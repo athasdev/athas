@@ -1204,6 +1204,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                       bufferId={buffer.id}
                       isActiveSurface={isActive && isActivePane}
                       readOnly={buffer.readOnly}
+                      outline={isActive}
                     />
                   </div>
                 );

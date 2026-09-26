@@ -10,7 +10,6 @@ import {
   getSidebarPaneLevel,
   type SidebarView,
 } from "@/features/layout/utils/sidebar-pane-utils";
-import { OutlineSidebar } from "@/features/outline/components/outline-sidebar";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { ViewsSidebar } from "@/features/views/components/views-sidebar";
 import { useAuthStore } from "@/features/window/stores/auth.store";
@@ -132,7 +131,6 @@ export const SidebarPane = memo(
             },
           ]
         : []),
-      { id: "outline", content: <OutlineSidebar /> },
       {
         id: "agent",
         content: (
@@ -167,7 +165,6 @@ export const SidebarPane = memo(
       [
         "files",
         "agents",
-        "outline",
         "docker",
         "views",
         "github-prs",

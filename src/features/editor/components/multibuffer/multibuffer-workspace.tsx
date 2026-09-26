@@ -372,7 +372,7 @@ export function MultibufferWorkspace({
         />
       ) : null}
 
-      <div className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden">
+      <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
         <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           <ScrollArea
             fill="flex"
@@ -417,7 +417,6 @@ export function MultibufferWorkspace({
             searchResetKey={navigatorSearchResetKey}
             compactRows
             resizeEdge="left"
-            className="absolute top-2 right-4 bottom-2 z-40 h-auto"
           />
         ) : null}
       </div>

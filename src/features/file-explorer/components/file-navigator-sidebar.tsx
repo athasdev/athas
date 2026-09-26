@@ -92,9 +92,9 @@ interface FileNavigatorSidebarProps {
   resizeEdge?: "left" | "right";
 }
 
-// Floats over the multibuffer it navigates, so opening it never reflows the file sections.
+// Docked beside the multibuffer it navigates, one surface from its filter bar to its last row.
 const fileNavigatorClassName =
-  "relative flex h-full min-h-0 min-w-0 shrink-0 flex-col overflow-hidden rounded-lg bg-overlay shadow-(--shadow-popover) ring-1 ring-border";
+  "relative flex h-full min-h-0 min-w-0 shrink-0 flex-col overflow-hidden border-border border-l bg-background";
 
 function getItemSearchText(item: FileNavigatorItem) {
   return [item.label, item.path, item.key, item.iconPath].filter(Boolean).join(" ").toLowerCase();

@@ -82,7 +82,7 @@ import {
   goToReferences,
   goToTypeDefinition,
   openOutlinePicker,
-  openOutlineSidebar,
+  openOutlinePanel,
   showCallHierarchy,
   showTypeHierarchy,
 } from "./navigation-command-actions";
@@ -898,7 +898,7 @@ const navigationCommands: Command[] = [
     id: "workbench.showOutline",
     title: "Show Outline",
     category: "Navigation",
-    execute: openOutlineSidebar,
+    execute: openOutlinePanel,
   },
   {
     id: "workbench.nextTab",

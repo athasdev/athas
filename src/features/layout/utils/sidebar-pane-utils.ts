@@ -6,7 +6,6 @@ export type SidebarView =
   | "workspaces"
   | "views"
   | "docker"
-  | "outline"
   | "databases"
   | "collaboration"
   | "agent"
@@ -26,15 +25,11 @@ interface SidebarPaneClickResult {
 
 export type SidebarPaneLevel = "primary" | "edge";
 
-const EDGE_SIDEBAR_VIEWS = new Set<SidebarView>(["outline", "collaboration", "agent"]);
+const EDGE_SIDEBAR_VIEWS = new Set<SidebarView>(["collaboration", "agent"]);
 
 export function getSidebarPaneLevel(view: SidebarView): SidebarPaneLevel {
   if (EDGE_SIDEBAR_VIEWS.has(view)) return "edge";
   return "primary";
-}
-
-export function isSidebarViewAvailable(view: SidebarView, outlineAvailable: boolean): boolean {
-  return view !== "outline" || outlineAvailable;
 }
 
 export function getActiveSidebarView({

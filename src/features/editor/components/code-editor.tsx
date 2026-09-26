@@ -51,6 +51,7 @@ import { MonacoEditor } from "./monaco-editor";
 import { SvgPreview } from "./svg/svg-preview";
 import { EditorStylesheet } from "./stylesheet";
 import Breadcrumb, { type BreadcrumbProps } from "./toolbar/breadcrumb";
+import { OutlineSidebar } from "@/features/outline/components/outline-sidebar";
 
 interface CodeEditorProps {
   onKeyDown?: (e: React.KeyboardEvent<HTMLDivElement>) => void;
@@ -62,6 +63,8 @@ interface CodeEditorProps {
   bufferId?: string;
   isActiveSurface?: boolean;
   showToolbar?: boolean;
+  /** Dock the document outline beside this tab's code, when the Outline setting is on. */
+  outline?: boolean;
   readOnly?: boolean;
   breadcrumbProps?: BreadcrumbProps;
   scrollable?: boolean;
@@ -130,6 +133,7 @@ const CodeEditor = ({
   bufferId: propBufferId,
   isActiveSurface = true,
   showToolbar = true,
+  outline = false,
   readOnly = false,
   breadcrumbProps,
   scrollable = true,
@@ -163,6 +167,7 @@ const CodeEditor = ({
   const editorFontSize = useSettingsStore((state) => state.settings.fontSize);
   const editorLineHeight = useSettingsStore((state) => state.settings.editorLineHeight);
   const codeLensEnabled = useSettingsStore((state) => state.settings.codeLens);
+  const showOutlineSetting = useSettingsStore((state) => state.settings.showOutline);
 
   // Apply zoom to font size for position calculations (must match editor.tsx)
   const zoomedFontSize = editorFontSize * zoomLevel;
@@ -526,94 +531,105 @@ const CodeEditor = ({
           />
         )}
 
-        <div
-          ref={editorRef}
-          className={`editor-container relative min-h-0 flex-1 overflow-hidden ${className || ""}`}
-          data-zoom-level={zoomLevel}
-          style={{
-            scrollbarWidth: "none",
-            msOverflowStyle: "none",
-            // Zoom is now applied via font size scaling in Editor component
-            // to avoid subpixel rendering mismatches between text and positioned elements
-          }}
-        >
-          {/* Code Lens */}
-          {enableCodeLens && inlineCodeLenses.length > 0 && (
-            <CodeLensOverlay
-              ref={codeLensRef}
-              lenses={inlineCodeLenses}
-              fontSize={zoomedFontSize}
-              lineHeight={zoomedLineHeight}
-              scrollTop={editorRef.current?.querySelector("textarea")?.scrollTop ?? 0}
-              viewportHeight={editorRef.current?.clientHeight ?? 600}
-              contentLeft={codeLensContentLeft}
-              getLineText={getCodeLensLineText}
-              onExecute={handleCodeLensExecute}
-              resolveModelPosition={resolveModelPosition}
-            />
-          )}
-
-          {/* Signature Help */}
-          {enableRichEditorServices && (
-            <SignatureHelpTooltip
-              editorRef={editorRef}
-              filePath={filePath}
-              resolveModelPosition={resolveModelPosition}
-            />
-          )}
-
-          {/* Rename Input */}
-          {enableRichEditorServices && rename.renameState && (
-            <RenameInput
-              ref={renameInputRef}
-              symbol={rename.renameState.symbol}
-              line={rename.renameState.line}
-              column={rename.renameState.column}
-              fontSize={zoomedFontSize}
-              lineHeight={zoomedLineHeight}
-              charWidth={zoomedFontSize * 0.6}
-              resolveModelPosition={resolveModelPosition}
-              inputRef={rename.inputRef}
-              onSubmit={(newName) => void rename.executeRename(newName)}
-              onCancel={rename.cancelRename}
-            />
-          )}
-
-          {/* Main editor - absolute positioned to fill container */}
-          <div className="absolute inset-0 bg-background">
-            {showMarkdownPreview ? (
-              <MarkdownPreview
-                bufferId={activeBufferId ?? undefined}
-                isActiveSurface={isActiveSurface}
-              />
-            ) : showHtmlPreview ? (
-              <HtmlPreview />
-            ) : showCsvPreview ? (
-              <CsvPreview />
-            ) : showSvgPreview ? (
-              <SvgPreview bufferId={activeBufferId ?? undefined} />
-            ) : showNotebookEditor ? (
-              <NotebookEditor />
-            ) : (
-              <MonacoEditor
-                bufferId={activeBufferId ?? undefined}
-                viewStateKey={editorViewKey ?? undefined}
-                isActiveSurface={isActiveSurface}
-                isPreviewMode={isPreviewBuffer}
-                readOnly={readOnly}
-                scrollable={scrollable}
-                backgroundLayer={backgroundLayer}
-                onReadonlySurfaceClick={onReadonlySurfaceClick}
-                highlightMatches={highlightMatches}
-                currentHighlightIndex={currentHighlightIndex}
-                lineNumberStart={lineNumberStart}
-                lineNumberMap={lineNumberMap}
-                onContentChange={onChange}
-                onScrollOffsetChange={syncLspOverlayTransform}
-                onModelPositionResolverChange={handleModelPositionResolverChange}
+        <div className="flex min-h-0 min-w-0 flex-1">
+          <div
+            ref={editorRef}
+            className={`editor-container relative min-h-0 min-w-0 flex-1 overflow-hidden ${className || ""}`}
+            data-zoom-level={zoomLevel}
+            style={{
+              scrollbarWidth: "none",
+              msOverflowStyle: "none",
+              // Zoom is now applied via font size scaling in Editor component
+              // to avoid subpixel rendering mismatches between text and positioned elements
+            }}
+          >
+            {/* Code Lens */}
+            {enableCodeLens && inlineCodeLenses.length > 0 && (
+              <CodeLensOverlay
+                ref={codeLensRef}
+                lenses={inlineCodeLenses}
+                fontSize={zoomedFontSize}
+                lineHeight={zoomedLineHeight}
+                scrollTop={editorRef.current?.querySelector("textarea")?.scrollTop ?? 0}
+                viewportHeight={editorRef.current?.clientHeight ?? 600}
+                contentLeft={codeLensContentLeft}
+                getLineText={getCodeLensLineText}
+                onExecute={handleCodeLensExecute}
+                resolveModelPosition={resolveModelPosition}
               />
             )}
+
+            {/* Signature Help */}
+            {enableRichEditorServices && (
+              <SignatureHelpTooltip
+                editorRef={editorRef}
+                filePath={filePath}
+                resolveModelPosition={resolveModelPosition}
+              />
+            )}
+
+            {/* Rename Input */}
+            {enableRichEditorServices && rename.renameState && (
+              <RenameInput
+                ref={renameInputRef}
+                symbol={rename.renameState.symbol}
+                line={rename.renameState.line}
+                column={rename.renameState.column}
+                fontSize={zoomedFontSize}
+                lineHeight={zoomedLineHeight}
+                charWidth={zoomedFontSize * 0.6}
+                resolveModelPosition={resolveModelPosition}
+                inputRef={rename.inputRef}
+                onSubmit={(newName) => void rename.executeRename(newName)}
+                onCancel={rename.cancelRename}
+              />
+            )}
+
+            {/* Main editor - absolute positioned to fill container */}
+            <div className="absolute inset-0 bg-background">
+              {showMarkdownPreview ? (
+                <MarkdownPreview
+                  bufferId={activeBufferId ?? undefined}
+                  isActiveSurface={isActiveSurface}
+                />
+              ) : showHtmlPreview ? (
+                <HtmlPreview />
+              ) : showCsvPreview ? (
+                <CsvPreview />
+              ) : showSvgPreview ? (
+                <SvgPreview bufferId={activeBufferId ?? undefined} />
+              ) : showNotebookEditor ? (
+                <NotebookEditor />
+              ) : (
+                <MonacoEditor
+                  bufferId={activeBufferId ?? undefined}
+                  viewStateKey={editorViewKey ?? undefined}
+                  isActiveSurface={isActiveSurface}
+                  isPreviewMode={isPreviewBuffer}
+                  readOnly={readOnly}
+                  scrollable={scrollable}
+                  backgroundLayer={backgroundLayer}
+                  onReadonlySurfaceClick={onReadonlySurfaceClick}
+                  highlightMatches={highlightMatches}
+                  currentHighlightIndex={currentHighlightIndex}
+                  lineNumberStart={lineNumberStart}
+                  lineNumberMap={lineNumberMap}
+                  onContentChange={onChange}
+                  onScrollOffsetChange={syncLspOverlayTransform}
+                  onModelPositionResolverChange={handleModelPositionResolverChange}
+                />
+              )}
+            </div>
           </div>
+          {outline && showOutlineSetting && activeBufferId ? (
+            <aside
+              aria-label="Outline"
+              className="flex w-64 min-w-0 shrink-0 border-border border-l"
+              data-slot="editor-outline"
+            >
+              <OutlineSidebar bufferId={activeBufferId} />
+            </aside>
+          ) : null}
         </div>
       </div>
 

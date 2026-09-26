@@ -23,7 +23,7 @@ export const createViewSlice: StateCreator<ViewSlice, [], [], ViewSlice> = (set,
   isGitViewActive: false,
   isGitHubPRsViewActive: false,
   activeSidebarView: "files",
-  activeRightSidebarView: "outline",
+  activeRightSidebarView: "agent",
 
   setActiveView: (view: SidebarView) => {
     set({

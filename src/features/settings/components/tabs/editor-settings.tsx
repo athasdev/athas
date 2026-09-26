@@ -248,7 +248,7 @@ export const EditorSettings = () => {
 
         <SettingRow
           label="Show Outline"
-          description="Show symbols for the active editor in the right sidebar"
+          description="Show symbols beside each editor tab"
           onReset={() => setOutlineVisibilityPreference(getDefaultSetting("showOutline"))}
           canReset={settings.showOutline !== getDefaultSetting("showOutline")}
         >

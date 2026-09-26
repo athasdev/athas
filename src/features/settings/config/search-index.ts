@@ -178,8 +178,8 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     tab: "editor",
     section: "Display",
     label: "Show Outline",
-    description: "Show symbols for the active editor in the right sidebar",
-    keywords: ["outline", "symbols", "sidebar", "structure", "display"],
+    description: "Show symbols beside each editor tab",
+    keywords: ["outline", "symbols", "panel", "structure", "display"],
   },
   {
     id: "editor-sticky-scroll",
