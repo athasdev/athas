@@ -61,7 +61,18 @@ export const FileExplorerViewport = forwardRef<
   forwardedRef,
 ) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const stickyRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<number | null>(null);
+
+  // Sticky ancestors are pinned by hand rather than with `position: sticky`, which WKWebView
+  // placed a few pixels below the top edge and let the row underneath show above them. Scroll
+  // events run before paint, so moving the layer there keeps it fixed without a frame of lag.
+  const syncStickyOffset = useCallback(() => {
+    const element = scrollRef.current;
+    const sticky = stickyRef.current;
+    if (!element || !sticky) return;
+    sticky.style.transform = `translateY(${element.scrollTop}px)`;
+  }, []);
   const [layout, setLayout] = useState<ViewportLayout>({ scrollTop: 0, viewportHeight: 0 });
 
   const updateLayout = useCallback(() => {
@@ -110,18 +121,23 @@ export const FileExplorerViewport = forwardRef<
 
     const resizeObserver = new ResizeObserver(updateLayout);
     resizeObserver.observe(element);
+    element.addEventListener("scroll", syncStickyOffset, { passive: true });
     element.addEventListener("scroll", scheduleLayoutUpdate, { passive: true });
     updateLayout();
 
     return () => {
       resizeObserver.disconnect();
+      element.removeEventListener("scroll", syncStickyOffset);
       element.removeEventListener("scroll", scheduleLayoutUpdate);
       if (frameRef.current !== null) {
         cancelAnimationFrame(frameRef.current);
         frameRef.current = null;
       }
     };
-  }, [scheduleLayoutUpdate, updateLayout]);
+  }, [scheduleLayoutUpdate, syncStickyOffset, updateLayout]);
+
+  // The sticky layer mounts and changes as rows scroll by; place it before each paint.
+  useLayoutEffect(syncStickyOffset);
 
   useLayoutEffect(() => {
     const element = scrollRef.current;
@@ -223,7 +239,8 @@ export const FileExplorerViewport = forwardRef<
     >
       {stickyIndexes.length > 0 ? (
         <div
-          className="pointer-events-none sticky top-0 z-20 h-0 overflow-visible"
+          ref={stickyRef}
+          className="pointer-events-none absolute inset-x-0 top-0 z-20 h-0 overflow-visible will-change-transform"
           data-file-tree-sticky-ancestors=""
         >
           <div
