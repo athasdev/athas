@@ -10,6 +10,7 @@ use super::{
    replay::{ReplayMode, ReplayRouter},
    terminal_meta::TERMINAL_OUTPUT_META_KEY,
    traffic::{TrafficDirection, TrafficInspector, TrafficTap, tapped_transport},
+   traffic_secrets::secret_env_values,
    types::{
       AcpAgentCapabilities, AcpAuthMethod, AcpEvent, AgentConfig, SessionConfigOption, SessionMode,
       SessionModeState,
@@ -113,7 +114,12 @@ pub(super) async fn start_connection(
    stop: CancellationToken,
 ) -> Result<StartedConnection> {
    let mut child = spawn_agent_process(config, workspace_path.as_deref())?;
-   let tap = traffic.start_process(&config.id, &config.name, workspace_path.as_deref());
+   let tap = traffic.start_process(
+      &config.id,
+      &config.name,
+      workspace_path.as_deref(),
+      secret_env_values(&config.env_vars),
+   );
    let process_group_id = child.id();
    let stdin = child
       .stdin

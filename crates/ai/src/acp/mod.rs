@@ -14,6 +14,7 @@ mod sessions;
 mod terminal_meta;
 mod terminal_state;
 pub mod traffic;
+mod traffic_secrets;
 pub mod types;
 mod workspace_path;
 

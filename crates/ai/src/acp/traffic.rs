@@ -8,6 +8,7 @@
 //! short, and to capture `initialize`. Live entries are pushed to the frontend only while an
 //! inspector is subscribed.
 
+use super::traffic_secrets::{REDACTED, scrub};
 use agent_client_protocol as acp_sdk;
 use futures::{AsyncBufReadExt, AsyncWrite, AsyncWriteExt, Stream, StreamExt, io::BufReader};
 use serde::Serialize;
@@ -31,7 +32,6 @@ pub(super) const MAX_LOG_BYTES: usize = 8 * 1024 * 1024;
 pub(super) const MAX_LINE_BYTES: usize = 64 * 1024;
 /// Stopped processes kept for inspection after more than this many logs exist.
 const MAX_LOGS: usize = 16;
-const REDACTED: &str = "[redacted]";
 
 /// Which way a line went.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -277,11 +277,14 @@ impl TrafficInspector {
 
    /// Starts the log of a new process. A process that replaces an earlier one for the same agent
    /// and workspace starts from an empty log, since its request ids start over.
+   /// `secrets` are values redacted wherever they appear in its lines, such as the API keys it
+   /// was started with.
    pub(super) fn start_process(
       &self,
       agent_id: &str,
       agent_name: &str,
       workspace_path: Option<&Path>,
+      secrets: Vec<String>,
    ) -> TrafficTap {
       let key = process_key(agent_id, workspace_path);
       let generation = self.inner.next_generation.fetch_add(1, Ordering::Relaxed);
@@ -310,10 +313,18 @@ impl TrafficInspector {
          inspector: self.clone(),
          key: Arc::from(key),
          generation,
+         secrets: Arc::from(secrets),
       }
    }
 
-   fn record(&self, key: &str, generation: u64, direction: TrafficDirection, line: &str) {
+   fn record(
+      &self,
+      key: &str,
+      generation: u64,
+      secrets: &[String],
+      direction: TrafficDirection,
+      line: &str,
+   ) {
       let (entry, initialize) = {
          let mut state = lock(&self.inner.state);
          let Some(log) = state
@@ -326,7 +337,10 @@ impl TrafficInspector {
          let initialize = log
             .capture_initialize(direction, line)
             .then(|| log.initialize.clone());
-         (log.push(prepare_entry(direction, line)), initialize)
+         (
+            log.push(prepare_entry(direction, line, secrets)),
+            initialize,
+         )
       };
       if let Some(initialize) = initialize {
          self.emit(|| TrafficEvent::Initialize {
@@ -451,13 +465,15 @@ fn prune_stopped(logs: &mut HashMap<String, ProcessLog>) {
 }
 
 /// Builds the entry kept for `line`: secrets redacted, then cut to [`MAX_LINE_BYTES`].
-fn prepare_entry(direction: TrafficDirection, line: &str) -> TrafficEntry {
+fn prepare_entry(direction: TrafficDirection, line: &str, secrets: &[String]) -> TrafficEntry {
    let redacted = if direction == TrafficDirection::Stderr {
       None
    } else {
       redact_line(line)
    };
    let line = redacted.as_deref().unwrap_or(line);
+   let scrubbed = scrub(line, secrets);
+   let line = scrubbed.as_deref().unwrap_or(line);
    let original_bytes = line.len();
    let truncated = original_bytes > MAX_LINE_BYTES;
    let (method, id) = if truncated && direction != TrafficDirection::Stderr {
@@ -550,13 +566,14 @@ pub(super) struct TrafficTap {
    inspector: TrafficInspector,
    key: Arc<str>,
    generation: u64,
+   secrets: Arc<[String]>,
 }
 
 impl TrafficTap {
    pub(super) fn record(&self, direction: TrafficDirection, line: &str) {
       self
          .inspector
-         .record(&self.key, self.generation, direction, line);
+         .record(&self.key, self.generation, &self.secrets, direction, line);
    }
 }
 
@@ -629,7 +646,12 @@ mod tests {
 
    fn inspector_with_process() -> (TrafficInspector, TrafficTap, String) {
       let inspector = TrafficInspector::default();
-      let tap = inspector.start_process("agent", "Agent", Some(Path::new("/work")));
+      let tap = inspector.start_process(
+         "agent",
+         "Agent",
+         Some(Path::new("/work")),
+         vec!["env-secret-123".to_string()],
+      );
       (inspector, tap, "agent@/work".to_string())
    }
 
@@ -725,6 +747,36 @@ mod tests {
       assert_eq!(servers[0]["env"][0]["value"], REDACTED);
       assert_eq!(servers[1]["headers"][0]["value"], REDACTED);
       assert_eq!(servers[1]["url"], "https://example.com");
+   }
+
+   #[test]
+   fn redacts_env_secrets_and_tokens_in_every_direction() {
+      let (inspector, tap, key) = inspector_with_process();
+      tap.record(
+         TrafficDirection::Stderr,
+         "starting with key env-secret-123 and Bearer abc123def456ghi",
+      );
+      tap.record(
+         TrafficDirection::In,
+         r#"{"id":1,"result":{"text":"ghp_0123456789abcdefghijABCDEFGHIJ"}}"#,
+      );
+      tap.record(
+         TrafficDirection::Out,
+         r#"{"id":2,"method":"x","params":{"note":"env-secret-123"}}"#,
+      );
+      let entries = inspector.backlog(&key).unwrap().entries;
+      assert_eq!(
+         entries[0].line,
+         "starting with key [redacted] and Bearer [redacted]"
+      );
+      assert_eq!(
+         entries[1].line,
+         r#"{"id":1,"result":{"text":"[redacted]"}}"#
+      );
+      assert_eq!(
+         entries[2].line,
+         r#"{"id":2,"method":"x","params":{"note":"[redacted]"}}"#
+      );
    }
 
    #[test]
@@ -840,7 +892,7 @@ mod tests {
    fn a_new_process_starts_an_empty_log() {
       let (inspector, tap, key) = inspector_with_process();
       tap.record(TrafficDirection::Stderr, "old");
-      inspector.start_process("agent", "Agent", Some(Path::new("/work")));
+      inspector.start_process("agent", "Agent", Some(Path::new("/work")), Vec::new());
       tap.record(TrafficDirection::Stderr, "late line from the old process");
       drop(StopOnDrop(tap));
       let backlog = inspector.backlog(&key).unwrap();
@@ -899,7 +951,7 @@ mod tests {
    fn prunes_the_oldest_stopped_logs() {
       let inspector = TrafficInspector::default();
       for index in 0..MAX_LOGS + 2 {
-         let tap = inspector.start_process(&format!("agent-{index}"), "Agent", None);
+         let tap = inspector.start_process(&format!("agent-{index}"), "Agent", None, Vec::new());
          drop(StopOnDrop(tap));
       }
       assert_eq!(inspector.processes().len(), MAX_LOGS);
