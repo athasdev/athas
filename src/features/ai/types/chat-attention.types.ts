@@ -5,6 +5,7 @@ import type { AcpQuestion } from "@/features/ai/stores/acp-questions.store";
 export type ChatAttention = "permission" | "question" | "auth";
 
 export interface ChatAttentionInput {
+  chatId: string;
   /** The chat's ACP session, when it has one. */
   sessionId: string | null | undefined;
   pendingPermissions: number;

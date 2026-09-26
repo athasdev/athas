@@ -7,6 +7,8 @@ export interface AcpQuestion {
   requestId: string;
   /** Null for request-scoped questions, which belong to no session. */
   sessionId: string | null;
+  /** For a question with no session: the chat that was talking to the agent when it asked. */
+  chatId?: string | null;
   request: AcpElicitationRequest;
   /** A URL question the user accepted: the agent is waiting for the flow in the browser. */
   waiting?: boolean;

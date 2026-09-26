@@ -6,13 +6,16 @@ import type { ChatAttention, ChatAttentionInput } from "@/features/ai/types/chat
  */
 export function getChatAttention(input: ChatAttentionInput): ChatAttention | null {
   if (input.pendingPermissions > 0) return "permission";
-  if (!input.sessionId) return null;
-  if (
-    input.questions.some((question) => question.sessionId === input.sessionId && !question.waiting)
-  ) {
+  // Requests with no session (startup sign-ins, request-scoped questions) go to the chat that
+  // was talking to the agent when they came.
+  const isOwn = (request: { sessionId: string | null; chatId?: string | null }) =>
+    request.sessionId
+      ? request.sessionId === input.sessionId
+      : Boolean(request.chatId) && request.chatId === input.chatId;
+  if (input.questions.some((question) => isOwn(question) && !question.waiting)) {
     return "question";
   }
-  if (input.authRequest?.sessionId === input.sessionId && input.authRequest.phase === "choosing") {
+  if (input.authRequest && isOwn(input.authRequest) && input.authRequest.phase === "choosing") {
     return "auth";
   }
   return null;

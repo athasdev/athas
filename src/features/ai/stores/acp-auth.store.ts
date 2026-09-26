@@ -14,6 +14,8 @@ export interface AcpAuthRequest {
   agentId: string;
   /** Set when a prompt needed sign-in; startup failures carry none. */
   sessionId: string | null;
+  /** The chat that needed the sign-in, when known; startup sign-ins have no session yet. */
+  chatId: string | null;
   methods: AcpAuthMethod[];
   phase: AcpAuthPhase;
   activeMethodId: string | null;
@@ -27,6 +29,7 @@ interface AcpAuthState {
     require: (request: {
       agentId: string;
       sessionId: string | null;
+      chatId?: string | null;
       methods: AcpAuthMethod[];
     }) => void;
     /**
@@ -61,12 +64,13 @@ const useAcpAuthStoreBase = create<AcpAuthState>()((set, get) => {
   return {
     request: null,
     actions: {
-      require: ({ agentId, sessionId, methods }) => {
+      require: ({ agentId, sessionId, chatId = null, methods }) => {
         stopTerminalWait();
         set({
           request: {
             agentId,
             sessionId,
+            chatId,
             methods,
             phase: "choosing",
             activeMethodId: null,

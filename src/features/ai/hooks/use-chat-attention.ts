@@ -16,5 +16,5 @@ export function useChatAttention(chatId: string | null | undefined): ChatAttenti
   const questions = useAcpQuestionsStore.use.questions();
   const authRequest = useAcpAuthStore.use.request();
   if (!chatId) return null;
-  return getChatAttention({ sessionId, pendingPermissions, questions, authRequest });
+  return getChatAttention({ chatId, sessionId, pendingPermissions, questions, authRequest });
 }

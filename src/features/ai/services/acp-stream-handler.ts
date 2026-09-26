@@ -89,6 +89,8 @@ export class AcpStreamHandler {
   private static activeHandlers = new Map<string, AcpStreamHandler>();
   /** Session opens in flight, by chat id: a chat opens its session once at a time. */
   private static sessionQueues = new Map<string, Promise<void>>();
+  /** The chat whose session open is starting or reaching each agent, by agent id. */
+  private static openingChats = new Map<string, string>();
   private listeners: AcpListeners = {};
   private activeTools = new Map<string, string>();
   /** The turn is over and every handler that will be called has been. */
@@ -235,6 +237,9 @@ export class AcpStreamHandler {
         this.handlers.onResponsePhase?.("starting");
       }
 
+      // Sign-ins and questions the agent sends before the chat has a session belong to it.
+      const openingChatId = targetChat?.id ?? this.chatId ?? null;
+      if (openingChatId) AcpStreamHandler.openingChats.set(this.agentId, openingChatId);
       let opened: AcpOpenedSession;
       try {
         opened = await this.openSession(workspacePath, desiredSessionId);
@@ -254,6 +259,10 @@ export class AcpStreamHandler {
           opened = await this.openSession(workspacePath, desiredSessionId);
         } else {
           throw error;
+        }
+      } finally {
+        if (openingChatId && AcpStreamHandler.openingChats.get(this.agentId) === openingChatId) {
+          AcpStreamHandler.openingChats.delete(this.agentId);
         }
       }
 
@@ -815,6 +824,26 @@ export class AcpStreamHandler {
 
   private static currentWorkspacePath(): string | null {
     return useProjectStore.getState().rootFolderPath ?? null;
+  }
+
+  /**
+   * The chat a request with no session is for: the chat whose session open is reaching the agent
+   * (startup sign-in, questions during setup), else the chat with the latest running prompt.
+   * Limited to `agentId` when the request names its agent.
+   */
+  static chatForUnscopedRequest(agentId?: string | null): string | null {
+    if (agentId) {
+      const opening = AcpStreamHandler.openingChats.get(agentId);
+      if (opening) return opening;
+    } else {
+      const opening = [...AcpStreamHandler.openingChats.values()].pop();
+      if (opening) return opening;
+    }
+    const running = [...AcpStreamHandler.activeHandlers.entries()].filter(
+      ([chatKey, handler]) =>
+        chatKey !== CURRENT_CHAT_KEY && (!agentId || handler.agentId === agentId),
+    );
+    return running.pop()?.[0] ?? null;
   }
 
   // Static method to respond to permission requests

@@ -1,5 +1,6 @@
 import { listen } from "@tauri-apps/api/event";
 import { getChatTitleFromSessionInfo } from "@/features/ai/lib/acp-session-info";
+import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
 import { sendAgentNativeNotification } from "@/features/ai/services/agent-native-notifications";
 import { useAcpAuthStore } from "@/features/ai/stores/acp-auth.store";
 import { useAcpQuestionsStore } from "@/features/ai/stores/acp-questions.store";
@@ -43,14 +44,18 @@ export function applyAcpEvent(payload: AcpEvent): void {
       break;
     }
     case "auth_required": {
+      const sessionChatId = payload.sessionId
+        ? store.chats.find((item) => item.acpSessionId === payload.sessionId)?.id
+        : undefined;
+      const routedChatId =
+        sessionChatId ?? AcpStreamHandler.chatForUnscopedRequest(payload.agentId);
       useAcpAuthStore.getState().actions.require({
         agentId: payload.agentId,
         sessionId: payload.sessionId,
+        chatId: routedChatId,
         methods: payload.methods,
       });
-      const authChatId =
-        store.chats.find((item) => item.acpSessionId === payload.sessionId)?.id ??
-        store.currentChatId;
+      const authChatId = routedChatId ?? store.currentChatId;
       if (authChatId) {
         void sendAgentNativeNotification({
           kind: "auth",
@@ -64,6 +69,7 @@ export function applyAcpEvent(payload: AcpEvent): void {
       useAcpQuestionsStore.getState().actions.add({
         requestId: payload.requestId,
         sessionId: payload.sessionId,
+        chatId: payload.sessionId ? undefined : AcpStreamHandler.chatForUnscopedRequest(),
         request: payload.request,
       });
       break;

@@ -417,6 +417,32 @@ describe("AcpStreamHandler", () => {
     await second;
   });
 
+  it("routes requests with no session to the chat whose session is opening", async () => {
+    let answer: () => void = () => {};
+    vi.mocked(invoke).mockImplementation((command) => {
+      if (command !== "open_acp_session") return Promise.resolve(undefined);
+      return new Promise((resolve) => {
+        answer = () => resolve({ sessionId: "session-c", status: agentStatus() });
+      });
+    });
+    chats.set("chat-3", { id: "chat-3", agentId: "codex", acpSessionId: null });
+    const handler = new AcpStreamHandler(
+      "codex",
+      { onChunk: vi.fn(), onComplete: vi.fn(), onError: vi.fn() },
+      "chat-3",
+    ) as unknown as { ensureSession: () => Promise<void> };
+
+    const opening = handler.ensureSession();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(AcpStreamHandler.chatForUnscopedRequest("codex")).toBe("chat-3");
+    expect(AcpStreamHandler.chatForUnscopedRequest()).toBe("chat-3");
+    expect(AcpStreamHandler.chatForUnscopedRequest("gemini")).toBeNull();
+
+    answer();
+    await opening;
+    expect(AcpStreamHandler.chatForUnscopedRequest("codex")).toBeNull();
+  });
+
   it("stops only the stalled startup when opening a session never answers", async () => {
     vi.mocked(invoke).mockImplementation((command) => {
       if (command === "open_acp_session") {
