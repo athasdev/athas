@@ -1,6 +1,7 @@
 import { startAssistantResponseContinuation } from "./assistant-response";
 import { createToolCall, markToolCallComplete, updateToolCall } from "./tool-call-state";
-import type { AcpEvent } from "@/features/ai/types/acp.types";
+import { appendAcpTerminalOutput, getAcpTerminalOutputs } from "./acp-terminal-output";
+import type { AcpEvent, AcpTerminalSnapshot } from "@/features/ai/types/acp.types";
 import type { Message, ToolCall } from "@/features/ai/types/ai-chat.types";
 
 type HistoryEvent = Extract<
@@ -13,7 +14,10 @@ type HistoryEvent = Extract<
       | "tool_start"
       | "tool_update"
       | "tool_complete"
-      | "plan_update";
+      | "plan_update"
+      | "terminal_started"
+      | "terminal_output"
+      | "terminal_exit";
   }
 >;
 
@@ -39,6 +43,9 @@ export function acpHistoryToMessages(events: AcpEvent[], options: HistoryOptions
   let thoughtId: string | null = null;
   // The agent's message ids, when it sends them, mark where one message ends and the next starts.
   const lastMessageId = new Map<HistoryEvent["type"], string>();
+  const terminals = new Map<string, AcpTerminalSnapshot>();
+  const terminal = (terminalId: string) =>
+    terminals.get(terminalId) ?? { output: "", truncated: false, exit: null };
   const startsNewMessage = (
     event: Extract<
       HistoryEvent,
@@ -198,7 +205,42 @@ export function acpHistoryToMessages(events: AcpEvent[], options: HistoryOptions
         message.plan = event.entries.length > 0 ? event.entries : undefined;
         break;
       }
+      case "terminal_started":
+        terminals.set(event.terminalId, terminal(event.terminalId));
+        break;
+      case "terminal_output":
+        terminals.set(
+          event.terminalId,
+          appendAcpTerminalOutput(terminal(event.terminalId), event.data),
+        );
+        break;
+      case "terminal_exit": {
+        const snapshot = terminal(event.terminalId);
+        if (!snapshot.exit) {
+          terminals.set(event.terminalId, {
+            ...snapshot,
+            exit: { exitCode: event.exitCode, signal: event.signal },
+          });
+        }
+        break;
+      }
     }
+  }
+
+  // Replayed terminals keep their output with the calls that show them.
+  for (const message of messages) {
+    message.toolCalls = message.toolCalls?.map((toolCall) => {
+      const shown = getAcpTerminalOutputs(toolCall.output).filter(({ terminalId }) =>
+        terminals.has(terminalId),
+      );
+      if (shown.length === 0) return toolCall;
+      return {
+        ...toolCall,
+        terminals: Object.fromEntries(
+          shown.map(({ terminalId }) => [terminalId, terminals.get(terminalId)!]),
+        ),
+      };
+    });
   }
 
   const endedAt = options.endedAt?.getTime() ?? Date.now();
@@ -227,6 +269,9 @@ function isHistoryEvent(event: AcpEvent): event is HistoryEvent {
     case "tool_update":
     case "tool_complete":
     case "plan_update":
+    case "terminal_started":
+    case "terminal_output":
+    case "terminal_exit":
       return true;
     default:
       return false;

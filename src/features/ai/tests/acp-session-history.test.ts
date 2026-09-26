@@ -164,6 +164,30 @@ describe("acpHistoryToMessages", () => {
     expect(messages[2].toolCalls?.map((toolCall) => toolCall.output)).toEqual(["plan", "recheck"]);
   });
 
+  it("keeps a replayed terminal's output with its tool call", () => {
+    const messages = convert([
+      user("List files"),
+      { type: "terminal_started", sessionId, terminalId: "t1", cwd: null, displayOnly: true },
+      {
+        type: "tool_start",
+        sessionId,
+        toolName: "ls",
+        toolId: "call-1",
+        input: {},
+        output: [{ type: "terminal", terminalId: "t1" }],
+        kind: "execute",
+        status: "in_progress",
+        locations: [],
+      },
+      { type: "terminal_output", sessionId, terminalId: "t1", data: "a.txt\n" },
+      { type: "terminal_exit", sessionId, terminalId: "t1", exitCode: 0, signal: null },
+    ]);
+
+    expect(messages[1].toolCalls?.[0].terminals).toEqual({
+      t1: { output: "a.txt\n", truncated: false, exit: { exitCode: 0, signal: null } },
+    });
+  });
+
   it("returns no messages for an empty replay", () => {
     expect(convert([])).toEqual([]);
   });

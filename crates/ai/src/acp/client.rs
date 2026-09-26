@@ -2,6 +2,7 @@ use super::{
    AcpConnection,
    file_access::{self, FileAccess, OutsideAccess},
    replay::ReplayRouter,
+   terminal_meta::{self, ToolTerminalMeta},
    terminal_state::{AcpTerminalState, TerminalChange, take_session_terminals},
    types::{
       ACP_BUFFER_READ_EVENT, AcpBufferReadRequest, AcpContentBlock, AcpCost, AcpEvent,
@@ -552,13 +553,18 @@ impl AthasAcpClient {
    fn tool_call_events(session_id: String, tool_call: acp::ToolCall) -> Vec<AcpEvent> {
       let tool_id = tool_call.tool_call_id.to_string();
       let status = tool_call.status;
-      let output = if tool_call.content.is_empty() {
+      let terminal = ToolTerminalMeta::parse(tool_call.meta.as_ref());
+      let mut output = if tool_call.content.is_empty() {
          None
       } else {
          Self::map_tool_content(tool_call.content)
       };
+      if let Some((terminal_id, _)) = &terminal.started {
+         output = terminal_meta::with_terminal_content(output, terminal_id);
+      }
 
-      let mut events = vec![AcpEvent::ToolStart {
+      let mut events: Vec<AcpEvent> = terminal.start_event(&session_id).into_iter().collect();
+      events.push(AcpEvent::ToolStart {
          session_id: session_id.clone(),
          tool_name: tool_call.title,
          tool_id: tool_id.clone(),
@@ -568,14 +574,14 @@ impl AthasAcpClient {
          kind: Self::map_tool_kind(tool_call.kind),
          status: Self::map_tool_status(status),
          locations: Self::map_tool_locations(tool_call.locations),
-      }];
+      });
 
       if matches!(
          status,
          acp::ToolCallStatus::Completed | acp::ToolCallStatus::Failed
       ) {
          events.push(AcpEvent::ToolComplete {
-            session_id,
+            session_id: session_id.clone(),
             tool_id,
             success: matches!(status, acp::ToolCallStatus::Completed),
             output,
@@ -583,6 +589,7 @@ impl AthasAcpClient {
          });
       }
 
+      events.extend(terminal.update_events(&session_id));
       events
    }
 
@@ -590,12 +597,14 @@ impl AthasAcpClient {
    /// change the call; `content`, when present, replaces the whole collection.
    fn tool_call_update_events(session_id: String, update: acp::ToolCallUpdate) -> Vec<AcpEvent> {
       let tool_id = update.tool_call_id.to_string();
+      let terminal = ToolTerminalMeta::parse(update.meta.as_ref());
       let fields = update.fields;
       let status = fields.status;
       let output = fields.content.and_then(Self::map_tool_content);
       let error = status.and_then(Self::failure_message);
 
-      let mut events = vec![AcpEvent::ToolUpdate {
+      let mut events: Vec<AcpEvent> = terminal.start_event(&session_id).into_iter().collect();
+      events.push(AcpEvent::ToolUpdate {
          session_id: session_id.clone(),
          tool_id: tool_id.clone(),
          tool_name: fields.title,
@@ -606,12 +615,12 @@ impl AthasAcpClient {
          status: status.map(Self::map_tool_status),
          locations: fields.locations.map(Self::map_tool_locations),
          error: error.clone(),
-      }];
+      });
 
       if let Some(status @ (acp::ToolCallStatus::Completed | acp::ToolCallStatus::Failed)) = status
       {
          events.push(AcpEvent::ToolComplete {
-            session_id,
+            session_id: session_id.clone(),
             tool_id,
             success: matches!(status, acp::ToolCallStatus::Completed),
             output,
@@ -619,6 +628,7 @@ impl AthasAcpClient {
          });
       }
 
+      events.extend(terminal.update_events(&session_id));
       events
    }
 
@@ -1697,6 +1707,42 @@ mod tests {
       let chunk = acp::ContentChunk::new(acp::ContentBlock::from("q")).message_id("u-1");
       let event = AthasAcpClient::chunk_event(ChunkRole::User, "s1".into(), chunk).unwrap();
       assert_eq!(serde_json::to_value(&event).unwrap()["messageId"], "u-1");
+   }
+
+   #[test]
+   fn tool_calls_stream_terminal_meta_into_a_display_only_terminal() {
+      let mut meta = acp::Meta::new();
+      meta.insert("terminal_info".into(), json!({ "terminal_id": "toolu_1" }));
+      let tool_call = acp::ToolCall::new("toolu_1", "Run ls").meta(meta);
+      let events =
+         serde_json::to_value(AthasAcpClient::tool_call_events("s1".into(), tool_call)).unwrap();
+      assert_eq!(events[0]["type"], "terminal_started");
+      assert_eq!(events[0]["displayOnly"], true);
+      assert_eq!(events[1]["type"], "tool_start");
+      assert_eq!(
+         events[1]["output"],
+         json!([{ "type": "terminal", "terminalId": "toolu_1" }])
+      );
+
+      let mut meta = acp::Meta::new();
+      meta.insert(
+         "terminal_exit".into(),
+         json!({ "terminal_id": "toolu_1", "exit_code": 0, "signal": null }),
+      );
+      let update = acp::ToolCallUpdate::new(
+         "toolu_1",
+         acp::ToolCallUpdateFields::new().status(acp::ToolCallStatus::Completed),
+      )
+      .meta(meta);
+      let events = AthasAcpClient::tool_call_update_events("s1".into(), update);
+      let types: Vec<_> = serde_json::to_value(&events)
+         .unwrap()
+         .as_array()
+         .unwrap()
+         .iter()
+         .map(|event| event["type"].as_str().unwrap().to_string())
+         .collect();
+      assert_eq!(types, ["tool_update", "tool_complete", "terminal_exit"]);
    }
 
    #[test]

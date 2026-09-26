@@ -8,6 +8,7 @@ use super::{
    mcp_servers::{AcpSkippedMcpServer, McpServerConfig, select_mcp_servers},
    process::{stop_child_tree, stop_child_tree_mut},
    replay::{ReplayMode, ReplayRouter},
+   terminal_meta::TERMINAL_OUTPUT_META_KEY,
    traffic::{TrafficDirection, TrafficInspector, TrafficTap, tapped_transport},
    types::{
       AcpAgentCapabilities, AcpAuthMethod, AcpEvent, AgentConfig, SessionConfigOption, SessionMode,
@@ -494,6 +495,9 @@ fn client_capabilities() -> acp::ClientCapabilities {
    );
    // Agents that predate `auth.terminal` describe terminal sign-in under this key instead.
    client_meta.insert(LEGACY_TERMINAL_AUTH_META_KEY.to_string(), json!(true));
+   // Agents that run commands themselves (the Claude and Codex adapters) stream the output into
+   // the tool call's `_meta` when the client says it shows it.
+   client_meta.insert(TERMINAL_OUTPUT_META_KEY.to_string(), json!(true));
 
    acp::ClientCapabilities::new()
       .fs(
@@ -1013,6 +1017,18 @@ mod tests {
             .meta
             .as_ref()
             .and_then(|meta| meta.get(LEGACY_TERMINAL_AUTH_META_KEY)),
+         Some(&json!(true))
+      );
+   }
+
+   #[test]
+   fn advertises_terminal_output_in_tool_call_meta() {
+      let capabilities = client_capabilities();
+      assert_eq!(
+         capabilities
+            .meta
+            .as_ref()
+            .and_then(|meta| meta.get(TERMINAL_OUTPUT_META_KEY)),
          Some(&json!(true))
       );
    }
