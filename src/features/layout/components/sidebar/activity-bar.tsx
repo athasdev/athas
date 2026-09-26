@@ -172,7 +172,7 @@ export const ActivityBar = memo(() => {
           </div>
           <div
             data-slot="activity-sidebar-footer"
-            className="relative z-20 flex w-full shrink-0 flex-col items-center gap-1.5 px-chrome-inline"
+            className="relative z-20 flex w-full shrink-0 flex-col items-center gap-1 px-1"
           >
             <DiagnosticsActivityControl />
             <ActivityChromeFooter />

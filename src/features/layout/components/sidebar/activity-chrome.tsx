@@ -70,7 +70,7 @@ export function ActivityChrome() {
     <>
       <ContextMenu>
         <ContextMenuTrigger
-          className="flex w-full shrink-0 flex-col gap-1.5 px-chrome-inline pb-2"
+          className="flex w-full shrink-0 flex-col gap-1 px-1 pb-2"
           onContextMenu={(event) => event.stopPropagation()}
         >
           {menuItem}
@@ -154,8 +154,8 @@ export function ActivityChrome() {
 
 export function ActivityChromeFooter() {
   return (
-    <div className="flex w-full flex-col items-center gap-1.5">
-      <div className="flex flex-col items-center gap-1.5">
+    <div className="flex w-full flex-col items-center gap-1">
+      <div className="flex flex-col items-center gap-1">
         <AppUpdateControl compact />
         <RunActionsButton />
         <NotificationsTrigger />

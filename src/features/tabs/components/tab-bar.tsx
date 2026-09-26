@@ -776,40 +776,40 @@ const TabBar = ({
             </div>
           </SortableContext>
 
-          {inTitleBar && paneId && !isBottomPane ? (
-            <div className="flex h-8 shrink-0 items-center">
-              <NewTabMenu paneId={paneId} inTitleBar />
-            </div>
-          ) : null}
-          <div className="pointer-events-none ml-auto flex h-8 shrink-0 items-center gap-1 pl-0.5 opacity-0 group-hover/tab-bar:pointer-events-auto group-hover/tab-bar:opacity-100 group-focus-within/tab-bar:pointer-events-auto group-focus-within/tab-bar:opacity-100 has-data-popup-open:pointer-events-auto has-data-popup-open:opacity-100">
-            {!inTitleBar && paneId && !isBottomPane && <NewTabMenu paneId={paneId} />}
-            {paneId && !disablePaneActions && !isBottomPane && (
-              <>
-                <Button
-                  type="button"
-                  onClick={handleTogglePaneFullscreen}
-                  variant="ghost"
-                  iconOnly
-                  tooltip={isPaneFullscreen ? "Exit full screen" : "Full screen editor"}
-                  aria-label={isPaneFullscreen ? "Exit full screen" : "Full screen editor"}
-                  aria-pressed={isPaneFullscreen}
-                >
-                  {isPaneFullscreen ? <ArrowsInIcon /> : <ArrowsOutIcon />}
-                </Button>
-                {isInSplit && (
+          {/* Pane actions show on hover; in the title bar the new tab button stays visible at the
+              end of the row instead of trailing the last tab. */}
+          <div className="ml-auto flex h-8 shrink-0 items-center gap-1 pl-0.5">
+            <div className="pointer-events-none flex items-center gap-1 opacity-0 group-hover/tab-bar:pointer-events-auto group-hover/tab-bar:opacity-100 group-focus-within/tab-bar:pointer-events-auto group-focus-within/tab-bar:opacity-100 has-data-popup-open:pointer-events-auto has-data-popup-open:opacity-100">
+              {!inTitleBar && paneId && !isBottomPane && <NewTabMenu paneId={paneId} />}
+              {paneId && !disablePaneActions && !isBottomPane && (
+                <>
                   <Button
                     type="button"
-                    onClick={() => closePane(paneId)}
+                    onClick={handleTogglePaneFullscreen}
                     variant="ghost"
                     iconOnly
-                    tooltip="Close split"
-                    aria-label="Close split"
+                    tooltip={isPaneFullscreen ? "Exit full screen" : "Full screen editor"}
+                    aria-label={isPaneFullscreen ? "Exit full screen" : "Full screen editor"}
+                    aria-pressed={isPaneFullscreen}
                   >
-                    <SidebarIcon />
+                    {isPaneFullscreen ? <ArrowsInIcon /> : <ArrowsOutIcon />}
                   </Button>
-                )}
-              </>
-            )}
+                  {isInSplit && (
+                    <Button
+                      type="button"
+                      onClick={() => closePane(paneId)}
+                      variant="ghost"
+                      iconOnly
+                      tooltip="Close split"
+                      aria-label="Close split"
+                    >
+                      <SidebarIcon />
+                    </Button>
+                  )}
+                </>
+              )}
+            </div>
+            {inTitleBar && paneId && !isBottomPane && <NewTabMenu paneId={paneId} />}
           </div>
         </TabBarSurface>
         {draggedBuffer ? (

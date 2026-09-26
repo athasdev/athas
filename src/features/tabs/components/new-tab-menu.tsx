@@ -12,13 +12,7 @@ import {
 } from "@/ui/dropdown";
 import { FilePlusIcon, PlusIcon, SparkleIcon, TerminalWindowIcon } from "@/ui/icons";
 
-export function NewTabMenu({
-  paneId,
-  inTitleBar = false,
-}: {
-  paneId: string;
-  inTitleBar?: boolean;
-}) {
+export function NewTabMenu({ paneId }: { paneId: string }) {
   const { setActivePane } = usePaneStore.use.actions();
   const { openBuffer, openTerminalBuffer } = useBufferStore.use.actions();
   const terminalEnabled = useSettingsStore((state) => state.settings.coreFeatures.terminal);
@@ -33,13 +27,7 @@ export function NewTabMenu({
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button
-            variant="ghost"
-            iconOnly
-            size={inTitleBar ? "sm" : "md"}
-            tooltip="New tab"
-            aria-label="New tab"
-          />
+          <Button variant="ghost" iconOnly size="md" tooltip="New tab" aria-label="New tab" />
         }
       >
         <PlusIcon optical="md" />

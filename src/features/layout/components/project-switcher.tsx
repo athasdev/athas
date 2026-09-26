@@ -209,7 +209,7 @@ export function ProjectSwitcher({
                   projectPath={projectPath}
                   iconPath={displayIconPath}
                   className="size-4"
-                  imageClassName="size-7"
+                  imageClassName="size-5.5"
                 />
               </Button>
             }

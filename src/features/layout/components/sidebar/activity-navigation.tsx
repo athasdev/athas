@@ -102,7 +102,7 @@ export function ActivityRailNavigation({ items }: { items: ActivityNavigationIte
     <nav
       data-slot="activity-rail-navigation"
       aria-label="Activity views"
-      className="flex w-full flex-col gap-1.5"
+      className="flex w-full flex-col gap-1"
     >
       {groups
         .filter((group) => group.items.length > 0 || (group.more && moreItems.length > 0))
@@ -111,7 +111,7 @@ export function ActivityRailNavigation({ items }: { items: ActivityNavigationIte
             key={group.label}
             role="group"
             aria-label={group.label}
-            className="flex flex-col gap-1.5"
+            className="flex flex-col gap-1"
           >
             {group.items.map((item) => (
               <NavigationItem key={item.id} item={item} />

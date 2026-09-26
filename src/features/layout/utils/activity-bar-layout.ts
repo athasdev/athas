@@ -1,6 +1,6 @@
 import { getUiFontScale } from "@/features/settings/lib/ui-font-size";
 
-const COLLAPSED_ACTIVITY_BAR_INLINE_PADDING = 8;
+const COLLAPSED_ACTIVITY_BAR_INLINE_PADDING = 4;
 const COLLAPSED_ACTIVITY_BAR_CONTROL_WIDTH = 32;
 
 export const COLLAPSED_ACTIVITY_BAR_WIDTH =

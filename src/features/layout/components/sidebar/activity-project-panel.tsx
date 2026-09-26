@@ -23,7 +23,7 @@ export function ActivityProjectPanel({
       aria-hidden={current ? undefined : true}
       inert={current ? undefined : true}
       className={cn(
-        "relative box-border flex h-full w-full shrink-0 snap-start snap-always flex-col items-start gap-2 overflow-hidden px-chrome-inline pb-1.5",
+        "relative box-border flex h-full w-full shrink-0 snap-start snap-always flex-col items-start gap-2 overflow-hidden px-1 pb-1.5",
         !current && "pointer-events-none",
       )}
     >

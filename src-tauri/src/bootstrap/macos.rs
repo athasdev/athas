@@ -805,7 +805,7 @@ pub fn set_window_document_state(
 
 /// Where the macOS traffic lights sit. Keep in sync with `trafficLightPosition` in the Tauri
 /// config files, which place them for windows created from config.
-pub const TRAFFIC_LIGHT_POSITION: (f64, f64) = (14.0, 25.5);
+pub const TRAFFIC_LIGHT_POSITION: (f64, f64) = (14.0, 22.5);
 
 /// Puts the traffic lights back at `TRAFFIC_LIGHT_POSITION`. AppKit lays the title bar out again
 /// when the title or represented document changes, dropping the inset Tauri applied, and Tauri

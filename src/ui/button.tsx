@@ -63,10 +63,12 @@ export const buttonVariants = cva(
     },
     compoundVariants: [
       { variant: "link", className: "h-auto px-0" },
-      { iconOnly: true, size: "xs", className: "w-5" },
-      { iconOnly: true, size: "sm", className: "w-chrome-control" },
-      { iconOnly: true, size: "md", className: "w-7" },
-      { iconOnly: true, size: "lg", className: "w-rail-control" },
+      // The size's inline padding is listed after `iconOnly`'s p-0 and would win, squeezing
+      // non-SVG content such as project images to a few pixels.
+      { iconOnly: true, size: "xs", className: "w-5 px-0" },
+      { iconOnly: true, size: "sm", className: "w-chrome-control px-0" },
+      { iconOnly: true, size: "md", className: "w-7 px-0" },
+      { iconOnly: true, size: "lg", className: "w-rail-control px-0" },
     ],
   },
 );

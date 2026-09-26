@@ -249,7 +249,7 @@
   }
 
   html.platform-macos {
-    --athas-title-bar-height: 2.75rem;
+    --athas-title-bar-height: 2.5rem;
     --athas-tab-bar-height: 2.125rem;
     --athas-title-bar-leading-inset: 4.75rem;
   }
