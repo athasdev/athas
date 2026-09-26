@@ -264,8 +264,8 @@ const WindowMenuBar = ({
       ),
       View: (
         <MenubarContent>
-          <MenubarItem shortcut="mod+e" onClick={() => handleClickEmit("menu_toggle_sidebar")}>
-            Toggle Secondary Sidebar
+          <MenubarItem shortcut="mod+b" onClick={() => handleClickEmit("menu_toggle_sidebar")}>
+            Toggle Sidebar
           </MenubarItem>
           <MenubarItem shortcut="mod+j" onClick={() => handleClickEmit("menu_toggle_terminal")}>
             Toggle Terminal

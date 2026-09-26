@@ -354,6 +354,7 @@ export const defaultKeymaps: Keybinding[] = [
   },
 
   // View Operations
+  { key: "cmd+b", command: "workbench.toggleSidebar", source: "default" },
   { key: "cmd+e", command: "workbench.toggleSidebar", source: "default" },
   { key: "cmd+j", command: "workbench.toggleTerminal", source: "default" },
   { key: "cmd+`", command: "workbench.toggleTerminalAlt", source: "default" },

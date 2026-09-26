@@ -787,20 +787,12 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["keyboard", "shortcut", "command", "palette"],
   },
   {
-    id: "keyboard-toggle-activity-sidebar",
-    tab: "keyboard",
-    section: "Navigation",
-    label: "Toggle Activity Sidebar",
-    description: "Expand/collapse activity sidebar",
-    keywords: ["keyboard", "shortcut", "activity", "sidebar", "toggle"],
-  },
-  {
     id: "keyboard-toggle-sidebar",
     tab: "keyboard",
     section: "Navigation",
-    label: "Toggle Secondary Sidebar",
-    description: "Show/hide secondary sidebar",
-    keywords: ["keyboard", "shortcut", "secondary", "sidebar", "toggle"],
+    label: "Toggle Sidebar",
+    description: "Show/hide the sidebar",
+    keywords: ["keyboard", "shortcut", "sidebar", "toggle"],
   },
   {
     id: "keyboard-next-tab",

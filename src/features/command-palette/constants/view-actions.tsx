@@ -63,10 +63,8 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
   return [
     {
       id: "toggle-sidebar",
-      label: isSidebarVisible ? "View: Hide Secondary Sidebar" : "View: Show Secondary Sidebar",
-      description: isSidebarVisible
-        ? "Hide the secondary sidebar panel"
-        : "Show the secondary sidebar panel",
+      label: isSidebarVisible ? "View: Hide Sidebar" : "View: Show Sidebar",
+      description: isSidebarVisible ? "Hide the sidebar panel" : "Show the sidebar panel",
       icon: <SidebarIcon />,
       category: "View",
       commandId: "workbench.toggleSidebar",

@@ -605,9 +605,9 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
       .item(&MenuItem::with_id(
          app,
          "toggle_sidebar",
-         "Show/Hide Secondary Sidebar",
+         "Show/Hide Sidebar",
          true,
-         Some("CmdOrCtrl+E"),
+         Some("CmdOrCtrl+B"),
       )?)
       .item(&MenuItem::with_id(
          app,

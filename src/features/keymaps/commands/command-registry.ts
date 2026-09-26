@@ -645,9 +645,9 @@ const viewCommands: Command[] = [
   },
   {
     id: "workbench.toggleSidebar",
-    title: "Toggle Secondary Sidebar",
+    title: "Toggle Sidebar",
     category: "View",
-    keybinding: "cmd+e",
+    keybinding: "cmd+b",
     execute: toggleSidebar,
   },
   {
