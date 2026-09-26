@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Badge, { type BadgeTone } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { EmptyState } from "@/ui/empty";
@@ -36,6 +37,13 @@ function formatTime(timestampMs: number): string {
   return `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}.${pad(date.getMilliseconds(), 3)}`;
 }
 
+/** Estimated heights before a row is measured; detail rows vary with their payload. */
+const MESSAGE_ROW_HEIGHT = 33;
+const DETAIL_ROW_HEIGHT = 240;
+const COLUMN_COUNT = 7;
+
+type LogRow = { kind: "message" | "detail"; message: AcpTrafficMessage };
+
 function latencyLabel(message: AcpTrafficMessage): string {
   if (message.latencyMs !== null) return `${message.latencyMs} ms`;
   return message.kind === "request" ? "Pending" : "";
@@ -56,6 +64,40 @@ export function AcpTrafficLog({
   onCopy,
 }: AcpTrafficLogProps) {
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
+  const [scrollTarget, setScrollTarget] = useState<string | null>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
+
+  // Only the rows in view are rendered, so a long log stays cheap to scroll and update.
+  const rows = useMemo(
+    () =>
+      messages.flatMap((message): LogRow[] =>
+        expanded.has(message.key)
+          ? [
+              { kind: "message", message },
+              { kind: "detail", message },
+            ]
+          : [{ kind: "message", message }],
+      ),
+    [messages, expanded],
+  );
+  const virtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => viewportRef.current,
+    estimateSize: (index) =>
+      rows[index]?.kind === "detail" ? DETAIL_ROW_HEIGHT : MESSAGE_ROW_HEIGHT,
+    getItemKey: (index) => `${rows[index].message.key}:${rows[index].kind}`,
+    initialRect: { width: 0, height: 800 },
+    overscan: 10,
+  });
+
+  useEffect(() => {
+    if (!scrollTarget) return;
+    const index = rows.findIndex(
+      (row) => row.kind === "message" && row.message.key === scrollTarget,
+    );
+    if (index >= 0) virtualizer.scrollToIndex(index, { align: "start" });
+    setScrollTarget(null);
+  }, [rows, scrollTarget, virtualizer]);
 
   const toggle = (key: string, open?: boolean) => {
     setExpanded((current) => {
@@ -68,21 +110,23 @@ export function AcpTrafficLog({
 
   const revealPartner = (message: AcpTrafficMessage) => {
     if (!message.partnerKey) return;
-    const partnerKey = message.partnerKey;
-    toggle(partnerKey, true);
-    requestAnimationFrame(() => {
-      document
-        .querySelector(`[data-traffic-key="${CSS.escape(partnerKey)}"]`)
-        ?.scrollIntoView({ block: "nearest" });
-    });
+    toggle(message.partnerKey, true);
+    setScrollTarget(message.partnerKey);
   };
 
   if (messages.length === 0) {
     return <EmptyState className="min-h-40" message={emptyMessage} />;
   }
 
+  const virtualRows = virtualizer.getVirtualItems();
+  const paddingTop = virtualRows[0]?.start ?? 0;
+  const paddingBottom =
+    virtualRows.length > 0
+      ? virtualizer.getTotalSize() - virtualRows[virtualRows.length - 1].end
+      : 0;
+
   return (
-    <ScrollArea fill="flex">
+    <ScrollArea fill="flex" viewportProps={{ ref: viewportRef }}>
       <Table>
         <TableHeader>
           <TableRow>
@@ -98,13 +142,68 @@ export function AcpTrafficLog({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {messages.map((message) => {
+          {paddingTop > 0 ? (
+            <tr aria-hidden="true">
+              <td colSpan={COLUMN_COUNT} style={{ height: paddingTop, padding: 0 }} />
+            </tr>
+          ) : null}
+          {virtualRows.map((virtualRow) => {
+            const { kind, message } = rows[virtualRow.index];
+            if (kind === "detail") {
+              const partner = message.partnerKey
+                ? messagesByKey.get(message.partnerKey)
+                : undefined;
+              return (
+                <TableRow
+                  key={virtualRow.key}
+                  ref={virtualizer.measureElement}
+                  data-index={virtualRow.index}
+                >
+                  <TableCell />
+                  <TableCell colSpan={6}>
+                    <div className="flex flex-col gap-2 pb-2">
+                      <div className="flex flex-wrap items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onCopy(message)}
+                        >
+                          <CopyIcon />
+                          Copy
+                        </Button>
+                        {partner ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => revealPartner(message)}
+                          >
+                            {partner.kind === "response" ? "Show response" : "Show request"}
+                          </Button>
+                        ) : null}
+                        {message.sessionId ? (
+                          <span className="font-mono text-subtle-foreground ui-text-caption">
+                            {message.sessionId}
+                          </span>
+                        ) : null}
+                        {message.truncated ? (
+                          <Badge tone="warning">Cut to the first 64 KiB</Badge>
+                        ) : null}
+                      </div>
+                      <AcpJsonBlock value={formatTrafficMessage(message)} />
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            }
             const isOpen = expanded.has(message.key);
             const direction = DIRECTION[message.direction];
-            const partner = message.partnerKey ? messagesByKey.get(message.partnerKey) : undefined;
-            return [
+            return (
               <TableRow
-                key={message.key}
+                key={virtualRow.key}
+                ref={virtualizer.measureElement}
+                data-index={virtualRow.index}
                 data-traffic-key={message.key}
                 data-state={isOpen ? "selected" : undefined}
                 onClick={() => toggle(message.key)}
@@ -144,48 +243,14 @@ export function AcpTrafficLog({
                 <TableCell className="tabular-nums text-subtle-foreground">
                   {latencyLabel(message)}
                 </TableCell>
-              </TableRow>,
-              isOpen ? (
-                <TableRow key={`${message.key}:detail`}>
-                  <TableCell />
-                  <TableCell colSpan={6}>
-                    <div className="flex flex-col gap-2 pb-2">
-                      <div className="flex flex-wrap items-center gap-1">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onCopy(message)}
-                        >
-                          <CopyIcon />
-                          Copy
-                        </Button>
-                        {partner ? (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => revealPartner(message)}
-                          >
-                            {partner.kind === "response" ? "Show response" : "Show request"}
-                          </Button>
-                        ) : null}
-                        {message.sessionId ? (
-                          <span className="font-mono text-subtle-foreground ui-text-caption">
-                            {message.sessionId}
-                          </span>
-                        ) : null}
-                        {message.truncated ? (
-                          <Badge tone="warning">Cut to the first 64 KiB</Badge>
-                        ) : null}
-                      </div>
-                      <AcpJsonBlock value={formatTrafficMessage(message)} />
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : null,
-            ];
+              </TableRow>
+            );
           })}
+          {paddingBottom > 0 ? (
+            <tr aria-hidden="true">
+              <td colSpan={COLUMN_COUNT} style={{ height: paddingBottom, padding: 0 }} />
+            </tr>
+          ) : null}
         </TableBody>
       </Table>
     </ScrollArea>

@@ -39,6 +39,32 @@ describe("ACP inspector panels", () => {
     expect(markup).toContain('aria-expanded="false"');
   });
 
+  it("renders only the rows near the top of a long log", () => {
+    const messages = buildTrafficMessages(
+      Array.from({ length: 500 }, (_, seq) => ({
+        seq,
+        timestampMs: 1000 + seq,
+        direction: "stderr" as const,
+        line: `stderr-line-${seq}.`,
+        truncated: false,
+        originalBytes: 0,
+      })),
+    );
+
+    const markup = renderToStaticMarkup(
+      <AcpTrafficLog
+        messages={messages}
+        messagesByKey={new Map(messages.map((message) => [message.key, message]))}
+        emptyMessage="Nothing"
+        onCopy={() => {}}
+      />,
+    );
+
+    expect(markup).toContain("stderr-line-0.");
+    expect(markup).not.toContain("stderr-line-499.");
+    expect(markup.match(/data-traffic-key=/g)?.length ?? 0).toBeLessThan(100);
+  });
+
   it("explains an empty log", () => {
     const markup = renderToStaticMarkup(
       <AcpTrafficLog
