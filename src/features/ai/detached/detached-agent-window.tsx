@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { AgentTab } from "@/features/ai/components/agent-tab";
 import { AgentSessionIcon } from "@/features/ai/components/icons/agent-session-icon";
+import { useAcpEventSync } from "@/features/ai/hooks/use-acp-event-sync";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
@@ -32,6 +33,7 @@ const RETURN_TIMEOUT_MS = 10_000;
  * drafts and comes back to the main window when this window closes.
  */
 export default function DetachedAgentWindow() {
+  useAcpEventSync();
   const [ready, setReady] = useState(false);
   const [returning, setReturning] = useState(false);
   const [sessionError, setSessionError] = useState<string | null>(null);

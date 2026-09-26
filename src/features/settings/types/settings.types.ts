@@ -1,5 +1,6 @@
 import type { CoreFeaturesState } from "./feature.types";
 import type { AIChatSkill } from "@/features/ai/types/skills.types";
+import type { McpServerSetting } from "@/features/ai/types/mcp-server.types";
 import type {
   GitSidebarItemId,
   GitSidebarTabId,
@@ -122,7 +123,14 @@ export interface Settings {
   aiAutocompleteCustomModelId: string;
   aiDefaultSessionMode: string;
   aiAgentNotifications: boolean;
+  /** Notify when an agent turn finishes or fails, not only when it waits on the user. */
+  aiAgentFinishNotifications: boolean;
+  aiAgentNotificationSound: boolean;
+  /** Whether new agent chats start with "Follow agent" on. */
+  aiFollowAgent: boolean;
   aiSkills: AIChatSkill[];
+  /** MCP servers offered to ACP agents. Secrets live in secure storage, not here. */
+  mcpServers: McpServerSetting[];
   v0DesignSystems: LegacyV0DesignSystemProfile[];
   activeV0DesignSystemId: string;
   ollamaBaseUrl: string;

@@ -32,8 +32,12 @@ import Textarea from "@/ui/textarea";
 import { ProviderIcon } from "../icons/provider-icons";
 import MarkdownRenderer from "../messages/markdown-renderer";
 import { PlanBlockDisplay } from "../messages/plan-block-display";
+import { AgentPlan } from "../messages/agent-plan";
+import { AgentStopNotice } from "../messages/agent-stop-notice";
 import { ToolCallList } from "../messages/tool-call-display";
 import { buildAssistantTimeline } from "@/features/ai/lib/assistant-timeline";
+import { describeTurnUsage, formatTurnUsage } from "@/features/ai/lib/acp-usage";
+import Tooltip from "@/ui/tooltip";
 
 interface ChatMessageProps {
   onRetry?: () => void | Promise<void>;
@@ -122,7 +126,13 @@ function UserMessageText({ text, query }: { text: string; query: string }) {
 function ChatResponseStatus({ phase }: { phase: AIMessage["responsePhase"] }) {
   const isStarting = phase === "starting";
   const isThinking = phase === "thinking";
-  const label = isStarting ? "Starting agent…" : isThinking ? "Thinking…" : "Waiting for response…";
+  const label = isStarting
+    ? "Starting agent…"
+    : isThinking
+      ? "Thinking…"
+      : phase === "stalled"
+        ? "Still waiting for the agent…"
+        : "Waiting for response…";
   const state: ThinkingOrbProps["state"] = isThinking ? "breathing" : "connecting";
 
   return (
@@ -306,6 +316,7 @@ export const ChatMessage = memo(function ChatMessage({
         <AssistantMessageAvatar iconId={assistantIconId} label={assistantLabel} />
         <MessageContent className={ASSISTANT_CONTENT_INSET}>
           <ToolCallList toolCalls={message.toolCalls!} isStreaming={message.isStreaming} />
+          {message.stopNotice ? <AgentStopNotice notice={message.stopNotice} /> : null}
         </MessageContent>
       </Message>
     );
@@ -385,6 +396,10 @@ export const ChatMessage = memo(function ChatMessage({
               </div>
             )}
 
+            {message.plan?.length ? (
+              <AgentPlan entries={message.plan} isStreaming={message.isStreaming} />
+            ) : null}
+
             {hasPlanBlock(message.content) ? (
               <>
                 <MessageResponse>
@@ -424,6 +439,7 @@ export const ChatMessage = memo(function ChatMessage({
                 </div>
               ))
             )}
+            {message.stopNotice ? <AgentStopNotice notice={message.stopNotice} /> : null}
           </BubbleContent>
         </Bubble>
         {showActions && message.content.trim() ? (
@@ -437,6 +453,11 @@ export const ChatMessage = memo(function ChatMessage({
                 label="Copy outcome as Markdown"
                 icon={UploadIcon}
               />
+            ) : null}
+            {message.turnUsage ? (
+              <Tooltip content={describeTurnUsage(message.turnUsage)}>
+                <span className="px-1 tabular-nums">{formatTurnUsage(message.turnUsage)}</span>
+              </Tooltip>
             ) : null}
           </MessageFooter>
         ) : null}

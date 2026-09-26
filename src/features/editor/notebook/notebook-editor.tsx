@@ -201,7 +201,7 @@ function MarkdownCellPreview({ source }: { source: string }) {
   const html = useHighlightedMarkdown(source);
   return (
     <div
-      className="markdown-preview block! h-auto! overflow-visible! bg-transparent! p-0! py-1.5 [&_.markdown-content]:max-w-none"
+      className="markdown-preview typeset typeset-preview block! h-auto! overflow-visible! bg-transparent! p-0! py-1.5"
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );
@@ -211,14 +211,14 @@ function MarkdownOutput({ source }: { source: string }) {
   const html = useHighlightedMarkdown(source);
   return (
     <div
-      className="markdown-preview overflow-auto rounded-md border border-border bg-surface p-2.5 [&_.markdown-content]:max-w-none"
+      className="markdown-preview typeset typeset-preview overflow-auto rounded-md border border-border bg-surface p-2.5"
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );
 }
 
 const outputClassName =
-  "m-0 overflow-auto rounded-md border border-border bg-surface p-2.5 font-mono ui-text-sm leading-[1.55] text-foreground";
+  "m-0 overflow-auto rounded-md border border-border bg-surface p-2.5 font-mono ui-text-sm leading-normal text-foreground";
 
 function NotebookOutputView({ output }: { output: NotebookOutput }) {
   if (output.output_type === "stream") {
@@ -514,7 +514,7 @@ function NotebookCellView({
           ) : (
             <textarea
               aria-label="Cell source"
-              className="m-0 block min-h-23 w-full resize-y rounded-md border border-border bg-surface p-2.5 font-mono ui-text-sm leading-[1.55] text-foreground outline-none focus:border-primary"
+              className="m-0 block min-h-23 w-full resize-y rounded-md border border-border bg-surface p-2.5 font-mono ui-text-sm leading-normal text-foreground outline-none focus:border-primary"
               value={source}
               spellCheck={isMarkdown}
               onChange={(event) => onSourceChange(cellIndex, event.target.value)}
@@ -768,7 +768,7 @@ export function NotebookEditor() {
         data-notebook-editor
         tone="error"
         role="alert"
-        className="h-full overflow-auto bg-background px-5.5 py-4.5 pb-[calc(2rem+env(safe-area-inset-bottom))]"
+        className="h-full overflow-auto bg-background px-5.5 py-4.5 pb-safe-8"
         style={{ fontSize, fontFamily: uiFontFamily }}
       >
         <EmptyMedia>
@@ -784,7 +784,7 @@ export function NotebookEditor() {
   return (
     <div
       data-notebook-editor
-      className="h-full overflow-auto bg-background px-5.5 py-4.5 pb-[calc(2rem+env(safe-area-inset-bottom))] text-foreground"
+      className="h-full overflow-auto bg-background px-5.5 py-4.5 pb-safe-8 text-foreground"
       style={{ fontSize: `${fontSize}px`, fontFamily: `${uiFontFamily}, sans-serif` }}
     >
       <div className="mx-auto w-[min(100%,980px)]">

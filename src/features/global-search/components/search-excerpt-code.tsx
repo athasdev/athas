@@ -159,10 +159,7 @@ export const SearchExcerptCode = memo(function SearchExcerptCode({
   );
 
   return (
-    <div
-      className="font-mono code-editor-font-override overflow-hidden bg-background py-2"
-      style={surfaceStyle}
-    >
+    <div className="font-mono overflow-hidden bg-background py-2" style={surfaceStyle}>
       {lines.map((line, lineIndex) => (
         <SearchExcerptLine
           key={`${lineIndex}-${excerpt.lineNumberMap[lineIndex] ?? "gap"}`}

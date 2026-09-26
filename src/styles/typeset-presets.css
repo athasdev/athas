@@ -1,0 +1,47 @@
+/* Presets for shadcn Typeset (src/styles/typeset.css, vendored; replace it whole to update). They map
+   Typeset onto the theme's variables and set the rhythm for each surface that renders markdown. */
+@layer components {
+  .typeset-chat,
+  .typeset-preview {
+    --typeset-size: 1em;
+    --typeset-muted: var(--color-muted-foreground);
+    --typeset-rule: var(--color-border);
+    /* Typeset reads --color-muted for code backgrounds; this theme calls that surface. */
+    --color-muted: var(--color-surface);
+    /* Text follows the surrounding UI size at every window width. */
+    font-size: var(--typeset-size);
+  }
+
+  .typeset-chat {
+    --typeset-leading: 1.625;
+    --typeset-flow: 0.5em;
+  }
+
+  /* Markdown files, notebooks, release notes and GitHub content. */
+  .typeset-preview {
+    --typeset-leading: 1.68;
+    --typeset-flow: 0.75em;
+  }
+
+  .typeset-preview :where(a) {
+    color: var(--color-primary);
+    font-weight: inherit;
+    text-decoration-color: transparent;
+  }
+
+  .typeset-preview :where(a:hover) {
+    text-decoration-color: currentColor;
+  }
+
+  /* Tables span the content so column alignment reads. */
+  :is(.typeset-chat, .typeset-preview) :where(table) {
+    width: 100%;
+  }
+
+  /* Chat headings mark structure by weight, not size. */
+  .typeset-chat :where(h1, h2, h3, h4, h5, h6) {
+    font-family: inherit;
+    font-size: 1em;
+    line-height: inherit;
+  }
+}

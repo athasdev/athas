@@ -6,6 +6,7 @@ export type SingletonToolBufferType = Extract<
   | "diagnostics"
   | "references"
   | "continuousAgents"
+  | "acpInspector"
   | "workspaces"
   | "settings"
   | "extensions"
@@ -30,6 +31,10 @@ export const SINGLETON_TOOL_BUFFER_METADATA: Record<
   continuousAgents: {
     path: "continuous-agents://workspace",
     name: "Continuous Agents",
+  },
+  acpInspector: {
+    path: "acp-inspector://traffic",
+    name: "ACP Inspector",
   },
   workspaces: { path: "workspaces://management", name: "Workspaces" },
   settings: {

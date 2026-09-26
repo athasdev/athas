@@ -34,7 +34,7 @@ const inputVariants = cva(
       font: {
         default: "font-sans",
         mono: "font-mono",
-        inherit: "[font-family:inherit] [font-size:inherit]",
+        inherit: "font-inherit",
       },
       variant: {
         default:

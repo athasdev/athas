@@ -25,7 +25,6 @@ const useAIChatStoreBase = create<AIChatStore>()(
         mode: state.mode,
         outputStyle: state.outputStyle,
         selectedAgentId: state.selectedAgentId,
-        sessionModeState: state.sessionModeState,
       }),
       merge: (persistedState, currentState) => {
         const persisted = persistedState as Partial<AIChatState> | undefined;
@@ -34,11 +33,8 @@ const useAIChatStoreBase = create<AIChatStore>()(
           mode: persisted?.mode ?? "chat",
           outputStyle: persisted?.outputStyle ?? "default",
           selectedAgentId: persisted?.selectedAgentId ?? "custom",
-          sessionModeState: persisted?.sessionModeState ?? {
-            currentModeId: null,
-            availableModes: [],
-          },
-          acpStatus: null,
+          acpAgents: {},
+          acpSessions: {},
         };
       },
     },

@@ -1,0 +1,18 @@
+{
+  "jsPlugins": ["@shadcn/lint"],
+  "settings": {
+    "shadcn": {
+      "ignoreImports": ["^@/ui/icons(/|$)", "^@/ui/brand-marks(/|$)"]
+    }
+  },
+  "rules": {
+    "shadcn/no-restyle": [
+      "warn",
+      {
+        "allow": ["layout", "not-typeset"]
+      }
+    ],
+    "shadcn/no-inline-styles": "warn",
+    "shadcn/require-static-classes": "warn"
+  }
+}

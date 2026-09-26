@@ -63,6 +63,7 @@ export const getChatCompletionStream = async (
   onResourceChunk?: (uri: string, name: string | null) => void,
   chatId?: string,
   systemPromptOverride?: string,
+  onResponsePhase?: (phase: "starting" | "waiting" | "stalled") => void,
 ): Promise<void> => {
   try {
     if (context.projectRoot) {
@@ -107,6 +108,7 @@ export const getChatCompletionStream = async (
           onEvent: onAcpEvent,
           onImageChunk,
           onResourceChunk,
+          onResponsePhase,
         },
         chatId,
       );

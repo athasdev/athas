@@ -425,7 +425,7 @@ const GitTagManager = ({ query, repoPath, onRefresh, onViewTagComparison }: GitT
                 </SidebarListMenuItem>
                 <CollapsibleContent>
                   <div className="px-1.5 pt-1 pb-3">
-                    <div className="grid gap-2 pl-[calc(1em+var(--athas-chrome-gap))]">
+                    <div className="grid gap-2 pl-disclosure-indent">
                       <div className="flex min-w-0 items-center gap-2">
                         <span className="ui-text-sm w-14 shrink-0 text-subtle-foreground">
                           Commit

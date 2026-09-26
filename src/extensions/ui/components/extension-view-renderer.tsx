@@ -249,7 +249,7 @@ function renderNode(
           key={key}
           className={cn(
             "max-w-full select-text overflow-x-auto rounded-lg bg-surface p-2 font-mono ui-text-sm text-foreground",
-            node.wrap && "whitespace-pre-wrap break-words",
+            node.wrap && "whitespace-pre-wrap wrap-break-word",
           )}
         >
           <code data-language={node.language}>{node.value}</code>

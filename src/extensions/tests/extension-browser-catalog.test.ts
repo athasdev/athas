@@ -5,6 +5,7 @@ import { bundledExtensionManifests } from "@/extensions/bundled/bundled-extensio
 import { buildExtensionCatalog } from "@/extensions/ui/components/build-extension-catalog";
 import type { AvailableExtension } from "@/extensions/registry/extension-store-types";
 import type { ExtensionManifest } from "@/extensions/types/extension-manifest";
+import type { AgentConfig, RegistryAgentInfo } from "@/features/ai/types/acp.types";
 
 function available(manifest: ExtensionManifest, isInstalled = true): AvailableExtension {
   return {
@@ -129,6 +130,123 @@ describe("integration browser catalog", () => {
       version: "2.0.0",
       installedVersion: "1.0.0",
       availableVersion: "2.0.0",
+      hasUpdate: true,
+    });
+  });
+
+  function registryInfo(overrides: Partial<RegistryAgentInfo> = {}): RegistryAgentInfo {
+    return {
+      id: "goose",
+      version: "1.52.0",
+      repository: "https://github.com/block/goose",
+      website: null,
+      authors: ["Block"],
+      license: "Apache-2.0",
+      licenseUrl: null,
+      distribution: "binary",
+      installsFromRegistry: true,
+      unavailableReason: null,
+      quarantined: null,
+      ...overrides,
+    };
+  }
+
+  function registryAgent(overrides: Partial<AgentConfig> = {}): AgentConfig {
+    return {
+      id: "goose",
+      name: "Goose",
+      binaryName: "goose",
+      binaryPath: null,
+      args: ["acp"],
+      envVars: {},
+      icon: "data:image/svg+xml;base64,",
+      description: "An open source agent",
+      installed: false,
+      installRuntime: "binary",
+      installPackage: null,
+      availableVersion: "1.52.0",
+      installedVersion: null,
+      updateAvailable: false,
+      managed: false,
+      canInstall: true,
+      source: "registry",
+      registry: registryInfo(),
+      ...overrides,
+    };
+  }
+
+  function catalogFor(agents: AgentConfig[], extensions = new Map<string, AvailableExtension>()) {
+    return buildExtensionCatalog({
+      availableExtensions: extensions,
+      agents,
+      marketplaceSkills: [],
+      aiSkills: [],
+      selectedThemeId: "athas-dark",
+      selectedIconThemeId: "pierre-icons-complete",
+    });
+  }
+
+  it("lists registry-only agents with their publisher, source and license", () => {
+    const goose = catalogFor([registryAgent()]).find((item) => item.id === "agent:goose");
+
+    expect(goose).toMatchObject({
+      category: "agent",
+      canInstall: true,
+      publisher: "Block",
+      sourceUrl: "https://github.com/block/goose",
+      license: "Apache-2.0",
+      distribution: "ACP Registry, verified binary",
+    });
+    expect(goose?.installNote).toBeUndefined();
+  });
+
+  it("explains why a registry agent cannot be installed", () => {
+    const crow = catalogFor([
+      registryAgent({
+        id: "crow-cli",
+        canInstall: false,
+        registry: registryInfo({
+          installsFromRegistry: false,
+          distribution: null,
+          unavailableReason: "Quarantined by the ACP Registry: Broken",
+          quarantined: "Broken",
+        }),
+      }),
+    ]).find((item) => item.id === "agent:crow-cli");
+
+    expect(crow).toMatchObject({
+      canInstall: false,
+      installNote: "Quarantined by the ACP Registry: Broken",
+    });
+    expect(crow?.distribution).toBeUndefined();
+  });
+
+  it("adds registry details to agents Athas ships a manifest for", () => {
+    const geminiManifest = manifest({
+      id: "athas.agent.gemini-cli",
+      agents: [{ id: "gemini-cli", name: "Gemini CLI", binaryName: "gemini", args: ["--acp"] }],
+    });
+    const gemini = catalogFor(
+      [
+        registryAgent({
+          id: "gemini-cli",
+          name: "Gemini CLI",
+          source: "extension",
+          availableVersion: "0.61.0",
+          installed: true,
+          installedVersion: "0.58.0",
+          updateAvailable: true,
+          registry: registryInfo({ id: "gemini", distribution: "npx", authors: ["Google"] }),
+        }),
+      ],
+      new Map([[geminiManifest.id, available(geminiManifest)]]),
+    ).filter((item) => item.id === "agent:gemini-cli");
+
+    expect(gemini).toHaveLength(1);
+    expect(gemini[0]).toMatchObject({
+      publisher: "Google",
+      distribution: "ACP Registry, npm package",
+      availableVersion: "0.61.0",
       hasUpdate: true,
     });
   });

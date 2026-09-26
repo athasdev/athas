@@ -25,6 +25,16 @@ export interface EditorNavigationTarget {
   range: Range;
 }
 
+/**
+ * A line to scroll into view in whichever editor shows `bufferId`, active pane or not, without
+ * moving focus or the cursor. Following an agent uses it so the chat keeps the keyboard.
+ */
+export interface EditorRevealTarget {
+  bufferId: string;
+  /** 1-based. */
+  line: number;
+}
+
 // Editor View State Cache Manager - caches cursor position and scroll offset per buffer
 class EditorViewStateCacheManager {
   private cache = new Map<string, EditorViewState>();
@@ -224,6 +234,7 @@ interface EditorState {
   disabled: boolean;
   activeEditorViewKey: string | null;
   pendingNavigation: EditorNavigationTarget | null;
+  pendingReveal: EditorRevealTarget | null;
 
   // Actions
   actions: EditorStateActions;
@@ -231,6 +242,7 @@ interface EditorState {
 
 interface EditorStateActions {
   requestNavigation: (target: EditorNavigationTarget | null) => void;
+  requestReveal: (target: EditorRevealTarget | null) => void;
   // Cursor actions
   setCursorPosition: (position: Position, options?: { ensureVisible?: boolean }) => void;
   setSelection: (selection?: Range) => void;
@@ -301,10 +313,12 @@ export const useEditorStateStore = createSelectors(
       disabled: false,
       activeEditorViewKey: null,
       pendingNavigation: null,
+      pendingReveal: null,
 
       // Actions
       actions: {
         requestNavigation: (pendingNavigation) => set({ pendingNavigation }),
+        requestReveal: (pendingReveal) => set({ pendingReveal }),
         // Cursor actions
         setCursorPosition: (position, options) => {
           const currentState = useEditorStateStore.getState();

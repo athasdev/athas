@@ -57,7 +57,7 @@ export function ExtensionDiffPreview({
       <div
         role="table"
         aria-label={`Changed lines in ${filePath}`}
-        className="max-h-72 max-w-full select-text overflow-auto font-mono code-editor-font-override ui-text-sm"
+        className="max-h-72 max-w-full select-text overflow-auto font-mono ui-text-sm"
         data-language={language}
       >
         {lines.map((line, index) => (

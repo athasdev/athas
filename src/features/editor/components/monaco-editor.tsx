@@ -89,6 +89,7 @@ import { useMonacoEditorSettings } from "../engines/monaco/use-monaco-editor-set
 import { registerMonacoVimCommands, toEditorVimMode } from "../engines/monaco/vim-commands";
 import { registerIntelligenceCompletions } from "../engines/monaco/intelligence-completions";
 import { registerMonacoLspProviders } from "../engines/monaco/lsp-providers";
+import { registerAgentEditsCodeLens } from "../engines/monaco/agent-edits-code-lens";
 import { registerMonacoCodeLensProvider } from "../engines/monaco/code-lens-provider";
 
 registerMonacoLspProviders();
@@ -174,6 +175,9 @@ export function MonacoEditor({
 }: MonacoEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
+
+  // Registered on first mount rather than at import, since it reads the AI feature's stores.
+  useEffect(() => registerAgentEditsCodeLens(), []);
   const modelRef = useRef<Monaco.editor.ITextModel | null>(null);
   const vimAdapterRef = useRef<VimAdapterInstance | null>(null);
   const vimStatusRef = useRef<HTMLDivElement | null>(null);
@@ -1781,6 +1785,24 @@ export function MonacoEditor({
       useEditorStateStore.getState().actions.requestNavigation(null);
     }
   }, [isActiveSurface, pendingNavigation]);
+
+  const pendingReveal = useEditorStateStore((state) =>
+    state.pendingReveal?.bufferId === activeBufferId ? state.pendingReveal : null,
+  );
+
+  // Scrolls a line into view for whoever asked (the agent follower) without taking focus or
+  // moving the cursor, so it works in a pane the user is not typing in.
+  useEffect(() => {
+    const editor = editorRef.current;
+    const model = modelRef.current;
+    if (!editor || !model || !pendingReveal) return;
+
+    const line = Math.min(Math.max(1, pendingReveal.line), model.getLineCount());
+    editor.revealLineInCenter(line);
+    if (useEditorStateStore.getState().pendingReveal === pendingReveal) {
+      useEditorStateStore.getState().actions.requestReveal(null);
+    }
+  }, [modelUri, pendingReveal]);
 
   if (!buffer) return null;
 

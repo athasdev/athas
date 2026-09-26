@@ -10,7 +10,16 @@ import {
   StopIcon,
   TerminalIcon,
 } from "@/ui/icons";
-import { memo, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useEffectEvent,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { runChatTerminalCommand } from "@/features/ai/services/chat-terminal-command";
 import { getFolderName } from "@/utils/path-helpers";
 import { getComposerTerminalCommand } from "@/features/ai/utils/composer-terminal-command";
@@ -23,11 +32,14 @@ import {
   type AIChatSkillInsertDetail,
 } from "@/features/ai/lib/skill-events";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
+import { selectChatAcpSession } from "@/features/ai/lib/acp-session-state";
 import { useVoiceInput } from "@/features/ai/hooks/use-voice-input";
 import { useComposerFileDrop } from "@/features/ai/hooks/use-composer-file-drop";
 import { getImageMimeType } from "@/utils/image-file-types";
 import { parsePastedImages, restorePastedImages } from "@/features/ai/lib/image-attachments";
 import { useToast } from "@/features/layout/contexts/toast-context";
+import { isAcpAgent } from "@/features/ai/services/ai-chat-service";
+import { FollowAgentToggle } from "./follow-agent-toggle";
 import {
   getComposerDropdownPosition,
   getComposerText,
@@ -39,7 +51,10 @@ import {
 import type { InlineDropdownPosition, PastedImage } from "@/features/ai/types/chat-composer.types";
 import type { AIChatSkill } from "@/features/ai/types/skills.types";
 import type { SlashCommand } from "@/features/ai/types/acp.types";
-import type { AIChatInputBarProps } from "@/features/ai/types/ai-chat.types";
+import type {
+  AIChatInputBarProps,
+  RestoredComposerPrompt,
+} from "@/features/ai/types/ai-chat.types";
 import type { FileEntry } from "@/features/file-system/types/app.types";
 import { openSidebarResourceBuffer } from "@/features/sidebar/utils/open-sidebar-resource";
 import {
@@ -60,7 +75,9 @@ import { chatContentWidth } from "../chat/chat-content-width";
 import { ComposerEffortSelector } from "./composer-effort-selector";
 import { ComposerAgentSelector } from "./composer-agent-selector";
 import { ChatPreferencesMenu } from "./chat-preferences-menu";
+import { AcpContextMeter } from "./acp-context-meter";
 import { AgentMessageQueue } from "./agent-message-queue";
+import { AgentEditsBar } from "./agent-edits-bar";
 import { FileMentionDropdown } from "../mentions/file-mention-dropdown";
 import { SlashCommandDropdown } from "../mentions/slash-command-dropdown";
 import { ContextSelector } from "../selectors/context-selector";
@@ -90,8 +107,12 @@ const AIChatInputBar = memo(function AIChatInputBar({
   onSendMessage,
   onInterruptAndSend,
   onMoveQueuedMessage,
+  onUpdateQueuedMessage,
   onRemoveQueuedMessage,
+  onSendQueuedMessageNow,
+  onEditQueuedMessage,
   onStopStreaming,
+  restoredPrompt,
 }: AIChatInputBarProps) {
   const inputRef = useRef<HTMLDivElement>(null);
   const composerRef = useRef<HTMLDivElement>(null);
@@ -146,8 +167,10 @@ const AIChatInputBar = memo(function AIChatInputBar({
   });
   const slashCommandRangeRef = useRef({ startIndex: 0, endIndex: 0 });
 
-  const sessionConfigOptions = useAIChatStore((state) => state.sessionConfigOptions);
+  const acpSession = useAIChatStore((state) => selectChatAcpSession(state, chatId));
+  const sessionConfigOptions = acpSession.configOptions;
   const session = useAIChatStore((state) => state.chats.find((chat) => chat.id === chatId));
+  const acpSessionId = session?.acpSessionId ?? null;
   const defaultProviderId = useSettingsStore((state) => state.settings.aiProviderId);
   const defaultModelId = useSettingsStore((state) => state.settings.aiModelId);
   const aiProviderId = session?.providerId ?? defaultProviderId;
@@ -184,7 +207,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
     [chatId, isCustomAgent, onAgentChange, updateSetting],
   );
 
-  const availableSlashCommands = useAIChatStore((state) => state.availableSlashCommands);
+  const availableSlashCommands = acpSession.slashCommands;
   const filteredSlashCommands = useMemo(() => {
     const search = slashCommandState.search.trim().toLowerCase();
     if (!search) return availableSlashCommands;
@@ -1021,6 +1044,16 @@ const AIChatInputBar = memo(function AIChatInputBar({
     [setInput],
   );
 
+  const restorePrompt = useEffectEvent((prompt: RestoredComposerPrompt) => {
+    // Never overwrite something the user already started typing.
+    if (inputValueRef.current.trim() || pastedImages.length > 0) return;
+    replaceInput(prompt.content);
+    setPastedImages(restorePastedImages(prompt.images));
+  });
+  useEffect(() => {
+    if (restoredPrompt) restorePrompt(restoredPrompt);
+  }, [restoredPrompt]);
+
   const handleInterruptAndSend = () => {
     const currentInput = inputValueRef.current;
     if ((!currentInput.trim() && !pastedImages.length) || !isInputEnabled) return;
@@ -1076,10 +1109,21 @@ const AIChatInputBar = memo(function AIChatInputBar({
     <div
       ref={aiChatContainerRef}
       className={cn(
-        "ai-chat-container relative z-20 flex min-w-0 shrink-0 flex-col gap-1",
+        "relative z-20 flex min-w-0 shrink-0 flex-col gap-1",
         isInitialPresentation ? "w-full" : [chatContentWidth(), "mb-3"],
       )}
     >
+      {!isTerminalMode && chatId ? <AgentEditsBar chatId={chatId} /> : null}
+      {!isTerminalMode && (
+        <AgentMessageQueue
+          messages={queuedMessages}
+          onUpdate={onUpdateQueuedMessage}
+          onMove={onMoveQueuedMessage}
+          onRemove={onRemoveQueuedMessage}
+          onSendNow={onSendQueuedMessageNow}
+          onEditingChange={onEditQueuedMessage}
+        />
+      )}
       <Composer
         ref={composerRef}
         data-ai-element="prompt-input"
@@ -1249,20 +1293,8 @@ const AIChatInputBar = memo(function AIChatInputBar({
             />
           </div>
 
-          <AgentMessageQueue
-            messages={queuedMessages}
-            onEdit={(index) => {
-              const message = queuedMessages[index];
-              if (!message) return;
-              onRemoveQueuedMessage(index, "edit");
-              replaceInput(message.content);
-              setPastedImages(restorePastedImages(message.images));
-            }}
-            onMove={onMoveQueuedMessage}
-            onRemove={(index) => onRemoveQueuedMessage(index, "discard")}
-          />
-
           <div className="ml-auto flex min-w-0 shrink items-center gap-1">
+            <AcpContextMeter usage={acpSession.usage} />
             <ComposerAgentSelector
               cwd={projectPath}
               currentAgentId={currentAgentId}
@@ -1271,31 +1303,33 @@ const AIChatInputBar = memo(function AIChatInputBar({
               sessionConfigOptions={sessionConfigOptions}
               onAgentChange={onAgentChange}
               onModelChange={handleApiModelChange}
-              onSessionConfigChange={(optionId, value) =>
-                void changeSessionConfigOption(optionId, value)
-              }
+              onSessionConfigChange={(optionId, value) => {
+                if (acpSessionId) void changeSessionConfigOption(acpSessionId, optionId, value);
+              }}
               onBeforeOpen={closeInlineMenus}
             />
             <ComposerEffortSelector
               cwd={projectPath}
               currentAgentId={currentAgentId}
               sessionConfigOptions={sessionConfigOptions}
-              onSessionConfigChange={(optionId, value) =>
-                void changeSessionConfigOption(optionId, value)
-              }
+              onSessionConfigChange={(optionId, value) => {
+                if (acpSessionId) void changeSessionConfigOption(acpSessionId, optionId, value);
+              }}
               onOpen={closeInlineMenus}
             />
             <ChatPreferencesMenu
+              chatId={chatId ?? null}
               currentAgentId={currentAgentId}
               canChangeAgent={Boolean(onAgentChange)}
               sessionConfigOptions={sessionConfigOptions}
-              onSessionConfigChange={(optionId, value) =>
-                void changeSessionConfigOption(optionId, value)
-              }
+              onSessionConfigChange={(optionId, value) => {
+                if (acpSessionId) void changeSessionConfigOption(acpSessionId, optionId, value);
+              }}
               onSelectSkill={insertSkillAtCursor}
               onSelectCodexSkill={insertCodexSkillAtCursor}
               onBeforeOpen={closeInlineMenus}
             />
+            {chatId && isAcpAgent(currentAgentId) ? <FollowAgentToggle chatId={chatId} /> : null}
             {hasSlashCommands && (
               <Button
                 type="button"

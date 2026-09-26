@@ -46,7 +46,7 @@ const commandItemVariants = cva(
 const commandHeaderContentClassName = "flex items-center gap-2 px-3 py-2.5";
 
 const commandInputClassName = cva(
-  "font-sans ui-text-sm min-w-0 flex-1 leading-[1.4] text-foreground placeholder:text-subtle-foreground outline-none",
+  "font-sans ui-text-sm min-w-0 flex-1 leading-snug text-foreground placeholder:text-subtle-foreground outline-none",
   {
     variants: {
       variant: {
@@ -135,7 +135,7 @@ const Command = ({
     <DialogPrimitive.Root open={isVisible} onOpenChange={(open) => !open && onClose?.()}>
       <DialogPrimitive.Portal>
         <div
-          className="fixed inset-0 z-10060 flex items-start justify-center bg-scrim pt-[10vh] transition-opacity duration-fast ease-smooth starting:opacity-0 motion-reduce:transition-none"
+          className="fixed inset-0 z-10060 flex items-start justify-center bg-scrim pt-palette-offset transition-opacity duration-fast ease-smooth starting:opacity-0 motion-reduce:transition-none"
           onMouseDown={(event) => {
             if (event.target !== event.currentTarget) return;
             event.preventDefault();

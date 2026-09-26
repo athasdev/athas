@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useRef } from "react";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
+import { TERMINAL_PROCESS_EXIT_EVENT } from "../constants/terminal-events";
 import { closeTerminalConnection } from "../services/terminal-connection-lifecycle";
 import type { IDisposable, Terminal } from "@xterm/xterm";
 import type { TerminalInput, TerminalSize } from "../types/terminal.types";
@@ -210,6 +211,17 @@ export function useTerminalConnection({
 
       void closeTerminalConnection({ connectionId, remoteConnectionId }).catch(() => {});
       releaseTerminalEventChannel(connectionId);
+      window.dispatchEvent(
+        new CustomEvent(TERMINAL_PROCESS_EXIT_EVENT, {
+          detail: {
+            sessionId,
+            exitCode: hadTerminalErrorRef.current
+              ? null
+              : (lastExitInfoRef.current?.exitCode ?? null),
+            signal: lastExitInfoRef.current?.signal ?? null,
+          },
+        }),
+      );
 
       if (hadTerminalErrorRef.current) {
         terminal.writeln("\x1b[90mOpen a new terminal tab or close this one manually.\x1b[0m");

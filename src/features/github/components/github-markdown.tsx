@@ -160,7 +160,7 @@ const GitHubMarkdown = memo(
 
     return (
       <div
-        className={`markdown-preview github-markdown ${className ?? ""}`.trim()}
+        className={`markdown-preview ${className ?? ""}`.trim()}
         onClick={handleClick}
         onErrorCapture={(event) => {
           const target = event.target;
@@ -169,7 +169,9 @@ const GitHubMarkdown = memo(
           }
         }}
       >
-        <div className={`markdown-content ${contentClassName ?? ""}`.trim()}>
+        <div
+          className={`markdown-content typeset typeset-preview ${contentClassName ?? ""}`.trim()}
+        >
           {renderedHtml !== null ? (
             <div dangerouslySetInnerHTML={{ __html: renderedHtml }} />
           ) : (

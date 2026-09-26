@@ -39,6 +39,9 @@
   --spacing-tab-bar: var(--athas-tab-bar-height);
   --spacing-tab: var(--athas-tab-height);
   --spacing-tab-max: var(--athas-tab-max-width);
+  --spacing-disclosure-indent: calc(1em + var(--athas-chrome-gap));
+  --spacing-palette-offset: 10vh;
+  --shadow-seam-top: 0 -1px 0 0 var(--background);
   --spacing-sidebar-header: var(--athas-sidebar-header-height);
   --spacing-workbench: var(--athas-workbench-gap);
   --spacing-chrome-control: var(--athas-chrome-control-height);

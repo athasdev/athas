@@ -1,4 +1,5 @@
 import { useIntelligenceSettingsStore } from "@/features/ai/intelligence/stores/intelligence-settings.store";
+import { holdsQueueForEdit } from "@/features/ai/lib/agent-queue-controls";
 import { resolveIntelligenceConnection } from "@/features/ai/intelligence/lib/resolve-intelligence-connection";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { hasProductCapability } from "@/features/window/lib/product-capabilities";
@@ -19,6 +20,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useGitStore } from "@/features/git/stores/git.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
+import { getChatAcpSessionToClose } from "@/features/ai/lib/acp-session-state";
 import type { AIChatActions } from "./ai-chat-store.types";
 import type { GetAIChatStore, SetAIChatStore } from "./ai-chat-store-context";
 
@@ -30,13 +32,17 @@ type ChatActions = Omit<
   | "removeApiKey"
   | "hasProviderApiKey"
   | "setDynamicModels"
-  | "setAvailableSlashCommands"
+  | "setAcpAgentStatus"
+  | "setSessionSlashCommands"
   | "setSessionModeState"
-  | "setCurrentModeId"
-  | "setAcpStatus"
-  | "changeSessionMode"
+  | "setSessionCurrentMode"
   | "setSessionConfigOptions"
+  | "setSessionUsage"
+  | "clearAcpSession"
+  | "changeSessionMode"
   | "changeSessionConfigOption"
+  | "restoreChatSessionSettings"
+  | "setChatFollowAgent"
 >;
 
 const getCurrentWorkspacePath = () => useProjectStore.getState().rootFolderPath || null;
@@ -233,6 +239,7 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
       }),
     dequeueAgentMessage: (chatId) => {
       const message = get().agentMessageQueues[chatId]?.[0] ?? null;
+      if (holdsQueueForEdit(chatId, message ?? undefined)) return null;
       set((state) => {
         const queue = state.agentMessageQueues[chatId];
         queue?.shift();
@@ -250,6 +257,11 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
 
         const [message] = queue.splice(fromIndex, 1);
         if (message) queue.splice(toIndex, 0, message);
+      }),
+    updateQueuedAgentMessage: (chatId, index, message) =>
+      set((state) => {
+        const queued = state.agentMessageQueues[chatId]?.[index];
+        if (queued) queued.content = message;
       }),
     removeQueuedAgentMessage: (chatId, index) =>
       set((state) => {
@@ -372,6 +384,7 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
       ensureChatMessagesLoaded(set, get, chatId);
     },
     deleteChat: (chatId) => {
+      const deletedChat = get().chats.find((chat) => chat.id === chatId);
       set((state) => {
         const chatIndex = state.chats.findIndex((chat) => chat.id === chatId);
         if (chatIndex !== -1) {
@@ -396,6 +409,22 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
       void deleteChatFromDb(chatId).catch((error) =>
         console.error("Failed to delete chat from database:", error),
       );
+      // Nobody can answer the chat's permission prompts any more.
+      void import("@/features/ai/stores/agent-permissions.store")
+        .then(({ useAgentPermissionsStore }) =>
+          useAgentPermissionsStore.getState().actions.cancelChat(chatId),
+        )
+        .catch(() => undefined);
+      // The chat's ACP session is no longer needed; the agent keeps serving other chats.
+      const sessionId = getChatAcpSessionToClose(deletedChat);
+      if (sessionId) {
+        set((state) => {
+          delete state.acpSessions[sessionId];
+        });
+        void import("@tauri-apps/api/core")
+          .then(({ invoke }) => invoke("close_acp_session", { sessionId }))
+          .catch((error) => console.error("Failed to close the chat's agent session:", error));
+      }
     },
     setChatModel: (chatId, providerId, modelId) => {
       set((state) => {

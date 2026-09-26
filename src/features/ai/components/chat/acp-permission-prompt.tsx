@@ -1,10 +1,8 @@
 import { KeyIcon } from "@/ui/icons";
-import type {
-  AcpEvent,
-  AcpPermissionOption,
-  AcpPermissionPreview,
-} from "@/features/ai/types/acp.types";
+import type { AcpPermissionOption, AcpPermissionPreview } from "@/features/ai/types/acp.types";
+import type { AgentPermissionRequest } from "@/features/ai/types/agent-permission.types";
 import { createAcpDiffViewNode, toRelativeDisplayPath } from "@/features/ai/lib/acp-diff-output";
+import { ToolLocations } from "@/features/ai/components/messages/tool-locations";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { ExtensionViewRenderer } from "@/extensions/ui/components/extension-view-renderer";
 import Badge from "@/ui/badge";
@@ -13,14 +11,19 @@ import { Button, type ButtonProps } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import { chatContentWidth } from "./chat-content-width";
 
-export type AcpPermissionRequest = {
-  requestId: string;
-  description: string;
-  permissionType: string;
-  resource: string;
-  options: Extract<AcpEvent, { type: "permission_request" }>["options"];
-  preview?: AcpPermissionPreview;
-};
+function PreviewText({ label, text, mono }: { label: string; text: string; mono?: boolean }) {
+  return (
+    <pre
+      aria-label={label}
+      className={cn(
+        "overflow-auto rounded-lg border border-border bg-surface px-2.5 py-2 whitespace-pre-wrap wrap-anywhere select-text text-foreground ui-text-sm",
+        mono ? "font-mono" : "font-sans",
+      )}
+    >
+      {text}
+    </pre>
+  );
+}
 
 function PermissionPreview({ preview }: { preview: AcpPermissionPreview }) {
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
@@ -33,6 +36,30 @@ function PermissionPreview({ preview }: { preview: AcpPermissionPreview }) {
       />
     );
   }
+  if (preview.type === "tool_call") {
+    return (
+      <div className="flex max-h-72 min-w-0 flex-col gap-1.5 overflow-y-auto">
+        {preview.diffs.map((diff, index) => (
+          <ExtensionViewRenderer
+            key={`${diff.path}-${index}`}
+            node={createAcpDiffViewNode(diff, rootFolderPath)}
+            execute={() => undefined}
+            surface="embedded"
+          />
+        ))}
+        {preview.command ? (
+          <PreviewText label="Proposed shell command" text={preview.command} mono />
+        ) : null}
+        {preview.text ? <PreviewText label="Tool call details" text={preview.text} /> : null}
+        {preview.inputSummary ? (
+          <PreviewText label="Tool call input" text={preview.inputSummary} mono />
+        ) : null}
+        {preview.locations.length > 0 ? (
+          <ToolLocations locations={preview.locations} rootFolderPath={rootFolderPath} />
+        ) : null}
+      </div>
+    );
+  }
   return (
     <pre
       aria-label="Proposed shell command"
@@ -43,7 +70,13 @@ function PermissionPreview({ preview }: { preview: AcpPermissionPreview }) {
   );
 }
 
-function getPreviewSummary(preview: AcpPermissionPreview, rootFolderPath?: string | null) {
+function getPreviewSummary(
+  preview: AcpPermissionPreview,
+  rootFolderPath?: string | null,
+): string | undefined {
+  if (preview.type === "tool_call") {
+    return preview.title ?? undefined;
+  }
   if (preview.type === "diff") {
     const isNew = preview.oldText.length === 0;
     return `${isNew ? "Create" : "Edit"} ${toRelativeDisplayPath(preview.path, rootFolderPath)}`;
@@ -111,16 +144,15 @@ export function AcpPermissionPrompt({
   queuedCount,
   onRespond,
 }: {
-  permission: AcpPermissionRequest;
+  permission: AgentPermissionRequest;
   queuedCount: number;
   onRespond: (approved: boolean, optionId?: string) => void;
 }) {
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const summary = (
-    permission.preview
-      ? getPreviewSummary(permission.preview, rootFolderPath)
-      : permission.description ||
-        [permission.permissionType, permission.resource].filter(Boolean).join(" ")
+    (permission.preview && getPreviewSummary(permission.preview, rootFolderPath)) ||
+    permission.description ||
+    [permission.permissionType, permission.resource].filter(Boolean).join(" ")
   ).trim();
   const options = permission.options.length > 0 ? permission.options : fallbackOptions;
 

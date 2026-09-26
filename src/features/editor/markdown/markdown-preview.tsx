@@ -146,7 +146,7 @@ export function MarkdownPreview() {
   return (
     <div
       ref={containerRef}
-      className="markdown-preview flex h-full justify-center overflow-auto bg-background px-6 pt-6 pb-[calc(4rem+env(safe-area-inset-bottom))]"
+      className="markdown-preview flex h-full justify-center overflow-auto bg-background px-6 pt-6 pb-safe-16"
       style={{
         fontSize: `${fontSize}px`,
         fontFamily: `${uiFontFamily}, sans-serif`,
@@ -155,7 +155,7 @@ export function MarkdownPreview() {
       onWheelCapture={handleWheelCapture}
     >
       <div
-        className="markdown-content w-full max-w-3xl"
+        className="markdown-content typeset typeset-preview w-full max-w-3xl"
         dangerouslySetInnerHTML={{ __html: html }}
       />
     </div>

@@ -1,13 +1,26 @@
 import { invoke } from "@tauri-apps/api/core";
+import { logOutOfAcpAgent } from "@/features/ai/lib/acp-logout";
 import { openNewAgentChat } from "@/features/ai/lib/open-new-agent-chat";
+import { openAgentSessions } from "@/features/ai/lib/open-agent-sessions";
 import { openAgentInNewWindow } from "@/features/ai/detached/agent-window-service";
+import { toggleFollowAgent } from "@/features/ai/services/agent-follow-service";
+import { keepAllAgentEdits, rejectAllAgentEdits } from "@/features/ai/services/agent-edits-service";
+import { pickAgentEditsChatId, useAgentEditsStore } from "@/features/ai/stores/agent-edits.store";
+import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import {
   ArrowClockwiseIcon,
   ArrowsClockwiseIcon,
+  ArrowsLeftRightIcon,
+  CheckIcon,
+  CrosshairIcon,
+  GitDiffIcon,
+  HistoryIcon,
+  SignOutIcon,
   SparkleIcon,
   SquareIcon,
   TerminalWindowIcon,
+  XIcon,
 } from "@/ui/icons";
 import {
   restartAllLanguageServers,
@@ -23,6 +36,10 @@ interface AdvancedActionsParams {
     activeWorkspaces: string[];
     lastError?: string | null | undefined;
   };
+  /** The current chat's running agent, when it advertises ACP logout. */
+  logOutAgentId: string | null;
+  /** The current chat's running agent, when it lists its sessions (ACP `session/list`). */
+  browseSessionsAgentId: string | null;
   vimMode: boolean;
   vimCommands: Array<{ name: string; description: string; execute: () => void }>;
   setMode: (mode: "normal" | "insert" | "visual") => void;
@@ -36,7 +53,17 @@ interface AdvancedActionsParams {
 }
 
 export const createAdvancedActions = (params: AdvancedActionsParams): Action[] => {
-  const { lspStatus, vimMode, vimCommands, setMode, openQuickEdit, showToast, onClose } = params;
+  const {
+    lspStatus,
+    logOutAgentId,
+    browseSessionsAgentId,
+    vimMode,
+    vimCommands,
+    setMode,
+    openQuickEdit,
+    showToast,
+    onClose,
+  } = params;
 
   const baseActions: Action[] = [
     {
@@ -53,6 +80,70 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
         else showToast({ message: "Open an agent tab first.", type: "info" });
       },
     },
+    {
+      id: "ai-toggle-follow-agent",
+      label: "AI: Toggle Follow Agent",
+      description: "Open the files the agent works in while its turn runs",
+      icon: <CrosshairIcon />,
+      category: "AI",
+      action: () => {
+        onClose();
+        const state = useBufferStore.getState();
+        const buffer = state.buffers.find((item) => item.id === state.activeBufferId);
+        const chatId =
+          buffer?.type === "agent" ? buffer.sessionId : useAIChatStore.getState().currentChatId;
+        if (!chatId) {
+          showToast({ message: "Open an agent tab first.", type: "info" });
+          return;
+        }
+        const following = toggleFollowAgent(chatId);
+        showToast({
+          message: following ? "Following the agent" : "Stopped following the agent",
+          type: "info",
+        });
+      },
+    },
+    ...(
+      [
+        {
+          id: "ai-review-agent-changes",
+          label: "AI: Review Agent Changes",
+          description: "Keep or reject the agent's file edits hunk by hunk",
+          icon: <GitDiffIcon />,
+          run: (chatId: string) => useAgentEditsStore.getState().actions.openReview(chatId),
+        },
+        {
+          id: "ai-keep-all-agent-changes",
+          label: "AI: Keep All Agent Changes",
+          description: "Accept every unreviewed edit the agent made",
+          icon: <CheckIcon />,
+          run: (chatId: string) => void keepAllAgentEdits(chatId),
+        },
+        {
+          id: "ai-reject-all-agent-changes",
+          label: "AI: Reject All Agent Changes",
+          description: "Revert every unreviewed edit the agent made",
+          icon: <XIcon />,
+          run: (chatId: string) => void rejectAllAgentEdits(chatId),
+        },
+      ] as const
+    ).map(({ run, ...command }): Action => ({
+      ...command,
+      category: "AI",
+      action: () => {
+        onClose();
+        const state = useBufferStore.getState();
+        const buffer = state.buffers.find((item) => item.id === state.activeBufferId);
+        const chatId = pickAgentEditsChatId(
+          buffer?.type === "agent" ? buffer.sessionId : useAIChatStore.getState().currentChatId,
+        );
+        if (!chatId) {
+          showToast({ message: "No agent changes to review.", type: "info" });
+          return;
+        }
+        run(chatId);
+      },
+    })),
     {
       id: "ai-new-agent",
       label: "AI: New Agent",
@@ -76,6 +167,47 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
         onClose();
       },
     },
+    {
+      id: "ai-open-acp-inspector",
+      label: "AI: Open ACP Inspector",
+      description: "Inspect the JSON-RPC traffic and capabilities of running ACP agents",
+      icon: <ArrowsLeftRightIcon />,
+      category: "AI",
+      action: () => {
+        useBufferStore.getState().actions.openAcpInspectorBuffer();
+        onClose();
+      },
+    },
+    ...(browseSessionsAgentId
+      ? [
+          {
+            id: "ai-import-agent-session",
+            label: "AI: Import Agent Session",
+            description: "Browse the agent's sessions for this workspace and open one",
+            icon: <HistoryIcon />,
+            category: "AI",
+            action: () => {
+              onClose();
+              openAgentSessions(browseSessionsAgentId);
+            },
+          },
+        ]
+      : []),
+    ...(logOutAgentId
+      ? [
+          {
+            id: "ai-log-out-agent",
+            label: "AI: Log Out of Agent",
+            description: "Sign out of the running agent; the next prompt asks how to sign in",
+            icon: <SignOutIcon />,
+            category: "AI",
+            action: () => {
+              onClose();
+              void logOutOfAcpAgent(logOutAgentId);
+            },
+          },
+        ]
+      : []),
     {
       id: "ai-quick-edit",
       label: "AI: Quick Edit Selection",

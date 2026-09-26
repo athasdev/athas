@@ -17,6 +17,7 @@ import {
   type Icon,
 } from "@/ui/icons";
 import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useShallow } from "zustand/react/shallow";
 import {
   createAcpDiffViewNode,
   getAcpDiffOutputs,
@@ -29,25 +30,26 @@ import {
   stripStructuredToolViews,
 } from "@/features/ai/lib/structured-tool-view";
 import {
+  describeAcpTerminalExit,
+  formatAcpTerminalText,
   getAcpTerminalOutputs,
   openAcpTerminalOutput,
 } from "@/features/ai/lib/acp-terminal-output";
-import {
-  createAcpToolLocationTree,
-  OPEN_TOOL_LOCATION_COMMAND,
-} from "@/features/ai/lib/acp-tool-location-tree";
+import { useAcpTerminalsStore } from "@/features/ai/stores/acp-terminals.store";
 import { summarizeToolCall, type ToolCallSummary } from "@/features/ai/lib/tool-call-summary";
 import type { ToolCall } from "@/features/ai/types/ai-chat.types";
-import type { AcpToolKind } from "@/features/ai/types/acp.types";
+import type { AcpTerminalSnapshot, AcpToolKind } from "@/features/ai/types/acp.types";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
+import { openToolPath, resolveWorkspacePath } from "@/features/ai/lib/open-tool-location";
+import { ToolLocations } from "./tool-locations";
 import { getFileDiff } from "@/features/git/api/git-diff-api";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { Button } from "@/ui/button";
 import { Shimmer } from "@/ui/shimmer";
 import { GenerativeUIRenderer } from "@/extensions/ui/components/generative-ui-renderer";
 import { ExtensionViewRenderer } from "@/extensions/ui/components/extension-view-renderer";
-import { getBaseName, joinPath } from "@/utils/path-helpers";
+import { getBaseName } from "@/utils/path-helpers";
 import { cn } from "@/utils/cn";
 
 const KIND_ICONS: Record<AcpToolKind, Icon> = {
@@ -75,25 +77,6 @@ function formatValue(value: unknown): string {
   } catch {
     return String(value);
   }
-}
-
-function isAbsolutePath(path: string): boolean {
-  return path.startsWith("/") || /^[A-Za-z]:[\\/]/.test(path) || path.startsWith("remote://");
-}
-
-function resolveWorkspacePath(path: string): string {
-  if (isAbsolutePath(path)) return path;
-  const rootFolderPath = useProjectStore.getState().rootFolderPath;
-  return rootFolderPath ? joinPath(rootFolderPath, path) : path;
-}
-
-async function openToolPath(path: string) {
-  const resolvedPath = resolveWorkspacePath(path);
-  const content = await readFileContent(resolvedPath);
-  const bufferId = useBufferStore
-    .getState()
-    .actions.openBuffer(resolvedPath, getBaseName(resolvedPath), content);
-  useBufferStore.getState().actions.setActiveBuffer(bufferId);
 }
 
 async function openToolDiff(path: string, output: unknown) {
@@ -183,6 +166,24 @@ function OutputBlock({ text, tone = "default" }: { text: string; tone?: "default
   );
 }
 
+/** A terminal's output inside its tool call, with how the command ended once it has. */
+function TerminalOutput({ terminal }: { terminal: AcpTerminalSnapshot }) {
+  const text = useMemo(() => formatAcpTerminalText(terminal.output).trimEnd(), [terminal.output]);
+  const status = describeAcpTerminalExit(terminal.exit);
+  const failed =
+    terminal.exit !== null && (terminal.exit.signal !== null || terminal.exit.exitCode !== 0);
+  return (
+    <div className="flex min-w-0 flex-col gap-1">
+      {text ? <OutputBlock text={terminal.truncated ? `…\n${text}` : text} /> : null}
+      {status ? (
+        <span className={cn("ui-text-sm", failed ? "text-destructive" : "text-subtle-foreground")}>
+          {status}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
 function ToolCallStats({ summary }: { summary: ToolCallSummary }) {
   if (summary.phase === "failed") {
     return (
@@ -192,8 +193,8 @@ function ToolCallStats({ summary }: { summary: ToolCallSummary }) {
       </span>
     );
   }
-  if (summary.phase === "declined") {
-    return <span className="shrink-0 text-subtle-foreground">declined</span>;
+  if (summary.phase === "declined" || summary.phase === "cancelled") {
+    return <span className="shrink-0 text-subtle-foreground">{summary.phase}</span>;
   }
   if (summary.additions > 0 || summary.deletions > 0) {
     return (
@@ -239,10 +240,9 @@ const ToolCallRow = memo(function ToolCallRow({
   const structuredViews = getStructuredToolViews(toolCall.output);
   const diffItems = getAcpDiffOutputs(output);
   const terminalItems = getAcpTerminalOutputs(output);
-  const locationTree =
-    toolCall.locations && toolCall.locations.length > 1
-      ? createAcpToolLocationTree(toolCall.locations)
-      : undefined;
+  const liveTerminals = useAcpTerminalsStore(
+    useShallow((state) => terminalItems.map((item) => state.terminals[item.terminalId])),
+  );
   const outputText = getOutputText(stripAcpDiffOutputs(output));
   const showInput =
     summary.kind === "other" || summary.kind === "think" || summary.kind === "switch_mode";
@@ -263,18 +263,19 @@ const ToolCallRow = memo(function ToolCallRow({
   );
   if (inputText) body.push(<OutputBlock key="input" text={inputText} />);
   if (outputText) body.push(<OutputBlock key="output" text={outputText} />);
-  if (locationTree) {
+  terminalItems.forEach(({ terminalId }, index) => {
+    // Live while the command runs; what the call kept once the terminal is gone.
+    const terminal = liveTerminals[index] ?? toolCall.terminals?.[terminalId];
+    if (terminal && (terminal.output || terminal.exit)) {
+      body.push(<TerminalOutput key={`terminal-${terminalId}`} terminal={terminal} />);
+    }
+  });
+  if (toolCall.locations?.some((location) => location.path)) {
     body.push(
-      <ExtensionViewRenderer
+      <ToolLocations
         key="locations"
-        node={locationTree}
-        execute={(action) => {
-          const path = action.args?.[0];
-          if (action.command === OPEN_TOOL_LOCATION_COMMAND && typeof path === "string") {
-            return openToolPath(path);
-          }
-        }}
-        surface="embedded"
+        locations={toolCall.locations}
+        rootFolderPath={rootFolderPath}
       />,
     );
   }
@@ -306,7 +307,10 @@ const ToolCallRow = memo(function ToolCallRow({
       summary.kind === "move" ||
       diffItems.length > 0);
   const canOpenFile = Boolean(summary.path) && summary.kind !== "execute";
-  const canOpenTerminal = terminalItems.length > 0;
+  // Only a terminal Athas runs for the agent, and only while it still runs, has a tab to open.
+  const canOpenTerminal = liveTerminals.some(
+    (terminal) => terminal && !terminal.displayOnly && !terminal.exit,
+  );
   const hasActions = canOpenDiff || canOpenFile || canOpenTerminal;
 
   const label = (

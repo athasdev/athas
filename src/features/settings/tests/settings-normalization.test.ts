@@ -375,6 +375,20 @@ describe("settings normalization", () => {
     ).toBe(true);
   });
 
+  it("keeps finished-turn notifications on and the sound off unless set otherwise", () => {
+    const defaults = normalizeSettings(getDefaultSettingsSnapshot());
+    expect(defaults.aiAgentFinishNotifications).toBe(true);
+    expect(defaults.aiAgentNotificationSound).toBe(false);
+
+    const changed = normalizeSettings({
+      ...getDefaultSettingsSnapshot(),
+      aiAgentFinishNotifications: false,
+      aiAgentNotificationSound: "yes" as never,
+    });
+    expect(changed.aiAgentFinishNotifications).toBe(false);
+    expect(changed.aiAgentNotificationSound).toBe(false);
+  });
+
   it("preserves supported marketplace skill metadata", () => {
     const now = new Date().toISOString();
     const normalized = normalizeSettingValue("aiSkills", [

@@ -30,6 +30,12 @@ export interface UnifiedExtension {
   extensions?: string[];
   license?: string;
   sourceUrl?: string;
+  /** Who publishes the extension, when it differs from Athas. */
+  publisher?: string;
+  /** Where the extension is installed from, when not the Athas catalog. */
+  distribution?: string;
+  /** Why the extension cannot be installed here. */
+  installNote?: string;
   isMarketplace?: boolean;
   isBundled?: boolean;
   runtimeIssues?: ExtensionRuntimeIssue[];

@@ -1,5 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
+import { parseChatSessionSettings } from "@/features/ai/lib/chat-session-settings";
 import type { AgentType, Chat, ToolCall } from "@/features/ai/types/ai-chat.types";
+import type { AcpTurnUsage } from "@/features/ai/types/acp.types";
 import { coalesceAssistantResponses } from "@/features/ai/lib/assistant-response";
 import { normalizeMessageFollowUpActions } from "@/features/ai/lib/follow-up-actions";
 
@@ -22,6 +24,7 @@ interface ChatData {
   branch: string | null;
   is_pinned: boolean;
   archived_at: number | null;
+  session_settings?: string | null;
 }
 
 interface MessageData {
@@ -34,6 +37,9 @@ interface MessageData {
   is_tool_use: boolean;
   tool_name: string | null;
   images?: string | null;
+  plan?: string | null;
+  stop_notice?: string | null;
+  turn_usage?: string | null;
 }
 
 interface ToolCallData {
@@ -47,7 +53,10 @@ interface ToolCallData {
   meta?: string | null;
 }
 
-type ToolCallMeta = Pick<ToolCall, "id" | "kind" | "status" | "locations" | "contentOffset">;
+type ToolCallMeta = Pick<
+  ToolCall,
+  "id" | "kind" | "status" | "locations" | "contentOffset" | "terminals"
+>;
 
 function serializeToolCallMeta(toolCall: ToolCall): string | null {
   const meta: ToolCallMeta = {};
@@ -56,7 +65,22 @@ function serializeToolCallMeta(toolCall: ToolCall): string | null {
   if (toolCall.status) meta.status = toolCall.status;
   if (toolCall.locations?.length) meta.locations = toolCall.locations;
   if (typeof toolCall.contentOffset === "number") meta.contentOffset = toolCall.contentOffset;
+  if (toolCall.terminals && Object.keys(toolCall.terminals).length > 0) {
+    meta.terminals = toolCall.terminals;
+  }
   return Object.keys(meta).length > 0 ? JSON.stringify(meta) : null;
+}
+
+function parseTurnUsage(value: string | null | undefined): AcpTurnUsage | undefined {
+  if (!value) return undefined;
+  try {
+    const parsed: unknown = JSON.parse(value);
+    return parsed && typeof parsed === "object" && "totalTokens" in parsed
+      ? (parsed as AcpTurnUsage)
+      : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 function parseToolCallMeta(meta: string | null | undefined): ToolCallMeta {
@@ -114,6 +138,7 @@ function chatToData(chat: Chat): {
     branch: chat.branch || null,
     is_pinned: chat.isPinned || false,
     archived_at: chat.archivedAt?.getTime() ?? null,
+    session_settings: chat.sessionSettings ? JSON.stringify(chat.sessionSettings) : null,
   };
 
   const messages: MessageData[] = chat.messages.map((msg) => ({
@@ -126,6 +151,9 @@ function chatToData(chat: Chat): {
     is_tool_use: msg.isToolUse || false,
     tool_name: msg.toolName || null,
     images: msg.images?.length ? JSON.stringify(msg.images) : null,
+    plan: msg.plan?.length ? JSON.stringify(msg.plan) : null,
+    stop_notice: msg.stopNotice ?? null,
+    turn_usage: msg.turnUsage ? JSON.stringify(msg.turnUsage) : null,
   }));
 
   const tool_calls: ToolCallData[] = [];
@@ -178,6 +206,9 @@ function dataToChat(data: ChatWithMessages): Chat {
         role: msg.role as "user" | "assistant" | "system",
         content: msg.content,
         images: deserializeMessageImages(msg.images),
+        plan: deserializeAcpPlan(msg.plan),
+        stopNotice: parseAgentStopNotice(msg.stop_notice),
+        turnUsage: parseTurnUsage(msg.turn_usage),
         timestamp: new Date(msg.timestamp),
         isStreaming: false,
         isToolUse: msg.is_tool_use,
@@ -201,6 +232,7 @@ function dataToChat(data: ChatWithMessages): Chat {
     branch: data.chat.branch,
     isPinned: data.chat.is_pinned,
     archivedAt: data.chat.archived_at ? new Date(data.chat.archived_at) : null,
+    sessionSettings: parseChatSessionSettings(data.chat.session_settings),
   };
 }
 
@@ -267,6 +299,7 @@ export const loadAllChatsFromDb = async (): Promise<Omit<Chat, "messages">[]> =>
       branch: chat.branch,
       isPinned: chat.is_pinned,
       archivedAt: chat.archived_at ? new Date(chat.archived_at) : null,
+      sessionSettings: parseChatSessionSettings(chat.session_settings),
     }));
   } catch (error) {
     console.error("Error loading chats from database:", error);
@@ -301,3 +334,5 @@ export const deleteChatFromDb = async (chatId: string): Promise<void> => {
   }
 };
 import { deserializeMessageImages } from "@/features/ai/lib/image-attachments";
+import { deserializeAcpPlan } from "@/features/ai/lib/acp-plan";
+import { parseAgentStopNotice } from "@/features/ai/lib/agent-stop-notice";

@@ -18,7 +18,7 @@ function Checkbox({
       className={cn(
         "peer relative inline-flex shrink-0 items-center justify-center bg-surface text-transparent outline-none transition-[background-color,border-color,color,box-shadow] duration-fast ease-smooth after:absolute after:-inset-x-3 after:-inset-y-2 focus-visible:ring-2 focus-visible:ring-focus data-checked:border-primary data-checked:bg-primary data-checked:text-primary-foreground data-checked:hover:border-primary data-disabled:cursor-not-allowed data-disabled:opacity-50 aria-invalid:border-destructive",
         size === "md" && "size-4 rounded-sm border border-border-strong hover:border-foreground",
-        size === "sm" && "size-3 rounded-[3px] border border-border hover:border-border-strong",
+        size === "sm" && "size-3 rounded-sm border border-border hover:border-border-strong",
         className,
       )}
       {...props}

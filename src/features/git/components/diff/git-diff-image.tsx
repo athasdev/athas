@@ -24,7 +24,7 @@ const ImageContainer = memo(
         {label === "Removed" ? <MinusIcon /> : <PlusIcon />}
         {label}
       </div>
-      <div className="flex flex-1 items-center justify-center overflow-auto bg-size-[16px_16px] bg-[repeating-conic-gradient(#1a1a1a_0%_25%,#252525_0%_50%)] p-4">
+      <div className="flex flex-1 items-center justify-center overflow-auto bg-checkerboard p-4">
         {base64 ? (
           <img
             src={getImgSrc(base64, filePath)}
@@ -103,7 +103,7 @@ const ImageDiffViewer = memo(({ diff, fileName, onClose, commitHash }: ImageDiff
               <PlusIcon />
               New Image
             </div>
-            <div className="flex flex-1 items-center justify-center overflow-auto bg-size-[16px_16px] bg-[repeating-conic-gradient(#1a1a1a_0%_25%,#252525_0%_50%)] p-4">
+            <div className="flex flex-1 items-center justify-center overflow-auto bg-checkerboard p-4">
               <img
                 src={getImgSrc(diff.new_blob_base64, fileName)}
                 alt={fileName}
@@ -118,7 +118,7 @@ const ImageDiffViewer = memo(({ diff, fileName, onClose, commitHash }: ImageDiff
               <MinusIcon />
               Removed Image
             </div>
-            <div className="flex flex-1 items-center justify-center overflow-auto bg-size-[16px_16px] bg-[repeating-conic-gradient(#1a1a1a_0%_25%,#252525_0%_50%)] p-4">
+            <div className="flex flex-1 items-center justify-center overflow-auto bg-checkerboard p-4">
               <img
                 src={getImgSrc(diff.old_blob_base64, fileName)}
                 alt={fileName}

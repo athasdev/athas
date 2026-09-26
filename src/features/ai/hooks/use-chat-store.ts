@@ -29,6 +29,7 @@ export function useChatActions() {
     prependAgentMessage: useAIChatStore((state) => state.actions.prependAgentMessage),
     dequeueAgentMessage: useAIChatStore((state) => state.actions.dequeueAgentMessage),
     moveQueuedAgentMessage: useAIChatStore((state) => state.actions.moveQueuedAgentMessage),
+    updateQueuedAgentMessage: useAIChatStore((state) => state.actions.updateQueuedAgentMessage),
     removeQueuedAgentMessage: useAIChatStore((state) => state.actions.removeQueuedAgentMessage),
     selectChatAgent: useAIChatStore((state) => state.actions.selectChatAgent),
     createNewChat: useAIChatStore((state) => state.actions.createNewChat),

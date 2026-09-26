@@ -184,10 +184,14 @@ export function ExtensionDetailView({
   const metadata = [
     ["Category", getCategoryLabel(extension.category)],
     ["Version", extension.installedVersion ?? extension.version],
+    ["Latest version", hasUpdate ? extension.availableVersion : undefined],
+    ["Publisher", extension.publisher],
+    ["Source", extension.sourceUrl],
     ["License", extension.license],
     [
       "Distribution",
-      extension.isBundled ? "Built-in" : extension.isMarketplace ? "Athas catalog" : "Local",
+      extension.distribution ??
+        (extension.isBundled ? "Built-in" : extension.isMarketplace ? "Athas catalog" : "Local"),
     ],
   ].filter((entry) => entry[1]);
 
@@ -219,6 +223,12 @@ export function ExtensionDetailView({
       }
     >
       <div className="space-y-8">
+        {extension.installNote && !extension.isInstalled ? (
+          <Alert>
+            <AlertDescription>{extension.installNote}</AlertDescription>
+          </Alert>
+        ) : null}
+
         {extension.runtimeIssues?.length ? (
           <Alert tone="error">
             <AlertDescription>{extension.runtimeIssues[0]?.message}</AlertDescription>

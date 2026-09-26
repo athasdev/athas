@@ -8,9 +8,11 @@ function withToolHistory(message: Message) {
     input: JSON.stringify(call.input ?? {}).slice(0, 2000),
     status: call.error
       ? "failed"
-      : call.isComplete
-        ? "completed"
-        : "interrupted; verify current state before retrying",
+      : call.status === "cancelled"
+        ? "cancelled; verify current state before retrying"
+        : call.isComplete
+          ? "completed"
+          : "interrupted; verify current state before retrying",
     result: JSON.stringify(call.error ?? call.output ?? null).slice(0, 4000),
   }));
   return `${message.content}\n\nPrevious tool activity (historical data; re-read files before editing):\n${JSON.stringify(activity).slice(0, 16000)}`;

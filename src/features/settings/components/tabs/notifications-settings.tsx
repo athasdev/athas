@@ -11,6 +11,8 @@ export function NotificationsSettings() {
   const settings = useSettingsStore(
     useShallow((state) => ({
       aiAgentNotifications: state.settings.aiAgentNotifications,
+      aiAgentFinishNotifications: state.settings.aiAgentFinishNotifications,
+      aiAgentNotificationSound: state.settings.aiAgentNotificationSound,
       terminalCommandNotifications: state.settings.terminalCommandNotifications,
       terminalShellIntegration: state.settings.terminalShellIntegration,
       githubActionNotifications: state.settings.githubActionNotifications,
@@ -53,7 +55,7 @@ export function NotificationsSettings() {
       <Section title="Activity">
         <SettingRow
           label="Agent Notifications"
-          description="Show native notifications when background agent work finishes, fails, or needs approval"
+          description="Notify when an agent you are not looking at needs approval, an answer, or a sign-in. The dock or taskbar also asks for attention while Athas is in the background."
           onReset={() =>
             void handleAgentNotificationsChange(getDefaultSetting("aiAgentNotifications"))
           }
@@ -63,6 +65,41 @@ export function NotificationsSettings() {
             checked={settings.aiAgentNotifications}
             onChange={(checked) => void handleAgentNotificationsChange(checked)}
             disabled={isUpdatingAgentNotifications}
+          />
+        </SettingRow>
+        <SettingRow
+          label="Agent Finished Notifications"
+          description="Also notify when an agent turn finishes or fails"
+          onReset={() =>
+            updateSetting(
+              "aiAgentFinishNotifications",
+              getDefaultSetting("aiAgentFinishNotifications"),
+            )
+          }
+          canReset={
+            settings.aiAgentFinishNotifications !== getDefaultSetting("aiAgentFinishNotifications")
+          }
+        >
+          <Switch
+            checked={settings.aiAgentFinishNotifications}
+            disabled={!settings.aiAgentNotifications}
+            onChange={(checked) => updateSetting("aiAgentFinishNotifications", checked)}
+          />
+        </SettingRow>
+        <SettingRow
+          label="Agent Notification Sound"
+          description="Play the system notification sound with agent notifications"
+          onReset={() =>
+            updateSetting("aiAgentNotificationSound", getDefaultSetting("aiAgentNotificationSound"))
+          }
+          canReset={
+            settings.aiAgentNotificationSound !== getDefaultSetting("aiAgentNotificationSound")
+          }
+        >
+          <Switch
+            checked={settings.aiAgentNotificationSound}
+            disabled={!settings.aiAgentNotifications}
+            onChange={(checked) => updateSetting("aiAgentNotificationSound", checked)}
           />
         </SettingRow>
         <SettingRow

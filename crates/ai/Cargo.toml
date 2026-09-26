@@ -9,15 +9,27 @@ tauri-wry = ["athas-terminal/tauri-wry", "tauri/wry", "tauri/x11"]
 linux = ["athas-terminal/linux", "tauri/cef"]
 
 [dependencies]
-agent-client-protocol = "2"
+# Unstable ACP extensions that only add to the protocol: notices are sent only to clients that
+# advertise them, and end-of-turn usage is an optional field of the prompt response.
+agent-client-protocol = { version = "2", features = [
+  "unstable_end_turn_token_usage",
+  "unstable_session_notices",
+] }
 anyhow = "1.0"
 async-trait = "0.1"
+base64 = "0.22"
+bzip2 = "0.5"
+flate2 = "1.0"
+futures = "0.3"
 log = "0.4"
 libc = "0.2"
+reqwest = "0.12"
 rusqlite = { version = "0.29.0", features = ["bundled"] }
 semver = "1"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+sha2 = "0.10"
+tar = "0.4"
 tauri = { version = "2", default-features = false, features = ["test"] }
 tokio = { version = "1.0", features = ["full"] }
 tokio-util = { version = "0.7", features = ["compat"] }
@@ -26,3 +38,4 @@ athas-terminal = { path = "../terminal", default-features = false }
 tempfile = "3"
 uuid = { version = "1.0", features = ["v4", "serde"] }
 which = "7.0"
+zip = "2.2"

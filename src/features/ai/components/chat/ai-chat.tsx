@@ -1,20 +1,15 @@
 import { getApiErrorCode } from "@/features/ai/lib/api-error";
 import { cancelIntelligenceAgent } from "@/features/ai/intelligence/services/intelligence-agent-session";
-import {
-  respondToIntelligencePermission,
-  isIntelligencePermissionPending,
-} from "@/features/ai/intelligence/services/intelligence-agent-permissions";
 import { getProviderAccessFromMap } from "@/features/ai/stores/ai-chat/provider-actions";
 import { isTerminalAgent } from "@/features/ai/lib/terminal-agents";
 import { openTerminalAgent } from "@/features/ai/lib/terminal-agent-terminal";
-import { listen } from "@tauri-apps/api/event";
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { appendChatAcpEvent, type ChatAcpEventInput } from "@/features/ai/lib/acp-event-timeline";
+import { acpNoticeToChatEvent } from "@/features/ai/lib/acp-notices";
 import {
   isAcpAuthenticationError,
   isAcpConfigurationError,
 } from "@/features/ai/lib/acp-authentication";
-import { getChatTitleFromSessionInfo } from "@/features/ai/lib/acp-session-info";
 import { parseDirectAcpUiAction } from "@/features/ai/lib/acp-ui-intents";
 import {
   appendReferencedFiles,
@@ -22,6 +17,7 @@ import {
   parseMentionsAndLoadFiles,
 } from "@/features/ai/lib/file-mentions";
 import { extractFollowUpActions } from "@/features/ai/lib/follow-up-actions";
+import { getAgentStopNotice } from "@/features/ai/lib/agent-stop-notice";
 import { buildConversationHistory } from "@/features/ai/lib/conversation-history";
 import { openAgentHistoryChat } from "@/features/ai/lib/open-agent-history";
 import {
@@ -31,26 +27,46 @@ import {
 } from "@/features/ai/lib/edit-diff-capture";
 import { getAgentMessageAccess } from "@/features/ai/lib/agent-message-access";
 import { startAssistantResponseContinuation } from "@/features/ai/lib/assistant-response";
+import { claimRunAbortController } from "@/features/ai/lib/run-abort-controller";
 import {
+  beginQueuedSendNow,
+  setQueuedMessageEditing,
+  settleQueuedSendNow,
+} from "@/features/ai/lib/agent-queue-controls";
+import {
+  cancelUnfinishedToolCalls,
   createToolCall,
   markToolCallComplete,
   updateToolCall,
 } from "@/features/ai/lib/tool-call-state";
+import { followAgentLocations, followAgentTo } from "@/features/ai/services/agent-follow-service";
+import { recordAgentFileWrite } from "@/features/ai/services/agent-edits-service";
 import { requestInlineEdit } from "@/features/editor/services/editor-inline-edit-service";
 import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
 import { CodexIntegrationService } from "@/features/ai/integrations/codex/codex-integration-service";
 import { CODEX_INTEGRATION_ID } from "@/features/ai/integrations/integration-registry";
 import { getChatCompletionStream, isAcpAgent } from "@/features/ai/services/ai-chat-service";
-import type { ImageContent } from "@/features/ai/types/ai-chat.types";
+import type {
+  ImageContent,
+  QueuedAgentMessage,
+  RestoredComposerPrompt,
+} from "@/features/ai/types/ai-chat.types";
+import {
+  type AgentRunEnding,
+  continuesAgentQueue,
+  getAgentRunEnding,
+} from "@/features/ai/lib/agent-message-queue";
 import {
   sendAgentNativeNotification,
   type AgentNativeNotificationKind,
 } from "@/features/ai/services/agent-native-notifications";
+import { useAcpTerminalsStore } from "@/features/ai/stores/acp-terminals.store";
+import { withExitedAcpTerminalSnapshots } from "@/features/ai/lib/acp-terminal-output";
+import { useAcpNoticesStore } from "@/features/ai/stores/acp-notices.store";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { agentIsDetached } from "@/features/ai/detached/agent-window.store";
 import { peekAgentDraft } from "@/features/ai/detached/agent-window-drafts";
 import { useComposerContextSelection } from "@/features/ai/hooks/use-composer-context-selection";
-import type { AcpEvent } from "@/features/ai/types/acp.types";
 import type { ContextInfo } from "@/features/ai/types/ai-context.types";
 import type {
   AgentMessageSubmitResult,
@@ -84,7 +100,20 @@ import { cn } from "@/utils/cn";
 import { AgentStartView } from "../agent-start-view";
 import { useChatActions, useChatState } from "../../hooks/use-chat-store";
 import AIChatInputBar from "../input/chat-input-bar";
-import { AcpPermissionPrompt, type AcpPermissionRequest } from "./acp-permission-prompt";
+import {
+  selectSessionQuestions,
+  useAcpQuestionsStore,
+} from "@/features/ai/stores/acp-questions.store";
+import type { AcpElicitationResponse } from "@/features/ai/lib/acp-elicitation";
+import { AcpPermissionPrompt } from "./acp-permission-prompt";
+import { markAgentChatVisible } from "@/features/ai/lib/visible-agent-chats";
+import {
+  selectChatPermissions,
+  useAgentPermissionsStore,
+} from "@/features/ai/stores/agent-permissions.store";
+import { getAcpPermissionPreview } from "@/features/ai/lib/acp-permission-preview";
+import { AcpQuestionPrompt } from "./acp-question-prompt";
+import { AcpUrlQuestionPrompt } from "./acp-url-question-prompt";
 import { ChatHeader } from "./chat-header";
 import { ChatMessages } from "./chat-messages";
 
@@ -118,8 +147,12 @@ const AIChat = memo(function AIChat({
   const { showToast } = useToast();
 
   const abortControllerRef = useRef<AbortController | null>(null);
-  const [permissionQueue, setPermissionQueue] = useState<AcpPermissionRequest[]>([]);
+  const allPermissions = useAgentPermissionsStore.use.permissions();
+  const permissionActions = useAgentPermissionsStore.use.actions();
+  const allAgentQuestions = useAcpQuestionsStore.use.questions();
+  const questionActions = useAcpQuestionsStore.use.actions();
   const [acpEvents, setAcpEvents] = useState<ChatAcpEvent[]>([]);
+  const [refusedPrompt, setRefusedPrompt] = useState<RestoredComposerPrompt | null>(null);
   const [isMessageSearchOpen, setIsMessageSearchOpen] = useState(false);
   const [messageSearchQuery, setMessageSearchQuery] = useState("");
   const [activeMessageSearchIndex, setActiveMessageSearchIndex] = useState(0);
@@ -128,11 +161,27 @@ const AIChat = memo(function AIChat({
     composerContext.inputProps;
   const effectiveChatId = chatId ?? chatState.currentChatId;
   const previousChatId = useRef(effectiveChatId);
+  useEffect(() => {
+    if (!effectiveChatId) return;
+    return markAgentChatVisible(effectiveChatId);
+  }, [effectiveChatId]);
   const currentChat = useMemo(
     () => chatState.chats.find((chat) => chat.id === effectiveChatId),
     [chatState.chats, effectiveChatId],
   );
   const currentAgentId = currentChat?.agentId ?? chatState.selectedAgentId;
+  const chatSessionId = currentChat?.acpSessionId ?? null;
+  const sessionNotices = useAcpNoticesStore((state) =>
+    chatSessionId ? state.notices[chatSessionId] : undefined,
+  );
+  const permissionQueue = useMemo(
+    () => selectChatPermissions(allPermissions, effectiveChatId),
+    [allPermissions, effectiveChatId],
+  );
+  const agentQuestions = useMemo(
+    () => selectSessionQuestions(allAgentQuestions, chatSessionId),
+    [allAgentQuestions, chatSessionId],
+  );
   const sessionProviderId = currentChat?.providerId ?? aiProviderId;
   const hasSessionApiKey = useAIChatStore((state) =>
     getProviderAccessFromMap(sessionProviderId, state.providerApiKeys),
@@ -227,100 +276,9 @@ const AIChat = memo(function AIChat({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isActiveSurface, isAiChatBlockedByPolicy]);
 
-  useEffect(() => {
-    let unlisten: (() => void) | undefined;
-    let disposed = false;
-
-    const setupAcpStateSync = async () => {
-      const stop = await listen<AcpEvent>("acp-event", ({ payload }) => {
-        const store = useAIChatStore.getState();
-        const { actions } = store;
-
-        switch (payload.type) {
-          case "slash_commands_update":
-            actions.setAvailableSlashCommands(payload.commands);
-            break;
-          case "session_mode_update":
-            actions.setSessionModeState(
-              payload.modeState.currentModeId,
-              payload.modeState.availableModes,
-            );
-            break;
-          case "current_mode_update":
-            actions.setCurrentModeId(payload.currentModeId);
-            break;
-          case "config_options_update":
-            actions.setSessionConfigOptions(payload.configOptions);
-            break;
-          case "session_info_update": {
-            const chat =
-              store.chats.find((item) => item.acpSessionId === payload.sessionId) ??
-              (store.acpStatus?.sessionId === payload.sessionId ? actions.getCurrentChat() : null);
-            const nextTitle = chat ? getChatTitleFromSessionInfo(chat.title, payload.title) : null;
-            if (chat && nextTitle) {
-              actions.updateChatTitle(chat.id, nextTitle);
-            }
-            break;
-          }
-          case "status_changed":
-            actions.setAcpStatus(payload.status);
-            if (!payload.status.running) {
-              actions.setAvailableSlashCommands([]);
-              actions.setSessionModeState(null, []);
-              actions.setSessionConfigOptions([]);
-            }
-            break;
-          default:
-            break;
-        }
-      });
-      // The surface may already be gone by the time the bridge answers.
-      if (disposed) {
-        stop();
-        return;
-      }
-      unlisten = stop;
-    };
-
-    setupAcpStateSync().catch((error) => {
-      if (!disposed) {
-        console.error("Failed to initialize ACP state sync listener:", error);
-      }
-    });
-
-    return () => {
-      disposed = true;
-      if (unlisten) {
-        unlisten();
-      }
-    };
-  }, []);
-
   const appendAcpEvent = useCallback((event: ChatAcpEventInput) => {
     setAcpEvents((prev) => appendChatAcpEvent(prev, event));
   }, []);
-
-  const permissionQueueRef = useRef(permissionQueue);
-  permissionQueueRef.current = permissionQueue;
-  const currentAgentIdRef = useRef(currentAgentId);
-  currentAgentIdRef.current = currentAgentId;
-  useEffect(
-    () => () => {
-      // A prompt nobody can answer would leave the run waiting forever.
-      for (const request of permissionQueueRef.current) {
-        if (request.requestId.startsWith("intelligence:")) {
-          respondToIntelligencePermission(request.requestId, false);
-        } else if (currentAgentIdRef.current === CODEX_INTEGRATION_ID) {
-          void CodexIntegrationService.respond(request.requestId, false).catch(() => undefined);
-        } else {
-          void AcpStreamHandler.respondToPermission(request.requestId, false, true).catch(
-            () => undefined,
-          );
-        }
-      }
-    },
-    [],
-  );
 
   // Agent availability is handled dynamically by the agent selector.
 
@@ -413,8 +371,11 @@ const AIChat = memo(function AIChat({
 
   const stopStreaming = async (options: { continueQueue?: boolean } = {}) => {
     void recordFrictionSignal({ area: "agent", signal: "cancel" });
-    const pendingPermissions = permissionQueue;
-    setPermissionQueue([]);
+    // ACP and Athas's own agent close their prompts on cancel; Codex prompts are refused.
+    const refusedCodexPermissions = effectiveChatId
+      ? permissionActions.dropStoppedTurn(effectiveChatId)
+      : Promise.resolve();
+    questionActions.forgetWaitingForSession(chatSessionId);
 
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -427,30 +388,18 @@ const AIChat = memo(function AIChat({
     } else if (currentAgentId === CODEX_INTEGRATION_ID) {
       try {
         await CodexIntegrationService.cancel();
-        await Promise.all(
-          pendingPermissions.map((item) => CodexIntegrationService.respond(item.requestId, false)),
-        );
+        await refusedCodexPermissions;
       } catch (error) {
         console.error("Failed to cancel Codex turn:", error);
       }
     } else if (isAcpAgent(currentAgentId)) {
-      try {
-        await AcpStreamHandler.cancelPrompt();
-        if (pendingPermissions.length > 0) {
-          await Promise.all(
-            pendingPermissions.map((item) =>
-              AcpStreamHandler.respondToPermission(item.requestId, false, true),
-            ),
-          );
-        }
-      } catch (error) {
-        console.error("Failed to cancel ACP prompt:", error);
-      }
+      // The bridge answers the turn's open permission requests and questions as cancelled.
+      await AcpStreamHandler.cancelPrompt(effectiveChatId);
     }
     if (effectiveChatId && run) {
       // Stop means stop: queued follow-ups stay queued instead of launching.
       if (options.continueQueue) {
-        finishRunAndProcessQueue(effectiveChatId, run.runId);
+        finishRunAndProcessQueue(effectiveChatId, run.runId, "interrupted");
       } else {
         useAIChatStore.getState().actions.finishAgentRun(effectiveChatId, run.runId);
       }
@@ -465,15 +414,29 @@ const AIChat = memo(function AIChat({
     ) => {
       const currentMessages = useAIChatStore.getState().actions.getMessagesForChat(chatId);
       const currentMessage = currentMessages.find((message) => message.id === messageId);
-      chatActions.updateMessage(chatId, messageId, mutate(currentMessage));
+      const updates = mutate(currentMessage);
+      if (updates.toolCalls) {
+        updates.toolCalls = withExitedAcpTerminalSnapshots(
+          updates.toolCalls,
+          useAcpTerminalsStore.getState().terminals,
+        );
+      }
+      chatActions.updateMessage(chatId, messageId, updates);
     },
     [chatActions.updateMessage],
   );
 
-  function finishRunAndProcessQueue(targetChatId: string, runId: string) {
+  function finishRunAndProcessQueue(
+    targetChatId: string,
+    runId: string,
+    ending: AgentRunEnding = "completed",
+  ) {
+    // A "Send now" that stopped this turn has its prompt starting now.
+    settleQueuedSendNow(targetChatId);
     if (useAIChatStore.getState().agentRuns[targetChatId]?.runId !== runId) return;
     const actions = useAIChatStore.getState().actions;
     actions.finishAgentRun(targetChatId, runId);
+    if (!continuesAgentQueue(ending)) return;
     const nextMessage = actions.dequeueAgentMessage(targetChatId);
     if (nextMessage) {
       queueMicrotask(
@@ -598,7 +561,8 @@ const AIChat = memo(function AIChat({
       void updateInitialAgentSessionTitle(targetChatId, userMessage.content);
     }
 
-    abortControllerRef.current = new AbortController();
+    // A stopped turn can finish after the next one started; it only clears its own controller.
+    const { release: releaseAbortController } = claimRunAbortController(abortControllerRef);
     const currentAssistantMessageId = assistantMessageId;
     let currentAssistantRawContent = "";
     let acpProducedStateOnlyUpdate = false;
@@ -642,7 +606,7 @@ const AIChat = memo(function AIChat({
           }
 
           finishRunAndProcessQueue(targetChatId, runId);
-          abortControllerRef.current = null;
+          releaseAbortController();
           return;
         }
       }
@@ -670,14 +634,18 @@ const AIChat = memo(function AIChat({
           }));
         },
         (completion) => {
-          setPermissionQueue((queue) =>
-            queue.filter(
-              (item) =>
-                !item.requestId.startsWith("intelligence:") ||
-                isIntelligencePermissionPending(item.requestId),
-            ),
-          );
+          permissionActions.dropSettled(targetChatId);
           const wasCancelled = completion?.outcome === "cancelled";
+          if (wasCancelled || (completion?.stopReason && completion.stopReason !== "end_turn")) {
+            // The turn is over; a call the agent never finished must not stay running.
+            updateStreamingAssistantMessage(
+              targetChatId,
+              currentAssistantMessageId,
+              (currentMessage) => ({
+                toolCalls: cancelUnfinishedToolCalls(currentMessage?.toolCalls),
+              }),
+            );
+          }
           const currentMessage = chatActions
             .getMessagesForChat(targetChatId)
             .find((message) => message.id === currentAssistantMessageId);
@@ -688,14 +656,41 @@ const AIChat = memo(function AIChat({
             currentMessage?.resources?.length,
           );
 
+          const stopNotice = wasCancelled
+            ? undefined
+            : getAgentStopNotice(completion?.stopReason, currentMessage);
+          const turnUsage = completion?.usage;
+          if (stopNotice) {
+            updateStreamingAssistantMessage(targetChatId, currentAssistantMessageId, () => ({
+              stopNotice,
+              turnUsage,
+              isStreaming: false,
+              responsePhase: undefined,
+            }));
+            if (stopNotice === "prompt_refused") {
+              // The prompt was rejected; hand it back so the user can rephrase it.
+              setRefusedPrompt({
+                id: currentAssistantMessageId,
+                content: userMessage.content,
+                images: userMessage.images,
+              });
+            }
+            finishRunAndProcessQueue(targetChatId, runId, getAgentRunEnding(false, stopNotice));
+            releaseAbortController();
+            notifyAgent(
+              stopNotice === "prompt_refused" || stopNotice === "refused" ? "error" : "complete",
+            );
+            return;
+          }
+
           if (!hasVisibleResponse && wasCancelled) {
             updateStreamingAssistantMessage(targetChatId, currentAssistantMessageId, () => ({
               content: "_Stopped._",
               isStreaming: false,
               responsePhase: undefined,
             }));
-            finishRunAndProcessQueue(targetChatId, runId);
-            abortControllerRef.current = null;
+            finishRunAndProcessQueue(targetChatId, runId, "stopped");
+            releaseAbortController();
             return;
           }
 
@@ -710,8 +705,8 @@ const AIChat = memo(function AIChat({
                 content: fallbackContent,
                 isStreaming: false,
               }));
-              finishRunAndProcessQueue(targetChatId, runId);
-              abortControllerRef.current = null;
+              finishRunAndProcessQueue(targetChatId, runId, getAgentRunEnding(wasCancelled));
+              releaseAbortController();
               if (!wasCancelled) notifyAgent("complete");
               return;
             }
@@ -730,27 +725,22 @@ details: The ${emptyResponseSource} completed, but no content, tool output, or r
 [/ERROR_BLOCK]`,
               isStreaming: false,
             }));
-            finishRunAndProcessQueue(targetChatId, runId);
-            abortControllerRef.current = null;
+            finishRunAndProcessQueue(targetChatId, runId, wasCancelled ? "stopped" : "failed");
+            releaseAbortController();
             if (!wasCancelled) notifyAgent("error");
             return;
           }
 
           chatActions.updateMessage(targetChatId, currentAssistantMessageId, {
             isStreaming: false,
+            turnUsage,
           });
-          finishRunAndProcessQueue(targetChatId, runId);
-          abortControllerRef.current = null;
+          finishRunAndProcessQueue(targetChatId, runId, getAgentRunEnding(wasCancelled));
+          releaseAbortController();
           if (!wasCancelled) notifyAgent("complete");
         },
         (error: string, canReconnect?: boolean) => {
-          setPermissionQueue((queue) =>
-            queue.filter(
-              (item) =>
-                !item.requestId.startsWith("intelligence:") ||
-                isIntelligencePermissionPending(item.requestId),
-            ),
-          );
+          permissionActions.dropSettled(targetChatId);
           console.error("Streaming error:", error);
 
           let errorTitle = "API Error";
@@ -867,6 +857,7 @@ details: ${errorDetails || mainError}
               content: currentMessage?.content
                 ? `${currentMessage.content}\n\n${formattedError}`
                 : formattedError,
+              toolCalls: cancelUnfinishedToolCalls(currentMessage?.toolCalls),
               isStreaming: false,
             }),
           );
@@ -877,8 +868,8 @@ details: ${errorDetails || mainError}
             });
           }
           notifyAgent("error");
-          finishRunAndProcessQueue(targetChatId, runId);
-          abortControllerRef.current = null;
+          finishRunAndProcessQueue(targetChatId, runId, "failed");
+          releaseAbortController();
         },
         conversationContext,
         () => {
@@ -903,6 +894,8 @@ details: ${errorDetails || mainError}
             event.kind,
             event.status,
             event.locations,
+            event.output,
+            event.rawOutput,
           );
           void snapshotToolEdit(toolCall);
           updateStreamingAssistantMessage(
@@ -928,6 +921,7 @@ details: ${errorDetails || mainError}
                 name: event.toolName,
                 input: event.input,
                 output: event.output,
+                rawOutput: event.rawOutput,
                 error: event.error,
                 kind: event.kind,
                 status: event.status,
@@ -985,20 +979,35 @@ details: ${errorDetails || mainError}
             detail: event.description || `${event.permissionType} ${event.resource}`.trim(),
             state: "info",
           });
-          setPermissionQueue((prev) => [
-            ...prev,
-            {
-              requestId: event.requestId,
-              description: event.description,
-              permissionType: event.permissionType,
-              resource: event.resource,
-              options: event.options,
-              preview: event.preview,
-            },
-          ]);
+          permissionActions.add({
+            chatId: targetChatId,
+            responder: event.requestId.startsWith("intelligence:")
+              ? "intelligence"
+              : currentAgentId === CODEX_INTEGRATION_ID
+                ? "codex"
+                : "acp",
+            requestId: event.requestId,
+            description: event.description,
+            permissionType: event.permissionType,
+            resource: event.resource,
+            options: event.options,
+            preview: getAcpPermissionPreview(event),
+          });
         },
         (event) => {
           if (!isAcpAgent(currentAgentId) && currentAgentId !== CODEX_INTEGRATION_ID) return;
+          if (event.type === "elicitation_request") {
+            chatActions.updateAgentRun(targetChatId, runId, { phase: "approval" });
+            notifyAgent("question", event.requestId);
+            appendAcpEvent({
+              id: `question-${event.requestId}`,
+              category: "permission",
+              label: "Question asked",
+              detail: event.request.message,
+              state: "info",
+            });
+            return;
+          }
           // Only show meaningful events, skip noisy ones
           if (
             event.type === "content_chunk" ||
@@ -1016,6 +1025,18 @@ details: ${errorDetails || mainError}
               break;
             case "tool_start":
             case "tool_update":
+              followAgentLocations(targetChatId, event.locations);
+              break;
+            case "agent_location":
+              followAgentTo(targetChatId, { path: event.path, line: event.line });
+              break;
+            case "agent_file_write":
+              recordAgentFileWrite(targetChatId, {
+                writeId: event.writeId,
+                path: event.path,
+                previousContent: event.previousContent,
+                content: event.content,
+              });
               break;
             case "tool_complete":
               break;
@@ -1058,25 +1079,16 @@ details: ${errorDetails || mainError}
               acpProducedStateOnlyUpdate = true;
               acpCommandResultLabel = "Slash commands refreshed.";
               break; // Not useful to show
-            case "plan_update": {
-              const summary =
-                event.entries.length > 0
-                  ? event.entries.map((entry) => entry.content).join(" | ")
-                  : "No plan steps";
-              appendAcpEvent({
-                category: "plan",
-                label: `Plan updated (${event.entries.length} steps)`,
-                detail: summary,
-                state: "info",
+            case "plan_update":
+              // ACP sends the full plan each time; the message shows the latest one.
+              chatActions.updateMessage(targetChatId, currentAssistantMessageId, {
+                plan: event.entries.length > 0 ? event.entries : undefined,
               });
               break;
-            }
-            case "usage_update": {
-              break;
-            }
+            case "usage_update":
+              break; // The chat store keeps the session's usage
             case "status_changed":
-              useAIChatStore.getState().actions.setAcpStatus(event.status);
-              break; // internal state sync
+              break; // The chat store follows agent status
             case "error":
               appendAcpEvent({
                 category: "error",
@@ -1110,6 +1122,19 @@ details: ${errorDetails || mainError}
           );
         },
         targetChatId,
+        undefined,
+        (phase) => {
+          updateStreamingAssistantMessage(
+            targetChatId,
+            currentAssistantMessageId,
+            (currentMessage) =>
+              currentMessage?.isStreaming &&
+              !currentMessage.content &&
+              currentMessage.responsePhase !== "thinking"
+                ? { responsePhase: phase }
+                : {},
+          );
+        },
       );
     } catch (error) {
       console.error("Failed to start streaming:", error);
@@ -1118,8 +1143,8 @@ details: ${errorDetails || mainError}
           "Error: Failed to connect to Agent service. Please check your API key and try again.",
         isStreaming: false,
       });
-      finishRunAndProcessQueue(targetChatId, runId);
-      abortControllerRef.current = null;
+      finishRunAndProcessQueue(targetChatId, runId, "failed");
+      releaseAbortController();
     }
   }
 
@@ -1152,7 +1177,7 @@ details: ${errorDetails || mainError}
           showToast({
             message: "Message queued",
             description:
-              "Open the queue to edit, reorder, or remove guidance while the agent runs.",
+              "It sends when this turn ends. Edit, reorder, or send it now from the queue above.",
             type: "info",
           });
         }
@@ -1223,10 +1248,47 @@ details: ${errorDetails || mainError}
     ],
   );
 
+  const handleSendQueuedMessageNow = (index: number) => {
+    if (!effectiveChatId || agentIsDetached(effectiveChatId)) return;
+    const store = useAIChatStore.getState();
+    const message = store.agentMessageQueues[effectiveChatId]?.[index];
+    if (!message) return;
+    // A quick second click must not reorder the queue or stop the turn the first one started.
+    if (!beginQueuedSendNow(effectiveChatId)) return;
+    if (store.agentRuns[effectiveChatId]) {
+      // It runs next: the stopped turn winds down before this prompt starts.
+      store.actions.moveQueuedAgentMessage(effectiveChatId, index, 0);
+      void stopStreaming({ continueQueue: true });
+      return;
+    }
+    // The queue is held after a stop, refusal or error; send this one on its own.
+    if (sendMessage(message.content, message.images).accepted) {
+      store.actions.removeQueuedAgentMessage(effectiveChatId, index);
+    }
+    settleQueuedSendNow(effectiveChatId);
+  };
+
   const processMessageRef = useRef(processMessage);
   useLayoutEffect(() => {
     processMessageRef.current = processMessage;
   });
+
+  const handleEditQueuedMessage = useCallback(
+    (message: QueuedAgentMessage | null) => {
+      if (!effectiveChatId) return;
+      const resume = setQueuedMessageEditing(effectiveChatId, message);
+      // The queue waited for this edit when the last turn ended; send the next message now.
+      if (!resume || useAIChatStore.getState().agentRuns[effectiveChatId]) return;
+      const next = useAIChatStore.getState().actions.dequeueAgentMessage(effectiveChatId);
+      if (next) {
+        void processMessageRef.current(next.content, {
+          targetChatId: effectiveChatId,
+          images: next.images,
+        });
+      }
+    },
+    [effectiveChatId],
+  );
 
   const handleEditUserMessage = useCallback(
     (messageId: string, content: string) => {
@@ -1280,41 +1342,59 @@ details: ${errorDetails || mainError}
     showToast,
   ]);
 
+  // Notices are live information from the agent, shown in the timeline but never saved.
+  const timelineEvents = useMemo(
+    () =>
+      sessionNotices?.length
+        ? [...acpEvents, ...sessionNotices.map(acpNoticeToChatEvent)]
+        : acpEvents,
+    [acpEvents, sessionNotices],
+  );
   const currentPermission = permissionQueue[0];
   const isNewSession =
     isChatMessagesLoaded && (currentChat?.messages.length ?? 0) === 0 && acpEvents.length === 0;
-  const useInitialComposer = isNewSession && !currentPermission;
+  const currentQuestion = currentPermission ? undefined : agentQuestions[0];
+  const useInitialComposer = isNewSession && !currentPermission && !currentQuestion;
+  const handleQuestionAnswer = async (response: AcpElicitationResponse) => {
+    if (!currentQuestion) return;
+    const isLink = currentQuestion.request.mode === "url";
+    appendAcpEvent({
+      id: `question-answer-${currentQuestion.requestId}`,
+      category: "permission",
+      label: isLink ? "Link request answered" : "Question answered",
+      detail:
+        response.action === "accept"
+          ? isLink
+            ? "opened in browser"
+            : "answered"
+          : response.action,
+      state: response.action === "accept" ? "success" : "info",
+    });
+    try {
+      await questionActions.answer(currentQuestion.requestId, response);
+    } catch (error) {
+      console.error("Failed to answer agent question:", error);
+      showToast({ message: "The agent stopped waiting for this answer.", type: "error" });
+    }
+  };
   const handlePermission = async (approved: boolean, optionId?: string) => {
     if (!currentPermission) return;
+    const option = currentPermission.options.find((item) => item.id === optionId);
+    appendAcpEvent({
+      id: `permission-response-${currentPermission.requestId}`,
+      category: "permission",
+      label: "Permission response",
+      detail: option?.name || (approved ? "allow" : "deny"),
+      state: approved ? "success" : "info",
+    });
     try {
-      const option = currentPermission.options.find((item) => item.id === optionId);
-      appendAcpEvent({
-        id: `permission-response-${currentPermission.requestId}`,
-        category: "permission",
-        label: "Permission response",
-        detail: option?.name || (approved ? "allow" : "deny"),
-        state: approved ? "success" : "info",
-      });
-      if (currentPermission.requestId.startsWith("intelligence:")) {
-        respondToIntelligencePermission(currentPermission.requestId, approved);
-      } else if (currentAgentId === CODEX_INTEGRATION_ID) {
-        await CodexIntegrationService.respond(currentPermission.requestId, approved);
-      } else {
-        await AcpStreamHandler.respondToPermission(
-          currentPermission.requestId,
-          approved,
-          false,
-          optionId,
-        );
-      }
+      await permissionActions.respond(currentPermission.requestId, approved, optionId);
     } catch (error) {
       console.error("Failed to answer permission request:", error);
       showToast({
         message: "The agent did not accept the answer. Stop the agent and try again.",
         type: "error",
       });
-    } finally {
-      setPermissionQueue((prev) => prev.slice(1));
     }
   };
 
@@ -1350,15 +1430,19 @@ details: ${errorDetails || mainError}
         if (effectiveChatId)
           chatActions.moveQueuedAgentMessage(effectiveChatId, fromIndex, toIndex);
       }}
-      onRemoveQueuedMessage={(index, reason) => {
+      onUpdateQueuedMessage={(index, message) => {
+        if (effectiveChatId) chatActions.updateQueuedAgentMessage(effectiveChatId, index, message);
+      }}
+      onRemoveQueuedMessage={(index) => {
         if (effectiveChatId) {
           chatActions.removeQueuedAgentMessage(effectiveChatId, index);
-          if (reason === "discard") {
-            void recordFrictionSignal({ area: "agent", signal: "queue_discard" });
-          }
+          void recordFrictionSignal({ area: "agent", signal: "queue_discard" });
         }
       }}
+      onSendQueuedMessageNow={handleSendQueuedMessageNow}
+      onEditQueuedMessage={handleEditQueuedMessage}
       onStopStreaming={stopStreaming}
+      restoredPrompt={refusedPrompt}
     />
   );
 
@@ -1432,7 +1516,7 @@ details: ${errorDetails || mainError}
                       !surfaceStreamingMessageId &&
                       !isAiChatBlockedByPolicy
                     }
-                    acpEvents={acpEvents}
+                    acpEvents={timelineEvents}
                     searchQuery={messageSearchQuery}
                     activeSearchMessageId={activeMessageSearchMatch?.messageId ?? null}
                     activeSearchIndex={activeMessageSearchIndex}
@@ -1452,6 +1536,27 @@ details: ${errorDetails || mainError}
               permission={currentPermission}
               queuedCount={permissionQueue.length - 1}
               onRespond={handlePermission}
+            />
+          ) : null}
+
+          {currentQuestion?.request.mode === "url" ? (
+            <AcpUrlQuestionPrompt
+              key={currentQuestion.requestId}
+              request={currentQuestion.request}
+              agentLabel={assistantLabel}
+              queuedCount={agentQuestions.length - 1}
+              waiting={currentQuestion.waiting ?? false}
+              onAnswer={handleQuestionAnswer}
+              onDismiss={() => questionActions.remove(currentQuestion.requestId)}
+            />
+          ) : currentQuestion ? (
+            <AcpQuestionPrompt
+              key={currentQuestion.requestId}
+              requestId={currentQuestion.requestId}
+              request={currentQuestion.request}
+              agentLabel={assistantLabel}
+              queuedCount={agentQuestions.length - 1}
+              onAnswer={handleQuestionAnswer}
             />
           ) : null}
 

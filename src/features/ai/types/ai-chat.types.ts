@@ -1,4 +1,9 @@
 import type {
+  AcpPlanEntry,
+  AcpTerminalSnapshot,
+  AcpTurnUsage,
+} from "@/features/ai/types/acp.types";
+import type {
   AcpToolCallLocation,
   AcpToolCallStatus,
   AcpToolKind,
@@ -11,26 +16,42 @@ import type { GenerativeUIView } from "@/extensions/ui/types/generative-ui";
 
 export type OutputStyle = "default" | "explanatory" | "learning" | "custom";
 export type ChatMode = "chat" | "plan";
-export type AssistantResponsePhase = "starting" | "waiting" | "thinking";
+/** `stalled`: a prompt the agent has not answered for a while; it may still be thinking. */
+export type AssistantResponsePhase = "starting" | "waiting" | "stalled" | "thinking";
+
+/**
+ * Why an agent's turn ended before it finished the work: it hit its output
+ * limit, hit its turn or tool request limit, refused the user's prompt, or
+ * refused to continue after tool output.
+ */
+export type AgentStopNotice = "max_tokens" | "max_turn_requests" | "prompt_refused" | "refused";
 
 export interface AgentMessageSubmitResult {
   accepted: boolean;
   error?: string;
 }
 
+/** ACP's tool call states, plus `cancelled` for a call still open when its turn ended. */
+export type ToolCallStatus = AcpToolCallStatus | "cancelled";
+
 export interface ToolCall {
   id?: string;
   name: string;
   input: any;
+  /** What the transcript shows: ACP content, or raw output when there is none. */
   output?: any;
+  /** The agent's ACP `rawOutput`, kept so later content can take precedence. */
+  rawOutput?: unknown;
   error?: string;
   kind?: AcpToolKind;
-  status?: AcpToolCallStatus;
+  status?: ToolCallStatus;
   locations?: AcpToolCallLocation[];
   timestamp: Date;
   isComplete?: boolean;
   /** Length of the assistant text when this call started, so the transcript can interleave them. */
   contentOffset?: number;
+  /** The final output of the call's terminals, by terminal id, kept after the terminal is gone. */
+  terminals?: Record<string, AcpTerminalSnapshot>;
 }
 
 export interface ImageContent {
@@ -41,6 +62,11 @@ export interface ImageContent {
 export interface QueuedAgentMessage {
   content: string;
   images?: ImageContent[];
+}
+
+/** A sent prompt handed back to the composer, e.g. after the agent refused it. */
+export interface RestoredComposerPrompt extends QueuedAgentMessage {
+  id: string;
 }
 
 interface ResourceContent {
@@ -62,6 +88,12 @@ export interface Message {
   resources?: ResourceContent[];
   ui?: GenerativeUIView[];
   followUpActions?: ChatFollowUpAction[];
+  /** The agent's latest ACP plan for this turn; each update replaces the whole list. */
+  plan?: AcpPlanEntry[];
+  /** Set when the turn ended early, so the chat can say why and offer to continue. */
+  stopNotice?: AgentStopNotice;
+  /** The tokens the agent reported for the turn this message answers. */
+  turnUsage?: AcpTurnUsage;
 }
 
 // Agent types for AI chat
@@ -81,6 +113,16 @@ export interface Chat {
   branch?: string | null;
   isPinned?: boolean;
   archivedAt?: Date | null;
+  /** The agent session options the user picked, applied again when the session reattaches. */
+  sessionSettings?: ChatSessionSettings | null;
+}
+
+/** A chat's picks among what its agent session offers. */
+export interface ChatSessionSettings {
+  modeId?: string;
+  configOptions?: Record<string, string | boolean>;
+  /** The chat's "Follow agent" toggle, when the user set it; otherwise the setting applies. */
+  followAgent?: boolean;
 }
 
 export interface AIChatProps {
@@ -130,8 +172,15 @@ export interface AIChatInputBarProps {
   onSendMessage: (message: string, images?: ImageContent[]) => AgentMessageSubmitResult;
   onInterruptAndSend: (message: string, images?: ImageContent[]) => AgentMessageSubmitResult;
   onMoveQueuedMessage: (fromIndex: number, toIndex: number) => void;
-  onRemoveQueuedMessage: (index: number, reason: "edit" | "discard") => void;
+  onUpdateQueuedMessage: (index: number, message: string) => void;
+  onRemoveQueuedMessage: (index: number) => void;
+  /** Sends a queued message next, stopping the running turn first. */
+  onSendQueuedMessageNow: (index: number) => void;
+  /** The queued message being edited, or null once the edit ends. */
+  onEditQueuedMessage?: (message: QueuedAgentMessage | null) => void;
   onStopStreaming: () => void;
+  /** Put back into the composer when it is empty; a new `id` restores again. */
+  restoredPrompt?: RestoredComposerPrompt | null;
 }
 
 export interface ApiModelSelection {

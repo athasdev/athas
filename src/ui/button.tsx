@@ -17,7 +17,7 @@ export const buttonVariants = cva(
           "bg-primary text-primary-foreground hover:bg-primary-hover data-[active=true]:bg-primary-hover",
         /** A field-shaped trigger: selects and pickers that sit among inputs. */
         outline:
-          "border border-border bg-surface text-foreground hover:border-border-strong data-[active=true]:border-primary data-[popup-open]:border-primary",
+          "border border-border bg-surface text-foreground hover:border-border-strong data-[active=true]:border-primary data-popup-open:border-primary",
         /** Borderless: toolbars, icon buttons, quiet actions. */
         ghost:
           "bg-transparent text-subtle-foreground hover:bg-accent hover:text-foreground data-[active=true]:bg-selected data-[active=true]:text-foreground",
@@ -32,7 +32,7 @@ export const buttonVariants = cva(
         success: "text-success hover:text-success",
         warning: "text-warning hover:text-warning",
         danger:
-          "text-destructive hover:text-destructive data-[active=true]:text-destructive [&[data-variant=ghost]]:hover:bg-destructive-soft [&[data-variant=ghost]]:data-[active=true]:bg-destructive-soft",
+          "text-destructive hover:text-destructive data-[active=true]:text-destructive data-[variant=ghost]:hover:bg-destructive-soft data-[variant=ghost]:data-[active=true]:bg-destructive-soft",
       },
       width: { content: "", full: "w-full", grow: "flex-1" },
       align: {

@@ -1,5 +1,7 @@
 import type {
   AcpAgentStatus,
+  AcpSessionState,
+  AcpUsageUpdate,
   SessionConfigOption,
   SessionConfigValue,
   SessionMode,
@@ -57,13 +59,10 @@ export interface AIChatState {
   hasApiKey: boolean;
   providerApiKeys: Map<string, boolean>;
   dynamicModels: Record<string, ProviderModel[]>;
-  availableSlashCommands: SlashCommand[];
-  acpStatus: AcpAgentStatus | null;
-  sessionModeState: {
-    currentModeId: string | null;
-    availableModes: SessionMode[];
-  };
-  sessionConfigOptions: SessionConfigOption[];
+  /** Running ACP agent processes, by `getAcpAgentKey(agentId, workspacePath)`. */
+  acpAgents: Record<string, AcpAgentStatus>;
+  /** What each open ACP session advertises, by session id. */
+  acpSessions: Record<string, AcpSessionState>;
 }
 
 export interface AIChatActions {
@@ -82,8 +81,11 @@ export interface AIChatActions {
   finishAgentRun: (chatId: string, runId: string) => void;
   enqueueAgentMessage: (chatId: string, message: string, images?: ImageContent[]) => void;
   prependAgentMessage: (chatId: string, message: string, images?: ImageContent[]) => void;
+  /** Takes the next queued message; null when there is none or the user is editing it. */
   dequeueAgentMessage: (chatId: string) => QueuedAgentMessage | null;
   moveQueuedAgentMessage: (chatId: string, fromIndex: number, toIndex: number) => void;
+  /** Rewrites a queued message's text; its images stay attached. */
+  updateQueuedAgentMessage: (chatId: string, index: number, message: string) => void;
   removeQueuedAgentMessage: (chatId: string, index: number) => void;
   createNewChat: (
     agentId?: AgentType,
@@ -118,13 +120,32 @@ export interface AIChatActions {
   hasProviderApiKey: (providerId: string) => boolean;
 
   setDynamicModels: (providerId: string, models: ProviderModel[]) => void;
-  setAvailableSlashCommands: (commands: SlashCommand[]) => void;
-  setSessionModeState: (currentModeId: string | null, availableModes: SessionMode[]) => void;
-  setCurrentModeId: (modeId: string) => void;
-  setAcpStatus: (status: AcpAgentStatus | null) => void;
-  changeSessionMode: (modeId: string) => Promise<void>;
-  setSessionConfigOptions: (options: SessionConfigOption[]) => void;
-  changeSessionConfigOption: (configId: string, value: SessionConfigValue) => Promise<void>;
+  /** Records a running agent, or forgets a stopped one together with its sessions. */
+  setAcpAgentStatus: (status: AcpAgentStatus) => void;
+  setSessionSlashCommands: (sessionId: string, commands: SlashCommand[]) => void;
+  setSessionModeState: (
+    sessionId: string,
+    currentModeId: string | null,
+    availableModes: SessionMode[],
+  ) => void;
+  setSessionCurrentMode: (sessionId: string, modeId: string) => void;
+  setSessionConfigOptions: (sessionId: string, options: SessionConfigOption[]) => void;
+  /** Keeps the latest context and cost report of a session. */
+  setSessionUsage: (sessionId: string, usage: AcpUsageUpdate) => void;
+  clearAcpSession: (sessionId: string) => void;
+  changeSessionMode: (sessionId: string, modeId: string) => Promise<void>;
+  changeSessionConfigOption: (
+    sessionId: string,
+    configId: string,
+    value: SessionConfigValue,
+  ) => Promise<void>;
+  /**
+   * Applies the chat's saved mode and config picks to its reattached session, once per session,
+   * where the session still offers them.
+   */
+  restoreChatSessionSettings: (sessionId: string) => void;
+  /** Saves the chat's "Follow agent" toggle with its history. */
+  setChatFollowAgent: (chatId: string, following: boolean) => void;
 
   getWorkspaceSessionSnapshot: () => AIWorkspaceSessionSnapshot;
   restoreWorkspaceSession: (snapshot: AIWorkspaceSessionSnapshot | null | undefined) => void;

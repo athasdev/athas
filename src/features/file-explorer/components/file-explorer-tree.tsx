@@ -1100,7 +1100,7 @@ function FileExplorerTreeComponent({
       className={cn(
         "group/file-explorer relative flex min-h-0 min-w-0 flex-1 select-none flex-col overflow-hidden px-0 pb-(--app-scrollbar-size)",
         dragState.dragOverPath === "__ROOT__" &&
-          "border-2! border-dashed! border-primary! bg-primary! bg-opacity-10!",
+          "border-2! border-dashed! border-primary! bg-primary-soft!",
       )}
       onFocusCapture={() => {
         setHasTreeFocus(true);
@@ -1512,7 +1512,7 @@ function FileExplorerTreeComponent({
         getStickyIndexes={getStickyRowIndexes}
         emptyState={
           !rootFolderPath ? (
-            <div className="file-tree-empty-state absolute inset-0 flex items-center justify-center">
+            <div className="absolute inset-0 flex items-center justify-center">
               <EmptyState
                 layout="sidebar"
                 message="No folder open"
@@ -1520,7 +1520,7 @@ function FileExplorerTreeComponent({
               />
             </div>
           ) : displayedFiles.length === 0 ? (
-            <div className="file-tree-empty-state absolute inset-0 flex items-center justify-center">
+            <div className="absolute inset-0 flex items-center justify-center">
               <EmptyState
                 layout="sidebar"
                 message={

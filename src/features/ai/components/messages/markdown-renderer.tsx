@@ -1,3 +1,4 @@
+import { AcpAuthChoice } from "./acp-auth-choice";
 import { ApiErrorActions } from "./api-error-actions";
 import { getApiErrorCode } from "@/features/ai/lib/api-error";
 import {
@@ -21,6 +22,7 @@ import {
   normalizeImplicitCodeFences,
   normalizePlainTextFence,
 } from "@/features/ai/lib/assistant-markdown";
+import { selectAgentAuthRequest, useAcpAuthStore } from "@/features/ai/stores/acp-auth.store";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import {
@@ -156,7 +158,7 @@ function CodeBlock({
   const renderedCode = useMemo(() => renderHighlightedCode(code, segments || []), [code, segments]);
 
   return (
-    <div className="group relative my-2">
+    <div className="not-typeset group relative my-2">
       <pre className="font-mono max-w-full overflow-x-auto rounded border border-border bg-surface p-2">
         <div className="mb-1 flex items-center justify-between">
           {languageLabel && (
@@ -253,6 +255,9 @@ function ErrorBlock({
   const isAuthRequired = code === "AUTH_REQUIRED";
   const isConfigurationRequired = code === "CONFIG_REQUIRED";
   const canRecoverAgent = isAuthRequired || isConfigurationRequired;
+  const authRequest = selectAgentAuthRequest(useAcpAuthStore.use.request(), agentId);
+  // Only the latest error offers sign-in, since signing in retries its prompt.
+  const showAuthChoice = isAuthRequired && authRequest !== null && onRetry !== undefined;
 
   const handleRestartAgentSession = async () => {
     setIsRestartingSession(true);
@@ -290,7 +295,7 @@ function ErrorBlock({
   };
 
   return (
-    <Marker role="alert" tone="error" className="my-1 items-start">
+    <Marker role="alert" tone="error" className="not-typeset my-1 items-start">
       <MarkerIcon>
         <WarningCircleIcon />
       </MarkerIcon>
@@ -320,7 +325,10 @@ function ErrorBlock({
             onRetry={onRetry}
           />
         )}
-        {canRecoverAgent && (
+        {showAuthChoice && authRequest ? (
+          <AcpAuthChoice request={authRequest} chatId={chatId} onSignedIn={onRetry} />
+        ) : null}
+        {canRecoverAgent && !showAuthChoice && (
           <span className="flex flex-wrap items-center gap-2">
             <Button
               type="button"
@@ -365,57 +373,9 @@ function ErrorBlock({
 }
 
 // Header classes scaled for sidebar context
-const headerClasses: Record<number, string> = {
-  1: "mt-3 mb-1.5 font-semibold ui-text-sm text-foreground",
-  2: "ui-text-sm mt-2.5 mb-1 font-semibold text-foreground",
-  3: "mt-2 mb-1 font-semibold text-foreground ui-text-sm",
-  4: "mt-2 mb-0.5 font-medium text-foreground ui-text-sm",
-  5: "mt-1.5 mb-0.5 font-medium text-muted-foreground ui-text-sm",
-  6: "mt-1.5 mb-0.5 font-medium text-subtle-foreground ui-text-sm",
-};
-
 function renderHeader(level: number, text: string, key: string): React.ReactNode {
-  const className = headerClasses[level] || headerClasses[6];
-  const content = renderInlineFormatting(text);
-
-  switch (level) {
-    case 1:
-      return (
-        <h1 key={key} className={className}>
-          {content}
-        </h1>
-      );
-    case 2:
-      return (
-        <h2 key={key} className={className}>
-          {content}
-        </h2>
-      );
-    case 3:
-      return (
-        <h3 key={key} className={className}>
-          {content}
-        </h3>
-      );
-    case 4:
-      return (
-        <h4 key={key} className={className}>
-          {content}
-        </h4>
-      );
-    case 5:
-      return (
-        <h5 key={key} className={className}>
-          {content}
-        </h5>
-      );
-    default:
-      return (
-        <h6 key={key} className={className}>
-          {content}
-        </h6>
-      );
-  }
+  const Heading = `h${Math.min(Math.max(level, 1), 6)}` as "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
+  return <Heading key={key}>{renderInlineFormatting(text)}</Heading>;
 }
 
 type TableAlignment = "left" | "center" | "right";
@@ -425,9 +385,6 @@ type MarkdownTable = {
   alignments: TableAlignment[];
   rows: string[][];
 };
-
-const INLINE_CODE_CLASS_NAME =
-  "font-mono inline whitespace-break-spaces rounded bg-surface px-1 py-0 text-[0.95em] leading-[inherit] text-foreground align-baseline";
 
 function splitMarkdownTableRow(line: string): string[] {
   let value = line.trim();
@@ -515,28 +472,14 @@ function parseMarkdownTable(
   };
 }
 
-function getTableAlignmentClass(alignment: TableAlignment): string {
-  switch (alignment) {
-    case "center":
-      return "text-center";
-    case "right":
-      return "text-right";
-    default:
-      return "text-left";
-  }
-}
-
 function renderTable(table: MarkdownTable, key: string): React.ReactNode {
   return (
-    <div key={key} className="my-2 max-w-full overflow-x-auto">
-      <table className="w-full min-w-max border-collapse ui-text-sm">
+    <div key={key} className="typeset-scroll">
+      <table>
         <thead>
-          <tr className="border-border border-b">
+          <tr>
             {table.headers.map((header, index) => (
-              <th
-                key={index}
-                className={`bg-surface px-2 py-1.5 font-medium text-foreground ${getTableAlignmentClass(table.alignments[index])}`}
-              >
+              <th key={index} align={table.alignments[index]}>
                 {renderInlineFormatting(header)}
               </th>
             ))}
@@ -544,12 +487,9 @@ function renderTable(table: MarkdownTable, key: string): React.ReactNode {
         </thead>
         <tbody>
           {table.rows.map((row, rowIndex) => (
-            <tr key={rowIndex} className="border-border border-b last:border-b-0">
+            <tr key={rowIndex}>
               {row.map((cell, cellIndex) => (
-                <td
-                  key={cellIndex}
-                  className={`px-2 py-1.5 text-muted-foreground align-top ${getTableAlignmentClass(table.alignments[cellIndex])}`}
-                >
+                <td key={cellIndex} align={table.alignments[cellIndex]}>
                   {renderInlineFormatting(cell)}
                 </td>
               ))}
@@ -574,11 +514,7 @@ function renderInlineFormatting(text: string): React.ReactNode {
     // Inline code
     const codeMatch = remaining.match(/^`([^`]+)`/);
     if (codeMatch) {
-      elements.push(
-        <code key={getInlineKey("code", codeMatch[0])} className={INLINE_CODE_CLASS_NAME}>
-          {codeMatch[1]}
-        </code>,
-      );
+      elements.push(<code key={getInlineKey("code", codeMatch[0])}>{codeMatch[1]}</code>);
       remaining = remaining.slice(codeMatch[0].length);
       continue;
     }
@@ -586,12 +522,7 @@ function renderInlineFormatting(text: string): React.ReactNode {
     const pendingCodeMatch = remaining.match(/^`([^`]*)$/);
     if (pendingCodeMatch) {
       elements.push(
-        <code
-          key={getInlineKey("pending-code", pendingCodeMatch[0])}
-          className={INLINE_CODE_CLASS_NAME}
-        >
-          {pendingCodeMatch[1]}
-        </code>,
+        <code key={getInlineKey("pending-code", pendingCodeMatch[0])}>{pendingCodeMatch[1]}</code>,
       );
       break;
     }
@@ -599,14 +530,7 @@ function renderInlineFormatting(text: string): React.ReactNode {
     // Strikethrough
     const strikeMatch = remaining.match(/^~~([^~]+)~~/);
     if (strikeMatch) {
-      elements.push(
-        <del
-          key={getInlineKey("strike", strikeMatch[0])}
-          className="text-subtle-foreground line-through"
-        >
-          {strikeMatch[1]}
-        </del>,
-      );
+      elements.push(<del key={getInlineKey("strike", strikeMatch[0])}>{strikeMatch[1]}</del>);
       remaining = remaining.slice(strikeMatch[0].length);
       continue;
     }
@@ -614,11 +538,7 @@ function renderInlineFormatting(text: string): React.ReactNode {
     // Bold
     const boldMatch = remaining.match(/^\*\*([^*]+)\*\*/);
     if (boldMatch) {
-      elements.push(
-        <strong key={getInlineKey("bold", boldMatch[0])} className="font-semibold">
-          {boldMatch[1]}
-        </strong>,
-      );
+      elements.push(<strong key={getInlineKey("bold", boldMatch[0])}>{boldMatch[1]}</strong>);
       remaining = remaining.slice(boldMatch[0].length);
       continue;
     }
@@ -626,11 +546,7 @@ function renderInlineFormatting(text: string): React.ReactNode {
     // Italic
     const italicMatch = remaining.match(/^\*([^*]+)\*/);
     if (italicMatch) {
-      elements.push(
-        <em key={getInlineKey("italic", italicMatch[0])} className="italic">
-          {italicMatch[1]}
-        </em>,
-      );
+      elements.push(<em key={getInlineKey("italic", italicMatch[0])}>{italicMatch[1]}</em>);
       remaining = remaining.slice(italicMatch[0].length);
       continue;
     }
@@ -732,27 +648,17 @@ function renderContent(
     if (currentList && currentList.items.length > 0) {
       if (currentList.type === "ol") {
         elements.push(
-          <ol
-            key={`ol-${currentListStartLine}-${currentList.items.length}`}
-            className="my-2 ml-5 list-decimal space-y-0.5"
-          >
+          <ol key={`ol-${currentListStartLine}-${currentList.items.length}`}>
             {currentList.items.map((item, idx) => (
-              <li key={idx} className="pl-1 text-foreground">
-                {renderInlineFormatting(item)}
-              </li>
+              <li key={idx}>{renderInlineFormatting(item)}</li>
             ))}
           </ol>,
         );
       } else {
         elements.push(
-          <ul
-            key={`ul-${currentListStartLine}-${currentList.items.length}`}
-            className="my-2 ml-5 list-disc space-y-0.5"
-          >
+          <ul key={`ul-${currentListStartLine}-${currentList.items.length}`}>
             {currentList.items.map((item, idx) => (
-              <li key={idx} className="pl-1 text-foreground">
-                {renderInlineFormatting(item)}
-              </li>
+              <li key={idx}>{renderInlineFormatting(item)}</li>
             ))}
           </ul>,
         );
@@ -766,10 +672,7 @@ function renderContent(
       const paragraphText = currentParagraph.join(" ").trim();
       if (paragraphText) {
         elements.push(
-          <p
-            key={`p-${currentParagraphStartLine}-${paragraphText.length}`}
-            className="my-1.5 leading-[1.6]"
-          >
+          <p key={`p-${currentParagraphStartLine}-${paragraphText.length}`}>
             {renderInlineFormatting(paragraphText)}
           </p>,
         );
@@ -826,7 +729,7 @@ function renderContent(
     if (trimmedLine.match(/^[-*_]{3,}$/) && trimmedLine.length >= 3) {
       flushList();
       flushParagraph();
-      elements.push(<hr key={`hr-${i}`} className="my-3 border-border" />);
+      elements.push(<hr key={`hr-${i}`} />);
       continue;
     }
 
@@ -836,10 +739,7 @@ function renderContent(
       flushParagraph();
       const quoteContent = trimmedLine.startsWith("> ") ? trimmedLine.slice(2) : "";
       elements.push(
-        <blockquote
-          key={`quote-${i}-${quoteContent.length}`}
-          className="my-2 border-border border-l-2 pl-3 text-muted-foreground italic"
-        >
+        <blockquote key={`quote-${i}-${quoteContent.length}`}>
           {renderInlineFormatting(quoteContent)}
         </blockquote>,
       );
@@ -912,14 +812,16 @@ export default function MarkdownRenderer({
     if (errorMatch) {
       const errorStart = errorMatch.index ?? 0;
       return (
-        <>
+        <div className="typeset typeset-chat">
           {renderContent(normalizedContent.slice(0, errorStart), onApplyCode)}
           <ErrorBlock errorData={errorMatch[1]} chatId={chatId} onRetry={onRetry} />
           {renderContent(normalizedContent.slice(errorStart + errorMatch[0].length), onApplyCode)}
-        </>
+        </div>
       );
     }
   }
 
-  return <div>{renderContent(normalizedContent, onApplyCode)}</div>;
+  return (
+    <div className="typeset typeset-chat">{renderContent(normalizedContent, onApplyCode)}</div>
+  );
 }

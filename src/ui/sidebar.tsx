@@ -506,7 +506,7 @@ export function SidebarListActionRow({
           "group-has-[[data-slot=button][aria-expanded=true]]/sidebar-list-action-row:pointer-events-auto group-has-[[data-slot=button][aria-expanded=true]]/sidebar-list-action-row:opacity-100",
         )}
       >
-        <ButtonGroup variant="ghost" className="[&>[data-slot=button]]:size-5">
+        <ButtonGroup variant="ghost" className="*:data-[slot=button]:size-5">
           {actionItems.map((action, index) => (
             <Fragment key={(isValidElement(action) && action.key) || index}>
               {index > 0 ? <ButtonGroupSeparator /> : null}

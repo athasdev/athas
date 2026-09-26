@@ -743,7 +743,7 @@ const TabBar = ({
               <NewTabMenu paneId={paneId} inTitleBar />
             </div>
           ) : null}
-          <div className="pointer-events-none ml-auto flex h-8 shrink-0 items-center gap-1 pl-0.5 opacity-0 group-hover/tab-bar:pointer-events-auto group-hover/tab-bar:opacity-100 group-focus-within/tab-bar:pointer-events-auto group-focus-within/tab-bar:opacity-100 has-data-[popup-open]:pointer-events-auto has-data-[popup-open]:opacity-100">
+          <div className="pointer-events-none ml-auto flex h-8 shrink-0 items-center gap-1 pl-0.5 opacity-0 group-hover/tab-bar:pointer-events-auto group-hover/tab-bar:opacity-100 group-focus-within/tab-bar:pointer-events-auto group-focus-within/tab-bar:opacity-100 has-data-popup-open:pointer-events-auto has-data-popup-open:opacity-100">
             {!inTitleBar && paneId && !isBottomPane && <NewTabMenu paneId={paneId} />}
             {paneId && !disablePaneActions && !isBottomPane && (
               <>

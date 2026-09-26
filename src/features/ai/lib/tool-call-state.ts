@@ -5,6 +5,47 @@ import type {
   AcpToolKind,
 } from "@/features/ai/types/acp.types";
 
+const ACP_TOOL_CONTENT_TYPES = new Set(["content", "diff", "terminal"]);
+
+function hasOutput(value: unknown): boolean {
+  return value !== undefined && value !== null && !(Array.isArray(value) && value.length === 0);
+}
+
+function isAcpToolContent(value: unknown): boolean {
+  return (
+    Array.isArray(value) &&
+    value.length > 0 &&
+    value.every(
+      (item) =>
+        typeof item === "object" &&
+        item !== null &&
+        ACP_TOOL_CONTENT_TYPES.has((item as { type?: unknown }).type as string),
+    )
+  );
+}
+
+/**
+ * Resolves the output a tool call displays after a change. `output` is the
+ * ACP `content` (diffs, terminals, text) and wins over `rawOutput`, which is
+ * only shown when the call has no content. Missing fields leave the call as
+ * it was; content that is present replaces the previous content, and an
+ * empty collection clears it.
+ */
+function resolveOutput(
+  previous: Pick<ToolCall, "output" | "rawOutput"> | undefined,
+  output: unknown,
+  rawOutput: unknown,
+): Pick<ToolCall, "output" | "rawOutput"> {
+  const nextRaw = rawOutput ?? previous?.rawOutput;
+  if (output !== undefined && output !== null) {
+    return { output: hasOutput(output) ? output : (nextRaw ?? undefined), rawOutput: nextRaw };
+  }
+  if (isAcpToolContent(previous?.output)) {
+    return { output: previous?.output, rawOutput: nextRaw };
+  }
+  return { output: nextRaw ?? previous?.output, rawOutput: nextRaw };
+}
+
 export const createToolCall = (
   toolName: string,
   toolInput: unknown,
@@ -12,6 +53,8 @@ export const createToolCall = (
   kind?: AcpToolKind,
   status?: AcpToolCallStatus,
   locations?: AcpToolCallLocation[],
+  output?: unknown,
+  rawOutput?: unknown,
 ): ToolCall => {
   const resolvedId =
     providedToolId ?? `${toolName}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
@@ -23,6 +66,9 @@ export const createToolCall = (
     kind,
     status,
     locations,
+    ...(hasOutput(output) || hasOutput(rawOutput)
+      ? resolveOutput(undefined, output, rawOutput)
+      : {}),
     timestamp: new Date(),
   };
 };
@@ -32,6 +78,7 @@ export interface ToolCallPatch {
   name?: string | null;
   input?: unknown;
   output?: unknown;
+  rawOutput?: unknown;
   error?: string | null;
   kind?: AcpToolKind | null;
   status?: AcpToolCallStatus | null;
@@ -49,12 +96,13 @@ export const updateToolCall = (toolCalls: ToolCall[], patch: ToolCallPatch): Too
       patch.kind ?? undefined,
       patch.status ?? undefined,
       patch.locations ?? undefined,
+      patch.output,
+      patch.rawOutput,
     );
     return [
       ...toolCalls,
       {
         ...created,
-        output: patch.output,
         error: patch.error ?? undefined,
         isComplete: patch.status === "completed" || patch.status === "failed" ? true : undefined,
       },
@@ -70,7 +118,7 @@ export const updateToolCall = (toolCalls: ToolCall[], patch: ToolCallPatch): Too
       ...toolCall,
       name: patch.name ?? toolCall.name,
       input: patch.input ?? toolCall.input,
-      output: patch.output ?? toolCall.output,
+      ...resolveOutput(toolCall, patch.output, patch.rawOutput),
       error: patch.error ?? toolCall.error,
       kind: patch.kind ?? toolCall.kind,
       status: nextStatus,
@@ -95,7 +143,7 @@ export const markToolCallComplete = (
       toolCall.id === toolId
         ? {
             ...toolCall,
-            output,
+            ...resolveOutput(toolCall, output, undefined),
             error,
             status: error ? "failed" : "completed",
             isComplete: true,
@@ -115,11 +163,24 @@ export const markToolCallComplete = (
     index === resolvedIndex
       ? {
           ...toolCall,
-          output,
+          ...resolveOutput(toolCall, output, undefined),
           error,
           status: error ? "failed" : "completed",
           isComplete: true,
         }
       : toolCall,
+  );
+};
+
+/**
+ * Marks the calls still pending or running when their turn ended (cancelled, cut off, or
+ * failed) as cancelled, so none of them keeps showing as running.
+ */
+export const cancelUnfinishedToolCalls = (
+  toolCalls: ToolCall[] | undefined,
+): ToolCall[] | undefined => {
+  if (!toolCalls?.some((toolCall) => !toolCall.isComplete)) return toolCalls;
+  return toolCalls.map((toolCall) =>
+    toolCall.isComplete ? toolCall : { ...toolCall, status: "cancelled", isComplete: true },
   );
 };

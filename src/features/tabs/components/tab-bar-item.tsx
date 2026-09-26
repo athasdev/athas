@@ -1,8 +1,11 @@
 import { TagIcon, RocketIcon } from "@/ui/icons";
 import { AgentSessionIcon } from "@/features/ai/components/icons/agent-session-icon";
+import { AgentAttentionDot } from "@/features/ai/components/agent-attention-dot";
+import { useChatAttention } from "@/features/ai/hooks/use-chat-attention";
 import {
   ActivityIcon,
   ArrowsClockwiseIcon,
+  ArrowsLeftRightIcon,
   ChatBubbleTextIcon,
   DatabaseIcon,
   GitBranchIcon,
@@ -75,6 +78,7 @@ const TabBarItem = memo(function TabBarItem({
   onRenameCancel,
 }: TabBarItemProps) {
   const [avatarError, setAvatarError] = useState(false);
+  const agentAttention = useChatAttention(buffer.type === "agent" ? buffer.sessionId : null);
   const showTabIcons = useSettingsStore((state) => state.settings.showTabIcons);
   const tabCloseButtonVisibility = useSettingsStore(
     (state) => state.settings.tabCloseButtonVisibility,
@@ -236,6 +240,8 @@ const TabBarItem = memo(function TabBarItem({
               <SearchIcon className="text-subtle-foreground" />
             ) : buffer.type === "continuousAgents" ? (
               <ArrowsClockwiseIcon className="text-subtle-foreground" />
+            ) : buffer.type === "acpInspector" ? (
+              <ArrowsLeftRightIcon className="text-subtle-foreground" />
             ) : buffer.type === "workspaces" ? (
               <GridIcon />
             ) : buffer.type === "settings" ? (
@@ -285,6 +291,7 @@ const TabBarItem = memo(function TabBarItem({
             aria-label="Unsaved changes"
           />
         )}
+        {agentAttention ? <AgentAttentionDot attention={agentAttention} /> : null}
       </TabItem>
     </div>
   );

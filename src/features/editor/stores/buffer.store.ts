@@ -148,6 +148,7 @@ interface BufferActions {
   openDiagnosticsBuffer: () => string;
   openReferencesBuffer: () => string;
   openContinuousAgentsBuffer: () => string;
+  openAcpInspectorBuffer: () => string;
   openSettingsBuffer: () => string;
   openExtensionsBuffer: () => string;
   openExtensionBuffer: (extensionId: string, name: string) => string;
@@ -781,6 +782,7 @@ const createBufferStore = (workspaceId: string) => {
             case "diagnostics":
             case "references":
             case "continuousAgents":
+            case "acpInspector":
             case "workspaces":
             case "settings":
             case "extensions": {
@@ -1030,6 +1032,10 @@ const createBufferStore = (workspaceId: string) => {
 
         openContinuousAgentsBuffer: (): string => {
           return get().actions.openContent({ type: "continuousAgents" });
+        },
+
+        openAcpInspectorBuffer: (): string => {
+          return get().actions.openContent({ type: "acpInspector" });
         },
 
         openSettingsBuffer: (): string => {

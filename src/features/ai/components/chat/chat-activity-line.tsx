@@ -5,12 +5,13 @@ import { Marker, MarkerContent, MarkerIcon } from "@/ui/marker";
 import { Shimmer } from "@/ui/shimmer";
 import { cn } from "@/utils/cn";
 
-type ActivityState = "running" | "success" | "error" | "info";
+type ActivityState = "running" | "success" | "error" | "warning" | "info";
 
 const stateClassNames: Record<ActivityState, string> = {
   running: "text-primary",
   success: "text-success",
   error: "text-destructive",
+  warning: "text-warning",
   info: "text-subtle-foreground",
 };
 

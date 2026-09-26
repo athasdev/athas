@@ -364,7 +364,7 @@ function DropdownMenuTrailingAction({
         "absolute right-0 z-10 flex pr-1 transition-opacity",
         visibility === "always"
           ? "opacity-100"
-          : "opacity-0 group-hover/dropdown-menu-row:opacity-100 group-focus-within/dropdown-menu-row:opacity-100 has-data-[popup-open]:opacity-100",
+          : "opacity-0 group-hover/dropdown-menu-row:opacity-100 group-focus-within/dropdown-menu-row:opacity-100 has-data-popup-open:opacity-100",
       )}
       onMouseMove={(event) => event.stopPropagation()}
       onPointerDown={(event) => event.stopPropagation()}
@@ -433,7 +433,7 @@ function DropdownMenuRadioItem({
         className={cn(
           "pointer-events-none absolute right-2 flex size-4 items-center justify-center transition-opacity",
           trailingAction &&
-            "group-hover/dropdown-menu-row:opacity-0 group-focus-within/dropdown-menu-row:opacity-0 group-has-data-[popup-open]/dropdown-menu-row:opacity-0",
+            "group-hover/dropdown-menu-row:opacity-0 group-focus-within/dropdown-menu-row:opacity-0 group-has-data-popup-open/dropdown-menu-row:opacity-0",
           trailingAction && trailingActionVisibility === "always" && "opacity-0",
         )}
       >

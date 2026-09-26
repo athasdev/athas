@@ -206,6 +206,7 @@ export const ColumnsIcon = createIconComponent(Nucleo.IconTableColsOutline18, "C
 export const CommandIcon = createIconComponent(Nucleo.IconCommandOutline18, "CommandIcon");
 export const CopyIcon = createIconComponent(Nucleo.IconCopyOutline18, "CopyIcon");
 export const CreditCardIcon = createIconComponent(Nucleo.IconCreditCardOutline18, "CreditCardIcon");
+export const CrosshairIcon = createIconComponent(Nucleo.IconCrosshairsOutline18, "CrosshairIcon");
 export const CubeIcon = createIconComponent(Nucleo.IconCubeOutline18, "CubeIcon");
 export const DatabaseIcon = createIconComponent(Nucleo.IconDatabaseOutline18, "DatabaseIcon");
 export const DotsIcon = createIconComponent(Nucleo.IconDotsOutline18, "DotsIcon");

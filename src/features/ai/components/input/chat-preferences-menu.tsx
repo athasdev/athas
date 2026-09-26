@@ -31,10 +31,16 @@ import {
   DropdownMenuTrigger,
 } from "@/ui/dropdown";
 import { useMenuSearch } from "@/ui/menu-search";
-import { ArrowClockwiseIcon, SlidersIcon, WarningIcon } from "@/ui/icons";
+import { ArrowClockwiseIcon, SignOutIcon, SlidersIcon, WarningIcon } from "@/ui/icons";
 import { Spinner } from "@/ui/spinner";
 import { getChatPreferencesModel } from "@/features/ai/utils/chat-preferences-model";
 import { classifySessionConfigOption } from "@/features/ai/lib/session-config-option-classifier";
+import { canLogOutOfAcpAgent, logOutOfAcpAgent } from "@/features/ai/lib/acp-logout";
+import {
+  selectAcpAgentStatus,
+  selectChatAcpSession,
+  selectChatAcpSessionId,
+} from "@/features/ai/lib/acp-session-state";
 import { useCodexSettings } from "@/features/ai/integrations/codex/use-codex-settings";
 
 const FALLBACK_MODES: { id: ChatMode; label: string }[] = [
@@ -72,12 +78,19 @@ function PreferenceLabel({ children }: { children: string }) {
   return <span className="min-w-0 flex-1 truncate">{children}</span>;
 }
 
-function ModePreferencesSubmenu({ currentAgentId }: { currentAgentId: AgentType }) {
+function ModePreferencesSubmenu({
+  chatId,
+  currentAgentId,
+}: {
+  chatId: string | null;
+  currentAgentId: AgentType;
+}) {
   const { settings: codexSettings, update: updateCodexSettings } = useCodexSettings();
   const isCodex = currentAgentId === CODEX_INTEGRATION_ID;
   const mode = useAIChatStore((state) => state.mode);
   const setMode = useAIChatStore((state) => state.actions.setMode);
-  const sessionModeState = useAIChatStore((state) => state.sessionModeState);
+  const sessionModeState = useAIChatStore((state) => selectChatAcpSession(state, chatId).modeState);
+  const acpSessionId = useAIChatStore((state) => selectChatAcpSessionId(state, chatId));
   const changeSessionMode = useAIChatStore((state) => state.actions.changeSessionMode);
   const isAcpAgent = currentAgentId !== "custom" && !isCodex;
   const options = isCodex
@@ -112,7 +125,7 @@ function ModePreferencesSubmenu({ currentAgentId }: { currentAgentId: AgentType 
               return;
             }
             if (isAcpAgent) {
-              void changeSessionMode(nextMode);
+              if (acpSessionId) void changeSessionMode(acpSessionId, nextMode);
               return;
             }
             setMode(nextMode as ChatMode);
@@ -342,6 +355,7 @@ function AcpConfigPreferences({
 }
 
 interface ChatPreferencesMenuProps {
+  chatId: string | null;
   currentAgentId: AgentType;
   canChangeAgent: boolean;
   sessionConfigOptions: SessionConfigOption[];
@@ -352,6 +366,7 @@ interface ChatPreferencesMenuProps {
 }
 
 export function ChatPreferencesMenu({
+  chatId,
   currentAgentId,
   canChangeAgent,
   sessionConfigOptions,
@@ -360,7 +375,8 @@ export function ChatPreferencesMenu({
   onSelectCodexSkill,
   onBeforeOpen,
 }: ChatPreferencesMenuProps) {
-  const cwd = useProjectStore((state) => state.rootFolderPath || ".");
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
+  const cwd = rootFolderPath || ".";
   const [codexSkillsState, setCodexSkillsState] =
     useState<CodexSkillsState>(EMPTY_CODEX_SKILLS_STATE);
   const codexStartRef = useRef<{
@@ -370,6 +386,12 @@ export function ChatPreferencesMenu({
   } | null>(null);
   const codexSkillsRequestId = useRef(0);
   const isCodex = currentAgentId === CODEX_INTEGRATION_ID;
+  const canLogOut = useAIChatStore((state) =>
+    canLogOutOfAcpAgent(
+      selectAcpAgentStatus(state, currentAgentId, rootFolderPath),
+      currentAgentId,
+    ),
+  );
 
   const ensureCodexStarted = useCallback(() => {
     if (codexStartRef.current?.cwd === cwd) {
@@ -466,7 +488,7 @@ export function ChatPreferencesMenu({
             />
           )}
           {preferences.showModePreference && (
-            <ModePreferencesSubmenu currentAgentId={currentAgentId} />
+            <ModePreferencesSubmenu chatId={chatId} currentAgentId={currentAgentId} />
           )}
           {isCodex ? (
             <CodexSkillsSubmenu
@@ -482,6 +504,12 @@ export function ChatPreferencesMenu({
           )}
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
+        {canLogOut ? (
+          <DropdownMenuItem onClick={() => void logOutOfAcpAgent(currentAgentId)}>
+            <SignOutIcon />
+            Log out of agent
+          </DropdownMenuItem>
+        ) : null}
         <DropdownMenuItem onClick={() => useUIState.getState().openSettingsDialog("ai")}>
           AI settings…
         </DropdownMenuItem>
