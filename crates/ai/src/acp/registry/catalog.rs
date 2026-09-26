@@ -27,6 +27,16 @@ pub fn athas_agent_id(registry_id: &str) -> &str {
       .map_or(registry_id, |(_, athas)| athas)
 }
 
+/// Registry agents that sit next to an Athas integration for the same product. They stay
+/// available, since the ACP adapter works like every other agent (Athas's MCP servers, the
+/// inspector, session import), but get a name and note that tell the two apart.
+const ADAPTER_LABELS: &[(&str, &str, &str)] = &[(
+   "codex-acp",
+   "Codex (ACP)",
+   "Codex through its ACP adapter. Athas also has a built-in Codex integration with native \
+    threads, review and skills; pick that one unless you want Codex to run as an ACP agent.",
+)];
+
 fn runtime_for(distribution: &str) -> AgentRuntime {
    match distribution {
       "npx" => AgentRuntime::Node,
@@ -110,9 +120,14 @@ pub fn merge_registry_agents(
             agent.registry = Some(info);
          }
          None => {
-            let mut agent = AgentConfig::new(&agent_id, &registry_agent.name, &agent_id);
+            let label = ADAPTER_LABELS.iter().find(|(id, ..)| *id == agent_id);
+            let name = label.map_or(registry_agent.name.as_str(), |(_, name, _)| name);
+            let mut agent = AgentConfig::new(&agent_id, name, &agent_id);
             agent.source = AgentSource::Registry;
-            agent.description = registry_agent.description.clone();
+            agent.description = match label {
+               Some((.., note)) => Some((*note).to_string()),
+               None => registry_agent.description.clone(),
+            };
             agent.icon = icon;
             agent.available_version = Some(registry_agent.version.clone());
             if let Some(resolved) = &resolved {
@@ -154,6 +169,9 @@ mod tests {
                  "sha256": "fa643f93401c13508d8d513780e54ce9cc01203d501114be9b88d62408b8101f" } } } },
             { "id": "crow-cli", "name": "Crow", "version": "0.1.24",
               "distribution": { "npx": { "package": "crow-cli@0.1.24" } } },
+            { "id": "codex-acp", "name": "Codex CLI", "version": "0.9.0",
+              "description": "ACP adapter for OpenAI's coding assistant",
+              "distribution": { "npx": { "package": "@zed-industries/codex-acp@0.9.0" } } },
             { "id": "claude-code", "name": "Terminal integration", "version": "1.0.0",
               "distribution": { "npx": { "package": "claude-code@1.0.0" } } }
          ] }"#,
@@ -246,6 +264,21 @@ mod tests {
       let info = crow.registry.as_ref().unwrap();
       assert_eq!(info.quarantined.as_deref(), Some("Broken"));
       assert!(!info.installs_from_registry);
+   }
+
+   #[test]
+   fn the_codex_adapter_is_named_apart_from_the_codex_integration() {
+      let agents = merged();
+      let codex = find(&agents, "codex-acp");
+      assert_eq!(codex.name, "Codex (ACP)");
+      assert!(
+         codex
+            .description
+            .as_deref()
+            .unwrap()
+            .contains("built-in Codex integration")
+      );
+      assert!(codex.can_install);
    }
 
    #[test]
