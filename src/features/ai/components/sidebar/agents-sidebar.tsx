@@ -29,6 +29,7 @@ import {
   ArchiveIcon,
   ChevronDownIcon,
   ChevronRightIcon,
+  DotsIcon,
   DownloadIcon,
   PencilLineIcon,
   PlusIcon,
@@ -37,15 +38,24 @@ import {
 } from "@/ui/icons";
 import { InlineRenameInput } from "@/ui/input";
 import {
-  SidebarFilterField,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/ui/dropdown";
+import {
+  SidebarFilterBar,
   SidebarIconButton,
+  SidebarListActionRow,
   SidebarListEditor,
   SidebarListItem,
+  SidebarPanel,
   SidebarScrollArea,
   SidebarSectionLabel,
-  SidebarWorkspace,
 } from "@/ui/sidebar";
 import { matchesSearchQuery } from "@/utils/search-match";
+import { AgentsPlanFooter } from "./agents-plan-footer";
 
 interface AgentRowContext {
   currentChatId: string | null;
@@ -156,12 +166,40 @@ function ArchivedAgentRow({ chat }: { chat: Chat }) {
   return (
     <ContextMenu>
       <ContextMenuTrigger className="block">
-        <SidebarListItem
-          leading={<AgentSessionIcon session={chat} size={16} />}
-          onClick={() => openAgentHistoryChat(chat.id)}
+        <SidebarListActionRow
+          actions={
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <SidebarIconButton
+                    tooltip="More actions"
+                    aria-label={`More actions for ${chat.title}`}
+                  />
+                }
+              >
+                <DotsIcon />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setChatArchived(chat.id, false)}>
+                  <ArrowCounterClockwiseIcon />
+                  Restore
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem variant="destructive" onClick={() => deleteChat(chat.id)}>
+                  <TrashIcon />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          }
         >
-          {chat.title}
-        </SidebarListItem>
+          <SidebarListItem
+            leading={<AgentSessionIcon session={chat} size={16} />}
+            onClick={() => openAgentHistoryChat(chat.id)}
+          >
+            {chat.title}
+          </SidebarListItem>
+        </SidebarListActionRow>
       </ContextMenuTrigger>
       <ContextMenuContent>
         <ContextMenuItem onClick={() => setChatArchived(chat.id, false)}>
@@ -228,34 +266,30 @@ export function AgentsSidebar() {
   const isEmpty = pinned.length === 0 && recent.length === 0 && archived.length === 0;
 
   return (
-    <SidebarWorkspace
-      title="Agents"
-      data-slot="agents-sidebar"
-      actions={
-        <>
-          {browseSessionsAgentId ? (
-            <SidebarIconButton
-              tooltip="Import agent session"
-              aria-label="Import agent session"
-              onClick={() => openAgentSessions(browseSessionsAgentId)}
-            >
-              <DownloadIcon />
+    <SidebarPanel data-slot="agents-sidebar">
+      <SidebarFilterBar
+        value={query}
+        onChange={setQuery}
+        placeholder="Filter agents"
+        aria-label="Filter agents"
+        actionsLabel="Agent actions"
+        actions={
+          <>
+            {browseSessionsAgentId ? (
+              <SidebarIconButton
+                tooltip="Import agent session"
+                aria-label="Import agent session"
+                onClick={() => openAgentSessions(browseSessionsAgentId)}
+              >
+                <DownloadIcon />
+              </SidebarIconButton>
+            ) : null}
+            <SidebarIconButton tooltip="New Agent" aria-label="New Agent" onClick={handleNewAgent}>
+              <PlusIcon />
             </SidebarIconButton>
-          ) : null}
-          <SidebarIconButton tooltip="New Agent" aria-label="New Agent" onClick={handleNewAgent}>
-            <PlusIcon />
-          </SidebarIconButton>
-        </>
-      }
-    >
-      <div className="shrink-0 px-chrome-inline">
-        <SidebarFilterField
-          value={query}
-          onChange={setQuery}
-          placeholder="Filter agents"
-          aria-label="Filter agents"
-        />
-      </div>
+          </>
+        }
+      />
       <SidebarScrollArea>
         {isEmpty ? (
           <Empty variant="inline" className="px-2 py-1.5">
@@ -298,6 +332,7 @@ export function AgentsSidebar() {
           </div>
         )}
       </SidebarScrollArea>
-    </SidebarWorkspace>
+      <AgentsPlanFooter />
+    </SidebarPanel>
   );
 }

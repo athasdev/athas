@@ -193,6 +193,20 @@ export interface SubscriptionInfo {
   autocomplete?: {
     usage?: Record<string, unknown> | null;
   } | null;
+  /** This billing period's hosted AI credits, in credit cents. Absent on older servers. */
+  intelligence?: {
+    credits?: IntelligenceCredits | null;
+  } | null;
+}
+
+export interface IntelligenceCredits {
+  periodStart: string;
+  periodEnd: string;
+  allowanceCents: number;
+  usedCents: number;
+  pendingCents: number;
+  remainingCents: number;
+  requestsCount: number;
 }
 
 export interface EnterprisePolicy {
