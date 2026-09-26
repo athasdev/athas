@@ -9,6 +9,7 @@ import {
   TextIcon,
 } from "@/ui/icons";
 import { AppearancePreviewGraphic } from "@/extensions/appearance/components/appearance-preview";
+import { AdaptiveIcon } from "@/ui/adaptive-icon";
 import type { UnifiedExtension } from "./extension-catalog-types";
 
 function categoryIcon(category: UnifiedExtension["category"], className: string): ReactNode {
@@ -36,18 +37,20 @@ function ExtensionIconGraphic({ extension }: { extension: UnifiedExtension }) {
   }
 
   if (extension.icon) {
-    return (
-      <img alt="" className="size-full object-contain" draggable={false} src={extension.icon} />
-    );
+    return <AdaptiveIcon src={extension.icon} className="size-full" />;
   }
 
   return categoryIcon(extension.category, "size-full text-subtle-foreground");
 }
 
+/** The catalog's icon tile, matching the one on athas.dev: a bordered square with the icon inside. */
 export function ExtensionIcon({ extension }: { extension: UnifiedExtension }) {
+  if (extension.appearancePreview) {
+    return <AppearancePreviewGraphic preview={extension.appearancePreview} size="catalog" />;
+  }
   return (
-    <span className="flex size-10 shrink-0 items-center justify-center">
-      <span className="size-8">
+    <span className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-border bg-background text-foreground">
+      <span className="size-6">
         <ExtensionIconGraphic extension={extension} />
       </span>
     </span>

@@ -9,7 +9,7 @@ const previewSizeClasses: Record<
   { frame: string; icon: string; radius: string }
 > = {
   compact: { frame: "size-6", icon: "size-4", radius: "rounded-md" },
-  catalog: { frame: "size-8", icon: "size-5", radius: "rounded-lg" },
+  catalog: { frame: "size-10", icon: "size-6", radius: "rounded-lg" },
   detail: { frame: "size-10", icon: "size-6", radius: "rounded-lg" },
 };
 
