@@ -49,6 +49,8 @@ function AgentSessionsBrowser({ agentId, onClose }: { agentId: string; onClose: 
       setLoading(true);
       setError(null);
       try {
+        // Browsing does not need a chat on the agent: start it on its own when it is not up.
+        if (!cursor) await AcpStreamHandler.startAgent(agentId, workspacePath);
         const page = await AcpStreamHandler.listSessions({
           agentId,
           workspacePath,

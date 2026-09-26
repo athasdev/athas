@@ -28,6 +28,14 @@ pub(super) struct OpenRequest {
    pub response_tx: Response<AcpOpenedSession>,
 }
 
+/// Someone waiting on an agent's startup.
+pub(super) enum StartupWaiter {
+   /// A chat that opens its session once the agent is up.
+   Open(OpenRequest),
+   /// A caller that only needs the agent running, such as the session browser.
+   Started(Response<()>),
+}
+
 /// Commands that can be sent to the ACP worker thread
 pub(super) enum AcpCommand {
    OpenSession {
@@ -36,6 +44,15 @@ pub(super) enum AcpCommand {
       config: Box<AgentConfig>,
       terminal_manager: Arc<TerminalManager>,
       request: OpenRequest,
+   },
+   /// Starts the agent for `agent_id` in `workspace_path` without opening a session, unless it
+   /// already runs there.
+   StartAgent {
+      agent_id: String,
+      workspace_path: Option<String>,
+      config: Box<AgentConfig>,
+      terminal_manager: Arc<TerminalManager>,
+      response_tx: Response<()>,
    },
    SendPrompt {
       session_id: String,
@@ -133,12 +150,65 @@ fn respond_in_background<T: 'static>(
    }
 }
 
-fn reject_stopped_startup(waiters: Vec<OpenRequest>) {
-   for waiter in waiters {
-      let _ = waiter
-         .response_tx
-         .send(Err(anyhow::anyhow!(ACP_STARTUP_STOPPED)));
+impl StartupWaiter {
+   fn fail(self, error: anyhow::Error) {
+      match self {
+         Self::Open(request) => {
+            let _ = request.response_tx.send(Err(error));
+         }
+         Self::Started(response_tx) => {
+            let _ = response_tx.send(Err(error));
+         }
+      }
    }
+}
+
+fn reject_stopped_startup(waiters: Vec<StartupWaiter>) {
+   for waiter in waiters {
+      waiter.fail(anyhow::anyhow!(ACP_STARTUP_STOPPED));
+   }
+}
+
+/// Queues `waiter` on the agent's startup, beginning it when none runs yet.
+fn join_startup(
+   key: ConnectionKey,
+   config: Box<AgentConfig>,
+   terminal_manager: Arc<TerminalManager>,
+   waiter: StartupWaiter,
+   worker: &AcpWorker,
+   startups: &mut Startups<StartupWaiter>,
+   followup_tx: &mpsc::UnboundedSender<WorkerFollowUp>,
+) {
+   // Callers that need an agent already starting wait for that startup.
+   let Some((startup_id, stop)) = startups.join(key.clone(), waiter) else {
+      return;
+   };
+   if !config.installed {
+      log::warn!(
+         "Agent '{}' not marked as installed; attempting to start anyway",
+         config.name
+      );
+   }
+   let app_handle = worker.app_handle();
+   let traffic = worker.traffic();
+   let followup_tx = followup_tx.clone();
+   tokio::task::spawn_local(async move {
+      let result = start_connection(
+         &config,
+         key.workspace_path.clone(),
+         app_handle,
+         terminal_manager,
+         traffic,
+         stop,
+      )
+      .await
+      .map(Box::new);
+      let _ = followup_tx.send(WorkerFollowUp::Started {
+         key,
+         startup_id,
+         result,
+      });
+   });
 }
 
 pub(super) async fn run_worker_loop(
@@ -150,7 +220,7 @@ pub(super) async fn run_worker_loop(
 ) {
    let (followup_tx, mut followup_rx) = mpsc::unbounded_channel::<WorkerFollowUp>();
    let mut worker = AcpWorker::new(app_handle, responders, traffic, followup_tx.clone());
-   let mut startups = Startups::<OpenRequest>::default();
+   let mut startups = Startups::<StartupWaiter>::default();
    let mut health_check = tokio::time::interval(std::time::Duration::from_secs(1));
    health_check.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
 
@@ -176,7 +246,7 @@ pub(super) async fn run_worker_loop(
 fn handle_command(
    cmd: AcpCommand,
    worker: &mut AcpWorker,
-   startups: &mut Startups<OpenRequest>,
+   startups: &mut Startups<StartupWaiter>,
    followup_tx: &mpsc::UnboundedSender<WorkerFollowUp>,
 ) {
    match cmd {
@@ -198,36 +268,43 @@ fn handle_command(
             worker.open_session_on(connection_id, request);
             return;
          }
-         // Chats that need an agent already starting wait for that startup.
-         let Some((startup_id, stop)) = startups.join(key.clone(), request) else {
-            return;
+         join_startup(
+            key,
+            config,
+            terminal_manager,
+            StartupWaiter::Open(request),
+            worker,
+            startups,
+            followup_tx,
+         );
+      }
+      AcpCommand::StartAgent {
+         agent_id,
+         workspace_path,
+         config,
+         terminal_manager,
+         response_tx,
+      } => {
+         let key = match connection_key(agent_id, workspace_path) {
+            Ok(key) => key,
+            Err(error) => {
+               let _ = response_tx.send(Err(error));
+               return;
+            }
          };
-         if !config.installed {
-            log::warn!(
-               "Agent '{}' not marked as installed; attempting to start anyway",
-               config.name
-            );
+         if worker.connection_by_key(&key).is_some() {
+            let _ = response_tx.send(Ok(()));
+            return;
          }
-         let app_handle = worker.app_handle();
-         let traffic = worker.traffic();
-         let followup_tx = followup_tx.clone();
-         tokio::task::spawn_local(async move {
-            let result = start_connection(
-               &config,
-               key.workspace_path.clone(),
-               app_handle,
-               terminal_manager,
-               traffic,
-               stop,
-            )
-            .await
-            .map(Box::new);
-            let _ = followup_tx.send(WorkerFollowUp::Started {
-               key,
-               startup_id,
-               result,
-            });
-         });
+         join_startup(
+            key,
+            config,
+            terminal_manager,
+            StartupWaiter::Started(response_tx),
+            worker,
+            startups,
+            followup_tx,
+         );
       }
       AcpCommand::SendPrompt {
          session_id,
@@ -351,7 +428,7 @@ fn handle_command(
 fn handle_followup(
    followup: WorkerFollowUp,
    worker: &mut AcpWorker,
-   startups: &mut Startups<OpenRequest>,
+   startups: &mut Startups<StartupWaiter>,
 ) {
    match followup {
       WorkerFollowUp::Started {
@@ -362,7 +439,12 @@ fn handle_followup(
          (Some(waiters), Ok(started)) => {
             let connection_id = worker.adopt(key, *started);
             for waiter in waiters {
-               worker.open_session_on(connection_id, waiter);
+               match waiter {
+                  StartupWaiter::Open(request) => worker.open_session_on(connection_id, request),
+                  StartupWaiter::Started(response_tx) => {
+                     let _ = response_tx.send(Ok(()));
+                  }
+               }
             }
          }
          (Some(waiters), Err(error)) => {
@@ -372,7 +454,7 @@ fn handle_followup(
                let error = error
                   .take()
                   .unwrap_or_else(|| anyhow::anyhow!(message.clone()));
-               let _ = waiter.response_tx.send(Err(error));
+               waiter.fail(error);
             }
          }
          (None, Ok(started)) => {
@@ -411,8 +493,31 @@ fn handle_followup(
 
 #[cfg(test)]
 mod tests {
-   use super::respond_in_background;
+   use super::{
+      ACP_STARTUP_STOPPED, OpenRequest, SessionTarget, StartupWaiter, reject_stopped_startup,
+      respond_in_background,
+   };
    use tokio::sync::oneshot;
+
+   #[test]
+   fn a_stopped_startup_answers_chats_and_callers_that_only_wanted_it_running() {
+      let (open_tx, mut open_rx) = oneshot::channel();
+      let (started_tx, mut started_rx) = oneshot::channel();
+      reject_stopped_startup(vec![
+         StartupWaiter::Open(OpenRequest {
+            target: SessionTarget::New,
+            auth_method_id: None,
+            mcp_servers: Vec::new(),
+            additional_directories: Vec::new(),
+            response_tx: open_tx,
+         }),
+         StartupWaiter::Started(started_tx),
+      ]);
+      let open_error = open_rx.try_recv().unwrap().unwrap_err();
+      let started_error = started_rx.try_recv().unwrap().unwrap_err();
+      assert_eq!(open_error.to_string(), ACP_STARTUP_STOPPED);
+      assert_eq!(started_error.to_string(), ACP_STARTUP_STOPPED);
+   }
 
    #[tokio::test]
    async fn a_hung_request_does_not_block_the_caller() {

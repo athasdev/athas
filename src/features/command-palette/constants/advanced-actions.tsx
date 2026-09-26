@@ -183,7 +183,7 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
           {
             id: "ai-import-agent-session",
             label: "AI: Import Agent Session",
-            description: "Browse the running agent's sessions for this workspace and open one",
+            description: "Browse the agent's sessions for this workspace and open one",
             icon: <HistoryIcon />,
             category: "AI",
             action: () => {

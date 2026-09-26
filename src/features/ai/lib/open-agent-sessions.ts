@@ -15,12 +15,16 @@ function advertisesSessionCapability(
   );
 }
 
-/** Whether the running agent (optionally `agentId`) lists its sessions (`session/list`). */
+/**
+ * Whether to offer browsing an ACP agent's sessions. A running agent must advertise
+ * `session/list`. One that is not running yet is offered too: the list starts it and then shows
+ * whether it can list its sessions.
+ */
 export function canBrowseAgentSessions(
   status: AcpAgentStatus | null | undefined,
   agentId?: string | null,
 ): boolean {
-  if (!status?.running || (agentId && status.agentId !== agentId)) return false;
+  if (!status?.running || (agentId && status.agentId !== agentId)) return true;
   return advertisesSessionCapability(status, "list");
 }
 

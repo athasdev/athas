@@ -848,6 +848,17 @@ export class AcpStreamHandler {
     return invoke("get_available_agents");
   }
 
+  /**
+   * Starts `agentId` in the current workspace without opening a session, unless it already runs
+   * there, so its sessions can be listed before any chat uses it.
+   */
+  static async startAgent(agentId: string, workspacePath?: string | null): Promise<void> {
+    await invoke("start_acp_agent", {
+      agentId,
+      workspacePath: workspacePath ?? AcpStreamHandler.currentWorkspacePath(),
+    });
+  }
+
   static async listSessions(args: {
     agentId: string;
     workspacePath?: string | null;

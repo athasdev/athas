@@ -1065,6 +1065,27 @@ impl AcpAgentBridge {
          .await
    }
 
+   /// Starts `agent_id` in `workspace_path` without opening a session, so requests that need a
+   /// running agent but no chat (listing its sessions) work. Answers once it is up.
+   pub async fn start_agent(&self, agent_id: &str, workspace_path: Option<String>) -> Result<()> {
+      let config = self
+         .registry
+         .get(agent_id)
+         .context("Agent not found")?
+         .clone();
+      let terminal_manager = self.terminal_manager.clone();
+      let agent_id = agent_id.to_string();
+      self
+         .request(|response_tx| AcpCommand::StartAgent {
+            agent_id,
+            workspace_path,
+            config: Box::new(config),
+            terminal_manager,
+            response_tx,
+         })
+         .await
+   }
+
    /// Sends a prompt in a chat's session. Other sessions, on this agent or others, keep running.
    pub async fn send_prompt(
       &self,

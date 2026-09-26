@@ -472,6 +472,27 @@ async fn refresh_registered_agents(app_handle: &AppHandle, bridge: &AcpBridgeSta
    bridge.lock().await.replace_registered_agents(agents);
 }
 
+/// Starts `agent_id` in `workspace_path` without opening a session, so its sessions can be
+/// browsed before any chat uses it. Does nothing when it already runs there.
+#[tauri::command]
+pub async fn start_acp_agent(
+   app_handle: AppHandle,
+   bridge: State<'_, AcpBridgeState>,
+   agent_id: String,
+   workspace_path: Option<String>,
+) -> Result<(), String> {
+   refresh_registered_agents(&app_handle, &bridge, false).await;
+   let bridge = {
+      let mut bridge = bridge.lock().await;
+      bridge.detect_agents();
+      bridge.clone()
+   };
+   bridge
+      .start_agent(&agent_id, workspace_path)
+      .await
+      .map_err(|e| e.to_string())
+}
+
 /// Stops the agent running `agent_id` in `workspace_path`, ending every session on it. Without
 /// an agent id every agent is stopped.
 #[tauri::command]

@@ -21,13 +21,16 @@ function status(sessionCapabilities: unknown, running = true): AcpAgentStatus {
 }
 
 describe("agent session browsing", () => {
-  it("is offered only for a running agent that advertises session/list", () => {
+  it("is offered for a running agent that advertises session/list", () => {
     expect(canBrowseAgentSessions(status({ list: {} }), "codex")).toBe(true);
-    expect(canBrowseAgentSessions(status({ list: {} }), "claude-code")).toBe(false);
-    expect(canBrowseAgentSessions(status({ list: {} }, false), "codex")).toBe(false);
     expect(canBrowseAgentSessions(status({ list: null }), "codex")).toBe(false);
     expect(canBrowseAgentSessions(status({}), "codex")).toBe(false);
-    expect(canBrowseAgentSessions(null, "codex")).toBe(false);
+  });
+
+  it("is offered for an agent that is not running yet, which the list starts", () => {
+    expect(canBrowseAgentSessions(status({}, false), "codex")).toBe(true);
+    expect(canBrowseAgentSessions(status({}), "claude-code")).toBe(true);
+    expect(canBrowseAgentSessions(null, "codex")).toBe(true);
   });
 
   it("offers delete only when the agent advertises session/delete", () => {

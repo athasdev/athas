@@ -328,6 +328,7 @@ fn main() {
          set_acp_session_mode,
          set_acp_session_config_option,
          list_acp_sessions,
+         start_acp_agent,
          delete_acp_session,
          logout_acp_agent,
          authenticate_acp_agent,
