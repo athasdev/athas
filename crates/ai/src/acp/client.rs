@@ -273,6 +273,9 @@ const PERMISSION_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(3
 /// How long a read waits for the editor to hand over an open file before it reads the disk.
 const BUFFER_READ_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(2);
 
+/// How long `terminal/kill` waits for the killed process to exit before it answers.
+const KILL_EXIT_WAIT: std::time::Duration = std::time::Duration::from_secs(2);
+
 /// How long an agent question waits for the user before it is cancelled.
 const ELICITATION_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(600);
 
@@ -1409,35 +1412,39 @@ impl AthasAcpClient {
       }
    }
 
+   /// Kills the command and reports how it really ended: the call waits briefly for the process
+   /// to exit, so a `terminal/output` or `terminal/wait_for_exit` right after sees its actual exit
+   /// code or signal. A process that takes longer keeps its status unset until it exits.
    async fn kill_terminal_command(
       &self,
       args: acp::KillTerminalRequest,
    ) -> acp::Result<acp::KillTerminalResponse> {
       let terminal_id = args.terminal_id.to_string();
-      let athas_id = {
-         let states = self
-            .terminal_states
-            .lock()
-            .map_err(|_| acp::Error::new(-32603, "Lock poisoned".to_string()))?;
-         states
-            .get(&terminal_id)
-            .map(|s| s.athas_terminal_id.clone())
-      };
-
-      if let Some(athas_terminal_id) = athas_id
-         && let Err(e) = self.terminal_manager.kill_terminal(&athas_terminal_id)
-      {
-         log::warn!("Failed to kill terminal {}: {}", terminal_id, e);
-      }
-
-      {
+      let (athas_id, exited) = {
          let mut states = self
             .terminal_states
             .lock()
             .map_err(|_| acp::Error::new(-32603, "Lock poisoned".to_string()))?;
-         if let Some(state) = states.get_mut(&terminal_id) {
-            state.set_exit_status(Some(1), Some("killed".to_string()));
-         }
+         let state = states
+            .get_mut(&terminal_id)
+            .ok_or_else(|| acp::Error::new(-32603, "Terminal not found".to_string()))?;
+         let exited = if state.exit_status.is_none() {
+            let (tx, rx) = oneshot::channel();
+            state.exit_waiters.push(tx);
+            Some(rx)
+         } else {
+            None
+         };
+         (state.athas_terminal_id.clone(), exited)
+      };
+
+      if let Err(e) = self.terminal_manager.kill_terminal(&athas_id) {
+         log::warn!("Failed to kill terminal {}: {}", terminal_id, e);
+      }
+      if let Some(exited) = exited
+         && tokio::time::timeout(KILL_EXIT_WAIT, exited).await.is_err()
+      {
+         log::warn!("Terminal {} did not exit after kill", terminal_id);
       }
 
       Ok(acp::KillTerminalResponse::new())

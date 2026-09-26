@@ -83,6 +83,9 @@ impl AcpTerminalState {
          }
          TerminalEvent::Exit { exit_code, signal } => {
             self.flush_pending_utf8();
+            // The PTY reports code 1 alongside a signal; ACP has no exit code for a process a
+            // signal ended.
+            let exit_code = if signal.is_some() { None } else { exit_code };
             self.set_exit_status(exit_code, signal);
          }
          TerminalEvent::Closed => {
@@ -283,6 +286,28 @@ mod tests {
       let status = state.exit_status.expect("exit status should be set");
       assert_eq!(status.exit_code, None);
       assert_eq!(status.signal.as_deref(), Some("SIGTERM"));
+   }
+
+   #[test]
+   fn a_signal_exit_reports_the_signal_without_an_exit_code() {
+      let mut state = AcpTerminalState::new("terminal-8".to_string(), None);
+      state.handle_event(athas_terminal::TerminalEvent::Exit {
+         exit_code: Some(1),
+         signal: Some("Killed".to_string()),
+      });
+      let status = state.exit_status.expect("exit status should be set");
+      assert_eq!(status.exit_code, None);
+      assert_eq!(status.signal.as_deref(), Some("Killed"));
+
+      let mut state = AcpTerminalState::new("terminal-9".to_string(), None);
+      state.handle_event(athas_terminal::TerminalEvent::Exit {
+         exit_code: Some(2),
+         signal: None,
+      });
+      assert_eq!(
+         state.exit_status.and_then(|status| status.exit_code),
+         Some(2)
+      );
    }
 
    #[test]
