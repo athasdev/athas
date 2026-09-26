@@ -1,4 +1,4 @@
-import { Activity, lazy, memo, type ReactNode, Suspense } from "react";
+import { Activity, lazy, memo, type ReactNode, Suspense, useState } from "react";
 import { CollaborationSidebarView } from "@/features/collaboration/components/collaboration-sidebar";
 import { DockerSidebar } from "@/features/docker/components/docker-sidebar";
 import { FileExplorerPane } from "@/features/file-explorer/components/file-explorer-pane";
@@ -53,6 +53,9 @@ interface SidebarPaneEntry {
   id: SidebarView;
   content: ReactNode;
 }
+
+/** How many sidebar views stay mounted after the user switches away from them. */
+const MAX_KEPT_SIDEBAR_VIEWS = 4;
 
 export const SidebarPane = memo(
   ({
@@ -173,11 +176,33 @@ export const SidebarPane = memo(
         "databases",
       ].includes(activePane.id);
 
+    // Recently shown views stay mounted but hidden, so switching back keeps their scroll, search
+    // and loaded data instead of remounting into a loading state.
+    const [recentPaneIds, setRecentPaneIds] = useState<string[]>([]);
+    const nextRecentPaneIds = activePane
+      ? [activePane.id, ...recentPaneIds.filter((id) => id !== activePane.id)]
+          .filter((id) => paneEntries.some((pane) => pane.id === id))
+          .slice(0, MAX_KEPT_SIDEBAR_VIEWS)
+      : recentPaneIds;
+    if (
+      nextRecentPaneIds.length !== recentPaneIds.length ||
+      nextRecentPaneIds.some((id, index) => id !== recentPaneIds[index])
+    ) {
+      setRecentPaneIds(nextRecentPaneIds);
+    }
+
     return (
       <div className="flex h-full min-h-0" data-external-file-drop-scope="sidebar">
-        <Activity mode={!visible && suspendWhenHidden ? "hidden" : "visible"}>
-          <div className="h-full min-h-0 flex-1 overflow-hidden">{activePane?.content ?? null}</div>
-        </Activity>
+        {paneEntries
+          .filter((pane) => nextRecentPaneIds.includes(pane.id))
+          .map((pane) => {
+            const isShown = pane.id === activePane?.id && (visible || !suspendWhenHidden);
+            return (
+              <Activity key={pane.id} mode={isShown ? "visible" : "hidden"}>
+                <div className="h-full min-h-0 flex-1 overflow-hidden">{pane.content}</div>
+              </Activity>
+            );
+          })}
       </div>
     );
   },

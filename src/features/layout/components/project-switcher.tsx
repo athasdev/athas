@@ -45,6 +45,9 @@ import {
 } from "@/features/layout/utils/project-switcher-items";
 import { getProjectNameFromPath, isRemoteProjectPath, ProjectGlyph } from "./sidebar/project-glyph";
 
+/** Icons found in each project folder, so switching projects doesn't rescan and blank the icon. */
+const detectedProjectIcons = new Map<string, string | undefined>();
+
 export function ProjectSwitcher({
   project,
   projects,
@@ -69,7 +72,11 @@ export function ProjectSwitcher({
   const [passwordPromptConnection, setPasswordPromptConnection] = useState<RemoteConnection | null>(
     null,
   );
-  const [detectedIconPath, setDetectedIconPath] = useState<string | undefined>();
+  const [detectedIconPath, setDetectedIconPath] = useState<string | undefined>(() =>
+    (project?.path ?? rootFolderPath)
+      ? detectedProjectIcons.get(project?.path ?? rootFolderPath ?? "")
+      : undefined,
+  );
   const [iconPickerProject, setIconPickerProject] = useState<ProjectTab | null>(null);
   const displayProject = project;
   const projectName = displayProject?.name || getProjectNameFromPath(rootFolderPath);
@@ -77,7 +84,6 @@ export function ProjectSwitcher({
   const customIcon = displayProject?.customIcon;
   const isRemote = isRemoteProjectPath(projectPath);
   const displayIconPath = customIcon ?? detectedIconPath;
-  const displayProjectKey = displayProject?.id ?? projectPath;
   const closedRemoteConnections = useMemo(
     () => getClosedRemoteConnections(projects, remoteConnections),
     [projects, remoteConnections],
@@ -101,21 +107,30 @@ export function ProjectSwitcher({
     }
   }, []);
 
+  // Keyed by the project's path, not its tab object: tab updates such as a new last-opened time
+  // replaced the icon with the fallback glyph and rescanned the folder each time.
+  const hasDisplayProject = Boolean(displayProject);
   useEffect(() => {
-    setDetectedIconPath(undefined);
+    if (!hasDisplayProject || customIcon || isRemote || !projectPath) {
+      setDetectedIconPath(undefined);
+      return;
+    }
 
-    if (!displayProject || customIcon || isRemote || !projectPath) return;
+    if (detectedProjectIcons.has(projectPath)) {
+      setDetectedIconPath(detectedProjectIcons.get(projectPath));
+      return;
+    }
 
     let cancelled = false;
-
     findBestProjectIcon(projectPath).then((iconFile) => {
+      detectedProjectIcons.set(projectPath, iconFile?.path);
       if (!cancelled) setDetectedIconPath(iconFile?.path);
     });
 
     return () => {
       cancelled = true;
     };
-  }, [displayProject, displayProjectKey, customIcon, isRemote, projectPath]);
+  }, [hasDisplayProject, customIcon, isRemote, projectPath]);
 
   const handleConnectRemote = async (connectionId: string, providedPassword?: string) => {
     const connection = remoteConnections.find((candidate) => candidate.id === connectionId);

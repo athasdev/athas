@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useShallow } from "zustand/react/shallow";
 import { useTerminalSlotsStore } from "../stores/terminal-slots.store";
@@ -78,8 +78,8 @@ function TerminalPortal({ sessionId }: { sessionId: string }) {
     return wrapper;
   });
 
-  // Reparent the wrapper into the active slot whenever the slot changes.
-  useEffect(() => {
+  // Reparent the wrapper into the active slot whenever the slot changes, before the slot paints.
+  useLayoutEffect(() => {
     if (!wrapper) return;
 
     if (slotEl) {

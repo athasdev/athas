@@ -138,6 +138,36 @@ interface PaneContainerProps {
 }
 
 const DEFAULT_CAROUSEL_CARD_WIDTH = 640;
+/**
+ * Editors kept mounted but hidden after their tab loses focus, most recent first. Switching back
+ * to one of them shows it immediately instead of creating a new editor, re-tokenizing and jumping
+ * to the saved scroll position; the cap keeps memory close to one editor per pane.
+ */
+const MAX_WARM_EDITOR_BUFFERS = 3;
+
+let hasPrefetchedPaneSurfaces = false;
+
+/**
+ * Loads the code for the surfaces users open most once the app is idle, so the first editor,
+ * terminal, diff or search tab after startup doesn't wait on a network-style chunk fetch.
+ */
+function prefetchPaneSurfaces() {
+  if (hasPrefetchedPaneSurfaces || typeof window === "undefined") return;
+  hasPrefetchedPaneSurfaces = true;
+  const load = () => {
+    void import("@/features/editor/components/code-editor");
+    void import("@/features/terminal/components/terminal-tab");
+    void import("@/features/git/components/diff/git-diff-viewer");
+    void import("@/features/global-search/components/global-search-buffer");
+    void import("@/features/ai/components/agent-tab");
+    void import("@/features/settings/components/settings-workbench-view");
+  };
+  if ("requestIdleCallback" in window) {
+    window.requestIdleCallback(load, { timeout: 3000 });
+  } else {
+    setTimeout(load, 1500);
+  }
+}
 const MIN_CAROUSEL_CARD_WIDTH = 320;
 const CAROUSEL_OUTER_GAP_PX = 160;
 type EditorBufferShell = Pick<EditorContent, "id" | "path" | "name" | "type" | "readOnly">;
@@ -308,6 +338,8 @@ export function PaneContainer({ pane }: PaneContainerProps) {
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
   const handleFileOpen = useFileSystemStore.use.handleFileOpen?.();
   const horizontalBufferCarousel = useSettingsStore((state) => state.settings.horizontalTabScroll);
+
+  useEffect(prefetchPaneSurfaces, []);
 
   const [isDragOver, setIsDragOver] = useState(false);
   const [isTabDragOver, setIsTabDragOver] = useState(false);
@@ -870,9 +902,28 @@ export function PaneContainer({ pane }: PaneContainerProps) {
 
   const shouldRenderCarousel =
     isWorkspaceSurfaceActive && horizontalBufferCarousel && paneBuffers.length > 1;
+  const activeEditorBufferId =
+    activeBuffer && isStandardEditorBuffer(activeBuffer) ? activeBuffer.id : null;
+  const [warmEditorBufferIds, setWarmEditorBufferIds] = useState<string[]>([]);
+  const nextWarmEditorBufferIds = [
+    ...(activeEditorBufferId ? [activeEditorBufferId] : []),
+    ...warmEditorBufferIds.filter(
+      (bufferId) =>
+        bufferId !== activeEditorBufferId &&
+        paneBuffers.some((buffer) => buffer.id === bufferId && isStandardEditorBuffer(buffer)),
+    ),
+  ].slice(0, MAX_WARM_EDITOR_BUFFERS);
+  if (
+    nextWarmEditorBufferIds.length !== warmEditorBufferIds.length ||
+    nextWarmEditorBufferIds.some((bufferId, index) => bufferId !== warmEditorBufferIds[index])
+  ) {
+    setWarmEditorBufferIds(nextWarmEditorBufferIds);
+  }
   const mountedEditorBuffers = paneBuffers.filter(
     (buffer): buffer is EditorBufferShell =>
-      isWorkspaceSurfaceActive && isStandardEditorBuffer(buffer) && buffer.id === activeBuffer?.id,
+      isWorkspaceSurfaceActive &&
+      isStandardEditorBuffer(buffer) &&
+      nextWarmEditorBufferIds.includes(buffer.id),
   );
 
   const renderActiveBuffer = useCallback(
@@ -1177,17 +1228,19 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                 .map((b) => {
                   return (
                     <div key={b.id} className="absolute inset-0">
-                      <TerminalTab
-                        sessionId={b.sessionId}
-                        bufferId={b.id}
-                        paneId={pane.id}
-                        shell={b.shell}
-                        initialCommand={b.initialCommand}
-                        workingDirectory={b.workingDirectory}
-                        remoteConnectionId={b.remoteConnectionId}
-                        isActive={isActivePane}
-                        isVisible={isWorkspaceSurfaceActive}
-                      />
+                      <Suspense fallback={null}>
+                        <TerminalTab
+                          sessionId={b.sessionId}
+                          bufferId={b.id}
+                          paneId={pane.id}
+                          shell={b.shell}
+                          initialCommand={b.initialCommand}
+                          workingDirectory={b.workingDirectory}
+                          remoteConnectionId={b.remoteConnectionId}
+                          isActive={isActivePane}
+                          isVisible={isWorkspaceSurfaceActive}
+                        />
+                      </Suspense>
                     </div>
                   );
                 })}
@@ -1198,22 +1251,28 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                     key={buffer.id}
                     className="absolute inset-0"
                     style={isActive ? undefined : { visibility: "hidden" }}
+                    inert={!isActive}
                   >
-                    <CodeEditor
-                      paneId={pane.id}
-                      bufferId={buffer.id}
-                      isActiveSurface={isActive && isActivePane}
-                      readOnly={buffer.readOnly}
-                      outline={isActive}
-                    />
+                    <Suspense fallback={null}>
+                      <CodeEditor
+                        paneId={pane.id}
+                        bufferId={buffer.id}
+                        isActiveSurface={isActive && isActivePane}
+                        readOnly={buffer.readOnly}
+                        outline={isActive}
+                      />
+                    </Suspense>
                   </div>
                 );
               })}
               {isWorkspaceSurfaceActive &&
                 activeBuffer &&
                 activeBuffer.type !== "terminal" &&
-                !isStandardEditorBuffer(activeBuffer) &&
-                renderActiveBuffer(activeBuffer)}
+                !isStandardEditorBuffer(activeBuffer) && (
+                  <Suspense key={activeBuffer.id} fallback={null}>
+                    {renderActiveBuffer(activeBuffer)}
+                  </Suspense>
+                )}
             </>
           )}
         </Suspense>

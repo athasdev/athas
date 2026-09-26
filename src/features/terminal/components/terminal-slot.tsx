@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { type TerminalSlotProps, useTerminalSlotsStore } from "../stores/terminal-slots.store";
 
 interface Props extends Omit<TerminalSlotProps, "el"> {
@@ -25,7 +25,8 @@ export function TerminalSlot({
 }: Props) {
   const ref = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+  // Layout effects, so the terminal moves into this slot before the empty slot paints.
+  useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
     const { register, unregister } = useTerminalSlotsStore.getState().actions;
@@ -48,7 +49,7 @@ export function TerminalSlot({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     useTerminalSlotsStore.getState().actions.update(sessionId, {
       isActive,
       isVisible,

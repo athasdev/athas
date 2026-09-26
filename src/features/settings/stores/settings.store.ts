@@ -21,6 +21,7 @@ import type { SearchResult, SearchState } from "../types/search.types";
 import type { Settings } from "../types/settings.types";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
 import { createSelectors } from "@/utils/zustand-selectors";
+import { readAppearanceBootstrapCache } from "@/features/settings/lib/appearance-bootstrap";
 
 let settingsStoreInitPromise: Promise<Settings> | null = null;
 
@@ -36,11 +37,23 @@ export function initializeSettingsStore(): Promise<Settings> {
   return settingsStoreInitPromise;
 }
 
+/**
+ * The settings the workbench renders with before the saved ones load: the defaults, with the UI
+ * font size the startup appearance cache already applied, so sizes derived from it don't jump.
+ */
+function getStartupSettingsSnapshot(): Settings {
+  const settings = getDefaultSettingsSnapshot();
+  const cachedUiFontSize = readAppearanceBootstrapCache()?.uiFontSize;
+  return cachedUiFontSize === undefined ? settings : { ...settings, uiFontSize: cachedUiFontSize };
+}
+
 const useSettingsStoreBase = create(
   immer(
     combine(
       {
-        settings: getDefaultSettingsSnapshot(),
+        settings: getStartupSettingsSnapshot(),
+        /** Whether the saved settings have replaced the startup snapshot. */
+        isLoaded: false,
         search: {
           query: "",
           results: [] as SearchResult[],
@@ -74,6 +87,7 @@ const useSettingsStoreBase = create(
           initializeSettings: (loadedSettings: Settings) => {
             set((state) => {
               state.settings = loadedSettings;
+              state.isLoaded = true;
             });
           },
 
