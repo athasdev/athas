@@ -18,6 +18,7 @@ function NavigationItem({ item }: { item: ActivityNavigationItem }) {
     <Tooltip content={item.label} shortcut={item.shortcut}>
       <SidebarIconButton
         size="lg"
+        solidWhenActive
         active={item.active}
         onClick={item.onClick}
         aria-label={item.ariaLabel}
@@ -40,7 +41,14 @@ function MoreViews({ items }: { items: ActivityNavigationItem[] }) {
     <DropdownMenu>
       <Tooltip content={label}>
         <DropdownMenuTrigger
-          render={<SidebarIconButton size="lg" active={Boolean(activeItem)} aria-label={label} />}
+          render={
+            <SidebarIconButton
+              size="lg"
+              solidWhenActive
+              active={Boolean(activeItem)}
+              aria-label={label}
+            />
+          }
         >
           <DotsIcon />
         </DropdownMenuTrigger>

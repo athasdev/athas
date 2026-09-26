@@ -57,6 +57,7 @@
         "monaco-vim": "^0.4.4",
         "motion": "^12.43.0",
         "nanoid": "^5.1.16",
+        "nucleo-ui-fill-18": "^1.5.1",
         "nucleo-ui-outline-18": "^1.5.0",
         "pdfjs-dist": "5.4.296",
         "react": "^19.3.0",
@@ -136,6 +137,7 @@
   },
   "trustedDependencies": [
     "nucleo-ui-outline-18",
+    "nucleo-ui-fill-18",
   ],
   "overrides": {
     "ajv": "^8.20.0",
@@ -1437,6 +1439,8 @@
     "node-gyp-build": ["node-gyp-build@4.8.4", "", { "bin": { "node-gyp-build": "bin.js", "node-gyp-build-optional": "optional.js", "node-gyp-build-test": "build-test.js" } }, "sha512-LA4ZjwlnUblHVgq0oBF3Jl/6h/Nvs5fzBLwdEF4nuxnFdsfajde4WfxtJr3CaiH+F6ewcIB/q4jQ4UzPyid+CQ=="],
 
     "node-releases": ["node-releases@2.0.56", "", {}, "sha512-x0InOIyzgdk+eyaWaRJFH5snEtiImgBgblZ2CyPrLmqqcuMQkEvcDPHbzqbD8eDsSeJbVOjn+crzyzHaM4D+/A=="],
+
+    "nucleo-ui-fill-18": ["nucleo-ui-fill-18@1.5.1", "", { "dependencies": { "tslib": "^2.0.0" }, "peerDependencies": { "react": ">=16.8.0", "react-dom": ">=16.8.0" } }, "sha512-UY9pW8fVtL438ofvDwhzh0JVTX66m2E7rhqSTiCy96pMRgaK/GePYQSURmYh0XmX760qGqhMQ9rFfYI1cGqwiA=="],
 
     "nucleo-ui-outline-18": ["nucleo-ui-outline-18@1.5.0", "", { "dependencies": { "tslib": "^2.0.0" }, "peerDependencies": { "react": ">=16.8.0", "react-dom": ">=16.8.0" } }, "sha512-kZq8sqCYTlPeD4VhaR/gC25KcdK298GG1lXg5O4110uDcBtsvDWPuu2rp6+2xREx+8zd4hOTQd9vmNFdZFd2iw=="],
 

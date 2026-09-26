@@ -6,13 +6,13 @@ import {
 } from "../utils/activity-bar-layout";
 
 describe("activity bar layout", () => {
-  it("keeps the default rail at 52 pixels", () => {
-    expect(COLLAPSED_ACTIVITY_BAR_WIDTH).toBe(52);
+  it("keeps the default rail at 48 pixels", () => {
+    expect(COLLAPSED_ACTIVITY_BAR_WIDTH).toBe(48);
     expect(getCollapsedActivityBarWidth(UI_FONT_SIZE_DEFAULT)).toBe(COLLAPSED_ACTIVITY_BAR_WIDTH);
     expect(getCollapsedActivityBarWidth(10)).toBe(COLLAPSED_ACTIVITY_BAR_WIDTH);
   });
 
   it("grows the collapsed rail with scaled chrome controls", () => {
-    expect(getCollapsedActivityBarWidth(15)).toBeCloseTo(57.54, 2);
+    expect(getCollapsedActivityBarWidth(15)).toBeCloseTo(52.92, 2);
   });
 });

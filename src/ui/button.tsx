@@ -50,7 +50,7 @@ export const buttonVariants = cva(
         /** Forms, dialogs, and page content. */
         md: "h-7 gap-1.5 px-2.5 ui-text-sm [&_svg:not([class*='size-'])]:size-3.5",
         /** The activity rail and other primary navigation. */
-        lg: "h-rail-control gap-2 rounded-lg px-3 ui-text-base [&_svg:not([class*='size-'])]:size-4.5",
+        lg: "h-rail-control gap-2 rounded-lg px-3 ui-text-base [&_svg:not([class*='size-'])]:size-4",
       },
     },
     defaultVariants: {

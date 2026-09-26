@@ -208,7 +208,8 @@ export function ProjectSwitcher({
                 <ProjectGlyph
                   projectPath={projectPath}
                   iconPath={displayIconPath}
-                  className="size-5"
+                  className="size-4"
+                  imageClassName="size-7"
                 />
               </Button>
             }

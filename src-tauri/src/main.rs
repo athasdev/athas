@@ -76,6 +76,18 @@ fn main() {
          if matches!(event, tauri::WindowEvent::Destroyed) {
             terminal::close_window_terminals(window.app_handle(), window.label());
          }
+         // AppKit lays the title bar out again on these, which can drop the traffic light inset.
+         #[cfg(target_os = "macos")]
+         if matches!(
+            event,
+            tauri::WindowEvent::Resized(_)
+               | tauri::WindowEvent::Focused(_)
+               | tauri::WindowEvent::ThemeChanged(_)
+               | tauri::WindowEvent::ScaleFactorChanged { .. }
+         ) && let Ok(ns_window) = window.ns_window()
+         {
+            bootstrap::macos::apply_traffic_light_position(ns_window);
+         }
       })
       .manage(startup_timing)
       .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {

@@ -16,7 +16,7 @@ import { ButtonGroup, ButtonGroupSeparator } from "@/ui/button-group";
 import { ChromeBar } from "@/ui/chrome";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/ui/dropdown";
 import { FieldTitle } from "@/ui/field";
-import { ChevronDownIcon, DotsIcon, SearchIcon } from "@/ui/icons";
+import { ChevronDownIcon, DotsIcon, IconContext, SearchIcon } from "@/ui/icons";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import { ScrollArea } from "@/ui/scroll-area";
 import { SearchField } from "@/ui/search";
@@ -454,12 +454,19 @@ const sidebarListItemVariants = cva(
   },
 );
 
+const SOLID_ICON = { filled: true };
+
 export const SidebarIconButton = forwardRef<
   HTMLButtonElement,
   Omit<ButtonProps, "variant" | "tone"> & {
     tone?: "default" | "warning" | "error" | "danger";
+    /** Show the icon's solid variant while the button is active, as the activity rail does. */
+    solidWhenActive?: boolean;
   }
->(function SidebarIconButton({ tone = "default", ...props }, ref) {
+>(function SidebarIconButton(
+  { tone = "default", solidWhenActive = false, active, children, ...props },
+  ref,
+) {
   return (
     <Button
       ref={ref}
@@ -468,8 +475,15 @@ export const SidebarIconButton = forwardRef<
       iconOnly
       size="sm"
       tone={tone === "error" ? "danger" : tone}
+      active={active}
       {...props}
-    />
+    >
+      {solidWhenActive && active ? (
+        <IconContext.Provider value={SOLID_ICON}>{children}</IconContext.Provider>
+      ) : (
+        children
+      )}
+    </Button>
   );
 });
 

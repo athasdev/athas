@@ -34,7 +34,6 @@
 
   --spacing-title-bar: var(--athas-title-bar-height);
   --spacing-title-bar-leading: var(--athas-title-bar-leading-inset);
-  --spacing-title-tab-inset: var(--athas-title-tab-inset);
   --spacing-pane-header: var(--athas-pane-header-height);
   --spacing-tab-bar: var(--athas-tab-bar-height);
   --spacing-tab: var(--athas-tab-height);
@@ -172,7 +171,6 @@
     --ui-text-chrome: var(--ui-text-sm);
     --athas-title-bar-height: 2.5rem;
     --athas-title-bar-leading-inset: var(--athas-chrome-padding-inline);
-    --athas-title-tab-inset: 6px;
     --athas-title-tab-leading-inset: calc(
       var(--athas-title-bar-leading-inset) + var(--athas-rail-control-size) +
         var(--athas-rail-control-size) + var(--athas-chrome-padding-inline)
@@ -184,7 +182,7 @@
     --athas-sidebar-header-height: 2rem;
     --athas-workbench-gap: 8px;
     --athas-chrome-control-height: 1.5rem;
-    --athas-rail-control-size: 2.25rem;
+    --athas-rail-control-size: 2rem;
     --athas-chrome-hit-target: 1.75rem;
     --athas-chrome-line-height: 1rem;
     --athas-chrome-gap-tight: 2px;
