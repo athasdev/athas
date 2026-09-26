@@ -65,13 +65,13 @@ const PATH = "/repo/a.ts";
 const lines = (...values: string[]) => values.join("\n");
 
 /** An agent write as the Rust client reports it, with the disk already holding the new text. */
-function agentWrites(previousContent: string | null, content: string, path = PATH) {
+function agentWrites(previousContent: string | null, content: string, path = PATH, chat = CHAT) {
   mocks.disk.set(path, content);
-  recordAgentFileWrite(CHAT, { path, previousContent, content });
+  recordAgentFileWrite(chat, { path, previousContent, content });
 }
 
-function entry(path = PATH) {
-  return getAgentEditEntries(CHAT)[path];
+function entry(path = PATH, chat = CHAT) {
+  return getAgentEditEntries(chat)[path];
 }
 
 function hunks(path = PATH) {
@@ -194,6 +194,38 @@ describe("agent edits service", () => {
     expect(entry()).toBeUndefined();
     expect(mocks.closeBufferForce).toHaveBeenCalledWith("buf");
     expect(mocks.updateBufferContent).not.toHaveBeenCalled();
+  });
+
+  it("reviews each chat's own changes when two chats' agents write the same file", async () => {
+    const OTHER = "chat-2";
+    agentWrites(lines("a", "b", "c"), lines("A", "b", "c"));
+    agentWrites(lines("A", "b", "c"), lines("A", "b", "C"), PATH, OTHER);
+
+    // The other chat's change moved into this chat's baseline at once.
+    expect(entry()?.baseline).toBe(lines("a", "b", "C"));
+    expect(entry()?.current).toBe(lines("A", "b", "C"));
+    expect(entry(PATH, OTHER)?.baseline).toBe(lines("A", "b", "c"));
+
+    // Rejecting in the other chat leaves this chat's hunk to review against the new text.
+    await rejectAllAgentEdits(OTHER);
+    expect(mocks.disk.get(PATH)).toBe(lines("A", "b", "c"));
+    expect(entry()?.baseline).toBe(lines("a", "b", "c"));
+    expect(hunks()).toEqual([
+      { baseStart: 0, baseLines: ["a"], currentStart: 0, currentLines: ["A"] },
+    ]);
+  });
+
+  it("stops tracking where another chat's agent overwrote this chat's lines", () => {
+    agentWrites(lines("a", "b"), lines("A", "b"));
+    agentWrites(lines("A", "b"), lines("X", "b"), PATH, "chat-2");
+
+    expect(entry()).toBeUndefined();
+    expect(entry(PATH, "chat-2")?.baseline).toBe(lines("A", "b"));
+    expect(mocks.showToast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        description: "Another chat's agent changed the lines this chat's agent had edited.",
+      }),
+    );
   });
 
   it("drops a file changed on disk where the agent edited it", async () => {

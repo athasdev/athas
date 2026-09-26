@@ -110,6 +110,32 @@ function listenForFileChanges() {
   });
 }
 
+/**
+ * Brings the other chats tracking `path` up to date with `content`, which one chat's agent wrote
+ * or one chat's review left on disk. Each chat's log holds only its own agent's changes: another
+ * chat's write moves into the baseline where it is clear of this chat's hunks, so they stay
+ * reviewable here and the other change is reviewed in its own chat. Where the two overlap the
+ * later change wins and this chat stops tracking the file, saying why. This runs right away
+ * instead of waiting for the file watcher, which does not report review writes at all.
+ */
+function rebaseOtherChats(path: string, exceptChatId: string, content: string | null) {
+  for (const chatId of chatsTracking(path)) {
+    if (chatId === exceptChatId) continue;
+    const entry = getAgentEditEntries(chatId)[path];
+    if (!entry || entry.current === content) continue;
+    const rebased = content === null ? null : rebaseOnDisk(entry, content);
+    setEntry(chatId, path, rebased);
+    if (!rebased) {
+      notifyDropped(
+        path,
+        content === null
+          ? "Another chat's review deleted the file."
+          : "Another chat's agent changed the lines this chat's agent had edited.",
+      );
+    }
+  }
+}
+
 /** Adds an `agent_file_write` to the chat's log. The write itself already landed. */
 export function recordAgentFileWrite(chatId: string, write: AgentFileWrite) {
   listenForFileChanges();
@@ -122,6 +148,7 @@ export function recordAgentFileWrite(chatId: string, write: AgentFileWrite) {
       "It changed where the agent had edited it before; earlier agent changes count as kept.",
     );
   }
+  rebaseOtherChats(write.path, chatId, write.content);
 }
 
 function findEditorBuffer(path: string) {
@@ -178,9 +205,11 @@ async function rejectHunks(chatId: string, entry: AgentEditEntry, hunks: AgentEd
       useFileWatcherStore.getState().actions.markPendingSave(entry.path);
       if (buffer) useBufferStore.getState().actions.closeBufferForce(buffer.id);
       await deleteFileOrDirectory(entry.path);
+      rebaseOtherChats(entry.path, chatId, null);
       return;
     }
     await writeReviewed(entry.path, reverted);
+    rebaseOtherChats(entry.path, chatId, reverted);
   } catch (error) {
     setEntry(chatId, entry.path, entry);
     showToast({ type: "error", message: `Could not reject the change in ${name}: ${error}` });
