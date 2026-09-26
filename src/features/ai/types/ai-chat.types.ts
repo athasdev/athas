@@ -1,4 +1,4 @@
-import type { AcpPlanEntry } from "@/features/ai/types/acp.types";
+import type { AcpPlanEntry, AcpTerminalSnapshot } from "@/features/ai/types/acp.types";
 import type {
   AcpToolCallLocation,
   AcpToolCallStatus,
@@ -46,6 +46,8 @@ export interface ToolCall {
   isComplete?: boolean;
   /** Length of the assistant text when this call started, so the transcript can interleave them. */
   contentOffset?: number;
+  /** The final output of the call's terminals, by terminal id, kept after the terminal is gone. */
+  terminals?: Record<string, AcpTerminalSnapshot>;
 }
 
 export interface ImageContent {

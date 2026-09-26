@@ -3,6 +3,15 @@ use athas_terminal::TerminalEvent;
 use std::collections::HashMap;
 use tokio::sync::oneshot;
 
+/// What a terminal event changed, for the chat to show.
+#[derive(Debug, PartialEq)]
+pub(super) enum TerminalChange {
+   /// Output text that arrived, decoded.
+   Output(String),
+   /// The command's exit, reported once.
+   Exit(acp::TerminalExitStatus),
+}
+
 /// Tracks state for an ACP terminal session
 pub(super) struct AcpTerminalState {
    pub athas_terminal_id: String,
@@ -44,23 +53,24 @@ impl AcpTerminalState {
       self.truncate_from_beginning_to_limit();
    }
 
-   pub fn append_output_bytes(&mut self, data: &[u8]) {
+   /// Appends PTY bytes, holding back a character split across reads. Returns the text that
+   /// was appended.
+   pub fn append_output_bytes(&mut self, data: &[u8]) -> String {
       self.pending_utf8.extend_from_slice(data);
+      let mut appended = String::new();
 
       loop {
          match std::str::from_utf8(&self.pending_utf8) {
             Ok(text) => {
-               let text = text.to_string();
+               appended.push_str(text);
                self.pending_utf8.clear();
-               self.append_output(&text);
                break;
             }
             Err(error) => {
                let valid_up_to = error.valid_up_to();
                if valid_up_to > 0 {
-                  let text = String::from_utf8_lossy(&self.pending_utf8[..valid_up_to]).to_string();
+                  appended.push_str(&String::from_utf8_lossy(&self.pending_utf8[..valid_up_to]));
                   self.pending_utf8.drain(..valid_up_to);
-                  self.append_output(&text);
                }
 
                let Some(invalid_length) = error.error_len() else {
@@ -68,43 +78,53 @@ impl AcpTerminalState {
                };
 
                self.pending_utf8.drain(..invalid_length);
-               self.append_output("\u{fffd}");
+               appended.push('\u{fffd}');
             }
          }
       }
+      self.append_output(&appended);
+      appended
    }
 
-   pub fn handle_event(&mut self, event: TerminalEvent) {
-      match event {
-         TerminalEvent::Output { data } => self.append_output_bytes(&data),
-         TerminalEvent::Error { .. } => {
-            self.flush_pending_utf8();
-            self.set_exit_status(Some(1), Some("pty_error".to_string()));
+   /// Applies a PTY event and returns what changed for the chat.
+   pub fn handle_event(&mut self, event: TerminalEvent) -> Vec<TerminalChange> {
+      let mut changes = Vec::new();
+      let exit = match event {
+         TerminalEvent::Output { data } => {
+            let text = self.append_output_bytes(&data);
+            if !text.is_empty() {
+               changes.push(TerminalChange::Output(text));
+            }
+            return changes;
          }
+         TerminalEvent::Error { .. } => Some((Some(1), Some("pty_error".to_string()))),
+         // The PTY reports code 1 alongside a signal; ACP has no exit code for a process a
+         // signal ended.
          TerminalEvent::Exit { exit_code, signal } => {
-            self.flush_pending_utf8();
-            // The PTY reports code 1 alongside a signal; ACP has no exit code for a process a
-            // signal ended.
-            let exit_code = if signal.is_some() { None } else { exit_code };
-            self.set_exit_status(exit_code, signal);
+            Some((if signal.is_some() { None } else { exit_code }, signal))
          }
-         TerminalEvent::Closed => {
-            self.flush_pending_utf8();
-            if self.exit_status.is_none() {
-               self.set_exit_status(Some(0), None);
-            }
-         }
+         TerminalEvent::Closed => self.exit_status.is_none().then_some((Some(0), None)),
+      };
+      if let Some(text) = self.flush_pending_utf8() {
+         changes.push(TerminalChange::Output(text));
       }
+      if let Some((exit_code, signal)) = exit
+         && let Some(status) = self.set_exit_status(exit_code, signal)
+      {
+         changes.push(TerminalChange::Exit(status));
+      }
+      changes
    }
 
-   fn flush_pending_utf8(&mut self) {
+   fn flush_pending_utf8(&mut self) -> Option<String> {
       if self.pending_utf8.is_empty() {
-         return;
+         return None;
       }
 
       let text = String::from_utf8_lossy(&self.pending_utf8).to_string();
       self.pending_utf8.clear();
       self.append_output(&text);
+      Some(text)
    }
 
    fn truncate_from_beginning_to_limit(&mut self) {
@@ -143,9 +163,15 @@ impl AcpTerminalState {
       self
    }
 
-   pub fn set_exit_status(&mut self, exit_code: Option<u32>, signal: Option<String>) {
+   /// Records how the command ended and answers everyone waiting on it. Returns the status
+   /// when this call set it; a terminal that already exited keeps its first status.
+   pub fn set_exit_status(
+      &mut self,
+      exit_code: Option<u32>,
+      signal: Option<String>,
+   ) -> Option<acp::TerminalExitStatus> {
       if self.exit_status.is_some() {
-         return;
+         return None;
       }
 
       let status = acp::TerminalExitStatus::new()
@@ -156,7 +182,16 @@ impl AcpTerminalState {
       for waiter in self.exit_waiters.drain(..) {
          let _ = waiter.send(status.clone());
       }
+      Some(status)
    }
+}
+
+/// A terminal taken out of the client's table.
+pub(super) struct ReleasedTerminal {
+   pub terminal_id: String,
+   pub state: AcpTerminalState,
+   /// The exit the release gave a command that was still running.
+   pub exit: Option<acp::TerminalExitStatus>,
 }
 
 /// Removes the terminals `session_id` created (every terminal with `None`), marking any still
@@ -165,7 +200,7 @@ impl AcpTerminalState {
 pub(super) fn take_session_terminals(
    states: &mut HashMap<String, AcpTerminalState>,
    session_id: Option<&str>,
-) -> Vec<AcpTerminalState> {
+) -> Vec<ReleasedTerminal> {
    let terminal_ids: Vec<String> = states
       .iter()
       .filter(|(_, state)| session_id.is_none_or(|session_id| state.session_id == session_id))
@@ -173,10 +208,14 @@ pub(super) fn take_session_terminals(
       .collect();
    terminal_ids
       .into_iter()
-      .filter_map(|terminal_id| states.remove(&terminal_id))
-      .map(|mut state| {
-         state.set_exit_status(Some(1), Some("released".to_string()));
-         state
+      .filter_map(|terminal_id| {
+         let mut state = states.remove(&terminal_id)?;
+         let exit = state.set_exit_status(Some(1), Some("released".to_string()));
+         Some(ReleasedTerminal {
+            terminal_id,
+            state,
+            exit,
+         })
       })
       .collect()
 }
@@ -201,7 +240,12 @@ mod tests {
       let released = take_session_terminals(&mut states, Some("a"));
 
       assert_eq!(released.len(), 1);
-      assert_eq!(released[0].athas_terminal_id, "athas-1");
+      assert_eq!(released[0].state.athas_terminal_id, "athas-1");
+      assert_eq!(released[0].terminal_id, "t1");
+      assert!(
+         released[0].exit.is_some(),
+         "the release ends a running command"
+      );
       assert!(exit_rx.try_recv().is_ok(), "a waiting caller is answered");
       assert!(states.contains_key("t2"));
 
@@ -286,6 +330,37 @@ mod tests {
       let status = state.exit_status.expect("exit status should be set");
       assert_eq!(status.exit_code, None);
       assert_eq!(status.signal.as_deref(), Some("SIGTERM"));
+   }
+
+   #[test]
+   fn events_report_decoded_output_and_the_exit_once() {
+      use super::TerminalChange;
+      use athas_terminal::TerminalEvent;
+
+      let mut state = AcpTerminalState::new("terminal-10".to_string(), None);
+      let emoji = "🙂".as_bytes();
+      assert_eq!(
+         state.handle_event(TerminalEvent::Output {
+            data: [b"ok ".as_slice(), &emoji[..2]].concat(),
+         }),
+         vec![TerminalChange::Output("ok ".to_string())]
+      );
+      assert_eq!(
+         state.handle_event(TerminalEvent::Output {
+            data: emoji[2..].to_vec(),
+         }),
+         vec![TerminalChange::Output("🙂".to_string())]
+      );
+
+      let changes = state.handle_event(TerminalEvent::Exit {
+         exit_code: Some(0),
+         signal: None,
+      });
+      assert!(
+         matches!(&changes[..], [TerminalChange::Exit(status)] if status.exit_code == Some(0))
+      );
+      assert!(state.handle_event(TerminalEvent::Closed).is_empty());
+      assert_eq!(state.output_buffer, "ok 🙂");
    }
 
    #[test]

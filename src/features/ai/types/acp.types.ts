@@ -321,6 +321,21 @@ export type AcpEvent =
       messageId?: string | null;
     }
   | {
+      type: "terminal_started";
+      sessionId: string;
+      terminalId: string;
+      cwd: string | null;
+      displayOnly: boolean;
+    }
+  | { type: "terminal_output"; sessionId: string; terminalId: string; data: string }
+  | {
+      type: "terminal_exit";
+      sessionId: string;
+      terminalId: string;
+      exitCode: number | null;
+      signal: string | null;
+    }
+  | {
       type: "tool_start";
       sessionId: string;
       toolName: string;
@@ -472,4 +487,18 @@ export type AcpEvent =
 export interface AcpBufferReadRequest {
   requestId: string;
   path: string;
+}
+
+/** How a terminal's command ended; `exitCode` is null when a signal ended it. */
+export interface AcpTerminalExit {
+  exitCode: number | null;
+  signal: string | null;
+}
+
+/** What a tool call's terminal showed, kept with the call once its command ends. */
+export interface AcpTerminalSnapshot {
+  output: string;
+  /** The start of the output was dropped to keep it within the display limit. */
+  truncated: boolean;
+  exit: AcpTerminalExit | null;
 }

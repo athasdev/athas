@@ -1,9 +1,11 @@
 import { listen } from "@tauri-apps/api/event";
 import { getChatTitleFromSessionInfo } from "@/features/ai/lib/acp-session-info";
+import { withAcpTerminalSnapshot } from "@/features/ai/lib/acp-terminal-output";
 import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
 import { sendAgentNativeNotification } from "@/features/ai/services/agent-native-notifications";
 import { useAcpAuthStore } from "@/features/ai/stores/acp-auth.store";
 import { useAcpQuestionsStore } from "@/features/ai/stores/acp-questions.store";
+import { useAcpTerminalsStore } from "@/features/ai/stores/acp-terminals.store";
 import { useAgentPermissionsStore } from "@/features/ai/stores/agent-permissions.store";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { AcpEvent } from "@/features/ai/types/acp.types";
@@ -85,6 +87,40 @@ export function applyAcpEvent(payload: AcpEvent): void {
     case "status_changed":
       actions.setAcpAgentStatus(payload.status);
       break;
+    case "terminal_started":
+      useAcpTerminalsStore.getState().actions.start(payload.terminalId, {
+        sessionId: payload.sessionId,
+        cwd: payload.cwd,
+        displayOnly: payload.displayOnly,
+      });
+      break;
+    case "terminal_output":
+      useAcpTerminalsStore
+        .getState()
+        .actions.append(payload.terminalId, payload.sessionId, payload.data);
+      break;
+    case "terminal_exit": {
+      const terminal = useAcpTerminalsStore
+        .getState()
+        .actions.exit(payload.terminalId, payload.sessionId, {
+          exitCode: payload.exitCode,
+          signal: payload.signal,
+        });
+      // Keep the final output with the tool call: the agent releases the terminal soon, and
+      // the chat outlives this window.
+      const chat = store.chats.find((item) => item.acpSessionId === payload.sessionId);
+      const updated = chat
+        ? withAcpTerminalSnapshot(chat.messages, payload.terminalId, {
+            output: terminal.output,
+            truncated: terminal.truncated,
+            exit: terminal.exit,
+          })
+        : null;
+      if (chat && updated) {
+        actions.updateMessage(chat.id, updated.messageId, { toolCalls: updated.toolCalls });
+      }
+      break;
+    }
     default:
       break;
   }

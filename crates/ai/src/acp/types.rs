@@ -604,6 +604,31 @@ pub enum AcpEvent {
       output: Option<serde_json::Value>,
       error: Option<String>,
    },
+   /// A terminal whose output a tool call shows: one Athas runs for the agent
+   /// (`terminal/create`), or, with `display_only`, one the agent runs itself and streams
+   /// through tool call `_meta`.
+   #[serde(rename_all = "camelCase")]
+   TerminalStarted {
+      session_id: String,
+      terminal_id: String,
+      cwd: Option<String>,
+      display_only: bool,
+   },
+   /// Output a terminal produced, appended to what it showed before.
+   #[serde(rename_all = "camelCase")]
+   TerminalOutput {
+      session_id: String,
+      terminal_id: String,
+      data: String,
+   },
+   /// A terminal's command ended; `exit_code` is `None` when a signal ended it.
+   #[serde(rename_all = "camelCase")]
+   TerminalExit {
+      session_id: String,
+      terminal_id: String,
+      exit_code: Option<u32>,
+      signal: Option<String>,
+   },
    /// Permission request from agent
    #[serde(rename_all = "camelCase")]
    PermissionRequest {

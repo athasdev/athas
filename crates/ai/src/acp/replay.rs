@@ -132,6 +132,9 @@ fn is_history(event: &AcpEvent) -> bool {
          | AcpEvent::ToolUpdate { .. }
          | AcpEvent::ToolComplete { .. }
          | AcpEvent::PlanUpdate { .. }
+         | AcpEvent::TerminalStarted { .. }
+         | AcpEvent::TerminalOutput { .. }
+         | AcpEvent::TerminalExit { .. }
    )
 }
 
@@ -143,6 +146,9 @@ fn session_id_of(event: &AcpEvent) -> Option<&str> {
       | AcpEvent::ToolStart { session_id, .. }
       | AcpEvent::ToolUpdate { session_id, .. }
       | AcpEvent::ToolComplete { session_id, .. }
+      | AcpEvent::TerminalStarted { session_id, .. }
+      | AcpEvent::TerminalOutput { session_id, .. }
+      | AcpEvent::TerminalExit { session_id, .. }
       | AcpEvent::PermissionRequest { session_id, .. }
       | AcpEvent::SessionComplete { session_id }
       | AcpEvent::SlashCommandsUpdate { session_id, .. }

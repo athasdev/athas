@@ -17,6 +17,7 @@ import {
   type Icon,
 } from "@/ui/icons";
 import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useShallow } from "zustand/react/shallow";
 import {
   createAcpDiffViewNode,
   getAcpDiffOutputs,
@@ -29,12 +30,15 @@ import {
   stripStructuredToolViews,
 } from "@/features/ai/lib/structured-tool-view";
 import {
+  describeAcpTerminalExit,
+  formatAcpTerminalText,
   getAcpTerminalOutputs,
   openAcpTerminalOutput,
 } from "@/features/ai/lib/acp-terminal-output";
+import { useAcpTerminalsStore } from "@/features/ai/stores/acp-terminals.store";
 import { summarizeToolCall, type ToolCallSummary } from "@/features/ai/lib/tool-call-summary";
 import type { ToolCall } from "@/features/ai/types/ai-chat.types";
-import type { AcpToolKind } from "@/features/ai/types/acp.types";
+import type { AcpTerminalSnapshot, AcpToolKind } from "@/features/ai/types/acp.types";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { openToolPath, resolveWorkspacePath } from "@/features/ai/lib/open-tool-location";
@@ -162,6 +166,24 @@ function OutputBlock({ text, tone = "default" }: { text: string; tone?: "default
   );
 }
 
+/** A terminal's output inside its tool call, with how the command ended once it has. */
+function TerminalOutput({ terminal }: { terminal: AcpTerminalSnapshot }) {
+  const text = useMemo(() => formatAcpTerminalText(terminal.output).trimEnd(), [terminal.output]);
+  const status = describeAcpTerminalExit(terminal.exit);
+  const failed =
+    terminal.exit !== null && (terminal.exit.signal !== null || terminal.exit.exitCode !== 0);
+  return (
+    <div className="flex min-w-0 flex-col gap-1">
+      {text ? <OutputBlock text={terminal.truncated ? `…\n${text}` : text} /> : null}
+      {status ? (
+        <span className={cn("ui-text-sm", failed ? "text-destructive" : "text-subtle-foreground")}>
+          {status}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
 function ToolCallStats({ summary }: { summary: ToolCallSummary }) {
   if (summary.phase === "failed") {
     return (
@@ -218,6 +240,9 @@ const ToolCallRow = memo(function ToolCallRow({
   const structuredViews = getStructuredToolViews(toolCall.output);
   const diffItems = getAcpDiffOutputs(output);
   const terminalItems = getAcpTerminalOutputs(output);
+  const liveTerminals = useAcpTerminalsStore(
+    useShallow((state) => terminalItems.map((item) => state.terminals[item.terminalId])),
+  );
   const outputText = getOutputText(stripAcpDiffOutputs(output));
   const showInput =
     summary.kind === "other" || summary.kind === "think" || summary.kind === "switch_mode";
@@ -238,6 +263,13 @@ const ToolCallRow = memo(function ToolCallRow({
   );
   if (inputText) body.push(<OutputBlock key="input" text={inputText} />);
   if (outputText) body.push(<OutputBlock key="output" text={outputText} />);
+  terminalItems.forEach(({ terminalId }, index) => {
+    // Live while the command runs; what the call kept once the terminal is gone.
+    const terminal = liveTerminals[index] ?? toolCall.terminals?.[terminalId];
+    if (terminal && (terminal.output || terminal.exit)) {
+      body.push(<TerminalOutput key={`terminal-${terminalId}`} terminal={terminal} />);
+    }
+  });
   if (toolCall.locations?.some((location) => location.path)) {
     body.push(
       <ToolLocations
@@ -275,7 +307,10 @@ const ToolCallRow = memo(function ToolCallRow({
       summary.kind === "move" ||
       diffItems.length > 0);
   const canOpenFile = Boolean(summary.path) && summary.kind !== "execute";
-  const canOpenTerminal = terminalItems.length > 0;
+  // Only a terminal Athas runs for the agent, and only while it still runs, has a tab to open.
+  const canOpenTerminal = liveTerminals.some(
+    (terminal) => terminal && !terminal.displayOnly && !terminal.exit,
+  );
   const hasActions = canOpenDiff || canOpenFile || canOpenTerminal;
 
   const label = (
