@@ -1,0 +1,30 @@
+name: "Install Tauri CEF CLI"
+description: "Install cargo-tauri from the tauri feat/cef branch, cached by commit."
+
+runs:
+  using: "composite"
+  steps:
+    - name: Resolve Tauri CEF CLI revision
+      id: rev
+      shell: bash
+      run: |
+        set -euo pipefail
+        rev="$(git ls-remote https://github.com/tauri-apps/tauri refs/heads/feat/cef | cut -f1)"
+        test -n "$rev"
+        echo "rev=$rev" >> "$GITHUB_OUTPUT"
+
+    # Release runs build from tags, and tag-scoped caches are invisible to the
+    # next tag. The release-cache-warmup workflow saves this entry on main.
+    - name: Cache Tauri CEF CLI
+      id: cache
+      uses: actions/cache@v4
+      with:
+        path: ~/.cargo/bin/cargo-tauri
+        key: ${{ runner.os }}-${{ runner.arch }}-tauri-cef-cli-${{ steps.rev.outputs.rev }}
+
+    - name: Build Tauri CEF CLI
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        RUSTFLAGS: "--cfg rustix_use_libc"
+      run: cargo install tauri-cli --git https://github.com/tauri-apps/tauri --rev ${{ steps.rev.outputs.rev }} --locked

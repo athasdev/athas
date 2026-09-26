@@ -175,6 +175,27 @@ describe("Linux release packaging", () => {
     expect(workflow).toContain("release-dist/*.rpm");
   });
 
+  it("keeps native package compression fast enough for the release window", () => {
+    const script = readRepoFile("scripts/release/packaging/linux/native.sh");
+
+    expect(script).toContain('compression: { type: "zstd", level: 10 }');
+    expect(script).toContain("dpkg-deb --root-owner-group -Zgzip -b");
+  });
+
+  it("restores the Tauri CEF CLI from a cache that main keeps warm", () => {
+    const action = readRepoFile(".github/actions/tauri-cef-cli/action.yml");
+    const warmup = readRepoFile(".github/workflows/release-cache-warmup.yml");
+
+    expect(action).toContain("path: ~/.cargo/bin/cargo-tauri");
+    expect(action).toContain("--rev ${{ steps.rev.outputs.rev }}");
+    expect(warmup).toContain("ref: main");
+    for (const workflow of ["release.yml", "linux-build.yml", "release-cache-warmup.yml"]) {
+      const content = readRepoFile(`.github/workflows/${workflow}`);
+      expect(content).toContain("uses: ./.github/actions/tauri-cef-cli");
+      expect(content).not.toContain("cargo install tauri-cli");
+    }
+  });
+
   it("does not force software rendering from the AppImage wrapper", () => {
     const script = readRepoFile("src-tauri/appimage-hooks/AppRun.wrapped");
 
