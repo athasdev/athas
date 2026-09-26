@@ -17,7 +17,6 @@ interface ModalState {
   settingsInitialSection: string | null;
   settingsNavigationRequestId: number;
   /** Settings is the active tab, so its navigation replaces the primary sidebar's view. */
-  isSettingsPageActive: boolean;
 }
 
 interface ModalActions {
@@ -35,7 +34,6 @@ interface ModalActions {
   openSettings: (tab?: SettingsTab, section?: string) => void;
   /** Closes the Settings page. */
   closeSettings: () => void;
-  setIsSettingsPageActive: (active: boolean) => void;
   hasOpenModal: () => boolean;
   closeTopModal: () => boolean;
 }
@@ -55,7 +53,6 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
   settingsInitialTab: null,
   settingsInitialSection: null,
   settingsNavigationRequestId: 0,
-  isSettingsPageActive: false,
 
   // Actions
   hasOpenModal: () => {
@@ -232,18 +229,11 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
       settingsInitialSection: section ?? null,
       settingsNavigationRequestId: get().settingsNavigationRequestId + 1,
     });
-    // Settings is a tab in the main view with its navigation in the sidebar. The buffer store
-    // loads lazily because it depends on this store.
-    (
-      get() as ModalSlice & { setIsSidebarVisible?: (visible: boolean) => void }
-    ).setIsSidebarVisible?.(true);
+    // Settings is one tab in the main view. The buffer store loads lazily because it depends on
+    // this store.
     void import("@/features/editor/stores/buffer.store").then(({ useBufferStore }) => {
       useBufferStore.getState().actions.openSettingsBuffer();
     });
-  },
-
-  setIsSettingsPageActive: (active: boolean) => {
-    if (get().isSettingsPageActive !== active) set({ isSettingsPageActive: active });
   },
 
   closeSettings: () => {

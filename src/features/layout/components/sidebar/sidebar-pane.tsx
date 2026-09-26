@@ -31,11 +31,6 @@ const WorkspaceSidebar = lazy(() =>
   })),
 );
 
-const SettingsSidebar = lazy(() =>
-  import("@/features/settings/components/settings-sidebar").then((module) => ({
-    default: module.SettingsSidebar,
-  })),
-);
 const AgentsSidebar = lazy(() =>
   import("@/features/ai/components/sidebar/agents-sidebar").then((module) => ({
     default: module.AgentsSidebar,
@@ -74,9 +69,6 @@ export const SidebarPane = memo(
     const isGitViewActive = isGitActive ?? uiGitViewActive;
     const isGitHubPRsViewActive = isGitHubPRsActive ?? uiGitHubPRsViewActive;
     const activeSidebarView = activeView ?? uiActiveSidebarView;
-    // Settings brings its own navigation into the primary sidebar while it is the active tab.
-    const isSettingsPageActive = useUIState((state) => state.isSettingsPageActive);
-    const showSettingsNavigation = paneLevel === "primary" && !activeView && isSettingsPageActive;
     const extensionViews = useExtensionViews();
     const handleFileSelect = useFileSystemStore.use.handleFileSelect?.();
     const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
@@ -186,21 +178,8 @@ export const SidebarPane = memo(
 
     return (
       <div className="flex h-full min-h-0" data-external-file-drop-scope="sidebar">
-        {showSettingsNavigation ? (
-          <div className="h-full min-h-0 flex-1 overflow-hidden">
-            <Suspense fallback={null}>
-              <SettingsSidebar />
-            </Suspense>
-          </div>
-        ) : null}
-        <Activity
-          mode={showSettingsNavigation || (!visible && suspendWhenHidden) ? "hidden" : "visible"}
-        >
-          <div
-            className={showSettingsNavigation ? "hidden" : "h-full min-h-0 flex-1 overflow-hidden"}
-          >
-            {activePane?.content ?? null}
-          </div>
+        <Activity mode={!visible && suspendWhenHidden ? "hidden" : "visible"}>
+          <div className="h-full min-h-0 flex-1 overflow-hidden">{activePane?.content ?? null}</div>
         </Activity>
       </div>
     );

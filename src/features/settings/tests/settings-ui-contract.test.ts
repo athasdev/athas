@@ -153,12 +153,11 @@ describe("settings UI contract", () => {
     expect(settingsViewSource).not.toContain("tabIndex: -1");
   });
 
-  it("opens Settings in the main view with its navigation in the workbench sidebar", () => {
+  it("opens Settings as one tab in the main view with its own navigation", () => {
     const settingsViewSource = readFileSync(
       `${componentsDirectory}/settings-workbench-view.tsx`,
       "utf8",
     );
-    const sidebarSource = readFileSync(`${componentsDirectory}/settings-sidebar.tsx`, "utf8");
     const sectionSource = readFileSync(`${componentsDirectory}/settings-section.tsx`, "utf8");
     const sidebarPaneSource = readFileSync(
       fileURLToPath(new URL("../../layout/components/sidebar/sidebar-pane.tsx", import.meta.url)),
@@ -170,16 +169,17 @@ describe("settings UI contract", () => {
     );
 
     expect(existsSync(`${componentsDirectory}/settings-dialog.tsx`)).toBe(false);
-    expect(settingsViewSource).not.toContain("<WorkbenchNavigation");
+    expect(existsSync(`${componentsDirectory}/settings-sidebar.tsx`)).toBe(false);
+    expect(settingsViewSource).toContain("<WorkbenchNavigation");
+    expect(settingsViewSource).toContain('ariaLabel="Settings pages"');
+    expect(settingsViewSource).toContain('placeholder="Search settings"');
     expect(settingsViewSource).not.toContain("<ResourcePageHeader");
     expect(settingsViewSource).not.toContain("<SettingsBreadcrumb");
-    expect(sidebarSource).toContain('aria-label="Settings pages"');
-    expect(sidebarSource).toContain("<SidebarFilterBar");
     expect(sectionSource).toContain("<Card");
     expect(sectionSource).not.toContain("<Accordion");
-    expect(sidebarPaneSource).toContain("<SettingsSidebar");
+    expect(sidebarPaneSource).not.toContain("SettingsSidebar");
     expect(modalSliceSource).toContain("openSettingsBuffer()");
-    expect(modalSliceSource).toContain("setIsSidebarVisible?.(true)");
+    expect(modalSliceSource).not.toContain("setIsSidebarVisible");
     expect(settingsViewSource).toContain("settingsInitialSection");
     expect(settingsViewSource).toContain('section.scrollIntoView({ block: "start"');
   });
