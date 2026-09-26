@@ -6,6 +6,7 @@ import {
   Fragment,
   isValidElement,
   type ComponentProps,
+  type CSSProperties,
   type ReactNode,
   useEffect,
   useState,
@@ -490,11 +491,17 @@ export function SidebarListActionRow({
   actions,
   children,
   className,
+  style,
   ...props
 }: ComponentProps<"div"> & {
   actions: ReactNode;
 }) {
   const actionItems = Children.toArray(actions).filter(Boolean);
+  // Room the actions need: the label makes way for them instead of sitting under them, since
+  // sidebar fills can be translucent.
+  const actionsWidth = `calc(${actionItems.length} * var(--athas-chrome-control-height) + ${
+    Math.max(0, actionItems.length - 1) * 2 + 4
+  }px)`;
 
   return (
     <div
@@ -504,17 +511,19 @@ export function SidebarListActionRow({
         "hover:bg-accent [&:hover_[data-slot=sidebar-list-item]]:text-foreground",
         "has-[[data-slot=button]:focus-visible]:bg-accent",
         "has-[[data-slot=button][aria-expanded=true]]:bg-accent",
+        "[&:hover_[data-slot=sidebar-list-item]]:pr-(--sidebar-row-actions-width)",
+        "[&:focus-within_[data-slot=sidebar-list-item]]:pr-(--sidebar-row-actions-width)",
+        "has-[[data-slot=button][aria-expanded=true]]:**:data-[slot=sidebar-list-item]:pr-(--sidebar-row-actions-width)",
         className,
       )}
+      style={{ ...style, "--sidebar-row-actions-width": actionsWidth } as CSSProperties}
       {...props}
     >
       {children}
       <span
         data-slot="sidebar-list-actions"
         className={cn(
-          // Same fill as the row under it, so the actions read as part of the row.
-          "pointer-events-none absolute inset-y-0 right-0 flex items-center gap-0.5 rounded-r-md bg-accent pr-0.5 pl-1",
-          "group-has-[[data-slot=sidebar-list-item][data-active=true]]/sidebar-list-action-row:bg-selected",
+          "pointer-events-none absolute inset-y-0 right-0 flex items-center gap-0.5 pr-0.5",
           "opacity-0 transition-opacity duration-fast ease-smooth motion-reduce:transition-none",
           "group-hover/sidebar-list-action-row:pointer-events-auto group-hover/sidebar-list-action-row:opacity-100",
           "group-focus-within/sidebar-list-action-row:pointer-events-auto group-focus-within/sidebar-list-action-row:opacity-100",

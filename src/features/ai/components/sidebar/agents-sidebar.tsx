@@ -112,6 +112,11 @@ function AgentRow({ chat, context }: { chat: Chat; context: AgentRowContext }) {
           actionsDisabled={isInAnotherWindow}
           onPinChange={(pinned) => setChatPinned(chat.id, pinned)}
           onArchive={() => setChatArchived(chat.id, true)}
+          onRename={() => {
+            setRenameValue(chat.title);
+            setIsRenaming(true);
+          }}
+          onDelete={() => deleteChat(chat.id)}
         />
       </ContextMenuTrigger>
       <ContextMenuContent>

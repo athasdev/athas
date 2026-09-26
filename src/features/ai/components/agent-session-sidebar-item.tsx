@@ -2,8 +2,27 @@ import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { AgentAttentionDot } from "@/features/ai/components/agent-attention-dot";
 import type { ChatAttention } from "@/features/ai/types/chat-attention.types";
 import type { ReactNode } from "react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/ui/dropdown";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/ui/hover-card";
-import { ArchiveIcon, CubeIcon, FolderIcon, GitBranchIcon, PinIcon, SparkleIcon } from "@/ui/icons";
+import {
+  ArchiveIcon,
+  CubeIcon,
+  DotsIcon,
+  FolderIcon,
+  GitBranchIcon,
+  PencilLineIcon,
+  PinIcon,
+  PinSlashIcon,
+  SparkleIcon,
+  TrashIcon,
+  WindowExpandIcon,
+} from "@/ui/icons";
 import { SidebarIconButton, SidebarListActionRow, SidebarListItem } from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
 
@@ -25,6 +44,8 @@ export interface AgentSessionSidebarItemProps {
   actionsDisabled?: boolean;
   onPinChange: (pinned: boolean) => void;
   onArchive: () => void;
+  onRename?: () => void;
+  onDelete?: () => void;
 }
 
 const agentSessionDateFormatter = new Intl.DateTimeFormat(undefined, {
@@ -71,6 +92,8 @@ export function AgentSessionSidebarItem({
   onOpenInNewWindow,
   actionsDisabled = false,
   onPinChange,
+  onRename,
+  onDelete,
   pinned = false,
   projectName,
   providerIconId,
@@ -82,31 +105,52 @@ export function AgentSessionSidebarItem({
   return (
     <HoverCard>
       <SidebarListActionRow
-        actions={[
-          <SidebarIconButton
-            key="pin"
-            disabled={actionsDisabled}
-            aria-pressed={pinned}
-            tooltip={pinned ? "Unpin session" : "Pin session"}
-            onClick={(event) => {
-              event.stopPropagation();
-              onPinChange(!pinned);
-            }}
-          >
-            <PinIcon filled={pinned} />
-          </SidebarIconButton>,
-          <SidebarIconButton
-            key="archive"
-            disabled={actionsDisabled}
-            tooltip="Archive session"
-            onClick={(event) => {
-              event.stopPropagation();
-              onArchive();
-            }}
-          >
-            <ArchiveIcon />
-          </SidebarIconButton>,
-        ]}
+        actions={
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <SidebarIconButton
+                  disabled={actionsDisabled}
+                  tooltip="More actions"
+                  aria-label={`More actions for ${title}`}
+                />
+              }
+            >
+              <DotsIcon />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {onOpenInNewWindow ? (
+                <DropdownMenuItem onClick={onOpenInNewWindow}>
+                  <WindowExpandIcon />
+                  Open in New Window
+                </DropdownMenuItem>
+              ) : null}
+              <DropdownMenuItem onClick={() => onPinChange(!pinned)}>
+                {pinned ? <PinSlashIcon /> : <PinIcon />}
+                {pinned ? "Unpin" : "Pin"}
+              </DropdownMenuItem>
+              {onRename ? (
+                <DropdownMenuItem onClick={onRename}>
+                  <PencilLineIcon />
+                  Rename
+                </DropdownMenuItem>
+              ) : null}
+              <DropdownMenuItem onClick={onArchive}>
+                <ArchiveIcon />
+                Archive
+              </DropdownMenuItem>
+              {onDelete ? (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem variant="destructive" onClick={onDelete}>
+                    <TrashIcon />
+                    Delete
+                  </DropdownMenuItem>
+                </>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        }
       >
         <HoverCardTrigger
           delay={320}
