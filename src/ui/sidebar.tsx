@@ -12,7 +12,6 @@ import {
 } from "react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/ui/accordion";
 import { Button, type ButtonProps } from "@/ui/button";
-import { ButtonGroup, ButtonGroupSeparator } from "@/ui/button-group";
 import { ChromeBar } from "@/ui/chrome";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/ui/dropdown";
 import { FieldTitle } from "@/ui/field";
@@ -513,21 +512,18 @@ export function SidebarListActionRow({
       <span
         data-slot="sidebar-list-actions"
         className={cn(
-          "pointer-events-none absolute inset-y-0 right-0 flex items-center rounded-r-md bg-accent pr-1 pl-2",
+          // Same fill as the row under it, so the actions read as part of the row.
+          "pointer-events-none absolute inset-y-0 right-0 flex items-center gap-0.5 rounded-r-md bg-accent pr-0.5 pl-1",
+          "group-has-[[data-slot=sidebar-list-item][data-active=true]]/sidebar-list-action-row:bg-selected",
           "opacity-0 transition-opacity duration-fast ease-smooth motion-reduce:transition-none",
           "group-hover/sidebar-list-action-row:pointer-events-auto group-hover/sidebar-list-action-row:opacity-100",
           "group-focus-within/sidebar-list-action-row:pointer-events-auto group-focus-within/sidebar-list-action-row:opacity-100",
           "group-has-[[data-slot=button][aria-expanded=true]]/sidebar-list-action-row:pointer-events-auto group-has-[[data-slot=button][aria-expanded=true]]/sidebar-list-action-row:opacity-100",
         )}
       >
-        <ButtonGroup variant="ghost" className="*:data-[slot=button]:size-5">
-          {actionItems.map((action, index) => (
-            <Fragment key={(isValidElement(action) && action.key) || index}>
-              {index > 0 ? <ButtonGroupSeparator /> : null}
-              {action}
-            </Fragment>
-          ))}
-        </ButtonGroup>
+        {actionItems.map((action, index) => (
+          <Fragment key={(isValidElement(action) && action.key) || index}>{action}</Fragment>
+        ))}
       </span>
     </div>
   );

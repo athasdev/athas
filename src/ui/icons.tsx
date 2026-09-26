@@ -335,7 +335,11 @@ export const PencilLineIcon = createIconComponent(
   Nucleo.IconPenWriting4Outline18,
   "PencilLineIcon",
 );
-export const PinIcon = createIconComponent(Nucleo.IconPinTackOutline18, "PinIcon");
+export const PinIcon = createIconComponent(
+  Nucleo.IconPinTackOutline18,
+  "PinIcon",
+  NucleoFill.IconPinTackFill18,
+);
 export const PinSlashIcon = createIconComponent(Nucleo.IconPinSlashOutline18, "PinSlashIcon");
 export const PlayCircleIcon = createIconComponent(Nucleo.IconCirclePlayOutline18, "PlayCircleIcon");
 export const PlayIcon = createIconComponent(Nucleo.IconMediaPlayOutline18, "PlayIcon");

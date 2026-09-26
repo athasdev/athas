@@ -86,7 +86,6 @@ export function AgentSessionSidebarItem({
           <SidebarIconButton
             key="pin"
             disabled={actionsDisabled}
-            active={pinned}
             aria-pressed={pinned}
             tooltip={pinned ? "Unpin session" : "Pin session"}
             onClick={(event) => {
@@ -94,12 +93,11 @@ export function AgentSessionSidebarItem({
               onPinChange(!pinned);
             }}
           >
-            <PinIcon />
+            <PinIcon filled={pinned} />
           </SidebarIconButton>,
           <SidebarIconButton
             key="archive"
             disabled={actionsDisabled}
-            tone="danger"
             tooltip="Archive session"
             onClick={(event) => {
               event.stopPropagation();

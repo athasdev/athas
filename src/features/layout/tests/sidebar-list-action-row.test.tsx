@@ -37,11 +37,16 @@ describe("sidebar list action row", () => {
     expect(actionsClass).toContain("group-hover/sidebar-list-action-row:opacity-100");
   });
 
-  it("renders the actions as a separated button group", () => {
+  it("renders the actions as plain buttons that share the row's fill", () => {
     const markup = renderRow();
+    const actionsClass = /data-slot="sidebar-list-actions" class="([^"]+)"/.exec(markup)?.[1] ?? "";
 
-    expect(markup).toContain('data-slot="button-group"');
-    expect(markup).toContain('data-slot="button-group-separator"');
+    expect(markup).not.toContain('data-slot="button-group"');
+    expect(markup).not.toContain('data-slot="button-group-separator"');
+    expect(actionsClass).toContain("bg-accent");
+    expect(actionsClass).toContain(
+      "group-has-[[data-slot=sidebar-list-item][data-active=true]]/sidebar-list-action-row:bg-selected",
+    );
     expect(markup).toContain('aria-label="Pin"');
     expect(markup).toContain('aria-label="Archive"');
   });
