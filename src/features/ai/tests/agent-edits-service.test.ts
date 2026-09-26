@@ -18,6 +18,7 @@ const mocks = vi.hoisted(() => ({
   closeBufferForce: vi.fn(),
   markPendingSave: vi.fn(),
   showToast: vi.fn(),
+  showConfirmDialog: vi.fn(),
 }));
 
 vi.mock("@/features/editor/stores/buffer.store", () => ({
@@ -57,6 +58,7 @@ vi.mock("@/features/file-system/stores/file-watcher.store", () => ({
 }));
 vi.mock("@/features/git/events/git-events", () => ({ emitGitChanged: vi.fn() }));
 vi.mock("@/features/layout/contexts/toast-context", () => ({ showToast: mocks.showToast }));
+vi.mock("@/ui/dialog", () => ({ showConfirmDialog: mocks.showConfirmDialog }));
 
 const CHAT = "chat-1";
 const PATH = "/repo/a.ts";
@@ -86,6 +88,7 @@ describe("agent edits service", () => {
       mocks.closeBufferForce,
       mocks.markPendingSave,
       mocks.showToast,
+      mocks.showConfirmDialog,
     ]) {
       mock.mockReset();
     }
@@ -173,6 +176,24 @@ describe("agent edits service", () => {
 
     expect(mocks.disk.has(PATH)).toBe(false);
     expect(entry()).toBeUndefined();
+  });
+
+  it("deletes a created file with unsaved edits only after the user confirms", async () => {
+    agentWrites(null, "new file");
+    mocks.buffers = [{ id: "buf", type: "editor", path: PATH, isDirty: true, content: "mine" }];
+
+    mocks.showConfirmDialog.mockResolvedValueOnce(false);
+    await rejectAllAgentEdits(CHAT);
+    expect(mocks.disk.get(PATH)).toBe("new file");
+    expect(entry()).toBeDefined();
+    expect(mocks.closeBufferForce).not.toHaveBeenCalled();
+
+    mocks.showConfirmDialog.mockResolvedValueOnce(true);
+    await rejectAllAgentEdits(CHAT);
+    expect(mocks.disk.has(PATH)).toBe(false);
+    expect(entry()).toBeUndefined();
+    expect(mocks.closeBufferForce).toHaveBeenCalledWith("buf");
+    expect(mocks.updateBufferContent).not.toHaveBeenCalled();
   });
 
   it("drops a file changed on disk where the agent edited it", async () => {

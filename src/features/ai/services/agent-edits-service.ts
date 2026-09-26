@@ -22,6 +22,7 @@ import { writeFile } from "@/features/file-system/controllers/platform";
 import { useFileWatcherStore } from "@/features/file-system/stores/file-watcher.store";
 import { emitGitChanged } from "@/features/git/events/git-events";
 import { showToast } from "@/features/layout/contexts/toast-context";
+import { showConfirmDialog } from "@/ui/dialog";
 import { getBaseName } from "@/utils/path-helpers";
 
 /** Long enough for the chat to have heard about an agent write before the disk is compared. */
@@ -139,7 +140,8 @@ async function writeReviewed(path: string, content: string) {
  * Takes hunks back out of the file. The disk gets the reverted text right away. An open editor
  * with unsaved edits gets the same revert applied on top of them when they are clear of the
  * reverted lines; when they overlap, nothing changes and the user is told why, since guessing
- * would lose either their edit or the revert.
+ * would lose either their edit or the revert. Rejecting all of a file the agent created deletes
+ * it; when its editor has unsaved edits the user confirms discarding them first.
  */
 async function rejectHunks(chatId: string, entry: AgentEditEntry, hunks: AgentEditHunk[]) {
   if (hunks.length === 0) return;
@@ -150,7 +152,17 @@ async function rejectHunks(chatId: string, entry: AgentEditEntry, hunks: AgentEd
 
   const buffer = findEditorBuffer(entry.path);
   const unsaved = buffer?.isDirty ? buffer.content : null;
-  const bufferText = unsaved === null ? reverted : transferLineEdits(entry.current, unsaved, edits);
+  const removesFile = entry.created && reverted === "";
+  if (removesFile && unsaved !== null) {
+    const confirmed = await showConfirmDialog(
+      `${name} has unsaved edits. Discard them and delete the file the agent created?`,
+      { title: "Delete agent-created file", confirmLabel: "Discard and delete" },
+    );
+    // The agent may have written the file again while the user decided.
+    if (!confirmed || getAgentEditEntries(chatId)[entry.path]?.revision !== entry.revision) return;
+  }
+  const bufferText =
+    unsaved === null || removesFile ? reverted : transferLineEdits(entry.current, unsaved, edits);
   if (bufferText === null) {
     showToast({
       type: "warning",
@@ -160,13 +172,12 @@ async function rejectHunks(chatId: string, entry: AgentEditEntry, hunks: AgentEd
     return;
   }
 
-  const removesFile = entry.created && reverted === "" && unsaved === null;
   setEntry(chatId, entry.path, { ...entry, current: reverted, revision: entry.revision + 1 });
   try {
     if (removesFile) {
       useFileWatcherStore.getState().actions.markPendingSave(entry.path);
-      await deleteFileOrDirectory(entry.path);
       if (buffer) useBufferStore.getState().actions.closeBufferForce(buffer.id);
+      await deleteFileOrDirectory(entry.path);
       return;
     }
     await writeReviewed(entry.path, reverted);
