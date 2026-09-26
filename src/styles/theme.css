@@ -75,6 +75,7 @@
   --color-border-strong: var(--border-strong);
   --color-accent: var(--accent);
   --color-selected: var(--selected);
+  --color-tab-active: var(--tab-active);
   --color-selection: var(--selection);
   --color-focus: var(--focus-ring);
   --color-scrollbar-thumb: var(--app-scrollbar-thumb);
@@ -171,13 +172,9 @@
     --ui-text-chrome: var(--ui-text-sm);
     --athas-title-bar-height: 2.5rem;
     --athas-title-bar-leading-inset: var(--athas-chrome-padding-inline);
-    --athas-title-tab-leading-inset: calc(
-      var(--athas-title-bar-leading-inset) + var(--athas-chrome-hit-target) +
-        var(--athas-chrome-hit-target) + var(--athas-chrome-padding-inline)
-    );
-    --athas-tab-bar-height: 2rem;
+    --athas-tab-bar-height: 1.875rem;
     --athas-pane-header-height: var(--athas-tab-bar-height);
-    --athas-tab-height: 1.75rem;
+    --athas-tab-height: 1.5rem;
     --athas-tab-max-width: 12.5rem;
     --athas-sidebar-header-height: 2rem;
     --athas-workbench-gap: 8px;
@@ -212,6 +209,9 @@
 
     /* Derived tokens. */
     --overlay: var(--background);
+    /* The active tab on a background-coloured tab bar: a tint in light themes, where the
+       overlay would match the bar, and the raised overlay in dark ones. */
+    --tab-active: color-mix(in srgb, var(--background) 91%, var(--foreground) 9%);
     --scrim: rgb(0 0 0 / 0.24);
     --border-strong: color-mix(in srgb, var(--border) 60%, var(--foreground) 40%);
     --focus-ring: color-mix(in srgb, var(--primary) 40%, transparent);
@@ -251,7 +251,7 @@
   html.platform-macos {
     /* Matches the native title bar, so the traffic lights keep AppKit's own position. */
     --athas-title-bar-height: 2rem;
-    --athas-tab-bar-height: 2.125rem;
+    --athas-tab-bar-height: 2rem;
     --athas-title-bar-leading-inset: 4.75rem;
   }
 
@@ -274,6 +274,7 @@
 
   :root[data-theme-type="dark"] {
     --overlay: color-mix(in srgb, var(--background) 92%, var(--foreground) 8%);
+    --tab-active: var(--overlay);
     --scrim: rgb(0 0 0 / 0.45);
     --shadow-card:
       0 1px 2px rgb(0 0 0 / 0.24), 0 2px 4px rgb(0 0 0 / 0.18), 0 0 0 0.5px rgb(255 255 255 / 0.1);

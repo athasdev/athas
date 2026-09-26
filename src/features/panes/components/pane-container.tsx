@@ -28,6 +28,7 @@ import {
   useActiveWorkspaceId,
   useWorkspaceStoreScopeId,
 } from "@/features/workspace/stores/create-workspace-scoped-store";
+import TabBar from "@/features/tabs/components/tab-bar";
 import { extractDroppedFilePaths } from "@/features/file-system/utils/file-system-dropped-paths";
 import Badge from "@/ui/badge";
 import { Empty, EmptyDescription } from "@/ui/empty";
@@ -49,7 +50,6 @@ import {
   moveBufferToPaneDropTarget,
 } from "../utils/pane-drop-actions";
 import { type DropZone, SplitDropOverlay } from "./split-drop-overlay";
-import { MainPaneTabBar } from "./main-pane-tab-bar";
 
 const AgentTab = lazy(() =>
   import("@/features/ai/components/agent-tab").then((m) => ({
@@ -1055,11 +1055,9 @@ export function PaneContainer({ pane }: PaneContainerProps) {
         onDrop={handleSplitDrop}
         activeZoneOverride={internalHoverZone}
       />
-      <MainPaneTabBar
+      <TabBar
         paneId={pane.id}
         onTabClick={handleTabClick}
-        containerRef={containerRef}
-        active={isWorkspaceSurfaceActive}
         disablePaneActions={pane.id === BOTTOM_PANE_ID}
       />
       <div className="relative min-h-0 flex-1 overflow-hidden">

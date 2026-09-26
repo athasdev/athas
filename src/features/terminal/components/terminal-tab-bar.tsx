@@ -347,12 +347,13 @@ const TerminalTabBar = ({
   const sortedTerminalIds = sortedTerminals.map((terminal) => terminal.id);
   const terminalProfiles = getAllTerminalProfiles(availableShells, customProfiles);
   const terminalToolbarActions = (
-    <div className="flex h-8 shrink-0 items-center gap-1 pl-1">
+    <div className="flex h-full shrink-0 items-center gap-1 pl-0.5">
       {onSearchTerminal && (
         <Button
           onClick={onSearchTerminal}
           variant="ghost"
           iconOnly
+          size="sm"
           tooltip="Find in Terminal"
           commandId="terminal.find"
           aria-label="Find in terminal"
@@ -368,6 +369,7 @@ const TerminalTabBar = ({
                 type="button"
                 variant="ghost"
                 iconOnly
+                size="sm"
                 tooltip="New Terminal"
                 commandId="terminal.new"
                 aria-label="New terminal"
@@ -390,6 +392,7 @@ const TerminalTabBar = ({
           onClick={onFullScreen}
           variant="ghost"
           iconOnly
+          size="sm"
           tooltip={isFullScreen ? "Exit Full Screen" : "Full Screen Terminal"}
           commandId="workbench.toggleActivePaneFullscreen"
           aria-label={isFullScreen ? "Exit full screen terminal" : "Full screen terminal"}

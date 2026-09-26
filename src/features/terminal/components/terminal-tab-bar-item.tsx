@@ -1,4 +1,12 @@
-import { ColumnsIcon, PauseIcon, PinIcon, WarningCircleIcon, XIcon } from "@/ui/icons";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import {
+  ColumnsIcon,
+  PauseIcon,
+  PinIcon,
+  TerminalWindowIcon,
+  WarningCircleIcon,
+  XIcon,
+} from "@/ui/icons";
 import { memo, useCallback } from "react";
 import type {
   Terminal,
@@ -51,7 +59,7 @@ function TerminalProgressIndicator({ progress }: { progress: TerminalProgress })
   return (
     <ProgressCircle
       value={progress.value}
-      className="size-3.5 shrink-0"
+      className="size-3 shrink-0"
       role="img"
       aria-label={label}
     />
@@ -90,6 +98,7 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
   onRenameSubmit,
   onRenameCancel,
 }: TerminalTabBarItemProps) {
+  const showTabIcons = useSettingsStore((state) => state.settings.showTabIcons);
   const handleAuxClick = useCallback(
     (e: React.MouseEvent) => {
       // Only handle middle click here
@@ -99,6 +108,15 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
     },
     [handleTabClose, terminal.id],
   );
+
+  // Same leading slot as editor tabs: live status first, then the terminal icon.
+  const leadingIndicator = progress ? (
+    <TerminalProgressIndicator progress={progress} />
+  ) : lastCommand && !isActive ? (
+    <TerminalCommandBadge command={lastCommand} />
+  ) : showTabIcons ? (
+    <TerminalWindowIcon className="text-subtle-foreground" />
+  ) : null;
 
   return (
     <>
@@ -132,6 +150,7 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
               <Button
                 type="button"
                 iconOnly
+                size="xs"
                 variant="ghost"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -175,9 +194,8 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
           />
         ) : (
           <>
-            {progress ? <TerminalProgressIndicator progress={progress} /> : null}
-            {!progress && lastCommand && !isActive ? (
-              <TerminalCommandBadge command={lastCommand} />
+            {leadingIndicator ? (
+              <div className="grid size-3 shrink-0 place-content-center">{leadingIndicator}</div>
             ) : null}
             {isSplit ? (
               <ColumnsIcon

@@ -1,5 +1,4 @@
 import { type DragEndEvent, type DragMoveEvent, type DragStartEvent } from "@dnd-kit/core";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import { SortableContext, horizontalListSortingStrategy } from "@dnd-kit/sortable";
 import { ArrowsInIcon, ArrowsOutIcon, SidebarIcon } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -32,8 +31,6 @@ import {
   useTabDragClickGuard,
 } from "@/ui/tab-bar";
 import { getRelativePath } from "@/utils/path-helpers";
-import { IS_MAC } from "@/utils/platform";
-import { cn } from "@/utils/cn";
 import { calculateDisplayNames } from "../utils/path-shortener";
 import {
   clearInternalTabDragData,
@@ -45,6 +42,7 @@ import {
   setInternalTabDragHoverTarget,
 } from "../utils/internal-tab-drag";
 import TabBarItem from "./tab-bar-item";
+import { TabHistoryNavigation } from "./tab-history-navigation";
 import { NewTabMenu } from "./new-tab-menu";
 import TabContextMenu from "./tab-context-menu";
 
@@ -52,14 +50,12 @@ interface TabBarProps {
   paneId?: string;
   onTabClick?: (bufferId: string) => void;
   disablePaneActions?: boolean;
-  inTitleBar?: boolean;
 }
 
 const TabBar = ({
   paneId,
   onTabClick: externalTabClick,
   disablePaneActions = false,
-  inTitleBar = false,
 }: TabBarProps) => {
   // Get everything from stores
   const pendingClose = useBufferStore.use.pendingClose();
@@ -122,26 +118,6 @@ const TabBar = ({
   const [srAnnouncement, setSrAnnouncement] = useState<string>("");
 
   const tabBarRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!IS_MAC || isBottomPane) return;
-    const tabBar = tabBarRef.current;
-    if (!tabBar) return;
-    const updateNativeControlInset = () => {
-      const { left, top } = tabBar.getBoundingClientRect();
-      tabBar.style.paddingLeft =
-        top <= 1
-          ? `max(var(--athas-chrome-padding-inline), calc(var(--athas-title-tab-leading-inset) - ${left}px))`
-          : "";
-    };
-    updateNativeControlInset();
-    const observer = new ResizeObserver(updateNativeControlInset);
-    if (tabBar.parentElement) observer.observe(tabBar.parentElement);
-    window.addEventListener("resize", updateNativeControlInset);
-    return () => {
-      observer.disconnect();
-      window.removeEventListener("resize", updateNativeControlInset);
-    };
-  }, [isBottomPane, fullscreenPaneId]);
   const tabRefs = useRef<(HTMLDivElement | null)[]>([]);
   const dragPointRef = useRef<{ x: number; y: number } | null>(null);
   const pointerPointRef = useRef<{ x: number; y: number } | null>(null);
@@ -650,30 +626,15 @@ const TabBar = ({
       >
         <TabBarSurface
           ref={tabBarRef}
-          surface={inTitleBar ? "title" : "default"}
           data-tab-bar-pane-id={paneId ?? ""}
           className="group/tab-bar scrollbar-none overscroll-x-none"
           role="tablist"
           aria-label="Open files"
           onWheel={handleWheel}
-          onMouseDown={(event) => {
-            if (event.button !== 0 || event.currentTarget.getBoundingClientRect().top > 1) return;
-            if (
-              (event.target as HTMLElement).closest(
-                "button, a, input, [role='tab'], [contenteditable='true']",
-              )
-            )
-              return;
-            void getCurrentWindow().startDragging().catch(console.error);
-          }}
         >
+          {!isBottomPane && <TabHistoryNavigation />}
           <SortableContext items={sortedBufferIds} strategy={horizontalListSortingStrategy}>
-            <div
-              className={cn(
-                "scrollbar-none flex min-w-0 items-center gap-0.5 overflow-x-auto overflow-y-hidden overscroll-x-none",
-                inTitleBar ? "max-w-full flex-initial px-2" : "flex-1",
-              )}
-            >
+            <div className="scrollbar-none flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto overflow-y-hidden overscroll-x-none">
               {sortedBuffers.map((buffer, index) => (
                 <SortableTab
                   key={buffer.id}
@@ -695,7 +656,6 @@ const TabBar = ({
                           index={index}
                           isActive={buffer.id === activeBufferId}
                           isDraggedTab={isDragging}
-                          inTitleBar={inTitleBar}
                           onClick={() => handleTabSelect(buffer)}
                           onDoubleClick={(e) => handleDoubleClick(e, index)}
                           onKeyDown={(e) => handleKeyDown(e, index)}
@@ -776,11 +736,10 @@ const TabBar = ({
             </div>
           </SortableContext>
 
-          {/* Close split shows on hover; new tab (in the title bar) and full screen stay visible
-              at the end of the row so they are always reachable. */}
-          <div className="ml-auto flex h-8 shrink-0 items-center gap-1 pl-0.5">
+          {/* Close split shows on hover; new tab and full screen stay visible at the end of the row
+              so they are always reachable. */}
+          <div className="ml-auto flex h-full shrink-0 items-center gap-1 pl-0.5">
             <div className="pointer-events-none flex items-center gap-1 opacity-0 group-hover/tab-bar:pointer-events-auto group-hover/tab-bar:opacity-100 group-focus-within/tab-bar:pointer-events-auto group-focus-within/tab-bar:opacity-100 has-data-popup-open:pointer-events-auto has-data-popup-open:opacity-100">
-              {!inTitleBar && paneId && !isBottomPane && <NewTabMenu paneId={paneId} />}
               {paneId && !disablePaneActions && !isBottomPane && (
                 <>
                   {isInSplit && (
@@ -789,6 +748,7 @@ const TabBar = ({
                       onClick={() => closePane(paneId)}
                       variant="ghost"
                       iconOnly
+                      size="sm"
                       tooltip="Close split"
                       aria-label="Close split"
                     >
@@ -798,13 +758,14 @@ const TabBar = ({
                 </>
               )}
             </div>
-            {inTitleBar && paneId && !isBottomPane && <NewTabMenu paneId={paneId} />}
+            {paneId && !isBottomPane && <NewTabMenu paneId={paneId} />}
             {paneId && !disablePaneActions && !isBottomPane ? (
               <Button
                 type="button"
                 onClick={handleTogglePaneFullscreen}
                 variant="ghost"
                 iconOnly
+                size="sm"
                 tooltip={isPaneFullscreen ? "Exit full screen" : "Full screen editor"}
                 aria-label={isPaneFullscreen ? "Exit full screen" : "Full screen editor"}
                 aria-pressed={isPaneFullscreen}
@@ -822,7 +783,6 @@ const TabBar = ({
               index={0}
               isActive
               isDraggedTab
-              inTitleBar={false}
               onClick={() => {}}
               onDoubleClick={() => {}}
               onKeyDown={() => {}}

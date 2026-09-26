@@ -221,7 +221,6 @@ export function useTabDragClickGuard() {
 export interface TabItemProps extends HTMLAttributes<HTMLDivElement> {
   isActive: boolean;
   isDragged?: boolean;
-  placement?: "pane" | "title";
   action?: ReactNode;
   children: ReactNode;
 }
@@ -231,28 +230,23 @@ const tabItemVariants = cva(
   {
     variants: {
       active: {
-        true: "z-10 text-foreground before:bg-selected",
+        true: "z-10 text-foreground before:bg-tab-active before:shadow-(--shadow-card)",
         false: "text-subtle-foreground hover:text-foreground hover:before:bg-accent",
       },
       dragged: {
         true: "shadow-(--shadow-drag)",
         false: "opacity-100",
       },
-      placement: {
-        pane: "",
-        title: "rounded-lg",
-      },
     },
     defaultVariants: {
       active: false,
       dragged: false,
-      placement: "pane",
     },
   },
 );
 
 export const TabItem = forwardRef<HTMLDivElement, TabItemProps>(function TabItem(
-  { isActive, isDragged = false, placement = "pane", action, children, className, ...props },
+  { isActive, isDragged = false, action, children, className, ...props },
   ref,
 ) {
   return (
@@ -261,7 +255,7 @@ export const TabItem = forwardRef<HTMLDivElement, TabItemProps>(function TabItem
       data-slot="tab-item"
       data-active={isActive}
       className={cn(
-        tabItemVariants({ active: isActive, dragged: isDragged, placement }),
+        tabItemVariants({ active: isActive, dragged: isDragged }),
         action && "pr-7",
         className,
       )}
@@ -273,20 +267,18 @@ export const TabItem = forwardRef<HTMLDivElement, TabItemProps>(function TabItem
   );
 });
 
-export const TabBarSurface = forwardRef<
-  HTMLDivElement,
-  HTMLAttributes<HTMLDivElement> & { surface?: "default" | "title" }
->(function TabBarSurface({ className, surface = "default", ...props }, ref) {
-  return (
-    <div
-      ref={ref}
-      data-slot="tab-bar"
-      className={cn(
-        "relative flex shrink-0 items-center gap-chrome overflow-hidden px-chrome-inline",
-        surface === "title" ? "h-full bg-transparent" : "h-tab-bar min-h-tab-bar bg-background",
-        className,
-      )}
-      {...props}
-    />
-  );
-});
+export const TabBarSurface = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
+  function TabBarSurface({ className, ...props }, ref) {
+    return (
+      <div
+        ref={ref}
+        data-slot="tab-bar"
+        className={cn(
+          "relative flex h-tab-bar min-h-tab-bar shrink-0 items-center gap-chrome overflow-hidden bg-background px-chrome-inline",
+          className,
+        )}
+        {...props}
+      />
+    );
+  },
+);

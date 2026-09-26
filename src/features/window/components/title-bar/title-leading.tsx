@@ -1,4 +1,3 @@
-import { forwardRef } from "react";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import GitBranchManager from "@/features/git/components/git-branch-manager";
 import { useGitStore } from "@/features/git/stores/git.store";
@@ -12,7 +11,7 @@ import { Toggle } from "@/ui/toggle";
  * The leading end of the title bar, next to the window controls: the sidebar toggle, then the
  * project and branch the workbench is on.
  */
-export const TitleLeading = forwardRef<HTMLDivElement>(function TitleLeading(_props, ref) {
+export function TitleLeading() {
   const isSidebarVisible = useUIState((state) => state.isSidebarVisible);
   const setIsSidebarVisible = useUIState((state) => state.setIsSidebarVisible);
   const openProjectPicker = useUIState((state) => state.openProjectPicker);
@@ -26,13 +25,12 @@ export const TitleLeading = forwardRef<HTMLDivElement>(function TitleLeading(_pr
 
   return (
     <div
-      ref={ref}
       data-slot="title-leading"
-      className="absolute inset-y-0 left-0 z-10 flex max-w-[50%] min-w-0 items-center gap-1 pl-title-bar-leading"
+      className="absolute inset-y-0 left-0 z-10 flex max-w-[50%] min-w-0 items-center gap-0.5 pl-title-bar-leading"
     >
       <Toggle
         type="button"
-        size="md"
+        size="sm"
         pressed={isSidebarVisible}
         onPressedChange={setIsSidebarVisible}
         tooltip={isSidebarVisible ? "Hide Sidebar" : "Show Sidebar"}
@@ -58,4 +56,4 @@ export const TitleLeading = forwardRef<HTMLDivElement>(function TitleLeading(_pr
       ) : null}
     </div>
   );
-});
+}

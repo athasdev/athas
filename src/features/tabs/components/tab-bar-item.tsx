@@ -39,7 +39,6 @@ interface TabBarItemProps {
   index: number;
   isActive: boolean;
   isDraggedTab: boolean;
-  inTitleBar: boolean;
   showDropIndicatorBefore?: boolean;
   tabRef?: RefCallback<HTMLDivElement>;
   onClick?: () => void;
@@ -61,7 +60,6 @@ const TabBarItem = memo(function TabBarItem({
   displayName,
   isActive,
   isDraggedTab,
-  inTitleBar,
   showDropIndicatorBefore = false,
   tabRef,
   onClick,
@@ -131,7 +129,6 @@ const TabBarItem = memo(function TabBarItem({
         tabIndex={isActive ? 0 : -1}
         isActive={isActive}
         isDragged={isDraggedTab}
-        placement={inTitleBar ? "title" : "pane"}
         onClick={isEditing ? undefined : onClick}
         onMouseDown={onMouseDown}
         onDoubleClick={isEditing ? undefined : onDoubleClick}
@@ -149,8 +146,8 @@ const TabBarItem = memo(function TabBarItem({
               <Button
                 type="button"
                 iconOnly
+                size="xs"
                 variant="ghost"
-                size={inTitleBar ? "sm" : "md"}
                 onClick={(e) => {
                   e.stopPropagation();
                   if (buffer.isPinned) {
