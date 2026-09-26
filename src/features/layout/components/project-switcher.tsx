@@ -29,7 +29,14 @@ import {
   DropdownMenuViewport,
 } from "@/ui/dropdown";
 import { useMenuSearch } from "@/ui/menu-search";
-import { DotsIcon, FolderOpenIcon, ImageIcon, RemoteIcon, TrashIcon } from "@/ui/icons";
+import {
+  ChevronExpandYIcon,
+  DotsIcon,
+  FolderOpenIcon,
+  ImageIcon,
+  RemoteIcon,
+  TrashIcon,
+} from "@/ui/icons";
 import { showConfirmDialog } from "@/ui/dialog";
 import { toast } from "sonner";
 import {
@@ -200,17 +207,18 @@ export function ProjectSwitcher({
             render={
               <Button
                 variant="ghost"
-                size="lg"
-                iconOnly
+                truncate
                 aria-label={`Switch project. Current project: ${projectName}`}
                 title={projectPath || projectName}
               >
                 <ProjectGlyph
                   projectPath={projectPath}
                   iconPath={displayIconPath}
-                  className="size-4"
-                  imageClassName="size-5.5"
+                  className="size-3.5"
+                  imageClassName="size-4.5"
                 />
+                <span className="min-w-0 truncate">{projectName}</span>
+                <ChevronExpandYIcon className="text-subtle-foreground" />
               </Button>
             }
           />

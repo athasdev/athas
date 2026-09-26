@@ -571,7 +571,6 @@ const GitBranchManager = ({
                 data-branch-manager-trigger="true"
                 disabled={isLoading}
                 variant="ghost"
-                size="sm"
                 align="start"
                 active={isDropdownOpen}
                 truncate
@@ -580,6 +579,7 @@ const GitBranchManager = ({
               />
             }
           >
+            <GitBranchIcon className="text-subtle-foreground" />
             <span className="min-w-0 truncate">{currentBranch}</span>
             <ChevronExpandYIcon className="text-subtle-foreground" />
           </DropdownMenuTrigger>

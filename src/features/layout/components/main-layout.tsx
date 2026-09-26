@@ -30,7 +30,8 @@ import { getInternalTabDragData } from "@/features/tabs/utils/internal-tab-drag"
 import { isSidebarViewAvailable } from "@/features/layout/utils/sidebar-pane-utils";
 import { getCollapsedActivityBarWidth } from "@/features/layout/utils/activity-bar-layout";
 import TitleBarWithSettings from "../../window/components/title-bar/title-bar";
-import { TitleNavigation } from "../../window/components/title-bar/title-navigation";
+import { TitleLeading } from "../../window/components/title-bar/title-leading";
+import { TitleHistoryNavigation } from "../../window/components/title-bar/title-navigation";
 import { ResizablePane } from "./resizable-pane";
 import { ActivityBar } from "./sidebar/activity-bar";
 import { SidebarPane } from "./sidebar/sidebar-pane";
@@ -69,6 +70,7 @@ export function MainLayout() {
   const [activityBarRoot, setActivityBarRoot] = useState<HTMLDivElement | null>(null);
   const [mainTabBarHeader, setMainTabBarHeader] = useState<HTMLDivElement | null>(null);
   const [mainContentRoot, setMainContentRoot] = useState<HTMLDivElement | null>(null);
+  const [titleLeading, setTitleLeading] = useState<HTMLDivElement | null>(null);
   const [mainTitleBounds, setMainTitleBounds] = useState<{ left: number; width: number } | null>(
     null,
   );
@@ -83,13 +85,24 @@ export function MainLayout() {
   useLayoutEffect(() => {
     const shell = layoutShellRef.current;
     if (!shell || !activityBarRoot || !mainContentRoot) return;
+    const titleTrailing = shell.querySelector<HTMLElement>(".athas-title-bar");
     const updateBounds = () => {
       const shellRect = shell.getBoundingClientRect();
       const activityRect = activityBarRoot.getBoundingClientRect();
       const contentRect = mainContentRoot.getBoundingClientRect();
+      // Tabs clear the title bar's leading controls (sidebar toggle, project, branch)...
+      if (titleLeading) {
+        const leadingEnd = titleLeading.getBoundingClientRect().right - shellRect.left;
+        shell.style.setProperty("--athas-title-tab-leading-inset", `${leadingEnd + 8}px`);
+      }
+      // ...and end before its trailing ones (back and forward, window controls).
+      const trailingStart = titleTrailing
+        ? titleTrailing.getBoundingClientRect().left - shellRect.left
+        : contentRect.right - shellRect.left;
       // Title bar tabs sit over the editor column, not over the sidebar beside it.
       const left = Math.max(contentRect.left, activityRect.right) - shellRect.left;
-      const nextBounds = { left, width: contentRect.right - shellRect.left - left };
+      const right = Math.min(contentRect.right - shellRect.left, trailingStart);
+      const nextBounds = { left, width: Math.max(0, right - left) };
       setMainTitleBounds((current) =>
         current?.left === nextBounds.left && current.width === nextBounds.width
           ? current
@@ -101,12 +114,14 @@ export function MainLayout() {
     observer.observe(shell);
     observer.observe(activityBarRoot);
     observer.observe(mainContentRoot);
+    if (titleLeading) observer.observe(titleLeading);
+    if (titleTrailing) observer.observe(titleTrailing);
     window.addEventListener("resize", updateBounds);
     return () => {
       observer.disconnect();
       window.removeEventListener("resize", updateBounds);
     };
-  }, [activityBarRoot, mainContentRoot]);
+  }, [activityBarRoot, mainContentRoot, titleLeading]);
 
   useChatInitialization();
   usePaneKeyboard();
@@ -340,7 +355,7 @@ export function MainLayout() {
         data-tauri-drag-region
         className="relative z-20 h-title-bar shrink-0"
       >
-        <TitleNavigation />
+        <TitleLeading ref={setTitleLeading} />
         <div
           ref={setMainTabBarHeader}
           data-slot="main-title-tab-bar"
@@ -414,7 +429,7 @@ export function MainLayout() {
         )}
       </div>
 
-      <TitleBarWithSettings showMinimal overlay />
+      <TitleBarWithSettings showMinimal overlay titleActions={<TitleHistoryNavigation />} />
 
       <PerformanceMonitor />
 

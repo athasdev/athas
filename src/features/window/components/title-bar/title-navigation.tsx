@@ -7,7 +7,8 @@ import { navigateToJumpEntry } from "@/features/editor/utils/jump-navigation";
 import { Button } from "@/ui/button";
 import { ArrowLeftIcon, ArrowRightIcon } from "@/ui/icons";
 
-export function TitleNavigation() {
+/** Back and forward through the jump list, at the trailing end of the title bar. */
+export function TitleHistoryNavigation() {
   const entries = useJumpListStore.use.entries();
   const currentIndex = useJumpListStore.use.currentIndex();
   const { goBack, goForward } = useJumpListStore.use.actions();
@@ -41,10 +42,7 @@ export function TitleNavigation() {
   }, [goForward]);
 
   return (
-    <div
-      data-slot="title-navigation"
-      className="absolute inset-y-0 left-0 z-10 flex items-center pl-title-bar-leading"
-    >
+    <div data-slot="title-history-navigation" className="pointer-events-auto flex items-center">
       <Button
         type="button"
         onClick={() => void handleGoBack()}

@@ -3,7 +3,6 @@ import { createPortal } from "react-dom";
 import { openFolder } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { AppUpdateControl } from "@/features/layout/components/app-update-control";
-import { ProjectSwitcher } from "@/features/layout/components/project-switcher";
 import { NotificationsTrigger } from "@/features/notifications/components/notifications-trigger";
 import RunActionsButton from "@/features/run-actions/components/run-actions-button";
 import { AccountMenu } from "@/features/window/components/account-menu";
@@ -27,10 +26,7 @@ import { IS_MAC } from "@/utils/platform";
 export function ActivityChrome() {
   const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
   const closeProject = useFileSystemStore((state) => state.closeProject);
-  const switchToProject = useFileSystemStore((state) => state.switchToProject);
-  const isSwitchingProject = useFileSystemStore((state) => state.isSwitchingProject);
   const projectTabs = useWorkspaceTabsStore.use.projectTabs();
-  const activeProject = projectTabs.find((project) => project.isActive);
   const openProjectPicker = useUIState((state) => state.openProjectPicker);
   const isProjectPickerVisible = useUIState((state) => state.isProjectPickerVisible);
   const projectPickerInitialStep = useUIState((state) => state.projectPickerInitialStep);
@@ -74,15 +70,6 @@ export function ActivityChrome() {
           onContextMenu={(event) => event.stopPropagation()}
         >
           {menuItem}
-          <div className="min-w-0 overflow-hidden">
-            <ProjectSwitcher
-              project={activeProject}
-              projects={projectTabs}
-              isSwitchingProject={isSwitchingProject}
-              onSelectProject={(projectId) => void switchToProject(projectId)}
-              onAddRemote={() => openProjectPicker("addRemote")}
-            />
-          </div>
         </ContextMenuTrigger>
         <ContextMenuContent>
           <ContextMenuItem onClick={() => void createAppWindow()}>

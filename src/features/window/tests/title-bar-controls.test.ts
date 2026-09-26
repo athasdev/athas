@@ -10,6 +10,10 @@ const titleNavigationSource = readFileSync(
   fileURLToPath(new URL("../components/title-bar/title-navigation.tsx", import.meta.url)),
   "utf8",
 );
+const titleLeadingSource = readFileSync(
+  fileURLToPath(new URL("../components/title-bar/title-leading.tsx", import.meta.url)),
+  "utf8",
+);
 const accountMenuSource = readFileSync(
   fileURLToPath(new URL("../components/account-menu.tsx", import.meta.url)),
   "utf8",
@@ -48,27 +52,30 @@ const dropdownSource = readFileSync(
 );
 
 describe("title bar controls", () => {
-  it("places the icon-only project switcher in the activity rail", () => {
-    const projectSwitcherIndex = activityChromeSource.indexOf("<ProjectSwitcher");
+  it("leads the title bar with the sidebar toggle, then project and branch", () => {
+    const toggleIndex = titleLeadingSource.indexOf("<Toggle");
+    const projectIndex = titleLeadingSource.indexOf("<ProjectSwitcher");
+    const branchIndex = titleLeadingSource.indexOf("<GitBranchManager");
 
-    expect(projectSwitcherIndex).toBeGreaterThan(-1);
+    expect(toggleIndex).toBeGreaterThan(-1);
+    expect(projectIndex).toBeGreaterThan(toggleIndex);
+    expect(branchIndex).toBeGreaterThan(projectIndex);
+    expect(titleLeadingSource).toContain('commandId="workbench.toggleSidebar"');
+    expect(titleLeadingSource).toContain('triggerMode="branch"');
+    expect(activityChromeSource).not.toContain("<ProjectSwitcher");
     expect(activityChromeSource).not.toContain("<GitBranchManager");
-    expect(projectSwitcherSource).toContain("iconOnly");
-    expect(mainLayoutSource).toContain("<TitleBarWithSettings showMinimal overlay />");
     expect(projectSwitcherSource).toContain(
-      "<ProjectGlyph\n                  projectPath={projectPath}",
+      '<span className="min-w-0 truncate">{projectName}</span>',
     );
-    expect(projectSwitcherSource).toContain('size="lg"');
   });
 
-  it("keeps title navigation before tabs without an activity bar toggle", () => {
+  it("puts back and forward at the trailing end, after the tabs", () => {
+    expect(titleNavigationSource).toContain("export function TitleHistoryNavigation");
     expect(titleNavigationSource).not.toContain("<Toggle");
-    expect(titleNavigationSource).not.toContain("toggleActivitySidebar");
-    expect(mainLayoutSource).toContain("<TitleNavigation />");
-    expect(mainLayoutSource.indexOf("<TitleNavigation")).toBeLessThan(
+    expect(mainLayoutSource).toContain("titleActions={<TitleHistoryNavigation />}");
+    expect(mainLayoutSource.indexOf("<TitleLeading")).toBeLessThan(
       mainLayoutSource.indexOf('data-slot="main-title-tab-bar"'),
     );
-    expect(activityChromeSource).not.toContain("<Toggle");
   });
 
   it("orders update, run, notifications, and account actions in the activity footer", () => {
@@ -100,9 +107,9 @@ describe("title bar controls", () => {
 
   it("keeps native window controls over the workbench", () => {
     expect(titleBarSource).toContain("pointer-events-none absolute top-0 right-0 w-auto");
-    expect(
-      mainLayoutSource.indexOf("<TitleBarWithSettings showMinimal overlay />"),
-    ).toBeGreaterThan(mainLayoutSource.indexOf("<ActivityBar"));
+    expect(mainLayoutSource.indexOf("<TitleBarWithSettings showMinimal overlay")).toBeGreaterThan(
+      mainLayoutSource.indexOf("<ActivityBar"),
+    );
   });
 
   it("mounts top pane tabs in a separate header above the main content", () => {
