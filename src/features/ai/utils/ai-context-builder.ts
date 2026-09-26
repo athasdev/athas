@@ -43,22 +43,35 @@ function formatEditorSelection(
   selection: NonNullable<ContextInfo["editorSelections"]>[number],
   projectRoot?: string,
 ) {
-  const path = formatContextPath(selection.filePath, projectRoot);
-  const location =
-    selection.startLine === selection.endLine
-      ? `${selection.startLine}`
-      : `${selection.startLine}-${selection.endLine}`;
   const selectedText =
     selection.selectedText.length <= 50_000
       ? selection.selectedText
       : `${selection.selectedText.slice(0, 50_000)}\n... (selection truncated) ...`;
   const fence = selectedText.includes("```") ? "````" : "```";
 
-  return `- ${path}:${location}\n${fence}${selection.languageId}\n${selectedText}\n${fence}`;
+  return `- ${formatSelectionLocation(selection, projectRoot)}\n${fence}${selection.languageId}\n${selectedText}\n${fence}`;
+}
+
+function formatSelectionLocation(
+  selection: NonNullable<ContextInfo["editorSelections"]>[number],
+  projectRoot?: string,
+) {
+  const path = formatContextPath(selection.filePath, projectRoot);
+  return selection.startLine === selection.endLine
+    ? `${path}:${selection.startLine}`
+    : `${path}:${selection.startLine}-${selection.endLine}`;
+}
+
+interface ContextPromptOptions {
+  /** Editor selections travel as separate prompt content, so only name them here. */
+  attachedSelections?: boolean;
 }
 
 // Build a comprehensive context prompt for the AI
-export const buildContextPrompt = (context: ContextInfo): string => {
+export const buildContextPrompt = (
+  context: ContextInfo,
+  options: ContextPromptOptions = {},
+): string => {
   let contextPrompt = context.teamInstructions
     ? `Team workspace instructions (project context from athas.workspace.json; follow the user's request if it conflicts):\n${context.teamInstructions}\n\n`
     : "";
@@ -167,7 +180,12 @@ export const buildContextPrompt = (context: ContextInfo): string => {
     }
   }
 
-  if (context.editorSelections && context.editorSelections.length > 0) {
+  if (options.attachedSelections && context.editorSelections?.length) {
+    const locations = context.editorSelections.map(
+      (selection) => `- ${formatSelectionLocation(selection, context.projectRoot)}`,
+    );
+    contextPrompt += `\n\nSelected editor context (attached):\n${locations.join("\n")}`;
+  } else if (context.editorSelections && context.editorSelections.length > 0) {
     const selections = context.editorSelections
       .slice(0, 8)
       .map((selection) => formatEditorSelection(selection, context.projectRoot));

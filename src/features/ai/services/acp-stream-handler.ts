@@ -18,17 +18,15 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { getAcpAdditionalDirectories } from "@/features/ai/lib/acp-additional-directories";
-import { getAcpPathBaseName, toAcpFileUri } from "@/features/ai/lib/acp-file-uri";
+import { buildAcpPrompt } from "@/features/ai/lib/acp-prompt";
 import {
   getAcpStartupErrorDetails,
   isAcpAuthenticationError,
 } from "@/features/ai/lib/acp-authentication";
 import { getChatTitleFromSessionInfo } from "@/features/ai/lib/acp-session-info";
 import { getAcpAgentKey, selectAcpAgentStatus } from "@/features/ai/lib/acp-session-state";
-import { getFollowUpActionsInstruction } from "@/features/ai/lib/follow-up-actions";
 import { formatSkippedMcpServersNotice } from "@/features/ai/lib/mcp-servers";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { buildContextPrompt } from "../utils/ai-context-builder";
 
 interface AcpHandlers {
   onChunk: (chunk: string) => void;
@@ -384,65 +382,10 @@ export class AcpStreamHandler {
   }
 
   private buildPrompt(userMessage: string, context: ContextInfo): AcpPromptContentBlock[] {
-    const images: AcpPromptContentBlock[] = (context.images ?? []).map((image) => ({
-      type: "image",
-      data: image.data,
-      mimeType: image.mediaType,
-    }));
-    // ACP slash commands must remain the first token in the prompt.
-    // If we prepend context, agents interpret them as plain text.
-    if (userMessage.trimStart().startsWith("/")) {
-      return [{ type: "text", text: userMessage }, ...images];
-    }
-
-    const contextPrompt = [buildContextPrompt(context), getFollowUpActionsInstruction()]
-      .filter(Boolean)
-      .join("\n\n");
-    const blocks: AcpPromptContentBlock[] = [
-      { type: "text", text: contextPrompt ? `${contextPrompt}\n\n${userMessage}` : userMessage },
-    ];
-
-    const supportsEmbeddedContext =
-      this.agentStatus?.agentCapabilities?.promptCapabilities.embeddedContext ?? false;
-
-    for (const file of context.mentionedFiles || []) {
-      if (supportsEmbeddedContext) {
-        blocks.push({
-          type: "resource",
-          resource: {
-            uri: toAcpFileUri(file.path),
-            text: file.content,
-            mimeType: "text/plain",
-          },
-        });
-      } else {
-        blocks.push({
-          type: "resource_link",
-          uri: toAcpFileUri(file.path),
-          name: getAcpPathBaseName(file.path),
-          mimeType: "text/plain",
-        });
-      }
-    }
-
-    const resourceLinks = new Set<string>();
-    for (const filePath of context.selectedProjectFiles || []) {
-      if (context.mentionedFiles?.some((file) => file.path === filePath)) {
-        continue;
-      }
-      if (resourceLinks.has(filePath)) {
-        continue;
-      }
-      resourceLinks.add(filePath);
-      blocks.push({
-        type: "resource_link",
-        uri: toAcpFileUri(filePath),
-        name: getAcpPathBaseName(filePath),
-        mimeType: "text/plain",
-      });
-    }
-
-    return [...blocks, ...images];
+    return buildAcpPrompt(userMessage, context, {
+      embeddedContext:
+        this.agentStatus?.agentCapabilities?.promptCapabilities.embeddedContext ?? false,
+    });
   }
 
   private async setupListeners(): Promise<void> {
