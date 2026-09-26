@@ -487,6 +487,8 @@ export type AcpEvent =
       /** A write the agent made through `fs/write_text_file`, kept for review after it landed. */
       type: "agent_file_write";
       sessionId: string;
+      /** Also on the `file-changed` event this write causes. */
+      writeId: number;
       path: string;
       /** The file's text before the write; null when the write created the file. */
       previousContent: string | null;

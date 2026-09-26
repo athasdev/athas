@@ -25,11 +25,27 @@ import { showToast } from "@/features/layout/contexts/toast-context";
 import { showConfirmDialog } from "@/ui/dialog";
 import { getBaseName } from "@/utils/path-helpers";
 
-/** Long enough for the chat to have heard about an agent write before the disk is compared. */
-const RECONCILE_DELAY_MS = 300;
+/** Gathers the file watcher's burst of events for one change into one disk check. */
+const RECONCILE_DELAY_MS = 150;
+/**
+ * How long a `file-changed` from an agent write waits for a chat to record that write. Rust
+ * sends `agent_file_write` first, so a chat that records it has done so by then; a write no chat
+ * records (its chat is not open) is then compared with the disk like any other change.
+ */
+const UNCLAIMED_WRITE_TIMEOUT_MS = 2000;
+const MAX_REMEMBERED_WRITES = 500;
 
 const reconcileTimers = new Map<string, ReturnType<typeof setTimeout>>();
+/** Agent writes a chat recorded, by write id. */
+const recordedWrites = new Set<number>();
+/** Agent writes whose `file-changed` came before any chat recorded them, by write id. */
+const unclaimedWrites = new Map<number, { path: string; timer: ReturnType<typeof setTimeout> }>();
 let listening = false;
+
+function hasUnclaimedWrite(path: string): boolean {
+  for (const write of unclaimedWrites.values()) if (write.path === path) return true;
+  return false;
+}
 
 function setEntry(chatId: string, path: string, entry: AgentEditEntry | null) {
   const resolved = entry && entry.baseline === entry.current ? null : entry;
@@ -61,6 +77,9 @@ async function readDisk(path: string): Promise<string | null> {
 async function syncWithDisk(chatId: string, path: string): Promise<AgentEditEntry | null> {
   const before = getAgentEditEntries(chatId)[path];
   if (!before) return null;
+  // The disk holds an agent write no chat has recorded yet; its record brings the log up to
+  // date, and comparing now would take the agent's change for someone else's.
+  if (hasUnclaimedWrite(path)) return before;
   const disk = await readDisk(path);
   const entry = getAgentEditEntries(chatId)[path];
   // A newer agent write or review landed while the disk was read; its own check follows.
@@ -105,9 +124,35 @@ function listenForFileChanges() {
   listening = true;
   // Fired for every change the file watcher reports, including the user's own saves.
   window.addEventListener("file-external-change", (event) => {
-    const path = (event as CustomEvent<{ path?: string }>).detail?.path;
-    if (path) scheduleAgentEditsDiskCheck(path);
+    const detail = (event as CustomEvent<{ path?: string; agentWriteId?: number }>).detail;
+    if (!detail?.path) return;
+    const { path, agentWriteId } = detail;
+    if (agentWriteId !== undefined) {
+      // The change is that agent write; a chat that recorded it already has it in its log.
+      if (recordedWrites.has(agentWriteId)) return;
+      const timer = setTimeout(() => {
+        unclaimedWrites.delete(agentWriteId);
+        scheduleAgentEditsDiskCheck(path);
+      }, UNCLAIMED_WRITE_TIMEOUT_MS);
+      unclaimedWrites.set(agentWriteId, { path, timer });
+      return;
+    }
+    scheduleAgentEditsDiskCheck(path);
   });
+}
+
+function rememberRecordedWrite(writeId: number | undefined) {
+  if (writeId === undefined) return;
+  const unclaimed = unclaimedWrites.get(writeId);
+  if (unclaimed) {
+    clearTimeout(unclaimed.timer);
+    unclaimedWrites.delete(writeId);
+  }
+  recordedWrites.add(writeId);
+  if (recordedWrites.size > MAX_REMEMBERED_WRITES) {
+    const oldest = recordedWrites.values().next().value;
+    if (oldest !== undefined) recordedWrites.delete(oldest);
+  }
 }
 
 /**
@@ -139,6 +184,7 @@ function rebaseOtherChats(path: string, exceptChatId: string, content: string | 
 /** Adds an `agent_file_write` to the chat's log. The write itself already landed. */
 export function recordAgentFileWrite(chatId: string, write: AgentFileWrite) {
   listenForFileChanges();
+  rememberRecordedWrite(write.writeId);
   const existing = getAgentEditEntries(chatId)[write.path];
   const { entry, lostEarlierReview } = recordAgentWrite(existing, write);
   setEntry(chatId, write.path, entry);

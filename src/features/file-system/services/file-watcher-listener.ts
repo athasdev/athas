@@ -17,6 +17,8 @@ import {
 export interface FileChangeEvent {
   path: string;
   event_type: "opened" | "reloaded" | "deleted";
+  /** Set when an agent write made the change: the id of its `agent_file_write` event. */
+  agent_write_id?: number;
 }
 
 let unlistenFileChanged: UnlistenFn | null = null;
@@ -92,13 +94,13 @@ async function syncOpenBuffer(
   return "kept-unsaved";
 }
 
-export async function handleFileChange({ path, event_type }: FileChangeEvent) {
+export async function handleFileChange({ path, event_type, agent_write_id }: FileChangeEvent) {
   const workspaceId = workspaceRuntimeRegistry.getActiveWorkspaceId();
   const parentDirectory = await dirname(path);
 
   window.dispatchEvent(
     new CustomEvent("file-external-change", {
-      detail: { path, event_type },
+      detail: { path, event_type, agentWriteId: agent_write_id },
     }),
   );
 

@@ -770,6 +770,9 @@ pub enum AcpEvent {
    #[serde(rename_all = "camelCase")]
    AgentFileWrite {
       session_id: String,
+      /// Also on the `file-changed` event for this write, so the frontend can tell that event
+      /// comes from this write rather than from someone else changing the file.
+      write_id: u64,
       path: String,
       /// The file's text before the write; `None` when the write created the file.
       previous_content: Option<String>,

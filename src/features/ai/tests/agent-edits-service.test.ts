@@ -70,6 +70,11 @@ function agentWrites(previousContent: string | null, content: string, path = PAT
   recordAgentFileWrite(chat, { path, previousContent, content });
 }
 
+/** The file watcher's event for a change an agent write made. */
+function fileChanged(agentWriteId: number, path = PATH) {
+  window.dispatchEvent(new CustomEvent("file-external-change", { detail: { path, agentWriteId } }));
+}
+
 function entry(path = PATH, chat = CHAT) {
   return getAgentEditEntries(chat)[path];
 }
@@ -251,6 +256,55 @@ describe("agent edits service", () => {
     expect(entry()?.baseline).toBe(lines("a", "b", "c", "saved"));
     expect(hunks()).toHaveLength(1);
     expect(mocks.showToast).not.toHaveBeenCalled();
+  });
+
+  it("takes a watcher event for a recorded agent write as that write", async () => {
+    vi.useFakeTimers();
+    agentWrites(lines("a", "b", "c"), lines("A", "b", "c"));
+    recordAgentFileWrite(CHAT, {
+      writeId: 101,
+      path: PATH,
+      previousContent: lines("A", "b", "c"),
+      content: lines("A", "b", "C"),
+    });
+    mocks.disk.set(PATH, lines("A", "b", "C"));
+    fileChanged(101);
+    await vi.runAllTimersAsync();
+
+    expect(hunks()).toHaveLength(2);
+    expect(mocks.showToast).not.toHaveBeenCalled();
+  });
+
+  it("waits for the record of an agent write whose watcher event came first", async () => {
+    vi.useFakeTimers();
+    agentWrites(lines("a", "b"), lines("A", "b"));
+    // The agent writes where it edited before, and the watcher reports it before the chat hears.
+    mocks.disk.set(PATH, lines("AA", "b"));
+    fileChanged(102);
+    window.dispatchEvent(new CustomEvent("file-external-change", { detail: { path: PATH } }));
+    await vi.advanceTimersByTimeAsync(500);
+    expect(entry()?.current).toBe(lines("A", "b"));
+
+    recordAgentFileWrite(CHAT, {
+      writeId: 102,
+      path: PATH,
+      previousContent: lines("A", "b"),
+      content: lines("AA", "b"),
+    });
+    await vi.runAllTimersAsync();
+    expect(entry()?.baseline).toBe(lines("a", "b"));
+    expect(entry()?.current).toBe(lines("AA", "b"));
+    expect(mocks.showToast).not.toHaveBeenCalled();
+  });
+
+  it("compares an agent write no chat records with the disk after a while", async () => {
+    vi.useFakeTimers();
+    agentWrites(lines("a", "b"), lines("A", "b"));
+    mocks.disk.set(PATH, lines("X", "b"));
+    fileChanged(103);
+    await vi.runAllTimersAsync();
+
+    expect(entry()).toBeUndefined();
   });
 
   it("drops a file that was deleted", async () => {

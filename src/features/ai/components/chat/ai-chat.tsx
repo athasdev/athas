@@ -1032,6 +1032,7 @@ details: ${errorDetails || mainError}
               break;
             case "agent_file_write":
               recordAgentFileWrite(targetChatId, {
+                writeId: event.writeId,
                 path: event.path,
                 previousContent: event.previousContent,
                 content: event.content,

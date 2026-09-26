@@ -1237,9 +1237,13 @@ impl AthasAcpClient {
          file_access::PriorContent::Text(text) => Some(Some(text)),
          file_access::PriorContent::Unreadable => None,
       };
-      if let Some(previous_content) = previous_content {
+      let write_id = previous_content
+         .is_some()
+         .then(file_access::next_agent_write_id);
+      if let (Some(previous_content), Some(write_id)) = (previous_content, write_id) {
          self.emit_event(AcpEvent::AgentFileWrite {
             session_id: session_id.to_string(),
+            write_id,
             path: path_to_string(path),
             previous_content,
             content: content.to_string(),
@@ -1253,6 +1257,7 @@ impl AthasAcpClient {
          } else {
             file_access::FileChangeType::Opened
          },
+         agent_write_id: write_id,
       };
       if let Err(e) = self.app_handle.emit("file-changed", &event) {
          log::warn!("Failed to emit file change: {}", e);

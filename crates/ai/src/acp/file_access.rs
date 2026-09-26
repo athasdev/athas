@@ -133,6 +133,16 @@ pub(super) fn access_denied(path: &Path) -> acp::Error {
 pub(super) struct FileChangeEvent {
    pub path: String,
    pub event_type: FileChangeType,
+   /// For a change an agent write made, the `write_id` of its `agent_file_write` event.
+   #[serde(skip_serializing_if = "Option::is_none")]
+   pub agent_write_id: Option<u64>,
+}
+
+/// Numbers agent writes for the whole app, so ids never repeat across agents.
+static NEXT_AGENT_WRITE_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+
+pub(super) fn next_agent_write_id() -> u64 {
+   NEXT_AGENT_WRITE_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -260,6 +270,7 @@ mod tests {
       let event = FileChangeEvent {
          path: "/repo/a.txt".to_string(),
          event_type: FileChangeType::Reloaded,
+         agent_write_id: None,
       };
       assert_eq!(
          serde_json::to_value(event).unwrap(),
@@ -269,11 +280,17 @@ mod tests {
       let created = FileChangeEvent {
          path: "/repo/b.txt".to_string(),
          event_type: FileChangeType::Opened,
+         agent_write_id: Some(7),
       };
-      assert_eq!(
-         serde_json::to_value(created).unwrap()["event_type"],
-         "opened"
-      );
+      let created = serde_json::to_value(created).unwrap();
+      assert_eq!(created["event_type"], "opened");
+      assert_eq!(created["agent_write_id"], 7);
+   }
+
+   #[test]
+   fn agent_write_ids_do_not_repeat() {
+      let first = next_agent_write_id();
+      assert!(next_agent_write_id() > first);
    }
 
    #[test]

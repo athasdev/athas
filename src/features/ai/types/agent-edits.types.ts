@@ -35,6 +35,8 @@ export interface AgentEditEntry {
 
 /** The `agent_file_write` event, as the log records it. */
 export interface AgentFileWrite {
+  /** The id Rust gave the write; the `file-changed` event it causes carries the same id. */
+  writeId?: number;
   path: string;
   previousContent: string | null;
   content: string;
