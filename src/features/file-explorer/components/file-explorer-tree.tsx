@@ -24,6 +24,7 @@ import {
   filterFileTreeForFffHits,
   getGuideAncestorRows,
   getStickyAncestorRows,
+  type FileTreeFilterCache,
   type FilterFileTreeForSearchResult,
 } from "@/features/file-explorer/lib/visible-file-tree-rows";
 import {
@@ -69,6 +70,7 @@ import { cn } from "@/utils/cn";
 import { frontendTrace } from "@/utils/frontend-trace";
 import { IS_MAC } from "@/utils/platform";
 import {
+  getBaseName,
   getDirName,
   getRelativePath,
   joinPath,
@@ -146,6 +148,26 @@ interface ResolvedFileTreeSearch {
 const FILE_TREE_SEARCH_DEBOUNCE_DELAY = 80;
 const FILE_TREE_SEARCH_RESULT_LIMIT = 500;
 const getFileTreeRowId = (path: string) => `file-tree-row-${path.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
+
+/** The tree without the unsaved new-item row, keeping every branch that did not contain one. */
+function removeNewItemsFromTree(items: FileEntry[]): FileEntry[] {
+  let changed = false;
+  const next: FileEntry[] = [];
+  for (const item of items) {
+    if (item.isNewItem && item.isEditing) {
+      changed = true;
+      continue;
+    }
+    const children = item.children ? removeNewItemsFromTree(item.children) : item.children;
+    if (children !== item.children) {
+      changed = true;
+      next.push({ ...item, children });
+    } else {
+      next.push(item);
+    }
+  }
+  return changed ? next : items;
+}
 
 function FileExplorerTreeComponent({
   files,
@@ -312,13 +334,33 @@ function FileExplorerTreeComponent({
     [getWorkspaceRootForPath, userIgnore],
   );
 
-  const gitIgnoreFileReferences = useMemo(
+  // Every tree update produces a new references array, but the ignore files only need reading
+  // again when the set of them changes or one of them is edited.
+  const collectedGitIgnoreFileReferences = useMemo(
     () => collectGitIgnoreFileReferences(files, rootFolderPath),
     [files, rootFolderPath],
   );
+  const gitIgnoreFileReferencesKey = collectedGitIgnoreFileReferences
+    .map((reference) => reference.path)
+    .join("\n");
+  const gitIgnoreFileReferencesRef = useRef(collectedGitIgnoreFileReferences);
+  gitIgnoreFileReferencesRef.current = collectedGitIgnoreFileReferences;
+  const [gitIgnoreContentVersion, setGitIgnoreContentVersion] = useState(0);
+
+  useEffect(() => {
+    const handleExternalChange = (event: Event) => {
+      const path = (event as CustomEvent<{ path?: string }>).detail?.path;
+      if (path && getBaseName(path) === ".gitignore") {
+        setGitIgnoreContentVersion((version) => version + 1);
+      }
+    };
+    window.addEventListener("file-external-change", handleExternalChange);
+    return () => window.removeEventListener("file-external-change", handleExternalChange);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
+    const gitIgnoreFileReferences = gitIgnoreFileReferencesRef.current;
 
     const loadGitignore = async () => {
       if (!rootFolderPath) {
@@ -354,7 +396,7 @@ function FileExplorerTreeComponent({
     return () => {
       cancelled = true;
     };
-  }, [gitIgnoreFileReferences, rootFolderPath]);
+  }, [gitIgnoreContentVersion, gitIgnoreFileReferencesKey, rootFolderPath]);
 
   const gitStatus =
     currentWorkspaceRepoPath && currentWorkspaceRepoPath === rootFolderPath
@@ -395,29 +437,38 @@ function FileExplorerTreeComponent({
     [getWorkspaceRootForPath, gitStatusDecorationLookup, rootFolderPath],
   );
 
+  // A new cache whenever the rules change; within one set of rules, unchanged directories reuse
+  // their filtered children.
+  const fileTreeFilter = useMemo(
+    () => ({
+      options: {
+        isAlwaysHidden: isAlwaysHiddenFileName,
+        isGitIgnored,
+        isHiddenName: isHiddenFileTreeName,
+        isUserHidden,
+        showGitignoredFiles: fileTreeSettings.showGitignoredFilesInFileTree,
+        showHiddenFiles: fileTreeSettings.showHiddenFilesInFileTree,
+      },
+      cache: new WeakMap() as FileTreeFilterCache,
+    }),
+    [
+      isGitIgnored,
+      isUserHidden,
+      fileTreeSettings.showGitignoredFilesInFileTree,
+      fileTreeSettings.showHiddenFilesInFileTree,
+    ],
+  );
+
   const filteredFiles = useMemo(() => {
     const startedAt = performance.now();
-    const result = filterFileTreeEntries(files, {
-      isAlwaysHidden: isAlwaysHiddenFileName,
-      isGitIgnored,
-      isHiddenName: isHiddenFileTreeName,
-      isUserHidden,
-      showGitignoredFiles: fileTreeSettings.showGitignoredFilesInFileTree,
-      showHiddenFiles: fileTreeSettings.showHiddenFilesInFileTree,
-    });
+    const result = filterFileTreeEntries(files, fileTreeFilter.options, fileTreeFilter.cache);
     frontendTrace("info", "file-tree", "filteredFiles:computed", {
       rootItems: files.length,
       filteredRootItems: result.length,
       durationMs: Math.round((performance.now() - startedAt) * 100) / 100,
     });
     return result;
-  }, [
-    files,
-    isGitIgnored,
-    isUserHidden,
-    fileTreeSettings.showGitignoredFilesInFileTree,
-    fileTreeSettings.showHiddenFilesInFileTree,
-  ]);
+  }, [files, fileTreeFilter]);
 
   const { consumeRevealRequest, revealRequest } = useFileExplorerSync({
     activePath,
@@ -704,16 +755,7 @@ function FileExplorerTreeComponent({
       }
     }
 
-    const removeNewItemFromTree = (items: FileEntry[]): FileEntry[] => {
-      return items
-        .filter((i) => !(i.isNewItem && i.isEditing))
-        .map((i) => ({
-          ...i,
-          children: i.children ? removeNewItemFromTree(i.children) : undefined,
-        }));
-    };
-
-    onUpdateFiles(removeNewItemFromTree(files));
+    onUpdateFiles(removeNewItemsFromTree(files));
     setEditingValue("");
   };
 
@@ -725,18 +767,22 @@ function FileExplorerTreeComponent({
       return;
     }
 
-    const removeNewItemFromTree = (items: FileEntry[]): FileEntry[] => {
-      return items
-        .filter((i) => !(i.isNewItem && i.isEditing))
-        .map((i) => ({
-          ...i,
-          children: i.children ? removeNewItemFromTree(i.children) : undefined,
-        }));
-    };
-
-    onUpdateFiles(removeNewItemFromTree(files));
+    onUpdateFiles(removeNewItemsFromTree(files));
     setEditingValue("");
   };
+
+  // Rows are memoized; handlers that keep their identity stop every visible row from rendering
+  // again on each scroll frame.
+  const inlineEditingRef = useRef({ finishInlineEditing, cancelInlineEditing });
+  inlineEditingRef.current = { finishInlineEditing, cancelInlineEditing };
+  const handleInlineEditSubmit = useCallback(
+    (value: string, file: FileEntry) => inlineEditingRef.current.finishInlineEditing(file, value),
+    [],
+  );
+  const handleInlineEditCancel = useCallback(
+    (file: FileEntry) => inlineEditingRef.current.cancelInlineEditing(file),
+    [],
+  );
 
   const openPathInTab = useCallback(
     async (path: string) => {
@@ -1578,8 +1624,8 @@ function FileExplorerTreeComponent({
               isDragging={dragState.isDragging}
               editingValue={isEditingRow ? editingValue : undefined}
               onEditingValueChange={setEditingValue}
-              onSubmit={(value, file) => finishInlineEditing(file, value)}
-              onCancel={cancelInlineEditing}
+              onSubmit={handleInlineEditSubmit}
+              onCancel={handleInlineEditCancel}
               getGitStatusDecoration={getGitStatusDecoration}
               rowId={getFileTreeRowId(row.file.path)}
               searchQuery={displayedTreeSearch?.query}

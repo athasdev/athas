@@ -45,6 +45,30 @@ const tree = [
 ];
 
 describe("buildVisibleFileTreeRows", () => {
+  test("sorts each directory once and keeps the order stable across rebuilds", () => {
+    const files = [
+      {
+        name: "root",
+        path: "/root",
+        isDir: true,
+        children: [
+          { name: "b.ts", path: "/root/b.ts", isDir: false },
+          { name: "src", path: "/root/src", isDir: true, children: [] },
+          { name: "A.ts", path: "/root/A.ts", isDir: false },
+        ],
+      },
+    ];
+    const expanded = new Set(["/root"]);
+    const first = buildVisibleFileTreeRows(files, expanded).map((row) => row.file.name);
+    const second = buildVisibleFileTreeRows(files, expanded).map((row) => row.file.name);
+
+    expect(first).toEqual(["root", "src", "A.ts", "b.ts"]);
+    expect(second).toEqual(first);
+    expect(
+      buildVisibleFileTreeRows(files, expanded, { sortOrder: "name" }).map((row) => row.file.name),
+    ).toEqual(["root", "A.ts", "b.ts", "src"]);
+  });
+
   test("shows only the expanded root branch", () => {
     const rows = buildVisibleFileTreeRows(tree, new Set(["/root"]));
 
@@ -245,6 +269,29 @@ describe("filterFileTreeEntries", () => {
     expect(result[0]).not.toBe(files[0]);
     expect(result[0]!.children?.[0]).toBe(files[0]!.children?.[0]);
     expect(result[0]!.children?.[1]).toEqual({ ...sibling, ignored: true, children: undefined });
+  });
+
+  test("filters only the directories that changed when given a cache", () => {
+    const checkedPaths: string[] = [];
+    const options = {
+      ...baseOptions,
+      isGitIgnored: (path: string) => {
+        checkedPaths.push(path);
+        return false;
+      },
+    };
+    const cache = new WeakMap();
+    filterFileTreeEntries(tree, options, cache);
+    const firstPassChecks = checkedPaths.length;
+
+    const addedFile = { name: "README.md", path: "/root/README.md", isDir: false };
+    const updatedTree = [{ ...tree[0]!, children: [...(tree[0]!.children ?? []), addedFile] }];
+    checkedPaths.length = 0;
+    filterFileTreeEntries(updatedTree, options, cache);
+
+    expect(firstPassChecks).toBeGreaterThan(2);
+    // The root's children are new, so they are checked; the unchanged src subtree is not.
+    expect(checkedPaths).toEqual(["/root", "/root/src", "/root/README.md"]);
   });
 });
 

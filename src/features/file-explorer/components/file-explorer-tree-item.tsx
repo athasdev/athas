@@ -1,5 +1,5 @@
 import type React from "react";
-import { memo } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import type { FileTreeGitStatusDecoration } from "@/features/file-explorer/lib/file-tree-git-status";
 import type { FileEntry } from "@/features/file-system/types/app.types";
 import { InlineRenameInput } from "@/ui/input";
@@ -11,6 +11,8 @@ import Badge from "@/ui/badge";
 import { formatFileSize } from "@/utils/format-file-size";
 
 const FILE_TREE_BASE_INDENT = 10;
+/** How long the pointer rests on an ignored or hidden folder before its size is measured. */
+const DIRECTORY_SIZE_HOVER_DELAY_MS = 250;
 
 export interface FileTreeGuideTarget {
   path: string;
@@ -112,7 +114,32 @@ function FileExplorerTreeItemComponent({
   const paddingLeft = FILE_TREE_BASE_INDENT + depth * indentSize;
   const gitStatusDecoration = getGitStatusDecoration(file);
   const showDirectorySize = shouldShowDirectorySize(file);
-  const directorySize = useDirectorySize(file.path, showDirectorySize);
+  // The size only shows on hover, and these folders (node_modules, .git, target) are the most
+  // expensive to walk, so the scan waits for the pointer instead of running for every visible row.
+  const [isDirectorySizeRequested, setIsDirectorySizeRequested] = useState(false);
+  const directorySizeTimerRef = useRef<number | null>(null);
+  const directorySize = useDirectorySize(file.path, showDirectorySize && isDirectorySizeRequested);
+  useEffect(
+    () => () => {
+      if (directorySizeTimerRef.current !== null)
+        window.clearTimeout(directorySizeTimerRef.current);
+    },
+    [],
+  );
+  const requestDirectorySize = () => {
+    if (!showDirectorySize || isDirectorySizeRequested || directorySizeTimerRef.current !== null) {
+      return;
+    }
+    directorySizeTimerRef.current = window.setTimeout(() => {
+      directorySizeTimerRef.current = null;
+      setIsDirectorySizeRequested(true);
+    }, DIRECTORY_SIZE_HOVER_DELAY_MS);
+  };
+  const cancelDirectorySizeRequest = () => {
+    if (directorySizeTimerRef.current === null) return;
+    window.clearTimeout(directorySizeTimerRef.current);
+    directorySizeTimerRef.current = null;
+  };
   const formattedDirectorySize = directorySize === null ? null : formatFileSize(directorySize);
   const guideLevels = Array.from({ length: depth }, (_, level) => level);
   const renderTreeGuides = () =>
@@ -211,6 +238,8 @@ function FileExplorerTreeItemComponent({
       reserveDisclosureSpace={showFolderArrows && !file.isDir}
       guides={renderTreeGuides()}
       rowHeight="file-tree"
+      onPointerEnter={requestDirectorySize}
+      onPointerLeave={cancelDirectorySizeRequest}
       data-file-path={file.path}
       data-is-dir={file.isDir}
       data-path={file.path}

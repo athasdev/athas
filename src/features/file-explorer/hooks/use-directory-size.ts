@@ -5,7 +5,7 @@ import { isRemotePath } from "@/features/remote/utils/remote-path";
 import { isWslPath } from "@/features/wsl/utils/wsl-path";
 
 const MAX_CONCURRENT_DIRECTORY_SCANS = 2;
-const DIRECTORY_SIZE_CACHE_DURATION = 60_000;
+const DIRECTORY_SIZE_CACHE_DURATION = 5 * 60_000;
 
 interface DirectorySizeJob {
   path: string;
