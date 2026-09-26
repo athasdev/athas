@@ -20,7 +20,6 @@ const editorBuffer = (overrides: Partial<EditorContent> = {}): EditorContent => 
 
 const defaults = {
   hasOpenFolder: true,
-  activityBarVisible: true,
   sidebarVisible: true,
   terminalVisible: false,
   minimapVisible: false,

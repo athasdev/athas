@@ -13,7 +13,6 @@ import {
 import {
   ExtensionsIcon,
   EyeIcon,
-  FolderIcon,
   FolderOpenIcon,
   NodesIcon,
   SearchIcon,
@@ -25,9 +24,6 @@ interface ActivityBarMenuProps {
   navigationItems: ActivityNavigationItem[];
   visibleNavigationItemIds: string[];
   coreFeatures: CoreFeaturesState;
-  showAgentHistory: boolean;
-  showTerminals: boolean;
-  showProjectDots: boolean;
   hasHiddenItems: boolean;
   onNewAgent: () => void;
   onNewTerminal: () => void;
@@ -36,9 +32,6 @@ interface ActivityBarMenuProps {
   onSearch: () => void;
   onOpenExtensions: () => void;
   onNavigationItemVisibleChange: (itemId: string, visible: boolean) => void;
-  onAgentHistoryVisibleChange: (visible: boolean) => void;
-  onTerminalsVisibleChange: (visible: boolean) => void;
-  onProjectDotsVisibleChange: (visible: boolean) => void;
   onShowAll: () => void;
 }
 
@@ -46,9 +39,6 @@ export function ActivityBarMenu({
   navigationItems,
   visibleNavigationItemIds,
   coreFeatures,
-  showAgentHistory,
-  showTerminals,
-  showProjectDots,
   hasHiddenItems,
   onNewAgent,
   onNewTerminal,
@@ -57,9 +47,6 @@ export function ActivityBarMenu({
   onSearch,
   onOpenExtensions,
   onNavigationItemVisibleChange,
-  onAgentHistoryVisibleChange,
-  onTerminalsVisibleChange,
-  onProjectDotsVisibleChange,
   onShowAll,
 }: ActivityBarMenuProps) {
   return (
@@ -112,29 +99,6 @@ export function ActivityBarMenu({
                 {item.label}
               </ContextMenuCheckboxItem>
             ))}
-            <ContextMenuCheckboxItem
-              checked={showAgentHistory}
-              onCheckedChange={onAgentHistoryVisibleChange}
-            >
-              <SparkleIcon />
-              Agents
-            </ContextMenuCheckboxItem>
-            {coreFeatures.terminal ? (
-              <ContextMenuCheckboxItem
-                checked={showTerminals}
-                onCheckedChange={onTerminalsVisibleChange}
-              >
-                <TerminalWindowIcon />
-                Terminals
-              </ContextMenuCheckboxItem>
-            ) : null}
-            <ContextMenuCheckboxItem
-              checked={showProjectDots}
-              onCheckedChange={onProjectDotsVisibleChange}
-            >
-              <FolderIcon />
-              Project Dots
-            </ContextMenuCheckboxItem>
           </ContextMenuGroup>
           {hasHiddenItems ? (
             <>

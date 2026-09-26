@@ -48,22 +48,22 @@ const dropdownSource = readFileSync(
 );
 
 describe("title bar controls", () => {
-  it("places project and branch selectors in the activity sidebar", () => {
+  it("places the icon-only project switcher in the activity rail", () => {
     const projectSwitcherIndex = activityChromeSource.indexOf("<ProjectSwitcher");
-    const branchSelectorIndex = activityChromeSource.indexOf("<GitBranchManager");
 
     expect(projectSwitcherIndex).toBeGreaterThan(-1);
-    expect(branchSelectorIndex).toBeGreaterThan(-1);
-    expect(activityChromeSource).toContain('triggerMode="branch"');
+    expect(activityChromeSource).not.toContain("<GitBranchManager");
+    expect(projectSwitcherSource).toContain("iconOnly");
     expect(mainLayoutSource).toContain("<TitleBarWithSettings showMinimal overlay />");
     expect(projectSwitcherSource).toContain(
       "<ProjectGlyph projectPath={projectPath} iconPath={displayIconPath} />",
     );
   });
 
-  it("places the sidebar toggle beside title navigation and before tabs", () => {
-    expect(titleNavigationSource).toContain('<Toggle\n        type="button"');
-    expect(titleNavigationSource).toContain('commandId="workbench.toggleActivitySidebar"');
+  it("keeps title navigation before tabs without an activity bar toggle", () => {
+    expect(titleNavigationSource).not.toContain("<Toggle");
+    expect(titleNavigationSource).not.toContain("toggleActivitySidebar");
+    expect(mainLayoutSource).toContain("<TitleNavigation />");
     expect(mainLayoutSource.indexOf("<TitleNavigation")).toBeLessThan(
       mainLayoutSource.indexOf('data-slot="main-title-tab-bar"'),
     );
@@ -80,8 +80,9 @@ describe("title bar controls", () => {
     expect(runActionsIndex).toBeGreaterThan(updateIndex);
     expect(notificationsIndex).toBeGreaterThan(runActionsIndex);
     expect(accountIndex).toBeGreaterThan(notificationsIndex);
-    expect(activityChromeSource).toContain("<AccountMenu expanded={expanded} />");
-    expect(accountMenuSource).toContain("<SidebarListItem");
+    expect(activityChromeSource).toContain("<AccountMenu />");
+    expect(accountMenuSource).toContain("<SidebarIconButton");
+    expect(accountMenuSource).not.toContain("<SidebarListItem");
     expect(accountMenuSource).toContain('<DropdownMenuContent side="top"');
   });
 
@@ -91,8 +92,9 @@ describe("title bar controls", () => {
     expect(activityBarSource).toContain(
       'visibleNavigationItems.findIndex((item) => item.id === "files")',
     );
-    expect(activityBarSource).toContain("<ActivityChrome expanded={expanded}");
-    expect(activityBarSource).toContain("<ActivityChromeFooter expanded={expanded}");
+    expect(activityBarSource).toContain("<ActivityChrome />");
+    expect(activityBarSource).toContain("<ActivityChromeFooter />");
+    expect(activityBarSource).not.toContain("expanded");
   });
 
   it("keeps native window controls over the workbench", () => {

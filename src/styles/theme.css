@@ -171,8 +171,7 @@
     --athas-title-tab-inset: 6px;
     --athas-title-tab-leading-inset: calc(
       var(--athas-title-bar-leading-inset) + var(--athas-chrome-control-height) +
-        var(--athas-chrome-control-height) + var(--athas-chrome-control-height) +
-        var(--athas-chrome-gap) + var(--athas-chrome-gap) + var(--athas-chrome-padding-inline) +
+        var(--athas-chrome-control-height) + var(--athas-chrome-gap) +
         var(--athas-chrome-padding-inline)
     );
     --athas-tab-bar-height: 2rem;

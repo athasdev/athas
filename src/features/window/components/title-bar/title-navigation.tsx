@@ -5,16 +5,9 @@ import { useJumpListStore } from "@/features/editor/stores/jump-list.store";
 import { getBufferById } from "@/features/editor/utils/buffer-index";
 import { navigateToJumpEntry } from "@/features/editor/utils/jump-navigation";
 import { Button } from "@/ui/button";
-import { ArrowLeftIcon, ArrowRightIcon, SidebarIcon } from "@/ui/icons";
-import { Toggle } from "@/ui/toggle";
+import { ArrowLeftIcon, ArrowRightIcon } from "@/ui/icons";
 
-export function TitleNavigation({
-  activityBarExpanded,
-  onActivityBarExpandedChange,
-}: {
-  activityBarExpanded: boolean;
-  onActivityBarExpandedChange: (expanded: boolean) => void;
-}) {
+export function TitleNavigation() {
   const entries = useJumpListStore.use.entries();
   const currentIndex = useJumpListStore.use.currentIndex();
   const { goBack, goForward } = useJumpListStore.use.actions();
@@ -52,18 +45,6 @@ export function TitleNavigation({
       data-slot="title-navigation"
       className="absolute top-title-tab-inset bottom-0 left-0 z-10 flex items-center gap-chrome pl-title-bar-leading"
     >
-      <Toggle
-        type="button"
-        className="mr-2"
-        pressed={activityBarExpanded}
-        tooltip={activityBarExpanded ? "Collapse Activity Bar" : "Expand Activity Bar"}
-        commandId="workbench.toggleActivitySidebar"
-        size="sm"
-        onPressedChange={onActivityBarExpandedChange}
-        aria-label={activityBarExpanded ? "Collapse activity bar" : "Expand activity bar"}
-      >
-        <SidebarIcon />
-      </Toggle>
       <Button
         type="button"
         onClick={() => void handleGoBack()}

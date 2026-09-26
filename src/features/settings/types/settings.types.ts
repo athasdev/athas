@@ -127,12 +127,6 @@ export interface Settings {
   activeV0DesignSystemId: string;
   ollamaBaseUrl: string;
   // Layout
-  activityRailExpanded: boolean;
-  activityRailWidth: number;
-  showActivityRailAgentHistory: boolean;
-  showActivityRailTerminals: boolean;
-  showActivityRailProjectIcons: boolean;
-  collapsedActivityRailSections: string[];
   sidebarWidth: number;
   rightSidebarWidth: number;
   showGitHubPullRequests: boolean;

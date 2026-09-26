@@ -115,12 +115,8 @@ export function MainLayout() {
 
   const isSidebarVisible = useUIState((state) => state.isSidebarVisible);
   const isBottomPaneVisible = useUIState((state) => state.isBottomPaneVisible);
-  const activityRailExpanded = useSettingsStore((state) => state.settings.activityRailExpanded);
-  const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
-  const responsiveLayout = useResponsiveWorkbenchLayout(activityRailExpanded);
-  const renderedActivityRailExpanded = responsiveLayout.activityBarExpanded;
+  const responsiveLayout = useResponsiveWorkbenchLayout();
   const renderedSidebarVisible = isSidebarVisible && !responsiveLayout.narrow;
-  const activityRailWidth = useSettingsStore((state) => state.settings.activityRailWidth);
   const uiFontSize = useSettingsStore((state) => state.settings.uiFontSize);
   const sidebarWidth = useSettingsStore((state) => state.settings.sidebarWidth);
   const rightSidebarWidth = useSettingsStore((state) => state.settings.rightSidebarWidth);
@@ -140,9 +136,7 @@ export function MainLayout() {
   const setIsDatabaseConnectionVisible = useUIState(
     (state) => state.setIsDatabaseConnectionVisible,
   );
-  const renderedActivityRailWidth = renderedActivityRailExpanded
-    ? activityRailWidth
-    : getCollapsedActivityBarWidth(uiFontSize);
+  const renderedActivityRailWidth = getCollapsedActivityBarWidth(uiFontSize);
   const leftPaneReservedWidth =
     renderedActivityRailWidth + (renderedRightSidebarVisible ? rightSidebarWidth : 0);
   const rightPaneReservedWidth =
@@ -347,16 +341,7 @@ export function MainLayout() {
         data-tauri-drag-region
         className="relative z-20 h-title-bar shrink-0"
       >
-        <TitleNavigation
-          activityBarExpanded={renderedActivityRailExpanded}
-          onActivityBarExpandedChange={(expanded) => {
-            if (responsiveLayout.compact) {
-              responsiveLayout.setActivityBarExpanded(expanded);
-            } else {
-              void updateSetting("activityRailExpanded", expanded);
-            }
-          }}
-        />
+        <TitleNavigation />
         <div
           ref={setMainTabBarHeader}
           data-slot="main-title-tab-bar"
@@ -368,7 +353,7 @@ export function MainLayout() {
       <div className="athas-workbench-glass relative z-10 flex flex-1 flex-col overflow-hidden pb-workbench">
         <div className="flex flex-1 flex-row overflow-hidden pr-workbench" style={{ minHeight: 0 }}>
           <div ref={setActivityBarRoot} className="h-full shrink-0">
-            <ActivityBar expanded={renderedActivityRailExpanded} />
+            <ActivityBar />
           </div>
           <ResizablePane
             position="left"

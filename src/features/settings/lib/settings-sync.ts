@@ -82,12 +82,6 @@ type SyncableSettingsKey =
   | "v0DesignSystems"
   | "activeV0DesignSystemId"
   | "ollamaBaseUrl"
-  | "activityRailExpanded"
-  | "activityRailWidth"
-  | "showActivityRailAgentHistory"
-  | "showActivityRailTerminals"
-  | "showActivityRailProjectIcons"
-  | "collapsedActivityRailSections"
   | "sidebarWidth"
   | "rightSidebarWidth"
   | "showGitHubPullRequests"
@@ -210,12 +204,6 @@ const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "v0DesignSystems",
   "activeV0DesignSystemId",
   "ollamaBaseUrl",
-  "activityRailExpanded",
-  "activityRailWidth",
-  "showActivityRailAgentHistory",
-  "showActivityRailTerminals",
-  "showActivityRailProjectIcons",
-  "collapsedActivityRailSections",
   "sidebarWidth",
   "rightSidebarWidth",
   "showGitHubPullRequests",

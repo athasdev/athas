@@ -104,7 +104,6 @@ import {
   showNotifications,
   showThemeSelector,
   showWhatsNew,
-  toggleActivitySidebar,
   toggleViewsSidebar,
   toggleFilesSidebar,
   toggleDockerSidebar,
@@ -643,13 +642,6 @@ const viewCommands: Command[] = [
     title: "Toggle Experimental WebGPU Renderer",
     category: "View",
     execute: () => usePerformanceExperiments.getState().actions.toggleWebgpu(),
-  },
-  {
-    id: "workbench.toggleActivitySidebar",
-    title: "Toggle Activity Sidebar",
-    category: "View",
-    keybinding: "cmd+b",
-    execute: toggleActivitySidebar,
   },
   {
     id: "workbench.toggleSidebar",

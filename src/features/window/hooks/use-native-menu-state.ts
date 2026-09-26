@@ -11,7 +11,6 @@ export function useNativeMenuState() {
     (state) => state.buffers.find((buffer) => buffer.id === state.activeBufferId) ?? null,
   );
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
-  const activityBarVisible = useSettingsStore((state) => state.settings.activityRailExpanded);
   const minimapVisible = useSettingsStore((state) => state.settings.showMinimap);
   const wordWrap = useSettingsStore((state) => state.settings.wordWrap);
   const lineNumbers = useSettingsStore((state) => state.settings.lineNumbers);
@@ -24,7 +23,6 @@ export function useNativeMenuState() {
       getNativeMenuState({
         activeBuffer,
         hasOpenFolder: Boolean(rootFolderPath),
-        activityBarVisible,
         sidebarVisible,
         terminalVisible: bottomPaneVisible && bottomPaneActiveTab === "terminal",
         minimapVisible,
@@ -34,7 +32,6 @@ export function useNativeMenuState() {
       }),
     [
       activeBuffer,
-      activityBarVisible,
       bottomPaneActiveTab,
       bottomPaneVisible,
       lineNumbers,
@@ -51,7 +48,6 @@ export function useNativeMenuState() {
       console.error("Failed to synchronize native menu state:", error);
     });
   }, [
-    menuState.activityBarVisible,
     menuState.closeFolderEnabled,
     menuState.lineNumbers,
     menuState.minimapVisible,

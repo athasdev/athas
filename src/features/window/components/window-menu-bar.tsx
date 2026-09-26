@@ -264,12 +264,6 @@ const WindowMenuBar = ({
       ),
       View: (
         <MenubarContent>
-          <MenubarItem
-            shortcut="mod+b"
-            onClick={() => handleClickEmit("menu_toggle_activity_sidebar")}
-          >
-            Toggle Activity Sidebar
-          </MenubarItem>
           <MenubarItem shortcut="mod+e" onClick={() => handleClickEmit("menu_toggle_sidebar")}>
             Toggle Secondary Sidebar
           </MenubarItem>

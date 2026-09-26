@@ -109,8 +109,6 @@ const EDITOR_LINE_HEIGHT_MIN = 1;
 const EDITOR_LINE_HEIGHT_MAX = 2;
 const FILE_TREE_INDENT_SIZE_MIN = 8;
 const FILE_TREE_INDENT_SIZE_MAX = 32;
-const ACTIVITY_RAIL_WIDTH_MIN = 140;
-const ACTIVITY_RAIL_WIDTH_MAX = 320;
 const SIDEBAR_WIDTH_MIN = 140;
 const SIDEBAR_WIDTH_MAX = 600;
 const RENDER_WHITESPACE_MODES = new Set<Settings["renderWhitespace"]>([
@@ -529,12 +527,6 @@ export function normalizeSettings(settings: Settings): Settings {
   normalizedSettings.fileTreeSortOrder = normalizeFileTreeSortOrder(
     (normalizedSettings as { fileTreeSortOrder?: unknown }).fileTreeSortOrder,
   );
-  normalizedSettings.activityRailWidth = normalizeBoundedWidth(
-    normalizedSettings.activityRailWidth,
-    defaultSettings.activityRailWidth,
-    ACTIVITY_RAIL_WIDTH_MIN,
-    ACTIVITY_RAIL_WIDTH_MAX,
-  );
   normalizedSettings.sidebarWidth = normalizeBoundedWidth(
     normalizedSettings.sidebarWidth,
     defaultSettings.sidebarWidth,
@@ -577,9 +569,6 @@ export function normalizeSettings(settings: Settings): Settings {
   ).filter((itemId) => itemId !== "search" && itemId !== "review");
   normalizedSettings.pinnedSidebarExtensionItems = normalizeStringList(
     normalizedSettings.pinnedSidebarExtensionItems,
-  );
-  normalizedSettings.collapsedActivityRailSections = normalizeStringList(
-    normalizedSettings.collapsedActivityRailSections,
   );
   return normalizedSettings;
 }
@@ -636,15 +625,6 @@ export function normalizeSettingValue<K extends keyof Settings>(
     return normalizeFileTreeSortOrder(value) as Settings[K];
   }
 
-  if (key === "activityRailWidth") {
-    return normalizeBoundedWidth(
-      value,
-      defaultSettings.activityRailWidth,
-      ACTIVITY_RAIL_WIDTH_MIN,
-      ACTIVITY_RAIL_WIDTH_MAX,
-    ) as Settings[K];
-  }
-
   if (key === "sidebarWidth" || key === "rightSidebarWidth") {
     const fallback =
       key === "sidebarWidth" ? defaultSettings.sidebarWidth : defaultSettings.rightSidebarWidth;
@@ -656,11 +636,7 @@ export function normalizeSettingValue<K extends keyof Settings>(
     ) as Settings[K];
   }
 
-  if (
-    key === "hiddenSidebarActivityItems" ||
-    key === "pinnedSidebarExtensionItems" ||
-    key === "collapsedActivityRailSections"
-  ) {
+  if (key === "hiddenSidebarActivityItems" || key === "pinnedSidebarExtensionItems") {
     return normalizeStringList(value) as Settings[K];
   }
 

@@ -5,14 +5,6 @@ import {
   isCoreActivityNavigationItem,
 } from "@/features/layout/utils/activity-navigation-visibility";
 
-const VISIBILITY_SETTING_BY_ITEM = {
-  agentHistory: "showActivityRailAgentHistory",
-  terminals: "showActivityRailTerminals",
-  projectDots: "showActivityRailProjectIcons",
-} as const;
-
-export type ActivityBarVisibilityItem = keyof typeof VISIBILITY_SETTING_BY_ITEM;
-
 export function useActivityBarVisibility() {
   const storedHiddenNavigationItemIds = useSettingsStore(
     (state) => state.settings.hiddenSidebarActivityItems,
@@ -24,9 +16,6 @@ export function useActivityBarVisibility() {
   const pinnedExtensionItemIds = useSettingsStore(
     (state) => state.settings.pinnedSidebarExtensionItems,
   );
-  const agentHistory = useSettingsStore((state) => state.settings.showActivityRailAgentHistory);
-  const terminals = useSettingsStore((state) => state.settings.showActivityRailTerminals);
-  const projectDots = useSettingsStore((state) => state.settings.showActivityRailProjectIcons);
   const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
 
   const setNavigationItemVisible = useCallback(
@@ -56,13 +45,6 @@ export function useActivityBarVisibility() {
     [hiddenNavigationItemIds, pinnedExtensionItemIds],
   );
 
-  const setItemVisible = useCallback(
-    (item: ActivityBarVisibilityItem, visible: boolean) => {
-      void updateSetting(VISIBILITY_SETTING_BY_ITEM[item], visible);
-    },
-    [updateSetting],
-  );
-
   const showAll = useCallback(
     (navigationItemIds: string[]) => {
       void updateSetting("hiddenSidebarActivityItems", []);
@@ -70,20 +52,13 @@ export function useActivityBarVisibility() {
         "pinnedSidebarExtensionItems",
         navigationItemIds.filter((itemId) => !isCoreActivityNavigationItem(itemId)),
       );
-      for (const setting of Object.values(VISIBILITY_SETTING_BY_ITEM)) {
-        void updateSetting(setting, true);
-      }
     },
     [updateSetting],
   );
 
   return {
-    agentHistory,
-    terminals,
-    projectDots,
     isNavigationItemVisible,
     setNavigationItemVisible,
-    setItemVisible,
     showAll,
   };
 }

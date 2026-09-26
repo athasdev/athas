@@ -4,7 +4,6 @@ export interface NativeMenuState {
   closeFolderEnabled: boolean;
   saveEnabled: boolean;
   saveAsEnabled: boolean;
-  activityBarVisible: boolean;
   sidebarVisible: boolean;
   terminalVisible: boolean;
   minimapVisible: boolean;
@@ -16,7 +15,6 @@ export interface NativeMenuState {
 interface NativeMenuStateInput {
   activeBuffer: PaneContent | null;
   hasOpenFolder: boolean;
-  activityBarVisible: boolean;
   sidebarVisible: boolean;
   terminalVisible: boolean;
   minimapVisible: boolean;
@@ -37,7 +35,6 @@ export function getNativeMenuState(input: NativeMenuStateInput): NativeMenuState
       writableEditor && (writableEditor.isDirty || writableEditor.path.startsWith("untitled:")),
     ),
     saveAsEnabled: Boolean(writableEditor),
-    activityBarVisible: input.activityBarVisible,
     sidebarVisible: input.sidebarVisible,
     terminalVisible: input.terminalVisible,
     minimapVisible: input.minimapVisible,

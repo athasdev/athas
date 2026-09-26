@@ -2,8 +2,6 @@ import { useCallback, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { openFolder } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import GitBranchManager from "@/features/git/components/git-branch-manager";
-import { useGitStore } from "@/features/git/stores/git.store";
 import { AppUpdateControl } from "@/features/layout/components/app-update-control";
 import { ProjectSwitcher } from "@/features/layout/components/project-switcher";
 import { NotificationsTrigger } from "@/features/notifications/components/notifications-trigger";
@@ -26,14 +24,11 @@ import { FilesIcon, FolderOpenIcon, ListIcon, TrashIcon, WindowExpandIcon } from
 import Tooltip from "@/ui/tooltip";
 import { IS_MAC } from "@/utils/platform";
 
-export function ActivityChrome({ expanded }: { expanded: boolean }) {
+export function ActivityChrome() {
   const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
   const closeProject = useFileSystemStore((state) => state.closeProject);
-  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
   const switchToProject = useFileSystemStore((state) => state.switchToProject);
   const isSwitchingProject = useFileSystemStore((state) => state.isSwitchingProject);
-  const currentBranch = useGitStore((state) => state.workspaceGitStatus?.branch);
-  const refreshWorkspaceGitStatus = useGitStore((state) => state.actions.refreshWorkspaceGitStatus);
   const projectTabs = useWorkspaceTabsStore.use.projectTabs();
   const activeProject = projectTabs.find((project) => project.isActive);
   const openProjectPicker = useUIState((state) => state.openProjectPicker);
@@ -86,19 +81,8 @@ export function ActivityChrome({ expanded }: { expanded: boolean }) {
               isSwitchingProject={isSwitchingProject}
               onSelectProject={(projectId) => void switchToProject(projectId)}
               onAddRemote={() => openProjectPicker("addRemote")}
-              compact={!expanded}
             />
           </div>
-          {expanded && currentBranch && rootFolderPath ? (
-            <div className="min-w-0 overflow-hidden">
-              <GitBranchManager
-                currentBranch={currentBranch}
-                repoPath={rootFolderPath}
-                triggerMode="branch"
-                onBranchChange={() => void refreshWorkspaceGitStatus(rootFolderPath)}
-              />
-            </div>
-          ) : null}
         </ContextMenuTrigger>
         <ContextMenuContent>
           <ContextMenuItem onClick={() => void createAppWindow()}>
@@ -168,21 +152,15 @@ export function ActivityChrome({ expanded }: { expanded: boolean }) {
   );
 }
 
-export function ActivityChromeFooter({ expanded }: { expanded: boolean }) {
+export function ActivityChromeFooter() {
   return (
     <div className="flex w-full flex-col gap-chrome-tight">
-      <div
-        className={
-          expanded
-            ? "flex flex-wrap items-center justify-center gap-chrome-tight"
-            : "flex flex-col items-center gap-chrome-tight"
-        }
-      >
+      <div className="flex flex-col items-center gap-chrome-tight">
         <AppUpdateControl compact />
         <RunActionsButton />
         <NotificationsTrigger />
       </div>
-      <AccountMenu expanded={expanded} />
+      <AccountMenu />
     </div>
   );
 }

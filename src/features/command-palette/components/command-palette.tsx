@@ -131,7 +131,6 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
 
   const lastEnteredActions = useActionsStore.use.lastEnteredActionsStack();
   const pushAction = useActionsStore.use.actions().pushAction;
-  const activityRailExpanded = useSettingsStore((state) => state.settings.activityRailExpanded);
   const aiCompletion = useSettingsStore((state) => state.settings.aiCompletion);
   const autoCompletion = useSettingsStore((state) => state.settings.autoCompletion);
   const autoDetectLanguage = useSettingsStore((state) => state.settings.autoDetectLanguage);
@@ -186,7 +185,6 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
 
   const commandSettings = useMemo(
     () => ({
-      activityRailExpanded,
       aiCompletion,
       autoCompletion,
       autoDetectLanguage,
@@ -215,7 +213,6 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
       wordWrap,
     }),
     [
-      activityRailExpanded,
       aiCompletion,
       autoCompletion,
       autoDetectLanguage,
@@ -263,7 +260,6 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
       bottomPaneActiveTab,
       setBottomPaneActiveTab,
       settings: {
-        activityRailExpanded: commandSettings.activityRailExpanded,
         nativeMenuBar: commandSettings.nativeMenuBar,
         compactMenuBar: commandSettings.compactMenuBar,
       },
