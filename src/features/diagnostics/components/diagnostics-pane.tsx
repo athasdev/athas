@@ -223,7 +223,7 @@ const DiagnosticsPane = ({ diagnostics, onDiagnosticClick }: DiagnosticsPaneProp
     warning: true,
     info: true,
   });
-  const [isFileNavigatorVisible, setIsFileNavigatorVisible] = useState(false);
+  const [isFileNavigatorVisible, setIsFileNavigatorVisible] = useState(true);
   const [selectedDiagnosticFilePath, setSelectedDiagnosticFilePath] = useState<string | null>(null);
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
 

@@ -65,7 +65,7 @@ const GlobalSearchBuffer = () => {
   );
   const [visibleMatchLimit, setVisibleMatchLimit] = useState(CONTENT_SEARCH_INITIAL_RENDER_LIMIT);
   const [fileNavigatorViewMode, setFileNavigatorViewMode] = useState<FileNavigatorViewMode>("flat");
-  const [isFileNavigatorVisible, setIsFileNavigatorVisible] = useState(false);
+  const [isFileNavigatorVisible, setIsFileNavigatorVisible] = useState(true);
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
   const [prioritizedFilePath, setPrioritizedFilePath] = useState<string | null>(null);
   const [contextLinesByFile, setContextLinesByFile] = useState<Record<string, number>>({});

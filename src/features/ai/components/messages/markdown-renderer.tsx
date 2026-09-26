@@ -9,7 +9,7 @@ import {
   WarningCircleIcon,
 } from "@/ui/icons";
 import type React from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { getAcpAuthenticationCommand } from "@/features/ai/lib/acp-authentication";
 import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
@@ -26,9 +26,9 @@ import { selectAgentAuthRequest, useAcpAuthStore } from "@/features/ai/stores/ac
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import {
-  type CodeHighlightSegment,
-  getCodeHighlightSegments,
-} from "@/features/editor/markdown/code-highlight";
+  HighlightedCode,
+  useCodeHighlightSegments,
+} from "@/features/editor/markdown/highlighted-code";
 import { normalizeCodeFenceLanguage } from "@/features/editor/markdown/language-map";
 import { Button } from "@/ui/button";
 import { Marker, MarkerContent, MarkerIcon } from "@/ui/marker";
@@ -93,35 +93,6 @@ async function openMarkdownLink(href: string, label: string) {
   await openUrl(href);
 }
 
-function renderHighlightedCode(code: string, segments: CodeHighlightSegment[]): React.ReactNode {
-  if (segments.length === 0) {
-    return code;
-  }
-
-  const elements: React.ReactNode[] = [];
-  let lastEnd = 0;
-
-  for (let i = 0; i < segments.length; i++) {
-    const segment = segments[i];
-    if (segment.start > lastEnd) {
-      elements.push(<span key={`t-${i}`}>{code.slice(lastEnd, segment.start)}</span>);
-    }
-
-    elements.push(
-      <span key={`k-${i}`} className={segment.className}>
-        {code.slice(segment.start, segment.end)}
-      </span>,
-    );
-    lastEnd = segment.end;
-  }
-
-  if (lastEnd < code.length) {
-    elements.push(<span key="e">{code.slice(lastEnd)}</span>);
-  }
-
-  return <>{elements}</>;
-}
-
 function CodeBlock({
   code,
   languageHint,
@@ -135,27 +106,7 @@ function CodeBlock({
   const inferredLanguage = explicitLanguage || inferCodeLanguage(code);
   const languageLabel = explicitLanguage || (inferredLanguage !== "clike" ? inferredLanguage : "");
 
-  const [segments, setSegments] = useState<CodeHighlightSegment[] | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    setSegments(null);
-
-    const loadHighlighting = async () => {
-      const nextSegments = await getCodeHighlightSegments(code, inferredLanguage);
-      if (!cancelled) {
-        setSegments(nextSegments);
-      }
-    };
-
-    loadHighlighting();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [code, inferredLanguage]);
-
-  const renderedCode = useMemo(() => renderHighlightedCode(code, segments || []), [code, segments]);
+  const segments = useCodeHighlightSegments(code, inferredLanguage);
 
   return (
     <div className="not-typeset group relative my-2">
@@ -190,7 +141,7 @@ function CodeBlock({
           )}
         </div>
         <code className="font-mono block whitespace-pre-wrap break-all text-foreground ui-text-sm">
-          {renderedCode}
+          <HighlightedCode code={code} segments={segments} />
         </code>
       </pre>
     </div>

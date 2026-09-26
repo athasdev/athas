@@ -21,7 +21,6 @@ import { ScrollArea } from "@/ui/scroll-area";
 import { cn } from "@/utils/cn";
 import { getBaseName, getDirName } from "@/utils/path-helpers";
 import { MultibufferFileHeader } from "./multibuffer-file-header";
-import { MultibufferFileStepper } from "./multibuffer-file-stepper";
 import { MultibufferNavigatorToggle } from "./multibuffer-navigator-toggle";
 
 /**
@@ -71,7 +70,6 @@ interface MultibufferWorkspaceProps {
   header?: MultibufferHeader;
   /** Floating content laid over the scroll area, e.g. a find popover. */
   overlay?: ReactNode;
-  isActive?: boolean;
   scrollContainerRef?: RefCallback<HTMLDivElement>;
   emptyState?: ReactNode;
   footer?: ReactNode;
@@ -189,9 +187,9 @@ const MultibufferSectionView = memo(function MultibufferSectionView({
 /**
  * The one shell for every "many files in one scroll" surface: diff reviews,
  * search results, diagnostics. It owns the scroll container, stacks each file
- * under a sticky header, keeps the docked file navigator and the J/K stepper
- * in sync with whichever section is at the top, and lazily mounts section
- * bodies so a thousand-file review stays responsive.
+ * under a sticky header, keeps the docked file navigator in sync with
+ * whichever section is at the top, and lazily mounts section bodies so a
+ * thousand-file review stays responsive.
  */
 export function MultibufferWorkspace({
   sections,
@@ -207,7 +205,6 @@ export function MultibufferWorkspace({
   navigatorSearchResetKey,
   header,
   overlay,
-  isActive = true,
   scrollContainerRef,
   emptyState,
   footer,
@@ -375,21 +372,7 @@ export function MultibufferWorkspace({
         />
       ) : null}
 
-      <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
-        {showNavigator ? (
-          <FileNavigatorSidebar
-            items={items}
-            selectedKey={highlightedKey}
-            onSelect={selectSection}
-            ariaLabel={navigatorLabel}
-            viewMode={navigatorViewMode}
-            onViewModeChange={onNavigatorViewModeChange}
-            searchMode="fuzzy"
-            searchResetKey={navigatorSearchResetKey}
-            compactRows
-          />
-        ) : null}
-
+      <div className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden">
         <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           <ScrollArea
             fill="flex"
@@ -421,18 +404,22 @@ export function MultibufferWorkspace({
           </ScrollArea>
 
           {overlay}
-
-          {items.length > 1 ? (
-            <div className="pointer-events-none absolute bottom-3 left-1/2 z-30 w-fit max-w-[calc(100%-1.5rem)] -translate-x-1/2">
-              <MultibufferFileStepper
-                items={items}
-                selectedKey={highlightedKey}
-                onSelect={selectSection}
-                isActive={isActive}
-              />
-            </div>
-          ) : null}
         </div>
+        {showNavigator ? (
+          <FileNavigatorSidebar
+            items={items}
+            selectedKey={highlightedKey}
+            onSelect={selectSection}
+            ariaLabel={navigatorLabel}
+            viewMode={navigatorViewMode}
+            onViewModeChange={onNavigatorViewModeChange}
+            searchMode="fuzzy"
+            searchResetKey={navigatorSearchResetKey}
+            compactRows
+            resizeEdge="left"
+            className="absolute top-2 right-4 bottom-2 z-40 h-auto"
+          />
+        ) : null}
       </div>
     </div>
   );

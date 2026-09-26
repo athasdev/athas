@@ -26,7 +26,6 @@ interface PRFilesPanelProps {
   contentError: string | null;
   diffFiles: DiffFileItem[];
   selectedFilePath: string | null;
-  isActive: boolean;
   patchErrors?: Record<string, string | undefined>;
   onRetry: () => void;
   onSelectFile: (path: string) => void;
@@ -44,13 +43,12 @@ export const PRFilesPanel = memo(
     contentError,
     diffFiles,
     selectedFilePath,
-    isActive,
     patchErrors,
     onRetry,
     onSelectFile,
     onOpenChangedFile,
   }: PRFilesPanelProps) => {
-    const [isNavigatorOpen, setIsNavigatorOpen] = useState(false);
+    const [isNavigatorOpen, setIsNavigatorOpen] = useState(true);
     const [navigatorViewMode, setNavigatorViewMode] = useState<FileNavigatorViewMode>("flat");
     const sections = useMemo<MultibufferSection[]>(
       () =>
@@ -125,7 +123,6 @@ export const PRFilesPanel = memo(
         onNavigatorOpenChange={setIsNavigatorOpen}
         navigatorViewMode={navigatorViewMode}
         onNavigatorViewModeChange={setNavigatorViewMode}
-        isActive={isActive}
         header={{
           title: "Changed files",
           detail: `${diffFiles.length} ${diffFiles.length === 1 ? "file" : "files"}`,

@@ -172,7 +172,7 @@ describe("Diff pane isolation", () => {
     expect(useBufferStore.getState().activeBufferId).toBe(otherTab.id);
   });
 
-  it("keeps commit contents and file selection scoped to each visible diff tab", async () => {
+  it("keeps commit contents scoped to each visible diff tab", async () => {
     const first = commitBuffer("aaaaaaa");
     const second = commitBuffer("bbbbbbb");
     useBufferStore.setState({ buffers: [first, second, otherTab], activeBufferId: first.id });
@@ -193,22 +193,10 @@ describe("Diff pane isolation", () => {
     const right = container.querySelector('[aria-label="Second commit"]')!;
     expect(left.textContent).toContain("aaaaaaa/first.ts");
     expect(right.textContent).toContain("bbbbbbb/first.ts");
-    await act(async () =>
-      left.querySelector<HTMLButtonElement>('[aria-label="Next file"]')!.click(),
-    );
-    expect(left.textContent).toContain("aaaaaaa/second.ts");
-    expect(right.textContent).toContain("bbbbbbb/first.ts");
+    expect(left.textContent).not.toContain("bbbbbbb/");
+    expect(right.textContent).not.toContain("aaaaaaa/");
     expect(useBufferStore.getState().buffers.find((buffer) => buffer.id === second.id)).toEqual(
       second,
     );
-
-    await focusTab(second.id);
-    await act(async () =>
-      document.dispatchEvent(
-        new KeyboardEvent("keydown", { key: "k", bubbles: true, cancelable: true }),
-      ),
-    );
-    expect(right.textContent).toContain("bbbbbbb/second.ts");
-    expect(left.textContent).toContain("aaaaaaa/second.ts");
   });
 });
