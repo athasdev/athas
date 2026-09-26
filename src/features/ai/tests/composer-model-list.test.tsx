@@ -53,7 +53,7 @@ vi.mock("../stores/ai-chat.store", () => ({
     select({ providerApiKeys: state.keys, dynamicModels: {} }),
 }));
 vi.mock("@/features/window/stores/ui-state.store", () => ({
-  useUIState: { getState: () => ({ openSettingsDialog: state.configure }) },
+  useUIState: { getState: () => ({ openSettings: state.configure }) },
 }));
 vi.mock("@/features/keymaps/hooks/use-command-shortcut", () => ({
   useCommandShortcut: () => undefined,

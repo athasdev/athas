@@ -19,7 +19,7 @@ vi.mock("@/features/window/hooks/use-desktop-sign-in", () => ({
   useDesktopSignIn: () => ({ signIn: state.signIn, isSigningIn: false }),
 }));
 vi.mock("@/features/window/stores/ui-state.store", () => ({
-  useUIState: { getState: () => ({ openSettingsDialog: state.settings }) },
+  useUIState: { getState: () => ({ openSettings: state.settings }) },
 }));
 vi.mock("../components/provider-api-key-command", () => ({
   ProviderApiKeyCommand: ({

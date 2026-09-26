@@ -378,7 +378,7 @@ export function ComposerAgentSelector({
           ) : null}
         </DropdownMenuViewport>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => useUIState.getState().openSettingsDialog("ai")}>
+        <DropdownMenuItem onClick={() => useUIState.getState().openSettings("ai")}>
           <SlidersIcon />
           Configure models…
         </DropdownMenuItem>

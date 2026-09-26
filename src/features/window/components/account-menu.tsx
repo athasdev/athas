@@ -46,7 +46,6 @@ function isBlockingModalOpen() {
     state.isQuickOpenVisible ||
     state.isCommandPaletteVisible ||
     state.isGlobalSearchVisible ||
-    state.isSettingsDialogVisible ||
     state.isProjectPickerVisible ||
     state.isDatabaseConnectionVisible
   );
@@ -62,8 +61,7 @@ export const AccountMenu = memo(function AccountMenu() {
   const githubCurrentUser = useGitHubStore((state) => state.currentUser);
   const checkGitHubAuth = useGitHubStore((state) => state.actions.checkAuth);
   const openWhatsNew = useWhatsNewStore((state) => state.actions.open);
-  const setIsSettingsDialogVisible = useUIState((state) => state.setIsSettingsDialogVisible);
-  const openSettingsDialog = useUIState((state) => state.openSettingsDialog);
+  const openSettings = useUIState((state) => state.openSettings);
 
   const [isOpen, setIsOpen] = useState(false);
   const { signIn, isSigningIn, cancel, reopen } = useDesktopSignIn({
@@ -107,11 +105,11 @@ export const AccountMenu = memo(function AccountMenu() {
   };
 
   const handleOpenSettings = () => {
-    setIsSettingsDialogVisible(true);
+    openSettings();
   };
 
   const handleOpenCollaboration = () => {
-    openSettingsDialog("collaboration");
+    openSettings("collaboration");
   };
 
   const isTeams = Boolean(subscription?.collaboration?.enabled);

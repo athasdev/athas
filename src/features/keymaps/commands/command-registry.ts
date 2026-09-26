@@ -1159,7 +1159,7 @@ const windowCommands: Command[] = [
     category: "Window",
     keybinding: "cmd+,",
     execute: () => {
-      useUIState.getState().setIsSettingsDialogVisible(true);
+      useUIState.getState().openSettings();
     },
   },
   {

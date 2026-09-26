@@ -21,7 +21,7 @@ export function GitHubAuthStatusMessage({
   const checkAuth = useGitHubStore.use.actions().checkAuth;
   const isAthasAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const isAthasAuthLoading = useAuthStore((s) => s.isLoading);
-  const openSettingsDialog = useUIState((s) => s.openSettingsDialog);
+  const openSettings = useUIState((s) => s.openSettings);
   const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
   const [canUseGhCli, setCanUseGhCli] = useState(false);
 
@@ -58,7 +58,7 @@ export function GitHubAuthStatusMessage({
     ? ({ label: "Use GitHub CLI", onClick: () => void useGhCli(), variant: "ghost" } as const)
     : ({
         label: "Use your own token",
-        onClick: () => openSettingsDialog("git", "GitHub Account"),
+        onClick: () => openSettings("git", "GitHub Account"),
         variant: "ghost",
       } as const);
 

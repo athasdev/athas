@@ -35,7 +35,7 @@ vi.mock("@tauri-apps/api/window", () => ({
 }));
 vi.mock("@/features/window/utils/create-app-window", () => ({ createAppWindow: mocks.create }));
 vi.mock("@/features/window/stores/ui-state.store", () => ({
-  useUIState: { getState: () => ({ openSettingsDialog: mocks.settings }) },
+  useUIState: { getState: () => ({ openSettings: mocks.settings }) },
 }));
 vi.mock("sonner", () => ({ toast: { info: mocks.info, error: mocks.error } }));
 vi.mock("@/features/ai/stores/ai-chat.store", () => ({

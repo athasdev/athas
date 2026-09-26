@@ -178,5 +178,5 @@ export function resetZoom(): void {
 }
 
 export function openKeyboardShortcuts(): void {
-  useUIState.getState().openSettingsDialog("keyboard");
+  useUIState.getState().openSettings("keyboard");
 }

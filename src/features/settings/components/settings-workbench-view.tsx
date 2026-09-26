@@ -1,29 +1,22 @@
 import { SharingSettings } from "@/features/sharing/components/sharing-settings";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { SETTINGS_TAB_ITEMS } from "@/features/settings/config/settings-tabs";
+import { useEffect, useRef } from "react";
+import { useResponsiveWorkbenchLayout } from "@/features/layout/hooks/use-responsive-workbench-layout";
+import { useSettingsPage } from "@/features/settings/hooks/use-settings-page";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { getSettingSearchTargetKey } from "@/features/settings/lib/settings-search";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import {
-  resolveSettingsAccess,
-  resolveVisibleSettingsSection,
-} from "@/features/settings/lib/settings-access";
-import { filterVisibleSettingsTabs } from "@/features/settings/lib/settings-tab-visibility";
-import {
-  getSettingSearchTargetKey,
-  SETTINGS_SEARCH_TAB_LABELS,
-} from "@/features/settings/lib/settings-search";
-import { useAuthStore } from "@/features/window/stores/auth.store";
-import { type SettingsTab } from "@/features/window/stores/ui-state/types/ui-state.types";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { Button } from "@/ui/button";
-import { Popover, PopoverContent } from "@/ui/popover";
-import { Empty, EmptyDescription } from "@/ui/empty";
-import { XIcon } from "@/ui/icons";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/ui/dropdown";
+import { ChevronDownIcon } from "@/ui/icons";
 import { Workbench, WorkbenchContent } from "@/ui/workbench";
-import { SearchInput } from "@/ui/search";
-import { cn } from "@/utils/cn";
-import type { SearchResult } from "../types/search.types";
 
-import { SettingsNavigation } from "./settings-navigation";
 import { AdvancedSettings } from "./tabs/advanced-settings";
 import { AccountSettings } from "./tabs/account-settings";
 import { AISettings } from "./tabs/ai-settings";
@@ -38,109 +31,48 @@ import { FileTreeSettings } from "./tabs/file-tree-settings";
 import { NotificationsSettings } from "./tabs/notifications-settings";
 import { TerminalSettings } from "./tabs/terminal-settings";
 
+/**
+ * The Settings page, opened as a tab in the main view. Its navigation and search live in the
+ * workbench sidebar (`SettingsSidebar`); when the sidebar is not showing them, the header offers
+ * a page picker instead.
+ */
 const SettingsWorkbenchView = () => {
-  const {
-    settingsInitialTab,
-    settingsInitialSection,
-    settingsNavigationRequestId,
-    setSettingsInitialTab,
-    setSettingsInitialSection,
-    setIsSettingsDialogVisible,
-    activeSidebarView,
-    setActiveView,
-  } = useUIState();
-  const [activeTab, setActiveTab] = useState<SettingsTab>("general");
+  const settingsInitialSection = useUIState((state) => state.settingsInitialSection);
+  const settingsNavigationRequestId = useUIState((state) => state.settingsNavigationRequestId);
+  const isSidebarVisible = useUIState((state) => state.isSidebarVisible);
+  const { narrow } = useResponsiveWorkbenchLayout();
+  const isSettingsTabActive = useBufferStore(
+    (state) =>
+      state.buffers.find((buffer) => buffer.id === state.activeBufferId)?.type === "settings",
+  );
   const lastSettingsTab = useSettingsStore((state) => state.settings.lastSettingsTab);
   const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
-  const subscription = useAuthStore((state) => state.subscription);
-  const settingsAccess = resolveSettingsAccess(subscription);
-  const { canShowEnterpriseSettings, canShowCollaborationSettings } = settingsAccess;
-
   const clearSearch = useSettingsStore((state) => state.actions.clearSearch);
-  const searchQuery = useSettingsStore((state) => state.search.query);
-  const searchResults = useSettingsStore((state) => state.search.results);
-  const selectedResultId = useSettingsStore((state) => state.search.selectedResultId);
-  const selectSearchResult = useSettingsStore((state) => state.actions.selectSearchResult);
-  const setSearchQuery = useSettingsStore((state) => state.actions.setSearchQuery);
-  const contentRef = useRef<HTMLDivElement>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  const searchInputAnchorRef = useRef<HTMLDivElement>(null);
-  const [isSearchDropdownOpen, setIsSearchDropdownOpen] = useState(false);
-
-  useEffect(() => {
-    if (activeSidebarView === "settings") setActiveView("files");
-  }, [activeSidebarView, setActiveView]);
-
-  useEffect(() => {
-    const frameId = window.requestAnimationFrame(() => {
-      searchInputRef.current?.focus({ preventScroll: true });
-    });
-    return () => window.cancelAnimationFrame(frameId);
-  }, []);
-
-  const resolveVisibleTab = useCallback(
-    (tab: SettingsTab) =>
-      resolveVisibleSettingsSection(tab, {
-        canShowCollaborationSettings,
-        canShowEnterpriseSettings,
-      }),
-    [canShowCollaborationSettings, canShowEnterpriseSettings],
-  );
-  const visibleSearchResults = useMemo(
-    () => searchResults.filter((result) => resolveVisibleTab(result.tab) === result.tab),
-    [resolveVisibleTab, searchResults],
-  );
-  const visibleSearchDropdownResults = visibleSearchResults.slice(0, 12);
-  const visibleTabs = filterVisibleSettingsTabs(SETTINGS_TAB_ITEMS, {
-    ...settingsAccess,
-    matchingTabs: null,
-  });
-  useEffect(() => {
-    const requestedTab = settingsInitialTab ?? lastSettingsTab;
-    const nextTab = resolveVisibleTab(requestedTab);
-    setActiveTab(nextTab);
-    void updateSetting("lastSettingsTab", nextTab);
-  }, [
-    settingsInitialTab,
-    lastSettingsTab,
-    canShowEnterpriseSettings,
+  const {
+    activeTab,
+    visibleTabs,
+    selectTab,
     canShowCollaborationSettings,
-    updateSetting,
-  ]);
+    canShowEnterpriseSettings,
+    searchResults,
+    selectedResultId,
+  } = useSettingsPage();
+  const setIsSettingsPageActive = useUIState((state) => state.setIsSettingsPageActive);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const sidebarShowsNavigation = isSidebarVisible && !narrow && isSettingsTabActive;
 
-  const handleTabChange = (tab: SettingsTab) => {
-    const nextTab = resolveVisibleTab(tab);
-    setActiveTab(nextTab);
-    setSettingsInitialTab(nextTab);
-    void updateSetting("lastSettingsTab", nextTab);
-  };
+  // The sidebar shows Settings' navigation while this page is the active tab.
+  useEffect(() => {
+    setIsSettingsPageActive(isSettingsTabActive);
+    return () => setIsSettingsPageActive(false);
+  }, [isSettingsTabActive, setIsSettingsPageActive]);
 
-  const navigateToSearchResult = useCallback(
-    (result: SearchResult) => {
-      const nextTab = resolveVisibleTab(result.tab);
-      if (nextTab !== result.tab) return;
+  // Pages opened directly (openSettings("ai")) become the page Settings reopens on.
+  useEffect(() => {
+    if (activeTab !== lastSettingsTab) void updateSetting("lastSettingsTab", activeTab);
+  }, [activeTab, lastSettingsTab, updateSetting]);
 
-      setActiveTab(nextTab);
-      setSettingsInitialTab(nextTab);
-      setSettingsInitialSection(result.section);
-      void updateSetting("lastSettingsTab", nextTab);
-      selectSearchResult(result.id);
-      setIsSearchDropdownOpen(false);
-    },
-    [
-      resolveVisibleTab,
-      selectSearchResult,
-      setSettingsInitialSection,
-      setSettingsInitialTab,
-      updateSetting,
-    ],
-  );
-  useEffect(
-    () => () => {
-      clearSearch();
-    },
-    [clearSearch],
-  );
+  useEffect(() => () => clearSearch(), [clearSearch]);
 
   useEffect(() => {
     if (!settingsInitialSection) return;
@@ -181,7 +113,7 @@ const SettingsWorkbenchView = () => {
       return;
     }
 
-    const result = visibleSearchResults.find((item) => item.id === selectedResultId);
+    const result = searchResults.find((item) => item.id === selectedResultId);
     if (!result || result.tab !== activeTab) {
       clearSearchHighlights();
       return;
@@ -211,7 +143,7 @@ const SettingsWorkbenchView = () => {
     return () => {
       window.cancelAnimationFrame(frameId);
     };
-  }, [activeTab, selectedResultId, visibleSearchResults]);
+  }, [activeTab, selectedResultId, searchResults]);
 
   useEffect(() => {
     if (!contentRef.current) return;
@@ -256,117 +188,49 @@ const SettingsWorkbenchView = () => {
   const activePanelId = `settings-panel-${activeTab}`;
   const activeTabItem = visibleTabs.find((item) => item.id === activeTab) ?? visibleTabs[0];
 
-  const searchInput = (
-    <div ref={searchInputAnchorRef} className="w-full">
-      <SearchInput
-        inputRef={searchInputRef}
-        placeholder="Search settings..."
-        value={searchQuery}
-        onChange={(value) => {
-          setSearchQuery(value);
-          setIsSearchDropdownOpen(value.trim().length > 0);
-        }}
-        onFocus={() => {
-          if (searchQuery.trim()) setIsSearchDropdownOpen(true);
-        }}
-        onKeyDown={(event) => {
-          if (event.key === "Escape") {
-            setIsSearchDropdownOpen(false);
-            return;
-          }
-
-          if (event.key !== "Enter") return;
-          const firstResult = visibleSearchResults[0];
-          if (!firstResult) return;
-          event.preventDefault();
-          navigateToSearchResult(firstResult);
-        }}
-      />
-    </div>
+  const pagePicker = sidebarShowsNavigation ? null : (
+    <DropdownMenu>
+      <DropdownMenuTrigger render={<Button variant="ghost" aria-label="Settings pages" />}>
+        {activeTabItem?.label ?? "Settings"}
+        <ChevronDownIcon />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuRadioGroup
+          value={activeTab}
+          onValueChange={(value) => selectTab(value as typeof activeTab)}
+        >
+          {visibleTabs.map((item) => {
+            const Icon = item.icon;
+            return (
+              <DropdownMenuRadioItem key={item.id} value={item.id} closeOnClick>
+                <Icon />
+                {item.label}
+              </DropdownMenuRadioItem>
+            );
+          })}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 
   return (
-    <>
-      <Workbench>
-        <SettingsNavigation
-          activeTab={activeTab}
-          items={visibleTabs}
-          onTabChange={handleTabChange}
-          search={searchInput}
-        >
-          <WorkbenchContent
-            title={activeTabItem?.label ?? "Settings"}
-            description={activeTabItem?.description}
-            pinnedHeader
-            actions={
-              <Button
-                variant="ghost"
-                iconOnly
-                aria-label="Close settings"
-                tooltip="Close"
-                onClick={() => setIsSettingsDialogVisible(false)}
-              >
-                <XIcon />
-              </Button>
-            }
-            viewportProps={{
-              ref: contentRef,
-              id: activePanelId,
-              role: "region",
-              "aria-label": `${activeTabItem?.label ?? "Settings"} settings`,
-              "data-settings-content": "",
-            }}
-          >
-            <div className="@container/settings">{renderTabContent()}</div>
-          </WorkbenchContent>
-        </SettingsNavigation>
-      </Workbench>
-      <Popover
-        open={isSearchDropdownOpen && searchQuery.trim().length > 0}
-        onOpenChange={(open) => !open && setIsSearchDropdownOpen(false)}
+    <Workbench>
+      <WorkbenchContent
+        title={activeTabItem?.label ?? "Settings"}
+        description={activeTabItem?.description}
+        pinnedHeader
+        actions={pagePicker}
+        viewportProps={{
+          ref: contentRef,
+          id: activePanelId,
+          role: "region",
+          "aria-label": `${activeTabItem?.label ?? "Settings"} settings`,
+          "data-settings-content": "",
+        }}
       >
-        <PopoverContent
-          anchor={searchInputAnchorRef}
-          side="bottom"
-          align="start"
-          size="trigger"
-          initialFocus={false}
-          finalFocus={false}
-          className="gap-0 p-0"
-        >
-          <div className="max-h-80 overflow-y-auto p-1">
-            {visibleSearchDropdownResults.length > 0 ? (
-              visibleSearchDropdownResults.map((result) => {
-                const isSelected = selectedResultId === result.id;
-
-                return (
-                  <button
-                    key={result.id}
-                    type="button"
-                    onClick={() => navigateToSearchResult(result)}
-                    className={cn(
-                      "flex w-full flex-col items-start rounded-chrome px-2 py-1.5 text-left font-sans transition-colors duration-fast",
-                      isSelected
-                        ? "bg-primary-soft text-primary"
-                        : "text-foreground hover:bg-accent",
-                    )}
-                  >
-                    <span className="w-full truncate ui-text-sm font-medium">{result.label}</span>
-                    <span className="w-full truncate text-subtle-foreground ui-text-sm">
-                      {SETTINGS_SEARCH_TAB_LABELS[result.tab]} / {result.section}
-                    </span>
-                  </button>
-                );
-              })
-            ) : (
-              <Empty variant="inline" className="px-2 py-1.5">
-                <EmptyDescription>No matching settings</EmptyDescription>
-              </Empty>
-            )}
-          </div>
-        </PopoverContent>
-      </Popover>
-    </>
+        <div className="@container/settings">{renderTabContent()}</div>
+      </WorkbenchContent>
+    </Workbench>
   );
 };
 

@@ -180,7 +180,6 @@ const GitBranchManager = ({
       state.isQuickOpenVisible ||
       state.isCommandPaletteVisible ||
       state.isGlobalSearchVisible ||
-      state.isSettingsDialogVisible ||
       state.isProjectPickerVisible ||
       state.isDatabaseConnectionVisible,
   );

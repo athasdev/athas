@@ -44,7 +44,6 @@ export default function RunActionsButton() {
       state.isQuickOpenVisible ||
       state.isCommandPaletteVisible ||
       state.isGlobalSearchVisible ||
-      state.isSettingsDialogVisible ||
       state.isProjectPickerVisible ||
       state.isDatabaseConnectionVisible,
   );

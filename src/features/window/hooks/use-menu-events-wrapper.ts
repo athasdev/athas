@@ -274,7 +274,7 @@ export function useMenuEventsWrapper() {
       );
     },
     onOpenSettings: () => {
-      useUIState.getState().openSettingsDialog("general");
+      useUIState.getState().openSettings("general");
     },
     onOpenExtensions: () => {
       useBufferStore.getState().actions.openExtensionsBuffer();

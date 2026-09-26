@@ -25,7 +25,7 @@ interface NavigationActionsParams {
   setBottomPaneActiveTab: (tab: BottomPaneTab) => void;
   setIsQuickOpenVisible: (v: boolean) => void;
   openCommandPaletteView?: (view: "outline") => void;
-  openSettingsDialog: (tab?: SettingsTab) => void;
+  openSettings: (tab?: SettingsTab) => void;
   hasActiveEditor: boolean;
   onClose: () => void;
 }

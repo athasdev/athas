@@ -173,7 +173,7 @@ async function openSettingsFromDeepLink(
   _extensionsCategory?: Settings["extensionsActiveTab"],
 ) {
   const { useUIState } = await import("@/features/window/stores/ui-state.store");
-  useUIState.getState().openSettingsDialog(tab);
+  useUIState.getState().openSettings(tab);
 }
 
 async function openExtensionsTabFromDeepLink(extensionsCategory?: Settings["extensionsActiveTab"]) {

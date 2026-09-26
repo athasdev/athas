@@ -510,7 +510,7 @@ export function ChatPreferencesMenu({
             Log out of agent
           </DropdownMenuItem>
         ) : null}
-        <DropdownMenuItem onClick={() => useUIState.getState().openSettingsDialog("ai")}>
+        <DropdownMenuItem onClick={() => useUIState.getState().openSettings("ai")}>
           AI settings…
         </DropdownMenuItem>
       </DropdownMenuContent>

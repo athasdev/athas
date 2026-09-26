@@ -77,7 +77,6 @@ interface CommandPaletteContentProps {
 const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteContentProps) => {
   // Get data from stores
   const setIsCommandPaletteVisible = useUIState((state) => state.setIsCommandPaletteVisible);
-  const setIsSettingsDialogVisible = useUIState((state) => state.setIsSettingsDialogVisible);
   const isSidebarVisible = useUIState((state) => state.isSidebarVisible);
   const setIsSidebarVisible = useUIState((state) => state.setIsSidebarVisible);
   const isBottomPaneVisible = useUIState((state) => state.isBottomPaneVisible);
@@ -87,7 +86,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
   const setActiveView = useUIState((state) => state.setActiveView);
   const setIsQuickOpenVisible = useUIState((state) => state.setIsQuickOpenVisible);
   const openCommandPaletteView = useUIState((state) => state.openCommandPaletteView);
-  const openSettingsDialog = useUIState((state) => state.openSettingsDialog);
+  const openSettings = useUIState((state) => state.openSettings);
   const { openQuickEdit } = useEditorAppStore.use.actions();
   const handleFileSelect = useFileSystemStore.use.handleFileSelect?.();
   const onClose = () => {
@@ -290,8 +289,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
     ...createSettingsActions({
       query,
       settings: commandSettings,
-      setIsSettingsDialogVisible,
-      openSettingsDialog,
+      openSettings,
       setSettingsSearchQuery: useSettingsStore.getState().actions.setSearchQuery,
       pushPaletteView: pushView,
       updateSetting: useSettingsStore.getState().actions.updateSetting as (
@@ -311,7 +309,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
       setBottomPaneActiveTab,
       setIsQuickOpenVisible,
       openCommandPaletteView,
-      openSettingsDialog,
+      openSettings,
       hasActiveEditor: activeBuffer?.type === "editor",
       onClose,
     }),

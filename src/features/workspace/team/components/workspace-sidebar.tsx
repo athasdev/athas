@@ -105,7 +105,7 @@ export function WorkspaceSidebar() {
           <Button
             variant="ghost"
             width="full"
-            onClick={() => useUIState.getState().openSettingsDialog("enterprise")}
+            onClick={() => useUIState.getState().openSettings("enterprise")}
           >
             Organization controls
           </Button>

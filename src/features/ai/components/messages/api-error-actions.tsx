@@ -34,7 +34,7 @@ export function ApiErrorActions({
       setBusy(false);
     }
   };
-  const openSettings = () => useUIState.getState().openSettingsDialog("ai");
+  const openSettings = () => useUIState.getState().openSettings("ai");
   const recover = () => {
     if (hosted && payment)
       return openUrl(new URL(new URL(services.dashboardBillingUrl).pathname, getApiBase()).href);
