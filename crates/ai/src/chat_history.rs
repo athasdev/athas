@@ -16,6 +16,9 @@ pub struct ChatData {
    pub branch: Option<String>,
    pub is_pinned: bool,
    pub archived_at: Option<i64>,
+   /// The agent session options the user picked for this chat (mode, config options), as JSON.
+   #[serde(default)]
+   pub session_settings: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -92,7 +95,8 @@ impl ChatHistoryRepository {
                model_id TEXT,
                branch TEXT,
                is_pinned BOOLEAN DEFAULT 0,
-               archived_at INTEGER
+               archived_at INTEGER,
+               session_settings TEXT
            )",
             [],
          )
@@ -112,6 +116,7 @@ impl ChatHistoryRepository {
          [],
       );
       let _ = conn.execute("ALTER TABLE chats ADD COLUMN archived_at INTEGER", []);
+      let _ = conn.execute("ALTER TABLE chats ADD COLUMN session_settings TEXT", []);
 
       conn
          .execute(
@@ -204,8 +209,8 @@ impl ChatHistoryRepository {
 
       match conn.execute(
          "INSERT OR REPLACE INTO chats (id, title, created_at, last_message_at, agent_id, \
-          acp_session_id, workspace_path, provider_id, model_id, branch, is_pinned, archived_at) \
-          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
+          acp_session_id, workspace_path, provider_id, model_id, branch, is_pinned, archived_at, \
+          session_settings) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
          params![
             chat.id,
             chat.title,
@@ -218,7 +223,8 @@ impl ChatHistoryRepository {
             chat.model_id,
             chat.branch,
             chat.is_pinned,
-            chat.archived_at
+            chat.archived_at,
+            chat.session_settings
          ],
       ) {
          Ok(_) => {}
@@ -298,8 +304,8 @@ impl ChatHistoryRepository {
       let mut stmt = conn
          .prepare(
             "SELECT id, title, created_at, last_message_at, agent_id, acp_session_id, \
-             workspace_path, provider_id, model_id, branch, is_pinned, archived_at FROM chats \
-             ORDER BY is_pinned DESC, last_message_at DESC",
+             workspace_path, provider_id, model_id, branch, is_pinned, archived_at, \
+             session_settings FROM chats ORDER BY is_pinned DESC, last_message_at DESC",
          )
          .map_err(|e| format!("Failed to prepare query: {}", e))?;
 
@@ -316,7 +322,7 @@ impl ChatHistoryRepository {
          .execute(
             "UPDATE chats SET title = ?2, last_message_at = ?3, agent_id = ?4, acp_session_id = \
              ?5, workspace_path = ?6, provider_id = ?7, model_id = ?8, branch = ?9, is_pinned = \
-             ?10, archived_at = ?11 WHERE id = ?1",
+             ?10, archived_at = ?11, session_settings = ?12 WHERE id = ?1",
             params![
                chat.id,
                chat.title,
@@ -328,7 +334,8 @@ impl ChatHistoryRepository {
                chat.model_id,
                chat.branch,
                chat.is_pinned,
-               chat.archived_at
+               chat.archived_at,
+               chat.session_settings
             ],
          )
          .map_err(|e| format!("Failed to update chat metadata: {}", e))?;
@@ -341,8 +348,8 @@ impl ChatHistoryRepository {
       let mut stmt = conn
          .prepare(
             "SELECT id, title, created_at, last_message_at, agent_id, acp_session_id, \
-             workspace_path, provider_id, model_id, branch, is_pinned, archived_at FROM chats \
-             WHERE id = ?1",
+             workspace_path, provider_id, model_id, branch, is_pinned, archived_at, \
+             session_settings FROM chats WHERE id = ?1",
          )
          .map_err(|e| format!("Failed to prepare chat query: {}", e))?;
 
@@ -403,7 +410,7 @@ impl ChatHistoryRepository {
          .prepare(
             "SELECT DISTINCT c.id, c.title, c.created_at, c.last_message_at, c.agent_id, \
              c.acp_session_id, c.workspace_path, c.provider_id, c.model_id, c.branch, \
-             c.is_pinned, c.archived_at
+             c.is_pinned, c.archived_at, c.session_settings
              FROM chats c
                 LEFT JOIN messages m ON c.id = m.chat_id
                 WHERE c.title LIKE ?1 OR m.content LIKE ?1
@@ -509,6 +516,7 @@ fn map_chat_row(row: &rusqlite::Row<'_>) -> SqliteResult<ChatData> {
       branch: row.get(9)?,
       is_pinned: row.get(10)?,
       archived_at: row.get(11)?,
+      session_settings: row.get(12)?,
    })
 }
 
@@ -562,5 +570,32 @@ mod tests {
          Some("max_tokens")
       );
       assert_eq!(loaded.messages[0].content, "");
+      assert!(loaded.chat.session_settings.is_none());
+   }
+
+   #[test]
+   fn keeps_a_chats_session_settings() {
+      let directory = tempfile::tempdir().unwrap();
+      let path = directory.path().join("history.db");
+      let repository = ChatHistoryRepository::new(path);
+      repository.initialize().unwrap();
+      let mut chat: ChatData = serde_json::from_value(serde_json::json!({
+         "id": "chat", "title": "Chat", "created_at": 1, "last_message_at": 2,
+         "is_pinned": false
+      }))
+      .unwrap();
+      repository.save_chat(chat.clone(), vec![], vec![]).unwrap();
+
+      let settings = r#"{"modeId":"plan","configOptions":{"model":"fast"}}"#.to_string();
+      chat.session_settings = Some(settings.clone());
+      repository.update_chat_metadata(chat).unwrap();
+      assert_eq!(
+         repository.load_chat("chat").unwrap().chat.session_settings,
+         Some(settings.clone())
+      );
+      assert_eq!(
+         repository.load_all_chats().unwrap()[0].session_settings,
+         Some(settings)
+      );
    }
 }

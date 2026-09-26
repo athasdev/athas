@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { parseChatSessionSettings } from "@/features/ai/lib/chat-session-settings";
 import type { AgentType, Chat, ToolCall } from "@/features/ai/types/ai-chat.types";
 import { coalesceAssistantResponses } from "@/features/ai/lib/assistant-response";
 import { normalizeMessageFollowUpActions } from "@/features/ai/lib/follow-up-actions";
@@ -22,6 +23,7 @@ interface ChatData {
   branch: string | null;
   is_pinned: boolean;
   archived_at: number | null;
+  session_settings?: string | null;
 }
 
 interface MessageData {
@@ -116,6 +118,7 @@ function chatToData(chat: Chat): {
     branch: chat.branch || null,
     is_pinned: chat.isPinned || false,
     archived_at: chat.archivedAt?.getTime() ?? null,
+    session_settings: chat.sessionSettings ? JSON.stringify(chat.sessionSettings) : null,
   };
 
   const messages: MessageData[] = chat.messages.map((msg) => ({
@@ -207,6 +210,7 @@ function dataToChat(data: ChatWithMessages): Chat {
     branch: data.chat.branch,
     isPinned: data.chat.is_pinned,
     archivedAt: data.chat.archived_at ? new Date(data.chat.archived_at) : null,
+    sessionSettings: parseChatSessionSettings(data.chat.session_settings),
   };
 }
 
@@ -273,6 +277,7 @@ export const loadAllChatsFromDb = async (): Promise<Omit<Chat, "messages">[]> =>
       branch: chat.branch,
       isPinned: chat.is_pinned,
       archivedAt: chat.archived_at ? new Date(chat.archived_at) : null,
+      sessionSettings: parseChatSessionSettings(chat.session_settings),
     }));
   } catch (error) {
     console.error("Error loading chats from database:", error);

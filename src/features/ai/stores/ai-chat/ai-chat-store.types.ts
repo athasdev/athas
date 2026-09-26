@@ -139,6 +139,11 @@ export interface AIChatActions {
     configId: string,
     value: SessionConfigValue,
   ) => Promise<void>;
+  /**
+   * Applies the chat's saved mode and config picks to its reattached session, once per session,
+   * where the session still offers them.
+   */
+  restoreChatSessionSettings: (sessionId: string) => void;
 
   getWorkspaceSessionSnapshot: () => AIWorkspaceSessionSnapshot;
   restoreWorkspaceSession: (snapshot: AIWorkspaceSessionSnapshot | null | undefined) => void;

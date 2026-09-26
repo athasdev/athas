@@ -52,6 +52,7 @@ vi.mock("@/features/ai/stores/ai-chat.store", () => ({
         getCurrentChat: vi.fn(),
         setAcpAgentStatus: vi.fn(),
         setChatAcpSessionId: vi.fn(),
+        restoreChatSessionSettings: vi.fn(),
       },
     })),
   },

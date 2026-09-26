@@ -105,6 +105,14 @@ export interface Chat {
   branch?: string | null;
   isPinned?: boolean;
   archivedAt?: Date | null;
+  /** The agent session options the user picked, applied again when the session reattaches. */
+  sessionSettings?: ChatSessionSettings | null;
+}
+
+/** A chat's picks among what its agent session offers. */
+export interface ChatSessionSettings {
+  modeId?: string;
+  configOptions?: Record<string, string | boolean>;
 }
 
 export interface AIChatProps {

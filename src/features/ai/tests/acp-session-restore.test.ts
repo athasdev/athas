@@ -13,6 +13,7 @@ const { actions } = vi.hoisted(() => ({
     getCurrentChat: vi.fn(),
     setAcpAgentStatus: vi.fn(),
     setChatAcpSessionId: vi.fn(),
+    restoreChatSessionSettings: vi.fn(),
   },
 }));
 

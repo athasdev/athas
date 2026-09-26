@@ -41,6 +41,7 @@ type ChatActions = Omit<
   | "clearAcpSession"
   | "changeSessionMode"
   | "changeSessionConfigOption"
+  | "restoreChatSessionSettings"
 >;
 
 const getCurrentWorkspacePath = () => useProjectStore.getState().rootFolderPath || null;

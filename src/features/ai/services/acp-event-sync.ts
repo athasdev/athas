@@ -27,12 +27,14 @@ export function applyAcpEvent(payload: AcpEvent): void {
         payload.modeState.currentModeId,
         payload.modeState.availableModes,
       );
+      actions.restoreChatSessionSettings(payload.sessionId);
       break;
     case "current_mode_update":
       actions.setSessionCurrentMode(payload.sessionId, payload.currentModeId);
       break;
     case "config_options_update":
       actions.setSessionConfigOptions(payload.sessionId, payload.configOptions);
+      actions.restoreChatSessionSettings(payload.sessionId);
       break;
     case "usage_update":
       actions.setSessionUsage(payload.sessionId, payload.usage);

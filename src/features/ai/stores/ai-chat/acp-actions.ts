@@ -1,5 +1,12 @@
+import { invoke } from "@tauri-apps/api/core";
 import type { AcpSessionState } from "@/features/ai/types/acp.types";
 import { getAcpAgentKey } from "@/features/ai/lib/acp-session-state";
+import {
+  getConfigOptionsToRestore,
+  getModeToRestore,
+  withSessionSetting,
+} from "@/features/ai/lib/chat-session-settings";
+import { saveChatMetadataToDb } from "@/features/ai/services/ai-chat-history-service";
 import type { AIChatActions } from "./ai-chat-store.types";
 import type { GetAIChatStore, SetAIChatStore } from "./ai-chat-store-context";
 
@@ -14,7 +21,12 @@ type AcpActions = Pick<
   | "clearAcpSession"
   | "changeSessionMode"
   | "changeSessionConfigOption"
+  | "restoreChatSessionSettings"
 >;
+
+/** Sessions whose saved mode, and saved config options, were already applied. */
+const restoredModes = new Set<string>();
+const restoredConfigOptions = new Set<string>();
 
 function emptySessionState(): AcpSessionState {
   return {
@@ -31,6 +43,22 @@ export function createAcpActions(set: SetAIChatStore, get: GetAIChatStore): AcpA
       state.acpSessions[sessionId] ??= emptySessionState();
       update(state.acpSessions[sessionId]);
     });
+
+  /** Remembers the user's pick on the chat holding `sessionId`, for when it reattaches. */
+  const recordPick = (sessionId: string, pick: Parameters<typeof withSessionSetting>[1]) => {
+    const findChat = () => get().chats.find((chat) => chat.acpSessionId === sessionId);
+    if (!findChat()) return;
+    set((state) => {
+      const chat = state.chats.find((candidate) => candidate.acpSessionId === sessionId);
+      if (chat) chat.sessionSettings = withSessionSetting(chat.sessionSettings, pick);
+    });
+    const chat = findChat();
+    if (chat) {
+      void saveChatMetadataToDb(chat).catch((error) =>
+        console.error("Failed to save the chat's session settings:", error),
+      );
+    }
+  };
 
   return {
     setAcpAgentStatus: (status) =>
@@ -71,11 +99,20 @@ export function createAcpActions(set: SetAIChatStore, get: GetAIChatStore): AcpA
         delete state.acpSessions[sessionId];
       }),
     changeSessionMode: async (sessionId, modeId) => {
+      const previousModeId = get().acpSessions[sessionId]?.modeState.currentModeId ?? null;
+      updateSession(sessionId, (session) => {
+        session.modeState.currentModeId = modeId;
+      });
       try {
-        const { invoke } = await import("@tauri-apps/api/core");
         await invoke("set_acp_session_mode", { sessionId, modeId });
+        recordPick(sessionId, { modeId });
       } catch (error) {
         console.error("Failed to change session mode:", error);
+        updateSession(sessionId, (session) => {
+          if (session.modeState.currentModeId === modeId) {
+            session.modeState.currentModeId = previousModeId;
+          }
+        });
       }
     },
     changeSessionConfigOption: async (sessionId, configId, value) => {
@@ -94,13 +131,35 @@ export function createAcpActions(set: SetAIChatStore, get: GetAIChatStore): AcpA
       });
 
       try {
-        const { invoke } = await import("@tauri-apps/api/core");
         await invoke("set_acp_session_config_option", { args: { sessionId, configId, value } });
+        recordPick(sessionId, { configId, value });
       } catch (error) {
         console.error("Failed to change session config option:", error);
         updateSession(sessionId, (session) => {
           session.configOptions = previousOptions;
         });
+      }
+    },
+    restoreChatSessionSettings: (sessionId) => {
+      // Before the chat knows its session, or before the agent said what it offers, wait for the
+      // next chance instead of giving up.
+      const chat = get().chats.find((candidate) => candidate.acpSessionId === sessionId);
+      const session = get().acpSessions[sessionId];
+      if (!chat?.sessionSettings || !session) return;
+      const { actions } = get();
+      if (!restoredModes.has(sessionId) && session.modeState.availableModes.length > 0) {
+        restoredModes.add(sessionId);
+        const modeId = getModeToRestore(chat.sessionSettings, session.modeState);
+        if (modeId) void actions.changeSessionMode(sessionId, modeId);
+      }
+      if (!restoredConfigOptions.has(sessionId) && session.configOptions.length > 0) {
+        restoredConfigOptions.add(sessionId);
+        for (const { configId, value } of getConfigOptionsToRestore(
+          chat.sessionSettings,
+          session.configOptions,
+        )) {
+          void actions.changeSessionConfigOption(sessionId, configId, value);
+        }
       }
     },
   };
