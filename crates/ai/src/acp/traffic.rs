@@ -6,7 +6,7 @@
 //! something already went wrong and the user opens the inspector afterwards. Lines are parsed
 //! only when they have to be: to redact MCP server secrets, to summarize a line that is cut
 //! short, and to capture `initialize`. Live entries are pushed to the frontend only while an
-//! inspector is subscribed.
+//! inspector is subscribed, in batches every [`FLUSH_INTERVAL`] rather than one event per line.
 
 use super::traffic_secrets::{REDACTED, scrub};
 use agent_client_protocol as acp_sdk;
@@ -21,7 +21,8 @@ use std::{
       Arc, Mutex,
       atomic::{AtomicU64, AtomicUsize, Ordering},
    },
-   time::{SystemTime, UNIX_EPOCH},
+   thread,
+   time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 /// How many entries a process keeps before the oldest are dropped.
@@ -30,6 +31,8 @@ pub(super) const MAX_ENTRIES: usize = 2000;
 pub(super) const MAX_LOG_BYTES: usize = 8 * 1024 * 1024;
 /// Longer lines are cut to this many bytes and marked truncated.
 pub(super) const MAX_LINE_BYTES: usize = 64 * 1024;
+/// How often live entries are sent to a subscribed inspector.
+const FLUSH_INTERVAL: Duration = Duration::from_millis(150);
 /// Stopped processes kept for inspection after more than this many logs exist.
 const MAX_LOGS: usize = 16;
 
@@ -101,10 +104,11 @@ pub struct TrafficBacklog {
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "type", rename_all = "camelCase")]
 pub enum TrafficEvent {
+   /// Entries recorded since the last batch, oldest first.
    #[serde(rename_all = "camelCase")]
-   Entry {
+   Entries {
       process_key: String,
-      entry: TrafficEntry,
+      entries: Vec<TrafficEntry>,
    },
    #[serde(rename_all = "camelCase")]
    Process { process: TrafficProcess },
@@ -208,6 +212,8 @@ struct Inner {
    subscribers: AtomicUsize,
    next_generation: AtomicU64,
    emitter: Mutex<Option<Emitter>>,
+   /// Live entries waiting for the next batch, with the key of their process.
+   pending: Mutex<Vec<(Arc<str>, TrafficEntry)>>,
 }
 
 /// Every agent process's traffic log. Cheap to clone.
@@ -224,6 +230,7 @@ impl Default for TrafficInspector {
             subscribers: AtomicUsize::new(0),
             next_generation: AtomicU64::new(0),
             emitter: Mutex::new(None),
+            pending: Mutex::default(),
          }),
       }
    }
@@ -246,8 +253,27 @@ fn now_ms() -> u64 {
 
 impl TrafficInspector {
    /// Sets where live events go while an inspector is subscribed.
+   /// Starts a thread that sends the pending live entries every [`FLUSH_INTERVAL`] for as long
+   /// as the inspector exists.
    pub fn set_emitter(&self, emitter: impl Fn(TrafficEvent) + Send + Sync + 'static) {
-      *lock(&self.inner.emitter) = Some(Arc::new(emitter));
+      if !self.replace_emitter(emitter) {
+         return;
+      }
+      let inner = Arc::downgrade(&self.inner);
+      let spawned = thread::Builder::new()
+         .name("acp-traffic-flush".to_string())
+         .spawn(move || {
+            loop {
+               thread::sleep(FLUSH_INTERVAL);
+               let Some(inner) = inner.upgrade() else {
+                  return;
+               };
+               TrafficInspector { inner }.flush();
+            }
+         });
+      if let Err(error) = spawned {
+         log::warn!("Failed to start the ACP traffic flush thread: {error}");
+      }
    }
 
    /// An inspector opened: live events start flowing.
@@ -263,6 +289,59 @@ impl TrafficInspector {
          .fetch_update(Ordering::AcqRel, Ordering::Acquire, |count| {
             Some(count.saturating_sub(1))
          });
+      if self.inner.subscribers.load(Ordering::Acquire) == 0 {
+         lock(&self.inner.pending).clear();
+      }
+   }
+
+   /// Sets where live events go, returning whether none was set before. Batches are only sent
+   /// on [`Self::flush`].
+   fn replace_emitter(&self, emitter: impl Fn(TrafficEvent) + Send + Sync + 'static) -> bool {
+      lock(&self.inner.emitter)
+         .replace(Arc::new(emitter))
+         .is_none()
+   }
+
+   fn is_live(&self) -> bool {
+      self.inner.subscribers.load(Ordering::Acquire) > 0 && lock(&self.inner.emitter).is_some()
+   }
+
+   /// Queues a live entry for the next batch. Past [`MAX_ENTRIES`] waiting, the oldest go, as
+   /// they would from the log itself.
+   fn queue(&self, key: &Arc<str>, entry: TrafficEntry) {
+      if !self.is_live() {
+         return;
+      }
+      let mut pending = lock(&self.inner.pending);
+      pending.push((key.clone(), entry));
+      if pending.len() > MAX_ENTRIES {
+         let excess = pending.len() - MAX_ENTRIES;
+         pending.drain(..excess);
+      }
+   }
+
+   /// Sends the entries waiting since the last batch, one event per run of the same process.
+   pub(super) fn flush(&self) {
+      let pending = std::mem::take(&mut *lock(&self.inner.pending));
+      let mut batches: Vec<(Arc<str>, Vec<TrafficEntry>)> = Vec::new();
+      for (key, entry) in pending {
+         match batches.last_mut() {
+            Some((last, entries)) if *last == key => entries.push(entry),
+            _ => batches.push((key, vec![entry])),
+         }
+      }
+      for (key, entries) in batches {
+         self.emit(|| TrafficEvent::Entries {
+            process_key: key.to_string(),
+            entries,
+         });
+      }
+   }
+
+   /// Sends a process or `initialize` event after the entries recorded before it.
+   fn emit_in_order(&self, event: impl FnOnce() -> TrafficEvent) {
+      self.flush();
+      self.emit(event);
    }
 
    fn emit(&self, event: impl FnOnce() -> TrafficEvent) {
@@ -308,7 +387,7 @@ impl TrafficInspector {
          prune_stopped(&mut state.logs);
          summary
       };
-      self.emit(|| TrafficEvent::Process { process: summary });
+      self.emit_in_order(|| TrafficEvent::Process { process: summary });
       TrafficTap {
          inspector: self.clone(),
          key: Arc::from(key),
@@ -319,7 +398,7 @@ impl TrafficInspector {
 
    fn record(
       &self,
-      key: &str,
+      key: &Arc<str>,
       generation: u64,
       secrets: &[String],
       direction: TrafficDirection,
@@ -329,7 +408,7 @@ impl TrafficInspector {
          let mut state = lock(&self.inner.state);
          let Some(log) = state
             .logs
-            .get_mut(key)
+            .get_mut(&**key)
             .filter(|log| log.generation == generation)
          else {
             return;
@@ -343,15 +422,12 @@ impl TrafficInspector {
          )
       };
       if let Some(initialize) = initialize {
-         self.emit(|| TrafficEvent::Initialize {
+         self.emit_in_order(|| TrafficEvent::Initialize {
             process_key: key.to_string(),
             initialize,
          });
       }
-      self.emit(|| TrafficEvent::Entry {
-         process_key: key.to_string(),
-         entry,
-      });
+      self.queue(key, entry);
    }
 
    fn mark_stopped(&self, key: &str, generation: u64) {
@@ -370,7 +446,7 @@ impl TrafficInspector {
          log.running = false;
          log.summary(key)
       };
-      self.emit(|| TrafficEvent::Process { process: summary });
+      self.emit_in_order(|| TrafficEvent::Process { process: summary });
    }
 
    /// Every process with a log, running ones first.
@@ -912,19 +988,59 @@ mod tests {
       let (inspector, tap, _) = inspector_with_process();
       let received = Arc::new(Mutex::new(Vec::new()));
       let sink = received.clone();
-      inspector.set_emitter(move |event| lock(&sink).push(event));
+      inspector.replace_emitter(move |event| lock(&sink).push(event));
       tap.record(TrafficDirection::Stderr, "unseen");
       inspector.subscribe();
       tap.record(TrafficDirection::Stderr, "seen");
+      inspector.flush();
+      tap.record(TrafficDirection::Stderr, "dropped on unsubscribe");
       inspector.unsubscribe();
       inspector.unsubscribe();
       tap.record(TrafficDirection::Stderr, "unseen again");
+      inspector.flush();
       let received = lock(&received);
       assert_eq!(received.len(), 1);
       assert!(matches!(
          &received[0],
-         TrafficEvent::Entry { entry, .. } if entry.line == "seen"
+         TrafficEvent::Entries { entries, .. } if entries.len() == 1 && entries[0].line == "seen"
       ));
+   }
+
+   #[test]
+   fn batches_live_entries_per_process_in_order() {
+      let inspector = TrafficInspector::default();
+      let received = Arc::new(Mutex::new(Vec::new()));
+      let sink = received.clone();
+      inspector.replace_emitter(move |event| lock(&sink).push(event));
+      inspector.subscribe();
+      let first = inspector.start_process("a", "A", None, Vec::new());
+      let second = inspector.start_process("b", "B", None, Vec::new());
+      lock(&received).clear();
+      first.record(TrafficDirection::Stderr, "a1");
+      first.record(TrafficDirection::Stderr, "a2");
+      second.record(TrafficDirection::Stderr, "b1");
+      // A process event goes out after the entries recorded before it.
+      drop(StopOnDrop(first));
+      let received = lock(&received);
+      let lines = |event: &TrafficEvent| match event {
+         TrafficEvent::Entries {
+            process_key,
+            entries,
+         } => format!(
+            "{process_key}:{}",
+            entries
+               .iter()
+               .map(|entry| entry.line.as_str())
+               .collect::<Vec<_>>()
+               .join(",")
+         ),
+         TrafficEvent::Process { process } => format!("process {}", process.process_key),
+         TrafficEvent::Initialize { .. } => "initialize".to_string(),
+      };
+      assert_eq!(
+         received.iter().map(lines).collect::<Vec<_>>(),
+         vec!["a:a1,a2", "b:b1", "process a"]
+      );
    }
 
    #[test]

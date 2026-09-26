@@ -25,8 +25,8 @@ function upsertProcess(
 
 /**
  * The agent processes the inspector can show and the traffic of the selected one. Live lines
- * arrive as `acp-traffic` events while the inspector is mounted and are applied in small batches
- * so a streaming agent does not re-render the log for every line.
+ * arrive as batched `acp-traffic` events while the inspector is mounted and are applied on a
+ * timer so a streaming agent does not re-render the log for every batch.
  */
 export function useAcpTraffic() {
   const [processes, setProcesses] = useState<AcpTrafficProcess[]>([]);
@@ -92,7 +92,7 @@ export function useAcpTraffic() {
           setInitialize(payload.initialize);
           return;
         }
-        pendingRef.current.push(payload.entry);
+        pendingRef.current.push(...payload.entries);
       });
       if (disposed) {
         stopListening();

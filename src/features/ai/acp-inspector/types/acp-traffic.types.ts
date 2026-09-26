@@ -39,7 +39,7 @@ export interface AcpTrafficBacklog {
 
 /** The `acp-traffic` event payload. */
 export type AcpTrafficEvent =
-  | { type: "entry"; processKey: string; entry: AcpTrafficEntry }
+  | { type: "entries"; processKey: string; entries: AcpTrafficEntry[] }
   | { type: "process"; process: AcpTrafficProcess }
   | { type: "initialize"; processKey: string; initialize: AcpInitializeExchange };
 
