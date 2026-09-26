@@ -28,6 +28,11 @@ import { getAgentMessageAccess } from "@/features/ai/lib/agent-message-access";
 import { startAssistantResponseContinuation } from "@/features/ai/lib/assistant-response";
 import { claimRunAbortController } from "@/features/ai/lib/run-abort-controller";
 import {
+  beginQueuedSendNow,
+  setQueuedMessageEditing,
+  settleQueuedSendNow,
+} from "@/features/ai/lib/agent-queue-controls";
+import {
   cancelUnfinishedToolCalls,
   createToolCall,
   markToolCallComplete,
@@ -40,7 +45,11 @@ import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
 import { CodexIntegrationService } from "@/features/ai/integrations/codex/codex-integration-service";
 import { CODEX_INTEGRATION_ID } from "@/features/ai/integrations/integration-registry";
 import { getChatCompletionStream, isAcpAgent } from "@/features/ai/services/ai-chat-service";
-import type { ImageContent, RestoredComposerPrompt } from "@/features/ai/types/ai-chat.types";
+import type {
+  ImageContent,
+  QueuedAgentMessage,
+  RestoredComposerPrompt,
+} from "@/features/ai/types/ai-chat.types";
 import {
   type AgentRunEnding,
   continuesAgentQueue,
@@ -408,6 +417,8 @@ const AIChat = memo(function AIChat({
     runId: string,
     ending: AgentRunEnding = "completed",
   ) {
+    // A "Send now" that stopped this turn has its prompt starting now.
+    settleQueuedSendNow(targetChatId);
     if (useAIChatStore.getState().agentRuns[targetChatId]?.runId !== runId) return;
     const actions = useAIChatStore.getState().actions;
     actions.finishAgentRun(targetChatId, runId);
@@ -1224,6 +1235,8 @@ details: ${errorDetails || mainError}
     const store = useAIChatStore.getState();
     const message = store.agentMessageQueues[effectiveChatId]?.[index];
     if (!message) return;
+    // A quick second click must not reorder the queue or stop the turn the first one started.
+    if (!beginQueuedSendNow(effectiveChatId)) return;
     if (store.agentRuns[effectiveChatId]) {
       // It runs next: the stopped turn winds down before this prompt starts.
       store.actions.moveQueuedAgentMessage(effectiveChatId, index, 0);
@@ -1234,12 +1247,30 @@ details: ${errorDetails || mainError}
     if (sendMessage(message.content, message.images).accepted) {
       store.actions.removeQueuedAgentMessage(effectiveChatId, index);
     }
+    settleQueuedSendNow(effectiveChatId);
   };
 
   const processMessageRef = useRef(processMessage);
   useLayoutEffect(() => {
     processMessageRef.current = processMessage;
   });
+
+  const handleEditQueuedMessage = useCallback(
+    (message: QueuedAgentMessage | null) => {
+      if (!effectiveChatId) return;
+      const resume = setQueuedMessageEditing(effectiveChatId, message);
+      // The queue waited for this edit when the last turn ended; send the next message now.
+      if (!resume || useAIChatStore.getState().agentRuns[effectiveChatId]) return;
+      const next = useAIChatStore.getState().actions.dequeueAgentMessage(effectiveChatId);
+      if (next) {
+        void processMessageRef.current(next.content, {
+          targetChatId: effectiveChatId,
+          images: next.images,
+        });
+      }
+    },
+    [effectiveChatId],
+  );
 
   const handleEditUserMessage = useCallback(
     (messageId: string, content: string) => {
@@ -1383,6 +1414,7 @@ details: ${errorDetails || mainError}
         }
       }}
       onSendQueuedMessageNow={handleSendQueuedMessageNow}
+      onEditQueuedMessage={handleEditQueuedMessage}
       onStopStreaming={stopStreaming}
       restoredPrompt={refusedPrompt}
     />

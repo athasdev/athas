@@ -110,6 +110,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
   onUpdateQueuedMessage,
   onRemoveQueuedMessage,
   onSendQueuedMessageNow,
+  onEditQueuedMessage,
   onStopStreaming,
   restoredPrompt,
 }: AIChatInputBarProps) {
@@ -1120,6 +1121,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
           onMove={onMoveQueuedMessage}
           onRemove={onRemoveQueuedMessage}
           onSendNow={onSendQueuedMessageNow}
+          onEditingChange={onEditQueuedMessage}
         />
       )}
       <Composer

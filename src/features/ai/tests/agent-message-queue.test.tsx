@@ -18,8 +18,33 @@ vi.mock("@/features/ai/services/ai-chat-history-service", () => ({
 
 import { AgentMessageQueue } from "../components/input/agent-message-queue";
 import { continuesAgentQueue, getAgentRunEnding } from "../lib/agent-message-queue";
+import {
+  beginQueuedSendNow,
+  setQueuedMessageEditing,
+  settleQueuedSendNow,
+} from "../lib/agent-queue-controls";
 import { useAIChatStore } from "../stores/ai-chat.store";
 import type { QueuedAgentMessage } from "../types/ai-chat.types";
+
+describe("queued send now", () => {
+  it("ignores a second send now until the first one's turn has started", () => {
+    const scheduled: Array<() => void> = [];
+    const schedule = (callback: () => void) => void scheduled.push(callback);
+    expect(beginQueuedSendNow("send-chat", 1_000)).toBe(true);
+    expect(beginQueuedSendNow("send-chat", 1_100)).toBe(false);
+    expect(beginQueuedSendNow("other-chat", 1_100)).toBe(true);
+
+    // The turn started right away, so a double click is still held off for a moment.
+    settleQueuedSendNow("send-chat", 1_200, schedule);
+    expect(beginQueuedSendNow("send-chat", 1_300)).toBe(false);
+    scheduled.forEach((callback) => callback());
+    expect(beginQueuedSendNow("send-chat", 1_400)).toBe(true);
+
+    settleQueuedSendNow("send-chat", 5_000, schedule);
+    settleQueuedSendNow("other-chat", 5_000, schedule);
+    expect(beginQueuedSendNow("send-chat", 5_000)).toBe(true);
+  });
+});
 
 describe("agent message queue policy", () => {
   it("moves on only after a turn that ended normally or was interrupted to send now", () => {
@@ -43,6 +68,32 @@ describe("agent message queue policy", () => {
 describe("agent message queue store", () => {
   beforeEach(() => {
     useAIChatStore.setState({ agentMessageQueues: {} });
+  });
+
+  it("does not send a message the user is editing and resumes when the edit ends", () => {
+    const actions = useAIChatStore.getState().actions;
+    actions.enqueueAgentMessage("edit-chat", "first");
+    actions.enqueueAgentMessage("edit-chat", "second");
+    const [first] = useAIChatStore.getState().agentMessageQueues["edit-chat"];
+
+    setQueuedMessageEditing("edit-chat", first);
+    expect(actions.dequeueAgentMessage("edit-chat")).toBeNull();
+    expect(useAIChatStore.getState().agentMessageQueues["edit-chat"]).toHaveLength(2);
+
+    expect(setQueuedMessageEditing("edit-chat", null)).toBe(true);
+    expect(setQueuedMessageEditing("edit-chat", null)).toBe(false);
+    expect(actions.dequeueAgentMessage("edit-chat")).toEqual({ content: "first" });
+  });
+
+  it("keeps sending when the user edits a later message", () => {
+    const actions = useAIChatStore.getState().actions;
+    actions.enqueueAgentMessage("later-chat", "first");
+    actions.enqueueAgentMessage("later-chat", "second");
+    const second = useAIChatStore.getState().agentMessageQueues["later-chat"][1];
+
+    setQueuedMessageEditing("later-chat", second);
+    expect(actions.dequeueAgentMessage("later-chat")).toEqual({ content: "first" });
+    expect(setQueuedMessageEditing("later-chat", null)).toBe(false);
   });
 
   it("edits a queued message's text and keeps its images", () => {

@@ -158,6 +158,8 @@ export interface AIChatInputBarProps {
   onRemoveQueuedMessage: (index: number) => void;
   /** Sends a queued message next, stopping the running turn first. */
   onSendQueuedMessageNow: (index: number) => void;
+  /** The queued message being edited, or null once the edit ends. */
+  onEditQueuedMessage?: (message: QueuedAgentMessage | null) => void;
   onStopStreaming: () => void;
   /** Put back into the composer when it is empty; a new `id` restores again. */
   restoredPrompt?: RestoredComposerPrompt | null;

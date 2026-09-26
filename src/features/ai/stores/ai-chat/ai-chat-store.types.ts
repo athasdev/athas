@@ -81,6 +81,7 @@ export interface AIChatActions {
   finishAgentRun: (chatId: string, runId: string) => void;
   enqueueAgentMessage: (chatId: string, message: string, images?: ImageContent[]) => void;
   prependAgentMessage: (chatId: string, message: string, images?: ImageContent[]) => void;
+  /** Takes the next queued message; null when there is none or the user is editing it. */
   dequeueAgentMessage: (chatId: string) => QueuedAgentMessage | null;
   moveQueuedAgentMessage: (chatId: string, fromIndex: number, toIndex: number) => void;
   /** Rewrites a queued message's text; its images stay attached. */

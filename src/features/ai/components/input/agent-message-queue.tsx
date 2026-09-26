@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowDownIcon,
   ArrowUpIcon,
@@ -23,6 +23,8 @@ interface AgentMessageQueueProps {
   onMove: (fromIndex: number, toIndex: number) => void;
   onRemove: (index: number) => void;
   onSendNow: (index: number) => void;
+  /** The message being edited, or null once the edit ends. */
+  onEditingChange?: (message: QueuedAgentMessage | null) => void;
 }
 
 function imageCountLabel(message: QueuedAgentMessage): string {
@@ -38,12 +40,20 @@ export function AgentMessageQueue({
   onMove,
   onRemove,
   onSendNow,
+  onEditingChange,
 }: AgentMessageQueueProps) {
   const [isOpen, setIsOpen] = useState(true);
   // Held by reference: the queue can shift while the user types if a turn ends.
   const [editing, setEditing] = useState<{ message: QueuedAgentMessage; draft: string } | null>(
     null,
   );
+
+  const editedMessage = editing?.message ?? null;
+  useEffect(() => {
+    if (!editedMessage) return;
+    onEditingChange?.(editedMessage);
+    return () => onEditingChange?.(null);
+  }, [editedMessage, onEditingChange]);
 
   if (messages.length === 0) return null;
 

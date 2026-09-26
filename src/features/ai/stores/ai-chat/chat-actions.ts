@@ -1,4 +1,5 @@
 import { useIntelligenceSettingsStore } from "@/features/ai/intelligence/stores/intelligence-settings.store";
+import { holdsQueueForEdit } from "@/features/ai/lib/agent-queue-controls";
 import { resolveIntelligenceConnection } from "@/features/ai/intelligence/lib/resolve-intelligence-connection";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { hasProductCapability } from "@/features/window/lib/product-capabilities";
@@ -236,6 +237,7 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
       }),
     dequeueAgentMessage: (chatId) => {
       const message = get().agentMessageQueues[chatId]?.[0] ?? null;
+      if (holdsQueueForEdit(chatId, message ?? undefined)) return null;
       set((state) => {
         const queue = state.agentMessageQueues[chatId];
         queue?.shift();
