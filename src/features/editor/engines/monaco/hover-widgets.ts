@@ -14,8 +14,18 @@ function isWithinMonacoHoverWidget(node: Node): boolean {
   );
 }
 
+// Monaco rebuilds these layers for every typed character and scrolled line; hover widgets never
+// live inside them, so their mutations are skipped before any selector matching.
+const MONACO_TEXT_LAYER_SELECTOR = ".view-lines, .view-overlays, .margin-view-overlays";
+
 export function mutationsContainMonacoHoverWidget(mutations: readonly MutationRecord[]): boolean {
   return mutations.some((mutation) => {
+    if (
+      mutation.target instanceof Element &&
+      mutation.target.closest(MONACO_TEXT_LAYER_SELECTOR) !== null
+    ) {
+      return false;
+    }
     if (isWithinMonacoHoverWidget(mutation.target)) return true;
     return Array.from(mutation.addedNodes).some(
       (node) =>

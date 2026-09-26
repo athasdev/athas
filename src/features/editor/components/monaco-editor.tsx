@@ -56,7 +56,7 @@ import { useBufferStore } from "../stores/buffer.store";
 import { useEditorStateStore } from "../stores/state.store";
 import type { EditorContentChangeOptions, Position, Range } from "../types/editor.types";
 import { getBufferById } from "../utils/buffer-index";
-import { createEditorSelectionContext } from "../utils/editor-agent-context";
+import { createEditorSelectionContextFromText } from "../utils/editor-agent-context";
 import { fileOpenBenchmark } from "../utils/file-open-benchmark";
 import { getLanguageIdFromPath } from "../utils/language-id";
 import { editorAPI } from "../extensions/api";
@@ -216,6 +216,11 @@ export function MonacoEditor({
   const monacoLanguageId = toMonacoLanguageId(languageId);
   const [selectionAgentAction, setSelectionAgentAction] =
     useState<SelectionAgentActionState | null>(null);
+  const lastSelectionAgentKeyRef = useRef<string | null>(null);
+  const clearSelectionAgentAction = useCallback(() => {
+    lastSelectionAgentKeyRef.current = null;
+    setSelectionAgentAction(null);
+  }, []);
   const [inlineGitBlameCard, setInlineGitBlameCard] = useState<{
     anchor: HTMLElement;
     presentation: InlineGitBlamePresentation;
@@ -420,6 +425,11 @@ export function MonacoEditor({
     isActiveSurfaceRef.current = isActiveSurface;
   }, [isActiveSurface, onContentChange]);
 
+  const selectionBufferId = buffer?.id;
+  const selectionBufferPath = buffer?.path;
+  const selectionBufferName = buffer?.name;
+  // Runs on scroll, cursor and content changes while text is selected, so it reads only the
+  // selected range and leaves state alone when neither the selection nor its anchor moved.
   const syncSelectionAgentAction = useCallback(() => {
     const editor = editorRef.current;
     const model = modelRef.current;
@@ -430,7 +440,7 @@ export function MonacoEditor({
       !editor ||
       !model ||
       !container ||
-      !buffer ||
+      !selectionBufferId ||
       !isActiveSurface ||
       isPointerSelectingRef.current ||
       readOnly ||
@@ -439,20 +449,25 @@ export function MonacoEditor({
       !selection ||
       selection.isEmpty()
     ) {
-      setSelectionAgentAction(null);
+      clearSelectionAgentAction();
       return;
     }
 
     const editorRange = toEditorRange(model, selection);
     const context = editorRange
-      ? createEditorSelectionContext(
-          { ...buffer, content: model.getValue() },
+      ? createEditorSelectionContextFromText(
+          {
+            id: selectionBufferId,
+            path: selectionBufferPath ?? "",
+            name: selectionBufferName ?? "",
+          },
           editorRange,
+          model.getValueInRange(selection),
           languageId || "text",
         )
       : null;
     if (!context) {
-      setSelectionAgentAction(null);
+      clearSelectionAgentAction();
       return;
     }
 
@@ -460,7 +475,7 @@ export function MonacoEditor({
     const endPosition = editor.getScrolledVisiblePosition(selection.getEndPosition());
     const visiblePosition = startPosition ?? endPosition;
     if (!visiblePosition) {
-      setSelectionAgentAction(null);
+      clearSelectionAgentAction();
       return;
     }
 
@@ -474,16 +489,26 @@ export function MonacoEditor({
       ? Math.max(Math.abs(endPosition.left - startPosition.left), 1)
       : 1;
 
-    setSelectionAgentAction({
-      anchorRect: {
-        x: containerRect.left + left,
-        y: containerRect.top + visiblePosition.top,
-        width,
-        height: visiblePosition.height,
-      },
-      context,
-    });
-  }, [buffer, inlineEditRequested, isActiveSurface, isPreviewMode, languageId, readOnly]);
+    const anchorRect = {
+      x: containerRect.left + left,
+      y: containerRect.top + visiblePosition.top,
+      width,
+      height: visiblePosition.height,
+    };
+    const key = `${context.id}:${Math.round(anchorRect.x)}:${Math.round(anchorRect.y)}:${Math.round(width)}`;
+    if (lastSelectionAgentKeyRef.current === key) return;
+    lastSelectionAgentKeyRef.current = key;
+    setSelectionAgentAction({ anchorRect, context });
+  }, [
+    inlineEditRequested,
+    isActiveSurface,
+    isPreviewMode,
+    languageId,
+    readOnly,
+    selectionBufferId,
+    selectionBufferName,
+    selectionBufferPath,
+  ]);
 
   useLayoutEffect(() => {
     syncSelectionAgentActionRef.current = syncSelectionAgentAction;
@@ -1045,7 +1070,7 @@ export function MonacoEditor({
         }
 
         isPointerSelectingRef.current = true;
-        setSelectionAgentAction(null);
+        clearSelectionAgentAction();
       }),
       editor.onContextMenu((event) => {
         event.event.preventDefault();
@@ -1789,7 +1814,8 @@ export function MonacoEditor({
     };
   }, [lineHeight, onModelPositionResolverChange]);
 
-  useEffect(() => {
+  // Before paint, so a freshly created editor never shows line 1 and then jumps.
+  useLayoutEffect(() => {
     const editor = editorRef.current;
     if (!editor || !isActiveSurface) return;
 
@@ -1889,12 +1915,12 @@ export function MonacoEditor({
         {selectionAgentAction ? (
           <EditorSelectionAgentAction
             anchorRect={selectionAgentAction.anchorRect}
-            onClose={() => setSelectionAgentAction(null)}
+            onClose={clearSelectionAgentAction}
             onSelect={() => {
               openNewAgentChat(undefined, {
                 editorSelections: [selectionAgentAction.context],
               });
-              setSelectionAgentAction(null);
+              clearSelectionAgentAction();
             }}
           />
         ) : null}

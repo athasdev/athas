@@ -1,5 +1,5 @@
 import { PerformanceMonitor } from "./performance-monitor";
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useChatInitialization } from "@/features/ai/hooks/use-chat-initialization";
 import { useCollaborationPresence } from "@/features/collaboration/hooks/use-collaboration-presence";
 import { initializeDebuggerEventBridge } from "@/features/debugger/services/debug-adapter-events";
@@ -65,6 +65,10 @@ export function MainLayout() {
   const [deferredSurfacesReady, setDeferredSurfacesReady] = useState(false);
   const layoutShellRef = useRef<HTMLDivElement | null>(null);
   const [layoutShell, setLayoutShell] = useState<HTMLDivElement | null>(null);
+  const setLayoutShellElement = useCallback((element: HTMLDivElement | null) => {
+    layoutShellRef.current = element;
+    setLayoutShell(element);
+  }, []);
   useChatInitialization();
   usePaneKeyboard();
   useCollaborationPresence();
@@ -255,10 +259,7 @@ export function MainLayout() {
 
   return (
     <div
-      ref={(element) => {
-        layoutShellRef.current = element;
-        setLayoutShell(element);
-      }}
+      ref={setLayoutShellElement}
       className="athas-layout-shell relative flex size-full flex-col overflow-hidden bg-surface"
     >
       <WorkbenchFullscreenRootContext.Provider value={layoutShell}>

@@ -1,18 +1,20 @@
 import { invoke } from "@tauri-apps/api/core";
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { getBufferById } from "@/features/editor/utils/buffer-index";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { getWindowDocumentState } from "@/features/window/utils/window-document-state";
 
 export function useWindowDocumentState() {
-  const activeBuffer = useBufferStore(
-    (state) => state.buffers.find((buffer) => buffer.id === state.activeBufferId) ?? null,
-  );
   const projectName = useProjectStore((state) => state.projectName);
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
-  const documentState = useMemo(
-    () => getWindowDocumentState({ activeBuffer, projectName, rootFolderPath }),
-    [activeBuffer, projectName, rootFolderPath],
+  // Derived inside the selector so typing in the active buffer doesn't re-render the app root.
+  const documentState = useBufferStore((state) =>
+    getWindowDocumentState({
+      activeBuffer: getBufferById(state.buffers, state.activeBufferId) ?? null,
+      projectName,
+      rootFolderPath,
+    }),
   );
 
   useEffect(() => {

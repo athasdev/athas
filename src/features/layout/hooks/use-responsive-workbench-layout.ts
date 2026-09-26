@@ -10,7 +10,12 @@ export function useResponsiveWorkbenchLayout() {
   const [layout, setLayout] = useState(() => getResponsiveWorkbenchLayout(window.innerWidth));
 
   useEffect(() => {
-    const sync = () => setLayout(getResponsiveWorkbenchLayout(window.innerWidth));
+    // Keep the same object until the breakpoint is crossed, so resizing the window doesn't
+    // re-render the layout shell on every resize event.
+    const sync = () => {
+      const next = getResponsiveWorkbenchLayout(window.innerWidth);
+      setLayout((current) => (current.narrow === next.narrow ? current : next));
+    };
     window.addEventListener("resize", sync);
     return () => window.removeEventListener("resize", sync);
   }, []);

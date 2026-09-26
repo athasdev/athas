@@ -75,7 +75,7 @@ export function useKeymapContext() {
   useEffect(() => {
     const handleSelectionChange = () => {
       const selection = window.getSelection();
-      const hasSelection = selection ? selection.toString().length > 0 : false;
+      const hasSelection = selection ? !selection.isCollapsed : false;
       setContext("hasSelection", hasSelection);
     };
 

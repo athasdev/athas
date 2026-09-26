@@ -22,6 +22,17 @@ const createTerminalStore = () =>
 
     actions: {
       updateSession: (sessionId: string, updates: Partial<Terminal>) => {
+        // Titles, directories and selections repeat often; an unchanged session keeps the same Map
+        // so tab bars and other subscribers don't re-render.
+        const currentSession = get().sessions.get(sessionId);
+        if (
+          currentSession &&
+          Object.entries(updates).every(
+            ([key, value]) => currentSession[key as keyof Terminal] === value,
+          )
+        ) {
+          return;
+        }
         set((state) => {
           const newSessions = new Map(state.sessions);
           const currentSession = newSessions.get(sessionId) || {};

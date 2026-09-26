@@ -43,7 +43,6 @@ function isCloseWindowShortcut(event: KeyboardEvent) {
 }
 
 export function useKeymaps() {
-  const contexts = useKeymapStore.use.contexts();
   const [chordState, setChordState] = useState<ParsedKey[]>([]);
 
   useEffect(() => {
@@ -59,6 +58,9 @@ export function useKeymaps() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Read at keydown rather than subscribing: contexts change on every focus move, and a
+      // subscription re-rendered the app root and re-attached this listener each time.
+      const contexts = useKeymapStore.getState().contexts;
       // Skip all keybinding handling when recording a new keybinding
       if (contexts.isRecordingKeybinding) {
         return;
@@ -246,7 +248,7 @@ export function useKeymaps() {
     return () => {
       window.removeEventListener("keydown", handleKeyDown, true);
     };
-  }, [contexts, chordState]);
+  }, [chordState]);
 
   return {
     chordState,

@@ -7,6 +7,7 @@ import { useDocumentOutline } from "@/features/outline/hooks/use-document-outlin
 import { findSymbolPathAtPosition } from "@/features/outline/utils/symbol-path";
 import { openOutlineSymbol } from "@/features/outline/utils/outline-symbols";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useShallow } from "zustand/react/shallow";
 import { Button } from "@/ui/button";
 import {
   Breadcrumb,
@@ -17,6 +18,8 @@ import {
   BreadcrumbSeparator,
 } from "@/ui/breadcrumb";
 import { cn } from "@/utils/cn";
+
+const NO_CURSOR = { line: 0, column: 0 };
 
 interface SymbolBreadcrumbProps {
   bufferId?: string;
@@ -43,20 +46,24 @@ export function SymbolBreadcrumb({
     isActive: breadcrumbShowSymbols && isLspSupported,
     bufferId,
   });
-  const activeEditorViewKey = useEditorStateStore.use.activeEditorViewKey();
-  const activeCursorPosition = useEditorStateStore.use.cursorPosition();
-  const cursorPosition = useMemo(() => {
-    const cachedPosition = editorViewKey
-      ? useEditorStateStore.getState().actions.getCachedPosition(editorViewKey)
-      : undefined;
-
-    return resolveEditorViewCursorPosition(
-      editorViewKey,
-      activeEditorViewKey,
-      activeCursorPosition,
-      cachedPosition,
-    );
-  }, [activeCursorPosition, activeEditorViewKey, editorViewKey]);
+  // Follow the cursor only while symbols show and this pane's editor is the active one; every
+  // other breadcrumb (other panes, cached workspaces) no longer re-renders on each cursor move.
+  const followsCursor = breadcrumbShowSymbols && isLspSupported;
+  const cursorPosition = useEditorStateStore(
+    useShallow((state) => {
+      if (!followsCursor) return NO_CURSOR;
+      const cachedPosition = editorViewKey
+        ? state.actions.getCachedPosition(editorViewKey)
+        : undefined;
+      const position = resolveEditorViewCursorPosition(
+        editorViewKey,
+        state.activeEditorViewKey,
+        state.cursorPosition,
+        cachedPosition,
+      );
+      return { line: position.line, column: position.column };
+    }),
+  );
 
   const symbolChain = useMemo(
     () => findSymbolPathAtPosition(symbols, cursorPosition.line, cursorPosition.column),
