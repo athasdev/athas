@@ -51,7 +51,10 @@ interface ToolCallData {
   meta?: string | null;
 }
 
-type ToolCallMeta = Pick<ToolCall, "id" | "kind" | "status" | "locations" | "contentOffset">;
+type ToolCallMeta = Pick<
+  ToolCall,
+  "id" | "kind" | "status" | "locations" | "contentOffset" | "terminals"
+>;
 
 function serializeToolCallMeta(toolCall: ToolCall): string | null {
   const meta: ToolCallMeta = {};
@@ -60,6 +63,9 @@ function serializeToolCallMeta(toolCall: ToolCall): string | null {
   if (toolCall.status) meta.status = toolCall.status;
   if (toolCall.locations?.length) meta.locations = toolCall.locations;
   if (typeof toolCall.contentOffset === "number") meta.contentOffset = toolCall.contentOffset;
+  if (toolCall.terminals && Object.keys(toolCall.terminals).length > 0) {
+    meta.terminals = toolCall.terminals;
+  }
   return Object.keys(meta).length > 0 ? JSON.stringify(meta) : null;
 }
 
