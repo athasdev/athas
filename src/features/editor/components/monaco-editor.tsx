@@ -89,6 +89,7 @@ import { useMonacoEditorSettings } from "../engines/monaco/use-monaco-editor-set
 import { registerMonacoVimCommands, toEditorVimMode } from "../engines/monaco/vim-commands";
 import { registerIntelligenceCompletions } from "../engines/monaco/intelligence-completions";
 import { registerMonacoLspProviders } from "../engines/monaco/lsp-providers";
+import { registerAgentEditsCodeLens } from "../engines/monaco/agent-edits-code-lens";
 import { registerMonacoCodeLensProvider } from "../engines/monaco/code-lens-provider";
 
 registerMonacoLspProviders();
@@ -174,6 +175,9 @@ export function MonacoEditor({
 }: MonacoEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
+
+  // Registered on first mount rather than at import, since it reads the AI feature's stores.
+  useEffect(() => registerAgentEditsCodeLens(), []);
   const modelRef = useRef<Monaco.editor.ITextModel | null>(null);
   const vimAdapterRef = useRef<VimAdapterInstance | null>(null);
   const vimStatusRef = useRef<HTMLDivElement | null>(null);
