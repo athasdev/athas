@@ -60,14 +60,15 @@ pub async fn get_available_agents(
    Ok(bridge.lock().await.detect_agents())
 }
 
-/// Downloads the ACP Registry again now instead of waiting for the hourly refresh.
+/// Downloads the ACP Registry again now instead of waiting for the hourly refresh, and asks every
+/// agent on PATH for its version again.
 #[tauri::command]
 pub async fn refresh_acp_agent_registry(
    app_handle: AppHandle,
    bridge: State<'_, AcpBridgeState>,
 ) -> Result<Vec<AgentConfig>, String> {
    refresh_registered_agents(&app_handle, &bridge, true).await;
-   Ok(bridge.lock().await.detect_agents())
+   Ok(bridge.lock().await.redetect_agents())
 }
 
 /// Opens a chat's session on `agent_id` in `workspace_path`, starting the agent when it is not

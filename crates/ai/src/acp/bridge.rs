@@ -995,6 +995,12 @@ impl AcpAgentBridge {
       self.registry.invalidate_detection_cache();
    }
 
+   /// Detects agents from scratch, running each one's `--version` again.
+   pub fn redetect_agents(&mut self) -> Vec<AgentConfig> {
+      self.registry.clear_version_cache();
+      self.detect_agents()
+   }
+
    async fn request<T>(
       &self,
       command: impl FnOnce(oneshot::Sender<Result<T>>) -> AcpCommand,
