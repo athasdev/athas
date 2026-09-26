@@ -28,6 +28,7 @@ import { recordStartupMilestone } from "@/features/bootstrap/startup-performance
 import { getInternalTabDragData } from "@/features/tabs/utils/internal-tab-drag";
 import { isSidebarViewAvailable } from "@/features/layout/utils/sidebar-pane-utils";
 import { getCollapsedActivityBarWidth } from "@/features/layout/utils/activity-bar-layout";
+import { WorkbenchFullscreenRootContext } from "@/features/window/components/workbench-fullscreen-surface";
 import TitleBarWithSettings from "../../window/components/title-bar/title-bar";
 import { TitleLeading } from "../../window/components/title-bar/title-leading";
 import { ResizablePane } from "./resizable-pane";
@@ -64,7 +65,8 @@ const BottomPane = lazy(() => import("./bottom-pane/bottom-pane"));
 
 export function MainLayout() {
   const [deferredSurfacesReady, setDeferredSurfacesReady] = useState(false);
-  const layoutShellRef = useRef<HTMLDivElement>(null);
+  const layoutShellRef = useRef<HTMLDivElement | null>(null);
+  const [layoutShell, setLayoutShell] = useState<HTMLDivElement | null>(null);
   useChatInitialization();
   usePaneKeyboard();
   useCollaborationPresence();
@@ -278,109 +280,119 @@ export function MainLayout() {
 
   return (
     <div
-      ref={layoutShellRef}
+      ref={(element) => {
+        layoutShellRef.current = element;
+        setLayoutShell(element);
+      }}
       className="athas-layout-shell relative flex size-full flex-col overflow-hidden bg-surface"
     >
-      {/* Drag-and-drop overlay */}
-      {isDraggingOver && !getInternalTabDragData() && (
-        <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center bg-background backdrop-blur-sm">
-          <div className="rounded-xl border-2 border-primary border-dashed bg-surface px-8 py-6">
-            <p className="ui-text-base font-semibold text-foreground">
-              Drop folder to open project, or file to open buffer
-            </p>
-          </div>
-        </div>
-      )}
-
-      <div
-        data-slot="workbench-title-row"
-        data-tauri-drag-region
-        className="relative z-20 h-title-bar shrink-0"
-      >
-        <TitleLeading />
-      </div>
-
-      <div className="athas-workbench-glass relative z-10 flex flex-1 flex-col overflow-hidden pb-workbench">
-        <div className="flex flex-1 flex-row overflow-hidden pr-workbench" style={{ minHeight: 0 }}>
-          <div className="h-full shrink-0">
-            <ActivityBar />
-          </div>
-          <ResizablePane
-            position="left"
-            widthKey="sidebarWidth"
-            hidden={!renderedSidebarVisible}
-            reservedWidth={leftPaneReservedWidth}
-          >
-            <SidebarPane paneLevel="primary" visible={renderedSidebarVisible} />
-          </ResizablePane>
-
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-            <div
-              className={cn(
-                "athas-glass-island relative min-h-0 flex-1 overflow-hidden border-border border-y border-r bg-background",
-                roundMainContentLeftEdge &&
-                  (isEditorBottomPaneVisible ? "rounded-tl-xl border-l" : "rounded-l-xl border-l"),
-                roundMainContentRightEdge &&
-                  (isEditorBottomPaneVisible ? "rounded-tr-xl" : "rounded-r-xl"),
-              )}
-            >
-              <CachedWorkspaceSplitViews />
+      <WorkbenchFullscreenRootContext.Provider value={layoutShell}>
+        {/* Drag-and-drop overlay */}
+        {isDraggingOver && !getInternalTabDragData() && (
+          <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center bg-background backdrop-blur-sm">
+            <div className="rounded-xl border-2 border-primary border-dashed bg-surface px-8 py-6">
+              <p className="ui-text-base font-semibold text-foreground">
+                Drop folder to open project, or file to open buffer
+              </p>
             </div>
-            {terminalWidthMode === "editor" && deferredSurfacesReady && (
-              <Suspense fallback={null}>
-                <BottomPane
-                  embedded
-                  roundLeftEdge={roundMainContentLeftEdge}
-                  roundRightEdge={roundMainContentRightEdge}
-                />
-              </Suspense>
-            )}
-          </div>
-
-          <ResizablePane
-            position="right"
-            widthKey="rightSidebarWidth"
-            hidden={!renderedRightSidebarVisible}
-            reservedWidth={rightPaneReservedWidth}
-          >
-            <SidebarPane
-              paneLevel="edge"
-              visible={renderedRightSidebarVisible}
-              activeView={activeRightSidebarView}
-              isGitActive={false}
-              isGitHubPRsActive={false}
-            />
-          </ResizablePane>
-        </div>
-
-        {terminalWidthMode === "full" && deferredSurfacesReady && (
-          <div className="px-workbench">
-            <Suspense fallback={null}>
-              <BottomPane />
-            </Suspense>
           </div>
         )}
-      </div>
 
-      <TitleBarWithSettings showMinimal overlay />
+        <div
+          data-slot="workbench-title-row"
+          data-tauri-drag-region
+          className="relative z-20 h-title-bar shrink-0"
+        >
+          <TitleLeading />
+        </div>
 
-      <PerformanceMonitor />
+        <div className="athas-workbench-glass relative z-10 flex flex-1 flex-col overflow-hidden pb-workbench">
+          <div
+            className="flex flex-1 flex-row overflow-hidden pr-workbench"
+            style={{ minHeight: 0 }}
+          >
+            <div className="h-full shrink-0">
+              <ActivityBar />
+            </div>
+            <ResizablePane
+              position="left"
+              widthKey="sidebarWidth"
+              hidden={!renderedSidebarVisible}
+              reservedWidth={leftPaneReservedWidth}
+            >
+              <SidebarPane paneLevel="primary" visible={renderedSidebarVisible} />
+            </ResizablePane>
 
-      {/* Global modals and overlays */}
-      {deferredSurfacesReady ? (
-        <Suspense fallback={null}>
-          <QuickOpen />
-          <CommandPalette />
-          <ConnectionDialog
-            isOpen={isDatabaseConnectionVisible}
-            onClose={() => setIsDatabaseConnectionVisible(false)}
-          />
-          <LinuxFolderPickerDialog />
-          <WindowCloseGuard />
-          <ExtensionDialogs />
-          <TerminalHost />
-        </Suspense>
-      ) : null}
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+              <div
+                className={cn(
+                  "athas-glass-island relative min-h-0 flex-1 overflow-hidden border-border border-y border-r bg-background",
+                  roundMainContentLeftEdge &&
+                    (isEditorBottomPaneVisible
+                      ? "rounded-tl-xl border-l"
+                      : "rounded-l-xl border-l"),
+                  roundMainContentRightEdge &&
+                    (isEditorBottomPaneVisible ? "rounded-tr-xl" : "rounded-r-xl"),
+                )}
+              >
+                <CachedWorkspaceSplitViews />
+              </div>
+              {terminalWidthMode === "editor" && deferredSurfacesReady && (
+                <Suspense fallback={null}>
+                  <BottomPane
+                    embedded
+                    roundLeftEdge={roundMainContentLeftEdge}
+                    roundRightEdge={roundMainContentRightEdge}
+                  />
+                </Suspense>
+              )}
+            </div>
+
+            <ResizablePane
+              position="right"
+              widthKey="rightSidebarWidth"
+              hidden={!renderedRightSidebarVisible}
+              reservedWidth={rightPaneReservedWidth}
+            >
+              <SidebarPane
+                paneLevel="edge"
+                visible={renderedRightSidebarVisible}
+                activeView={activeRightSidebarView}
+                isGitActive={false}
+                isGitHubPRsActive={false}
+              />
+            </ResizablePane>
+          </div>
+
+          {terminalWidthMode === "full" && deferredSurfacesReady && (
+            <div className="px-workbench">
+              <Suspense fallback={null}>
+                <BottomPane />
+              </Suspense>
+            </div>
+          )}
+        </div>
+
+        <TitleBarWithSettings showMinimal overlay />
+
+        <PerformanceMonitor />
+
+        {/* Global modals and overlays */}
+        {deferredSurfacesReady ? (
+          <Suspense fallback={null}>
+            <QuickOpen />
+            <CommandPalette />
+            <ConnectionDialog
+              isOpen={isDatabaseConnectionVisible}
+              onClose={() => setIsDatabaseConnectionVisible(false)}
+            />
+            <LinuxFolderPickerDialog />
+            <WindowCloseGuard />
+            <ExtensionDialogs />
+            <TerminalHost />
+          </Suspense>
+        ) : null}
+      </WorkbenchFullscreenRootContext.Provider>
     </div>
   );
 }
