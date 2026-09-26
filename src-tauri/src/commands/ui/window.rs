@@ -554,11 +554,7 @@ fn create_labeled_app_window_internal(
    #[cfg(all(target_os = "macos", not(feature = "linux")))]
    let builder = builder
       .hidden_title(true)
-      .title_bar_style(TitleBarStyle::Overlay)
-      .traffic_light_position(tauri::LogicalPosition::new(
-         crate::bootstrap::macos::TRAFFIC_LIGHT_POSITION.0,
-         crate::bootstrap::macos::TRAFFIC_LIGHT_POSITION.1,
-      ));
+      .title_bar_style(TitleBarStyle::Overlay);
 
    let build_started_at = Instant::now();
    let window = builder
@@ -749,8 +745,6 @@ pub async fn set_window_document_state(
    is_edited: bool,
 ) -> Result<(), String> {
    let app = window.app_handle().clone();
-   #[cfg(target_os = "macos")]
-   let relayout_window = window.clone();
    let (sender, receiver) = tokio::sync::oneshot::channel();
    app.run_on_main_thread(move || {
       let result = window.set_title(&title).map_err(|error| error.to_string());
@@ -762,10 +756,7 @@ pub async fn set_window_document_state(
             ns_window,
             represented_path.as_deref().map(Path::new),
             is_edited,
-         )?;
-         // The title and document icon relayout the title bar and reset the traffic lights.
-         crate::bootstrap::macos::apply_traffic_light_position(ns_window);
-         Ok(())
+         )
       });
 
       #[cfg(not(target_os = "macos"))]
@@ -778,23 +769,9 @@ pub async fn set_window_document_state(
    })
    .map_err(|error| error.to_string())?;
 
-   let result = receiver
+   receiver
       .await
-      .map_err(|_| "Failed to update window document state on the main thread".to_string())?;
-
-   // AppKit finishes the title bar relayout on a later pass, so place the lights again after it.
-   #[cfg(target_os = "macos")]
-   tauri::async_runtime::spawn(async move {
-      tokio::time::sleep(std::time::Duration::from_millis(120)).await;
-      let window = relayout_window.clone();
-      let _ = relayout_window.run_on_main_thread(move || {
-         if let Ok(ns_window) = window.ns_window() {
-            crate::bootstrap::macos::apply_traffic_light_position(ns_window);
-         }
-      });
-   });
-
-   result
+      .map_err(|_| "Failed to update window document state on the main thread".to_string())?
 }
 
 #[command]

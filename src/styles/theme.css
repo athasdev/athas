@@ -172,8 +172,8 @@
     --athas-title-bar-height: 2.5rem;
     --athas-title-bar-leading-inset: var(--athas-chrome-padding-inline);
     --athas-title-tab-leading-inset: calc(
-      var(--athas-title-bar-leading-inset) + var(--athas-rail-control-size) +
-        var(--athas-rail-control-size) + var(--athas-chrome-padding-inline)
+      var(--athas-title-bar-leading-inset) + var(--athas-chrome-hit-target) +
+        var(--athas-chrome-hit-target) + var(--athas-chrome-padding-inline)
     );
     --athas-tab-bar-height: 2rem;
     --athas-pane-header-height: var(--athas-tab-bar-height);
@@ -249,7 +249,8 @@
   }
 
   html.platform-macos {
-    --athas-title-bar-height: 2.5rem;
+    /* Matches the native title bar, so the traffic lights keep AppKit's own position. */
+    --athas-title-bar-height: 2rem;
     --athas-tab-bar-height: 2.125rem;
     --athas-title-bar-leading-inset: 4.75rem;
   }

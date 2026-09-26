@@ -54,7 +54,7 @@ export function TitleNavigation() {
         commandId="navigation.goBack"
         aria-label="Go back to previous location"
         iconOnly
-        size="lg"
+        size="md"
       >
         <ArrowLeftIcon />
       </Button>
@@ -67,7 +67,7 @@ export function TitleNavigation() {
         commandId="navigation.goForward"
         aria-label="Go forward to next location"
         iconOnly
-        size="lg"
+        size="md"
       >
         <ArrowRightIcon />
       </Button>
