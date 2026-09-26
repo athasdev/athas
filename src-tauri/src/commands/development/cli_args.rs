@@ -145,6 +145,7 @@ fn is_chromium_runtime_arg(arg: &str) -> bool {
          | "--disable-gpu-compositing"
          | "--disable-setuid-sandbox"
          | "--disable-vulkan"
+         | "--no-sandbox"
          | "--ozone-platform=x11"
    )
 }
@@ -503,6 +504,7 @@ mod tests {
          "--disable-gpu".to_string(),
          "--disable-gpu-compositing".to_string(),
          "--disable-setuid-sandbox".to_string(),
+         "--no-sandbox".to_string(),
          "web".to_string(),
          "https://athas.dev".to_string(),
       ];
