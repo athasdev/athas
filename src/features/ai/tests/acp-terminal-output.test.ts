@@ -4,6 +4,7 @@ import {
   describeAcpTerminalExit,
   formatAcpTerminalText,
   withAcpTerminalSnapshot,
+  withExitedAcpTerminalSnapshots,
 } from "@/features/ai/lib/acp-terminal-output";
 import type { Message } from "@/features/ai/types/ai-chat.types";
 
@@ -67,5 +68,29 @@ describe("ACP terminal output", () => {
     expect(updated?.toolCalls[1].terminals).toEqual({ "term-1": snapshot });
     expect(updated?.toolCalls[0]).toBe(messages[0].toolCalls?.[0]);
     expect(withAcpTerminalSnapshot(messages, "other", snapshot)).toBeNull();
+  });
+
+  it("keeps the output of a terminal that exited before its tool call appeared", () => {
+    const call = {
+      id: "call-1",
+      name: "Run",
+      input: {},
+      timestamp: new Date(0),
+      output: [{ type: "terminal", terminalId: "t1" }],
+    } as unknown as NonNullable<Message["toolCalls"]>[number];
+    const exited = { output: "done\n", truncated: false, exit: { exitCode: 0, signal: null } };
+    const running = { output: "still going", truncated: false, exit: null };
+
+    const [withSnapshot] = withExitedAcpTerminalSnapshots([call], { t1: exited });
+    expect(withSnapshot.terminals).toEqual({ t1: exited });
+
+    const unchanged = [call];
+    expect(withExitedAcpTerminalSnapshots(unchanged, { t1: running })).toBe(unchanged);
+    const kept = [withSnapshot];
+    expect(
+      withExitedAcpTerminalSnapshots(kept, {
+        t1: { ...exited, output: "newer", exit: { exitCode: 1, signal: null } },
+      }),
+    ).toBe(kept);
   });
 });

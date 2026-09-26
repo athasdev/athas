@@ -87,6 +87,38 @@ export function withAcpTerminalSnapshot(
   return null;
 }
 
+/**
+ * Gives each call the final state of the terminals it shows that already ended but are not yet
+ * kept on it. A terminal can exit before the agent reports the call that shows it; its output
+ * then waits in the live terminal store until the call appears. Returns `toolCalls` itself when
+ * nothing changed.
+ */
+export function withExitedAcpTerminalSnapshots(
+  toolCalls: ToolCall[],
+  terminals: Readonly<Record<string, AcpTerminalSnapshot>>,
+): ToolCall[] {
+  let changed = false;
+  const next = toolCalls.map((toolCall) => {
+    let kept = toolCall.terminals;
+    for (const { terminalId } of getAcpTerminalOutputs(toolCall.output)) {
+      const terminal = terminals[terminalId];
+      if (kept?.[terminalId] || !terminal?.exit) continue;
+      kept = {
+        ...kept,
+        [terminalId]: {
+          output: terminal.output,
+          truncated: terminal.truncated,
+          exit: terminal.exit,
+        },
+      };
+    }
+    if (kept === toolCall.terminals) return toolCall;
+    changed = true;
+    return { ...toolCall, terminals: kept };
+  });
+  return changed ? next : toolCalls;
+}
+
 const ESCAPE = String.fromCharCode(27);
 const BELL = String.fromCharCode(7);
 // OSC sequences (titles, links) end with BEL or ESC \; CSI sequences carry colors and cursor moves.

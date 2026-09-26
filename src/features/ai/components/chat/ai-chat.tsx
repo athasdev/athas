@@ -60,6 +60,8 @@ import {
   sendAgentNativeNotification,
   type AgentNativeNotificationKind,
 } from "@/features/ai/services/agent-native-notifications";
+import { useAcpTerminalsStore } from "@/features/ai/stores/acp-terminals.store";
+import { withExitedAcpTerminalSnapshots } from "@/features/ai/lib/acp-terminal-output";
 import { useAcpNoticesStore } from "@/features/ai/stores/acp-notices.store";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { agentIsDetached } from "@/features/ai/detached/agent-window.store";
@@ -412,7 +414,14 @@ const AIChat = memo(function AIChat({
     ) => {
       const currentMessages = useAIChatStore.getState().actions.getMessagesForChat(chatId);
       const currentMessage = currentMessages.find((message) => message.id === messageId);
-      chatActions.updateMessage(chatId, messageId, mutate(currentMessage));
+      const updates = mutate(currentMessage);
+      if (updates.toolCalls) {
+        updates.toolCalls = withExitedAcpTerminalSnapshots(
+          updates.toolCalls,
+          useAcpTerminalsStore.getState().terminals,
+        );
+      }
+      chatActions.updateMessage(chatId, messageId, updates);
     },
     [chatActions.updateMessage],
   );
