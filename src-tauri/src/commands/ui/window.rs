@@ -555,7 +555,7 @@ fn create_labeled_app_window_internal(
    let builder = builder
       .hidden_title(true)
       .title_bar_style(TitleBarStyle::Overlay)
-      .traffic_light_position(tauri::LogicalPosition::new(14.0, 28.0));
+      .traffic_light_position(tauri::LogicalPosition::new(14.0, 25.5));
 
    let build_started_at = Instant::now();
    let window = builder

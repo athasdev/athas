@@ -61,7 +61,7 @@ export function AppUpdateControl({ compact = false }: { compact?: boolean }) {
       <Button
         type="button"
         variant="ghost"
-        size="sm"
+        size={compact ? "lg" : "sm"}
         onClick={() => void openWhatsNew()}
         tooltip="What's new in Athas"
         aria-label="What's new in Athas"
@@ -87,7 +87,7 @@ export function AppUpdateControl({ compact = false }: { compact?: boolean }) {
           <Button
             type="button"
             variant="ghost"
-            size="sm"
+            size={compact ? "lg" : "sm"}
             disabled={updateBusy}
             iconOnly={compact}
             aria-label={updateTooltip}

@@ -49,6 +49,8 @@ export const buttonVariants = cva(
         sm: "h-chrome-control gap-chrome px-2 ui-text-chrome [&_svg:not([class*='size-'])]:size-[1em]",
         /** Forms, dialogs, and page content. */
         md: "h-7 gap-1.5 px-2.5 ui-text-sm [&_svg:not([class*='size-'])]:size-3.5",
+        /** The activity rail and other primary navigation. */
+        lg: "h-rail-control gap-2 rounded-lg px-3 ui-text-base [&_svg:not([class*='size-'])]:size-4.5",
       },
     },
     defaultVariants: {
@@ -64,6 +66,7 @@ export const buttonVariants = cva(
       { iconOnly: true, size: "xs", className: "w-5" },
       { iconOnly: true, size: "sm", className: "w-chrome-control" },
       { iconOnly: true, size: "md", className: "w-7" },
+      { iconOnly: true, size: "lg", className: "w-rail-control" },
     ],
   },
 );

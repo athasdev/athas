@@ -29,6 +29,7 @@ export function DiagnosticsActivityControl() {
   return (
     <Tooltip content={status.tooltip}>
       <SidebarIconButton
+        size="lg"
         active={isActive}
         tone={status.tone}
         aria-label={status.tooltip}

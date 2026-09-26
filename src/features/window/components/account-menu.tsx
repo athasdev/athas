@@ -264,9 +264,9 @@ export const AccountMenu = memo(function AccountMenu() {
     <>
       <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
         <DropdownMenuTrigger
-          render={<SidebarIconButton tooltip={tooltipLabel} aria-label="Account" />}
+          render={<SidebarIconButton size="lg" tooltip={tooltipLabel} aria-label="Account" />}
         >
-          <Avatar name={accountName} src={accountAvatarUrl} size="sm" />
+          <Avatar name={accountName} src={accountAvatarUrl} size="md" />
         </DropdownMenuTrigger>
         <DropdownMenuContent side="top" align="start" size="wide">
           {isAuthenticated ? (

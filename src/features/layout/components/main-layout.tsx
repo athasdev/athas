@@ -87,10 +87,9 @@ export function MainLayout() {
       const shellRect = shell.getBoundingClientRect();
       const activityRect = activityBarRoot.getBoundingClientRect();
       const contentRect = mainContentRoot.getBoundingClientRect();
-      const nextBounds = {
-        left: activityRect.right - shellRect.left,
-        width: contentRect.right - activityRect.right,
-      };
+      // Title bar tabs sit over the editor column, not over the sidebar beside it.
+      const left = Math.max(contentRect.left, activityRect.right) - shellRect.left;
+      const nextBounds = { left, width: contentRect.right - shellRect.left - left };
       setMainTitleBounds((current) =>
         current?.left === nextBounds.left && current.width === nextBounds.width
           ? current

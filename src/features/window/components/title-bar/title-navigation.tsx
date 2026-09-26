@@ -43,7 +43,7 @@ export function TitleNavigation() {
   return (
     <div
       data-slot="title-navigation"
-      className="absolute top-title-tab-inset bottom-0 left-0 z-10 flex items-center gap-chrome pl-title-bar-leading"
+      className="absolute inset-y-0 left-0 z-10 flex items-center pl-title-bar-leading"
     >
       <Button
         type="button"
@@ -54,7 +54,7 @@ export function TitleNavigation() {
         commandId="navigation.goBack"
         aria-label="Go back to previous location"
         iconOnly
-        size="sm"
+        size="lg"
       >
         <ArrowLeftIcon />
       </Button>
@@ -67,7 +67,7 @@ export function TitleNavigation() {
         commandId="navigation.goForward"
         aria-label="Go forward to next location"
         iconOnly
-        size="sm"
+        size="lg"
       >
         <ArrowRightIcon />
       </Button>

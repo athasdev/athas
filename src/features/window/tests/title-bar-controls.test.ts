@@ -56,8 +56,9 @@ describe("title bar controls", () => {
     expect(projectSwitcherSource).toContain("iconOnly");
     expect(mainLayoutSource).toContain("<TitleBarWithSettings showMinimal overlay />");
     expect(projectSwitcherSource).toContain(
-      "<ProjectGlyph projectPath={projectPath} iconPath={displayIconPath} />",
+      "<ProjectGlyph\n                  projectPath={projectPath}",
     );
+    expect(projectSwitcherSource).toContain('size="lg"');
   });
 
   it("keeps title navigation before tabs without an activity bar toggle", () => {

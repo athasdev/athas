@@ -45,6 +45,7 @@
   --spacing-sidebar-header: var(--athas-sidebar-header-height);
   --spacing-workbench: var(--athas-workbench-gap);
   --spacing-chrome-control: var(--athas-chrome-control-height);
+  --spacing-rail-control: var(--athas-rail-control-size);
   --spacing-chrome-hit-target: var(--athas-chrome-hit-target);
   --spacing-chrome-tight: var(--athas-chrome-gap-tight);
   --spacing-chrome: var(--athas-chrome-gap);
@@ -173,9 +174,8 @@
     --athas-title-bar-leading-inset: var(--athas-chrome-padding-inline);
     --athas-title-tab-inset: 6px;
     --athas-title-tab-leading-inset: calc(
-      var(--athas-title-bar-leading-inset) + var(--athas-chrome-control-height) +
-        var(--athas-chrome-control-height) + var(--athas-chrome-gap) +
-        var(--athas-chrome-padding-inline)
+      var(--athas-title-bar-leading-inset) + var(--athas-rail-control-size) +
+        var(--athas-rail-control-size) + var(--athas-chrome-padding-inline)
     );
     --athas-tab-bar-height: 2rem;
     --athas-pane-header-height: var(--athas-tab-bar-height);
@@ -184,6 +184,7 @@
     --athas-sidebar-header-height: 2rem;
     --athas-workbench-gap: 8px;
     --athas-chrome-control-height: 1.5rem;
+    --athas-rail-control-size: 2.25rem;
     --athas-chrome-hit-target: 1.75rem;
     --athas-chrome-line-height: 1rem;
     --athas-chrome-gap-tight: 2px;
@@ -250,7 +251,7 @@
   }
 
   html.platform-macos {
-    --athas-title-bar-height: 2.5rem;
+    --athas-title-bar-height: 2.75rem;
     --athas-tab-bar-height: 2.125rem;
     --athas-title-bar-leading-inset: 4.75rem;
   }

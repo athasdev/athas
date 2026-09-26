@@ -200,12 +200,16 @@ export function ProjectSwitcher({
             render={
               <Button
                 variant="ghost"
-                size="sm"
+                size="lg"
                 iconOnly
                 aria-label={`Switch project. Current project: ${projectName}`}
                 title={projectPath || projectName}
               >
-                <ProjectGlyph projectPath={projectPath} iconPath={displayIconPath} />
+                <ProjectGlyph
+                  projectPath={projectPath}
+                  iconPath={displayIconPath}
+                  className="size-5"
+                />
               </Button>
             }
           />

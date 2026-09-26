@@ -55,7 +55,7 @@ export function ActivityChrome() {
           }}
           variant="ghost"
           iconOnly
-          size="sm"
+          size="lg"
           active={isCompactMenuVisible}
           aria-label="Menu"
           aria-expanded={isCompactMenuVisible}
@@ -70,7 +70,7 @@ export function ActivityChrome() {
     <>
       <ContextMenu>
         <ContextMenuTrigger
-          className="flex w-full shrink-0 flex-col gap-chrome-tight px-chrome-inline pb-1"
+          className="flex w-full shrink-0 flex-col gap-1.5 px-chrome-inline pb-2"
           onContextMenu={(event) => event.stopPropagation()}
         >
           {menuItem}
@@ -154,8 +154,8 @@ export function ActivityChrome() {
 
 export function ActivityChromeFooter() {
   return (
-    <div className="flex w-full flex-col gap-chrome-tight">
-      <div className="flex flex-col items-center gap-chrome-tight">
+    <div className="flex w-full flex-col items-center gap-1.5">
+      <div className="flex flex-col items-center gap-1.5">
         <AppUpdateControl compact />
         <RunActionsButton />
         <NotificationsTrigger />

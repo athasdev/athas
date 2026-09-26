@@ -17,6 +17,7 @@ function NavigationItem({ item }: { item: ActivityNavigationItem }) {
   return (
     <Tooltip content={item.label} shortcut={item.shortcut}>
       <SidebarIconButton
+        size="lg"
         active={item.active}
         onClick={item.onClick}
         aria-label={item.ariaLabel}
@@ -39,7 +40,7 @@ function MoreViews({ items }: { items: ActivityNavigationItem[] }) {
     <DropdownMenu>
       <Tooltip content={label}>
         <DropdownMenuTrigger
-          render={<SidebarIconButton active={Boolean(activeItem)} aria-label={label} />}
+          render={<SidebarIconButton size="lg" active={Boolean(activeItem)} aria-label={label} />}
         >
           <DotsIcon />
         </DropdownMenuTrigger>
@@ -93,7 +94,7 @@ export function ActivityRailNavigation({ items }: { items: ActivityNavigationIte
     <nav
       data-slot="activity-rail-navigation"
       aria-label="Activity views"
-      className="flex w-full flex-col gap-chrome-tight"
+      className="flex w-full flex-col gap-1.5"
     >
       {groups
         .filter((group) => group.items.length > 0 || (group.more && moreItems.length > 0))
@@ -102,7 +103,7 @@ export function ActivityRailNavigation({ items }: { items: ActivityNavigationIte
             key={group.label}
             role="group"
             aria-label={group.label}
-            className="flex flex-col gap-chrome-tight"
+            className="flex flex-col gap-1.5"
           >
             {group.items.map((item) => (
               <NavigationItem key={item.id} item={item} />
