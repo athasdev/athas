@@ -1,6 +1,7 @@
 import type { ComponentProps, ReactNode } from "react";
 import { ChromeBar, ChromeGroup, ChromeLabel } from "@/ui/chrome";
 import { cn } from "@/utils/cn";
+import { ControlSizeProvider } from "@/ui/control-size";
 
 interface PaneContentHeaderProps extends Omit<
   ComponentProps<typeof ChromeBar>,
@@ -24,30 +25,32 @@ function PaneContentHeader({
   ...props
 }: PaneContentHeaderProps) {
   return (
-    <ChromeBar
-      data-slot="pane-content-header"
-      region="content"
-      separated={separated}
-      className={cn("justify-between", className)}
-      {...props}
-    >
-      <ChromeGroup grow gap="loose" className="overflow-hidden">
-        {leading ? (
-          <span className="flex shrink-0 items-center [&_svg]:size-3.5">{leading}</span>
-        ) : null}
-        {context ?? (title ? <ChromeLabel tone="strong">{title}</ChromeLabel> : null)}
-        {detail ? (
-          <ChromeLabel tone="muted" className="hidden shrink-0 sm:block">
-            {detail}
-          </ChromeLabel>
-        ) : null}
-      </ChromeGroup>
-      {actions ? (
-        <ChromeGroup gap="tight" className="scrollbar-none ml-auto max-w-[70%] overflow-x-auto">
-          {actions}
+    <ControlSizeProvider size="sm">
+      <ChromeBar
+        data-slot="pane-content-header"
+        region="content"
+        separated={separated}
+        className={cn("justify-between", className)}
+        {...props}
+      >
+        <ChromeGroup grow gap="loose" className="overflow-hidden">
+          {leading ? (
+            <span className="flex shrink-0 items-center [&_svg]:size-3.5">{leading}</span>
+          ) : null}
+          {context ?? (title ? <ChromeLabel tone="strong">{title}</ChromeLabel> : null)}
+          {detail ? (
+            <ChromeLabel tone="muted" className="hidden shrink-0 sm:block">
+              {detail}
+            </ChromeLabel>
+          ) : null}
         </ChromeGroup>
-      ) : null}
-    </ChromeBar>
+        {actions ? (
+          <ChromeGroup gap="tight" className="scrollbar-none ml-auto max-w-[70%] overflow-x-auto">
+            {actions}
+          </ChromeGroup>
+        ) : null}
+      </ChromeBar>
+    </ControlSizeProvider>
   );
 }
 

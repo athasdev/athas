@@ -88,7 +88,14 @@ export function SymbolBreadcrumb({
               <BreadcrumbItem className="shrink-0 gap-0">
                 {interactive ? (
                   <BreadcrumbLink
-                    render={<Button onClick={() => openOutlineSymbol(symbol)} variant="ghost" />}
+                    render={
+                      <Button
+                        onClick={() => openOutlineSymbol(symbol)}
+                        variant="ghost"
+                        size="inline"
+                        weight="regular"
+                      />
+                    }
                     className="min-w-0 whitespace-nowrap text-subtle-foreground hover:text-foreground"
                   >
                     {symbol.name}

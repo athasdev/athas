@@ -1,6 +1,7 @@
 import { Toggle as TogglePrimitive } from "@base-ui/react/toggle";
 import { cva, type VariantProps } from "class-variance-authority";
 import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
+import { useControlSize } from "@/ui/control-size";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 
@@ -34,7 +35,7 @@ function Toggle({
   className,
   variant = "default",
   tone = "default",
-  size = "md",
+  size: sizeProp,
   tooltip,
   shortcut,
   commandId,
@@ -48,6 +49,8 @@ function Toggle({
   }) {
   const commandShortcut = useCommandShortcut(commandId);
   const effectiveShortcut = commandId ? commandShortcut : shortcut;
+  const contextSize = useControlSize();
+  const size = sizeProp ?? contextSize ?? "md";
   const element = (
     <TogglePrimitive
       data-slot="toggle"
