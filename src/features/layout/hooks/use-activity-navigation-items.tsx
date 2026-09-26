@@ -12,6 +12,7 @@ import {
   FilesIcon,
   GitBranchIcon,
   PackageIcon,
+  SparkleIcon,
   StackIcon,
   GridIcon,
 } from "@/ui/icons";
@@ -82,6 +83,18 @@ export function useActivityNavigationItems({
         ariaLabel: "Files",
         shortcut: "Mod+Shift+E",
       },
+      ...(coreFeatures.aiChat
+        ? [
+            {
+              id: "agents",
+              label: "Agents",
+              icon: <SparkleIcon />,
+              active: isPrimarySidebarItemActive && activeSidebarView === "agents",
+              onClick: () => onViewChange("agents"),
+              ariaLabel: "Agents",
+            } satisfies ActivityNavigationItem,
+          ]
+        : []),
       ...(coreFeatures.git
         ? [
             {
@@ -178,6 +191,7 @@ export function useActivityNavigationItems({
     ],
     [
       activeSidebarView,
+      coreFeatures.aiChat,
       coreFeatures.debugger,
       coreFeatures.docker,
       coreFeatures.git,

@@ -1,4 +1,5 @@
 export const SIDEBAR_ACTIVITY_ITEM_IDS = [
+  "agents",
   "files",
   "workspaces",
   "git",

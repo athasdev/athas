@@ -375,7 +375,11 @@ export const SignInIcon = createIconComponent(Nucleo.IconArrowDoorInOutline18, "
 export const SignOutIcon = createIconComponent(Nucleo.IconArrowDoorOut3Outline18, "SignOutIcon");
 export const SitemapIcon = createIconComponent(Nucleo.IconSitemapOutline18, "SitemapIcon");
 export const SlidersIcon = createIconComponent(Nucleo.IconSlidersOutline18, "SlidersIcon");
-export const SparkleIcon = createIconComponent(Nucleo.IconSparkleOutline18, "SparkleIcon");
+export const SparkleIcon = createIconComponent(
+  Nucleo.IconSparkleOutline18,
+  "SparkleIcon",
+  NucleoFill.IconSparkleFill18,
+);
 export const SquareArrowUpIcon = createIconComponent(
   Nucleo.IconSquareArrowUpOutline18,
   "SquareArrowUpIcon",

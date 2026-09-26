@@ -33,6 +33,7 @@ describe("orderChromeItems", () => {
 
   test("moves Review from the activity rail into Source Control", () => {
     expect(SIDEBAR_ACTIVITY_ITEM_IDS).toEqual([
+      "agents",
       "files",
       "workspaces",
       "git",

@@ -36,6 +36,11 @@ const SettingsSidebar = lazy(() =>
     default: module.SettingsSidebar,
   })),
 );
+const AgentsSidebar = lazy(() =>
+  import("@/features/ai/components/sidebar/agents-sidebar").then((module) => ({
+    default: module.AgentsSidebar,
+  })),
+);
 const DatabaseSidebar = lazy(() =>
   import("@/features/database/components/database-sidebar").then((module) => ({
     default: module.DatabaseSidebar,
@@ -123,6 +128,18 @@ export const SidebarPane = memo(
         ),
       },
       { id: "files", content: <FileExplorerPane /> },
+      ...(coreFeatures.aiChat
+        ? [
+            {
+              id: "agents" as const,
+              content: (
+                <Suspense fallback={null}>
+                  <AgentsSidebar />
+                </Suspense>
+              ),
+            },
+          ]
+        : []),
       { id: "outline", content: <OutlineSidebar /> },
       {
         id: "agent",
@@ -157,6 +174,7 @@ export const SidebarPane = memo(
       activePane &&
       [
         "files",
+        "agents",
         "outline",
         "docker",
         "views",

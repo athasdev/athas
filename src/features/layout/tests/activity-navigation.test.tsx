@@ -41,4 +41,27 @@ describe("activity navigation", () => {
     expect(markup).toContain('data-slot="button"');
     expect(markup).not.toContain('data-slot="sidebar-list-item"');
   });
+
+  it("puts the agents item first, in its own group", () => {
+    const markup = renderToStaticMarkup(
+      <ActivityRailNavigation
+        items={[
+          ...items,
+          {
+            id: "agents",
+            label: "Agents",
+            icon: <span>agents icon</span>,
+            active: false,
+            onClick: () => {},
+            ariaLabel: "Agents",
+          },
+        ]}
+      />,
+    );
+
+    expect(markup).toContain('aria-label="Agents"');
+    expect(markup.indexOf('aria-label="Agents"')).toBeLessThan(
+      markup.indexOf('aria-label="Files"'),
+    );
+  });
 });
