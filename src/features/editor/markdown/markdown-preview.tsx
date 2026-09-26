@@ -1,21 +1,33 @@
 import "./styles.css";
 import { exists } from "@tauri-apps/plugin-fs";
 import { open } from "@tauri-apps/plugin-shell";
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
+import { editorAPI } from "@/features/editor/extensions/api";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
 import { getBufferById, getBufferByPath } from "@/features/editor/utils/buffer-index";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { hasTextContent } from "@/features/panes/types/pane-content.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { SearchPopover } from "@/ui/search";
 import { logger } from "../utils/logger";
+import {
+  highlightMarkdownPreviewMatches,
+  isEntireMarkdownPreviewSelected,
+} from "./markdown-preview-search";
 import { useHighlightedMarkdown } from "./use-highlighted-markdown";
 
-export function MarkdownPreview() {
+export function MarkdownPreview({
+  bufferId,
+  isActiveSurface = true,
+}: {
+  bufferId?: string;
+  isActiveSurface?: boolean;
+}) {
   const { sourceBufferPath, sourceContent } = useBufferStore(
     useShallow((state) => {
-      const activeBuffer = getBufferById(state.buffers, state.activeBufferId);
+      const activeBuffer = getBufferById(state.buffers, bufferId ?? state.activeBufferId);
       const sourceBuffer =
         activeBuffer?.type === "markdownPreview"
           ? (getBufferByPath(state.buffers, activeBuffer.sourceFilePath) ?? activeBuffer)
@@ -32,7 +44,79 @@ export function MarkdownPreview() {
   const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath) || "";
   const containerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
   const html = useHighlightedMarkdown(sourceContent, { frontMatter: "render" });
+  const { html: renderedHtml, matchCount } = useMemo(
+    () => highlightMarkdownPreviewMatches(html, isSearchOpen ? searchQuery : ""),
+    [html, isSearchOpen, searchQuery],
+  );
+
+  useEffect(() => {
+    if (isActiveSurface) containerRef.current?.focus({ preventScroll: true });
+  }, [isActiveSurface]);
+
+  useEffect(() => {
+    if (!isActiveSurface) return;
+    const ownerId = `markdown-preview:${bufferId ?? sourceBufferPath}`;
+    editorAPI.setActiveFindAdapter({ ownerId, openFind: () => setIsSearchOpen(true) });
+    return () => editorAPI.clearActiveFindAdapter(ownerId);
+  }, [bufferId, isActiveSurface, sourceBufferPath]);
+
+  useEffect(() => {
+    if (!isActiveSurface) return;
+    const handleCopy = (event: ClipboardEvent) => {
+      const activeElement = document.activeElement;
+      if (
+        activeElement instanceof HTMLInputElement ||
+        activeElement instanceof HTMLTextAreaElement ||
+        (activeElement instanceof HTMLElement && activeElement.isContentEditable)
+      ) {
+        return;
+      }
+
+      const content = contentRef.current;
+      const selection = window.getSelection();
+      if (!content || !selection || !isEntireMarkdownPreviewSelected(content, selection)) return;
+      event.preventDefault();
+      event.clipboardData?.setData("text/plain", sourceContent);
+    };
+
+    document.addEventListener("copy", handleCopy);
+    return () => document.removeEventListener("copy", handleCopy);
+  }, [isActiveSurface, sourceContent]);
+
+  useEffect(() => {
+    if (isSearchOpen) searchInputRef.current?.focus();
+  }, [isSearchOpen]);
+
+  useEffect(() => {
+    setCurrentMatchIndex((index) => (matchCount ? Math.min(index, matchCount - 1) : 0));
+  }, [matchCount]);
+
+  useEffect(() => {
+    const matches = contentRef.current?.querySelectorAll<HTMLElement>(
+      "[data-markdown-search-match]",
+    );
+    if (!matches?.length) return;
+    matches.forEach((match, index) => {
+      match.toggleAttribute("data-current", index === currentMatchIndex);
+    });
+    matches[currentMatchIndex]?.scrollIntoView({ block: "center", inline: "nearest" });
+  }, [currentMatchIndex, renderedHtml]);
+
+  const navigateSearch = (direction: number) => {
+    if (matchCount === 0) return;
+    setCurrentMatchIndex((index) => (index + direction + matchCount) % matchCount);
+  };
+
+  const closeSearch = () => {
+    setIsSearchOpen(false);
+    containerRef.current?.focus();
+  };
 
   const resolvePath = useCallback(
     (href: string, currentFilePath: string): string => {
@@ -144,20 +228,63 @@ export function MarkdownPreview() {
   }, []);
 
   return (
-    <div
-      ref={containerRef}
-      className="markdown-preview flex h-full justify-center overflow-auto bg-background px-6 pt-6 pb-safe-16"
-      style={{
-        fontSize: `${fontSize}px`,
-        fontFamily: `${uiFontFamily}, sans-serif`,
-      }}
-      onClick={handleLinkClick}
-      onWheelCapture={handleWheelCapture}
-    >
+    <div className="relative size-full min-h-0">
+      {isSearchOpen ? (
+        <div className="absolute top-2 right-2 z-30">
+          <SearchPopover
+            value={searchQuery}
+            onChange={(value) => {
+              setSearchQuery(value);
+              setCurrentMatchIndex(0);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                event.preventDefault();
+                closeSearch();
+              } else if (event.key === "Enter") {
+                event.preventDefault();
+                navigateSearch(event.shiftKey ? -1 : 1);
+              }
+            }}
+            onClose={closeSearch}
+            placeholder="Find in Markdown preview"
+            inputRef={searchInputRef}
+            matchLabel={
+              searchQuery
+                ? matchCount
+                  ? `${currentMatchIndex + 1} of ${matchCount}`
+                  : "No results"
+                : null
+            }
+            onNext={() => navigateSearch(1)}
+            onPrevious={() => navigateSearch(-1)}
+            canNavigate={matchCount > 0}
+          />
+        </div>
+      ) : null}
       <div
-        className="markdown-content typeset typeset-preview w-full max-w-3xl"
-        dangerouslySetInnerHTML={{ __html: html }}
-      />
+        ref={containerRef}
+        data-markdown-preview
+        tabIndex={0}
+        className="markdown-preview flex h-full items-start justify-center overflow-auto bg-background px-6 pt-6 outline-none focus-visible:ring-2 focus-visible:ring-focus"
+        style={{
+          fontSize: `${fontSize}px`,
+          fontFamily: `${uiFontFamily}, sans-serif`,
+        }}
+        onPointerUp={(event) => {
+          if (event.button === 0 && window.getSelection()?.isCollapsed) {
+            containerRef.current?.focus({ preventScroll: true });
+          }
+        }}
+        onClick={handleLinkClick}
+        onWheelCapture={handleWheelCapture}
+      >
+        <div
+          ref={contentRef}
+          className="markdown-content typeset typeset-preview w-full max-w-3xl pb-safe-16"
+          dangerouslySetInnerHTML={{ __html: renderedHtml }}
+        />
+      </div>
     </div>
   );
 }

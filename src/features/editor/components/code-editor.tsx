@@ -178,14 +178,16 @@ const CodeEditor = ({
     ? (onContentChange ?? (isActiveSurface ? handleContentChange : () => {}))
     : () => {};
   const isPreviewBuffer = activeBuffer?.isPreview ?? false;
+  const showMarkdownPreview =
+    activeBuffer?.type === "markdownPreview" ||
+    (activeBuffer?.type === "editor" && activeBuffer.isMarkdownPreview === true);
   const showNotebookEditor =
     activeBuffer?.type === "editor" && filePath.toLowerCase().endsWith(".ipynb");
   const enableInteractiveServices =
-    isActiveSurface && !isPreviewBuffer && !readOnly && !showNotebookEditor;
+    isActiveSurface && !isPreviewBuffer && !readOnly && !showNotebookEditor && !showMarkdownPreview;
   const enableRichEditorServices = enableInteractiveServices;
   const enableCodeLens = enableRichEditorServices && codeLensEnabled;
 
-  const showMarkdownPreview = activeBuffer?.type === "markdownPreview";
   const showHtmlPreview = activeBuffer?.type === "htmlPreview";
   const showCsvPreview = activeBuffer?.type === "csvPreview";
   const showSvgPreview = activeBuffer?.type === "svgPreview";
@@ -580,7 +582,10 @@ const CodeEditor = ({
           {/* Main editor - absolute positioned to fill container */}
           <div className="absolute inset-0 bg-background">
             {showMarkdownPreview ? (
-              <MarkdownPreview />
+              <MarkdownPreview
+                bufferId={activeBufferId ?? undefined}
+                isActiveSurface={isActiveSurface}
+              />
             ) : showHtmlPreview ? (
               <HtmlPreview />
             ) : showCsvPreview ? (

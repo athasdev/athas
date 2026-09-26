@@ -9,6 +9,51 @@
   width: 100%;
 }
 
+[data-markdown-preview] .markdown-content :where(ul:not(.task-list), ol) {
+  list-style: none;
+}
+
+[data-markdown-preview] .markdown-content :where(ul:not(.task-list), ol) > li {
+  position: relative;
+}
+
+[data-markdown-preview] .markdown-content ul:not(.task-list) > li::before,
+[data-markdown-preview] .markdown-content ol > li::before {
+  position: absolute;
+  left: -1.5em;
+  width: 1.3em;
+  color: var(--subtle-foreground);
+  text-align: right;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+[data-markdown-preview] .markdown-content ul:not(.task-list) > li::before {
+  content: "•";
+}
+
+[data-markdown-preview] .markdown-content ol {
+  counter-reset: markdown-preview-list;
+}
+
+[data-markdown-preview] .markdown-content ol > li {
+  counter-increment: markdown-preview-list;
+}
+
+[data-markdown-preview] .markdown-content ol > li::before {
+  content: counter(markdown-preview-list) ".";
+}
+
+[data-markdown-preview] .markdown-content [data-markdown-search-match] {
+  background: var(--primary-soft);
+  color: inherit;
+}
+
+[data-markdown-preview] .markdown-content [data-markdown-search-match][data-current] {
+  outline: 1px solid var(--primary);
+}
+
 .markdown-preview .markdown-front-matter {
   margin: 0 0 1.1em;
   padding: 0.75em 0;

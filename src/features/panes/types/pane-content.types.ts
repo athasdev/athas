@@ -68,6 +68,7 @@ export interface EditorContent extends PaneContentBase {
   savedContent: string;
   isDirty: boolean;
   isVirtual: boolean;
+  isMarkdownPreview?: boolean;
   readOnly?: boolean;
   language?: string;
   languageOverride?: string;

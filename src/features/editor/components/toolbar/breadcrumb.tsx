@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
-import { EyeIcon, SearchIcon } from "@/ui/icons";
+import { EyeIcon, PenIcon, SearchIcon } from "@/ui/icons";
 import { useShallow } from "zustand/react/shallow";
 import { EditorStatusActions } from "@/features/editor/components/toolbar/editor-status-actions";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { openMarkdownPreview } from "@/features/editor/markdown/open-markdown-preview";
+import { toggleMarkdownPreview } from "@/features/editor/markdown/toggle-markdown-preview";
 import { isMarkdownPreviewableFile } from "@/features/editor/markdown/previewable";
 import { getBufferById } from "@/features/editor/utils/buffer-index";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
@@ -47,6 +47,7 @@ export default function Breadcrumb({
             id: buffer.id,
             path: buffer.path,
             type: buffer.type,
+            isMarkdownPreview: buffer.type === "editor" ? buffer.isMarkdownPreview : false,
           }
         : null;
     }),
@@ -59,8 +60,7 @@ export default function Breadcrumb({
   };
 
   const handlePreviewClick = () => {
-    const buffer = useBufferStore.getState().buffers.find((item) => item.id === resolvedBufferId);
-    if (buffer?.type === "editor") openMarkdownPreview(buffer);
+    if (resolvedBufferId) toggleMarkdownPreview(resolvedBufferId);
   };
 
   const filePath = filePathOverride ?? activeBuffer?.path ?? "";
@@ -71,8 +71,13 @@ export default function Breadcrumb({
     showDefaultActions && activeBuffer ? (
       <>
         {activeBuffer.type === "editor" && isMarkdownPreviewableFile(activeBuffer.path) ? (
-          <Button variant="ghost" iconOnly onClick={handlePreviewClick} tooltip="Preview Markdown">
-            <EyeIcon />
+          <Button
+            variant="ghost"
+            iconOnly
+            onClick={handlePreviewClick}
+            tooltip={activeBuffer.isMarkdownPreview ? "Show Markdown Source" : "Preview Markdown"}
+          >
+            {activeBuffer.isMarkdownPreview ? <PenIcon /> : <EyeIcon />}
           </Button>
         ) : null}
         {activeBuffer.type === "editor" ? (
@@ -103,12 +108,14 @@ export default function Breadcrumb({
                 filePath={filePath}
                 interactive={interactive && !isLocalHistorySnapshot}
               />
-              <SymbolBreadcrumb
-                bufferId={resolvedBufferId ?? undefined}
-                editorViewKey={editorViewKey}
-                filePath={filePath}
-                interactive={interactive && !isLocalHistorySnapshot}
-              />
+              {!activeBuffer?.isMarkdownPreview ? (
+                <SymbolBreadcrumb
+                  bufferId={resolvedBufferId ?? undefined}
+                  editorViewKey={editorViewKey}
+                  filePath={filePath}
+                  interactive={interactive && !isLocalHistorySnapshot}
+                />
+              ) : null}
             </>
           ) : null}
           {extensionActions.left.map((action) => (

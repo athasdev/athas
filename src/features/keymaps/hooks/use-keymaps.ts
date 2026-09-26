@@ -16,7 +16,10 @@ import { useUIState } from "@/features/window/stores/ui-state.store";
 import { IS_LINUX } from "@/utils/platform";
 import { useKeymapStore } from "../stores/keymaps.store";
 import { getEffectiveKeybindings } from "../utils/effective-keymaps";
-import { isEditorKeyboardTarget } from "../utils/editor-keyboard-target";
+import {
+  getMarkdownPreviewKeyboardTarget,
+  isEditorKeyboardTarget,
+} from "../utils/editor-keyboard-target";
 import { resolveEffectiveKeymapContexts } from "../utils/effective-contexts";
 import { evaluateWhenClause } from "../utils/context";
 import { eventToKey, keysMatch, matchKeybinding } from "../utils/matcher";
@@ -62,7 +65,9 @@ export function useKeymaps() {
       }
 
       const target = e.target as HTMLElement | null;
+      const isMarkdownPreviewTarget = getMarkdownPreviewKeyboardTarget(target) !== null;
       const isEditorTarget =
+        isMarkdownPreviewTarget ||
         isEditorKeyboardTarget(target) ||
         isEditorKeyboardTarget(document.activeElement as HTMLElement | null);
       const isTerminalTarget =
@@ -183,6 +188,15 @@ export function useKeymaps() {
       // Try to match against registered keybindings
       for (const keybinding of allKeybindings) {
         if (!keybinding.enabled && keybinding.enabled !== undefined) {
+          continue;
+        }
+
+        if (
+          isMarkdownPreviewTarget &&
+          keybinding.command.startsWith("editor.") &&
+          keybinding.command !== "editor.selectAll" &&
+          keybinding.command !== "editor.copy"
+        ) {
           continue;
         }
 
