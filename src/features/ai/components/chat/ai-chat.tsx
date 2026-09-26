@@ -26,6 +26,7 @@ import {
 } from "@/features/ai/lib/edit-diff-capture";
 import { getAgentMessageAccess } from "@/features/ai/lib/agent-message-access";
 import { startAssistantResponseContinuation } from "@/features/ai/lib/assistant-response";
+import { claimRunAbortController } from "@/features/ai/lib/run-abort-controller";
 import {
   cancelUnfinishedToolCalls,
   createToolCall,
@@ -535,7 +536,8 @@ const AIChat = memo(function AIChat({
       void updateInitialAgentSessionTitle(targetChatId, userMessage.content);
     }
 
-    abortControllerRef.current = new AbortController();
+    // A stopped turn can finish after the next one started; it only clears its own controller.
+    const { release: releaseAbortController } = claimRunAbortController(abortControllerRef);
     const currentAssistantMessageId = assistantMessageId;
     let currentAssistantRawContent = "";
     let acpProducedStateOnlyUpdate = false;
@@ -579,7 +581,7 @@ const AIChat = memo(function AIChat({
           }
 
           finishRunAndProcessQueue(targetChatId, runId);
-          abortControllerRef.current = null;
+          releaseAbortController();
           return;
         }
       }
@@ -647,7 +649,7 @@ const AIChat = memo(function AIChat({
               });
             }
             finishRunAndProcessQueue(targetChatId, runId, getAgentRunEnding(false, stopNotice));
-            abortControllerRef.current = null;
+            releaseAbortController();
             notifyAgent(
               stopNotice === "prompt_refused" || stopNotice === "refused" ? "error" : "complete",
             );
@@ -661,7 +663,7 @@ const AIChat = memo(function AIChat({
               responsePhase: undefined,
             }));
             finishRunAndProcessQueue(targetChatId, runId, "stopped");
-            abortControllerRef.current = null;
+            releaseAbortController();
             return;
           }
 
@@ -677,7 +679,7 @@ const AIChat = memo(function AIChat({
                 isStreaming: false,
               }));
               finishRunAndProcessQueue(targetChatId, runId, getAgentRunEnding(wasCancelled));
-              abortControllerRef.current = null;
+              releaseAbortController();
               if (!wasCancelled) notifyAgent("complete");
               return;
             }
@@ -697,7 +699,7 @@ details: The ${emptyResponseSource} completed, but no content, tool output, or r
               isStreaming: false,
             }));
             finishRunAndProcessQueue(targetChatId, runId, wasCancelled ? "stopped" : "failed");
-            abortControllerRef.current = null;
+            releaseAbortController();
             if (!wasCancelled) notifyAgent("error");
             return;
           }
@@ -706,7 +708,7 @@ details: The ${emptyResponseSource} completed, but no content, tool output, or r
             isStreaming: false,
           });
           finishRunAndProcessQueue(targetChatId, runId, getAgentRunEnding(wasCancelled));
-          abortControllerRef.current = null;
+          releaseAbortController();
           if (!wasCancelled) notifyAgent("complete");
         },
         (error: string, canReconnect?: boolean) => {
@@ -839,7 +841,7 @@ details: ${errorDetails || mainError}
           }
           notifyAgent("error");
           finishRunAndProcessQueue(targetChatId, runId, "failed");
-          abortControllerRef.current = null;
+          releaseAbortController();
         },
         conversationContext,
         () => {
@@ -1113,7 +1115,7 @@ details: ${errorDetails || mainError}
         isStreaming: false,
       });
       finishRunAndProcessQueue(targetChatId, runId, "failed");
-      abortControllerRef.current = null;
+      releaseAbortController();
     }
   }
 
