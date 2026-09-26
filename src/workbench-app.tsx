@@ -19,6 +19,7 @@ import {
 } from "@/features/window/utils/window-open-diagnostics";
 import { NotificationRecorder } from "@/features/notifications/components/notification-recorder";
 import { useNativeNotificationIntegration } from "@/features/notifications/hooks/use-native-notification-integration";
+import { useAcpEventSync } from "@/features/ai/hooks/use-acp-event-sync";
 
 import { MainLayout } from "./features/layout/components/main-layout";
 import { ZoomIndicator } from "./features/window/components/zoom-indicator";
@@ -37,6 +38,7 @@ function WorkbenchApp() {
   useAppBootstrap();
   useSystemAccessibility();
   useNativeNotificationIntegration();
+  useAcpEventSync();
   const reduceMotion = useSettingsStore((state) => state.settings.reduceMotion);
 
   useEffect(() => {

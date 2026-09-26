@@ -2,7 +2,6 @@ import { describe, expect, it } from "vite-plus/test";
 import { getChatAttention } from "@/features/ai/lib/chat-attention";
 import type { AcpAuthRequest } from "@/features/ai/stores/acp-auth.store";
 import type { AcpQuestion } from "@/features/ai/stores/acp-questions.store";
-import { useAgentAttentionStore } from "@/features/ai/stores/agent-attention.store";
 
 function question(sessionId: string | null, waiting = false): AcpQuestion {
   return {
@@ -64,15 +63,5 @@ describe("getChatAttention", () => {
         authRequest: authRequest(null, "choosing"),
       }),
     ).toBeNull();
-  });
-});
-
-describe("agent attention store", () => {
-  it("tracks pending permissions per chat and forgets chats that have none", () => {
-    const { setPendingPermissions } = useAgentAttentionStore.getState().actions;
-    setPendingPermissions("chat-1", 2);
-    expect(useAgentAttentionStore.getState().pendingPermissions).toEqual({ "chat-1": 2 });
-    setPendingPermissions("chat-1", 0);
-    expect(useAgentAttentionStore.getState().pendingPermissions).toEqual({});
   });
 });

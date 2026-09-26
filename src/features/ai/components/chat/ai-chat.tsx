@@ -1,20 +1,14 @@
 import { getApiErrorCode } from "@/features/ai/lib/api-error";
 import { cancelIntelligenceAgent } from "@/features/ai/intelligence/services/intelligence-agent-session";
-import {
-  respondToIntelligencePermission,
-  isIntelligencePermissionPending,
-} from "@/features/ai/intelligence/services/intelligence-agent-permissions";
 import { getProviderAccessFromMap } from "@/features/ai/stores/ai-chat/provider-actions";
 import { isTerminalAgent } from "@/features/ai/lib/terminal-agents";
 import { openTerminalAgent } from "@/features/ai/lib/terminal-agent-terminal";
-import { listen } from "@tauri-apps/api/event";
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { appendChatAcpEvent, type ChatAcpEventInput } from "@/features/ai/lib/acp-event-timeline";
 import {
   isAcpAuthenticationError,
   isAcpConfigurationError,
 } from "@/features/ai/lib/acp-authentication";
-import { getChatTitleFromSessionInfo } from "@/features/ai/lib/acp-session-info";
 import { parseDirectAcpUiAction } from "@/features/ai/lib/acp-ui-intents";
 import {
   appendReferencedFiles,
@@ -59,7 +53,6 @@ import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { agentIsDetached } from "@/features/ai/detached/agent-window.store";
 import { peekAgentDraft } from "@/features/ai/detached/agent-window-drafts";
 import { useComposerContextSelection } from "@/features/ai/hooks/use-composer-context-selection";
-import type { AcpEvent } from "@/features/ai/types/acp.types";
 import type { ContextInfo } from "@/features/ai/types/ai-context.types";
 import type {
   AgentMessageSubmitResult,
@@ -93,15 +86,17 @@ import { cn } from "@/utils/cn";
 import { AgentStartView } from "../agent-start-view";
 import { useChatActions, useChatState } from "../../hooks/use-chat-store";
 import AIChatInputBar from "../input/chat-input-bar";
-import { useAcpAuthStore } from "@/features/ai/stores/acp-auth.store";
 import {
   selectSessionQuestions,
   useAcpQuestionsStore,
 } from "@/features/ai/stores/acp-questions.store";
 import type { AcpElicitationResponse } from "@/features/ai/lib/acp-elicitation";
-import { AcpPermissionPrompt, type AcpPermissionRequest } from "./acp-permission-prompt";
+import { AcpPermissionPrompt } from "./acp-permission-prompt";
 import { markAgentChatVisible } from "@/features/ai/lib/visible-agent-chats";
-import { useAgentAttentionStore } from "@/features/ai/stores/agent-attention.store";
+import {
+  selectChatPermissions,
+  useAgentPermissionsStore,
+} from "@/features/ai/stores/agent-permissions.store";
 import { getAcpPermissionPreview } from "@/features/ai/lib/acp-permission-preview";
 import { AcpQuestionPrompt } from "./acp-question-prompt";
 import { AcpUrlQuestionPrompt } from "./acp-url-question-prompt";
@@ -138,7 +133,8 @@ const AIChat = memo(function AIChat({
   const { showToast } = useToast();
 
   const abortControllerRef = useRef<AbortController | null>(null);
-  const [permissionQueue, setPermissionQueue] = useState<AcpPermissionRequest[]>([]);
+  const allPermissions = useAgentPermissionsStore.use.permissions();
+  const permissionActions = useAgentPermissionsStore.use.actions();
   const allAgentQuestions = useAcpQuestionsStore.use.questions();
   const questionActions = useAcpQuestionsStore.use.actions();
   const [acpEvents, setAcpEvents] = useState<ChatAcpEvent[]>([]);
@@ -161,6 +157,10 @@ const AIChat = memo(function AIChat({
   );
   const currentAgentId = currentChat?.agentId ?? chatState.selectedAgentId;
   const chatSessionId = currentChat?.acpSessionId ?? null;
+  const permissionQueue = useMemo(
+    () => selectChatPermissions(allPermissions, effectiveChatId),
+    [allPermissions, effectiveChatId],
+  );
   const agentQuestions = useMemo(
     () => selectSessionQuestions(allAgentQuestions, chatSessionId),
     [allAgentQuestions, chatSessionId],
@@ -259,140 +259,9 @@ const AIChat = memo(function AIChat({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isActiveSurface, isAiChatBlockedByPolicy]);
 
-  useEffect(() => {
-    let unlisten: (() => void) | undefined;
-    let disposed = false;
-
-    const setupAcpStateSync = async () => {
-      const stop = await listen<AcpEvent>("acp-event", ({ payload }) => {
-        const store = useAIChatStore.getState();
-        const { actions } = store;
-
-        switch (payload.type) {
-          case "slash_commands_update":
-            actions.setSessionSlashCommands(payload.sessionId, payload.commands);
-            break;
-          case "session_mode_update":
-            actions.setSessionModeState(
-              payload.sessionId,
-              payload.modeState.currentModeId,
-              payload.modeState.availableModes,
-            );
-            break;
-          case "current_mode_update":
-            actions.setSessionCurrentMode(payload.sessionId, payload.currentModeId);
-            break;
-          case "config_options_update":
-            actions.setSessionConfigOptions(payload.sessionId, payload.configOptions);
-            break;
-          case "usage_update":
-            actions.setSessionUsage(payload.sessionId, payload.usage);
-            break;
-          case "session_info_update": {
-            const chat = store.chats.find((item) => item.acpSessionId === payload.sessionId);
-            const nextTitle = chat ? getChatTitleFromSessionInfo(chat.title, payload.title) : null;
-            if (chat && nextTitle) {
-              actions.updateChatTitle(chat.id, nextTitle);
-            }
-            break;
-          }
-          case "auth_required": {
-            useAcpAuthStore.getState().actions.require({
-              agentId: payload.agentId,
-              sessionId: payload.sessionId,
-              methods: payload.methods,
-            });
-            const authChatId =
-              store.chats.find((item) => item.acpSessionId === payload.sessionId)?.id ??
-              store.currentChatId;
-            if (authChatId) {
-              void sendAgentNativeNotification({
-                kind: "auth",
-                dedupeId: `${payload.agentId}:${payload.sessionId ?? "startup"}`,
-                chatId: authChatId,
-              });
-            }
-            break;
-          }
-          case "elicitation_request":
-            useAcpQuestionsStore.getState().actions.add({
-              requestId: payload.requestId,
-              sessionId: payload.sessionId,
-              request: payload.request,
-            });
-            break;
-          case "elicitation_complete":
-            useAcpQuestionsStore.getState().actions.complete(payload.elicitationId);
-            break;
-          case "request_closed":
-            useAcpQuestionsStore.getState().actions.remove(payload.requestId);
-            setPermissionQueue((queue) =>
-              queue.filter((item) => item.requestId !== payload.requestId),
-            );
-            break;
-          case "status_changed":
-            actions.setAcpAgentStatus(payload.status);
-            break;
-          default:
-            break;
-        }
-      });
-      // The surface may already be gone by the time the bridge answers.
-      if (disposed) {
-        stop();
-        return;
-      }
-      unlisten = stop;
-    };
-
-    setupAcpStateSync().catch((error) => {
-      if (!disposed) {
-        console.error("Failed to initialize ACP state sync listener:", error);
-      }
-    });
-
-    return () => {
-      disposed = true;
-      if (unlisten) {
-        unlisten();
-      }
-    };
-  }, []);
-
   const appendAcpEvent = useCallback((event: ChatAcpEventInput) => {
     setAcpEvents((prev) => appendChatAcpEvent(prev, event));
   }, []);
-
-  const setPendingPermissions = useAgentAttentionStore(
-    (state) => state.actions.setPendingPermissions,
-  );
-  useEffect(() => {
-    if (!effectiveChatId) return;
-    setPendingPermissions(effectiveChatId, permissionQueue.length);
-    return () => setPendingPermissions(effectiveChatId, 0);
-  }, [effectiveChatId, permissionQueue.length, setPendingPermissions]);
-
-  const permissionQueueRef = useRef(permissionQueue);
-  permissionQueueRef.current = permissionQueue;
-  const currentAgentIdRef = useRef(currentAgentId);
-  currentAgentIdRef.current = currentAgentId;
-  useEffect(
-    () => () => {
-      // A prompt nobody can answer would leave the run waiting forever.
-      for (const request of permissionQueueRef.current) {
-        if (request.requestId.startsWith("intelligence:")) {
-          respondToIntelligencePermission(request.requestId, false);
-        } else if (currentAgentIdRef.current === CODEX_INTEGRATION_ID) {
-          void CodexIntegrationService.respond(request.requestId, false).catch(() => undefined);
-        } else {
-          void AcpStreamHandler.respondToPermission(request.requestId, false, true).catch(
-            () => undefined,
-          );
-        }
-      }
-    },
-    [],
-  );
 
   // Agent availability is handled dynamically by the agent selector.
 
@@ -485,8 +354,10 @@ const AIChat = memo(function AIChat({
 
   const stopStreaming = async (options: { continueQueue?: boolean } = {}) => {
     void recordFrictionSignal({ area: "agent", signal: "cancel" });
-    const pendingPermissions = permissionQueue;
-    setPermissionQueue([]);
+    // ACP and Athas's own agent close their prompts on cancel; Codex prompts are refused.
+    const refusedCodexPermissions = effectiveChatId
+      ? permissionActions.dropStoppedTurn(effectiveChatId)
+      : Promise.resolve();
     questionActions.forgetWaitingForSession(chatSessionId);
 
     if (abortControllerRef.current) {
@@ -500,9 +371,7 @@ const AIChat = memo(function AIChat({
     } else if (currentAgentId === CODEX_INTEGRATION_ID) {
       try {
         await CodexIntegrationService.cancel();
-        await Promise.all(
-          pendingPermissions.map((item) => CodexIntegrationService.respond(item.requestId, false)),
-        );
+        await refusedCodexPermissions;
       } catch (error) {
         console.error("Failed to cancel Codex turn:", error);
       }
@@ -738,13 +607,7 @@ const AIChat = memo(function AIChat({
           }));
         },
         (completion) => {
-          setPermissionQueue((queue) =>
-            queue.filter(
-              (item) =>
-                !item.requestId.startsWith("intelligence:") ||
-                isIntelligencePermissionPending(item.requestId),
-            ),
-          );
+          permissionActions.dropSettled(targetChatId);
           const wasCancelled = completion?.outcome === "cancelled";
           if (wasCancelled || (completion?.stopReason && completion.stopReason !== "end_turn")) {
             // The turn is over; a call the agent never finished must not stay running.
@@ -847,13 +710,7 @@ details: The ${emptyResponseSource} completed, but no content, tool output, or r
           if (!wasCancelled) notifyAgent("complete");
         },
         (error: string, canReconnect?: boolean) => {
-          setPermissionQueue((queue) =>
-            queue.filter(
-              (item) =>
-                !item.requestId.startsWith("intelligence:") ||
-                isIntelligencePermissionPending(item.requestId),
-            ),
-          );
+          permissionActions.dropSettled(targetChatId);
           console.error("Streaming error:", error);
 
           let errorTitle = "API Error";
@@ -1092,17 +949,20 @@ details: ${errorDetails || mainError}
             detail: event.description || `${event.permissionType} ${event.resource}`.trim(),
             state: "info",
           });
-          setPermissionQueue((prev) => [
-            ...prev,
-            {
-              requestId: event.requestId,
-              description: event.description,
-              permissionType: event.permissionType,
-              resource: event.resource,
-              options: event.options,
-              preview: getAcpPermissionPreview(event),
-            },
-          ]);
+          permissionActions.add({
+            chatId: targetChatId,
+            responder: event.requestId.startsWith("intelligence:")
+              ? "intelligence"
+              : currentAgentId === CODEX_INTEGRATION_ID
+                ? "codex"
+                : "acp",
+            requestId: event.requestId,
+            description: event.description,
+            permissionType: event.permissionType,
+            resource: event.resource,
+            options: event.options,
+            preview: getAcpPermissionPreview(event),
+          });
         },
         (event) => {
           if (!isAcpAgent(currentAgentId) && currentAgentId !== CODEX_INTEGRATION_ID) return;
@@ -1460,35 +1320,22 @@ details: ${errorDetails || mainError}
   };
   const handlePermission = async (approved: boolean, optionId?: string) => {
     if (!currentPermission) return;
+    const option = currentPermission.options.find((item) => item.id === optionId);
+    appendAcpEvent({
+      id: `permission-response-${currentPermission.requestId}`,
+      category: "permission",
+      label: "Permission response",
+      detail: option?.name || (approved ? "allow" : "deny"),
+      state: approved ? "success" : "info",
+    });
     try {
-      const option = currentPermission.options.find((item) => item.id === optionId);
-      appendAcpEvent({
-        id: `permission-response-${currentPermission.requestId}`,
-        category: "permission",
-        label: "Permission response",
-        detail: option?.name || (approved ? "allow" : "deny"),
-        state: approved ? "success" : "info",
-      });
-      if (currentPermission.requestId.startsWith("intelligence:")) {
-        respondToIntelligencePermission(currentPermission.requestId, approved);
-      } else if (currentAgentId === CODEX_INTEGRATION_ID) {
-        await CodexIntegrationService.respond(currentPermission.requestId, approved);
-      } else {
-        await AcpStreamHandler.respondToPermission(
-          currentPermission.requestId,
-          approved,
-          false,
-          optionId,
-        );
-      }
+      await permissionActions.respond(currentPermission.requestId, approved, optionId);
     } catch (error) {
       console.error("Failed to answer permission request:", error);
       showToast({
         message: "The agent did not accept the answer. Stop the agent and try again.",
         type: "error",
       });
-    } finally {
-      setPermissionQueue((prev) => prev.slice(1));
     }
   };
 

@@ -1,9 +1,6 @@
 import { KeyIcon } from "@/ui/icons";
-import type {
-  AcpEvent,
-  AcpPermissionOption,
-  AcpPermissionPreview,
-} from "@/features/ai/types/acp.types";
+import type { AcpPermissionOption, AcpPermissionPreview } from "@/features/ai/types/acp.types";
+import type { AgentPermissionRequest } from "@/features/ai/types/agent-permission.types";
 import { createAcpDiffViewNode, toRelativeDisplayPath } from "@/features/ai/lib/acp-diff-output";
 import { ToolLocations } from "@/features/ai/components/messages/tool-locations";
 import { useProjectStore } from "@/features/window/stores/project.store";
@@ -13,15 +10,6 @@ import Textarea from "@/ui/textarea";
 import { Button, type ButtonProps } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import { chatContentWidth } from "./chat-content-width";
-
-export type AcpPermissionRequest = {
-  requestId: string;
-  description: string;
-  permissionType: string;
-  resource: string;
-  options: Extract<AcpEvent, { type: "permission_request" }>["options"];
-  preview?: AcpPermissionPreview;
-};
 
 function PreviewText({ label, text, mono }: { label: string; text: string; mono?: boolean }) {
   return (
@@ -156,7 +144,7 @@ export function AcpPermissionPrompt({
   queuedCount,
   onRespond,
 }: {
-  permission: AcpPermissionRequest;
+  permission: AgentPermissionRequest;
   queuedCount: number;
   onRespond: (approved: boolean, optionId?: string) => void;
 }) {

@@ -405,6 +405,12 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
       void deleteChatFromDb(chatId).catch((error) =>
         console.error("Failed to delete chat from database:", error),
       );
+      // Nobody can answer the chat's permission prompts any more.
+      void import("@/features/ai/stores/agent-permissions.store")
+        .then(({ useAgentPermissionsStore }) =>
+          useAgentPermissionsStore.getState().actions.cancelChat(chatId),
+        )
+        .catch(() => undefined);
       // The chat's ACP session is no longer needed; the agent keeps serving other chats.
       const sessionId = getChatAcpSessionToClose(deletedChat);
       if (sessionId) {
