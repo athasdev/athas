@@ -198,7 +198,6 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
     openContent,
   } = useBufferStore.use.actions();
   const { zoomIn, zoomOut, resetZoom } = useZoomStore.use.actions();
-  const { openBuffer } = useBufferStore.use.actions();
 
   const commandSettings = useMemo(
     () => ({
@@ -266,7 +265,6 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
     ...createMarkdownActions({
       isMarkdownFile: isActiveMarkdownFile,
       activeBuffer,
-      openBuffer,
       onClose,
     }),
     ...createViewActions({

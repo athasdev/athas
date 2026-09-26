@@ -1,8 +1,10 @@
 import type { ReactNode } from "react";
-import { SearchIcon } from "@/ui/icons";
+import { EyeIcon, SearchIcon } from "@/ui/icons";
 import { useShallow } from "zustand/react/shallow";
 import { EditorStatusActions } from "@/features/editor/components/toolbar/editor-status-actions";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { openMarkdownPreview } from "@/features/editor/markdown/open-markdown-preview";
+import { isMarkdownPreviewableFile } from "@/features/editor/markdown/previewable";
 import { getBufferById } from "@/features/editor/utils/buffer-index";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import { useExtensionActions } from "@/extensions/ui/hooks/use-extension-actions";
@@ -56,6 +58,11 @@ export default function Breadcrumb({
     void keymapRegistry.executeCommand("workbench.showFind");
   };
 
+  const handlePreviewClick = () => {
+    const buffer = useBufferStore.getState().buffers.find((item) => item.id === resolvedBufferId);
+    if (buffer?.type === "editor") openMarkdownPreview(buffer);
+  };
+
   const filePath = filePathOverride ?? activeBuffer?.path ?? "";
   if (!filePath) return null;
   const isLocalHistorySnapshot = filePath.startsWith("local-history://");
@@ -63,6 +70,11 @@ export default function Breadcrumb({
   const defaultActions =
     showDefaultActions && activeBuffer ? (
       <>
+        {activeBuffer.type === "editor" && isMarkdownPreviewableFile(activeBuffer.path) ? (
+          <Button variant="ghost" iconOnly onClick={handlePreviewClick} tooltip="Preview Markdown">
+            <EyeIcon />
+          </Button>
+        ) : null}
         {activeBuffer.type === "editor" ? (
           <Button
             variant="ghost"
