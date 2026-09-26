@@ -98,6 +98,25 @@ async function syncChatToDatabase(get: GetAIChatStore, chatId: string) {
   }
 }
 
+const STREAMING_SAVE_DELAY_MS = 250;
+const scheduledChatSyncs = new Map<string, ReturnType<typeof setTimeout>>();
+
+/**
+ * Saves a chat once message updates pause. A streamed reply updates its message for every chunk,
+ * and saving each one re-serialized the whole chat and rewrote it in the database tens of times a
+ * second; the last update always lands within the delay.
+ */
+function scheduleChatSync(get: GetAIChatStore, chatId: string) {
+  if (scheduledChatSyncs.has(chatId)) return;
+  scheduledChatSyncs.set(
+    chatId,
+    setTimeout(() => {
+      scheduledChatSyncs.delete(chatId);
+      void syncChatToDatabase(get, chatId);
+    }, STREAMING_SAVE_DELAY_MS),
+  );
+}
+
 async function loadChatMessages(set: SetAIChatStore, chatId: string) {
   set((state) => {
     state.chatMessageLoadStates[chatId] = "loading";
@@ -529,7 +548,7 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
           chat.lastMessageAt = new Date();
         }
       });
-      void syncChatToDatabase(get, chatId);
+      scheduleChatSync(get, chatId);
     },
     replaceChatMessages: (chatId, messages) => {
       set((state) => {

@@ -100,7 +100,7 @@ export const createGitStore = () =>
         }
 
         set({
-          gitStatus,
+          gitStatus: keepEqualGitStatus(get().gitStatus, gitStatus),
           ...(branches ? { branches } : {}),
           ...(commits
             ? {
@@ -119,7 +119,7 @@ export const createGitStore = () =>
         }
 
         set({
-          workspaceGitStatus: status,
+          workspaceGitStatus: keepEqualGitStatus(get().workspaceGitStatus, status),
           workspaceGitStatusUpdatedAt: Date.now(),
         });
       },
@@ -153,10 +153,10 @@ export const createGitStore = () =>
         }
       },
 
-      setGitStatus: (status) => set({ gitStatus: status }),
+      setGitStatus: (status) => set({ gitStatus: keepEqualGitStatus(get().gitStatus, status) }),
       setWorkspaceGitStatus: (status, repoPath) =>
         set({
-          workspaceGitStatus: status,
+          workspaceGitStatus: keepEqualGitStatus(get().workspaceGitStatus, status),
           currentWorkspaceRepoPath: repoPath,
           workspaceGitStatusUpdatedAt: Date.now(),
         }),
@@ -184,4 +184,29 @@ export const createGitStore = () =>
     },
   }));
 
+/**
+ * The previous status when a refresh returns the same one. Saves and watcher events refresh git
+ * often with nothing changed; keeping the reference stops the file tree and git views from
+ * re-decorating every row.
+ */
+function keepEqualGitStatus<T extends GitStatus | null>(previous: T, next: T): T {
+  if (!previous || !next || previous === next) return next;
+  if (
+    previous.branch !== next.branch ||
+    previous.ahead !== next.ahead ||
+    previous.behind !== next.behind ||
+    previous.files.length !== next.files.length
+  ) {
+    return next;
+  }
+  const sameFiles = previous.files.every((file, index) => {
+    const nextFile = next.files[index]!;
+    return (
+      file.path === nextFile.path &&
+      file.status === nextFile.status &&
+      file.staged === nextFile.staged
+    );
+  });
+  return sameFiles ? previous : next;
+}
 export const useGitStore = createWorkspaceScopedStore("git", createGitStore);

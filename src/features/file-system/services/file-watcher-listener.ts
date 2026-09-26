@@ -1,5 +1,4 @@
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import { dirname } from "@tauri-apps/api/path";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getBufferByPath } from "@/features/editor/utils/buffer-index";
 import { emitGitChanged } from "@/features/git/events/git-events";
@@ -12,6 +11,7 @@ import {
   cancelFileWatcherRefreshes,
   scheduleFileWatcherRefresh,
 } from "./file-watcher-refresh-scheduler";
+import { getDirName } from "@/utils/path-helpers";
 
 /** The `file-changed` payload, from the project file watcher and from agent writes alike. */
 export interface FileChangeEvent {
@@ -96,7 +96,6 @@ async function syncOpenBuffer(
 
 export async function handleFileChange({ path, event_type, agent_write_id }: FileChangeEvent) {
   const workspaceId = workspaceRuntimeRegistry.getActiveWorkspaceId();
-  const parentDirectory = await dirname(path);
 
   window.dispatchEvent(
     new CustomEvent("file-external-change", {
@@ -105,7 +104,8 @@ export async function handleFileChange({ path, event_type, agent_write_id }: Fil
   );
 
   if (event_type === "deleted" || event_type === "opened") {
-    scheduleDirectoryRefresh(workspaceId, parentDirectory);
+    // Computed here rather than over IPC: bursts of watcher events each paid a round trip.
+    scheduleDirectoryRefresh(workspaceId, getDirName(path));
     return;
   }
 

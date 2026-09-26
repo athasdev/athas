@@ -1872,9 +1872,9 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
         }));
 
         set((state) => {
-          const updated = updateDirectoryContents(state.files, directoryPath, entries as any[]);
+          const result = updateDirectoryContents(state.files, directoryPath, entries as any[]);
 
-          if (updated) {
+          if (result === "changed") {
             state.filesVersion++;
           }
         });

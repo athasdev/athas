@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { buildDiagnosticsActivityStatus } from "@/features/diagnostics/lib/diagnostics-activity-status";
 import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { getBufferById } from "@/features/editor/utils/buffer-index";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { WarningIcon } from "@/ui/icons";
 import { SidebarIconButton } from "@/ui/sidebar";
@@ -18,10 +19,9 @@ export function DiagnosticsActivityControl() {
     () => buildDiagnosticsActivityStatus(diagnosticsEnabled, diagnostics),
     [diagnostics, diagnosticsEnabled],
   );
-  const isActive = useBufferStore((state) => {
-    const activeBuffer = state.buffers.find((buffer) => buffer.id === state.activeBufferId);
-    return activeBuffer?.type === "diagnostics";
-  });
+  const isActive = useBufferStore(
+    (state) => getBufferById(state.buffers, state.activeBufferId)?.type === "diagnostics",
+  );
   const openDiagnosticsBuffer = useBufferStore.use.actions().openDiagnosticsBuffer;
 
   if (!status) return null;

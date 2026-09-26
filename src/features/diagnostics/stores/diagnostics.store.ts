@@ -8,6 +8,26 @@ function diagnosticMessageToString(message: LSPDiagnostic["message"]): string {
   return typeof message === "string" ? message : message.value;
 }
 
+function isSameDiagnostic(left: Diagnostic, right: Diagnostic): boolean {
+  return (
+    left.line === right.line &&
+    left.column === right.column &&
+    left.endLine === right.endLine &&
+    left.endColumn === right.endColumn &&
+    left.severity === right.severity &&
+    left.message === right.message &&
+    left.code === right.code &&
+    left.source === right.source
+  );
+}
+
+function isSameDiagnosticList(left: readonly Diagnostic[], right: readonly Diagnostic[]): boolean {
+  return (
+    left.length === right.length &&
+    left.every((diagnostic, index) => isSameDiagnostic(diagnostic, right[index]!))
+  );
+}
+
 interface DiagnosticsState {
   // Map of file path to diagnostics
   diagnosticsByFile: Map<string, Diagnostic[]>;
@@ -84,6 +104,12 @@ export const useDiagnosticsStore = createSelectors(
 
     actions: {
       setDiagnostics: (filePath: string, diagnostics: Diagnostic[], owner = "default") => {
+        // Language servers republish after nearly every edit, usually with the same result. An
+        // unchanged list keeps the store as is, so editor markers and the rail badge don't redo work.
+        const existing = get().diagnosticsByOwner.get(filePath)?.get(owner);
+        if (existing ? isSameDiagnosticList(existing, diagnostics) : diagnostics.length === 0) {
+          return;
+        }
         set((state) => {
           const normalizedDiagnostics = diagnostics.map((diagnostic) => ({
             ...diagnostic,
