@@ -75,8 +75,10 @@ pub async fn refresh_acp_agent_registry(
 /// `session_id` is the chat's earlier session, reattached when the agent still has it; with
 /// `import_session` it is an agent session a new chat imports, and the answer carries its history.
 /// `mcp_servers` is the user's MCP server list from settings; enabled servers are joined with
-/// their stored secrets and offered to the agent.
+/// their stored secrets and offered to the agent. `additional_directories` are the workspace's
+/// other roots, offered to agents that support them.
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 pub async fn open_acp_session(
    app_handle: AppHandle,
    bridge: State<'_, AcpBridgeState>,
@@ -86,6 +88,7 @@ pub async fn open_acp_session(
    import_session: Option<bool>,
    auth_method_id: Option<String>,
    mcp_servers: Option<Vec<McpServerSetting>>,
+   additional_directories: Option<Vec<String>>,
 ) -> Result<AcpOpenedSession, String> {
    let mcp_servers = resolve_mcp_servers(&app_handle, mcp_servers.unwrap_or_default());
    refresh_registered_agents(&app_handle, &bridge, false).await;
@@ -102,6 +105,7 @@ pub async fn open_acp_session(
          import_session.unwrap_or(false),
          auth_method_id,
          mcp_servers,
+         additional_directories.unwrap_or_default(),
       )
       .await
       .map_err(|e| e.to_string())

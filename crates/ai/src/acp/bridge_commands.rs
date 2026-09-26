@@ -23,6 +23,8 @@ pub(super) struct OpenRequest {
    /// The sign-in method the user picked after an earlier attempt needed one.
    pub auth_method_id: Option<String>,
    pub mcp_servers: Vec<McpServerConfig>,
+   /// The workspace's other roots, offered to agents that take `additionalDirectories`.
+   pub additional_directories: Vec<String>,
    pub response_tx: Response<AcpOpenedSession>,
 }
 

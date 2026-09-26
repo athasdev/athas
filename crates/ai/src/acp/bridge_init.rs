@@ -13,7 +13,7 @@ use super::{
       AcpAgentCapabilities, AcpAuthMethod, AcpEvent, AgentConfig, SessionConfigOption, SessionMode,
       SessionModeState,
    },
-   workspace_path::path_to_string,
+   workspace_path::{self, path_to_string},
 };
 use crate::{executable_path::find_executable, runtime::AthasAppHandle as AppHandle};
 use agent_client_protocol::{
@@ -71,6 +71,8 @@ pub(super) struct ConnectionHandle {
    pub described_auth_methods: Vec<AcpAuthMethod>,
    pub agent_capabilities: AcpAgentCapabilities,
    pub supports_session_resume: bool,
+   /// The agent takes `additionalDirectories` on session setup.
+   pub supports_additional_directories: bool,
    recent_stderr: RecentAgentStderr,
 }
 
@@ -208,6 +210,11 @@ pub(super) async fn start_connection(
       .session_capabilities
       .resume
       .is_some();
+   let supports_additional_directories = init_response
+      .agent_capabilities
+      .session_capabilities
+      .additional_directories
+      .is_some();
 
    Ok(StartedConnection {
       handle: ConnectionHandle {
@@ -221,6 +228,7 @@ pub(super) async fn start_connection(
          described_auth_methods,
          agent_capabilities: init_response.agent_capabilities.into(),
          supports_session_resume,
+         supports_additional_directories,
          recent_stderr,
       },
       process: child,
@@ -251,6 +259,7 @@ pub(super) async fn open_session(
    target: SessionTarget,
    startup_auth: StartupAuth,
    mcp_servers: Vec<McpServerConfig>,
+   additional_directories: Vec<String>,
    map_config_options: impl Fn(Vec<acp::SessionConfigOption>) -> Vec<SessionConfigOption>,
 ) -> Result<OpenedSession> {
    let mcp_selection = select_mcp_servers(
@@ -273,6 +282,13 @@ pub(super) async fn open_session(
       path_to_string(cwd.as_path())
    );
 
+   // Extra workspace roots only go to agents that advertise them; others would ignore them.
+   let additional_directories = if handle.supports_additional_directories {
+      workspace_path::additional_directories(&cwd, &additional_directories)
+   } else {
+      Vec::new()
+   };
+
    let session_bootstrap = bootstrap_session(
       handle.connection.clone(),
       cwd,
@@ -283,7 +299,10 @@ pub(super) async fn open_session(
          can_load_session: handle.agent_capabilities.load_session,
          can_resume_session: handle.supports_session_resume,
          replay: handle.client.replay(),
-         mcp_servers: &mcp_selection.servers,
+         scope: SessionScope {
+            mcp_servers: &mcp_selection.servers,
+            additional_directories: &additional_directories,
+         },
          map_config_options,
       },
    )
@@ -312,6 +331,10 @@ pub(super) async fn open_session(
       .client
       .set_session_id(session_bootstrap.session_id.to_string())
       .await;
+   handle.client.set_session_roots(
+      &session_bootstrap.session_id.to_string(),
+      &additional_directories,
+   );
    emit_initial_session_state(
       &handle.app_handle,
       &session_bootstrap.session_id,
@@ -344,9 +367,17 @@ where
    can_load_session: bool,
    can_resume_session: bool,
    replay: &'a ReplayRouter,
-   /// Sent in `session/new`, `session/load` and `session/resume`.
-   mcp_servers: &'a [acp::McpServer],
+   scope: SessionScope<'a>,
    map_config_options: F,
+}
+
+/// What a session gets beyond its `cwd`, sent in `session/new`, `session/load` and
+/// `session/resume`.
+#[derive(Clone, Copy)]
+struct SessionScope<'a> {
+   mcp_servers: &'a [acp::McpServer],
+   /// Extra workspace roots; empty unless the agent supports them.
+   additional_directories: &'a [PathBuf],
 }
 
 fn configure_background_agent_command(command: &mut Command) {
@@ -599,7 +630,7 @@ async fn bootstrap_session(
             connection.clone(),
             cwd.clone(),
             existing_session_id,
-            ctx.mcp_servers,
+            ctx.scope,
             method,
          )
          .await;
@@ -614,7 +645,7 @@ async fn bootstrap_session(
                connection.clone(),
                cwd.clone(),
                existing_session_id,
-               ctx.mcp_servers,
+               ctx.scope,
                method,
             )
             .await;
@@ -676,13 +707,13 @@ async fn bootstrap_session(
       context_lost = true;
    }
 
-   let mut session_result = create_session(connection.clone(), cwd.clone(), ctx.mcp_servers).await;
+   let mut session_result = create_session(connection.clone(), cwd.clone(), ctx.scope).await;
    if let Ok(Err(err)) = &session_result
       && matches!(err.code, acp::ErrorCode::AuthRequired)
    {
       authenticate(connection.clone()).await?;
       log::info!("ACP authentication succeeded, retrying session creation");
-      session_result = create_session(connection.clone(), cwd, ctx.mcp_servers).await;
+      session_result = create_session(connection.clone(), cwd, ctx.scope).await;
    }
 
    let session = match session_result {
@@ -786,12 +817,12 @@ async fn reopen_session(
    connection: Arc<AcpConnection>,
    cwd: PathBuf,
    session_id: &str,
-   mcp_servers: &[acp::McpServer],
+   scope: SessionScope<'_>,
    method: ReopenMethod,
 ) -> Result<Result<SessionSetup, acp::Error>, tokio::time::error::Elapsed> {
    let session_id = session_id.to_string();
    match method {
-      ReopenMethod::Load => load_session(connection, cwd, session_id, mcp_servers)
+      ReopenMethod::Load => load_session(connection, cwd, session_id, scope)
          .await
          .map(|result| {
             result.map(|response| SessionSetup {
@@ -799,7 +830,7 @@ async fn reopen_session(
                config_options: response.config_options,
             })
          }),
-      ReopenMethod::Resume => resume_session(connection, cwd, session_id, mcp_servers)
+      ReopenMethod::Resume => resume_session(connection, cwd, session_id, scope)
          .await
          .map(|result| {
             result.map(|response| SessionSetup {
@@ -810,15 +841,22 @@ async fn reopen_session(
    }
 }
 
+fn new_session_request(cwd: PathBuf, scope: SessionScope<'_>) -> acp::NewSessionRequest {
+   acp::NewSessionRequest::new(cwd)
+      .mcp_servers(scope.mcp_servers.to_vec())
+      .additional_directories(scope.additional_directories.to_vec())
+}
+
 async fn create_session(
    connection: Arc<AcpConnection>,
    cwd: PathBuf,
-   mcp_servers: &[acp::McpServer],
+   scope: SessionScope<'_>,
 ) -> Result<Result<acp::NewSessionResponse, acp::Error>, tokio::time::error::Elapsed> {
-   let session_request = acp::NewSessionRequest::new(cwd).mcp_servers(mcp_servers.to_vec());
    tokio::time::timeout(
       std::time::Duration::from_secs(30),
-      connection.send_request(session_request).block_task(),
+      connection
+         .send_request(new_session_request(cwd, scope))
+         .block_task(),
    )
    .await
 }
@@ -827,10 +865,11 @@ async fn load_session(
    connection: Arc<AcpConnection>,
    cwd: PathBuf,
    existing_session_id: String,
-   mcp_servers: &[acp::McpServer],
+   scope: SessionScope<'_>,
 ) -> Result<Result<acp::LoadSessionResponse, acp::Error>, tokio::time::error::Elapsed> {
-   let request =
-      acp::LoadSessionRequest::new(existing_session_id, cwd).mcp_servers(mcp_servers.to_vec());
+   let request = acp::LoadSessionRequest::new(existing_session_id, cwd)
+      .mcp_servers(scope.mcp_servers.to_vec())
+      .additional_directories(scope.additional_directories.to_vec());
    tokio::time::timeout(
       std::time::Duration::from_secs(30),
       connection.send_request(request).block_task(),
@@ -842,10 +881,11 @@ async fn resume_session(
    connection: Arc<AcpConnection>,
    cwd: PathBuf,
    existing_session_id: String,
-   mcp_servers: &[acp::McpServer],
+   scope: SessionScope<'_>,
 ) -> Result<Result<acp::ResumeSessionResponse, acp::Error>, tokio::time::error::Elapsed> {
-   let request =
-      acp::ResumeSessionRequest::new(existing_session_id, cwd).mcp_servers(mcp_servers.to_vec());
+   let request = acp::ResumeSessionRequest::new(existing_session_id, cwd)
+      .mcp_servers(scope.mcp_servers.to_vec())
+      .additional_directories(scope.additional_directories.to_vec());
    tokio::time::timeout(
       std::time::Duration::from_secs(30),
       connection.send_request(request).block_task(),
@@ -902,6 +942,24 @@ fn emit_initial_session_state(
 #[cfg(test)]
 mod tests {
    use super::*;
+
+   #[test]
+   fn new_sessions_carry_extra_roots_only_when_there_are_some() {
+      let roots = [PathBuf::from("/work/docs")];
+      let scope = SessionScope {
+         mcp_servers: &[],
+         additional_directories: &roots,
+      };
+      let request = serde_json::to_value(new_session_request("/work/app".into(), scope)).unwrap();
+      assert_eq!(request["additionalDirectories"], json!(["/work/docs"]));
+
+      let scope = SessionScope {
+         mcp_servers: &[],
+         additional_directories: &[],
+      };
+      let request = serde_json::to_value(new_session_request("/work/app".into(), scope)).unwrap();
+      assert!(request.get("additionalDirectories").is_none());
+   }
 
    #[test]
    fn reattaching_prefers_resume_then_load() {

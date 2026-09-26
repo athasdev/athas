@@ -1,7 +1,9 @@
 use anyhow::{Context, Result, bail};
 use std::{
+   collections::HashMap,
    fs,
    path::{Component, Path, PathBuf},
+   sync::Mutex,
 };
 
 pub(super) fn resolve_workspace_path(workspace_path: Option<String>) -> Result<Option<PathBuf>> {
@@ -76,6 +78,80 @@ pub(super) fn is_inside_roots(path: &Path, roots: &[PathBuf]) -> bool {
       return false;
    };
    roots.iter().any(|root| path.starts_with(root))
+}
+
+/// The extra workspace roots a session is opened with: the absolute, existing folders in
+/// `requested` other than `cwd`, each once and in the order given. Anything else is dropped,
+/// since ACP requires absolute roots and an agent cannot work in a folder that is not there.
+pub(super) fn additional_directories(cwd: &Path, requested: &[String]) -> Vec<PathBuf> {
+   let cwd = fs::canonicalize(cwd).ok();
+   let mut seen = Vec::new();
+   let mut directories = Vec::new();
+   for raw in requested {
+      let Ok(path) = path_from_workspace_input(raw.trim()) else {
+         continue;
+      };
+      if !path.is_absolute() {
+         continue;
+      }
+      let path = lexical_normalize(&path);
+      let Ok(real) = fs::canonicalize(&path) else {
+         continue;
+      };
+      if !real.is_dir() || cwd.as_ref() == Some(&real) || seen.contains(&real) {
+         continue;
+      }
+      seen.push(real);
+      directories.push(path);
+   }
+   directories
+}
+
+/// The extra workspace roots each session was opened with, by session id, kept where they really
+/// are on disk so [`is_inside_roots`] can judge paths against them.
+#[derive(Default)]
+pub(super) struct SessionRoots(Mutex<HashMap<String, Vec<PathBuf>>>);
+
+impl SessionRoots {
+   fn lock(&self) -> std::sync::MutexGuard<'_, HashMap<String, Vec<PathBuf>>> {
+      self
+         .0
+         .lock()
+         .unwrap_or_else(|poisoned| poisoned.into_inner())
+   }
+
+   /// Records `directories` as the roots of `session_id`, replacing what it had.
+   pub fn set(&self, session_id: &str, directories: &[PathBuf]) {
+      let roots: Vec<PathBuf> = directories
+         .iter()
+         .filter_map(|directory| fs::canonicalize(directory).ok())
+         .collect();
+      let mut sessions = self.lock();
+      if roots.is_empty() {
+         sessions.remove(session_id);
+      } else {
+         sessions.insert(session_id.to_string(), roots);
+      }
+   }
+
+   /// Whether `path` lies inside one of the roots of `session_id`.
+   pub fn contains(&self, session_id: &str, path: &Path) -> bool {
+      self
+         .lock()
+         .get(session_id)
+         .is_some_and(|roots| is_inside_roots(path, roots))
+   }
+
+   /// Forgets the roots of `session_id`, or of every session with `None`.
+   pub fn release(&self, session_id: Option<&str>) {
+      let mut sessions = self.lock();
+      match session_id {
+         Some(session_id) => {
+            sessions.remove(session_id);
+         }
+         None => sessions.clear(),
+      }
+   }
 }
 
 fn path_from_workspace_input(input: &str) -> Result<PathBuf> {
@@ -310,6 +386,51 @@ mod tests {
       // A link that stays inside is fine.
       std::os::unix::fs::symlink(&workspace, workspace.join("self")).unwrap();
       assert!(is_inside_roots(&workspace.join("self/a.txt"), &roots));
+   }
+
+   #[test]
+   fn keeps_only_distinct_existing_absolute_extra_roots() {
+      let temp_dir = tempfile::tempdir().unwrap();
+      let workspace = temp_dir.path().join("workspace");
+      let docs = temp_dir.path().join("docs");
+      let lib = temp_dir.path().join("lib");
+      for dir in [&workspace, &docs, &lib] {
+         fs::create_dir_all(dir).unwrap();
+      }
+      fs::write(temp_dir.path().join("file.txt"), "").unwrap();
+      let requested = [
+         path_to_string(&docs),
+         path_to_string(&workspace),
+         "relative/dir".to_string(),
+         path_to_string(&temp_dir.path().join("missing")),
+         path_to_string(&temp_dir.path().join("file.txt")),
+         path_to_string(&lib),
+         path_to_string(&docs.join("../docs")),
+      ];
+
+      assert_eq!(
+         additional_directories(&workspace, &requested),
+         vec![docs.clone(), lib.clone()]
+      );
+   }
+
+   #[test]
+   fn session_roots_let_each_session_into_its_own_extra_roots() {
+      let temp_dir = tempfile::tempdir().unwrap();
+      let docs = temp_dir.path().join("docs");
+      fs::create_dir_all(&docs).unwrap();
+      let roots = SessionRoots::default();
+      roots.set("s1", std::slice::from_ref(&docs));
+
+      assert!(roots.contains("s1", &docs.join("guide.md")));
+      assert!(!roots.contains("s2", &docs.join("guide.md")));
+      assert!(!roots.contains("s1", &temp_dir.path().join("other.md")));
+
+      roots.release(Some("s1"));
+      assert!(!roots.contains("s1", &docs.join("guide.md")));
+      roots.set("s1", std::slice::from_ref(&docs));
+      roots.release(None);
+      assert!(!roots.contains("s1", &docs.join("guide.md")));
    }
 
    #[test]

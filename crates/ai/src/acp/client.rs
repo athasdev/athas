@@ -9,7 +9,9 @@ use super::{
       AcpToolCallLocation, AcpToolCallStatus, AcpToolKind, AcpUsageUpdate, SessionConfigOption,
       SessionConfigOptionKind, SessionConfigOptionValue, UiAction,
    },
-   workspace_path::{is_inside_roots, path_to_string, real_path, resolve_path_against_workspace},
+   workspace_path::{
+      SessionRoots, is_inside_roots, path_to_string, real_path, resolve_path_against_workspace,
+   },
 };
 use crate::runtime::AthasAppHandle as AppHandle;
 use agent_client_protocol::{self as acp_sdk, schema::v1 as acp};
@@ -281,6 +283,9 @@ pub struct AthasAcpClient {
    workspace_path: Option<PathBuf>,
    /// Where the workspace really is on disk; agent file access outside these asks the user.
    workspace_roots: Vec<PathBuf>,
+   /// The extra workspace roots each session was opened with, by session id, where they really
+   /// are on disk. Agent file access inside them goes ahead like access inside the workspace.
+   session_roots: SessionRoots,
    /// Folders outside the workspace the user let each session read from, by session id.
    outside_read_grants: StdMutex<HashMap<String, HashSet<PathBuf>>>,
    pending_permissions: Pending<PermissionResponse>,
@@ -308,6 +313,7 @@ impl AthasAcpClient {
          app_handle,
          workspace_path,
          workspace_roots,
+         session_roots: SessionRoots::default(),
          outside_read_grants: StdMutex::default(),
          pending_permissions: Arc::default(),
          pending_elicitations: Arc::default(),
@@ -334,8 +340,15 @@ impl AthasAcpClient {
       *current = Some(session_id);
    }
 
-   /// Frees what a closed session held: its terminals and the folders outside the workspace the
-   /// user let it read. `None` frees everything, for when the agent itself stops.
+   /// Records the extra workspace roots `session_id` was opened with, so the agent can use them
+   /// without asking the way it uses the workspace.
+   pub fn set_session_roots(&self, session_id: &str, directories: &[PathBuf]) {
+      self.session_roots.set(session_id, directories);
+   }
+
+   /// Frees what a closed session held: its terminals, its extra workspace roots and the folders
+   /// outside the workspace the user let it read. `None` frees everything, for when the agent
+   /// itself stops.
    pub async fn release_session(&self, session_id: Option<&str>) {
       let released = {
          let mut states = self
@@ -362,6 +375,7 @@ impl AthasAcpClient {
             .outside_read_grants
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
+         self.session_roots.release(session_id);
          match session_id {
             Some(session_id) => {
                grants.remove(session_id);
@@ -1079,7 +1093,8 @@ impl AthasAcpClient {
       Ok(acp::WriteTextFileResponse::new())
    }
 
-   /// Lets the agent at `path` when it lies inside the workspace. Anything outside asks the user
+   /// Lets the agent at `path` when it lies inside the workspace or one of the session's extra
+   /// roots. Anything outside asks the user
    /// first, with the permission prompt the agent's own permission requests use; a write shows the
    /// change it would make. Reads in a folder the user allowed for the session go ahead.
    async fn ensure_file_access(
@@ -1089,7 +1104,9 @@ impl AthasAcpClient {
       access: FileAccess,
       new_content: Option<&str>,
    ) -> acp::Result<()> {
-      if is_inside_roots(path, &self.workspace_roots) {
+      if is_inside_roots(path, &self.workspace_roots)
+         || self.session_roots.contains(session_id, path)
+      {
          return Ok(());
       }
       let folder = real_path(path).and_then(|real| real.parent().map(Path::to_path_buf));

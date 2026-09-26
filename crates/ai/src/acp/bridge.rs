@@ -355,6 +355,7 @@ impl AcpWorker {
             request.target.clone(),
             startup_auth,
             request.mcp_servers,
+            request.additional_directories,
             map_config_options,
          )
          .await;
@@ -1014,7 +1015,9 @@ impl AcpAgentBridge {
    /// attempt needed one. `mcp_servers` are offered to the agent in session setup, filtered by
    /// what it supports. With `import`, `session_id` is an agent session a new chat takes over:
    /// it is loaded and its replayed history is returned, and no new session is created when that
-   /// fails.
+   /// fails. `additional_directories` are the workspace's other roots; agents that support
+   /// `additionalDirectories` get them in session setup.
+   #[allow(clippy::too_many_arguments)]
    pub async fn open_session(
       &self,
       agent_id: &str,
@@ -1023,6 +1026,7 @@ impl AcpAgentBridge {
       import: bool,
       auth_method_id: Option<String>,
       mcp_servers: Vec<McpServerConfig>,
+      additional_directories: Vec<String>,
    ) -> Result<AcpOpenedSession> {
       let target = match (session_id, import) {
          (Some(session_id), true) => SessionTarget::Import(session_id),
@@ -1048,6 +1052,7 @@ impl AcpAgentBridge {
                target,
                auth_method_id,
                mcp_servers,
+               additional_directories,
                response_tx,
             },
          })

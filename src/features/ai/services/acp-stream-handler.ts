@@ -15,7 +15,9 @@ import type {
 import type { ContextInfo } from "@/features/ai/types/ai-context.types";
 import type { AgentCompletionResult } from "@/features/ai/types/agent-completion.types";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
+import { getAcpAdditionalDirectories } from "@/features/ai/lib/acp-additional-directories";
 import { getAcpPathBaseName, toAcpFileUri } from "@/features/ai/lib/acp-file-uri";
 import {
   getAcpStartupErrorDetails,
@@ -309,6 +311,7 @@ export class AcpStreamHandler {
           mcpServers: useSettingsStore
             .getState()
             .settings.mcpServers.filter((server) => server.enabled),
+          ...AcpStreamHandler.additionalDirectories(workspacePath),
         }),
         ACP_START_TIMEOUT_MS,
         `${this.agentId} startup timed out`,
@@ -325,6 +328,15 @@ export class AcpStreamHandler {
       }
       throw error;
     }
+  }
+
+  /** The workspace's other roots, which agents that support them get with each session. */
+  private static additionalDirectories(workspacePath: string | null) {
+    const additionalDirectories = getAcpAdditionalDirectories(
+      workspacePath,
+      useFileSystemStore.getState().workspaceFolders,
+    );
+    return additionalDirectories.length > 0 ? { additionalDirectories } : {};
   }
 
   /** Tells the user once per agent start which configured MCP servers the agent left out. */
@@ -920,6 +932,7 @@ export class AcpStreamHandler {
         mcpServers: useSettingsStore
           .getState()
           .settings.mcpServers.filter((server) => server.enabled),
+        ...AcpStreamHandler.additionalDirectories(AcpStreamHandler.currentWorkspacePath()),
       }),
       ACP_START_TIMEOUT_MS,
       `${agentId} did not load the session in time`,
