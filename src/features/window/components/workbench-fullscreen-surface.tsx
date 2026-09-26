@@ -7,7 +7,7 @@ export function WorkbenchFullscreenSurface({ className, style, ...props }: Compo
       data-slot="workbench-fullscreen-surface"
       className={cn("fixed inset-x-0 bottom-0 z-10040 overflow-hidden bg-background", className)}
       style={{
-        top: "var(--athas-title-bar-height)",
+        top: 0,
         ...style,
       }}
       {...props}

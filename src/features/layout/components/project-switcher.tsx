@@ -51,12 +51,14 @@ export function ProjectSwitcher({
   isSwitchingProject,
   onSelectProject,
   onAddRemote,
+  compact = false,
 }: {
   project?: ProjectTab;
   projects: ProjectTab[];
   isSwitchingProject: boolean;
   onSelectProject: (projectId: string) => void;
   onAddRemote: () => void;
+  compact?: boolean;
 }) {
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
   const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
@@ -208,13 +210,14 @@ export function ProjectSwitcher({
               <Button
                 variant="ghost"
                 size="sm"
-                truncate
+                truncate={!compact}
+                iconOnly={compact}
                 aria-label={`Switch project. Current project: ${projectName}`}
                 title={projectPath || projectName}
               >
                 <ProjectGlyph projectPath={projectPath} iconPath={displayIconPath} />
-                <span className="min-w-0 truncate">{projectName}</span>
-                <ChevronExpandYIcon className="text-subtle-foreground" />
+                {!compact && <span className="min-w-0 truncate">{projectName}</span>}
+                {!compact && <ChevronExpandYIcon className="text-subtle-foreground" />}
               </Button>
             }
           />

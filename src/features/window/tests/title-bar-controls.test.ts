@@ -6,8 +6,32 @@ const titleBarSource = readFileSync(
   fileURLToPath(new URL("../components/title-bar/title-bar.tsx", import.meta.url)),
   "utf8",
 );
+const titleNavigationSource = readFileSync(
+  fileURLToPath(new URL("../components/title-bar/title-navigation.tsx", import.meta.url)),
+  "utf8",
+);
+const accountMenuSource = readFileSync(
+  fileURLToPath(new URL("../components/account-menu.tsx", import.meta.url)),
+  "utf8",
+);
 const activityBarSource = readFileSync(
   fileURLToPath(new URL("../../layout/components/sidebar/activity-bar.tsx", import.meta.url)),
+  "utf8",
+);
+const activityChromeSource = readFileSync(
+  fileURLToPath(new URL("../../layout/components/sidebar/activity-chrome.tsx", import.meta.url)),
+  "utf8",
+);
+const mainLayoutSource = readFileSync(
+  fileURLToPath(new URL("../../layout/components/main-layout.tsx", import.meta.url)),
+  "utf8",
+);
+const mainPaneTabBarSource = readFileSync(
+  fileURLToPath(new URL("../../panes/components/main-pane-tab-bar.tsx", import.meta.url)),
+  "utf8",
+);
+const paneContainerSource = readFileSync(
+  fileURLToPath(new URL("../../panes/components/pane-container.tsx", import.meta.url)),
   "utf8",
 );
 const projectSwitcherSource = readFileSync(
@@ -24,52 +48,77 @@ const dropdownSource = readFileSync(
 );
 
 describe("title bar controls", () => {
-  it("places project and branch selectors after the activity sidebar toggle", () => {
-    const sidebarToggleIndex = titleBarSource.indexOf("{sidebarToggle}");
-    const projectSwitcherIndex = titleBarSource.indexOf("{workspaceSelectors}");
-    const branchSelectorIndex = titleBarSource.indexOf("<GitBranchManager");
+  it("places project and branch selectors in the activity sidebar", () => {
+    const projectSwitcherIndex = activityChromeSource.indexOf("<ProjectSwitcher");
+    const branchSelectorIndex = activityChromeSource.indexOf("<GitBranchManager");
 
-    expect(sidebarToggleIndex).toBeGreaterThan(-1);
-    expect(projectSwitcherIndex).toBeGreaterThan(sidebarToggleIndex);
+    expect(projectSwitcherIndex).toBeGreaterThan(-1);
     expect(branchSelectorIndex).toBeGreaterThan(-1);
-    expect(titleBarSource).toContain('triggerMode="branch"');
-    expect(titleBarSource).toContain('aria-hidden="true"');
+    expect(activityChromeSource).toContain('triggerMode="branch"');
+    expect(mainLayoutSource).toContain("<TitleBarWithSettings showMinimal overlay />");
     expect(projectSwitcherSource).toContain(
       "<ProjectGlyph projectPath={projectPath} iconPath={displayIconPath} />",
     );
   });
 
-  it("orders update, run, notifications, and account actions on the trailing side", () => {
-    const updateIndex = titleBarSource.indexOf("<AppUpdateControl");
-    const runActionsIndex = titleBarSource.indexOf("<RunActionsButton");
-    const notificationsIndex = titleBarSource.indexOf("<NotificationsTrigger");
-    const accountIndex = titleBarSource.indexOf("<AccountMenu");
+  it("places the sidebar toggle beside title navigation and before tabs", () => {
+    expect(titleNavigationSource).toContain('<Toggle\n        type="button"');
+    expect(titleNavigationSource).toContain('commandId="workbench.toggleActivitySidebar"');
+    expect(mainLayoutSource.indexOf("<TitleNavigation")).toBeLessThan(
+      mainLayoutSource.indexOf('data-slot="main-title-tab-bar"'),
+    );
+    expect(activityChromeSource).not.toContain("<Toggle");
+  });
+
+  it("orders update, run, notifications, and account actions in the activity footer", () => {
+    const updateIndex = activityChromeSource.indexOf("<AppUpdateControl");
+    const runActionsIndex = activityChromeSource.indexOf("<RunActionsButton");
+    const notificationsIndex = activityChromeSource.indexOf("<NotificationsTrigger");
+    const accountIndex = activityChromeSource.indexOf("<AccountMenu");
 
     expect(updateIndex).toBeGreaterThan(-1);
     expect(runActionsIndex).toBeGreaterThan(updateIndex);
     expect(notificationsIndex).toBeGreaterThan(runActionsIndex);
     expect(accountIndex).toBeGreaterThan(notificationsIndex);
+    expect(activityChromeSource).toContain("<AccountMenu expanded={expanded} />");
+    expect(accountMenuSource).toContain("<SidebarListItem");
+    expect(accountMenuSource).toContain('<DropdownMenuContent side="top"');
   });
 
-  it("removes the relocated controls from the activity sidebar", () => {
+  it("keeps activity navigation and the relocated chrome in the rail", () => {
     expect(activityBarSource).toContain('id: "search"');
     expect(activityBarSource).toContain("<SearchIcon />");
     expect(activityBarSource).toContain(
       'visibleNavigationItems.findIndex((item) => item.id === "files")',
     );
-    expect(activityBarSource).not.toContain("<ProjectSwitcher");
-    expect(activityBarSource).not.toContain("<NotificationsTrigger");
-    expect(activityBarSource).not.toContain("<AppUpdateControl");
-    expect(activityBarSource).not.toContain("<RunActionsButton");
-    expect(activityBarSource).not.toContain("<AccountMenu");
+    expect(activityBarSource).toContain("<ActivityChrome expanded={expanded}");
+    expect(activityBarSource).toContain("<ActivityChromeFooter expanded={expanded}");
   });
 
-  it("keeps macOS control alignment stable across fullscreen transitions", () => {
-    expect(titleBarSource).toContain('isFullscreen ? "pl-2" : "pl-title-bar-leading"');
-    expect(titleBarSource).not.toContain("macTitleBarControlAlignment");
-    expect(titleBarSource).not.toContain("translate-y");
+  it("keeps native window controls over the workbench", () => {
+    expect(titleBarSource).toContain("pointer-events-none absolute top-0 right-0 w-auto");
+    expect(
+      mainLayoutSource.indexOf("<TitleBarWithSettings showMinimal overlay />"),
+    ).toBeGreaterThan(mainLayoutSource.indexOf("<ActivityBar"));
   });
-  it("uses searchable anchored menus for title bar project and branch selection", () => {
+
+  it("mounts top pane tabs in a separate header above the main content", () => {
+    const titleRowIndex = mainLayoutSource.indexOf('data-slot="workbench-title-row"');
+    const headerIndex = mainLayoutSource.indexOf('data-slot="main-title-tab-bar"');
+    const workbenchIndex = mainLayoutSource.indexOf('className="athas-workbench-glass');
+    const contentIndex = mainLayoutSource.indexOf("ref={setMainContentRoot}");
+
+    expect(titleRowIndex).toBeGreaterThan(-1);
+    expect(headerIndex).toBeGreaterThan(titleRowIndex);
+    expect(workbenchIndex).toBeGreaterThan(headerIndex);
+    expect(contentIndex).toBeGreaterThan(workbenchIndex);
+    expect(mainLayoutSource).toContain("<MainTabBarHostContext.Provider value={mainTabBarHost}>");
+    expect(paneContainerSource).toContain("<MainPaneTabBar");
+    expect(mainPaneTabBarSource).toContain("createPortal(");
+    expect(mainPaneTabBarSource).toContain("host.header");
+  });
+
+  it("uses searchable anchored menus for activity sidebar project and branch selection", () => {
     expect(projectSwitcherSource).toContain("<DropdownMenuSearch");
     expect(projectSwitcherSource).toContain("<DropdownMenuViewport>");
     expect(projectSwitcherSource).toContain("<DropdownMenuFooter>");

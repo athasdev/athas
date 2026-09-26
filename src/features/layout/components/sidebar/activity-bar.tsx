@@ -3,6 +3,10 @@ import { useNewAgentAction } from "@/features/ai/hooks/use-new-agent-action";
 import { DiagnosticsActivityControl } from "@/features/diagnostics/components/diagnostics-activity-control";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { ActivityBarMenu } from "@/features/layout/components/sidebar/activity-bar-menu";
+import {
+  ActivityChrome,
+  ActivityChromeFooter,
+} from "@/features/layout/components/sidebar/activity-chrome";
 import { ActivityProjectDots } from "@/features/layout/components/sidebar/activity-project-dots";
 import { ActivityProjectPanel } from "@/features/layout/components/sidebar/activity-project-panel";
 import { useActivityBarResize } from "@/features/layout/hooks/use-activity-bar-resize";
@@ -173,6 +177,7 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
           className="athas-sidebar-rail absolute inset-y-0 left-0 flex flex-col overflow-hidden py-1.5 transition-[width] duration-fast ease-smooth motion-reduce:transition-none"
           style={{ width: railPanelWidth }}
         >
+          <ActivityChrome expanded={expanded} />
           <div
             ref={railContentRef}
             onScroll={projectCarouselEnabled ? handleProjectScroll : undefined}
@@ -210,6 +215,7 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
               />
             ) : null}
             <DiagnosticsActivityControl expanded={expanded} />
+            <ActivityChromeFooter expanded={expanded} />
           </div>
         </div>
         {expanded ? (

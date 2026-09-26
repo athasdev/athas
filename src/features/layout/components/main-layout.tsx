@@ -1,5 +1,5 @@
 import { PerformanceMonitor } from "./performance-monitor";
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useChatInitialization } from "@/features/ai/hooks/use-chat-initialization";
 import { useCollaborationPresence } from "@/features/collaboration/hooks/use-collaboration-presence";
 import { initializeDebuggerEventBridge } from "@/features/debugger/services/debug-adapter-events";
@@ -13,6 +13,7 @@ import { useGitStore } from "@/features/git/stores/git.store";
 import { isGitChangeRelevant, subscribeToGitChanges } from "@/features/git/events/git-events";
 import { useOnboardingStore } from "@/features/onboarding/stores/onboarding.store";
 import { CachedWorkspaceSplitViews } from "@/features/panes/components/split-view-root";
+import { MainTabBarHostContext } from "@/features/panes/contexts/main-tab-bar-host";
 import { usePaneKeyboard } from "@/features/panes/hooks/use-pane-keyboard";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useVimStore } from "@/features/vim/stores/vim.store";
@@ -29,6 +30,7 @@ import { getInternalTabDragData } from "@/features/tabs/utils/internal-tab-drag"
 import { isSidebarViewAvailable } from "@/features/layout/utils/sidebar-pane-utils";
 import { getCollapsedActivityBarWidth } from "@/features/layout/utils/activity-bar-layout";
 import TitleBarWithSettings from "../../window/components/title-bar/title-bar";
+import { TitleNavigation } from "../../window/components/title-bar/title-navigation";
 import { ResizablePane } from "./resizable-pane";
 import { ActivityBar } from "./sidebar/activity-bar";
 import { SidebarPane } from "./sidebar/sidebar-pane";
@@ -63,6 +65,49 @@ const BottomPane = lazy(() => import("./bottom-pane/bottom-pane"));
 
 export function MainLayout() {
   const [deferredSurfacesReady, setDeferredSurfacesReady] = useState(false);
+  const layoutShellRef = useRef<HTMLDivElement>(null);
+  const [activityBarRoot, setActivityBarRoot] = useState<HTMLDivElement | null>(null);
+  const [mainTabBarHeader, setMainTabBarHeader] = useState<HTMLDivElement | null>(null);
+  const [mainContentRoot, setMainContentRoot] = useState<HTMLDivElement | null>(null);
+  const [mainTitleBounds, setMainTitleBounds] = useState<{ left: number; width: number } | null>(
+    null,
+  );
+  const mainTabBarHost = useMemo(
+    () =>
+      mainTabBarHeader && mainContentRoot && mainTitleBounds
+        ? { header: mainTabBarHeader, content: mainContentRoot }
+        : null,
+    [mainTabBarHeader, mainContentRoot, mainTitleBounds],
+  );
+
+  useLayoutEffect(() => {
+    const shell = layoutShellRef.current;
+    if (!shell || !activityBarRoot || !mainContentRoot) return;
+    const updateBounds = () => {
+      const shellRect = shell.getBoundingClientRect();
+      const activityRect = activityBarRoot.getBoundingClientRect();
+      const contentRect = mainContentRoot.getBoundingClientRect();
+      const nextBounds = {
+        left: activityRect.right - shellRect.left,
+        width: contentRect.right - activityRect.right,
+      };
+      setMainTitleBounds((current) =>
+        current?.left === nextBounds.left && current.width === nextBounds.width
+          ? current
+          : nextBounds,
+      );
+    };
+    updateBounds();
+    const observer = new ResizeObserver(updateBounds);
+    observer.observe(shell);
+    observer.observe(activityBarRoot);
+    observer.observe(mainContentRoot);
+    window.addEventListener("resize", updateBounds);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updateBounds);
+    };
+  }, [activityBarRoot, mainContentRoot]);
 
   useChatInitialization();
   usePaneKeyboard();
@@ -282,7 +327,10 @@ export function MainLayout() {
   }, [rootFolderPath, refreshWorkspaceGitStatus, setWorkspaceGitStatus]);
 
   return (
-    <div className="athas-layout-shell relative flex size-full flex-col overflow-hidden bg-surface">
+    <div
+      ref={layoutShellRef}
+      className="athas-layout-shell relative flex size-full flex-col overflow-hidden bg-surface"
+    >
       {/* Drag-and-drop overlay */}
       {isDraggingOver && !getInternalTabDragData() && (
         <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center bg-background backdrop-blur-sm">
@@ -294,20 +342,34 @@ export function MainLayout() {
         </div>
       )}
 
-      <TitleBarWithSettings
-        activityBarExpanded={renderedActivityRailExpanded}
-        onActivityBarExpandedChange={(expanded) => {
-          if (responsiveLayout.compact) {
-            responsiveLayout.setActivityBarExpanded(expanded);
-          } else {
-            void updateSetting("activityRailExpanded", expanded);
-          }
-        }}
-      />
+      <div
+        data-slot="workbench-title-row"
+        data-tauri-drag-region
+        className="relative z-20 h-title-bar shrink-0"
+      >
+        <TitleNavigation
+          activityBarExpanded={renderedActivityRailExpanded}
+          onActivityBarExpandedChange={(expanded) => {
+            if (responsiveLayout.compact) {
+              responsiveLayout.setActivityBarExpanded(expanded);
+            } else {
+              void updateSetting("activityRailExpanded", expanded);
+            }
+          }}
+        />
+        <div
+          ref={setMainTabBarHeader}
+          data-slot="main-title-tab-bar"
+          className="absolute top-0 -bottom-px overflow-hidden"
+          style={mainTitleBounds ?? { left: 0, width: 0 }}
+        />
+      </div>
 
       <div className="athas-workbench-glass relative z-10 flex flex-1 flex-col overflow-hidden pb-workbench">
         <div className="flex flex-1 flex-row overflow-hidden pr-workbench" style={{ minHeight: 0 }}>
-          <ActivityBar expanded={renderedActivityRailExpanded} />
+          <div ref={setActivityBarRoot} className="h-full shrink-0">
+            <ActivityBar expanded={renderedActivityRailExpanded} />
+          </div>
           <ResizablePane
             position="left"
             widthKey="sidebarWidth"
@@ -319,6 +381,7 @@ export function MainLayout() {
 
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
             <div
+              ref={setMainContentRoot}
               className={cn(
                 "athas-glass-island relative min-h-0 flex-1 overflow-hidden border-border border-y border-r bg-background",
                 roundMainContentLeftEdge &&
@@ -327,7 +390,9 @@ export function MainLayout() {
                   (isEditorBottomPaneVisible ? "rounded-tr-xl" : "rounded-r-xl"),
               )}
             >
-              <CachedWorkspaceSplitViews />
+              <MainTabBarHostContext.Provider value={mainTabBarHost}>
+                <CachedWorkspaceSplitViews />
+              </MainTabBarHostContext.Provider>
             </div>
             {terminalWidthMode === "editor" && deferredSurfacesReady && (
               <Suspense fallback={null}>
@@ -364,6 +429,8 @@ export function MainLayout() {
           </div>
         )}
       </div>
+
+      <TitleBarWithSettings showMinimal overlay />
 
       <PerformanceMonitor />
 

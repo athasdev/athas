@@ -1,19 +1,11 @@
 import { type DragEndEvent, type DragMoveEvent, type DragStartEvent } from "@dnd-kit/core";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { restrictToHorizontalAxis } from "@dnd-kit/modifiers";
 import { SortableContext, horizontalListSortingStrategy } from "@dnd-kit/sortable";
-import {
-  ArrowLeftIcon,
-  ArrowRightIcon,
-  ArrowsInIcon,
-  ArrowsOutIcon,
-  SidebarIcon,
-} from "@/ui/icons";
+import { ArrowsInIcon, ArrowsOutIcon, SidebarIcon } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { useJumpListStore } from "@/features/editor/stores/jump-list.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
-import { getBufferById } from "@/features/editor/utils/buffer-index";
-import { navigateToJumpEntry } from "@/features/editor/utils/jump-navigation";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { formatDiffBufferLabel } from "@/features/git/utils/diff-buffer-label";
 import { writeClipboardText } from "@/utils/clipboard";
@@ -35,6 +27,8 @@ import { Button } from "@/ui/button";
 import { ContextMenu, ContextMenuTrigger } from "@/ui/context-menu";
 import { SortableTab, TabBarSurface, TabDndContext, useTabDragClickGuard } from "@/ui/tab-bar";
 import { getRelativePath } from "@/utils/path-helpers";
+import { IS_MAC } from "@/utils/platform";
+import { cn } from "@/utils/cn";
 import { calculateDisplayNames } from "../utils/path-shortener";
 import {
   clearInternalTabDragData,
@@ -50,12 +44,14 @@ interface TabBarProps {
   paneId?: string;
   onTabClick?: (bufferId: string) => void;
   disablePaneActions?: boolean;
+  inTitleBar?: boolean;
 }
 
 const TabBar = ({
   paneId,
   onTabClick: externalTabClick,
   disablePaneActions = false,
+  inTitleBar = false,
 }: TabBarProps) => {
   // Get everything from stores
   const pendingClose = useBufferStore.use.pendingClose();
@@ -97,7 +93,6 @@ const TabBar = ({
   const maxOpenTabs = useSettingsStore((state) => state.settings.maxOpenTabs);
   const updateActivePath = useSidebarStore.use.actions().updateActivePath;
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.() || undefined;
-  const jumpListActions = useJumpListStore.use.actions();
   const bufferById = useMemo(() => {
     const nextBufferById = new Map<string, PaneContent>();
     for (const buffer of buffers) {
@@ -107,8 +102,6 @@ const TabBar = ({
   }, [buffers]);
   const activeBufferId =
     activeBufferCandidate && bufferById.has(activeBufferCandidate) ? activeBufferCandidate : null;
-  const canGoBack = jumpListActions.canGoBack();
-  const canGoForward = jumpListActions.canGoForward();
   const isPaneFullscreen = paneId ? fullscreenPaneId === paneId : false;
   const isPaneLocked = Boolean(pane?.locked);
   const isInSplit = paneRoot.type === "split";
@@ -121,6 +114,26 @@ const TabBar = ({
   const [srAnnouncement, setSrAnnouncement] = useState<string>("");
 
   const tabBarRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!IS_MAC || isBottomPane) return;
+    const tabBar = tabBarRef.current;
+    if (!tabBar) return;
+    const updateNativeControlInset = () => {
+      const { left, top } = tabBar.getBoundingClientRect();
+      tabBar.style.paddingLeft =
+        top <= 1
+          ? `max(var(--athas-chrome-padding-inline), calc(var(--athas-title-tab-leading-inset) - ${left}px))`
+          : "";
+    };
+    updateNativeControlInset();
+    const observer = new ResizeObserver(updateNativeControlInset);
+    if (tabBar.parentElement) observer.observe(tabBar.parentElement);
+    window.addEventListener("resize", updateNativeControlInset);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updateNativeControlInset);
+    };
+  }, [isBottomPane, fullscreenPaneId]);
   const tabRefs = useRef<(HTMLDivElement | null)[]>([]);
   const dragPointRef = useRef<{ x: number; y: number } | null>(null);
   const pointerPointRef = useRef<{ x: number; y: number } | null>(null);
@@ -157,38 +170,6 @@ const TabBar = ({
 
     return true;
   }, []);
-
-  const handleJumpBack = useCallback(async () => {
-    const bufferStore = useBufferStore.getState();
-    const editorState = useEditorStateStore.getState();
-    const currentActiveBufferId = bufferStore.activeBufferId;
-    const currentActiveBuffer = getBufferById(bufferStore.buffers, currentActiveBufferId);
-
-    const currentPosition =
-      currentActiveBufferId && currentActiveBuffer?.path
-        ? {
-            bufferId: currentActiveBufferId,
-            filePath: currentActiveBuffer.path,
-            line: editorState.cursorPosition.line,
-            column: editorState.cursorPosition.column,
-            offset: editorState.cursorPosition.offset,
-            scrollTop: editorState.scrollTop,
-            scrollLeft: editorState.scrollLeft,
-          }
-        : undefined;
-
-    const entry = jumpListActions.goBack(currentPosition);
-    if (entry) {
-      await navigateToJumpEntry(entry);
-    }
-  }, [jumpListActions]);
-
-  const handleJumpForward = useCallback(async () => {
-    const entry = jumpListActions.goForward();
-    if (entry) {
-      await navigateToJumpEntry(entry);
-    }
-  }, [jumpListActions]);
 
   const handleTogglePaneFullscreen = useCallback(() => {
     if (!paneId) return;
@@ -630,41 +611,32 @@ const TabBar = ({
       >
         <TabBarSurface
           ref={tabBarRef}
+          surface={inTitleBar ? "title" : "default"}
           data-tab-bar-pane-id={paneId ?? ""}
           className="group/tab-bar scrollbar-none overscroll-x-none"
           role="tablist"
           aria-label="Open files"
           onWheel={handleWheel}
+          onMouseDown={(event) => {
+            if (event.button !== 0 || event.currentTarget.getBoundingClientRect().top > 1) return;
+            if (
+              (event.target as HTMLElement).closest(
+                "button, a, input, [role='tab'], [contenteditable='true']",
+              )
+            )
+              return;
+            void getCurrentWindow().startDragging().catch(console.error);
+          }}
         >
-          <div className="flex h-8 shrink-0 items-center gap-0.5">
-            <Button
-              type="button"
-              onClick={handleJumpBack}
-              disabled={!canGoBack}
-              variant="ghost"
-              tooltip="Go Back"
-              commandId="navigation.goBack"
-              aria-label="Go back to previous location"
-              iconOnly
-            >
-              <ArrowLeftIcon />
-            </Button>
-            <Button
-              type="button"
-              onClick={handleJumpForward}
-              disabled={!canGoForward}
-              variant="ghost"
-              tooltip="Go Forward"
-              commandId="navigation.goForward"
-              aria-label="Go forward to next location"
-              iconOnly
-            >
-              <ArrowRightIcon />
-            </Button>
-          </div>
-
           <SortableContext items={sortedBufferIds} strategy={horizontalListSortingStrategy}>
-            <div className="scrollbar-none flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto overflow-y-hidden overscroll-x-none">
+            <div
+              className={cn(
+                "scrollbar-none flex min-w-0 items-center gap-0.5 overflow-x-auto overflow-y-hidden overscroll-x-none",
+                inTitleBar
+                  ? "-mb-px max-w-full flex-initial items-stretch self-stretch px-2 pb-px"
+                  : "flex-1",
+              )}
+            >
               {sortedBuffers.map((buffer, index) => (
                 <SortableTab
                   key={buffer.id}
@@ -685,6 +657,7 @@ const TabBar = ({
                           index={index}
                           isActive={buffer.id === activeBufferId}
                           isDraggedTab={isDragging}
+                          inTitleBar={inTitleBar}
                           onClick={() => handleTabSelect(buffer)}
                           onDoubleClick={(e) => handleDoubleClick(e, index)}
                           onKeyDown={(e) => handleKeyDown(e, index)}
@@ -765,8 +738,13 @@ const TabBar = ({
             </div>
           </SortableContext>
 
-          <div className="pointer-events-none flex h-8 shrink-0 items-center gap-1 pl-0.5 opacity-0 group-hover/tab-bar:pointer-events-auto group-hover/tab-bar:opacity-100 group-focus-within/tab-bar:pointer-events-auto group-focus-within/tab-bar:opacity-100 has-data-[popup-open]:pointer-events-auto has-data-[popup-open]:opacity-100">
-            {paneId && !isBottomPane && <NewTabMenu paneId={paneId} />}
+          {inTitleBar && paneId && !isBottomPane ? (
+            <div className="flex h-8 shrink-0 items-center">
+              <NewTabMenu paneId={paneId} inTitleBar />
+            </div>
+          ) : null}
+          <div className="pointer-events-none ml-auto flex h-8 shrink-0 items-center gap-1 pl-0.5 opacity-0 group-hover/tab-bar:pointer-events-auto group-hover/tab-bar:opacity-100 group-focus-within/tab-bar:pointer-events-auto group-focus-within/tab-bar:opacity-100 has-data-[popup-open]:pointer-events-auto has-data-[popup-open]:opacity-100">
+            {!inTitleBar && paneId && !isBottomPane && <NewTabMenu paneId={paneId} />}
             {paneId && !disablePaneActions && !isBottomPane && (
               <>
                 <Button

@@ -183,6 +183,7 @@ export function useTabDragClickGuard() {
 export interface TabItemProps extends HTMLAttributes<HTMLDivElement> {
   isActive: boolean;
   isDragged?: boolean;
+  placement?: "pane" | "title";
   action?: ReactNode;
   children: ReactNode;
 }
@@ -199,16 +200,35 @@ const tabItemVariants = cva(
         true: "shadow-(--shadow-drag)",
         false: "opacity-100",
       },
+      placement: {
+        pane: "",
+        title:
+          "h-auto min-h-0 rounded-t-xl rounded-b-none border-x border-t border-transparent pl-3",
+      },
     },
+    compoundVariants: [
+      {
+        active: true,
+        placement: "title",
+        className: "border-border before:-inset-px before:bg-island",
+      },
+      {
+        active: false,
+        placement: "title",
+        className: "before:inset-y-1 before:rounded-lg",
+      },
+      { dragged: true, placement: "title", className: "rounded-b-xl" },
+    ],
     defaultVariants: {
       active: false,
       dragged: false,
+      placement: "pane",
     },
   },
 );
 
 export const TabItem = forwardRef<HTMLDivElement, TabItemProps>(function TabItem(
-  { isActive, isDragged = false, action, children, className, ...props },
+  { isActive, isDragged = false, placement = "pane", action, children, className, ...props },
   ref,
 ) {
   return (
@@ -217,30 +237,61 @@ export const TabItem = forwardRef<HTMLDivElement, TabItemProps>(function TabItem
       data-slot="tab-item"
       data-active={isActive}
       className={cn(
-        tabItemVariants({ active: isActive, dragged: isDragged }),
+        tabItemVariants({ active: isActive, dragged: isDragged, placement }),
         action && "pr-7",
         className,
       )}
       {...props}
     >
+      {placement === "title" && isActive && !isDragged ? (
+        <>
+          <TabFlare side="start" />
+          <TabFlare side="end" />
+        </>
+      ) : null}
       <div className="flex min-w-0 flex-1 items-center gap-chrome-loose">{children}</div>
       {action}
     </div>
   );
 });
 
-export const TabBarSurface = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
-  function TabBarSurface({ className, ...props }, ref) {
-    return (
-      <div
-        ref={ref}
-        data-slot="tab-bar"
-        className={cn(
-          "relative flex h-tab-bar min-h-tab-bar shrink-0 items-center gap-chrome overflow-hidden bg-background px-chrome-inline",
-          className,
-        )}
-        {...props}
-      />
-    );
-  },
-);
+function TabFlare({ side }: { side: "start" | "end" }) {
+  const origin = side === "start" ? "0 0" : "100% 0";
+  const radius = "calc(var(--radius) * 2)";
+  return (
+    <span
+      aria-hidden
+      data-slot="tab-flare"
+      className="pointer-events-none absolute -bottom-px"
+      style={{
+        [side === "start" ? "left" : "right"]: `calc(-1px - ${radius})`,
+        width: `calc(${radius} + 1px)`,
+        height: `calc(${radius} + 1px)`,
+        background: [
+          `radial-gradient(circle at ${origin}, transparent calc(${radius} - 0.25px), var(--border) calc(${radius} + 0.25px), var(--border) calc(${radius} + 0.75px), transparent calc(${radius} + 1.25px))`,
+          `radial-gradient(circle at ${origin}, transparent calc(${radius} - 0.25px), var(--athas-glass-island-bg, var(--background)) calc(${radius} + 0.25px))`,
+        ].join(", "),
+      }}
+    />
+  );
+}
+
+export const TabBarSurface = forwardRef<
+  HTMLDivElement,
+  HTMLAttributes<HTMLDivElement> & { surface?: "default" | "title" }
+>(function TabBarSurface({ className, surface = "default", ...props }, ref) {
+  return (
+    <div
+      ref={ref}
+      data-slot="tab-bar"
+      className={cn(
+        "relative flex shrink-0 items-center gap-chrome overflow-hidden px-chrome-inline",
+        surface === "title"
+          ? "h-full bg-transparent pt-title-tab-inset pb-px"
+          : "h-tab-bar min-h-tab-bar bg-background",
+        className,
+      )}
+      {...props}
+    />
+  );
+});

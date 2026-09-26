@@ -36,6 +36,7 @@ interface TabBarItemProps {
   index: number;
   isActive: boolean;
   isDraggedTab: boolean;
+  inTitleBar: boolean;
   showDropIndicatorBefore?: boolean;
   tabRef?: RefCallback<HTMLDivElement>;
   onClick?: () => void;
@@ -57,6 +58,7 @@ const TabBarItem = memo(function TabBarItem({
   displayName,
   isActive,
   isDraggedTab,
+  inTitleBar,
   showDropIndicatorBefore = false,
   tabRef,
   onClick,
@@ -114,7 +116,7 @@ const TabBarItem = memo(function TabBarItem({
   );
 
   return (
-    <div ref={tabRef} className="relative">
+    <div ref={tabRef} className="relative flex">
       {showDropIndicatorBefore ? (
         <div className="drop-indicator absolute top-1 bottom-1 left-0 z-20 w-0.5 bg-primary" />
       ) : null}
@@ -125,6 +127,7 @@ const TabBarItem = memo(function TabBarItem({
         tabIndex={isActive ? 0 : -1}
         isActive={isActive}
         isDragged={isDraggedTab}
+        placement={inTitleBar ? "title" : "pane"}
         onClick={isEditing ? undefined : onClick}
         onMouseDown={onMouseDown}
         onDoubleClick={isEditing ? undefined : onDoubleClick}
@@ -143,6 +146,7 @@ const TabBarItem = memo(function TabBarItem({
                 type="button"
                 iconOnly
                 variant="ghost"
+                size={inTitleBar ? "sm" : "md"}
                 onClick={(e) => {
                   e.stopPropagation();
                   if (buffer.isPinned) {

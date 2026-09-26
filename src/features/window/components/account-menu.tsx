@@ -11,7 +11,6 @@ import { useAuthStore } from "@/features/window/stores/auth.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { Avatar } from "@/ui/avatar";
 import Badge from "@/ui/badge";
-import { Button } from "@/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,6 +25,7 @@ import {
 import {
   BookOpenIcon,
   ChatBubbleTextIcon,
+  ChevronDownIcon,
   CreditCardIcon,
   HistoryIcon,
   MegaphoneIcon,
@@ -37,6 +37,7 @@ import {
   XIcon,
 } from "@/ui/icons";
 import { GithubMark } from "@/ui/brand-marks";
+import { SidebarIconButton, SidebarListItem } from "@/ui/sidebar";
 
 const COMMUNITY_URL = "https://discord.gg/DD8F38wFMv";
 
@@ -52,7 +53,7 @@ function isBlockingModalOpen() {
   );
 }
 
-export const AccountMenu = memo(function AccountMenu() {
+export const AccountMenu = memo(function AccountMenu({ expanded }: { expanded: boolean }) {
   const services = getServiceUrls();
   const user = useAuthStore((s) => s.user);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -263,21 +264,28 @@ export const AccountMenu = memo(function AccountMenu() {
   return (
     <>
       <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              type="button"
-              variant="ghost"
-              iconOnly
-              size="sm"
-              tooltip={tooltipLabel}
-              aria-label="Account"
-            />
-          }
-        >
-          <Avatar name={accountName} src={accountAvatarUrl} size="sm" />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" size="wide">
+        {expanded ? (
+          <DropdownMenuTrigger
+            render={(props, state) => (
+              <SidebarListItem
+                {...props}
+                active={state.open}
+                leading={<Avatar name={accountName} src={accountAvatarUrl} size="sm" />}
+                trailing={<ChevronDownIcon />}
+                aria-label="Account"
+              >
+                {accountName}
+              </SidebarListItem>
+            )}
+          />
+        ) : (
+          <DropdownMenuTrigger
+            render={<SidebarIconButton tooltip={tooltipLabel} aria-label="Account" />}
+          >
+            <Avatar name={accountName} src={accountAvatarUrl} size="sm" />
+          </DropdownMenuTrigger>
+        )}
+        <DropdownMenuContent side="top" align="start" size="wide">
           {isAuthenticated ? (
             <div role="presentation" className="flex min-w-0 items-center gap-2.5 px-2.5 py-2">
               <Avatar name={accountName} src={accountAvatarUrl} size="lg" />
