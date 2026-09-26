@@ -4,25 +4,28 @@ import type { AcpEvent } from "@/features/ai/types/acp.types";
 
 const sessionId = "imported";
 
-const user = (text: string): AcpEvent => ({
+const user = (text: string, messageId?: string): AcpEvent => ({
   type: "user_message_chunk",
   sessionId,
   content: { type: "text", text },
   isComplete: false,
+  messageId,
 });
 
-const agent = (text: string): AcpEvent => ({
+const agent = (text: string, messageId?: string): AcpEvent => ({
   type: "content_chunk",
   sessionId,
   content: { type: "text", text },
   isComplete: false,
+  messageId,
 });
 
-const thought = (text: string): AcpEvent => ({
+const thought = (text: string, messageId?: string): AcpEvent => ({
   type: "thought_chunk",
   sessionId,
   content: { type: "text", text },
   isComplete: false,
+  messageId,
 });
 
 function convert(events: AcpEvent[]) {
@@ -140,6 +143,25 @@ describe("acpHistoryToMessages", () => {
       error: "Missing",
       isComplete: true,
     });
+  });
+
+  it("splits messages where the agent's message ids change", () => {
+    const messages = convert([
+      user("first", "u1"),
+      user(" question", "u1"),
+      user("second question", "u2"),
+      thought("plan", "t1"),
+      thought("recheck", "t2"),
+      agent("Answer one.", "a1"),
+      agent("Answer two.", "a2"),
+    ]);
+
+    expect(messages.map((message) => [message.role, message.content])).toEqual([
+      ["user", "first question"],
+      ["user", "second question"],
+      ["assistant", "Answer one.\n\nAnswer two."],
+    ]);
+    expect(messages[2].toolCalls?.map((toolCall) => toolCall.output)).toEqual(["plan", "recheck"]);
   });
 
   it("returns no messages for an empty replay", () => {

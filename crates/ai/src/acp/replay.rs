@@ -177,6 +177,7 @@ mod tests {
             text: text.to_string(),
          },
          is_complete: false,
+         message_id: None,
       }
    }
 

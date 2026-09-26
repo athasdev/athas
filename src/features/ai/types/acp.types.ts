@@ -301,18 +301,24 @@ export type AcpEvent =
       sessionId: string;
       content: AcpContentBlock;
       isComplete: boolean;
+      /** The agent's id for the message; a new id starts a new message. */
+      messageId?: string | null;
     }
   | {
       type: "content_chunk";
       sessionId: string;
       content: AcpContentBlock;
       isComplete: boolean;
+      /** The agent's id for the message; a new id starts a new message. */
+      messageId?: string | null;
     }
   | {
       type: "thought_chunk";
       sessionId: string;
       content: AcpContentBlock;
       isComplete: boolean;
+      /** The agent's id for the message; a new id starts a new message. */
+      messageId?: string | null;
     }
   | {
       type: "tool_start";

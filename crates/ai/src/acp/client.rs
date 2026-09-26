@@ -482,6 +482,37 @@ impl AthasAcpClient {
 
    /// Serializes ACP tool call content for the frontend. An empty collection
    /// stays an empty array so an update can clear previously shown content.
+   /// Maps a message chunk to its event, keeping the agent's message id so the frontend can
+   /// tell where one message ends and the next begins.
+   fn chunk_event(
+      role: ChunkRole,
+      session_id: String,
+      chunk: acp::ContentChunk,
+   ) -> Option<AcpEvent> {
+      let content = Self::map_content_block(chunk.content)?;
+      let message_id = chunk.message_id.map(|id| id.to_string());
+      Some(match role {
+         ChunkRole::User => AcpEvent::UserMessageChunk {
+            session_id,
+            content,
+            is_complete: false,
+            message_id,
+         },
+         ChunkRole::Agent => AcpEvent::ContentChunk {
+            session_id,
+            content,
+            is_complete: false,
+            message_id,
+         },
+         ChunkRole::Thought => AcpEvent::ThoughtChunk {
+            session_id,
+            content,
+            is_complete: false,
+            message_id,
+         },
+      })
+   }
+
    fn map_tool_content(content: Vec<acp::ToolCallContent>) -> Option<serde_json::Value> {
       serde_json::to_value(content).ok()
    }
@@ -872,37 +903,19 @@ impl AthasAcpClient {
 
       match args.update {
          acp::SessionUpdate::UserMessageChunk(chunk) => {
-            let Some(content) = Self::map_content_block(chunk.content) else {
-               return Ok(());
-            };
-
-            self.emit_session_update(AcpEvent::UserMessageChunk {
-               session_id,
-               content,
-               is_complete: false,
-            });
+            if let Some(event) = Self::chunk_event(ChunkRole::User, session_id, chunk) {
+               self.emit_session_update(event);
+            }
          }
          acp::SessionUpdate::AgentMessageChunk(chunk) => {
-            let Some(content) = Self::map_content_block(chunk.content) else {
-               return Ok(());
-            };
-
-            self.emit_session_update(AcpEvent::ContentChunk {
-               session_id,
-               content,
-               is_complete: false,
-            });
+            if let Some(event) = Self::chunk_event(ChunkRole::Agent, session_id, chunk) {
+               self.emit_session_update(event);
+            }
          }
          acp::SessionUpdate::AgentThoughtChunk(chunk) => {
-            let Some(content) = Self::map_content_block(chunk.content) else {
-               return Ok(());
-            };
-
-            self.emit_session_update(AcpEvent::ThoughtChunk {
-               session_id,
-               content,
-               is_complete: false,
-            });
+            if let Some(event) = Self::chunk_event(ChunkRole::Thought, session_id, chunk) {
+               self.emit_session_update(event);
+            }
          }
          acp::SessionUpdate::ToolCall(tool_call) => {
             for event in Self::tool_call_events(session_id, tool_call) {
@@ -1475,6 +1488,13 @@ impl AthasAcpClient {
 
 /// Whether a window runs the editor workbench, which answers buffer reads. Detached windows (a
 /// chat popped out on its own) hold no editor buffers.
+#[derive(Clone, Copy)]
+enum ChunkRole {
+   User,
+   Agent,
+   Thought,
+}
+
 fn is_editor_window<R: tauri::Runtime>(window: &tauri::WebviewWindow<R>) -> bool {
    window.url().is_ok_and(|url| {
       !url
@@ -1532,9 +1552,9 @@ fn automatic_permission_option(
 #[cfg(test)]
 mod tests {
    use super::{
-      AthasAcpClient, ClientResponders, PendingBufferRead, PendingEntry, PermissionResponse,
-      SessionConfigOptionKind, acp, agent_location_event, automatic_permission_option,
-      elicitation_response, ext_request_session_id,
+      AthasAcpClient, ChunkRole, ClientResponders, PendingBufferRead, PendingEntry,
+      PermissionResponse, SessionConfigOptionKind, acp, agent_location_event,
+      automatic_permission_option, elicitation_response, ext_request_session_id,
    };
    use crate::acp::types::{AcpBufferReadRequest, AcpEvent};
    use serde_json::json;
@@ -1559,6 +1579,32 @@ mod tests {
          let event = agent_location_event(&session, std::path::Path::new("/repo/b.rs"), line);
          assert_eq!(serde_json::to_value(&event).unwrap()["line"], json!(null));
       }
+   }
+
+   #[test]
+   fn message_chunks_carry_the_agent_message_id() {
+      let chunk = acp::ContentChunk::new(acp::ContentBlock::from("hi")).message_id("msg-1");
+      let event = AthasAcpClient::chunk_event(ChunkRole::Agent, "s1".into(), chunk).unwrap();
+      assert_eq!(
+         serde_json::to_value(&event).unwrap(),
+         json!({
+            "type": "content_chunk",
+            "sessionId": "s1",
+            "content": { "type": "text", "text": "hi" },
+            "isComplete": false,
+            "messageId": "msg-1",
+         })
+      );
+
+      let chunk = acp::ContentChunk::new(acp::ContentBlock::from("hm"));
+      let event = AthasAcpClient::chunk_event(ChunkRole::Thought, "s1".into(), chunk).unwrap();
+      let json = serde_json::to_value(&event).unwrap();
+      assert_eq!(json["type"], "thought_chunk");
+      assert!(json.get("messageId").is_none());
+
+      let chunk = acp::ContentChunk::new(acp::ContentBlock::from("q")).message_id("u-1");
+      let event = AthasAcpClient::chunk_event(ChunkRole::User, "s1".into(), chunk).unwrap();
+      assert_eq!(serde_json::to_value(&event).unwrap()["messageId"], "u-1");
    }
 
    fn diff_content() -> acp::ToolCallContent {

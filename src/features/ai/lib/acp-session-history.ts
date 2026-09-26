@@ -1,3 +1,4 @@
+import { startAssistantResponseContinuation } from "./assistant-response";
 import { createToolCall, markToolCallComplete, updateToolCall } from "./tool-call-state";
 import type { AcpEvent } from "@/features/ai/types/acp.types";
 import type { Message, ToolCall } from "@/features/ai/types/ai-chat.types";
@@ -36,14 +37,30 @@ export function acpHistoryToMessages(events: AcpEvent[], options: HistoryOptions
   const createId = options.createId ?? (() => crypto.randomUUID());
   const messages: Message[] = [];
   let thoughtId: string | null = null;
+  // The agent's message ids, when it sends them, mark where one message ends and the next starts.
+  const lastMessageId = new Map<HistoryEvent["type"], string>();
+  const startsNewMessage = (
+    event: Extract<
+      HistoryEvent,
+      { type: "user_message_chunk" | "content_chunk" | "thought_chunk" }
+    >,
+  ): boolean => {
+    if (!event.messageId) return false;
+    const previous = lastMessageId.get(event.type);
+    lastMessageId.set(event.type, event.messageId);
+    return previous !== undefined && previous !== event.messageId;
+  };
 
-  const current = (role: Message["role"]): Message => {
-    const last = messages[messages.length - 1];
-    if (last?.role === role) return last;
+  const startMessage = (role: Message["role"]): Message => {
     const message: Message = { id: createId(), role, content: "", timestamp: new Date(0) };
     messages.push(message);
     thoughtId = null;
     return message;
+  };
+
+  const current = (role: Message["role"]): Message => {
+    const last = messages[messages.length - 1];
+    return last?.role === role ? last : startMessage(role);
   };
 
   const holderOf = (toolId: string): Message | undefined => {
@@ -90,14 +107,24 @@ export function acpHistoryToMessages(events: AcpEvent[], options: HistoryOptions
     if (event.type !== "thought_chunk") thoughtId = null;
 
     switch (event.type) {
-      case "user_message_chunk":
-        appendContent(current("user"), event.content);
+      case "user_message_chunk": {
+        const last = messages[messages.length - 1];
+        const message =
+          startsNewMessage(event) && last?.role === "user" ? startMessage("user") : current("user");
+        appendContent(message, event.content);
         break;
-      case "content_chunk":
-        appendContent(current("assistant"), event.content);
+      }
+      case "content_chunk": {
+        const message = current("assistant");
+        if (startsNewMessage(event)) {
+          message.content = startAssistantResponseContinuation(message.content);
+        }
+        appendContent(message, event.content);
         break;
+      }
       case "thought_chunk": {
         if (event.content.type !== "text") break;
+        if (startsNewMessage(event)) thoughtId = null;
         const message = current("assistant");
         const thought = message.toolCalls?.find((toolCall) => toolCall.id === thoughtId);
         if (thought) {

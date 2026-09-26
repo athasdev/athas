@@ -540,6 +540,9 @@ pub enum AcpEvent {
       session_id: String,
       content: AcpContentBlock,
       is_complete: bool,
+      /// The agent's id for the message this chunk belongs to; a new id starts a new message.
+      #[serde(default, skip_serializing_if = "Option::is_none")]
+      message_id: Option<String>,
    },
    /// Agent message content chunk
    #[serde(rename_all = "camelCase")]
@@ -547,6 +550,9 @@ pub enum AcpEvent {
       session_id: String,
       content: AcpContentBlock,
       is_complete: bool,
+      /// The agent's id for the message this chunk belongs to; a new id starts a new message.
+      #[serde(default, skip_serializing_if = "Option::is_none")]
+      message_id: Option<String>,
    },
    /// Agent thought content chunk
    #[serde(rename_all = "camelCase")]
@@ -554,6 +560,9 @@ pub enum AcpEvent {
       session_id: String,
       content: AcpContentBlock,
       is_complete: bool,
+      /// The agent's id for the message this chunk belongs to; a new id starts a new message.
+      #[serde(default, skip_serializing_if = "Option::is_none")]
+      message_id: Option<String>,
    },
    /// Tool use started
    #[serde(rename_all = "camelCase")]

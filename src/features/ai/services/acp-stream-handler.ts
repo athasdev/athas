@@ -96,6 +96,8 @@ export class AcpStreamHandler {
   /** The turn is over and every handler that will be called has been. */
   private sessionComplete = false;
   private pendingNewMessage = false;
+  /** The id of the agent message the last text chunk belonged to, when the agent sends ids. */
+  private agentMessageId: string | null = null;
   /** Stop was pressed; the turn ends when the agent answers session/cancel. */
   private cancelRequested = false;
   private wasRunning = false;
@@ -603,6 +605,14 @@ export class AcpStreamHandler {
   }
 
   private handleContentChunk(event: Extract<AcpEvent, { type: "content_chunk" }>): void {
+    // Agents that send message ids say where a message starts; without them a finished tool
+    // call is the only hint.
+    if (event.messageId) {
+      if (this.agentMessageId && this.agentMessageId !== event.messageId) {
+        this.pendingNewMessage = true;
+      }
+      this.agentMessageId = event.messageId;
+    }
     this.startPendingMessage();
 
     if (event.content.type === "text") {

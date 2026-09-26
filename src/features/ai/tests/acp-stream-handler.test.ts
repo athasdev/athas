@@ -278,6 +278,29 @@ describe("AcpStreamHandler", () => {
     expect(calls).toEqual(["response-continuation", "thought_chunk"]);
   });
 
+  it("starts a new message when the agent message id changes", () => {
+    const calls: string[] = [];
+    const { handler } = createHandler({
+      onResponseContinuation: () => calls.push("continuation"),
+      onChunk: (chunk) => calls.push(chunk),
+    });
+    const chunk = (text: string, messageId?: string) =>
+      handler.handleAcpEvent({
+        type: "content_chunk",
+        sessionId: "session-a",
+        content: { type: "text", text },
+        isComplete: false,
+        messageId,
+      });
+
+    chunk("one", "m1");
+    chunk(" more", "m1");
+    chunk("two", "m2");
+    chunk(" still two");
+
+    expect(calls).toEqual(["one", " more", "continuation", "two", " still two"]);
+  });
+
   it("normalizes startup authentication errors for the login action", () => {
     const handler = new AcpStreamHandler("gemini-cli", {
       onChunk: vi.fn(),
