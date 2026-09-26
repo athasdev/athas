@@ -1,4 +1,8 @@
-import type { AcpPlanEntry, AcpTerminalSnapshot } from "@/features/ai/types/acp.types";
+import type {
+  AcpPlanEntry,
+  AcpTerminalSnapshot,
+  AcpTurnUsage,
+} from "@/features/ai/types/acp.types";
 import type {
   AcpToolCallLocation,
   AcpToolCallStatus,
@@ -88,6 +92,8 @@ export interface Message {
   plan?: AcpPlanEntry[];
   /** Set when the turn ended early, so the chat can say why and offer to continue. */
   stopNotice?: AgentStopNotice;
+  /** The tokens the agent reported for the turn this message answers. */
+  turnUsage?: AcpTurnUsage;
 }
 
 // Agent types for AI chat

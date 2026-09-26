@@ -1,4 +1,4 @@
-import type { AcpCost, AcpUsageUpdate } from "@/features/ai/types/acp.types";
+import type { AcpCost, AcpTurnUsage, AcpUsageUpdate } from "@/features/ai/types/acp.types";
 
 /** Context use at or above this share of the window is shown as a warning. */
 const CONTEXT_WARNING_RATIO = 0.8;
@@ -62,4 +62,24 @@ export function describeContextUsage(usage: AcpUsageUpdate, locale?: string): st
   const used = `${formatTokenCount(usage.used, locale)} tokens used`;
   const cost = usage.cost ? ` · ${formatUsageCost(usage.cost, locale)} spent` : "";
   return `${context} (${used})${cost}`;
+}
+
+/** "1.2k tokens": the short form of what a turn used. */
+export function formatTurnUsage(usage: AcpTurnUsage, locale?: string): string {
+  return `${formatTokenCount(usage.totalTokens, locale)} tokens`;
+}
+
+/** "1k input · 200 output · 50 reasoning · 800 cache read · 100 cache write" */
+export function describeTurnUsage(usage: AcpTurnUsage, locale?: string): string {
+  const parts: [number | null | undefined, string][] = [
+    [usage.inputTokens, "input"],
+    [usage.outputTokens, "output"],
+    [usage.thoughtTokens, "reasoning"],
+    [usage.cachedReadTokens, "cache read"],
+    [usage.cachedWriteTokens, "cache write"],
+  ];
+  return parts
+    .filter(([tokens], index) => index < 2 || (tokens ?? 0) > 0)
+    .map(([tokens, label]) => `${formatTokenCount(tokens ?? 0, locale)} ${label}`)
+    .join(" · ");
 }

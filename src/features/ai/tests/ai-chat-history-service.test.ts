@@ -47,6 +47,20 @@ describe("AI chat history service", () => {
     vi.clearAllMocks();
   });
 
+  it("keeps a turn's token usage across a restart", async () => {
+    const chat = createChat("usage-chat", "Done");
+    chat.messages[0].isStreaming = false;
+    chat.messages[0].turnUsage = { totalTokens: 30, inputTokens: 20, outputTokens: 10 };
+    vi.mocked(invoke).mockResolvedValue(undefined);
+    await saveChatToDb(chat);
+    const saved = vi.mocked(invoke).mock.calls[0][1] as Record<string, unknown>;
+    vi.mocked(invoke).mockResolvedValue({ ...saved, tool_calls: [] });
+
+    const restored = await loadChatFromDb(chat.id);
+
+    expect(restored.messages[0].turnUsage).toEqual(chat.messages[0].turnUsage);
+  });
+
   it("keeps a tool call's terminal output across a restart", async () => {
     const chat = createChat("terminal-chat", "Ran it");
     chat.messages[0].isStreaming = false;

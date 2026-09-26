@@ -15,7 +15,9 @@ vi.mock("@/features/ai/services/ai-chat-history-service", () => ({
 
 import {
   describeContextUsage,
+  describeTurnUsage,
   formatTokenCount,
+  formatTurnUsage,
   formatUsageCost,
   getContextUsagePercent,
   getContextUsageTone,
@@ -25,6 +27,19 @@ import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { Chat } from "@/features/ai/types/ai-chat.types";
 
 describe("ACP usage formatting", () => {
+  it("describes what one turn used", () => {
+    const usage = {
+      totalTokens: 1_250,
+      inputTokens: 1_000,
+      outputTokens: 250,
+      thoughtTokens: 0,
+      cachedReadTokens: 800,
+      cachedWriteTokens: null,
+    };
+    expect(formatTurnUsage(usage, "en-US")).toBe("1.3k tokens");
+    expect(describeTurnUsage(usage, "en-US")).toBe("1k input · 250 output · 800 cache read");
+  });
+
   it("shortens context window sizes the way agents name them", () => {
     expect(formatTokenCount(850, "en-US")).toBe("850");
     expect(formatTokenCount(1_500, "en-US")).toBe("1.5k");

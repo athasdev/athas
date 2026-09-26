@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { parseChatSessionSettings } from "@/features/ai/lib/chat-session-settings";
 import type { AgentType, Chat, ToolCall } from "@/features/ai/types/ai-chat.types";
+import type { AcpTurnUsage } from "@/features/ai/types/acp.types";
 import { coalesceAssistantResponses } from "@/features/ai/lib/assistant-response";
 import { normalizeMessageFollowUpActions } from "@/features/ai/lib/follow-up-actions";
 
@@ -38,6 +39,7 @@ interface MessageData {
   images?: string | null;
   plan?: string | null;
   stop_notice?: string | null;
+  turn_usage?: string | null;
 }
 
 interface ToolCallData {
@@ -67,6 +69,18 @@ function serializeToolCallMeta(toolCall: ToolCall): string | null {
     meta.terminals = toolCall.terminals;
   }
   return Object.keys(meta).length > 0 ? JSON.stringify(meta) : null;
+}
+
+function parseTurnUsage(value: string | null | undefined): AcpTurnUsage | undefined {
+  if (!value) return undefined;
+  try {
+    const parsed: unknown = JSON.parse(value);
+    return parsed && typeof parsed === "object" && "totalTokens" in parsed
+      ? (parsed as AcpTurnUsage)
+      : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 function parseToolCallMeta(meta: string | null | undefined): ToolCallMeta {
@@ -139,6 +153,7 @@ function chatToData(chat: Chat): {
     images: msg.images?.length ? JSON.stringify(msg.images) : null,
     plan: msg.plan?.length ? JSON.stringify(msg.plan) : null,
     stop_notice: msg.stopNotice ?? null,
+    turn_usage: msg.turnUsage ? JSON.stringify(msg.turnUsage) : null,
   }));
 
   const tool_calls: ToolCallData[] = [];
@@ -193,6 +208,7 @@ function dataToChat(data: ChatWithMessages): Chat {
         images: deserializeMessageImages(msg.images),
         plan: deserializeAcpPlan(msg.plan),
         stopNotice: parseAgentStopNotice(msg.stop_notice),
+        turnUsage: parseTurnUsage(msg.turn_usage),
         timestamp: new Date(msg.timestamp),
         isStreaming: false,
         isToolUse: msg.is_tool_use,

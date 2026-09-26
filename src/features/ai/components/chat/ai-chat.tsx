@@ -650,9 +650,11 @@ const AIChat = memo(function AIChat({
           const stopNotice = wasCancelled
             ? undefined
             : getAgentStopNotice(completion?.stopReason, currentMessage);
+          const turnUsage = completion?.usage;
           if (stopNotice) {
             updateStreamingAssistantMessage(targetChatId, currentAssistantMessageId, () => ({
               stopNotice,
+              turnUsage,
               isStreaming: false,
               responsePhase: undefined,
             }));
@@ -722,6 +724,7 @@ details: The ${emptyResponseSource} completed, but no content, tool output, or r
 
           chatActions.updateMessage(targetChatId, currentAssistantMessageId, {
             isStreaming: false,
+            turnUsage,
           });
           finishRunAndProcessQueue(targetChatId, runId, getAgentRunEnding(wasCancelled));
           releaseAbortController();

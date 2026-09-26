@@ -10,6 +10,7 @@ import type {
   AcpPromptContentBlock,
   AcpSessionList,
   AcpStopReason,
+  AcpTurnUsage,
   AgentConfig,
 } from "@/features/ai/types/acp.types";
 import type { ContextInfo } from "@/features/ai/types/ai-context.types";
@@ -502,7 +503,7 @@ export class AcpStreamHandler {
       return;
     }
     // Limits and refusals end the turn too; the chat explains them from the stop reason.
-    this.handleSessionComplete(event.stopReason);
+    this.handleSessionComplete(event.stopReason, event.usage ?? undefined);
   }
 
   /** Whether `status` is about the agent process holding this turn's session. */
@@ -647,7 +648,7 @@ export class AcpStreamHandler {
     }
   }
 
-  private handleSessionComplete(stopReason?: AcpStopReason): void {
+  private handleSessionComplete(stopReason?: AcpStopReason, usage?: AcpTurnUsage): void {
     if (this.sessionComplete) return;
     if (this.cancelRequested) {
       this.finishCancelled();
@@ -657,9 +658,11 @@ export class AcpStreamHandler {
     this.sessionComplete = true;
     this.pendingNewMessage = false;
     this.cleanup();
-    this.handlers.onComplete(
-      stopReason ? { outcome: "completed", stopReason } : { outcome: "completed" },
-    );
+    this.handlers.onComplete({
+      outcome: "completed",
+      ...(stopReason ? { stopReason } : {}),
+      ...(usage ? { usage } : {}),
+    });
   }
 
   private handleError(event: Extract<AcpEvent, { type: "error" }>): void {

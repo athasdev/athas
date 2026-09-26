@@ -1,7 +1,7 @@
 use super::{
    AcpConnection,
    auth::ACP_AUTHENTICATE_TIMEOUT,
-   types::{AcpAuthMethod, AcpEvent, StopReason},
+   types::{AcpAuthMethod, AcpEvent, AcpTurnUsage, StopReason},
 };
 use crate::runtime::AthasAppHandle as AppHandle;
 use agent_client_protocol::schema::v1 as acp;
@@ -37,18 +37,31 @@ pub(super) async fn run_prompt(
    let response =
       send_prompt_with_auth_retry(connection, prompt_request, auth, &app_handle).await?;
 
-   let stop_reason: StopReason = response.stop_reason.into();
    if let Err(e) = app_handle.emit(
       "acp-event",
-      AcpEvent::PromptComplete {
-         session_id: session_id.to_string(),
-         stop_reason,
-      },
+      prompt_complete_event(session_id.to_string(), response),
    ) {
       log::warn!("Failed to emit prompt complete event: {}", e);
    }
 
    Ok(())
+}
+
+/// The event that ends a turn in the chat, with the turn's token usage when the agent sent it.
+fn prompt_complete_event(session_id: String, response: acp::PromptResponse) -> AcpEvent {
+   let stop_reason: StopReason = response.stop_reason.into();
+   AcpEvent::PromptComplete {
+      session_id,
+      stop_reason,
+      usage: response.usage.map(|usage| AcpTurnUsage {
+         total_tokens: usage.total_tokens,
+         input_tokens: usage.input_tokens,
+         output_tokens: usage.output_tokens,
+         thought_tokens: usage.thought_tokens,
+         cached_read_tokens: usage.cached_read_tokens,
+         cached_write_tokens: usage.cached_write_tokens,
+      }),
+   }
 }
 
 async fn send_prompt_with_auth_retry(
@@ -148,7 +161,35 @@ async fn await_turn<T>(
 
 #[cfg(test)]
 mod tests {
-   use super::await_turn;
+   use super::{acp, await_turn, prompt_complete_event};
+   use serde_json::json;
+
+   #[test]
+   fn the_turn_end_carries_its_token_usage() {
+      let response = acp::PromptResponse::new(acp::StopReason::EndTurn)
+         .usage(acp::Usage::new(1200, 1000, 200).cached_read_tokens(800));
+      assert_eq!(
+         serde_json::to_value(prompt_complete_event("s1".into(), response)).unwrap(),
+         json!({
+            "type": "prompt_complete",
+            "sessionId": "s1",
+            "stopReason": "end_turn",
+            "usage": {
+               "totalTokens": 1200,
+               "inputTokens": 1000,
+               "outputTokens": 200,
+               "thoughtTokens": null,
+               "cachedReadTokens": 800,
+               "cachedWriteTokens": null,
+            },
+         })
+      );
+
+      let response = acp::PromptResponse::new(acp::StopReason::EndTurn);
+      let event = serde_json::to_value(prompt_complete_event("s1".into(), response)).unwrap();
+      assert_eq!(event["usage"], json!(null));
+   }
+
    use std::{cell::Cell, time::Duration};
 
    #[tokio::test]

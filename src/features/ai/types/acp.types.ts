@@ -468,6 +468,8 @@ export type AcpEvent =
       type: "prompt_complete";
       sessionId: string;
       stopReason: AcpStopReason;
+      /** The turn's token usage, when the agent reports it. */
+      usage?: AcpTurnUsage | null;
     }
   | {
       type: "ui_action";
@@ -518,4 +520,14 @@ export interface AcpNotice {
   title: string;
   description: string | null;
   timestamp: Date;
+}
+
+/** The tokens one prompt turn used, from the agent's `session/prompt` answer. */
+export interface AcpTurnUsage {
+  totalTokens: number;
+  inputTokens: number;
+  outputTokens: number;
+  thoughtTokens?: number | null;
+  cachedReadTokens?: number | null;
+  cachedWriteTokens?: number | null;
 }

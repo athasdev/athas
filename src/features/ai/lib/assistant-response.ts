@@ -37,6 +37,7 @@ export function coalesceAssistantResponses(messages: Message[]): Message[] {
       ui: mergeOptionalArrays(previous.ui, message.ui),
       followUpActions: message.followUpActions ?? previous.followUpActions,
       stopNotice: message.stopNotice ?? previous.stopNotice,
+      turnUsage: message.turnUsage ?? previous.turnUsage,
     };
   }
 

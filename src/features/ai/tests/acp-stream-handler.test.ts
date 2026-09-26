@@ -371,6 +371,24 @@ describe("AcpStreamHandler", () => {
     });
   });
 
+  it("passes the turn's token usage to the chat", () => {
+    const { handler, handlers } = createHandler();
+    const usage = { totalTokens: 30, inputTokens: 20, outputTokens: 10 };
+
+    handler.handleAcpEvent({
+      type: "prompt_complete",
+      sessionId: "session-a",
+      stopReason: "end_turn",
+      usage,
+    });
+
+    expect(handlers.onComplete).toHaveBeenCalledWith({
+      outcome: "completed",
+      stopReason: "end_turn",
+      usage,
+    });
+  });
+
   it.each(["max_tokens", "max_turn_requests", "refusal"] as const)(
     "passes the %s stop reason to the chat instead of a plain finish",
     (stopReason) => {

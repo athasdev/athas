@@ -36,6 +36,8 @@ import { AgentPlan } from "../messages/agent-plan";
 import { AgentStopNotice } from "../messages/agent-stop-notice";
 import { ToolCallList } from "../messages/tool-call-display";
 import { buildAssistantTimeline } from "@/features/ai/lib/assistant-timeline";
+import { describeTurnUsage, formatTurnUsage } from "@/features/ai/lib/acp-usage";
+import Tooltip from "@/ui/tooltip";
 
 interface ChatMessageProps {
   onRetry?: () => void | Promise<void>;
@@ -451,6 +453,11 @@ export const ChatMessage = memo(function ChatMessage({
                 label="Copy outcome as Markdown"
                 icon={UploadIcon}
               />
+            ) : null}
+            {message.turnUsage ? (
+              <Tooltip content={describeTurnUsage(message.turnUsage)}>
+                <span className="px-1 tabular-nums">{formatTurnUsage(message.turnUsage)}</span>
+              </Tooltip>
             ) : null}
           </MessageFooter>
         ) : null}

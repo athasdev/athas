@@ -114,6 +114,18 @@ pub struct AcpUsageUpdate {
    pub cost: Option<AcpCost>,
 }
 
+/// The tokens one prompt turn used, as the agent reports them in its `session/prompt` answer.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct AcpTurnUsage {
+   pub total_tokens: u64,
+   pub input_tokens: u64,
+   pub output_tokens: u64,
+   pub thought_tokens: Option<u64>,
+   pub cached_read_tokens: Option<u64>,
+   pub cached_write_tokens: Option<u64>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct AcpCost {
@@ -736,6 +748,8 @@ pub enum AcpEvent {
    PromptComplete {
       session_id: String,
       stop_reason: StopReason,
+      /// The turn's token usage, when the agent reports it.
+      usage: Option<AcpTurnUsage>,
    },
    /// UI action request from agent
    #[serde(rename_all = "camelCase")]
