@@ -94,10 +94,14 @@ export function createAcpActions(set: SetAIChatStore, get: GetAIChatStore): AcpA
       updateSession(sessionId, (session) => {
         session.usage = usage;
       }),
-    clearAcpSession: (sessionId) =>
+    clearAcpSession: (sessionId) => {
+      // A session opened again later gets the chat's saved picks again.
+      restoredModes.delete(sessionId);
+      restoredConfigOptions.delete(sessionId);
       set((state) => {
         delete state.acpSessions[sessionId];
-      }),
+      });
+    },
     changeSessionMode: async (sessionId, modeId) => {
       const previousModeId = get().acpSessions[sessionId]?.modeState.currentModeId ?? null;
       updateSession(sessionId, (session) => {
