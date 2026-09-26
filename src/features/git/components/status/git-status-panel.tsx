@@ -593,112 +593,6 @@ const GitStatusPanel = ({
     <div className="flex h-full min-h-0 flex-col select-none">
       {hasFiles ? (
         <>
-          <SidebarToolbar className="@container/git-status-toolbar">
-            <div className="flex min-w-0 flex-1 items-center gap-1.5">
-              <ButtonGroup ref={diffMenuAnchorRef}>
-                <Button
-                  type="button"
-                  variant="default"
-                  size="sm"
-                  onClick={() => openScopedDiff("all")}
-                  disabled={!onViewDiff || isLoading}
-                  aria-label="View all diffs"
-                >
-                  View Diff
-                </Button>
-                <ButtonGroupSeparator />
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    render={
-                      <Button
-                        type="button"
-                        variant="default"
-                        size="sm"
-                        iconOnly
-                        disabled={isLoading}
-                        aria-label="Choose diff source"
-                      />
-                    }
-                  >
-                    <ChevronDownIcon className="size-3" />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent anchor={diffMenuAnchorRef} align="start" size="compact">
-                    <DropdownMenuItems items={diffMenuItems} />
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </ButtonGroup>
-              {renderDiffStats(allDiffStats, "shrink-0 @max-[230px]/git-status-toolbar:hidden")}
-            </div>
-            <div className="flex shrink-0 items-center gap-1 @max-[300px]/git-status-toolbar:hidden">
-              {unstagedFiles.length > 0 && (
-                <SidebarIconButton
-                  onClick={handleStashAllUnstaged}
-                  disabled={isLoading}
-                  tooltip="Stash all unstaged changes"
-                  aria-label="Stash all unstaged changes"
-                >
-                  <ArchiveIcon />
-                </SidebarIconButton>
-              )}
-              {unstagedFiles.length > 0 && (
-                <SidebarIconButton
-                  onClick={handleStageAll}
-                  disabled={isLoading || isStageLoading}
-                  tooltip="Stage all changes"
-                  aria-label="Stage all changes"
-                >
-                  <PlusIcon />
-                </SidebarIconButton>
-              )}
-              {stagedFiles.length > 0 && (
-                <SidebarIconButton
-                  onClick={handleUnstageAll}
-                  disabled={isLoading || isStageLoading}
-                  tooltip="Unstage all changes"
-                  aria-label="Unstage all changes"
-                >
-                  <MinusIcon />
-                </SidebarIconButton>
-              )}
-            </div>
-            <div className="hidden shrink-0 @max-[300px]/git-status-toolbar:block">
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={
-                    <SidebarIconButton tooltip="Change actions" aria-label="Change actions" />
-                  }
-                >
-                  <DotsIcon />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  {unstagedFiles.length > 0 ? (
-                    <DropdownMenuItem onClick={handleStashAllUnstaged} disabled={isLoading}>
-                      <ArchiveIcon />
-                      Stash all unstaged changes
-                    </DropdownMenuItem>
-                  ) : null}
-                  {unstagedFiles.length > 0 ? (
-                    <DropdownMenuItem
-                      onClick={() => void handleStageAll()}
-                      disabled={isLoading || isStageLoading}
-                    >
-                      <PlusIcon />
-                      Stage all changes
-                    </DropdownMenuItem>
-                  ) : null}
-                  {stagedFiles.length > 0 ? (
-                    <DropdownMenuItem
-                      onClick={() => void handleUnstageAll()}
-                      disabled={isLoading || isStageLoading}
-                    >
-                      <MinusIcon />
-                      Unstage all changes
-                    </DropdownMenuItem>
-                  ) : null}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </SidebarToolbar>
           <SidebarFilterBar
             value={searchQuery}
             onChange={setSearchQuery}
@@ -746,6 +640,117 @@ const GitStatusPanel = ({
               <EmptyState layout="sidebar" message="No changed files match" />
             )}
           </NativeScrollArea>
+          <SidebarToolbar position="bottom" className="@container/git-status-toolbar">
+            <div className="flex min-w-0 flex-1 items-center gap-1.5">
+              <ButtonGroup ref={diffMenuAnchorRef}>
+                <Button
+                  type="button"
+                  variant="default"
+                  size="sm"
+                  onClick={() => openScopedDiff("all")}
+                  disabled={!onViewDiff || isLoading}
+                  aria-label="View all diffs"
+                >
+                  View Diff
+                </Button>
+                <ButtonGroupSeparator />
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={
+                      <Button
+                        type="button"
+                        variant="default"
+                        size="sm"
+                        iconOnly
+                        disabled={isLoading}
+                        aria-label="Choose diff source"
+                      />
+                    }
+                  >
+                    <ChevronDownIcon className="size-3" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    anchor={diffMenuAnchorRef}
+                    side="top"
+                    align="start"
+                    size="compact"
+                  >
+                    <DropdownMenuItems items={diffMenuItems} />
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </ButtonGroup>
+              {renderDiffStats(allDiffStats, "shrink-0 @max-[230px]/git-status-toolbar:hidden")}
+            </div>
+            <div className="flex shrink-0 items-center gap-1 @max-[300px]/git-status-toolbar:hidden">
+              {unstagedFiles.length > 0 && (
+                <SidebarIconButton
+                  onClick={handleStashAllUnstaged}
+                  disabled={isLoading}
+                  tooltip="Stash all unstaged changes"
+                  aria-label="Stash all unstaged changes"
+                >
+                  <ArchiveIcon />
+                </SidebarIconButton>
+              )}
+              {unstagedFiles.length > 0 && (
+                <SidebarIconButton
+                  onClick={handleStageAll}
+                  disabled={isLoading || isStageLoading}
+                  tooltip="Stage all changes"
+                  aria-label="Stage all changes"
+                >
+                  <PlusIcon />
+                </SidebarIconButton>
+              )}
+              {stagedFiles.length > 0 && (
+                <SidebarIconButton
+                  onClick={handleUnstageAll}
+                  disabled={isLoading || isStageLoading}
+                  tooltip="Unstage all changes"
+                  aria-label="Unstage all changes"
+                >
+                  <MinusIcon />
+                </SidebarIconButton>
+              )}
+            </div>
+            <div className="hidden shrink-0 @max-[300px]/git-status-toolbar:block">
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <SidebarIconButton tooltip="Change actions" aria-label="Change actions" />
+                  }
+                >
+                  <DotsIcon />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent side="top" align="end">
+                  {unstagedFiles.length > 0 ? (
+                    <DropdownMenuItem onClick={handleStashAllUnstaged} disabled={isLoading}>
+                      <ArchiveIcon />
+                      Stash all unstaged changes
+                    </DropdownMenuItem>
+                  ) : null}
+                  {unstagedFiles.length > 0 ? (
+                    <DropdownMenuItem
+                      onClick={() => void handleStageAll()}
+                      disabled={isLoading || isStageLoading}
+                    >
+                      <PlusIcon />
+                      Stage all changes
+                    </DropdownMenuItem>
+                  ) : null}
+                  {stagedFiles.length > 0 ? (
+                    <DropdownMenuItem
+                      onClick={() => void handleUnstageAll()}
+                      disabled={isLoading || isStageLoading}
+                    >
+                      <MinusIcon />
+                      Unstage all changes
+                    </DropdownMenuItem>
+                  ) : null}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </SidebarToolbar>
         </>
       ) : (
         <EmptyState

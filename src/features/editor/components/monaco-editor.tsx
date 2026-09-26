@@ -98,6 +98,10 @@ registerMonacoCodeLensProvider();
 
 const EMPTY_DIAGNOSTICS: Diagnostic[] = [];
 const INACTIVE_CURSOR_POSITION: Position = { line: 0, column: 0, offset: 0 };
+/** How long the cursor rests on a line before its inline blame appears. */
+const INLINE_GIT_BLAME_DELAY_MS = 450;
+/** How long the pointer rests on inline blame before its commit card opens. */
+const INLINE_GIT_BLAME_CARD_DELAY_MS = 500;
 
 function createBreakpointHoverDecorations(
   hoveredLine: number | null,
@@ -190,8 +194,10 @@ export function MonacoEditor({
   const hoveredBreakpointLineRef = useRef<number | null>(null);
   const breakpointLinesRef = useRef<Set<number>>(new Set());
   const gitBlameDecorationRef = useRef<string[]>([]);
-  const gitBlameRenderFrameRef = useRef<number | null>(null);
+  const gitBlameRenderTimerRef = useRef<number | null>(null);
   const renderedGitBlameKeyRef = useRef<string | null>(null);
+  const renderedGitBlameLineRef = useRef<number | null>(null);
+  const inlineGitBlameOpenTimerRef = useRef<number | null>(null);
   const inlineGitBlamePresentationRef = useRef<InlineGitBlamePresentation | null>(null);
   const inlineGitBlameCloseTimerRef = useRef<number | null>(null);
   const renderInlineGitBlameRef = useRef<() => void>(() => {});
@@ -280,6 +286,12 @@ export function MonacoEditor({
     content,
   );
 
+  const cancelInlineGitBlameOpen = useCallback(() => {
+    if (inlineGitBlameOpenTimerRef.current === null) return;
+    window.clearTimeout(inlineGitBlameOpenTimerRef.current);
+    inlineGitBlameOpenTimerRef.current = null;
+  }, []);
+
   const cancelInlineGitBlameClose = useCallback(() => {
     if (inlineGitBlameCloseTimerRef.current === null) return;
     window.clearTimeout(inlineGitBlameCloseTimerRef.current);
@@ -287,9 +299,10 @@ export function MonacoEditor({
   }, []);
 
   const closeInlineGitBlameCard = useCallback(() => {
+    cancelInlineGitBlameOpen();
     cancelInlineGitBlameClose();
     setInlineGitBlameCard(null);
-  }, [cancelInlineGitBlameClose]);
+  }, [cancelInlineGitBlameClose, cancelInlineGitBlameOpen]);
 
   const scheduleInlineGitBlameClose = useCallback(() => {
     cancelInlineGitBlameClose();
@@ -306,6 +319,7 @@ export function MonacoEditor({
 
     const clearDecoration = () => {
       renderedGitBlameKeyRef.current = null;
+      renderedGitBlameLineRef.current = null;
       inlineGitBlamePresentationRef.current = null;
       closeInlineGitBlameCard();
       if (gitBlameDecorationRef.current.length === 0) return;
@@ -356,18 +370,36 @@ export function MonacoEditor({
       },
     ]);
     renderedGitBlameKeyRef.current = decorationKey;
+    renderedGitBlameLineRef.current = lineNumber;
   }, [closeInlineGitBlameCard, filePath, getBlameForLine, inlineGitBlameEnabled, isActiveSurface]);
   useLayoutEffect(() => {
     renderInlineGitBlameRef.current = renderInlineGitBlame;
   }, [renderInlineGitBlame]);
 
+  // Blame waits for the cursor to settle, so moving through a file does not flash a line of
+  // metadata on every row it passes. Leaving the blamed line hides it right away.
   const scheduleInlineGitBlameRender = useCallback(() => {
-    if (gitBlameRenderFrameRef.current !== null) return;
-    gitBlameRenderFrameRef.current = requestAnimationFrame(() => {
-      gitBlameRenderFrameRef.current = null;
+    const editor = editorRef.current;
+    const lineNumber = editor?.getPosition()?.lineNumber ?? null;
+    if (
+      editor &&
+      renderedGitBlameLineRef.current !== null &&
+      renderedGitBlameLineRef.current !== lineNumber
+    ) {
+      renderedGitBlameKeyRef.current = null;
+      renderedGitBlameLineRef.current = null;
+      inlineGitBlamePresentationRef.current = null;
+      closeInlineGitBlameCard();
+      gitBlameDecorationRef.current = editor.deltaDecorations(gitBlameDecorationRef.current, []);
+    }
+    if (gitBlameRenderTimerRef.current !== null) {
+      window.clearTimeout(gitBlameRenderTimerRef.current);
+    }
+    gitBlameRenderTimerRef.current = window.setTimeout(() => {
+      gitBlameRenderTimerRef.current = null;
       renderInlineGitBlameRef.current();
-    });
-  }, []);
+    }, INLINE_GIT_BLAME_DELAY_MS);
+  }, [closeInlineGitBlameCard]);
   const diagnosticsForFile = useDiagnosticsStore((state) =>
     filePath ? (state.diagnosticsByFile.get(filePath) ?? EMPTY_DIAGNOSTICS) : EMPTY_DIAGNOSTICS,
   );
@@ -882,17 +914,24 @@ export function MonacoEditor({
       if (!anchor || !presentation || !container.contains(anchor)) return;
 
       cancelInlineGitBlameClose();
-      setInlineGitBlameCard((current) =>
-        current?.anchor === anchor && current.presentation === presentation
-          ? current
-          : { anchor, presentation },
-      );
+      cancelInlineGitBlameOpen();
+      // Opens only once the pointer rests on the blame, not while it passes over it.
+      inlineGitBlameOpenTimerRef.current = window.setTimeout(() => {
+        inlineGitBlameOpenTimerRef.current = null;
+        if (!anchor.isConnected) return;
+        setInlineGitBlameCard((current) =>
+          current?.anchor === anchor && current.presentation === presentation
+            ? current
+            : { anchor, presentation },
+        );
+      }, INLINE_GIT_BLAME_CARD_DELAY_MS);
     };
     const hideInlineGitBlameCard = (event: Event) => {
       const anchor = getInlineGitBlameAnchor(event.target);
       if (!anchor) return;
       const relatedTarget = event instanceof MouseEvent ? event.relatedTarget : null;
       if (relatedTarget instanceof Node && anchor.contains(relatedTarget)) return;
+      cancelInlineGitBlameOpen();
       scheduleInlineGitBlameClose();
     };
     container.addEventListener("mouseover", showInlineGitBlameCard, true);
@@ -1145,14 +1184,15 @@ export function MonacoEditor({
       container.removeEventListener("focusout", hideCopyTooltip, true);
       container.removeEventListener("mouseover", showInlineGitBlameCard, true);
       container.removeEventListener("mouseout", hideInlineGitBlameCard, true);
+      cancelInlineGitBlameOpen();
       cancelInlineGitBlameClose();
       setInlineGitBlameCard(null);
       if (hoverClampRaf !== null) {
         cancelAnimationFrame(hoverClampRaf);
       }
-      if (gitBlameRenderFrameRef.current !== null) {
-        cancelAnimationFrame(gitBlameRenderFrameRef.current);
-        gitBlameRenderFrameRef.current = null;
+      if (gitBlameRenderTimerRef.current !== null) {
+        window.clearTimeout(gitBlameRenderTimerRef.current);
+        gitBlameRenderTimerRef.current = null;
       }
       gitBlameDecorationRef.current = [];
       breakpointDecorationRef.current = [];
@@ -1170,6 +1210,7 @@ export function MonacoEditor({
     activeBufferId,
     autoCompletion,
     cancelInlineGitBlameClose,
+    cancelInlineGitBlameOpen,
     editorBracketPairColorization,
     editorCursorBlinking,
     editorCursorStyle,

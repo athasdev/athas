@@ -118,11 +118,20 @@ export function SidebarTitleBar({
   );
 }
 
-export function SidebarToolbar({ children, className, ...props }: ComponentProps<"div">) {
+export function SidebarToolbar({
+  children,
+  className,
+  position = "top",
+  ...props
+}: ComponentProps<"div"> & {
+  /** Which end of the panel the toolbar sits on; the dividing border faces the content. */
+  position?: "top" | "bottom";
+}) {
   return (
     <div
       className={cn(
-        "font-sans ui-text-chrome flex h-pane-header min-w-0 shrink-0 select-none items-center gap-chrome border-border border-b px-chrome-inline",
+        "font-sans ui-text-chrome flex h-pane-header min-w-0 shrink-0 select-none items-center gap-chrome border-border px-chrome-inline",
+        position === "top" ? "border-b" : "border-t",
         className,
       )}
       {...props}
