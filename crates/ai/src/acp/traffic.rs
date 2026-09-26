@@ -286,7 +286,7 @@ impl TrafficInspector {
       let _ = self
          .inner
          .subscribers
-         .fetch_update(Ordering::AcqRel, Ordering::Acquire, |count| {
+         .try_update(Ordering::AcqRel, Ordering::Acquire, |count| {
             Some(count.saturating_sub(1))
          });
       if self.inner.subscribers.load(Ordering::Acquire) == 0 {
