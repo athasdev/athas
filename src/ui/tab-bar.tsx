@@ -1,5 +1,6 @@
 import {
   DndContext,
+  DragOverlay,
   MeasuringStrategy,
   PointerSensor,
   closestCenter,
@@ -16,12 +17,29 @@ import { cva } from "class-variance-authority";
 import { motion } from "motion/react";
 import type { HTMLAttributes, MouseEvent as ReactMouseEvent, ReactNode, RefCallback } from "react";
 import { forwardRef, useCallback, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { instantTransition, quickTransition } from "@/utils/motion";
 import { cn } from "@/utils/cn";
 
+/** How far above or below the tab row the pointer may stray and still reorder tabs. */
+const TAB_ROW_SLOP = 8;
+
 const tabCollisionDetection: CollisionDetection = (args) => {
   const pointerCollisions = pointerWithin(args);
-  return pointerCollisions.length > 0 ? pointerCollisions : closestCenter(args);
+  if (pointerCollisions.length > 0) return pointerCollisions;
+
+  const pointer = args.pointerCoordinates;
+  if (!pointer) return closestCenter(args);
+
+  // Off the tab row the tab is headed for a pane or a split, so the other tabs stay put.
+  let top = Number.POSITIVE_INFINITY;
+  let bottom = Number.NEGATIVE_INFINITY;
+  for (const rect of args.droppableRects.values()) {
+    top = Math.min(top, rect.top);
+    bottom = Math.max(bottom, rect.bottom);
+  }
+  const onTabRow = pointer.y >= top - TAB_ROW_SLOP && pointer.y <= bottom + TAB_ROW_SLOP;
+  return onTabRow ? closestCenter(args) : [];
 };
 
 export type TabDndContextProps = Omit<
@@ -60,6 +78,8 @@ export interface SortableTabProps extends Pick<
   id: UniqueIdentifier;
   disabled?: boolean;
   motionDrag?: boolean;
+  /** The drag shows in a TabDragOverlay, so the tab itself stays behind as a faded placeholder. */
+  placeholderWhileDragging?: boolean;
   tabRef?: RefCallback<HTMLDivElement>;
   children: (state: SortableTabRenderState) => ReactNode;
 }
@@ -68,6 +88,7 @@ export function SortableTab({
   id,
   disabled = false,
   motionDrag = false,
+  placeholderWhileDragging = false,
   tabRef,
   className,
   style,
@@ -93,6 +114,7 @@ export function SortableTab({
     "relative flex min-w-0 shrink-0 items-stretch will-change-transform",
     !disabled && "touch-none",
     isDragging && "z-10 cursor-grabbing",
+    isDragging && placeholderWhileDragging && "opacity-40",
     className,
   );
   const content = children({ isDragging, dragDistance });
@@ -102,6 +124,7 @@ export function SortableTab({
       <motion.div
         ref={setRefs}
         data-slot="sortable-tab"
+        data-sortable-id={String(id)}
         data-dragging={isDragging}
         style={style}
         animate={{ x: transform?.x ?? 0, y: transform?.y ?? 0 }}
@@ -120,6 +143,7 @@ export function SortableTab({
     <div
       ref={setRefs}
       data-slot="sortable-tab"
+      data-sortable-id={String(id)}
       data-dragging={isDragging}
       style={{
         ...style,
@@ -133,6 +157,20 @@ export function SortableTab({
     >
       {content}
     </div>
+  );
+}
+
+/**
+ * The tab that follows the pointer while it is dragged. Rendered into the document body so tab
+ * bars that clip their overflow (the title bar) don't cut it off once it leaves the row.
+ */
+export function TabDragOverlay({ children }: { children: ReactNode }) {
+  if (typeof document === "undefined") return null;
+  return createPortal(
+    <DragOverlay dropAnimation={null} zIndex={100000} className="cursor-grabbing">
+      {children}
+    </DragOverlay>,
+    document.body,
   );
 }
 
@@ -202,23 +240,9 @@ const tabItemVariants = cva(
       },
       placement: {
         pane: "",
-        title:
-          "h-auto min-h-0 rounded-t-xl rounded-b-none border-x border-t border-transparent pl-3",
+        title: "rounded-lg",
       },
     },
-    compoundVariants: [
-      {
-        active: true,
-        placement: "title",
-        className: "border-border before:-inset-px before:bg-island",
-      },
-      {
-        active: false,
-        placement: "title",
-        className: "before:inset-y-1 before:rounded-lg",
-      },
-      { dragged: true, placement: "title", className: "rounded-b-xl" },
-    ],
     defaultVariants: {
       active: false,
       dragged: false,
@@ -243,38 +267,11 @@ export const TabItem = forwardRef<HTMLDivElement, TabItemProps>(function TabItem
       )}
       {...props}
     >
-      {placement === "title" && isActive && !isDragged ? (
-        <>
-          <TabFlare side="start" />
-          <TabFlare side="end" />
-        </>
-      ) : null}
       <div className="flex min-w-0 flex-1 items-center gap-chrome-loose">{children}</div>
       {action}
     </div>
   );
 });
-
-function TabFlare({ side }: { side: "start" | "end" }) {
-  const origin = side === "start" ? "0 0" : "100% 0";
-  const radius = "calc(var(--radius) * 2)";
-  return (
-    <span
-      aria-hidden
-      data-slot="tab-flare"
-      className="pointer-events-none absolute -bottom-px"
-      style={{
-        [side === "start" ? "left" : "right"]: `calc(-1px - ${radius})`,
-        width: `calc(${radius} + 1px)`,
-        height: `calc(${radius} + 1px)`,
-        background: [
-          `radial-gradient(circle at ${origin}, transparent calc(${radius} - 0.25px), var(--border) calc(${radius} + 0.25px), var(--border) calc(${radius} + 0.75px), transparent calc(${radius} + 1.25px))`,
-          `radial-gradient(circle at ${origin}, transparent calc(${radius} - 0.25px), var(--athas-glass-island-bg, var(--background)) calc(${radius} + 0.25px))`,
-        ].join(", "),
-      }}
-    />
-  );
-}
 
 export const TabBarSurface = forwardRef<
   HTMLDivElement,
@@ -286,9 +283,7 @@ export const TabBarSurface = forwardRef<
       data-slot="tab-bar"
       className={cn(
         "relative flex shrink-0 items-center gap-chrome overflow-hidden px-chrome-inline",
-        surface === "title"
-          ? "h-full bg-transparent pt-title-tab-inset pb-px"
-          : "h-tab-bar min-h-tab-bar bg-background",
+        surface === "title" ? "h-full bg-transparent" : "h-tab-bar min-h-tab-bar bg-background",
         className,
       )}
       {...props}

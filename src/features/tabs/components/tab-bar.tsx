@@ -1,6 +1,5 @@
 import { type DragEndEvent, type DragMoveEvent, type DragStartEvent } from "@dnd-kit/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { restrictToHorizontalAxis } from "@dnd-kit/modifiers";
 import { SortableContext, horizontalListSortingStrategy } from "@dnd-kit/sortable";
 import { ArrowsInIcon, ArrowsOutIcon, SidebarIcon } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -25,16 +24,25 @@ import UnsavedChangesDialog from "@/features/window/components/unsaved-changes-d
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { Button } from "@/ui/button";
 import { ContextMenu, ContextMenuTrigger } from "@/ui/context-menu";
-import { SortableTab, TabBarSurface, TabDndContext, useTabDragClickGuard } from "@/ui/tab-bar";
+import {
+  SortableTab,
+  TabBarSurface,
+  TabDndContext,
+  TabDragOverlay,
+  useTabDragClickGuard,
+} from "@/ui/tab-bar";
 import { getRelativePath } from "@/utils/path-helpers";
 import { IS_MAC } from "@/utils/platform";
 import { cn } from "@/utils/cn";
 import { calculateDisplayNames } from "../utils/path-shortener";
 import {
   clearInternalTabDragData,
+  getGlobalTabMove,
   resolveDropTarget,
-  setInternalTabDragHover,
+  resolveTabInsertBefore,
   setInternalTabDragData,
+  setInternalTabDragHover,
+  setInternalTabDragHoverTarget,
 } from "../utils/internal-tab-drag";
 import TabBarItem from "./tab-bar-item";
 import { NewTabMenu } from "./new-tab-menu";
@@ -452,7 +460,7 @@ const TabBar = ({
     if (!rect) return false;
 
     const horizontalSlop = 24;
-    const verticalSlop = 64;
+    const verticalSlop = 12;
     return (
       point.x < rect.left - horizontalSlop ||
       point.x > rect.right + horizontalSlop ||
@@ -485,6 +493,9 @@ const TabBar = ({
     dragPointRef.current = point;
     if (isPointOutsideTabBar(point)) {
       setInternalTabDragHover(point);
+    } else {
+      // Back over its own tab row: reordering, so no pane should show a drop preview.
+      setInternalTabDragHoverTarget({ paneId: null, zone: null });
     }
   }, []);
 
@@ -533,22 +544,49 @@ const TabBar = ({
           resetDrag();
           return;
         }
+        // Dropped on another pane's tab row: land between the tabs under the pointer.
+        if (point && target.zone === "center" && destinationPaneId === target.paneId) {
+          const beforeId = resolveTabInsertBefore(point, dragged.id);
+          const destinationPane =
+            destinationPaneId === BOTTOM_PANE_ID
+              ? findPaneGroup(usePaneStore.getState().bottomRoot, BOTTOM_PANE_ID)
+              : findPaneGroup(usePaneStore.getState().root, destinationPaneId);
+          if (beforeId !== undefined && destinationPane) {
+            const move = getGlobalTabMove(
+              useBufferStore.getState().buffers.map((buffer) => buffer.id),
+              dragged.id,
+              beforeId,
+              destinationPane.bufferIds,
+            );
+            if (move) reorderBuffers(...move);
+          }
+        }
         activateBufferInPaneAndSync(destinationPaneId, dragged.id);
         if (destinationPaneId === BOTTOM_PANE_ID) {
           useUIState.getState().setBottomPaneActiveTab("buffers");
           useUIState.getState().setIsBottomPaneVisible(true);
         }
       } else if (event.over && reorderBuffers) {
+        // Indices here are pane-local, but reorderBuffers works on the global buffer list, so
+        // translate the drop into "before the tab that now sits at the new index".
         const oldIndex = sortedBufferIndexById.get(activeId) ?? -1;
         const newIndex = sortedBufferIndexById.get(String(event.over.id)) ?? -1;
         if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
-          reorderBuffers(oldIndex, newIndex);
+          const reordered = sortedBufferIds.filter((id) => id !== activeId);
+          const beforeId = reordered[newIndex] ?? null;
+          const move = getGlobalTabMove(
+            useBufferStore.getState().buffers.map((buffer) => buffer.id),
+            activeId,
+            beforeId,
+            sortedBufferIds,
+          );
+          if (move) reorderBuffers(...move);
         }
       }
 
       resetDrag();
     },
-    [bufferById, paneId, reorderBuffers, resetDrag, sortedBufferIndexById],
+    [bufferById, paneId, reorderBuffers, resetDrag, sortedBufferIds, sortedBufferIndexById],
   );
 
   useEffect(() => {
@@ -600,10 +638,11 @@ const TabBar = ({
     [sortedBuffers, handleTabClick, updateActivePath, closeTab],
   );
 
+  const draggedBuffer = draggedBufferId ? bufferById.get(draggedBufferId) : undefined;
+
   return (
     <>
       <TabDndContext
-        modifiers={[restrictToHorizontalAxis]}
         onDragStart={handleDragStart}
         onDragMove={handleDragMove}
         onDragEnd={handleDragEnd}
@@ -632,9 +671,7 @@ const TabBar = ({
             <div
               className={cn(
                 "scrollbar-none flex min-w-0 items-center gap-0.5 overflow-x-auto overflow-y-hidden overscroll-x-none",
-                inTitleBar
-                  ? "-mb-px max-w-full flex-initial items-stretch self-stretch px-2 pb-px"
-                  : "flex-1",
+                inTitleBar ? "max-w-full flex-initial px-2" : "flex-1",
               )}
             >
               {sortedBuffers.map((buffer, index) => (
@@ -646,6 +683,7 @@ const TabBar = ({
                   }}
                   disabled={editingBufferId === buffer.id}
                   motionDrag
+                  placeholderWhileDragging
                   onClickCapture={getClickCapture(buffer.id)}
                 >
                   {({ isDragging }) => (
@@ -774,6 +812,28 @@ const TabBar = ({
             )}
           </div>
         </TabBarSurface>
+        {draggedBuffer ? (
+          <TabDragOverlay>
+            <TabBarItem
+              buffer={draggedBuffer}
+              displayName={getBufferDisplayName(draggedBuffer)}
+              index={0}
+              isActive
+              isDraggedTab
+              inTitleBar={false}
+              onClick={() => {}}
+              onDoubleClick={() => {}}
+              onKeyDown={() => {}}
+              handleTabClose={() => {}}
+              handleTabPin={() => {}}
+              isEditing={false}
+              editingName=""
+              onEditingNameChange={() => {}}
+              onRenameSubmit={() => {}}
+              onRenameCancel={() => {}}
+            />
+          </TabDragOverlay>
+        ) : null}
       </TabDndContext>
 
       {pendingClose && (
