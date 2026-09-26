@@ -1,6 +1,7 @@
 import { useContext, useLayoutEffect, useState, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import TabBar from "@/features/tabs/components/tab-bar";
+import { usePaneStore } from "../stores/pane.store";
 import { MainTabBarHostContext } from "../contexts/main-tab-bar-host";
 
 interface MainPaneTabBarProps {
@@ -25,10 +26,13 @@ export function MainPaneTabBar({
 }: MainPaneTabBarProps) {
   const host = useContext(MainTabBarHostContext);
   const [headerPosition, setHeaderPosition] = useState<HeaderPosition | null>(null);
+  const fullscreenPaneId = usePaneStore.use.fullscreenPaneId();
 
   useLayoutEffect(() => {
     const pane = containerRef.current;
-    if (!host || !pane || !active || disablePaneActions) {
+    // While a pane is fullscreen it owns the title bar; the panes behind it keep their tabs inline.
+    const isFullscreen = fullscreenPaneId === paneId;
+    if (!host || !pane || !active || disablePaneActions || (fullscreenPaneId && !isFullscreen)) {
       setHeaderPosition(null);
       return;
     }
@@ -39,8 +43,9 @@ export function MainPaneTabBar({
       const headerRect = host.header.getBoundingClientRect();
       const top = paneRect.top - contentRect.top;
       const isFirstPane = Math.abs(paneRect.left - contentRect.left) <= 2;
-      const nextPosition =
-        top >= 0 && top <= 2
+      const nextPosition = isFullscreen
+        ? { left: 0, width: headerRect.width }
+        : top >= 0 && top <= 2
           ? {
               left: isFirstPane ? 0 : paneRect.left - headerRect.left,
               width: isFirstPane ? paneRect.right - headerRect.left : paneRect.width,
@@ -63,7 +68,7 @@ export function MainPaneTabBar({
       observer.disconnect();
       window.removeEventListener("resize", updatePosition);
     };
-  }, [active, containerRef, disablePaneActions, host]);
+  }, [active, containerRef, disablePaneActions, fullscreenPaneId, host, paneId]);
 
   const inTitleBar = Boolean(host && headerPosition);
   const tabBar = (
