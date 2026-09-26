@@ -144,6 +144,8 @@ export interface AIChatActions {
    * where the session still offers them.
    */
   restoreChatSessionSettings: (sessionId: string) => void;
+  /** Saves the chat's "Follow agent" toggle with its history. */
+  setChatFollowAgent: (chatId: string, following: boolean) => void;
 
   getWorkspaceSessionSnapshot: () => AIWorkspaceSessionSnapshot;
   restoreWorkspaceSession: (snapshot: AIWorkspaceSessionSnapshot | null | undefined) => void;

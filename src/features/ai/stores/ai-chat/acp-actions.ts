@@ -22,6 +22,7 @@ type AcpActions = Pick<
   | "changeSessionMode"
   | "changeSessionConfigOption"
   | "restoreChatSessionSettings"
+  | "setChatFollowAgent"
 >;
 
 /** Sessions whose saved mode, and saved config options, were already applied. */
@@ -142,6 +143,20 @@ export function createAcpActions(set: SetAIChatStore, get: GetAIChatStore): AcpA
         updateSession(sessionId, (session) => {
           session.configOptions = previousOptions;
         });
+      }
+    },
+    setChatFollowAgent: (chatId, following) => {
+      const chat = get().chats.find((candidate) => candidate.id === chatId);
+      if (!chat || chat.sessionSettings?.followAgent === following) return;
+      set((state) => {
+        const target = state.chats.find((candidate) => candidate.id === chatId);
+        if (target) target.sessionSettings = { ...target.sessionSettings, followAgent: following };
+      });
+      const saved = get().chats.find((candidate) => candidate.id === chatId);
+      if (saved) {
+        void saveChatMetadataToDb(saved).catch((error) =>
+          console.error("Failed to save the chat's follow toggle:", error),
+        );
       }
     },
     restoreChatSessionSettings: (sessionId) => {

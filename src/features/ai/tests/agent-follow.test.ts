@@ -112,6 +112,12 @@ describe("agent follow eligibility", () => {
     expect(selectIsFollowingAgent({ "chat-1": true }, "chat-1", false)).toBe(true);
     expect(selectIsFollowingAgent({}, null, true)).toBe(false);
   });
+
+  it("uses the toggle saved with the chat until it is toggled again", () => {
+    expect(selectIsFollowingAgent({}, "chat-1", false, true)).toBe(true);
+    expect(selectIsFollowingAgent({}, "chat-1", true, false)).toBe(false);
+    expect(selectIsFollowingAgent({ "chat-1": false }, "chat-1", true, true)).toBe(false);
+  });
 });
 
 describe("agent follow interruption", () => {

@@ -9,9 +9,10 @@ export function parseChatSessionSettings(
   try {
     const parsed: unknown = JSON.parse(value);
     if (!parsed || typeof parsed !== "object") return null;
-    const { modeId, configOptions } = parsed as Record<string, unknown>;
+    const { modeId, configOptions, followAgent } = parsed as Record<string, unknown>;
     const settings: ChatSessionSettings = {};
     if (typeof modeId === "string") settings.modeId = modeId;
+    if (typeof followAgent === "boolean") settings.followAgent = followAgent;
     if (configOptions && typeof configOptions === "object") {
       settings.configOptions = Object.fromEntries(
         Object.entries(configOptions).filter(

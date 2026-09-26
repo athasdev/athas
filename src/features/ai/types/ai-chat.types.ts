@@ -121,6 +121,8 @@ export interface Chat {
 export interface ChatSessionSettings {
   modeId?: string;
   configOptions?: Record<string, string | boolean>;
+  /** The chat's "Follow agent" toggle, when the user set it; otherwise the setting applies. */
+  followAgent?: boolean;
 }
 
 export interface AIChatProps {

@@ -51,6 +51,9 @@ describe("chat session settings", () => {
       modeId: "plan",
       configOptions: { a: "b" },
     });
+    expect(parseChatSessionSettings('{"followAgent":false,"modeId":3}')).toEqual({
+      followAgent: false,
+    });
     expect(parseChatSessionSettings("not json")).toBeNull();
     expect(parseChatSessionSettings(null)).toBeNull();
   });
@@ -158,5 +161,21 @@ describe("restoring a chat's session settings", () => {
     await actions.changeSessionMode("session-1", "code");
     expect(useAIChatStore.getState().acpSessions["session-1"].modeState.currentModeId).toBe("plan");
     expect(useAIChatStore.getState().chats[0].sessionSettings).toEqual({ modeId: "plan" });
+  });
+
+  it("saves the chat's follow toggle next to its other picks", () => {
+    useAIChatStore.setState({ chats: [chat({ modeId: "plan" })], acpSessions: {} });
+    const { actions } = useAIChatStore.getState();
+
+    actions.setChatFollowAgent("chat-1", false);
+    expect(useAIChatStore.getState().chats[0].sessionSettings).toEqual({
+      modeId: "plan",
+      followAgent: false,
+    });
+    expect(saveChatMetadataToDb).toHaveBeenCalledTimes(1);
+
+    actions.setChatFollowAgent("chat-1", false);
+    actions.setChatFollowAgent("unknown", true);
+    expect(saveChatMetadataToDb).toHaveBeenCalledTimes(1);
   });
 });
