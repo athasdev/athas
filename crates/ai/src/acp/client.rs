@@ -2,6 +2,7 @@ use super::{
    AcpConnection,
    file_access::{self, FileAccess, OutsideAccess},
    replay::ReplayRouter,
+   terminal_events::TerminalEvents,
    terminal_meta::{self, ToolTerminalMeta},
    terminal_state::{AcpTerminalState, TerminalChange, take_session_terminals},
    types::{
@@ -299,6 +300,7 @@ pub struct AthasAcpClient {
    terminal_manager: Arc<TerminalManager>,
    /// Maps ACP terminal IDs to terminal state (uses StdMutex for sync access from event listeners)
    terminal_states: Arc<StdMutex<HashMap<String, AcpTerminalState>>>,
+   terminal_events: TerminalEvents,
    replay: ReplayRouter,
 }
 
@@ -313,6 +315,7 @@ impl AthasAcpClient {
          .and_then(|path| std::fs::canonicalize(path).ok())
          .into_iter()
          .collect();
+      let terminal_events = TerminalEvents::new(app_handle.clone());
       Self {
          app_handle,
          workspace_path,
@@ -325,6 +328,7 @@ impl AthasAcpClient {
          current_session_id: Arc::new(Mutex::new(None)),
          terminal_manager,
          terminal_states: Arc::new(StdMutex::new(HashMap::new())),
+         terminal_events,
          replay: ReplayRouter::default(),
       }
    }
@@ -363,8 +367,7 @@ impl AthasAcpClient {
       };
       for released in released {
          if let Some(exit) = released.exit {
-            emit_terminal_changes(
-               &self.app_handle,
+            self.terminal_events.emit_changes(
                &released.state.session_id,
                &released.terminal_id,
                vec![TerminalChange::Exit(exit)],
@@ -1311,7 +1314,7 @@ impl AthasAcpClient {
       let states_for_events = self.terminal_states.clone();
       let pending_events = Arc::new(StdMutex::new(Vec::<(String, TerminalEvent)>::new()));
       let pending_events_for_handler = pending_events.clone();
-      let app_handle = self.app_handle.clone();
+      let terminal_events = self.terminal_events.clone();
       let events_session_id = session_id.clone();
       let event_handler: TerminalEventHandler = Arc::new(move |terminal_id, event| {
          let changes = {
@@ -1327,7 +1330,7 @@ impl AthasAcpClient {
                return true;
             }
          };
-         emit_terminal_changes(&app_handle, &events_session_id, terminal_id, changes);
+         terminal_events.emit_changes(&events_session_id, terminal_id, changes);
          true
       });
 
@@ -1355,7 +1358,9 @@ impl AthasAcpClient {
                   }
                }
             }
-            emit_terminal_changes(&self.app_handle, &session_id, &terminal_id, changes);
+            self
+               .terminal_events
+               .emit_changes(&session_id, &terminal_id, changes);
 
             log::info!("ACP terminal created: {}", terminal_id);
             Ok(acp::CreateTerminalResponse::new(terminal_id))
@@ -1406,8 +1411,7 @@ impl AthasAcpClient {
          // A command still running when the agent lets go is stopped; the chat keeps showing
          // what it printed, and hears that it ended.
          if let Some(exit) = exit {
-            emit_terminal_changes(
-               &self.app_handle,
+            self.terminal_events.emit_changes(
                &state.session_id,
                &terminal_id,
                vec![TerminalChange::Exit(exit)],
@@ -1577,37 +1581,6 @@ fn notice_event(session_id: String, notice: acp::Notice) -> AcpEvent {
    }
 }
 
-/// The event that tells the chat what a terminal change was.
-fn terminal_change_event(session_id: &str, terminal_id: &str, change: TerminalChange) -> AcpEvent {
-   match change {
-      TerminalChange::Output(data) => AcpEvent::TerminalOutput {
-         session_id: session_id.to_string(),
-         terminal_id: terminal_id.to_string(),
-         data,
-      },
-      TerminalChange::Exit(status) => AcpEvent::TerminalExit {
-         session_id: session_id.to_string(),
-         terminal_id: terminal_id.to_string(),
-         exit_code: status.exit_code,
-         signal: status.signal,
-      },
-   }
-}
-
-fn emit_terminal_changes(
-   app_handle: &AppHandle,
-   session_id: &str,
-   terminal_id: &str,
-   changes: Vec<TerminalChange>,
-) {
-   for change in changes {
-      let event = terminal_change_event(session_id, terminal_id, change);
-      if let Err(e) = app_handle.emit("acp-event", &event) {
-         log::error!("Failed to emit ACP terminal event: {}", e);
-      }
-   }
-}
-
 #[derive(Clone, Copy)]
 enum ChunkRole {
    User,
@@ -1673,9 +1646,8 @@ fn automatic_permission_option(
 mod tests {
    use super::{
       AthasAcpClient, ChunkRole, ClientResponders, PendingBufferRead, PendingEntry,
-      PermissionResponse, SessionConfigOptionKind, TerminalChange, acp, agent_location_event,
+      PermissionResponse, SessionConfigOptionKind, acp, agent_location_event,
       automatic_permission_option, elicitation_response, ext_request_session_id, notice_event,
-      terminal_change_event,
    };
    use crate::acp::types::{AcpBufferReadRequest, AcpEvent};
    use serde_json::json;
@@ -1782,31 +1754,6 @@ mod tests {
       assert_eq!(
          serde_json::to_value(notice_event("s1".into(), custom)).unwrap()["severity"],
          "_debug"
-      );
-   }
-
-   #[test]
-   fn terminal_changes_become_chat_events() {
-      let output = terminal_change_event("s1", "t1", TerminalChange::Output("ok\n".into()));
-      assert_eq!(
-         serde_json::to_value(&output).unwrap(),
-         json!({ "type": "terminal_output", "sessionId": "s1", "terminalId": "t1", "data": "ok\n" })
-      );
-
-      let exit = terminal_change_event(
-         "s1",
-         "t1",
-         TerminalChange::Exit(acp::TerminalExitStatus::new().signal("Killed".to_string())),
-      );
-      assert_eq!(
-         serde_json::to_value(&exit).unwrap(),
-         json!({
-            "type": "terminal_exit",
-            "sessionId": "s1",
-            "terminalId": "t1",
-            "exitCode": null,
-            "signal": "Killed",
-         })
       );
    }
 

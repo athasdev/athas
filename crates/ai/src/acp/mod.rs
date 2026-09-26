@@ -11,6 +11,7 @@ mod process;
 pub mod registry;
 mod replay;
 mod sessions;
+mod terminal_events;
 mod terminal_meta;
 mod terminal_state;
 pub mod traffic;
