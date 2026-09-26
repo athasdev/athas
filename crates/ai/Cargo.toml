@@ -9,7 +9,8 @@ tauri-wry = ["athas-terminal/tauri-wry", "tauri/wry", "tauri/x11"]
 linux = ["athas-terminal/linux", "tauri/cef"]
 
 [dependencies]
-agent-client-protocol = "2"
+# Additive, capability-gated extensions: agents only use them when the client advertises them.
+agent-client-protocol = { version = "2", features = ["unstable_session_notices"] }
 anyhow = "1.0"
 async-trait = "0.1"
 base64 = "0.22"

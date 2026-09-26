@@ -629,6 +629,15 @@ pub enum AcpEvent {
       exit_code: Option<u32>,
       signal: Option<String>,
    },
+   /// Advisory information for the user that is not part of the conversation (ACP `notice`).
+   /// `severity` is `info`, `warning`, `error`, or a value a newer agent defines.
+   #[serde(rename_all = "camelCase")]
+   Notice {
+      session_id: String,
+      severity: String,
+      title: String,
+      description: Option<String>,
+   },
    /// Permission request from agent
    #[serde(rename_all = "camelCase")]
    PermissionRequest {

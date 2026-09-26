@@ -4,6 +4,7 @@ import { withAcpTerminalSnapshot } from "@/features/ai/lib/acp-terminal-output";
 import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
 import { sendAgentNativeNotification } from "@/features/ai/services/agent-native-notifications";
 import { useAcpAuthStore } from "@/features/ai/stores/acp-auth.store";
+import { useAcpNoticesStore } from "@/features/ai/stores/acp-notices.store";
 import { useAcpQuestionsStore } from "@/features/ai/stores/acp-questions.store";
 import { useAcpTerminalsStore } from "@/features/ai/stores/acp-terminals.store";
 import { useAgentPermissionsStore } from "@/features/ai/stores/agent-permissions.store";
@@ -86,6 +87,13 @@ export function applyAcpEvent(payload: AcpEvent): void {
       break;
     case "status_changed":
       actions.setAcpAgentStatus(payload.status);
+      break;
+    case "notice":
+      useAcpNoticesStore.getState().actions.add(payload.sessionId, {
+        severity: payload.severity,
+        title: payload.title,
+        description: payload.description,
+      });
       break;
     case "terminal_started":
       useAcpTerminalsStore.getState().actions.start(payload.terminalId, {

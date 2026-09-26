@@ -513,10 +513,12 @@ fn client_capabilities() -> acp::ClientCapabilities {
             .url(acp::ElicitationUrlCapabilities::new()),
       )
       .session(
-         acp::ClientSessionCapabilities::new().config_options(
-            acp::SessionConfigOptionsCapabilities::new()
-               .boolean(acp::BooleanConfigOptionCapabilities::new()),
-         ),
+         acp::ClientSessionCapabilities::new()
+            .config_options(
+               acp::SessionConfigOptionsCapabilities::new()
+                  .boolean(acp::BooleanConfigOptionCapabilities::new()),
+            )
+            .notices(acp::NoticeCapabilities::new()),
       )
       .meta(client_meta)
 }
@@ -1019,6 +1021,12 @@ mod tests {
             .and_then(|meta| meta.get(LEGACY_TERMINAL_AUTH_META_KEY)),
          Some(&json!(true))
       );
+   }
+
+   #[test]
+   fn advertises_session_notices() {
+      let capabilities = serde_json::to_value(client_capabilities()).unwrap();
+      assert_eq!(capabilities["session"]["notices"], json!({}));
    }
 
    #[test]

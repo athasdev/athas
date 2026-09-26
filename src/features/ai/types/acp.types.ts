@@ -321,6 +321,14 @@ export type AcpEvent =
       messageId?: string | null;
     }
   | {
+      type: "notice";
+      sessionId: string;
+      /** `info`, `warning`, `error`, or a value a newer agent defines. */
+      severity: string;
+      title: string;
+      description: string | null;
+    }
+  | {
       type: "terminal_started";
       sessionId: string;
       terminalId: string;
@@ -501,4 +509,13 @@ export interface AcpTerminalSnapshot {
   /** The start of the output was dropped to keep it within the display limit. */
   truncated: boolean;
   exit: AcpTerminalExit | null;
+}
+
+/** Advisory information an agent showed the user; it is not part of the conversation. */
+export interface AcpNotice {
+  id: string;
+  severity: string;
+  title: string;
+  description: string | null;
+  timestamp: Date;
 }

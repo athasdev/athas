@@ -149,6 +149,7 @@ fn session_id_of(event: &AcpEvent) -> Option<&str> {
       | AcpEvent::TerminalStarted { session_id, .. }
       | AcpEvent::TerminalOutput { session_id, .. }
       | AcpEvent::TerminalExit { session_id, .. }
+      | AcpEvent::Notice { session_id, .. }
       | AcpEvent::PermissionRequest { session_id, .. }
       | AcpEvent::SessionComplete { session_id }
       | AcpEvent::SlashCommandsUpdate { session_id, .. }

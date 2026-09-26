@@ -1035,6 +1035,9 @@ impl AthasAcpClient {
                usage: Self::map_usage(usage),
             });
          }
+         acp::SessionUpdate::Notice(notice) => {
+            self.emit_session_update(notice_event(session_id, notice));
+         }
          update => {
             log::warn!(
                "Unhandled ACP session update for {}: {:?}",
@@ -1558,6 +1561,22 @@ impl AthasAcpClient {
 
 /// Whether a window runs the editor workbench, which answers buffer reads. Detached windows (a
 /// chat popped out on its own) hold no editor buffers.
+fn notice_event(session_id: String, notice: acp::Notice) -> AcpEvent {
+   let severity = match notice.severity {
+      acp::NoticeSeverity::Info => "info".to_string(),
+      acp::NoticeSeverity::Warning => "warning".to_string(),
+      acp::NoticeSeverity::Error => "error".to_string(),
+      acp::NoticeSeverity::Other(other) => other,
+      _ => "info".to_string(),
+   };
+   AcpEvent::Notice {
+      session_id,
+      severity,
+      title: notice.title,
+      description: notice.description,
+   }
+}
+
 /// The event that tells the chat what a terminal change was.
 fn terminal_change_event(session_id: &str, terminal_id: &str, change: TerminalChange) -> AcpEvent {
    match change {
@@ -1655,7 +1674,7 @@ mod tests {
    use super::{
       AthasAcpClient, ChunkRole, ClientResponders, PendingBufferRead, PendingEntry,
       PermissionResponse, SessionConfigOptionKind, TerminalChange, acp, agent_location_event,
-      automatic_permission_option, elicitation_response, ext_request_session_id,
+      automatic_permission_option, elicitation_response, ext_request_session_id, notice_event,
       terminal_change_event,
    };
    use crate::acp::types::{AcpBufferReadRequest, AcpEvent};
@@ -1743,6 +1762,27 @@ mod tests {
          .map(|event| event["type"].as_str().unwrap().to_string())
          .collect();
       assert_eq!(types, ["tool_update", "tool_complete", "terminal_exit"]);
+   }
+
+   #[test]
+   fn notices_reach_the_chat_with_their_severity() {
+      let notice = acp::Notice::new(acp::NoticeSeverity::Warning, "Rate limited")
+         .description("Retrying in 30 seconds".to_string());
+      assert_eq!(
+         serde_json::to_value(notice_event("s1".into(), notice)).unwrap(),
+         json!({
+            "type": "notice",
+            "sessionId": "s1",
+            "severity": "warning",
+            "title": "Rate limited",
+            "description": "Retrying in 30 seconds",
+         })
+      );
+      let custom = acp::Notice::new(acp::NoticeSeverity::Other("_debug".into()), "Hi");
+      assert_eq!(
+         serde_json::to_value(notice_event("s1".into(), custom)).unwrap()["severity"],
+         "_debug"
+      );
    }
 
    #[test]

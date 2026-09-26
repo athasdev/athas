@@ -5,6 +5,7 @@ import { isTerminalAgent } from "@/features/ai/lib/terminal-agents";
 import { openTerminalAgent } from "@/features/ai/lib/terminal-agent-terminal";
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { appendChatAcpEvent, type ChatAcpEventInput } from "@/features/ai/lib/acp-event-timeline";
+import { acpNoticeToChatEvent } from "@/features/ai/lib/acp-notices";
 import {
   isAcpAuthenticationError,
   isAcpConfigurationError,
@@ -59,6 +60,7 @@ import {
   sendAgentNativeNotification,
   type AgentNativeNotificationKind,
 } from "@/features/ai/services/agent-native-notifications";
+import { useAcpNoticesStore } from "@/features/ai/stores/acp-notices.store";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { agentIsDetached } from "@/features/ai/detached/agent-window.store";
 import { peekAgentDraft } from "@/features/ai/detached/agent-window-drafts";
@@ -167,6 +169,9 @@ const AIChat = memo(function AIChat({
   );
   const currentAgentId = currentChat?.agentId ?? chatState.selectedAgentId;
   const chatSessionId = currentChat?.acpSessionId ?? null;
+  const sessionNotices = useAcpNoticesStore((state) =>
+    chatSessionId ? state.notices[chatSessionId] : undefined,
+  );
   const permissionQueue = useMemo(
     () => selectChatPermissions(allPermissions, effectiveChatId),
     [allPermissions, effectiveChatId],
@@ -1324,6 +1329,14 @@ details: ${errorDetails || mainError}
     showToast,
   ]);
 
+  // Notices are live information from the agent, shown in the timeline but never saved.
+  const timelineEvents = useMemo(
+    () =>
+      sessionNotices?.length
+        ? [...acpEvents, ...sessionNotices.map(acpNoticeToChatEvent)]
+        : acpEvents,
+    [acpEvents, sessionNotices],
+  );
   const currentPermission = permissionQueue[0];
   const isNewSession =
     isChatMessagesLoaded && (currentChat?.messages.length ?? 0) === 0 && acpEvents.length === 0;
@@ -1490,7 +1503,7 @@ details: ${errorDetails || mainError}
                       !surfaceStreamingMessageId &&
                       !isAiChatBlockedByPolicy
                     }
-                    acpEvents={acpEvents}
+                    acpEvents={timelineEvents}
                     searchQuery={messageSearchQuery}
                     activeSearchMessageId={activeMessageSearchMatch?.messageId ?? null}
                     activeSearchIndex={activeMessageSearchIndex}
