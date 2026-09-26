@@ -84,10 +84,10 @@ pub(super) fn connection_key(
    agent_id: String,
    workspace_path: Option<String>,
 ) -> Result<ConnectionKey> {
-   Ok(ConnectionKey {
+   Ok(ConnectionKey::new(
       agent_id,
-      workspace_path: resolve_workspace_path(workspace_path)?,
-   })
+      resolve_workspace_path(workspace_path)?,
+   ))
 }
 
 /// Why an agent process is being shut down.

@@ -5,17 +5,51 @@
 use anyhow::{Result, bail};
 use std::{
    collections::HashMap,
+   hash::{Hash, Hasher},
    path::PathBuf,
    time::{Duration, Instant},
 };
 use tokio_util::sync::CancellationToken;
 
-/// One agent process serves every chat that uses the same agent in the same workspace.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+/// One agent process serves every chat that uses the same agent in the same workspace. Two keys
+/// are the same workspace when their folders are the same on disk, so a folder opened through a
+/// symlink shares the process started through its real path.
+#[derive(Debug, Clone)]
 pub(super) struct ConnectionKey {
    pub agent_id: String,
-   /// The resolved workspace the process runs in; `None` without a project.
+   /// The resolved workspace the process runs in, as the app named it; `None` without a project.
    pub workspace_path: Option<PathBuf>,
+   /// Where `workspace_path` really is, with symlinks resolved when possible.
+   pub workspace_identity: Option<PathBuf>,
+}
+
+impl ConnectionKey {
+   pub fn new(agent_id: String, workspace_path: Option<PathBuf>) -> Self {
+      let workspace_identity = workspace_path
+         .as_ref()
+         .map(|path| std::fs::canonicalize(path).unwrap_or_else(|_| path.clone()));
+      Self {
+         agent_id,
+         workspace_path,
+         workspace_identity,
+      }
+   }
+}
+
+impl PartialEq for ConnectionKey {
+   fn eq(&self, other: &Self) -> bool {
+      self.agent_id == other.agent_id && self.workspace_identity == other.workspace_identity
+   }
+}
+
+impl Eq for ConnectionKey {
+}
+
+impl Hash for ConnectionKey {
+   fn hash<H: Hasher>(&self, state: &mut H) {
+      self.agent_id.hash(state);
+      self.workspace_identity.hash(state);
+   }
 }
 
 #[derive(Debug)]
@@ -215,10 +249,35 @@ mod tests {
    use super::*;
 
    fn key(agent_id: &str, workspace: &str) -> ConnectionKey {
-      ConnectionKey {
-         agent_id: agent_id.to_string(),
-         workspace_path: Some(PathBuf::from(workspace)),
-      }
+      ConnectionKey::new(agent_id.to_string(), Some(PathBuf::from(workspace)))
+   }
+
+   #[cfg(unix)]
+   #[test]
+   fn a_workspace_reached_through_a_symlink_is_the_same_workspace() {
+      let temp_dir = tempfile::tempdir().unwrap();
+      let real = temp_dir.path().join("project");
+      let link = temp_dir.path().join("link");
+      std::fs::create_dir(&real).unwrap();
+      std::os::unix::fs::symlink(&real, &link).unwrap();
+
+      let through_link = ConnectionKey::new("claude".into(), Some(link.clone()));
+      let direct = ConnectionKey::new("claude".into(), Some(real));
+      assert_eq!(through_link, direct);
+      assert_eq!(through_link.workspace_path, Some(link));
+      assert_ne!(
+         through_link,
+         ConnectionKey::new("gemini".into(), Some(temp_dir.path().into()))
+      );
+   }
+
+   #[test]
+   fn a_workspace_that_cannot_be_resolved_keeps_its_own_path() {
+      assert_eq!(
+         key("claude", "/no/such/workspace"),
+         key("claude", "/no/such/workspace")
+      );
+      assert_ne!(key("claude", "/no/such/a"), key("claude", "/no/such/b"));
    }
 
    #[test]
