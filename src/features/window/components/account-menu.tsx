@@ -266,7 +266,7 @@ export const AccountMenu = memo(function AccountMenu() {
         >
           <Avatar name={accountName} src={accountAvatarUrl} size="md" />
         </DropdownMenuTrigger>
-        <DropdownMenuContent side="top" align="start" size="wide">
+        <DropdownMenuContent size="wide">
           {isAuthenticated ? (
             <div role="presentation" className="flex min-w-0 items-center gap-2.5 px-2.5 py-2">
               <Avatar name={accountName} src={accountAvatarUrl} size="lg" />

@@ -12,6 +12,7 @@ import { ScrollArea } from "@/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/ui/dropdown";
 import { cn } from "@/utils/cn";
+import { OverlayRoot } from "@/ui/overlay-root";
 
 interface CommandProps {
   isVisible: boolean;
@@ -134,34 +135,36 @@ const Command = ({
   return (
     <DialogPrimitive.Root open={isVisible} onOpenChange={(open) => !open && onClose?.()}>
       <DialogPrimitive.Portal>
-        <div
-          className="fixed inset-0 z-10060 flex items-start justify-center bg-scrim pt-palette-offset transition-opacity duration-fast ease-smooth starting:opacity-0 motion-reduce:transition-none"
-          onMouseDown={(event) => {
-            if (event.target !== event.currentTarget) return;
-            event.preventDefault();
-            event.stopPropagation();
-            onClose?.();
-          }}
-        >
-          <DialogPrimitive.Popup
-            ref={popupRef}
-            aria-describedby={undefined}
-            initialFocus={autoFocus ? getInitialFocusTarget : false}
-            className={cn(
-              "rounded-xl bg-overlay text-foreground shadow-(--shadow-dialog) ring-1 ring-border outline-none",
-              // Native @starting-style: the surface mounts already open, so the entrance
-              // must not depend on Base UI flipping a data attribute after mount.
-              "transition-[opacity,transform,scale] duration-fast ease-smooth starting:translate-y-1 starting:scale-[0.98] starting:opacity-0 motion-reduce:transition-none",
-              commandContentVariants(),
-              "pointer-events-auto",
-              className,
-            )}
-            data-command-surface=""
+        <OverlayRoot>
+          <div
+            className="fixed inset-0 z-10060 flex items-start justify-center bg-scrim pt-palette-offset transition-opacity duration-fast ease-smooth starting:opacity-0 motion-reduce:transition-none"
+            onMouseDown={(event) => {
+              if (event.target !== event.currentTarget) return;
+              event.preventDefault();
+              event.stopPropagation();
+              onClose?.();
+            }}
           >
-            <DialogPrimitive.Title className="sr-only">{title}</DialogPrimitive.Title>
-            {children}
-          </DialogPrimitive.Popup>
-        </div>
+            <DialogPrimitive.Popup
+              ref={popupRef}
+              aria-describedby={undefined}
+              initialFocus={autoFocus ? getInitialFocusTarget : false}
+              className={cn(
+                "rounded-xl bg-overlay text-foreground shadow-(--shadow-dialog) ring-1 ring-border outline-none",
+                // Native @starting-style: the surface mounts already open, so the entrance
+                // must not depend on Base UI flipping a data attribute after mount.
+                "transition-[opacity,transform,scale] duration-fast ease-smooth starting:translate-y-1 starting:scale-[0.98] starting:opacity-0 motion-reduce:transition-none",
+                commandContentVariants(),
+                "pointer-events-auto",
+                className,
+              )}
+              data-command-surface=""
+            >
+              <DialogPrimitive.Title className="sr-only">{title}</DialogPrimitive.Title>
+              {children}
+            </DialogPrimitive.Popup>
+          </div>
+        </OverlayRoot>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
   );

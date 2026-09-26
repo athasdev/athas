@@ -6,8 +6,12 @@ const titleBarSource = readFileSync(
   fileURLToPath(new URL("../components/title-bar/title-bar.tsx", import.meta.url)),
   "utf8",
 );
-const titleNavigationSource = readFileSync(
-  fileURLToPath(new URL("../components/title-bar/title-navigation.tsx", import.meta.url)),
+const tabHistoryNavigationSource = readFileSync(
+  fileURLToPath(new URL("../../tabs/components/tab-history-navigation.tsx", import.meta.url)),
+  "utf8",
+);
+const tabBarSource = readFileSync(
+  fileURLToPath(new URL("../../tabs/components/tab-bar.tsx", import.meta.url)),
   "utf8",
 );
 const titleLeadingSource = readFileSync(
@@ -28,10 +32,6 @@ const activityChromeSource = readFileSync(
 );
 const mainLayoutSource = readFileSync(
   fileURLToPath(new URL("../../layout/components/main-layout.tsx", import.meta.url)),
-  "utf8",
-);
-const mainPaneTabBarSource = readFileSync(
-  fileURLToPath(new URL("../../panes/components/main-pane-tab-bar.tsx", import.meta.url)),
   "utf8",
 );
 const paneContainerSource = readFileSync(
@@ -69,29 +69,32 @@ describe("title bar controls", () => {
     );
   });
 
-  it("puts back and forward at the trailing end, after the tabs", () => {
-    expect(titleNavigationSource).toContain("export function TitleHistoryNavigation");
-    expect(titleNavigationSource).not.toContain("<Toggle");
-    expect(mainLayoutSource).toContain("titleActions={<TitleHistoryNavigation />}");
-    expect(mainLayoutSource.indexOf("<TitleLeading")).toBeLessThan(
-      mainLayoutSource.indexOf('data-slot="main-title-tab-bar"'),
-    );
+  it("puts back and forward in the pane tab bar, right before the tabs", () => {
+    expect(tabHistoryNavigationSource).toContain("export function TabHistoryNavigation");
+    expect(mainLayoutSource).not.toContain("titleActions=");
+    const navigationIndex = tabBarSource.indexOf("<TabHistoryNavigation />");
+    expect(navigationIndex).toBeGreaterThan(-1);
+    expect(navigationIndex).toBeLessThan(tabBarSource.indexOf("<SortableContext"));
   });
 
   it("orders update, run, notifications, and account actions in the activity footer", () => {
     const updateIndex = activityChromeSource.indexOf("<AppUpdateControl");
+    const terminalIndex = activityChromeSource.indexOf("<TerminalToggle />");
     const runActionsIndex = activityChromeSource.indexOf("<RunActionsButton");
     const notificationsIndex = activityChromeSource.indexOf("<NotificationsTrigger");
     const accountIndex = activityChromeSource.indexOf("<AccountMenu");
 
     expect(updateIndex).toBeGreaterThan(-1);
-    expect(runActionsIndex).toBeGreaterThan(updateIndex);
+    expect(terminalIndex).toBeGreaterThan(updateIndex);
+    expect(runActionsIndex).toBeGreaterThan(terminalIndex);
     expect(notificationsIndex).toBeGreaterThan(runActionsIndex);
     expect(accountIndex).toBeGreaterThan(notificationsIndex);
     expect(activityChromeSource).toContain("<AccountMenu />");
     expect(accountMenuSource).toContain("<SidebarIconButton");
     expect(accountMenuSource).not.toContain("<SidebarListItem");
-    expect(accountMenuSource).toContain('<DropdownMenuContent side="top"');
+    // The rail's overlay placement opens the account menu to the right.
+    expect(accountMenuSource).toContain('<DropdownMenuContent size="wide">');
+    expect(activityBarSource).toContain('<OverlaySideProvider side="right" align="end">');
   });
 
   it("keeps activity navigation and the relocated chrome in the rail", () => {
@@ -112,20 +115,11 @@ describe("title bar controls", () => {
     );
   });
 
-  it("mounts top pane tabs in a separate header above the main content", () => {
-    const titleRowIndex = mainLayoutSource.indexOf('data-slot="workbench-title-row"');
-    const headerIndex = mainLayoutSource.indexOf('data-slot="main-title-tab-bar"');
-    const workbenchIndex = mainLayoutSource.indexOf('className="athas-workbench-glass');
-    const contentIndex = mainLayoutSource.indexOf("ref={setMainContentRoot}");
-
-    expect(titleRowIndex).toBeGreaterThan(-1);
-    expect(headerIndex).toBeGreaterThan(titleRowIndex);
-    expect(workbenchIndex).toBeGreaterThan(headerIndex);
-    expect(contentIndex).toBeGreaterThan(workbenchIndex);
-    expect(mainLayoutSource).toContain("<MainTabBarHostContext.Provider value={mainTabBarHost}>");
-    expect(paneContainerSource).toContain("<MainPaneTabBar");
-    expect(mainPaneTabBarSource).toContain("createPortal(");
-    expect(mainPaneTabBarSource).toContain("host.header");
+  it("keeps pane tabs inside the main view instead of the title bar", () => {
+    expect(mainLayoutSource).toContain('data-slot="workbench-title-row"');
+    expect(mainLayoutSource).not.toContain("main-title-tab-bar");
+    expect(paneContainerSource).toContain("<TabBar");
+    expect(paneContainerSource).not.toContain("createPortal(");
   });
 
   it("uses searchable anchored menus for activity sidebar project and branch selection", () => {

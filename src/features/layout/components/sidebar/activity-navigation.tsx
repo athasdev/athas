@@ -83,16 +83,16 @@ export function ActivityRailNavigation({ items }: { items: ActivityNavigationIte
   const primaryItems = items.filter((item) => !moreViewIds.has(item.id));
   const groups = [
     {
-      label: "Agents",
-      items: primaryItems.filter((item) => item.id === "agents"),
-    },
-    {
       label: "Project navigation",
       items: primaryItems.filter((item) => item.id === "files" || item.id === "search"),
     },
     {
       label: "Version control",
       items: primaryItems.filter((item) => item.id === "git" || item.id === "github-prs"),
+    },
+    {
+      label: "Agents",
+      items: primaryItems.filter((item) => item.id === "agents"),
     },
     {
       label: "Tools",

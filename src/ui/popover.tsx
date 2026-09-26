@@ -11,6 +11,8 @@ import { createPortal } from "react-dom";
 import { OVERLAY_MAX_WIDTH, type OverlaySize, OVERLAY_SIZES } from "@/ui/overlay-size";
 import { instantTransition, overlayEntrance } from "@/utils/motion";
 import { cn } from "@/utils/cn";
+import { useOverlayPlacement } from "@/ui/overlay-side";
+import { OverlayRoot } from "@/ui/overlay-root";
 
 function containScrollChain(event: ReactWheelEvent<HTMLDivElement>) {
   const root = event.currentTarget;
@@ -107,9 +109,9 @@ function PopoverTrigger(props: PopoverPrimitive.Trigger.Props) {
 
 function PopoverContent({
   className,
-  align = "center",
+  align: alignProp,
   alignOffset = 0,
-  side = "bottom",
+  side: sideProp,
   sideOffset = 6,
   collisionPadding = 8,
   anchor,
@@ -125,28 +127,33 @@ function PopoverContent({
     /** Width preset from the shared overlay scale. See `@/ui/overlay-size`. */
     size?: OverlaySize;
   }) {
+  const placement = useOverlayPlacement();
+  const side = sideProp ?? placement.side ?? "bottom";
+  const align = alignProp ?? placement.align ?? "center";
   return (
     <PopoverPrimitive.Portal data-slot="popover-portal" container={portalContainer}>
-      <PopoverPrimitive.Positioner
-        align={align}
-        alignOffset={alignOffset}
-        anchor={anchor}
-        side={side}
-        sideOffset={sideOffset}
-        collisionPadding={collisionPadding}
-        className="isolate z-10070"
-      >
-        <PopoverPrimitive.Popup
-          data-slot="popover-content"
-          className={cn(
-            "z-10070 flex origin-(--transform-origin) flex-col gap-2 rounded-lg bg-overlay p-2 font-sans text-foreground shadow-(--shadow-popover) ring-1 ring-border outline-none transition-opacity duration-75 data-ending-style:opacity-0 data-starting-style:opacity-0 ui-text-chrome",
-            OVERLAY_MAX_WIDTH,
-            OVERLAY_SIZES[size],
-            className,
-          )}
-          {...props}
-        />
-      </PopoverPrimitive.Positioner>
+      <OverlayRoot>
+        <PopoverPrimitive.Positioner
+          align={align}
+          alignOffset={alignOffset}
+          anchor={anchor}
+          side={side}
+          sideOffset={sideOffset}
+          collisionPadding={collisionPadding}
+          className="isolate z-10070"
+        >
+          <PopoverPrimitive.Popup
+            data-slot="popover-content"
+            className={cn(
+              "z-10070 flex origin-(--transform-origin) flex-col gap-2 rounded-lg bg-overlay p-2 font-sans text-foreground shadow-(--shadow-popover) ring-1 ring-border outline-none transition-opacity duration-75 data-ending-style:opacity-0 data-starting-style:opacity-0 ui-text-chrome",
+              OVERLAY_MAX_WIDTH,
+              OVERLAY_SIZES[size],
+              className,
+            )}
+            {...props}
+          />
+        </PopoverPrimitive.Positioner>
+      </OverlayRoot>
     </PopoverPrimitive.Portal>
   );
 }

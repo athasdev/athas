@@ -42,11 +42,19 @@ describe("activity navigation", () => {
     expect(markup).not.toContain('data-slot="sidebar-list-item"');
   });
 
-  it("puts the agents item first, in its own group", () => {
+  it("puts the agents item after version control, in its own group", () => {
     const markup = renderToStaticMarkup(
       <ActivityRailNavigation
         items={[
           ...items,
+          {
+            id: "github-prs",
+            label: "Pull Requests",
+            icon: <span>github icon</span>,
+            active: false,
+            onClick: () => {},
+            ariaLabel: "Pull Requests",
+          },
           {
             id: "agents",
             label: "Agents",
@@ -60,7 +68,10 @@ describe("activity navigation", () => {
     );
 
     expect(markup).toContain('aria-label="Agents"');
-    expect(markup.indexOf('aria-label="Agents"')).toBeLessThan(
+    expect(markup.indexOf('aria-label="Agents"')).toBeGreaterThan(
+      markup.indexOf('aria-label="Pull Requests"'),
+    );
+    expect(markup.indexOf('aria-label="Pull Requests"')).toBeGreaterThan(
       markup.indexOf('aria-label="Files"'),
     );
   });

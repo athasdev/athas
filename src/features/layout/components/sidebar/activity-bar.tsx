@@ -19,6 +19,7 @@ import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { ContextMenu, ContextMenuTrigger } from "@/ui/context-menu";
 import { SearchIcon } from "@/ui/icons";
+import { OverlaySideProvider } from "@/ui/overlay-side";
 import { cn } from "@/utils/cn";
 
 export const ActivityBar = memo(() => {
@@ -46,10 +47,6 @@ export const ActivityBar = memo(() => {
   const isExtensionsBufferActive = useBufferStore((state) => {
     const activeBuffer = state.buffers.find((buffer) => buffer.id === state.activeBufferId);
     return activeBuffer?.type === "extensions" || activeBuffer?.type === "extension";
-  });
-  const isGlobalSearchBufferActive = useBufferStore((state) => {
-    const activeBuffer = state.buffers.find((buffer) => buffer.id === state.activeBufferId);
-    return activeBuffer?.type === "globalSearch";
   });
   const handleNewAgent = useNewAgentAction();
   const handleNewTerminal = useCallback(() => {
@@ -103,7 +100,8 @@ export const ActivityBar = memo(() => {
           id: "search",
           label: "Search",
           icon: <SearchIcon />,
-          active: isGlobalSearchBufferActive,
+          // Search opens as a tab, not a sidebar view, so it never shows as the active view.
+          active: false,
           onClick: handleOpenGlobalSearch,
           ariaLabel: "Search",
           shortcut: "Mod+Shift+F",
@@ -148,35 +146,39 @@ export const ActivityBar = memo(() => {
           className="athas-sidebar-rail absolute inset-y-0 left-0 flex flex-col overflow-hidden py-1.5"
           style={{ width: railWidth }}
         >
-          <ActivityChrome />
-          <div
-            ref={railContentRef}
-            onScroll={projectCarouselEnabled ? handleProjectScroll : undefined}
-            data-slot="project-carousel"
-            className={cn(
-              "scrollbar-none flex min-h-0 w-full flex-1 shrink-0 overflow-y-hidden overscroll-x-none",
-              projectCarouselEnabled
-                ? "snap-x snap-mandatory overflow-x-auto"
-                : "overflow-x-hidden",
-            )}
-          >
-            {renderedCarouselProjects.map((project) => (
-              <ActivityProjectPanel
-                key={project.id}
-                project={project}
-                current={project.id === carouselProject?.id}
-                loading={project.id === loadingCarouselProjectId}
-                navigationItems={visibleActivityNavigationItems}
-              />
-            ))}
-          </div>
-          <div
-            data-slot="activity-sidebar-footer"
-            className="relative z-20 flex w-full shrink-0 flex-col items-center gap-1 px-1"
-          >
-            <DiagnosticsActivityControl />
-            <ActivityChromeFooter />
-          </div>
+          <OverlaySideProvider side="right" align="start">
+            <ActivityChrome />
+            <div
+              ref={railContentRef}
+              onScroll={projectCarouselEnabled ? handleProjectScroll : undefined}
+              data-slot="project-carousel"
+              className={cn(
+                "scrollbar-none flex min-h-0 w-full flex-1 shrink-0 overflow-y-hidden overscroll-x-none",
+                projectCarouselEnabled
+                  ? "snap-x snap-mandatory overflow-x-auto"
+                  : "overflow-x-hidden",
+              )}
+            >
+              {renderedCarouselProjects.map((project) => (
+                <ActivityProjectPanel
+                  key={project.id}
+                  project={project}
+                  current={project.id === carouselProject?.id}
+                  loading={project.id === loadingCarouselProjectId}
+                  navigationItems={visibleActivityNavigationItems}
+                />
+              ))}
+            </div>
+          </OverlaySideProvider>
+          <OverlaySideProvider side="right" align="end">
+            <div
+              data-slot="activity-sidebar-footer"
+              className="relative z-20 flex w-full shrink-0 flex-col items-center gap-1 px-1"
+            >
+              <DiagnosticsActivityControl />
+              <ActivityChromeFooter />
+            </div>
+          </OverlaySideProvider>
         </div>
       </ContextMenuTrigger>
       <ActivityBarMenu
