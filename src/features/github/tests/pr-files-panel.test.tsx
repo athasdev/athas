@@ -30,7 +30,6 @@ describe("PRFilesPanel", () => {
         contentError={null}
         diffFiles={files}
         selectedFilePath="src/second.ts"
-        isActive
         onRetry={vi.fn()}
         onSelectFile={vi.fn()}
         onOpenChangedFile={vi.fn()}
@@ -41,6 +40,5 @@ describe("PRFilesPanel", () => {
     expect(markup).toContain('data-multibuffer-section="src/first.ts"');
     expect(markup).toContain('data-multibuffer-section="src/second.ts"');
     expect(markup).toContain("data-multibuffer-navigator-toggle");
-    expect(markup).toContain("File 2 of 2");
   });
 });

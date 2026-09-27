@@ -20,6 +20,7 @@ import { ProviderSelector } from "@/features/ai/components/selectors/provider-se
 import { useAvailableProviders } from "@/features/ai/hooks/use-available-providers";
 import { useAIProviderSettingsActions } from "@/features/ai/services/providers/ai-provider-settings-registry";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
+import { selectChatAcpSession, selectChatAcpSessionId } from "@/features/ai/lib/acp-session-state";
 import type { SessionConfigOption } from "@/features/ai/types/acp.types";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { TypedConfirmAction } from "@/features/settings/components/typed-confirm-action";
@@ -54,12 +55,21 @@ import {
   storeProviderApiToken,
 } from "@/features/ai/services/ai-token-service";
 import { CodexSettings } from "@/features/ai/integrations/codex/codex-settings";
+import { McpServerSettings } from "@/features/ai/components/mcp/mcp-server-settings";
+import { AgentAllowedActionsSettings } from "@/features/ai/components/permissions/agent-allowed-actions-settings";
+import {
+  MAX_INTELLIGENCE_AGENT_STEPS,
+  MIN_INTELLIGENCE_AGENT_STEPS,
+} from "@/features/ai/intelligence/lib/intelligence-agent-steps";
+import NumberInput from "@/ui/number-input";
 import { IntelligencePreferences } from "../intelligence-preferences";
 export const AISettings = () => {
   const settings = useSettingsStore(
     useShallow((state) => ({
       aiAutocompleteCustomModelId: state.settings.aiAutocompleteCustomModelId,
       aiCompletion: state.settings.aiCompletion,
+      aiFollowAgent: state.settings.aiFollowAgent,
+      aiAgentMaxSteps: state.settings.aiAgentMaxSteps,
       aiCustomBaseUrl: state.settings.aiCustomBaseUrl,
       aiCustomModelId: state.settings.aiCustomModelId,
       aiModelId: state.settings.aiModelId,
@@ -106,11 +116,13 @@ export const AISettings = () => {
   const providers = useAvailableProviders();
   const providerSettingsActions = useAIProviderSettingsActions(settings.aiProviderId);
 
+  // The options of the current chat's ACP session.
   useEffect(() => {
     const unsubscribe = useAIChatStore.subscribe((state) => {
-      setSessionConfigOptions(state.sessionConfigOptions);
+      setSessionConfigOptions(selectChatAcpSession(state, state.currentChatId).configOptions);
     });
-    setSessionConfigOptions(useAIChatStore.getState().sessionConfigOptions);
+    const state = useAIChatStore.getState();
+    setSessionConfigOptions(selectChatAcpSession(state, state.currentChatId).configOptions);
     return unsubscribe;
   }, []);
 
@@ -669,11 +681,13 @@ export const AISettings = () => {
                         value: value.id,
                         label: value.name,
                       }))}
-                      onChange={(value) =>
-                        useAIChatStore
-                          .getState()
-                          .actions.changeSessionConfigOption(option.id, value)
-                      }
+                      onChange={(value) => {
+                        const state = useAIChatStore.getState();
+                        const sessionId = selectChatAcpSessionId(state, state.currentChatId);
+                        if (sessionId) {
+                          void state.actions.changeSessionConfigOption(sessionId, option.id, value);
+                        }
+                      }}
                       variant="default"
                       searchable
                       searchableTrigger="input"
@@ -685,6 +699,36 @@ export const AISettings = () => {
           )}
         </CollapsibleContent>
       </Collapsible>
+      <McpServerSettings />
+      <Section title="Agents">
+        <SettingRow
+          label="Follow Agent"
+          description="Start new agent chats with the editor following the files the agent works in"
+          onReset={() => updateSetting("aiFollowAgent", getDefaultSetting("aiFollowAgent"))}
+          canReset={settings.aiFollowAgent !== getDefaultSetting("aiFollowAgent")}
+        >
+          <Switch
+            checked={settings.aiFollowAgent}
+            onChange={(checked) => updateSetting("aiFollowAgent", checked)}
+          />
+        </SettingRow>
+        <SettingRow
+          label="Step Budget"
+          description="Model requests one Athas agent turn may make before it pauses and offers to continue"
+          onReset={() => updateSetting("aiAgentMaxSteps", getDefaultSetting("aiAgentMaxSteps"))}
+          canReset={settings.aiAgentMaxSteps !== getDefaultSetting("aiAgentMaxSteps")}
+        >
+          <NumberInput
+            min={String(MIN_INTELLIGENCE_AGENT_STEPS)}
+            max={String(MAX_INTELLIGENCE_AGENT_STEPS)}
+            step="1"
+            value={settings.aiAgentMaxSteps}
+            onChange={(value) => updateSetting("aiAgentMaxSteps", value)}
+            className="tabular-nums"
+          />
+        </SettingRow>
+      </Section>
+      <AgentAllowedActionsSettings />
       <Section title="Autocomplete">
         <SettingRow
           label="AI Autocomplete"

@@ -59,7 +59,8 @@ describe("auth-api desktop auth parsers", () => {
 
   it("only treats authorization failures as invalid auth", () => {
     expect(isAuthInvalidError(new AuthApiError("Unauthorized", 401))).toBe(true);
-    expect(isAuthInvalidError(new AuthApiError("Forbidden", 403))).toBe(true);
+    expect(isAuthInvalidError(new AuthApiError("Forbidden", 403))).toBe(false);
+    expect(isAuthInvalidError(new AuthApiError("Forbidden", 403, "invalid_session"))).toBe(true);
     expect(isAuthInvalidError(new AuthApiError("Server error", 500))).toBe(false);
     expect(isAuthInvalidError(new Error("Network error"))).toBe(false);
   });

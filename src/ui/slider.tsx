@@ -64,7 +64,7 @@ export function Slider({
 
         <span
           aria-hidden="true"
-          className="absolute inset-y-0 left-0 rounded-full bg-primary transition-[width] duration-normal ease-smooth group-data-[dragging]/slider:transition-none"
+          className="absolute inset-y-0 left-0 rounded-full bg-primary transition-[width] duration-normal ease-smooth group-data-dragging/slider:transition-none"
           style={{ width: stopOffset(ratio) }}
         />
 
@@ -89,8 +89,8 @@ export function Slider({
               "size-5 rounded-full bg-overlay shadow-(--shadow-card) ring-1 ring-border outline-none",
               "transition-[inset-inline-start,scale,box-shadow] duration-normal ease-smooth",
               // While dragging, follow the pointer with no positional easing.
-              "group-data-[dragging]/slider:transition-[scale,box-shadow]",
-              "hover:scale-105 group-data-[dragging]/slider:scale-110",
+              "group-data-dragging/slider:transition-[scale,box-shadow]",
+              "hover:scale-105 group-data-dragging/slider:scale-110",
               "focus-visible:ring-2 focus-visible:ring-focus",
             )}
           />

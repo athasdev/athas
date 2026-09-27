@@ -41,8 +41,7 @@ function MessageScrollerViewport({
       data-slot="message-scroller-viewport"
       className={cn(
         "scrollbar-none size-full min-h-0 min-w-0 overflow-y-auto overscroll-none contain-content",
-        fadeEdges &&
-          "[mask-image:linear-gradient(to_bottom,transparent,black_1rem,black_calc(100%_-_1rem),transparent)]",
+        fadeEdges && "scroll-fade-y scroll-fade-4",
         className,
       )}
       {...props}

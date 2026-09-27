@@ -3,7 +3,7 @@ import { describe, expect, it } from "vite-plus/test";
 import { WorkbenchFullscreenSurface } from "../components/workbench-fullscreen-surface";
 
 describe("WorkbenchFullscreenSurface", () => {
-  it("fills the workbench below the shared title bar", () => {
+  it("fills the workbench below the title bar", () => {
     const markup = renderToStaticMarkup(
       <WorkbenchFullscreenSurface>Fullscreen content</WorkbenchFullscreenSurface>,
     );

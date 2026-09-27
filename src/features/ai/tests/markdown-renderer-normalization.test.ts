@@ -25,4 +25,11 @@ describe("assistant markdown normalization", () => {
       "```typescript\nconst answer = 42;\n```",
     );
   });
+
+  it("leaves explicit fences alone", () => {
+    const fenced = "```ts\nconst a = 1;\n\nconst b = 2;\n```\n\nTypeScript\nconst c = 3;";
+    expect(normalizeImplicitCodeFences(fenced)).toBe(
+      "```ts\nconst a = 1;\n\nconst b = 2;\n```\n\n```typescript\nconst c = 3;\n```",
+    );
+  });
 });

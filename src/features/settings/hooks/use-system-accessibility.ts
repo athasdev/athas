@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect } from "react";
 import { syncEffectiveWindowTransparency } from "@/features/settings/lib/settings-effects";
+import { disposeListener } from "@/utils/tauri-drag-drop";
 
 interface SystemAccessibilityPreferences {
   reduceTransparency: boolean;
@@ -59,7 +60,7 @@ export function useSystemAccessibility() {
     transparencyQuery.addEventListener("change", sync);
 
     return () => {
-      void unlistenPromise.then((unlisten) => unlisten());
+      disposeListener(unlistenPromise);
       window.removeEventListener("focus", sync);
       contrastQuery.removeEventListener("change", sync);
       transparencyQuery.removeEventListener("change", sync);

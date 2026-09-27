@@ -41,7 +41,7 @@ export function HtmlPreview() {
   }
 
   return (
-    <div ref={containerRef} className="html-preview size-full bg-white">
+    <div ref={containerRef} className="size-full bg-white">
       <iframe
         title="HTML Preview"
         srcDoc={iframeContent}

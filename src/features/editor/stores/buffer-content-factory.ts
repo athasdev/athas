@@ -249,6 +249,8 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
     case "diagnostics":
     case "references":
     case "continuousAgents":
+    case "acpInspector":
+    case "agentChanges":
     case "workspaces":
     case "settings":
     case "extensions": {

@@ -15,6 +15,14 @@ describe("hosted browser tool", () => {
     expect(calls[0][0]).toBe("/api/browser-use/run");
     expect(calls[0][1]?.body).toBe(calls[1][1]?.body);
   });
+  it("waits longer than the default request timeout for a browser run", async () => {
+    const timeout = vi.spyOn(AbortSignal, "timeout");
+    vi.mocked(authenticatedFetch).mockResolvedValue(new Response(JSON.stringify({})));
+    await runHostedBrowserTool({ url: "https://example.com" }, "call");
+    expect(timeout).toHaveBeenCalledWith(120_000);
+    expect(vi.mocked(authenticatedFetch).mock.calls[0][1]?.signal).toBeInstanceOf(AbortSignal);
+    timeout.mockRestore();
+  });
   it("returns payment errors without retrying", async () => {
     vi.mocked(authenticatedFetch).mockResolvedValue(
       new Response(JSON.stringify({ error: "Add browser balance" }), { status: 402 }),

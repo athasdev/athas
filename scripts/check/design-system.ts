@@ -5,28 +5,23 @@
  * Advisory only: this always exits 0. It exists to make drift visible in one
  * place instead of letting it accumulate across feature code. The rules mirror
  * the "UI Design System" section of AGENTS.md.
+ *
+ * Rules that already pass are enforced by @shadcn/lint in `vp check` (see the
+ * lint block in vite.config.ts). This report covers what is not enforced yet:
+ * the structural checks below, plus the wider @shadcn/lint policy from
+ * design-advisory.json. Pass --all to list every finding.
  */
 import { readFileSync } from "node:fs";
-import { Glob } from "bun";
+import path from "node:path";
+import { $, Glob } from "bun";
 
 const ROOTS = ["src/features", "src/extensions", "src/components"];
-
-/** Overlay surfaces whose width is owned by the `size` preset (@/ui/overlay-size). */
-const OVERLAY_SURFACES = new Set([
-  "DropdownMenuContent",
-  "DropdownMenuSubContent",
-  "PopoverContent",
-  "PopoverListContent",
-  "SelectContent",
-  "ComboboxContent",
-]);
 
 /** Menu surfaces whose scroll cap is owned by the `viewport` variant. */
 const MENU_SURFACES = new Set(["DropdownMenuContent", "DropdownMenuSubContent"]);
 
-const WIDTH_UTILITY = /(?:^|\s)(?:min-|max-)?w-(?!full\b|fit\b|auto\b|0\b)[\w./[\]()-]+/;
-const HEIGHT_UTILITY = /(?:^|\s)max-h-[\w./[\]()-]+/;
-const ARBITRARY_SIZE = /\b(?:text|h|w|gap|p[xytblr]?)-\[[\d.]+(?:px|rem)\]/g;
+/** Fixed pixel sizes. Lint treats h-/w- as layout, so they are only reported here. */
+const ARBITRARY_SIZE = /\b(?:h|w)-\[[\d.]+(?:px|rem)\]/g;
 const RAW_HEX = /(?<![\w&])#[0-9a-fA-F]{6}\b/g;
 /**
  * A theme color with an opacity modifier. The token layer already carries the
@@ -133,37 +128,11 @@ function lineOf(source: string, index: number) {
 function checkFile(file: string, findings: Finding[]) {
   const source = readFileSync(file, "utf8");
 
-  for (const tag of findOpeningTags(source, OVERLAY_SURFACES)) {
+  for (const tag of findOpeningTags(source, MENU_SURFACES)) {
     const line = lineOf(source, tag.index);
-    const className = /className=(?:"([^"]*)"|\{`([^`]*)`\})/.exec(tag.attrs);
-    const value = className?.[1] ?? className?.[2];
-
-    if (value) {
-      const width = WIDTH_UTILITY.exec(value);
-      if (width) {
-        findings.push({
-          file,
-          line,
-          rule: "overlay-width",
-          detail: `<${tag.name}> sets "${width[0].trim()}" — use the size preset instead (@/ui/overlay-size).`,
-        });
-      }
-
-      const height = MENU_SURFACES.has(tag.name) ? HEIGHT_UTILITY.exec(value) : null;
-      if (height) {
-        findings.push({
-          file,
-          line,
-          rule: "overlay-height",
-          detail: `<${tag.name}> sets "${height[0].trim()}" — use viewport="list" or viewport="searchable", which own the scroll cap.`,
-        });
-      }
-    }
-
     // A search header only sticks, and only scrolls correctly, inside the
     // searchable viewport. Getting this wrong is silent, so check it here.
     if (
-      MENU_SURFACES.has(tag.name) &&
       ownBody(tag.body).includes("<DropdownMenuSearch") &&
       !/viewport=(?:"searchable"|\{"searchable"\})/.test(tag.attrs)
     ) {
@@ -182,7 +151,7 @@ function checkFile(file: string, findings: Finding[]) {
         file,
         line: i + 1,
         rule: "arbitrary-size",
-        detail: `"${m[0]}" — use a token-backed utility (ui-text-*, spacing scale).`,
+        detail: `"${m[0]}" — size it from content, the spacing scale, or a primitive prop.`,
       });
     }
     for (const m of text.matchAll(ALPHA_COLOR)) {
@@ -212,6 +181,36 @@ for (const root of ROOTS) {
   }
 }
 
+/** The wider @shadcn/lint policy that is not enforced yet. */
+async function lintFindings(): Promise<Finding[]> {
+  // The oxlint that Vite+ runs for `vp lint`, so both see the same version.
+  const vitePlus = path.dirname(Bun.resolveSync("vite-plus/package.json", process.cwd()));
+  const oxlint = path.join(
+    path.dirname(Bun.resolveSync("oxlint/package.json", vitePlus)),
+    "bin/oxlint",
+  );
+  const config = path.join(import.meta.dir, "design-advisory.json");
+  const output = await $`${oxlint} -c ${config} -A all -f json ${ROOTS}`.nothrow().quiet().text();
+  const { diagnostics } = JSON.parse(output) as {
+    diagnostics: {
+      code: string;
+      filename: string;
+      message: string;
+      labels: { span: { line: number } }[];
+    }[];
+  };
+  return diagnostics
+    .filter((item) => !item.filename.includes("/tests/") && !item.filename.endsWith(".test.tsx"))
+    .map((item) => ({
+      file: item.filename,
+      line: item.labels[0]?.span.line ?? 1,
+      rule: item.code.replace(/^shadcn\((.+)\)$/, "$1"),
+      detail: item.message.split(". See ")[0],
+    }));
+}
+
+findings.push(...(await lintFindings()));
+
 if (findings.length === 0) {
   console.log("design-system: no drift found");
   process.exit(0);
@@ -227,8 +226,12 @@ for (const finding of findings) {
 console.log(`design-system: ${findings.length} advisory finding(s)\n`);
 for (const [rule, bucket] of [...byRule].sort((a, b) => b[1].length - a[1].length)) {
   console.log(`  ${rule} (${bucket.length})`);
-  for (const finding of bucket) {
+  const shown = process.argv.includes("--all") ? bucket : bucket.slice(0, 20);
+  for (const finding of shown) {
     console.log(`    ${finding.file}:${finding.line}  ${finding.detail}`);
+  }
+  if (shown.length < bucket.length) {
+    console.log(`    … ${bucket.length - shown.length} more (bun check:design --all)`);
   }
   console.log("");
 }

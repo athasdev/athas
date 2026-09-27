@@ -35,7 +35,7 @@ export function ReleaseNotesContent({ info, loading = false }: ReleaseNotesConte
   return (
     <div className="markdown-preview" onClick={handleLinkClick}>
       <div
-        className="markdown-content min-w-0 max-w-full"
+        className="markdown-content typeset typeset-preview min-w-0 max-w-full"
         dangerouslySetInnerHTML={{ __html: html }}
       />
     </div>

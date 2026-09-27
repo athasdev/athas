@@ -6,17 +6,17 @@ import {
   Fragment,
   isValidElement,
   type ComponentProps,
+  type CSSProperties,
   type ReactNode,
   useEffect,
   useState,
 } from "react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/ui/accordion";
 import { Button, type ButtonProps } from "@/ui/button";
-import { ButtonGroup, ButtonGroupSeparator } from "@/ui/button-group";
 import { ChromeBar } from "@/ui/chrome";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/ui/dropdown";
 import { FieldTitle } from "@/ui/field";
-import { ChevronDownIcon, DotsIcon, SearchIcon } from "@/ui/icons";
+import { ChevronDownIcon, DotsIcon, IconContext, SearchIcon } from "@/ui/icons";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import { ScrollArea } from "@/ui/scroll-area";
 import { SearchField } from "@/ui/search";
@@ -118,11 +118,20 @@ export function SidebarTitleBar({
   );
 }
 
-export function SidebarToolbar({ children, className, ...props }: ComponentProps<"div">) {
+export function SidebarToolbar({
+  children,
+  className,
+  position = "top",
+  ...props
+}: ComponentProps<"div"> & {
+  /** Which end of the panel the toolbar sits on; the dividing border faces the content. */
+  position?: "top" | "bottom";
+}) {
   return (
     <div
       className={cn(
-        "font-sans ui-text-chrome flex h-pane-header min-w-0 shrink-0 select-none items-center gap-chrome border-border border-b px-chrome-inline",
+        "font-sans ui-text-chrome flex h-pane-header min-w-0 shrink-0 select-none items-center gap-chrome border-border px-chrome-inline",
+        position === "top" ? "border-b" : "border-t",
         className,
       )}
       {...props}
@@ -454,12 +463,19 @@ const sidebarListItemVariants = cva(
   },
 );
 
+const SOLID_ICON = { filled: true };
+
 export const SidebarIconButton = forwardRef<
   HTMLButtonElement,
   Omit<ButtonProps, "variant" | "tone"> & {
     tone?: "default" | "warning" | "error" | "danger";
+    /** Show the icon's solid variant while the button is active, as the activity rail does. */
+    solidWhenActive?: boolean;
   }
->(function SidebarIconButton({ tone = "default", ...props }, ref) {
+>(function SidebarIconButton(
+  { tone = "default", solidWhenActive = false, active, children, ...props },
+  ref,
+) {
   return (
     <Button
       ref={ref}
@@ -468,8 +484,15 @@ export const SidebarIconButton = forwardRef<
       iconOnly
       size="sm"
       tone={tone === "error" ? "danger" : tone}
+      active={active}
       {...props}
-    />
+    >
+      {solidWhenActive && active ? (
+        <IconContext.Provider value={SOLID_ICON}>{children}</IconContext.Provider>
+      ) : (
+        children
+      )}
+    </Button>
   );
 });
 
@@ -477,11 +500,17 @@ export function SidebarListActionRow({
   actions,
   children,
   className,
+  style,
   ...props
 }: ComponentProps<"div"> & {
   actions: ReactNode;
 }) {
   const actionItems = Children.toArray(actions).filter(Boolean);
+  // Room the actions need: the label makes way for them instead of sitting under them, since
+  // sidebar fills can be translucent.
+  const actionsWidth = `calc(${actionItems.length} * var(--athas-chrome-control-height) + ${
+    Math.max(0, actionItems.length - 1) * 2 + 4
+  }px)`;
 
   return (
     <div
@@ -491,29 +520,28 @@ export function SidebarListActionRow({
         "hover:bg-accent [&:hover_[data-slot=sidebar-list-item]]:text-foreground",
         "has-[[data-slot=button]:focus-visible]:bg-accent",
         "has-[[data-slot=button][aria-expanded=true]]:bg-accent",
+        "[&:hover_[data-slot=sidebar-list-item]]:pr-(--sidebar-row-actions-width)",
+        "[&:focus-within_[data-slot=sidebar-list-item]]:pr-(--sidebar-row-actions-width)",
+        "has-[[data-slot=button][aria-expanded=true]]:**:data-[slot=sidebar-list-item]:pr-(--sidebar-row-actions-width)",
         className,
       )}
+      style={{ ...style, "--sidebar-row-actions-width": actionsWidth } as CSSProperties}
       {...props}
     >
       {children}
       <span
         data-slot="sidebar-list-actions"
         className={cn(
-          "pointer-events-none absolute inset-y-0 right-0 flex items-center rounded-r-md bg-accent pr-1 pl-2",
+          "pointer-events-none absolute inset-y-0 right-0 flex items-center gap-0.5 pr-0.5",
           "opacity-0 transition-opacity duration-fast ease-smooth motion-reduce:transition-none",
           "group-hover/sidebar-list-action-row:pointer-events-auto group-hover/sidebar-list-action-row:opacity-100",
           "group-focus-within/sidebar-list-action-row:pointer-events-auto group-focus-within/sidebar-list-action-row:opacity-100",
           "group-has-[[data-slot=button][aria-expanded=true]]/sidebar-list-action-row:pointer-events-auto group-has-[[data-slot=button][aria-expanded=true]]/sidebar-list-action-row:opacity-100",
         )}
       >
-        <ButtonGroup variant="ghost" className="[&>[data-slot=button]]:size-5">
-          {actionItems.map((action, index) => (
-            <Fragment key={(isValidElement(action) && action.key) || index}>
-              {index > 0 ? <ButtonGroupSeparator /> : null}
-              {action}
-            </Fragment>
-          ))}
-        </ButtonGroup>
+        {actionItems.map((action, index) => (
+          <Fragment key={(isValidElement(action) && action.key) || index}>{action}</Fragment>
+        ))}
       </span>
     </div>
   );

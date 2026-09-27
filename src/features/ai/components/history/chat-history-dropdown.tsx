@@ -21,6 +21,7 @@ import {
   ArrowCounterClockwiseIcon,
   CheckIcon,
   DotsIcon,
+  DownloadIcon,
   HistoryIcon,
   PinIcon,
   TrashIcon,
@@ -36,6 +37,8 @@ interface ChatHistoryDropdownProps {
   onSwitchToChat: (chatId: string) => void;
   onSetChatArchived: (chatId: string, archived: boolean) => void;
   onDeleteChat: (chatId: string) => void;
+  /** Opens the agent's own sessions; set when the running agent can list them. */
+  onBrowseAgentSessions?: () => void;
 }
 
 function SessionRow({
@@ -101,6 +104,7 @@ export default function ChatHistoryDropdown({
   onSwitchToChat,
   onSetChatArchived,
   onDeleteChat,
+  onBrowseAgentSessions,
 }: ChatHistoryDropdownProps) {
   const search = useMenuSearch();
   const matches = (chat: Chat) => [chat.title, chat.agentId || "custom"];
@@ -188,6 +192,16 @@ export default function ChatHistoryDropdown({
                 ))}
               </DropdownMenuSubContent>
             </DropdownMenuSub>
+          ) : null}
+
+          {onBrowseAgentSessions ? (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={onBrowseAgentSessions}>
+                <DownloadIcon />
+                Import agent session
+              </DropdownMenuItem>
+            </>
           ) : null}
         </DropdownMenuViewport>
       </DropdownMenuContent>

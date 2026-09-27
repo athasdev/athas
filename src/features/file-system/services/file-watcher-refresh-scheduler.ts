@@ -20,7 +20,12 @@ export function scheduleFileWatcherRefresh(
     refreshKey,
     setTimeout(() => {
       pendingRefreshes.delete(refreshKey);
-      void refresh();
+      // A watched directory can disappear before the refresh reads it.
+      void Promise.resolve()
+        .then(refresh)
+        .catch((error) => {
+          console.error(`Failed to refresh ${directoryPath}:`, error);
+        });
     }, REFRESH_DEBOUNCE_MS),
   );
 }

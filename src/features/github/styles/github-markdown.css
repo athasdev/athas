@@ -1,73 +1,19 @@
-.github-markdown.github-markdown-pr {
-  font-size: var(--ui-text-base);
-  font-weight: 400;
-  line-height: 1.68;
+/* GitHub PR descriptions and comments: a compact take on the typeset-preview preset. Everything
+   runs at the UI base size and headings mark structure by weight. */
+.github-markdown-pr .typeset {
+  --typeset-size: var(--ui-text-base);
+  --typeset-leading: 1.68;
+  --typeset-flow: 0.55em;
 }
 
-.github-markdown.github-markdown-pr h1,
-.github-markdown.github-markdown-pr h2 {
-  font-size: var(--ui-text-base);
-  font-weight: 600;
-  margin: 0.55em 0 0.2em;
-  padding-bottom: 0;
-  border-bottom: 0;
-}
-
-.github-markdown.github-markdown-pr h3 {
-  font-size: var(--ui-text-base);
-  font-weight: 500;
-  margin: 0.45em 0 0.15em;
-}
-
-.github-markdown.github-markdown-pr h4,
-.github-markdown.github-markdown-pr h5,
-.github-markdown.github-markdown-pr h6 {
-  font-size: var(--ui-text-base);
-  font-weight: 500;
-  margin: 0.4em 0 0.1em;
-}
-
-.github-markdown.github-markdown-pr p,
-.github-markdown.github-markdown-pr li {
+.github-markdown-pr .typeset :where(h1, h2, h3, h4, h5, h6) {
   font-size: 1em;
-  line-height: 1.68;
+  line-height: inherit;
 }
 
-.github-markdown.github-markdown-pr p {
-  margin: 0.28em 0 0.55em;
-}
-
-.github-markdown.github-markdown-pr code {
-  font-size: 0.9em;
-}
-
-.github-markdown.github-markdown-pr pre code {
-  font-size: 0.9em;
-}
-
-.github-markdown.github-markdown-pr blockquote {
-  margin: 0.9em 0;
-  padding: 0.75em 1em;
-  color: inherit;
-  font-style: normal;
-}
-
-.github-markdown.github-markdown-pr .markdown-alert {
-  margin: 0.9em 0;
-  padding: 0.75em 1em;
-}
-
-.github-markdown.github-markdown-pr ul,
-.github-markdown.github-markdown-pr ol {
-  margin: 0.25em 0 0.55em;
-}
-
-.github-markdown.github-markdown-pr pre {
-  margin: 0.9em 0;
-}
-
-.github-markdown.github-markdown-pr img,
-.github-markdown.github-markdown-pr video {
+/* Badges and screenshots in PR bodies sit inline and never exceed the view. */
+.github-markdown-pr .typeset img,
+.github-markdown-pr .typeset video {
   display: inline-block;
   vertical-align: middle;
   max-width: 100%;
@@ -79,11 +25,7 @@
   border-radius: 0;
 }
 
-.github-markdown.github-markdown-pr video {
+.github-markdown-pr .typeset video {
   display: block;
   margin: 0.75em 0;
-}
-
-.github-markdown.github-markdown-pr .github-markdown-pr-content > :first-child {
-  margin-top: 0;
 }

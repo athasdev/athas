@@ -85,4 +85,13 @@ describe("tool call summary", () => {
     );
     expect(summary).toMatchObject({ kind: "read", verb: "Read", target: "README.md" });
   });
+
+  it("names an MCP tool and its server instead of guessing a kind from the name", () => {
+    expect(inferToolKind("mcp__github__create_issue")).toBe("other");
+    expect(
+      summarizeToolCall(
+        base({ name: "mcp__github__create_issue", kind: "other", status: "completed" }),
+      ),
+    ).toMatchObject({ kind: "other", verb: "create_issue", target: "github (MCP)" });
+  });
 });

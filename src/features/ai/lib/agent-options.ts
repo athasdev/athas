@@ -77,9 +77,13 @@ export function buildAgentOptions({
   codexInstalled: boolean;
   pendingAction: PendingAgentAction | null;
 }): AgentOption[] {
-  const registryAgents = Array.from(agentConfigs.values()).sort((left, right) =>
-    left.name.localeCompare(right.name),
-  );
+  // The ACP Registry lists dozens of agents; the composer offers the ones Athas ships and the
+  // registry agents the user installed. The rest are installed from the Agents catalog.
+  const registryAgents = Array.from(agentConfigs.values())
+    .filter(
+      (agent) => agent.source !== "registry" || agent.installed || agent.id === currentAgentId,
+    )
+    .sort((left, right) => left.name.localeCompare(right.name));
   const availableAgents: Array<{ id: string; name: string; description?: string | null }> = [
     ATHAS_AGENT_OPTION,
     ...BUILT_IN_AI_INTEGRATIONS,

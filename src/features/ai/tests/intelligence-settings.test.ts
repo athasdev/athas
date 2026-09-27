@@ -65,6 +65,19 @@ describe("Intelligence connection choices", () => {
       modelId: "user/model",
     });
   });
+
+  it("gives a hosted connection without a model the automatic model", () => {
+    const preferences = defaultIntelligencePreferences();
+    preferences.tasks.agent = { providerId: "athas", modelId: "" };
+    expect(
+      resolveIntelligenceConnection({
+        task: "agent",
+        preferences,
+        hasIntelligence: true,
+        personalConnection: { providerId: "anthropic", modelId: "personal-model" },
+      }),
+    ).toEqual({ providerId: "athas", modelId: "auto" });
+  });
 });
 
 describe("Intelligence settings sync", () => {

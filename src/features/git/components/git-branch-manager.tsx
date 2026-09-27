@@ -180,7 +180,6 @@ const GitBranchManager = ({
       state.isQuickOpenVisible ||
       state.isCommandPaletteVisible ||
       state.isGlobalSearchVisible ||
-      state.isSettingsDialogVisible ||
       state.isProjectPickerVisible ||
       state.isDatabaseConnectionVisible,
   );
@@ -581,6 +580,7 @@ const GitBranchManager = ({
               />
             }
           >
+            <GitBranchIcon className="text-subtle-foreground" />
             <span className="min-w-0 truncate">{currentBranch}</span>
             <ChevronExpandYIcon className="text-subtle-foreground" />
           </DropdownMenuTrigger>

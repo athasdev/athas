@@ -18,6 +18,9 @@ function setRootStyleProperty(name: string, value: string) {
 }
 
 export const FontStyleInjector = () => {
+  // The startup appearance cache already set the saved fonts; writing the default snapshot over
+  // them would flash default fonts and reflow the app until the saved settings load.
+  const isLoaded = useSettingsStore((state) => state.isLoaded);
   const codeEditorFontFamily = useEditorSettingsStore((state) => state.fontFamily);
   const { fontFamily, uiFontFamily, uiFontSize } = useSettingsStore(
     useShallow((state) => ({
@@ -29,6 +32,7 @@ export const FontStyleInjector = () => {
 
   useEffect(() => {
     document.documentElement.setAttribute("data-platform", currentPlatform);
+    if (!isLoaded) return;
 
     const requestedEditorFont = fontFamily || codeEditorFontFamily || DEFAULT_MONO_FONT_FAMILY;
     const requestedUiFont = uiFontFamily || DEFAULT_UI_FONT_FAMILY;
@@ -40,7 +44,7 @@ export const FontStyleInjector = () => {
     const normalizedUiFontSize = normalizeUiFontSize(uiFontSize);
     setRootStyleProperty("--app-ui-font-size", `${normalizedUiFontSize}px`);
     setRootStyleProperty("--app-ui-scale", `${getUiFontScale(normalizedUiFontSize)}`);
-  }, [fontFamily, uiFontFamily, uiFontSize, codeEditorFontFamily]);
+  }, [isLoaded, fontFamily, uiFontFamily, uiFontSize, codeEditorFontFamily]);
 
   return null;
 };

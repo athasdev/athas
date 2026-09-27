@@ -5,6 +5,20 @@ import { invoke } from "@tauri-apps/api/core";
  * Handles secure storage and retrieval of API tokens using Tauri's secure storage
  */
 
+const tokenChangeListeners = new Set<(providerId: string) => void>();
+
+/** Calls `listener` after a provider's API token is stored or removed; returns an unsubscribe. */
+export function onProviderApiTokenChange(listener: (providerId: string) => void) {
+  tokenChangeListeners.add(listener);
+  return () => {
+    tokenChangeListeners.delete(listener);
+  };
+}
+
+function notifyTokenChange(providerId: string) {
+  for (const listener of tokenChangeListeners) listener(providerId);
+}
+
 // Get API token for a specific provider
 export const getProviderApiToken = async (providerId: string): Promise<string | null> => {
   try {
@@ -22,6 +36,7 @@ export const getProviderApiToken = async (providerId: string): Promise<string | 
 export const storeProviderApiToken = async (providerId: string, token: string): Promise<void> => {
   try {
     await invoke("store_ai_provider_token", { providerId, token });
+    notifyTokenChange(providerId);
   } catch (error) {
     console.error(`Error storing ${providerId} API token:`, error);
     throw error;
@@ -32,6 +47,7 @@ export const storeProviderApiToken = async (providerId: string, token: string): 
 export const removeProviderApiToken = async (providerId: string): Promise<void> => {
   try {
     await invoke("remove_ai_provider_token", { providerId });
+    notifyTokenChange(providerId);
   } catch (error) {
     console.error(`Error removing ${providerId} API token:`, error);
     throw error;

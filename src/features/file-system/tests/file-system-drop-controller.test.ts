@@ -108,6 +108,7 @@ describe("file system drop controller", () => {
 
     expect(getExternalFileDropRoute(target("[data-terminal-drop-target]"))).toBe("terminal");
     expect(getExternalFileDropRoute(target("[data-pane-container]"))).toBe("local");
+    expect(getExternalFileDropRoute(target("[data-tab-bar-pane-id]"))).toBe("local");
     expect(getExternalFileDropRoute(target("[data-pane-container]"), true)).toBe("global");
     expect(getExternalFileDropRoute(target("[data-external-file-drop-scope]"))).toBe("local");
     expect(getExternalFileDropRoute(target("[data-external-file-drop-scope]"), true)).toBe("local");

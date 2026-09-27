@@ -2,15 +2,20 @@ import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import type { EditorSelectionContext } from "../types/ai-context.types";
 import type { PastedImage } from "../types/chat-composer.types";
 import { getBaseName } from "@/utils/path-helpers";
+import { describeContextReference, parseContextReference } from "../lib/context-references";
+import type { ContextReference } from "../types/context-references.types";
 
 export type ComposerAttachmentKind =
   | "files"
+  | "folders"
   | "diffs"
   | "images"
   | "selections"
   | "terminals"
   | "databases"
   | "github"
+  | "problems"
+  | "chats"
   | "other";
 
 export interface ComposerAttachmentSource {
@@ -30,13 +35,23 @@ export interface ComposerAttachmentEntry {
 
 const groupNames: Record<ComposerAttachmentKind, [string, string]> = {
   files: ["file", "files"],
+  folders: ["folder", "folders"],
   diffs: ["diff", "diffs"],
   images: ["image", "images"],
   selections: ["selection", "selections"],
   terminals: ["terminal", "terminals"],
   databases: ["database", "databases"],
   github: ["GitHub item", "GitHub items"],
+  problems: ["problem list", "problem lists"],
+  chats: ["past chat", "past chats"],
   other: ["resource", "resources"],
+};
+
+const referenceKinds: Record<ContextReference["kind"], ComposerAttachmentKind> = {
+  folder: "folders",
+  gitDiff: "diffs",
+  problems: "problems",
+  chat: "chats",
 };
 
 function getFileKind(path: string): ComposerAttachmentKind {
@@ -107,6 +122,18 @@ export function getComposerAttachmentGroups({
     });
   }
   for (const path of selectedFilesPaths) {
+    const reference = parseContextReference(path);
+    if (reference) {
+      const { name, description } = describeContextReference(reference);
+      addEntry({
+        key: `context:${path}`,
+        name,
+        path: description,
+        kind: referenceKinds[reference.kind],
+        sources: [{ type: "file", id: path }],
+      });
+      continue;
+    }
     addEntry({
       key: `path:${path}`,
       name: getBaseName(path),

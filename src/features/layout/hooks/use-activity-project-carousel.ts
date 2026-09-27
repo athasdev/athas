@@ -20,10 +20,8 @@ const waitForProjectCarouselPaint = () =>
 
 export function useActivityProjectCarousel({
   alignCurrentProject,
-  isResizing,
 }: {
   alignCurrentProject: () => void;
-  isResizing: boolean;
 }) {
   const enabled = !useSettingsStore((state) => state.settings.openFoldersInNewWindow);
   const projects = useWorkspaceTabsStore.use.projectTabs();
@@ -61,13 +59,7 @@ export function useActivityProjectCarousel({
 
   const activateProject = useCallback(
     async (projectId: string) => {
-      if (
-        !enabled ||
-        isResizing ||
-        isSwitchingProject ||
-        isGestureSettlingRef.current ||
-        projects.length === 0
-      ) {
+      if (!enabled || isSwitchingProject || isGestureSettlingRef.current || projects.length === 0) {
         return;
       }
 
@@ -118,7 +110,6 @@ export function useActivityProjectCarousel({
       alignCurrentProject,
       currentProject?.id,
       enabled,
-      isResizing,
       isSwitchingProject,
       projects,
       switchToProject,
@@ -136,7 +127,6 @@ export function useActivityProjectCarousel({
     (event: ReactUIEvent<HTMLDivElement>) => {
       if (
         !enabled ||
-        isResizing ||
         isSwitchingProject ||
         isGestureSettlingRef.current ||
         carouselProjects.length <= 1
@@ -167,7 +157,6 @@ export function useActivityProjectCarousel({
       carouselProjects,
       currentProject?.id,
       enabled,
-      isResizing,
       isSwitchingProject,
     ],
   );

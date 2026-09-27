@@ -23,6 +23,24 @@ describe("file watcher refresh scheduler", () => {
     expect(latestRefresh).toHaveBeenCalledOnce();
   });
 
+  it("keeps a failed refresh from escaping as an unhandled rejection", async () => {
+    vi.useFakeTimers();
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const refresh = vi.fn(async () => {
+      throw new Error("Failed to read directory /project/gone");
+    });
+
+    scheduleFileWatcherRefresh("workspace-a", "/project/gone", refresh);
+    await vi.advanceTimersByTimeAsync(300);
+
+    expect(refresh).toHaveBeenCalledOnce();
+    expect(consoleError).toHaveBeenCalledWith(
+      "Failed to refresh /project/gone:",
+      expect.any(Error),
+    );
+    consoleError.mockRestore();
+  });
+
   it("cancels only the closing workspace refreshes", async () => {
     vi.useFakeTimers();
     const closedWorkspaceRefresh = vi.fn();

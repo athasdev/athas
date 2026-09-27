@@ -29,7 +29,7 @@ export const ComposerEditable = forwardRef<
       data-slot="composer-editable"
       aria-disabled={!enabled || undefined}
       className={cn(
-        "max-h-48 min-h-12 w-full overflow-x-hidden overflow-y-auto whitespace-pre-wrap break-words bg-transparent px-3 pt-3 pb-2 text-left ui-text-base leading-relaxed text-foreground outline-none empty:before:pointer-events-none empty:before:text-subtle-foreground empty:before:content-[attr(data-placeholder)]",
+        "max-h-48 min-h-12 w-full overflow-x-hidden overflow-y-auto whitespace-pre-wrap wrap-break-word bg-transparent px-3 pt-3 pb-2 text-left ui-text-base leading-relaxed text-foreground outline-none empty:before:pointer-events-none empty:before:text-subtle-foreground empty:before:content-[attr(data-placeholder)]",
         font === "mono" ? "font-mono" : "font-sans",
         enabled ? "cursor-text" : "cursor-not-allowed opacity-50",
         className,
@@ -43,7 +43,7 @@ export function ComposerToolbar({ className, ...props }: ComponentProps<"div">) 
   return (
     <div
       data-slot="composer-toolbar"
-      className={cn("flex min-w-0 flex-wrap items-center gap-1 px-1", className)}
+      className={cn("flex min-w-0 items-center gap-1 px-1", className)}
       {...props}
     />
   );

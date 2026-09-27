@@ -111,7 +111,7 @@ export function openOutlinePicker(): void {
   useUIState.getState().openCommandPaletteView("outline");
 }
 
-export function openOutlineSidebar(): void {
+export function openOutlinePanel(): void {
   if (!getActiveEditorContext()) return;
   setOutlineVisibilityPreference(true);
 }

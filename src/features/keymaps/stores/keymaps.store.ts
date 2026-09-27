@@ -29,7 +29,7 @@ interface KeymapState extends KeymapStore {
 
 const useKeymapStoreBase = create<KeymapState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       keybindings: [],
       recordingCommandId: null,
       contexts: {
@@ -72,14 +72,24 @@ const useKeymapStoreBase = create<KeymapState>()(
           set(() => ({
             keybindings: [],
           })),
-        setContext: (key, value) =>
+        // Focus and selection events call these constantly. Skipping unchanged values before `set`
+        // matters twice over: persist writes localStorage on every `set`, even a no-op one.
+        setContext: (key, value) => {
+          if (get().contexts[key] === value) return;
           set((state) => ({
             contexts: { ...state.contexts, [key]: value },
-          })),
-        setContexts: (contexts) =>
+          }));
+        },
+        setContexts: (contexts) => {
+          const current = get().contexts;
+          const changed = Object.entries(contexts).some(
+            ([key, value]) => current[key as keyof typeof current] !== value,
+          );
+          if (!changed) return;
           set((state) => ({
             contexts: { ...state.contexts, ...contexts },
-          })),
+          }));
+        },
         startRecording: (commandId) =>
           set((state) => ({
             recordingCommandId: commandId,

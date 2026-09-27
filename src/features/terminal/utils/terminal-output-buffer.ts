@@ -13,6 +13,13 @@ export interface TerminalOutputBuffer {
   flush: () => void;
   queuedBytes: () => number;
   whenDrained: () => Promise<void>;
+  /**
+   * Hands every queued byte to the terminal at once and stops waiting for write callbacks. A
+   * disposed xterm never calls them back, so anything waiting on `whenDrained` would otherwise
+   * hang and keep the connection it was going to close.
+   */
+  dispose: () => void;
+  isDisposed: () => boolean;
 }
 
 export function createTerminalOutputBuffer({
@@ -24,55 +31,68 @@ export function createTerminalOutputBuffer({
 }: TerminalOutputBufferOptions): TerminalOutputBuffer {
   const chunks: Uint8Array[] = [];
   const drainedResolvers = new Set<() => void>();
+  // Consumed chunks are skipped by index instead of shifted off, so a burst of many small chunks
+  // drains in linear time.
+  let headIndex = 0;
   let firstChunkOffset = 0;
   let queuedByteCount = 0;
   let writeInProgress = false;
   let flushScheduled = false;
+  let disposed = false;
 
+  const hasQueuedChunks = () => headIndex < chunks.length;
   const notifyQueuedBytes = () => onQueuedBytesChange?.(queuedByteCount);
   const resolveDrained = () => {
-    if (queuedByteCount !== 0 || writeInProgress || chunks.length !== 0) return;
+    if (!disposed && (queuedByteCount !== 0 || writeInProgress || hasQueuedChunks())) return;
     for (const resolve of drainedResolvers) resolve();
     drainedResolvers.clear();
   };
 
-  const takeBatch = (): Uint8Array => {
-    const size = Math.min(
-      maxBatchBytes,
-      chunks.reduce((total, chunk, index) => {
-        const available = chunk.byteLength - (index === 0 ? firstChunkOffset : 0);
-        return Math.min(maxBatchBytes, total + available);
-      }, 0),
-    );
+  const compactChunks = () => {
+    if (headIndex === chunks.length) {
+      chunks.length = 0;
+      headIndex = 0;
+    } else if (headIndex >= 1024 && headIndex * 2 >= chunks.length) {
+      chunks.splice(0, headIndex);
+      headIndex = 0;
+    }
+  };
+
+  const takeBatch = (limit: number): Uint8Array => {
+    let size = 0;
+    for (let index = headIndex; index < chunks.length && size < limit; index += 1) {
+      size += chunks[index].byteLength - (index === headIndex ? firstChunkOffset : 0);
+    }
+    size = Math.min(size, limit);
+
     const batch = new Uint8Array(size);
     let written = 0;
-    while (written < size) {
-      const chunk = chunks[0];
-      if (!chunk) break;
-      const available = chunk.byteLength - firstChunkOffset;
-      const length = Math.min(available, size - written);
+    while (written < size && hasQueuedChunks()) {
+      const chunk = chunks[headIndex];
+      const length = Math.min(chunk.byteLength - firstChunkOffset, size - written);
       batch.set(chunk.subarray(firstChunkOffset, firstChunkOffset + length), written);
       written += length;
       firstChunkOffset += length;
       if (firstChunkOffset === chunk.byteLength) {
-        chunks.shift();
+        headIndex += 1;
         firstChunkOffset = 0;
       }
     }
+    compactChunks();
     return batch;
   };
 
   const drain = () => {
     flushScheduled = false;
-    if (writeInProgress || chunks.length === 0) {
+    if (disposed || writeInProgress || !hasQueuedChunks()) {
       resolveDrained();
       return;
     }
-    const batch = takeBatch();
+    const batch = takeBatch(maxBatchBytes);
     writeInProgress = true;
     let completed = false;
     const complete = () => {
-      if (completed) return;
+      if (completed || disposed) return;
       completed = true;
       writeInProgress = false;
       queuedByteCount = Math.max(0, queuedByteCount - batch.byteLength);
@@ -88,14 +108,14 @@ export function createTerminalOutputBuffer({
   };
 
   const scheduleFlush = () => {
-    if (flushScheduled || writeInProgress) return;
+    if (disposed || flushScheduled || writeInProgress) return;
     flushScheduled = true;
     schedule(drain);
   };
 
   return {
     enqueue: (data) => {
-      if (data.byteLength === 0) return;
+      if (disposed || data.byteLength === 0) return;
       chunks.push(data);
       queuedByteCount += data.byteLength;
       notifyQueuedBytes();
@@ -104,10 +124,30 @@ export function createTerminalOutputBuffer({
     flush: drain,
     queuedBytes: () => queuedByteCount,
     whenDrained: () => {
-      if (queuedByteCount === 0 && !writeInProgress && chunks.length === 0) {
+      if (disposed || (queuedByteCount === 0 && !writeInProgress && !hasQueuedChunks())) {
         return Promise.resolve();
       }
       return new Promise<void>((resolve) => drainedResolvers.add(resolve));
     },
+    dispose: () => {
+      if (disposed) return;
+      const remaining = hasQueuedChunks() ? takeBatch(Number.POSITIVE_INFINITY) : null;
+      disposed = true;
+      chunks.length = 0;
+      headIndex = 0;
+      firstChunkOffset = 0;
+      writeInProgress = false;
+      if (remaining && remaining.byteLength > 0) {
+        try {
+          write(remaining, () => {});
+        } catch (error) {
+          onWriteError?.(error);
+        }
+      }
+      queuedByteCount = 0;
+      notifyQueuedBytes();
+      resolveDrained();
+    },
+    isDisposed: () => disposed,
   };
 }

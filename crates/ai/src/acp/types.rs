@@ -106,8 +106,32 @@ pub struct AcpPlanEntry {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AcpUsageUpdate {
+   /// Tokens currently in the context window.
    pub used: u64,
+   /// Size of the context window in tokens.
    pub size: u64,
+   /// Cumulative session cost, when the agent reports one.
+   pub cost: Option<AcpCost>,
+}
+
+/// The tokens one prompt turn used, as the agent reports them in its `session/prompt` answer.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct AcpTurnUsage {
+   pub total_tokens: u64,
+   pub input_tokens: u64,
+   pub output_tokens: u64,
+   pub thought_tokens: Option<u64>,
+   pub cached_read_tokens: Option<u64>,
+   pub cached_write_tokens: Option<u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct AcpCost {
+   pub amount: f64,
+   /// ISO 4217 currency code, such as "USD".
+   pub currency: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -206,6 +230,32 @@ pub struct AcpToolCallLocation {
    pub line: Option<u32>,
 }
 
+/// The tool call a permission request is about, in the same shapes tool
+/// cards use, so the prompt can show what the agent is about to do.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AcpPermissionToolCall {
+   pub tool_id: String,
+   pub title: Option<String>,
+   pub kind: Option<AcpToolKind>,
+   /// The call's ACP `content` (diffs, terminals, text) when present.
+   pub content: Option<serde_json::Value>,
+   pub locations: Option<Vec<AcpToolCallLocation>>,
+   pub raw_input: Option<serde_json::Value>,
+}
+
+/// The Tauri event that asks the editor for an open file's contents.
+pub const ACP_BUFFER_READ_EVENT: &str = "acp-buffer-read";
+
+/// Asks the frontend what the editor holds for `path`. It answers through
+/// `respond_acp_buffer_read` with the buffer's text, or null when the file is not open.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AcpBufferReadRequest {
+   pub request_id: String,
+   pub path: String,
+}
+
 /// Configuration for an ACP-compatible agent
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -229,6 +279,43 @@ pub struct AgentConfig {
    pub install_download_url: Option<String>,
    pub install_command: Option<String>,
    pub can_install: bool,
+   /// Where the agent's entry comes from: an Athas extension manifest, or only the ACP Registry.
+   #[serde(default)]
+   pub source: AgentSource,
+   /// The agent's ACP Registry entry, when the registry lists it.
+   #[serde(default)]
+   pub registry: Option<RegistryAgentInfo>,
+}
+
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum AgentSource {
+   /// Athas ships a manifest for the agent; a copy on PATH is detected by its binary name.
+   #[default]
+   Extension,
+   /// Only the ACP Registry lists the agent; it runs only from Athas's own install.
+   Registry,
+}
+
+/// What the ACP Registry says about an agent, shown before it is installed.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct RegistryAgentInfo {
+   pub id: String,
+   pub version: String,
+   pub repository: Option<String>,
+   pub website: Option<String>,
+   pub authors: Vec<String>,
+   pub license: Option<String>,
+   pub license_url: Option<String>,
+   /// `binary`, `npx` or `uvx`: what Athas installs on this machine.
+   pub distribution: Option<String>,
+   /// Installs and updates come from the registry rather than the extension manifest.
+   pub installs_from_registry: bool,
+   /// Why the registry entry cannot be installed here, when it cannot.
+   pub unavailable_reason: Option<String>,
+   /// The registry's reason for quarantining the agent.
+   pub quarantined: Option<String>,
 }
 
 impl AgentConfig {
@@ -252,6 +339,8 @@ impl AgentConfig {
          install_download_url: None,
          install_command: None,
          can_install: false,
+         source: AgentSource::Extension,
+         registry: None,
       }
    }
 
@@ -283,18 +372,73 @@ impl AgentConfig {
    }
 }
 
-/// Status of an ACP agent connection
+/// Status of one running agent process. Every chat that uses the same agent in the same
+/// workspace shares it, each with its own session.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[derive(Default)]
 pub struct AcpAgentStatus {
    pub agent_id: String,
    pub running: bool,
-   pub session_active: bool,
    pub initialized: bool,
-   pub session_id: Option<String>,
    pub workspace_path: Option<String>,
    pub agent_capabilities: Option<AcpAgentCapabilities>,
+   /// The sign-in methods the agent offered in `initialize`.
+   pub auth_methods: Vec<AcpAuthMethod>,
+   /// Configured MCP servers left out of the latest session because the agent does not support
+   /// their transport.
+   #[serde(default)]
+   pub skipped_mcp_servers: Vec<super::mcp_servers::AcpSkippedMcpServer>,
+   /// The sessions open on this agent. When a stopped status is reported, the sessions it had.
+   #[serde(default)]
+   pub session_ids: Vec<String>,
+}
+
+/// A session opened (or found already open) for a chat, and the agent that holds it.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AcpOpenedSession {
+   pub session_id: String,
+   pub status: AcpAgentStatus,
+   /// The chat asked for its earlier session, but the agent could not restore it; the chat
+   /// continues in a new session without the agent's earlier context.
+   #[serde(default)]
+   pub context_lost: bool,
+   /// The conversation an imported session replayed, as the events a live turn would emit.
+   #[serde(default, skip_serializing_if = "Vec::is_empty")]
+   pub history: Vec<AcpEvent>,
+}
+
+/// How an ACP sign-in method is completed.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum AcpAuthMethodKind {
+   /// The agent signs in itself when Athas calls `authenticate` with the method id.
+   Agent,
+   /// The user signs in by running a command in a terminal; `authenticate` is never called.
+   Terminal,
+}
+
+/// The command a terminal sign-in method runs, ready to start in an Athas terminal.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct AcpTerminalAuthLaunch {
+   pub label: String,
+   pub command: String,
+   pub args: Vec<String>,
+   pub env: HashMap<String, String>,
+}
+
+/// A sign-in method an ACP agent offers, as the frontend shows it.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct AcpAuthMethod {
+   pub id: String,
+   pub name: String,
+   pub description: Option<String>,
+   pub kind: AcpAuthMethodKind,
+   /// Set for terminal methods.
+   pub terminal: Option<AcpTerminalAuthLaunch>,
 }
 
 /// Content block types in ACP messages
@@ -408,6 +552,9 @@ pub enum AcpEvent {
       session_id: String,
       content: AcpContentBlock,
       is_complete: bool,
+      /// The agent's id for the message this chunk belongs to; a new id starts a new message.
+      #[serde(default, skip_serializing_if = "Option::is_none")]
+      message_id: Option<String>,
    },
    /// Agent message content chunk
    #[serde(rename_all = "camelCase")]
@@ -415,6 +562,9 @@ pub enum AcpEvent {
       session_id: String,
       content: AcpContentBlock,
       is_complete: bool,
+      /// The agent's id for the message this chunk belongs to; a new id starts a new message.
+      #[serde(default, skip_serializing_if = "Option::is_none")]
+      message_id: Option<String>,
    },
    /// Agent thought content chunk
    #[serde(rename_all = "camelCase")]
@@ -422,6 +572,9 @@ pub enum AcpEvent {
       session_id: String,
       content: AcpContentBlock,
       is_complete: bool,
+      /// The agent's id for the message this chunk belongs to; a new id starts a new message.
+      #[serde(default, skip_serializing_if = "Option::is_none")]
+      message_id: Option<String>,
    },
    /// Tool use started
    #[serde(rename_all = "camelCase")]
@@ -430,6 +583,10 @@ pub enum AcpEvent {
       tool_name: String,
       tool_id: String,
       input: serde_json::Value,
+      /// The call's ACP `content`, when it has any.
+      output: Option<serde_json::Value>,
+      /// The agent's `rawOutput`, kept apart from the displayed content.
+      raw_output: Option<serde_json::Value>,
       kind: AcpToolKind,
       status: AcpToolCallStatus,
       locations: Vec<AcpToolCallLocation>,
@@ -441,7 +598,10 @@ pub enum AcpEvent {
       tool_id: String,
       tool_name: Option<String>,
       input: Option<serde_json::Value>,
+      /// The call's ACP `content` when the update carries it; an empty array
+      /// means the agent cleared it.
       output: Option<serde_json::Value>,
+      raw_output: Option<serde_json::Value>,
       kind: Option<AcpToolKind>,
       status: Option<AcpToolCallStatus>,
       locations: Option<Vec<AcpToolCallLocation>>,
@@ -456,6 +616,40 @@ pub enum AcpEvent {
       output: Option<serde_json::Value>,
       error: Option<String>,
    },
+   /// A terminal whose output a tool call shows: one Athas runs for the agent
+   /// (`terminal/create`), or, with `display_only`, one the agent runs itself and streams
+   /// through tool call `_meta`.
+   #[serde(rename_all = "camelCase")]
+   TerminalStarted {
+      session_id: String,
+      terminal_id: String,
+      cwd: Option<String>,
+      display_only: bool,
+   },
+   /// Output a terminal produced, appended to what it showed before.
+   #[serde(rename_all = "camelCase")]
+   TerminalOutput {
+      session_id: String,
+      terminal_id: String,
+      data: String,
+   },
+   /// A terminal's command ended; `exit_code` is `None` when a signal ended it.
+   #[serde(rename_all = "camelCase")]
+   TerminalExit {
+      session_id: String,
+      terminal_id: String,
+      exit_code: Option<u32>,
+      signal: Option<String>,
+   },
+   /// Advisory information for the user that is not part of the conversation (ACP `notice`).
+   /// `severity` is `info`, `warning`, `error`, or a value a newer agent defines.
+   #[serde(rename_all = "camelCase")]
+   Notice {
+      session_id: String,
+      severity: String,
+      title: String,
+      description: Option<String>,
+   },
    /// Permission request from agent
    #[serde(rename_all = "camelCase")]
    PermissionRequest {
@@ -465,7 +659,23 @@ pub enum AcpEvent {
       resource: String,
       description: String,
       options: Vec<AcpPermissionOption>,
+      tool_call: AcpPermissionToolCall,
    },
+   /// Agent asks the user something (`elicitation/create`): a form, or a URL to open. `request`
+   /// is the ACP request as sent, so the frontend sees the schema, URL and any `_meta`.
+   #[serde(rename_all = "camelCase")]
+   ElicitationRequest {
+      session_id: Option<String>,
+      request_id: String,
+      request: serde_json::Value,
+   },
+   /// The flow behind an accepted URL elicitation finished (`elicitation/complete`).
+   #[serde(rename_all = "camelCase")]
+   ElicitationComplete { elicitation_id: String },
+   /// A permission request or elicitation stopped waiting before the user answered: the agent
+   /// cancelled it, it timed out, or the agent went away. The frontend withdraws its prompt.
+   #[serde(rename_all = "camelCase")]
+   RequestClosed { request_id: String },
    /// Session completed
    #[serde(rename_all = "camelCase")]
    SessionComplete { session_id: String },
@@ -475,9 +685,21 @@ pub enum AcpEvent {
       session_id: Option<String>,
       error: String,
    },
-   /// Agent status changed
+   /// An agent process started, stopped, or opened or closed a session. `error` says why an agent
+   /// stopped on its own (it exited or crashed); it is `None` for a requested or idle stop.
    #[serde(rename_all = "camelCase")]
-   StatusChanged { status: AcpAgentStatus },
+   StatusChanged {
+      status: AcpAgentStatus,
+      error: Option<String>,
+   },
+   /// The agent needs the user to sign in and Athas will not pick a method on its own. The
+   /// session id is set when a prompt hit this; startup failures carry none.
+   #[serde(rename_all = "camelCase")]
+   AuthRequired {
+      agent_id: String,
+      session_id: Option<String>,
+      methods: Vec<AcpAuthMethod>,
+   },
    /// Available slash commands updated
    #[serde(rename_all = "camelCase")]
    SlashCommandsUpdate {
@@ -526,11 +748,34 @@ pub enum AcpEvent {
    PromptComplete {
       session_id: String,
       stop_reason: StopReason,
+      /// The turn's token usage, when the agent reports it.
+      usage: Option<AcpTurnUsage>,
    },
    /// UI action request from agent
    #[serde(rename_all = "camelCase")]
    UiAction {
       session_id: String,
       action: UiAction,
+   },
+   /// A file the agent just read or wrote through `fs/*`, so the editor can follow it there.
+   #[serde(rename_all = "camelCase")]
+   AgentLocation {
+      session_id: String,
+      path: String,
+      /// 1-based line the read started at, when the agent asked for one.
+      line: Option<u32>,
+   },
+   /// A write the agent made through `fs/write_text_file`, with what the file held before, so the
+   /// user can review the change hunk by hunk after it landed.
+   #[serde(rename_all = "camelCase")]
+   AgentFileWrite {
+      session_id: String,
+      /// Also on the `file-changed` event for this write, so the frontend can tell that event
+      /// comes from this write rather than from someone else changing the file.
+      write_id: u64,
+      path: String,
+      /// The file's text before the write; `None` when the write created the file.
+      previous_content: Option<String>,
+      content: String,
    },
 }

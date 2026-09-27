@@ -2,6 +2,12 @@
 
 declare module "monaco-editor/esm/vs/basic-languages/*";
 declare module "monaco-editor/esm/vs/language/*";
+declare module "monaco-editor/esm/vs/editor/common/services/resolverService.js" {
+  export const ITextModelService: unknown;
+}
+declare module "monaco-editor/esm/vs/editor/standalone/browser/standaloneServices.js" {
+  export const StandaloneServices: { get(serviceId: unknown): unknown };
+}
 
 interface SpeechRecognitionAlternative {
   transcript: string;

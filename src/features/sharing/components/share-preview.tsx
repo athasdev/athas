@@ -1,9 +1,7 @@
 import { ChatMessage } from "@/features/ai/components/chat/chat-message";
-import { useAuthStore } from "@/features/window/stores/auth.store";
 import type { ShareDraft } from "../types/share.types";
 
 export function SharePreview({ draft }: { draft: ShareDraft }) {
-  const user = useAuthStore((state) => state.user);
   return (
     <div className="max-h-72 overflow-auto" aria-label="Share preview">
       {draft.kind === "agent" ? (
@@ -14,10 +12,6 @@ export function SharePreview({ draft }: { draft: ShareDraft }) {
               message={{ ...message, id: String(index), timestamp: new Date(0) }}
               isLastMessage={false}
               showActions={false}
-              userName={user?.name || "You"}
-              userAvatarUrl={user?.avatar_url}
-              assistantIconId="athas"
-              assistantLabel="Agent"
             />
           ))}
         </div>

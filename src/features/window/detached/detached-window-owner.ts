@@ -89,7 +89,7 @@ export function openDetachedWindow<Message extends { type: string }>(
       return;
     }
     if (base.type === "settings") {
-      useUIState.getState().openSettingsDialog(base.tab, base.section);
+      useUIState.getState().openSettings(base.tab, base.section);
       focusOwnerWindow();
       return;
     }

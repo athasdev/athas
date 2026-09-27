@@ -18,6 +18,27 @@ describe("default keymaps", () => {
     keymapRegistry.clear();
   });
 
+  it("binds selection-to-chat shortcuts without taking select all occurrences", () => {
+    expectKeybinding("editor.addSelectionToChat", "cmd+l", "editorFocus");
+    expectKeybinding("editor.addSelectionToNewChat", "cmd+alt+l", "editorFocus");
+    expectKeybinding("editor.selectAllOccurrences", "cmd+shift+l", "editorFocus");
+    const editorKeys = defaultKeymaps
+      .filter((keybinding) => keybinding.when === "editorFocus")
+      .map((keybinding) => keybinding.key);
+    expect(editorKeys.filter((key) => key === "cmd+l" || key === "cmd+alt+l")).toHaveLength(2);
+  });
+
+  it("keeps and undoes agent changes only while the editor shows them", () => {
+    const when = "editorFocus && agentEditHunks";
+    expectKeybinding("ai.keepAgentHunk", "cmd+y", when);
+    expectKeybinding("ai.rejectAgentHunk", "cmd+n", when);
+    // Earlier bindings win, so these must come before redo and new tab.
+    const index = (command: string, key: string) =>
+      defaultKeymaps.findIndex((binding) => binding.command === command && binding.key === key);
+    expect(index("ai.keepAgentHunk", "cmd+y")).toBeLessThan(index("editor.redo", "cmd+y"));
+    expect(index("ai.rejectAgentHunk", "cmd+n")).toBeLessThan(index("workbench.newTab", "cmd+n"));
+  });
+
   it("registers editor navigation and folding shortcuts", () => {
     const byCommand = new Map(defaultKeymaps.map((keybinding) => [keybinding.command, keybinding]));
 
@@ -120,7 +141,7 @@ describe("default keymaps", () => {
 
   it("keeps chrome actions in the command registry", () => {
     expectKeybinding("workbench.openSettings", "cmd+,");
-    expectKeybinding("workbench.toggleActivitySidebar", "cmd+b");
+    expectKeybinding("workbench.toggleSidebar", "cmd+b");
     expectKeybinding("workbench.toggleSidebar", "cmd+e");
     expectKeybinding("workbench.showFind", "cmd+f", "editorFocus");
     expectKeybinding("workbench.showFindReplace", "ctrl+h", "editorFocus");
@@ -163,15 +184,13 @@ describe("default keymaps", () => {
     });
   });
 
-  it("registers distinct activity and secondary sidebar commands", () => {
+  it("keeps the activity bar out of the command registry", () => {
     keymapRegistry.clear();
     registerCommands();
 
-    expect(keymapRegistry.getCommand("workbench.toggleActivitySidebar")).toMatchObject({
-      title: "Toggle Activity Sidebar",
-    });
+    expect(keymapRegistry.getCommand("workbench.toggleActivitySidebar")).toBeUndefined();
     expect(keymapRegistry.getCommand("workbench.toggleSidebar")).toMatchObject({
-      title: "Toggle Secondary Sidebar",
+      title: "Toggle Sidebar",
     });
   });
 });

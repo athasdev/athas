@@ -58,8 +58,9 @@ pub fn configure_app(app: &mut tauri::App<AthasRuntime>) -> Result<(), Box<dyn s
    register_managed_state(app);
    emit_cli_open_requests(app);
    configure_initial_window(app);
+   listen_for_deep_links(app);
 
-   #[cfg(all(unix, not(target_os = "macos")))]
+   #[cfg(unix)]
    commands::development::cli::auto_fix_cli_on_startup();
 
    app.on_menu_event(handle_menu_event);
@@ -141,6 +142,43 @@ fn register_managed_state(app: &mut tauri::App<AthasRuntime>) {
    app.manage(FffSearchState::new());
    app.manage(commands::development::docker::DockerLogStreams::default());
    app.manage(commands::development::cli_args::PendingCliOpenRequests::default());
+   app.manage(commands::development::deep_links::PendingDeepLinks::default());
+}
+
+fn listen_for_deep_links(app: &tauri::App<AthasRuntime>) {
+   use tauri_plugin_deep_link::DeepLinkExt;
+
+   let deep_link = app.deep_link();
+   match deep_link.get_current() {
+      Ok(Some(urls)) => queue_deep_links(app.handle(), &urls),
+      Ok(None) => {}
+      Err(error) => log::warn!("Failed to read launch deep links: {error}"),
+   }
+
+   let handle = app.handle().clone();
+   deep_link.on_open_url(move |event| {
+      let app = handle.clone();
+      let urls = event.urls();
+      if let Err(error) = handle.run_on_main_thread(move || queue_deep_links(&app, &urls)) {
+         log::error!("Failed to route deep link: {error}");
+      }
+   });
+}
+
+fn queue_deep_links(app: &tauri::AppHandle<AthasRuntime>, urls: &[tauri::Url]) {
+   let urls = commands::development::deep_links::app_deep_links(urls);
+   if urls.is_empty() {
+      return;
+   }
+   let Some(window) = focus_workbench_window(app) else {
+      log::error!("Failed to create a workbench for deep links");
+      return;
+   };
+   app.state::<commands::development::deep_links::PendingDeepLinks>()
+      .push_all(window.label(), urls);
+   if let Err(error) = app.emit_to(window.label(), "deep_links_pending", ()) {
+      log::error!("Failed to signal pending deep links: {error}");
+   }
 }
 
 fn emit_cli_open_requests(app: &tauri::App<AthasRuntime>) {
@@ -190,6 +228,20 @@ fn get_workbench_window(
       .or_else(|| app.webview_windows().into_values().find(is_workbench))
 }
 
+fn focus_workbench_window(
+   app: &tauri::AppHandle<AthasRuntime>,
+) -> Option<tauri::WebviewWindow<AthasRuntime>> {
+   let window = get_workbench_window(app).or_else(|| {
+      commands::ui::window::create_app_window_internal(app, None)
+         .ok()
+         .and_then(|label| app.get_webview_window(&label))
+   })?;
+   let _ = window.unminimize();
+   let _ = window.show();
+   let _ = window.set_focus();
+   Some(window)
+}
+
 fn queue_cli_requests(
    app: &tauri::AppHandle<AthasRuntime>,
    requests: Vec<commands::development::cli_args::CliRequest>,
@@ -212,20 +264,12 @@ fn queue_cli_requests(
    if pending.is_empty() {
       return;
    }
-   let window = get_workbench_window(app).or_else(|| {
-      commands::ui::window::create_app_window_internal(app, None)
-         .ok()
-         .and_then(|label| app.get_webview_window(&label))
-   });
-   let Some(window) = window else {
+   let Some(window) = focus_workbench_window(app) else {
       log::error!("Failed to create a workbench for CLI requests");
       return;
    };
    app.state::<commands::development::cli_args::PendingCliOpenRequests>()
       .push_all(window.label(), pending);
-   let _ = window.unminimize();
-   let _ = window.show();
-   let _ = window.set_focus();
    if let Err(error) = app.emit_to(window.label(), "cli_open_requests_pending", ()) {
       log::error!("Failed to signal pending open requests: {error}");
    }
@@ -492,9 +536,6 @@ fn handle_menu_event(app_handle: &tauri::AppHandle<AthasRuntime>, event: tauri::
                "command_palette" => {
                   emit_menu_event(&window, "menu_command_palette", ());
                }
-               "toggle_activity_sidebar" => {
-                  emit_menu_event(&window, "menu_toggle_activity_sidebar", ());
-               }
                "toggle_sidebar" => {
                   emit_menu_event(&window, "menu_toggle_sidebar", ());
                }
@@ -649,7 +690,7 @@ pub(crate) fn shutdown_background_services(app_handle: &tauri::AppHandle<AthasRu
       let acp_bridge = acp_bridge.inner().clone();
       tauri::async_runtime::block_on(async move {
          let bridge = acp_bridge.lock().await;
-         if let Err(error) = bridge.stop_agent().await {
+         if let Err(error) = bridge.stop_agent(None, None).await {
             log::debug!("ACP shutdown returned error: {}", error);
          }
       });

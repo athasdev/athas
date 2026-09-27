@@ -15,6 +15,13 @@ export interface TerminalCommandSummary {
   finishedAt: number;
 }
 
+/** A program a terminal runs directly instead of the shell, such as an agent's sign-in. */
+export interface TerminalLaunch {
+  command: string;
+  args: string[];
+  environment?: Record<string, string>;
+}
+
 export interface Terminal {
   id: string;
   name: string;
@@ -25,6 +32,8 @@ export interface Terminal {
   profileId?: string;
   initialCommand?: string;
   environment?: Record<string, string>;
+  /** Set before the terminal opens to run this program in place of the shell. */
+  launch?: TerminalLaunch;
   createdAt: Date;
   lastActivity?: Date;
   connectionId?: string;

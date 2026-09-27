@@ -17,7 +17,10 @@ import {
 } from "@/features/editor/utils/select-next-occurrence";
 import { showChoiceDialog } from "@/ui/dialog";
 import { toast } from "sonner";
-import { isEditorKeyboardTarget } from "../utils/editor-keyboard-target";
+import {
+  getMarkdownPreviewKeyboardTarget,
+  isEditorKeyboardTarget,
+} from "../utils/editor-keyboard-target";
 
 type EditorSelection = NonNullable<ReturnType<typeof editorAPI.getSelection>>;
 
@@ -189,6 +192,18 @@ function selectAllEditorOccurrenceRanges(ranges: OccurrenceRange[]): void {
 }
 
 export function selectAllActiveEditor(): void {
+  const preview = getMarkdownPreviewKeyboardTarget(document.activeElement);
+  if (preview) {
+    const content = preview.querySelector(".markdown-content");
+    if (!content) return;
+    const range = document.createRange();
+    range.selectNodeContents(content);
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+    return;
+  }
+
   if (!shouldUseEditorModelCommand()) {
     document.execCommand("selectAll");
     return;
@@ -206,6 +221,11 @@ export function redoActiveEditor(): void {
 }
 
 export async function copyActiveEditorSelection(): Promise<void> {
+  if (getMarkdownPreviewKeyboardTarget(document.activeElement)) {
+    document.execCommand("copy");
+    return;
+  }
+
   if (!shouldUseEditorModelCommand()) {
     document.execCommand("copy");
     return;

@@ -1,6 +1,5 @@
 import { SharingRuntime } from "@/features/sharing/components/sharing-runtime";
 import { GitHubActionsWatcher } from "@/features/github/components/github-actions-watcher";
-import { SettingsDialog } from "@/features/settings/components/settings-dialog";
 import { ShareDialog } from "@/features/sharing/components/share-dialog";
 import { useEffect } from "react";
 import { MotionConfig } from "motion/react";
@@ -19,6 +18,8 @@ import {
 } from "@/features/window/utils/window-open-diagnostics";
 import { NotificationRecorder } from "@/features/notifications/components/notification-recorder";
 import { useNativeNotificationIntegration } from "@/features/notifications/hooks/use-native-notification-integration";
+import { useAcpEventSync } from "@/features/ai/hooks/use-acp-event-sync";
+import { useAgentTabSessionRelease } from "@/features/ai/hooks/use-agent-tab-session-release";
 
 import { MainLayout } from "./features/layout/components/main-layout";
 import { ZoomIndicator } from "./features/window/components/zoom-indicator";
@@ -27,6 +28,7 @@ import { TooltipProvider } from "./ui/tooltip";
 import { WindowResizeBorder } from "./features/window/components/window-resize-border";
 import { DialogServiceProvider } from "@/ui/dialog";
 import { ContinuousAgentsRuntime } from "@/features/ai/continuous-agents/continuous-agents-runtime";
+import { AgentSessionsDialog } from "@/features/ai/components/history/agent-sessions-dialog";
 import { ProductFeedbackDialog } from "@/features/feedback/components/product-feedback-dialog";
 import { bucketFrictionDuration } from "@/features/telemetry/lib/friction-signals";
 import { recordFrictionSignal } from "@/features/telemetry/services/telemetry";
@@ -35,6 +37,8 @@ function WorkbenchApp() {
   useAppBootstrap();
   useSystemAccessibility();
   useNativeNotificationIntegration();
+  useAcpEventSync();
+  useAgentTabSessionRelease();
   const reduceMotion = useSettingsStore((state) => state.settings.reduceMotion);
 
   useEffect(() => {
@@ -104,10 +108,10 @@ function WorkbenchApp() {
             <Toaster />
             <NotificationRecorder />
             <ContinuousAgentsRuntime />
+            <AgentSessionsDialog />
             <ProductFeedbackDialog />
             <ShareDialog />
             <SharingRuntime />
-            <SettingsDialog />
             <GitHubActionsWatcher />
           </div>
         </TooltipProvider>

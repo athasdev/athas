@@ -232,7 +232,7 @@ const DiffLine = memo(
           <div
             className={cn(
               "w-11 shrink-0 select-none border-border border-r px-2 py-0.5 text-right",
-              "font-mono code-editor-font-override tabular-nums",
+              "font-mono tabular-nums",
               getGutterBackground(diffType),
               getGutterTextColor(diffType),
             )}
@@ -243,7 +243,7 @@ const DiffLine = memo(
           </div>
           <div
             className={cn(
-              "font-mono code-editor-font-override m-0 min-w-0 flex-1 px-2.5 py-0.5 antialiased",
+              "font-mono m-0 min-w-0 flex-1 px-2.5 py-0.5 antialiased",
               diffType === "added"
                 ? getContentColor("added")
                 : diffType === "removed"
@@ -276,7 +276,7 @@ const DiffLine = memo(
             <div
               className={cn(
                 "w-11 shrink-0 select-none border-border border-r px-2 py-0.5 text-right",
-                "font-mono code-editor-font-override tabular-nums",
+                "font-mono tabular-nums",
                 getGutterBackground(line.line_type === "removed" ? "removed" : ""),
                 getGutterTextColor(line.line_type === "removed" ? "removed" : ""),
               )}
@@ -287,7 +287,7 @@ const DiffLine = memo(
             </div>
             <div
               className={cn(
-                "font-mono code-editor-font-override m-0 min-w-0 flex-1 overflow-x-auto overflow-y-hidden px-2.5 py-0.5 antialiased",
+                "font-mono m-0 min-w-0 flex-1 overflow-x-auto overflow-y-hidden px-2.5 py-0.5 antialiased",
                 line.line_type === "removed" ? getContentColor("removed") : "text-foreground",
               )}
               style={contentStyle}
@@ -307,7 +307,7 @@ const DiffLine = memo(
             <div
               className={cn(
                 "w-11 shrink-0 select-none border-border border-r px-2 py-0.5 text-right",
-                "font-mono code-editor-font-override tabular-nums",
+                "font-mono tabular-nums",
                 getGutterBackground(line.line_type === "added" ? "added" : ""),
                 getGutterTextColor(line.line_type === "added" ? "added" : ""),
               )}
@@ -318,7 +318,7 @@ const DiffLine = memo(
             </div>
             <div
               className={cn(
-                "font-mono code-editor-font-override m-0 min-w-0 flex-1 overflow-x-auto overflow-y-hidden px-2.5 py-0.5 antialiased",
+                "font-mono m-0 min-w-0 flex-1 overflow-x-auto overflow-y-hidden px-2.5 py-0.5 antialiased",
                 line.line_type === "added" ? getContentColor("added") : "text-foreground",
               )}
               style={contentStyle}
@@ -343,7 +343,7 @@ const DiffLine = memo(
         <div
           className={cn(
             "w-11 shrink-0 select-none border-border border-r px-2 py-0.5 text-right",
-            "font-mono code-editor-font-override tabular-nums",
+            "font-mono tabular-nums",
             getGutterBackground(line.line_type),
             getGutterTextColor(line.line_type),
           )}
@@ -355,7 +355,7 @@ const DiffLine = memo(
 
         <div
           className={cn(
-            "font-mono code-editor-font-override m-0 min-w-0 flex-1 px-2.5 py-0.5 antialiased",
+            "font-mono m-0 min-w-0 flex-1 px-2.5 py-0.5 antialiased",
             getContentColor(line.line_type),
           )}
           style={contentStyle}

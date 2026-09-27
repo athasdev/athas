@@ -4,7 +4,10 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { ChatMessage } from "../components/chat/chat-message";
 
-vi.mock("../components/icons/provider-icons", () => ({ ProviderIcon: () => null }));
+vi.mock("@tauri-apps/api/webviewWindow", () => ({
+  getCurrentWebviewWindow: () => ({ label: "main" }),
+  getAllWebviewWindows: async () => [],
+}));
 vi.mock("../components/messages/markdown-renderer", () => ({ default: () => null }));
 let root: Root;
 let container: HTMLDivElement;
@@ -29,9 +32,6 @@ beforeEach(async () => {
         isLastMessage
         canEditUserMessage
         onEditUserMessage={submit}
-        userName="Mehmet"
-        assistantIconId="athas"
-        assistantLabel="Athas"
       />,
     ),
   );
@@ -94,7 +94,7 @@ describe("inline prompt editing", () => {
 vi.mock("@/features/keymaps/hooks/use-command-shortcut", () => ({
   useCommandShortcut: () => undefined,
 }));
-vi.mock("../components/messages/tool-call-display", () => ({ ToolCallGroupDisplay: () => null }));
+vi.mock("../components/messages/tool-call-display", () => ({ ToolCallList: () => null }));
 vi.mock("../components/messages/plan-block-display", () => ({ PlanBlockDisplay: () => null }));
 vi.mock("@/extensions/ui/components/generative-ui-renderer", () => ({
   GenerativeUIRenderer: () => null,

@@ -7,8 +7,13 @@ export function resolveAgentModel(params: {
   customDefault?: string;
 }): Model | undefined {
   if (!params.provider) return undefined;
-  const modelId =
-    params.modelId.trim() || (params.provider.id === "custom" ? params.customDefault?.trim() : "");
+  const fallback =
+    params.provider.id === "custom"
+      ? params.customDefault?.trim()
+      : params.provider.id === "athas"
+        ? "auto"
+        : "";
+  const modelId = params.modelId.trim() || fallback;
   if (!modelId) return undefined;
   const known =
     params.provider.models.find((model) => model.id === modelId) ??

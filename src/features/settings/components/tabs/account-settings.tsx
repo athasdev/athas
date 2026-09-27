@@ -102,7 +102,11 @@ export const AccountSettings = () => {
           {isAuthenticated ? (
             <span className="text-subtle-foreground">{user?.email}</span>
           ) : (
-            <Button variant="default" onClick={signIn} disabled={isSigningIn}>
+            <Button
+              variant="default"
+              onClick={() => void signIn().catch(() => undefined)}
+              disabled={isSigningIn}
+            >
               {isSigningIn ? "Signing In..." : "Sign In"}
             </Button>
           )}

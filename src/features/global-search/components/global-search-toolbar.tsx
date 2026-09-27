@@ -1,18 +1,14 @@
-import { memo, type KeyboardEventHandler, type RefObject } from "react";
+import { memo, type KeyboardEventHandler, type ReactNode, type RefObject } from "react";
 import { SearchIcon, XIcon } from "@/ui/icons";
 import { MultibufferNavigatorToggle } from "@/features/editor/components/multibuffer/multibuffer-navigator-toggle";
 import { PaneContentHeader } from "@/features/panes/components/pane-content-chrome";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
+import { ChromeLabel } from "@/ui/chrome";
 import { CommandInput } from "@/ui/command";
 import { SEARCH_TOGGLE_ICONS, SearchReplaceRow, SearchReplaceToggle } from "@/ui/search";
-import { ToggleGroup, type ToggleGroupOption } from "@/ui/toggle-group";
+import { Toggle } from "@/ui/toggle";
 import type { ContentSearchOptions } from "../types/global-search.types";
-import {
-  fromSearchOptionValues,
-  toSearchOptionValues,
-  type SearchOptionValue,
-} from "../utils/search-options";
 
 interface GlobalSearchToolbarProps {
   inputRef: RefObject<HTMLInputElement | null>;
@@ -72,24 +68,15 @@ export const GlobalSearchToolbar = memo(function GlobalSearchToolbar({
   fileNavigatorVisible,
   onFileNavigatorVisibleChange,
 }: GlobalSearchToolbarProps) {
-  const searchOptionButtons: ToggleGroupOption<SearchOptionValue>[] = [
-    {
-      value: "case-sensitive",
-      label: "Match case",
-      icon: SEARCH_TOGGLE_ICONS.caseSensitive,
-    },
-    {
-      value: "whole-word",
-      label: "Match whole word",
-      icon: SEARCH_TOGGLE_ICONS.wholeWord,
-    },
-    {
-      value: "regex",
-      label: "Use regular expression",
-      icon: SEARCH_TOGGLE_ICONS.regex,
-    },
+  const searchOptionToggles: Array<{
+    key: "caseSensitive" | "wholeWord" | "useRegex";
+    label: string;
+    icon: ReactNode;
+  }> = [
+    { key: "caseSensitive", label: "Match case", icon: SEARCH_TOGGLE_ICONS.caseSensitive },
+    { key: "wholeWord", label: "Match whole word", icon: SEARCH_TOGGLE_ICONS.wholeWord },
+    { key: "useRegex", label: "Use regular expression", icon: SEARCH_TOGGLE_ICONS.regex },
   ];
-  const activeSearchOptions = toSearchOptionValues(searchOptions);
 
   return (
     <>
@@ -135,30 +122,28 @@ export const GlobalSearchToolbar = memo(function GlobalSearchToolbar({
         }
         actions={
           <>
-            <ToggleGroup<SearchOptionValue>
-              type="multiple"
-              value={activeSearchOptions}
-              options={searchOptionButtons}
-              onValueChange={(nextValues) => {
-                const next = fromSearchOptionValues(nextValues);
-                setSearchOption("caseSensitive", next.caseSensitive);
-                setSearchOption("wholeWord", next.wholeWord);
-                setSearchOption("useRegex", next.useRegex);
-              }}
-              ariaLabel="Search options"
-              variant="segmented"
-              wrap={false}
-              iconOnly
-              className="shrink-0"
-            />
+            <div role="group" aria-label="Search options" className="flex shrink-0 items-center">
+              {searchOptionToggles.map((option) => (
+                <Toggle
+                  key={option.key}
+                  size="sm"
+                  pressed={searchOptions[option.key]}
+                  onPressedChange={(pressed) => setSearchOption(option.key, pressed)}
+                  tooltip={option.label}
+                  aria-label={option.label}
+                >
+                  {option.icon}
+                </Toggle>
+              ))}
+            </div>
             {searchWarning ? (
               <Badge tone="warning" truncate title={searchWarning} role="status" aria-live="polite">
                 {searchWarning}
               </Badge>
             ) : resultLabel ? (
-              <Badge truncate title={resultLabel} role="status">
+              <ChromeLabel tone="muted" title={resultLabel} role="status" className="px-1">
                 {resultLabel}
-              </Badge>
+              </ChromeLabel>
             ) : null}
             <MultibufferNavigatorToggle
               open={fileNavigatorVisible}

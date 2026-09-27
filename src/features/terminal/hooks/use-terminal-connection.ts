@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useRef } from "react";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
+import { TERMINAL_PROCESS_EXIT_EVENT } from "../constants/terminal-events";
 import { closeTerminalConnection } from "../services/terminal-connection-lifecycle";
 import type { IDisposable, Terminal } from "@xterm/xterm";
 import type { TerminalInput, TerminalSize } from "../types/terminal.types";
@@ -190,6 +191,7 @@ export function useTerminalConnection({
       if (event.event === "error") {
         hadTerminalErrorRef.current = true;
         void outputBuffer.whenDrained().then(() => {
+          if (outputBuffer.isDisposed()) return;
           terminal.writeln(`\r\n\x1b[31mError: ${event.message}\x1b[0m`);
         });
         return;
@@ -203,26 +205,38 @@ export function useTerminalConnection({
       void outputBuffer.whenDrained().then(() => {
         void closeTerminalConnection({ connectionId, remoteConnectionId }).catch(() => {});
         releaseTerminalEventChannel(connectionId);
-
-        if (hadTerminalErrorRef.current) {
-          terminal.writeln("\x1b[90mOpen a new terminal tab or close this one manually.\x1b[0m");
-          return;
-        }
+        window.dispatchEvent(
+          new CustomEvent(TERMINAL_PROCESS_EXIT_EVENT, {
+            detail: {
+              sessionId,
+              exitCode: hadTerminalErrorRef.current
+                ? null
+                : (lastExitInfoRef.current?.exitCode ?? null),
+              signal: lastExitInfoRef.current?.signal ?? null,
+            },
+          }),
+        );
 
         const exitCode = lastExitInfoRef.current?.exitCode;
         const signal = lastExitInfoRef.current?.signal;
-        if (exitCode === 0 && signal == null) {
+        const exitedCleanly = !hadTerminalErrorRef.current && exitCode === 0 && signal == null;
+        if (exitedCleanly) {
           onTerminalExitRef.current?.(sessionId);
           return;
         }
+        // The view was torn down while output was still draining; there is no terminal left to
+        // explain the exit in.
+        if (outputBuffer.isDisposed()) return;
 
-        const details =
-          signal != null
-            ? `signal ${signal}`
-            : exitCode != null
-              ? `exit code ${exitCode}`
-              : "unknown status";
-        terminal.writeln(`\r\n\x1b[33mTerminal process exited unexpectedly (${details}).\x1b[0m`);
+        if (!hadTerminalErrorRef.current) {
+          const details =
+            signal != null
+              ? `signal ${signal}`
+              : exitCode != null
+                ? `exit code ${exitCode}`
+                : "unknown status";
+          terminal.writeln(`\r\n\x1b[33mTerminal process exited unexpectedly (${details}).\x1b[0m`);
+        }
         terminal.writeln("\x1b[90mOpen a new terminal tab or close this one manually.\x1b[0m");
       });
     });
@@ -230,7 +244,7 @@ export function useTerminalConnection({
     sendTerminalSize(terminal);
 
     return () => {
-      outputBuffer.flush();
+      outputBuffer.dispose();
       void flush();
       if (outputPausedRef.current) setOutputPaused(false);
       for (const disposable of disposables) disposable.dispose();

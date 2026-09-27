@@ -31,6 +31,7 @@ import {
 import Select, { type SelectOption } from "@/ui/select";
 import { toast } from "sonner";
 import VimStatusIndicator from "@/features/vim/components/vim-status-indicator";
+import { IntelligenceCompletionStatus } from "./intelligence-completion-status";
 import { getFilenameFromPath } from "@/features/file-system/controllers/file-utils";
 
 const editorMenuRowClass =
@@ -432,6 +433,8 @@ export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {})
       )}
 
       <VimStatusIndicator />
+
+      {activeBuffer?.type === "editor" && <IntelligenceCompletionStatus />}
 
       <div className="relative flex items-center self-center">
         <DropdownMenu>

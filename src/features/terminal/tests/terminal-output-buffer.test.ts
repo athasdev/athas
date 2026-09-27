@@ -75,4 +75,53 @@ describe("terminal output buffer", () => {
     await failed.whenDrained();
     expect(onWriteError).toHaveBeenCalledOnce();
   });
+
+  it("releases close waiters when the terminal goes away mid-write", async () => {
+    const writes: Array<{ data: Uint8Array; done: () => void }> = [];
+    const buffer = createTerminalOutputBuffer({
+      maxBatchBytes: 2,
+      schedule: (callback) => callback(),
+      write: (data, done) => writes.push({ data, done }),
+    });
+    buffer.enqueue(new Uint8Array([1, 2, 3, 4, 5]));
+    const drained = vi.fn();
+    void buffer.whenDrained().then(drained);
+
+    buffer.dispose();
+    await Promise.resolve();
+
+    expect(drained).toHaveBeenCalledOnce();
+    expect(buffer.isDisposed()).toBe(true);
+    expect(buffer.queuedBytes()).toBe(0);
+    expect(writes.map(({ data }) => Array.from(data))).toEqual([
+      [1, 2],
+      [3, 4, 5],
+    ]);
+    writes[0]?.done();
+    buffer.enqueue(new Uint8Array([6]));
+    expect(writes).toHaveLength(2);
+    await expect(buffer.whenDrained()).resolves.toBeUndefined();
+  });
+
+  it("drains many small chunks across batches in order", () => {
+    const writes: Array<{ data: Uint8Array; done: () => void }> = [];
+    const buffer = createTerminalOutputBuffer({
+      maxBatchBytes: 1000,
+      schedule: (callback) => callback(),
+      write: (data, done) => writes.push({ data, done }),
+    });
+    for (let index = 0; index < 5000; index += 1) {
+      buffer.enqueue(new Uint8Array([index & 0xff]));
+    }
+    let received: number[] = [];
+    for (let guard = 0; guard < 10_000 && writes.length > 0; guard += 1) {
+      const next = writes.shift();
+      if (!next) break;
+      received = received.concat(Array.from(next.data));
+      next.done();
+    }
+    expect(received).toHaveLength(5000);
+    expect(received.every((value, index) => value === (index & 0xff))).toBe(true);
+    expect(buffer.queuedBytes()).toBe(0);
+  });
 });

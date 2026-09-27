@@ -26,7 +26,9 @@ export function NewTabMenu({ paneId }: { paneId: string }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        render={<Button variant="ghost" iconOnly tooltip="New tab" aria-label="New tab" />}
+        render={
+          <Button variant="ghost" iconOnly size="sm" tooltip="New tab" aria-label="New tab" />
+        }
       >
         <PlusIcon optical="md" />
       </DropdownMenuTrigger>

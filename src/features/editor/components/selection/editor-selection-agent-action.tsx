@@ -45,7 +45,8 @@ export function EditorSelectionAgentAction({
         initialFocus={false}
         role="toolbar"
         aria-label="Selected code actions"
-        className="w-fit p-1"
+        size="auto"
+        className="p-1"
       >
         <Button
           type="button"
