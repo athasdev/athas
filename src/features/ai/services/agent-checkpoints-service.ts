@@ -105,6 +105,16 @@ export function forgetChatCheckpoints(chatId: string) {
   useAgentCheckpointsStore.getState().actions.forgetChat(chatId);
 }
 
+/**
+ * Empties a chat's checkpoints, in memory and in the database, for a chat that was cleared: its
+ * turns are gone, so there is nothing left to restore to.
+ */
+export function clearChatCheckpoints(chatId: string): Promise<void> {
+  return enqueue(chatId, async () => {
+    setCheckpoints(chatId, parseChatCheckpoints(null));
+  });
+}
+
 /** Loads the chat's saved checkpoints once, before anything reads or adds to them. */
 export function ensureCheckpointsLoaded(chatId: string): Promise<void> {
   if (useAgentCheckpointsStore.getState().byChat[chatId]) return Promise.resolve();

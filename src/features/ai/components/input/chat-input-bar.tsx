@@ -1015,7 +1015,10 @@ const AIChatInputBar = memo(function AIChatInputBar({
           return;
         }
         if (action.type === "clear") {
-          clearChat(chatId);
+          void clearChat(chatId).catch((error: unknown) => {
+            console.error("Failed to clear the chat:", error);
+            showToast({ message: "Could not clear this chat.", type: "error" });
+          });
           return;
         }
         void compactChat(chatId)

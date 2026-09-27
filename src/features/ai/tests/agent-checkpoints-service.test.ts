@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import {
+  clearChatCheckpoints,
   currentTurnMessageId,
   forgetChatCheckpoints,
   listCheckpoints,
@@ -199,6 +200,17 @@ describe("agent checkpoints service", () => {
     expect(await restoreCheckpoint(CHAT, "u1")).toMatchObject({ status: "restored" });
     expect(mocks.disk.get("/a")).toBe("a0");
     expect(await restoreCheckpoint(CHAT, "u1")).toEqual({ status: "nothing-to-restore" });
+  });
+
+  it("clears a chat's checkpoints in memory and in the database", async () => {
+    mocks.disk.set("/a", "a0");
+    await agentWrites("u1", "/a", "a1");
+    await vi.runAllTimersAsync();
+    expect(mocks.saved.get(CHAT)).toEqual(expect.any(String));
+    await clearChatCheckpoints(CHAT);
+    await vi.runAllTimersAsync();
+    expect(mocks.saved.get(CHAT)).toBeNull();
+    expect(await listCheckpoints(CHAT)).toEqual([]);
   });
 
   it("does not save a deleted chat's checkpoints back", async () => {

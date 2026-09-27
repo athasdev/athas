@@ -4,8 +4,12 @@ import {
   summarizeConversationExtractively,
   type ConversationSummarizer,
 } from "@/features/ai/lib/conversation-history";
+import { clearChatCheckpoints } from "@/features/ai/services/agent-checkpoints-service";
+import { rejectAllAgentEdits } from "@/features/ai/services/agent-edits-service";
+import { getAgentEditEntries, useAgentEditsStore } from "@/features/ai/stores/agent-edits.store";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { Message } from "@/features/ai/types/ai-chat.types";
+import { showChoiceDialog } from "@/ui/dialog";
 
 /** Recent history `/compact` keeps word for word. */
 const MANUAL_COMPACT_KEEP_TOKENS = 4_000;
@@ -69,6 +73,35 @@ export async function compactChat(chatId: string): Promise<number> {
   return result.compactedCount;
 }
 
-export function clearChat(chatId: string) {
+/**
+ * Empties a chat, with its agent changes review and checkpoints, which belong to the turns being
+ * removed. When the agent's changes are still unreviewed the user decides whether they stay in
+ * the files or are taken back out; dismissing that choice leaves the chat as it was. Returns
+ * whether the chat was cleared.
+ */
+export async function clearChat(chatId: string): Promise<boolean> {
+  const pending = Object.keys(getAgentEditEntries(chatId)).length;
+  if (pending > 0) {
+    const files = pending === 1 ? "1 file" : `${pending} files`;
+    const choice = await showChoiceDialog(
+      `The agent's changes to ${files} in this chat are not reviewed yet. Keep them in your files, or discard them before clearing?`,
+      {
+        title: "Clear chat",
+        choices: [
+          { value: "keep", label: "Keep changes", variant: "accent" },
+          { value: "discard", label: "Discard changes", variant: "default" },
+        ],
+      },
+    );
+    if (choice === null) return false;
+    if (choice === "discard") {
+      await rejectAllAgentEdits(chatId);
+      // A file whose unsaved edits overlap the change could not be reverted; its review stays.
+      if (Object.keys(getAgentEditEntries(chatId)).length > 0) return false;
+    }
+  }
+  useAgentEditsStore.getState().actions.forgetChat(chatId);
+  await clearChatCheckpoints(chatId);
   useAIChatStore.getState().actions.replaceChatMessages(chatId, []);
+  return true;
 }
