@@ -34,9 +34,27 @@ function unquote(value: string) {
   return value.trim().replace(/^(["'])(.*)\1$/, "$2");
 }
 
+/** Splits at commas outside braces, so a glob such as `*.{ts,tsx}` stays whole. */
+function splitOutsideBraces(value: string) {
+  const parts: string[] = [];
+  let depth = 0;
+  let start = 0;
+  for (let index = 0; index < value.length; index++) {
+    const char = value[index];
+    if (char === "{") depth++;
+    else if (char === "}") depth = Math.max(0, depth - 1);
+    else if (char === "," && depth === 0) {
+      parts.push(value.slice(start, index));
+      start = index + 1;
+    }
+  }
+  parts.push(value.slice(start));
+  return parts;
+}
+
 function splitGlobs(value: string) {
   const list = value.trim().replace(/^\[(.*)\]$/, "$1");
-  return list.split(",").map(unquote).filter(Boolean);
+  return splitOutsideBraces(list).map(unquote).filter(Boolean);
 }
 
 /** Reads Cursor-style `.mdc` frontmatter: `description`, `globs` and `alwaysApply`. */
@@ -76,6 +94,15 @@ export function matchesRuleGlob(glob: string, relativePath: string): boolean {
   if (!pattern) return false;
   const target = pattern.includes("/") ? relativePath : (relativePath.split("/").pop() ?? "");
 
+  try {
+    return new RegExp(`^${globSource(pattern)}$`).test(target);
+  } catch {
+    return false;
+  }
+}
+
+/** The regular expression source for a glob; brace options are globs themselves. */
+function globSource(pattern: string): string {
   let source = "";
   for (let index = 0; index < pattern.length; index++) {
     const char = pattern[index];
@@ -88,24 +115,28 @@ export function matchesRuleGlob(glob: string, relativePath: string): boolean {
     } else if (char === "?") {
       source += "[^/]";
     } else if (char === "{") {
-      const end = pattern.indexOf("}", index);
+      const end = findClosingBrace(pattern, index);
       if (end < 0) {
         source += "\\{";
         continue;
       }
-      const options = pattern.slice(index + 1, end).split(",");
-      source += `(?:${options.map((option) => option.replace(/[.+^$()|[\]\\]/g, "\\$&")).join("|")})`;
+      const options = splitOutsideBraces(pattern.slice(index + 1, end));
+      source += `(?:${options.map(globSource).join("|")})`;
       index = end;
     } else {
-      source += char.replace(/[.+^$()|[\]\\]/g, "\\$&");
+      source += char.replace(/[.+^$()|[\]\\{}]/g, "\\$&");
     }
   }
+  return source;
+}
 
-  try {
-    return new RegExp(`^${source}$`).test(target);
-  } catch {
-    return false;
+function findClosingBrace(pattern: string, open: number) {
+  let depth = 0;
+  for (let index = open; index < pattern.length; index++) {
+    if (pattern[index] === "{") depth++;
+    else if (pattern[index] === "}" && --depth === 0) return index;
   }
+  return -1;
 }
 
 /** CLAUDE.md files that only import AGENTS.md add nothing of their own. */

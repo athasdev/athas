@@ -59,6 +59,15 @@ describe("project rules", () => {
     expect(matchesRuleGlob("docs/*.md", "docs/a/b.md")).toBe(false);
   });
 
+  it("reads globs inside braces and keeps brace lists in one glob", () => {
+    expect(matchesRuleGlob("{*.ts,*.tsx}", "src/a.tsx")).toBe(true);
+    expect(matchesRuleGlob("src/{app,lib}/**/*.ts", "src/lib/x/y.ts")).toBe(true);
+    expect(matchesRuleGlob("src/{app,lib}/**/*.ts", "src/other/y.ts")).toBe(false);
+    expect(
+      parseRuleFrontmatter("---\nglobs: src/**/*.{ts,tsx}, *.css\n---\nx").attributes?.globs,
+    ).toEqual(["src/**/*.{ts,tsx}", "*.css"]);
+  });
+
   it("loads root, nested, always-apply and matching glob rules in order", async () => {
     const reader = memoryReader({
       "/w/AGENTS.md": "Use Bun.",
