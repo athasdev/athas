@@ -3,7 +3,9 @@ import {
   buildConversationHistory,
   compactConversationHistory,
   fitMessagesToProviderLimits,
+  getProviderRequestLimits,
   HOSTED_ATHAS_REQUEST_LIMITS,
+  HOSTED_ATHAS_TOOL_LOOP_RESERVE,
   providerAcceptsImages,
 } from "@/features/ai/lib/conversation-history";
 import type { AIMessage } from "@/features/ai/types/messages.types";
@@ -173,8 +175,14 @@ describe("buildConversationHistory", () => {
     const fitted = fitMessagesToProviderLimits(messages, "athas");
     const bytes = new TextEncoder().encode(JSON.stringify(fitted)).length;
 
-    expect(fitted.length).toBeLessThanOrEqual(HOSTED_ATHAS_REQUEST_LIMITS.maxMessages);
-    expect(bytes).toBeLessThanOrEqual(HOSTED_ATHAS_REQUEST_LIMITS.maxBytes);
+    const loopMessages = HOSTED_ATHAS_TOOL_LOOP_RESERVE.messages;
+    expect(fitted.length + loopMessages).toBeLessThanOrEqual(
+      HOSTED_ATHAS_REQUEST_LIMITS.maxMessages,
+    );
+    expect(bytes + HOSTED_ATHAS_TOOL_LOOP_RESERVE.bytes).toBeLessThanOrEqual(
+      HOSTED_ATHAS_REQUEST_LIMITS.maxBytes,
+    );
+    expect(getProviderRequestLimits("athas")?.maxMessages).toBe(40);
     expect(fitted[0]).toEqual({ role: "system", content: "system" });
     expect(fitted[fitted.length - 1].content).toContain("latest");
     expect(fitted.some((entry) => entry.role === "user" && entry.images)).toBe(false);
@@ -190,7 +198,7 @@ describe("buildConversationHistory", () => {
       "athas",
     );
     expect(new TextEncoder().encode(JSON.stringify(fitted)).length).toBeLessThanOrEqual(
-      HOSTED_ATHAS_REQUEST_LIMITS.maxBytes,
+      getProviderRequestLimits("athas")?.maxBytes ?? 0,
     );
     expect(fitted.every((entry) => entry.content.length <= 100_000)).toBe(true);
   });

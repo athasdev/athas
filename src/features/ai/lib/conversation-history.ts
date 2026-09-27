@@ -35,8 +35,20 @@ export const HOSTED_ATHAS_REQUEST_LIMITS: ProviderRequestLimits = {
 /** Providers whose chat endpoint takes text only. */
 const TEXT_ONLY_PROVIDERS = new Set(["athas", "deepseek"]);
 
+/**
+ * Room the built-in agent's tool loop needs on top of the first request: each step adds an
+ * assistant tool call and a tool result, and a turn runs up to 25 steps.
+ */
+export const HOSTED_ATHAS_TOOL_LOOP_RESERVE = { messages: 50, bytes: 60_000 };
+
+/** What the first request of a turn may use, with the tool loop's reserve held back. */
 export function getProviderRequestLimits(providerId: string): ProviderRequestLimits | null {
-  return providerId === "athas" ? HOSTED_ATHAS_REQUEST_LIMITS : null;
+  if (providerId !== "athas") return null;
+  return {
+    maxMessages: HOSTED_ATHAS_REQUEST_LIMITS.maxMessages - HOSTED_ATHAS_TOOL_LOOP_RESERVE.messages,
+    maxBytes: HOSTED_ATHAS_REQUEST_LIMITS.maxBytes - HOSTED_ATHAS_TOOL_LOOP_RESERVE.bytes,
+    maxMessageChars: HOSTED_ATHAS_REQUEST_LIMITS.maxMessageChars,
+  };
 }
 
 export function providerAcceptsImages(providerId: string): boolean {
