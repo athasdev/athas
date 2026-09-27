@@ -6,6 +6,10 @@ import {
   rejectEdit,
   transferLineEdits,
 } from "@/features/ai/lib/agent-edit-hunks";
+import {
+  currentTurnMessageId,
+  recordCheckpointAgentWrite,
+} from "@/features/ai/services/agent-checkpoints-service";
 import { getAgentEditEntries, useAgentEditsStore } from "@/features/ai/stores/agent-edits.store";
 import type {
   AgentEditEntry,
@@ -181,12 +185,17 @@ function rebaseOtherChats(path: string, exceptChatId: string, content: string | 
   }
 }
 
-/** Adds an `agent_file_write` to the chat's log. The write itself already landed. */
+/**
+ * Adds an `agent_file_write` to the chat's log, and to the checkpoint of the turn it belongs to.
+ * The write itself already landed.
+ */
 export function recordAgentFileWrite(chatId: string, write: AgentFileWrite) {
   listenForFileChanges();
   rememberRecordedWrite(write.writeId);
+  const turnId = write.turnId ?? currentTurnMessageId(chatId) ?? undefined;
+  if (turnId) void recordCheckpointAgentWrite(chatId, turnId, write);
   const existing = getAgentEditEntries(chatId)[write.path];
-  const { entry, lostEarlierReview } = recordAgentWrite(existing, write);
+  const { entry, lostEarlierReview } = recordAgentWrite(existing, { ...write, turnId });
   setEntry(chatId, write.path, entry);
   if (lostEarlierReview) {
     notifyDropped(

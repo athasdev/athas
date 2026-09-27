@@ -19,6 +19,13 @@ const mocks = vi.hoisted(() => ({
   markPendingSave: vi.fn(),
   showToast: vi.fn(),
   showConfirmDialog: vi.fn(),
+  recordCheckpointAgentWrite: vi.fn(),
+  currentTurn: null as string | null,
+}));
+
+vi.mock("@/features/ai/services/agent-checkpoints-service", () => ({
+  currentTurnMessageId: () => mocks.currentTurn,
+  recordCheckpointAgentWrite: mocks.recordCheckpointAgentWrite,
 }));
 
 vi.mock("@/features/editor/stores/buffer.store", () => ({
@@ -94,14 +101,27 @@ describe("agent edits service", () => {
       mocks.markPendingSave,
       mocks.showToast,
       mocks.showConfirmDialog,
+      mocks.recordCheckpointAgentWrite,
     ]) {
       mock.mockReset();
     }
+    mocks.currentTurn = null;
     useAgentEditsStore.setState({ byChat: {}, reviewChatId: null });
   });
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  it("records each write in the checkpoint of the turn it belongs to", () => {
+    mocks.currentTurn = "user-1";
+    agentWrites("a", "b");
+    expect(mocks.recordCheckpointAgentWrite).toHaveBeenCalledWith(
+      CHAT,
+      "user-1",
+      expect.objectContaining({ path: PATH, previousContent: "a", content: "b" }),
+    );
+    expect(entry()?.turnId).toBe("user-1");
   });
 
   it("keeps a hunk without touching the file", async () => {
