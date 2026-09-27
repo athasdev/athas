@@ -70,9 +70,26 @@ describe("file-backed Monaco text model resolver", () => {
 
     first.dispose();
     first.dispose();
+    await Promise.resolve();
     expect(created[0].isDisposed()).toBe(false);
     second.dispose();
+    expect(created[0].isDisposed()).toBe(true);
+  });
+
+  it("counts a holder that asks after the model finished loading", async () => {
+    const { resolve, created } = setup();
+
+    const first = await resolve(uri("file:///project/b.ts"));
+    // Monaco now finds the loaded model by its URI; it must still be counted.
+    const second = await resolve(uri("file:///project/b.ts"));
+    const third = await resolve(uri("file:///project/b.ts"));
+
+    first.dispose();
+    second.dispose();
     await Promise.resolve();
+    expect(created[0].isDisposed()).toBe(false);
+    expect(third.object.textEditorModel).toBe(created[0]);
+    third.dispose();
     expect(created[0].isDisposed()).toBe(true);
   });
 

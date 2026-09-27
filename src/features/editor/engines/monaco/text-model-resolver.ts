@@ -23,6 +23,8 @@ interface FileBackedModelResolverDeps {
 
 interface TransientModel {
   model: Promise<Monaco.editor.ITextModel>;
+  /** The loaded model, so the last release disposes it before anyone else can pick it up. */
+  resolved?: Monaco.editor.ITextModel;
   references: number;
 }
 
@@ -61,33 +63,35 @@ export function createFileBackedModelResolver(deps: FileBackedModelResolverDeps)
     entry.references -= 1;
     if (entry.references > 0 || transientModels.get(key) !== entry) return;
     transientModels.delete(key);
-    void entry.model.then(
-      (model) => {
-        if (!model.isDisposed()) model.dispose();
-      },
-      () => undefined,
-    );
+    if (entry.resolved && !entry.resolved.isDisposed()) entry.resolved.dispose();
   };
 
   return async function createModelReference(resource: Monaco.Uri): Promise<TextModelReference> {
-    const existing = deps.getModel(resource);
-    if (existing) return reference(existing);
-
-    const filePath = deps.filePathFromUri(resource);
-    if (!filePath) throw new Error("Model not found");
-
-    const openModel = findOpenModel(filePath);
-    if (openModel) return reference(openModel);
-
     const key = resource.toString();
+    // A model this resolver loaded is shared by counting, never handed out uncounted.
     let entry = transientModels.get(key);
     if (!entry) {
+      const existing = deps.getModel(resource);
+      if (existing) return reference(existing);
+
+      const filePath = deps.filePathFromUri(resource);
+      if (!filePath) throw new Error("Model not found");
+
+      const openModel = findOpenModel(filePath);
+      if (openModel) return reference(openModel);
+
       const pending: TransientModel = {
         references: 0,
         model: deps
           .readFile(filePath)
           .then((content) => deps.getModel(resource) ?? deps.createModel(content, resource)),
       };
+      void pending.model.then(
+        (model) => {
+          pending.resolved = model;
+        },
+        () => undefined,
+      );
       pending.model.catch(() => {
         if (transientModels.get(key) === pending) transientModels.delete(key);
       });
