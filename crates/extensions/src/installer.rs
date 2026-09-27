@@ -48,7 +48,7 @@ pub fn validate_extension_id(extension_id: &str) -> Result<()> {
 }
 
 fn require_download_checksum(extension_id: &str, download_info: &DownloadInfo) -> Result<()> {
-   if download_info.checksum.is_empty() {
+   if download_info.checksum.is_empty() && !is_local_dev_download_url(&download_info.url) {
       anyhow::bail!(
          "Refusing to install integration {} without a checksum",
          extension_id
@@ -57,12 +57,15 @@ fn require_download_checksum(extension_id: &str, download_info: &DownloadInfo) -
    Ok(())
 }
 
+/// Debug builds may install from a local marketplace server, whose packages
+/// are rebuilt too often to carry checksums.
+fn is_local_dev_download_url(url: &str) -> bool {
+   cfg!(debug_assertions)
+      && (url.starts_with("http://localhost:") || url.starts_with("http://127.0.0.1:"))
+}
+
 fn require_https_download_url(url: &str) -> Result<()> {
-   if url.starts_with("https://") {
-      return Ok(());
-   }
-   #[cfg(debug_assertions)]
-   if url.starts_with("http://localhost:") || url.starts_with("http://127.0.0.1:") {
+   if url.starts_with("https://") || is_local_dev_download_url(url) {
       return Ok(());
    }
    anyhow::bail!("Integration download URL must use HTTPS");
@@ -223,22 +226,24 @@ impl ExtensionInstaller {
       );
 
       if download_info.checksum.is_empty() {
-         anyhow::bail!(
-            "Refusing to install integration {} without a checksum",
+         // Only reachable for local development downloads; see
+         // `require_download_checksum`.
+         log::info!(
+            "Checksum verification skipped for local integration {}",
             extension_id
          );
+      } else {
+         let checksum = sha256::digest(bytes.as_slice());
+         if checksum != download_info.checksum {
+            anyhow::bail!(
+               "Checksum mismatch for integration {}: expected {}, got {}",
+               extension_id,
+               download_info.checksum,
+               checksum
+            );
+         }
+         log::info!("Checksum verified for integration {}", extension_id);
       }
-      let checksum = sha256::digest(bytes.as_slice());
-      if checksum != download_info.checksum {
-         anyhow::bail!(
-            "Checksum mismatch for integration {}: expected {}, got {}",
-            extension_id,
-            download_info.checksum,
-            checksum
-         );
-      }
-
-      log::info!("Checksum verified for integration {}", extension_id);
 
       // Stage under an unpredictable, exclusively created name so a local
       // attacker cannot pre-plant a symlink at the staging path.
@@ -497,7 +502,42 @@ impl ExtensionInstaller {
 
 #[cfg(test)]
 mod tests {
-   use super::validate_extension_id;
+   use super::{
+      DownloadInfo, require_download_checksum, require_https_download_url, validate_extension_id,
+   };
+
+   fn download(url: &str, checksum: &str) -> DownloadInfo {
+      DownloadInfo {
+         url: url.to_string(),
+         checksum: checksum.to_string(),
+         size: 0,
+      }
+   }
+
+   #[test]
+   fn requires_checksums_for_remote_downloads() {
+      let remote = download("https://athas.dev/ext.tar.gz", "");
+      assert!(require_download_checksum("theme", &remote).is_err());
+      let remote = download("https://athas.dev/ext.tar.gz", "abc");
+      assert!(require_download_checksum("theme", &remote).is_ok());
+   }
+
+   #[test]
+   fn allows_local_development_downloads_without_checksums() {
+      let local = download("http://localhost:14321/ext.tar.gz", "");
+      assert_eq!(
+         require_download_checksum("theme", &local).is_ok(),
+         cfg!(debug_assertions)
+      );
+      assert!(require_download_checksum("theme", &download("http://athas.dev/x", "")).is_err());
+   }
+
+   #[test]
+   fn requires_https_outside_local_development() {
+      assert!(require_https_download_url("https://athas.dev/ext.tar.gz").is_ok());
+      assert!(require_https_download_url("http://athas.dev/ext.tar.gz").is_err());
+      assert!(require_https_download_url("file:///tmp/ext.tar.gz").is_err());
+   }
 
    #[test]
    fn validate_extension_id_accepts_safe_values() {
