@@ -56,7 +56,6 @@ function createHost(chatId: string): AgentTurnHost & { finishRun: ReturnType<typ
     surfaceChatId: chatId,
     isBoundToChat: true,
     fallbackProviderId: "athas",
-    mode: "chat",
     outputStyle: "default",
     allProjectFiles: [],
     selectedFilesPaths: new Set(),
@@ -123,6 +122,29 @@ describe("agent turn runner", () => {
     expect(host.finishRun).toHaveBeenCalledWith(chatId, expect.any(String), "completed");
     expect(mocks.scheduleSubscriptionRefresh).toHaveBeenCalledOnce();
     expect(host.onFirstExchange).toHaveBeenCalledWith(chatId, "Say hello");
+  });
+
+  it("runs a turn in the mode of its own chat, not the one the user switched to last", async () => {
+    const planned = hostedChat();
+    const other = hostedChat();
+    const { setMode } = useAIChatStore.getState().actions;
+    setMode("plan", planned);
+    // The user moves to another chat and switches it to Agent while the plan turn waits.
+    setMode("chat", other);
+    mocks.stream.mockImplementation(async (...args: StreamArgs) => {
+      args[6]({ outcome: "completed" } as never);
+    });
+
+    await runAgentTurn({ content: "Plan the refactor", targetChatId: planned }, createHost(other));
+    await runAgentTurn({ content: "Refactor it", targetChatId: other }, createHost(other));
+
+    expect(mocks.stream.mock.calls.map((args) => args[15])).toEqual(["plan", "chat"]);
+    // A chat that never picked a mode kept the default it had.
+    const untouched = hostedChat();
+    expect(useAIChatStore.getState().mode).toBe("chat");
+    setMode("ask", other);
+    expect(useAIChatStore.getState().modeByChat[untouched]).toBe("chat");
+    expect(useAIChatStore.getState().mode).toBe("ask");
   });
 
   it("stores a structured error beside the legacy block and refreshes credits after a 402", async () => {

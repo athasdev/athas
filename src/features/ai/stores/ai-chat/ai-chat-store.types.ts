@@ -56,7 +56,10 @@ export interface AIChatState {
   agentRuns: Record<string, AgentRunState>;
   agentMessageQueues: Record<string, QueuedAgentMessage[]>;
   chatMessageLoadStates: Record<string, ChatMessageLoadState>;
+  /** The mode new chats start in: the one the user picked last. */
   mode: ChatMode;
+  /** Each chat's own mode, so a queued message runs in the mode of the chat it was sent to. */
+  modeByChat: Record<string, ChatMode>;
   outputStyle: OutputStyle;
   hasApiKey: boolean;
   providerApiKeys: Map<string, boolean>;
@@ -76,7 +79,8 @@ export interface AIChatActions {
     agentId: AgentType,
     options?: { activate?: boolean; model?: ApiModelSelection },
   ) => string | null;
-  setMode: (mode: ChatMode) => void;
+  /** Sets `chatId`'s mode, and the mode new chats start in; without a chat only the latter. */
+  setMode: (mode: ChatMode, chatId?: string | null) => void;
   setPendingAgentLaunchRequest: (request: PendingAgentLaunchRequest | null) => void;
   startAgentRun: (chatId: string, run: AgentRunState) => void;
   updateAgentRun: (chatId: string, runId: string, updates: Partial<AgentRunState>) => void;

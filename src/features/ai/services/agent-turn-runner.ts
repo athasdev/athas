@@ -37,6 +37,7 @@ import {
   updateToolCall,
 } from "@/features/ai/lib/tool-call-state";
 import { CODEX_INTEGRATION_ID } from "@/features/ai/integrations/integration-registry";
+import { selectChatMode } from "@/features/ai/lib/composer-modes";
 import { followAgentLocations, followAgentTo } from "@/features/ai/services/agent-follow-service";
 import { recordAgentFileWrite } from "@/features/ai/services/agent-edits-service";
 import {
@@ -52,7 +53,6 @@ import { agentIsDetached } from "@/features/ai/detached/agent-window.store";
 import type { AcpEvent } from "@/features/ai/types/acp.types";
 import type { AgentCompletionResult } from "@/features/ai/types/agent-completion.types";
 import type {
-  ChatMode,
   ImageContent,
   Message,
   MessageUsage,
@@ -83,7 +83,6 @@ export interface AgentTurnHost {
   /** Whether the surface is bound to one chat (a tab) instead of following the current chat. */
   isBoundToChat: boolean;
   fallbackProviderId: string;
-  mode: ChatMode;
   outputStyle: OutputStyle;
   allProjectFiles: FileEntry[];
   selectedFilesPaths: Set<string>;
@@ -788,7 +787,8 @@ export async function runAgentTurn(request: AgentTurnRequest, host: AgentTurnHos
       stream.onToolComplete,
       stream.onPermissionRequest,
       stream.onAcpEvent,
-      host.mode,
+      // The mode of the chat the turn runs in, which a queued turn keeps after the user moved on.
+      selectChatMode(useAIChatStore.getState(), turn.chatId),
       host.outputStyle,
       stream.onImageChunk,
       stream.onResourceChunk,

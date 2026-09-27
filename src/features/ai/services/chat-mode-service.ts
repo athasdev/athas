@@ -8,6 +8,7 @@ import {
   getChatModeSource,
   getNextModeOption,
   isBuiltInChatMode,
+  selectChatMode,
 } from "@/features/ai/lib/composer-modes";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type {
@@ -24,8 +25,9 @@ export function readChatModeSource(chatId: string | null, agentId?: string): Cha
     state.chats.find((chat) => chat.id === chatId)?.agentId ??
     state.actions.getCurrentAgentId();
   return getChatModeSource({
+    chatId,
     agentId: resolvedAgentId,
-    builtInMode: state.mode,
+    builtInMode: selectChatMode(state, chatId),
     codexMode: getCodexSettings().collaborationMode,
     acpSession: selectChatAcpSession(state, chatId),
     acpSessionId: selectChatAcpSessionId(state, chatId),
@@ -38,7 +40,7 @@ export function applyChatMode(source: ChatModeSource, modeId: string): boolean {
   switch (source.kind) {
     case "built-in":
       if (!isBuiltInChatMode(modeId)) return false;
-      actions.setMode(modeId);
+      actions.setMode(modeId, source.chatId);
       return true;
     case "codex":
       saveCodexSettings({ ...getCodexSettings(), collaborationMode: modeId });

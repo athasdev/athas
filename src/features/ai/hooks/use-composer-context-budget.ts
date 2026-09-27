@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { getComposerContextBudget } from "@/features/ai/lib/composer-context-budget";
+import { selectChatMode } from "@/features/ai/lib/composer-modes";
 import { loadContextProjectRules } from "@/features/ai/lib/project-rules";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { getProviderById } from "@/features/ai/types/providers.types";
@@ -32,7 +33,7 @@ export function useComposerContextBudget({
   selectedFilesPaths: Set<string>;
   editorContexts: EditorSelectionContext[];
 }): ContextBudget | null {
-  const mode = useAIChatStore((state) => state.mode);
+  const mode = useAIChatStore((state) => selectChatMode(state, chatId));
   const messages = useAIChatStore(
     (state) => state.chats.find((chat) => chat.id === chatId)?.messages ?? EMPTY_MESSAGES,
   );

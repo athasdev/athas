@@ -390,7 +390,6 @@ const AIChat = memo(function AIChat({
         surfaceChatId: effectiveChatId,
         isBoundToChat: Boolean(chatId),
         fallbackProviderId: aiProviderId,
-        mode: chatState.mode,
         outputStyle: chatState.outputStyle,
         allProjectFiles,
         selectedFilesPaths,

@@ -59,6 +59,14 @@ function fromAgentModes(modes: { id: string; name: string }[]): ComposerModeOpti
   }));
 }
 
+/** The built-in agent's mode in `chatId`: its own, or the default for chats that never set one. */
+export function selectChatMode(
+  state: { mode: ChatMode; modeByChat: Record<string, ChatMode> },
+  chatId: string | null | undefined,
+): ChatMode {
+  return (chatId ? state.modeByChat[chatId] : undefined) ?? state.mode;
+}
+
 export function isBuiltInChatMode(value: string): value is ChatMode {
   return BUILT_IN_MODES.some((mode) => mode.id === value);
 }
@@ -68,12 +76,14 @@ export function isBuiltInChatMode(value: string): value is ChatMode {
  * settings, and ACP agents in either their session modes or a "mode" config option.
  */
 export function getChatModeSource({
+  chatId,
   agentId,
   builtInMode,
   codexMode,
   acpSession,
   acpSessionId,
 }: {
+  chatId?: string | null;
   agentId: string;
   builtInMode: ChatMode;
   codexMode?: string | null;
@@ -81,7 +91,12 @@ export function getChatModeSource({
   acpSessionId: string | null;
 }): ChatModeSource {
   if (agentId === "custom") {
-    return { kind: "built-in", options: BUILT_IN_MODES, currentId: builtInMode };
+    return {
+      kind: "built-in",
+      options: BUILT_IN_MODES,
+      currentId: builtInMode,
+      chatId: chatId ?? null,
+    };
   }
   if (agentId === CODEX_INTEGRATION_ID) {
     return { kind: "codex", options: CODEX_MODES, currentId: codexMode || "default" };

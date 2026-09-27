@@ -142,6 +142,7 @@ async function loadChatMessages(set: SetAIChatStore, chatId: string) {
           state.currentChatId = null;
         }
         delete state.chatMessageLoadStates[chatId];
+        delete state.modeByChat[chatId];
       });
       return;
     }
@@ -306,8 +307,16 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
       }
       return nextChatId;
     },
-    setMode: (mode) =>
+    setMode: (mode, chatId) =>
       set((state) => {
+        if (chatId) {
+          // Chats still on the default keep the mode they had; only this chat changes.
+          for (const chat of state.chats) {
+            if (chat.id !== chatId && !state.modeByChat[chat.id])
+              state.modeByChat[chat.id] = state.mode;
+          }
+          state.modeByChat[chatId] = mode;
+        }
         state.mode = mode;
       }),
     setPendingAgentLaunchRequest: (request) =>
