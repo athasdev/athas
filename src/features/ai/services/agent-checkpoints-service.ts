@@ -95,6 +95,16 @@ function setCheckpoints(chatId: string, state: ChatCheckpoints) {
   schedulePersist(chatId);
 }
 
+/**
+ * Drops a deleted chat's checkpoints from memory. The database removes its saved row with the
+ * chat, so a save still waiting to run must not write it back.
+ */
+export function forgetChatCheckpoints(chatId: string) {
+  clearTimeout(persistTimers.get(chatId));
+  persistTimers.delete(chatId);
+  useAgentCheckpointsStore.getState().actions.forgetChat(chatId);
+}
+
 /** Loads the chat's saved checkpoints once, before anything reads or adds to them. */
 export function ensureCheckpointsLoaded(chatId: string): Promise<void> {
   if (useAgentCheckpointsStore.getState().byChat[chatId]) return Promise.resolve();

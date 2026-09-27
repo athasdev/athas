@@ -512,6 +512,9 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
       void deleteChatFromDb(chatId).catch((error) =>
         console.error("Failed to delete chat from database:", error),
       );
+      void import("@/features/ai/services/agent-checkpoints-service")
+        .then(({ forgetChatCheckpoints }) => forgetChatCheckpoints(chatId))
+        .catch(() => undefined);
       // Nobody can answer the chat's permission prompts any more.
       void import("@/features/ai/stores/agent-permissions.store")
         .then(({ useAgentPermissionsStore }) =>

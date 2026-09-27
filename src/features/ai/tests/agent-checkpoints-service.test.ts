@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import {
   currentTurnMessageId,
+  forgetChatCheckpoints,
   listCheckpoints,
   recordCheckpointAgentWrite,
   restoreCheckpoint,
@@ -198,5 +199,14 @@ describe("agent checkpoints service", () => {
     expect(await restoreCheckpoint(CHAT, "u1")).toMatchObject({ status: "restored" });
     expect(mocks.disk.get("/a")).toBe("a0");
     expect(await restoreCheckpoint(CHAT, "u1")).toEqual({ status: "nothing-to-restore" });
+  });
+
+  it("does not save a deleted chat's checkpoints back", async () => {
+    mocks.disk.set("/a", "a0");
+    await agentWrites("u1", "/a", "a1");
+    forgetChatCheckpoints(CHAT);
+    await vi.runAllTimersAsync();
+    expect(mocks.saved.has(CHAT)).toBe(false);
+    expect(useAgentCheckpointsStore.getState().byChat[CHAT]).toBeUndefined();
   });
 });
