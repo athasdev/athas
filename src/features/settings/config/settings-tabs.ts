@@ -6,12 +6,16 @@ import {
   GitBranchIcon,
   type Icon,
   KeyboardIcon,
+  KeyIcon,
   PaintBrushIcon,
+  PlugsConnectedIcon,
   SettingsIcon,
   ShieldCheckIcon,
   SitemapIcon,
   SparkleIcon,
   TerminalWindowIcon,
+  TextIndentIcon,
+  ChatBubbleTextIcon,
   UserCircleIcon,
   UsersIcon,
 } from "@/ui/icons";
@@ -20,6 +24,8 @@ import type { SettingsSection } from "@/features/settings/types/settings.types";
 export interface SettingsTabItem {
   id: SettingsSection;
   label: string;
+  /** A shorter name for the settings sidebar, where the page's group already names it. */
+  navigationLabel?: string;
   description: string;
   icon: Icon;
 }
@@ -87,9 +93,34 @@ export const SETTINGS_TAB_ITEMS: SettingsTabItem[] = [
   },
   {
     id: "ai",
-    description: "Agent models, tools, and preferences.",
-    label: "Agent",
+    description: "Your Athas plan and the model AI features use by default.",
+    label: "AI",
+    navigationLabel: "Overview",
     icon: SparkleIcon,
+  },
+  {
+    id: "ai-models",
+    description: "Your own API keys, Ollama, and OpenAI-compatible servers.",
+    label: "Models & keys",
+    icon: KeyIcon,
+  },
+  {
+    id: "ai-completion",
+    description: "Code suggestions as you type, accepted with Tab.",
+    label: "Tab completion",
+    icon: TextIndentIcon,
+  },
+  {
+    id: "ai-agents",
+    description: "Coding agents, what they may run on their own, and chat history.",
+    label: "Agents",
+    icon: ChatBubbleTextIcon,
+  },
+  {
+    id: "ai-mcp",
+    description: "Tools and context that MCP servers give agents.",
+    label: "MCP servers",
+    icon: PlugsConnectedIcon,
   },
   {
     id: "collaboration",

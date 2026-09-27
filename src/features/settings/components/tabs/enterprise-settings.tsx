@@ -70,7 +70,7 @@ export const EnterpriseSettings = () => {
       <SettingsView>
         <Section title="Enterprise Controls" description="Access restricted">
           <EmptyState
-            className="py-6"
+            variant="section"
             message="Enterprise policy controls are available only for enterprise workspaces"
           />
         </Section>
@@ -83,7 +83,7 @@ export const EnterpriseSettings = () => {
       <SettingsView>
         <Section title="Enterprise Controls" description="Policy unavailable">
           <EmptyState
-            className="py-6"
+            variant="section"
             message="Enterprise policy could not be loaded. Try re-authenticating."
           />
         </Section>

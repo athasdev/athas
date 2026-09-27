@@ -34,7 +34,11 @@ import { isTerminalAgent } from "../lib/terminal-agents";
 import { loadContextProjectRules } from "../lib/project-rules";
 import {
   compactConversationHistory,
+  currentImageCount,
   fitMessagesToProviderLimits,
+  getProviderRequestLimits,
+  imagesOmittedNotice,
+  providerAcceptsImages,
 } from "../lib/conversation-history";
 import { setCustomProviderBaseUrl } from "./providers/ai-provider-registry";
 import { CODEX_INTEGRATION_ID } from "../integrations/integration-registry";
@@ -201,7 +205,18 @@ export const getChatCompletionStream = async (
       content: userMessage,
       ...(context.images?.length ? { images: context.images } : {}),
     });
-    const messages = fitMessagesToProviderLimits(draftMessages, providerId);
+    const acceptsImages = providerAcceptsImages(providerId, model);
+    const messages = fitMessagesToProviderLimits(
+      draftMessages,
+      providerId,
+      getProviderRequestLimits(providerId),
+      acceptsImages,
+    );
+    const omittedImages = currentImageCount(draftMessages) - currentImageCount(messages);
+    const notices =
+      omittedImages > 0
+        ? [imagesOmittedNotice({ omitted: omittedImages, acceptsImages, modelName: model.name })]
+        : [];
 
     if (
       [
@@ -228,6 +243,11 @@ export const getChatCompletionStream = async (
         root: context.projectRoot,
         readOnly: mode !== "chat",
         maxSteps: settings.aiAgentMaxSteps,
+        notices,
+        // Other providers keep the agent's own default output budget.
+        ...(providerId === "athas"
+          ? { maxOutputTokens: resolveChatCompletionTokenLimit(model.maxOutputTokens, "athas") }
+          : {}),
         onChunk,
         onToolUse,
         onToolComplete,
@@ -238,6 +258,8 @@ export const getChatCompletionStream = async (
       return;
     }
 
+    for (const notice of notices) onChunk(`_${notice}_\n\n`);
+
     // Use provider abstraction
     const providerImpl = getProvider(providerId);
     if (!providerImpl) {
@@ -247,7 +269,10 @@ export const getChatCompletionStream = async (
     const streamRequest = {
       modelId,
       messages,
-      maxTokens: resolveChatCompletionTokenLimit(model.maxOutputTokens ?? model.maxTokens),
+      maxTokens: resolveChatCompletionTokenLimit(
+        model.maxOutputTokens ?? model.maxTokens,
+        providerId,
+      ),
       temperature: 0.7,
       apiKey: apiKey || undefined,
     };

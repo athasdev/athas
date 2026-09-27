@@ -133,7 +133,13 @@ export function ChatErrorBlock({
           <span className="text-destructive">{error.message}</span>
         ) : null}
         {actions.includes("provider_settings") ? (
-          <ApiErrorActions code={code} providerId={providerId} onRetry={canRetry} />
+          <ApiErrorActions
+            code={code}
+            serverCode={error.code}
+            billingUrl={error.billingUrl}
+            providerId={providerId}
+            onRetry={canRetry}
+          />
         ) : canRetry ? (
           <span>
             <Button type="button" variant="default" onClick={() => void canRetry()}>

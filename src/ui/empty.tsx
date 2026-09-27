@@ -12,6 +12,8 @@ const emptyVariants = cva("group/empty flex min-h-0 w-full min-w-0 flex-col gap-
       region: "flex-1 items-center justify-center p-3 text-center",
       /** A compact left-aligned row, for an empty state inside a list or menu. */
       inline: "flex-none items-start p-2 text-left",
+      /** Stands in for the rows of a card, such as a settings section with nothing in it yet. */
+      section: "flex-none items-center justify-center px-3 py-6 text-center",
     },
   },
   defaultVariants: {

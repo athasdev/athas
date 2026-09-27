@@ -1,4 +1,5 @@
 import { cancelIntelligenceAgent } from "@/features/ai/intelligence/services/intelligence-agent-session";
+import { getLocalChatConnection } from "@/features/ai/lib/local-ai-connection";
 import { getProviderAccessFromMap } from "@/features/ai/stores/ai-chat/provider-actions";
 import { isTerminalAgent } from "@/features/ai/lib/terminal-agents";
 import { openTerminalAgent } from "@/features/ai/lib/terminal-agent-terminal";
@@ -243,9 +244,16 @@ const AIChat = memo(function AIChat({
       const fallbackTitle = getFallbackAgentSessionTitle(userMessage);
       chatActions.updateChatTitle(chatId, fallbackTitle);
 
+      // A chat on a local model titles itself with that model, so its text stays on the machine.
+      const localConnection = getLocalChatConnection(
+        useAIChatStore.getState().actions.getChatById(chatId),
+        useSettingsStore.getState().settings,
+      );
       try {
         const { editedText } = await requestInlineEdit({
-          model: "",
+          ...(localConnection
+            ? { provider: localConnection.providerId, model: localConnection.modelId }
+            : { model: "" }),
           feature: "chat-title",
           beforeSelection: "",
           selectedText: userMessage,

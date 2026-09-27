@@ -1,18 +1,24 @@
-import { getServiceUrls } from "@/config/services";
 import { useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { toast } from "sonner";
 import { ProviderApiKeyCommand } from "../provider-api-key-command";
+import { HOSTED_BILLING_CODES, resolveBillingUrl } from "@/features/ai/lib/api-error";
+import { openNewAgentChat } from "@/features/ai/lib/open-new-agent-chat";
 import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { Button } from "@/ui/button";
 
 export function ApiErrorActions({
   code,
+  serverCode,
+  billingUrl,
   providerId,
   onRetry,
 }: {
   code: string;
+  /** The server's own reason, such as `insufficient_balance`, when it sent one. */
+  serverCode?: string;
+  billingUrl?: string;
   providerId: string;
   onRetry?: () => void | Promise<void>;
 }) {
@@ -21,7 +27,8 @@ export function ApiErrorActions({
   const { signIn, isSigningIn, reopen, cancel } = useDesktopSignIn();
   const hosted = providerId === "athas";
   const authentication = code === "401";
-  const payment = code === "402";
+  const tooLarge = serverCode === "request_too_large" || code === "413";
+  const payment = !tooLarge && (code === "402" || HOSTED_BILLING_CODES.has(serverCode ?? ""));
   const configure = authentication || code === "403" || payment;
   const run = async (action: () => void | Promise<void>) => {
     setBusy(true);
@@ -35,7 +42,11 @@ export function ApiErrorActions({
   };
   const openSettings = () => useUIState.getState().openSettings("ai");
   const recover = () => {
-    if (hosted && payment) return openUrl(getServiceUrls().dashboardBillingUrl);
+    if (tooLarge) {
+      openNewAgentChat();
+      return;
+    }
+    if (hosted && payment) return openUrl(resolveBillingUrl(billingUrl));
     if (hosted && authentication) return signIn();
     if (configure && !hosted) {
       setKeyManagerOpen(true);
@@ -45,9 +56,12 @@ export function ApiErrorActions({
     if (onRetry) return onRetry();
     openSettings();
   };
-  const label =
-    hosted && payment
-      ? "Manage billing"
+  const label = tooLarge
+    ? "Start new chat"
+    : hosted && payment
+      ? serverCode === "allowance_exhausted" || serverCode === "insufficient_balance"
+        ? "Add credit"
+        : "Manage billing"
       : hosted && authentication
         ? "Sign in to Athas"
         : configure && !hosted

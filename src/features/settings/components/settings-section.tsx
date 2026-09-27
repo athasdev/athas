@@ -56,7 +56,7 @@ export default function Section({ title, description, children, className }: Sec
           <p className="mt-0.5 text-subtle-foreground ui-text-sm">{description}</p>
         ) : null}
       </div>
-      <Card className="gap-0 divide-y divide-border py-0">{children}</Card>
+      <Card layout="list">{children}</Card>
     </section>
   );
 }

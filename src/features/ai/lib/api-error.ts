@@ -1,4 +1,6 @@
+import { getServiceUrls } from "@/config/services";
 import type { ChatMessageError } from "@/features/ai/types/chat-error.types";
+import { getApiBase } from "@/utils/api-base";
 
 /** A provider failure as it reached the client: an HTTP status, a server code and a raw body. */
 export interface ApiErrorInput {
@@ -10,13 +12,19 @@ export interface ApiErrorInput {
 
 export interface ParsedApiError extends ApiErrorInput {
   message: string;
+  /** The billing page a hosted 402 points to, as the server sent it. */
+  billingUrl?: string;
+  /** The spendable pay-as-you-go balance a hosted 402 reports, in USD cents. */
+  walletBalanceCents?: number;
 }
 
 /** The HTTP status each server error code stands for, so recovery actions can match on either. */
 const SERVER_CODE_STATUS: Record<string, number> = {
   allowance_exhausted: 402,
   insufficient_balance: 402,
+  spending_limit_reached: 402,
   payment_required: 402,
+  request_too_large: 413,
   entitlement_required: 402,
   provider_rejected: 502,
   timeout: 408,
@@ -54,8 +62,50 @@ function readJson(body: string | undefined): Record<string, unknown> | null {
   }
 }
 
+/** Server codes for a hosted request refused over billing, which the billing page resolves. */
+export const HOSTED_BILLING_CODES = new Set([
+  "allowance_exhausted",
+  "insufficient_balance",
+  "spending_limit_reached",
+  "entitlement_required",
+  "payment_required",
+]);
+
+/** Whether a failure means the request would not fit in one request, whatever the status. */
+export function isRequestTooLarge(error: Pick<ChatMessageError, "code" | "status">): boolean {
+  return error.code === "request_too_large" || error.status === 413;
+}
+
+/**
+ * The web billing page to open for a hosted billing failure. A `billingUrl` from the server is
+ * resolved against the API base and used only when it stays on the API or website origin.
+ */
+export function resolveBillingUrl(billingUrl?: string): string {
+  const services = getServiceUrls();
+  if (!billingUrl) return services.dashboardBillingUrl;
+  try {
+    const url = new URL(billingUrl, getApiBase());
+    const trusted = [getApiBase(), services.websiteBaseUrl].flatMap((base) => {
+      try {
+        return base ? [new URL(base).origin] : [];
+      } catch {
+        return [];
+      }
+    });
+    if (/^https?:$/.test(url.protocol) && trusted.includes(url.origin)) return url.toString();
+  } catch {
+    // Not a URL; the configured billing page is used instead.
+  }
+  return services.dashboardBillingUrl;
+}
+
 /** The server's error code and message from a JSON body such as `{ error: { code, message } }`. */
-export function readErrorBody(body: string | undefined): { code?: string; message?: string } {
+export function readErrorBody(body: string | undefined): {
+  code?: string;
+  message?: string;
+  billingUrl?: string;
+  walletBalanceCents?: number;
+} {
   const json = readJson(body);
   if (!json) return {};
   const nested =
@@ -66,7 +116,18 @@ export function readErrorBody(body: string | undefined): { code?: string; messag
   const message = [nested?.message, json.error, json.message].find(
     (value): value is string => typeof value === "string" && value.length > 0,
   );
-  return { code, message };
+  const billingUrl = [json.billingUrl, nested?.billingUrl].find(
+    (value): value is string => typeof value === "string" && value.length > 0,
+  );
+  const walletBalanceCents = [json.walletBalanceCents, nested?.walletBalanceCents].find(
+    (value): value is number => typeof value === "number" && Number.isFinite(value),
+  );
+  return {
+    code,
+    message,
+    ...(billingUrl ? { billingUrl } : {}),
+    ...(walletBalanceCents !== undefined ? { walletBalanceCents } : {}),
+  };
 }
 
 function statusFromText(text: string): number | undefined {
@@ -81,7 +142,18 @@ function statusFromText(text: string): number | undefined {
 }
 
 function codeFromText(text: string): string | undefined {
-  return text.match(/\b(allowance_exhausted|provider_rejected|http_\d{3}|timeout)\b/)?.[1];
+  return text.match(
+    /\b(allowance_exhausted|insufficient_balance|spending_limit_reached|request_too_large|provider_rejected|http_\d{3}|timeout)\b/,
+  )?.[1];
+}
+
+function billingFields(fromBody: ReturnType<typeof readErrorBody>) {
+  return {
+    ...(fromBody.billingUrl ? { billingUrl: fromBody.billingUrl } : {}),
+    ...(fromBody.walletBalanceCents !== undefined
+      ? { walletBalanceCents: fromBody.walletBalanceCents }
+      : {}),
+  };
 }
 
 /**
@@ -100,6 +172,7 @@ export function parseApiError(input: unknown): ParsedApiError {
       code,
       body,
       message: fromBody.message ?? head,
+      ...billingFields(fromBody),
     };
   }
   if (input && typeof input === "object") {
@@ -127,6 +200,7 @@ export function parseApiError(input: unknown): ParsedApiError {
       code,
       body,
       message: fromBody.message ?? (ownMessage || "Request failed"),
+      ...billingFields(fromBody),
     };
   }
   return { message: String(input) };
@@ -149,6 +223,7 @@ export function toChatMessageError(input: unknown, message?: string): ChatMessag
   const error: ChatMessageError = { message: message ?? parsed.message };
   if (parsed.code) error.code = parsed.code;
   if (parsed.status) error.status = parsed.status;
+  if (parsed.billingUrl) error.billingUrl = parsed.billingUrl;
   error.retryable = isRetryableApiError(error);
   return error;
 }

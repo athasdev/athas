@@ -256,7 +256,7 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
       category: "AI",
       action: () => {
         onClose();
-        useUIState.getState().openSettings("ai", "Allowed Commands");
+        useUIState.getState().openSettings("ai-agents", "Allowed Commands");
       },
     },
     {

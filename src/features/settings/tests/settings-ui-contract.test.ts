@@ -5,6 +5,7 @@ import { describe, expect, it } from "vite-plus/test";
 
 const componentsDirectory = fileURLToPath(new URL("../components", import.meta.url));
 const tabsDirectory = fileURLToPath(new URL("../components/tabs", import.meta.url));
+const aiSectionsDirectory = fileURLToPath(new URL("../components/ai", import.meta.url));
 const aiSelectorsDirectory = fileURLToPath(
   new URL("../../ai/components/selectors", import.meta.url),
 );
@@ -16,6 +17,9 @@ const settingsComponentFiles = [
   ...readdirSync(tabsDirectory)
     .filter((name) => name.endsWith(".tsx"))
     .map((name) => `${tabsDirectory}/${name}`),
+  ...readdirSync(aiSectionsDirectory)
+    .filter((name) => name.endsWith(".tsx"))
+    .map((name) => `${aiSectionsDirectory}/${name}`),
 ];
 
 function collectControlProps(filePath: string, tagName: "Button" | "Select") {
@@ -184,13 +188,11 @@ describe("settings UI contract", () => {
     expect(settingsViewSource).toContain('section.scrollIntoView({ block: "start"');
   });
 
-  it("content-sizes AI selector triggers and menus in settings", () => {
-    for (const fileName of ["provider-selector.tsx", "model-selector.tsx"]) {
-      const source = readFileSync(`${aiSelectorsDirectory}/${fileName}`, "utf8");
+  it("content-sizes the settings model picker and takes its menu width from the size scale", () => {
+    const source = readFileSync(`${aiSelectorsDirectory}/model-connection-picker.tsx`, "utf8");
 
-      expect(source, fileName).toContain('isComposer ? "w-fit max-w-');
-      expect(source, fileName).toContain(': "w-fit max-w-full"');
-      expect(source, fileName).toContain('menuWidth="content"');
-    }
+    expect(source).toContain('"inline-flex min-w-0 max-w-full"');
+    expect(source).toContain("truncate");
+    expect(source).toContain('size="wide"');
   });
 });

@@ -40,8 +40,23 @@ function isRereadable(toolName: string) {
 }
 
 const encoder = new TextEncoder();
+
+/** Image parts count toward the provider's separate image limit, not the text size. */
+function withoutImageData(key: string, value: unknown) {
+  if (!value || typeof value !== "object") return value;
+  const part = value as { type?: unknown; mediaType?: unknown };
+  if (part.type === "image") return { type: "image" };
+  if (
+    part.type === "file" &&
+    typeof part.mediaType === "string" &&
+    part.mediaType.startsWith("image")
+  )
+    return { type: "file" };
+  return value;
+}
+
 export function serializedBytes(value: unknown): number {
-  return value === undefined ? 0 : encoder.encode(JSON.stringify(value)).length;
+  return value === undefined ? 0 : encoder.encode(JSON.stringify(value, withoutImageData)).length;
 }
 
 /** Bytes the tool definitions add to every request of the loop. */

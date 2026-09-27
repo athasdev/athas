@@ -21,6 +21,10 @@ const mocks = vi.hoisted(() => ({
   mcpServers: [] as McpServerSetting[],
   mcpCalls: [] as unknown[],
   mcpClosed: 0,
+  ollamaToolSupport: "supported" as "supported" | "unsupported" | "unknown",
+}));
+vi.mock("../intelligence/services/intelligence-ollama-tools", () => ({
+  resolveOllamaToolSupport: async () => mocks.ollamaToolSupport,
 }));
 vi.mock("../intelligence/services/intelligence-mcp", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../intelligence/services/intelligence-mcp")>();
@@ -162,6 +166,7 @@ beforeEach(() => {
   mocks.mcpCalls = [];
   mocks.mcpClosed = 0;
   mocks.turnId = undefined;
+  mocks.ollamaToolSupport = "supported";
   storage.clear();
   vi.stubGlobal("localStorage", {
     getItem: (key: string) => storage.get(key) ?? null,
@@ -511,7 +516,7 @@ describe("Intelligence local agent loop", () => {
     );
     mocks.model = new MockLanguageModelV4({
       doStream: [
-        ...Array.from({ length: 12 }, (_, index) => step("read_file", { path: `f${index}.ts` })),
+        ...Array.from({ length: 24 }, (_, index) => step("read_file", { path: `f${index}.ts` })),
         step(),
       ],
     });
@@ -520,9 +525,9 @@ describe("Intelligence local agent loop", () => {
     const sizes = mocks.model.doStreamCalls.map(
       (call) => new TextEncoder().encode(JSON.stringify(call.prompt)).length,
     );
-    expect(sizes).toHaveLength(13);
+    expect(sizes).toHaveLength(25);
     expect(Math.max(...sizes)).toBeLessThanOrEqual(HOSTED_ATHAS_REQUEST_LIMITS.maxBytes);
-    expect(JSON.stringify(mocks.model.doStreamCalls[12].prompt)).toContain(
+    expect(JSON.stringify(mocks.model.doStreamCalls[24].prompt)).toContain(
       "[trimmed: re-read if needed]",
     );
   });
@@ -587,23 +592,81 @@ describe("Intelligence local agent loop", () => {
       ],
     });
   });
-  it("leaves images out for Athas hosted models and says so", async () => {
+  it("sends images to Athas models as image parts and shows the caller's notices", async () => {
     mocks.model = new MockLanguageModelV4({ doStream: [step()] });
     const options = params();
     const result = await runIntelligenceAgent({
       ...options,
       providerId: "athas",
+      notices: ["An image was not sent: it is over the size limit."],
       messages: [
         {
           role: "user",
           content: "What is this?",
-          images: [{ data: "abc", mediaType: "image/png" }],
+          images: [{ data: "YWJj", mediaType: "image/png" }],
         },
       ],
     });
-    expect(result.notices).toEqual([expect.stringContaining("Images were not sent")]);
-    const prompt = JSON.stringify(mocks.model.doStreamCalls[0].prompt);
-    expect(prompt).not.toContain("image/png");
-    expect(options.onChunk).toHaveBeenCalledWith(expect.stringContaining("Images were not sent"));
+    expect(result.notices).toEqual(["An image was not sent: it is over the size limit."]);
+    expect(options.onChunk).toHaveBeenCalledWith(
+      "_An image was not sent: it is over the size limit._\n\n",
+    );
+    const [message] = mocks.model.doStreamCalls[0].prompt;
+    expect(message.role).toBe("user");
+    expect(message.content).toEqual([
+      { type: "text", text: "What is this?" },
+      expect.objectContaining({ type: "file", mediaType: "image/png" }),
+    ]);
+  });
+  it("gives a local Ollama model the file and command tools in Agent mode", async () => {
+    const result = await runIntelligenceAgent({
+      ...params(),
+      providerId: "ollama",
+      modelId: "qwen3-coder",
+    });
+    expect(result).toMatchObject({ outcome: "completed", steps: 3 });
+    const tools = (mocks.model.doStreamCalls[0].tools ?? []).map((entry) => entry.name);
+    expect(tools).toEqual(
+      expect.arrayContaining(["read_file", "edit_file", "write_file", "run_command"]),
+    );
+    expect(called("intelligence_edit_file")).toBe(true);
+  });
+  it("tells the user to pick a tool-capable Ollama model in Agent mode", async () => {
+    mocks.ollamaToolSupport = "unsupported";
+    const failure = await runIntelligenceAgent({
+      ...params(),
+      providerId: "ollama",
+      modelId: "gemma3",
+    }).catch((error: unknown) => error);
+    expect(failure).toBeInstanceOf(Error);
+    expect((failure as Error).message).toContain('"gemma3" does not support tools');
+    expect((failure as Error).message).toContain("qwen3-coder");
+    expect(mocks.model.doStreamCalls).toHaveLength(0);
+  });
+  it("answers without tools in Ask mode when the Ollama model cannot call them", async () => {
+    mocks.ollamaToolSupport = "unsupported";
+    mocks.model = new MockLanguageModelV4({ doStream: [step()] });
+    const result = await runIntelligenceAgent({
+      ...params(),
+      providerId: "ollama",
+      modelId: "gemma3",
+      readOnly: true,
+    });
+    expect(result.notices).toEqual([expect.stringContaining("does not support tools")]);
+    expect(mocks.model.doStreamCalls[0].tools ?? []).toEqual([]);
+  });
+  it("explains an Ollama rejection of tools from a server that does not report capabilities", async () => {
+    mocks.ollamaToolSupport = "unknown";
+    mocks.model = new MockLanguageModelV4({
+      doStream: async () => {
+        throw new Error("registry.ollama.ai/library/gemma3:latest does not support tools");
+      },
+    });
+    const failure = await runIntelligenceAgent({
+      ...params(),
+      providerId: "ollama",
+      modelId: "gemma3",
+    }).catch((error: unknown) => error);
+    expect((failure as Error).message).toContain("Pick a tool-capable model");
   });
 });

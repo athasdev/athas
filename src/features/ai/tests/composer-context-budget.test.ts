@@ -84,9 +84,17 @@ describe("Composer context budget", () => {
 
   it("measures hosted Athas requests against their request size cap", () => {
     expect(resolveComposerContextWindow("athas", undefined)).toEqual({
-      contextWindowTokens: 30_000,
+      contextWindowTokens: 100_000,
+      reservedOutputTokens: 0,
+    });
+    expect(resolveComposerContextWindow("athas", 1_000_000)).toEqual({
+      contextWindowTokens: 100_000,
       reservedOutputTokens: 0,
     });
     expect(resolveComposerContextWindow("ollama", undefined)).toEqual({});
+  });
+
+  it("uses a hosted model's own context window when it is smaller than the request cap", () => {
+    expect(resolveComposerContextWindow("athas", 64_000)).toEqual({ contextWindowTokens: 64_000 });
   });
 });

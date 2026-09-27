@@ -8,7 +8,7 @@ import { Popover, PopoverListContent } from "@/ui/popover";
 import { Spinner } from "@/ui/spinner";
 import type { Range } from "@/features/editor/types/editor.types";
 import type { useInlineEdit } from "./use-inline-edit";
-import { InlineEditModelSelector } from "./inline-edit-model-selector";
+import { ModelConnectionPicker } from "@/features/ai/components/selectors/model-connection-picker";
 
 type InlineEditState = ReturnType<typeof useInlineEdit>;
 
@@ -27,6 +27,8 @@ export function InlineEditPopover({ state, selection }: InlineEditPopoverProps) 
 
   const handleKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     if (event.defaultPrevented) return;
+    // The model menu renders in a portal but its key events still bubble here; it owns them.
+    if (event.target instanceof Element && event.target.closest('[role="menu"]')) return;
     if (isComposingKeyboardEvent(event.nativeEvent)) {
       event.stopPropagation();
       return;
@@ -129,12 +131,15 @@ export function InlineEditPopover({ state, selection }: InlineEditPopoverProps) 
                     : "Edit current line..."
               }
             />
-            <div className="min-w-0 shrink-0">
-              <InlineEditModelSelector
-                providerId={state.aiProviderId}
-                modelId={state.aiModelId}
-                onProviderChange={(providerId) => state.updateSetting("aiProviderId", providerId)}
-                onModelChange={(modelId) => state.updateSetting("aiModelId", modelId)}
+            <div className="min-w-0 max-w-40">
+              <ModelConnectionPicker
+                aria-label="Inline edit model"
+                value={
+                  state.aiProviderId
+                    ? { providerId: state.aiProviderId, modelId: state.aiModelId }
+                    : null
+                }
+                onChange={state.setInlineEditConnection}
                 disabled={running}
               />
             </div>

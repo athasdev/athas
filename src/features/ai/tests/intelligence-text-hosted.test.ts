@@ -100,7 +100,9 @@ describe("Hosted Intelligence text requests", () => {
   });
 
   it("surfaces server errors with their status", async () => {
-    mocks.fetch.mockResolvedValue(jsonResponse({ error: "Athas Intelligence requires Pro." }, 402));
+    mocks.fetch.mockResolvedValue(
+      jsonResponse({ error: "Athas AI needs Pro or pay-as-you-go balance." }, 402),
+    );
     const error = await requestInlineEdit({
       model: "",
       beforeSelection: "",

@@ -74,8 +74,8 @@ export function CodexSettings() {
 
   return (
     <Section
-      title="Codex Integration"
-      description="Native Codex app-server integration. Codex is built into Athas and is not an integration agent."
+      title="Codex"
+      description="OpenAI's coding agent. Uses the Codex CLI and account on this device."
     >
       <SettingRow
         label="Codex CLI"

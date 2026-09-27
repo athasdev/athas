@@ -193,7 +193,10 @@ export interface SubscriptionInfo {
   autocomplete?: {
     usage?: Record<string, unknown> | null;
   } | null;
-  /** This billing period's hosted AI credits, in credit cents. Absent on older servers. */
+  /**
+   * This billing period's included hosted AI credit and the prepaid balance, all in USD cents
+   * billed at list price plus the usage markup. Absent on older servers.
+   */
   intelligence?: {
     credits?: IntelligenceCredits | null;
   } | null;
@@ -207,7 +210,12 @@ export interface IntelligenceCredits {
   pendingCents: number;
   remainingCents: number;
   requestsCount: number;
-  /** Prepaid usage balance that hosted turns draw from after the allowance, when reported. */
+  /** List price multiplier hosted requests are billed at (1.1 = plus 10%), when reported. */
+  usageMarkup?: number | null;
+  /**
+   * Spendable prepaid balance hosted turns draw from after the included credit, with in-flight
+   * holds subtracted. Null when the server has no prepaid balance enabled.
+   */
   walletBalanceCents?: number | null;
 }
 

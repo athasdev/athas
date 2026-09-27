@@ -36,7 +36,7 @@ describe("Athas hosted models", () => {
     const error = await provider()
       .getModels()
       .catch((caught: unknown) => caught);
-    expect(String(error)).toContain("Upgrade or top up");
+    expect(String(error)).toContain("Upgrade or add credit");
     expect(getApiErrorCode(error as Error)).toBe("402");
   });
 
@@ -44,5 +44,18 @@ describe("Athas hosted models", () => {
     state.plan = "pro";
     state.fetch.mockResolvedValue(Response.json({ enabled: false, data: [] }));
     await expect(provider().getModels()).rejects.toThrow("not available on this Athas server");
+  });
+
+  it("asks for the model's own output limit instead of a fixed 4096", () => {
+    const request = {
+      modelId: "anthropic/claude-sonnet-5",
+      messages: [],
+      maxTokens: 32000,
+      temperature: 0.2,
+    } as never;
+    expect(provider().buildPayload(request)).toMatchObject({ max_completion_tokens: 32000 });
+    expect(
+      provider().buildPayload({ ...(request as object), maxTokens: Number.NaN } as never),
+    ).not.toHaveProperty("max_completion_tokens");
   });
 });

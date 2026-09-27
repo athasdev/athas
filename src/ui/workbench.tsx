@@ -66,7 +66,7 @@ export function WorkbenchNavigation<TValue extends string>({
     <div className="flex size-full min-h-0 min-w-0 @max-[680px]/workbench:flex-col">
       <aside
         data-slot="workbench-navigation"
-        className="flex w-56 shrink-0 flex-col gap-4 border-border border-r bg-surface p-3 @max-[680px]/workbench:w-full @max-[680px]/workbench:gap-3 @max-[680px]/workbench:border-r-0 @max-[680px]/workbench:border-b"
+        className="flex w-56 shrink-0 flex-col gap-4 border-border border-r p-3 @max-[680px]/workbench:w-full @max-[680px]/workbench:gap-3 @max-[680px]/workbench:border-r-0 @max-[680px]/workbench:border-b"
       >
         <div className="flex shrink-0 flex-col gap-3">
           <h1 className="px-1.5 font-medium text-foreground ui-text-base">{title}</h1>

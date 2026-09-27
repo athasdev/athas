@@ -3,7 +3,7 @@ import type { ComponentProps } from "react";
 import { cn } from "@/utils/cn";
 
 const cardVariants = cva(
-  "group/card flex flex-col gap-3 overflow-hidden rounded-lg py-3 font-sans ui-text-sm text-foreground",
+  "group/card flex flex-col overflow-hidden rounded-lg font-sans ui-text-sm text-foreground",
   {
     variants: {
       variant: {
@@ -15,6 +15,12 @@ const cardVariants = cva(
         interactive:
           "border border-border bg-surface cursor-default transition-colors duration-fast hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus",
       },
+      layout: {
+        /** Header, content, and footer spaced apart. */
+        stack: "gap-3 py-3",
+        /** Edge-to-edge rows split by hairlines, such as a section of settings. */
+        list: "divide-y divide-border",
+      },
       tone: {
         default: "",
         /** Tinted with the primary colour, for a callout or a plan. */
@@ -23,6 +29,7 @@ const cardVariants = cva(
     },
     defaultVariants: {
       variant: "default",
+      layout: "stack",
       tone: "default",
     },
   },
@@ -31,6 +38,7 @@ const cardVariants = cva(
 function Card({
   className,
   variant = "default",
+  layout = "stack",
   tone = "default",
   ...props
 }: ComponentProps<"div"> & VariantProps<typeof cardVariants>) {
@@ -39,7 +47,7 @@ function Card({
       data-slot="card"
       data-variant={variant}
       data-tone={tone}
-      className={cn(cardVariants({ variant, tone }), className)}
+      className={cn(cardVariants({ variant, layout, tone }), className)}
       {...props}
     />
   );

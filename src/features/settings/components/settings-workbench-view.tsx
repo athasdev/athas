@@ -21,7 +21,13 @@ import {
 
 import { AdvancedSettings } from "./tabs/advanced-settings";
 import { AccountSettings } from "./tabs/account-settings";
-import { AISettings } from "./tabs/ai-settings";
+import {
+  AIAgentsSettings,
+  AIModelsSettings,
+  AIOverviewSettings,
+  McpSettings,
+  TabCompletionSettings,
+} from "./tabs/ai-settings";
 import { AppearanceSettings } from "./tabs/appearance-settings";
 import { CollaborationSettings } from "./tabs/collaboration-settings";
 import { EditorSettings } from "./tabs/editor-settings";
@@ -35,7 +41,8 @@ import { TerminalSettings } from "./tabs/terminal-settings";
 
 const SETTINGS_NAVIGATION_GROUPS: Array<{ id: string; label?: string; tabs: SettingsSection[] }> = [
   { id: "app", tabs: ["general", "appearance", "notifications", "keyboard"] },
-  { id: "code", label: "Code", tabs: ["editor", "file-explorer", "terminal", "git", "ai"] },
+  { id: "code", label: "Code", tabs: ["editor", "file-explorer", "terminal", "git"] },
+  { id: "ai", label: "AI", tabs: ["ai", "ai-models", "ai-completion", "ai-agents", "ai-mcp"] },
   {
     id: "account",
     label: "Account",
@@ -49,7 +56,7 @@ function groupSettingsTabs(tabs: SettingsTabItem[]): WorkbenchNavigationGroup<Se
     const Icon = tab.icon;
     return {
       id: tab.id,
-      label: tab.label,
+      label: tab.navigationLabel ?? tab.label,
       icon: <Icon />,
       tabId: `settings-tab-${tab.id}`,
       panelId: `settings-panel-${tab.id}`,
@@ -194,7 +201,15 @@ const SettingsWorkbenchView = () => {
       case "appearance":
         return <AppearanceSettings />;
       case "ai":
-        return <AISettings />;
+        return <AIOverviewSettings />;
+      case "ai-models":
+        return <AIModelsSettings />;
+      case "ai-completion":
+        return <TabCompletionSettings />;
+      case "ai-agents":
+        return <AIAgentsSettings />;
+      case "ai-mcp":
+        return <McpSettings />;
       case "keyboard":
         return <KeyboardSettings />;
       case "collaboration":

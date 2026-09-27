@@ -202,7 +202,7 @@ export const TerminalSettings = () => {
         </SettingRow>
 
         {profiles.length === 0 ? (
-          <EmptyState className="py-6" message="No custom terminal profiles yet" />
+          <EmptyState variant="section" message="No custom terminal profiles yet" />
         ) : (
           profiles.map((profile) => (
             <SettingBlock key={profile.id} className="space-y-3">

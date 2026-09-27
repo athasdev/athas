@@ -1,4 +1,7 @@
-import { buildContextBudget } from "@/features/ai/lib/context-budget";
+import {
+  buildContextBudget,
+  DEFAULT_RESERVED_OUTPUT_TOKENS,
+} from "@/features/ai/lib/context-budget";
 import {
   buildConversationHistory,
   getProviderRequestLimits,
@@ -20,8 +23,8 @@ const ERROR_RATIO = 0.95;
 const CHARS_PER_TOKEN = 4;
 
 /**
- * The window the meter measures against. Hosted Athas requests are capped by size rather than
- * by the model's window, so their request cap is the limit that matters.
+ * The window the meter measures against. Hosted Athas requests are capped by size, so the request
+ * cap is the limit, unless the model's own context window (from the catalog) is smaller.
  */
 export function resolveComposerContextWindow(
   providerId: string,
@@ -29,10 +32,14 @@ export function resolveComposerContextWindow(
 ): { contextWindowTokens?: number; reservedOutputTokens?: number } {
   const requestLimits = getProviderRequestLimits(providerId);
   if (requestLimits) {
-    return {
-      contextWindowTokens: Math.floor(requestLimits.maxBytes / CHARS_PER_TOKEN),
-      reservedOutputTokens: 0,
-    };
+    const requestCapTokens = Math.floor(requestLimits.maxBytes / CHARS_PER_TOKEN);
+    if (
+      modelContextWindow &&
+      modelContextWindow - DEFAULT_RESERVED_OUTPUT_TOKENS < requestCapTokens
+    ) {
+      return { contextWindowTokens: modelContextWindow };
+    }
+    return { contextWindowTokens: requestCapTokens, reservedOutputTokens: 0 };
   }
   return modelContextWindow ? { contextWindowTokens: modelContextWindow } : {};
 }

@@ -16,18 +16,44 @@ describe("agent turn failures", () => {
     const failure = describeFailure(
       'athas API error: 402|||{"error":{"code":"allowance_exhausted","message":"Used up"}}',
     );
-    expect(failure.title).toBe("Payment required");
+    expect(failure.title).toBe("Included credit used up");
     expect(failure.blockCode).toBe("402");
-    expect(failure.message).toContain("included Athas usage");
+    expect(failure.message).toContain("Add pay-as-you-go credit");
     expect(failure.error).toEqual({
       code: "allowance_exhausted",
       status: 402,
-      title: "Payment required",
+      title: "Included credit used up",
       message: failure.message,
       details: failure.details,
       providerId: "athas",
       retryable: false,
     });
+  });
+
+  it("explains each hosted billing refusal and keeps the server's billing page", () => {
+    const body = (code: string, extra: Record<string, unknown> = {}) =>
+      `athas API error: 402|||${JSON.stringify({ error: "Server text", code, billingUrl: "/dashboard/settings/billing", ...extra })}`;
+    const short = describeFailure(body("allowance_exhausted", { walletBalanceCents: 12.5 }));
+    expect(short.message).toContain("balance ($0.13) doesn't cover this request");
+    expect(short.error.billingUrl).toBe("/dashboard/settings/billing");
+    expect(describeFailure(body("insufficient_balance")).title).toBe("Not enough credit");
+    expect(describeFailure(body("spending_limit_reached"))).toMatchObject({
+      title: "Spending limit reached",
+      error: { code: "spending_limit_reached", status: 402, retryable: false },
+    });
+  });
+
+  it("asks for a new chat when a request is too large, whatever its status", () => {
+    const tooLarge = describeFailure(
+      'athas API error: 413|||{"error":"Too large","code":"request_too_large"}',
+    );
+    expect(tooLarge).toMatchObject({ title: "Conversation too large", blockCode: "413" });
+    expect(tooLarge.message).toContain("Start a new chat");
+    expect(tooLarge.error.retryable).toBe(false);
+    expect(
+      describeFailure('athas API error: 402|||{"error":"Too large","code":"request_too_large"}')
+        .title,
+    ).toBe("Conversation too large");
   });
 
   it("prefers the server's explanation for other failures", () => {

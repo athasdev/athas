@@ -1,18 +1,20 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useState } from "react";
 import { getServiceUrls } from "@/config/services";
-import { getHostedUsageState, type HostedUsageLevel } from "@/features/ai/lib/hosted-usage";
+import {
+  formatResetDate,
+  formatUsdCents,
+  getHostedUsageState,
+  type HostedUsageLevel,
+} from "@/features/ai/lib/hosted-usage";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { useSubscriptionRefresh } from "@/features/window/hooks/use-subscription-refresh";
 import { Alert, AlertDescription, AlertTitle } from "@/ui/alert";
 import { Button } from "@/ui/button";
 
-const creditFormatter = new Intl.NumberFormat(undefined, { style: "currency", currency: "USD" });
-const dateFormatter = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" });
-
 /**
- * Warns above the composer of a hosted chat when this period's included Athas usage is at
- * 80% or used up, with a way to top up or manage billing.
+ * Tells a hosted chat, above the composer, when this period's included Athas credit is at 80%,
+ * when usage has moved on to the pay-as-you-go balance, or when nothing is left.
  */
 export function HostedUsageBanner() {
   useSubscriptionRefresh();
@@ -21,27 +23,36 @@ export function HostedUsageBanner() {
   const usage = getHostedUsageState(credits);
   if (!usage || usage.level === "ok" || usage.level === dismissedLevel) return null;
 
-  const resets = usage.periodEnd ? ` It resets ${dateFormatter.format(usage.periodEnd)}.` : "";
+  const resets = usage.periodEnd
+    ? ` Included credit resets ${formatResetDate(usage.periodEnd)}.`
+    : "";
+  const balance =
+    usage.walletBalanceCents === null ? null : formatUsdCents(usage.walletBalanceCents);
   const content =
     usage.level === "low"
       ? {
           tone: "warning" as const,
-          title: `${usage.usedPercent}% of included usage used`,
-          description: `${creditFormatter.format(usage.remainingCents / 100)} of this period's included Athas usage is left.${resets}`,
+          title: `${usage.usedPercent}% of included credit used`,
+          description: `${formatUsdCents(usage.remainingCents)} of ${formatUsdCents(usage.allowanceCents)} left.${
+            balance ? ` After that, usage continues from your balance (${balance}).` : ""
+          }${resets}`,
           action: "Manage billing",
         }
       : usage.level === "included_exhausted"
         ? {
             tone: "info" as const,
-            title: "Included usage used up",
-            description: `Hosted turns now use your prepaid balance (${creditFormatter.format((usage.walletBalanceCents ?? 0) / 100)} left).${resets}`,
-            action: "Top up",
+            title: "Now using your pay-as-you-go balance",
+            description: `Your included credit is used up. Athas models keep working from your balance (${balance ?? "$0.00"} left) at list price +10%.${resets}`,
+            action: "Add credit",
           }
         : {
             tone: "error" as const,
-            title: "Included usage used up",
-            description: `Top up to keep using hosted models, or choose another model.${resets}`,
-            action: "Top up",
+            title: "Out of Athas credit",
+            description:
+              balance === null
+                ? `Your included credit is used up. Choose another model until it resets.${resets}`
+                : `Add pay-as-you-go credit to keep using Athas models, or choose another model.${resets}`,
+            action: balance === null ? "Manage billing" : "Add credit",
           };
 
   return (

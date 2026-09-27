@@ -754,9 +754,11 @@ export function MonacoEditor({
   useOnClickOutside(inlineEditState.inlineEditPopoverRef as RefObject<HTMLElement>, (event) => {
     if (!inlineEditState.inlineEditVisible) return;
     const target = event.target as HTMLElement | null;
+    // The model menu opens in a portal outside the popover.
     if (
-      target?.closest(".inline-edit-model-selector-menu") ||
-      target?.closest(".inline-edit-model-command")
+      target?.closest(
+        '[data-slot="dropdown-menu-content"], [data-slot="dropdown-menu-sub-content"]',
+      )
     ) {
       return;
     }
