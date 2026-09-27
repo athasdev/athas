@@ -17,6 +17,7 @@ declare global {
     __athasMonacoContextMenuInitialized?: boolean;
     __athasMonacoExternalLinkOpenerInitialized?: boolean;
     __athasMonacoEditorOpenerInitialized?: boolean;
+    __athasMonacoTextModelServiceInitialized?: boolean;
   }
 }
 
@@ -29,6 +30,12 @@ if (typeof window !== "undefined") {
         return athasEditorOpener.openCodeEditor(...args);
       },
     });
+  }
+  if (!window.__athasMonacoTextModelServiceInitialized) {
+    window.__athasMonacoTextModelServiceInitialized = true;
+    void import("./text-model-resolver").then(({ installFileBackedTextModelService }) =>
+      installFileBackedTextModelService(),
+    );
   }
   if (!window.__athasMonacoExternalLinkOpenerInitialized) {
     window.__athasMonacoExternalLinkOpenerInitialized = true;
