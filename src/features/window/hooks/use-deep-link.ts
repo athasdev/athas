@@ -1,4 +1,5 @@
-import { onOpenUrl } from "@tauri-apps/plugin-deep-link";
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { useEffect } from "react";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
 import { toast } from "sonner";
@@ -11,7 +12,9 @@ import {
 } from "../utils/window-open-request";
 
 /**
- * Hook to handle deep link URLs
+ * Hook to handle deep link URLs. The native side queues every link, including
+ * the one that launched the app, so links are drained here instead of relying
+ * on an event that can fire before this window subscribes.
  * Supports:
  *   athas://open?path=...&line=...&type=directory
  *   athas://extension/install/{extensionId}
@@ -19,14 +22,29 @@ import {
  */
 export function useDeepLink() {
   useEffect(() => {
-    const unlisten = onOpenUrl((urls: string[]) => {
-      for (const url of urls) {
-        handleDeepLink(url);
-      }
+    let disposed = false;
+
+    const drainPendingDeepLinks = () => {
+      void invoke<string[]>("take_pending_deep_links")
+        .then((urls) => {
+          if (disposed) return;
+          for (const url of urls) {
+            handleDeepLink(url);
+          }
+        })
+        .catch((error) => {
+          console.error("Failed to load pending deep links:", error);
+        });
+    };
+
+    const unlisten = listen<void>("deep_links_pending", drainPendingDeepLinks);
+    void unlisten.then(() => {
+      if (!disposed) drainPendingDeepLinks();
     });
 
     return () => {
-      unlisten.then((fn: () => void) => fn());
+      disposed = true;
+      unlisten.then((fn) => fn());
     };
   }, []);
 }

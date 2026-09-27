@@ -472,6 +472,7 @@ fn main() {
          get_cli_install_command,
          get_importable_ide_projects,
          take_pending_cli_open_requests,
+         take_pending_deep_links,
          // Runtime commands
          ensure_runtime,
          get_runtime_status,
