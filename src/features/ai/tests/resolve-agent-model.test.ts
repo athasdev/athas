@@ -51,4 +51,13 @@ describe("agent model choices", () => {
         ?.id,
     ).toBe("device-model");
   });
+  it("sends a hosted chat without a stored model to the automatic model", () => {
+    expect(
+      resolveAgentModel({
+        provider: { ...provider, id: "athas", models: [{ id: "auto", name: "Automatic" }] },
+        modelId: "",
+        dynamicModels: [],
+      })?.id,
+    ).toBe("auto");
+  });
 });

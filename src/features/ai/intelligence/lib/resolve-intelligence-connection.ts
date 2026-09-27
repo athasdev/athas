@@ -11,6 +11,8 @@ export function resolveIntelligenceConnection(params: {
   personalConnection: IntelligenceConnection;
 }): IntelligenceConnection {
   const connection = params.preferences.tasks[params.task] ?? params.preferences.defaultConnection;
+  if (connection.providerId === "athas" && !connection.modelId.trim())
+    return { providerId: "athas", modelId: "auto" };
   if (connection.providerId !== "auto") return connection;
   if (params.hasIntelligence) return { providerId: "athas", modelId: "auto" };
   return params.personalConnection;

@@ -59,7 +59,11 @@ export function IntelligencePreferences({
           options={providerOptions}
           disabled={state.loading || !editable}
           onChange={(providerId) =>
-            onChange(providerId === "inherit" ? undefined : { providerId, modelId: "" })
+            onChange(
+              providerId === "inherit"
+                ? undefined
+                : { providerId, modelId: providerId === "athas" ? "auto" : "" },
+            )
           }
         />
         {value && !["auto", "athas"].includes(value.providerId) ? (
