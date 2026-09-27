@@ -1,4 +1,4 @@
-import { CopyIcon, FileTextIcon, PencilIcon, UploadIcon } from "@/ui/icons";
+import { ClipboardTextIcon, CopyIcon, FileTextIcon, PencilIcon } from "@/ui/icons";
 import type { FormEvent, ReactNode } from "react";
 import { memo, useCallback, useState } from "react";
 import { Shimmer } from "@/ui/shimmer";
@@ -415,7 +415,7 @@ export const ChatMessage = memo(function ChatMessage({
               <MessageAction
                 onClick={() => void copyText(buildShareableOutcomeMarkdown(message.content))}
                 label="Copy outcome as Markdown"
-                icon={UploadIcon}
+                icon={ClipboardTextIcon}
               />
             ) : null}
             {message.turnUsage ? (
