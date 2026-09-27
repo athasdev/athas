@@ -13,6 +13,7 @@ import type { FileEntry } from "@/features/file-system/types/app.types";
 import type { EditorSelectionContext } from "@/features/ai/types/ai-context.types";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import type { GenerativeUIView } from "@/extensions/ui/types/generative-ui";
+import type { ChatMessageError } from "@/features/ai/types/chat-error.types";
 
 export type OutputStyle = "default" | "explanatory" | "learning" | "custom";
 export type ChatMode = "chat" | "plan";
@@ -94,6 +95,17 @@ export interface Message {
   stopNotice?: AgentStopNotice;
   /** The tokens the agent reported for the turn this message answers. */
   turnUsage?: AcpTurnUsage;
+  /** Why the turn failed, when it did; never sent back to the model as history. */
+  error?: ChatMessageError;
+  /** What a hosted or built-in run reported it used, shown in the message footer. */
+  usage?: MessageUsage;
+}
+
+/** The tokens and cost a built-in agent run reported for one turn. */
+export interface MessageUsage {
+  inputTokens?: number;
+  outputTokens?: number;
+  costCents?: number;
 }
 
 // Agent types for AI chat
