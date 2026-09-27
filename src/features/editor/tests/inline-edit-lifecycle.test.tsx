@@ -212,6 +212,26 @@ describe("Inline edit request ownership", () => {
     );
   });
 
+  it("keeps the preview while the user types on other lines", async () => {
+    await act(async () => root.render(<Editor content={"original\nsecond"} selectionEnd={8} />));
+    vi.mocked(requestInlineEdit).mockResolvedValueOnce({ editedText: "updated" });
+    await press();
+    expect(previewInlineEdit).toHaveBeenCalledOnce();
+    await act(async () => root.render(<Editor content={"original\nsecond!"} selectionEnd={8} />));
+    await act(async () => root.render(<Editor content={"original\nsecond!?"} selectionEnd={8} />));
+    expect(previewInlineEdit).toHaveBeenCalledOnce();
+    expect(clearPreview).not.toHaveBeenCalled();
+    // A change on the proposal's own line shows up in the preview.
+    await act(async () => root.render(<Editor content={"original;\nsecond!?"} selectionEnd={8} />));
+    expect(clearPreview).toHaveBeenCalledOnce();
+    expect(previewInlineEdit).toHaveBeenLastCalledWith({
+      startOffset: 0,
+      endOffset: 8,
+      editedText: "updated",
+      reveal: false,
+    });
+  });
+
   it("blocks accepting a proposal whose original code was edited", async () => {
     vi.mocked(requestInlineEdit).mockResolvedValueOnce({ editedText: "updated" });
     await press();

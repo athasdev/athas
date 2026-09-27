@@ -470,23 +470,52 @@ export function useInlineEdit({
 
   /** The proposal last scrolled into view, so later rebuilds leave the viewport alone. */
   const revealedProposalRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (!previewInlineEdit || !inlineEditProposal || !rebasedProposalRange) return;
-    const proposalKey = [
+  /**
+   * Everything the preview renders: the proposal and the full lines it replaces. Typing
+   * elsewhere leaves it unchanged, and the editor already moves the existing preview along with
+   * the lines, so rebuilding it on every keystroke would only make it flicker.
+   */
+  const previewKey = useMemo(() => {
+    if (!inlineEditProposal || !rebasedProposalRange) return null;
+    const { start, end } = rebasedProposalRange;
+    const lineStart = start === 0 ? 0 : inlineEditContent.lastIndexOf("\n", start - 1) + 1;
+    const nextBreak = inlineEditContent.indexOf("\n", end);
+    const lineEnd = nextBreak === -1 ? inlineEditContent.length : nextBreak;
+    return [
       inlineEditProposal.bufferId,
       inlineEditProposal.instruction,
       inlineEditProposal.editedText,
+      start - lineStart,
+      end - start,
+      inlineEditContent.slice(lineStart, lineEnd),
     ].join("\0");
+  }, [inlineEditContent, inlineEditProposal, rebasedProposalRange]);
+  const latestPreviewRef = useRef<{ start: number; end: number; editedText: string } | null>(null);
+  useEffect(() => {
+    latestPreviewRef.current =
+      inlineEditProposal && rebasedProposalRange
+        ? { ...rebasedProposalRange, editedText: inlineEditProposal.editedText }
+        : null;
+  });
+  const proposalKey = inlineEditProposal
+    ? [
+        inlineEditProposal.bufferId,
+        inlineEditProposal.instruction,
+        inlineEditProposal.editedText,
+      ].join("\0")
+    : null;
+  useEffect(() => {
+    const latest = latestPreviewRef.current;
+    if (!previewInlineEdit || previewKey === null || !latest || proposalKey === null) return;
     const reveal = revealedProposalRef.current !== proposalKey;
     revealedProposalRef.current = proposalKey;
     return previewInlineEdit({
-      startOffset: rebasedProposalRange.start,
-      endOffset: rebasedProposalRange.end,
-      editedText: inlineEditProposal.editedText,
+      startOffset: latest.start,
+      endOffset: latest.end,
+      editedText: latest.editedText,
       reveal,
     });
-    // The content dependency rebuilds the preview when text around the proposal changes.
-  }, [inlineEditContent, inlineEditProposal, previewInlineEdit, rebasedProposalRange]);
+  }, [previewInlineEdit, previewKey, proposalKey]);
 
   const handleSubmitInlineEdit = useCallback(async () => {
     if (!inlineEditVisible || pendingRequestRef.current) return;
