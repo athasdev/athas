@@ -29,6 +29,14 @@ export function safeUnlisten(unlisten: UnlistenFn) {
   }
 }
 
+/**
+ * Removes a listener that `listen` is still registering or already registered. Neither a failed
+ * `listen` nor the unlisten race above can then surface as an unhandled rejection.
+ */
+export function disposeListener(listener: Promise<UnlistenFn>) {
+  listener.then(safeUnlisten, () => undefined);
+}
+
 function toPosition(position: RawDragDropPayload["position"]) {
   return { x: position?.x ?? 0, y: position?.y ?? 0 };
 }

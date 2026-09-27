@@ -2,6 +2,7 @@ import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { useEffect } from "react";
 import { enqueueWindowOpenRequest, type WindowOpenRequest } from "../utils/window-open-request";
+import { disposeListener } from "@/utils/tauri-drag-drop";
 
 export interface CliOpenPayload {
   kind: "path" | "web" | "terminal" | "remote" | "surface" | "empty";
@@ -106,14 +107,17 @@ export function useCliOpen() {
     };
 
     const unlistenPending = listen<void>("cli_open_requests_pending", drainPendingRequests);
-    void Promise.all([unlisten, unlistenPending]).then(() => {
-      if (!disposed) drainPendingRequests();
-    });
+    Promise.all([unlisten, unlistenPending]).then(
+      () => {
+        if (!disposed) drainPendingRequests();
+      },
+      (error: unknown) => console.error("Failed to listen for CLI open requests:", error),
+    );
 
     return () => {
       disposed = true;
-      unlisten.then((fn) => fn());
-      unlistenPending.then((fn) => fn());
+      disposeListener(unlisten);
+      disposeListener(unlistenPending);
     };
   }, []);
 }

@@ -12,7 +12,7 @@ vi.mock("@tauri-apps/api/webview", () => ({
   getCurrentWebview: () => ({ listen: mocks.listen }),
 }));
 
-import { listenToNativeDragDrop, safeUnlisten } from "@/utils/tauri-drag-drop";
+import { disposeListener, listenToNativeDragDrop, safeUnlisten } from "@/utils/tauri-drag-drop";
 
 const HANDLER_ID_ERROR = new TypeError(
   "undefined is not an object (evaluating 'listeners[eventId].handlerId')",
@@ -93,5 +93,27 @@ describe("safeUnlisten", () => {
         throw HANDLER_ID_ERROR;
       }),
     ).not.toThrow();
+  });
+});
+
+describe("disposeListener", () => {
+  const unhandled = vi.fn();
+
+  beforeEach(() => {
+    process.on("unhandledRejection", unhandled);
+  });
+
+  afterEach(() => {
+    process.off("unhandledRejection", unhandled);
+    unhandled.mockReset();
+  });
+
+  it("drops a rejected unlisten and a listen that failed", async () => {
+    const unlisten = vi.fn(() => Promise.reject(HANDLER_ID_ERROR));
+    disposeListener(Promise.resolve(unlisten));
+    disposeListener(Promise.reject(new Error("listen failed")));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(unlisten).toHaveBeenCalledOnce();
+    expect(unhandled).not.toHaveBeenCalled();
   });
 });

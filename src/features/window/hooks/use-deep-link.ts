@@ -10,6 +10,7 @@ import {
   parseWindowOpenUrl,
   type WindowOpenRequest,
 } from "../utils/window-open-request";
+import { disposeListener } from "@/utils/tauri-drag-drop";
 
 /**
  * Hook to handle deep link URLs. The native side queues every link, including
@@ -38,13 +39,16 @@ export function useDeepLink() {
     };
 
     const unlisten = listen<void>("deep_links_pending", drainPendingDeepLinks);
-    void unlisten.then(() => {
-      if (!disposed) drainPendingDeepLinks();
-    });
+    unlisten.then(
+      () => {
+        if (!disposed) drainPendingDeepLinks();
+      },
+      (error: unknown) => console.error("Failed to listen for deep links:", error),
+    );
 
     return () => {
       disposed = true;
-      unlisten.then((fn) => fn());
+      disposeListener(unlisten);
     };
   }, []);
 }

@@ -1,3 +1,4 @@
+import { disposeListener } from "@/utils/tauri-drag-drop";
 import { invoke } from "@tauri-apps/api/core";
 import { ProjectCustomIcon } from "./project-custom-icon";
 import { listen } from "@tauri-apps/api/event";
@@ -172,7 +173,7 @@ const ProjectPicker = memo(({ isOpen, initialStep = "picker", onClose }: Project
     );
 
     return () => {
-      unsubscribe.then((fn) => fn());
+      disposeListener(unsubscribe);
     };
   }, [loadConnections]);
 
