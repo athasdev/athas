@@ -47,6 +47,9 @@ const IGNORED_DIRECTORIES = new Set([
 const BINARY_FILE_PATTERN =
   /\.(png|jpe?g|gif|webp|avif|bmp|ico|icns|pdf|zip|gz|tgz|tar|7z|rar|woff2?|ttf|otf|eot|mp[34]|mov|wav|ogg|webm|wasm|so|dylib|dll|exe|bin|lock|sqlite|db)$/i;
 
+/** Credentials the workspace tools never read; a folder lists them but never inlines them. */
+const SECRET_FILE_PATTERN = /^\.env($|\.)|\.(pem|key|p12|pfx)$|^id_(rsa|ed25519|ecdsa|dsa)/i;
+
 export function formatContextReference(reference: ContextReference): string {
   switch (reference.kind) {
     case "folder":
@@ -159,7 +162,7 @@ async function resolveFolder(
         } else {
           truncated = true;
         }
-      } else if (!BINARY_FILE_PATTERN.test(entry.name)) {
+      } else if (!BINARY_FILE_PATTERN.test(entry.name) && !SECRET_FILE_PATTERN.test(entry.name)) {
         files.push({ path: entry.path, relativePath, depth: directory.depth });
       }
     }

@@ -16,6 +16,7 @@ function sources(overrides: Partial<ContextReferenceSources> = {}): ContextRefer
     "/w/src/big.ts": "x".repeat(20_000),
     "/w/src/logo.png": "binary",
     "/w/src/lib/b.ts": "export const b = 2;",
+    "/w/src/.env.local": "API_KEY=secret",
   };
   const directories: Record<string, { name: string; path: string; isDir: boolean }[]> = {
     "/w/src": [
@@ -24,6 +25,7 @@ function sources(overrides: Partial<ContextReferenceSources> = {}): ContextRefer
       { name: "logo.png", path: "/w/src/logo.png", isDir: false },
       { name: "lib", path: "/w/src/lib", isDir: true },
       { name: "node_modules", path: "/w/src/node_modules", isDir: true },
+      { name: ".env.local", path: "/w/src/.env.local", isDir: false },
     ],
     "/w/src/lib": [{ name: "b.ts", path: "/w/src/lib/b.ts", isDir: false }],
   };
@@ -111,12 +113,15 @@ describe("context references", () => {
     );
 
     expect(folder.label).toBe("src/ (src)");
-    expect(folder.content).toContain("Folder tree (6 entries):");
+    expect(folder.content).toContain("Folder tree (7 entries):");
     expect(folder.content).toContain("lib/b.ts");
     expect(folder.content).toContain("--- a.ts ---\nexport const a = 1;");
     expect(folder.content).toContain("--- lib/b.ts ---\nexport const b = 2;");
     expect(folder.content).not.toContain("x".repeat(100));
     expect(folder.content).not.toContain("--- logo.png");
+    // Listed so the model knows it exists, never read into the prompt.
+    expect(folder.content).toContain(".env.local");
+    expect(folder.content).not.toContain("API_KEY=secret");
   });
 
   it("resolves working tree and staged diffs separately", async () => {
