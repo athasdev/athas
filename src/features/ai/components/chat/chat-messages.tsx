@@ -23,6 +23,8 @@ interface ChatMessagesProps {
   onSendFollowUp?: (message: string) => void | Promise<void>;
   onEditUserMessage?: (messageId: string, content: string) => void | Promise<void>;
   canEditUserMessages?: boolean;
+  /** Starts the latest turn over while the agent has not answered for a while. */
+  onRetryStalledResponse?: () => void;
   acpEvents?: ChatAcpEvent[];
   chatId?: string | null;
   searchQuery?: string;
@@ -50,6 +52,7 @@ interface ChatTimelineMessageProps {
   onSendFollowUp?: (message: string) => void | Promise<void>;
   onEditUserMessage?: (messageId: string, content: string) => void | Promise<void>;
   onRetryBefore: (messageId: string) => void | Promise<void>;
+  onRetryStalled?: () => void;
 }
 
 /**
@@ -67,6 +70,7 @@ const ChatTimelineMessage = memo(function ChatTimelineMessage({
   onSendFollowUp,
   onEditUserMessage,
   onRetryBefore,
+  onRetryStalled,
 }: ChatTimelineMessageProps) {
   const canRetry = isLastMessage && canEditUserMessages && Boolean(onEditUserMessage);
   const retry = useCallback(() => onRetryBefore(message.id), [onRetryBefore, message.id]);
@@ -116,6 +120,7 @@ const ChatTimelineMessage = memo(function ChatTimelineMessage({
         message={message}
         isLastMessage={isLastMessage}
         onRetry={canRetry ? retry : undefined}
+        onRetryStalled={onRetryStalled}
         onEditUserMessage={onEditUserMessage}
         canEditUserMessage={canEditUserMessages}
         searchQuery={searchQuery}
@@ -136,6 +141,7 @@ export const ChatMessages = memo(function ChatMessages({
   onSendFollowUp,
   onEditUserMessage,
   canEditUserMessages = false,
+  onRetryStalledResponse,
   acpEvents,
   chatId,
   searchQuery = "",
@@ -223,6 +229,7 @@ export const ChatMessages = memo(function ChatMessages({
             onSendFollowUp={onSendFollowUp}
             onEditUserMessage={onEditUserMessage}
             onRetryBefore={retryBefore}
+            onRetryStalled={index === messages.length - 1 ? onRetryStalledResponse : undefined}
           />
         );
       })}

@@ -1,6 +1,12 @@
-import { ClipboardTextIcon, CopyIcon, FileTextIcon, PencilIcon } from "@/ui/icons";
+import {
+  ArrowClockwiseIcon,
+  ClipboardTextIcon,
+  CopyIcon,
+  FileTextIcon,
+  PencilIcon,
+} from "@/ui/icons";
 import type { FormEvent, ReactNode } from "react";
-import { memo, useCallback, useState } from "react";
+import { memo, useCallback, useEffect, useState } from "react";
 import { Shimmer } from "@/ui/shimmer";
 import { Marker, MarkerContent, MarkerIcon } from "@/ui/marker";
 import { MessageAction, MessageResponse } from "@/ui/message";
@@ -8,6 +14,7 @@ import { ThinkingOrb, type ThinkingOrbProps } from "@/ui/thinking-orb";
 import type { PlanStep } from "@/features/ai/lib/plan-parser";
 import type { Message as AIMessage } from "@/features/ai/types/ai-chat.types";
 import { formatTime } from "@/features/ai/lib/formatting";
+import { elapsedSeconds, formatElapsed } from "@/features/ai/lib/elapsed-time";
 import { buildShareableOutcomeMarkdown } from "@/features/ai/lib/shareable-outcome";
 import { writeClipboardText } from "@/utils/clipboard";
 import { cn } from "@/utils/cn";
@@ -41,6 +48,8 @@ import { parseMentionTokens } from "@/features/ai/lib/file-mentions";
 
 interface ChatMessageProps {
   onRetry?: () => void | Promise<void>;
+  /** Starts the turn over when the agent has not answered for a while. */
+  onRetryStalled?: () => void;
   message: AIMessage;
   isLastMessage: boolean;
   showActions?: boolean;
@@ -117,14 +126,34 @@ function UserMessageText({ text, query }: { text: string; query: string }) {
   return <>{parts}</>;
 }
 
-function ChatResponseStatus({ phase }: { phase: AIMessage["responsePhase"] }) {
+/** Seconds since `since`, ticking once a second while mounted. */
+function useElapsedSeconds(since: Date | string) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+  return elapsedSeconds(since, now);
+}
+
+function ChatResponseStatus({
+  phase,
+  since,
+  onRetry,
+}: {
+  phase: AIMessage["responsePhase"];
+  since: Date | string;
+  onRetry?: () => void;
+}) {
+  const elapsed = useElapsedSeconds(since);
   const isStarting = phase === "starting";
   const isThinking = phase === "thinking";
+  const isStalled = phase === "stalled";
   const label = isStarting
     ? "Starting agent…"
     : isThinking
       ? "Thinking…"
-      : phase === "stalled"
+      : isStalled
         ? "Still waiting for the agent…"
         : "Waiting for response…";
   const state: ThinkingOrbProps["state"] = isThinking ? "breathing" : "connecting";
@@ -134,9 +163,16 @@ function ChatResponseStatus({ phase }: { phase: AIMessage["responsePhase"] }) {
       <MarkerIcon className="size-5">
         <ThinkingOrb state={state} size={20} aria-hidden="true" />
       </MarkerIcon>
-      <MarkerContent>
+      <MarkerContent className="flex items-center gap-2">
         <Shimmer>{label}</Shimmer>
+        {elapsed > 0 ? <span className="tabular-nums">{formatElapsed(elapsed)}</span> : null}
       </MarkerContent>
+      {isStalled && onRetry ? (
+        <Button type="button" variant="ghost" onClick={onRetry}>
+          <ArrowClockwiseIcon />
+          Retry
+        </Button>
+      ) : null}
     </Marker>
   );
 }
@@ -149,6 +185,7 @@ export const ChatMessage = memo(function ChatMessage({
   isLastMessage,
   showActions = true,
   onRetry,
+  onRetryStalled,
   onEditUserMessage,
   canEditUserMessage = false,
   searchQuery = "",
@@ -293,7 +330,11 @@ export const ChatMessage = memo(function ChatMessage({
     return (
       <Message className="items-center">
         <MessageContent className={ASSISTANT_CONTENT_INSET}>
-          <ChatResponseStatus phase={message.responsePhase} />
+          <ChatResponseStatus
+            phase={message.responsePhase}
+            since={message.timestamp}
+            onRetry={onRetryStalled}
+          />
         </MessageContent>
       </Message>
     );
