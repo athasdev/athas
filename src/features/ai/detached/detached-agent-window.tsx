@@ -22,7 +22,6 @@ import {
   setAgentWindowSessionOpener,
 } from "./agent-window-service";
 import { getAgentWindowTransferBlocker } from "./agent-window-state";
-import { useAgentWindowStore } from "./agent-window.store";
 
 enableMapSet();
 
@@ -78,8 +77,6 @@ export default function DetachedAgentWindow() {
         useAIChatStore.getState().actions.switchToChat(chatId);
         setReady(true);
         post({ type: "snapshot", snapshot: captureAgentWindowSnapshot(chatId) });
-      } else if (data.type === "identity") {
-        useAgentWindowStore.getState().actions.setAccountIdentity(data.identity);
       } else if (data.type === "returned" && returningRef.current) {
         clearTimeout(returnTimer.current);
         void getCurrentWindow()
@@ -140,7 +137,6 @@ export default function DetachedAgentWindow() {
       unsubscribeChat();
       unsubscribeBuffers();
       setAgentWindowSessionOpener(null);
-      useAgentWindowStore.getState().actions.setAccountIdentity(null);
     };
   }, [post]);
 
