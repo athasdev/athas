@@ -11,6 +11,22 @@ import {
 } from "./ai-provider-interface";
 import { toOpenAIMessage } from "@/features/ai/lib/image-attachments";
 
+/**
+ * The server offers hosted models only to accounts with Athas Pro or a prepaid usage balance.
+ * Carries a 402 so chat recovery offers billing instead of provider settings.
+ */
+export class HostedEntitlementError extends Error {
+  readonly status = 402;
+  readonly code = "entitlement_required";
+
+  constructor() {
+    super(
+      "Hosted models need Athas Pro or a prepaid usage balance. Upgrade or top up in billing to use them.",
+    );
+    this.name = "HostedEntitlementError";
+  }
+}
+
 export class AthasProvider extends AIProvider {
   async buildHeaders(): Promise<ProviderHeaders> {
     const userId = useAuthStore.getState().user?.id;
@@ -51,9 +67,15 @@ export class AthasProvider extends AIProvider {
     });
     if (response.status === 401)
       throw new Error("Your Athas session has expired. Sign out and sign in again.");
+    if (response.status === 402) throw new HostedEntitlementError();
     if (!response.ok) throw new Error(`Could not connect to Athas (${response.status}).`);
     const result = (await response.json()) as { enabled: boolean; data: ProviderModel[] };
-    if (!result.enabled) throw new Error("Athas Agent is not enabled on this server.");
+    if (!result.enabled) {
+      // A Pro account is entitled; then the server itself has hosted models turned off.
+      if (useAuthStore.getState().subscription?.status === "pro")
+        throw new Error("Hosted models are not available on this Athas server.");
+      throw new HostedEntitlementError();
+    }
     return result.data;
   }
 
