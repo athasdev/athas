@@ -21,6 +21,7 @@ import { useShallow } from "zustand/react/shallow";
 import {
   createAcpDiffViewNode,
   getAcpDiffOutputs,
+  type AcpDiffOutput,
   openAcpDiffOutput,
   stripAcpDiffOutputs,
 } from "@/features/ai/lib/acp-diff-output";
@@ -39,22 +40,19 @@ import { useAcpTerminalsStore } from "@/features/ai/stores/acp-terminals.store";
 import { summarizeToolCall, type ToolCallSummary } from "@/features/ai/lib/tool-call-summary";
 import type { ToolCall } from "@/features/ai/types/ai-chat.types";
 import type { AcpTerminalSnapshot, AcpToolKind } from "@/features/ai/types/acp.types";
-import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import {
-  openToolPath,
-  resolveToolPath,
-  showToolPathError,
-} from "@/features/ai/lib/open-tool-location";
+  describeExploration,
+  groupToolCalls,
+  type ToolCallListItem,
+} from "@/features/ai/lib/tool-call-groups";
+import { openToolPath } from "@/features/ai/lib/open-tool-location";
 import { ToolLocations } from "./tool-locations";
-import { getFileDiff } from "@/features/git/api/git-diff-api";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { Button } from "@/ui/button";
 import { CodeOutput } from "@/ui/code-output";
 import { Shimmer } from "@/ui/shimmer";
 import { GenerativeUIRenderer } from "@/extensions/ui/components/generative-ui-renderer";
 import { ExtensionViewRenderer } from "@/extensions/ui/components/extension-view-renderer";
-import { getBaseName } from "@/utils/path-helpers";
 import { cn } from "@/utils/cn";
 
 const KIND_ICONS: Record<AcpToolKind, Icon> = {
@@ -81,38 +79,6 @@ function formatValue(value: unknown): string {
     return JSON.stringify(value, null, 2);
   } catch {
     return String(value);
-  }
-}
-
-async function openToolDiff(path: string, output: unknown) {
-  if (openAcpDiffOutput(output)) return;
-
-  const rootFolderPath = useProjectStore.getState().rootFolderPath;
-  const resolvedPath = await resolveToolPath(path);
-  const repoPath = rootFolderPath ?? resolvedPath;
-  const diff = await getFileDiff(repoPath, path);
-
-  if (diff) {
-    useBufferStore
-      .getState()
-      .actions.openBuffer(
-        `diff://acp-tool-output/${Date.now()}`,
-        `${getBaseName(diff.file_path)}.diff`,
-        "",
-        false,
-        undefined,
-        true,
-        true,
-        diff,
-      );
-    return;
-  }
-
-  try {
-    const newText = await readFileContent(resolvedPath);
-    openAcpDiffOutput([{ type: "diff", path: resolvedPath, oldText: "", newText }]);
-  } catch (error) {
-    showToolPathError(resolvedPath, error);
   }
 }
 
@@ -160,6 +126,36 @@ function getOutputText(output: unknown): string {
     .filter(Boolean)
     .join("\n")
     .trim();
+}
+
+/** Rows a diff shows inside the transcript before the user asks for the rest. */
+const DIFF_PREVIEW_ROWS = 16;
+
+function ToolDiff({
+  diff,
+  rootFolderPath,
+}: {
+  diff: AcpDiffOutput;
+  rootFolderPath?: string | null;
+}) {
+  const [showAll, setShowAll] = useState(false);
+  const node = useMemo(() => createAcpDiffViewNode(diff, rootFolderPath), [diff, rootFolderPath]);
+  const hiddenRows = showAll ? 0 : Math.max(0, node.lines.length - DIFF_PREVIEW_ROWS);
+  const preview = useMemo(
+    () => (hiddenRows > 0 ? { ...node, lines: node.lines.slice(0, DIFF_PREVIEW_ROWS) } : node),
+    [node, hiddenRows],
+  );
+
+  return (
+    <div className="flex min-w-0 flex-col items-start gap-1">
+      <ExtensionViewRenderer node={preview} execute={() => undefined} surface="embedded" />
+      {hiddenRows > 0 ? (
+        <Button type="button" variant="link" onClick={() => setShowAll(true)}>
+          Expand diff ({hiddenRows} more {hiddenRows === 1 ? "line" : "lines"})
+        </Button>
+      ) : null}
+    </div>
+  );
 }
 
 /** A terminal's output inside its tool call, with how the command ended once it has. */
@@ -220,9 +216,12 @@ function ToolCallStats({ summary }: { summary: ToolCallSummary }) {
 const ToolCallRow = memo(function ToolCallRow({
   toolCall,
   isStreaming,
+  isLatestEdit = false,
 }: {
   toolCall: ToolCall;
   isStreaming?: boolean;
+  /** The newest edit of the latest reply opens on its own; earlier ones fold away. */
+  isLatestEdit?: boolean;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   // Keep the body mounted after its first reveal so collapsing can animate too.
@@ -236,7 +235,7 @@ const ToolCallRow = memo(function ToolCallRow({
 
   const output = stripStructuredToolViews(toolCall.output);
   const structuredViews = getStructuredToolViews(toolCall.output);
-  const diffItems = getAcpDiffOutputs(output);
+  const diffItems = useMemo(() => getAcpDiffOutputs(output), [output]);
   const terminalItems = getAcpTerminalOutputs(output);
   const liveTerminals = useAcpTerminalsStore(
     useShallow((state) => terminalItems.map((item) => state.terminals[item.terminalId])),
@@ -257,12 +256,7 @@ const ToolCallRow = memo(function ToolCallRow({
   }
   diffItems.forEach((item, index) =>
     body.push(
-      <ExtensionViewRenderer
-        key={`diff-${item.path}-${index}`}
-        node={createAcpDiffViewNode(item, rootFolderPath)}
-        execute={() => undefined}
-        surface="embedded"
-      />,
+      <ToolDiff key={`diff-${item.path}-${index}`} diff={item} rootFolderPath={rootFolderPath} />,
     ),
   );
   if (inputText) {
@@ -300,13 +294,13 @@ const ToolCallRow = memo(function ToolCallRow({
   );
 
   const canExpand = body.length > 0;
-  // A finished edit opens on its own; that diff is what the row is for.
-  const autoExpand = summary.kind === "edit" && diffItems.length > 0;
+  // The latest finished edit opens on its own and folds once a newer one lands, unless the user
+  // already chose.
+  const autoExpand = isLatestEdit && diffItems.length > 0;
   useEffect(() => {
-    if (autoExpand && !userToggled.current) {
-      setIsExpanded(true);
-      setHasOpened(true);
-    }
+    if (userToggled.current) return;
+    setIsExpanded(autoExpand);
+    if (autoExpand) setHasOpened(true);
   }, [autoExpand]);
   const toggle = () => {
     userToggled.current = true;
@@ -316,12 +310,8 @@ const ToolCallRow = memo(function ToolCallRow({
   const isRunning = summary.phase === "running";
   const isFailed = summary.phase === "failed";
   const KindIcon = KIND_ICONS[summary.kind];
-  const canOpenDiff =
-    Boolean(summary.path) &&
-    (summary.kind === "edit" ||
-      summary.kind === "delete" ||
-      summary.kind === "move" ||
-      diffItems.length > 0);
+  // Only the change this call recorded; a diff against HEAD would mix in every other edit.
+  const canOpenDiff = diffItems.length > 0;
   const canOpenFile = Boolean(summary.path) && summary.kind !== "execute";
   // Only a terminal Athas runs for the agent, and only while it still runs, has a tab to open.
   const canOpenTerminal = liveTerminals.some(
@@ -367,8 +357,8 @@ const ToolCallRow = memo(function ToolCallRow({
             />
             <ChevronRightIcon
               className={cn(
-                "size-3.5 shrink-0 opacity-0 transition-[opacity,transform] group-hover/tool:opacity-40",
-                isExpanded && "rotate-90 opacity-40",
+                "size-3.5 shrink-0 opacity-40 transition-[opacity,transform] group-hover/tool:opacity-100",
+                isExpanded && "rotate-90",
               )}
             />
           </button>
@@ -387,14 +377,14 @@ const ToolCallRow = memo(function ToolCallRow({
           </div>
         )}
         {hasActions ? (
-          <span className="flex shrink-0 items-center opacity-0 transition-opacity group-hover/tool:opacity-100 focus-within:opacity-100">
+          <span className="flex shrink-0 items-center opacity-40 transition-opacity group-hover/tool:opacity-100 focus-within:opacity-100">
             {canOpenDiff ? (
               <Button
                 type="button"
                 variant="ghost"
                 iconOnly
                 tooltip="Open diff"
-                onClick={() => void openToolDiff(summary.path!, toolCall.output)}
+                onClick={() => openAcpDiffOutput(output)}
               >
                 <GitDiffIcon />
               </Button>
@@ -482,29 +472,97 @@ function ToolCallRowContent({
   );
 }
 
+function ExplorationGroup({
+  item,
+  isStreaming,
+  latestEdit,
+}: {
+  item: Extract<ToolCallListItem, { type: "exploration" }>;
+  isStreaming?: boolean;
+  latestEdit?: ToolCall | null;
+}) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  return (
+    <div data-ai-element="tool-call-group" className="group/tool flex min-w-0 flex-col">
+      <button
+        type="button"
+        aria-expanded={isExpanded}
+        onClick={() => setIsExpanded((current) => !current)}
+        className="flex min-h-6 w-fit max-w-full min-w-0 items-center gap-2 rounded text-left text-subtle-foreground outline-none ui-text-sm hover:text-foreground focus-visible:ring-2 focus-visible:ring-focus"
+      >
+        <span
+          aria-hidden="true"
+          className={cn(
+            "flex size-4 shrink-0 items-center justify-center [&_svg]:size-3.5",
+            item.isRunning && "text-primary",
+          )}
+        >
+          {item.isRunning ? <CircleDottedIcon className="animate-spin" /> : <SearchIcon />}
+        </span>
+        <Shimmer active={item.isRunning} className="min-w-0 truncate">
+          {describeExploration(item)}
+        </Shimmer>
+        <ChevronRightIcon
+          className={cn(
+            "size-3.5 shrink-0 opacity-40 transition-[opacity,transform] group-hover/tool:opacity-100",
+            isExpanded && "rotate-90",
+          )}
+        />
+      </button>
+      {isExpanded ? (
+        <div className="ml-6 flex min-w-0 flex-col">
+          {item.toolCalls.map((toolCall, index) => (
+            <ToolCallRow
+              key={toolCall.id || `${toolCall.name}-${index}`}
+              toolCall={toolCall}
+              isStreaming={isStreaming}
+              isLatestEdit={toolCall === latestEdit}
+            />
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function ToolCallList({
   toolCalls,
   isStreaming,
+  latestEdit,
   className,
 }: {
   toolCalls: ToolCall[];
   isStreaming?: boolean;
+  /** The call whose diff opens on its own, usually the newest edit of the latest reply. */
+  latestEdit?: ToolCall | null;
   className?: string;
 }) {
-  if (toolCalls.length === 0) return null;
+  const items = useMemo(() => groupToolCalls(toolCalls, isStreaming), [toolCalls, isStreaming]);
+  if (items.length === 0) return null;
 
   return (
     <div
       data-ai-element="tool-calls"
       className={cn("flex min-w-0 flex-col select-none", className)}
     >
-      {toolCalls.map((toolCall, index) => (
-        <ToolCallRow
-          key={toolCall.id || `${toolCall.name}-${index}`}
-          toolCall={toolCall}
-          isStreaming={isStreaming}
-        />
-      ))}
+      {items.map((item) =>
+        item.type === "exploration" ? (
+          <ExplorationGroup
+            key={item.key}
+            item={item}
+            isStreaming={isStreaming}
+            latestEdit={latestEdit}
+          />
+        ) : (
+          <ToolCallRow
+            key={item.key}
+            toolCall={item.toolCall}
+            isStreaming={isStreaming}
+            isLatestEdit={item.toolCall === latestEdit}
+          />
+        ),
+      )}
     </div>
   );
 }

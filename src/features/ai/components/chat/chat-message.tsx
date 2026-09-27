@@ -36,6 +36,7 @@ import { AgentPlan } from "../messages/agent-plan";
 import { AgentStopNotice } from "../messages/agent-stop-notice";
 import { ToolCallList } from "../messages/tool-call-display";
 import { buildAssistantTimeline } from "@/features/ai/lib/assistant-timeline";
+import { findLatestEdit } from "@/features/ai/lib/tool-call-groups";
 import { describeTurnUsage, formatTurnUsage } from "@/features/ai/lib/acp-usage";
 import { formatMessageUsage } from "@/features/ai/lib/message-usage";
 import Tooltip from "@/ui/tooltip";
@@ -205,6 +206,9 @@ export const ChatMessage = memo(function ChatMessage({
     [onExecutePlanStep],
   );
 
+  // Only the newest edit of the latest reply opens its diff on its own.
+  const latestEdit = isLastMessage ? findLatestEdit(message.toolCalls) : null;
+
   if (message.role === "user") {
     const messageTime = formatTime(message.timestamp);
     const startEditing = () => {
@@ -314,7 +318,11 @@ export const ChatMessage = memo(function ChatMessage({
       <Message>
         <AssistantMessageAvatar iconId={assistantIconId} label={assistantLabel} />
         <MessageContent className={ASSISTANT_CONTENT_INSET}>
-          <ToolCallList toolCalls={message.toolCalls!} isStreaming={message.isStreaming} />
+          <ToolCallList
+            toolCalls={message.toolCalls!}
+            isStreaming={message.isStreaming}
+            latestEdit={latestEdit}
+          />
           {message.stopNotice ? <AgentStopNotice notice={message.stopNotice} /> : null}
         </MessageContent>
       </Message>
@@ -416,6 +424,7 @@ export const ChatMessage = memo(function ChatMessage({
                     className="mt-2"
                     toolCalls={message.toolCalls}
                     isStreaming={message.isStreaming}
+                    latestEdit={latestEdit}
                   />
                 ) : null}
               </>
@@ -431,7 +440,11 @@ export const ChatMessage = memo(function ChatMessage({
                     </MessageResponse>
                   ) : null}
                   {segment.toolCalls.length > 0 ? (
-                    <ToolCallList toolCalls={segment.toolCalls} isStreaming={message.isStreaming} />
+                    <ToolCallList
+                      toolCalls={segment.toolCalls}
+                      isStreaming={message.isStreaming}
+                      latestEdit={latestEdit}
+                    />
                   ) : null}
                 </div>
               ))
