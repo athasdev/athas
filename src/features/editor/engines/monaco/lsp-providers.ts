@@ -242,10 +242,19 @@ function withoutPayloadEdit(payload: unknown): unknown {
   return copy;
 }
 
+/**
+ * The open buffer's model for `filePath`. Models under `file://` are only loaded for peeks and
+ * hovers and go away with them, so an edit made there would never reach the file.
+ */
 function openModelUriForFile(filePath: string): Monaco.Uri | null {
   const model = monacoEditor
     .getModels()
-    .find((candidate) => !candidate.isDisposed() && filePathFromModel(candidate) === filePath);
+    .find(
+      (candidate) =>
+        !candidate.isDisposed() &&
+        candidate.uri.scheme === "athas" &&
+        filePathFromModel(candidate) === filePath,
+    );
   return model?.uri ?? null;
 }
 
@@ -255,7 +264,7 @@ function openModelUriForFile(filePath: string): Monaco.Uri | null {
  * existing models, and buffers live under `athas://` URIs, so `file://` resources
  * failed with "bad edit - model not found".
  */
-function toWorkspaceEdit(edit: unknown): {
+export function toWorkspaceEdit(edit: unknown): {
   edit: Monaco.languages.WorkspaceEdit | undefined;
   unopened: WorkspaceEdit | undefined;
 } {
@@ -562,7 +571,7 @@ export function registerMonacoLspProviders() {
         text: prepared?.placeholder || model.getValueInRange(monacoRange),
       };
     },
-    async provideRenameEdits(model, position, newName) {
+    async provideRenameEdits(model, position, newName, token) {
       if (!isLspModel(model)) return undefined;
 
       const edit = await lspClient.rename(
@@ -571,6 +580,8 @@ export function registerMonacoLspProviders() {
         position.column - 1,
         newName,
       );
+      // Monaco drops a cancelled rename's edits; the files on disk must not change either.
+      if (token.isCancellationRequested) return undefined;
       const { edit: openEdit, unopened } = toWorkspaceEdit(edit);
       if (unopened) await applyWorkspaceEdit(unopened);
       return openEdit ?? { edits: [] };
