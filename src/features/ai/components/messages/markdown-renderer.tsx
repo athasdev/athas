@@ -9,7 +9,7 @@ import {
   WarningCircleIcon,
 } from "@/ui/icons";
 import type React from "react";
-import { useState } from "react";
+import { memo, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { getAcpAuthenticationCommand } from "@/features/ai/lib/acp-authentication";
 import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
@@ -21,6 +21,7 @@ import {
   normalizeImplicitCodeFences,
   normalizePlainTextFence,
 } from "@/features/ai/lib/assistant-markdown";
+import { splitMarkdownBlocks } from "@/features/ai/lib/markdown-blocks";
 import { selectAgentAuthRequest, useAcpAuthStore } from "@/features/ai/stores/acp-auth.store";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
@@ -545,7 +546,7 @@ function renderInlineFormatting(text: string): React.ReactNode {
 
 // Line-by-line state machine markdown renderer
 function renderContent(text: string): React.ReactNode[] {
-  const lines = normalizeImplicitCodeFences(text).split("\n");
+  const lines = text.split("\n");
   const elements: React.ReactNode[] = [];
   let inCodeBlock = false;
   let codeBlockLanguage = "";
@@ -561,7 +562,7 @@ function renderContent(text: string): React.ReactNode[] {
       const code = codeBlockContent.join("\n");
       elements.push(
         <CodeBlock
-          key={`code-${codeBlockStartLine}-${code.length}`}
+          key={`code-${codeBlockStartLine}`}
           code={code}
           languageHint={codeBlockLanguage}
         />,
@@ -575,7 +576,7 @@ function renderContent(text: string): React.ReactNode[] {
     if (currentList && currentList.items.length > 0) {
       if (currentList.type === "ol") {
         elements.push(
-          <ol key={`ol-${currentListStartLine}-${currentList.items.length}`}>
+          <ol key={`ol-${currentListStartLine}`}>
             {currentList.items.map((item, idx) => (
               <li key={idx}>{renderInlineFormatting(item)}</li>
             ))}
@@ -583,7 +584,7 @@ function renderContent(text: string): React.ReactNode[] {
         );
       } else {
         elements.push(
-          <ul key={`ul-${currentListStartLine}-${currentList.items.length}`}>
+          <ul key={`ul-${currentListStartLine}`}>
             {currentList.items.map((item, idx) => (
               <li key={idx}>{renderInlineFormatting(item)}</li>
             ))}
@@ -599,9 +600,7 @@ function renderContent(text: string): React.ReactNode[] {
       const paragraphText = currentParagraph.join(" ").trim();
       if (paragraphText) {
         elements.push(
-          <p key={`p-${currentParagraphStartLine}-${paragraphText.length}`}>
-            {renderInlineFormatting(paragraphText)}
-          </p>,
+          <p key={`p-${currentParagraphStartLine}`}>{renderInlineFormatting(paragraphText)}</p>,
         );
       }
       currentParagraph = [];
@@ -637,7 +636,7 @@ function renderContent(text: string): React.ReactNode[] {
     if (parsedTable) {
       flushList();
       flushParagraph();
-      elements.push(renderTable(parsedTable.table, `table-${i}-${parsedTable.endIndex}`));
+      elements.push(renderTable(parsedTable.table, `table-${i}`));
       i = parsedTable.endIndex - 1;
       continue;
     }
@@ -666,9 +665,7 @@ function renderContent(text: string): React.ReactNode[] {
       flushParagraph();
       const quoteContent = trimmedLine.startsWith("> ") ? trimmedLine.slice(2) : "";
       elements.push(
-        <blockquote key={`quote-${i}-${quoteContent.length}`}>
-          {renderInlineFormatting(quoteContent)}
-        </blockquote>,
+        <blockquote key={`quote-${i}`}>{renderInlineFormatting(quoteContent)}</blockquote>,
       );
       continue;
     }
@@ -724,13 +721,25 @@ function renderContent(text: string): React.ReactNode[] {
   return elements;
 }
 
-// Simple markdown renderer for AI responses
+/** One blank-line-separated block; unchanged blocks skip re-rendering while a reply streams. */
+const MarkdownBlockContent = memo(function MarkdownBlockContent({ text }: { text: string }) {
+  return renderContent(text);
+});
+
+function MarkdownBlocks({ text }: { text: string }) {
+  const blocks = useMemo(() => splitMarkdownBlocks(normalizeImplicitCodeFences(text)), [text]);
+  return blocks.map((block) => (
+    <MarkdownBlockContent key={`block-${block.startLine}`} text={block.text} />
+  ));
+}
+
 interface MarkdownRendererProps {
   content: string;
   chatId?: string | null;
   onRetry?: () => void | Promise<void>;
 }
 
+// Simple markdown renderer for AI responses
 export default function MarkdownRenderer({ content, chatId, onRetry }: MarkdownRendererProps) {
   const normalizedContent = normalizePlainTextFence(content);
 
@@ -741,13 +750,17 @@ export default function MarkdownRenderer({ content, chatId, onRetry }: MarkdownR
       const errorStart = errorMatch.index ?? 0;
       return (
         <div className="typeset typeset-chat">
-          {renderContent(normalizedContent.slice(0, errorStart))}
+          <MarkdownBlocks text={normalizedContent.slice(0, errorStart)} />
           <ErrorBlock errorData={errorMatch[1]} chatId={chatId} onRetry={onRetry} />
-          {renderContent(normalizedContent.slice(errorStart + errorMatch[0].length))}
+          <MarkdownBlocks text={normalizedContent.slice(errorStart + errorMatch[0].length)} />
         </div>
       );
     }
   }
 
-  return <div className="typeset typeset-chat">{renderContent(normalizedContent)}</div>;
+  return (
+    <div className="typeset typeset-chat">
+      <MarkdownBlocks text={normalizedContent} />
+    </div>
+  );
 }
