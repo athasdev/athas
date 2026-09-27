@@ -338,6 +338,9 @@ export const ChatMessage = memo(function ChatMessage({
     );
   }
 
+  // A plan block without any parsable steps renders as ordinary markdown.
+  const planBlock = hasPlanBlock(message.content) ? parsePlan(message.content) : null;
+
   return (
     <Message>
       <AssistantMessageAvatar iconId={assistantIconId} label={assistantLabel} />
@@ -400,11 +403,11 @@ export const ChatMessage = memo(function ChatMessage({
               <AgentPlan entries={message.plan} isStreaming={message.isStreaming} />
             ) : null}
 
-            {hasPlanBlock(message.content) ? (
+            {planBlock ? (
               <>
                 <MessageResponse>
                   <PlanBlockDisplay
-                    plan={parsePlan(message.content)!}
+                    plan={planBlock}
                     isStreaming={message.isStreaming}
                     onExecuteStep={handleExecuteStep}
                   />
