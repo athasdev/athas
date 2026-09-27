@@ -10,7 +10,14 @@ import {
   parseWindowOpenUrl,
   type WindowOpenRequest,
 } from "../utils/window-open-request";
+import { createPendingQueueDrain } from "../utils/pending-queue-drain";
 import { disposeListener } from "@/utils/tauri-drag-drop";
+
+const drainPendingDeepLinks = createPendingQueueDrain({
+  take: () => invoke<string[]>("take_pending_deep_links"),
+  handle: handleDeepLink,
+  onError: (error) => console.error("Failed to load pending deep links:", error),
+});
 
 /**
  * Hook to handle deep link URLs. The native side queues every link, including
@@ -24,24 +31,12 @@ import { disposeListener } from "@/utils/tauri-drag-drop";
 export function useDeepLink() {
   useEffect(() => {
     let disposed = false;
+    const drain = () => void drainPendingDeepLinks();
 
-    const drainPendingDeepLinks = () => {
-      void invoke<string[]>("take_pending_deep_links")
-        .then((urls) => {
-          if (disposed) return;
-          for (const url of urls) {
-            handleDeepLink(url);
-          }
-        })
-        .catch((error) => {
-          console.error("Failed to load pending deep links:", error);
-        });
-    };
-
-    const unlisten = listen<void>("deep_links_pending", drainPendingDeepLinks);
+    const unlisten = listen<void>("deep_links_pending", drain);
     unlisten.then(
       () => {
-        if (!disposed) drainPendingDeepLinks();
+        if (!disposed) drain();
       },
       (error: unknown) => console.error("Failed to listen for deep links:", error),
     );
