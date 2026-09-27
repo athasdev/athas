@@ -1,5 +1,4 @@
 import type * as React from "react";
-import { cva, type VariantProps } from "class-variance-authority";
 import { CopyIcon, type Icon } from "@/ui/icons";
 import { Button, type ButtonProps } from "@/ui/button";
 import { cn } from "@/utils/cn";
@@ -25,49 +24,6 @@ function Message({
       data-align={align}
       className={cn(
         "group/message relative flex w-full min-w-0 gap-2 font-sans ui-text-sm data-[align=end]:flex-row-reverse",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
-const messageAvatarVariants = cva(
-  "flex shrink-0 items-center justify-center overflow-hidden [&_svg:not([class*='size-'])]:size-3.5",
-  {
-    variants: {
-      variant: {
-        default: "rounded-full bg-accent",
-        assistant: "rounded-full bg-accent text-muted-foreground",
-      },
-      size: {
-        default: "",
-        compact: "size-6",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
-    },
-  },
-);
-
-function MessageAvatar({
-  className,
-  placement = "footer",
-  variant = "default",
-  size = "default",
-  ...props
-}: React.ComponentProps<"div"> &
-  VariantProps<typeof messageAvatarVariants> & { placement?: "content" | "footer" }) {
-  return (
-    <div
-      data-slot="message-avatar"
-      className={cn(
-        messageAvatarVariants({ variant, size }),
-        placement === "footer"
-          ? "min-w-8 self-end group-has-data-[slot=message-footer]/message:-translate-y-8"
-          : "min-w-6 self-start",
         className,
       )}
       {...props}
@@ -176,11 +132,9 @@ export {
   Message,
   MessageAction,
   MessageActions,
-  MessageAvatar,
   MessageContent,
   MessageFooter,
   MessageGroup,
   MessageHeader,
-  messageAvatarVariants,
   MessageResponse,
 };
