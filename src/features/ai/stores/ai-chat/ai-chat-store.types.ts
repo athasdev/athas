@@ -33,6 +33,8 @@ interface PendingAgentLaunchRequest {
   selectedBufferIds: string[];
   selectedFilesPaths: string[];
   editorSelections: EditorSelectionContext[];
+  /** "append" adds the context to the composer instead of replacing what it already holds. */
+  mode?: "replace" | "append";
 }
 
 export type AgentRunPhase = "starting" | "waiting" | "thinking" | "tool" | "approval";

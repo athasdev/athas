@@ -26,7 +26,7 @@ import {
 import { createPortal } from "react-dom";
 import { useOnClickOutside } from "usehooks-ts";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
-import { openNewAgentChat } from "@/features/ai/lib/open-new-agent-chat";
+import { addEditorSelectionsToAgentChat } from "@/features/ai/lib/add-selection-to-agent-chat";
 import type { EditorSelectionContext } from "@/features/ai/types/ai-context.types";
 import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics.store";
 import type { Diagnostic } from "@/features/diagnostics/types/diagnostics.types";
@@ -1927,9 +1927,7 @@ export function MonacoEditor({
             anchorRect={selectionAgentAction.anchorRect}
             onClose={clearSelectionAgentAction}
             onSelect={() => {
-              openNewAgentChat(undefined, {
-                editorSelections: [selectionAgentAction.context],
-              });
+              addEditorSelectionsToAgentChat([selectionAgentAction.context]);
               clearSelectionAgentAction();
             }}
           />

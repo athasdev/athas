@@ -18,6 +18,16 @@ describe("default keymaps", () => {
     keymapRegistry.clear();
   });
 
+  it("binds selection-to-chat shortcuts without taking select all occurrences", () => {
+    expectKeybinding("editor.addSelectionToChat", "cmd+l", "editorFocus");
+    expectKeybinding("editor.addSelectionToNewChat", "cmd+alt+l", "editorFocus");
+    expectKeybinding("editor.selectAllOccurrences", "cmd+shift+l", "editorFocus");
+    const editorKeys = defaultKeymaps
+      .filter((keybinding) => keybinding.when === "editorFocus")
+      .map((keybinding) => keybinding.key);
+    expect(editorKeys.filter((key) => key === "cmd+l" || key === "cmd+alt+l")).toHaveLength(2);
+  });
+
   it("registers editor navigation and folding shortcuts", () => {
     const byCommand = new Map(defaultKeymaps.map((keybinding) => [keybinding.command, keybinding]));
 

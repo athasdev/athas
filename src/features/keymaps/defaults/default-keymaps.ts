@@ -352,6 +352,18 @@ export const defaultKeymaps: Keybinding[] = [
     source: "default",
     when: "editorFocus",
   },
+  {
+    key: "cmd+l",
+    command: "editor.addSelectionToChat",
+    source: "default",
+    when: "editorFocus",
+  },
+  {
+    key: "cmd+alt+l",
+    command: "editor.addSelectionToNewChat",
+    source: "default",
+    when: "editorFocus",
+  },
 
   // View Operations
   { key: "cmd+b", command: "workbench.toggleSidebar", source: "default" },

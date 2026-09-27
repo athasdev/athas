@@ -628,6 +628,28 @@ const editCommands: Command[] = [
     keybinding: "cmd+i",
     execute: showInlineEditToolbar,
   },
+  {
+    id: "editor.addSelectionToChat",
+    title: "Add Selection to Agent Chat",
+    category: "Agent",
+    keybinding: "cmd+l",
+    execute: async () => {
+      const { addActiveSelectionToAgentChat } =
+        await import("@/features/ai/lib/add-selection-to-agent-chat");
+      addActiveSelectionToAgentChat();
+    },
+  },
+  {
+    id: "editor.addSelectionToNewChat",
+    title: "Add Selection to New Agent Chat",
+    category: "Agent",
+    keybinding: "cmd+alt+l",
+    execute: async () => {
+      const { addActiveSelectionToNewAgentChat } =
+        await import("@/features/ai/lib/add-selection-to-agent-chat");
+      addActiveSelectionToNewAgentChat();
+    },
+  },
 ];
 
 const viewCommands: Command[] = [

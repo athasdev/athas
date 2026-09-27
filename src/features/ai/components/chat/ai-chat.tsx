@@ -1310,6 +1310,15 @@ details: ${errorDetails || mainError}
     if (pendingLaunch.chatId !== effectiveChatId) return;
     if (activeBuffer?.type !== "agent") return;
     if (activeBuffer.sessionId !== pendingLaunch.chatId) return;
+    if (pendingLaunch.mode === "append") {
+      composerContext.append(
+        pendingLaunch.selectedBufferIds,
+        pendingLaunch.selectedFilesPaths,
+        pendingLaunch.editorSelections,
+      );
+      chatActions.setPendingAgentLaunchRequest(null);
+      return;
+    }
     if (isSurfaceTyping || surfaceStreamingMessageId) return;
     composerContext.replace(
       pendingLaunch.selectedBufferIds,
@@ -1343,6 +1352,7 @@ details: ${errorDetails || mainError}
     chatState.pendingAgentLaunchRequest,
     surfaceStreamingMessageId,
     activeBuffer,
+    composerContext.append,
     composerContext.replace,
     sendMessage,
     showToast,

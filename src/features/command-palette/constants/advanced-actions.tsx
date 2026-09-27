@@ -1,6 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import { logOutOfAcpAgent } from "@/features/ai/lib/acp-logout";
 import { openNewAgentChat } from "@/features/ai/lib/open-new-agent-chat";
+import {
+  addActiveSelectionToAgentChat,
+  addActiveSelectionToNewAgentChat,
+} from "@/features/ai/lib/add-selection-to-agent-chat";
 import { openAgentSessions } from "@/features/ai/lib/open-agent-sessions";
 import { openAgentInNewWindow } from "@/features/ai/detached/agent-window-service";
 import { toggleFollowAgent } from "@/features/ai/services/agent-follow-service";
@@ -154,6 +158,30 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
       action: () => {
         openNewAgentChat();
         onClose();
+      },
+    },
+    {
+      id: "ai-add-selection-to-chat",
+      label: "AI: Add Selection to Agent Chat",
+      description: "Attach the selected code to the current agent chat",
+      icon: <SparkleIcon />,
+      category: "AI",
+      commandId: "editor.addSelectionToChat",
+      action: () => {
+        onClose();
+        addActiveSelectionToAgentChat();
+      },
+    },
+    {
+      id: "ai-add-selection-to-new-chat",
+      label: "AI: Add Selection to New Agent Chat",
+      description: "Start a new agent chat with the selected code attached",
+      icon: <SparkleIcon />,
+      category: "AI",
+      commandId: "editor.addSelectionToNewChat",
+      action: () => {
+        onClose();
+        addActiveSelectionToNewAgentChat();
       },
     },
     {
