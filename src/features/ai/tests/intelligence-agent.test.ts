@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   model: null as unknown as MockLanguageModelV4,
   invoke: vi.fn(),
   recordWrite: vi.fn(),
+  turnId: undefined as string | undefined,
   dirty: false,
   backgroundDirty: false,
   mcpServers: [] as McpServerSetting[],
@@ -55,6 +56,7 @@ vi.mock("../intelligence/services/intelligence-mcp", async (importOriginal) => {
 });
 vi.mock("@/features/ai/services/agent-edits-service", () => ({
   recordAgentFileWrite: mocks.recordWrite,
+  currentAgentTurnId: () => mocks.turnId,
 }));
 vi.mock("../intelligence/services/intelligence-sdk-model", () => ({
   getIntelligenceSdkModel: async () => mocks.model,
@@ -149,6 +151,7 @@ beforeEach(() => {
   mocks.mcpServers = [];
   mocks.mcpCalls = [];
   mocks.mcpClosed = 0;
+  mocks.turnId = undefined;
   storage.clear();
   vi.stubGlobal("localStorage", {
     getItem: (key: string) => storage.get(key) ?? null,
@@ -210,6 +213,21 @@ describe("Intelligence local agent loop", () => {
     });
     expect(mocks.recordWrite).toHaveBeenCalledWith("test-session", written);
     expect(options.onChunk).toHaveBeenCalledWith("Finished");
+  });
+  it("keeps a write with the turn that started the run", async () => {
+    mocks.turnId = "prompt-1";
+    mocks.invoke.mockImplementation(async (command: string) => {
+      if (command === "intelligence_read_file") return "const old = 1;";
+      if (command !== "intelligence_edit_file") return undefined;
+      // The user stopped this turn and sent the next prompt while the edit was landing.
+      mocks.turnId = "prompt-2";
+      return written;
+    });
+    await runIntelligenceAgent(params());
+    expect(mocks.recordWrite).toHaveBeenCalledWith("test-session", {
+      ...written,
+      turnId: "prompt-1",
+    });
   });
   it("edits again from what it wrote without another read", async () => {
     mocks.model = new MockLanguageModelV4({

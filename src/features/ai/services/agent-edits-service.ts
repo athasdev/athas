@@ -206,6 +206,15 @@ export function recordAgentFileWrite(chatId: string, write: AgentFileWrite) {
   rebaseOtherChats(write.path, chatId, write.content);
 }
 
+/**
+ * The user message whose turn the chat's agent is running now. An agent that resolves it when
+ * its run starts keeps its writes with that turn even if they land after the user stopped it and
+ * sent the next prompt.
+ */
+export function currentAgentTurnId(chatId: string): string | undefined {
+  return currentTurnMessageId(chatId) ?? undefined;
+}
+
 function findEditorBuffer(path: string) {
   const buffer = getBufferByPath(useBufferStore.getState().buffers, path);
   return buffer?.type === "editor" ? buffer : null;

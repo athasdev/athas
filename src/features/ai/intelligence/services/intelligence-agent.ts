@@ -9,7 +9,10 @@ import type {
   AcpToolKind,
   AcpTurnUsage,
 } from "@/features/ai/types/acp.types";
-import { recordAgentFileWrite } from "@/features/ai/services/agent-edits-service";
+import {
+  currentAgentTurnId,
+  recordAgentFileWrite,
+} from "@/features/ai/services/agent-edits-service";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
 import { isMac, isWindows } from "@/utils/platform";
@@ -150,6 +153,8 @@ export async function runIntelligenceAgent(params: {
     if (!controller.signal.aborted) throw new Error("The request timed out after 10 minutes.");
     return { outcome: "cancelled", stopReason: "cancelled", ...summary() };
   };
+  // Writes belong to the turn that started this run, even ones that land after a stop.
+  const turnId = currentAgentTurnId(params.sessionId);
   const readFiles = new Map<string, string>();
   const workspaceRoot = params.root?.replace(/[/\\]$/, "") ?? "";
   const absolutePath = (path: string) => `${workspaceRoot}/${path}`;
@@ -208,6 +213,7 @@ export async function runIntelligenceAgent(params: {
       path: write.path,
       previousContent: write.previousContent,
       content: write.content,
+      ...(turnId ? { turnId } : {}),
     });
     // The agent knows what it wrote, so it can keep editing without reading again.
     readFiles.set(relativePath, write.content);
