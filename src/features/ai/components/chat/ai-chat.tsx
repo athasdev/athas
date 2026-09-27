@@ -19,6 +19,7 @@ import {
 import { extractFollowUpActions } from "@/features/ai/lib/follow-up-actions";
 import { getAgentStopNotice } from "@/features/ai/lib/agent-stop-notice";
 import { buildConversationHistory } from "@/features/ai/lib/conversation-history";
+import { applyAttachmentBudget } from "@/features/ai/lib/context-budget";
 import { openAgentHistoryChat } from "@/features/ai/lib/open-agent-history";
 import {
   discardToolEditSnapshot,
@@ -587,7 +588,11 @@ const AIChat = memo(function AIChat({
       };
       const context = await buildContext(currentAgentId, latestSettings.aiProviderId);
       context.images = userMessage.images;
-      context.mentionedFiles = [...mentionedFiles, ...attachedFiles];
+      const { attachments: referencedFiles } = applyAttachmentBudget([
+        ...mentionedFiles,
+        ...attachedFiles,
+      ]);
+      context.mentionedFiles = referencedFiles;
 
       // Handle direct ACP UI intents locally so they are always reliable.
       if (isAcp && !userMessage.images?.length) {
@@ -613,7 +618,7 @@ const AIChat = memo(function AIChat({
 
       const enhancedMessage = isAcp
         ? trimmedMessageContent
-        : appendReferencedFiles(trimmedMessageContent, [...mentionedFiles, ...attachedFiles]);
+        : appendReferencedFiles(trimmedMessageContent, referencedFiles);
       if (isAcp) {
         setAcpEvents([]);
       }
