@@ -25,6 +25,10 @@ const state = vi.hoisted(() => ({
   configure: vi.fn(),
   loadModels: vi.fn(),
 }));
+vi.mock("@tauri-apps/api/webviewWindow", () => ({
+  getCurrentWebviewWindow: () => ({ label: "main" }),
+  getAllWebviewWindows: async () => [],
+}));
 vi.mock("../hooks/use-available-providers", () => ({
   useAvailableProviders: () => state.providers,
 }));

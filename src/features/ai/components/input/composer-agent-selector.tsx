@@ -29,6 +29,8 @@ import {
 import { useMenuSearch, type MenuSearch } from "@/ui/menu-search";
 import { ArrowClockwiseIcon, SlidersIcon, WarningIcon } from "@/ui/icons";
 import { Spinner } from "@/ui/spinner";
+import { ComposerEffortSubmenu } from "./composer-effort-selector";
+import { FollowAgentMenuItem } from "./follow-agent-toggle";
 
 const ModelResultsContext = createContext<((id: string, count: number) => void) | null>(null);
 
@@ -190,6 +192,8 @@ interface ComposerAgentSelectorProps {
   onModelChange: (modelId: string, providerId: string) => void;
   onSessionConfigChange: (optionId: string, value: SessionConfigValue) => void;
   onBeforeOpen?: () => void;
+  /** The chat whose agent can be followed in the editor; omitted when following is unavailable. */
+  followChatId?: string | null;
 }
 
 export function ComposerAgentSelector({
@@ -202,6 +206,7 @@ export function ComposerAgentSelector({
   onModelChange,
   onSessionConfigChange,
   onBeforeOpen,
+  followChatId,
 }: ComposerAgentSelectorProps) {
   const [isContentMounted, setIsContentMounted] = useState(false);
   const search = useMenuSearch();
@@ -378,6 +383,15 @@ export function ComposerAgentSelector({
           ) : null}
         </DropdownMenuViewport>
         <DropdownMenuSeparator />
+        {isContentMounted ? (
+          <ComposerEffortSubmenu
+            cwd={cwd}
+            currentAgentId={currentAgentId}
+            sessionConfigOptions={sessionConfigOptions}
+            onSessionConfigChange={onSessionConfigChange}
+          />
+        ) : null}
+        {followChatId ? <FollowAgentMenuItem chatId={followChatId} /> : null}
         <DropdownMenuItem onClick={() => useUIState.getState().openSettings("ai")}>
           <SlidersIcon />
           Configure models…

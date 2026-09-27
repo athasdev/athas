@@ -32,6 +32,7 @@ vi.mock("@/ui/dropdown", async (importOriginal) => {
     DropdownMenuTrigger: group,
     DropdownMenuContent: group,
     DropdownMenuItem: group,
+    DropdownMenuCheckboxItem: group,
     DropdownMenuRadioGroup: group,
     DropdownMenuRadioItem: group,
     DropdownMenuViewport: group,
@@ -43,10 +44,11 @@ vi.mock("@/ui/dropdown", async (importOriginal) => {
   };
 });
 
-const render = (agentId: string) =>
+const render = (agentId: string, followChatId?: string) =>
   renderToStaticMarkup(
     <ComposerAgentSelector
       cwd="/project"
+      followChatId={followChatId}
       currentAgentId={agentId}
       providerId="openai"
       modelId="gpt-test"
@@ -73,5 +75,10 @@ describe("Composer agent selector", () => {
 
     expect(markup).toContain("Gemini CLI");
     expect(markup).not.toContain("Claude Agent");
+  });
+
+  it("offers following the agent from the model menu when the chat supports it", () => {
+    expect(render("gemini", "chat-1")).toContain("Follow agent in editor");
+    expect(render("gemini")).not.toContain("Follow agent in editor");
   });
 });

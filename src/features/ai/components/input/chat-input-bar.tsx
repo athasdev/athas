@@ -4,7 +4,6 @@ import { getProviderAccessFromMap } from "@/features/ai/stores/ai-chat/provider-
 import {
   ArrowUpIcon,
   BoltIcon,
-  CommandIcon,
   MicrophoneIcon,
   PlayIcon,
   StopIcon,
@@ -39,14 +38,13 @@ import { getImageMimeType } from "@/utils/image-file-types";
 import { parsePastedImages, restorePastedImages } from "@/features/ai/lib/image-attachments";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { isAcpAgent } from "@/features/ai/services/ai-chat-service";
-import { FollowAgentToggle } from "./follow-agent-toggle";
+import { useFollowAgentInterrupt } from "./follow-agent-toggle";
 import {
   getComposerDropdownPosition,
   getComposerText,
   getComposerTextBeforeCaret,
   getComposerTextRange,
   isComposerTokenElement,
-  prepareComposerSlashCommand,
 } from "@/features/ai/utils/chat-composer-dom";
 import type { InlineDropdownPosition, PastedImage } from "@/features/ai/types/chat-composer.types";
 import type { AIChatSkill } from "@/features/ai/types/skills.types";
@@ -72,7 +70,6 @@ import { cn } from "@/utils/cn";
 import { Composer, ComposerEditable, ComposerToolbar } from "@/ui/composer";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { chatContentWidth } from "../chat/chat-content-width";
-import { ComposerEffortSelector } from "./composer-effort-selector";
 import { ComposerAgentSelector } from "./composer-agent-selector";
 import { ChatPreferencesMenu } from "./chat-preferences-menu";
 import { ComposerModeSelector } from "./composer-mode-selector";
@@ -175,6 +172,8 @@ const AIChatInputBar = memo(function AIChatInputBar({
   const session = useAIChatStore((state) => state.chats.find((chat) => chat.id === chatId));
   const acpSessionId = session?.acpSessionId ?? null;
   const modeSource = useChatModeSource(chatId ?? null, currentAgentId);
+  const followChatId = chatId && isAcpAgent(currentAgentId) ? chatId : null;
+  useFollowAgentInterrupt(followChatId);
   const defaultProviderId = useSettingsStore((state) => state.settings.aiProviderId);
   const defaultModelId = useSettingsStore((state) => state.settings.aiModelId);
   const aiProviderId = session?.providerId ?? defaultProviderId;
@@ -1289,7 +1288,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
         </ChromeBar>
       ) : (
         <ComposerToolbar>
-          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
+          <div className="flex min-w-0 items-center gap-1">
             <ContextSelector
               buffers={buffers}
               selectedBufferIds={selectedBufferIds}
@@ -1322,15 +1321,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
                 if (acpSessionId) void changeSessionConfigOption(acpSessionId, optionId, value);
               }}
               onBeforeOpen={closeInlineMenus}
-            />
-            <ComposerEffortSelector
-              cwd={projectPath}
-              currentAgentId={currentAgentId}
-              sessionConfigOptions={sessionConfigOptions}
-              onSessionConfigChange={(optionId, value) => {
-                if (acpSessionId) void changeSessionConfigOption(acpSessionId, optionId, value);
-              }}
-              onOpen={closeInlineMenus}
+              followChatId={followChatId}
             />
             <ChatPreferencesMenu
               currentAgentId={currentAgentId}
@@ -1343,35 +1334,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
               onSelectCodexSkill={insertCodexSkillAtCursor}
               onBeforeOpen={closeInlineMenus}
             />
-            {chatId && isAcpAgent(currentAgentId) ? <FollowAgentToggle chatId={chatId} /> : null}
-            {hasSlashCommands && (
-              <Button
-                type="button"
-                onClick={() => {
-                  if (!inputRef.current || !isInputEnabled) return;
-                  if (slashCommandState.active) {
-                    hideSlashCommands();
-                    return;
-                  }
-                  closeInlineMenus();
-                  const { startIndex, endIndex, search } = prepareComposerSlashCommand(
-                    inputRef.current,
-                  );
-                  syncInputFromEditable();
-                  slashCommandRangeRef.current = { startIndex, endIndex };
-                  showSlashCommands(getSlashDropdownPosition(), search);
-                }}
-                variant="ghost"
-                disabled={!isInputEnabled}
-                iconOnly
-                active={slashCommandState.active}
-                tooltip="Show slash commands"
-                aria-label="Show slash commands"
-              >
-                <CommandIcon />
-              </Button>
-            )}
-
             <Button
               type="button"
               disabled={!isInputEnabled || !isSpeechRecognitionSupported}

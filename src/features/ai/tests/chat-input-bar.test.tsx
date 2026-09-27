@@ -86,4 +86,15 @@ describe("Agent composer", () => {
     expect(markup).toContain('aria-label="Stop generation"');
     expect(markup).not.toContain('aria-label="Send message"');
   });
+
+  it("keeps one toolbar row: context, mode, model, settings and voice", () => {
+    const markup = renderComposer({ currentAgentId: "custom" });
+    const toolbar = markup.slice(markup.indexOf('data-slot="composer-toolbar"'));
+    expect(toolbar).toContain('aria-label="Add context"');
+    expect(toolbar).toContain('aria-label="Mode: Agent"');
+    expect(toolbar).toContain('aria-label="Change model"');
+    expect(toolbar).not.toContain('aria-label="Show slash commands"');
+    expect(toolbar).not.toContain('aria-label="Reasoning effort"');
+    expect(toolbar).not.toContain("Follow the agent in the editor");
+  });
 });

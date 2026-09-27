@@ -215,7 +215,6 @@ export const CloudWarningIcon = createIconComponent(
 export const CodeBlockIcon = createIconComponent(Nucleo.IconSquareCodeOutline18, "CodeBlockIcon");
 export const CodeIcon = createIconComponent(Nucleo.IconCodeOutline18, "CodeIcon");
 export const ColumnsIcon = createIconComponent(Nucleo.IconTableColsOutline18, "ColumnsIcon");
-export const CommandIcon = createIconComponent(Nucleo.IconCommandOutline18, "CommandIcon");
 export const CopyIcon = createIconComponent(Nucleo.IconCopyOutline18, "CopyIcon");
 export const CreditCardIcon = createIconComponent(Nucleo.IconCreditCardOutline18, "CreditCardIcon");
 export const CrosshairIcon = createIconComponent(Nucleo.IconCrosshairsOutline18, "CrosshairIcon");
