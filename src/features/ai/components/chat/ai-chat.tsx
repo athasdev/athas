@@ -81,6 +81,7 @@ import { AcpQuestionPrompt } from "./acp-question-prompt";
 import { AcpUrlQuestionPrompt } from "./acp-url-question-prompt";
 import { ChatHeader } from "./chat-header";
 import { ChatMessages } from "./chat-messages";
+import { HostedUsageBanner } from "./hosted-usage-banner";
 
 const AIChat = memo(function AIChat({
   className,
@@ -697,6 +698,8 @@ const AIChat = memo(function AIChat({
             canRetry: true,
           }
         : null;
+  const showHostedUsage =
+    !useInitialComposer && currentAgentId === "custom" && sessionProviderId === "athas";
   const handleQuestionAnswer = async (response: AcpElicitationResponse) => {
     if (!currentQuestion) return;
     const isLink = currentQuestion.request.mode === "url";
@@ -932,6 +935,11 @@ const AIChat = memo(function AIChat({
                   </AlertAction>
                 ) : null}
               </Alert>
+            </div>
+          ) : null}
+          {showHostedUsage ? (
+            <div className="shrink-0 px-2 pb-1">
+              <HostedUsageBanner />
             </div>
           ) : null}
           {!useInitialComposer ? composer : null}

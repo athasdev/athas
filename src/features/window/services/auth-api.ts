@@ -207,6 +207,8 @@ export interface IntelligenceCredits {
   pendingCents: number;
   remainingCents: number;
   requestsCount: number;
+  /** Prepaid usage balance that hosted turns draw from after the allowance, when reported. */
+  walletBalanceCents?: number | null;
 }
 
 export interface EnterprisePolicy {
