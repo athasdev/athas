@@ -1,4 +1,3 @@
-import { getApiErrorCode } from "@/features/ai/lib/api-error";
 import { cancelIntelligenceAgent } from "@/features/ai/intelligence/services/intelligence-agent-session";
 import { getProviderAccessFromMap } from "@/features/ai/stores/ai-chat/provider-actions";
 import { isTerminalAgent } from "@/features/ai/lib/terminal-agents";
@@ -6,85 +5,45 @@ import { openTerminalAgent } from "@/features/ai/lib/terminal-agent-terminal";
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { appendChatAcpEvent, type ChatAcpEventInput } from "@/features/ai/lib/acp-event-timeline";
 import { acpNoticeToChatEvent } from "@/features/ai/lib/acp-notices";
-import {
-  isAcpAuthenticationError,
-  isAcpConfigurationError,
-} from "@/features/ai/lib/acp-authentication";
-import { parseDirectAcpUiAction } from "@/features/ai/lib/acp-ui-intents";
-import {
-  appendReferencedFiles,
-  loadFilesByPaths,
-  parseMentionsAndLoadFiles,
-} from "@/features/ai/lib/file-mentions";
-import { extractFollowUpActions } from "@/features/ai/lib/follow-up-actions";
-import { getAgentStopNotice } from "@/features/ai/lib/agent-stop-notice";
-import { buildConversationHistory } from "@/features/ai/lib/conversation-history";
-import { applyAttachmentBudget } from "@/features/ai/lib/context-budget";
-import {
-  partitionContextSelections,
-  resolveContextReferences,
-} from "@/features/ai/lib/context-references";
+import { partitionContextSelections } from "@/features/ai/lib/context-references";
 import { openAgentHistoryChat } from "@/features/ai/lib/open-agent-history";
-import {
-  discardToolEditSnapshot,
-  resolveToolEditDiff,
-  snapshotToolEdit,
-} from "@/features/ai/lib/edit-diff-capture";
 import { getAgentMessageAccess } from "@/features/ai/lib/agent-message-access";
-import { startAssistantResponseContinuation } from "@/features/ai/lib/assistant-response";
-import { claimRunAbortController } from "@/features/ai/lib/run-abort-controller";
 import {
   beginQueuedSendNow,
   setQueuedMessageEditing,
   settleQueuedSendNow,
 } from "@/features/ai/lib/agent-queue-controls";
-import {
-  cancelUnfinishedToolCalls,
-  createToolCall,
-  markToolCallComplete,
-  updateToolCall,
-} from "@/features/ai/lib/tool-call-state";
-import { followAgentLocations, followAgentTo } from "@/features/ai/services/agent-follow-service";
-import { recordAgentFileWrite } from "@/features/ai/services/agent-edits-service";
+import { isBrowserOffline } from "@/features/ai/lib/agent-turn-error";
 import { requestInlineEdit } from "@/features/editor/services/editor-inline-edit-service";
 import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
+import {
+  type AgentTurnRequest,
+  getAgentAccessMessage,
+  runAgentTurn,
+} from "@/features/ai/services/agent-turn-runner";
 import { CodexIntegrationService } from "@/features/ai/integrations/codex/codex-integration-service";
 import { CODEX_INTEGRATION_ID } from "@/features/ai/integrations/integration-registry";
-import { getChatCompletionStream, isAcpAgent } from "@/features/ai/services/ai-chat-service";
+import { isAcpAgent } from "@/features/ai/services/ai-chat-service";
 import type {
   ImageContent,
   QueuedAgentMessage,
   RestoredComposerPrompt,
 } from "@/features/ai/types/ai-chat.types";
-import {
-  type AgentRunEnding,
-  continuesAgentQueue,
-  getAgentRunEnding,
-} from "@/features/ai/lib/agent-message-queue";
-import {
-  sendAgentNativeNotification,
-  type AgentNativeNotificationKind,
-} from "@/features/ai/services/agent-native-notifications";
-import { useAcpTerminalsStore } from "@/features/ai/stores/acp-terminals.store";
-import { withExitedAcpTerminalSnapshots } from "@/features/ai/lib/acp-terminal-output";
+import { type AgentRunEnding, continuesAgentQueue } from "@/features/ai/lib/agent-message-queue";
 import { useAcpNoticesStore } from "@/features/ai/stores/acp-notices.store";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { agentIsDetached } from "@/features/ai/detached/agent-window.store";
 import { peekAgentDraft } from "@/features/ai/detached/agent-window-drafts";
 import { useComposerContextSelection } from "@/features/ai/hooks/use-composer-context-selection";
+import { useOnlineStatus } from "@/features/ai/hooks/use-online-status";
 import type { ContextInfo } from "@/features/ai/types/ai-context.types";
-import type {
-  AgentMessageSubmitResult,
-  AIChatProps,
-  Message,
-} from "@/features/ai/types/ai-chat.types";
+import type { AgentMessageSubmitResult, AIChatProps } from "@/features/ai/types/ai-chat.types";
 import type { ChatAcpEvent } from "@/features/ai/types/chat-ui.types";
 import {
   getFallbackAgentSessionTitle,
   normalizeAgentSessionTitle,
 } from "@/features/ai/utils/chat-session-title";
 import { getMessageSearchMatches } from "@/features/ai/utils/message-search";
-import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useGitHubStore } from "@/features/github/stores/github.store";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
@@ -94,7 +53,9 @@ import { useAuthStore } from "@/features/window/stores/auth.store";
 import { getAccountIdentity } from "@/features/window/lib/account-identity";
 import { useAgentWindowStore } from "@/features/ai/detached/agent-window.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
-import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
+import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/ui/alert";
+import { Button } from "@/ui/button";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
 import {
   MessageScroller,
   MessageScrollerButton,
@@ -116,14 +77,10 @@ import {
   selectChatPermissions,
   useAgentPermissionsStore,
 } from "@/features/ai/stores/agent-permissions.store";
-import { getAcpPermissionPreview } from "@/features/ai/lib/acp-permission-preview";
 import { AcpQuestionPrompt } from "./acp-question-prompt";
 import { AcpUrlQuestionPrompt } from "./acp-url-question-prompt";
 import { ChatHeader } from "./chat-header";
 import { ChatMessages } from "./chat-messages";
-
-const createMessageId = () =>
-  globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
 const AIChat = memo(function AIChat({
   className,
@@ -152,6 +109,8 @@ const AIChat = memo(function AIChat({
   const { showToast } = useToast();
 
   const abortControllerRef = useRef<AbortController | null>(null);
+  const offlineHeldChatsRef = useRef(new Set<string>());
+  const isOnline = useOnlineStatus();
   const allPermissions = useAgentPermissionsStore.use.permissions();
   const permissionActions = useAgentPermissionsStore.use.actions();
   const allAgentQuestions = useAcpQuestionsStore.use.questions();
@@ -411,26 +370,6 @@ const AIChat = memo(function AIChat({
     }
   };
 
-  const updateStreamingAssistantMessage = useCallback(
-    (
-      chatId: string,
-      messageId: string,
-      mutate: (currentMessage: Message | undefined) => Partial<Message>,
-    ) => {
-      const currentMessages = useAIChatStore.getState().actions.getMessagesForChat(chatId);
-      const currentMessage = currentMessages.find((message) => message.id === messageId);
-      const updates = mutate(currentMessage);
-      if (updates.toolCalls) {
-        updates.toolCalls = withExitedAcpTerminalSnapshots(
-          updates.toolCalls,
-          useAcpTerminalsStore.getState().terminals,
-        );
-      }
-      chatActions.updateMessage(chatId, messageId, updates);
-    },
-    [chatActions.updateMessage],
-  );
-
   function finishRunAndProcessQueue(
     targetChatId: string,
     runId: string,
@@ -442,6 +381,11 @@ const AIChat = memo(function AIChat({
     const actions = useAIChatStore.getState().actions;
     actions.finishAgentRun(targetChatId, runId);
     if (!continuesAgentQueue(ending)) return;
+    if (isBrowserOffline() && useAIChatStore.getState().agentMessageQueues[targetChatId]?.length) {
+      // Sending now would only fail; the queue resumes when the connection is back.
+      offlineHeldChatsRef.current.add(targetChatId);
+      return;
+    }
     const nextMessage = actions.dequeueAgentMessage(targetChatId);
     if (nextMessage) {
       queueMicrotask(
@@ -451,720 +395,28 @@ const AIChat = memo(function AIChat({
     }
   }
 
-  async function processMessage(
-    messageContent: string,
-    options: { editedUserMessageId?: string; targetChatId?: string; images?: ImageContent[] } = {},
-  ) {
-    const store = useAIChatStore.getState();
-    const requestedChatId = options.targetChatId ?? effectiveChatId;
-    if (agentIsDetached(requestedChatId)) return;
-    const targetChat = requestedChatId
-      ? store.chats.find((chat) => chat.id === requestedChatId)
-      : null;
-    const currentAgentId = targetChat?.agentId ?? store.actions.getCurrentAgentId();
-    const trimmedMessageContent = messageContent.trim();
-    const access = getAgentMessageAccess(
-      currentAgentId,
-      getProviderAccessFromMap(targetChat?.providerId ?? aiProviderId, store.providerApiKeys),
-    );
-    if (!trimmedMessageContent && !options.images?.length && !options.editedUserMessageId) return;
-    if (!access.accepted) {
-      showToast({
-        message:
-          currentAgentId === "custom" && (targetChat?.providerId ?? aiProviderId) === "athas"
-            ? "Sign in and add Athas Agent balance to use hosted models."
-            : (access.error ?? "This agent is not ready."),
-        type: "error",
-      });
-      return;
-    }
-    const isAcp = isAcpAgent(currentAgentId);
-    // Agents are started automatically by AcpStreamHandler when needed
-
-    let targetChatId = requestedChatId ?? store.currentChatId;
-    if (!targetChatId) {
-      targetChatId = chatActions.createNewChat(currentAgentId);
-    } else {
-      targetChatId = chatActions.ensureChatSession(targetChatId, currentAgentId, {
-        activate: !chatId,
-      });
-    }
-
-    const existingMessages = useAIChatStore.getState().actions.getMessagesForChat(targetChatId);
-    const editedUserMessageIndex = options.editedUserMessageId
-      ? existingMessages.findIndex(
-          (message) => message.id === options.editedUserMessageId && message.role === "user",
-        )
-      : -1;
-    if (options.editedUserMessageId && editedUserMessageIndex === -1) return;
-
-    const conversationContext = buildConversationHistory(
-      editedUserMessageIndex >= 0
-        ? existingMessages.slice(0, editedUserMessageIndex)
-        : existingMessages,
-    );
-    const userMessage: Message =
-      editedUserMessageIndex >= 0
-        ? {
-            ...existingMessages[editedUserMessageIndex],
-            content: trimmedMessageContent,
-            timestamp: new Date(),
-          }
-        : {
-            id: createMessageId(),
-            content: trimmedMessageContent,
-            role: "user",
-            timestamp: new Date(),
-            images: options.images,
-          };
-
-    const assistantMessageId = createMessageId();
-    const runId = createMessageId();
-    const supportsAgentNotifications = isAcp || currentAgentId === CODEX_INTEGRATION_ID;
-    const notifyAgent = (
-      kind: AgentNativeNotificationKind,
-      dedupeId: string = assistantMessageId,
-    ) => {
-      if (!supportsAgentNotifications) return;
-      void sendAgentNativeNotification({
-        kind,
-        dedupeId: `${targetChatId}:${dedupeId}`,
-        chatId: targetChatId,
-      });
-    };
-    const assistantMessage: Message = {
-      id: assistantMessageId,
-      content: "",
-      role: "assistant",
-      timestamp: new Date(),
-      isStreaming: true,
-      responsePhase: "waiting",
-    };
-
-    if (options.editedUserMessageId) {
-      const didReplace = chatActions.replaceUserMessage(
-        targetChatId,
-        options.editedUserMessageId,
-        trimmedMessageContent,
-      );
-      if (!didReplace) return;
-      // The edited prompt was just re-stamped; its answer must come after it.
-      assistantMessage.timestamp = new Date();
-    } else {
-      chatActions.addMessage(targetChatId, userMessage);
-    }
-    chatActions.addMessage(targetChatId, assistantMessage);
-    chatActions.startAgentRun(targetChatId, {
-      runId,
-      assistantMessageId,
-      agentId: currentAgentId,
-      phase: "waiting",
-    });
-
-    const currentMessages = useAIChatStore.getState().actions.getMessagesForChat(targetChatId);
-    if (currentMessages.length === 2) {
-      void updateInitialAgentSessionTitle(targetChatId, userMessage.content);
-    }
-
-    // A stopped turn can finish after the next one started; it only clears its own controller.
-    const { release: releaseAbortController } = claimRunAbortController(abortControllerRef);
-    const currentAssistantMessageId = assistantMessageId;
-    let currentAssistantRawContent = "";
-    let acpProducedStateOnlyUpdate = false;
-    let acpCommandResultLabel: string | null = null;
-
-    try {
-      const { mentionedFiles } = await parseMentionsAndLoadFiles(
-        trimmedMessageContent,
+  function processMessage(messageContent: string, options: Omit<AgentTurnRequest, "content"> = {}) {
+    return runAgentTurn(
+      { ...options, content: messageContent },
+      {
+        surfaceChatId: effectiveChatId,
+        isBoundToChat: Boolean(chatId),
+        fallbackProviderId: aiProviderId,
+        mode: chatState.mode,
+        outputStyle: chatState.outputStyle,
         allProjectFiles,
-      );
-      const mentionedPaths = new Set(mentionedFiles.map((file) => file.path));
-      const contextSelections = partitionContextSelections(selectedFilesPaths);
-      const attachedFiles = isAcp
-        ? []
-        : await loadFilesByPaths(
-            contextSelections.filePaths.filter((path) => !mentionedPaths.has(path)),
-          );
-      const settings = useSettingsStore.getState().settings;
-      const latestSettings = {
-        ...settings,
-        aiProviderId: targetChat?.providerId ?? settings.aiProviderId,
-        aiModelId: targetChat?.modelId ?? settings.aiModelId,
-      };
-      const context = await buildContext(currentAgentId, latestSettings.aiProviderId);
-      context.images = userMessage.images;
-      const { attachments: referencedFiles } = applyAttachmentBudget([
-        ...mentionedFiles,
-        ...attachedFiles,
-      ]);
-      context.mentionedFiles = referencedFiles;
-      context.contextReferences = await resolveContextReferences(contextSelections.references, {
-        projectRoot: rootFolderPath,
-      });
-
-      // Handle direct ACP UI intents locally so they are always reliable.
-      if (isAcp && !userMessage.images?.length) {
-        const directAction = parseDirectAcpUiAction(trimmedMessageContent);
-        if (directAction) {
-          const bufferActions = useBufferStore.getState().actions;
-          if (directAction.kind === "open_terminal" && directAction.command) {
-            bufferActions.openTerminalBuffer({
-              command: directAction.command,
-              name: directAction.command,
-            });
-            chatActions.updateMessage(targetChatId, currentAssistantMessageId, {
-              content: `Opened terminal and ran \`${directAction.command}\`.`,
-              isStreaming: false,
-            });
-          }
-
-          finishRunAndProcessQueue(targetChatId, runId);
-          releaseAbortController();
-          return;
-        }
-      }
-
-      const enhancedMessage = isAcp
-        ? trimmedMessageContent
-        : appendReferencedFiles(trimmedMessageContent, referencedFiles);
-      if (isAcp) {
-        setAcpEvents([]);
-      }
-
-      await getChatCompletionStream(
-        currentAgentId,
-        latestSettings.aiProviderId,
-        latestSettings.aiModelId,
-        enhancedMessage,
-        context,
-        (chunk: string) => {
-          currentAssistantRawContent += chunk;
-          const extracted = extractFollowUpActions(currentAssistantRawContent);
-          updateStreamingAssistantMessage(targetChatId, currentAssistantMessageId, () => ({
-            content: extracted.content,
-            followUpActions: extracted.actions,
-            responsePhase: undefined,
-          }));
-        },
-        (completion) => {
-          permissionActions.dropSettled(targetChatId);
-          const wasCancelled = completion?.outcome === "cancelled";
-          if (wasCancelled || (completion?.stopReason && completion.stopReason !== "end_turn")) {
-            // The turn is over; a call the agent never finished must not stay running.
-            updateStreamingAssistantMessage(
-              targetChatId,
-              currentAssistantMessageId,
-              (currentMessage) => ({
-                toolCalls: cancelUnfinishedToolCalls(currentMessage?.toolCalls),
-              }),
-            );
-          }
-          const currentMessage = chatActions
-            .getMessagesForChat(targetChatId)
-            .find((message) => message.id === currentAssistantMessageId);
-          const hasVisibleResponse = Boolean(
-            currentMessage?.content?.trim() ||
-            currentMessage?.toolCalls?.length ||
-            currentMessage?.images?.length ||
-            currentMessage?.resources?.length,
-          );
-
-          const stopNotice = wasCancelled
-            ? undefined
-            : getAgentStopNotice(completion?.stopReason, currentMessage);
-          const turnUsage = completion?.usage;
-          if (stopNotice) {
-            updateStreamingAssistantMessage(targetChatId, currentAssistantMessageId, () => ({
-              stopNotice,
-              turnUsage,
-              isStreaming: false,
-              responsePhase: undefined,
-            }));
-            if (stopNotice === "prompt_refused") {
-              // The prompt was rejected; hand it back so the user can rephrase it.
-              setRefusedPrompt({
-                id: currentAssistantMessageId,
-                content: userMessage.content,
-                images: userMessage.images,
-              });
-            }
-            finishRunAndProcessQueue(targetChatId, runId, getAgentRunEnding(false, stopNotice));
-            releaseAbortController();
-            notifyAgent(
-              stopNotice === "prompt_refused" || stopNotice === "refused" ? "error" : "complete",
-            );
-            return;
-          }
-
-          if (!hasVisibleResponse && wasCancelled) {
-            updateStreamingAssistantMessage(targetChatId, currentAssistantMessageId, () => ({
-              content: "_Stopped._",
-              isStreaming: false,
-              responsePhase: undefined,
-            }));
-            finishRunAndProcessQueue(targetChatId, runId, "stopped");
-            releaseAbortController();
-            return;
-          }
-
-          if (!hasVisibleResponse) {
-            if (isAcpAgent(currentAgentId) && acpProducedStateOnlyUpdate) {
-              const slashCommand = trimmedMessageContent.match(/^\/([^\s]+)/)?.[1];
-              const fallbackContent =
-                acpCommandResultLabel ||
-                (slashCommand ? `Applied \`/${slashCommand}\`.` : "Session updated.");
-
-              updateStreamingAssistantMessage(targetChatId, currentAssistantMessageId, () => ({
-                content: fallbackContent,
-                isStreaming: false,
-              }));
-              finishRunAndProcessQueue(targetChatId, runId, getAgentRunEnding(wasCancelled));
-              releaseAbortController();
-              if (!wasCancelled) notifyAgent("complete");
-              return;
-            }
-
-            const isAcp = isAcpAgent(currentAgentId);
-            const fallbackMessage = isAcp
-              ? "The selected agent did not return a visible response. Try sending the message again."
-              : "The selected provider did not return a visible response. Try another model or send the message again.";
-            const emptyResponseSource = isAcp ? "agent session" : "provider request";
-            updateStreamingAssistantMessage(targetChatId, currentAssistantMessageId, () => ({
-              content: `[ERROR_BLOCK]
-title: No Response
-code: EMPTY_RESPONSE
-message: ${fallbackMessage}
-details: The ${emptyResponseSource} completed, but no content, tool output, or resource was returned.
-[/ERROR_BLOCK]`,
-              isStreaming: false,
-            }));
-            finishRunAndProcessQueue(targetChatId, runId, wasCancelled ? "stopped" : "failed");
-            releaseAbortController();
-            if (!wasCancelled) notifyAgent("error");
-            return;
-          }
-
-          chatActions.updateMessage(targetChatId, currentAssistantMessageId, {
-            isStreaming: false,
-            turnUsage,
-          });
-          finishRunAndProcessQueue(targetChatId, runId, getAgentRunEnding(wasCancelled));
-          releaseAbortController();
-          if (!wasCancelled) notifyAgent("complete");
-        },
-        (error: string, canReconnect?: boolean) => {
-          permissionActions.dropSettled(targetChatId);
-          console.error("Streaming error:", error);
-
-          let errorTitle = "API Error";
-          let errorMessage = error;
-          let errorCode = "";
-          let errorDetails = "";
-
-          const parts = error.split("|||");
-          const mainError = parts[0];
-          if (parts.length > 1) {
-            errorDetails = parts[1];
-          }
-
-          errorCode = getApiErrorCode(mainError);
-          if (errorCode) {
-            if (errorCode === "429") {
-              errorTitle = "Rate Limit Exceeded";
-              errorMessage =
-                "The API is temporarily rate-limited. Please wait a moment and try again.";
-            } else if (errorCode === "401") {
-              errorTitle = "Authentication Error";
-              errorMessage =
-                (targetChat?.providerId ?? settings.aiProviderId) === "athas"
-                  ? "Your Athas session has expired. Sign in to continue."
-                  : "The provider rejected your API key. Check its configuration to continue.";
-            } else if (errorCode === "402") {
-              errorTitle = "Payment required";
-              errorMessage =
-                "Check your balance and spending limits to continue, or choose another model.";
-            } else if (errorCode === "403") {
-              errorTitle = "Access Denied";
-              errorMessage = "You don't have permission to access this resource.";
-            } else if (errorCode === "500") {
-              errorTitle = "Server Error";
-              errorMessage = "The API server encountered an error. Please try again later.";
-            } else if (errorCode === "400") {
-              errorTitle = "Bad Request";
-              if (errorDetails) {
-                try {
-                  const parsed = JSON.parse(errorDetails);
-                  if (parsed.error?.message) {
-                    errorMessage = parsed.error.message;
-                  }
-                } catch {
-                  errorMessage = mainError;
-                }
-              }
-            }
-          }
-
-          if (errorDetails) {
-            try {
-              const parsed = JSON.parse(errorDetails);
-              const detailMessage =
-                parsed.error?.message ??
-                (typeof parsed.error === "string" ? parsed.error : parsed.message);
-              if (typeof detailMessage === "string") errorMessage = detailMessage;
-            } catch {
-              // Non-JSON provider responses remain available under Details.
-            }
-          }
-
-          const isAcpConfigError =
-            isAcpAgent(currentAgentId) && isAcpConfigurationError(mainError, errorDetails);
-          const isAcpAuthError =
-            !isAcpConfigError &&
-            isAcpAgent(currentAgentId) &&
-            isAcpAuthenticationError(mainError, errorDetails);
-
-          if (isAcpConfigError) {
-            errorTitle = "Agent Configuration Required";
-            errorCode = "CONFIG_REQUIRED";
-            errorMessage =
-              "The selected agent is authenticated, but its account configuration is incomplete.";
-          } else if (isAcpAuthError) {
-            errorTitle = "Authentication Required";
-            errorCode = "AUTH_REQUIRED";
-            errorMessage =
-              "The selected agent needs external authentication before it can accept prompts.";
-
-            if (
-              mainError.includes("Method not implemented") ||
-              errorDetails.includes("Method not implemented")
-            ) {
-              errorDetails =
-                "This ACP adapter does not implement the protocol authenticate flow. Complete login in the underlying CLI/adapter, then try again.";
-            } else if (!errorDetails) {
-              errorDetails =
-                "Complete authentication in the underlying CLI/adapter, then try again.";
-            }
-          }
-
-          if (canReconnect) {
-            errorTitle = "Connection Lost";
-            errorCode = "RECONNECT";
-          }
-
-          const shouldSuppressToast =
-            isAcpAgent(currentAgentId) &&
-            (mainError.includes("did not return any response") || errorCode === "RECONNECT");
-
-          const formattedError = `[ERROR_BLOCK]
-title: ${errorTitle}
-code: ${errorCode}
-provider: ${targetChat?.providerId ?? settings.aiProviderId}
-message: ${errorMessage}
-details: ${errorDetails || mainError}
-[/ERROR_BLOCK]`;
-
-          updateStreamingAssistantMessage(
-            targetChatId,
-            currentAssistantMessageId,
-            (currentMessage) => ({
-              content: currentMessage?.content
-                ? `${currentMessage.content}\n\n${formattedError}`
-                : formattedError,
-              toolCalls: cancelUnfinishedToolCalls(currentMessage?.toolCalls),
-              isStreaming: false,
-            }),
-          );
-          if (!shouldSuppressToast) {
-            showToast({
-              message: errorMessage,
-              type: "error",
-            });
-          }
-          notifyAgent("error");
-          finishRunAndProcessQueue(targetChatId, runId, "failed");
-          releaseAbortController();
-        },
-        conversationContext,
-        () => {
-          currentAssistantRawContent = startAssistantResponseContinuation(
-            currentAssistantRawContent,
-          );
-          chatActions.updateMessage(targetChatId, currentAssistantMessageId, {
-            isStreaming: true,
-            responsePhase: "waiting",
-          });
-          chatActions.updateAgentRun(targetChatId, runId, {
-            assistantMessageId: currentAssistantMessageId,
-            phase: "waiting",
-          });
-        },
-        (event) => {
-          chatActions.updateAgentRun(targetChatId, runId, { phase: "tool" });
-          const toolCall = createToolCall(
-            event.toolName,
-            event.input,
-            event.toolId,
-            event.kind,
-            event.status,
-            event.locations,
-            event.output,
-            event.rawOutput,
-          );
-          void snapshotToolEdit(toolCall);
-          updateStreamingAssistantMessage(
-            targetChatId,
-            currentAssistantMessageId,
-            (currentMessage) => ({
-              isToolUse: true,
-              toolName: event.toolName,
-              toolCalls: [
-                ...(currentMessage?.toolCalls || []),
-                { ...toolCall, contentOffset: (currentMessage?.content ?? "").length },
-              ],
-            }),
-          );
-        },
-        (event) => {
-          updateStreamingAssistantMessage(
-            targetChatId,
-            currentAssistantMessageId,
-            (currentMessage) => ({
-              toolCalls: updateToolCall(currentMessage?.toolCalls || [], {
-                id: event.toolId,
-                name: event.toolName,
-                input: event.input,
-                output: event.output,
-                rawOutput: event.rawOutput,
-                error: event.error,
-                kind: event.kind,
-                status: event.status,
-                locations: event.locations,
-              }),
-            }),
-          );
-        },
-        (toolName: string, toolId?: string, output?: unknown, error?: string) => {
-          updateStreamingAssistantMessage(
-            targetChatId,
-            currentAssistantMessageId,
-            (currentMessage) => ({
-              toolCalls: markToolCallComplete(
-                currentMessage?.toolCalls || [],
-                toolName,
-                toolId,
-                output,
-                error,
-              ),
-            }),
-          );
-          const completed = chatActions
-            .getMessagesForChat(targetChatId)
-            .find((message) => message.id === currentAssistantMessageId)
-            ?.toolCalls?.find((toolCall) =>
-              toolId ? toolCall.id === toolId : toolCall.name === toolName && toolCall.isComplete,
-            );
-          if (!completed?.id || error) {
-            discardToolEditSnapshot(completed?.id ?? toolId);
-            return;
-          }
-          const completedId = completed.id;
-          void resolveToolEditDiff(completed).then((nextOutput) => {
-            if (!nextOutput) return;
-            updateStreamingAssistantMessage(
-              targetChatId,
-              currentAssistantMessageId,
-              (currentMessage) => ({
-                toolCalls: updateToolCall(currentMessage?.toolCalls || [], {
-                  id: completedId,
-                  output: nextOutput,
-                }),
-              }),
-            );
-          });
-        },
-        (event) => {
-          chatActions.updateAgentRun(targetChatId, runId, { phase: "approval" });
-          notifyAgent("permission", event.requestId);
-          appendAcpEvent({
-            id: `permission-request-${event.requestId}`,
-            category: "permission",
-            label: "Permission requested",
-            detail: event.description || `${event.permissionType} ${event.resource}`.trim(),
-            state: "info",
-          });
-          permissionActions.add({
-            chatId: targetChatId,
-            responder: event.requestId.startsWith("intelligence:")
-              ? "intelligence"
-              : currentAgentId === CODEX_INTEGRATION_ID
-                ? "codex"
-                : "acp",
-            requestId: event.requestId,
-            description: event.description,
-            permissionType: event.permissionType,
-            resource: event.resource,
-            options: event.options,
-            preview: getAcpPermissionPreview(event),
-          });
-        },
-        (event) => {
-          // Athas's own agent sends only its todo list through here.
-          if (
-            !isAcpAgent(currentAgentId) &&
-            currentAgentId !== CODEX_INTEGRATION_ID &&
-            event.type !== "plan_update"
-          )
-            return;
-          if (event.type === "elicitation_request") {
-            chatActions.updateAgentRun(targetChatId, runId, { phase: "approval" });
-            notifyAgent("question", event.requestId);
-            appendAcpEvent({
-              id: `question-${event.requestId}`,
-              category: "permission",
-              label: "Question asked",
-              detail: event.request.message,
-              state: "info",
-            });
-            return;
-          }
-          // Only show meaningful events, skip noisy ones
-          if (
-            event.type === "content_chunk" ||
-            event.type === "user_message_chunk" ||
-            event.type === "session_complete"
-          ) {
-            return;
-          }
-          switch (event.type) {
-            case "thought_chunk":
-              chatActions.updateAgentRun(targetChatId, runId, { phase: "thinking" });
-              updateStreamingAssistantMessage(targetChatId, currentAssistantMessageId, () => ({
-                responsePhase: "thinking",
-              }));
-              break;
-            case "tool_start":
-            case "tool_update":
-              followAgentLocations(targetChatId, event.locations);
-              break;
-            case "agent_location":
-              followAgentTo(targetChatId, { path: event.path, line: event.line });
-              break;
-            case "agent_file_write":
-              recordAgentFileWrite(targetChatId, {
-                writeId: event.writeId,
-                path: event.path,
-                previousContent: event.previousContent,
-                content: event.content,
-              });
-              break;
-            case "tool_complete":
-              break;
-            case "permission_request":
-              break; // Handled separately with permission UI
-            case "prompt_complete":
-              break; // Not useful to show
-            case "session_mode_update":
-              acpProducedStateOnlyUpdate = true;
-              acpCommandResultLabel = event.modeState.currentModeId
-                ? `Mode set to \`${event.modeState.currentModeId}\`.`
-                : "Session mode updated.";
-              break;
-            case "config_options_update":
-              acpProducedStateOnlyUpdate = true;
-              acpCommandResultLabel =
-                event.configOptions.length === 1
-                  ? "Session option updated."
-                  : "Session options updated.";
-              break;
-            case "session_info_update":
-              acpProducedStateOnlyUpdate = true;
-              acpCommandResultLabel = event.title
-                ? `Session title updated to "${event.title}".`
-                : "Session metadata updated.";
-              if (event.title) {
-                appendAcpEvent({
-                  category: "status",
-                  label: "Session title updated",
-                  detail: event.title,
-                  state: "info",
-                });
-              }
-              break;
-            case "current_mode_update":
-              acpProducedStateOnlyUpdate = true;
-              acpCommandResultLabel = `Mode set to \`${event.currentModeId}\`.`;
-              break;
-            case "slash_commands_update":
-              acpProducedStateOnlyUpdate = true;
-              acpCommandResultLabel = "Slash commands refreshed.";
-              break; // Not useful to show
-            case "plan_update":
-              // ACP sends the full plan each time; the message shows the latest one.
-              chatActions.updateMessage(targetChatId, currentAssistantMessageId, {
-                plan: event.entries.length > 0 ? event.entries : undefined,
-              });
-              break;
-            case "usage_update":
-              break; // The chat store keeps the session's usage
-            case "status_changed":
-              break; // The chat store follows agent status
-            case "error":
-              appendAcpEvent({
-                category: "error",
-                label: "Agent error",
-                detail: event.error,
-                state: "error",
-              });
-              break;
-            case "ui_action":
-              break; // Handled by acp-handler
-          }
-        },
-        chatState.mode,
-        chatState.outputStyle,
-        (data: string, mediaType: string) => {
-          updateStreamingAssistantMessage(
-            targetChatId,
-            currentAssistantMessageId,
-            (currentMessage) => ({
-              images: [...(currentMessage?.images || []), { data, mediaType }],
-            }),
-          );
-        },
-        (uri: string, name: string | null) => {
-          updateStreamingAssistantMessage(
-            targetChatId,
-            currentAssistantMessageId,
-            (currentMessage) => ({
-              resources: [...(currentMessage?.resources || []), { uri, name }],
-            }),
-          );
-        },
-        targetChatId,
-        undefined,
-        (phase) => {
-          updateStreamingAssistantMessage(
-            targetChatId,
-            currentAssistantMessageId,
-            (currentMessage) =>
-              currentMessage?.isStreaming &&
-              !currentMessage.content &&
-              currentMessage.responsePhase !== "thinking"
-                ? { responsePhase: phase }
-                : {},
-          );
-        },
-      );
-    } catch (error) {
-      console.error("Failed to start streaming:", error);
-      chatActions.updateMessage(targetChatId, assistantMessageId, {
-        content:
-          "Error: Failed to connect to Agent service. Please check your API key and try again.",
-        isStreaming: false,
-      });
-      finishRunAndProcessQueue(targetChatId, runId, "failed");
-      releaseAbortController();
-    }
+        selectedFilesPaths,
+        abortControllerRef,
+        buildContext,
+        showError: (message) => showToast({ message, type: "error" }),
+        appendAcpEvent,
+        clearAcpEvents: () => setAcpEvents([]),
+        restorePrompt: setRefusedPrompt,
+        finishRun: finishRunAndProcessQueue,
+        onFirstExchange: (targetChatId, userContent) =>
+          void updateInitialAgentSessionTitle(targetChatId, userContent),
+      },
+    );
   }
 
   const sendMessage = useCallback(
@@ -1175,10 +427,7 @@ details: ${errorDetails || mainError}
       const access = getAgentMessageAccess(currentAgentId, hasSessionApiKey);
       if (!access.accepted) {
         showToast({
-          message:
-            currentAgentId === "custom" && (currentChat?.providerId ?? aiProviderId) === "athas"
-              ? "Sign in and add Athas Agent balance to use hosted models."
-              : (access.error ?? "This agent is not ready."),
+          message: getAgentAccessMessage(currentAgentId, sessionProviderId, access.error),
           type: "error",
         });
         return access;
@@ -1190,6 +439,22 @@ details: ${errorDetails || mainError}
       }
 
       const targetChatId = effectiveChatId ?? useAIChatStore.getState().currentChatId;
+      const needsNetwork = !(currentAgentId === "custom" && sessionProviderId === "ollama");
+      if (
+        targetChatId &&
+        !useAIChatStore.getState().agentRuns[targetChatId] &&
+        needsNetwork &&
+        isBrowserOffline()
+      ) {
+        chatActions.enqueueAgentMessage(targetChatId, messageContent, images);
+        offlineHeldChatsRef.current.add(targetChatId);
+        showToast({
+          message: "You're offline",
+          description: "The message is queued and sends when the connection is back.",
+          type: "info",
+        });
+        return { accepted: true };
+      }
       if (targetChatId && useAIChatStore.getState().agentRuns[targetChatId]) {
         chatActions.enqueueAgentMessage(targetChatId, messageContent, images);
         if (claimContextualTip("agent-queue-controls")) {
@@ -1210,7 +475,7 @@ details: ${errorDetails || mainError}
       chatActions.enqueueAgentMessage,
       hasSessionApiKey,
       aiProviderId,
-      currentChat?.providerId,
+      sessionProviderId,
       currentAgentId,
       effectiveChatId,
       isChatMessagesLoaded,
@@ -1237,10 +502,7 @@ details: ${errorDetails || mainError}
       const access = getAgentMessageAccess(currentAgentId, hasSessionApiKey);
       if (!access.accepted) {
         showToast({
-          message:
-            currentAgentId === "custom" && (currentChat?.providerId ?? aiProviderId) === "athas"
-              ? "Sign in and add Athas Agent balance to use hosted models."
-              : (access.error ?? "This agent is not ready."),
+          message: getAgentAccessMessage(currentAgentId, sessionProviderId, access.error),
           type: "error",
         });
         return access;
@@ -1259,7 +521,7 @@ details: ${errorDetails || mainError}
       chatActions.prependAgentMessage,
       hasSessionApiKey,
       aiProviderId,
-      currentChat?.providerId,
+      sessionProviderId,
       currentAgentId,
       effectiveChatId,
       sendMessage,
@@ -1291,6 +553,36 @@ details: ${errorDetails || mainError}
   useLayoutEffect(() => {
     processMessageRef.current = processMessage;
   });
+
+  // Messages held while offline go out once the connection is back.
+  useEffect(() => {
+    if (!isOnline || !effectiveChatId || !offlineHeldChatsRef.current.has(effectiveChatId)) return;
+    offlineHeldChatsRef.current.delete(effectiveChatId);
+    const store = useAIChatStore.getState();
+    if (store.agentRuns[effectiveChatId]) return;
+    const next = store.actions.dequeueAgentMessage(effectiveChatId);
+    if (next) {
+      void processMessageRef.current(next.content, {
+        targetChatId: effectiveChatId,
+        images: next.images,
+      });
+    }
+  }, [effectiveChatId, isOnline]);
+
+  /** Runs the last prompt again, stopping a stalled turn first. */
+  const retryLastTurn = async () => {
+    if (!effectiveChatId || agentIsDetached(effectiveChatId)) return;
+    const messages = useAIChatStore.getState().actions.getMessagesForChat(effectiveChatId);
+    const prompt = [...messages].reverse().find((message) => message.role === "user");
+    if (!prompt?.content.trim()) return;
+    void recordFrictionSignal({ area: "agent", signal: "retry" });
+    if (useAIChatStore.getState().agentRuns[effectiveChatId]) await stopStreaming();
+    void processMessageRef.current(prompt.content, {
+      editedUserMessageId: prompt.id,
+      targetChatId: effectiveChatId,
+      retried: true,
+    });
+  };
 
   const handleEditQueuedMessage = useCallback(
     (message: QueuedAgentMessage | null) => {
@@ -1344,10 +636,7 @@ details: ${errorDetails || mainError}
     const access = getAgentMessageAccess(pendingLaunch.agentId, hasSessionApiKey);
     if (!access.accepted) {
       showToast({
-        message:
-          currentAgentId === "custom" && (currentChat?.providerId ?? aiProviderId) === "athas"
-            ? "Sign in and add Athas Agent balance to use hosted models."
-            : (access.error ?? "This agent is not ready."),
+        message: getAgentAccessMessage(currentAgentId, sessionProviderId, access.error),
         type: "error",
       });
       return;
@@ -1359,7 +648,7 @@ details: ${errorDetails || mainError}
     effectiveChatId,
     hasSessionApiKey,
     aiProviderId,
-    currentChat?.providerId,
+    sessionProviderId,
     currentAgentId,
     isSurfaceTyping,
     chatState.pendingAgentLaunchRequest,
@@ -1384,6 +673,30 @@ details: ${errorDetails || mainError}
     isChatMessagesLoaded && (currentChat?.messages.length ?? 0) === 0 && acpEvents.length === 0;
   const currentQuestion = currentPermission ? undefined : agentQuestions[0];
   const useInitialComposer = isNewSession && !currentPermission && !currentQuestion;
+  const lastMessage = currentChat?.messages[currentChat.messages.length - 1];
+  const lastTurnFailed = lastMessage?.role === "assistant" && Boolean(lastMessage.error);
+  const turnNotice = !isOnline
+    ? {
+        tone: "warning" as const,
+        title: "You're offline",
+        description: "Messages you send wait in the queue until the connection is back.",
+        canRetry: false,
+      }
+    : lastMessage?.isStreaming && lastMessage.responsePhase === "stalled"
+      ? {
+          tone: "info" as const,
+          title: "No response yet",
+          description: "The agent has not answered for a while. It may still be working.",
+          canRetry: true,
+        }
+      : lastTurnFailed && lastMessage?.error?.code === "offline"
+        ? {
+            tone: "info" as const,
+            title: "Back online",
+            description: "Run the last prompt again.",
+            canRetry: true,
+          }
+        : null;
   const handleQuestionAnswer = async (response: AcpElicitationResponse) => {
     if (!currentQuestion) return;
     const isLink = currentQuestion.request.mode === "url";
@@ -1521,9 +834,21 @@ details: ${errorDetails || mainError}
                 : "Loading session…"}
             </EmptyTitle>
             {chatMessageLoadState === "error" ? (
-              <EmptyDescription>Close and reopen this session to try again.</EmptyDescription>
+              <EmptyDescription>Its saved messages could not be read.</EmptyDescription>
             ) : null}
           </EmptyHeader>
+          {chatMessageLoadState === "error" && effectiveChatId ? (
+            <EmptyContent>
+              <Button
+                type="button"
+                onClick={() =>
+                  void useAIChatStore.getState().actions.loadChatMessages(effectiveChatId)
+                }
+              >
+                Retry
+              </Button>
+            </EmptyContent>
+          ) : null}
         </Empty>
       ) : (
         <>
@@ -1589,6 +914,26 @@ details: ${errorDetails || mainError}
             />
           ) : null}
 
+          {turnNotice ? (
+            <div className="shrink-0 px-2 pb-1">
+              <Alert tone={turnNotice.tone} role="status">
+                <AlertTitle>{turnNotice.title}</AlertTitle>
+                <AlertDescription>{turnNotice.description}</AlertDescription>
+                {turnNotice.canRetry ? (
+                  <AlertAction>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="xs"
+                      onClick={() => void retryLastTurn()}
+                    >
+                      Retry
+                    </Button>
+                  </AlertAction>
+                ) : null}
+              </Alert>
+            </div>
+          ) : null}
           {!useInitialComposer ? composer : null}
         </>
       )}

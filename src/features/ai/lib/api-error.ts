@@ -151,19 +151,27 @@ export function toChatMessageError(input: unknown, message?: string): ChatMessag
   return error;
 }
 
+/**
+ * The string form the chat service reports failures in. A status and server code on the error
+ * survive into it, so `parseApiError` can read them back.
+ */
 export function formatApiError(providerId: string, error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
-  if (
-    error &&
-    typeof error === "object" &&
-    "statusCode" in error &&
-    typeof error.statusCode === "number"
-  ) {
-    const body =
-      "responseBody" in error && typeof error.responseBody === "string"
-        ? error.responseBody
+  const record = error && typeof error === "object" ? (error as Record<string, unknown>) : {};
+  const status =
+    typeof record.statusCode === "number"
+      ? record.statusCode
+      : typeof record.status === "number"
+        ? record.status
+        : undefined;
+  const code = typeof record.code === "string" && record.code ? record.code : undefined;
+  const body =
+    typeof record.responseBody === "string"
+      ? record.responseBody
+      : code
+        ? JSON.stringify({ error: { code, message } })
         : message;
-    return `${providerId} API error: ${error.statusCode}|||${body}`;
-  }
+  if (status !== undefined) return `${providerId} API error: ${status}|||${body}`;
+  if (code) return `${providerId} API error: ${code}|||${body}`;
   return `Failed to connect to ${providerId} API: ${message}`;
 }

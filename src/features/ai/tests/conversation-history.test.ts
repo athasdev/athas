@@ -86,7 +86,7 @@ describe("buildConversationHistory", () => {
         }),
         {
           ...message({ id: "structured", role: "assistant", content: "Rate limited" }),
-          error: "429",
+          error: { status: 429, message: "Rate limited" },
         } as Message,
       ]),
     ).toEqual([
