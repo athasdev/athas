@@ -1,9 +1,9 @@
 import { isTauri } from "@tauri-apps/api/core";
-import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { extractDroppedFilePaths } from "@/features/file-system/utils/file-system-dropped-paths";
 import { resolveDropClientPoint } from "@/features/file-system/utils/file-system-drop-controller";
 import { getImageMimeType } from "@/utils/image-file-types";
+import { listenToNativeDragDrop } from "@/utils/tauri-drag-drop";
 import type { PastedImage } from "../types/chat-composer.types";
 
 function readComposerImage(file: File): Promise<PastedImage> {
@@ -127,22 +127,21 @@ export function useComposerFileDrop({
     if (!isTauri()) return;
     let disposed = false;
     let unlisten: (() => void) | undefined;
-    void getCurrentWebview()
-      .onDragDropEvent(({ payload }) => {
-        if (disposed) return;
-        if (payload.type === "leave") {
-          setIsDraggingFiles(false);
-          return;
-        }
-        const { element } = resolveDropClientPoint(
-          payload.position,
-          window.devicePixelRatio,
-          (x, y) => document.elementFromPoint(x, y),
-        );
-        const isTarget = Boolean(element && targetRef.current?.contains(element));
-        setIsDraggingFiles(isTarget && payload.type !== "drop");
-        if (isTarget && payload.type === "drop") void attachPaths(payload.paths);
-      })
+    void listenToNativeDragDrop((payload) => {
+      if (disposed) return;
+      if (payload.type === "leave") {
+        setIsDraggingFiles(false);
+        return;
+      }
+      const { element } = resolveDropClientPoint(
+        payload.position,
+        window.devicePixelRatio,
+        (x, y) => document.elementFromPoint(x, y),
+      );
+      const isTarget = Boolean(element && targetRef.current?.contains(element));
+      setIsDraggingFiles(isTarget && payload.type !== "drop");
+      if (isTarget && payload.type === "drop") void attachPaths(payload.paths);
+    })
       .then((cleanup) => {
         if (disposed) cleanup();
         else unlisten = cleanup;
