@@ -29,14 +29,15 @@ pub struct LspManager {
 fn send_document_changes(
    client: &LspClient,
    file_path: &str,
-   pending: &PendingDocumentChanges,
+   pending: &mut PendingDocumentChanges,
 ) -> Result<()> {
+   let uri = manager_support::text_document_identifier(file_path)?.uri;
    client.text_document_did_change(DidChangeTextDocumentParams {
       text_document: VersionedTextDocumentIdentifier {
-         uri: manager_support::text_document_identifier(file_path)?.uri,
+         uri,
          version: pending.version,
       },
-      content_changes: pending.changes.clone(),
+      content_changes: pending.take_changes_for_send(),
    })
 }
 
@@ -1468,7 +1469,9 @@ impl LspManager {
          self.document_sessions.queue_many(file_path, batches)?;
       let sessions = self.document_sessions.clone();
       let file_path = file_path.to_string();
-      tokio::spawn(async move {
+      // Tauri runs sync commands on a thread without a Tokio context, so this must go through
+      // Tauri's runtime handle rather than `tokio::spawn`.
+      tauri::async_runtime::spawn(async move {
          tokio::time::sleep(Duration::from_millis(35)).await;
          if let Err(error) =
             sessions.emit_pending(&file_path, Some((epoch, generation)), |pending| {

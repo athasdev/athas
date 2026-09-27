@@ -2,7 +2,7 @@ use anyhow::{Context, Result, bail};
 use lsp_types::{Position, Range, TextDocumentContentChangeEvent};
 use serde::{Deserialize, Serialize};
 use std::{
-   collections::{HashMap, HashSet},
+   collections::{HashMap, VecDeque},
    sync::{
       Arc, Mutex,
       atomic::{AtomicU64, Ordering},
@@ -42,15 +42,22 @@ pub(crate) enum SyncMode {
    Incremental,
 }
 
-#[derive(Debug, Clone)]
+/// Late batches from a replaced Monaco model are refused by session id; only the most recent
+/// ones can still be in flight, so older ids are forgotten.
+const MAX_RETIRED_MODEL_SESSIONS: usize = 16;
+
+#[derive(Debug)]
 struct DocumentSession {
    content: String,
    line_starts: Vec<usize>,
    model_session_id: Option<String>,
-   retired_model_sessions: HashSet<String>,
+   retired_model_sessions: VecDeque<String>,
    model_version_id: i64,
    lsp_version: i32,
    pending_changes: Vec<TextDocumentContentChangeEvent>,
+   /// The server needs the whole document on the next emission. The text is read from `content`
+   /// then, so it is never copied while it waits.
+   pending_full_replacement: bool,
    generation: u64,
    sync_mode: SyncMode,
    epoch: u64,
@@ -60,6 +67,19 @@ struct DocumentSession {
 pub(crate) struct PendingDocumentChanges {
    pub version: i32,
    pub changes: Vec<TextDocumentContentChangeEvent>,
+   full_replacement: bool,
+}
+
+impl PendingDocumentChanges {
+   /// The changes to put in a `didChange` request. A full replacement is handed over rather than
+   /// copied, since a failed send only needs to know that the document is due in full again.
+   pub fn take_changes_for_send(&mut self) -> Vec<TextDocumentContentChangeEvent> {
+      if self.full_replacement {
+         std::mem::take(&mut self.changes)
+      } else {
+         self.changes.clone()
+      }
+   }
 }
 
 #[derive(Clone)]
@@ -87,10 +107,11 @@ impl DocumentSessions {
             content,
             line_starts,
             model_session_id: None,
-            retired_model_sessions: HashSet::new(),
+            retired_model_sessions: VecDeque::new(),
             model_version_id: 0,
             lsp_version: 1,
             pending_changes: Vec::new(),
+            pending_full_replacement: false,
             generation: 0,
             sync_mode,
             epoch,
@@ -108,6 +129,8 @@ impl DocumentSessions {
       self.queue_many(file_path, vec![batch])
    }
 
+   /// Applies every batch or none of them. The document is edited in place and an undo log
+   /// restores it if a later batch is invalid, so a keystroke never copies the whole file.
    pub fn queue_many(
       &self,
       file_path: &str,
@@ -117,17 +140,19 @@ impl DocumentSessions {
       let session = sessions
          .get_mut(file_path)
          .context("No open LSP document session for this file")?;
-      let mut staged = session.clone();
+      let mut transaction = Transaction::begin(session);
       for batch in batches {
-         apply_batch(&mut staged, batch)?;
+         if let Err(error) = apply_batch(session, &mut transaction, batch) {
+            transaction.rollback(session);
+            return Err(error);
+         }
       }
-      let result = (
-         staged.epoch,
-         staged.generation,
-         staged.lsp_version.saturating_add(1),
-      );
-      *session = staged;
-      Ok(result)
+      session.generation = session.generation.wrapping_add(1);
+      Ok((
+         session.epoch,
+         session.generation,
+         session.lsp_version.saturating_add(1),
+      ))
    }
 
    #[cfg(test)]
@@ -141,7 +166,7 @@ impl DocumentSessions {
       &self,
       file_path: &str,
       expected: Option<(u64, u64)>,
-      emit: impl FnOnce(&PendingDocumentChanges) -> Result<()>,
+      emit: impl FnOnce(&mut PendingDocumentChanges) -> Result<()>,
    ) -> Result<()> {
       let (epoch, emission_lock) = {
          let sessions = self.inner.lock().unwrap();
@@ -165,19 +190,18 @@ impl DocumentSessions {
          }
          take_pending(session)
       };
-      if let Some(pending) = pending
-         && let Err(error) = emit(&pending)
+      if let Some(mut pending) = pending
+         && let Err(error) = emit(&mut pending)
       {
          let mut sessions = self.inner.lock().unwrap();
          if let Some(session) = sessions.get_mut(file_path)
             && session.epoch == epoch
          {
             session.lsp_version = pending.version.saturating_sub(1);
-            if !session
-               .pending_changes
-               .iter()
-               .any(|change| change.range.is_none())
-            {
+            if pending.full_replacement {
+               session.pending_changes.clear();
+               session.pending_full_replacement = true;
+            } else if !session.pending_full_replacement {
                let mut restored = pending.changes;
                restored.append(&mut session.pending_changes);
                session.pending_changes = restored;
@@ -198,7 +222,77 @@ impl DocumentSessions {
    }
 }
 
-fn apply_batch(session: &mut DocumentSession, batch: DocumentChangeBatch) -> Result<()> {
+enum UndoStep {
+   Edit {
+      start: usize,
+      inserted_len: usize,
+      removed: String,
+   },
+   Replace {
+      previous: String,
+   },
+}
+
+/// What `queue_many` needs to put a session back after an invalid batch. Replaced documents are
+/// moved in here rather than copied, and small edits keep only the text they removed.
+struct Transaction {
+   undo: Vec<UndoStep>,
+   model_session_id: Option<String>,
+   retired_model_sessions: VecDeque<String>,
+   model_version_id: i64,
+   pending_len: usize,
+   pending_full_replacement: bool,
+   replaced_pending: Option<Vec<TextDocumentContentChangeEvent>>,
+}
+
+impl Transaction {
+   fn begin(session: &DocumentSession) -> Self {
+      Self {
+         undo: Vec::new(),
+         model_session_id: session.model_session_id.clone(),
+         retired_model_sessions: session.retired_model_sessions.clone(),
+         model_version_id: session.model_version_id,
+         pending_len: session.pending_changes.len(),
+         pending_full_replacement: session.pending_full_replacement,
+         replaced_pending: None,
+      }
+   }
+
+   fn rollback(self, session: &mut DocumentSession) {
+      if self.undo.is_empty() && self.replaced_pending.is_none() {
+         session.pending_changes.truncate(self.pending_len);
+         return;
+      }
+      for step in self.undo.into_iter().rev() {
+         match step {
+            UndoStep::Edit {
+               start,
+               inserted_len,
+               removed,
+            } => session
+               .content
+               .replace_range(start..start + inserted_len, &removed),
+            UndoStep::Replace { previous } => session.content = previous,
+         }
+      }
+      session.line_starts = collect_line_starts(&session.content);
+      session.model_session_id = self.model_session_id;
+      session.retired_model_sessions = self.retired_model_sessions;
+      session.model_version_id = self.model_version_id;
+      let mut pending = self
+         .replaced_pending
+         .unwrap_or_else(|| std::mem::take(&mut session.pending_changes));
+      pending.truncate(self.pending_len);
+      session.pending_changes = pending;
+      session.pending_full_replacement = self.pending_full_replacement;
+   }
+}
+
+fn apply_batch(
+   session: &mut DocumentSession,
+   transaction: &mut Transaction,
+   batch: DocumentChangeBatch,
+) -> Result<()> {
    let replacement = batch.is_flush || batch.is_eol_change;
    if !replacement
       && session.model_session_id.as_deref() == Some(&batch.model_session_id)
@@ -214,93 +308,94 @@ fn apply_batch(session: &mut DocumentSession, batch: DocumentChangeBatch) -> Res
       bail!("Change belongs to a retired LSP model session");
    }
 
-   let mut next_content = session.content.clone();
-   let mut next_line_starts = session.line_starts.clone();
-   let mut next_pending = session.pending_changes.clone();
    if replacement {
-      next_content = batch
+      let next_content = batch
          .full_content
          .context("Full document content is required for replacement changes")?;
-      next_line_starts = collect_line_starts(&next_content);
-      next_pending.clear();
-      next_pending.push(TextDocumentContentChangeEvent {
-         range: None,
-         range_length: None,
-         text: next_content.clone(),
-      });
-   } else {
-      if batch.changes.is_empty() {
-         bail!("Incremental document change batch is empty");
+      session.line_starts = collect_line_starts(&next_content);
+      let previous = std::mem::replace(&mut session.content, next_content);
+      transaction.undo.push(UndoStep::Replace { previous });
+      let pending = std::mem::take(&mut session.pending_changes);
+      if transaction.replaced_pending.is_none() {
+         transaction.replaced_pending = Some(pending);
       }
+      session.pending_full_replacement = true;
+      return Ok(());
+   }
 
-      let mut changes = batch.changes;
-      // Monaco ranges within one event refer to the same pre-edit document. Applying
-      // them from the end keeps every earlier UTF-16 offset and position valid.
-      changes.sort_by_key(|change| std::cmp::Reverse(change.range_offset));
-      for pair in changes.windows(2) {
-         if pair[1].range_offset.saturating_add(pair[1].range_length) > pair[0].range_offset {
-            bail!("Overlapping changes in one Monaco event are invalid");
-         }
+   if batch.changes.is_empty() {
+      bail!("Incremental document change batch is empty");
+   }
+
+   let mut changes = batch.changes;
+   // Monaco ranges within one event refer to the same pre-edit document. Applying
+   // them from the end keeps every earlier UTF-16 offset and position valid.
+   changes.sort_by_key(|change| std::cmp::Reverse(change.range_offset));
+   for pair in changes.windows(2) {
+      if pair[1].range_offset.saturating_add(pair[1].range_length) > pair[0].range_offset {
+         bail!("Overlapping changes in one Monaco event are invalid");
       }
-      for change in changes {
-         apply_change(&mut next_content, &mut next_line_starts, &change)?;
-         next_pending.push(TextDocumentContentChangeEvent {
-            range: Some(Range {
-               start: Position {
-                  line: change.start_line,
-                  character: change.start_column,
-               },
-               end: Position {
-                  line: change.end_line,
-                  character: change.end_column,
-               },
-            }),
-            range_length: Some(change.range_length as u32),
-            text: change.text,
-         });
+   }
+   for change in changes {
+      let undo = apply_change(&mut session.content, &mut session.line_starts, &change)?;
+      transaction.undo.push(undo);
+      if !session.pending_full_replacement {
+         session
+            .pending_changes
+            .push(TextDocumentContentChangeEvent {
+               range: Some(Range {
+                  start: Position {
+                     line: change.start_line,
+                     character: change.start_column,
+                  },
+                  end: Position {
+                     line: change.end_line,
+                     character: change.end_column,
+                  },
+               }),
+               range_length: Some(change.range_length as u32),
+               text: change.text,
+            });
       }
    }
 
-   if !replacement {
-      if let Some(previous_session) = session.model_session_id.replace(batch.model_session_id)
-         && session.model_session_id.as_deref() != Some(&previous_session)
-      {
-         session.retired_model_sessions.insert(previous_session);
+   if let Some(previous_session) = session.model_session_id.replace(batch.model_session_id)
+      && session.model_session_id.as_deref() != Some(&previous_session)
+   {
+      session.retired_model_sessions.push_back(previous_session);
+      while session.retired_model_sessions.len() > MAX_RETIRED_MODEL_SESSIONS {
+         session.retired_model_sessions.pop_front();
       }
-      session.model_version_id = batch.model_version_id;
    }
-   session.content = next_content;
-   session.line_starts = next_line_starts;
-   session.pending_changes = next_pending;
-   session.generation = session.generation.wrapping_add(1);
+   session.model_version_id = batch.model_version_id;
    Ok(())
 }
 
 fn take_pending(session: &mut DocumentSession) -> Option<PendingDocumentChanges> {
-   if session.pending_changes.is_empty() || session.sync_mode == SyncMode::None {
+   let full_replacement = std::mem::take(&mut session.pending_full_replacement);
+   if (session.pending_changes.is_empty() && !full_replacement)
+      || session.sync_mode == SyncMode::None
+   {
       session.pending_changes.clear();
       return None;
    }
 
    session.lsp_version = session.lsp_version.saturating_add(1);
-   let changes = if session.sync_mode == SyncMode::Incremental
-      && session
-         .pending_changes
-         .iter()
-         .all(|change| change.range.is_some())
-   {
-      std::mem::take(&mut session.pending_changes)
-   } else {
+   let full_replacement = full_replacement || session.sync_mode != SyncMode::Incremental;
+   let changes = if full_replacement {
       session.pending_changes.clear();
       vec![TextDocumentContentChangeEvent {
          range: None,
          range_length: None,
          text: session.content.clone(),
       }]
+   } else {
+      std::mem::take(&mut session.pending_changes)
    };
    Some(PendingDocumentChanges {
       version: session.lsp_version,
       changes,
+      full_replacement,
    })
 }
 
@@ -337,7 +432,7 @@ fn apply_change(
    content: &mut String,
    line_starts: &mut Vec<usize>,
    change: &DocumentChange,
-) -> Result<()> {
+) -> Result<UndoStep> {
    let start = position_to_byte(content, line_starts, change.start_line, change.start_column)
       .context("LSP change starts at an invalid UTF-16 position")?;
    let end = position_to_byte(content, line_starts, change.end_line, change.end_column)
@@ -345,7 +440,7 @@ fn apply_change(
    if end < start {
       bail!("LSP change range ends before it starts");
    }
-   let removed_byte_length = end - start;
+   let removed = content[start..end].to_string();
    content.replace_range(start..end, &change.text);
 
    let first_removed_line = change.start_line as usize + 1;
@@ -358,14 +453,18 @@ fn apply_change(
       .collect();
    let inserted_line_count = inserted_line_starts.len();
    line_starts.splice(first_removed_line..first_removed_line, inserted_line_starts);
-   let byte_delta = change.text.len() as isize - removed_byte_length as isize;
+   let byte_delta = change.text.len() as isize - removed.len() as isize;
    for line_start in line_starts
       .iter_mut()
       .skip(first_removed_line + inserted_line_count)
    {
       *line_start = line_start.saturating_add_signed(byte_delta);
    }
-   Ok(())
+   Ok(UndoStep::Edit {
+      start,
+      inserted_len: change.text.len(),
+      removed,
+   })
 }
 
 #[cfg(test)]
@@ -578,5 +677,114 @@ mod tests {
       let pending = sessions.flush("/test.ts").unwrap();
       assert_eq!(pending.version, 2);
       assert_eq!(pending.changes[0].text, "d");
+   }
+
+   fn replacement(content: &str) -> DocumentChangeBatch {
+      DocumentChangeBatch {
+         model_session_id: "buffer-store".to_string(),
+         model_version_id: 0,
+         changes: Vec::new(),
+         is_eol_change: false,
+         is_flush: true,
+         full_content: Some(content.to_string()),
+      }
+   }
+
+   #[test]
+   fn invalid_batch_after_a_replacement_restores_the_original_document() {
+      let sessions = DocumentSessions::default();
+      sessions.open("/test.ts", "one\ntwo".to_string(), SyncMode::Incremental);
+      sessions
+         .queue("/test.ts", batch(2, vec![change(0, 0, "a", (0, 0, 0, 0))]))
+         .unwrap();
+
+      let result = sessions.queue_many(
+         "/test.ts",
+         vec![
+            batch(3, vec![change(4, 0, "b", (1, 0, 1, 0))]),
+            replacement("replaced"),
+            batch(4, vec![change(0, 0, "c", (0, 0, 0, 0))]),
+            batch(5, vec![change(0, 1, "x", (7, 0, 7, 1))]),
+         ],
+      );
+
+      assert!(result.is_err());
+      assert_eq!(sessions.content("/test.ts").as_deref(), Some("aone\ntwo"));
+      let pending = sessions.flush("/test.ts").unwrap();
+      assert_eq!(pending.changes.len(), 1);
+      assert_eq!(pending.changes[0].text, "a");
+      assert!(
+         sessions
+            .queue("/test.ts", batch(3, vec![change(5, 0, "!", (1, 0, 1, 0))]))
+            .is_ok()
+      );
+      assert_eq!(sessions.content("/test.ts").as_deref(), Some("aone\n!two"));
+   }
+
+   #[test]
+   fn edits_after_a_replacement_are_sent_inside_the_full_document() {
+      let sessions = DocumentSessions::default();
+      sessions.open("/test.ts", "abc".to_string(), SyncMode::Incremental);
+      sessions.queue("/test.ts", replacement("xyz")).unwrap();
+      sessions
+         .queue("/test.ts", batch(2, vec![change(3, 0, "!", (0, 3, 0, 3))]))
+         .unwrap();
+
+      let pending = sessions.flush("/test.ts").unwrap();
+      assert_eq!(pending.changes.len(), 1);
+      assert!(pending.changes[0].range.is_none());
+      assert_eq!(pending.changes[0].text, "xyz!");
+      assert!(sessions.flush("/test.ts").is_none());
+   }
+
+   #[test]
+   fn failed_full_emission_sends_the_latest_document_next_time() {
+      let sessions = DocumentSessions::default();
+      sessions.open("/test.ts", "abc".to_string(), SyncMode::Full);
+      sessions
+         .queue("/test.ts", batch(2, vec![change(3, 0, "d", (0, 3, 0, 3))]))
+         .unwrap();
+      assert!(
+         sessions
+            .emit_pending("/test.ts", None, |pending| {
+               assert_eq!(pending.take_changes_for_send()[0].text, "abcd");
+               bail!("send failed")
+            })
+            .is_err()
+      );
+      sessions
+         .queue("/test.ts", batch(3, vec![change(4, 0, "e", (0, 4, 0, 4))]))
+         .unwrap();
+
+      let pending = sessions.flush("/test.ts").unwrap();
+      assert_eq!(pending.version, 2);
+      assert_eq!(pending.changes.len(), 1);
+      assert_eq!(pending.changes[0].text, "abcde");
+   }
+
+   #[test]
+   fn retired_model_sessions_are_bounded() {
+      let sessions = DocumentSessions::default();
+      sessions.open("/test.ts", String::new(), SyncMode::Incremental);
+      for index in 0..(MAX_RETIRED_MODEL_SESSIONS + 4) {
+         let mut next = batch(
+            1,
+            vec![change(index, 0, "x", (0, index as u32, 0, index as u32))],
+         );
+         next.model_session_id = format!("model-{index}");
+         sessions.queue("/test.ts", next).unwrap();
+      }
+
+      let inner = sessions.inner.lock().unwrap();
+      let session = inner.get("/test.ts").unwrap();
+      assert_eq!(
+         session.retired_model_sessions.len(),
+         MAX_RETIRED_MODEL_SESSIONS
+      );
+      assert!(
+         !session
+            .retired_model_sessions
+            .contains(&"model-0".to_string())
+      );
    }
 }

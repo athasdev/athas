@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
 import { LspClient } from "../lsp/lsp-client";
+import { useBufferStore } from "../stores/buffer.store";
 import { publishEditorDocumentChange } from "../services/editor-document-events";
 import type { EditorDocumentChangeEvent } from "../types/editor.types";
 
@@ -51,6 +52,7 @@ describe("LSP incremental document synchronization", () => {
     documentChangeTimers: Map<string, ReturnType<typeof setTimeout>>;
     documentChangeSendChains: Map<string, Promise<void>>;
     documentChangeRetries: Map<string, number>;
+    documentsNeedingResync: Set<string>;
   };
 
   beforeEach(() => {
@@ -73,6 +75,26 @@ describe("LSP incremental document synchronization", () => {
     state.documentChangeTimers.clear();
     state.documentChangeSendChains.clear();
     state.documentChangeRetries.clear();
+    state.documentsNeedingResync.clear();
+    useBufferStore.setState({
+      buffers: [
+        {
+          id: "buffer-1",
+          type: "editor",
+          path: filePath,
+          name: "example.ts",
+          content: "ab",
+          savedContent: "",
+          isDirty: true,
+          isVirtual: false,
+          isPreview: false,
+          isPinned: false,
+          isActive: true,
+          language: "typescript",
+          tokens: [],
+        },
+      ],
+    });
   });
 
   afterEach(() => vi.useRealTimers());
@@ -175,5 +197,67 @@ describe("LSP incremental document synchronization", () => {
       "lsp_document_close",
     ]);
     expect(state.openDocuments.has(filePath)).toBe(false);
+  });
+
+  it("replaces the server's copy with the editor text once retries run out", async () => {
+    let failures = 3;
+    vi.mocked(invoke).mockImplementation(async (command) => {
+      if (command === "lsp_document_change_batch" && failures-- > 0) {
+        throw new Error("mirror rejected the change");
+      }
+      if (command === "lsp_document_change_batch") return 3;
+      return null;
+    });
+    publishEditorDocumentChange(event(2, 0, "a"));
+
+    await vi.advanceTimersByTimeAsync(40 + 80 + 160 + 240);
+
+    const batches = vi
+      .mocked(invoke)
+      .mock.calls.filter(([command]) => command === "lsp_document_change_batch")
+      .map(([, args]) => (args as { batches: unknown[] }).batches);
+    expect(batches).toHaveLength(4);
+    expect(batches[3]).toEqual([
+      expect.objectContaining({ isFlush: true, fullContent: "ab", changes: [] }),
+    ]);
+    expect(state.documentsNeedingResync.has(filePath)).toBe(false);
+    expect(state.documentVersions.get(filePath)).toBe(3);
+  });
+
+  it("still answers requests while the server cannot take edits", async () => {
+    vi.mocked(invoke).mockImplementation(async (command) => {
+      if (command === "lsp_document_change_batch") throw new Error("server gone");
+      if (command === "lsp_get_hover") return { contents: "hover" };
+      return null;
+    });
+    publishEditorDocumentChange(event(2, 0, "a"));
+
+    await expect(client.getHover(filePath, 0, 1)).resolves.toEqual({ contents: "hover" });
+    expect(state.documentsNeedingResync.has(filePath)).toBe(true);
+
+    vi.mocked(invoke).mockImplementation(async (command) =>
+      command === "lsp_document_change_batch" ? 5 : null,
+    );
+    publishEditorDocumentChange(event(3, 1, "b"));
+    await vi.advanceTimersByTimeAsync(40);
+
+    const batchCalls = vi
+      .mocked(invoke)
+      .mock.calls.filter(([command]) => command === "lsp_document_change_batch");
+    const lastBatch = batchCalls[batchCalls.length - 1]?.[1] as { batches: unknown[] };
+    expect(lastBatch.batches).toEqual([expect.objectContaining({ fullContent: "ab" })]);
+    expect(state.documentsNeedingResync.has(filePath)).toBe(false);
+  });
+
+  it("opens a document with the store's text rather than a stale render", async () => {
+    state.openDocuments.clear();
+    state.backendOpenedDocuments.clear();
+
+    await client.notifyDocumentOpen(filePath, "stale");
+
+    expect(invoke).toHaveBeenCalledWith(
+      "lsp_document_open",
+      expect.objectContaining({ filePath, content: "ab" }),
+    );
   });
 });

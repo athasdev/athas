@@ -152,7 +152,7 @@ async function saveEditorBufferById(bufferId: string): Promise<boolean> {
     await recordLocalHistoryBeforeWrite(activeBuffer.path, "save");
     await writeFile(activeBuffer.path, contentToSave);
     const { LspClient } = await import("@/features/editor/lsp/lsp-client");
-    await LspClient.getInstance().notifyDocumentSave(activeBuffer.path, contentToSave);
+    await LspClient.getInstance().notifyDocumentSave(activeBuffer.path);
     markBufferDirty(activeBuffer.id, false);
 
     if (settings.lintOnSave) {

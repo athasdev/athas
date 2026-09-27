@@ -155,6 +155,13 @@ function withoutWorkspaceEdit(actionPayload: unknown): unknown {
   return commandPayload;
 }
 
+const MAX_DOCUMENT_CHANGE_RETRIES = 2;
+
+type DocumentChangeBatchPayload = Pick<
+  EditorDocumentChangeEvent,
+  "modelSessionId" | "modelVersionId" | "changes" | "isEolChange" | "isFlush" | "fullContent"
+>;
+
 export class LspClient {
   private static instance: LspClient | null = null;
   private activeLanguageServers = new Set<string>(); // workspace:language format
@@ -172,6 +179,7 @@ export class LspClient {
   private documentChangeTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private documentChangeSendChains = new Map<string, Promise<void>>();
   private documentChangeRetries = new Map<string, number>();
+  private documentsNeedingResync = new Set<string>();
 
   private constructor() {
     this.setupDiagnosticsListener();
@@ -199,27 +207,41 @@ export class LspClient {
     );
   }
 
+  /** The editor's current text for a document, which every published change is already part of. */
+  private getCurrentDocumentContent(filePath: string): string | null {
+    const buffer = getSourceEditorBufferByPath(useBufferStore.getState().buffers, filePath);
+    return buffer && hasTextContent(buffer) ? buffer.content : null;
+  }
+
   private flushDocumentChanges(filePath: string): Promise<void> {
     const timer = this.documentChangeTimers.get(filePath);
     if (timer) clearTimeout(timer);
     this.documentChangeTimers.delete(filePath);
 
-    const batches = this.documentChangeQueues.get(filePath);
-    if (!batches?.length) {
+    const queued = this.documentChangeQueues.get(filePath) ?? [];
+    const needsResync = this.documentsNeedingResync.has(filePath);
+    if (queued.length === 0 && !needsResync) {
       return this.documentChangeSendChains.get(filePath) ?? Promise.resolve();
     }
     this.documentChangeQueues.delete(filePath);
 
-    const previous = this.documentChangeSendChains.get(filePath) ?? Promise.resolve();
-    const send = previous
-      .catch(() => undefined)
-      .then(async () => {
-        const opening = this.openingDocuments.get(filePath);
-        if (opening) await opening;
-        if (!this.openDocuments.has(filePath)) return;
-        const version = await invoke<number>("lsp_document_change_batch", {
-          filePath,
-          batches: batches.map(
+    // After deltas were lost the server's copy can no longer be patched, so it is replaced with the
+    // editor's text as of now. The text is read here, not when the request goes out, so edits
+    // queued in between are sent on top of it exactly once.
+    const resyncContent = needsResync ? this.getCurrentDocumentContent(filePath) : null;
+    const batches: DocumentChangeBatchPayload[] =
+      resyncContent !== null
+        ? [
+            {
+              modelSessionId: "lsp-resync",
+              modelVersionId: 0,
+              changes: [],
+              isEolChange: false,
+              isFlush: true,
+              fullContent: resyncContent,
+            },
+          ]
+        : queued.map(
             ({ modelSessionId, modelVersionId, changes, isEolChange, isFlush, fullContent }) => ({
               modelSessionId,
               modelVersionId,
@@ -228,23 +250,44 @@ export class LspClient {
               isFlush,
               fullContent,
             }),
-          ),
-        });
+          );
+    if (batches.length === 0) {
+      return this.documentChangeSendChains.get(filePath) ?? Promise.resolve();
+    }
+
+    const previous = this.documentChangeSendChains.get(filePath) ?? Promise.resolve();
+    const send = previous
+      .catch(() => undefined)
+      .then(async () => {
+        const opening = this.openingDocuments.get(filePath);
+        if (opening) await opening;
+        if (!this.openDocuments.has(filePath)) return;
+        const version = await invoke<number>("lsp_document_change_batch", { filePath, batches });
         this.documentVersions.set(filePath, version);
         this.documentChangeRetries.delete(filePath);
+        if (resyncContent !== null) this.documentsNeedingResync.delete(filePath);
       })
       .catch((error) => {
-        const retries = this.documentChangeRetries.get(filePath) ?? 0;
-        if (this.openDocuments.has(filePath) && retries < 2) {
-          this.documentChangeRetries.set(filePath, retries + 1);
-          const queued = this.documentChangeQueues.get(filePath) ?? [];
-          this.documentChangeQueues.set(filePath, [...batches, ...queued]);
-          this.documentChangeTimers.set(
-            filePath,
-            setTimeout(() => void this.flushDocumentChanges(filePath), 80 * (retries + 1)),
-          );
+        logger.error("LSPClient", "LSP document change error:", error);
+        if (!this.openDocuments.has(filePath)) return;
+        if (resyncContent !== null) {
+          // Stays flagged: the next edit or request tries the full replacement again.
+          return;
         }
-        logger.error("LSPClient", "LSP incremental document change error:", error);
+        const retries = this.documentChangeRetries.get(filePath) ?? 0;
+        if (retries < MAX_DOCUMENT_CHANGE_RETRIES) {
+          this.documentChangeRetries.set(filePath, retries + 1);
+          const laterChanges = this.documentChangeQueues.get(filePath) ?? [];
+          this.documentChangeQueues.set(filePath, [...queued, ...laterChanges]);
+        } else {
+          this.documentChangeRetries.delete(filePath);
+          this.documentsNeedingResync.add(filePath);
+          this.documentChangeQueues.delete(filePath);
+        }
+        this.documentChangeTimers.set(
+          filePath,
+          setTimeout(() => void this.flushDocumentChanges(filePath), 80 * (retries + 1)),
+        );
       });
     this.documentChangeSendChains.set(filePath, send);
     return send;
@@ -258,13 +301,20 @@ export class LspClient {
     return invoke<T>(command, args);
   }
 
+  /**
+   * Sends pending edits before a request that reads the document. A failed send schedules its own
+   * retry or full resync, so the request still goes ahead instead of failing until restart.
+   */
   private async flushDocumentChangesBeforeOperation(filePath: string): Promise<void> {
-    for (let attempt = 0; attempt < 3; attempt += 1) {
+    for (let attempt = 0; attempt <= MAX_DOCUMENT_CHANGE_RETRIES + 1; attempt += 1) {
       await this.flushDocumentChanges(filePath);
-      if (!this.documentChangeRetries.has(filePath)) return;
-      if (!this.documentChangeQueues.has(filePath)) break;
+      if (
+        !this.documentChangeQueues.has(filePath) &&
+        (!this.documentsNeedingResync.has(filePath) || attempt > MAX_DOCUMENT_CHANGE_RETRIES)
+      ) {
+        return;
+      }
     }
-    throw new Error(`Could not synchronize pending LSP changes for ${filePath}`);
   }
 
   /**
@@ -1642,10 +1692,14 @@ export class LspClient {
     }
   }
 
-  async notifyDocumentOpen(filePath: string, content: string): Promise<void> {
+  async notifyDocumentOpen(filePath: string, fallbackContent: string): Promise<void> {
     if (this.openDocuments.has(filePath)) return;
     const opening = this.openingDocuments.get(filePath);
     if (opening) return opening;
+
+    // Edits are queued from this point on, so the opened text must include every edit published
+    // before it. The store has them; a React prop may still be a render behind.
+    const content = this.getCurrentDocumentContent(filePath) ?? fallbackContent;
 
     this.closingDocuments.delete(filePath);
     const generation = (this.documentLifecycleGenerations.get(filePath) ?? 0) + 1;
@@ -1690,23 +1744,8 @@ export class LspClient {
     });
   }
 
-  async notifyDocumentChange(filePath: string, content: string, version: number): Promise<void> {
-    try {
-      await this.flushDocumentChangesBeforeOperation(filePath);
-      this.openDocuments.add(filePath);
-      this.documentVersions.set(filePath, version);
-      await invoke<void>("lsp_document_change", {
-        filePath,
-        content,
-        version,
-      });
-    } catch (error) {
-      logger.error("LSPClient", "LSP document change error:", error);
-    }
-  }
-
-  async notifyDocumentSave(filePath: string, content?: string): Promise<void> {
-    void content;
+  /** The saved text, when the server wants it, comes from the backend's synchronized copy. */
+  async notifyDocumentSave(filePath: string): Promise<void> {
     try {
       await this.flushDocumentChangesBeforeOperation(filePath);
       await invoke<void>("lsp_document_save", { filePath });
@@ -1743,6 +1782,7 @@ export class LspClient {
     this.documentChangeQueues.delete(filePath);
     this.documentChangeSendChains.delete(filePath);
     this.documentChangeRetries.delete(filePath);
+    this.documentsNeedingResync.delete(filePath);
     useDiagnosticsStore.getState().actions.clearDiagnosticsForOwner(filePath, "lsp");
     if (wasOpen) {
       useLspStore.getState().actions.markDocumentStateChanged();
