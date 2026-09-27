@@ -8,6 +8,7 @@ import {
 import { openAgentSessions } from "@/features/ai/lib/open-agent-sessions";
 import { openAgentInNewWindow } from "@/features/ai/detached/agent-window-service";
 import { toggleFollowAgent } from "@/features/ai/services/agent-follow-service";
+import { cycleChatMode, readChatModeSource } from "@/features/ai/services/chat-mode-service";
 import {
   keepAllAgentEdits,
   openAgentEditsReview,
@@ -20,6 +21,7 @@ import {
   ArrowClockwiseIcon,
   ArrowsClockwiseIcon,
   ArrowsLeftRightIcon,
+  ChatBubbleTextIcon,
   CheckIcon,
   CrosshairIcon,
   GitDiffIcon,
@@ -108,6 +110,25 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
         const following = toggleFollowAgent(chatId);
         showToast({
           message: following ? "Following the agent" : "Stopped following the agent",
+          type: "info",
+        });
+      },
+    },
+    {
+      id: "ai-cycle-agent-mode",
+      label: "AI: Cycle Agent Mode",
+      description: "Switch the current chat between Agent, Ask and Plan",
+      icon: <ChatBubbleTextIcon />,
+      category: "AI",
+      action: () => {
+        onClose();
+        const state = useBufferStore.getState();
+        const buffer = state.buffers.find((item) => item.id === state.activeBufferId);
+        const chatId =
+          buffer?.type === "agent" ? buffer.sessionId : useAIChatStore.getState().currentChatId;
+        const mode = cycleChatMode(readChatModeSource(chatId));
+        showToast({
+          message: mode ? `Mode: ${mode.label}` : "This agent has no other modes.",
           type: "info",
         });
       },

@@ -16,7 +16,8 @@ import type { GenerativeUIView } from "@/extensions/ui/types/generative-ui";
 import type { ChatMessageError } from "@/features/ai/types/chat-error.types";
 
 export type OutputStyle = "default" | "explanatory" | "learning" | "custom";
-export type ChatMode = "chat" | "plan";
+/** "chat" is the full agent; "ask" and "plan" run read-only. */
+export type ChatMode = "chat" | "ask" | "plan";
 /** `stalled`: a prompt the agent has not answered for a while; it may still be thinking. */
 export type AssistantResponsePhase = "starting" | "waiting" | "stalled" | "thinking";
 

@@ -75,6 +75,9 @@ import { chatContentWidth } from "../chat/chat-content-width";
 import { ComposerEffortSelector } from "./composer-effort-selector";
 import { ComposerAgentSelector } from "./composer-agent-selector";
 import { ChatPreferencesMenu } from "./chat-preferences-menu";
+import { ComposerModeSelector } from "./composer-mode-selector";
+import { useChatModeSource } from "@/features/ai/hooks/use-chat-mode";
+import { cycleChatMode } from "@/features/ai/services/chat-mode-service";
 import { AcpContextMeter } from "./acp-context-meter";
 import { AgentMessageQueue } from "./agent-message-queue";
 import { AgentEditsBar } from "./agent-edits-bar";
@@ -171,6 +174,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
   const sessionConfigOptions = acpSession.configOptions;
   const session = useAIChatStore((state) => state.chats.find((chat) => chat.id === chatId));
   const acpSessionId = session?.acpSessionId ?? null;
+  const modeSource = useChatModeSource(chatId ?? null, currentAgentId);
   const defaultProviderId = useSettingsStore((state) => state.settings.aiProviderId);
   const defaultModelId = useSettingsStore((state) => state.settings.aiModelId);
   const aiProviderId = session?.providerId ?? defaultProviderId;
@@ -537,6 +541,16 @@ const AIChatInputBar = memo(function AIChatInputBar({
         if (!e.repeat) handleSendMessage();
         return;
       }
+    }
+    if (
+      e.key === "Tab" &&
+      e.shiftKey &&
+      !slashCommandState.active &&
+      !mentionState.active &&
+      cycleChatMode(modeSource)
+    ) {
+      e.preventDefault();
+      return;
     }
     // Handle slash command navigation
     if (slashCommandState.active) {
@@ -1291,6 +1305,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
                 setIsContextDropdownOpen(open);
               }}
             />
+            <ComposerModeSelector source={modeSource} onBeforeOpen={closeInlineMenus} />
           </div>
 
           <div className="ml-auto flex min-w-0 shrink items-center gap-1">
@@ -1318,7 +1333,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
               onOpen={closeInlineMenus}
             />
             <ChatPreferencesMenu
-              chatId={chatId ?? null}
               currentAgentId={currentAgentId}
               canChangeAgent={Boolean(onAgentChange)}
               sessionConfigOptions={sessionConfigOptions}

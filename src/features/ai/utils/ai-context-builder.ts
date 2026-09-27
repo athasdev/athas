@@ -280,6 +280,13 @@ Rules for plans:
 - Use 3-8 steps for most plans
 - Each step should be independently executable
 - Always wrap your plan in [PLAN_BLOCK] tags`;
+  } else if (mode === "ask") {
+    basePrompt += `
+
+ASK MODE: You are currently in Ask Mode. This means:
+- Answer questions about the code and explain how it works
+- Read files and search the project as needed, but NEVER modify files or run commands that change state
+- When a change would help, describe it and suggest switching to Agent mode to apply it`;
   } else {
     basePrompt += `
 

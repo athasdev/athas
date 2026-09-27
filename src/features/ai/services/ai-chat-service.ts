@@ -226,7 +226,7 @@ export const getChatCompletionStream = async (
         modelId,
         messages,
         root: context.projectRoot,
-        readOnly: mode === "plan",
+        readOnly: mode !== "chat",
         onChunk,
         onToolUse,
         onToolComplete,

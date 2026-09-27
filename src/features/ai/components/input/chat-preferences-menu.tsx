@@ -6,7 +6,7 @@ import {
 } from "@/features/ai/integrations/codex/codex-composer-catalog";
 import { CODEX_INTEGRATION_ID } from "@/features/ai/integrations/integration-registry";
 import type { SessionConfigOption, SessionConfigValue } from "@/features/ai/types/acp.types";
-import type { AgentType, ChatMode } from "@/features/ai/types/ai-chat.types";
+import type { AgentType } from "@/features/ai/types/ai-chat.types";
 import type { AIChatSkill } from "@/features/ai/types/skills.types";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
@@ -36,17 +36,7 @@ import { Spinner } from "@/ui/spinner";
 import { getChatPreferencesModel } from "@/features/ai/utils/chat-preferences-model";
 import { classifySessionConfigOption } from "@/features/ai/lib/session-config-option-classifier";
 import { canLogOutOfAcpAgent, logOutOfAcpAgent } from "@/features/ai/lib/acp-logout";
-import {
-  selectAcpAgentStatus,
-  selectChatAcpSession,
-  selectChatAcpSessionId,
-} from "@/features/ai/lib/acp-session-state";
-import { useCodexSettings } from "@/features/ai/integrations/codex/use-codex-settings";
-
-const FALLBACK_MODES: { id: ChatMode; label: string }[] = [
-  { id: "chat", label: "Ask" },
-  { id: "plan", label: "Plan" },
-];
+import { selectAcpAgentStatus } from "@/features/ai/lib/acp-session-state";
 
 type CodexCatalogStatus = "idle" | "loading" | "loading-more" | "loaded" | "error";
 
@@ -76,70 +66,6 @@ function CurrentValue({ children }: { children: string }) {
 
 function PreferenceLabel({ children }: { children: string }) {
   return <span className="min-w-0 flex-1 truncate">{children}</span>;
-}
-
-function ModePreferencesSubmenu({
-  chatId,
-  currentAgentId,
-}: {
-  chatId: string | null;
-  currentAgentId: AgentType;
-}) {
-  const { settings: codexSettings, update: updateCodexSettings } = useCodexSettings();
-  const isCodex = currentAgentId === CODEX_INTEGRATION_ID;
-  const mode = useAIChatStore((state) => state.mode);
-  const setMode = useAIChatStore((state) => state.actions.setMode);
-  const sessionModeState = useAIChatStore((state) => selectChatAcpSession(state, chatId).modeState);
-  const acpSessionId = useAIChatStore((state) => selectChatAcpSessionId(state, chatId));
-  const changeSessionMode = useAIChatStore((state) => state.actions.changeSessionMode);
-  const isAcpAgent = currentAgentId !== "custom" && !isCodex;
-  const options = isCodex
-    ? [
-        { id: "default", label: "Agent" },
-        { id: "plan", label: "Plan" },
-      ]
-    : isAcpAgent
-      ? sessionModeState.availableModes.map((option) => ({ id: option.id, label: option.name }))
-      : FALLBACK_MODES;
-  const selectedModeId = isCodex
-    ? (codexSettings.collaborationMode ?? "default")
-    : isAcpAgent
-      ? (sessionModeState.currentModeId ?? options[0]?.id ?? "")
-      : mode;
-  const selectedModeName = options.find((option) => option.id === selectedModeId)?.label ?? "Mode";
-
-  if (options.length === 0) return null;
-
-  return (
-    <DropdownMenuSub>
-      <DropdownMenuSubTrigger>
-        <PreferenceLabel>Mode</PreferenceLabel>
-        <CurrentValue>{selectedModeName}</CurrentValue>
-      </DropdownMenuSubTrigger>
-      <DropdownMenuSubContent>
-        <DropdownMenuRadioGroup
-          value={selectedModeId}
-          onValueChange={(nextMode) => {
-            if (isCodex) {
-              updateCodexSettings({ collaborationMode: nextMode });
-              return;
-            }
-            if (isAcpAgent) {
-              if (acpSessionId) void changeSessionMode(acpSessionId, nextMode);
-              return;
-            }
-            setMode(nextMode as ChatMode);
-          }}
-        >
-          {options.map((option) => (
-            <DropdownMenuRadioItem key={option.id} value={option.id}>
-              {option.label}
-            </DropdownMenuRadioItem>
-          ))}
-        </DropdownMenuRadioGroup>
-      </DropdownMenuSubContent>
-    </DropdownMenuSub>
-  );
 }
 
 function SkillsSubmenu({ onSelectSkill }: { onSelectSkill: (skill: AIChatSkill) => void }) {
@@ -355,7 +281,6 @@ function AcpConfigPreferences({
 }
 
 interface ChatPreferencesMenuProps {
-  chatId: string | null;
   currentAgentId: AgentType;
   canChangeAgent: boolean;
   sessionConfigOptions: SessionConfigOption[];
@@ -366,7 +291,6 @@ interface ChatPreferencesMenuProps {
 }
 
 export function ChatPreferencesMenu({
-  chatId,
   currentAgentId,
   canChangeAgent,
   sessionConfigOptions,
@@ -481,14 +405,11 @@ export function ChatPreferencesMenu({
             <AcpConfigPreferences
               options={preferences.acpConfigOptions.filter((option) => {
                 const category = classifySessionConfigOption(option);
-                // Model and effort each have a dedicated composer control.
-                return category !== "model" && category !== "thought_level";
+                // Model, effort and mode each have a dedicated composer control.
+                return category !== "model" && category !== "thought_level" && category !== "mode";
               })}
               onChange={onSessionConfigChange}
             />
-          )}
-          {preferences.showModePreference && (
-            <ModePreferencesSubmenu chatId={chatId} currentAgentId={currentAgentId} />
           )}
           {isCodex ? (
             <CodexSkillsSubmenu
