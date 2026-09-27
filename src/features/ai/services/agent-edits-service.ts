@@ -207,6 +207,27 @@ export function recordAgentFileWrite(chatId: string, write: AgentFileWrite) {
 }
 
 /**
+ * Adds a file the agent deleted to the checkpoint of its turn, so restoring the turn brings the
+ * file back. There is nothing left to review, so the chat stops tracking the file; other chats
+ * notice the deletion through the file watcher.
+ */
+export function recordAgentFileDelete(
+  chatId: string,
+  deletion: { path: string; previousContent: string; turnId?: string },
+) {
+  listenForFileChanges();
+  const turnId = deletion.turnId ?? currentTurnMessageId(chatId) ?? undefined;
+  if (turnId) {
+    void recordCheckpointAgentWrite(chatId, turnId, {
+      path: deletion.path,
+      previousContent: deletion.previousContent,
+      content: null,
+    });
+  }
+  setEntry(chatId, deletion.path, null);
+}
+
+/**
  * The user message whose turn the chat's agent is running now. An agent that resolves it when
  * its run starts keeps its writes with that turn even if they land after the user stopped it and
  * sent the next prompt.

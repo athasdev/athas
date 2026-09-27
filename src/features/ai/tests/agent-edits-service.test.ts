@@ -5,6 +5,7 @@ import {
   keepAgentHunk,
   keepAllAgentEdits,
   openAgentEditsReview,
+  recordAgentFileDelete,
   recordAgentFileWrite,
   rejectAgentHunk,
   rejectAllAgentEdits,
@@ -125,6 +126,18 @@ describe("agent edits service", () => {
       expect.objectContaining({ path: PATH, previousContent: "a", content: "b" }),
     );
     expect(entry()?.turnId).toBe("user-1");
+  });
+
+  it("records a deletion in its turn's checkpoint and stops reviewing the file", () => {
+    mocks.currentTurn = "user-1";
+    agentWrites("a", "b");
+    recordAgentFileDelete(CHAT, { path: PATH, previousContent: "b" });
+    expect(mocks.recordCheckpointAgentWrite).toHaveBeenLastCalledWith(CHAT, "user-1", {
+      path: PATH,
+      previousContent: "b",
+      content: null,
+    });
+    expect(entry()).toBeUndefined();
   });
 
   it("opens the review as a tab showing the chat", () => {

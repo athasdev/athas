@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   model: null as unknown as MockLanguageModelV4,
   invoke: vi.fn(),
   recordWrite: vi.fn(),
+  recordDelete: vi.fn(),
   turnId: undefined as string | undefined,
   dirty: false,
   backgroundDirty: false,
@@ -56,6 +57,7 @@ vi.mock("../intelligence/services/intelligence-mcp", async (importOriginal) => {
 });
 vi.mock("@/features/ai/services/agent-edits-service", () => ({
   recordAgentFileWrite: mocks.recordWrite,
+  recordAgentFileDelete: mocks.recordDelete,
   currentAgentTurnId: () => mocks.turnId,
 }));
 vi.mock("../intelligence/services/intelligence-sdk-model", () => ({
@@ -308,6 +310,11 @@ describe("Intelligence local agent loop", () => {
       root: "/project",
       path: "file.ts",
       expectedContent: "const old = 1;",
+    });
+    // The turn's checkpoint keeps what the file held, so restoring it brings the file back.
+    expect(mocks.recordDelete).toHaveBeenCalledWith("test-session", {
+      path: "/project/file.ts",
+      previousContent: "const old = 1;",
     });
   });
   it("runs a command only after showing it for approval", async () => {

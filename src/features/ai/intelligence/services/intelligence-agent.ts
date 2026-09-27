@@ -11,6 +11,7 @@ import type {
 } from "@/features/ai/types/acp.types";
 import {
   currentAgentTurnId,
+  recordAgentFileDelete,
   recordAgentFileWrite,
 } from "@/features/ai/services/agent-edits-service";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
@@ -499,7 +500,7 @@ export async function runIntelligenceAgent(params: {
                 }),
                 delete_file: tool({
                   description:
-                    "Delete a file you have read. The user approves every deletion, and a deletion cannot be rejected from the review afterwards.",
+                    "Delete a file you have read. The user approves every deletion; it cannot be rejected from the review afterwards, only undone by restoring the turn's checkpoint.",
                   inputSchema: z.object({ path: z.string().min(1).max(1024) }),
                   execute: async (input, { toolCallId }) =>
                     runTool(
@@ -535,6 +536,18 @@ export async function runIntelligenceAgent(params: {
                             root,
                             path: input.path,
                             expectedContent,
+                          });
+                          // Checkpoint restore can bring the file back.
+                          recordAgentFileDelete(params.sessionId, {
+                            // Written like the paths Rust reports for writes: no `.` segments.
+                            path: absolutePath(
+                              input.path
+                                .split(/[\\/]/)
+                                .filter((part) => part && part !== ".")
+                                .join("/"),
+                            ),
+                            previousContent: expectedContent,
+                            ...(turnId ? { turnId } : {}),
                           });
                           readFiles.delete(input.path);
                           return { deleted: true, path: input.path };
