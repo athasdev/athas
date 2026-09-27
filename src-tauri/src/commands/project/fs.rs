@@ -379,19 +379,85 @@ pub(super) fn copy_dir_all(src: &Path, dst: &Path) -> Result<(), String> {
          .map_err(|e| format!("Failed to get relative path: {}", e))?;
       let dst_path = dst.join(relative_path);
 
-      if entry.file_type().is_dir() {
+      let file_type = entry.file_type();
+      if file_type.is_dir() {
          // Create directory
          fs::create_dir_all(&dst_path).map_err(|e| format!("Failed to create directory: {}", e))?;
-      } else {
-         // Copy file
+      } else if file_type.is_file() || src_path.is_file() {
+         // Copy a file, or the file a symlink points to
          fs::copy(src_path, &dst_path).map_err(|e| format!("Failed to copy file: {}", e))?;
+      } else if file_type.is_symlink() {
+         // fs::copy cannot copy a link to a directory or a broken link, so recreate it
+         copy_symlink(src_path, &dst_path)?;
       }
+      // Sockets, FIFOs and device files have no content to copy and are skipped.
    }
 
    Ok(())
 }
 
+fn copy_symlink(src: &Path, dst: &Path) -> Result<(), String> {
+   let target = fs::read_link(src).map_err(|e| format!("Failed to read symlink: {}", e))?;
+
+   #[cfg(unix)]
+   let result = std::os::unix::fs::symlink(&target, dst);
+   #[cfg(windows)]
+   let result = std::os::windows::fs::symlink_dir(&target, dst);
+
+   result.map_err(|e| format!("Failed to copy symlink: {}", e))
+}
+
 // Helper function to recursively remove a directory
 pub(super) fn remove_dir_all(path: &Path) -> Result<(), String> {
    fs::remove_dir_all(path).map_err(|e| format!("Failed to remove directory: {}", e))
+}
+
+#[cfg(all(test, unix))]
+mod copy_dir_tests {
+   use super::copy_dir_all;
+   use std::{fs, os::unix::fs::symlink, path::PathBuf};
+
+   fn temp_dir(name: &str) -> PathBuf {
+      let dir =
+         std::env::temp_dir().join(format!("athas-copy-dir-{}-{}", name, std::process::id()));
+      let _ = fs::remove_dir_all(&dir);
+      fs::create_dir_all(&dir).unwrap();
+      dir
+   }
+
+   #[test]
+   fn copies_links_to_directories_and_broken_links() {
+      let root = temp_dir("links");
+      let src = root.join("src");
+      fs::create_dir_all(src.join("nested")).unwrap();
+      fs::write(src.join("nested/file.txt"), "hello").unwrap();
+      symlink("nested", src.join("dir-link")).unwrap();
+      symlink("nested/file.txt", src.join("file-link")).unwrap();
+      symlink("missing", src.join("broken-link")).unwrap();
+
+      let dst = root.join("dst");
+      copy_dir_all(&src, &dst).unwrap();
+
+      assert_eq!(
+         fs::read_to_string(dst.join("nested/file.txt")).unwrap(),
+         "hello"
+      );
+      assert_eq!(fs::read_to_string(dst.join("file-link")).unwrap(), "hello");
+      assert!(
+         !fs::symlink_metadata(dst.join("file-link"))
+            .unwrap()
+            .file_type()
+            .is_symlink()
+      );
+      assert_eq!(
+         fs::read_link(dst.join("dir-link")).unwrap(),
+         PathBuf::from("nested")
+      );
+      assert_eq!(
+         fs::read_link(dst.join("broken-link")).unwrap(),
+         PathBuf::from("missing")
+      );
+
+      fs::remove_dir_all(root).unwrap();
+   }
 }
