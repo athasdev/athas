@@ -101,11 +101,13 @@ export interface Message {
   usage?: MessageUsage;
 }
 
-/** The tokens and cost a built-in agent run reported for one turn. */
+/** The tokens, cost and model requests a built-in agent run reported for one turn. */
 export interface MessageUsage {
   inputTokens?: number;
   outputTokens?: number;
   costCents?: number;
+  /** Model requests the turn made. */
+  steps?: number;
 }
 
 // Agent types for AI chat

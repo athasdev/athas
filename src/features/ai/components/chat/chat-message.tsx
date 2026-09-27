@@ -37,6 +37,7 @@ import { AgentStopNotice } from "../messages/agent-stop-notice";
 import { ToolCallList } from "../messages/tool-call-display";
 import { buildAssistantTimeline } from "@/features/ai/lib/assistant-timeline";
 import { describeTurnUsage, formatTurnUsage } from "@/features/ai/lib/acp-usage";
+import { formatMessageUsage } from "@/features/ai/lib/message-usage";
 import Tooltip from "@/ui/tooltip";
 import { parseMentionTokens } from "@/features/ai/lib/file-mentions";
 
@@ -461,6 +462,9 @@ export const ChatMessage = memo(function ChatMessage({
               <Tooltip content={describeTurnUsage(message.turnUsage)}>
                 <span className="px-1 tabular-nums">{formatTurnUsage(message.turnUsage)}</span>
               </Tooltip>
+            ) : null}
+            {message.usage && formatMessageUsage(message.usage) ? (
+              <span className="px-1 tabular-nums">{formatMessageUsage(message.usage)}</span>
             ) : null}
           </MessageFooter>
         ) : null}

@@ -132,6 +132,7 @@ export function toMessageUsage(completion?: BuiltInCompletion): MessageUsage | u
     usage.outputTokens = completion.usage.outputTokens;
   if (typeof completion.costUsd === "number" && Number.isFinite(completion.costUsd))
     usage.costCents = Math.round(completion.costUsd * 10_000) / 100;
+  if (typeof completion.steps === "number" && completion.steps > 0) usage.steps = completion.steps;
   return Object.keys(usage).length > 0 ? usage : undefined;
 }
 

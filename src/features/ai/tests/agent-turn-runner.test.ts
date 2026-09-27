@@ -107,6 +107,7 @@ describe("agent turn runner", () => {
         outcome: "completed",
         usage: { totalTokens: 30, inputTokens: 20, outputTokens: 10 },
         costUsd: 0.0123,
+        steps: 3,
       } as never);
     });
     const host = createHost(chatId);
@@ -117,7 +118,7 @@ describe("agent turn runner", () => {
       role: "assistant",
       content: "Hello world",
       isStreaming: false,
-      usage: { inputTokens: 20, outputTokens: 10, costCents: 1.23 },
+      usage: { inputTokens: 20, outputTokens: 10, costCents: 1.23, steps: 3 },
     });
     expect(host.finishRun).toHaveBeenCalledWith(chatId, expect.any(String), "completed");
     expect(mocks.scheduleSubscriptionRefresh).toHaveBeenCalledOnce();
