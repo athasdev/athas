@@ -227,6 +227,7 @@ export const getChatCompletionStream = async (
         messages,
         root: context.projectRoot,
         readOnly: mode !== "chat",
+        maxSteps: settings.aiAgentMaxSteps,
         onChunk,
         onToolUse,
         onToolComplete,

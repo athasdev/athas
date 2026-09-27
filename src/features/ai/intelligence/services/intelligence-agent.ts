@@ -23,6 +23,7 @@ import { getCommandAllowPrefix } from "../lib/intelligence-command-policy";
 import { getExtraTools, type ExtraTools, type McpToolCallRequest } from "./intelligence-mcp";
 import { allowMcpTool, isMcpToolAllowed } from "./intelligence-mcp-allowlist";
 import { toIntelligenceAgentError } from "../lib/intelligence-agent-error";
+import { normalizeIntelligenceAgentSteps } from "../lib/intelligence-agent-steps";
 import {
   fitStepMessages,
   getStepRequestLimits,
@@ -34,9 +35,6 @@ import { parseExtensionViewNode } from "@/extensions/ui/services/extension-view-
 
 import { beginIntelligenceAgent, finishIntelligenceAgent } from "./intelligence-agent-session";
 
-/** Model requests one turn may make before it pauses with a Continue affordance. */
-export const DEFAULT_INTELLIGENCE_AGENT_STEPS = 25;
-const MAX_INTELLIGENCE_AGENT_STEPS = 100;
 const READ_LINES = 250;
 const READ_CHARS = 24000;
 const MCP_INPUT_PREVIEW_CHARS = 4000;
@@ -138,10 +136,7 @@ export async function runIntelligenceAgent(params: {
   const unsubscribeScope = useIntelligenceSettingsStore.subscribe((next, previous) => {
     if (next.scope !== previous.scope) controller.abort();
   });
-  const maxSteps = Math.min(
-    Math.max(1, Math.floor(params.maxSteps ?? DEFAULT_INTELLIGENCE_AGENT_STEPS)),
-    MAX_INTELLIGENCE_AGENT_STEPS,
-  );
+  const maxSteps = normalizeIntelligenceAgentSteps(params.maxSteps);
   let steps = 0;
   let costUsd: number | undefined;
   const notices: string[] = [];

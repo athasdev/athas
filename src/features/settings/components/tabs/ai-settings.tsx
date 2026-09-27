@@ -56,6 +56,11 @@ import {
 } from "@/features/ai/services/ai-token-service";
 import { CodexSettings } from "@/features/ai/integrations/codex/codex-settings";
 import { McpServerSettings } from "@/features/ai/components/mcp/mcp-server-settings";
+import {
+  MAX_INTELLIGENCE_AGENT_STEPS,
+  MIN_INTELLIGENCE_AGENT_STEPS,
+} from "@/features/ai/intelligence/lib/intelligence-agent-steps";
+import NumberInput from "@/ui/number-input";
 import { IntelligencePreferences } from "../intelligence-preferences";
 export const AISettings = () => {
   const settings = useSettingsStore(
@@ -63,6 +68,7 @@ export const AISettings = () => {
       aiAutocompleteCustomModelId: state.settings.aiAutocompleteCustomModelId,
       aiCompletion: state.settings.aiCompletion,
       aiFollowAgent: state.settings.aiFollowAgent,
+      aiAgentMaxSteps: state.settings.aiAgentMaxSteps,
       aiCustomBaseUrl: state.settings.aiCustomBaseUrl,
       aiCustomModelId: state.settings.aiCustomModelId,
       aiModelId: state.settings.aiModelId,
@@ -703,6 +709,21 @@ export const AISettings = () => {
           <Switch
             checked={settings.aiFollowAgent}
             onChange={(checked) => updateSetting("aiFollowAgent", checked)}
+          />
+        </SettingRow>
+        <SettingRow
+          label="Step Budget"
+          description="Model requests one Athas agent turn may make before it pauses and offers to continue"
+          onReset={() => updateSetting("aiAgentMaxSteps", getDefaultSetting("aiAgentMaxSteps"))}
+          canReset={settings.aiAgentMaxSteps !== getDefaultSetting("aiAgentMaxSteps")}
+        >
+          <NumberInput
+            min={String(MIN_INTELLIGENCE_AGENT_STEPS)}
+            max={String(MAX_INTELLIGENCE_AGENT_STEPS)}
+            step="1"
+            value={settings.aiAgentMaxSteps}
+            onChange={(value) => updateSetting("aiAgentMaxSteps", value)}
+            className="tabular-nums"
           />
         </SettingRow>
       </Section>

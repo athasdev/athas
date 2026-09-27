@@ -694,6 +694,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["ai", "agent", "notification", "sound", "audio", "alert"],
   },
   {
+    id: "ai-agent-max-steps",
+    tab: "ai",
+    section: "Agents",
+    label: "Step Budget",
+    description: "Model requests one Athas agent turn may make before it pauses",
+    keywords: ["ai", "agent", "steps", "budget", "limit", "tool", "calls", "continue"],
+  },
+  {
     id: "ai-mcp-servers",
     tab: "ai",
     section: "MCP Servers",
