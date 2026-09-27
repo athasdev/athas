@@ -38,8 +38,10 @@ import MarkdownRenderer from "../messages/markdown-renderer";
 import { PlanBlockDisplay } from "../messages/plan-block-display";
 import { AgentPlan } from "../messages/agent-plan";
 import { AgentStopNotice } from "../messages/agent-stop-notice";
+import { ChatErrorBlock } from "../messages/chat-error-block";
 import { ToolCallList } from "../messages/tool-call-display";
 import { buildAssistantSegments } from "@/features/ai/lib/assistant-segments";
+import { stripErrorBlocks } from "@/features/ai/lib/chat-error";
 import { findLatestEdit } from "@/features/ai/lib/tool-call-groups";
 import { describeTurnUsage, formatTurnUsage } from "@/features/ai/lib/acp-usage";
 import { formatMessageUsage } from "@/features/ai/lib/message-usage";
@@ -194,11 +196,14 @@ export const ChatMessage = memo(function ChatMessage({
 }: ChatMessageProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [draftContent, setDraftContent] = useState(message.content);
+  // A turn that failed keeps a legacy error card in its text for saved chats; the structured
+  // error renders instead, so the card is left out.
+  const responseText = message.error ? stripErrorBlocks(message.content) : message.content;
   const isToolOnlyMessage =
     message.role === "assistant" &&
     message.toolCalls &&
     message.toolCalls.length > 0 &&
-    (!message.content || message.content.trim().length === 0);
+    !responseText.trim();
 
   const handleExecuteStep = useCallback(
     (step: PlanStep, stepIndex: number) => {
@@ -315,6 +320,9 @@ export const ChatMessage = memo(function ChatMessage({
             isStreaming={message.isStreaming}
             latestEdit={latestEdit}
           />
+          {message.error ? (
+            <ChatErrorBlock error={message.error} chatId={chatId} onRetry={onRetry} />
+          ) : null}
           {message.stopNotice ? <AgentStopNotice notice={message.stopNotice} /> : null}
         </MessageContent>
       </Message>
@@ -324,6 +332,7 @@ export const ChatMessage = memo(function ChatMessage({
   if (
     message.role === "assistant" &&
     message.isStreaming &&
+    !message.error &&
     (!message.content || message.content.trim().length === 0) &&
     (!message.toolCalls || message.toolCalls.length === 0)
   ) {
@@ -401,7 +410,7 @@ export const ChatMessage = memo(function ChatMessage({
               <AgentPlan entries={message.plan} isStreaming={message.isStreaming} />
             ) : null}
 
-            {buildAssistantSegments(message.content, message.toolCalls).map((segment, index) => (
+            {buildAssistantSegments(responseText, message.toolCalls).map((segment, index) => (
               <div
                 key={`${message.id}-segment-${index}`}
                 className={cn("flex min-w-0 flex-col gap-2", index > 0 && "mt-2")}
@@ -428,17 +437,20 @@ export const ChatMessage = memo(function ChatMessage({
                 ) : null}
               </div>
             ))}
+            {message.error ? (
+              <ChatErrorBlock error={message.error} chatId={chatId} onRetry={onRetry} />
+            ) : null}
             {message.stopNotice ? <AgentStopNotice notice={message.stopNotice} /> : null}
           </BubbleContent>
         </Bubble>
-        {showActions && message.content.trim() ? (
+        {showActions && responseText.trim() ? (
           <MessageFooter reserveSpace={false}>
-            <MessageAction onClick={() => void copyText(message.content)} label="Copy response">
+            <MessageAction onClick={() => void copyText(responseText)} label="Copy response">
               <CopyIcon className="size-3.5" />
             </MessageAction>
             {isLastMessage && !message.isStreaming ? (
               <MessageAction
-                onClick={() => void copyText(buildShareableOutcomeMarkdown(message.content))}
+                onClick={() => void copyText(buildShareableOutcomeMarkdown(responseText))}
                 label="Copy outcome as Markdown"
                 icon={ClipboardTextIcon}
               />

@@ -461,14 +461,21 @@ class AgentTurnStream {
         ? "The selected agent did not return a visible response. Try sending the message again."
         : "The selected provider did not return a visible response. Try another model or send the message again.";
       const source = turn.isAcp ? "agent session" : "provider request";
+      const details = `The ${source} completed, but no content, tool output, or resource was returned.`;
       this.update(() => ({
         content: formatErrorBlock({
           title: "No Response",
           code: "EMPTY_RESPONSE",
           message: fallbackMessage,
-          details: `The ${source} completed, but no content, tool output, or resource was returned.`,
+          details,
         }),
-        error: { code: "empty_response", message: fallbackMessage, retryable: true },
+        error: {
+          code: "empty_response",
+          title: "No Response",
+          message: fallbackMessage,
+          details,
+          retryable: true,
+        },
         isStreaming: false,
       }));
       this.finish(wasCancelled ? "stopped" : "failed");

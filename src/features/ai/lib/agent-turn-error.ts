@@ -120,10 +120,11 @@ export function describeAgentTurnFailure(input: {
     code = "RECONNECT";
   }
 
-  const error: ChatMessageError = { message };
+  const error: ChatMessageError = { title, message, details: details || mainError, providerId };
   if (code) error.code = code;
   if (status) error.status = status;
   error.retryable = isRetryableApiError(error);
+  if (acpConfig || acpAuth) error.actions = ["restart_agent", "open_agent_terminal"];
 
   return {
     title,

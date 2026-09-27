@@ -20,7 +20,10 @@ describe("agent turn failures", () => {
     expect(failure.error).toEqual({
       code: "allowance_exhausted",
       status: 402,
+      title: "Payment required",
       message: failure.message,
+      details: failure.details,
+      providerId: "athas",
       retryable: false,
     });
   });

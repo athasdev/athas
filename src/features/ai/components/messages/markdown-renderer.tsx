@@ -1,18 +1,8 @@
-import { AcpAuthChoice } from "./acp-auth-choice";
-import { ApiErrorActions } from "./api-error-actions";
-import { getApiErrorCode } from "@/features/ai/lib/api-error";
-import {
-  ChevronDownIcon,
-  ChevronRightIcon,
-  CopyIcon,
-  TerminalWindowIcon,
-  WarningCircleIcon,
-} from "@/ui/icons";
+import { ChatErrorBlock } from "./chat-error-block";
+import { parseLegacyErrorBlock } from "@/features/ai/lib/chat-error";
+import { CopyIcon } from "@/ui/icons";
 import type React from "react";
-import { memo, useMemo, useState } from "react";
-import { toast } from "sonner";
-import { getAcpAuthenticationCommand } from "@/features/ai/lib/acp-authentication";
-import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
+import { memo, useMemo } from "react";
 import {
   isExternalMarkdownLink,
   resolveWorkspaceFileLink,
@@ -22,20 +12,15 @@ import {
   normalizePlainTextFence,
 } from "@/features/ai/lib/assistant-markdown";
 import { splitMarkdownBlocks } from "@/features/ai/lib/markdown-blocks";
-import { selectAgentAuthRequest, useAcpAuthStore } from "@/features/ai/stores/acp-auth.store";
-import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
-import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import {
   HighlightedCode,
   useCodeHighlightSegments,
 } from "@/features/editor/markdown/highlighted-code";
 import { normalizeCodeFenceLanguage } from "@/features/editor/markdown/language-map";
 import { Button } from "@/ui/button";
-import { Marker, MarkerContent, MarkerIcon } from "@/ui/marker";
 import { TextLink } from "@/ui/text-link";
 import { writeClipboardText } from "@/utils/clipboard";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import { useProjectStore } from "@/features/window/stores/project.store";
 
 function inferCodeLanguage(code: string): string {
   const trimmed = code.trim();
@@ -126,181 +111,6 @@ function CodeBlock({ code, languageHint }: { code: string; languageHint: string 
         </code>
       </pre>
     </div>
-  );
-}
-
-// Error Block Component
-function ErrorBlock({
-  errorData,
-  chatId,
-  onRetry,
-}: {
-  errorData: string;
-  chatId?: string | null;
-  onRetry?: () => void | Promise<void>;
-}) {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [isRestartingSession, setIsRestartingSession] = useState(false);
-  const [isOpeningTerminal, setIsOpeningTerminal] = useState(false);
-  const openTerminalBuffer = useBufferStore((state) => state.actions.openTerminalBuffer);
-  const setActiveBuffer = useBufferStore((state) => state.actions.setActiveBuffer);
-  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
-  const agentId = useAIChatStore((state) => {
-    const chatAgentId = chatId
-      ? state.chats.find((chat) => chat.id === chatId)?.agentId
-      : undefined;
-    return chatAgentId ?? state.selectedAgentId;
-  });
-
-  const chatProviderId = useAIChatStore(
-    (state) => state.chats.find((chat) => chat.id === chatId)?.providerId,
-  );
-  const lines = errorData.split("\n");
-  const providerId =
-    lines
-      .find((line) => line.startsWith("provider:"))
-      ?.slice("provider:".length)
-      .trim() || (/athas API/i.test(errorData) ? "athas" : chatProviderId || agentId);
-
-  const title =
-    lines
-      .find((l) => l.startsWith("title:"))
-      ?.replace("title:", "")
-      .trim() || "";
-  const code =
-    lines
-      .find((l) => l.startsWith("code:"))
-      ?.replace("code:", "")
-      .trim() || "";
-  const message =
-    lines
-      .find((l) => l.startsWith("message:"))
-      ?.replace("message:", "")
-      .trim() || "";
-  const details =
-    lines
-      .find((l) => l.startsWith("details:"))
-      ?.replace("details:", "")
-      .trim() || "";
-  const summary = title || message || "Error";
-  const normalizedDetails = details && details !== message ? details : "";
-  const isAuthRequired = code === "AUTH_REQUIRED";
-  const isConfigurationRequired = code === "CONFIG_REQUIRED";
-  const canRecoverAgent = isAuthRequired || isConfigurationRequired;
-  const authRequest = selectAgentAuthRequest(useAcpAuthStore.use.request(), agentId);
-  // Only the latest error offers sign-in, since signing in retries its prompt.
-  const showAuthChoice = isAuthRequired && authRequest !== null && onRetry !== undefined;
-
-  const handleRestartAgentSession = async () => {
-    setIsRestartingSession(true);
-    try {
-      await AcpStreamHandler.restartAgent(agentId, chatId);
-      toast.success("Agent session restarted");
-    } catch (error) {
-      console.error("Failed to restart ACP agent session:", error);
-      toast.error("Couldn't restart the agent session", {
-        description: error instanceof Error ? error.message : String(error),
-      });
-    } finally {
-      setIsRestartingSession(false);
-    }
-  };
-
-  const handleOpenAuthenticationTerminal = async () => {
-    setIsOpeningTerminal(true);
-    try {
-      const agents = await AcpStreamHandler.getAvailableAgents().catch(() => []);
-      const command = getAcpAuthenticationCommand(agentId, agents);
-      const bufferId = openTerminalBuffer({
-        command: command ?? undefined,
-        name: command ?? "Agent setup",
-        workingDirectory: rootFolderPath ?? undefined,
-      });
-      setActiveBuffer(bufferId);
-    } catch (error) {
-      toast.error("Couldn't open the agent terminal", {
-        description: error instanceof Error ? error.message : String(error),
-      });
-    } finally {
-      setIsOpeningTerminal(false);
-    }
-  };
-
-  return (
-    <Marker role="alert" tone="error" className="not-typeset my-1 items-start">
-      <MarkerIcon>
-        <WarningCircleIcon />
-      </MarkerIcon>
-      <MarkerContent className="flex min-w-0 flex-col gap-1">
-        <span className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
-          <span className="font-medium">{summary}</span>
-          {code ? <span className="text-destructive">({code})</span> : null}
-          {normalizedDetails ? (
-            <Button
-              type="button"
-              variant="link"
-              onClick={() => setIsExpanded(!isExpanded)}
-              tone="danger"
-            >
-              {isExpanded ? <ChevronDownIcon /> : <ChevronRightIcon />}
-              {isExpanded ? "Hide details" : "Details"}
-            </Button>
-          ) : null}
-        </span>
-        {message && message !== summary ? (
-          <span className="text-destructive">{message}</span>
-        ) : null}
-        {!canRecoverAgent && (
-          <ApiErrorActions
-            code={code || getApiErrorCode(message)}
-            providerId={providerId}
-            onRetry={onRetry}
-          />
-        )}
-        {showAuthChoice && authRequest ? (
-          <AcpAuthChoice request={authRequest} chatId={chatId} onSignedIn={onRetry} />
-        ) : null}
-        {canRecoverAgent && !showAuthChoice && (
-          <span className="flex flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              variant="default"
-              onClick={() => void handleRestartAgentSession()}
-              disabled={isRestartingSession}
-            >
-              <TerminalWindowIcon size={12} />
-              {isRestartingSession ? "Restarting..." : "Restart Agent Session"}
-            </Button>
-            <Button
-              type="button"
-              variant="default"
-              onClick={() => void handleOpenAuthenticationTerminal()}
-              disabled={isOpeningTerminal}
-            >
-              <TerminalWindowIcon size={12} />
-              {isOpeningTerminal ? "Opening..." : "Open Agent Terminal"}
-            </Button>
-            <span className="text-destructive">
-              {isConfigurationRequired
-                ? "Finish the agent setup, then restart the session."
-                : "Complete login in the agent CLI, then restart the session."}
-            </span>
-          </span>
-        )}
-        {normalizedDetails && isExpanded && (
-          <pre className="max-w-full overflow-x-auto rounded-md bg-destructive-soft p-2 font-mono text-destructive ui-text-sm">
-            {(() => {
-              try {
-                const parsed = JSON.parse(normalizedDetails);
-                return JSON.stringify(parsed, null, 2);
-              } catch {
-                return normalizedDetails;
-              }
-            })()}
-          </pre>
-        )}
-      </MarkerContent>
-    </Marker>
   );
 }
 
@@ -751,7 +561,11 @@ export default function MarkdownRenderer({ content, chatId, onRetry }: MarkdownR
       return (
         <div className="typeset typeset-chat">
           <MarkdownBlocks text={normalizedContent.slice(0, errorStart)} />
-          <ErrorBlock errorData={errorMatch[1]} chatId={chatId} onRetry={onRetry} />
+          <ChatErrorBlock
+            error={parseLegacyErrorBlock(errorMatch[1])}
+            chatId={chatId}
+            onRetry={onRetry}
+          />
           <MarkdownBlocks text={normalizedContent.slice(errorStart + errorMatch[0].length)} />
         </div>
       );
