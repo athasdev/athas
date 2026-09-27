@@ -50,6 +50,7 @@ import { ToolLocations } from "./tool-locations";
 import { getFileDiff } from "@/features/git/api/git-diff-api";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { Button } from "@/ui/button";
+import { CodeOutput } from "@/ui/code-output";
 import { Shimmer } from "@/ui/shimmer";
 import { GenerativeUIRenderer } from "@/extensions/ui/components/generative-ui-renderer";
 import { ExtensionViewRenderer } from "@/extensions/ui/components/extension-view-renderer";
@@ -161,19 +162,6 @@ function getOutputText(output: unknown): string {
     .trim();
 }
 
-function OutputBlock({ text, tone = "default" }: { text: string; tone?: "default" | "error" }) {
-  return (
-    <pre
-      className={cn(
-        "max-h-64 overflow-auto rounded-lg border border-border bg-surface px-2.5 py-2 font-mono whitespace-pre-wrap wrap-anywhere select-text ui-text-sm",
-        tone === "error" ? "text-destructive" : "text-subtle-foreground",
-      )}
-    >
-      {text}
-    </pre>
-  );
-}
-
 /** A terminal's output inside its tool call, with how the command ended once it has. */
 function TerminalOutput({ terminal }: { terminal: AcpTerminalSnapshot }) {
   const text = useMemo(() => formatAcpTerminalText(terminal.output).trimEnd(), [terminal.output]);
@@ -182,7 +170,9 @@ function TerminalOutput({ terminal }: { terminal: AcpTerminalSnapshot }) {
     terminal.exit !== null && (terminal.exit.signal !== null || terminal.exit.exitCode !== 0);
   return (
     <div className="flex min-w-0 flex-col gap-1">
-      {text ? <OutputBlock text={terminal.truncated ? `…\n${text}` : text} /> : null}
+      {text ? (
+        <CodeOutput tone="muted">{terminal.truncated ? `…\n${text}` : text}</CodeOutput>
+      ) : null}
       {status ? (
         <span className={cn("ui-text-sm", failed ? "text-destructive" : "text-subtle-foreground")}>
           {status}
@@ -258,7 +248,13 @@ const ToolCallRow = memo(function ToolCallRow({
   const errorText = toolCall.error && toolCall.error !== summary.error ? toolCall.error : "";
 
   const body: ReactNode[] = [];
-  if (errorText) body.push(<OutputBlock key="error" text={errorText} tone="error" />);
+  if (errorText) {
+    body.push(
+      <CodeOutput key="error" tone="error">
+        {errorText}
+      </CodeOutput>,
+    );
+  }
   diffItems.forEach((item, index) =>
     body.push(
       <ExtensionViewRenderer
@@ -269,8 +265,20 @@ const ToolCallRow = memo(function ToolCallRow({
       />,
     ),
   );
-  if (inputText) body.push(<OutputBlock key="input" text={inputText} />);
-  if (outputText) body.push(<OutputBlock key="output" text={outputText} />);
+  if (inputText) {
+    body.push(
+      <CodeOutput key="input" tone="muted">
+        {inputText}
+      </CodeOutput>,
+    );
+  }
+  if (outputText) {
+    body.push(
+      <CodeOutput key="output" tone="muted">
+        {outputText}
+      </CodeOutput>,
+    );
+  }
   terminalItems.forEach(({ terminalId }, index) => {
     // Live while the command runs; what the call kept once the terminal is gone.
     const terminal = liveTerminals[index] ?? toolCall.terminals?.[terminalId];
