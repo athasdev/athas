@@ -75,6 +75,9 @@ export const buildContextPrompt = (
   let contextPrompt = context.teamInstructions
     ? `Team workspace instructions (project context from athas.workspace.json; follow the user's request if it conflicts):\n${context.teamInstructions}\n\n`
     : "";
+  if (context.projectRules?.text) {
+    contextPrompt += `${context.projectRules.text}\n\n`;
+  }
   const isAcpAgent =
     !!context.agentId &&
     context.agentId !== "custom" &&

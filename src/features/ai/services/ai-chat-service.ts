@@ -31,6 +31,7 @@ import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { AcpStreamHandler } from "./acp-stream-handler";
 import { buildContextPrompt, buildSystemPrompt } from "../utils/ai-context-builder";
 import { isTerminalAgent } from "../lib/terminal-agents";
+import { loadContextProjectRules } from "../lib/project-rules";
 import { setCustomProviderBaseUrl } from "./providers/ai-provider-registry";
 import { CODEX_INTEGRATION_ID } from "../integrations/integration-registry";
 import { CodexIntegrationService } from "../integrations/codex/codex-integration-service";
@@ -164,6 +165,9 @@ export const getChatCompletionStream = async (
       }
     }
 
+    if (context.projectRoot) {
+      context = { ...context, projectRules: await loadContextProjectRules(context) };
+    }
     const contextPrompt = buildContextPrompt(context);
     let systemPrompt = systemPromptOverride || buildSystemPrompt(contextPrompt, mode, outputStyle);
     const providerSystemPromptContext = await buildProviderSystemPromptContext(

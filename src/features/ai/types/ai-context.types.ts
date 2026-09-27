@@ -3,6 +3,7 @@
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import type { MentionedFile } from "@/features/ai/lib/file-mentions";
 import type { ImageContent } from "./ai-chat.types";
+import type { LoadedProjectRules } from "./project-rules.types";
 
 export interface EditorSelectionContext {
   id: string;
@@ -27,6 +28,8 @@ export interface ContextInfo {
   editorSelections?: EditorSelectionContext[];
   projectRoot?: string;
   teamInstructions?: string;
+  /** AGENTS.md, CLAUDE.md, rule folders and user rules loaded for the built-in agent. */
+  projectRules?: LoadedProjectRules;
   language?: string;
   providerId?: string;
   agentId?: string;
