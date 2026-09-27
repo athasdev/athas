@@ -25,7 +25,7 @@ export function requestIntelligencePermission(params: {
   sessionId: string;
   path: string;
   description: string;
-  kind?: "edit" | "command" | "delete";
+  kind?: "edit" | "command" | "delete" | "mcp";
   preview?: AcpPermissionPreview;
   /** Offers an "always allow" answer with this label, such as `Always allow bun test`. */
   allowAlwaysLabel?: string;
@@ -58,7 +58,13 @@ export function requestIntelligencePermission(params: {
         {
           id: "allow",
           name:
-            kind === "command" ? "Run command" : kind === "delete" ? "Delete file" : "Apply edit",
+            kind === "command"
+              ? "Run command"
+              : kind === "delete"
+                ? "Delete file"
+                : kind === "mcp"
+                  ? "Run tool"
+                  : "Apply edit",
           kind: "allow_once",
         },
         ...(params.allowAlwaysLabel

@@ -20,6 +20,8 @@ import { toIntelligenceSdkPrompt } from "../lib/intelligence-sdk-prompt";
 import { requestIntelligencePermission } from "./intelligence-agent-permissions";
 import { allowCommandPrefix, getCommandAutoApproval } from "./intelligence-command-allowlist";
 import { getCommandAllowPrefix } from "../lib/intelligence-command-policy";
+import { getExtraTools, type ExtraTools, type McpToolCallRequest } from "./intelligence-mcp";
+import { allowMcpTool, isMcpToolAllowed } from "./intelligence-mcp-allowlist";
 import { toIntelligenceAgentError } from "../lib/intelligence-agent-error";
 import type { IntelligenceAgentResult } from "../types/intelligence-agent.types";
 import { parseExtensionViewNode } from "@/extensions/ui/services/extension-view-schema";
@@ -31,6 +33,7 @@ export const DEFAULT_INTELLIGENCE_AGENT_STEPS = 25;
 const MAX_INTELLIGENCE_AGENT_STEPS = 100;
 const READ_LINES = 250;
 const READ_CHARS = 24000;
+const MCP_INPUT_PREVIEW_CHARS = 4000;
 const UNSAVED_CHANGES =
   "The editor has unsaved changes to this file. Ask the user to save or discard them first.";
 
@@ -217,6 +220,22 @@ export async function runIntelligenceAgent(params: {
       },
     };
   };
+  const authorizeMcpTool = async (call: McpToolCallRequest) => {
+    if (isMcpToolAllowed(call.serverId, call.tool)) return true;
+    const input = JSON.stringify(call.input ?? {}, null, 2) ?? "{}";
+    const decision = await requestIntelligencePermission({
+      sessionId: params.sessionId,
+      path: call.serverName,
+      kind: "mcp",
+      description: `MCP server: ${call.serverName}\nTool: ${call.tool}\n\nInput:\n${input.slice(0, MCP_INPUT_PREVIEW_CHARS)}\n\nMCP tools run outside Athas and can change data or reach the network.`,
+      allowAlwaysLabel: `Always allow ${call.tool}`,
+      signal,
+      notify: params.onPermissionRequest,
+    });
+    if (decision.always) allowMcpTool(call.serverId, call.tool);
+    return decision.approved;
+  };
+  let extraTools: ExtraTools | undefined;
   try {
     const model = await getIntelligenceSdkModel(params.providerId, params.modelId, undefined, {
       onCost: (usd) => {
@@ -225,7 +244,19 @@ export async function runIntelligenceAgent(params: {
     });
     signal.throwIfAborted();
     const root = params.root && !/^[a-z]+:\/\//i.test(params.root) ? params.root : undefined;
-    const tools = root
+    extraTools = await getExtraTools(root, {
+      signal,
+      readOnly: params.readOnly,
+      authorize: authorizeMcpTool,
+      track: (name, input, toolCallId, execute) =>
+        runTool(name, "other", input, toolCallId, execute),
+    });
+    signal.throwIfAborted();
+    for (const notice of extraTools.notices) {
+      notices.push(notice);
+      params.onChunk(`_${notice}_\n\n`);
+    }
+    const builtInTools = root
       ? {
           list_files: tool({
             description:
@@ -508,6 +539,7 @@ export async function runIntelligenceAgent(params: {
             : {}),
         }
       : {};
+    const tools = { ...extraTools.tools, ...builtInTools };
     const prepared = withoutUnsupportedImages(params.providerId, params.messages);
     if (prepared.dropped) {
       const notice = "Images were not sent: Athas hosted models accept text only.";
@@ -568,6 +600,7 @@ export async function runIntelligenceAgent(params: {
     throw toIntelligenceAgentError(error);
   } finally {
     controller.abort();
+    await extraTools?.close().catch(() => undefined);
     unsubscribeAuth();
     unsubscribeScope();
     finishIntelligenceAgent(params.sessionId, controller);

@@ -2,6 +2,7 @@ import type { ToolCall } from "@/features/ai/types/ai-chat.types";
 import type { AcpToolKind } from "@/features/ai/types/acp.types";
 import { getAcpDiffOutputs, toRelativeDisplayPath } from "./acp-diff-output";
 import { diffTextLines } from "@/features/git/utils/line-diff";
+import { parseMcpToolName } from "./mcp-tool-name";
 
 export type ToolCallPhase = "running" | "done" | "failed" | "declined" | "cancelled";
 
@@ -48,6 +49,8 @@ function firstString(record: Record<string, unknown>, keys: string[]): string | 
 
 /** Older history rows and some agents only give a name; read the kind off it. */
 export function inferToolKind(name: string): AcpToolKind {
+  // An MCP tool's name says nothing reliable about what it does to the workspace.
+  if (parseMcpToolName(name)) return "other";
   const lower = name.toLowerCase();
   if (/(^|[^a-z])(edit|write|replace|patch|create|apply)/.test(lower)) return "edit";
   if (/(^|[^a-z])(delete|remove|rm)([^a-z]|$)/.test(lower)) return "delete";
@@ -149,7 +152,13 @@ export function summarizeToolCall(
       target = target ? firstLine(target) : null;
   }
 
-  const verb = kind === "other" ? toolCall.name : VERBS[kind][phase === "running" ? 0 : 1];
+  const mcpTool = kind === "other" ? parseMcpToolName(toolCall.name) : null;
+  if (mcpTool) target = `${mcpTool.server} (MCP)`;
+  const verb = mcpTool
+    ? mcpTool.tool
+    : kind === "other"
+      ? toolCall.name
+      : VERBS[kind][phase === "running" ? 0 : 1];
 
   return {
     kind,

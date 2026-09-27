@@ -5,6 +5,9 @@ import { runIntelligenceAgent } from "../intelligence/services/intelligence-agen
 import { cancelIntelligenceAgent } from "../intelligence/services/intelligence-agent-session";
 import { respondToIntelligencePermission } from "../intelligence/services/intelligence-agent-permissions";
 import { formatApiError } from "../lib/api-error";
+import type { McpToolContext } from "../intelligence/services/intelligence-mcp";
+import type { McpJsonRpcMessage } from "../intelligence/types/intelligence-mcp.types";
+import type { McpServerSetting } from "../types/mcp-server.types";
 
 const mocks = vi.hoisted(() => ({
   model: null as unknown as MockLanguageModelV4,
@@ -12,7 +15,43 @@ const mocks = vi.hoisted(() => ({
   recordWrite: vi.fn(),
   dirty: false,
   backgroundDirty: false,
+  mcpServers: [] as McpServerSetting[],
+  mcpCalls: [] as unknown[],
+  mcpClosed: 0,
 }));
+vi.mock("../intelligence/services/intelligence-mcp", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../intelligence/services/intelligence-mcp")>();
+  return {
+    ...actual,
+    getExtraTools: (root: string | undefined, context: McpToolContext) =>
+      actual.getExtraTools(root, {
+        ...context,
+        servers: mocks.mcpServers,
+        createTransport: () => {
+          let deliver: (message: McpJsonRpcMessage) => void = () => {};
+          return {
+            start: async (onMessage) => {
+              deliver = onMessage;
+            },
+            send: async (message) => {
+              if (message.id === undefined) return;
+              if (message.method === "tools/call") mocks.mcpCalls.push(message.params);
+              const result =
+                message.method === "tools/list"
+                  ? { tools: [{ name: "search", inputSchema: { type: "object" } }] }
+                  : message.method === "tools/call"
+                    ? { content: [{ type: "text", text: "3 issues" }] }
+                    : {};
+              queueMicrotask(() => deliver({ jsonrpc: "2.0", id: message.id, result }));
+            },
+            close: async () => {
+              mocks.mcpClosed++;
+            },
+          };
+        },
+      }),
+  };
+});
 vi.mock("@/features/ai/services/agent-edits-service", () => ({
   recordAgentFileWrite: mocks.recordWrite,
 }));
@@ -106,6 +145,9 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.dirty = false;
   mocks.backgroundDirty = false;
+  mocks.mcpServers = [];
+  mocks.mcpCalls = [];
+  mocks.mcpClosed = 0;
   storage.clear();
   vi.stubGlobal("localStorage", {
     getItem: (key: string) => storage.get(key) ?? null,
@@ -300,6 +342,55 @@ describe("Intelligence local agent loop", () => {
       .filter(([name]) => name === "intelligence_run_command")
       .map(([, args]) => args.command);
     expect(ran).toEqual(["git status", "bun test src", "bun test other", "bun test; rm -rf src"]);
+  });
+  it("calls MCP tools after approval and remembers an always-allowed tool", async () => {
+    mocks.mcpServers = [
+      {
+        id: "gh",
+        name: "github",
+        enabled: true,
+        transport: "stdio",
+        command: "github-mcp",
+        args: [],
+        url: "",
+      },
+    ];
+    mocks.model = new MockLanguageModelV4({
+      doStream: [
+        step("mcp__github__search", { q: "bug" }),
+        step("mcp__github__search", { q: "crash" }),
+        step(),
+      ],
+    });
+    const permission = vi.fn((event) =>
+      respondToIntelligencePermission(event.requestId, true, "allow_always"),
+    );
+    const onToolUse = vi.fn();
+    const complete = vi.fn();
+    await runIntelligenceAgent({
+      ...params(),
+      onPermissionRequest: permission,
+      onToolUse,
+      onToolComplete: complete,
+    });
+
+    expect(permission).toHaveBeenCalledOnce();
+    expect(permission.mock.calls[0][0]).toMatchObject({
+      permissionType: "intelligence-mcp",
+      resource: "github",
+    });
+    expect(permission.mock.calls[0][0].description).toContain('"q": "bug"');
+    expect(mocks.mcpCalls).toEqual([
+      { name: "search", arguments: { q: "bug" } },
+      { name: "search", arguments: { q: "crash" } },
+    ]);
+    expect(onToolUse).toHaveBeenCalledWith(
+      expect.objectContaining({ toolName: "mcp__github__search", kind: "other" }),
+    );
+    expect(complete).toHaveBeenCalledWith("mcp__github__search", "mcp__github__search", {
+      content: "3 issues",
+    });
+    expect(mocks.mcpClosed).toBe(1);
   });
   it("pauses with a Continue outcome when the step budget runs out", async () => {
     mocks.model = new MockLanguageModelV4({
