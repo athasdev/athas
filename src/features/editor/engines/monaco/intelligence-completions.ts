@@ -6,6 +6,8 @@ import {
   requestInlineEdit,
 } from "@/features/ai/intelligence/services/intelligence-text-service";
 import { useIntelligenceSettingsStore } from "@/features/ai/intelligence/stores/intelligence-settings.store";
+import { onProviderApiTokenChange } from "@/features/ai/services/ai-token-service";
+import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import {
   type IntelligenceCompletionPauseReason,
   useIntelligenceCompletionStore,
@@ -217,5 +219,18 @@ export function registerIntelligenceCompletions() {
   });
   useIntelligenceSettingsStore.subscribe((next, previous) => {
     if (next.scope !== previous.scope || next.preferences !== previous.preferences) resume();
+  });
+  // A pause for a missing or rejected API key lifts once a key is added or replaced, or once
+  // Tab uses another provider or model.
+  onProviderApiTokenChange(resume);
+  useAIChatStore.subscribe((next, previous) => {
+    if (next.providerApiKeys !== previous.providerApiKeys) resume();
+  });
+  useSettingsStore.subscribe((next, previous) => {
+    if (
+      next.settings.aiProviderId !== previous.settings.aiProviderId ||
+      next.settings.aiModelId !== previous.settings.aiModelId
+    )
+      resume();
   });
 }

@@ -8,14 +8,19 @@ const mocks = vi.hoisted(() => ({
   enabled: true,
   authenticated: true,
   listeners: new Set<(...args: any[]) => void>(),
+  tokenListeners: new Set<(providerId: string) => void>(),
+  settingsListeners: new Set<(...args: any[]) => void>(),
+  chatListeners: new Set<(...args: any[]) => void>(),
 }));
 vi.mock("monaco-editor", () => ({
   editor: {
     getEditors: mocks.editors,
     getModelMarkers: mocks.markers,
+    getModels: () => [],
+    onDidCreateModel: vi.fn(),
     EditorOption: { readOnly: 1 },
   },
-  languages: {},
+  languages: { registerInlineCompletionsProvider: vi.fn() },
   Range: { fromPositions: (start: unknown, end = start) => ({ start, end }) },
 }));
 vi.mock("@/features/ai/intelligence/services/intelligence-text-service", () => {
@@ -36,7 +41,24 @@ vi.mock("sonner", () => ({ toast: { warning: vi.fn() } }));
 vi.mock("@/features/settings/stores/settings.store", () => ({
   useSettingsStore: {
     getState: () => ({ settings: { aiCompletion: mocks.enabled } }),
-    subscribe: () => () => {},
+    subscribe: (listener: (...args: any[]) => void) => {
+      mocks.settingsListeners.add(listener);
+      return () => mocks.settingsListeners.delete(listener);
+    },
+  },
+}));
+vi.mock("@/features/ai/services/ai-token-service", () => ({
+  onProviderApiTokenChange: (listener: (providerId: string) => void) => {
+    mocks.tokenListeners.add(listener);
+    return () => mocks.tokenListeners.delete(listener);
+  },
+}));
+vi.mock("@/features/ai/stores/ai-chat.store", () => ({
+  useAIChatStore: {
+    subscribe: (listener: (...args: any[]) => void) => {
+      mocks.chatListeners.add(listener);
+      return () => mocks.chatListeners.delete(listener);
+    },
   },
 }));
 vi.mock("@/features/window/stores/auth.store", () => ({
@@ -56,6 +78,7 @@ import { toast } from "sonner";
 import { InlineEditError } from "@/features/ai/intelligence/services/intelligence-text-service";
 import {
   createIntelligenceCompletionsProvider,
+  registerIntelligenceCompletions,
   trimSuffixOverlap,
 } from "../engines/monaco/intelligence-completions";
 import {
@@ -114,7 +137,7 @@ beforeEach(() => {
   mocks.markers.mockReturnValue([]);
   mocks.listeners.clear();
   clearRecentEdits();
-  useIntelligenceCompletionStore.getState().actions.resume();
+  useIntelligenceCompletionStore.setState({ status: { kind: "idle" }, pending: 0 });
 });
 
 const status = () => useIntelligenceCompletionStore.getState().status;
@@ -191,6 +214,44 @@ describe("Intelligence editor completions", () => {
     await setup().run();
     expect(mocks.request).toHaveBeenCalledTimes(2);
     expect(toast.warning).toHaveBeenCalledTimes(1);
+  });
+
+  it("resumes after an API key is added or the provider changes", async () => {
+    registerIntelligenceCompletions();
+    const { pause } = useIntelligenceCompletionStore.getState().actions;
+    pause("api-key", "Add an API key.");
+    for (const listener of mocks.tokenListeners) listener("openai");
+    expect(status()).toEqual({ kind: "idle" });
+
+    pause("api-key", "Add an API key.");
+    const keys = new Map([["openai", false]]);
+    for (const listener of mocks.chatListeners)
+      listener({ providerApiKeys: new Map([["openai", true]]) }, { providerApiKeys: keys });
+    expect(status()).toEqual({ kind: "idle" });
+
+    pause("api-key", "Add an API key.");
+    const settings = { aiProviderId: "openai", aiModelId: "gpt" };
+    for (const listener of mocks.settingsListeners)
+      listener({ settings: { ...settings, fontSize: 14 } }, { settings });
+    expect(status()).toMatchObject({ kind: "paused" });
+    for (const listener of mocks.settingsListeners)
+      listener({ settings: { ...settings, aiProviderId: "anthropic" } }, { settings });
+    expect(status()).toEqual({ kind: "idle" });
+  });
+
+  it("keeps counting requests in flight across a pause and resume", async () => {
+    const { requestStarted, requestFinished, pause, resume } =
+      useIntelligenceCompletionStore.getState().actions;
+    requestStarted();
+    pause("api-key", "Add an API key.");
+    requestStarted();
+    resume();
+    expect(status()).toEqual({ kind: "loading" });
+    requestFinished();
+    expect(status()).toEqual({ kind: "loading" });
+    requestFinished();
+    expect(status()).toEqual({ kind: "idle" });
+    expect(useIntelligenceCompletionStore.getState().pending).toBe(0);
   });
 
   it("shows a signed-out pause without a notice", async () => {
