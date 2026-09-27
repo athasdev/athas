@@ -25,13 +25,44 @@ pub async fn intelligence_list_files(
    .map_err(|e| e.to_string())?
 }
 
+/// A command's output together with the workspace files it changed, which the chat records for
+/// review like the agent's own writes.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IntelligenceCommandRun {
+   #[serde(flatten)]
+   output: athas_ai::workspace_command::WorkspaceCommandOutput,
+   /// `None` when the workspace could not be compared, so changes went untracked.
+   file_changes: Option<athas_ai::workspace_changes::WorkspaceChanges>,
+}
+
 #[tauri::command]
 pub async fn intelligence_run_command(
    root: String,
    command: String,
    id: String,
-) -> Result<athas_ai::workspace_command::WorkspaceCommandOutput, String> {
-   athas_ai::workspace_command::run_workspace_command(&root, &command, &id).await
+) -> Result<IntelligenceCommandRun, String> {
+   let snapshot_root = root.clone();
+   let snapshot = tauri::async_runtime::spawn_blocking(move || {
+      athas_ai::workspace_changes::snapshot_workspace(&snapshot_root).ok()
+   })
+   .await
+   .ok()
+   .flatten();
+   let output = athas_ai::workspace_command::run_workspace_command(&root, &command, &id).await?;
+   let file_changes = match snapshot {
+      Some(snapshot) => tauri::async_runtime::spawn_blocking(move || {
+         athas_ai::workspace_changes::diff_workspace(&snapshot).ok()
+      })
+      .await
+      .ok()
+      .flatten(),
+      None => None,
+   };
+   Ok(IntelligenceCommandRun {
+      output,
+      file_changes,
+   })
 }
 
 #[tauri::command]

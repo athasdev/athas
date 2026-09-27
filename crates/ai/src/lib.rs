@@ -18,5 +18,6 @@ pub use codex::{
    CodexThreadSettings,
 };
 
+pub mod workspace_changes;
 pub mod workspace_command;
 pub mod workspace_tools;

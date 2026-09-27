@@ -6,7 +6,7 @@ use std::{
    path::{Component, Path, PathBuf},
 };
 
-const MAX_FILE_BYTES: u64 = 256 * 1024;
+pub(crate) const MAX_FILE_BYTES: u64 = 256 * 1024;
 /// Search skips files larger than this; they are almost never hand-written source.
 const MAX_SEARCH_FILE_BYTES: u64 = 1024 * 1024;
 /// A walk stops after this many files, so a huge tree cannot stall the agent.
@@ -132,7 +132,7 @@ fn current_content(root: &str, path: &str, target: &Path) -> Result<Option<Strin
    }
 }
 
-fn display_path(root: &str, relative: &str) -> String {
+pub(crate) fn display_path(root: &str, relative: &str) -> String {
    let relative = Path::new(relative)
       .components()
       .filter(|part| matches!(part, Component::Normal(_)))
@@ -282,14 +282,14 @@ fn glob_matcher(glob: Option<&str>) -> Result<Option<(globset::GlobMatcher, bool
    Ok(Some((matcher, !glob.contains('/'))))
 }
 
-struct WorkspaceWalk {
-   files: Vec<(PathBuf, String)>,
-   truncated: bool,
+pub(crate) struct WorkspaceWalk {
+   pub(crate) files: Vec<(PathBuf, String)>,
+   pub(crate) truncated: bool,
 }
 
 /// The workspace files under `subpath` that `.gitignore` does not exclude, in path order,
 /// leaving out `.git`, `node_modules`, symbolic links, and credentials.
-fn walk_workspace(
+pub(crate) fn walk_workspace(
    root: &str,
    subpath: Option<&str>,
    glob: Option<&str>,

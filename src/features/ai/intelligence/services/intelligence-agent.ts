@@ -53,6 +53,21 @@ interface IntelligenceFileWrite {
   content: string;
 }
 
+/** What Rust returns for `run_command`: the output and the workspace files the command changed. */
+interface IntelligenceCommandRun {
+  stdout: string;
+  stderr: string;
+  exitCode: number | null;
+  cancelled: boolean;
+  timedOut: boolean;
+  fileChanges: {
+    /** `previousContent` is null for a file the command created, `content` for one it deleted. */
+    changes: { path: string; previousContent: string | null; content: string | null }[];
+    skipped: { path: string; reason: string }[];
+    incomplete: boolean;
+  } | null;
+}
+
 function toTurnUsage(usage: LanguageModelUsage | undefined): AcpTurnUsage | undefined {
   if (!usage) return undefined;
   const inputTokens = usage.inputTokens ?? 0;
@@ -228,6 +243,42 @@ export async function runIntelligenceAgent(params: {
       },
     };
   };
+  /**
+   * Records the files a command changed like the agent's own writes, so they can be reviewed and
+   * a checkpoint restore undoes them. What the model gets back names the files, not their text.
+   */
+  const landCommandChanges = (fileChanges: IntelligenceCommandRun["fileChanges"]) => {
+    if (!fileChanges) return { fileChanges: "The workspace could not be checked for changes." };
+    const relative = (path: string) =>
+      path.startsWith(`${workspaceRoot}/`) ? path.slice(workspaceRoot.length + 1) : path;
+    for (const change of fileChanges.changes) {
+      if (change.content !== null) {
+        recordAgentFileWrite(params.sessionId, {
+          path: change.path,
+          previousContent: change.previousContent,
+          content: change.content,
+          ...(turnId ? { turnId } : {}),
+        });
+      } else if (change.previousContent !== null) {
+        recordAgentFileDelete(params.sessionId, {
+          path: change.path,
+          previousContent: change.previousContent,
+          ...(turnId ? { turnId } : {}),
+        });
+      }
+    }
+    const notes = fileChanges.skipped.map(
+      (skipped) => `${relative(skipped.path)} changed but is not in the review: ${skipped.reason}`,
+    );
+    if (fileChanges.incomplete)
+      notes.push("Some changed files were not checked; the workspace or the change is too large.");
+    return {
+      ...(fileChanges.changes.length
+        ? { changedFiles: fileChanges.changes.map((change) => relative(change.path)) }
+        : {}),
+      ...(notes.length ? { unreviewedChanges: notes } : {}),
+    };
+  };
   const authorizeMcpTool = async (call: McpToolCallRequest) => {
     if (isMcpToolAllowed(call.serverId, call.tool)) return true;
     const input = JSON.stringify(call.input ?? {}, null, 2) ?? "{}";
@@ -376,7 +427,7 @@ export async function runIntelligenceAgent(params: {
             ? {
                 run_command: tool({
                   description:
-                    "Run a shell command in the workspace directory. Read-only commands and ones the user always allowed run at once; others wait for approval. Runs with the user's permissions, not in a sandbox. Maximum 60 seconds; output is capped. Do not start background services.",
+                    "Run a shell command in the workspace directory. Read-only commands and ones the user always allowed run at once; others wait for approval. Runs with the user's permissions, not in a sandbox. Maximum 60 seconds; output is capped. Files the command changes go into the same review as your edits. Do not start background services.",
                   inputSchema: z.object({ command: z.string().min(1).max(8000) }),
                   execute: async (input, { toolCallId }) =>
                     runTool("run_command", "execute", input, toolCallId, async () => {
@@ -406,11 +457,14 @@ export async function runIntelligenceAgent(params: {
                       };
                       signal.addEventListener("abort", cancel, { once: true });
                       try {
-                        return await invoke("intelligence_run_command", {
-                          root,
-                          command: input.command,
-                          id,
-                        });
+                        const { fileChanges, ...output } = await invoke<IntelligenceCommandRun>(
+                          "intelligence_run_command",
+                          { root, command: input.command, id },
+                        );
+                        return {
+                          ...output,
+                          ...landCommandChanges(fileChanges),
+                        };
                       } finally {
                         signal.removeEventListener("abort", cancel);
                         readFiles.clear();

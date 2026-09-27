@@ -98,6 +98,14 @@ const written = {
   previousContent: "const old = 1;",
   content: "const value = 1;",
 };
+const commandRun = (fileChanges: unknown = { changes: [], skipped: [], incomplete: false }) => ({
+  stdout: "",
+  stderr: "",
+  exitCode: 0,
+  cancelled: false,
+  timedOut: false,
+  fileChanges,
+});
 const edit = { path: "file.ts", edits: [{ oldText: "old", newText: "value" }] };
 const storage = new Map<string, string>();
 const called = (command: string) => mocks.invoke.mock.calls.some(([name]) => name === command);
@@ -164,7 +172,9 @@ beforeEach(() => {
       ? "const old = 1;"
       : command === "intelligence_edit_file"
         ? written
-        : undefined,
+        : command === "intelligence_run_command"
+          ? commandRun()
+          : undefined,
   );
   mocks.model = new MockLanguageModelV4({
     doStream: [step("read_file", { path: "file.ts" }), step("edit_file", edit), step()],
@@ -334,6 +344,54 @@ describe("Intelligence local agent loop", () => {
       "intelligence_run_command",
       expect.objectContaining({ command: "bun test", root: "/project" }),
     );
+  });
+  it("records the files a command changed with the turn that started the run", async () => {
+    mocks.turnId = "prompt-1";
+    const fileChanges = {
+      changes: [
+        { path: "/project/src/a.ts", previousContent: "a", content: "b" },
+        { path: "/project/new.ts", previousContent: null, content: "new" },
+        { path: "/project/old.ts", previousContent: "old", content: null },
+      ],
+      skipped: [{ path: "/project/logo.png", reason: "It is a binary file." }],
+      incomplete: false,
+    };
+    mocks.invoke.mockImplementation(async (command: string) => {
+      if (command !== "intelligence_run_command") return undefined;
+      mocks.turnId = "prompt-2";
+      return commandRun(fileChanges);
+    });
+    mocks.model = new MockLanguageModelV4({
+      doStream: [step("run_command", { command: "bun run format" }), step()],
+    });
+    const complete = vi.fn();
+    await runIntelligenceAgent({
+      ...params(),
+      onToolComplete: complete,
+      onPermissionRequest: (event) => respondToIntelligencePermission(event.requestId, true),
+    });
+    expect(mocks.recordWrite.mock.calls).toEqual([
+      [
+        "test-session",
+        { path: "/project/src/a.ts", previousContent: "a", content: "b", turnId: "prompt-1" },
+      ],
+      [
+        "test-session",
+        { path: "/project/new.ts", previousContent: null, content: "new", turnId: "prompt-1" },
+      ],
+    ]);
+    expect(mocks.recordDelete).toHaveBeenCalledWith("test-session", {
+      path: "/project/old.ts",
+      previousContent: "old",
+      turnId: "prompt-1",
+    });
+    const output = complete.mock.calls.find(([name]) => name === "run_command")?.[2];
+    expect(output).toMatchObject({
+      exitCode: 0,
+      changedFiles: ["src/a.ts", "new.ts", "old.ts"],
+      unreviewedChanges: [expect.stringContaining("logo.png changed but is not in the review")],
+    });
+    expect(JSON.stringify(output)).not.toContain("previousContent");
   });
   it("never executes a declined command", async () => {
     mocks.model = new MockLanguageModelV4({
