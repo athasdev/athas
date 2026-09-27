@@ -93,6 +93,7 @@ describe("Agent composer", () => {
     expect(toolbar).toContain('aria-label="Add context"');
     expect(toolbar).toContain('aria-label="Mode: Agent"');
     expect(toolbar).toContain('aria-label="Change model"');
+    expect(toolbar).toContain('aria-label="Context window: ');
     expect(toolbar).not.toContain('aria-label="Show slash commands"');
     expect(toolbar).not.toContain('aria-label="Reasoning effort"');
     expect(toolbar).not.toContain("Follow the agent in the editor");

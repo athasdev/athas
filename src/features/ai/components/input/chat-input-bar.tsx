@@ -76,6 +76,8 @@ import { ComposerModeSelector } from "./composer-mode-selector";
 import { useChatModeSource } from "@/features/ai/hooks/use-chat-mode";
 import { cycleChatMode } from "@/features/ai/services/chat-mode-service";
 import { AcpContextMeter } from "./acp-context-meter";
+import { ComposerContextMeter } from "./composer-context-meter";
+import { useComposerContextBudget } from "@/features/ai/hooks/use-composer-context-budget";
 import { AgentMessageQueue } from "./agent-message-queue";
 import { AgentEditsBar } from "./agent-edits-bar";
 import { FileMentionDropdown } from "../mentions/file-mention-dropdown";
@@ -185,6 +187,18 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
   // Check if current agent is "custom" (only show model selector for custom agent)
   const isCustomAgent = currentAgentId === "custom";
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
+  const contextBudget = useComposerContextBudget({
+    enabled: isCustomAgent,
+    chatId: chatId ?? null,
+    projectRoot: rootFolderPath ?? null,
+    providerId: aiProviderId,
+    modelId: aiModelId,
+    buffers,
+    selectedBufferIds,
+    selectedFilesPaths,
+    editorContexts: selectedEditorContexts,
+  });
 
   // ACP agents don't need API key (they handle their own auth)
   const isInputEnabled = isCustomAgent ? hasApiKey : true;
@@ -1308,7 +1322,11 @@ const AIChatInputBar = memo(function AIChatInputBar({
           </div>
 
           <div className="ml-auto flex min-w-0 shrink items-center gap-1">
-            <AcpContextMeter usage={acpSession.usage} />
+            {contextBudget ? (
+              <ComposerContextMeter budget={contextBudget} />
+            ) : (
+              <AcpContextMeter usage={acpSession.usage} />
+            )}
             <ComposerAgentSelector
               cwd={projectPath}
               currentAgentId={currentAgentId}
