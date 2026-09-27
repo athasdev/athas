@@ -141,7 +141,7 @@ pub(super) struct FileChangeEvent {
 /// Numbers agent writes for the whole app, so ids never repeat across agents.
 static NEXT_AGENT_WRITE_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
 
-pub(super) fn next_agent_write_id() -> u64 {
+pub fn next_agent_write_id() -> u64 {
    NEXT_AGENT_WRITE_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
 }
 

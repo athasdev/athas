@@ -4,12 +4,17 @@ import { MockLanguageModelV4 } from "ai/test";
 import { runIntelligenceAgent } from "../intelligence/services/intelligence-agent";
 import { cancelIntelligenceAgent } from "../intelligence/services/intelligence-agent-session";
 import { respondToIntelligencePermission } from "../intelligence/services/intelligence-agent-permissions";
+import { formatApiError } from "../lib/api-error";
 
 const mocks = vi.hoisted(() => ({
   model: null as unknown as MockLanguageModelV4,
   invoke: vi.fn(),
+  recordWrite: vi.fn(),
   dirty: false,
   backgroundDirty: false,
+}));
+vi.mock("@/features/ai/services/agent-edits-service", () => ({
+  recordAgentFileWrite: mocks.recordWrite,
 }));
 vi.mock("../intelligence/services/intelligence-sdk-model", () => ({
   getIntelligenceSdkModel: async () => mocks.model,
@@ -42,6 +47,16 @@ vi.mock("@/features/window/stores/auth.store", () => ({
 vi.mock("../intelligence/stores/intelligence-settings.store", () => ({
   useIntelligenceSettingsStore: { subscribe: () => () => {} },
 }));
+
+const written = {
+  writeId: 7,
+  path: "/project/file.ts",
+  previousContent: "const old = 1;",
+  content: "const value = 1;",
+};
+const edit = { path: "file.ts", edits: [{ oldText: "old", newText: "value" }] };
+const storage = new Map<string, string>();
+const called = (command: string) => mocks.invoke.mock.calls.some(([name]) => name === command);
 
 function step(name?: string, input: Record<string, unknown> = {}) {
   return {
@@ -91,15 +106,20 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.dirty = false;
   mocks.backgroundDirty = false;
+  storage.clear();
+  vi.stubGlobal("localStorage", {
+    getItem: (key: string) => storage.get(key) ?? null,
+    setItem: (key: string, value: string) => storage.set(key, value),
+  });
   mocks.invoke.mockImplementation(async (command: string) =>
-    command === "intelligence_read_file" ? "const old = 1;" : undefined,
+    command === "intelligence_read_file"
+      ? "const old = 1;"
+      : command === "intelligence_edit_file"
+        ? written
+        : undefined,
   );
   mocks.model = new MockLanguageModelV4({
-    doStream: [
-      step("read_file", { path: "file.ts" }),
-      step("edit_file", { path: "file.ts", oldText: "old", newText: "value" }),
-      step(),
-    ],
+    doStream: [step("read_file", { path: "file.ts" }), step("edit_file", edit), step()],
   });
 });
 
@@ -128,83 +148,106 @@ describe("Intelligence local agent loop", () => {
       }
     },
   );
-  it("reads, obtains approval, applies the exact read version, and continues to an answer", async () => {
+  it("lands an edit at once on the read version and records it for review", async () => {
     const options = params();
-    const permission = vi.fn((event) => {
-      expect(mocks.invoke).not.toHaveBeenCalledWith("intelligence_edit_file", expect.anything());
-      expect(event.description).toContain("With:\nvalue");
-      respondToIntelligencePermission(event.requestId, true);
-    });
-    expect(await runIntelligenceAgent({ ...options, onPermissionRequest: permission })).toEqual({
+    const permission = vi.fn();
+    const result = await runIntelligenceAgent({ ...options, onPermissionRequest: permission });
+    expect(result).toMatchObject({
       outcome: "completed",
+      stopReason: "end_turn",
+      steps: 3,
+      usage: { inputTokens: 3, outputTokens: 3 },
     });
-    expect(mocks.invoke).toHaveBeenCalledWith(
-      "intelligence_edit_file",
-      expect.objectContaining({
-        expectedContent: "const old = 1;",
-        oldText: "old",
-        newText: "value",
-      }),
-    );
+    expect(permission).not.toHaveBeenCalled();
+    expect(mocks.invoke).toHaveBeenCalledWith("intelligence_edit_file", {
+      root: "/project",
+      path: "file.ts",
+      expectedContent: "const old = 1;",
+      edits: [{ oldText: "old", newText: "value" }],
+    });
+    expect(mocks.recordWrite).toHaveBeenCalledWith("test-session", written);
     expect(options.onChunk).toHaveBeenCalledWith("Finished");
-    expect(mocks.model.doStreamCalls).toHaveLength(3);
   });
-  it("does not write when the user denies an edit", async () => {
-    await runIntelligenceAgent({
-      ...params(),
-      onPermissionRequest: (event) => respondToIntelligencePermission(event.requestId, false),
+  it("edits again from what it wrote without another read", async () => {
+    mocks.model = new MockLanguageModelV4({
+      doStream: [
+        step("read_file", { path: "file.ts" }),
+        step("edit_file", edit),
+        step("edit_file", { path: "file.ts", edits: [{ oldText: "value", newText: "next" }] }),
+        step(),
+      ],
     });
-    expect(mocks.invoke.mock.calls.some(([command]) => command === "intelligence_edit_file")).toBe(
-      false,
-    );
+    await runIntelligenceAgent(params());
+    const edits = mocks.invoke.mock.calls.filter(([name]) => name === "intelligence_edit_file");
+    expect(edits[1][1]).toMatchObject({ expectedContent: "const value = 1;" });
   });
-  it("does not overwrite an unsaved editor buffer after approval", async () => {
+  it("refuses to edit a file it has not read", async () => {
+    mocks.model = new MockLanguageModelV4({ doStream: [step("edit_file", edit), step()] });
+    const complete = vi.fn();
+    await runIntelligenceAgent({ ...params(), onToolComplete: complete });
+    expect(complete).toHaveBeenCalledWith("edit_file", "edit_file", undefined, expect.any(String));
+    expect(called("intelligence_edit_file")).toBe(false);
+  });
+  it("does not overwrite an unsaved editor buffer", async () => {
     mocks.dirty = true;
     const complete = vi.fn();
-    await runIntelligenceAgent({
-      ...params(),
-      onToolComplete: complete,
-      onPermissionRequest: (event) => respondToIntelligencePermission(event.requestId, true),
-    });
+    await runIntelligenceAgent({ ...params(), onToolComplete: complete });
     expect(complete).toHaveBeenCalledWith(
       "edit_file",
       "edit_file",
       undefined,
       expect.stringContaining("unsaved changes"),
     );
-    expect(mocks.invoke.mock.calls.some(([command]) => command === "intelligence_edit_file")).toBe(
-      false,
-    );
+    expect(called("intelligence_edit_file")).toBe(false);
   });
-  it("cancels pending approval and leaves the file unchanged", async () => {
+  it("does not apply an edit after the user stops", async () => {
+    const complete = vi.fn();
     expect(
       await runIntelligenceAgent({
         ...params(),
-        onPermissionRequest: () => cancelIntelligenceAgent("test-session"),
+        onToolComplete: complete,
+        onToolUse: (event) => {
+          if (event.toolName === "edit_file") cancelIntelligenceAgent("test-session");
+        },
       }),
-    ).toEqual({ outcome: "cancelled" });
-    expect(mocks.invoke.mock.calls.some(([command]) => command === "intelligence_edit_file")).toBe(
-      false,
-    );
+    ).toMatchObject({ outcome: "cancelled", stopReason: "cancelled" });
+    expect(called("intelligence_edit_file")).toBe(false);
+    expect(complete).toHaveBeenCalledWith("edit_file", "edit_file", undefined, "Stopped");
   });
   it("omits mutation tools in plan mode", async () => {
     mocks.model = new MockLanguageModelV4({ doStream: [step()] });
     await runIntelligenceAgent({ ...params(), readOnly: true });
-    expect(
-      mocks.model.doStreamCalls[0].tools?.some(
-        (tool) => tool.type === "function" && ["edit_file", "run_command"].includes(tool.name),
-      ),
-    ).toBe(false);
+    const names = mocks.model.doStreamCalls[0].tools?.map((tool) => tool.name);
+    expect(names).toEqual(expect.arrayContaining(["read_file", "search_files", "todo_write"]));
+    for (const name of ["edit_file", "write_file", "delete_file", "run_command"])
+      expect(names).not.toContain(name);
   });
   it("protects unsaved files in background workspaces", async () => {
     mocks.backgroundDirty = true;
+    await runIntelligenceAgent(params());
+    expect(called("intelligence_edit_file")).toBe(false);
+  });
+  it("asks before deleting a file and deletes only after approval", async () => {
+    mocks.model = new MockLanguageModelV4({
+      doStream: [
+        step("read_file", { path: "file.ts" }),
+        step("delete_file", { path: "file.ts" }),
+        step(),
+      ],
+    });
     await runIntelligenceAgent({
       ...params(),
-      onPermissionRequest: (event) => respondToIntelligencePermission(event.requestId, true),
+      onPermissionRequest: (event) => {
+        expect(event.permissionType).toBe("intelligence-delete");
+        expect(called("intelligence_delete_file")).toBe(false);
+        respondToIntelligencePermission(event.requestId, true);
+      },
     });
-    expect(mocks.invoke.mock.calls.some(([command]) => command === "intelligence_edit_file")).toBe(
-      false,
-    );
+    expect(mocks.invoke).toHaveBeenCalledWith("intelligence_delete_file", {
+      root: "/project",
+      path: "file.ts",
+      expectedContent: "const old = 1;",
+    });
   });
   it("runs a command only after showing it for approval", async () => {
     mocks.model = new MockLanguageModelV4({
@@ -214,6 +257,7 @@ describe("Intelligence local agent loop", () => {
       ...params(),
       onPermissionRequest: (event) => {
         expect(event.description).toContain("bun test");
+        expect(event.options.map((option) => option.kind)).toContain("allow_always");
         expect(mocks.invoke).not.toHaveBeenCalled();
         respondToIntelligencePermission(event.requestId, true);
       },
@@ -232,5 +276,109 @@ describe("Intelligence local agent loop", () => {
       onPermissionRequest: (event) => respondToIntelligencePermission(event.requestId, false),
     });
     expect(mocks.invoke).not.toHaveBeenCalled();
+  });
+  it("runs read-only commands and always-allowed prefixes without asking", async () => {
+    const permission = vi.fn((event) =>
+      respondToIntelligencePermission(event.requestId, true, "allow_always"),
+    );
+    mocks.model = new MockLanguageModelV4({
+      doStream: [
+        step("run_command", { command: "git status" }),
+        step("run_command", { command: "bun test src" }),
+        step("run_command", { command: "bun test other" }),
+        step("run_command", { command: "bun test; rm -rf src" }),
+        step(),
+      ],
+    });
+    await runIntelligenceAgent({ ...params(), onPermissionRequest: permission });
+    const prompted = permission.mock.calls.map(([event]) => event.preview.command);
+    expect(prompted).toEqual(["bun test src", "bun test; rm -rf src"]);
+    expect(
+      permission.mock.calls[1][0].options.map((option: { kind: string }) => option.kind),
+    ).not.toContain("allow_always");
+    const ran = mocks.invoke.mock.calls
+      .filter(([name]) => name === "intelligence_run_command")
+      .map(([, args]) => args.command);
+    expect(ran).toEqual(["git status", "bun test src", "bun test other", "bun test; rm -rf src"]);
+  });
+  it("pauses with a Continue outcome when the step budget runs out", async () => {
+    mocks.model = new MockLanguageModelV4({
+      doStream: [step("read_file", { path: "file.ts" }), step("read_file", { path: "file.ts" })],
+    });
+    const options = params();
+    expect(await runIntelligenceAgent({ ...options, maxSteps: 2 })).toMatchObject({
+      outcome: "completed",
+      stopReason: "max_turn_requests",
+      steps: 2,
+    });
+    expect(mocks.model.doStreamCalls).toHaveLength(2);
+  });
+  it("turns a stream error chunk into an error the chat can act on", async () => {
+    mocks.model = new MockLanguageModelV4({
+      doStream: [
+        {
+          stream: simulateReadableStream({
+            initialDelayInMs: null,
+            chunkDelayInMs: null,
+            chunks: [
+              {
+                type: "error" as const,
+                error: { message: "Your allowance is used up.", code: "allowance_exhausted" },
+              },
+            ],
+          }),
+        },
+      ],
+    });
+    const failure = await runIntelligenceAgent(params()).catch((error: unknown) => error);
+    expect(failure).toBeInstanceOf(Error);
+    expect(failure).toMatchObject({
+      message: "Your allowance is used up.",
+      code: "allowance_exhausted",
+      statusCode: 402,
+    });
+    expect(formatApiError("athas", failure)).toContain("athas API error: 402|||");
+  });
+  it("sends the todo list to the chat as a plan", async () => {
+    mocks.model = new MockLanguageModelV4({
+      doStream: [
+        step("todo_write", {
+          todos: [
+            { content: "Read the file", status: "completed" },
+            { content: "Edit it", status: "in_progress" },
+          ],
+        }),
+        step(),
+      ],
+    });
+    const onEvent = vi.fn();
+    await runIntelligenceAgent({ ...params(), onEvent });
+    expect(onEvent).toHaveBeenCalledWith({
+      type: "plan_update",
+      sessionId: "test-session",
+      entries: [
+        { content: "Read the file", status: "completed", priority: "medium" },
+        { content: "Edit it", status: "in_progress", priority: "medium" },
+      ],
+    });
+  });
+  it("leaves images out for Athas hosted models and says so", async () => {
+    mocks.model = new MockLanguageModelV4({ doStream: [step()] });
+    const options = params();
+    const result = await runIntelligenceAgent({
+      ...options,
+      providerId: "athas",
+      messages: [
+        {
+          role: "user",
+          content: "What is this?",
+          images: [{ data: "abc", mediaType: "image/png" }],
+        },
+      ],
+    });
+    expect(result.notices).toEqual([expect.stringContaining("Images were not sent")]);
+    const prompt = JSON.stringify(mocks.model.doStreamCalls[0].prompt);
+    expect(prompt).not.toContain("image/png");
+    expect(options.onChunk).toHaveBeenCalledWith(expect.stringContaining("Images were not sent"));
   });
 });

@@ -31,7 +31,7 @@ interface AgentPermissionsState {
 function answer(permission: PendingAgentPermission, approved: boolean, optionId?: string) {
   switch (permission.responder) {
     case "intelligence":
-      respondToIntelligencePermission(permission.requestId, approved);
+      respondToIntelligencePermission(permission.requestId, approved, optionId);
       return Promise.resolve();
     case "codex":
       return CodexIntegrationService.respond(permission.requestId, approved);

@@ -995,7 +995,13 @@ details: ${errorDetails || mainError}
           });
         },
         (event) => {
-          if (!isAcpAgent(currentAgentId) && currentAgentId !== CODEX_INTEGRATION_ID) return;
+          // Athas's own agent sends only its todo list through here.
+          if (
+            !isAcpAgent(currentAgentId) &&
+            currentAgentId !== CODEX_INTEGRATION_ID &&
+            event.type !== "plan_update"
+          )
+            return;
           if (event.type === "elicitation_request") {
             chatActions.updateAgentRun(targetChatId, runId, { phase: "approval" });
             notifyAgent("question", event.requestId);

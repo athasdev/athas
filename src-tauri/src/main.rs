@@ -230,6 +230,8 @@ fn main() {
          intelligence_read_file,
          intelligence_list_files,
          intelligence_edit_file,
+         intelligence_write_file,
+         intelligence_delete_file,
          intelligence_run_command,
          chat_run_terminal_command,
          intelligence_cancel_command,

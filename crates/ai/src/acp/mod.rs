@@ -20,6 +20,8 @@ pub mod types;
 mod workspace_path;
 
 pub use bridge::AcpAgentBridge;
+/// Shared with Athas's own agent, so its writes and ACP writes never reuse an id.
+pub use file_access::next_agent_write_id;
 pub use mcp_servers::{McpServerConfig, McpServerSecrets, McpServerSetting};
 pub use traffic::TrafficInspector;
 pub use types::{

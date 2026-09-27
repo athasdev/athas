@@ -222,6 +222,7 @@ export const getChatCompletionStream = async (
         onToolUse,
         onToolComplete,
         onPermissionRequest,
+        onEvent: onAcpEvent,
       });
       onComplete(result);
       return;

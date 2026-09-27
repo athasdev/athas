@@ -1,8 +1,15 @@
-import { streamText, tool, isStepCount, type ModelMessage } from "ai";
+import { streamText, tool, isStepCount, type LanguageModelUsage, type ModelMessage } from "ai";
 import { z } from "zod";
 import { invoke } from "@tauri-apps/api/core";
 import type { AIMessage } from "@/features/ai/types/messages.types";
-import type { AcpEvent, AcpToolCallLocation, AcpToolKind } from "@/features/ai/types/acp.types";
+import type {
+  AcpEvent,
+  AcpPlanEntry,
+  AcpToolCallLocation,
+  AcpToolKind,
+  AcpTurnUsage,
+} from "@/features/ai/types/acp.types";
+import { recordAgentFileWrite } from "@/features/ai/services/agent-edits-service";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
 import { isMac, isWindows } from "@/utils/platform";
@@ -11,9 +18,91 @@ import { useIntelligenceSettingsStore } from "../stores/intelligence-settings.st
 import { getIntelligenceSdkModel } from "./intelligence-sdk-model";
 import { toIntelligenceSdkPrompt } from "../lib/intelligence-sdk-prompt";
 import { requestIntelligencePermission } from "./intelligence-agent-permissions";
+import { allowCommandPrefix, getCommandAutoApproval } from "./intelligence-command-allowlist";
+import { getCommandAllowPrefix } from "../lib/intelligence-command-policy";
+import { toIntelligenceAgentError } from "../lib/intelligence-agent-error";
+import type { IntelligenceAgentResult } from "../types/intelligence-agent.types";
 import { parseExtensionViewNode } from "@/extensions/ui/services/extension-view-schema";
 
 import { beginIntelligenceAgent, finishIntelligenceAgent } from "./intelligence-agent-session";
+
+/** Model requests one turn may make before it pauses with a Continue affordance. */
+export const DEFAULT_INTELLIGENCE_AGENT_STEPS = 25;
+const MAX_INTELLIGENCE_AGENT_STEPS = 100;
+const READ_LINES = 250;
+const READ_CHARS = 24000;
+const UNSAVED_CHANGES =
+  "The editor has unsaved changes to this file. Ask the user to save or discard them first.";
+
+/** The shape Rust returns for a write that landed, matching the ACP `agent_file_write` event. */
+interface IntelligenceFileWrite {
+  writeId: number;
+  path: string;
+  previousContent: string | null;
+  content: string;
+}
+
+function toTurnUsage(usage: LanguageModelUsage | undefined): AcpTurnUsage | undefined {
+  if (!usage) return undefined;
+  const inputTokens = usage.inputTokens ?? 0;
+  const outputTokens = usage.outputTokens ?? 0;
+  const totalTokens = usage.totalTokens ?? inputTokens + outputTokens;
+  if (!totalTokens) return undefined;
+  return {
+    totalTokens,
+    inputTokens,
+    outputTokens,
+    thoughtTokens: usage.outputTokenDetails?.reasoningTokens ?? null,
+    cachedReadTokens: usage.inputTokenDetails?.cacheReadTokens ?? null,
+    cachedWriteTokens: usage.inputTokenDetails?.cacheWriteTokens ?? null,
+  };
+}
+
+function normalizeBufferPath(path: string) {
+  const normalized = path
+    .replace(/\\/g, "/")
+    .split("/")
+    .filter((part) => part !== ".")
+    .join("/");
+  return isMac() || isWindows() ? normalized.toLowerCase() : normalized;
+}
+
+/** Whether any open workspace has unsaved edits to `path`, which an agent write must not race. */
+function hasUnsavedBuffer(path: string) {
+  const target = normalizeBufferPath(path);
+  const bufferStates = [
+    useBufferStore.getState(),
+    ...workspaceRuntimeRegistry
+      .getExistingStores<ReturnType<typeof useBufferStore.getState>>("editor-buffer")
+      .map((store) => store.getState()),
+  ];
+  return bufferStates.some((state) =>
+    state.buffers.some(
+      (buffer) =>
+        buffer.path &&
+        normalizeBufferPath(buffer.path) === target &&
+        buffer.type === "editor" &&
+        buffer.isDirty,
+    ),
+  );
+}
+
+/**
+ * Strips images the provider cannot take. Athas's hosted API accepts text parts only, so an image
+ * would fail this turn and every later one that carries it in the history.
+ */
+function withoutUnsupportedImages(providerId: string, messages: AIMessage[]) {
+  if (providerId !== "athas") return { messages, dropped: false };
+  const last = [...messages].reverse().find((message) => message.role === "user");
+  return {
+    messages: messages.map((message): AIMessage =>
+      message.role === "user" && message.images?.length
+        ? { role: "user", content: message.content }
+        : message,
+    ),
+    dropped: Boolean(last?.role === "user" && last.images?.length),
+  };
+}
 
 export async function runIntelligenceAgent(params: {
   sessionId: string;
@@ -22,11 +111,16 @@ export async function runIntelligenceAgent(params: {
   messages: AIMessage[];
   root?: string;
   readOnly: boolean;
+  /** Model requests this turn may make; defaults to `DEFAULT_INTELLIGENCE_AGENT_STEPS`. */
+  maxSteps?: number;
+  maxOutputTokens?: number;
   onChunk: (text: string) => void;
   onToolUse?: (event: Extract<AcpEvent, { type: "tool_start" }>) => void;
   onToolComplete?: (name: string, id?: string, output?: unknown, error?: string) => void;
   onPermissionRequest?: (event: Extract<AcpEvent, { type: "permission_request" }>) => void;
-}) {
+  /** Receives a `plan_update` event whenever the agent rewrites its todo list. */
+  onEvent?: (event: AcpEvent) => void;
+}): Promise<IntelligenceAgentResult> {
   const controller = beginIntelligenceAgent(params.sessionId);
   const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(10 * 60 * 1000)]);
   const unsubscribeAuth = useAuthStore.subscribe((next, previous) => {
@@ -35,14 +129,33 @@ export async function runIntelligenceAgent(params: {
   const unsubscribeScope = useIntelligenceSettingsStore.subscribe((next, previous) => {
     if (next.scope !== previous.scope) controller.abort();
   });
+  const maxSteps = Math.min(
+    Math.max(1, Math.floor(params.maxSteps ?? DEFAULT_INTELLIGENCE_AGENT_STEPS)),
+    MAX_INTELLIGENCE_AGENT_STEPS,
+  );
+  let steps = 0;
+  let costUsd: number | undefined;
+  const notices: string[] = [];
+  const summary = () => ({
+    steps,
+    ...(costUsd !== undefined ? { costUsd } : {}),
+    ...(notices.length ? { notices } : {}),
+  });
   // Only the user's own stop is a quiet cancellation; the watchdog should say why.
-  const settleAbort = () => {
+  const settleAbort = (): IntelligenceAgentResult => {
     if (!controller.signal.aborted) throw new Error("The request timed out after 10 minutes.");
-    return { outcome: "cancelled" as const };
+    return { outcome: "cancelled", stopReason: "cancelled", ...summary() };
   };
   const readFiles = new Map<string, string>();
   const workspaceRoot = params.root?.replace(/[/\\]$/, "") ?? "";
   const absolutePath = (path: string) => `${workspaceRoot}/${path}`;
+  // Writes run one at a time, so parallel tool calls never race on the same file.
+  let writeQueue: Promise<unknown> = Promise.resolve();
+  const serializeWrite = <T>(write: () => Promise<T>): Promise<T> => {
+    const next = writeQueue.then(write, write);
+    writeQueue = next.catch(() => undefined);
+    return next;
+  };
   const runTool = async <T>(
     name: string,
     kind: AcpToolKind,
@@ -68,7 +181,7 @@ export async function runIntelligenceAgent(params: {
     });
     try {
       const output = await execute();
-      if (kind !== "edit") signal.throwIfAborted();
+      signal.throwIfAborted();
       params.onToolComplete?.(name, id, options.display ? options.display(output) : output);
       return output;
     } catch (error) {
@@ -76,38 +189,77 @@ export async function runIntelligenceAgent(params: {
         name,
         id,
         undefined,
-        error instanceof Error ? error.message : "Tool failed",
+        signal.aborted ? "Stopped" : error instanceof Error ? error.message : String(error),
       );
       throw error;
     }
   };
+  /**
+   * Finishes a write the way ACP agent writes finish: it is already on disk, and it goes into the
+   * chat's review log so the user can keep or reject each hunk.
+   */
+  const landWrite = (write: IntelligenceFileWrite, relativePath: string) => {
+    recordAgentFileWrite(params.sessionId, {
+      writeId: write.writeId,
+      path: write.path,
+      previousContent: write.previousContent,
+      content: write.content,
+    });
+    // The agent knows what it wrote, so it can keep editing without reading again.
+    readFiles.set(relativePath, write.content);
+    return {
+      created: write.previousContent === null,
+      diff: {
+        type: "diff" as const,
+        path: write.path,
+        oldText: write.previousContent ?? "",
+        newText: write.content,
+      },
+    };
+  };
   try {
-    const model = await getIntelligenceSdkModel(params.providerId, params.modelId);
+    const model = await getIntelligenceSdkModel(params.providerId, params.modelId, undefined, {
+      onCost: (usd) => {
+        costUsd = (costUsd ?? 0) + usd;
+      },
+    });
     signal.throwIfAborted();
     const root = params.root && !/^[a-z]+:\/\//i.test(params.root) ? params.root : undefined;
     const tools = root
       ? {
           list_files: tool({
             description:
-              "List up to 512 workspace files, excluding build directories and credentials.",
-            inputSchema: z.object({}),
+              "List workspace files in path order, respecting .gitignore and leaving out credentials. Returns one page: pass nextOffset back as offset for the next. Narrow with path (a folder) or glob (like *.ts or src/**/*.rs).",
+            inputSchema: z.object({
+              path: z.string().max(1024).optional(),
+              glob: z.string().max(200).optional(),
+              offset: z.number().int().min(0).optional(),
+              limit: z.number().int().min(1).max(2000).optional(),
+            }),
             execute: async (input, { toolCallId }) =>
               runTool("list_files", "search", input, toolCallId, () =>
-                invoke<string[]>("intelligence_list_files", { root }),
+                invoke("intelligence_list_files", { root, options: input }),
               ),
           }),
           search_files: tool({
             description:
-              "Search literal text in up to 512 workspace files. Returns at most 40 matches; results may be incomplete. Excludes build directories and credentials.",
-            inputSchema: z.object({ query: z.string().min(1).max(500) }),
+              "Search file contents across the whole workspace, like ripgrep: .gitignore is respected and binary files are skipped. Literal text by default; set regex for a regular expression. Case-insensitive unless the query has an uppercase letter or caseSensitive is set. Narrow with path or glob, and ask for contextLines around each match.",
+            inputSchema: z.object({
+              query: z.string().min(1).max(500),
+              regex: z.boolean().optional(),
+              caseSensitive: z.boolean().optional(),
+              path: z.string().max(1024).optional(),
+              glob: z.string().max(200).optional(),
+              contextLines: z.number().int().min(0).max(5).optional(),
+              maxResults: z.number().int().min(1).max(500).optional(),
+            }),
             execute: async (input, { toolCallId }) =>
               runTool("search_files", "search", input, toolCallId, () =>
-                invoke("intelligence_search_files", { root, query: input.query }),
+                invoke("intelligence_search_files", { root, options: input }),
               ),
           }),
           read_file: tool({
-            description:
-              "Read a workspace text file. Paths are relative to the workspace. Read before editing.",
+            description: `Read a workspace text file, ${READ_LINES} lines at a time from startLine. Paths are relative to the workspace. Read a file before editing, overwriting or deleting it.`,
             inputSchema: z.object({
               path: z.string().min(1).max(1024),
               startLine: z.number().int().min(1).default(1),
@@ -130,9 +282,9 @@ export async function runIntelligenceAgent(params: {
                     startLine: input.startLine,
                     totalLines: lines.length,
                     text: lines
-                      .slice(input.startLine - 1, input.startLine + 199)
+                      .slice(input.startLine - 1, input.startLine - 1 + READ_LINES)
                       .join("\n")
-                      .slice(0, 12000),
+                      .slice(0, READ_CHARS),
                   };
                 },
                 { locations: [{ path: absolutePath(input.path), line: input.startLine }] },
@@ -156,25 +308,58 @@ export async function runIntelligenceAgent(params: {
               );
             },
           }),
+          todo_write: tool({
+            description:
+              "Keep a checklist for multi-step work. Send the whole list every time, with at most one item in_progress; the user sees it update live. Skip it for one-step requests.",
+            inputSchema: z.object({
+              todos: z
+                .array(
+                  z.object({
+                    content: z.string().min(1).max(500),
+                    status: z.enum(["pending", "in_progress", "completed"]),
+                    priority: z.enum(["high", "medium", "low"]).default("medium"),
+                  }),
+                )
+                .max(50),
+            }),
+            execute: async (input, { toolCallId }) =>
+              runTool("todo_write", "think", input, toolCallId, async () => {
+                const entries: AcpPlanEntry[] = input.todos;
+                params.onEvent?.({ type: "plan_update", sessionId: params.sessionId, entries });
+                return {
+                  updated: true,
+                  completed: entries.filter((entry) => entry.status === "completed").length,
+                  total: entries.length,
+                };
+              }),
+          }),
           ...(!params.readOnly
             ? {
                 run_command: tool({
                   description:
-                    "Propose a shell command in the workspace directory. Requires user approval for every invocation. Runs with the user's permissions, not in a sandbox. Maximum 60 seconds; output is capped. Do not start background services.",
+                    "Run a shell command in the workspace directory. Read-only commands and ones the user always allowed run at once; others wait for approval. Runs with the user's permissions, not in a sandbox. Maximum 60 seconds; output is capped. Do not start background services.",
                   inputSchema: z.object({ command: z.string().min(1).max(8000) }),
                   execute: async (input, { toolCallId }) =>
                     runTool("run_command", "execute", input, toolCallId, async () => {
-                      const approved = await requestIntelligencePermission({
-                        sessionId: params.sessionId,
-                        path: root,
-                        kind: "command",
-                        description: `Working directory: ${root}\n\nCommand:\n${input.command}\n\nRuns with your account permissions and can modify files or access the network.`,
-                        preview: { type: "command", command: input.command, cwd: root },
-                        signal,
-                        notify: params.onPermissionRequest,
-                      });
-                      if (!approved)
-                        return { executed: false, reason: "The user declined the command." };
+                      if (!getCommandAutoApproval(root, input.command)) {
+                        const prefix = getCommandAllowPrefix(input.command);
+                        const always = prefix
+                          ? `\n\nAlways allow runs commands starting with \`${prefix}\` in this workspace without asking.`
+                          : "";
+                        const decision = await requestIntelligencePermission({
+                          sessionId: params.sessionId,
+                          path: root,
+                          kind: "command",
+                          description: `Working directory: ${root}\n\nCommand:\n${input.command}\n\nRuns with your account permissions and can modify files or access the network.${always}`,
+                          preview: { type: "command", command: input.command, cwd: root },
+                          allowAlwaysLabel: prefix ? `Always allow ${prefix}` : undefined,
+                          signal,
+                          notify: params.onPermissionRequest,
+                        });
+                        if (!decision.approved)
+                          return { executed: false, reason: "The user declined the command." };
+                        if (decision.always) allowCommandPrefix(root, input.command);
+                      }
                       signal.throwIfAborted();
                       const id = crypto.randomUUID();
                       const cancel = () => {
@@ -195,101 +380,141 @@ export async function runIntelligenceAgent(params: {
                 }),
                 edit_file: tool({
                   description:
-                    "Propose replacing one exact text occurrence in a file already read, or create a new file with empty oldText. The user reviews and approves the edit before it is written.",
+                    "Edit a file you have read by replacing exact text. Send every change to one file in a single call as edits; they apply in order, all or none. Each oldText must match exactly one location (include surrounding lines to make it unique) unless replaceAll is set. The change lands at once and the user can keep or reject it afterwards.",
                   inputSchema: z.object({
                     path: z.string().min(1).max(1024),
-                    oldText: z.string().max(12000),
-                    newText: z.string().max(24000),
-                    create: z.boolean().default(false),
+                    edits: z
+                      .array(
+                        z.object({
+                          oldText: z.string().min(1).max(24000),
+                          newText: z.string().max(48000),
+                          replaceAll: z.boolean().optional(),
+                        }),
+                      )
+                      .min(1)
+                      .max(64),
                   }),
                   execute: async (input, { toolCallId }) => {
-                    // Reconstruct the file as the backend will write it, so the
-                    // approval prompt and the transcript can show a real diff.
-                    const before = input.create ? "" : (readFiles.get(input.path) ?? "");
-                    const after = before
-                      ? before.replace(input.oldText, () => input.newText)
-                      : input.newText;
-                    const diff = {
-                      type: "diff" as const,
-                      path: absolutePath(input.path),
-                      oldText: before,
-                      newText: after,
-                    };
-                    return runTool(
+                    await runTool(
                       "edit_file",
                       "edit",
                       input,
                       toolCallId,
-                      async () => {
-                        if (!input.create && !readFiles.has(input.path))
-                          throw new Error("Read this file before editing it.");
-                        const approved = await requestIntelligencePermission({
-                          sessionId: params.sessionId,
-                          path: input.path,
-                          description: `${input.path}\n\nReplace:\n${input.oldText || "(new file)"}\n\nWith:\n${input.newText}`,
-                          preview: diff,
-                          signal,
-                          notify: params.onPermissionRequest,
-                        });
-                        if (!approved)
-                          return { applied: false, reason: "The user declined the edit." };
-                        signal.throwIfAborted();
-                        const normalizePath = (path: string) => {
-                          const normalized = path
-                            .replace(/\\/g, "/")
-                            .split("/")
-                            .filter((part) => part !== ".")
-                            .join("/");
-                          return isMac() || isWindows() ? normalized.toLowerCase() : normalized;
-                        };
-                        const filePath = normalizePath(
-                          `${root.replace(/[/\\]$/, "")}/${input.path}`,
-                        );
-                        const bufferStates = [
-                          useBufferStore.getState(),
-                          ...workspaceRuntimeRegistry
-                            .getExistingStores<ReturnType<typeof useBufferStore.getState>>(
-                              "editor-buffer",
-                            )
-                            .map((store) => store.getState()),
-                        ];
-                        if (
-                          bufferStates.some((state) =>
-                            state.buffers.some(
-                              (buffer) =>
-                                buffer.path &&
-                                normalizePath(buffer.path) === filePath &&
-                                buffer.type === "editor" &&
-                                buffer.isDirty,
-                            ),
-                          )
-                        ) {
-                          throw new Error(
-                            "The editor has unsaved changes. Ask the user to save this file first.",
+                      () =>
+                        serializeWrite(async () => {
+                          const expectedContent = readFiles.get(input.path);
+                          if (expectedContent === undefined)
+                            throw new Error("Read this file before editing it.");
+                          if (hasUnsavedBuffer(absolutePath(input.path)))
+                            throw new Error(UNSAVED_CHANGES);
+                          signal.throwIfAborted();
+                          const write = await invoke<IntelligenceFileWrite>(
+                            "intelligence_edit_file",
+                            { root, path: input.path, expectedContent, edits: input.edits },
                           );
-                        }
-                        await invoke("intelligence_edit_file", {
-                          root,
-                          path: input.path,
-                          expectedContent: input.create ? null : readFiles.get(input.path),
-                          oldText: input.oldText,
-                          newText: input.newText,
-                        });
-                        readFiles.delete(input.path);
-                        return { applied: true, path: input.path };
-                      },
+                          return landWrite(write, input.path);
+                        }),
                       {
-                        locations: [{ path: diff.path }],
-                        display: (result) => (result.applied ? [diff] : result),
+                        locations: [{ path: absolutePath(input.path) }],
+                        display: (result) => [result.diff],
                       },
                     );
+                    return { applied: true, path: input.path };
                   },
+                }),
+                write_file: tool({
+                  description:
+                    "Create a file, or replace all of a file you have read. Prefer edit_file for changes to existing files. Missing folders are created. The change lands at once and the user can keep or reject it afterwards.",
+                  inputSchema: z.object({
+                    path: z.string().min(1).max(1024),
+                    content: z.string().max(256 * 1024),
+                  }),
+                  execute: async (input, { toolCallId }) => {
+                    const result = await runTool(
+                      "write_file",
+                      "edit",
+                      { path: input.path },
+                      toolCallId,
+                      () =>
+                        serializeWrite(async () => {
+                          if (hasUnsavedBuffer(absolutePath(input.path)))
+                            throw new Error(UNSAVED_CHANGES);
+                          signal.throwIfAborted();
+                          const write = await invoke<IntelligenceFileWrite>(
+                            "intelligence_write_file",
+                            {
+                              root,
+                              path: input.path,
+                              expectedContent: readFiles.get(input.path) ?? null,
+                              content: input.content,
+                            },
+                          );
+                          return landWrite(write, input.path);
+                        }),
+                      {
+                        locations: [{ path: absolutePath(input.path) }],
+                        display: (result) => [result.diff],
+                      },
+                    );
+                    return { written: true, created: result.created, path: input.path };
+                  },
+                }),
+                delete_file: tool({
+                  description:
+                    "Delete a file you have read. The user approves every deletion, and a deletion cannot be rejected from the review afterwards.",
+                  inputSchema: z.object({ path: z.string().min(1).max(1024) }),
+                  execute: async (input, { toolCallId }) =>
+                    runTool(
+                      "delete_file",
+                      "delete",
+                      input,
+                      toolCallId,
+                      () =>
+                        serializeWrite(async () => {
+                          const expectedContent = readFiles.get(input.path);
+                          if (expectedContent === undefined)
+                            throw new Error("Read this file before deleting it.");
+                          if (hasUnsavedBuffer(absolutePath(input.path)))
+                            throw new Error(UNSAVED_CHANGES);
+                          const decision = await requestIntelligencePermission({
+                            sessionId: params.sessionId,
+                            path: input.path,
+                            kind: "delete",
+                            description: `Delete ${input.path}?`,
+                            preview: {
+                              type: "diff",
+                              path: absolutePath(input.path),
+                              oldText: expectedContent,
+                              newText: "",
+                            },
+                            signal,
+                            notify: params.onPermissionRequest,
+                          });
+                          if (!decision.approved)
+                            return { deleted: false, reason: "The user declined the deletion." };
+                          signal.throwIfAborted();
+                          await invoke("intelligence_delete_file", {
+                            root,
+                            path: input.path,
+                            expectedContent,
+                          });
+                          readFiles.delete(input.path);
+                          return { deleted: true, path: input.path };
+                        }),
+                      { locations: [{ path: absolutePath(input.path) }] },
+                    ),
                 }),
               }
             : {}),
         }
       : {};
-    const messages: ModelMessage[] = params.messages.map((message) => {
+    const prepared = withoutUnsupportedImages(params.providerId, params.messages);
+    if (prepared.dropped) {
+      const notice = "Images were not sent: Athas hosted models accept text only.";
+      notices.push(notice);
+      params.onChunk(`_${notice}_\n\n`);
+    }
+    const messages: ModelMessage[] = prepared.messages.map((message) => {
       if (message.role === "user" && message.images?.length)
         return {
           role: "user",
@@ -308,8 +533,10 @@ export async function runIntelligenceAgent(params: {
       model,
       ...toIntelligenceSdkPrompt(messages),
       tools,
-      stopWhen: isStepCount(12),
-      maxOutputTokens: 4096,
+      stopWhen: isStepCount(maxSteps),
+      maxOutputTokens: params.maxOutputTokens ?? 4096,
+      // Retries happen in the model's fetch, per request, where Retry-After is visible and the
+      // idempotency key stays the same.
       maxRetries: 0,
       abortSignal: signal,
       onError: () => {},
@@ -317,19 +544,28 @@ export async function runIntelligenceAgent(params: {
     let failure: unknown;
     for await (const part of result.fullStream) {
       if (part.type === "text-delta") params.onChunk(part.text);
+      if (part.type === "finish-step") steps++;
       if (part.type === "error") failure = part.error;
     }
-    if (failure && !signal.aborted) throw failure;
-    if (!signal.aborted && (await result.finishReason) === "tool-calls") {
-      params.onChunk(
-        "\n\nPaused after 12 steps. Send a follow-up message to continue; completed changes are saved.",
-      );
-    }
     if (signal.aborted) return settleAbort();
-    return { outcome: "completed" as const };
+    if (failure) throw toIntelligenceAgentError(failure);
+    const usage = toTurnUsage(await result.totalUsage);
+    const finishReason = await result.finishReason;
+    return {
+      outcome: "completed",
+      // A turn that still wanted tools ran out of steps; the chat offers Continue for both.
+      stopReason:
+        finishReason === "tool-calls"
+          ? "max_turn_requests"
+          : finishReason === "length"
+            ? "max_tokens"
+            : "end_turn",
+      ...(usage ? { usage } : {}),
+      ...summary(),
+    };
   } catch (error) {
     if (signal.aborted) return settleAbort();
-    throw error;
+    throw toIntelligenceAgentError(error);
   } finally {
     controller.abort();
     unsubscribeAuth();
