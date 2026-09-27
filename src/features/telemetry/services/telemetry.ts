@@ -535,16 +535,25 @@ function registerCrashListeners() {
   listenersRegistered = true;
 }
 
-export async function recordCrashReport(payload: Record<string, unknown>) {
-  return enqueueTelemetryEvent(
-    "crash_report",
-    {
-      ...payload,
-      report_source: "desktop_runtime",
-      build: crashReportBuild(import.meta.env.DEV),
-    },
-    { flushImmediately: true, mode: "optional" },
-  );
+/**
+ * Queue a crash report. It never rejects: a failure to persist the report, such as a
+ * full disk, would otherwise raise another unhandled rejection and report itself again.
+ */
+export async function recordCrashReport(payload: Record<string, unknown>): Promise<boolean> {
+  try {
+    return await enqueueTelemetryEvent(
+      "crash_report",
+      {
+        ...payload,
+        report_source: "desktop_runtime",
+        build: crashReportBuild(import.meta.env.DEV),
+      },
+      { flushImmediately: true, mode: "optional" },
+    );
+  } catch (error) {
+    console.error("Failed to record crash report:", error);
+    return false;
+  }
 }
 
 export async function recordUpdateCheckTelemetry(payload: {
