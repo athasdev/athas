@@ -41,8 +41,7 @@ function MessageScrollerViewport({
       data-slot="message-scroller-viewport"
       className={cn(
         "scrollbar-none size-full min-h-0 min-w-0 overflow-y-auto overscroll-none contain-content",
-        fadeEdges &&
-          "[mask-image:linear-gradient(to_bottom,transparent,black_1rem,black_calc(100%_-_1rem),transparent)]",
+        fadeEdges && "scroll-fade-y scroll-fade-4",
         className,
       )}
       {...props}
@@ -66,13 +65,21 @@ function MessageScrollerContent({
 function MessageScrollerItem({
   className,
   scrollAnchor = false,
+  rendering = "eager",
   ...props
-}: React.ComponentProps<typeof MessageScrollerPrimitive.Item>) {
+}: React.ComponentProps<typeof MessageScrollerPrimitive.Item> & {
+  rendering?: "eager" | "deferred";
+}) {
   return (
     <MessageScrollerPrimitive.Item
       data-slot="message-scroller-item"
       scrollAnchor={scrollAnchor}
-      className={cn("min-w-0 shrink-0", className)}
+      className={cn(
+        "min-w-0 shrink-0",
+        rendering === "deferred" &&
+          "[content-visibility:auto] [contain-intrinsic-block-size:auto_12rem] focus-within:[content-visibility:visible]",
+        className,
+      )}
       {...props}
     />
   );
@@ -94,7 +101,7 @@ function MessageScrollerButton({
       direction={direction}
       className={cn(
         buttonVariants({ variant, iconOnly: true }),
-        "absolute inset-s-1/2 -translate-x-1/2 border border-border bg-background text-foreground transition-[translate,scale,opacity] duration-200 hover:bg-accent hover:text-foreground data-[active=false]:pointer-events-none data-[active=false]:scale-95 data-[active=false]:opacity-0 data-[active=false]:duration-400 data-[active=true]:translate-y-0 data-[active=true]:scale-100 data-[active=true]:opacity-100 data-[direction=end]:bottom-4 data-[direction=end]:data-[active=false]:translate-y-full data-[direction=start]:top-4 data-[direction=start]:data-[active=false]:-translate-y-full rtl:translate-x-1/2 data-[direction=start]:[&_svg]:rotate-180",
+        "absolute inset-s-1/2 -translate-x-1/2 bg-overlay text-foreground shadow-(--shadow-popover) ring-1 ring-border transition-[translate,scale,opacity] duration-200 hover:bg-accent hover:text-foreground data-[active=false]:pointer-events-none data-[active=false]:scale-95 data-[active=false]:opacity-0 data-[active=false]:duration-400 data-[active=true]:translate-y-0 data-[active=true]:scale-100 data-[active=true]:opacity-100 data-[direction=end]:bottom-4 data-[direction=end]:data-[active=false]:translate-y-full data-[direction=start]:top-4 data-[direction=start]:data-[active=false]:-translate-y-full rtl:translate-x-1/2 data-[direction=start]:[&_svg]:rotate-180",
         className,
       )}
       render={render}

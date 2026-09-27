@@ -34,7 +34,6 @@ function createMultiFileDiff({
   metadata,
   initiallyExpandedFileKey,
   selectedFilePath,
-  fileNavigation,
 }: {
   title?: string;
   repoPath: string;
@@ -46,7 +45,6 @@ function createMultiFileDiff({
   >;
   initiallyExpandedFileKey?: string;
   selectedFilePath?: string;
-  fileNavigation?: "embedded" | "external";
 }): MultiFileDiff {
   const { additions, deletions } = countDiffStats(diffs);
   return {
@@ -58,7 +56,6 @@ function createMultiFileDiff({
     initiallyExpandedFileKey,
     selectedFileKey: initiallyExpandedFileKey,
     selectedFilePath,
-    fileNavigation,
     totalFiles: diffs.length,
     totalAdditions: additions,
     totalDeletions: deletions,
@@ -171,11 +168,7 @@ export function useGitDiffActions({
   );
 
   const viewCommitDiff = useCallback(
-    async (
-      commitHash: string,
-      filePath?: string,
-      options?: { fileNavigation?: "embedded" | "external" },
-    ) => {
+    async (commitHash: string, filePath?: string) => {
       if (!activeRepoPath) return null;
 
       setIsLoadingCommitDiff(true);
@@ -208,7 +201,6 @@ export function useGitDiffActions({
           selectedFilePath: selectedDiff
             ? selectedDiff.new_path || selectedDiff.old_path || selectedDiff.file_path
             : undefined,
-          fileNavigation: options?.fileNavigation,
           metadata: {
             commitMessage: commit?.message,
             commitDescription: commit?.description,

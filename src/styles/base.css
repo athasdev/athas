@@ -15,6 +15,32 @@
     overscroll-behavior: none;
     background: transparent;
     font-size: var(--ui-text-base);
+    /* Chrome is not selectable, like a native app. Text surfaces opt back in below. */
+    user-select: none;
+    -webkit-user-select: none;
+    cursor: default;
+  }
+
+  /* Editable controls always allow selection and show the text cursor. */
+  :where(
+    input:not([type="checkbox"], [type="radio"], [type="range"], [type="button"], [type="submit"]),
+    textarea,
+    [contenteditable]:not([contenteditable="false"])
+  ) {
+    user-select: text;
+    -webkit-user-select: text;
+    cursor: text;
+  }
+
+  /* Read-only text the user should be able to copy: rendered documents, code, messages. */
+  :where(.markdown-preview, .markdown-content, .github-markdown-pr, .select-text) {
+    user-select: text;
+    -webkit-user-select: text;
+    cursor: auto;
+  }
+
+  :where(a[href]) {
+    cursor: pointer;
   }
 
   :where(h1, h2, h3, h4, h5, h6) {

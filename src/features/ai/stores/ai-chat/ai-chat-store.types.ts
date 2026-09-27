@@ -1,5 +1,7 @@
 import type {
   AcpAgentStatus,
+  AcpSessionState,
+  AcpUsageUpdate,
   SessionConfigOption,
   SessionConfigValue,
   SessionMode,
@@ -31,6 +33,8 @@ interface PendingAgentLaunchRequest {
   selectedBufferIds: string[];
   selectedFilesPaths: string[];
   editorSelections: EditorSelectionContext[];
+  /** "append" adds the context to the composer instead of replacing what it already holds. */
+  mode?: "replace" | "append";
 }
 
 export type AgentRunPhase = "starting" | "waiting" | "thinking" | "tool" | "approval";
@@ -52,18 +56,18 @@ export interface AIChatState {
   agentRuns: Record<string, AgentRunState>;
   agentMessageQueues: Record<string, QueuedAgentMessage[]>;
   chatMessageLoadStates: Record<string, ChatMessageLoadState>;
+  /** The mode new chats start in: the one the user picked last. */
   mode: ChatMode;
+  /** Each chat's own mode, so a queued message runs in the mode of the chat it was sent to. */
+  modeByChat: Record<string, ChatMode>;
   outputStyle: OutputStyle;
   hasApiKey: boolean;
   providerApiKeys: Map<string, boolean>;
   dynamicModels: Record<string, ProviderModel[]>;
-  availableSlashCommands: SlashCommand[];
-  acpStatus: AcpAgentStatus | null;
-  sessionModeState: {
-    currentModeId: string | null;
-    availableModes: SessionMode[];
-  };
-  sessionConfigOptions: SessionConfigOption[];
+  /** Running ACP agent processes, by `getAcpAgentKey(agentId, workspacePath)`. */
+  acpAgents: Record<string, AcpAgentStatus>;
+  /** What each open ACP session advertises, by session id. */
+  acpSessions: Record<string, AcpSessionState>;
 }
 
 export interface AIChatActions {
@@ -75,15 +79,19 @@ export interface AIChatActions {
     agentId: AgentType,
     options?: { activate?: boolean; model?: ApiModelSelection },
   ) => string | null;
-  setMode: (mode: ChatMode) => void;
+  /** Sets `chatId`'s mode, and the mode new chats start in; without a chat only the latter. */
+  setMode: (mode: ChatMode, chatId?: string | null) => void;
   setPendingAgentLaunchRequest: (request: PendingAgentLaunchRequest | null) => void;
   startAgentRun: (chatId: string, run: AgentRunState) => void;
   updateAgentRun: (chatId: string, runId: string, updates: Partial<AgentRunState>) => void;
   finishAgentRun: (chatId: string, runId: string) => void;
   enqueueAgentMessage: (chatId: string, message: string, images?: ImageContent[]) => void;
   prependAgentMessage: (chatId: string, message: string, images?: ImageContent[]) => void;
+  /** Takes the next queued message; null when there is none or the user is editing it. */
   dequeueAgentMessage: (chatId: string) => QueuedAgentMessage | null;
   moveQueuedAgentMessage: (chatId: string, fromIndex: number, toIndex: number) => void;
+  /** Rewrites a queued message's text; its images stay attached. */
+  updateQueuedAgentMessage: (chatId: string, index: number, message: string) => void;
   removeQueuedAgentMessage: (chatId: string, index: number) => void;
   createNewChat: (
     agentId?: AgentType,
@@ -104,6 +112,16 @@ export interface AIChatActions {
   setChatAcpSessionId: (chatId: string, sessionId: string | null) => void;
   addMessage: (chatId: string, message: Message) => void;
   updateMessage: (chatId: string, messageId: string, updates: Partial<Message>) => void;
+  /**
+   * Stream-friendly `updateMessage`: merges `updates` into the message on the next animation
+   * frame together with every other queued change, without touching the session's
+   * `lastMessageAt`. Use it for per-chunk updates.
+   */
+  queueMessageUpdate: (chatId: string, messageId: string, updates: Partial<Message>) => void;
+  /** Appends streamed text to a message on the next animation frame, like `queueMessageUpdate`. */
+  appendMessageContent: (chatId: string, messageId: string, chunk: string) => void;
+  /** Writes queued stream updates now, for one chat or all of them. */
+  flushMessageUpdates: (chatId?: string) => void;
   replaceChatMessages: (chatId: string, messages: Message[]) => void;
   setChatMessageLoadState: (chatId: string, state: ChatMessageLoadState) => void;
   replaceUserMessage: (chatId: string, messageId: string, content: string) => boolean;
@@ -118,13 +136,32 @@ export interface AIChatActions {
   hasProviderApiKey: (providerId: string) => boolean;
 
   setDynamicModels: (providerId: string, models: ProviderModel[]) => void;
-  setAvailableSlashCommands: (commands: SlashCommand[]) => void;
-  setSessionModeState: (currentModeId: string | null, availableModes: SessionMode[]) => void;
-  setCurrentModeId: (modeId: string) => void;
-  setAcpStatus: (status: AcpAgentStatus | null) => void;
-  changeSessionMode: (modeId: string) => Promise<void>;
-  setSessionConfigOptions: (options: SessionConfigOption[]) => void;
-  changeSessionConfigOption: (configId: string, value: SessionConfigValue) => Promise<void>;
+  /** Records a running agent, or forgets a stopped one together with its sessions. */
+  setAcpAgentStatus: (status: AcpAgentStatus) => void;
+  setSessionSlashCommands: (sessionId: string, commands: SlashCommand[]) => void;
+  setSessionModeState: (
+    sessionId: string,
+    currentModeId: string | null,
+    availableModes: SessionMode[],
+  ) => void;
+  setSessionCurrentMode: (sessionId: string, modeId: string) => void;
+  setSessionConfigOptions: (sessionId: string, options: SessionConfigOption[]) => void;
+  /** Keeps the latest context and cost report of a session. */
+  setSessionUsage: (sessionId: string, usage: AcpUsageUpdate) => void;
+  clearAcpSession: (sessionId: string) => void;
+  changeSessionMode: (sessionId: string, modeId: string) => Promise<void>;
+  changeSessionConfigOption: (
+    sessionId: string,
+    configId: string,
+    value: SessionConfigValue,
+  ) => Promise<void>;
+  /**
+   * Applies the chat's saved mode and config picks to its reattached session, once per session,
+   * where the session still offers them.
+   */
+  restoreChatSessionSettings: (sessionId: string) => void;
+  /** Saves the chat's "Follow agent" toggle with its history. */
+  setChatFollowAgent: (chatId: string, following: boolean) => void;
 
   getWorkspaceSessionSnapshot: () => AIWorkspaceSessionSnapshot;
   restoreWorkspaceSession: (snapshot: AIWorkspaceSessionSnapshot | null | undefined) => void;

@@ -63,7 +63,7 @@ export function WorkspaceTasks({ root, config, onChange, reportError }: Workspac
         </FieldDescription>
       ) : null}
       {config.commands.map((command, index) => (
-        <Card key={index} variant="muted">
+        <Card key={index}>
           <CardContent className="space-y-4">
             <div className="grid gap-4 @min-[700px]/workbench-content:grid-cols-2">
               <Field>

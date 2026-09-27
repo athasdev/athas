@@ -1,3 +1,9 @@
+import sqliteImage from "../../extensions/official/sqlite/icon.svg";
+import duckdbImage from "../../extensions/official/duckdb/icon.svg";
+import postgresImage from "../../extensions/official/postgres/icon.svg";
+import mysqlImage from "../../extensions/official/mysql/icon.svg";
+import mongodbImage from "../../extensions/official/mongodb/icon.svg";
+import redisImage from "../../extensions/official/redis/icon.svg";
 import claudeImage from "../../extensions/official/claude-code/icon.svg";
 import geminiImage from "../../extensions/official/gemini-cli/icon.svg";
 import antigravityImage from "../../extensions/official/antigravity/icon.svg";
@@ -39,6 +45,7 @@ export function GithubMark({ size = "1em", ...props }: BrandMarkProps) {
 }
 
 export const agentBrandImages: Readonly<Record<string, string>> = {
+  athas: "/logo.png",
   "claude-acp": claudeImage,
   "claude-code": claudeImage,
   anthropic: claudeImage,
@@ -53,3 +60,39 @@ export const agentBrandImages: Readonly<Record<string, string>> = {
   "qwen-code": qwenImage,
   qwen: qwenImage,
 };
+
+const databaseBrandImages = {
+  sqlite: sqliteImage,
+  duckdb: duckdbImage,
+  postgres: postgresImage,
+  mysql: mysqlImage,
+  mongodb: mongodbImage,
+  redis: redisImage,
+};
+
+type DatabaseBrand = keyof typeof databaseBrandImages;
+
+export function getDatabaseBrandImage(providerOrExtensionId: string): string | undefined {
+  const provider = providerOrExtensionId.replace(/^athas\.database\./, "");
+  return Object.prototype.hasOwnProperty.call(databaseBrandImages, provider)
+    ? databaseBrandImages[provider as DatabaseBrand]
+    : undefined;
+}
+
+export function DatabaseBrandMark({
+  provider,
+  size = "1em",
+}: {
+  provider: DatabaseBrand;
+  size?: number | string;
+}) {
+  return (
+    <img
+      src={getDatabaseBrandImage(provider)}
+      alt=""
+      draggable={false}
+      className="shrink-0 object-contain"
+      style={{ width: size, height: size }}
+    />
+  );
+}

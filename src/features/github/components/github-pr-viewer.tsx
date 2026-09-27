@@ -31,7 +31,7 @@ import {
   extractFilePatch,
   getPullRequestStatus,
   normalizeCommit,
-  PR_STATUS_BADGE_VARIANT,
+  PR_STATUS_BADGE_TONE,
   PULL_REQUEST_STATUS_LABEL,
   resolveSafeRepoFilePath,
   toFileDiffFromMetadata,
@@ -75,7 +75,6 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
     return buffer?.type === "pullRequest" ? buffer : undefined;
   });
   const selectedPRDetails = useGitHubStore.use.selectedPRDetails();
-  const isActiveBuffer = useBufferStore((state) => state.activeBufferId === bufferId);
   const selectedPRDiff = useGitHubStore.use.selectedPRDiff();
   const selectedPRFiles = useGitHubStore.use.selectedPRFiles();
   const selectedPRComments = useGitHubStore.use.selectedPRComments();
@@ -289,10 +288,13 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
     return Array.from(labelsByName.values());
   }, [labels, selectedPRDetails?.labels]);
 
-  const selectedDiffFile = useMemo(() => {
-    if (diffFiles.length === 0) return null;
-    return diffFiles.find((file) => file.path === selectedFilePath) ?? diffFiles[0] ?? null;
-  }, [diffFiles, selectedFilePath]);
+  const patchErrors = useMemo(() => {
+    const errors: Record<string, string | undefined> = {};
+    for (const [path, patch] of Object.entries(filePatches)) {
+      if (patch.error) errors[path] = patch.error;
+    }
+    return errors;
+  }, [filePatches]);
 
   useEffect(() => {
     if (activeTab !== "files") return;
@@ -611,19 +613,19 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
   const MergeStatusIcon = mergeStatus.icon;
   const actions = (
     <>
-      <Badge variant={PR_STATUS_BADGE_VARIANT[status]}>{PULL_REQUEST_STATUS_LABEL[status]}</Badge>
+      <Badge tone={PR_STATUS_BADGE_TONE[status]}>{PULL_REQUEST_STATUS_LABEL[status]}</Badge>
       {mergeStatus.ready ? (
-        <Button onClick={() => openInlineAction("merge")} variant="accent" size="chrome">
+        <Button onClick={() => openInlineAction("merge")} variant="accent" size="sm">
           <GitMergeIcon />
           Merge
         </Button>
       ) : (
-        <Button variant="default" size="chrome" disabled tooltip={mergeStatus.text}>
+        <Button variant="default" size="sm" disabled tooltip={mergeStatus.text}>
           <MergeStatusIcon />
           {mergeStatus.text}
         </Button>
       )}
-      <ResourceActionsMenu label="Pull request actions" size="chrome">
+      <ResourceActionsMenu label="Pull request actions" size="sm">
         <DropdownMenuItem onClick={() => void handleCheckout()}>Checkout branch</DropdownMenuItem>
         <DropdownMenuItem disabled={isClosed} onClick={() => openInlineAction("approve")}>
           Approve
@@ -705,10 +707,8 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
             isLoadingContent={isLoadingContent}
             contentError={contentError}
             diffFiles={diffFiles}
-            selectedDiffFile={selectedDiffFile}
             selectedFilePath={selectedFilePath}
-            isActive={isActiveBuffer}
-            patchError={selectedDiffFile ? filePatches[selectedDiffFile.path]?.error : undefined}
+            patchErrors={patchErrors}
             onRetry={handleRefresh}
             onSelectFile={setSelectedFilePath}
             onOpenChangedFile={handleOpenChangedFile}

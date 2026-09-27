@@ -128,7 +128,7 @@ const CodeLensOverlay = forwardRef(
                 <button
                   key={`${item.title}-${i}`}
                   type="button"
-                  className="pointer-events-auto mr-2 border-none bg-transparent p-0 font-mono text-subtle-foreground/60 hover:text-foreground"
+                  className="pointer-events-auto mr-2 border-none bg-transparent p-0 font-mono text-subtle-foreground hover:text-foreground"
                   disabled={!item.command}
                   onClick={(event) => {
                     event.preventDefault();

@@ -1,11 +1,15 @@
 import { TagIcon, RocketIcon } from "@/ui/icons";
 import { AgentSessionIcon } from "@/features/ai/components/icons/agent-session-icon";
+import { AgentAttentionDot } from "@/features/ai/components/agent-attention-dot";
+import { useChatAttention } from "@/features/ai/hooks/use-chat-attention";
 import {
   ActivityIcon,
   ArrowsClockwiseIcon,
+  ArrowsLeftRightIcon,
   ChatBubbleTextIcon,
   DatabaseIcon,
   GitBranchIcon,
+  GitDiffIcon,
   GitPullRequestIcon,
   GridIcon,
   PackageIcon,
@@ -73,6 +77,7 @@ const TabBarItem = memo(function TabBarItem({
   onRenameCancel,
 }: TabBarItemProps) {
   const [avatarError, setAvatarError] = useState(false);
+  const agentAttention = useChatAttention(buffer.type === "agent" ? buffer.sessionId : null);
   const showTabIcons = useSettingsStore((state) => state.settings.showTabIcons);
   const tabCloseButtonVisibility = useSettingsStore(
     (state) => state.settings.tabCloseButtonVisibility,
@@ -114,7 +119,7 @@ const TabBarItem = memo(function TabBarItem({
   );
 
   return (
-    <div ref={tabRef} className="relative">
+    <div ref={tabRef} className="relative flex">
       {showDropIndicatorBefore ? (
         <div className="drop-indicator absolute top-1 bottom-1 left-0 z-20 w-0.5 bg-primary" />
       ) : null}
@@ -142,6 +147,7 @@ const TabBarItem = memo(function TabBarItem({
               <Button
                 type="button"
                 iconOnly
+                size="xs"
                 variant="ghost"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -232,6 +238,10 @@ const TabBarItem = memo(function TabBarItem({
               <SearchIcon className="text-subtle-foreground" />
             ) : buffer.type === "continuousAgents" ? (
               <ArrowsClockwiseIcon className="text-subtle-foreground" />
+            ) : buffer.type === "acpInspector" ? (
+              <ArrowsLeftRightIcon className="text-subtle-foreground" />
+            ) : buffer.type === "agentChanges" ? (
+              <GitDiffIcon className="text-subtle-foreground" />
             ) : buffer.type === "workspaces" ? (
               <GridIcon />
             ) : buffer.type === "settings" ? (
@@ -281,6 +291,7 @@ const TabBarItem = memo(function TabBarItem({
             aria-label="Unsaved changes"
           />
         )}
+        {agentAttention ? <AgentAttentionDot attention={agentAttention} /> : null}
       </TabItem>
     </div>
   );

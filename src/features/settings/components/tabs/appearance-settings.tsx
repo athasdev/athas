@@ -299,7 +299,8 @@ export const AppearanceSettings = () => {
             <Button
               type="button"
               iconOnly
-              variant="danger"
+              variant="ghost"
+              tone="danger"
               tooltip={`Remove ${theme.name}`}
               onClick={() => void handleRemoveCustomTheme(theme.id)}
             >

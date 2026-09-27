@@ -1,4 +1,12 @@
-import { type SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type SetStateAction,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   canUseIntelligenceProvider,
   canUseProviderWithoutApiKey,
@@ -7,12 +15,17 @@ import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { getProviderById } from "@/features/ai/types/providers.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useAuthStore } from "@/features/window/stores/auth.store";
+import { hasProductCapability } from "@/features/window/lib/product-capabilities";
+import { useIntelligenceSettingsStore } from "@/features/ai/intelligence/stores/intelligence-settings.store";
+import { resolveIntelligenceConnection } from "@/features/ai/intelligence/lib/resolve-intelligence-connection";
 import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar.store";
 import { toast } from "sonner";
 import {
   InlineEditError,
   requestInlineEdit,
 } from "@/features/editor/services/editor-inline-edit-service";
+import { rebaseInlineEditRange } from "./inline-edit-rebase";
+import type { InlineEditPreview } from "./monaco-inline-edit-preview";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { buildLineOffsets } from "@/features/editor/engines/monaco/position";
 import type { Position, Range } from "@/features/editor/types/editor.types";
@@ -30,14 +43,35 @@ type InlineEditModelPositionResolver = (
 type InlineEditAnchor = { line: number; column: number };
 
 const DEFAULT_INLINE_EDIT_INSTRUCTION = "Improve this code while preserving behavior.";
-const INLINE_EDIT_POPOVER_WIDTH = 380;
-const INLINE_EDIT_POPOVER_ESTIMATED_HEIGHT = 58;
-const INLINE_EDIT_POPOVER_MARGIN = 8;
-const INLINE_EDIT_POPOVER_X_OFFSET = 0;
-const INLINE_EDIT_POPOVER_Y_OFFSET = 6;
+const INLINE_EDIT_TIMEOUT_MS = 60_000;
+const INLINE_EDIT_CONTEXT_CHARS = 12_000;
+const INLINE_EDIT_INSTRUCTION_LIMIT = 2000;
 const INLINE_EDIT_TOP_THRESHOLD = 64;
 const EMPTY_LINES = [""];
 const EMPTY_LINE_OFFSETS = [0];
+const CONFLICT_MESSAGE =
+  "The selected code changed while the edit was running. Run the edit again with the latest content.";
+
+interface InlineEditProposal {
+  bufferId: string;
+  baseContent: string;
+  startOffset: number;
+  endOffset: number;
+  originalText: string;
+  editedText: string;
+  instruction: string;
+  lost?: boolean;
+}
+
+export function composeInlineEditFollowUp(previousInstruction: string, followUp: string) {
+  const suffix = ` The selection is your previous proposal. Revise it: ${followUp}`;
+  const budget = Math.max(0, INLINE_EDIT_INSTRUCTION_LIMIT - suffix.length - 20);
+  const previous =
+    previousInstruction.length > budget
+      ? `${previousInstruction.slice(0, Math.max(0, budget - 3))}...`
+      : previousInstruction;
+  return `Original request: ${previous}.${suffix}`.slice(0, INLINE_EDIT_INSTRUCTION_LIMIT);
+}
 
 interface UseInlineEditOptions {
   enabled?: boolean;
@@ -69,6 +103,7 @@ interface UseInlineEditOptions {
   setCursorPosition: (position: Position) => void;
   setSelection: (selection?: Range) => void;
   updateBufferContent?: (bufferId: string, content: string, snapshot?: boolean) => void;
+  previewInlineEdit?: (preview: InlineEditPreview) => () => void;
 }
 
 export function useInlineEdit({
@@ -90,6 +125,7 @@ export function useInlineEdit({
   setCursorPosition,
   setSelection,
   updateBufferContent,
+  previewInlineEdit,
 }: UseInlineEditOptions) {
   const inlineEditRequested = useInlineEditToolbarStore.use.isVisible();
   const inlineEditTargetViewKey = useInlineEditToolbarStore.use.targetViewKey();
@@ -120,6 +156,42 @@ export function useInlineEdit({
     value: string;
   }>({ sessionKey: null, value: "" });
   const [isInlineEditRunning, setIsInlineEditRunning] = useState(false);
+  const [proposalState, setProposalState] = useState<{
+    sessionKey: string | null;
+    value: InlineEditProposal | null;
+  }>({ sessionKey: null, value: null });
+  const requestScopeRef = useRef<{
+    content: string;
+    ranges: Set<{ start: number; end: number; lost: boolean }>;
+  } | null>(null);
+  const pendingRequestRef = useRef<{ controller: AbortController } | null>(null);
+
+  useLayoutEffect(() => {
+    const scope = { content: "", ranges: new Set<{ start: number; end: number; lost: boolean }>() };
+    requestScopeRef.current = scope;
+    pendingRequestRef.current = null;
+    setIsInlineEditRunning(false);
+    return () => {
+      requestScopeRef.current = null;
+      pendingRequestRef.current?.controller.abort();
+      pendingRequestRef.current = null;
+    };
+  }, [buffer?.id, inlineEditSessionKey]);
+
+  // Follows every content change one step at a time, so ranges survive edits made in several
+  // places while a request runs as long as none of them touch the range itself.
+  useLayoutEffect(() => {
+    const scope = requestScopeRef.current;
+    if (!scope) return;
+    for (const range of scope.ranges) {
+      if (range.lost) continue;
+      const next = rebaseInlineEditRange(scope.content, inlineEditContent, range.start, range.end);
+      if (next) Object.assign(range, next);
+      else range.lost = true;
+    }
+    scope.content = inlineEditContent;
+  }, [inlineEditContent, buffer?.id, inlineEditSessionKey]);
+
   const [inlineEditErrorState, setInlineEditErrorState] = useState<{
     sessionKey: string | null;
     value: string | null;
@@ -129,11 +201,33 @@ export function useInlineEdit({
     value: InlineEditAnchor | null;
   }>({ sessionKey: null, value: null });
 
-  const aiProviderId = useSettingsStore((state) => state.settings.aiProviderId);
-  const aiModelId = useSettingsStore((state) => state.settings.aiModelId);
-  const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
+  const personalProviderId = useSettingsStore((state) => state.settings.aiProviderId);
+  const personalModelId = useSettingsStore((state) => state.settings.aiModelId);
+  const intelligencePreferences = useIntelligenceSettingsStore((state) => state.preferences);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const subscription = useAuthStore((state) => state.subscription);
+  const connection = resolveIntelligenceConnection({
+    task: "inline-edit",
+    preferences: intelligencePreferences,
+    hasIntelligence: hasProductCapability(subscription, "intelligence"),
+    personalConnection: { providerId: personalProviderId, modelId: personalModelId },
+  });
+  const aiProviderId = connection.providerId;
+  const aiModelId = connection.modelId;
+  const updateSetting = (key: "aiProviderId" | "aiModelId", value: string) => {
+    const state = useIntelligenceSettingsStore.getState();
+    state.actions.change({
+      ...state.preferences,
+      tasks: {
+        ...state.preferences.tasks,
+        "inline-edit":
+          key === "aiProviderId"
+            ? { providerId: value, modelId: "" }
+            : { providerId: aiProviderId, modelId: value },
+      },
+    });
+    void state.actions.save();
+  };
   const checkAllProviderApiKeys = useAIChatStore((state) => state.actions.checkAllProviderApiKeys);
 
   const getSelectionAnchorPosition = useCallback((): { line: number; column: number } | null => {
@@ -150,8 +244,8 @@ export function useInlineEdit({
     }
 
     return {
-      line: end.line,
-      column: end.column,
+      line: start.line,
+      column: start.column,
     };
   }, [selection]);
 
@@ -182,8 +276,43 @@ export function useInlineEdit({
     inlineEditInstructionState.sessionKey === inlineEditSessionKey
       ? inlineEditInstructionState.value
       : "";
+  const inlineEditProposal =
+    proposalState.sessionKey === inlineEditSessionKey &&
+    proposalState.value?.bufferId === buffer?.id
+      ? proposalState.value
+      : null;
+  const rebasedProposalRange = useMemo(
+    () =>
+      inlineEditProposal && !inlineEditProposal.lost
+        ? rebaseInlineEditRange(
+            inlineEditProposal.baseContent,
+            inlineEditContent,
+            inlineEditProposal.startOffset,
+            inlineEditProposal.endOffset,
+          )
+        : null,
+    [inlineEditContent, inlineEditProposal],
+  );
+  const inlineEditProposalConflict = Boolean(inlineEditProposal && !rebasedProposalRange);
+
+  useLayoutEffect(() => {
+    if (!inlineEditProposal || inlineEditProposal.baseContent === inlineEditContent) return;
+    const next: InlineEditProposal = rebasedProposalRange
+      ? {
+          ...inlineEditProposal,
+          baseContent: inlineEditContent,
+          startOffset: rebasedProposalRange.start,
+          endOffset: rebasedProposalRange.end,
+        }
+      : { ...inlineEditProposal, baseContent: inlineEditContent, lost: true };
+    setProposalState((current) =>
+      current.value === inlineEditProposal ? { ...current, value: next } : current,
+    );
+  }, [inlineEditContent, inlineEditProposal, rebasedProposalRange]);
   const inlineEditError =
-    inlineEditErrorState.sessionKey === inlineEditSessionKey ? inlineEditErrorState.value : null;
+    (inlineEditErrorState.sessionKey === inlineEditSessionKey
+      ? inlineEditErrorState.value
+      : null) ?? (inlineEditProposalConflict ? CONFLICT_MESSAGE : null);
   const inlineEditSelectionAnchor =
     inlineEditSelectionAnchorState.sessionKey === inlineEditSessionKey
       ? inlineEditSelectionAnchorState.value
@@ -332,147 +461,227 @@ export function useInlineEdit({
     };
   }, [enabled, getCursorOffset, inputRef, lineOffsets, lines, selection]);
 
-  const handleApplyInlineEdit = useCallback(async () => {
-    if (!enabled) {
-      inlineEditToolbarActions.hide();
-      return;
-    }
+  const setInlineEditProposal = useCallback(
+    (value: InlineEditProposal | null) => {
+      setProposalState({ sessionKey: inlineEditSessionKey, value });
+    },
+    [inlineEditSessionKey],
+  );
 
+  /** The proposal last scrolled into view, so later rebuilds leave the viewport alone. */
+  const revealedProposalRef = useRef<string | null>(null);
+  /**
+   * Everything the preview renders: the proposal and the full lines it replaces. Typing
+   * elsewhere leaves it unchanged, and the editor already moves the existing preview along with
+   * the lines, so rebuilding it on every keystroke would only make it flicker.
+   */
+  const previewKey = useMemo(() => {
+    if (!inlineEditProposal || !rebasedProposalRange) return null;
+    const { start, end } = rebasedProposalRange;
+    const lineStart = start === 0 ? 0 : inlineEditContent.lastIndexOf("\n", start - 1) + 1;
+    const nextBreak = inlineEditContent.indexOf("\n", end);
+    const lineEnd = nextBreak === -1 ? inlineEditContent.length : nextBreak;
+    return [
+      inlineEditProposal.bufferId,
+      inlineEditProposal.instruction,
+      inlineEditProposal.editedText,
+      start - lineStart,
+      end - start,
+      inlineEditContent.slice(lineStart, lineEnd),
+    ].join("\0");
+  }, [inlineEditContent, inlineEditProposal, rebasedProposalRange]);
+  const latestPreviewRef = useRef<{ start: number; end: number; editedText: string } | null>(null);
+  useEffect(() => {
+    latestPreviewRef.current =
+      inlineEditProposal && rebasedProposalRange
+        ? { ...rebasedProposalRange, editedText: inlineEditProposal.editedText }
+        : null;
+  });
+  const proposalKey = inlineEditProposal
+    ? [
+        inlineEditProposal.bufferId,
+        inlineEditProposal.instruction,
+        inlineEditProposal.editedText,
+      ].join("\0")
+    : null;
+  useEffect(() => {
+    const latest = latestPreviewRef.current;
+    if (!previewInlineEdit || previewKey === null || !latest || proposalKey === null) return;
+    const reveal = revealedProposalRef.current !== proposalKey;
+    revealedProposalRef.current = proposalKey;
+    return previewInlineEdit({
+      startOffset: latest.start,
+      endOffset: latest.end,
+      editedText: latest.editedText,
+      reveal,
+    });
+  }, [previewInlineEdit, previewKey, proposalKey]);
+
+  const handleSubmitInlineEdit = useCallback(async () => {
+    if (!inlineEditVisible || pendingRequestRef.current) return;
     if (!buffer) {
       toast.warning("Inline edit requires an open buffer.");
       inlineEditToolbarActions.hide();
       return;
     }
 
-    const targetRange = resolveInlineEditRange();
-    if (!targetRange) {
-      toast.warning("Could not determine an inline edit target.");
-      inlineEditToolbarActions.hide();
-      return;
-    }
+    const requestContent = buffer.content;
+    const followUp = inlineEditInstruction.trim();
+    let startOffset: number;
+    let endOffset: number;
+    let selectedText: string;
+    let instruction: string;
+    let proposalInstruction: string;
 
-    const startOffset = targetRange.start.offset;
-    const endOffset = targetRange.end.offset;
-    const selectedText = buffer.content.slice(startOffset, endOffset);
+    if (inlineEditProposal) {
+      if (!rebasedProposalRange) {
+        setInlineEditProposal(null);
+        setInlineEditError(CONFLICT_MESSAGE);
+        return;
+      }
+      if (!followUp) return;
+      startOffset = rebasedProposalRange.start;
+      endOffset = rebasedProposalRange.end;
+      selectedText = inlineEditProposal.editedText;
+      instruction = composeInlineEditFollowUp(inlineEditProposal.instruction, followUp);
+      proposalInstruction = `${inlineEditProposal.instruction}. Then: ${followUp}`;
+    } else {
+      const targetRange = resolveInlineEditRange();
+      if (!targetRange) {
+        toast.warning("Could not determine an inline edit target.");
+        inlineEditToolbarActions.hide();
+        return;
+      }
+      startOffset = targetRange.start.offset;
+      endOffset = targetRange.end.offset;
+      selectedText = requestContent.slice(startOffset, endOffset);
+      instruction = followUp || DEFAULT_INLINE_EDIT_INSTRUCTION;
+      proposalInstruction = instruction;
+    }
 
     const provider = getProviderById(aiProviderId);
 
     if (!aiModelId.trim()) {
-      toast.error("Please select an inline edit model.");
+      setInlineEditError("Select an inline edit model.");
       return;
     }
 
-    const enterprisePolicy = subscription?.enterprise?.policy;
-    const managedPolicy = enterprisePolicy?.managedMode ? enterprisePolicy : null;
-
-    const hasStoredProviderKey =
-      useAIChatStore.getState().providerApiKeys.get(aiProviderId) || false;
-    const canUseProvider =
-      canUseIntelligenceProvider(aiProviderId, subscription) ||
-      canUseProviderWithoutApiKey({
-        providerId: aiProviderId,
-        subscription,
-        hasStoredKey: hasStoredProviderKey,
-        requiresApiKey: provider?.requiresApiKey ?? true,
-      });
-
-    if (!canUseProvider) {
-      await checkAllProviderApiKeys();
-      const hasProviderKeyAfterRefresh =
-        useAIChatStore.getState().providerApiKeys.get(aiProviderId) || false;
-      if (!hasProviderKeyAfterRefresh) {
-        toast.error(`${provider?.name ?? aiProviderId} API key is required for inline edit.`);
-        return;
-      }
-    }
-
-    const hasProviderKey = useAIChatStore.getState().providerApiKeys.get(aiProviderId) || false;
-    const useHosted = !hasProviderKey && canUseIntelligenceProvider(aiProviderId, subscription);
-
-    if (useHosted && !isAuthenticated) {
-      toast.error("Please sign in to use Athas Intelligence.");
-      return;
-    }
-
-    if (useHosted && managedPolicy && !managedPolicy.aiCompletionEnabled) {
-      toast.error("Inline edit is disabled by your organization policy.");
-      return;
-    }
-
-    if (!useHosted && managedPolicy && !managedPolicy.allowByok) {
-      toast.error("BYOK is disabled by your organization policy.");
-      return;
-    }
-
-    const beforeSelection = buffer.content.slice(Math.max(0, startOffset - 12000), startOffset);
-    const afterSelection = buffer.content.slice(endOffset, endOffset + 12000);
-
+    const scope = requestScopeRef.current;
+    if (!scope) return;
+    const request = { controller: new AbortController() };
+    const trackedRange = { start: startOffset, end: endOffset, lost: false };
+    scope.ranges.add(trackedRange);
+    pendingRequestRef.current = request;
+    const isCurrentRequest = () =>
+      requestScopeRef.current === scope && pendingRequestRef.current === request;
     setInlineEditError(null);
     setIsInlineEditRunning(true);
 
     try {
+      const enterprisePolicy = subscription?.enterprise?.policy;
+      const managedPolicy = enterprisePolicy?.managedMode ? enterprisePolicy : null;
+
+      const hasStoredProviderKey =
+        useAIChatStore.getState().providerApiKeys.get(aiProviderId) || false;
+      const canUseProvider =
+        canUseIntelligenceProvider(aiProviderId, subscription) ||
+        canUseProviderWithoutApiKey({
+          providerId: aiProviderId,
+          subscription,
+          hasStoredKey: hasStoredProviderKey,
+          requiresApiKey: provider?.requiresApiKey ?? true,
+        });
+
+      if (!canUseProvider) {
+        await checkAllProviderApiKeys();
+        if (!isCurrentRequest()) return;
+        const hasProviderKeyAfterRefresh =
+          useAIChatStore.getState().providerApiKeys.get(aiProviderId) || false;
+        if (!hasProviderKeyAfterRefresh) {
+          setInlineEditError(
+            `${provider?.name ?? aiProviderId} API key is required for inline edit.`,
+          );
+          return;
+        }
+      }
+
+      const hasProviderKey = useAIChatStore.getState().providerApiKeys.get(aiProviderId) || false;
+      const useHosted = !hasProviderKey && canUseIntelligenceProvider(aiProviderId, subscription);
+
+      if (useHosted && !isAuthenticated) {
+        setInlineEditError("Sign in to use Athas Intelligence.");
+        return;
+      }
+
+      if (useHosted && managedPolicy && !managedPolicy.aiCompletionEnabled) {
+        setInlineEditError("Inline edit is disabled by your organization policy.");
+        return;
+      }
+
+      if (!useHosted && managedPolicy && !managedPolicy.allowByok) {
+        setInlineEditError("BYOK is disabled by your organization policy.");
+        return;
+      }
+
       const { editedText } = await requestInlineEdit(
         {
           provider: aiProviderId,
           feature: "inline-edit",
           model: aiModelId,
-          beforeSelection,
+          beforeSelection: requestContent.slice(
+            Math.max(0, startOffset - INLINE_EDIT_CONTEXT_CHARS),
+            startOffset,
+          ),
           selectedText,
-          afterSelection,
-          instruction: inlineEditInstruction.trim() || DEFAULT_INLINE_EDIT_INSTRUCTION,
+          afterSelection: requestContent.slice(endOffset, endOffset + INLINE_EDIT_CONTEXT_CHARS),
+          instruction,
           filePath: buffer.path,
           languageId: buffer.language,
         },
-        { useHosted },
+        { useHosted, signal: request.controller.signal, timeoutMs: INLINE_EDIT_TIMEOUT_MS },
       );
 
-      if (!editedText.trim()) {
-        toast.warning("Inline edit returned an empty result.");
+      if (!isCurrentRequest()) return;
+      const latestContent = scope.content;
+      const range = trackedRange.lost ? null : trackedRange;
+      if (!range) {
+        setInlineEditProposal(null);
+        setInlineEditError(CONFLICT_MESSAGE);
         return;
       }
 
-      const newContent = `${buffer.content.slice(0, startOffset)}${editedText}${buffer.content.slice(
-        endOffset,
-      )}`;
-      const newCursorOffset = startOffset + editedText.length;
-      const newPosition = calculateCursorPositionFromContent(newCursorOffset, newContent);
-
-      if (applyInlineEdit) {
-        applyInlineEdit({
-          range: targetRange,
-          editedText,
-          newContent,
-          newCursorOffset,
-          newPosition,
-        });
-      } else {
-        updateBufferContent?.(buffer.id, newContent, true);
+      if (!editedText.trim()) {
+        setInlineEditError("Inline edit returned an empty result. Try a different instruction.");
+        return;
       }
 
-      setCursorPosition(newPosition);
-      setSelection(undefined);
-      setInlineEditSelectionAnchor(null);
-      inlineEditToolbarActions.hide();
-      if (inputRef?.current) {
-        inputRef.current.selectionStart = newCursorOffset;
-        inputRef.current.selectionEnd = newCursorOffset;
-      }
-
-      toast.success("Inline edit applied.");
+      setInlineEditProposal({
+        bufferId: buffer.id,
+        baseContent: latestContent,
+        startOffset: range.start,
+        endOffset: range.end,
+        originalText: latestContent.slice(range.start, range.end),
+        editedText,
+        instruction: proposalInstruction,
+      });
+      setInlineEditInstruction("");
     } catch (error) {
-      const errorMessage =
-        error instanceof InlineEditError ? error.message : "Inline edit failed. Please try again.";
-      setInlineEditError(errorMessage);
-      if (error instanceof InlineEditError) {
-        toast.error(error.message);
-      } else {
-        toast.error("Inline edit failed. Please try again.");
-      }
+      if (!isCurrentRequest() || request.controller.signal.aborted) return;
+      setInlineEditError(
+        error instanceof InlineEditError ? error.message : "Inline edit failed. Please try again.",
+      );
     } finally {
-      setIsInlineEditRunning(false);
+      scope.ranges.delete(trackedRange);
+      if (isCurrentRequest()) {
+        pendingRequestRef.current = null;
+        setIsInlineEditRunning(false);
+      }
     }
   }, [
     buffer,
+    inlineEditVisible,
+    inlineEditProposal,
+    rebasedProposalRange,
     resolveInlineEditRange,
     isAuthenticated,
     subscription,
@@ -480,17 +689,83 @@ export function useInlineEdit({
     aiProviderId,
     aiModelId,
     inlineEditInstruction,
-    inlineEditError,
-    applyInlineEdit,
-    updateBufferContent,
-    setCursorPosition,
-    setSelection,
     inlineEditToolbarActions,
-    inputRef,
-    enabled,
+    setInlineEditError,
+    setInlineEditInstruction,
+    setInlineEditProposal,
   ]);
 
-  const popoverPosition = (() => {
+  const cancelInlineEditRequest = useCallback(() => {
+    const request = pendingRequestRef.current;
+    if (!request) return false;
+    request.controller.abort();
+    pendingRequestRef.current = null;
+    setIsInlineEditRunning(false);
+    return true;
+  }, []);
+
+  const handleAcceptInlineEdit = useCallback(() => {
+    if (!inlineEditVisible || pendingRequestRef.current || !buffer || !inlineEditProposal) return;
+    if (!rebasedProposalRange) {
+      setInlineEditError(CONFLICT_MESSAGE);
+      return;
+    }
+
+    const { editedText } = inlineEditProposal;
+    const { start: startOffset, end: endOffset } = rebasedProposalRange;
+    const content = buffer.content;
+    const range: Range = {
+      start: { ...calculateCursorPositionFromContent(startOffset, content), offset: startOffset },
+      end: { ...calculateCursorPositionFromContent(endOffset, content), offset: endOffset },
+    };
+    const newContent = `${content.slice(0, startOffset)}${editedText}${content.slice(endOffset)}`;
+    const newCursorOffset = startOffset + editedText.length;
+    const newPosition = calculateCursorPositionFromContent(newCursorOffset, newContent);
+
+    setInlineEditProposal(null);
+    if (applyInlineEdit) {
+      applyInlineEdit({ range, editedText, newContent, newCursorOffset, newPosition });
+    } else {
+      updateBufferContent?.(buffer.id, newContent, true);
+    }
+
+    setCursorPosition(newPosition);
+    setSelection(undefined);
+    setInlineEditSelectionAnchor(null);
+    inlineEditToolbarActions.hide();
+    if (inputRef?.current) {
+      inputRef.current.selectionStart = newCursorOffset;
+      inputRef.current.selectionEnd = newCursorOffset;
+    }
+  }, [
+    applyInlineEdit,
+    buffer,
+    inlineEditProposal,
+    inlineEditToolbarActions,
+    inlineEditVisible,
+    inputRef,
+    rebasedProposalRange,
+    setCursorPosition,
+    setInlineEditError,
+    setInlineEditProposal,
+    setInlineEditSelectionAnchor,
+    setSelection,
+    updateBufferContent,
+  ]);
+
+  const handleRejectInlineEdit = useCallback(() => {
+    cancelInlineEditRequest();
+    setInlineEditProposal(null);
+    inlineEditToolbarActions.hide();
+  }, [cancelInlineEditRequest, inlineEditToolbarActions, setInlineEditProposal]);
+
+  /** Escape: stop a running request first, then discard the proposal and close. */
+  const handleEscapeInlineEdit = useCallback(() => {
+    if (cancelInlineEditRequest()) return;
+    handleRejectInlineEdit();
+  }, [cancelInlineEditRequest, handleRejectInlineEdit]);
+
+  const popoverAnchor = (() => {
     if (!enabled) return null;
     if (!inlineEditVisible || !inlineEditSelectionAnchor) return null;
     if (inlineEditSelectionAnchor.line < 0 || inlineEditSelectionAnchor.line >= lines.length) {
@@ -513,44 +788,20 @@ export function useInlineEdit({
       viewportMetrics?.scrollLeft ?? textarea?.scrollLeft ?? lastScrollRef.current.left;
     const scrollTop =
       viewportMetrics?.scrollTop ?? textarea?.scrollTop ?? lastScrollRef.current.top;
-    const viewportWidth =
-      viewportMetrics?.viewportWidth ??
-      textarea?.clientWidth ??
-      INLINE_EDIT_POPOVER_WIDTH + INLINE_EDIT_POPOVER_MARGIN * 2;
-    const viewportHeight =
-      viewportMetrics?.viewportHeight ??
-      textarea?.clientHeight ??
-      INLINE_EDIT_POPOVER_ESTIMATED_HEIGHT + INLINE_EDIT_POPOVER_MARGIN * 2;
+    const viewportWidth = viewportMetrics?.viewportWidth ?? textarea?.clientWidth;
 
-    const minLeft = scrollLeft + INLINE_EDIT_POPOVER_MARGIN;
-    const maxLeft = Math.max(
-      minLeft,
-      scrollLeft + viewportWidth - INLINE_EDIT_POPOVER_WIDTH - INLINE_EDIT_POPOVER_MARGIN,
-    );
-    const rawLeft = anchorX + EDITOR_CONSTANTS.EDITOR_PADDING_LEFT + INLINE_EDIT_POPOVER_X_OFFSET;
-    const clampedLeft = Math.min(Math.max(rawLeft, minLeft), maxLeft);
-
-    const minTop = scrollTop + INLINE_EDIT_POPOVER_MARGIN;
-    const maxTop = Math.max(
-      minTop,
-      scrollTop +
-        viewportHeight -
-        INLINE_EDIT_POPOVER_ESTIMATED_HEIGHT -
-        INLINE_EDIT_POPOVER_MARGIN,
-    );
-    const preferBelow = anchorTop - scrollTop < INLINE_EDIT_TOP_THRESHOLD;
-    const belowTop = anchorTop + lineHeight + INLINE_EDIT_POPOVER_Y_OFFSET;
-    const aboveTop =
-      anchorTop - INLINE_EDIT_POPOVER_ESTIMATED_HEIGHT - INLINE_EDIT_POPOVER_Y_OFFSET;
-    let top = preferBelow ? belowTop : aboveTop;
-    if (top < minTop) {
-      top = belowTop;
-    }
-    const clampedTop = Math.min(Math.max(top, minTop), maxTop);
+    const rawLeft = anchorX + EDITOR_CONSTANTS.EDITOR_PADDING_LEFT;
+    const left =
+      viewportWidth === undefined
+        ? rawLeft
+        : Math.min(Math.max(rawLeft, scrollLeft), scrollLeft + viewportWidth);
 
     return {
-      top: clampedTop,
-      left: clampedLeft,
+      top: anchorTop,
+      left,
+      height: lineHeight,
+      side:
+        anchorTop - scrollTop < INLINE_EDIT_TOP_THRESHOLD ? ("bottom" as const) : ("top" as const),
     };
   })();
 
@@ -568,10 +819,15 @@ export function useInlineEdit({
     inlineEditPopoverRef,
     inlineEditInstructionRef,
     inlineEditToolbarActions,
+    inlineEditProposal,
+    inlineEditProposalConflict,
     aiProviderId,
     aiModelId,
     updateSetting,
-    handleApplyInlineEdit,
-    popoverPosition,
+    handleSubmitInlineEdit,
+    handleAcceptInlineEdit,
+    handleRejectInlineEdit,
+    handleEscapeInlineEdit,
+    popoverAnchor,
   };
 }

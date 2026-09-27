@@ -4,6 +4,7 @@ import type { Chat } from "@/features/ai/types/ai-chat.types";
 const state = vi.hoisted(() => ({
   effect: undefined as (() => (() => void) | undefined) | undefined,
   chats: [] as Chat[],
+  userId: 1,
   loadAll: vi.fn(),
   loadChat: vi.fn(),
   options: vi.fn(),
@@ -17,7 +18,9 @@ vi.mock("react", () => ({
 }));
 vi.mock("@/features/window/services/auth-api", () => ({ getAuthToken: async () => "token" }));
 vi.mock("@/features/window/stores/auth.store", () => ({
-  useAuthStore: Object.assign(() => 1, { getState: () => ({ user: { id: 1 } }) }),
+  useAuthStore: Object.assign(() => state.userId, {
+    getState: () => ({ user: { id: state.userId } }),
+  }),
 }));
 vi.mock("@/features/ai/stores/ai-chat.store", () => ({
   useAIChatStore: { getState: () => ({ chats: state.chats }) },
@@ -30,11 +33,24 @@ vi.mock("@/features/ai/services/ai-chat-history-service", () => ({
   loadAllChatsFromDb: state.loadAll,
   loadChatFromDb: state.loadChat,
 }));
-vi.mock("../services/share-api", () => ({
-  fetchShareOptions: state.options,
-  shareRequest: state.request,
-  updateShare: vi.fn(),
-}));
+vi.mock("../services/share-api", () => {
+  class ShareRequestError extends Error {
+    status: number;
+    constructor(message: string, status: number) {
+      super(message);
+      this.status = status;
+    }
+  }
+  return {
+    ShareRequestError,
+    isRejectedShareRequest: (error: unknown) =>
+      error instanceof ShareRequestError && (error.status === 400 || error.status === 413),
+    fetchShareOptions: state.options,
+    shareRequest: state.request,
+    updateShare: vi.fn(),
+  };
+});
+import { ShareRequestError } from "../services/share-api";
 vi.mock("../services/share-device", () => ({ getShareDeviceId: () => "device" }));
 import { SharingRuntime } from "../components/sharing-runtime";
 
@@ -53,12 +69,14 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.stubGlobal("window", { dispatchEvent: state.dispatch });
   state.chats = [];
+  state.userId = 1;
   state.options.mockResolvedValue({ sessionsEnabled: true, items: [], excludedSources: [] });
   state.request.mockResolvedValue({ id: "cloud", revision: 1 });
 });
 afterEach(() => {
   cleanup?.();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 async function sync() {
   SharingRuntime();
@@ -95,6 +113,46 @@ describe("private session sync", () => {
     expect(state.request).toHaveBeenCalledTimes(2);
     expect(state.dispatch.mock.calls[0][0].detail.error).toBe("Failed upload");
   });
+  it("sends a trimmed title and a fallback when the session has none", async () => {
+    state.chats = [
+      { ...chat("long", 300), title: ` ${"x".repeat(400)} ` },
+      { ...chat("blank", 200), title: "   " },
+    ];
+    state.loadAll.mockResolvedValue([]);
+    await sync();
+    const titles = state.request.mock.calls.map((call) => JSON.parse(call[1].body).title);
+    expect(titles[0]).toHaveLength(200);
+    expect(titles[1]).toBe("Untitled session");
+  });
+  it("stops retrying a rejected session until its content changes", async () => {
+    let scheduled: (() => void) | undefined;
+    vi.spyOn(globalThis, "setTimeout").mockImplementation(((callback: () => void) => {
+      scheduled = callback;
+      return 0;
+    }) as typeof setTimeout);
+    state.chats = [chat("bad", 300)];
+    state.loadAll.mockResolvedValue([]);
+    state.request.mockRejectedValueOnce(new ShareRequestError("Invalid session", 400));
+    await sync();
+    expect(state.request).toHaveBeenCalledTimes(1);
+    expect(state.dispatch.mock.calls[0][0].detail.error).toBe("Invalid session");
+
+    scheduled?.();
+    await vi.waitFor(() => expect(state.dispatch).toHaveBeenCalledTimes(2));
+    expect(state.request).toHaveBeenCalledTimes(1);
+
+    state.chats = [
+      {
+        ...chat("bad", 400),
+        messages: [
+          { id: "bad-message", role: "user", content: "Edited", timestamp: new Date(400) },
+        ],
+      },
+    ];
+    scheduled?.();
+    await vi.waitFor(() => expect(state.dispatch).toHaveBeenCalledTimes(3));
+    expect(state.request).toHaveBeenCalledTimes(2);
+  });
   it("does not read or upload history when sync is disabled", async () => {
     state.options.mockResolvedValue({ sessionsEnabled: false, items: [], excludedSources: [] });
     await sync();
@@ -112,4 +170,23 @@ describe("private session sync", () => {
     await sync();
     expect(state.request).not.toHaveBeenCalled();
   });
+  it.each(["unmount", "account change"])(
+    "ignores a late sync completion after %s",
+    async (change) => {
+      const request = Promise.withResolvers<{ id: string; revision: number }>();
+      state.chats = [chat("active", 300)];
+      state.loadAll.mockResolvedValue([]);
+      state.request.mockReturnValueOnce(request.promise);
+      SharingRuntime();
+      cleanup = state.effect?.();
+      await vi.waitFor(() => expect(state.request).toHaveBeenCalledTimes(1));
+      const schedule = vi.spyOn(globalThis, "setTimeout");
+      if (change === "unmount") cleanup?.();
+      else state.userId = 2;
+      request.resolve({ id: "cloud", revision: 1 });
+      await request.promise;
+      expect(state.dispatch).not.toHaveBeenCalled();
+      expect(schedule).not.toHaveBeenCalled();
+    },
+  );
 });

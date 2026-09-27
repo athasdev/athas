@@ -1,5 +1,5 @@
 import type React from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { cn } from "@/utils/cn";
 import {
@@ -33,8 +33,25 @@ export function ResizablePane({
 }: ResizablePaneProps) {
   const storedWidth = useSettingsStore((state) => state.settings[widthKey]);
   const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
-  const [width, setWidth] = useState(Math.max(storedWidth, MIN_RESPONSIVE_PANE_WIDTH));
+  const [width, setWidth] = useState(() =>
+    Math.round(
+      clampResponsivePaneWidth({
+        value: Math.max(storedWidth, MIN_RESPONSIVE_PANE_WIDTH),
+        minWidth: MIN_SIDEBAR_WIDTH,
+        viewportWidth: typeof window !== "undefined" ? window.innerWidth : 1280,
+        reservedWidth,
+      }),
+    ),
+  );
   const [isResizing, setIsResizing] = useState(false);
+  // Width only animates when the pane is shown or hidden. Settings loading, a project switch or a
+  // window resize change it instantly, since an animated width re-lays out the editor every frame.
+  const [previousHidden, setPreviousHidden] = useState(hidden);
+  const [isTogglingVisibility, setIsTogglingVisibility] = useState(false);
+  if (previousHidden !== hidden) {
+    setPreviousHidden(hidden);
+    setIsTogglingVisibility(true);
+  }
   const paneRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -48,21 +65,29 @@ export function ResizablePane({
 
   const clampWidth = useCallback(
     (value: number) => {
-      return clampResponsivePaneWidth({
-        value,
-        minWidth: getMinWidth(),
-        viewportWidth: getViewportWidth(),
-        reservedWidth,
-      });
+      // Whole pixels only: a fractional pane edge puts everything to its right on
+      // a half pixel, and WebKit snaps that by 1px whenever a layer repaints.
+      return Math.round(
+        clampResponsivePaneWidth({
+          value,
+          minWidth: getMinWidth(),
+          viewportWidth: getViewportWidth(),
+          reservedWidth,
+        }),
+      );
     },
     [getMinWidth, reservedWidth],
   );
 
-  useEffect(() => {
-    const nextWidth = clampWidth(storedWidth);
-
-    setWidth(nextWidth);
+  useLayoutEffect(() => {
+    setWidth(clampWidth(storedWidth));
   }, [storedWidth, clampWidth]);
+
+  useEffect(() => {
+    if (!isTogglingVisibility) return;
+    const timeoutId = window.setTimeout(() => setIsTogglingVisibility(false), 250);
+    return () => window.clearTimeout(timeoutId);
+  }, [isTogglingVisibility]);
 
   useEffect(() => {
     const handleWindowResize = () => {
@@ -134,7 +159,7 @@ export function ResizablePane({
       }
       className={cn(
         "group absolute top-0 z-30 flex h-full w-workbench cursor-col-resize items-center justify-center",
-        "transition-colors duration-fast ease-smooth hover:bg-primary/8",
+        "transition-colors duration-fast ease-smooth hover:bg-primary-soft",
       )}
       role="separator"
       aria-orientation="vertical"
@@ -159,6 +184,9 @@ export function ResizablePane({
       style={{ width: totalWidth }}
       className={cn(
         "athas-resizable-pane relative flex h-full min-w-0 shrink-0 overflow-visible bg-transparent",
+        isTogglingVisibility &&
+          !isResizing &&
+          "transition-[width] duration-fast ease-smooth motion-reduce:transition-none",
         hidden && "pointer-events-none",
         className,
       )}
@@ -169,11 +197,16 @@ export function ResizablePane({
       <div
         ref={contentRef}
         style={{ width: hidden ? "0px" : `${width}px` }}
-        className="flex min-h-0 shrink-0 flex-col overflow-hidden py-0"
+        className={cn(
+          "flex min-h-0 shrink-0 flex-col overflow-hidden py-0",
+          isTogglingVisibility &&
+            !isResizing &&
+            "transition-[width] duration-fast ease-smooth motion-reduce:transition-none",
+        )}
       >
         <div
           className={cn(
-            "athas-glass-island flex min-h-0 flex-1 flex-col overflow-hidden border-border/70 border-y bg-background",
+            "athas-glass-island flex min-h-0 flex-1 flex-col overflow-hidden border-border border-y bg-background",
             position === "left" && "border-l border-r",
             position === "right" && "border-r",
             !hidden && position === "left" && "rounded-l-xl",

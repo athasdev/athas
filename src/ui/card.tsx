@@ -7,17 +7,23 @@ const cardVariants = cva(
   {
     variants: {
       variant: {
-        default: "border border-border/70 bg-surface/45",
-        ghost: "bg-transparent",
-        muted: "bg-surface/55",
-        outline: "border border-border/70 bg-transparent",
-        elevated: "bg-surface/65 shadow-(--shadow-card)",
+        /** A surface-plane panel with a hairline edge, so it reads on either plane. */
+        default: "border border-border bg-surface",
+        /** Edge only, for grouping content that stays on the current plane. */
+        outline: "border border-border bg-transparent",
+        /** A `default` card that responds to hover and focus. */
         interactive:
-          "border border-border/70 bg-surface/45 cursor-default transition-colors hover:bg-accent/60 active:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+          "border border-border bg-surface cursor-default transition-colors duration-fast hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus",
+      },
+      tone: {
+        default: "",
+        /** Tinted with the primary colour, for a callout or a plan. */
+        accent: "border-primary bg-primary-soft",
       },
     },
     defaultVariants: {
       variant: "default",
+      tone: "default",
     },
   },
 );
@@ -25,13 +31,15 @@ const cardVariants = cva(
 function Card({
   className,
   variant = "default",
+  tone = "default",
   ...props
 }: ComponentProps<"div"> & VariantProps<typeof cardVariants>) {
   return (
     <div
       data-slot="card"
       data-variant={variant}
-      className={cn(cardVariants({ variant }), className)}
+      data-tone={tone}
+      className={cn(cardVariants({ variant, tone }), className)}
       {...props}
     />
   );
@@ -64,7 +72,7 @@ function CardDescription({ className, ...props }: ComponentProps<"div">) {
   return (
     <div
       data-slot="card-description"
-      className={cn("leading-normal text-subtle-foreground", className)}
+      className={cn("leading-normal text-muted-foreground", className)}
       {...props}
     />
   );
@@ -88,10 +96,7 @@ function CardFooter({ className, ...props }: ComponentProps<"div">) {
   return (
     <div
       data-slot="card-footer"
-      className={cn(
-        "flex items-center border-border/70 border-t bg-surface/55 px-3 pt-3",
-        className,
-      )}
+      className={cn("flex items-center border-border border-t px-3 pt-3", className)}
       {...props}
     />
   );

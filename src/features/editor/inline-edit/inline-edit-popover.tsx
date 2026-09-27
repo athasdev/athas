@@ -1,8 +1,11 @@
-import { ArrowCornerDownLeftIcon, XIcon } from "@/ui/icons";
-import { forwardRef } from "react";
+import { isComposingKeyboardEvent } from "@/features/keymaps/utils/is-composing-keyboard-event";
+import { ArrowCornerDownLeftIcon, CheckIcon, XIcon } from "@/ui/icons";
+import { type KeyboardEvent, useRef } from "react";
 import { Alert, AlertDescription } from "@/ui/alert";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
+import { Popover, PopoverListContent } from "@/ui/popover";
+import { Spinner } from "@/ui/spinner";
 import type { Range } from "@/features/editor/types/editor.types";
 import type { useInlineEdit } from "./use-inline-edit";
 import { InlineEditModelSelector } from "./inline-edit-model-selector";
@@ -12,32 +15,68 @@ type InlineEditState = ReturnType<typeof useInlineEdit>;
 interface InlineEditPopoverProps {
   state: InlineEditState;
   selection?: Range;
-  zoneTop?: number;
 }
 
-export const InlineEditPopover = forwardRef<HTMLDivElement, InlineEditPopoverProps>(
-  function InlineEditPopover({ state, selection, zoneTop }, ref) {
-    if (!state.inlineEditVisible || !state.popoverPosition) return null;
+export function InlineEditPopover({ state, selection }: InlineEditPopoverProps) {
+  const anchorRef = useRef<HTMLSpanElement>(null);
+  if (!state.inlineEditVisible || !state.popoverAnchor) return null;
 
-    return (
-      <div ref={ref} className="pointer-events-none absolute inset-0 z-200">
-        <div
+  const proposal = state.inlineEditProposal;
+  const running = state.isInlineEditRunning;
+  const canAccept = Boolean(proposal) && !state.inlineEditProposalConflict && !running;
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+    if (event.defaultPrevented) return;
+    if (isComposingKeyboardEvent(event.nativeEvent)) {
+      event.stopPropagation();
+      return;
+    }
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      state.handleEscapeInlineEdit();
+      return;
+    }
+    if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+      event.preventDefault();
+      event.stopPropagation();
+      if (canAccept) state.handleAcceptInlineEdit();
+      return;
+    }
+    if (event.target instanceof HTMLInputElement) event.stopPropagation();
+  };
+
+  return (
+    <>
+      <span
+        ref={anchorRef}
+        aria-hidden
+        className="pointer-events-none absolute w-px opacity-0"
+        style={{
+          top: state.popoverAnchor.top,
+          left: state.popoverAnchor.left,
+          height: state.popoverAnchor.height,
+        }}
+      />
+      <Popover open modal={false}>
+        <PopoverListContent
           ref={state.inlineEditPopoverRef}
-          role="dialog"
-          aria-modal="false"
+          anchor={anchorRef}
+          side={state.popoverAnchor.side}
+          align="start"
+          size="panel"
+          initialFocus={state.inlineEditInstructionRef}
+          finalFocus={false}
           aria-labelledby="inline-edit-title"
           aria-describedby="inline-edit-description"
-          className="pointer-events-auto absolute overflow-hidden rounded-md border border-border/70 bg-background shadow-(--shadow-popover)"
-          style={{
-            top: `${zoneTop ?? state.popoverPosition.top}px`,
-            left: `${state.popoverPosition.left}px`,
-            width: "min(380px, calc(100% - 16px))",
-          }}
+          onKeyDown={handleKeyDown}
         >
           <div className="sr-only">
             <div id="inline-edit-title">Inline edit</div>
             <div id="inline-edit-description">
-              Describe the code change, then press Enter to apply or Escape to close.
+              {proposal
+                ? "Review the proposed change. Press Command or Control Enter to accept, Escape to reject, or type a follow-up and press Enter to refine it."
+                : "Describe the code change, then press Enter to preview it or Escape to close."}
             </div>
           </div>
           <div className="flex items-center gap-1.5 px-2 py-1.5">
@@ -53,6 +92,11 @@ export const InlineEditPopover = forwardRef<HTMLDivElement, InlineEditPopoverPro
                 }
               }}
               onKeyDown={(event) => {
+                if (event.defaultPrevented) return;
+                if (isComposingKeyboardEvent(event.nativeEvent)) {
+                  event.stopPropagation();
+                  return;
+                }
                 if (
                   (event.metaKey || event.ctrlKey) &&
                   !event.altKey &&
@@ -63,24 +107,14 @@ export const InlineEditPopover = forwardRef<HTMLDivElement, InlineEditPopoverPro
                   event.currentTarget.select();
                   return;
                 }
-                if (event.key === "Enter") {
+                if (event.key === "Enter" && !event.metaKey && !event.ctrlKey) {
                   event.preventDefault();
                   event.stopPropagation();
-                  void state.handleApplyInlineEdit();
-                  return;
+                  void state.handleSubmitInlineEdit();
                 }
-                if (event.key === "Escape") {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  if (!state.isInlineEditRunning) {
-                    state.inlineEditToolbarActions.hide();
-                  }
-                  return;
-                }
-                event.stopPropagation();
               }}
               variant="ghost"
-              aria-label="Inline edit instruction"
+              aria-label={proposal ? "Refine the proposed edit" : "Inline edit instruction"}
               aria-describedby={
                 state.inlineEditError
                   ? "inline-edit-description inline-edit-error"
@@ -88,9 +122,11 @@ export const InlineEditPopover = forwardRef<HTMLDivElement, InlineEditPopoverPro
               }
               aria-invalid={state.inlineEditError ? true : undefined}
               placeholder={
-                selection && selection.start.offset !== selection.end.offset
-                  ? "Edit selection..."
-                  : "Edit current line..."
+                proposal
+                  ? "Refine, e.g. make it shorter..."
+                  : selection && selection.start.offset !== selection.end.offset
+                    ? "Edit selection..."
+                    : "Edit current line..."
               }
             />
             <div className="min-w-0 shrink-0">
@@ -99,33 +135,74 @@ export const InlineEditPopover = forwardRef<HTMLDivElement, InlineEditPopoverPro
                 modelId={state.aiModelId}
                 onProviderChange={(providerId) => state.updateSetting("aiProviderId", providerId)}
                 onModelChange={(modelId) => state.updateSetting("aiModelId", modelId)}
-                disabled={state.isInlineEditRunning}
+                disabled={running}
               />
             </div>
-            <Button
-              type="button"
-              variant="ghost"
-              iconOnly
-              onClick={() => void state.handleApplyInlineEdit()}
-              disabled={state.isInlineEditRunning}
-              tone="primary"
-              aria-label={state.isInlineEditRunning ? "Applying inline edit" : "Apply inline edit"}
-              tooltip="Apply inline edit"
-              shortcut="enter"
-            >
-              <ArrowCornerDownLeftIcon />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              iconOnly
-              onClick={() => state.inlineEditToolbarActions.hide()}
-              tooltip="Close inline edit"
-              shortcut="escape"
-            >
-              <XIcon />
-            </Button>
+            {running ? (
+              <Button
+                type="button"
+                variant="ghost"
+                iconOnly
+                onClick={() => state.handleEscapeInlineEdit()}
+                tooltip="Stop inline edit"
+                shortcut="escape"
+              >
+                <Spinner label="Generating edit" compact />
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="ghost"
+                iconOnly
+                onClick={() => void state.handleSubmitInlineEdit()}
+                disabled={Boolean(proposal) && !state.inlineEditInstruction.trim()}
+                tone="accent"
+                tooltip={proposal ? "Refine proposed edit" : "Preview inline edit"}
+                shortcut="enter"
+              >
+                <ArrowCornerDownLeftIcon />
+              </Button>
+            )}
+            {proposal ? null : (
+              <Button
+                type="button"
+                variant="ghost"
+                iconOnly
+                onClick={() => state.handleRejectInlineEdit()}
+                tooltip="Close inline edit"
+                shortcut="escape"
+              >
+                <XIcon />
+              </Button>
+            )}
           </div>
+          {proposal ? (
+            <div className="flex items-center justify-end gap-1.5 px-2 pb-1.5">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => state.handleRejectInlineEdit()}
+                tooltip="Reject proposed edit"
+                shortcut="escape"
+              >
+                <XIcon />
+                Reject
+              </Button>
+              <Button
+                type="button"
+                variant="accent"
+                size="sm"
+                onClick={() => state.handleAcceptInlineEdit()}
+                disabled={!canAccept}
+                tooltip="Accept proposed edit"
+                shortcut="mod+enter"
+              >
+                <CheckIcon />
+                Accept
+              </Button>
+            </div>
+          ) : null}
           {state.inlineEditError && (
             <Alert
               id="inline-edit-error"
@@ -136,8 +213,8 @@ export const InlineEditPopover = forwardRef<HTMLDivElement, InlineEditPopoverPro
               <AlertDescription>{state.inlineEditError}</AlertDescription>
             </Alert>
           )}
-        </div>
-      </div>
-    );
-  },
-);
+        </PopoverListContent>
+      </Popover>
+    </>
+  );
+}

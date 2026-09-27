@@ -8,9 +8,6 @@ import {
   createKnownGitHubView,
 } from "@/features/views/services/view-generator";
 import type { CustomViewDefinition, ViewLayout } from "@/features/views/types/view.types";
-import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { hasProductCapability } from "@/features/window/lib/product-capabilities";
-import { useAuthStore } from "@/features/window/stores/auth.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Checkbox } from "@/ui/checkbox";
@@ -37,10 +34,6 @@ function isGitHubApiUrl(value: string): boolean {
 }
 
 export function ViewSetup({ projectPath, view, onCancel, onSave }: ViewSetupProps) {
-  const subscription = useAuthStore((state) => state.subscription);
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const aiAutocompleteModelId = useSettingsStore((state) => state.settings.aiAutocompleteModelId);
-  const hasIntelligence = hasProductCapability(subscription, "intelligence");
   const [mode, setMode] = useState<"intelligence" | "manual">(view ? "manual" : "intelligence");
   const [request, setRequest] = useState("");
   const [repository, setRepository] = useState<GitHubRepository | null>(null);
@@ -102,16 +95,13 @@ export function ViewSetup({ projectPath, view, onCancel, onSave }: ViewSetupProp
       let generatedView: CustomViewDefinition | null = null;
       let intelligenceError: unknown = null;
 
-      if (isAuthenticated && hasIntelligence) {
-        try {
-          generatedView = await generateCustomView({
-            request: trimmedRequest,
-            repository,
-            model: aiAutocompleteModelId,
-          });
-        } catch (nextError) {
-          intelligenceError = nextError;
-        }
+      try {
+        generatedView = await generateCustomView({
+          request: trimmedRequest,
+          repository,
+        });
+      } catch (nextError) {
+        intelligenceError = nextError;
       }
 
       generatedView ??= createKnownGitHubView(trimmedRequest);
@@ -183,7 +173,7 @@ export function ViewSetup({ projectPath, view, onCancel, onSave }: ViewSetupProp
     >
       <div className="mb-7 space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <Badge variant="muted">
+          <Badge>
             <SparkleIcon />
             Athas Intelligence
           </Badge>
@@ -235,18 +225,16 @@ export function ViewSetup({ projectPath, view, onCancel, onSave }: ViewSetupProp
               No GitHub remote was found for this project.
             </p>
           ) : null}
-          {!hasIntelligence ? (
-            <p className="font-sans ui-text-sm text-subtle-foreground">
-              Common GitHub views are generated automatically. Athas Pro Intelligence handles custom
-              requests.
-            </p>
-          ) : null}
+          <p className="font-sans ui-text-sm text-subtle-foreground">
+            Use Athas Intelligence or your own provider for custom requests. Common GitHub views
+            also work without AI.
+          </p>
           {error ? (
             <p role="alert" className="font-sans ui-text-sm text-destructive">
               {error}
             </p>
           ) : null}
-          <div className="flex items-center justify-between gap-3 border-border/60 border-t pt-4">
+          <div className="flex items-center justify-between gap-3 border-border border-t pt-4">
             <Button
               type="button"
               variant="ghost"
@@ -354,7 +342,7 @@ export function ViewSetup({ projectPath, view, onCancel, onSave }: ViewSetupProp
               {error}
             </p>
           ) : null}
-          <div className="flex items-center justify-between gap-3 border-border/60 border-t pt-4">
+          <div className="flex items-center justify-between gap-3 border-border border-t pt-4">
             {!view ? (
               <Button
                 type="button"

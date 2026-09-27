@@ -6,12 +6,11 @@ import Textarea from "@/ui/textarea";
 import { cn } from "@/utils/cn";
 
 const inputGroupVariants = cva(
-  "group/input-group relative flex min-h-7 w-full min-w-0 items-center rounded-chrome bg-surface text-foreground outline-none transition-colors has-disabled:opacity-50 has-[[data-slot=input-group-control]:focus-visible]:ring-1 has-[[data-slot=input-group-control]:focus-visible]:ring-border-strong/35 has-[[data-slot][aria-invalid=true]]:border-destructive has-[>[data-align=block-end]]:h-auto has-[>[data-align=block-end]]:flex-col has-[>[data-align=block-start]]:h-auto has-[>[data-align=block-start]]:flex-col has-[>textarea]:h-auto",
+  "group/input-group relative flex min-h-7 w-full min-w-0 items-center rounded-md bg-surface text-foreground outline-none transition-[border-color,box-shadow] duration-fast has-disabled:opacity-50 has-[[data-slot=input-group-control]:focus]:ring-2 has-[[data-slot=input-group-control]:focus]:ring-focus has-[[data-slot][aria-invalid=true]]:border-destructive has-[>[data-align=block-end]]:h-auto has-[>[data-align=block-end]]:flex-col has-[>[data-align=block-start]]:h-auto has-[>[data-align=block-start]]:flex-col has-[>textarea]:h-auto",
   {
     variants: {
       variant: {
-        default:
-          "border border-border has-[[data-slot=input-group-control]:focus-visible]:border-border-strong",
+        default: "border border-border has-[[data-slot=input-group-control]:focus]:border-primary",
         surface: "border-0",
       },
     },
@@ -38,7 +37,7 @@ function InputGroup({
 }
 
 const inputGroupAddonVariants = cva(
-  "flex h-auto cursor-text select-none items-center justify-center gap-2 py-1 font-sans ui-text-sm font-medium text-subtle-foreground group-data-[disabled=true]/input-group:opacity-50 [&>svg:not([class*='size-'])]:size-3.5",
+  "flex h-auto cursor-text select-none items-center justify-center gap-2 py-1 font-sans ui-text-sm font-medium text-muted-foreground group-data-[disabled=true]/input-group:opacity-50 [&>svg:not([class*='size-'])]:size-3.5",
   {
     variants: {
       align: {
@@ -86,14 +85,14 @@ function InputGroupButton({
   style?: never;
   type?: "button" | "submit" | "reset";
 }) {
-  return <Button type={type} variant={variant} iconOnly={iconOnly} size="compact" {...props} />;
+  return <Button type={type} variant={variant} iconOnly={iconOnly} size="xs" {...props} />;
 }
 
 function InputGroupText({ className, ...props }: ComponentProps<"span">) {
   return (
     <span
       className={cn(
-        "flex items-center gap-2 font-sans ui-text-sm text-subtle-foreground [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-3.5",
+        "flex items-center gap-2 font-sans ui-text-sm text-muted-foreground [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-3.5",
         className,
       )}
       {...props}
@@ -103,7 +102,7 @@ function InputGroupText({ className, ...props }: ComponentProps<"span">) {
 
 const InputGroupInput = forwardRef<HTMLInputElement, InputProps>(
   function InputGroupInput(props, ref) {
-    return <Input {...props} ref={ref} data-slot="input-group-control" variant="group" grow />;
+    return <Input {...props} ref={ref} data-slot="input-group-control" variant="ghost" grow />;
   },
 );
 
@@ -114,10 +113,8 @@ const InputGroupTextarea = forwardRef<HTMLTextAreaElement, ComponentProps<"texta
         ref={ref}
         data-slot="input-group-control"
         variant="ghost"
-        className={cn(
-          "min-w-0 flex-1 resize-none rounded-none border-0 bg-transparent shadow-none ring-0 focus-visible:ring-0",
-          className,
-        )}
+        resize="none"
+        className={cn("flex-1", className)}
         {...props}
       />
     );

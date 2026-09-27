@@ -7,6 +7,7 @@ import type { ImageFormat } from "../types/image-operation.types";
 import { convertImageFormat } from "../utils/image-conversion";
 import { formatFileSize } from "@/utils/format-file-size";
 import { getDataURLSize } from "../utils/image-file-utils";
+import { SidebarListItem } from "@/ui/sidebar";
 
 interface ImageFormatDialogProps {
   isOpen: boolean;
@@ -159,23 +160,16 @@ export function ImageFormatDialog({
           <div className="font-semibold text-foreground ui-text-sm">Quality Setting</div>
           <div className="flex flex-col gap-1">
             {config.options.map((option) => (
-              <Button
+              <SidebarListItem
                 key={option.quality}
-                type="button"
                 onClick={() => setSelectedQuality(option.quality)}
-                variant="choice"
                 active={selectedQuality === option.quality}
-                align="between"
                 aria-pressed={selectedQuality === option.quality}
+                description={option.quality === config.recommended ? "Recommended" : undefined}
+                trailing={`${Math.round(option.quality * 100)}%`}
               >
-                <span>
-                  {option.label}
-                  {option.quality === config.recommended && (
-                    <span className="ml-2 ui-text-sm text-primary">★ RECOMMENDED</span>
-                  )}
-                </span>
-                <span className="text-subtle-foreground">{Math.round(option.quality * 100)}%</span>
-              </Button>
+                {option.label}
+              </SidebarListItem>
             ))}
           </div>
         </div>

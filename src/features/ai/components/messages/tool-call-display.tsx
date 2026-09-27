@@ -1,7 +1,27 @@
-import { FileTextIcon, GitDiffIcon, TerminalWindowIcon } from "@/ui/icons";
+import {
+  ArrowsLeftRightIcon,
+  BrainIcon,
+  ChevronRightIcon,
+  CircleDottedIcon,
+  FileTextIcon,
+  GitDiffIcon,
+  GlobeIcon,
+  PencilLineIcon,
+  SearchIcon,
+  SlidersIcon,
+  TerminalIcon,
+  TerminalWindowIcon,
+  TrashIcon,
+  WarningCircleIcon,
+  WrenchIcon,
+  type Icon,
+} from "@/ui/icons";
+import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useShallow } from "zustand/react/shallow";
 import {
   createAcpDiffViewNode,
   getAcpDiffOutputs,
+  type AcpDiffOutput,
   openAcpDiffOutput,
   stripAcpDiffOutputs,
 } from "@/features/ai/lib/acp-diff-output";
@@ -11,411 +31,538 @@ import {
   stripStructuredToolViews,
 } from "@/features/ai/lib/structured-tool-view";
 import {
+  describeAcpTerminalExit,
+  formatAcpTerminalText,
   getAcpTerminalOutputs,
   openAcpTerminalOutput,
 } from "@/features/ai/lib/acp-terminal-output";
-import {
-  createAcpToolLocationTree,
-  OPEN_TOOL_LOCATION_COMMAND,
-} from "@/features/ai/lib/acp-tool-location-tree";
+import { useAcpTerminalsStore } from "@/features/ai/stores/acp-terminals.store";
+import { summarizeToolCall, type ToolCallSummary } from "@/features/ai/lib/tool-call-summary";
 import type { ToolCall } from "@/features/ai/types/ai-chat.types";
-import type {
-  AcpToolCallLocation,
-  AcpToolCallStatus,
-  AcpToolKind,
-} from "@/features/ai/types/acp.types";
-import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { readFileContent } from "@/features/file-system/controllers/file-operations";
-import { getFileDiff } from "@/features/git/api/git-diff-api";
+import type { AcpTerminalSnapshot, AcpToolKind } from "@/features/ai/types/acp.types";
+import {
+  describeExploration,
+  groupToolCalls,
+  type ToolCallListItem,
+} from "@/features/ai/lib/tool-call-groups";
+import { openToolPath } from "@/features/ai/lib/open-tool-location";
+import { ToolLocations } from "./tool-locations";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { Button } from "@/ui/button";
+import { CodeOutput } from "@/ui/code-output";
+import { Shimmer } from "@/ui/shimmer";
 import { GenerativeUIRenderer } from "@/extensions/ui/components/generative-ui-renderer";
 import { ExtensionViewRenderer } from "@/extensions/ui/components/extension-view-renderer";
-import { getBaseName, joinPath } from "@/utils/path-helpers";
-import { ChatActivityLine } from "../chat/chat-activity-line";
+import { cn } from "@/utils/cn";
 
-interface ToolCallDisplayProps {
-  toolName: string;
-  input?: unknown;
-  output?: unknown;
-  isStreaming?: boolean;
-  error?: string;
-  kind?: AcpToolKind;
-  status?: AcpToolCallStatus;
-  locations?: AcpToolCallLocation[];
-}
+const KIND_ICONS: Record<AcpToolKind, Icon> = {
+  read: FileTextIcon,
+  edit: PencilLineIcon,
+  delete: TrashIcon,
+  move: ArrowsLeftRightIcon,
+  search: SearchIcon,
+  execute: TerminalIcon,
+  think: BrainIcon,
+  fetch: GlobeIcon,
+  switch_mode: SlidersIcon,
+  other: WrenchIcon,
+};
 
-function getStatus(
-  isStreaming?: boolean,
-  error?: string,
-  protocolStatus?: AcpToolCallStatus,
-): "running" | "success" | "error" | "info" {
-  if (error || protocolStatus === "failed") return "error";
-  if (protocolStatus === "completed") return "success";
-  if (protocolStatus === "pending" || protocolStatus === "in_progress" || isStreaming) {
-    return "running";
-  }
-  return "success";
-}
-
-function getStatusLabel(status: ReturnType<typeof getStatus>, protocolStatus?: AcpToolCallStatus) {
-  if (status === "error") return "failed";
-  if (protocolStatus === "pending") return "pending";
-  if (status === "running") return "running";
-  return "completed";
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
 function formatValue(value: unknown): string {
   if (value === null || value === undefined) return "";
   if (typeof value === "string") return value;
-  return JSON.stringify(value, null, 2);
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object";
-}
-
-function getInputSummary(toolName: string, input: unknown): string | null {
-  if (!input || typeof input !== "object") return typeof input === "string" ? input : null;
-  const record = input as Record<string, unknown>;
-  const path =
-    typeof record.file_path === "string"
-      ? record.file_path
-      : typeof record.path === "string"
-        ? record.path
-        : null;
-  if (path) return path.split("/").pop() || path;
-  if (toolName.toLowerCase().includes("bash") && typeof record.command === "string") {
-    return record.command;
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value);
   }
-  return null;
 }
 
-function isAbsolutePath(path: string): boolean {
-  return path.startsWith("/") || /^[A-Za-z]:[\\/]/.test(path) || path.startsWith("remote://");
-}
-
-function resolveToolPath(
-  locations: AcpToolCallLocation[] | undefined,
-  input: unknown,
-): string | null {
-  const locationPath = locations?.[0]?.path;
-  if (locationPath) return locationPath;
-
-  if (!input || typeof input !== "object") return null;
-  const record = input as Record<string, unknown>;
-  const path =
-    typeof record.file_path === "string"
-      ? record.file_path
-      : typeof record.path === "string"
-        ? record.path
-        : typeof record.filename === "string"
-          ? record.filename
-          : null;
-
-  return path;
-}
-
-function resolveWorkspacePath(path: string): string {
-  if (isAbsolutePath(path)) return path;
-  const rootFolderPath = useProjectStore.getState().rootFolderPath;
-  return rootFolderPath ? joinPath(rootFolderPath, path) : path;
-}
-
-async function openToolPath(path: string) {
-  const resolvedPath = resolveWorkspacePath(path);
-  const content = await readFileContent(resolvedPath);
-  const bufferId = useBufferStore
-    .getState()
-    .actions.openBuffer(resolvedPath, getBaseName(resolvedPath), content);
-  useBufferStore.getState().actions.setActiveBuffer(bufferId);
-}
-
-async function openToolDiff(path: string, output: unknown) {
-  if (openAcpDiffOutput(output)) return;
-
-  const rootFolderPath = useProjectStore.getState().rootFolderPath;
-  const resolvedPath = resolveWorkspacePath(path);
-  const repoPath = rootFolderPath ?? resolvedPath;
-  const diff = await getFileDiff(repoPath, path);
-
-  if (diff) {
-    const displayName = `${getBaseName(diff.file_path)}.diff`;
-    useBufferStore
-      .getState()
-      .actions.openBuffer(
-        `diff://acp-tool-output/${Date.now()}`,
-        displayName,
-        "",
-        false,
-        undefined,
-        true,
-        true,
-        diff,
-      );
-    return;
-  }
-
-  const newText = await readFileContent(resolvedPath);
-  openAcpDiffOutput([{ type: "diff", path: resolvedPath, oldText: "", newText }]);
-}
-
-function getDiffItems(output: unknown) {
-  return getAcpDiffOutputs(output);
-}
-
-function getTerminalItems(output: unknown) {
-  return getAcpTerminalOutputs(output);
-}
-
-function getContentText(item: Record<string, unknown>): string {
-  if (item.type !== "content" || !isRecord(item.content)) return "";
-  if (item.content.type === "text" && typeof item.content.text === "string") {
-    return item.content.text;
-  }
-  return formatValue(item.content);
-}
-
-function formatDiffText(item: Record<string, unknown>): string {
-  const path = typeof item.path === "string" ? item.path : "file";
-  const oldText = typeof item.oldText === "string" ? item.oldText : "";
-  const newText = typeof item.newText === "string" ? item.newText : "";
-
-  return [`diff: ${path}`, "--- before", oldText, "+++ after", newText]
-    .filter((line) => line.length > 0)
-    .join("\n");
-}
-
-function getOutputSummary(output: unknown): string | null {
-  const diffItems = getDiffItems(output);
-  if (diffItems.length > 0) {
-    const file = getBaseName(diffItems[0].path);
-    return diffItems.length === 1 ? `changed ${file}` : `changed ${diffItems.length} files`;
-  }
-
-  const terminalItems = getTerminalItems(output);
-  if (terminalItems.length > 0) {
-    return terminalItems.length === 1 ? "terminal output" : `${terminalItems.length} terminals`;
-  }
-
-  if (getStructuredToolViews(output).length > 0) return "interactive result";
-
-  return null;
-}
-
+/** Text worth showing for a tool result once diffs and views are taken out. */
 function getOutputText(output: unknown): string {
-  if (isStructuredToolViewEnvelope(output)) return "";
+  if (output === undefined || output === null || isStructuredToolViewEnvelope(output)) return "";
+
+  if (isRecord(output)) {
+    // The built-in shell tool.
+    if (typeof output.stdout === "string" || typeof output.stderr === "string") {
+      const parts = [output.stdout, output.stderr].filter(
+        (part): part is string => typeof part === "string" && part.trim().length > 0,
+      );
+      if (output.timed_out === true) parts.push("(timed out)");
+      else if (typeof output.exit_code === "number" && output.exit_code !== 0) {
+        parts.push(`(exit code ${output.exit_code})`);
+      }
+      return parts.join("\n").trim();
+    }
+    // The built-in read tool.
+    if (typeof output.text === "string") return output.text;
+    if (typeof output.reason === "string") return output.reason;
+    return formatValue(output);
+  }
+
   if (!Array.isArray(output)) return formatValue(output);
 
   return output
     .map((item) => {
       if (isStructuredToolViewEnvelope(item)) return "";
       if (!isRecord(item)) return formatValue(item);
-      if (item.type === "content") return getContentText(item);
-      if (item.type === "diff") return formatDiffText(item);
-      if (item.type === "terminal" && typeof item.terminalId === "string") {
-        return `terminal: ${item.terminalId}`;
+      // ACP content blocks.
+      if (item.type === "content" && isRecord(item.content)) {
+        return item.content.type === "text" && typeof item.content.text === "string"
+          ? item.content.text
+          : formatValue(item.content);
+      }
+      if (item.type === "terminal") return "";
+      // The built-in search tool.
+      if (typeof item.path === "string" && typeof item.line === "number") {
+        return `${item.path}:${item.line}  ${typeof item.text === "string" ? item.text.trim() : ""}`;
       }
       return formatValue(item);
     })
     .filter(Boolean)
-    .join("\n\n");
+    .join("\n")
+    .trim();
 }
 
-function getToolCallDetail(
-  toolName: string,
-  input: unknown,
-  output: unknown,
-  state: ReturnType<typeof getStatus>,
-  protocolStatus?: AcpToolCallStatus,
-) {
-  const statusLabel = getStatusLabel(state, protocolStatus);
-  const inputSummary = getInputSummary(toolName, input);
-  const outputSummary = getOutputSummary(output);
-  const summary = outputSummary ?? inputSummary;
-  return summary ? `${statusLabel} - ${summary}` : statusLabel;
+/** Rows a diff shows inside the transcript before the user asks for the rest. */
+const DIFF_PREVIEW_ROWS = 16;
+
+function ToolDiff({
+  diff,
+  rootFolderPath,
+}: {
+  diff: AcpDiffOutput;
+  rootFolderPath?: string | null;
+}) {
+  const [showAll, setShowAll] = useState(false);
+  const node = useMemo(() => createAcpDiffViewNode(diff, rootFolderPath), [diff, rootFolderPath]);
+  const hiddenRows = showAll ? 0 : Math.max(0, node.lines.length - DIFF_PREVIEW_ROWS);
+  const preview = useMemo(
+    () => (hiddenRows > 0 ? { ...node, lines: node.lines.slice(0, DIFF_PREVIEW_ROWS) } : node),
+    [node, hiddenRows],
+  );
+
+  return (
+    <div className="flex min-w-0 flex-col items-start gap-1">
+      <ExtensionViewRenderer node={preview} execute={() => undefined} surface="embedded" />
+      {hiddenRows > 0 ? (
+        <Button type="button" variant="link" onClick={() => setShowAll(true)}>
+          Expand diff ({hiddenRows} more {hiddenRows === 1 ? "line" : "lines"})
+        </Button>
+      ) : null}
+    </div>
+  );
 }
 
-function getLatestToolSummary(toolCall: ToolCall, isStreaming?: boolean) {
-  const state = getStatus(isStreaming && !toolCall.isComplete, toolCall.error, toolCall.status);
-  return `${toolCall.name}: ${getToolCallDetail(
-    toolCall.name,
-    toolCall.input,
-    toolCall.output,
-    state,
-    toolCall.status,
-  )}`;
+/** A terminal's output inside its tool call, with how the command ended once it has. */
+function TerminalOutput({ terminal }: { terminal: AcpTerminalSnapshot }) {
+  const text = useMemo(() => formatAcpTerminalText(terminal.output).trimEnd(), [terminal.output]);
+  const status = describeAcpTerminalExit(terminal.exit);
+  const failed =
+    terminal.exit !== null && (terminal.exit.signal !== null || terminal.exit.exitCode !== 0);
+  return (
+    <div className="flex min-w-0 flex-col gap-1">
+      {text ? (
+        <CodeOutput tone="muted">{terminal.truncated ? `…\n${text}` : text}</CodeOutput>
+      ) : null}
+      {status ? (
+        <span className={cn("ui-text-sm", failed ? "text-destructive" : "text-subtle-foreground")}>
+          {status}
+        </span>
+      ) : null}
+    </div>
+  );
 }
 
-export function ToolCallGroupDisplay({
+function ToolCallStats({ summary }: { summary: ToolCallSummary }) {
+  if (summary.phase === "failed") {
+    return (
+      <span className="shrink-0 text-destructive">
+        failed
+        {summary.error ? <span className="text-destructive"> · {summary.error}</span> : null}
+      </span>
+    );
+  }
+  if (summary.phase === "declined" || summary.phase === "cancelled") {
+    return <span className="shrink-0 text-subtle-foreground">{summary.phase}</span>;
+  }
+  if (summary.additions > 0 || summary.deletions > 0) {
+    return (
+      <span className="shrink-0 tabular-nums">
+        {summary.additions > 0 ? (
+          <span className="text-git-added">+{summary.additions}</span>
+        ) : null}
+        {summary.additions > 0 && summary.deletions > 0 ? " " : null}
+        {summary.deletions > 0 ? (
+          <span className="text-git-deleted">−{summary.deletions}</span>
+        ) : null}
+      </span>
+    );
+  }
+  if (summary.count !== null && summary.phase === "done") {
+    return (
+      <span className="shrink-0 text-subtle-foreground tabular-nums">
+        {summary.count === 1 ? "1 result" : `${summary.count} results`}
+      </span>
+    );
+  }
+  return null;
+}
+
+const ToolCallRow = memo(function ToolCallRow({
+  toolCall,
+  isStreaming,
+  isLatestEdit = false,
+}: {
+  toolCall: ToolCall;
+  isStreaming?: boolean;
+  /** The newest edit of the latest reply opens on its own; earlier ones fold away. */
+  isLatestEdit?: boolean;
+}) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  // Keep the body mounted after its first reveal so collapsing can animate too.
+  const [hasOpened, setHasOpened] = useState(false);
+  const userToggled = useRef(false);
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
+  const summary = useMemo(
+    () => summarizeToolCall(toolCall, { isStreaming, rootFolderPath }),
+    [toolCall, isStreaming, rootFolderPath],
+  );
+
+  const output = stripStructuredToolViews(toolCall.output);
+  const structuredViews = getStructuredToolViews(toolCall.output);
+  const diffItems = useMemo(() => getAcpDiffOutputs(output), [output]);
+  const terminalItems = getAcpTerminalOutputs(output);
+  const liveTerminals = useAcpTerminalsStore(
+    useShallow((state) => terminalItems.map((item) => state.terminals[item.terminalId])),
+  );
+  const outputText = getOutputText(stripAcpDiffOutputs(output));
+  const showInput =
+    summary.kind === "other" || summary.kind === "think" || summary.kind === "switch_mode";
+  const inputText = showInput && toolCall.input ? formatValue(toolCall.input) : "";
+  const errorText = toolCall.error && toolCall.error !== summary.error ? toolCall.error : "";
+
+  const body: ReactNode[] = [];
+  if (errorText) {
+    body.push(
+      <CodeOutput key="error" tone="error">
+        {errorText}
+      </CodeOutput>,
+    );
+  }
+  diffItems.forEach((item, index) =>
+    body.push(
+      <ToolDiff key={`diff-${item.path}-${index}`} diff={item} rootFolderPath={rootFolderPath} />,
+    ),
+  );
+  if (inputText) {
+    body.push(
+      <CodeOutput key="input" tone="muted">
+        {inputText}
+      </CodeOutput>,
+    );
+  }
+  if (outputText) {
+    body.push(
+      <CodeOutput key="output" tone="muted">
+        {outputText}
+      </CodeOutput>,
+    );
+  }
+  terminalItems.forEach(({ terminalId }, index) => {
+    // Live while the command runs; what the call kept once the terminal is gone.
+    const terminal = liveTerminals[index] ?? toolCall.terminals?.[terminalId];
+    if (terminal && (terminal.output || terminal.exit)) {
+      body.push(<TerminalOutput key={`terminal-${terminalId}`} terminal={terminal} />);
+    }
+  });
+  if (toolCall.locations?.some((location) => location.path)) {
+    body.push(
+      <ToolLocations
+        key="locations"
+        locations={toolCall.locations}
+        rootFolderPath={rootFolderPath}
+      />,
+    );
+  }
+  structuredViews.forEach((view, index) =>
+    body.push(<GenerativeUIRenderer key={`ui-${index}`} component={view} />),
+  );
+
+  const canExpand = body.length > 0;
+  // The latest finished edit opens on its own and folds once a newer one lands, unless the user
+  // already chose.
+  const autoExpand = isLatestEdit && diffItems.length > 0;
+  useEffect(() => {
+    if (userToggled.current) return;
+    setIsExpanded(autoExpand);
+    if (autoExpand) setHasOpened(true);
+  }, [autoExpand]);
+  const toggle = () => {
+    userToggled.current = true;
+    setHasOpened(true);
+    setIsExpanded((current) => !current);
+  };
+  const isRunning = summary.phase === "running";
+  const isFailed = summary.phase === "failed";
+  const KindIcon = KIND_ICONS[summary.kind];
+  // Only the change this call recorded; a diff against HEAD would mix in every other edit.
+  const canOpenDiff = diffItems.length > 0;
+  const canOpenFile = Boolean(summary.path) && summary.kind !== "execute";
+  // Only a terminal Athas runs for the agent, and only while it still runs, has a tab to open.
+  const canOpenTerminal = liveTerminals.some(
+    (terminal) => terminal && !terminal.displayOnly && !terminal.exit,
+  );
+  const hasActions = canOpenDiff || canOpenFile || canOpenTerminal;
+
+  const label = (
+    <>
+      <span className={cn(summary.kind === "other" && "font-mono")}>{summary.verb}</span>
+      {summary.target ? (
+        <>
+          {" "}
+          <span
+            className={cn(
+              "text-foreground",
+              summary.kind === "execute" || summary.kind === "search" ? "font-mono" : "",
+            )}
+          >
+            {summary.target}
+          </span>
+        </>
+      ) : null}
+    </>
+  );
+
+  return (
+    <div data-ai-element="tool-call" className="group/tool flex min-w-0 flex-col">
+      <div className="flex w-fit max-w-full min-w-0 items-center gap-1">
+        {canExpand ? (
+          <button
+            type="button"
+            aria-expanded={isExpanded}
+            onClick={toggle}
+            className="flex min-h-6 min-w-0 flex-1 items-center gap-2 rounded text-left text-subtle-foreground outline-none ui-text-sm hover:text-foreground focus-visible:ring-2 focus-visible:ring-focus"
+          >
+            <ToolCallRowContent
+              icon={KindIcon}
+              isRunning={isRunning}
+              isFailed={isFailed}
+              label={label}
+              summary={summary}
+            />
+            <ChevronRightIcon
+              className={cn(
+                "size-3.5 shrink-0 opacity-40 transition-[opacity,transform] group-hover/tool:opacity-100",
+                isExpanded && "rotate-90",
+              )}
+            />
+          </button>
+        ) : (
+          <div
+            role={isRunning ? "status" : undefined}
+            className="flex min-h-6 min-w-0 flex-1 items-center gap-2 text-subtle-foreground ui-text-sm"
+          >
+            <ToolCallRowContent
+              icon={KindIcon}
+              isRunning={isRunning}
+              isFailed={isFailed}
+              label={label}
+              summary={summary}
+            />
+          </div>
+        )}
+        {hasActions ? (
+          <span className="flex shrink-0 items-center opacity-40 transition-opacity group-hover/tool:opacity-100 focus-within:opacity-100">
+            {canOpenDiff ? (
+              <Button
+                type="button"
+                variant="ghost"
+                iconOnly
+                tooltip="Open diff"
+                onClick={() => openAcpDiffOutput(output)}
+              >
+                <GitDiffIcon />
+              </Button>
+            ) : null}
+            {canOpenFile ? (
+              <Button
+                type="button"
+                variant="ghost"
+                iconOnly
+                tooltip="Open file"
+                onClick={() => void openToolPath(summary.path!)}
+              >
+                <FileTextIcon />
+              </Button>
+            ) : null}
+            {canOpenTerminal ? (
+              <Button
+                type="button"
+                variant="ghost"
+                iconOnly
+                tooltip="Open terminal"
+                onClick={() => openAcpTerminalOutput(toolCall.output)}
+              >
+                <TerminalWindowIcon />
+              </Button>
+            ) : null}
+          </span>
+        ) : null}
+      </div>
+      {canExpand && hasOpened ? (
+        <div
+          aria-hidden={!isExpanded}
+          className={cn(
+            "grid transition-[grid-template-rows,opacity] duration-200 ease-out",
+            isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
+          )}
+        >
+          <div className="min-h-0 overflow-hidden">
+            <div className="mt-1 mb-1.5 ml-6 flex min-w-0 flex-col gap-1.5">{body}</div>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+});
+
+function ToolCallRowContent({
+  icon: KindIcon,
+  isRunning,
+  isFailed,
+  label,
+  summary,
+}: {
+  icon: Icon;
+  isRunning: boolean;
+  isFailed: boolean;
+  label: ReactNode;
+  summary: ToolCallSummary;
+}) {
+  return (
+    <>
+      <span
+        aria-hidden="true"
+        className={cn(
+          "flex size-4 shrink-0 items-center justify-center [&_svg]:size-3.5",
+          isRunning && "text-primary",
+          isFailed && "text-destructive",
+        )}
+      >
+        {isRunning ? (
+          <CircleDottedIcon className="animate-spin" />
+        ) : isFailed ? (
+          <WarningCircleIcon />
+        ) : (
+          <KindIcon />
+        )}
+      </span>
+      <span className="flex min-w-0 flex-1 items-baseline gap-2">
+        <Shimmer active={isRunning} className="min-w-0 truncate">
+          {label}
+        </Shimmer>
+        <ToolCallStats summary={summary} />
+      </span>
+    </>
+  );
+}
+
+function ExplorationGroup({
+  item,
+  isStreaming,
+  latestEdit,
+}: {
+  item: Extract<ToolCallListItem, { type: "exploration" }>;
+  isStreaming?: boolean;
+  latestEdit?: ToolCall | null;
+}) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  return (
+    <div data-ai-element="tool-call-group" className="group/tool flex min-w-0 flex-col">
+      <button
+        type="button"
+        aria-expanded={isExpanded}
+        onClick={() => setIsExpanded((current) => !current)}
+        className="flex min-h-6 w-fit max-w-full min-w-0 items-center gap-2 rounded text-left text-subtle-foreground outline-none ui-text-sm hover:text-foreground focus-visible:ring-2 focus-visible:ring-focus"
+      >
+        <span
+          aria-hidden="true"
+          className={cn(
+            "flex size-4 shrink-0 items-center justify-center [&_svg]:size-3.5",
+            item.isRunning && "text-primary",
+          )}
+        >
+          {item.isRunning ? <CircleDottedIcon className="animate-spin" /> : <SearchIcon />}
+        </span>
+        <Shimmer active={item.isRunning} className="min-w-0 truncate">
+          {describeExploration(item)}
+        </Shimmer>
+        <ChevronRightIcon
+          className={cn(
+            "size-3.5 shrink-0 opacity-40 transition-[opacity,transform] group-hover/tool:opacity-100",
+            isExpanded && "rotate-90",
+          )}
+        />
+      </button>
+      {isExpanded ? (
+        <div className="ml-6 flex min-w-0 flex-col">
+          {item.toolCalls.map((toolCall, index) => (
+            <ToolCallRow
+              key={toolCall.id || `${toolCall.name}-${index}`}
+              toolCall={toolCall}
+              isStreaming={isStreaming}
+              isLatestEdit={toolCall === latestEdit}
+            />
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+export function ToolCallList({
   toolCalls,
   isStreaming,
+  latestEdit,
+  className,
 }: {
   toolCalls: ToolCall[];
   isStreaming?: boolean;
+  /** The call whose diff opens on its own, usually the newest edit of the latest reply. */
+  latestEdit?: ToolCall | null;
+  className?: string;
 }) {
-  if (toolCalls.length === 0) return null;
-
-  const latestToolCall = toolCalls[toolCalls.length - 1];
-  const title = toolCalls.length === 1 ? "Tool call" : `${toolCalls.length} tool calls`;
-  const detail = getLatestToolSummary(latestToolCall, isStreaming);
+  const items = useMemo(() => groupToolCalls(toolCalls, isStreaming), [toolCalls, isStreaming]);
+  if (items.length === 0) return null;
 
   return (
-    <ChatActivityLine title={title} detail={detail} detailsVariant="content">
-      <div className="space-y-1">
-        {toolCalls.map((toolCall, toolIndex) => (
-          <ToolCallDisplay
-            key={`${toolCall.id || toolCall.name}-${toolIndex}`}
-            toolName={toolCall.name}
-            input={toolCall.input}
-            output={toolCall.output}
-            error={toolCall.error}
-            kind={toolCall.kind}
-            status={toolCall.status}
-            locations={toolCall.locations}
-            isStreaming={!toolCall.isComplete && isStreaming}
-          />
-        ))}
-      </div>
-    </ChatActivityLine>
-  );
-}
-
-function ToolCallDisplay({
-  toolName,
-  input,
-  output,
-  isStreaming,
-  error,
-  kind,
-  status: protocolStatus,
-  locations,
-}: ToolCallDisplayProps) {
-  const state = getStatus(isStreaming, error, protocolStatus);
-  const detail = getToolCallDetail(toolName, input, output, state, protocolStatus);
-  const structuredViews = getStructuredToolViews(output);
-  const displayOutput = stripStructuredToolViews(output);
-  const hasStructuredViews = structuredViews.length > 0;
-  const hasDetails =
-    Boolean(input) ||
-    Boolean(displayOutput) ||
-    hasStructuredViews ||
-    Boolean(error) ||
-    Boolean(kind && kind !== "other") ||
-    Boolean(locations?.length);
-  const diffItems = getDiffItems(displayOutput);
-  const hasDiffOutput = diffItems.length > 0;
-  const nonDiffOutput = stripAcpDiffOutputs(displayOutput);
-  const diffViews = diffItems.map((item) =>
-    createAcpDiffViewNode(item, useProjectStore.getState().rootFolderPath),
-  );
-  const terminalItems = getTerminalItems(displayOutput);
-  const hasTerminalOutput = terminalItems.length > 0;
-  const toolPath = resolveToolPath(locations, input);
-  const locationTree = locations ? createAcpToolLocationTree(locations) : undefined;
-  const hasActions = Boolean(toolPath || hasTerminalOutput);
-  const actionButtons = hasActions ? (
-    <span className="flex items-center gap-1">
-      {toolPath && (kind === "edit" || kind === "delete" || kind === "move" || hasDiffOutput) ? (
-        <Button
-          type="button"
-          variant="ghost"
-          iconOnly
-          tooltip="Open diff"
-          onClick={(event) => {
-            event.stopPropagation();
-            void openToolDiff(toolPath, output);
-          }}
-        >
-          <GitDiffIcon />
-        </Button>
-      ) : null}
-      {toolPath ? (
-        <Button
-          type="button"
-          variant="ghost"
-          iconOnly
-          tooltip="Open file"
-          onClick={(event) => {
-            event.stopPropagation();
-            void openToolPath(toolPath);
-          }}
-        >
-          <FileTextIcon />
-        </Button>
-      ) : null}
-      {hasTerminalOutput ? (
-        <Button
-          type="button"
-          variant="ghost"
-          iconOnly
-          tooltip="Open terminal"
-          onClick={(event) => {
-            event.stopPropagation();
-            openAcpTerminalOutput(output);
-          }}
-        >
-          <TerminalWindowIcon />
-        </Button>
-      ) : null}
-    </span>
-  ) : null;
-  const detailText = [
-    kind && kind !== "other" ? `kind: ${kind}\n` : "",
-    locations?.length && !locationTree
-      ? `locations:\n${locations
-          .map((location) => `  ${location.path}${location.line ? `:${location.line}` : ""}`)
-          .join("\n")}\n`
-      : "",
-    input ? `input:\n${formatValue(input)}\n` : "",
-    nonDiffOutput ? `output:\n${getOutputText(nonDiffOutput)}\n` : "",
-    error ? `error:\n${error}` : "",
-  ].join("");
-
-  return (
-    <ChatActivityLine
-      title={toolName}
-      detail={detail}
-      state={state}
-      actions={actionButtons}
-      detailsVariant={hasStructuredViews || hasDiffOutput || locationTree ? "content" : "text"}
+    <div
+      data-ai-element="tool-calls"
+      className={cn("flex min-w-0 flex-col select-none", className)}
     >
-      {hasDetails ? (
-        hasStructuredViews || hasDiffOutput || locationTree ? (
-          <div className="flex min-w-0 flex-col gap-2">
-            {detailText ? (
-              <pre className="max-h-64 overflow-auto whitespace-pre-wrap font-mono ui-text-sm text-subtle-foreground/55">
-                {detailText}
-              </pre>
-            ) : null}
-            {diffViews.map((view, index) => (
-              <ExtensionViewRenderer
-                key={`${view.filePath}-diff-${index}`}
-                node={view}
-                execute={() => undefined}
-                surface="embedded"
-              />
-            ))}
-            {locationTree ? (
-              <ExtensionViewRenderer
-                node={locationTree}
-                execute={(action) => {
-                  const path = action.args?.[0];
-                  if (action.command === OPEN_TOOL_LOCATION_COMMAND && typeof path === "string") {
-                    return openToolPath(path);
-                  }
-                }}
-                surface="embedded"
-              />
-            ) : null}
-            {structuredViews.map((view, index) => (
-              <GenerativeUIRenderer key={`${toolName}-ui-${index}`} component={view} />
-            ))}
-          </div>
+      {items.map((item) =>
+        item.type === "exploration" ? (
+          <ExplorationGroup
+            key={item.key}
+            item={item}
+            isStreaming={isStreaming}
+            latestEdit={latestEdit}
+          />
         ) : (
-          detailText
-        )
-      ) : null}
-    </ChatActivityLine>
+          <ToolCallRow
+            key={item.key}
+            toolCall={item.toolCall}
+            isStreaming={isStreaming}
+            isLatestEdit={item.toolCall === latestEdit}
+          />
+        ),
+      )}
+    </div>
   );
 }

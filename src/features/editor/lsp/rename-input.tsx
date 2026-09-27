@@ -66,7 +66,7 @@ const RenameInput = forwardRef(
             left: `${left}px`,
           }}
         >
-          <div className="flex items-center gap-1 rounded-md border border-primary/60 bg-surface p-0.5 shadow-(--shadow-popover)">
+          <div className="flex items-center gap-1 rounded-md border border-primary bg-surface p-0.5 shadow-(--shadow-popover)">
             <span
               className="inline-flex min-w-0 min-w-30"
               style={{
@@ -75,7 +75,7 @@ const RenameInput = forwardRef(
               }}
             >
               <Input
-                size="compact"
+                size="sm"
                 font="inherit"
                 ref={inputRef}
                 value={value}

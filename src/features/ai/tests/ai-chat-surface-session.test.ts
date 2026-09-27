@@ -16,6 +16,7 @@ vi.mock("@/features/window/stores/project.store", () => ({
 }));
 
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
+import { loadAllChatsFromDb, loadChatFromDb } from "@/features/ai/services/ai-chat-history-service";
 
 describe("AI chat surface sessions", () => {
   it("updates only the chosen API session model and preserves CLI sessions", () => {
@@ -155,5 +156,97 @@ describe("AI chat surface sessions", () => {
       { content: "interrupt now" },
       { content: "later" },
     ]);
+  });
+});
+
+describe("AI chat history loading", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useAIChatStore.setState({
+      chats: [],
+      currentChatId: null,
+      pendingAgentLaunchRequest: null,
+      agentRuns: {},
+      agentMessageQueues: {},
+      chatMessageLoadStates: {},
+    });
+  });
+
+  const historyRow = (id: string) => {
+    const createdAt = new Date("2026-09-18T10:00:00Z");
+    return {
+      id,
+      title: "New Session",
+      createdAt,
+      lastMessageAt: new Date(createdAt),
+      agentId: "custom" as const,
+      acpSessionId: null,
+      workspacePath: "/workspace",
+      providerId: "anthropic",
+      modelId: "claude-test",
+      branch: null,
+      isPinned: false,
+      archivedAt: null,
+    };
+  };
+
+  it("leaves unloaded history rows without a load state", async () => {
+    vi.mocked(loadAllChatsFromDb).mockResolvedValue([historyRow("old")]);
+
+    await useAIChatStore.getState().actions.loadChatsFromDatabase();
+
+    expect(useAIChatStore.getState().chatMessageLoadStates.old).toBeUndefined();
+  });
+
+  it("loads a persisted empty session when New Agent reuses it", async () => {
+    vi.mocked(loadAllChatsFromDb).mockResolvedValue([historyRow("old")]);
+    vi.mocked(loadChatFromDb).mockResolvedValue({ ...historyRow("old"), messages: [] });
+    await useAIChatStore.getState().actions.loadChatsFromDatabase();
+
+    const chatId = useAIChatStore
+      .getState()
+      .actions.createNewChat("custom", { activate: false, reuseEmpty: true });
+
+    expect(chatId).toBe("old");
+    expect(loadChatFromDb).toHaveBeenCalledWith("old");
+    await vi.waitFor(() => {
+      expect(useAIChatStore.getState().chatMessageLoadStates.old).toBe("loaded");
+    });
+  });
+
+  it("prefers an empty session that is already in memory over an unloaded row", async () => {
+    vi.mocked(loadAllChatsFromDb).mockResolvedValue([historyRow("old")]);
+    await useAIChatStore.getState().actions.loadChatsFromDatabase();
+    const inMemoryId = useAIChatStore.getState().actions.createNewChat("custom");
+
+    const chatId = useAIChatStore
+      .getState()
+      .actions.createNewChat("custom", { activate: false, reuseEmpty: true });
+
+    expect(chatId).toBe(inMemoryId);
+    expect(loadChatFromDb).not.toHaveBeenCalled();
+  });
+
+  it("does not start a second fetch while one is in flight", () => {
+    useAIChatStore.setState({
+      chats: [{ ...historyRow("old"), messages: [] }],
+      chatMessageLoadStates: { old: "loading" },
+    });
+
+    useAIChatStore.getState().actions.switchToChat("old");
+
+    expect(loadChatFromDb).not.toHaveBeenCalled();
+  });
+
+  it("loads the session that takes over after the current one is archived", async () => {
+    vi.mocked(loadAllChatsFromDb).mockResolvedValue([historyRow("old")]);
+    vi.mocked(loadChatFromDb).mockResolvedValue({ ...historyRow("old"), messages: [] });
+    await useAIChatStore.getState().actions.loadChatsFromDatabase();
+    const currentId = useAIChatStore.getState().actions.createNewChat("custom");
+
+    useAIChatStore.getState().actions.setChatArchived(currentId, true);
+
+    expect(useAIChatStore.getState().currentChatId).toBe("old");
+    expect(loadChatFromDb).toHaveBeenCalledWith("old");
   });
 });

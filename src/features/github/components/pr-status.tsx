@@ -12,9 +12,8 @@ import {
 } from "@/ui/icons";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { memo, useMemo, useState } from "react";
-import type { ComponentProps } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import Badge from "@/ui/badge";
+import Badge, { type BadgeTone } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import { Spinner } from "@/ui/spinner";
@@ -35,17 +34,15 @@ interface CIStatusProps {
   repositoryUrl?: string;
 }
 
-type BadgeVariant = ComponentProps<typeof Badge>["variant"];
-
-function getCheckBadgeVariant(check: StatusCheck): BadgeVariant {
+function getCheckBadgeTone(check: StatusCheck): BadgeTone {
   if (check.conclusion === "SUCCESS") return "success";
   if (check.conclusion === "FAILURE" || check.conclusion === "ERROR") {
-    return "error";
+    return "danger";
   }
   if (check.status === "IN_PROGRESS" || check.status === "PENDING" || check.status === "QUEUED") {
     return "warning";
   }
-  return "muted";
+  return "neutral";
 }
 
 /** Failed first, then running, then passed, then skipped or neutral. */
@@ -170,7 +167,7 @@ export const CIStatusIndicator = memo(({ checks, repoPath, repositoryUrl }: CISt
                 </p>
               )}
             </div>
-            <Badge variant={getCheckBadgeVariant(check)}>
+            <Badge tone={getCheckBadgeTone(check)}>
               {(check.conclusion ?? check.status ?? "pending").toLowerCase()}
             </Badge>
           </button>
@@ -192,7 +189,7 @@ export interface MergeStatusProps {
 
 export interface MergeStatusInfo {
   text: string;
-  variant: BadgeVariant;
+  variant: BadgeTone;
   icon: typeof WarningCircleIcon;
   /** The pull request can be merged right now. */
   ready: boolean;
@@ -204,25 +201,25 @@ export function getMergeStatusInfo({
   mergeable,
   reviewDecision,
 }: MergeStatusProps): MergeStatusInfo {
-  const blocked = (text: string, variant: BadgeVariant, icon: typeof WarningCircleIcon) => ({
+  const blocked = (text: string, variant: BadgeTone, icon: typeof WarningCircleIcon) => ({
     text,
     variant,
     icon,
     ready: false,
   });
   if (status === "merged") return blocked("Merged", "accent", GitMergeIcon);
-  if (status === "closed") return blocked("Closed without merging", "muted", XCircleIcon);
+  if (status === "closed") return blocked("Closed without merging", "neutral", XCircleIcon);
 
   const mergeState = (mergeStateStatus ?? "").toLowerCase();
   const hasConflicts =
     mergeable === "false" || mergeable === "CONFLICTING" || mergeState === "dirty";
-  if (hasConflicts) return blocked("Has conflicts", "error", WarningCircleIcon);
-  if (status === "draft") return blocked("Draft", "muted", CircleDotIcon);
+  if (hasConflicts) return blocked("Has conflicts", "danger", WarningCircleIcon);
+  if (status === "draft") return blocked("Draft", "neutral", CircleDotIcon);
 
   switch (mergeState) {
     case "blocked":
       if (reviewDecision === "CHANGES_REQUESTED") {
-        return blocked("Changes requested", "error", WarningCircleIcon);
+        return blocked("Changes requested", "danger", WarningCircleIcon);
       }
       if (!reviewDecision || reviewDecision === "REVIEW_REQUIRED") {
         return blocked("Review required", "warning", WarningCircleIcon);
@@ -236,7 +233,7 @@ export function getMergeStatusInfo({
     case "has_hooks":
       return { text: "Merge", variant: "success", icon: GitMergeIcon, ready: true };
     default:
-      return blocked("Checking mergeability", "muted", ClockIcon);
+      return blocked("Checking mergeability", "neutral", ClockIcon);
   }
 }
 
@@ -321,7 +318,7 @@ export const LabelBadges = memo(({ labels, repositoryUrl, kind = "issues" }: Lab
             type="button"
             title={`Open ${kind === "pulls" ? "pull requests" : "issues"} labelled ${label.name} on GitHub`}
             onClick={() => void openUrl(getGitHubLabelUrl(repositoryUrl, label.name, kind))}
-            className="rounded-full outline-none transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:ring-primary/30"
+            className="rounded-full outline-none transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:ring-focus"
           >
             <Badge labelColor={label.color}>{label.name}</Badge>
           </button>

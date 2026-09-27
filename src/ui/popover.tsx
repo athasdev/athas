@@ -11,6 +11,8 @@ import { createPortal } from "react-dom";
 import { OVERLAY_MAX_WIDTH, type OverlaySize, OVERLAY_SIZES } from "@/ui/overlay-size";
 import { instantTransition, overlayEntrance } from "@/utils/motion";
 import { cn } from "@/utils/cn";
+import { useOverlayPlacement } from "@/ui/overlay-side";
+import { OverlayRoot } from "@/ui/overlay-root";
 
 function containScrollChain(event: ReactWheelEvent<HTMLDivElement>) {
   const root = event.currentTarget;
@@ -85,7 +87,7 @@ export function FloatingPopoverContent({
       exit={shouldAnimate ? exit : { opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }}
       transition={shouldAnimate ? transition : instantTransition}
       className={cn(
-        "pointer-events-auto fixed z-10070 min-w-60 max-w-[min(480px,calc(100vw-16px))] select-none overflow-y-auto rounded-lg bg-surface/98 p-1 font-sans text-foreground shadow-(--shadow-card) ring-1 ring-border/50 outline-none backdrop-blur-sm overscroll-none ui-text-chrome",
+        "pointer-events-auto fixed z-10070 min-w-60 max-w-[min(480px,calc(100vw-16px))] select-none overflow-y-auto rounded-lg bg-overlay p-1 font-sans text-foreground shadow-(--shadow-popover) ring-1 ring-border outline-none overscroll-none ui-text-chrome",
         className,
       )}
       style={style}
@@ -107,9 +109,9 @@ function PopoverTrigger(props: PopoverPrimitive.Trigger.Props) {
 
 function PopoverContent({
   className,
-  align = "center",
+  align: alignProp,
   alignOffset = 0,
-  side = "bottom",
+  side: sideProp,
   sideOffset = 6,
   collisionPadding = 8,
   anchor,
@@ -125,28 +127,33 @@ function PopoverContent({
     /** Width preset from the shared overlay scale. See `@/ui/overlay-size`. */
     size?: OverlaySize;
   }) {
+  const placement = useOverlayPlacement();
+  const side = sideProp ?? placement.side ?? "bottom";
+  const align = alignProp ?? placement.align ?? "center";
   return (
     <PopoverPrimitive.Portal data-slot="popover-portal" container={portalContainer}>
-      <PopoverPrimitive.Positioner
-        align={align}
-        alignOffset={alignOffset}
-        anchor={anchor}
-        side={side}
-        sideOffset={sideOffset}
-        collisionPadding={collisionPadding}
-        className="isolate z-10070"
-      >
-        <PopoverPrimitive.Popup
-          data-slot="popover-content"
-          className={cn(
-            "z-10070 flex origin-(--transform-origin) flex-col gap-2 rounded-lg bg-surface/98 p-2 font-sans text-foreground shadow-(--shadow-card) ring-1 ring-border/50 outline-none backdrop-blur-sm transition-opacity duration-75 data-ending-style:opacity-0 data-starting-style:opacity-0 ui-text-chrome",
-            OVERLAY_MAX_WIDTH,
-            OVERLAY_SIZES[size],
-            className,
-          )}
-          {...props}
-        />
-      </PopoverPrimitive.Positioner>
+      <OverlayRoot>
+        <PopoverPrimitive.Positioner
+          align={align}
+          alignOffset={alignOffset}
+          anchor={anchor}
+          side={side}
+          sideOffset={sideOffset}
+          collisionPadding={collisionPadding}
+          className="isolate z-10070"
+        >
+          <PopoverPrimitive.Popup
+            data-slot="popover-content"
+            className={cn(
+              "z-10070 flex origin-(--transform-origin) flex-col gap-2 rounded-lg bg-overlay p-2 font-sans text-foreground shadow-(--shadow-popover) ring-1 ring-border outline-none transition-opacity duration-75 data-ending-style:opacity-0 data-starting-style:opacity-0 ui-text-chrome",
+              OVERLAY_MAX_WIDTH,
+              OVERLAY_SIZES[size],
+              className,
+            )}
+            {...props}
+          />
+        </PopoverPrimitive.Positioner>
+      </OverlayRoot>
     </PopoverPrimitive.Portal>
   );
 }
@@ -185,7 +192,7 @@ function PopoverDescription({ className, ...props }: PopoverPrimitive.Descriptio
   return (
     <PopoverPrimitive.Description
       data-slot="popover-description"
-      className={cn("text-subtle-foreground", className)}
+      className={cn("text-muted-foreground", className)}
       {...props}
     />
   );

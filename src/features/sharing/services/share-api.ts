@@ -1,6 +1,21 @@
 import { authenticatedFetch } from "@/features/window/services/auth-api";
 import type { ShareInput, ShareOptions } from "../types/share.types";
 
+export class ShareRequestError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "ShareRequestError";
+    this.status = status;
+  }
+}
+
+/** The server rejected the payload itself; retrying with the same content cannot succeed. */
+export function isRejectedShareRequest(error: unknown) {
+  return error instanceof ShareRequestError && (error.status === 400 || error.status === 413);
+}
+
 export async function shareRequest<T>(
   path: string,
   options?: RequestInit,
@@ -8,7 +23,11 @@ export async function shareRequest<T>(
 ): Promise<T> {
   const response = await authenticatedFetch(path, options, token);
   const body = await response.json();
-  if (!response.ok) throw new Error(body.error || "Could not reach Athas sharing. Try again.");
+  if (!response.ok)
+    throw new ShareRequestError(
+      body.error || "Could not reach Athas sharing. Try again.",
+      response.status,
+    );
   return body as T;
 }
 

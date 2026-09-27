@@ -49,7 +49,7 @@ export function WorkspaceRepositories({
         absolute paths are never written to the shared profile.
       </FieldDescription>
       {repositories.map((repo, index) => (
-        <Card key={repo.id} variant="muted">
+        <Card key={repo.id}>
           <CardContent className="space-y-4">
             <div className="grid gap-4 @min-[700px]/workbench-content:grid-cols-2">
               <Field>

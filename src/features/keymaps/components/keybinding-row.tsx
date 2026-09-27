@@ -63,7 +63,7 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
 
   return (
     <>
-      <TableRow className={cn(hasConflict && "bg-destructive/5 hover:bg-destructive/10")}>
+      <TableRow className={cn(hasConflict && "bg-destructive-soft hover:bg-destructive-soft")}>
         <TableCell className="min-w-0">
           <div className="font-sans ui-text-sm truncate text-foreground">{command.title}</div>
           <div className="font-sans ui-text-sm mt-0.5 truncate text-subtle-foreground">
@@ -102,7 +102,7 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
         </TableCell>
 
         <TableCell>
-          <Badge variant={isUserOverride ? "accent" : "default"}>{sourceLabel}</Badge>
+          <Badge tone={isUserOverride ? "accent" : "neutral"}>{sourceLabel}</Badge>
         </TableCell>
 
         <TableCell>
@@ -122,7 +122,8 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
               <Button
                 type="button"
                 onClick={handleRemove}
-                variant="danger"
+                variant="ghost"
+                tone="danger"
                 tooltip="Remove keybinding"
                 aria-label="Remove keybinding"
               >
@@ -134,7 +135,7 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
       </TableRow>
 
       {hasConflict && (
-        <TableRow className="bg-destructive/5 hover:bg-destructive/5">
+        <TableRow className="bg-destructive-soft hover:bg-destructive-soft">
           <TableCell colSpan={5} className="pt-0">
             <Alert tone="error" className="py-1.5">
               <WarningCircleIcon />

@@ -23,7 +23,7 @@ export function ProGate({ children, fallback }: ProGateProps) {
   return (
     <Empty>
       <EmptyHeader>
-        <EmptyMedia variant="icon" className="size-10 rounded-full bg-primary/10 text-primary">
+        <EmptyMedia variant="icon" className="size-10 rounded-full bg-primary-soft text-primary">
           <LockIcon className="size-5" />
         </EmptyMedia>
         <EmptyTitle className="flex items-center gap-2">

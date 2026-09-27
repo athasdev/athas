@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { DatabaseBrandMark } from "@/ui/brand-marks";
 import { Button } from "@/ui/button";
 import { Checkbox } from "@/ui/checkbox";
 import Dialog from "@/ui/dialog";
@@ -236,7 +237,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
       }
     >
       {installedDbTypes.length === 0 ? (
-        <div className="rounded-lg border border-border bg-surface/35 px-3 py-2 text-subtle-foreground ui-text-sm">
+        <div className="rounded-lg border border-border bg-surface px-3 py-2 text-subtle-foreground ui-text-sm">
           Install a database provider from Settings &gt; Integrations to connect to databases.
         </div>
       ) : null}
@@ -247,6 +248,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
         options={installedDbTypes.map((type) => ({
           value: type,
           label: PROVIDER_REGISTRY[type].label,
+          icon: <DatabaseBrandMark provider={type} />,
         }))}
         variant="default"
         width="full"

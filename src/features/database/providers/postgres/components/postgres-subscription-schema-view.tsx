@@ -53,7 +53,7 @@ export default function PostgresSubscriptionSchemaView({
           <div className="text-subtle-foreground ui-text-sm">logical replication subscription</div>
         </div>
       </div>
-      <div className="mx-3 mb-3 divide-y divide-border/60 rounded-xl bg-surface/40">
+      <div className="mx-3 mb-3 divide-y divide-border rounded-xl bg-surface">
         {fields.map((field) => (
           <div key={field.label} className="px-3 py-2">
             <div className="text-subtle-foreground ui-text-sm uppercase tracking-wide">

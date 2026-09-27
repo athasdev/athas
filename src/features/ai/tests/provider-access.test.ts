@@ -43,8 +43,9 @@ describe("provider access", () => {
     ).toBe(false);
   });
 
-  it("uses Athas Intelligence only for focused OpenRouter features", () => {
-    expect(canUseIntelligenceProvider("openrouter", subscription)).toBe(true);
+  it("keeps managed Intelligence separate from personal provider keys", () => {
+    expect(canUseIntelligenceProvider("athas", subscription)).toBe(true);
+    expect(canUseIntelligenceProvider("openrouter", subscription)).toBe(false);
     expect(canUseIntelligenceProvider("anthropic", subscription)).toBe(false);
   });
 

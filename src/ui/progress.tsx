@@ -8,8 +8,7 @@ const progressIndicatorVariants = cva(
   {
     variants: {
       tone: {
-        default: "bg-foreground/55",
-        muted: "bg-subtle-foreground/55",
+        default: "bg-muted-foreground",
         accent: "bg-primary",
         success: "bg-success",
         warning: "bg-warning",
@@ -49,7 +48,7 @@ function ProgressTrack({ className, ...props }: ProgressPrimitive.Track.Props) {
     <ProgressPrimitive.Track
       data-slot="progress-track"
       className={cn(
-        "relative flex h-1 w-full items-center overflow-hidden rounded-full bg-surface",
+        "relative flex h-1 w-full items-center overflow-hidden rounded-full bg-accent",
         className,
       )}
       {...props}
@@ -85,17 +84,36 @@ function ProgressValue({ className, ...props }: ProgressPrimitive.Value.Props) {
   return (
     <ProgressPrimitive.Value
       data-slot="progress-value"
-      className={cn("ml-auto tabular-nums text-subtle-foreground", className)}
+      className={cn("ml-auto tabular-nums text-muted-foreground", className)}
       {...props}
     />
   );
 }
 
-interface ProgressCircleProps extends Omit<SVGProps<SVGSVGElement>, "value"> {
+const progressCircleIndicatorVariants = cva(
+  "transition-[stroke-dashoffset] duration-normal ease-smooth",
+  {
+    variants: {
+      tone: {
+        accent: "stroke-primary",
+        warning: "stroke-warning",
+        error: "stroke-destructive",
+      },
+    },
+    defaultVariants: {
+      tone: "accent",
+    },
+  },
+);
+
+interface ProgressCircleProps
+  extends
+    Omit<SVGProps<SVGSVGElement>, "value">,
+    VariantProps<typeof progressCircleIndicatorVariants> {
   value: number;
 }
 
-function ProgressCircle({ className, value, ...props }: ProgressCircleProps) {
+function ProgressCircle({ className, value, tone = "accent", ...props }: ProgressCircleProps) {
   const progress = Math.min(100, Math.max(0, value)) / 100;
 
   return (
@@ -116,7 +134,7 @@ function ProgressCircle({ className, value, ...props }: ProgressCircleProps) {
         strokeDasharray="1"
         strokeDashoffset={1 - progress}
         strokeLinecap="round"
-        className="stroke-primary transition-[stroke-dashoffset] duration-normal ease-smooth"
+        className={progressCircleIndicatorVariants({ tone })}
       />
     </svg>
   );

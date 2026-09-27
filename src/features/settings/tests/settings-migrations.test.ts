@@ -21,6 +21,23 @@ describe("settings migrations", () => {
     expect(migrated.compactFoldersInFileTree).toBe(false);
   });
 
+  it("drops the settings of the removed expanded activity rail", () => {
+    const migrated = migrateSettingsRecord(
+      {
+        activityRailExpanded: true,
+        activityRailWidth: 220,
+        showActivityRailAgentHistory: true,
+        showActivityRailTerminals: true,
+        showActivityRailProjectIcons: false,
+        collapsedActivityRailSections: ["agents"],
+        sidebarWidth: 240,
+      },
+      4,
+    );
+
+    expect(migrated).toEqual({ sidebarWidth: 240 });
+  });
+
   it("preserves a compact folders opt-in after the migration", () => {
     const migrated = migrateSettingsRecord({ compactFoldersInFileTree: true }, 4);
 

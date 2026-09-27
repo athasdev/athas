@@ -1,8 +1,10 @@
 import type { ReactNode } from "react";
-import { SearchIcon } from "@/ui/icons";
+import { EyeIcon, PenIcon, SearchIcon } from "@/ui/icons";
 import { useShallow } from "zustand/react/shallow";
 import { EditorStatusActions } from "@/features/editor/components/toolbar/editor-status-actions";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { toggleMarkdownPreview } from "@/features/editor/markdown/toggle-markdown-preview";
+import { isMarkdownPreviewableFile } from "@/features/editor/markdown/previewable";
 import { getBufferById } from "@/features/editor/utils/buffer-index";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import { useExtensionActions } from "@/extensions/ui/hooks/use-extension-actions";
@@ -17,6 +19,7 @@ export interface BreadcrumbProps {
   bufferId?: string;
   editorViewKey?: string | null;
   filePathOverride?: string;
+  leadingContent?: ReactNode;
   rightContent?: ReactNode;
   extraLeftContent?: ReactNode;
   showDefaultActions?: boolean;
@@ -28,6 +31,7 @@ export default function Breadcrumb({
   bufferId,
   editorViewKey,
   filePathOverride,
+  leadingContent,
   rightContent,
   extraLeftContent,
   showDefaultActions = true,
@@ -43,6 +47,7 @@ export default function Breadcrumb({
             id: buffer.id,
             path: buffer.path,
             type: buffer.type,
+            isMarkdownPreview: buffer.type === "editor" ? buffer.isMarkdownPreview : false,
           }
         : null;
     }),
@@ -54,6 +59,10 @@ export default function Breadcrumb({
     void keymapRegistry.executeCommand("workbench.showFind");
   };
 
+  const handlePreviewClick = () => {
+    if (resolvedBufferId) toggleMarkdownPreview(resolvedBufferId);
+  };
+
   const filePath = filePathOverride ?? activeBuffer?.path ?? "";
   if (!filePath) return null;
   const isLocalHistorySnapshot = filePath.startsWith("local-history://");
@@ -61,6 +70,16 @@ export default function Breadcrumb({
   const defaultActions =
     showDefaultActions && activeBuffer ? (
       <>
+        {activeBuffer.type === "editor" && isMarkdownPreviewableFile(activeBuffer.path) ? (
+          <Button
+            variant="ghost"
+            iconOnly
+            onClick={handlePreviewClick}
+            tooltip={activeBuffer.isMarkdownPreview ? "Show Markdown Source" : "Preview Markdown"}
+          >
+            {activeBuffer.isMarkdownPreview ? <PenIcon /> : <EyeIcon />}
+          </Button>
+        ) : null}
         {activeBuffer.type === "editor" ? (
           <Button
             variant="ghost"
@@ -80,6 +99,7 @@ export default function Breadcrumb({
     <PaneContentHeader
       separated={false}
       className="select-none"
+      leading={leadingContent}
       context={
         <div className="font-sans flex min-w-0 items-center gap-1 text-subtle-foreground ui-text-sm">
           {showPath && showBreadcrumbPath ? (
@@ -88,12 +108,14 @@ export default function Breadcrumb({
                 filePath={filePath}
                 interactive={interactive && !isLocalHistorySnapshot}
               />
-              <SymbolBreadcrumb
-                bufferId={resolvedBufferId ?? undefined}
-                editorViewKey={editorViewKey}
-                filePath={filePath}
-                interactive={interactive && !isLocalHistorySnapshot}
-              />
+              {!activeBuffer?.isMarkdownPreview ? (
+                <SymbolBreadcrumb
+                  bufferId={resolvedBufferId ?? undefined}
+                  editorViewKey={editorViewKey}
+                  filePath={filePath}
+                  interactive={interactive && !isLocalHistorySnapshot}
+                />
+              ) : null}
             </>
           ) : null}
           {extensionActions.left.map((action) => (
@@ -105,7 +127,7 @@ export default function Breadcrumb({
       actions={
         <>
           {defaultActions}
-          {defaultActions && rightContent ? <div className="mx-1 h-3.5 w-px bg-border/70" /> : null}
+          {defaultActions && rightContent ? <div className="mx-1 h-3.5 w-px bg-border" /> : null}
           {rightContent}
           {extensionActions.right.map((action) => (
             <ExtensionToolbarAction key={action.id} action={action} />

@@ -21,7 +21,7 @@ describe("view data display", () => {
 
     expect(markup).toContain("<table");
     expect(markup).toContain("Created At");
-    expect(markup).toContain("bg-success/10 text-success");
+    expect(markup).toContain("bg-success-soft text-success");
     expect(markup).toContain("font-mono");
   });
 

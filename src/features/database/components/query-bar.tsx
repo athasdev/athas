@@ -89,7 +89,7 @@ function SqlEditor({
 
   return (
     <div className="mb-1">
-      <div className={databaseCardClassName("relative h-20 overflow-hidden bg-surface/60")}>
+      <div className={databaseCardClassName("relative h-20 overflow-hidden bg-surface")}>
         <pre
           ref={highlightRef}
           aria-hidden="true"
@@ -148,7 +148,7 @@ function SqlEditor({
           }}
           font="mono"
           resize="none"
-          className="relative h-full border-0 bg-transparent ui-text-sm leading-5 text-transparent caret-foreground placeholder:text-transparent selection:bg-primary/30 focus:ring-0"
+          className="relative h-full border-0 bg-transparent ui-text-sm leading-5 text-transparent caret-foreground placeholder:text-transparent selection:bg-primary-soft focus:ring-0"
           placeholder="SELECT * FROM table_name"
           spellCheck={false}
           disabled={disabled}
@@ -161,7 +161,7 @@ function SqlEditor({
               key={`${item.detail}-${item.value}`}
               type="button"
               variant="ghost"
-              size="chrome"
+              size="sm"
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => applyCompletion(index)}
               aria-label={`Insert SQL ${item.detail} ${item.label}`}

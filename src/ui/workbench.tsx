@@ -46,10 +46,13 @@ export function WorkbenchNavigation<TValue extends string>({
   value,
   onValueChange,
   ariaLabel,
+  body,
   children,
 }: {
   title: string;
   search: ReactNode;
+  /** Replaces the page list, e.g. with search results while a query is typed. */
+  body?: ReactNode;
   groups: WorkbenchNavigationGroup<TValue>[];
   value: TValue;
   onValueChange: (value: TValue) => void;
@@ -63,7 +66,7 @@ export function WorkbenchNavigation<TValue extends string>({
     <div className="flex size-full min-h-0 min-w-0 @max-[680px]/workbench:flex-col">
       <aside
         data-slot="workbench-navigation"
-        className="flex w-56 shrink-0 flex-col gap-4 bg-surface/55 p-3 @max-[680px]/workbench:w-full @max-[680px]/workbench:gap-3"
+        className="flex w-56 shrink-0 flex-col gap-4 border-border border-r bg-surface p-3 @max-[680px]/workbench:w-full @max-[680px]/workbench:gap-3 @max-[680px]/workbench:border-r-0 @max-[680px]/workbench:border-b"
       >
         <div className="flex shrink-0 flex-col gap-3">
           <h1 className="px-1.5 font-medium text-foreground ui-text-base">{title}</h1>
@@ -81,7 +84,7 @@ export function WorkbenchNavigation<TValue extends string>({
                 </span>
                 <ChevronDownIcon />
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-(--anchor-width)">
+              <DropdownMenuContent align="start" size="trigger">
                 <DropdownMenuRadioGroup
                   value={value}
                   onValueChange={(nextValue) => onValueChange(nextValue as TValue)}
@@ -97,31 +100,37 @@ export function WorkbenchNavigation<TValue extends string>({
             </DropdownMenu>
           </div>
         </div>
-        <ScrollArea className="-mx-1 min-h-0 flex-1 @max-[680px]/workbench:hidden">
-          <nav aria-label={ariaLabel} className="space-y-4 px-1">
-            {groups
-              .filter((group) => group.items.length > 0)
-              .map((group) => (
-                <section key={group.id}>
-                  {group.label ? <SidebarSectionLabel>{group.label}</SidebarSectionLabel> : null}
-                  <div className="flex flex-col gap-0.5">
-                    {group.items.map((item) => (
-                      <SidebarListItem
-                        key={item.id}
-                        id={item.tabId}
-                        active={value === item.id}
-                        leading={item.icon}
-                        onClick={() => onValueChange(item.id)}
-                        aria-controls={item.panelId}
-                        aria-current={value === item.id ? "page" : undefined}
-                      >
-                        {item.label}
-                      </SidebarListItem>
-                    ))}
-                  </div>
-                </section>
-              ))}
-          </nav>
+        <ScrollArea
+          className={cn("-mx-1 min-h-0 flex-1", !body && "@max-[680px]/workbench:hidden")}
+        >
+          {body ? (
+            <div className="px-1">{body}</div>
+          ) : (
+            <nav aria-label={ariaLabel} className="space-y-4 px-1">
+              {groups
+                .filter((group) => group.items.length > 0)
+                .map((group) => (
+                  <section key={group.id}>
+                    {group.label ? <SidebarSectionLabel>{group.label}</SidebarSectionLabel> : null}
+                    <div className="flex flex-col gap-0.5">
+                      {group.items.map((item) => (
+                        <SidebarListItem
+                          key={item.id}
+                          id={item.tabId}
+                          active={value === item.id}
+                          leading={item.icon}
+                          onClick={() => onValueChange(item.id)}
+                          aria-controls={item.panelId}
+                          aria-current={value === item.id ? "page" : undefined}
+                        >
+                          {item.label}
+                        </SidebarListItem>
+                      ))}
+                    </div>
+                  </section>
+                ))}
+            </nav>
+          )}
         </ScrollArea>
       </aside>
       <main className="min-h-0 min-w-0 flex-1">{children}</main>
@@ -141,11 +150,11 @@ function WorkbenchContentTitle({
   return (
     <div className="min-w-0 flex-1 basis-64">
       <div className="flex min-w-0 flex-wrap items-center gap-2">
-        <h2 className="min-w-0 break-words font-medium text-foreground ui-text-lg">{title}</h2>
+        <h2 className="min-w-0 wrap-break-word font-medium text-foreground ui-text-lg">{title}</h2>
         {status}
       </div>
       {description ? (
-        <div className="mt-1 text-subtle-foreground ui-text-sm">{description}</div>
+        <div className="mt-1 text-muted-foreground ui-text-sm">{description}</div>
       ) : null}
     </div>
   );
@@ -175,7 +184,7 @@ export function WorkbenchContent({
   if (pinnedHeader) {
     return (
       <div className="flex size-full min-h-0 min-w-0 flex-col">
-        <header className="flex shrink-0 items-start justify-between gap-4 border-border/60 border-b px-6 pt-5 pb-4 @max-[680px]/workbench:px-3 @max-[680px]/workbench:pt-3 @max-[680px]/workbench:pb-3">
+        <header className="flex shrink-0 items-start justify-between gap-4 border-border border-b px-6 pt-5 pb-4 @max-[680px]/workbench:px-3 @max-[680px]/workbench:pt-3 @max-[680px]/workbench:pb-3">
           <WorkbenchContentTitle title={title} description={description} status={status} />
           {actions ? (
             <div className="-mt-1 -mr-2 flex shrink-0 items-center gap-2">{actions}</div>

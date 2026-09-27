@@ -5,11 +5,11 @@ import { cn } from "@/utils/cn";
 export function CollaborationAvatar({ name, online }: { name: string; online?: boolean }) {
   return (
     <span className="relative shrink-0">
-      <Avatar name={name} className="size-7" />
+      <Avatar name={name} />
       {online !== undefined ? (
         <span
           className={cn(
-            "-right-0.5 -bottom-0.5 absolute size-2 rounded-full border border-background bg-subtle-foreground/55",
+            "-right-0.5 -bottom-0.5 absolute size-2 rounded-full border border-background bg-subtle-foreground",
             online && "bg-primary",
           )}
         />

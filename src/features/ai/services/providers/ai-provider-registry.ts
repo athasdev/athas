@@ -70,6 +70,16 @@ function initializeProviders(): void {
     maxTokens: 4096,
   };
   providers.set("openrouter", new OpenRouterProvider(openRouterConfig));
+  providers.set(
+    "vercel",
+    new OpenAICompatibleProvider({
+      id: "vercel",
+      name: "Vercel AI Gateway",
+      apiUrl: "https://ai-gateway.vercel.sh/v1/chat/completions",
+      requiresApiKey: true,
+      maxTokens: 4096,
+    }),
+  );
 
   const geminiConfig: ProviderConfig = {
     id: "gemini",
@@ -202,7 +212,8 @@ export function shouldUseTauriFetchForProvider(providerId: string): boolean {
     providerId === "gemini" ||
     providerId === "ollama" ||
     providerId === "anthropic" ||
-    providerId === "openrouter"
+    providerId === "openrouter" ||
+    providerId === "vercel"
   );
 }
 

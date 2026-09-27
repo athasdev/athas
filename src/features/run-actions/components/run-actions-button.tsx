@@ -44,7 +44,6 @@ export default function RunActionsButton() {
       state.isQuickOpenVisible ||
       state.isCommandPaletteVisible ||
       state.isGlobalSearchVisible ||
-      state.isSettingsDialogVisible ||
       state.isProjectPickerVisible ||
       state.isDatabaseConnectionVisible,
   );
@@ -163,7 +162,7 @@ export default function RunActionsButton() {
                 type="button"
                 variant="ghost"
                 iconOnly
-                size="chrome"
+                size="lg"
                 tooltip="Run actions"
                 aria-label="Run actions"
                 active={isMenuOpen}

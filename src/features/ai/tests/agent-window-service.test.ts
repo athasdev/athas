@@ -1,8 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { useAgentWindowStore } from "@/features/ai/detached/agent-window.store";
 import { restoreAgentDrafts } from "@/features/ai/detached/agent-window-drafts";
-import { useAuthStore } from "@/features/window/stores/auth.store";
-import { useGitHubStore } from "@/features/github/stores/github.store";
 
 const mocks = vi.hoisted(() => ({
   create: vi.fn(),
@@ -35,7 +33,7 @@ vi.mock("@tauri-apps/api/window", () => ({
 }));
 vi.mock("@/features/window/utils/create-app-window", () => ({ createAppWindow: mocks.create }));
 vi.mock("@/features/window/stores/ui-state.store", () => ({
-  useUIState: { getState: () => ({ openSettingsDialog: mocks.settings }) },
+  useUIState: { getState: () => ({ openSettings: mocks.settings }) },
 }));
 vi.mock("sonner", () => ({ toast: { info: mocks.info, error: mocks.error } }));
 vi.mock("@/features/ai/stores/ai-chat.store", () => ({
@@ -62,7 +60,6 @@ vi.mock("@/features/window/stores/project.store", () => ({
 import {
   openAgentInNewWindow,
   captureAgentWindowSnapshot,
-  restoreAgentWindowSnapshot,
   type AgentWindowMessage,
 } from "@/features/ai/detached/agent-window-service";
 
@@ -104,17 +101,11 @@ beforeEach(() => {
     agentMessageQueues: {},
   };
   restoreAgentDrafts({});
-  useAgentWindowStore.getState().actions.setAccountIdentity(null);
-  useAuthStore.setState({ user: null });
-  useGitHubStore.setState({ currentUser: null, githubAccountStatus: "unknown" });
 });
 afterEach(() => {
   destroyListeners.forEach((listener) => listener());
   destroyListeners = [];
   onDestroyed = undefined;
-  useAgentWindowStore.getState().actions.setAccountIdentity(null);
-  useAuthStore.setState({ user: null });
-  useGitHubStore.setState({ currentUser: null, githubAccountStatus: "unknown" });
   vi.useRealTimers();
   vi.unstubAllGlobals();
 });
@@ -189,22 +180,6 @@ describe("Agent session window ownership", () => {
     expect(snapshot.chat.chats.map((chat: { id: string }) => chat.id)).toEqual(["chat"]);
     expect(snapshot.chat.currentChatId).toBe("chat");
     expect(mocks.create).toHaveBeenCalledOnce();
-  });
-
-  it("transfers the owner's GitHub identity without waiting for detached sign-in", async () => {
-    useGitHubStore.setState({ currentUser: "octocat", githubAccountStatus: "connected" });
-    await openAgentInNewWindow("chat");
-    TestChannel.current.receive({ type: "ready" });
-    const snapshot = TestChannel.current.postMessage.mock.calls[0][0].snapshot;
-    expect(snapshot.accountIdentity.name).toBe("octocat");
-    expect(snapshot.accountIdentity.avatarUrl).toContain("octocat");
-    restoreAgentWindowSnapshot(snapshot);
-    expect(useAgentWindowStore.getState().accountIdentity).toEqual(snapshot.accountIdentity);
-    useGitHubStore.setState({ currentUser: "updated-user" });
-    expect(TestChannel.current.postMessage).toHaveBeenLastCalledWith({
-      type: "identity",
-      identity: expect.objectContaining({ name: "updated-user" }),
-    });
   });
 
   it("opens the requested settings section in the owning workbench", async () => {

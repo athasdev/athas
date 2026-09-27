@@ -1,4 +1,5 @@
-import { useEffect, useState, type ComponentProps } from "react";
+import { usePerformanceExperiments } from "../../stores/performance-experiments.store";
+import { useEffect, useState } from "react";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { useToast } from "@/features/layout/contexts/toast-context";
@@ -11,7 +12,7 @@ import {
   subscribeToTelemetryLog,
   type TelemetryLogEntry,
 } from "@/features/telemetry/services/telemetry";
-import Badge from "@/ui/badge";
+import Badge, { type BadgeTone } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { EmptyState } from "@/ui/empty";
 import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemTitle } from "@/ui/item";
@@ -24,16 +25,17 @@ const telemetryDescription =
   "Athas sends anonymous operational metadata for updates and, when enabled, heartbeats, integrations, and crashes; it never sends file paths, project names, prompts, or editor content.";
 const telemetryLearnMoreUrl = getServiceUrls().telemetryDocsUrl;
 
-function getTelemetryStatusVariant(
-  status: TelemetryLogEntry["status"],
-): ComponentProps<typeof Badge>["variant"] {
-  if (status === "failed") return "error";
+function getTelemetryStatusVariant(status: TelemetryLogEntry["status"]): BadgeTone {
+  if (status === "failed") return "danger";
   if (status === "sent") return "success";
   if (status === "local") return "accent";
-  return "muted";
+  return "neutral";
 }
 
 export const AdvancedSettings = () => {
+  const webgpu = usePerformanceExperiments.use.webgpu();
+  const showMonitor = usePerformanceExperiments.use.showMonitor();
+  const { toggleWebgpu, toggleMonitor } = usePerformanceExperiments.use.actions();
   const telemetry = useSettingsStore((state) => state.settings.telemetry);
   const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
   const resetToDefaults = useSettingsStore((state) => state.actions.resetToDefaults);
@@ -119,6 +121,20 @@ export const AdvancedSettings = () => {
 
   return (
     <SettingsView>
+      <Section title="Performance experiments">
+        <SettingRow
+          label="Experimental WebGPU renderer"
+          description="Try GPU rendering in Monaco editors. Falls back to DOM when WebGPU is unavailable. Stored on this device only."
+        >
+          <Switch checked={webgpu} onChange={toggleWebgpu} />
+        </SettingRow>
+        <SettingRow
+          label="Show performance monitor"
+          description="Show frame callback FPS, longest frame interval, and renderer status. The monitor itself adds a small amount of work."
+        >
+          <Switch checked={showMonitor} onChange={toggleMonitor} />
+        </SettingRow>
+      </Section>
       <Section title="Data">
         <SettingRow label="Export Settings" description="Save all app settings to a JSON file">
           <Button variant="default" onClick={() => void handleExportSettings()}>
@@ -177,9 +193,7 @@ export const AdvancedSettings = () => {
                       <ItemDescription>{entry.error || entry.summary}</ItemDescription>
                     </ItemContent>
                     <ItemActions>
-                      <Badge variant={getTelemetryStatusVariant(entry.status)}>
-                        {entry.status}
-                      </Badge>
+                      <Badge tone={getTelemetryStatusVariant(entry.status)}>{entry.status}</Badge>
                       <time className="font-sans ui-text-sm text-subtle-foreground">
                         {new Date(entry.timestamp).toLocaleString()}
                       </time>

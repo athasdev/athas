@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vite-plus/test";
@@ -153,12 +153,11 @@ describe("settings UI contract", () => {
     expect(settingsViewSource).not.toContain("tabIndex: -1");
   });
 
-  it("keeps settings navigation in a persistent flat sidebar", () => {
+  it("opens Settings as one tab in the main view with its own navigation", () => {
     const settingsViewSource = readFileSync(
       `${componentsDirectory}/settings-workbench-view.tsx`,
       "utf8",
     );
-    const navigationSource = readFileSync(`${componentsDirectory}/settings-navigation.tsx`, "utf8");
     const sectionSource = readFileSync(`${componentsDirectory}/settings-section.tsx`, "utf8");
     const sidebarPaneSource = readFileSync(
       fileURLToPath(new URL("../../layout/components/sidebar/sidebar-pane.tsx", import.meta.url)),
@@ -169,19 +168,18 @@ describe("settings UI contract", () => {
       "utf8",
     );
 
-    expect(settingsViewSource).toContain("<SettingsNavigation");
-    expect(settingsViewSource).toContain("<SearchInput");
+    expect(existsSync(`${componentsDirectory}/settings-dialog.tsx`)).toBe(false);
+    expect(existsSync(`${componentsDirectory}/settings-sidebar.tsx`)).toBe(false);
+    expect(settingsViewSource).toContain("<WorkbenchNavigation");
+    expect(settingsViewSource).toContain('ariaLabel="Settings pages"');
+    expect(settingsViewSource).toContain('placeholder="Search settings"');
     expect(settingsViewSource).not.toContain("<ResourcePageHeader");
-    expect(settingsViewSource).not.toContain("<ResourceCategoryNav");
     expect(settingsViewSource).not.toContain("<SettingsBreadcrumb");
-    expect(navigationSource).toContain('ariaLabel="Settings pages"');
-    expect(navigationSource).toContain("<WorkbenchNavigation");
-    expect(navigationSource).not.toContain("SETTINGS_TAB_GROUPS");
     expect(sectionSource).toContain("<Card");
     expect(sectionSource).not.toContain("<Accordion");
     expect(sidebarPaneSource).not.toContain("SettingsSidebar");
-    expect(modalSliceSource).not.toContain('setActiveView("settings")');
-    expect(modalSliceSource).not.toContain("setIsSidebarVisible(true)");
+    expect(modalSliceSource).toContain("openSettingsBuffer()");
+    expect(modalSliceSource).not.toContain("setIsSidebarVisible");
     expect(settingsViewSource).toContain("settingsInitialSection");
     expect(settingsViewSource).toContain('section.scrollIntoView({ block: "start"');
   });

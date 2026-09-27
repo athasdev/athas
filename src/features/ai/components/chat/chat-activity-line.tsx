@@ -5,13 +5,14 @@ import { Marker, MarkerContent, MarkerIcon } from "@/ui/marker";
 import { Shimmer } from "@/ui/shimmer";
 import { cn } from "@/utils/cn";
 
-type ActivityState = "running" | "success" | "error" | "info";
+type ActivityState = "running" | "success" | "error" | "warning" | "info";
 
 const stateClassNames: Record<ActivityState, string> = {
   running: "text-primary",
   success: "text-success",
   error: "text-destructive",
-  info: "text-subtle-foreground/60",
+  warning: "text-warning",
+  info: "text-subtle-foreground",
 };
 
 interface ChatActivityLineProps {
@@ -22,6 +23,7 @@ interface ChatActivityLineProps {
   actions?: ReactNode;
   children?: ReactNode;
   detailsVariant?: "text" | "content";
+  defaultExpanded?: boolean;
 }
 
 export function ChatActivityLine({
@@ -32,8 +34,9 @@ export function ChatActivityLine({
   actions,
   children,
   detailsVariant = "text",
+  defaultExpanded = false,
 }: ChatActivityLineProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const canExpand = Boolean(children);
   const summary = detail ? `${title}: ${detail}` : title;
 
@@ -67,7 +70,10 @@ export function ChatActivityLine({
         {actions ? <span className="shrink-0">{actions}</span> : null}
       </div>
       {canExpand && isExpanded && detailsVariant === "text" ? (
-        <pre className="mt-1.5 max-h-64 overflow-auto whitespace-pre-wrap pl-6 font-mono ui-text-sm text-subtle-foreground/55">
+        <pre
+          tabIndex={0}
+          className="mt-1.5 max-h-64 overflow-auto whitespace-pre-wrap pl-6 font-mono ui-text-sm text-subtle-foreground select-text"
+        >
           {children}
         </pre>
       ) : canExpand && isExpanded ? (

@@ -97,16 +97,22 @@ export function ExtensionDetailView({
       {!extension.isBundled ? (
         <Button
           variant={
-            isAppearanceExtension(extension) && extension.isActive
-              ? "default"
-              : isAppearanceExtension(extension) && extension.isInstalled
-                ? "accent"
-                : extension.isInstalled &&
-                    (extension.category === "agent" || extension.category === "skill")
-                  ? "danger"
-                  : extension.isInstalled && extension.isEnabled
-                    ? "default"
-                    : "accent"
+            isAppearanceExtension(extension)
+              ? extension.isActive || !extension.isInstalled
+                ? extension.isActive
+                  ? "default"
+                  : "accent"
+                : "accent"
+              : extension.isInstalled && extension.isEnabled
+                ? "default"
+                : "accent"
+          }
+          tone={
+            !isAppearanceExtension(extension) &&
+            extension.isInstalled &&
+            (extension.category === "agent" || extension.category === "skill")
+              ? "danger"
+              : "default"
           }
           onClick={() => void actions.toggle(extension)}
           disabled={
@@ -137,7 +143,8 @@ export function ExtensionDetailView({
       extension.category !== "agent" &&
       extension.category !== "skill" ? (
         <Button
-          variant="danger"
+          variant="ghost"
+          tone="danger"
           onClick={() => void actions.uninstall(extension)}
           disabled={isInstalling}
         >
@@ -177,10 +184,14 @@ export function ExtensionDetailView({
   const metadata = [
     ["Category", getCategoryLabel(extension.category)],
     ["Version", extension.installedVersion ?? extension.version],
+    ["Latest version", hasUpdate ? extension.availableVersion : undefined],
+    ["Publisher", extension.publisher],
+    ["Source", extension.sourceUrl],
     ["License", extension.license],
     [
       "Distribution",
-      extension.isBundled ? "Built-in" : extension.isMarketplace ? "Athas catalog" : "Local",
+      extension.distribution ??
+        (extension.isBundled ? "Built-in" : extension.isMarketplace ? "Athas catalog" : "Local"),
     ],
   ].filter((entry) => entry[1]);
 
@@ -197,7 +208,7 @@ export function ExtensionDetailView({
           {isInstalling ? (
             <Spinner label="Installing" showLabel compact />
           ) : (
-            <Badge variant={extension.isInstalled && extension.isEnabled ? "success" : "muted"}>
+            <Badge tone={extension.isInstalled && extension.isEnabled ? "success" : "neutral"}>
               {extension.isActive
                 ? "Active"
                 : extension.isInstalled
@@ -207,11 +218,17 @@ export function ExtensionDetailView({
                   : "Not installed"}
             </Badge>
           )}
-          {hasUpdate ? <Badge variant="accent">Update available</Badge> : null}
+          {hasUpdate ? <Badge tone="accent">Update available</Badge> : null}
         </>
       }
     >
       <div className="space-y-8">
+        {extension.installNote && !extension.isInstalled ? (
+          <Alert>
+            <AlertDescription>{extension.installNote}</AlertDescription>
+          </Alert>
+        ) : null}
+
         {extension.runtimeIssues?.length ? (
           <Alert tone="error">
             <AlertDescription>{extension.runtimeIssues[0]?.message}</AlertDescription>
@@ -300,7 +317,7 @@ export function ExtensionDetailView({
                     Review what this skill asks the agent to do before adding it.
                   </p>
                   {skillPreview.isLoading ? (
-                    <Card variant="muted">
+                    <Card>
                       <CardContent>
                         <Spinner label="Loading skill instructions" showLabel />
                       </CardContent>
@@ -310,7 +327,7 @@ export function ExtensionDetailView({
                       <AlertDescription>{skillPreview.error}</AlertDescription>
                     </Alert>
                   ) : skillContent ? (
-                    <Card variant="muted">
+                    <Card>
                       <CardContent className="min-w-0 overflow-hidden">
                         <MarkdownRenderer content={skillContent} />
                       </CardContent>

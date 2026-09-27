@@ -11,7 +11,6 @@ import { useAuthStore } from "@/features/window/stores/auth.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { Avatar } from "@/ui/avatar";
 import Badge from "@/ui/badge";
-import { Button } from "@/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,8 +33,10 @@ import {
   SignOutIcon,
   UserIcon,
   UsersIcon,
+  XIcon,
 } from "@/ui/icons";
 import { GithubMark } from "@/ui/brand-marks";
+import { SidebarIconButton } from "@/ui/sidebar";
 
 const COMMUNITY_URL = "https://discord.gg/DD8F38wFMv";
 
@@ -45,7 +46,6 @@ function isBlockingModalOpen() {
     state.isQuickOpenVisible ||
     state.isCommandPaletteVisible ||
     state.isGlobalSearchVisible ||
-    state.isSettingsDialogVisible ||
     state.isProjectPickerVisible ||
     state.isDatabaseConnectionVisible
   );
@@ -61,11 +61,10 @@ export const AccountMenu = memo(function AccountMenu() {
   const githubCurrentUser = useGitHubStore((state) => state.currentUser);
   const checkGitHubAuth = useGitHubStore((state) => state.actions.checkAuth);
   const openWhatsNew = useWhatsNewStore((state) => state.actions.open);
-  const setIsSettingsDialogVisible = useUIState((state) => state.setIsSettingsDialogVisible);
-  const openSettingsDialog = useUIState((state) => state.openSettingsDialog);
+  const openSettings = useUIState((state) => state.openSettings);
 
   const [isOpen, setIsOpen] = useState(false);
-  const { signIn, isSigningIn } = useDesktopSignIn({
+  const { signIn, isSigningIn, cancel, reopen } = useDesktopSignIn({
     onSuccess: () => setIsOpen(false),
   });
   const settingsShortcut = useCommandShortcut("workbench.openSettings");
@@ -74,7 +73,8 @@ export const AccountMenu = memo(function AccountMenu() {
     if (import.meta.env.DEV) {
       console.log("[Auth] Starting desktop sign-in flow from account menu");
     }
-    await signIn();
+    // useDesktopSignIn already shows the failure; its rejection only signals it.
+    await signIn().catch(() => undefined);
   };
 
   const handleSignOut = async () => {
@@ -106,11 +106,11 @@ export const AccountMenu = memo(function AccountMenu() {
   };
 
   const handleOpenSettings = () => {
-    setIsSettingsDialogVisible(true);
+    openSettings();
   };
 
   const handleOpenCollaboration = () => {
-    openSettingsDialog("collaboration");
+    openSettings("collaboration");
   };
 
   const isTeams = Boolean(subscription?.collaboration?.enabled);
@@ -137,11 +137,13 @@ export const AccountMenu = memo(function AccountMenu() {
   const sessionItems: MenuItem[] = [
     {
       id: isAuthenticated ? "sign-out" : "sign-in",
-      label: isAuthenticated ? "Sign Out" : isSigningIn ? "Signing In..." : "Sign In",
+      label: isAuthenticated ? "Sign Out" : isSigningIn ? "Open sign-in page" : "Sign In",
       icon: isAuthenticated ? <SignOutIcon /> : <SignInIcon />,
-      onClick: isAuthenticated ? handleSignOut : handleSignIn,
-      disabled: !isAuthenticated && isSigningIn,
+      onClick: isAuthenticated ? handleSignOut : isSigningIn ? reopen : handleSignIn,
     },
+    ...(!isAuthenticated && isSigningIn
+      ? [{ id: "cancel-sign-in", label: "Cancel sign-in", icon: <XIcon />, onClick: cancel }]
+      : []),
   ];
 
   const signedInAccountItems: MenuItem[] = [
@@ -261,30 +263,21 @@ export const AccountMenu = memo(function AccountMenu() {
     <>
       <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
         <DropdownMenuTrigger
-          render={
-            <Button
-              type="button"
-              variant="ghost"
-              iconOnly
-              size="chrome"
-              tooltip={tooltipLabel}
-              aria-label="Account"
-            />
-          }
+          render={<SidebarIconButton size="lg" tooltip={tooltipLabel} aria-label="Account" />}
         >
-          <Avatar name={accountName} src={accountAvatarUrl} size="xs" />
+          <Avatar name={accountName} src={accountAvatarUrl} size="md" />
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" size="wide">
+        <DropdownMenuContent size="wide">
           {isAuthenticated ? (
             <div role="presentation" className="flex min-w-0 items-center gap-2.5 px-2.5 py-2">
-              <Avatar name={accountName} src={accountAvatarUrl} className="size-9" />
+              <Avatar name={accountName} src={accountAvatarUrl} size="lg" />
               <div className="min-w-0 flex-1">
                 <div className="truncate font-medium text-foreground">{accountName}</div>
                 {accountDetail ? (
                   <div className="truncate text-subtle-foreground">{accountDetail}</div>
                 ) : null}
               </div>
-              <Badge variant="muted">{planLabel}</Badge>
+              <Badge>{planLabel}</Badge>
             </div>
           ) : null}
           {sections.map((section, index) => (

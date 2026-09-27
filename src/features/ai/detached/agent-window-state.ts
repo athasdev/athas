@@ -1,12 +1,8 @@
 import type { AIChatState } from "@/features/ai/stores/ai-chat/ai-chat-store.types";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import type { AgentWindowDraft } from "./agent-window-drafts";
-import type { getAccountIdentity } from "@/features/window/lib/account-identity";
-
-export type AgentAccountIdentity = ReturnType<typeof getAccountIdentity>;
 
 export interface AgentWindowSnapshot {
-  accountIdentity?: AgentAccountIdentity;
   chat: Pick<AIChatState, "chats" | "currentChatId" | "selectedAgentId" | "chatMessageLoadStates">;
   workspacePath: string | undefined;
   buffers: PaneContent[];

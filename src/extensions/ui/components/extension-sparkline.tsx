@@ -5,8 +5,8 @@ import { cn } from "@/utils/cn";
 const extensionSparklineVariants = cva("h-8 w-full overflow-visible", {
   variants: {
     tone: {
-      default: "text-foreground/65",
-      muted: "text-subtle-foreground/60",
+      default: "text-muted-foreground",
+      muted: "text-subtle-foreground",
       accent: "text-primary",
       success: "text-success",
       warning: "text-warning",

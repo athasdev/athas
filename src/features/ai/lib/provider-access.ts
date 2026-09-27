@@ -5,7 +5,7 @@ export function canUseIntelligenceProvider(
   providerId: string,
   subscription: SubscriptionInfo | null,
 ): boolean {
-  return providerId === "openrouter" && hasProductCapability(subscription, "intelligence");
+  return providerId === "athas" && hasProductCapability(subscription, "intelligence");
 }
 
 export function canUseProviderWithoutApiKey(params: {

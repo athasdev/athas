@@ -14,7 +14,7 @@ export function WorkspaceOverview({ root, config, onChange }: WorkspaceSectionPr
   return (
     <div className="space-y-6">
       <div className="grid gap-4 @min-[700px]/workbench-content:grid-cols-3">
-        <Card variant="muted">
+        <Card>
           <CardHeader>
             <CardTitle>Repositories</CardTitle>
             <CardDescription>
@@ -27,7 +27,7 @@ export function WorkspaceOverview({ root, config, onChange }: WorkspaceSectionPr
             </Button>
           </CardContent>
         </Card>
-        <Card variant="muted">
+        <Card>
           <CardHeader>
             <CardTitle>Shared tasks</CardTitle>
             <CardDescription>{config.commands.length} commands for the team</CardDescription>
@@ -38,7 +38,7 @@ export function WorkspaceOverview({ root, config, onChange }: WorkspaceSectionPr
             </Button>
           </CardContent>
         </Card>
-        <Card variant="muted">
+        <Card>
           <CardHeader>
             <CardTitle>Integrations</CardTitle>
             <CardDescription>

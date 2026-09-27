@@ -34,6 +34,7 @@ const AI_PROVIDERS: ModelProvider[] = [
     requiresApiKey: false,
     requiresAuth: true,
     models: [
+      { id: "auto", name: "Automatic", maxOutputTokens: 4096 },
       { id: "qwen/qwen3-coder", name: "Qwen3 Coder", contextWindow: 262144, maxOutputTokens: 4096 },
       { id: "openai/gpt-5-mini", name: "GPT-5 Mini", contextWindow: 400000, maxOutputTokens: 4096 },
     ],
@@ -250,6 +251,13 @@ const AI_PROVIDERS: ModelProvider[] = [
     name: "Custom",
     apiUrl: "",
     requiresApiKey: false,
+    models: [],
+  },
+  {
+    id: "vercel",
+    name: "Vercel AI Gateway",
+    apiUrl: "https://ai-gateway.vercel.sh/v1/chat/completions",
+    requiresApiKey: true,
     models: [],
   },
   {

@@ -1,5 +1,11 @@
+import { formatApiError } from "../lib/api-error";
+import { resolveAgentModel } from "../intelligence/lib/resolve-agent-model";
+import {
+  assertIntelligenceConnectionAllowed,
+  getIntelligenceConnection,
+} from "../intelligence/services/intelligence-connection";
 import { loadWorkspaceTeamContext } from "@/features/workspace/team/services/workspace-team-context";
-import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
+import { tauriFetch } from "@/utils/tauri-fetch";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { ChatMode, OutputStyle } from "@/features/ai/types/ai-chat.types";
 import type { AcpEvent } from "@/features/ai/types/acp.types";
@@ -7,11 +13,7 @@ import type { AgentCompletionResult } from "@/features/ai/types/agent-completion
 import type { ContextInfo } from "@/features/ai/types/ai-context.types";
 import type { AgentType } from "@/features/ai/types/ai-chat.types";
 import type { AIMessage } from "@/features/ai/types/messages.types";
-import {
-  getAvailableProviders,
-  getModelById,
-  getProviderById,
-} from "@/features/ai/types/providers.types";
+import { getProviderById } from "@/features/ai/types/providers.types";
 import {
   buildProviderSystemPromptContext,
   getProvider,
@@ -24,12 +26,16 @@ import { resolveChatCompletionTokenLimit } from "@/features/ai/lib/chat-completi
 import {
   getCustomProviderApiToken,
   resolveCustomProviderBaseUrl,
-  resolveCustomProviderModelId,
 } from "@/features/ai/lib/custom-provider-config";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { AcpStreamHandler } from "./acp-stream-handler";
 import { buildContextPrompt, buildSystemPrompt } from "../utils/ai-context-builder";
 import { isTerminalAgent } from "../lib/terminal-agents";
+import { loadContextProjectRules } from "../lib/project-rules";
+import {
+  compactConversationHistory,
+  fitMessagesToProviderLimits,
+} from "../lib/conversation-history";
 import { setCustomProviderBaseUrl } from "./providers/ai-provider-registry";
 import { CODEX_INTEGRATION_ID } from "../integrations/integration-registry";
 import { CodexIntegrationService } from "../integrations/codex/codex-integration-service";
@@ -38,98 +44,6 @@ import { CodexIntegrationService } from "../integrations/codex/codex-integration
 export const isAcpAgent = (agentId: AgentType): boolean => {
   return agentId !== "custom" && agentId !== CODEX_INTEGRATION_ID && !isTerminalAgent(agentId);
 };
-
-function resolveProviderModelPair(providerId: string, modelId: string) {
-  const requestedProvider = getProviderById(providerId);
-  const requestedStaticModel = getModelById(providerId, modelId);
-  if (requestedProvider && requestedStaticModel) {
-    return {
-      providerId,
-      modelId,
-      provider: requestedProvider,
-      model: requestedStaticModel,
-    };
-  }
-
-  const { dynamicModels } = useAIChatStore.getState();
-  const requestedDynamicModel = dynamicModels[providerId]?.find((model) => model.id === modelId);
-  if (requestedProvider && requestedDynamicModel) {
-    return {
-      providerId,
-      modelId,
-      provider: requestedProvider,
-      model: {
-        ...requestedDynamicModel,
-        maxOutputTokens:
-          requestedDynamicModel.maxOutputTokens ?? requestedDynamicModel.maxTokens ?? 4096,
-      },
-    };
-  }
-
-  if (requestedProvider?.id === "openrouter" && modelId.trim().length > 0) {
-    return {
-      providerId,
-      modelId,
-      provider: requestedProvider,
-      model: {
-        id: modelId,
-        name: modelId,
-        maxOutputTokens: 4096,
-      },
-    };
-  }
-
-  if (requestedProvider?.id === "custom") {
-    const customModelId = resolveCustomProviderModelId(
-      useSettingsStore.getState().settings,
-      modelId,
-    );
-    if (customModelId.trim().length > 0) {
-      return {
-        providerId,
-        modelId: customModelId,
-        provider: requestedProvider,
-        model: {
-          id: customModelId,
-          name: customModelId,
-          maxOutputTokens: 4096,
-        },
-      };
-    }
-  }
-
-  for (const provider of getAvailableProviders()) {
-    const staticModel = provider.models.find((model) => model.id === modelId);
-    if (staticModel) {
-      return {
-        providerId: provider.id,
-        modelId,
-        provider,
-        model: staticModel,
-      };
-    }
-
-    const dynamicModel = dynamicModels[provider.id]?.find((model) => model.id === modelId);
-    if (dynamicModel) {
-      return {
-        providerId: provider.id,
-        modelId,
-        provider,
-        model: {
-          ...dynamicModel,
-          maxOutputTokens: dynamicModel.maxOutputTokens ?? dynamicModel.maxTokens ?? 4096,
-        },
-      };
-    }
-  }
-
-  return {
-    providerId,
-    modelId,
-    provider: requestedProvider,
-    model: undefined,
-  };
-}
 
 // Generic streaming chat completion function that works with any agent/provider
 export const getChatCompletionStream = async (
@@ -154,6 +68,7 @@ export const getChatCompletionStream = async (
   onResourceChunk?: (uri: string, name: string | null) => void,
   chatId?: string,
   systemPromptOverride?: string,
+  onResponsePhase?: (phase: "starting" | "waiting" | "stalled") => void,
 ): Promise<void> => {
   try {
     if (context.projectRoot) {
@@ -198,6 +113,7 @@ export const getChatCompletionStream = async (
           onEvent: onAcpEvent,
           onImageChunk,
           onResourceChunk,
+          onResponsePhase,
         },
         chatId,
       );
@@ -205,13 +121,17 @@ export const getChatCompletionStream = async (
       return;
     }
 
-    // For "custom" agent, use HTTP API providers. Resolve stale provider/model
-    // pairs defensively so a recent selector change cannot call the wrong API.
-    const resolved = resolveProviderModelPair(providerId, modelId);
-    providerId = resolved.providerId;
-    modelId = resolved.modelId;
-    const provider = resolved.provider;
-    const model = resolved.model;
+    await getIntelligenceConnection("agent");
+    assertIntelligenceConnectionAllowed(providerId, "agent");
+    const provider = getProviderById(providerId);
+    const settings = useSettingsStore.getState().settings;
+    const model = resolveAgentModel({
+      provider,
+      modelId,
+      dynamicModels: useAIChatStore.getState().dynamicModels[providerId] ?? [],
+      customDefault: settings.aiCustomModelId || settings.aiAutocompleteCustomModelId,
+    });
+    if (model) modelId = model.id;
 
     if (providerId === "custom" && !model) {
       throw new Error("Custom provider model is required. Add one in Settings -> Agent.");
@@ -221,7 +141,6 @@ export const getChatCompletionStream = async (
       throw new Error(`Provider or model not found: ${providerId}/${modelId}`);
     }
 
-    const settings = useSettingsStore.getState().settings;
     const customProviderBaseUrl =
       providerId === "custom" ? resolveCustomProviderBaseUrl(settings) : "";
     const apiKey =
@@ -250,6 +169,9 @@ export const getChatCompletionStream = async (
       }
     }
 
+    if (context.projectRoot) {
+      context = { ...context, projectRules: await loadContextProjectRules(context) };
+    }
     const contextPrompt = buildContextPrompt(context);
     let systemPrompt = systemPromptOverride || buildSystemPrompt(contextPrompt, mode, outputStyle);
     const providerSystemPromptContext = await buildProviderSystemPromptContext(
@@ -261,7 +183,7 @@ export const getChatCompletionStream = async (
     }
 
     // Build messages array with conversation history
-    const messages: AIMessage[] = [
+    const draftMessages: AIMessage[] = [
       {
         role: "system" as const,
         content: systemPrompt,
@@ -270,15 +192,51 @@ export const getChatCompletionStream = async (
 
     // Add conversation history if provided
     if (conversationHistory && conversationHistory.length > 0) {
-      messages.push(...conversationHistory);
+      draftMessages.push(...(await compactConversationHistory(conversationHistory)));
     }
 
     // Add the current user message
-    messages.push({
+    draftMessages.push({
       role: "user" as const,
       content: userMessage,
       ...(context.images?.length ? { images: context.images } : {}),
     });
+    const messages = fitMessagesToProviderLimits(draftMessages, providerId);
+
+    if (
+      [
+        "athas",
+        "anthropic",
+        "openai",
+        "openrouter",
+        "vercel",
+        "gemini",
+        "grok",
+        "mistral",
+        "deepseek",
+        "qwen",
+        "ollama",
+        "custom",
+      ].includes(providerId)
+    ) {
+      const { runIntelligenceAgent } = await import("../intelligence/services/intelligence-agent");
+      const result = await runIntelligenceAgent({
+        sessionId: chatId || crypto.randomUUID(),
+        providerId,
+        modelId,
+        messages,
+        root: context.projectRoot,
+        readOnly: mode !== "chat",
+        maxSteps: settings.aiAgentMaxSteps,
+        onChunk,
+        onToolUse,
+        onToolComplete,
+        onPermissionRequest,
+        onEvent: onAcpEvent,
+      });
+      onComplete(result);
+      return;
+    }
 
     // Use provider abstraction
     const providerImpl = getProvider(providerId);
@@ -323,6 +281,6 @@ export const getChatCompletionStream = async (
     await processStreamingResponse(response, onChunk, onComplete, onError);
   } catch (error: any) {
     console.error(`${providerId} streaming chat completion error:`, error);
-    onError(`Failed to connect to ${providerId} API: ${error.message || error}`);
+    onError(formatApiError(providerId, error));
   }
 };

@@ -1,10 +1,7 @@
-use crate::git::{GitRemote, IntoStringError};
+use crate::git::{GitCommand, GitRemote, IntoStringError, RepositoryHost};
 use anyhow::{Context, Result, bail};
 use git2::Repository;
-use std::{
-   path::Path,
-   process::{Command, Stdio},
-};
+use std::path::Path;
 
 pub fn git_clone(repository_url: String, destination_path: String) -> Result<(), String> {
    _git_clone(repository_url, destination_path).into_string_error()
@@ -18,7 +15,11 @@ fn _git_clone(repository_url: String, destination_path: String) -> Result<()> {
    if repository_url.starts_with('-') {
       bail!("Repository URL cannot start with an option prefix");
    }
-   if repository_url.len() >= 5 && repository_url[..5].eq_ignore_ascii_case("ext::") {
+   if repository_url
+      .as_bytes()
+      .get(..5)
+      .is_some_and(|prefix| prefix.eq_ignore_ascii_case(b"ext::"))
+   {
       bail!("The ext transport can execute local commands and is not allowed");
    }
 
@@ -37,105 +38,44 @@ fn _git_clone(repository_url: String, destination_path: String) -> Result<()> {
       bail!("Clone destination parent does not exist");
    }
 
-   let output = Command::new("git")
-      .current_dir(parent)
-      .env("GIT_TERMINAL_PROMPT", "0")
-      .env("GCM_INTERACTIVE", "never")
-      .env("SSH_ASKPASS_REQUIRE", "never")
-      .env("GIT_SSH_COMMAND", "ssh -oBatchMode=yes")
-      .stdin(Stdio::null())
+   let host = RepositoryHost::detect(&parent.to_string_lossy());
+   let command = remote_git_command(&host);
+   let destination_argument = command.argument_path(&destination_path);
+   command
       .arg("clone")
       .arg(repository_url)
-      .arg(destination)
-      .output()
-      .context("Failed to execute git clone")?;
+      .arg(destination_argument)
+      .run("clone")?;
 
-   if output.status.success() {
-      return Ok(());
-   }
-
-   let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-   let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
-   let details = if !stderr.is_empty() {
-      stderr
-   } else if !stdout.is_empty() {
-      stdout
-   } else {
-      "Git returned a non-zero exit status without output.".to_string()
-   };
-
-   bail!("Git clone failed: {}", redact_url_credentials(&details));
+   Ok(())
 }
 
 pub fn git_push(repo_path: String, branch: Option<String>, remote: String) -> Result<(), String> {
    _git_push(repo_path, branch, remote).into_string_error()
 }
 
-pub(crate) fn execute_remote_git_command(
-   repo_dir: &Path,
-   args: &[&str],
-   operation: &str,
-) -> Result<()> {
-   let output = Command::new("git")
-      .current_dir(repo_dir)
+/// A git command that never waits for interactive credential prompts.
+fn remote_git_command(host: &RepositoryHost) -> GitCommand {
+   host
+      .git()
       .env("GIT_TERMINAL_PROMPT", "0")
       .env("GCM_INTERACTIVE", "never")
       .env("SSH_ASKPASS_REQUIRE", "never")
       .env("GIT_SSH_COMMAND", "ssh -oBatchMode=yes")
-      .stdin(Stdio::null())
-      .args(args)
-      .output()
-      .with_context(|| format!("Failed to execute git {operation}"))?;
-
-   if output.status.success() {
-      return Ok(());
-   }
-
-   let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-   let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
-   let details = if !stderr.is_empty() {
-      stderr
-   } else if !stdout.is_empty() {
-      stdout
-   } else {
-      "Git returned a non-zero exit status without output.".to_string()
-   };
-
-   bail!(
-      "Git {operation} failed: {}",
-      redact_url_credentials(&details)
-   );
 }
 
-/// Replace `user:password@` userinfo in URLs with `***` so embedded
-/// credentials never reach UI errors or logs.
-fn redact_url_credentials(text: &str) -> String {
-   let mut redacted = String::with_capacity(text.len());
-   let mut rest = text;
-   while let Some(scheme_end) = rest.find("://") {
-      let after_scheme = &rest[scheme_end + 3..];
-      let userinfo_end = after_scheme
-         .find(['@', '/', ' ', '\n', '"', '\''])
-         .map(|index| (index, after_scheme.as_bytes().get(index)));
-      match userinfo_end {
-         Some((index, Some(b'@'))) => {
-            redacted.push_str(&rest[..scheme_end + 3]);
-            redacted.push_str("***@");
-            rest = &after_scheme[index + 1..];
-         }
-         _ => {
-            let keep = scheme_end + 3;
-            redacted.push_str(&rest[..keep]);
-            rest = &rest[keep..];
-         }
-      }
-   }
-   redacted.push_str(rest);
-   redacted
+pub(crate) fn execute_remote_git_command(
+   repo_path: &str,
+   args: &[&str],
+   operation: &str,
+) -> Result<()> {
+   remote_git_command(&RepositoryHost::detect(repo_path))
+      .args(args)
+      .run(operation)?;
+   Ok(())
 }
 
 fn _git_push(repo_path: String, branch: Option<String>, remote: String) -> Result<()> {
-   let repo_dir = Path::new(&repo_path);
    let mut args = vec!["push", &remote];
    let branch_str;
    if let Some(b) = branch {
@@ -143,7 +83,7 @@ fn _git_push(repo_path: String, branch: Option<String>, remote: String) -> Resul
       args.push(&branch_str);
    }
 
-   execute_remote_git_command(repo_dir, &args, "push")
+   execute_remote_git_command(&repo_path, &args, "push")
 }
 
 pub fn git_pull(repo_path: String, branch: Option<String>, remote: String) -> Result<(), String> {
@@ -151,7 +91,6 @@ pub fn git_pull(repo_path: String, branch: Option<String>, remote: String) -> Re
 }
 
 fn _git_pull(repo_path: String, branch: Option<String>, remote: String) -> Result<()> {
-   let repo_dir = Path::new(&repo_path);
    let mut args = vec!["pull", &remote];
    let branch_str;
    if let Some(b) = branch {
@@ -159,7 +98,7 @@ fn _git_pull(repo_path: String, branch: Option<String>, remote: String) -> Resul
       args.push(&branch_str);
    }
 
-   execute_remote_git_command(repo_dir, &args, "pull")
+   execute_remote_git_command(&repo_path, &args, "pull")
 }
 
 pub fn git_fetch(repo_path: String, remote: Option<String>) -> Result<(), String> {
@@ -167,7 +106,6 @@ pub fn git_fetch(repo_path: String, remote: Option<String>) -> Result<(), String
 }
 
 fn _git_fetch(repo_path: String, remote: Option<String>) -> Result<()> {
-   let repo_dir = Path::new(&repo_path);
    let mut args = vec!["fetch"];
    let remote_str;
    if let Some(r) = remote {
@@ -175,7 +113,7 @@ fn _git_fetch(repo_path: String, remote: Option<String>) -> Result<()> {
       args.push(&remote_str);
    }
 
-   execute_remote_git_command(repo_dir, &args, "fetch")
+   execute_remote_git_command(&repo_path, &args, "fetch")
 }
 
 pub fn git_get_remotes(repo_path: String) -> Result<Vec<GitRemote>, String> {
@@ -205,6 +143,15 @@ pub fn git_add_remote(repo_path: String, name: String, url: String) -> Result<()
 }
 
 fn _git_add_remote(repo_path: String, name: String, url: String) -> Result<()> {
+   let host = RepositoryHost::detect(&repo_path);
+   if host.uses_distro_git() {
+      host
+         .git()
+         .args(["remote", "add", &name, &url])
+         .run("remote add")?;
+      return Ok(());
+   }
+
    let repo = Repository::open(&repo_path).context("Failed to open repository")?;
    repo.remote(&name, &url).context("Failed to add remote")?;
    Ok(())
@@ -215,6 +162,15 @@ pub fn git_remove_remote(repo_path: String, name: String) -> Result<(), String> 
 }
 
 fn _git_remove_remote(repo_path: String, name: String) -> Result<()> {
+   let host = RepositoryHost::detect(&repo_path);
+   if host.uses_distro_git() {
+      host
+         .git()
+         .args(["remote", "remove", &name])
+         .run("remote remove")?;
+      return Ok(());
+   }
+
    let repo = Repository::open(&repo_path).context("Failed to open repository")?;
    repo
       .remote_delete(&name)
@@ -248,19 +204,10 @@ mod tests {
          "/tmp/athas-clone-target".to_string(),
       );
       assert!(result.unwrap_err().to_string().contains("ext transport"));
-   }
-
-   #[test]
-   fn redacts_embedded_credentials_from_git_output() {
-      assert_eq!(
-         redact_url_credentials(
-            "repository 'https://user:s3cret@github.com/org/repo.git' not found"
-         ),
-         "repository 'https://***@github.com/org/repo.git' not found"
+      let result = _git_clone(
+         "EXT::sh -c cp".to_string(),
+         "/tmp/athas-clone-target".to_string(),
       );
-      assert_eq!(
-         redact_url_credentials("https://github.com/org/repo.git"),
-         "https://github.com/org/repo.git"
-      );
+      assert!(result.unwrap_err().to_string().contains("ext transport"));
    }
 }

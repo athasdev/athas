@@ -9,7 +9,14 @@ import {
 } from "@/ui/icons";
 import { useState } from "react";
 import { Button } from "@/ui/button";
-import { cn } from "@/utils/cn";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/ui/dropdown";
+import { ChromeSeparator } from "@/ui/chrome";
 import type { ImageFormat } from "../types/image-operation.types";
 import { ImageFormatDialog } from "./image-format-dialog";
 
@@ -30,6 +37,13 @@ interface ImageEditorToolbarProps {
   currentFileName: string;
 }
 
+const CONVERT_FORMATS: { format: ImageFormat; label: string }[] = [
+  { format: "png", label: "PNG" },
+  { format: "jpeg", label: "JPEG" },
+  { format: "webp", label: "WebP" },
+  { format: "avif", label: "AVIF" },
+];
+
 export function ImageEditorToolbar({
   onConvertFormat,
   onRotateCW,
@@ -46,200 +60,77 @@ export function ImageEditorToolbar({
   currentImageSrc,
   currentFileName,
 }: ImageEditorToolbarProps) {
-  const [showEditMenu, setShowEditMenu] = useState(false);
-  const [showConvertMenu, setShowConvertMenu] = useState(false);
   const [formatDialogState, setFormatDialogState] = useState<{
     isOpen: boolean;
     format: ImageFormat | null;
   }>({ isOpen: false, format: null });
-
-  const handleFormatSelect = (format: ImageFormat) => {
-    setShowConvertMenu(false);
-    setFormatDialogState({ isOpen: true, format });
-  };
 
   const handleConvert = (format: ImageFormat, quality?: number) => {
     onConvertFormat(format, quality);
     setFormatDialogState({ isOpen: false, format: null });
   };
 
-  const handleEdit = (action: () => void) => {
-    action();
-    setShowEditMenu(false);
-  };
-
   return (
     <div className="flex items-center gap-1">
-      {/* Edit Menu */}
-      <div className="relative">
-        <Button
-          onClick={() => setShowEditMenu(!showEditMenu)}
-          variant="ghost"
-          disabled={isProcessing}
-          tooltip="Edit operations"
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={<Button variant="ghost" disabled={isProcessing} tooltip="Edit operations" />}
         >
-          <span className="ui-text-sm">Edit</span>
-          <ChevronDownIcon className="ml-1" />
-        </Button>
+          Edit
+          <ChevronDownIcon />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" size="compact">
+          <DropdownMenuItem onClick={onResize}>
+            <ImageIcon />
+            Resize...
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={onRotateCW}>
+            <ArrowClockwiseIcon />
+            Rotate 90° CW
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={onRotateCCW}>
+            <ArrowCounterClockwiseIcon />
+            Rotate 90° CCW
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={onRotate180}>
+            <ArrowClockwiseIcon />
+            Rotate 180°
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={onFlipHorizontal}>
+            <FlipHorizontalIcon />
+            Flip Horizontal
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={onFlipVertical}>
+            <FlipVerticalIcon />
+            Flip Vertical
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
-        {showEditMenu && (
-          <>
-            <div
-              className="fixed inset-0 z-40"
-              onClick={() => setShowEditMenu(false)}
-              onKeyDown={() => setShowEditMenu(false)}
-            />
-            <div
-              className={cn(
-                "absolute top-full left-0 z-50 mt-1",
-                "w-48 rounded border border-border bg-surface shadow-(--shadow-popover)",
-              )}
-            >
-              <div className="py-1">
-                <Button
-                  type="button"
-                  onClick={() => handleEdit(onResize)}
-                  variant="list"
-                  width="full"
-                  align="start"
-                >
-                  <ImageIcon />
-                  <span>Resize...</span>
-                </Button>
-                <div className="my-1 h-px bg-border" />
-                <Button
-                  type="button"
-                  onClick={() => handleEdit(onRotateCW)}
-                  variant="list"
-                  width="full"
-                  align="start"
-                >
-                  <ArrowClockwiseIcon />
-                  <span>Rotate 90° CW</span>
-                </Button>
-                <Button
-                  type="button"
-                  onClick={() => handleEdit(onRotateCCW)}
-                  variant="list"
-                  width="full"
-                  align="start"
-                >
-                  <ArrowCounterClockwiseIcon />
-                  <span>Rotate 90° CCW</span>
-                </Button>
-                <Button
-                  type="button"
-                  onClick={() => handleEdit(onRotate180)}
-                  variant="list"
-                  width="full"
-                  align="start"
-                >
-                  <ArrowClockwiseIcon />
-                  <span>Rotate 180°</span>
-                </Button>
-                <div className="my-1 h-px bg-border" />
-                <Button
-                  type="button"
-                  onClick={() => handleEdit(onFlipHorizontal)}
-                  variant="list"
-                  width="full"
-                  align="start"
-                >
-                  <FlipHorizontalIcon />
-                  <span>Flip Horizontal</span>
-                </Button>
-                <Button
-                  type="button"
-                  onClick={() => handleEdit(onFlipVertical)}
-                  variant="list"
-                  width="full"
-                  align="start"
-                >
-                  <FlipVerticalIcon />
-                  <span>Flip Vertical</span>
-                </Button>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* Convert Menu */}
-      <div className="relative">
-        <Button
-          onClick={() => setShowConvertMenu(!showConvertMenu)}
-          variant="ghost"
-          disabled={isProcessing}
-          tooltip="Convert format"
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={<Button variant="ghost" disabled={isProcessing} tooltip="Convert format" />}
         >
-          <span className="ui-text-sm">Convert</span>
-          <ChevronDownIcon className="ml-1" />
-        </Button>
-
-        {showConvertMenu && (
-          <>
-            <div
-              className="fixed inset-0 z-40"
-              onClick={() => setShowConvertMenu(false)}
-              onKeyDown={() => setShowConvertMenu(false)}
-            />
-            <div
-              className={cn(
-                "absolute top-full left-0 z-50 mt-1",
-                "w-40 rounded border border-border bg-surface shadow-(--shadow-popover)",
-              )}
+          Convert
+          <ChevronDownIcon />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" size="compact">
+          {CONVERT_FORMATS.map(({ format, label }) => (
+            <DropdownMenuItem
+              key={format}
+              onClick={() => setFormatDialogState({ isOpen: true, format })}
             >
-              <div className="py-1">
-                <Button
-                  type="button"
-                  onClick={() => handleFormatSelect("png")}
-                  variant="list"
-                  width="full"
-                  align="start"
-                >
-                  <ImageIcon />
-                  <span>PNG</span>
-                </Button>
-                <Button
-                  type="button"
-                  onClick={() => handleFormatSelect("jpeg")}
-                  variant="list"
-                  width="full"
-                  align="start"
-                >
-                  <ImageIcon />
-                  <span>JPEG</span>
-                </Button>
-                <Button
-                  type="button"
-                  onClick={() => handleFormatSelect("webp")}
-                  variant="list"
-                  width="full"
-                  align="start"
-                >
-                  <ImageIcon />
-                  <span>WebP</span>
-                </Button>
-                <Button
-                  type="button"
-                  onClick={() => handleFormatSelect("avif")}
-                  variant="list"
-                  width="full"
-                  align="start"
-                >
-                  <ImageIcon />
-                  <span>AVIF</span>
-                </Button>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
+              <ImageIcon />
+              {label}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
 
-      {/* Separator */}
-      <div className="mx-1 h-4 w-px bg-border" />
+      <ChromeSeparator />
 
-      {/* Undo Button */}
       <Button
         onClick={onUndo}
         variant="ghost"
@@ -250,21 +141,19 @@ export function ImageEditorToolbar({
         <ArrowCounterClockwiseIcon />
       </Button>
 
-      {/* Save Button - shows when there are changes */}
       {hasChanges && (
         <Button
           onClick={onSave}
           variant="ghost"
           disabled={isProcessing}
           tooltip="Save changes"
-          tone="primary"
+          tone="accent"
           iconOnly
         >
           <SaveIcon />
         </Button>
       )}
 
-      {/* Format Conversion Dialog */}
       {formatDialogState.format && (
         <ImageFormatDialog
           isOpen={formatDialogState.isOpen}

@@ -9,9 +9,20 @@ import {
 } from "@/features/ai/services/ai-chat-history-service";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { conversationContent, conversationMessages } from "../lib/snapshot-content";
-import { fetchShareOptions, shareRequest, updateShare } from "../services/share-api";
+import {
+  fetchShareOptions,
+  isRejectedShareRequest,
+  shareRequest,
+  updateShare,
+} from "../services/share-api";
 import { getShareDeviceId } from "../services/share-device";
 import type { ShareDraft } from "../types/share.types";
+
+const maxTitleLength = 200;
+
+function sessionTitle(title: string | null | undefined) {
+  return (title ?? "").trim().slice(0, maxTitleLength) || "Untitled session";
+}
 
 export function SharingRuntime() {
   const userId = useAuthStore((state) => state.user?.id);
@@ -22,8 +33,29 @@ export function SharingRuntime() {
     const deviceId = getShareDeviceId();
     const sent = new Map<string, string>();
     const requests = new Map<string, string>();
+    const rejected = new Map<string, string>();
     const current = () => !cancelled && useAuthStore.getState().user?.id === userId;
+    // Chats loaded from the database, reused until their last message changes.
+    const loadedChats = new Map<
+      string,
+      { lastMessageAt: number; chat: Awaited<ReturnType<typeof loadChatFromDb>> }
+    >();
+    let isChatDatabaseReady = false;
+    let isSyncing = false;
+    const loadChat = async (id: string, lastMessageAt: number) => {
+      const cached = loadedChats.get(id);
+      if (cached && cached.lastMessageAt === lastMessageAt) return cached.chat;
+      const chat = await loadChatFromDb(id);
+      loadedChats.set(id, { lastMessageAt, chat });
+      return chat;
+    };
     const sync = async () => {
+      // Nothing to publish while the window is hidden; visibility brings it back straight away.
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+        if (current()) timer = setTimeout(() => void sync(), 3000);
+        return;
+      }
+      isSyncing = true;
       try {
         const token = await getAuthToken();
         if (!token || !current()) return;
@@ -32,7 +64,10 @@ export function SharingRuntime() {
         const drafts = new Map<string, ShareDraft>();
         const summaries = new Map(useAIChatStore.getState().chats.map((chat) => [chat.id, chat]));
         if (options.sessionsEnabled) {
-          await initChatDatabase();
+          if (!isChatDatabaseReady) {
+            await initChatDatabase();
+            isChatDatabaseReady = true;
+          }
           for (const chat of await loadAllChatsFromDb()) {
             if (!summaries.has(chat.id)) summaries.set(chat.id, { ...chat, messages: [] });
           }
@@ -49,7 +84,9 @@ export function SharingRuntime() {
               )
             )
               continue;
-            const chat = summary.messages.length ? summary : await loadChatFromDb(summary.id);
+            const chat = summary.messages.length
+              ? summary
+              : await loadChat(summary.id, summary.lastMessageAt.getTime());
             if (!current()) return;
             const latest = useAIChatStore.getState().chats.find((entry) => entry.id === summary.id);
             const messages = latest?.messages.length ? latest.messages : chat.messages;
@@ -61,7 +98,7 @@ export function SharingRuntime() {
                 : chat.lastMessageAt
               ).getTime(),
               kind: "agent",
-              title: summary.title,
+              title: sessionTitle(summary.title),
               content,
               messages: conversationMessages(messages),
               language: "markdown",
@@ -101,14 +138,26 @@ export function SharingRuntime() {
             ) {
               const requestId = requests.get(sourceId) || crypto.randomUUID();
               requests.set(sourceId, requestId);
-              await shareRequest(
-                "/api/cloud-sessions",
-                {
-                  method: "POST",
-                  body: JSON.stringify({ ...draft, requestId, visibility: "private", live: true }),
-                },
-                token,
-              );
+              const payload = JSON.stringify({
+                ...draft,
+                requestId,
+                visibility: "private",
+                live: true,
+              });
+              if (rejected.get(sourceId) !== payload) {
+                try {
+                  await shareRequest(
+                    "/api/cloud-sessions",
+                    { method: "POST", body: payload },
+                    token,
+                  );
+                  rejected.delete(sourceId);
+                } catch (error) {
+                  // A rejected payload is only retried once its content changes.
+                  if (isRejectedShareRequest(error)) rejected.set(sourceId, payload);
+                  throw error;
+                }
+              }
             }
             for (const item of options.items) {
               if (!current()) return;
@@ -136,6 +185,7 @@ export function SharingRuntime() {
           }
         }
         if (syncError) throw syncError;
+        if (!current()) return;
         window.dispatchEvent(
           new CustomEvent("athas:sharing-status", {
             detail: { error: null, syncedAt: Date.now() },
@@ -149,13 +199,25 @@ export function SharingRuntime() {
             }),
           );
       } finally {
+        isSyncing = false;
         if (current()) timer = setTimeout(() => void sync(), 3000);
       }
     };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== "visible" || !current() || isSyncing) return;
+      clearTimeout(timer);
+      void sync();
+    };
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", handleVisibilityChange);
+    }
     void sync();
     return () => {
       cancelled = true;
       clearTimeout(timer);
+      if (typeof document !== "undefined") {
+        document.removeEventListener("visibilitychange", handleVisibilityChange);
+      }
     };
   }, [userId]);
   return null;

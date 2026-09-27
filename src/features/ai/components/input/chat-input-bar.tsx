@@ -1,16 +1,44 @@
+import { ProviderConnectionAction } from "./provider-connection-action";
+import { isComposingKeyboardEvent } from "@/features/keymaps/utils/is-composing-keyboard-event";
 import { getProviderAccessFromMap } from "@/features/ai/stores/ai-chat/provider-actions";
-import { ArrowUpIcon, BoltIcon, CommandIcon, MicrophoneIcon, StopIcon } from "@/ui/icons";
-import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { registerAgentDraft, takeAgentDraft } from "@/features/ai/detached/agent-window-drafts";
+import {
+  ArrowUpIcon,
+  BoltIcon,
+  MicrophoneIcon,
+  PlayIcon,
+  StopIcon,
+  TerminalIcon,
+} from "@/ui/icons";
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useEffectEvent,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { runChatTerminalCommand } from "@/features/ai/services/chat-terminal-command";
+import { getFolderName } from "@/utils/path-helpers";
+import { getComposerTerminalCommand } from "@/features/ai/utils/composer-terminal-command";
+import { ChromeBar, ChromeGroup, ChromeLabel } from "@/ui/chrome";
+import { Kbd } from "@/ui/kbd";
+import { useAgentDraft } from "@/features/ai/hooks/use-agent-draft";
 import { shouldIgnoreSearchFile } from "@/features/file-search/utils/file-search-filtering";
 import {
   AI_CHAT_INSERT_SKILL_EVENT,
   type AIChatSkillInsertDetail,
 } from "@/features/ai/lib/skill-events";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
+import { selectChatAcpSession } from "@/features/ai/lib/acp-session-state";
 import { useVoiceInput } from "@/features/ai/hooks/use-voice-input";
+import { useComposerFileDrop } from "@/features/ai/hooks/use-composer-file-drop";
+import { getImageMimeType } from "@/utils/image-file-types";
 import { parsePastedImages, restorePastedImages } from "@/features/ai/lib/image-attachments";
 import { useToast } from "@/features/layout/contexts/toast-context";
+import { isAcpAgent } from "@/features/ai/services/ai-chat-service";
+import { useFollowAgentInterrupt } from "./follow-agent-toggle";
 import {
   getComposerDropdownPosition,
   getComposerText,
@@ -21,7 +49,10 @@ import {
 import type { InlineDropdownPosition, PastedImage } from "@/features/ai/types/chat-composer.types";
 import type { AIChatSkill } from "@/features/ai/types/skills.types";
 import type { SlashCommand } from "@/features/ai/types/acp.types";
-import type { AIChatInputBarProps } from "@/features/ai/types/ai-chat.types";
+import type {
+  AIChatInputBarProps,
+  RestoredComposerPrompt,
+} from "@/features/ai/types/ai-chat.types";
 import type { FileEntry } from "@/features/file-system/types/app.types";
 import { openSidebarResourceBuffer } from "@/features/sidebar/utils/open-sidebar-resource";
 import {
@@ -32,17 +63,36 @@ import {
 } from "@/features/sidebar/utils/sidebar-resource-drag";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { ComposerAttachments } from "./composer-attachments";
-import { badgeVariants } from "@/ui/badge";
+import Badge, { badgeVariants } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { ButtonGroup, ButtonGroupSeparator } from "@/ui/button-group";
 import { cn } from "@/utils/cn";
 import { Composer, ComposerEditable, ComposerToolbar } from "@/ui/composer";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { chatContentWidth } from "../chat/chat-content-width";
-import { ComposerEffortSelector } from "./composer-effort-selector";
 import { ComposerAgentSelector } from "./composer-agent-selector";
 import { ChatPreferencesMenu } from "./chat-preferences-menu";
+import { ComposerModeSelector } from "./composer-mode-selector";
+import { useChatModeSource } from "@/features/ai/hooks/use-chat-mode";
+import { applyChatModeIntent, cycleChatMode } from "@/features/ai/services/chat-mode-service";
+import {
+  filterComposerSlashCommands,
+  mergeComposerSlashCommands,
+  parseLeadingModeCommand,
+} from "@/features/ai/lib/composer-slash-commands";
+import type {
+  ComposerCommandAction,
+  ComposerSlashCommand,
+} from "@/features/ai/types/composer-slash-command.types";
+import { clearChat, compactChat } from "@/features/ai/services/chat-compaction-service";
+import { openAgentEditsReview } from "@/features/ai/services/agent-edits-service";
+import { pickAgentEditsChatId } from "@/features/ai/stores/agent-edits.store";
+import { openNewAgentChat } from "@/features/ai/lib/open-new-agent-chat";
+import { AcpContextMeter } from "./acp-context-meter";
+import { ComposerContextMeter } from "./composer-context-meter";
+import { useComposerContextBudget } from "@/features/ai/hooks/use-composer-context-budget";
 import { AgentMessageQueue } from "./agent-message-queue";
+import { AgentEditsBar } from "./agent-edits-bar";
 import { FileMentionDropdown } from "../mentions/file-mention-dropdown";
 import { SlashCommandDropdown } from "../mentions/slash-command-dropdown";
 import { ContextSelector } from "../selectors/context-selector";
@@ -68,13 +118,19 @@ const AIChatInputBar = memo(function AIChatInputBar({
   presentation = "default",
   autoFocus = false,
   onAgentChange,
+  onTerminalChatCreated,
   onSendMessage,
   onInterruptAndSend,
   onMoveQueuedMessage,
+  onUpdateQueuedMessage,
   onRemoveQueuedMessage,
+  onSendQueuedMessageNow,
+  onEditQueuedMessage,
   onStopStreaming,
+  restoredPrompt,
 }: AIChatInputBarProps) {
   const inputRef = useRef<HTMLDivElement>(null);
+  const composerRef = useRef<HTMLDivElement>(null);
   const contextTriggerRef = useRef<HTMLButtonElement>(null);
   const aiChatContainerRef = useRef<HTMLDivElement>(null);
   const isUpdatingContentRef = useRef(false);
@@ -83,36 +139,33 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
   // Local state for input emptiness check (to avoid subscribing to full input text)
   const [hasInputText, setHasInputText] = useState(false);
+  const [terminalCommand, setTerminalCommand] = useState<string | null>(null);
+  const terminalHintId = useId();
+  const isTerminalMode = terminalCommand !== null;
+  const terminalEnabled = useSettingsStore((state) => state.settings.coreFeatures.terminal);
   const [isContextDragOver, setIsContextDragOver] = useState(false);
   const [isComposerFocused, setIsComposerFocused] = useState(false);
   const projectPath = useProjectStore((state) => state.rootFolderPath || ".");
   const inputValueRef = useRef("");
   const [pastedImages, setPastedImages] = useState<PastedImage[]>([]);
   const { showToast } = useToast();
-  const draftReader = useRef(() => ({
-    text: inputValueRef.current,
-    images: pastedImages,
-    bufferIds: [...selectedBufferIds],
-    filePaths: [...selectedFilesPaths],
-    editorContexts: selectedEditorContexts,
-  }));
-  draftReader.current = () => ({
-    text: inputValueRef.current,
-    images: pastedImages,
-    bufferIds: [...selectedBufferIds],
-    filePaths: [...selectedFilesPaths],
-    editorContexts: selectedEditorContexts,
-  });
-  useLayoutEffect(() => {
-    const draft = takeAgentDraft(surfaceId);
-    if (draft) {
+  useAgentDraft({
+    surfaceId,
+    readDraft: () => ({
+      text: inputValueRef.current,
+      images: pastedImages,
+      bufferIds: [...selectedBufferIds],
+      filePaths: [...selectedFilesPaths],
+      editorContexts: selectedEditorContexts,
+    }),
+    restoreDraft: (draft) => {
       inputValueRef.current = draft.text;
       if (inputRef.current) inputRef.current.textContent = draft.text;
       setHasInputText(draft.text.trim().length > 0);
+      setTerminalCommand(getComposerTerminalCommand(draft.text));
       setPastedImages(draft.images);
-    }
-    return registerAgentDraft(surfaceId, () => draftReader.current());
-  }, [surfaceId]);
+    },
+  });
   const [isContextDropdownOpen, setIsContextDropdownOpen] = useState(false);
   const [mentionState, setMentionState] = useState({
     active: false,
@@ -129,8 +182,13 @@ const AIChatInputBar = memo(function AIChatInputBar({
   });
   const slashCommandRangeRef = useRef({ startIndex: 0, endIndex: 0 });
 
-  const sessionConfigOptions = useAIChatStore((state) => state.sessionConfigOptions);
+  const acpSession = useAIChatStore((state) => selectChatAcpSession(state, chatId));
+  const sessionConfigOptions = acpSession.configOptions;
   const session = useAIChatStore((state) => state.chats.find((chat) => chat.id === chatId));
+  const acpSessionId = session?.acpSessionId ?? null;
+  const modeSource = useChatModeSource(chatId ?? null, currentAgentId);
+  const followChatId = chatId && isAcpAgent(currentAgentId) ? chatId : null;
+  useFollowAgentInterrupt(followChatId);
   const defaultProviderId = useSettingsStore((state) => state.settings.aiProviderId);
   const defaultModelId = useSettingsStore((state) => state.settings.aiModelId);
   const aiProviderId = session?.providerId ?? defaultProviderId;
@@ -142,9 +200,22 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
   // Check if current agent is "custom" (only show model selector for custom agent)
   const isCustomAgent = currentAgentId === "custom";
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
+  const contextBudget = useComposerContextBudget({
+    enabled: isCustomAgent,
+    chatId: chatId ?? null,
+    projectRoot: rootFolderPath ?? null,
+    providerId: aiProviderId,
+    modelId: aiModelId,
+    buffers,
+    selectedBufferIds,
+    selectedFilesPaths,
+    editorContexts: selectedEditorContexts,
+  });
 
   // ACP agents don't need API key (they handle their own auth)
   const isInputEnabled = isCustomAgent ? hasApiKey : true;
+  const canEditInput = isInputEnabled || terminalEnabled;
   const isStreaming = isTyping && !!streamingMessageId;
   const changeSessionConfigOption = useAIChatStore(
     (state) => state.actions.changeSessionConfigOption,
@@ -152,34 +223,41 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
   const handleApiModelChange = useCallback(
     (nextModelId: string, nextProviderId: string) => {
-      void updateSetting("aiProviderId", nextProviderId);
-      void updateSetting("aiModelId", nextModelId);
-      if (nextProviderId === "custom") void updateSetting("aiCustomModelId", nextModelId);
-      if (onAgentChange) {
-        onAgentChange("custom", { providerId: nextProviderId, modelId: nextModelId });
-      } else if (chatId && isCustomAgent) {
+      if (chatId && isCustomAgent) {
         useAIChatStore.getState().actions.setChatModel(chatId, nextProviderId, nextModelId);
+        return;
       }
+      if (!chatId) {
+        void updateSetting("aiProviderId", nextProviderId);
+        void updateSetting("aiModelId", nextModelId);
+        if (nextProviderId === "custom") void updateSetting("aiCustomModelId", nextModelId);
+      }
+      onAgentChange?.("custom", { providerId: nextProviderId, modelId: nextModelId });
     },
     [chatId, isCustomAgent, onAgentChange, updateSetting],
   );
 
-  const availableSlashCommands = useAIChatStore((state) => state.availableSlashCommands);
-  const filteredSlashCommands = useMemo(() => {
-    const search = slashCommandState.search.trim().toLowerCase();
-    if (!search) return availableSlashCommands;
-    return availableSlashCommands.filter(
-      (command) =>
-        command.name.toLowerCase().includes(search) ||
-        command.description?.toLowerCase().includes(search),
-    );
-  }, [availableSlashCommands, slashCommandState.search]);
+  const skills = useSettingsStore((state) => state.settings.aiSkills);
+  const availableSlashCommands = useMemo(
+    () =>
+      mergeComposerSlashCommands({
+        agentCommands: acpSession.slashCommands,
+        skills,
+        isBuiltInAgent: isCustomAgent,
+        availableModeIntents: modeSource.options.flatMap((option) =>
+          option.intent ? [option.intent] : [],
+        ),
+      }),
+    [acpSession.slashCommands, isCustomAgent, modeSource.options, skills],
+  );
+  const filteredSlashCommands = useMemo(
+    () => filterComposerSlashCommands(availableSlashCommands, slashCommandState.search),
+    [availableSlashCommands, slashCommandState.search],
+  );
 
   const setInput = useCallback((input: string) => {
     inputValueRef.current = input;
-  }, []);
-  const addPastedImage = useCallback((image: PastedImage) => {
-    setPastedImages((current) => [...current, image]);
+    setTerminalCommand(getComposerTerminalCommand(input));
   }, []);
   const removePastedImage = useCallback((imageId: string) => {
     setPastedImages((current) => current.filter((image) => image.id !== imageId));
@@ -272,9 +350,21 @@ const AIChatInputBar = memo(function AIChatInputBar({
     [selectedFilesPaths, setSelectedFilesPaths],
   );
 
+  const { isDraggingFiles, attachImages, attachPaths, attachTransfer } = useComposerFileDrop({
+    targetRef: composerRef,
+    scopeId: JSON.stringify([surfaceId, chatId, currentAgentId]),
+    onImages: (images) => setPastedImages((current) => [...current, ...images]),
+    onPaths: (paths) => setSelectedFilesPaths(new Set([...selectedFilesPaths, ...paths])),
+    onError: (message) => showToast({ message, type: "error" }),
+  });
+
   const addSidebarResourceToContext = useCallback(
     async (resource: SidebarDragResource) => {
       if (resource.type === "file") {
+        if (!resource.isDir && getImageMimeType(resource.path)) {
+          await attachPaths([resource.path]);
+          return;
+        }
         const matchingBuffer = !resource.isDir
           ? buffers.find((buffer) => buffer.path === resource.path)
           : null;
@@ -296,7 +386,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
         addBufferToContext(bufferId);
       }
     },
-    [addBufferToContext, addPathToContext, buffers],
+    [addBufferToContext, addPathToContext, attachPaths, buffers],
   );
 
   useEffect(() => {
@@ -313,7 +403,11 @@ const AIChatInputBar = memo(function AIChatInputBar({
   }, [addSidebarResourceToContext, isActiveSurface, surfaceId]);
 
   const handleContextDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
-    if (!hasSidebarResourceDragData(event.dataTransfer)) return;
+    if (
+      !hasSidebarResourceDragData(event.dataTransfer) &&
+      !Array.from(event.dataTransfer.types).includes("Files")
+    )
+      return;
     event.preventDefault();
     event.stopPropagation();
     event.dataTransfer.dropEffect = "copy";
@@ -330,19 +424,22 @@ const AIChatInputBar = memo(function AIChatInputBar({
   const handleContextDrop = useCallback(
     async (event: React.DragEvent<HTMLDivElement>) => {
       const resource = readSidebarResourceDragData(event.dataTransfer);
-      if (!resource) return;
+      if (!resource && !Array.from(event.dataTransfer.types).includes("Files")) return;
 
       event.preventDefault();
       event.stopPropagation();
       setIsContextDragOver(false);
-      await addSidebarResourceToContext(resource);
+      if (resource) await addSidebarResourceToContext(resource);
+      else await attachTransfer(event.dataTransfer);
     },
-    [addSidebarResourceToContext],
+    [addSidebarResourceToContext, attachTransfer],
   );
 
   // Computed state for send button
   const hasImages = pastedImages.length > 0;
-  const isSendDisabled = (!hasInputText && !hasImages) || !isInputEnabled;
+  const isSendDisabled = isTerminalMode
+    ? !terminalEnabled || !terminalCommand
+    : (!hasInputText && !hasImages) || !isInputEnabled;
   const getPlainTextFromDiv = useCallback(() => getComposerText(inputRef.current), []);
   const getTextBeforeCaret = useCallback(() => getComposerTextBeforeCaret(inputRef.current), []);
   const getCaretDropdownPosition = useCallback(
@@ -462,6 +559,32 @@ const AIChatInputBar = memo(function AIChatInputBar({
   ]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.defaultPrevented || isComposingKeyboardEvent(e.nativeEvent)) return;
+    if (getComposerTerminalCommand(inputValueRef.current) !== null) {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        replaceInput(inputValueRef.current.trimStart().slice(1));
+        closeInlineMenus();
+        return;
+      }
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!e.repeat) handleSendMessage();
+        return;
+      }
+    }
+    if (
+      e.key === "Tab" &&
+      e.shiftKey &&
+      !slashCommandState.active &&
+      !mentionState.active &&
+      cycleChatMode(modeSource)
+    ) {
+      e.preventDefault();
+      return;
+    }
     // Handle slash command navigation
     if (slashCommandState.active) {
       if (e.key === "ArrowDown") {
@@ -555,7 +678,9 @@ const AIChatInputBar = memo(function AIChatInputBar({
       }
     } else if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleSendMessage();
+      if (e.repeat) return;
+      if (isStreaming && (e.metaKey || e.ctrlKey)) handleInterruptAndSend();
+      else handleSendMessage();
     }
   };
 
@@ -567,6 +692,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
     performanceTimer.current = window.setTimeout(() => {
       if (!inputRef.current) return;
+      if (getComposerTerminalCommand(inputValueRef.current) !== null) return;
 
       const textBeforeCaret = getTextBeforeCaret();
       const lastAtIndex = textBeforeCaret.lastIndexOf("@");
@@ -601,6 +727,11 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
       // Update local state for button enabled/disabled
       setHasInputText(plainTextFromDiv.trim().length > 0);
+
+      if (getComposerTerminalCommand(plainTextFromDiv) !== null) {
+        closeInlineMenus();
+        return;
+      }
 
       const textBeforeCaret = getTextBeforeCaret();
       const slashMatch = textBeforeCaret.match(/(?:^|\s)\/([^\s/]*)$/);
@@ -639,6 +770,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
     getSlashDropdownPosition,
     isContextDropdownOpen,
     setIsContextDropdownOpen,
+    closeInlineMenus,
   ]);
 
   const handleEditableMouseDown = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
@@ -772,21 +904,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
           e.preventDefault();
 
           const file = items[i].getAsFile();
-          if (file) {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-              const dataUrl = event.target?.result as string;
-              if (dataUrl) {
-                addPastedImage({
-                  id: `img-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-                  dataUrl,
-                  name: file.name || `image-${Date.now()}.png`,
-                  size: file.size,
-                });
-              }
-            };
-            reader.readAsDataURL(file);
-          }
+          if (file) void attachImages([file]);
         }
       }
 
@@ -819,7 +937,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
       // Trigger input change handler to update state
       handleInputChange();
     },
-    [handleInputChange, addPastedImage],
+    [handleInputChange, attachImages],
   );
 
   // Handle file mention selection
@@ -843,7 +961,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
       mentionSpan.setAttribute("contenteditable", "false");
       mentionSpan.title = file.path;
       mentionSpan.className = cn(
-        badgeVariants({ variant: "accent" }),
+        badgeVariants({ tone: "accent" }),
         "max-w-48 truncate align-baseline select-none",
       );
       mentionSpan.textContent = file.name;
@@ -869,53 +987,139 @@ const AIChatInputBar = memo(function AIChatInputBar({
     [hideMention, mentionState.search.length, mentionState.startIndex, syncInputFromEditable],
   );
 
-  // Handle slash command selection
-  const handleSlashCommandSelect = useCallback(
-    (command: SlashCommand) => {
-      if (!inputRef.current) return;
+  const runSlashCommandAction = (action: ComposerCommandAction) => {
+    const notify = (message: string) => showToast({ message, type: "info" });
+    switch (action.type) {
+      case "mode": {
+        const mode = applyChatModeIntent(modeSource, action.intent);
+        notify(mode ? `Mode: ${mode.label}` : "This agent has no matching mode.");
+        return;
+      }
+      case "skill": {
+        const skill = skills.find((candidate) => candidate.id === action.skillId);
+        if (skill) insertSkillAtCursor(skill);
+        return;
+      }
+      case "new":
+        openNewAgentChat(currentAgentId);
+        return;
+      case "review":
+        if (chatId && pickAgentEditsChatId(chatId) === chatId) openAgentEditsReview(chatId);
+        else notify("No agent changes to review in this chat.");
+        return;
+      case "compact":
+      case "clear":
+        if (!chatId) return;
+        if (isTyping) {
+          notify("Wait for the current response to finish.");
+          return;
+        }
+        if (action.type === "clear") {
+          void clearChat(chatId).catch((error: unknown) => {
+            console.error("Failed to clear the chat:", error);
+            showToast({ message: "Could not clear this chat.", type: "error" });
+          });
+          return;
+        }
+        void compactChat(chatId)
+          .then((count) =>
+            notify(count > 0 ? `Summarised ${count} earlier messages.` : "Nothing to compact yet."),
+          )
+          .catch((error: unknown) => {
+            console.error("Failed to compact the chat:", error);
+            showToast({ message: "Could not compact this chat.", type: "error" });
+          });
+        return;
+    }
+  };
 
-      isUpdatingContentRef.current = true;
-      const { startIndex, endIndex } = slashCommandRangeRef.current;
-      hideSlashCommands();
-      const commandRange = getComposerTextRange(inputRef.current, startIndex, endIndex);
-      commandRange.deleteContents();
+  const handleSlashCommandSelect = (command: SlashCommand) => {
+    if (!inputRef.current) return;
 
-      const commandSpan = document.createElement("span");
-      commandSpan.setAttribute("data-slash-command", "true");
-      commandSpan.setAttribute("data-slash-command-name", command.name);
-      commandSpan.setAttribute("contenteditable", "false");
-      commandSpan.title = command.description || `/${command.name}`;
-      commandSpan.className = cn(
-        badgeVariants({ variant: "muted" }),
-        "max-w-48 truncate align-baseline select-none",
-      );
-      commandSpan.textContent = `/${command.name}`;
+    isUpdatingContentRef.current = true;
+    const { startIndex, endIndex } = slashCommandRangeRef.current;
+    hideSlashCommands();
+    const commandRange = getComposerTextRange(inputRef.current, startIndex, endIndex);
+    commandRange.deleteContents();
 
-      const trailingSpace = document.createTextNode(" ");
-      const fragment = document.createDocumentFragment();
-      fragment.append(commandSpan, trailingSpace);
-      commandRange.insertNode(fragment);
-
+    const action = (command as ComposerSlashCommand).action;
+    if (action) {
       const selection = window.getSelection();
       if (selection) {
-        const caretRange = document.createRange();
-        caretRange.setStart(trailingSpace, trailingSpace.length);
-        caretRange.collapse(true);
+        commandRange.collapse(true);
         selection.removeAllRanges();
-        selection.addRange(caretRange);
+        selection.addRange(commandRange);
       }
-
       inputRef.current.focus();
       syncInputFromEditable();
       isUpdatingContentRef.current = false;
-    },
-    [hideSlashCommands, syncInputFromEditable],
-  );
+      runSlashCommandAction(action);
+      return;
+    }
+
+    const commandSpan = document.createElement("span");
+    commandSpan.setAttribute("data-slash-command", "true");
+    commandSpan.setAttribute("data-slash-command-name", command.name);
+    commandSpan.setAttribute("contenteditable", "false");
+    commandSpan.title = command.description || `/${command.name}`;
+    commandSpan.className = cn(
+      badgeVariants({ tone: "neutral" }),
+      "max-w-48 truncate align-baseline select-none",
+    );
+    commandSpan.textContent = `/${command.name}`;
+
+    const trailingSpace = document.createTextNode(" ");
+    const fragment = document.createDocumentFragment();
+    fragment.append(commandSpan, trailingSpace);
+    commandRange.insertNode(fragment);
+
+    const selection = window.getSelection();
+    if (selection) {
+      const caretRange = document.createRange();
+      caretRange.setStart(trailingSpace, trailingSpace.length);
+      caretRange.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(caretRange);
+    }
+
+    inputRef.current.focus();
+    syncInputFromEditable();
+    isUpdatingContentRef.current = false;
+  };
 
   const handleSendMessage = () => {
     const currentInput = inputValueRef.current;
+    const command = getComposerTerminalCommand(currentInput);
+    if (command !== null) {
+      if (!command || !terminalEnabled) return;
+      try {
+        const targetChatId = runChatTerminalCommand({
+          chatId,
+          agentId: currentAgentId,
+          command,
+          workingDirectory: projectPath,
+        });
+        setInput("");
+        setHasInputText(false);
+        if (inputRef.current) inputRef.current.textContent = "";
+        closeInlineMenus();
+        if (!chatId) onTerminalChatCreated?.(targetChatId);
+      } catch (error) {
+        showToast({ message: String(error), type: "error" });
+      }
+      return;
+    }
     const currentImages = pastedImages;
-    const hasContent = currentInput.trim() || currentImages.length > 0;
+    const modeCommand = parseLeadingModeCommand(currentInput, availableSlashCommands);
+    if (modeCommand) {
+      runSlashCommandAction({ type: "mode", intent: modeCommand.intent });
+      if (!modeCommand.prompt && currentImages.length === 0) {
+        replaceInput("");
+        return;
+      }
+    }
+    const prompt = modeCommand ? modeCommand.prompt : currentInput;
+    const hasContent = prompt.trim() || currentImages.length > 0;
     if (!hasContent || !isInputEnabled) return;
 
     let images;
@@ -925,7 +1129,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
       showToast({ message: String(error), type: "error" });
       return;
     }
-    const result = onSendMessage(currentInput, images);
+    const result = onSendMessage(prompt, images);
     if (!result.accepted) return;
 
     setInput("");
@@ -954,6 +1158,16 @@ const AIChatInputBar = memo(function AIChatInputBar({
     },
     [setInput],
   );
+
+  const restorePrompt = useEffectEvent((prompt: RestoredComposerPrompt) => {
+    // Never overwrite something the user already started typing.
+    if (inputValueRef.current.trim() || pastedImages.length > 0) return;
+    replaceInput(prompt.content);
+    setPastedImages(restorePastedImages(prompt.images));
+  });
+  useEffect(() => {
+    if (restoredPrompt) restorePrompt(restoredPrompt);
+  }, [restoredPrompt]);
 
   const handleInterruptAndSend = () => {
     const currentInput = inputValueRef.current;
@@ -985,15 +1199,16 @@ const AIChatInputBar = memo(function AIChatInputBar({
     focusInput,
   });
 
-  const hasSlashCommands = availableSlashCommands.length > 0;
   const isInitialPresentation = presentation === "initial";
   const inputPlaceholder = isInputEnabled
     ? isInitialPresentation
       ? "What do you want to create?"
-      : hasSlashCommands
-        ? "Ask anything... (@ files, / commands)"
-        : "Ask anything... (@ to mention files)"
-    : "Configure API key to enable Agent...";
+      : "Ask anything... (@ files, / commands, ! terminal)"
+    : terminalEnabled
+      ? "Type ! for terminal, or connect a provider to chat"
+      : aiProviderId === "athas"
+        ? "Connect your Athas account to use Agent"
+        : "Connect your provider to use Agent";
 
   useEffect(() => {
     if (!autoFocus || !isActiveSurface) return;
@@ -1006,39 +1221,67 @@ const AIChatInputBar = memo(function AIChatInputBar({
     <div
       ref={aiChatContainerRef}
       className={cn(
-        "ai-chat-container relative z-20 flex min-w-0 shrink-0 flex-col gap-1",
+        "relative z-20 flex min-w-0 shrink-0 flex-col gap-1",
         isInitialPresentation ? "w-full" : [chatContentWidth(), "mb-3"],
       )}
     >
+      {!isTerminalMode && chatId ? <AgentEditsBar chatId={chatId} /> : null}
+      {!isTerminalMode && (
+        <AgentMessageQueue
+          messages={queuedMessages}
+          onUpdate={onUpdateQueuedMessage}
+          onMove={onMoveQueuedMessage}
+          onRemove={onRemoveQueuedMessage}
+          onSendNow={onSendQueuedMessageNow}
+          onEditingChange={onEditQueuedMessage}
+        />
+      )}
       <Composer
+        ref={composerRef}
         data-ai-element="prompt-input"
         data-ai-context-drop-target
         onDragOver={handleContextDragOver}
         onDragLeave={handleContextDragLeave}
         onDrop={handleContextDrop}
-        dragActive={isContextDragOver}
+        dragActive={isContextDragOver || isDraggingFiles}
       >
-        <ComposerAttachments
-          buffers={buffers}
-          selectedBufferIds={selectedBufferIds}
-          selectedFilesPaths={selectedFilesPaths}
-          selectedEditorContexts={selectedEditorContexts}
-          pastedImages={pastedImages}
-          contextTriggerRef={contextTriggerRef}
-          onRemove={(source) => {
-            if (source.type === "buffer") toggleBufferSelection(source.id);
-            else if (source.type === "file") toggleFileSelection(source.id);
-            else if (source.type === "selection") onRemoveEditorContext(source.id);
-            else removePastedImage(source.id);
-          }}
-        />
+        {isTerminalMode && (
+          <div className="px-1 pt-2">
+            <ChromeBar region="content" surface="transparent">
+              <Badge tone="accent">
+                <TerminalIcon />
+                Terminal
+              </Badge>
+              <ChromeLabel title={projectPath}>
+                {projectPath === "." ? "Default directory" : getFolderName(projectPath)}
+              </ChromeLabel>
+            </ChromeBar>
+          </div>
+        )}
+        {!isTerminalMode && (
+          <ComposerAttachments
+            buffers={buffers}
+            selectedBufferIds={selectedBufferIds}
+            selectedFilesPaths={selectedFilesPaths}
+            selectedEditorContexts={selectedEditorContexts}
+            pastedImages={pastedImages}
+            contextTriggerRef={contextTriggerRef}
+            onRemove={(source) => {
+              if (source.type === "buffer") toggleBufferSelection(source.id);
+              else if (source.type === "file") toggleFileSelection(source.id);
+              else if (source.type === "selection") onRemoveEditorContext(source.id);
+              else removePastedImage(source.id);
+            }}
+          />
+        )}
 
         <div className="flex min-w-0 items-end gap-1">
           <ComposerEditable
             ref={inputRef}
             data-ai-element="prompt-input-editable"
-            enabled={isInputEnabled}
-            contentEditable={isInputEnabled}
+            enabled={canEditInput}
+            contentEditable={canEditInput}
+            font={isTerminalMode ? "mono" : "sans"}
             onInput={handleInputChange}
             onKeyDown={handleKeyDown}
             onMouseDown={handleEditableMouseDown}
@@ -1048,12 +1291,27 @@ const AIChatInputBar = memo(function AIChatInputBar({
             data-placeholder={inputPlaceholder}
             role="textbox"
             aria-multiline
-            aria-label="Message input"
-            tabIndex={isInputEnabled ? 0 : -1}
+            aria-label={isTerminalMode ? "Terminal command" : "Message input"}
+            aria-describedby={isTerminalMode ? terminalHintId : undefined}
+            tabIndex={canEditInput ? 0 : -1}
             className="min-w-0 flex-1 pr-0"
           />
           <div className="flex shrink-0 items-center gap-1 pr-2 pb-2">
-            {isStreaming ? (
+            {isTerminalMode ? (
+              <Button
+                type="button"
+                disabled={isSendDisabled}
+                onClick={handleSendMessage}
+                variant="accent"
+                tooltip="Run command"
+                shortcut="enter"
+                iconOnly
+              >
+                <PlayIcon />
+              </Button>
+            ) : !isInputEnabled ? (
+              <ProviderConnectionAction key={aiProviderId} providerId={aiProviderId} />
+            ) : isStreaming ? (
               <ButtonGroup variant="ghost">
                 <Button
                   type="button"
@@ -1071,8 +1329,10 @@ const AIChatInputBar = memo(function AIChatInputBar({
                   type="button"
                   disabled={isSendDisabled}
                   onClick={handleInterruptAndSend}
-                  variant="accent-ghost"
+                  variant="ghost"
+                  tone="accent"
                   tooltip="Interrupt and send now"
+                  shortcut="mod+enter"
                   iconOnly
                 >
                   <BoltIcon />
@@ -1081,7 +1341,8 @@ const AIChatInputBar = memo(function AIChatInputBar({
                 <Button
                   type="button"
                   onClick={onStopStreaming}
-                  variant="danger"
+                  variant="ghost"
+                  tone="danger"
                   tooltip="Stop generation"
                   shortcut="escape"
                   iconOnly
@@ -1106,133 +1367,104 @@ const AIChatInputBar = memo(function AIChatInputBar({
         </div>
       </Composer>
 
-      <ComposerToolbar>
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
-          <ContextSelector
-            buffers={buffers}
-            selectedBufferIds={selectedBufferIds}
-            selectedFilesPaths={selectedFilesPaths}
-            onToggleBuffer={toggleBufferSelection}
-            onToggleFile={toggleFileSelection}
-            isOpen={isContextDropdownOpen}
-            triggerRef={contextTriggerRef}
-            onOpenChange={(open) => {
-              if (open) {
-                closeInlineMenus();
-              }
-              setIsContextDropdownOpen(open);
-            }}
-          />
-        </div>
+      {isTerminalMode ? (
+        <ChromeBar region="content" surface="transparent" id={terminalHintId}>
+          <ChromeGroup grow>
+            <ChromeLabel>
+              {terminalEnabled
+                ? "Enter to run · Output appears in chat"
+                : "Enable Terminal in Settings to run commands"}
+            </ChromeLabel>
+          </ChromeGroup>
+          <Button
+            variant="ghost"
+            size="xs"
+            onClick={() => replaceInput(inputValueRef.current.trimStart().slice(1))}
+            tooltip="Back to chat"
+            shortcut="escape"
+          >
+            <Kbd>Esc</Kbd>Back to chat
+          </Button>
+        </ChromeBar>
+      ) : (
+        <ComposerToolbar>
+          <div className="flex min-w-0 items-center gap-1">
+            <ContextSelector
+              buffers={buffers}
+              selectedBufferIds={selectedBufferIds}
+              selectedFilesPaths={selectedFilesPaths}
+              onToggleBuffer={toggleBufferSelection}
+              onToggleFile={toggleFileSelection}
+              isOpen={isContextDropdownOpen}
+              triggerRef={contextTriggerRef}
+              onOpenChange={(open) => {
+                if (open) {
+                  closeInlineMenus();
+                }
+                setIsContextDropdownOpen(open);
+              }}
+            />
+            <ComposerModeSelector source={modeSource} onBeforeOpen={closeInlineMenus} />
+          </div>
 
-        <AgentMessageQueue
-          messages={queuedMessages}
-          onEdit={(index) => {
-            const message = queuedMessages[index];
-            if (!message) return;
-            onRemoveQueuedMessage(index, "edit");
-            replaceInput(message.content);
-            setPastedImages(restorePastedImages(message.images));
-          }}
-          onMove={onMoveQueuedMessage}
-          onRemove={(index) => onRemoveQueuedMessage(index, "discard")}
-        />
-
-        <div className="ml-auto flex min-w-0 shrink items-center gap-1">
-          <ComposerAgentSelector
-            cwd={projectPath}
-            currentAgentId={currentAgentId}
-            providerId={aiProviderId}
-            modelId={aiModelId}
-            sessionConfigOptions={sessionConfigOptions}
-            onAgentChange={onAgentChange}
-            onModelChange={handleApiModelChange}
-            onSessionConfigChange={(optionId, value) =>
-              void changeSessionConfigOption(optionId, value)
-            }
-            onBeforeOpen={closeInlineMenus}
-          />
-          <ComposerEffortSelector
-            cwd={projectPath}
-            currentAgentId={currentAgentId}
-            sessionConfigOptions={sessionConfigOptions}
-            onSessionConfigChange={(optionId, value) =>
-              void changeSessionConfigOption(optionId, value)
-            }
-            onOpen={closeInlineMenus}
-          />
-          <ChatPreferencesMenu
-            currentAgentId={currentAgentId}
-            canChangeAgent={Boolean(onAgentChange)}
-            sessionConfigOptions={sessionConfigOptions}
-            onSessionConfigChange={(optionId, value) =>
-              void changeSessionConfigOption(optionId, value)
-            }
-            onSelectSkill={insertSkillAtCursor}
-            onSelectCodexSkill={insertCodexSkillAtCursor}
-            onBeforeOpen={closeInlineMenus}
-          />
-          {hasSlashCommands && (
+          <div className="ml-auto flex min-w-0 shrink items-center gap-1">
+            {contextBudget ? (
+              <ComposerContextMeter budget={contextBudget} />
+            ) : (
+              <AcpContextMeter usage={acpSession.usage} />
+            )}
+            <ComposerAgentSelector
+              cwd={projectPath}
+              currentAgentId={currentAgentId}
+              providerId={aiProviderId}
+              modelId={aiModelId}
+              sessionConfigOptions={sessionConfigOptions}
+              onAgentChange={onAgentChange}
+              onModelChange={handleApiModelChange}
+              onSessionConfigChange={(optionId, value) => {
+                if (acpSessionId) void changeSessionConfigOption(acpSessionId, optionId, value);
+              }}
+              onBeforeOpen={closeInlineMenus}
+              followChatId={followChatId}
+            />
+            <ChatPreferencesMenu
+              currentAgentId={currentAgentId}
+              canChangeAgent={Boolean(onAgentChange)}
+              sessionConfigOptions={sessionConfigOptions}
+              onSessionConfigChange={(optionId, value) => {
+                if (acpSessionId) void changeSessionConfigOption(acpSessionId, optionId, value);
+              }}
+              onSelectSkill={insertSkillAtCursor}
+              onSelectCodexSkill={insertCodexSkillAtCursor}
+              onBeforeOpen={closeInlineMenus}
+            />
             <Button
               type="button"
-              onClick={() => {
-                if (!inputRef.current || !isInputEnabled) return;
-                if (slashCommandState.active) {
-                  hideSlashCommands();
-                  return;
-                }
-                closeInlineMenus();
-                inputRef.current.textContent = "/";
-                setInput("/");
-                setHasInputText(true);
-                inputRef.current.focus();
-                const selection = window.getSelection();
-                if (selection) {
-                  const range = document.createRange();
-                  range.selectNodeContents(inputRef.current);
-                  range.collapse(false);
-                  selection.removeAllRanges();
-                  selection.addRange(range);
-                }
-                slashCommandRangeRef.current = { startIndex: 0, endIndex: 1 };
-                showSlashCommands(getSlashDropdownPosition(), "");
-              }}
+              disabled={!isInputEnabled || !isSpeechRecognitionSupported}
+              active={isListening}
+              aria-pressed={isListening}
+              onClick={toggleVoiceInput}
               variant="ghost"
-              disabled={!isInputEnabled}
+              tone={isListening ? "accent" : "default"}
               iconOnly
-              active={slashCommandState.active}
-              tooltip="Show slash commands"
-              aria-label="Show slash commands"
+              tooltip={
+                isMacDevSpeechRecognitionBlocked
+                  ? "Voice input is unavailable in macOS development builds. Use a packaged build."
+                  : !isSpeechRecognitionSupported
+                    ? "Voice input is not supported by this webview"
+                    : isListening
+                      ? interimTranscript || "Stop voice input"
+                      : "Start voice input"
+              }
+              aria-label={isListening ? "Stop voice input" : "Start voice input"}
             >
-              <CommandIcon />
+              <MicrophoneIcon className={cn(isListening && "animate-pulse")} />
             </Button>
-          )}
+          </div>
+        </ComposerToolbar>
+      )}
 
-          <Button
-            type="button"
-            disabled={!isInputEnabled || !isSpeechRecognitionSupported}
-            active={isListening}
-            aria-pressed={isListening}
-            onClick={toggleVoiceInput}
-            variant={isListening ? "accent-ghost" : "ghost"}
-            iconOnly
-            tooltip={
-              isMacDevSpeechRecognitionBlocked
-                ? "Voice input is unavailable in macOS development builds. Use a packaged build."
-                : !isSpeechRecognitionSupported
-                  ? "Voice input is not supported by this webview"
-                  : isListening
-                    ? interimTranscript || "Stop voice input"
-                    : "Start voice input"
-            }
-            aria-label={isListening ? "Stop voice input" : "Start voice input"}
-          >
-            <MicrophoneIcon className={cn(isListening && "animate-pulse")} />
-          </Button>
-        </div>
-      </ComposerToolbar>
-
-      {(isActiveSurface || isComposerFocused) && mentionState.active && (
+      {!isTerminalMode && (isActiveSurface || isComposerFocused) && mentionState.active && (
         <FileMentionDropdown
           files={mentionableFiles}
           mentionState={mentionState}
@@ -1245,7 +1477,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
         />
       )}
 
-      {slashCommandState.active && (
+      {!isTerminalMode && slashCommandState.active && (
         <SlashCommandDropdown
           slashCommandState={slashCommandState}
           availableSlashCommands={availableSlashCommands}

@@ -9,16 +9,15 @@ const buttonGroupVariants = cva(
     variants: {
       orientation: {
         horizontal:
-          "flex-row [&>[data-slot=button]:not(:first-child)]:rounded-l-none [&>[data-slot=button]:not(:last-child)]:rounded-r-none [&>[data-slot=button]:not(:first-child)]:border-l-0 *:data-[slot=button-group-separator]:h-auto",
-        vertical:
-          "flex-col [&>[data-slot=button]:not(:first-child)]:rounded-t-none [&>[data-slot=button]:not(:last-child)]:rounded-b-none [&>[data-slot=button]:not(:first-child)]:border-t-0",
+          "flex-row [&>[data-slot=button]:not(:first-child)]:border-l-0 *:data-[slot=button-group-separator]:h-auto",
+        vertical: "flex-col [&>[data-slot=button]:not(:first-child)]:border-t-0",
       },
       variant: {
         default:
-          "rounded-chrome bg-accent *:data-[slot=button]:bg-transparent *:data-[slot=button]:hover:bg-selected",
+          "rounded-md bg-accent *:data-[slot=button]:bg-transparent *:data-[slot=button]:hover:bg-selected",
         accent:
-          "overflow-hidden rounded-chrome bg-primary/10 *:data-[slot=button]:text-primary *:data-[slot=button]:hover:bg-primary/10 *:data-[slot=button-group-separator]:bg-primary/25",
-        ghost: "rounded-chrome bg-transparent",
+          "overflow-hidden rounded-md bg-primary-soft *:data-[slot=button]:text-primary *:data-[slot=button]:hover:bg-primary-soft *:data-[slot=button-group-separator]:bg-primary",
+        ghost: "rounded-md bg-transparent",
       },
     },
     defaultVariants: {
@@ -56,7 +55,7 @@ function ButtonGroupSeparator({
       data-slot="button-group-separator"
       orientation={orientation}
       className={cn(
-        "relative m-0 self-stretch bg-border/70 data-[orientation=vertical]:h-auto",
+        "relative m-0 self-stretch bg-border data-[orientation=vertical]:h-auto",
         className,
       )}
       {...props}

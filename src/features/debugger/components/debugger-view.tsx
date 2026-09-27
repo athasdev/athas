@@ -87,10 +87,10 @@ const getActiveDebuggableFile = (state: ReturnType<typeof useBufferStore.getStat
 };
 
 function DebugStatusBadge({ status }: { status: "idle" | "running" | "paused" }) {
-  const variant = status === "paused" ? "default" : status === "running" ? "accent" : "muted";
+  const tone = status === "paused" ? "warning" : status === "running" ? "accent" : "neutral";
 
   return (
-    <Badge variant={variant}>
+    <Badge tone={tone}>
       <DebugSessionStatusIcon status={status} />
       {status}
     </Badge>
@@ -480,28 +480,26 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
         >
           <BugIcon className="text-subtle-foreground" />
           <div className="scrollbar-none min-w-0 flex-1 overflow-x-auto">
-            <TabsList variant="bare" aria-label="Debugger panels">
+            <TabsList aria-label="Debugger panels">
               <TabsTrigger value="stack" className="w-fit flex-none">
                 Call Stack
-                <Badge variant="muted">{stackFrames.length}</Badge>
+                <Badge>{stackFrames.length}</Badge>
               </TabsTrigger>
               <TabsTrigger value="variables" className="w-fit flex-none">
                 Variables
-                <Badge variant="muted">{scopes.length}</Badge>
+                <Badge>{scopes.length}</Badge>
               </TabsTrigger>
               <TabsTrigger value="watch" className="w-fit flex-none">
                 Watch
-                <Badge variant="muted">{watchExpressions.length}</Badge>
+                <Badge>{watchExpressions.length}</Badge>
               </TabsTrigger>
               <TabsTrigger value="console" className="w-fit flex-none">
                 Console
-                <Badge variant="muted">{activeAdapterOutput.length}</Badge>
+                <Badge>{activeAdapterOutput.length}</Badge>
               </TabsTrigger>
               <TabsTrigger value="breakpoints" className="w-fit flex-none">
                 Breakpoints
-                <Badge variant="muted">
-                  {sortedBreakpoints.length + enabledExceptionFilters.size}
-                </Badge>
+                <Badge>{sortedBreakpoints.length + enabledExceptionFilters.size}</Badge>
               </TabsTrigger>
             </TabsList>
           </div>
@@ -599,7 +597,7 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
       </ContextMenu>
 
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(260px,320px)_minmax(0,1fr)]">
-        <aside className="flex min-h-0 flex-col border-border/70 border-r">
+        <aside className="flex min-h-0 flex-col border-border border-r">
           <div className="space-y-3 p-3">
             <div className="space-y-1.5">
               <div className="font-sans text-subtle-foreground ui-text-sm">Configuration</div>
@@ -622,7 +620,7 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
                   placeholder="Command to run"
                 />
               ) : (
-                <div className="font-sans min-h-8 truncate rounded-lg border border-border/60 bg-surface/70 px-2 py-1.5 font-mono ui-text-sm text-subtle-foreground">
+                <div className="font-sans min-h-8 truncate rounded-lg border border-border bg-surface px-2 py-1.5 font-mono ui-text-sm text-subtle-foreground">
                   {adapterCommandPreview || selectedCommand || "No command available"}
                 </div>
               )}
@@ -650,7 +648,8 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
                 {isPaused ? <PlayIcon /> : <PauseIcon />}
               </Button>
               <Button
-                variant="danger"
+                variant="ghost"
+                tone="danger"
                 tooltip="Stop debugging"
                 disabled={!isActiveSession}
                 onClick={() => void stopDebugging()}
@@ -716,11 +715,11 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
           </div>
 
           {activeSession && activeSession.status !== "idle" ? (
-            <div className="border-border/70 border-t px-3 py-2 ui-text-sm">
+            <div className="border-border border-t px-3 py-2 ui-text-sm">
               <div className="flex items-center gap-2">
                 <DebugSessionStatusIcon status={activeSession.status} />
                 <span className="truncate font-medium">{activeSession.name}</span>
-                {stoppedState ? <Badge variant="warning">Paused</Badge> : null}
+                {stoppedState ? <Badge tone="warning">Paused</Badge> : null}
               </div>
               <div className="mt-1 line-clamp-2 ui-text-sm text-subtle-foreground">
                 {stoppedState?.description || stoppedState?.reason || activeSession.command}
@@ -728,7 +727,7 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
             </div>
           ) : null}
 
-          <div className="mt-auto border-border/70 border-t px-3 py-2 ui-text-sm text-subtle-foreground">
+          <div className="mt-auto border-border border-t px-3 py-2 ui-text-sm text-subtle-foreground">
             <div className="flex items-center gap-1.5">
               <FolderOpenIcon size={12} />
               <span className="truncate">

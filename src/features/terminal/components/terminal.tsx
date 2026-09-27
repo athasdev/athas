@@ -54,6 +54,7 @@ import { getFrontendTerminalSessionArgs } from "../utils/frontend-terminal-sessi
 import { TerminalSearch, type TerminalSearchOptions } from "./terminal-search";
 import "@xterm/xterm/css/xterm.css";
 import "../styles/terminal.css";
+import { getRequiredAthasDefaultColor } from "@/extensions/themes/default-theme";
 
 const MULTILINE_PASTE_LINE_THRESHOLD = 5;
 const LARGE_PASTE_CHAR_THRESHOLD = 1000;
@@ -487,6 +488,7 @@ export const TerminalEmulator = ({
         activeRemoteConnectionId = activeRemoteConnectionId || remoteInfo?.connectionId;
         const size = getTerminalSize(terminal);
         const events = createTerminalEventChannel();
+        const launch = existingSession?.launch;
 
         activeConnectionId = activeRemoteConnectionId
           ? await (async () => {
@@ -516,7 +518,11 @@ export const TerminalEmulator = ({
                   (wslInfo ? getWslShellId(wslInfo.distro) : undefined),
                 wslDistribution: wslInfo?.distro,
                 wslWorkingDirectory: wslInfo?.linuxPath,
-                environment,
+                environment: launch?.environment
+                  ? { ...environment, ...launch.environment }
+                  : environment,
+                command: launch?.command,
+                args: launch?.args,
                 size,
                 shellIntegration: terminalShellIntegration,
               },
@@ -824,10 +830,15 @@ export const TerminalEmulator = ({
   }, [fitTerminal]);
 
   const getSearchOptions = useCallback((options: TerminalSearchOptions): ISearchOptions => {
-    const rootStyles = getComputedStyle(document.documentElement);
-    const selected = rootStyles.getPropertyValue("--selected").trim() || "#3b82f6";
-    const accent = rootStyles.getPropertyValue("--primary").trim() || "#60a5fa";
-    const border = rootStyles.getPropertyValue("--border").trim() || "#4b5563";
+    const root = document.documentElement;
+    const rootStyles = getComputedStyle(root);
+    const themeType = root.getAttribute("data-theme-type") === "light" ? "light" : "dark";
+    const themeColor = (name: string) =>
+      rootStyles.getPropertyValue(`--${name}`).trim() ||
+      getRequiredAthasDefaultColor(themeType, name);
+    const selected = themeColor("selected");
+    const accent = themeColor("primary");
+    const border = themeColor("border");
 
     return {
       caseSensitive: options.caseSensitive,

@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import {
   clearRepositoryDiscoveryCache,
   discoverWorkspaceRepositories,
+  normalizeRepositoryPath,
   resolveRepositoryPath,
 } from "../api/git-repo-api";
 
@@ -90,6 +91,32 @@ describe("git repo api", () => {
     await expect(staleRequest).resolves.toBeNull();
     await expect(resolveRepositoryPath("/workspace")).resolves.toBe("/workspace");
     expect(mockInvoke).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps the share prefix of Windows UNC paths", () => {
+    expect(normalizeRepositoryPath("\\\\wsl$\\Ubuntu\\home\\me\\repo\\")).toBe(
+      "//wsl$/Ubuntu/home/me/repo",
+    );
+    expect(normalizeRepositoryPath("//wsl.localhost/Ubuntu//home/me/repo")).toBe(
+      "//wsl.localhost/Ubuntu/home/me/repo",
+    );
+    expect(normalizeRepositoryPath("\\\\server\\share\\repo")).toBe("//server/share/repo");
+    expect(normalizeRepositoryPath("C:\\Users\\me\\repo\\")).toBe("C:/Users/me/repo");
+    expect(normalizeRepositoryPath("/home//me/repo/")).toBe("/home/me/repo");
+    expect(normalizeRepositoryPath("wsl://Ubuntu//home/me/repo/")).toBe(
+      "wsl://Ubuntu/home/me/repo",
+    );
+  });
+
+  it("resolves repositories opened from a WSL share path", async () => {
+    mockInvoke.mockResolvedValueOnce("//wsl$/Ubuntu/home/me/repo/");
+
+    await expect(resolveRepositoryPath("\\\\wsl$\\Ubuntu\\home\\me\\repo")).resolves.toBe(
+      "//wsl$/Ubuntu/home/me/repo",
+    );
+    expect(mockInvoke).toHaveBeenCalledWith("git_discover_repo", {
+      path: "//wsl$/Ubuntu/home/me/repo",
+    });
   });
 
   it("does not negative-cache transient native discovery failures", async () => {

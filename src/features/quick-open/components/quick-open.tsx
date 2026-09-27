@@ -50,16 +50,34 @@ const QuickOpen = () => {
   const hasResults =
     openBufferFiles.length > 0 || recentFilesInResults.length > 0 || otherFiles.length > 0;
   const totalResults = openBufferFiles.length + recentFilesInResults.length + otherFiles.length;
+  const resultCount = isSymbolMode
+    ? symbols.length
+    : isWorkspaceSymbolMode
+      ? workspaceSymbols.length
+      : totalResults;
+  const isLoading = isSymbolMode
+    ? isLoadingSymbols
+    : isWorkspaceSymbolMode
+      ? isLoadingWorkspaceSymbols
+      : isLoadingFiles;
   const symbolSearchQuery = isSymbolMode || isWorkspaceSymbolMode ? query.slice(1).trim() : query;
 
   return (
-    <Command isVisible={isVisible} onClose={onClose}>
+    <Command isVisible={isVisible} onClose={onClose} title="Quick Open">
       <CommandHeader onClose={onClose}>
         <CommandInput
           ref={inputRef}
           value={query}
           onChange={setQuery}
           onKeyDown={handleInputKeyDown}
+          aria-label="Search files and symbols"
+          role="combobox"
+          aria-autocomplete="list"
+          aria-expanded="true"
+          aria-controls="quick-open-results"
+          aria-activedescendant={
+            selectedIndex < resultCount ? `quick-open-option-${selectedIndex}` : undefined
+          }
           placeholder={
             isSymbolMode
               ? "Type to filter symbols..."
@@ -86,7 +104,13 @@ const QuickOpen = () => {
         )}
       </CommandHeader>
 
-      <CommandList ref={scrollContainerRef}>
+      <CommandList
+        ref={scrollContainerRef}
+        id="quick-open-results"
+        role="listbox"
+        aria-label={isSymbolMode || isWorkspaceSymbolMode ? "Symbol results" : "File results"}
+        aria-busy={isLoading}
+      >
         {isSymbolMode ? (
           symbols.length === 0 ? (
             <CommandEmpty>
@@ -100,7 +124,7 @@ const QuickOpen = () => {
                 index={index}
                 isSelected={index === selectedIndex}
                 onClick={handleSymbolSelect}
-                onMouseEnter={(idx) => setSelectedIndex(idx)}
+                onMouseMove={(idx) => setSelectedIndex(idx)}
                 searchQuery={symbolSearchQuery}
               />
             ))
@@ -118,7 +142,7 @@ const QuickOpen = () => {
                 index={index}
                 isSelected={index === selectedIndex}
                 onClick={handleWorkspaceSymbolSelect}
-                onMouseEnter={(idx) => setSelectedIndex(idx)}
+                onMouseMove={(idx) => setSelectedIndex(idx)}
                 searchQuery={symbolSearchQuery}
                 showFilePath
               />
@@ -145,7 +169,7 @@ const QuickOpen = () => {
                     index={index}
                     isSelected={index === selectedIndex}
                     onClick={handleItemSelect}
-                    onMouseEnter={handleItemHover}
+                    onMouseMove={handleItemHover}
                     rootFolderPath={rootFolderPath}
                     searchQuery={debouncedQuery}
                   />
@@ -165,7 +189,7 @@ const QuickOpen = () => {
                       index={globalIndex}
                       isSelected={globalIndex === selectedIndex}
                       onClick={handleItemSelect}
-                      onMouseEnter={handleItemHover}
+                      onMouseMove={handleItemHover}
                       rootFolderPath={rootFolderPath}
                       searchQuery={debouncedQuery}
                     />
@@ -186,7 +210,7 @@ const QuickOpen = () => {
                       index={globalIndex}
                       isSelected={globalIndex === selectedIndex}
                       onClick={handleItemSelect}
-                      onMouseEnter={handleItemHover}
+                      onMouseMove={handleItemHover}
                       rootFolderPath={rootFolderPath}
                       searchQuery={debouncedQuery}
                     />

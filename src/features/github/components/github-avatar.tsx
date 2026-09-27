@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Avatar } from "@/ui/avatar";
+import { Avatar, type AvatarSize } from "@/ui/avatar";
 import { getGitHubAvatarUrl } from "../utils/github-avatar-url";
 
 interface GitHubAvatarProps {
@@ -7,8 +7,7 @@ interface GitHubAvatarProps {
   name?: string | null;
   avatarUrl?: string | null;
   size?: number;
-  className?: string;
-  displaySize?: "xs" | "sm" | "md" | "lg";
+  displaySize?: AvatarSize;
 }
 
 export function GitHubAvatar({
@@ -16,7 +15,6 @@ export function GitHubAvatar({
   name,
   avatarUrl,
   size = 32,
-  className,
   displaySize,
 }: GitHubAvatarProps) {
   const label = (login || name || "GitHub user").trim();
@@ -25,5 +23,5 @@ export function GitHubAvatar({
     [avatarUrl, login, size],
   );
 
-  return <Avatar name={label} src={src} size={displaySize} className={className} />;
+  return <Avatar name={label} src={src} size={displaySize} />;
 }

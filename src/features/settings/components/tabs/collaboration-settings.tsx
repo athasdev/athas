@@ -50,7 +50,7 @@ export const CollaborationSettings = () => {
         </SettingRow>
 
         <SettingRow label="Members" description={`${invitations.length} pending invitations`}>
-          <Badge variant="default">
+          <Badge>
             {activeMembers.length}/{members.length} active
           </Badge>
         </SettingRow>
@@ -59,7 +59,7 @@ export const CollaborationSettings = () => {
           label="Channels"
           description={selectedChannel ? `Joined #${selectedChannel.slug}` : "No channel selected"}
         >
-          <Badge variant="default">{channels.length} channels</Badge>
+          <Badge>{channels.length} channels</Badge>
         </SettingRow>
 
         <SettingRow
@@ -67,7 +67,7 @@ export const CollaborationSettings = () => {
           description={followedMember ? `Following ${followedMember.name}` : "Not following anyone"}
         >
           <div className="flex items-center gap-2">
-            <Badge variant="default">{collaboration?.presence.length ?? 0} sessions</Badge>
+            <Badge>{collaboration?.presence.length ?? 0} sessions</Badge>
             <Button
               type="button"
               variant="default"
@@ -90,13 +90,13 @@ export const CollaborationSettings = () => {
               : "No active document stream"
           }
         >
-          <Badge variant={activeDocumentStream.status === "error" ? "error" : "default"}>
+          <Badge tone={activeDocumentStream.status === "error" ? "danger" : "neutral"}>
             {activeDocumentStream.status}
           </Badge>
         </SettingRow>
 
         <SettingRow label="Workspace Rules" description={`Invites: ${invitePolicy}`}>
-          <Badge variant="default">
+          <Badge>
             Seats {seatLimit} · Updates {updateLimit}
           </Badge>
         </SettingRow>

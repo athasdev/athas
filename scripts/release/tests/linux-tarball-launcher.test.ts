@@ -96,6 +96,33 @@ describe("Linux tarball launcher", () => {
     expect(result.preloads).toEqual(integration.map((lib) => `/usr/lib/${lib}`));
   });
 
+  it("uses Arch NSS libraries with the bundled stable release runtime", () => {
+    const bundled = [
+      "libfontconfig.so.1",
+      "libnspr4.so",
+      "libnss3.so",
+      "libnssutil3.so",
+      "libplc4.so",
+      "libplds4.so",
+      "libsmime3.so",
+      "libxkbcommon.so.0",
+    ];
+    const host = [...bundled, "libsoftokn3.so"].map((lib) => `/usr/lib/${lib}`);
+
+    expect(runLauncher({ bundled, host }).preloads).toEqual(
+      [
+        "libxkbcommon.so.0",
+        "libfontconfig.so.1",
+        "libnspr4.so",
+        "libplc4.so",
+        "libplds4.so",
+        "libnssutil3.so",
+        "libnss3.so",
+        "libsmime3.so",
+      ].map((lib) => `/usr/lib/${lib}`),
+    );
+  });
+
   it.each([
     ["x86_64", "/usr/lib/x86_64-linux-gnu"],
     ["x86_64", "/usr/lib64"],

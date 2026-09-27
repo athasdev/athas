@@ -132,16 +132,15 @@ export function parseGeneratedViewPlan(value: string): CustomViewDefinition {
 export async function generateCustomView(options: {
   request: string;
   repository: GitHubRepository;
-  model: string;
+  model?: string;
 }): Promise<CustomViewDefinition> {
   const { request, repository, model } = options;
-  const { editedText } = await requestInlineEdit(
-    {
-      model,
-      beforeSelection: "",
-      selectedText: `Project GitHub repository: ${repository.owner}/${repository.repo}\nUser request: ${request}`,
-      afterSelection: "",
-      instruction: `Generate a read-only custom view for the current project's GitHub repository.
+  const { editedText } = await requestInlineEdit({
+    model: model ?? "",
+    beforeSelection: "",
+    selectedText: `Project GitHub repository: ${repository.owner}/${repository.repo}\nUser request: ${request}`,
+    afterSelection: "",
+    instruction: `Generate a read-only custom view for the current project's GitHub repository.
 Return only one JSON object with these fields:
 {"kind":"github","name":"Short view name","endpointPath":"/repository-relative GitHub REST API path","rowsPath":"optional dot path with [] for arrays","presentation":{"layout":"table","groupBy":"optional column","titleColumn":"optional column","descriptionColumn":"optional column"}}
 
@@ -150,11 +149,9 @@ Set presentation.layout to table, list, or board. Prefer board for status-driven
 The endpoint path is always relative to /repos/${repository.owner}/${repository.repo}. Never return a host, full URL, token, GraphQL request, mutation, or endpoint for another repository. Use per_page=100 for list endpoints. For release download statistics use /releases?per_page=100 with rowsPath assets[]. For workflow runs use /actions/runs?per_page=100 with rowsPath workflow_runs.
 
 If the request cannot be represented by a read-only GitHub REST endpoint, return {"kind":"manual","reason":"Brief reason"}.`,
-      filePath: `${repository.owner}/${repository.repo}`,
-      languageId: "json",
-    },
-    { useHosted: true },
-  );
+    filePath: `${repository.owner}/${repository.repo}`,
+    languageId: "json",
+  });
 
   return parseGeneratedViewPlan(editedText);
 }

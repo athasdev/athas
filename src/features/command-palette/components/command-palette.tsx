@@ -5,7 +5,6 @@ import { useUIExtensionStore } from "@/extensions/ui/stores/ui-extension-store";
 import { IconThemeSelectorContent } from "@/features/command-palette/components/icon-theme-selector";
 import { ThemeSelectorContent } from "@/features/command-palette/components/theme-selector";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
-import { DatabaseCommandContent } from "@/features/database/components/database-sidebar";
 import { useLspStore } from "@/features/editor/lsp/stores/lsp.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { isMarkdownFile } from "@/features/editor/utils/lines";
@@ -44,6 +43,11 @@ import Command, {
 import { Kbd } from "@/ui/kbd";
 import { SearchMatchHighlight } from "@/components/search-match-highlight";
 import Keybinding from "@/features/keymaps/components/keybinding";
+import { canLogOutOfAcpAgent } from "@/features/ai/lib/acp-logout";
+import { isAcpAgent } from "@/features/ai/services/ai-chat-service";
+import { canBrowseAgentSessions } from "@/features/ai/lib/open-agent-sessions";
+import { selectAcpAgentStatus } from "@/features/ai/lib/acp-session-state";
+import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { createAdvancedActions } from "../constants/advanced-actions";
 import { createDatabaseActions } from "../constants/database-actions";
 import { createFileActions } from "../constants/file-actions";
@@ -73,7 +77,6 @@ interface CommandPaletteContentProps {
 const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteContentProps) => {
   // Get data from stores
   const setIsCommandPaletteVisible = useUIState((state) => state.setIsCommandPaletteVisible);
-  const setIsSettingsDialogVisible = useUIState((state) => state.setIsSettingsDialogVisible);
   const isSidebarVisible = useUIState((state) => state.isSidebarVisible);
   const setIsSidebarVisible = useUIState((state) => state.setIsSidebarVisible);
   const isBottomPaneVisible = useUIState((state) => state.isBottomPaneVisible);
@@ -83,7 +86,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
   const setActiveView = useUIState((state) => state.setActiveView);
   const setIsQuickOpenVisible = useUIState((state) => state.setIsQuickOpenVisible);
   const openCommandPaletteView = useUIState((state) => state.openCommandPaletteView);
-  const openSettingsDialog = useUIState((state) => state.openSettingsDialog);
+  const openSettings = useUIState((state) => state.openSettings);
   const { openQuickEdit } = useEditorAppStore.use.actions();
   const handleFileSelect = useFileSystemStore.use.handleFileSelect?.();
   const onClose = () => {
@@ -132,7 +135,6 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
 
   const lastEnteredActions = useActionsStore.use.lastEnteredActionsStack();
   const pushAction = useActionsStore.use.actions().pushAction;
-  const activityRailExpanded = useSettingsStore((state) => state.settings.activityRailExpanded);
   const aiCompletion = useSettingsStore((state) => state.settings.aiCompletion);
   const autoCompletion = useSettingsStore((state) => state.settings.autoCompletion);
   const autoDetectLanguage = useSettingsStore((state) => state.settings.autoDetectLanguage);
@@ -163,6 +165,18 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
   const { setMode } = useVimStore.use.actions();
   const lspStatus = useLspStore.use.lspStatus();
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+  const logOutAgentId = useAIChatStore((state) => {
+    const agentId =
+      state.chats.find((chat) => chat.id === state.currentChatId)?.agentId ?? state.selectedAgentId;
+    const status = selectAcpAgentStatus(state, agentId, rootFolderPath);
+    return canLogOutOfAcpAgent(status, agentId) ? agentId : null;
+  });
+  const browseSessionsAgentId = useAIChatStore((state) => {
+    const agentId =
+      state.chats.find((chat) => chat.id === state.currentChatId)?.agentId ?? state.selectedAgentId;
+    const status = selectAcpAgentStatus(state, agentId, rootFolderPath);
+    return isAcpAgent(agentId) && canBrowseAgentSessions(status, agentId) ? agentId : null;
+  });
   const activeRepoPath = useRepositoryStore.use.activeRepoPath();
   const { checkAuth: checkGitHubAuth } = useGitHubStore.use.actions();
   const extensionCommands = useUIExtensionStore.use.commands();
@@ -183,11 +197,9 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
     openContent,
   } = useBufferStore.use.actions();
   const { zoomIn, zoomOut, resetZoom } = useZoomStore.use.actions();
-  const { openBuffer } = useBufferStore.use.actions();
 
   const commandSettings = useMemo(
     () => ({
-      activityRailExpanded,
       aiCompletion,
       autoCompletion,
       autoDetectLanguage,
@@ -216,7 +228,6 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
       wordWrap,
     }),
     [
-      activityRailExpanded,
       aiCompletion,
       autoCompletion,
       autoDetectLanguage,
@@ -253,7 +264,6 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
     ...createMarkdownActions({
       isMarkdownFile: isActiveMarkdownFile,
       activeBuffer,
-      openBuffer,
       onClose,
     }),
     ...createViewActions({
@@ -264,7 +274,6 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
       bottomPaneActiveTab,
       setBottomPaneActiveTab,
       settings: {
-        activityRailExpanded: commandSettings.activityRailExpanded,
         nativeMenuBar: commandSettings.nativeMenuBar,
         compactMenuBar: commandSettings.compactMenuBar,
       },
@@ -280,8 +289,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
     ...createSettingsActions({
       query,
       settings: commandSettings,
-      setIsSettingsDialogVisible,
-      openSettingsDialog,
+      openSettings,
       setSettingsSearchQuery: useSettingsStore.getState().actions.setSearchQuery,
       pushPaletteView: pushView,
       updateSetting: useSettingsStore.getState().actions.updateSetting as (
@@ -301,7 +309,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
       setBottomPaneActiveTab,
       setIsQuickOpenVisible,
       openCommandPaletteView,
-      openSettingsDialog,
+      openSettings,
       hasActiveEditor: activeBuffer?.type === "editor",
       onClose,
     }),
@@ -383,10 +391,16 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
       onClose,
     }),
     ...createDatabaseActions({
-      openDatabaseCommand: () => pushView("databases"),
+      openDatabaseSidebar: () => {
+        setActiveView("databases");
+        setIsSidebarVisible(true);
+        onClose();
+      },
     }),
     ...createAdvancedActions({
       lspStatus,
+      logOutAgentId,
+      browseSessionsAgentId,
       vimMode: commandSettings.vimMode,
       vimCommands,
       setMode,
@@ -439,7 +453,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
     const selectedElement = resultsRef.current?.querySelector(
       `[data-command-item-index="${selectedIndex}"]`,
     );
-    selectedElement?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    selectedElement?.scrollIntoView({ block: "nearest", behavior: "instant" });
   }, [selectedIndex, paletteActions.length]);
 
   const extensionView = extensionViews.get(currentView);
@@ -474,12 +488,6 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
       ) : currentView === "outline" ? (
         <OutlineCommandContent
           isActive={currentView === "outline"}
-          onBack={popView}
-          onClose={onClose}
-        />
-      ) : currentView === "databases" ? (
-        <DatabaseCommandContent
-          isActive={currentView === "databases"}
           onBack={popView}
           onClose={onClose}
         />
@@ -562,7 +570,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
                           action.action();
                           pushAction(action.id);
                         }}
-                        onMouseEnter={() => setSelectedIndex(index)}
+                        onMouseMove={() => setSelectedIndex(index)}
                         isSelected={isSelected}
                         icon={action.icon}
                         contentLayout="stacked"

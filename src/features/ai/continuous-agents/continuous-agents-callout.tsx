@@ -31,9 +31,9 @@ export function ContinuousAgentsCallout() {
         <ItemTitle>
           {activeCount > 0 ? "Continuous Agents" : "Try Continuous Agents"}
           {activeCount > 0 ? (
-            <Badge variant="success">{activeCount} active</Badge>
+            <Badge tone="success">{activeCount} active</Badge>
           ) : (
-            <Badge variant="accent">New</Badge>
+            <Badge tone="accent">New</Badge>
           )}
         </ItemTitle>
         <ItemDescription>

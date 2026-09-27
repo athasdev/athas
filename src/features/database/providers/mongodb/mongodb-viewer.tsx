@@ -26,6 +26,7 @@ import {
 } from "../../utils/database-surface";
 import { getMongoDocumentDisplayIndex } from "./mongodb-pagination";
 import { createMongoDbStore } from "./stores/mongodb.store";
+import { SidebarListItem } from "@/ui/sidebar";
 
 interface MongoDBViewerProps {
   connectionId: string;
@@ -86,21 +87,18 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
       />
 
       <div className="flex min-h-0 flex-1">
-        <div className={databasePanelClassName("w-56 shrink-0 border-border/60 border-r")}>
+        <div className={databasePanelClassName("w-56 shrink-0 border-border border-r")}>
           <PaneContentHeader leading={<StackIcon />} title="Collections" />
           <ScrollArea fill="flex" contentPadding="sm" contentGap="xs">
             {store.collections.map((col) => (
-              <Button
+              <SidebarListItem
                 key={col.name}
                 onClick={() => actions.selectCollection(col.name)}
-                variant="list"
-                width="full"
-                align="start"
                 active={store.selectedCollection === col.name}
                 aria-label={`Select collection ${col.name}`}
               >
                 {col.name}
-              </Button>
+              </SidebarListItem>
             ))}
           </ScrollArea>
         </div>
@@ -186,7 +184,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                   </div>
                 )}
               </div>
-              <div className="divide-y divide-border/60 border-y border-border/60">
+              <div className="divide-y divide-border border-y border-border">
                 {store.documents.map((doc, i) => {
                   const id = doc._id ? String(doc._id) : String(i);
                   const displayIndex = getMongoDocumentDisplayIndex(
@@ -212,9 +210,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                           </Button>
                         </span>
                       </div>
-                      <pre
-                        className={databaseCodeBlockClassName("overflow-x-auto bg-background/70")}
-                      >
+                      <pre className={databaseCodeBlockClassName("overflow-x-auto bg-background")}>
                         {JSON.stringify(doc, null, 2)}
                       </pre>
                     </div>
@@ -236,7 +232,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
           )}
 
           {!store.isLoading && store.totalPages > 1 && (
-            <div className="flex items-center justify-between border-border/60 border-t px-3 py-2">
+            <div className="flex items-center justify-between border-border border-t px-3 py-2">
               <div className="flex items-center gap-2">
                 <Select
                   value={store.pageSize.toString()}

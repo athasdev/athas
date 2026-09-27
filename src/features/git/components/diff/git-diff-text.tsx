@@ -72,7 +72,7 @@ function SplitDiffCodePanel({
         })}
       </div>
 
-      <div className="min-w-0 flex-1 overflow-x-auto overflow-y-hidden">
+      <div className="min-w-0 flex-1 select-text overflow-x-auto overflow-y-hidden">
         <div className="min-w-max">
           {lines.map((line, index) => {
             const meta = getSplitLineMeta(line, side);
@@ -158,7 +158,7 @@ const TextDiffViewer = memo(
       return (
         <div
           ref={selectionScopeRef}
-          className="font-mono code-editor-font-override min-w-0"
+          className="font-mono min-w-0"
           style={{
             fontSize: `${fontSize}px`,
             fontFamily: editorFontFamily,
@@ -230,9 +230,7 @@ const TextDiffViewer = memo(
       >
         <div
           className={
-            viewMode === "split"
-              ? "font-mono code-editor-font-override min-w-0 w-full"
-              : "font-mono code-editor-font-override min-w-full w-fit"
+            viewMode === "split" ? "font-mono min-w-0 w-full" : "font-mono min-w-full w-fit"
           }
           style={{
             fontSize: `${fontSize}px`,

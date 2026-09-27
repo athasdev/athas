@@ -1,20 +1,40 @@
 import path from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
+import babel from "@rolldown/plugin-babel";
 import { codeInspectorPlugin } from "code-inspector-plugin";
 import { defaultExclude, defineConfig } from "vite-plus";
+import { createReactCompilerPreset } from "./scripts/vite/react-compiler";
 
 const host = process.env.TAURI_DEV_HOST || "127.0.0.1";
 const isVitest = Boolean(process.env.VITEST);
+const enableReactCompiler = !isVitest && process.env.ATHAS_REACT_COMPILER !== "0";
 const enableCodeInspector = process.env.VITE_CODE_INSPECTOR === "true";
 const webviewTargets = ["chrome96", "edge96", "firefox94", "safari15"];
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  define: {
+    "import.meta.env.VITE_REACT_COMPILER_ENABLED": JSON.stringify(enableReactCompiler),
+  },
   fmt: {
+    // Vendored agent skills stay byte-identical to upstream so `skills update` stays clean.
+    ignorePatterns: [".claude/skills/**"],
     printWidth: 100,
   },
   lint: {
+    jsPlugins: ["@shadcn/lint", "eslint-plugin-better-tailwindcss"],
+    settings: {
+      shadcn: {
+        // Icons and brand marks take color from context.
+        ignoreImports: ["^@/ui/icons(/|$)", "^@/ui/brand-marks(/|$)"],
+        note: "See the UI Design System section of AGENTS.md.",
+      },
+      "better-tailwindcss": {
+        entryPoint: "src/styles.css",
+        rootFontSize: 16,
+      },
+    },
     options: {
       typeAware: true,
       typeCheck: true,
@@ -31,7 +51,62 @@ export default defineConfig({
       "typescript/no-useless-default-assignment": "off",
       "typescript/restrict-template-expressions": "off",
       "typescript/unbound-method": "off",
+      // The editor's suggestCanonicalClasses hint as a lint error; vp check --fix rewrites them.
+      // Collapsing is off: text-sm + leading-6 -> text-sm/6 drops --tw-leading and breaks
+      // responsive size overrides.
+      "better-tailwindcss/enforce-canonical-classes": ["error", { collapse: false }],
+      "shadcn/no-raw-colors": "error",
+      "shadcn/no-unknown-classes": [
+        "error",
+        {
+          // Plain selectors that CSS or DOM queries rely on.
+          allow: [
+            "editor-container",
+            "file-tree-container",
+            "github-markdown-*",
+            "inline-edit-model-command",
+            "items-container",
+            "pdf-page-container",
+            "terminal-container",
+            "xterm-container",
+          ],
+        },
+      ],
+      "shadcn/no-arbitrary-values": [
+        "error",
+        // Layout sizes, transition property lists and inherited radii are structural.
+        { allow: ["layout", "transition", "rounded-[inherit]", "rounded-b-[inherit]"] },
+      ],
+      "shadcn/no-restyle": [
+        "error",
+        {
+          // Only overlay sizing is enforced so far; bun check:design reports the wider policy.
+          deny: [],
+          contracts: [
+            {
+              pattern:
+                "^(DropdownMenuContent|DropdownMenuSubContent|PopoverContent|PopoverListContent|SelectContent|ComboboxContent)$",
+              deny: ["w-*", "min-w-*", "max-w-*"],
+              message:
+                "<{{component}}> takes its width from the size preset in src/ui/overlay-size.ts, not {{className}}.",
+            },
+            {
+              pattern: "^(DropdownMenuContent|DropdownMenuSubContent)$",
+              deny: ["w-*", "min-w-*", "max-w-*", "max-h-*"],
+              message:
+                "<{{component}}> takes its width from the size preset and its scroll cap from the viewport variant, not {{className}}.",
+            },
+          ],
+        },
+      ],
     },
+    overrides: [
+      {
+        // Primitives compose each other and own their exact sizes.
+        files: ["src/ui/**"],
+        rules: { "shadcn/no-restyle": "off" },
+      },
+    ],
   },
   staged: {
     "*.{js,jsx,mjs,cjs,ts,tsx,mts,cts}": "vp check --fix",
@@ -57,6 +132,7 @@ export default defineConfig({
         })
       : null,
     react(),
+    enableReactCompiler ? babel({ presets: [createReactCompilerPreset()] }) : null,
     tailwindcss(),
   ].filter(Boolean),
   resolve: {

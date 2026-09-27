@@ -46,7 +46,7 @@ export function WindowControls({
           onClick={handleMinimize}
           variant="ghost"
           iconOnly
-          size="chrome"
+          size="sm"
           tooltip="Minimize"
           commandId="window.minimize.alt"
           aria-label="Minimize"
@@ -59,7 +59,7 @@ export function WindowControls({
           onClick={handleToggleMaximize}
           variant="ghost"
           iconOnly
-          size="chrome"
+          size="sm"
           tooltip={isMaximized ? "Restore" : "Maximize"}
           commandId="window.maximize"
           aria-label={isMaximized ? "Restore" : "Maximize"}
@@ -70,9 +70,10 @@ export function WindowControls({
       <span className="inline-flex min-w-0 pointer-events-auto group">
         <Button
           onClick={handleClose}
-          variant="danger"
+          variant="ghost"
+          tone="danger"
           iconOnly
-          size="chrome"
+          size="sm"
           tooltip="Close"
           commandId="workbench.closeWindow"
           aria-label="Close"

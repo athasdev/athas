@@ -11,7 +11,7 @@ export const chromeBarVariants = cva(
         tabs: "h-tab-bar min-h-tab-bar gap-chrome bg-background px-chrome-inline",
         content: "h-7 min-h-7 gap-chrome bg-background px-chrome-inline",
         status: "h-7 min-h-7 gap-chrome-loose bg-background px-chrome-inline",
-        sidebar: "min-h-sidebar-header gap-chrome bg-background/92 px-chrome-inline",
+        sidebar: "min-h-sidebar-header gap-chrome bg-background px-chrome-inline",
       },
       emphasis: {
         supporting: "text-subtle-foreground",
@@ -23,7 +23,7 @@ export const chromeBarVariants = cva(
         transparent: "bg-transparent",
       },
       separated: {
-        true: "border-border/55 border-b",
+        true: "border-border border-b",
         false: "border-transparent border-b",
       },
     },
@@ -135,7 +135,7 @@ export function ChromeSeparator({
       role="separator"
       aria-orientation={orientation}
       className={cn(
-        "shrink-0 bg-border/55",
+        "shrink-0 bg-border",
         orientation === "vertical" ? "mx-0.5 h-3.5 w-px" : "my-0.5 h-px w-full",
         className,
       )}

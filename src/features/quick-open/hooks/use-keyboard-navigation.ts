@@ -1,5 +1,6 @@
+import { isComposingKeyboardEvent } from "@/features/keymaps/utils/is-composing-keyboard-event";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { KeyboardEvent as ReactKeyboardEvent } from "react";
+import type { KeyboardEvent as ReactKeyboardEvent, SetStateAction } from "react";
 import {
   KEY_ARROW_DOWN,
   KEY_ARROW_UP,
@@ -22,9 +23,11 @@ export const useKeyboardNavigation = ({
   onClose,
   onSelect,
 }: UseKeyboardNavigationProps) => {
-  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [selection, setSelection] = useState<{ index: number; path: string | null }>({
+    index: 0,
+    path: null,
+  });
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const selectedPathRef = useRef<string | null>(null);
   const resultIndexByPath = useMemo(() => {
     const indexByPath = new Map<string, number>();
     for (let index = 0; index < allResults.length; index++) {
@@ -36,38 +39,42 @@ export const useKeyboardNavigation = ({
     return indexByPath;
   }, [allResults]);
 
+  const selectedIndex =
+    (selection.path ? resultIndexByPath.get(selection.path) : undefined) ??
+    Math.min(selection.index, Math.max(0, allResults.length - 1));
+
+  const setSelectedIndex = useCallback(
+    (next: SetStateAction<number>) => {
+      setSelection((previous) => {
+        const currentIndex =
+          (previous.path ? resultIndexByPath.get(previous.path) : undefined) ??
+          Math.min(previous.index, Math.max(0, allResults.length - 1));
+        const index = typeof next === "function" ? next(currentIndex) : next;
+        const path = allResults[index]?.path ?? null;
+        return previous.index === index && previous.path === path ? previous : { index, path };
+      });
+    },
+    [allResults, resultIndexByPath],
+  );
+
   useEffect(() => {
-    selectedPathRef.current = allResults[selectedIndex]?.path || null;
+    const path = allResults[selectedIndex]?.path ?? null;
+    setSelection((previous) =>
+      previous.index === selectedIndex && previous.path === path
+        ? previous
+        : { index: selectedIndex, path },
+    );
   }, [allResults, selectedIndex]);
-
-  // Preserve selection as results change by matching selected path first,
-  // then clamping to valid range as a fallback.
-  useEffect(() => {
-    setSelectedIndex((previousIndex) => {
-      if (allResults.length === 0) {
-        return 0;
-      }
-
-      const selectedPath = selectedPathRef.current;
-      if (selectedPath) {
-        const nextIndex = resultIndexByPath.get(selectedPath) ?? -1;
-        if (nextIndex >= 0) {
-          return nextIndex;
-        }
-      }
-
-      return Math.min(previousIndex, allResults.length - 1);
-    });
-  }, [allResults, resultIndexByPath]);
 
   useEffect(() => {
     if (isVisible) {
-      setSelectedIndex(0);
+      setSelection({ index: 0, path: null });
     }
   }, [isVisible]);
 
   const handleInputKeyDown = useCallback(
     (event: ReactKeyboardEvent<HTMLInputElement>) => {
+      if (event.defaultPrevented || isComposingKeyboardEvent(event.nativeEvent)) return;
       if (event.key === KEY_ESCAPE || (event.key === KEY_K && (event.metaKey || event.ctrlKey))) {
         event.preventDefault();
         onClose();
@@ -97,7 +104,7 @@ export const useKeyboardNavigation = ({
         }
       }
     },
-    [allResults, onClose, onSelect, selectedIndex],
+    [allResults, onClose, onSelect, selectedIndex, setSelectedIndex],
   );
 
   // Auto-scroll selected item into view
@@ -114,7 +121,7 @@ export const useKeyboardNavigation = ({
         block: "nearest",
       });
     }
-  }, [selectedIndex, isVisible]);
+  }, [selectedIndex, isVisible, allResults]);
 
   return { selectedIndex, setSelectedIndex, scrollContainerRef, handleInputKeyDown };
 };

@@ -3,9 +3,11 @@ import { useNewAgentAction } from "@/features/ai/hooks/use-new-agent-action";
 import { DiagnosticsActivityControl } from "@/features/diagnostics/components/diagnostics-activity-control";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { ActivityBarMenu } from "@/features/layout/components/sidebar/activity-bar-menu";
-import { ActivityProjectDots } from "@/features/layout/components/sidebar/activity-project-dots";
+import {
+  ActivityChrome,
+  ActivityChromeFooter,
+} from "@/features/layout/components/sidebar/activity-chrome";
 import { ActivityProjectPanel } from "@/features/layout/components/sidebar/activity-project-panel";
-import { useActivityBarResize } from "@/features/layout/hooks/use-activity-bar-resize";
 import { useActivityBarVisibility } from "@/features/layout/hooks/use-activity-bar-visibility";
 import { useActivityNavigationItems } from "@/features/layout/hooks/use-activity-navigation-items";
 import { useActivityProjectCarousel } from "@/features/layout/hooks/use-activity-project-carousel";
@@ -17,13 +19,10 @@ import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { ContextMenu, ContextMenuTrigger } from "@/ui/context-menu";
 import { SearchIcon } from "@/ui/icons";
+import { OverlaySideProvider } from "@/ui/overlay-side";
 import { cn } from "@/utils/cn";
 
-interface ActivityBarProps {
-  expanded: boolean;
-}
-
-export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
+export const ActivityBar = memo(() => {
   const { openSidebarView } = useSidebarPaneController();
   const { showToast } = useToast();
   const isGitViewActive = useUIState((state) => state.isGitViewActive);
@@ -32,9 +31,6 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
   const activeSidebarView = useUIState((state) => state.activeSidebarView);
   const isBottomPaneVisible = useUIState((state) => state.isBottomPaneVisible);
   const bottomPaneActiveTab = useUIState((state) => state.bottomPaneActiveTab);
-  const isCommandPaletteVisible = useUIState((state) => state.isCommandPaletteVisible);
-  const commandPaletteInitialView = useUIState((state) => state.commandPaletteInitialView);
-  const openCommandPaletteView = useUIState((state) => state.openCommandPaletteView);
   const openProjectPicker = useUIState((state) => state.openProjectPicker);
   const openGlobalSearchBuffer = useBufferStore.use.actions().openGlobalSearchBuffer;
   const handleOpenGlobalSearch = useCallback(() => {
@@ -51,10 +47,6 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
   const isExtensionsBufferActive = useBufferStore((state) => {
     const activeBuffer = state.buffers.find((buffer) => buffer.id === state.activeBufferId);
     return activeBuffer?.type === "extensions" || activeBuffer?.type === "extension";
-  });
-  const isGlobalSearchBufferActive = useBufferStore((state) => {
-    const activeBuffer = state.buffers.find((buffer) => buffer.id === state.activeBufferId);
-    return activeBuffer?.type === "globalSearch";
   });
   const handleNewAgent = useNewAgentAction();
   const handleNewTerminal = useCallback(() => {
@@ -80,42 +72,21 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
     uiState.setBottomPaneActiveTab("debugger");
     uiState.setIsBottomPaneVisible(showingDebugger);
   }, []);
-  const handleOpenDatabases = useCallback(() => {
-    openCommandPaletteView("databases");
-  }, [openCommandPaletteView]);
   const railContentRef = useRef<HTMLDivElement>(null);
   const uiFontSize = useSettingsStore((state) => state.settings.uiFontSize);
   const coreFeatures = useSettingsStore((state) => state.settings.coreFeatures);
   const activityBarVisibility = useActivityBarVisibility();
-  const handleSidebarViewChange = (view: typeof activeSidebarView) => {
-    const buffers = useBufferStore.getState();
-    if (
-      buffers.buffers.find((buffer) => buffer.id === buffers.activeBufferId)?.type === "workspaces"
-    ) {
-      const editor = [...buffers.buffers].reverse().find((buffer) => buffer.type === "editor");
-      if (editor) buffers.actions.setActiveBuffer(editor.id);
-      else buffers.actions.showNewTabView();
-      const ui = useUIState.getState();
-      ui.setActiveView(view);
-      ui.setIsSidebarVisible(true);
-      return;
-    }
-    openSidebarView(view);
-  };
-
   const activityNavigationItems = useActivityNavigationItems({
     activeSidebarView,
     isGitViewActive,
     isGitHubPRsViewActive,
     isSidebarVisible,
     coreFeatures,
-    onViewChange: handleSidebarViewChange,
+    onViewChange: openSidebarView,
     onOpenExtensions: openExtensionsBuffer,
     isExtensionsActive: isExtensionsBufferActive,
     isDebuggerActive: isBottomPaneVisible && bottomPaneActiveTab === "debugger",
-    isDatabasesActive: isCommandPaletteVisible && commandPaletteInitialView === "databases",
     onToggleDebugger: handleDebuggerToggle,
-    onOpenDatabases: handleOpenDatabases,
   });
   const visibleNavigationItems = activityNavigationItems.filter((item) =>
     activityBarVisibility.isNavigationItemVisible(item.id),
@@ -129,7 +100,8 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
           id: "search",
           label: "Search",
           icon: <SearchIcon />,
-          active: isGlobalSearchBufferActive,
+          // Search opens as a tab, not a sidebar view, so it never shows as the active view.
+          active: false,
           onClick: handleOpenGlobalSearch,
           ariaLabel: "Search",
           shortcut: "Mod+Shift+F",
@@ -138,11 +110,7 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
       ]
     : visibleNavigationItems;
   const visibleNavigationItemIds = visibleNavigationItems.map((item) => item.id);
-  const hasHiddenItems =
-    visibleNavigationItems.length < activityNavigationItems.length ||
-    !activityBarVisibility.agentHistory ||
-    (coreFeatures.terminal && !activityBarVisibility.terminals) ||
-    !activityBarVisibility.projectDots;
+  const hasHiddenItems = visibleNavigationItems.length < activityNavigationItems.length;
   const alignProjectCarouselToCurrent = useCallback(() => {
     const container = railContentRef.current;
     const currentPanel = container?.querySelector<HTMLElement>(
@@ -152,111 +120,71 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
     container.scrollLeft = currentPanel.offsetLeft;
   }, []);
 
-  const {
-    width: activityRailWidth,
-    isResizing: isActivityRailResizing,
-    sidebarRef: railRef,
-    handleResizeStart,
-  } = useActivityBarResize({
-    expanded,
-  });
-  const collapsedRailWidth = getCollapsedActivityBarWidth(uiFontSize);
-  const railPanelWidth = expanded ? activityRailWidth : collapsedRailWidth;
+  const railWidth = getCollapsedActivityBarWidth(uiFontSize);
   const {
     enabled: projectCarouselEnabled,
-    projects: projectTabs,
     currentProject: carouselProject,
     carouselProjects,
     renderedProjects: renderedCarouselProjects,
     loadingProjectId: loadingCarouselProjectId,
-    isSwitchingProject,
-    selectProject: handleProjectSelect,
     handleScroll: handleProjectScroll,
   } = useActivityProjectCarousel({
     alignCurrentProject: alignProjectCarouselToCurrent,
-    isResizing: isActivityRailResizing,
   });
 
   useLayoutEffect(() => {
     alignProjectCarouselToCurrent();
-  }, [alignProjectCarouselToCurrent, carouselProject?.id, carouselProjects.length, railPanelWidth]);
+  }, [alignProjectCarouselToCurrent, carouselProject?.id, carouselProjects.length, railWidth]);
 
-  const renderedRailWidth = expanded
-    ? `calc(${activityRailWidth}px + var(--athas-workbench-gap))`
-    : `${collapsedRailWidth}px`;
   return (
     <ContextMenu>
       <ContextMenuTrigger
-        ref={railRef}
         className="relative flex h-full shrink-0 select-none overflow-hidden"
-        style={{
-          width: renderedRailWidth,
-        }}
+        style={{ width: railWidth }}
       >
         <div
-          className="athas-sidebar-rail absolute inset-y-0 left-0 flex flex-col overflow-hidden py-1.5"
-          style={{ width: railPanelWidth }}
+          className="athas-sidebar-rail absolute inset-y-0 left-0 flex flex-col overflow-hidden"
+          style={{ width: railWidth }}
         >
-          <div
-            ref={railContentRef}
-            onScroll={projectCarouselEnabled ? handleProjectScroll : undefined}
-            data-slot="project-carousel"
-            className={cn(
-              "scrollbar-none flex min-h-0 w-full flex-1 shrink-0 overflow-y-hidden overscroll-x-none",
-              projectCarouselEnabled
-                ? "snap-x snap-mandatory overflow-x-auto"
-                : "overflow-x-hidden",
-            )}
-          >
-            {renderedCarouselProjects.map((project) => (
-              <ActivityProjectPanel
-                key={project.id}
-                expanded={expanded}
-                project={project}
-                current={project.id === carouselProject?.id}
-                loading={project.id === loadingCarouselProjectId}
-                navigationItems={visibleActivityNavigationItems}
-                showAgents={activityBarVisibility.agentHistory}
-                showTerminals={coreFeatures.terminal && activityBarVisibility.terminals}
-              />
-            ))}
-          </div>
-          <div
-            data-slot="activity-sidebar-footer"
-            className="relative z-20 flex w-full shrink-0 flex-col items-center gap-chrome-tight px-chrome-inline"
-          >
-            {expanded && projectCarouselEnabled && activityBarVisibility.projectDots ? (
-              <ActivityProjectDots
-                projects={projectTabs}
-                activeProjectId={carouselProject?.id}
-                isSwitchingProject={isSwitchingProject}
-                onSelectProject={handleProjectSelect}
-              />
-            ) : null}
-            <DiagnosticsActivityControl expanded={expanded} />
-          </div>
+          <OverlaySideProvider side="right" align="start">
+            <ActivityChrome />
+            <div
+              ref={railContentRef}
+              onScroll={projectCarouselEnabled ? handleProjectScroll : undefined}
+              data-slot="project-carousel"
+              className={cn(
+                "scrollbar-none flex min-h-0 w-full flex-1 shrink-0 overflow-y-hidden overscroll-x-none",
+                projectCarouselEnabled
+                  ? "snap-x snap-mandatory overflow-x-auto"
+                  : "overflow-x-hidden",
+              )}
+            >
+              {renderedCarouselProjects.map((project) => (
+                <ActivityProjectPanel
+                  key={project.id}
+                  project={project}
+                  current={project.id === carouselProject?.id}
+                  loading={project.id === loadingCarouselProjectId}
+                  navigationItems={visibleActivityNavigationItems}
+                />
+              ))}
+            </div>
+          </OverlaySideProvider>
+          <OverlaySideProvider side="right" align="end">
+            <div
+              data-slot="activity-sidebar-footer"
+              className="relative z-20 flex w-full shrink-0 flex-col items-center gap-1 px-1"
+            >
+              <DiagnosticsActivityControl />
+              <ActivityChromeFooter />
+            </div>
+          </OverlaySideProvider>
         </div>
-        {expanded ? (
-          <div
-            role="separator"
-            tabIndex={0}
-            aria-label="Resize activity rail"
-            aria-orientation="vertical"
-            className="group absolute top-0 right-0 z-20 flex h-full w-workbench cursor-col-resize items-center justify-center hover:bg-primary/8"
-            onMouseDown={handleResizeStart}
-          >
-            <div className="h-full w-px bg-transparent transition-colors duration-fast ease-smooth group-hover:bg-primary" />
-          </div>
-        ) : null}
-        {isActivityRailResizing ? <div className="fixed inset-0 z-40 cursor-col-resize" /> : null}
       </ContextMenuTrigger>
       <ActivityBarMenu
         navigationItems={activityNavigationItems}
         visibleNavigationItemIds={visibleNavigationItemIds}
         coreFeatures={coreFeatures}
-        showAgentHistory={activityBarVisibility.agentHistory}
-        showTerminals={activityBarVisibility.terminals}
-        showProjectDots={activityBarVisibility.projectDots}
         hasHiddenItems={hasHiddenItems}
         onNewAgent={handleNewAgent}
         onNewTerminal={handleNewTerminal}
@@ -265,15 +193,6 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
         onSearch={handleOpenGlobalSearch}
         onOpenExtensions={openExtensionsBuffer}
         onNavigationItemVisibleChange={activityBarVisibility.setNavigationItemVisible}
-        onAgentHistoryVisibleChange={(visible) =>
-          activityBarVisibility.setItemVisible("agentHistory", visible)
-        }
-        onTerminalsVisibleChange={(visible) =>
-          activityBarVisibility.setItemVisible("terminals", visible)
-        }
-        onProjectDotsVisibleChange={(visible) =>
-          activityBarVisibility.setItemVisible("projectDots", visible)
-        }
         onShowAll={() =>
           activityBarVisibility.showAll(activityNavigationItems.map((item) => item.id))
         }

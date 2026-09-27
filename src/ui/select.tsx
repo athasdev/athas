@@ -198,15 +198,13 @@ function PlainSelect({
           data-prevent-dialog-escape={open ? "true" : undefined}
           aria-label={ariaLabel}
           render={
-            <Button variant={variant === "surface" ? "ghost" : variant} iconOnly={iconOnly} />
+            <Button
+              variant={variant === "surface" ? "outline" : variant}
+              iconOnly={iconOnly}
+              width={iconOnly ? "content" : "full"}
+              align={iconOnly ? "center" : align === "start" ? "start" : "between"}
+            />
           }
-          className={cn(
-            !iconOnly &&
-              "font-sans inline-flex w-full min-w-0 items-center justify-between gap-2 whitespace-nowrap text-left font-normal",
-            variant === "surface" &&
-              "bg-surface text-foreground hover:bg-surface hover:text-foreground focus-visible:ring-1 focus-visible:ring-border-strong/35",
-            align === "start" && "justify-start",
-          )}
         >
           <SelectTriggerContent
             selectedOption={selectedOption}
@@ -230,7 +228,7 @@ function PlainSelect({
               data-prevent-dialog-escape="true"
               className={cn(
                 menuSurfaceVariants(),
-                "w-(--anchor-width) max-w-(--available-width) min-w-36 overflow-hidden text-foreground duration-75 data-ending-style:opacity-0 data-starting-style:opacity-0",
+                "w-(--anchor-width) max-w-(--available-width) min-w-36 overflow-hidden text-foreground",
                 OVERLAY_MIN_SIZES[menuSize],
                 !menuAnimated && "duration-0 data-ending-style:transform-none",
                 menuWidth === "content" && "w-max min-w-(--anchor-width) max-w-(--available-width)",
@@ -408,15 +406,13 @@ function SearchableSelect({
             data-prevent-dialog-escape={open ? "true" : undefined}
             aria-label={ariaLabel}
             render={
-              <Button variant={variant === "surface" ? "ghost" : variant} iconOnly={iconOnly} />
+              <Button
+                variant={variant === "surface" ? "outline" : variant}
+                iconOnly={iconOnly}
+                width={iconOnly ? "content" : "full"}
+                align={iconOnly ? "center" : align === "start" ? "start" : "between"}
+              />
             }
-            className={cn(
-              !iconOnly &&
-                "font-sans inline-flex w-full min-w-0 items-center justify-between gap-2 whitespace-nowrap text-left font-normal",
-              variant === "surface" &&
-                "bg-surface text-foreground hover:bg-surface hover:text-foreground focus-visible:ring-1 focus-visible:ring-border-strong/35",
-              align === "start" && "justify-start",
-            )}
           >
             <SelectTriggerContent
               selectedOption={selectedOption ?? undefined}
@@ -443,7 +439,7 @@ function SearchableSelect({
         )}
       >
         {searchableTrigger === "menu" ? (
-          <div className="border-border/60 border-b p-1.5">
+          <div className="border-border border-b p-1">
             <ComboboxInput
               ref={searchInputRef}
               leftIcon={SearchIcon}

@@ -1,7 +1,28 @@
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
+import { AgentAttentionDot } from "@/features/ai/components/agent-attention-dot";
+import type { ChatAttention } from "@/features/ai/types/chat-attention.types";
 import type { ReactNode } from "react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/ui/dropdown";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/ui/hover-card";
-import { ArchiveIcon, CubeIcon, FolderIcon, GitBranchIcon, PinIcon, SparkleIcon } from "@/ui/icons";
+import {
+  ArchiveIcon,
+  CubeIcon,
+  DotsIcon,
+  FolderIcon,
+  GitBranchIcon,
+  PencilLineIcon,
+  PinIcon,
+  PinSlashIcon,
+  SparkleIcon,
+  TrashIcon,
+  WindowExpandIcon,
+} from "@/ui/icons";
 import { SidebarIconButton, SidebarListActionRow, SidebarListItem } from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
 
@@ -16,11 +37,15 @@ export interface AgentSessionSidebarItemProps {
   branch?: string | null;
   active?: boolean;
   pinned?: boolean;
+  /** What the session is waiting on the user for, if anything. */
+  attention?: ChatAttention | null;
   onOpen: () => void;
   onOpenInNewWindow?: () => void;
   actionsDisabled?: boolean;
   onPinChange: (pinned: boolean) => void;
   onArchive: () => void;
+  onRename?: () => void;
+  onDelete?: () => void;
 }
 
 const agentSessionDateFormatter = new Intl.DateTimeFormat(undefined, {
@@ -41,10 +66,10 @@ function MetadataRow({
 }) {
   return (
     <div className="flex min-w-0 items-center gap-2">
-      <span className="flex size-4 shrink-0 items-center justify-center text-subtle-foreground/70">
+      <span className="flex size-4 shrink-0 items-center justify-center text-subtle-foreground">
         {icon}
       </span>
-      <dt className="w-14 shrink-0 text-subtle-foreground/80">{label}</dt>
+      <dt className="w-14 shrink-0 text-subtle-foreground">{label}</dt>
       <dd
         className={cn("min-w-0 flex-1 truncate text-right text-foreground", mono && "font-mono")}
         title={value}
@@ -58,6 +83,7 @@ function MetadataRow({
 export function AgentSessionSidebarItem({
   active = false,
   agentLabel,
+  attention,
   branch,
   createdAt,
   modelLabel,
@@ -66,6 +92,8 @@ export function AgentSessionSidebarItem({
   onOpenInNewWindow,
   actionsDisabled = false,
   onPinChange,
+  onRename,
+  onDelete,
   pinned = false,
   projectName,
   providerIconId,
@@ -77,33 +105,52 @@ export function AgentSessionSidebarItem({
   return (
     <HoverCard>
       <SidebarListActionRow
-        actions={[
-          <SidebarIconButton
-            key="pin"
-            disabled={actionsDisabled}
-            active={pinned}
-            aria-pressed={pinned}
-            tooltip={pinned ? "Unpin session" : "Pin session"}
-            onClick={(event) => {
-              event.stopPropagation();
-              onPinChange(!pinned);
-            }}
-          >
-            <PinIcon />
-          </SidebarIconButton>,
-          <SidebarIconButton
-            key="archive"
-            disabled={actionsDisabled}
-            tone="danger"
-            tooltip="Archive session"
-            onClick={(event) => {
-              event.stopPropagation();
-              onArchive();
-            }}
-          >
-            <ArchiveIcon />
-          </SidebarIconButton>,
-        ]}
+        actions={
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <SidebarIconButton
+                  disabled={actionsDisabled}
+                  tooltip="More actions"
+                  aria-label={`More actions for ${title}`}
+                />
+              }
+            >
+              <DotsIcon />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {onOpenInNewWindow ? (
+                <DropdownMenuItem onClick={onOpenInNewWindow}>
+                  <WindowExpandIcon />
+                  Open in New Window
+                </DropdownMenuItem>
+              ) : null}
+              <DropdownMenuItem onClick={() => onPinChange(!pinned)}>
+                {pinned ? <PinSlashIcon /> : <PinIcon />}
+                {pinned ? "Unpin" : "Pin"}
+              </DropdownMenuItem>
+              {onRename ? (
+                <DropdownMenuItem onClick={onRename}>
+                  <PencilLineIcon />
+                  Rename
+                </DropdownMenuItem>
+              ) : null}
+              <DropdownMenuItem onClick={onArchive}>
+                <ArchiveIcon />
+                Archive
+              </DropdownMenuItem>
+              {onDelete ? (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem variant="destructive" onClick={onDelete}>
+                    <TrashIcon />
+                    Delete
+                  </DropdownMenuItem>
+                </>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        }
       >
         <HoverCardTrigger
           delay={320}
@@ -114,6 +161,7 @@ export function AgentSessionSidebarItem({
             <SidebarListItem
               active={active}
               leading={<ProviderIcon providerId={providerIconId} size={16} />}
+              trailing={attention ? <AgentAttentionDot attention={attention} /> : undefined}
             >
               {title}
             </SidebarListItem>
@@ -126,10 +174,11 @@ export function AgentSessionSidebarItem({
         align="start"
         sideOffset={10}
         collisionPadding={10}
-        className="z-10080 w-[19rem] overflow-hidden p-0"
+        size="wide"
+        variant="preview"
       >
-        <div className="flex min-w-0 items-start gap-3 bg-[color-mix(in_srgb,var(--accent)_45%,transparent)] p-3">
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-background ring-1 ring-border/60">
+        <div className="flex min-w-0 items-start gap-3 bg-accent p-3">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-background ring-1 ring-border">
             <ProviderIcon providerId={providerIconId} size={16} />
           </span>
           <div className="min-w-0 flex-1">
@@ -137,7 +186,7 @@ export function AgentSessionSidebarItem({
             <div className="mt-1 flex min-w-0 items-center gap-1.5 text-subtle-foreground ui-text-sm">
               <span className="min-w-0 truncate">{formattedDate}</span>
               {pinned ? (
-                <span className="flex shrink-0 items-center gap-1 rounded-full bg-background px-1.5 py-0.5 text-subtle-foreground ring-1 ring-border/60">
+                <span className="flex shrink-0 items-center gap-1 rounded-full bg-background px-1.5 py-0.5 text-subtle-foreground ring-1 ring-border">
                   <PinIcon className="size-3" />
                   Pinned
                 </span>
@@ -146,7 +195,7 @@ export function AgentSessionSidebarItem({
           </div>
         </div>
 
-        <dl className="flex flex-col gap-1.5 border-border/60 border-t p-3 ui-text-sm">
+        <dl className="flex flex-col gap-1.5 border-border border-t p-3 ui-text-sm">
           <MetadataRow
             icon={<SparkleIcon className="size-3.5" />}
             label="Agent"
@@ -170,7 +219,7 @@ export function AgentSessionSidebarItem({
 
         {workspacePath ? (
           <div
-            className="min-w-0 truncate border-border/60 border-t px-3 py-2 font-mono text-subtle-foreground/80 ui-text-sm"
+            className="min-w-0 truncate border-border border-t px-3 py-2 font-mono text-subtle-foreground ui-text-sm"
             title={workspacePath}
             dir="rtl"
           >
@@ -178,7 +227,7 @@ export function AgentSessionSidebarItem({
           </div>
         ) : null}
 
-        <div className="flex items-center justify-between gap-2 border-border/60 border-t bg-[color-mix(in_srgb,var(--accent)_30%,transparent)] px-3 py-2 text-subtle-foreground/80 ui-text-sm">
+        <div className="flex items-center justify-between gap-2 border-border border-t bg-surface px-3 py-2 text-subtle-foreground ui-text-sm">
           <span>Click to open</span>
           <span>Double-click for new window</span>
         </div>

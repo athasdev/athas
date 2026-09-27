@@ -18,6 +18,7 @@ interface GenerativeUIRendererProps {
 function resolveExternalUrl(value: unknown): string {
   if (typeof value !== "string") throw new Error("The external URL is missing.");
   const url = new URL(value);
+  // Do not pass generated custom-protocol links to the operating system.
   if (url.protocol !== "http:" && url.protocol !== "https:") {
     throw new Error("Only HTTP and HTTPS links can be opened from generated UI.");
   }
@@ -46,6 +47,7 @@ export function GenerativeUIRenderer({ component }: GenerativeUIRendererProps) {
         return;
       }
 
+      // Only registered extension commands may run from generated UI.
       const command = useUIExtensionStore.getState().commands.get(action.command);
       if (!command) throw new Error(`Generated UI command is not available: ${action.command}`);
       await command.execute(...args);

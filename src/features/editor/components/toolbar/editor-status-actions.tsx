@@ -31,6 +31,7 @@ import {
 import Select, { type SelectOption } from "@/ui/select";
 import { toast } from "sonner";
 import VimStatusIndicator from "@/features/vim/components/vim-status-indicator";
+import { IntelligenceCompletionStatus } from "./intelligence-completion-status";
 import { getFilenameFromPath } from "@/features/file-system/controllers/file-utils";
 
 const editorMenuRowClass =
@@ -101,7 +102,7 @@ export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {})
       default:
         return {
           icon: <BoltSlashIcon />,
-          tone: "muted",
+          tone: "default",
           title: "No active language servers",
         };
     }
@@ -433,6 +434,8 @@ export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {})
 
       <VimStatusIndicator />
 
+      {activeBuffer?.type === "editor" && <IntelligenceCompletionStatus />}
+
       <div className="relative flex items-center self-center">
         <DropdownMenu>
           <DropdownMenuTrigger
@@ -463,7 +466,7 @@ export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {})
                         onClick={() => void handleRestartAllServers()}
                         disabled={!canRunBulkLspAction}
                         variant="default"
-                        size="chrome"
+                        size="sm"
                         width="grow"
                       >
                         {bulkLspAction === "restart" ? "Restarting..." : "Restart all"}
@@ -473,7 +476,7 @@ export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {})
                         onClick={() => void handleStopAllServers()}
                         disabled={!canRunBulkLspAction}
                         variant="default"
-                        size="chrome"
+                        size="sm"
                         width="grow"
                       >
                         {bulkLspAction === "stop" ? "Stopping..." : "Stop all"}
@@ -496,7 +499,7 @@ export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {})
                             onClick={() => void handleRestartServer(entry.key)}
                             disabled={isBusy || isRestartingCurrent || isBulkLspBusy}
                             variant="default"
-                            size="chrome"
+                            size="sm"
                           >
                             {isBusy ? "..." : "Restart"}
                           </Button>
@@ -506,7 +509,7 @@ export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {})
                             disabled={isBusy || isRestartingCurrent || isBulkLspBusy}
                             variant="default"
                             iconOnly
-                            size="chrome"
+                            size="sm"
                             aria-label={`Stop ${entry.displayName} language server`}
                           >
                             <SquareIcon />
@@ -529,7 +532,7 @@ export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {})
                           onClick={() => void handleStartCurrent()}
                           disabled={isRestartingCurrent || isBulkLspBusy}
                           variant="default"
-                          size="chrome"
+                          size="sm"
                         >
                           {isRestartingCurrent ? "Starting..." : "Start"}
                         </Button>

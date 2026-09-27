@@ -205,10 +205,7 @@ export function AIFileSelector({
     >
       {showSearchInput && (
         <div
-          className={cn(
-            "border-border/60 border-b bg-surface/95 px-2 py-2",
-            compact && "px-1.5 py-1.5",
-          )}
+          className={cn("border-border border-b bg-surface px-2 py-2", compact && "px-1.5 py-1.5")}
         >
           <ComboboxInput
             ref={searchInputRef}
@@ -224,7 +221,7 @@ export function AIFileSelector({
 
       <ComboboxList
         className={cn(
-          "items-container min-h-0 flex-1 overflow-y-auto bg-surface/95 p-1.5 overscroll-none",
+          "items-container min-h-0 flex-1 overflow-y-auto bg-surface p-1.5 overscroll-none",
           compact && "p-0",
           presentation === "menu" ? "max-h-66" : "max-h-full",
         )}
@@ -253,7 +250,7 @@ export function AIFileSelector({
               {showCategoryHeader ? (
                 <div
                   className={cn(
-                    "px-2 font-medium text-subtle-foreground/75",
+                    "px-2 font-medium text-subtle-foreground",
                     compact
                       ? "ui-text-sm pt-1 pb-0.5 leading-normal"
                       : "ui-text-base pt-1.5 pb-1 leading-row",
@@ -277,7 +274,7 @@ export function AIFileSelector({
                 <span className="flex min-w-0 flex-1 items-center gap-1.5">
                   <span className="truncate text-foreground">{file.name}</span>
                   {directoryPath ? (
-                    <span className="truncate text-subtle-foreground/80">{directoryPath}</span>
+                    <span className="truncate text-subtle-foreground">{directoryPath}</span>
                   ) : null}
                 </span>
                 {category === "open" ? (

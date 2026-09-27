@@ -238,7 +238,7 @@ export default function SqlDatabaseViewer({
           onClearHistory={actions.clearSqlHistory}
         />
 
-        <div className={databasePanelClassName("flex-1 border-border/70 border-l")}>
+        <div className={databasePanelClassName("flex-1 border-border border-l")}>
           <QueryBar
             searchTerm={canMutateRows ? store.searchTerm : ""}
             setSearchTerm={actions.setSearchTerm}

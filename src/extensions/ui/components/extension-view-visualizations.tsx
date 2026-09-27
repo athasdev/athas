@@ -5,7 +5,8 @@ import type { ExtensionViewNode, ExtensionViewTone } from "../types/extension-vi
 type SparklineNode = Extract<ExtensionViewNode, { type: "sparkline" }>;
 type BarChartNode = Extract<ExtensionViewNode, { type: "barChart" }>;
 
-const chartTone = (tone: ExtensionViewTone | undefined) => tone ?? "default";
+const chartTone = (tone: ExtensionViewTone | undefined) =>
+  tone === "muted" || !tone ? "default" : tone;
 
 export function ExtensionViewSparkline({ node }: { node: SparklineNode }) {
   const minimum = Math.min(...node.values);

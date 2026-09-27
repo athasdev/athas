@@ -47,7 +47,7 @@ export default function RunActionDialog({
       }
     >
       <div className="space-y-4">
-        <div className="rounded-lg bg-surface/60 px-3 py-2 text-subtle-foreground ui-text-sm">
+        <div className="rounded-lg bg-surface px-3 py-2 text-subtle-foreground ui-text-sm">
           This action is saved for{" "}
           <span className="font-medium text-foreground">{workspaceLabel}</span> and runs in a new
           terminal.

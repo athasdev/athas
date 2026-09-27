@@ -273,7 +273,8 @@ export const CreateTableModal = ({ isOpen, onClose, onSubmit }: CreateTableModal
                 <Button
                   type="button"
                   onClick={() => removeColumn(index)}
-                  variant="danger"
+                  variant="ghost"
+                  tone="danger"
                   iconOnly
                   aria-label={`Remove ${column.name || `column ${index + 1}`}`}
                 >

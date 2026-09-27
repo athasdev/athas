@@ -190,13 +190,18 @@ export const shouldIgnore = (name: string, isDir: boolean): boolean => {
   return shouldHideFromFileTree(name);
 };
 
-// Helper function for directory content updates (used with Immer)
+/**
+ * Replaces a directory's children with a fresh listing (used with Immer). Returns `"changed"`,
+ * `"unchanged"` when the listing matches what is already loaded, or `"missing"` when the directory
+ * is not in the tree. Leaving an unchanged directory untouched keeps the tree's identity, so a
+ * watcher refresh with nothing new does not re-filter and re-render the file tree.
+ */
 export function updateDirectoryContents(
   files: FileEntry[],
   dirPath: string,
   newEntries: any[],
   preserveStates: boolean = true,
-): boolean {
+): "changed" | "unchanged" | "missing" {
   for (const item of files) {
     if (item.path === dirPath && item.isDir) {
       // Create a map of existing children to preserve their states
@@ -236,8 +241,7 @@ export function updateDirectoryContents(
         );
       };
 
-      // Update children with new entries and sort them
-      item.children = sortFileEntries(
+      const nextChildren = sortFileEntries(
         newEntries
           .filter((entry: any) => {
             const entryName = entry.name || "Unknown";
@@ -252,16 +256,24 @@ export function updateDirectoryContents(
           }),
       );
 
-      return true; // Directory was found and updated
+      const currentChildren = item.children;
+      if (
+        currentChildren &&
+        currentChildren.length === nextChildren.length &&
+        nextChildren.every((child, index) => child === currentChildren[index])
+      ) {
+        return "unchanged";
+      }
+
+      item.children = nextChildren;
+      return "changed";
     }
 
     // Recursively search in children
-    if (
-      item.children &&
-      updateDirectoryContents(item.children, dirPath, newEntries, preserveStates)
-    ) {
-      return true;
+    if (item.children) {
+      const result = updateDirectoryContents(item.children, dirPath, newEntries, preserveStates);
+      if (result !== "missing") return result;
     }
   }
-  return false; // Directory not found
+  return "missing";
 }

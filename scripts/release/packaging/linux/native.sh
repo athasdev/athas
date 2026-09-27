@@ -193,6 +193,9 @@ await Bun.write(
               "xdg-desktop-portal-gtk",
               "zenity",
             ],
+            // The bundler otherwise falls back to single-threaded zstd level 19,
+            // which spends more than ten minutes on the CEF payload.
+            compression: { type: "zstd", level: 10 },
           },
         },
       },
@@ -253,7 +256,9 @@ patch_deb_dependencies() {
     fi
     chmod 4755 "$chrome_sandbox"
 
-    dpkg-deb --root-owner-group -b "$work_dir/package" "$work_dir/repacked.deb" >/dev/null
+    # Match the gzip payload Tauri writes; dpkg-deb defaults to xz, which takes
+    # about ten minutes to recompress the CEF runtime.
+    dpkg-deb --root-owner-group -Zgzip -b "$work_dir/package" "$work_dir/repacked.deb" >/dev/null
     mv "$work_dir/repacked.deb" "$deb"
     rm -rf "$work_dir"
   done < <(find target/release/bundle/deb -maxdepth 1 -type f -name '*.deb' -print)

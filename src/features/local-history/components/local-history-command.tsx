@@ -522,7 +522,8 @@ export function LocalHistoryCommandContent({
                 </Button>
                 <Button
                   type="button"
-                  variant="danger"
+                  variant="ghost"
+                  tone="danger"
                   tooltip="Delete snapshot"
                   onClick={(event) => {
                     event.stopPropagation();

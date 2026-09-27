@@ -108,7 +108,7 @@ export default function TableToolbar({
       actions={
         <>
           <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as ViewMode)}>
-            <TabsList variant="bare">
+            <TabsList>
               {VIEW_TABS.map(({ mode, label }) => (
                 <TabsTrigger key={mode} value={mode} aria-label={`Switch to ${label} view`}>
                   {label}

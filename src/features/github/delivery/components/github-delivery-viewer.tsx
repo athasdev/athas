@@ -342,11 +342,12 @@ export default function GitHubDeliveryViewer({ buffer }: { buffer: GitHubDeliver
               <FieldLabel htmlFor={latestId}>Set as latest release</FieldLabel>
             </Field>
           )}
-          {actionError && <FieldError className="break-words">{actionError}</FieldError>}
+          {actionError && <FieldError className="wrap-break-word">{actionError}</FieldError>}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={pending || assetBusy}>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              variant={confirm === "delete" ? "danger" : "accent"}
+              variant={confirm === "delete" ? "default" : "accent"}
+              tone={confirm === "delete" ? "danger" : "default"}
               disabled={pending || assetBusy}
               onClick={() => void mutate()}
             >

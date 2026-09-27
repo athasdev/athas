@@ -93,7 +93,7 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
               data-item-index={index}
               isSelected={index === selectedIndex}
               onClick={() => onSelect(command)}
-              onMouseEnter={() => onSelectedIndexChange(index)}
+              onMouseMove={() => onSelectedIndexChange(index)}
               role="option"
               aria-selected={index === selectedIndex}
               tabIndex={index === selectedIndex ? 0 : -1}

@@ -131,14 +131,14 @@ export const GitHubCredentials = () => {
           {isLoadingStatus ? (
             <Spinner label="Checking credential" showLabel compact />
           ) : statusError ? (
-            <span className="text-error text-xs">{statusError}</span>
+            <span className="text-destructive ui-text-caption">{statusError}</span>
           ) : status?.source && status.login ? (
             <>
               <Badge>{GITHUB_TOKEN_SOURCE_LABELS[status.source]}</Badge>
-              <span className="text-subtle-foreground text-xs">{status.login}</span>
+              <span className="text-subtle-foreground ui-text-caption">{status.login}</span>
             </>
           ) : (
-            <span className="text-subtle-foreground text-xs">
+            <span className="text-subtle-foreground ui-text-caption">
               {status?.source
                 ? "GitHub rejected the resolved token"
                 : "No GitHub credential available"}
@@ -157,7 +157,9 @@ export const GitHubCredentials = () => {
         >
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <WarningCircleIcon className="shrink-0 text-warning" />
-            <span className="text-subtle-foreground text-xs">{destructiveScopes.join(", ")}</span>
+            <span className="text-subtle-foreground ui-text-caption">
+              {destructiveScopes.join(", ")}
+            </span>
           </div>
         </SettingRow>
       )}
@@ -190,7 +192,8 @@ export const GitHubCredentials = () => {
           {status?.hasPersonalAccessToken && (
             <Button
               type="button"
-              variant="danger"
+              variant="ghost"
+              tone="danger"
               onClick={() => void handleRemovePat()}
               tooltip="Remove saved personal access token"
               iconOnly
@@ -206,7 +209,7 @@ export const GitHubCredentials = () => {
         description="Reuses the token from your gh installation. Read on demand and never stored by Athas."
       >
         <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <span className="text-subtle-foreground text-xs">
+          <span className="text-subtle-foreground ui-text-caption">
             {status?.ghCliInstalled ? "gh detected" : "gh not found on this machine"}
           </span>
           {status?.ghCliInstalled && (

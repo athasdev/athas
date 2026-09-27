@@ -1,21 +1,22 @@
 import { useRender } from "@base-ui/react/use-render";
+import { cva } from "class-variance-authority";
 import {
   Children,
   forwardRef,
   Fragment,
   isValidElement,
   type ComponentProps,
+  type CSSProperties,
   type ReactNode,
   useEffect,
   useState,
 } from "react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/ui/accordion";
 import { Button, type ButtonProps } from "@/ui/button";
-import { ButtonGroup, ButtonGroupSeparator } from "@/ui/button-group";
 import { ChromeBar } from "@/ui/chrome";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/ui/dropdown";
 import { FieldTitle } from "@/ui/field";
-import { ChevronDownIcon, DotsIcon, SearchIcon } from "@/ui/icons";
+import { ChevronDownIcon, DotsIcon, IconContext, SearchIcon } from "@/ui/icons";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import { ScrollArea } from "@/ui/scroll-area";
 import { SearchField } from "@/ui/search";
@@ -117,11 +118,20 @@ export function SidebarTitleBar({
   );
 }
 
-export function SidebarToolbar({ children, className, ...props }: ComponentProps<"div">) {
+export function SidebarToolbar({
+  children,
+  className,
+  position = "top",
+  ...props
+}: ComponentProps<"div"> & {
+  /** Which end of the panel the toolbar sits on; the dividing border faces the content. */
+  position?: "top" | "bottom";
+}) {
   return (
     <div
       className={cn(
-        "font-sans ui-text-chrome flex h-pane-header min-w-0 shrink-0 select-none items-center gap-chrome border-border/70 border-b px-chrome-inline",
+        "font-sans ui-text-chrome flex h-pane-header min-w-0 shrink-0 select-none items-center gap-chrome border-border px-chrome-inline",
+        position === "top" ? "border-b" : "border-t",
         className,
       )}
       {...props}
@@ -139,7 +149,7 @@ export const SidebarFooter = forwardRef<
     <div
       ref={ref}
       className={cn(
-        "ui-text-chrome mx-2 mb-2 shrink-0 rounded-xl border border-border/60 bg-[color-mix(in_srgb,var(--surface)_82%,var(--border)_18%)] p-0 pb-1",
+        "ui-text-chrome mx-2 mb-2 shrink-0 rounded-lg border border-border bg-surface p-0 pb-1",
         className,
       )}
       {...props}
@@ -157,10 +167,7 @@ export function SidebarHeader({
   return (
     <ChromeBar
       region="sidebar"
-      className={cn(
-        "sticky top-0 z-20 h-sidebar-header select-none py-1 backdrop-blur-sm",
-        className,
-      )}
+      className={cn("sticky top-0 z-20 h-sidebar-header select-none py-1", className)}
       {...props}
     >
       {children}
@@ -181,8 +188,7 @@ export function SidebarComposerBody({
     <div
       className={cn(
         "overflow-hidden",
-        variant === "surface" &&
-          "rounded-xl border border-border/60 bg-[color-mix(in_srgb,var(--background)_96%,var(--surface)_4%)]",
+        variant === "surface" && "rounded-lg border border-border bg-surface",
         className,
       )}
       {...props}
@@ -239,7 +245,7 @@ export function SidebarSectionHeader({
       <button
         type="button"
         className={cn(
-          "athas-chrome-control font-sans ui-text-sm flex min-h-chrome-control min-w-0 items-center gap-chrome rounded-chrome px-1.5 py-0.5 font-normal select-none text-left text-subtle-foreground/80 transition-colors hover:bg-accent/50 hover:text-foreground focus-visible:bg-accent/50 focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-[1em]",
+          "font-sans ui-text-sm flex min-h-chrome-control min-w-0 items-center gap-chrome rounded-md px-1.5 py-0.5 font-medium select-none text-left text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-[1em]",
           className,
         )}
         aria-expanded={expanded}
@@ -294,9 +300,7 @@ export function SidebarSection({
           action={
             action ??
             (count !== undefined ? (
-              <span className="pr-2 tabular-nums ui-text-sm text-subtle-foreground/80">
-                {count}
-              </span>
+              <span className="pr-2 tabular-nums ui-text-sm text-subtle-foreground">{count}</span>
             ) : undefined)
           }
         >
@@ -322,7 +326,7 @@ export function SidebarSectionLabel({
   return (
     <div
       className={cn(
-        "font-sans ui-text-sm flex h-chrome-control min-w-0 select-none items-center gap-chrome px-1.5 font-normal text-subtle-foreground/80 [&_svg]:size-[1em]",
+        "font-sans ui-text-sm flex h-chrome-control min-w-0 select-none items-center gap-chrome px-1.5 font-medium text-muted-foreground [&_svg]:size-[1em]",
         className,
       )}
       {...props}
@@ -331,7 +335,7 @@ export function SidebarSectionLabel({
         <span className="flex shrink-0 items-center justify-center">{leading}</span>
       ) : null}
       <span className="min-w-0 flex-1 truncate">{children}</span>
-      {trailing ? <span className="shrink-0 text-subtle-foreground/80">{trailing}</span> : null}
+      {trailing ? <span className="shrink-0 text-subtle-foreground">{trailing}</span> : null}
     </div>
   );
 }
@@ -424,25 +428,71 @@ export function SidebarTabPanels<TValue extends string>({
   );
 }
 
-const sidebarListRowClassName =
-  "athas-chrome-control flex min-h-chrome-control w-full min-w-0 items-center gap-chrome rounded-chrome px-1.5 py-0.5 font-sans font-normal ui-text-sm [&_svg]:size-[1em]";
+const sidebarListRowVariants = cva(
+  "flex min-h-chrome-control w-full min-w-0 items-center gap-chrome rounded-md px-1.5 py-0.5 font-sans font-normal ui-text-sm [&_svg]:size-[1em]",
+  {
+    variants: {
+      density: {
+        default: "",
+        compact: "",
+        comfortable: "min-h-10 gap-3 px-2 py-2 ui-text-base",
+      },
+      multiline: { true: "h-auto" },
+    },
+    compoundVariants: [
+      { multiline: true, density: "default", className: "min-h-10 py-1.5" },
+      { multiline: true, density: "compact", className: "min-h-9 py-1" },
+    ],
+    defaultVariants: { density: "default" },
+  },
+);
+
+const sidebarListItemVariants = cva(
+  "text-left transition-colors duration-fast motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:pointer-events-none disabled:opacity-50",
+  {
+    variants: {
+      tone: {
+        default:
+          "text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground data-[active=true]:bg-selected data-[active=true]:text-foreground",
+        warning: "bg-warning-soft text-warning hover:text-warning focus-visible:text-warning",
+        error:
+          "bg-destructive-soft text-destructive hover:text-destructive focus-visible:text-destructive",
+      },
+    },
+    defaultVariants: { tone: "default" },
+  },
+);
+
+const SOLID_ICON = { filled: true };
 
 export const SidebarIconButton = forwardRef<
   HTMLButtonElement,
   Omit<ButtonProps, "variant" | "tone"> & {
     tone?: "default" | "warning" | "error" | "danger";
+    /** Show the icon's solid variant while the button is active, as the activity rail does. */
+    solidWhenActive?: boolean;
   }
->(function SidebarIconButton({ tone = "default", ...props }, ref) {
+>(function SidebarIconButton(
+  { tone = "default", solidWhenActive = false, active, children, ...props },
+  ref,
+) {
   return (
     <Button
       ref={ref}
       type="button"
-      variant={tone === "danger" ? "danger" : "ghost"}
+      variant="ghost"
       iconOnly
-      size="chrome"
+      size="sm"
       tone={tone === "error" ? "danger" : tone}
+      active={active}
       {...props}
-    />
+    >
+      {solidWhenActive && active ? (
+        <IconContext.Provider value={SOLID_ICON}>{children}</IconContext.Provider>
+      ) : (
+        children
+      )}
+    </Button>
   );
 });
 
@@ -450,50 +500,98 @@ export function SidebarListActionRow({
   actions,
   children,
   className,
+  style,
   ...props
 }: ComponentProps<"div"> & {
   actions: ReactNode;
 }) {
   const actionItems = Children.toArray(actions).filter(Boolean);
+  // Room the actions need: the label makes way for them instead of sitting under them, since
+  // sidebar fills can be translucent.
+  const actionsWidth = `calc(${actionItems.length} * var(--athas-chrome-control-height) + ${
+    Math.max(0, actionItems.length - 1) * 2 + 4
+  }px)`;
 
   return (
     <div
       data-slot="sidebar-list-action-row"
       className={cn(
-        "group/sidebar-list-action-row relative flex w-full min-w-0 items-center rounded-chrome",
+        "group/sidebar-list-action-row relative flex w-full min-w-0 items-center rounded-md",
+        "hover:bg-accent [&:hover_[data-slot=sidebar-list-item]]:text-foreground",
         "has-[[data-slot=button]:focus-visible]:bg-accent",
         "has-[[data-slot=button][aria-expanded=true]]:bg-accent",
+        "[&:hover_[data-slot=sidebar-list-item]]:pr-(--sidebar-row-actions-width)",
+        "[&:focus-within_[data-slot=sidebar-list-item]]:pr-(--sidebar-row-actions-width)",
+        "has-[[data-slot=button][aria-expanded=true]]:**:data-[slot=sidebar-list-item]:pr-(--sidebar-row-actions-width)",
         className,
       )}
+      style={{ ...style, "--sidebar-row-actions-width": actionsWidth } as CSSProperties}
       {...props}
     >
       {children}
       <span
         data-slot="sidebar-list-actions"
         className={cn(
-          "pointer-events-none absolute inset-y-0 right-0 flex items-center rounded-r-chrome pr-1 pl-6",
-          "bg-[linear-gradient(to_right,transparent,var(--accent)_1.25rem)]",
+          "pointer-events-none absolute inset-y-0 right-0 flex items-center gap-0.5 pr-0.5",
           "opacity-0 transition-opacity duration-fast ease-smooth motion-reduce:transition-none",
           "group-hover/sidebar-list-action-row:pointer-events-auto group-hover/sidebar-list-action-row:opacity-100",
           "group-focus-within/sidebar-list-action-row:pointer-events-auto group-focus-within/sidebar-list-action-row:opacity-100",
           "group-has-[[data-slot=button][aria-expanded=true]]/sidebar-list-action-row:pointer-events-auto group-has-[[data-slot=button][aria-expanded=true]]/sidebar-list-action-row:opacity-100",
         )}
       >
-        <ButtonGroup
-          variant="ghost"
-          className="rounded-chrome bg-surface shadow-xs ring-1 ring-border/60 [&>[data-slot=button]]:size-5"
-        >
-          {actionItems.map((action, index) => (
-            <Fragment key={(isValidElement(action) && action.key) || index}>
-              {index > 0 ? <ButtonGroupSeparator /> : null}
-              {action}
-            </Fragment>
-          ))}
-        </ButtonGroup>
+        {actionItems.map((action, index) => (
+          <Fragment key={(isValidElement(action) && action.key) || index}>{action}</Fragment>
+        ))}
       </span>
     </div>
   );
 }
+
+/**
+ * An always-visible, borderless filter input for a sidebar header. Use it when
+ * the list is the whole point of the panel and filtering should be one keystroke
+ * away; `SidebarSearchPopover` is for headers where search is secondary.
+ */
+export const SidebarFilterField = forwardRef<
+  HTMLInputElement,
+  Omit<ComponentProps<typeof SearchField>, "variant" | "size" | "leftIcon">
+>(function SidebarFilterField({ placeholder = "Filter", ...props }, ref) {
+  return (
+    <div className="flex min-w-0 flex-1 items-center" data-slot="sidebar-filter-field">
+      <SearchField ref={ref} variant="ghost" size="sm" placeholder={placeholder} {...props} />
+    </div>
+  );
+});
+
+/**
+ * The standard first row of a list sidebar: a plain filter input on the left,
+ * chrome-sized controls on the right. Same height and padding as every other
+ * sidebar bar so stacked panels line up.
+ */
+export const SidebarFilterBar = forwardRef<
+  HTMLInputElement,
+  ComponentProps<typeof SidebarFilterField> & {
+    leading?: ReactNode;
+    actions?: ReactNode;
+    actionsLabel?: string;
+  }
+>(function SidebarFilterBar({ leading, actions, actionsLabel = "List controls", ...props }, ref) {
+  return (
+    <SidebarHeader className="py-0" data-slot="sidebar-filter-bar">
+      {leading}
+      <SidebarFilterField ref={ref} {...props} />
+      {actions ? (
+        <div
+          className="ml-auto flex shrink-0 items-center gap-chrome-tight"
+          role="group"
+          aria-label={actionsLabel}
+        >
+          {actions}
+        </div>
+      ) : null}
+    </SidebarHeader>
+  );
+});
 
 export const SidebarSearchPopover = forwardRef<
   HTMLInputElement,
@@ -564,44 +662,32 @@ export function SidebarListItem({
   leading,
   trailing,
   tone = "default",
-  width = "fill",
-  render,
+  as = "button",
   ref,
   ...props
-}: Omit<useRender.ComponentProps<"button">, "className" | "style"> & {
+}: Omit<ComponentProps<"button">, "className" | "style"> & {
   children: ReactNode;
   active?: boolean;
   description?: ReactNode;
-  density?: "default" | "compact";
+  density?: "default" | "compact" | "comfortable";
   leading?: ReactNode;
   trailing?: ReactNode;
   tone?: "default" | "warning" | "error";
-  width?: "fill" | "content";
+  as?: "button" | "div";
 }) {
   return useRender({
-    defaultTagName: "button",
-    render,
+    defaultTagName: as,
     ref,
     props: {
-      type: "button",
+      ...props,
+      type: as === "button" ? (props.type ?? "button") : undefined,
       className: cn(
-        sidebarListRowClassName,
-        "text-left transition-colors duration-fast motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 disabled:pointer-events-none disabled:opacity-50",
-        tone === "default" &&
-          "text-subtle-foreground hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground",
-        tone === "warning" &&
-          "bg-warning/10 text-warning hover:bg-warning/15 hover:text-warning focus-visible:bg-warning/15 focus-visible:text-warning",
-        tone === "error" &&
-          "bg-destructive/8 text-destructive hover:bg-destructive/12 hover:text-destructive focus-visible:bg-destructive/12 focus-visible:text-destructive",
-        active && tone === "default" && "bg-selected text-foreground",
-        active && tone === "warning" && "bg-warning/15 text-warning",
-        active && tone === "error" && "bg-destructive/12 text-destructive",
-        description && (density === "compact" ? "h-auto min-h-9 py-1" : "h-auto min-h-10 py-1.5"),
-        width === "content" && "w-fit max-w-full",
+        sidebarListRowVariants({ density, multiline: Boolean(description) }),
+        sidebarListItemVariants({ tone }),
       ),
+      style: undefined,
       "data-slot": "sidebar-list-item",
       "data-active": active,
-      ...props,
       children: (
         <>
           {leading ? (
@@ -620,7 +706,7 @@ export function SidebarListItem({
             {description ? (
               <span
                 className={cn(
-                  "block min-w-0 truncate font-normal leading-row text-subtle-foreground/80",
+                  "block min-w-0 truncate font-normal leading-row text-subtle-foreground",
                   density === "compact" ? "ui-text-caption" : "mt-0.5",
                 )}
               >
@@ -632,7 +718,7 @@ export function SidebarListItem({
             <span
               className={cn(
                 "ml-auto max-w-[min(42%,6rem)] shrink-0 truncate whitespace-nowrap text-right",
-                tone === "default" ? "text-subtle-foreground/80" : "text-current",
+                tone === "default" ? "text-subtle-foreground" : "text-current",
               )}
             >
               {trailing}
@@ -704,7 +790,7 @@ export function SidebarListEditor({
 }) {
   return (
     <div
-      className={cn(sidebarListRowClassName, "bg-selected text-foreground")}
+      className={cn(sidebarListRowVariants(), "bg-selected text-foreground")}
       data-active="true"
       {...props}
     >

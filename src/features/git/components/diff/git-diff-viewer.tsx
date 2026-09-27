@@ -15,8 +15,8 @@ function isMultiFileDiff(data: unknown): data is MultiFileDiff {
   return typeof data === "object" && data !== null && "files" in data && Array.isArray(data.files);
 }
 
-const DiffViewer = memo((_props: DiffViewerProps) => {
-  const { diff, rawDiffData, filePath, isLoading, error } = useDiffData();
+const DiffViewer = memo(({ bufferId }: DiffViewerProps) => {
+  const { diff, rawDiffData, filePath, isLoading, error } = useDiffData(bufferId);
 
   const multiFileDiff = useMemo(() => {
     if (rawDiffData && isMultiFileDiff(rawDiffData)) {
@@ -26,7 +26,7 @@ const DiffViewer = memo((_props: DiffViewerProps) => {
   }, [rawDiffData]);
 
   if (multiFileDiff) {
-    return <GitDiffEditorStack multiDiff={multiFileDiff} />;
+    return <GitDiffEditorStack bufferId={bufferId} multiDiff={multiFileDiff} />;
   }
 
   if (isLoading) {
@@ -58,7 +58,7 @@ const DiffViewer = memo((_props: DiffViewerProps) => {
   return (
     <div className="flex h-full flex-col overflow-hidden bg-background">
       <GitDiffEditorSurface
-        cacheKey={filePath}
+        cacheKey={bufferId}
         diff={diff}
         breadcrumbProps={{
           filePathOverride: diff.file_path || filePath,

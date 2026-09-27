@@ -1,31 +1,23 @@
-use crate::git::{GitWorktree, IntoStringError};
+use crate::git::{GitWorktree, IntoStringError, RepositoryHost};
 use anyhow::{Context, Result, bail};
-use std::{
-   fs,
-   path::{Path, PathBuf},
-   process::Command,
-};
+use std::{fs, path::Path};
 
 pub fn git_get_worktrees(repo_path: String) -> Result<Vec<GitWorktree>, String> {
    _git_get_worktrees(repo_path).into_string_error()
 }
 
 fn _git_get_worktrees(repo_path: String) -> Result<Vec<GitWorktree>> {
-   let repo_dir = Path::new(&repo_path);
-   let output = Command::new("git")
-      .current_dir(repo_dir)
+   let host = RepositoryHost::detect(&repo_path);
+   let git = host.git();
+   let in_distro = git.runs_in_distro();
+   let output = git
       .args(["worktree", "list", "--porcelain"])
-      .output()
-      .context("Failed to execute git worktree list")?;
+      .run("worktree list")?;
 
-   if !output.status.success() {
-      bail!(
-         "Git worktree list failed: {}",
-         String::from_utf8_lossy(&output.stderr)
-      );
-   }
-
-   let current_path = normalize_path(repo_dir);
+   let current_path = match host.linux_path() {
+      Some(linux_path) if in_distro => linux_path.to_string(),
+      _ => normalize_path(host.native_path()),
+   };
    let stdout = String::from_utf8(output.stdout).context("Invalid git worktree output")?;
    let mut worktrees = Vec::new();
    let mut current: Option<GitWorktree> = None;
@@ -43,7 +35,11 @@ fn _git_get_worktrees(repo_path: String) -> Result<Vec<GitWorktree>> {
             worktrees.push(worktree);
          }
 
-         let normalized_worktree_path = normalize_path(Path::new(path));
+         let normalized_worktree_path = if in_distro {
+            path.to_string()
+         } else {
+            normalize_path(Path::new(path))
+         };
          current = Some(GitWorktree {
             is_current: normalized_worktree_path == current_path,
             path: normalized_worktree_path,
@@ -103,10 +99,10 @@ fn _git_add_worktree(
    branch: Option<String>,
    create_branch: bool,
 ) -> Result<()> {
-   let repo_dir = Path::new(&repo_path);
-   let target_path = PathBuf::from(path.trim());
+   let git = RepositoryHost::detect(&repo_path).git();
+   let target_path = git.argument_path(path.trim());
 
-   if target_path.as_os_str().is_empty() {
+   if target_path.is_empty() {
       bail!("Worktree path is required");
    }
 
@@ -123,7 +119,7 @@ fn _git_add_worktree(
       args.push(branch_name.clone());
    }
 
-   args.push(target_path.to_string_lossy().to_string());
+   args.push(target_path);
 
    if let Some(branch_name) = branch
       && !create_branch
@@ -131,18 +127,7 @@ fn _git_add_worktree(
       args.push(branch_name);
    }
 
-   let output = Command::new("git")
-      .current_dir(repo_dir)
-      .args(&args)
-      .output()
-      .context("Failed to execute git worktree add")?;
-
-   if !output.status.success() {
-      bail!(
-         "Git worktree add failed: {}",
-         String::from_utf8_lossy(&output.stderr)
-      );
-   }
+   git.args(&args).run("worktree add")?;
 
    Ok(())
 }
@@ -152,25 +137,14 @@ pub fn git_remove_worktree(repo_path: String, path: String, force: bool) -> Resu
 }
 
 fn _git_remove_worktree(repo_path: String, path: String, force: bool) -> Result<()> {
-   let repo_dir = Path::new(&repo_path);
+   let git = RepositoryHost::detect(&repo_path).git();
    let mut args: Vec<String> = vec!["worktree".into(), "remove".into()];
    if force {
       args.push("--force".into());
    }
-   args.push(path);
+   args.push(git.argument_path(&path));
 
-   let output = Command::new("git")
-      .current_dir(repo_dir)
-      .args(&args)
-      .output()
-      .context("Failed to execute git worktree remove")?;
-
-   if !output.status.success() {
-      bail!(
-         "Git worktree remove failed: {}",
-         String::from_utf8_lossy(&output.stderr)
-      );
-   }
+   git.args(&args).run("worktree remove")?;
 
    Ok(())
 }
@@ -180,19 +154,10 @@ pub fn git_prune_worktrees(repo_path: String) -> Result<(), String> {
 }
 
 fn _git_prune_worktrees(repo_path: String) -> Result<()> {
-   let repo_dir = Path::new(&repo_path);
-   let output = Command::new("git")
-      .current_dir(repo_dir)
+   RepositoryHost::detect(&repo_path)
+      .git()
       .args(["worktree", "prune"])
-      .output()
-      .context("Failed to execute git worktree prune")?;
-
-   if !output.status.success() {
-      bail!(
-         "Git worktree prune failed: {}",
-         String::from_utf8_lossy(&output.stderr)
-      );
-   }
+      .run("worktree prune")?;
 
    Ok(())
 }

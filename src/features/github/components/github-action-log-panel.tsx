@@ -142,8 +142,6 @@ export function GitHubActionLogPanel({
     () => buildWorkflowLogModel(lines, { showTimestamps }),
     [lines, showTimestamps],
   );
-  const modelRef = useRef(model);
-  modelRef.current = model;
 
   const highlightLine = useMemo(() => {
     if (highlightLineIndex === null) return null;
@@ -196,12 +194,12 @@ export function GitHubActionLogPanel({
       const decorator = createViewportDecorator(editor);
       decoratorRef.current = decorator;
       unregisterModelRef.current = registerWorkflowLogModel(editor, {
-        model: modelRef.current,
+        model,
         showTimestamps,
         repoPath,
       });
       decorator.update({
-        model: modelRef.current,
+        model,
         showTimestamps,
         highlightLine: currentProblemLine,
       });
@@ -225,9 +223,7 @@ export function GitHubActionLogPanel({
         editorRef.current = null;
       };
     },
-    // Only the initial values matter here; later changes are synced by effects.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
+    [currentProblemLine, isLive, model, repoPath, showTimestamps, updateFollowTail],
   );
 
   const handleContentApplied = useCallback(
@@ -262,10 +258,13 @@ export function GitHubActionLogPanel({
     editorRef.current?.trigger("github-actions-log", action, null);
   };
 
-  const lineNumberFormatter = useCallback((lineNumber: number) => {
-    const row = modelRef.current.rows[lineNumber - 1];
-    return String(row ? row.index + 1 : lineNumber);
-  }, []);
+  const lineNumberFormatter = useCallback(
+    (lineNumber: number) => {
+      const row = model.rows[lineNumber - 1];
+      return String(row ? row.index + 1 : lineNumber);
+    },
+    [model.rows],
+  );
 
   const hasQuery = query.trim().length > 0;
   const problemCount = model.errorCount + model.warningCount;
@@ -280,7 +279,7 @@ export function GitHubActionLogPanel({
 
   return (
     <section className="flex min-h-0 min-w-0 flex-1 flex-col" aria-label="Job logs">
-      <div className="flex shrink-0 flex-wrap items-center gap-2 border-border/60 border-b px-3 py-2">
+      <div className="flex shrink-0 flex-wrap items-center gap-2 border-border border-b px-3 py-2">
         <div className="flex min-w-0 flex-1 items-center gap-2">
           {subject ? (
             <WorkflowStatusIcon
@@ -338,7 +337,7 @@ export function GitHubActionLogPanel({
                 type="button"
                 onClick={() => jumpToProblem(1)}
                 className={cn(
-                  "rounded-chrome px-1.5 py-0.5 ui-text-caption tabular-nums transition-colors hover:bg-accent/60",
+                  "rounded-chrome px-1.5 py-0.5 ui-text-caption tabular-nums transition-colors hover:bg-accent",
                   model.errorCount > 0
                     ? WORKFLOW_TONE_TEXT_CLASS.error
                     : WORKFLOW_TONE_TEXT_CLASS.warning,

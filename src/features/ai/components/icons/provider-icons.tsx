@@ -3,6 +3,7 @@ import { useAIProviderIcon } from "@/features/ai/services/providers/ai-provider-
 import { agentBrandImages } from "@/ui/brand-marks";
 import { SparkleIcon } from "@/ui/icons";
 import { cn } from "@/utils/cn";
+import { AdaptiveIcon } from "@/ui/adaptive-icon";
 
 type IconProps = SVGProps<SVGSVGElement> & { size?: number };
 
@@ -148,13 +149,12 @@ export function ProviderIcon({
   const imageUrl = iconUrl || agentBrandImages[providerId];
   if (imageUrl) {
     return (
-      <img
-        src={imageUrl}
-        alt=""
-        width={size}
-        height={size}
-        className={cn("shrink-0 object-contain", className)}
-      />
+      <span
+        className={cn("inline-flex shrink-0 text-foreground", className)}
+        style={{ width: size, height: size }}
+      >
+        <AdaptiveIcon src={imageUrl} className="size-full" />
+      </span>
     );
   }
 

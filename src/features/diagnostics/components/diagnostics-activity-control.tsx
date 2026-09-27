@@ -2,12 +2,13 @@ import { useMemo } from "react";
 import { buildDiagnosticsActivityStatus } from "@/features/diagnostics/lib/diagnostics-activity-status";
 import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { getBufferById } from "@/features/editor/utils/buffer-index";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { WarningIcon } from "@/ui/icons";
-import { SidebarIconButton, SidebarListItem } from "@/ui/sidebar";
+import { SidebarIconButton } from "@/ui/sidebar";
 import Tooltip from "@/ui/tooltip";
 
-export function DiagnosticsActivityControl({ expanded }: { expanded: boolean }) {
+export function DiagnosticsActivityControl() {
   const diagnosticsEnabled = useSettingsStore((state) => state.settings.coreFeatures.diagnostics);
   const diagnosticsByFile = useDiagnosticsStore.use.diagnosticsByFile();
   const diagnostics = useMemo(
@@ -18,34 +19,18 @@ export function DiagnosticsActivityControl({ expanded }: { expanded: boolean }) 
     () => buildDiagnosticsActivityStatus(diagnosticsEnabled, diagnostics),
     [diagnostics, diagnosticsEnabled],
   );
-  const isActive = useBufferStore((state) => {
-    const activeBuffer = state.buffers.find((buffer) => buffer.id === state.activeBufferId);
-    return activeBuffer?.type === "diagnostics";
-  });
+  const isActive = useBufferStore(
+    (state) => getBufferById(state.buffers, state.activeBufferId)?.type === "diagnostics",
+  );
   const openDiagnosticsBuffer = useBufferStore.use.actions().openDiagnosticsBuffer;
 
   if (!status) return null;
 
-  if (expanded) {
-    return (
-      <div className="w-full">
-        <SidebarListItem
-          active={isActive}
-          tone={status.tone}
-          leading={<WarningIcon />}
-          trailing={<span className="tabular-nums">{status.count}</span>}
-          aria-label={status.tooltip}
-          onClick={() => openDiagnosticsBuffer()}
-        >
-          Diagnostics
-        </SidebarListItem>
-      </div>
-    );
-  }
-
   return (
     <Tooltip content={status.tooltip}>
       <SidebarIconButton
+        size="lg"
+        solidWhenActive
         active={isActive}
         tone={status.tone}
         aria-label={status.tooltip}

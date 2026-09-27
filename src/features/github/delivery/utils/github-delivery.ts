@@ -41,11 +41,11 @@ export function deploymentStatusState(state?: string) {
     case "success":
       return { label: "Successful", tone: "success" as const, pending: false };
     case "failure":
-      return { label: "Failed", tone: "error" as const, pending: false };
+      return { label: "Failed", tone: "danger" as const, pending: false };
     case "error":
-      return { label: "Error", tone: "error" as const, pending: false };
+      return { label: "Error", tone: "danger" as const, pending: false };
     case "inactive":
-      return { label: "Inactive", tone: "muted" as const, pending: false };
+      return { label: "Inactive", tone: "neutral" as const, pending: false };
     case "queued":
       return { label: "Queued", tone: "warning" as const, pending: true };
     case "pending":
@@ -55,7 +55,7 @@ export function deploymentStatusState(state?: string) {
     default:
       return {
         label: state ? "Unknown status" : "Awaiting status",
-        tone: "muted" as const,
+        tone: "neutral" as const,
         pending: true,
       };
   }

@@ -31,7 +31,7 @@ interface GitHubActionJobsPanelProps {
 }
 
 const rowClassName =
-  "flex w-full min-w-0 items-center gap-2 rounded-chrome px-2 text-left font-sans ui-text-sm outline-none transition-colors duration-fast hover:bg-accent/60 focus-visible:ring-2 focus-visible:ring-primary/20";
+  "flex w-full min-w-0 items-center gap-2 rounded-chrome px-2 text-left font-sans ui-text-sm outline-none transition-colors duration-fast hover:bg-accent focus-visible:ring-2 focus-visible:ring-focus";
 
 export function GitHubActionJobsPanel({
   jobs,
@@ -145,7 +145,7 @@ export function GitHubActionJobsPanel({
               </button>
 
               {isSelected ? (
-                <ol className="my-1 ml-3 flex flex-col gap-0.5 border-border/60 border-l pl-1.5">
+                <ol className="my-1 ml-3 flex flex-col gap-0.5 border-border border-l pl-1.5">
                   {job.steps.length === 0 ? (
                     <li className="px-2 py-1.5 text-subtle-foreground ui-text-sm">
                       No steps reported

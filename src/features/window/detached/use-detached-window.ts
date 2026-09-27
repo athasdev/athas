@@ -1,5 +1,5 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import type { OpenContentSpec } from "@/features/panes/types/pane-content.types";
 import { initializeSettingsStore } from "@/features/settings/stores/settings.store";
@@ -50,13 +50,11 @@ export function useDetachedWindow<Message extends { type: string }>({
   const [error, setError] = useState<string | null>(null);
   const target = useMemo(() => parseDetachedWindowUrl(new URL(window.location.href)), []);
   const channelRef = useRef<BroadcastChannel | null>(null);
-  const onMessageRef = useRef(onMessage);
-  const onCloseRequestRef = useRef(onCloseRequest);
+  const handleMessage = useEffectEvent(onMessage);
+  const handleCloseRequest = useEffectEvent(onCloseRequest);
   const openLocallyRef = useRef<DetachedWindowConnection<Message>["openLocally"]>((content) =>
     useBufferStore.getState().actions.openContent(content),
   );
-  onMessageRef.current = onMessage;
-  onCloseRequestRef.current = onCloseRequest;
 
   const post = useCallback((message: Message) => {
     channelRef.current?.postMessage(message);
@@ -84,7 +82,7 @@ export function useDetachedWindow<Message extends { type: string }>({
         void getCurrentWindow().setFocus().catch(console.error);
         return;
       }
-      onMessageRef.current(data, connection);
+      handleMessage(data, connection);
     };
 
     const bufferActions = useBufferStore.getState().actions;
@@ -148,15 +146,35 @@ export function useDetachedWindow<Message extends { type: string }>({
       });
     }
 
-    const requestClose = () => onCloseRequestRef.current();
-    const listeners = Promise.all([
-      getCurrentWindow().onCloseRequested((event) => {
-        event.preventDefault();
-        requestClose();
-      }),
-      getCurrentWindow().listen("menu_close_window", requestClose),
-      getCurrentWindow().listen("menu_quit_app", requestClose),
-    ]);
+    const requestClose = () => {
+      if (!disposed) handleCloseRequest();
+    };
+    const unlisteners = new Set<() => void>();
+    let listenersFailed = false;
+    const stopListeners = () => {
+      for (const unlisten of unlisteners) unlisten();
+      unlisteners.clear();
+    };
+    const listeners = Promise.all(
+      [
+        getCurrentWindow().onCloseRequested((event) => {
+          if (disposed) return;
+          event.preventDefault();
+          requestClose();
+        }),
+        getCurrentWindow().listen("menu_close_window", requestClose),
+        getCurrentWindow().listen("menu_quit_app", requestClose),
+      ].map((listener) =>
+        listener.then((unlisten) => {
+          if (disposed || listenersFailed) unlisten();
+          else unlisteners.add(unlisten);
+        }),
+      ),
+    ).catch((cause) => {
+      listenersFailed = true;
+      stopListeners();
+      throw cause;
+    });
     const onKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "w") {
         event.preventDefault();
@@ -192,7 +210,7 @@ export function useDetachedWindow<Message extends { type: string }>({
       disposed = true;
       channelRef.current = null;
       useBufferStore.setState({ actions: bufferActions });
-      void listeners.then((unlisteners) => unlisteners.forEach((unlisten) => unlisten()));
+      stopListeners();
       window.removeEventListener(REQUEST_WINDOW_CLOSE_EVENT, requestClose);
       window.removeEventListener("keydown", onKeyDown);
       channel.close();

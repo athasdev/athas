@@ -86,6 +86,7 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
   );
 
   useEffect(() => {
+    // Settings can change or this view can close before the request completes.
     let isCurrent = true;
     setIsLoadingSkills(true);
     void loadMarketplaceSkills()
@@ -192,6 +193,7 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
     actions,
   });
 
+  // Keep route-independent overlays mounted while navigating the extensions surface.
   const overlays = (
     <>
       <SkillsCommand
@@ -285,7 +287,7 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
             }}
           >
             <div className="mb-4 min-w-0 overflow-x-auto">
-              <TabsList variant="bare" aria-label="Integration categories">
+              <TabsList aria-label="Integration categories">
                 {EXTENSION_FILTERS.map((filter) => (
                   <TabsTrigger key={filter.id} value={filter.id} className="flex-none">
                     {filter.label}

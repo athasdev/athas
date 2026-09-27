@@ -1,3 +1,5 @@
+import { toast } from "sonner";
+import { renameTerminalWithIntelligence } from "@/features/terminal/services/intelligence-terminal-title";
 import {
   ArrowCounterClockwiseIcon,
   ArrowDownIcon,
@@ -10,6 +12,7 @@ import {
   ListIcon,
   RowsIcon,
   SearchIcon,
+  SparkleIcon,
   SelectAllIcon,
   SidebarIcon,
   TerminalWindowIcon,
@@ -31,7 +34,6 @@ interface ViewActionsParams {
   bottomPaneActiveTab: BottomPaneTab;
   setBottomPaneActiveTab: (tab: BottomPaneTab) => void;
   settings: {
-    activityRailExpanded: boolean;
     nativeMenuBar: boolean;
     compactMenuBar: boolean;
   };
@@ -60,27 +62,9 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
 
   return [
     {
-      id: "toggle-activity-sidebar",
-      label: settings.activityRailExpanded
-        ? "View: Collapse Activity Sidebar"
-        : "View: Expand Activity Sidebar",
-      description: settings.activityRailExpanded
-        ? "Collapse the activity sidebar"
-        : "Expand the activity sidebar",
-      icon: <SidebarIcon />,
-      category: "View",
-      commandId: "workbench.toggleActivitySidebar",
-      action: () => {
-        void keymapRegistry.executeCommand("workbench.toggleActivitySidebar");
-        onClose();
-      },
-    },
-    {
       id: "toggle-sidebar",
-      label: isSidebarVisible ? "View: Hide Secondary Sidebar" : "View: Show Secondary Sidebar",
-      description: isSidebarVisible
-        ? "Hide the secondary sidebar panel"
-        : "Show the secondary sidebar panel",
+      label: isSidebarVisible ? "View: Hide Sidebar" : "View: Show Sidebar",
+      description: isSidebarVisible ? "Hide the sidebar panel" : "Show the sidebar panel",
       icon: <SidebarIcon />,
       category: "View",
       commandId: "workbench.toggleSidebar",
@@ -232,6 +216,25 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       action: () => {
         onClose();
         void keymapRegistry.executeCommand("terminal.new");
+      },
+    },
+    {
+      id: "terminal-generate-name",
+      label: "Terminal: Generate Name",
+      description: "Name the active terminal using your Intelligence connection",
+      icon: <SparkleIcon />,
+      category: "Terminal",
+      action: () => {
+        onClose();
+        toast.promise(renameTerminalWithIntelligence(), {
+          loading: "Generating terminal name…",
+          success: (applied) =>
+            applied
+              ? "Terminal name generated"
+              : "Terminal changed; generated name was not applied",
+          error: (error) =>
+            error instanceof Error ? error.message : "Could not generate terminal name",
+        });
       },
     },
     {

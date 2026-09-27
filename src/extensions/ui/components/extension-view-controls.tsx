@@ -197,7 +197,8 @@ export function ExtensionButtonControl({ node, execute }: ExtensionControlProps<
 
   return (
     <Button
-      variant={node.tone ?? "default"}
+      variant={node.tone === "danger" ? "ghost" : (node.tone ?? "default")}
+      tone={node.tone === "danger" ? "danger" : "default"}
       disabled={node.disabled || pending}
       aria-busy={pending || undefined}
       onClick={() => void run(node.action)}

@@ -1,3 +1,4 @@
+import { usePerformanceExperiments } from "@/features/settings/stores/performance-experiments.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import {
   closeActiveEditorGroup,
@@ -81,7 +82,7 @@ import {
   goToReferences,
   goToTypeDefinition,
   openOutlinePicker,
-  openOutlineSidebar,
+  openOutlinePanel,
   showCallHierarchy,
   showTypeHierarchy,
 } from "./navigation-command-actions";
@@ -103,7 +104,6 @@ import {
   showNotifications,
   showThemeSelector,
   showWhatsNew,
-  toggleActivitySidebar,
   toggleViewsSidebar,
   toggleFilesSidebar,
   toggleDockerSidebar,
@@ -628,21 +628,48 @@ const editCommands: Command[] = [
     keybinding: "cmd+i",
     execute: showInlineEditToolbar,
   },
+  {
+    id: "editor.addSelectionToChat",
+    title: "Add Selection to Agent Chat",
+    category: "Agent",
+    keybinding: "cmd+l",
+    execute: async () => {
+      const { addActiveSelectionToAgentChat } =
+        await import("@/features/ai/lib/add-selection-to-agent-chat");
+      addActiveSelectionToAgentChat();
+    },
+  },
+  {
+    id: "editor.addSelectionToNewChat",
+    title: "Add Selection to New Agent Chat",
+    category: "Agent",
+    keybinding: "cmd+alt+l",
+    execute: async () => {
+      const { addActiveSelectionToNewAgentChat } =
+        await import("@/features/ai/lib/add-selection-to-agent-chat");
+      addActiveSelectionToNewAgentChat();
+    },
+  },
 ];
 
 const viewCommands: Command[] = [
   {
-    id: "workbench.toggleActivitySidebar",
-    title: "Toggle Activity Sidebar",
+    id: "workbench.togglePerformanceMonitor",
+    title: "Toggle Performance Monitor",
     category: "View",
-    keybinding: "cmd+b",
-    execute: toggleActivitySidebar,
+    execute: () => usePerformanceExperiments.getState().actions.toggleMonitor(),
+  },
+  {
+    id: "editor.toggleWebgpu",
+    title: "Toggle Experimental WebGPU Renderer",
+    category: "View",
+    execute: () => usePerformanceExperiments.getState().actions.toggleWebgpu(),
   },
   {
     id: "workbench.toggleSidebar",
-    title: "Toggle Secondary Sidebar",
+    title: "Toggle Sidebar",
     category: "View",
-    keybinding: "cmd+e",
+    keybinding: "cmd+b",
     execute: toggleSidebar,
   },
   {
@@ -893,7 +920,7 @@ const navigationCommands: Command[] = [
     id: "workbench.showOutline",
     title: "Show Outline",
     category: "Navigation",
-    execute: openOutlineSidebar,
+    execute: openOutlinePanel,
   },
   {
     id: "workbench.nextTab",
@@ -1130,7 +1157,9 @@ const databaseCommands: Command[] = [
     title: "Show Databases",
     category: "Database",
     execute: () => {
-      useUIState.getState().openCommandPaletteView("databases");
+      const ui = useUIState.getState();
+      ui.setActiveView("databases");
+      ui.setIsSidebarVisible(true);
     },
   },
 ];
@@ -1152,7 +1181,7 @@ const windowCommands: Command[] = [
     category: "Window",
     keybinding: "cmd+,",
     execute: () => {
-      useUIState.getState().setIsSettingsDialogVisible(true);
+      useUIState.getState().openSettings();
     },
   },
   {
@@ -1212,6 +1241,34 @@ const windowCommands: Command[] = [
   },
 ];
 
+/** Loaded on use, so the keymap layer does not pull in the Monaco integration up front. */
+async function agentHunkActions() {
+  return import("@/features/editor/engines/monaco/agent-edits-code-lens");
+}
+
+const agentEditCommands: Command[] = [
+  {
+    id: "ai.keepAgentHunk",
+    title: "Keep Agent Change",
+    category: "AI",
+    keybinding: "cmd+y",
+    description: "Keep the unreviewed agent change at the cursor",
+    execute: async () => {
+      await (await agentHunkActions()).keepAgentHunkAtCursor();
+    },
+  },
+  {
+    id: "ai.rejectAgentHunk",
+    title: "Undo Agent Change",
+    category: "AI",
+    keybinding: "cmd+n",
+    description: "Undo the unreviewed agent change at the cursor",
+    execute: async () => {
+      await (await agentHunkActions()).rejectAgentHunkAtCursor();
+    },
+  },
+];
+
 const allCommands: Command[] = [
   ...fileCommands,
   ...editCommands,
@@ -1222,6 +1279,7 @@ const allCommands: Command[] = [
   ...paneCommands,
   ...databaseCommands,
   ...windowCommands,
+  ...agentEditCommands,
 ];
 
 export function registerCommands(): void {

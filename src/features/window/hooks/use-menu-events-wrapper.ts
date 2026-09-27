@@ -174,9 +174,6 @@ export function useMenuEventsWrapper() {
       void keymapRegistry.executeCommand("editor.toggleComment");
     },
     onCommandPalette: () => useUIState.getState().setIsCommandPaletteVisible(true),
-    onToggleActivitySidebar: () => {
-      void keymapRegistry.executeCommand("workbench.toggleActivitySidebar");
-    },
     onToggleSidebar: () => {
       void keymapRegistry.executeCommand("workbench.toggleSidebar");
     },
@@ -277,7 +274,7 @@ export function useMenuEventsWrapper() {
       );
     },
     onOpenSettings: () => {
-      useUIState.getState().openSettingsDialog("general");
+      useUIState.getState().openSettings("general");
     },
     onOpenExtensions: () => {
       useBufferStore.getState().actions.openExtensionsBuffer();

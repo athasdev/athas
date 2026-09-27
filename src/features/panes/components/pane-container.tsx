@@ -82,6 +82,10 @@ const DiagnosticsBuffer = lazy(
 );
 const ReferencesBuffer = lazy(() => import("@/features/references/components/references-buffer"));
 const ContinuousAgentsResource = lazy(() => import("@/features/ai/continuous-agents/resource"));
+const AcpInspectorView = lazy(
+  () => import("@/features/ai/acp-inspector/components/acp-inspector-view"),
+);
+const AgentEditsReviewView = lazy(() => import("@/features/ai/components/chat/agent-edits-review"));
 const WorkspaceManagementView = lazy(
   () => import("@/features/workspace/team/components/workspace-management-view"),
 );
@@ -135,6 +139,36 @@ interface PaneContainerProps {
 }
 
 const DEFAULT_CAROUSEL_CARD_WIDTH = 640;
+/**
+ * Editors kept mounted but hidden after their tab loses focus, most recent first. Switching back
+ * to one of them shows it immediately instead of creating a new editor, re-tokenizing and jumping
+ * to the saved scroll position; the cap keeps memory close to one editor per pane.
+ */
+const MAX_WARM_EDITOR_BUFFERS = 3;
+
+let hasPrefetchedPaneSurfaces = false;
+
+/**
+ * Loads the code for the surfaces users open most once the app is idle, so the first editor,
+ * terminal, diff or search tab after startup doesn't wait on a network-style chunk fetch.
+ */
+function prefetchPaneSurfaces() {
+  if (hasPrefetchedPaneSurfaces || typeof window === "undefined") return;
+  hasPrefetchedPaneSurfaces = true;
+  const load = () => {
+    void import("@/features/editor/components/code-editor");
+    void import("@/features/terminal/components/terminal-tab");
+    void import("@/features/git/components/diff/git-diff-viewer");
+    void import("@/features/global-search/components/global-search-buffer");
+    void import("@/features/ai/components/agent-tab");
+    void import("@/features/settings/components/settings-workbench-view");
+  };
+  if ("requestIdleCallback" in window) {
+    window.requestIdleCallback(load, { timeout: 3000 });
+  } else {
+    setTimeout(load, 1500);
+  }
+}
 const MIN_CAROUSEL_CARD_WIDTH = 320;
 const CAROUSEL_OUTER_GAP_PX = 160;
 type EditorBufferShell = Pick<EditorContent, "id" | "path" | "name" | "type" | "readOnly">;
@@ -219,7 +253,7 @@ function BufferPreviewCard({ buffer }: { buffer: PaneRenderBuffer }) {
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background">
       <div className="pointer-events-none flex min-h-0 flex-1 overflow-hidden">
-        <div className="flex w-12 shrink-0 flex-col items-end gap-1 border-r border-border/60 bg-surface/80 px-2 py-4 ui-text-sm leading-5 text-subtle-foreground">
+        <div className="flex w-12 shrink-0 flex-col items-end gap-1 border-r border-border bg-surface px-2 py-4 ui-text-sm leading-5 text-subtle-foreground">
           {previewLines.map((_, index) => (
             <span key={`${buffer.id}-line-${index + 1}`}>{index + 1}</span>
           ))}
@@ -231,7 +265,7 @@ function BufferPreviewCard({ buffer }: { buffer: PaneRenderBuffer }) {
         </div>
       </div>
 
-      <div className="border-t border-border/60 bg-surface/80 px-4 py-2">
+      <div className="border-t border-border bg-surface px-4 py-2">
         <div className="truncate ui-text-sm font-medium text-foreground">
           {buffer.type === "diff" ? formatDiffBufferLabel(buffer.name, buffer.path) : buffer.name}
         </div>
@@ -252,12 +286,12 @@ function PullRequestPreviewCard({ buffer }: { buffer: PullRequestContent }) {
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background">
-      <div className="shrink-0 bg-surface/60 px-3 py-3">
+      <div className="shrink-0 bg-surface px-3 py-3">
         <div className="flex min-w-0 items-start gap-2">
-          <div className="mt-0.5 size-4 shrink-0 rounded-lg bg-success/80" />
+          <div className="mt-0.5 size-4 shrink-0 rounded-lg bg-success-soft" />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge font="mono">#{buffer.prNumber ?? "--"}</Badge>
+              <Badge>#{buffer.prNumber ?? "--"}</Badge>
               <div className="min-w-0 truncate font-medium ui-text-sm text-foreground">
                 {buffer.name}
               </div>
@@ -278,15 +312,15 @@ function PullRequestPreviewCard({ buffer }: { buffer: PullRequestContent }) {
           </div>
         </div>
       </div>
-      <div className="min-h-0 flex-1 bg-background/40 px-3 py-3">
-        <div className="rounded-lg bg-surface/35 px-3 py-2">
+      <div className="min-h-0 flex-1 bg-background px-3 py-3">
+        <div className="rounded-lg bg-surface px-3 py-2">
           <div className="line-clamp-5 ui-text-sm leading-6 text-subtle-foreground">
             {details?.body?.trim()
               ? details.body
               : "Activate this card to inspect the full pull request description, changed files, comments, review state, and checkout actions."}
           </div>
         </div>
-        <div className="mt-3 rounded-lg bg-surface/35 px-3 py-2 ui-text-sm text-subtle-foreground">
+        <div className="mt-3 rounded-lg bg-surface px-3 py-2 ui-text-sm text-subtle-foreground">
           {buffer.path}
         </div>
       </div>
@@ -305,6 +339,8 @@ export function PaneContainer({ pane }: PaneContainerProps) {
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
   const handleFileOpen = useFileSystemStore.use.handleFileOpen?.();
   const horizontalBufferCarousel = useSettingsStore((state) => state.settings.horizontalTabScroll);
+
+  useEffect(prefetchPaneSurfaces, []);
 
   const [isDragOver, setIsDragOver] = useState(false);
   const [isTabDragOver, setIsTabDragOver] = useState(false);
@@ -867,9 +903,28 @@ export function PaneContainer({ pane }: PaneContainerProps) {
 
   const shouldRenderCarousel =
     isWorkspaceSurfaceActive && horizontalBufferCarousel && paneBuffers.length > 1;
+  const activeEditorBufferId =
+    activeBuffer && isStandardEditorBuffer(activeBuffer) ? activeBuffer.id : null;
+  const [warmEditorBufferIds, setWarmEditorBufferIds] = useState<string[]>([]);
+  const nextWarmEditorBufferIds = [
+    ...(activeEditorBufferId ? [activeEditorBufferId] : []),
+    ...warmEditorBufferIds.filter(
+      (bufferId) =>
+        bufferId !== activeEditorBufferId &&
+        paneBuffers.some((buffer) => buffer.id === bufferId && isStandardEditorBuffer(buffer)),
+    ),
+  ].slice(0, MAX_WARM_EDITOR_BUFFERS);
+  if (
+    nextWarmEditorBufferIds.length !== warmEditorBufferIds.length ||
+    nextWarmEditorBufferIds.some((bufferId, index) => bufferId !== warmEditorBufferIds[index])
+  ) {
+    setWarmEditorBufferIds(nextWarmEditorBufferIds);
+  }
   const mountedEditorBuffers = paneBuffers.filter(
     (buffer): buffer is EditorBufferShell =>
-      isWorkspaceSurfaceActive && isStandardEditorBuffer(buffer) && buffer.id === activeBuffer?.id,
+      isWorkspaceSurfaceActive &&
+      isStandardEditorBuffer(buffer) &&
+      nextWarmEditorBufferIds.includes(buffer.id),
   );
 
   const renderActiveBuffer = useCallback(
@@ -900,7 +955,14 @@ export function PaneContainer({ pane }: PaneContainerProps) {
           return <AgentTab buffer={buffer} isActive={isActivePane} />;
 
         case "diff":
-          return <DiffViewer onStageHunk={handleStageHunk} onUnstageHunk={handleUnstageHunk} />;
+          return (
+            <DiffViewer
+              key={buffer.id}
+              bufferId={buffer.id}
+              onStageHunk={handleStageHunk}
+              onUnstageHunk={handleUnstageHunk}
+            />
+          );
 
         case "pullRequest":
         case "githubIssue":
@@ -926,6 +988,12 @@ export function PaneContainer({ pane }: PaneContainerProps) {
 
         case "continuousAgents":
           return <ContinuousAgentsResource />;
+
+        case "acpInspector":
+          return <AcpInspectorView />;
+
+        case "agentChanges":
+          return <AgentEditsReviewView />;
 
         case "workspaces":
           return <WorkspaceManagementView />;
@@ -1024,7 +1092,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       data-pane-id={pane.id}
       className={cn(
         "relative flex size-full flex-col overflow-hidden bg-background",
-        isActivePane && "ring-1 ring-primary/30",
+        isActivePane && "ring-1 ring-focus",
         (isDragOver || internalHoverZone) && "ring-2 ring-primary",
       )}
       onMouseDownCapture={handlePaneMouseDownCapture}
@@ -1035,7 +1103,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       onDrop={handleDrop}
     >
       {(isDragOver || internalHoverZone) && !isTabDragOver && !internalHoverZone && (
-        <div className="pointer-events-none absolute inset-0 z-40 bg-primary/10" />
+        <div className="pointer-events-none absolute inset-0 z-40 bg-primary-soft" />
       )}
       <SplitDropOverlay
         visible={isTabDragOver || !!internalHoverZone}
@@ -1069,9 +1137,9 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                     className={cn(
                       "relative h-full shrink-0 overflow-hidden rounded-2xl border text-left transition-[transform,opacity,border-color,box-shadow] duration-normal ease-smooth",
                       isActiveBuffer
-                        ? "border-primary/50 bg-background shadow-[0_0_0_1px_rgba(99,102,241,0.15)]"
-                        : "border-border/70 bg-background hover:border-border/90",
-                      isDropTarget && "border-primary shadow-[0_0_0_1px_rgba(99,102,241,0.25)]",
+                        ? "border-primary bg-background ring-1 ring-focus"
+                        : "border-border bg-background hover:border-border-strong",
+                      isDropTarget && "border-primary ring-2 ring-focus",
                       draggedCarouselBufferId === buffer.id && "opacity-70",
                       isCarouselResizing && "transition-none",
                     )}
@@ -1143,7 +1211,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                       )}
                     </div>
                     <div
-                      className="absolute top-0 right-0 z-20 h-full w-2 cursor-col-resize transition-colors hover:bg-primary/20"
+                      className="absolute top-0 right-0 z-20 h-full w-2 cursor-col-resize transition-colors hover:bg-primary-soft"
                       onMouseDown={handleCarouselResizeStart}
                       role="separator"
                       tabIndex={0}
@@ -1164,17 +1232,19 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                 .map((b) => {
                   return (
                     <div key={b.id} className="absolute inset-0">
-                      <TerminalTab
-                        sessionId={b.sessionId}
-                        bufferId={b.id}
-                        paneId={pane.id}
-                        shell={b.shell}
-                        initialCommand={b.initialCommand}
-                        workingDirectory={b.workingDirectory}
-                        remoteConnectionId={b.remoteConnectionId}
-                        isActive={isActivePane}
-                        isVisible={isWorkspaceSurfaceActive}
-                      />
+                      <Suspense fallback={null}>
+                        <TerminalTab
+                          sessionId={b.sessionId}
+                          bufferId={b.id}
+                          paneId={pane.id}
+                          shell={b.shell}
+                          initialCommand={b.initialCommand}
+                          workingDirectory={b.workingDirectory}
+                          remoteConnectionId={b.remoteConnectionId}
+                          isActive={isActivePane}
+                          isVisible={isWorkspaceSurfaceActive}
+                        />
+                      </Suspense>
                     </div>
                   );
                 })}
@@ -1185,21 +1255,28 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                     key={buffer.id}
                     className="absolute inset-0"
                     style={isActive ? undefined : { visibility: "hidden" }}
+                    inert={!isActive}
                   >
-                    <CodeEditor
-                      paneId={pane.id}
-                      bufferId={buffer.id}
-                      isActiveSurface={isActive && isActivePane}
-                      readOnly={buffer.readOnly}
-                    />
+                    <Suspense fallback={null}>
+                      <CodeEditor
+                        paneId={pane.id}
+                        bufferId={buffer.id}
+                        isActiveSurface={isActive && isActivePane}
+                        readOnly={buffer.readOnly}
+                        outline={isActive}
+                      />
+                    </Suspense>
                   </div>
                 );
               })}
               {isWorkspaceSurfaceActive &&
                 activeBuffer &&
                 activeBuffer.type !== "terminal" &&
-                !isStandardEditorBuffer(activeBuffer) &&
-                renderActiveBuffer(activeBuffer)}
+                !isStandardEditorBuffer(activeBuffer) && (
+                  <Suspense key={activeBuffer.id} fallback={null}>
+                    {renderActiveBuffer(activeBuffer)}
+                  </Suspense>
+                )}
             </>
           )}
         </Suspense>

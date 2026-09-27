@@ -66,6 +66,22 @@ export function useComposerContextSelection(initial?: {
     [],
   );
 
+  const append = useCallback(
+    (
+      bufferIds: Iterable<string>,
+      filePaths: Iterable<string>,
+      editorContexts: EditorSelectionContext[] = [],
+    ) => {
+      setSelectedBufferIds((current) => new Set([...current, ...bufferIds]));
+      setSelectedFilesPaths((current) => new Set([...current, ...filePaths]));
+      setSelectedEditorContexts((current) => [
+        ...current,
+        ...editorContexts.filter((context) => !current.some((item) => item.id === context.id)),
+      ]);
+    },
+    [],
+  );
+
   const removeEditorContext = useCallback((contextId: string) => {
     setSelectedEditorContexts((current) => current.filter((context) => context.id !== contextId));
   }, []);
@@ -91,5 +107,5 @@ export function useComposerContextSelection(initial?: {
     ],
   );
 
-  return { clear, inputProps, replace };
+  return { append, clear, inputProps, replace };
 }

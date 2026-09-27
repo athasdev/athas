@@ -1,8 +1,12 @@
 import { TagIcon, RocketIcon } from "@/ui/icons";
-import { useMemo, useRef, useState, type RefObject } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
 import { openFiles } from "@/features/file-system/controllers/platform";
 import { useGitStore } from "@/features/git/stores/git.store";
+import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics.store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
+import { formatContextReference, listProjectFolders } from "@/features/ai/lib/context-references";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { Button } from "@/ui/button";
@@ -13,6 +17,7 @@ import {
   DropdownMenuItem,
   DropdownMenuEmpty,
   DropdownMenuSearch,
+  DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
@@ -24,12 +29,16 @@ import {
   DatabaseIcon,
   FileTextIcon,
   FilesIcon,
+  FolderIcon,
   GitBranchIcon,
+  GitDiffIcon,
+  HistoryIcon,
   GitPullRequestIcon,
   PlayCircleIcon,
   PlusIcon,
   TerminalWindowIcon,
   UploadIcon,
+  WarningIcon,
 } from "@/ui/icons";
 import { GithubMark } from "@/ui/brand-marks";
 import { AIFileSelector } from "../mentions/ai-file-selector";
@@ -83,6 +92,16 @@ export function ContextSelector({
 }: ContextSelectorProps) {
   const bufferSearch = useMenuSearch();
   const githubSearch = useMenuSearch();
+  const folderSearch = useMenuSearch();
+  const chatSearch = useMenuSearch();
+  const [projectFolders, setProjectFolders] = useState<ReturnType<typeof listProjectFolders>>([]);
+  const getAllProjectFiles = useFileSystemStore((state) => state.getAllProjectFiles);
+  const problemCount = useDiagnosticsStore((state) => {
+    let count = 0;
+    for (const diagnostics of state.diagnosticsByFile.values()) count += diagnostics.length;
+    return count;
+  });
+  const chats = useAIChatStore((state) => state.chats);
   const [fileQuery, setFileQuery] = useState("");
   const [selectedFileIndex, setSelectedFileIndex] = useState(0);
   const fileSearchInputRef = useRef<HTMLInputElement>(null);
@@ -119,6 +138,53 @@ export function ContextSelector({
     [currentWorkspaceRepoPath, rootFolderPath, workspaceGitStatus],
   );
 
+  useEffect(() => {
+    if (!isOpen || !rootFolderPath) return;
+    let cancelled = false;
+    void getAllProjectFiles()
+      .then((entries) => {
+        if (!cancelled) setProjectFolders(listProjectFolders(entries, rootFolderPath));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [getAllProjectFiles, isOpen, rootFolderPath]);
+
+  const filteredFolders = folderSearch
+    .filter(projectFolders, (folder) => [folder.relativePath])
+    .slice(0, 100);
+  const pastChats = useMemo(
+    () =>
+      chats
+        .filter((chat) => !chat.archivedAt)
+        .sort((left, right) => right.lastMessageAt.getTime() - left.lastMessageAt.getTime())
+        .slice(0, 50),
+    [chats],
+  );
+  const filteredChats = chatSearch.filter(pastChats, (chat) => [chat.title]);
+
+  const renderReferenceToggle = (
+    reference: Parameters<typeof formatContextReference>[0],
+    icon: ReactNode,
+    label: string,
+    detail?: ReactNode,
+  ) => {
+    const value = formatContextReference(reference);
+    return (
+      <DropdownMenuCheckboxItem
+        key={value}
+        checked={selectedFilesPaths.has(value)}
+        closeOnClick={false}
+        onCheckedChange={() => onToggleFile(value)}
+      >
+        {icon}
+        <span className="min-w-0 flex-1 truncate">{label}</span>
+        {detail}
+      </DropdownMenuCheckboxItem>
+    );
+  };
+
   const handleAttachFiles = async () => {
     const selectedPaths = await openFiles();
     for (const path of selectedPaths) {
@@ -153,6 +219,8 @@ export function ContextSelector({
         if (!open) {
           bufferSearch.reset();
           githubSearch.reset();
+          folderSearch.reset();
+          chatSearch.reset();
           setFileQuery("");
           setSelectedFileIndex(0);
         }
@@ -214,6 +282,34 @@ export function ContextSelector({
 
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
+            <FolderIcon />
+            Folders
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent size="wide" viewport="searchable">
+            <DropdownMenuSearch
+              value={folderSearch.query}
+              onChange={(event) => folderSearch.setQuery(event.target.value)}
+              placeholder="Search folders..."
+              autoFocus
+            />
+            <DropdownMenuViewport>
+              {filteredFolders.length > 0 ? (
+                filteredFolders.map((folder) =>
+                  renderReferenceToggle(
+                    { kind: "folder", path: folder.path },
+                    <FolderIcon />,
+                    folder.relativePath,
+                  ),
+                )
+              ) : (
+                <DropdownMenuEmpty>No matching folders</DropdownMenuEmpty>
+              )}
+            </DropdownMenuViewport>
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>
             <GitBranchIcon />
             <span className="min-w-0 flex-1 truncate">Git changes</span>
             <span className="shrink-0 text-subtle-foreground tabular-nums">
@@ -221,6 +317,17 @@ export function ContextSelector({
             </span>
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent size="wide" viewport="list">
+            {renderReferenceToggle(
+              { kind: "gitDiff", scope: "working" },
+              <GitDiffIcon />,
+              "Working tree diff",
+            )}
+            {renderReferenceToggle(
+              { kind: "gitDiff", scope: "staged" },
+              <GitDiffIcon />,
+              "Staged diff",
+            )}
+            <DropdownMenuSeparator />
             {gitContextFiles.length > 0 ? (
               gitContextFiles.map((file) => (
                 <DropdownMenuCheckboxItem
@@ -239,6 +346,41 @@ export function ContextSelector({
             ) : (
               <DropdownMenuEmpty>No attachable Git changes</DropdownMenuEmpty>
             )}
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+
+        {renderReferenceToggle(
+          { kind: "problems" },
+          <WarningIcon />,
+          "Problems",
+          <span className="shrink-0 text-subtle-foreground tabular-nums">{problemCount}</span>,
+        )}
+
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>
+            <HistoryIcon />
+            <span className="min-w-0 flex-1 truncate">Past chats</span>
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent size="wide" viewport="searchable">
+            <DropdownMenuSearch
+              value={chatSearch.query}
+              onChange={(event) => chatSearch.setQuery(event.target.value)}
+              placeholder="Search chats..."
+              autoFocus
+            />
+            <DropdownMenuViewport>
+              {filteredChats.length > 0 ? (
+                filteredChats.map((chat) =>
+                  renderReferenceToggle(
+                    { kind: "chat", chatId: chat.id, title: chat.title },
+                    <HistoryIcon />,
+                    chat.title || "Untitled chat",
+                  ),
+                )
+              ) : (
+                <DropdownMenuEmpty>No matching chats</DropdownMenuEmpty>
+              )}
+            </DropdownMenuViewport>
           </DropdownMenuSubContent>
         </DropdownMenuSub>
 

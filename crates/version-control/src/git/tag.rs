@@ -1,12 +1,9 @@
 use crate::git::{
-   CheckoutResult, GitTag, IntoStringError, execute_remote_git_command, format_git_time,
+   CheckoutResult, GitTag, IntoStringError, RepositoryHost, execute_remote_git_command,
+   format_git_time, status::has_unstaged_changes_with_cli,
 };
 use anyhow::{Context, Result};
 use git2::{Repository, Status};
-use std::{
-   path::Path,
-   process::{Command, Stdio},
-};
 
 pub fn git_get_tags(repo_path: String) -> Result<Vec<GitTag>, String> {
    _git_get_tags(repo_path).into_string_error()
@@ -80,6 +77,20 @@ fn _git_create_tag(
       return create_signed_tag(repo_path, name, message, commit);
    }
 
+   let host = RepositoryHost::detect(&repo_path);
+   if host.uses_distro_git() {
+      let mut args = vec!["tag".to_string()];
+      if let Some(msg) = &message {
+         args.extend(["-a".to_string(), "-m".to_string(), msg.clone()]);
+      }
+      args.push(name);
+      if let Some(commit_ref) = commit {
+         args.push(commit_ref);
+      }
+      host.git().args(&args).run("tag")?;
+      return Ok(());
+   }
+
    let repo = Repository::open(&repo_path).context("Failed to open repository")?;
 
    let target = if let Some(commit_ref) = commit {
@@ -115,7 +126,6 @@ fn create_signed_tag(
    message: Option<String>,
    commit: Option<String>,
 ) -> Result<()> {
-   let repo_dir = Path::new(&repo_path);
    let tag_message = message.unwrap_or_else(|| name.clone());
    let mut args = vec!["tag", "-s", &name, "-m", &tag_message];
 
@@ -125,29 +135,13 @@ fn create_signed_tag(
       args.push(&commit_ref);
    }
 
-   let output = Command::new("git")
-      .current_dir(repo_dir)
+   RepositoryHost::detect(&repo_path)
+      .git()
       .env("GIT_TERMINAL_PROMPT", "0")
-      .stdin(Stdio::null())
       .args(args)
-      .output()
-      .context("Failed to execute git tag -s")?;
+      .run("signed tag")?;
 
-   if output.status.success() {
-      return Ok(());
-   }
-
-   let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-   let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
-   let details = if !stderr.is_empty() {
-      stderr
-   } else if !stdout.is_empty() {
-      stdout
-   } else {
-      "Git returned a non-zero exit status without output.".to_string()
-   };
-
-   anyhow::bail!("Git signed tag failed: {details}");
+   Ok(())
 }
 
 pub fn git_delete_tag(repo_path: String, name: String) -> Result<(), String> {
@@ -155,6 +149,12 @@ pub fn git_delete_tag(repo_path: String, name: String) -> Result<(), String> {
 }
 
 fn _git_delete_tag(repo_path: String, name: String) -> Result<()> {
+   let host = RepositoryHost::detect(&repo_path);
+   if host.uses_distro_git() {
+      host.git().args(["tag", "-d", &name]).run("tag delete")?;
+      return Ok(());
+   }
+
    let repo = Repository::open(&repo_path).context("Failed to open repository")?;
 
    repo.tag_delete(&name).context("Failed to delete tag")?;
@@ -167,9 +167,8 @@ pub fn git_push_tag(repo_path: String, name: String, remote: String) -> Result<(
 }
 
 fn _git_push_tag(repo_path: String, name: String, remote: String) -> Result<()> {
-   let repo_dir = Path::new(&repo_path);
    execute_remote_git_command(
-      repo_dir,
+      &repo_path,
       &["push", &remote, &format!("refs/tags/{name}")],
       "push tag",
    )
@@ -184,9 +183,8 @@ pub fn git_delete_remote_tag(
 }
 
 fn _git_delete_remote_tag(repo_path: String, name: String, remote: String) -> Result<()> {
-   let repo_dir = Path::new(&repo_path);
    execute_remote_git_command(
-      repo_dir,
+      &repo_path,
       &["push", &remote, &format!(":refs/tags/{name}")],
       "delete remote tag",
    )
@@ -197,6 +195,29 @@ pub fn git_checkout_tag(repo_path: String, name: String) -> Result<CheckoutResul
 }
 
 fn _git_checkout_tag(repo_path: String, name: String) -> Result<CheckoutResult> {
+   let host = RepositoryHost::detect(&repo_path);
+   if host.uses_distro_git() {
+      if has_unstaged_changes_with_cli(&host)? {
+         return Ok(CheckoutResult {
+            success: false,
+            has_changes: true,
+            message: "You have unstaged changes. Please stash or commit them before checking out \
+                      a tag."
+               .to_string(),
+         });
+      }
+
+      host
+         .git()
+         .args(["checkout", "-q", "--detach", &format!("refs/tags/{name}")])
+         .run("checkout tag")?;
+      return Ok(CheckoutResult {
+         success: true,
+         has_changes: false,
+         message: format!("Checked out tag '{name}' in detached HEAD."),
+      });
+   }
+
    let repo = Repository::open(&repo_path).context("Failed to open repository")?;
    let statuses = repo
       .statuses(None)

@@ -62,7 +62,7 @@ export default function SchemaView({
         <div className="ui-text-sm text-foreground">{tableName}</div>
         <div className="ui-text-sm text-subtle-foreground">{columns.length} columns</div>
       </div>
-      <div className={databaseCardClassName("mx-3 mb-3 divide-y divide-border/60")}>
+      <div className={databaseCardClassName("mx-3 mb-3 divide-y divide-border")}>
         {columns.map((column) => {
           const fk = fkMap.get(column.name);
           const constraintLabels = getColumnConstraintLabels(column);

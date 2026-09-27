@@ -35,7 +35,7 @@ interface SymbolListItemProps {
   index: number;
   isSelected: boolean;
   onClick: (symbol: SymbolItem) => void;
-  onMouseEnter?: (index: number) => void;
+  onMouseMove?: (index: number) => void;
   searchQuery: string;
   /** Render a file-path badge alongside the container name. Off by default so the
    * existing `@`-mode (file-scoped) call site renders identically to before. */
@@ -47,7 +47,7 @@ export const SymbolListItem = ({
   index,
   isSelected,
   onClick,
-  onMouseEnter,
+  onMouseMove,
   searchQuery,
   showFilePath = false,
 }: SymbolListItemProps) => {
@@ -58,9 +58,14 @@ export const SymbolListItem = ({
 
   return (
     <CommandItemRow
+      as="div"
+      id={`quick-open-option-${index}`}
+      role="option"
+      tabIndex={-1}
+      aria-selected={isSelected}
       data-item-index={index}
       onClick={() => onClick(symbol)}
-      onMouseEnter={() => onMouseEnter?.(index)}
+      onMouseMove={() => onMouseMove?.(index)}
       isSelected={isSelected}
       icon={icon}
       title={<SearchMatchHighlight text={symbol.name} query={searchQuery} />}

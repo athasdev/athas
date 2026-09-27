@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useToast } from "@/features/layout/contexts/toast-context";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { getServiceUrls } from "@/config/services";
 import { Alert, AlertDescription } from "@/ui/alert";
@@ -11,32 +12,68 @@ import { fetchShareOptions, revokeShare, setSessionSync, updateShare } from "../
 import { ShareAccessDialog } from "./share-access-dialog";
 import type { SharedItem, ShareOptions } from "../types/share.types";
 
+function sharingErrorMessage(reason: unknown, fallback: string) {
+  return reason instanceof Error ? reason.message : fallback;
+}
+
 export function SharingSettings() {
+  const { showToast } = useToast();
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const actionPending = useRef(false);
   const [editing, setEditing] = useState<SharedItem | null>(null);
   const [options, setOptions] = useState<ShareOptions | null>(null);
   const [error, setError] = useState("");
   const [syncError, setSyncError] = useState("");
   const [busy, setBusy] = useState(false);
   const refresh = async () => setOptions(await fetchShareOptions());
-  const run = async (action: () => Promise<unknown>) => {
+  const run = async (action?: () => Promise<unknown>) => {
+    if (actionPending.current) return;
+    actionPending.current = true;
     setBusy(true);
     setError("");
     try {
-      await action();
-      await refresh();
+      await action?.();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Could not update sharing");
+      setError(sharingErrorMessage(reason, "Could not update sharing"));
     } finally {
-      await refresh().catch(() => {});
+      await refresh().catch((reason) => {
+        setError(
+          (current) => current || sharingErrorMessage(reason, "Could not load sharing settings"),
+        );
+      });
+      actionPending.current = false;
       setBusy(false);
     }
   };
   useEffect(() => {
-    void refresh().catch((reason) => setError(reason.message));
+    let cancelled = false;
+    setError("");
+    void fetchShareOptions().then(
+      (next) => {
+        if (!cancelled) setOptions(next);
+      },
+      (reason) => {
+        if (!cancelled) setError(sharingErrorMessage(reason, "Could not load sharing settings"));
+      },
+    );
     const status = (event: Event) => setSyncError((event as CustomEvent).detail.error || "");
     window.addEventListener("athas:sharing-status", status);
-    return () => window.removeEventListener("athas:sharing-status", status);
-  }, []);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("athas:sharing-status", status);
+    };
+  }, [loadAttempt]);
+  const copyLink = async (id: string) => {
+    try {
+      await writeClipboardText(`${base}/s/${id}`);
+      showToast({ message: "Link copied", type: "success" });
+    } catch (reason) {
+      showToast({
+        message: sharingErrorMessage(reason, "Could not copy link"),
+        type: "error",
+      });
+    }
+  };
   const base = getServiceUrls().websiteBaseUrl;
   return (
     <SettingsView>
@@ -45,7 +82,7 @@ export function SharingSettings() {
           item={editing}
           options={options}
           onClose={() => setEditing(null)}
-          onSaved={() => void run(refresh)}
+          onSaved={() => void run()}
         />
       )}
       <Section
@@ -81,6 +118,12 @@ export function SharingSettings() {
             className="py-6"
             tone={error ? "error" : "neutral"}
             message={error || "Loading shared items…"}
+            role={error ? "alert" : "status"}
+            action={
+              error
+                ? { label: "Retry", onClick: () => setLoadAttempt((attempt) => attempt + 1) }
+                : undefined
+            }
           />
         )}
         {options?.items.filter((item) => item.visibility !== "private").length === 0 && (
@@ -108,10 +151,7 @@ export function SharingSettings() {
                     }
                   />
                 )}
-                <Button
-                  disabled={busy}
-                  onClick={() => void run(() => writeClipboardText(`${base}/s/${item.id}`))}
-                >
+                <Button disabled={busy} onClick={() => void copyLink(item.id)}>
                   Copy link
                 </Button>
                 <Button disabled={busy} onClick={() => setEditing(item)}>
@@ -127,7 +167,14 @@ export function SharingSettings() {
       </Section>
       {((error && options) || syncError) && (
         <Alert tone="error">
-          <AlertDescription>{syncError || error}</AlertDescription>
+          <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
+            <span>{error || syncError}</span>
+            {error && (
+              <Button disabled={busy} onClick={() => void run()}>
+                Retry
+              </Button>
+            )}
+          </AlertDescription>
         </Alert>
       )}
     </SettingsView>

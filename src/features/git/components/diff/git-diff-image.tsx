@@ -24,7 +24,7 @@ const ImageContainer = memo(
         {label === "Removed" ? <MinusIcon /> : <PlusIcon />}
         {label}
       </div>
-      <div className="flex flex-1 items-center justify-center overflow-auto bg-size-[16px_16px] bg-[repeating-conic-gradient(#1a1a1a_0%_25%,#252525_0%_50%)] p-4">
+      <div className="flex flex-1 items-center justify-center overflow-auto bg-checkerboard p-4">
         {base64 ? (
           <img
             src={getImgSrc(base64, filePath)}
@@ -99,11 +99,11 @@ const ImageDiffViewer = memo(({ diff, fileName, onClose, commitHash }: ImageDiff
       <div className="flex flex-1 overflow-hidden">
         {status === "added" ? (
           <div className="flex flex-1 flex-col">
-            <div className="flex items-center justify-center gap-1 border-border border-b bg-git-added/20 py-1 font-medium ui-text-sm text-git-added">
+            <div className="flex items-center justify-center gap-1 border-border border-b bg-git-added-soft py-1 font-medium ui-text-sm text-git-added">
               <PlusIcon />
               New Image
             </div>
-            <div className="flex flex-1 items-center justify-center overflow-auto bg-size-[16px_16px] bg-[repeating-conic-gradient(#1a1a1a_0%_25%,#252525_0%_50%)] p-4">
+            <div className="flex flex-1 items-center justify-center overflow-auto bg-checkerboard p-4">
               <img
                 src={getImgSrc(diff.new_blob_base64, fileName)}
                 alt={fileName}
@@ -114,11 +114,11 @@ const ImageDiffViewer = memo(({ diff, fileName, onClose, commitHash }: ImageDiff
           </div>
         ) : status === "deleted" ? (
           <div className="flex flex-1 flex-col">
-            <div className="flex items-center justify-center gap-1 border-border border-b bg-git-deleted/20 py-1 font-medium ui-text-sm text-git-deleted">
+            <div className="flex items-center justify-center gap-1 border-border border-b bg-git-deleted-soft py-1 font-medium ui-text-sm text-git-deleted">
               <MinusIcon />
               Removed Image
             </div>
-            <div className="flex flex-1 items-center justify-center overflow-auto bg-size-[16px_16px] bg-[repeating-conic-gradient(#1a1a1a_0%_25%,#252525_0%_50%)] p-4">
+            <div className="flex flex-1 items-center justify-center overflow-auto bg-checkerboard p-4">
               <img
                 src={getImgSrc(diff.old_blob_base64, fileName)}
                 alt={fileName}
@@ -132,7 +132,7 @@ const ImageDiffViewer = memo(({ diff, fileName, onClose, commitHash }: ImageDiff
             {hasOldImage && (
               <ImageContainer
                 label="Removed"
-                labelColor="bg-git-deleted/20 text-git-deleted"
+                labelColor="bg-git-deleted-soft text-git-deleted"
                 base64={diff.old_blob_base64}
                 alt={`${fileName} (old)`}
                 filePath={fileName}
@@ -143,7 +143,7 @@ const ImageDiffViewer = memo(({ diff, fileName, onClose, commitHash }: ImageDiff
             {hasNewImage && (
               <ImageContainer
                 label="Added"
-                labelColor="bg-git-added/20 text-git-added"
+                labelColor="bg-git-added-soft text-git-added"
                 base64={diff.new_blob_base64}
                 alt={`${fileName} (new)`}
                 filePath={fileName}

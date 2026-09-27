@@ -83,7 +83,7 @@ export default function Pagination({
           <span className="inline-flex min-w-0 w-12">
             <Input
               align="center"
-              size="compact"
+              size="sm"
               type="number"
               value={pageInput}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>

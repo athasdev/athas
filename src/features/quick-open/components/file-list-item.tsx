@@ -11,7 +11,7 @@ interface FileListItemProps {
   index: number;
   isSelected: boolean;
   onClick: (path: string) => void;
-  onMouseEnter?: (index: number, path: string) => void;
+  onMouseMove?: (index: number, path: string) => void;
   rootFolderPath: string | null | undefined;
   searchQuery: string;
 }
@@ -22,7 +22,7 @@ export const FileListItem = ({
   index,
   isSelected,
   onClick,
-  onMouseEnter,
+  onMouseMove,
   rootFolderPath,
   searchQuery,
 }: FileListItemProps) => {
@@ -31,9 +31,14 @@ export const FileListItem = ({
   return (
     <CommandItemRow
       key={`${category}-${file.path}`}
+      as="div"
+      id={`quick-open-option-${index}`}
+      role="option"
+      tabIndex={-1}
+      aria-selected={isSelected}
       data-item-index={index}
       onClick={() => onClick(file.path)}
-      onMouseEnter={() => onMouseEnter?.(index, file.path)}
+      onMouseMove={() => onMouseMove?.(index, file.path)}
       isSelected={isSelected}
       icon={<ThemedFileIcon fileName={file.name} isDir={false} />}
       title={<SearchMatchHighlight text={file.name} query={searchQuery} />}

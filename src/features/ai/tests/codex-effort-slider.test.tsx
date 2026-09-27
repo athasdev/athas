@@ -11,7 +11,7 @@ describe("Stepped slider", () => {
     expect(markup).toContain('aria-label="Reasoning effort"');
     expect(markup).toContain('aria-valuenow="1"');
     expect(markup).toContain('max="3"');
-    expect(markup.match(/rounded-full bg-foreground\/25/g)).toHaveLength(4);
+    expect(markup.match(/rounded-full bg-muted-foreground/g)).toHaveLength(4);
   });
 
   it("keeps the stops aligned with the inset thumb travel", () => {
@@ -28,6 +28,6 @@ describe("Stepped slider", () => {
       <Slider value={5} onValueChange={() => {}} max={100} ticks aria-label="Effort" />,
     );
 
-    expect(markup).not.toContain("bg-foreground/25");
+    expect(markup).not.toContain("bg-muted-foreground");
   });
 });

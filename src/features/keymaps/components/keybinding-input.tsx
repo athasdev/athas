@@ -51,7 +51,7 @@ export function KeybindingInput({
     <div
       className={cn(
         "flex h-7 w-full min-w-0 items-center justify-between gap-1 rounded border px-2",
-        isRecording ? "border-primary bg-primary/5" : "border-border bg-surface",
+        isRecording ? "border-primary bg-primary-soft" : "border-border bg-surface",
       )}
       onClick={handleClick}
       onKeyDown={(e) => {

@@ -1,20 +1,46 @@
 import { invoke } from "@tauri-apps/api/core";
+import { logOutOfAcpAgent } from "@/features/ai/lib/acp-logout";
 import { openNewAgentChat } from "@/features/ai/lib/open-new-agent-chat";
+import {
+  addActiveSelectionToAgentChat,
+  addActiveSelectionToNewAgentChat,
+} from "@/features/ai/lib/add-selection-to-agent-chat";
+import { openAgentSessions } from "@/features/ai/lib/open-agent-sessions";
 import { openAgentInNewWindow } from "@/features/ai/detached/agent-window-service";
+import { toggleFollowAgent } from "@/features/ai/services/agent-follow-service";
+import { cycleChatMode, readChatModeSource } from "@/features/ai/services/chat-mode-service";
+import {
+  keepAllAgentEdits,
+  openAgentEditsReview,
+  rejectAllAgentEdits,
+} from "@/features/ai/services/agent-edits-service";
+import { pickAgentEditsChatId } from "@/features/ai/stores/agent-edits.store";
+import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import {
   ArrowClockwiseIcon,
   ArrowsClockwiseIcon,
+  ArrowsLeftRightIcon,
+  ChatBubbleTextIcon,
+  CheckIcon,
+  CrosshairIcon,
+  GitDiffIcon,
+  HistoryIcon,
+  SignOutIcon,
+  ShieldCheckIcon,
   SparkleIcon,
   SquareIcon,
   TerminalWindowIcon,
+  XIcon,
 } from "@/ui/icons";
 import {
   restartAllLanguageServers,
   stopAllLanguageServers,
 } from "@/features/keymaps/commands/lsp-command-actions";
 import { openAthasLogBuffer } from "@/features/settings/services/athas-log-service";
+import { useUIState } from "@/features/window/stores/ui-state.store";
 import { showAlertDialog } from "@/ui/dialog";
+import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import type { Action } from "../types/action.types";
 
 interface AdvancedActionsParams {
@@ -23,6 +49,10 @@ interface AdvancedActionsParams {
     activeWorkspaces: string[];
     lastError?: string | null | undefined;
   };
+  /** The current chat's running agent, when it advertises ACP logout. */
+  logOutAgentId: string | null;
+  /** The current chat's running agent, when it lists its sessions (ACP `session/list`). */
+  browseSessionsAgentId: string | null;
   vimMode: boolean;
   vimCommands: Array<{ name: string; description: string; execute: () => void }>;
   setMode: (mode: "normal" | "insert" | "visual") => void;
@@ -36,7 +66,17 @@ interface AdvancedActionsParams {
 }
 
 export const createAdvancedActions = (params: AdvancedActionsParams): Action[] => {
-  const { lspStatus, vimMode, vimCommands, setMode, openQuickEdit, showToast, onClose } = params;
+  const {
+    lspStatus,
+    logOutAgentId,
+    browseSessionsAgentId,
+    vimMode,
+    vimCommands,
+    setMode,
+    openQuickEdit,
+    showToast,
+    onClose,
+  } = params;
 
   const baseActions: Action[] = [
     {
@@ -54,6 +94,114 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
       },
     },
     {
+      id: "ai-toggle-follow-agent",
+      label: "AI: Toggle Follow Agent",
+      description: "Open the files the agent works in while its turn runs",
+      icon: <CrosshairIcon />,
+      category: "AI",
+      action: () => {
+        onClose();
+        const state = useBufferStore.getState();
+        const buffer = state.buffers.find((item) => item.id === state.activeBufferId);
+        const chatId =
+          buffer?.type === "agent" ? buffer.sessionId : useAIChatStore.getState().currentChatId;
+        if (!chatId) {
+          showToast({ message: "Open an agent tab first.", type: "info" });
+          return;
+        }
+        const following = toggleFollowAgent(chatId);
+        showToast({
+          message: following ? "Following the agent" : "Stopped following the agent",
+          type: "info",
+        });
+      },
+    },
+    {
+      id: "ai-cycle-agent-mode",
+      label: "AI: Cycle Agent Mode",
+      description: "Switch the current chat between Agent, Ask and Plan",
+      icon: <ChatBubbleTextIcon />,
+      category: "AI",
+      action: () => {
+        onClose();
+        const state = useBufferStore.getState();
+        const buffer = state.buffers.find((item) => item.id === state.activeBufferId);
+        const chatId =
+          buffer?.type === "agent" ? buffer.sessionId : useAIChatStore.getState().currentChatId;
+        const mode = cycleChatMode(readChatModeSource(chatId));
+        showToast({
+          message: mode ? `Mode: ${mode.label}` : "This agent has no other modes.",
+          type: "info",
+        });
+      },
+    },
+    ...(
+      [
+        {
+          id: "ai-review-agent-changes",
+          label: "AI: Review Agent Changes",
+          description: "Keep or reject the agent's file edits hunk by hunk",
+          icon: <GitDiffIcon />,
+          run: (chatId: string) => openAgentEditsReview(chatId),
+        },
+        {
+          id: "ai-keep-all-agent-changes",
+          label: "AI: Keep All Agent Changes",
+          description: "Accept every unreviewed edit the agent made",
+          icon: <CheckIcon />,
+          run: (chatId: string) => void keepAllAgentEdits(chatId),
+        },
+        {
+          id: "ai-reject-all-agent-changes",
+          label: "AI: Reject All Agent Changes",
+          description: "Revert every unreviewed edit the agent made",
+          icon: <XIcon />,
+          run: (chatId: string) => void rejectAllAgentEdits(chatId),
+        },
+      ] as const
+    ).map(({ run, ...command }): Action => ({
+      ...command,
+      category: "AI",
+      action: () => {
+        onClose();
+        const state = useBufferStore.getState();
+        const buffer = state.buffers.find((item) => item.id === state.activeBufferId);
+        const chatId = pickAgentEditsChatId(
+          buffer?.type === "agent" ? buffer.sessionId : useAIChatStore.getState().currentChatId,
+        );
+        if (!chatId) {
+          showToast({ message: "No agent changes to review.", type: "info" });
+          return;
+        }
+        run(chatId);
+      },
+    })),
+    ...(
+      [
+        {
+          id: "ai-keep-agent-change",
+          label: "AI: Keep Agent Change",
+          description: "Keep the unreviewed agent change at the cursor",
+          icon: <CheckIcon />,
+          commandId: "ai.keepAgentHunk",
+        },
+        {
+          id: "ai-undo-agent-change",
+          label: "AI: Undo Agent Change",
+          description: "Undo the unreviewed agent change at the cursor",
+          icon: <XIcon />,
+          commandId: "ai.rejectAgentHunk",
+        },
+      ] as const
+    ).map((command): Action => ({
+      ...command,
+      category: "AI",
+      action: () => {
+        onClose();
+        void keymapRegistry.executeCommand(command.commandId);
+      },
+    })),
+    {
       id: "ai-new-agent",
       label: "AI: New Agent",
       description: "Open a new agent chat",
@@ -63,6 +211,30 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
       action: () => {
         openNewAgentChat();
         onClose();
+      },
+    },
+    {
+      id: "ai-add-selection-to-chat",
+      label: "AI: Add Selection to Agent Chat",
+      description: "Attach the selected code to the current agent chat",
+      icon: <SparkleIcon />,
+      category: "AI",
+      commandId: "editor.addSelectionToChat",
+      action: () => {
+        onClose();
+        addActiveSelectionToAgentChat();
+      },
+    },
+    {
+      id: "ai-add-selection-to-new-chat",
+      label: "AI: Add Selection to New Agent Chat",
+      description: "Start a new agent chat with the selected code attached",
+      icon: <SparkleIcon />,
+      category: "AI",
+      commandId: "editor.addSelectionToNewChat",
+      action: () => {
+        onClose();
+        addActiveSelectionToNewAgentChat();
       },
     },
     {
@@ -76,6 +248,58 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
         onClose();
       },
     },
+    {
+      id: "ai-manage-allowed-commands",
+      label: "AI: Manage Allowed Commands",
+      description: "Review the commands and MCP tools the Athas agent runs without asking",
+      icon: <ShieldCheckIcon />,
+      category: "AI",
+      action: () => {
+        onClose();
+        useUIState.getState().openSettings("ai", "Allowed Commands");
+      },
+    },
+    {
+      id: "ai-open-acp-inspector",
+      label: "AI: Open ACP Inspector",
+      description: "Inspect the JSON-RPC traffic and capabilities of running ACP agents",
+      icon: <ArrowsLeftRightIcon />,
+      category: "AI",
+      action: () => {
+        useBufferStore.getState().actions.openAcpInspectorBuffer();
+        onClose();
+      },
+    },
+    ...(browseSessionsAgentId
+      ? [
+          {
+            id: "ai-import-agent-session",
+            label: "AI: Import Agent Session",
+            description: "Browse the agent's sessions for this workspace and open one",
+            icon: <HistoryIcon />,
+            category: "AI",
+            action: () => {
+              onClose();
+              openAgentSessions(browseSessionsAgentId);
+            },
+          },
+        ]
+      : []),
+    ...(logOutAgentId
+      ? [
+          {
+            id: "ai-log-out-agent",
+            label: "AI: Log Out of Agent",
+            description: "Sign out of the running agent; the next prompt asks how to sign in",
+            icon: <SignOutIcon />,
+            category: "AI",
+            action: () => {
+              onClose();
+              void logOutOfAcpAgent(logOutAgentId);
+            },
+          },
+        ]
+      : []),
     {
       id: "ai-quick-edit",
       label: "AI: Quick Edit Selection",

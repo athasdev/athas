@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
+import { tauriFetch } from "@/utils/tauri-fetch";
 import { getAuthToken } from "@/features/window/services/auth-api";
 import { getServiceUrls } from "@/config/services";
 

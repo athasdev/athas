@@ -1,5 +1,4 @@
 import type * as React from "react";
-import { cva, type VariantProps } from "class-variance-authority";
 import { CopyIcon, type Icon } from "@/ui/icons";
 import { Button, type ButtonProps } from "@/ui/button";
 import { cn } from "@/utils/cn";
@@ -32,49 +31,6 @@ function Message({
   );
 }
 
-const messageAvatarVariants = cva(
-  "flex shrink-0 items-center justify-center overflow-hidden [&_svg:not([class*='size-'])]:size-3.5",
-  {
-    variants: {
-      variant: {
-        default: "rounded-full bg-surface",
-        assistant: "rounded-md bg-accent text-subtle-foreground",
-      },
-      size: {
-        default: "",
-        compact: "size-6",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
-    },
-  },
-);
-
-function MessageAvatar({
-  className,
-  placement = "footer",
-  variant = "default",
-  size = "default",
-  ...props
-}: React.ComponentProps<"div"> &
-  VariantProps<typeof messageAvatarVariants> & { placement?: "content" | "footer" }) {
-  return (
-    <div
-      data-slot="message-avatar"
-      className={cn(
-        messageAvatarVariants({ variant, size }),
-        placement === "footer"
-          ? "min-w-8 self-end group-has-data-[slot=message-footer]/message:-translate-y-8"
-          : "min-w-6 self-start",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
 function MessageContent({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -93,7 +49,7 @@ function MessageHeader({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="message-header"
       className={cn(
-        "flex max-w-full min-w-0 items-center px-3 font-medium text-subtle-foreground ui-text-sm group-has-data-[variant=ghost]/message:px-0",
+        "flex max-w-full min-w-0 items-center px-3 font-medium text-muted-foreground ui-text-sm group-has-data-[variant=ghost]/message:px-0",
         className,
       )}
       {...props}
@@ -110,7 +66,7 @@ function MessageFooter({
     <div
       data-slot="message-footer"
       className={cn(
-        "flex min-h-6 max-w-full min-w-0 items-center gap-0.5 px-2 text-subtle-foreground/60 transition-opacity duration-fast ui-text-sm group-has-data-[variant=ghost]/message:px-0 group-data-[align=end]/message:justify-end md:pointer-events-none md:opacity-0 md:group-hover/message:pointer-events-auto md:group-hover/message:opacity-100 md:group-focus-within/message:pointer-events-auto md:group-focus-within/message:opacity-100",
+        "flex min-h-6 max-w-full min-w-0 items-center gap-0.5 px-2 text-subtle-foreground transition-opacity duration-fast ui-text-sm group-has-data-[variant=ghost]/message:px-0 group-data-[align=end]/message:justify-end md:pointer-events-none md:opacity-0 md:group-hover/message:pointer-events-auto md:group-hover/message:opacity-100 md:group-focus-within/message:pointer-events-auto md:group-focus-within/message:opacity-100",
         !reserveSpace && "-mb-6",
         className,
       )}
@@ -164,7 +120,7 @@ function MessageAction({
       iconOnly
       tooltip={tooltip ?? label}
       aria-label={label}
-      size="chrome"
+      size="sm"
       {...props}
     >
       {children ?? <Icon className="size-3.5" />}
@@ -176,11 +132,9 @@ export {
   Message,
   MessageAction,
   MessageActions,
-  MessageAvatar,
   MessageContent,
   MessageFooter,
   MessageGroup,
   MessageHeader,
-  messageAvatarVariants,
   MessageResponse,
 };

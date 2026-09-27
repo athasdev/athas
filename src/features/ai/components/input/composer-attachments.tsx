@@ -7,11 +7,14 @@ import {
   CodeBlockIcon,
   DatabaseIcon,
   FilesIcon,
+  FolderIcon,
   GitDiffIcon,
   GitPullRequestIcon,
+  HistoryIcon,
   ImageIcon,
   StackIcon,
   TerminalWindowIcon,
+  WarningIcon,
   XIcon,
 } from "@/ui/icons";
 import { GithubMark } from "@/ui/brand-marks";
@@ -35,12 +38,15 @@ import {
 
 const groupIcons = {
   files: FilesIcon,
+  folders: FolderIcon,
   diffs: GitDiffIcon,
   images: ImageIcon,
   selections: CodeBlockIcon,
   terminals: TerminalWindowIcon,
   databases: DatabaseIcon,
   github: GithubMark,
+  problems: WarningIcon,
+  chats: HistoryIcon,
   other: StackIcon,
 };
 
@@ -117,7 +123,7 @@ export function ComposerAttachments({
                   render={
                     <button
                       type="button"
-                      className="group inline-flex h-6 items-center gap-1.5 rounded-md bg-transparent px-1.5 font-sans ui-text-sm text-muted-foreground outline-none transition-colors duration-fast hover:bg-accent/60 hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary/25 data-popup-open:bg-accent/60 data-popup-open:text-foreground motion-reduce:transition-none"
+                      className="group inline-flex h-6 items-center gap-1.5 rounded-md bg-transparent px-1.5 font-sans ui-text-sm text-muted-foreground outline-none transition-colors duration-fast hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-focus data-popup-open:bg-accent data-popup-open:text-foreground motion-reduce:transition-none"
                     />
                   }
                   aria-label={`Review ${group.label}`}
@@ -141,7 +147,7 @@ export function ComposerAttachments({
                       <PopoverTitle>{group.label}</PopoverTitle>
                     </PopoverHeader>
                     <Button
-                      size="compact"
+                      size="xs"
                       variant="ghost"
                       aria-label={`Remove ${group.label}`}
                       onClick={() => removeEntries(group.items, 0)}
@@ -174,7 +180,7 @@ export function ComposerAttachments({
                           <ItemActions>
                             <Button
                               data-remove-attachment
-                              size="compact"
+                              size="xs"
                               variant="ghost"
                               iconOnly
                               aria-label={`Remove ${item.name} from context`}

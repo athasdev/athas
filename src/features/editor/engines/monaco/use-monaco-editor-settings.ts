@@ -1,12 +1,22 @@
+import { getTypographyFontFallbacks } from "@/features/settings/config/typography-defaults";
+import { buildFontFamilyStack } from "@/features/settings/lib/font-family-resolution";
+import { usePerformanceExperiments } from "@/features/settings/stores/performance-experiments.store";
+import { useWebGpuSupport } from "./use-webgpu-support";
 import { useZoomStore } from "@/features/window/stores/zoom.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { IS_WINDOWS } from "@/utils/platform";
 import { useShallow } from "zustand/react/shallow";
 import { useEditorSettingsStore } from "../../stores/settings.store";
 import { calculateLineHeight } from "../../utils/lines";
+import { useMonacoFontRemeasure } from "./font-remeasure";
 
 export function useMonacoEditorSettings() {
+  const webgpu = usePerformanceExperiments.use.webgpu();
+  const gpuSupport = useWebGpuSupport();
+  const experimentalGpuAcceleration: "on" | "off" =
+    webgpu && gpuSupport === "available" ? "on" : "off";
   const baseFontSize = useEditorSettingsStore.use.fontSize();
-  const fontFamily = useEditorSettingsStore.use.fontFamily();
+  const fontFamilySetting = useEditorSettingsStore.use.fontFamily();
   const editorLineHeight = useEditorSettingsStore.use.lineHeight();
   const tabSize = useEditorSettingsStore.use.tabSize();
   const wordWrap = useEditorSettingsStore.use.wordWrap();
@@ -38,8 +48,14 @@ export function useMonacoEditorSettings() {
   );
   const zoomLevel = useZoomStore.use.editorZoomLevel();
   const fontSize = baseFontSize * zoomLevel;
+  const fontFamily = buildFontFamilyStack(
+    fontFamilySetting,
+    getTypographyFontFallbacks(IS_WINDOWS).mono,
+  );
+  useMonacoFontRemeasure(fontFamily, fontSize);
 
   return {
+    experimentalGpuAcceleration,
     fontFamily,
     fontSize,
     lineHeight: calculateLineHeight(fontSize, editorLineHeight),

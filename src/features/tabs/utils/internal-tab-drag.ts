@@ -97,3 +97,64 @@ export function resolveDropTarget(point: { x: number; y: number }) {
 
   return { paneId: null, zone: null as InternalDropZone };
 }
+
+/**
+ * Where a tab dropped on a tab bar should land: the id of the tab it goes before, `null` for the
+ * end of the bar, or `undefined` when the point is not over a tab bar.
+ */
+export function resolveTabInsertBefore(
+  point: { x: number; y: number },
+  draggedId: string,
+): string | null | undefined {
+  const tabBar = document
+    .elementsFromPoint(point.x, point.y)
+    .map((element) => element.closest<HTMLElement>("[data-tab-bar-pane-id]"))
+    .find(Boolean);
+  if (!tabBar) return undefined;
+
+  for (const tab of tabBar.querySelectorAll<HTMLElement>("[data-sortable-id]")) {
+    const id = tab.dataset.sortableId;
+    if (!id || id === draggedId) continue;
+    const rect = tab.getBoundingClientRect();
+    if (point.x < rect.left + rect.width / 2) return id;
+  }
+  return null;
+}
+
+/**
+ * Tabs render in the global buffer order, filtered to the pane. To put `movedId` before
+ * `beforeId` (or after the pane's last tab when `beforeId` is null), returns the global
+ * `[from, to]` indices for a remove-then-insert reorder, or null when nothing needs to move.
+ */
+export function getGlobalTabMove(
+  globalIds: readonly string[],
+  movedId: string,
+  beforeId: string | null,
+  paneIds: readonly string[],
+): [number, number] | null {
+  const from = globalIds.indexOf(movedId);
+  if (from === -1) return null;
+
+  // Already in place within the pane: nothing to move.
+  const paneIdSet = new Set(paneIds);
+  const paneOrder = globalIds.filter((id) => id === movedId || paneIdSet.has(id));
+  const next = paneOrder[paneOrder.indexOf(movedId) + 1] ?? null;
+  if (next === beforeId) return null;
+
+  let target: number;
+  if (beforeId) {
+    target = globalIds.indexOf(beforeId);
+    if (target === -1) return null;
+  } else {
+    let last = -1;
+    globalIds.forEach((id, index) => {
+      if (id !== movedId && paneIdSet.has(id)) last = index;
+    });
+    if (last === -1) return null;
+    target = last + 1;
+  }
+
+  // Removing `from` first shifts everything after it one slot to the left.
+  const to = from < target ? target - 1 : target;
+  return from === to ? null : [from, to];
+}

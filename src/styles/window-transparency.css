@@ -1,36 +1,44 @@
+/*
+ * Window transparency ("glass").
+ *
+ * With transparency on, the layout shell, the activity rail and the sidebar
+ * panes show the desktop through them (native vibrancy on macOS, a backdrop
+ * blur on Windows), while the editor, sidebar contents and bottom pane sit on
+ * translucent islands.
+ *
+ * Nothing here restyles individual controls. Instead the interaction tokens
+ * are remapped inside the shell, so every hover, active fill, surface and
+ * hairline that the design system already uses reads the same over any
+ * wallpaper: fills are a foreground tint (white on dark themes, black on light
+ * ones), never the theme's opaque accent colour, and text keeps full contrast.
+ */
+
 .window-container {
   overflow: hidden;
 }
 
 html:is(.platform-macos, .platform-windows):not([data-window-transparency="disabled"]) {
   --athas-glass-shell-bg: color-mix(in srgb, var(--surface) 12%, transparent);
-  --athas-glass-control-bg: color-mix(in srgb, var(--surface) 20%, transparent);
-  --athas-glass-control-active-bg: color-mix(in srgb, var(--accent) 70%, transparent);
-  --athas-glass-control-border: color-mix(in srgb, var(--border) 26%, transparent);
-  --athas-glass-popover-bg: color-mix(in srgb, var(--background) 62%, transparent);
-  --athas-glass-popover-border: color-mix(in srgb, var(--border) 50%, transparent);
-  --athas-glass-island-bg: var(--athas-glass-popover-bg);
-  --athas-chrome-icon-color: color-mix(in srgb, var(--muted-foreground) 78%, transparent);
-  --athas-chrome-icon-hover-color: var(--foreground);
-  --athas-chrome-icon-active-color: var(--foreground);
-  --athas-chrome-control-hover-bg: color-mix(in srgb, var(--accent) 58%, transparent);
-  --athas-chrome-control-active-bg: color-mix(in srgb, var(--accent) 72%, transparent);
+  --athas-glass-island-bg: color-mix(in srgb, var(--background) 70%, transparent);
+  --athas-glass-surface: color-mix(in srgb, var(--surface) 48%, transparent);
+  --athas-glass-border: color-mix(in srgb, var(--foreground) 14%, transparent);
+  --athas-glass-border-strong: color-mix(in srgb, var(--foreground) 32%, transparent);
+  --athas-glass-hover: color-mix(in srgb, var(--foreground) 9%, transparent);
+  --athas-glass-active: color-mix(in srgb, var(--foreground) 16%, transparent);
   --athas-navigation-material: color-mix(in srgb, var(--surface) 74%, transparent);
 }
 
 html:is(.platform-macos, .platform-windows):not(
     [data-window-transparency="disabled"]
   )[data-theme-type="light"] {
-  --athas-glass-shell-bg: color-mix(in srgb, var(--surface) 42%, transparent);
-  --athas-glass-control-bg: color-mix(in srgb, var(--background) 42%, transparent);
-  --athas-glass-control-active-bg: color-mix(in srgb, var(--background) 78%, transparent);
-  --athas-glass-control-border: color-mix(in srgb, var(--border) 42%, transparent);
-  --athas-glass-popover-bg: color-mix(in srgb, var(--background) 78%, transparent);
-  --athas-glass-popover-border: color-mix(in srgb, var(--border) 55%, transparent);
-  --athas-chrome-icon-color: color-mix(in srgb, var(--foreground) 66%, transparent);
-  --athas-chrome-icon-hover-color: color-mix(in srgb, var(--foreground) 92%, var(--primary) 8%);
-  --athas-chrome-icon-active-color: color-mix(in srgb, var(--foreground) 88%, var(--primary) 12%);
-  --athas-chrome-control-hover-bg: color-mix(in srgb, var(--background) 62%, transparent);
+  --athas-glass-shell-bg: color-mix(in srgb, var(--surface) 46%, transparent);
+  --athas-glass-island-bg: color-mix(in srgb, var(--background) 84%, transparent);
+  --athas-glass-surface: color-mix(in srgb, var(--surface) 62%, transparent);
+  --athas-glass-border: color-mix(in srgb, var(--foreground) 12%, transparent);
+  --athas-glass-border-strong: color-mix(in srgb, var(--foreground) 28%, transparent);
+  --athas-glass-hover: color-mix(in srgb, var(--foreground) 7%, transparent);
+  --athas-glass-active: color-mix(in srgb, var(--foreground) 13%, transparent);
+  --athas-navigation-material: color-mix(in srgb, var(--surface) 80%, transparent);
 }
 
 html:is(.platform-macos, .platform-windows):not([data-window-transparency="disabled"])
@@ -38,17 +46,22 @@ html:is(.platform-macos, .platform-windows):not([data-window-transparency="disab
   background: transparent !important;
 }
 
+/* The shell: see-through, and the token remap for everything inside it. */
 html:is(.platform-macos, .platform-windows):not([data-window-transparency="disabled"])
   .athas-layout-shell:not([data-window-surface="content"]) {
+  --accent: var(--athas-glass-hover);
+  --selected: var(--athas-glass-active);
+  --surface: var(--athas-glass-surface);
+  --border: var(--athas-glass-border);
+  --border-strong: var(--athas-glass-border-strong);
   background: var(--athas-glass-shell-bg) !important;
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
 
+/* Rail and panes: the OS provides the material on macOS, we blur on Windows. */
 html:is(.platform-macos, .platform-windows):not([data-window-transparency="disabled"])
-  .athas-resizable-pane,
-html:is(.platform-macos, .platform-windows):not([data-window-transparency="disabled"])
-  .athas-sidebar-rail {
+  :is(.athas-resizable-pane, .athas-sidebar-rail) {
   background: var(--athas-navigation-material) !important;
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
@@ -65,6 +78,7 @@ html.platform-windows:not([data-window-transparency="disabled"])
   backdrop-filter: blur(18px) saturate(1.08);
 }
 
+/* Islands: editor, sidebar contents, bottom pane. */
 html:is(.platform-macos, .platform-windows):not([data-window-transparency="disabled"])
   .athas-glass-island {
   background: var(--athas-glass-island-bg) !important;
@@ -89,59 +103,7 @@ html:is(.platform-macos, .platform-windows):not([data-window-transparency="disab
   backdrop-filter: none;
 }
 
-html:is(.platform-macos, .platform-windows):not([data-window-transparency="disabled"])
-  .athas-title-project-add-button {
-  border-color: var(--athas-glass-control-border) !important;
-  background: var(--athas-glass-control-bg) !important;
-  color: var(--athas-chrome-icon-color) !important;
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
-}
-
-html:is(.platform-macos, .platform-windows):not([data-window-transparency="disabled"])
-  .athas-title-project-surface:hover,
-html:is(.platform-macos, .platform-windows):not([data-window-transparency="disabled"])
-  .athas-title-project-add-button:hover {
-  background: var(--athas-chrome-control-hover-bg) !important;
-  color: var(--athas-chrome-icon-hover-color) !important;
-}
-
-html:is(.platform-macos, .platform-windows):not([data-window-transparency="disabled"])
-  .athas-project-picker-command {
-  border-color: var(--athas-glass-popover-border) !important;
-  background: var(--athas-glass-popover-bg) !important;
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
-}
-
-html:is(.platform-macos, .platform-windows):not([data-window-transparency="disabled"])
-  .athas-project-picker-command
-  [data-command-header],
-html:is(.platform-macos, .platform-windows):not([data-window-transparency="disabled"])
-  .athas-project-picker-command
-  [data-command-footer] {
-  background: color-mix(in srgb, var(--athas-glass-popover-bg) 72%, transparent) !important;
-}
-
-html:is(.platform-macos, .platform-windows):not([data-window-transparency="disabled"])
-  .athas-chrome-control {
-  color: var(--athas-chrome-icon-color) !important;
-}
-
-html:is(.platform-macos, .platform-windows):not([data-window-transparency="disabled"])
-  .athas-chrome-control:hover,
-html:is(.platform-macos, .platform-windows):not([data-window-transparency="disabled"])
-  .athas-chrome-control:focus-visible {
-  background: var(--athas-chrome-control-hover-bg) !important;
-  color: var(--athas-chrome-icon-hover-color) !important;
-}
-
-html:is(.platform-macos, .platform-windows):not([data-window-transparency="disabled"])
-  .athas-chrome-control[data-active="true"] {
-  background: var(--athas-chrome-control-active-bg) !important;
-  color: var(--athas-chrome-icon-active-color) !important;
-}
-
+/* Transparency off: opaque planes exactly as the theme defines them. */
 html[data-window-transparency="disabled"] .window-container {
   background: var(--background) !important;
 }
@@ -151,9 +113,11 @@ html[data-window-transparency="disabled"] .athas-resizable-pane {
   background: var(--surface) !important;
 }
 
+/* OS "reduce transparency": keep the layout, drop the see-through materials. */
 html[data-reduce-transparency="true"] {
   --athas-navigation-material: var(--surface);
   --athas-glass-island-bg: var(--background);
+  --athas-glass-shell-bg: var(--surface);
 }
 
 html[data-reduce-transparency="true"]

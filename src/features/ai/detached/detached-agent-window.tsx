@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { AgentTab } from "@/features/ai/components/agent-tab";
 import { AgentSessionIcon } from "@/features/ai/components/icons/agent-session-icon";
+import { useAcpEventSync } from "@/features/ai/hooks/use-acp-event-sync";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
@@ -21,7 +22,6 @@ import {
   setAgentWindowSessionOpener,
 } from "./agent-window-service";
 import { getAgentWindowTransferBlocker } from "./agent-window-state";
-import { useAgentWindowStore } from "./agent-window.store";
 
 enableMapSet();
 
@@ -32,6 +32,7 @@ const RETURN_TIMEOUT_MS = 10_000;
  * drafts and comes back to the main window when this window closes.
  */
 export default function DetachedAgentWindow() {
+  useAcpEventSync();
   const [ready, setReady] = useState(false);
   const [returning, setReturning] = useState(false);
   const [sessionError, setSessionError] = useState<string | null>(null);
@@ -76,8 +77,6 @@ export default function DetachedAgentWindow() {
         useAIChatStore.getState().actions.switchToChat(chatId);
         setReady(true);
         post({ type: "snapshot", snapshot: captureAgentWindowSnapshot(chatId) });
-      } else if (data.type === "identity") {
-        useAgentWindowStore.getState().actions.setAccountIdentity(data.identity);
       } else if (data.type === "returned" && returningRef.current) {
         clearTimeout(returnTimer.current);
         void getCurrentWindow()
@@ -97,7 +96,7 @@ export default function DetachedAgentWindow() {
   const returnToOwner = useCallback(() => {
     if (returningRef.current) return;
     if (!sessionId.current) {
-      void getCurrentWindow().destroy();
+      void getCurrentWindow().destroy().catch(console.error);
       return;
     }
     const blocker = getAgentWindowTransferBlocker(useAIChatStore.getState(), sessionId.current);
@@ -138,7 +137,6 @@ export default function DetachedAgentWindow() {
       unsubscribeChat();
       unsubscribeBuffers();
       setAgentWindowSessionOpener(null);
-      useAgentWindowStore.getState().actions.setAccountIdentity(null);
     };
   }, [post]);
 
@@ -157,7 +155,7 @@ export default function DetachedAgentWindow() {
           <Button
             type="button"
             variant="ghost"
-            size="chrome"
+            size="sm"
             onClick={returnToOwner}
             tooltip="Move this session back to the main window"
             shortcut="mod+w"

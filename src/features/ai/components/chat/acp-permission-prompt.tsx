@@ -1,17 +1,87 @@
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { KeyIcon } from "@/ui/icons";
-import type { AcpEvent, AcpPermissionOption } from "@/features/ai/types/acp.types";
+import Keybinding from "@/features/keymaps/components/keybinding";
+import {
+  findPermissionOptionForShortcut,
+  getPermissionOptionShortcut,
+  getPermissionShortcut,
+} from "@/features/ai/lib/permission-shortcuts";
+import type { AcpPermissionOption, AcpPermissionPreview } from "@/features/ai/types/acp.types";
+import type { AgentPermissionRequest } from "@/features/ai/types/agent-permission.types";
+import { createAcpDiffViewNode, toRelativeDisplayPath } from "@/features/ai/lib/acp-diff-output";
+import { ToolLocations } from "@/features/ai/components/messages/tool-locations";
+import { useProjectStore } from "@/features/window/stores/project.store";
+import { ExtensionViewRenderer } from "@/extensions/ui/components/extension-view-renderer";
 import Badge from "@/ui/badge";
-import { Button, type ButtonVariant } from "@/ui/button";
+import { CodeOutput } from "@/ui/code-output";
+import Textarea from "@/ui/textarea";
+import { Button, type ButtonProps } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import { chatContentWidth } from "./chat-content-width";
 
-export type AcpPermissionRequest = {
-  requestId: string;
-  description: string;
-  permissionType: string;
-  resource: string;
-  options: Extract<AcpEvent, { type: "permission_request" }>["options"];
-};
+function PreviewText({ label, text, mono }: { label: string; text: string; mono?: boolean }) {
+  return (
+    <CodeOutput aria-label={label} height="auto" font={mono ? "mono" : "sans"}>
+      {text}
+    </CodeOutput>
+  );
+}
+
+function PermissionPreview({ preview }: { preview: AcpPermissionPreview }) {
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
+  if (preview.type === "diff") {
+    return (
+      <ExtensionViewRenderer
+        node={createAcpDiffViewNode(preview, rootFolderPath)}
+        execute={() => undefined}
+        surface="embedded"
+      />
+    );
+  }
+  if (preview.type === "tool_call") {
+    return (
+      <div className="flex max-h-72 min-w-0 flex-col gap-1.5 overflow-y-auto">
+        {preview.diffs.map((diff, index) => (
+          <ExtensionViewRenderer
+            key={`${diff.path}-${index}`}
+            node={createAcpDiffViewNode(diff, rootFolderPath)}
+            execute={() => undefined}
+            surface="embedded"
+          />
+        ))}
+        {preview.command ? (
+          <PreviewText label="Proposed shell command" text={preview.command} mono />
+        ) : null}
+        {preview.text ? <PreviewText label="Tool call details" text={preview.text} /> : null}
+        {preview.inputSummary ? (
+          <PreviewText label="Tool call input" text={preview.inputSummary} mono />
+        ) : null}
+        {preview.locations.length > 0 ? (
+          <ToolLocations locations={preview.locations} rootFolderPath={rootFolderPath} />
+        ) : null}
+      </div>
+    );
+  }
+  return (
+    <CodeOutput aria-label="Proposed shell command" height="compact">
+      {preview.command}
+    </CodeOutput>
+  );
+}
+
+function getPreviewSummary(
+  preview: AcpPermissionPreview,
+  rootFolderPath?: string | null,
+): string | undefined {
+  if (preview.type === "tool_call") {
+    return preview.title ?? undefined;
+  }
+  if (preview.type === "diff") {
+    const isNew = preview.oldText.length === 0;
+    return `${isNew ? "Create" : "Edit"} ${toRelativeDisplayPath(preview.path, rootFolderPath)}`;
+  }
+  return `Run ${preview.command.trim().split("\n")[0] ?? ""}`;
+}
 
 const fallbackOptions: AcpPermissionOption[] = [
   { id: "reject", name: "Deny", kind: "reject_once" },
@@ -48,17 +118,19 @@ function getOptionTooltip(option: AcpPermissionOption) {
   }
 }
 
-function getOptionVariant(option: AcpPermissionOption): ButtonVariant {
+function getOptionStyle(
+  option: AcpPermissionOption,
+): Partial<Pick<ButtonProps, "variant" | "tone">> {
   switch (option.kind) {
     case "allow_always":
-      return "accent";
+      return { variant: "accent" };
     case "allow_once":
-      return "default";
+      return { variant: "default" };
     case "reject_always":
     case "reject_once":
-      return "danger";
+      return { variant: "ghost", tone: "danger" };
     default:
-      return "ghost";
+      return { variant: "ghost" };
   }
 }
 
@@ -66,24 +138,97 @@ function isApproval(option: AcpPermissionOption) {
   return option.kind === "allow_once" || option.kind === "allow_always";
 }
 
+/** Someone typing a message keeps their focus; otherwise the prompt takes it. */
+function isTypingElsewhere(element: Element | null) {
+  if (!(element instanceof HTMLElement)) return false;
+  if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+    return element.value.trim().length > 0;
+  }
+  return element.isContentEditable && (element.textContent ?? "").trim().length > 0;
+}
+
 export function AcpPermissionPrompt({
   permission,
   queuedCount,
   onRespond,
 }: {
-  permission: AcpPermissionRequest;
+  permission: AgentPermissionRequest;
   queuedCount: number;
   onRespond: (approved: boolean, optionId?: string) => void;
 }) {
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const summary = (
+    (permission.preview && getPreviewSummary(permission.preview, rootFolderPath)) ||
     permission.description ||
     [permission.permissionType, permission.resource].filter(Boolean).join(" ")
   ).trim();
   const options = permission.options.length > 0 ? permission.options : fallbackOptions;
+  const promptRef = useRef<HTMLDivElement>(null);
+  const [hasFocus, setHasFocus] = useState(false);
+  const respond = (option: AcpPermissionOption) =>
+    onRespond(isApproval(option), permission.options.length > 0 ? option.id : undefined);
+  const shortcutOwners = new Set(
+    (["enter", "mod+enter", "escape"] as const).flatMap((shortcut) => {
+      const option = findPermissionOptionForShortcut(options, shortcut);
+      return option ? [option.id] : [];
+    }),
+  );
+
+  useEffect(() => {
+    const previous = document.activeElement;
+    if (isTypingElsewhere(previous)) return;
+    const prompt = promptRef.current;
+    prompt?.focus();
+    return () => {
+      const active = document.activeElement;
+      const lostFocus = !active || active === document.body || prompt?.contains(active);
+      if (lostFocus && previous instanceof HTMLElement && previous.isConnected) previous.focus();
+    };
+  }, [permission.requestId]);
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const shortcut = getPermissionShortcut(event);
+    if (!shortcut || event.nativeEvent.isComposing) return;
+    // A focused button answers Enter itself.
+    if (shortcut === "enter" && event.target !== event.currentTarget) return;
+    const option = findPermissionOptionForShortcut(options, shortcut);
+    if (!option) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (!event.repeat) respond(option);
+  };
 
   return (
-    <div className={cn(chatContentWidth(), "mb-1 ui-text-sm")}>
-      <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5 rounded-xl border border-border/70 bg-background/92 px-2 py-1.5 shadow-(--shadow-card)">
+    <div className={cn(chatContentWidth(), "mb-1 flex flex-col gap-1.5 ui-text-sm")}>
+      {permission.preview ? (
+        <PermissionPreview preview={permission.preview} />
+      ) : permission.requestId.startsWith("intelligence:") ? (
+        <Textarea
+          aria-label={
+            permission.permissionType === "intelligence-command"
+              ? "Proposed shell command"
+              : "Proposed workspace edit"
+          }
+          readOnly
+          font="mono"
+          resize="y"
+          rows={12}
+          value={permission.description}
+        />
+      ) : null}
+      <div
+        ref={promptRef}
+        role="group"
+        aria-label="Permission request"
+        aria-keyshortcuts="Enter Meta+Enter Control+Enter Escape"
+        tabIndex={-1}
+        onKeyDown={handleKeyDown}
+        onFocus={() => setHasFocus(true)}
+        onBlur={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget)) setHasFocus(false);
+        }}
+        className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5 rounded-xl border border-border bg-background px-2 py-1.5 shadow-(--shadow-card) outline-none focus-visible:border-primary"
+      >
         <KeyIcon className="size-3.5 shrink-0 text-subtle-foreground" />
         <div
           className="flex min-w-0 flex-1 basis-40 items-center text-foreground"
@@ -93,21 +238,20 @@ export function AcpPermissionPrompt({
           <span className="shrink-0 px-1.5 text-subtle-foreground">/</span>
           <span className="min-w-0 truncate font-mono">{summary}</span>
         </div>
-        {queuedCount > 0 ? <Badge variant="muted">+{queuedCount}</Badge> : null}
+        {queuedCount > 0 ? <Badge>+{queuedCount}</Badge> : null}
         <div className="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-1">
           {options.map((option) => {
+            const shortcut = shortcutOwners.has(option.id)
+              ? getPermissionOptionShortcut(option)
+              : undefined;
             return (
               <Button
                 key={option.id}
                 type="button"
-                variant={getOptionVariant(option)}
-                onClick={() =>
-                  onRespond(
-                    isApproval(option),
-                    permission.options.length > 0 ? option.id : undefined,
-                  )
-                }
+                {...getOptionStyle(option)}
+                onClick={() => respond(option)}
                 tooltip={getOptionTooltip(option)}
+                shortcut={shortcut}
               >
                 {getOptionLabel(option)}
               </Button>
@@ -115,6 +259,19 @@ export function AcpPermissionPrompt({
           })}
         </div>
       </div>
+      {hasFocus ? (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-2 text-subtle-foreground">
+          {(["enter", "mod+enter", "escape"] as const).map((shortcut) => {
+            const option = findPermissionOptionForShortcut(options, shortcut);
+            return option ? (
+              <span key={shortcut} className="flex items-center gap-1">
+                <Keybinding binding={shortcut} />
+                {getOptionTooltip(option)}
+              </span>
+            ) : null;
+          })}
+        </div>
+      ) : null}
     </div>
   );
 }

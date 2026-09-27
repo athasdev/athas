@@ -100,9 +100,9 @@ export const GitCommitFilesPanel = memo(function GitCommitFilesPanel({
         </code>
       </SidebarTitleBar>
 
-      <div className="shrink-0 border-border/60 border-b px-3 py-3">
+      <div className="shrink-0 border-border border-b px-3 py-3">
         <div className="flex min-w-0 items-start gap-2.5">
-          <Avatar name={commit.author} src={avatarUrl} className="mt-0.5 size-7" />
+          <Avatar name={commit.author} src={avatarUrl} />
           <div className="min-w-0 flex-1">
             <div
               className="line-clamp-2 font-medium leading-snug text-foreground"
