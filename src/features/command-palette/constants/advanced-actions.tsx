@@ -36,6 +36,7 @@ import {
 } from "@/features/keymaps/commands/lsp-command-actions";
 import { openAthasLogBuffer } from "@/features/settings/services/athas-log-service";
 import { showAlertDialog } from "@/ui/dialog";
+import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import type { Action } from "../types/action.types";
 
 interface AdvancedActionsParams {
@@ -150,6 +151,31 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
           return;
         }
         run(chatId);
+      },
+    })),
+    ...(
+      [
+        {
+          id: "ai-keep-agent-change",
+          label: "AI: Keep Agent Change",
+          description: "Keep the unreviewed agent change at the cursor",
+          icon: <CheckIcon />,
+          commandId: "ai.keepAgentHunk",
+        },
+        {
+          id: "ai-undo-agent-change",
+          label: "AI: Undo Agent Change",
+          description: "Undo the unreviewed agent change at the cursor",
+          icon: <XIcon />,
+          commandId: "ai.rejectAgentHunk",
+        },
+      ] as const
+    ).map((command): Action => ({
+      ...command,
+      category: "AI",
+      action: () => {
+        onClose();
+        void keymapRegistry.executeCommand(command.commandId);
       },
     })),
     {

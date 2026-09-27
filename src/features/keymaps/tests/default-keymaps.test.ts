@@ -28,6 +28,17 @@ describe("default keymaps", () => {
     expect(editorKeys.filter((key) => key === "cmd+l" || key === "cmd+alt+l")).toHaveLength(2);
   });
 
+  it("keeps and undoes agent changes only while the editor shows them", () => {
+    const when = "editorFocus && agentEditHunks";
+    expectKeybinding("ai.keepAgentHunk", "cmd+y", when);
+    expectKeybinding("ai.rejectAgentHunk", "cmd+n", when);
+    // Earlier bindings win, so these must come before redo and new tab.
+    const index = (command: string, key: string) =>
+      defaultKeymaps.findIndex((binding) => binding.command === command && binding.key === key);
+    expect(index("ai.keepAgentHunk", "cmd+y")).toBeLessThan(index("editor.redo", "cmd+y"));
+    expect(index("ai.rejectAgentHunk", "cmd+n")).toBeLessThan(index("workbench.newTab", "cmd+n"));
+  });
+
   it("registers editor navigation and folding shortcuts", () => {
     const byCommand = new Map(defaultKeymaps.map((keybinding) => [keybinding.command, keybinding]));
 
