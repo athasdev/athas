@@ -299,6 +299,27 @@
   outline: 1px solid color-mix(in srgb, var(--primary) 72%, white 8%);
 }
 
+.monaco-editor-shell .monaco-editor .agent-edit-added-line {
+  background-color: var(--git-added-soft);
+}
+
+.monaco-editor-shell .monaco-editor .agent-edit-added-gutter {
+  margin-left: 3px;
+  border-left: 2px solid var(--git-added);
+}
+
+.monaco-editor-shell .monaco-editor .agent-edit-removed-lines {
+  border-left: 2px solid var(--git-deleted);
+  background-color: var(--git-deleted-soft);
+  color: var(--subtle-foreground);
+  pointer-events: none;
+}
+
+.monaco-editor-shell .monaco-editor .agent-edit-removed-line {
+  overflow: hidden;
+  white-space: pre;
+}
+
 .monaco-editor-shell .monaco-inline-git-blame {
   color: var(--subtle-foreground);
   opacity: 0.8;
