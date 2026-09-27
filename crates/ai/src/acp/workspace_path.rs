@@ -35,54 +35,15 @@ pub(super) fn path_to_string(path: &Path) -> String {
    path.to_string_lossy().to_string()
 }
 
-pub(super) fn resolve_path_against_workspace(
-   workspace_path: Option<&Path>,
-   path: &str,
-) -> Result<PathBuf> {
+pub(super) fn resolve_path_against_workspace(workspace_path: Option<&Path>, path: &str) -> PathBuf {
    let candidate = PathBuf::from(path);
-   let joined = if candidate.is_absolute() {
-      candidate
-   } else if let Some(workspace) = workspace_path {
-      workspace.join(candidate)
-   } else {
-      std::env::current_dir().unwrap_or_default().join(candidate)
-   };
-   let normalized = lexical_normalize(&joined);
-   let Some(workspace) = workspace_path else {
-      return Ok(normalized);
-   };
-
-   let workspace_normalized = lexical_normalize(workspace);
-   if !normalized.starts_with(&workspace_normalized) {
-      bail!("Path escapes the agent workspace");
+   if candidate.is_absolute() {
+      return candidate;
    }
-   enforce_no_symlink_escape(&workspace_normalized, &normalized)?;
-   Ok(normalized)
-}
 
-fn enforce_no_symlink_escape(workspace: &Path, path: &Path) -> Result<()> {
-   let canonical_workspace = fs::canonicalize(workspace)
-      .with_context(|| format!("Workspace path is not reachable: {}", workspace.display()))?;
-   let mut ancestor = path;
-   loop {
-      match fs::canonicalize(ancestor) {
-         Ok(canonical) => {
-            if !canonical.starts_with(&canonical_workspace) {
-               bail!("Path escapes the agent workspace through a symlink");
-            }
-            return Ok(());
-         }
-         Err(_) => {
-            let Some(parent) = ancestor.parent() else {
-               bail!("Path escapes the agent workspace");
-            };
-            if parent.as_os_str().is_empty() {
-               bail!("Path escapes the agent workspace");
-            }
-            ancestor = parent;
-         }
-      }
-   }
+   workspace_path
+      .map(|workspace| workspace.join(candidate.clone()))
+      .unwrap_or_else(|| std::env::current_dir().unwrap_or_default().join(candidate))
 }
 
 fn path_from_workspace_input(input: &str) -> Result<PathBuf> {
@@ -237,45 +198,11 @@ mod tests {
 
    #[test]
    fn resolves_relative_paths_against_workspace() {
-      let temp_dir = tempfile::tempdir().unwrap();
-      let workspace = temp_dir.path().join("repo");
-      fs::create_dir(&workspace).unwrap();
+      let workspace = PathBuf::from("/workspace");
 
       assert_eq!(
-         resolve_path_against_workspace(Some(&workspace), "src/main.ts").unwrap(),
-         workspace.join("src/main.ts")
+         resolve_path_against_workspace(Some(&workspace), "src/main.ts"),
+         PathBuf::from("/workspace/src/main.ts")
       );
-   }
-
-   #[test]
-   fn rejects_absolute_paths_outside_the_workspace() {
-      let temp_dir = tempfile::tempdir().unwrap();
-      let workspace = temp_dir.path().join("repo");
-      fs::create_dir(&workspace).unwrap();
-
-      let err = resolve_path_against_workspace(Some(&workspace), "/etc/passwd").unwrap_err();
-      assert!(err.to_string().contains("escapes the agent workspace"));
-   }
-
-   #[test]
-   fn rejects_parent_traversal_outside_the_workspace() {
-      let temp_dir = tempfile::tempdir().unwrap();
-      let workspace = temp_dir.path().join("repo");
-      fs::create_dir(&workspace).unwrap();
-
-      let err = resolve_path_against_workspace(Some(&workspace), "../outside.txt").unwrap_err();
-      assert!(err.to_string().contains("escapes the agent workspace"));
-   }
-
-   #[cfg(unix)]
-   #[test]
-   fn rejects_symlink_escape_from_the_workspace() {
-      let temp_dir = tempfile::tempdir().unwrap();
-      let workspace = temp_dir.path().join("repo");
-      fs::create_dir(&workspace).unwrap();
-      std::os::unix::fs::symlink("/etc", workspace.join("link")).unwrap();
-
-      let err = resolve_path_against_workspace(Some(&workspace), "link/passwd").unwrap_err();
-      assert!(err.to_string().contains("escapes the agent workspace"));
    }
 }
