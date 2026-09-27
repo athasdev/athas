@@ -41,6 +41,23 @@ function createDependencies(overrides: Partial<AuthStoreDependencies> = {}): Aut
 }
 
 describe("auth store", () => {
+  it("signs out an expired session even when its token cannot be removed", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const dependencies = createDependencies({
+      fetchCurrentUser: vi.fn(async () => {
+        throw new Error("expired");
+      }),
+      isAuthInvalidError: vi.fn(() => true),
+      removeAuthToken: vi.fn(async () => {
+        throw new Error("keychain locked");
+      }),
+    });
+    const store = createAuthStore(dependencies);
+
+    await expect(store.getState().actions.initialize()).resolves.toBeUndefined();
+    expect(store.getState()).toMatchObject({ isAuthenticated: false, isLoading: false });
+  });
+
   it("keeps a valid session when subscription lookup has a transient failure", async () => {
     const dependencies = createDependencies({
       fetchSubscriptionStatus: vi.fn(async () => {

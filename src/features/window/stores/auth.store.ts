@@ -151,7 +151,13 @@ export function createAuthStore(
             if (revision !== sessionRevision) return;
             const invalid = dependencies.isAuthInvalidError(error);
             if (invalid) {
-              await dependencies.removeAuthToken();
+              // The session is over either way; a keychain error must not leave it loading.
+              await dependencies
+                .removeAuthToken()
+                .catch((removeError) =>
+                  console.error("Failed to remove the expired auth token:", removeError),
+                );
+              if (revision !== sessionRevision) return;
             } else if (dependencies.waitForReconnect) {
               // The server could not be reached; the saved session may still be fine.
               const attempt = reconnectAttempt++;
@@ -208,7 +214,11 @@ export function createAuthStore(
           } catch (error) {
             if (revision !== sessionRevision) return;
             if (dependencies.isAuthInvalidError(error)) {
-              await dependencies.removeAuthToken();
+              await dependencies
+                .removeAuthToken()
+                .catch((removeError) =>
+                  console.error("Failed to remove the rejected auth token:", removeError),
+                );
             }
             set((state) => {
               if (dependencies.isAuthInvalidError(error)) {
