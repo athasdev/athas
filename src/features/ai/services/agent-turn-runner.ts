@@ -382,19 +382,21 @@ class AgentTurnStream {
     });
   }
 
-  /** Where streamed text lands; the one place to switch to batched appends. */
+  /** Where streamed text lands; queued so a burst of tokens reaches the store once per frame. */
   onChunk = (chunk: string) => {
     this.rawContent += chunk;
     const extracted = extractFollowUpActions(this.rawContent);
-    this.update(() => ({
+    chatActions().queueMessageUpdate(this.chatId, this.messageId, {
       content: extracted.content,
       followUpActions: extracted.actions,
       responsePhase: undefined,
-    }));
+    });
   };
 
   onComplete = (completion?: BuiltInCompletion) => {
     const { chatId, turn } = this;
+    // The final chunks may still be queued; the checks below read the finished content.
+    chatActions().flushMessageUpdates(chatId);
     useAgentPermissionsStore.getState().actions.dropSettled(chatId);
     const wasCancelled = completion?.outcome === "cancelled";
     if (wasCancelled || (completion?.stopReason && completion.stopReason !== "end_turn")) {
@@ -489,6 +491,7 @@ class AgentTurnStream {
   /** Settles the turn as failed: a legacy error block for the reader plus a structured error. */
   fail(error: string, phase: AiFailurePhase, canReconnect?: boolean) {
     if (this.settled) return;
+    chatActions().flushMessageUpdates(this.chatId);
     useAgentPermissionsStore.getState().actions.dropSettled(this.chatId);
     console.error("Streaming error:", error);
     const failure = describeAgentTurnFailure({

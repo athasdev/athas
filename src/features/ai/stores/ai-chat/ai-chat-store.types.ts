@@ -108,6 +108,16 @@ export interface AIChatActions {
   setChatAcpSessionId: (chatId: string, sessionId: string | null) => void;
   addMessage: (chatId: string, message: Message) => void;
   updateMessage: (chatId: string, messageId: string, updates: Partial<Message>) => void;
+  /**
+   * Stream-friendly `updateMessage`: merges `updates` into the message on the next animation
+   * frame together with every other queued change, without touching the session's
+   * `lastMessageAt`. Use it for per-chunk updates.
+   */
+  queueMessageUpdate: (chatId: string, messageId: string, updates: Partial<Message>) => void;
+  /** Appends streamed text to a message on the next animation frame, like `queueMessageUpdate`. */
+  appendMessageContent: (chatId: string, messageId: string, chunk: string) => void;
+  /** Writes queued stream updates now, for one chat or all of them. */
+  flushMessageUpdates: (chatId?: string) => void;
   replaceChatMessages: (chatId: string, messages: Message[]) => void;
   setChatMessageLoadState: (chatId: string, state: ChatMessageLoadState) => void;
   replaceUserMessage: (chatId: string, messageId: string, content: string) => boolean;
