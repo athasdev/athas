@@ -230,6 +230,15 @@ export const buildContextPrompt = (
     }
   }
 
+  if (context.contextReferences?.length) {
+    const sections = context.contextReferences.map((reference) => {
+      const fence = reference.content.includes("```") ? "````" : "```";
+      const note = reference.truncated ? " [truncated to fit the context budget]" : "";
+      return `### ${reference.label}${note}\n${fence}text\n${reference.content}\n${fence}`;
+    });
+    contextPrompt += `\n\nAttached context:\n${sections.join("\n\n")}`;
+  }
+
   return contextPrompt;
 };
 

@@ -20,6 +20,10 @@ import { extractFollowUpActions } from "@/features/ai/lib/follow-up-actions";
 import { getAgentStopNotice } from "@/features/ai/lib/agent-stop-notice";
 import { buildConversationHistory } from "@/features/ai/lib/conversation-history";
 import { applyAttachmentBudget } from "@/features/ai/lib/context-budget";
+import {
+  partitionContextSelections,
+  resolveContextReferences,
+} from "@/features/ai/lib/context-references";
 import { openAgentHistoryChat } from "@/features/ai/lib/open-agent-history";
 import {
   discardToolEditSnapshot,
@@ -334,7 +338,7 @@ const AIChat = memo(function AIChat({
       activeBuffer: selectedActiveBuffer,
       openBuffers: selectedBuffers,
       selectedFiles,
-      selectedProjectFiles: Array.from(selectedFilesPaths),
+      selectedProjectFiles: partitionContextSelections(selectedFilesPaths).filePaths,
       editorSelections: selectedEditorContexts,
       projectRoot: rootFolderPath,
       providerId,
@@ -575,10 +579,11 @@ const AIChat = memo(function AIChat({
         allProjectFiles,
       );
       const mentionedPaths = new Set(mentionedFiles.map((file) => file.path));
+      const contextSelections = partitionContextSelections(selectedFilesPaths);
       const attachedFiles = isAcp
         ? []
         : await loadFilesByPaths(
-            Array.from(selectedFilesPaths).filter((path) => !mentionedPaths.has(path)),
+            contextSelections.filePaths.filter((path) => !mentionedPaths.has(path)),
           );
       const settings = useSettingsStore.getState().settings;
       const latestSettings = {
@@ -593,6 +598,9 @@ const AIChat = memo(function AIChat({
         ...attachedFiles,
       ]);
       context.mentionedFiles = referencedFiles;
+      context.contextReferences = await resolveContextReferences(contextSelections.references, {
+        projectRoot: rootFolderPath,
+      });
 
       // Handle direct ACP UI intents locally so they are always reliable.
       if (isAcp && !userMessage.images?.length) {
