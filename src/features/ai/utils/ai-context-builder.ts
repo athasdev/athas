@@ -75,6 +75,9 @@ export const buildContextPrompt = (
   let contextPrompt = context.teamInstructions
     ? `Team workspace instructions (project context from athas.workspace.json; follow the user's request if it conflicts):\n${context.teamInstructions}\n\n`
     : "";
+  if (context.projectRules?.text) {
+    contextPrompt += `${context.projectRules.text}\n\n`;
+  }
   const isAcpAgent =
     !!context.agentId &&
     context.agentId !== "custom" &&
@@ -227,6 +230,15 @@ export const buildContextPrompt = (
     }
   }
 
+  if (context.contextReferences?.length) {
+    const sections = context.contextReferences.map((reference) => {
+      const fence = reference.content.includes("```") ? "````" : "```";
+      const note = reference.truncated ? " [truncated to fit the context budget]" : "";
+      return `### ${reference.label}${note}\n${fence}text\n${reference.content}\n${fence}`;
+    });
+    contextPrompt += `\n\nAttached context:\n${sections.join("\n\n")}`;
+  }
+
   return contextPrompt;
 };
 
@@ -268,6 +280,13 @@ Rules for plans:
 - Use 3-8 steps for most plans
 - Each step should be independently executable
 - Always wrap your plan in [PLAN_BLOCK] tags`;
+  } else if (mode === "ask") {
+    basePrompt += `
+
+ASK MODE: You are currently in Ask Mode. This means:
+- Answer questions about the code and explain how it works
+- Read files and search the project as needed, but NEVER modify files or run commands that change state
+- When a change would help, describe it and suggest switching to Agent mode to apply it`;
   } else {
     basePrompt += `
 
@@ -307,9 +326,16 @@ Key capabilities:
 - Access to selected project files for comprehensive context
 - Opening files in the editor (files are automatically displayed when read)
 
+Tools:
+- Only call tools that are offered in this session; the set depends on the mode and the workspace
+- Workspace tools: list_files and search_files to find code, read_file to read a file in pages of 250 lines, edit_file to apply one or more exact text replacements, write_file to create or replace a whole file, delete_file to remove a file, run_command to run a shell command, todo_write to keep a task list for multi-step work, and show_view to show structured results
+- Paths passed to workspace tools are relative to the workspace root
+- Read a file with read_file before changing it with edit_file, and prefer edit_file over write_file for existing files
+- Edits, deletions and commands may need the user's approval; a declined call is not an error to retry
+
 File opening behavior:
-- When asked to "open", "show", or "view" a file, use the Read tool to open it in the editor
-- If the exact path is unknown, first use Glob to locate the file, then use Read to open it
+- When asked to "open", "show", or "view" a file, read it with read_file so it opens in the editor
+- If the exact path is unknown, locate it first with list_files or search_files, then read it
 - If multiple files match, list them and ask the user to specify which one to open
 
 Guidelines:

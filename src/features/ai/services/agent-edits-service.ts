@@ -6,6 +6,10 @@ import {
   rejectEdit,
   transferLineEdits,
 } from "@/features/ai/lib/agent-edit-hunks";
+import {
+  currentTurnMessageId,
+  recordCheckpointAgentWrite,
+} from "@/features/ai/services/agent-checkpoints-service";
 import { getAgentEditEntries, useAgentEditsStore } from "@/features/ai/stores/agent-edits.store";
 import type {
   AgentEditEntry,
@@ -181,12 +185,17 @@ function rebaseOtherChats(path: string, exceptChatId: string, content: string | 
   }
 }
 
-/** Adds an `agent_file_write` to the chat's log. The write itself already landed. */
+/**
+ * Adds an `agent_file_write` to the chat's log, and to the checkpoint of the turn it belongs to.
+ * The write itself already landed.
+ */
 export function recordAgentFileWrite(chatId: string, write: AgentFileWrite) {
   listenForFileChanges();
   rememberRecordedWrite(write.writeId);
+  const turnId = write.turnId ?? currentTurnMessageId(chatId) ?? undefined;
+  if (turnId) void recordCheckpointAgentWrite(chatId, turnId, write);
   const existing = getAgentEditEntries(chatId)[write.path];
-  const { entry, lostEarlierReview } = recordAgentWrite(existing, write);
+  const { entry, lostEarlierReview } = recordAgentWrite(existing, { ...write, turnId });
   setEntry(chatId, write.path, entry);
   if (lostEarlierReview) {
     notifyDropped(
@@ -195,6 +204,36 @@ export function recordAgentFileWrite(chatId: string, write: AgentFileWrite) {
     );
   }
   rebaseOtherChats(write.path, chatId, write.content);
+}
+
+/**
+ * Adds a file the agent deleted to the checkpoint of its turn, so restoring the turn brings the
+ * file back. There is nothing left to review, so the chat stops tracking the file; other chats
+ * notice the deletion through the file watcher.
+ */
+export function recordAgentFileDelete(
+  chatId: string,
+  deletion: { path: string; previousContent: string; turnId?: string },
+) {
+  listenForFileChanges();
+  const turnId = deletion.turnId ?? currentTurnMessageId(chatId) ?? undefined;
+  if (turnId) {
+    void recordCheckpointAgentWrite(chatId, turnId, {
+      path: deletion.path,
+      previousContent: deletion.previousContent,
+      content: null,
+    });
+  }
+  setEntry(chatId, deletion.path, null);
+}
+
+/**
+ * The user message whose turn the chat's agent is running now. An agent that resolves it when
+ * its run starts keeps its writes with that turn even if they land after the user stopped it and
+ * sent the next prompt.
+ */
+export function currentAgentTurnId(chatId: string): string | undefined {
+  return currentTurnMessageId(chatId) ?? undefined;
 }
 
 function findEditorBuffer(path: string) {
@@ -319,4 +358,10 @@ export async function keepAllAgentEdits(chatId: string) {
 
 export async function rejectAllAgentEdits(chatId: string) {
   for (const path of Object.keys(getAgentEditEntries(chatId))) await rejectAgentFile(chatId, path);
+}
+
+/** Shows the chat's unreviewed changes in the "Agent Changes" tab, opening it if needed. */
+export function openAgentEditsReview(chatId: string) {
+  useAgentEditsStore.getState().actions.openReview(chatId);
+  useBufferStore.getState().actions.openContent({ type: "agentChanges" });
 }

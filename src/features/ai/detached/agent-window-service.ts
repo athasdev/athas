@@ -2,26 +2,18 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { toast } from "sonner";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { useGitHubStore } from "@/features/github/stores/github.store";
 import {
   type DetachedWindowHandle,
   openDetachedWindow,
 } from "@/features/window/detached/detached-window-owner";
 import type { DetachedWindowBaseMessage } from "@/features/window/detached/detached-window-protocol";
-import { getAccountIdentity } from "@/features/window/lib/account-identity";
-import { useAuthStore } from "@/features/window/stores/auth.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { captureAgentDrafts, restoreAgentDrafts } from "./agent-window-drafts";
-import {
-  type AgentAccountIdentity,
-  type AgentWindowSnapshot,
-  getAgentWindowTransferBlocker,
-} from "./agent-window-state";
+import { type AgentWindowSnapshot, getAgentWindowTransferBlocker } from "./agent-window-state";
 import { useAgentWindowStore } from "./agent-window.store";
 
 export type AgentWindowMessage =
   | DetachedWindowBaseMessage
-  | { type: "identity"; identity: AgentAccountIdentity }
   | { type: "initialize" | "snapshot" | "return"; snapshot: AgentWindowSnapshot }
   | { type: "returned" | "recall" };
 
@@ -40,20 +32,10 @@ export function isAgentWindow() {
   return localSessionOpener !== null;
 }
 
-function captureAccountIdentity() {
-  const user = useAuthStore.getState().user;
-  const github = useGitHubStore.getState();
-  return getAccountIdentity(
-    user,
-    github.githubAccountStatus === "connected" ? github.currentUser || user?.github_username : null,
-  );
-}
-
 export function captureAgentWindowSnapshot(chatId?: string): AgentWindowSnapshot {
   const state = useAIChatStore.getState();
   const buffers = useBufferStore.getState();
   return {
-    accountIdentity: useAgentWindowStore.getState().accountIdentity ?? captureAccountIdentity(),
     chat: {
       chats: chatId ? state.chats.filter((chat) => chat.id === chatId) : state.chats,
       currentChatId: chatId ?? state.currentChatId,
@@ -84,7 +66,6 @@ export function captureAgentWindowSnapshot(chatId?: string): AgentWindowSnapshot
 export function restoreAgentWindowSnapshot(snapshot: AgentWindowSnapshot, chatId?: string) {
   restoreAgentDrafts(snapshot.drafts, Boolean(chatId));
   if (!chatId) {
-    useAgentWindowStore.getState().actions.setAccountIdentity(snapshot.accountIdentity ?? null);
     useAIChatStore.setState(snapshot.chat);
     return;
   }
@@ -140,21 +121,7 @@ export async function openAgentInNewWindow(chatId: string) {
   let returned = false;
   const setStatus = (status: "attached" | "opening" | "detached") =>
     useAgentWindowStore.getState().actions.setStatus(chatId, status);
-  const publishIdentity = () =>
-    windows.get(chatId)?.post({ type: "identity", identity: captureAccountIdentity() });
-  const unsubscribeAuth = useAuthStore.subscribe((state, previous) => {
-    if (state.user !== previous.user) publishIdentity();
-  });
-  const unsubscribeGithub = useGitHubStore.subscribe((state, previous) => {
-    if (
-      state.currentUser !== previous.currentUser ||
-      state.githubAccountStatus !== previous.githubAccountStatus
-    )
-      publishIdentity();
-  });
   const finish = () => {
-    unsubscribeAuth();
-    unsubscribeGithub();
     if (windows.get(chatId) === handle) windows.delete(chatId);
     setStatus("attached");
   };
@@ -168,10 +135,7 @@ export async function openAgentInNewWindow(chatId: string) {
         return;
       }
       if (data.type === "ready") {
-        handle.post({
-          type: "initialize",
-          snapshot: { ...initial, accountIdentity: captureAccountIdentity() },
-        });
+        handle.post({ type: "initialize", snapshot: initial });
       } else if (data.type === "snapshot" || data.type === "return") {
         handle.markInitialized();
         latest = data.snapshot;

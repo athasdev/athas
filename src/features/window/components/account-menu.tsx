@@ -73,7 +73,8 @@ export const AccountMenu = memo(function AccountMenu() {
     if (import.meta.env.DEV) {
       console.log("[Auth] Starting desktop sign-in flow from account menu");
     }
-    await signIn();
+    // useDesktopSignIn already shows the failure; its rejection only signals it.
+    await signIn().catch(() => undefined);
   };
 
   const handleSignOut = async () => {

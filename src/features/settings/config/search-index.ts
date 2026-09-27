@@ -694,11 +694,27 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["ai", "agent", "notification", "sound", "audio", "alert"],
   },
   {
+    id: "ai-agent-max-steps",
+    tab: "ai",
+    section: "Agents",
+    label: "Step Budget",
+    description: "Model requests one Athas agent turn may make before it pauses",
+    keywords: ["ai", "agent", "steps", "budget", "limit", "tool", "calls", "continue"],
+  },
+  {
+    id: "ai-allowed-commands",
+    tab: "ai",
+    section: "Allowed Commands",
+    label: "Allowed Commands",
+    description: "Commands and MCP tools the Athas agent runs without asking",
+    keywords: ["ai", "agent", "allow", "always", "command", "permission", "approve", "mcp", "tool"],
+  },
+  {
     id: "ai-mcp-servers",
     tab: "ai",
     section: "MCP Servers",
     label: "Add MCP server",
-    description: "Configure MCP servers passed to ACP agents",
+    description: "Configure MCP servers used by agents",
     keywords: [
       "mcp",
       "server",

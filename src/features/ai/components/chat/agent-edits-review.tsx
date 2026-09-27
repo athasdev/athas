@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { ExtensionDiffPreview } from "@/extensions/ui/components/extension-diff-preview";
 import { toRelativeDisplayPath } from "@/features/ai/lib/acp-diff-output";
 import {
@@ -16,12 +16,13 @@ import {
   rejectAgentHunk,
   rejectAllAgentEdits,
 } from "@/features/ai/services/agent-edits-service";
-import { useAgentEditEntries, useAgentEditsStore } from "@/features/ai/stores/agent-edits.store";
-import type { AgentEditHunk } from "@/features/ai/types/agent-edits.types";
+import { pickAgentEditsChatId, useAgentEditsStore } from "@/features/ai/stores/agent-edits.store";
+import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
+import type { AgentEditEntry, AgentEditHunk } from "@/features/ai/types/agent-edits.types";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { Button } from "@/ui/button";
 import { ButtonGroup } from "@/ui/button-group";
-import Dialog from "@/ui/dialog";
+import { EmptyState } from "@/ui/empty";
 import {
   CheckIcon,
   ChevronDownIcon,
@@ -31,6 +32,8 @@ import {
   XIcon,
 } from "@/ui/icons";
 import { Item, ItemActions, ItemContent, ItemDescription, ItemTitle } from "@/ui/item";
+import { ResourceDocument, ResourceSummary } from "@/ui/resource";
+import Select from "@/ui/select";
 
 interface ReviewHunk {
   path: string;
@@ -38,26 +41,75 @@ interface ReviewHunk {
   index: number;
 }
 
-/** The review surface for the chat whose review is open; mounted once for the whole app. */
-export function AgentEditsReview() {
-  const chatId = useAgentEditsStore((state) => state.reviewChatId);
-  if (!chatId) return null;
-  return <AgentEditsReviewDialog chatId={chatId} />;
+interface ReviewFile {
+  entry: AgentEditEntry;
+  hunks: ReviewHunk[];
+  counts: { added: number; removed: number };
 }
 
-function AgentEditsReviewDialog({ chatId }: { chatId: string }) {
-  const entries = useAgentEditEntries(chatId);
+function plural(count: number, noun: string) {
+  return `${count} ${noun}${count === 1 ? "" : "s"}`;
+}
+
+/**
+ * The "Agent Changes" tab: every unreviewed hunk a chat's agent wrote, grouped by file, with keep
+ * and reject per hunk, per file, and for everything. It sits beside the editor as a tab, so the
+ * files stay open and editable while the review is.
+ */
+export default function AgentEditsReviewView() {
+  const byChat = useAgentEditsStore((state) => state.byChat);
+  const reviewChatId = useAgentEditsStore((state) => state.reviewChatId);
+  const chats = useAIChatStore((state) => state.chats);
+  const chatId =
+    reviewChatId && byChat[reviewChatId] ? reviewChatId : pickAgentEditsChatId(reviewChatId);
+
+  if (!chatId || !byChat[chatId]) {
+    return (
+      <ResourceDocument>
+        <EmptyState
+          className="min-h-40"
+          icon={<GitDiffIcon />}
+          title="No agent changes to review"
+          message="Files an agent edits show up here until you keep or reject its changes."
+        />
+      </ResourceDocument>
+    );
+  }
+
+  const chatOptions = Object.keys(byChat).map((id) => ({
+    value: id,
+    label: chats.find((chat) => chat.id === id)?.title || "Untitled chat",
+  }));
+
+  return (
+    <AgentEditsReviewBody
+      key={chatId}
+      chatId={chatId}
+      entries={byChat[chatId]}
+      chatOptions={chatOptions}
+    />
+  );
+}
+
+function AgentEditsReviewBody({
+  chatId,
+  entries,
+  chatOptions,
+}: {
+  chatId: string;
+  entries: Record<string, AgentEditEntry>;
+  chatOptions: Array<{ value: string; label: string }>;
+}) {
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const bodyRef = useRef<HTMLDivElement>(null);
   const [focused, setFocused] = useState(0);
-  const close = () => useAgentEditsStore.getState().actions.closeReview();
 
   const files = useMemo(() => {
     let index = 0;
     return Object.values(entries)
       .sort((a, b) => a.path.localeCompare(b.path))
-      .map((entry) => {
-        const hunks = computeAgentHunks(entry.baseline, entry.current).map((hunk): ReviewHunk => ({
+      .map((entry): ReviewFile => {
+        const hunks = computeAgentHunks(entry.baseline, entry.current).map((hunk) => ({
           path: entry.path,
           hunk,
           index: index++,
@@ -67,11 +119,8 @@ function AgentEditsReviewDialog({ chatId }: { chatId: string }) {
   }, [entries]);
   const total = files.reduce((sum, file) => sum + file.hunks.length, 0);
   const current = Math.min(focused, Math.max(total - 1, 0));
-
-  // Everything reviewed: nothing left to show.
-  useEffect(() => {
-    if (total === 0) useAgentEditsStore.getState().actions.closeReview();
-  }, [total]);
+  const added = files.reduce((sum, file) => sum + file.counts.added, 0);
+  const removed = files.reduce((sum, file) => sum + file.counts.removed, 0);
 
   const goTo = (index: number) => {
     if (total === 0) return;
@@ -82,63 +131,71 @@ function AgentEditsReviewDialog({ chatId }: { chatId: string }) {
     target?.querySelector<HTMLElement>("button")?.focus();
   };
 
-  const openAt = (path: string, hunk: AgentEditHunk) => {
-    close();
-    void openToolPath(path, hunkLine(hunk));
-  };
+  const summary = (
+    <ResourceSummary
+      icon={<GitDiffIcon />}
+      title="Agent changes"
+      description={`${plural(files.length, "file")}, ${plural(total, "change")}, +${added} -${removed}`}
+      actions={
+        <>
+          {chatOptions.length > 1 ? (
+            <Select
+              value={chatId}
+              options={chatOptions}
+              onChange={(value) => useAgentEditsStore.getState().actions.openReview(value)}
+              aria-label="Chat"
+            />
+          ) : null}
+          <ButtonGroup variant="ghost">
+            <Button
+              type="button"
+              variant="ghost"
+              iconOnly
+              disabled={total < 2}
+              onClick={() => goTo(current - 1)}
+              tooltip="Previous change"
+            >
+              <ChevronUpIcon />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              iconOnly
+              disabled={total < 2}
+              onClick={() => goTo(current + 1)}
+              tooltip="Next change"
+            >
+              <ChevronDownIcon />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              tone="success"
+              onClick={() => void keepAllAgentEdits(chatId)}
+            >
+              <CheckIcon />
+              Keep all
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              tone="danger"
+              onClick={() => void rejectAllAgentEdits(chatId)}
+            >
+              <XIcon />
+              Reject all
+            </Button>
+          </ButtonGroup>
+        </>
+      }
+    />
+  );
 
   return (
-    <Dialog
-      onClose={close}
-      title="Review agent changes"
-      icon={GitDiffIcon}
-      size="settings"
-      headerActions={
-        <ButtonGroup variant="ghost">
-          <Button
-            type="button"
-            variant="ghost"
-            iconOnly
-            disabled={total < 2}
-            onClick={() => goTo(current - 1)}
-            tooltip="Previous change"
-          >
-            <ChevronUpIcon />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            iconOnly
-            disabled={total < 2}
-            onClick={() => goTo(current + 1)}
-            tooltip="Next change"
-          >
-            <ChevronDownIcon />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            tone="success"
-            onClick={() => void keepAllAgentEdits(chatId)}
-          >
-            <CheckIcon />
-            Keep all
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            tone="danger"
-            onClick={() => void rejectAllAgentEdits(chatId)}
-          >
-            <XIcon />
-            Reject all
-          </Button>
-        </ButtonGroup>
-      }
-    >
+    <ResourceDocument summary={summary}>
       <div
         ref={bodyRef}
-        className="flex flex-col gap-4"
+        className="flex flex-col gap-6"
         onKeyDown={(event) => {
           if (event.altKey && event.key === "ArrowDown") {
             event.preventDefault();
@@ -151,6 +208,7 @@ function AgentEditsReviewDialog({ chatId }: { chatId: string }) {
       >
         {files.map(({ entry, hunks, counts }) => {
           const displayPath = toRelativeDisplayPath(entry.path, rootFolderPath);
+          const firstHunk = hunks[0]?.hunk;
           return (
             <section key={entry.path} aria-label={displayPath} className="flex flex-col gap-2">
               <Item variant="muted" size="compact">
@@ -158,8 +216,7 @@ function AgentEditsReviewDialog({ chatId }: { chatId: string }) {
                   <ItemTitle>{displayPath}</ItemTitle>
                   <ItemDescription>
                     {entry.created ? "New file, " : ""}
-                    {hunks.length} change{hunks.length === 1 ? "" : "s"}, +{counts.added} -
-                    {counts.removed}
+                    {plural(hunks.length, "change")}, +{counts.added} -{counts.removed}
                   </ItemDescription>
                 </ItemContent>
                 <ItemActions>
@@ -168,7 +225,9 @@ function AgentEditsReviewDialog({ chatId }: { chatId: string }) {
                       type="button"
                       variant="ghost"
                       iconOnly
-                      onClick={() => hunks[0] && openAt(entry.path, hunks[0].hunk)}
+                      onClick={() =>
+                        void openToolPath(entry.path, firstHunk ? hunkLine(firstHunk) : undefined)
+                      }
                       tooltip="Open file"
                     >
                       <OpenExternalIcon />
@@ -238,7 +297,7 @@ function AgentEditsReviewDialog({ chatId }: { chatId: string }) {
                         type="button"
                         variant="ghost"
                         size="xs"
-                        onClick={() => openAt(entry.path, hunk)}
+                        onClick={() => void openToolPath(entry.path, hunkLine(hunk))}
                       >
                         <OpenExternalIcon />
                         Line {hunkLine(hunk)}
@@ -255,6 +314,6 @@ function AgentEditsReviewDialog({ chatId }: { chatId: string }) {
           );
         })}
       </div>
-    </Dialog>
+    </ResourceDocument>
   );
 }

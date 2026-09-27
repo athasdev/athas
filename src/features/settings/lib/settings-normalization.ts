@@ -1,6 +1,7 @@
 import { getProviderById } from "@/features/ai/types/providers.types";
 import { normalizeOllamaBaseUrl } from "@/features/ai/lib/ollama-endpoint";
 import { normalizeMcpServers } from "@/features/ai/lib/mcp-servers";
+import { normalizeIntelligenceAgentSteps } from "@/features/ai/intelligence/lib/intelligence-agent-steps";
 import { normalizeLegacyV0DesignSystems } from "@/features/settings/lib/legacy-v0-settings";
 import { isKeybindingPreset } from "@/features/keymaps/defaults/keybinding-presets";
 import {
@@ -422,6 +423,9 @@ function normalizeAISettings(settings: Settings): Settings {
   normalizedSettings.aiAgentNotificationSound =
     normalizedSettings.aiAgentNotificationSound === true;
   normalizedSettings.aiFollowAgent = normalizedSettings.aiFollowAgent === true;
+  normalizedSettings.aiAgentMaxSteps = normalizeIntelligenceAgentSteps(
+    normalizedSettings.aiAgentMaxSteps,
+  );
   normalizedSettings.aiSkills = normalizeAISkills(normalizedSettings.aiSkills);
   normalizedSettings.mcpServers = normalizeMcpServers(normalizedSettings.mcpServers);
   normalizedSettings.v0DesignSystems = normalizeLegacyV0DesignSystems(
@@ -675,6 +679,10 @@ export function normalizeSettingValue<K extends keyof Settings>(
 
   if (key === "mcpServers") {
     return normalizeMcpServers(value) as Settings[K];
+  }
+
+  if (key === "aiAgentMaxSteps") {
+    return normalizeIntelligenceAgentSteps(value) as Settings[K];
   }
 
   if (key === "v0DesignSystems") {

@@ -26,7 +26,7 @@ import {
 import { createPortal } from "react-dom";
 import { useOnClickOutside } from "usehooks-ts";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
-import { openNewAgentChat } from "@/features/ai/lib/open-new-agent-chat";
+import { addEditorSelectionsToAgentChat } from "@/features/ai/lib/add-selection-to-agent-chat";
 import type { EditorSelectionContext } from "@/features/ai/types/ai-context.types";
 import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics.store";
 import type { Diagnostic } from "@/features/diagnostics/types/diagnostics.types";
@@ -34,6 +34,10 @@ import { useDebuggerStore } from "@/features/debugger/stores/debugger.store";
 import { EditorSelectionAgentAction } from "@/features/editor/components/selection/editor-selection-agent-action";
 import { InlineEditPopover } from "@/features/editor/inline-edit/inline-edit-popover";
 import { useInlineEdit } from "@/features/editor/inline-edit/use-inline-edit";
+import {
+  type InlineEditPreview,
+  showMonacoInlineEditPreview,
+} from "@/features/editor/inline-edit/monaco-inline-edit-preview";
 import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { InlineGitBlameCard } from "@/features/git/components/inline-git-blame-card";
@@ -606,6 +610,11 @@ export function MonacoEditor({
     [syncCursorAndSelection],
   );
 
+  const previewMonacoInlineEdit = useCallback((preview: InlineEditPreview) => {
+    const editor = editorRef.current;
+    return editor ? showMonacoInlineEditPreview(editor, preview) : () => {};
+  }, []);
+
   const inlineEditState = useInlineEdit({
     enabled: isActiveSurface && !readOnly && !isPreviewMode,
     viewKey: viewStateKey ?? activeBufferId ?? null,
@@ -660,6 +669,7 @@ export function MonacoEditor({
     getSelectionAnchor: getMonacoSelectionAnchor,
     getViewportMetrics: getMonacoViewportMetrics,
     applyInlineEdit: applyMonacoInlineEdit,
+    previewInlineEdit: previewMonacoInlineEdit,
     setCursorPosition,
     setSelection,
   });
@@ -1917,9 +1927,7 @@ export function MonacoEditor({
             anchorRect={selectionAgentAction.anchorRect}
             onClose={clearSelectionAgentAction}
             onSelect={() => {
-              openNewAgentChat(undefined, {
-                editorSelections: [selectionAgentAction.context],
-              });
+              addEditorSelectionsToAgentChat([selectionAgentAction.context]);
               clearSelectionAgentAction();
             }}
           />

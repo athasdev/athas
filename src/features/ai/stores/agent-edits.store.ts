@@ -7,13 +7,14 @@ const NO_ENTRIES: Record<string, AgentEditEntry> = {};
 interface AgentEditsState {
   /** Unreviewed agent writes by chat id, then by file path. */
   byChat: Record<string, Record<string, AgentEditEntry>>;
-  /** The chat whose review is open, if any. */
+  /** The chat the "Agent Changes" tab shows, if one was picked. */
   reviewChatId: string | null;
   actions: {
     /** Stores the file's entry, or forgets the file when `entry` is null. */
     setEntry: (chatId: string, path: string, entry: AgentEditEntry | null) => void;
     openReview: (chatId: string) => void;
-    closeReview: () => void;
+    /** Stops tracking all of a chat's files; what the agent wrote stays on disk. */
+    forgetChat: (chatId: string) => void;
   };
 }
 
@@ -38,7 +39,13 @@ const useAgentEditsStoreBase = create<AgentEditsState>()((set) => ({
         return { byChat };
       }),
     openReview: (chatId) => set({ reviewChatId: chatId }),
-    closeReview: () => set({ reviewChatId: null }),
+    forgetChat: (chatId) =>
+      set((state) => {
+        if (!state.byChat[chatId]) return state;
+        const byChat = { ...state.byChat };
+        delete byChat[chatId];
+        return { byChat };
+      }),
   },
 }));
 

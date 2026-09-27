@@ -731,7 +731,7 @@ const TerminalTabBar = ({
               onTabPin?.(terminalId);
             }}
             onCloseTab={(terminalId) => {
-              onTabClose(terminalId, {} as React.MouseEvent);
+              onTabClose(terminalId);
             }}
             onCloseOthers={onCloseOtherTabs || (() => {})}
             onCloseAll={onCloseAllTabs || (() => {})}

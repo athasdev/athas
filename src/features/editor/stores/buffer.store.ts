@@ -783,6 +783,7 @@ const createBufferStore = (workspaceId: string) => {
             case "references":
             case "continuousAgents":
             case "acpInspector":
+            case "agentChanges":
             case "workspaces":
             case "settings":
             case "extensions": {

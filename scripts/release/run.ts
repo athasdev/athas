@@ -272,6 +272,9 @@ async function release() {
     await updateTauriConfig(newVersion);
     await updateCargoToml(newVersion);
     await updateCargoLock();
+    // JSON.stringify expands short arrays that the formatter keeps inline, and CI release
+    // commits skip the pre-commit hook, so format the rewritten files here.
+    await $`bunx vp fmt package.json src-tauri/tauri.conf.json`.quiet();
 
     if (isDryRun) {
       const diffStat = (await $`git diff --stat -- ${VERSIONED_FILES}`.text()).trim();

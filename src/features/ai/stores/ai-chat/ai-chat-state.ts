@@ -10,6 +10,7 @@ export function createInitialAIChatState(): AIChatState {
     agentMessageQueues: {},
     chatMessageLoadStates: {},
     mode: "chat",
+    modeByChat: {},
     outputStyle: "default",
     hasApiKey: false,
     providerApiKeys: new Map(),

@@ -1,19 +1,8 @@
-import { AcpAuthChoice } from "./acp-auth-choice";
-import { ApiErrorActions } from "./api-error-actions";
-import { getApiErrorCode } from "@/features/ai/lib/api-error";
-import {
-  ChevronDownIcon,
-  ChevronRightIcon,
-  CopyIcon,
-  TerminalWindowIcon,
-  WarningCircleIcon,
-} from "@/ui/icons";
+import { ChatErrorBlock } from "./chat-error-block";
+import { parseLegacyErrorBlock } from "@/features/ai/lib/chat-error";
+import { CopyIcon } from "@/ui/icons";
 import type React from "react";
-import { useState } from "react";
-import { toast } from "sonner";
-import { getAcpAuthenticationCommand } from "@/features/ai/lib/acp-authentication";
-import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
-import type { MarkdownRendererProps } from "@/features/ai/types/ai-chat.types";
+import { memo, useMemo } from "react";
 import {
   isExternalMarkdownLink,
   resolveWorkspaceFileLink,
@@ -22,20 +11,16 @@ import {
   normalizeImplicitCodeFences,
   normalizePlainTextFence,
 } from "@/features/ai/lib/assistant-markdown";
-import { selectAgentAuthRequest, useAcpAuthStore } from "@/features/ai/stores/acp-auth.store";
-import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
-import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { splitMarkdownBlocks } from "@/features/ai/lib/markdown-blocks";
 import {
   HighlightedCode,
   useCodeHighlightSegments,
 } from "@/features/editor/markdown/highlighted-code";
 import { normalizeCodeFenceLanguage } from "@/features/editor/markdown/language-map";
 import { Button } from "@/ui/button";
-import { Marker, MarkerContent, MarkerIcon } from "@/ui/marker";
 import { TextLink } from "@/ui/text-link";
 import { writeClipboardText } from "@/utils/clipboard";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import { useProjectStore } from "@/features/window/stores/project.store";
 
 function inferCodeLanguage(code: string): string {
   const trimmed = code.trim();
@@ -93,15 +78,7 @@ async function openMarkdownLink(href: string, label: string) {
   await openUrl(href);
 }
 
-function CodeBlock({
-  code,
-  languageHint,
-  onApplyCode,
-}: {
-  code: string;
-  languageHint: string;
-  onApplyCode?: (code: string, language?: string) => void;
-}) {
+function CodeBlock({ code, languageHint }: { code: string; languageHint: string }) {
   const explicitLanguage = languageHint ? normalizeCodeFenceLanguage(languageHint) : "";
   const inferredLanguage = explicitLanguage || inferCodeLanguage(code);
   const languageLabel = explicitLanguage || (inferredLanguage !== "clike" ? inferredLanguage : "");
@@ -126,17 +103,6 @@ function CodeBlock({
               >
                 <CopyIcon className="text-subtle-foreground" size={12} />
               </Button>
-              {onApplyCode && (
-                <Button
-                  type="button"
-                  variant="default"
-                  onClick={() => onApplyCode(code)}
-                  size="xs"
-                  tooltip="Apply this code to current buffer"
-                >
-                  Apply
-                </Button>
-              )}
             </div>
           )}
         </div>
@@ -145,181 +111,6 @@ function CodeBlock({
         </code>
       </pre>
     </div>
-  );
-}
-
-// Error Block Component
-function ErrorBlock({
-  errorData,
-  chatId,
-  onRetry,
-}: {
-  errorData: string;
-  chatId?: string | null;
-  onRetry?: () => void | Promise<void>;
-}) {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [isRestartingSession, setIsRestartingSession] = useState(false);
-  const [isOpeningTerminal, setIsOpeningTerminal] = useState(false);
-  const openTerminalBuffer = useBufferStore((state) => state.actions.openTerminalBuffer);
-  const setActiveBuffer = useBufferStore((state) => state.actions.setActiveBuffer);
-  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
-  const agentId = useAIChatStore((state) => {
-    const chatAgentId = chatId
-      ? state.chats.find((chat) => chat.id === chatId)?.agentId
-      : undefined;
-    return chatAgentId ?? state.selectedAgentId;
-  });
-
-  const chatProviderId = useAIChatStore(
-    (state) => state.chats.find((chat) => chat.id === chatId)?.providerId,
-  );
-  const lines = errorData.split("\n");
-  const providerId =
-    lines
-      .find((line) => line.startsWith("provider:"))
-      ?.slice("provider:".length)
-      .trim() || (/athas API/i.test(errorData) ? "athas" : chatProviderId || agentId);
-
-  const title =
-    lines
-      .find((l) => l.startsWith("title:"))
-      ?.replace("title:", "")
-      .trim() || "";
-  const code =
-    lines
-      .find((l) => l.startsWith("code:"))
-      ?.replace("code:", "")
-      .trim() || "";
-  const message =
-    lines
-      .find((l) => l.startsWith("message:"))
-      ?.replace("message:", "")
-      .trim() || "";
-  const details =
-    lines
-      .find((l) => l.startsWith("details:"))
-      ?.replace("details:", "")
-      .trim() || "";
-  const summary = title || message || "Error";
-  const normalizedDetails = details && details !== message ? details : "";
-  const isAuthRequired = code === "AUTH_REQUIRED";
-  const isConfigurationRequired = code === "CONFIG_REQUIRED";
-  const canRecoverAgent = isAuthRequired || isConfigurationRequired;
-  const authRequest = selectAgentAuthRequest(useAcpAuthStore.use.request(), agentId);
-  // Only the latest error offers sign-in, since signing in retries its prompt.
-  const showAuthChoice = isAuthRequired && authRequest !== null && onRetry !== undefined;
-
-  const handleRestartAgentSession = async () => {
-    setIsRestartingSession(true);
-    try {
-      await AcpStreamHandler.restartAgent(agentId, chatId);
-      toast.success("Agent session restarted");
-    } catch (error) {
-      console.error("Failed to restart ACP agent session:", error);
-      toast.error("Couldn't restart the agent session", {
-        description: error instanceof Error ? error.message : String(error),
-      });
-    } finally {
-      setIsRestartingSession(false);
-    }
-  };
-
-  const handleOpenAuthenticationTerminal = async () => {
-    setIsOpeningTerminal(true);
-    try {
-      const agents = await AcpStreamHandler.getAvailableAgents().catch(() => []);
-      const command = getAcpAuthenticationCommand(agentId, agents);
-      const bufferId = openTerminalBuffer({
-        command: command ?? undefined,
-        name: command ?? "Agent setup",
-        workingDirectory: rootFolderPath ?? undefined,
-      });
-      setActiveBuffer(bufferId);
-    } catch (error) {
-      toast.error("Couldn't open the agent terminal", {
-        description: error instanceof Error ? error.message : String(error),
-      });
-    } finally {
-      setIsOpeningTerminal(false);
-    }
-  };
-
-  return (
-    <Marker role="alert" tone="error" className="not-typeset my-1 items-start">
-      <MarkerIcon>
-        <WarningCircleIcon />
-      </MarkerIcon>
-      <MarkerContent className="flex min-w-0 flex-col gap-1">
-        <span className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
-          <span className="font-medium">{summary}</span>
-          {code ? <span className="text-destructive">({code})</span> : null}
-          {normalizedDetails ? (
-            <Button
-              type="button"
-              variant="link"
-              onClick={() => setIsExpanded(!isExpanded)}
-              tone="danger"
-            >
-              {isExpanded ? <ChevronDownIcon /> : <ChevronRightIcon />}
-              {isExpanded ? "Hide details" : "Details"}
-            </Button>
-          ) : null}
-        </span>
-        {message && message !== summary ? (
-          <span className="text-destructive">{message}</span>
-        ) : null}
-        {!canRecoverAgent && (
-          <ApiErrorActions
-            code={code || getApiErrorCode(message)}
-            providerId={providerId}
-            onRetry={onRetry}
-          />
-        )}
-        {showAuthChoice && authRequest ? (
-          <AcpAuthChoice request={authRequest} chatId={chatId} onSignedIn={onRetry} />
-        ) : null}
-        {canRecoverAgent && !showAuthChoice && (
-          <span className="flex flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              variant="default"
-              onClick={() => void handleRestartAgentSession()}
-              disabled={isRestartingSession}
-            >
-              <TerminalWindowIcon size={12} />
-              {isRestartingSession ? "Restarting..." : "Restart Agent Session"}
-            </Button>
-            <Button
-              type="button"
-              variant="default"
-              onClick={() => void handleOpenAuthenticationTerminal()}
-              disabled={isOpeningTerminal}
-            >
-              <TerminalWindowIcon size={12} />
-              {isOpeningTerminal ? "Opening..." : "Open Agent Terminal"}
-            </Button>
-            <span className="text-destructive">
-              {isConfigurationRequired
-                ? "Finish the agent setup, then restart the session."
-                : "Complete login in the agent CLI, then restart the session."}
-            </span>
-          </span>
-        )}
-        {normalizedDetails && isExpanded && (
-          <pre className="max-w-full overflow-x-auto rounded-md bg-destructive-soft p-2 font-mono text-destructive ui-text-sm">
-            {(() => {
-              try {
-                const parsed = JSON.parse(normalizedDetails);
-                return JSON.stringify(parsed, null, 2);
-              } catch {
-                return normalizedDetails;
-              }
-            })()}
-          </pre>
-        )}
-      </MarkerContent>
-    </Marker>
   );
 }
 
@@ -564,11 +355,8 @@ function renderInlineFormatting(text: string): React.ReactNode {
 }
 
 // Line-by-line state machine markdown renderer
-function renderContent(
-  text: string,
-  onApplyCode?: (code: string, language?: string) => void,
-): React.ReactNode[] {
-  const lines = normalizeImplicitCodeFences(text).split("\n");
+function renderContent(text: string): React.ReactNode[] {
+  const lines = text.split("\n");
   const elements: React.ReactNode[] = [];
   let inCodeBlock = false;
   let codeBlockLanguage = "";
@@ -584,10 +372,9 @@ function renderContent(
       const code = codeBlockContent.join("\n");
       elements.push(
         <CodeBlock
-          key={`code-${codeBlockStartLine}-${code.length}`}
+          key={`code-${codeBlockStartLine}`}
           code={code}
           languageHint={codeBlockLanguage}
-          onApplyCode={onApplyCode}
         />,
       );
       codeBlockContent = [];
@@ -599,7 +386,7 @@ function renderContent(
     if (currentList && currentList.items.length > 0) {
       if (currentList.type === "ol") {
         elements.push(
-          <ol key={`ol-${currentListStartLine}-${currentList.items.length}`}>
+          <ol key={`ol-${currentListStartLine}`}>
             {currentList.items.map((item, idx) => (
               <li key={idx}>{renderInlineFormatting(item)}</li>
             ))}
@@ -607,7 +394,7 @@ function renderContent(
         );
       } else {
         elements.push(
-          <ul key={`ul-${currentListStartLine}-${currentList.items.length}`}>
+          <ul key={`ul-${currentListStartLine}`}>
             {currentList.items.map((item, idx) => (
               <li key={idx}>{renderInlineFormatting(item)}</li>
             ))}
@@ -623,9 +410,7 @@ function renderContent(
       const paragraphText = currentParagraph.join(" ").trim();
       if (paragraphText) {
         elements.push(
-          <p key={`p-${currentParagraphStartLine}-${paragraphText.length}`}>
-            {renderInlineFormatting(paragraphText)}
-          </p>,
+          <p key={`p-${currentParagraphStartLine}`}>{renderInlineFormatting(paragraphText)}</p>,
         );
       }
       currentParagraph = [];
@@ -661,7 +446,7 @@ function renderContent(
     if (parsedTable) {
       flushList();
       flushParagraph();
-      elements.push(renderTable(parsedTable.table, `table-${i}-${parsedTable.endIndex}`));
+      elements.push(renderTable(parsedTable.table, `table-${i}`));
       i = parsedTable.endIndex - 1;
       continue;
     }
@@ -690,9 +475,7 @@ function renderContent(
       flushParagraph();
       const quoteContent = trimmedLine.startsWith("> ") ? trimmedLine.slice(2) : "";
       elements.push(
-        <blockquote key={`quote-${i}-${quoteContent.length}`}>
-          {renderInlineFormatting(quoteContent)}
-        </blockquote>,
+        <blockquote key={`quote-${i}`}>{renderInlineFormatting(quoteContent)}</blockquote>,
       );
       continue;
     }
@@ -748,13 +531,26 @@ function renderContent(
   return elements;
 }
 
+/** One blank-line-separated block; unchanged blocks skip re-rendering while a reply streams. */
+const MarkdownBlockContent = memo(function MarkdownBlockContent({ text }: { text: string }) {
+  return renderContent(text);
+});
+
+function MarkdownBlocks({ text }: { text: string }) {
+  const blocks = useMemo(() => splitMarkdownBlocks(normalizeImplicitCodeFences(text)), [text]);
+  return blocks.map((block) => (
+    <MarkdownBlockContent key={`block-${block.startLine}`} text={block.text} />
+  ));
+}
+
+interface MarkdownRendererProps {
+  content: string;
+  chatId?: string | null;
+  onRetry?: () => void | Promise<void>;
+}
+
 // Simple markdown renderer for AI responses
-export default function MarkdownRenderer({
-  content,
-  onApplyCode,
-  chatId,
-  onRetry,
-}: MarkdownRendererProps) {
+export default function MarkdownRenderer({ content, chatId, onRetry }: MarkdownRendererProps) {
   const normalizedContent = normalizePlainTextFence(content);
 
   // Check for error blocks first
@@ -764,15 +560,21 @@ export default function MarkdownRenderer({
       const errorStart = errorMatch.index ?? 0;
       return (
         <div className="typeset typeset-chat">
-          {renderContent(normalizedContent.slice(0, errorStart), onApplyCode)}
-          <ErrorBlock errorData={errorMatch[1]} chatId={chatId} onRetry={onRetry} />
-          {renderContent(normalizedContent.slice(errorStart + errorMatch[0].length), onApplyCode)}
+          <MarkdownBlocks text={normalizedContent.slice(0, errorStart)} />
+          <ChatErrorBlock
+            error={parseLegacyErrorBlock(errorMatch[1])}
+            chatId={chatId}
+            onRetry={onRetry}
+          />
+          <MarkdownBlocks text={normalizedContent.slice(errorStart + errorMatch[0].length)} />
         </div>
       );
     }
   }
 
   return (
-    <div className="typeset typeset-chat">{renderContent(normalizedContent, onApplyCode)}</div>
+    <div className="typeset typeset-chat">
+      <MarkdownBlocks text={normalizedContent} />
+    </div>
   );
 }

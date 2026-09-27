@@ -1184,20 +1184,20 @@ function FileExplorerTreeComponent({
         if (mod && current) {
           if (e.key === "c") {
             e.preventDefault();
-            clipboardActions.copy([{ path: current.path, is_dir: !!isDir }]);
+            void clipboardActions.copy([{ path: current.path, is_dir: !!isDir }]);
             return;
           }
           if (e.key === "x") {
             e.preventDefault();
-            clipboardActions.cut([{ path: current.path, is_dir: !!isDir }]);
+            void clipboardActions.cut([{ path: current.path, is_dir: !!isDir }]);
             return;
           }
           if (e.key === "v") {
             e.preventDefault();
             const sep = current.path.includes("\\") ? "\\" : "/";
             const targetDir = isDir ? current.path : current.path.split(sep).slice(0, -1).join(sep);
-            if (targetDir) {
-              clipboardActions.paste(targetDir).then(() => {
+            if (targetDir && useFileClipboardStore.getState().clipboard) {
+              void clipboardActions.paste(targetDir).then(() => {
                 onRefreshDirectory?.(targetDir, { force: true });
               });
             }

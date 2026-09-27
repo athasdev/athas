@@ -195,7 +195,55 @@ impl ChatHistoryRepository {
          )
          .map_err(|e| format!("Failed to create tool_calls index: {}", e))?;
 
+      conn
+         .execute(
+            "CREATE TABLE IF NOT EXISTS chat_checkpoints (
+               chat_id TEXT PRIMARY KEY,
+               data TEXT NOT NULL,
+               updated_at INTEGER NOT NULL
+           )",
+            [],
+         )
+         .map_err(|e| format!("Failed to create chat_checkpoints table: {}", e))?;
+
       Ok(())
+   }
+
+   /// Stores a chat's agent checkpoints, as the JSON the frontend keeps them in, replacing any
+   /// stored before. `None` forgets them.
+   pub fn save_checkpoints(
+      &self,
+      chat_id: &str,
+      data: Option<String>,
+      updated_at: i64,
+   ) -> Result<(), String> {
+      let conn = self.open_connection()?;
+      match data {
+         Some(data) => conn.execute(
+            "INSERT OR REPLACE INTO chat_checkpoints (chat_id, data, updated_at) VALUES (?1, ?2, \
+             ?3)",
+            params![chat_id, data, updated_at],
+         ),
+         None => conn.execute(
+            "DELETE FROM chat_checkpoints WHERE chat_id = ?1",
+            params![chat_id],
+         ),
+      }
+      .map_err(|e| format!("Failed to save chat checkpoints: {}", e))?;
+      Ok(())
+   }
+
+   pub fn load_checkpoints(&self, chat_id: &str) -> Result<Option<String>, String> {
+      let conn = self.open_connection()?;
+      match conn.query_row(
+         "SELECT data FROM chat_checkpoints WHERE chat_id = ?1",
+         params![chat_id],
+         |row| row.get(0),
+      ) {
+         Ok(data) => Ok(Some(data)),
+         Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+         Err(e) => Err(format!("Failed to load chat checkpoints: {}", e)),
+      }
    }
 
    pub fn save_chat(
@@ -405,6 +453,12 @@ impl ChatHistoryRepository {
       conn
          .execute("DELETE FROM chats WHERE id = ?1", params![chat_id])
          .map_err(|e| format!("Failed to delete chat: {}", e))?;
+      conn
+         .execute(
+            "DELETE FROM chat_checkpoints WHERE chat_id = ?1",
+            params![chat_id],
+         )
+         .map_err(|e| format!("Failed to delete chat checkpoints: {}", e))?;
       Ok(())
    }
 
@@ -609,5 +663,33 @@ mod tests {
          repository.load_all_chats().unwrap()[0].session_settings,
          Some(settings)
       );
+   }
+
+   #[test]
+   fn stores_replaces_and_deletes_a_chats_checkpoints() {
+      let directory = tempfile::tempdir().unwrap();
+      let repository = ChatHistoryRepository::new(directory.path().join("history.db"));
+      repository.initialize().unwrap();
+      assert_eq!(repository.load_checkpoints("chat").unwrap(), None);
+
+      repository
+         .save_checkpoints("chat", Some("[1]".to_string()), 1)
+         .unwrap();
+      repository
+         .save_checkpoints("chat", Some("[2]".to_string()), 2)
+         .unwrap();
+      assert_eq!(
+         repository.load_checkpoints("chat").unwrap().as_deref(),
+         Some("[2]")
+      );
+
+      repository.save_checkpoints("chat", None, 3).unwrap();
+      assert_eq!(repository.load_checkpoints("chat").unwrap(), None);
+
+      repository
+         .save_checkpoints("chat", Some("[3]".to_string()), 4)
+         .unwrap();
+      repository.delete_chat("chat").unwrap();
+      assert_eq!(repository.load_checkpoints("chat").unwrap(), None);
    }
 }

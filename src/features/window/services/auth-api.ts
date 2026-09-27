@@ -207,6 +207,8 @@ export interface IntelligenceCredits {
   pendingCents: number;
   remainingCents: number;
   requestsCount: number;
+  /** Prepaid usage balance that hosted turns draw from after the allowance, when reported. */
+  walletBalanceCents?: number | null;
 }
 
 export interface EnterprisePolicy {
@@ -439,12 +441,41 @@ export class DesktopAuthError extends Error {
 
 export class AuthApiError extends Error {
   status: number;
+  /** The server's error code from the response body, when it sent one. */
+  code?: string;
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, code?: string) {
     super(message);
     this.name = "AuthApiError";
     this.status = status;
+    this.code = code;
   }
+}
+
+/** Codes a 403 carries when the saved session itself is no longer accepted. */
+const INVALID_SESSION_CODES = new Set([
+  "invalid_session",
+  "session_invalid",
+  "session_revoked",
+  "session_expired",
+  "token_revoked",
+]);
+
+async function readAuthErrorCode(response: Response): Promise<string | undefined> {
+  try {
+    const body: unknown = await response.json();
+    if (!isRecord(body)) return undefined;
+    const nested = isRecord(body.error) ? body.error : null;
+    const code = nested?.code ?? body.code;
+    if (typeof code === "string" && code) return code;
+    return body.sessionInvalid === true ? "invalid_session" : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+async function authApiError(message: string, response: Response): Promise<AuthApiError> {
+  return new AuthApiError(message, response.status, await readAuthErrorCode(response));
 }
 
 function sleep(ms: number, signal?: AbortSignal): Promise<void> {
@@ -462,8 +493,15 @@ function sleep(ms: number, signal?: AbortSignal): Promise<void> {
   });
 }
 
+/**
+ * Whether a failure means the saved session is gone. A plain 403 is a permission answer
+ * (a plan, a team policy) and must not sign the user out; only 401, or a 403 whose body
+ * marks the session invalid, does.
+ */
 export function isAuthInvalidError(error: unknown): boolean {
-  return error instanceof AuthApiError && (error.status === 401 || error.status === 403);
+  if (!(error instanceof AuthApiError)) return false;
+  if (error.status === 401) return true;
+  return error.status === 403 && error.code !== undefined && INVALID_SESSION_CODES.has(error.code);
 }
 
 function getApiBaseUnavailableMessage(apiBase = API_BASE): string {
@@ -506,10 +544,31 @@ export const removeAuthToken = async (): Promise<void> => {
   await invoke("remove_auth_token");
 };
 
+const DEFAULT_AUTHENTICATED_FETCH_TIMEOUT_MS = 10_000;
+
+export interface AuthenticatedFetchOptions extends RequestInit {
+  /**
+   * How long the request may take. Defaults to 10 seconds when no `signal` is given; a
+   * caller's `signal` and timeout both apply when both are set. `null` disables the timeout.
+   */
+  timeoutMs?: number | null;
+}
+
+function authenticatedFetchSignal(
+  signal: AbortSignal | null | undefined,
+  timeoutMs: number | null | undefined,
+): AbortSignal | undefined {
+  const timeout =
+    timeoutMs === undefined ? (signal ? null : DEFAULT_AUTHENTICATED_FETCH_TIMEOUT_MS) : timeoutMs;
+  if (timeout === null) return signal ?? undefined;
+  const timeoutSignal = AbortSignal.timeout(timeout);
+  return signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal;
+}
+
 // Authenticated API fetch helper
 export async function authenticatedFetch(
   path: string,
-  options: RequestInit = {},
+  options: AuthenticatedFetchOptions = {},
   tokenOverride?: string,
 ): Promise<Response> {
   const token = tokenOverride ?? (await getAuthToken());
@@ -517,25 +576,22 @@ export async function authenticatedFetch(
     throw new Error("Not authenticated");
   }
 
-  const requestOptions = {
-    ...options,
+  const { timeoutMs, signal, ...requestOptions } = options;
+  return tauriFetch(`${getPreferredAuthApiBase()}${path}`, {
+    ...requestOptions,
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
       ...options.headers,
     },
-  };
-
-  return tauriFetch(`${getPreferredAuthApiBase()}${path}`, {
-    ...requestOptions,
-    signal: options.signal ?? AbortSignal.timeout(10000),
+    signal: authenticatedFetchSignal(signal, timeoutMs),
   });
 }
 
 export async function fetchCurrentUser(tokenOverride?: string): Promise<AuthUser> {
   const response = await authenticatedFetch("/api/auth/me", {}, tokenOverride);
   if (!response.ok) {
-    throw new AuthApiError(`Failed to fetch user: ${response.status}`, response.status);
+    throw await authApiError(`Failed to fetch user: ${response.status}`, response);
   }
   const data = await response.json();
   if (!data.user) {
@@ -547,7 +603,7 @@ export async function fetchCurrentUser(tokenOverride?: string): Promise<AuthUser
 export async function fetchSubscriptionStatus(tokenOverride?: string): Promise<SubscriptionInfo> {
   const response = await authenticatedFetch("/api/auth/subscription", {}, tokenOverride);
   if (!response.ok) {
-    throw new AuthApiError(`Failed to fetch subscription: ${response.status}`, response.status);
+    throw await authApiError(`Failed to fetch subscription: ${response.status}`, response);
   }
   const parsed = parseSubscriptionInfoResponse(await response.json());
   if (!parsed) {
@@ -1145,23 +1201,30 @@ export async function waitForDesktopAuthToken(
       );
     }
 
-    if (response.status === 404) {
+    if (response.status === 410) {
+      throw new DesktopAuthError("expired", "Desktop sign-in session expired.");
+    }
+
+    // Read the body before judging the status: a server answers an unknown session with
+    // `{ status: "missing" }` (200 now, 404 on older servers), which is not a missing endpoint.
+    let payload: unknown = null;
+    try {
+      payload = await response.json();
+    } catch {
+      payload = null;
+    }
+    const parsed = parseDesktopAuthPollResponse(payload);
+
+    if (response.status === 404 && !parsed) {
       throw new DesktopAuthError(
         "endpoint_unavailable",
         "Desktop auth session endpoint is unavailable on this server.",
       );
     }
 
-    if (response.status === 410) {
-      throw new DesktopAuthError("expired", "Desktop sign-in session expired.");
-    }
-
-    if (!response.ok) {
+    if (!response.ok && response.status !== 404) {
       throw new DesktopAuthError("failed", `Desktop sign-in failed (${response.status}).`);
     }
-
-    const payload = await response.json();
-    const parsed = parseDesktopAuthPollResponse(payload);
 
     if (!parsed) {
       throw new DesktopAuthError("failed", "Invalid desktop sign-in response.");

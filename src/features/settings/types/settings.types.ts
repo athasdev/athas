@@ -128,8 +128,10 @@ export interface Settings {
   aiAgentNotificationSound: boolean;
   /** Whether new agent chats start with "Follow agent" on. */
   aiFollowAgent: boolean;
+  /** Model requests one built-in agent turn may make before it pauses to ask to continue. */
+  aiAgentMaxSteps: number;
   aiSkills: AIChatSkill[];
-  /** MCP servers offered to ACP agents. Secrets live in secure storage, not here. */
+  /** MCP servers offered to agents. Secrets live in secure storage, not here. */
   mcpServers: McpServerSetting[];
   v0DesignSystems: LegacyV0DesignSystemProfile[];
   activeV0DesignSystemId: string;

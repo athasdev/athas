@@ -10,7 +10,6 @@ export function useChatState() {
     agentRuns: useAIChatStore((state) => state.agentRuns),
     agentMessageQueues: useAIChatStore((state) => state.agentMessageQueues),
     chatMessageLoadStates: useAIChatStore((state) => state.chatMessageLoadStates),
-    mode: useAIChatStore((state) => state.mode),
     outputStyle: useAIChatStore((state) => state.outputStyle),
   };
 }

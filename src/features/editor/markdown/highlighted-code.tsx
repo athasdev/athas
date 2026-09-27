@@ -1,28 +1,50 @@
 import { type ReactNode, useEffect, useState } from "react";
 import { type CodeHighlightSegment, getCodeHighlightSegments } from "./code-highlight";
 
-/** Highlight segments for `code`, loaded in the background; empty until they arrive. */
+const NO_SEGMENTS: CodeHighlightSegment[] = [];
+/** How long code must stop changing before its unfinished last line is highlighted too. */
+const SETTLE_MS = 120;
+
+/**
+ * Highlight segments for `code`, loaded in the background. Segments computed for an earlier
+ * version stay in use while the code only grows, so a streamed code block keeps its colours
+ * instead of flashing plain on every chunk. Whole lines are highlighted right away; a trailing
+ * partial line waits until the code settles.
+ */
 export function useCodeHighlightSegments(
   code: string,
   language: string | undefined,
 ): CodeHighlightSegment[] {
-  const [segments, setSegments] = useState<CodeHighlightSegment[]>([]);
+  const [result, setResult] = useState<{
+    code: string;
+    language: string | undefined;
+    segments: CodeHighlightSegment[];
+  }>({ code: "", language, segments: NO_SEGMENTS });
 
   useEffect(() => {
-    let cancelled = false;
-    setSegments([]);
     if (!language || !code) return;
+    let cancelled = false;
+    const highlight = (target: string) => {
+      void getCodeHighlightSegments(target, language).then((segments) => {
+        if (!cancelled) setResult({ code: target, language, segments });
+      });
+    };
 
-    void getCodeHighlightSegments(code, language).then((nextSegments) => {
-      if (!cancelled) setSegments(nextSegments);
-    });
+    const lineEnd = code.lastIndexOf("\n") + 1;
+    const hasPartialLine = lineEnd > 0 && lineEnd < code.length;
+    if (hasPartialLine) highlight(code.slice(0, lineEnd));
+    const settle = setTimeout(() => highlight(code), hasPartialLine ? SETTLE_MS : 0);
 
     return () => {
       cancelled = true;
+      clearTimeout(settle);
     };
   }, [code, language]);
 
-  return segments;
+  if (!language || !code) return NO_SEGMENTS;
+  return result.language === language && code.startsWith(result.code)
+    ? result.segments
+    : NO_SEGMENTS;
 }
 
 /**

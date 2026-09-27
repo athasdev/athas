@@ -229,7 +229,10 @@ fn main() {
          // AI Provider token commands
          intelligence_read_file,
          intelligence_list_files,
+         intelligence_paths_stay_in_workspace,
          intelligence_edit_file,
+         intelligence_write_file,
+         intelligence_delete_file,
          intelligence_run_command,
          chat_run_terminal_command,
          intelligence_cancel_command,
@@ -240,6 +243,9 @@ fn main() {
          get_mcp_server_secrets,
          store_mcp_server_secrets,
          remove_mcp_server_secrets,
+         intelligence_mcp_start,
+         intelligence_mcp_send,
+         intelligence_mcp_stop,
          // Auth token commands
          store_auth_token,
          get_auth_token,
@@ -251,6 +257,8 @@ fn main() {
          load_all_chats,
          load_chat,
          delete_chat,
+         save_chat_checkpoints,
+         load_chat_checkpoints,
          search_chats,
          get_chat_stats,
          // Window commands
@@ -472,6 +480,7 @@ fn main() {
          get_cli_install_command,
          get_importable_ide_projects,
          take_pending_cli_open_requests,
+         take_pending_deep_links,
          // Runtime commands
          ensure_runtime,
          get_runtime_status,

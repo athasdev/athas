@@ -4,7 +4,6 @@ import { getProviderAccessFromMap } from "@/features/ai/stores/ai-chat/provider-
 import {
   ArrowUpIcon,
   BoltIcon,
-  CommandIcon,
   MicrophoneIcon,
   PlayIcon,
   StopIcon,
@@ -39,14 +38,13 @@ import { getImageMimeType } from "@/utils/image-file-types";
 import { parsePastedImages, restorePastedImages } from "@/features/ai/lib/image-attachments";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { isAcpAgent } from "@/features/ai/services/ai-chat-service";
-import { FollowAgentToggle } from "./follow-agent-toggle";
+import { useFollowAgentInterrupt } from "./follow-agent-toggle";
 import {
   getComposerDropdownPosition,
   getComposerText,
   getComposerTextBeforeCaret,
   getComposerTextRange,
   isComposerTokenElement,
-  prepareComposerSlashCommand,
 } from "@/features/ai/utils/chat-composer-dom";
 import type { InlineDropdownPosition, PastedImage } from "@/features/ai/types/chat-composer.types";
 import type { AIChatSkill } from "@/features/ai/types/skills.types";
@@ -72,10 +70,27 @@ import { cn } from "@/utils/cn";
 import { Composer, ComposerEditable, ComposerToolbar } from "@/ui/composer";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { chatContentWidth } from "../chat/chat-content-width";
-import { ComposerEffortSelector } from "./composer-effort-selector";
 import { ComposerAgentSelector } from "./composer-agent-selector";
 import { ChatPreferencesMenu } from "./chat-preferences-menu";
+import { ComposerModeSelector } from "./composer-mode-selector";
+import { useChatModeSource } from "@/features/ai/hooks/use-chat-mode";
+import { applyChatModeIntent, cycleChatMode } from "@/features/ai/services/chat-mode-service";
+import {
+  filterComposerSlashCommands,
+  mergeComposerSlashCommands,
+  parseLeadingModeCommand,
+} from "@/features/ai/lib/composer-slash-commands";
+import type {
+  ComposerCommandAction,
+  ComposerSlashCommand,
+} from "@/features/ai/types/composer-slash-command.types";
+import { clearChat, compactChat } from "@/features/ai/services/chat-compaction-service";
+import { openAgentEditsReview } from "@/features/ai/services/agent-edits-service";
+import { pickAgentEditsChatId } from "@/features/ai/stores/agent-edits.store";
+import { openNewAgentChat } from "@/features/ai/lib/open-new-agent-chat";
 import { AcpContextMeter } from "./acp-context-meter";
+import { ComposerContextMeter } from "./composer-context-meter";
+import { useComposerContextBudget } from "@/features/ai/hooks/use-composer-context-budget";
 import { AgentMessageQueue } from "./agent-message-queue";
 import { AgentEditsBar } from "./agent-edits-bar";
 import { FileMentionDropdown } from "../mentions/file-mention-dropdown";
@@ -171,6 +186,9 @@ const AIChatInputBar = memo(function AIChatInputBar({
   const sessionConfigOptions = acpSession.configOptions;
   const session = useAIChatStore((state) => state.chats.find((chat) => chat.id === chatId));
   const acpSessionId = session?.acpSessionId ?? null;
+  const modeSource = useChatModeSource(chatId ?? null, currentAgentId);
+  const followChatId = chatId && isAcpAgent(currentAgentId) ? chatId : null;
+  useFollowAgentInterrupt(followChatId);
   const defaultProviderId = useSettingsStore((state) => state.settings.aiProviderId);
   const defaultModelId = useSettingsStore((state) => state.settings.aiModelId);
   const aiProviderId = session?.providerId ?? defaultProviderId;
@@ -182,6 +200,18 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
   // Check if current agent is "custom" (only show model selector for custom agent)
   const isCustomAgent = currentAgentId === "custom";
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
+  const contextBudget = useComposerContextBudget({
+    enabled: isCustomAgent,
+    chatId: chatId ?? null,
+    projectRoot: rootFolderPath ?? null,
+    providerId: aiProviderId,
+    modelId: aiModelId,
+    buffers,
+    selectedBufferIds,
+    selectedFilesPaths,
+    editorContexts: selectedEditorContexts,
+  });
 
   // ACP agents don't need API key (they handle their own auth)
   const isInputEnabled = isCustomAgent ? hasApiKey : true;
@@ -207,16 +237,23 @@ const AIChatInputBar = memo(function AIChatInputBar({
     [chatId, isCustomAgent, onAgentChange, updateSetting],
   );
 
-  const availableSlashCommands = acpSession.slashCommands;
-  const filteredSlashCommands = useMemo(() => {
-    const search = slashCommandState.search.trim().toLowerCase();
-    if (!search) return availableSlashCommands;
-    return availableSlashCommands.filter(
-      (command) =>
-        command.name.toLowerCase().includes(search) ||
-        command.description?.toLowerCase().includes(search),
-    );
-  }, [availableSlashCommands, slashCommandState.search]);
+  const skills = useSettingsStore((state) => state.settings.aiSkills);
+  const availableSlashCommands = useMemo(
+    () =>
+      mergeComposerSlashCommands({
+        agentCommands: acpSession.slashCommands,
+        skills,
+        isBuiltInAgent: isCustomAgent,
+        availableModeIntents: modeSource.options.flatMap((option) =>
+          option.intent ? [option.intent] : [],
+        ),
+      }),
+    [acpSession.slashCommands, isCustomAgent, modeSource.options, skills],
+  );
+  const filteredSlashCommands = useMemo(
+    () => filterComposerSlashCommands(availableSlashCommands, slashCommandState.search),
+    [availableSlashCommands, slashCommandState.search],
+  );
 
   const setInput = useCallback((input: string) => {
     inputValueRef.current = input;
@@ -538,6 +575,16 @@ const AIChatInputBar = memo(function AIChatInputBar({
         return;
       }
     }
+    if (
+      e.key === "Tab" &&
+      e.shiftKey &&
+      !slashCommandState.active &&
+      !mentionState.active &&
+      cycleChatMode(modeSource)
+    ) {
+      e.preventDefault();
+      return;
+    }
     // Handle slash command navigation
     if (slashCommandState.active) {
       if (e.key === "ArrowDown") {
@@ -631,7 +678,9 @@ const AIChatInputBar = memo(function AIChatInputBar({
       }
     } else if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleSendMessage();
+      if (e.repeat) return;
+      if (isStreaming && (e.metaKey || e.ctrlKey)) handleInterruptAndSend();
+      else handleSendMessage();
     }
   };
 
@@ -938,48 +987,105 @@ const AIChatInputBar = memo(function AIChatInputBar({
     [hideMention, mentionState.search.length, mentionState.startIndex, syncInputFromEditable],
   );
 
-  // Handle slash command selection
-  const handleSlashCommandSelect = useCallback(
-    (command: SlashCommand) => {
-      if (!inputRef.current) return;
+  const runSlashCommandAction = (action: ComposerCommandAction) => {
+    const notify = (message: string) => showToast({ message, type: "info" });
+    switch (action.type) {
+      case "mode": {
+        const mode = applyChatModeIntent(modeSource, action.intent);
+        notify(mode ? `Mode: ${mode.label}` : "This agent has no matching mode.");
+        return;
+      }
+      case "skill": {
+        const skill = skills.find((candidate) => candidate.id === action.skillId);
+        if (skill) insertSkillAtCursor(skill);
+        return;
+      }
+      case "new":
+        openNewAgentChat(currentAgentId);
+        return;
+      case "review":
+        if (chatId && pickAgentEditsChatId(chatId) === chatId) openAgentEditsReview(chatId);
+        else notify("No agent changes to review in this chat.");
+        return;
+      case "compact":
+      case "clear":
+        if (!chatId) return;
+        if (isTyping) {
+          notify("Wait for the current response to finish.");
+          return;
+        }
+        if (action.type === "clear") {
+          void clearChat(chatId).catch((error: unknown) => {
+            console.error("Failed to clear the chat:", error);
+            showToast({ message: "Could not clear this chat.", type: "error" });
+          });
+          return;
+        }
+        void compactChat(chatId)
+          .then((count) =>
+            notify(count > 0 ? `Summarised ${count} earlier messages.` : "Nothing to compact yet."),
+          )
+          .catch((error: unknown) => {
+            console.error("Failed to compact the chat:", error);
+            showToast({ message: "Could not compact this chat.", type: "error" });
+          });
+        return;
+    }
+  };
 
-      isUpdatingContentRef.current = true;
-      const { startIndex, endIndex } = slashCommandRangeRef.current;
-      hideSlashCommands();
-      const commandRange = getComposerTextRange(inputRef.current, startIndex, endIndex);
-      commandRange.deleteContents();
+  const handleSlashCommandSelect = (command: SlashCommand) => {
+    if (!inputRef.current) return;
 
-      const commandSpan = document.createElement("span");
-      commandSpan.setAttribute("data-slash-command", "true");
-      commandSpan.setAttribute("data-slash-command-name", command.name);
-      commandSpan.setAttribute("contenteditable", "false");
-      commandSpan.title = command.description || `/${command.name}`;
-      commandSpan.className = cn(
-        badgeVariants({ tone: "neutral" }),
-        "max-w-48 truncate align-baseline select-none",
-      );
-      commandSpan.textContent = `/${command.name}`;
+    isUpdatingContentRef.current = true;
+    const { startIndex, endIndex } = slashCommandRangeRef.current;
+    hideSlashCommands();
+    const commandRange = getComposerTextRange(inputRef.current, startIndex, endIndex);
+    commandRange.deleteContents();
 
-      const trailingSpace = document.createTextNode(" ");
-      const fragment = document.createDocumentFragment();
-      fragment.append(commandSpan, trailingSpace);
-      commandRange.insertNode(fragment);
-
+    const action = (command as ComposerSlashCommand).action;
+    if (action) {
       const selection = window.getSelection();
       if (selection) {
-        const caretRange = document.createRange();
-        caretRange.setStart(trailingSpace, trailingSpace.length);
-        caretRange.collapse(true);
+        commandRange.collapse(true);
         selection.removeAllRanges();
-        selection.addRange(caretRange);
+        selection.addRange(commandRange);
       }
-
       inputRef.current.focus();
       syncInputFromEditable();
       isUpdatingContentRef.current = false;
-    },
-    [hideSlashCommands, syncInputFromEditable],
-  );
+      runSlashCommandAction(action);
+      return;
+    }
+
+    const commandSpan = document.createElement("span");
+    commandSpan.setAttribute("data-slash-command", "true");
+    commandSpan.setAttribute("data-slash-command-name", command.name);
+    commandSpan.setAttribute("contenteditable", "false");
+    commandSpan.title = command.description || `/${command.name}`;
+    commandSpan.className = cn(
+      badgeVariants({ tone: "neutral" }),
+      "max-w-48 truncate align-baseline select-none",
+    );
+    commandSpan.textContent = `/${command.name}`;
+
+    const trailingSpace = document.createTextNode(" ");
+    const fragment = document.createDocumentFragment();
+    fragment.append(commandSpan, trailingSpace);
+    commandRange.insertNode(fragment);
+
+    const selection = window.getSelection();
+    if (selection) {
+      const caretRange = document.createRange();
+      caretRange.setStart(trailingSpace, trailingSpace.length);
+      caretRange.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(caretRange);
+    }
+
+    inputRef.current.focus();
+    syncInputFromEditable();
+    isUpdatingContentRef.current = false;
+  };
 
   const handleSendMessage = () => {
     const currentInput = inputValueRef.current;
@@ -1004,7 +1110,16 @@ const AIChatInputBar = memo(function AIChatInputBar({
       return;
     }
     const currentImages = pastedImages;
-    const hasContent = currentInput.trim() || currentImages.length > 0;
+    const modeCommand = parseLeadingModeCommand(currentInput, availableSlashCommands);
+    if (modeCommand) {
+      runSlashCommandAction({ type: "mode", intent: modeCommand.intent });
+      if (!modeCommand.prompt && currentImages.length === 0) {
+        replaceInput("");
+        return;
+      }
+    }
+    const prompt = modeCommand ? modeCommand.prompt : currentInput;
+    const hasContent = prompt.trim() || currentImages.length > 0;
     if (!hasContent || !isInputEnabled) return;
 
     let images;
@@ -1014,7 +1129,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
       showToast({ message: String(error), type: "error" });
       return;
     }
-    const result = onSendMessage(currentInput, images);
+    const result = onSendMessage(prompt, images);
     if (!result.accepted) return;
 
     setInput("");
@@ -1084,14 +1199,11 @@ const AIChatInputBar = memo(function AIChatInputBar({
     focusInput,
   });
 
-  const hasSlashCommands = availableSlashCommands.length > 0;
   const isInitialPresentation = presentation === "initial";
   const inputPlaceholder = isInputEnabled
     ? isInitialPresentation
       ? "What do you want to create?"
-      : hasSlashCommands
-        ? "Ask anything... (@ files, / commands, ! terminal)"
-        : "Ask anything... (@ files, ! terminal)"
+      : "Ask anything... (@ files, / commands, ! terminal)"
     : terminalEnabled
       ? "Type ! for terminal, or connect a provider to chat"
       : aiProviderId === "athas"
@@ -1220,6 +1332,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
                   variant="ghost"
                   tone="accent"
                   tooltip="Interrupt and send now"
+                  shortcut="mod+enter"
                   iconOnly
                 >
                   <BoltIcon />
@@ -1275,7 +1388,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
         </ChromeBar>
       ) : (
         <ComposerToolbar>
-          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
+          <div className="flex min-w-0 items-center gap-1">
             <ContextSelector
               buffers={buffers}
               selectedBufferIds={selectedBufferIds}
@@ -1291,10 +1404,15 @@ const AIChatInputBar = memo(function AIChatInputBar({
                 setIsContextDropdownOpen(open);
               }}
             />
+            <ComposerModeSelector source={modeSource} onBeforeOpen={closeInlineMenus} />
           </div>
 
           <div className="ml-auto flex min-w-0 shrink items-center gap-1">
-            <AcpContextMeter usage={acpSession.usage} />
+            {contextBudget ? (
+              <ComposerContextMeter budget={contextBudget} />
+            ) : (
+              <AcpContextMeter usage={acpSession.usage} />
+            )}
             <ComposerAgentSelector
               cwd={projectPath}
               currentAgentId={currentAgentId}
@@ -1307,18 +1425,9 @@ const AIChatInputBar = memo(function AIChatInputBar({
                 if (acpSessionId) void changeSessionConfigOption(acpSessionId, optionId, value);
               }}
               onBeforeOpen={closeInlineMenus}
-            />
-            <ComposerEffortSelector
-              cwd={projectPath}
-              currentAgentId={currentAgentId}
-              sessionConfigOptions={sessionConfigOptions}
-              onSessionConfigChange={(optionId, value) => {
-                if (acpSessionId) void changeSessionConfigOption(acpSessionId, optionId, value);
-              }}
-              onOpen={closeInlineMenus}
+              followChatId={followChatId}
             />
             <ChatPreferencesMenu
-              chatId={chatId ?? null}
               currentAgentId={currentAgentId}
               canChangeAgent={Boolean(onAgentChange)}
               sessionConfigOptions={sessionConfigOptions}
@@ -1329,35 +1438,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
               onSelectCodexSkill={insertCodexSkillAtCursor}
               onBeforeOpen={closeInlineMenus}
             />
-            {chatId && isAcpAgent(currentAgentId) ? <FollowAgentToggle chatId={chatId} /> : null}
-            {hasSlashCommands && (
-              <Button
-                type="button"
-                onClick={() => {
-                  if (!inputRef.current || !isInputEnabled) return;
-                  if (slashCommandState.active) {
-                    hideSlashCommands();
-                    return;
-                  }
-                  closeInlineMenus();
-                  const { startIndex, endIndex, search } = prepareComposerSlashCommand(
-                    inputRef.current,
-                  );
-                  syncInputFromEditable();
-                  slashCommandRangeRef.current = { startIndex, endIndex };
-                  showSlashCommands(getSlashDropdownPosition(), search);
-                }}
-                variant="ghost"
-                disabled={!isInputEnabled}
-                iconOnly
-                active={slashCommandState.active}
-                tooltip="Show slash commands"
-                aria-label="Show slash commands"
-              >
-                <CommandIcon />
-              </Button>
-            )}
-
             <Button
               type="button"
               disabled={!isInputEnabled || !isSpeechRecognitionSupported}

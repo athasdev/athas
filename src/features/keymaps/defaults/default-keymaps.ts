@@ -6,6 +6,21 @@
 import type { Keybinding } from "../types/keymaps.types";
 
 export const defaultKeymaps: Keybinding[] = [
+  // Agent edit review. These come first and only apply while the focused editor shows
+  // unreviewed agent changes, so redo and new tab keep their keys everywhere else.
+  {
+    key: "cmd+y",
+    command: "ai.keepAgentHunk",
+    source: "default",
+    when: "editorFocus && agentEditHunks",
+  },
+  {
+    key: "cmd+n",
+    command: "ai.rejectAgentHunk",
+    source: "default",
+    when: "editorFocus && agentEditHunks",
+  },
+
   // File Operations
   {
     key: "cmd+t",
@@ -349,6 +364,18 @@ export const defaultKeymaps: Keybinding[] = [
   {
     key: "cmd+i",
     command: "editor.inlineEdit",
+    source: "default",
+    when: "editorFocus",
+  },
+  {
+    key: "cmd+l",
+    command: "editor.addSelectionToChat",
+    source: "default",
+    when: "editorFocus",
+  },
+  {
+    key: "cmd+alt+l",
+    command: "editor.addSelectionToNewChat",
     source: "default",
     when: "editorFocus",
   },

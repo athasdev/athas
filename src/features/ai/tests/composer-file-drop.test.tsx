@@ -16,16 +16,15 @@ const native = vi.hoisted(() => ({
   unlisten: vi.fn(),
 }));
 vi.mock("@tauri-apps/api/core", () => ({ isTauri: () => true }));
-vi.mock("@tauri-apps/api/webview", () => ({
-  getCurrentWebview: () => ({
-    onDragDropEvent: async (listener: (event: NativeDrop) => void) => {
-      native.listeners.add(listener);
-      return () => {
-        native.unlisten();
-        native.listeners.delete(listener);
-      };
-    },
-  }),
+vi.mock("@/utils/tauri-drag-drop", () => ({
+  listenToNativeDragDrop: async (listener: (payload: NativeDrop["payload"]) => void) => {
+    const wrapped = (event: NativeDrop) => listener(event.payload);
+    native.listeners.add(wrapped);
+    return () => {
+      native.unlisten();
+      native.listeners.delete(wrapped);
+    };
+  },
 }));
 vi.mock("@tauri-apps/plugin-fs", () => ({ readFile: vi.fn() }));
 

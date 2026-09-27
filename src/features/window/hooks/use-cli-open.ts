@@ -2,6 +2,8 @@ import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { useEffect } from "react";
 import { enqueueWindowOpenRequest, type WindowOpenRequest } from "../utils/window-open-request";
+import { createPendingQueueDrain } from "../utils/pending-queue-drain";
+import { disposeListener } from "@/utils/tauri-drag-drop";
 
 export interface CliOpenPayload {
   kind: "path" | "web" | "terminal" | "remote" | "surface" | "empty";
@@ -78,42 +80,40 @@ function mapCliOpenPayloadToWindowOpenRequest(payload: CliOpenPayload): WindowOp
   }
 }
 
+function enqueuePayload(payload: CliOpenPayload) {
+  const request = mapCliOpenPayloadToWindowOpenRequest(payload);
+  if (request) {
+    void enqueueWindowOpenRequest(request);
+  }
+}
+
+const drainPendingRequests = createPendingQueueDrain({
+  take: () => invoke<CliOpenPayload[]>("take_pending_cli_open_requests"),
+  handle: enqueuePayload,
+  onError: (error) => console.error("Failed to load pending CLI open requests:", error),
+});
+
 export function useCliOpen() {
   useEffect(() => {
     let disposed = false;
-    const enqueuePayload = (payload: CliOpenPayload) => {
-      const request = mapCliOpenPayloadToWindowOpenRequest(payload);
-      if (request) {
-        void enqueueWindowOpenRequest(request);
-      }
-    };
+    const drain = () => void drainPendingRequests();
 
     const unlisten = listen<CliOpenPayload>("cli_open_request", (event) => {
       enqueuePayload(event.payload);
     });
 
-    const drainPendingRequests = () => {
-      void invoke<CliOpenPayload[]>("take_pending_cli_open_requests")
-        .then((payloads) => {
-          if (disposed) return;
-          for (const payload of payloads) {
-            enqueuePayload(payload);
-          }
-        })
-        .catch((error) => {
-          console.error("Failed to load pending CLI open requests:", error);
-        });
-    };
-
-    const unlistenPending = listen<void>("cli_open_requests_pending", drainPendingRequests);
-    void Promise.all([unlisten, unlistenPending]).then(() => {
-      if (!disposed) drainPendingRequests();
-    });
+    const unlistenPending = listen<void>("cli_open_requests_pending", drain);
+    Promise.all([unlisten, unlistenPending]).then(
+      () => {
+        if (!disposed) drain();
+      },
+      (error: unknown) => console.error("Failed to listen for CLI open requests:", error),
+    );
 
     return () => {
       disposed = true;
-      unlisten.then((fn) => fn());
-      unlistenPending.then((fn) => fn());
+      disposeListener(unlisten);
+      disposeListener(unlistenPending);
     };
   }, []);
 }

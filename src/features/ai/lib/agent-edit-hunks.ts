@@ -177,6 +177,7 @@ export function recordAgentWrite(
         current: write.content,
         created: write.previousContent === null,
         revision: (existing?.revision ?? 0) + 1,
+        ...(write.turnId ? { turnId: write.turnId } : {}),
       };
 
   if (entry.baseline === entry.current) {

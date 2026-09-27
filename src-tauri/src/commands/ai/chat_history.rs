@@ -61,6 +61,24 @@ pub async fn delete_chat(
 }
 
 #[command]
+pub async fn save_chat_checkpoints(
+   app: crate::app_runtime::AppHandle,
+   chat_id: String,
+   data: Option<String>,
+   updated_at: i64,
+) -> Result<(), String> {
+   repository(&app)?.save_checkpoints(&chat_id, data, updated_at)
+}
+
+#[command]
+pub async fn load_chat_checkpoints(
+   app: crate::app_runtime::AppHandle,
+   chat_id: String,
+) -> Result<Option<String>, String> {
+   repository(&app)?.load_checkpoints(&chat_id)
+}
+
+#[command]
 pub async fn search_chats(
    app: crate::app_runtime::AppHandle,
    query: String,

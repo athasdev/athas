@@ -1,14 +1,20 @@
-import { CopyIcon, FileTextIcon, UploadIcon } from "@/ui/icons";
+import {
+  ArrowClockwiseIcon,
+  ClipboardTextIcon,
+  CopyIcon,
+  FileTextIcon,
+  PencilIcon,
+} from "@/ui/icons";
 import type { FormEvent, ReactNode } from "react";
-import { memo, useCallback, useState } from "react";
+import { memo, useCallback, useEffect, useState } from "react";
 import { Shimmer } from "@/ui/shimmer";
 import { Marker, MarkerContent, MarkerIcon } from "@/ui/marker";
 import { MessageAction, MessageResponse } from "@/ui/message";
 import { ThinkingOrb, type ThinkingOrbProps } from "@/ui/thinking-orb";
 import type { PlanStep } from "@/features/ai/lib/plan-parser";
-import { hasPlanBlock, parsePlan } from "@/features/ai/lib/plan-parser";
 import type { Message as AIMessage } from "@/features/ai/types/ai-chat.types";
 import { formatTime } from "@/features/ai/lib/formatting";
+import { elapsedSeconds, formatElapsed } from "@/features/ai/lib/elapsed-time";
 import { buildShareableOutcomeMarkdown } from "@/features/ai/lib/shareable-outcome";
 import { writeClipboardText } from "@/utils/clipboard";
 import { cn } from "@/utils/cn";
@@ -26,34 +32,35 @@ import {
   AttachmentTrigger,
 } from "@/ui/attachment";
 import { Bubble, BubbleContent } from "@/ui/bubble";
-import { Avatar } from "@/ui/avatar";
-import { Message, MessageAvatar, MessageContent, MessageFooter } from "@/ui/message";
+import { Message, MessageContent, MessageFooter } from "@/ui/message";
 import Textarea from "@/ui/textarea";
-import { ProviderIcon } from "../icons/provider-icons";
 import MarkdownRenderer from "../messages/markdown-renderer";
+import { CheckpointRestoreButton } from "./checkpoint-restore-button";
 import { PlanBlockDisplay } from "../messages/plan-block-display";
 import { AgentPlan } from "../messages/agent-plan";
 import { AgentStopNotice } from "../messages/agent-stop-notice";
+import { ChatErrorBlock } from "../messages/chat-error-block";
 import { ToolCallList } from "../messages/tool-call-display";
-import { buildAssistantTimeline } from "@/features/ai/lib/assistant-timeline";
+import { buildAssistantSegments } from "@/features/ai/lib/assistant-segments";
+import { stripErrorBlocks } from "@/features/ai/lib/chat-error";
+import { findLatestEdit } from "@/features/ai/lib/tool-call-groups";
 import { describeTurnUsage, formatTurnUsage } from "@/features/ai/lib/acp-usage";
+import { formatMessageUsage } from "@/features/ai/lib/message-usage";
 import Tooltip from "@/ui/tooltip";
+import { parseMentionTokens } from "@/features/ai/lib/file-mentions";
 
 interface ChatMessageProps {
   onRetry?: () => void | Promise<void>;
+  /** Starts the turn over when the agent has not answered for a while. */
+  onRetryStalled?: () => void;
   message: AIMessage;
   isLastMessage: boolean;
   showActions?: boolean;
-  onApplyCode?: (code: string, language?: string) => void;
   onEditUserMessage?: (messageId: string, content: string) => void | Promise<void>;
   canEditUserMessage?: boolean;
   searchQuery?: string;
   chatId?: string | null;
   onExecutePlanStep?: (message: string) => void | Promise<void>;
-  userName: string;
-  userAvatarUrl?: string | null;
-  assistantIconId: string;
-  assistantLabel: string;
 }
 
 async function copyText(text: string) {
@@ -87,14 +94,12 @@ function HighlightedPlainText({ text, query }: { text: string; query: string }) 
   );
 }
 
-// The composer serializes an @file chip as `@[name]`; show it as a chip again.
-const MENTION_PATTERN = /@\[([^\]]+)\]/g;
-
+// The composer serializes an @file chip as a mention token; show it as a chip again.
 function UserMessageText({ text, query }: { text: string; query: string }) {
   const parts: ReactNode[] = [];
   let cursor = 0;
-  for (const match of text.matchAll(MENTION_PATTERN)) {
-    const index = match.index ?? 0;
+  for (const token of parseMentionTokens(text)) {
+    const index = token.start;
     if (index > cursor) {
       parts.push(
         <HighlightedPlainText
@@ -108,12 +113,13 @@ function UserMessageText({ text, query }: { text: string; query: string }) {
       <span
         key={`mention-${index}`}
         data-mention="true"
+        title={token.path}
         className={cn(badgeVariants({ tone: "accent" }), "max-w-48 truncate align-baseline")}
       >
-        {match[1]}
+        {token.name}
       </span>,
     );
-    cursor = index + match[0].length;
+    cursor = token.end;
   }
   if (cursor < text.length) {
     parts.push(
@@ -123,14 +129,34 @@ function UserMessageText({ text, query }: { text: string; query: string }) {
   return <>{parts}</>;
 }
 
-function ChatResponseStatus({ phase }: { phase: AIMessage["responsePhase"] }) {
+/** Seconds since `since`, ticking once a second while mounted. */
+function useElapsedSeconds(since: Date | string) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+  return elapsedSeconds(since, now);
+}
+
+function ChatResponseStatus({
+  phase,
+  since,
+  onRetry,
+}: {
+  phase: AIMessage["responsePhase"];
+  since: Date | string;
+  onRetry?: () => void;
+}) {
+  const elapsed = useElapsedSeconds(since);
   const isStarting = phase === "starting";
   const isThinking = phase === "thinking";
+  const isStalled = phase === "stalled";
   const label = isStarting
     ? "Starting agent…"
     : isThinking
       ? "Thinking…"
-      : phase === "stalled"
+      : isStalled
         ? "Still waiting for the agent…"
         : "Waiting for response…";
   const state: ThinkingOrbProps["state"] = isThinking ? "breathing" : "connecting";
@@ -140,9 +166,16 @@ function ChatResponseStatus({ phase }: { phase: AIMessage["responsePhase"] }) {
       <MarkerIcon className="size-5">
         <ThinkingOrb state={state} size={20} aria-hidden="true" />
       </MarkerIcon>
-      <MarkerContent>
+      <MarkerContent className="flex items-center gap-2">
         <Shimmer>{label}</Shimmer>
+        {elapsed > 0 ? <span className="tabular-nums">{formatElapsed(elapsed)}</span> : null}
       </MarkerContent>
+      {isStalled && onRetry ? (
+        <Button type="button" variant="ghost" onClick={onRetry}>
+          <ArrowClockwiseIcon />
+          Retry
+        </Button>
+      ) : null}
     </Marker>
   );
 }
@@ -150,52 +183,28 @@ function ChatResponseStatus({ phase }: { phase: AIMessage["responsePhase"] }) {
 /** Matches the user bubble's `px-3` so both text columns start on the same x. */
 const ASSISTANT_CONTENT_INSET = "px-3";
 
-function AssistantMessageAvatar({
-  iconId,
-  label,
-  isStatus = false,
-}: {
-  iconId: string;
-  label: string;
-  isStatus?: boolean;
-}) {
-  return (
-    <MessageAvatar
-      placement="content"
-      variant="assistant"
-      size="compact"
-      className={isStatus ? "self-center" : "mt-px"}
-      title={label}
-      aria-label={label}
-    >
-      <ProviderIcon providerId={iconId} size={20} className="size-5" />
-    </MessageAvatar>
-  );
-}
-
 export const ChatMessage = memo(function ChatMessage({
   message,
   isLastMessage,
   showActions = true,
-  onApplyCode,
   onRetry,
+  onRetryStalled,
   onEditUserMessage,
   canEditUserMessage = false,
   searchQuery = "",
   chatId,
   onExecutePlanStep,
-  userName,
-  userAvatarUrl,
-  assistantIconId,
-  assistantLabel,
 }: ChatMessageProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [draftContent, setDraftContent] = useState(message.content);
+  // A turn that failed keeps a legacy error card in its text for saved chats; the structured
+  // error renders instead, so the card is left out.
+  const responseText = message.error ? stripErrorBlocks(message.content) : message.content;
   const isToolOnlyMessage =
     message.role === "assistant" &&
     message.toolCalls &&
     message.toolCalls.length > 0 &&
-    (!message.content || message.content.trim().length === 0);
+    !responseText.trim();
 
   const handleExecuteStep = useCallback(
     (step: PlanStep, stepIndex: number) => {
@@ -205,6 +214,9 @@ export const ChatMessage = memo(function ChatMessage({
     },
     [onExecutePlanStep],
   );
+
+  // Only the newest edit of the latest reply opens its diff on its own.
+  const latestEdit = isLastMessage ? findLatestEdit(message.toolCalls) : null;
 
   if (message.role === "user") {
     const messageTime = formatTime(message.timestamp);
@@ -233,10 +245,6 @@ export const ChatMessage = memo(function ChatMessage({
 
     return (
       <Message>
-        {/* Same box as the assistant's, dropped to the bubble's first text line. */}
-        <MessageAvatar placement="content" size="compact" className="mt-3">
-          <Avatar name={userName} src={userAvatarUrl} size="md" />
-        </MessageAvatar>
         <MessageContent>
           <Bubble variant="user">
             <BubbleContent title={messageTime} className="w-full">
@@ -281,15 +289,6 @@ export const ChatMessage = memo(function ChatMessage({
                     </Button>
                   </div>
                 </form>
-              ) : canEditUserMessage && onEditUserMessage ? (
-                <button
-                  type="button"
-                  onClick={startEditing}
-                  className="block w-full cursor-text text-left whitespace-pre-wrap wrap-break-word select-text"
-                  aria-label="Edit prompt"
-                >
-                  <UserMessageText text={message.content} query={searchQuery} />
-                </button>
               ) : (
                 <div className="select-text whitespace-pre-wrap wrap-break-word">
                   <UserMessageText text={message.content} query={searchQuery} />
@@ -303,6 +302,12 @@ export const ChatMessage = memo(function ChatMessage({
               <MessageAction onClick={() => void copyText(message.content)} label="Copy prompt">
                 <CopyIcon className="size-3.5" />
               </MessageAction>
+              {canEditUserMessage && onEditUserMessage ? (
+                <MessageAction onClick={startEditing} label="Edit prompt" icon={PencilIcon} />
+              ) : null}
+              {canEditUserMessage ? (
+                <CheckpointRestoreButton chatId={chatId} messageId={message.id} />
+              ) : null}
             </MessageFooter>
           )}
         </MessageContent>
@@ -313,9 +318,15 @@ export const ChatMessage = memo(function ChatMessage({
   if (isToolOnlyMessage) {
     return (
       <Message>
-        <AssistantMessageAvatar iconId={assistantIconId} label={assistantLabel} />
         <MessageContent className={ASSISTANT_CONTENT_INSET}>
-          <ToolCallList toolCalls={message.toolCalls!} isStreaming={message.isStreaming} />
+          <ToolCallList
+            toolCalls={message.toolCalls!}
+            isStreaming={message.isStreaming}
+            latestEdit={latestEdit}
+          />
+          {message.error ? (
+            <ChatErrorBlock error={message.error} chatId={chatId} onRetry={onRetry} />
+          ) : null}
           {message.stopNotice ? <AgentStopNotice notice={message.stopNotice} /> : null}
         </MessageContent>
       </Message>
@@ -325,14 +336,18 @@ export const ChatMessage = memo(function ChatMessage({
   if (
     message.role === "assistant" &&
     message.isStreaming &&
+    !message.error &&
     (!message.content || message.content.trim().length === 0) &&
     (!message.toolCalls || message.toolCalls.length === 0)
   ) {
     return (
       <Message className="items-center">
-        <AssistantMessageAvatar iconId={assistantIconId} label={assistantLabel} isStatus />
         <MessageContent className={ASSISTANT_CONTENT_INSET}>
-          <ChatResponseStatus phase={message.responsePhase} />
+          <ChatResponseStatus
+            phase={message.responsePhase}
+            since={message.timestamp}
+            onRetry={onRetryStalled}
+          />
         </MessageContent>
       </Message>
     );
@@ -340,7 +355,6 @@ export const ChatMessage = memo(function ChatMessage({
 
   return (
     <Message>
-      <AssistantMessageAvatar iconId={assistantIconId} label={assistantLabel} />
       <MessageContent className={ASSISTANT_CONTENT_INSET}>
         <Bubble variant="ghost">
           <BubbleContent>
@@ -400,64 +414,58 @@ export const ChatMessage = memo(function ChatMessage({
               <AgentPlan entries={message.plan} isStreaming={message.isStreaming} />
             ) : null}
 
-            {hasPlanBlock(message.content) ? (
-              <>
-                <MessageResponse>
-                  <PlanBlockDisplay
-                    plan={parsePlan(message.content)!}
-                    isStreaming={message.isStreaming}
-                    onExecuteStep={handleExecuteStep}
-                  />
-                </MessageResponse>
-                {message.toolCalls && message.toolCalls.length > 0 ? (
+            {buildAssistantSegments(responseText, message.toolCalls).map((segment, index) => (
+              <div
+                key={`${message.id}-segment-${index}`}
+                className={cn("flex min-w-0 flex-col gap-2", index > 0 && "mt-2")}
+              >
+                {segment.plan ? (
+                  <MessageResponse>
+                    <PlanBlockDisplay
+                      plan={segment.plan}
+                      isStreaming={message.isStreaming}
+                      onExecuteStep={handleExecuteStep}
+                    />
+                  </MessageResponse>
+                ) : segment.text ? (
+                  <MessageResponse>
+                    <MarkdownRenderer onRetry={onRetry} content={segment.text} chatId={chatId} />
+                  </MessageResponse>
+                ) : null}
+                {segment.toolCalls.length > 0 ? (
                   <ToolCallList
-                    className="mt-2"
-                    toolCalls={message.toolCalls}
+                    toolCalls={segment.toolCalls}
                     isStreaming={message.isStreaming}
+                    latestEdit={latestEdit}
                   />
                 ) : null}
-              </>
-            ) : (
-              buildAssistantTimeline(message.content, message.toolCalls).map((segment, index) => (
-                <div
-                  key={`${message.id}-segment-${index}`}
-                  className={cn("flex min-w-0 flex-col gap-2", index > 0 && "mt-2")}
-                >
-                  {segment.text ? (
-                    <MessageResponse>
-                      <MarkdownRenderer
-                        onRetry={onRetry}
-                        content={segment.text}
-                        onApplyCode={onApplyCode}
-                        chatId={chatId}
-                      />
-                    </MessageResponse>
-                  ) : null}
-                  {segment.toolCalls.length > 0 ? (
-                    <ToolCallList toolCalls={segment.toolCalls} isStreaming={message.isStreaming} />
-                  ) : null}
-                </div>
-              ))
-            )}
+              </div>
+            ))}
+            {message.error ? (
+              <ChatErrorBlock error={message.error} chatId={chatId} onRetry={onRetry} />
+            ) : null}
             {message.stopNotice ? <AgentStopNotice notice={message.stopNotice} /> : null}
           </BubbleContent>
         </Bubble>
-        {showActions && message.content.trim() ? (
+        {showActions && responseText.trim() ? (
           <MessageFooter reserveSpace={false}>
-            <MessageAction onClick={() => void copyText(message.content)} label="Copy response">
+            <MessageAction onClick={() => void copyText(responseText)} label="Copy response">
               <CopyIcon className="size-3.5" />
             </MessageAction>
             {isLastMessage && !message.isStreaming ? (
               <MessageAction
-                onClick={() => void copyText(buildShareableOutcomeMarkdown(message.content))}
+                onClick={() => void copyText(buildShareableOutcomeMarkdown(responseText))}
                 label="Copy outcome as Markdown"
-                icon={UploadIcon}
+                icon={ClipboardTextIcon}
               />
             ) : null}
             {message.turnUsage ? (
               <Tooltip content={describeTurnUsage(message.turnUsage)}>
                 <span className="px-1 tabular-nums">{formatTurnUsage(message.turnUsage)}</span>
               </Tooltip>
+            ) : null}
+            {message.usage && formatMessageUsage(message.usage) ? (
+              <span className="px-1 tabular-nums">{formatMessageUsage(message.usage)}</span>
             ) : null}
           </MessageFooter>
         ) : null}

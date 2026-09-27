@@ -31,6 +31,8 @@ export interface AgentEditEntry {
   created: boolean;
   /** Bumped on every change, so a disk read that raced a newer write can be told apart. */
   revision: number;
+  /** The user message whose turn made the first unreviewed write, when known. */
+  turnId?: string;
 }
 
 /** The `agent_file_write` event, as the log records it. */
@@ -40,4 +42,6 @@ export interface AgentFileWrite {
   path: string;
   previousContent: string | null;
   content: string;
+  /** The user message whose turn the agent wrote in, when known. */
+  turnId?: string;
 }

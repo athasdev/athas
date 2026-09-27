@@ -33,6 +33,8 @@ interface PendingAgentLaunchRequest {
   selectedBufferIds: string[];
   selectedFilesPaths: string[];
   editorSelections: EditorSelectionContext[];
+  /** "append" adds the context to the composer instead of replacing what it already holds. */
+  mode?: "replace" | "append";
 }
 
 export type AgentRunPhase = "starting" | "waiting" | "thinking" | "tool" | "approval";
@@ -54,7 +56,10 @@ export interface AIChatState {
   agentRuns: Record<string, AgentRunState>;
   agentMessageQueues: Record<string, QueuedAgentMessage[]>;
   chatMessageLoadStates: Record<string, ChatMessageLoadState>;
+  /** The mode new chats start in: the one the user picked last. */
   mode: ChatMode;
+  /** Each chat's own mode, so a queued message runs in the mode of the chat it was sent to. */
+  modeByChat: Record<string, ChatMode>;
   outputStyle: OutputStyle;
   hasApiKey: boolean;
   providerApiKeys: Map<string, boolean>;
@@ -74,7 +79,8 @@ export interface AIChatActions {
     agentId: AgentType,
     options?: { activate?: boolean; model?: ApiModelSelection },
   ) => string | null;
-  setMode: (mode: ChatMode) => void;
+  /** Sets `chatId`'s mode, and the mode new chats start in; without a chat only the latter. */
+  setMode: (mode: ChatMode, chatId?: string | null) => void;
   setPendingAgentLaunchRequest: (request: PendingAgentLaunchRequest | null) => void;
   startAgentRun: (chatId: string, run: AgentRunState) => void;
   updateAgentRun: (chatId: string, runId: string, updates: Partial<AgentRunState>) => void;
@@ -106,6 +112,16 @@ export interface AIChatActions {
   setChatAcpSessionId: (chatId: string, sessionId: string | null) => void;
   addMessage: (chatId: string, message: Message) => void;
   updateMessage: (chatId: string, messageId: string, updates: Partial<Message>) => void;
+  /**
+   * Stream-friendly `updateMessage`: merges `updates` into the message on the next animation
+   * frame together with every other queued change, without touching the session's
+   * `lastMessageAt`. Use it for per-chunk updates.
+   */
+  queueMessageUpdate: (chatId: string, messageId: string, updates: Partial<Message>) => void;
+  /** Appends streamed text to a message on the next animation frame, like `queueMessageUpdate`. */
+  appendMessageContent: (chatId: string, messageId: string, chunk: string) => void;
+  /** Writes queued stream updates now, for one chat or all of them. */
+  flushMessageUpdates: (chatId?: string) => void;
   replaceChatMessages: (chatId: string, messages: Message[]) => void;
   setChatMessageLoadState: (chatId: string, state: ChatMessageLoadState) => void;
   replaceUserMessage: (chatId: string, messageId: string, content: string) => boolean;

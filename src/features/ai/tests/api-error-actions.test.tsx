@@ -15,6 +15,11 @@ const state = vi.hoisted(() => ({
 vi.mock("@tauri-apps/plugin-opener", () => ({ openUrl: state.openUrl }));
 vi.mock("sonner", () => ({ toast: { error: state.error } }));
 vi.mock("@/utils/api-base", () => ({ getApiBase: () => state.base }));
+vi.mock("@/config/services", () => ({
+  getServiceUrls: () => ({
+    dashboardBillingUrl: "https://website.test/dashboard/settings/billing",
+  }),
+}));
 vi.mock("@/features/window/hooks/use-desktop-sign-in", () => ({
   useDesktopSignIn: () => ({ signIn: state.signIn, isSigningIn: false }),
 }));
@@ -51,15 +56,12 @@ async function click(code: string, providerId: string, onRetry?: () => void) {
   await act(async () => container.querySelector("button")!.click());
 }
 describe("API error recovery", () => {
-  it.each(["http://localhost:3000", "https://athas.dev"])(
-    "opens billing on the matching backend: %s",
-    async (base) => {
-      state.base = base;
-      await click("402", "athas");
-      expect(state.openUrl).toHaveBeenCalledWith(`${base}/dashboard/settings/billing`);
-      expect(state.signIn).not.toHaveBeenCalled();
-    },
-  );
+  it("opens billing on the website, not the API server", async () => {
+    state.base = "http://localhost:3000";
+    await click("402", "athas");
+    expect(state.openUrl).toHaveBeenCalledWith("https://website.test/dashboard/settings/billing");
+    expect(state.signIn).not.toHaveBeenCalled();
+  });
   it("starts sign-in when Athas rejects the session", async () => {
     await click("401", "athas");
     expect(state.signIn).toHaveBeenCalledOnce();

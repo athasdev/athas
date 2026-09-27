@@ -628,6 +628,28 @@ const editCommands: Command[] = [
     keybinding: "cmd+i",
     execute: showInlineEditToolbar,
   },
+  {
+    id: "editor.addSelectionToChat",
+    title: "Add Selection to Agent Chat",
+    category: "Agent",
+    keybinding: "cmd+l",
+    execute: async () => {
+      const { addActiveSelectionToAgentChat } =
+        await import("@/features/ai/lib/add-selection-to-agent-chat");
+      addActiveSelectionToAgentChat();
+    },
+  },
+  {
+    id: "editor.addSelectionToNewChat",
+    title: "Add Selection to New Agent Chat",
+    category: "Agent",
+    keybinding: "cmd+alt+l",
+    execute: async () => {
+      const { addActiveSelectionToNewAgentChat } =
+        await import("@/features/ai/lib/add-selection-to-agent-chat");
+      addActiveSelectionToNewAgentChat();
+    },
+  },
 ];
 
 const viewCommands: Command[] = [
@@ -1219,6 +1241,34 @@ const windowCommands: Command[] = [
   },
 ];
 
+/** Loaded on use, so the keymap layer does not pull in the Monaco integration up front. */
+async function agentHunkActions() {
+  return import("@/features/editor/engines/monaco/agent-edits-code-lens");
+}
+
+const agentEditCommands: Command[] = [
+  {
+    id: "ai.keepAgentHunk",
+    title: "Keep Agent Change",
+    category: "AI",
+    keybinding: "cmd+y",
+    description: "Keep the unreviewed agent change at the cursor",
+    execute: async () => {
+      await (await agentHunkActions()).keepAgentHunkAtCursor();
+    },
+  },
+  {
+    id: "ai.rejectAgentHunk",
+    title: "Undo Agent Change",
+    category: "AI",
+    keybinding: "cmd+n",
+    description: "Undo the unreviewed agent change at the cursor",
+    execute: async () => {
+      await (await agentHunkActions()).rejectAgentHunkAtCursor();
+    },
+  },
+];
+
 const allCommands: Command[] = [
   ...fileCommands,
   ...editCommands,
@@ -1229,6 +1279,7 @@ const allCommands: Command[] = [
   ...paneCommands,
   ...databaseCommands,
   ...windowCommands,
+  ...agentEditCommands,
 ];
 
 export function registerCommands(): void {

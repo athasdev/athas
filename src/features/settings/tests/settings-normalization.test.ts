@@ -81,6 +81,16 @@ describe("settings normalization", () => {
     expect(normalizeSettingValue("fileTreeIndentSize", 13.6)).toBe(14);
   });
 
+  it("keeps the agent step budget a whole number within range", () => {
+    expect(normalizeSettingValue("aiAgentMaxSteps", 0)).toBe(1);
+    expect(normalizeSettingValue("aiAgentMaxSteps", 500)).toBe(100);
+    expect(normalizeSettingValue("aiAgentMaxSteps", 40.7)).toBe(40);
+    expect(
+      normalizeSettings({ ...getDefaultSettingsSnapshot(), aiAgentMaxSteps: Number.NaN })
+        .aiAgentMaxSteps,
+    ).toBe(25);
+  });
+
   it("falls back from unsupported file tree sort orders", () => {
     const normalized = normalizeSettings({
       ...getDefaultSettingsSnapshot(),

@@ -4,6 +4,8 @@ import { computeAgentHunks } from "@/features/ai/lib/agent-edit-hunks";
 import {
   keepAgentHunk,
   keepAllAgentEdits,
+  openAgentEditsReview,
+  recordAgentFileDelete,
   recordAgentFileWrite,
   rejectAgentHunk,
   rejectAllAgentEdits,
@@ -16,9 +18,17 @@ const mocks = vi.hoisted(() => ({
   buffers: [] as Array<Record<string, unknown>>,
   updateBufferContent: vi.fn(),
   closeBufferForce: vi.fn(),
+  openContent: vi.fn(),
   markPendingSave: vi.fn(),
   showToast: vi.fn(),
   showConfirmDialog: vi.fn(),
+  recordCheckpointAgentWrite: vi.fn(),
+  currentTurn: null as string | null,
+}));
+
+vi.mock("@/features/ai/services/agent-checkpoints-service", () => ({
+  currentTurnMessageId: () => mocks.currentTurn,
+  recordCheckpointAgentWrite: mocks.recordCheckpointAgentWrite,
 }));
 
 vi.mock("@/features/editor/stores/buffer.store", () => ({
@@ -28,6 +38,7 @@ vi.mock("@/features/editor/stores/buffer.store", () => ({
       actions: {
         updateBufferContent: mocks.updateBufferContent,
         closeBufferForce: mocks.closeBufferForce,
+        openContent: mocks.openContent,
       },
     }),
   },
@@ -94,14 +105,45 @@ describe("agent edits service", () => {
       mocks.markPendingSave,
       mocks.showToast,
       mocks.showConfirmDialog,
+      mocks.recordCheckpointAgentWrite,
     ]) {
       mock.mockReset();
     }
+    mocks.currentTurn = null;
     useAgentEditsStore.setState({ byChat: {}, reviewChatId: null });
   });
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  it("records each write in the checkpoint of the turn it belongs to", () => {
+    mocks.currentTurn = "user-1";
+    agentWrites("a", "b");
+    expect(mocks.recordCheckpointAgentWrite).toHaveBeenCalledWith(
+      CHAT,
+      "user-1",
+      expect.objectContaining({ path: PATH, previousContent: "a", content: "b" }),
+    );
+    expect(entry()?.turnId).toBe("user-1");
+  });
+
+  it("records a deletion in its turn's checkpoint and stops reviewing the file", () => {
+    mocks.currentTurn = "user-1";
+    agentWrites("a", "b");
+    recordAgentFileDelete(CHAT, { path: PATH, previousContent: "b" });
+    expect(mocks.recordCheckpointAgentWrite).toHaveBeenLastCalledWith(CHAT, "user-1", {
+      path: PATH,
+      previousContent: "b",
+      content: null,
+    });
+    expect(entry()).toBeUndefined();
+  });
+
+  it("opens the review as a tab showing the chat", () => {
+    openAgentEditsReview(CHAT);
+    expect(useAgentEditsStore.getState().reviewChatId).toBe(CHAT);
+    expect(mocks.openContent).toHaveBeenCalledWith({ type: "agentChanges" });
   });
 
   it("keeps a hunk without touching the file", async () => {

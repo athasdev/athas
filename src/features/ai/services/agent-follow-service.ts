@@ -9,7 +9,7 @@ import {
   pickAgentFollowPaneId,
   pickAgentFollowTarget,
 } from "@/features/ai/lib/agent-follow";
-import { resolveWorkspacePath } from "@/features/ai/lib/open-tool-location";
+import { resolveToolPath } from "@/features/ai/lib/open-tool-location";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { isFollowingAgent, useAgentFollowStore } from "@/features/ai/stores/agent-follow.store";
 import type { AcpToolCallLocation } from "@/features/ai/types/acp.types";
@@ -79,7 +79,7 @@ function mayFollow(chatId: string) {
  */
 async function revealAgentLocation(chatId: string, target: AgentFollowTarget) {
   if (!mayFollow(chatId)) return;
-  const path = resolveWorkspacePath(target.path);
+  const path = await resolveToolPath(target.path);
   // Following shows text; images, PDFs, databases and binaries keep their usual openers.
   if (isImageFile(path) || isPdfFile(path) || isBinaryFile(path) || getDatabaseTypeFromPath(path)) {
     return;

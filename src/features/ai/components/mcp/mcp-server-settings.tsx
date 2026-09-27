@@ -87,7 +87,7 @@ export function McpServerSettings() {
     <>
       <Section
         title="MCP Servers"
-        description="Passed to ACP agents when a session starts. Changes apply to the next agent start."
+        description="Used by the Athas agent and passed to ACP agents when a session starts. Changes apply to the next turn or agent start."
       >
         {servers.map((server) => (
           <SettingRow

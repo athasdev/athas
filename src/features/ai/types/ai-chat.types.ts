@@ -13,9 +13,11 @@ import type { FileEntry } from "@/features/file-system/types/app.types";
 import type { EditorSelectionContext } from "@/features/ai/types/ai-context.types";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import type { GenerativeUIView } from "@/extensions/ui/types/generative-ui";
+import type { ChatMessageError } from "@/features/ai/types/chat-error.types";
 
 export type OutputStyle = "default" | "explanatory" | "learning" | "custom";
-export type ChatMode = "chat" | "plan";
+/** "chat" is the full agent; "ask" and "plan" run read-only. */
+export type ChatMode = "chat" | "ask" | "plan";
 /** `stalled`: a prompt the agent has not answered for a while; it may still be thinking. */
 export type AssistantResponsePhase = "starting" | "waiting" | "stalled" | "thinking";
 
@@ -94,6 +96,19 @@ export interface Message {
   stopNotice?: AgentStopNotice;
   /** The tokens the agent reported for the turn this message answers. */
   turnUsage?: AcpTurnUsage;
+  /** Why the turn failed, when it did; never sent back to the model as history. */
+  error?: ChatMessageError;
+  /** What a hosted or built-in run reported it used, shown in the message footer. */
+  usage?: MessageUsage;
+}
+
+/** The tokens, cost and model requests a built-in agent run reported for one turn. */
+export interface MessageUsage {
+  inputTokens?: number;
+  outputTokens?: number;
+  costCents?: number;
+  /** Model requests the turn made. */
+  steps?: number;
 }
 
 // Agent types for AI chat
@@ -136,15 +151,6 @@ export interface AIChatProps {
   selectedFiles?: string[];
   allProjectFiles?: FileEntry[];
   mode: "chat";
-  // Buffer update functions
-  onApplyCode?: (code: string) => void;
-}
-
-export interface MarkdownRendererProps {
-  onRetry?: () => void | Promise<void>;
-  content: string;
-  onApplyCode?: (code: string) => void;
-  chatId?: string | null;
 }
 
 export interface AIChatInputBarProps {

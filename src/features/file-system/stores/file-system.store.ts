@@ -1446,7 +1446,20 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
             }
           }
 
-          const content = await readFileOpenText(fileOpenResource, preloadedText);
+          let content: string;
+          try {
+            content = await readFileOpenText(fileOpenResource, preloadedText);
+          } catch (error) {
+            fileOpenBenchmark.finish(path, "file-read-failed");
+            if (isStaleRequest()) return;
+            // Most callers open files fire-and-forget, so report the failure here
+            // instead of leaving the rejection unhandled.
+            console.error(`Failed to open ${path}:`, error);
+            toast.error(`Could not open ${fileName}`, {
+              description: error instanceof Error ? error.message : String(error),
+            });
+            return;
+          }
           fileOpenBenchmark.mark(path, "file-read", `${content.length} chars`);
 
           if (isStaleRequest()) return;
@@ -1529,10 +1542,21 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
         if (!isCurrentlyExpanded) {
           // Expand: load children if not present
           if (!folder.children || folder.children.length === 0) {
-            const childEntries = await readWorkspaceDirectoryEntries(
-              folder.path,
-              get().rootFolderPath ?? folder.path,
-            );
+            let childEntries: FileEntry[];
+            try {
+              childEntries = await readWorkspaceDirectoryEntries(
+                folder.path,
+                get().rootFolderPath ?? folder.path,
+              );
+            } catch (error) {
+              // Folder rows expand fire-and-forget, so report a folder that was deleted
+              // or is not readable here instead of leaving the rejection unhandled.
+              console.error(`Failed to expand ${path}:`, error);
+              toast.error(`Could not open folder ${folder.name}`, {
+                description: error instanceof Error ? error.message : String(error),
+              });
+              return;
+            }
 
             const updatedFiles = updateFileInTree(get().files, path, (item) => ({
               ...item,
