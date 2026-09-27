@@ -253,6 +253,8 @@ fn main() {
          load_all_chats,
          load_chat,
          delete_chat,
+         save_chat_checkpoints,
+         load_chat_checkpoints,
          search_chats,
          get_chat_stats,
          // Window commands
