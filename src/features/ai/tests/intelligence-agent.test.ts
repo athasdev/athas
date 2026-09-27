@@ -5,6 +5,7 @@ import { runIntelligenceAgent } from "../intelligence/services/intelligence-agen
 import { cancelIntelligenceAgent } from "../intelligence/services/intelligence-agent-session";
 import { respondToIntelligencePermission } from "../intelligence/services/intelligence-agent-permissions";
 import { formatApiError } from "../lib/api-error";
+import { HOSTED_ATHAS_REQUEST_LIMITS } from "../lib/conversation-history";
 import type { McpToolContext } from "../intelligence/services/intelligence-mcp";
 import type { McpJsonRpcMessage } from "../intelligence/types/intelligence-mcp.types";
 import type { McpServerSetting } from "../types/mcp-server.types";
@@ -391,6 +392,27 @@ describe("Intelligence local agent loop", () => {
       content: "3 issues",
     });
     expect(mocks.mcpClosed).toBe(1);
+  });
+  it("trims older file reads so every Athas request stays within the hosted limit", async () => {
+    mocks.invoke.mockImplementation(async (command: string) =>
+      command === "intelligence_read_file" ? "y".repeat(30_000) : undefined,
+    );
+    mocks.model = new MockLanguageModelV4({
+      doStream: [
+        ...Array.from({ length: 12 }, (_, index) => step("read_file", { path: `f${index}.ts` })),
+        step(),
+      ],
+    });
+    await runIntelligenceAgent({ ...params(), providerId: "athas", modelId: "athas/model" });
+
+    const sizes = mocks.model.doStreamCalls.map(
+      (call) => new TextEncoder().encode(JSON.stringify(call.prompt)).length,
+    );
+    expect(sizes).toHaveLength(13);
+    expect(Math.max(...sizes)).toBeLessThanOrEqual(HOSTED_ATHAS_REQUEST_LIMITS.maxBytes);
+    expect(JSON.stringify(mocks.model.doStreamCalls[12].prompt)).toContain(
+      "[trimmed: re-read if needed]",
+    );
   });
   it("pauses with a Continue outcome when the step budget runs out", async () => {
     mocks.model = new MockLanguageModelV4({

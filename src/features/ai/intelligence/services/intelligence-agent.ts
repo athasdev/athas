@@ -23,6 +23,12 @@ import { getCommandAllowPrefix } from "../lib/intelligence-command-policy";
 import { getExtraTools, type ExtraTools, type McpToolCallRequest } from "./intelligence-mcp";
 import { allowMcpTool, isMcpToolAllowed } from "./intelligence-mcp-allowlist";
 import { toIntelligenceAgentError } from "../lib/intelligence-agent-error";
+import {
+  fitStepMessages,
+  getStepRequestLimits,
+  measureToolDefinitions,
+  serializedBytes,
+} from "../lib/intelligence-step-budget";
 import type { IntelligenceAgentResult } from "../types/intelligence-agent.types";
 import { parseExtensionViewNode } from "@/extensions/ui/services/extension-view-schema";
 
@@ -561,11 +567,24 @@ export async function runIntelligenceAgent(params: {
         };
       return { role: message.role, content: message.content };
     });
+    const prompt = toIntelligenceSdkPrompt(messages);
+    const stepLimits = getStepRequestLimits(params.providerId);
+    const toolBytes = await measureToolDefinitions(tools);
+    signal.throwIfAborted();
     const result = streamText({
       model,
-      ...toIntelligenceSdkPrompt(messages),
+      ...prompt,
       tools,
       stopWhen: isStepCount(maxSteps),
+      // Every step resends all earlier tool results, so older ones are trimmed before a request
+      // would outgrow what the provider accepts.
+      prepareStep: ({ messages: stepMessages, instructions }) => {
+        const fitted = fitStepMessages(stepMessages, stepLimits, {
+          firstStep: prompt.messages.length,
+          instructionBytes: serializedBytes(instructions) + toolBytes,
+        });
+        return fitted ? { messages: fitted } : undefined;
+      },
       maxOutputTokens: params.maxOutputTokens ?? 4096,
       // Retries happen in the model's fetch, per request, where Retry-After is visible and the
       // idempotency key stays the same.
