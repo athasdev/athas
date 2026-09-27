@@ -1,3 +1,4 @@
+import { stripErrorBlocks } from "@/features/ai/lib/chat-error";
 import { estimateTokens, truncateTextToTokens } from "@/features/ai/lib/context-budget";
 import type { Message, ToolCall } from "@/features/ai/types/ai-chat.types";
 import type { AIMessage } from "@/features/ai/types/messages.types";
@@ -53,14 +54,6 @@ export function getProviderRequestLimits(providerId: string): ProviderRequestLim
 
 export function providerAcceptsImages(providerId: string): boolean {
   return !TEXT_ONLY_PROVIDERS.has(providerId);
-}
-
-const ERROR_BLOCK_PATTERN = /\[ERROR_BLOCK\][\s\S]*?(?:\[\/ERROR_BLOCK\]|$)/g;
-
-/** Error cards are UI for the user; replaying them teaches the model that it failed. */
-function stripErrorContent(message: Message): string {
-  if ((message as { error?: unknown }).error) return "";
-  return message.content.replace(ERROR_BLOCK_PATTERN, "").trim();
 }
 
 function clip(text: string, maxChars: number) {
@@ -140,7 +133,9 @@ export function buildConversationHistory(messages: Message[]): AIMessage[] {
       });
       continue;
     }
-    const content = stripErrorContent(message);
+    // Error cards are UI for the user; replaying them teaches the model that it failed. The
+    // text the turn wrote before it failed is still real work and stays.
+    const content = stripErrorBlocks(message.content);
     if (!content && !message.toolCalls?.length) continue;
     history.push({ role: "assistant", content: withToolHistory(message, content) });
   }

@@ -85,13 +85,26 @@ describe("buildConversationHistory", () => {
           content: "Partial answer\n\n[ERROR_BLOCK]\ntitle: Connection Lost\n[/ERROR_BLOCK]",
         }),
         {
-          ...message({ id: "structured", role: "assistant", content: "Rate limited" }),
+          ...message({
+            id: "structured",
+            role: "assistant",
+            content: "[ERROR_BLOCK]\ntitle: Rate Limit Exceeded\n[/ERROR_BLOCK]",
+          }),
           error: { status: 429, message: "Rate limited" },
+        } as Message,
+        {
+          ...message({
+            id: "structured-partial",
+            role: "assistant",
+            content: "Wrote half\n\n[ERROR_BLOCK]\ntitle: Connection Lost\n[/ERROR_BLOCK]",
+          }),
+          error: { code: "network", message: "Could not reach the provider" },
         } as Message,
       ]),
     ).toEqual([
       { role: "user", content: "Question" },
       { role: "assistant", content: "Partial answer" },
+      { role: "assistant", content: "Wrote half" },
     ]);
   });
 
