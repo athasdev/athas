@@ -201,6 +201,15 @@ describe("Intelligence editor completions", () => {
     expect(toast.warning).not.toHaveBeenCalled();
   });
 
+  it("pauses for organization policy only when Athas refuses", async () => {
+    mocks.request.mockRejectedValueOnce(new InlineEditError("Model not allowed", 403));
+    await setup().run();
+    expect(status()).toEqual({ kind: "error", message: "Model not allowed" });
+    mocks.request.mockRejectedValueOnce(new InlineEditError("Disabled", 403, { hosted: true }));
+    await setup().run();
+    expect(status()).toMatchObject({ kind: "paused", reason: "policy" });
+  });
+
   it("reports other failures and clears them after a successful request", async () => {
     mocks.request.mockRejectedValueOnce(new InlineEditError("Server busy", 503, { hosted: true }));
     await setup().run();

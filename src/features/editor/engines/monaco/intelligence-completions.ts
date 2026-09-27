@@ -34,7 +34,8 @@ const PAUSE_NOTICES: Record<IntelligenceCompletionPauseReason, string> = {
 function getPauseReason(error: InlineEditError): IntelligenceCompletionPauseReason | null {
   if (error.status === 401) return error.hosted ? "sign-in" : "api-key";
   if (error.status === 402) return error.hosted ? "credits" : "api-key";
-  if (error.status === 403) return "policy";
+  // Only Athas enforces organization policy; a provider's own 403 is an ordinary failure.
+  if (error.status === 403 && error.hosted) return "policy";
   return null;
 }
 
