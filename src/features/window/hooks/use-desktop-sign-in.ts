@@ -11,6 +11,10 @@ export function useDesktopSignIn(options: UseDesktopSignInOptions = {}) {
   const error = useDesktopSignInStore((state) => state.error);
   const actions = useDesktopSignInStore((state) => state.actions);
 
+  /**
+   * Shows the outcome as a toast. It also rejects on failure so callers can stop a
+   * follow-up step; a caller that only starts sign-in must catch that rejection.
+   */
   const signIn = async () => {
     const completed = await actions.signIn(options.apiBase);
     if (completed) {
