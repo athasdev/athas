@@ -56,6 +56,7 @@ import {
 } from "@/features/ai/services/ai-token-service";
 import { CodexSettings } from "@/features/ai/integrations/codex/codex-settings";
 import { McpServerSettings } from "@/features/ai/components/mcp/mcp-server-settings";
+import { AgentAllowedActionsSettings } from "@/features/ai/components/permissions/agent-allowed-actions-settings";
 import {
   MAX_INTELLIGENCE_AGENT_STEPS,
   MIN_INTELLIGENCE_AGENT_STEPS,
@@ -727,6 +728,7 @@ export const AISettings = () => {
           />
         </SettingRow>
       </Section>
+      <AgentAllowedActionsSettings />
       <Section title="Autocomplete">
         <SettingRow
           label="AI Autocomplete"

@@ -36,6 +36,31 @@ function readAllowlist(): Allowlist {
   }
 }
 
+function writeAllowlist(allowlist: Allowlist) {
+  try {
+    storage()?.setItem(STORAGE_KEY, JSON.stringify(allowlist));
+  } catch {
+    // Storage is full or unavailable; the command still runs this once.
+  }
+}
+
+/** Every always-allowed command prefix, by workspace root. */
+export function getAllAllowedCommandPrefixes(): Allowlist {
+  return Object.fromEntries(
+    Object.entries(readAllowlist()).filter(([, prefixes]) => prefixes.length > 0),
+  );
+}
+
+/** Stops `prefix` from running without asking in `root`. */
+export function removeAllowedCommandPrefix(root: string, prefix: string) {
+  const allowlist = readAllowlist();
+  const key = workspaceKey(root);
+  const prefixes = (allowlist[key] ?? []).filter((entry) => entry !== prefix);
+  if (prefixes.length) allowlist[key] = prefixes;
+  else delete allowlist[key];
+  writeAllowlist(allowlist);
+}
+
 /** The command prefixes the user chose to always allow in this workspace. */
 export function getAllowedCommandPrefixes(root: string): string[] {
   return readAllowlist()[workspaceKey(root)] ?? [];
@@ -53,11 +78,7 @@ export function allowCommandPrefix(root: string, command: string): string | null
   const prefixes = allowlist[key] ?? [];
   if (!prefixes.includes(prefix)) {
     allowlist[key] = [...prefixes, prefix].slice(-MAX_PREFIXES_PER_WORKSPACE);
-    try {
-      storage()?.setItem(STORAGE_KEY, JSON.stringify(allowlist));
-    } catch {
-      // Storage is full or unavailable; the command still runs this once.
-    }
+    writeAllowlist(allowlist);
   }
   return prefix;
 }

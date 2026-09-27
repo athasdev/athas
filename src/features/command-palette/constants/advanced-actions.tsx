@@ -27,6 +27,7 @@ import {
   GitDiffIcon,
   HistoryIcon,
   SignOutIcon,
+  ShieldCheckIcon,
   SparkleIcon,
   SquareIcon,
   TerminalWindowIcon,
@@ -37,6 +38,7 @@ import {
   stopAllLanguageServers,
 } from "@/features/keymaps/commands/lsp-command-actions";
 import { openAthasLogBuffer } from "@/features/settings/services/athas-log-service";
+import { useUIState } from "@/features/window/stores/ui-state.store";
 import { showAlertDialog } from "@/ui/dialog";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import type { Action } from "../types/action.types";
@@ -244,6 +246,17 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
       action: () => {
         useBufferStore.getState().actions.openContinuousAgentsBuffer();
         onClose();
+      },
+    },
+    {
+      id: "ai-manage-allowed-commands",
+      label: "AI: Manage Allowed Commands",
+      description: "Review the commands and MCP tools the Athas agent runs without asking",
+      icon: <ShieldCheckIcon />,
+      category: "AI",
+      action: () => {
+        onClose();
+        useUIState.getState().openSettings("ai", "Allowed Commands");
       },
     },
     {
