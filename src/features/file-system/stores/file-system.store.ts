@@ -1446,7 +1446,20 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
             }
           }
 
-          const content = await readFileOpenText(fileOpenResource, preloadedText);
+          let content: string;
+          try {
+            content = await readFileOpenText(fileOpenResource, preloadedText);
+          } catch (error) {
+            fileOpenBenchmark.finish(path, "file-read-failed");
+            if (isStaleRequest()) return;
+            // Most callers open files fire-and-forget, so report the failure here
+            // instead of leaving the rejection unhandled.
+            console.error(`Failed to open ${path}:`, error);
+            toast.error(`Could not open ${fileName}`, {
+              description: error instanceof Error ? error.message : String(error),
+            });
+            return;
+          }
           fileOpenBenchmark.mark(path, "file-read", `${content.length} chars`);
 
           if (isStaleRequest()) return;
