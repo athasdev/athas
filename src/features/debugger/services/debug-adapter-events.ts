@@ -78,7 +78,10 @@ async function handleDebugRequest(sessionId: string, message: Record<string, unk
   const args = Array.isArray(request?.args)
     ? request.args.filter((arg): arg is string => typeof arg === "string")
     : [];
-  const terminalCommand = buildDebugTerminalCommand(args);
+  const terminalCommand = buildDebugTerminalCommand(
+    args,
+    request?.argsCanBeInterpretedByShell === true,
+  );
   if (!terminalCommand) {
     await sendDebugAdapterResponse(
       sessionId,
