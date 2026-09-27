@@ -35,6 +35,7 @@ import { Bubble, BubbleContent } from "@/ui/bubble";
 import { Message, MessageContent, MessageFooter } from "@/ui/message";
 import Textarea from "@/ui/textarea";
 import MarkdownRenderer from "../messages/markdown-renderer";
+import { CheckpointRestoreButton } from "./checkpoint-restore-button";
 import { PlanBlockDisplay } from "../messages/plan-block-display";
 import { AgentPlan } from "../messages/agent-plan";
 import { AgentStopNotice } from "../messages/agent-stop-notice";
@@ -303,6 +304,9 @@ export const ChatMessage = memo(function ChatMessage({
               </MessageAction>
               {canEditUserMessage && onEditUserMessage ? (
                 <MessageAction onClick={startEditing} label="Edit prompt" icon={PencilIcon} />
+              ) : null}
+              {canEditUserMessage ? (
+                <CheckpointRestoreButton chatId={chatId} messageId={message.id} />
               ) : null}
             </MessageFooter>
           )}
