@@ -41,7 +41,11 @@ import type { ToolCall } from "@/features/ai/types/ai-chat.types";
 import type { AcpTerminalSnapshot, AcpToolKind } from "@/features/ai/types/acp.types";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
-import { openToolPath, resolveWorkspacePath } from "@/features/ai/lib/open-tool-location";
+import {
+  openToolPath,
+  resolveToolPath,
+  showToolPathError,
+} from "@/features/ai/lib/open-tool-location";
 import { ToolLocations } from "./tool-locations";
 import { getFileDiff } from "@/features/git/api/git-diff-api";
 import { useProjectStore } from "@/features/window/stores/project.store";
@@ -83,7 +87,7 @@ async function openToolDiff(path: string, output: unknown) {
   if (openAcpDiffOutput(output)) return;
 
   const rootFolderPath = useProjectStore.getState().rootFolderPath;
-  const resolvedPath = resolveWorkspacePath(path);
+  const resolvedPath = await resolveToolPath(path);
   const repoPath = rootFolderPath ?? resolvedPath;
   const diff = await getFileDiff(repoPath, path);
 
@@ -103,8 +107,12 @@ async function openToolDiff(path: string, output: unknown) {
     return;
   }
 
-  const newText = await readFileContent(resolvedPath);
-  openAcpDiffOutput([{ type: "diff", path: resolvedPath, oldText: "", newText }]);
+  try {
+    const newText = await readFileContent(resolvedPath);
+    openAcpDiffOutput([{ type: "diff", path: resolvedPath, oldText: "", newText }]);
+  } catch (error) {
+    showToolPathError(resolvedPath, error);
+  }
 }
 
 /** Text worth showing for a tool result once diffs and views are taken out. */
