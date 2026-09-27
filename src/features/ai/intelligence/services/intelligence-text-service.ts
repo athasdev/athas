@@ -20,6 +20,32 @@ import { toIntelligenceSdkPrompt } from "../lib/intelligence-sdk-prompt";
 
 const API_BASE = getApiBase();
 const DEFAULT_INLINE_EDIT_INSTRUCTION = "Improve this code while preserving behavior.";
+export const HOSTED_TEXT_FIELD_LIMIT = 12000;
+const HOSTED_AUTOCOMPLETE_SUFFIX_LIMIT = 4000;
+
+type IntelligenceTextFeature = NonNullable<InlineEditRequest["feature"]>;
+
+const DEFAULT_TIMEOUT_MS: Record<IntelligenceTextFeature, number> = {
+  autocomplete: 10_000,
+  "inline-edit": 60_000,
+  "commit-message": 45_000,
+  "github-draft": 60_000,
+  "chat-title": 20_000,
+  "terminal-title": 20_000,
+  "review-summary": 90_000,
+  "review-insight": 90_000,
+};
+
+export interface AutocompleteRecentEdit {
+  filePath: string;
+  snippet: string;
+}
+
+export interface AutocompleteDiagnostic {
+  line: number;
+  severity: "error" | "warning" | "info" | "hint";
+  message: string;
+}
 
 export interface InlineEditRequest {
   feature?:
@@ -39,6 +65,8 @@ export interface InlineEditRequest {
   instruction?: string;
   filePath?: string;
   languageId?: string;
+  recentEdits?: AutocompleteRecentEdit[];
+  diagnostics?: AutocompleteDiagnostic[];
 }
 
 export class InlineEditError extends Error {
@@ -51,17 +79,46 @@ export class InlineEditError extends Error {
   }
 }
 
+export function getDefaultIntelligenceTimeoutMs(feature: IntelligenceTextFeature = "inline-edit") {
+  return DEFAULT_TIMEOUT_MS[feature];
+}
+
+export interface RequestInlineEditOptions {
+  useHosted?: boolean;
+  useByok?: boolean;
+  signal?: AbortSignal;
+  timeoutMs?: number;
+}
+
 export async function requestInlineEdit(
   request: InlineEditRequest,
-  options?: { useHosted?: boolean; useByok?: boolean; signal?: AbortSignal },
+  options?: RequestInlineEditOptions,
 ): Promise<{ editedText: string }> {
   options?.signal?.throwIfAborted();
+  const timeout = AbortSignal.timeout(
+    options?.timeoutMs ?? getDefaultIntelligenceTimeoutMs(request.feature),
+  );
+  const signal = options?.signal ? AbortSignal.any([options.signal, timeout]) : timeout;
+  try {
+    return await sendInlineEditRequest(request, { ...options, signal });
+  } catch (error) {
+    if (timeout.aborted && !options?.signal?.aborted) {
+      throw new InlineEditError("Athas Intelligence took too long to respond. Try again.", 408);
+    }
+    throw error;
+  }
+}
+
+async function sendInlineEditRequest(
+  request: InlineEditRequest,
+  options: RequestInlineEditOptions & { signal: AbortSignal },
+): Promise<{ editedText: string }> {
   const selected = await getIntelligenceConnection(request.feature ?? "inline-edit");
   const connection = request.provider
     ? { ...selected, providerId: request.provider, modelId: request.model }
     : selected;
   assertIntelligenceConnectionAllowed(connection.providerId, request.feature ?? "inline-edit");
-  const useHosted = options?.useHosted ?? connection.providerId === "athas";
+  const useHosted = options.useHosted ?? connection.providerId === "athas";
   const normalizedRequest = {
     ...request,
     provider: connection.providerId,
@@ -77,7 +134,7 @@ export async function requestInlineEdit(
   }
 
   if (!useHosted) {
-    const result = await requestProviderInlineEdit(normalizedRequest, options?.signal);
+    const result = await requestProviderInlineEdit(normalizedRequest, options.signal);
     if (
       (useAuthStore.getState().user?.id ?? null) !== connection.userId ||
       useIntelligenceSettingsStore.getState().scope !== connection.scope
@@ -95,15 +152,26 @@ export async function requestInlineEdit(
     throw new InlineEditError("The active account or team changed. Try again.", 409);
   }
   if (!token) {
-    throw new InlineEditError("Not authenticated", 401);
+    throw new InlineEditError("Sign in to use Athas Intelligence.", 401);
   }
 
   const autocomplete = request.feature === "autocomplete";
-  options?.signal?.throwIfAborted();
+  if (normalizedRequest.selectedText.length > HOSTED_TEXT_FIELD_LIMIT) {
+    throw new InlineEditError(
+      `The selection is too large for Athas Intelligence. Select at most ${HOSTED_TEXT_FIELD_LIMIT.toLocaleString("en-US")} characters.`,
+      413,
+    );
+  }
+  const beforeSelection = normalizedRequest.beforeSelection.slice(-HOSTED_TEXT_FIELD_LIMIT);
+  const afterSelection = normalizedRequest.afterSelection.slice(
+    0,
+    autocomplete ? HOSTED_AUTOCOMPLETE_SUFFIX_LIMIT : HOSTED_TEXT_FIELD_LIMIT,
+  );
+  options.signal.throwIfAborted();
   const response = await tauriFetch(
     `${API_BASE}/api/ai/${autocomplete ? "autocomplete" : "inline-edit"}`,
     {
-      signal: options?.signal,
+      signal: options.signal,
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -113,13 +181,15 @@ export async function requestInlineEdit(
       body: JSON.stringify(
         autocomplete
           ? {
-              model: normalizedRequest.model,
-              beforeCursor: normalizedRequest.beforeSelection,
-              afterCursor: normalizedRequest.afterSelection,
+              model: normalizedRequest.model || undefined,
+              beforeCursor: beforeSelection,
+              afterCursor: afterSelection,
               filePath: normalizedRequest.filePath,
               languageId: normalizedRequest.languageId,
+              ...(request.recentEdits?.length ? { recentEdits: request.recentEdits } : {}),
+              ...(request.diagnostics?.length ? { diagnostics: request.diagnostics } : {}),
             }
-          : normalizedRequest,
+          : { ...normalizedRequest, beforeSelection, afterSelection },
       ),
     },
   );
@@ -143,7 +213,7 @@ export async function requestInlineEdit(
     throw new InlineEditError(message, response.status);
   }
 
-  options?.signal?.throwIfAborted();
+  options.signal.throwIfAborted();
   const field = autocomplete ? "completion" : "editedText";
   const editedText =
     body &&
@@ -226,7 +296,7 @@ async function requestProviderInlineEdit(
       ...toIntelligenceSdkPrompt(buildInlineEditMessages(request)),
       maxOutputTokens,
       maxRetries: 0,
-      abortSignal: AbortSignal.any([...(signal ? [signal] : []), AbortSignal.timeout(45000)]),
+      abortSignal: signal,
       ...(request.provider === "openai" ? { reasoning: "minimal" as const } : {}),
     });
     signal?.throwIfAborted();
@@ -317,7 +387,7 @@ async function requestProviderInlineEdit(
 function buildInlineEditMessages(request: InlineEditRequest): AIMessage[] {
   const instructions = {
     autocomplete:
-      "Complete the code at the cursor between before and after. Return only the new text to insert, preserving indentation. Do not repeat surrounding code, use markdown fences, or explain. Return nothing when a completion is not useful.",
+      "Complete the code at the cursor between before and after. Return only the new text to insert, preserving indentation. The completion may span several lines when the next logical step does, such as finishing a function body. Use recentEdits and diagnostics, when present, as hints for what the user is doing. Do not repeat surrounding code, use markdown fences, or explain. Return nothing when a completion is not useful.",
     "inline-edit":
       "Rewrite only the selected code. Return replacement code without markdown fences or explanations. Preserve the surrounding code.",
     "commit-message":
@@ -343,6 +413,8 @@ function buildInlineEditMessages(request: InlineEditRequest): AIMessage[] {
         before: request.beforeSelection,
         selection: request.selectedText,
         after: request.afterSelection || "",
+        ...(request.recentEdits?.length ? { recentEdits: request.recentEdits } : {}),
+        ...(request.diagnostics?.length ? { diagnostics: request.diagnostics } : {}),
       }),
     },
   ];
