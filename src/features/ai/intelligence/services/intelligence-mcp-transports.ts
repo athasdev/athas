@@ -17,6 +17,8 @@ function lastLines(text: string, count = 3) {
 export function createStdioMcpTransport(server: McpServerSetting, cwd?: string): McpTransport {
   const processId = `mcp:${crypto.randomUUID()}`;
   let started = false;
+  let closed = false;
+  const stop = () => invoke("intelligence_mcp_stop", { processId });
   return {
     async start(onMessage, onClose) {
       const channel = new Channel<StdioEvent>();
@@ -37,11 +39,17 @@ export function createStdioMcpTransport(server: McpServerSetting, cwd?: string):
         onEvent: channel,
       });
       started = true;
+      // A run stopped or timed out while the server was starting; it must not outlive the run.
+      if (closed) {
+        await stop().catch(() => undefined);
+        throw new Error("Stopped");
+      }
     },
     send: (message) =>
       invoke("intelligence_mcp_send", { processId, message: JSON.stringify(message) }),
     async close() {
-      if (started) await invoke("intelligence_mcp_stop", { processId });
+      closed = true;
+      if (started) await stop();
     },
   };
 }

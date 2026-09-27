@@ -7,10 +7,12 @@ import {
   readServerSentEvents,
 } from "../intelligence/lib/intelligence-mcp-client";
 import { getExtraTools, type McpToolContext } from "../intelligence/services/intelligence-mcp";
+import { createStdioMcpTransport } from "../intelligence/services/intelligence-mcp-transports";
 import type { McpJsonRpcMessage, McpTransport } from "../intelligence/types/intelligence-mcp.types";
 import type { McpServerSetting } from "../types/mcp-server.types";
 
-vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn(), Channel: class {} }));
+const tauri = vi.hoisted(() => ({ invoke: vi.fn() }));
+vi.mock("@tauri-apps/api/core", () => ({ invoke: tauri.invoke, Channel: class {} }));
 
 interface FakeTool {
   name: string;
@@ -344,5 +346,39 @@ describe("MCP tools for the built-in agent", () => {
 
     expect(extra.tools).toEqual({});
     expect(createTransport).not.toHaveBeenCalled();
+  });
+});
+
+describe("stdio MCP transport", () => {
+  it("stops a server that finished starting after its run was closed", async () => {
+    let finishStart: () => void = () => {};
+    tauri.invoke.mockImplementation((command: string) =>
+      command === "intelligence_mcp_start"
+        ? new Promise<void>((resolve) => {
+            finishStart = resolve;
+          })
+        : Promise.resolve(),
+    );
+    const transport = createStdioMcpTransport({
+      id: "slow",
+      name: "slow",
+      enabled: true,
+      transport: "stdio",
+      command: "slow-server",
+      args: [],
+      url: "",
+    });
+    const starting = transport.start(
+      () => {},
+      () => {},
+    );
+    await transport.close();
+    expect(tauri.invoke).not.toHaveBeenCalledWith("intelligence_mcp_stop", expect.anything());
+
+    finishStart();
+    await expect(starting).rejects.toThrow("Stopped");
+    expect(tauri.invoke).toHaveBeenCalledWith("intelligence_mcp_stop", {
+      processId: expect.stringMatching(/^mcp:/),
+    });
   });
 });
