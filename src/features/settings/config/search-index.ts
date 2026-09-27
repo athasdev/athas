@@ -714,7 +714,7 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     tab: "ai",
     section: "MCP Servers",
     label: "Add MCP server",
-    description: "Configure MCP servers passed to ACP agents",
+    description: "Configure MCP servers used by agents",
     keywords: [
       "mcp",
       "server",
