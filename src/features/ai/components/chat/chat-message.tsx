@@ -6,7 +6,6 @@ import { Marker, MarkerContent, MarkerIcon } from "@/ui/marker";
 import { MessageAction, MessageResponse } from "@/ui/message";
 import { ThinkingOrb, type ThinkingOrbProps } from "@/ui/thinking-orb";
 import type { PlanStep } from "@/features/ai/lib/plan-parser";
-import { hasPlanBlock, parsePlan } from "@/features/ai/lib/plan-parser";
 import type { Message as AIMessage } from "@/features/ai/types/ai-chat.types";
 import { formatTime } from "@/features/ai/lib/formatting";
 import { buildShareableOutcomeMarkdown } from "@/features/ai/lib/shareable-outcome";
@@ -33,7 +32,7 @@ import { PlanBlockDisplay } from "../messages/plan-block-display";
 import { AgentPlan } from "../messages/agent-plan";
 import { AgentStopNotice } from "../messages/agent-stop-notice";
 import { ToolCallList } from "../messages/tool-call-display";
-import { buildAssistantTimeline } from "@/features/ai/lib/assistant-timeline";
+import { buildAssistantSegments } from "@/features/ai/lib/assistant-segments";
 import { findLatestEdit } from "@/features/ai/lib/tool-call-groups";
 import { describeTurnUsage, formatTurnUsage } from "@/features/ai/lib/acp-usage";
 import { formatMessageUsage } from "@/features/ai/lib/message-usage";
@@ -300,9 +299,6 @@ export const ChatMessage = memo(function ChatMessage({
     );
   }
 
-  // A plan block without any parsable steps renders as ordinary markdown.
-  const planBlock = hasPlanBlock(message.content) ? parsePlan(message.content) : null;
-
   return (
     <Message>
       <MessageContent className={ASSISTANT_CONTENT_INSET}>
@@ -364,45 +360,33 @@ export const ChatMessage = memo(function ChatMessage({
               <AgentPlan entries={message.plan} isStreaming={message.isStreaming} />
             ) : null}
 
-            {planBlock ? (
-              <>
-                <MessageResponse>
-                  <PlanBlockDisplay
-                    plan={planBlock}
-                    isStreaming={message.isStreaming}
-                    onExecuteStep={handleExecuteStep}
-                  />
-                </MessageResponse>
-                {message.toolCalls && message.toolCalls.length > 0 ? (
+            {buildAssistantSegments(message.content, message.toolCalls).map((segment, index) => (
+              <div
+                key={`${message.id}-segment-${index}`}
+                className={cn("flex min-w-0 flex-col gap-2", index > 0 && "mt-2")}
+              >
+                {segment.plan ? (
+                  <MessageResponse>
+                    <PlanBlockDisplay
+                      plan={segment.plan}
+                      isStreaming={message.isStreaming}
+                      onExecuteStep={handleExecuteStep}
+                    />
+                  </MessageResponse>
+                ) : segment.text ? (
+                  <MessageResponse>
+                    <MarkdownRenderer onRetry={onRetry} content={segment.text} chatId={chatId} />
+                  </MessageResponse>
+                ) : null}
+                {segment.toolCalls.length > 0 ? (
                   <ToolCallList
-                    className="mt-2"
-                    toolCalls={message.toolCalls}
+                    toolCalls={segment.toolCalls}
                     isStreaming={message.isStreaming}
                     latestEdit={latestEdit}
                   />
                 ) : null}
-              </>
-            ) : (
-              buildAssistantTimeline(message.content, message.toolCalls).map((segment, index) => (
-                <div
-                  key={`${message.id}-segment-${index}`}
-                  className={cn("flex min-w-0 flex-col gap-2", index > 0 && "mt-2")}
-                >
-                  {segment.text ? (
-                    <MessageResponse>
-                      <MarkdownRenderer onRetry={onRetry} content={segment.text} chatId={chatId} />
-                    </MessageResponse>
-                  ) : null}
-                  {segment.toolCalls.length > 0 ? (
-                    <ToolCallList
-                      toolCalls={segment.toolCalls}
-                      isStreaming={message.isStreaming}
-                      latestEdit={latestEdit}
-                    />
-                  ) : null}
-                </div>
-              ))
-            )}
+              </div>
+            ))}
             {message.stopNotice ? <AgentStopNotice notice={message.stopNotice} /> : null}
           </BubbleContent>
         </Bubble>
