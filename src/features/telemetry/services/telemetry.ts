@@ -4,6 +4,11 @@ import { arch, platform } from "@tauri-apps/plugin-os";
 import { load, type Store } from "@tauri-apps/plugin-store";
 import { getSettingsStore } from "@/features/settings/lib/settings-persistence";
 import {
+  crashReportBuild,
+  isBenignWindowError,
+  isExpectedCancellation,
+} from "@/features/telemetry/lib/crash-noise";
+import {
   createFrictionPayload,
   type FrictionSignalInput,
 } from "@/features/telemetry/lib/friction-signals";
@@ -154,19 +159,6 @@ function serializeError(error: unknown): { message: string; stack?: string } {
   } catch {
     return { message: String(error) };
   }
-}
-
-function isExpectedCancellation(error: unknown): boolean {
-  if (error instanceof Error) {
-    return (
-      error.name === "Canceled" ||
-      error.name === "CancellationError" ||
-      error.message === "Canceled" ||
-      error.message === "Canceled: Canceled"
-    );
-  }
-
-  return error === "Canceled" || error === "Canceled: Canceled";
 }
 
 function sanitizePayload(value: unknown): unknown {
@@ -514,6 +506,8 @@ function registerCrashListeners() {
   if (listenersRegistered || typeof window === "undefined") return;
 
   window.addEventListener("error", (event) => {
+    if (isBenignWindowError(event.message)) return;
+
     void recordCrashReport({
       kind: "window_error",
       message: event.message,
@@ -547,6 +541,7 @@ export async function recordCrashReport(payload: Record<string, unknown>) {
     {
       ...payload,
       report_source: "desktop_runtime",
+      build: crashReportBuild(import.meta.env.DEV),
     },
     { flushImmediately: true, mode: "optional" },
   );
