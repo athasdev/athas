@@ -670,21 +670,14 @@ const AIChat = memo(function AIChat({
         description: "Messages you send wait in the queue until the connection is back.",
         canRetry: false,
       }
-    : lastMessage?.isStreaming && lastMessage.responsePhase === "stalled"
+    : lastTurnFailed && lastMessage?.error?.code === "offline"
       ? {
           tone: "info" as const,
-          title: "No response yet",
-          description: "The agent has not answered for a while. It may still be working.",
+          title: "Back online",
+          description: "Run the last prompt again.",
           canRetry: true,
         }
-      : lastTurnFailed && lastMessage?.error?.code === "offline"
-        ? {
-            tone: "info" as const,
-            title: "Back online",
-            description: "Run the last prompt again.",
-            canRetry: true,
-          }
-        : null;
+      : null;
   const showHostedUsage =
     !useInitialComposer && currentAgentId === "custom" && sessionProviderId === "athas";
   const handleQuestionAnswer = async (response: AcpElicitationResponse) => {
