@@ -329,3 +329,9 @@ export async function keepAllAgentEdits(chatId: string) {
 export async function rejectAllAgentEdits(chatId: string) {
   for (const path of Object.keys(getAgentEditEntries(chatId))) await rejectAgentFile(chatId, path);
 }
+
+/** Shows the chat's unreviewed changes in the "Agent Changes" tab, opening it if needed. */
+export function openAgentEditsReview(chatId: string) {
+  useAgentEditsStore.getState().actions.openReview(chatId);
+  useBufferStore.getState().actions.openContent({ type: "agentChanges" });
+}

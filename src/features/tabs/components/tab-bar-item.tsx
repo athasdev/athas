@@ -9,6 +9,7 @@ import {
   ChatBubbleTextIcon,
   DatabaseIcon,
   GitBranchIcon,
+  GitDiffIcon,
   GitPullRequestIcon,
   GridIcon,
   PackageIcon,
@@ -239,6 +240,8 @@ const TabBarItem = memo(function TabBarItem({
               <ArrowsClockwiseIcon className="text-subtle-foreground" />
             ) : buffer.type === "acpInspector" ? (
               <ArrowsLeftRightIcon className="text-subtle-foreground" />
+            ) : buffer.type === "agentChanges" ? (
+              <GitDiffIcon className="text-subtle-foreground" />
             ) : buffer.type === "workspaces" ? (
               <GridIcon />
             ) : buffer.type === "settings" ? (

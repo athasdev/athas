@@ -85,6 +85,7 @@ const ContinuousAgentsResource = lazy(() => import("@/features/ai/continuous-age
 const AcpInspectorView = lazy(
   () => import("@/features/ai/acp-inspector/components/acp-inspector-view"),
 );
+const AgentEditsReviewView = lazy(() => import("@/features/ai/components/chat/agent-edits-review"));
 const WorkspaceManagementView = lazy(
   () => import("@/features/workspace/team/components/workspace-management-view"),
 );
@@ -990,6 +991,9 @@ export function PaneContainer({ pane }: PaneContainerProps) {
 
         case "acpInspector":
           return <AcpInspectorView />;
+
+        case "agentChanges":
+          return <AgentEditsReviewView />;
 
         case "workspaces":
           return <WorkspaceManagementView />;

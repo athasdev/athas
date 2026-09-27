@@ -4,6 +4,7 @@ import { computeAgentHunks } from "@/features/ai/lib/agent-edit-hunks";
 import {
   keepAgentHunk,
   keepAllAgentEdits,
+  openAgentEditsReview,
   recordAgentFileWrite,
   rejectAgentHunk,
   rejectAllAgentEdits,
@@ -16,6 +17,7 @@ const mocks = vi.hoisted(() => ({
   buffers: [] as Array<Record<string, unknown>>,
   updateBufferContent: vi.fn(),
   closeBufferForce: vi.fn(),
+  openContent: vi.fn(),
   markPendingSave: vi.fn(),
   showToast: vi.fn(),
   showConfirmDialog: vi.fn(),
@@ -35,6 +37,7 @@ vi.mock("@/features/editor/stores/buffer.store", () => ({
       actions: {
         updateBufferContent: mocks.updateBufferContent,
         closeBufferForce: mocks.closeBufferForce,
+        openContent: mocks.openContent,
       },
     }),
   },
@@ -122,6 +125,12 @@ describe("agent edits service", () => {
       expect.objectContaining({ path: PATH, previousContent: "a", content: "b" }),
     );
     expect(entry()?.turnId).toBe("user-1");
+  });
+
+  it("opens the review as a tab showing the chat", () => {
+    openAgentEditsReview(CHAT);
+    expect(useAgentEditsStore.getState().reviewChatId).toBe(CHAT);
+    expect(mocks.openContent).toHaveBeenCalledWith({ type: "agentChanges" });
   });
 
   it("keeps a hunk without touching the file", async () => {

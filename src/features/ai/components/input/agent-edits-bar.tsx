@@ -1,7 +1,11 @@
 import { useMemo } from "react";
 import { computeAgentHunks, countChangedLines } from "@/features/ai/lib/agent-edit-hunks";
-import { keepAllAgentEdits, rejectAllAgentEdits } from "@/features/ai/services/agent-edits-service";
-import { useAgentEditEntries, useAgentEditsStore } from "@/features/ai/stores/agent-edits.store";
+import {
+  keepAllAgentEdits,
+  openAgentEditsReview,
+  rejectAllAgentEdits,
+} from "@/features/ai/services/agent-edits-service";
+import { useAgentEditEntries } from "@/features/ai/stores/agent-edits.store";
 import { Button } from "@/ui/button";
 import { ButtonGroup } from "@/ui/button-group";
 import { CheckIcon, GitDiffIcon, XIcon } from "@/ui/icons";
@@ -36,7 +40,7 @@ export function AgentEditsBar({ chatId }: { chatId: string }) {
             type="button"
             variant="ghost"
             size="xs"
-            onClick={() => useAgentEditsStore.getState().actions.openReview(chatId)}
+            onClick={() => openAgentEditsReview(chatId)}
           >
             <GitDiffIcon />
             Review

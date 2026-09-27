@@ -8,8 +8,12 @@ import {
 import { openAgentSessions } from "@/features/ai/lib/open-agent-sessions";
 import { openAgentInNewWindow } from "@/features/ai/detached/agent-window-service";
 import { toggleFollowAgent } from "@/features/ai/services/agent-follow-service";
-import { keepAllAgentEdits, rejectAllAgentEdits } from "@/features/ai/services/agent-edits-service";
-import { pickAgentEditsChatId, useAgentEditsStore } from "@/features/ai/stores/agent-edits.store";
+import {
+  keepAllAgentEdits,
+  openAgentEditsReview,
+  rejectAllAgentEdits,
+} from "@/features/ai/services/agent-edits-service";
+import { pickAgentEditsChatId } from "@/features/ai/stores/agent-edits.store";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import {
@@ -114,7 +118,7 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
           label: "AI: Review Agent Changes",
           description: "Keep or reject the agent's file edits hunk by hunk",
           icon: <GitDiffIcon />,
-          run: (chatId: string) => useAgentEditsStore.getState().actions.openReview(chatId),
+          run: (chatId: string) => openAgentEditsReview(chatId),
         },
         {
           id: "ai-keep-all-agent-changes",

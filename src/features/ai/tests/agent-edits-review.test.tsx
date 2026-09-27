@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   rejectAllAgentEdits: vi.fn(),
   keepAgentFile: vi.fn(),
   rejectAgentFile: vi.fn(),
+  openAgentEditsReview: vi.fn(),
   openToolPath: vi.fn(),
 }));
 
@@ -19,12 +20,21 @@ vi.mock("@tauri-apps/api/webviewWindow", () => ({
 }));
 vi.mock("@/features/ai/services/agent-edits-service", () => mocks);
 vi.mock("@/features/ai/lib/open-tool-location", () => ({ openToolPath: mocks.openToolPath }));
+vi.mock("@/features/ai/stores/ai-chat.store", () => ({
+  useAIChatStore: (select: (state: { chats: Array<{ id: string; title: string }> }) => unknown) =>
+    select({
+      chats: [
+        { id: "chat-1", title: "Fix the parser" },
+        { id: "chat-2", title: "Rename things" },
+      ],
+    }),
+}));
 vi.mock("@/features/window/stores/project.store", () => ({
   useProjectStore: (select: (state: { rootFolderPath: string }) => unknown) =>
     select({ rootFolderPath: "/repo" }),
 }));
 
-import { AgentEditsReview } from "../components/chat/agent-edits-review";
+import AgentEditsReviewView from "../components/chat/agent-edits-review";
 import { AgentEditsBar } from "../components/input/agent-edits-bar";
 import { pickAgentEditsChatId, useAgentEditsStore } from "../stores/agent-edits.store";
 
@@ -73,12 +83,12 @@ describe("agent edits review", () => {
     expect(container.textContent).toContain("+2 -2");
 
     act(() => buttons("Review")[0].click());
-    expect(useAgentEditsStore.getState().reviewChatId).toBe(CHAT);
+    expect(mocks.openAgentEditsReview).toHaveBeenCalledWith(CHAT);
   });
 
   it("lists each hunk with keep, reject and open", () => {
     useAgentEditsStore.setState({ reviewChatId: CHAT });
-    act(() => root.render(<AgentEditsReview />));
+    act(() => root.render(<AgentEditsReviewView />));
 
     expect(document.body.textContent).toContain("src/a.ts");
     expect(buttons("Keep")).toHaveLength(2);
@@ -92,15 +102,16 @@ describe("agent edits review", () => {
 
     act(() => buttons("Line 6")[0].click());
     expect(mocks.openToolPath).toHaveBeenCalledWith("/repo/src/a.ts", 6);
-    expect(useAgentEditsStore.getState().reviewChatId).toBeNull();
+    // The review is a tab, not a dialog: opening a file leaves it where it is.
+    expect(document.body.textContent).toContain("src/a.ts");
   });
 
-  it("closes once nothing is left to review", () => {
-    useAgentEditsStore.setState({ reviewChatId: CHAT });
-    act(() => root.render(<AgentEditsReview />));
-    act(() => useAgentEditsStore.getState().actions.setEntry(CHAT, "/repo/src/a.ts", null));
+  it("shows the most recent chat with changes and says when nothing is left", () => {
+    act(() => root.render(<AgentEditsReviewView />));
+    expect(document.body.textContent).toContain("1 file, 2 changes, +2 -2");
 
-    expect(useAgentEditsStore.getState().reviewChatId).toBeNull();
+    act(() => useAgentEditsStore.getState().actions.setEntry(CHAT, "/repo/src/a.ts", null));
+    expect(document.body.textContent).toContain("No agent changes to review");
   });
 });
 
