@@ -30,6 +30,8 @@ const RETRYABLE_CODES = new Set([
   "offline",
   "network",
   "provider_rejected",
+  "provider_unavailable",
+  "connection_interrupted",
   "RECONNECT",
 ]);
 

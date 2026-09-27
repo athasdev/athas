@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 import { describeAgentTurnFailure } from "../lib/agent-turn-error";
+import { formatApiError } from "../lib/api-error";
+import { toIntelligenceAgentError } from "../intelligence/lib/intelligence-agent-error";
 
 const describeFailure = (error: string, overrides: { isAcp?: boolean; offline?: boolean } = {}) =>
   describeAgentTurnFailure({
@@ -63,5 +65,29 @@ describe("agent turn failures", () => {
       offline: false,
     });
     expect(failure).toMatchObject({ blockCode: "RECONNECT", suppressToast: true });
+  });
+
+  it("keeps the status a hosted stream error chunk carries in param", () => {
+    // What the SDK hands over for an Athas SSE `error` event: only the OpenAI-style fields.
+    const chunk = (code: string, param: Record<string, unknown> = {}) =>
+      describeFailure(
+        formatApiError(
+          "athas",
+          toIntelligenceAgentError({ message: "Upstream failed", type: code, code, param }),
+        ),
+      ).error;
+
+    expect(chunk("provider_rejected", { statusCode: 400 })).toMatchObject({
+      code: "provider_rejected",
+      status: 400,
+    });
+    expect(chunk("provider_unavailable", { statusCode: 503 })).toMatchObject({
+      status: 503,
+      retryable: true,
+    });
+    expect(chunk("connection_interrupted")).toMatchObject({
+      code: "connection_interrupted",
+      retryable: true,
+    });
   });
 });
