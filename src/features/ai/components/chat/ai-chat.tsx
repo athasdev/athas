@@ -44,14 +44,11 @@ import {
   normalizeAgentSessionTitle,
 } from "@/features/ai/utils/chat-session-title";
 import { getMessageSearchMatches } from "@/features/ai/utils/message-search";
-import { useGitHubStore } from "@/features/github/stores/github.store";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { recordFrictionSignal } from "@/features/telemetry/services/telemetry";
 import { claimContextualTip } from "@/features/onboarding/lib/contextual-teaching";
 import { useAuthStore } from "@/features/window/stores/auth.store";
-import { getAccountIdentity } from "@/features/window/lib/account-identity";
-import { useAgentWindowStore } from "@/features/ai/detached/agent-window.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/ui/alert";
 import { Button } from "@/ui/button";
@@ -96,9 +93,6 @@ const AIChat = memo(function AIChat({
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const aiProviderId = useSettingsStore((state) => state.settings.aiProviderId);
   const subscription = useAuthStore((state) => state.subscription);
-  const user = useAuthStore((state) => state.user);
-  const githubAccountStatus = useGitHubStore((state) => state.githubAccountStatus);
-  const githubCurrentUser = useGitHubStore((state) => state.currentUser);
   const enterprisePolicy = subscription?.enterprise?.policy;
   const isAiChatBlockedByPolicy = Boolean(
     enterprisePolicy?.managedMode && !enterprisePolicy.aiChatEnabled,
@@ -150,16 +144,10 @@ const AIChat = memo(function AIChat({
   const hasSessionApiKey = useAIChatStore((state) =>
     getProviderAccessFromMap(sessionProviderId, state.providerApiKeys),
   );
-  const assistantIconId =
-    currentAgentId === "custom" ? (currentChat?.providerId ?? aiProviderId) : currentAgentId;
   const assistantLabel =
     currentAgentId === "custom"
       ? (currentChat?.modelId ?? currentChat?.providerId ?? aiProviderId)
       : currentAgentId;
-  const connectedGitHubLogin =
-    githubAccountStatus === "connected" ? githubCurrentUser || user?.github_username : null;
-  const detachedIdentity = useAgentWindowStore((state) => state.accountIdentity);
-  const accountIdentity = detachedIdentity ?? getAccountIdentity(user, connectedGitHubLogin);
   const activeRun = effectiveChatId ? chatState.agentRuns[effectiveChatId] : undefined;
   const isSurfaceTyping = Boolean(activeRun);
   const surfaceStreamingMessageId = activeRun?.assistantMessageId ?? null;
@@ -875,10 +863,6 @@ const AIChat = memo(function AIChat({
                     searchQuery={messageSearchQuery}
                     activeSearchMessageId={activeMessageSearchMatch?.messageId ?? null}
                     activeSearchIndex={activeMessageSearchIndex}
-                    userName={accountIdentity.name}
-                    userAvatarUrl={accountIdentity.avatarUrl}
-                    assistantIconId={assistantIconId}
-                    assistantLabel={assistantLabel}
                   />
                 </MessageScrollerViewport>
                 <MessageScrollerButton />

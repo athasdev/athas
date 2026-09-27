@@ -29,10 +29,6 @@ interface ChatMessagesProps {
   activeSearchMessageId?: string | null;
   activeSearchIndex?: number;
   surfaceId: string;
-  userName: string;
-  userAvatarUrl?: string | null;
-  assistantIconId: string;
-  assistantLabel: string;
 }
 
 const EMPTY_MESSAGES: Message[] = [];
@@ -54,10 +50,6 @@ interface ChatTimelineMessageProps {
   onSendFollowUp?: (message: string) => void | Promise<void>;
   onEditUserMessage?: (messageId: string, content: string) => void | Promise<void>;
   onRetryBefore: (messageId: string) => void | Promise<void>;
-  userName: string;
-  userAvatarUrl?: string | null;
-  assistantIconId: string;
-  assistantLabel: string;
 }
 
 /**
@@ -75,10 +67,6 @@ const ChatTimelineMessage = memo(function ChatTimelineMessage({
   onSendFollowUp,
   onEditUserMessage,
   onRetryBefore,
-  userName,
-  userAvatarUrl,
-  assistantIconId,
-  assistantLabel,
 }: ChatTimelineMessageProps) {
   const canRetry = isLastMessage && canEditUserMessages && Boolean(onEditUserMessage);
   const retry = useCallback(() => onRetryBefore(message.id), [onRetryBefore, message.id]);
@@ -133,10 +121,6 @@ const ChatTimelineMessage = memo(function ChatTimelineMessage({
         searchQuery={searchQuery}
         chatId={chatId}
         onExecutePlanStep={onSendFollowUp}
-        userName={userName}
-        userAvatarUrl={userAvatarUrl}
-        assistantIconId={assistantIconId}
-        assistantLabel={assistantLabel}
       />
       {isLastMessage && message.role === "assistant" && onSendFollowUp ? (
         <ChatFollowUpActions
@@ -158,10 +142,6 @@ export const ChatMessages = memo(function ChatMessages({
   activeSearchMessageId,
   activeSearchIndex,
   surfaceId,
-  userName,
-  userAvatarUrl,
-  assistantIconId,
-  assistantLabel,
 }: ChatMessagesProps) {
   const { scrollToMessage } = useMessageScroller();
   const resolvedChatId = useAIChatStore((state) => chatId ?? state.currentChatId);
@@ -243,10 +223,6 @@ export const ChatMessages = memo(function ChatMessages({
             onSendFollowUp={onSendFollowUp}
             onEditUserMessage={onEditUserMessage}
             onRetryBefore={retryBefore}
-            userName={userName}
-            userAvatarUrl={userAvatarUrl}
-            assistantIconId={assistantIconId}
-            assistantLabel={assistantLabel}
           />
         );
       })}

@@ -64,17 +64,7 @@ beforeEach(async () => {
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);
-  await act(async () =>
-    root.render(
-      <ChatMessages
-        chatId="a"
-        surfaceId="test"
-        userName="Tester"
-        assistantIconId="athas"
-        assistantLabel="Athas"
-      />,
-    ),
-  );
+  await act(async () => root.render(<ChatMessages chatId="a" surfaceId="test" />));
 });
 
 afterEach(async () => {

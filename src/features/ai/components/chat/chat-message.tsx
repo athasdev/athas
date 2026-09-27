@@ -26,10 +26,8 @@ import {
   AttachmentTrigger,
 } from "@/ui/attachment";
 import { Bubble, BubbleContent } from "@/ui/bubble";
-import { Avatar } from "@/ui/avatar";
-import { Message, MessageAvatar, MessageContent, MessageFooter } from "@/ui/message";
+import { Message, MessageContent, MessageFooter } from "@/ui/message";
 import Textarea from "@/ui/textarea";
-import { ProviderIcon } from "../icons/provider-icons";
 import MarkdownRenderer from "../messages/markdown-renderer";
 import { PlanBlockDisplay } from "../messages/plan-block-display";
 import { AgentPlan } from "../messages/agent-plan";
@@ -52,10 +50,6 @@ interface ChatMessageProps {
   searchQuery?: string;
   chatId?: string | null;
   onExecutePlanStep?: (message: string) => void | Promise<void>;
-  userName: string;
-  userAvatarUrl?: string | null;
-  assistantIconId: string;
-  assistantLabel: string;
 }
 
 async function copyText(text: string) {
@@ -151,29 +145,6 @@ function ChatResponseStatus({ phase }: { phase: AIMessage["responsePhase"] }) {
 /** Matches the user bubble's `px-3` so both text columns start on the same x. */
 const ASSISTANT_CONTENT_INSET = "px-3";
 
-function AssistantMessageAvatar({
-  iconId,
-  label,
-  isStatus = false,
-}: {
-  iconId: string;
-  label: string;
-  isStatus?: boolean;
-}) {
-  return (
-    <MessageAvatar
-      placement="content"
-      variant="assistant"
-      size="compact"
-      className={isStatus ? "self-center" : "mt-px"}
-      title={label}
-      aria-label={label}
-    >
-      <ProviderIcon providerId={iconId} size={20} className="size-5" />
-    </MessageAvatar>
-  );
-}
-
 export const ChatMessage = memo(function ChatMessage({
   message,
   isLastMessage,
@@ -184,10 +155,6 @@ export const ChatMessage = memo(function ChatMessage({
   searchQuery = "",
   chatId,
   onExecutePlanStep,
-  userName,
-  userAvatarUrl,
-  assistantIconId,
-  assistantLabel,
 }: ChatMessageProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [draftContent, setDraftContent] = useState(message.content);
@@ -236,10 +203,6 @@ export const ChatMessage = memo(function ChatMessage({
 
     return (
       <Message>
-        {/* Same box as the assistant's, dropped to the bubble's first text line. */}
-        <MessageAvatar placement="content" size="compact" className="mt-3">
-          <Avatar name={userName} src={userAvatarUrl} size="md" />
-        </MessageAvatar>
         <MessageContent>
           <Bubble variant="user">
             <BubbleContent title={messageTime} className="w-full">
@@ -316,7 +279,6 @@ export const ChatMessage = memo(function ChatMessage({
   if (isToolOnlyMessage) {
     return (
       <Message>
-        <AssistantMessageAvatar iconId={assistantIconId} label={assistantLabel} />
         <MessageContent className={ASSISTANT_CONTENT_INSET}>
           <ToolCallList
             toolCalls={message.toolCalls!}
@@ -337,7 +299,6 @@ export const ChatMessage = memo(function ChatMessage({
   ) {
     return (
       <Message className="items-center">
-        <AssistantMessageAvatar iconId={assistantIconId} label={assistantLabel} isStatus />
         <MessageContent className={ASSISTANT_CONTENT_INSET}>
           <ChatResponseStatus phase={message.responsePhase} />
         </MessageContent>
@@ -350,7 +311,6 @@ export const ChatMessage = memo(function ChatMessage({
 
   return (
     <Message>
-      <AssistantMessageAvatar iconId={assistantIconId} label={assistantLabel} />
       <MessageContent className={ASSISTANT_CONTENT_INSET}>
         <Bubble variant="ghost">
           <BubbleContent>
