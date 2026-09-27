@@ -678,7 +678,9 @@ const AIChatInputBar = memo(function AIChatInputBar({
       }
     } else if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleSendMessage();
+      if (e.repeat) return;
+      if (isStreaming && (e.metaKey || e.ctrlKey)) handleInterruptAndSend();
+      else handleSendMessage();
     }
   };
 
@@ -1322,6 +1324,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
                   variant="ghost"
                   tone="accent"
                   tooltip="Interrupt and send now"
+                  shortcut="mod+enter"
                   iconOnly
                 >
                   <BoltIcon />

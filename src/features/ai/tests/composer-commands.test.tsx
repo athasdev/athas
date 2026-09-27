@@ -134,4 +134,16 @@ describe("Composer modes and commands", () => {
     expect(useAIChatStore.getState().mode).toBe("plan");
     expect(onSendMessage).toHaveBeenCalledWith("add dark mode", []);
   });
+
+  it("interrupts and sends with Cmd or Ctrl+Enter while the agent responds", async () => {
+    await render({ isTyping: true, streamingMessageId: "response" });
+    await type("stop and do this instead");
+    await press("Enter", { metaKey: true });
+    expect(onInterruptAndSend).toHaveBeenCalledWith("stop and do this instead", []);
+    expect(onSendMessage).not.toHaveBeenCalled();
+
+    await type("queue this");
+    await press("Enter");
+    expect(onSendMessage).toHaveBeenCalledWith("queue this", []);
+  });
 });
