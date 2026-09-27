@@ -149,7 +149,15 @@ fn persist(target: &Path, content: &str) -> Result<(), String> {
    }
    let parent = target.parent().ok_or("Missing parent")?;
    fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-   let mut temporary = tempfile::NamedTempFile::new_in(parent).map_err(|e| e.to_string())?;
+   let mut builder = tempfile::Builder::new();
+   // A temporary file is private (0600); a file the agent creates should get the same mode as
+   // any other new file, 0666 less the umask, like an editor save would give it.
+   #[cfg(unix)]
+   if !target.exists() {
+      use std::os::unix::fs::PermissionsExt;
+      builder.permissions(fs::Permissions::from_mode(0o666));
+   }
+   let mut temporary = builder.tempfile_in(parent).map_err(|e| e.to_string())?;
    if let Ok(metadata) = fs::metadata(target) {
       temporary
          .as_file()
@@ -547,6 +555,23 @@ pub fn search_workspace_files(
 #[cfg(test)]
 mod tests {
    use super::*;
+   #[cfg(unix)]
+   #[test]
+   fn creates_files_with_the_usual_mode() {
+      use std::os::unix::fs::PermissionsExt;
+      let dir = tempfile::tempdir().unwrap();
+      let root = dir.path().to_str().unwrap();
+      fs::write(dir.path().join("plain.txt"), "x").unwrap();
+      write_workspace_file(root, "created.txt", None, "x").unwrap();
+      let mode = |name: &str| {
+         fs::metadata(dir.path().join(name))
+            .unwrap()
+            .permissions()
+            .mode()
+            & 0o777
+      };
+      assert_eq!(mode("created.txt"), mode("plain.txt"));
+   }
    #[test]
    fn refuses_traversal_and_secret_files() {
       let dir = tempfile::tempdir().unwrap();
