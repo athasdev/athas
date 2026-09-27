@@ -46,7 +46,6 @@ interface ChatMessageProps {
   message: AIMessage;
   isLastMessage: boolean;
   showActions?: boolean;
-  onApplyCode?: (code: string, language?: string) => void;
   onEditUserMessage?: (messageId: string, content: string) => void | Promise<void>;
   canEditUserMessage?: boolean;
   searchQuery?: string;
@@ -178,7 +177,6 @@ export const ChatMessage = memo(function ChatMessage({
   message,
   isLastMessage,
   showActions = true,
-  onApplyCode,
   onRetry,
   onEditUserMessage,
   canEditUserMessage = false,
@@ -429,12 +427,7 @@ export const ChatMessage = memo(function ChatMessage({
                 >
                   {segment.text ? (
                     <MessageResponse>
-                      <MarkdownRenderer
-                        onRetry={onRetry}
-                        content={segment.text}
-                        onApplyCode={onApplyCode}
-                        chatId={chatId}
-                      />
+                      <MarkdownRenderer onRetry={onRetry} content={segment.text} chatId={chatId} />
                     </MessageResponse>
                   ) : null}
                   {segment.toolCalls.length > 0 ? (

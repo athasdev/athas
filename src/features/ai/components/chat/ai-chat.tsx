@@ -92,7 +92,6 @@ const AIChat = memo(function AIChat({
   buffers = [],
   selectedFiles = [],
   allProjectFiles = [],
-  onApplyCode,
 }: AIChatProps) {
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const aiProviderId = useSettingsStore((state) => state.settings.aiProviderId);
@@ -864,7 +863,6 @@ const AIChat = memo(function AIChat({
                   <ChatMessages
                     surfaceId={surfaceId}
                     chatId={effectiveChatId}
-                    onApplyCode={onApplyCode}
                     onSendFollowUp={handleSendFollowUp}
                     onEditUserMessage={handleEditUserMessage}
                     canEditUserMessages={

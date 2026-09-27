@@ -20,7 +20,6 @@ import { ChatTerminalCommand } from "./chat-terminal-command";
 import { isChatTerminalCommand } from "../../services/chat-terminal-command";
 
 interface ChatMessagesProps {
-  onApplyCode?: (code: string, language?: string) => void;
   onSendFollowUp?: (message: string) => void | Promise<void>;
   onEditUserMessage?: (messageId: string, content: string) => void | Promise<void>;
   canEditUserMessages?: boolean;
@@ -52,7 +51,6 @@ interface ChatTimelineMessageProps {
   isActiveSearchMatch: boolean;
   chatId: string | null;
   canEditUserMessages: boolean;
-  onApplyCode?: (code: string, language?: string) => void;
   onSendFollowUp?: (message: string) => void | Promise<void>;
   onEditUserMessage?: (messageId: string, content: string) => void | Promise<void>;
   onRetryBefore: (messageId: string) => void | Promise<void>;
@@ -74,7 +72,6 @@ const ChatTimelineMessage = memo(function ChatTimelineMessage({
   isActiveSearchMatch,
   chatId,
   canEditUserMessages,
-  onApplyCode,
   onSendFollowUp,
   onEditUserMessage,
   onRetryBefore,
@@ -130,7 +127,6 @@ const ChatTimelineMessage = memo(function ChatTimelineMessage({
       <ChatMessage
         message={message}
         isLastMessage={isLastMessage}
-        onApplyCode={onApplyCode}
         onRetry={canRetry ? retry : undefined}
         onEditUserMessage={onEditUserMessage}
         canEditUserMessage={canEditUserMessages}
@@ -153,7 +149,6 @@ const ChatTimelineMessage = memo(function ChatTimelineMessage({
 });
 
 export const ChatMessages = memo(function ChatMessages({
-  onApplyCode,
   onSendFollowUp,
   onEditUserMessage,
   canEditUserMessages = false,
@@ -245,7 +240,6 @@ export const ChatMessages = memo(function ChatMessages({
             isActiveSearchMatch={item.message.id === activeSearchMessageId}
             chatId={resolvedChatId}
             canEditUserMessages={canEditUserMessages}
-            onApplyCode={onApplyCode}
             onSendFollowUp={onSendFollowUp}
             onEditUserMessage={onEditUserMessage}
             onRetryBefore={retryBefore}

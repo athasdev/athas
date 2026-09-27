@@ -150,15 +150,6 @@ export interface AIChatProps {
   selectedFiles?: string[];
   allProjectFiles?: FileEntry[];
   mode: "chat";
-  // Buffer update functions
-  onApplyCode?: (code: string) => void;
-}
-
-export interface MarkdownRendererProps {
-  onRetry?: () => void | Promise<void>;
-  content: string;
-  onApplyCode?: (code: string) => void;
-  chatId?: string | null;
 }
 
 export interface AIChatInputBarProps {

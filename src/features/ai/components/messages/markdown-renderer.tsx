@@ -13,7 +13,6 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { getAcpAuthenticationCommand } from "@/features/ai/lib/acp-authentication";
 import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
-import type { MarkdownRendererProps } from "@/features/ai/types/ai-chat.types";
 import {
   isExternalMarkdownLink,
   resolveWorkspaceFileLink,
@@ -93,15 +92,7 @@ async function openMarkdownLink(href: string, label: string) {
   await openUrl(href);
 }
 
-function CodeBlock({
-  code,
-  languageHint,
-  onApplyCode,
-}: {
-  code: string;
-  languageHint: string;
-  onApplyCode?: (code: string, language?: string) => void;
-}) {
+function CodeBlock({ code, languageHint }: { code: string; languageHint: string }) {
   const explicitLanguage = languageHint ? normalizeCodeFenceLanguage(languageHint) : "";
   const inferredLanguage = explicitLanguage || inferCodeLanguage(code);
   const languageLabel = explicitLanguage || (inferredLanguage !== "clike" ? inferredLanguage : "");
@@ -126,17 +117,6 @@ function CodeBlock({
               >
                 <CopyIcon className="text-subtle-foreground" size={12} />
               </Button>
-              {onApplyCode && (
-                <Button
-                  type="button"
-                  variant="default"
-                  onClick={() => onApplyCode(code)}
-                  size="xs"
-                  tooltip="Apply this code to current buffer"
-                >
-                  Apply
-                </Button>
-              )}
             </div>
           )}
         </div>
@@ -564,10 +544,7 @@ function renderInlineFormatting(text: string): React.ReactNode {
 }
 
 // Line-by-line state machine markdown renderer
-function renderContent(
-  text: string,
-  onApplyCode?: (code: string, language?: string) => void,
-): React.ReactNode[] {
+function renderContent(text: string): React.ReactNode[] {
   const lines = normalizeImplicitCodeFences(text).split("\n");
   const elements: React.ReactNode[] = [];
   let inCodeBlock = false;
@@ -587,7 +564,6 @@ function renderContent(
           key={`code-${codeBlockStartLine}-${code.length}`}
           code={code}
           languageHint={codeBlockLanguage}
-          onApplyCode={onApplyCode}
         />,
       );
       codeBlockContent = [];
@@ -749,12 +725,13 @@ function renderContent(
 }
 
 // Simple markdown renderer for AI responses
-export default function MarkdownRenderer({
-  content,
-  onApplyCode,
-  chatId,
-  onRetry,
-}: MarkdownRendererProps) {
+interface MarkdownRendererProps {
+  content: string;
+  chatId?: string | null;
+  onRetry?: () => void | Promise<void>;
+}
+
+export default function MarkdownRenderer({ content, chatId, onRetry }: MarkdownRendererProps) {
   const normalizedContent = normalizePlainTextFence(content);
 
   // Check for error blocks first
@@ -764,15 +741,13 @@ export default function MarkdownRenderer({
       const errorStart = errorMatch.index ?? 0;
       return (
         <div className="typeset typeset-chat">
-          {renderContent(normalizedContent.slice(0, errorStart), onApplyCode)}
+          {renderContent(normalizedContent.slice(0, errorStart))}
           <ErrorBlock errorData={errorMatch[1]} chatId={chatId} onRetry={onRetry} />
-          {renderContent(normalizedContent.slice(errorStart + errorMatch[0].length), onApplyCode)}
+          {renderContent(normalizedContent.slice(errorStart + errorMatch[0].length))}
         </div>
       );
     }
   }
 
-  return (
-    <div className="typeset typeset-chat">{renderContent(normalizedContent, onApplyCode)}</div>
-  );
+  return <div className="typeset typeset-chat">{renderContent(normalizedContent)}</div>;
 }
