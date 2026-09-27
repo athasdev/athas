@@ -248,9 +248,13 @@ impl GitCommand {
          .stderr(Stdio::piped());
       let mut child = command.spawn().context("Failed to start git")?;
       if let Some(mut stdin) = child.stdin.take() {
-         stdin
-            .write_all(&input)
-            .context("Failed to write to git stdin")?;
+         // Git may exit before reading its input (for example `git --version`); its exit
+         // status and stderr then describe the outcome, so a closed pipe is not an error.
+         if let Err(error) = stdin.write_all(&input)
+            && error.kind() != std::io::ErrorKind::BrokenPipe
+         {
+            return Err(error).context("Failed to write to git stdin");
+         }
       }
       child.wait_with_output().context("Failed to wait for git")
    }
