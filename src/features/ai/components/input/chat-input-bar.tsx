@@ -74,7 +74,20 @@ import { ComposerAgentSelector } from "./composer-agent-selector";
 import { ChatPreferencesMenu } from "./chat-preferences-menu";
 import { ComposerModeSelector } from "./composer-mode-selector";
 import { useChatModeSource } from "@/features/ai/hooks/use-chat-mode";
-import { cycleChatMode } from "@/features/ai/services/chat-mode-service";
+import { applyChatModeIntent, cycleChatMode } from "@/features/ai/services/chat-mode-service";
+import {
+  filterComposerSlashCommands,
+  mergeComposerSlashCommands,
+  parseLeadingModeCommand,
+} from "@/features/ai/lib/composer-slash-commands";
+import type {
+  ComposerCommandAction,
+  ComposerSlashCommand,
+} from "@/features/ai/types/composer-slash-command.types";
+import { clearChat, compactChat } from "@/features/ai/services/chat-compaction-service";
+import { openAgentEditsReview } from "@/features/ai/services/agent-edits-service";
+import { pickAgentEditsChatId } from "@/features/ai/stores/agent-edits.store";
+import { openNewAgentChat } from "@/features/ai/lib/open-new-agent-chat";
 import { AcpContextMeter } from "./acp-context-meter";
 import { ComposerContextMeter } from "./composer-context-meter";
 import { useComposerContextBudget } from "@/features/ai/hooks/use-composer-context-budget";
@@ -224,16 +237,23 @@ const AIChatInputBar = memo(function AIChatInputBar({
     [chatId, isCustomAgent, onAgentChange, updateSetting],
   );
 
-  const availableSlashCommands = acpSession.slashCommands;
-  const filteredSlashCommands = useMemo(() => {
-    const search = slashCommandState.search.trim().toLowerCase();
-    if (!search) return availableSlashCommands;
-    return availableSlashCommands.filter(
-      (command) =>
-        command.name.toLowerCase().includes(search) ||
-        command.description?.toLowerCase().includes(search),
-    );
-  }, [availableSlashCommands, slashCommandState.search]);
+  const skills = useSettingsStore((state) => state.settings.aiSkills);
+  const availableSlashCommands = useMemo(
+    () =>
+      mergeComposerSlashCommands({
+        agentCommands: acpSession.slashCommands,
+        skills,
+        isBuiltInAgent: isCustomAgent,
+        availableModeIntents: modeSource.options.flatMap((option) =>
+          option.intent ? [option.intent] : [],
+        ),
+      }),
+    [acpSession.slashCommands, isCustomAgent, modeSource.options, skills],
+  );
+  const filteredSlashCommands = useMemo(
+    () => filterComposerSlashCommands(availableSlashCommands, slashCommandState.search),
+    [availableSlashCommands, slashCommandState.search],
+  );
 
   const setInput = useCallback((input: string) => {
     inputValueRef.current = input;
@@ -965,48 +985,97 @@ const AIChatInputBar = memo(function AIChatInputBar({
     [hideMention, mentionState.search.length, mentionState.startIndex, syncInputFromEditable],
   );
 
-  // Handle slash command selection
-  const handleSlashCommandSelect = useCallback(
-    (command: SlashCommand) => {
-      if (!inputRef.current) return;
+  const runSlashCommandAction = (action: ComposerCommandAction) => {
+    const notify = (message: string) => showToast({ message, type: "info" });
+    switch (action.type) {
+      case "mode": {
+        const mode = applyChatModeIntent(modeSource, action.intent);
+        notify(mode ? `Mode: ${mode.label}` : "This agent has no matching mode.");
+        return;
+      }
+      case "skill": {
+        const skill = skills.find((candidate) => candidate.id === action.skillId);
+        if (skill) insertSkillAtCursor(skill);
+        return;
+      }
+      case "new":
+        openNewAgentChat(currentAgentId);
+        return;
+      case "review":
+        if (chatId && pickAgentEditsChatId(chatId) === chatId) openAgentEditsReview(chatId);
+        else notify("No agent changes to review in this chat.");
+        return;
+      case "compact":
+      case "clear":
+        if (!chatId) return;
+        if (isTyping) {
+          notify("Wait for the current response to finish.");
+          return;
+        }
+        if (action.type === "clear") {
+          clearChat(chatId);
+          return;
+        }
+        void compactChat(chatId).then((count) =>
+          notify(count > 0 ? `Summarised ${count} earlier messages.` : "Nothing to compact yet."),
+        );
+        return;
+    }
+  };
 
-      isUpdatingContentRef.current = true;
-      const { startIndex, endIndex } = slashCommandRangeRef.current;
-      hideSlashCommands();
-      const commandRange = getComposerTextRange(inputRef.current, startIndex, endIndex);
-      commandRange.deleteContents();
+  const handleSlashCommandSelect = (command: SlashCommand) => {
+    if (!inputRef.current) return;
 
-      const commandSpan = document.createElement("span");
-      commandSpan.setAttribute("data-slash-command", "true");
-      commandSpan.setAttribute("data-slash-command-name", command.name);
-      commandSpan.setAttribute("contenteditable", "false");
-      commandSpan.title = command.description || `/${command.name}`;
-      commandSpan.className = cn(
-        badgeVariants({ tone: "neutral" }),
-        "max-w-48 truncate align-baseline select-none",
-      );
-      commandSpan.textContent = `/${command.name}`;
+    isUpdatingContentRef.current = true;
+    const { startIndex, endIndex } = slashCommandRangeRef.current;
+    hideSlashCommands();
+    const commandRange = getComposerTextRange(inputRef.current, startIndex, endIndex);
+    commandRange.deleteContents();
 
-      const trailingSpace = document.createTextNode(" ");
-      const fragment = document.createDocumentFragment();
-      fragment.append(commandSpan, trailingSpace);
-      commandRange.insertNode(fragment);
-
+    const action = (command as ComposerSlashCommand).action;
+    if (action) {
       const selection = window.getSelection();
       if (selection) {
-        const caretRange = document.createRange();
-        caretRange.setStart(trailingSpace, trailingSpace.length);
-        caretRange.collapse(true);
+        commandRange.collapse(true);
         selection.removeAllRanges();
-        selection.addRange(caretRange);
+        selection.addRange(commandRange);
       }
-
       inputRef.current.focus();
       syncInputFromEditable();
       isUpdatingContentRef.current = false;
-    },
-    [hideSlashCommands, syncInputFromEditable],
-  );
+      runSlashCommandAction(action);
+      return;
+    }
+
+    const commandSpan = document.createElement("span");
+    commandSpan.setAttribute("data-slash-command", "true");
+    commandSpan.setAttribute("data-slash-command-name", command.name);
+    commandSpan.setAttribute("contenteditable", "false");
+    commandSpan.title = command.description || `/${command.name}`;
+    commandSpan.className = cn(
+      badgeVariants({ tone: "neutral" }),
+      "max-w-48 truncate align-baseline select-none",
+    );
+    commandSpan.textContent = `/${command.name}`;
+
+    const trailingSpace = document.createTextNode(" ");
+    const fragment = document.createDocumentFragment();
+    fragment.append(commandSpan, trailingSpace);
+    commandRange.insertNode(fragment);
+
+    const selection = window.getSelection();
+    if (selection) {
+      const caretRange = document.createRange();
+      caretRange.setStart(trailingSpace, trailingSpace.length);
+      caretRange.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(caretRange);
+    }
+
+    inputRef.current.focus();
+    syncInputFromEditable();
+    isUpdatingContentRef.current = false;
+  };
 
   const handleSendMessage = () => {
     const currentInput = inputValueRef.current;
@@ -1031,7 +1100,16 @@ const AIChatInputBar = memo(function AIChatInputBar({
       return;
     }
     const currentImages = pastedImages;
-    const hasContent = currentInput.trim() || currentImages.length > 0;
+    const modeCommand = parseLeadingModeCommand(currentInput, availableSlashCommands);
+    if (modeCommand) {
+      runSlashCommandAction({ type: "mode", intent: modeCommand.intent });
+      if (!modeCommand.prompt && currentImages.length === 0) {
+        replaceInput("");
+        return;
+      }
+    }
+    const prompt = modeCommand ? modeCommand.prompt : currentInput;
+    const hasContent = prompt.trim() || currentImages.length > 0;
     if (!hasContent || !isInputEnabled) return;
 
     let images;
@@ -1041,7 +1119,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
       showToast({ message: String(error), type: "error" });
       return;
     }
-    const result = onSendMessage(currentInput, images);
+    const result = onSendMessage(prompt, images);
     if (!result.accepted) return;
 
     setInput("");
@@ -1111,14 +1189,11 @@ const AIChatInputBar = memo(function AIChatInputBar({
     focusInput,
   });
 
-  const hasSlashCommands = availableSlashCommands.length > 0;
   const isInitialPresentation = presentation === "initial";
   const inputPlaceholder = isInputEnabled
     ? isInitialPresentation
       ? "What do you want to create?"
-      : hasSlashCommands
-        ? "Ask anything... (@ files, / commands, ! terminal)"
-        : "Ask anything... (@ files, ! terminal)"
+      : "Ask anything... (@ files, / commands, ! terminal)"
     : terminalEnabled
       ? "Type ! for terminal, or connect a provider to chat"
       : aiProviderId === "athas"
