@@ -71,11 +71,14 @@ export interface InlineEditRequest {
 
 export class InlineEditError extends Error {
   status: number;
+  /** True when the error came from the Athas Intelligence server rather than a local provider. */
+  hosted: boolean;
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, options?: { hosted?: boolean }) {
     super(message);
     this.name = "InlineEditError";
     this.status = status;
+    this.hosted = options?.hosted ?? false;
   }
 }
 
@@ -152,7 +155,7 @@ async function sendInlineEditRequest(
     throw new InlineEditError("The active account or team changed. Try again.", 409);
   }
   if (!token) {
-    throw new InlineEditError("Sign in to use Athas Intelligence.", 401);
+    throw new InlineEditError("Sign in to use Athas Intelligence.", 401, { hosted: true });
   }
 
   const autocomplete = request.feature === "autocomplete";
@@ -210,7 +213,7 @@ async function sendInlineEditRequest(
         ? ((body as { error: string }).error ?? "")
         : `Inline edit request failed (${response.status})`;
 
-    throw new InlineEditError(message, response.status);
+    throw new InlineEditError(message, response.status, { hosted: true });
   }
 
   options.signal.throwIfAborted();

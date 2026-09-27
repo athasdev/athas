@@ -1,12 +1,77 @@
 import { editor, languages, Range } from "monaco-editor";
 import type * as Monaco from "monaco-editor";
-import { requestInlineEdit } from "@/features/ai/intelligence/services/intelligence-text-service";
+import { toast } from "sonner";
+import {
+  InlineEditError,
+  requestInlineEdit,
+} from "@/features/ai/intelligence/services/intelligence-text-service";
 import { useIntelligenceSettingsStore } from "@/features/ai/intelligence/stores/intelligence-settings.store";
+import {
+  type IntelligenceCompletionPauseReason,
+  useIntelligenceCompletionStore,
+} from "@/features/editor/stores/intelligence-completion.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useAuthStore } from "@/features/window/stores/auth.store";
-import { filePathFromAthasModelUri } from "./model-uri";
+import {
+  getModelFilePath,
+  getNearbyDiagnostics,
+  getRecentEdits,
+  isAthasEditorModel,
+  recordRecentEdit,
+  SENSITIVE_FILE_PATTERN,
+} from "./intelligence-completion-context";
 
 let registered = false;
+const notifiedPauseReasons = new Set<IntelligenceCompletionPauseReason>();
+
+const PAUSE_NOTICES: Record<IntelligenceCompletionPauseReason, string> = {
+  credits: "Tab autocomplete is paused because Athas Intelligence needs a plan or more credits.",
+  "sign-in": "Tab autocomplete is paused. Sign in to use Athas Intelligence.",
+  "api-key": "Tab autocomplete is paused because the selected provider needs an API key.",
+  policy: "Tab autocomplete is disabled by your organization.",
+};
+
+function getPauseReason(error: InlineEditError): IntelligenceCompletionPauseReason | null {
+  if (error.status === 401) return error.hosted ? "sign-in" : "api-key";
+  if (error.status === 402) return error.hosted ? "credits" : "api-key";
+  if (error.status === 403) return "policy";
+  return null;
+}
+
+/** Pauses Tab on account or billing errors so it stops retrying, and reports others once. */
+export function reportIntelligenceCompletionError(error: unknown) {
+  const { actions } = useIntelligenceCompletionStore.getState();
+  if (error instanceof InlineEditError) {
+    const reason = getPauseReason(error);
+    if (reason) {
+      actions.pause(reason, error.message);
+      // One notice per reason per session; after that the status indicator carries it. A
+      // signed-out user only sees the indicator, since the notice is for lost sessions.
+      const notify = reason !== "sign-in" || useAuthStore.getState().isAuthenticated;
+      if (notify && !notifiedPauseReasons.has(reason)) {
+        notifiedPauseReasons.add(reason);
+        toast.warning(PAUSE_NOTICES[reason]);
+      }
+      return;
+    }
+    actions.fail(error.message);
+    return;
+  }
+  actions.fail("Tab autocomplete failed. Try again.");
+}
+
+/**
+ * Drops the end of a multi-line completion when it repeats the text that already follows
+ * the cursor, such as a closing brace the model wrote again.
+ */
+export function trimSuffixOverlap(completion: string, suffix: string) {
+  const nextLine = suffix.split(/\r?\n/, 1)[0].trim();
+  if (!nextLine || !completion.includes("\n")) return completion;
+  const trimmed = completion.trimEnd();
+  if (!trimmed.endsWith(nextLine)) return completion;
+  const withoutOverlap = trimmed.slice(0, trimmed.length - nextLine.length);
+  return withoutOverlap.trim() ? withoutOverlap.replace(/[ \t]+$/, "") : completion;
+}
 
 export function createIntelligenceCompletionsProvider(): Monaco.languages.InlineCompletionsProvider {
   return {
@@ -17,8 +82,8 @@ export function createIntelligenceCompletionsProvider(): Monaco.languages.Inline
         token.isCancellationRequested ||
         context.selectedSuggestionInfo ||
         !useSettingsStore.getState().settings.aiCompletion ||
-        model.uri.scheme !== "athas" ||
-        model.uri.authority !== "editor" ||
+        useIntelligenceCompletionStore.getState().status.kind === "paused" ||
+        !isAthasEditorModel(model) ||
         !editor
           .getEditors()
           .some(
@@ -30,8 +95,8 @@ export function createIntelligenceCompletionsProvider(): Monaco.languages.Inline
       )
         return { items: [] };
 
-      const filePath = filePathFromAthasModelUri(model.uri.path, model.uri.query);
-      if (/(?:^|[/\\])(?:\.env(?:\..*)?|[^/\\]+\.(?:pem|key|p12|pfx))$/i.test(filePath)) {
+      const filePath = getModelFilePath(model);
+      if (SENSITIVE_FILE_PATTERN.test(filePath)) {
         return { items: [] };
       }
       const offset = model.getOffsetAt(position);
@@ -40,6 +105,11 @@ export function createIntelligenceCompletionsProvider(): Monaco.languages.Inline
       const beforeSelection = model.getValueInRange(Range.fromPositions(beforeStart, position));
       if (!beforeSelection.trim()) return { items: [] };
       const afterSelection = model.getValueInRange(Range.fromPositions(position, afterEnd));
+      const recentEdits = getRecentEdits(filePath, position.lineNumber);
+      const diagnostics = getNearbyDiagnostics(
+        editor.getModelMarkers?.({ resource: model.uri }) ?? [],
+        position.lineNumber,
+      );
       const version = model.getVersionId();
       const controller = new AbortController();
       const cancellation = token.onCancellationRequested(() => controller.abort());
@@ -58,6 +128,8 @@ export function createIntelligenceCompletionsProvider(): Monaco.languages.Inline
         model.onDidChangeContent(() => controller.abort()),
         model.onWillDispose(() => controller.abort()),
       ];
+      const status = useIntelligenceCompletionStore.getState().actions;
+      status.requestStarted();
       try {
         const { editedText } = await requestInlineEdit(
           {
@@ -68,9 +140,12 @@ export function createIntelligenceCompletionsProvider(): Monaco.languages.Inline
             afterSelection,
             filePath,
             languageId: model.getLanguageId(),
-            instruction: "Insert a short completion at the cursor.",
+            instruction:
+              "Insert a completion at the cursor. Finish the whole statement or block when the next step is clear.",
+            ...(recentEdits.length ? { recentEdits } : {}),
+            ...(diagnostics.length ? { diagnostics } : {}),
           },
-          { signal: AbortSignal.any([controller.signal, AbortSignal.timeout(10000)]) },
+          { signal: controller.signal, timeoutMs: 10000 },
         );
         if (
           controller.signal.aborted ||
@@ -82,10 +157,21 @@ export function createIntelligenceCompletionsProvider(): Monaco.languages.Inline
         ) {
           return { items: [] };
         }
-        return { items: [{ insertText: editedText, range: Range.fromPositions(position) }] };
-      } catch {
+        return {
+          items: [
+            {
+              insertText: trimSuffixOverlap(editedText, afterSelection),
+              range: Range.fromPositions(position),
+            },
+          ],
+        };
+      } catch (error) {
+        if (!controller.signal.aborted && !token.isCancellationRequested) {
+          reportIntelligenceCompletionError(error);
+        }
         return { items: [] };
       } finally {
+        status.requestFinished();
         cancellation.dispose();
         for (const subscription of subscriptions) {
           if (typeof subscription === "function") subscription();
@@ -97,6 +183,14 @@ export function createIntelligenceCompletionsProvider(): Monaco.languages.Inline
   };
 }
 
+function trackRecentEdits(model: Monaco.editor.ITextModel) {
+  if (!isAthasEditorModel(model)) return;
+  const subscription = model.onDidChangeContent((event) => {
+    if (!event.isFlush) recordRecentEdit(model, event.changes);
+  });
+  model.onWillDispose(() => subscription.dispose());
+}
+
 export function registerIntelligenceCompletions() {
   if (registered) return;
   registered = true;
@@ -104,4 +198,23 @@ export function registerIntelligenceCompletions() {
     { scheme: "athas", pattern: "**/*" },
     createIntelligenceCompletionsProvider(),
   );
+  for (const model of editor.getModels()) trackRecentEdits(model);
+  editor.onDidCreateModel(trackRecentEdits);
+
+  const resume = () => {
+    if (useIntelligenceCompletionStore.getState().status.kind !== "idle") {
+      useIntelligenceCompletionStore.getState().actions.resume();
+    }
+  };
+  useAuthStore.subscribe((next, previous) => {
+    if (
+      next.user?.id !== previous.user?.id ||
+      next.isAuthenticated !== previous.isAuthenticated ||
+      next.subscription !== previous.subscription
+    )
+      resume();
+  });
+  useIntelligenceSettingsStore.subscribe((next, previous) => {
+    if (next.scope !== previous.scope || next.preferences !== previous.preferences) resume();
+  });
 }
