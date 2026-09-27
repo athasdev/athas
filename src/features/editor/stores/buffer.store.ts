@@ -55,10 +55,7 @@ import type {
   EditorDocumentChangeResult,
 } from "@/features/editor/types/editor.types";
 import { publishEditorDocumentChange } from "@/features/editor/services/editor-document-events";
-import {
-  applyEditorTextChanges,
-  normalizeEditorContentEol,
-} from "@/features/editor/utils/editor-text-changes";
+import { applyEditorTextChanges } from "@/features/editor/utils/editor-text-changes";
 import { createWorkspaceScopedStore } from "@/features/workspace/stores/create-workspace-scoped-store";
 import {
   isEditorContent,
@@ -1335,16 +1332,24 @@ const createBufferStore = (workspaceId: string) => {
             };
           }
 
-          let nextContent = applyEditorTextChanges(buffer.content, batch.changes);
-          if (nextContent === null) {
+          // A delta that does not land cleanly is refused rather than guessed at; the editor then
+          // resends the model's full text.
+          const nextContent =
+            batch.fullContent ??
+            (batch.isFlush || batch.isEolChange
+              ? null
+              : applyEditorTextChanges(buffer.content, batch.changes));
+          if (
+            nextContent === null ||
+            (batch.fullContent === undefined &&
+              batch.expectedContentLength !== undefined &&
+              nextContent.length !== batch.expectedContentLength)
+          ) {
             return {
               accepted: false,
               synchronized: false,
               contentRevision: buffer.contentRevision ?? 0,
             };
-          }
-          if (batch.isEolChange) {
-            nextContent = normalizeEditorContentEol(nextContent, batch.eol);
           }
 
           const contentRevision = (buffer.contentRevision ?? 0) + 1;

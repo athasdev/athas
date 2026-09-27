@@ -12,10 +12,7 @@ vi.mock("monaco-editor", () => ({
   },
 }));
 
-import {
-  acquireMonacoModel,
-  markMonacoModelContentRevision,
-} from "../engines/monaco/model-lifecycle";
+import { acquireMonacoModel } from "../engines/monaco/model-lifecycle";
 
 function createTextModel() {
   let disposed = false;
@@ -99,15 +96,12 @@ describe("Monaco model lifecycle", () => {
     expect(model.dispose).toHaveBeenCalledTimes(1);
   });
 
-  it("exposes the last synchronized revision when a shared model remounts", () => {
+  it("keeps one change session for every view of a shared model", () => {
     const model = createTextModel();
     getModel.mockReturnValue(null);
     createModel.mockReturnValue(model);
-    const first = acquireMonacoModel("one", "text", uri as never, 1);
-    markMonacoModelContentRevision(first.model as never, 3);
-
-    const second = acquireMonacoModel("new external content", "text", uri as never, 4);
-    expect(second.contentRevision).toBe(3);
+    const first = acquireMonacoModel("one", "text", uri as never);
+    const second = acquireMonacoModel("one", "text", uri as never);
     expect(second.sessionId).toBe(first.sessionId);
 
     first.release();

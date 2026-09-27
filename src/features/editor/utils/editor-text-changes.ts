@@ -42,7 +42,3 @@ export function applyEditorTextChanges(
   pieces.push(content.slice(sourceOffset));
   return pieces.join("");
 }
-
-export function normalizeEditorContentEol(content: string, eol: "\n" | "\r\n"): string {
-  return content.replace(/\r\n|\r|\n/g, eol);
-}

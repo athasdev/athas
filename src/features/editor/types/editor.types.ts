@@ -43,6 +43,9 @@ export interface EditorDocumentChangeBatch {
   isFlush: boolean;
   isUndoing: boolean;
   isRedoing: boolean;
+  /** Length of the model's text after the change, checked before a delta is accepted. */
+  expectedContentLength?: number;
+  /** The whole document, sent instead of `changes` when a delta cannot be trusted. */
   fullContent?: string;
 }
 
