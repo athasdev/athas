@@ -47,6 +47,9 @@ details:
     expect(markup).toContain('data-variant="user"');
     expect(markup).toContain("w-full max-w-full");
     expect(markup).not.toContain('data-slot="message-avatar"');
+    // The prompt stays plain selectable text; editing has its own action.
+    expect(markup).toMatch(/<div class="select-text[^"]*">Hello<\/div>/);
+    expect(markup).toContain('aria-label="Edit prompt"');
   });
 
   it("renders the starting status without an avatar", () => {

@@ -1,4 +1,4 @@
-import { CopyIcon, FileTextIcon, UploadIcon } from "@/ui/icons";
+import { CopyIcon, FileTextIcon, PencilIcon, UploadIcon } from "@/ui/icons";
 import type { FormEvent, ReactNode } from "react";
 import { memo, useCallback, useState } from "react";
 import { Shimmer } from "@/ui/shimmer";
@@ -247,15 +247,6 @@ export const ChatMessage = memo(function ChatMessage({
                     </Button>
                   </div>
                 </form>
-              ) : canEditUserMessage && onEditUserMessage ? (
-                <button
-                  type="button"
-                  onClick={startEditing}
-                  className="block w-full cursor-text text-left whitespace-pre-wrap wrap-break-word select-text"
-                  aria-label="Edit prompt"
-                >
-                  <UserMessageText text={message.content} query={searchQuery} />
-                </button>
               ) : (
                 <div className="select-text whitespace-pre-wrap wrap-break-word">
                   <UserMessageText text={message.content} query={searchQuery} />
@@ -269,6 +260,9 @@ export const ChatMessage = memo(function ChatMessage({
               <MessageAction onClick={() => void copyText(message.content)} label="Copy prompt">
                 <CopyIcon className="size-3.5" />
               </MessageAction>
+              {canEditUserMessage && onEditUserMessage ? (
+                <MessageAction onClick={startEditing} label="Edit prompt" icon={PencilIcon} />
+              ) : null}
             </MessageFooter>
           )}
         </MessageContent>
