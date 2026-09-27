@@ -853,6 +853,7 @@ const AIChat = memo(function AIChat({
                     chatId={effectiveChatId}
                     onSendFollowUp={handleSendFollowUp}
                     onEditUserMessage={handleEditUserMessage}
+                    onRetryStalledResponse={() => void retryLastTurn()}
                     canEditUserMessages={
                       getAgentMessageAccess(currentAgentId, hasSessionApiKey).accepted &&
                       !isSurfaceTyping &&
