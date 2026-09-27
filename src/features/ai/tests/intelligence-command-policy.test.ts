@@ -1,12 +1,21 @@
 import { describe, expect, it } from "vite-plus/test";
 import {
   getCommandAllowPrefix,
+  getCommandPathArguments,
   isBuiltInSafeCommand,
   matchesAllowedPrefix,
 } from "../intelligence/lib/intelligence-command-policy";
 import { toIntelligenceAgentError } from "../intelligence/lib/intelligence-agent-error";
 
 describe("Intelligence command policy", () => {
+  it("names every argument that could be a path, including flag values", () => {
+    expect(getCommandPathArguments("cat 'my link' -n --file=conf -fsrc/a.ts")).toEqual([
+      "my link",
+      "conf",
+      "src/a.ts",
+    ]);
+    expect(getCommandPathArguments("cat a; cat b")).toEqual([]);
+  });
   it.each([
     "git status",
     "git diff --stat",

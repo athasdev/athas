@@ -1,5 +1,7 @@
+import { invoke } from "@tauri-apps/api/core";
 import {
   getCommandAllowPrefix,
+  getCommandPathArguments,
   isBuiltInSafeCommand,
   matchesAllowedPrefix,
 } from "../lib/intelligence-command-policy";
@@ -91,4 +93,20 @@ export function getCommandAutoApproval(
   if (isBuiltInSafeCommand(command)) return "built-in";
   if (matchesAllowedPrefix(command, getAllowedCommandPrefixes(root))) return "allowed";
   return null;
+}
+
+/**
+ * Whether every argument of `command` that could be a path stays inside `root` and away from
+ * secret files once symbolic links are followed. A read-only command such as `cat link` would
+ * otherwise read through a link committed to the repository to anywhere on disk. When the check
+ * itself fails the command is treated as leaving the workspace, so it waits for approval.
+ */
+export async function commandPathsStayInWorkspace(root: string, command: string) {
+  const paths = getCommandPathArguments(command);
+  if (paths.length === 0) return true;
+  try {
+    return await invoke<boolean>("intelligence_paths_stay_in_workspace", { root, paths });
+  } catch {
+    return false;
+  }
 }

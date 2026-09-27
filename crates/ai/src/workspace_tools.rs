@@ -84,6 +84,40 @@ fn permitted_path(root: &str, relative: &str, create: bool) -> Result<PathBuf, S
    Ok(resolved)
 }
 
+/// Whether each of `paths`, taken relative to `root` the way a command in the workspace sees it,
+/// stays inside the workspace and away from secret files once symbolic links are followed. A
+/// path that does not exist is judged by its nearest existing folder.
+pub fn paths_stay_in_workspace(root: &str, paths: &[String]) -> bool {
+   let Ok(root) = fs::canonicalize(root) else {
+      return false;
+   };
+   paths.iter().all(|path| {
+      let mut existing = root.join(path);
+      let mut missing = Vec::new();
+      let resolved = loop {
+         match fs::canonicalize(&existing) {
+            Ok(resolved) => break resolved,
+            Err(_) => {
+               let Some(name) = existing.file_name().map(ToOwned::to_owned) else {
+                  return false;
+               };
+               missing.push(name);
+               if !existing.pop() {
+                  return false;
+               }
+            }
+         }
+      };
+      let resolved = missing
+         .iter()
+         .rev()
+         .fold(resolved, |path, part| path.join(part));
+      resolved
+         .strip_prefix(&root)
+         .is_ok_and(|relative| !excluded_path(relative))
+   })
+}
+
 pub fn read_workspace_file(root: &str, path: &str) -> Result<String, String> {
    let target = permitted_path(root, path, false)?;
    let metadata = fs::metadata(&target).map_err(|e| e.to_string())?;
@@ -571,6 +605,36 @@ mod tests {
             & 0o777
       };
       assert_eq!(mode("created.txt"), mode("plain.txt"));
+   }
+   #[cfg(unix)]
+   #[test]
+   fn follows_symbolic_links_before_judging_command_paths() {
+      let outside = tempfile::tempdir().unwrap();
+      fs::write(outside.path().join("private.txt"), "secret").unwrap();
+      let dir = tempfile::tempdir().unwrap();
+      let root = dir.path().to_str().unwrap();
+      fs::create_dir(dir.path().join("src")).unwrap();
+      fs::write(dir.path().join("src/main.rs"), "fn main() {}").unwrap();
+      fs::write(dir.path().join(".env"), "TOKEN=1").unwrap();
+      std::os::unix::fs::symlink(outside.path().join("private.txt"), dir.path().join("link"))
+         .unwrap();
+      std::os::unix::fs::symlink(outside.path(), dir.path().join("linked-dir")).unwrap();
+      std::os::unix::fs::symlink(dir.path().join(".env"), dir.path().join("config")).unwrap();
+      std::os::unix::fs::symlink(dir.path().join("src"), dir.path().join("sources")).unwrap();
+      let stays = |path: &str| paths_stay_in_workspace(root, &[path.to_string()]);
+      assert!(stays("src/main.rs"));
+      assert!(stays("sources/main.rs"));
+      assert!(stays("missing/file.txt"));
+      assert!(stays("pattern"));
+      assert!(!stays("link"));
+      assert!(!stays("linked-dir/private.txt"));
+      assert!(!stays("linked-dir/not-there"));
+      assert!(!stays("config"));
+      assert!(!stays(".env"));
+      assert!(!paths_stay_in_workspace(
+         root,
+         &["src/main.rs".into(), "link".into()]
+      ));
    }
    #[test]
    fn refuses_traversal_and_secret_files() {

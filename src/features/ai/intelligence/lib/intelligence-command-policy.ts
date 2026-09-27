@@ -129,6 +129,27 @@ const GLOB = /[*?[]/;
 
 const SECRET_ARGUMENT = /(^|[/:])\.env(\.|$)|\.(pem|key|p12|pfx)$|id_(rsa|ed25519|ecdsa|dsa)/i;
 
+/** The part of an argument that can name a path: the word itself, or a flag's value. */
+function argumentValue(word: string): string | null {
+  if (!word.startsWith("-")) return word;
+  if (word.includes("=")) return word.slice(word.indexOf("=") + 1);
+  // A short flag can carry its value attached, as in `-f/etc/passwd`.
+  return !word.startsWith("--") && word.length > 2 ? word.slice(2) : null;
+}
+
+/**
+ * The arguments of a simple command that could name files, for checking where they lead once
+ * symbolic links are followed. Empty for a command with shell syntax, which never runs unasked.
+ */
+export function getCommandPathArguments(command: string): string[] {
+  const words = splitSimpleCommand(command);
+  if (!words) return [];
+  return words
+    .slice(1)
+    .map(argumentValue)
+    .filter((value): value is string => Boolean(value));
+}
+
 /**
  * Arguments that stay inside the workspace and away from credentials: no absolute or home paths,
  * no `..`, no secret files. Commands run without asking only when every argument passes, since
@@ -137,14 +158,7 @@ const SECRET_ARGUMENT = /(^|[/:])\.env(\.|$)|\.(pem|key|p12|pfx)$|id_(rsa|ed2551
 function argumentsStayInWorkspace(words: string[]) {
   return words.slice(1).every((word) => {
     if (GLOB.test(word)) return false;
-    const value = word.startsWith("-")
-      ? word.includes("=")
-        ? word.slice(word.indexOf("=") + 1)
-        : // A short flag can carry its value attached, as in `-f/etc/passwd`.
-          !word.startsWith("--") && word.length > 2
-          ? word.slice(2)
-          : null
-      : word;
+    const value = argumentValue(word);
     if (value === null) return true;
     return (
       !/^(\/|~|[A-Za-z]:)/.test(value) &&

@@ -22,7 +22,11 @@ import { useIntelligenceSettingsStore } from "../stores/intelligence-settings.st
 import { getIntelligenceSdkModel } from "./intelligence-sdk-model";
 import { toIntelligenceSdkPrompt } from "../lib/intelligence-sdk-prompt";
 import { requestIntelligencePermission } from "./intelligence-agent-permissions";
-import { allowCommandPrefix, getCommandAutoApproval } from "./intelligence-command-allowlist";
+import {
+  allowCommandPrefix,
+  commandPathsStayInWorkspace,
+  getCommandAutoApproval,
+} from "./intelligence-command-allowlist";
 import { getCommandAllowPrefix } from "../lib/intelligence-command-policy";
 import { getExtraTools, type ExtraTools, type McpToolCallRequest } from "./intelligence-mcp";
 import { allowMcpTool, isMcpToolAllowed } from "./intelligence-mcp-allowlist";
@@ -431,7 +435,11 @@ export async function runIntelligenceAgent(params: {
                   inputSchema: z.object({ command: z.string().min(1).max(8000) }),
                   execute: async (input, { toolCallId }) =>
                     runTool("run_command", "execute", input, toolCallId, async () => {
-                      if (!getCommandAutoApproval(root, input.command)) {
+                      const autoApproved =
+                        getCommandAutoApproval(root, input.command) !== null &&
+                        (await commandPathsStayInWorkspace(root, input.command));
+                      signal.throwIfAborted();
+                      if (!autoApproved) {
                         const prefix = getCommandAllowPrefix(input.command);
                         const always = prefix
                           ? `\n\nAlways allow runs commands starting with \`${prefix}\` in this workspace without asking.`

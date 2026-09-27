@@ -174,7 +174,9 @@ beforeEach(() => {
         ? written
         : command === "intelligence_run_command"
           ? commandRun()
-          : undefined,
+          : command === "intelligence_paths_stay_in_workspace"
+            ? true
+            : undefined,
   );
   mocks.model = new MockLanguageModelV4({
     doStream: [step("read_file", { path: "file.ts" }), step("edit_file", edit), step()],
@@ -426,6 +428,33 @@ describe("Intelligence local agent loop", () => {
       .filter(([name]) => name === "intelligence_run_command")
       .map(([, args]) => args.command);
     expect(ran).toEqual(["git status", "bun test src", "bun test other", "bun test; rm -rf src"]);
+  });
+  it("asks before a read-only command whose path leads out of the workspace", async () => {
+    mocks.invoke.mockImplementation(async (command: string, args: { paths?: string[] }) =>
+      command === "intelligence_paths_stay_in_workspace"
+        ? !args.paths?.includes("link")
+        : command === "intelligence_run_command"
+          ? commandRun()
+          : undefined,
+    );
+    const permission = vi.fn((event) => respondToIntelligencePermission(event.requestId, false));
+    mocks.model = new MockLanguageModelV4({
+      doStream: [
+        step("run_command", { command: "cat src/main.ts" }),
+        step("run_command", { command: "cat link" }),
+        step(),
+      ],
+    });
+    await runIntelligenceAgent({ ...params(), onPermissionRequest: permission });
+    expect(mocks.invoke).toHaveBeenCalledWith("intelligence_paths_stay_in_workspace", {
+      root: "/project",
+      paths: ["link"],
+    });
+    expect(permission.mock.calls.map(([event]) => event.preview.command)).toEqual(["cat link"]);
+    const ran = mocks.invoke.mock.calls
+      .filter(([name]) => name === "intelligence_run_command")
+      .map(([, args]) => args.command);
+    expect(ran).toEqual(["cat src/main.ts"]);
   });
   it("calls MCP tools after approval and remembers an always-allowed tool", async () => {
     mocks.mcpServers = [

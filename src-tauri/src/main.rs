@@ -229,6 +229,7 @@ fn main() {
          // AI Provider token commands
          intelligence_read_file,
          intelligence_list_files,
+         intelligence_paths_stay_in_workspace,
          intelligence_edit_file,
          intelligence_write_file,
          intelligence_delete_file,

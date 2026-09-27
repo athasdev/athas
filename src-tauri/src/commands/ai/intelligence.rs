@@ -14,6 +14,21 @@ pub async fn intelligence_read_file(root: String, path: String) -> Result<String
 }
 
 #[tauri::command]
+pub async fn intelligence_paths_stay_in_workspace(
+   root: String,
+   paths: Vec<String>,
+) -> Result<bool, String> {
+   if paths.len() > 256 {
+      return Ok(false);
+   }
+   tauri::async_runtime::spawn_blocking(move || {
+      athas_ai::workspace_tools::paths_stay_in_workspace(&root, &paths)
+   })
+   .await
+   .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub async fn intelligence_list_files(
    root: String,
    options: Option<ListFilesOptions>,
