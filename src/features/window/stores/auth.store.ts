@@ -25,6 +25,11 @@ interface AuthActions {
   handleAuthCallback: (token: string) => Promise<void>;
   refreshUser: () => Promise<void>;
   refreshSubscription: () => Promise<boolean>;
+  /**
+   * Refreshes the plan and credits after a short quiet period, so several hosted turns or
+   * focus changes in a row cost one request. Does nothing while signed out.
+   */
+  scheduleSubscriptionRefresh: (delayMs?: number) => void;
   setCollaborationSnapshot: (collaboration: SubscriptionInfo["collaboration"] | null) => void;
   logout: () => Promise<void>;
 }
@@ -41,6 +46,35 @@ export interface AuthStoreDependencies {
   logoutFromServer: typeof logoutFromServer;
   removeAuthToken: typeof removeAuthToken;
   storeAuthToken: typeof storeAuthToken;
+  /**
+   * Calls `retry` once the connection may be back (the network comes online, or a backoff
+   * delay passes) and returns a function that stops waiting.
+   */
+  waitForReconnect?: (retry: () => void, attempt: number) => () => void;
+}
+
+const RECONNECT_BACKOFF_MS = [5_000, 15_000, 30_000, 60_000, 120_000, 300_000];
+const SUBSCRIPTION_REFRESH_DEBOUNCE_MS = 1_500;
+
+function waitForBrowserReconnect(retry: () => void, attempt: number): () => void {
+  if (typeof window === "undefined") return () => {};
+  let done = false;
+  const run = () => {
+    if (done) return;
+    stop();
+    retry();
+  };
+  const timer = setTimeout(
+    run,
+    RECONNECT_BACKOFF_MS[Math.min(attempt, RECONNECT_BACKOFF_MS.length - 1)],
+  );
+  window.addEventListener("online", run);
+  function stop() {
+    done = true;
+    clearTimeout(timer);
+    window.removeEventListener("online", run);
+  }
+  return stop;
 }
 
 const defaultAuthStoreDependencies: AuthStoreDependencies = {
@@ -51,12 +85,20 @@ const defaultAuthStoreDependencies: AuthStoreDependencies = {
   logoutFromServer,
   removeAuthToken,
   storeAuthToken,
+  waitForReconnect: waitForBrowserReconnect,
 };
 
 export function createAuthStore(
   dependencies: AuthStoreDependencies = defaultAuthStoreDependencies,
 ) {
   let sessionRevision = 0;
+  let reconnectAttempt = 0;
+  let stopWaitingForReconnect: (() => void) | null = null;
+  let subscriptionRefreshTimer: ReturnType<typeof setTimeout> | null = null;
+  const cancelReconnect = () => {
+    stopWaitingForReconnect?.();
+    stopWaitingForReconnect = null;
+  };
   return create<AuthStore>()(
     immer((set, get) => ({
       user: null,
@@ -67,6 +109,7 @@ export function createAuthStore(
 
       actions: {
         initialize: async () => {
+          cancelReconnect();
           const revision = ++sessionRevision;
           set((state) => {
             state.isLoading = true;
@@ -91,6 +134,7 @@ export function createAuthStore(
                 subscriptionError =
                   error instanceof Error ? error.message : "Could not load your Athas access.";
               }
+              reconnectAttempt = 0;
               set((state) => {
                 state.user = user;
                 state.subscription = subscription;
@@ -105,8 +149,17 @@ export function createAuthStore(
             }
           } catch (error) {
             if (revision !== sessionRevision) return;
-            if (dependencies.isAuthInvalidError(error)) {
+            const invalid = dependencies.isAuthInvalidError(error);
+            if (invalid) {
               await dependencies.removeAuthToken();
+            } else if (dependencies.waitForReconnect) {
+              // The server could not be reached; the saved session may still be fine.
+              const attempt = reconnectAttempt++;
+              stopWaitingForReconnect = dependencies.waitForReconnect(() => {
+                stopWaitingForReconnect = null;
+                if (revision !== sessionRevision) return;
+                void get().actions.initialize();
+              }, attempt);
             }
             set((state) => {
               state.user = null;
@@ -121,6 +174,7 @@ export function createAuthStore(
         },
 
         handleAuthCallback: async (token: string) => {
+          cancelReconnect();
           const revision = ++sessionRevision;
           set((state) => {
             state.isLoading = true;
@@ -221,6 +275,15 @@ export function createAuthStore(
           }
         },
 
+        scheduleSubscriptionRefresh: (delayMs = SUBSCRIPTION_REFRESH_DEBOUNCE_MS) => {
+          if (subscriptionRefreshTimer) clearTimeout(subscriptionRefreshTimer);
+          subscriptionRefreshTimer = setTimeout(() => {
+            subscriptionRefreshTimer = null;
+            if (!get().isAuthenticated) return;
+            void get().actions.refreshSubscription();
+          }, delayMs);
+        },
+
         setCollaborationSnapshot: (collaboration) => {
           set((state) => {
             if (!state.subscription) return;
@@ -229,6 +292,9 @@ export function createAuthStore(
         },
 
         logout: async () => {
+          cancelReconnect();
+          if (subscriptionRefreshTimer) clearTimeout(subscriptionRefreshTimer);
+          subscriptionRefreshTimer = null;
           const revision = ++sessionRevision;
           void dependencies.logoutFromServer().catch(() => {});
           set((state) => {

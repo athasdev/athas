@@ -225,3 +225,68 @@ describe("connection failure recovery", () => {
     expect(store.getState().error).toContain("Sign in again");
   });
 });
+
+describe("startup reconnect", () => {
+  it("retries the saved session when the server was unreachable at startup", async () => {
+    let reconnect: (() => void) | null = null;
+    const fetchCurrentUser = vi
+      .fn<AuthStoreDependencies["fetchCurrentUser"]>()
+      .mockRejectedValueOnce(new Error("Connection refused"))
+      .mockResolvedValue(user);
+    const store = createAuthStore(
+      createDependencies({
+        fetchCurrentUser,
+        waitForReconnect: vi.fn((retry: () => void) => {
+          reconnect = retry;
+          return () => {};
+        }),
+      }),
+    );
+
+    await store.getState().actions.initialize();
+    expect(store.getState().isAuthenticated).toBe(false);
+    expect(store.getState().error).toContain("Check your connection");
+
+    reconnect!();
+    await vi.waitFor(() => expect(store.getState().isAuthenticated).toBe(true));
+    expect(store.getState().subscription).toEqual(subscription);
+  });
+
+  it("does not wait for a reconnect when the session was rejected", async () => {
+    const waitForReconnect = vi.fn(() => () => {});
+    const store = createAuthStore(
+      createDependencies({
+        fetchCurrentUser: vi.fn(async () => {
+          throw new Error("Unauthorized");
+        }),
+        isAuthInvalidError: vi.fn(() => true),
+        waitForReconnect,
+      }),
+    );
+    await store.getState().actions.initialize();
+    expect(waitForReconnect).not.toHaveBeenCalled();
+  });
+});
+
+describe("subscription refresh", () => {
+  it("collapses a burst of refresh requests into one while signed in", async () => {
+    vi.useFakeTimers();
+    try {
+      const fetchSubscriptionStatus = vi.fn(async () => subscription);
+      const store = createAuthStore(createDependencies({ fetchSubscriptionStatus }));
+      store.setState({ user, isAuthenticated: true });
+      store.getState().actions.scheduleSubscriptionRefresh();
+      store.getState().actions.scheduleSubscriptionRefresh();
+      store.getState().actions.scheduleSubscriptionRefresh();
+      await vi.advanceTimersByTimeAsync(2_000);
+      expect(fetchSubscriptionStatus).toHaveBeenCalledOnce();
+
+      store.setState({ isAuthenticated: false });
+      store.getState().actions.scheduleSubscriptionRefresh();
+      await vi.advanceTimersByTimeAsync(2_000);
+      expect(fetchSubscriptionStatus).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
