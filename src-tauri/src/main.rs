@@ -242,6 +242,9 @@ fn main() {
          get_mcp_server_secrets,
          store_mcp_server_secrets,
          remove_mcp_server_secrets,
+         intelligence_mcp_start,
+         intelligence_mcp_send,
+         intelligence_mcp_stop,
          // Auth token commands
          store_auth_token,
          get_auth_token,

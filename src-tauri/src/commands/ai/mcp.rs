@@ -6,7 +6,7 @@ use crate::{
    app_runtime::AppHandle,
    secure_storage::{get_secret, remove_secret, store_secret},
 };
-use athas_ai::{McpServerConfig, McpServerSecrets, McpServerSetting};
+use athas_ai::{McpServerConfig, McpServerSecrets, McpServerSetting, mcp_stdio::McpStdioEvent};
 use tauri::command;
 
 fn secrets_key(server_id: &str) -> Result<String, String> {
@@ -69,6 +69,43 @@ pub async fn store_mcp_server_secrets(
    let serialized = serde_json::to_string(&secrets)
       .map_err(|_| "Failed to serialize MCP server secrets".to_string())?;
    store_secret(&app, &key, &serialized)
+}
+
+/// Starts a stdio MCP server for the built-in agent under `process_id`, with its stored
+/// environment joined in. Its stdout lines and exit arrive on `on_event`.
+#[command]
+pub async fn intelligence_mcp_start(
+   app: AppHandle,
+   process_id: String,
+   server: McpServerSetting,
+   cwd: Option<String>,
+   on_event: tauri::ipc::Channel<McpStdioEvent>,
+) -> Result<(), String> {
+   let name = server.name.clone();
+   let config = resolve_mcp_servers(&app, vec![server])
+      .into_iter()
+      .next()
+      .ok_or_else(|| format!("MCP server '{name}' is disabled or incomplete"))?;
+   let listener: athas_ai::mcp_stdio::McpStdioListener = std::sync::Arc::new(move |event| {
+      let _ = on_event.send(event);
+   });
+   athas_ai::mcp_stdio::start_mcp_stdio(
+      &process_id,
+      &config,
+      cwd.as_deref().map(std::path::Path::new),
+      listener,
+   )
+   .await
+}
+
+#[command]
+pub async fn intelligence_mcp_send(process_id: String, message: String) -> Result<(), String> {
+   athas_ai::mcp_stdio::send_mcp_stdio(&process_id, &message).await
+}
+
+#[command]
+pub fn intelligence_mcp_stop(process_id: String) {
+   athas_ai::mcp_stdio::stop_mcp_stdio(&process_id);
 }
 
 #[command]
