@@ -7,7 +7,10 @@ import { useCallback, useRef, useState } from "react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { logger } from "@/features/editor/utils/logger";
 import { getLanguageAssetConfig } from "../lib/wasm-parser/extension-assets";
-import { tokenizerWorkerClient } from "../lib/wasm-parser/tokenizer-worker-client";
+import {
+  TokenizerRequestSupersededError,
+  tokenizerWorkerClient,
+} from "../lib/wasm-parser/tokenizer-worker-client";
 import type { HighlightToken } from "../types/wasm-parser/wasm-parser.types";
 import { buildLineOffsetMap, normalizeLineEndings, type Token } from "../utils/html";
 import { getLanguageIdFromPath } from "../utils/language-id";
@@ -337,7 +340,12 @@ export function useTokenizer({
           previousContent: result.normalizedText,
         };
       } catch (error) {
-        if (requestVersion !== requestVersionRef.current) return;
+        if (
+          requestVersion !== requestVersionRef.current ||
+          error instanceof TokenizerRequestSupersededError
+        ) {
+          return;
+        }
         logger.warn("Editor", "[Tokenizer] Full tokenization failed:", error);
         if (hasLineBasedSyntaxFallback(languageId)) {
           const fallbackTokens = tokenizeLineBasedSyntax(normalizedText, languageId);
@@ -468,7 +476,12 @@ export function useTokenizer({
           }, BACKGROUND_FULL_TOKENIZE_DELAY_MS);
         }
       } catch (error) {
-        if (requestVersion !== requestVersionRef.current) return;
+        if (
+          requestVersion !== requestVersionRef.current ||
+          error instanceof TokenizerRequestSupersededError
+        ) {
+          return;
+        }
         logger.warn("Editor", "[Tokenizer] Range tokenization failed:", error);
         if (hasLineBasedSyntaxFallback(languageId)) {
           const fallbackTokens = tokenizeLineBasedSyntax(normalizedText, languageId, {

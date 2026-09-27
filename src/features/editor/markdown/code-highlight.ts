@@ -4,7 +4,10 @@ import {
   fetchHighlightQuery,
   getLanguageAssetConfig,
 } from "@/features/editor/lib/wasm-parser/extension-assets";
-import { tokenizerWorkerClient } from "@/features/editor/lib/wasm-parser/tokenizer-worker-client";
+import {
+  TokenizerRequestSupersededError,
+  tokenizerWorkerClient,
+} from "@/features/editor/lib/wasm-parser/tokenizer-worker-client";
 import type { HighlightToken } from "@/features/editor/types/wasm-parser/wasm-parser.types";
 import { normalizeCodeFenceLanguage } from "./language-map";
 
@@ -210,7 +213,8 @@ async function tokenizeForLanguage(
       })),
       code.length,
     );
-  } catch {
+  } catch (error) {
+    if (error instanceof TokenizerRequestSupersededError) throw error;
     return null;
   }
 }
@@ -256,11 +260,18 @@ export async function getCodeHighlightSegments(
   if (pending) return pending;
 
   const tokenRequest = (async () => {
-    const treeSitterSegments = await tokenizeForLanguage(
-      code,
-      languageId,
-      requestKey ?? `markdown-code:${languageId}:${contentKey}`,
-    );
+    let treeSitterSegments: CodeHighlightSegment[] | null;
+    try {
+      treeSitterSegments = await tokenizeForLanguage(
+        code,
+        languageId,
+        requestKey ?? `markdown-code:${languageId}:${contentKey}`,
+      );
+    } catch {
+      // A newer request for the same view replaced this one; its result must not be cached as
+      // the answer for this code.
+      return fallbackSegmentsForLanguage(code, languageId);
+    }
     const segments =
       treeSitterSegments && treeSitterSegments.length > 0
         ? treeSitterSegments
