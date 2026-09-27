@@ -57,26 +57,93 @@ export async function loadFilesByPaths(
   ).filter((file): file is MentionedFile => file !== null);
 }
 
+export interface MentionToken {
+  /** Offset of the leading `@` in the message. */
+  start: number;
+  /** Offset just past the token. */
+  end: number;
+  name: string;
+  /** The exact file path the chip pointed at; absent for chips saved before paths were kept. */
+  path?: string;
+}
+
+/**
+ * `@[name](path)` as the composer writes a file chip. The name escapes `\` and `]` with a
+ * backslash; the path percent-encodes `%`, parentheses and whitespace so the token stays one
+ * piece. Chats saved earlier hold `@[name]` without a path.
+ */
+const MENTION_TOKEN_PATTERN = /@\[((?:\\.|[^\\\]\n])+)\](?:\(([^()\s]+)\))?/g;
+
+function encodeMentionPath(path: string) {
+  return path.replace(/[%()\s]/g, (character) =>
+    character === "(" ? "%28" : character === ")" ? "%29" : encodeURIComponent(character),
+  );
+}
+
+function decodeMentionPath(path: string) {
+  try {
+    return decodeURIComponent(path);
+  } catch {
+    return path;
+  }
+}
+
+export function formatMentionToken(name: string, path?: string): string {
+  const label = name.replace(/[\\\]]/g, "\\$&");
+  return path ? `@[${label}](${encodeMentionPath(path)})` : `@[${label}]`;
+}
+
+/** Only structured chip tokens count; `@types/node`, decorators and emails are plain text. */
+export function parseMentionTokens(message: string): MentionToken[] {
+  return [...message.matchAll(MENTION_TOKEN_PATTERN)].map((match) => {
+    const start = match.index ?? 0;
+    return {
+      start,
+      end: start + match[0].length,
+      name: match[1].replace(/\\(.)/g, "$1"),
+      ...(match[2] ? { path: decodeMentionPath(match[2]) } : {}),
+    };
+  });
+}
+
 export function extractFileMentionNames(message: string): string[] {
-  const mentionRegex = /@\[([^\]]+)\]|@(\S+)/g;
-  return [...message.matchAll(mentionRegex)]
-    .map((match) => match[1] ?? match[2])
-    .filter((fileName): fileName is string => Boolean(fileName));
+  return parseMentionTokens(message).map((token) => token.name);
+}
+
+function normalizeMentionPath(path: string) {
+  return path.replace(/\\/g, "/");
+}
+
+/**
+ * The files a message mentions. Tokens with a path resolve to exactly that path. A saved
+ * `@[name]` token resolves when one project file has that relative path or that name; an
+ * ambiguous name is left unresolved rather than guessed.
+ */
+export function resolveMentionPaths(message: string, allProjectFiles: FileEntry[]): string[] {
+  const files = allProjectFiles.filter((file) => !file.isDir);
+  const paths = new Set<string>();
+  for (const token of parseMentionTokens(message)) {
+    if (token.path) {
+      paths.add(token.path);
+      continue;
+    }
+    const name = normalizeMentionPath(token.name);
+    const byRelativePath = files.filter((file) =>
+      normalizeMentionPath(file.path).endsWith(`/${name}`),
+    );
+    const candidates = name.includes("/")
+      ? byRelativePath
+      : files.filter((file) => file.name === token.name);
+    if (candidates.length === 1) paths.add(candidates[0].path);
+  }
+  return Array.from(paths);
 }
 
 export async function parseMentionsAndLoadFiles(
   message: string,
   allProjectFiles: FileEntry[],
 ): Promise<{ processedMessage: string; mentionedFiles: MentionedFile[] }> {
-  const mentionNames = extractFileMentionNames(message);
-  const mentionedPaths = new Set(
-    mentionNames
-      .map(
-        (fileName) => allProjectFiles.find((file) => !file.isDir && file.name === fileName)?.path,
-      )
-      .filter((path): path is string => Boolean(path)),
-  );
-  const mentionedFiles = await loadFilesByPaths(Array.from(mentionedPaths));
+  const mentionedFiles = await loadFilesByPaths(resolveMentionPaths(message, allProjectFiles));
 
   return { processedMessage: appendReferencedFiles(message, mentionedFiles), mentionedFiles };
 }

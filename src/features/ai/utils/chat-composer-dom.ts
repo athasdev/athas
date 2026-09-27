@@ -1,3 +1,4 @@
+import { formatMentionToken } from "@/features/ai/lib/file-mentions";
 import type { InlineDropdownPosition } from "@/features/ai/types/chat-composer.types";
 
 export function isComposerTokenElement(node: Node | null): node is Element {
@@ -17,7 +18,8 @@ interface ComposerTextSegment {
 function getComposerTokenText(token: Element): string {
   if (token.hasAttribute("data-mention")) {
     const fileName = token.getAttribute("data-mention-name") || token.textContent?.trim();
-    return fileName ? `@[${fileName}]` : "";
+    const filePath = token.getAttribute("data-mention-path") || undefined;
+    return fileName ? formatMentionToken(fileName, filePath) : "";
   }
 
   if (token.hasAttribute("data-slash-command")) {

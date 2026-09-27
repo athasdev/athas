@@ -38,6 +38,7 @@ import { ToolCallList } from "../messages/tool-call-display";
 import { buildAssistantTimeline } from "@/features/ai/lib/assistant-timeline";
 import { describeTurnUsage, formatTurnUsage } from "@/features/ai/lib/acp-usage";
 import Tooltip from "@/ui/tooltip";
+import { parseMentionTokens } from "@/features/ai/lib/file-mentions";
 
 interface ChatMessageProps {
   onRetry?: () => void | Promise<void>;
@@ -87,14 +88,12 @@ function HighlightedPlainText({ text, query }: { text: string; query: string }) 
   );
 }
 
-// The composer serializes an @file chip as `@[name]`; show it as a chip again.
-const MENTION_PATTERN = /@\[([^\]]+)\]/g;
-
+// The composer serializes an @file chip as a mention token; show it as a chip again.
 function UserMessageText({ text, query }: { text: string; query: string }) {
   const parts: ReactNode[] = [];
   let cursor = 0;
-  for (const match of text.matchAll(MENTION_PATTERN)) {
-    const index = match.index ?? 0;
+  for (const token of parseMentionTokens(text)) {
+    const index = token.start;
     if (index > cursor) {
       parts.push(
         <HighlightedPlainText
@@ -108,12 +107,13 @@ function UserMessageText({ text, query }: { text: string; query: string }) {
       <span
         key={`mention-${index}`}
         data-mention="true"
+        title={token.path}
         className={cn(badgeVariants({ tone: "accent" }), "max-w-48 truncate align-baseline")}
       >
-        {match[1]}
+        {token.name}
       </span>,
     );
-    cursor = index + match[0].length;
+    cursor = token.end;
   }
   if (cursor < text.length) {
     parts.push(
