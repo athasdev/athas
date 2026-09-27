@@ -1018,9 +1018,14 @@ const AIChatInputBar = memo(function AIChatInputBar({
           clearChat(chatId);
           return;
         }
-        void compactChat(chatId).then((count) =>
-          notify(count > 0 ? `Summarised ${count} earlier messages.` : "Nothing to compact yet."),
-        );
+        void compactChat(chatId)
+          .then((count) =>
+            notify(count > 0 ? `Summarised ${count} earlier messages.` : "Nothing to compact yet."),
+          )
+          .catch((error: unknown) => {
+            console.error("Failed to compact the chat:", error);
+            showToast({ message: "Could not compact this chat.", type: "error" });
+          });
         return;
     }
   };

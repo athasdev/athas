@@ -42,6 +42,9 @@ export function CheckpointRestoreButton({
           description: "Older checkpoints are dropped to keep the chat's history small.",
         });
       }
+    } catch (error) {
+      console.error("Failed to restore checkpoint:", error);
+      showToast({ type: "error", message: "Could not restore this checkpoint" });
     } finally {
       setRestoring(false);
     }

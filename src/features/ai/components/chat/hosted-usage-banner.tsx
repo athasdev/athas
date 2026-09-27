@@ -53,7 +53,11 @@ export function HostedUsageBanner() {
           type="button"
           variant="ghost"
           size="xs"
-          onClick={() => void openUrl(getServiceUrls().dashboardBillingUrl)}
+          onClick={() =>
+            void openUrl(getServiceUrls().dashboardBillingUrl).catch((error: unknown) =>
+              console.error("Failed to open billing:", error),
+            )
+          }
         >
           {content.action}
         </Button>

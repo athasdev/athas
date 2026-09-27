@@ -33,9 +33,9 @@ if (typeof window !== "undefined") {
   }
   if (!window.__athasMonacoTextModelServiceInitialized) {
     window.__athasMonacoTextModelServiceInitialized = true;
-    void import("./text-model-resolver").then(({ installFileBackedTextModelService }) =>
-      installFileBackedTextModelService(),
-    );
+    void import("./text-model-resolver")
+      .then(({ installFileBackedTextModelService }) => installFileBackedTextModelService())
+      .catch((error: unknown) => console.error("Failed to install the file model service:", error));
   }
   if (!window.__athasMonacoExternalLinkOpenerInitialized) {
     window.__athasMonacoExternalLinkOpenerInitialized = true;
