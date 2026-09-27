@@ -2,6 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 import {
   buildConversationHistory,
   compactConversationHistory,
+  summarizeConversationExtractively,
   fitMessagesToProviderLimits,
   getProviderRequestLimits,
   HOSTED_ATHAS_REQUEST_LIMITS,
@@ -156,6 +157,19 @@ describe("buildConversationHistory", () => {
     expect(compacted[0].content).toContain("model summary of");
     expect(compacted[compacted.length - 1]).toEqual(history[history.length - 1]);
     expect(await compactConversationHistory(history.slice(0, 2))).toEqual(history.slice(0, 2));
+  });
+
+  it("carries an earlier summary into the next one instead of clipping it", () => {
+    const earlier = `first decision ${"detail ".repeat(80)}last decision`;
+    const summary = summarizeConversationExtractively([
+      {
+        role: "user",
+        content: `[Summary of 12 earlier messages in this conversation]\n${earlier}\n[End of summary]\n\nNow add tests`,
+      },
+      { role: "assistant", content: "Added them." },
+    ]);
+    expect(summary).toContain("last decision");
+    expect(summary).toContain("- User: Now add tests");
   });
 
   it("falls back to an extractive summary when the summarizer fails", async () => {

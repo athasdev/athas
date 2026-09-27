@@ -151,7 +151,15 @@ export type ConversationSummarizer = (messages: AIMessage[]) => Promise<string> 
 export function summarizeConversationExtractively(messages: AIMessage[]): string {
   const lines: string[] = [];
   for (const message of messages) {
-    const text = message.content.replace(/\s+/g, " ").trim();
+    let content = message.content;
+    // A summary from an earlier compaction (or /compact) is already condensed; clipping it like
+    // an ordinary request would throw most of it away.
+    const earlier = EARLIER_SUMMARY.exec(content);
+    if (earlier) {
+      lines.push(`- Earlier summary: ${clip(earlier[1].trim(), MAX_SUMMARY_CHARS / 2)}`);
+      content = content.slice(earlier[0].length);
+    }
+    const text = content.replace(/\s+/g, " ").trim();
     if (!text) continue;
     const label = message.role === "user" ? "User" : "Assistant";
     lines.push(`- ${label}: ${clip(text, message.role === "user" ? 300 : 200)}`);
@@ -163,6 +171,9 @@ export function summarizeConversationExtractively(messages: AIMessage[]): string
   }
   return clip(summary, MAX_SUMMARY_CHARS);
 }
+
+const EARLIER_SUMMARY =
+  /^\[Summary of \d+ earlier messages in this conversation\]\n([\s\S]*?)\n\[End of summary\]\s*/;
 
 function formatSummary(summary: string, count: number) {
   return `[Summary of ${count} earlier messages in this conversation]\n${summary.trim()}\n[End of summary]`;
