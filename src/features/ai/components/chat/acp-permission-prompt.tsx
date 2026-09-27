@@ -13,6 +13,7 @@ import { ToolLocations } from "@/features/ai/components/messages/tool-locations"
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { ExtensionViewRenderer } from "@/extensions/ui/components/extension-view-renderer";
 import Badge from "@/ui/badge";
+import { CodeOutput } from "@/ui/code-output";
 import Textarea from "@/ui/textarea";
 import { Button, type ButtonProps } from "@/ui/button";
 import { cn } from "@/utils/cn";
@@ -20,15 +21,9 @@ import { chatContentWidth } from "./chat-content-width";
 
 function PreviewText({ label, text, mono }: { label: string; text: string; mono?: boolean }) {
   return (
-    <pre
-      aria-label={label}
-      className={cn(
-        "overflow-auto rounded-lg border border-border bg-surface px-2.5 py-2 whitespace-pre-wrap wrap-anywhere select-text text-foreground ui-text-sm",
-        mono ? "font-mono" : "font-sans",
-      )}
-    >
+    <CodeOutput aria-label={label} height="auto" font={mono ? "mono" : "sans"}>
       {text}
-    </pre>
+    </CodeOutput>
   );
 }
 
@@ -68,12 +63,9 @@ function PermissionPreview({ preview }: { preview: AcpPermissionPreview }) {
     );
   }
   return (
-    <pre
-      aria-label="Proposed shell command"
-      className="max-h-48 overflow-auto rounded-lg border border-border bg-surface px-2.5 py-2 font-mono whitespace-pre-wrap wrap-anywhere select-text text-foreground ui-text-sm"
-    >
+    <CodeOutput aria-label="Proposed shell command" height="compact">
       {preview.command}
-    </pre>
+    </CodeOutput>
   );
 }
 
