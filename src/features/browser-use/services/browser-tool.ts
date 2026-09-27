@@ -21,6 +21,8 @@ export async function runHostedBrowserTool(args: unknown, callId: string) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ requestId, url: input.url, steps: input.steps ?? [] }),
+      // A browser run takes up to about a minute on the server; the default 10s would cut it off.
+      signal: AbortSignal.timeout(120_000),
     });
     const result = await response.json();
     if (!response.ok)
