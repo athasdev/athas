@@ -32,6 +32,8 @@ describe("AI context builder", () => {
     expect(prompt).toContain("read_file");
     expect(prompt).toContain("list_files");
     expect(prompt).toContain("search_files");
+    expect(prompt).toContain("write_file");
+    expect(prompt).toContain("todo_write");
     expect(prompt).not.toMatch(/\bRead tool\b|\bGlob\b/);
   });
 });
