@@ -110,6 +110,23 @@ const SAFE_GIT_SUBCOMMANDS = new Set([
 const UNSAFE_FLAGS =
   /^(--output|--ext-diff|--exec|--pre\b|--pre=|-exec|-execdir|-ok|-delete|-fprint)/;
 
+/**
+ * Flags that make one program write, run something, or read past the workspace's ignore rules:
+ * `sed -i` edits in place, `tree -o` and `file -C` write files, `rg --hostname-bin` runs a
+ * program, and a recursive `grep` reads ignored secrets such as `.env`.
+ */
+const UNSAFE_PROGRAM_FLAGS: Record<string, RegExp> = {
+  sed: /^(-[a-zA-Z]*i|--in-place)/,
+  perl: /^-[a-zA-Z]*i/,
+  tree: /^(-[a-zA-Z]*o|--output)/,
+  file: /^(-[a-zA-Z]*C|--compile)/,
+  rg: /^--hostname-bin/,
+  grep: /^(-[a-zA-Z]*[rR]|--recursive|--dereference-recursive)/,
+};
+
+/** Shell wildcards: the shell expands them to paths the checks below never saw. */
+const GLOB = /[*?[]/;
+
 const SECRET_ARGUMENT = /(^|[/:])\.env(\.|$)|\.(pem|key|p12|pfx)$|id_(rsa|ed25519|ecdsa|dsa)/i;
 
 /**
@@ -119,10 +136,14 @@ const SECRET_ARGUMENT = /(^|[/:])\.env(\.|$)|\.(pem|key|p12|pfx)$|id_(rsa|ed2551
  */
 function argumentsStayInWorkspace(words: string[]) {
   return words.slice(1).every((word) => {
+    if (GLOB.test(word)) return false;
     const value = word.startsWith("-")
       ? word.includes("=")
         ? word.slice(word.indexOf("=") + 1)
-        : null
+        : // A short flag can carry its value attached, as in `-f/etc/passwd`.
+          !word.startsWith("--") && word.length > 2
+          ? word.slice(2)
+          : null
       : word;
     if (value === null) return true;
     return (
@@ -181,11 +202,27 @@ function isDestructive(words: string[]) {
   return false;
 }
 
+function hasUnsafeFlag(words: string[]) {
+  const programFlags = UNSAFE_PROGRAM_FLAGS[programName(words[0])];
+  return words
+    .slice(1)
+    .some((word) => UNSAFE_FLAGS.test(word) || Boolean(programFlags?.test(word)));
+}
+
+/**
+ * Whether a program that takes a subcommand got an option before it, as in `git -c k=v log`.
+ * Global options can run programs or change what the subcommand does, and they hide the
+ * subcommand from the destructive check.
+ */
+function hasGlobalOption(words: string[]) {
+  return SUBCOMMAND_PROGRAMS.has(programName(words[0])) && Boolean(words[1]?.startsWith("-"));
+}
+
 /** A read-only command from the built-in list, safe to run without asking. */
 export function isBuiltInSafeCommand(command: string): boolean {
   const words = splitSimpleCommand(command);
   if (!words || !argumentsStayInWorkspace(words)) return false;
-  if (words.slice(1).some((word) => UNSAFE_FLAGS.test(word))) return false;
+  if (hasUnsafeFlag(words)) return false;
   const program = programName(words[0]);
   if (program !== words[0]) return false;
   if (program === "git") {
@@ -204,7 +241,7 @@ export function isBuiltInSafeCommand(command: string): boolean {
  */
 export function getCommandAllowPrefix(command: string): string | null {
   const words = splitSimpleCommand(command);
-  if (!words || isDestructive(words)) return null;
+  if (!words || isDestructive(words) || hasGlobalOption(words)) return null;
   const program = words[0];
   const subcommand = words[1];
   if (
@@ -219,7 +256,14 @@ export function getCommandAllowPrefix(command: string): string | null {
 /** Whether `command` starts with one of the remembered prefixes and is still safe to run. */
 export function matchesAllowedPrefix(command: string, prefixes: readonly string[]): boolean {
   const words = splitSimpleCommand(command);
-  if (!words || isDestructive(words) || !argumentsStayInWorkspace(words)) return false;
+  if (
+    !words ||
+    isDestructive(words) ||
+    hasGlobalOption(words) ||
+    hasUnsafeFlag(words) ||
+    !argumentsStayInWorkspace(words)
+  )
+    return false;
   return prefixes.some((prefix) => {
     const prefixWords = prefix.split(" ");
     return prefixWords.every((word, index) => words[index] === word);

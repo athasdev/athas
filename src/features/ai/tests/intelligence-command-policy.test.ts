@@ -57,6 +57,30 @@ describe("Intelligence command policy", () => {
     expect(matchesAllowedPrefix("bun test /etc", ["bun test"])).toBe(false);
     expect(matchesAllowedPrefix("rm -rf dist", ["rm"])).toBe(false);
   });
+
+  it.each([
+    "tree -o src/main.ts",
+    "rg --hostname-bin=./x.sh foo",
+    "file -C -m magic",
+    "grep -rn KEY .",
+    "cat .env*",
+    "cat *.pe?",
+    "grep -f/etc/passwd src",
+  ])("asks before %s even though its program is read-only", (command) =>
+    expect(isBuiltInSafeCommand(command)).toBe(false),
+  );
+
+  it("never lets a remembered prefix write, run programs or hide a subcommand", () => {
+    expect(getCommandAllowPrefix("git --no-pager log")).toBeNull();
+    expect(getCommandAllowPrefix("git -C sub status")).toBeNull();
+    expect(matchesAllowedPrefix("git -c core.pager=x log", ["git"])).toBe(false);
+    expect(matchesAllowedPrefix("git -C . reset --hard", ["git"])).toBe(false);
+    expect(matchesAllowedPrefix("find . -delete", ["find"])).toBe(false);
+    expect(matchesAllowedPrefix("sed -i s/a/b/ src/a.ts", ["sed"])).toBe(false);
+    expect(matchesAllowedPrefix("git log --output=src/x.ts", ["git log"])).toBe(false);
+    expect(matchesAllowedPrefix("sed -n 1,5p src/a.ts", ["sed"])).toBe(true);
+    expect(matchesAllowedPrefix("make build", ["make"])).toBe(true);
+  });
 });
 
 describe("Intelligence agent errors", () => {
