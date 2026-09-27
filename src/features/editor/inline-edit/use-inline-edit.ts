@@ -468,12 +468,22 @@ export function useInlineEdit({
     [inlineEditSessionKey],
   );
 
+  /** The proposal last scrolled into view, so later rebuilds leave the viewport alone. */
+  const revealedProposalRef = useRef<string | null>(null);
   useEffect(() => {
     if (!previewInlineEdit || !inlineEditProposal || !rebasedProposalRange) return;
+    const proposalKey = [
+      inlineEditProposal.bufferId,
+      inlineEditProposal.instruction,
+      inlineEditProposal.editedText,
+    ].join("\0");
+    const reveal = revealedProposalRef.current !== proposalKey;
+    revealedProposalRef.current = proposalKey;
     return previewInlineEdit({
       startOffset: rebasedProposalRange.start,
       endOffset: rebasedProposalRange.end,
       editedText: inlineEditProposal.editedText,
+      reveal,
     });
     // The content dependency rebuilds the preview when text around the proposal changes.
   }, [inlineEditContent, inlineEditProposal, previewInlineEdit, rebasedProposalRange]);

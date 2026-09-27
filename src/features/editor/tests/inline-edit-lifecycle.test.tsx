@@ -148,6 +148,7 @@ describe("Inline edit request ownership", () => {
       startOffset: 0,
       endOffset: 8,
       editedText: "updated",
+      reveal: true,
     });
     await accept();
     expect(applyInlineEdit).toHaveBeenCalledExactlyOnceWith(
@@ -192,8 +193,16 @@ describe("Inline edit request ownership", () => {
       startOffset: 4,
       endOffset: 12,
       editedText: "updated",
+      reveal: true,
     });
     await act(async () => root.render(<Editor content="an new original tail!" selectionEnd={8} />));
+    // Typing elsewhere moves the preview without scrolling back to it.
+    expect(previewInlineEdit).toHaveBeenLastCalledWith({
+      startOffset: 7,
+      endOffset: 15,
+      editedText: "updated",
+      reveal: false,
+    });
     await act(async () =>
       root.render(<Editor content="an new original tail!?" selectionEnd={8} />),
     );

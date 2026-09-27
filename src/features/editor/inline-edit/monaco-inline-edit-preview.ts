@@ -6,6 +6,11 @@ export interface InlineEditPreview {
   startOffset: number;
   endOffset: number;
   editedText: string;
+  /**
+   * Scrolls the proposal into view. Only its first showing does; the preview is rebuilt as the
+   * user types elsewhere, and scrolling back each time would fight them.
+   */
+  reveal?: boolean;
 }
 
 /**
@@ -68,7 +73,9 @@ export function showMonacoInlineEditPreview(
       suppressMouseDown: true,
     });
   });
-  editor.revealLinesInCenterIfOutsideViewport(firstLine, lastLine + resultLines.length);
+  if (preview.reveal) {
+    editor.revealLinesInCenterIfOutsideViewport(firstLine, lastLine + resultLines.length);
+  }
 
   return () => {
     if (disposed) return;
