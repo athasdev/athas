@@ -99,7 +99,7 @@ export default function DetachedAgentWindow() {
   const returnToOwner = useCallback(() => {
     if (returningRef.current) return;
     if (!sessionId.current) {
-      void getCurrentWindow().destroy();
+      void getCurrentWindow().destroy().catch(console.error);
       return;
     }
     const blocker = getAgentWindowTransferBlocker(useAIChatStore.getState(), sessionId.current);
