@@ -1,0 +1,35 @@
+name: "Release Cache Warmup"
+
+# Caches saved by tag-triggered release runs cannot be restored by the next
+# tag. Scheduled runs execute on main, whose caches every release can read.
+on:
+  schedule:
+    # One hour before the nightly preview release.
+    - cron: "0 20 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  tauri-cef-cli:
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: ["ubuntu-22.04", "ubuntu-22.04-arm"]
+    runs-on: ${{ matrix.platform }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Tauri CEF CLI
+        uses: ./.github/actions/tauri-cef-cli

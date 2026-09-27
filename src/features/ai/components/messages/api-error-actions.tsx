@@ -1,4 +1,4 @@
-import services from "@/config/services.json";
+import { getServiceUrls } from "@/config/services";
 import { useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { toast } from "sonner";
@@ -6,7 +6,6 @@ import { ProviderApiKeyCommand } from "../provider-api-key-command";
 import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { Button } from "@/ui/button";
-import { getApiBase } from "@/utils/api-base";
 
 export function ApiErrorActions({
   code,
@@ -34,10 +33,9 @@ export function ApiErrorActions({
       setBusy(false);
     }
   };
-  const openSettings = () => useUIState.getState().openSettingsDialog("ai");
+  const openSettings = () => useUIState.getState().openSettings("ai");
   const recover = () => {
-    if (hosted && payment)
-      return openUrl(new URL(new URL(services.dashboardBillingUrl).pathname, getApiBase()).href);
+    if (hosted && payment) return openUrl(getServiceUrls().dashboardBillingUrl);
     if (hosted && authentication) return signIn();
     if (configure && !hosted) {
       setKeyManagerOpen(true);

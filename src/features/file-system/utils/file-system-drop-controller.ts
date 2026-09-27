@@ -92,7 +92,7 @@ const LOCAL_DROP_TARGET_SELECTOR = [
   "[data-bottom-pane-drop-target]",
   "[data-ai-context-drop-target]",
 ].join(",");
-const PANE_DROP_TARGET_SELECTOR = "[data-pane-container]";
+const PANE_DROP_TARGET_SELECTOR = "[data-pane-container], [data-tab-bar-pane-id]";
 
 export function dispatchDroppedPathsToTerminal(
   target: Pick<Element, "closest"> | null | undefined,

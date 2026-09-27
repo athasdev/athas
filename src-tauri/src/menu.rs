@@ -18,7 +18,6 @@ pub struct NativeMenuState {
    pub close_folder_enabled: bool,
    pub save_enabled: bool,
    pub save_as_enabled: bool,
-   pub activity_bar_visible: bool,
    pub sidebar_visible: bool,
    pub terminal_visible: bool,
    pub minimap_visible: bool,
@@ -82,15 +81,6 @@ fn apply_native_menu_state(
    }
 
    if let Some(tauri::menu::MenuItemKind::Submenu(view_menu)) = menu.get("view_menu") {
-      set_normal_menu_item_text(
-         &view_menu,
-         "toggle_activity_sidebar",
-         if state.activity_bar_visible {
-            "Hide Activity Bar"
-         } else {
-            "Show Activity Bar"
-         },
-      )?;
       set_normal_menu_item_text(
          &view_menu,
          "toggle_sidebar",
@@ -614,17 +604,10 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
    let view_menu = SubmenuBuilder::with_id(app, "view_menu", "View")
       .item(&MenuItem::with_id(
          app,
-         "toggle_activity_sidebar",
-         "Show/Hide Activity Bar",
+         "toggle_sidebar",
+         "Show/Hide Sidebar",
          true,
          Some("CmdOrCtrl+B"),
-      )?)
-      .item(&MenuItem::with_id(
-         app,
-         "toggle_sidebar",
-         "Show/Hide Secondary Sidebar",
-         true,
-         Some("CmdOrCtrl+E"),
       )?)
       .item(&MenuItem::with_id(
          app,

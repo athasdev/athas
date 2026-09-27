@@ -1,6 +1,4 @@
-import { getCurrentWebview } from "@tauri-apps/api/webview";
-import { getCurrentWindow } from "@tauri-apps/api/window";
-import { useEffect, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { BOTTOM_PANE_ID } from "@/features/panes/constants/pane";
 import { usePaneStore } from "@/features/panes/stores/pane.store";
@@ -16,8 +14,8 @@ import {
   getExternalFileDropRoute,
   isExternalFileDragTypeList,
   resolveDropClientPoint,
-  type ExternalFileDropPayload,
 } from "../utils/file-system-drop-controller";
+import { listenToNativeDragDrop, type NativeDragDropPayload } from "@/utils/tauri-drag-drop";
 
 function resolveClientPoint(position: { x: number; y: number }) {
   return resolveDropClientPoint(position, window.devicePixelRatio, (x, y) =>
@@ -164,91 +162,69 @@ export const useFileSystemFolderDrop = (
   treatPaneDropAsGlobal = false,
 ) => {
   const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const handleDrop = useEffectEvent((paths: string[]) => onDrop(paths));
+  const handleNativeDragDrop = useEffectEvent(async (payload: NativeDragDropPayload) => {
+    if (getInternalTabDragData()) {
+      if (payload.type === "drop" && routeInternalTabDrop(payload.position)) {
+        setIsDraggingOver(false);
+        return;
+      }
+      if (payload.type === "leave" || payload.type === "drop") {
+        setIsDraggingOver(false);
+      }
+      return;
+    }
+
+    const target = "position" in payload ? resolveClientPoint(payload.position).element : null;
+    const route = getExternalFileDropRoute(target, treatPaneDropAsGlobal);
+
+    if (route === "terminal") {
+      if (payload.type === "drop") {
+        dispatchDroppedPathsToTerminal(target, payload.paths);
+      }
+      setIsDraggingOver(false);
+      return;
+    }
+
+    if (route !== "global") {
+      setIsDraggingOver(false);
+      return;
+    }
+
+    await handleExternalFileDropPayload(payload, {
+      onDrop: handleDrop,
+      setDraggingOver: setIsDraggingOver,
+      onError: (error) => {
+        console.error("Error handling dropped items:", error);
+      },
+    });
+  });
 
   useEffect(() => {
-    const currentWindow = getCurrentWindow();
-    let unlistenWindow: (() => void) | null = null;
-    let unlistenWebview: (() => void) | null = null;
-    let domTeardown: (() => void) | null = null;
     let disposed = false;
+    let unlistenNative: (() => void) | null = null;
 
-    const handleExternalPayload = async (payload: { type: string; paths?: string[] }) => {
-      await handleExternalFileDropPayload(payload, {
-        onDrop,
-        setDraggingOver: setIsDraggingOver,
-        onError: (error) => {
-          console.error("Error handling dropped items:", error);
-        },
+    void listenToNativeDragDrop((payload) => {
+      if (!disposed) void handleNativeDragDrop(payload);
+    })
+      .then((unlisten) => {
+        if (disposed) unlisten();
+        else unlistenNative = unlisten;
+      })
+      .catch((error) => {
+        console.error("Failed to listen for native file drops:", error);
       });
-    };
-
-    const setupListener = async () => {
-      const handleNativeDragDrop = async (payload: ExternalFileDropPayload) => {
-        if (getInternalTabDragData()) {
-          if (
-            payload.type === "drop" &&
-            payload.position &&
-            routeInternalTabDrop(payload.position)
-          ) {
-            setIsDraggingOver(false);
-            return;
-          }
-          if (payload.type === "leave" || payload.type === "drop") {
-            setIsDraggingOver(false);
-          }
-          return;
-        }
-
-        const position = payload.position;
-        const target = position ? resolveClientPoint(position).element : null;
-        const route = getExternalFileDropRoute(target, treatPaneDropAsGlobal);
-
-        if (route === "terminal") {
-          if (payload.type === "drop" && payload.paths) {
-            dispatchDroppedPathsToTerminal(target, payload.paths);
-          }
-          setIsDraggingOver(false);
-          return;
-        }
-
-        if (route !== "global") {
-          setIsDraggingOver(false);
-          return;
-        }
-
-        await handleExternalPayload(payload);
-      };
-
-      const nextUnlistenWindow = await currentWindow.onDragDropEvent((event) =>
-        handleNativeDragDrop(event.payload),
-      );
-      if (disposed) {
-        nextUnlistenWindow();
-        return;
-      }
-      unlistenWindow = nextUnlistenWindow;
-
-      const currentWebview = getCurrentWebview();
-      const nextUnlistenWebview = await currentWebview.onDragDropEvent((event) =>
-        handleNativeDragDrop(event.payload),
-      );
-      if (disposed) {
-        nextUnlistenWebview();
-        return;
-      }
-      unlistenWebview = nextUnlistenWebview;
-    };
-
-    domTeardown = listenForExternalFileDropDomEvents(treatPaneDropAsGlobal, setIsDraggingOver);
-    void setupListener();
 
     return () => {
       disposed = true;
-      if (unlistenWindow) unlistenWindow();
-      if (unlistenWebview) unlistenWebview();
-      if (domTeardown) domTeardown();
+      unlistenNative?.();
     };
-  }, [onDrop, treatPaneDropAsGlobal]);
+  }, []);
+
+  useEffect(
+    () => listenForExternalFileDropDomEvents(treatPaneDropAsGlobal, setIsDraggingOver),
+    [treatPaneDropAsGlobal],
+  );
 
   return { isDraggingOver };
 };

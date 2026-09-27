@@ -105,4 +105,27 @@ describe("agent options", () => {
     expect(installOption).toMatchObject({ action: "install", isBusy: false });
     expect(updateOption).toMatchObject({ action: "update", isBusy: true });
   });
+
+  it("offers registry-only agents in the composer once they are installed", () => {
+    const registryAgent = (id: string, installed: boolean) =>
+      agentConfig({ id, name: id, source: "registry", installed });
+    const agents = [
+      agentConfig({ source: "extension" }),
+      registryAgent("goose", true),
+      registryAgent("cline", false),
+      registryAgent("selected", false),
+    ];
+
+    const ids = buildAgentOptions({
+      currentAgentId: "selected",
+      agentConfigs: new Map(agents.map((agent) => [agent.id, agent])),
+      codexInstalled: true,
+      pendingAction: null,
+    }).map((option) => option.id);
+
+    expect(ids).toContain("claude-acp");
+    expect(ids).toContain("goose");
+    expect(ids).toContain("selected");
+    expect(ids).not.toContain("cline");
+  });
 });

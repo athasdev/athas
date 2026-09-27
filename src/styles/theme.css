@@ -38,9 +38,13 @@
   --spacing-tab-bar: var(--athas-tab-bar-height);
   --spacing-tab: var(--athas-tab-height);
   --spacing-tab-max: var(--athas-tab-max-width);
+  --spacing-disclosure-indent: calc(1em + var(--athas-chrome-gap));
+  --spacing-palette-offset: 10vh;
+  --shadow-seam-top: 0 -1px 0 0 var(--background);
   --spacing-sidebar-header: var(--athas-sidebar-header-height);
   --spacing-workbench: var(--athas-workbench-gap);
   --spacing-chrome-control: var(--athas-chrome-control-height);
+  --spacing-rail-control: var(--athas-rail-control-size);
   --spacing-chrome-hit-target: var(--athas-chrome-hit-target);
   --spacing-chrome-tight: var(--athas-chrome-gap-tight);
   --spacing-chrome: var(--athas-chrome-gap);
@@ -60,6 +64,7 @@
   --ease-smooth: var(--app-ease-smooth);
 
   --color-background: var(--background);
+  --color-island: var(--athas-glass-island-bg, var(--background));
   --color-surface: var(--surface);
   --color-overlay: var(--overlay);
   --color-scrim: var(--scrim);
@@ -70,6 +75,7 @@
   --color-border-strong: var(--border-strong);
   --color-accent: var(--accent);
   --color-selected: var(--selected);
+  --color-tab-active: var(--tab-active);
   --color-selection: var(--selection);
   --color-focus: var(--focus-ring);
   --color-scrollbar-thumb: var(--app-scrollbar-thumb);
@@ -164,15 +170,16 @@
     --ui-text-sm: max(10px, calc(var(--app-ui-font-size) - 1px));
     --ui-text-caption: max(10px, calc(var(--app-ui-font-size) - 3px));
     --ui-text-chrome: var(--ui-text-sm);
-    --athas-title-bar-height: 2rem;
+    --athas-title-bar-height: 2.5rem;
     --athas-title-bar-leading-inset: var(--athas-chrome-padding-inline);
-    --athas-tab-bar-height: 2rem;
+    --athas-tab-bar-height: 1.875rem;
     --athas-pane-header-height: var(--athas-tab-bar-height);
-    --athas-tab-height: 1.75rem;
+    --athas-tab-height: 1.5rem;
     --athas-tab-max-width: 12.5rem;
     --athas-sidebar-header-height: 2rem;
     --athas-workbench-gap: 8px;
     --athas-chrome-control-height: 1.5rem;
+    --athas-rail-control-size: 2rem;
     --athas-chrome-hit-target: 1.75rem;
     --athas-chrome-line-height: 1rem;
     --athas-chrome-gap-tight: 2px;
@@ -202,6 +209,9 @@
 
     /* Derived tokens. */
     --overlay: var(--background);
+    /* The active tab on a background-coloured tab bar: a tint in light themes, where the
+       overlay would match the bar, and the raised overlay in dark ones. */
+    --tab-active: color-mix(in srgb, var(--background) 91%, var(--foreground) 9%);
     --scrim: rgb(0 0 0 / 0.24);
     --border-strong: color-mix(in srgb, var(--border) 60%, var(--foreground) 40%);
     --focus-ring: color-mix(in srgb, var(--primary) 40%, transparent);
@@ -239,7 +249,9 @@
   }
 
   html.platform-macos {
-    --athas-title-bar-height: 2.125rem;
+    /* Matches the native title bar, so the traffic lights keep AppKit's own position. */
+    --athas-title-bar-height: 2rem;
+    --athas-tab-bar-height: 2rem;
     --athas-title-bar-leading-inset: 4.75rem;
   }
 
@@ -262,6 +274,7 @@
 
   :root[data-theme-type="dark"] {
     --overlay: color-mix(in srgb, var(--background) 92%, var(--foreground) 8%);
+    --tab-active: var(--overlay);
     --scrim: rgb(0 0 0 / 0.45);
     --shadow-card:
       0 1px 2px rgb(0 0 0 / 0.24), 0 2px 4px rgb(0 0 0 / 0.18), 0 0 0 0.5px rgb(255 255 255 / 0.1);

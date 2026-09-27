@@ -4,9 +4,20 @@ import { arch, platform } from "@tauri-apps/plugin-os";
 import { load, type Store } from "@tauri-apps/plugin-store";
 import { getSettingsStore } from "@/features/settings/lib/settings-persistence";
 import {
+  crashReportBuild,
+  isBenignWindowError,
+  isExpectedCancellation,
+} from "@/features/telemetry/lib/crash-noise";
+import {
   createFrictionPayload,
   type FrictionSignalInput,
 } from "@/features/telemetry/lib/friction-signals";
+import {
+  createAiEditOutcomePayload,
+  createAiFailurePayload,
+  type AiEditOutcomeInput,
+  type AiFailureInput,
+} from "@/features/telemetry/lib/ai-signals";
 import { getApiBase } from "@/utils/api-base";
 
 const API_BASE = getApiBase();
@@ -44,6 +55,8 @@ type TelemetryEventType =
   | "extension_uninstall"
   | "extension_update"
   | "friction"
+  | "ai_failure"
+  | "ai_edit_outcome"
   | "crash_report";
 
 type TelemetryLogStatus = "local" | "queued" | "sent" | "failed" | "dropped" | "cleared";
@@ -154,19 +167,6 @@ function serializeError(error: unknown): { message: string; stack?: string } {
   } catch {
     return { message: String(error) };
   }
-}
-
-function isExpectedCancellation(error: unknown): boolean {
-  if (error instanceof Error) {
-    return (
-      error.name === "Canceled" ||
-      error.name === "CancellationError" ||
-      error.message === "Canceled" ||
-      error.message === "Canceled: Canceled"
-    );
-  }
-
-  return error === "Canceled" || error === "Canceled: Canceled";
 }
 
 function sanitizePayload(value: unknown): unknown {
@@ -514,6 +514,8 @@ function registerCrashListeners() {
   if (listenersRegistered || typeof window === "undefined") return;
 
   window.addEventListener("error", (event) => {
+    if (isBenignWindowError(event.message)) return;
+
     void recordCrashReport({
       kind: "window_error",
       message: event.message,
@@ -541,15 +543,25 @@ function registerCrashListeners() {
   listenersRegistered = true;
 }
 
-export async function recordCrashReport(payload: Record<string, unknown>) {
-  return enqueueTelemetryEvent(
-    "crash_report",
-    {
-      ...payload,
-      report_source: "desktop_runtime",
-    },
-    { flushImmediately: true, mode: "optional" },
-  );
+/**
+ * Queue a crash report. It never rejects: a failure to persist the report, such as a
+ * full disk, would otherwise raise another unhandled rejection and report itself again.
+ */
+export async function recordCrashReport(payload: Record<string, unknown>): Promise<boolean> {
+  try {
+    return await enqueueTelemetryEvent(
+      "crash_report",
+      {
+        ...payload,
+        report_source: "desktop_runtime",
+        build: crashReportBuild(import.meta.env.DEV),
+      },
+      { flushImmediately: true, mode: "optional" },
+    );
+  } catch (error) {
+    console.error("Failed to record crash report:", error);
+    return false;
+  }
 }
 
 export async function recordUpdateCheckTelemetry(payload: {
@@ -629,6 +641,26 @@ export async function recordFrictionSignal(input: FrictionSignalInput) {
     mode: "optional",
     logEventType: eventType,
     logSummary: "Queued anonymous friction signal",
+  });
+}
+
+/** An AI run that failed, with its provider, model, phase and error code but no content. */
+export async function recordAiFailure(input: AiFailureInput) {
+  const payload = createAiFailurePayload(input);
+  return enqueueTelemetryEvent("ai_failure", payload, {
+    mode: "optional",
+    logEventType: `ai_failure:${input.kind}:${input.phase}`,
+    logSummary: "Queued anonymous AI failure signal",
+  });
+}
+
+/** Whether an inline edit or Tab suggestion was accepted, rejected or failed. */
+export async function recordAiEditOutcome(input: AiEditOutcomeInput) {
+  const payload = createAiEditOutcomePayload(input);
+  return enqueueTelemetryEvent("ai_edit_outcome", payload, {
+    mode: "optional",
+    logEventType: `ai_edit_outcome:${input.surface}:${input.outcome}`,
+    logSummary: "Queued anonymous AI edit outcome",
   });
 }
 

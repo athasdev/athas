@@ -16,13 +16,17 @@ export function ProjectGlyph({
   projectPath,
   iconPath,
   className,
+  imageClassName,
 }: {
   projectPath?: string;
   iconPath?: string;
   className?: string;
+  imageClassName?: string;
 }) {
   if (iconPath) {
-    return <ProjectCustomIcon value={iconPath} className={className} />;
+    return (
+      <ProjectCustomIcon value={iconPath} className={className} imageClassName={imageClassName} />
+    );
   }
 
   const Icon = isRemoteProjectPath(projectPath) ? RemoteIcon : projectPath ? FolderIcon : PlusIcon;

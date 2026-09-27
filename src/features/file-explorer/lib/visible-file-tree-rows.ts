@@ -41,10 +41,21 @@ export interface FilterFileTreeEntriesOptions {
   showHiddenFiles: boolean;
 }
 
+/**
+ * Filtered results per children array, for one set of filter options. Tree updates keep the
+ * arrays of unchanged directories, so a refresh or an expanded folder only filters the path that
+ * changed instead of re-matching every loaded entry against the ignore rules.
+ */
+export type FileTreeFilterCache = WeakMap<FileEntry[], FileEntry[]>;
+
 export function filterFileTreeEntries(
   files: FileEntry[],
   options: FilterFileTreeEntriesOptions,
+  cache?: FileTreeFilterCache,
 ): FileEntry[] {
+  const cached = cache?.get(files);
+  if (cached) return cached;
+
   let changed = false;
   const filteredItems: FileEntry[] = [];
 
@@ -67,7 +78,7 @@ export function filterFileTreeEntries(
     }
 
     const filteredChildren = item.children
-      ? filterFileTreeEntries(item.children, options)
+      ? filterFileTreeEntries(item.children, options, cache)
       : undefined;
     const childrenChanged = filteredChildren !== item.children;
     const ignoredChanged = item.ignored !== ignored && (ignored || item.ignored !== undefined);
@@ -85,7 +96,9 @@ export function filterFileTreeEntries(
     filteredItems.push(item);
   }
 
-  return changed ? filteredItems : files;
+  const result = changed ? filteredItems : files;
+  cache?.set(files, result);
+  return result;
 }
 
 export function collectFileTreeSearchHits(
@@ -133,17 +146,36 @@ function getCompactFolderChild(item: FileEntry): FileEntry | null {
   return child;
 }
 
+const fileTreeNameCollator = new Intl.Collator();
+const sortedEntriesCache: Record<FileTreeSortOrder, WeakMap<readonly FileEntry[], FileEntry[]>> = {
+  "folders-first": new WeakMap(),
+  name: new WeakMap(),
+};
+
+/**
+ * Directory children in display order. Sorted once per children array: expanding or collapsing a
+ * folder rebuilds the visible rows, and re-sorting every open directory each time was the bulk of
+ * that work in large trees.
+ */
 function sortFileTreeEntriesForDisplay(
-  entries: readonly FileEntry[],
+  entries: FileEntry[],
   sortOrder: FileTreeSortOrder,
 ): FileEntry[] {
-  return [...entries].sort((left, right) => {
-    if (sortOrder === "folders-first" && left.isDir !== right.isDir) {
-      return left.isDir ? -1 : 1;
-    }
+  const cache = sortedEntriesCache[sortOrder];
+  const cached = cache.get(entries);
+  if (cached) return cached;
 
-    return left.name.toLowerCase().localeCompare(right.name.toLowerCase());
-  });
+  const sorted = entries
+    .map((entry) => ({ entry, key: entry.name.toLowerCase() }))
+    .sort((left, right) => {
+      if (sortOrder === "folders-first" && left.entry.isDir !== right.entry.isDir) {
+        return left.entry.isDir ? -1 : 1;
+      }
+      return fileTreeNameCollator.compare(left.key, right.key);
+    })
+    .map(({ entry }) => entry);
+  cache.set(entries, sorted);
+  return sorted;
 }
 
 export function buildVisibleFileTreeRows(

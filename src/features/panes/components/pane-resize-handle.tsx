@@ -129,7 +129,7 @@ export function PaneResizeHandle({
   return (
     <div
       ref={containerRef}
-      className={`group relative flex shrink-0 items-center justify-center outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset ${
+      className={`group relative flex shrink-0 items-center justify-center outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-inset ${
         isHorizontal
           ? "h-full w-workbench cursor-col-resize"
           : "h-workbench w-full cursor-row-resize"

@@ -130,7 +130,7 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
   const setIsFindVisible = useUIState((state) => state.setIsFindVisible);
   const [viewMode, setViewMode] = useState<"unified" | "split">("unified");
   const [showWhitespace, setShowWhitespace] = useState(false);
-  const [isNavigatorOpen, setIsNavigatorOpen] = useState(false);
+  const [isNavigatorOpen, setIsNavigatorOpen] = useState(true);
   const [navigatorViewMode, setNavigatorViewMode] = useState<FileNavigatorViewMode>("flat");
   const isWorkingTree = multiDiff.commitHash === "working-tree";
   const isCommitDiff = /^[0-9a-f]{7,40}$/i.test(multiDiff.commitHash);
@@ -510,7 +510,6 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
         onNavigatorOpenChange={setIsNavigatorOpen}
         navigatorViewMode={navigatorViewMode}
         onNavigatorViewModeChange={setNavigatorViewMode}
-        isActive={isActiveMultiDiff}
         scrollContainerRef={setScrollContainer}
         header={{
           icon: isCommitDiff ? <GitCommitIcon /> : <GitBranchIcon />,

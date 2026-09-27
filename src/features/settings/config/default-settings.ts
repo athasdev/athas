@@ -1,3 +1,4 @@
+import { DEFAULT_INTELLIGENCE_AGENT_STEPS } from "@/features/ai/intelligence/lib/intelligence-agent-steps";
 import { normalizeUiFontSize, UI_FONT_SIZE_DEFAULT } from "@/features/settings/lib/ui-font-size";
 import {
   DEFAULT_CODE_FONT_SIZE,
@@ -95,17 +96,16 @@ export const defaultSettings: Settings = {
   aiAutocompleteCustomModelId: "",
   aiDefaultSessionMode: "",
   aiAgentNotifications: true,
+  aiAgentFinishNotifications: true,
+  aiAgentNotificationSound: false,
+  aiFollowAgent: false,
+  aiAgentMaxSteps: DEFAULT_INTELLIGENCE_AGENT_STEPS,
   aiSkills: [],
+  mcpServers: [],
   v0DesignSystems: [],
   activeV0DesignSystemId: "",
   ollamaBaseUrl: "http://localhost:11434",
   // Layout
-  activityRailExpanded: false,
-  activityRailWidth: 180,
-  showActivityRailAgentHistory: true,
-  showActivityRailTerminals: false,
-  showActivityRailProjectIcons: true,
-  collapsedActivityRailSections: [],
   sidebarWidth: 220,
   rightSidebarWidth: 220,
   showGitHubPullRequests: true,
@@ -202,8 +202,8 @@ export function getDefaultSettingsSnapshot(): Settings {
     hiddenSidebarActivityItems: [...defaultSettings.hiddenSidebarActivityItems],
     pinnedSidebarExtensionItems: [...defaultSettings.pinnedSidebarExtensionItems],
     hiddenGitSidebarItems: [...defaultSettings.hiddenGitSidebarItems],
-    collapsedActivityRailSections: [...defaultSettings.collapsedActivityRailSections],
     aiSkills: defaultSettings.aiSkills.map((skill) => ({ ...skill })),
+    mcpServers: defaultSettings.mcpServers.map((server) => ({ ...server, args: [...server.args] })),
     v0DesignSystems: defaultSettings.v0DesignSystems.map((profile) => ({ ...profile })),
     uiFontSize: normalizeUiFontSize(defaultSettings.uiFontSize),
   };

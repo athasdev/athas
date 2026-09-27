@@ -1,5 +1,5 @@
 import type React from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { cn } from "@/utils/cn";
 import {
@@ -33,8 +33,25 @@ export function ResizablePane({
 }: ResizablePaneProps) {
   const storedWidth = useSettingsStore((state) => state.settings[widthKey]);
   const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
-  const [width, setWidth] = useState(Math.max(storedWidth, MIN_RESPONSIVE_PANE_WIDTH));
+  const [width, setWidth] = useState(() =>
+    Math.round(
+      clampResponsivePaneWidth({
+        value: Math.max(storedWidth, MIN_RESPONSIVE_PANE_WIDTH),
+        minWidth: MIN_SIDEBAR_WIDTH,
+        viewportWidth: typeof window !== "undefined" ? window.innerWidth : 1280,
+        reservedWidth,
+      }),
+    ),
+  );
   const [isResizing, setIsResizing] = useState(false);
+  // Width only animates when the pane is shown or hidden. Settings loading, a project switch or a
+  // window resize change it instantly, since an animated width re-lays out the editor every frame.
+  const [previousHidden, setPreviousHidden] = useState(hidden);
+  const [isTogglingVisibility, setIsTogglingVisibility] = useState(false);
+  if (previousHidden !== hidden) {
+    setPreviousHidden(hidden);
+    setIsTogglingVisibility(true);
+  }
   const paneRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -62,11 +79,15 @@ export function ResizablePane({
     [getMinWidth, reservedWidth],
   );
 
-  useEffect(() => {
-    const nextWidth = clampWidth(storedWidth);
-
-    setWidth(nextWidth);
+  useLayoutEffect(() => {
+    setWidth(clampWidth(storedWidth));
   }, [storedWidth, clampWidth]);
+
+  useEffect(() => {
+    if (!isTogglingVisibility) return;
+    const timeoutId = window.setTimeout(() => setIsTogglingVisibility(false), 250);
+    return () => window.clearTimeout(timeoutId);
+  }, [isTogglingVisibility]);
 
   useEffect(() => {
     const handleWindowResize = () => {
@@ -163,8 +184,9 @@ export function ResizablePane({
       style={{ width: totalWidth }}
       className={cn(
         "athas-resizable-pane relative flex h-full min-w-0 shrink-0 overflow-visible bg-transparent",
-        // Animate show/hide, but never fight the pointer while the user drags the edge.
-        !isResizing && "transition-[width] duration-fast ease-smooth motion-reduce:transition-none",
+        isTogglingVisibility &&
+          !isResizing &&
+          "transition-[width] duration-fast ease-smooth motion-reduce:transition-none",
         hidden && "pointer-events-none",
         className,
       )}
@@ -177,7 +199,8 @@ export function ResizablePane({
         style={{ width: hidden ? "0px" : `${width}px` }}
         className={cn(
           "flex min-h-0 shrink-0 flex-col overflow-hidden py-0",
-          !isResizing &&
+          isTogglingVisibility &&
+            !isResizing &&
             "transition-[width] duration-fast ease-smooth motion-reduce:transition-none",
         )}
       >

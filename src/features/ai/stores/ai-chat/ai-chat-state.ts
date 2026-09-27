@@ -10,16 +10,12 @@ export function createInitialAIChatState(): AIChatState {
     agentMessageQueues: {},
     chatMessageLoadStates: {},
     mode: "chat",
+    modeByChat: {},
     outputStyle: "default",
     hasApiKey: false,
     providerApiKeys: new Map(),
     dynamicModels: {},
-    availableSlashCommands: [],
-    sessionModeState: {
-      currentModeId: null,
-      availableModes: [],
-    },
-    acpStatus: null,
-    sessionConfigOptions: [],
+    acpAgents: {},
+    acpSessions: {},
   };
 }

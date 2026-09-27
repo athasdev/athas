@@ -16,7 +16,10 @@ import { useUIState } from "@/features/window/stores/ui-state.store";
 import { IS_LINUX } from "@/utils/platform";
 import { useKeymapStore } from "../stores/keymaps.store";
 import { getEffectiveKeybindings } from "../utils/effective-keymaps";
-import { isEditorKeyboardTarget } from "../utils/editor-keyboard-target";
+import {
+  getMarkdownPreviewKeyboardTarget,
+  isEditorKeyboardTarget,
+} from "../utils/editor-keyboard-target";
 import { resolveEffectiveKeymapContexts } from "../utils/effective-contexts";
 import { evaluateWhenClause } from "../utils/context";
 import { eventToKey, keysMatch, matchKeybinding } from "../utils/matcher";
@@ -40,7 +43,6 @@ function isCloseWindowShortcut(event: KeyboardEvent) {
 }
 
 export function useKeymaps() {
-  const contexts = useKeymapStore.use.contexts();
   const [chordState, setChordState] = useState<ParsedKey[]>([]);
 
   useEffect(() => {
@@ -56,13 +58,18 @@ export function useKeymaps() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Read at keydown rather than subscribing: contexts change on every focus move, and a
+      // subscription re-rendered the app root and re-attached this listener each time.
+      const contexts = useKeymapStore.getState().contexts;
       // Skip all keybinding handling when recording a new keybinding
       if (contexts.isRecordingKeybinding) {
         return;
       }
 
       const target = e.target as HTMLElement | null;
+      const isMarkdownPreviewTarget = getMarkdownPreviewKeyboardTarget(target) !== null;
       const isEditorTarget =
+        isMarkdownPreviewTarget ||
         isEditorKeyboardTarget(target) ||
         isEditorKeyboardTarget(document.activeElement as HTMLElement | null);
       const isTerminalTarget =
@@ -186,6 +193,15 @@ export function useKeymaps() {
           continue;
         }
 
+        if (
+          isMarkdownPreviewTarget &&
+          keybinding.command.startsWith("editor.") &&
+          keybinding.command !== "editor.selectAll" &&
+          keybinding.command !== "editor.copy"
+        ) {
+          continue;
+        }
+
         // Evaluate when clause
         if (keybinding.when && !evaluateWhenClause(keybinding.when, effectiveContexts)) {
           continue;
@@ -232,7 +248,7 @@ export function useKeymaps() {
     return () => {
       window.removeEventListener("keydown", handleKeyDown, true);
     };
-  }, [contexts, chordState]);
+  }, [chordState]);
 
   return {
     chordState,

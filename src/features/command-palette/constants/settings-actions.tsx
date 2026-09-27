@@ -50,8 +50,7 @@ type CommandPaletteSettings = Pick<
 interface SettingsActionsParams {
   query: string;
   settings: CommandPaletteSettings;
-  setIsSettingsDialogVisible: (v: boolean) => void;
-  openSettingsDialog: (tab?: SettingsTab) => void;
+  openSettings: (tab?: SettingsTab) => void;
   setSettingsSearchQuery: (query: string) => void;
   pushPaletteView: (view: CommandPaletteViewId) => void;
   updateSetting: (key: string, value: any) => void | Promise<void>;
@@ -114,8 +113,7 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
   const {
     query,
     settings,
-    setIsSettingsDialogVisible,
-    openSettingsDialog,
+    openSettings,
     setSettingsSearchQuery,
     pushPaletteView,
     updateSetting,
@@ -135,7 +133,7 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
     action: () => {
       onClose();
       setSettingsSearchQuery("");
-      openSettingsDialog(tab);
+      openSettings(tab);
     },
   }));
 
@@ -148,7 +146,7 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
     action: () => {
       onClose();
       setSettingsSearchQuery(record.label);
-      openSettingsDialog(record.tab);
+      openSettings(record.tab);
     },
   }));
 
@@ -156,12 +154,12 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
     {
       id: "open-settings",
       label: "Preferences: Open Settings",
-      description: "Open settings dialog",
+      description: "Open the settings page",
       icon: <SettingsIcon />,
       category: "Settings",
       action: () => {
         onClose();
-        setIsSettingsDialogVisible(true);
+        openSettings();
       },
     },
     {

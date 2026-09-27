@@ -49,11 +49,6 @@ describe("default settings", () => {
     expect(settings.reduceMotion).toBe(false);
     expect(settings.showTabIcons).toBe(true);
     expect(settings.tabCloseButtonVisibility).toBe("active");
-    expect(settings.activityRailExpanded).toBe(false);
-    expect(settings.activityRailWidth).toBe(180);
-    expect(settings.showActivityRailAgentHistory).toBe(true);
-    expect(settings.showActivityRailTerminals).toBe(false);
-    expect(settings.showActivityRailProjectIcons).toBe(true);
     expect(settings.hiddenSidebarActivityItems).toEqual([
       "github-prs",
       "views",
@@ -64,7 +59,6 @@ describe("default settings", () => {
     ]);
     expect(settings.pinnedSidebarExtensionItems).toEqual([]);
     expect(settings.hiddenGitSidebarItems).toEqual([]);
-    expect(settings.collapsedActivityRailSections).toEqual([]);
     expect(settings.sidebarWidth).toBe(220);
     expect(settings.rightSidebarWidth).toBe(220);
   });

@@ -1,19 +1,11 @@
 import { type DragEndEvent, type DragMoveEvent, type DragStartEvent } from "@dnd-kit/core";
-import { restrictToHorizontalAxis } from "@dnd-kit/modifiers";
 import { SortableContext, horizontalListSortingStrategy } from "@dnd-kit/sortable";
-import {
-  ArrowLeftIcon,
-  ArrowRightIcon,
-  ArrowsInIcon,
-  ArrowsOutIcon,
-  SidebarIcon,
-} from "@/ui/icons";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ArrowsInIcon, ArrowsOutIcon, SidebarIcon } from "@/ui/icons";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { useJumpListStore } from "@/features/editor/stores/jump-list.store";
-import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import { getBufferById } from "@/features/editor/utils/buffer-index";
-import { navigateToJumpEntry } from "@/features/editor/utils/jump-navigation";
+import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { formatDiffBufferLabel } from "@/features/git/utils/diff-buffer-label";
 import { writeClipboardText } from "@/utils/clipboard";
@@ -24,27 +16,60 @@ import { splitEditorGroup } from "@/features/panes/utils/pane-command-actions";
 import { moveBufferToPaneDropTarget } from "@/features/panes/utils/pane-drop-actions";
 import { findPaneGroup } from "@/features/panes/utils/pane-tree";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import type { PaneContent } from "@/features/panes/types/pane-content.types";
+import type { EditorContent, PaneContent } from "@/features/panes/types/pane-content.types";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
 import { getChromeNavigationIndex } from "@/features/layout/utils/chrome-keyboard";
 import { useSidebarStore } from "@/features/layout/stores/sidebar.store";
 import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
+import type { Terminal } from "@/features/terminal/types/terminal.types";
 import UnsavedChangesDialog from "@/features/window/components/unsaved-changes-dialog";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { Button } from "@/ui/button";
 import { ContextMenu, ContextMenuTrigger } from "@/ui/context-menu";
-import { SortableTab, TabBarSurface, TabDndContext, useTabDragClickGuard } from "@/ui/tab-bar";
+import {
+  scrollTabIntoStrip,
+  SortableTab,
+  TabBarSurface,
+  TabDndContext,
+  TabDragOverlay,
+  TabStrip,
+  useTabDragClickGuard,
+} from "@/ui/tab-bar";
 import { getRelativePath } from "@/utils/path-helpers";
 import { calculateDisplayNames } from "../utils/path-shortener";
 import {
   clearInternalTabDragData,
+  getGlobalTabMove,
   resolveDropTarget,
-  setInternalTabDragHover,
+  resolveTabInsertBefore,
   setInternalTabDragData,
+  setInternalTabDragHover,
+  setInternalTabDragHoverTarget,
 } from "../utils/internal-tab-drag";
 import TabBarItem from "./tab-bar-item";
+import { TabHistoryNavigation } from "./tab-history-navigation";
 import { NewTabMenu } from "./new-tab-menu";
 import TabContextMenu from "./tab-context-menu";
+
+const EMPTY_TOKENS: EditorContent["tokens"] = [];
+const tabShellCache = new WeakMap<PaneContent, PaneContent>();
+
+/**
+ * A buffer as the tab bar sees it: its text replaced with empty strings. The tab bar never reads
+ * content, and without it the selection stays equal while the user types, so the bar and every
+ * tab don't re-render on each keystroke.
+ */
+function toTabShell(buffer: PaneContent): PaneContent {
+  if (buffer.type !== "editor" && buffer.type !== "diff") return buffer;
+  const cached = tabShellCache.get(buffer);
+  if (cached) return cached;
+  const shell: PaneContent =
+    buffer.type === "editor"
+      ? { ...buffer, content: "", savedContent: "", tokens: EMPTY_TOKENS }
+      : { ...buffer, content: "", savedContent: "" };
+  tabShellCache.set(buffer, shell);
+  return shell;
+}
 
 interface TabBarProps {
   paneId?: string;
@@ -59,25 +84,27 @@ const TabBar = ({
 }: TabBarProps) => {
   // Get everything from stores
   const pendingClose = useBufferStore.use.pendingClose();
-  const paneRoot = usePaneStore.use.root();
-  const bottomRoot = usePaneStore.use.bottomRoot();
   const fullscreenPaneId = usePaneStore.use.fullscreenPaneId();
   const { closePane, togglePaneFullscreen, setPaneLocked } = usePaneStore.use.actions();
 
-  const pane = useMemo(() => {
+  // Only this pane: the pane store compares selections deeply, so tab switches in other panes
+  // no longer re-render this bar.
+  const pane = usePaneStore((state) => {
     if (!paneId) return null;
     return paneId === BOTTOM_PANE_ID
-      ? findPaneGroup(bottomRoot, BOTTOM_PANE_ID)
-      : findPaneGroup(paneRoot, paneId);
-  }, [bottomRoot, paneId, paneRoot]);
+      ? findPaneGroup(state.bottomRoot, BOTTOM_PANE_ID)
+      : findPaneGroup(state.root, paneId);
+  });
+  const isInSplit = usePaneStore((state) => state.root.type === "split");
   const paneBufferIdSet = useMemo(() => {
     return pane ? new Set(pane.bufferIds) : null;
   }, [pane?.bufferIds]);
-  const buffers = useBufferStore((state) => {
-    return paneBufferIdSet
+  const buffers = useBufferStore((state) =>
+    (paneBufferIdSet
       ? state.buffers.filter((buffer) => paneBufferIdSet.has(buffer.id))
-      : state.buffers;
-  });
+      : state.buffers
+    ).map(toTabShell),
+  );
   const globalActiveBufferId = useBufferStore((state) => (pane ? null : state.activeBufferId));
   const activeBufferCandidate = pane ? pane.activeBufferId : globalActiveBufferId;
   const {
@@ -97,7 +124,6 @@ const TabBar = ({
   const maxOpenTabs = useSettingsStore((state) => state.settings.maxOpenTabs);
   const updateActivePath = useSidebarStore.use.actions().updateActivePath;
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.() || undefined;
-  const jumpListActions = useJumpListStore.use.actions();
   const bufferById = useMemo(() => {
     const nextBufferById = new Map<string, PaneContent>();
     for (const buffer of buffers) {
@@ -107,11 +133,8 @@ const TabBar = ({
   }, [buffers]);
   const activeBufferId =
     activeBufferCandidate && bufferById.has(activeBufferCandidate) ? activeBufferCandidate : null;
-  const canGoBack = jumpListActions.canGoBack();
-  const canGoForward = jumpListActions.canGoForward();
   const isPaneFullscreen = paneId ? fullscreenPaneId === paneId : false;
   const isPaneLocked = Boolean(pane?.locked);
-  const isInSplit = paneRoot.type === "split";
   const isBottomPane = paneId === BOTTOM_PANE_ID;
 
   const [draggedBufferId, setDraggedBufferId] = useState<string | null>(null);
@@ -121,13 +144,44 @@ const TabBar = ({
   const [srAnnouncement, setSrAnnouncement] = useState<string>("");
 
   const tabBarRef = useRef<HTMLDivElement>(null);
+  const tabStripRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<(HTMLDivElement | null)[]>([]);
   const dragPointRef = useRef<{ x: number; y: number } | null>(null);
   const pointerPointRef = useRef<{ x: number; y: number } | null>(null);
   const { getClickCapture, releaseClickSuppression, suppressNextClick } = useTabDragClickGuard();
   const handleRevealInFolder = useFileSystemStore.use.handleRevealInFolder?.();
   const { clearPositionCache } = useEditorStateStore.getState().actions;
-  const terminalSessions = useTerminalStore((state) => state.sessions);
+  // Only the label fields of this bar's terminals, flattened so a shallow compare holds: the
+  // sessions Map changes on every terminal selection and would re-render the bar while dragging.
+  const terminalSessionFields = useTerminalStore(
+    useShallow((state) => {
+      const fields: string[] = [];
+      for (const buffer of buffers) {
+        if (buffer.type !== "terminal") continue;
+        const session = state.sessions.get(buffer.sessionId);
+        fields.push(
+          buffer.sessionId,
+          session?.customName ? "1" : "",
+          session?.name ?? "",
+          session?.title ?? "",
+          session?.currentDirectory ?? "",
+        );
+      }
+      return fields;
+    }),
+  );
+  const terminalSessions = useMemo(() => {
+    const sessions = new Map<string, Partial<Terminal>>();
+    for (let index = 0; index < terminalSessionFields.length; index += 5) {
+      sessions.set(terminalSessionFields[index]!, {
+        customName: terminalSessionFields[index + 1] === "1",
+        name: terminalSessionFields[index + 2] || undefined,
+        title: terminalSessionFields[index + 3] || undefined,
+        currentDirectory: terminalSessionFields[index + 4] || undefined,
+      });
+    }
+    return sessions;
+  }, [terminalSessionFields]);
   const getDirectoryLabel = useCallback((directory?: string) => {
     if (!directory) return "";
     const normalized = directory.replace(/[\\/]+$/, "");
@@ -158,38 +212,6 @@ const TabBar = ({
     return true;
   }, []);
 
-  const handleJumpBack = useCallback(async () => {
-    const bufferStore = useBufferStore.getState();
-    const editorState = useEditorStateStore.getState();
-    const currentActiveBufferId = bufferStore.activeBufferId;
-    const currentActiveBuffer = getBufferById(bufferStore.buffers, currentActiveBufferId);
-
-    const currentPosition =
-      currentActiveBufferId && currentActiveBuffer?.path
-        ? {
-            bufferId: currentActiveBufferId,
-            filePath: currentActiveBuffer.path,
-            line: editorState.cursorPosition.line,
-            column: editorState.cursorPosition.column,
-            offset: editorState.cursorPosition.offset,
-            scrollTop: editorState.scrollTop,
-            scrollLeft: editorState.scrollLeft,
-          }
-        : undefined;
-
-    const entry = jumpListActions.goBack(currentPosition);
-    if (entry) {
-      await navigateToJumpEntry(entry);
-    }
-  }, [jumpListActions]);
-
-  const handleJumpForward = useCallback(async () => {
-    const entry = jumpListActions.goForward();
-    if (entry) {
-      await navigateToJumpEntry(entry);
-    }
-  }, [jumpListActions]);
-
   const handleTogglePaneFullscreen = useCallback(() => {
     if (!paneId) return;
     togglePaneFullscreen(paneId);
@@ -201,7 +223,7 @@ const TabBar = ({
   }, [isPaneLocked, paneId, setPaneLocked]);
 
   const canScrollTabsHorizontally = useCallback(() => {
-    const container = tabBarRef.current;
+    const container = tabStripRef.current;
     if (!container) return false;
 
     return container.scrollWidth > container.clientWidth + 1;
@@ -210,7 +232,7 @@ const TabBar = ({
   // Optional wheel-to-horizontal scrolling for overflowing tab strips.
   const handleWheel = useCallback(
     (e: React.WheelEvent<HTMLDivElement>) => {
-      const container = tabBarRef.current;
+      const container = tabStripRef.current;
       if (!container) return;
       if (!horizontalTabScroll) return;
       if (draggedBufferId) return;
@@ -312,27 +334,14 @@ const TabBar = ({
     }
   }, [buffers, maxOpenTabs, activeBufferId, handleTabClose]);
 
-  // Auto-scroll active tab into view
-  useEffect(() => {
+  // Bring the active tab into view whenever it changes or a tab opens, measured against the
+  // scrolling strip rather than the whole bar, whose trailing actions can cover a tab.
+  useLayoutEffect(() => {
     const activeIndex = activeBufferId ? (sortedBufferIndexById.get(activeBufferId) ?? -1) : -1;
-    if (activeIndex !== -1 && tabRefs.current[activeIndex] && tabBarRef.current) {
-      const activeTab = tabRefs.current[activeIndex];
-      const container = tabBarRef.current;
-
-      if (activeTab) {
-        const tabRect = activeTab.getBoundingClientRect();
-        const containerRect = container.getBoundingClientRect();
-
-        // Check if tab is out of view
-        if (tabRect.left < containerRect.left || tabRect.right > containerRect.right) {
-          activeTab.scrollIntoView({
-            behavior: "smooth",
-            block: "nearest",
-            inline: "center",
-          });
-        }
-      }
-    }
+    if (activeIndex === -1) return;
+    const activeTab = tabRefs.current[activeIndex];
+    const strip = tabStripRef.current;
+    if (activeTab && strip) scrollTabIntoStrip(strip, activeTab);
   }, [activeBufferId, sortedBufferIndexById]);
 
   const handleDoubleClick = useCallback(
@@ -471,7 +480,7 @@ const TabBar = ({
     if (!rect) return false;
 
     const horizontalSlop = 24;
-    const verticalSlop = 64;
+    const verticalSlop = 12;
     return (
       point.x < rect.left - horizontalSlop ||
       point.x > rect.right + horizontalSlop ||
@@ -504,6 +513,9 @@ const TabBar = ({
     dragPointRef.current = point;
     if (isPointOutsideTabBar(point)) {
       setInternalTabDragHover(point);
+    } else {
+      // Back over its own tab row: reordering, so no pane should show a drop preview.
+      setInternalTabDragHoverTarget({ paneId: null, zone: null });
     }
   }, []);
 
@@ -552,22 +564,49 @@ const TabBar = ({
           resetDrag();
           return;
         }
+        // Dropped on another pane's tab row: land between the tabs under the pointer.
+        if (point && target.zone === "center" && destinationPaneId === target.paneId) {
+          const beforeId = resolveTabInsertBefore(point, dragged.id);
+          const destinationPane =
+            destinationPaneId === BOTTOM_PANE_ID
+              ? findPaneGroup(usePaneStore.getState().bottomRoot, BOTTOM_PANE_ID)
+              : findPaneGroup(usePaneStore.getState().root, destinationPaneId);
+          if (beforeId !== undefined && destinationPane) {
+            const move = getGlobalTabMove(
+              useBufferStore.getState().buffers.map((buffer) => buffer.id),
+              dragged.id,
+              beforeId,
+              destinationPane.bufferIds,
+            );
+            if (move) reorderBuffers(...move);
+          }
+        }
         activateBufferInPaneAndSync(destinationPaneId, dragged.id);
         if (destinationPaneId === BOTTOM_PANE_ID) {
           useUIState.getState().setBottomPaneActiveTab("buffers");
           useUIState.getState().setIsBottomPaneVisible(true);
         }
       } else if (event.over && reorderBuffers) {
+        // Indices here are pane-local, but reorderBuffers works on the global buffer list, so
+        // translate the drop into "before the tab that now sits at the new index".
         const oldIndex = sortedBufferIndexById.get(activeId) ?? -1;
         const newIndex = sortedBufferIndexById.get(String(event.over.id)) ?? -1;
         if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
-          reorderBuffers(oldIndex, newIndex);
+          const reordered = sortedBufferIds.filter((id) => id !== activeId);
+          const beforeId = reordered[newIndex] ?? null;
+          const move = getGlobalTabMove(
+            useBufferStore.getState().buffers.map((buffer) => buffer.id),
+            activeId,
+            beforeId,
+            sortedBufferIds,
+          );
+          if (move) reorderBuffers(...move);
         }
       }
 
       resetDrag();
     },
-    [bufferById, paneId, reorderBuffers, resetDrag, sortedBufferIndexById],
+    [bufferById, paneId, reorderBuffers, resetDrag, sortedBufferIds, sortedBufferIndexById],
   );
 
   useEffect(() => {
@@ -619,10 +658,11 @@ const TabBar = ({
     [sortedBuffers, handleTabClick, updateActivePath, closeTab],
   );
 
+  const draggedBuffer = draggedBufferId ? bufferById.get(draggedBufferId) : undefined;
+
   return (
     <>
       <TabDndContext
-        modifiers={[restrictToHorizontalAxis]}
         onDragStart={handleDragStart}
         onDragMove={handleDragMove}
         onDragEnd={handleDragEnd}
@@ -636,35 +676,9 @@ const TabBar = ({
           aria-label="Open files"
           onWheel={handleWheel}
         >
-          <div className="flex h-8 shrink-0 items-center gap-0.5">
-            <Button
-              type="button"
-              onClick={handleJumpBack}
-              disabled={!canGoBack}
-              variant="ghost"
-              tooltip="Go Back"
-              commandId="navigation.goBack"
-              aria-label="Go back to previous location"
-              iconOnly
-            >
-              <ArrowLeftIcon />
-            </Button>
-            <Button
-              type="button"
-              onClick={handleJumpForward}
-              disabled={!canGoForward}
-              variant="ghost"
-              tooltip="Go Forward"
-              commandId="navigation.goForward"
-              aria-label="Go forward to next location"
-              iconOnly
-            >
-              <ArrowRightIcon />
-            </Button>
-          </div>
-
+          {!isBottomPane && <TabHistoryNavigation />}
           <SortableContext items={sortedBufferIds} strategy={horizontalListSortingStrategy}>
-            <div className="scrollbar-none flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto overflow-y-hidden overscroll-x-none">
+            <TabStrip ref={tabStripRef}>
               {sortedBuffers.map((buffer, index) => (
                 <SortableTab
                   key={buffer.id}
@@ -674,6 +688,7 @@ const TabBar = ({
                   }}
                   disabled={editingBufferId === buffer.id}
                   motionDrag
+                  placeholderWhileDragging
                   onClickCapture={getClickCapture(buffer.id)}
                 >
                   {({ isDragging }) => (
@@ -703,7 +718,11 @@ const TabBar = ({
                         onPin={handleTabPin}
                         onRename={startRename}
                         onCloseTab={(bufferId) => {
-                          const targetBuffer = bufferById.get(bufferId);
+                          // Tabs hold shells without content; reload from the live buffer.
+                          const targetBuffer = getBufferById(
+                            useBufferStore.getState().buffers,
+                            bufferId,
+                          );
                           if (targetBuffer) closeTab(bufferId);
                         }}
                         onCloseOthers={handleCloseOtherTabs}
@@ -762,40 +781,69 @@ const TabBar = ({
                   )}
                 </SortableTab>
               ))}
-            </div>
+            </TabStrip>
           </SortableContext>
 
-          <div className="pointer-events-none flex h-8 shrink-0 items-center gap-1 pl-0.5 opacity-0 group-hover/tab-bar:pointer-events-auto group-hover/tab-bar:opacity-100 group-focus-within/tab-bar:pointer-events-auto group-focus-within/tab-bar:opacity-100 has-data-[popup-open]:pointer-events-auto has-data-[popup-open]:opacity-100">
+          {/* Close split shows on hover; new tab and full screen stay visible at the end of the row
+              so they are always reachable. */}
+          <div className="ml-auto flex h-full shrink-0 items-center gap-1 pl-0.5">
+            <div className="pointer-events-none flex items-center gap-1 opacity-0 group-hover/tab-bar:pointer-events-auto group-hover/tab-bar:opacity-100 group-focus-within/tab-bar:pointer-events-auto group-focus-within/tab-bar:opacity-100 has-data-popup-open:pointer-events-auto has-data-popup-open:opacity-100">
+              {paneId && !disablePaneActions && !isBottomPane && (
+                <>
+                  {isInSplit && (
+                    <Button
+                      type="button"
+                      onClick={() => closePane(paneId)}
+                      variant="ghost"
+                      iconOnly
+                      size="sm"
+                      tooltip="Close split"
+                      aria-label="Close split"
+                    >
+                      <SidebarIcon />
+                    </Button>
+                  )}
+                </>
+              )}
+            </div>
             {paneId && !isBottomPane && <NewTabMenu paneId={paneId} />}
-            {paneId && !disablePaneActions && !isBottomPane && (
-              <>
-                <Button
-                  type="button"
-                  onClick={handleTogglePaneFullscreen}
-                  variant="ghost"
-                  iconOnly
-                  tooltip={isPaneFullscreen ? "Exit full screen" : "Full screen editor"}
-                  aria-label={isPaneFullscreen ? "Exit full screen" : "Full screen editor"}
-                  aria-pressed={isPaneFullscreen}
-                >
-                  {isPaneFullscreen ? <ArrowsInIcon /> : <ArrowsOutIcon />}
-                </Button>
-                {isInSplit && (
-                  <Button
-                    type="button"
-                    onClick={() => closePane(paneId)}
-                    variant="ghost"
-                    iconOnly
-                    tooltip="Close split"
-                    aria-label="Close split"
-                  >
-                    <SidebarIcon />
-                  </Button>
-                )}
-              </>
-            )}
+            {paneId && !disablePaneActions && !isBottomPane ? (
+              <Button
+                type="button"
+                onClick={handleTogglePaneFullscreen}
+                variant="ghost"
+                iconOnly
+                size="sm"
+                tooltip={isPaneFullscreen ? "Exit full screen" : "Full screen editor"}
+                aria-label={isPaneFullscreen ? "Exit full screen" : "Full screen editor"}
+                aria-pressed={isPaneFullscreen}
+              >
+                {isPaneFullscreen ? <ArrowsInIcon /> : <ArrowsOutIcon />}
+              </Button>
+            ) : null}
           </div>
         </TabBarSurface>
+        {draggedBuffer ? (
+          <TabDragOverlay>
+            <TabBarItem
+              buffer={draggedBuffer}
+              displayName={getBufferDisplayName(draggedBuffer)}
+              index={0}
+              isActive
+              isDraggedTab
+              onClick={() => {}}
+              onDoubleClick={() => {}}
+              onKeyDown={() => {}}
+              handleTabClose={() => {}}
+              handleTabPin={() => {}}
+              isEditing={false}
+              editingName=""
+              onEditingNameChange={() => {}}
+              onRenameSubmit={() => {}}
+              onRenameCancel={() => {}}
+            />
+          </TabDragOverlay>
+        ) : null}
       </TabDndContext>
 
       {pendingClose && (

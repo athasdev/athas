@@ -1,4 +1,4 @@
-export const SETTINGS_SCHEMA_VERSION = 4;
+export const SETTINGS_SCHEMA_VERSION = 5;
 export const SETTINGS_SCHEMA_VERSION_KEY = "settingsSchemaVersion";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -35,6 +35,20 @@ export function migrateSettingsRecord(
 
   if (schemaVersion < 4) {
     migratedSettings.compactFoldersInFileTree = false;
+  }
+
+  if (schemaVersion < 5) {
+    // The activity rail is always collapsed now; drop the settings that only shaped the expanded rail.
+    for (const key of [
+      "activityRailExpanded",
+      "activityRailWidth",
+      "showActivityRailAgentHistory",
+      "showActivityRailTerminals",
+      "showActivityRailProjectIcons",
+      "collapsedActivityRailSections",
+    ]) {
+      delete migratedSettings[key];
+    }
   }
 
   return migratedSettings;

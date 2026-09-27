@@ -75,7 +75,6 @@ const VSCODE_COMMANDS: Record<string, string> = {
   "editor.action.showHover": "editor.showHover",
   "editor.action.quickFix": "editor.quickFix",
   "editor.action.inlineEdit.trigger": "editor.inlineEdit",
-  "workbench.action.toggleActivityBarVisibility": "workbench.toggleActivitySidebar",
   "workbench.action.toggleSidebarVisibility": "workbench.toggleSidebar",
   "workbench.action.terminal.toggleTerminal": "workbench.toggleTerminal",
   "workbench.actions.view.problems": "workbench.toggleDiagnostics",

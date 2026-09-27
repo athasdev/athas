@@ -92,8 +92,17 @@ function isLikelyImplicitCodeLine(line: string): boolean {
 export function normalizeImplicitCodeFences(text: string): string {
   const lines = text.split("\n");
   const output: string[] = [];
+  let inExplicitFence = false;
 
   for (let index = 0; index < lines.length; index++) {
+    // A fence the reply already wrote is left alone; its "```ts" line is not a language label.
+    const isFenceLine = lines[index].trimStart().startsWith("```");
+    if (isFenceLine) inExplicitFence = !inExplicitFence;
+    if (isFenceLine || inExplicitFence) {
+      output.push(lines[index]);
+      continue;
+    }
+
     const languageHint = getLanguageHint(lines[index]);
     const nextLine = lines[index + 1];
 

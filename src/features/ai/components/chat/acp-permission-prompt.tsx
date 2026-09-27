@@ -1,26 +1,31 @@
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { KeyIcon } from "@/ui/icons";
-import type {
-  AcpEvent,
-  AcpPermissionOption,
-  AcpPermissionPreview,
-} from "@/features/ai/types/acp.types";
+import Keybinding from "@/features/keymaps/components/keybinding";
+import {
+  findPermissionOptionForShortcut,
+  getPermissionOptionShortcut,
+  getPermissionShortcut,
+} from "@/features/ai/lib/permission-shortcuts";
+import type { AcpPermissionOption, AcpPermissionPreview } from "@/features/ai/types/acp.types";
+import type { AgentPermissionRequest } from "@/features/ai/types/agent-permission.types";
 import { createAcpDiffViewNode, toRelativeDisplayPath } from "@/features/ai/lib/acp-diff-output";
+import { ToolLocations } from "@/features/ai/components/messages/tool-locations";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { ExtensionViewRenderer } from "@/extensions/ui/components/extension-view-renderer";
 import Badge from "@/ui/badge";
+import { CodeOutput } from "@/ui/code-output";
 import Textarea from "@/ui/textarea";
 import { Button, type ButtonProps } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import { chatContentWidth } from "./chat-content-width";
 
-export type AcpPermissionRequest = {
-  requestId: string;
-  description: string;
-  permissionType: string;
-  resource: string;
-  options: Extract<AcpEvent, { type: "permission_request" }>["options"];
-  preview?: AcpPermissionPreview;
-};
+function PreviewText({ label, text, mono }: { label: string; text: string; mono?: boolean }) {
+  return (
+    <CodeOutput aria-label={label} height="auto" font={mono ? "mono" : "sans"}>
+      {text}
+    </CodeOutput>
+  );
+}
 
 function PermissionPreview({ preview }: { preview: AcpPermissionPreview }) {
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
@@ -33,17 +38,44 @@ function PermissionPreview({ preview }: { preview: AcpPermissionPreview }) {
       />
     );
   }
+  if (preview.type === "tool_call") {
+    return (
+      <div className="flex max-h-72 min-w-0 flex-col gap-1.5 overflow-y-auto">
+        {preview.diffs.map((diff, index) => (
+          <ExtensionViewRenderer
+            key={`${diff.path}-${index}`}
+            node={createAcpDiffViewNode(diff, rootFolderPath)}
+            execute={() => undefined}
+            surface="embedded"
+          />
+        ))}
+        {preview.command ? (
+          <PreviewText label="Proposed shell command" text={preview.command} mono />
+        ) : null}
+        {preview.text ? <PreviewText label="Tool call details" text={preview.text} /> : null}
+        {preview.inputSummary ? (
+          <PreviewText label="Tool call input" text={preview.inputSummary} mono />
+        ) : null}
+        {preview.locations.length > 0 ? (
+          <ToolLocations locations={preview.locations} rootFolderPath={rootFolderPath} />
+        ) : null}
+      </div>
+    );
+  }
   return (
-    <pre
-      aria-label="Proposed shell command"
-      className="max-h-48 overflow-auto rounded-lg border border-border bg-surface px-2.5 py-2 font-mono whitespace-pre-wrap wrap-anywhere select-text text-foreground ui-text-sm"
-    >
+    <CodeOutput aria-label="Proposed shell command" height="compact">
       {preview.command}
-    </pre>
+    </CodeOutput>
   );
 }
 
-function getPreviewSummary(preview: AcpPermissionPreview, rootFolderPath?: string | null) {
+function getPreviewSummary(
+  preview: AcpPermissionPreview,
+  rootFolderPath?: string | null,
+): string | undefined {
+  if (preview.type === "tool_call") {
+    return preview.title ?? undefined;
+  }
   if (preview.type === "diff") {
     const isNew = preview.oldText.length === 0;
     return `${isNew ? "Create" : "Edit"} ${toRelativeDisplayPath(preview.path, rootFolderPath)}`;
@@ -106,23 +138,65 @@ function isApproval(option: AcpPermissionOption) {
   return option.kind === "allow_once" || option.kind === "allow_always";
 }
 
+/** Someone typing a message keeps their focus; otherwise the prompt takes it. */
+function isTypingElsewhere(element: Element | null) {
+  if (!(element instanceof HTMLElement)) return false;
+  if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+    return element.value.trim().length > 0;
+  }
+  return element.isContentEditable && (element.textContent ?? "").trim().length > 0;
+}
+
 export function AcpPermissionPrompt({
   permission,
   queuedCount,
   onRespond,
 }: {
-  permission: AcpPermissionRequest;
+  permission: AgentPermissionRequest;
   queuedCount: number;
   onRespond: (approved: boolean, optionId?: string) => void;
 }) {
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const summary = (
-    permission.preview
-      ? getPreviewSummary(permission.preview, rootFolderPath)
-      : permission.description ||
-        [permission.permissionType, permission.resource].filter(Boolean).join(" ")
+    (permission.preview && getPreviewSummary(permission.preview, rootFolderPath)) ||
+    permission.description ||
+    [permission.permissionType, permission.resource].filter(Boolean).join(" ")
   ).trim();
   const options = permission.options.length > 0 ? permission.options : fallbackOptions;
+  const promptRef = useRef<HTMLDivElement>(null);
+  const [hasFocus, setHasFocus] = useState(false);
+  const respond = (option: AcpPermissionOption) =>
+    onRespond(isApproval(option), permission.options.length > 0 ? option.id : undefined);
+  const shortcutOwners = new Set(
+    (["enter", "mod+enter", "escape"] as const).flatMap((shortcut) => {
+      const option = findPermissionOptionForShortcut(options, shortcut);
+      return option ? [option.id] : [];
+    }),
+  );
+
+  useEffect(() => {
+    const previous = document.activeElement;
+    if (isTypingElsewhere(previous)) return;
+    const prompt = promptRef.current;
+    prompt?.focus();
+    return () => {
+      const active = document.activeElement;
+      const lostFocus = !active || active === document.body || prompt?.contains(active);
+      if (lostFocus && previous instanceof HTMLElement && previous.isConnected) previous.focus();
+    };
+  }, [permission.requestId]);
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const shortcut = getPermissionShortcut(event);
+    if (!shortcut || event.nativeEvent.isComposing) return;
+    // A focused button answers Enter itself.
+    if (shortcut === "enter" && event.target !== event.currentTarget) return;
+    const option = findPermissionOptionForShortcut(options, shortcut);
+    if (!option) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (!event.repeat) respond(option);
+  };
 
   return (
     <div className={cn(chatContentWidth(), "mb-1 flex flex-col gap-1.5 ui-text-sm")}>
@@ -142,7 +216,19 @@ export function AcpPermissionPrompt({
           value={permission.description}
         />
       ) : null}
-      <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5 rounded-xl border border-border bg-background px-2 py-1.5 shadow-(--shadow-card)">
+      <div
+        ref={promptRef}
+        role="group"
+        aria-label="Permission request"
+        aria-keyshortcuts="Enter Meta+Enter Control+Enter Escape"
+        tabIndex={-1}
+        onKeyDown={handleKeyDown}
+        onFocus={() => setHasFocus(true)}
+        onBlur={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget)) setHasFocus(false);
+        }}
+        className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5 rounded-xl border border-border bg-background px-2 py-1.5 shadow-(--shadow-card) outline-none focus-visible:border-primary"
+      >
         <KeyIcon className="size-3.5 shrink-0 text-subtle-foreground" />
         <div
           className="flex min-w-0 flex-1 basis-40 items-center text-foreground"
@@ -155,18 +241,17 @@ export function AcpPermissionPrompt({
         {queuedCount > 0 ? <Badge>+{queuedCount}</Badge> : null}
         <div className="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-1">
           {options.map((option) => {
+            const shortcut = shortcutOwners.has(option.id)
+              ? getPermissionOptionShortcut(option)
+              : undefined;
             return (
               <Button
                 key={option.id}
                 type="button"
                 {...getOptionStyle(option)}
-                onClick={() =>
-                  onRespond(
-                    isApproval(option),
-                    permission.options.length > 0 ? option.id : undefined,
-                  )
-                }
+                onClick={() => respond(option)}
                 tooltip={getOptionTooltip(option)}
+                shortcut={shortcut}
               >
                 {getOptionLabel(option)}
               </Button>
@@ -174,6 +259,19 @@ export function AcpPermissionPrompt({
           })}
         </div>
       </div>
+      {hasFocus ? (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-2 text-subtle-foreground">
+          {(["enter", "mod+enter", "escape"] as const).map((shortcut) => {
+            const option = findPermissionOptionForShortcut(options, shortcut);
+            return option ? (
+              <span key={shortcut} className="flex items-center gap-1">
+                <Keybinding binding={shortcut} />
+                {getOptionTooltip(option)}
+              </span>
+            ) : null;
+          })}
+        </div>
+      ) : null}
     </div>
   );
 }

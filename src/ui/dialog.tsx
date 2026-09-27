@@ -20,6 +20,7 @@ import { ScrollArea } from "@/ui/scroll-area";
 import { instantTransition, overlayEntrance, quickTransition } from "@/utils/motion";
 import { resolveEscapeGuard } from "@/utils/keyboard/escape-guard";
 import { cn } from "@/utils/cn";
+import { OverlayRoot } from "@/ui/overlay-root";
 
 interface DialogProps {
   children: ReactNode;
@@ -65,8 +66,12 @@ function DialogTrigger(props: DialogPrimitive.Trigger.Props) {
   return <DialogPrimitive.Trigger data-slot="dialog-trigger" {...props} />;
 }
 
-function DialogPortal(props: DialogPrimitive.Portal.Props) {
-  return <DialogPrimitive.Portal data-slot="dialog-portal" {...props} />;
+function DialogPortal({ children, ...props }: DialogPrimitive.Portal.Props) {
+  return (
+    <DialogPrimitive.Portal data-slot="dialog-portal" {...props}>
+      <OverlayRoot>{children}</OverlayRoot>
+    </DialogPrimitive.Portal>
+  );
 }
 
 function DialogClose(props: DialogPrimitive.Close.Props) {
@@ -216,78 +221,80 @@ const AppDialog = ({
       }}
     >
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Backdrop
-          render={
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={prefersReducedMotion ? instantTransition : quickTransition}
-            />
-          }
-          className="fixed inset-0 z-9998 bg-scrim transition-opacity duration-75 data-ending-style:opacity-0 data-starting-style:opacity-0"
-        />
+        <OverlayRoot>
+          <DialogPrimitive.Backdrop
+            render={
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={prefersReducedMotion ? instantTransition : quickTransition}
+              />
+            }
+            className="fixed inset-0 z-9998 bg-scrim transition-opacity duration-75 data-ending-style:opacity-0 data-starting-style:opacity-0"
+          />
 
-        <DialogPrimitive.Popup
-          aria-describedby={undefined}
-          render={
-            <motion.div
-              initial={popupMotion.initial}
-              animate={popupMotion.animate}
-              exit={popupMotion.exit}
-              transition={popupMotion.transition}
-            />
-          }
-          data-dialog-content=""
-          className={dialogContentVariants({ size })}
-        >
-          {hideHeader ? (
-            <DialogPrimitive.Title className="sr-only">{title}</DialogPrimitive.Title>
-          ) : (
-            <div className="flex shrink-0 items-center justify-between px-4 py-3">
-              <div className="flex min-w-0 items-center gap-2">
-                {Icon && <Icon className="text-muted-foreground" />}
-                <DialogPrimitive.Title className="min-w-0 font-sans ui-text-base font-medium text-foreground">
-                  {title}
-                </DialogPrimitive.Title>
+          <DialogPrimitive.Popup
+            aria-describedby={undefined}
+            render={
+              <motion.div
+                initial={popupMotion.initial}
+                animate={popupMotion.animate}
+                exit={popupMotion.exit}
+                transition={popupMotion.transition}
+              />
+            }
+            data-dialog-content=""
+            className={dialogContentVariants({ size })}
+          >
+            {hideHeader ? (
+              <DialogPrimitive.Title className="sr-only">{title}</DialogPrimitive.Title>
+            ) : (
+              <div className="flex shrink-0 items-center justify-between px-4 py-3">
+                <div className="flex min-w-0 items-center gap-2">
+                  {Icon && <Icon className="text-muted-foreground" />}
+                  <DialogPrimitive.Title className="min-w-0 font-sans ui-text-base font-medium text-foreground">
+                    {title}
+                  </DialogPrimitive.Title>
+                </div>
+
+                <div className="flex items-center gap-1">
+                  {headerActions}
+                  <DialogPrimitive.Close
+                    render={<Button variant="ghost" iconOnly />}
+                    aria-label="Close dialog"
+                  >
+                    <XIcon />
+                  </DialogPrimitive.Close>
+                </div>
               </div>
+            )}
 
-              <div className="flex items-center gap-1">
-                {headerActions}
-                <DialogPrimitive.Close
-                  render={<Button variant="ghost" iconOnly />}
-                  aria-label="Close dialog"
-                >
-                  <XIcon />
-                </DialogPrimitive.Close>
+            {scrollable ? (
+              <ScrollArea
+                className="flex-1"
+                contentClassName={dialogBodyVariants({ layout: contentLayout ?? "default" })}
+              >
+                {children}
+              </ScrollArea>
+            ) : (
+              <div
+                className={cn(
+                  "min-h-0 flex-1",
+                  dialogBodyVariants({
+                    layout: contentLayout ?? (size === "settings" ? "flush" : "default"),
+                  }),
+                )}
+              >
+                {children}
               </div>
-            </div>
-          )}
+            )}
 
-          {scrollable ? (
-            <ScrollArea
-              className="flex-1"
-              contentClassName={dialogBodyVariants({ layout: contentLayout ?? "default" })}
-            >
-              {children}
-            </ScrollArea>
-          ) : (
-            <div
-              className={cn(
-                "min-h-0 flex-1",
-                dialogBodyVariants({
-                  layout: contentLayout ?? (size === "settings" ? "flush" : "default"),
-                }),
-              )}
-            >
-              {children}
-            </div>
-          )}
-
-          {footer && (
-            <div className="flex shrink-0 items-center justify-end gap-2 px-4 py-3">{footer}</div>
-          )}
-        </DialogPrimitive.Popup>
+            {footer && (
+              <div className="flex shrink-0 items-center justify-end gap-2 px-4 py-3">{footer}</div>
+            )}
+          </DialogPrimitive.Popup>
+        </OverlayRoot>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
   );

@@ -12,10 +12,13 @@ import { LspClient } from "@/features/editor/lsp/lsp-client";
 import { formatHoverContents } from "@/features/editor/lsp/hover-content";
 import { useLspStore } from "@/features/editor/lsp/stores/lsp.store";
 import {
+  applyWorkspaceEdit,
   collectWorkspaceTextEdits,
+  fileUriFromPath,
   filePathFromUri,
   isWorkspaceEdit,
   type LspTextEdit,
+  type WorkspaceEdit,
 } from "@/features/editor/lsp/workspace-edit";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { MONACO_HIGHLIGHT_LANGUAGE_IDS } from "./language";
@@ -239,12 +242,42 @@ function withoutPayloadEdit(payload: unknown): unknown {
   return copy;
 }
 
-function toWorkspaceEdit(edit: unknown): Monaco.languages.WorkspaceEdit | undefined {
-  if (!isWorkspaceEdit(edit)) return undefined;
+/**
+ * The open buffer's model for `filePath`. Models under `file://` are only loaded for peeks and
+ * hovers and go away with them, so an edit made there would never reach the file.
+ */
+function openModelUriForFile(filePath: string): Monaco.Uri | null {
+  const model = monacoEditor
+    .getModels()
+    .find(
+      (candidate) =>
+        !candidate.isDisposed() &&
+        candidate.uri.scheme === "athas" &&
+        filePathFromModel(candidate) === filePath,
+    );
+  return model?.uri ?? null;
+}
+
+/**
+ * Split an LSP workspace edit into edits Monaco can apply to open buffer models and
+ * the files that have no model. Monaco's standalone bulk edit service only edits
+ * existing models, and buffers live under `athas://` URIs, so `file://` resources
+ * failed with "bad edit - model not found".
+ */
+export function toWorkspaceEdit(edit: unknown): {
+  edit: Monaco.languages.WorkspaceEdit | undefined;
+  unopened: WorkspaceEdit | undefined;
+} {
+  if (!isWorkspaceEdit(edit)) return { edit: undefined, unopened: undefined };
 
   const edits: Monaco.languages.IWorkspaceTextEdit[] = [];
+  const unopened: NonNullable<WorkspaceEdit["changes"]> = {};
   for (const [filePath, textEdits] of collectWorkspaceTextEdits(edit)) {
-    const resource = Uri.file(filePath);
+    const resource = openModelUriForFile(filePath);
+    if (!resource) {
+      unopened[fileUriFromPath(filePath)] = textEdits;
+      continue;
+    }
     for (const textEdit of textEdits) {
       edits.push({
         resource,
@@ -254,7 +287,10 @@ function toWorkspaceEdit(edit: unknown): Monaco.languages.WorkspaceEdit | undefi
     }
   }
 
-  return edits.length > 0 ? { edits } : undefined;
+  return {
+    edit: edits.length > 0 ? { edits } : undefined,
+    unopened: Object.keys(unopened).length > 0 ? { changes: unopened } : undefined,
+  };
 }
 
 function isLspModel(model: Monaco.editor.ITextModel): boolean {
@@ -535,7 +571,7 @@ export function registerMonacoLspProviders() {
         text: prepared?.placeholder || model.getValueInRange(monacoRange),
       };
     },
-    async provideRenameEdits(model, position, newName) {
+    async provideRenameEdits(model, position, newName, token) {
       if (!isLspModel(model)) return undefined;
 
       const edit = await lspClient.rename(
@@ -544,7 +580,11 @@ export function registerMonacoLspProviders() {
         position.column - 1,
         newName,
       );
-      return toWorkspaceEdit(edit);
+      // Monaco drops a cancelled rename's edits; the files on disk must not change either.
+      if (token.isCancellationRequested) return undefined;
+      const { edit: openEdit, unopened } = toWorkspaceEdit(edit);
+      if (unopened) await applyWorkspaceEdit(unopened);
+      return openEdit ?? { edits: [] };
     },
   });
 
@@ -580,20 +620,22 @@ export function registerMonacoLspProviders() {
       const actions = lspActions
         .filter((action) => !action.disabledReason)
         .map((action): Monaco.languages.CodeAction => {
-          const edit = toWorkspaceEdit(getPayloadEdit(action.payload));
-          const command = action.hasCommand
-            ? {
-                id: EXECUTE_LSP_CODE_ACTION_COMMAND,
-                title: action.title,
-                arguments: [
-                  {
-                    filePath,
-                    actionPayload: edit ? withoutPayloadEdit(action.payload) : action.payload,
-                    title: action.title,
-                  } satisfies ExecuteLspCodeActionPayload,
-                ],
-              }
-            : undefined;
+          const converted = toWorkspaceEdit(getPayloadEdit(action.payload));
+          const edit = converted.unopened ? undefined : converted.edit;
+          const command =
+            action.hasCommand || converted.unopened
+              ? {
+                  id: EXECUTE_LSP_CODE_ACTION_COMMAND,
+                  title: action.title,
+                  arguments: [
+                    {
+                      filePath,
+                      actionPayload: edit ? withoutPayloadEdit(action.payload) : action.payload,
+                      title: action.title,
+                    } satisfies ExecuteLspCodeActionPayload,
+                  ],
+                }
+              : undefined;
 
           return {
             title: action.title,

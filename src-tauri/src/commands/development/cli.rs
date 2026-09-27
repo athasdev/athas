@@ -151,15 +151,68 @@ $start.Arguments = $encodedArgs
    ))
 }
 
+#[cfg(any(target_os = "macos", test))]
+const UNIX_CLI_SCRIPT_HEADER: &str = "#!/bin/bash\n# Athas CLI launcher\n";
+
 #[cfg(unix)]
 fn current_cli_script() -> Result<String, String> {
    let binary = std::env::current_exe().map_err(|error| error.to_string())?;
    Ok(unix_cli_script(&binary))
 }
 
+/// macOS mounts apps opened straight from Downloads or a disk image at a random
+/// read-only App Translocation path that disappears after the app quits, so a
+/// launcher pointing there stops working.
+#[cfg(target_os = "macos")]
+fn is_translocated(binary: &std::path::Path) -> bool {
+   binary
+      .components()
+      .any(|component| component.as_os_str() == "AppTranslocation")
+}
+
+#[cfg(target_os = "macos")]
+fn ensure_installable_location() -> Result<(), String> {
+   let binary = std::env::current_exe().map_err(|error| error.to_string())?;
+   if is_translocated(&binary) {
+      return Err(
+         "Athas is running from a temporary location. Move Athas to your Applications folder, \
+          reopen it, and install the CLI command again."
+            .to_string(),
+      );
+   }
+   Ok(())
+}
+
+/// Returns the binary an Athas launcher script execs, or `None` for launchers
+/// written by older versions that went through `open` and URL schemes instead.
+#[cfg(any(target_os = "macos", test))]
+fn launcher_binary(script: &str) -> Option<std::path::PathBuf> {
+   let quoted = script
+      .lines()
+      .find_map(|line| line.strip_prefix("athas_binary="))?;
+   let inner = quoted.strip_prefix('\'')?.strip_suffix('\'')?;
+   Some(std::path::PathBuf::from(inner.replace("'\\''", "'")))
+}
+
+/// Decides whether a launcher found on disk should be replaced by `current`.
+/// Scripts Athas did not write are left alone, and a working launcher that
+/// points at another existing Athas build (for example a preview channel) is
+/// kept so channels do not keep overwriting each other.
+#[cfg(any(target_os = "macos", test))]
+fn launcher_needs_rewrite(existing: &str, current: &str) -> bool {
+   if !existing.starts_with(UNIX_CLI_SCRIPT_HEADER) || existing == current {
+      return false;
+   }
+   match launcher_binary(existing) {
+      Some(binary) => !binary.exists(),
+      None => true,
+   }
+}
+
 #[cfg(target_os = "macos")]
 #[command]
 pub fn install_cli_command() -> Result<String, String> {
+   ensure_installable_location()?;
    let cli_path = get_cli_script_path()?;
    let bin_dir = cli_path
       .parent()
@@ -252,6 +305,7 @@ pub fn install_cli_command() -> Result<String, String> {
 #[cfg(target_os = "macos")]
 #[command]
 pub fn get_cli_install_command() -> Result<String, String> {
+   ensure_installable_location()?;
    let script = current_cli_script()?;
 
    Ok(format!(
@@ -347,6 +401,34 @@ pub fn auto_fix_cli_on_startup() {
    }
 }
 
+/// On macOS, replace launchers written by older Athas versions. Those ran
+/// `open "athas://open?..."`, which could leave a blank window instead of
+/// opening the requested path.
+#[cfg(target_os = "macos")]
+pub fn auto_fix_cli_on_startup() {
+   if cfg!(debug_assertions) {
+      return;
+   }
+   let Ok(cli_path) = get_cli_script_path() else {
+      return;
+   };
+   let Ok(existing) = fs::read_to_string(&cli_path) else {
+      return;
+   };
+   let Ok(binary) = std::env::current_exe() else {
+      return;
+   };
+   if is_translocated(&binary) || !launcher_needs_rewrite(&existing, &unix_cli_script(&binary)) {
+      return;
+   }
+
+   log::info!("Updating outdated CLI launcher at {}", cli_path.display());
+   match install_cli_command() {
+      Ok(_) => log::info!("CLI launcher updated"),
+      Err(error) => log::warn!("Failed to update CLI launcher: {error}"),
+   }
+}
+
 #[cfg(all(test, unix))]
 mod tests {
    use super::*;
@@ -354,6 +436,38 @@ mod tests {
       process::Command,
       time::{SystemTime, UNIX_EPOCH},
    };
+
+   #[test]
+   fn reads_the_binary_back_from_a_launcher() {
+      let binary = std::path::Path::new("/Applications/Athas's App.app/Contents/MacOS/athas");
+      assert_eq!(
+         launcher_binary(&unix_cli_script(binary)).as_deref(),
+         Some(binary)
+      );
+   }
+
+   #[test]
+   fn rewrites_legacy_launchers_and_ones_pointing_at_missing_binaries() {
+      let current = unix_cli_script(std::path::Path::new("/bin/sh"));
+      let legacy = "#!/bin/bash\n# Athas CLI launcher\n\nopen \"athas://open?path=$1\"\n";
+      assert!(launcher_needs_rewrite(legacy, &current));
+
+      let missing = unix_cli_script(std::path::Path::new("/nonexistent/Athas.app/athas"));
+      assert!(launcher_needs_rewrite(&missing, &current));
+   }
+
+   #[test]
+   fn keeps_current_foreign_and_other_channel_launchers() {
+      let current = unix_cli_script(std::path::Path::new("/bin/sh"));
+      assert!(!launcher_needs_rewrite(&current, &current));
+      assert!(!launcher_needs_rewrite(
+         "#!/bin/bash\nexec my-editor \"$@\"\n",
+         &current
+      ));
+
+      let other_channel = unix_cli_script(std::path::Path::new("/bin/bash"));
+      assert!(!launcher_needs_rewrite(&other_channel, &current));
+   }
 
    #[test]
    fn launcher_preserves_arguments_and_the_callers_directory() {

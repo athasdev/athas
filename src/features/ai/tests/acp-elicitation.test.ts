@@ -1,0 +1,254 @@
+import { describe, expect, it } from "vite-plus/test";
+import {
+  type AcpFormElicitationRequest,
+  findElicitationError,
+  hasUnanswerableFields,
+  inspectElicitationUrl,
+  toElicitationContent,
+  toElicitationQuestions,
+} from "../lib/acp-elicitation";
+
+function form(entries: Array<[string, string]>) {
+  const data = new FormData();
+  for (const [name, value] of entries) data.append(name, value);
+  return data;
+}
+
+// Shaped like claude-agent-acp's AskUserQuestion elicitation.
+const claudeRequest: AcpFormElicitationRequest = {
+  mode: "form",
+  message: "Claude has questions",
+  sessionId: "sess_1",
+  toolCallId: "call_1",
+  requestedSchema: {
+    type: "object",
+    properties: {
+      question_0: {
+        type: "string",
+        title: "Which scope should the refactor cover?",
+        oneOf: [
+          { const: "Package", title: "Package", description: "Only this package" },
+          { const: "Workspace", title: "Workspace" },
+        ],
+      },
+      question_0_custom: {
+        type: "string",
+        title: "Other",
+        _meta: { _askUserQuestionCustomAnswer: { questionId: "question_0", isCustomAnswer: true } },
+      },
+      question_1: {
+        type: "array",
+        title: "Which checks should run?",
+        items: {
+          anyOf: [
+            { const: "tests", title: "Tests" },
+            { const: "types", title: "Types" },
+          ],
+        },
+      },
+    },
+    required: ["question_0"],
+  },
+};
+
+describe("ACP elicitation forms", () => {
+  it("turns each schema field into a step and folds paired custom answers in", () => {
+    const questions = toElicitationQuestions(claudeRequest);
+
+    expect(questions.map((question) => question.name)).toEqual(["question_0", "question_1"]);
+    expect(questions[0]).toMatchObject({
+      kind: "choice",
+      multiple: false,
+      required: true,
+      otherField: "question_0_custom",
+      options: [
+        { value: "Package", label: "Package", description: "Only this package" },
+        { value: "Workspace", label: "Workspace" },
+      ],
+    });
+    expect(questions[1]).toMatchObject({ kind: "choice", multiple: true, required: false });
+  });
+
+  it("sends choices under the question and typed text under its custom field", () => {
+    const questions = toElicitationQuestions(claudeRequest);
+
+    expect(
+      toElicitationContent(
+        questions,
+        form([
+          ["question_0", "Package"],
+          ["question_1", "tests"],
+          ["question_1", "types"],
+        ]),
+      ),
+    ).toEqual({ question_0: "Package", question_1: ["tests", "types"] });
+
+    expect(toElicitationContent(questions, form([["question_0", "Only the ACP bridge"]]))).toEqual({
+      question_0_custom: "Only the ACP bridge",
+    });
+  });
+
+  it("maps booleans, integers, string formats and secrets", () => {
+    const questions = toElicitationQuestions({
+      mode: "form",
+      message: "Codex needs your input to continue.",
+      requestedSchema: {
+        type: "object",
+        properties: {
+          force: { type: "boolean", title: "Force push?", default: false },
+          retries: { type: "integer", minimum: 0, maximum: 5 },
+          contact: { type: "string", format: "email" },
+          token: { type: "string", _meta: { codex: { isSecret: true } } },
+        },
+        required: ["retries"],
+      },
+    });
+
+    expect(questions.map((question) => question.kind)).toEqual([
+      "choice",
+      "number",
+      "text",
+      "text",
+    ]);
+    expect(questions[0]).toMatchObject({ defaults: ["false"] });
+    expect(questions[1]).toMatchObject({ integer: true, minimum: 0, maximum: 5, required: true });
+    expect(questions[2]).toMatchObject({ inputType: "email" });
+    expect(questions[3]).toMatchObject({ inputType: "password" });
+
+    expect(
+      toElicitationContent(
+        questions,
+        form([
+          ["force", "true"],
+          ["retries", "3"],
+          ["contact", "  "],
+        ]),
+      ),
+    ).toEqual({ force: true, retries: 3 });
+  });
+});
+
+describe("ACP elicitation schema edge cases", () => {
+  function formRequest(
+    properties: Record<string, unknown>,
+    required: string[] = [],
+  ): AcpFormElicitationRequest {
+    return {
+      mode: "form",
+      message: "Question",
+      requestedSchema: {
+        type: "object",
+        properties: properties as AcpFormElicitationRequest["requestedSchema"]["properties"],
+        required,
+      },
+    };
+  }
+
+  it("leaves out fields it cannot render and blocks accepting when one is required", () => {
+    const request = formRequest(
+      {
+        name: { type: "string" },
+        location: { type: "object", properties: {} },
+        tags: { type: "array", items: { type: "number", enum: ["1", "2"] } },
+      },
+      ["location"],
+    );
+    const questions = toElicitationQuestions(request);
+
+    expect(questions.map((question) => question.name)).toEqual(["name"]);
+    expect(hasUnanswerableFields(request, questions)).toBe(true);
+    expect(
+      hasUnanswerableFields(
+        formRequest({ tags: { type: "array", items: { type: "number" } } }),
+        [],
+      ),
+    ).toBe(false);
+  });
+
+  it("enforces minItems and maxItems once something is chosen", () => {
+    const questions = toElicitationQuestions(
+      formRequest({
+        checks: {
+          type: "array",
+          title: "Checks",
+          minItems: 2,
+          maxItems: 3,
+          items: { type: "string", enum: ["lint", "types", "tests", "build"] },
+        },
+      }),
+    );
+
+    expect(findElicitationError(questions, {})).toBeNull();
+    expect(findElicitationError(questions, { checks: ["lint"] })).toBe(
+      "Checks: choose at least 2.",
+    );
+    expect(findElicitationError(questions, { checks: ["lint", "types", "tests", "build"] })).toBe(
+      "Checks: choose at most 3.",
+    );
+    expect(findElicitationError(questions, { checks: ["lint", "types"] })).toBeNull();
+  });
+
+  it("keeps Claude option previews, codex notes and unpaired custom answers", () => {
+    const questions = toElicitationQuestions(
+      formRequest({
+        layout: {
+          type: "string",
+          title: "Layout",
+          oneOf: [
+            {
+              const: "Grid",
+              title: "Grid",
+              _meta: { "_claude/askUserQuestionOption": { preview: "[ ][ ]\n[ ][ ]" } },
+            },
+          ],
+        },
+        layout_note: {
+          type: "string",
+          _meta: { codex: { questionId: "layout", role: "user_note" } },
+        },
+        extra_custom: {
+          type: "string",
+          title: "Other",
+          _meta: { _askUserQuestionCustomAnswer: { questionId: "missing", isCustomAnswer: true } },
+        },
+      }),
+    );
+
+    expect(questions[0]).toMatchObject({ options: [{ value: "Grid", preview: "[ ][ ]\n[ ][ ]" }] });
+    expect(questions[1]).toMatchObject({
+      name: "layout_note",
+      kind: "text",
+      title: "Anything to add?",
+      description: "Layout",
+    });
+    expect(questions[2]).toMatchObject({ name: "extra_custom", kind: "text", title: "Other" });
+  });
+});
+
+describe("ACP URL elicitation links", () => {
+  it("opens web links and flags ones worth a second look", () => {
+    expect(inspectElicitationUrl("https://auth.example.com/authorize?state=1")).toEqual({
+      openable: true,
+      href: "https://auth.example.com/authorize?state=1",
+      host: "auth.example.com",
+      insecure: false,
+      punycode: false,
+    });
+    expect(inspectElicitationUrl("http://localhost:8080/callback")).toMatchObject({
+      openable: true,
+      insecure: true,
+    });
+    // "аpple.com" with a Cyrillic "а" becomes punycode once parsed.
+    expect(inspectElicitationUrl("https://аpple.com/login")).toMatchObject({
+      openable: true,
+      host: "xn--pple-43d.com",
+      punycode: true,
+    });
+  });
+
+  it("refuses anything that is not a web link", () => {
+    for (const url of ["file:///etc/passwd", "javascript:alert(1)", "vscode://open", "not a url"]) {
+      expect(inspectElicitationUrl(url)).toMatchObject({ openable: false });
+    }
+  });
+});

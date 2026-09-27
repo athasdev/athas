@@ -1,5 +1,6 @@
 import type { CoreFeaturesState } from "./feature.types";
 import type { AIChatSkill } from "@/features/ai/types/skills.types";
+import type { McpServerSetting } from "@/features/ai/types/mcp-server.types";
 import type {
   GitSidebarItemId,
   GitSidebarTabId,
@@ -122,17 +123,20 @@ export interface Settings {
   aiAutocompleteCustomModelId: string;
   aiDefaultSessionMode: string;
   aiAgentNotifications: boolean;
+  /** Notify when an agent turn finishes or fails, not only when it waits on the user. */
+  aiAgentFinishNotifications: boolean;
+  aiAgentNotificationSound: boolean;
+  /** Whether new agent chats start with "Follow agent" on. */
+  aiFollowAgent: boolean;
+  /** Model requests one built-in agent turn may make before it pauses to ask to continue. */
+  aiAgentMaxSteps: number;
   aiSkills: AIChatSkill[];
+  /** MCP servers offered to agents. Secrets live in secure storage, not here. */
+  mcpServers: McpServerSetting[];
   v0DesignSystems: LegacyV0DesignSystemProfile[];
   activeV0DesignSystemId: string;
   ollamaBaseUrl: string;
   // Layout
-  activityRailExpanded: boolean;
-  activityRailWidth: number;
-  showActivityRailAgentHistory: boolean;
-  showActivityRailTerminals: boolean;
-  showActivityRailProjectIcons: boolean;
-  collapsedActivityRailSections: string[];
   sidebarWidth: number;
   rightSidebarWidth: number;
   showGitHubPullRequests: boolean;

@@ -35,7 +35,27 @@ export function SharingRuntime() {
     const requests = new Map<string, string>();
     const rejected = new Map<string, string>();
     const current = () => !cancelled && useAuthStore.getState().user?.id === userId;
+    // Chats loaded from the database, reused until their last message changes.
+    const loadedChats = new Map<
+      string,
+      { lastMessageAt: number; chat: Awaited<ReturnType<typeof loadChatFromDb>> }
+    >();
+    let isChatDatabaseReady = false;
+    let isSyncing = false;
+    const loadChat = async (id: string, lastMessageAt: number) => {
+      const cached = loadedChats.get(id);
+      if (cached && cached.lastMessageAt === lastMessageAt) return cached.chat;
+      const chat = await loadChatFromDb(id);
+      loadedChats.set(id, { lastMessageAt, chat });
+      return chat;
+    };
     const sync = async () => {
+      // Nothing to publish while the window is hidden; visibility brings it back straight away.
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+        if (current()) timer = setTimeout(() => void sync(), 3000);
+        return;
+      }
+      isSyncing = true;
       try {
         const token = await getAuthToken();
         if (!token || !current()) return;
@@ -44,7 +64,10 @@ export function SharingRuntime() {
         const drafts = new Map<string, ShareDraft>();
         const summaries = new Map(useAIChatStore.getState().chats.map((chat) => [chat.id, chat]));
         if (options.sessionsEnabled) {
-          await initChatDatabase();
+          if (!isChatDatabaseReady) {
+            await initChatDatabase();
+            isChatDatabaseReady = true;
+          }
           for (const chat of await loadAllChatsFromDb()) {
             if (!summaries.has(chat.id)) summaries.set(chat.id, { ...chat, messages: [] });
           }
@@ -61,7 +84,9 @@ export function SharingRuntime() {
               )
             )
               continue;
-            const chat = summary.messages.length ? summary : await loadChatFromDb(summary.id);
+            const chat = summary.messages.length
+              ? summary
+              : await loadChat(summary.id, summary.lastMessageAt.getTime());
             if (!current()) return;
             const latest = useAIChatStore.getState().chats.find((entry) => entry.id === summary.id);
             const messages = latest?.messages.length ? latest.messages : chat.messages;
@@ -174,13 +199,25 @@ export function SharingRuntime() {
             }),
           );
       } finally {
+        isSyncing = false;
         if (current()) timer = setTimeout(() => void sync(), 3000);
       }
     };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== "visible" || !current() || isSyncing) return;
+      clearTimeout(timer);
+      void sync();
+    };
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", handleVisibilityChange);
+    }
     void sync();
     return () => {
       cancelled = true;
       clearTimeout(timer);
+      if (typeof document !== "undefined") {
+        document.removeEventListener("visibilitychange", handleVisibilityChange);
+      }
     };
   }, [userId]);
   return null;

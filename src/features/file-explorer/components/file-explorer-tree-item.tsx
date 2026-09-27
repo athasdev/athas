@@ -1,5 +1,5 @@
 import type React from "react";
-import { memo } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import type { FileTreeGitStatusDecoration } from "@/features/file-explorer/lib/file-tree-git-status";
 import type { FileEntry } from "@/features/file-system/types/app.types";
 import { InlineRenameInput } from "@/ui/input";
@@ -11,6 +11,8 @@ import Badge from "@/ui/badge";
 import { formatFileSize } from "@/utils/format-file-size";
 
 const FILE_TREE_BASE_INDENT = 10;
+/** How long the pointer rests on an ignored or hidden folder before its size is measured. */
+const DIRECTORY_SIZE_HOVER_DELAY_MS = 250;
 
 export interface FileTreeGuideTarget {
   path: string;
@@ -77,7 +79,7 @@ function renderHighlightedLabel(label: string, query: string | undefined) {
   return (
     <>
       {label.slice(0, matchIndex)}
-      <mark className="file-tree-search-highlight rounded-md bg-primary-soft px-px text-inherit">
+      <mark className="rounded-md bg-primary-soft px-px text-inherit">
         {label.slice(matchIndex, matchIndex + trimmedQuery.length)}
       </mark>
       {label.slice(matchIndex + trimmedQuery.length)}
@@ -112,12 +114,37 @@ function FileExplorerTreeItemComponent({
   const paddingLeft = FILE_TREE_BASE_INDENT + depth * indentSize;
   const gitStatusDecoration = getGitStatusDecoration(file);
   const showDirectorySize = shouldShowDirectorySize(file);
-  const directorySize = useDirectorySize(file.path, showDirectorySize);
+  // The size only shows on hover, and these folders (node_modules, .git, target) are the most
+  // expensive to walk, so the scan waits for the pointer instead of running for every visible row.
+  const [isDirectorySizeRequested, setIsDirectorySizeRequested] = useState(false);
+  const directorySizeTimerRef = useRef<number | null>(null);
+  const directorySize = useDirectorySize(file.path, showDirectorySize && isDirectorySizeRequested);
+  useEffect(
+    () => () => {
+      if (directorySizeTimerRef.current !== null)
+        window.clearTimeout(directorySizeTimerRef.current);
+    },
+    [],
+  );
+  const requestDirectorySize = () => {
+    if (!showDirectorySize || isDirectorySizeRequested || directorySizeTimerRef.current !== null) {
+      return;
+    }
+    directorySizeTimerRef.current = window.setTimeout(() => {
+      directorySizeTimerRef.current = null;
+      setIsDirectorySizeRequested(true);
+    }, DIRECTORY_SIZE_HOVER_DELAY_MS);
+  };
+  const cancelDirectorySizeRequest = () => {
+    if (directorySizeTimerRef.current === null) return;
+    window.clearTimeout(directorySizeTimerRef.current);
+    directorySizeTimerRef.current = null;
+  };
   const formattedDirectorySize = directorySize === null ? null : formatFileSize(directorySize);
   const guideLevels = Array.from({ length: depth }, (_, level) => level);
   const renderTreeGuides = () =>
     showIndentGuides ? (
-      <div className="file-tree-guides pointer-events-none absolute inset-0 z-1">
+      <div className="pointer-events-none absolute inset-0 z-1">
         {guideLevels.map((level) => {
           const target = guideTargets[level];
           const startsHere = previousDepth <= level;
@@ -125,7 +152,7 @@ function FileExplorerTreeItemComponent({
           return (
             <span
               key={level}
-              className="file-tree-guide pointer-events-auto absolute w-[7px] -translate-x-[3px] opacity-90 before:absolute before:inset-y-0 before:left-[3px] before:w-px before:bg-border"
+              className="pointer-events-auto absolute w-1.75 -translate-x-0.75 opacity-90 before:absolute before:inset-y-0 before:left-0.75 before:w-px before:bg-border"
               data-file-path={target?.path}
               data-is-dir={target?.isDir}
               data-path={target?.path}
@@ -147,12 +174,12 @@ function FileExplorerTreeItemComponent({
   if (file.isEditing || file.isRenaming) {
     return (
       <div
-        className="file-tree-item relative flex h-(--file-tree-row-height) w-full min-w-0 items-center"
+        className="relative flex h-(--file-tree-row-height) w-full min-w-0 items-center"
         data-depth={depth}
       >
         {renderTreeGuides()}
         <div
-          className="file-tree-row relative z-2 box-border flex h-full w-full min-w-0 max-w-full items-center justify-start overflow-hidden rounded-chrome border border-transparent gap-1.5 px-1.5 py-1 ui-text-sm leading-row"
+          className="relative z-2 box-border flex h-full w-full min-w-0 max-w-full items-center justify-start overflow-hidden rounded-chrome border border-transparent gap-1.5 px-1.5 py-1 ui-text-sm leading-row"
           style={{
             paddingLeft: `${paddingLeft}px`,
           }}
@@ -211,13 +238,15 @@ function FileExplorerTreeItemComponent({
       reserveDisclosureSpace={showFolderArrows && !file.isDir}
       guides={renderTreeGuides()}
       rowHeight="file-tree"
+      onPointerEnter={requestDirectorySize}
+      onPointerLeave={cancelDirectorySizeRequest}
       data-file-path={file.path}
       data-is-dir={file.isDir}
       data-path={file.path}
       title={file.isSymlink && file.symlinkTarget ? `Symlink to: ${file.symlinkTarget}` : undefined}
       className={cn(
         "group/file-tree-row box-border h-full max-w-full justify-start overflow-hidden",
-        isDragOver && "border-2! border-dashed! border-primary! bg-primary! bg-opacity-20!",
+        isDragOver && "border-2! border-dashed! border-primary! bg-primary-soft!",
         isDragging && "cursor-move",
         file.ignored && "opacity-50",
         isCut && "italic opacity-40",

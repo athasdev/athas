@@ -40,10 +40,16 @@ export function eventToKey(event: KeyboardEvent): ParsedKey {
   // For modifier shortcuts, prefer physical key position (event.code) for non-letter keys.
   // This ensures shortcuts like Cmd+= work on non-US keyboard layouts (e.g. Turkish QWERTY)
   // where the character at that physical position differs from the US layout.
-  let key = event.key;
+  // Synthetic keydown events, such as those WebKit fires for autofill, can omit key.
+  let key: string = event.key ?? "";
   const hasModifier = event.metaKey || event.ctrlKey || event.altKey;
-  if (key === "Dead" || key === "Unidentified" || (hasModifier && CODE_TO_KEY[event.code])) {
-    key = CODE_TO_KEY[event.code] || event.code;
+  if (
+    !key ||
+    key === "Dead" ||
+    key === "Unidentified" ||
+    (hasModifier && CODE_TO_KEY[event.code])
+  ) {
+    key = CODE_TO_KEY[event.code] || event.code || "";
   }
 
   return {

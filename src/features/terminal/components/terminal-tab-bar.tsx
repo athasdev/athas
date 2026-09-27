@@ -13,7 +13,7 @@ import {
   TerminalWindowIcon,
 } from "@/ui/icons";
 import type React from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTerminalProfilesStore } from "@/features/terminal/stores/profiles.store";
 import { useTerminalShellsStore } from "@/features/terminal/stores/shells.store";
@@ -41,7 +41,14 @@ import {
 } from "@/ui/dropdown";
 import { ContextMenuPopup, type ContextMenuAction } from "@/ui/context-menu";
 import { Button } from "@/ui/button";
-import { SortableTab, TabBarSurface, TabDndContext, useTabDragClickGuard } from "@/ui/tab-bar";
+import {
+  scrollTabIntoStrip,
+  SortableTab,
+  TabBarSurface,
+  TabDndContext,
+  TabStrip,
+  useTabDragClickGuard,
+} from "@/ui/tab-bar";
 import {
   clearInternalTabDragData,
   resolveDropTarget,
@@ -211,6 +218,7 @@ const TerminalTabBar = ({
   const { openTerminalBuffer } = useBufferStore.use.actions();
 
   const tabBarRef = useRef<HTMLDivElement>(null);
+  const tabStripRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<(HTMLDivElement | null)[]>([]);
   const dragPointRef = useRef<{ x: number; y: number } | null>(null);
   const pointerPointRef = useRef<{ x: number; y: number } | null>(null);
@@ -345,14 +353,26 @@ const TerminalTabBar = ({
     return 0;
   });
   const sortedTerminalIds = sortedTerminals.map((terminal) => terminal.id);
+  const sortedTerminalKey = sortedTerminalIds.join("\n");
+
+  // Keep the active terminal's tab in view when it changes or a terminal opens.
+  useLayoutEffect(() => {
+    if (!activeTerminalId) return;
+    const strip = tabStripRef.current;
+    const activeTab = strip?.querySelector<HTMLElement>(
+      `[data-sortable-id="${CSS.escape(activeTerminalId)}"]`,
+    );
+    if (strip && activeTab) scrollTabIntoStrip(strip, activeTab);
+  }, [activeTerminalId, sortedTerminalKey]);
   const terminalProfiles = getAllTerminalProfiles(availableShells, customProfiles);
   const terminalToolbarActions = (
-    <div className="flex h-8 shrink-0 items-center gap-1 pl-1">
+    <div className="flex h-full shrink-0 items-center gap-1 pl-0.5">
       {onSearchTerminal && (
         <Button
           onClick={onSearchTerminal}
           variant="ghost"
           iconOnly
+          size="sm"
           tooltip="Find in Terminal"
           commandId="terminal.find"
           aria-label="Find in terminal"
@@ -368,6 +388,7 @@ const TerminalTabBar = ({
                 type="button"
                 variant="ghost"
                 iconOnly
+                size="sm"
                 tooltip="New Terminal"
                 commandId="terminal.new"
                 aria-label="New terminal"
@@ -390,6 +411,7 @@ const TerminalTabBar = ({
           onClick={onFullScreen}
           variant="ghost"
           iconOnly
+          size="sm"
           tooltip={isFullScreen ? "Exit Full Screen" : "Full Screen Terminal"}
           commandId="workbench.toggleActivePaneFullscreen"
           aria-label={isFullScreen ? "Exit full screen terminal" : "Full screen terminal"}
@@ -632,8 +654,8 @@ const TerminalTabBar = ({
                 </div>
               )}
 
-              <div
-                className="scrollbar-none flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto overflow-y-hidden"
+              <TabStrip
+                ref={tabStripRef}
                 data-tab-container
                 onWheel={(e) => {
                   const container = e.currentTarget;
@@ -683,7 +705,7 @@ const TerminalTabBar = ({
                     </SortableTab>
                   );
                 })}
-              </div>
+              </TabStrip>
             </div>
           </SortableContext>
 
@@ -709,7 +731,7 @@ const TerminalTabBar = ({
               onTabPin?.(terminalId);
             }}
             onCloseTab={(terminalId) => {
-              onTabClose(terminalId, {} as React.MouseEvent);
+              onTabClose(terminalId);
             }}
             onCloseOthers={onCloseOtherTabs || (() => {})}
             onCloseAll={onCloseAllTabs || (() => {})}

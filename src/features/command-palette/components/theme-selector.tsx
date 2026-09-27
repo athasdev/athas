@@ -226,7 +226,7 @@ export const ThemeSelectorContent = ({
         <CommandHeaderAction
           onClick={() => {
             onClose();
-            useUIState.getState().openSettingsDialog("appearance");
+            useUIState.getState().openSettings("appearance");
           }}
           aria-label="Open appearance settings"
         >

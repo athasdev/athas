@@ -1,10 +1,9 @@
 import { PerformanceMonitor } from "./performance-monitor";
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useChatInitialization } from "@/features/ai/hooks/use-chat-initialization";
 import { useCollaborationPresence } from "@/features/collaboration/hooks/use-collaboration-presence";
 import { initializeDebuggerEventBridge } from "@/features/debugger/services/debug-adapter-events";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { getBufferById } from "@/features/editor/utils/buffer-index";
 import { getSymlinkInfo } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useFileSystemFolderDrop } from "@/features/file-system/hooks/use-file-system-folder-drop";
@@ -26,9 +25,10 @@ import { cn } from "@/utils/cn";
 import { frontendTrace } from "@/utils/frontend-trace";
 import { recordStartupMilestone } from "@/features/bootstrap/startup-performance";
 import { getInternalTabDragData } from "@/features/tabs/utils/internal-tab-drag";
-import { isSidebarViewAvailable } from "@/features/layout/utils/sidebar-pane-utils";
 import { getCollapsedActivityBarWidth } from "@/features/layout/utils/activity-bar-layout";
+import { WorkbenchFullscreenRootContext } from "@/features/window/components/workbench-fullscreen-surface";
 import TitleBarWithSettings from "../../window/components/title-bar/title-bar";
+import { TitleLeading } from "../../window/components/title-bar/title-leading";
 import { ResizablePane } from "./resizable-pane";
 import { ActivityBar } from "./sidebar/activity-bar";
 import { SidebarPane } from "./sidebar/sidebar-pane";
@@ -63,41 +63,31 @@ const BottomPane = lazy(() => import("./bottom-pane/bottom-pane"));
 
 export function MainLayout() {
   const [deferredSurfacesReady, setDeferredSurfacesReady] = useState(false);
-
+  const layoutShellRef = useRef<HTMLDivElement | null>(null);
+  const [layoutShell, setLayoutShell] = useState<HTMLDivElement | null>(null);
+  const setLayoutShellElement = useCallback((element: HTMLDivElement | null) => {
+    layoutShellRef.current = element;
+    setLayoutShell(element);
+  }, []);
   useChatInitialization();
   usePaneKeyboard();
   useCollaborationPresence();
 
   const isSidebarVisible = useUIState((state) => state.isSidebarVisible);
   const isBottomPaneVisible = useUIState((state) => state.isBottomPaneVisible);
-  const activityRailExpanded = useSettingsStore((state) => state.settings.activityRailExpanded);
-  const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
-  const responsiveLayout = useResponsiveWorkbenchLayout(activityRailExpanded);
-  const renderedActivityRailExpanded = responsiveLayout.activityBarExpanded;
+  const responsiveLayout = useResponsiveWorkbenchLayout();
   const renderedSidebarVisible = isSidebarVisible && !responsiveLayout.narrow;
-  const activityRailWidth = useSettingsStore((state) => state.settings.activityRailWidth);
   const uiFontSize = useSettingsStore((state) => state.settings.uiFontSize);
   const sidebarWidth = useSettingsStore((state) => state.settings.sidebarWidth);
   const rightSidebarWidth = useSettingsStore((state) => state.settings.rightSidebarWidth);
-  const showOutline = useSettingsStore((state) => state.settings.showOutline);
   const isRightSidebarVisible = useUIState((state) => state.isRightSidebarVisible);
   const activeRightSidebarView = useUIState((state) => state.activeRightSidebarView);
-  const setIsRightSidebarVisible = useUIState((state) => state.setIsRightSidebarVisible);
-  const hasActiveEditor = useBufferStore((state) => {
-    const activeBuffer = getBufferById(state.buffers, state.activeBufferId);
-    return activeBuffer?.type === "editor";
-  });
-  const renderedRightSidebarVisible =
-    isRightSidebarVisible &&
-    !responsiveLayout.narrow &&
-    isSidebarViewAvailable(activeRightSidebarView, hasActiveEditor && showOutline);
+  const renderedRightSidebarVisible = isRightSidebarVisible && !responsiveLayout.narrow;
   const isDatabaseConnectionVisible = useUIState((state) => state.isDatabaseConnectionVisible);
   const setIsDatabaseConnectionVisible = useUIState(
     (state) => state.setIsDatabaseConnectionVisible,
   );
-  const renderedActivityRailWidth = renderedActivityRailExpanded
-    ? activityRailWidth
-    : getCollapsedActivityBarWidth(uiFontSize);
+  const renderedActivityRailWidth = getCollapsedActivityBarWidth(uiFontSize);
   const leftPaneReservedWidth =
     renderedActivityRailWidth + (renderedRightSidebarVisible ? rightSidebarWidth : 0);
   const rightPaneReservedWidth =
@@ -146,20 +136,6 @@ export function MainLayout() {
     terminalWidthMode === "editor" && deferredSurfacesReady && isBottomPaneVisible;
   const roundMainContentLeftEdge = !renderedSidebarVisible;
   const roundMainContentRightEdge = !renderedRightSidebarVisible;
-  useEffect(() => {
-    if (activeRightSidebarView !== "outline") return;
-
-    const shouldShowOutline = hasActiveEditor && showOutline;
-    if (isRightSidebarVisible !== shouldShowOutline) {
-      setIsRightSidebarVisible(shouldShowOutline);
-    }
-  }, [
-    activeRightSidebarView,
-    hasActiveEditor,
-    isRightSidebarVisible,
-    setIsRightSidebarVisible,
-    showOutline,
-  ]);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -282,106 +258,117 @@ export function MainLayout() {
   }, [rootFolderPath, refreshWorkspaceGitStatus, setWorkspaceGitStatus]);
 
   return (
-    <div className="athas-layout-shell relative flex size-full flex-col overflow-hidden bg-surface">
-      {/* Drag-and-drop overlay */}
-      {isDraggingOver && !getInternalTabDragData() && (
-        <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center bg-background backdrop-blur-sm">
-          <div className="rounded-xl border-2 border-primary border-dashed bg-surface px-8 py-6">
-            <p className="ui-text-base font-semibold text-foreground">
-              Drop folder to open project, or file to open buffer
-            </p>
-          </div>
-        </div>
-      )}
-
-      <TitleBarWithSettings
-        activityBarExpanded={renderedActivityRailExpanded}
-        onActivityBarExpandedChange={(expanded) => {
-          if (responsiveLayout.compact) {
-            responsiveLayout.setActivityBarExpanded(expanded);
-          } else {
-            void updateSetting("activityRailExpanded", expanded);
-          }
-        }}
-      />
-
-      <div className="athas-workbench-glass relative z-10 flex flex-1 flex-col overflow-hidden pb-workbench">
-        <div className="flex flex-1 flex-row overflow-hidden pr-workbench" style={{ minHeight: 0 }}>
-          <ActivityBar expanded={renderedActivityRailExpanded} />
-          <ResizablePane
-            position="left"
-            widthKey="sidebarWidth"
-            hidden={!renderedSidebarVisible}
-            reservedWidth={leftPaneReservedWidth}
-          >
-            <SidebarPane paneLevel="primary" visible={renderedSidebarVisible} />
-          </ResizablePane>
-
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-            <div
-              className={cn(
-                "athas-glass-island relative min-h-0 flex-1 overflow-hidden border-border border-y border-r bg-background",
-                roundMainContentLeftEdge &&
-                  (isEditorBottomPaneVisible ? "rounded-tl-xl border-l" : "rounded-l-xl border-l"),
-                roundMainContentRightEdge &&
-                  (isEditorBottomPaneVisible ? "rounded-tr-xl" : "rounded-r-xl"),
-              )}
-            >
-              <CachedWorkspaceSplitViews />
+    <div
+      ref={setLayoutShellElement}
+      className="athas-layout-shell relative flex size-full flex-col overflow-hidden bg-surface"
+    >
+      <WorkbenchFullscreenRootContext.Provider value={layoutShell}>
+        {/* Drag-and-drop overlay */}
+        {isDraggingOver && !getInternalTabDragData() && (
+          <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center bg-background backdrop-blur-sm">
+            <div className="rounded-xl border-2 border-primary border-dashed bg-surface px-8 py-6">
+              <p className="ui-text-base font-semibold text-foreground">
+                Drop folder to open project, or file to open buffer
+              </p>
             </div>
-            {terminalWidthMode === "editor" && deferredSurfacesReady && (
-              <Suspense fallback={null}>
-                <BottomPane
-                  embedded
-                  roundLeftEdge={roundMainContentLeftEdge}
-                  roundRightEdge={roundMainContentRightEdge}
-                />
-              </Suspense>
-            )}
-          </div>
-
-          <ResizablePane
-            position="right"
-            widthKey="rightSidebarWidth"
-            hidden={!renderedRightSidebarVisible}
-            reservedWidth={rightPaneReservedWidth}
-          >
-            <SidebarPane
-              paneLevel="edge"
-              visible={renderedRightSidebarVisible}
-              activeView={activeRightSidebarView}
-              isGitActive={false}
-              isGitHubPRsActive={false}
-            />
-          </ResizablePane>
-        </div>
-
-        {terminalWidthMode === "full" && deferredSurfacesReady && (
-          <div className="px-workbench">
-            <Suspense fallback={null}>
-              <BottomPane />
-            </Suspense>
           </div>
         )}
-      </div>
 
-      <PerformanceMonitor />
+        <div
+          data-slot="workbench-title-row"
+          data-tauri-drag-region
+          className="relative z-20 h-title-bar shrink-0"
+        >
+          <TitleLeading />
+        </div>
 
-      {/* Global modals and overlays */}
-      {deferredSurfacesReady ? (
-        <Suspense fallback={null}>
-          <QuickOpen />
-          <CommandPalette />
-          <ConnectionDialog
-            isOpen={isDatabaseConnectionVisible}
-            onClose={() => setIsDatabaseConnectionVisible(false)}
-          />
-          <LinuxFolderPickerDialog />
-          <WindowCloseGuard />
-          <ExtensionDialogs />
-          <TerminalHost />
-        </Suspense>
-      ) : null}
+        <div className="athas-workbench-glass relative z-10 flex flex-1 flex-col overflow-hidden pb-workbench">
+          <div
+            className="flex flex-1 flex-row overflow-hidden pr-workbench"
+            style={{ minHeight: 0 }}
+          >
+            <div className="h-full shrink-0">
+              <ActivityBar />
+            </div>
+            <ResizablePane
+              position="left"
+              widthKey="sidebarWidth"
+              hidden={!renderedSidebarVisible}
+              reservedWidth={leftPaneReservedWidth}
+            >
+              <SidebarPane paneLevel="primary" visible={renderedSidebarVisible} />
+            </ResizablePane>
+
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+              <div
+                className={cn(
+                  "athas-glass-island relative min-h-0 flex-1 overflow-hidden border-border border-y border-r bg-background",
+                  roundMainContentLeftEdge &&
+                    (isEditorBottomPaneVisible
+                      ? "rounded-tl-xl border-l"
+                      : "rounded-l-xl border-l"),
+                  roundMainContentRightEdge &&
+                    (isEditorBottomPaneVisible ? "rounded-tr-xl" : "rounded-r-xl"),
+                )}
+              >
+                <CachedWorkspaceSplitViews />
+              </div>
+              {terminalWidthMode === "editor" && deferredSurfacesReady && (
+                <Suspense fallback={null}>
+                  <BottomPane
+                    embedded
+                    roundLeftEdge={roundMainContentLeftEdge}
+                    roundRightEdge={roundMainContentRightEdge}
+                  />
+                </Suspense>
+              )}
+            </div>
+
+            <ResizablePane
+              position="right"
+              widthKey="rightSidebarWidth"
+              hidden={!renderedRightSidebarVisible}
+              reservedWidth={rightPaneReservedWidth}
+            >
+              <SidebarPane
+                paneLevel="edge"
+                visible={renderedRightSidebarVisible}
+                activeView={activeRightSidebarView}
+                isGitActive={false}
+                isGitHubPRsActive={false}
+              />
+            </ResizablePane>
+          </div>
+
+          {terminalWidthMode === "full" && deferredSurfacesReady && (
+            <div className="px-workbench">
+              <Suspense fallback={null}>
+                <BottomPane />
+              </Suspense>
+            </div>
+          )}
+        </div>
+
+        <TitleBarWithSettings showMinimal overlay />
+
+        <PerformanceMonitor />
+
+        {/* Global modals and overlays */}
+        {deferredSurfacesReady ? (
+          <Suspense fallback={null}>
+            <QuickOpen />
+            <CommandPalette />
+            <ConnectionDialog
+              isOpen={isDatabaseConnectionVisible}
+              onClose={() => setIsDatabaseConnectionVisible(false)}
+            />
+            <LinuxFolderPickerDialog />
+            <WindowCloseGuard />
+            <ExtensionDialogs />
+            <TerminalHost />
+          </Suspense>
+        ) : null}
+      </WorkbenchFullscreenRootContext.Provider>
     </div>
   );
 }

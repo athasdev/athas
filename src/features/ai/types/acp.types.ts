@@ -1,3 +1,5 @@
+import type { AcpElicitationRequest } from "../lib/acp-elicitation";
+import type { AcpSkippedMcpServer } from "@/features/ai/types/mcp-server.types";
 // Types for Agent Client Protocol (ACP) integration
 
 export interface AgentConfig {
@@ -17,16 +19,88 @@ export interface AgentConfig {
   updateAvailable: boolean;
   managed: boolean;
   canInstall: boolean;
+  /** `extension` when Athas ships a manifest for the agent, `registry` when only the ACP Registry lists it. */
+  source?: "extension" | "registry";
+  registry?: RegistryAgentInfo | null;
 }
 
+/** What the ACP Registry says about an agent, shown before it is installed. */
+export interface RegistryAgentInfo {
+  id: string;
+  version: string;
+  repository: string | null;
+  website: string | null;
+  authors: string[];
+  license: string | null;
+  licenseUrl: string | null;
+  /** What Athas installs here: a checksummed binary, an npm package, or a uvx package. */
+  distribution: "binary" | "npx" | "uvx" | null;
+  installsFromRegistry: boolean;
+  unavailableReason: string | null;
+  quarantined: string | null;
+}
+
+/**
+ * One running agent process. Every chat that uses the same agent in the same workspace shares it,
+ * each with its own session.
+ */
 export interface AcpAgentStatus {
   agentId: string;
   running: boolean;
-  sessionActive: boolean;
   initialized: boolean;
-  sessionId?: string | null;
   workspacePath?: string | null;
+  /** The sessions open on the agent; for a stopped agent, the sessions it had. */
+  sessionIds?: string[];
   agentCapabilities?: AcpAgentCapabilities | null;
+  /** The sign-in methods the agent offered in `initialize`. */
+  authMethods?: AcpAuthMethod[];
+  /** Configured MCP servers left out because the agent does not support their transport. */
+  skippedMcpServers?: AcpSkippedMcpServer[];
+}
+
+/** A chat's session, opened or found already open, and the agent that holds it. */
+export interface AcpOpenedSession {
+  sessionId: string;
+  status: AcpAgentStatus;
+  /**
+   * The chat asked for its earlier session, but the agent could not restore it, so the chat
+   * continues in a new session without the agent's earlier context.
+   */
+  contextLost?: boolean;
+  /** The conversation an imported session replayed, as the events a live turn would emit. */
+  history?: AcpEvent[];
+}
+
+/** What an ACP session advertises: its slash commands, modes and config options. */
+export interface AcpSessionState {
+  slashCommands: SlashCommand[];
+  modeState: {
+    currentModeId: string | null;
+    availableModes: SessionMode[];
+  };
+  configOptions: SessionConfigOption[];
+  /** The agent's latest context and cost report; null until it sends one. */
+  usage: AcpUsageUpdate | null;
+}
+
+/** The command a terminal sign-in method runs in an Athas terminal. */
+export interface AcpTerminalAuthLaunch {
+  label: string;
+  command: string;
+  args: string[];
+  env: Record<string, string>;
+}
+
+/**
+ * A way to sign in to an ACP agent. `agent` methods are completed by the agent through
+ * `authenticate`; `terminal` methods are completed by the user running `terminal`.
+ */
+export interface AcpAuthMethod {
+  id: string;
+  name: string;
+  description: string | null;
+  kind: "agent" | "terminal";
+  terminal: AcpTerminalAuthLaunch | null;
 }
 
 interface AcpAgentCapabilities {
@@ -44,7 +118,7 @@ interface AcpAgentCapabilities {
   authCapabilities: unknown;
 }
 
-interface AcpSessionInfo {
+export interface AcpSessionInfo {
   sessionId: string;
   cwd: string;
   title?: string | null;
@@ -132,18 +206,26 @@ interface SessionModeState {
   availableModes: SessionMode[];
 }
 
-type AcpPlanEntryPriority = "high" | "medium" | "low";
-type AcpPlanEntryStatus = "pending" | "in_progress" | "completed";
+export type AcpPlanEntryPriority = "high" | "medium" | "low";
+export type AcpPlanEntryStatus = "pending" | "in_progress" | "completed";
 
-interface AcpPlanEntry {
+export interface AcpPlanEntry {
   content: string;
   priority: AcpPlanEntryPriority;
   status: AcpPlanEntryStatus;
 }
 
-interface AcpUsageUpdate {
+/** Cumulative cost of a session, in an ISO 4217 currency. */
+export interface AcpCost {
+  amount: number;
+  currency: string;
+}
+
+/** Context window use of a session, from the agent's latest `usage_update`. */
+export interface AcpUsageUpdate {
   used: number;
   size: number;
+  cost?: AcpCost | null;
 }
 
 type AcpPermissionOptionKind = "allow_once" | "allow_always" | "reject_once" | "reject_always";
@@ -173,13 +255,40 @@ export interface AcpToolCallLocation {
   line?: number | null;
 }
 
+/** The tool call an ACP permission request is about, in the shapes tool cards use. */
+export interface AcpPermissionToolCall {
+  toolId: string;
+  title?: string | null;
+  kind?: AcpToolKind | null;
+  /** The call's ACP `content`: diffs, terminals and content blocks. */
+  content?: unknown;
+  locations?: AcpToolCallLocation[] | null;
+  rawInput?: unknown;
+}
+
 /** What a permission request is about to do, so the prompt can show it instead of describing it. */
 export type AcpPermissionPreview =
   | { type: "diff"; path: string; oldText: string; newText: string }
-  | { type: "command"; command: string; cwd?: string };
+  | { type: "command"; command: string; cwd?: string }
+  | {
+      /** An ACP agent's tool call, reduced to what the prompt shows. */
+      type: "tool_call";
+      title: string | null;
+      kind: AcpToolKind | null;
+      diffs: { path: string; oldText: string; newText: string }[];
+      command: string | null;
+      text: string | null;
+      locations: AcpToolCallLocation[];
+      inputSummary: string | null;
+    };
 
 // Prompt turn types
-type StopReason = "end_turn" | "max_tokens" | "max_turn_requests" | "refusal" | "cancelled";
+export type AcpStopReason =
+  | "end_turn"
+  | "max_tokens"
+  | "max_turn_requests"
+  | "refusal"
+  | "cancelled";
 
 // UI action types that agents can request
 type UiAction =
@@ -192,18 +301,47 @@ export type AcpEvent =
       sessionId: string;
       content: AcpContentBlock;
       isComplete: boolean;
+      /** The agent's id for the message; a new id starts a new message. */
+      messageId?: string | null;
     }
   | {
       type: "content_chunk";
       sessionId: string;
       content: AcpContentBlock;
       isComplete: boolean;
+      /** The agent's id for the message; a new id starts a new message. */
+      messageId?: string | null;
     }
   | {
       type: "thought_chunk";
       sessionId: string;
       content: AcpContentBlock;
       isComplete: boolean;
+      /** The agent's id for the message; a new id starts a new message. */
+      messageId?: string | null;
+    }
+  | {
+      type: "notice";
+      sessionId: string;
+      /** `info`, `warning`, `error`, or a value a newer agent defines. */
+      severity: string;
+      title: string;
+      description: string | null;
+    }
+  | {
+      type: "terminal_started";
+      sessionId: string;
+      terminalId: string;
+      cwd: string | null;
+      displayOnly: boolean;
+    }
+  | { type: "terminal_output"; sessionId: string; terminalId: string; data: string }
+  | {
+      type: "terminal_exit";
+      sessionId: string;
+      terminalId: string;
+      exitCode: number | null;
+      signal: string | null;
     }
   | {
       type: "tool_start";
@@ -211,6 +349,8 @@ export type AcpEvent =
       toolName: string;
       toolId: string;
       input: unknown;
+      output?: unknown;
+      rawOutput?: unknown;
       kind: AcpToolKind;
       status: AcpToolCallStatus;
       locations: AcpToolCallLocation[];
@@ -222,6 +362,7 @@ export type AcpEvent =
       toolName?: string | null;
       input?: unknown;
       output?: unknown;
+      rawOutput?: unknown;
       kind?: AcpToolKind | null;
       status?: AcpToolCallStatus | null;
       locations?: AcpToolCallLocation[] | null;
@@ -244,6 +385,25 @@ export type AcpEvent =
       description: string;
       options: AcpPermissionOption[];
       preview?: AcpPermissionPreview;
+      /** Sent by ACP agents: the tool call the request is about. */
+      toolCall?: AcpPermissionToolCall;
+    }
+  | {
+      type: "elicitation_request";
+      /** Null when the agent asks outside a session (a request-scoped elicitation). */
+      sessionId: string | null;
+      requestId: string;
+      request: AcpElicitationRequest;
+    }
+  | {
+      /** The flow behind an accepted URL question finished. */
+      type: "elicitation_complete";
+      elicitationId: string;
+    }
+  | {
+      /** A permission request or question stopped waiting before anyone answered it. */
+      type: "request_closed";
+      requestId: string;
     }
   | {
       type: "session_complete";
@@ -255,8 +415,18 @@ export type AcpEvent =
       error: string;
     }
   | {
+      /** An agent started, stopped, or opened or closed a session. */
       type: "status_changed";
       status: AcpAgentStatus;
+      /** Why an agent stopped on its own (it exited); null for a requested or idle stop. */
+      error?: string | null;
+    }
+  | {
+      type: "auth_required";
+      agentId: string;
+      /** Set when a prompt needed sign-in; startup failures carry none. */
+      sessionId: string | null;
+      methods: AcpAuthMethod[];
     }
   | {
       type: "slash_commands_update";
@@ -297,10 +467,69 @@ export type AcpEvent =
   | {
       type: "prompt_complete";
       sessionId: string;
-      stopReason: StopReason;
+      stopReason: AcpStopReason;
+      /** The turn's token usage, when the agent reports it. */
+      usage?: AcpTurnUsage | null;
     }
   | {
       type: "ui_action";
       sessionId: string;
       action: UiAction;
+    }
+  | {
+      /** A file the agent just read or wrote through `fs/*`; the editor follows it there. */
+      type: "agent_location";
+      sessionId: string;
+      path: string;
+      line: number | null;
+    }
+  | {
+      /** A write the agent made through `fs/write_text_file`, kept for review after it landed. */
+      type: "agent_file_write";
+      sessionId: string;
+      /** Also on the `file-changed` event this write causes. */
+      writeId: number;
+      path: string;
+      /** The file's text before the write; null when the write created the file. */
+      previousContent: string | null;
+      content: string;
     };
+
+/** The ACP client asks each editor window what it holds for a file an agent is reading. */
+export interface AcpBufferReadRequest {
+  requestId: string;
+  path: string;
+}
+
+/** How a terminal's command ended; `exitCode` is null when a signal ended it. */
+export interface AcpTerminalExit {
+  exitCode: number | null;
+  signal: string | null;
+}
+
+/** What a tool call's terminal showed, kept with the call once its command ends. */
+export interface AcpTerminalSnapshot {
+  output: string;
+  /** The start of the output was dropped to keep it within the display limit. */
+  truncated: boolean;
+  exit: AcpTerminalExit | null;
+}
+
+/** Advisory information an agent showed the user; it is not part of the conversation. */
+export interface AcpNotice {
+  id: string;
+  severity: string;
+  title: string;
+  description: string | null;
+  timestamp: Date;
+}
+
+/** The tokens one prompt turn used, from the agent's `session/prompt` answer. */
+export interface AcpTurnUsage {
+  totalTokens: number;
+  inputTokens: number;
+  outputTokens: number;
+  thoughtTokens?: number | null;
+  cachedReadTokens?: number | null;
+  cachedWriteTokens?: number | null;
+}

@@ -10,6 +10,15 @@ interface MutableTreeItem extends ExtensionViewTreeItem {
   children: MutableTreeItem[];
 }
 
+/** Reads the path and line an "open tool location" action carries. */
+export function getToolLocationActionArgs(
+  args: unknown[] | undefined,
+): { path: string; line: number | null } | null {
+  const [path, line] = args ?? [];
+  if (typeof path !== "string") return null;
+  return { path, line: typeof line === "number" && line > 0 ? line : null };
+}
+
 const MAX_LOCATION_ITEMS = 20;
 const MAX_PATH_SEGMENTS = 10;
 
@@ -71,7 +80,10 @@ export function createAcpToolLocationTree(
       description: segments.length === 1 ? undefined : location.path,
       meta: location.line ? `line ${location.line}` : undefined,
       icon: "file-text",
-      onSelect: { command: OPEN_TOOL_LOCATION_COMMAND, args: [location.path] },
+      onSelect: {
+        command: OPEN_TOOL_LOCATION_COMMAND,
+        args: location.line ? [location.path, location.line] : [location.path],
+      },
       children: [],
     });
   }

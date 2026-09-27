@@ -47,50 +47,41 @@ export function InlineGitBlameCard({
         anchor={anchor}
         initialFocus={false}
         finalFocus={false}
-        side="bottom"
+        side="top"
         align="start"
-        sideOffset={6}
+        sideOffset={4}
         collisionPadding={8}
-        size="panel"
-        className="gap-0 overflow-hidden p-0"
+        size="default"
+        className="gap-1.5 p-2.5"
         onMouseEnter={onPointerEnter}
         onMouseLeave={onPointerLeave}
       >
-        <div className="flex min-w-0 items-start gap-2.5 p-3">
-          <Avatar name={presentation.author} src={avatarUrl} size="lg" />
-          <div className="min-w-0 flex-1">
-            <div className="select-text font-medium leading-snug text-foreground ui-text-base">
-              {presentation.commitSummary}
-            </div>
-            <div className="mt-1 flex min-w-0 items-center gap-1.5 text-subtle-foreground ui-text-sm">
-              <span className="truncate select-text">{presentation.author}</span>
-              <span aria-hidden="true">·</span>
-              <span className="shrink-0">{presentation.relativeTime}</span>
-            </div>
-            {presentation.email ? (
-              <div className="mt-0.5 truncate select-text text-subtle-foreground ui-text-sm">
-                {presentation.email}
-              </div>
-            ) : null}
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between border-border border-t bg-surface px-3 py-1.5">
-          <code
-            className="select-text font-mono text-subtle-foreground ui-text-sm"
-            title={presentation.commitHash}
+        <div className="flex min-w-0 items-center gap-1.5 text-subtle-foreground ui-text-sm">
+          <Avatar name={presentation.author} src={avatarUrl} size="sm" />
+          <span
+            className="min-w-0 truncate select-text font-medium text-foreground"
+            title={presentation.email ?? undefined}
           >
-            {presentation.shortHash}
-          </code>
+            {presentation.author}
+          </span>
+          <span className="shrink-0">{presentation.relativeTime}</span>
+        </div>
+        <p className="line-clamp-3 select-text text-foreground ui-text-sm">
+          {presentation.commitSummary}
+        </p>
+        <div>
           <Button
             type="button"
             variant="ghost"
-            iconOnly
-            tooltip={copied ? "Copied commit hash" : "Copy commit hash"}
-            aria-label={copied ? "Commit hash copied" : "Copy commit hash"}
+            size="xs"
+            tooltip={copied ? "Copied" : "Copy commit hash"}
+            aria-label={
+              copied ? "Commit hash copied" : `Copy commit hash ${presentation.shortHash}`
+            }
             onClick={() => void copyCommitHash()}
           >
             {copied ? <CheckIcon /> : <CopyIcon />}
+            <span className="font-mono">{presentation.shortHash}</span>
           </Button>
         </div>
       </PopoverContent>

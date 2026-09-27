@@ -198,7 +198,7 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
           {!store.isLoading && showInfo && store.serverInfo && (
             <div className="flex-1 overflow-auto p-3">
               <section className="border-y border-border py-3">
-                <div className="mb-3 text-subtle-foreground ui-text-sm uppercase tracking-[0.08em]">
+                <div className="mb-3 text-subtle-foreground ui-text-sm uppercase tracking-wider">
                   Server Info
                 </div>
                 <div className="space-y-2">

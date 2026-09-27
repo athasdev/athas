@@ -1,18 +1,8 @@
-import { ApiErrorActions } from "./api-error-actions";
-import { getApiErrorCode } from "@/features/ai/lib/api-error";
-import {
-  ChevronDownIcon,
-  ChevronRightIcon,
-  CopyIcon,
-  TerminalWindowIcon,
-  WarningCircleIcon,
-} from "@/ui/icons";
+import { ChatErrorBlock } from "./chat-error-block";
+import { parseLegacyErrorBlock } from "@/features/ai/lib/chat-error";
+import { CopyIcon } from "@/ui/icons";
 import type React from "react";
-import { useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
-import { getAcpAuthenticationCommand } from "@/features/ai/lib/acp-authentication";
-import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
-import type { MarkdownRendererProps } from "@/features/ai/types/ai-chat.types";
+import { memo, useMemo } from "react";
 import {
   isExternalMarkdownLink,
   resolveWorkspaceFileLink,
@@ -21,19 +11,16 @@ import {
   normalizeImplicitCodeFences,
   normalizePlainTextFence,
 } from "@/features/ai/lib/assistant-markdown";
-import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
-import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { splitMarkdownBlocks } from "@/features/ai/lib/markdown-blocks";
 import {
-  type CodeHighlightSegment,
-  getCodeHighlightSegments,
-} from "@/features/editor/markdown/code-highlight";
+  HighlightedCode,
+  useCodeHighlightSegments,
+} from "@/features/editor/markdown/highlighted-code";
 import { normalizeCodeFenceLanguage } from "@/features/editor/markdown/language-map";
 import { Button } from "@/ui/button";
-import { Marker, MarkerContent, MarkerIcon } from "@/ui/marker";
 import { TextLink } from "@/ui/text-link";
 import { writeClipboardText } from "@/utils/clipboard";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import { useProjectStore } from "@/features/window/stores/project.store";
 
 function inferCodeLanguage(code: string): string {
   const trimmed = code.trim();
@@ -91,72 +78,15 @@ async function openMarkdownLink(href: string, label: string) {
   await openUrl(href);
 }
 
-function renderHighlightedCode(code: string, segments: CodeHighlightSegment[]): React.ReactNode {
-  if (segments.length === 0) {
-    return code;
-  }
-
-  const elements: React.ReactNode[] = [];
-  let lastEnd = 0;
-
-  for (let i = 0; i < segments.length; i++) {
-    const segment = segments[i];
-    if (segment.start > lastEnd) {
-      elements.push(<span key={`t-${i}`}>{code.slice(lastEnd, segment.start)}</span>);
-    }
-
-    elements.push(
-      <span key={`k-${i}`} className={segment.className}>
-        {code.slice(segment.start, segment.end)}
-      </span>,
-    );
-    lastEnd = segment.end;
-  }
-
-  if (lastEnd < code.length) {
-    elements.push(<span key="e">{code.slice(lastEnd)}</span>);
-  }
-
-  return <>{elements}</>;
-}
-
-function CodeBlock({
-  code,
-  languageHint,
-  onApplyCode,
-}: {
-  code: string;
-  languageHint: string;
-  onApplyCode?: (code: string, language?: string) => void;
-}) {
+function CodeBlock({ code, languageHint }: { code: string; languageHint: string }) {
   const explicitLanguage = languageHint ? normalizeCodeFenceLanguage(languageHint) : "";
   const inferredLanguage = explicitLanguage || inferCodeLanguage(code);
   const languageLabel = explicitLanguage || (inferredLanguage !== "clike" ? inferredLanguage : "");
 
-  const [segments, setSegments] = useState<CodeHighlightSegment[] | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    setSegments(null);
-
-    const loadHighlighting = async () => {
-      const nextSegments = await getCodeHighlightSegments(code, inferredLanguage);
-      if (!cancelled) {
-        setSegments(nextSegments);
-      }
-    };
-
-    loadHighlighting();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [code, inferredLanguage]);
-
-  const renderedCode = useMemo(() => renderHighlightedCode(code, segments || []), [code, segments]);
+  const segments = useCodeHighlightSegments(code, inferredLanguage);
 
   return (
-    <div className="group relative my-2">
+    <div className="not-typeset group relative my-2">
       <pre className="font-mono max-w-full overflow-x-auto rounded border border-border bg-surface p-2">
         <div className="mb-1 flex items-center justify-between">
           {languageLabel && (
@@ -173,249 +103,21 @@ function CodeBlock({
               >
                 <CopyIcon className="text-subtle-foreground" size={12} />
               </Button>
-              {onApplyCode && (
-                <Button
-                  type="button"
-                  variant="default"
-                  onClick={() => onApplyCode(code)}
-                  size="xs"
-                  tooltip="Apply this code to current buffer"
-                >
-                  Apply
-                </Button>
-              )}
             </div>
           )}
         </div>
         <code className="font-mono block whitespace-pre-wrap break-all text-foreground ui-text-sm">
-          {renderedCode}
+          <HighlightedCode code={code} segments={segments} />
         </code>
       </pre>
     </div>
   );
 }
 
-// Error Block Component
-function ErrorBlock({
-  errorData,
-  chatId,
-  onRetry,
-}: {
-  errorData: string;
-  chatId?: string | null;
-  onRetry?: () => void | Promise<void>;
-}) {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [isRestartingSession, setIsRestartingSession] = useState(false);
-  const [isOpeningTerminal, setIsOpeningTerminal] = useState(false);
-  const openTerminalBuffer = useBufferStore((state) => state.actions.openTerminalBuffer);
-  const setActiveBuffer = useBufferStore((state) => state.actions.setActiveBuffer);
-  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
-  const agentId = useAIChatStore((state) => {
-    const chatAgentId = chatId
-      ? state.chats.find((chat) => chat.id === chatId)?.agentId
-      : undefined;
-    return chatAgentId ?? state.selectedAgentId;
-  });
-
-  const chatProviderId = useAIChatStore(
-    (state) => state.chats.find((chat) => chat.id === chatId)?.providerId,
-  );
-  const lines = errorData.split("\n");
-  const providerId =
-    lines
-      .find((line) => line.startsWith("provider:"))
-      ?.slice("provider:".length)
-      .trim() || (/athas API/i.test(errorData) ? "athas" : chatProviderId || agentId);
-
-  const title =
-    lines
-      .find((l) => l.startsWith("title:"))
-      ?.replace("title:", "")
-      .trim() || "";
-  const code =
-    lines
-      .find((l) => l.startsWith("code:"))
-      ?.replace("code:", "")
-      .trim() || "";
-  const message =
-    lines
-      .find((l) => l.startsWith("message:"))
-      ?.replace("message:", "")
-      .trim() || "";
-  const details =
-    lines
-      .find((l) => l.startsWith("details:"))
-      ?.replace("details:", "")
-      .trim() || "";
-  const summary = title || message || "Error";
-  const normalizedDetails = details && details !== message ? details : "";
-  const isAuthRequired = code === "AUTH_REQUIRED";
-  const isConfigurationRequired = code === "CONFIG_REQUIRED";
-  const canRecoverAgent = isAuthRequired || isConfigurationRequired;
-
-  const handleRestartAgentSession = async () => {
-    setIsRestartingSession(true);
-    try {
-      await AcpStreamHandler.restartAgent(agentId, chatId);
-      toast.success("Agent session restarted");
-    } catch (error) {
-      console.error("Failed to restart ACP agent session:", error);
-      toast.error("Couldn't restart the agent session", {
-        description: error instanceof Error ? error.message : String(error),
-      });
-    } finally {
-      setIsRestartingSession(false);
-    }
-  };
-
-  const handleOpenAuthenticationTerminal = async () => {
-    setIsOpeningTerminal(true);
-    try {
-      const agents = await AcpStreamHandler.getAvailableAgents().catch(() => []);
-      const command = getAcpAuthenticationCommand(agentId, agents);
-      const bufferId = openTerminalBuffer({
-        command: command ?? undefined,
-        name: command ?? "Agent setup",
-        workingDirectory: rootFolderPath ?? undefined,
-      });
-      setActiveBuffer(bufferId);
-    } catch (error) {
-      toast.error("Couldn't open the agent terminal", {
-        description: error instanceof Error ? error.message : String(error),
-      });
-    } finally {
-      setIsOpeningTerminal(false);
-    }
-  };
-
-  return (
-    <Marker role="alert" tone="error" className="my-1 items-start">
-      <MarkerIcon>
-        <WarningCircleIcon />
-      </MarkerIcon>
-      <MarkerContent className="flex min-w-0 flex-col gap-1">
-        <span className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
-          <span className="font-medium">{summary}</span>
-          {code ? <span className="text-destructive">({code})</span> : null}
-          {normalizedDetails ? (
-            <Button
-              type="button"
-              variant="link"
-              onClick={() => setIsExpanded(!isExpanded)}
-              tone="danger"
-            >
-              {isExpanded ? <ChevronDownIcon /> : <ChevronRightIcon />}
-              {isExpanded ? "Hide details" : "Details"}
-            </Button>
-          ) : null}
-        </span>
-        {message && message !== summary ? (
-          <span className="text-destructive">{message}</span>
-        ) : null}
-        {!canRecoverAgent && (
-          <ApiErrorActions
-            code={code || getApiErrorCode(message)}
-            providerId={providerId}
-            onRetry={onRetry}
-          />
-        )}
-        {canRecoverAgent && (
-          <span className="flex flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              variant="default"
-              onClick={() => void handleRestartAgentSession()}
-              disabled={isRestartingSession}
-            >
-              <TerminalWindowIcon size={12} />
-              {isRestartingSession ? "Restarting..." : "Restart Agent Session"}
-            </Button>
-            <Button
-              type="button"
-              variant="default"
-              onClick={() => void handleOpenAuthenticationTerminal()}
-              disabled={isOpeningTerminal}
-            >
-              <TerminalWindowIcon size={12} />
-              {isOpeningTerminal ? "Opening..." : "Open Agent Terminal"}
-            </Button>
-            <span className="text-destructive">
-              {isConfigurationRequired
-                ? "Finish the agent setup, then restart the session."
-                : "Complete login in the agent CLI, then restart the session."}
-            </span>
-          </span>
-        )}
-        {normalizedDetails && isExpanded && (
-          <pre className="max-w-full overflow-x-auto rounded-md bg-destructive-soft p-2 font-mono text-destructive ui-text-sm">
-            {(() => {
-              try {
-                const parsed = JSON.parse(normalizedDetails);
-                return JSON.stringify(parsed, null, 2);
-              } catch {
-                return normalizedDetails;
-              }
-            })()}
-          </pre>
-        )}
-      </MarkerContent>
-    </Marker>
-  );
-}
-
 // Header classes scaled for sidebar context
-const headerClasses: Record<number, string> = {
-  1: "mt-3 mb-1.5 font-semibold ui-text-sm text-foreground",
-  2: "ui-text-sm mt-2.5 mb-1 font-semibold text-foreground",
-  3: "mt-2 mb-1 font-semibold text-foreground ui-text-sm",
-  4: "mt-2 mb-0.5 font-medium text-foreground ui-text-sm",
-  5: "mt-1.5 mb-0.5 font-medium text-muted-foreground ui-text-sm",
-  6: "mt-1.5 mb-0.5 font-medium text-subtle-foreground ui-text-sm",
-};
-
 function renderHeader(level: number, text: string, key: string): React.ReactNode {
-  const className = headerClasses[level] || headerClasses[6];
-  const content = renderInlineFormatting(text);
-
-  switch (level) {
-    case 1:
-      return (
-        <h1 key={key} className={className}>
-          {content}
-        </h1>
-      );
-    case 2:
-      return (
-        <h2 key={key} className={className}>
-          {content}
-        </h2>
-      );
-    case 3:
-      return (
-        <h3 key={key} className={className}>
-          {content}
-        </h3>
-      );
-    case 4:
-      return (
-        <h4 key={key} className={className}>
-          {content}
-        </h4>
-      );
-    case 5:
-      return (
-        <h5 key={key} className={className}>
-          {content}
-        </h5>
-      );
-    default:
-      return (
-        <h6 key={key} className={className}>
-          {content}
-        </h6>
-      );
-  }
+  const Heading = `h${Math.min(Math.max(level, 1), 6)}` as "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
+  return <Heading key={key}>{renderInlineFormatting(text)}</Heading>;
 }
 
 type TableAlignment = "left" | "center" | "right";
@@ -425,9 +127,6 @@ type MarkdownTable = {
   alignments: TableAlignment[];
   rows: string[][];
 };
-
-const INLINE_CODE_CLASS_NAME =
-  "font-mono inline whitespace-break-spaces rounded bg-surface px-1 py-0 text-[0.95em] leading-[inherit] text-foreground align-baseline";
 
 function splitMarkdownTableRow(line: string): string[] {
   let value = line.trim();
@@ -515,28 +214,14 @@ function parseMarkdownTable(
   };
 }
 
-function getTableAlignmentClass(alignment: TableAlignment): string {
-  switch (alignment) {
-    case "center":
-      return "text-center";
-    case "right":
-      return "text-right";
-    default:
-      return "text-left";
-  }
-}
-
 function renderTable(table: MarkdownTable, key: string): React.ReactNode {
   return (
-    <div key={key} className="my-2 max-w-full overflow-x-auto">
-      <table className="w-full min-w-max border-collapse ui-text-sm">
+    <div key={key} className="typeset-scroll">
+      <table>
         <thead>
-          <tr className="border-border border-b">
+          <tr>
             {table.headers.map((header, index) => (
-              <th
-                key={index}
-                className={`bg-surface px-2 py-1.5 font-medium text-foreground ${getTableAlignmentClass(table.alignments[index])}`}
-              >
+              <th key={index} align={table.alignments[index]}>
                 {renderInlineFormatting(header)}
               </th>
             ))}
@@ -544,12 +229,9 @@ function renderTable(table: MarkdownTable, key: string): React.ReactNode {
         </thead>
         <tbody>
           {table.rows.map((row, rowIndex) => (
-            <tr key={rowIndex} className="border-border border-b last:border-b-0">
+            <tr key={rowIndex}>
               {row.map((cell, cellIndex) => (
-                <td
-                  key={cellIndex}
-                  className={`px-2 py-1.5 text-muted-foreground align-top ${getTableAlignmentClass(table.alignments[cellIndex])}`}
-                >
+                <td key={cellIndex} align={table.alignments[cellIndex]}>
                   {renderInlineFormatting(cell)}
                 </td>
               ))}
@@ -574,11 +256,7 @@ function renderInlineFormatting(text: string): React.ReactNode {
     // Inline code
     const codeMatch = remaining.match(/^`([^`]+)`/);
     if (codeMatch) {
-      elements.push(
-        <code key={getInlineKey("code", codeMatch[0])} className={INLINE_CODE_CLASS_NAME}>
-          {codeMatch[1]}
-        </code>,
-      );
+      elements.push(<code key={getInlineKey("code", codeMatch[0])}>{codeMatch[1]}</code>);
       remaining = remaining.slice(codeMatch[0].length);
       continue;
     }
@@ -586,12 +264,7 @@ function renderInlineFormatting(text: string): React.ReactNode {
     const pendingCodeMatch = remaining.match(/^`([^`]*)$/);
     if (pendingCodeMatch) {
       elements.push(
-        <code
-          key={getInlineKey("pending-code", pendingCodeMatch[0])}
-          className={INLINE_CODE_CLASS_NAME}
-        >
-          {pendingCodeMatch[1]}
-        </code>,
+        <code key={getInlineKey("pending-code", pendingCodeMatch[0])}>{pendingCodeMatch[1]}</code>,
       );
       break;
     }
@@ -599,14 +272,7 @@ function renderInlineFormatting(text: string): React.ReactNode {
     // Strikethrough
     const strikeMatch = remaining.match(/^~~([^~]+)~~/);
     if (strikeMatch) {
-      elements.push(
-        <del
-          key={getInlineKey("strike", strikeMatch[0])}
-          className="text-subtle-foreground line-through"
-        >
-          {strikeMatch[1]}
-        </del>,
-      );
+      elements.push(<del key={getInlineKey("strike", strikeMatch[0])}>{strikeMatch[1]}</del>);
       remaining = remaining.slice(strikeMatch[0].length);
       continue;
     }
@@ -614,11 +280,7 @@ function renderInlineFormatting(text: string): React.ReactNode {
     // Bold
     const boldMatch = remaining.match(/^\*\*([^*]+)\*\*/);
     if (boldMatch) {
-      elements.push(
-        <strong key={getInlineKey("bold", boldMatch[0])} className="font-semibold">
-          {boldMatch[1]}
-        </strong>,
-      );
+      elements.push(<strong key={getInlineKey("bold", boldMatch[0])}>{boldMatch[1]}</strong>);
       remaining = remaining.slice(boldMatch[0].length);
       continue;
     }
@@ -626,11 +288,7 @@ function renderInlineFormatting(text: string): React.ReactNode {
     // Italic
     const italicMatch = remaining.match(/^\*([^*]+)\*/);
     if (italicMatch) {
-      elements.push(
-        <em key={getInlineKey("italic", italicMatch[0])} className="italic">
-          {italicMatch[1]}
-        </em>,
-      );
+      elements.push(<em key={getInlineKey("italic", italicMatch[0])}>{italicMatch[1]}</em>);
       remaining = remaining.slice(italicMatch[0].length);
       continue;
     }
@@ -697,11 +355,8 @@ function renderInlineFormatting(text: string): React.ReactNode {
 }
 
 // Line-by-line state machine markdown renderer
-function renderContent(
-  text: string,
-  onApplyCode?: (code: string, language?: string) => void,
-): React.ReactNode[] {
-  const lines = normalizeImplicitCodeFences(text).split("\n");
+function renderContent(text: string): React.ReactNode[] {
+  const lines = text.split("\n");
   const elements: React.ReactNode[] = [];
   let inCodeBlock = false;
   let codeBlockLanguage = "";
@@ -717,10 +372,9 @@ function renderContent(
       const code = codeBlockContent.join("\n");
       elements.push(
         <CodeBlock
-          key={`code-${codeBlockStartLine}-${code.length}`}
+          key={`code-${codeBlockStartLine}`}
           code={code}
           languageHint={codeBlockLanguage}
-          onApplyCode={onApplyCode}
         />,
       );
       codeBlockContent = [];
@@ -732,27 +386,17 @@ function renderContent(
     if (currentList && currentList.items.length > 0) {
       if (currentList.type === "ol") {
         elements.push(
-          <ol
-            key={`ol-${currentListStartLine}-${currentList.items.length}`}
-            className="my-2 ml-5 list-decimal space-y-0.5"
-          >
+          <ol key={`ol-${currentListStartLine}`}>
             {currentList.items.map((item, idx) => (
-              <li key={idx} className="pl-1 text-foreground">
-                {renderInlineFormatting(item)}
-              </li>
+              <li key={idx}>{renderInlineFormatting(item)}</li>
             ))}
           </ol>,
         );
       } else {
         elements.push(
-          <ul
-            key={`ul-${currentListStartLine}-${currentList.items.length}`}
-            className="my-2 ml-5 list-disc space-y-0.5"
-          >
+          <ul key={`ul-${currentListStartLine}`}>
             {currentList.items.map((item, idx) => (
-              <li key={idx} className="pl-1 text-foreground">
-                {renderInlineFormatting(item)}
-              </li>
+              <li key={idx}>{renderInlineFormatting(item)}</li>
             ))}
           </ul>,
         );
@@ -766,12 +410,7 @@ function renderContent(
       const paragraphText = currentParagraph.join(" ").trim();
       if (paragraphText) {
         elements.push(
-          <p
-            key={`p-${currentParagraphStartLine}-${paragraphText.length}`}
-            className="my-1.5 leading-[1.6]"
-          >
-            {renderInlineFormatting(paragraphText)}
-          </p>,
+          <p key={`p-${currentParagraphStartLine}`}>{renderInlineFormatting(paragraphText)}</p>,
         );
       }
       currentParagraph = [];
@@ -807,7 +446,7 @@ function renderContent(
     if (parsedTable) {
       flushList();
       flushParagraph();
-      elements.push(renderTable(parsedTable.table, `table-${i}-${parsedTable.endIndex}`));
+      elements.push(renderTable(parsedTable.table, `table-${i}`));
       i = parsedTable.endIndex - 1;
       continue;
     }
@@ -826,7 +465,7 @@ function renderContent(
     if (trimmedLine.match(/^[-*_]{3,}$/) && trimmedLine.length >= 3) {
       flushList();
       flushParagraph();
-      elements.push(<hr key={`hr-${i}`} className="my-3 border-border" />);
+      elements.push(<hr key={`hr-${i}`} />);
       continue;
     }
 
@@ -836,12 +475,7 @@ function renderContent(
       flushParagraph();
       const quoteContent = trimmedLine.startsWith("> ") ? trimmedLine.slice(2) : "";
       elements.push(
-        <blockquote
-          key={`quote-${i}-${quoteContent.length}`}
-          className="my-2 border-border border-l-2 pl-3 text-muted-foreground italic"
-        >
-          {renderInlineFormatting(quoteContent)}
-        </blockquote>,
+        <blockquote key={`quote-${i}`}>{renderInlineFormatting(quoteContent)}</blockquote>,
       );
       continue;
     }
@@ -897,13 +531,26 @@ function renderContent(
   return elements;
 }
 
+/** One blank-line-separated block; unchanged blocks skip re-rendering while a reply streams. */
+const MarkdownBlockContent = memo(function MarkdownBlockContent({ text }: { text: string }) {
+  return renderContent(text);
+});
+
+function MarkdownBlocks({ text }: { text: string }) {
+  const blocks = useMemo(() => splitMarkdownBlocks(normalizeImplicitCodeFences(text)), [text]);
+  return blocks.map((block) => (
+    <MarkdownBlockContent key={`block-${block.startLine}`} text={block.text} />
+  ));
+}
+
+interface MarkdownRendererProps {
+  content: string;
+  chatId?: string | null;
+  onRetry?: () => void | Promise<void>;
+}
+
 // Simple markdown renderer for AI responses
-export default function MarkdownRenderer({
-  content,
-  onApplyCode,
-  chatId,
-  onRetry,
-}: MarkdownRendererProps) {
+export default function MarkdownRenderer({ content, chatId, onRetry }: MarkdownRendererProps) {
   const normalizedContent = normalizePlainTextFence(content);
 
   // Check for error blocks first
@@ -912,14 +559,22 @@ export default function MarkdownRenderer({
     if (errorMatch) {
       const errorStart = errorMatch.index ?? 0;
       return (
-        <>
-          {renderContent(normalizedContent.slice(0, errorStart), onApplyCode)}
-          <ErrorBlock errorData={errorMatch[1]} chatId={chatId} onRetry={onRetry} />
-          {renderContent(normalizedContent.slice(errorStart + errorMatch[0].length), onApplyCode)}
-        </>
+        <div className="typeset typeset-chat">
+          <MarkdownBlocks text={normalizedContent.slice(0, errorStart)} />
+          <ChatErrorBlock
+            error={parseLegacyErrorBlock(errorMatch[1])}
+            chatId={chatId}
+            onRetry={onRetry}
+          />
+          <MarkdownBlocks text={normalizedContent.slice(errorStart + errorMatch[0].length)} />
+        </div>
       );
     }
   }
 
-  return <div>{renderContent(normalizedContent, onApplyCode)}</div>;
+  return (
+    <div className="typeset typeset-chat">
+      <MarkdownBlocks text={normalizedContent} />
+    </div>
+  );
 }

@@ -554,8 +554,7 @@ fn create_labeled_app_window_internal(
    #[cfg(all(target_os = "macos", not(feature = "linux")))]
    let builder = builder
       .hidden_title(true)
-      .title_bar_style(TitleBarStyle::Overlay)
-      .traffic_light_position(tauri::LogicalPosition::new(14.0, 20.0));
+      .title_bar_style(TitleBarStyle::Overlay);
 
    let build_started_at = Instant::now();
    let window = builder

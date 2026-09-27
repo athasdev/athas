@@ -31,6 +31,11 @@ import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { AcpStreamHandler } from "./acp-stream-handler";
 import { buildContextPrompt, buildSystemPrompt } from "../utils/ai-context-builder";
 import { isTerminalAgent } from "../lib/terminal-agents";
+import { loadContextProjectRules } from "../lib/project-rules";
+import {
+  compactConversationHistory,
+  fitMessagesToProviderLimits,
+} from "../lib/conversation-history";
 import { setCustomProviderBaseUrl } from "./providers/ai-provider-registry";
 import { CODEX_INTEGRATION_ID } from "../integrations/integration-registry";
 import { CodexIntegrationService } from "../integrations/codex/codex-integration-service";
@@ -63,6 +68,7 @@ export const getChatCompletionStream = async (
   onResourceChunk?: (uri: string, name: string | null) => void,
   chatId?: string,
   systemPromptOverride?: string,
+  onResponsePhase?: (phase: "starting" | "waiting" | "stalled") => void,
 ): Promise<void> => {
   try {
     if (context.projectRoot) {
@@ -107,6 +113,7 @@ export const getChatCompletionStream = async (
           onEvent: onAcpEvent,
           onImageChunk,
           onResourceChunk,
+          onResponsePhase,
         },
         chatId,
       );
@@ -162,6 +169,9 @@ export const getChatCompletionStream = async (
       }
     }
 
+    if (context.projectRoot) {
+      context = { ...context, projectRules: await loadContextProjectRules(context) };
+    }
     const contextPrompt = buildContextPrompt(context);
     let systemPrompt = systemPromptOverride || buildSystemPrompt(contextPrompt, mode, outputStyle);
     const providerSystemPromptContext = await buildProviderSystemPromptContext(
@@ -173,7 +183,7 @@ export const getChatCompletionStream = async (
     }
 
     // Build messages array with conversation history
-    const messages: AIMessage[] = [
+    const draftMessages: AIMessage[] = [
       {
         role: "system" as const,
         content: systemPrompt,
@@ -182,15 +192,16 @@ export const getChatCompletionStream = async (
 
     // Add conversation history if provided
     if (conversationHistory && conversationHistory.length > 0) {
-      messages.push(...conversationHistory);
+      draftMessages.push(...(await compactConversationHistory(conversationHistory)));
     }
 
     // Add the current user message
-    messages.push({
+    draftMessages.push({
       role: "user" as const,
       content: userMessage,
       ...(context.images?.length ? { images: context.images } : {}),
     });
+    const messages = fitMessagesToProviderLimits(draftMessages, providerId);
 
     if (
       [
@@ -215,11 +226,13 @@ export const getChatCompletionStream = async (
         modelId,
         messages,
         root: context.projectRoot,
-        readOnly: mode === "plan",
+        readOnly: mode !== "chat",
+        maxSteps: settings.aiAgentMaxSteps,
         onChunk,
         onToolUse,
         onToolComplete,
         onPermissionRequest,
+        onEvent: onAcpEvent,
       });
       onComplete(result);
       return;

@@ -11,7 +11,7 @@ import {
 import { Spinner } from "@/ui/spinner";
 import { ClockIcon, DownloadIcon, FileTextIcon } from "@/ui/icons";
 
-export function AppUpdateControl() {
+export function AppUpdateControl({ compact = false }: { compact?: boolean }) {
   const hasUnreadWhatsNew = useWhatsNewStore((state) => state.hasUnread);
   const openWhatsNew = useWhatsNewStore((state) => state.actions.open);
   const {
@@ -61,7 +61,7 @@ export function AppUpdateControl() {
       <Button
         type="button"
         variant="ghost"
-        size="sm"
+        size={compact ? "lg" : "sm"}
         onClick={() => void openWhatsNew()}
         tooltip="What's new in Athas"
         aria-label="What's new in Athas"
@@ -87,8 +87,9 @@ export function AppUpdateControl() {
           <Button
             type="button"
             variant="ghost"
-            size="sm"
+            size={compact ? "lg" : "sm"}
             disabled={updateBusy}
+            iconOnly={compact}
             aria-label={updateTooltip}
             tooltip={updateTooltip}
           />
@@ -99,7 +100,7 @@ export function AppUpdateControl() {
         ) : (
           <DownloadIcon />
         )}
-        <span>Update available</span>
+        {!compact && <span>Update available</span>}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" size="default">
         <DropdownMenuItems items={updateMenuItems} />

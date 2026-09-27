@@ -1,4 +1,4 @@
-import { getDatabaseBrandImage } from "@/ui/brand-marks";
+import { agentBrandImages, getDatabaseBrandImage } from "@/ui/brand-marks";
 import { iconThemeRegistry } from "@/extensions/icon-themes/icon-theme-registry";
 import { bundledExtensionManifests } from "@/extensions/bundled/bundled-extension-manifests";
 import type { AvailableExtension } from "@/extensions/registry/extension-store-types";
@@ -102,6 +102,30 @@ function iconThemeAppearanceOption(
   };
 }
 
+const REGISTRY_DISTRIBUTION_LABELS = {
+  binary: "ACP Registry, verified binary",
+  npx: "ACP Registry, npm package",
+  uvx: "ACP Registry, Python package via uv",
+} as const;
+
+/** Who publishes a registry agent, where its source lives and how Athas installs it. */
+export function agentRegistryDetails(agent: AgentConfig | undefined): Partial<UnifiedExtension> {
+  const registry = agent?.registry;
+  if (!registry) return {};
+  return {
+    publisher: registry.authors.length > 0 ? registry.authors.join(", ") : undefined,
+    license: registry.license ?? undefined,
+    sourceUrl: registry.repository ?? registry.website ?? undefined,
+    distribution:
+      registry.installsFromRegistry && registry.distribution
+        ? REGISTRY_DISTRIBUTION_LABELS[registry.distribution]
+        : undefined,
+    installNote: registry.installsFromRegistry
+      ? undefined
+      : (registry.unavailableReason ?? undefined),
+  };
+}
+
 export function buildExtensionCatalog({
   availableExtensions,
   agents,
@@ -139,7 +163,8 @@ export function buildExtensionCatalog({
         isBundled: false,
         runtimeIssues: ext.runtimeIssues,
         agentId: contribution.id,
-        icon: agent?.icon ?? ext.manifest.icon,
+        // The bundled brand art athas.dev also shows; registry icons are monochrome fallbacks.
+        icon: agentBrandImages[contribution.id] ?? agent?.icon ?? ext.manifest.icon,
         canInstall: agent?.canInstall ?? Boolean(contribution.install),
         hasUpdate: agent?.updateAvailable ?? false,
         installedVersion: agent?.installedVersion,
@@ -148,6 +173,7 @@ export function buildExtensionCatalog({
           `agent:${contribution.id}`,
           agent?.binaryName ?? contribution.binaryName,
         ].filter(Boolean),
+        ...agentRegistryDetails(agent),
       });
     }
 
@@ -482,6 +508,7 @@ export function buildExtensionCatalog({
       installedVersion: agent.installedVersion,
       availableVersion: agent.availableVersion,
       contributionSummary: [`agent:${agent.id}`, agent.binaryName],
+      ...agentRegistryDetails(agent),
     });
   }
 

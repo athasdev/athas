@@ -1,6 +1,7 @@
 import { Tooltip as TooltipPrimitive } from "@base-ui/react";
 import type React from "react";
 import Keybinding from "@/features/keymaps/components/keybinding";
+import { useOverlayPlacement } from "@/ui/overlay-side";
 import { cn } from "@/utils/cn";
 
 interface TooltipProps {
@@ -27,11 +28,12 @@ function TooltipContent({
   content,
   shortcut,
 }: Pick<TooltipProps, "content" | "shortcut"> & { anchor?: Element }) {
+  const placement = useOverlayPlacement();
   return (
     <TooltipPrimitive.Portal>
       <TooltipPrimitive.Positioner
         anchor={anchor}
-        side="top"
+        side={placement.side ?? "top"}
         sideOffset={4}
         collisionPadding={8}
         positionMethod={anchor ? "fixed" : undefined}

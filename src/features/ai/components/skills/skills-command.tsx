@@ -88,7 +88,7 @@ export function SkillsCommand({
   const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
   const syncEnabled = useSettingsSyncStore((state) => state.enabled);
   const syncStatus = useSettingsSyncStore((state) => state.status);
-  const openSettingsDialog = useUIState((state) => state.openSettingsDialog);
+  const openSettings = useUIState((state) => state.openSettings);
 
   const filteredSkills = useMemo(() => {
     const normalizedQuery = deferredQuery.trim();
@@ -171,8 +171,8 @@ export function SkillsCommand({
 
   const openAccountSyncSettings = useCallback(() => {
     handleClose();
-    openSettingsDialog("account");
-  }, [handleClose, openSettingsDialog]);
+    openSettings("account");
+  }, [handleClose, openSettings]);
 
   const handleInstallMarketplaceSkill = useCallback(
     async (skill: MarketplaceSkill) => {

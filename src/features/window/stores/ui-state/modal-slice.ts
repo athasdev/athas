@@ -9,7 +9,6 @@ interface ModalState {
   isCommandPaletteVisible: boolean;
   commandPaletteInitialView: CommandPaletteViewId;
   isGlobalSearchVisible: boolean;
-  isSettingsDialogVisible: boolean;
   isBranchManagerVisible: boolean;
   isProjectPickerVisible: boolean;
   projectPickerInitialStep: ProjectPickerInitialStep;
@@ -17,6 +16,7 @@ interface ModalState {
   settingsInitialTab: SettingsTab | null;
   settingsInitialSection: string | null;
   settingsNavigationRequestId: number;
+  /** Settings is the active tab, so its navigation replaces the primary sidebar's view. */
 }
 
 interface ModalActions {
@@ -24,14 +24,16 @@ interface ModalActions {
   setIsCommandPaletteVisible: (v: boolean) => void;
   openCommandPaletteView: (view: CommandPaletteViewId) => void;
   setIsGlobalSearchVisible: (v: boolean) => void;
-  setIsSettingsDialogVisible: (v: boolean) => void;
   setIsBranchManagerVisible: (v: boolean) => void;
   setIsProjectPickerVisible: (v: boolean) => void;
   openProjectPicker: (initialStep?: ProjectPickerInitialStep) => void;
   setIsDatabaseConnectionVisible: (v: boolean) => void;
   setSettingsInitialTab: (tab: SettingsTab) => void;
   setSettingsInitialSection: (section: string | null) => void;
-  openSettingsDialog: (tab?: SettingsTab, section?: string) => void;
+  /** Opens the Settings page in the main view, on `tab` and scrolled to `section` when given. */
+  openSettings: (tab?: SettingsTab, section?: string) => void;
+  /** Closes the Settings page. */
+  closeSettings: () => void;
   hasOpenModal: () => boolean;
   closeTopModal: () => boolean;
 }
@@ -44,7 +46,6 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
   isCommandPaletteVisible: false,
   commandPaletteInitialView: "root",
   isGlobalSearchVisible: false,
-  isSettingsDialogVisible: false,
   isBranchManagerVisible: false,
   isProjectPickerVisible: false,
   projectPickerInitialStep: "picker",
@@ -60,7 +61,6 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
       state.isQuickOpenVisible ||
       state.isCommandPaletteVisible ||
       state.isGlobalSearchVisible ||
-      state.isSettingsDialogVisible ||
       state.isBranchManagerVisible ||
       state.isProjectPickerVisible ||
       state.isDatabaseConnectionVisible
@@ -86,10 +86,6 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
       set({ isProjectPickerVisible: false });
       return true;
     }
-    if (state.isSettingsDialogVisible) {
-      set({ isSettingsDialogVisible: false });
-      return true;
-    }
     if (state.isBranchManagerVisible) {
       set({ isBranchManagerVisible: false });
       return true;
@@ -107,7 +103,6 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
         isQuickOpenVisible: true,
         isCommandPaletteVisible: false,
         isGlobalSearchVisible: false,
-        isSettingsDialogVisible: false,
         isBranchManagerVisible: false,
         isProjectPickerVisible: false,
         isDatabaseConnectionVisible: false,
@@ -124,7 +119,6 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
         commandPaletteInitialView: "root",
         isQuickOpenVisible: false,
         isGlobalSearchVisible: false,
-        isSettingsDialogVisible: false,
         isBranchManagerVisible: false,
         isProjectPickerVisible: false,
         isDatabaseConnectionVisible: false,
@@ -140,7 +134,6 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
       commandPaletteInitialView: view,
       isQuickOpenVisible: false,
       isGlobalSearchVisible: false,
-      isSettingsDialogVisible: false,
       isBranchManagerVisible: false,
       isProjectPickerVisible: false,
       isDatabaseConnectionVisible: false,
@@ -153,21 +146,12 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
         isGlobalSearchVisible: true,
         isQuickOpenVisible: false,
         isCommandPaletteVisible: false,
-        isSettingsDialogVisible: false,
         isBranchManagerVisible: false,
         isProjectPickerVisible: false,
         isDatabaseConnectionVisible: false,
       });
     } else {
       set({ isGlobalSearchVisible: v });
-    }
-  },
-
-  setIsSettingsDialogVisible: (v: boolean) => {
-    if (v) {
-      get().openSettingsDialog();
-    } else {
-      set({ isSettingsDialogVisible: v });
     }
   },
 
@@ -178,7 +162,6 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
         isQuickOpenVisible: false,
         isCommandPaletteVisible: false,
         isGlobalSearchVisible: false,
-        isSettingsDialogVisible: false,
         isProjectPickerVisible: false,
         isDatabaseConnectionVisible: false,
       });
@@ -202,7 +185,6 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
       isQuickOpenVisible: false,
       isCommandPaletteVisible: false,
       isGlobalSearchVisible: false,
-      isSettingsDialogVisible: false,
       isBranchManagerVisible: false,
       isDatabaseConnectionVisible: false,
     });
@@ -215,7 +197,6 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
         isQuickOpenVisible: false,
         isCommandPaletteVisible: false,
         isGlobalSearchVisible: false,
-        isSettingsDialogVisible: false,
         isBranchManagerVisible: false,
         isProjectPickerVisible: false,
       });
@@ -236,9 +217,8 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
       settingsNavigationRequestId: state.settingsNavigationRequestId + 1,
     })),
 
-  openSettingsDialog: (tab?: SettingsTab, section?: string) => {
+  openSettings: (tab?: SettingsTab, section?: string) => {
     set({
-      isSettingsDialogVisible: true,
       isQuickOpenVisible: false,
       isCommandPaletteVisible: false,
       isGlobalSearchVisible: false,
@@ -248,6 +228,19 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
       settingsInitialTab: tab ?? null,
       settingsInitialSection: section ?? null,
       settingsNavigationRequestId: get().settingsNavigationRequestId + 1,
+    });
+    // Settings is one tab in the main view. The buffer store loads lazily because it depends on
+    // this store.
+    void import("@/features/editor/stores/buffer.store").then(({ useBufferStore }) => {
+      useBufferStore.getState().actions.openSettingsBuffer();
+    });
+  },
+
+  closeSettings: () => {
+    void import("@/features/editor/stores/buffer.store").then(({ useBufferStore }) => {
+      const { buffers, actions } = useBufferStore.getState();
+      const settings = buffers.find((buffer) => buffer.type === "settings");
+      if (settings) actions.closeBuffer(settings.id);
     });
   },
 });

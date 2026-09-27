@@ -55,7 +55,9 @@ function composer(overrides: Partial<AIChatInputBarProps> = {}) {
       onSendMessage={() => ({ accepted: true })}
       onInterruptAndSend={() => ({ accepted: true })}
       onMoveQueuedMessage={vi.fn()}
+      onUpdateQueuedMessage={vi.fn()}
       onRemoveQueuedMessage={vi.fn()}
+      onSendQueuedMessageNow={vi.fn()}
       onStopStreaming={vi.fn()}
       {...overrides}
     />

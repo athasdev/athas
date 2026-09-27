@@ -25,6 +25,10 @@ const state = vi.hoisted(() => ({
   configure: vi.fn(),
   loadModels: vi.fn(),
 }));
+vi.mock("@tauri-apps/api/webviewWindow", () => ({
+  getCurrentWebviewWindow: () => ({ label: "main" }),
+  getAllWebviewWindows: async () => [],
+}));
 vi.mock("../hooks/use-available-providers", () => ({
   useAvailableProviders: () => state.providers,
 }));
@@ -53,7 +57,7 @@ vi.mock("../stores/ai-chat.store", () => ({
     select({ providerApiKeys: state.keys, dynamicModels: {} }),
 }));
 vi.mock("@/features/window/stores/ui-state.store", () => ({
-  useUIState: { getState: () => ({ openSettingsDialog: state.configure }) },
+  useUIState: { getState: () => ({ openSettings: state.configure }) },
 }));
 vi.mock("@/features/keymaps/hooks/use-command-shortcut", () => ({
   useCommandShortcut: () => undefined,

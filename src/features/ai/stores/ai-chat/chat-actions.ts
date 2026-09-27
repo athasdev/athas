@@ -1,8 +1,9 @@
 import { useIntelligenceSettingsStore } from "@/features/ai/intelligence/stores/intelligence-settings.store";
+import { holdsQueueForEdit } from "@/features/ai/lib/agent-queue-controls";
 import { resolveIntelligenceConnection } from "@/features/ai/intelligence/lib/resolve-intelligence-connection";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { hasProductCapability } from "@/features/window/lib/product-capabilities";
-import type { AgentType, Chat } from "@/features/ai/types/ai-chat.types";
+import type { AgentType, Chat, Message } from "@/features/ai/types/ai-chat.types";
 import { hasAgentSessionActivity, selectAgentSessions } from "@/features/ai/lib/agent-session-list";
 import { isChatInWorkspace } from "@/features/ai/lib/ai-workspace-scope";
 import { coalesceAssistantResponses } from "@/features/ai/lib/assistant-response";
@@ -19,8 +20,10 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useGitStore } from "@/features/git/stores/git.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
+import { getChatAcpSessionToClose } from "@/features/ai/lib/acp-session-state";
 import type { AIChatActions } from "./ai-chat-store.types";
 import type { GetAIChatStore, SetAIChatStore } from "./ai-chat-store-context";
+import type { Draft } from "immer";
 
 type ChatActions = Omit<
   AIChatActions,
@@ -30,13 +33,17 @@ type ChatActions = Omit<
   | "removeApiKey"
   | "hasProviderApiKey"
   | "setDynamicModels"
-  | "setAvailableSlashCommands"
+  | "setAcpAgentStatus"
+  | "setSessionSlashCommands"
   | "setSessionModeState"
-  | "setCurrentModeId"
-  | "setAcpStatus"
-  | "changeSessionMode"
+  | "setSessionCurrentMode"
   | "setSessionConfigOptions"
+  | "setSessionUsage"
+  | "clearAcpSession"
+  | "changeSessionMode"
   | "changeSessionConfigOption"
+  | "restoreChatSessionSettings"
+  | "setChatFollowAgent"
 >;
 
 const getCurrentWorkspacePath = () => useProjectStore.getState().rootFolderPath || null;
@@ -92,6 +99,25 @@ async function syncChatToDatabase(get: GetAIChatStore, chatId: string) {
   }
 }
 
+const STREAMING_SAVE_DELAY_MS = 250;
+const scheduledChatSyncs = new Map<string, ReturnType<typeof setTimeout>>();
+
+/**
+ * Saves a chat once message updates pause. A streamed reply updates its message for every chunk,
+ * and saving each one re-serialized the whole chat and rewrote it in the database tens of times a
+ * second; the last update always lands within the delay.
+ */
+function scheduleChatSync(get: GetAIChatStore, chatId: string) {
+  if (scheduledChatSyncs.has(chatId)) return;
+  scheduledChatSyncs.set(
+    chatId,
+    setTimeout(() => {
+      scheduledChatSyncs.delete(chatId);
+      void syncChatToDatabase(get, chatId);
+    }, STREAMING_SAVE_DELAY_MS),
+  );
+}
+
 async function loadChatMessages(set: SetAIChatStore, chatId: string) {
   set((state) => {
     state.chatMessageLoadStates[chatId] = "loading";
@@ -116,6 +142,7 @@ async function loadChatMessages(set: SetAIChatStore, chatId: string) {
           state.currentChatId = null;
         }
         delete state.chatMessageLoadStates[chatId];
+        delete state.modeByChat[chatId];
       });
       return;
     }
@@ -135,7 +162,89 @@ function ensureChatMessagesLoaded(set: SetAIChatStore, get: GetAIChatStore, chat
   void loadChatMessages(set, chatId);
 }
 
+/** Streamed changes to one message that have not reached the store yet. */
+interface PendingMessageUpdate {
+  updates: Partial<Message>;
+  /** Text appended after `updates.content` (or the stored content when there is none). */
+  appended: string;
+}
+
+type PendingChatUpdates = Map<string, PendingMessageUpdate>;
+
+function applyPendingUpdates(chat: Draft<Chat>, pending: PendingChatUpdates) {
+  for (const [messageId, { updates, appended }] of pending) {
+    const message = chat.messages.find((candidate) => candidate.id === messageId);
+    if (!message) continue;
+    const next = { ...message, ...updates } as Message;
+    if (appended) next.content = `${next.content ?? ""}${appended}`;
+    Object.assign(message, normalizeMessageFollowUpActions(next));
+  }
+}
+
+function scheduleFrame(callback: () => void): () => void {
+  if (typeof requestAnimationFrame === "function") {
+    const id = requestAnimationFrame(callback);
+    return () => cancelAnimationFrame(id);
+  }
+  const id = setTimeout(callback, 16);
+  return () => clearTimeout(id);
+}
+
 export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): ChatActions {
+  /**
+   * A streamed reply used to write the store for every token: each write copied the chat list,
+   * re-rendered everything subscribed to it and re-sorted the session sidebar. Stream updates now
+   * collect here and land together once per animation frame.
+   */
+  const pendingUpdates = new Map<string, PendingChatUpdates>();
+  let cancelFrame: (() => void) | null = null;
+
+  const takePending = (chatId: string) => {
+    const pending = pendingUpdates.get(chatId);
+    if (!pending) return null;
+    pendingUpdates.delete(chatId);
+    if (pendingUpdates.size === 0 && cancelFrame) {
+      cancelFrame();
+      cancelFrame = null;
+    }
+    return pending;
+  };
+
+  const flushPending = (chatId?: string) => {
+    const chatIds = chatId ? [chatId] : [...pendingUpdates.keys()];
+    const batches = chatIds.flatMap((id) => {
+      const pending = takePending(id);
+      return pending ? [[id, pending] as const] : [];
+    });
+    if (batches.length === 0) return;
+
+    set((state) => {
+      for (const [id, pending] of batches) {
+        const chat = state.chats.find((candidate) => candidate.id === id);
+        if (chat) applyPendingUpdates(chat, pending);
+      }
+    });
+    for (const [id] of batches) scheduleChatSync(get, id);
+  };
+
+  const queuePending = (chatId: string, messageId: string) => {
+    let chatPending = pendingUpdates.get(chatId);
+    if (!chatPending) {
+      chatPending = new Map();
+      pendingUpdates.set(chatId, chatPending);
+    }
+    let pending = chatPending.get(messageId);
+    if (!pending) {
+      pending = { updates: {}, appended: "" };
+      chatPending.set(messageId, pending);
+    }
+    cancelFrame ??= scheduleFrame(() => {
+      cancelFrame = null;
+      flushPending();
+    });
+    return pending;
+  };
+
   return {
     setSelectedAgentId: (agentId) =>
       set((state) => {
@@ -198,8 +307,16 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
       }
       return nextChatId;
     },
-    setMode: (mode) =>
+    setMode: (mode, chatId) =>
       set((state) => {
+        if (chatId) {
+          // Chats still on the default keep the mode they had; only this chat changes.
+          for (const chat of state.chats) {
+            if (chat.id !== chatId && !state.modeByChat[chat.id])
+              state.modeByChat[chat.id] = state.mode;
+          }
+          state.modeByChat[chatId] = mode;
+        }
         state.mode = mode;
       }),
     setPendingAgentLaunchRequest: (request) =>
@@ -233,6 +350,7 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
       }),
     dequeueAgentMessage: (chatId) => {
       const message = get().agentMessageQueues[chatId]?.[0] ?? null;
+      if (holdsQueueForEdit(chatId, message ?? undefined)) return null;
       set((state) => {
         const queue = state.agentMessageQueues[chatId];
         queue?.shift();
@@ -250,6 +368,11 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
 
         const [message] = queue.splice(fromIndex, 1);
         if (message) queue.splice(toIndex, 0, message);
+      }),
+    updateQueuedAgentMessage: (chatId, index, message) =>
+      set((state) => {
+        const queued = state.agentMessageQueues[chatId]?.[index];
+        if (queued) queued.content = message;
       }),
     removeQueuedAgentMessage: (chatId, index) =>
       set((state) => {
@@ -372,6 +495,8 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
       ensureChatMessagesLoaded(set, get, chatId);
     },
     deleteChat: (chatId) => {
+      takePending(chatId);
+      const deletedChat = get().chats.find((chat) => chat.id === chatId);
       set((state) => {
         const chatIndex = state.chats.findIndex((chat) => chat.id === chatId);
         if (chatIndex !== -1) {
@@ -396,6 +521,25 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
       void deleteChatFromDb(chatId).catch((error) =>
         console.error("Failed to delete chat from database:", error),
       );
+      void import("@/features/ai/services/agent-checkpoints-service")
+        .then(({ forgetChatCheckpoints }) => forgetChatCheckpoints(chatId))
+        .catch(() => undefined);
+      // Nobody can answer the chat's permission prompts any more.
+      void import("@/features/ai/stores/agent-permissions.store")
+        .then(({ useAgentPermissionsStore }) =>
+          useAgentPermissionsStore.getState().actions.cancelChat(chatId),
+        )
+        .catch(() => undefined);
+      // The chat's ACP session is no longer needed; the agent keeps serving other chats.
+      const sessionId = getChatAcpSessionToClose(deletedChat);
+      if (sessionId) {
+        set((state) => {
+          delete state.acpSessions[sessionId];
+        });
+        void import("@tauri-apps/api/core")
+          .then(({ invoke }) => invoke("close_acp_session", { sessionId }))
+          .catch((error) => console.error("Failed to close the chat's agent session:", error));
+      }
     },
     setChatModel: (chatId, providerId, modelId) => {
       set((state) => {
@@ -482,9 +626,11 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
       void syncChatToDatabase(get, chatId);
     },
     addMessage: (chatId, message) => {
+      const pending = takePending(chatId);
       set((state) => {
         const chat = state.chats.find((candidate) => candidate.id === chatId);
         if (chat) {
+          if (pending) applyPendingUpdates(chat, pending);
           chat.messages.push(normalizeMessageFollowUpActions(message));
           chat.lastMessageAt = new Date();
         }
@@ -492,17 +638,32 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
       void syncChatToDatabase(get, chatId);
     },
     updateMessage: (chatId, messageId, updates) => {
+      // Streamed changes queued before this one land first, so nothing arrives out of order.
+      const pending = takePending(chatId);
       set((state) => {
         const chat = state.chats.find((candidate) => candidate.id === chatId);
-        const message = chat?.messages.find((candidate) => candidate.id === messageId);
-        if (chat && message) {
-          Object.assign(message, normalizeMessageFollowUpActions({ ...message, ...updates }));
-          chat.lastMessageAt = new Date();
-        }
+        if (!chat) return;
+        if (pending) applyPendingUpdates(chat, pending);
+        const message = chat.messages.find((candidate) => candidate.id === messageId);
+        if (!message) return;
+        Object.assign(message, normalizeMessageFollowUpActions({ ...message, ...updates }));
+        // A turn moves its session up the list when it starts and when it ends, not per token.
+        if (!message.isStreaming) chat.lastMessageAt = new Date();
       });
-      void syncChatToDatabase(get, chatId);
+      scheduleChatSync(get, chatId);
     },
+    queueMessageUpdate: (chatId, messageId, updates) => {
+      const pending = queuePending(chatId, messageId);
+      if ("content" in updates) pending.appended = "";
+      Object.assign(pending.updates, updates);
+    },
+    appendMessageContent: (chatId, messageId, chunk) => {
+      if (!chunk) return;
+      queuePending(chatId, messageId).appended += chunk;
+    },
+    flushMessageUpdates: (chatId) => flushPending(chatId),
     replaceChatMessages: (chatId, messages) => {
+      takePending(chatId);
       set((state) => {
         const chat = state.chats.find((candidate) => candidate.id === chatId);
         if (!chat) return;
@@ -520,6 +681,7 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
       const nextContent = content.trim();
       if (!nextContent) return false;
 
+      flushPending(chatId);
       let didReplace = false;
       set((state) => {
         const chat = state.chats.find((candidate) => candidate.id === chatId);
@@ -573,6 +735,9 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
     clearAllChats: async () => {
       try {
         await Promise.all(get().chats.map((chat) => deleteChatFromDb(chat.id)));
+        pendingUpdates.clear();
+        cancelFrame?.();
+        cancelFrame = null;
         set((state) => {
           state.chats = [];
           state.currentChatId = null;
@@ -602,11 +767,19 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
         ensureChatMessagesLoaded(set, get, snapshot.currentChatId);
       }
     },
+    // Readers act on what the stream has produced so far, including the current frame.
     getCurrentChat: () => {
-      const state = get();
-      return state.chats.find((chat) => chat.id === state.currentChatId);
+      const currentChatId = get().currentChatId;
+      if (currentChatId) flushPending(currentChatId);
+      return get().chats.find((chat) => chat.id === currentChatId);
     },
-    getChatById: (chatId) => get().chats.find((chat) => chat.id === chatId),
-    getMessagesForChat: (chatId) => get().chats.find((chat) => chat.id === chatId)?.messages || [],
+    getChatById: (chatId) => {
+      flushPending(chatId);
+      return get().chats.find((chat) => chat.id === chatId);
+    },
+    getMessagesForChat: (chatId) => {
+      flushPending(chatId);
+      return get().chats.find((chat) => chat.id === chatId)?.messages || [];
+    },
   };
 }

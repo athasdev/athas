@@ -81,6 +81,16 @@ describe("settings normalization", () => {
     expect(normalizeSettingValue("fileTreeIndentSize", 13.6)).toBe(14);
   });
 
+  it("keeps the agent step budget a whole number within range", () => {
+    expect(normalizeSettingValue("aiAgentMaxSteps", 0)).toBe(1);
+    expect(normalizeSettingValue("aiAgentMaxSteps", 500)).toBe(100);
+    expect(normalizeSettingValue("aiAgentMaxSteps", 40.7)).toBe(40);
+    expect(
+      normalizeSettings({ ...getDefaultSettingsSnapshot(), aiAgentMaxSteps: Number.NaN })
+        .aiAgentMaxSteps,
+    ).toBe(25);
+  });
+
   it("falls back from unsupported file tree sort orders", () => {
     const normalized = normalizeSettings({
       ...getDefaultSettingsSnapshot(),
@@ -112,18 +122,15 @@ describe("settings normalization", () => {
       ...getDefaultSettingsSnapshot(),
       tabCloseButtonVisibility: "missing" as never,
       windowChromeDensity: "comfortable",
-      activityRailWidth: 400,
       sidebarWidth: 100,
       rightSidebarWidth: 900,
     } as ReturnType<typeof getDefaultSettingsSnapshot> & { windowChromeDensity: string });
 
     expect(normalized.tabCloseButtonVisibility).toBe("active");
     expect(normalized).not.toHaveProperty("windowChromeDensity");
-    expect(normalized.activityRailWidth).toBe(320);
     expect(normalized.sidebarWidth).toBe(140);
     expect(normalized.rightSidebarWidth).toBe(600);
     expect(normalizeSettingValue("tabCloseButtonVisibility", "hover")).toBe("hover");
-    expect(normalizeSettingValue("activityRailWidth", 120)).toBe(140);
     expect(normalizeSettingValue("sidebarWidth", 900)).toBe(600);
     expect(normalizeSettingValue("rightSidebarWidth", 100)).toBe(140);
   });
@@ -177,9 +184,6 @@ describe("settings normalization", () => {
         42,
       ] as unknown as string[]),
     ).toEqual(["git"]);
-    expect(
-      normalizeSettingValue("collapsedActivityRailSections", ["agents", "", "agents", "terminals"]),
-    ).toEqual(["agents", "terminals"]);
   });
 
   it("normalizes hidden Source Control submenu items", () => {
@@ -379,6 +383,20 @@ describe("settings normalization", () => {
         aiAgentNotifications: true,
       }).aiAgentNotifications,
     ).toBe(true);
+  });
+
+  it("keeps finished-turn notifications on and the sound off unless set otherwise", () => {
+    const defaults = normalizeSettings(getDefaultSettingsSnapshot());
+    expect(defaults.aiAgentFinishNotifications).toBe(true);
+    expect(defaults.aiAgentNotificationSound).toBe(false);
+
+    const changed = normalizeSettings({
+      ...getDefaultSettingsSnapshot(),
+      aiAgentFinishNotifications: false,
+      aiAgentNotificationSound: "yes" as never,
+    });
+    expect(changed.aiAgentFinishNotifications).toBe(false);
+    expect(changed.aiAgentNotificationSound).toBe(false);
   });
 
   it("preserves supported marketplace skill metadata", () => {

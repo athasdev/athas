@@ -1,4 +1,4 @@
-import type { ComponentProps } from "react";
+import type { ComponentProps, CSSProperties } from "react";
 import { cn } from "@/utils/cn";
 
 interface ShimmerProps extends Omit<ComponentProps<"span">, "style"> {
@@ -17,8 +17,10 @@ export function Shimmer({ active = true, duration, className, ...props }: Shimme
     <span
       data-slot="shimmer"
       data-active={active || undefined}
-      className={cn(active && "text-shimmer", className)}
-      style={active && duration ? { animationDuration: `${duration}s` } : undefined}
+      className={cn(active && "shimmer text-subtle-foreground shimmer-color-foreground", className)}
+      style={
+        active && duration ? ({ "--shimmer-duration": `${duration}s` } as CSSProperties) : undefined
+      }
       {...props}
     />
   );

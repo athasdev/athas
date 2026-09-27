@@ -86,6 +86,7 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
   );
 
   useEffect(() => {
+    // Settings can change or this view can close before the request completes.
     let isCurrent = true;
     setIsLoadingSkills(true);
     void loadMarketplaceSkills()
@@ -192,6 +193,7 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
     actions,
   });
 
+  // Keep route-independent overlays mounted while navigating the extensions surface.
   const overlays = (
     <>
       <SkillsCommand

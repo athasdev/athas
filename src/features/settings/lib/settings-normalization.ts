@@ -1,5 +1,7 @@
 import { getProviderById } from "@/features/ai/types/providers.types";
 import { normalizeOllamaBaseUrl } from "@/features/ai/lib/ollama-endpoint";
+import { normalizeMcpServers } from "@/features/ai/lib/mcp-servers";
+import { normalizeIntelligenceAgentSteps } from "@/features/ai/intelligence/lib/intelligence-agent-steps";
 import { normalizeLegacyV0DesignSystems } from "@/features/settings/lib/legacy-v0-settings";
 import { isKeybindingPreset } from "@/features/keymaps/defaults/keybinding-presets";
 import {
@@ -109,8 +111,6 @@ const EDITOR_LINE_HEIGHT_MIN = 1;
 const EDITOR_LINE_HEIGHT_MAX = 2;
 const FILE_TREE_INDENT_SIZE_MIN = 8;
 const FILE_TREE_INDENT_SIZE_MAX = 32;
-const ACTIVITY_RAIL_WIDTH_MIN = 140;
-const ACTIVITY_RAIL_WIDTH_MAX = 320;
 const SIDEBAR_WIDTH_MIN = 140;
 const SIDEBAR_WIDTH_MAX = 600;
 const RENDER_WHITESPACE_MODES = new Set<Settings["renderWhitespace"]>([
@@ -418,7 +418,16 @@ function normalizeAISettings(settings: Settings): Settings {
   normalizedSettings.aiAutocompleteCustomModelId =
     normalizedSettings.aiAutocompleteCustomModelId?.trim() || "";
   normalizedSettings.aiAgentNotifications = normalizedSettings.aiAgentNotifications === true;
+  normalizedSettings.aiAgentFinishNotifications =
+    normalizedSettings.aiAgentFinishNotifications !== false;
+  normalizedSettings.aiAgentNotificationSound =
+    normalizedSettings.aiAgentNotificationSound === true;
+  normalizedSettings.aiFollowAgent = normalizedSettings.aiFollowAgent === true;
+  normalizedSettings.aiAgentMaxSteps = normalizeIntelligenceAgentSteps(
+    normalizedSettings.aiAgentMaxSteps,
+  );
   normalizedSettings.aiSkills = normalizeAISkills(normalizedSettings.aiSkills);
+  normalizedSettings.mcpServers = normalizeMcpServers(normalizedSettings.mcpServers);
   normalizedSettings.v0DesignSystems = normalizeLegacyV0DesignSystems(
     (normalizedSettings as { v0DesignSystems?: unknown }).v0DesignSystems,
   );
@@ -529,12 +538,6 @@ export function normalizeSettings(settings: Settings): Settings {
   normalizedSettings.fileTreeSortOrder = normalizeFileTreeSortOrder(
     (normalizedSettings as { fileTreeSortOrder?: unknown }).fileTreeSortOrder,
   );
-  normalizedSettings.activityRailWidth = normalizeBoundedWidth(
-    normalizedSettings.activityRailWidth,
-    defaultSettings.activityRailWidth,
-    ACTIVITY_RAIL_WIDTH_MIN,
-    ACTIVITY_RAIL_WIDTH_MAX,
-  );
   normalizedSettings.sidebarWidth = normalizeBoundedWidth(
     normalizedSettings.sidebarWidth,
     defaultSettings.sidebarWidth,
@@ -577,9 +580,6 @@ export function normalizeSettings(settings: Settings): Settings {
   ).filter((itemId) => itemId !== "search" && itemId !== "review");
   normalizedSettings.pinnedSidebarExtensionItems = normalizeStringList(
     normalizedSettings.pinnedSidebarExtensionItems,
-  );
-  normalizedSettings.collapsedActivityRailSections = normalizeStringList(
-    normalizedSettings.collapsedActivityRailSections,
   );
   return normalizedSettings;
 }
@@ -636,15 +636,6 @@ export function normalizeSettingValue<K extends keyof Settings>(
     return normalizeFileTreeSortOrder(value) as Settings[K];
   }
 
-  if (key === "activityRailWidth") {
-    return normalizeBoundedWidth(
-      value,
-      defaultSettings.activityRailWidth,
-      ACTIVITY_RAIL_WIDTH_MIN,
-      ACTIVITY_RAIL_WIDTH_MAX,
-    ) as Settings[K];
-  }
-
   if (key === "sidebarWidth" || key === "rightSidebarWidth") {
     const fallback =
       key === "sidebarWidth" ? defaultSettings.sidebarWidth : defaultSettings.rightSidebarWidth;
@@ -656,11 +647,7 @@ export function normalizeSettingValue<K extends keyof Settings>(
     ) as Settings[K];
   }
 
-  if (
-    key === "hiddenSidebarActivityItems" ||
-    key === "pinnedSidebarExtensionItems" ||
-    key === "collapsedActivityRailSections"
-  ) {
+  if (key === "hiddenSidebarActivityItems" || key === "pinnedSidebarExtensionItems") {
     return normalizeStringList(value) as Settings[K];
   }
 
@@ -688,6 +675,14 @@ export function normalizeSettingValue<K extends keyof Settings>(
 
   if (key === "aiSkills") {
     return normalizeAISkills(value as Settings["aiSkills"]) as Settings[K];
+  }
+
+  if (key === "mcpServers") {
+    return normalizeMcpServers(value) as Settings[K];
+  }
+
+  if (key === "aiAgentMaxSteps") {
+    return normalizeIntelligenceAgentSteps(value) as Settings[K];
   }
 
   if (key === "v0DesignSystems") {

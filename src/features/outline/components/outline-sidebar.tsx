@@ -72,7 +72,8 @@ function matchesOutlineFilter(kind: string, selectedFilters: Set<OutlineFilter>)
   });
 }
 
-export function OutlineSidebar() {
+/** The outline of one editor tab's document, docked beside its code. */
+export function OutlineSidebar({ bufferId }: { bufferId?: string } = {}) {
   const [query, setQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [selectedFilters, setSelectedFilters] = useState<Set<OutlineFilter>>(
@@ -82,7 +83,10 @@ export function OutlineSidebar() {
   const rowRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const [focusedSymbolId, setFocusedSymbolId] = useState<string | null>(null);
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(() => new Set());
-  const { activeBuffer, symbols, isLoading, isSupported } = useDocumentOutline({ isActive: true });
+  const { activeBuffer, symbols, isLoading, isSupported } = useDocumentOutline({
+    isActive: true,
+    bufferId,
+  });
   const openBuffer = useBufferStore.use.actions().openBuffer;
   const filteredSymbols = useMemo(
     () => symbols.filter((symbol) => matchesOutlineFilter(symbol.kind, selectedFilters)),

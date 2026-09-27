@@ -488,6 +488,7 @@ export const TerminalEmulator = ({
         activeRemoteConnectionId = activeRemoteConnectionId || remoteInfo?.connectionId;
         const size = getTerminalSize(terminal);
         const events = createTerminalEventChannel();
+        const launch = existingSession?.launch;
 
         activeConnectionId = activeRemoteConnectionId
           ? await (async () => {
@@ -517,7 +518,11 @@ export const TerminalEmulator = ({
                   (wslInfo ? getWslShellId(wslInfo.distro) : undefined),
                 wslDistribution: wslInfo?.distro,
                 wslWorkingDirectory: wslInfo?.linuxPath,
-                environment,
+                environment: launch?.environment
+                  ? { ...environment, ...launch.environment }
+                  : environment,
+                command: launch?.command,
+                args: launch?.args,
                 size,
                 shellIntegration: terminalShellIntegration,
               },

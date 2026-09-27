@@ -4,25 +4,66 @@ import type * as Monaco from "monaco-editor";
 const mocks = vi.hoisted(() => ({
   request: vi.fn(),
   editors: vi.fn(),
+  markers: vi.fn(() => [] as unknown[]),
   enabled: true,
+  authenticated: true,
   listeners: new Set<(...args: any[]) => void>(),
+  tokenListeners: new Set<(providerId: string) => void>(),
+  settingsListeners: new Set<(...args: any[]) => void>(),
+  chatListeners: new Set<(...args: any[]) => void>(),
 }));
 vi.mock("monaco-editor", () => ({
-  editor: { getEditors: mocks.editors, EditorOption: { readOnly: 1 } },
-  languages: {},
+  editor: {
+    getEditors: mocks.editors,
+    getModelMarkers: mocks.markers,
+    getModels: () => [],
+    onDidCreateModel: vi.fn(),
+    EditorOption: { readOnly: 1 },
+  },
+  languages: { registerInlineCompletionsProvider: vi.fn() },
   Range: { fromPositions: (start: unknown, end = start) => ({ start, end }) },
 }));
-vi.mock("@/features/ai/intelligence/services/intelligence-text-service", () => ({
-  requestInlineEdit: mocks.request,
-}));
+vi.mock("@/features/ai/intelligence/services/intelligence-text-service", () => {
+  class InlineEditError extends Error {
+    constructor(
+      message: string,
+      public status: number,
+      options?: { hosted?: boolean },
+    ) {
+      super(message);
+      this.hosted = options?.hosted ?? false;
+    }
+    hosted: boolean;
+  }
+  return { requestInlineEdit: mocks.request, InlineEditError };
+});
+vi.mock("sonner", () => ({ toast: { warning: vi.fn() } }));
 vi.mock("@/features/settings/stores/settings.store", () => ({
   useSettingsStore: {
     getState: () => ({ settings: { aiCompletion: mocks.enabled } }),
-    subscribe: () => () => {},
+    subscribe: (listener: (...args: any[]) => void) => {
+      mocks.settingsListeners.add(listener);
+      return () => mocks.settingsListeners.delete(listener);
+    },
+  },
+}));
+vi.mock("@/features/ai/services/ai-token-service", () => ({
+  onProviderApiTokenChange: (listener: (providerId: string) => void) => {
+    mocks.tokenListeners.add(listener);
+    return () => mocks.tokenListeners.delete(listener);
+  },
+}));
+vi.mock("@/features/ai/stores/ai-chat.store", () => ({
+  useAIChatStore: {
+    subscribe: (listener: (...args: any[]) => void) => {
+      mocks.chatListeners.add(listener);
+      return () => mocks.chatListeners.delete(listener);
+    },
   },
 }));
 vi.mock("@/features/window/stores/auth.store", () => ({
   useAuthStore: {
+    getState: () => ({ isAuthenticated: mocks.authenticated }),
     subscribe: (listener: (...args: any[]) => void) => {
       mocks.listeners.add(listener);
       return () => mocks.listeners.delete(listener);
@@ -33,7 +74,20 @@ vi.mock("@/features/ai/intelligence/stores/intelligence-settings.store", () => (
   useIntelligenceSettingsStore: { subscribe: () => () => {} },
 }));
 
-import { createIntelligenceCompletionsProvider } from "../engines/monaco/intelligence-completions";
+import { toast } from "sonner";
+import { InlineEditError } from "@/features/ai/intelligence/services/intelligence-text-service";
+import {
+  createIntelligenceCompletionsProvider,
+  registerIntelligenceCompletions,
+  trimSuffixOverlap,
+} from "../engines/monaco/intelligence-completions";
+import {
+  clearRecentEdits,
+  getNearbyDiagnostics,
+  getRecentEdits,
+  recordRecentEdit,
+} from "../engines/monaco/intelligence-completion-context";
+import { useIntelligenceCompletionStore } from "../stores/intelligence-completion.store";
 
 function setup(path = "/project/file.ts") {
   let change = () => {};
@@ -79,8 +133,14 @@ function setup(path = "/project/file.ts") {
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.enabled = true;
+  mocks.authenticated = true;
+  mocks.markers.mockReturnValue([]);
   mocks.listeners.clear();
+  clearRecentEdits();
+  useIntelligenceCompletionStore.setState({ status: { kind: "idle" }, pending: 0 });
 });
+
+const status = () => useIntelligenceCompletionStore.getState().status;
 
 describe("Intelligence editor completions", () => {
   it("requests bounded cursor context and preserves insertion whitespace", async () => {
@@ -141,5 +201,152 @@ describe("Intelligence editor completions", () => {
   it("treats unavailable providers as no suggestion", async () => {
     mocks.request.mockRejectedValue(new Error("No key"));
     expect(await setup().run()).toEqual({ items: [] });
+  });
+
+  it("pauses on hosted billing errors, notifies once, and stops requesting", async () => {
+    mocks.request.mockRejectedValue(new InlineEditError("Requires Pro.", 402, { hosted: true }));
+    await setup().run();
+    expect(status()).toEqual({ kind: "paused", reason: "credits", message: "Requires Pro." });
+    expect(toast.warning).toHaveBeenCalledOnce();
+    await setup().run();
+    expect(mocks.request).toHaveBeenCalledOnce();
+    useIntelligenceCompletionStore.getState().actions.resume();
+    await setup().run();
+    expect(mocks.request).toHaveBeenCalledTimes(2);
+    expect(toast.warning).toHaveBeenCalledTimes(1);
+  });
+
+  it("resumes after an API key is added or the provider changes", async () => {
+    registerIntelligenceCompletions();
+    const { pause } = useIntelligenceCompletionStore.getState().actions;
+    pause("api-key", "Add an API key.");
+    for (const listener of mocks.tokenListeners) listener("openai");
+    expect(status()).toEqual({ kind: "idle" });
+
+    pause("api-key", "Add an API key.");
+    const keys = new Map([["openai", false]]);
+    for (const listener of mocks.chatListeners)
+      listener({ providerApiKeys: new Map([["openai", true]]) }, { providerApiKeys: keys });
+    expect(status()).toEqual({ kind: "idle" });
+
+    pause("api-key", "Add an API key.");
+    const settings = { aiProviderId: "openai", aiModelId: "gpt" };
+    for (const listener of mocks.settingsListeners)
+      listener({ settings: { ...settings, fontSize: 14 } }, { settings });
+    expect(status()).toMatchObject({ kind: "paused" });
+    for (const listener of mocks.settingsListeners)
+      listener({ settings: { ...settings, aiProviderId: "anthropic" } }, { settings });
+    expect(status()).toEqual({ kind: "idle" });
+  });
+
+  it("keeps counting requests in flight across a pause and resume", async () => {
+    const { requestStarted, requestFinished, pause, resume } =
+      useIntelligenceCompletionStore.getState().actions;
+    requestStarted();
+    pause("api-key", "Add an API key.");
+    requestStarted();
+    resume();
+    expect(status()).toEqual({ kind: "loading" });
+    requestFinished();
+    expect(status()).toEqual({ kind: "loading" });
+    requestFinished();
+    expect(status()).toEqual({ kind: "idle" });
+    expect(useIntelligenceCompletionStore.getState().pending).toBe(0);
+  });
+
+  it("shows a signed-out pause without a notice", async () => {
+    mocks.authenticated = false;
+    mocks.request.mockRejectedValue(new InlineEditError("Sign in.", 401, { hosted: true }));
+    await setup().run();
+    expect(status()).toMatchObject({ kind: "paused", reason: "sign-in" });
+    expect(toast.warning).not.toHaveBeenCalled();
+  });
+
+  it("pauses for organization policy only when Athas refuses", async () => {
+    mocks.request.mockRejectedValueOnce(new InlineEditError("Model not allowed", 403));
+    await setup().run();
+    expect(status()).toEqual({ kind: "error", message: "Model not allowed" });
+    mocks.request.mockRejectedValueOnce(new InlineEditError("Disabled", 403, { hosted: true }));
+    await setup().run();
+    expect(status()).toMatchObject({ kind: "paused", reason: "policy" });
+  });
+
+  it("reports other failures and clears them after a successful request", async () => {
+    mocks.request.mockRejectedValueOnce(new InlineEditError("Server busy", 503, { hosted: true }));
+    await setup().run();
+    expect(status()).toEqual({ kind: "error", message: "Server busy" });
+    mocks.request.mockResolvedValueOnce({ editedText: "value" });
+    await setup().run();
+    expect(status()).toEqual({ kind: "idle" });
+  });
+
+  it("sends recent edits and nearby diagnostics as context", async () => {
+    mocks.request.mockResolvedValue({ editedText: "x" });
+    const other = {
+      uri: { scheme: "athas", authority: "editor", path: "/project/other.ts", query: "" },
+      isDisposed: () => false,
+      getLineCount: () => 3,
+      getLineMaxColumn: () => 20,
+      getValueInRange: () => "export const other = 1;",
+    };
+    recordRecentEdit(other as unknown as Monaco.editor.ITextModel, [
+      {
+        range: { startLineNumber: 2 } as Monaco.IRange,
+        text: "1",
+      },
+    ]);
+    mocks.markers.mockReturnValue([
+      { severity: 8, message: "Missing return", startLineNumber: 3 },
+      { severity: 1, message: "hint", startLineNumber: 1 },
+    ]);
+    await setup().run();
+    expect(mocks.request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recentEdits: [{ filePath: "/project/other.ts", snippet: "export const other = 1;" }],
+        diagnostics: [{ line: 3, severity: "error", message: "Missing return" }],
+      }),
+      expect.anything(),
+    );
+  });
+});
+
+describe("Intelligence completion context", () => {
+  it("keeps the latest edits and skips the one at the cursor", () => {
+    const model = (path: string) => ({
+      uri: { scheme: "athas", authority: "editor", path, query: "" },
+      isDisposed: () => false,
+      getLineCount: () => 100,
+      getLineMaxColumn: () => 10,
+      getValueInRange: () => `edit in ${path}`,
+    });
+    for (let index = 0; index < 7; index++) {
+      recordRecentEdit(model(`/f${index}.ts`) as unknown as Monaco.editor.ITextModel, [
+        { range: { startLineNumber: 10 } as Monaco.IRange, text: "x" },
+      ]);
+    }
+    recordRecentEdit(model("/.env") as unknown as Monaco.editor.ITextModel, [
+      { range: { startLineNumber: 1 } as Monaco.IRange, text: "SECRET=1" },
+    ]);
+    const edits = getRecentEdits("/f6.ts", 10);
+    expect(edits.map((edit) => edit.filePath)).toEqual(["/f2.ts", "/f3.ts", "/f4.ts", "/f5.ts"]);
+  });
+
+  it("limits diagnostics to nearby warnings and errors", () => {
+    const diagnostics = getNearbyDiagnostics(
+      [
+        { severity: 4, message: "far", startLineNumber: 200 },
+        { severity: 4, message: "near warning", startLineNumber: 12 },
+        { severity: 8, message: "error", startLineNumber: 9 },
+        { severity: 2, message: "info", startLineNumber: 10 },
+      ],
+      10,
+    );
+    expect(diagnostics.map((diagnostic) => diagnostic.message)).toEqual(["error", "near warning"]);
+  });
+
+  it("drops a repeated closing line from multi-line completions", () => {
+    expect(trimSuffixOverlap("{\n  return 1;\n}", "}\n")).toBe("{\n  return 1;\n");
+    expect(trimSuffixOverlap("value", "value")).toBe("value");
+    expect(trimSuffixOverlap("a\nb", "c")).toBe("a\nb");
   });
 });

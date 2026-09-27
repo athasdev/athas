@@ -75,7 +75,6 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
     return buffer?.type === "pullRequest" ? buffer : undefined;
   });
   const selectedPRDetails = useGitHubStore.use.selectedPRDetails();
-  const isActiveBuffer = useBufferStore((state) => state.activeBufferId === bufferId);
   const selectedPRDiff = useGitHubStore.use.selectedPRDiff();
   const selectedPRFiles = useGitHubStore.use.selectedPRFiles();
   const selectedPRComments = useGitHubStore.use.selectedPRComments();
@@ -709,7 +708,6 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
             contentError={contentError}
             diffFiles={diffFiles}
             selectedFilePath={selectedFilePath}
-            isActive={isActiveBuffer}
             patchErrors={patchErrors}
             onRetry={handleRefresh}
             onSelectFile={setSelectedFilePath}

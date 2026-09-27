@@ -7,11 +7,14 @@ import {
   CodeBlockIcon,
   DatabaseIcon,
   FilesIcon,
+  FolderIcon,
   GitDiffIcon,
   GitPullRequestIcon,
+  HistoryIcon,
   ImageIcon,
   StackIcon,
   TerminalWindowIcon,
+  WarningIcon,
   XIcon,
 } from "@/ui/icons";
 import { GithubMark } from "@/ui/brand-marks";
@@ -35,12 +38,15 @@ import {
 
 const groupIcons = {
   files: FilesIcon,
+  folders: FolderIcon,
   diffs: GitDiffIcon,
   images: ImageIcon,
   selections: CodeBlockIcon,
   terminals: TerminalWindowIcon,
   databases: DatabaseIcon,
   github: GithubMark,
+  problems: WarningIcon,
+  chats: HistoryIcon,
   other: StackIcon,
 };
 

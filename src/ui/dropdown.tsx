@@ -19,6 +19,8 @@ import { ScrollArea } from "@/ui/scroll-area";
 import { cn } from "@/utils/cn";
 import { CheckIcon, ChevronRightIcon, SearchIcon } from "@/ui/icons";
 import Keybinding from "@/features/keymaps/components/keybinding";
+import { useOverlayPlacement } from "@/ui/overlay-side";
+import { OverlayRoot } from "@/ui/overlay-root";
 
 const menuSurfaceVariants = cva(
   // One fast, smooth entrance for every menu-shaped surface: fade + a hint of scale from its anchor.
@@ -277,9 +279,9 @@ type DropdownMenuContentProps = DropdownMenuPrimitive.Popup.Props &
 
 function DropdownMenuContent({
   className,
-  align = "end",
+  align: alignProp,
   alignOffset,
-  side = "bottom",
+  side: sideProp,
   sideOffset = 4,
   collisionPadding = 8,
   viewport = "default",
@@ -288,24 +290,29 @@ function DropdownMenuContent({
   positionMethod,
   ...props
 }: DropdownMenuContentProps) {
+  const placement = useOverlayPlacement();
+  const side = sideProp ?? placement.side ?? "bottom";
+  const align = alignProp ?? placement.align ?? "end";
   return (
     <DropdownMenuPrimitive.Portal>
-      <DropdownMenuPrimitive.Positioner
-        align={align}
-        alignOffset={alignOffset}
-        side={side}
-        sideOffset={sideOffset}
-        collisionPadding={collisionPadding}
-        anchor={anchor}
-        positionMethod={positionMethod}
-        className="isolate z-10070 outline-none"
-      >
-        <DropdownMenuPrimitive.Popup
-          data-slot="dropdown-menu-content"
-          className={cn(menuSurfaceVariants({ viewport, size }), "z-10070", className)}
-          {...props}
-        />
-      </DropdownMenuPrimitive.Positioner>
+      <OverlayRoot>
+        <DropdownMenuPrimitive.Positioner
+          align={align}
+          alignOffset={alignOffset}
+          side={side}
+          sideOffset={sideOffset}
+          collisionPadding={collisionPadding}
+          anchor={anchor}
+          positionMethod={positionMethod}
+          className="isolate z-10070 outline-none"
+        >
+          <DropdownMenuPrimitive.Popup
+            data-slot="dropdown-menu-content"
+            className={cn(menuSurfaceVariants({ viewport, size }), "z-10070", className)}
+            {...props}
+          />
+        </DropdownMenuPrimitive.Positioner>
+      </OverlayRoot>
     </DropdownMenuPrimitive.Portal>
   );
 }
@@ -364,7 +371,7 @@ function DropdownMenuTrailingAction({
         "absolute right-0 z-10 flex pr-1 transition-opacity",
         visibility === "always"
           ? "opacity-100"
-          : "opacity-0 group-hover/dropdown-menu-row:opacity-100 group-focus-within/dropdown-menu-row:opacity-100 has-data-[popup-open]:opacity-100",
+          : "opacity-0 group-hover/dropdown-menu-row:opacity-100 group-focus-within/dropdown-menu-row:opacity-100 has-data-popup-open:opacity-100",
       )}
       onMouseMove={(event) => event.stopPropagation()}
       onPointerDown={(event) => event.stopPropagation()}
@@ -433,7 +440,7 @@ function DropdownMenuRadioItem({
         className={cn(
           "pointer-events-none absolute right-2 flex size-4 items-center justify-center transition-opacity",
           trailingAction &&
-            "group-hover/dropdown-menu-row:opacity-0 group-focus-within/dropdown-menu-row:opacity-0 group-has-data-[popup-open]/dropdown-menu-row:opacity-0",
+            "group-hover/dropdown-menu-row:opacity-0 group-focus-within/dropdown-menu-row:opacity-0 group-has-data-popup-open/dropdown-menu-row:opacity-0",
           trailingAction && trailingActionVisibility === "always" && "opacity-0",
         )}
       >
