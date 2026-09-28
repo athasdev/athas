@@ -48,24 +48,16 @@ export function TabCompletionSection() {
 
   const describeModel = () => {
     if (!resolved) {
-      if (defaultIsLocal)
-        return "Your default model runs locally, so Automatic never uses Athas. Choose a local model for Tab.";
+      if (defaultIsLocal) return "Choose a local model; Automatic never uses Athas here";
       return state.isAuthenticated
-        ? "Automatic uses Athas's Tab model, which needs Pro. Choose one of your own models instead."
-        : "Automatic uses Athas's Tab model once you sign in. Or choose one of your own models.";
+        ? "Athas Tab needs Pro, or choose your own model"
+        : "Sign in for Athas Tab, or choose your own model";
     }
     const prefix = choice ? "" : "Automatic: ";
-    if (resolved.providerId === "athas")
-      return `${prefix}Athas's Tab model, a small, fast model made for completions. Included in Pro.`;
-    if (resolvedIsLocal) {
-      const reason = choice ? "" : ", because your default model runs locally";
-      return `${prefix}${resolvedName.model} on ${resolvedName.provider}${reason}. Your code stays on your network.`;
-    }
-    const fallback = choice
-      ? ""
-      : ", your default model, because Athas's Tab model is not available";
-    return `${prefix}${resolvedName.model} on your ${resolvedName.provider} account${fallback}.${
-      defaultIsLocal ? " Your default model is local, but Tab sends code to this provider." : ""
+    if (resolved.providerId === "athas") return `${prefix}Athas Tab, included in Pro`;
+    if (resolvedIsLocal) return `${prefix}${resolvedName.model}, runs locally`;
+    return `${prefix}${resolvedName.model} on your ${resolvedName.provider} key${
+      defaultIsLocal ? ", sends code off your network" : ""
     }`;
   };
 
@@ -73,11 +65,7 @@ export function TabCompletionSection() {
     <Section title="Suggestions">
       <SettingRow
         label="Tab completion"
-        description={
-          allowed
-            ? "Suggest code as you type. Press Tab to accept a suggestion."
-            : "Turned off by your organization."
-        }
+        description={allowed ? undefined : "Turned off by your organization"}
         onReset={() => updateSetting("aiCompletion", getDefaultSetting("aiCompletion"))}
         canReset={enabled !== getDefaultSetting("aiCompletion")}
       >

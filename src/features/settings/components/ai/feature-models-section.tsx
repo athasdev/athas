@@ -34,18 +34,11 @@ export function FeatureModelsSection() {
   }
 
   return (
-    <Section
-      title={SECTION_TITLE}
-      description="Each feature uses the default model unless you choose another one for it."
-    >
+    <Section title={SECTION_TITLE}>
       <SettingRow
         label="Models per feature"
         description={
-          overrideCount > 0
-            ? overrideCount === 1
-              ? "1 feature uses its own model."
-              : `${overrideCount} features use their own model.`
-            : "Every feature uses the default model."
+          overrideCount > 0 ? `${overrideCount} with their own model` : "All use the default model"
         }
       >
         <Button variant="ghost" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
@@ -55,7 +48,7 @@ export function FeatureModelsSection() {
       </SettingRow>
       {open
         ? AI_FEATURE_MODEL_OVERRIDES.map(({ task, label }) => (
-            <SettingRow key={task} label={label}>
+            <SettingRow key={task} label={label} level="nested">
               <ModelConnectionPicker
                 aria-label={`${label} model`}
                 value={state.preferences.tasks[task] ?? null}

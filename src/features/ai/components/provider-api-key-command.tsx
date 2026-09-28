@@ -6,6 +6,7 @@ import {
   useProviderById,
 } from "@/features/ai/hooks/use-available-providers";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
+import type { ModelProvider } from "@/features/ai/types/providers.types";
 import { Button } from "@/ui/button";
 import Command, {
   CommandEmpty,
@@ -40,6 +41,15 @@ const PLACEHOLDERS: Partial<Record<string, string>> = {
 };
 
 const MASKED_API_KEY = "••••••••••••••••••••";
+
+/** Where to create a key for a provider, from its own metadata or the built-in list. */
+export function getProviderApiKeyUrl(provider: Pick<ModelProvider, "id" | "apiKeyUrl">) {
+  return provider.apiKeyUrl || DASHBOARD_LINKS[provider.id];
+}
+
+function getProviderApiKeyPlaceholder(provider: Pick<ModelProvider, "id" | "apiKeyPlaceholder">) {
+  return provider.apiKeyPlaceholder || PLACEHOLDERS[provider.id] || "API key";
+}
 
 export function ProviderApiKeyCommand({
   isOpen,
@@ -90,15 +100,10 @@ function ProviderApiKeyCommandContent({
 
   const selectedProvider = useProviderById(selectedProviderId);
   const hasExistingKey = selectedProviderId ? hasProviderApiKey(selectedProviderId) : false;
-  const dashboardLink =
-    selectedProvider?.apiKeyUrl ||
-    (selectedProviderId ? DASHBOARD_LINKS[selectedProviderId] : undefined);
-  const placeholder =
-    selectedProvider?.apiKeyPlaceholder ||
-    (selectedProviderId && PLACEHOLDERS[selectedProviderId]
-      ? PLACEHOLDERS[selectedProviderId]
-      : undefined) ||
-    "Enter API key...";
+  const dashboardLink = selectedProvider ? getProviderApiKeyUrl(selectedProvider) : undefined;
+  const placeholder = selectedProvider
+    ? getProviderApiKeyPlaceholder(selectedProvider)
+    : "Enter API key...";
 
   const filteredProviders = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();

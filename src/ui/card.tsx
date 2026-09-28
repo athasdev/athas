@@ -7,19 +7,30 @@ const cardVariants = cva(
   {
     variants: {
       variant: {
-        /** A surface-plane panel with a hairline edge, so it reads on either plane. */
-        default: "border border-border bg-surface",
+        /** A panel with a hairline edge, so it reads on either plane. */
+        default: "border border-border",
         /** Edge only, for grouping content that stays on the current plane. */
-        outline: "border border-border bg-transparent",
+        outline: "border border-border",
         /** A `default` card that responds to hover and focus. */
         interactive:
-          "border border-border bg-surface cursor-default transition-colors duration-fast hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus",
+          "border border-border cursor-default transition-colors duration-fast hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus",
+      },
+      /**
+       * The plane the card fill comes from. `surface` suits cards on the content plane;
+       * `background` raises cards off a surface page, such as Settings.
+       */
+      plane: {
+        surface: "bg-surface",
+        background: "bg-background",
       },
       layout: {
         /** Header, content, and footer spaced apart. */
         stack: "gap-3 py-3",
-        /** Edge-to-edge rows split by hairlines, such as a section of settings. */
-        list: "divide-y divide-border",
+        /**
+         * Rows split by hairlines inset from the card edge, such as a section of settings. Each
+         * row owns its padding; the card owns the edge and the lines between rows.
+         */
+        list: "*:relative *:not-first:before:pointer-events-none *:not-first:before:absolute *:not-first:before:inset-x-3 *:not-first:before:top-0 *:not-first:before:h-px *:not-first:before:bg-border",
       },
       tone: {
         default: "",
@@ -27,8 +38,10 @@ const cardVariants = cva(
         accent: "border-primary bg-primary-soft",
       },
     },
+    compoundVariants: [{ variant: "outline", class: "bg-transparent" }],
     defaultVariants: {
       variant: "default",
+      plane: "surface",
       layout: "stack",
       tone: "default",
     },
@@ -40,6 +53,7 @@ function Card({
   variant = "default",
   layout = "stack",
   tone = "default",
+  plane = "surface",
   ...props
 }: ComponentProps<"div"> & VariantProps<typeof cardVariants>) {
   return (
@@ -47,7 +61,7 @@ function Card({
       data-slot="card"
       data-variant={variant}
       data-tone={tone}
-      className={cn(cardVariants({ variant, layout, tone }), className)}
+      className={cn(cardVariants({ variant, layout, tone, plane }), className)}
       {...props}
     />
   );

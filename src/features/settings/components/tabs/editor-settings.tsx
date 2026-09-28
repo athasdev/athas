@@ -67,10 +67,9 @@ export const EditorSettings = () => {
   ];
   return (
     <SettingsView>
-      <Section title="Editor">
+      <Section title="Font">
         <SettingRow
-          label="Editor Font Family"
-          description="Font family for code editor"
+          label="Font Family"
           onReset={() => updateSetting("fontFamily", getDefaultSetting("fontFamily"))}
           canReset={settings.fontFamily !== getDefaultSetting("fontFamily")}
         >
@@ -80,10 +79,8 @@ export const EditorSettings = () => {
             monospaceOnly={true}
           />
         </SettingRow>
-
         <SettingRow
           label="Font Size"
-          description="Editor font size in pixels"
           onReset={() => updateSetting("fontSize", getDefaultSetting("fontSize"))}
           canReset={settings.fontSize !== getDefaultSetting("fontSize")}
         >
@@ -94,38 +91,8 @@ export const EditorSettings = () => {
             onChange={(val) => updateSetting("fontSize", val)}
           />
         </SettingRow>
-
-        <SettingRow
-          label="Font Ligatures"
-          description="Use programming ligatures provided by the selected editor font"
-          onReset={() =>
-            updateSetting("editorFontLigatures", getDefaultSetting("editorFontLigatures"))
-          }
-          canReset={settings.editorFontLigatures !== getDefaultSetting("editorFontLigatures")}
-        >
-          <Switch
-            checked={settings.editorFontLigatures}
-            onChange={(checked) => updateSetting("editorFontLigatures", checked)}
-          />
-        </SettingRow>
-
-        <SettingRow
-          label="Italic Comments"
-          description="Render code comments in italics"
-          onReset={() =>
-            updateSetting("editorItalicComments", getDefaultSetting("editorItalicComments"))
-          }
-          canReset={settings.editorItalicComments !== getDefaultSetting("editorItalicComments")}
-        >
-          <Switch
-            checked={settings.editorItalicComments}
-            onChange={(checked) => updateSetting("editorItalicComments", checked)}
-          />
-        </SettingRow>
-
         <SettingRow
           label="Line Height"
-          description="Editor line height multiplier"
           onReset={() => updateSetting("editorLineHeight", getDefaultSetting("editorLineHeight"))}
           canReset={settings.editorLineHeight !== getDefaultSetting("editorLineHeight")}
         >
@@ -137,35 +104,34 @@ export const EditorSettings = () => {
             onChange={(val) => updateSetting("editorLineHeight", val)}
           />
         </SettingRow>
-
         <SettingRow
-          label="Tab Size"
-          description="Number of spaces per tab"
-          onReset={() => updateSetting("tabSize", getDefaultSetting("tabSize"))}
-          canReset={settings.tabSize !== getDefaultSetting("tabSize")}
-        >
-          <NumberInput
-            min="1"
-            max="8"
-            value={settings.tabSize}
-            onChange={(val) => updateSetting("tabSize", val)}
-          />
-        </SettingRow>
-        <SettingRow
-          label="Word Wrap"
-          description="Wrap lines that exceed viewport width"
-          onReset={() => updateSetting("wordWrap", getDefaultSetting("wordWrap"))}
-          canReset={settings.wordWrap !== getDefaultSetting("wordWrap")}
+          label="Font Ligatures"
+          onReset={() =>
+            updateSetting("editorFontLigatures", getDefaultSetting("editorFontLigatures"))
+          }
+          canReset={settings.editorFontLigatures !== getDefaultSetting("editorFontLigatures")}
         >
           <Switch
-            checked={settings.wordWrap}
-            onChange={(checked) => updateSetting("wordWrap", checked)}
+            checked={settings.editorFontLigatures}
+            onChange={(checked) => updateSetting("editorFontLigatures", checked)}
           />
         </SettingRow>
-
+        <SettingRow
+          label="Italic Comments"
+          onReset={() =>
+            updateSetting("editorItalicComments", getDefaultSetting("editorItalicComments"))
+          }
+          canReset={settings.editorItalicComments !== getDefaultSetting("editorItalicComments")}
+        >
+          <Switch
+            checked={settings.editorItalicComments}
+            onChange={(checked) => updateSetting("editorItalicComments", checked)}
+          />
+        </SettingRow>
+      </Section>
+      <Section title="Display">
         <SettingRow
           label="Line Numbers"
-          description="Show line numbers in the editor"
           onReset={() => updateSetting("lineNumbers", getDefaultSetting("lineNumbers"))}
           canReset={settings.lineNumbers !== getDefaultSetting("lineNumbers")}
         >
@@ -174,10 +140,32 @@ export const EditorSettings = () => {
             onChange={(checked) => updateSetting("lineNumbers", checked)}
           />
         </SettingRow>
-
+        <SettingRow
+          label="Relative Line Numbers"
+          description="In Vim mode"
+          onReset={() =>
+            updateSetting("vimRelativeLineNumbers", getDefaultSetting("vimRelativeLineNumbers"))
+          }
+          canReset={settings.vimRelativeLineNumbers !== getDefaultSetting("vimRelativeLineNumbers")}
+        >
+          <Switch
+            checked={settings.vimRelativeLineNumbers}
+            onChange={(checked) => updateSetting("vimRelativeLineNumbers", checked)}
+            disabled={!settings.lineNumbers}
+          />
+        </SettingRow>
+        <SettingRow
+          label="Word Wrap"
+          onReset={() => updateSetting("wordWrap", getDefaultSetting("wordWrap"))}
+          canReset={settings.wordWrap !== getDefaultSetting("wordWrap")}
+        >
+          <Switch
+            checked={settings.wordWrap}
+            onChange={(checked) => updateSetting("wordWrap", checked)}
+          />
+        </SettingRow>
         <SettingRow
           label="Render Whitespace"
-          description="Show visible markers for spaces and tabs"
           onReset={() => updateSetting("renderWhitespace", getDefaultSetting("renderWhitespace"))}
           canReset={settings.renderWhitespace !== getDefaultSetting("renderWhitespace")}
         >
@@ -190,10 +178,8 @@ export const EditorSettings = () => {
             variant="default"
           />
         </SettingRow>
-
         <SettingRow
           label="Indent Guides"
-          description="Show vertical guides for indentation levels"
           onReset={() =>
             updateSetting("renderIndentGuides", getDefaultSetting("renderIndentGuides"))
           }
@@ -204,10 +190,8 @@ export const EditorSettings = () => {
             onChange={(checked) => updateSetting("renderIndentGuides", checked)}
           />
         </SettingRow>
-
         <SettingRow
           label="Highlight Occurrences"
-          description="Highlight visible matches for the word under the cursor"
           onReset={() =>
             updateSetting("highlightOccurrences", getDefaultSetting("highlightOccurrences"))
           }
@@ -218,60 +202,8 @@ export const EditorSettings = () => {
             onChange={(checked) => updateSetting("highlightOccurrences", checked)}
           />
         </SettingRow>
-
-        <SettingRow
-          label="Relative Line Numbers"
-          description="Show relative numbers when Vim mode is active"
-          onReset={() =>
-            updateSetting("vimRelativeLineNumbers", getDefaultSetting("vimRelativeLineNumbers"))
-          }
-          canReset={settings.vimRelativeLineNumbers !== getDefaultSetting("vimRelativeLineNumbers")}
-        >
-          <Switch
-            checked={settings.vimRelativeLineNumbers}
-            onChange={(checked) => updateSetting("vimRelativeLineNumbers", checked)}
-            disabled={!settings.lineNumbers}
-          />
-        </SettingRow>
-
-        <SettingRow
-          label="Show Minimap"
-          description="Show a minimap overview on the right side of the editor"
-          onReset={() => updateSetting("showMinimap", getDefaultSetting("showMinimap"))}
-          canReset={settings.showMinimap !== getDefaultSetting("showMinimap")}
-        >
-          <Switch
-            checked={settings.showMinimap}
-            onChange={(checked) => updateSetting("showMinimap", checked)}
-          />
-        </SettingRow>
-
-        <SettingRow
-          label="Show Outline"
-          description="Show symbols beside each editor tab"
-          onReset={() => setOutlineVisibilityPreference(getDefaultSetting("showOutline"))}
-          canReset={settings.showOutline !== getDefaultSetting("showOutline")}
-        >
-          <Switch checked={settings.showOutline} onChange={setOutlineVisibilityPreference} />
-        </SettingRow>
-
-        <SettingRow
-          label="Sticky Scroll"
-          description="Keep containing scopes visible at the top while scrolling"
-          onReset={() =>
-            updateSetting("editorStickyScroll", getDefaultSetting("editorStickyScroll"))
-          }
-          canReset={settings.editorStickyScroll !== getDefaultSetting("editorStickyScroll")}
-        >
-          <Switch
-            checked={settings.editorStickyScroll}
-            onChange={(checked) => updateSetting("editorStickyScroll", checked)}
-          />
-        </SettingRow>
-
         <SettingRow
           label="Bracket Pair Colorization"
-          description="Use matching colors to distinguish nested bracket pairs"
           onReset={() =>
             updateSetting(
               "editorBracketPairColorization",
@@ -288,43 +220,51 @@ export const EditorSettings = () => {
             onChange={(checked) => updateSetting("editorBracketPairColorization", checked)}
           />
         </SettingRow>
-
         <SettingRow
-          label="Smooth Scrolling"
-          description="Animate editor scrolling between positions"
-          onReset={() =>
-            updateSetting("editorSmoothScrolling", getDefaultSetting("editorSmoothScrolling"))
-          }
-          canReset={settings.editorSmoothScrolling !== getDefaultSetting("editorSmoothScrolling")}
+          label="Show Minimap"
+          onReset={() => updateSetting("showMinimap", getDefaultSetting("showMinimap"))}
+          canReset={settings.showMinimap !== getDefaultSetting("showMinimap")}
         >
           <Switch
-            checked={settings.editorSmoothScrolling}
-            onChange={(checked) => updateSetting("editorSmoothScrolling", checked)}
+            checked={settings.showMinimap}
+            onChange={(checked) => updateSetting("showMinimap", checked)}
           />
         </SettingRow>
-
         <SettingRow
-          label="Scroll Beyond Last Line"
-          description="Allow scrolling the final line above the bottom of the editor"
+          label="Show Outline"
+          onReset={() => setOutlineVisibilityPreference(getDefaultSetting("showOutline"))}
+          canReset={settings.showOutline !== getDefaultSetting("showOutline")}
+        >
+          <Switch checked={settings.showOutline} onChange={setOutlineVisibilityPreference} />
+        </SettingRow>
+        <SettingRow
+          label="Sticky Scroll"
           onReset={() =>
-            updateSetting(
-              "editorScrollBeyondLastLine",
-              getDefaultSetting("editorScrollBeyondLastLine"),
-            )
+            updateSetting("editorStickyScroll", getDefaultSetting("editorStickyScroll"))
           }
-          canReset={
-            settings.editorScrollBeyondLastLine !== getDefaultSetting("editorScrollBeyondLastLine")
-          }
+          canReset={settings.editorStickyScroll !== getDefaultSetting("editorStickyScroll")}
         >
           <Switch
-            checked={settings.editorScrollBeyondLastLine}
-            onChange={(checked) => updateSetting("editorScrollBeyondLastLine", checked)}
+            checked={settings.editorStickyScroll}
+            onChange={(checked) => updateSetting("editorStickyScroll", checked)}
           />
         </SettingRow>
-
+        <SettingRow
+          label="Show Symbol in Breadcrumb"
+          onReset={() =>
+            updateSetting("breadcrumbShowSymbols", getDefaultSetting("breadcrumbShowSymbols"))
+          }
+          canReset={settings.breadcrumbShowSymbols !== getDefaultSetting("breadcrumbShowSymbols")}
+        >
+          <Switch
+            checked={settings.breadcrumbShowSymbols}
+            onChange={(checked) => updateSetting("breadcrumbShowSymbols", checked)}
+          />
+        </SettingRow>
+      </Section>
+      <Section title="Cursor and Scrolling">
         <SettingRow
           label="Cursor Style"
-          description="Shape of the editor cursor outside Vim normal mode"
           onReset={() => updateSetting("editorCursorStyle", getDefaultSetting("editorCursorStyle"))}
           canReset={settings.editorCursorStyle !== getDefaultSetting("editorCursorStyle")}
         >
@@ -344,10 +284,8 @@ export const EditorSettings = () => {
             variant="default"
           />
         </SettingRow>
-
         <SettingRow
           label="Cursor Blinking"
-          description="Animation used by the editor cursor outside Vim normal mode"
           onReset={() =>
             updateSetting("editorCursorBlinking", getDefaultSetting("editorCursorBlinking"))
           }
@@ -368,10 +306,51 @@ export const EditorSettings = () => {
             variant="default"
           />
         </SettingRow>
-
+        <SettingRow
+          label="Smooth Scrolling"
+          onReset={() =>
+            updateSetting("editorSmoothScrolling", getDefaultSetting("editorSmoothScrolling"))
+          }
+          canReset={settings.editorSmoothScrolling !== getDefaultSetting("editorSmoothScrolling")}
+        >
+          <Switch
+            checked={settings.editorSmoothScrolling}
+            onChange={(checked) => updateSetting("editorSmoothScrolling", checked)}
+          />
+        </SettingRow>
+        <SettingRow
+          label="Scroll Beyond Last Line"
+          onReset={() =>
+            updateSetting(
+              "editorScrollBeyondLastLine",
+              getDefaultSetting("editorScrollBeyondLastLine"),
+            )
+          }
+          canReset={
+            settings.editorScrollBeyondLastLine !== getDefaultSetting("editorScrollBeyondLastLine")
+          }
+        >
+          <Switch
+            checked={settings.editorScrollBeyondLastLine}
+            onChange={(checked) => updateSetting("editorScrollBeyondLastLine", checked)}
+          />
+        </SettingRow>
+      </Section>
+      <Section title="Tabs and Files">
+        <SettingRow
+          label="Tab Size"
+          onReset={() => updateSetting("tabSize", getDefaultSetting("tabSize"))}
+          canReset={settings.tabSize !== getDefaultSetting("tabSize")}
+        >
+          <NumberInput
+            min="1"
+            max="8"
+            value={settings.tabSize}
+            onChange={(val) => updateSetting("tabSize", val)}
+          />
+        </SettingRow>
         <SettingRow
           label="Max Open Tabs"
-          description="Maximum number of tabs before oldest closes"
           onReset={() => updateSetting("maxOpenTabs", getDefaultSetting("maxOpenTabs"))}
           canReset={settings.maxOpenTabs !== getDefaultSetting("maxOpenTabs")}
         >
@@ -382,10 +361,8 @@ export const EditorSettings = () => {
             onChange={(val) => updateSetting("maxOpenTabs", val)}
           />
         </SettingRow>
-
         <SettingRow
           label="Buffer Carousel"
-          description="Show open buffers as a horizontally scrollable carousel in the main view"
           onReset={() =>
             updateSetting("horizontalTabScroll", getDefaultSetting("horizontalTabScroll"))
           }
@@ -398,7 +375,6 @@ export const EditorSettings = () => {
         </SettingRow>
         <SettingRow
           label="Auto Save"
-          description="Automatically save files when editing"
           onReset={() => updateSetting("autoSave", getDefaultSetting("autoSave"))}
           canReset={settings.autoSave !== getDefaultSetting("autoSave")}
         >
@@ -409,7 +385,6 @@ export const EditorSettings = () => {
         </SettingRow>
         <SettingRow
           label="Default Language"
-          description="Default syntax highlighting for new files"
           onReset={() => updateSetting("defaultLanguage", getDefaultSetting("defaultLanguage"))}
           canReset={settings.defaultLanguage !== getDefaultSetting("defaultLanguage")}
         >
@@ -422,10 +397,8 @@ export const EditorSettings = () => {
             searchableTrigger="input"
           />
         </SettingRow>
-
         <SettingRow
           label="Auto-detect Language"
-          description="Automatically detect file language from extension"
           onReset={() =>
             updateSetting("autoDetectLanguage", getDefaultSetting("autoDetectLanguage"))
           }
@@ -436,10 +409,10 @@ export const EditorSettings = () => {
             onChange={(checked) => updateSetting("autoDetectLanguage", checked)}
           />
         </SettingRow>
-
+      </Section>
+      <Section title="Language Features">
         <SettingRow
           label="Format on Save"
-          description="Automatically format code when saving"
           onReset={() => updateSetting("formatOnSave", getDefaultSetting("formatOnSave"))}
           canReset={settings.formatOnSave !== getDefaultSetting("formatOnSave")}
         >
@@ -448,10 +421,8 @@ export const EditorSettings = () => {
             onChange={(checked) => updateSetting("formatOnSave", checked)}
           />
         </SettingRow>
-
         <SettingRow
           label="Lint on Save"
-          description="Run linter when saving files"
           onReset={() => updateSetting("lintOnSave", getDefaultSetting("lintOnSave"))}
           canReset={settings.lintOnSave !== getDefaultSetting("lintOnSave")}
         >
@@ -460,10 +431,8 @@ export const EditorSettings = () => {
             onChange={(checked) => updateSetting("lintOnSave", checked)}
           />
         </SettingRow>
-
         <SettingRow
           label="Auto Completion"
-          description="Show completion suggestions while typing"
           onReset={() => updateSetting("autoCompletion", getDefaultSetting("autoCompletion"))}
           canReset={settings.autoCompletion !== getDefaultSetting("autoCompletion")}
         >
@@ -472,10 +441,8 @@ export const EditorSettings = () => {
             onChange={(checked) => updateSetting("autoCompletion", checked)}
           />
         </SettingRow>
-
         <SettingRow
           label="Parameter Hints"
-          description="Show function parameter hints"
           onReset={() => updateSetting("parameterHints", getDefaultSetting("parameterHints"))}
           canReset={settings.parameterHints !== getDefaultSetting("parameterHints")}
         >
@@ -484,10 +451,8 @@ export const EditorSettings = () => {
             onChange={(checked) => updateSetting("parameterHints", checked)}
           />
         </SettingRow>
-
         <SettingRow
           label="Inlay Hints"
-          description="Show inline type and parameter hints from language servers"
           onReset={() => updateSetting("inlayHints", getDefaultSetting("inlayHints"))}
           canReset={settings.inlayHints !== getDefaultSetting("inlayHints")}
         >
@@ -496,10 +461,8 @@ export const EditorSettings = () => {
             onChange={(checked) => updateSetting("inlayHints", checked)}
           />
         </SettingRow>
-
         <SettingRow
           label="Code Lens"
-          description="Show inline code actions above symbols"
           onReset={() => updateSetting("codeLens", getDefaultSetting("codeLens"))}
           canReset={settings.codeLens !== getDefaultSetting("codeLens")}
         >
@@ -508,30 +471,14 @@ export const EditorSettings = () => {
             onChange={(checked) => updateSetting("codeLens", checked)}
           />
         </SettingRow>
-
         <SettingRow
           label="Semantic Tokens"
-          description="Use language server semantic highlighting"
           onReset={() => updateSetting("semanticTokens", getDefaultSetting("semanticTokens"))}
           canReset={settings.semanticTokens !== getDefaultSetting("semanticTokens")}
         >
           <Switch
             checked={settings.semanticTokens}
             onChange={(checked) => updateSetting("semanticTokens", checked)}
-          />
-        </SettingRow>
-
-        <SettingRow
-          label="Show Symbol in Breadcrumb"
-          description="Show the containing function/class for the cursor position in the breadcrumb bar"
-          onReset={() =>
-            updateSetting("breadcrumbShowSymbols", getDefaultSetting("breadcrumbShowSymbols"))
-          }
-          canReset={settings.breadcrumbShowSymbols !== getDefaultSetting("breadcrumbShowSymbols")}
-        >
-          <Switch
-            checked={settings.breadcrumbShowSymbols}
-            onChange={(checked) => updateSetting("breadcrumbShowSymbols", checked)}
           />
         </SettingRow>
       </Section>

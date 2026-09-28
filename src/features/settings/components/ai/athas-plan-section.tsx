@@ -13,6 +13,7 @@ import { useAuthStore } from "@/features/window/stores/auth.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Progress } from "@/ui/progress";
+import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import Section, { SettingRow } from "../settings-section";
 import { describeIncludedCredit } from "../../lib/athas-credit";
 
@@ -34,35 +35,13 @@ export function AthasPlanSection() {
   const planLabel = getAccountPlanLabel(subscription, isAuthenticated);
   const policy = subscription?.enterprise?.policy;
   const managedPolicy = policy?.managedMode ? policy : null;
+  const balance =
+    usage?.walletBalanceCents != null ? formatUsdCents(usage.walletBalanceCents) : null;
 
   return (
-    <Section
-      title="Athas"
-      description="Models hosted by Athas. No API key needed, usage comes out of your plan or balance."
-    >
-      {isAuthenticated ? (
-        <SettingRow
-          label="Plan"
-          description={
-            hasIntelligence
-              ? `Includes ${usage ? formatUsdCents(usage.allowanceCents) : "$10"} of Athas AI every month.`
-              : "Pro includes $10 of Athas AI every month."
-          }
-          activateOnClick={false}
-        >
-          <div className="flex items-center gap-2">
-            <Badge tone={hasIntelligence ? "accent" : "neutral"}>{planLabel}</Badge>
-            {hasIntelligence ? (
-              <Button onClick={openBilling}>Manage billing</Button>
-            ) : (
-              <Button onClick={() => void openUrl(getServiceUrls().pricingUrl)}>
-                Upgrade to Pro
-              </Button>
-            )}
-          </div>
-        </SettingRow>
-      ) : (
-        <SettingRow label="Account" description="Sign in to use Athas models.">
+    <Section title="Athas" icon={<ProviderIcon providerId="athas" />}>
+      {!isAuthenticated ? (
+        <SettingRow label="Plan" description="Sign in to use Athas models">
           <Button
             variant="accent"
             onClick={() => void signIn().catch(() => undefined)}
@@ -71,34 +50,49 @@ export function AthasPlanSection() {
             {isSigningIn ? "Signing in…" : "Sign in"}
           </Button>
         </SettingRow>
-      )}
-      {usage ? (
+      ) : (
         <SettingRow
-          label="Included credit"
-          description={describeIncludedCredit(usage)}
+          label="Plan"
+          labelAccessory={<Badge tone={hasIntelligence ? "accent" : "neutral"}>{planLabel}</Badge>}
+          description={
+            hasIntelligence
+              ? usage
+                ? describeIncludedCredit(usage)
+                : undefined
+              : "Pro includes $10 of Athas AI every month"
+          }
           activateOnClick={false}
         >
-          <Progress
-            className="w-40"
-            value={usage.usedPercent}
-            tone={getHostedUsageTone(usage.level)}
-            aria-label={`Included credit: ${usage.usedPercent}% used`}
-          />
+          {hasIntelligence ? (
+            <div className="flex items-center gap-2">
+              {usage ? (
+                <Progress
+                  className="w-24"
+                  value={usage.usedPercent}
+                  tone={getHostedUsageTone(usage.level)}
+                  aria-label={`Included credit: ${usage.usedPercent}% used`}
+                />
+              ) : null}
+              <Button variant="ghost" onClick={openBilling}>
+                Manage
+              </Button>
+            </div>
+          ) : (
+            <Button variant="accent" onClick={() => void openUrl(getServiceUrls().pricingUrl)}>
+              Upgrade
+            </Button>
+          )}
         </SettingRow>
-      ) : null}
+      )}
       {isAuthenticated ? (
         <SettingRow
-          label="Pay-as-you-go balance"
-          description="Used once included credit runs out, at the model's list price plus 10%."
+          label="Balance"
+          description="Used after included credit, at list price +10%"
           activateOnClick={false}
         >
           <div className="flex items-center gap-2">
-            {usage?.walletBalanceCents != null ? (
-              <span className="text-foreground tabular-nums">
-                {formatUsdCents(usage.walletBalanceCents)}
-              </span>
-            ) : null}
-            <Button onClick={openBilling}>Add credit</Button>
+            {balance ? <span className="text-foreground tabular-nums">{balance}</span> : null}
+            <Button onClick={openBilling}>Add Credit</Button>
           </div>
         </SettingRow>
       ) : null}
@@ -107,12 +101,12 @@ export function AthasPlanSection() {
           label="Managed by your organization"
           description={
             [
-              managedPolicy.aiChatEnabled ? null : "Chat is turned off.",
-              managedPolicy.aiCompletionEnabled ? null : "Tab completion is turned off.",
-              managedPolicy.allowByok ? null : "Your own API keys are not allowed.",
+              managedPolicy.aiChatEnabled ? null : "Chat off",
+              managedPolicy.aiCompletionEnabled ? null : "Tab completion off",
+              managedPolicy.allowByok ? null : "No personal keys",
             ]
               .filter(Boolean)
-              .join(" ") || "Your organization manages AI access."
+              .join(" · ") || undefined
           }
           activateOnClick={false}
         >

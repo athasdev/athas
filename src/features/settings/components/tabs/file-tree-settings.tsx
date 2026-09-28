@@ -64,7 +64,6 @@ export const FileTreeSettings = () => {
       <Section title="Display">
         <SettingRow
           label="Sort Order"
-          description="Choose whether folders stay above files or everything sorts by name"
           onReset={() => updateSetting("fileTreeSortOrder", getDefaultSetting("fileTreeSortOrder"))}
           canReset={settings.fileTreeSortOrder !== getDefaultSetting("fileTreeSortOrder")}
         >
@@ -81,7 +80,6 @@ export const FileTreeSettings = () => {
 
         <SettingRow
           label="Indent Size"
-          description="Pixels per nesting level"
           onReset={() =>
             updateSetting("fileTreeIndentSize", getDefaultSetting("fileTreeIndentSize"))
           }
@@ -97,7 +95,6 @@ export const FileTreeSettings = () => {
 
         <SettingRow
           label="Show File Icons"
-          description="Show themed file and folder icons"
           onReset={() =>
             updateSetting("showFileIconsInFileTree", getDefaultSetting("showFileIconsInFileTree"))
           }
@@ -113,7 +110,6 @@ export const FileTreeSettings = () => {
 
         <SettingRow
           label="Show Folder Arrows"
-          description="Show expand and collapse arrows beside folders"
           onReset={() =>
             updateSetting(
               "showFolderArrowsInFileTree",
@@ -132,7 +128,6 @@ export const FileTreeSettings = () => {
 
         <SettingRow
           label="Show Indent Guides"
-          description="Show vertical guides for nested folders"
           onReset={() =>
             updateSetting(
               "showIndentGuidesInFileTree",
@@ -151,7 +146,6 @@ export const FileTreeSettings = () => {
 
         <SettingRow
           label="Compact Folders"
-          description="Collapse single-child folder chains"
           onReset={() =>
             updateSetting("compactFoldersInFileTree", getDefaultSetting("compactFoldersInFileTree"))
           }
@@ -167,7 +161,6 @@ export const FileTreeSettings = () => {
 
         <SettingRow
           label="Hide Root Folder"
-          description="Show project files directly at the top level"
           onReset={() =>
             updateSetting("hideRootFolderInFileTree", getDefaultSetting("hideRootFolderInFileTree"))
           }
@@ -183,7 +176,6 @@ export const FileTreeSettings = () => {
 
         <SettingRow
           label="Show Hidden Files"
-          description="Show dotfiles and hidden directories"
           onReset={() =>
             updateSetting(
               "showHiddenFilesInFileTree",
@@ -202,7 +194,6 @@ export const FileTreeSettings = () => {
 
         <SettingRow
           label="Respect .gitignore"
-          description="Hide files matched by root and nested .gitignore files"
           onReset={() =>
             updateSetting(
               "showGitignoredFilesInFileTree",
@@ -222,7 +213,6 @@ export const FileTreeSettings = () => {
 
         <SettingRow
           label="Show Git Status"
-          description="Display Git color decorations beside changed files"
           onReset={() =>
             updateSetting("showGitStatusInFileTree", getDefaultSetting("showGitStatusInFileTree"))
           }
@@ -240,7 +230,6 @@ export const FileTreeSettings = () => {
       <Section title="Behavior">
         <SettingRow
           label="Auto Reveal Active File"
-          description="Expand and scroll Files to the active editor file"
           onReset={() =>
             updateSetting(
               "autoRevealActiveFileInFileTree",
@@ -260,7 +249,6 @@ export const FileTreeSettings = () => {
 
         <SettingRow
           label="Confirm Before Delete"
-          description="Ask for confirmation before deleting a file or folder"
           onReset={() =>
             updateSetting("confirmBeforeFileDelete", getDefaultSetting("confirmBeforeFileDelete"))
           }
@@ -278,7 +266,8 @@ export const FileTreeSettings = () => {
       <Section title="Filters">
         <SettingRow
           label="Hidden Files"
-          description="Comma-separated glob patterns"
+          description="Comma-separated globs"
+          control="field"
           onReset={() =>
             updateSetting("hiddenFilePatterns", getDefaultSetting("hiddenFilePatterns"))
           }
@@ -300,13 +289,13 @@ export const FileTreeSettings = () => {
             placeholder="*.log, *.tmp, **/*.bak"
             rows={2}
             resize="none"
-            className="w-56 max-w-full"
           />
         </SettingRow>
 
         <SettingRow
           label="Hidden Directories"
-          description="Comma-separated glob patterns"
+          description="Comma-separated globs"
+          control="field"
           onReset={() =>
             updateSetting("hiddenDirectoryPatterns", getDefaultSetting("hiddenDirectoryPatterns"))
           }
@@ -328,7 +317,6 @@ export const FileTreeSettings = () => {
             placeholder="node_modules, .git, build/"
             rows={2}
             resize="none"
-            className="w-56 max-w-full"
           />
         </SettingRow>
       </Section>

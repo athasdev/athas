@@ -13,7 +13,7 @@ import {
 } from "@/features/terminal/utils/terminal-profiles";
 import { Button } from "@/ui/button";
 import { EmptyState } from "@/ui/empty";
-import { Field, FieldDescription, FieldLabel } from "@/ui/field";
+import { Field, FieldLabel } from "@/ui/field";
 import Input from "@/ui/input";
 import NumberInput from "@/ui/number-input";
 import Section, { SettingBlock, SettingsView, SettingRow } from "../settings-section";
@@ -21,8 +21,7 @@ import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 import Textarea from "@/ui/textarea";
 
-const FONT_HELP_TEXT =
-  "Note: Selected font must be installed on your system to work correctly. If icons are missing, try installing a Nerd Font.";
+const FONT_HELP_TEXT = "Missing icons? Install a Nerd Font.";
 
 export const TerminalSettings = () => {
   const settings = useSettingsStore((state) => state.settings);
@@ -109,13 +108,9 @@ export const TerminalSettings = () => {
 
   return (
     <SettingsView>
-      <Section
-        title="Launch"
-        description="Choose which shell and profile new terminal tabs should use by default"
-      >
+      <Section title="Launch">
         <SettingRow
           label="Default Shell"
-          description="Fallback shell when a terminal profile does not override it"
           onReset={() =>
             updateSetting("terminalDefaultShellId", getDefaultSetting("terminalDefaultShellId"))
           }
@@ -138,7 +133,7 @@ export const TerminalSettings = () => {
 
         <SettingRow
           label="Default Profile"
-          description="Used by the terminal toolbar button and Cmd+T when the terminal is focused"
+          description="Used by the toolbar button and new terminals"
           onReset={() =>
             updateSetting("terminalDefaultProfileId", getDefaultSetting("terminalDefaultProfileId"))
           }
@@ -163,7 +158,6 @@ export const TerminalSettings = () => {
 
         <SettingRow
           label="Shell Integration"
-          description="Track commands, exit codes, and the working directory in zsh, bash, fish, PowerShell, and Git Bash"
           onReset={() =>
             updateSetting("terminalShellIntegration", getDefaultSetting("terminalShellIntegration"))
           }
@@ -180,14 +174,9 @@ export const TerminalSettings = () => {
 
       <Section
         title="Profiles"
-        description="Create reusable launch presets with a shell override, startup directory, and optional startup commands"
-      >
-        <SettingRow
-          label="Custom Profiles"
-          description="Built-in profiles come from detected shells. Custom profiles appear in the terminal toolbar profile picker."
-        >
+        actions={
           <Button
-            variant="default"
+            variant="ghost"
             onClick={() =>
               profileActions.addProfile({
                 name: `Custom Profile ${profiles.length + 1}`,
@@ -199,10 +188,10 @@ export const TerminalSettings = () => {
             <PlusIcon />
             Add Profile
           </Button>
-        </SettingRow>
-
+        }
+      >
         {profiles.length === 0 ? (
-          <EmptyState variant="section" message="No custom terminal profiles yet" />
+          <EmptyState variant="section" message="No custom profiles" />
         ) : (
           profiles.map((profile) => (
             <SettingBlock key={profile.id} className="space-y-3">
@@ -210,9 +199,6 @@ export const TerminalSettings = () => {
                 <div className="min-w-0 flex-1">
                   <div className="font-sans ui-text-sm font-medium text-foreground">
                     {profile.name}
-                  </div>
-                  <div className="font-sans ui-text-sm text-subtle-foreground">
-                    Visible in the terminal profile picker
                   </div>
                 </div>
                 <Button
@@ -272,11 +258,8 @@ export const TerminalSettings = () => {
                       startupDirectory: event.target.value || undefined,
                     })
                   }
-                  placeholder="Leave empty to use the current workspace directory"
+                  placeholder="Workspace directory"
                 />
-                <FieldDescription>
-                  Leave empty to use the current workspace directory.
-                </FieldDescription>
               </Field>
 
               <Field>
@@ -297,7 +280,6 @@ export const TerminalSettings = () => {
                   placeholder="One command per line"
                   rows={3}
                 />
-                <FieldDescription>Enter one command per line.</FieldDescription>
               </Field>
             </SettingBlock>
           ))
@@ -307,7 +289,6 @@ export const TerminalSettings = () => {
       <Section title="Typography">
         <SettingRow
           label="Font Family"
-          description="Font family for the integrated terminal. Select a Nerd Font for best icon support."
           onReset={() =>
             updateSetting("terminalFontFamily", getDefaultSetting("terminalFontFamily"))
           }
@@ -331,7 +312,6 @@ export const TerminalSettings = () => {
 
         <SettingRow
           label="Font Size"
-          description="Terminal font size in pixels"
           onReset={() => updateSetting("terminalFontSize", getDefaultSetting("terminalFontSize"))}
           canReset={settings.terminalFontSize !== getDefaultSetting("terminalFontSize")}
         >
@@ -345,7 +325,6 @@ export const TerminalSettings = () => {
 
         <SettingRow
           label="Line Height"
-          description="Line height multiplier"
           onReset={() =>
             updateSetting("terminalLineHeight", getDefaultSetting("terminalLineHeight"))
           }
@@ -362,7 +341,6 @@ export const TerminalSettings = () => {
 
         <SettingRow
           label="Letter Spacing"
-          description="Additional spacing between characters"
           onReset={() =>
             updateSetting("terminalLetterSpacing", getDefaultSetting("terminalLetterSpacing"))
           }
@@ -379,7 +357,6 @@ export const TerminalSettings = () => {
 
         <SettingRow
           label="Scrollback"
-          description="How many lines of terminal history to keep in memory"
           onReset={() =>
             updateSetting("terminalScrollback", getDefaultSetting("terminalScrollback"))
           }
@@ -396,7 +373,7 @@ export const TerminalSettings = () => {
 
         <SettingRow
           label="Minimum Contrast"
-          description="Adjust ANSI colors that would be hard to read against the background. 1 keeps theme colors as they are, 4.5 meets WCAG AA, 21 forces black or white."
+          description="1 keeps theme colors, 4.5 meets WCAG AA"
           onReset={() =>
             updateSetting(
               "terminalMinimumContrastRatio",
@@ -421,7 +398,6 @@ export const TerminalSettings = () => {
       <Section title="Interaction">
         <SettingRow
           label="Alt Click Moves Cursor"
-          description="Move the shell prompt cursor to the clicked position when supported"
           onReset={() =>
             updateSetting(
               "terminalAltClickMovesCursor",
@@ -441,7 +417,6 @@ export const TerminalSettings = () => {
 
         <SettingRow
           label="Option as Meta"
-          description="Treat the Option key as Meta in terminal applications on macOS"
           onReset={() =>
             updateSetting("terminalMacOptionIsMeta", getDefaultSetting("terminalMacOptionIsMeta"))
           }
@@ -457,7 +432,6 @@ export const TerminalSettings = () => {
 
         <SettingRow
           label="Right Click Selects Word"
-          description="Select the word under the pointer before opening the context menu"
           onReset={() =>
             updateSetting(
               "terminalRightClickSelectsWord",
@@ -479,7 +453,6 @@ export const TerminalSettings = () => {
       <Section title="Cursor">
         <SettingRow
           label="Cursor Style"
-          description="Shape of the cursor"
           onReset={() =>
             updateSetting("terminalCursorStyle", getDefaultSetting("terminalCursorStyle"))
           }
@@ -501,7 +474,6 @@ export const TerminalSettings = () => {
 
         <SettingRow
           label="Blinking Cursor"
-          description="Whether the cursor should blink"
           onReset={() =>
             updateSetting("terminalCursorBlink", getDefaultSetting("terminalCursorBlink"))
           }
@@ -515,7 +487,6 @@ export const TerminalSettings = () => {
 
         <SettingRow
           label="Cursor Width"
-          description="Thickness of the bar or block cursor"
           onReset={() =>
             updateSetting("terminalCursorWidth", getDefaultSetting("terminalCursorWidth"))
           }
@@ -531,7 +502,6 @@ export const TerminalSettings = () => {
 
         <SettingRow
           label="Inactive Cursor Style"
-          description="Appearance of the terminal cursor when the terminal is not focused"
           onReset={() =>
             updateSetting(
               "terminalCursorInactiveStyle",

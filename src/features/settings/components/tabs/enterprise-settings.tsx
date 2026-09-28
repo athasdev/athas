@@ -68,11 +68,8 @@ export const EnterpriseSettings = () => {
   if (!hasAccess) {
     return (
       <SettingsView>
-        <Section title="Enterprise Controls" description="Access restricted">
-          <EmptyState
-            variant="section"
-            message="Enterprise policy controls are available only for enterprise workspaces"
-          />
+        <Section title="Enterprise Controls">
+          <EmptyState variant="section" message="Available in enterprise workspaces" />
         </Section>
       </SettingsView>
     );
@@ -81,10 +78,10 @@ export const EnterpriseSettings = () => {
   if (!policy) {
     return (
       <SettingsView>
-        <Section title="Enterprise Controls" description="Policy unavailable">
+        <Section title="Enterprise Controls">
           <EmptyState
             variant="section"
-            message="Enterprise policy could not be loaded. Try re-authenticating."
+            message="Could not load the policy. Try signing in again."
           />
         </Section>
       </SettingsView>
@@ -93,14 +90,8 @@ export const EnterpriseSettings = () => {
 
   return (
     <SettingsView>
-      <Section
-        title="Enterprise Controls"
-        description={isAdmin ? "Manage organization policy controls." : "Read-only policy view."}
-      >
-        <SettingRow
-          label="Managed Mode"
-          description="Enforce enterprise policy controls in the desktop app"
-        >
+      <Section title="Enterprise Controls" description={isAdmin ? undefined : "Read only"}>
+        <SettingRow label="Managed Mode">
           <Switch
             checked={policy.managedMode}
             onChange={(checked) =>
@@ -110,10 +101,7 @@ export const EnterpriseSettings = () => {
           />
         </SettingRow>
 
-        <SettingRow
-          label="Require Integration Allowlist"
-          description="Only approved integration IDs can be installed or updated"
-        >
+        <SettingRow label="Require Integration Allowlist">
           <Switch
             checked={policy.requireExtensionAllowlist}
             onChange={(checked) =>
@@ -126,10 +114,7 @@ export const EnterpriseSettings = () => {
           />
         </SettingRow>
 
-        <SettingRow
-          label="Allow BYOK Autocomplete"
-          description="Allow user-provided OpenRouter keys for autocomplete"
-        >
+        <SettingRow label="Allow BYOK Autocomplete">
           <Switch
             checked={policy.allowByok}
             onChange={(checked) => savePolicyPatch({ allowByok: checked }, "BYOK policy updated.")}
@@ -137,10 +122,7 @@ export const EnterpriseSettings = () => {
           />
         </SettingRow>
 
-        <SettingRow
-          label="Enable AI Autocomplete"
-          description="Enable inline AI completion for enterprise users"
-        >
+        <SettingRow label="Enable AI Autocomplete">
           <Switch
             checked={policy.aiCompletionEnabled}
             onChange={(checked) =>
@@ -150,7 +132,7 @@ export const EnterpriseSettings = () => {
           />
         </SettingRow>
 
-        <SettingRow label="Enable Agent" description="Enable Agent panel for enterprise users">
+        <SettingRow label="Enable Agent">
           <Switch
             checked={policy.aiChatEnabled}
             onChange={(checked) =>
@@ -161,10 +143,7 @@ export const EnterpriseSettings = () => {
         </SettingRow>
       </Section>
 
-      <Section
-        title="Integration Allowlist"
-        description="Only approved integration IDs can be installed while the allowlist is enforced"
-      >
+      <Section title="Integration Allowlist">
         <SettingBlock className="space-y-3">
           <Field>
             <FieldLabel htmlFor="enterprise-extension-allowlist">

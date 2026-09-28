@@ -108,7 +108,7 @@ describe("Athas included credit", () => {
   };
 
   it("says how much is left and when it resets", () => {
-    expect(describeIncludedCredit(usage)).toBe("$7.50 of $10.00 included left. Resets Oct 1.");
+    expect(describeIncludedCredit(usage)).toBe("$7.50 of $10.00 left · resets Oct 1");
   });
 
   it("says usage continues from the balance once included credit is used up", () => {
@@ -120,9 +120,7 @@ describe("Athas included credit", () => {
         walletBalanceCents: 312.5,
         periodEnd: null,
       }),
-    ).toBe(
-      "All $10.00 included used. Usage continues from your pay-as-you-go balance ($3.13 left).",
-    );
+    ).toBe("Included credit used, on balance");
     expect(
       describeIncludedCredit({
         ...usage,
@@ -131,6 +129,6 @@ describe("Athas included credit", () => {
         walletBalanceCents: 0,
         periodEnd: null,
       }),
-    ).toBe("All $10.00 included used. Add credit to keep using Athas models.");
+    ).toBe("Included credit used, add credit to continue");
   });
 });

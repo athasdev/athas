@@ -151,7 +151,7 @@ describe("settings UI contract", () => {
       "utf8",
     );
 
-    expect(settingsViewSource).toContain("<Workbench>");
+    expect(settingsViewSource).toContain('<Workbench plane="surface">');
     expect(settingsViewSource).not.toContain("<Dialog");
     expect(settingsViewSource).not.toContain("<Card");
     expect(settingsViewSource).not.toContain("tabIndex: -1");
@@ -179,7 +179,7 @@ describe("settings UI contract", () => {
     expect(settingsViewSource).toContain('placeholder="Search settings"');
     expect(settingsViewSource).not.toContain("<ResourcePageHeader");
     expect(settingsViewSource).not.toContain("<SettingsBreadcrumb");
-    expect(sectionSource).toContain("<Card");
+    expect(sectionSource).toContain("<GroupedSection");
     expect(sectionSource).not.toContain("<Accordion");
     expect(sidebarPaneSource).not.toContain("SettingsSidebar");
     expect(modalSliceSource).toContain("openSettingsBuffer()");

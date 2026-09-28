@@ -4,6 +4,7 @@ import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import Select from "@/ui/select";
 import { Spinner } from "@/ui/spinner";
+import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import Section, { SettingRow } from "@/features/settings/components/settings-section";
 import { CodexIntegrationService } from "./codex-integration-service";
 import type { CodexIntegrationStatus } from "./codex-types";
@@ -73,15 +74,10 @@ export function CodexSettings() {
   }, []);
 
   return (
-    <Section
-      title="Codex"
-      description="OpenAI's coding agent. Uses the Codex CLI and account on this device."
-    >
+    <Section title="Codex" icon={<ProviderIcon providerId="codex" />}>
       <SettingRow
         label="Codex CLI"
-        description={
-          status?.version ?? status?.error ?? "Install the Codex CLI to use this integration"
-        }
+        description={status?.version ?? status?.error ?? "Not installed"}
       >
         <div className="flex items-center gap-2">
           <Badge tone={status?.initialized ? "success" : "neutral"}>
@@ -102,7 +98,7 @@ export function CodexSettings() {
           </Button>
         </div>
       </SettingRow>
-      <SettingRow label="Model" description="Models are read from your installed Codex version">
+      <SettingRow label="Model">
         <Select
           value={settings.model ?? ""}
           options={[
@@ -117,7 +113,7 @@ export function CodexSettings() {
           searchable
         />
       </SettingRow>
-      <SettingRow label="Reasoning" description="Reasoning effort for new turns">
+      <SettingRow label="Reasoning">
         <Select
           value={settings.effort ?? "medium"}
           options={effortOptions}
@@ -125,39 +121,36 @@ export function CodexSettings() {
           onChange={(effort) => update({ effort })}
         />
       </SettingRow>
-      <SettingRow label="Workspace Access" description="Filesystem sandbox used by Codex">
+      <SettingRow label="Workspace Access">
         <Select
           value={settings.sandbox ?? "workspace-write"}
           options={sandboxOptions}
           onChange={(sandbox) => update({ sandbox })}
         />
       </SettingRow>
-      <SettingRow label="Approvals" description="When Codex asks before running an action">
+      <SettingRow label="Approvals">
         <Select
           value={settings.approvalPolicy ?? "on-request"}
           options={approvalOptions}
           onChange={(approvalPolicy) => update({ approvalPolicy })}
         />
       </SettingRow>
-      <SettingRow
-        label="Codex Capabilities"
-        description={catalogError ?? "Loaded from app-server for the current workspace"}
-      >
+      <SettingRow label="Capabilities" description={catalogError ?? undefined}>
         <div className="flex items-center gap-1.5">
           <Badge>{details.threads} threads</Badge>
           <Badge>{details.skills} skills</Badge>
           <Badge>{details.mcp} MCP</Badge>
         </div>
       </SettingRow>
-      <SettingRow label="Account" description="Uses the Codex CLI account on this device">
-        <div className="flex items-center gap-2">
+      <SettingRow label="Account">
+        <div className="flex items-center gap-1">
           <Button
             variant="default"
             onClick={() => void invoke("start_codex_login", { loginType: "chatgpt" })}
           >
             Sign in
           </Button>
-          <Button variant="default" onClick={() => void invoke("logout_codex_account")}>
+          <Button variant="ghost" onClick={() => void invoke("logout_codex_account")}>
             Sign out
           </Button>
         </div>

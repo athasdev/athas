@@ -1,14 +1,12 @@
 import { useAgentOptions } from "@/features/ai/hooks/use-agent-options";
 import type { AgentOption } from "@/features/ai/lib/agent-options";
-import { isTerminalAgent } from "@/features/ai/lib/terminal-agents";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { ArrowClockwiseIcon } from "@/ui/icons";
 import { Spinner } from "@/ui/spinner";
-import Section, { SettingRow } from "../settings-section";
+import Section, { SettingRow, SettingStatus } from "../settings-section";
 
 function AgentStatus({ agent }: { agent: AgentOption }) {
-  if (isTerminalAgent(agent.id)) return <Badge>Runs in terminal</Badge>;
   if (agent.isInstalled) return <Badge tone="success">Installed</Badge>;
   return <Badge>Not installed</Badge>;
 }
@@ -22,10 +20,7 @@ export function AgentsSection() {
   const agents = options.filter((agent) => agent.id !== "custom");
 
   return (
-    <Section
-      title="Agents"
-      description="Other coding agents Athas can run. Each uses its own account and models."
-    >
+    <Section title="Agents">
       {agents.map((agent) => {
         const action = agent.action;
         return (
@@ -52,7 +47,10 @@ export function AgentsSection() {
         </SettingRow>
       ) : null}
       {loadError ? (
-        <SettingRow label="Could not load agents" description={loadError}>
+        <SettingRow
+          label="Could not load agents"
+          description={<SettingStatus tone="danger">{loadError}</SettingStatus>}
+        >
           <Button onClick={() => void refresh()}>
             <ArrowClockwiseIcon />
             <span>Try again</span>

@@ -1,4 +1,5 @@
 import { useEffect, useState, type KeyboardEvent } from "react";
+import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { CUSTOM_CHAT_PROVIDER_ID } from "@/features/ai/lib/custom-provider-config";
 import {
   getProviderApiToken,
@@ -10,9 +11,9 @@ import { useToast } from "@/features/layout/contexts/toast-context";
 import { getDefaultSetting } from "@/features/settings/config/default-settings";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
-import { GlobeIcon, KeyIcon, TrashIcon } from "@/ui/icons";
+import { ArrowCounterClockwiseIcon } from "@/ui/icons";
 import Input from "@/ui/input";
-import Section, { SettingRow } from "../settings-section";
+import Section, { SettingRow, SettingStatus } from "../settings-section";
 
 function blurOnEnter(event: KeyboardEvent<HTMLInputElement>) {
   if (event.key !== "Enter") return;
@@ -74,58 +75,81 @@ export function CustomEndpointSection() {
   };
 
   return (
-    <Section
-      title="Custom endpoint"
-      description="Any OpenAI-compatible server, such as LM Studio or vLLM. Its model shows up as Custom in model menus."
-    >
+    <Section title="Custom endpoint" icon={<ProviderIcon providerId="custom" />}>
       <SettingRow
         label="Server address"
-        description="Base URL of the OpenAI-compatible API."
-        onReset={() => commitBaseUrl(getDefaultSetting("aiCustomBaseUrl"))}
-        canReset={baseUrl !== getDefaultSetting("aiCustomBaseUrl")}
-        resetLabel="Reset custom endpoint address"
+        description="Any OpenAI-compatible server"
+        control="field"
+        activateOnClick={false}
       >
-        <span className="inline-flex min-w-0 w-56 max-w-full">
-          <Input
-            value={baseUrlInput}
-            onChange={(event) => setBaseUrlInput(event.currentTarget.value)}
-            onBlur={() => commitBaseUrl(baseUrlInput)}
-            onKeyDown={blurOnEnter}
-            placeholder="http://localhost:1234/v1"
-            spellCheck={false}
-            leftIcon={GlobeIcon}
-          />
-        </span>
+        <Input
+          grow
+          value={baseUrlInput}
+          onChange={(event) => setBaseUrlInput(event.currentTarget.value)}
+          onBlur={() => commitBaseUrl(baseUrlInput)}
+          onKeyDown={blurOnEnter}
+          placeholder="http://localhost:1234/v1"
+          aria-label="Custom endpoint address"
+          spellCheck={false}
+        />
+        {baseUrl !== getDefaultSetting("aiCustomBaseUrl") ? (
+          <Button
+            type="button"
+            variant="ghost"
+            iconOnly
+            tooltip="Reset address"
+            aria-label="Reset custom endpoint address"
+            onClick={() => commitBaseUrl(getDefaultSetting("aiCustomBaseUrl"))}
+          >
+            <ArrowCounterClockwiseIcon />
+          </Button>
+        ) : null}
       </SettingRow>
-      <SettingRow label="Model" description="Model name sent to the server.">
-        <span className="inline-flex min-w-0 w-56 max-w-full">
-          <Input
-            value={modelInput}
-            onChange={(event) => setModelInput(event.currentTarget.value)}
-            onBlur={() => void updateSetting("aiCustomModelId", modelInput.trim())}
-            onKeyDown={blurOnEnter}
-            placeholder="Model name"
-            spellCheck={false}
-          />
-        </span>
+      <SettingRow label="Model" control="field" activateOnClick={false}>
+        <Input
+          grow
+          value={modelInput}
+          onChange={(event) => setModelInput(event.currentTarget.value)}
+          onBlur={() => void updateSetting("aiCustomModelId", modelInput.trim())}
+          onKeyDown={blurOnEnter}
+          placeholder="Model name"
+          aria-label="Custom endpoint model"
+          spellCheck={false}
+        />
       </SettingRow>
-      <SettingRow
-        label="API key"
-        description={hasApiKey ? "Saved on this device." : "Optional, if the server requires one."}
-      >
-        <div className="flex items-center gap-2">
-          <span className="inline-flex min-w-0 w-56 max-w-full">
-            <Input
-              type="password"
-              value={apiKeyInput}
-              onChange={(event) => setApiKeyInput(event.currentTarget.value)}
-              placeholder={hasApiKey ? "Saved" : "API key"}
-              spellCheck={false}
-              autoComplete="off"
-              disabled={isSavingApiKey}
-              leftIcon={KeyIcon}
-            />
-          </span>
+      {hasApiKey ? (
+        <SettingRow
+          label="API key"
+          description={<SettingStatus>Configured</SettingStatus>}
+          activateOnClick={false}
+        >
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => void removeApiKey()}
+            disabled={isSavingApiKey}
+          >
+            Reset Key
+          </Button>
+        </SettingRow>
+      ) : (
+        <SettingRow label="API key" description="Optional" control="field" activateOnClick={false}>
+          <Input
+            type="password"
+            grow
+            value={apiKeyInput}
+            onChange={(event) => setApiKeyInput(event.currentTarget.value)}
+            onKeyDown={(event) => {
+              if (event.key !== "Enter") return;
+              event.preventDefault();
+              void saveApiKey();
+            }}
+            placeholder="API key"
+            aria-label="Custom endpoint API key"
+            spellCheck={false}
+            autoComplete="off"
+            disabled={isSavingApiKey}
+          />
           <Button
             type="button"
             onClick={() => void saveApiKey()}
@@ -133,22 +157,8 @@ export function CustomEndpointSection() {
           >
             Save
           </Button>
-          {hasApiKey ? (
-            <Button
-              type="button"
-              variant="ghost"
-              tone="danger"
-              iconOnly
-              tooltip="Remove saved API key"
-              aria-label="Remove saved custom endpoint API key"
-              onClick={() => void removeApiKey()}
-              disabled={isSavingApiKey}
-            >
-              <TrashIcon />
-            </Button>
-          ) : null}
-        </div>
-      </SettingRow>
+        </SettingRow>
+      )}
     </Section>
   );
 }

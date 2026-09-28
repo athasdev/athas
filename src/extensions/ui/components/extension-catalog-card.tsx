@@ -1,14 +1,6 @@
 import type { KeyboardEvent, MouseEvent } from "react";
-import {
-  ArrowClockwiseIcon,
-  CheckIcon,
-  PackageIcon,
-  PlusIcon,
-  TagIcon,
-  WarningCircleIcon,
-  XCircleIcon,
-} from "@/ui/icons";
-import { Card, CardContent, CardDescription, CardTitle } from "@/ui/card";
+import Badge from "@/ui/badge";
+import { Item, ItemActions, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@/ui/item";
 import { Spinner } from "@/ui/spinner";
 import { ExtensionIcon } from "./extension-catalog-icon";
 import type { UnifiedExtension } from "./extension-catalog-types";
@@ -40,68 +32,41 @@ export function ExtensionCatalogCard({
   const status = isInstalling ? (
     <Spinner label="Installing" compact />
   ) : hasRuntimeIssue ? (
-    <WarningCircleIcon className="size-4 text-destructive" />
+    <Badge tone="danger">Issue</Badge>
   ) : hasUpdate ? (
-    <ArrowClockwiseIcon className="size-4 text-primary" />
+    <Badge tone="accent">Update</Badge>
   ) : isUnavailableAgent ? (
-    <XCircleIcon className="size-4 text-subtle-foreground" />
+    <Badge>Unavailable</Badge>
   ) : extension.isInstalled ? (
-    <CheckIcon className="size-4 text-primary" optical="md" />
-  ) : (
-    <PlusIcon className="size-4 text-subtle-foreground" />
-  );
+    <Badge tone="success">Installed</Badge>
+  ) : null;
 
   return (
-    <Card
-      variant="interactive"
-      className="min-w-0"
+    <Item
+      variant="list"
+      interactive
+      className="min-w-0 flex-nowrap"
       onClick={onSelect}
       onContextMenu={(event) => onContextMenu(event, extension)}
       onKeyDown={handleKeyDown}
       role="button"
       tabIndex={0}
     >
-      <CardContent className="grid min-w-0 grid-cols-[2.5rem_minmax(0,1fr)_1.25rem] items-center gap-x-3">
+      <ItemMedia>
         <ExtensionIcon extension={extension} />
-        <div className="min-w-0">
-          <CardTitle className="truncate">{extension.name}</CardTitle>
-          <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-subtle-foreground ui-text-sm">
-            <span className="flex shrink-0 items-center gap-1">
-              <TagIcon className="size-3.5" />
-              {getCategoryLabel(extension.category)}
-            </span>
-            {extension.isBundled ? (
-              <span className="flex shrink-0 items-center gap-1">
-                <PackageIcon className="size-3.5" />
-                Built-in
-              </span>
-            ) : null}
-          </div>
-        </div>
-        <span
-          className="flex size-5 items-center justify-center justify-self-end"
-          aria-label={
-            isInstalling
-              ? "Installing"
-              : hasRuntimeIssue
-                ? "Runtime issue"
-                : hasUpdate
-                  ? "Update available"
-                  : isUnavailableAgent
-                    ? "Unavailable"
-                    : extension.isInstalled
-                      ? "Installed"
-                      : "Available to install"
-          }
-        >
-          {status}
-        </span>
-        {extension.description ? (
-          <CardDescription className="col-span-3 mt-3 line-clamp-2">
-            {extension.description}
-          </CardDescription>
+      </ItemMedia>
+      <ItemContent>
+        <ItemTitle>{extension.name}</ItemTitle>
+        <ItemDescription>
+          {extension.description || getCategoryLabel(extension.category)}
+        </ItemDescription>
+      </ItemContent>
+      <ItemActions>
+        {extension.isBundled ? (
+          <span className="text-subtle-foreground ui-text-sm max-[520px]:hidden">Built-in</span>
         ) : null}
-      </CardContent>
-    </Card>
+        {status}
+      </ItemActions>
+    </Item>
   );
 }

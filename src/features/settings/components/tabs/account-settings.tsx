@@ -23,7 +23,7 @@ export const AccountSettings = () => {
   const subscription = useAuthStore((state) => state.subscription);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const logout = useAuthStore((state) => state.actions.logout);
-  const { isPro, hasIntelligence, hasSettingsSync } = useProFeature();
+  const { isPro, hasSettingsSync } = useProFeature();
   const { isSigningIn, signIn } = useDesktopSignIn();
   const { showToast } = useToast();
   const settingsSyncEnabled = useSettingsSyncStore((state) => state.enabled);
@@ -84,58 +84,50 @@ export const AccountSettings = () => {
     }
   };
 
-  const settingsSyncDescription = !isAuthenticated
-    ? "Sign in to access cloud settings sync across devices."
-    : !hasSettingsSync
-      ? "Cloud settings sync is included with Pro."
-      : settingsSyncLastSyncedAt
-        ? `Last synced ${new Date(settingsSyncLastSyncedAt).toLocaleString()}${settingsSyncLastSource ? ` from ${settingsSyncLastSource}` : ""}.`
-        : "Keep non-sensitive settings synced across your devices.";
+  const settingsSyncDescription = !hasSettingsSync
+    ? "Included with Pro"
+    : settingsSyncLastSyncedAt
+      ? `Last synced ${new Date(settingsSyncLastSyncedAt).toLocaleString()}${settingsSyncLastSource ? ` from ${settingsSyncLastSource}` : ""}`
+      : "Sync settings across your devices";
 
   return (
     <SettingsView>
       <Section title="Account">
-        <SettingRow
-          label="Account"
-          description="Sign in to access account and subscription features"
-        >
-          {isAuthenticated ? (
-            <span className="text-subtle-foreground">{user?.email}</span>
-          ) : (
+        {isAuthenticated ? (
+          <SettingRow label="Signed In" description={user?.email} activateOnClick={false}>
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" onClick={handleManageAccount}>
+                Dashboard
+              </Button>
+              <Button variant="default" onClick={() => void logout()}>
+                Sign Out
+              </Button>
+            </div>
+          </SettingRow>
+        ) : (
+          <SettingRow label="Account" description="Sign in for Pro, Athas AI, and settings sync">
             <Button
-              variant="default"
+              variant="accent"
               onClick={() => void signIn().catch(() => undefined)}
               disabled={isSigningIn}
             >
               {isSigningIn ? "Signing In..." : "Sign In"}
             </Button>
-          )}
-        </SettingRow>
-
-        {isAuthenticated && (
+          </SettingRow>
+        )}
+        {isAuthenticated ? (
           <SettingRow
-            label="Athas AI"
-            description="Pro includes $10 of Athas AI every month, then pay as you go at list price +10%."
-            activateOnClick={false}
+            label="Plan"
+            labelAccessory={isPaidPlan ? <Badge tone="accent">{planLabel}</Badge> : null}
           >
-            <Badge tone={hasIntelligence ? "success" : "neutral"}>
-              {hasIntelligence ? "Included in Pro" : "Pro required"}
-            </Badge>
+            <Button variant="default" onClick={handleManagePlan}>
+              {isPaidPlan ? "Manage Plan" : "Upgrade"}
+            </Button>
           </SettingRow>
-        )}
-
-        {isAuthenticated && (
-          <SettingRow label="Plan" description="Manage your Athas subscription and billing">
-            <div className="flex items-center gap-2">
-              {isPaidPlan ? <Badge tone="accent">{planLabel}</Badge> : null}
-              <Button variant="default" onClick={handleManagePlan}>
-                {isPaidPlan ? "Manage plan" : "Upgrade plan"}
-              </Button>
-            </div>
-          </SettingRow>
-        )}
-
-        {isAuthenticated && (
+        ) : null}
+      </Section>
+      {isAuthenticated ? (
+        <Section title="Settings Sync">
           <SettingRow
             label="Cloud Settings Sync"
             description={
@@ -144,70 +136,35 @@ export const AccountSettings = () => {
                 : settingsSyncDescription
             }
           >
-            {hasSettingsSync ? (
+            <div className="flex items-center gap-1">
+              {hasSettingsSync && settingsSyncEnabled ? (
+                <>
+                  <Button
+                    variant="ghost"
+                    onClick={() => void handleSyncNow()}
+                    disabled={settingsSyncIsSyncing}
+                  >
+                    {settingsSyncIsSyncing ? "Syncing..." : "Sync Now"}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => void handleRestoreFromCloud()}
+                    disabled={settingsSyncIsSyncing}
+                    tooltip="Replace this device's settings with the cloud copy"
+                  >
+                    Restore
+                  </Button>
+                </>
+              ) : null}
               <Switch
-                checked={settingsSyncHydrated ? settingsSyncEnabled : false}
+                checked={hasSettingsSync && settingsSyncHydrated ? settingsSyncEnabled : false}
                 onChange={(checked) => void handleToggleSettingsSync(checked)}
-                disabled={!settingsSyncHydrated}
+                disabled={!hasSettingsSync || !settingsSyncHydrated}
               />
-            ) : (
-              <Switch checked={false} onChange={() => undefined} disabled />
-            )}
+            </div>
           </SettingRow>
-        )}
-
-        {hasSettingsSync && settingsSyncEnabled ? (
-          <>
-            <SettingRow
-              label="Sync Now"
-              description="Upload this device's current settings snapshot to the cloud"
-            >
-              <Button
-                variant="default"
-                onClick={() => void handleSyncNow()}
-                disabled={settingsSyncIsSyncing}
-              >
-                {settingsSyncIsSyncing ? "Syncing..." : "Sync Now"}
-              </Button>
-            </SettingRow>
-
-            <SettingRow
-              label="Restore From Cloud"
-              description="Replace this device's non-sensitive settings with the cloud snapshot"
-            >
-              <Button
-                variant="default"
-                onClick={() => void handleRestoreFromCloud()}
-                disabled={settingsSyncIsSyncing}
-              >
-                Restore
-              </Button>
-            </SettingRow>
-          </>
-        ) : null}
-
-        {isAuthenticated && (
-          <SettingRow
-            label="Manage Account"
-            description="Open your Athas dashboard to manage billing and subscription details"
-          >
-            <Button variant="default" onClick={handleManageAccount}>
-              Open Dashboard
-            </Button>
-          </SettingRow>
-        )}
-
-        {isAuthenticated && (
-          <SettingRow
-            label="Sign Out"
-            description="End your current Athas account session on this device"
-          >
-            <Button variant="default" onClick={() => void logout()}>
-              Sign Out
-            </Button>
-          </SettingRow>
-        )}
-      </Section>
+        </Section>
+      ) : null}
     </SettingsView>
   );
 };

@@ -67,7 +67,7 @@ function AgentBehaviorSection() {
     <Section title="Agent behavior">
       <SettingRow
         label="Follow Agent"
-        description="Start new agent chats with the editor following the files the agent works in"
+        description="The editor follows the files an agent opens"
         onReset={() => updateSetting("aiFollowAgent", getDefaultSetting("aiFollowAgent"))}
         canReset={settings.aiFollowAgent !== getDefaultSetting("aiFollowAgent")}
       >
@@ -78,7 +78,7 @@ function AgentBehaviorSection() {
       </SettingRow>
       <SettingRow
         label="Steps before pausing"
-        description="How many model requests the Athas agent makes in one turn before it pauses and asks to continue"
+        description="Model requests per turn before asking to continue"
         onReset={() => updateSetting("aiAgentMaxSteps", getDefaultSetting("aiAgentMaxSteps"))}
         canReset={settings.aiAgentMaxSteps !== getDefaultSetting("aiAgentMaxSteps")}
       >
@@ -100,7 +100,7 @@ function ChatHistorySection() {
 
   return (
     <Section title="Chat history">
-      <SettingRow label="Clear chat history" description="Permanently delete every agent chat">
+      <SettingRow label="Clear chat history">
         <TypedConfirmAction
           actionLabel="Clear All"
           busyLabel="Clearing..."

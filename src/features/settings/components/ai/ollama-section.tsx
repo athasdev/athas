@@ -1,3 +1,4 @@
+import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   DEFAULT_OLLAMA_BASE_URL,
@@ -20,32 +21,15 @@ import { useToast } from "@/features/layout/contexts/toast-context";
 import { getDefaultSetting } from "@/features/settings/config/default-settings";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
-import {
-  CheckCircleIcon,
-  CloudIcon,
-  GlobeIcon,
-  KeyIcon,
-  LaptopIcon,
-  TrashIcon,
-  WarningCircleIcon,
-} from "@/ui/icons";
+import { ArrowCounterClockwiseIcon, CloudIcon, LaptopIcon } from "@/ui/icons";
 import Input from "@/ui/input";
 import { Spinner } from "@/ui/spinner";
 import { TextLink } from "@/ui/text-link";
 import { ToggleGroup } from "@/ui/toggle-group";
-import Section, { SettingRow } from "../settings-section";
+import { cn } from "@/utils/cn";
+import Section, { SettingRow, SettingStatus } from "../settings-section";
 
 type OllamaStatus = "idle" | "checking" | "ok" | "error";
-
-function describeEndpoint(status: OllamaStatus, isCloud: boolean) {
-  if (status === "error") {
-    return isCloud
-      ? "Could not reach Ollama Cloud. Check your API key and internet connection."
-      : "Could not connect. Check that Ollama is running at this address.";
-  }
-  if (status === "ok") return "Connected.";
-  return isCloud ? "Ollama Cloud address." : "Where your Ollama server runs.";
-}
 
 /** Ollama on this machine, on the local network, or on Ollama Cloud. */
 export function OllamaSection() {
@@ -203,18 +187,27 @@ export function OllamaSection() {
     }
   };
 
+  const statusDot = {
+    idle: { label: "Not checked", className: "bg-subtle-foreground" },
+    checking: { label: "Checking", className: "bg-warning" },
+    ok: { label: "Connected", className: "bg-success" },
+    error: { label: "Not reachable", className: "bg-destructive" },
+  }[ollamaStatus];
+  const addressHint =
+    ollamaStatus === "error"
+      ? isOllamaCloud
+        ? "Could not reach Ollama Cloud. Check your key and connection."
+        : "Could not connect. Is Ollama running at this address?"
+      : isOllamaCloud || isLocalEndpointUrl(resolveOllamaBaseUrl(ollamaUrl) ?? "")
+        ? undefined
+        : "Runs outside your local network";
+  const showKey = isOllamaCloud || hasStoredOllamaKey;
+
   return (
     <Section
       title="Ollama"
-      description={
-        isOllamaCloud
-          ? "Ollama Cloud runs models on ollama.com and needs an API key."
-          : isLocalEndpointUrl(resolveOllamaBaseUrl(ollamaUrl) ?? "")
-            ? "Local: models run on your machine or network and nothing leaves it."
-            : "Models run on the server at this address, outside your local network."
-      }
-    >
-      <SettingRow label="Runs on" description="Your machine or Ollama Cloud.">
+      icon={<ProviderIcon providerId="ollama" />}
+      actions={
         <ToggleGroup
           value={isOllamaCloud ? "cloud" : "local"}
           onValueChange={(nextValue) => {
@@ -230,94 +223,105 @@ export function OllamaSection() {
             { value: "cloud", label: "Cloud", icon: <CloudIcon /> },
           ]}
         />
-      </SettingRow>
+      }
+    >
       <SettingRow
         label="Server address"
-        description={describeEndpoint(ollamaStatus, isOllamaCloud)}
-        onReset={handleResetOllamaUrl}
-        canReset={ollamaBaseUrl !== getDefaultSetting("ollamaBaseUrl")}
-        resetLabel="Reset Ollama address to default"
+        description={addressHint ?? statusDot.label}
+        control="field"
+        activateOnClick={false}
       >
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <span className="inline-flex min-w-0 w-56 max-w-full">
-            <Input
-              type="text"
-              value={ollamaUrl}
-              onChange={(e) => handleOllamaUrlChange(e.target.value)}
-              onBlur={(e) => {
-                void commitOllamaUrl(e.target.value);
-              }}
-              onKeyDown={(e) => {
-                if (e.key !== "Enter") return;
-                e.preventDefault();
-                e.currentTarget.blur();
-              }}
-              placeholder={DEFAULT_OLLAMA_BASE_URL}
-              spellCheck={false}
-              leftIcon={GlobeIcon}
-              aria-invalid={ollamaStatus === "error" || undefined}
-            />
-          </span>
-          {ollamaStatus === "checking" && <Spinner label="Checking" compact />}
-          {ollamaStatus === "ok" && <CheckCircleIcon className="text-success" />}
-          {ollamaStatus === "error" && <WarningCircleIcon className="text-destructive" />}
-        </div>
+        <span
+          role="img"
+          aria-label={statusDot.label}
+          title={statusDot.label}
+          className={cn("size-2 shrink-0 rounded-full", statusDot.className)}
+        />
+        <Input
+          type="text"
+          grow
+          value={ollamaUrl}
+          onChange={(e) => handleOllamaUrlChange(e.target.value)}
+          onBlur={(e) => {
+            void commitOllamaUrl(e.target.value);
+          }}
+          onKeyDown={(e) => {
+            if (e.key !== "Enter") return;
+            e.preventDefault();
+            e.currentTarget.blur();
+          }}
+          placeholder={DEFAULT_OLLAMA_BASE_URL}
+          spellCheck={false}
+          aria-label="Ollama server address"
+          aria-invalid={ollamaStatus === "error" || undefined}
+        />
+        {ollamaStatus === "checking" ? <Spinner label="Checking" compact /> : null}
+        {ollamaBaseUrl !== getDefaultSetting("ollamaBaseUrl") ? (
+          <Button
+            type="button"
+            variant="ghost"
+            iconOnly
+            onClick={handleResetOllamaUrl}
+            tooltip="Reset address"
+            aria-label="Reset Ollama address to default"
+          >
+            <ArrowCounterClockwiseIcon />
+          </Button>
+        ) : null}
       </SettingRow>
-      <SettingRow
-        label="API key"
-        description={
-          isOllamaCloud && !hasStoredOllamaKey ? (
+      {showKey && hasStoredOllamaKey ? (
+        <SettingRow
+          label="API key"
+          description={<SettingStatus>Configured</SettingStatus>}
+          activateOnClick={false}
+        >
+          <Button type="button" variant="ghost" onClick={() => void handleRemoveOllamaApiKey()}>
+            Reset Key
+          </Button>
+        </SettingRow>
+      ) : showKey ? (
+        <SettingRow
+          label="API key"
+          description={
             <>
-              Required for Ollama Cloud.{" "}
+              Get a key at{" "}
               <TextLink
                 href="https://ollama.com/settings/keys"
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                Get a key
+                ollama.com
               </TextLink>
             </>
-          ) : (
-            "Only needed for Ollama Cloud or a protected server."
-          )
-        }
-      >
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <span className="inline-flex min-w-0 w-56 max-w-full">
-            <Input
-              type="password"
-              value={ollamaApiKeyInput}
-              onChange={(e) => setOllamaApiKeyInput(e.target.value)}
-              placeholder={hasStoredOllamaKey ? "••••••••  (saved)" : "ollama-…"}
-              spellCheck={false}
-              leftIcon={KeyIcon}
-              aria-invalid={(isOllamaCloud && !hasStoredOllamaKey) || undefined}
-              autoComplete="off"
-              disabled={isSavingOllamaKey}
-            />
-          </span>
+          }
+          control="field"
+          activateOnClick={false}
+        >
+          <Input
+            type="password"
+            grow
+            value={ollamaApiKeyInput}
+            onChange={(e) => setOllamaApiKeyInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key !== "Enter") return;
+              e.preventDefault();
+              void handleSaveOllamaApiKey();
+            }}
+            placeholder="API key"
+            aria-label="Ollama API key"
+            spellCheck={false}
+            autoComplete="off"
+            disabled={isSavingOllamaKey}
+          />
           <Button
             type="button"
-            onClick={handleSaveOllamaApiKey}
+            onClick={() => void handleSaveOllamaApiKey()}
             disabled={!ollamaApiKeyInput.trim() || isSavingOllamaKey}
           >
             {isSavingOllamaKey ? "Saving…" : "Save"}
           </Button>
-          {hasStoredOllamaKey && (
-            <Button
-              type="button"
-              variant="ghost"
-              tone="danger"
-              onClick={handleRemoveOllamaApiKey}
-              tooltip="Remove saved API key"
-              aria-label="Remove saved Ollama API key"
-              iconOnly
-            >
-              <TrashIcon />
-            </Button>
-          )}
-        </div>
-      </SettingRow>
+        </SettingRow>
+      ) : null}
     </Section>
   );
 }

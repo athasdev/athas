@@ -1,4 +1,4 @@
-import { KeyIcon, TrashIcon, WarningCircleIcon } from "@/ui/icons";
+import { KeyIcon, TrashIcon } from "@/ui/icons";
 import { useCallback, useEffect, useState } from "react";
 import {
   GITHUB_TOKEN_SOURCE_LABELS,
@@ -18,7 +18,7 @@ import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import Select from "@/ui/select";
 import { Spinner } from "@/ui/spinner";
-import Section, { SettingRow } from "../settings-section";
+import Section, { SettingRow, SettingStatus } from "../settings-section";
 
 type TokenSourceSetting = "auto" | "athas" | "pat" | "gh";
 
@@ -111,7 +111,6 @@ export const GitHubCredentials = () => {
     <Section title="GitHub Account">
       <SettingRow
         label="Token Source"
-        description="Which credential Athas authenticates GitHub with. Automatic prefers a personal access token, then your Athas account, then the GitHub CLI."
         onReset={() => updateSetting("githubTokenSource", getDefaultSetting("githubTokenSource"))}
         canReset={tokenSource !== getDefaultSetting("githubTokenSource")}
       >
@@ -125,25 +124,25 @@ export const GitHubCredentials = () => {
 
       <SettingRow
         label="Active Credential"
-        description="The token currently used for pull requests, issues, and Actions"
-      >
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
-          {isLoadingStatus ? (
-            <Spinner label="Checking credential" showLabel compact />
-          ) : statusError ? (
-            <span className="text-destructive ui-text-caption">{statusError}</span>
+        description={
+          isLoadingStatus ? undefined : statusError ? (
+            <SettingStatus tone="danger">{statusError}</SettingStatus>
           ) : status?.source && status.login ? (
-            <>
-              <Badge>{GITHUB_TOKEN_SOURCE_LABELS[status.source]}</Badge>
-              <span className="text-subtle-foreground ui-text-caption">{status.login}</span>
-            </>
+            status.login
+          ) : status?.source ? (
+            "GitHub rejected the resolved token"
           ) : (
-            <span className="text-subtle-foreground ui-text-caption">
-              {status?.source
-                ? "GitHub rejected the resolved token"
-                : "No GitHub credential available"}
-            </span>
-          )}
+            "No GitHub credential available"
+          )
+        }
+        activateOnClick={false}
+      >
+        <div className="flex items-center gap-2">
+          {isLoadingStatus ? (
+            <Spinner label="Checking credential" compact />
+          ) : status?.source && status.login ? (
+            <Badge>{GITHUB_TOKEN_SOURCE_LABELS[status.source]}</Badge>
+          ) : null}
           <Button type="button" variant="ghost" onClick={() => void loadStatus()}>
             Refresh
           </Button>
@@ -153,71 +152,64 @@ export const GitHubCredentials = () => {
       {destructiveScopes.length > 0 && (
         <SettingRow
           label="Token Permissions"
-          description="This token can perform destructive actions on your account. Consider a narrower token for Athas."
+          description={<SettingStatus tone="warning">{destructiveScopes.join(", ")}</SettingStatus>}
+          activateOnClick={false}
         >
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <WarningCircleIcon className="shrink-0 text-warning" />
-            <span className="text-subtle-foreground ui-text-caption">
-              {destructiveScopes.join(", ")}
-            </span>
-          </div>
+          {null}
         </SettingRow>
       )}
 
       <SettingRow
         label="Personal Access Token"
-        description="Use your own token when an organization has not approved the Athas GitHub app. Needs the repo scope."
+        description="Needs the repo scope"
+        control="field"
+        activateOnClick={false}
       >
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <span className="inline-flex w-56 min-w-0 max-w-full">
-            <Input
-              type="password"
-              value={patInput}
-              onChange={(e) => setPatInput(e.target.value)}
-              placeholder={status?.hasPersonalAccessToken ? "••••••••  (saved)" : "ghp_…"}
-              spellCheck={false}
-              leftIcon={KeyIcon}
-              autoComplete="off"
-              disabled={isSavingPat}
-            />
-          </span>
+        <Input
+          type="password"
+          grow
+          value={patInput}
+          onChange={(e) => setPatInput(e.target.value)}
+          placeholder={status?.hasPersonalAccessToken ? "••••••••  (saved)" : "ghp_…"}
+          spellCheck={false}
+          leftIcon={KeyIcon}
+          autoComplete="off"
+          aria-label="GitHub personal access token"
+          disabled={isSavingPat}
+        />
+        <Button
+          type="button"
+          variant="default"
+          onClick={() => void handleSavePat()}
+          disabled={!patInput.trim() || isSavingPat}
+        >
+          {isSavingPat ? "Saving…" : "Save"}
+        </Button>
+        {status?.hasPersonalAccessToken && (
           <Button
             type="button"
-            variant="default"
-            onClick={() => void handleSavePat()}
-            disabled={!patInput.trim() || isSavingPat}
+            variant="ghost"
+            tone="danger"
+            onClick={() => void handleRemovePat()}
+            tooltip="Remove saved personal access token"
+            aria-label="Remove saved personal access token"
+            iconOnly
           >
-            {isSavingPat ? "Saving…" : "Save"}
+            <TrashIcon />
           </Button>
-          {status?.hasPersonalAccessToken && (
-            <Button
-              type="button"
-              variant="ghost"
-              tone="danger"
-              onClick={() => void handleRemovePat()}
-              tooltip="Remove saved personal access token"
-              iconOnly
-            >
-              <TrashIcon />
-            </Button>
-          )}
-        </div>
+        )}
       </SettingRow>
 
       <SettingRow
         label="GitHub CLI"
-        description="Reuses the token from your gh installation. Read on demand and never stored by Athas."
+        description={status?.ghCliInstalled ? "gh detected" : "gh not found on this machine"}
+        activateOnClick={false}
       >
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <span className="text-subtle-foreground ui-text-caption">
-            {status?.ghCliInstalled ? "gh detected" : "gh not found on this machine"}
-          </span>
-          {status?.ghCliInstalled && (
-            <Button type="button" variant="ghost" onClick={() => void handleRefreshGhCli()}>
-              Re-read token
-            </Button>
-          )}
-        </div>
+        {status?.ghCliInstalled ? (
+          <Button type="button" variant="ghost" onClick={() => void handleRefreshGhCli()}>
+            Re-read token
+          </Button>
+        ) : null}
       </SettingRow>
     </Section>
   );

@@ -10,10 +10,8 @@ import {
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { Button } from "@/ui/button";
-import { EmptyState } from "@/ui/empty";
-import { SparkleIcon } from "@/ui/icons";
 import Select from "@/ui/select";
-import Section, { SettingRow } from "../settings-section";
+import Section, { SettingRow, SettingStatus } from "../settings-section";
 
 function describeDefault(params: {
   connection: IntelligenceConnection;
@@ -23,18 +21,11 @@ function describeDefault(params: {
   providerName: string | undefined;
 }) {
   const { connection, available, isLocal, isAuthenticated, providerName } = params;
-  if (!available) {
-    return isAuthenticated
-      ? "Athas models need Pro. Choose one of your own models, or upgrade."
-      : "Choose a model to start using AI in Athas.";
-  }
-  if (connection.providerId === "athas") {
-    return connection.modelId === "auto"
-      ? "Athas Automatic picks a suitable model for each request. Usage comes out of your included credit, then your balance."
-      : "Hosted by Athas. Usage comes out of your included credit, then your balance.";
-  }
-  if (isLocal) return "Runs locally. Prompts and code never leave your network.";
-  return `Runs on your ${providerName ?? connection.providerId} account, with your own key.`;
+  if (!available) return isAuthenticated ? "Athas models need Pro" : "Choose a model to start";
+  if (connection.providerId === "athas")
+    return connection.modelId === "auto" ? "Picks a model per request" : "Hosted by Athas";
+  if (isLocal) return "Runs locally";
+  return `Your ${providerName ?? connection.providerId} key`;
 }
 
 /**
@@ -49,7 +40,7 @@ export function DefaultModelSection() {
   const provider = useProviderById(defaultConnection.providerId);
   const keyProviders = useConnectedModelProviders().filter((item) => item.requiresApiKey);
   const available = isConnectionAvailable(defaultConnection, hasIntelligence);
-  const openModelsPage = (section: string) =>
+  const openModelsPage = (section?: string) =>
     useUIState.getState().openSettings("ai-models", section);
 
   const changeDefault = (connection: IntelligenceConnection | null) => {
@@ -62,26 +53,23 @@ export function DefaultModelSection() {
   };
 
   return (
-    <Section
-      title="Default model"
-      description="New chats, inline edits, commit messages, and titles use it. Switch models for any chat from the composer."
-    >
+    <Section title="Default model">
       {!available && keyProviders.length === 0 ? (
-        <EmptyState
-          variant="section"
-          icon={<SparkleIcon />}
-          title="Set up a model"
-          message={
-            isAuthenticated
-              ? "Upgrade to Pro above for Athas models, add your own API key, or run models locally with Ollama."
-              : "Sign in above to use Athas models, add your own API key, or run models locally with Ollama."
-          }
-          action={{ label: "Add an API key", onClick: () => openModelsPage("Your API keys") }}
-          secondaryAction={{ label: "Use Ollama", onClick: () => openModelsPage("Ollama") }}
-        />
+        <SettingRow
+          label="No model yet"
+          description="Use Athas, your own API key, or Ollama"
+          activateOnClick={false}
+        >
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" onClick={() => openModelsPage("Ollama")}>
+              Use Ollama
+            </Button>
+            <Button onClick={() => openModelsPage()}>Add API Key</Button>
+          </div>
+        </SettingRow>
       ) : null}
       {state.scopes.length > 1 ? (
-        <SettingRow label="Settings for" description="Team settings apply to everyone on the team.">
+        <SettingRow label="Settings for">
           <Select
             aria-label="Model settings scope"
             value={state.scope}
@@ -109,7 +97,10 @@ export function DefaultModelSection() {
         />
       </SettingRow>
       {error ? (
-        <SettingRow label="Could not save" description={error}>
+        <SettingRow
+          label="Could not save"
+          description={<SettingStatus tone="danger">{error}</SettingStatus>}
+        >
           <div className="flex gap-2">
             <Button disabled={loading || !state.editable} onClick={() => void actions.save()}>
               Try again

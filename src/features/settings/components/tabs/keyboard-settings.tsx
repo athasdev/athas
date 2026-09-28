@@ -351,11 +351,14 @@ export const KeyboardSettings = () => {
             </div>
           </motion.div>
         ) : (
-          <motion.div key="keyboard-summary" className="space-y-6" {...summaryStepTransition}>
+          <motion.div
+            key="keyboard-summary"
+            className="flex flex-col gap-6"
+            {...summaryStepTransition}
+          >
             <Section title="Keyboard">
               <SettingRow
                 label="Vim Mode"
-                description="Enable vim keybindings and commands"
                 onReset={() => updateSetting("vimMode", getDefaultSetting("vimMode"))}
                 canReset={vimMode !== getDefaultSetting("vimMode")}
               >
@@ -367,7 +370,6 @@ export const KeyboardSettings = () => {
 
               <SettingRow
                 label="Keybinding Preset"
-                description="Apply a base shortcut style before your custom overrides"
                 onReset={() =>
                   updateSetting("keybindingPreset", getDefaultSetting("keybindingPreset"))
                 }
@@ -387,10 +389,9 @@ export const KeyboardSettings = () => {
                   <Alert tone="warning">
                     <WarningCircleIcon />
                     <AlertDescription>
-                      This preset is incomplete. {selectedPresetCoverage.missingCommandIds.length}{" "}
-                      built-in command
-                      {selectedPresetCoverage.missingCommandIds.length === 1 ? " is" : "s are"}{" "}
-                      still missing preset coverage.
+                      {selectedPresetCoverage.missingCommandIds.length} command
+                      {selectedPresetCoverage.missingCommandIds.length === 1 ? "" : "s"} not covered
+                      by this preset.
                     </AlertDescription>
                   </Alert>
                 </SettingBlock>
@@ -402,12 +403,12 @@ export const KeyboardSettings = () => {
                 label="Edit Keybindings"
                 description={
                   userOverrideCount > 0
-                    ? `Customize shortcuts individually. ${userOverrideCount} user override${userOverrideCount === 1 ? "" : "s"} saved.`
-                    : "Customize shortcuts individually"
+                    ? `${userOverrideCount} custom shortcut${userOverrideCount === 1 ? "" : "s"}`
+                    : undefined
                 }
               >
                 <Button variant="default" onClick={() => setIsEditingKeybindings(true)}>
-                  Open Editor
+                  Edit
                 </Button>
               </SettingRow>
             </Section>

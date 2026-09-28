@@ -138,8 +138,8 @@ const SettingsWorkbenchView = () => {
         .querySelectorAll<HTMLElement>("[data-settings-search-active='true']")
         .forEach((element) => element.removeAttribute("data-settings-search-active"));
       content
-        .querySelectorAll<HTMLElement>("[data-settings-search-section-active='true']")
-        .forEach((element) => element.removeAttribute("data-settings-search-section-active"));
+        .querySelectorAll<HTMLElement>("[data-highlighted='true']")
+        .forEach((element) => element.removeAttribute("data-highlighted"));
     };
 
     if (!selectedResultId) {
@@ -168,7 +168,7 @@ const SettingsWorkbenchView = () => {
       if (!target) return;
 
       clearSearchHighlights();
-      section?.setAttribute("data-settings-search-section-active", "true");
+      section?.setAttribute("data-highlighted", "true");
       target.setAttribute("data-settings-search-active", "true");
       target.scrollIntoView({ block: "center", inline: "nearest" });
       target.focus({ preventScroll: true });
@@ -267,14 +267,14 @@ const SettingsWorkbenchView = () => {
         ))}
       </div>
     ) : (
-      <Empty variant="inline" className="px-2 py-1.5">
+      <Empty variant="inline">
         <EmptyDescription>No matching settings</EmptyDescription>
       </Empty>
     )
   ) : undefined;
 
   return (
-    <Workbench>
+    <Workbench plane="surface">
       <WorkbenchNavigation
         title="Settings"
         search={search}
@@ -286,8 +286,8 @@ const SettingsWorkbenchView = () => {
       >
         <WorkbenchContent
           title={activeTabItem?.label ?? "Settings"}
-          description={activeTabItem?.description}
           pinnedHeader
+          width="narrow"
           viewportProps={{
             ref: contentRef,
             id: activePanelId,
