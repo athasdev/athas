@@ -33,6 +33,7 @@
     "build:linux:native": "bash scripts/release/package-linux-native.sh all",
     "build:preview": "tauri build --config src-tauri/tauri.preview.conf.json",
     "build:dev": "tauri build --config src-tauri/tauri.dev.conf.json",
+    "build:web-demo": "vp build --config vite.web-demo.config.ts",
     "smoke:macos": "bun scripts/smoke-app.ts --platform macos",
     "smoke:linux": "bun scripts/smoke-app.ts --platform linux",
     "smoke:windows": "bun scripts/smoke-app.ts --platform windows",

@@ -10,6 +10,7 @@ result-*
 
 # Build output
 dist/
+dist-web-demo/
 
 # Optional npm and yarn cache directory
 .npm/
