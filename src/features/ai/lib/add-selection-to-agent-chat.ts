@@ -7,12 +7,10 @@ import { createEditorSelectionContext } from "@/features/editor/utils/editor-age
 import { getLanguageIdFromPath } from "@/features/editor/utils/language-id";
 import { isEditorContent } from "@/features/panes/types/pane-content.types";
 import { openNewAgentChat } from "./open-new-agent-chat";
-import { isTerminalAgent } from "./terminal-agents";
 
 /**
  * Adds editor selections to the composer of the current agent chat and shows that chat. Falls
- * back to a new chat when there is no current chat or it runs in a terminal agent, which has
- * no composer to hold the selection.
+ * back to a new chat when there is no current chat.
  */
 export function addEditorSelectionsToAgentChat(
   editorSelections: EditorSelectionContext[],
@@ -20,7 +18,7 @@ export function addEditorSelectionsToAgentChat(
   const chatStore = useAIChatStore.getState();
   const chatId = chatStore.currentChatId;
   const chat = chatId ? chatStore.chats.find((candidate) => candidate.id === chatId) : undefined;
-  if (!chatId || !chat || chat.archivedAt || isTerminalAgent(chat.agentId)) {
+  if (!chatId || !chat || chat.archivedAt) {
     return openNewAgentChat(undefined, editorSelections.length ? { editorSelections } : {});
   }
 

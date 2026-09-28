@@ -171,6 +171,10 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
     const status = selectAcpAgentStatus(state, agentId, rootFolderPath);
     return canLogOutOfAcpAgent(status, agentId) ? agentId : null;
   });
+  const currentAgentId = useAIChatStore(
+    (state) =>
+      state.chats.find((chat) => chat.id === state.currentChatId)?.agentId ?? state.selectedAgentId,
+  );
   const browseSessionsAgentId = useAIChatStore((state) => {
     const agentId =
       state.chats.find((chat) => chat.id === state.currentChatId)?.agentId ?? state.selectedAgentId;
@@ -401,6 +405,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
       lspStatus,
       logOutAgentId,
       browseSessionsAgentId,
+      currentAgentId,
       vimMode: commandSettings.vimMode,
       vimCommands,
       setMode,

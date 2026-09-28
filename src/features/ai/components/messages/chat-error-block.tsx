@@ -14,16 +14,14 @@ import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { ChatMessageError } from "@/features/ai/types/chat-error.types";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
+import { Alert, AlertDescription, AlertTitle } from "@/ui/alert";
 import { Button } from "@/ui/button";
 import { CodeOutput } from "@/ui/code-output";
-import {
-  ArrowClockwiseIcon,
-  ChevronDownIcon,
-  ChevronRightIcon,
-  TerminalWindowIcon,
-  WarningCircleIcon,
-} from "@/ui/icons";
-import { Marker, MarkerContent, MarkerIcon } from "@/ui/marker";
+import { ArrowClockwiseIcon, ChevronRightIcon, TerminalWindowIcon } from "@/ui/icons";
+import { ICON_CONCEPTS } from "@/ui/icon-concepts";
+import { cn } from "@/utils/cn";
+
+const ErrorIcon = ICON_CONCEPTS["status.error"];
 
 function formatDetails(details: string): string {
   try {
@@ -108,86 +106,95 @@ export function ChatErrorBlock({
     }
   };
 
+  const hasAgentSetupActions = (canRestartAgent || canOpenAgentTerminal) && !showAuthChoice;
+
   return (
-    <Marker role="alert" tone="error" className="not-typeset my-1 items-start">
-      <MarkerIcon>
-        <WarningCircleIcon />
-      </MarkerIcon>
-      <MarkerContent className="flex min-w-0 flex-col gap-1">
-        <span className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
-          <span className="font-medium">{summary}</span>
-          {shownCode ? <span className="text-destructive">({shownCode})</span> : null}
-          {details ? (
-            <Button
-              type="button"
-              variant="link"
-              onClick={() => setIsExpanded(!isExpanded)}
-              tone="danger"
-            >
-              {isExpanded ? <ChevronDownIcon /> : <ChevronRightIcon />}
-              {isExpanded ? "Hide details" : "Details"}
-            </Button>
-          ) : null}
-        </span>
-        {error.message && error.message !== summary ? (
-          <span className="text-destructive">{error.message}</span>
-        ) : null}
-        {actions.includes("provider_settings") ? (
-          <ApiErrorActions
-            code={code}
-            serverCode={error.code}
-            billingUrl={error.billingUrl}
-            providerId={providerId}
-            onRetry={canRetry}
-          />
-        ) : canRetry ? (
-          <span>
-            <Button type="button" variant="default" onClick={() => void canRetry()}>
-              <ArrowClockwiseIcon />
-              Try again
-            </Button>
+    <Alert tone="error" data-ai-element="chat-error" className="not-typeset">
+      <ErrorIcon />
+      <AlertTitle>
+        {summary}
+        {shownCode ? (
+          <span className="ml-1.5 font-normal text-subtle-foreground tabular-nums">
+            {shownCode}
           </span>
         ) : null}
-        {showAuthChoice && authRequest ? (
-          <AcpAuthChoice request={authRequest} chatId={chatId} onSignedIn={onRetry} />
-        ) : null}
-        {(canRestartAgent || canOpenAgentTerminal) && !showAuthChoice ? (
-          <span className="flex flex-wrap items-center gap-2">
-            {canRestartAgent ? (
+      </AlertTitle>
+      {error.message && error.message !== summary ? (
+        <AlertDescription>{error.message}</AlertDescription>
+      ) : null}
+      <div className="col-start-2 mt-1.5 flex min-w-0 flex-col gap-2 empty:hidden">
+        {actions.includes("provider_settings") || canRetry || hasAgentSetupActions || details ? (
+          <div className="flex flex-wrap items-center gap-1.5">
+            {actions.includes("provider_settings") ? (
+              <ApiErrorActions
+                code={code}
+                serverCode={error.code}
+                billingUrl={error.billingUrl}
+                providerId={providerId}
+                onRetry={canRetry}
+              />
+            ) : canRetry ? (
+              <Button type="button" variant="default" onClick={() => void canRetry()}>
+                <ArrowClockwiseIcon />
+                Try again
+              </Button>
+            ) : null}
+            {canRestartAgent && hasAgentSetupActions ? (
               <Button
                 type="button"
                 variant="default"
                 onClick={() => void handleRestartAgentSession()}
                 disabled={isRestartingSession}
               >
-                <TerminalWindowIcon size={12} />
-                {isRestartingSession ? "Restarting..." : "Restart Agent Session"}
+                <TerminalWindowIcon />
+                {isRestartingSession ? "Restarting…" : "Restart agent session"}
               </Button>
             ) : null}
-            {canOpenAgentTerminal ? (
+            {canOpenAgentTerminal && hasAgentSetupActions ? (
               <Button
                 type="button"
-                variant="default"
+                variant="ghost"
                 onClick={() => void handleOpenAuthenticationTerminal()}
                 disabled={isOpeningTerminal}
               >
-                <TerminalWindowIcon size={12} />
-                {isOpeningTerminal ? "Opening..." : "Open Agent Terminal"}
+                <TerminalWindowIcon />
+                {isOpeningTerminal ? "Opening…" : "Open agent terminal"}
               </Button>
             ) : null}
-            <span className="text-destructive">
-              {isAgentSetupError(error, "config")
-                ? "Finish the agent setup, then restart the session."
-                : "Complete login in the agent CLI, then restart the session."}
-            </span>
+            {details ? (
+              <Button
+                type="button"
+                variant="ghost"
+                aria-expanded={isExpanded}
+                onClick={() => setIsExpanded(!isExpanded)}
+              >
+                <ChevronRightIcon
+                  className={cn(
+                    "transition-transform duration-fast motion-reduce:transition-none",
+                    isExpanded && "rotate-90",
+                  )}
+                />
+                {isExpanded ? "Hide details" : "Details"}
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
+        {hasAgentSetupActions ? (
+          <span className="text-muted-foreground">
+            {isAgentSetupError(error, "config")
+              ? "Finish the agent setup, then restart the session."
+              : "Complete login in the agent CLI, then restart the session."}
           </span>
         ) : null}
+        {showAuthChoice && authRequest ? (
+          <AcpAuthChoice request={authRequest} chatId={chatId} onSignedIn={onRetry} />
+        ) : null}
         {details && isExpanded ? (
-          <CodeOutput tone="error" height="auto">
+          <CodeOutput tone="muted" height="default">
             {formatDetails(details)}
           </CodeOutput>
         ) : null}
-      </MarkerContent>
-    </Marker>
+      </div>
+    </Alert>
   );
 }

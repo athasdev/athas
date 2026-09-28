@@ -512,6 +512,53 @@ export function isAuthInvalidError(error: unknown): boolean {
   return error.status === 403 && error.code !== undefined && INVALID_SESSION_CODES.has(error.code);
 }
 
+/**
+ * Why a saved session could not be checked, when the answer was not "the session is invalid".
+ * `local_server_down` is a development build pointed at a local server that is not running.
+ */
+export interface SessionCheckFailure {
+  reason: "unreachable" | "local_server_down" | "timeout" | "server_error";
+  /** One line saying what actually happened, naming the host that was asked. */
+  message: string;
+  host: string;
+}
+
+function describeApiHost(apiBase: string): string {
+  try {
+    return new URL(apiBase).host || apiBase;
+  } catch {
+    return apiBase;
+  }
+}
+
+export function describeSessionCheckFailure(
+  error: unknown,
+  apiBase: string = API_BASE,
+): SessionCheckFailure {
+  const host = describeApiHost(apiBase);
+  if (error instanceof AuthApiError) {
+    return {
+      reason: "server_error",
+      message:
+        error.status >= 500
+          ? `${host} had a server error (${error.status}).`
+          : `${host} gave an unexpected answer (${error.status}).`,
+      host,
+    };
+  }
+  if (error instanceof Error && error.name === "TimeoutError") {
+    return { reason: "timeout", message: `${host} did not answer in time.`, host };
+  }
+  if (isLocalApiBase(apiBase)) {
+    return {
+      reason: "local_server_down",
+      message: `Nothing is answering at ${host}.`,
+      host,
+    };
+  }
+  return { reason: "unreachable", message: `Could not reach ${host}.`, host };
+}
+
 function getApiBaseUnavailableMessage(apiBase = API_BASE): string {
   if (isLocalApiBase(apiBase)) {
     return `Could not reach local auth server at ${apiBase}. Start the local web app/server first, then try sign-in again.`;

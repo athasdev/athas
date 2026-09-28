@@ -138,4 +138,26 @@ describe("tool call state", () => {
     expect(cancelUnfinishedToolCalls(toolCalls)).toBe(toolCalls);
     expect(cancelUnfinishedToolCalls(undefined)).toBeUndefined();
   });
+
+  it("records how long a call ran when it finishes, once", () => {
+    const started = {
+      ...createToolCall("Bash", {}, "run"),
+      timestamp: new Date(Date.now() - 5000),
+    };
+    const [finished] = updateToolCall([started], { id: "run", status: "completed" });
+    expect(finished?.durationMs).toBeGreaterThanOrEqual(5000);
+    const [again] = updateToolCall([finished!], { id: "run", status: "completed" });
+    expect(again?.durationMs).toBe(finished?.durationMs);
+
+    const [completed] = markToolCallComplete([started], "Bash", "run");
+    expect(completed?.durationMs).toBeGreaterThanOrEqual(5000);
+    const [cancelled] = cancelUnfinishedToolCalls([started])!;
+    expect(cancelled?.durationMs).toBeGreaterThanOrEqual(5000);
+  });
+
+  it("records no duration for a call with no real start time", () => {
+    const replayed = { ...createToolCall("Read", {}, "read"), timestamp: new Date(0) };
+    const [finished] = updateToolCall([replayed], { id: "read", status: "completed" });
+    expect(finished?.durationMs).toBeUndefined();
+  });
 });

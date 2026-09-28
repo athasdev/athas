@@ -65,17 +65,10 @@ async function render(props: Partial<Parameters<typeof ModelConnectionPicker>[0]
 }
 const trigger = () => container.querySelector<HTMLButtonElement>("button")!;
 const rows = () => [...document.querySelectorAll<HTMLElement>('[role="menuitemradio"]')];
-const connections = () =>
-  [...document.querySelectorAll<HTMLElement>('[data-slot="dropdown-menu-sub-trigger"]')].map(
+const sections = () =>
+  [...document.querySelectorAll<HTMLElement>('[data-slot="dropdown-menu-label"]')].map(
     (item) => item.textContent,
   );
-async function openConnection(name: string) {
-  await act(async () =>
-    [...document.querySelectorAll<HTMLElement>('[data-slot="dropdown-menu-sub-trigger"]')]
-      .find((item) => item.textContent?.startsWith(name))!
-      .click(),
-  );
-}
 
 beforeEach(() => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
@@ -104,13 +97,12 @@ describe("settings model picker", () => {
     await render();
     expect(trigger().textContent).toBe("Athas Automatic");
     await act(async () => trigger().click());
-    expect(connections()).toEqual(["AthasAutomatic", "OpenAI", "Ollama"]);
+    expect(sections()).toEqual(["Athas", "OpenAI", "Ollama"]);
   });
 
   it("chooses a local model from its connection", async () => {
     await render();
     await act(async () => trigger().click());
-    await openConnection("Ollama");
     await act(async () =>
       rows()
         .find((row) => row.textContent?.includes("llama3"))!
@@ -148,8 +140,8 @@ describe("settings model picker", () => {
     await render({ value: null, inheritLabel: "Automatic", purpose: "completion" });
     expect(trigger().textContent).toBe("Automatic");
     await act(async () => trigger().click());
-    expect(connections()).toEqual(["OpenAI", "Ollama"]);
-    expect(rows().map((row) => row.textContent)).toContain("Athas Tab modelvia Athas");
+    expect(sections()).toEqual(["Athas", "OpenAI", "Ollama"]);
+    expect(rows().map((row) => row.textContent)).toContain("Athas Tab model");
     expect(rows().some((row) => row.textContent?.includes("Kimi"))).toBe(false);
     await act(async () =>
       rows()

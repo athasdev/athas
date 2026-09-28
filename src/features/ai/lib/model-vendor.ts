@@ -50,3 +50,31 @@ export function getModelIconId(providerId: string, modelId: string): string {
   const vendor = getVendor(modelId);
   return (vendor && VENDOR_ICON_IDS[vendor]) || providerId;
 }
+
+/**
+ * Model families worth suggesting first, strongest fallback last within each family. Patterns
+ * rather than ids, so the picks follow the catalog as it updates and never name a model the
+ * catalog does not serve.
+ */
+const RECOMMENDED_FAMILIES: readonly (readonly RegExp[])[] = [
+  [/^anthropic\/claude-sonnet-/],
+  [/^openai\/gpt-[\d.]+-terra$/, /^openai\/gpt-[\d.]+-sol$/, /^openai\/gpt-(?!.*codex)/],
+  [/^google\/gemini-[\d.]+-pro/],
+];
+
+/**
+ * Athas Automatic plus the catalog's first match for each recommended family, in catalog order
+ * within a family. Empty when the catalog has none of them.
+ */
+export function pickRecommendedModels<T extends { id: string }>(models: readonly T[]): T[] {
+  const picks = RECOMMENDED_FAMILIES.flatMap((patterns) => {
+    for (const pattern of patterns) {
+      const match = models.find((model) => pattern.test(model.id));
+      if (match) return [match];
+    }
+    return [];
+  });
+  if (picks.length === 0) return [];
+  const automatic = models.find((model) => model.id === "auto");
+  return automatic ? [automatic, ...picks] : picks;
+}

@@ -45,7 +45,11 @@ vi.mock("../hooks/use-available-providers", () => ({
 }));
 vi.mock("../hooks/use-agent-options", () => ({
   useAgentOptions: () => ({
-    options: [{ id: "codex", name: "Codex", isInstalled: true, isCurrent: false }],
+    options: [
+      { id: "codex", name: "Codex", isInstalled: true, isCurrent: false },
+      { id: "claude-acp", name: "Claude Agent", isInstalled: false, isCurrent: false },
+      { id: "gemini", name: "Gemini CLI", isInstalled: true, isCurrent: false },
+    ],
     isLoading: false,
     loadError: null,
     refresh: vi.fn(),
@@ -129,71 +133,67 @@ async function search(value: string) {
   });
 }
 const rows = () => [...document.querySelectorAll<HTMLElement>('[role="menuitemradio"]')];
-const connections = () =>
-  [...document.querySelectorAll<HTMLElement>('[data-slot="dropdown-menu-sub-trigger"]')].map(
-    (trigger) => trigger.textContent,
+const sections = () =>
+  [...document.querySelectorAll<HTMLElement>('[data-slot="dropdown-menu-label"]')].map(
+    (label) => label.textContent,
   );
-async function openConnection(name: string) {
-  await act(async () =>
-    [...document.querySelectorAll<HTMLElement>('[data-slot="dropdown-menu-sub-trigger"]')]
-      .find((trigger) => trigger.textContent?.startsWith(name))!
-      .click(),
-  );
-}
+const rowsIn = (section: string) =>
+  [...document.querySelectorAll<HTMLElement>('[data-slot="dropdown-menu-label"]')]
+    .find((label) => label.textContent === section)!
+    .closest('[role="group"]')!
+    .querySelectorAll<HTMLElement>('[role="menuitemradio"]');
+const names = (items: Iterable<HTMLElement>) => [...items].map((row) => row.textContent);
 
 describe("composer model selector", () => {
-  it("groups models under their connection and marks the current choice", async () => {
+  it("lists every connection as a headed section in one flat list", async () => {
     await open();
-    expect(connections()).toEqual(["AthasAutomatic", "OpenAI", "Codex"]);
-    expect(rows()).toHaveLength(0);
-    await openConnection("Athas");
-    expect(rows().map((row) => row.textContent)).toEqual([
-      "AutomaticBest per request",
-      "Kimi K2.6Moonshot",
-      "Claude Sonnet 5$3 / $15",
-      "DeepSeek V4 Pro$0.435 / $0.87",
+    expect(document.querySelector('[data-slot="dropdown-menu-sub-trigger"]')).toBeNull();
+    expect(sections()).toEqual(["Recommended", "Athas", "OpenAI", "Codex", "Agents"]);
+    expect(names(rowsIn("Recommended"))).toEqual(["Automatic", "Claude Sonnet 5"]);
+    expect(names(rowsIn("Athas"))).toEqual([
+      "Automatic",
+      "Kimi K2.6",
+      "Claude Sonnet 5",
+      "DeepSeek V4 Pro",
     ]);
-    expect(rows()[2].getAttribute("title")).toContain("billed at list price +10%");
-    expect(rows()[0].getAttribute("aria-checked")).toBe("true");
-    await act(async () => rows()[1].click());
+    expect(names(rowsIn("Codex"))).toEqual(["Default", "Codex Test"]);
+    const sonnet = rowsIn("Athas")[2];
+    expect(sonnet.getAttribute("title")).toContain("Anthropic");
+    expect(sonnet.getAttribute("title")).toContain("billed at list price +10%");
+    expect(rowsIn("Athas")[0].getAttribute("aria-checked")).toBe("true");
+    await act(async () => rowsIn("Athas")[1].click());
     expect(onModelChange).toHaveBeenCalledExactlyOnceWith("moonshotai/kimi-k2.6", "athas");
     expect(state.loadModels).not.toHaveBeenCalledWith("anthropic");
   });
-  it("selects a configured provider model from its submenu", async () => {
+  it("selects a configured provider model from its section", async () => {
     await open();
-    await openConnection("OpenAI");
-    await act(async () =>
-      rows()
-        .find((row) => row.textContent?.includes("GPT Test"))!
-        .click(),
-    );
+    await act(async () => rowsIn("OpenAI")[0].click());
     expect(onModelChange).toHaveBeenCalledExactlyOnceWith("gpt-test", "openai");
     expect(onAgentChange).not.toHaveBeenCalled();
   });
-  it("flattens every connection into one searchable list", async () => {
+  it("filters every section at once and keeps the headers of matches", async () => {
     await open();
     await search("Codex");
-    expect(connections()).toEqual([]);
-    expect(rows().map((row) => row.textContent)).toEqual([
-      "Defaultvia Codex",
-      "Codex Testvia Codex",
-    ]);
+    expect(sections()).toEqual(["Codex"]);
+    expect(names(rows())).toEqual(["Default", "Codex Test"]);
     await search("missing-model");
     expect(rows()).toHaveLength(0);
     expect(document.body.textContent).toContain("No matching models");
     await search("kimi");
-    expect(rows().map((row) => row.textContent)).toEqual(["Kimi K2.6via Athas"]);
+    expect(sections()).toEqual(["Athas"]);
+    expect(names(rows())).toEqual(["Kimi K2.6"]);
     await search("anthropic");
-    expect(rows().map((row) => row.textContent)).toEqual(["Claude Sonnet 5via Athas"]);
+    expect(names(rows())).toEqual(["Claude Sonnet 5"]);
+  });
+  it("lists installed agents and switches to one from its row", async () => {
+    await open();
+    expect(names(rowsIn("Agents"))).toEqual(["Gemini CLI"]);
+    await act(async () => rowsIn("Agents")[0].click());
+    expect(onAgentChange).toHaveBeenCalledExactlyOnceWith("gemini");
   });
   it("selects the model and agent together for a Codex row", async () => {
     await open();
-    await search("Codex Test");
-    await act(async () =>
-      rows()
-        .find((row) => row.textContent === "Codex Testvia Codex")!
-        .click(),
-    );
+    await act(async () => rowsIn("Codex")[1].click());
     expect(state.update).toHaveBeenCalledOnce();
     expect(onAgentChange).toHaveBeenCalledExactlyOnceWith("codex");
     expect(onModelChange).not.toHaveBeenCalled();

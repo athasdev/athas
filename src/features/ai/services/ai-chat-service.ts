@@ -30,7 +30,6 @@ import {
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { AcpStreamHandler } from "./acp-stream-handler";
 import { buildContextPrompt, buildSystemPrompt } from "../utils/ai-context-builder";
-import { isTerminalAgent } from "../lib/terminal-agents";
 import { loadContextProjectRules } from "../lib/project-rules";
 import {
   compactConversationHistory,
@@ -46,7 +45,7 @@ import { CodexIntegrationService } from "../integrations/codex/codex-integration
 
 // Check if an agent uses ACP (CLI-based) vs HTTP API
 export const isAcpAgent = (agentId: AgentType): boolean => {
-  return agentId !== "custom" && agentId !== CODEX_INTEGRATION_ID && !isTerminalAgent(agentId);
+  return agentId !== "custom" && agentId !== CODEX_INTEGRATION_ID;
 };
 
 // Generic streaming chat completion function that works with any agent/provider

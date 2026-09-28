@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { useProviderById } from "@/features/ai/hooks/use-available-providers";
+import { getModelIconId } from "@/features/ai/lib/model-vendor";
 import type { IntelligenceConnection } from "@/features/ai/intelligence/types/intelligence.types";
 import { Button } from "@/ui/button";
 import {
@@ -17,9 +18,9 @@ import {
 import { ChevronDownIcon } from "@/ui/icons";
 import { useMenuSearch } from "@/ui/menu-search";
 import {
-  AthasModels,
-  Connection,
+  AthasModelSections,
   ModelResultsProvider,
+  ModelSection,
   ProviderModels,
   useConnectedModelProviders,
   useModelName,
@@ -52,8 +53,8 @@ function isAthasAutomatic(connection: IntelligenceConnection) {
 }
 
 /**
- * Picks a model the same way the composer does: each connection (Athas, then every provider the
- * user connected) opens a submenu of its models, and searching flattens them into one list.
+ * Picks a model the same way the composer does: one searchable list with a section per
+ * connection (Recommended and Athas, then every provider the user connected).
  */
 export function ModelConnectionPicker({
   value,
@@ -104,7 +105,7 @@ export function ModelConnectionPicker({
             />
           }
         >
-          {value ? <ProviderIcon providerId={providerId} /> : null}
+          {value ? <ProviderIcon providerId={getModelIconId(providerId, modelId)} /> : null}
           <span className="min-w-0 truncate">{label}</span>
           <ChevronDownIcon />
         </DropdownMenuTrigger>
@@ -113,7 +114,7 @@ export function ModelConnectionPicker({
         <DropdownMenuSearch
           value={search.query}
           onChange={(event) => search.setQuery(event.target.value)}
-          placeholder="Search models…"
+          placeholder="Select a model…"
           autoFocus
         />
         <DropdownMenuViewport>
@@ -133,16 +134,17 @@ export function ModelConnectionPicker({
           {isContentMounted ? (
             <ModelResultsProvider value={reportResults}>
               {purpose === "completion" ? (
-                <Connection
+                <ModelSection
+                  id="athas"
+                  label="Athas"
                   models={[{ id: "auto", name: ATHAS_TAB_MODEL_LABEL, keywords: ["automatic"] }]}
                   selected={value && providerId === "athas" ? modelId || "auto" : ""}
                   onSelect={(id) => onChange({ providerId: "athas", modelId: id })}
                   providerId="athas"
-                  providerName="Athas"
                   search={search}
                 />
               ) : (
-                <AthasModels
+                <AthasModelSections
                   selected={value && providerId === "athas" ? modelId || "auto" : ""}
                   search={search}
                   onSelect={(id) => onChange({ providerId: "athas", modelId: id })}

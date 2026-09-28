@@ -114,6 +114,24 @@ export function groupComposerBudget(budget: ContextBudget): ComposerBudgetGroup[
   return [...groups.values()].sort((a, b) => b.tokens - a.tokens);
 }
 
+/** Below this share, instructions and rules alone are not worth a meter. */
+const QUIET_RATIO = 0.5;
+
+/**
+ * Whether the meter has anything to say. A new chat carries only the agent's instructions, and a
+ * small ring beside the model picker then reads as a loading spinner, so it waits for real
+ * content: conversation, attachments or references, or a budget that is already half used.
+ */
+export function shouldShowComposerContextMeter(budget: ContextBudget): boolean {
+  if (budget.usedTokens <= 0) return false;
+  if (budget.overLimit || (budget.ratio ?? 0) >= QUIET_RATIO) return true;
+  return budget.items.some(
+    (item) =>
+      item.tokens > 0 &&
+      (item.kind === "history" || item.kind === "attachment" || item.kind === "context"),
+  );
+}
+
 export function getComposerBudgetTone(budget: ContextBudget): ComposerBudgetTone {
   if (budget.overLimit || (budget.ratio ?? 0) >= ERROR_RATIO) return "error";
   if ((budget.ratio ?? 0) >= WARNING_RATIO) return "warning";

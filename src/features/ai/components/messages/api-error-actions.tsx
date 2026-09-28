@@ -72,7 +72,7 @@ export function ApiErrorActions({
               ? "Try again"
               : "Configure models";
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-center gap-1.5">
       <Button variant="default" disabled={busy || isSigningIn} onClick={() => void run(recover)}>
         {isSigningIn ? "Waiting for browser…" : busy ? "Working…" : label}
       </Button>

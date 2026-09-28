@@ -57,7 +57,7 @@ export function CheckpointRestoreButton({
       disabled={restoring}
       onClick={() => void restore()}
     >
-      <HistoryIcon className="size-3.5" />
+      <HistoryIcon />
     </MessageAction>
   );
 }

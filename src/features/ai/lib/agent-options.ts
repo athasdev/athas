@@ -2,7 +2,6 @@ import {
   BUILT_IN_AI_INTEGRATIONS,
   CODEX_INTEGRATION_ID,
 } from "@/features/ai/integrations/integration-registry";
-import { isTerminalAgent, TERMINAL_AGENT_OPTIONS } from "@/features/ai/lib/terminal-agents";
 import type { AgentConfig } from "@/features/ai/types/acp.types";
 import type { AgentType } from "@/features/ai/types/ai-chat.types";
 
@@ -87,7 +86,6 @@ export function buildAgentOptions({
   const availableAgents: Array<{ id: string; name: string; description?: string | null }> = [
     ATHAS_AGENT_OPTION,
     ...BUILT_IN_AI_INTEGRATIONS,
-    ...TERMINAL_AGENT_OPTIONS,
     ...registryAgents,
   ];
   if (!availableAgents.some((agent) => agent.id === currentAgentId)) {
@@ -102,13 +100,10 @@ export function buildAgentOptions({
     const agentId = agent.id as AgentType;
     const agentConfig = agentConfigs.get(agent.id);
     const isAthasAgent = agent.id === "custom";
-    const isTerminal = isTerminalAgent(agent.id);
     const isIntegration = agent.id === CODEX_INTEGRATION_ID;
     const isInstalled =
-      isAthasAgent ||
-      isTerminal ||
-      (isIntegration ? codexInstalled : (agentConfig?.installed ?? false));
-    const canInstall = !isTerminal && !isIntegration && (agentConfig?.canInstall ?? false);
+      isAthasAgent || (isIntegration ? codexInstalled : (agentConfig?.installed ?? false));
+    const canInstall = !isIntegration && (agentConfig?.canInstall ?? false);
     const updateAvailable = isInstalled && canInstall && (agentConfig?.updateAvailable ?? false);
     const isBusy = pendingAction?.agentId === agent.id;
     const action = isBusy

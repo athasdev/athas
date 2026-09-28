@@ -53,7 +53,7 @@ describe("buildWorkspaceRestorePlan", () => {
         {
           type: "terminal",
           path: "terminal://terminal-tab-1",
-          name: "Claude Code",
+          name: "Claude CLI",
           isPinned: false,
           sessionId: "terminal-tab-1",
           shell: "bash",
@@ -67,7 +67,7 @@ describe("buildWorkspaceRestorePlan", () => {
     expect(plan.initialBuffer).toEqual({
       type: "terminal",
       path: "terminal://terminal-tab-1",
-      name: "Claude Code",
+      name: "Claude CLI",
       isPinned: false,
       sessionId: "terminal-tab-1",
       shell: "bash",

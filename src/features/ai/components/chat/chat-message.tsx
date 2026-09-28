@@ -1,12 +1,13 @@
 import {
   ArrowClockwiseIcon,
-  ClipboardTextIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
   CopyIcon,
   FileTextIcon,
   PencilIcon,
 } from "@/ui/icons";
 import type { FormEvent, ReactNode } from "react";
-import { memo, useCallback, useEffect, useState } from "react";
+import { memo, useCallback, useLayoutEffect, useRef, useState } from "react";
 import { Shimmer } from "@/ui/shimmer";
 import { Marker, MarkerContent, MarkerIcon } from "@/ui/marker";
 import { MessageAction, MessageResponse } from "@/ui/message";
@@ -14,8 +15,8 @@ import { ThinkingOrb, type ThinkingOrbProps } from "@/ui/thinking-orb";
 import type { PlanStep } from "@/features/ai/lib/plan-parser";
 import type { Message as AIMessage } from "@/features/ai/types/ai-chat.types";
 import { formatTime } from "@/features/ai/lib/formatting";
-import { elapsedSeconds, formatElapsed } from "@/features/ai/lib/elapsed-time";
-import { buildShareableOutcomeMarkdown } from "@/features/ai/lib/shareable-outcome";
+import { formatElapsed } from "@/features/ai/lib/elapsed-time";
+import { useElapsedSeconds } from "@/features/ai/hooks/use-elapsed-seconds";
 import { writeClipboardText } from "@/utils/clipboard";
 import { cn } from "@/utils/cn";
 import { badgeVariants } from "@/ui/badge";
@@ -129,14 +130,50 @@ function UserMessageText({ text, query }: { text: string; query: string }) {
   return <>{parts}</>;
 }
 
-/** Seconds since `since`, ticking once a second while mounted. */
-function useElapsedSeconds(since: Date | string) {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const interval = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(interval);
-  }, []);
-  return elapsedSeconds(since, now);
+/**
+ * A prompt, clamped to a few lines until the user asks for the rest. A search that matches keeps
+ * it open so the highlight is visible.
+ */
+function UserPromptText({ text, query }: { text: string; query: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isClamped, setIsClamped] = useState(false);
+  const forceOpen =
+    query.trim().length > 0 && text.toLowerCase().includes(query.trim().toLowerCase());
+  const open = isExpanded || forceOpen;
+
+  useLayoutEffect(() => {
+    const element = ref.current;
+    if (!element || open) return;
+    const measure = () => setIsClamped(element.scrollHeight > element.clientHeight + 1);
+    measure();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [open, text]);
+
+  return (
+    <div className="flex min-w-0 flex-col items-start gap-1">
+      <div
+        ref={ref}
+        className={cn("select-text whitespace-pre-wrap wrap-break-word", !open && "line-clamp-8")}
+      >
+        <UserMessageText text={text} query={query} />
+      </div>
+      {isClamped && !forceOpen ? (
+        <Button
+          type="button"
+          variant="link"
+          aria-expanded={open}
+          onClick={() => setIsExpanded((current) => !current)}
+        >
+          {open ? <ChevronUpIcon /> : <ChevronDownIcon />}
+          {open ? "Show less" : "Show more"}
+        </Button>
+      ) : null}
+    </div>
+  );
 }
 
 function ChatResponseStatus({
@@ -179,9 +216,6 @@ function ChatResponseStatus({
     </Marker>
   );
 }
-
-/** Matches the user bubble's `px-3` so both text columns start on the same x. */
-const ASSISTANT_CONTENT_INSET = "px-3";
 
 export const ChatMessage = memo(function ChatMessage({
   message,
@@ -244,10 +278,24 @@ export const ChatMessage = memo(function ChatMessage({
     };
 
     return (
-      <Message>
+      <Message align="end">
         <MessageContent>
-          <Bubble variant="user">
-            <BubbleContent title={messageTime} className="w-full">
+          {message.images?.length ? (
+            <AttachmentGroup aria-label="Attached images">
+              {message.images.map((image, index) => (
+                <Attachment key={`${message.id}-image-${index}`}>
+                  <AttachmentMedia variant="image">
+                    <img
+                      src={`data:${image.mediaType};base64,${image.data}`}
+                      alt={`Attached image ${index + 1}`}
+                    />
+                  </AttachmentMedia>
+                </Attachment>
+              ))}
+            </AttachmentGroup>
+          ) : null}
+          <Bubble variant="user" className={isEditing ? "w-full max-w-full" : undefined}>
+            <BubbleContent title={messageTime} className={isEditing ? "w-full" : undefined}>
               {isEditing ? (
                 <form onSubmit={handleEditSubmit} className="flex min-w-0 flex-col gap-2">
                   <Textarea
@@ -290,18 +338,18 @@ export const ChatMessage = memo(function ChatMessage({
                   </div>
                 </form>
               ) : (
-                <div className="select-text whitespace-pre-wrap wrap-break-word">
-                  <UserMessageText text={message.content} query={searchQuery} />
-                </div>
+                <UserPromptText text={message.content} query={searchQuery} />
               )}
             </BubbleContent>
           </Bubble>
           {isEditing || !showActions ? null : (
-            <MessageFooter reserveSpace={false}>
-              <span>{messageTime}</span>
-              <MessageAction onClick={() => void copyText(message.content)} label="Copy prompt">
-                <CopyIcon className="size-3.5" />
-              </MessageAction>
+            <MessageFooter visibility="hover">
+              <span className="px-1">{messageTime}</span>
+              <MessageAction
+                onClick={() => void copyText(message.content)}
+                label="Copy prompt"
+                icon={CopyIcon}
+              />
               {canEditUserMessage && onEditUserMessage ? (
                 <MessageAction onClick={startEditing} label="Edit prompt" icon={PencilIcon} />
               ) : null}
@@ -318,11 +366,12 @@ export const ChatMessage = memo(function ChatMessage({
   if (isToolOnlyMessage) {
     return (
       <Message>
-        <MessageContent className={ASSISTANT_CONTENT_INSET}>
+        <MessageContent>
           <ToolCallList
             toolCalls={message.toolCalls!}
             isStreaming={message.isStreaming}
             latestEdit={latestEdit}
+            chatId={chatId}
           />
           {message.error ? (
             <ChatErrorBlock error={message.error} chatId={chatId} onRetry={onRetry} />
@@ -342,7 +391,7 @@ export const ChatMessage = memo(function ChatMessage({
   ) {
     return (
       <Message className="items-center">
-        <MessageContent className={ASSISTANT_CONTENT_INSET}>
+        <MessageContent>
           <ChatResponseStatus
             phase={message.responsePhase}
             since={message.timestamp}
@@ -353,112 +402,119 @@ export const ChatMessage = memo(function ChatMessage({
     );
   }
 
+  const segments = buildAssistantSegments(responseText, message.toolCalls);
+  const lastSegment = segments[segments.length - 1];
+  // The caret follows streamed text; once the agent moves on to a tool, the tool row shows it.
+  const showCaret = Boolean(
+    message.isStreaming &&
+    lastSegment?.text &&
+    !lastSegment.plan &&
+    lastSegment.toolCalls.length === 0,
+  );
+
   return (
     <Message>
-      <MessageContent className={ASSISTANT_CONTENT_INSET}>
-        <Bubble variant="ghost">
-          <BubbleContent>
-            {message.images?.length || message.resources?.length ? (
-              <AttachmentGroup className="mb-2">
-                {message.images?.map((image, index) => (
-                  <Attachment key={`${message.id}-image-${index}`} orientation="vertical">
-                    <AttachmentMedia variant="image">
-                      <img
-                        src={`data:${image.mediaType};base64,${image.data}`}
-                        alt={`AI generated content ${index + 1}`}
-                      />
+      <MessageContent>
+        <div data-slot="assistant-response" className="flex min-w-0 flex-col gap-3">
+          {message.images?.length || message.resources?.length ? (
+            <AttachmentGroup>
+              {message.images?.map((image, index) => (
+                <Attachment key={`${message.id}-image-${index}`} orientation="vertical">
+                  <AttachmentMedia variant="image">
+                    <img
+                      src={`data:${image.mediaType};base64,${image.data}`}
+                      alt={`AI generated content ${index + 1}`}
+                    />
+                  </AttachmentMedia>
+                  <AttachmentContent>
+                    <AttachmentTitle>Generated image {index + 1}</AttachmentTitle>
+                    <AttachmentDescription>{image.mediaType}</AttachmentDescription>
+                  </AttachmentContent>
+                </Attachment>
+              ))}
+              {message.resources?.map((resource, index) => {
+                const resourceName = resource.name || resource.uri;
+
+                return (
+                  <Attachment key={`${message.id}-resource-${index}`}>
+                    <AttachmentMedia>
+                      <FileTextIcon />
                     </AttachmentMedia>
                     <AttachmentContent>
-                      <AttachmentTitle>Generated image {index + 1}</AttachmentTitle>
-                      <AttachmentDescription>{image.mediaType}</AttachmentDescription>
+                      <AttachmentTitle>{resourceName}</AttachmentTitle>
+                      <AttachmentDescription>{resource.uri}</AttachmentDescription>
                     </AttachmentContent>
-                  </Attachment>
-                ))}
-                {message.resources?.map((resource, index) => {
-                  const resourceName = resource.name || resource.uri;
-
-                  return (
-                    <Attachment key={`${message.id}-resource-${index}`}>
-                      <AttachmentMedia>
-                        <FileTextIcon />
-                      </AttachmentMedia>
-                      <AttachmentContent>
-                        <AttachmentTitle>{resourceName}</AttachmentTitle>
-                        <AttachmentDescription>{resource.uri}</AttachmentDescription>
-                      </AttachmentContent>
-                      <AttachmentTrigger
-                        render={
-                          <a
-                            href={resource.uri}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            aria-label={`Open ${resourceName}`}
-                          />
-                        }
-                      />
-                    </Attachment>
-                  );
-                })}
-              </AttachmentGroup>
-            ) : null}
-
-            {message.ui && message.ui.length > 0 && (
-              <div className="mb-2 space-y-2">
-                {message.ui.map((component, index) => (
-                  <GenerativeUIRenderer key={`${message.id}-ui-${index}`} component={component} />
-                ))}
-              </div>
-            )}
-
-            {message.plan?.length ? (
-              <AgentPlan entries={message.plan} isStreaming={message.isStreaming} />
-            ) : null}
-
-            {buildAssistantSegments(responseText, message.toolCalls).map((segment, index) => (
-              <div
-                key={`${message.id}-segment-${index}`}
-                className={cn("flex min-w-0 flex-col gap-2", index > 0 && "mt-2")}
-              >
-                {segment.plan ? (
-                  <MessageResponse>
-                    <PlanBlockDisplay
-                      plan={segment.plan}
-                      isStreaming={message.isStreaming}
-                      onExecuteStep={handleExecuteStep}
+                    <AttachmentTrigger
+                      render={
+                        <a
+                          href={resource.uri}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label={`Open ${resourceName}`}
+                        />
+                      }
                     />
-                  </MessageResponse>
-                ) : segment.text ? (
-                  <MessageResponse>
-                    <MarkdownRenderer onRetry={onRetry} content={segment.text} chatId={chatId} />
-                  </MessageResponse>
-                ) : null}
-                {segment.toolCalls.length > 0 ? (
-                  <ToolCallList
-                    toolCalls={segment.toolCalls}
+                  </Attachment>
+                );
+              })}
+            </AttachmentGroup>
+          ) : null}
+
+          {message.ui && message.ui.length > 0 && (
+            <div className="flex flex-col gap-2">
+              {message.ui.map((component, index) => (
+                <GenerativeUIRenderer key={`${message.id}-ui-${index}`} component={component} />
+              ))}
+            </div>
+          )}
+
+          {message.plan?.length ? (
+            <AgentPlan entries={message.plan} isStreaming={message.isStreaming} />
+          ) : null}
+
+          {segments.map((segment, index) => (
+            <div key={`${message.id}-segment-${index}`} className="flex min-w-0 flex-col gap-2">
+              {segment.plan ? (
+                <MessageResponse>
+                  <PlanBlockDisplay
+                    plan={segment.plan}
                     isStreaming={message.isStreaming}
-                    latestEdit={latestEdit}
+                    onExecuteStep={handleExecuteStep}
                   />
-                ) : null}
-              </div>
-            ))}
-            {message.error ? (
-              <ChatErrorBlock error={message.error} chatId={chatId} onRetry={onRetry} />
-            ) : null}
-            {message.stopNotice ? <AgentStopNotice notice={message.stopNotice} /> : null}
-          </BubbleContent>
-        </Bubble>
-        {showActions && responseText.trim() ? (
-          <MessageFooter reserveSpace={false}>
-            <MessageAction onClick={() => void copyText(responseText)} label="Copy response">
-              <CopyIcon className="size-3.5" />
-            </MessageAction>
-            {isLastMessage && !message.isStreaming ? (
-              <MessageAction
-                onClick={() => void copyText(buildShareableOutcomeMarkdown(responseText))}
-                label="Copy outcome as Markdown"
-                icon={ClipboardTextIcon}
-              />
-            ) : null}
+                </MessageResponse>
+              ) : segment.text ? (
+                <MessageResponse>
+                  <MarkdownRenderer
+                    onRetry={onRetry}
+                    content={segment.text}
+                    chatId={chatId}
+                    isStreaming={showCaret && segment === lastSegment}
+                  />
+                </MessageResponse>
+              ) : null}
+              {segment.toolCalls.length > 0 ? (
+                <ToolCallList
+                  toolCalls={segment.toolCalls}
+                  isStreaming={message.isStreaming}
+                  latestEdit={latestEdit}
+                  chatId={chatId}
+                />
+              ) : null}
+            </div>
+          ))}
+          {message.error ? (
+            <ChatErrorBlock error={message.error} chatId={chatId} onRetry={onRetry} />
+          ) : null}
+          {message.stopNotice ? <AgentStopNotice notice={message.stopNotice} /> : null}
+        </div>
+        {showActions && responseText.trim() && !message.isStreaming ? (
+          <MessageFooter>
+            <MessageAction
+              onClick={() => void copyText(responseText.trim())}
+              label="Copy response"
+              tooltip="Copy response as Markdown"
+              icon={CopyIcon}
+            />
             {message.turnUsage ? (
               <Tooltip content={describeTurnUsage(message.turnUsage)}>
                 <span className="px-1 tabular-nums">{formatTurnUsage(message.turnUsage)}</span>

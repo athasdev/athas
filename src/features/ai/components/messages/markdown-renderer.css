@@ -1,0 +1,30 @@
+/* A caret after the last streamed block of an assistant reply. The markdown is generated markup,
+   so the caret attaches to whichever text element happens to close the reply. */
+.typeset-chat[data-streaming] > :where(p, h1, h2, h3, h4, h5, h6, blockquote):last-child::after,
+.typeset-chat[data-streaming] > :where(ul, ol):last-child > li:last-child::after {
+  content: "";
+  display: inline-block;
+  width: 0.45em;
+  height: 1em;
+  margin-inline-start: 0.2em;
+  vertical-align: -0.12em;
+  border-radius: 1px;
+  background: var(--color-subtle-foreground);
+  animation: typeset-chat-caret 1s steps(2, jump-none) infinite;
+}
+
+@keyframes typeset-chat-caret {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .typeset-chat[data-streaming] > :where(p, h1, h2, h3, h4, h5, h6, blockquote):last-child::after,
+  .typeset-chat[data-streaming] > :where(ul, ol):last-child > li:last-child::after {
+    animation: none;
+  }
+}

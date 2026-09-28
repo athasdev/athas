@@ -1,17 +1,8 @@
+import { cva, type VariantProps } from "class-variance-authority";
 import type * as React from "react";
 import { CopyIcon, type Icon } from "@/ui/icons";
 import { Button, type ButtonProps } from "@/ui/button";
 import { cn } from "@/utils/cn";
-
-function MessageGroup({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="message-group"
-      className={cn("flex min-w-0 flex-col gap-2", className)}
-      {...props}
-    />
-  );
-}
 
 function Message({
   className,
@@ -44,32 +35,35 @@ function MessageContent({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
-function MessageHeader({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="message-header"
-      className={cn(
-        "flex max-w-full min-w-0 items-center px-3 font-medium text-muted-foreground ui-text-sm group-has-data-[variant=ghost]/message:px-0",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
+const messageFooterVariants = cva(
+  "flex min-h-6 max-w-full min-w-0 items-center gap-0.5 text-subtle-foreground ui-text-sm group-data-[align=end]/message:justify-end",
+  {
+    variants: {
+      /**
+       * `always` keeps the actions in view as quiet icons that brighten on hover or focus.
+       * `hover` reveals them while the pointer is anywhere on the message row or focus is inside
+       * it; the footer keeps its space either way, so revealing it never shifts the transcript.
+       */
+      visibility: {
+        always: "",
+        hover:
+          "transition-opacity duration-fast md:pointer-events-none md:opacity-0 md:group-hover/message:pointer-events-auto md:group-hover/message:opacity-100 md:group-focus-within/message:pointer-events-auto md:group-focus-within/message:opacity-100",
+      },
+    },
+    defaultVariants: { visibility: "always" },
+  },
+);
 
 function MessageFooter({
   className,
-  reserveSpace = true,
+  visibility,
   ...props
-}: React.ComponentProps<"div"> & { reserveSpace?: boolean }) {
+}: React.ComponentProps<"div"> & VariantProps<typeof messageFooterVariants>) {
   return (
     <div
       data-slot="message-footer"
-      className={cn(
-        "flex min-h-6 max-w-full min-w-0 items-center gap-0.5 px-2 text-subtle-foreground transition-opacity duration-fast ui-text-sm group-has-data-[variant=ghost]/message:px-0 group-data-[align=end]/message:justify-end md:pointer-events-none md:opacity-0 md:group-hover/message:pointer-events-auto md:group-hover/message:opacity-100 md:group-focus-within/message:pointer-events-auto md:group-focus-within/message:opacity-100",
-        !reserveSpace && "-mb-6",
-        className,
-      )}
+      data-visibility={visibility ?? "always"}
+      className={cn(messageFooterVariants({ visibility }), className)}
       {...props}
     />
   );
@@ -92,10 +86,7 @@ function MessageActions({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="message-actions"
-      className={cn(
-        "mt-2 flex flex-wrap items-center gap-1.5 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100",
-        className,
-      )}
+      className={cn("mt-2 flex flex-wrap items-center gap-1.5", className)}
       {...props}
     />
   );
@@ -123,18 +114,9 @@ function MessageAction({
       size="sm"
       {...props}
     >
-      {children ?? <Icon className="size-3.5" />}
+      {children ?? <Icon />}
     </Button>
   );
 }
 
-export {
-  Message,
-  MessageAction,
-  MessageActions,
-  MessageContent,
-  MessageFooter,
-  MessageGroup,
-  MessageHeader,
-  MessageResponse,
-};
+export { Message, MessageAction, MessageActions, MessageContent, MessageFooter, MessageResponse };
