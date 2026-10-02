@@ -61,9 +61,11 @@ impl WorkspaceClients {
       Self::prune_dead_instances(&mut clients);
       let key = (workspace_path.to_path_buf(), server_name.to_string());
       let instance = clients.get_mut(&key)?;
-      instance.ref_count += 1;
+      // stop_file releases a file once, so a file that is already tracked
+      // must not add another reference or the count can never reach zero.
       if !instance.files.iter().any(|tracked| tracked == file_path) {
          instance.files.push(file_path.to_path_buf());
+         instance.ref_count += 1;
       }
       Some(instance.ref_count)
    }
@@ -354,6 +356,25 @@ mod tests {
 
       clients.shutdown_workspace(&workspace).unwrap();
       assert_eq!(instance_count(&clients), 0);
+   }
+
+   #[tokio::test]
+   async fn reopening_a_tracked_file_does_not_leak_the_server() {
+      let temp = tempfile::tempdir().unwrap();
+      let workspace = temp.path().to_path_buf();
+      let file = workspace.join("a.ts");
+      let clients = WorkspaceClients::new();
+      let _guard = ShutdownOnDrop(clients.clone());
+      clients.insert(
+         workspace.clone(),
+         "typescript".to_string(),
+         instance(&workspace, "typescript", std::slice::from_ref(&file)).await,
+      );
+
+      assert_eq!(clients.track_file(&workspace, "typescript", &file), Some(1));
+      clients.stop_file(&file);
+
+      assert!(!clients.contains_workspace_server(&workspace, "typescript"));
    }
 
    #[tokio::test]
