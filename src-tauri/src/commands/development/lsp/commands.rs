@@ -9,7 +9,6 @@ use super::{
       LspCodeActionContext, LspCodeActionItem, LspSemanticTokensResponse,
    },
 };
-use crate::app_runtime::AppHandle;
 use athas_lsp::{LspError, LspManager, LspResult};
 use athas_tooling::{LanguageToolConfigSet, ToolInstaller, ToolRegistry, ToolType};
 use lsp_types::{
@@ -20,7 +19,7 @@ use lsp_types::{
 };
 use serde_json::Value;
 use std::{collections::HashMap, path::PathBuf};
-use tauri::State;
+use tauri::{AppHandle, State};
 
 type LspLaunchRequest = (
    Option<String>,

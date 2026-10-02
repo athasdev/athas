@@ -16,6 +16,13 @@ pub struct Shell {
 
 // Helper function to find appropriate executable for specific os
 fn shell_exe_in_path(exe: &str) -> Option<String> {
+   if crate::flatpak::is_sandboxed() {
+      return crate::flatpak::host_shell_dirs()
+         .into_iter()
+         .map(|dir| dir.join(exe).to_string_lossy().into_owned())
+         .find(|path| crate::flatpak::host_path_exists(path));
+   }
+
    let path_match = env::var("PATH")
       .ok()
       .and_then(|paths| path_from_list(exe, env::split_paths(&paths)));
@@ -274,9 +281,19 @@ impl Shell {
             } else {
                sh.exec_unix.as_deref()
             };
-            path.map(|p| Path::new(p).exists()).unwrap_or(false)
+            path.is_some_and(shell_path_exists)
          })
          .collect()
+   }
+}
+
+/// Whether a shell executable exists where terminals will start it: on the
+/// host when Athas runs as a Flatpak, locally otherwise.
+pub(crate) fn shell_path_exists(path: &str) -> bool {
+   if crate::flatpak::is_sandboxed() {
+      crate::flatpak::host_path_exists(path)
+   } else {
+      Path::new(path).exists()
    }
 }
 

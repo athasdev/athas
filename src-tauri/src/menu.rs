@@ -66,10 +66,7 @@ fn set_check_menu_item<R: tauri::Runtime>(
    Ok(())
 }
 
-fn apply_native_menu_state(
-   app: &crate::app_runtime::AppHandle,
-   state: &NativeMenuState,
-) -> Result<(), String> {
+fn apply_native_menu_state(app: &tauri::AppHandle, state: &NativeMenuState) -> Result<(), String> {
    let Some(menu) = app.menu() else {
       return Ok(());
    };
@@ -117,10 +114,7 @@ fn apply_native_menu_state(
 }
 
 #[tauri::command]
-pub fn sync_native_menu_state(
-   app: crate::app_runtime::AppHandle,
-   state: NativeMenuState,
-) -> Result<(), String> {
+pub fn sync_native_menu_state(app: tauri::AppHandle, state: NativeMenuState) -> Result<(), String> {
    *LAST_NATIVE_MENU_STATE
       .lock()
       .map_err(|_| "Native menu state lock poisoned".to_string())? = Some(state.clone());
@@ -129,7 +123,7 @@ pub fn sync_native_menu_state(
 
 #[tauri::command]
 pub async fn rebuild_menu_themes(
-   app: crate::app_runtime::AppHandle,
+   app: tauri::AppHandle,
    themes: Vec<ThemeData>,
 ) -> Result<(), String> {
    // Only rebuild menu if native menu bar is enabled
@@ -152,10 +146,7 @@ pub async fn rebuild_menu_themes(
 }
 
 #[tauri::command]
-pub async fn toggle_menu_bar(
-   app: crate::app_runtime::AppHandle,
-   toggle: Option<bool>,
-) -> Result<(), String> {
+pub async fn toggle_menu_bar(app: tauri::AppHandle, toggle: Option<bool>) -> Result<(), String> {
    #[cfg(any(target_os = "windows", target_os = "linux"))]
    {
       let _ = toggle;
@@ -325,9 +316,7 @@ fn build_open_recent_submenu<R: tauri::Runtime>(
 }
 
 #[cfg(target_os = "macos")]
-pub fn refresh_open_recent_submenu(
-   app: &tauri::AppHandle<crate::app_runtime::AthasRuntime>,
-) -> Result<(), String> {
+pub fn refresh_open_recent_submenu(app: &tauri::AppHandle) -> Result<(), String> {
    let Some(menu) = app.menu() else {
       return Ok(());
    };
@@ -402,8 +391,6 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
    app: &tauri::AppHandle<R>,
    themes: Option<Vec<ThemeData>>,
 ) -> Result<tauri::menu::Menu<R>, tauri::Error> {
-   let close_tab_accelerator = close_tab_accelerator();
-
    #[cfg(target_os = "macos")]
    let open_recent_menu = build_open_recent_submenu(app)?;
 
@@ -480,7 +467,7 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
          "close_tab",
          "Close Tab",
          true,
-         close_tab_accelerator,
+         Some("CmdOrCtrl+W"),
       )?)
       .text("command_close_all_tabs", "Close All Tabs")
       .text("command_close_other_tabs", "Close Other Tabs")
@@ -974,18 +961,6 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
             &help_menu,
          ])
          .build()
-   }
-}
-
-fn close_tab_accelerator() -> Option<&'static str> {
-   #[cfg(target_os = "linux")]
-   {
-      None
-   }
-
-   #[cfg(not(target_os = "linux"))]
-   {
-      Some("CmdOrCtrl+W")
    }
 }
 

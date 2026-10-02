@@ -1,4 +1,3 @@
-use crate::app_runtime::AppHandle;
 use athas_tooling::{
    LanguageToolConfigSet, LanguageToolStatus, ToolInstaller, ToolRegistry, ToolStatus, ToolType,
 };
@@ -9,6 +8,7 @@ use std::{
    io::Write,
    time::{SystemTime, UNIX_EPOCH},
 };
+use tauri::AppHandle;
 
 #[tauri::command]
 pub fn frontend_trace(level: String, scope: String, message: String, payload: Option<Value>) {

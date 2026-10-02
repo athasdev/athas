@@ -1,10 +1,9 @@
 use super::path_guard::{require_path_under_home, require_symlink_container_under_home};
-use crate::app_runtime::AppHandle;
 use serde::Serialize;
 use std::{fs, path::Path, time::Instant};
 #[cfg(target_os = "macos")]
 use tauri::Manager;
-use tauri::command;
+use tauri::{AppHandle, command};
 use walkdir::WalkDir;
 
 fn calculate_directory_size(path: &Path) -> Result<u64, String> {
@@ -180,10 +179,7 @@ pub async fn toggle_quick_look(app: AppHandle, path: String) -> Result<(), Strin
 }
 
 #[command]
-pub async fn show_share_picker(
-   window: tauri::WebviewWindow<crate::app_runtime::AthasRuntime>,
-   path: String,
-) -> Result<(), String> {
+pub async fn show_share_picker(window: tauri::WebviewWindow, path: String) -> Result<(), String> {
    let resolved = require_path_under_home(&path)?;
    if !resolved.is_file() {
       return Err("Share is only available for local files".to_string());

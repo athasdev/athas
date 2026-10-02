@@ -5,7 +5,7 @@ import { IS_LINUX, isMac } from "@/utils/platform";
 function getMicrophoneAccessErrorMessage(error?: string): string {
   if (IS_LINUX) {
     if (error === "service-not-allowed") {
-      return "Voice input is unavailable in this Linux webview. Chromium speech recognition may be blocked even when the microphone works.";
+      return "Voice input is unavailable because the Linux webview does not provide speech recognition.";
     }
 
     return "Microphone access failed. Check your PipeWire/PulseAudio input device and unmute the default microphone.";

@@ -35,7 +35,7 @@ pub fn app_deep_links(urls: &[tauri::Url]) -> Vec<String> {
 
 #[tauri::command]
 pub fn take_pending_deep_links(
-   window: tauri::WebviewWindow<crate::app_runtime::AthasRuntime>,
+   window: tauri::WebviewWindow,
    state: State<'_, PendingDeepLinks>,
 ) -> Vec<String> {
    let urls = state.take(window.label());

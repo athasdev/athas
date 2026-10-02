@@ -1,4 +1,3 @@
-use crate::app_runtime::AppHandle;
 use serde::Deserialize;
 use std::{
    collections::HashMap,
@@ -7,7 +6,7 @@ use std::{
    process::Stdio,
    sync::Arc,
 };
-use tauri::{Emitter, State};
+use tauri::{AppHandle, Emitter, State};
 use tokio::{
    io::{AsyncBufReadExt, AsyncRead, BufReader},
    process::Command,

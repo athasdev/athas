@@ -2,12 +2,9 @@
 //! variables and HTTP/SSE headers), and joining it with the stored server list when an ACP
 //! agent starts. Secret values never pass through logs.
 
-use crate::{
-   app_runtime::AppHandle,
-   secure_storage::{get_secret, remove_secret, store_secret},
-};
+use crate::secure_storage::{get_secret, remove_secret, store_secret};
 use athas_ai::{McpServerConfig, McpServerSecrets, McpServerSetting, mcp_stdio::McpStdioEvent};
-use tauri::command;
+use tauri::{AppHandle, command};
 
 fn secrets_key(server_id: &str) -> Result<String, String> {
    let valid = !server_id.is_empty()

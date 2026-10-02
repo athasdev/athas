@@ -1,5 +1,6 @@
 pub mod config;
 pub mod connection;
+mod flatpak;
 pub mod manager;
 pub mod protocol;
 pub mod shell;

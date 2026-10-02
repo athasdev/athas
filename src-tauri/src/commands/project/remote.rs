@@ -20,7 +20,7 @@ use tauri::{
 
 #[tauri::command]
 pub async fn ssh_connect(
-   app: crate::app_runtime::AppHandle,
+   app: tauri::AppHandle,
    connection_id: String,
    host: String,
    port: u16,
@@ -52,10 +52,7 @@ pub async fn ssh_connect(
 }
 
 #[tauri::command]
-pub async fn ssh_disconnect(
-   app: crate::app_runtime::AppHandle,
-   connection_id: String,
-) -> Result<(), String> {
+pub async fn ssh_disconnect(app: tauri::AppHandle, connection_id: String) -> Result<(), String> {
    remote_ssh_disconnect(app.clone(), connection_id.clone()).await?;
 
    let _ = app.emit(
@@ -71,7 +68,7 @@ pub async fn ssh_disconnect(
 
 #[tauri::command]
 pub async fn ssh_disconnect_only(
-   app: crate::app_runtime::AppHandle,
+   app: tauri::AppHandle,
    connection_id: String,
 ) -> Result<(), String> {
    remote_ssh_disconnect_only(connection_id.clone()).await?;
@@ -157,7 +154,7 @@ pub async fn ssh_copy_path(
 
 #[tauri::command]
 pub async fn create_remote_terminal(
-   app_handle: crate::app_runtime::AppHandle,
+   app_handle: tauri::AppHandle,
    host: String,
    port: u16,
    username: String,

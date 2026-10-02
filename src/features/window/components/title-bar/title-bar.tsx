@@ -1,6 +1,5 @@
 import { getCurrentWindow, type Window as TauriWindow } from "@tauri-apps/api/window";
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { useNativeWindowChrome } from "@/features/window/hooks/use-native-window-chrome";
 import { ChromeBar, ChromeGroup, ChromeLabel } from "@/ui/chrome";
 import { cn } from "@/utils/cn";
 import { IS_MAC } from "@/utils/platform";
@@ -20,8 +19,7 @@ export default function TitleBar({
   titleIcon,
   titleActions,
 }: TitleBarProps) {
-  const usesNativeWindowChrome = useNativeWindowChrome();
-  const showAppWindowControls = !IS_MAC && !usesNativeWindowChrome;
+  const showAppWindowControls = !IS_MAC;
   const titleControlsRef = useRef<HTMLDivElement>(null);
   const [titleControlsWidth, setTitleControlsWidth] = useState(0);
   const [currentWindow, setCurrentWindow] = useState<TauriWindow | null>(null);

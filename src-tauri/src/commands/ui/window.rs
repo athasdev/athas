@@ -1,4 +1,3 @@
-use crate::app_runtime::AthasRuntime;
 use serde::{Deserialize, Serialize};
 #[cfg(target_os = "macos")]
 use std::path::PathBuf;
@@ -7,19 +6,19 @@ use std::{
    sync::atomic::{AtomicU32, Ordering},
    time::{Instant, SystemTime, UNIX_EPOCH},
 };
-#[cfg(all(target_os = "macos", not(feature = "linux")))]
+#[cfg(target_os = "macos")]
 use tauri::TitleBarStyle;
 use tauri::{Manager, WebviewUrl, command, webview::PageLoadEvent};
 #[cfg(target_os = "windows")]
 use window_vibrancy::{Color as VibrancyColor, apply_acrylic, clear_acrylic};
-#[cfg(all(target_os = "macos", not(feature = "linux")))]
+#[cfg(target_os = "macos")]
 use window_vibrancy::{
    NSVisualEffectMaterial, NSVisualEffectState, apply_vibrancy, clear_vibrancy,
 };
 
-#[cfg(all(target_os = "macos", not(feature = "linux")))]
+#[cfg(target_os = "macos")]
 const ATHAS_WINDOW_MATERIAL: NSVisualEffectMaterial = NSVisualEffectMaterial::Sidebar;
-#[cfg(all(target_os = "macos", not(feature = "linux")))]
+#[cfg(target_os = "macos")]
 const ATHAS_WINDOW_STATE: NSVisualEffectState = NSVisualEffectState::FollowsWindowActiveState;
 #[cfg(target_os = "windows")]
 const ATHAS_WINDOWS_DARK_ACRYLIC_TINT: VibrancyColor = (18, 18, 18, 125);
@@ -274,8 +273,8 @@ fn window_title_for_request(request: Option<&CreateAppWindowRequest>) -> String 
    }
 }
 
-pub fn configure_app_window(window: &tauri::WebviewWindow<AthasRuntime>) {
-   #[cfg(all(target_os = "macos", not(feature = "linux")))]
+pub fn configure_app_window(window: &tauri::WebviewWindow) {
+   #[cfg(target_os = "macos")]
    {
       let _ = window.set_background_color(Some(tauri::window::Color(0, 0, 0, 0)));
       if let Err(error) = apply_vibrancy(
@@ -306,14 +305,9 @@ pub fn configure_app_window(window: &tauri::WebviewWindow<AthasRuntime>) {
       }
    }
 
-   #[cfg(all(target_os = "linux", not(feature = "linux")))]
+   #[cfg(target_os = "linux")]
    {
       let _ = window.set_decorations(false);
-   }
-
-   #[cfg(all(target_os = "linux", feature = "linux"))]
-   {
-      let _ = window.set_decorations(true);
    }
 }
 
@@ -327,7 +321,7 @@ fn windows_acrylic_tint(theme_type: Option<&str>) -> VibrancyColor {
 
 #[cfg(target_os = "windows")]
 fn set_windows_window_transparency(
-   window: &tauri::WebviewWindow<AthasRuntime>,
+   window: &tauri::WebviewWindow,
    enabled: bool,
    theme_type: Option<&str>,
 ) -> Result<(), String> {
@@ -343,7 +337,7 @@ fn set_windows_window_transparency(
    Ok(())
 }
 
-#[cfg(all(target_os = "macos", not(feature = "linux")))]
+#[cfg(target_os = "macos")]
 fn set_ns_appearance(
    target: *mut std::ffi::c_void,
    appearance_name: Option<&str>,
@@ -376,9 +370,9 @@ fn set_ns_appearance(
    Ok(())
 }
 
-#[cfg(all(target_os = "macos", not(feature = "linux")))]
+#[cfg(target_os = "macos")]
 fn sync_macos_window_appearance(
-   window: &tauri::WebviewWindow<AthasRuntime>,
+   window: &tauri::WebviewWindow,
    theme_type: &str,
    transparency_enabled: bool,
    follow_system: bool,
@@ -423,18 +417,13 @@ fn sync_macos_window_appearance(
 }
 
 #[command]
-pub fn uses_native_window_chrome() -> bool {
-   cfg!(all(target_os = "linux", feature = "linux"))
-}
-
-#[command]
 pub fn set_native_window_appearance(
-   window: tauri::WebviewWindow<AthasRuntime>,
+   window: tauri::WebviewWindow,
    theme_type: String,
    transparency_enabled: Option<bool>,
    follow_system: Option<bool>,
 ) -> Result<(), String> {
-   #[cfg(all(target_os = "macos", not(feature = "linux")))]
+   #[cfg(target_os = "macos")]
    {
       sync_macos_window_appearance(
          &window,
@@ -444,7 +433,7 @@ pub fn set_native_window_appearance(
       )?;
    }
 
-   #[cfg(any(not(target_os = "macos"), feature = "linux"))]
+   #[cfg(not(target_os = "macos"))]
    let _ = follow_system;
 
    #[cfg(target_os = "windows")]
@@ -468,11 +457,11 @@ pub fn set_native_window_appearance(
 
 #[command]
 pub fn set_window_transparency_enabled(
-   window: tauri::WebviewWindow<AthasRuntime>,
+   window: tauri::WebviewWindow,
    enabled: bool,
    theme_type: Option<String>,
 ) -> Result<(), String> {
-   #[cfg(all(target_os = "macos", not(feature = "linux")))]
+   #[cfg(target_os = "macos")]
    {
       let _ = theme_type;
       if enabled {
@@ -508,7 +497,7 @@ pub fn set_window_transparency_enabled(
 }
 
 fn create_labeled_app_window_internal(
-   app: &tauri::AppHandle<AthasRuntime>,
+   app: &tauri::AppHandle,
    label: String,
    request: Option<CreateAppWindowRequest>,
 ) -> Result<String, String> {
@@ -542,16 +531,10 @@ fn create_labeled_app_window_internal(
          );
       });
 
-   #[cfg(all(target_os = "linux", feature = "linux"))]
-   let builder = builder.browser_runtime_style(tauri_runtime_cef::RuntimeStyle::Alloy);
-
-   #[cfg(any(
-      target_os = "windows",
-      all(target_os = "linux", not(feature = "linux"))
-   ))]
+   #[cfg(any(target_os = "windows", target_os = "linux"))]
    let builder = builder.decorations(false);
 
-   #[cfg(all(target_os = "macos", not(feature = "linux")))]
+   #[cfg(target_os = "macos")]
    let builder = builder
       .hidden_title(true)
       .title_bar_style(TitleBarStyle::Overlay);
@@ -589,7 +572,7 @@ fn create_labeled_app_window_internal(
 }
 
 #[cfg(target_os = "linux")]
-pub fn ensure_app_windows_reachable(app: &tauri::AppHandle<AthasRuntime>) {
+pub fn ensure_app_windows_reachable(app: &tauri::AppHandle) {
    for window in app.webview_windows().into_values() {
       if let Err(error) = ensure_window_reachable(&window) {
          log::warn!(
@@ -601,7 +584,7 @@ pub fn ensure_app_windows_reachable(app: &tauri::AppHandle<AthasRuntime>) {
 }
 
 #[cfg(target_os = "linux")]
-fn ensure_window_reachable(window: &tauri::WebviewWindow<AthasRuntime>) -> Result<(), String> {
+fn ensure_window_reachable(window: &tauri::WebviewWindow) -> Result<(), String> {
    if window.is_maximized().map_err(|error| error.to_string())?
       || window.is_fullscreen().map_err(|error| error.to_string())?
    {
@@ -666,7 +649,7 @@ fn ensure_window_reachable(window: &tauri::WebviewWindow<AthasRuntime>) -> Resul
 }
 
 pub fn create_app_window_internal(
-   app: &tauri::AppHandle<AthasRuntime>,
+   app: &tauri::AppHandle,
    request: Option<CreateAppWindowRequest>,
 ) -> Result<String, String> {
    let label = format!(
@@ -679,7 +662,7 @@ pub fn create_app_window_internal(
 
 #[command]
 pub async fn create_app_window(
-   app: tauri::AppHandle<AthasRuntime>,
+   app: tauri::AppHandle,
    request: Option<CreateAppWindowRequest>,
 ) -> Result<String, String> {
    let started_at = Instant::now();
@@ -713,10 +696,7 @@ pub async fn create_app_window(
 }
 
 #[command]
-pub async fn note_recent_document(
-   app: tauri::AppHandle<AthasRuntime>,
-   path: String,
-) -> Result<(), String> {
+pub async fn note_recent_document(app: tauri::AppHandle, path: String) -> Result<(), String> {
    #[cfg(target_os = "macos")]
    {
       let path = PathBuf::from(path);
@@ -739,7 +719,7 @@ pub async fn note_recent_document(
 
 #[command]
 pub async fn set_window_document_state(
-   window: tauri::WebviewWindow<AthasRuntime>,
+   window: tauri::WebviewWindow,
    title: String,
    represented_path: Option<String>,
    is_edited: bool,
@@ -776,7 +756,7 @@ pub async fn set_window_document_state(
 
 #[command]
 pub async fn show_native_choice_sheet(
-   window: tauri::WebviewWindow<AthasRuntime>,
+   window: tauri::WebviewWindow,
    message: String,
    informative_text: String,
    primary_label: String,
@@ -829,9 +809,7 @@ pub async fn show_native_choice_sheet(
 }
 
 #[command]
-pub async fn reopen_current_webview_devtools(
-   window: tauri::WebviewWindow<AthasRuntime>,
-) -> Result<(), String> {
+pub async fn reopen_current_webview_devtools(window: tauri::WebviewWindow) -> Result<(), String> {
    #[cfg(any(debug_assertions, feature = "devtools"))]
    {
       if window.is_devtools_open() {

@@ -5,31 +5,6 @@ description = "Athas code editor"
 authors = ["you"]
 edition = "2024"
 
-[features]
-default = ["tauri-wry"]
-tauri-wry = [
-  "athas-ai/tauri-wry",
-  "athas-debugger/tauri-wry",
-  "athas-extensions/tauri-wry",
-  "athas-lsp/tauri-wry",
-  "athas-remote/tauri-wry",
-  "athas-terminal/tauri-wry",
-  "athas-tooling/tauri-wry",
-  "tauri/wry",
-  "tauri/x11",
-]
-linux = [
-  "athas-ai/linux",
-  "athas-debugger/linux",
-  "athas-extensions/linux",
-  "athas-lsp/linux",
-  "athas-remote/linux",
-  "athas-terminal/linux",
-  "athas-tooling/linux",
-  "dep:tauri-runtime-cef",
-  "tauri/cef",
-]
-
 [lints]
 workspace = true
 
@@ -38,8 +13,7 @@ name = "athas_text_lib"
 crate-type = ["rlib"]
 
 [build-dependencies]
-tauri-build = { git = "https://github.com/tauri-apps/tauri", rev = "d3a685323977d5618cdc8fe1ad9b8f3c80c6c26c", features = [
-] }
+tauri-build = "2.7"
 
 [dependencies]
 anyhow = "1.0"
@@ -53,18 +27,18 @@ env_logger = "0.11.8"
 futures-util = "0.3"
 git2 = { version = "0.20", features = ["vendored-libgit2", "vendored-openssl"] }
 athas-runtime = { path = "../crates/runtime" }
-athas-tooling = { path = "../crates/tooling", default-features = false }
-athas-lsp = { path = "../crates/lsp", default-features = false }
-athas-remote = { path = "../crates/remote", default-features = false }
+athas-tooling = { path = "../crates/tooling" }
+athas-lsp = { path = "../crates/lsp" }
+athas-remote = { path = "../crates/remote" }
 athas-wsl = { path = "../crates/wsl" }
 athas-project = { path = "../crates/project" }
 athas-version-control = { path = "../crates/version-control" }
-athas-extensions = { path = "../crates/extensions", default-features = false }
-athas-terminal = { path = "../crates/terminal", default-features = false }
-athas-ai = { path = "../crates/ai", default-features = false }
+athas-extensions = { path = "../crates/extensions" }
+athas-terminal = { path = "../crates/terminal" }
+athas-ai = { path = "../crates/ai" }
 athas-github = { path = "../crates/github" }
 athas-fff-search = { path = "../crates/fff-search" }
-athas-debugger = { path = "../crates/debugger", default-features = false }
+athas-debugger = { path = "../crates/debugger" }
 athas-database = { path = "../crates/database", default-features = false, features = ["sqlite"] }
 mimalloc = { version = "0.1", default-features = false }
 log = "0.4.27"
@@ -88,27 +62,19 @@ keyring = { version = "3.6.3", features = [
   "sync-secret-service",
   "windows-native",
 ] }
-tauri = { version = "2", default-features = false, features = [
-  "compression",
-  "common-controls-v6",
-  "dynamic-acl",
-  "macos-private-api",
-  "protocol-asset",
-  "test",
-  "unstable",
-] }
-tauri-plugin-dialog = { version = "2", default-features = false, features = ["xdg-portal"] }
-tauri-plugin-fs = "2"
-tauri-plugin-http = "2"
-tauri-plugin-notification = "2.3.3"
-tauri-plugin-log = "2"
-tauri-plugin-opener = "2"
-tauri-plugin-os = "2"
-tauri-plugin-process = "2"
-tauri-plugin-shell = "2"
-tauri-plugin-single-instance = "2"
-tauri-plugin-store = "2"
-tauri-plugin-updater = "2"
+tauri = { version = "2.12", features = ["macos-private-api", "protocol-asset", "test", "unstable"] }
+tauri-plugin-dialog = { version = "2.8", default-features = false, features = ["xdg-portal"] }
+tauri-plugin-fs = "2.6"
+tauri-plugin-http = "2.8"
+tauri-plugin-notification = "2.5"
+tauri-plugin-log = "2.10"
+tauri-plugin-opener = "2.7"
+tauri-plugin-os = "2.4"
+tauri-plugin-process = "2.4"
+tauri-plugin-shell = "2.4"
+tauri-plugin-single-instance = "2.5"
+tauri-plugin-store = "2.5"
+tauri-plugin-updater = "2.13"
 tokio = { version = "1.0", features = ["full"] }
 tokio-tungstenite = "0.24"
 unicode-width = "0.2.1"
@@ -118,25 +84,25 @@ vt100 = "0.15"
 walkdir = "2.5.0"
 which = "7.0"
 zip = "2.2"
-window-vibrancy = "0.6.0"
+window-vibrancy = "0.8"
 tempfile = "3.20.0"
 fontdb = "0.23.0"
 ttf-parser = "0.25.1"
 nucleo = "0.5.0"
 nucleo-matcher = "0.3.1"
 toml = "0.8"
-tauri-plugin-clipboard-manager = "2"
-tauri-plugin-deep-link = "2"
+tauri-plugin-clipboard-manager = "2.4"
+tauri-plugin-deep-link = "2.6"
 tauri-plugin-drag = "2.1.1"
 async-trait = "0.1"
 tokio-util = { version = "0.7", features = ["compat"] }
 
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
-tauri-plugin-window-state = "2"
+tauri-plugin-window-state = "2.5"
 
 [target.'cfg(target_os = "linux")'.dependencies]
-tauri-runtime-cef = { git = "https://github.com/tauri-apps/tauri", rev = "d3a685323977d5618cdc8fe1ad9b8f3c80c6c26c", optional = true }
+webkit2gtk-sys = "2"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc = "0.2"

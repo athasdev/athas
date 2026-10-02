@@ -1,10 +1,7 @@
-use crate::{
-   app_runtime::AppHandle,
-   commands::fuzzy::{FffSearchState, local_workspace_paths},
-};
+use crate::commands::fuzzy::{FffSearchState, local_workspace_paths};
 use athas_fff_search::{FffGrepOptions, GrepMode};
 use serde::{Deserialize, Serialize};
-use tauri::State;
+use tauri::{AppHandle, State};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SearchMatchRange {

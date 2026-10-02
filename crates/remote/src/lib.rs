@@ -1,5 +1,4 @@
 mod file_ops;
-mod runtime;
 mod ssh_helpers;
 mod state;
 mod terminal;
@@ -9,7 +8,6 @@ use crate::{
       read_directory as read_directory_inner, read_file as read_file_inner,
       write_file as write_file_inner,
    },
-   runtime::AthasAppHandle as AppHandle,
    ssh_helpers::{create_ssh_session, exec_remote_command, shell_quote},
    state::CONNECTIONS,
    terminal::{
@@ -22,7 +20,7 @@ use athas_terminal::{TerminalInput, TerminalSize};
 pub use file_ops::RemoteFileEntry;
 use serde::{Deserialize, Serialize};
 use tauri::{
-   Manager,
+   AppHandle, Manager,
    ipc::{Channel, InvokeResponseBody},
 };
 

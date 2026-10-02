@@ -50,7 +50,6 @@ try {
         {
           ...process.env,
           VITE_EXTENSION_MARKETPLACE_LOCAL: "true",
-          WEBKIT_DISABLE_DMABUF_RENDERER: "1",
         },
         { identifier: "com.code.athas.preview" },
       ),

@@ -1,7 +1,0 @@
-#!/bin/bash
-cd "$(dirname "$0")"
-
-if [ -x ./usr/bin/athas ]; then
-  exec ./usr/bin/athas "$@"
-fi
-exec ./usr/bin/athas-code "$@"

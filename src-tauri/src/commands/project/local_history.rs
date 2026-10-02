@@ -1,5 +1,4 @@
 use super::path_guard::require_path_under_home;
-use crate::app_runtime::AppHandle;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -7,7 +6,7 @@ use std::{
    fs,
    path::{Path, PathBuf},
 };
-use tauri::{Manager, command};
+use tauri::{AppHandle, Manager, command};
 
 const MAX_ENTRIES_PER_FILE: usize = 50;
 const AUTO_SAVE_MIN_INTERVAL_MS: i64 = 30_000;

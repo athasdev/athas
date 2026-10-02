@@ -4,7 +4,7 @@ use super::{
    },
    mcp::resolve_mcp_servers,
 };
-use crate::{app_runtime::AppHandle, service_urls};
+use crate::service_urls;
 use athas_ai::{
    AcpAgentBridge, AcpAgentStatus, AcpOpenedSession, AcpSessionList, AgentConfig, AgentRuntime,
    AgentSource, McpServerSetting, SessionConfigValue,
@@ -20,7 +20,7 @@ use std::{
    sync::Arc,
    time::{Duration, Instant},
 };
-use tauri::{Manager, State};
+use tauri::{AppHandle, Manager, State};
 use tokio::sync::Mutex;
 
 pub type AcpBridgeState = Arc<Mutex<AcpAgentBridge>>;

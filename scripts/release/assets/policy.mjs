@@ -93,6 +93,30 @@ export function requiredAssets(version, channel) {
       checksum: true,
     },
     {
+      id: "linux-x64-appimage",
+      pattern: new RegExp(`^${appPrefix}_${escapedVersion}_amd64\\.AppImage$`),
+      signature: true,
+      checksum: true,
+    },
+    {
+      id: "linux-arm64-appimage",
+      pattern: new RegExp(`^${appPrefix}_${escapedVersion}_aarch64\\.AppImage$`),
+      signature: true,
+      checksum: true,
+    },
+    {
+      id: "linux-x64-flatpak",
+      pattern: new RegExp(`^${appPrefix}_${escapedVersion}_linux-x86_64\\.flatpak$`),
+      signature: true,
+      checksum: true,
+    },
+    {
+      id: "linux-arm64-flatpak",
+      pattern: new RegExp(`^${appPrefix}_${escapedVersion}_linux-aarch64\\.flatpak$`),
+      signature: true,
+      checksum: true,
+    },
+    {
       id: "linux-x64-deb",
       pattern: new RegExp(`^${appPrefix}_${escapedVersion}_amd64\\.deb$`),
       signature: true,
@@ -147,7 +171,6 @@ export function forbiddenAssetPatterns(version) {
   const escapedVersion = escapeRegExp(version);
   const appPrefix = "Athas(?:[ .]Preview)?";
   return [
-    new RegExp(`^${appPrefix}_${escapedVersion}_(?:amd64|aarch64)\\.AppImage(?:\\.sig)?$`),
     new RegExp(`^${appPrefix}_${escapedVersion}_(?:x64|arm64)-setup-machine\\.exe(?:\\.sig)?$`),
   ];
 }

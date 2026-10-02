@@ -1,7 +1,6 @@
 mod installer;
 mod platform;
 mod registry;
-mod runtime;
 mod types;
 
 pub use installer::ToolInstaller;

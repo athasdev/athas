@@ -1,7 +1,6 @@
-use crate::app_runtime::AppHandle;
 use athas_runtime::{BunRuntime, NodeRuntime, RuntimeManager, RuntimeStatus, RuntimeType};
 use std::path::PathBuf;
-use tauri::Manager;
+use tauri::{AppHandle, Manager};
 
 fn managed_runtime_root(app_handle: &AppHandle) -> Result<PathBuf, String> {
    app_handle

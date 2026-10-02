@@ -4,7 +4,6 @@
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
-use app_runtime::AthasRuntime;
 use app_setup::{configure_app, shutdown_background_services};
 use commands::*;
 use tauri::Manager;
@@ -14,7 +13,6 @@ use terminal::{
    terminal_set_paused, terminal_write, warm_terminal_environment,
 };
 
-mod app_runtime;
 mod app_setup;
 mod bootstrap;
 mod commands;
@@ -25,7 +23,6 @@ mod secure_storage;
 mod service_urls;
 mod terminal;
 
-#[cfg_attr(all(target_os = "linux", feature = "linux"), tauri::cef_entry_point)]
 fn main() {
    let mut cli_args = std::env::args().skip(1).collect::<Vec<_>>();
    let validate_cli = cli_args.first().is_some_and(|arg| arg == "--validate-cli");
@@ -55,7 +52,7 @@ fn main() {
    let _ = rustls::crypto::ring::default_provider().install_default();
 
    #[cfg(target_os = "linux")]
-   bootstrap::linux::configure_graphics_fallback();
+   bootstrap::linux::configure_webkit_environment();
 
    #[cfg(target_os = "macos")]
    bootstrap::macos::disable_macos_autofill_heuristics();
@@ -66,12 +63,7 @@ fn main() {
          window.create = false;
       }
    }
-   let builder = tauri::Builder::<AthasRuntime>::new();
-
-   #[cfg(all(target_os = "linux", feature = "linux"))]
-   let builder = builder.command_line_args(bootstrap::linux::cef_command_line_args());
-
-   builder
+   tauri::Builder::default()
       .on_window_event(|window, event| {
          if matches!(event, tauri::WindowEvent::Destroyed) {
             terminal::close_window_terminals(window.app_handle(), window.label());
@@ -102,6 +94,7 @@ fn main() {
       .plugin(tauri_plugin_updater::Builder::new().build())
       .setup(configure_app)
       .invoke_handler(tauri::generate_handler![
+         self_update_supported,
          // File system commands
          read_athas_log,
          read_local_file,
@@ -266,7 +259,6 @@ fn main() {
          note_recent_document,
          set_window_document_state,
          show_native_choice_sheet,
-         uses_native_window_chrome,
          set_native_window_appearance,
          set_window_transparency_enabled,
          reopen_current_webview_devtools,

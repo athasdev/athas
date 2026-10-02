@@ -21,7 +21,7 @@ const DB_CONNECTIONS_KEY: &str = "db_saved_connections";
 
 #[command]
 pub async fn store_db_credential(
-   app: crate::app_runtime::AppHandle,
+   app: tauri::AppHandle,
    connection_id: String,
    password: String,
 ) -> Result<(), String> {
@@ -31,7 +31,7 @@ pub async fn store_db_credential(
 
 #[command]
 pub async fn get_db_credential(
-   app: crate::app_runtime::AppHandle,
+   app: tauri::AppHandle,
    connection_id: String,
 ) -> Result<Option<String>, String> {
    let key = format!("{}{}", DB_CRED_PREFIX, connection_id);
@@ -40,7 +40,7 @@ pub async fn get_db_credential(
 
 #[command]
 pub async fn remove_db_credential(
-   app: crate::app_runtime::AppHandle,
+   app: tauri::AppHandle,
    connection_id: String,
 ) -> Result<(), String> {
    let key = format!("{}{}", DB_CRED_PREFIX, connection_id);
@@ -49,7 +49,7 @@ pub async fn remove_db_credential(
 
 #[command]
 pub async fn save_connection(
-   app: crate::app_runtime::AppHandle,
+   app: tauri::AppHandle,
    connection: SavedConnection,
 ) -> Result<(), String> {
    // Get existing connections
@@ -68,15 +68,13 @@ pub async fn save_connection(
 }
 
 #[command]
-pub async fn list_saved_connections(
-   app: crate::app_runtime::AppHandle,
-) -> Result<Vec<SavedConnection>, String> {
+pub async fn list_saved_connections(app: tauri::AppHandle) -> Result<Vec<SavedConnection>, String> {
    get_saved_connections_internal(&app)
 }
 
 #[command]
 pub async fn delete_saved_connection(
-   app: crate::app_runtime::AppHandle,
+   app: tauri::AppHandle,
    connection_id: String,
 ) -> Result<(), String> {
    let mut connections = get_saved_connections_internal(&app)?;
@@ -94,7 +92,7 @@ pub async fn delete_saved_connection(
 }
 
 pub(super) fn get_saved_connections_internal(
-   app: &crate::app_runtime::AppHandle,
+   app: &tauri::AppHandle,
 ) -> Result<Vec<SavedConnection>, String> {
    match secure_storage::get_secret(app, DB_CONNECTIONS_KEY)? {
       Some(json) => serde_json::from_str(&json)
@@ -104,7 +102,7 @@ pub(super) fn get_saved_connections_internal(
 }
 
 pub(super) fn get_db_credential_internal(
-   app: &crate::app_runtime::AppHandle,
+   app: &tauri::AppHandle,
    connection_id: &str,
 ) -> Result<Option<String>, String> {
    let key = format!("{}{}", DB_CRED_PREFIX, connection_id);

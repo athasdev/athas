@@ -1,12 +1,11 @@
 use super::types::{DownloadInfo, ExtensionMetadata, InstallProgress, InstallStatus};
-use crate::runtime::AthasAppHandle as AppHandle;
 use anyhow::{Context, Result};
 use serde::Deserialize;
 use std::{
    fs,
    path::{Path, PathBuf},
 };
-use tauri::{Emitter, Manager};
+use tauri::{AppHandle, Emitter, Manager};
 
 pub struct ExtensionInstaller {
    app_handle: AppHandle,

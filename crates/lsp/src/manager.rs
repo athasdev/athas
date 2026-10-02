@@ -2,9 +2,7 @@ use super::{
    client::{LspClient, LspServerEnv},
    config::{LspRegistry, LspSettings},
    manager_state::{LspInstance, WorkspaceClients},
-   manager_support,
-   runtime::AthasAppHandle as AppHandle,
-   utils,
+   manager_support, utils,
 };
 use anyhow::{Context, Result, bail};
 use lsp_types::*;
@@ -14,7 +12,7 @@ use std::{
    path::{Path, PathBuf},
    time::Instant,
 };
-use tauri::Manager as TauriManager;
+use tauri::{AppHandle, Manager as TauriManager};
 
 pub struct LspManager {
    // Map (workspace path, language) to their LSP clients with reference counting

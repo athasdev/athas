@@ -137,7 +137,7 @@ pub async fn get_system_theme() -> Result<String, String> {
 
 #[tauri::command]
 pub async fn get_system_accessibility_preferences(
-   app: crate::app_runtime::AppHandle,
+   app: tauri::AppHandle,
 ) -> Result<SystemAccessibilityPreferences, String> {
    #[cfg(target_os = "macos")]
    {

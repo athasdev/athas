@@ -17,12 +17,7 @@ members = [
   "crates/debugger",
   "crates/database",
 ]
-exclude = ["vendor/phf_generator-0.8.0"]
 resolver = "2"
-
-[patch.crates-io]
-phf_generator = { path = "vendor/phf_generator-0.8.0" }
-tauri = { git = "https://github.com/tauri-apps/tauri", rev = "d3a685323977d5618cdc8fe1ad9b8f3c80c6c26c" }
 
 [workspace.lints.clippy]
 uninlined_format_args = "allow"

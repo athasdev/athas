@@ -1,4 +1,3 @@
-use crate::app_runtime::AppHandle;
 use athas_extensions::ExtensionInstaller;
 use serde::Deserialize;
 use serde_json::{Map, Value, json};
@@ -8,7 +7,7 @@ use std::{
    process::Stdio,
    time::Duration,
 };
-use tauri::command;
+use tauri::{AppHandle, command};
 use tokio::{io::AsyncWriteExt, process::Command, time::timeout};
 
 const DATABASE_SIDECAR_TIMEOUT: Duration = Duration::from_secs(60);

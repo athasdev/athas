@@ -1,7 +1,7 @@
 use super::sidecar::run_database_sidecar;
-use crate::app_runtime::AppHandle;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
+use tauri::AppHandle;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConnectionConfig {

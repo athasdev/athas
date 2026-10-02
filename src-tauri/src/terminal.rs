@@ -1,4 +1,3 @@
-use crate::app_runtime::AppHandle;
 use athas_terminal::{
    TerminalConfig, TerminalEventHandler, TerminalInput, TerminalManager, TerminalSize, shell::Shell,
 };
@@ -7,7 +6,7 @@ use std::{
    sync::{Arc, Mutex},
 };
 use tauri::{
-   State,
+   AppHandle, State,
    ipc::{Channel, InvokeResponseBody},
 };
 
