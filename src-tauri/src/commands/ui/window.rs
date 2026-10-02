@@ -9,21 +9,17 @@ use std::{
 #[cfg(target_os = "macos")]
 use tauri::TitleBarStyle;
 use tauri::{Manager, WebviewUrl, command, webview::PageLoadEvent};
-#[cfg(target_os = "windows")]
-use window_vibrancy::{Color as VibrancyColor, apply_acrylic, clear_acrylic};
-#[cfg(target_os = "macos")]
-use window_vibrancy::{
-   NSVisualEffectMaterial, NSVisualEffectState, apply_vibrancy, clear_vibrancy,
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+use tauri::{
+   Theme,
+   utils::config::WindowEffectsConfig,
+   window::{Color, Effect, EffectsBuilder},
 };
 
-#[cfg(target_os = "macos")]
-const ATHAS_WINDOW_MATERIAL: NSVisualEffectMaterial = NSVisualEffectMaterial::Sidebar;
-#[cfg(target_os = "macos")]
-const ATHAS_WINDOW_STATE: NSVisualEffectState = NSVisualEffectState::FollowsWindowActiveState;
 #[cfg(target_os = "windows")]
-const ATHAS_WINDOWS_DARK_ACRYLIC_TINT: VibrancyColor = (18, 18, 18, 125);
+const ATHAS_WINDOWS_DARK_ACRYLIC_TINT: Color = Color(18, 18, 18, 125);
 #[cfg(target_os = "windows")]
-const ATHAS_WINDOWS_LIGHT_ACRYLIC_TINT: VibrancyColor = (245, 245, 245, 125);
+const ATHAS_WINDOWS_LIGHT_ACRYLIC_TINT: Color = Color(245, 245, 245, 125);
 
 static APP_WINDOW_COUNTER: AtomicU32 = AtomicU32::new(0);
 
@@ -276,13 +272,7 @@ fn window_title_for_request(request: Option<&CreateAppWindowRequest>) -> String 
 pub fn configure_app_window(window: &tauri::WebviewWindow) {
    #[cfg(target_os = "macos")]
    {
-      let _ = window.set_background_color(Some(tauri::window::Color(0, 0, 0, 0)));
-      if let Err(error) = apply_vibrancy(
-         window,
-         ATHAS_WINDOW_MATERIAL,
-         Some(ATHAS_WINDOW_STATE),
-         None,
-      ) {
+      if let Err(error) = set_window_material(window, true, None) {
          log::warn!("Failed to initialize macOS window vibrancy: {error}");
       }
       if let Ok(ns_window) = window.ns_window()
@@ -300,7 +290,7 @@ pub fn configure_app_window(window: &tauri::WebviewWindow) {
    #[cfg(target_os = "windows")]
    {
       let _ = window.set_decorations(false);
-      if let Err(error) = set_windows_window_transparency(window, true, None) {
+      if let Err(error) = set_window_material(window, true, None) {
          log::warn!("Failed to initialize Windows window transparency: {error}");
       }
    }
@@ -311,109 +301,58 @@ pub fn configure_app_window(window: &tauri::WebviewWindow) {
    }
 }
 
-#[cfg(target_os = "windows")]
-fn windows_acrylic_tint(theme_type: Option<&str>) -> VibrancyColor {
-   match theme_type {
-      Some("light") => ATHAS_WINDOWS_LIGHT_ACRYLIC_TINT,
-      _ => ATHAS_WINDOWS_DARK_ACRYLIC_TINT,
-   }
+/// The translucent window background. On macOS this stays on the `Sidebar`
+/// visual-effect material on every version: Liquid Glass ignores the
+/// active/inactive state, and Apple reserves it for controls floating above
+/// content rather than a full-window backdrop. On Windows acrylic works on
+/// both Windows 10 and 11; the tint only applies on Windows 10, and Windows 11
+/// draws its system acrylic from the window theme set in
+/// `set_native_window_appearance`.
+#[cfg(target_os = "macos")]
+fn athas_window_effects(_theme: Option<Theme>) -> WindowEffectsConfig {
+   EffectsBuilder::new()
+      .effect(Effect::Sidebar)
+      .state(tauri::window::EffectState::FollowsWindowActiveState)
+      .build()
 }
 
 #[cfg(target_os = "windows")]
-fn set_windows_window_transparency(
+fn athas_window_effects(theme: Option<Theme>) -> WindowEffectsConfig {
+   let tint = match theme {
+      Some(Theme::Light) => ATHAS_WINDOWS_LIGHT_ACRYLIC_TINT,
+      _ => ATHAS_WINDOWS_DARK_ACRYLIC_TINT,
+   };
+   EffectsBuilder::new()
+      .effect(Effect::Acrylic)
+      .color(tint)
+      .build()
+}
+
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+fn set_window_material(
    window: &tauri::WebviewWindow,
    enabled: bool,
-   theme_type: Option<&str>,
+   theme: Option<Theme>,
 ) -> Result<(), String> {
    if enabled {
-      let _ = window.set_background_color(Some(tauri::window::Color(0, 0, 0, 0)));
-      apply_acrylic(window, Some(windows_acrylic_tint(theme_type)))
-         .map_err(|e| format!("Failed to apply Windows acrylic: {e}"))?;
+      let _ = window.set_background_color(Some(Color(0, 0, 0, 0)));
+      window
+         .set_effects(athas_window_effects(theme))
+         .map_err(|e| format!("Failed to apply window effects: {e}"))
    } else {
-      let _ = clear_acrylic(window);
-      let _ = window.set_background_color(Some(tauri::window::Color(0, 0, 0, 255)));
+      let _ = window.set_effects(None);
+      let _ = window.set_background_color(Some(Color(0, 0, 0, 255)));
+      Ok(())
    }
-
-   Ok(())
 }
 
-#[cfg(target_os = "macos")]
-fn set_ns_appearance(
-   target: *mut std::ffi::c_void,
-   appearance_name: Option<&str>,
-) -> Result<(), String> {
-   use objc::{class, msg_send, runtime::Object, sel, sel_impl};
-   use std::ffi::CString;
-
-   unsafe {
-      let target = target.cast::<Object>();
-      let Some(appearance_name) = appearance_name else {
-         let _: () = msg_send![target, setAppearance: std::ptr::null_mut::<Object>()];
-         return Ok(());
-      };
-      let appearance_name = CString::new(appearance_name)
-         .map_err(|e| format!("Invalid macOS appearance name: {e}"))?;
-      let name: *mut Object =
-         msg_send![class!(NSString), stringWithUTF8String: appearance_name.as_ptr()];
-      if name.is_null() {
-         return Err("Failed to create macOS appearance name".to_string());
-      }
-
-      let appearance: *mut Object = msg_send![class!(NSAppearance), appearanceNamed: name];
-      if appearance.is_null() {
-         return Err("Failed to resolve macOS appearance".to_string());
-      }
-
-      let _: () = msg_send![target, setAppearance: appearance];
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+fn parse_theme_type(theme_type: &str) -> Result<Theme, String> {
+   match theme_type {
+      "light" => Ok(Theme::Light),
+      "dark" => Ok(Theme::Dark),
+      _ => Err(format!("Unsupported window theme appearance: {theme_type}")),
    }
-
-   Ok(())
-}
-
-#[cfg(target_os = "macos")]
-fn sync_macos_window_appearance(
-   window: &tauri::WebviewWindow,
-   theme_type: &str,
-   transparency_enabled: bool,
-   follow_system: bool,
-) -> Result<(), String> {
-   let appearance_name = match theme_type {
-      "light" => "NSAppearanceNameAqua",
-      "dark" => "NSAppearanceNameDarkAqua",
-      _ => return Err(format!("Unsupported macOS theme appearance: {theme_type}")),
-   };
-   let appearance_name = if follow_system {
-      None
-   } else {
-      Some(appearance_name)
-   };
-
-   let ns_window = window
-      .ns_window()
-      .map_err(|e| format!("Failed to access macOS window: {e}"))?;
-   set_ns_appearance(ns_window, appearance_name)?;
-
-   let ns_view = window
-      .ns_view()
-      .map_err(|e| format!("Failed to access macOS webview: {e}"))?;
-   set_ns_appearance(ns_view, appearance_name)?;
-
-   if transparency_enabled {
-      let _ = window.set_background_color(Some(tauri::window::Color(0, 0, 0, 0)));
-      let _ = clear_vibrancy(window);
-      apply_vibrancy(
-         window,
-         ATHAS_WINDOW_MATERIAL,
-         Some(ATHAS_WINDOW_STATE),
-         None,
-      )
-      .map_err(|e| format!("Failed to refresh macOS vibrancy: {e}"))?;
-   } else {
-      let _ = window.set_background_color(Some(tauri::window::Color(0, 0, 0, 255)));
-      let _ = clear_vibrancy(window);
-   }
-
-   Ok(())
 }
 
 #[command]
@@ -423,33 +362,25 @@ pub fn set_native_window_appearance(
    transparency_enabled: Option<bool>,
    follow_system: Option<bool>,
 ) -> Result<(), String> {
-   #[cfg(target_os = "macos")]
+   #[cfg(any(target_os = "macos", target_os = "windows"))]
    {
-      sync_macos_window_appearance(
+      let theme = parse_theme_type(&theme_type)?;
+      // On macOS the theme is app-wide (NSApp.appearance), which the window,
+      // the webview, and native sheets inherit; `None` follows the system.
+      window
+         .set_theme((!follow_system.unwrap_or(false)).then_some(theme))
+         .map_err(|e| format!("Failed to set window theme: {e}"))?;
+      let default_transparency = cfg!(target_os = "windows");
+      set_window_material(
          &window,
-         &theme_type,
-         transparency_enabled.unwrap_or(false),
-         follow_system.unwrap_or(false),
-      )?;
-   }
-
-   #[cfg(not(target_os = "macos"))]
-   let _ = follow_system;
-
-   #[cfg(target_os = "windows")]
-   {
-      set_windows_window_transparency(
-         &window,
-         transparency_enabled.unwrap_or(true),
-         Some(theme_type.as_str()),
+         transparency_enabled.unwrap_or(default_transparency),
+         Some(theme),
       )?;
    }
 
    #[cfg(all(not(target_os = "macos"), not(target_os = "windows")))]
    {
-      let _ = window;
-      let _ = theme_type;
-      let _ = transparency_enabled;
+      let _ = (window, theme_type, transparency_enabled, follow_system);
    }
 
    Ok(())
@@ -461,36 +392,15 @@ pub fn set_window_transparency_enabled(
    enabled: bool,
    theme_type: Option<String>,
 ) -> Result<(), String> {
-   #[cfg(target_os = "macos")]
+   #[cfg(any(target_os = "macos", target_os = "windows"))]
    {
-      let _ = theme_type;
-      if enabled {
-         let _ = window.set_background_color(Some(tauri::window::Color(0, 0, 0, 0)));
-         let _ = clear_vibrancy(&window);
-         if let Err(error) = apply_vibrancy(
-            &window,
-            ATHAS_WINDOW_MATERIAL,
-            Some(ATHAS_WINDOW_STATE),
-            None,
-         ) {
-            log::warn!("Failed to apply macOS window vibrancy: {error}");
-         }
-      } else {
-         let _ = window.set_background_color(Some(tauri::window::Color(0, 0, 0, 255)));
-         let _ = clear_vibrancy(&window);
-      }
-   }
-
-   #[cfg(target_os = "windows")]
-   {
-      set_windows_window_transparency(&window, enabled, theme_type.as_deref())?;
+      let theme = theme_type.as_deref().and_then(|t| parse_theme_type(t).ok());
+      set_window_material(&window, enabled, theme)?;
    }
 
    #[cfg(all(not(target_os = "macos"), not(target_os = "windows")))]
    {
-      let _ = window;
-      let _ = enabled;
-      let _ = theme_type;
+      let _ = (window, enabled, theme_type);
    }
 
    Ok(())

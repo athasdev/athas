@@ -642,7 +642,6 @@ dependencies = [
  "walkdir",
  "webkit2gtk-sys",
  "which",
- "window-vibrancy",
  "zip 2.4.2",
 ]
 
