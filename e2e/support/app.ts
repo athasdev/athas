@@ -1,6 +1,13 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { By, Key, type Locator, type WebElement, until } from "selenium-webdriver";
+import {
+  By,
+  Key,
+  type Locator,
+  type WebElement,
+  error as seleniumError,
+  until,
+} from "selenium-webdriver";
 import { workspaceDir } from "./paths.ts";
 import { driver } from "./session.ts";
 
@@ -75,8 +82,36 @@ export function waitForHidden(locator: Locator, message: string, timeout = UI_TI
   return waitUntil(async () => !(await isDisplayed(locator)), timeout, message);
 }
 
+function isTransientClickError(error: unknown) {
+  return (
+    error instanceof seleniumError.ElementClickInterceptedError ||
+    error instanceof seleniumError.StaleElementReferenceError
+  );
+}
+
+/**
+ * Clicks the first visible match that accepts the click. While a view is being
+ * replaced, the previous tab's editor can still be visible under the new one,
+ * so an intercepted or stale match falls through to the next one, and the
+ * whole lookup is retried until the UI settles.
+ */
 export async function click(locator: Locator) {
-  await (await visibleElement(locator)).click();
+  const deadline = Date.now() + UI_TIMEOUT;
+  for (;;) {
+    let lastError: unknown = new Error(`No visible element matches ${locator}`);
+    for (const element of await driver().findElements(locator)) {
+      try {
+        if (!(await element.isDisplayed())) continue;
+        await element.click();
+        return;
+      } catch (error) {
+        if (!isTransientClickError(error)) throw error;
+        lastError = error;
+      }
+    }
+    if (Date.now() > deadline) throw lastError;
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
 }
 
 export async function attribute(locator: Locator, name: string) {
