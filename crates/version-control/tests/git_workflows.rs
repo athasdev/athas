@@ -227,6 +227,27 @@ fn add_all_and_reset_all_cover_new_and_modified_files() {
 }
 
 #[test]
+fn staging_a_deleted_file_records_the_deletion() {
+   for stage_all in [false, true] {
+      let repo = TestRepo::with_commit(&[("gone.txt", "bye\n"), ("kept.txt", "k\n")]);
+      fs::remove_file(repo.root().join("gone.txt")).unwrap();
+
+      if stage_all {
+         git_add_all(repo.path.clone()).unwrap();
+      } else {
+         git_add(repo.path.clone(), "gone.txt".to_string()).unwrap();
+      }
+
+      assert_eq!(
+         repo.status(),
+         vec![entry("gone.txt", FileStatus::Deleted, true)],
+         "stage_all={stage_all}"
+      );
+      assert_eq!(repo.index_blob("gone.txt"), None);
+   }
+}
+
+#[test]
 fn discarding_restores_head_content() {
    let repo = TestRepo::with_commit(&[("a.txt", "a\n"), ("b.txt", "b\n")]);
    repo.write("a.txt", "dirty a\n");
