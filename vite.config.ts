@@ -156,6 +156,21 @@ export default defineConfig({
       "**/target/**",
       "**/src-tauri/**",
     ],
+    coverage: {
+      provider: "v8",
+      include: ["src/**/*.{ts,tsx}"],
+      exclude: ["src/**/tests/**", "src/**/*.test.{ts,tsx}", "src/**/*.d.ts"],
+      reporter: ["text-summary", "json-summary", "lcovonly", "html"],
+      reportsDirectory: "coverage",
+      // A couple of points under the measured suite, so a drop fails the run.
+      // Raise these as coverage grows.
+      thresholds: {
+        lines: 39,
+        statements: 38,
+        branches: 36,
+        functions: 34,
+      },
+    },
   },
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`

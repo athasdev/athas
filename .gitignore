@@ -11,6 +11,9 @@ result-*
 # Build output
 dist/
 
+# Test coverage reports
+coverage/
+
 # Optional npm and yarn cache directory
 .npm/
 .yarn/

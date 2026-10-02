@@ -37,8 +37,20 @@ jobs:
       - name: Run frontend checks
         run: bash scripts/check/frontend.sh
 
-      - name: Run frontend tests
-        run: vp test run
+      - name: Run frontend tests with coverage
+        run: vp test run --coverage
+
+      - name: Summarize frontend coverage
+        if: ${{ !cancelled() && hashFiles('coverage/coverage-summary.json') != '' }}
+        run: bun scripts/check/coverage-summary.ts "Frontend coverage" coverage/coverage-summary.json >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload frontend coverage
+        if: ${{ !cancelled() && hashFiles('coverage/lcov.info') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: coverage/
+          retention-days: 14
 
   rust:
     if: github.repository == 'athasdev/athas'
