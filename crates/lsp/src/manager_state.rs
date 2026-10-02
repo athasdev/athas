@@ -246,3 +246,130 @@ impl WorkspaceClients {
       }
    }
 }
+
+#[cfg(test)]
+mod tests {
+   use super::*;
+   use crate::test_support::spawn_fake_server;
+
+   struct ShutdownOnDrop(WorkspaceClients);
+
+   impl Drop for ShutdownOnDrop {
+      fn drop(&mut self) {
+         self.0.shutdown_all();
+      }
+   }
+
+   async fn instance(workspace: &Path, server_name: &str, files: &[PathBuf]) -> LspInstance {
+      let (client, child) = spawn_fake_server(workspace).await;
+      LspInstance {
+         client,
+         child,
+         server_name: server_name.to_string(),
+         ref_count: files.len(),
+         files: files.to_vec(),
+      }
+   }
+
+   fn instance_count(clients: &WorkspaceClients) -> usize {
+      clients.inner.lock().unwrap().len()
+   }
+
+   #[tokio::test]
+   async fn reference_counts_files_and_stops_the_server_after_the_last_one() {
+      let temp = tempfile::tempdir().unwrap();
+      let workspace = temp.path().to_path_buf();
+      let first = workspace.join("a.ts");
+      let second = workspace.join("b.ts");
+      let clients = WorkspaceClients::new();
+      let _guard = ShutdownOnDrop(clients.clone());
+      clients.insert(
+         workspace.clone(),
+         "typescript".to_string(),
+         instance(&workspace, "typescript", std::slice::from_ref(&first)).await,
+      );
+
+      assert!(clients.contains_workspace_server(&workspace, "typescript"));
+      assert!(!clients.contains_workspace_server(&workspace, "rust-analyzer"));
+      assert_eq!(
+         clients.track_file(&workspace, "rust-analyzer", &second),
+         None
+      );
+      assert_eq!(
+         clients.track_file(&workspace, "typescript", &second),
+         Some(2)
+      );
+
+      clients.stop_file(&first);
+      assert!(clients.contains_workspace_server(&workspace, "typescript"));
+      clients.stop_file(&workspace.join("never-opened.ts"));
+      assert!(clients.contains_workspace_server(&workspace, "typescript"));
+
+      clients.stop_file(&second);
+      assert!(!clients.contains_workspace_server(&workspace, "typescript"));
+      assert_eq!(instance_count(&clients), 0);
+   }
+
+   #[tokio::test]
+   async fn routes_files_to_the_server_tracking_their_extension() {
+      let temp = tempfile::tempdir().unwrap();
+      let workspace = temp.path().to_path_buf();
+      let other_workspace = temp.path().join("other");
+      let clients = WorkspaceClients::new();
+      let _guard = ShutdownOnDrop(clients.clone());
+      let ts = instance(&workspace, "typescript", &[workspace.join("index.ts")]).await;
+      let rust = instance(&workspace, "rust-analyzer", &[workspace.join("main.rs")]).await;
+      let ts_id = ts.client.id().to_string();
+      let rust_id = rust.client.id().to_string();
+      clients.insert(workspace.clone(), "typescript".to_string(), ts);
+      clients.insert(workspace.clone(), "rust-analyzer".to_string(), rust);
+
+      let for_ts = clients
+         .get_client_for_file(&workspace.join("src").join("app.ts"))
+         .unwrap();
+      assert_eq!(for_ts.id(), ts_id);
+      let for_rust = clients
+         .get_client_for_file(&workspace.join("lib.rs"))
+         .unwrap();
+      assert_eq!(for_rust.id(), rust_id);
+      assert!(
+         clients
+            .get_client_for_file(&workspace.join("notes.md"))
+            .is_none()
+      );
+      assert!(
+         clients
+            .get_client_for_file(&temp.path().parent().unwrap().join("elsewhere.ts"))
+            .is_none()
+      );
+
+      assert_eq!(clients.get_clients_for_workspace(&workspace).len(), 2);
+      assert!(
+         clients
+            .get_clients_for_workspace(&other_workspace)
+            .is_empty()
+      );
+      assert_eq!(clients.get_client_by_id(&rust_id).unwrap().id(), rust_id);
+      assert!(clients.get_client_by_id("lsp-missing").is_none());
+
+      clients.shutdown_workspace(&workspace).unwrap();
+      assert_eq!(instance_count(&clients), 0);
+   }
+
+   #[tokio::test]
+   async fn prunes_instances_whose_server_process_exited() {
+      let temp = tempfile::tempdir().unwrap();
+      let workspace = temp.path().to_path_buf();
+      let file = workspace.join("main.rs");
+      let clients = WorkspaceClients::new();
+      let _guard = ShutdownOnDrop(clients.clone());
+      let mut dead = instance(&workspace, "rust-analyzer", std::slice::from_ref(&file)).await;
+      dead.child.kill().unwrap();
+      dead.child.wait().unwrap();
+      clients.insert(workspace.clone(), "rust-analyzer".to_string(), dead);
+
+      assert!(clients.get_client_for_file(&file).is_none());
+      assert!(!clients.contains_workspace_server(&workspace, "rust-analyzer"));
+      assert_eq!(instance_count(&clients), 0);
+   }
+}

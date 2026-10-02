@@ -1372,4 +1372,400 @@ mod tests {
       assert_eq!(response["result"]["applied"], json!(false));
       assert_eq!(response["result"]["failureReason"], "Unsupported edit");
    }
+
+   fn test_client() -> (LspClient, crossbeam_channel::Receiver<String>) {
+      let (stdin_tx, stdin_rx) = bounded(16);
+      let client = LspClient {
+         id: "test-client".to_string(),
+         request_counter: Arc::new(AtomicU64::new(1)),
+         stdin_tx,
+         pending_requests: Arc::new(Mutex::new(HashMap::new())),
+         capabilities: Arc::new(Mutex::new(None)),
+         is_running: Arc::new(AtomicBool::new(true)),
+         server_context: Arc::new(Mutex::new(LspServerContext::default())),
+      };
+      (client, stdin_rx)
+   }
+
+   fn decode_frame(framed: &str) -> Value {
+      let (header, payload) = framed.split_once("\r\n\r\n").unwrap();
+      let length: usize = header
+         .strip_prefix("Content-Length: ")
+         .unwrap()
+         .parse()
+         .unwrap();
+      assert_eq!(length, payload.len(), "Content-Length must count bytes");
+      serde_json::from_str(payload).unwrap()
+   }
+
+   fn set_capabilities(client: &LspClient, capabilities: Value) {
+      *client.capabilities.lock().unwrap() = Some(serde_json::from_value(capabilities).unwrap());
+   }
+
+   fn server_request(client: &LspClient, request: Value) {
+      LspClient::handle_server_request(
+         request,
+         &client.stdin_tx,
+         &client.server_context,
+         &None,
+         client.id(),
+      );
+   }
+
+   #[tokio::test]
+   async fn frames_requests_with_byte_length_and_resolves_matching_response() {
+      let (client, stdin_rx) = test_client();
+      let request_client = client.clone();
+      let request = tokio::spawn(async move {
+         request_client
+            .request_value("test/echo", json!({ "text": "héllo wörld ✓" }))
+            .await
+      });
+
+      let framed = tokio::task::spawn_blocking(move || stdin_rx.recv().unwrap())
+         .await
+         .unwrap();
+      let message = decode_frame(&framed);
+      assert_eq!(message["jsonrpc"], "2.0");
+      assert_eq!(message["method"], "test/echo");
+      assert_eq!(message["params"]["text"], "héllo wörld ✓");
+      let id = message["id"].as_u64().unwrap();
+
+      LspClient::handle_response(
+         json!({ "id": id, "result": { "ok": true } }),
+         &client.pending_requests,
+      );
+
+      assert_eq!(request.await.unwrap().unwrap(), json!({ "ok": true }));
+      assert!(client.pending_requests.lock().unwrap().is_empty());
+   }
+
+   #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+   async fn request_ids_increase_and_responses_route_by_id() {
+      let (client, stdin_rx) = test_client();
+      let first_client = client.clone();
+      let second_client = client.clone();
+      let first = tokio::spawn(async move { first_client.request_value("a", json!(null)).await });
+      let first_id = decode_frame(&stdin_rx.recv().unwrap())["id"]
+         .as_u64()
+         .unwrap();
+      let second = tokio::spawn(async move { second_client.request_value("b", json!(null)).await });
+      let second_id = decode_frame(&stdin_rx.recv().unwrap())["id"]
+         .as_u64()
+         .unwrap();
+      assert_eq!(second_id, first_id + 1);
+
+      let pending = &client.pending_requests;
+      LspClient::handle_response(json!({ "id": 9999, "result": "stray" }), pending);
+      LspClient::handle_response(json!({ "id": second_id, "result": "second" }), pending);
+      LspClient::handle_response(
+         json!({ "id": first_id, "error": { "code": -32601, "message": "Method not found" } }),
+         pending,
+      );
+
+      assert_eq!(second.await.unwrap().unwrap(), json!("second"));
+      let error = first.await.unwrap().unwrap_err();
+      assert!(error.to_string().contains("Method not found"), "{error}");
+      assert!(crate::manager_support::is_unsupported_method(&error, "a"));
+   }
+
+   #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+   async fn null_result_resolves_as_null() {
+      let (client, stdin_rx) = test_client();
+      let request_client = client.clone();
+      let request =
+         tokio::spawn(async move { request_client.request_value("x", json!(null)).await });
+      let id = decode_frame(&stdin_rx.recv().unwrap())["id"].clone();
+
+      LspClient::handle_response(
+         json!({ "id": id, "result": null }),
+         &client.pending_requests,
+      );
+
+      assert_eq!(request.await.unwrap().unwrap(), Value::Null);
+   }
+
+   #[tokio::test]
+   async fn rejects_requests_and_notifications_after_server_stops() {
+      let (client, stdin_rx) = test_client();
+      client.is_running.store(false, Ordering::SeqCst);
+
+      let error = client.request_value("x", json!(null)).await.unwrap_err();
+      assert!(error.to_string().contains("not running"));
+      assert!(
+         client
+            .notify::<notification::Initialized>(InitializedParams {})
+            .is_err()
+      );
+      assert!(stdin_rx.try_recv().is_err());
+      assert!(client.pending_requests.lock().unwrap().is_empty());
+   }
+
+   #[test]
+   fn frames_notifications_without_an_id() {
+      let (client, stdin_rx) = test_client();
+      client.notify::<notification::Exit>(()).unwrap();
+
+      let message = decode_frame(&stdin_rx.recv().unwrap());
+      assert_eq!(message["method"], "exit");
+      assert!(message.get("id").is_none());
+   }
+
+   #[test]
+   fn answers_workspace_configuration_from_initialization_settings() {
+      let (client, stdin_rx) = test_client();
+      client.server_context.lock().unwrap().settings = json!({
+         "python": { "analysis": { "typeCheckingMode": "strict" } }
+      });
+
+      server_request(
+         &client,
+         json!({
+            "id": 7,
+            "method": "workspace/configuration",
+            "params": { "items": [
+               { "section": "python.analysis" },
+               { "section": "python.missing" },
+               { "scopeUri": "file:///tmp" }
+            ] }
+         }),
+      );
+
+      let response = decode_frame(&stdin_rx.recv().unwrap());
+      assert_eq!(response["id"], 7);
+      assert_eq!(
+         response["result"],
+         json!([{ "typeCheckingMode": "strict" }, null, null])
+      );
+   }
+
+   #[test]
+   fn answers_workspace_folders_from_root_uri() {
+      let (client, stdin_rx) = test_client();
+      server_request(
+         &client,
+         json!({ "id": "a", "method": "workspace/workspaceFolders" }),
+      );
+      assert_eq!(decode_frame(&stdin_rx.recv().unwrap())["result"], json!([]));
+
+      client.server_context.lock().unwrap().root_uri =
+         Some(Url::parse("file:///home/user/my-project/").unwrap());
+      server_request(
+         &client,
+         json!({ "id": "b", "method": "workspace/workspaceFolders" }),
+      );
+
+      let response = decode_frame(&stdin_rx.recv().unwrap());
+      assert_eq!(response["id"], "b");
+      assert_eq!(
+         response["result"],
+         json!([{ "uri": "file:///home/user/my-project/", "name": "my-project" }])
+      );
+   }
+
+   #[test]
+   fn acknowledges_and_rejects_other_server_requests() {
+      let (client, stdin_rx) = test_client();
+
+      server_request(
+         &client,
+         json!({ "id": 1, "method": "client/registerCapability" }),
+      );
+      let response = decode_frame(&stdin_rx.recv().unwrap());
+      assert_eq!(response["result"], Value::Null);
+      assert!(response.get("error").is_none());
+
+      server_request(
+         &client,
+         json!({ "id": 2, "method": "workspace/applyEdit", "params": {} }),
+      );
+      let response = decode_frame(&stdin_rx.recv().unwrap());
+      assert_eq!(response["result"]["applied"], false);
+
+      server_request(&client, json!({ "id": 3, "method": "custom/unknown" }));
+      let response = decode_frame(&stdin_rx.recv().unwrap());
+      assert_eq!(response["id"], 3);
+      assert_eq!(response["error"]["code"], -32601);
+      assert!(
+         response["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("custom/unknown")
+      );
+
+      server_request(&client, json!({ "id": 4 }));
+      let response = decode_frame(&stdin_rx.recv().unwrap());
+      assert_eq!(response["error"]["code"], -32600);
+   }
+
+   #[test]
+   fn reports_capabilities_advertised_by_the_server() {
+      let (client, _stdin_rx) = test_client();
+      assert!(!client.supports_code_actions());
+      assert!(!client.supports_code_lens());
+      assert_eq!(client.semantic_token_legend(), (Vec::new(), Vec::new()));
+      assert!(client.signature_help_trigger_characters().is_empty());
+      assert!(client.on_type_formatting_trigger_characters().is_empty());
+
+      set_capabilities(&client, json!({ "codeActionProvider": false }));
+      assert!(!client.supports_code_actions());
+
+      set_capabilities(
+         &client,
+         json!({
+            "codeActionProvider": { "codeActionKinds": ["quickfix"] },
+            "codeLensProvider": { "resolveProvider": false },
+            "semanticTokensProvider": {
+               "legend": { "tokenTypes": ["class", "function"], "tokenModifiers": ["static"] },
+               "full": true
+            },
+            "signatureHelpProvider": { "triggerCharacters": ["(", ","] },
+            "documentOnTypeFormattingProvider": {
+               "firstTriggerCharacter": "}",
+               "moreTriggerCharacter": [";", "\n"]
+            }
+         }),
+      );
+      assert!(client.supports_code_actions());
+      assert!(client.supports_code_lens());
+      assert_eq!(
+         client.semantic_token_legend(),
+         (
+            vec!["class".to_string(), "function".to_string()],
+            vec!["static".to_string()]
+         )
+      );
+      assert_eq!(client.signature_help_trigger_characters(), vec!["(", ","]);
+      assert_eq!(
+         client.on_type_formatting_trigger_characters(),
+         vec!["}", ";", "\n"]
+      );
+   }
+
+   #[tokio::test]
+   async fn initializes_against_a_real_process_and_stores_capabilities() {
+      let temp = tempfile::tempdir().unwrap();
+      let server = crate::test_support::start_fake_server(temp.path()).await;
+
+      server
+         .client
+         .initialize(
+            Url::from_file_path(temp.path()).unwrap(),
+            Some(json!({
+               "fakeCapabilities": { "codeLensProvider": {}, "codeActionProvider": true }
+            })),
+         )
+         .await
+         .unwrap();
+
+      assert!(server.client.is_running());
+      assert!(server.client.supports_code_lens());
+      assert!(server.client.supports_code_actions());
+   }
+
+   #[tokio::test]
+   async fn reassembles_fragmented_messages_with_extra_headers() {
+      let temp = tempfile::tempdir().unwrap();
+      let server = crate::test_support::start_fake_server(temp.path()).await;
+      let params = json!({ "text": "ünïcödé ".repeat(64), "n": 42 });
+
+      let response = server
+         .client
+         .request_value("test/fragmented", params.clone())
+         .await
+         .unwrap();
+
+      assert_eq!(response, params);
+   }
+
+   #[tokio::test]
+   async fn matches_out_of_order_responses_to_their_requests() {
+      let temp = tempfile::tempdir().unwrap();
+      let server = crate::test_support::start_fake_server(temp.path()).await;
+
+      let (first, second) = tokio::join!(
+         server.client.request_value("test/reverse", json!("first")),
+         server.client.request_value("test/reverse", json!("second")),
+      );
+
+      assert_eq!(first.unwrap(), json!("first"));
+      assert_eq!(second.unwrap(), json!("second"));
+   }
+
+   #[tokio::test]
+   async fn surfaces_error_responses_from_a_real_process() {
+      let temp = tempfile::tempdir().unwrap();
+      let server = crate::test_support::start_fake_server(temp.path()).await;
+
+      let error = server
+         .client
+         .request_value("test/error", json!(null))
+         .await
+         .unwrap_err();
+
+      assert!(error.to_string().contains("-32601"), "{error}");
+      assert_eq!(
+         server
+            .client
+            .request_value("test/echo", json!(1))
+            .await
+            .unwrap(),
+         json!(1)
+      );
+   }
+
+   #[tokio::test]
+   async fn answers_server_requests_over_stdio() {
+      let temp = tempfile::tempdir().unwrap();
+      let server = crate::test_support::start_fake_server(temp.path()).await;
+      server
+         .client
+         .initialize(
+            Url::from_file_path(temp.path()).unwrap(),
+            Some(json!({ "settings": { "fake": { "level": 2 } } })),
+         )
+         .await
+         .unwrap();
+
+      let response = server
+         .client
+         .request_value(
+            "test/serverRequest",
+            json!({
+               "method": "workspace/configuration",
+               "params": { "items": [{ "section": "fake.level" }] }
+            }),
+         )
+         .await
+         .unwrap();
+
+      assert_eq!(response["id"], "srv-1");
+      assert_eq!(response["result"], json!([2]));
+   }
+
+   #[tokio::test]
+   async fn fails_pending_requests_when_the_server_exits() {
+      let temp = tempfile::tempdir().unwrap();
+      let server = crate::test_support::start_fake_server(temp.path()).await;
+
+      let error = tokio::time::timeout(
+         std::time::Duration::from_secs(30),
+         server.client.request_value("test/crash", json!(null)),
+      )
+      .await
+      .expect("pending request should fail instead of hanging")
+      .unwrap_err();
+
+      assert!(error.to_string().contains("stdout closed"), "{error}");
+      assert!(!server.client.is_running());
+      assert!(
+         server
+            .client
+            .request_value("test/echo", json!(null))
+            .await
+            .unwrap_err()
+            .to_string()
+            .contains("not running")
+      );
+   }
 }
