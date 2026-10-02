@@ -10,7 +10,6 @@ source "${script_dir}/common.sh"
 
 arch="$(normalize_linux_arch "${1:?Usage: package-linux-tarball.sh <arch> [out-dir]}")"
 out_dir="${2:-release-dist}"
-resolve_linux_channel
 
 version="$(bun -e 'console.log(JSON.parse(await Bun.file("package.json").text()).version)')"
 binary="${CARGO_TARGET_DIR:-target}/release/athas"

@@ -11,7 +11,6 @@ source "${script_dir}/common.sh"
 
 arch="$(normalize_linux_arch "${1:?Usage: flatpak.sh <arch> [out-dir]}")"
 out_dir="${2:-release-dist}"
-resolve_linux_channel
 
 for tool in flatpak flatpak-builder; do
   if ! command -v "$tool" >/dev/null 2>&1; then
@@ -27,15 +26,12 @@ if [[ ! -f "$tarball" ]]; then
   exit 1
 fi
 
-stable_id="com.code.athas"
 work_dir="$(mktemp -d)"
 trap 'rm -rf "$work_dir"' EXIT
 
 cp "$tarball" "${work_dir}/athas.tar.gz"
-sed "s/${stable_id}/${desktop_id}/g" flatpak/com.code.athas.yml > "${work_dir}/${desktop_id}.yml"
+cp flatpak/com.code.athas.yml "${work_dir}/${desktop_id}.yml"
 sed \
-  -e "s/${stable_id}/${desktop_id}/g" \
-  -e "0,/<name>Athas<\/name>/s//<name>${product_name}<\/name>/" \
   -e "s/@VERSION@/${version}/" \
   -e "s/@DATE@/$(date -u +%F)/" \
   flatpak/com.code.athas.metainfo.xml > "${work_dir}/${desktop_id}.metainfo.xml"

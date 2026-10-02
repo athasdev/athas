@@ -44,14 +44,14 @@ try {
     }),
   );
   children.add(
-    Bun.spawn(["tauri", "dev", "--config", "src-tauri/tauri.preview.conf.json"], {
+    Bun.spawn(["tauri", "dev", "--config", "src-tauri/tauri.dev.conf.json"], {
       detached: process.platform !== "win32",
       env: withMacosDevSigning(
         {
           ...process.env,
           VITE_EXTENSION_MARKETPLACE_LOCAL: "true",
         },
-        { identifier: "com.code.athas.preview" },
+        { identifier: "com.code.athas.dev" },
       ),
       stdin: "inherit",
       stdout: "inherit",

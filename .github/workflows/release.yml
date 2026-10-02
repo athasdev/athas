@@ -39,7 +39,7 @@ jobs:
         run: |
           set -euo pipefail
           tag="${INPUT_TAG:-${GITHUB_REF_NAME}}"
-          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "Dispatch the release on its version tag."
             exit 1
           fi
@@ -56,7 +56,6 @@ jobs:
     outputs:
       tag_name: ${{ steps.release_meta.outputs.tag_name }}
       release_name: ${{ steps.release_meta.outputs.release_name }}
-      is_prerelease: ${{ steps.release_meta.outputs.is_prerelease }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -92,7 +91,7 @@ jobs:
             tag="${GITHUB_REF_NAME}"
           fi
 
-          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "Invalid release tag: $tag"
             exit 1
           fi
@@ -355,12 +354,10 @@ jobs:
           APPLE_PASSWORD: ${{ matrix.os == 'macos' && secrets.APPLE_PASSWORD || '' }}
           APPLE_TEAM_ID: ${{ matrix.os == 'macos' && secrets.APPLE_TEAM_ID || '' }}
           RUSTFLAGS: ${{ matrix.rustflags }}
-        run: bun tauri build ${{ matrix.args }} ${{ needs.release-metadata.outputs.is_prerelease == 'true' && '--config src-tauri/tauri.preview.conf.json' || '' }}
+        run: bun tauri build ${{ matrix.args }}
 
       - name: Package Linux tarball and Flatpak (Linux only)
         if: matrix.os == 'linux'
-        env:
-          ATHAS_RELEASE_CHANNEL: ${{ needs.release-metadata.outputs.is_prerelease == 'true' && 'preview' || 'stable' }}
         run: |
           set -euo pipefail
           bash scripts/release/package-linux-tarball.sh "${{ runner.arch }}" release-dist
@@ -472,7 +469,6 @@ jobs:
           GH_TOKEN: ${{ secrets.ATHAS_RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
           TAG_NAME: ${{ needs.release-metadata.outputs.tag_name }}
           RELEASE_NAME: ${{ needs.release-metadata.outputs.release_name }}
-          IS_PRERELEASE: ${{ needs.release-metadata.outputs.is_prerelease }}
         run: |
           set -euo pipefail
 
@@ -487,7 +483,7 @@ jobs:
           if gh release view "${TAG_NAME}" --repo "${{ github.repository }}" >/dev/null 2>&1; then
             release_id="$(gh api "/repos/${{ github.repository }}/releases/tags/${TAG_NAME}" --jq ".id")"
             is_draft="$(gh api "/repos/${{ github.repository }}/releases/${release_id}" --jq ".draft")"
-            if [[ "$is_draft" != "true" && "$IS_PRERELEASE" != "true" ]]; then
+            if [[ "$is_draft" != "true" ]]; then
               echo "Release ${TAG_NAME} is already published; refusing to mutate it."
               exit 1
             fi
@@ -496,30 +492,13 @@ jobs:
               --repo "${{ github.repository }}" \
               --title "${RELEASE_NAME}" \
               --notes-file release-metadata/release-body.md
-
-            if [[ "$IS_PRERELEASE" == "true" ]]; then
-              gh api \
-                --method PATCH \
-                "/repos/${{ github.repository }}/releases/${release_id}" \
-                -f draft=false \
-                -f prerelease=true
-            fi
           else
-            create_args=(
-              release create "${TAG_NAME}"
-              --repo "${{ github.repository }}"
-              --target "${GITHUB_SHA}"
-              --title "${RELEASE_NAME}"
-              --notes-file release-metadata/release-body.md
-            )
-
-            if [[ "$IS_PRERELEASE" == "true" ]]; then
-              create_args+=(--prerelease)
-            else
-              create_args+=(--draft)
-            fi
-
-            gh "${create_args[@]}"
+            gh release create "${TAG_NAME}" \
+              --repo "${{ github.repository }}" \
+              --target "${GITHUB_SHA}" \
+              --title "${RELEASE_NAME}" \
+              --notes-file release-metadata/release-body.md \
+              --draft
           fi
 
       - name: Upload release assets

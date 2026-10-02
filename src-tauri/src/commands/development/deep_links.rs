@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::Mutex};
 use tauri::State;
 
-const APP_DEEP_LINK_SCHEMES: [&str; 3] = ["athas", "athas-dev", "athas-preview"];
+const APP_DEEP_LINK_SCHEMES: [&str; 2] = ["athas", "athas-dev"];
 
 /// Deep links waiting for a workbench window to pick them up. URLs that arrive
 /// before the frontend has subscribed (for example the one that launched the

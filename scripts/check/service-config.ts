@@ -3,7 +3,6 @@
 export type Services = {
   websiteBaseUrl: string;
   stableUpdateUrl: string;
-  previewUpdateUrl: string;
 };
 
 export type TauriConfig = {
@@ -18,14 +17,12 @@ export type CapabilityConfig = {
 type ServiceConfigInput = {
   services: Services;
   stable: TauriConfig;
-  preview: TauriConfig;
   capability: CapabilityConfig;
 };
 
 export function getServiceConfigErrors({
   services,
   stable,
-  preview,
   capability,
 }: ServiceConfigInput): string[] {
   const errors: string[] = [];
@@ -42,10 +39,6 @@ export function getServiceConfigErrors({
 
   if (stable.plugins?.updater?.endpoints?.[0] !== services.stableUpdateUrl) {
     errors.push("Stable Tauri updater endpoint does not match src/config/services.json.");
-  }
-
-  if (preview.plugins?.updater?.endpoints?.[0] !== services.previewUpdateUrl) {
-    errors.push("Preview Tauri updater endpoint does not match src/config/services.json.");
   }
 
   if (!stable.app?.security?.csp?.includes(services.websiteBaseUrl)) {
@@ -67,7 +60,6 @@ async function main() {
   const errors = getServiceConfigErrors({
     services: await readJson<Services>("src/config/services.json"),
     stable: await readJson<TauriConfig>("src-tauri/tauri.conf.json"),
-    preview: await readJson<TauriConfig>("src-tauri/tauri.preview.conf.json"),
     capability: await readJson<CapabilityConfig>("src-tauri/capabilities/main.json"),
   });
 

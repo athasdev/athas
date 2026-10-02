@@ -38,7 +38,6 @@ jobs:
           test -n "$TAURI_SIGNING_PRIVATE_KEY"
           test -n "$TAURI_SIGNING_PRIVATE_KEY_PASSWORD"
           test -f .github/workflows/release.yml
-          test -f src-tauri/tauri.preview.conf.json
           test -f scripts/release/generate-notes.mjs
           test -f scripts/release/release-assets.mjs
 

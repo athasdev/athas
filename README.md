@@ -38,12 +38,6 @@ release, and verify its SHA256 checksum when one is available. You can review th
 [macOS and Linux script](https://athas.dev/install.sh) or
 [Windows script](https://athas.dev/install.ps1) before running it.
 
-To install the latest preview release on macOS or Linux:
-
-```bash
-curl -fsSL https://athas.dev/install.sh | sh -s -- --preview
-```
-
 ### Package managers
 
 Homebrew on macOS:

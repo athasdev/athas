@@ -16,7 +16,6 @@ import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { spawnSync } from "node:child_process";
 import {
-  channelFromTag,
   forbiddenAssetPatterns,
   normalizedArtifactName,
   requiredAssets,
@@ -64,14 +63,14 @@ function walkFiles(dir) {
   return files;
 }
 
-function indexFiles(dir, channel) {
+function indexFiles(dir) {
   if (!existsSync(dir)) {
     throw new Error(`Directory does not exist: ${dir}`);
   }
 
   const byName = new Map();
   for (const file of walkFiles(dir)) {
-    const name = normalizedArtifactName(file, basename(file), channel);
+    const name = normalizedArtifactName(file, basename(file));
     if (byName.has(name)) {
       throw new Error(`Duplicate artifact filename found: ${name}`);
     }
@@ -103,8 +102,8 @@ function findRequiredAsset(filesByName, required) {
   };
 }
 
-function collectRequiredAssets(dir, version, channel) {
-  const filesByName = indexFiles(dir, channel);
+function collectRequiredAssets(dir, version) {
+  const filesByName = indexFiles(dir);
   for (const name of filesByName.keys()) {
     if (forbiddenAssetPatterns(version).some((pattern) => pattern.test(name))) {
       throw new Error(`Unexpected legacy release asset found: ${name}`);
@@ -113,9 +112,7 @@ function collectRequiredAssets(dir, version, channel) {
 
   return {
     filesByName,
-    assets: requiredAssets(version, channel).map((required) =>
-      findRequiredAsset(filesByName, required),
-    ),
+    assets: requiredAssets(version).map((required) => findRequiredAsset(filesByName, required)),
   };
 }
 
@@ -236,9 +233,8 @@ async function assemble() {
   const notesFile = requireArg("--notes-file");
   const outDir = requireArg("--out");
   const version = versionFromTag(tag);
-  const channel = channelFromTag(tag);
   const notes = readFileSync(notesFile, "utf8");
-  const { filesByName, assets } = collectRequiredAssets(dir, version, channel);
+  const { filesByName, assets } = collectRequiredAssets(dir, version);
 
   rmSync(outDir, { recursive: true, force: true });
   mkdirSync(outDir, { recursive: true });
@@ -318,8 +314,7 @@ function validateLocal() {
   const dir = requireArg("--dir");
   const repo = getArg("--repo", "athasdev/athas");
   const version = versionFromTag(tag);
-  const channel = channelFromTag(tag);
-  const { filesByName, assets } = collectRequiredAssets(dir, version, channel);
+  const { filesByName, assets } = collectRequiredAssets(dir, version);
 
   if (!filesByName.has("latest.json")) {
     throw new Error("Missing latest.json");
@@ -377,7 +372,6 @@ function verifyRemote({ planOnly = false } = {}) {
   const tag = requireArg("--tag");
   const repo = requireArg("--repo");
   const version = versionFromTag(tag);
-  const channel = channelFromTag(tag);
   const problems = [];
 
   let releases = [];
@@ -407,7 +401,7 @@ function verifyRemote({ planOnly = false } = {}) {
       for (const name of assetNames) {
         writeFileSync(join(fakeDir, name), "");
       }
-      const { assets } = collectRequiredAssets(fakeDir, version, channel);
+      const { assets } = collectRequiredAssets(fakeDir, version);
 
       for (const required of ["latest.json", "SHA256SUMS.txt"]) {
         if (!assetNames.has(required)) {

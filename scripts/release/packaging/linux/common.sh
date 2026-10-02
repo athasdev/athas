@@ -16,32 +16,12 @@ normalize_linux_arch() {
   esac
 }
 
-# Sets product_name, app_dir_name, icon_dir, desktop_id and url_scheme from
-# ATHAS_RELEASE_CHANNEL (stable or preview).
-resolve_linux_channel() {
-  local channel="${ATHAS_RELEASE_CHANNEL:-stable}"
-
-  case "$channel" in
-    stable)
-      product_name="Athas"
-      app_dir_name="athas.app"
-      icon_dir="prod"
-      desktop_id="com.code.athas"
-      url_scheme="athas"
-      ;;
-    preview)
-      product_name="Athas Preview"
-      app_dir_name="athas-preview.app"
-      icon_dir="preview"
-      desktop_id="com.code.athas.preview"
-      url_scheme="athas-preview"
-      ;;
-    *)
-      echo "Unsupported release channel: $channel" >&2
-      return 1
-      ;;
-  esac
-}
+# Product names and ids shared by the Linux packaging scripts.
+product_name="Athas"
+app_dir_name="athas.app"
+icon_dir="prod"
+desktop_id="com.code.athas"
+url_scheme="athas"
 
 # install_linux_icons <hicolor-dir> <icon-name>
 install_linux_icons() {

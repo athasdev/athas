@@ -1,6 +1,6 @@
 import path from "node:path";
 
-export type SmokeIdentity = "stable" | "preview" | "smoke";
+export type SmokeIdentity = "stable" | "smoke";
 export type SmokePlatform = "macos" | "linux" | "windows";
 
 export type SmokeOptions = {
@@ -12,10 +12,6 @@ export type SmokeOptions = {
 export const smokeTargets: Record<SmokeIdentity, { config?: string; macosAppName: string }> = {
   stable: {
     macosAppName: "Athas.app",
-  },
-  preview: {
-    config: "src-tauri/tauri.preview.conf.json",
-    macosAppName: "Athas Preview.app",
   },
   smoke: {
     config: "src-tauri/tauri.smoke.conf.json",
@@ -62,7 +58,7 @@ export function parseSmokeOptions(args: string[], host: NodeJS.Platform): SmokeO
   }
 
   const identity = (readOption(args, "--identity") ?? "smoke").toLowerCase();
-  if (identity !== "stable" && identity !== "preview" && identity !== "smoke") {
+  if (identity !== "stable" && identity !== "smoke") {
     throw new Error("Invalid smoke identity");
   }
 

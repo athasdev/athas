@@ -19,15 +19,13 @@ async function text(command) {
 }
 
 async function getPreviousTag(tag) {
-  const isPreview = /-preview\.\d+$/.test(tag);
   const tags = await text("git tag --sort=-creatordate --merged HEAD");
   return tags
     .split("\n")
     .map((entry) => entry.trim())
     .filter(Boolean)
     .filter((entry) => entry !== tag)
-    .filter((entry) => /^v\d+\.\d+\.\d+(?:-preview\.\d+)?$/.test(entry))
-    .find((entry) => isPreview || /^v\d+\.\d+\.\d+$/.test(entry));
+    .find((entry) => /^v\d+\.\d+\.\d+$/.test(entry));
 }
 
 async function getComparableRevision(tag) {
@@ -67,11 +65,7 @@ function parseGithubPullRequestLines(githubNotes) {
 }
 
 function shouldSkipCommit(subject) {
-  return (
-    subject === "Prepare release" ||
-    subject === "Prepare preview release" ||
-    subject.startsWith("Merge remote-tracking branch ")
-  );
+  return subject === "Prepare release" || subject.startsWith("Merge remote-tracking branch ");
 }
 
 async function getCommits(tag, previousTag) {
@@ -170,15 +164,12 @@ const previousTag = await getPreviousTag(tag);
 const githubNotes = await generateGithubNotes(tag, previousTag, repo);
 const releaseEntries = await formatReleaseEntries(tag, previousTag, repo, githubNotes);
 const releaseBody = formatBody(releaseEntries, tag, previousTag);
-const version = tag.replace(/^v/, "");
-const isPrerelease = /-preview\.\d+$/.test(version) ? "true" : "false";
 const releaseName = `Athas ${tag}`;
 
 if (outputPath) {
   writeGithubOutput(outputPath, {
     release_name: releaseName,
     release_body: releaseBody,
-    is_prerelease: isPrerelease,
   });
 } else {
   console.log(releaseBody);

@@ -369,11 +369,11 @@ mod tests {
       let cache = Mutex::new(HashMap::new());
       let loads = AtomicUsize::new(0);
 
-      let first = get_secret_with_cache(&cache, "com.code.athas.preview", "github_token", || {
+      let first = get_secret_with_cache(&cache, "com.code.athas.dev", "github_token", || {
          loads.fetch_add(1, Ordering::Relaxed);
          Ok(Some("secret".to_string()))
       });
-      let second = get_secret_with_cache(&cache, "com.code.athas.preview", "github_token", || {
+      let second = get_secret_with_cache(&cache, "com.code.athas.dev", "github_token", || {
          loads.fetch_add(1, Ordering::Relaxed);
          Ok(Some("different".to_string()))
       });
@@ -388,11 +388,11 @@ mod tests {
       let cache = Mutex::new(HashMap::new());
       let loads = AtomicUsize::new(0);
 
-      let first = get_secret_with_cache(&cache, "com.code.athas.preview", "github_token", || {
+      let first = get_secret_with_cache(&cache, "com.code.athas.dev", "github_token", || {
          loads.fetch_add(1, Ordering::Relaxed);
          Ok(None)
       });
-      let second = get_secret_with_cache(&cache, "com.code.athas.preview", "github_token", || {
+      let second = get_secret_with_cache(&cache, "com.code.athas.dev", "github_token", || {
          loads.fetch_add(1, Ordering::Relaxed);
          Ok(Some("secret".to_string()))
       });

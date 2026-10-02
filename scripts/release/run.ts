@@ -1,15 +1,7 @@
 #!/usr/bin/env bun
 import { $ } from "bun";
 import { waitForReleaseCi } from "./ci-gate";
-import {
-  bumpStableBase,
-  formatVersion,
-  getReleaseCommitMessage,
-  getWindowsMsiVersion,
-  parseVersion,
-  sameStableBase,
-  type ParsedVersion,
-} from "./version";
+import { bumpVersion, formatVersion, getWindowsMsiVersion, parseVersion } from "./version";
 
 const colors = {
   reset: "\x1b[0m",
@@ -45,63 +37,14 @@ function info(message: string) {
   log(message, "cyan");
 }
 
-async function getLatestPreviewNumber(baseVersion: ParsedVersion): Promise<number> {
-  const base = `${baseVersion.major}.${baseVersion.minor}.${baseVersion.patch}`;
-  const result = await $`git tag --list ${`v${base}-preview.*`}`.quiet().nothrow();
-
-  if (result.exitCode !== 0) {
-    return 0;
-  }
-
-  const tags = result.stdout
-    .toString()
-    .trim()
-    .split("\n")
-    .filter((line) => line.length > 0);
-
-  return tags.reduce((latest, tag) => {
-    const version = parseVersion(tag.replace(/^v/, ""));
-    if (version.prerelease?.channel !== "preview" || !sameStableBase(version, baseVersion)) {
-      return latest;
-    }
-
-    return Math.max(latest, version.prerelease.number);
-  }, 0);
-}
-
-async function bumpVersion(currentVersion: string, args: string[]): Promise<string> {
-  const current = parseVersion(currentVersion);
-  const [channel = "stable", bump = "patch"] = args;
+function getNextVersion(currentVersion: string, args: string[]): string {
+  const [bump = "patch"] = args;
 
   if (bump !== "patch" && bump !== "minor" && bump !== "major") {
     error("Invalid release bump. Use: patch, minor, or major");
   }
 
-  const baseVersion = bumpStableBase(current, bump);
-
-  if (channel === "stable") {
-    return formatVersion(baseVersion);
-  }
-
-  if (channel === "preview") {
-    const currentPreviewNumber =
-      current.prerelease?.channel === "preview" &&
-      bump === "patch" &&
-      sameStableBase(current, baseVersion)
-        ? current.prerelease.number
-        : 0;
-    const latestPreviewNumber = await getLatestPreviewNumber(baseVersion);
-
-    return formatVersion({
-      ...baseVersion,
-      prerelease: {
-        channel: "preview",
-        number: Math.max(currentPreviewNumber, latestPreviewNumber) + 1,
-      },
-    });
-  }
-
-  error("Invalid release channel. Use: stable or preview");
+  return formatVersion(bumpVersion(parseVersion(currentVersion), bump));
 }
 
 async function getCommitsSinceLastTag(): Promise<string[]> {
@@ -204,8 +147,7 @@ async function release() {
 
   info(`Current version: ${currentVersion}`);
 
-  const newVersion = await bumpVersion(currentVersion, releaseArgs);
-  const parsedNewVersion = parseVersion(newVersion);
+  const newVersion = getNextVersion(currentVersion, releaseArgs);
   info(`New version: ${newVersion}`);
 
   log("\nFetching recent commits...\n", "yellow");
@@ -239,14 +181,6 @@ async function release() {
     log("  2. Create a commit with these changes", "yellow");
     log(`  3. Push main, wait for CI, then push tag v${newVersion}`, "yellow");
     log("  4. Trigger GitHub Actions to build a draft release\n", "yellow");
-  }
-
-  if (parsedNewVersion.prerelease) {
-    info(
-      `Release channel: ${parsedNewVersion.prerelease.channel} (#${parsedNewVersion.prerelease.number})`,
-    );
-  } else {
-    info("Release channel: stable");
   }
 
   if (!process.stdin.isTTY) {
@@ -288,7 +222,7 @@ async function release() {
     await $`git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml Cargo.lock`;
     success("Staged version changes");
 
-    const commitMessage = getReleaseCommitMessage(parsedNewVersion);
+    const commitMessage = "Prepare release";
     await $`git commit -m ${commitMessage} -m "Update version files for the release."`;
     success(`Created commit: ${commitMessage}`);
 

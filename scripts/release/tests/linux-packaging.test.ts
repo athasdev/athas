@@ -9,14 +9,14 @@ function readRepoFile(filePath: string) {
   return fs.readFileSync(path.join(repoRoot, filePath), "utf8");
 }
 
-function renderDesktopEntry(channel: "stable" | "preview") {
+function renderDesktopEntry() {
   const result = spawnSync(
     "bash",
     [
       "-c",
-      'source scripts/release/packaging/linux/common.sh && resolve_linux_channel && render_linux_desktop_entry athas athas && echo "$desktop_id"',
+      'source scripts/release/packaging/linux/common.sh && render_linux_desktop_entry athas athas && echo "$desktop_id"',
     ],
-    { cwd: repoRoot, encoding: "utf8", env: { ...process.env, ATHAS_RELEASE_CHANNEL: channel } },
+    { cwd: repoRoot, encoding: "utf8" },
   );
   expect(result.stderr).toBe("");
   expect(result.status).toBe(0);
@@ -98,8 +98,7 @@ describe("Linux release packaging", () => {
   });
 
   it("renders the shared desktop template for the tarball and Flatpak", () => {
-    const stable = renderDesktopEntry("stable");
-    const preview = renderDesktopEntry("preview");
+    const stable = renderDesktopEntry();
 
     expect(stable.desktopId).toBe("com.code.athas");
     expect(stable.entry).toContain("Exec=athas");
@@ -108,9 +107,6 @@ describe("Linux release packaging", () => {
     expect(stable.entry).toContain("MimeType=x-scheme-handler/athas");
     expect(stable.entry).toContain("Categories=Utility;TextEditor;Development;");
     expect(stable.entry.join("\n")).not.toContain("{{");
-    expect(preview.desktopId).toBe("com.code.athas.preview");
-    expect(preview.entry).toContain("Name=Athas Preview");
-    expect(preview.entry).toContain("MimeType=x-scheme-handler/athas-preview");
   });
 
   it("lays out the tarball the way Tauri, Nix and install.sh expect", () => {
