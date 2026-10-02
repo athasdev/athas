@@ -9,7 +9,7 @@ interface EffectiveKeybindingsInput {
   userKeybindings: Keybinding[];
 }
 
-function normalizeKeybindingForComparison(keybinding: string): string {
+export function normalizeKeybindingForComparison(keybinding: string): string {
   return parseKeybinding(keybinding)
     .parts.map((part) => `${part.modifiers.join("+")}+${part.key.toLowerCase()}`)
     .join(" ");

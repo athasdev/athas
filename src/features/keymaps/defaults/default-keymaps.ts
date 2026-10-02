@@ -404,12 +404,6 @@ export const defaultKeymaps: Keybinding[] = [
     when: "editorFocus",
   },
   {
-    key: "cmd+f",
-    command: "workbench.showFind",
-    source: "default",
-    when: "terminalFocus",
-  },
-  {
     key: "cmd+shift+f",
     command: "workbench.showGlobalSearch",
     source: "default",

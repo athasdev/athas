@@ -1,6 +1,9 @@
 import { useMemo } from "react";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useKeymapStore } from "../stores/keymaps.store";
 import type { Command } from "../types/keymaps.types";
+import { getEffectiveKeybindings } from "../utils/effective-keymaps";
+import { findConflictingKeybindings } from "../utils/keybinding-conflicts";
 import { keymapRegistry } from "../utils/registry";
 
 interface ConflictInfo {
@@ -13,38 +16,28 @@ export function useKeybindingConflicts(
   currentCommandId: string,
   whenClause?: string,
 ): ConflictInfo {
-  const keybindings = useKeymapStore.use.keybindings();
+  const userKeybindings = useKeymapStore.use.keybindings();
+  const preset = useSettingsStore((state) => state.settings.keybindingPreset);
 
-  const conflictInfo = useMemo(() => {
-    if (!keybinding) {
-      return { hasConflict: false, conflictingCommands: [] };
-    }
-
-    const conflicting = keybindings.filter((kb) => {
-      if (kb.command === currentCommandId) return false;
-      if (kb.key !== keybinding) return false;
-      if (!kb.enabled) return false;
-
-      if (whenClause === kb.when) {
-        return true;
-      }
-
-      if (!whenClause && !kb.when) {
-        return true;
-      }
-
-      return false;
+  return useMemo(() => {
+    const conflicting = findConflictingKeybindings({
+      keybinding,
+      commandId: currentCommandId,
+      when: whenClause,
+      effectiveKeybindings: getEffectiveKeybindings({
+        preset,
+        registryKeybindings: keymapRegistry.getAllKeybindings(),
+        userKeybindings,
+      }),
     });
 
     const conflictingCommands = conflicting
-      .map((kb) => keymapRegistry.getCommand(kb.command))
-      .filter((cmd): cmd is Command => cmd !== undefined);
+      .map((binding) => keymapRegistry.getCommand(binding.command))
+      .filter((command): command is Command => command !== undefined);
 
     return {
       hasConflict: conflictingCommands.length > 0,
       conflictingCommands,
     };
-  }, [keybinding, keybindings, currentCommandId, whenClause]);
-
-  return conflictInfo;
+  }, [keybinding, userKeybindings, preset, currentCommandId, whenClause]);
 }

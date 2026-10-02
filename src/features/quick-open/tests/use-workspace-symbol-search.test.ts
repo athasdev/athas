@@ -4,7 +4,7 @@ import {
   getWorkspaceSymbolKey,
   mergeWorkspaceSymbolResults,
   type WorkspaceSymbolItem,
-} from "./use-workspace-symbol-search";
+} from "../hooks/use-workspace-symbol-search";
 
 const createSymbol = (
   name: string,

@@ -21,7 +21,55 @@ use std::{
 use tauri::{Emitter, Manager};
 use tokio::sync::oneshot;
 
-type PendingRequests = Arc<Mutex<HashMap<u64, oneshot::Sender<Result<Value>>>>>;
+type ResponseSender = oneshot::Sender<Result<Value>>;
+
+#[derive(Default)]
+struct PendingRequestState {
+   requests: HashMap<u64, ResponseSender>,
+   closed_reason: Option<String>,
+}
+
+/// Requests waiting for a response. Once the stdout reader stops, the map is
+/// closed under the same lock that drains it, so a request registered while
+/// the server dies either lands before the drain and receives its error, or
+/// sees the closed state and fails immediately. It can never be inserted
+/// after the drain and wait forever.
+#[derive(Clone, Default)]
+struct PendingRequests(Arc<Mutex<PendingRequestState>>);
+
+impl PendingRequests {
+   fn register(&self, id: u64, tx: ResponseSender) -> Result<()> {
+      let mut state = self.0.lock().unwrap();
+      if let Some(reason) = &state.closed_reason {
+         bail!("LSP server is not running: {reason}");
+      }
+      state.requests.insert(id, tx);
+      Ok(())
+   }
+
+   fn take(&self, id: u64) -> Option<ResponseSender> {
+      self.0.lock().unwrap().requests.remove(&id)
+   }
+
+   fn close(&self, reason: &str) {
+      let drained: Vec<ResponseSender> = {
+         let mut state = self.0.lock().unwrap();
+         state
+            .closed_reason
+            .get_or_insert_with(|| reason.to_string());
+         state.requests.drain().map(|(_, tx)| tx).collect()
+      };
+      for tx in drained {
+         let _ = tx.send(Err(anyhow::anyhow!(reason.to_string())));
+      }
+   }
+
+   #[cfg(test)]
+   fn is_empty(&self) -> bool {
+      self.0.lock().unwrap().requests.is_empty()
+   }
+}
+
 pub type LspServerEnv = HashMap<String, String>;
 static NEXT_CLIENT_ID: AtomicU64 = AtomicU64::new(1);
 
@@ -109,6 +157,47 @@ fn configuration_value(settings: &Value, section: &str) -> Value {
       .try_fold(settings, |current, key| current.get(key))
       .cloned()
       .unwrap_or(Value::Null)
+}
+
+/// Parses a `Content-Length` header line. Header names are case-insensitive,
+/// and whitespace around the name and value is ignored.
+fn parse_content_length_header(line: &str) -> Option<usize> {
+   let (name, value) = line.split_once(':')?;
+   if !name.trim().eq_ignore_ascii_case("content-length") {
+      return None;
+   }
+   value.trim().parse().ok()
+}
+
+/// Reads one base-protocol message body from the server. Returns `Ok(None)`
+/// when the stream ends between messages. Headers other than
+/// `Content-Length` are skipped, and header blocks without a usable length
+/// are dropped so the reader can resynchronize on the next message.
+fn read_frame(reader: &mut impl BufRead) -> std::io::Result<Option<Vec<u8>>> {
+   let mut line = String::new();
+   loop {
+      let mut content_length = None;
+      loop {
+         line.clear();
+         if reader.read_line(&mut line)? == 0 {
+            return Ok(None);
+         }
+         if line.trim().is_empty() {
+            break;
+         }
+         if let Some(length) = parse_content_length_header(&line) {
+            content_length = Some(length);
+         }
+      }
+
+      let Some(content_length) = content_length.filter(|length| *length > 0) else {
+         continue;
+      };
+
+      let mut content = vec![0u8; content_length];
+      reader.read_exact(&mut content)?;
+      return Ok(Some(content));
+   }
 }
 
 #[derive(Clone)]
@@ -238,8 +327,8 @@ impl LspClient {
 
       let (stdin_tx, stdin_rx) = bounded::<String>(100);
       let client_id = format!("lsp-{}", NEXT_CLIENT_ID.fetch_add(1, Ordering::SeqCst));
-      let pending_requests = Arc::new(Mutex::new(HashMap::new()));
-      let pending_requests_clone = Arc::clone(&pending_requests);
+      let pending_requests = PendingRequests::default();
+      let pending_requests_clone = pending_requests.clone();
       let app_handle_clone = app_handle.clone();
       let server_request_app_handle = app_handle.clone();
       let server_request_client_id = client_id.clone();
@@ -252,11 +341,7 @@ impl LspClient {
       let mark_stopped =
          |reason: String, pending_requests: &PendingRequests, is_running: &Arc<AtomicBool>| {
             is_running.store(false, Ordering::SeqCst);
-
-            let mut pending = pending_requests.lock().unwrap();
-            for (_, tx) in pending.drain() {
-               let _ = tx.send(Err(anyhow::anyhow!(reason.clone())));
-            }
+            pending_requests.close(&reason);
          };
 
       // Stderr reader thread
@@ -297,65 +382,27 @@ impl LspClient {
       thread::spawn(move || {
          let mut reader = BufReader::new(stdout);
          loop {
-            let mut headers: HashMap<String, String> = HashMap::new();
-            let mut line = String::new();
-
-            // Read headers
-            loop {
-               line.clear();
-               match reader.read_line(&mut line) {
-                  Ok(0) => {
-                     // EOF — server process has exited
-                     log::warn!("LSP server stdout closed (server crashed or exited)");
-                     mark_stopped(
-                        "LSP server stdout closed (server crashed or exited)".to_string(),
-                        &pending_requests_clone,
-                        &is_running_clone,
-                     );
-                     return;
-                  }
-                  Err(e) => {
-                     log::error!("Error reading LSP stdout: {}", e);
-                     mark_stopped(
-                        format!("Error reading LSP stdout: {e}"),
-                        &pending_requests_clone,
-                        &is_running_clone,
-                     );
-                     return;
-                  }
-                  Ok(_) => {}
+            let content = match read_frame(&mut reader) {
+               Ok(Some(content)) => content,
+               Ok(None) => {
+                  log::warn!("LSP server stdout closed (server crashed or exited)");
+                  mark_stopped(
+                     "LSP server stdout closed (server crashed or exited)".to_string(),
+                     &pending_requests_clone,
+                     &is_running_clone,
+                  );
+                  return;
                }
-
-               if line == "\r\n" || line == "\n" {
-                  break;
+               Err(e) => {
+                  log::error!("Error reading LSP stdout: {}", e);
+                  mark_stopped(
+                     format!("Error reading LSP stdout: {e}"),
+                     &pending_requests_clone,
+                     &is_running_clone,
+                  );
+                  return;
                }
-
-               if let Some((key, value)) = line.trim_end().split_once(": ") {
-                  headers.insert(key.to_string(), value.to_string());
-               }
-            }
-
-            // Get content length
-            let content_length = headers
-               .get("Content-Length")
-               .and_then(|s| s.parse::<usize>().ok())
-               .unwrap_or(0);
-
-            if content_length == 0 {
-               continue;
-            }
-
-            // Read content
-            let mut content = vec![0u8; content_length];
-            if reader.read_exact(&mut content).is_err() {
-               log::warn!("LSP server stdout read error (server may have crashed)");
-               mark_stopped(
-                  "LSP server stdout read error (server may have crashed)".to_string(),
-                  &pending_requests_clone,
-                  &is_running_clone,
-               );
-               return;
-            }
+            };
 
             if let Ok(content_str) = String::from_utf8(content)
                && let Ok(message) = serde_json::from_str::<Value>(&content_str)
@@ -656,7 +703,7 @@ impl LspClient {
 
    fn handle_response(response: Value, pending: &PendingRequests) {
       if let Some(id) = response.get("id").and_then(|id| id.as_u64())
-         && let Some(tx) = pending.lock().unwrap().remove(&id)
+         && let Some(tx) = pending.take(id)
       {
          if let Some(error) = response.get("error") {
             let _ = tx.send(Err(anyhow::anyhow!("LSP error: {:?}", error)));
@@ -876,7 +923,7 @@ impl LspClient {
       let id = self.request_counter.fetch_add(1, Ordering::SeqCst);
       let (tx, rx) = oneshot::channel();
 
-      self.pending_requests.lock().unwrap().insert(id, tx);
+      self.pending_requests.register(id, tx)?;
 
       let request = json!({
           "jsonrpc": "2.0",
@@ -893,7 +940,10 @@ impl LspClient {
          request
       );
 
-      self.stdin_tx.send(msg).context("Failed to send request")?;
+      if let Err(error) = self.stdin_tx.send(msg) {
+         self.pending_requests.take(id);
+         return Err(error).context("Failed to send request");
+      }
 
       rx.await.context("Request cancelled")?
    }
@@ -1355,7 +1405,7 @@ mod tests {
          id: "test-client".to_string(),
          request_counter: Arc::new(AtomicU64::new(1)),
          stdin_tx,
-         pending_requests: Arc::new(Mutex::new(HashMap::new())),
+         pending_requests: PendingRequests::default(),
          capabilities: Arc::new(Mutex::new(None)),
          is_running: Arc::new(AtomicBool::new(true)),
          server_context: Arc::new(Mutex::new(LspServerContext::default())),
@@ -1379,7 +1429,7 @@ mod tests {
          id: "test-client".to_string(),
          request_counter: Arc::new(AtomicU64::new(1)),
          stdin_tx,
-         pending_requests: Arc::new(Mutex::new(HashMap::new())),
+         pending_requests: PendingRequests::default(),
          capabilities: Arc::new(Mutex::new(None)),
          is_running: Arc::new(AtomicBool::new(true)),
          server_context: Arc::new(Mutex::new(LspServerContext::default())),
@@ -1437,7 +1487,7 @@ mod tests {
       );
 
       assert_eq!(request.await.unwrap().unwrap(), json!({ "ok": true }));
-      assert!(client.pending_requests.lock().unwrap().is_empty());
+      assert!(client.pending_requests.is_empty());
    }
 
    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -1498,7 +1548,44 @@ mod tests {
             .is_err()
       );
       assert!(stdin_rx.try_recv().is_err());
-      assert!(client.pending_requests.lock().unwrap().is_empty());
+      assert!(client.pending_requests.is_empty());
+   }
+
+   #[tokio::test]
+   async fn a_request_that_misses_the_shutdown_drain_fails_immediately() {
+      let (client, stdin_rx) = test_client();
+      // The stdout reader drained the pending map after this request passed
+      // its is_running check but before it registered.
+      client
+         .pending_requests
+         .close("LSP server stdout closed (server crashed or exited)");
+      assert!(client.is_running());
+
+      let error = tokio::time::timeout(
+         std::time::Duration::from_secs(5),
+         client.request_value("x", json!(null)),
+      )
+      .await
+      .expect("request should fail instead of waiting for a response")
+      .unwrap_err();
+
+      assert!(error.to_string().contains("stdout closed"), "{error}");
+      assert!(stdin_rx.try_recv().is_err());
+      assert!(client.pending_requests.is_empty());
+   }
+
+   #[tokio::test]
+   async fn drops_the_pending_entry_when_the_request_cannot_be_written() {
+      let (client, stdin_rx) = test_client();
+      drop(stdin_rx);
+
+      let error = client.request_value("x", json!(null)).await.unwrap_err();
+
+      assert!(
+         error.to_string().contains("Failed to send request"),
+         "{error}"
+      );
+      assert!(client.pending_requests.is_empty());
    }
 
    #[test]
@@ -1679,6 +1766,93 @@ mod tests {
    }
 
    #[tokio::test]
+   async fn accepts_headers_in_any_case_order_and_spacing() {
+      let temp = tempfile::tempdir().unwrap();
+      let server = crate::test_support::start_fake_server(temp.path()).await;
+      let params = json!({ "text": "ünïcödé", "n": 7 });
+
+      let response = server
+         .client
+         .request_value("test/looseHeaders", params.clone())
+         .await
+         .unwrap();
+
+      assert_eq!(response, params);
+   }
+
+   fn read_frames(stream: &str) -> (Vec<Value>, std::io::Result<Option<Vec<u8>>>) {
+      let mut reader = std::io::Cursor::new(stream.as_bytes().to_vec());
+      let mut frames = Vec::new();
+      loop {
+         match read_frame(&mut reader) {
+            Ok(Some(body)) => frames.push(serde_json::from_slice(&body).unwrap()),
+            end => return (frames, end),
+         }
+      }
+   }
+
+   #[test]
+   fn parses_content_length_regardless_of_header_case_and_whitespace() {
+      for line in [
+         "Content-Length: 12\r\n",
+         "content-length: 12\r\n",
+         "CONTENT-LENGTH:12\r\n",
+         "  Content-length :   12  \r\n",
+         "Content-Length: 12\n",
+      ] {
+         assert_eq!(parse_content_length_header(line), Some(12), "{line:?}");
+      }
+
+      for line in [
+         "Content-Type: application/vscode-jsonrpc; charset=utf-8\r\n",
+         "Content-Length-Extra: 12\r\n",
+         "Content-Length: twelve\r\n",
+         "Content-Length 12\r\n",
+      ] {
+         assert_eq!(parse_content_length_header(line), None, "{line:?}");
+      }
+   }
+
+   #[test]
+   fn reads_consecutive_frames_with_mixed_headers() {
+      let first = r#"{"id":1}"#;
+      let second = r#"{"id":2}"#;
+      let stream = format!(
+         "content-length: {}\r\nX-Trace: a\r\n\r\n{first}Content-Type: \
+          application/vscode-jsonrpc\nCONTENT-LENGTH:{}\n\n{second}",
+         first.len(),
+         second.len()
+      );
+
+      let (frames, end) = read_frames(&stream);
+
+      assert_eq!(frames, vec![json!({ "id": 1 }), json!({ "id": 2 })]);
+      assert!(matches!(end, Ok(None)));
+   }
+
+   #[test]
+   fn skips_header_blocks_without_a_usable_length() {
+      let body = r#"{"ok":true}"#;
+      let stream = format!(
+         "\r\nX-Only: header\r\n\r\nContent-Length: 0\r\n\r\nContent-Length: {}\r\n\r\n{body}",
+         body.len()
+      );
+
+      let (frames, end) = read_frames(&stream);
+
+      assert_eq!(frames, vec![json!({ "ok": true })]);
+      assert!(matches!(end, Ok(None)));
+   }
+
+   #[test]
+   fn reports_a_truncated_body_as_an_error() {
+      let (frames, end) = read_frames("Content-Length: 50\r\n\r\n{\"id\":1}");
+
+      assert!(frames.is_empty());
+      assert_eq!(end.unwrap_err().kind(), std::io::ErrorKind::UnexpectedEof);
+   }
+
+   #[tokio::test]
    async fn matches_out_of_order_responses_to_their_requests() {
       let temp = tempfile::tempdir().unwrap();
       let server = crate::test_support::start_fake_server(temp.path()).await;
@@ -1767,5 +1941,31 @@ mod tests {
             .to_string()
             .contains("not running")
       );
+   }
+
+   #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+   async fn every_request_in_flight_during_a_crash_resolves() {
+      let temp = tempfile::tempdir().unwrap();
+      let server = crate::test_support::start_fake_server(temp.path()).await;
+      let crash_client = server.client.clone();
+      let crash =
+         tokio::spawn(async move { crash_client.request_value("test/crash", json!(null)).await });
+      let racing: Vec<_> = (0..32)
+         .map(|n| {
+            let client = server.client.clone();
+            tokio::spawn(async move { client.request_value("test/echo", json!(n)).await })
+         })
+         .collect();
+
+      tokio::time::timeout(std::time::Duration::from_secs(30), async {
+         assert!(crash.await.unwrap().is_err());
+         for request in racing {
+            let _ = request.await.unwrap();
+         }
+      })
+      .await
+      .expect("no request may wait forever once the server has exited");
+
+      assert!(!server.client.is_running());
    }
 }
