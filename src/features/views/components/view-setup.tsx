@@ -175,7 +175,7 @@ export function ViewSetup({ projectPath, view, onCancel, onSave }: ViewSetupProp
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Badge>
             <SparkleIcon />
-            Athas Intelligence
+            Athas AI
           </Badge>
           {repository ? (
             <span className="flex min-w-0 items-center gap-1.5 font-sans ui-text-sm text-subtle-foreground">
@@ -226,8 +226,8 @@ export function ViewSetup({ projectPath, view, onCancel, onSave }: ViewSetupProp
             </p>
           ) : null}
           <p className="font-sans ui-text-sm text-subtle-foreground">
-            Use Athas Intelligence or your own provider for custom requests. Common GitHub views
-            also work without AI.
+            Use Athas AI or your own provider for custom requests. Common GitHub views also work
+            without AI.
           </p>
           {error ? (
             <p role="alert" className="font-sans ui-text-sm text-destructive">
@@ -353,7 +353,7 @@ export function ViewSetup({ projectPath, view, onCancel, onSave }: ViewSetupProp
                 }}
               >
                 <SparkleIcon />
-                Use Athas Intelligence
+                Use Athas AI
               </Button>
             ) : (
               <span />

@@ -1,19 +1,19 @@
 import { ChevronRightIcon } from "@/ui/icons";
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { Marker, MarkerContent, MarkerIcon } from "@/ui/marker";
+import { Marker, MarkerContent, MarkerIcon, type MarkerIconTone } from "@/ui/marker";
 import { Shimmer } from "@/ui/shimmer";
 import { cn } from "@/utils/cn";
 
 type ActivityState = "running" | "success" | "error" | "warning" | "info";
 
-const stateClassNames: Record<ActivityState, string> = {
-  running: "text-primary",
-  success: "text-success",
-  error: "text-destructive",
-  warning: "text-warning",
-  info: "text-subtle-foreground",
-};
+const stateTones = {
+  running: "accent",
+  success: "success",
+  error: "error",
+  warning: "warning",
+  info: "default",
+} as const satisfies Record<ActivityState, MarkerIconTone>;
 
 interface ChatActivityLineProps {
   icon?: ReactNode;
@@ -50,7 +50,7 @@ export function ChatActivityLine({
           onClick={canExpand ? () => setIsExpanded((current) => !current) : undefined}
           className="min-w-0 flex-1"
         >
-          <MarkerIcon className={stateClassNames[state]}>
+          <MarkerIcon tone={stateTones[state]}>
             {icon ?? <span className="size-1.5 rounded-full bg-current" />}
           </MarkerIcon>
           <MarkerContent className="flex flex-1 items-center gap-1">

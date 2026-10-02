@@ -85,14 +85,8 @@ export function SharingSettings() {
           onSaved={() => void run()}
         />
       )}
-      <Section
-        title="Cloud Sessions"
-        description="Keep your agent conversations available on the web. Synced sessions are private to your account."
-      >
-        <SettingRow
-          label="Sync Agent Sessions"
-          description="Upload existing conversations and keep new responses in sync while Athas runs. Turning this off keeps existing cloud copies."
-        >
+      <Section title="Cloud Sessions">
+        <SettingRow label="Sync Agent Sessions">
           <Switch
             aria-label="Sync agent sessions"
             checked={options?.sessionsEnabled ?? false}
@@ -100,22 +94,16 @@ export function SharingSettings() {
             onChange={(enabled) => void run(() => setSessionSync(enabled))}
           />
         </SettingRow>
-        <SettingRow
-          label="Web Library"
-          description="Read your private sessions and manage links on athas.dev"
-        >
+        <SettingRow label="Web Library">
           <Button onClick={() => void openUrl(`${base}/dashboard/settings/sharing`)}>
             Open on web
           </Button>
         </SettingRow>
       </Section>
-      <Section
-        title="Shared Items"
-        description="Manage access and pause live updates without changing the link"
-      >
+      <Section title="Shared Items">
         {!options && (
           <EmptyState
-            className="py-6"
+            variant="section"
             tone={error ? "error" : "neutral"}
             message={error || "Loading shared items…"}
             role={error ? "alert" : "status"}
@@ -127,10 +115,7 @@ export function SharingSettings() {
           />
         )}
         {options?.items.filter((item) => item.visibility !== "private").length === 0 && (
-          <EmptyState
-            className="py-6"
-            message="No shared links yet. Share a conversation, selection, or editor buffer to get started."
-          />
+          <EmptyState variant="section" message="No shared links" />
         )}
         {options?.items
           .filter((item) => item.visibility !== "private")
@@ -140,7 +125,7 @@ export function SharingSettings() {
               label={item.title}
               description={`${item.visibility} · ${item.live ? "Live" : "Snapshot"}`}
             >
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-1">
                 {item.sourceId && item.kind !== "snippet" && (
                   <Switch
                     aria-label={`Live updates for ${item.title}`}
@@ -151,14 +136,20 @@ export function SharingSettings() {
                     }
                   />
                 )}
-                <Button disabled={busy} onClick={() => void copyLink(item.id)}>
+                <Button variant="ghost" disabled={busy} onClick={() => void copyLink(item.id)}>
                   Copy link
                 </Button>
-                <Button disabled={busy} onClick={() => setEditing(item)}>
+                <Button variant="ghost" disabled={busy} onClick={() => setEditing(item)}>
                   Access
                 </Button>
-                <Button onClick={() => void openUrl(`${base}/s/${item.id}`)}>Open</Button>
-                <Button disabled={busy} onClick={() => void run(() => revokeShare(item.id))}>
+                <Button variant="ghost" onClick={() => void openUrl(`${base}/s/${item.id}`)}>
+                  Open
+                </Button>
+                <Button
+                  variant="ghost"
+                  disabled={busy}
+                  onClick={() => void run(() => revokeShare(item.id))}
+                >
                   Revoke
                 </Button>
               </div>

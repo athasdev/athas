@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { useAgentOptions } from "@/features/ai/hooks/use-agent-options";
-import { isTerminalAgent } from "@/features/ai/lib/terminal-agents";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
@@ -356,10 +355,7 @@ function CreateContent({ onCreated }: { onCreated: (taskId: string) => void }) {
   const [cadence, setCadence] = useState<ContinuousAgentCadence>("hourly");
 
   const runnableAgents = useMemo(
-    () =>
-      options.filter(
-        (option) => option.id !== "custom" && option.isInstalled && !isTerminalAgent(option.id),
-      ),
+    () => options.filter((option) => option.id !== "custom" && option.isInstalled),
     [options],
   );
 

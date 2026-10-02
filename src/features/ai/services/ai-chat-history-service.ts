@@ -1,9 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import { parseChatSessionSettings } from "@/features/ai/lib/chat-session-settings";
-import type { AgentType, Chat, ToolCall } from "@/features/ai/types/ai-chat.types";
+import type { Chat, ToolCall } from "@/features/ai/types/ai-chat.types";
 import type { AcpTurnUsage } from "@/features/ai/types/acp.types";
 import { coalesceAssistantResponses } from "@/features/ai/lib/assistant-response";
 import { normalizeMessageFollowUpActions } from "@/features/ai/lib/follow-up-actions";
+import { migrateLegacyAgentId } from "@/features/ai/lib/agent-clis";
 
 /**
  * Chat History Database Utilities
@@ -55,7 +56,7 @@ interface ToolCallData {
 
 type ToolCallMeta = Pick<
   ToolCall,
-  "id" | "kind" | "status" | "locations" | "contentOffset" | "terminals"
+  "id" | "kind" | "status" | "locations" | "contentOffset" | "terminals" | "durationMs"
 >;
 
 function serializeToolCallMeta(toolCall: ToolCall): string | null {
@@ -65,6 +66,7 @@ function serializeToolCallMeta(toolCall: ToolCall): string | null {
   if (toolCall.status) meta.status = toolCall.status;
   if (toolCall.locations?.length) meta.locations = toolCall.locations;
   if (typeof toolCall.contentOffset === "number") meta.contentOffset = toolCall.contentOffset;
+  if (typeof toolCall.durationMs === "number") meta.durationMs = toolCall.durationMs;
   if (toolCall.terminals && Object.keys(toolCall.terminals).length > 0) {
     meta.terminals = toolCall.terminals;
   }
@@ -224,7 +226,7 @@ function dataToChat(data: ChatWithMessages): Chat {
     messages,
     createdAt: new Date(data.chat.created_at),
     lastMessageAt: new Date(data.chat.last_message_at),
-    agentId: (data.chat.agent_id || "custom") as AgentType,
+    agentId: migrateLegacyAgentId(data.chat.agent_id || "custom"),
     acpSessionId: data.chat.acp_session_id,
     workspacePath: data.chat.workspace_path,
     providerId: data.chat.provider_id,
@@ -291,7 +293,7 @@ export const loadAllChatsFromDb = async (): Promise<Omit<Chat, "messages">[]> =>
       messages: [], // Messages loaded separately
       createdAt: new Date(chat.created_at),
       lastMessageAt: new Date(chat.last_message_at),
-      agentId: (chat.agent_id || "custom") as AgentType,
+      agentId: migrateLegacyAgentId(chat.agent_id || "custom"),
       acpSessionId: chat.acp_session_id,
       workspacePath: chat.workspace_path,
       providerId: chat.provider_id,

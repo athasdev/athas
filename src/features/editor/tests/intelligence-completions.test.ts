@@ -75,6 +75,7 @@ vi.mock("@/features/ai/intelligence/stores/intelligence-settings.store", () => (
 }));
 
 import { toast } from "sonner";
+import { AutocompleteModelRequiredError } from "@/features/ai/intelligence/services/intelligence-connection";
 import { InlineEditError } from "@/features/ai/intelligence/services/intelligence-text-service";
 import {
   createIntelligenceCompletionsProvider,
@@ -260,6 +261,15 @@ describe("Intelligence editor completions", () => {
     await setup().run();
     expect(status()).toMatchObject({ kind: "paused", reason: "sign-in" });
     expect(toast.warning).not.toHaveBeenCalled();
+  });
+
+  it("pauses without a notice until Tab has a model to run on", async () => {
+    mocks.request.mockRejectedValue(new AutocompleteModelRequiredError("Choose a model."));
+    await setup().run();
+    expect(status()).toEqual({ kind: "paused", reason: "model", message: "Choose a model." });
+    expect(toast.warning).not.toHaveBeenCalled();
+    await setup().run();
+    expect(mocks.request).toHaveBeenCalledOnce();
   });
 
   it("pauses for organization policy only when Athas refuses", async () => {

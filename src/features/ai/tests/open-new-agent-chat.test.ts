@@ -6,7 +6,7 @@ const mocks = vi.hoisted(() => ({
   createNewChat: vi.fn(() => "chat-1"),
   setPendingAgentLaunchRequest: vi.fn(),
   openAgentBuffer: vi.fn(() => "agent://chat-1"),
-  openTerminalAgent: vi.fn(() => "terminal://claude"),
+  openTerminalBuffer: vi.fn(() => "terminal://claude"),
 }));
 
 vi.mock("@/features/ai/stores/ai-chat.store", () => ({
@@ -23,16 +23,13 @@ vi.mock("@/features/ai/stores/ai-chat.store", () => ({
 
 vi.mock("@/features/editor/stores/buffer.store", () => ({
   useBufferStore: {
-    getState: () => ({ actions: { openAgentBuffer: mocks.openAgentBuffer } }),
+    getState: () => ({
+      actions: {
+        openAgentBuffer: mocks.openAgentBuffer,
+        openTerminalBuffer: mocks.openTerminalBuffer,
+      },
+    }),
   },
-}));
-
-vi.mock("@/features/ai/lib/terminal-agents", () => ({
-  isTerminalAgent: (agentId: string) => agentId === "claude-code",
-}));
-
-vi.mock("@/features/ai/lib/terminal-agent-terminal", () => ({
-  openTerminalAgent: mocks.openTerminalAgent,
 }));
 
 describe("open new agent chat", () => {
@@ -61,12 +58,20 @@ describe("open new agent chat", () => {
     });
   });
 
-  it("opens terminal agents without creating a chat", () => {
-    const bufferId = openNewAgentChat("claude-code");
+  it.each([
+    ["claude-code", "claude-acp"],
+    ["antigravity-cli", "antigravity-acp"],
+    ["claude-acp", "claude-acp"],
+    ["gemini-cli", "gemini-cli"],
+  ])("opens %s as a %s chat instead of a terminal", (agentId, chatAgentId) => {
+    const bufferId = openNewAgentChat(agentId);
 
-    expect(mocks.openTerminalAgent).toHaveBeenCalledWith("claude-code");
-    expect(mocks.createNewChat).not.toHaveBeenCalled();
-    expect(bufferId).toBe("terminal://claude");
+    expect(mocks.openTerminalBuffer).not.toHaveBeenCalled();
+    expect(mocks.createNewChat).toHaveBeenCalledWith(chatAgentId, {
+      activate: false,
+      reuseEmpty: true,
+    });
+    expect(bufferId).toBe("agent://chat-1");
   });
 
   it("opens a new chat with editor selection context without submitting a prompt", () => {
@@ -96,7 +101,7 @@ describe("open new agent chat", () => {
     expect(mocks.openAgentBuffer).toHaveBeenCalledWith("chat-1");
   });
 
-  it("uses a context-capable chat when the current agent only runs in a terminal", () => {
+  it("keeps editor selections with a former terminal agent, now an ACP chat", () => {
     mocks.currentAgentId = "claude-code";
     const editorSelection = {
       id: "selection-1",
@@ -113,10 +118,10 @@ describe("open new agent chat", () => {
 
     openNewAgentChat(undefined, { editorSelections: [editorSelection] });
 
-    expect(mocks.openTerminalAgent).not.toHaveBeenCalled();
+    expect(mocks.openTerminalBuffer).not.toHaveBeenCalled();
     // A launch request carries its own prompt, so it must not land in a
     // session the user already has open.
-    expect(mocks.createNewChat).toHaveBeenCalledWith("custom", {
+    expect(mocks.createNewChat).toHaveBeenCalledWith("claude-acp", {
       activate: false,
       reuseEmpty: false,
     });

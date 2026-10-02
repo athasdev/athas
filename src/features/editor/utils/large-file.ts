@@ -1,3 +1,5 @@
+import type { EditorModelTextChange } from "../types/editor.types";
+
 const LARGE_FILE_TOKENIZATION_SIZE_THRESHOLD = 20 * 1024 * 1024;
 const LARGE_FILE_TOKENIZATION_LINE_THRESHOLD = 300_000;
 const RESPONSIVE_LARGE_FILE_SIZE_THRESHOLD = 2 * 1024 * 1024;
@@ -250,6 +252,52 @@ export function applyIncrementalLargeEditorModeInfo(
     largeContentMode,
     lineOffsets,
   };
+}
+
+export function applyEditorChangesToLargeEditorModeInfo(
+  previousContentLength: number,
+  previousInfo: LargeEditorModeInfo,
+  changes: readonly EditorModelTextChange[],
+): LargeEditorModeInfo | null {
+  if (changes.length === 0) return previousInfo;
+
+  let insertedNewlines = 0;
+  let removedNewlines = 0;
+  let contentLengthDelta = 0;
+  for (const change of changes) {
+    insertedNewlines += countNewlines(change.text);
+    removedNewlines += change.endLine - change.startLine;
+    contentLengthDelta += change.text.length - change.rangeLength;
+  }
+
+  const lineCount = Math.max(1, previousInfo.lineCount + insertedNewlines - removedNewlines);
+  const nextContentLength = Math.max(0, previousContentLength + contentLengthDelta);
+  const largeContentMode = isTooLargeForEditorServices({
+    contentLength: nextContentLength,
+    lineCount,
+  });
+
+  if (!largeContentMode) {
+    return { lineCount, largeContentMode: false };
+  }
+  if (!previousInfo.lineOffsets) return null;
+
+  let lineOffsets = previousInfo.lineOffsets;
+  const descendingChanges = [...changes].sort(
+    (left, right) => right.rangeOffset - left.rangeOffset,
+  );
+  for (const change of descendingChanges) {
+    lineOffsets = updateLineOffsetsForEdit(
+      lineOffsets,
+      change.rangeOffset,
+      change.rangeOffset + change.rangeLength,
+      change.text,
+      change.text.length - change.rangeLength,
+    );
+  }
+  if (lineOffsets.length !== lineCount) return null;
+
+  return { lineCount, largeContentMode: true, lineOffsets };
 }
 
 function buildLineOffsets(content: string): number[] {

@@ -1,4 +1,4 @@
-import { ExtensionsIcon, PackageIcon } from "@/ui/icons";
+import { PackageIcon } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
@@ -10,6 +10,7 @@ import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useDropdownMenu } from "@/ui/dropdown";
 import { ContextMenuPopup, createContextMenuGroups } from "@/ui/context-menu";
 import { EmptyState } from "@/ui/empty";
+import { GroupedSection } from "@/ui/grouped-section";
 import { SearchInput } from "@/ui/search";
 import { Spinner } from "@/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
@@ -31,6 +32,20 @@ const EXTENSION_FILTER_IDS = new Set<string>(EXTENSION_FILTERS.map((filter) => f
 
 function isExtensionFilter(value: string): value is "all" | ExtensionCategory {
   return EXTENSION_FILTER_IDS.has(value);
+}
+
+/** One group per category on "All"; a filtered view is already one category. */
+function groupExtensionsByCategory(
+  extensions: UnifiedExtension[],
+  filter: "all" | ExtensionCategory,
+) {
+  return EXTENSION_CATEGORIES.filter((category) => filter === "all" || category.id === filter)
+    .map((category) => ({
+      id: category.id,
+      label: category.label,
+      extensions: extensions.filter((extension) => extension.category === category.id),
+    }))
+    .filter((group) => group.extensions.length > 0);
 }
 
 function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
@@ -260,10 +275,11 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
   const resultLabel = `${visibleExtensions.length} integration${visibleExtensions.length === 1 ? "" : "s"}`;
 
   return (
-    <Workbench>
+    <Workbench plane="surface">
       {detail ?? (
         <WorkbenchContent
           title="Integrations"
+          width="narrow"
           actions={
             <SearchInput
               value={searchQuery}
@@ -286,7 +302,7 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
               }
             }}
           >
-            <div className="mb-4 min-w-0 overflow-x-auto">
+            <div className="mb-3 min-w-0 overflow-x-auto">
               <TabsList aria-label="Integration categories">
                 {EXTENSION_FILTERS.map((filter) => (
                   <TabsTrigger key={filter.id} value={filter.id} className="flex-none">
@@ -299,8 +315,6 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
               {isLoading ? (
                 <EmptyState
                   className="min-h-64"
-                  icon={<ExtensionsIcon />}
-                  title="Loading integrations"
                   message={<Spinner label="Loading integrations" showLabel compact />}
                 />
               ) : visibleExtensions.length === 0 ? (
@@ -308,7 +322,6 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
                   className="min-h-64"
                   icon={<PackageIcon />}
                   title="No integrations found"
-                  message="Try another search or category."
                   action={
                     normalizedSearchQuery
                       ? { label: "Clear search", onClick: () => setSearchQuery("") }
@@ -316,17 +329,21 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
                   }
                 />
               ) : (
-                <div className="grid grid-cols-1 gap-3 @min-[640px]/workbench-content:grid-cols-2">
-                  {visibleExtensions.map((extension) => (
-                    <ExtensionCatalogCard
-                      key={extension.id}
-                      extension={extension}
-                      onSelect={() => openExtensionBuffer(extension.id, extension.name)}
-                      onContextMenu={handleExtensionContextMenu}
-                      isInstalling={actions.isInstalling(extension)}
-                      hasUpdate={actions.hasUpdate(extension)}
-                      hasRuntimeIssue={Boolean(extension.runtimeIssues?.length)}
-                    />
+                <div className="flex flex-col gap-6">
+                  {groupExtensionsByCategory(visibleExtensions, activeFilter).map((group) => (
+                    <GroupedSection key={group.id} title={group.label}>
+                      {group.extensions.map((extension) => (
+                        <ExtensionCatalogCard
+                          key={extension.id}
+                          extension={extension}
+                          onSelect={() => openExtensionBuffer(extension.id, extension.name)}
+                          onContextMenu={handleExtensionContextMenu}
+                          isInstalling={actions.isInstalling(extension)}
+                          hasUpdate={actions.hasUpdate(extension)}
+                          hasRuntimeIssue={Boolean(extension.runtimeIssues?.length)}
+                        />
+                      ))}
+                    </GroupedSection>
                   ))}
                 </div>
               )}

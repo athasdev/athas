@@ -48,15 +48,9 @@ export function AgentAllowedActionsSettings() {
   const actions = readAllowedActions(serverNames);
 
   return (
-    <Section
-      title="Allowed Commands"
-      description="Commands and MCP tools the Athas agent runs without asking. Remove one to be asked again."
-    >
+    <Section title="Allowed Commands">
       {actions.length === 0 ? (
-        <EmptyState
-          className="py-6"
-          message="Nothing is always allowed yet. Choose Always allow when the agent asks."
-        />
+        <EmptyState variant="section" message="Nothing yet. Choose Always allow when asked." />
       ) : (
         actions.map((action) => (
           <SettingRow key={action.key} label={action.label} description={action.description}>

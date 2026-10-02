@@ -187,7 +187,6 @@ export const AppearanceSettings = () => {
       <Section title="Theme">
         <SettingRow
           label="Sync With OS"
-          description="Automatically switch between your preferred light and dark themes"
           onReset={() => updateSetting("syncSystemTheme", getDefaultSetting("syncSystemTheme"))}
           canReset={settings.syncSystemTheme !== getDefaultSetting("syncSystemTheme")}
         >
@@ -200,7 +199,6 @@ export const AppearanceSettings = () => {
         {!settings.syncSystemTheme ? (
           <SettingRow
             label="Color Theme"
-            description="Choose your preferred color theme"
             onReset={() => updateSetting("theme", getDefaultSetting("theme"))}
             canReset={settings.theme !== getDefaultSetting("theme")}
           >
@@ -219,7 +217,7 @@ export const AppearanceSettings = () => {
           <>
             <SettingRow
               label="Preferred Light Theme"
-              description="Used when Sync With OS is enabled and the system appearance is light"
+              level="nested"
               onReset={() => updateSetting("autoThemeLight", getDefaultSetting("autoThemeLight"))}
               canReset={settings.autoThemeLight !== getDefaultSetting("autoThemeLight")}
             >
@@ -235,7 +233,7 @@ export const AppearanceSettings = () => {
 
             <SettingRow
               label="Preferred Dark Theme"
-              description="Used when Sync With OS is enabled and the system appearance is dark"
+              level="nested"
               onReset={() => updateSetting("autoThemeDark", getDefaultSetting("autoThemeDark"))}
               canReset={settings.autoThemeDark !== getDefaultSetting("autoThemeDark")}
             >
@@ -253,7 +251,6 @@ export const AppearanceSettings = () => {
 
         <SettingRow
           label="Icons"
-          description="Icons displayed in the file tree and tabs"
           onReset={() => updateSetting("iconTheme", getDefaultSetting("iconTheme"))}
           canReset={settings.iconTheme !== getDefaultSetting("iconTheme")}
         >
@@ -270,12 +267,9 @@ export const AppearanceSettings = () => {
         <SettingRow
           label="Custom Themes"
           description={
-            <>
-              Import Athas theme JSON or create one from an installed theme.{" "}
-              <TextLink href={themeDocsUrl} target="_blank" rel="noopener noreferrer">
-                Format guide
-              </TextLink>
-            </>
+            <TextLink href={themeDocsUrl} target="_blank" rel="noopener noreferrer">
+              Theme format
+            </TextLink>
           }
         >
           <div className="flex items-center gap-2">
@@ -291,11 +285,7 @@ export const AppearanceSettings = () => {
         </SettingRow>
 
         {customThemes.map((theme) => (
-          <SettingRow
-            key={theme.id}
-            label={theme.name}
-            description={`${theme.category} custom theme · ${theme.id}`}
-          >
+          <SettingRow key={theme.id} label={theme.name} description={theme.category}>
             <Button
               type="button"
               iconOnly
@@ -313,7 +303,6 @@ export const AppearanceSettings = () => {
       <Section title="Typography">
         <SettingRow
           label="UI Font Family"
-          description="Font family for UI elements (file tree, markdown, etc.)"
           onReset={() => updateSetting("uiFontFamily", getDefaultSetting("uiFontFamily"))}
           canReset={settings.uiFontFamily !== getDefaultSetting("uiFontFamily")}
         >
@@ -326,7 +315,6 @@ export const AppearanceSettings = () => {
 
         <SettingRow
           label="UI Font Size"
-          description="Adjust interface text and control scale in 0.5px steps"
           onReset={() => updateSetting("uiFontSize", getDefaultSetting("uiFontSize"))}
           canReset={settings.uiFontSize !== getDefaultSetting("uiFontSize")}
         >
@@ -345,7 +333,6 @@ export const AppearanceSettings = () => {
       <Section title="Interface">
         <SettingRow
           label="Reduce Motion"
-          description="Reduce non-essential interface animations while keeping state changes visible"
           onReset={() => updateSetting("reduceMotion", getDefaultSetting("reduceMotion"))}
           canReset={settings.reduceMotion !== getDefaultSetting("reduceMotion")}
         >
@@ -357,7 +344,6 @@ export const AppearanceSettings = () => {
 
         <SettingRow
           label="Show Tab Icons"
-          description="Show file and view icons in editor tabs"
           onReset={() => updateSetting("showTabIcons", getDefaultSetting("showTabIcons"))}
           canReset={settings.showTabIcons !== getDefaultSetting("showTabIcons")}
         >
@@ -369,7 +355,6 @@ export const AppearanceSettings = () => {
 
         <SettingRow
           label="Tab Close Buttons"
-          description="Choose when unpinned tabs show their close button"
           onReset={() =>
             updateSetting("tabCloseButtonVisibility", getDefaultSetting("tabCloseButtonVisibility"))
           }
@@ -396,7 +381,6 @@ export const AppearanceSettings = () => {
         {!IS_MAC && !IS_WINDOWS && !IS_LINUX && (
           <SettingRow
             label="Native Menu Bar"
-            description="Use the native menu bar or a custom UI menu bar"
             onReset={() => updateSetting("nativeMenuBar", getDefaultSetting("nativeMenuBar"))}
             canReset={settings.nativeMenuBar !== getDefaultSetting("nativeMenuBar")}
           >
@@ -413,7 +397,6 @@ export const AppearanceSettings = () => {
         {!IS_MAC && (
           <SettingRow
             label="Compact Menu Bar"
-            description="Requires UI menu bar; compact hamburger or full UI menu"
             onReset={() => updateSetting("compactMenuBar", getDefaultSetting("compactMenuBar"))}
             canReset={settings.compactMenuBar !== getDefaultSetting("compactMenuBar")}
           >
@@ -427,7 +410,6 @@ export const AppearanceSettings = () => {
 
         <SettingRow
           label="Window Transparency"
-          description="Use translucent app chrome and transparent native windows where supported"
           onReset={() =>
             updateSetting("windowTransparency", getDefaultSetting("windowTransparency"))
           }
@@ -441,7 +423,6 @@ export const AppearanceSettings = () => {
 
         <SettingRow
           label="Open Projects In New Window"
-          description="Open each new project in a separate window and disable activity-bar project switching"
           onReset={() =>
             updateSetting("openFoldersInNewWindow", getDefaultSetting("openFoldersInNewWindow"))
           }

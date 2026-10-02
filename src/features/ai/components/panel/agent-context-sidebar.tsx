@@ -7,6 +7,7 @@ import {
   TerminalIcon,
 } from "@/ui/icons";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { DiffStats } from "@/features/ai/components/diff-stats";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GenerativeUIRenderer } from "@/extensions/ui/components/generative-ui-renderer";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
@@ -57,16 +58,6 @@ function useActiveAgentSessionId(): string | null {
 
 function isAbsolutePath(path: string) {
   return path.startsWith("/") || /^[A-Za-z]:[\\/]/.test(path);
-}
-
-function DiffStats({ additions, deletions }: { additions: number; deletions: number }) {
-  if (additions === 0 && deletions === 0) return null;
-  return (
-    <span className="flex items-center gap-1 font-mono tabular-nums">
-      {additions > 0 ? <span className="text-git-added">+{additions}</span> : null}
-      {deletions > 0 ? <span className="text-git-deleted">-{deletions}</span> : null}
-    </span>
-  );
 }
 
 function resourceIcon(resource: AgentSessionResource) {

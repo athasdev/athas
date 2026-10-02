@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vite-plus/test";
 import { EditorUndoGroupTracker } from "@/features/editor/history/undo-group-tracker";
+import type { StoredHistoryEntry } from "@/features/editor/types/history.types";
+
+function snapshotContent(entry: StoredHistoryEntry | null): string | undefined {
+  return entry && "content" in entry ? entry.content : undefined;
+}
 
 describe("editor undo group tracker", () => {
   it("flushes a typing group after only the cursor moved", () => {
@@ -13,7 +18,7 @@ describe("editor undo group tracker", () => {
 
     const flushedEntry = tracker.flush("buffer-1", "asd");
 
-    expect(flushedEntry?.content).toBe("");
+    expect(snapshotContent(flushedEntry)).toBe("");
     expect(flushedEntry?.cursorPosition).toEqual({ line: 0, column: 0, offset: 0 });
   });
 
@@ -30,7 +35,7 @@ describe("editor undo group tracker", () => {
     expect(tracker.track("buffer-1", "asd\na", "asd\nas")).toEqual([]);
     expect(tracker.track("buffer-1", "asd\nas", "asd\nasd")).toEqual([]);
 
-    expect(tracker.flush("buffer-1", "asd\nasd")?.content).toBe("asd");
+    expect(snapshotContent(tracker.flush("buffer-1", "asd\nasd"))).toBe("asd");
   });
 
   it("starts a new group when typing resumes at a different offset", () => {
@@ -43,7 +48,7 @@ describe("editor undo group tracker", () => {
     expect(tracker.track("buffer-1", "asd", "xasd")).toEqual([
       expect.objectContaining({ content: "" }),
     ]);
-    expect(tracker.flush("buffer-1", "xasd")?.content).toBe("asd");
+    expect(snapshotContent(tracker.flush("buffer-1", "xasd"))).toBe("asd");
   });
 
   it("groups incremental Monaco changes without scanning for their offsets", () => {
@@ -59,6 +64,6 @@ describe("editor undo group tracker", () => {
         contentChange: { rangeOffset: 1, rangeLength: 0, text: "b" },
       }),
     ).toEqual([]);
-    expect(tracker.flush("buffer-1", "ab")?.content).toBe("");
+    expect(snapshotContent(tracker.flush("buffer-1", "ab"))).toBe("");
   });
 });

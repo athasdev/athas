@@ -3,15 +3,19 @@ import type * as Monaco from "monaco-editor";
 
 interface SharedMonacoModel {
   model: Monaco.editor.ITextModel;
+  sessionId: string;
   referenceCount: number;
   releaseTimer: ReturnType<typeof globalThis.setTimeout> | null;
 }
 
 const sharedModels = new Map<string, SharedMonacoModel>();
 const MODEL_RELEASE_GRACE_MS = 5_000;
+let nextModelSessionId = 1;
 
 export interface AcquiredMonacoModel {
   model: Monaco.editor.ITextModel;
+  /** Identifies this model's version ids; a recreated model starts a new session. */
+  sessionId: string;
   release: () => void;
 }
 
@@ -24,7 +28,12 @@ export function acquireMonacoModel(
   let entry = sharedModels.get(key);
   if (!entry || entry.model.isDisposed()) {
     const model = monacoEditor.getModel(uri) ?? monacoEditor.createModel(content, languageId, uri);
-    entry = { model, referenceCount: 0, releaseTimer: null };
+    entry = {
+      model,
+      sessionId: `monaco-model-${nextModelSessionId++}`,
+      referenceCount: 0,
+      releaseTimer: null,
+    };
     sharedModels.set(key, entry);
   }
 
@@ -38,6 +47,7 @@ export function acquireMonacoModel(
   let released = false;
   return {
     model,
+    sessionId: entry.sessionId,
     release: () => {
       if (released) return;
       released = true;

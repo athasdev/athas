@@ -21,8 +21,7 @@ import { TextLink } from "@/ui/text-link";
 import Section, { SettingBlock, SettingsView, SettingRow } from "../settings-section";
 import { getServiceUrls } from "@/config/services";
 
-const telemetryDescription =
-  "Athas sends anonymous operational metadata for updates and, when enabled, heartbeats, integrations, and crashes; it never sends file paths, project names, prompts, or editor content.";
+const telemetryDescription = "Never includes file paths, prompts, or code.";
 const telemetryLearnMoreUrl = getServiceUrls().telemetryDocsUrl;
 
 function getTelemetryStatusVariant(status: TelemetryLogEntry["status"]): BadgeTone {
@@ -122,35 +121,23 @@ export const AdvancedSettings = () => {
   return (
     <SettingsView>
       <Section title="Performance experiments">
-        <SettingRow
-          label="Experimental WebGPU renderer"
-          description="Try GPU rendering in Monaco editors. Falls back to DOM when WebGPU is unavailable. Stored on this device only."
-        >
+        <SettingRow label="Experimental WebGPU renderer" description="Falls back to DOM rendering">
           <Switch checked={webgpu} onChange={toggleWebgpu} />
         </SettingRow>
-        <SettingRow
-          label="Show performance monitor"
-          description="Show frame callback FPS, longest frame interval, and renderer status. The monitor itself adds a small amount of work."
-        >
+        <SettingRow label="Show performance monitor">
           <Switch checked={showMonitor} onChange={toggleMonitor} />
         </SettingRow>
       </Section>
       <Section title="Data">
-        <SettingRow label="Export Settings" description="Save all app settings to a JSON file">
+        <SettingRow label="Export Settings">
           <Button variant="default" onClick={() => void handleExportSettings()}>
             Export
           </Button>
         </SettingRow>
-        <SettingRow
-          label="Import Settings"
-          description="Restore app settings from an Athas settings JSON file"
-        >
+        <SettingRow label="Import Settings">
           <Button variant="default" onClick={handleImportSettings}>
             Import
           </Button>
-        </SettingRow>
-        <SettingRow label="Reset Settings" description="Reset all settings to their default values">
-          <TypedConfirmAction actionLabel="Reset" onConfirm={handleResetSettings} />
         </SettingRow>
       </Section>
       <Section title="Telemetry">
@@ -167,27 +154,24 @@ export const AdvancedSettings = () => {
         >
           <Switch checked={telemetry} onChange={(checked) => updateSetting("telemetry", checked)} />
         </SettingRow>
-        <SettingRow
-          label="Telemetry Log"
-          description="Inspect local friction signals, the upload queue, and recent delivery results"
-        >
-          <div className="flex items-center gap-2">
-            <Button variant="default" onClick={() => setShowTelemetryLog((value) => !value)}>
-              {showTelemetryLog ? "Hide Log" : "Open Log"}
-            </Button>
-            <Button variant="default" onClick={handleClearTelemetryLog}>
+        <SettingRow label="Telemetry Log">
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" onClick={handleClearTelemetryLog}>
               Clear
+            </Button>
+            <Button variant="default" onClick={() => setShowTelemetryLog((value) => !value)}>
+              {showTelemetryLog ? "Hide" : "Show"}
             </Button>
           </div>
         </SettingRow>
-        {showTelemetryLog && (
-          <SettingBlock className="max-h-72 overflow-y-auto">
-            {telemetryLog.length === 0 ? (
-              <EmptyState className="py-3" message="No telemetry entries yet" />
-            ) : (
+        {showTelemetryLog ? (
+          telemetryLog.length === 0 ? (
+            <EmptyState variant="section" message="No entries yet" />
+          ) : (
+            <SettingBlock className="max-h-72 overflow-y-auto">
               <ItemGroup>
                 {[...telemetryLog].reverse().map((entry) => (
-                  <Item key={entry.id} variant="muted">
+                  <Item key={entry.id} size="compact">
                     <ItemContent>
                       <ItemTitle>{entry.eventType}</ItemTitle>
                       <ItemDescription>{entry.error || entry.summary}</ItemDescription>
@@ -201,9 +185,14 @@ export const AdvancedSettings = () => {
                   </Item>
                 ))}
               </ItemGroup>
-            )}
-          </SettingBlock>
-        )}
+            </SettingBlock>
+          )
+        ) : null}
+      </Section>
+      <Section title="Reset" tone="danger">
+        <SettingRow label="Reset Settings" description="Restores every setting to its default">
+          <TypedConfirmAction actionLabel="Reset" onConfirm={handleResetSettings} />
+        </SettingRow>
       </Section>
     </SettingsView>
   );

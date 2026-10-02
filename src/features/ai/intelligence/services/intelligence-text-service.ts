@@ -71,7 +71,7 @@ export interface InlineEditRequest {
 
 export class InlineEditError extends Error {
   status: number;
-  /** True when the error came from the Athas Intelligence server rather than a local provider. */
+  /** True when the error came from the Athas AI server rather than a local provider. */
   hosted: boolean;
 
   constructor(message: string, status: number, options?: { hosted?: boolean }) {
@@ -106,7 +106,7 @@ export async function requestInlineEdit(
     return await sendInlineEditRequest(request, { ...options, signal });
   } catch (error) {
     if (timeout.aborted && !options?.signal?.aborted) {
-      throw new InlineEditError("Athas Intelligence took too long to respond. Try again.", 408);
+      throw new InlineEditError("The model took too long to respond. Try again.", 408);
     }
     throw error;
   }
@@ -133,7 +133,7 @@ async function sendInlineEditRequest(
   };
 
   if (!useHosted && !normalizedRequest.model) {
-    throw new InlineEditError("Choose a model for this Intelligence task.", 400);
+    throw new InlineEditError("Choose a model for this AI feature.", 400);
   }
 
   if (!useHosted) {
@@ -155,13 +155,13 @@ async function sendInlineEditRequest(
     throw new InlineEditError("The active account or team changed. Try again.", 409);
   }
   if (!token) {
-    throw new InlineEditError("Sign in to use Athas Intelligence.", 401, { hosted: true });
+    throw new InlineEditError("Sign in to use Athas AI.", 401, { hosted: true });
   }
 
   const autocomplete = request.feature === "autocomplete";
   if (normalizedRequest.selectedText.length > HOSTED_TEXT_FIELD_LIMIT) {
     throw new InlineEditError(
-      `The selection is too large for Athas Intelligence. Select at most ${HOSTED_TEXT_FIELD_LIMIT.toLocaleString("en-US")} characters.`,
+      `The selection is too large for Athas AI. Select at most ${HOSTED_TEXT_FIELD_LIMIT.toLocaleString("en-US")} characters.`,
       413,
     );
   }

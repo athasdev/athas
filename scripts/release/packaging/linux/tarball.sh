@@ -6,7 +6,6 @@ source "${script_dir}/cef.sh"
 
 arch_input="${1:?Usage: package-linux-tarball.sh <arch> [out-dir]}"
 out_dir="${2:-release-dist}"
-channel="${ATHAS_RELEASE_CHANNEL:-stable}"
 
 case "$arch_input" in
   X64 | x64 | amd64 | x86_64)
@@ -21,17 +20,10 @@ case "$arch_input" in
     ;;
 esac
 
-if [[ "$channel" == "preview" ]]; then
-  product_name="Athas Preview"
-  app_dir_name="athas-preview.app"
-  icon_dir="preview"
-  desktop_id="com.code.athas.preview"
-else
-  product_name="Athas"
-  app_dir_name="athas.app"
-  icon_dir="prod"
-  desktop_id="com.code.athas"
-fi
+product_name="Athas"
+app_dir_name="athas.app"
+icon_dir="prod"
+desktop_id="com.code.athas"
 
 version="$(bun -e 'console.log(JSON.parse(await Bun.file("package.json").text()).version)')"
 binary="target/release/athas"

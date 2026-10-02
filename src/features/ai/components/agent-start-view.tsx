@@ -12,7 +12,7 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/ui/context-menu";
-import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
+import { Empty, EmptyHeader, EmptyTitle } from "@/ui/empty";
 import {
   FileTextIcon,
   FolderOpenIcon,
@@ -88,12 +88,9 @@ export function AgentStartView({ children, showQuickActions = false }: AgentStar
   ];
 
   const startView = (
-    <Empty className="m-auto max-w-2xl gap-6 px-6 py-8" data-slot="agent-start-view">
-      <EmptyHeader className="max-w-md gap-1.5">
+    <Empty className="m-auto max-w-2xl gap-5 px-6 py-8" data-slot="agent-start-view">
+      <EmptyHeader className="max-w-md">
         <EmptyTitle className="ui-text-lg">Where should we begin?</EmptyTitle>
-        <EmptyDescription>
-          Describe a change, ask about this codebase, or pull in files with @.
-        </EmptyDescription>
       </EmptyHeader>
 
       {children}

@@ -52,77 +52,6 @@ pub struct DetachedWindowRequest {
    pub payload: Option<String>,
 }
 
-#[cfg(test)]
-mod agent_window_tests {
-   use super::*;
-
-   #[test]
-   fn opens_detached_windows_without_a_workspace_open_request() {
-      let request: CreateAppWindowRequest = serde_json::from_value(serde_json::json!({
-         "detached": { "kind": "agent", "channel": "test-channel" }
-      }))
-      .unwrap();
-      let url = build_window_open_url(Some(&request), "main-2", 123);
-      assert!(url.starts_with("/?view=detached&kind=agent&channel=test-channel&"));
-      assert!(!url.contains("target=open"));
-      assert_eq!(window_title_for_request(Some(&request)), "Agents - Athas");
-
-      let request: CreateAppWindowRequest = serde_json::from_value(serde_json::json!({
-         "detached": { "kind": "resource", "channel": "abc", "payload": "{\"a\":1}" }
-      }))
-      .unwrap();
-      let url = build_window_open_url(Some(&request), "main-3", 123);
-      assert!(
-         url.starts_with("/?view=detached&kind=resource&channel=abc&payload=%7B%22a%22%3A1%7D&")
-      );
-      assert_eq!(window_title_for_request(Some(&request)), "Athas");
-   }
-
-   #[test]
-   fn standalone_content_is_self_contained_and_encoded() {
-      let request = CreateAppWindowRequest {
-         content: Some(
-            serde_json::json!({ "type": "terminal", "command": "echo 'a & b'", "workingDirectory": "/my project" }),
-         ),
-         working_directory: Some("/my project".into()),
-         ..Default::default()
-      };
-      let url = tauri::Url::parse(&format!(
-         "https://athas.local{}",
-         build_window_open_url(Some(&request), "main-4", 123)
-      ))
-      .unwrap();
-      let query = url
-         .query_pairs()
-         .collect::<std::collections::HashMap<_, _>>();
-      assert_eq!(query["kind"], "standalone");
-      let payload: serde_json::Value = serde_json::from_str(&query["payload"]).unwrap();
-      assert_eq!(payload["content"]["command"], "echo 'a & b'");
-      assert_eq!(payload["workspacePath"], "/my project");
-      assert_eq!(window_title_for_request(Some(&request)), "Terminal - Athas");
-      assert!(!query.contains_key("target"));
-   }
-
-   #[test]
-   fn preserves_directory_window_requests() {
-      let request: CreateAppWindowRequest = serde_json::from_value(serde_json::json!({
-         "path": "/workspace/project", "isDirectory": true
-      }))
-      .unwrap();
-      let url = build_window_open_url(Some(&request), "main-2", 123);
-      assert!(url.contains("target=open&type=directory&path="));
-      assert!(!url.contains("view=detached"));
-      assert_eq!(window_title_for_request(Some(&request)), "project - Athas");
-   }
-
-   #[test]
-   fn preserves_empty_windows() {
-      let url = build_window_open_url(None, "main-2", 123);
-      assert!(url.starts_with("/?athasWindowTraceId=main-2&"));
-      assert_eq!(window_title_for_request(None), "Athas");
-   }
-}
-
 fn append_window_trace_params(url: String, label: &str, created_at_ms: u128) -> String {
    let separator = if url.contains('?') { '&' } else { '?' };
    format!("{url}{separator}athasWindowTraceId={label}&athasWindowCreatedAtMs={created_at_ms}")
@@ -845,5 +774,76 @@ pub async fn reopen_current_webview_devtools(
    {
       let _ = window;
       Err("Webview devtools are unavailable in release builds".to_string())
+   }
+}
+
+#[cfg(test)]
+mod agent_window_tests {
+   use super::*;
+
+   #[test]
+   fn opens_detached_windows_without_a_workspace_open_request() {
+      let request: CreateAppWindowRequest = serde_json::from_value(serde_json::json!({
+         "detached": { "kind": "agent", "channel": "test-channel" }
+      }))
+      .unwrap();
+      let url = build_window_open_url(Some(&request), "main-2", 123);
+      assert!(url.starts_with("/?view=detached&kind=agent&channel=test-channel&"));
+      assert!(!url.contains("target=open"));
+      assert_eq!(window_title_for_request(Some(&request)), "Agents - Athas");
+
+      let request: CreateAppWindowRequest = serde_json::from_value(serde_json::json!({
+         "detached": { "kind": "resource", "channel": "abc", "payload": "{\"a\":1}" }
+      }))
+      .unwrap();
+      let url = build_window_open_url(Some(&request), "main-3", 123);
+      assert!(
+         url.starts_with("/?view=detached&kind=resource&channel=abc&payload=%7B%22a%22%3A1%7D&")
+      );
+      assert_eq!(window_title_for_request(Some(&request)), "Athas");
+   }
+
+   #[test]
+   fn standalone_content_is_self_contained_and_encoded() {
+      let request = CreateAppWindowRequest {
+         content: Some(
+            serde_json::json!({ "type": "terminal", "command": "echo 'a & b'", "workingDirectory": "/my project" }),
+         ),
+         working_directory: Some("/my project".into()),
+         ..Default::default()
+      };
+      let url = tauri::Url::parse(&format!(
+         "https://athas.local{}",
+         build_window_open_url(Some(&request), "main-4", 123)
+      ))
+      .unwrap();
+      let query = url
+         .query_pairs()
+         .collect::<std::collections::HashMap<_, _>>();
+      assert_eq!(query["kind"], "standalone");
+      let payload: serde_json::Value = serde_json::from_str(&query["payload"]).unwrap();
+      assert_eq!(payload["content"]["command"], "echo 'a & b'");
+      assert_eq!(payload["workspacePath"], "/my project");
+      assert_eq!(window_title_for_request(Some(&request)), "Terminal - Athas");
+      assert!(!query.contains_key("target"));
+   }
+
+   #[test]
+   fn preserves_directory_window_requests() {
+      let request: CreateAppWindowRequest = serde_json::from_value(serde_json::json!({
+         "path": "/workspace/project", "isDirectory": true
+      }))
+      .unwrap();
+      let url = build_window_open_url(Some(&request), "main-2", 123);
+      assert!(url.contains("target=open&type=directory&path="));
+      assert!(!url.contains("view=detached"));
+      assert_eq!(window_title_for_request(Some(&request)), "project - Athas");
+   }
+
+   #[test]
+   fn preserves_empty_windows() {
+      let url = build_window_open_url(None, "main-2", 123);
+      assert!(url.starts_with("/?athasWindowTraceId=main-2&"));
+      assert_eq!(window_title_for_request(None), "Athas");
    }
 }

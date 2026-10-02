@@ -715,7 +715,7 @@ const viewCommands: Command[] = [
       const { openNewAgentChat } = await import("@/features/ai/lib/open-new-agent-chat");
       const { useAIChatStore } = await import("@/features/ai/stores/ai-chat.store");
       await useSettingsStore.getState().actions.updateSetting("aiProviderId", "athas");
-      await useSettingsStore.getState().actions.updateSetting("aiModelId", "qwen/qwen3-coder");
+      await useSettingsStore.getState().actions.updateSetting("aiModelId", "auto");
       await useAIChatStore.getState().actions.checkApiKey("athas");
       openNewAgentChat("custom");
     },

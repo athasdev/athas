@@ -4,7 +4,7 @@ name: "Release Cache Warmup"
 # tag. Scheduled runs execute on main, whose caches every release can read.
 on:
   schedule:
-    # One hour before the nightly preview release.
+    # Daily, so release caches never age out between tags.
     - cron: "0 20 * * *"
   workflow_dispatch:
 

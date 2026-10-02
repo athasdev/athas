@@ -35,15 +35,20 @@ const itemVariants = cva(
         default: "border-transparent",
         outline: "border-border",
         muted: "border-transparent bg-surface",
+        /** A row inside a `Card` list: square, on the card's row grid, split by its hairlines. */
+        list: "min-h-10 rounded-none border-transparent px-3 py-2 focus-visible:ring-inset",
       },
       size: {
         default: "",
         compact: "min-h-chrome-control px-1 py-0.5",
       },
+      /** Fills on hover when the item is not an anchor or button, such as a `role="button"` row. */
+      interactive: { true: "cursor-default hover:bg-accent", false: "" },
     },
     defaultVariants: {
       variant: "default",
       size: "default",
+      interactive: false,
     },
   },
 );
@@ -52,12 +57,16 @@ function Item({
   className,
   variant = "default",
   size = "default",
+  interactive = false,
   render,
   ...props
 }: useRender.ComponentProps<"div"> & VariantProps<typeof itemVariants>) {
   return useRender({
     defaultTagName: "div",
-    props: mergeProps<"div">({ className: cn(itemVariants({ variant, size, className })) }, props),
+    props: mergeProps<"div">(
+      { className: cn(itemVariants({ variant, size, interactive, className })) },
+      props,
+    ),
     render,
     state: {
       slot: "item",

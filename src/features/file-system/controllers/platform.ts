@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { homeDir } from "@tauri-apps/api/path";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useLinuxFolderPickerStore } from "@/features/file-system/stores/linux-folder-picker.store";
+import { invalidateFileTreeGitIgnoreCache } from "@/features/file-explorer/lib/file-tree-gitignore";
 import { parseWslPath } from "@/features/wsl/utils/wsl-path";
 import { IS_LINUX } from "@/utils/platform";
 import {
@@ -72,6 +73,7 @@ export async function writeFile(path: string, content: string): Promise<void> {
       filePath: wslInfo.linuxPath,
       content,
     });
+    invalidateFileTreeGitIgnoreCache(path);
     return;
   }
 
@@ -82,6 +84,7 @@ export async function writeFile(path: string, content: string): Promise<void> {
     // Fallback to writing to app data directory
     await writeTextFile(path, content, { baseDir: BaseDirectory.AppData });
   }
+  invalidateFileTreeGitIgnoreCache(path);
 }
 
 /**

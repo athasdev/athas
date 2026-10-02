@@ -1,6 +1,6 @@
 import { stripErrorBlocks } from "@/features/ai/lib/chat-error";
 import { estimateTokens, truncateTextToTokens } from "@/features/ai/lib/context-budget";
-import type { Message, ToolCall } from "@/features/ai/types/ai-chat.types";
+import type { ImageContent, Message, ToolCall } from "@/features/ai/types/ai-chat.types";
 import type { AIMessage } from "@/features/ai/types/messages.types";
 
 /** Tool calls replayed per assistant message; older calls in the turn are only counted. */
@@ -24,23 +24,37 @@ export interface ProviderRequestLimits {
 }
 
 /**
- * The hosted Athas chat endpoint rejects requests with more than 100 messages, a body over
- * 200 KB or a message over 100,000 characters. These limits leave headroom below that.
+ * The hosted Athas chat endpoint accepts up to 400 messages, a 4 MB body and 1,000,000
+ * characters per message. The client stays well below that: about 140,000 to 190,000 tokens
+ * fits every hosted model's context window, and each step of a tool loop resends the whole
+ * request, so a smaller request also keeps a long turn's cost down.
  */
 export const HOSTED_ATHAS_REQUEST_LIMITS: ProviderRequestLimits = {
-  maxMessages: 90,
-  maxBytes: 180_000,
-  maxMessageChars: 90_000,
+  maxMessages: 360,
+  maxBytes: 560_000,
+  maxMessageChars: 200_000,
 };
 
-/** Providers whose chat endpoint takes text only. */
-const TEXT_ONLY_PROVIDERS = new Set(["athas", "deepseek"]);
+/** Providers whose chat endpoint takes text only. Athas depends on the selected model. */
+const TEXT_ONLY_PROVIDERS = new Set(["deepseek"]);
+
+/**
+ * Inline images the hosted Athas endpoint accepts, in decoded bytes: PNG, JPEG, GIF and WebP,
+ * up to 16 per request, 1.5 MB each and 2.25 MB in total. Images do not count toward
+ * `maxBytes`; they have their own share of the 4 MB body.
+ */
+export const HOSTED_ATHAS_IMAGE_LIMITS = {
+  mediaTypes: ["image/png", "image/jpeg", "image/gif", "image/webp"],
+  maxImages: 16,
+  maxImageBytes: 1_500_000,
+  maxTotalBytes: 2_250_000,
+};
 
 /**
  * Room the built-in agent's tool loop needs on top of the first request: each step adds an
  * assistant tool call and a tool result, and a turn runs up to 25 steps.
  */
-export const HOSTED_ATHAS_TOOL_LOOP_RESERVE = { messages: 50, bytes: 60_000 };
+export const HOSTED_ATHAS_TOOL_LOOP_RESERVE = { messages: 50, bytes: 160_000 };
 
 /** What the first request of a turn may use, with the tool loop's reserve held back. */
 export function getProviderRequestLimits(providerId: string): ProviderRequestLimits | null {
@@ -52,8 +66,34 @@ export function getProviderRequestLimits(providerId: string): ProviderRequestLim
   };
 }
 
-export function providerAcceptsImages(providerId: string): boolean {
+/**
+ * Whether a request to this provider may carry images. Athas decides per model from its catalog
+ * (`supportsImages`; `auto` reports its default model), so without the model it is text only.
+ */
+export function providerAcceptsImages(
+  providerId: string,
+  model?: { supportsImages?: boolean },
+): boolean {
+  if (providerId === "athas") return model?.supportsImages === true;
   return !TEXT_ONLY_PROVIDERS.has(providerId);
+}
+
+/** Images of the last user message, the one being sent. */
+export function currentImageCount(messages: AIMessage[]) {
+  const current = [...messages].reverse().find((message) => message.role === "user");
+  return current?.images?.length ?? 0;
+}
+
+/** What to tell the user when images of the message being sent were left out. */
+export function imagesOmittedNotice(params: {
+  omitted: number;
+  acceptsImages: boolean;
+  modelName: string;
+}) {
+  const images = params.omitted === 1 ? "An image was" : `${params.omitted} images were`;
+  if (!params.acceptsImages)
+    return `${images} not sent: ${params.modelName} cannot read images. Choose a model that supports images to include them.`;
+  return `${images} not sent: Athas AI takes PNG, JPEG, GIF or WebP images up to 1.5 MB each and 2.25 MB per request.`;
 }
 
 function clip(text: string, maxChars: number) {
@@ -239,15 +279,63 @@ export async function compactConversationHistory(
   );
 }
 
+/** Serialized size of the text of a request; inline images are limited separately. */
 function byteLength(messages: AIMessage[]) {
-  return new TextEncoder().encode(JSON.stringify(messages)).length;
+  return new TextEncoder().encode(
+    JSON.stringify(messages, (key, value) => (key === "images" ? undefined : value)),
+  ).length;
+}
+
+function withOmittedNote(message: AIMessage, count: number, reason: string): AIMessage {
+  const note = `[${count} image${count === 1 ? "" : "s"} omitted: ${reason}]`;
+  return { ...message, content: message.content ? `${message.content}\n\n${note}` : note };
 }
 
 function withoutImages(message: AIMessage): AIMessage {
   if (message.role !== "user" || !message.images?.length) return message;
   const { images, ...rest } = message;
-  const note = `[${images.length} image${images.length === 1 ? "" : "s"} omitted: this model does not accept images]`;
-  return { ...rest, content: rest.content ? `${rest.content}\n\n${note}` : note };
+  return withOmittedNote(rest, images.length, "this model does not accept images");
+}
+
+const decodedBytes = (base64: string) =>
+  Math.floor((base64.length * 3) / 4) - (base64.match(/=+$/)?.[0].length ?? 0);
+
+/**
+ * Keeps the images the hosted endpoint accepts, newest first: an allowed type, under the
+ * per-image size, and within the request's count and total size. The rest are left out with a
+ * note, so an old screenshot never blocks the conversation.
+ */
+function withinHostedImageLimits(messages: AIMessage[]): AIMessage[] {
+  const limits = HOSTED_ATHAS_IMAGE_LIMITS;
+  let count = 0;
+  let total = 0;
+  const fitted = [...messages];
+  for (let index = fitted.length - 1; index >= 0; index--) {
+    const message = fitted[index];
+    if (message.role !== "user" || !message.images?.length) continue;
+    const kept: ImageContent[] = [];
+    for (const image of [...message.images].reverse()) {
+      const bytes = decodedBytes(image.data);
+      if (
+        !limits.mediaTypes.includes(image.mediaType.toLowerCase()) ||
+        bytes > limits.maxImageBytes ||
+        count + 1 > limits.maxImages ||
+        total + bytes > limits.maxTotalBytes
+      )
+        continue;
+      count += 1;
+      total += bytes;
+      kept.unshift(image);
+    }
+    if (kept.length === message.images.length) continue;
+    const { images, ...rest } = message;
+    fitted[index] = withOmittedNote(
+      kept.length ? { ...rest, images: kept } : rest,
+      images.length - kept.length,
+      "over the image size or count limit",
+    );
+  }
+  return fitted;
 }
 
 function capMessage<T extends AIMessage>(message: T, maxChars: number): T {
@@ -260,15 +348,21 @@ function capMessage<T extends AIMessage>(message: T, maxChars: number): T {
 
 /**
  * Fits a full request (system prompt first, current user message last) to what the provider
- * accepts: images are dropped for text-only providers, oversized messages are truncated, and
- * the oldest turns are summarised away until the count and size limits hold.
+ * accepts: images are dropped for text-only models (and kept within Athas's image limits
+ * otherwise), oversized messages are truncated, and the oldest turns are summarised away until
+ * the count and size limits hold.
  */
 export function fitMessagesToProviderLimits(
   messages: AIMessage[],
   providerId: string,
   limits: ProviderRequestLimits | null = getProviderRequestLimits(providerId),
+  acceptsImages = providerAcceptsImages(providerId),
 ): AIMessage[] {
-  let fitted = providerAcceptsImages(providerId) ? messages : messages.map(withoutImages);
+  let fitted = !acceptsImages
+    ? messages.map(withoutImages)
+    : providerId === "athas"
+      ? withinHostedImageLimits(messages)
+      : messages;
   if (!limits) return fitted;
   fitted = fitted.map((message) => capMessage(message, limits.maxMessageChars));
   if (fitted.length <= limits.maxMessages && byteLength(fitted) <= limits.maxBytes) return fitted;

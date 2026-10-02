@@ -2,8 +2,7 @@ import type { AgentType } from "@/features/ai/types/ai-chat.types";
 import type { EditorSelectionContext } from "@/features/ai/types/ai-context.types";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { isTerminalAgent } from "./terminal-agents";
-import { openTerminalAgent } from "./terminal-agent-terminal";
+import { migrateLegacyAgentId } from "./agent-clis";
 import { openAgentWindowSession } from "@/features/ai/detached/agent-window-service";
 
 interface OpenNewAgentChatOptions {
@@ -15,15 +14,9 @@ export function openNewAgentChat(
   options: OpenNewAgentChatOptions = {},
 ): string | null {
   const chatStore = useAIChatStore.getState();
-  const requestedAgentId = agentId ?? chatStore.actions.getCurrentAgentId();
-  const nextAgentId =
-    options.editorSelections?.length && isTerminalAgent(requestedAgentId)
-      ? "custom"
-      : requestedAgentId;
-
-  if (isTerminalAgent(nextAgentId)) {
-    return openTerminalAgent(nextAgentId);
-  }
+  // Every agent opens in the chat, never in a terminal, including ids saved before the
+  // terminal-only agents moved to ACP.
+  const nextAgentId = migrateLegacyAgentId(agentId ?? chatStore.actions.getCurrentAgentId());
 
   const chatId = chatStore.actions.createNewChat(nextAgentId, {
     activate: false,

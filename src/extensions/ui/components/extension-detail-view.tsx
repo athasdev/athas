@@ -18,17 +18,8 @@ import { EmptyState } from "@/ui/empty";
 import { Card, CardContent } from "@/ui/card";
 import { Spinner } from "@/ui/spinner";
 import { WorkbenchContent } from "@/ui/workbench";
-import { ResourceSection } from "@/ui/resource";
-import {
-  Item,
-  ItemActions,
-  ItemContent,
-  ItemDescription,
-  ItemGroup,
-  ItemMedia,
-  ItemTitle,
-} from "@/ui/item";
-import { Table, TableBody, TableCell, TableHead, TableRow } from "@/ui/table";
+import { GroupedSection } from "@/ui/grouped-section";
+import { Item, ItemActions, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@/ui/item";
 import MarkdownRenderer from "@/features/ai/components/messages/markdown-renderer";
 import { hasSkillLocalOverride } from "@/features/ai/lib/skill-library";
 import { AppearancePreviewGraphic } from "@/extensions/appearance/components/appearance-preview";
@@ -200,6 +191,7 @@ export function ExtensionDetailView({
       key={extension.id}
       title={extension.name}
       description={extension.description}
+      width="narrow"
       breadcrumb={breadcrumb}
       leading={<ExtensionIcon extension={extension} />}
       actions={headerActions}
@@ -222,7 +214,7 @@ export function ExtensionDetailView({
         </>
       }
     >
-      <div className="space-y-8">
+      <div className="flex flex-col gap-6">
         {extension.installNote && !extension.isInstalled ? (
           <Alert>
             <AlertDescription>{extension.installNote}</AlertDescription>
@@ -235,74 +227,59 @@ export function ExtensionDetailView({
           </Alert>
         ) : null}
 
-        <ResourceSection title="Integration details">
-          <Card variant="outline">
-            <CardContent>
-              <Table>
-                <TableBody>
-                  {metadata.map(([label, value]) => (
-                    <TableRow key={label}>
-                      <TableHead scope="row" className="w-1/3">
-                        {label}
-                      </TableHead>
-                      <TableCell className="break-all">{value}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </ResourceSection>
+        <GroupedSection title="Details">
+          {metadata.map(([label, value]) => (
+            <Item key={label} variant="list">
+              <ItemContent>
+                <ItemDescription>{label}</ItemDescription>
+              </ItemContent>
+              <ItemActions className="min-w-0">
+                <span className="truncate" title={value ?? undefined}>
+                  {value}
+                </span>
+              </ItemActions>
+            </Item>
+          ))}
+        </GroupedSection>
 
         {isAppearanceExtension(extension) && extension.appearanceOptions?.length ? (
-          <ResourceSection title={extension.category === "theme" ? "Themes" : "Icons"}>
-            <Card variant="outline">
-              <CardContent>
-                <ItemGroup>
-                  {extension.appearanceOptions.map((option) => {
-                    const isCurrent =
-                      (extension.category === "theme"
-                        ? appearanceSelection.theme
-                        : appearanceSelection.iconTheme) === option.id;
-                    return (
-                      <Item key={option.id} role="listitem">
-                        {option.preview ? (
-                          <ItemMedia>
-                            <AppearancePreviewGraphic preview={option.preview} size="detail" />
-                          </ItemMedia>
-                        ) : null}
-                        <ItemContent>
-                          <ItemTitle>{option.name}</ItemTitle>
-                          {option.description ? (
-                            <ItemDescription>{option.description}</ItemDescription>
-                          ) : null}
-                        </ItemContent>
-                        <ItemActions>
-                          <Button
-                            variant={isCurrent ? "default" : "accent"}
-                            active={isCurrent}
-                            disabled={!extension.isInstalled || isCurrent || isInstalling}
-                            onClick={() => void actions.applyAppearance(extension, option.id)}
-                          >
-                            <CheckIcon />
-                            {isCurrent
-                              ? "Current"
-                              : extension.isEnabled
-                                ? "Use"
-                                : "Activate and use"}
-                          </Button>
-                        </ItemActions>
-                      </Item>
-                    );
-                  })}
-                </ItemGroup>
-              </CardContent>
-            </Card>
-          </ResourceSection>
+          <GroupedSection title={extension.category === "theme" ? "Themes" : "Icons"}>
+            {extension.appearanceOptions.map((option) => {
+              const isCurrent =
+                (extension.category === "theme"
+                  ? appearanceSelection.theme
+                  : appearanceSelection.iconTheme) === option.id;
+              return (
+                <Item key={option.id} variant="list">
+                  {option.preview ? (
+                    <ItemMedia>
+                      <AppearancePreviewGraphic preview={option.preview} size="detail" />
+                    </ItemMedia>
+                  ) : null}
+                  <ItemContent>
+                    <ItemTitle>{option.name}</ItemTitle>
+                    {option.description ? (
+                      <ItemDescription>{option.description}</ItemDescription>
+                    ) : null}
+                  </ItemContent>
+                  <ItemActions>
+                    <Button
+                      variant={isCurrent ? "ghost" : "default"}
+                      disabled={!extension.isInstalled || isCurrent || isInstalling}
+                      onClick={() => void actions.applyAppearance(extension, option.id)}
+                    >
+                      <CheckIcon />
+                      {isCurrent ? "Current" : extension.isEnabled ? "Use" : "Activate and use"}
+                    </Button>
+                  </ItemActions>
+                </Item>
+              );
+            })}
+          </GroupedSection>
         ) : null}
 
         {extension.category === "skill" ? (
-          <ResourceSection title="Instructions">
+          <GroupedSection title="Instructions" variant="bare">
             <Accordion
               key={extension.id}
               defaultValue={[]}
@@ -313,15 +290,8 @@ export function ExtensionDetailView({
               <AccordionItem value="instructions">
                 <AccordionTrigger>Skill instructions</AccordionTrigger>
                 <AccordionContent className="gap-3 pt-2">
-                  <p className="text-subtle-foreground ui-text-sm">
-                    Review what this skill asks the agent to do before adding it.
-                  </p>
                   {skillPreview.isLoading ? (
-                    <Card>
-                      <CardContent>
-                        <Spinner label="Loading skill instructions" showLabel />
-                      </CardContent>
-                    </Card>
+                    <Spinner label="Loading skill instructions" showLabel />
                   ) : skillPreview.error ? (
                     <Alert tone="error">
                       <AlertDescription>{skillPreview.error}</AlertDescription>
@@ -342,32 +312,26 @@ export function ExtensionDetailView({
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
-          </ResourceSection>
+          </GroupedSection>
         ) : null}
 
-        <ResourceSection title="Contributions">
-          <Card variant="outline">
-            <CardContent>
-              <ItemGroup>
-                {(extension.contributionSummary?.length
-                  ? extension.contributionSummary
-                  : extension.extensions
-                    ? extension.extensions
-                    : [getCategoryLabel(extension.category)]
-                ).map((item) => (
-                  <Item key={item} role="listitem">
-                    <ItemMedia variant="icon">
-                      <CheckIcon />
-                    </ItemMedia>
-                    <ItemContent>
-                      <ItemTitle>{item}</ItemTitle>
-                    </ItemContent>
-                  </Item>
-                ))}
-              </ItemGroup>
-            </CardContent>
-          </Card>
-        </ResourceSection>
+        <GroupedSection title="Contributions">
+          {(extension.contributionSummary?.length
+            ? extension.contributionSummary
+            : extension.extensions
+              ? extension.extensions
+              : [getCategoryLabel(extension.category)]
+          ).map((item) => (
+            <Item key={item} variant="list">
+              <ItemMedia variant="icon">
+                <CheckIcon />
+              </ItemMedia>
+              <ItemContent>
+                <ItemTitle>{item}</ItemTitle>
+              </ItemContent>
+            </Item>
+          ))}
+        </GroupedSection>
       </div>
     </WorkbenchContent>
   );

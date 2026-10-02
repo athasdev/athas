@@ -45,9 +45,6 @@ vi.mock("@/features/ai/detached/agent-window-service", () => ({
 vi.mock("@/features/ai/lib/open-new-agent-chat", () => ({
   openNewAgentChat: mocks.openNewAgentChat,
 }));
-vi.mock("@/features/ai/lib/terminal-agents", () => ({
-  isTerminalAgent: (agentId: string) => agentId === "claude-code",
-}));
 
 import {
   addActiveSelectionToAgentChat,
@@ -82,12 +79,9 @@ describe("add selection to agent chat", () => {
     expect(mocks.openNewAgentChat).not.toHaveBeenCalled();
   });
 
-  it.each([
-    ["there is no current chat", null, []],
-    ["the current chat is a terminal agent", "chat-1", [{ id: "chat-1", agentId: "claude-code" }]],
-  ])("opens a new chat when %s", (_label, chatId, chats) => {
-    mocks.currentChatId = chatId;
-    mocks.chats = chats;
+  it("opens a new chat when there is no current chat", () => {
+    mocks.currentChatId = null;
+    mocks.chats = [];
     addEditorSelectionsToAgentChat([context]);
     expect(mocks.openNewAgentChat).toHaveBeenCalledWith(undefined, {
       editorSelections: [context],

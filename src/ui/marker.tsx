@@ -52,12 +52,32 @@ function Marker({
   });
 }
 
-function MarkerIcon({ className, ...props }: React.ComponentProps<"span">) {
+const markerIconVariants = cva("flex size-4 shrink-0 items-center justify-center", {
+  variants: {
+    /** Status colour for the icon alone, when the text beside it stays neutral. */
+    tone: {
+      default: "",
+      accent: "text-primary",
+      error: "text-destructive",
+      success: "text-success",
+      warning: "text-warning",
+    },
+  },
+  defaultVariants: {
+    tone: "default",
+  },
+});
+
+function MarkerIcon({
+  className,
+  tone,
+  ...props
+}: React.ComponentProps<"span"> & VariantProps<typeof markerIconVariants>) {
   return (
     <span
       data-slot="marker-icon"
       aria-hidden="true"
-      className={cn("flex size-4 shrink-0 items-center justify-center", className)}
+      className={cn(markerIconVariants({ tone }), className)}
       {...props}
     />
   );
@@ -76,4 +96,7 @@ function MarkerContent({ className, ...props }: React.ComponentProps<"span">) {
   );
 }
 
+type MarkerIconTone = NonNullable<VariantProps<typeof markerIconVariants>["tone"]>;
+
 export { Marker, MarkerContent, MarkerIcon, markerVariants };
+export type { MarkerIconTone };

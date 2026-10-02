@@ -46,6 +46,13 @@ function resolveOutput(
   return { output: nextRaw ?? previous?.output, rawOutput: nextRaw };
 }
 
+/** How long a call that is finishing now has run, when its start time is real. */
+function durationSince(toolCall: Pick<ToolCall, "timestamp" | "durationMs">): number | undefined {
+  if (toolCall.durationMs !== undefined) return toolCall.durationMs;
+  const start = new Date(toolCall.timestamp).getTime();
+  return Number.isFinite(start) && start > 0 ? Math.max(0, Date.now() - start) : undefined;
+}
+
 export const createToolCall = (
   toolName: string,
   toolInput: unknown,
@@ -113,6 +120,7 @@ export const updateToolCall = (toolCalls: ToolCall[], patch: ToolCallPatch): Too
     if (toolCall.id !== patch.id) return toolCall;
 
     const nextStatus = patch.status ?? toolCall.status;
+    const finishes = nextStatus === "completed" || nextStatus === "failed";
 
     return {
       ...toolCall,
@@ -123,8 +131,8 @@ export const updateToolCall = (toolCalls: ToolCall[], patch: ToolCallPatch): Too
       kind: patch.kind ?? toolCall.kind,
       status: nextStatus,
       locations: patch.locations ?? toolCall.locations,
-      isComplete:
-        nextStatus === "completed" || nextStatus === "failed" ? true : toolCall.isComplete,
+      isComplete: finishes ? true : toolCall.isComplete,
+      ...(finishes && !toolCall.isComplete ? { durationMs: durationSince(toolCall) } : {}),
     };
   });
 };
@@ -147,6 +155,7 @@ export const markToolCallComplete = (
             error,
             status: error ? "failed" : "completed",
             isComplete: true,
+            durationMs: durationSince(toolCall),
           }
         : toolCall,
     );
@@ -167,6 +176,7 @@ export const markToolCallComplete = (
           error,
           status: error ? "failed" : "completed",
           isComplete: true,
+          durationMs: durationSince(toolCall),
         }
       : toolCall,
   );
@@ -181,6 +191,8 @@ export const cancelUnfinishedToolCalls = (
 ): ToolCall[] | undefined => {
   if (!toolCalls?.some((toolCall) => !toolCall.isComplete)) return toolCalls;
   return toolCalls.map((toolCall) =>
-    toolCall.isComplete ? toolCall : { ...toolCall, status: "cancelled", isComplete: true },
+    toolCall.isComplete
+      ? toolCall
+      : { ...toolCall, status: "cancelled", isComplete: true, durationMs: durationSince(toolCall) },
   );
 };

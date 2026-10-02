@@ -128,4 +128,22 @@ describe("agent options", () => {
     expect(ids).toContain("selected");
     expect(ids).not.toContain("cline");
   });
+
+  it("lists Claude Agent and Antigravity once, as ACP agents that need their adapter", () => {
+    const claude = agentConfig({ installed: false, canInstall: true });
+    const options = buildAgentOptions({
+      currentAgentId: "custom",
+      agentConfigs: new Map([[claude.id, claude]]),
+      codexInstalled: true,
+      pendingAction: null,
+    });
+    const ids = options.map((option) => option.id);
+
+    expect(ids).not.toContain("claude-code");
+    expect(ids).not.toContain("antigravity-cli");
+    expect(options.find((option) => option.id === "claude-acp")).toMatchObject({
+      isInstalled: false,
+      action: "install",
+    });
+  });
 });

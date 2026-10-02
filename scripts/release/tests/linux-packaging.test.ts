@@ -127,13 +127,11 @@ describe("Linux release packaging", () => {
     expect(platformController).toContain("useLinuxFolderPickerStore.getState().actions.open()");
   });
 
-  it("loads CEF from stable and preview native package resource directories", () => {
+  it("loads CEF from the native package resource directory", () => {
     const buildScript = readRepoFile("src-tauri/build.rs");
     const packagingScript = readRepoFile("scripts/release/packaging/linux/native.sh");
 
     expect(buildScript).toContain("$ORIGIN/../lib/Athas");
-    expect(buildScript).toContain("$ORIGIN/../lib/Athas Preview");
-    expect(packagingScript).toContain('product_name="Athas Preview"');
     expect(packagingScript).toContain('patchelf --print-rpath "$release_binary"');
     expect(packagingScript).toContain('expected_cef_rpath="\\$ORIGIN/../lib/${product_name}"');
   });

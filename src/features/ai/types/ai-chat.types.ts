@@ -52,6 +52,8 @@ export interface ToolCall {
   isComplete?: boolean;
   /** Length of the assistant text when this call started, so the transcript can interleave them. */
   contentOffset?: number;
+  /** How long the call ran, recorded when it finished. */
+  durationMs?: number;
   /** The final output of the call's terminals, by terminal id, kept after the terminal is gone. */
   terminals?: Record<string, AcpTerminalSnapshot>;
 }
@@ -171,7 +173,8 @@ export interface AIChatInputBarProps {
   onSetSelectedFilesPaths: (filePaths: Set<string>) => void;
   onRemoveEditorContext: (contextId: string) => void;
   isActiveSurface?: boolean;
-  presentation?: "default" | "initial";
+  /** `roomy` is the first prompt of a start page, where the composer is the whole page. */
+  size?: "default" | "roomy";
   autoFocus?: boolean;
   onAgentChange?: (agentId: AgentType, model?: ApiModelSelection) => void;
   onTerminalChatCreated?: (chatId: string) => void;
@@ -185,6 +188,9 @@ export interface AIChatInputBarProps {
   /** The queued message being edited, or null once the edit ends. */
   onEditQueuedMessage?: (message: QueuedAgentMessage | null) => void;
   onStopStreaming: () => void;
+  /** The last turn failed because the connection dropped; the composer offers to send it again. */
+  lastTurnFailedOffline?: boolean;
+  onRetryLastTurn?: () => void;
   /** Put back into the composer when it is empty; a new `id` restores again. */
   restoredPrompt?: RestoredComposerPrompt | null;
 }
