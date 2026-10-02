@@ -44,7 +44,7 @@ try {
     }),
   );
   children.add(
-    Bun.spawn(["tauri", "dev", "--config", "src-tauri/tauri.preview.conf.json"], {
+    Bun.spawn(["tauri", "dev", "--config", "src-tauri/tauri.dev.conf.json"], {
       detached: process.platform !== "win32",
       env: withMacosDevSigning(
         {
@@ -52,7 +52,7 @@ try {
           VITE_EXTENSION_MARKETPLACE_LOCAL: "true",
           WEBKIT_DISABLE_DMABUF_RENDERER: "1",
         },
-        { identifier: "com.code.athas.preview" },
+        { identifier: "com.code.athas.dev" },
       ),
       stdin: "inherit",
       stdout: "inherit",

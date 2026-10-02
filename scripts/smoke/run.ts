@@ -10,14 +10,13 @@ import { getSmokeLaunchPath, parseSmokeOptions, smokeTargets } from "./config";
 //   bun run smoke:macos
 //   bun run smoke:linux
 //   bun run smoke:windows
-//   bun run smoke:macos -- --identity preview
 //   bun run smoke:macos -- --identity stable --open-only
 
 const args = process.argv.slice(2);
 
 const usage = () => {
   console.error(
-    "Usage: bun scripts/smoke-app.ts --platform macos|linux|windows [--identity smoke|preview|stable] [--open-only]",
+    "Usage: bun scripts/smoke-app.ts --platform macos|linux|windows [--identity smoke|stable] [--open-only]",
   );
 };
 
