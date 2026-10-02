@@ -293,6 +293,21 @@ export class LspClient {
     return send;
   }
 
+  private forgetDocument(filePath: string): void {
+    const timer = this.documentChangeTimers.get(filePath);
+    if (timer) clearTimeout(timer);
+    this.documentChangeTimers.delete(filePath);
+    this.documentChangeQueues.delete(filePath);
+    this.documentChangeSendChains.delete(filePath);
+    this.documentChangeRetries.delete(filePath);
+    this.documentsNeedingResync.delete(filePath);
+    this.documentVersions.delete(filePath);
+    this.backendOpenedDocuments.delete(filePath);
+    if (this.openDocuments.delete(filePath)) {
+      useLspStore.getState().actions.markDocumentStateChanged();
+    }
+  }
+
   private async invokeForDocument<T>(
     command: string,
     args: { filePath: string; [key: string]: unknown },
@@ -740,6 +755,9 @@ export class LspClient {
     try {
       logger.debug("LSPClient", "Stopping LSP for workspace:", workspacePath);
       await invoke<void>("lsp_stop", { workspacePath });
+      for (const filePath of Array.from(this.openDocuments)) {
+        if (filePath.startsWith(workspacePath)) this.forgetDocument(filePath);
+      }
 
       // Remove all language servers for this workspace
       const serversToRemove = Array.from(this.activeLanguageServers).filter((key) =>
@@ -941,6 +959,8 @@ export class LspClient {
       const { extensionRegistry } = await import("@/extensions/registry/extension-registry");
       const languageId = extensionRegistry.getLanguageId(filePath) || undefined;
       await invoke<void>("lsp_stop_for_file", { filePath });
+      // The backend dropped this document's session, so a later start must send didOpen again.
+      this.forgetDocument(filePath);
 
       if (languageId) {
         const activeKey = this.findServerKeyForFile(filePath, languageId);

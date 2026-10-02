@@ -1359,6 +1359,7 @@ const createBufferStore = (workspaceId: string) => {
             if (!current || !isEditorContent(current)) return;
             current.content = nextContent;
             current.contentRevision = contentRevision;
+            if (current.isVirtual) return;
             if (!markDirty) {
               current.savedContent = nextContent;
               current.isDirty = false;
