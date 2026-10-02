@@ -209,7 +209,7 @@ fn r_string_literal(value: &str) -> String {
    value.replace('\\', "\\\\").replace('"', "\\\"")
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct NotebookRunResult {
    stdout: String,
@@ -219,7 +219,7 @@ pub struct NotebookRunResult {
    display_data: Vec<PythonDisplayData>,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct PythonDisplayData {
    output_type: Option<String>,
@@ -237,6 +237,7 @@ struct PythonCellRunnerResult {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn notebook_run_python_cell(
    code: String,
    cwd: Option<String>,
@@ -333,6 +334,7 @@ pub async fn notebook_run_python_cell(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn notebook_run_r_cell(
    code: String,
    cwd: Option<String>,

@@ -12,5 +12,6 @@ reqwest = "0.12"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sha256 = "1.5"
+specta = { version = "=2.0.0-rc.25", features = ["derive", "serde_json"] }
 tar = "0.4"
 tauri = { version = "2.12", default-features = false, features = ["wry"] }

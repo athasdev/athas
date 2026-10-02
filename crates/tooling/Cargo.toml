@@ -19,6 +19,7 @@ walkdir = "2.5.0"
 which = "7.0"
 xz2 = "0.1"
 zip = "2.2"
+specta = { version = "=2.0.0-rc.25", features = ["derive", "serde_json"] }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt"] }

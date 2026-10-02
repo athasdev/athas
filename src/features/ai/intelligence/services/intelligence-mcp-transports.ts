@@ -1,13 +1,10 @@
-import { Channel, invoke } from "@tauri-apps/api/core";
+import { Channel } from "@tauri-apps/api/core";
+import { commands, type McpStdioEvent } from "@/bindings/commands";
 import { tauriFetch } from "@/utils/tauri-fetch";
 import type { McpServerSetting } from "@/features/ai/types/mcp-server.types";
 import { getMcpServerSecrets } from "@/features/ai/services/mcp-server-secrets";
 import { parseMcpMessages, readServerSentEvents } from "../lib/intelligence-mcp-client";
 import type { McpJsonRpcMessage, McpTransport } from "../types/intelligence-mcp.types";
-
-type StdioEvent =
-  | { type: "message"; line: string }
-  | { type: "closed"; code: number | null; stderr: string };
 
 function lastLines(text: string, count = 3) {
   return text.trim().split("\n").slice(-count).join("\n");
@@ -18,10 +15,10 @@ export function createStdioMcpTransport(server: McpServerSetting, cwd?: string):
   const processId = `mcp:${crypto.randomUUID()}`;
   let started = false;
   let closed = false;
-  const stop = () => invoke("intelligence_mcp_stop", { processId });
+  const stop = () => commands.intelligenceMcpStop(processId);
   return {
     async start(onMessage, onClose) {
-      const channel = new Channel<StdioEvent>();
+      const channel = new Channel<McpStdioEvent>();
       channel.onmessage = (event) => {
         if (event.type === "message") {
           for (const message of parseMcpMessages(event.line)) onMessage(message);
@@ -32,12 +29,7 @@ export function createStdioMcpTransport(server: McpServerSetting, cwd?: string):
           `the server exited${event.code !== null ? ` with code ${event.code}` : ""}${detail ? `: ${detail}` : "."}`,
         );
       };
-      await invoke("intelligence_mcp_start", {
-        processId,
-        server,
-        cwd: cwd ?? null,
-        onEvent: channel,
-      });
+      await commands.intelligenceMcpStart(processId, server, cwd ?? null, channel);
       started = true;
       // A run stopped or timed out while the server was starting; it must not outlive the run.
       if (closed) {
@@ -45,8 +37,9 @@ export function createStdioMcpTransport(server: McpServerSetting, cwd?: string):
         throw new Error("Stopped");
       }
     },
-    send: (message) =>
-      invoke("intelligence_mcp_send", { processId, message: JSON.stringify(message) }),
+    async send(message) {
+      await commands.intelligenceMcpSend(processId, JSON.stringify(message));
+    },
     async close() {
       closed = true;
       if (started) await stop();

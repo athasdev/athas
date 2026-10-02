@@ -5,14 +5,14 @@ use tauri::menu::{AboutMetadata, MenuItemKind, PredefinedMenuItem, WINDOW_SUBMEN
 use tauri::menu::{CheckMenuItem, HELP_SUBMENU_ID, MenuBuilder, MenuItem, Submenu, SubmenuBuilder};
 use tauri_plugin_store::StoreExt;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, specta::Type)]
 pub struct ThemeData {
    pub id: String,
    pub name: String,
    pub category: String,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct NativeMenuState {
    pub close_folder_enabled: bool,
@@ -114,6 +114,7 @@ fn apply_native_menu_state(app: &tauri::AppHandle, state: &NativeMenuState) -> R
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn sync_native_menu_state(app: tauri::AppHandle, state: NativeMenuState) -> Result<(), String> {
    *LAST_NATIVE_MENU_STATE
       .lock()
@@ -122,6 +123,7 @@ pub fn sync_native_menu_state(app: tauri::AppHandle, state: NativeMenuState) -> 
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn rebuild_menu_themes(
    app: tauri::AppHandle,
    themes: Vec<ThemeData>,
@@ -146,6 +148,7 @@ pub async fn rebuild_menu_themes(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn toggle_menu_bar(app: tauri::AppHandle, toggle: Option<bool>) -> Result<(), String> {
    #[cfg(any(target_os = "windows", target_os = "linux"))]
    {

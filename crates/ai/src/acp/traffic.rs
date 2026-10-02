@@ -37,7 +37,7 @@ const FLUSH_INTERVAL: Duration = Duration::from_millis(150);
 const MAX_LOGS: usize = 16;
 
 /// Which way a line went.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, specta::Type)]
 #[serde(rename_all = "lowercase")]
 pub enum TrafficDirection {
    /// From the agent to Athas.
@@ -49,7 +49,7 @@ pub enum TrafficDirection {
 }
 
 /// One recorded line.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct TrafficEntry {
    /// Increases by one per entry in a process's log.
@@ -71,7 +71,7 @@ pub struct TrafficEntry {
 
 /// The `initialize` exchange of a process, kept apart from the ring buffer so it is never
 /// dropped.
-#[derive(Debug, Clone, Default, Serialize)]
+#[derive(Debug, Clone, Default, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct InitializeExchange {
    pub request: Option<Value>,
@@ -79,7 +79,7 @@ pub struct InitializeExchange {
 }
 
 /// A process the inspector has a log for.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct TrafficProcess {
    pub process_key: String,
@@ -92,7 +92,7 @@ pub struct TrafficProcess {
 }
 
 /// Everything recorded for one process.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct TrafficBacklog {
    pub process: TrafficProcess,

@@ -24,7 +24,7 @@ const STDERR_LINES: usize = 20;
 /// A single JSON-RPC message larger than this is dropped instead of forwarded.
 const MAX_LINE_BYTES: usize = 8 * 1024 * 1024;
 
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq, specta::Type)]
 #[serde(tag = "type", rename_all = "camelCase")]
 pub enum McpStdioEvent {
    /// One line the server wrote to stdout, normally a JSON-RPC message.

@@ -15,6 +15,8 @@
     "fix": "vp check --fix",
     "format": "vp fmt --write .",
     "check:rust": "bash scripts/check/rust.sh",
+    "bindings": "bun scripts/generate-bindings.ts",
+    "bindings:check": "bun scripts/generate-bindings.ts --check",
     "reset:workspace": "bun scripts/reset-workspace.ts",
     "postinstall": "bun scripts/postinstall.ts",
     "prepare": "vp config --no-agent",

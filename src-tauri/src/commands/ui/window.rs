@@ -23,7 +23,7 @@ const ATHAS_WINDOWS_LIGHT_ACRYLIC_TINT: Color = Color(245, 245, 245, 125);
 
 static APP_WINDOW_COUNTER: AtomicU32 = AtomicU32::new(0);
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateAppWindowRequest {
    /// A bare window that hosts one thing (an agent session, a pull request)
@@ -39,7 +39,7 @@ pub struct CreateAppWindowRequest {
    pub remote_connection_name: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct DetachedWindowRequest {
    pub kind: String,
@@ -356,6 +356,7 @@ fn parse_theme_type(theme_type: &str) -> Result<Theme, String> {
 }
 
 #[command]
+#[specta::specta]
 pub fn set_native_window_appearance(
    window: tauri::WebviewWindow,
    theme_type: String,
@@ -387,6 +388,7 @@ pub fn set_native_window_appearance(
 }
 
 #[command]
+#[specta::specta]
 pub fn set_window_transparency_enabled(
    window: tauri::WebviewWindow,
    enabled: bool,
@@ -571,6 +573,7 @@ pub fn create_app_window_internal(
 }
 
 #[command]
+#[specta::specta]
 pub async fn create_app_window(
    app: tauri::AppHandle,
    request: Option<CreateAppWindowRequest>,
@@ -606,6 +609,7 @@ pub async fn create_app_window(
 }
 
 #[command]
+#[specta::specta]
 pub async fn note_recent_document(app: tauri::AppHandle, path: String) -> Result<(), String> {
    #[cfg(target_os = "macos")]
    {
@@ -628,6 +632,7 @@ pub async fn note_recent_document(app: tauri::AppHandle, path: String) -> Result
 }
 
 #[command]
+#[specta::specta]
 pub async fn set_window_document_state(
    window: tauri::WebviewWindow,
    title: String,
@@ -665,6 +670,7 @@ pub async fn set_window_document_state(
 }
 
 #[command]
+#[specta::specta]
 pub async fn show_native_choice_sheet(
    window: tauri::WebviewWindow,
    message: String,
@@ -719,6 +725,7 @@ pub async fn show_native_choice_sheet(
 }
 
 #[command]
+#[specta::specta]
 pub async fn reopen_current_webview_devtools(window: tauri::WebviewWindow) -> Result<(), String> {
    #[cfg(any(debug_assertions, feature = "devtools"))]
    {

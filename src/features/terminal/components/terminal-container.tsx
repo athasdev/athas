@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import type React from "react";
 import type {
   TerminalCommandNavigationDirection,
@@ -532,10 +532,11 @@ const TerminalContainer = ({
       if (pendingCommand && connectionId) {
         // Small delay to ensure shell prompt is ready
         commandTimers.schedule(() => {
-          invoke(remoteConnectionId ? "remote_terminal_write" : "terminal_write", {
-            id: connectionId,
-            input: { kind: "text", data: pendingCommand },
-          }).catch(() => {});
+          const input = { kind: "text", data: pendingCommand } as const;
+          const request = remoteConnectionId
+            ? commands.remoteTerminalWrite(connectionId, input)
+            : commands.terminalWrite(connectionId, input);
+          request.catch(() => {});
           pendingCommandsRef.current.delete(terminalId);
         }, 300);
       }

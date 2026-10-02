@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { useEffect } from "react";
 import { agentIsDetached } from "@/features/ai/detached/agent-window.store";
 import { getSessionToCloseWithTab } from "@/features/ai/lib/agent-tab-session-release";
@@ -33,9 +33,9 @@ function releaseChatSession(chatId: string) {
   });
   if (!toClose) return;
   store.actions.clearAcpSession(toClose);
-  void invoke("close_acp_session", { sessionId: toClose }).catch((error) =>
-    console.error("Failed to close the agent session of a closed tab:", error),
-  );
+  void commands
+    .closeAcpSession(toClose)
+    .catch((error) => console.error("Failed to close the agent session of a closed tab:", error));
 }
 
 /** Frees the agent sessions of chats whose tabs were closed (see `getSessionToCloseWithTab`). */

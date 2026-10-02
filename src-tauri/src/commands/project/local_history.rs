@@ -11,7 +11,7 @@ use tauri::{AppHandle, Manager, command};
 const MAX_ENTRIES_PER_FILE: usize = 50;
 const AUTO_SAVE_MIN_INTERVAL_MS: i64 = 30_000;
 
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize, specta::Type)]
 pub struct LocalHistoryEntry {
    id: String,
    file_path: String,
@@ -90,6 +90,7 @@ fn prune_entries(history_dir: &Path, entries: &mut Vec<LocalHistoryEntry>) {
 }
 
 #[command]
+#[specta::specta]
 pub fn local_history_record_file(
    app: AppHandle,
    path: String,
@@ -147,6 +148,7 @@ pub fn local_history_record_file(
 }
 
 #[command]
+#[specta::specta]
 pub fn local_history_rename_entry(
    app: AppHandle,
    path: String,
@@ -168,6 +170,7 @@ pub fn local_history_rename_entry(
 }
 
 #[command]
+#[specta::specta]
 pub fn local_history_list_file(
    app: AppHandle,
    path: String,
@@ -178,6 +181,7 @@ pub fn local_history_list_file(
 }
 
 #[command]
+#[specta::specta]
 pub fn local_history_read_entry(
    app: AppHandle,
    path: String,
@@ -196,6 +200,7 @@ pub fn local_history_read_entry(
 }
 
 #[command]
+#[specta::specta]
 pub fn local_history_delete_entry(
    app: AppHandle,
    path: String,

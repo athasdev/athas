@@ -1,5 +1,5 @@
-import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useState } from "react";
+import { commands } from "@/bindings/commands";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
 import {
   createSkillFromMarketplace,
@@ -46,7 +46,7 @@ export function useExtensionCatalogActions(settings: ExtensionCatalogActionSetti
   const loadAgents = useCallback(async () => {
     setIsLoadingAgents(true);
     try {
-      const availableAgents = await invoke<AgentConfig[]>("get_available_agents");
+      const availableAgents = (await commands.getAvailableAgents()) as AgentConfig[];
       setAgents(availableAgents);
     } catch (error) {
       console.error("Failed to load ACP agents:", error);
@@ -66,7 +66,7 @@ export function useExtensionCatalogActions(settings: ExtensionCatalogActionSetti
       setInstallingAgentIds((current) => new Set(current).add(agentId));
 
       try {
-        const updatedAgent = await invoke<AgentConfig>("update_acp_agent", { agentId });
+        const updatedAgent = (await commands.updateAcpAgent(agentId)) as AgentConfig;
         setAgents((current) => {
           const next = new Map(current.map((agent) => [agent.id, agent]));
           next.set(updatedAgent.id, updatedAgent);
@@ -251,10 +251,11 @@ export function useExtensionCatalogActions(settings: ExtensionCatalogActionSetti
       setInstallingAgentIds((current) => new Set(current).add(agentId));
 
       try {
-        const installedAgent = await invoke<AgentConfig>(
-          extension.isInstalled ? "uninstall_acp_agent" : "install_acp_agent",
-          { agentId },
-        );
+        const installedAgent = (
+          extension.isInstalled
+            ? await commands.uninstallAcpAgent(agentId)
+            : await commands.installAcpAgent(agentId)
+        ) as AgentConfig;
         setAgents((current) => {
           const next = new Map(current.map((agent) => [agent.id, agent]));
           next.set(installedAgent.id, installedAgent);

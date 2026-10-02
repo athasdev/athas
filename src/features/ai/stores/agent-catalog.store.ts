@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { create } from "zustand";
 import { toast } from "sonner";
 import { CodexIntegrationService } from "@/features/ai/integrations/codex/codex-integration-service";
@@ -74,9 +74,9 @@ export const useAgentCatalogStore = createSelectors(
       load(
         "agents",
         () =>
-          invoke<AgentConfig[]>(
-            fromRegistry ? "refresh_acp_agent_registry" : "get_available_agents",
-          ),
+          (fromRegistry
+            ? commands.refreshAcpAgentRegistry()
+            : commands.getAvailableAgents()) as Promise<AgentConfig[]>,
         force,
       );
     return {
@@ -93,10 +93,9 @@ export const useAgentCatalogStore = createSelectors(
             return;
           set({ pendingAction: { agentId, action } });
           try {
-            const updated = await invoke<AgentConfig>(
-              action === "update" ? "update_acp_agent" : "install_acp_agent",
-              { agentId },
-            );
+            const updated = (await (action === "update"
+              ? commands.updateAcpAgent(agentId)
+              : commands.installAcpAgent(agentId))) as AgentConfig;
             const source = get().agents;
             set({
               agents: {

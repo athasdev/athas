@@ -1,18 +1,15 @@
-import { Channel, invoke } from "@tauri-apps/api/core";
+import { Channel } from "@tauri-apps/api/core";
+import {
+  commands,
+  type WorkspaceCommandChunk,
+  type WorkspaceCommandOutput,
+} from "@/bindings/commands";
 import { nanoid } from "nanoid";
 import { isRemotePath } from "@/features/remote/utils/remote-path";
 import { useAIChatStore } from "../stores/ai-chat.store";
 import type { Message, ToolCall } from "../types/ai-chat.types";
 
 export const CHAT_TERMINAL_TOOL = "user_terminal_command";
-
-interface CommandOutput {
-  stdout: string;
-  stderr: string;
-  exitCode: number | null;
-  cancelled: boolean;
-  timedOut: boolean;
-}
 
 const activeCommands = new Set<string>();
 
@@ -26,7 +23,7 @@ export function isChatTerminalRunning(messageId: string) {
 
 export async function stopChatTerminalCommand(messageId: string) {
   if (activeCommands.has(messageId)) {
-    await invoke("intelligence_cancel_command", { id: messageId });
+    await commands.intelligenceCancelCommand(messageId);
   }
 }
 
@@ -88,7 +85,7 @@ async function execute(
   command: string,
   root: string,
 ) {
-  const output: CommandOutput = {
+  const output: WorkspaceCommandOutput = {
     stdout: "",
     stderr: "",
     exitCode: null,
@@ -102,9 +99,10 @@ async function execute(
       toolCalls: [{ ...toolCall, output: { ...output }, ...updates }],
     });
   };
-  const onOutput = new Channel<{ stream: "stdout" | "stderr"; data: number[] }>((chunk) => {
+  const onOutput = new Channel<WorkspaceCommandChunk>((chunk) => {
     if (!activeCommands.has(id)) return;
-    output[chunk.stream] += decoders[chunk.stream].decode(new Uint8Array(chunk.data), {
+    const stream = chunk.stream as "stdout" | "stderr";
+    output[stream] += decoders[stream].decode(new Uint8Array(chunk.data), {
       stream: true,
     });
     timer ??= setTimeout(() => {
@@ -113,12 +111,7 @@ async function execute(
     }, 100);
   });
   try {
-    const result = await invoke<CommandOutput>("chat_run_terminal_command", {
-      root,
-      command,
-      id,
-      onOutput,
-    });
+    const result = await commands.chatRunTerminalCommand(root, command, id, onOutput);
     Object.assign(output, result);
     publish({ isComplete: true });
   } catch (error) {

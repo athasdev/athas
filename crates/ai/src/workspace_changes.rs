@@ -62,7 +62,7 @@ pub struct WorkspaceSnapshot {
 
 /// One file the command changed. `previous_content` is `None` when the command created the file,
 /// `content` is `None` when it deleted it.
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct WorkspaceChange {
    /// The file's path as the workspace root spells it, like agent writes report it.
@@ -72,14 +72,14 @@ pub struct WorkspaceChange {
 }
 
 /// A change that cannot be offered for review, and why.
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct SkippedWorkspaceChange {
    pub path: String,
    pub reason: String,
 }
 
-#[derive(Debug, Default, Serialize)]
+#[derive(Debug, Default, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct WorkspaceChanges {
    pub changes: Vec<WorkspaceChange>,

@@ -34,6 +34,7 @@ pub fn app_deep_links(urls: &[tauri::Url]) -> Vec<String> {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn take_pending_deep_links(
    window: tauri::WebviewWindow,
    state: State<'_, PendingDeepLinks>,

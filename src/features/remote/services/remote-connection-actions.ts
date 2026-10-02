@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { toast } from "sonner";
 import { connectionStore } from "../stores/remote-connection.store";
@@ -33,7 +33,7 @@ export async function saveAndConnectRemoteConnection(connection: RemoteConnectio
     await connectRemoteConnection(connection);
   } catch (error) {
     await Promise.allSettled([
-      invoke("ssh_disconnect_only", { connectionId: connection.id }),
+      commands.sshDisconnectOnly(connection.id),
       connectionStore.deleteConnection(connection.id),
     ]);
     throw error;
@@ -51,18 +51,18 @@ export async function testRemoteConnection(connection: {
   const tempId = `test-${Date.now()}`;
 
   try {
-    await invoke("ssh_connect", {
-      connectionId: tempId,
-      host: connection.host,
-      port: connection.port,
-      username: connection.username,
-      password: connection.password || null,
-      keyPath: connection.keyPath || null,
-      useSftp: connection.type === "sftp",
-    });
+    await commands.sshConnect(
+      tempId,
+      connection.host,
+      connection.port,
+      connection.username,
+      connection.password || null,
+      connection.keyPath || null,
+      connection.type === "sftp",
+    );
   } catch (error) {
     throw new Error(getFriendlyRemoteError(error));
   } finally {
-    await invoke("ssh_disconnect_only", { connectionId: tempId }).catch(() => {});
+    await commands.sshDisconnectOnly(tempId).catch(() => {});
   }
 }

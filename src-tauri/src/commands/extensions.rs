@@ -62,6 +62,7 @@ fn validate_extension_download_url(input: &str) -> Result<(), String> {
 }
 
 #[command]
+#[specta::specta]
 pub fn get_bundled_extensions_path<R: Runtime>(app_handle: AppHandle<R>) -> Result<String, String> {
    // In production, use Tauri's resource directory API
    // In development, fall back to the source path
@@ -97,6 +98,7 @@ pub fn get_bundled_extensions_path<R: Runtime>(app_handle: AppHandle<R>) -> Resu
 }
 
 #[command]
+#[specta::specta]
 pub async fn install_extension(
    app_handle: AppHandle,
    extension_id: String,
@@ -125,6 +127,7 @@ pub async fn install_extension(
 }
 
 #[command]
+#[specta::specta]
 pub fn uninstall_extension(app_handle: AppHandle, extension_id: String) -> Result<(), String> {
    validate_extension_id(&extension_id).map_err(|error| error.to_string())?;
 
@@ -139,6 +142,7 @@ pub fn uninstall_extension(app_handle: AppHandle, extension_id: String) -> Resul
 }
 
 #[command]
+#[specta::specta]
 pub fn list_installed_extensions(app_handle: AppHandle) -> Result<Vec<ExtensionMetadata>, String> {
    let installer = ExtensionInstaller::new(app_handle)
       .map_err(|e| format!("Failed to create installer: {}", e))?;
@@ -149,6 +153,7 @@ pub fn list_installed_extensions(app_handle: AppHandle) -> Result<Vec<ExtensionM
 }
 
 #[command]
+#[specta::specta]
 pub fn get_extension_path(app_handle: AppHandle, extension_id: String) -> Result<String, String> {
    validate_extension_id(&extension_id).map_err(|error| error.to_string())?;
 
@@ -166,6 +171,7 @@ pub fn get_extension_path(app_handle: AppHandle, extension_id: String) -> Result
 }
 
 #[command]
+#[specta::specta]
 pub fn read_extension_entrypoint(
    app_handle: AppHandle,
    extension_id: String,
@@ -198,6 +204,7 @@ pub fn read_extension_entrypoint(
 }
 
 #[command]
+#[specta::specta]
 pub fn get_extension_secret(
    app_handle: AppHandle,
    extension_id: String,
@@ -207,6 +214,7 @@ pub fn get_extension_secret(
 }
 
 #[command]
+#[specta::specta]
 pub fn set_extension_secret(
    app_handle: AppHandle,
    extension_id: String,
@@ -221,6 +229,7 @@ pub fn set_extension_secret(
 }
 
 #[command]
+#[specta::specta]
 pub fn delete_extension_secret(
    app_handle: AppHandle,
    extension_id: String,

@@ -1,4 +1,4 @@
-import { invoke as tauriInvoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { readDirectory } from "@/features/file-system/controllers/platform";
 
 interface RepositoryDiscoveryCacheEntry {
@@ -155,9 +155,8 @@ async function discoverRepo(path: string): Promise<string | null> {
   if (existingRequest) return existingRequest;
 
   const generation = discoveryGeneration;
-  const request = tauriInvoke<string | null>("git_discover_repo", {
-    path: normalizedPath,
-  })
+  const request = commands
+    .gitDiscoverRepo(normalizedPath)
     .then((discovered) => {
       const repoPath = discovered ? normalizePath(discovered) : null;
       if (generation === discoveryGeneration) {

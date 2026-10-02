@@ -16,15 +16,12 @@ use crate::{
       set_remote_terminal_paused, write_remote_terminal,
    },
 };
-use athas_terminal::{TerminalInput, TerminalSize};
+use athas_terminal::{TerminalChannelMessage, TerminalInput, TerminalSize};
 pub use file_ops::RemoteFileEntry;
 use serde::{Deserialize, Serialize};
-use tauri::{
-   AppHandle, Manager,
-   ipc::{Channel, InvokeResponseBody},
-};
+use tauri::{AppHandle, Manager, ipc::Channel};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 pub struct SshConnection {
    pub id: String,
    pub name: String,
@@ -227,7 +224,7 @@ pub async fn create_remote_terminal(
    working_directory: Option<String>,
    size: TerminalSize,
    term_program_version: String,
-   on_event: Channel<InvokeResponseBody>,
+   on_event: Channel<TerminalChannelMessage>,
 ) -> Result<String, String> {
    create_remote_terminal_inner(
       host,

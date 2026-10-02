@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { create } from "zustand";
 import { createSelectors } from "@/utils/zustand-selectors";
 import type { Shell } from "../types/terminal.types";
@@ -24,7 +24,7 @@ const useTerminalShellsStoreBase = create<TerminalShellsState>()((set, get) => (
       set({ isLoading: true });
 
       try {
-        const shells = await invoke<Shell[]>("list_shells");
+        const shells = await commands.listShells();
         set({
           shells,
           isLoading: false,

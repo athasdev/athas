@@ -10,14 +10,14 @@ use std::{
 };
 use tauri::{AppHandle, Manager, State};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, specta::Type)]
 pub struct FuzzyMatchItem {
    pub text: String,
    pub score: i64,
    pub indices: Vec<u32>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, specta::Type)]
 pub struct FuzzyMatchRequest {
    pub pattern: String,
    pub items: Vec<String>,
@@ -26,6 +26,7 @@ pub struct FuzzyMatchRequest {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn fuzzy_match(request: FuzzyMatchRequest) -> Vec<FuzzyMatchItem> {
    if request.pattern.is_empty() || request.items.is_empty() {
       return request
@@ -162,6 +163,7 @@ pub(crate) fn local_workspace_paths(paths: Vec<String>) -> Vec<PathBuf> {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn fff_ensure_workspaces(
    app: AppHandle,
    state: State<'_, FffSearchState>,
@@ -175,6 +177,7 @@ pub fn fff_ensure_workspaces(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn fff_search_files(
    app: AppHandle,
    state: State<'_, FffSearchState>,
@@ -201,6 +204,7 @@ pub fn fff_search_files(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn fff_scan_status(
    app: AppHandle,
    state: State<'_, FffSearchState>,
@@ -214,6 +218,7 @@ pub fn fff_scan_status(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn fff_list_files(
    app: AppHandle,
    state: State<'_, FffSearchState>,
@@ -231,6 +236,7 @@ pub fn fff_list_files(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn fff_track_access(
    app: AppHandle,
    state: State<'_, FffSearchState>,

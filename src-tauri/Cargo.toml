@@ -95,6 +95,9 @@ tauri-plugin-deep-link = "2.6"
 tauri-plugin-drag = "2.1.1"
 async-trait = "0.1"
 tokio-util = { version = "0.7", features = ["compat"] }
+tauri-specta = { version = "=2.0.0-rc.25", features = ["derive", "typescript"] }
+specta = { version = "=2.0.0-rc.25", features = ["derive", "serde_json"] }
+specta-typescript = "=0.0.12"
 
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]

@@ -37,3 +37,4 @@ tempfile = "3"
 uuid = { version = "1.0", features = ["v4", "serde"] }
 which = "7.0"
 zip = "2.2"
+specta = { version = "=2.0.0-rc.25", features = ["derive", "serde_json"] }

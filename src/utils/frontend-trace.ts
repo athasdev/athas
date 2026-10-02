@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 
 type TraceLevel = "debug" | "info" | "warn" | "error";
 
@@ -34,10 +34,5 @@ export function frontendTrace(
   const isBenchmarkTrace = scope.startsWith("bench:");
   if (!FRONTEND_TRACE_ENABLED && !(FRONTEND_BENCHMARK_TRACE_ENABLED && isBenchmarkTrace)) return;
 
-  void invoke("frontend_trace", {
-    level,
-    scope,
-    message,
-    payload: sanitizePayload(payload),
-  }).catch(() => {});
+  void commands.frontendTrace(level, scope, message, sanitizePayload(payload)).catch(() => {});
 }

@@ -3,13 +3,13 @@ use athas_fff_search::{FffGrepOptions, GrepMode};
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, State};
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, specta::Type)]
 pub struct SearchMatchRange {
    pub start: usize,
    pub end: usize,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, specta::Type)]
 pub struct SearchMatch {
    pub line_number: usize,
    pub line_content: String,
@@ -20,14 +20,14 @@ pub struct SearchMatch {
    pub context_after: Vec<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, specta::Type)]
 pub struct FileSearchResult {
    pub file_path: String,
    pub matches: Vec<SearchMatch>,
    pub total_matches: usize,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, specta::Type)]
 pub struct SearchFilesResponse {
    pub results: Vec<FileSearchResult>,
    pub total_files: usize,
@@ -41,7 +41,7 @@ pub struct SearchFilesResponse {
    pub regex_fallback_error: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, specta::Type)]
 pub struct SearchFilesRequest {
    pub root_paths: Vec<String>,
    pub query: String,
@@ -118,6 +118,7 @@ fn byte_range_to_char_range(text: &str, start: usize, end: usize) -> (usize, usi
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn search_files_content(
    app: AppHandle,
    state: State<'_, FffSearchState>,

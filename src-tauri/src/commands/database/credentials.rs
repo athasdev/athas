@@ -2,7 +2,7 @@ use crate::secure_storage;
 use serde::{Deserialize, Serialize};
 use tauri::command;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, specta::Type)]
 pub struct SavedConnection {
    pub id: String,
    pub name: String,
@@ -20,6 +20,7 @@ const DB_CRED_PREFIX: &str = "db_cred_";
 const DB_CONNECTIONS_KEY: &str = "db_saved_connections";
 
 #[command]
+#[specta::specta]
 pub async fn store_db_credential(
    app: tauri::AppHandle,
    connection_id: String,
@@ -30,6 +31,7 @@ pub async fn store_db_credential(
 }
 
 #[command]
+#[specta::specta]
 pub async fn get_db_credential(
    app: tauri::AppHandle,
    connection_id: String,
@@ -39,6 +41,7 @@ pub async fn get_db_credential(
 }
 
 #[command]
+#[specta::specta]
 pub async fn remove_db_credential(
    app: tauri::AppHandle,
    connection_id: String,
@@ -48,6 +51,7 @@ pub async fn remove_db_credential(
 }
 
 #[command]
+#[specta::specta]
 pub async fn save_connection(
    app: tauri::AppHandle,
    connection: SavedConnection,
@@ -68,11 +72,13 @@ pub async fn save_connection(
 }
 
 #[command]
+#[specta::specta]
 pub async fn list_saved_connections(app: tauri::AppHandle) -> Result<Vec<SavedConnection>, String> {
    get_saved_connections_internal(&app)
 }
 
 #[command]
+#[specta::specta]
 pub async fn delete_saved_connection(
    app: tauri::AppHandle,
    connection_id: String,

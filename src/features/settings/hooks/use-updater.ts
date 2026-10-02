@@ -1,7 +1,7 @@
-import { invoke } from "@tauri-apps/api/core";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { check, type Update } from "@tauri-apps/plugin-updater";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { commands } from "@/bindings/commands";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { prepareProjectTransitionWithUnsavedBuffers } from "@/features/file-system/controllers/workspace-project-transition";
 import { recordUpdateCheckTelemetry } from "@/features/telemetry/services/telemetry";
@@ -18,7 +18,7 @@ let selfUpdateSupported: Promise<boolean> | null = null;
 
 // Flatpak and tarball installs on Linux are updated outside Athas.
 function isSelfUpdateSupported() {
-  selfUpdateSupported ??= invoke<boolean>("self_update_supported").catch(() => true);
+  selfUpdateSupported ??= commands.selfUpdateSupported().catch(() => true);
   return selfUpdateSupported;
 }
 

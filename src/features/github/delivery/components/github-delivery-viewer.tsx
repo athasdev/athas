@@ -3,7 +3,7 @@ import { Checkbox } from "@/ui/checkbox";
 import { Field, FieldLabel } from "@/ui/field";
 import { FieldError } from "@/ui/field";
 import { useEffect, useId, useRef, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { toast } from "sonner";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
@@ -123,20 +123,17 @@ export default function GitHubDeliveryViewer({ buffer }: { buffer: GitHubDeliver
     setPending(true);
     setActionError(null);
     try {
-      await invoke(
-        confirm === "publish"
-          ? "github_publish_release"
-          : confirm === "delete"
-            ? "github_delete_release"
-            : "github_deactivate_deployment",
-        {
+      if (confirm === "publish") {
+        await commands.githubPublishRelease(
           repoPath,
-          id: data.id,
-          ...(confirm === "publish"
-            ? { makeLatest: makeLatest && isRelease(data) && !data.prerelease }
-            : {}),
-        },
-      );
+          data.id,
+          makeLatest && isRelease(data) && !data.prerelease,
+        );
+      } else if (confirm === "delete") {
+        await commands.githubDeleteRelease(repoPath, data.id);
+      } else {
+        await commands.githubDeactivateDeployment(repoPath, data.id);
+      }
       notifyDeliveryChanged(kind, repoPath, data.id);
       if (confirm === "delete") closeBuffer(buffer.id);
       toast.success(

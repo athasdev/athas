@@ -1,9 +1,27 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import type { WindowOpenRequest } from "@/features/window/utils/window-open-request";
 import { traceWindowOpen } from "./window-open-diagnostics";
 
-interface CreateAppWindowPayload {
-  request?: WindowOpenRequest | null;
+type CreateAppWindowRequest = NonNullable<Parameters<typeof commands.createAppWindow>[0]>;
+
+function toCreateAppWindowRequest(request: WindowOpenRequest): CreateAppWindowRequest {
+  return {
+    detached: request.detached
+      ? {
+          kind: request.detached.kind,
+          channel: request.detached.channel,
+          payload: request.detached.payload ?? null,
+        }
+      : null,
+    content: request.content ?? null,
+    workbenchContent: request.workbenchContent ?? null,
+    workingDirectory: request.workingDirectory ?? null,
+    path: request.path ?? null,
+    isDirectory: request.isDirectory ?? null,
+    line: request.line ?? null,
+    remoteConnectionId: request.remoteConnectionId ?? null,
+    remoteConnectionName: request.remoteConnectionName ?? null,
+  };
 }
 
 export async function createAppWindow(request?: WindowOpenRequest | null) {
@@ -22,9 +40,9 @@ export async function createAppWindow(request?: WindowOpenRequest | null) {
   traceWindowOpen("createAppWindow:invoke:start", { requestKind });
 
   try {
-    const label = await invoke<string>("create_app_window", {
-      request: request ?? null,
-    } satisfies CreateAppWindowPayload);
+    const label = await commands.createAppWindow(
+      request ? toCreateAppWindowRequest(request) : null,
+    );
 
     traceWindowOpen("createAppWindow:invoke:end", {
       requestKind,

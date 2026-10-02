@@ -1,4 +1,5 @@
-import { convertFileSrc, invoke } from "@tauri-apps/api/core";
+import { convertFileSrc } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { getDefaultSetting } from "@/features/settings/config/default-settings";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import type { IconThemeContribution, ThemeContribution } from "../types/extension-manifest";
@@ -163,7 +164,7 @@ async function resolveContributionExtensionPath(
   }
 
   try {
-    return await invoke<string>("get_extension_path", { extensionId });
+    return await commands.getExtensionPath(extensionId);
   } catch (error) {
     console.warn(`Failed to resolve integration path for ${extensionId}:`, error);
     return undefined;

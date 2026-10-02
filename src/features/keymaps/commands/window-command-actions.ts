@@ -1,3 +1,4 @@
+import { commands } from "@/bindings/commands";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { createAppWindow } from "@/features/window/utils/create-app-window";
 import { isLinux, isMac } from "@/utils/platform";
@@ -51,6 +52,5 @@ export async function toggleNativeMenuBar(): Promise<void> {
   const { settings } = useSettingsStore.getState();
   if (!settings.nativeMenuBar) return;
 
-  const { invoke } = await import("@tauri-apps/api/core");
-  invoke("toggle_menu_bar").catch(console.error);
+  commands.toggleMenuBar(null).catch(console.error);
 }

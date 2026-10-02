@@ -5,6 +5,7 @@ use tauri::command;
 /// updated by Flatpak, and the tarball (including the Nix package) by whoever
 /// installed it.
 #[command]
+#[specta::specta]
 pub fn self_update_supported() -> bool {
    if cfg!(target_os = "linux") {
       return tauri::utils::platform::bundle_type().is_some()

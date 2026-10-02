@@ -1,5 +1,5 @@
 import { getBufferById } from "@/features/editor/utils/buffer-index";
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { getDirtyEditorBuffers } from "@/features/editor/utils/editor-buffer-selectors";
 import { isEditorContent, type PaneContent } from "@/features/panes/types/pane-content.types";
 import { showChoiceDialog } from "@/ui/dialog";
@@ -80,17 +80,19 @@ export const prepareProjectTransitionWithUnsavedBuffers = async (
   const canUseNativeSheet =
     IS_MAC && typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
   const choice = canUseNativeSheet
-    ? await invoke<"primary" | "secondary" | "cancel">("show_native_choice_sheet", {
-        message,
-        informativeText: "Unsaved changes will be lost if you continue without saving.",
-        primaryLabel: dirtyBuffers.length === 1 ? "Save" : "Save All",
-        secondaryLabel: dirtyBuffers.length === 1 ? "Don’t Save" : "Discard All",
-        cancelLabel: "Cancel",
-      }).then((nativeChoice): UnsavedProjectTransitionChoice => {
-        if (nativeChoice === "primary") return "save";
-        if (nativeChoice === "secondary") return "discard";
-        return "cancel";
-      })
+    ? await commands
+        .showNativeChoiceSheet(
+          message,
+          "Unsaved changes will be lost if you continue without saving.",
+          dirtyBuffers.length === 1 ? "Save" : "Save All",
+          dirtyBuffers.length === 1 ? "Don’t Save" : "Discard All",
+          "Cancel",
+        )
+        .then((nativeChoice): UnsavedProjectTransitionChoice => {
+          if (nativeChoice === "primary") return "save";
+          if (nativeChoice === "secondary") return "discard";
+          return "cancel";
+        })
     : await showChoiceDialog<UnsavedProjectTransitionChoice>(message, {
         title: "Unsaved Changes",
         choices: [

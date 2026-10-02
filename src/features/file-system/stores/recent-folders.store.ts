@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
@@ -54,7 +54,7 @@ const useRecentFoldersStoreBase = create<RecentFoldersStore>()(
             });
 
             if (IS_MAC && typeof window !== "undefined") {
-              void invoke("note_recent_document", { path: folderPath }).catch((error) => {
+              void commands.noteRecentDocument(folderPath).catch((error) => {
                 console.error("Failed to update the macOS Open Recent menu:", error);
               });
             }

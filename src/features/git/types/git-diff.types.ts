@@ -20,7 +20,7 @@ export interface ParsedHunk {
 export interface ImageContainerProps {
   label: string;
   labelColor: string;
-  base64?: string;
+  base64?: string | null;
   alt: string;
   filePath: string;
   zoom: number;
@@ -100,7 +100,7 @@ export interface MultiFileDiff {
   repoPath?: string;
   commitHash: string;
   commitMessage?: string;
-  commitDescription?: string;
+  commitDescription?: string | null;
   commitAuthor?: string;
   commitEmail?: string;
   commitDate?: string;

@@ -15,6 +15,8 @@ describe("resolveTerminalLaunch", () => {
           {
             id: "wsl:Ubuntu",
             name: "WSL: Ubuntu",
+            exec_unix: null,
+            exec_win: null,
             kind: "wsl",
             wsl_distribution: "Ubuntu",
           },
@@ -47,6 +49,8 @@ describe("resolveTerminalLaunch", () => {
           {
             id: "wsl:Debian",
             name: "WSL: Debian",
+            exec_unix: null,
+            exec_win: null,
             kind: "wsl",
             wsl_distribution: "Debian",
           },

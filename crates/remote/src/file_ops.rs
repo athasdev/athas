@@ -2,7 +2,7 @@ use crate::{ssh_helpers::shell_quote, state::CONNECTIONS};
 use serde::{Deserialize, Serialize};
 use std::io::{Read, Write};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 pub struct RemoteFileEntry {
    pub name: String,
    pub path: String,

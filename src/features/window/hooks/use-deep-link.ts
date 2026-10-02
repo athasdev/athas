@@ -1,6 +1,6 @@
-import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect } from "react";
+import { commands } from "@/bindings/commands";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
 import { toast } from "sonner";
 import type { Settings } from "@/features/settings/types/settings.types";
@@ -14,7 +14,7 @@ import { createPendingQueueDrain } from "../utils/pending-queue-drain";
 import { disposeListener } from "@/utils/tauri-drag-drop";
 
 const drainPendingDeepLinks = createPendingQueueDrain({
-  take: () => invoke<string[]>("take_pending_deep_links"),
+  take: () => commands.takePendingDeepLinks(),
   handle: handleDeepLink,
   onError: (error) => console.error("Failed to load pending deep links:", error),
 });

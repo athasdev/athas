@@ -3,14 +3,9 @@ interface PullRequestAuthor {
   avatarUrl?: string | null;
 }
 
-export interface StatusCheck {
-  id?: number | null;
-  name: string | null;
-  status: string | null;
-  conclusion: string | null;
-  workflowName: string | null;
-  detailsUrl?: string | null;
-}
+import type { StatusCheck } from "@/bindings/commands";
+
+export type { StatusCheck };
 
 export interface LinkedIssue {
   number: number;

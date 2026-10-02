@@ -30,6 +30,7 @@ async fn resolve_github_token_async(app: &tauri::AppHandle) -> Option<String> {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_check_auth(
    app: tauri::AppHandle,
 ) -> Result<athas_github::GitHubAuthStatus, String> {
@@ -38,6 +39,7 @@ pub async fn github_check_auth(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_list_prs(
    app: tauri::AppHandle,
    repo_path: String,
@@ -48,12 +50,14 @@ pub async fn github_list_prs(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_get_current_user(app: tauri::AppHandle) -> Result<String, String> {
    let github_token = resolve_github_token_async(&app).await;
    run_blocking(move || athas_github::github_get_current_user(github_token)).await
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_list_notifications(
    app: tauri::AppHandle,
 ) -> Result<Vec<GitHubNotification>, String> {
@@ -62,6 +66,7 @@ pub async fn github_list_notifications(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_resolve_notification_workflow_run(
    app: tauri::AppHandle,
    repository_full_name: String,
@@ -83,6 +88,7 @@ pub async fn github_resolve_notification_workflow_run(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_list_issues(
    app: tauri::AppHandle,
    repo_path: String,
@@ -100,6 +106,7 @@ pub async fn github_list_issues(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_list_workflow_runs(
    app: tauri::AppHandle,
    repo_path: String,
@@ -109,6 +116,7 @@ pub async fn github_list_workflow_runs(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_list_workflows(
    app: tauri::AppHandle,
    repo_path: String,
@@ -118,6 +126,7 @@ pub async fn github_list_workflows(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_list_labels(
    app: tauri::AppHandle,
    repo_path: String,
@@ -127,6 +136,7 @@ pub async fn github_list_labels(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_list_milestones(
    app: tauri::AppHandle,
    repo_path: String,
@@ -136,6 +146,7 @@ pub async fn github_list_milestones(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_list_issue_types(
    app: tauri::AppHandle,
    repo_path: String,
@@ -145,6 +156,7 @@ pub async fn github_list_issue_types(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_create_issue(
    app: tauri::AppHandle,
    repo_path: String,
@@ -172,6 +184,7 @@ pub async fn github_create_issue(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_update_issue(
    app: tauri::AppHandle,
    repo_path: String,
@@ -201,6 +214,7 @@ pub async fn github_update_issue(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_update_issue_state(
    app: tauri::AppHandle,
    repo_path: String,
@@ -222,6 +236,7 @@ pub async fn github_update_issue_state(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_add_issue_comment(
    app: tauri::AppHandle,
    repo_path: String,
@@ -236,6 +251,7 @@ pub async fn github_add_issue_comment(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_update_issue_comment(
    app: tauri::AppHandle,
    repo_path: String,
@@ -250,6 +266,7 @@ pub async fn github_update_issue_comment(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_delete_issue_comment(
    app: tauri::AppHandle,
    repo_path: String,
@@ -263,6 +280,7 @@ pub async fn github_delete_issue_comment(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_lock_issue(
    app: tauri::AppHandle,
    repo_path: String,
@@ -277,6 +295,7 @@ pub async fn github_lock_issue(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_unlock_issue(
    app: tauri::AppHandle,
    repo_path: String,
@@ -288,6 +307,7 @@ pub async fn github_unlock_issue(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_create_pull_request(
    app: tauri::AppHandle,
    repo_path: String,
@@ -317,6 +337,7 @@ pub async fn github_create_pull_request(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_update_pull_request(
    app: tauri::AppHandle,
    repo_path: String,
@@ -342,6 +363,7 @@ pub async fn github_update_pull_request(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_add_pr_comment(
    app: tauri::AppHandle,
    repo_path: String,
@@ -356,6 +378,7 @@ pub async fn github_add_pr_comment(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_submit_pr_review(
    app: tauri::AppHandle,
    repo_path: String,
@@ -371,6 +394,7 @@ pub async fn github_submit_pr_review(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_merge_pull_request(
    app: tauri::AppHandle,
    repo_path: String,
@@ -385,6 +409,7 @@ pub async fn github_merge_pull_request(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_close_pull_request(
    app: tauri::AppHandle,
    repo_path: String,
@@ -396,6 +421,7 @@ pub async fn github_close_pull_request(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_dispatch_workflow(
    app: tauri::AppHandle,
    repo_path: String,
@@ -410,6 +436,7 @@ pub async fn github_dispatch_workflow(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_checkout_pr(
    app: tauri::AppHandle,
    repo_path: String,
@@ -420,6 +447,7 @@ pub async fn github_checkout_pr(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_get_pr_details(
    app: tauri::AppHandle,
    repo_path: String,
@@ -431,6 +459,7 @@ pub async fn github_get_pr_details(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_get_pr_diff(
    app: tauri::AppHandle,
    repo_path: String,
@@ -441,6 +470,7 @@ pub async fn github_get_pr_diff(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_get_pr_files(
    app: tauri::AppHandle,
    repo_path: String,
@@ -451,6 +481,7 @@ pub async fn github_get_pr_files(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_get_pr_comments(
    app: tauri::AppHandle,
    repo_path: String,
@@ -462,6 +493,7 @@ pub async fn github_get_pr_comments(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_get_issue_details(
    app: tauri::AppHandle,
    repo_path: String,
@@ -475,6 +507,7 @@ pub async fn github_get_issue_details(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_get_workflow_run_details(
    app: tauri::AppHandle,
    repo_path: String,
@@ -488,6 +521,7 @@ pub async fn github_get_workflow_run_details(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_rerun_workflow_run(
    app: tauri::AppHandle,
    repo_path: String,
@@ -502,6 +536,7 @@ pub async fn github_rerun_workflow_run(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_cancel_workflow_run(
    app: tauri::AppHandle,
    repo_path: String,
@@ -513,6 +548,7 @@ pub async fn github_cancel_workflow_run(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_get_workflow_job_logs(
    app: tauri::AppHandle,
    repo_path: String,
@@ -524,21 +560,25 @@ pub async fn github_get_workflow_job_logs(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn store_github_token(app: tauri::AppHandle, token: String) -> Result<(), String> {
    store_secret(&app, "github_token", &token)
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn get_github_token(app: tauri::AppHandle) -> Result<Option<String>, String> {
    get_secret(&app, "github_token")
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn remove_github_token(app: tauri::AppHandle) -> Result<(), String> {
    remove_secret(&app, "github_token")
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_list_releases(
    app: tauri::AppHandle,
    repo_path: String,
@@ -549,6 +589,7 @@ pub async fn github_list_releases(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_get_release(
    app: tauri::AppHandle,
    repo_path: String,
@@ -559,6 +600,7 @@ pub async fn github_get_release(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_save_release(
    app: tauri::AppHandle,
    repo_path: String,
@@ -570,6 +612,7 @@ pub async fn github_save_release(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_publish_release(
    app: tauri::AppHandle,
    repo_path: String,
@@ -582,6 +625,7 @@ pub async fn github_publish_release(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_delete_release(
    app: tauri::AppHandle,
    repo_path: String,
@@ -592,6 +636,7 @@ pub async fn github_delete_release(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_generate_release_notes(
    app: tauri::AppHandle,
    repo_path: String,
@@ -607,6 +652,7 @@ pub async fn github_generate_release_notes(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_list_deployments(
    app: tauri::AppHandle,
    repo_path: String,
@@ -617,6 +663,7 @@ pub async fn github_list_deployments(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_get_deployment(
    app: tauri::AppHandle,
    repo_path: String,
@@ -627,6 +674,7 @@ pub async fn github_get_deployment(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_deactivate_deployment(
    app: tauri::AppHandle,
    repo_path: String,
@@ -637,6 +685,7 @@ pub async fn github_deactivate_deployment(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_upload_release_asset(
    app: tauri::AppHandle,
    repo_path: String,
@@ -649,6 +698,7 @@ pub async fn github_upload_release_asset(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_delete_release_asset(
    app: tauri::AppHandle,
    repo_path: String,
@@ -659,7 +709,7 @@ pub async fn github_delete_release_asset(
 }
 
 /// What the GitHub auth indicator in Settings shows.
-#[derive(serde::Serialize)]
+#[derive(serde::Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct GitHubTokenStatus {
    /// Which source supplied the active token, or `None` when there is none.
@@ -674,6 +724,7 @@ pub struct GitHubTokenStatus {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_token_status(app: tauri::AppHandle) -> Result<GitHubTokenStatus, String> {
    run_blocking(move || {
       let resolved = resolve_github_token(&app);
@@ -692,6 +743,7 @@ pub async fn github_token_status(app: tauri::AppHandle) -> Result<GitHubTokenSta
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn store_github_personal_access_token(
    app: tauri::AppHandle,
    token: String,
@@ -705,19 +757,21 @@ pub async fn store_github_personal_access_token(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn remove_github_personal_access_token(app: tauri::AppHandle) -> Result<(), String> {
    remove_secret(&app, PERSONAL_ACCESS_TOKEN_SECRET_KEY)
 }
 
 /// Forces the next resolution to re-read `gh`, for the "Retry" action in Settings.
 #[tauri::command]
+#[specta::specta]
 pub async fn refresh_github_gh_cli_token() -> Result<(), String> {
    invalidate_gh_cli_token_cache();
    Ok(())
 }
 
 /// Whether the `gh` CLI can supply a credential, for the one-click switch in empty states.
-#[derive(serde::Serialize)]
+#[derive(serde::Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct GhCliAvailability {
    pub installed: bool,
@@ -726,6 +780,7 @@ pub struct GhCliAvailability {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn github_gh_cli_availability() -> Result<GhCliAvailability, String> {
    run_blocking(|| {
       let installed = athas_github::is_gh_cli_installed();

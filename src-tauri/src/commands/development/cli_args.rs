@@ -24,6 +24,7 @@ impl PendingCliOpenRequests {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn take_pending_cli_open_requests(
    window: tauri::WebviewWindow,
    state: State<'_, PendingCliOpenRequests>,
@@ -43,10 +44,21 @@ pub struct OpenRequest {
    pub line: Option<u32>,
 }
 
-#[derive(Debug, Clone, Serialize, PartialEq)]
+/// Names `CliRequest` from inside itself. Specta recurses forever when an
+/// internally tagged enum contains itself, so the nested request is typed by name.
+pub struct CliRequestReference;
+
+impl specta::Type for CliRequestReference {
+   fn definition(_: &mut specta::Types) -> specta::datatype::DataType {
+      specta::datatype::DataType::Reference(specta_typescript::define("CliRequest"))
+   }
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq, specta::Type)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum CliRequest {
    NewWindow {
+      #[specta(type = CliRequestReference)]
       request: Box<CliRequest>,
    },
    Surface {

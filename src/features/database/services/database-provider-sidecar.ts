@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import type { DatabaseType } from "../types/provider.types";
 
 const COMMAND_PROVIDER_PREFIXES: Array<[string, DatabaseType]> = [
@@ -49,9 +49,9 @@ export async function invokeDatabaseProvider<T>(
     throw new Error("Database provider id is required");
   }
 
-  return invoke<T>("run_database_provider_command", {
-    providerId: resolvedProviderId,
-    command: normalizedCommand,
+  return (await commands.runDatabaseProviderCommand(
+    resolvedProviderId,
+    normalizedCommand,
     payload,
-  });
+  )) as T;
 }

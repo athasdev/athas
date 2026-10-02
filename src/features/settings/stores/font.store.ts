@@ -1,5 +1,5 @@
 import { BUNDLED_FONTS } from "@/features/settings/config/bundled-fonts";
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import type { FontInfo } from "@/features/settings/types/font.types";
@@ -118,7 +118,7 @@ export const useFontStore = createSelectors(
             });
 
             try {
-              const fonts = await invoke<FontInfo[]>("get_system_fonts");
+              const fonts = await commands.getSystemFonts();
               const monospaceFonts = fonts.filter((font) => font.is_monospace);
 
               set((state) => {
@@ -167,7 +167,7 @@ export const useFontStore = createSelectors(
             });
 
             try {
-              const fonts = await invoke<FontInfo[]>("get_monospace_fonts");
+              const fonts = await commands.getMonospaceFonts();
 
               set((state) => {
                 state.monospaceFonts = fonts;
@@ -211,7 +211,7 @@ export const useFontStore = createSelectors(
           validateFont: async (fontFamily: string): Promise<boolean> => {
             if (BUNDLED_FONTS.some((font) => font.family === fontFamily)) return true;
             try {
-              return await invoke<boolean>("validate_font", { fontFamily });
+              return await commands.validateFont(fontFamily);
             } catch (error) {
               console.error("Failed to validate font:", error);
               if (isTauriBridgeError(error)) {

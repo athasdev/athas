@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import type { AcpSessionState } from "@/features/ai/types/acp.types";
 import { getAcpAgentKey } from "@/features/ai/lib/acp-session-state";
 import {
@@ -109,7 +109,7 @@ export function createAcpActions(set: SetAIChatStore, get: GetAIChatStore): AcpA
         session.modeState.currentModeId = modeId;
       });
       try {
-        await invoke("set_acp_session_mode", { sessionId, modeId });
+        await commands.setAcpSessionMode(sessionId, modeId);
         recordPick(sessionId, { modeId });
       } catch (error) {
         console.error("Failed to change session mode:", error);
@@ -136,7 +136,7 @@ export function createAcpActions(set: SetAIChatStore, get: GetAIChatStore): AcpA
       });
 
       try {
-        await invoke("set_acp_session_config_option", { args: { sessionId, configId, value } });
+        await commands.setAcpSessionConfigOption({ sessionId, configId, value });
         recordPick(sessionId, { configId, value });
       } catch (error) {
         console.error("Failed to change session config option:", error);

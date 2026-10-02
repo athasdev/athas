@@ -331,6 +331,7 @@ pub async fn run_database_sidecar(
 }
 
 #[command]
+#[specta::specta]
 pub async fn run_database_provider_command(
    app_handle: AppHandle,
    provider_id: String,

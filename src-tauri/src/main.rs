@@ -14,6 +14,8 @@ use terminal::{
 };
 
 mod app_setup;
+#[cfg(debug_assertions)]
+mod bindings;
 mod bootstrap;
 mod commands;
 mod file_events;
@@ -63,6 +65,10 @@ fn main() {
          window.create = false;
       }
    }
+   let specta_builder = specta_builder();
+   #[cfg(debug_assertions)]
+   bindings::export_in_background(&specta_builder);
+
    tauri::Builder::default()
       .on_window_event(|window, event| {
          if matches!(event, tauri::WindowEvent::Destroyed) {
@@ -93,10 +99,41 @@ fn main() {
       .plugin(tauri_plugin_drag::init())
       .plugin(tauri_plugin_updater::Builder::new().build())
       .setup(configure_app)
-      .invoke_handler(tauri::generate_handler![
-         self_update_supported,
+      .invoke_handler(specta_builder.invoke_handler())
+      .build(context)
+      .expect("error while building tauri application")
+      .run(|app_handle, event| match event {
+         #[cfg(target_os = "linux")]
+         tauri::RunEvent::Ready => {
+            commands::ui::window::ensure_app_windows_reachable(app_handle);
+            app_handle.state::<StartupTiming>().record("native:ready");
+         }
+         #[cfg(not(target_os = "linux"))]
+         tauri::RunEvent::Ready => app_handle.state::<StartupTiming>().record("native:ready"),
+         #[cfg(target_os = "macos")]
+         tauri::RunEvent::Reopen {
+            has_visible_windows,
+            ..
+         } => app_setup::handle_reopen(app_handle, has_visible_windows),
+         #[cfg(target_os = "macos")]
+         tauri::RunEvent::Opened { urls } => app_setup::handle_opened_urls(app_handle, &urls),
+         tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit => {
+            shutdown_background_services(app_handle);
+         }
+         _ => {}
+      });
+}
+
+/// Every app command, registered once for both the invoke handler and the
+/// generated TypeScript bindings in `src/bindings/commands.ts`.
+pub(crate) fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
+   tauri_specta::Builder::<tauri::Wry>::new()
+      .error_handling(tauri_specta::ErrorHandlingMode::Throw)
+      .dangerously_cast_bigints_to_number()
+      .commands(tauri_specta::collect_commands![
          // File system commands
          read_athas_log,
+         self_update_supported,
          read_local_file,
          get_local_directory_size,
          open_file_external,
@@ -441,7 +478,7 @@ fn main() {
          install_extension,
          uninstall_extension,
          list_installed_extensions,
-         get_bundled_extensions_path,
+         get_bundled_extensions_path::<tauri::Wry>,
          get_extension_path,
          read_extension_entrypoint,
          get_extension_secret,
@@ -520,28 +557,6 @@ fn main() {
          menu::rebuild_menu_themes,
          menu::sync_native_menu_state,
       ])
-      .build(context)
-      .expect("error while building tauri application")
-      .run(|app_handle, event| match event {
-         #[cfg(target_os = "linux")]
-         tauri::RunEvent::Ready => {
-            commands::ui::window::ensure_app_windows_reachable(app_handle);
-            app_handle.state::<StartupTiming>().record("native:ready");
-         }
-         #[cfg(not(target_os = "linux"))]
-         tauri::RunEvent::Ready => app_handle.state::<StartupTiming>().record("native:ready"),
-         #[cfg(target_os = "macos")]
-         tauri::RunEvent::Reopen {
-            has_visible_windows,
-            ..
-         } => app_setup::handle_reopen(app_handle, has_visible_windows),
-         #[cfg(target_os = "macos")]
-         tauri::RunEvent::Opened { urls } => app_setup::handle_opened_urls(app_handle, &urls),
-         tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit => {
-            shutdown_background_services(app_handle);
-         }
-         _ => {}
-      });
 }
 
 fn window_state_flags() -> StateFlags {

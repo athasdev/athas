@@ -30,7 +30,7 @@ const GH_TOKEN_CACHE_TTL: Duration = Duration::from_secs(60);
 
 static GH_TOKEN_CACHE: Mutex<Option<(Instant, Option<String>)>> = Mutex::new(None);
 
-#[derive(Clone, Copy, PartialEq, Eq, serde::Serialize)]
+#[derive(Clone, Copy, PartialEq, Eq, serde::Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub enum GitHubTokenSource {
    Athas,

@@ -4,20 +4,20 @@ use std::{fs, path::Path};
 use tauri::{AppHandle, Emitter, State, command};
 use tokio::sync::RwLock;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
 #[serde(rename_all = "snake_case")]
 pub enum ClipboardOperation {
    Copy,
    Cut,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 pub struct ClipboardEntry {
    pub path: String,
    pub is_dir: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 pub struct FileClipboardState {
    pub entries: Vec<ClipboardEntry>,
    pub operation: ClipboardOperation,
@@ -25,7 +25,7 @@ pub struct FileClipboardState {
 
 pub type FileClipboard = RwLock<Option<FileClipboardState>>;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 pub struct PastedEntry {
    pub source_path: String,
    pub destination_path: String,
@@ -67,6 +67,7 @@ fn generate_unique_path(base: &Path) -> std::path::PathBuf {
 }
 
 #[command]
+#[specta::specta]
 pub async fn clipboard_set(
    state: State<'_, FileClipboard>,
    app: AppHandle,
@@ -84,6 +85,7 @@ pub async fn clipboard_set(
 }
 
 #[command]
+#[specta::specta]
 pub async fn clipboard_get(
    state: State<'_, FileClipboard>,
 ) -> Result<Option<FileClipboardState>, String> {
@@ -92,6 +94,7 @@ pub async fn clipboard_get(
 }
 
 #[command]
+#[specta::specta]
 pub async fn clipboard_clear(
    state: State<'_, FileClipboard>,
    app: AppHandle,
@@ -106,6 +109,7 @@ pub async fn clipboard_clear(
 }
 
 #[command]
+#[specta::specta]
 pub async fn clipboard_paste(
    state: State<'_, FileClipboard>,
    app: AppHandle,

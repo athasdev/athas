@@ -2,7 +2,7 @@ import {
   ATHAS_BROWSER_TOOL,
   runHostedBrowserTool,
 } from "@/features/browser-use/services/browser-tool";
-import { invoke } from "@tauri-apps/api/core";
+import { commands, type CodexThreadSettings as CodexThreadSettingsArg } from "@/bindings/commands";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { AcpEvent } from "@/features/ai/types/acp.types";
@@ -11,11 +11,7 @@ import type { AgentCompletionResult } from "@/features/ai/types/agent-completion
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { runCodexDynamicTool } from "./codex-dynamic-tools";
 import { imageDataUrl } from "@/features/ai/lib/image-attachments";
-import type {
-  CodexIntegrationStatus,
-  CodexProtocolEvent,
-  CodexThreadSettings,
-} from "./codex-types";
+import type { CodexProtocolEvent, CodexThreadSettings } from "./codex-types";
 
 interface CodexHandlers {
   onChunk: (chunk: string) => void;
@@ -46,6 +42,20 @@ export function getCodexSettings(): CodexThreadSettings {
   } catch {
     return defaultCodexSettings;
   }
+}
+
+function codexThreadSettingsArg(): CodexThreadSettingsArg {
+  const settings = getCodexSettings();
+  return {
+    model: settings.model ?? null,
+    effort: settings.effort ?? null,
+    personality: settings.personality ?? null,
+    approvalPolicy: settings.approvalPolicy ?? null,
+    sandbox: settings.sandbox ?? null,
+    developerInstructions: settings.developerInstructions ?? null,
+    serviceTier: settings.serviceTier ?? null,
+    collaborationMode: settings.collaborationMode ?? null,
+  };
 }
 
 export function saveCodexSettings(settings: CodexThreadSettings) {
@@ -104,9 +114,11 @@ export class CodexIntegrationService {
       const chat = this.chatId
         ? useAIChatStore.getState().actions.getChatById(this.chatId)
         : undefined;
-      const result = await invoke<any>("start_codex_thread", {
-        args: { cwd, threadId: chat?.acpSessionId ?? null, settings: getCodexSettings() },
-      });
+      const result = (await commands.startCodexThread({
+        cwd,
+        threadId: chat?.acpSessionId ?? null,
+        settings: codexThreadSettingsArg(),
+      })) as { thread: { id: string } };
       this.threadId = result.thread.id;
       if (this.chatId) {
         useAIChatStore.getState().actions.setChatAcpSessionId(this.chatId, this.threadId);
@@ -114,16 +126,14 @@ export class CodexIntegrationService {
       this.unlisten = await listen<CodexProtocolEvent>("codex-event", ({ payload }) =>
         this.handleEvent(payload),
       );
-      const turn = await invoke<any>("start_codex_turn", {
-        args: {
-          threadId: this.threadId,
-          input: [
-            ...(message ? [{ type: "text", text: message, text_elements: [] }] : []),
-            ...(context.images ?? []).map((image) => ({ type: "image", url: imageDataUrl(image) })),
-          ],
-          settings: getCodexSettings(),
-        },
-      });
+      const turn = (await commands.startCodexTurn({
+        threadId: this.threadId,
+        input: [
+          ...(message ? [{ type: "text", text: message, text_elements: [] }] : []),
+          ...(context.images ?? []).map((image) => ({ type: "image", url: imageDataUrl(image) })),
+        ],
+        settings: codexThreadSettingsArg(),
+      })) as { turn?: { id?: string } | null };
       this.turnId = turn.turn?.id ?? null;
     } catch (error) {
       this.dispose();
@@ -154,9 +164,7 @@ export class CodexIntegrationService {
       if (toolName === ATHAS_BROWSER_TOOL) {
         const requestId = event.id;
         void runHostedBrowserTool(params.arguments, `${this.threadId}:${this.turnId}:${requestId}`)
-          .then((decision) =>
-            invoke("respond_codex_request", { response: { requestId, decision } }),
-          )
+          .then((decision) => commands.respondCodexRequest({ requestId, decision }))
           .catch((error) => this.handlers.onError(String(error), true));
         return;
       }
@@ -175,9 +183,9 @@ export class CodexIntegrationService {
         contentItems: [{ type: "inputText" as const, text: `Unknown Athas tool: ${toolName}` }],
         success: false,
       };
-      void invoke("respond_codex_request", {
-        response: { requestId: event.id, decision: result },
-      }).catch((error) => this.handlers.onError(String(error), true));
+      void commands
+        .respondCodexRequest({ requestId: event.id, decision: result })
+        .catch((error) => this.handlers.onError(String(error), true));
       return;
     }
 
@@ -280,20 +288,18 @@ export class CodexIntegrationService {
   static async cancel() {
     const current = CodexIntegrationService.active;
     if (!current?.threadId || !current.turnId) return;
-    await invoke("interrupt_codex_turn", { threadId: current.threadId, turnId: current.turnId });
+    await commands.interruptCodexTurn(current.threadId, current.turnId);
     current.dispose();
   }
 
   static async respond(requestId: string, approved: boolean) {
-    await invoke("respond_codex_request", {
-      response: {
-        requestId: Number(requestId),
-        decision: { decision: approved ? "accept" : "decline" },
-      },
+    await commands.respondCodexRequest({
+      requestId: Number(requestId),
+      decision: { decision: approved ? "accept" : "decline" },
     });
   }
 
   static status() {
-    return invoke<CodexIntegrationStatus>("get_codex_status");
+    return commands.getCodexStatus();
   }
 }

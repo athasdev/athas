@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct LspDiagnosticContext {
    pub line: u32,
@@ -14,7 +14,7 @@ pub struct LspDiagnosticContext {
    pub severity: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct LspCodeActionContext {
    pub start_line: u32,
@@ -25,7 +25,7 @@ pub struct LspCodeActionContext {
    pub diagnostics: Vec<LspDiagnosticContext>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct LspCodeActionItem {
    pub id: String,
@@ -38,14 +38,14 @@ pub struct LspCodeActionItem {
    pub payload: Value,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct LspApplyCodeActionResult {
    pub applied: bool,
    pub reason: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct FlatSymbol {
    pub name: String,
@@ -59,7 +59,7 @@ pub struct FlatSymbol {
    pub hierarchy_path: Vec<u32>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct FlatWorkspaceSymbol {
    pub name: String,
@@ -73,7 +73,7 @@ pub struct FlatWorkspaceSymbol {
    pub file_path: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct FlatInlayHint {
    pub line: u32,
@@ -84,7 +84,7 @@ pub struct FlatInlayHint {
    pub padding_right: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct FlatSemanticToken {
    pub line: u32,
@@ -94,7 +94,7 @@ pub struct FlatSemanticToken {
    pub token_modifiers: u32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct LspSemanticTokensResponse {
    pub tokens: Vec<FlatSemanticToken>,
@@ -102,7 +102,7 @@ pub struct LspSemanticTokensResponse {
    pub token_modifiers: Vec<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct FlatCodeLens {
    pub line: u32,
@@ -111,23 +111,95 @@ pub struct FlatCodeLens {
    pub arguments: Option<Vec<Value>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct FlatTextEditPosition {
    pub line: u32,
    pub character: u32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct FlatTextEditRange {
    pub start: FlatTextEditPosition,
    pub end: FlatTextEditPosition,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct FlatTextEdit {
    pub range: FlatTextEditRange,
    pub new_text: String,
+}
+
+/// An `lsp_types` value crossing IPC unchanged. The generated bindings type it as
+/// the matching `vscode-languageserver-protocol` type the frontend already uses.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct Lsp<T>(pub T);
+
+pub trait LspTypeName {
+   const TS_NAME: &'static str;
+}
+
+macro_rules! lsp_type_names {
+   ($($ty:ident => $name:literal),* $(,)?) => {
+      $(impl LspTypeName for lsp_types::$ty {
+         const TS_NAME: &'static str = $name;
+      })*
+   };
+}
+
+lsp_type_names!(
+   CallHierarchyIncomingCall => "CallHierarchyIncomingCall",
+   CallHierarchyItem => "CallHierarchyItem",
+   CallHierarchyOutgoingCall => "CallHierarchyOutgoingCall",
+   CompletionItem => "CompletionItem",
+   DocumentHighlight => "DocumentHighlight",
+   FoldingRange => "FoldingRange",
+   Hover => "Hover",
+   Location => "Location",
+   Position => "Position",
+   PrepareRenameResponse => "PrepareRenameResult",
+   SelectionRange => "SelectionRange",
+   SignatureHelp => "SignatureHelp",
+   TextEdit => "TextEdit",
+   TypeHierarchyItem => "TypeHierarchyItem",
+   WorkspaceEdit => "WorkspaceEdit",
+);
+
+impl<T: LspTypeName> specta::Type for Lsp<T> {
+   fn definition(_: &mut specta::Types) -> specta::datatype::DataType {
+      specta::datatype::DataType::Reference(specta_typescript::define(format!(
+         "Lsp.{}",
+         T::TS_NAME
+      )))
+   }
+}
+
+/// Wraps `lsp_types` values, including inside `Option` and `Vec`, in [`Lsp`].
+pub trait IntoLsp {
+   type Output;
+   fn into_lsp(self) -> Self::Output;
+}
+
+impl<T: LspTypeName> IntoLsp for T {
+   type Output = Lsp<T>;
+   fn into_lsp(self) -> Self::Output {
+      Lsp(self)
+   }
+}
+
+impl<T: IntoLsp> IntoLsp for Option<T> {
+   type Output = Option<T::Output>;
+   fn into_lsp(self) -> Self::Output {
+      self.map(IntoLsp::into_lsp)
+   }
+}
+
+impl<T: IntoLsp> IntoLsp for Vec<T> {
+   type Output = Vec<T::Output>;
+   fn into_lsp(self) -> Self::Output {
+      self.into_iter().map(IntoLsp::into_lsp).collect()
+   }
 }

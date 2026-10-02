@@ -3,13 +3,13 @@ use serde::Deserialize;
 use serde_json::Value;
 use tauri::State;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct CodexStartArgs {
    cwd: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct CodexThreadArgs {
    cwd: String,
@@ -18,7 +18,7 @@ pub struct CodexThreadArgs {
    settings: CodexThreadSettings,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct CodexTurnArgs {
    thread_id: String,
@@ -28,6 +28,7 @@ pub struct CodexTurnArgs {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn get_codex_status(
    server: State<'_, CodexAppServer>,
 ) -> Result<CodexIntegrationStatus, String> {
@@ -35,6 +36,7 @@ pub async fn get_codex_status(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn start_codex_integration(
    server: State<'_, CodexAppServer>,
    args: CodexStartArgs,
@@ -46,12 +48,14 @@ pub async fn start_codex_integration(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn stop_codex_integration(server: State<'_, CodexAppServer>) -> Result<(), String> {
    server.stop().await;
    Ok(())
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn start_codex_thread(
    server: State<'_, CodexAppServer>,
    args: CodexThreadArgs,
@@ -63,6 +67,7 @@ pub async fn start_codex_thread(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn start_codex_turn(
    server: State<'_, CodexAppServer>,
    args: CodexTurnArgs,
@@ -74,6 +79,7 @@ pub async fn start_codex_turn(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn interrupt_codex_turn(
    server: State<'_, CodexAppServer>,
    thread_id: String,
@@ -86,6 +92,7 @@ pub async fn interrupt_codex_turn(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn respond_codex_request(
    server: State<'_, CodexAppServer>,
    response: CodexRequestDecision,
@@ -99,6 +106,7 @@ pub async fn respond_codex_request(
 macro_rules! codex_value_command {
    ($name:ident, $method:ident) => {
       #[tauri::command]
+      #[specta::specta]
       pub async fn $name(server: State<'_, CodexAppServer>) -> Result<Value, String> {
          server.$method().await.map_err(|error| error.to_string())
       }
@@ -114,6 +122,7 @@ codex_value_command!(list_codex_permission_profiles, list_permission_profiles);
 codex_value_command!(list_codex_collaboration_modes, list_collaboration_modes);
 
 #[tauri::command]
+#[specta::specta]
 pub async fn start_codex_login(
    server: State<'_, CodexAppServer>,
    login_type: String,
@@ -125,6 +134,7 @@ pub async fn start_codex_login(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn list_codex_threads(
    server: State<'_, CodexAppServer>,
    cwd: Option<String>,
@@ -138,6 +148,7 @@ pub async fn list_codex_threads(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn read_codex_thread(
    server: State<'_, CodexAppServer>,
    thread_id: String,
@@ -149,6 +160,7 @@ pub async fn read_codex_thread(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn archive_codex_thread(
    server: State<'_, CodexAppServer>,
    thread_id: String,
@@ -160,6 +172,7 @@ pub async fn archive_codex_thread(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn delete_codex_thread(
    server: State<'_, CodexAppServer>,
    thread_id: String,
@@ -171,6 +184,7 @@ pub async fn delete_codex_thread(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn list_codex_skills(
    server: State<'_, CodexAppServer>,
    cwd: String,
@@ -182,6 +196,7 @@ pub async fn list_codex_skills(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn start_codex_review(
    server: State<'_, CodexAppServer>,
    thread_id: String,

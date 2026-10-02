@@ -1,5 +1,5 @@
 import { useGitHubList } from "../hooks/use-github-list";
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { GitHubAuthStatusMessage } from "./github-auth-status";
 import { memo, startTransition, useCallback, useDeferredValue, useEffect, useMemo } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
@@ -7,7 +7,7 @@ import { useFileSystemStore } from "@/features/file-system/stores/file-system.st
 import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
 import { writeSidebarResourceDragData } from "@/features/sidebar/utils/sidebar-resource-drag";
 import { useGitHubStore } from "../stores/github.store";
-import type { IssueDetails, IssueFilter, IssueListItem } from "../types/github.types";
+import type { IssueFilter, IssueListItem } from "../types/github.types";
 import { groupIssues } from "../utils/github-sidebar-groups";
 import { getTimeAgo, getSidebarTime } from "../utils/github-viewer-utils";
 import { getGitHubAvatarUrl } from "../utils/github-avatar-url";
@@ -118,7 +118,10 @@ const GitHubIssuesView = memo(
       return activeBuffer?.type === "githubIssue" ? activeBuffer.issueNumber : null;
     });
     const load = useCallback(
-      () => invoke<IssueListItem[]>("github_list_issues", { repoPath, state: filter }),
+      () =>
+        repoPath
+          ? commands.githubListIssues(repoPath, filter)
+          : Promise.resolve<IssueListItem[]>([]),
       [filter, repoPath],
     );
     const {
@@ -142,15 +145,9 @@ const GitHubIssuesView = memo(
 
         const cacheKey = `${repoPath}::${issue.number}`;
         void githubIssueDetailsCache
-          .load(
-            cacheKey,
-            () =>
-              invoke<IssueDetails>("github_get_issue_details", {
-                repoPath,
-                issueNumber: issue.number,
-              }),
-            { ttlMs: GITHUB_ISSUE_DETAILS_TTL_MS },
-          )
+          .load(cacheKey, () => commands.githubGetIssueDetails(repoPath, issue.number), {
+            ttlMs: GITHUB_ISSUE_DETAILS_TTL_MS,
+          })
           .catch(() => undefined);
       },
       [repoPath],

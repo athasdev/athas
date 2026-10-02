@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { FilePlusIcon, TrashIcon, UploadIcon } from "@/ui/icons";
 import { iconThemeRegistry } from "@/extensions/icon-themes/icon-theme-registry";
 import { useRegisteredIconThemes } from "@/extensions/icon-themes/use-registered-icon-themes";
@@ -388,7 +388,7 @@ export const AppearanceSettings = () => {
               checked={settings.nativeMenuBar}
               onChange={(checked) => {
                 updateSetting("nativeMenuBar", checked);
-                invoke("toggle_menu_bar", { toggle: checked });
+                commands.toggleMenuBar(checked);
               }}
             />
           </SettingRow>

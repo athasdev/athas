@@ -45,6 +45,7 @@ pub(crate) fn resolve_mcp_servers(
 }
 
 #[command]
+#[specta::specta]
 pub async fn get_mcp_server_secrets(
    app: AppHandle,
    server_id: String,
@@ -54,6 +55,7 @@ pub async fn get_mcp_server_secrets(
 
 /// Stores a server's environment variables and headers, or clears them when both are empty.
 #[command]
+#[specta::specta]
 pub async fn store_mcp_server_secrets(
    app: AppHandle,
    server_id: String,
@@ -71,6 +73,7 @@ pub async fn store_mcp_server_secrets(
 /// Starts a stdio MCP server for the built-in agent under `process_id`, with its stored
 /// environment joined in. Its stdout lines and exit arrive on `on_event`.
 #[command]
+#[specta::specta]
 pub async fn intelligence_mcp_start(
    app: AppHandle,
    process_id: String,
@@ -96,16 +99,19 @@ pub async fn intelligence_mcp_start(
 }
 
 #[command]
+#[specta::specta]
 pub async fn intelligence_mcp_send(process_id: String, message: String) -> Result<(), String> {
    athas_ai::mcp_stdio::send_mcp_stdio(&process_id, &message).await
 }
 
 #[command]
+#[specta::specta]
 pub fn intelligence_mcp_stop(process_id: String) {
    athas_ai::mcp_stdio::stop_mcp_stdio(&process_id);
 }
 
 #[command]
+#[specta::specta]
 pub async fn remove_mcp_server_secrets(app: AppHandle, server_id: String) -> Result<(), String> {
    remove_secret(&app, &secrets_key(&server_id)?)
 }

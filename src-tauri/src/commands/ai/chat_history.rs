@@ -17,11 +17,13 @@ fn repository(app: &tauri::AppHandle) -> Result<ChatHistoryRepository, String> {
 }
 
 #[command]
+#[specta::specta]
 pub async fn init_chat_database(app: tauri::AppHandle) -> Result<(), String> {
    repository(&app)?.initialize()
 }
 
 #[command]
+#[specta::specta]
 pub async fn save_chat(
    app: tauri::AppHandle,
    chat: ChatData,
@@ -32,26 +34,31 @@ pub async fn save_chat(
 }
 
 #[command]
+#[specta::specta]
 pub async fn update_chat_metadata(app: tauri::AppHandle, chat: ChatData) -> Result<(), String> {
    repository(&app)?.update_chat_metadata(chat)
 }
 
 #[command]
+#[specta::specta]
 pub async fn load_all_chats(app: tauri::AppHandle) -> Result<Vec<ChatData>, String> {
    repository(&app)?.load_all_chats()
 }
 
 #[command]
+#[specta::specta]
 pub async fn load_chat(app: tauri::AppHandle, chat_id: String) -> Result<ChatWithMessages, String> {
    repository(&app)?.load_chat(&chat_id)
 }
 
 #[command]
+#[specta::specta]
 pub async fn delete_chat(app: tauri::AppHandle, chat_id: String) -> Result<(), String> {
    repository(&app)?.delete_chat(&chat_id)
 }
 
 #[command]
+#[specta::specta]
 pub async fn save_chat_checkpoints(
    app: tauri::AppHandle,
    chat_id: String,
@@ -62,6 +69,7 @@ pub async fn save_chat_checkpoints(
 }
 
 #[command]
+#[specta::specta]
 pub async fn load_chat_checkpoints(
    app: tauri::AppHandle,
    chat_id: String,
@@ -70,11 +78,13 @@ pub async fn load_chat_checkpoints(
 }
 
 #[command]
+#[specta::specta]
 pub async fn search_chats(app: tauri::AppHandle, query: String) -> Result<Vec<ChatData>, String> {
    repository(&app)?.search_chats(&query)
 }
 
 #[command]
+#[specta::specta]
 pub async fn get_chat_stats(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
    let stats: ChatStats = repository(&app)?.get_stats()?;
    Ok(serde_json::json!({

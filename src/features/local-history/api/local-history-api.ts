@@ -1,4 +1,4 @@
-import { invoke as tauriInvoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 
 export interface LocalHistoryEntry {
   id: string;
@@ -16,29 +16,19 @@ export const recordLocalHistoryFile = async (
   reason: "save" | "auto-save" | "restore" | "manual" = "save",
   label?: string,
 ): Promise<LocalHistoryEntry | null> => {
-  return tauriInvoke<LocalHistoryEntry | null>("local_history_record_file", {
-    path,
-    reason,
-    label,
-  });
+  return commands.localHistoryRecordFile(path, reason, label ?? null);
 };
 
 export const listLocalHistoryFile = async (path: string): Promise<LocalHistoryEntry[]> => {
-  return tauriInvoke<LocalHistoryEntry[]>("local_history_list_file", { path });
+  return commands.localHistoryListFile(path);
 };
 
 export const readLocalHistoryEntry = async (path: string, entryId: string): Promise<string> => {
-  return tauriInvoke<string>("local_history_read_entry", {
-    path,
-    entryId,
-  });
+  return commands.localHistoryReadEntry(path, entryId);
 };
 
 export const deleteLocalHistoryEntry = async (path: string, entryId: string): Promise<void> => {
-  await tauriInvoke("local_history_delete_entry", {
-    path,
-    entryId,
-  });
+  await commands.localHistoryDeleteEntry(path, entryId);
 };
 
 export const renameLocalHistoryEntry = async (
@@ -46,9 +36,5 @@ export const renameLocalHistoryEntry = async (
   entryId: string,
   label: string | null,
 ): Promise<LocalHistoryEntry> => {
-  return tauriInvoke<LocalHistoryEntry>("local_history_rename_entry", {
-    path,
-    entryId,
-    label,
-  });
+  return commands.localHistoryRenameEntry(path, entryId, label);
 };

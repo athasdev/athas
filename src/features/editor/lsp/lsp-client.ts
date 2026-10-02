@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { listen } from "@tauri-apps/api/event";
 import type {
   CallHierarchyIncomingCall,
@@ -131,6 +131,16 @@ function isCanceledLspRequest(error: unknown): boolean {
     message.includes("content modified") ||
     message.includes("-32801")
   );
+}
+
+type NullFieldsAsOptional<T> = {
+  [K in keyof T]: null extends T[K] ? Exclude<T[K], null> | undefined : T[K];
+};
+
+function nullFieldsToUndefined<T extends object>(value: T): NullFieldsAsOptional<T> {
+  return Object.fromEntries(
+    Object.entries(value).map(([key, field]) => [key, field ?? undefined]),
+  ) as NullFieldsAsOptional<T>;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -492,12 +502,12 @@ export class LspClient {
     }
 
     try {
-      await invoke("lsp_respond_workspace_edit", {
-        clientId: request.clientId,
-        requestId: request.requestId,
+      await commands.lspRespondWorkspaceEdit(
+        request.clientId,
+        request.requestId,
         applied,
-        failureReason,
-      });
+        failureReason ?? null,
+      );
     } catch (error) {
       logger.warn("LSPClient", "Failed to acknowledge server workspace edit:", error);
     }
@@ -563,14 +573,14 @@ export class LspClient {
         serverArgs,
       });
 
-      await invoke<void>("lsp_start", {
+      await commands.lspStart(
         workspacePath,
         serverPath,
-        serverArgs,
-        languageId: languageId || null,
-        tools: tools || null,
-        initializationOptions: initOptions || null,
-      });
+        serverArgs ?? null,
+        languageId || null,
+        tools || null,
+        initOptions || null,
+      );
 
       // Track this language server
       if (languageId) {
@@ -591,7 +601,7 @@ export class LspClient {
   async stop(workspacePath: string): Promise<void> {
     try {
       logger.debug("LSPClient", "Stopping LSP for workspace:", workspacePath);
-      await invoke<void>("lsp_stop", { workspacePath });
+      await commands.lspStop(workspacePath);
 
       // Remove all language servers for this workspace
       const serversToRemove = Array.from(this.activeLanguageServers).filter((key) =>
@@ -697,15 +707,15 @@ export class LspClient {
       });
 
       try {
-        await invoke<void>("lsp_start_for_file", {
+        await commands.lspStartForFile(
           filePath,
           workspacePath,
           serverPath,
-          serverArgs,
-          languageId: languageId || null,
-          tools: tools || null,
-          initializationOptions: initializationOptions || null,
-        });
+          serverArgs ?? null,
+          languageId || null,
+          tools || null,
+          initializationOptions || null,
+        );
         if (languageId) {
           const serverKey = `${workspacePath}:${languageId}`;
           this.failedLanguageServers.delete(serverKey);
@@ -792,7 +802,7 @@ export class LspClient {
       logger.debug("LSPClient", "Stopping LSP for file:", filePath);
       const { extensionRegistry } = await import("@/extensions/registry/extension-registry");
       const languageId = extensionRegistry.getLanguageId(filePath) || undefined;
-      await invoke<void>("lsp_stop_for_file", { filePath });
+      await commands.lspStopForFile(filePath);
 
       if (languageId) {
         const activeKey = this.findServerKeyForFile(filePath, languageId);
@@ -892,13 +902,13 @@ export class LspClient {
         "LSPClient",
         `Active language servers: ${Array.from(this.activeLanguageServers).join(", ")}`,
       );
-      const completions = await invoke<CompletionItem[]>("lsp_get_completions", {
+      const completions = await commands.lspGetCompletions(
         filePath,
         line,
         character,
-        triggerKind,
-        triggerCharacter,
-      });
+        triggerKind ?? null,
+        triggerCharacter ?? null,
+      );
       if (completions.length === 0) {
         logger.warn("LSPClient", "LSP returned 0 completions - checking LSP status");
       } else {
@@ -913,7 +923,7 @@ export class LspClient {
 
   async resolveCompletionItem(filePath: string, item: CompletionItem): Promise<CompletionItem> {
     try {
-      return await invoke<CompletionItem>("lsp_resolve_completion_item", { filePath, item });
+      return await commands.lspResolveCompletionItem(filePath, item);
     } catch (error) {
       if (!isCanceledLspRequest(error)) {
         logger.debug("LSPClient", "LSP completion resolve unavailable:", error);
@@ -924,11 +934,7 @@ export class LspClient {
 
   async getHover(filePath: string, line: number, character: number): Promise<Hover | null> {
     try {
-      return await invoke<Hover | null>("lsp_get_hover", {
-        filePath,
-        line,
-        character,
-      });
+      return await commands.lspGetHover(filePath, line, character);
     } catch (error) {
       if (!isBenignHoverError(error)) {
         logger.error("LSPClient", "LSP hover error:", error);
@@ -946,11 +952,13 @@ export class LspClient {
   ): Promise<LspLocation[] | null> {
     try {
       logger.debug("LSPClient", `Getting ${label} for ${filePath}:${line}:${character}`);
-      const locations = await invoke<LspLocation[] | null>(command, {
-        filePath,
-        line,
-        character,
-      });
+      const request =
+        command === "lsp_get_definition"
+          ? commands.lspGetDefinition
+          : command === "lsp_get_implementation"
+            ? commands.lspGetImplementation
+            : commands.lspGetTypeDefinition;
+      const locations = await request(filePath, line, character);
       if (locations) {
         logger.debug("LSPClient", `Got ${label}: ${JSON.stringify(locations)}`);
       }
@@ -1005,7 +1013,7 @@ export class LspClient {
 
   async getSemanticTokens(filePath: string): Promise<LspSemanticTokensResponse | null> {
     try {
-      return await invoke<LspSemanticTokensResponse>("lsp_get_semantic_tokens", { filePath });
+      return await commands.lspGetSemanticTokens(filePath);
     } catch (error) {
       if (isCanceledLspRequest(error)) return null;
       logger.warn("LSPClient", `LSP semantic tokens unavailable: ${stringifyLspError(error)}`);
@@ -1022,7 +1030,8 @@ export class LspClient {
     }[]
   > {
     try {
-      return await invoke("lsp_get_code_lens", { filePath });
+      const lenses = await commands.lspGetCodeLens(filePath);
+      return lenses.map((lens) => nullFieldsToUndefined(lens));
     } catch (error) {
       if (isCanceledLspRequest(error)) return [];
       logger.error("LSPClient", "LSP code lens error:", error);
@@ -1032,7 +1041,7 @@ export class LspClient {
 
   async getFoldingRanges(filePath: string): Promise<FoldingRange[]> {
     try {
-      return await invoke<FoldingRange[]>("lsp_get_folding_ranges", { filePath });
+      return await commands.lspGetFoldingRanges(filePath);
     } catch (error) {
       if (isCanceledLspRequest(error)) return [];
       logger.warn("LSPClient", `LSP folding ranges unavailable: ${stringifyLspError(error)}`);
@@ -1042,10 +1051,7 @@ export class LspClient {
 
   async getSelectionRanges(filePath: string, positions: Position[]): Promise<SelectionRange[]> {
     try {
-      return await invoke<SelectionRange[]>("lsp_get_selection_ranges", {
-        filePath,
-        positions,
-      });
+      return await commands.lspGetSelectionRanges(filePath, positions);
     } catch (error) {
       if (isCanceledLspRequest(error)) return [];
       logger.warn("LSPClient", `LSP selection ranges unavailable: ${stringifyLspError(error)}`);
@@ -1059,11 +1065,7 @@ export class LspClient {
     character: number,
   ): Promise<DocumentHighlight[]> {
     try {
-      return await invoke<DocumentHighlight[]>("lsp_get_document_highlights", {
-        filePath,
-        line,
-        character,
-      });
+      return await commands.lspGetDocumentHighlights(filePath, line, character);
     } catch (error) {
       if (isCanceledLspRequest(error)) return [];
       logger.debug("LSPClient", "LSP document highlights unavailable:", error);
@@ -1077,11 +1079,7 @@ export class LspClient {
     character: number,
   ): Promise<CallHierarchyItem[]> {
     try {
-      return await invoke<CallHierarchyItem[]>("lsp_prepare_call_hierarchy", {
-        filePath,
-        line,
-        character,
-      });
+      return await commands.lspPrepareCallHierarchy(filePath, line, character);
     } catch (error) {
       logger.debug("LSPClient", "LSP call hierarchy unavailable:", error);
       return [];
@@ -1093,10 +1091,7 @@ export class LspClient {
     item: CallHierarchyItem,
   ): Promise<CallHierarchyIncomingCall[]> {
     try {
-      return await invoke<CallHierarchyIncomingCall[]>("lsp_get_incoming_calls", {
-        filePath,
-        item,
-      });
+      return await commands.lspGetIncomingCalls(filePath, item);
     } catch (error) {
       logger.debug("LSPClient", "LSP incoming calls unavailable:", error);
       return [];
@@ -1108,10 +1103,7 @@ export class LspClient {
     item: CallHierarchyItem,
   ): Promise<CallHierarchyOutgoingCall[]> {
     try {
-      return await invoke<CallHierarchyOutgoingCall[]>("lsp_get_outgoing_calls", {
-        filePath,
-        item,
-      });
+      return await commands.lspGetOutgoingCalls(filePath, item);
     } catch (error) {
       logger.debug("LSPClient", "LSP outgoing calls unavailable:", error);
       return [];
@@ -1124,11 +1116,7 @@ export class LspClient {
     character: number,
   ): Promise<TypeHierarchyItem[]> {
     try {
-      return await invoke<TypeHierarchyItem[]>("lsp_prepare_type_hierarchy", {
-        filePath,
-        line,
-        character,
-      });
+      return await commands.lspPrepareTypeHierarchy(filePath, line, character);
     } catch (error) {
       logger.debug("LSPClient", "LSP type hierarchy unavailable:", error);
       return [];
@@ -1137,7 +1125,7 @@ export class LspClient {
 
   async getSupertypes(filePath: string, item: TypeHierarchyItem): Promise<TypeHierarchyItem[]> {
     try {
-      return await invoke<TypeHierarchyItem[]>("lsp_get_supertypes", { filePath, item });
+      return await commands.lspGetSupertypes(filePath, item);
     } catch (error) {
       logger.debug("LSPClient", "LSP supertypes unavailable:", error);
       return [];
@@ -1146,7 +1134,7 @@ export class LspClient {
 
   async getSubtypes(filePath: string, item: TypeHierarchyItem): Promise<TypeHierarchyItem[]> {
     try {
-      return await invoke<TypeHierarchyItem[]>("lsp_get_subtypes", { filePath, item });
+      return await commands.lspGetSubtypes(filePath, item);
     } catch (error) {
       logger.debug("LSPClient", "LSP subtypes unavailable:", error);
       return [];
@@ -1155,9 +1143,7 @@ export class LspClient {
 
   async getOnTypeFormattingTriggerCharacters(filePath: string): Promise<string[]> {
     try {
-      return await invoke<string[]>("lsp_get_on_type_formatting_trigger_characters", {
-        filePath,
-      });
+      return await commands.lspGetOnTypeFormattingTriggerCharacters(filePath);
     } catch (error) {
       logger.debug("LSPClient", "LSP on-type formatting triggers unavailable:", error);
       return [];
@@ -1173,14 +1159,14 @@ export class LspClient {
     insertSpaces: boolean,
   ): Promise<LspTextEdit[]> {
     try {
-      return await invoke<LspTextEdit[]>("lsp_format_on_type", {
+      return await commands.lspFormatOnType(
         filePath,
         line,
         character,
         triggerCharacter,
         tabSize,
         insertSpaces,
-      });
+      );
     } catch (error) {
       if (isCanceledLspRequest(error)) return [];
       logger.debug("LSPClient", "LSP on-type formatting unavailable:", error);
@@ -1203,11 +1189,8 @@ export class LspClient {
     }[]
   > {
     try {
-      return await invoke("lsp_get_inlay_hints", {
-        filePath,
-        startLine,
-        endLine,
-      });
+      const hints = await commands.lspGetInlayHints(filePath, startLine, endLine);
+      return hints.map((hint) => nullFieldsToUndefined(hint));
     } catch (error) {
       if (isCanceledLspRequest(error)) return [];
       logger.error("LSPClient", "LSP inlay hints error:", error);
@@ -1230,21 +1213,9 @@ export class LspClient {
   > {
     try {
       logger.debug("LSPClient", `Getting document symbols for ${filePath}`);
-      const symbols = await invoke<
-        {
-          name: string;
-          kind: string;
-          detail?: string;
-          line: number;
-          character: number;
-          endLine: number;
-          endCharacter: number;
-          containerName?: string;
-          hierarchyPath?: number[];
-        }[]
-      >("lsp_get_document_symbols", { filePath });
+      const symbols = await commands.lspGetDocumentSymbols(filePath);
       logger.debug("LSPClient", `Got ${symbols.length} document symbols`);
-      return symbols;
+      return symbols.map((symbol) => nullFieldsToUndefined(symbol));
     } catch (error) {
       logger.error("LSPClient", "LSP document symbols error:", error);
       return [];
@@ -1269,21 +1240,9 @@ export class LspClient {
   > {
     try {
       logger.debug("LSPClient", `Getting workspace symbols for "${query}" in ${workspacePath}`);
-      const symbols = await invoke<
-        {
-          name: string;
-          kind: string;
-          detail?: string;
-          line: number;
-          character: number;
-          endLine: number;
-          endCharacter: number;
-          containerName?: string;
-          filePath: string;
-        }[]
-      >("lsp_get_workspace_symbols", { workspacePath, query });
+      const symbols = await commands.lspGetWorkspaceSymbols(workspacePath, query);
       logger.debug("LSPClient", `Got ${symbols.length} workspace symbols`);
-      return symbols;
+      return symbols.map((symbol) => nullFieldsToUndefined(symbol));
     } catch (error) {
       if (isCanceledLspRequest(error)) return [];
       logger.error("LSPClient", "LSP workspace symbols error:", error);
@@ -1309,11 +1268,12 @@ export class LspClient {
     activeParameter?: number;
   } | null> {
     try {
-      return await invoke("lsp_get_signature_help", {
-        filePath,
-        line,
-        character,
-      });
+      const help = await commands.lspGetSignatureHelp(filePath, line, character);
+      if (!help) return null;
+      return {
+        ...nullFieldsToUndefined(help),
+        signatures: help.signatures.map((signature) => nullFieldsToUndefined(signature)),
+      };
     } catch (error) {
       logger.error("LSPClient", "LSP signature help error:", error);
       return null;
@@ -1322,7 +1282,7 @@ export class LspClient {
 
   async getSignatureTriggerCharacters(filePath: string): Promise<string[]> {
     try {
-      return await invoke<string[]>("lsp_get_signature_trigger_characters", { filePath });
+      return await commands.lspGetSignatureTriggerCharacters(filePath);
     } catch (error) {
       logger.debug("LSPClient", "LSP signature trigger characters unavailable:", error);
       return [];
@@ -1331,7 +1291,7 @@ export class LspClient {
 
   async formatDocument(filePath: string, content: string): Promise<string | null> {
     try {
-      const edits = await invoke<LspTextEdit[]>("lsp_format_document", { filePath });
+      const edits = await commands.lspFormatDocument(filePath);
       if (!edits.length) return content;
       return applyTextEditsToContent(content, edits);
     } catch (error) {
@@ -1349,13 +1309,13 @@ export class LspClient {
     },
   ): Promise<string | null> {
     try {
-      const edits = await invoke<LspTextEdit[]>("lsp_format_range", {
+      const edits = await commands.lspFormatRange(
         filePath,
-        startLine: range.start.line,
-        startCharacter: range.start.character,
-        endLine: range.end.line,
-        endCharacter: range.end.character,
-      });
+        range.start.line,
+        range.start.character,
+        range.end.line,
+        range.end.character,
+      );
       if (!edits.length) return content;
       return applyTextEditsToContent(content, edits);
     } catch (error) {
@@ -1380,20 +1340,7 @@ export class LspClient {
   > {
     try {
       logger.debug("LSPClient", `Getting references for ${filePath}:${line}:${character}`);
-      const references = await invoke<
-        | {
-            uri: string;
-            range: {
-              start: { line: number; character: number };
-              end: { line: number; character: number };
-            };
-          }[]
-        | null
-      >("lsp_get_references", {
-        filePath,
-        line,
-        character,
-      });
+      const references = await commands.lspGetReferences(filePath, line, character);
       if (references) {
         logger.debug("LSPClient", `Got ${references.length} references`);
       }
@@ -1412,12 +1359,7 @@ export class LspClient {
   ): Promise<WorkspaceEdit | null> {
     try {
       logger.debug("LSPClient", `Renaming at ${filePath}:${line}:${character} to "${newName}"`);
-      const result = await invoke<WorkspaceEdit | null>("lsp_rename", {
-        filePath,
-        line,
-        character,
-        newName,
-      });
+      const result = await commands.lspRename(filePath, line, character, newName);
       if (result) {
         logger.debug("LSPClient", `Rename result: ${JSON.stringify(result)}`);
       }
@@ -1434,11 +1376,7 @@ export class LspClient {
     character: number,
   ): Promise<PrepareRenameResult | null> {
     try {
-      return await invoke<PrepareRenameResult | null>("lsp_prepare_rename", {
-        filePath,
-        line,
-        character,
-      });
+      return await commands.lspPrepareRename(filePath, line, character);
     } catch (error) {
       logger.debug("LSPClient", "LSP prepare rename unavailable:", error);
       return null;
@@ -1468,22 +1406,20 @@ export class LspClient {
           }
         : rangeOrDiagnostic;
       const contextDiagnostics = diagnostics ?? (isDiagnostic ? [rangeOrDiagnostic] : []);
-      return await invoke<DiagnosticCodeAction[]>("lsp_get_code_actions", {
-        filePath,
-        context: {
-          ...range,
-          diagnostics: contextDiagnostics.map((diagnostic) => ({
-            line: diagnostic.line,
-            column: diagnostic.column,
-            endLine: diagnostic.endLine,
-            endColumn: diagnostic.endColumn,
-            message: diagnostic.message,
-            source: diagnostic.source,
-            code: diagnostic.code,
-            severity: diagnostic.severity,
-          })),
-        },
+      const actions = await commands.lspGetCodeActions(filePath, {
+        ...range,
+        diagnostics: contextDiagnostics.map((diagnostic) => ({
+          line: diagnostic.line,
+          column: diagnostic.column,
+          endLine: diagnostic.endLine,
+          endColumn: diagnostic.endColumn,
+          message: diagnostic.message,
+          source: diagnostic.source ?? null,
+          code: diagnostic.code ?? null,
+          severity: diagnostic.severity,
+        })),
       });
+      return actions.map((action) => nullFieldsToUndefined(action));
     } catch (error) {
       logger.warn("LSPClient", "LSP code action request failed:", error);
       return [];
@@ -1508,10 +1444,9 @@ export class LspClient {
         actionPayload = withoutWorkspaceEdit(actionPayload);
       }
 
-      const result = await invoke<ApplyDiagnosticCodeActionResult>("lsp_apply_code_action", {
-        filePath,
-        actionPayload,
-      });
+      const result = nullFieldsToUndefined(
+        await commands.lspApplyCodeAction(filePath, actionPayload),
+      );
 
       return appliedEdit && !result.applied ? { applied: true, reason: result.reason } : result;
     } catch (error) {
@@ -1528,7 +1463,7 @@ export class LspClient {
       logger.debug("LSPClient", `Opening document: ${filePath}`);
       const { extensionRegistry } = await import("@/extensions/registry/extension-registry");
       const languageId = extensionRegistry.getLanguageId(filePath) || undefined;
-      await invoke<void>("lsp_document_open", { filePath, content, languageId });
+      await commands.lspDocumentOpen(filePath, content, languageId ?? null);
       this.openDocuments.add(filePath);
       this.documentVersions.set(filePath, 1);
       useLspStore.getState().actions.markDocumentStateChanged();
@@ -1542,26 +1477,18 @@ export class LspClient {
     command: string,
     argumentsPayload: unknown[] = [],
   ): Promise<unknown> {
-    return await invoke<unknown>("lsp_execute_command", {
-      filePath,
-      command,
-      arguments: argumentsPayload,
-    });
+    return await commands.lspExecuteCommand(filePath, command, argumentsPayload);
   }
 
   async getJavaClassFileContents(filePath: string, uri: string): Promise<string> {
-    return await invoke<string>("lsp_get_java_class_file_contents", { filePath, uri });
+    return await commands.lspGetJavaClassFileContents(filePath, uri);
   }
 
   async notifyDocumentChange(filePath: string, content: string, version: number): Promise<void> {
     try {
       this.openDocuments.add(filePath);
       this.documentVersions.set(filePath, version);
-      await invoke<void>("lsp_document_change", {
-        filePath,
-        content,
-        version,
-      });
+      await commands.lspDocumentChange(filePath, content, version);
     } catch (error) {
       logger.error("LSPClient", "LSP document change error:", error);
     }
@@ -1569,7 +1496,7 @@ export class LspClient {
 
   async notifyDocumentSave(filePath: string, content: string): Promise<void> {
     try {
-      await invoke<void>("lsp_document_save", { filePath, content });
+      await commands.lspDocumentSave(filePath, content);
     } catch (error) {
       logger.debug("LSPClient", "LSP document save notification skipped:", error);
     }
@@ -1584,7 +1511,7 @@ export class LspClient {
     }
 
     try {
-      await invoke<void>("lsp_document_close", { filePath });
+      await commands.lspDocumentClose(filePath);
     } catch (error) {
       logger.error("LSPClient", "LSP document close error:", error);
     }

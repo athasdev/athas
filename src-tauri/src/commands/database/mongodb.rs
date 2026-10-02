@@ -12,6 +12,7 @@ use athas_database::{
 use std::sync::Arc;
 
 #[tauri::command]
+#[specta::specta]
 pub async fn get_mongo_databases(
    connection_id: String,
    state: tauri::State<'_, Arc<ConnectionManager>>,
@@ -20,6 +21,7 @@ pub async fn get_mongo_databases(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn get_mongo_collections(
    connection_id: String,
    database: String,
@@ -29,6 +31,7 @@ pub async fn get_mongo_collections(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn query_mongo_documents(
    connection_id: String,
    database: String,
@@ -53,6 +56,7 @@ pub async fn query_mongo_documents(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn insert_mongo_document(
    connection_id: String,
    database: String,
@@ -71,6 +75,7 @@ pub async fn insert_mongo_document(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn delete_mongo_document(
    connection_id: String,
    database: String,
@@ -89,6 +94,7 @@ pub async fn delete_mongo_document(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn update_mongo_document(
    connection_id: String,
    database: String,

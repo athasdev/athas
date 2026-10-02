@@ -1,4 +1,4 @@
-import { invoke as tauriInvoke } from "@tauri-apps/api/core";
+import { commands, type CheckoutResult } from "@/bindings/commands";
 import { emitGitChanged } from "../events/git-events";
 import { runGitRead } from "../runtime/git-read-coordinator";
 import {
@@ -6,12 +6,6 @@ import {
   resolveRepositoryPath,
   resolveRepositoryPathOrThrow,
 } from "./git-repo-api";
-
-interface CheckoutResult {
-  success: boolean;
-  hasChanges: boolean;
-  message: string;
-}
 
 export const getBranches = async (repoPath: string): Promise<string[]> => {
   try {
@@ -21,7 +15,7 @@ export const getBranches = async (repoPath: string): Promise<string[]> => {
     }
 
     return await runGitRead(resolvedRepoPath, "branches", () =>
-      tauriInvoke<string[]>("git_branches", { repoPath: resolvedRepoPath }),
+      commands.gitBranches(resolvedRepoPath),
     );
   } catch (error) {
     if (!isNotGitRepositoryError(error)) {
@@ -37,10 +31,7 @@ export const checkoutBranch = async (
 ): Promise<CheckoutResult> => {
   try {
     const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
-    const result = await tauriInvoke<CheckoutResult>("git_checkout", {
-      repoPath: resolvedRepoPath,
-      branchName,
-    });
+    const result = await commands.gitCheckout(resolvedRepoPath, branchName);
     if (result.success) {
       emitGitChanged({
         repoPath: resolvedRepoPath,
@@ -66,11 +57,7 @@ export const createBranch = async (
 ): Promise<boolean> => {
   try {
     const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
-    await tauriInvoke("git_create_branch", {
-      repoPath: resolvedRepoPath,
-      branchName,
-      fromBranch,
-    });
+    await commands.gitCreateBranch(resolvedRepoPath, branchName, fromBranch ?? null);
     emitGitChanged({
       repoPath: resolvedRepoPath,
       scopes: ["refs"],
@@ -86,7 +73,7 @@ export const createBranch = async (
 export const deleteBranch = async (repoPath: string, branchName: string): Promise<boolean> => {
   try {
     const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
-    await tauriInvoke("git_delete_branch", { repoPath: resolvedRepoPath, branchName });
+    await commands.gitDeleteBranch(resolvedRepoPath, branchName);
     emitGitChanged({
       repoPath: resolvedRepoPath,
       scopes: ["refs"],

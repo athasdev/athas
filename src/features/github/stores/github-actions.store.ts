@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { create } from "zustand";
 import { createSelectors } from "@/utils/zustand-selectors";
 import type { WorkflowRunListItem } from "../types/github.types";
@@ -89,7 +89,8 @@ export const useGitHubActionsStore = createSelectors(
             patchEntry(repoPath, { isLoading: true, error: null });
           }
 
-          const request = invoke<WorkflowRunListItem[]>("github_list_workflow_runs", { repoPath })
+          const request = commands
+            .githubListWorkflowRuns(repoPath)
             .then((runs) => {
               patchEntry(repoPath, { runs, fetchedAt: Date.now(), isLoading: false, error: null });
               return runs;
@@ -112,12 +113,12 @@ export const useGitHubActionsStore = createSelectors(
         },
         rerunRun: (repoPath, runId, failedJobsOnly) =>
           withPendingAction(runId, failedJobsOnly ? "rerun-failed" : "rerun", async () => {
-            await invoke("github_rerun_workflow_run", { repoPath, runId, failedJobsOnly });
+            await commands.githubRerunWorkflowRun(repoPath, runId, failedJobsOnly);
             await get().actions.loadRuns(repoPath, { force: true, quiet: true });
           }),
         cancelRun: (repoPath, runId) =>
           withPendingAction(runId, "cancel", async () => {
-            await invoke("github_cancel_workflow_run", { repoPath, runId });
+            await commands.githubCancelWorkflowRun(repoPath, runId);
             await get().actions.loadRuns(repoPath, { force: true, quiet: true });
           }),
       },

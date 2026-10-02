@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import {
   CheckCircleIcon,
@@ -28,13 +28,7 @@ import { Spinner } from "@/ui/spinner";
 import { toast } from "sonner";
 import Select from "@/ui/select";
 import { useGitHubStore } from "../stores/github.store";
-import type {
-  IssueComment,
-  IssueDetails,
-  IssueMilestone,
-  IssueType,
-  Label,
-} from "../types/github.types";
+import type { IssueDetails, IssueMilestone, IssueType, Label } from "../types/github.types";
 import {
   GITHUB_ISSUE_DETAILS_TTL_MS,
   githubIssueDetailsCache,
@@ -111,11 +105,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
       try {
         const nextDetails = await githubIssueDetailsCache.load(
           cacheKey,
-          () =>
-            invoke<IssueDetails>("github_get_issue_details", {
-              repoPath,
-              issueNumber,
-            }),
+          () => commands.githubGetIssueDetails(repoPath, issueNumber),
           { force, ttlMs: GITHUB_ISSUE_DETAILS_TTL_MS },
         );
         setDetails(nextDetails);
@@ -138,9 +128,9 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
     let cancelled = false;
 
     void Promise.all([
-      invoke<Label[]>("github_list_labels", { repoPath }).catch(() => []),
-      invoke<IssueMilestone[]>("github_list_milestones", { repoPath }).catch(() => []),
-      invoke<IssueType[]>("github_list_issue_types", { repoPath }).catch(() => []),
+      commands.githubListLabels(repoPath).catch((): Label[] => []),
+      commands.githubListMilestones(repoPath).catch((): IssueMilestone[] => []),
+      commands.githubListIssueTypes(repoPath).catch((): IssueType[] => []),
     ]).then(([nextLabels, nextMilestones, nextIssueTypes]) => {
       if (cancelled) return;
       setLabels(nextLabels);
@@ -258,13 +248,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
       if (!repoPath) return;
       await runMutation(
         "state",
-        () =>
-          invoke<IssueDetails>("github_update_issue_state", {
-            repoPath,
-            issueNumber,
-            state,
-            stateReason,
-          }),
+        () => commands.githubUpdateIssueState(repoPath, issueNumber, state, stateReason),
         (nextDetails) => {
           applyIssueDetails(nextDetails);
           toast.success(state === "open" ? "Issue reopened" : "Issue closed");
@@ -286,16 +270,16 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
       return runMutation(
         "edit",
         () =>
-          invoke<IssueDetails>("github_update_issue", {
+          commands.githubUpdateIssue(
             repoPath,
             issueNumber,
-            title: next.title,
-            body: next.body,
-            labels: next.labels.map((label) => label.name),
-            assignees: next.assignees.map((assignee) => assignee.login),
-            milestone: next.milestone?.number ?? null,
-            issueType: next.issueType?.name ?? null,
-          }),
+            next.title,
+            next.body,
+            next.labels.map((label) => label.name),
+            next.assignees.map((assignee) => assignee.login),
+            next.milestone?.number ?? null,
+            next.issueType?.name ?? null,
+          ),
         (nextDetails) => {
           applyIssueDetails(nextDetails);
           toast.success("Issue updated");
@@ -313,8 +297,8 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
         "lock",
         () =>
           shouldUnlock
-            ? invoke("github_unlock_issue", { repoPath, issueNumber })
-            : invoke("github_lock_issue", { repoPath, issueNumber, lockReason }),
+            ? commands.githubUnlockIssue(repoPath, issueNumber)
+            : commands.githubLockIssue(repoPath, issueNumber, lockReason ?? null),
         () => {
           githubIssueDetailsCache.clear(`${repoPath}::${issueNumber}`);
           void fetchIssue(true);
@@ -329,12 +313,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
     if (!repoPath || !commentBody.trim() || details?.locked) return false;
     return runMutation(
       "new-comment",
-      () =>
-        invoke<IssueComment>("github_add_issue_comment", {
-          repoPath,
-          issueNumber,
-          body: commentBody,
-        }),
+      () => commands.githubAddIssueComment(repoPath, issueNumber, commentBody),
       (comment) => {
         if (details) applyIssueDetails({ ...details, comments: [...details.comments, comment] });
         setCommentBody("");
@@ -349,7 +328,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
       if (!repoPath) return Promise.resolve(false);
       return runMutation(
         `comment-${commentId}`,
-        () => invoke<IssueComment>("github_update_issue_comment", { repoPath, commentId, body }),
+        () => commands.githubUpdateIssueComment(repoPath, commentId, body),
         (comment) => {
           if (details) {
             applyIssueDetails({
@@ -369,7 +348,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
       if (!repoPath) return;
       await runMutation(
         `comment-${commentId}`,
-        () => invoke("github_delete_issue_comment", { repoPath, commentId }),
+        () => commands.githubDeleteIssueComment(repoPath, commentId),
         () => {
           if (details) {
             applyIssueDetails({

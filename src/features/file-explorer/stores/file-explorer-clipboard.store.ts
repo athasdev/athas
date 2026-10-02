@@ -1,23 +1,14 @@
-import { invoke } from "@tauri-apps/api/core";
 import { toast } from "sonner";
 import { create } from "zustand";
+import {
+  commands,
+  type ClipboardEntry,
+  type FileClipboardState,
+  type PastedEntry,
+} from "@/bindings/commands";
 import { createSelectors } from "@/utils/zustand-selectors";
 
-export interface ClipboardEntry {
-  path: string;
-  is_dir: boolean;
-}
-
-export interface FileClipboardState {
-  entries: ClipboardEntry[];
-  operation: "copy" | "cut";
-}
-
-interface PastedEntry {
-  source_path: string;
-  destination_path: string;
-  is_dir: boolean;
-}
+export type { ClipboardEntry, FileClipboardState };
 
 interface FileClipboardStore {
   clipboard: FileClipboardState | null;
@@ -44,7 +35,7 @@ const useFileClipboardStoreBase = create<FileClipboardStore>()((set) => ({
   actions: {
     copy: async (entries: ClipboardEntry[]) => {
       try {
-        await invoke("clipboard_set", { entries, operation: "copy" });
+        await commands.clipboardSet(entries, "copy");
         set({ clipboard: { entries, operation: "copy" } });
       } catch (error) {
         reportClipboardError("copy", error);
@@ -52,7 +43,7 @@ const useFileClipboardStoreBase = create<FileClipboardStore>()((set) => ({
     },
     cut: async (entries: ClipboardEntry[]) => {
       try {
-        await invoke("clipboard_set", { entries, operation: "cut" });
+        await commands.clipboardSet(entries, "cut");
         set({ clipboard: { entries, operation: "cut" } });
       } catch (error) {
         reportClipboardError("cut", error);
@@ -61,20 +52,18 @@ const useFileClipboardStoreBase = create<FileClipboardStore>()((set) => ({
     paste: async (targetDirectory: string) => {
       let result: PastedEntry[] | null = null;
       try {
-        result = await invoke<PastedEntry[]>("clipboard_paste", {
-          targetDirectory,
-        });
+        result = await commands.clipboardPaste(targetDirectory);
       } catch (error) {
         reportClipboardError("paste", error);
       }
       // Backend updates clipboard state and emits events; sync eagerly. A failed paste
       // may still have copied some entries, so sync then too.
-      const clipboard = await invoke<FileClipboardState | null>("clipboard_get").catch(() => null);
+      const clipboard = await commands.clipboardGet().catch(() => null);
       set({ clipboard });
       return result;
     },
     clear: async () => {
-      await invoke("clipboard_clear");
+      await commands.clipboardClear();
       set({ clipboard: null });
     },
     setClipboard: (state: FileClipboardState | null) => {

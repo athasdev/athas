@@ -8,6 +8,7 @@ fn remote_credential_key(connection_id: &str) -> String {
 }
 
 #[command]
+#[specta::specta]
 pub async fn store_remote_credential(
    app: tauri::AppHandle,
    connection_id: String,
@@ -17,6 +18,7 @@ pub async fn store_remote_credential(
 }
 
 #[command]
+#[specta::specta]
 pub async fn get_remote_credential(
    app: tauri::AppHandle,
    connection_id: String,
@@ -25,6 +27,7 @@ pub async fn get_remote_credential(
 }
 
 #[command]
+#[specta::specta]
 pub async fn remove_remote_credential(
    app: tauri::AppHandle,
    connection_id: String,

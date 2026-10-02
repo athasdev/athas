@@ -2,14 +2,16 @@ use crate::{
    ssh_helpers::{create_ssh_session, shell_quote},
    state::{REMOTE_TERMINALS, RemoteTerminal},
 };
-use athas_terminal::{TerminalEvent, TerminalInput, TerminalReaderControl, TerminalSize};
+use athas_terminal::{
+   TerminalChannelMessage, TerminalEvent, TerminalInput, TerminalReaderControl, TerminalSize,
+};
 use std::{
    io::{Read, Write},
    sync::{Arc, Mutex},
    thread,
    time::Duration,
 };
-use tauri::ipc::{Channel as TauriChannel, InvokeResponseBody};
+use tauri::ipc::Channel as TauriChannel;
 use uuid::Uuid;
 
 const MAX_TRANSIENT_READ_FAILURES: u8 = 10;
@@ -23,7 +25,7 @@ pub(super) async fn create_remote_terminal(
    working_directory: Option<String>,
    size: TerminalSize,
    term_program_version: String,
-   on_event: TauriChannel<InvokeResponseBody>,
+   on_event: TauriChannel<TerminalChannelMessage>,
 ) -> Result<String, String> {
    let size = size.normalized();
    let session = create_ssh_session(
@@ -167,7 +169,7 @@ fn spawn_terminal_reader(
    id: String,
    channel: Arc<Mutex<ssh2::Channel>>,
    reader_control: Arc<TerminalReaderControl>,
-   on_event: TauriChannel<InvokeResponseBody>,
+   on_event: TauriChannel<TerminalChannelMessage>,
 ) {
    thread::spawn(move || {
       let mut buffer = vec![0u8; 65536];
@@ -208,8 +210,9 @@ fn spawn_terminal_reader(
 
          match read_result {
             Ok((0, _, exit_code, signal)) | Ok((_, true, exit_code, signal)) => {
-               let _ = on_event.send(TerminalEvent::Exit { exit_code, signal }.into_ipc_body());
-               let _ = on_event.send(TerminalEvent::Closed.into_ipc_body());
+               let _ =
+                  on_event.send(TerminalEvent::Exit { exit_code, signal }.into_channel_message());
+               let _ = on_event.send(TerminalEvent::Closed.into_channel_message());
                break;
             }
             Ok((n, false, _, _)) => {
@@ -219,7 +222,7 @@ fn spawn_terminal_reader(
                      TerminalEvent::Output {
                         data: buffer[..n].to_vec(),
                      }
-                     .into_ipc_body(),
+                     .into_channel_message(),
                   )
                   .is_err()
                {
@@ -228,8 +231,9 @@ fn spawn_terminal_reader(
             }
             Err((std::io::ErrorKind::WouldBlock, eof, exit_code, signal, _)) => {
                if eof {
-                  let _ = on_event.send(TerminalEvent::Exit { exit_code, signal }.into_ipc_body());
-                  let _ = on_event.send(TerminalEvent::Closed.into_ipc_body());
+                  let _ = on_event
+                     .send(TerminalEvent::Exit { exit_code, signal }.into_channel_message());
+                  let _ = on_event.send(TerminalEvent::Closed.into_channel_message());
                   break;
                }
                thread::sleep(Duration::from_millis(10));
@@ -242,8 +246,9 @@ fn spawn_terminal_reader(
                thread::sleep(Duration::from_millis(25));
             }
             Err((_, _, _, _, error)) => {
-               let _ = on_event.send(TerminalEvent::Error { message: error }.into_ipc_body());
-               let _ = on_event.send(TerminalEvent::Closed.into_ipc_body());
+               let _ =
+                  on_event.send(TerminalEvent::Error { message: error }.into_channel_message());
+               let _ = on_event.send(TerminalEvent::Closed.into_channel_message());
                break;
             }
          }

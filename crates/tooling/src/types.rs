@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 
 /// Status of a tool installation
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub enum ToolStatus {
    /// Tool is not installed
@@ -16,7 +16,7 @@ pub enum ToolStatus {
 }
 
 /// Runtime environment required to run a tool
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
 #[serde(rename_all = "lowercase")]
 pub enum ToolRuntime {
    /// JavaScript runtime (Bun preferred, Node fallback)
@@ -39,7 +39,7 @@ pub enum ToolRuntime {
 }
 
 /// Configuration for a language tool (LSP, formatter, linter)
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct ToolConfig {
    /// Tool name (e.g., "pyright", "black", "eslint")
@@ -76,7 +76,7 @@ pub enum ToolType {
 }
 
 /// Tool configurations provided by a language extension manifest.
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct LanguageToolConfigSet {
    #[serde(default)]
@@ -88,7 +88,7 @@ pub struct LanguageToolConfigSet {
 }
 
 /// Status of all tools for a language
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct LanguageToolStatus {
    pub language_id: String,

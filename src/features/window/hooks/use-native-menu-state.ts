@@ -1,5 +1,5 @@
-import { invoke } from "@tauri-apps/api/core";
 import { useEffect } from "react";
+import { commands } from "@/bindings/commands";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getBufferById } from "@/features/editor/utils/buffer-index";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
@@ -32,7 +32,7 @@ export function useNativeMenuState() {
   );
 
   useEffect(() => {
-    void invoke("sync_native_menu_state", { state: menuState }).catch((error) => {
+    void commands.syncNativeMenuState(menuState).catch((error) => {
       console.error("Failed to synchronize native menu state:", error);
     });
   }, [
