@@ -68,6 +68,7 @@ describe("Markdown preview interactions", () => {
     preview.blur();
     const partialRange = document.createRange();
     partialRange.selectNodeContents(content.querySelector("strong")!);
+    selection.removeAllRanges();
     selection.addRange(partialRange);
     await act(async () => preview.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true })));
     expect(document.activeElement).not.toBe(preview);

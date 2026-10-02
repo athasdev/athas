@@ -37,6 +37,9 @@ jobs:
       - name: Run frontend checks
         run: bash scripts/check/frontend.sh
 
+      - name: Run frontend tests
+        run: vp test run
+
   rust:
     if: github.repository == 'athasdev/athas'
     name: Rust — fmt, check, clippy, test
