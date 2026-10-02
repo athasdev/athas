@@ -49,6 +49,27 @@ const SHELL_BINARIES: &[&str] = &[
    "wsl",
 ];
 
+/// Binary names that run their arguments as another program, so
+/// `command: "env", args: ["sh", "-c", payload]` cannot reach a shell.
+const LAUNCHER_BINARIES: &[&str] = &[
+   "env", "busybox", "toybox", "xargs", "nohup", "nice", "timeout", "sudo", "doas", "setsid",
+   "stdbuf",
+];
+
+/// Windows resolves these suffixes as executables, so `cmd.exe` is `cmd`.
+const EXECUTABLE_SUFFIXES: &[&str] = &[".exe", ".com", ".bat", ".cmd"];
+
+fn executable_stem(file_name: &str) -> &str {
+   EXECUTABLE_SUFFIXES
+      .iter()
+      .find_map(|suffix| {
+         let split = file_name.len().checked_sub(suffix.len())?;
+         let (stem, ext) = file_name.split_at_checked(split)?;
+         ext.eq_ignore_ascii_case(suffix).then_some(stem)
+      })
+      .unwrap_or(file_name)
+}
+
 /// Validate the `command` field of a formatter/linter config.
 ///
 /// The name must be a bare executable (looked up via `PATH`) or an absolute
@@ -71,12 +92,18 @@ pub fn validate_exec_command(command: &str) -> Result<(), String> {
       return Err("Command must not contain '..'".to_string());
    }
 
-   let file_name = trimmed.rsplit(['/', '\\']).next().unwrap_or(trimmed);
+   let file_name = executable_stem(trimmed.rsplit(['/', '\\']).next().unwrap_or(trimmed));
    if SHELL_BINARIES
       .iter()
       .any(|shell| file_name.eq_ignore_ascii_case(shell))
    {
       return Err("Shell interpreters are not allowed as tool commands".to_string());
+   }
+   if LAUNCHER_BINARIES
+      .iter()
+      .any(|launcher| file_name.eq_ignore_ascii_case(launcher))
+   {
+      return Err("Program launchers are not allowed as tool commands".to_string());
    }
 
    let has_separator = trimmed.contains('/') || trimmed.contains('\\');
@@ -195,7 +222,24 @@ mod tests {
       assert!(validate_exec_command("sh").is_err());
       assert!(validate_exec_command("bash").is_err());
       assert!(validate_exec_command("/bin/sh").is_err());
-      assert!(validate_exec_command("C:\\Windows\\System32\\cmd.exe").is_err());
+      assert!(validate_exec_command("cmd.exe").is_err());
+      assert!(validate_exec_command("PowerShell.EXE").is_err());
+      assert!(validate_exec_command("pwsh.exe").is_err());
+   }
+
+   #[test]
+   fn rejects_program_launchers() {
+      assert!(validate_exec_command("env").is_err());
+      assert!(validate_exec_command("/usr/bin/env").is_err());
+      assert!(validate_exec_command("busybox").is_err());
+      assert!(validate_exec_command("xargs").is_err());
+   }
+
+   #[test]
+   fn accepts_tools_named_like_executables() {
+      assert!(validate_exec_command("prettier").is_ok());
+      assert!(validate_exec_command("rustfmt.exe").is_ok());
+      assert!(validate_exec_command("environment-check").is_ok());
    }
 
    #[test]
