@@ -1,9 +1,10 @@
 import { type ChildProcess, spawn, spawnSync } from "node:child_process";
-import { createWriteStream, existsSync, mkdirSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
 import { connect } from "node:net";
 import os from "node:os";
 import path from "node:path";
 import { appBinary, artifactsDir, repoRoot, sandboxDir } from "./paths.ts";
+import { logProcessOutput } from "./process-log.ts";
 
 const DRIVER_HOST = "127.0.0.1";
 const DRIVER_PORT = Number(process.env.TAURI_DRIVER_PORT ?? 4444);
@@ -131,9 +132,7 @@ export async function startHarness() {
   nativeDriver = child;
   // msedgedriver writes its own verbose log; this keeps its console output apart.
   const logName = ATTACH_TO_APP ? `${name}.out.log` : `${name}.log`;
-  const driverLog = createWriteStream(path.join(artifactsDir, logName));
-  child.stdout?.pipe(driverLog);
-  child.stderr?.pipe(driverLog);
+  logProcessOutput(child, path.join(artifactsDir, logName));
 
   const driverFailed = new Promise<never>((resolve, reject) => {
     child.once("error", (error) => reject(new Error(`Failed to start ${name}: ${error}`)));

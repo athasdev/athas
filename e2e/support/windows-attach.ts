@@ -1,9 +1,10 @@
 import { type ChildProcess, spawn } from "node:child_process";
-import { createWriteStream, mkdirSync } from "node:fs";
+import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { Capabilities } from "selenium-webdriver";
 import { DEBUGGER_ADDRESS } from "./driver.ts";
 import { appBinary, artifactsDir, workspaceDir } from "./paths.ts";
+import { logProcessOutput } from "./process-log.ts";
 
 const DEVTOOLS_TIMEOUT = 60_000;
 
@@ -31,12 +32,9 @@ async function devToolsReady() {
 export async function launchAppForAttach(logName: string) {
   const logsDir = path.join(artifactsDir, "app-output");
   mkdirSync(logsDir, { recursive: true });
-  const output = createWriteStream(path.join(logsDir, `${logName}.log`));
-
   const child = spawn(appBinary, [workspaceDir], { stdio: ["ignore", "pipe", "pipe"] });
   app = child;
-  child.stdout?.pipe(output);
-  child.stderr?.pipe(output);
+  logProcessOutput(child, path.join(logsDir, `${logName}.log`));
 
   let exited: string | undefined;
   child.once("error", (error) => (exited = `failed to start: ${error}`));
