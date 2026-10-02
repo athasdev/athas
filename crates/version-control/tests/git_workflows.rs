@@ -359,6 +359,18 @@ fn stashes_are_listed_with_clean_messages_and_can_be_popped() {
 }
 
 #[test]
+fn stash_messages_keep_pipe_characters() {
+   let repo = TestRepo::with_commit(&[("a.txt", "a\n")]);
+   repo.write("a.txt", "b\n");
+
+   git_create_stash(repo.path.clone(), Some("fix a|b".to_string()), false, None).unwrap();
+
+   let stashes = git_get_stashes(repo.path.clone()).unwrap();
+   assert_eq!(stashes[0].message, "fix a|b");
+   assert!(stashes[0].date.starts_with("20"), "{}", stashes[0].date);
+}
+
+#[test]
 fn stash_listing_rejects_non_repositories() {
    let dir = TempDir::new().unwrap();
    assert!(git_get_stashes(dir.path().to_string_lossy().into_owned()).is_err());
