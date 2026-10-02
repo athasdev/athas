@@ -1,81 +1,163 @@
 import { readFileSync } from "node:fs";
-import { $, browser } from "@wdio/globals";
-import { Key } from "webdriverio";
+import path from "node:path";
+import { By, Key, type Locator, type WebElement, until } from "selenium-webdriver";
+import { workspaceDir } from "./paths.ts";
+import { driver } from "./session.ts";
+
+export { Key };
 
 export const STARTUP_TIMEOUT = 60_000;
 export const UI_TIMEOUT = 15_000;
 
-export async function waitForWorkbench() {
-  await $('[data-slot="workbench-title-row"]').waitForExist({
-    timeout: STARTUP_TIMEOUT,
-    timeoutMsg: "The workbench never rendered",
-  });
-}
-
-export function fileTree() {
-  return $('[role="tree"][aria-label="File Explorer"]');
-}
+export const FILE_TREE = By.css('[role="tree"][aria-label="File Explorer"]');
+export const EDITOR_LINES = By.css(".monaco-editor .view-lines");
+const WORKBENCH = By.css('[data-slot="workbench-title-row"]');
+const PALETTE_INPUT = By.css('input[placeholder="Search commands and actions..."]');
 
 export function treeItem(name: string) {
-  return $(`[role="treeitem"][data-path$="${name}"]`);
+  return By.css(`[role="treeitem"][data-path$="${name}"]`);
+}
+
+export function editorTab(fileName: string) {
+  return By.css(`[role="tab"][aria-label^="${fileName}"]`);
+}
+
+/** Polls a condition, treating thrown errors (stale or missing nodes) as "not yet". */
+export async function waitUntil(
+  condition: () => boolean | Promise<boolean>,
+  timeout: number,
+  message: string,
+) {
+  await driver().wait(
+    async () => {
+      try {
+        return await condition();
+      } catch {
+        return false;
+      }
+    },
+    timeout,
+    message,
+  );
+}
+
+/**
+ * The first match that is actually shown. Inactive tabs keep their Monaco
+ * editors mounted but hidden, so the first DOM match is often not the one on
+ * screen.
+ */
+async function findVisible(locator: Locator): Promise<WebElement | undefined> {
+  for (const element of await driver().findElements(locator)) {
+    if (await element.isDisplayed()) return element;
+  }
+  return undefined;
+}
+
+async function visibleElement(locator: Locator) {
+  const element = await findVisible(locator);
+  if (!element) throw new Error(`No visible element matches ${locator}`);
+  return element;
+}
+
+export async function isDisplayed(locator: Locator) {
+  return (await findVisible(locator)) !== undefined;
+}
+
+export async function exists(locator: Locator) {
+  return (await driver().findElements(locator)).length > 0;
+}
+
+export function waitForDisplayed(locator: Locator, message: string, timeout = UI_TIMEOUT) {
+  return waitUntil(() => isDisplayed(locator), timeout, message);
+}
+
+export function waitForHidden(locator: Locator, message: string, timeout = UI_TIMEOUT) {
+  return waitUntil(async () => !(await isDisplayed(locator)), timeout, message);
+}
+
+export async function click(locator: Locator) {
+  await (await visibleElement(locator)).click();
+}
+
+export async function attribute(locator: Locator, name: string) {
+  return (await (await visibleElement(locator)).getAttribute(name)) ?? "";
+}
+
+export async function text(locator: Locator) {
+  return (await visibleElement(locator)).getText();
+}
+
+export async function waitForWorkbench() {
+  await driver().wait(
+    until.elementLocated(WORKBENCH),
+    STARTUP_TIMEOUT,
+    "The workbench never rendered",
+  );
 }
 
 export async function waitForProjectTree() {
   await waitForWorkbench();
-  await treeItem("README.md").waitForDisplayed({
-    timeout: STARTUP_TIMEOUT,
-    timeoutMsg: "The fixture project never appeared in the file tree",
-  });
-}
-
-export function editorTab(fileName: string) {
-  return $(`[role="tab"][aria-label^="${fileName}"]`);
-}
-
-export function editorLines() {
-  return $(".monaco-editor .view-lines");
+  // The project root row can come up collapsed; expand it like a user would.
+  const root = treeItem(path.basename(workspaceDir));
+  const readme = treeItem("README.md");
+  await waitUntil(
+    async () => (await isDisplayed(readme)) || (await isDisplayed(root)),
+    STARTUP_TIMEOUT,
+    "The fixture project never appeared in the file tree",
+  );
+  if ((await isDisplayed(root)) && (await attribute(root, "aria-expanded")) === "false") {
+    await click(root);
+  }
+  await waitForDisplayed(
+    treeItem("README.md"),
+    "The fixture project never appeared in the file tree",
+    STARTUP_TIMEOUT,
+  );
 }
 
 /** Monaco renders spaces as non-breaking spaces in its view layer. */
 export async function readEditorText() {
-  const text = await editorLines().getText();
-  return text.replace(/ /g, " ");
+  const text = await (await visibleElement(EDITOR_LINES)).getText();
+  return text.replace(/\u00a0/g, " ");
 }
 
 export async function openFileFromTree(name: string) {
-  await treeItem(name).click();
-  await editorTab(name).waitForExist({
-    timeout: UI_TIMEOUT,
-    timeoutMsg: `No editor tab opened for ${name}`,
-  });
-  await editorLines().waitForDisplayed({ timeout: UI_TIMEOUT });
+  await click(treeItem(name));
+  await waitUntil(() => exists(editorTab(name)), UI_TIMEOUT, `No editor tab opened for ${name}`);
+  await waitForDisplayed(EDITOR_LINES, `The editor for ${name} never appeared`);
+}
+
+/** Presses a chord such as Ctrl+Shift+P: every key but the last is held down. */
+export async function pressShortcut(...keys: string[]) {
+  const modifiers = keys.slice(0, -1);
+  let actions = driver().actions();
+  for (const modifier of modifiers) actions = actions.keyDown(modifier);
+  actions = actions.sendKeys(keys[keys.length - 1]);
+  for (const modifier of modifiers.reverse()) actions = actions.keyUp(modifier);
+  await actions.perform();
+}
+
+/** Types into whatever element currently has focus. */
+export async function typeText(text: string) {
+  await driver().actions().sendKeys(text).perform();
 }
 
 export async function focusEditorAtStart() {
-  await editorLines().click();
-  await browser.keys([Key.Ctrl, Key.Home]);
-}
-
-export async function pressShortcut(...keys: string[]) {
-  await browser.keys(keys);
+  await click(EDITOR_LINES);
+  await pressShortcut(Key.CONTROL, Key.HOME);
 }
 
 export async function runPaletteCommand(label: string) {
-  await pressShortcut(Key.Ctrl, Key.Shift, "p");
-  const input = $('input[placeholder="Search commands and actions..."]');
-  await input.waitForDisplayed({
-    timeout: UI_TIMEOUT,
-    timeoutMsg: "The command palette did not open",
-  });
-  await input.setValue(label);
+  await pressShortcut(Key.CONTROL, Key.SHIFT, "p");
+  await waitForDisplayed(PALETTE_INPUT, "The command palette did not open");
+  const input = await visibleElement(PALETTE_INPUT);
+  await input.clear();
+  await input.sendKeys(label);
 
-  const option = $(`//*[@role="option"][.//*[normalize-space()="${label}"]]`);
-  await option.waitForDisplayed({
-    timeout: UI_TIMEOUT,
-    timeoutMsg: `Command "${label}" is missing from the palette`,
-  });
-  await option.click();
-  await input.waitForDisplayed({ reverse: true, timeout: UI_TIMEOUT });
+  const option = By.xpath(`//*[@role="option"][.//*[normalize-space()="${label}"]]`);
+  await waitForDisplayed(option, `Command "${label}" is missing from the palette`);
+  await click(option);
+  await waitForHidden(PALETTE_INPUT, "The command palette did not close");
 }
 
 /** Windows PowerShell 5 redirects text as UTF-16; everything else writes UTF-8. */
@@ -87,15 +169,14 @@ export function readTextFile(filePath: string) {
   return bytes.toString("utf8");
 }
 
-export async function waitForFileContent(filePath: string, expected: string, timeoutMsg: string) {
-  await browser.waitUntil(
-    () => {
-      try {
-        return readTextFile(filePath).includes(expected);
-      } catch {
-        return false;
-      }
-    },
-    { timeout: UI_TIMEOUT, interval: 250, timeoutMsg },
-  );
+export function fileContains(filePath: string, expected: string) {
+  try {
+    return readTextFile(filePath).includes(expected);
+  } catch {
+    return false;
+  }
+}
+
+export function waitForFileContent(filePath: string, expected: string, message: string) {
+  return waitUntil(() => fileContains(filePath, expected), UI_TIMEOUT, message);
 }

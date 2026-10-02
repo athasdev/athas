@@ -2,8 +2,9 @@
 
 These tests drive a real debug build of Athas through WebDriver, using
 [`tauri-driver`](https://v2.tauri.app/develop/tests/webdriver/) with
-WebdriverIO and Mocha. `tauri-driver` proxies to `WebKitWebDriver` on Linux
-and `msedgedriver` on Windows.
+`selenium-webdriver` and Bun's test runner, following Tauri's Selenium example.
+`tauri-driver` proxies to `WebKitWebDriver` on Linux and `msedgedriver` on
+Windows.
 
 macOS is not supported: Apple ships no WebDriver for WKWebView, so
 `tauri-driver` cannot run there. On a Mac, run the suite in a Linux VM or
@@ -11,10 +12,15 @@ container (see below) or rely on the `E2E` GitHub workflow.
 
 ## Layout
 
-- `wdio.conf.ts` builds the app, starts `tauri-driver`, and resets state before
-  every spec file.
-- `specs/*.e2e.ts` are the specs. Vitest ignores them because they do not match
-  `*.test.ts`.
+- `run.ts` (`bun run e2e`) passes every `specs/*.e2e.ts` file to `bun test`.
+  Neither `bun test` nor Vitest discovers `.e2e.ts` files on its own, so a plain
+  test run from the repository root never starts the app.
+- `support/setup.ts` is preloaded by `bun test`: it builds the app and starts
+  `tauri-driver` once for the whole run, and stops it at the end.
+- `support/session.ts` gives each spec file a fresh session: it kills any
+  leftover app process from the e2e binary, resets state, and opens the app.
+  Failed tests save a screenshot and the page source.
+- `support/app.ts` holds the selectors and UI helpers the specs share.
 - `fixtures/sample-project/` is copied to `target/e2e/workspace/` before each
   spec file and opened by passing its path to the app on the command line.
 - Screenshots, page sources, app logs, and the driver log of failed runs land in
@@ -46,6 +52,7 @@ Then run the suite. It builds the e2e binary first unless
 ```sh
 bun run e2e:build          # optional, builds the e2e debug binary
 bun run e2e                # builds (unless skipped) and runs every spec
+bun run e2e -t "editor"    # extra arguments are passed to bun test
 ```
 
 Without a display, wrap the run in Xvfb:

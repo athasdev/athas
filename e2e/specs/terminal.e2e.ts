@@ -1,60 +1,58 @@
 import { rmSync } from "node:fs";
-import { $, browser } from "@wdio/globals";
-import { Key } from "webdriverio";
+import { beforeAll, describe } from "bun:test";
+import { By } from "selenium-webdriver";
 import {
+  Key,
   STARTUP_TIMEOUT,
-  readTextFile,
+  click,
+  fileContains,
+  pressShortcut,
   runPaletteCommand,
+  typeText,
+  waitForDisplayed,
   waitForProjectTree,
+  waitUntil,
 } from "../support/app.ts";
 import { workspaceFile } from "../support/paths.ts";
+import { e2eTest, useAppSession } from "../support/session.ts";
 
 const MARKER = "athas-e2e-terminal";
-
-function markerWritten(filePath: string) {
-  try {
-    return readTextFile(filePath).includes(MARKER);
-  } catch {
-    return false;
-  }
-}
+const TERMINAL = By.css(".xterm");
 
 describe("integrated terminal", () => {
-  before(async () => {
+  useAppSession("terminal");
+
+  beforeAll(async () => {
     await waitForProjectTree();
   });
 
-  it("runs a shell command", async () => {
+  e2eTest("runs a shell command", async () => {
     // xterm draws to a canvas, so the shell's output is checked through a side
     // effect on disk instead of scraping rendered rows.
     const outputFile = workspaceFile("terminal-output.txt");
     rmSync(outputFile, { force: true });
 
     await runPaletteCommand("View: Show Terminal");
-    const terminal = $(".xterm");
-    await terminal.waitForDisplayed({
-      timeout: STARTUP_TIMEOUT,
-      timeoutMsg: "The integrated terminal never rendered",
-    });
+    await waitForDisplayed(TERMINAL, "The integrated terminal never rendered", STARTUP_TIMEOUT);
 
     // A shell that is still starting can drop typed input, so the command is
     // retyped (after clearing the line) until the shell has run it.
     let attempt = 0;
-    await browser.waitUntil(
+    await waitUntil(
       async () => {
-        await terminal.click();
-        if (attempt++ > 0) await browser.keys([Key.Ctrl, "c"]);
-        await browser.keys(`echo ${MARKER} > "${outputFile}"`);
-        await browser.keys(Key.Enter);
-        return browser
-          .waitUntil(() => markerWritten(outputFile), { timeout: 10_000, interval: 250 })
-          .catch(() => false);
+        await click(TERMINAL);
+        if (attempt++ > 0) await pressShortcut(Key.CONTROL, "c");
+        await typeText(`echo ${MARKER} > "${outputFile}"`);
+        await typeText(Key.ENTER);
+        const deadline = Date.now() + 10_000;
+        while (Date.now() < deadline) {
+          if (fileContains(outputFile, MARKER)) return true;
+          await new Promise((resolve) => setTimeout(resolve, 250));
+        }
+        return false;
       },
-      {
-        timeout: STARTUP_TIMEOUT,
-        interval: 500,
-        timeoutMsg: "The terminal never ran the echo command",
-      },
+      STARTUP_TIMEOUT,
+      "The terminal never ran the echo command",
     );
   });
 });

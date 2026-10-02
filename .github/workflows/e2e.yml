@@ -79,7 +79,16 @@ jobs:
           Push-Location "$env:RUNNER_TEMP\msedgedriver"
           & "$HOME\.cargo\bin\msedgedriver-tool.exe"
           Pop-Location
-          "TAURI_NATIVE_DRIVER=$env:RUNNER_TEMP\msedgedriver\msedgedriver.exe" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          # tauri-driver cannot pass flags to the native driver, so a wrapper
+          # turns on msedgedriver's verbose log and writes it with the artifacts.
+          $artifacts = "$env:GITHUB_WORKSPACE\target\e2e\artifacts"
+          New-Item -ItemType Directory -Force -Path $artifacts | Out-Null
+          $wrapper = "$env:RUNNER_TEMP\msedgedriver\msedgedriver-verbose.cmd"
+          Set-Content -Path $wrapper -Encoding ascii -Value @(
+            '@echo off',
+            "`"%~dp0msedgedriver.exe`" %* --verbose `"--log-path=$artifacts\msedgedriver.log`""
+          )
+          "TAURI_NATIVE_DRIVER=$wrapper" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Install frontend dependencies
         run: vp install --ignore-scripts && bun scripts/postinstall.ts
@@ -93,6 +102,31 @@ jobs:
           ATHAS_E2E_SKIP_BUILD: "1"
           ATHAS_DISABLE_LINUX_GPU: "1"
         run: dbus-run-session -- xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" bun run e2e
+
+      # Launches the e2e build without WebDriver so a crash at startup shows up
+      # here with its exit code and logs instead of as a driver timeout.
+      - name: Check that the e2e app starts (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          RUST_BACKTRACE: "1"
+        run: |
+          $artifacts = "$env:GITHUB_WORKSPACE\target\e2e\artifacts\startup-check"
+          New-Item -ItemType Directory -Force -Path $artifacts | Out-Null
+          $project = "$env:RUNNER_TEMP\startup-check\sample-project"
+          Copy-Item -Recurse -Force e2e\fixtures\sample-project $project
+          $app = Start-Process -FilePath target\debug\athas.exe -ArgumentList "`"$project`"" -PassThru `
+            -RedirectStandardOutput "$artifacts\stdout.log" -RedirectStandardError "$artifacts\stderr.log"
+          Start-Sleep -Seconds 20
+          $running = -not $app.HasExited
+          if ($running) { Stop-Process -Id $app.Id -Force } else { "exit code: $($app.ExitCode)" }
+          Get-Content "$artifacts\stdout.log", "$artifacts\stderr.log" -ErrorAction SilentlyContinue
+          if (Test-Path target\debug\e2e-app-data\logs) {
+            Copy-Item -Recurse target\debug\e2e-app-data\logs "$artifacts\app-logs"
+            Get-Content target\debug\e2e-app-data\logs\*.log -Tail 40
+          }
+          Remove-Item -Recurse -Force target\debug\e2e-app-data -ErrorAction SilentlyContinue
+          if (-not $running) { throw "The e2e app exited during startup" }
 
       - name: Run e2e tests (Windows)
         if: runner.os == 'Windows'

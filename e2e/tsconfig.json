@@ -9,7 +9,7 @@
     "skipLibCheck": true,
     "noEmit": true,
     "strict": true,
-    "types": ["node", "@wdio/globals/types", "@wdio/mocha-framework"]
+    "types": ["bun-types"]
   },
-  "include": ["wdio.conf.ts", "specs", "support"]
+  "include": ["run.ts", "specs", "support"]
 }

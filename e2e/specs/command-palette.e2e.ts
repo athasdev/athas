@@ -1,20 +1,25 @@
-import { expect } from "@wdio/globals";
-import { UI_TIMEOUT, fileTree, runPaletteCommand, waitForProjectTree } from "../support/app.ts";
+import { beforeAll, describe } from "bun:test";
+import {
+  FILE_TREE,
+  runPaletteCommand,
+  waitForDisplayed,
+  waitForHidden,
+  waitForProjectTree,
+} from "../support/app.ts";
+import { e2eTest, useAppSession } from "../support/session.ts";
 
 describe("command palette", () => {
-  before(async () => {
+  useAppSession("command-palette");
+
+  beforeAll(async () => {
     await waitForProjectTree();
   });
 
-  it("opens and runs a command", async () => {
+  e2eTest("opens and runs a command", async () => {
     await runPaletteCommand("View: Hide Sidebar");
-    await fileTree().waitForDisplayed({
-      reverse: true,
-      timeout: UI_TIMEOUT,
-      timeoutMsg: "Hide Sidebar did not hide the file tree",
-    });
+    await waitForHidden(FILE_TREE, "Hide Sidebar did not hide the file tree");
 
     await runPaletteCommand("View: Show Sidebar");
-    await expect(fileTree()).toBeDisplayed();
+    await waitForDisplayed(FILE_TREE, "Show Sidebar did not bring the file tree back");
   });
 });
