@@ -34,6 +34,9 @@ describe("debugger command helpers", () => {
     expect(buildDebugTerminalCommand(["java", "-cp '/tmp/my app' Main"], true)).toBe(
       "java -cp '/tmp/my app' Main",
     );
+    expect(buildDebugTerminalCommand(["run", "$(touch /tmp/pwned)"])).toBe(
+      "run '$(touch /tmp/pwned)'",
+    );
   });
 
   test("normalizes launch.json style configs", () => {

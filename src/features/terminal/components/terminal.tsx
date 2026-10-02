@@ -45,7 +45,7 @@ import type {
   TerminalCommandSummary,
   TerminalEmulatorHandle,
 } from "../types/terminal.types";
-import { formatDroppedPathsForTerminal } from "../utils/terminal-file-drop";
+import { formatDroppedPathsForTerminal, getTerminalQuoteStyle } from "../utils/terminal-file-drop";
 import { resolveTerminalFont } from "../utils/resolve-font";
 import { getTerminalKeyAction } from "../utils/terminal-keyboard";
 import { getTerminalCompatibilityOptions } from "../utils/terminal-options";
@@ -191,14 +191,20 @@ export const TerminalEmulator = ({
 
   const insertDroppedPaths = useCallback(
     (paths: string[]) => {
-      const text = formatDroppedPathsForTerminal(paths);
+      const session = getSession(sessionId);
+      const quoteStyle = getTerminalQuoteStyle(
+        shell || session?.shell,
+        currentPlatform,
+        Boolean(remoteConnectionId || session?.remoteConnectionId),
+      );
+      const text = formatDroppedPathsForTerminal(paths, quoteStyle);
       if (!text) return false;
 
       writeBuffered(text);
       requestAnimationFrame(() => terminalRef.current?.focus());
       return true;
     },
-    [writeBuffered],
+    [getSession, remoteConnectionId, sessionId, shell, writeBuffered],
   );
 
   const handleTerminalFileDrop = useCallback(

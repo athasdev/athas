@@ -12,8 +12,9 @@ linux = ["tauri/cef"]
 anyhow = "1.0"
 chrono = { version = "0.4.41", features = ["serde"] }
 flate2 = "1.0"
+futures-util = "0.3"
 log = "0.4"
-reqwest = "0.12"
+reqwest = { version = "0.12", features = ["stream"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sha256 = "1.5"

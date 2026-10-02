@@ -1,5 +1,5 @@
 use super::{
-   exec_guard::{validate_exec_command, validate_exec_env},
+   exec_guard::{validate_exec_args, validate_exec_command, validate_exec_env},
    extension_command::build_extension_command,
 };
 use athas_runtime::process::configure_background_command;
@@ -72,6 +72,9 @@ async fn format_with_generic(
    // before the template variables get a chance to be substituted.
    validate_exec_command(&config.command)
       .map_err(|e| format!("Invalid formatter config: {}", e))?;
+   if let Some(args) = config.args.as_deref() {
+      validate_exec_args(args).map_err(|e| format!("Invalid formatter config: {}", e))?;
+   }
    if let Some(env) = &config.env {
       validate_exec_env(env).map_err(|e| format!("Invalid formatter config: {}", e))?;
    }

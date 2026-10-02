@@ -15,6 +15,13 @@ fn _git_clone(repository_url: String, destination_path: String) -> Result<()> {
    if repository_url.starts_with('-') {
       bail!("Repository URL cannot start with an option prefix");
    }
+   if repository_url
+      .as_bytes()
+      .get(..5)
+      .is_some_and(|prefix| prefix.eq_ignore_ascii_case(b"ext::"))
+   {
+      bail!("The ext transport can execute local commands and is not allowed");
+   }
 
    let destination = Path::new(&destination_path);
    if !destination.is_absolute() {
@@ -188,5 +195,19 @@ mod tests {
          "athas-clone-target".to_string(),
       );
       assert!(result.is_err());
+   }
+
+   #[test]
+   fn clone_rejects_ext_transport_urls() {
+      let result = _git_clone(
+         "ext::sh -c cp".to_string(),
+         "/tmp/athas-clone-target".to_string(),
+      );
+      assert!(result.unwrap_err().to_string().contains("ext transport"));
+      let result = _git_clone(
+         "EXT::sh -c cp".to_string(),
+         "/tmp/athas-clone-target".to_string(),
+      );
+      assert!(result.unwrap_err().to_string().contains("ext transport"));
    }
 }

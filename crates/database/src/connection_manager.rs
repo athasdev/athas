@@ -267,29 +267,32 @@ fn network_connection_string(
       return Ok(cs.clone());
    }
 
-   let pass = password.unwrap_or_default();
+   // Percent-encode credentials so metacharacters such as @ : / ? #
+   // cannot shift the parsed host and send the password elsewhere.
+   let user = encode_url_userinfo(&config.username);
+   let pass = encode_url_userinfo(&password.unwrap_or_default());
    match config.db_type.as_str() {
       #[cfg(feature = "postgres")]
       "postgres" => Ok(format!(
          "postgres://{}:{}@{}:{}/{}",
-         config.username, pass, config.host, config.port, config.database
+         user, pass, config.host, config.port, config.database
       )),
       #[cfg(feature = "mysql")]
       "mysql" => Ok(format!(
          "mysql://{}:{}@{}:{}/{}",
-         config.username, pass, config.host, config.port, config.database
+         user, pass, config.host, config.port, config.database
       )),
       #[cfg(feature = "mongodb")]
       "mongodb" => Ok(format!(
          "mongodb://{}:{}@{}:{}/{}",
-         config.username, pass, config.host, config.port, config.database
+         user, pass, config.host, config.port, config.database
       )),
       #[cfg(feature = "redis")]
       "redis" => {
          if !config.username.is_empty() {
             Ok(format!(
                "redis://{}:{}@{}:{}",
-               config.username, pass, config.host, config.port
+               user, pass, config.host, config.port
             ))
          } else if !pass.is_empty() {
             Ok(format!("redis://:{}@{}:{}", pass, config.host, config.port))
@@ -298,5 +301,62 @@ fn network_connection_string(
          }
       }
       _ => Err(format!("Unsupported database type: {}", config.db_type)),
+   }
+}
+
+#[cfg(any(
+   feature = "postgres",
+   feature = "mysql",
+   feature = "mongodb",
+   feature = "redis"
+))]
+fn encode_url_userinfo(input: &str) -> String {
+   const UNRESERVED: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
+   const HEX: &[u8; 16] = b"0123456789ABCDEF";
+   let mut encoded = String::with_capacity(input.len());
+   for byte in input.bytes() {
+      if UNRESERVED.contains(&byte) {
+         encoded.push(byte as char);
+      } else {
+         encoded.push('%');
+         encoded.push(HEX[(byte >> 4) as usize] as char);
+         encoded.push(HEX[(byte & 15) as usize] as char);
+      }
+   }
+   encoded
+}
+
+#[cfg(all(test, feature = "postgres"))]
+mod tests {
+   use super::*;
+
+   fn test_config() -> ConnectionConfig {
+      ConnectionConfig {
+         id: "test".to_string(),
+         name: "test".to_string(),
+         db_type: "postgres".to_string(),
+         host: "db.internal".to_string(),
+         port: 5432,
+         database: "app".to_string(),
+         username: "user@corp".to_string(),
+         connection_string: None,
+      }
+   }
+
+   #[test]
+   fn encodes_credential_metacharacters() {
+      let url = network_connection_string(&test_config(), Some("p@ss:w/rd?#".to_string())).unwrap();
+      assert_eq!(
+         url,
+         "postgres://user%40corp:p%40ss%3Aw%2Frd%3F%23@db.internal:5432/app"
+      );
+   }
+
+   #[test]
+   fn leaves_plain_credentials_untouched() {
+      let mut config = test_config();
+      config.username = "app".to_string();
+      let url = network_connection_string(&config, Some("s3cret".to_string())).unwrap();
+      assert_eq!(url, "postgres://app:s3cret@db.internal:5432/app");
    }
 }
