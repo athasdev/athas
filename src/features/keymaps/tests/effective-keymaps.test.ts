@@ -3,6 +3,7 @@ import type { Keybinding } from "../types/keymaps.types";
 import {
   getEffectiveKeybindingForCommand,
   getEffectiveKeybindings,
+  getEffectiveShortcutsByCommand,
 } from "../utils/effective-keymaps";
 
 const registryKeybindings: Keybinding[] = [
@@ -113,5 +114,21 @@ describe("effective keybindings", () => {
         userKeybindings: [],
       })?.source,
     ).toBe("preset");
+  });
+
+  it("maps each command to the shortcut that will actually run it", () => {
+    const shortcuts = getEffectiveShortcutsByCommand({
+      preset: "jetbrains",
+      registryKeybindings,
+      userKeybindings: [
+        { key: "cmd+alt+s", command: "file.save", source: "user" },
+        { key: "cmd+shift+a", command: "workbench.commandPalette", source: "user", enabled: false },
+      ],
+    });
+
+    expect(shortcuts.get("file.save")).toBe("cmd+alt+s");
+    expect(shortcuts.has("workbench.commandPalette")).toBe(false);
+    expect(shortcuts.has("workbench.newWindow")).toBe(false);
+    expect(shortcuts.get("editor.goToReferences")).toBe("alt+F7");
   });
 });
