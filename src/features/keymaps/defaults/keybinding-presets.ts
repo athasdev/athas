@@ -74,6 +74,7 @@ export const keybindingPresetDefinitions: Record<KeybindingPreset, KeybindingPre
   vscode: createPresetDefinition({
     label: "VS Code",
     description: "Match common VS Code shortcuts.",
+    disabledCommands: ["workbench.toggleMinimap"],
     overrides: [
       { key: "cmd+n", command: "file.new", source: "preset" },
       { key: "cmd+alt+f", command: "workbench.showFindReplace", source: "preset" },
@@ -83,7 +84,12 @@ export const keybindingPresetDefinitions: Record<KeybindingPreset, KeybindingPre
   jetbrains: createPresetDefinition({
     label: "JetBrains",
     description: "Match common JetBrains IDE shortcuts.",
-    disabledCommands: ["workbench.newWindow", "workbench.toggleSidebar"],
+    disabledCommands: [
+      "workbench.newWindow",
+      "workbench.toggleSidebar",
+      "workbench.switchToTab1",
+      "workbench.switchToTab9",
+    ],
     overrides: [
       { key: "cmd+shift+a", command: "workbench.commandPalette", source: "preset" },
       { key: "cmd+shift+n", command: "file.quickOpen", source: "preset" },
@@ -97,6 +103,7 @@ export const keybindingPresetDefinitions: Record<KeybindingPreset, KeybindingPre
   sublime: createPresetDefinition({
     label: "Sublime Text",
     description: "Match common Sublime Text shortcuts.",
+    disabledCommands: ["workbench.showDebugger"],
     overrides: [
       { key: "cmd+shift+d", command: "editor.duplicateLine", source: "preset" },
       { key: "cmd+k cmd+b", command: "workbench.toggleSidebar", source: "preset" },
@@ -107,6 +114,12 @@ export const keybindingPresetDefinitions: Record<KeybindingPreset, KeybindingPre
   xcode: createPresetDefinition({
     label: "Xcode",
     description: "Match common Xcode shortcuts.",
+    disabledCommands: [
+      "editor.showOutline",
+      "workbench.switchToTab1",
+      "workbench.switchToTab5",
+      "workbench.zoomReset",
+    ],
     overrides: [
       { key: "cmd+shift+a", command: "workbench.commandPalette", source: "preset" },
       { key: "cmd+shift+o", command: "file.quickOpen", source: "preset" },
@@ -119,6 +132,7 @@ export const keybindingPresetDefinitions: Record<KeybindingPreset, KeybindingPre
   atom: createPresetDefinition({
     label: "Atom",
     description: "Match common Atom shortcuts.",
+    disabledCommands: ["workbench.showDebugger"],
     overrides: [
       { key: "cmd+shift+p", command: "workbench.commandPalette", source: "preset" },
       { key: "cmd+\\", command: "workbench.toggleSidebar", source: "preset" },

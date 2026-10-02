@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
-import type { KeybindingPreset } from "../defaults/keybinding-presets";
+import { defaultKeymaps } from "../defaults/default-keymaps";
+import { type KeybindingPreset, keybindingPresetOptions } from "../defaults/keybinding-presets";
 import type { Keybinding } from "../types/keymaps.types";
 import { getEffectiveKeybindings } from "../utils/effective-keymaps";
 import { findConflictingKeybindings } from "../utils/keybinding-conflicts";
@@ -84,5 +85,25 @@ describe("findConflictingKeybindings", () => {
     expect(
       conflictsFor("cmd+shift+p", "workbench.toggleSidebar", [], undefined, "jetbrains"),
     ).toEqual([]);
+  });
+
+  it("finds no conflicts inside the shipped defaults for any preset", () => {
+    const conflicts = keybindingPresetOptions.flatMap(({ value: preset }) => {
+      const effectiveKeybindings = getEffectiveKeybindings({
+        preset,
+        registryKeybindings: defaultKeymaps,
+        userKeybindings: [],
+      });
+      return effectiveKeybindings.flatMap((binding) =>
+        findConflictingKeybindings({
+          keybinding: binding.key,
+          commandId: binding.command,
+          when: binding.when,
+          effectiveKeybindings,
+        }).map((conflict) => `${preset}: ${binding.key} ${binding.command} vs ${conflict.command}`),
+      );
+    });
+
+    expect(conflicts).toEqual([]);
   });
 });
