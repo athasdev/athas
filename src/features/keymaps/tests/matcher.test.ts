@@ -1,6 +1,8 @@
-import { describe, expect, it } from "vite-plus/test";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { eventToKey, matchKeybinding } from "../utils/matcher";
 import { parseKeybinding } from "../utils/parser";
+
+vi.mock("@/utils/platform", () => import("./macos-platform-mock"));
 
 function keydown(init: Partial<KeyboardEvent>): KeyboardEvent {
   return {
