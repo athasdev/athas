@@ -9,7 +9,7 @@ use super::{
       LspApplyCodeActionResult, LspCodeActionContext, LspCodeActionItem, LspSemanticTokensResponse,
    },
 };
-use athas_lsp::{LspError, LspManager, LspResult};
+use athas_lsp::{DocumentChangeBatch, LspError, LspManager, LspResult};
 use athas_tooling::{LanguageToolConfigSet, ToolInstaller, ToolRegistry, ToolType};
 use lsp_types::{
    CallHierarchyIncomingCall, CallHierarchyItem, CallHierarchyOutgoingCall, CodeActionOrCommand,
@@ -935,7 +935,7 @@ pub fn lsp_document_change(
    lsp_manager: State<'_, LspManager>,
    file_path: String,
    content: String,
-   version: i32,
+   version: i64,
 ) -> LspResult<()> {
    lsp_manager
       .notify_document_change(&file_path, content, version)
@@ -944,13 +944,21 @@ pub fn lsp_document_change(
 
 #[tauri::command]
 #[specta::specta]
-pub fn lsp_document_save(
+pub fn lsp_document_change_batch(
    lsp_manager: State<'_, LspManager>,
    file_path: String,
-   content: Option<String>,
-) -> LspResult<()> {
+   batches: Vec<DocumentChangeBatch>,
+) -> LspResult<i32> {
    lsp_manager
-      .notify_document_save(&file_path, content)
+      .queue_document_change_batches(&file_path, batches)
+      .map_err(Into::into)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn lsp_document_save(lsp_manager: State<'_, LspManager>, file_path: String) -> LspResult<()> {
+   lsp_manager
+      .notify_document_save(&file_path)
       .map_err(Into::into)
 }
 

@@ -1,4 +1,4 @@
-import { commands } from "@/bindings/commands";
+import { commands, type DocumentChangeBatch } from "@/bindings/commands";
 import { listen } from "@tauri-apps/api/event";
 import type {
   CallHierarchyIncomingCall,
@@ -24,7 +24,9 @@ import type {
 } from "@/features/diagnostics/types/diagnostics.types";
 import type { BackendLanguageToolConfigSet } from "@/extensions/runtime/language-tool-config";
 import { hasTextContent } from "@/features/panes/types/pane-content.types";
+import { subscribeToEditorDocumentChanges } from "../services/editor-document-events";
 import { useBufferStore } from "../stores/buffer.store";
+import type { EditorDocumentChangeEvent } from "../types/editor.types";
 import { getSourceEditorBufferByPath } from "../utils/buffer-index";
 import { logger } from "../utils/logger";
 import type { LspSemanticTokensResponse } from "./semantic-token-types";
@@ -163,6 +165,8 @@ function withoutWorkspaceEdit(actionPayload: unknown): unknown {
   return commandPayload;
 }
 
+const MAX_DOCUMENT_CHANGE_RETRIES = 2;
+
 export class LspClient {
   private static instance: LspClient | null = null;
   private activeLanguageServers = new Set<string>(); // workspace:language format
@@ -172,11 +176,162 @@ export class LspClient {
   private repairLanguageServerPromises = new Map<string, Promise<boolean>>();
   private openDocuments = new Set<string>();
   private documentVersions = new Map<string, number>();
+  private openingDocuments = new Map<string, Promise<void>>();
+  private backendOpenedDocuments = new Set<string>();
+  private closingDocuments = new Set<string>();
+  private documentLifecycleGenerations = new Map<string, number>();
+  private documentChangeQueues = new Map<string, EditorDocumentChangeEvent[]>();
+  private documentChangeTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private documentChangeSendChains = new Map<string, Promise<void>>();
+  private documentChangeRetries = new Map<string, number>();
+  private documentsNeedingResync = new Set<string>();
 
   private constructor() {
     this.setupDiagnosticsListener();
     this.setupCrashListener();
     this.setupWorkspaceEditListener();
+    subscribeToEditorDocumentChanges((event) => this.queueDocumentChange(event));
+  }
+
+  private queueDocumentChange(event: EditorDocumentChangeEvent): void {
+    if (
+      this.closingDocuments.has(event.filePath) ||
+      (!this.openDocuments.has(event.filePath) && !this.openingDocuments.has(event.filePath))
+    ) {
+      return;
+    }
+    const queue = this.documentChangeQueues.get(event.filePath) ?? [];
+    queue.push(event);
+    this.documentChangeQueues.set(event.filePath, queue);
+
+    const existingTimer = this.documentChangeTimers.get(event.filePath);
+    if (existingTimer) clearTimeout(existingTimer);
+    this.documentChangeTimers.set(
+      event.filePath,
+      setTimeout(() => void this.flushDocumentChanges(event.filePath), 40),
+    );
+  }
+
+  /** The editor's current text for a document, which every published change is already part of. */
+  private getCurrentDocumentContent(filePath: string): string | null {
+    const buffer = getSourceEditorBufferByPath(useBufferStore.getState().buffers, filePath);
+    return buffer && hasTextContent(buffer) ? buffer.content : null;
+  }
+
+  private flushDocumentChanges(filePath: string): Promise<void> {
+    const timer = this.documentChangeTimers.get(filePath);
+    if (timer) clearTimeout(timer);
+    this.documentChangeTimers.delete(filePath);
+
+    const queued = this.documentChangeQueues.get(filePath) ?? [];
+    const needsResync = this.documentsNeedingResync.has(filePath);
+    if (queued.length === 0 && !needsResync) {
+      return this.documentChangeSendChains.get(filePath) ?? Promise.resolve();
+    }
+    this.documentChangeQueues.delete(filePath);
+
+    // After deltas were lost the server's copy can no longer be patched, so it is replaced with the
+    // editor's text as of now. The text is read here, not when the request goes out, so edits
+    // queued in between are sent on top of it exactly once.
+    const resyncContent = needsResync ? this.getCurrentDocumentContent(filePath) : null;
+    const batches: DocumentChangeBatch[] =
+      resyncContent !== null
+        ? [
+            {
+              modelSessionId: "lsp-resync",
+              modelVersionId: 0,
+              changes: [],
+              isEolChange: false,
+              isFlush: true,
+              fullContent: resyncContent,
+            },
+          ]
+        : queued.map(
+            ({ modelSessionId, modelVersionId, changes, isEolChange, isFlush, fullContent }) => ({
+              modelSessionId,
+              modelVersionId,
+              changes: [...changes],
+              isEolChange,
+              isFlush,
+              fullContent: fullContent ?? null,
+            }),
+          );
+    if (batches.length === 0) {
+      return this.documentChangeSendChains.get(filePath) ?? Promise.resolve();
+    }
+
+    const previous = this.documentChangeSendChains.get(filePath) ?? Promise.resolve();
+    const send = previous
+      .catch(() => undefined)
+      .then(async () => {
+        const opening = this.openingDocuments.get(filePath);
+        if (opening) await opening;
+        if (!this.openDocuments.has(filePath)) return;
+        const version = await commands.lspDocumentChangeBatch(filePath, batches);
+        this.documentVersions.set(filePath, version);
+        this.documentChangeRetries.delete(filePath);
+        if (resyncContent !== null) this.documentsNeedingResync.delete(filePath);
+      })
+      .catch((error) => {
+        logger.error("LSPClient", "LSP document change error:", error);
+        if (!this.openDocuments.has(filePath)) return;
+        if (resyncContent !== null) {
+          // Stays flagged: the next edit or request tries the full replacement again.
+          return;
+        }
+        const retries = this.documentChangeRetries.get(filePath) ?? 0;
+        if (retries < MAX_DOCUMENT_CHANGE_RETRIES) {
+          this.documentChangeRetries.set(filePath, retries + 1);
+          const laterChanges = this.documentChangeQueues.get(filePath) ?? [];
+          this.documentChangeQueues.set(filePath, [...queued, ...laterChanges]);
+        } else {
+          this.documentChangeRetries.delete(filePath);
+          this.documentsNeedingResync.add(filePath);
+          this.documentChangeQueues.delete(filePath);
+        }
+        this.documentChangeTimers.set(
+          filePath,
+          setTimeout(() => void this.flushDocumentChanges(filePath), 80 * (retries + 1)),
+        );
+      });
+    this.documentChangeSendChains.set(filePath, send);
+    return send;
+  }
+
+  private forgetDocument(filePath: string): void {
+    const timer = this.documentChangeTimers.get(filePath);
+    if (timer) clearTimeout(timer);
+    this.documentChangeTimers.delete(filePath);
+    this.documentChangeQueues.delete(filePath);
+    this.documentChangeSendChains.delete(filePath);
+    this.documentChangeRetries.delete(filePath);
+    this.documentsNeedingResync.delete(filePath);
+    this.documentVersions.delete(filePath);
+    this.backendOpenedDocuments.delete(filePath);
+    if (this.openDocuments.delete(filePath)) {
+      useLspStore.getState().actions.markDocumentStateChanged();
+    }
+  }
+
+  private async invokeForDocument<T>(filePath: string, request: () => Promise<T>): Promise<T> {
+    await this.flushDocumentChangesBeforeOperation(filePath);
+    return request();
+  }
+
+  /**
+   * Sends pending edits before a request that reads the document. A failed send schedules its own
+   * retry or full resync, so the request still goes ahead instead of failing until restart.
+   */
+  private async flushDocumentChangesBeforeOperation(filePath: string): Promise<void> {
+    for (let attempt = 0; attempt <= MAX_DOCUMENT_CHANGE_RETRIES + 1; attempt += 1) {
+      await this.flushDocumentChanges(filePath);
+      if (
+        !this.documentChangeQueues.has(filePath) &&
+        (!this.documentsNeedingResync.has(filePath) || attempt > MAX_DOCUMENT_CHANGE_RETRIES)
+      ) {
+        return;
+      }
+    }
   }
 
   /**
@@ -602,6 +757,9 @@ export class LspClient {
     try {
       logger.debug("LSPClient", "Stopping LSP for workspace:", workspacePath);
       await commands.lspStop(workspacePath);
+      for (const filePath of Array.from(this.openDocuments)) {
+        if (filePath.startsWith(workspacePath)) this.forgetDocument(filePath);
+      }
 
       // Remove all language servers for this workspace
       const serversToRemove = Array.from(this.activeLanguageServers).filter((key) =>
@@ -803,6 +961,8 @@ export class LspClient {
       const { extensionRegistry } = await import("@/extensions/registry/extension-registry");
       const languageId = extensionRegistry.getLanguageId(filePath) || undefined;
       await commands.lspStopForFile(filePath);
+      // The backend dropped this document's session, so a later start must send didOpen again.
+      this.forgetDocument(filePath);
 
       if (languageId) {
         const activeKey = this.findServerKeyForFile(filePath, languageId);
@@ -902,12 +1062,14 @@ export class LspClient {
         "LSPClient",
         `Active language servers: ${Array.from(this.activeLanguageServers).join(", ")}`,
       );
-      const completions = await commands.lspGetCompletions(
-        filePath,
-        line,
-        character,
-        triggerKind ?? null,
-        triggerCharacter ?? null,
+      const completions = await this.invokeForDocument(filePath, () =>
+        commands.lspGetCompletions(
+          filePath,
+          line,
+          character,
+          triggerKind ?? null,
+          triggerCharacter ?? null,
+        ),
       );
       if (completions.length === 0) {
         logger.warn("LSPClient", "LSP returned 0 completions - checking LSP status");
@@ -923,7 +1085,9 @@ export class LspClient {
 
   async resolveCompletionItem(filePath: string, item: CompletionItem): Promise<CompletionItem> {
     try {
-      return await commands.lspResolveCompletionItem(filePath, item);
+      return await this.invokeForDocument(filePath, () =>
+        commands.lspResolveCompletionItem(filePath, item),
+      );
     } catch (error) {
       if (!isCanceledLspRequest(error)) {
         logger.debug("LSPClient", "LSP completion resolve unavailable:", error);
@@ -934,7 +1098,9 @@ export class LspClient {
 
   async getHover(filePath: string, line: number, character: number): Promise<Hover | null> {
     try {
-      return await commands.lspGetHover(filePath, line, character);
+      return await this.invokeForDocument(filePath, () =>
+        commands.lspGetHover(filePath, line, character),
+      );
     } catch (error) {
       if (!isBenignHoverError(error)) {
         logger.error("LSPClient", "LSP hover error:", error);
@@ -958,7 +1124,9 @@ export class LspClient {
           : command === "lsp_get_implementation"
             ? commands.lspGetImplementation
             : commands.lspGetTypeDefinition;
-      const locations = await request(filePath, line, character);
+      const locations = await this.invokeForDocument(filePath, () =>
+        request(filePath, line, character),
+      );
       if (locations) {
         logger.debug("LSPClient", `Got ${label}: ${JSON.stringify(locations)}`);
       }
@@ -1013,7 +1181,7 @@ export class LspClient {
 
   async getSemanticTokens(filePath: string): Promise<LspSemanticTokensResponse | null> {
     try {
-      return await commands.lspGetSemanticTokens(filePath);
+      return await this.invokeForDocument(filePath, () => commands.lspGetSemanticTokens(filePath));
     } catch (error) {
       if (isCanceledLspRequest(error)) return null;
       logger.warn("LSPClient", `LSP semantic tokens unavailable: ${stringifyLspError(error)}`);
@@ -1030,7 +1198,9 @@ export class LspClient {
     }[]
   > {
     try {
-      const lenses = await commands.lspGetCodeLens(filePath);
+      const lenses = await this.invokeForDocument(filePath, () =>
+        commands.lspGetCodeLens(filePath),
+      );
       return lenses.map((lens) => nullFieldsToUndefined(lens));
     } catch (error) {
       if (isCanceledLspRequest(error)) return [];
@@ -1041,7 +1211,7 @@ export class LspClient {
 
   async getFoldingRanges(filePath: string): Promise<FoldingRange[]> {
     try {
-      return await commands.lspGetFoldingRanges(filePath);
+      return await this.invokeForDocument(filePath, () => commands.lspGetFoldingRanges(filePath));
     } catch (error) {
       if (isCanceledLspRequest(error)) return [];
       logger.warn("LSPClient", `LSP folding ranges unavailable: ${stringifyLspError(error)}`);
@@ -1051,7 +1221,9 @@ export class LspClient {
 
   async getSelectionRanges(filePath: string, positions: Position[]): Promise<SelectionRange[]> {
     try {
-      return await commands.lspGetSelectionRanges(filePath, positions);
+      return await this.invokeForDocument(filePath, () =>
+        commands.lspGetSelectionRanges(filePath, positions),
+      );
     } catch (error) {
       if (isCanceledLspRequest(error)) return [];
       logger.warn("LSPClient", `LSP selection ranges unavailable: ${stringifyLspError(error)}`);
@@ -1065,7 +1237,9 @@ export class LspClient {
     character: number,
   ): Promise<DocumentHighlight[]> {
     try {
-      return await commands.lspGetDocumentHighlights(filePath, line, character);
+      return await this.invokeForDocument(filePath, () =>
+        commands.lspGetDocumentHighlights(filePath, line, character),
+      );
     } catch (error) {
       if (isCanceledLspRequest(error)) return [];
       logger.debug("LSPClient", "LSP document highlights unavailable:", error);
@@ -1079,7 +1253,9 @@ export class LspClient {
     character: number,
   ): Promise<CallHierarchyItem[]> {
     try {
-      return await commands.lspPrepareCallHierarchy(filePath, line, character);
+      return await this.invokeForDocument(filePath, () =>
+        commands.lspPrepareCallHierarchy(filePath, line, character),
+      );
     } catch (error) {
       logger.debug("LSPClient", "LSP call hierarchy unavailable:", error);
       return [];
@@ -1091,7 +1267,9 @@ export class LspClient {
     item: CallHierarchyItem,
   ): Promise<CallHierarchyIncomingCall[]> {
     try {
-      return await commands.lspGetIncomingCalls(filePath, item);
+      return await this.invokeForDocument(filePath, () =>
+        commands.lspGetIncomingCalls(filePath, item),
+      );
     } catch (error) {
       logger.debug("LSPClient", "LSP incoming calls unavailable:", error);
       return [];
@@ -1103,7 +1281,9 @@ export class LspClient {
     item: CallHierarchyItem,
   ): Promise<CallHierarchyOutgoingCall[]> {
     try {
-      return await commands.lspGetOutgoingCalls(filePath, item);
+      return await this.invokeForDocument(filePath, () =>
+        commands.lspGetOutgoingCalls(filePath, item),
+      );
     } catch (error) {
       logger.debug("LSPClient", "LSP outgoing calls unavailable:", error);
       return [];
@@ -1116,7 +1296,9 @@ export class LspClient {
     character: number,
   ): Promise<TypeHierarchyItem[]> {
     try {
-      return await commands.lspPrepareTypeHierarchy(filePath, line, character);
+      return await this.invokeForDocument(filePath, () =>
+        commands.lspPrepareTypeHierarchy(filePath, line, character),
+      );
     } catch (error) {
       logger.debug("LSPClient", "LSP type hierarchy unavailable:", error);
       return [];
@@ -1125,7 +1307,9 @@ export class LspClient {
 
   async getSupertypes(filePath: string, item: TypeHierarchyItem): Promise<TypeHierarchyItem[]> {
     try {
-      return await commands.lspGetSupertypes(filePath, item);
+      return await this.invokeForDocument(filePath, () =>
+        commands.lspGetSupertypes(filePath, item),
+      );
     } catch (error) {
       logger.debug("LSPClient", "LSP supertypes unavailable:", error);
       return [];
@@ -1134,7 +1318,7 @@ export class LspClient {
 
   async getSubtypes(filePath: string, item: TypeHierarchyItem): Promise<TypeHierarchyItem[]> {
     try {
-      return await commands.lspGetSubtypes(filePath, item);
+      return await this.invokeForDocument(filePath, () => commands.lspGetSubtypes(filePath, item));
     } catch (error) {
       logger.debug("LSPClient", "LSP subtypes unavailable:", error);
       return [];
@@ -1143,7 +1327,9 @@ export class LspClient {
 
   async getOnTypeFormattingTriggerCharacters(filePath: string): Promise<string[]> {
     try {
-      return await commands.lspGetOnTypeFormattingTriggerCharacters(filePath);
+      return await this.invokeForDocument(filePath, () =>
+        commands.lspGetOnTypeFormattingTriggerCharacters(filePath),
+      );
     } catch (error) {
       logger.debug("LSPClient", "LSP on-type formatting triggers unavailable:", error);
       return [];
@@ -1159,13 +1345,15 @@ export class LspClient {
     insertSpaces: boolean,
   ): Promise<LspTextEdit[]> {
     try {
-      return await commands.lspFormatOnType(
-        filePath,
-        line,
-        character,
-        triggerCharacter,
-        tabSize,
-        insertSpaces,
+      return await this.invokeForDocument(filePath, () =>
+        commands.lspFormatOnType(
+          filePath,
+          line,
+          character,
+          triggerCharacter,
+          tabSize,
+          insertSpaces,
+        ),
       );
     } catch (error) {
       if (isCanceledLspRequest(error)) return [];
@@ -1189,7 +1377,9 @@ export class LspClient {
     }[]
   > {
     try {
-      const hints = await commands.lspGetInlayHints(filePath, startLine, endLine);
+      const hints = await this.invokeForDocument(filePath, () =>
+        commands.lspGetInlayHints(filePath, startLine, endLine),
+      );
       return hints.map((hint) => nullFieldsToUndefined(hint));
     } catch (error) {
       if (isCanceledLspRequest(error)) return [];
@@ -1213,7 +1403,9 @@ export class LspClient {
   > {
     try {
       logger.debug("LSPClient", `Getting document symbols for ${filePath}`);
-      const symbols = await commands.lspGetDocumentSymbols(filePath);
+      const symbols = await this.invokeForDocument(filePath, () =>
+        commands.lspGetDocumentSymbols(filePath),
+      );
       logger.debug("LSPClient", `Got ${symbols.length} document symbols`);
       return symbols.map((symbol) => nullFieldsToUndefined(symbol));
     } catch (error) {
@@ -1268,7 +1460,9 @@ export class LspClient {
     activeParameter?: number;
   } | null> {
     try {
-      const help = await commands.lspGetSignatureHelp(filePath, line, character);
+      const help = await this.invokeForDocument(filePath, () =>
+        commands.lspGetSignatureHelp(filePath, line, character),
+      );
       if (!help) return null;
       return {
         ...nullFieldsToUndefined(help),
@@ -1282,7 +1476,9 @@ export class LspClient {
 
   async getSignatureTriggerCharacters(filePath: string): Promise<string[]> {
     try {
-      return await commands.lspGetSignatureTriggerCharacters(filePath);
+      return await this.invokeForDocument(filePath, () =>
+        commands.lspGetSignatureTriggerCharacters(filePath),
+      );
     } catch (error) {
       logger.debug("LSPClient", "LSP signature trigger characters unavailable:", error);
       return [];
@@ -1291,7 +1487,9 @@ export class LspClient {
 
   async formatDocument(filePath: string, content: string): Promise<string | null> {
     try {
-      const edits = await commands.lspFormatDocument(filePath);
+      const edits = await this.invokeForDocument(filePath, () =>
+        commands.lspFormatDocument(filePath),
+      );
       if (!edits.length) return content;
       return applyTextEditsToContent(content, edits);
     } catch (error) {
@@ -1309,12 +1507,14 @@ export class LspClient {
     },
   ): Promise<string | null> {
     try {
-      const edits = await commands.lspFormatRange(
-        filePath,
-        range.start.line,
-        range.start.character,
-        range.end.line,
-        range.end.character,
+      const edits = await this.invokeForDocument(filePath, () =>
+        commands.lspFormatRange(
+          filePath,
+          range.start.line,
+          range.start.character,
+          range.end.line,
+          range.end.character,
+        ),
       );
       if (!edits.length) return content;
       return applyTextEditsToContent(content, edits);
@@ -1340,7 +1540,9 @@ export class LspClient {
   > {
     try {
       logger.debug("LSPClient", `Getting references for ${filePath}:${line}:${character}`);
-      const references = await commands.lspGetReferences(filePath, line, character);
+      const references = await this.invokeForDocument(filePath, () =>
+        commands.lspGetReferences(filePath, line, character),
+      );
       if (references) {
         logger.debug("LSPClient", `Got ${references.length} references`);
       }
@@ -1359,7 +1561,9 @@ export class LspClient {
   ): Promise<WorkspaceEdit | null> {
     try {
       logger.debug("LSPClient", `Renaming at ${filePath}:${line}:${character} to "${newName}"`);
-      const result = await commands.lspRename(filePath, line, character, newName);
+      const result = await this.invokeForDocument(filePath, () =>
+        commands.lspRename(filePath, line, character, newName),
+      );
       if (result) {
         logger.debug("LSPClient", `Rename result: ${JSON.stringify(result)}`);
       }
@@ -1376,7 +1580,9 @@ export class LspClient {
     character: number,
   ): Promise<PrepareRenameResult | null> {
     try {
-      return await commands.lspPrepareRename(filePath, line, character);
+      return await this.invokeForDocument(filePath, () =>
+        commands.lspPrepareRename(filePath, line, character),
+      );
     } catch (error) {
       logger.debug("LSPClient", "LSP prepare rename unavailable:", error);
       return null;
@@ -1406,19 +1612,21 @@ export class LspClient {
           }
         : rangeOrDiagnostic;
       const contextDiagnostics = diagnostics ?? (isDiagnostic ? [rangeOrDiagnostic] : []);
-      const actions = await commands.lspGetCodeActions(filePath, {
-        ...range,
-        diagnostics: contextDiagnostics.map((diagnostic) => ({
-          line: diagnostic.line,
-          column: diagnostic.column,
-          endLine: diagnostic.endLine,
-          endColumn: diagnostic.endColumn,
-          message: diagnostic.message,
-          source: diagnostic.source ?? null,
-          code: diagnostic.code ?? null,
-          severity: diagnostic.severity,
-        })),
-      });
+      const actions = await this.invokeForDocument(filePath, () =>
+        commands.lspGetCodeActions(filePath, {
+          ...range,
+          diagnostics: contextDiagnostics.map((diagnostic) => ({
+            line: diagnostic.line,
+            column: diagnostic.column,
+            endLine: diagnostic.endLine,
+            endColumn: diagnostic.endColumn,
+            message: diagnostic.message,
+            source: diagnostic.source ?? null,
+            code: diagnostic.code ?? null,
+            severity: diagnostic.severity,
+          })),
+        }),
+      );
       return actions.map((action) => nullFieldsToUndefined(action));
     } catch (error) {
       logger.warn("LSPClient", "LSP code action request failed:", error);
@@ -1445,7 +1653,9 @@ export class LspClient {
       }
 
       const result = nullFieldsToUndefined(
-        await commands.lspApplyCodeAction(filePath, actionPayload),
+        await this.invokeForDocument(filePath, () =>
+          commands.lspApplyCodeAction(filePath, actionPayload),
+        ),
       );
 
       return appliedEdit && !result.applied ? { applied: true, reason: result.reason } : result;
@@ -1458,18 +1668,37 @@ export class LspClient {
     }
   }
 
-  async notifyDocumentOpen(filePath: string, content: string): Promise<void> {
-    try {
+  async notifyDocumentOpen(filePath: string, fallbackContent: string): Promise<void> {
+    if (this.openDocuments.has(filePath)) return;
+    const opening = this.openingDocuments.get(filePath);
+    if (opening) return opening;
+
+    // Edits are queued from this point on, so the opened text must include every edit published
+    // before it. The store has them; a React prop may still be a render behind.
+    const content = this.getCurrentDocumentContent(filePath) ?? fallbackContent;
+
+    this.closingDocuments.delete(filePath);
+    const generation = (this.documentLifecycleGenerations.get(filePath) ?? 0) + 1;
+    this.documentLifecycleGenerations.set(filePath, generation);
+    const open = (async () => {
       logger.debug("LSPClient", `Opening document: ${filePath}`);
       const { extensionRegistry } = await import("@/extensions/registry/extension-registry");
       const languageId = extensionRegistry.getLanguageId(filePath) || undefined;
       await commands.lspDocumentOpen(filePath, content, languageId ?? null);
+      this.backendOpenedDocuments.add(filePath);
+      if (this.documentLifecycleGenerations.get(filePath) !== generation) return;
       this.openDocuments.add(filePath);
       this.documentVersions.set(filePath, 1);
       useLspStore.getState().actions.markDocumentStateChanged();
-    } catch (error) {
-      logger.error("LSPClient", "LSP document open error:", error);
-    }
+    })()
+      .catch((error) => {
+        this.documentChangeQueues.delete(filePath);
+        logger.error("LSPClient", "LSP document open error:", error);
+      })
+      .finally(() => this.openingDocuments.delete(filePath));
+    this.openingDocuments.set(filePath, open);
+    await open;
+    await this.flushDocumentChanges(filePath);
   }
 
   async executeCommand(
@@ -1477,43 +1706,69 @@ export class LspClient {
     command: string,
     argumentsPayload: unknown[] = [],
   ): Promise<unknown> {
-    return await commands.lspExecuteCommand(filePath, command, argumentsPayload);
+    return await this.invokeForDocument(filePath, () =>
+      commands.lspExecuteCommand(filePath, command, argumentsPayload),
+    );
   }
 
   async getJavaClassFileContents(filePath: string, uri: string): Promise<string> {
-    return await commands.lspGetJavaClassFileContents(filePath, uri);
+    return await this.invokeForDocument(filePath, () =>
+      commands.lspGetJavaClassFileContents(filePath, uri),
+    );
   }
 
-  async notifyDocumentChange(filePath: string, content: string, version: number): Promise<void> {
+  /** The saved text, when the server wants it, comes from the backend's synchronized copy. */
+  async notifyDocumentSave(filePath: string): Promise<void> {
     try {
-      this.openDocuments.add(filePath);
-      this.documentVersions.set(filePath, version);
-      await commands.lspDocumentChange(filePath, content, version);
-    } catch (error) {
-      logger.error("LSPClient", "LSP document change error:", error);
-    }
-  }
-
-  async notifyDocumentSave(filePath: string, content: string): Promise<void> {
-    try {
-      await commands.lspDocumentSave(filePath, content);
+      await this.flushDocumentChangesBeforeOperation(filePath);
+      await commands.lspDocumentSave(filePath);
     } catch (error) {
       logger.debug("LSPClient", "LSP document save notification skipped:", error);
     }
   }
 
   async notifyDocumentClose(filePath: string): Promise<void> {
+    this.closingDocuments.add(filePath);
+    this.documentLifecycleGenerations.set(
+      filePath,
+      (this.documentLifecycleGenerations.get(filePath) ?? 0) + 1,
+    );
+    const opening = this.openingDocuments.get(filePath);
+    if (opening) {
+      const timer = this.documentChangeTimers.get(filePath);
+      if (timer) clearTimeout(timer);
+      this.documentChangeTimers.delete(filePath);
+      this.documentChangeQueues.delete(filePath);
+      await opening;
+    } else {
+      try {
+        await this.flushDocumentChangesBeforeOperation(filePath);
+      } catch (error) {
+        logger.warn("LSPClient", "Closing document with unsent changes:", error);
+      }
+    }
     const wasOpen = this.openDocuments.delete(filePath);
     this.documentVersions.delete(filePath);
+    const timer = this.documentChangeTimers.get(filePath);
+    if (timer) clearTimeout(timer);
+    this.documentChangeTimers.delete(filePath);
+    this.documentChangeQueues.delete(filePath);
+    this.documentChangeSendChains.delete(filePath);
+    this.documentChangeRetries.delete(filePath);
+    this.documentsNeedingResync.delete(filePath);
     useDiagnosticsStore.getState().actions.clearDiagnosticsForOwner(filePath, "lsp");
     if (wasOpen) {
       useLspStore.getState().actions.markDocumentStateChanged();
     }
 
     try {
-      await commands.lspDocumentClose(filePath);
+      if (this.backendOpenedDocuments.delete(filePath)) {
+        await commands.lspDocumentClose(filePath);
+      }
     } catch (error) {
       logger.error("LSPClient", "LSP document close error:", error);
+    } finally {
+      this.closingDocuments.delete(filePath);
     }
   }
 

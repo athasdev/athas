@@ -7,9 +7,33 @@ export interface HistoryEntry {
   timestamp: number;
 }
 
+export interface HistoryPatchChange {
+  rangeOffset: number;
+  beforeText: string;
+  afterText: string;
+}
+
+export interface HistoryPatchBatch {
+  beforeLength: number;
+  afterLength: number;
+  changes: HistoryPatchChange[];
+}
+
+export interface PatchHistoryEntry {
+  kind: "patch";
+  patches: HistoryPatchBatch[];
+  beforeLength: number;
+  afterLength: number;
+  cursorPosition?: Position;
+  selection?: Range;
+  timestamp: number;
+}
+
+export type StoredHistoryEntry = HistoryEntry | PatchHistoryEntry;
+
 export interface HistoryState {
-  past: HistoryEntry[];
-  future: HistoryEntry[];
+  past: StoredHistoryEntry[];
+  future: StoredHistoryEntry[];
   maxHistorySize: number;
 }
 

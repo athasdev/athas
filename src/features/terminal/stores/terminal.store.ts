@@ -34,8 +34,13 @@ const createTerminalStore = () =>
           return;
         }
         set((state) => {
+          const currentSession = state.sessions.get(sessionId) || {};
+          const changed = Object.entries(updates).some(
+            ([key, value]) => !Object.is(currentSession[key as keyof Terminal], value),
+          );
+          if (!changed) return state;
+
           const newSessions = new Map(state.sessions);
-          const currentSession = newSessions.get(sessionId) || {};
           newSessions.set(sessionId, { ...currentSession, ...updates });
           return { sessions: newSessions };
         });
@@ -47,6 +52,7 @@ const createTerminalStore = () =>
 
       removeSession: (sessionId: string) => {
         set((state) => {
+          if (!state.sessions.has(sessionId)) return state;
           const newSessions = new Map(state.sessions);
           newSessions.delete(sessionId);
           return { sessions: newSessions };
@@ -54,7 +60,7 @@ const createTerminalStore = () =>
       },
 
       setWidthMode: (mode: TerminalWidthMode) => {
-        set({ widthMode: mode });
+        set((state) => (state.widthMode === mode ? state : { widthMode: mode }));
       },
     },
   }));

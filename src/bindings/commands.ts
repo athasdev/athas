@@ -1030,8 +1030,9 @@ export const commands = {
     __TAURI_INVOKE<null>("lsp_document_open", { filePath, content, languageId }),
   lspDocumentChange: (filePath: string, content: string, version: number) =>
     __TAURI_INVOKE<null>("lsp_document_change", { filePath, content, version }),
-  lspDocumentSave: (filePath: string, content: string | null) =>
-    __TAURI_INVOKE<null>("lsp_document_save", { filePath, content }),
+  lspDocumentChangeBatch: (filePath: string, batches: DocumentChangeBatch[]) =>
+    __TAURI_INVOKE<number>("lsp_document_change_batch", { filePath, batches }),
+  lspDocumentSave: (filePath: string) => __TAURI_INVOKE<null>("lsp_document_save", { filePath }),
   lspDocumentClose: (filePath: string) => __TAURI_INVOKE<null>("lsp_document_close", { filePath }),
   lspIsLanguageSupported: (filePath: string) =>
     __TAURI_INVOKE<boolean>("lsp_is_language_supported", { filePath }),
@@ -4798,6 +4799,25 @@ export type DockerVolume = {
   driver: string;
   scope: string;
   mountpoint: string;
+};
+
+export type DocumentChange = {
+  rangeOffset: number;
+  rangeLength: number;
+  text: string;
+  startLine: number;
+  startColumn: number;
+  endLine: number;
+  endColumn: number;
+};
+
+export type DocumentChangeBatch = {
+  modelSessionId: string;
+  modelVersionId: number;
+  changes?: DocumentChange[];
+  isEolChange?: boolean;
+  isFlush?: boolean;
+  fullContent: string | null;
 };
 
 export type ExtensionMetadata = {
