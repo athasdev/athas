@@ -121,8 +121,10 @@ async fn format_with_generic(
                   let formatted = if output_method == "stdout" {
                      String::from_utf8_lossy(&output.stdout).to_string()
                   } else {
-                     // For file output, read the file (TODO: implement file-based formatting)
-                     content.to_string()
+                     // For file output, read the formatted file
+                     let file_path =
+                        file_path.ok_or("file_path required for file output method")?;
+                     std::fs::read_to_string(file_path).unwrap_or_else(|_| content.to_string())
                   };
 
                   Ok(FormatResponse {
@@ -291,5 +293,70 @@ fn get_file_extension(language: &str) -> &str {
       "c" => "c",
       "cpp" | "c++" => "cpp",
       _ => "txt",
+   }
+}
+
+#[cfg(test)]
+mod tests {
+   use super::*;
+   use tempfile::Builder;
+
+   /// Deliberately misformatted so a real formatter has something to change.
+   const UNFORMATTED: &str = "fn  main( )  {  let  x=1;  }\n";
+
+   /// rustfmt is used as the stand-in file formatter because it is already a
+   /// hard requirement of this workspace (`cargo fmt --check` gates CI), so the
+   /// test does not depend on any optional tool being installed.
+   fn file_formatter(args: &[&str]) -> FormatterConfig {
+      FormatterConfig {
+         command: "rustfmt".to_string(),
+         args: Some(args.iter().map(|arg| arg.to_string()).collect()),
+         env: None,
+         input_method: Some("file".to_string()),
+         output_method: Some("file".to_string()),
+      }
+   }
+
+   #[tokio::test]
+   async fn returns_file_contents_for_file_output_method() {
+      let mut file = Builder::new()
+         .suffix(".rs")
+         .tempfile()
+         .expect("create temp file");
+      file
+         .write_all(UNFORMATTED.as_bytes())
+         .expect("seed temp file");
+      file.flush().expect("flush temp file");
+      let path = file.path().to_string_lossy().into_owned();
+
+      let config = file_formatter(&["--emit", "files", "${file}"]);
+      let response = format_with_generic(UNFORMATTED, &config, Some(&path), None)
+         .await
+         .expect("file output should succeed");
+
+      assert!(response.success, "unexpected error: {:?}", response.error);
+      // The formatter rewrote the file in place, so the reply must be the file
+      // as it now stands on disk rather than the input we started from.
+      assert_eq!(
+         response.formatted_content,
+         std::fs::read_to_string(&path).expect("read formatted file back"),
+      );
+      assert_ne!(
+         response.formatted_content, UNFORMATTED,
+         "formatter did not rewrite the file, so this assertion proves nothing",
+      );
+   }
+
+   #[tokio::test]
+   async fn rejects_file_output_method_without_a_file_path() {
+      // `--version` exits successfully without touching any file, which reaches
+      // the file branch with no path to read.
+      let config = file_formatter(&["--version"]);
+
+      let error = format_with_generic(UNFORMATTED, &config, None, None)
+         .await
+         .expect_err("file output without a path must fail");
+
+      assert_eq!(error, "file_path required for file output method");
    }
 }
