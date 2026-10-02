@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { cpSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -27,6 +28,47 @@ export function workspaceFile(...segments: string[]) {
   return path.join(workspaceDir, ...segments);
 }
 
+/** The settings store the app reads and writes, seeded before every spec file. */
+export const settingsFile = path.join(appDataDir, "settings.json");
+
+// A fixed identity and defaults, so commits never depend on the runner's git config.
+const GIT_CONFIG = [
+  "-c",
+  "user.name=Athas E2E",
+  "-c",
+  "user.email=e2e@athas.invalid",
+  "-c",
+  "commit.gpgsign=false",
+  "-c",
+  "core.autocrlf=false",
+  "-c",
+  "init.defaultBranch=main",
+];
+
+/** Runs git inside the workspace copy and returns its standard output. */
+export function runWorkspaceGit(...args: string[]) {
+  const result = spawnSync("git", [...GIT_CONFIG, ...args], {
+    cwd: workspaceDir,
+    encoding: "utf8",
+  });
+  if (result.error) throw result.error;
+  if (result.status !== 0) {
+    throw new Error(`git ${args.join(" ")} failed: ${result.stderr.trim()}`);
+  }
+  return result.stdout;
+}
+
+/**
+ * Makes the workspace copy a repository of its own with one commit. The Git
+ * view gets a clean baseline, and ignore rules from the enclosing checkout
+ * (which ignores target/) stop applying to the fixture files.
+ */
+function initWorkspaceRepository() {
+  runWorkspaceGit("init", "--quiet");
+  runWorkspaceGit("add", "--all");
+  runWorkspaceGit("commit", "--quiet", "--no-verify", "-m", "Fixture baseline");
+}
+
 // Settings the app would otherwise collect on first launch. Any recorded
 // version skips the first-run onboarding tab so specs start on the workbench.
 const SEEDED_SETTINGS = {
@@ -44,9 +86,10 @@ export function resetSessionState() {
 
   rmSync(appDataDir, { recursive: true, force: true });
   mkdirSync(appDataDir, { recursive: true });
-  writeFileSync(path.join(appDataDir, "settings.json"), JSON.stringify(SEEDED_SETTINGS, null, 2));
+  writeFileSync(settingsFile, JSON.stringify(SEEDED_SETTINGS, null, 2));
 
   rmSync(workspaceDir, { recursive: true, force: true });
   mkdirSync(path.dirname(workspaceDir), { recursive: true });
   cpSync(fixtureDir, workspaceDir, { recursive: true });
+  initWorkspaceRepository();
 }
