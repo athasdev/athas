@@ -9,7 +9,20 @@ const DRIVER_HOST = "127.0.0.1";
 const DRIVER_PORT = Number(process.env.TAURI_DRIVER_PORT ?? 4444);
 export const DRIVER_URL = `http://${DRIVER_HOST}:${DRIVER_PORT}/`;
 
-let tauriDriver: ChildProcess | undefined;
+/*
+ * On Windows the harness does not use tauri-driver. WebView2 150+ ignores the
+ * `--remote-debugging-port` that msedgedriver passes through
+ * WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS once the app sets its own browser
+ * arguments (wry always does), and msedgedriver turns every launch argument
+ * into a `--switch`. The Windows e2e build therefore opens a fixed DevTools
+ * port itself (src-tauri/tauri.e2e.windows.conf.json), the harness launches
+ * the app with the workspace as a plain argument, and msedgedriver attaches to
+ * that port.
+ */
+export const ATTACH_TO_APP = process.platform === "win32";
+export const DEBUGGER_ADDRESS = "127.0.0.1:9222";
+
+let nativeDriver: ChildProcess | undefined;
 
 function resolveTauriDriver() {
   if (process.env.TAURI_DRIVER_PATH) return process.env.TAURI_DRIVER_PATH;
@@ -51,7 +64,7 @@ function waitForPort(port: number, timeoutMs: number) {
       socket.once("error", () => {
         socket.destroy();
         if (Date.now() > deadline) {
-          reject(new Error(`tauri-driver did not listen on port ${port} in time`));
+          reject(new Error(`The WebDriver server did not listen on port ${port} in time`));
         } else {
           setTimeout(attempt, 200);
         }
@@ -61,42 +74,70 @@ function waitForPort(port: number, timeoutMs: number) {
   });
 }
 
-/** Builds the e2e binary (unless skipped) and starts tauri-driver. */
-export async function startHarness() {
-  mkdirSync(artifactsDir, { recursive: true });
-
-  if (process.env.ATHAS_E2E_SKIP_BUILD !== "1") {
-    const build = spawnSync("bun", ["run", "e2e:build"], {
-      cwd: repoRoot,
-      stdio: "inherit",
-      shell: process.platform === "win32",
-    });
-    if (build.status !== 0) {
-      throw new Error(`e2e:build failed with exit code ${build.status}`);
-    }
+function buildApp() {
+  const script = ATTACH_TO_APP ? "e2e:build:windows" : "e2e:build";
+  const build = spawnSync("bun", ["run", script], {
+    cwd: repoRoot,
+    stdio: "inherit",
+    shell: process.platform === "win32",
+  });
+  if (build.status !== 0) {
+    throw new Error(`${script} failed with exit code ${build.status}`);
   }
+}
 
-  if (!existsSync(appBinary)) {
-    throw new Error(`App binary not found at ${appBinary}. Run \`bun run e2e:build\` first.`);
+/** tauri-driver on Linux, msedgedriver itself on Windows (see ATTACH_TO_APP). */
+function spawnNativeDriver() {
+  if (ATTACH_TO_APP) {
+    const msedgedriver = process.env.TAURI_NATIVE_DRIVER ?? "msedgedriver.exe";
+    return {
+      name: "msedgedriver",
+      child: spawn(
+        msedgedriver,
+        [
+          `--port=${DRIVER_PORT}`,
+          "--verbose",
+          `--log-path=${path.join(artifactsDir, "msedgedriver.log")}`,
+        ],
+        { stdio: ["ignore", "pipe", "pipe"] },
+      ),
+    };
   }
 
   const args = ["--port", String(DRIVER_PORT)];
   if (process.env.TAURI_NATIVE_DRIVER) {
     args.push("--native-driver", process.env.TAURI_NATIVE_DRIVER);
   }
+  return {
+    name: "tauri-driver",
+    child: spawn(resolveTauriDriver(), args, {
+      env: driverEnvironment(),
+      stdio: ["ignore", "pipe", "pipe"],
+    }),
+  };
+}
 
-  const driverLog = createWriteStream(path.join(artifactsDir, "tauri-driver.log"));
-  const driver = spawn(resolveTauriDriver(), args, {
-    env: driverEnvironment(),
-    stdio: ["ignore", "pipe", "pipe"],
-  });
-  tauriDriver = driver;
-  driver.stdout?.pipe(driverLog);
-  driver.stderr?.pipe(driverLog);
+/** Builds the e2e binary (unless skipped) and starts the WebDriver server. */
+export async function startHarness() {
+  mkdirSync(artifactsDir, { recursive: true });
+
+  if (process.env.ATHAS_E2E_SKIP_BUILD !== "1") buildApp();
+
+  if (!existsSync(appBinary)) {
+    throw new Error(`App binary not found at ${appBinary}. Run \`bun run e2e:build\` first.`);
+  }
+
+  const { name, child } = spawnNativeDriver();
+  nativeDriver = child;
+  // msedgedriver writes its own verbose log; this keeps its console output apart.
+  const logName = ATTACH_TO_APP ? `${name}.out.log` : `${name}.log`;
+  const driverLog = createWriteStream(path.join(artifactsDir, logName));
+  child.stdout?.pipe(driverLog);
+  child.stderr?.pipe(driverLog);
 
   const driverFailed = new Promise<never>((resolve, reject) => {
-    driver.once("error", (error) => reject(new Error(`Failed to start tauri-driver: ${error}`)));
-    driver.once("exit", (code) => reject(new Error(`tauri-driver exited early with ${code}`)));
+    child.once("error", (error) => reject(new Error(`Failed to start ${name}: ${error}`)));
+    child.once("exit", (code) => reject(new Error(`${name} exited early with ${code}`)));
   });
   try {
     await Promise.race([waitForPort(DRIVER_PORT, 30_000), driverFailed]);
@@ -107,6 +148,6 @@ export async function startHarness() {
 }
 
 export function stopHarness() {
-  tauriDriver?.kill();
-  tauriDriver = undefined;
+  nativeDriver?.kill();
+  nativeDriver = undefined;
 }

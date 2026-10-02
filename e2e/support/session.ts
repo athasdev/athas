@@ -3,7 +3,8 @@ import path from "node:path";
 import { afterAll, beforeAll, it } from "bun:test";
 import { Builder, Capabilities, type WebDriver } from "selenium-webdriver";
 import { stopAppProcesses } from "./app-process.ts";
-import { DRIVER_URL } from "./driver.ts";
+import { ATTACH_TO_APP, DRIVER_URL } from "./driver.ts";
+import { killAttachedApp, launchAppForAttach } from "./windows-attach.ts";
 import { appBinary, appDataDir, artifactsDir, resetSessionState, workspaceDir } from "./paths.ts";
 
 const QUIT_TIMEOUT = 15_000;
@@ -20,6 +21,14 @@ function safeFileName(value: string) {
   return value.replace(/[^a-z0-9-_]+/gi, "-").slice(0, 120);
 }
 
+/** tauri-driver launches the app itself, passing the workspace on the command line. */
+function tauriDriverCapabilities() {
+  const capabilities = new Capabilities();
+  capabilities.setBrowserName("wry");
+  capabilities.set("tauri:options", { application: appBinary, args: [workspaceDir] });
+  return capabilities;
+}
+
 /**
  * Starts a fresh app for the spec file: a wiped app data directory, a
  * pristine fixture project, and a new WebDriver session that opens it.
@@ -29,9 +38,9 @@ export function useAppSession(spec: string) {
     currentSpec = spec;
     await stopAppProcesses();
     resetSessionState();
-    const capabilities = new Capabilities();
-    capabilities.setBrowserName("wry");
-    capabilities.set("tauri:options", { application: appBinary, args: [workspaceDir] });
+    const capabilities = ATTACH_TO_APP
+      ? await launchAppForAttach(safeFileName(spec))
+      : tauriDriverCapabilities();
     current = await new Builder().usingServer(DRIVER_URL).withCapabilities(capabilities).build();
   });
 
@@ -42,6 +51,7 @@ export function useAppSession(spec: string) {
       const timeout = new Promise((resolve) => setTimeout(resolve, QUIT_TIMEOUT));
       await Promise.race([session.quit().catch(() => undefined), timeout]);
     }
+    if (ATTACH_TO_APP) killAttachedApp();
     await stopAppProcesses();
     const logsDir = path.join(appDataDir, "logs");
     if (existsSync(logsDir)) {

@@ -37,6 +37,7 @@
     "smoke:linux": "bun scripts/smoke-app.ts --platform linux",
     "smoke:windows": "bun scripts/smoke-app.ts --platform windows",
     "e2e:build": "tauri build --debug --no-bundle --config src-tauri/tauri.e2e.conf.json",
+    "e2e:build:windows": "tauri build --debug --no-bundle --config src-tauri/tauri.e2e.conf.json --config src-tauri/tauri.e2e.windows.conf.json",
     "e2e": "bun e2e/run.ts",
     "pre-commit": "bun scripts/hooks/pre-commit.ts",
     "release:check": "bun scripts/release/pre-release-check.ts",

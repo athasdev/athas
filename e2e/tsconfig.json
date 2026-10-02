@@ -11,5 +11,5 @@
     "strict": true,
     "types": ["bun-types"]
   },
-  "include": ["run.ts", "specs", "support"]
+  "include": ["run.ts", "specs", "support", "tests"]
 }

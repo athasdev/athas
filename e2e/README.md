@@ -3,8 +3,9 @@
 These tests drive a real debug build of Athas through WebDriver, using
 [`tauri-driver`](https://v2.tauri.app/develop/tests/webdriver/) with
 `selenium-webdriver` and Bun's test runner, following Tauri's Selenium example.
-`tauri-driver` proxies to `WebKitWebDriver` on Linux and `msedgedriver` on
-Windows.
+On Linux `tauri-driver` launches the app through `WebKitWebDriver`. On Windows
+the harness launches the app itself and attaches `msedgedriver` to it (see
+below).
 
 macOS is not supported: Apple ships no WebDriver for WKWebView, so
 `tauri-driver` cannot run there. On a Mac, run the suite in a Linux VM or
@@ -16,7 +17,9 @@ container (see below) or rely on the `E2E` GitHub workflow.
   Neither `bun test` nor Vitest discovers `.e2e.ts` files on its own, so a plain
   test run from the repository root never starts the app.
 - `support/setup.ts` is preloaded by `bun test`: it builds the app and starts
-  `tauri-driver` once for the whole run, and stops it at the end.
+  the WebDriver server (`tauri-driver`, or `msedgedriver` on Windows) once for
+  the whole run, and stops it at the end.
+- `tests/` holds plain Vitest checks for the e2e configuration.
 - `support/session.ts` gives each spec file a fresh session: it kills any
   leftover app process from the e2e binary, resets state, and opens the app.
   Failed tests save a screenshot and the page source.
@@ -68,21 +71,40 @@ needs no GPU; set `ATHAS_DISABLE_LINUX_GPU=1` there.
 
 ## Running on Windows
 
-Install `tauri-driver` and an `msedgedriver` that matches the installed
-WebView2 runtime, then point the harness at it:
+Windows does not use `tauri-driver`. WebView2 150 and later ignores the
+DevTools port that `msedgedriver` requests through
+`WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS` once the app sets its own browser
+arguments, which wry always does, and `msedgedriver` turns launch arguments
+into `--switches`, which mangles the workspace path. Instead:
+
+- `bun run e2e:build:windows` adds `src-tauri/tauri.e2e.windows.conf.json`,
+  which opens DevTools on `127.0.0.1:9222` through `additionalBrowserArgs`.
+  Tauri merges `--config` files as JSON merge patches, so the overlay repeats
+  the whole Windows main window; `tests/windows-config.test.ts` keeps it in
+  sync with `src-tauri/tauri.windows.conf.json`.
+- For each spec file the harness launches the app with the workspace path,
+  waits for the DevTools endpoint, and attaches with
+  `{ browserName: "webview2", "ms:edgeOptions": { debuggerAddress } }`. It kills
+  the app by PID when the spec file is done.
+
+Install an `msedgedriver` that matches the installed WebView2 runtime and point
+the harness at it:
 
 ```powershell
-cargo install tauri-driver --locked
 cargo install --git https://github.com/chippers/msedgedriver-tool
 msedgedriver-tool.exe   # downloads msedgedriver.exe into the current folder
 $env:TAURI_NATIVE_DRIVER = "$PWD\msedgedriver.exe"
 bun run e2e
 ```
 
+The verbose `msedgedriver` log and the app's console output land in
+`target/e2e/artifacts/`.
+
 ## Environment variables
 
 - `ATHAS_E2E_SKIP_BUILD=1` reuses the existing binary.
 - `ATHAS_E2E_APP` points at a different binary.
-- `TAURI_DRIVER_PATH` overrides where `tauri-driver` is found.
-- `TAURI_NATIVE_DRIVER` passes `--native-driver` to `tauri-driver`.
-- `TAURI_DRIVER_PORT` changes the driver port (default `4444`).
+- `TAURI_DRIVER_PATH` overrides where `tauri-driver` is found (Linux).
+- `TAURI_NATIVE_DRIVER` passes `--native-driver` to `tauri-driver` on Linux,
+  and is the path to `msedgedriver.exe` on Windows.
+- `TAURI_DRIVER_PORT` changes the WebDriver server port (default `4444`).
