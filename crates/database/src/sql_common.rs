@@ -91,112 +91,6 @@ pub fn validate_row_identity(identity: &RowIdentity) -> Result<(), String> {
    Ok(())
 }
 
-#[cfg(test)]
-mod tests {
-   use super::*;
-
-   #[test]
-   fn normalizes_invalid_pagination_values() {
-      assert_eq!(normalized_pagination(50, 10), (50, 10));
-      assert_eq!(normalized_pagination(0, -5), (1, 0));
-      assert_eq!(normalized_pagination(-100, -1), (1, 0));
-   }
-
-   #[test]
-   fn builds_postgres_placeholders_after_existing_where_params() {
-      let mut offset = 0;
-      let filters = vec![ColumnFilter {
-         column: "name".to_string(),
-         operator: "equals".to_string(),
-         value: "Alice".to_string(),
-         value2: None,
-      }];
-
-      let (where_clause, params) = build_where_clause_generic(
-         &filters,
-         &None,
-         &[],
-         "AND",
-         escape_identifier,
-         |i| format!("${}", i),
-         &mut offset,
-      );
-
-      assert_eq!(where_clause, "WHERE \"name\" = $1");
-      assert_eq!(params, vec!["Alice".to_string()]);
-      assert_eq!(
-         format!("LIMIT ${} OFFSET ${}", offset + 1, offset + 2),
-         "LIMIT $2 OFFSET $3"
-      );
-   }
-
-   #[test]
-   fn builds_null_safe_row_identity_where_clause() {
-      let identity = RowIdentity {
-         columns: vec!["name".to_string(), "email".to_string()],
-         values: vec![serde_json::json!("Alice"), serde_json::Value::Null],
-      };
-      let mut offset = 2;
-
-      let (where_clause, params) = build_row_identity_where_clause(
-         &identity,
-         escape_identifier,
-         |i| format!("${}", i),
-         &mut offset,
-      )
-      .expect("row identity where clause");
-
-      assert_eq!(where_clause, "WHERE \"name\" = $3 AND \"email\" IS NULL");
-      assert_eq!(params, vec![serde_json::json!("Alice")]);
-      assert_eq!(offset, 3);
-   }
-
-   #[test]
-   fn rejects_invalid_row_identity() {
-      let identity = RowIdentity {
-         columns: vec!["name".to_string()],
-         values: vec![],
-      };
-      let mut offset = 0;
-
-      let error = build_row_identity_where_clause(
-         &identity,
-         escape_identifier,
-         |_| "?".to_string(),
-         &mut offset,
-      )
-      .expect_err("invalid identity should fail");
-
-      assert_eq!(
-         error,
-         "Row identity columns and values must have the same length"
-      );
-   }
-
-   #[test]
-   fn rejects_empty_row_identity_columns() {
-      let identity = RowIdentity {
-         columns: vec!["name".to_string(), " ".to_string()],
-         values: vec![
-            serde_json::json!("Alice"),
-            serde_json::json!("ada@example.com"),
-         ],
-      };
-      let mut offset = 0;
-
-      let error = build_row_identity_where_clause(
-         &identity,
-         escape_identifier,
-         |_| "?".to_string(),
-         &mut offset,
-      )
-      .expect_err("empty identity column should fail");
-
-      assert_eq!(error, "Row identity columns must not be empty");
-      assert_eq!(offset, 0);
-   }
-}
-
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ForeignKeyInfo {
    pub from_column: String,
@@ -430,4 +324,110 @@ pub struct CreatePostgresSubscriptionParams {
    pub failover: bool,
    #[serde(default)]
    pub with_slot_name: Option<String>,
+}
+
+#[cfg(test)]
+mod tests {
+   use super::*;
+
+   #[test]
+   fn normalizes_invalid_pagination_values() {
+      assert_eq!(normalized_pagination(50, 10), (50, 10));
+      assert_eq!(normalized_pagination(0, -5), (1, 0));
+      assert_eq!(normalized_pagination(-100, -1), (1, 0));
+   }
+
+   #[test]
+   fn builds_postgres_placeholders_after_existing_where_params() {
+      let mut offset = 0;
+      let filters = vec![ColumnFilter {
+         column: "name".to_string(),
+         operator: "equals".to_string(),
+         value: "Alice".to_string(),
+         value2: None,
+      }];
+
+      let (where_clause, params) = build_where_clause_generic(
+         &filters,
+         &None,
+         &[],
+         "AND",
+         escape_identifier,
+         |i| format!("${}", i),
+         &mut offset,
+      );
+
+      assert_eq!(where_clause, "WHERE \"name\" = $1");
+      assert_eq!(params, vec!["Alice".to_string()]);
+      assert_eq!(
+         format!("LIMIT ${} OFFSET ${}", offset + 1, offset + 2),
+         "LIMIT $2 OFFSET $3"
+      );
+   }
+
+   #[test]
+   fn builds_null_safe_row_identity_where_clause() {
+      let identity = RowIdentity {
+         columns: vec!["name".to_string(), "email".to_string()],
+         values: vec![serde_json::json!("Alice"), serde_json::Value::Null],
+      };
+      let mut offset = 2;
+
+      let (where_clause, params) = build_row_identity_where_clause(
+         &identity,
+         escape_identifier,
+         |i| format!("${}", i),
+         &mut offset,
+      )
+      .expect("row identity where clause");
+
+      assert_eq!(where_clause, "WHERE \"name\" = $3 AND \"email\" IS NULL");
+      assert_eq!(params, vec![serde_json::json!("Alice")]);
+      assert_eq!(offset, 3);
+   }
+
+   #[test]
+   fn rejects_invalid_row_identity() {
+      let identity = RowIdentity {
+         columns: vec!["name".to_string()],
+         values: vec![],
+      };
+      let mut offset = 0;
+
+      let error = build_row_identity_where_clause(
+         &identity,
+         escape_identifier,
+         |_| "?".to_string(),
+         &mut offset,
+      )
+      .expect_err("invalid identity should fail");
+
+      assert_eq!(
+         error,
+         "Row identity columns and values must have the same length"
+      );
+   }
+
+   #[test]
+   fn rejects_empty_row_identity_columns() {
+      let identity = RowIdentity {
+         columns: vec!["name".to_string(), " ".to_string()],
+         values: vec![
+            serde_json::json!("Alice"),
+            serde_json::json!("ada@example.com"),
+         ],
+      };
+      let mut offset = 0;
+
+      let error = build_row_identity_where_clause(
+         &identity,
+         escape_identifier,
+         |_| "?".to_string(),
+         &mut offset,
+      )
+      .expect_err("empty identity column should fail");
+
+      assert_eq!(error, "Row identity columns must not be empty");
+      assert_eq!(offset, 0);
+   }
 }
