@@ -356,4 +356,205 @@ mod tests {
       ));
       assert!(!known_files.lock().unwrap().contains_key(&path));
    }
+
+   #[derive(Default)]
+   struct RecordingEmitter {
+      events: Mutex<Vec<(String, String)>>,
+   }
+
+   impl RecordingEmitter {
+      fn take(&self) -> Vec<(String, String)> {
+         std::mem::take(&mut *self.events.lock().unwrap())
+      }
+   }
+
+   impl FileChangeEmitter for RecordingEmitter {
+      fn emit_file_change(&self, event: &FileChangeEvent) {
+         let kind = match event.event_type {
+            FileChangeType::Opened => "opened",
+            FileChangeType::Reloaded => "reloaded",
+            FileChangeType::Deleted => "deleted",
+         };
+         self
+            .events
+            .lock()
+            .unwrap()
+            .push((event.path.clone(), kind.to_string()));
+      }
+   }
+
+   fn debounced(path: &std::path::Path) -> notify_debouncer_mini::DebouncedEvent {
+      notify_debouncer_mini::DebouncedEvent {
+         path: path.to_path_buf(),
+         kind: notify_debouncer_mini::DebouncedEventKind::Any,
+      }
+   }
+
+   fn path_string(path: &std::path::Path) -> String {
+      path.to_string_lossy().to_string()
+   }
+
+   fn bump_mtime(path: &std::path::Path) {
+      let file = std::fs::OpenOptions::new().write(true).open(path).unwrap();
+      let modified = std::fs::metadata(path).unwrap().modified().unwrap();
+      file
+         .set_modified(modified + Duration::from_secs(5))
+         .unwrap();
+   }
+
+   fn canonical_tempdir() -> (tempfile::TempDir, PathBuf) {
+      let temp = tempfile::tempdir().unwrap();
+      let root = temp.path().canonicalize().unwrap();
+      (temp, root)
+   }
+
+   #[test]
+   fn serializes_change_types_in_snake_case() {
+      let event = FileChangeEvent {
+         path: "/a.txt".to_string(),
+         event_type: FileChangeType::Reloaded,
+      };
+      assert_eq!(
+         serde_json::to_value(&event).unwrap(),
+         serde_json::json!({ "path": "/a.txt", "event_type": "reloaded" })
+      );
+   }
+
+   #[test]
+   fn handle_events_emits_only_watched_and_changed_paths() {
+      let (_temp, root) = canonical_tempdir();
+      let watched_dir = root.join("src");
+      std::fs::create_dir_all(&watched_dir).unwrap();
+      let tracked = watched_dir.join("lib.rs");
+      let outside = root.join("outside.rs");
+      std::fs::write(&tracked, "a").unwrap();
+      std::fs::write(&outside, "b").unwrap();
+
+      let emitter = RecordingEmitter::default();
+      let watched_paths = Arc::new(Mutex::new(HashSet::new()));
+      let watched_dirs = Arc::new(Mutex::new(HashSet::from([watched_dir.clone()])));
+      let known_files = Arc::new(Mutex::new(HashMap::new()));
+      let mtime = std::fs::metadata(&tracked).unwrap().modified().unwrap();
+      known_files.lock().unwrap().insert(tracked.clone(), mtime);
+
+      let run = |paths: &[&std::path::Path]| {
+         FileWatcher::handle_events(
+            paths.iter().map(|path| debounced(path)).collect(),
+            &emitter,
+            &watched_paths,
+            &watched_dirs,
+            &known_files,
+         );
+      };
+
+      run(&[&tracked, &outside]);
+      assert!(
+         emitter.take().is_empty(),
+         "unchanged mtime and unwatched paths stay quiet"
+      );
+
+      bump_mtime(&tracked);
+      run(&[&tracked]);
+      assert_eq!(
+         emitter.take(),
+         vec![(path_string(&tracked), "reloaded".to_string())]
+      );
+
+      let created = watched_dir.join("new.rs");
+      std::fs::write(&created, "c").unwrap();
+      std::fs::remove_file(&tracked).unwrap();
+      run(&[&created, &tracked]);
+      assert_eq!(
+         emitter.take(),
+         vec![
+            (path_string(&created), "opened".to_string()),
+            (path_string(&tracked), "deleted".to_string()),
+         ]
+      );
+   }
+
+   #[tokio::test]
+   async fn watching_rejects_missing_paths_and_emits_opened_once() {
+      let (_temp, root) = canonical_tempdir();
+      let file = root.join("notes.md");
+      std::fs::write(&file, "notes").unwrap();
+      let emitter = Arc::new(RecordingEmitter::default());
+      let watcher = FileWatcher::new(emitter.clone());
+
+      let missing = root.join("missing.md");
+      let error = watcher.watch_path(path_string(&missing)).await.unwrap_err();
+      assert!(error.to_string().contains("does not exist"));
+      assert!(emitter.take().is_empty());
+
+      watcher.watch_path(path_string(&file)).await.unwrap();
+      watcher.watch_path(path_string(&file)).await.unwrap();
+      assert_eq!(
+         emitter.take(),
+         vec![(path_string(&file), "opened".to_string())]
+      );
+      assert!(watcher.known_files.lock().unwrap().contains_key(&file));
+   }
+
+   #[tokio::test]
+   async fn watching_a_project_root_tracks_its_files_until_stopped() {
+      let (_temp, root) = canonical_tempdir();
+      let file = root.join("main.rs");
+      std::fs::write(&file, "fn main() {}").unwrap();
+      std::fs::create_dir_all(root.join("nested")).unwrap();
+      let emitter = Arc::new(RecordingEmitter::default());
+      let watcher = FileWatcher::new(emitter.clone());
+
+      watcher
+         .watch_project_root(path_string(&root))
+         .await
+         .unwrap();
+      assert!(watcher.watched_directories.lock().unwrap().contains(&root));
+      assert!(watcher.known_files.lock().unwrap().contains_key(&file));
+      assert!(
+         !watcher
+            .known_files
+            .lock()
+            .unwrap()
+            .contains_key(&root.join("nested"))
+      );
+
+      watcher.stop_watching(path_string(&root)).unwrap();
+      assert!(watcher.watched_paths.lock().unwrap().is_empty());
+      assert!(watcher.watched_directories.lock().unwrap().is_empty());
+      let error = watcher.stop_watching(path_string(&root)).unwrap_err();
+      assert!(error.to_string().contains("not being watched"));
+
+      emitter.take();
+      watcher
+         .watch_project_root(path_string(&root))
+         .await
+         .unwrap();
+      assert_eq!(
+         emitter.take(),
+         vec![(path_string(&root), "opened".to_string())]
+      );
+   }
+
+   #[tokio::test]
+   async fn reports_real_file_modifications_through_the_debouncer() {
+      let (_temp, root) = canonical_tempdir();
+      let file = root.join("watched.txt");
+      std::fs::write(&file, "before").unwrap();
+      let emitter = Arc::new(RecordingEmitter::default());
+      let watcher = FileWatcher::new(emitter.clone());
+      watcher.watch_path(path_string(&file)).await.unwrap();
+      emitter.take();
+
+      std::fs::write(&file, "after").unwrap();
+      bump_mtime(&file);
+
+      let expected = (path_string(&file), "reloaded".to_string());
+      let deadline = std::time::Instant::now() + Duration::from_secs(15);
+      let mut seen = Vec::new();
+      while std::time::Instant::now() < deadline && !seen.contains(&expected) {
+         std::thread::sleep(Duration::from_millis(100));
+         seen.extend(emitter.take());
+      }
+      assert!(seen.contains(&expected), "events: {seen:?}");
+   }
 }
