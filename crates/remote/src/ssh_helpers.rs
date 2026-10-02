@@ -431,4 +431,24 @@ Host *
       assert!(ssh_pattern_matches("*", ""));
       assert!(!ssh_pattern_matches("prod*", "staging-prod"));
    }
+
+   #[cfg(unix)]
+   #[test]
+   fn shell_quoted_values_reach_the_shell_verbatim() {
+      for value in [
+         "plain",
+         "it's a 'quoted' name",
+         "$(touch /tmp/athas-pwned) `id` $HOME",
+         "semi; rm -rf / && echo | cat > out",
+         "line\nbreak\ttab *glob?",
+      ] {
+         let output = std::process::Command::new("sh")
+            .arg("-c")
+            .arg(format!("printf %s {}", shell_quote(value)))
+            .output()
+            .unwrap();
+         assert!(output.status.success());
+         assert_eq!(String::from_utf8(output.stdout).unwrap(), value);
+      }
+   }
 }
