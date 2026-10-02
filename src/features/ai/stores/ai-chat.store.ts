@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import { createSelectors } from "@/utils/zustand-selectors";
+import { migrateLegacyAgentId } from "@/features/ai/lib/agent-clis";
 import { createAcpActions } from "./ai-chat/acp-actions";
 import { createChatActions } from "./ai-chat/chat-actions";
 import { createInitialAIChatState } from "./ai-chat/ai-chat-state";
@@ -32,7 +33,7 @@ const useAIChatStoreBase = create<AIChatStore>()(
           ...currentState,
           mode: persisted?.mode ?? "chat",
           outputStyle: persisted?.outputStyle ?? "default",
-          selectedAgentId: persisted?.selectedAgentId ?? "custom",
+          selectedAgentId: migrateLegacyAgentId(persisted?.selectedAgentId ?? "custom"),
           acpAgents: {},
           acpSessions: {},
         };

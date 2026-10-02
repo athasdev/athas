@@ -4,6 +4,7 @@ import {
   getComposerContextBudget,
   groupComposerBudget,
   resolveComposerContextWindow,
+  shouldShowComposerContextMeter,
 } from "@/features/ai/lib/composer-context-budget";
 import type { Message } from "@/features/ai/types/ai-chat.types";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
@@ -84,9 +85,48 @@ describe("Composer context budget", () => {
 
   it("measures hosted Athas requests against their request size cap", () => {
     expect(resolveComposerContextWindow("athas", undefined)).toEqual({
-      contextWindowTokens: 30_000,
+      contextWindowTokens: 100_000,
+      reservedOutputTokens: 0,
+    });
+    expect(resolveComposerContextWindow("athas", 1_000_000)).toEqual({
+      contextWindowTokens: 100_000,
       reservedOutputTokens: 0,
     });
     expect(resolveComposerContextWindow("ollama", undefined)).toEqual({});
+  });
+
+  it("uses a hosted model's own context window when it is smaller than the request cap", () => {
+    expect(resolveComposerContextWindow("athas", 64_000)).toEqual({ contextWindowTokens: 64_000 });
+  });
+
+  it("stays hidden for a new chat that only carries the agent's instructions", () => {
+    const base = {
+      providerId: "openai",
+      modelContextWindow: 128_000,
+      mode: "chat" as const,
+      buffers: [editor("app", "export const app = 1;")],
+      editorContexts: [],
+    };
+    const empty = getComposerContextBudget({
+      ...base,
+      messages: [],
+      selectedBufferIds: new Set<string>(),
+    });
+    expect(empty.usedTokens).toBeGreaterThan(0);
+    expect(shouldShowComposerContextMeter(empty)).toBe(false);
+
+    const withFile = getComposerContextBudget({
+      ...base,
+      messages: [],
+      selectedBufferIds: new Set(["app"]),
+    });
+    expect(shouldShowComposerContextMeter(withFile)).toBe(true);
+
+    const withHistory = getComposerContextBudget({
+      ...base,
+      messages: [message("user", "hello"), message("assistant", "hi")],
+      selectedBufferIds: new Set<string>(),
+    });
+    expect(shouldShowComposerContextMeter(withHistory)).toBe(true);
   });
 });

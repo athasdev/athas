@@ -27,6 +27,8 @@ export interface ChatMessageError {
   message: string;
   /** Raw detail, such as a response body, shown on request. */
   details?: string;
+  /** The web billing page a hosted billing failure points to, as the server sent it. */
+  billingUrl?: string;
   /** The provider that failed, when it is not the chat's own. */
   providerId?: string;
   /** Whether sending the same prompt again can succeed without changing anything. */

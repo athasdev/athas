@@ -6,7 +6,7 @@ source "${script_dir}/cef.sh"
 
 usage() {
   cat <<'EOF'
-Usage: scripts/release/package-linux-native.sh <deb|rpm|packages|appimage|all> [--preview]
+Usage: scripts/release/package-linux-native.sh <deb|rpm|packages|appimage|all>
 
 Build native Linux packages for the CEF runtime.
 
@@ -15,12 +15,11 @@ Examples:
   scripts/release/package-linux-native.sh rpm
   scripts/release/package-linux-native.sh packages
   scripts/release/package-linux-native.sh appimage
-  scripts/release/package-linux-native.sh all --preview
+  scripts/release/package-linux-native.sh all
 EOF
 }
 
 target="${1:-}"
-channel="${2:-}"
 
 if [[ -z "$target" || "$target" == "-h" || "$target" == "--help" ]]; then
   usage
@@ -57,14 +56,6 @@ esac
 
 config_args=()
 product_name="Athas"
-if [[ "$channel" == "--preview" ]]; then
-  product_name="Athas Preview"
-  config_args+=(--config src-tauri/tauri.preview.conf.json)
-elif [[ -n "$channel" ]]; then
-  echo "Unsupported option: $channel" >&2
-  usage >&2
-  exit 1
-fi
 
 # Disable updater artifacts for local package builds so this path does not
 # require release signing secrets.

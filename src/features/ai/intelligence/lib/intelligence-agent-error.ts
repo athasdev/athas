@@ -21,6 +21,9 @@ export class IntelligenceAgentError extends Error implements IntelligenceAgentEr
 
 const STATUS_BY_CODE: Record<string, number> = {
   allowance_exhausted: 402,
+  insufficient_balance: 402,
+  spending_limit_reached: 402,
+  request_too_large: 413,
   timeout: 504,
 };
 

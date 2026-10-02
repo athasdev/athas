@@ -1,20 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { buildShareableOutcomeMarkdown } from "../lib/shareable-outcome";
+import { redactLocalPaths } from "../lib/shareable-outcome";
 
-describe("shareable agent outcome", () => {
-  it("shares only the outcome and redacts local absolute paths", () => {
-    const markdown = buildShareableOutcomeMarkdown(
+describe("redactLocalPaths", () => {
+  it("redacts local absolute paths", () => {
+    const text = redactLocalPaths(
       "Implemented the fix in `/Users/alex/secret/src/app.ts` and C:\\work\\private\\app.ts.",
     );
 
-    expect(markdown).toBe("## Outcome\n\nImplemented the fix in `[local path]` and [local path]\n");
-    expect(markdown).not.toContain("secret");
-    expect(markdown).not.toContain("private");
+    expect(text).toBe("Implemented the fix in `[local path]` and [local path]");
+    expect(text).not.toContain("secret");
+    expect(text).not.toContain("private");
   });
 
   it("preserves relative implementation details", () => {
-    expect(buildShareableOutcomeMarkdown("Updated `src/app.ts`.\n\nTests pass.")).toBe(
-      "## Outcome\n\nUpdated `src/app.ts`.\n\nTests pass.\n",
+    expect(redactLocalPaths("Updated `src/app.ts`.\n\nTests pass.")).toBe(
+      "Updated `src/app.ts`.\n\nTests pass.",
     );
   });
 });

@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 import type { AuthUser, SubscriptionInfo } from "../services/auth-api";
-import { createAuthStore, type AuthStoreDependencies } from "../stores/auth.store";
+import {
+  createAuthStore,
+  getReconnectDelayMs,
+  type AuthStoreDependencies,
+} from "../stores/auth.store";
 
 const user: AuthUser = {
   id: 1,
@@ -262,7 +266,8 @@ describe("startup reconnect", () => {
 
     await store.getState().actions.initialize();
     expect(store.getState().isAuthenticated).toBe(false);
-    expect(store.getState().error).toContain("Check your connection");
+    expect(store.getState().error).toBeNull();
+    expect(store.getState().sessionCheck).toMatchObject({ attempt: 1 });
 
     reconnect!();
     await vi.waitFor(() => expect(store.getState().isAuthenticated).toBe(true));
@@ -282,6 +287,89 @@ describe("startup reconnect", () => {
     );
     await store.getState().actions.initialize();
     expect(waitForReconnect).not.toHaveBeenCalled();
+    expect(store.getState().sessionCheck).toBeNull();
+  });
+
+  it("keeps the saved token and says what failed when the server is unreachable", async () => {
+    const removeAuthToken = vi.fn(async () => {});
+    const store = createAuthStore(
+      createDependencies({
+        fetchCurrentUser: vi.fn(async () => {
+          throw new TypeError("error sending request");
+        }),
+        removeAuthToken,
+        waitForReconnect: vi.fn(() => () => {}),
+        describeSessionCheckFailure: () => ({
+          reason: "local_server_down",
+          message: "Nothing is answering at localhost:3000.",
+          host: "localhost:3000",
+        }),
+        now: () => 1_000,
+      }),
+    );
+
+    await store.getState().actions.initialize();
+
+    expect(removeAuthToken).not.toHaveBeenCalled();
+    expect(store.getState()).toMatchObject({ isLoading: false, error: null });
+    expect(store.getState().sessionCheck).toEqual({
+      reason: "local_server_down",
+      message: "Nothing is answering at localhost:3000.",
+      host: "localhost:3000",
+      attempt: 1,
+      nextRetryAt: 1_000 + getReconnectDelayMs(0),
+    });
+  });
+
+  it("backs off between failed checks and resets once the session is verified", async () => {
+    const retries: Array<() => void> = [];
+    const waitForReconnect = vi.fn<NonNullable<AuthStoreDependencies["waitForReconnect"]>>(
+      (retry) => {
+        retries.push(retry);
+        return () => {};
+      },
+    );
+    const fetchCurrentUser = vi
+      .fn<AuthStoreDependencies["fetchCurrentUser"]>()
+      .mockRejectedValueOnce(new TypeError("offline"))
+      .mockRejectedValueOnce(new TypeError("offline"))
+      .mockResolvedValue(user);
+    const store = createAuthStore(createDependencies({ fetchCurrentUser, waitForReconnect }));
+
+    await store.getState().actions.initialize();
+    retries.shift()!();
+    await vi.waitFor(() => expect(store.getState().sessionCheck?.attempt).toBe(2));
+    expect(waitForReconnect.mock.calls.map((call) => call[1])).toEqual([0, 1]);
+    expect(getReconnectDelayMs(1)).toBeGreaterThan(getReconnectDelayMs(0));
+
+    retries.shift()!();
+    await vi.waitFor(() => expect(store.getState().isAuthenticated).toBe(true));
+    expect(store.getState().sessionCheck).toBeNull();
+  });
+
+  it("checks again immediately on a manual retry and cancels the pending wait", async () => {
+    const stop = vi.fn();
+    const fetchCurrentUser = vi
+      .fn<AuthStoreDependencies["fetchCurrentUser"]>()
+      .mockRejectedValueOnce(new TypeError("offline"))
+      .mockResolvedValue(user);
+    const store = createAuthStore(
+      createDependencies({ fetchCurrentUser, waitForReconnect: vi.fn(() => stop) }),
+    );
+
+    await store.getState().actions.initialize();
+    await store.getState().actions.retrySessionCheck();
+
+    expect(stop).toHaveBeenCalledOnce();
+    expect(fetchCurrentUser).toHaveBeenCalledTimes(2);
+    expect(store.getState()).toMatchObject({ isAuthenticated: true, sessionCheck: null });
+  });
+
+  it("does nothing on a manual retry when no check failed", async () => {
+    const fetchCurrentUser = vi.fn(async () => user);
+    const store = createAuthStore(createDependencies({ fetchCurrentUser }));
+    await store.getState().actions.retrySessionCheck();
+    expect(fetchCurrentUser).not.toHaveBeenCalled();
   });
 });
 

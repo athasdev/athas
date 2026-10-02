@@ -49,7 +49,7 @@ export const ChatFollowUpActions = memo(function ChatFollowUpActions({
   if (actions.length === 0) return null;
 
   return (
-    <MessageActions className="opacity-100">
+    <MessageActions>
       {actions.map((action) => (
         <FollowUpButton key={action.id} action={action} onSelect={onSelect} />
       ))}

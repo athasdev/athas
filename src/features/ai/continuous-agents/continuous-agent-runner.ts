@@ -1,4 +1,4 @@
-import { isTerminalAgent } from "@/features/ai/lib/terminal-agents";
+import { migrateLegacyAgentId } from "@/features/ai/lib/agent-clis";
 import type { AgentConfig } from "@/features/ai/types/acp.types";
 import type { ContinuousAgentTask } from "./continuous-agents.store";
 
@@ -23,13 +23,6 @@ export async function checkContinuousAgentReadiness(
     };
   }
 
-  if (isTerminalAgent(task.agentId)) {
-    return {
-      status: "blocked",
-      reason: "Terminal agents cannot run as Continuous Agents.",
-    };
-  }
-
   if (task.agentId === "codex") {
     try {
       const status = await dependencies.loadCodexStatus();
@@ -43,7 +36,8 @@ export async function checkContinuousAgentReadiness(
 
   try {
     const agents = await dependencies.loadAcpAgents();
-    const agent = agents.find((candidate) => candidate.id === task.agentId);
+    const agentId = migrateLegacyAgentId(task.agentId);
+    const agent = agents.find((candidate) => candidate.id === agentId);
     if (!agent) {
       return {
         status: "blocked",

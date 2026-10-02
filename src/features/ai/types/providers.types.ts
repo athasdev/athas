@@ -18,6 +18,8 @@ export interface Model {
   maxOutputTokens?: number;
   maxTokens?: number;
   proOnly?: boolean;
+  /** Whether the model reads images; reported per model by the Athas catalog. */
+  supportsImages?: boolean;
 }
 
 // Helper to check if a provider ID is an agent
@@ -34,9 +36,58 @@ const AI_PROVIDERS: ModelProvider[] = [
     requiresApiKey: false,
     requiresAuth: true,
     models: [
-      { id: "auto", name: "Automatic", maxOutputTokens: 4096 },
-      { id: "qwen/qwen3-coder", name: "Qwen3 Coder", contextWindow: 262144, maxOutputTokens: 4096 },
-      { id: "openai/gpt-5-mini", name: "GPT-5 Mini", contextWindow: 400000, maxOutputTokens: 4096 },
+      // Shown until the server's catalog arrives, which then replaces this list. `auto` runs on
+      // Kimi K2.7 Code, a steady-priced coding model that reads images.
+      { id: "auto", name: "Automatic", maxOutputTokens: 32000, supportsImages: true },
+      {
+        id: "anthropic/claude-opus-5.5",
+        name: "Claude Opus 5.5",
+        maxOutputTokens: 32000,
+        supportsImages: true,
+      },
+      {
+        id: "anthropic/claude-sonnet-5",
+        name: "Claude Sonnet 5",
+        maxOutputTokens: 32000,
+        supportsImages: true,
+      },
+      {
+        id: "openai/gpt-5.6-sol",
+        name: "GPT 5.6 Sol",
+        maxOutputTokens: 32000,
+        supportsImages: true,
+      },
+      {
+        id: "openai/gpt-5.3-codex",
+        name: "GPT 5.3 Codex",
+        maxOutputTokens: 32000,
+        supportsImages: true,
+      },
+      {
+        id: "google/gemini-3.1-pro-preview",
+        name: "Gemini 3.1 Pro Preview",
+        maxOutputTokens: 32000,
+        supportsImages: true,
+      },
+      {
+        id: "moonshotai/kimi-k2.7-code",
+        name: "Kimi K2.7 Code",
+        maxOutputTokens: 32000,
+        supportsImages: true,
+      },
+      { id: "zai/glm-5.3", name: "GLM 5.3", maxOutputTokens: 32000, supportsImages: false },
+      {
+        id: "deepseek/deepseek-v4-pro",
+        name: "DeepSeek V4 Pro",
+        maxOutputTokens: 32000,
+        supportsImages: false,
+      },
+      {
+        id: "deepseek/deepseek-v4-flash",
+        name: "DeepSeek V4 Flash",
+        maxOutputTokens: 32000,
+        supportsImages: false,
+      },
     ],
   },
   {

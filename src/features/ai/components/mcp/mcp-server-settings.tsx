@@ -16,6 +16,7 @@ import { useToast } from "@/features/layout/contexts/toast-context";
 import Section, { SettingRow } from "@/features/settings/components/settings-section";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
+import { EmptyState } from "@/ui/empty";
 import { showConfirmDialog } from "@/ui/dialog";
 import { PencilIcon, PlusIcon, TrashIcon } from "@/ui/icons";
 import Switch from "@/ui/switch";
@@ -87,8 +88,14 @@ export function McpServerSettings() {
     <>
       <Section
         title="MCP Servers"
-        description="Used by the Athas agent and passed to ACP agents when a session starts. Changes apply to the next turn or agent start."
+        actions={
+          <Button type="button" variant="ghost" onClick={() => void openEditor()}>
+            <PlusIcon />
+            <span>Add Server</span>
+          </Button>
+        }
       >
+        {servers.length === 0 ? <EmptyState variant="section" message="No servers" /> : null}
         {servers.map((server) => (
           <SettingRow
             key={server.id}
@@ -125,15 +132,6 @@ export function McpServerSettings() {
             </div>
           </SettingRow>
         ))}
-        <SettingRow
-          label="Add MCP server"
-          description="Run a local command over stdio, or connect to an HTTP or SSE server"
-        >
-          <Button type="button" variant="default" onClick={() => void openEditor()}>
-            <PlusIcon />
-            <span>Add server</span>
-          </Button>
-        </SettingRow>
       </Section>
       {draft ? (
         <McpServerDialog

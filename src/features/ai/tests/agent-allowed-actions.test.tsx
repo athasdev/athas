@@ -84,7 +84,7 @@ describe("always-allowed agent actions", () => {
 
   it("explains how to allow something when nothing is allowed", () => {
     expect(renderToStaticMarkup(<AgentAllowedActionsSettings />)).toContain(
-      "Nothing is always allowed yet",
+      "Choose Always allow when asked",
     );
   });
 });

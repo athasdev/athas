@@ -164,33 +164,26 @@ export const GeneralSettings = () => {
     }
   };
 
+  const versionLabel = `Athas ${appVersion || "..."}`;
   const updateStatus = downloading
-    ? `Athas ${appVersion || "..."} · Downloading ${downloadProgress?.percentage ?? 0}%`
+    ? `${versionLabel} · Downloading ${downloadProgress?.percentage ?? 0}%`
     : installing
-      ? `Athas ${appVersion || "..."} · Installing update...`
+      ? `${versionLabel} · Installing`
       : available
-        ? `Athas ${appVersion || "..."} · Version ${updateInfo?.version} available`
+        ? `${versionLabel} · ${updateInfo?.version} available`
         : error
-          ? `Athas ${appVersion || "..."} · Failed to check for updates`
-          : `Athas ${appVersion || "..."} · App is up to date`;
+          ? `${versionLabel} · Update check failed`
+          : `${versionLabel} · Up to date`;
   const cliStatus = cliChecking
     ? "Checking..."
     : cliInstalled
-      ? "CLI command is installed at $HOME/.local/bin/athas"
-      : "CLI command is not installed.";
+      ? "Installed at ~/.local/bin/athas"
+      : "Open folders from your shell with athas";
 
   return (
     <SettingsView>
       <Section title="Application">
-        <SettingRow
-          label="Version"
-          description={
-            <span className="flex flex-col gap-0.5">
-              <span>Check for updates and install the latest app version.</span>
-              <span className="text-subtle-foreground">{updateStatus}</span>
-            </span>
-          }
-        >
+        <SettingRow label="Version" description={updateStatus}>
           <div className="flex flex-wrap justify-end gap-2">
             {available ? (
               <Button
@@ -210,7 +203,7 @@ export const GeneralSettings = () => {
                 disabled={checking || downloading || installing}
                 variant="default"
               >
-                {checking ? "Checking..." : "Check"}
+                {checking ? "Checking..." : "Check for updates"}
               </Button>
             )}
           </div>
@@ -233,15 +226,7 @@ export const GeneralSettings = () => {
           </SettingBlock>
         ) : null}
 
-        <SettingRow
-          label="Terminal Command"
-          description={
-            <span className="flex flex-col gap-0.5">
-              <span>Install the athas command to open folders and files from your terminal.</span>
-              <span className="text-subtle-foreground">{cliStatus}</span>
-            </span>
-          }
-        >
+        <SettingRow label="Shell Command" description={cliStatus}>
           <div className="flex gap-2">
             {cliInstalled ? (
               <TypedConfirmAction
@@ -272,18 +257,15 @@ export const GeneralSettings = () => {
           </div>
         </SettingRow>
 
-        <SettingRow label="Import Settings" description="Import matching setup from another editor">
+        <SettingRow label="Import From Another Editor">
           <Button onClick={() => setIsImportDialogOpen(true)} variant="default">
             Import
           </Button>
         </SettingRow>
 
-        <SettingRow
-          label="Report a Bug"
-          description="Choose where to report an issue with environment details"
-        >
+        <SettingRow label="Report a Bug">
           <Button onClick={() => setIsReportBugDialogOpen(true)} variant="default">
-            Open
+            Report
           </Button>
         </SettingRow>
       </Section>

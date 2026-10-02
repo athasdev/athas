@@ -1,4 +1,4 @@
-import { Marker, MarkerContent, MarkerIcon } from "@/ui/marker";
+import { Marker, MarkerContent, MarkerIcon, type MarkerIconTone } from "@/ui/marker";
 import { Spinner } from "@/ui/spinner";
 import { cn } from "@/utils/cn";
 import { DynamicIcon } from "./dynamic-icon";
@@ -7,13 +7,13 @@ import type { ExtensionViewActivityState, ExtensionViewNode } from "../types/ext
 
 type ActivityNode = Extract<ExtensionViewNode, { type: "activity" }>;
 
-const stateClassNames: Record<ExtensionViewActivityState, string> = {
-  default: "text-subtle-foreground",
-  running: "text-primary",
-  success: "text-success",
-  warning: "text-warning",
-  error: "text-destructive",
-};
+const stateTones = {
+  default: "default",
+  running: "accent",
+  success: "success",
+  warning: "warning",
+  error: "error",
+} as const satisfies Record<ExtensionViewActivityState, MarkerIconTone>;
 
 const markerTone = (state: ExtensionViewActivityState) =>
   state === "default" || state === "running" ? "default" : state;
@@ -38,7 +38,7 @@ export function ExtensionViewActivity({
               onClick={() => item.onSelect && execute(item.onSelect)}
               className="min-w-0 py-0.5"
             >
-              <MarkerIcon className={stateClassNames[state]}>
+              <MarkerIcon tone={stateTones[state]}>
                 {state === "running" ? (
                   <Spinner compact label={item.title} />
                 ) : item.icon ? (

@@ -1,6 +1,7 @@
 import {
   getComposerBudgetTone,
   groupComposerBudget,
+  shouldShowComposerContextMeter,
 } from "@/features/ai/lib/composer-context-budget";
 import { formatTokenCount } from "@/features/ai/lib/acp-usage";
 import type { ContextBudget } from "@/features/ai/types/context-budget.types";
@@ -16,11 +17,11 @@ function describeBudget(budget: ContextBudget) {
 }
 
 /**
- * How much of the built-in agent's context the next request would use, with a hover breakdown
- * of where it goes. It warns before the history has to be summarised or trimmed.
+ * How much of the built-in agent's context the next request would use, as a ring with a hover
+ * breakdown of where it goes. It warns before the history has to be summarised or trimmed.
  */
 export function ComposerContextMeter({ budget }: { budget: ContextBudget }) {
-  if (budget.usedTokens <= 0) return null;
+  if (!shouldShowComposerContextMeter(budget)) return null;
 
   const tone = getComposerBudgetTone(budget);
   const description = describeBudget(budget);

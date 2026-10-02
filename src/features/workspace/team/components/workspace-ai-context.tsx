@@ -41,7 +41,9 @@ export function WorkspaceAIContext({ config, onChange }: WorkspaceSectionProps) 
           </ItemDescription>
         </ItemContent>
         <ItemActions>
-          <Button onClick={() => useUIState.getState().openSettings("ai")}>Configure agents</Button>
+          <Button onClick={() => useUIState.getState().openSettings("ai-agents")}>
+            Configure agents
+          </Button>
         </ItemActions>
       </Item>
     </div>

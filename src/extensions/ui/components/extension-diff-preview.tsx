@@ -16,7 +16,13 @@ import { cn } from "@/utils/cn";
 const COLLAPSED_ROW_LIMIT = 40;
 
 type ExtensionDiffNode = Extract<ExtensionViewNode, { type: "diff" }>;
-type ExtensionDiffPreviewProps = Omit<ExtensionDiffNode, "type">;
+type ExtensionDiffPreviewProps = Omit<ExtensionDiffNode, "type"> & {
+  /**
+   * The file header with its counts and fold toggle. Leave it out where the surrounding row
+   * already names the file, such as an agent's edit in the chat.
+   */
+  caption?: boolean;
+};
 
 const lineClassNames: Record<ExtensionViewDiffLineType, string> = {
   added: "bg-git-added-soft shadow-[inset_2px_0_0_var(--git-added)]",
@@ -43,6 +49,7 @@ export function ExtensionDiffPreview({
   language,
   lines,
   truncated,
+  caption = true,
 }: ExtensionDiffPreviewProps) {
   const [isOpen, setIsOpen] = useState(true);
   const [showAllRows, setShowAllRows] = useState(false);
@@ -75,37 +82,39 @@ export function ExtensionDiffPreview({
       className="min-w-0 overflow-hidden rounded-lg border border-border bg-background"
       aria-label={`Diff for ${filePath}, ${additions} additions and ${deletions} deletions`}
     >
-      <figcaption className="min-w-0">
-        <CollapsibleTrigger
-          className={cn(
-            "flex min-h-8 w-full min-w-0 items-center gap-2 bg-surface px-2.5 py-1.5 text-left ui-text-sm outline-none transition-colors duration-fast ease-smooth hover:bg-accent focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-inset",
-            isOpen && "border-border border-b",
-          )}
-        >
-          <ChevronRightIcon
+      {caption ? (
+        <figcaption className="min-w-0">
+          <CollapsibleTrigger
             className={cn(
-              "shrink-0 text-subtle-foreground transition-transform duration-fast ease-smooth",
-              isOpen && "rotate-90",
+              "flex min-h-8 w-full min-w-0 items-center gap-2 bg-surface px-2.5 py-1.5 text-left ui-text-sm outline-none transition-colors duration-fast ease-smooth hover:bg-accent focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-inset",
+              isOpen && "border-border border-b",
             )}
-          />
-          <span className="min-w-0 flex-1">
-            <span className="block truncate font-mono text-foreground" title={filePath}>
-              {filePath}
-            </span>
-            {oldPath && oldPath !== filePath ? (
-              <span className="block truncate text-subtle-foreground" title={oldPath}>
-                from {oldPath}
+          >
+            <ChevronRightIcon
+              className={cn(
+                "shrink-0 text-subtle-foreground transition-transform duration-fast ease-smooth",
+                isOpen && "rotate-90",
+              )}
+            />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate font-mono text-foreground" title={filePath}>
+                {filePath}
               </span>
+              {oldPath && oldPath !== filePath ? (
+                <span className="block truncate text-subtle-foreground" title={oldPath}>
+                  from {oldPath}
+                </span>
+              ) : null}
+            </span>
+            {additions > 0 ? (
+              <span className="shrink-0 text-git-added tabular-nums">+{additions}</span>
             ) : null}
-          </span>
-          {additions > 0 ? (
-            <span className="shrink-0 text-git-added tabular-nums">+{additions}</span>
-          ) : null}
-          {deletions > 0 ? (
-            <span className="shrink-0 text-git-deleted tabular-nums">-{deletions}</span>
-          ) : null}
-        </CollapsibleTrigger>
-      </figcaption>
+            {deletions > 0 ? (
+              <span className="shrink-0 text-git-deleted tabular-nums">-{deletions}</span>
+            ) : null}
+          </CollapsibleTrigger>
+        </figcaption>
+      ) : null}
       <CollapsibleContent>
         <div
           role="table"

@@ -12,7 +12,7 @@ import {
 import { toOpenAIMessage } from "@/features/ai/lib/image-attachments";
 
 /**
- * The server offers hosted models only to accounts with Athas Pro or a prepaid usage balance.
+ * The server offers hosted models only to accounts with Athas Pro or a pay-as-you-go balance.
  * Carries a 402 so chat recovery offers billing instead of provider settings.
  */
 export class HostedEntitlementError extends Error {
@@ -21,7 +21,7 @@ export class HostedEntitlementError extends Error {
 
   constructor() {
     super(
-      "Hosted models need Athas Pro or a prepaid usage balance. Upgrade or top up in billing to use them.",
+      "Athas models need Pro or pay-as-you-go credit. Upgrade or add credit in billing to use them.",
     );
     this.name = "HostedEntitlementError";
   }
@@ -47,10 +47,16 @@ export class AthasProvider extends AIProvider {
   }
 
   buildPayload(request: StreamRequest) {
+    // The server lowers a larger value to the model's own output limit, and without one it
+    // uses that limit, so the model's catalog value is sent as is.
+    const maxTokens =
+      Number.isFinite(request.maxTokens) && request.maxTokens > 0
+        ? Math.floor(request.maxTokens)
+        : undefined;
     return {
       model: request.modelId,
       messages: request.messages.map(toOpenAIMessage),
-      max_completion_tokens: Math.min(request.maxTokens, 4096),
+      ...(maxTokens ? { max_completion_tokens: maxTokens } : {}),
       temperature: request.temperature,
       stream: true,
     };
@@ -61,10 +67,21 @@ export class AthasProvider extends AIProvider {
   }
 
   override async getModels(): Promise<ProviderModel[]> {
-    const response = await tauriFetch(this.buildUrl(), {
-      headers: await this.buildHeaders(),
-      signal: AbortSignal.timeout(10000),
-    });
+    let response: Response;
+    try {
+      response = await tauriFetch(this.buildUrl(), {
+        headers: await this.buildHeaders(),
+        signal: AbortSignal.timeout(15000),
+      });
+    } catch (error) {
+      // The HTTP plugin rejects with a bare string, which the menu would reduce to a generic line.
+      const host = new URL(getApiBase()).host;
+      throw new Error(
+        error instanceof DOMException && error.name === "TimeoutError"
+          ? `Athas at ${host} took too long to answer.`
+          : `Could not reach Athas at ${host}.`,
+      );
+    }
     if (response.status === 401)
       throw new Error("Your Athas session has expired. Sign out and sign in again.");
     if (response.status === 402) throw new HostedEntitlementError();

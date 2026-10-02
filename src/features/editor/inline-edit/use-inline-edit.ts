@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { isLocalAiProvider } from "@/features/ai/lib/local-ai-connection";
 import {
   canUseIntelligenceProvider,
   canUseProviderWithoutApiKey,
@@ -18,6 +19,8 @@ import { useAuthStore } from "@/features/window/stores/auth.store";
 import { hasProductCapability } from "@/features/window/lib/product-capabilities";
 import { useIntelligenceSettingsStore } from "@/features/ai/intelligence/stores/intelligence-settings.store";
 import { resolveIntelligenceConnection } from "@/features/ai/intelligence/lib/resolve-intelligence-connection";
+import type { IntelligenceConnection } from "@/features/ai/intelligence/types/intelligence.types";
+import { withTaskConnection } from "@/features/settings/lib/ai-model-preferences";
 import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar.store";
 import { toast } from "sonner";
 import {
@@ -203,6 +206,9 @@ export function useInlineEdit({
 
   const personalProviderId = useSettingsStore((state) => state.settings.aiProviderId);
   const personalModelId = useSettingsStore((state) => state.settings.aiModelId);
+  const personalConnectionIsLocal = useSettingsStore((state) =>
+    isLocalAiProvider(state.settings.aiProviderId, state.settings),
+  );
   const intelligencePreferences = useIntelligenceSettingsStore((state) => state.preferences);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const subscription = useAuthStore((state) => state.subscription);
@@ -211,21 +217,13 @@ export function useInlineEdit({
     preferences: intelligencePreferences,
     hasIntelligence: hasProductCapability(subscription, "intelligence"),
     personalConnection: { providerId: personalProviderId, modelId: personalModelId },
+    personalConnectionIsLocal,
   });
   const aiProviderId = connection.providerId;
   const aiModelId = connection.modelId;
-  const updateSetting = (key: "aiProviderId" | "aiModelId", value: string) => {
+  const setInlineEditConnection = (next: IntelligenceConnection | null) => {
     const state = useIntelligenceSettingsStore.getState();
-    state.actions.change({
-      ...state.preferences,
-      tasks: {
-        ...state.preferences.tasks,
-        "inline-edit":
-          key === "aiProviderId"
-            ? { providerId: value, modelId: "" }
-            : { providerId: aiProviderId, modelId: value },
-      },
-    });
+    state.actions.change(withTaskConnection(state.preferences, "inline-edit", next));
     void state.actions.save();
   };
   const checkAllProviderApiKeys = useAIChatStore((state) => state.actions.checkAllProviderApiKeys);
@@ -609,7 +607,7 @@ export function useInlineEdit({
       const useHosted = !hasProviderKey && canUseIntelligenceProvider(aiProviderId, subscription);
 
       if (useHosted && !isAuthenticated) {
-        setInlineEditError("Sign in to use Athas Intelligence.");
+        setInlineEditError("Sign in to use Athas AI.");
         return;
       }
 
@@ -823,7 +821,7 @@ export function useInlineEdit({
     inlineEditProposalConflict,
     aiProviderId,
     aiModelId,
-    updateSetting,
+    setInlineEditConnection,
     handleSubmitInlineEdit,
     handleAcceptInlineEdit,
     handleRejectInlineEdit,

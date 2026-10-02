@@ -1,5 +1,5 @@
 use super::{
-   exec_guard::{validate_exec_command, validate_exec_env},
+   exec_guard::{validate_exec_args, validate_exec_command, validate_exec_env},
    extension_command::build_extension_command,
 };
 use serde::{Deserialize, Serialize};
@@ -81,6 +81,15 @@ async fn lint_with_generic(
    // Defense-in-depth: reject obviously unsafe extension-supplied exec configs
    // before the template variables get a chance to be substituted.
    if let Err(e) = validate_exec_command(&config.command) {
+      return Ok(LintResponse {
+         diagnostics: vec![],
+         success: false,
+         error: Some(format!("Invalid linter config: {}", e)),
+      });
+   }
+   if let Some(args) = config.args.as_deref()
+      && let Err(e) = validate_exec_args(args)
+   {
       return Ok(LintResponse {
          diagnostics: vec![],
          success: false,

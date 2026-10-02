@@ -477,6 +477,7 @@ fn spawn_exit_watcher(
 }
 
 fn read_protocol_message(reader: &mut impl BufRead) -> Result<Option<Value>> {
+   const MAX_PROTOCOL_FRAME_BYTES: usize = 64 * 1024 * 1024;
    let mut content_length = None;
    let mut line = String::new();
 
@@ -499,6 +500,9 @@ fn read_protocol_message(reader: &mut impl BufRead) -> Result<Option<Value>> {
    }
 
    let content_length = content_length.context("Debug adapter message missing Content-Length")?;
+   if content_length > MAX_PROTOCOL_FRAME_BYTES {
+      anyhow::bail!("Debug adapter sent an oversized protocol frame");
+   }
    let mut content = vec![0u8; content_length];
    reader.read_exact(&mut content)?;
 

@@ -2,6 +2,7 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getBufferByPath } from "@/features/editor/utils/buffer-index";
 import { emitGitChanged } from "@/features/git/events/git-events";
+import { invalidateFileTreeGitIgnoreCache } from "@/features/file-explorer/lib/file-tree-gitignore";
 import { showToast } from "@/features/layout/contexts/toast-context";
 import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
 import { readFileContent } from "../controllers/file-operations";
@@ -95,6 +96,7 @@ async function syncOpenBuffer(
 }
 
 export async function handleFileChange({ path, event_type, agent_write_id }: FileChangeEvent) {
+  invalidateFileTreeGitIgnoreCache(path);
   const workspaceId = workspaceRuntimeRegistry.getActiveWorkspaceId();
 
   window.dispatchEvent(

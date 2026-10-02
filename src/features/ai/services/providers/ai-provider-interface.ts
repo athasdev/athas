@@ -27,6 +27,14 @@ export interface ProviderModel {
   contextWindow?: number;
   maxOutputTokens?: number;
   maxTokens?: number;
+  /** List price for input tokens in USD per million, when the catalog reports it (Athas). */
+  input?: number;
+  /** List price for output tokens in USD per million, when the catalog reports it (Athas). */
+  output?: number;
+  /** List price for cached input tokens in USD per million, when reported. */
+  cachedInput?: number;
+  /** Whether the model reads images, when the catalog reports it (Athas). */
+  supportsImages?: boolean;
 }
 
 export abstract class AIProvider {

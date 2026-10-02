@@ -1,9 +1,10 @@
-import { ProviderConnectionAction } from "./provider-connection-action";
+import { ComposerNotice } from "./composer-notice";
 import { isComposingKeyboardEvent } from "@/features/keymaps/utils/is-composing-keyboard-event";
 import { getProviderAccessFromMap } from "@/features/ai/stores/ai-chat/provider-actions";
 import {
   ArrowUpIcon,
   BoltIcon,
+  FilePlusIcon,
   MicrophoneIcon,
   PlayIcon,
   StopIcon,
@@ -65,9 +66,8 @@ import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { ComposerAttachments } from "./composer-attachments";
 import Badge, { badgeVariants } from "@/ui/badge";
 import { Button } from "@/ui/button";
-import { ButtonGroup, ButtonGroupSeparator } from "@/ui/button-group";
 import { cn } from "@/utils/cn";
-import { Composer, ComposerEditable, ComposerToolbar } from "@/ui/composer";
+import { Composer, ComposerDropHint, ComposerEditable, ComposerToolbar } from "@/ui/composer";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { chatContentWidth } from "../chat/chat-content-width";
 import { ComposerAgentSelector } from "./composer-agent-selector";
@@ -115,7 +115,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
   onSetSelectedFilesPaths,
   onRemoveEditorContext,
   isActiveSurface = true,
-  presentation = "default",
+  size = "default",
   autoFocus = false,
   onAgentChange,
   onTerminalChatCreated,
@@ -127,6 +127,8 @@ const AIChatInputBar = memo(function AIChatInputBar({
   onSendQueuedMessageNow,
   onEditQueuedMessage,
   onStopStreaming,
+  lastTurnFailedOffline,
+  onRetryLastTurn,
   restoredPrompt,
 }: AIChatInputBarProps) {
   const inputRef = useRef<HTMLDivElement>(null);
@@ -215,7 +217,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
   // ACP agents don't need API key (they handle their own auth)
   const isInputEnabled = isCustomAgent ? hasApiKey : true;
-  const canEditInput = isInputEnabled || terminalEnabled;
   const isStreaming = isTyping && !!streamingMessageId;
   const changeSessionConfigOption = useAIChatStore(
     (state) => state.actions.changeSessionConfigOption,
@@ -1199,16 +1200,8 @@ const AIChatInputBar = memo(function AIChatInputBar({
     focusInput,
   });
 
-  const isInitialPresentation = presentation === "initial";
-  const inputPlaceholder = isInputEnabled
-    ? isInitialPresentation
-      ? "What do you want to create?"
-      : "Ask anything... (@ files, / commands, ! terminal)"
-    : terminalEnabled
-      ? "Type ! for terminal, or connect a provider to chat"
-      : aiProviderId === "athas"
-        ? "Connect your Athas account to use Agent"
-        : "Connect your provider to use Agent";
+  const isDropActive = isContextDragOver || isDraggingFiles;
+  const inputPlaceholder = "Ask anything, @ to add context";
 
   useEffect(() => {
     if (!autoFocus || !isActiveSurface) return;
@@ -1217,12 +1210,80 @@ const AIChatInputBar = memo(function AIChatInputBar({
     return () => window.cancelAnimationFrame(frame);
   }, [autoFocus, isActiveSurface]);
 
+  const sendControls = isTerminalMode ? (
+    <Button
+      type="button"
+      disabled={isSendDisabled}
+      onClick={handleSendMessage}
+      variant="accent"
+      tooltip="Run command"
+      shortcut="enter"
+      iconOnly
+    >
+      <PlayIcon />
+    </Button>
+  ) : isTyping ? (
+    <>
+      {hasInputText || hasImages ? (
+        <>
+          {isStreaming ? (
+            <Button
+              type="button"
+              disabled={isSendDisabled}
+              onClick={handleInterruptAndSend}
+              variant="ghost"
+              tooltip="Interrupt and send now"
+              shortcut="mod+enter"
+              iconOnly
+            >
+              <BoltIcon />
+            </Button>
+          ) : null}
+          <Button
+            type="button"
+            disabled={isSendDisabled}
+            onClick={handleSendMessage}
+            variant="ghost"
+            tone="accent"
+            tooltip="Send after current response"
+            shortcut="enter"
+            iconOnly
+          >
+            <ArrowUpIcon />
+          </Button>
+        </>
+      ) : null}
+      <Button
+        type="button"
+        onClick={onStopStreaming}
+        variant="default"
+        tooltip="Stop generation"
+        shortcut="escape"
+        iconOnly
+      >
+        <StopIcon />
+      </Button>
+    </>
+  ) : (
+    <Button
+      type="button"
+      disabled={isSendDisabled}
+      onClick={handleSendMessage}
+      variant="accent"
+      tooltip="Send message"
+      shortcut="enter"
+      iconOnly
+    >
+      <ArrowUpIcon />
+    </Button>
+  );
+
   return (
     <div
       ref={aiChatContainerRef}
       className={cn(
-        "relative z-20 flex min-w-0 shrink-0 flex-col gap-1",
-        isInitialPresentation ? "w-full" : [chatContentWidth(), "mb-3"],
+        "relative z-20 flex min-w-0 shrink-0 flex-col gap-1.5",
+        size === "roomy" ? "w-full" : [chatContentWidth(), "mb-3"],
       )}
     >
       {!isTerminalMode && chatId ? <AgentEditsBar chatId={chatId} /> : null}
@@ -1243,10 +1304,19 @@ const AIChatInputBar = memo(function AIChatInputBar({
         onDragOver={handleContextDragOver}
         onDragLeave={handleContextDragLeave}
         onDrop={handleContextDrop}
-        dragActive={isContextDragOver || isDraggingFiles}
+        dragActive={isDropActive}
       >
-        {isTerminalMode && (
-          <div className="px-1 pt-2">
+        {!isTerminalMode ? (
+          <ComposerNotice
+            builtInAgent={isCustomAgent}
+            providerId={aiProviderId}
+            providerBlocked={!hasApiKey}
+            lastTurnFailedOffline={lastTurnFailedOffline}
+            onRetryLastTurn={onRetryLastTurn}
+          />
+        ) : null}
+        {isTerminalMode ? (
+          <div className="px-3 pt-2.5">
             <ChromeBar region="content" surface="transparent">
               <Badge tone="accent">
                 <TerminalIcon />
@@ -1257,8 +1327,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
               </ChromeLabel>
             </ChromeBar>
           </div>
-        )}
-        {!isTerminalMode && (
+        ) : (
           <ComposerAttachments
             buffers={buffers}
             selectedBufferIds={selectedBufferIds}
@@ -1275,120 +1344,48 @@ const AIChatInputBar = memo(function AIChatInputBar({
           />
         )}
 
-        <div className="flex min-w-0 items-end gap-1">
-          <ComposerEditable
-            ref={inputRef}
-            data-ai-element="prompt-input-editable"
-            enabled={canEditInput}
-            contentEditable={canEditInput}
-            font={isTerminalMode ? "mono" : "sans"}
-            onInput={handleInputChange}
-            onKeyDown={handleKeyDown}
-            onMouseDown={handleEditableMouseDown}
-            onFocus={() => setIsComposerFocused(true)}
-            onBlur={() => setIsComposerFocused(false)}
-            onPaste={handlePaste}
-            data-placeholder={inputPlaceholder}
-            role="textbox"
-            aria-multiline
-            aria-label={isTerminalMode ? "Terminal command" : "Message input"}
-            aria-describedby={isTerminalMode ? terminalHintId : undefined}
-            tabIndex={canEditInput ? 0 : -1}
-            className="min-w-0 flex-1 pr-0"
-          />
-          <div className="flex shrink-0 items-center gap-1 pr-2 pb-2">
-            {isTerminalMode ? (
-              <Button
-                type="button"
-                disabled={isSendDisabled}
-                onClick={handleSendMessage}
-                variant="accent"
-                tooltip="Run command"
-                shortcut="enter"
-                iconOnly
-              >
-                <PlayIcon />
-              </Button>
-            ) : !isInputEnabled ? (
-              <ProviderConnectionAction key={aiProviderId} providerId={aiProviderId} />
-            ) : isStreaming ? (
-              <ButtonGroup variant="ghost">
-                <Button
-                  type="button"
-                  disabled={isSendDisabled}
-                  onClick={handleSendMessage}
-                  variant="accent"
-                  tooltip="Send after current response"
-                  shortcut="enter"
-                  iconOnly
-                >
-                  <ArrowUpIcon />
-                </Button>
-                <ButtonGroupSeparator />
-                <Button
-                  type="button"
-                  disabled={isSendDisabled}
-                  onClick={handleInterruptAndSend}
-                  variant="ghost"
-                  tone="accent"
-                  tooltip="Interrupt and send now"
-                  shortcut="mod+enter"
-                  iconOnly
-                >
-                  <BoltIcon />
-                </Button>
-                <ButtonGroupSeparator />
-                <Button
-                  type="button"
-                  onClick={onStopStreaming}
-                  variant="ghost"
-                  tone="danger"
-                  tooltip="Stop generation"
-                  shortcut="escape"
-                  iconOnly
-                >
-                  <StopIcon />
-                </Button>
-              </ButtonGroup>
-            ) : (
-              <Button
-                type="button"
-                disabled={isSendDisabled}
-                onClick={handleSendMessage}
-                variant="accent"
-                tooltip="Send message"
-                shortcut="enter"
-                iconOnly
-              >
-                <ArrowUpIcon />
-              </Button>
-            )}
-          </div>
-        </div>
-      </Composer>
+        <ComposerEditable
+          ref={inputRef}
+          data-ai-element="prompt-input-editable"
+          contentEditable
+          font={isTerminalMode ? "mono" : "sans"}
+          size={size}
+          onInput={handleInputChange}
+          onKeyDown={handleKeyDown}
+          onMouseDown={handleEditableMouseDown}
+          onFocus={() => setIsComposerFocused(true)}
+          onBlur={() => setIsComposerFocused(false)}
+          onPaste={handlePaste}
+          data-placeholder={inputPlaceholder}
+          role="textbox"
+          aria-multiline
+          aria-label={isTerminalMode ? "Terminal command" : "Message input"}
+          aria-describedby={isTerminalMode ? terminalHintId : undefined}
+          tabIndex={0}
+        />
 
-      {isTerminalMode ? (
-        <ChromeBar region="content" surface="transparent" id={terminalHintId}>
-          <ChromeGroup grow>
-            <ChromeLabel>
-              {terminalEnabled
-                ? "Enter to run · Output appears in chat"
-                : "Enable Terminal in Settings to run commands"}
-            </ChromeLabel>
-          </ChromeGroup>
-          <Button
-            variant="ghost"
-            size="xs"
-            onClick={() => replaceInput(inputValueRef.current.trimStart().slice(1))}
-            tooltip="Back to chat"
-            shortcut="escape"
-          >
-            <Kbd>Esc</Kbd>Back to chat
-          </Button>
-        </ChromeBar>
-      ) : (
-        <ComposerToolbar>
-          <div className="flex min-w-0 items-center gap-1">
+        {isTerminalMode ? (
+          <ComposerToolbar>
+            <ChromeGroup grow>
+              <ChromeLabel id={terminalHintId}>
+                {terminalEnabled
+                  ? "Enter to run · Output appears in chat"
+                  : "Enable Terminal in Settings to run commands"}
+              </ChromeLabel>
+            </ChromeGroup>
+            <Button
+              variant="ghost"
+              size="xs"
+              onClick={() => replaceInput(inputValueRef.current.trimStart().slice(1))}
+              tooltip="Back to chat"
+              shortcut="escape"
+            >
+              <Kbd>Esc</Kbd>Back to chat
+            </Button>
+            {sendControls}
+          </ComposerToolbar>
+        ) : (
+          <ComposerToolbar>
             <ContextSelector
               buffers={buffers}
               selectedBufferIds={selectedBufferIds}
@@ -1405,14 +1402,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
               }}
             />
             <ComposerModeSelector source={modeSource} onBeforeOpen={closeInlineMenus} />
-          </div>
-
-          <div className="ml-auto flex min-w-0 shrink items-center gap-1">
-            {contextBudget ? (
-              <ComposerContextMeter budget={contextBudget} />
-            ) : (
-              <AcpContextMeter usage={acpSession.usage} />
-            )}
             <ComposerAgentSelector
               cwd={projectPath}
               currentAgentId={currentAgentId}
@@ -1427,42 +1416,57 @@ const AIChatInputBar = memo(function AIChatInputBar({
               onBeforeOpen={closeInlineMenus}
               followChatId={followChatId}
             />
-            <ChatPreferencesMenu
-              currentAgentId={currentAgentId}
-              canChangeAgent={Boolean(onAgentChange)}
-              sessionConfigOptions={sessionConfigOptions}
-              onSessionConfigChange={(optionId, value) => {
-                if (acpSessionId) void changeSessionConfigOption(acpSessionId, optionId, value);
-              }}
-              onSelectSkill={insertSkillAtCursor}
-              onSelectCodexSkill={insertCodexSkillAtCursor}
-              onBeforeOpen={closeInlineMenus}
-            />
-            <Button
-              type="button"
-              disabled={!isInputEnabled || !isSpeechRecognitionSupported}
-              active={isListening}
-              aria-pressed={isListening}
-              onClick={toggleVoiceInput}
-              variant="ghost"
-              tone={isListening ? "accent" : "default"}
-              iconOnly
-              tooltip={
-                isMacDevSpeechRecognitionBlocked
-                  ? "Voice input is unavailable in macOS development builds. Use a packaged build."
-                  : !isSpeechRecognitionSupported
-                    ? "Voice input is not supported by this webview"
-                    : isListening
-                      ? interimTranscript || "Stop voice input"
-                      : "Start voice input"
-              }
-              aria-label={isListening ? "Stop voice input" : "Start voice input"}
-            >
-              <MicrophoneIcon className={cn(isListening && "animate-pulse")} />
-            </Button>
-          </div>
-        </ComposerToolbar>
-      )}
+
+            <div className="ml-auto flex shrink-0 items-center gap-1">
+              {contextBudget ? (
+                <ComposerContextMeter budget={contextBudget} />
+              ) : (
+                <AcpContextMeter usage={acpSession.usage} />
+              )}
+              <ChatPreferencesMenu
+                currentAgentId={currentAgentId}
+                canChangeAgent={Boolean(onAgentChange)}
+                sessionConfigOptions={sessionConfigOptions}
+                onSessionConfigChange={(optionId, value) => {
+                  if (acpSessionId) void changeSessionConfigOption(acpSessionId, optionId, value);
+                }}
+                onSelectSkill={insertSkillAtCursor}
+                onSelectCodexSkill={insertCodexSkillAtCursor}
+                onBeforeOpen={closeInlineMenus}
+              />
+              {isSpeechRecognitionSupported || isMacDevSpeechRecognitionBlocked ? (
+                <Button
+                  type="button"
+                  disabled={!isInputEnabled || !isSpeechRecognitionSupported}
+                  active={isListening}
+                  aria-pressed={isListening}
+                  onClick={toggleVoiceInput}
+                  variant="ghost"
+                  tone={isListening ? "accent" : "default"}
+                  iconOnly
+                  tooltip={
+                    isMacDevSpeechRecognitionBlocked
+                      ? "Voice input is unavailable in macOS development builds. Use a packaged build."
+                      : isListening
+                        ? interimTranscript || "Stop voice input"
+                        : "Start voice input"
+                  }
+                  aria-label={isListening ? "Stop voice input" : "Start voice input"}
+                >
+                  <MicrophoneIcon className={cn(isListening && "animate-pulse")} />
+                </Button>
+              ) : null}
+              {sendControls}
+            </div>
+          </ComposerToolbar>
+        )}
+        {isDropActive ? (
+          <ComposerDropHint>
+            <FilePlusIcon />
+            Drop to add as context
+          </ComposerDropHint>
+        ) : null}
+      </Composer>
 
       {!isTerminalMode && (isActiveSurface || isComposerFocused) && mentionState.active && (
         <FileMentionDropdown

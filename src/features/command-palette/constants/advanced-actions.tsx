@@ -6,6 +6,8 @@ import {
   addActiveSelectionToNewAgentChat,
 } from "@/features/ai/lib/add-selection-to-agent-chat";
 import { openAgentSessions } from "@/features/ai/lib/open-agent-sessions";
+import { openAgentCliInTerminal } from "@/features/ai/lib/open-agent-cli-in-terminal";
+import { getAgentCli } from "@/features/ai/lib/agent-clis";
 import { openAgentInNewWindow } from "@/features/ai/detached/agent-window-service";
 import { toggleFollowAgent } from "@/features/ai/services/agent-follow-service";
 import { cycleChatMode, readChatModeSource } from "@/features/ai/services/chat-mode-service";
@@ -53,6 +55,8 @@ interface AdvancedActionsParams {
   logOutAgentId: string | null;
   /** The current chat's running agent, when it lists its sessions (ACP `session/list`). */
   browseSessionsAgentId: string | null;
+  /** The current chat's agent, whose own CLI can also open in a terminal on request. */
+  currentAgentId: string;
   vimMode: boolean;
   vimCommands: Array<{ name: string; description: string; execute: () => void }>;
   setMode: (mode: "normal" | "insert" | "visual") => void;
@@ -70,6 +74,7 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
     lspStatus,
     logOutAgentId,
     browseSessionsAgentId,
+    currentAgentId,
     vimMode,
     vimCommands,
     setMode,
@@ -77,6 +82,8 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
     showToast,
     onClose,
   } = params;
+
+  const agentCli = getAgentCli(currentAgentId);
 
   const baseActions: Action[] = [
     {
@@ -256,7 +263,7 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
       category: "AI",
       action: () => {
         onClose();
-        useUIState.getState().openSettings("ai", "Allowed Commands");
+        useUIState.getState().openSettings("ai-agents", "Allowed Commands");
       },
     },
     {
@@ -281,6 +288,21 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
             action: () => {
               onClose();
               openAgentSessions(browseSessionsAgentId);
+            },
+          },
+        ]
+      : []),
+    ...(agentCli
+      ? [
+          {
+            id: "ai-open-agent-cli-in-terminal",
+            label: `AI: Open ${agentCli.name} in Terminal`,
+            description: `Run the ${agentCli.command} CLI in a terminal instead of the chat`,
+            icon: <TerminalWindowIcon />,
+            category: "AI",
+            action: () => {
+              onClose();
+              openAgentCliInTerminal(currentAgentId);
             },
           },
         ]

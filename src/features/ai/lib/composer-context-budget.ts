@@ -1,4 +1,7 @@
-import { buildContextBudget } from "@/features/ai/lib/context-budget";
+import {
+  buildContextBudget,
+  DEFAULT_RESERVED_OUTPUT_TOKENS,
+} from "@/features/ai/lib/context-budget";
 import {
   buildConversationHistory,
   getProviderRequestLimits,
@@ -20,8 +23,8 @@ const ERROR_RATIO = 0.95;
 const CHARS_PER_TOKEN = 4;
 
 /**
- * The window the meter measures against. Hosted Athas requests are capped by size rather than
- * by the model's window, so their request cap is the limit that matters.
+ * The window the meter measures against. Hosted Athas requests are capped by size, so the request
+ * cap is the limit, unless the model's own context window (from the catalog) is smaller.
  */
 export function resolveComposerContextWindow(
   providerId: string,
@@ -29,10 +32,14 @@ export function resolveComposerContextWindow(
 ): { contextWindowTokens?: number; reservedOutputTokens?: number } {
   const requestLimits = getProviderRequestLimits(providerId);
   if (requestLimits) {
-    return {
-      contextWindowTokens: Math.floor(requestLimits.maxBytes / CHARS_PER_TOKEN),
-      reservedOutputTokens: 0,
-    };
+    const requestCapTokens = Math.floor(requestLimits.maxBytes / CHARS_PER_TOKEN);
+    if (
+      modelContextWindow &&
+      modelContextWindow - DEFAULT_RESERVED_OUTPUT_TOKENS < requestCapTokens
+    ) {
+      return { contextWindowTokens: modelContextWindow };
+    }
+    return { contextWindowTokens: requestCapTokens, reservedOutputTokens: 0 };
   }
   return modelContextWindow ? { contextWindowTokens: modelContextWindow } : {};
 }
@@ -105,6 +112,24 @@ export function groupComposerBudget(budget: ContextBudget): ComposerBudgetGroup[
     groups.set(id, group);
   }
   return [...groups.values()].sort((a, b) => b.tokens - a.tokens);
+}
+
+/** Below this share, instructions and rules alone are not worth a meter. */
+const QUIET_RATIO = 0.5;
+
+/**
+ * Whether the meter has anything to say. A new chat carries only the agent's instructions, and a
+ * small ring beside the model picker then reads as a loading spinner, so it waits for real
+ * content: conversation, attachments or references, or a budget that is already half used.
+ */
+export function shouldShowComposerContextMeter(budget: ContextBudget): boolean {
+  if (budget.usedTokens <= 0) return false;
+  if (budget.overLimit || (budget.ratio ?? 0) >= QUIET_RATIO) return true;
+  return budget.items.some(
+    (item) =>
+      item.tokens > 0 &&
+      (item.kind === "history" || item.kind === "attachment" || item.kind === "context"),
+  );
 }
 
 export function getComposerBudgetTone(budget: ContextBudget): ComposerBudgetTone {

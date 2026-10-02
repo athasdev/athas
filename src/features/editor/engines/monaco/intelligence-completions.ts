@@ -5,6 +5,7 @@ import {
   InlineEditError,
   requestInlineEdit,
 } from "@/features/ai/intelligence/services/intelligence-text-service";
+import { AutocompleteModelRequiredError } from "@/features/ai/intelligence/services/intelligence-connection";
 import { useIntelligenceSettingsStore } from "@/features/ai/intelligence/stores/intelligence-settings.store";
 import { onProviderApiTokenChange } from "@/features/ai/services/ai-token-service";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
@@ -27,10 +28,12 @@ let registered = false;
 const notifiedPauseReasons = new Set<IntelligenceCompletionPauseReason>();
 
 const PAUSE_NOTICES: Record<IntelligenceCompletionPauseReason, string> = {
-  credits: "Tab autocomplete is paused because Athas Intelligence needs a plan or more credits.",
-  "sign-in": "Tab autocomplete is paused. Sign in to use Athas Intelligence.",
+  credits:
+    "Tab autocomplete is paused: there is no Athas AI credit left. Pro includes $10 of Athas AI every month, then pay as you go at list price +10%.",
+  "sign-in": "Tab autocomplete is paused. Sign in to use Athas AI.",
   "api-key": "Tab autocomplete is paused because the selected provider needs an API key.",
   policy: "Tab autocomplete is disabled by your organization.",
+  model: "Tab autocomplete is paused until you choose a model for it in Settings.",
 };
 
 function getPauseReason(error: InlineEditError): IntelligenceCompletionPauseReason | null {
@@ -44,6 +47,11 @@ function getPauseReason(error: InlineEditError): IntelligenceCompletionPauseReas
 /** Pauses Tab on account or billing errors so it stops retrying, and reports others once. */
 export function reportIntelligenceCompletionError(error: unknown) {
   const { actions } = useIntelligenceCompletionStore.getState();
+  // Tab on Automatic with nothing to run on: the status indicator says so, without a notice.
+  if (error instanceof AutocompleteModelRequiredError) {
+    actions.pause("model", error.message);
+    return;
+  }
   if (error instanceof InlineEditError) {
     const reason = getPauseReason(error);
     if (reason) {
@@ -78,7 +86,7 @@ export function trimSuffixOverlap(completion: string, suffix: string) {
 
 export function createIntelligenceCompletionsProvider(): Monaco.languages.InlineCompletionsProvider {
   return {
-    displayName: "Athas Intelligence",
+    displayName: "Athas AI",
     debounceDelayMs: 350,
     async provideInlineCompletions(model, position, context, token) {
       if (

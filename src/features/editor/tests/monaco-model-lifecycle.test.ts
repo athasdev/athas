@@ -95,4 +95,16 @@ describe("Monaco model lifecycle", () => {
     vi.advanceTimersByTime(5_000);
     expect(model.dispose).toHaveBeenCalledTimes(1);
   });
+
+  it("keeps one change session for every view of a shared model", () => {
+    const model = createTextModel();
+    getModel.mockReturnValue(null);
+    createModel.mockReturnValue(model);
+    const first = acquireMonacoModel("one", "text", uri as never);
+    const second = acquireMonacoModel("one", "text", uri as never);
+    expect(second.sessionId).toBe(first.sessionId);
+
+    first.release();
+    second.release();
+  });
 });

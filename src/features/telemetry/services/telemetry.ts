@@ -8,6 +8,7 @@ import {
   isBenignWindowError,
   isExpectedCancellation,
 } from "@/features/telemetry/lib/crash-noise";
+import { redactCrashText } from "@/features/telemetry/lib/crash-report-redaction";
 import {
   createFrictionPayload,
   type FrictionSignalInput,
@@ -89,6 +90,7 @@ interface TelemetryClientContext {
 
 type TelemetryLogSubscriber = (entries: TelemetryLogEntry[]) => void;
 type TelemetryMode = "required" | "optional";
+const REQUIRED_TELEMETRY_EVENTS = new Set<string>(["update_check"]);
 
 let clientContextPromise: Promise<TelemetryClientContext> | null = null;
 let initializationPromise: Promise<void> | null = null;
@@ -428,7 +430,13 @@ async function flushTelemetryQueue(): Promise<boolean> {
 
   flushInFlight = (async () => {
     const store = await getTelemetryStore();
-    const queue = await loadQueue(store);
+    let queue = await loadQueue(store);
+    // Events queued while usage telemetry was on are not sent after the user turns it off.
+    if (queue.length > 0 && !(await isUsageTelemetryEnabled())) {
+      const required = queue.filter((event) => REQUIRED_TELEMETRY_EVENTS.has(event.type));
+      if (required.length !== queue.length) await saveQueue(required, store);
+      queue = required;
+    }
     if (queue.length === 0) return true;
 
     const context = await ensureClientContext();
@@ -553,6 +561,9 @@ export async function recordCrashReport(payload: Record<string, unknown>): Promi
       "crash_report",
       {
         ...payload,
+        message: redactCrashText(payload.message),
+        stack: redactCrashText(payload.stack),
+        ...("source" in payload ? { source: redactCrashText(payload.source) } : {}),
         report_source: "desktop_runtime",
         build: crashReportBuild(import.meta.env.DEV),
       },

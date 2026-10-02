@@ -19,7 +19,7 @@ describe("custom view intelligence", () => {
     });
   });
 
-  it("accepts a constrained GitHub plan from Athas Intelligence", () => {
+  it("accepts a constrained GitHub plan from Athas AI", () => {
     expect(
       parseGeneratedViewPlan(`Result:
 {"kind":"github","name":"Latest runs","endpointPath":"/actions/runs?per_page=100","rowsPath":"workflow_runs"}`),

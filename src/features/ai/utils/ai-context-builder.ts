@@ -1,7 +1,6 @@
 import type { ChatMode, OutputStyle } from "@/features/ai/types/ai-chat.types";
 import type { ContextInfo } from "@/features/ai/types/ai-context.types";
 import { hasTextContent, type PaneContent } from "@/features/panes/types/pane-content.types";
-import { isTerminalAgent } from "@/features/ai/lib/terminal-agents";
 import { CODEX_INTEGRATION_ID } from "@/features/ai/integrations/integration-registry";
 import { getFollowUpActionsInstruction } from "@/features/ai/lib/follow-up-actions";
 
@@ -79,10 +78,7 @@ export const buildContextPrompt = (
     contextPrompt += `${context.projectRules.text}\n\n`;
   }
   const isAcpAgent =
-    !!context.agentId &&
-    context.agentId !== "custom" &&
-    context.agentId !== CODEX_INTEGRATION_ID &&
-    !isTerminalAgent(context.agentId);
+    !!context.agentId && context.agentId !== "custom" && context.agentId !== CODEX_INTEGRATION_ID;
 
   if (isAcpAgent) {
     contextPrompt += `Athas ACP client integrations:

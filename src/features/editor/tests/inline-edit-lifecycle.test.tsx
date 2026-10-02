@@ -8,6 +8,7 @@ import { InlineEditPopover } from "../inline-edit/inline-edit-popover";
 import { useInlineEditToolbarStore } from "../stores/inline-edit-toolbar.store";
 import { requestInlineEdit } from "../services/editor-inline-edit-service";
 import { toast } from "sonner";
+import { useIntelligenceSettingsStore } from "@/features/ai/intelligence/stores/intelligence-settings.store";
 
 vi.mock("monaco-editor", () => ({}));
 vi.mock("@/features/ai/stores/ai-chat.store", () => {
@@ -36,8 +37,17 @@ vi.mock("../services/editor-inline-edit-service", () => ({
   requestInlineEdit: vi.fn(),
   InlineEditError: class extends Error {},
 }));
-vi.mock("../inline-edit/inline-edit-model-selector", () => ({
-  InlineEditModelSelector: () => null,
+const picker = vi.hoisted(() => ({
+  props: null as null | {
+    value: { providerId: string; modelId: string } | null;
+    onChange: (connection: { providerId: string; modelId: string } | null) => void;
+  },
+}));
+vi.mock("@/features/ai/components/selectors/model-connection-picker", () => ({
+  ModelConnectionPicker: (props: NonNullable<typeof picker.props>) => {
+    picker.props = props;
+    return null;
+  },
 }));
 vi.mock("@/features/keymaps/hooks/use-command-shortcut", () => ({
   useCommandShortcut: () => undefined,
@@ -343,6 +353,23 @@ describe("Inline edit request ownership", () => {
     await act(async () => pending.reject(new Error("Disconnected")));
     expect(applyInlineEdit).not.toHaveBeenCalled();
     expect(toast.error).not.toHaveBeenCalled();
+  });
+});
+
+describe("Inline edit model", () => {
+  it("shows the connection it runs on and saves a new choice for inline edit only", async () => {
+    expect(picker.props?.value).toEqual({ providerId: "openai", modelId: "test-model" });
+    await act(async () => picker.props?.onChange({ providerId: "athas", modelId: "auto" }));
+    expect(useIntelligenceSettingsStore.getState().preferences.tasks["inline-edit"]).toEqual({
+      providerId: "athas",
+      modelId: "auto",
+    });
+    expect(picker.props?.value).toEqual({ providerId: "athas", modelId: "auto" });
+    await act(async () => picker.props?.onChange(null));
+    expect(
+      useIntelligenceSettingsStore.getState().preferences.tasks["inline-edit"],
+    ).toBeUndefined();
+    expect(picker.props?.value).toEqual({ providerId: "openai", modelId: "test-model" });
   });
 });
 

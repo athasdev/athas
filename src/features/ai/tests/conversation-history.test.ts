@@ -7,6 +7,8 @@ import {
   getProviderRequestLimits,
   HOSTED_ATHAS_REQUEST_LIMITS,
   HOSTED_ATHAS_TOOL_LOOP_RESERVE,
+  currentImageCount,
+  imagesOmittedNotice,
   providerAcceptsImages,
 } from "@/features/ai/lib/conversation-history";
 import type { AIMessage } from "@/features/ai/types/messages.types";
@@ -209,7 +211,7 @@ describe("buildConversationHistory", () => {
     expect(bytes + HOSTED_ATHAS_TOOL_LOOP_RESERVE.bytes).toBeLessThanOrEqual(
       HOSTED_ATHAS_REQUEST_LIMITS.maxBytes,
     );
-    expect(getProviderRequestLimits("athas")?.maxMessages).toBe(40);
+    expect(getProviderRequestLimits("athas")?.maxMessages).toBe(310);
     expect(fitted[0]).toEqual({ role: "system", content: "system" });
     expect(fitted[fitted.length - 1].content).toContain("latest");
     expect(fitted.some((entry) => entry.role === "user" && entry.images)).toBe(false);
@@ -219,15 +221,19 @@ describe("buildConversationHistory", () => {
   it("truncates a single oversized message for hosted Athas", () => {
     const fitted = fitMessagesToProviderLimits(
       [
-        { role: "system", content: "s".repeat(250_000) },
-        { role: "user", content: "u".repeat(250_000) },
+        { role: "system", content: "s".repeat(500_000) },
+        { role: "user", content: "u".repeat(500_000) },
       ],
       "athas",
     );
     expect(new TextEncoder().encode(JSON.stringify(fitted)).length).toBeLessThanOrEqual(
       getProviderRequestLimits("athas")?.maxBytes ?? 0,
     );
-    expect(fitted.every((entry) => entry.content.length <= 100_000)).toBe(true);
+    expect(
+      fitted.every(
+        (entry) => entry.content.length <= HOSTED_ATHAS_REQUEST_LIMITS.maxMessageChars + 100,
+      ),
+    ).toBe(true);
   });
 
   it("leaves requests to other providers untouched", () => {
@@ -235,6 +241,66 @@ describe("buildConversationHistory", () => {
     const messages: AIMessage[] = [{ role: "user", content: "x".repeat(300_000), images }];
     expect(fitMessagesToProviderLimits(messages, "anthropic")).toBe(messages);
     expect(providerAcceptsImages("anthropic")).toBe(true);
+    expect(providerAcceptsImages("deepseek")).toBe(false);
+  });
+
+  it("decides image support for Athas per model from the catalog", () => {
     expect(providerAcceptsImages("athas")).toBe(false);
+    expect(providerAcceptsImages("athas", { supportsImages: false })).toBe(false);
+    expect(providerAcceptsImages("athas", { supportsImages: true })).toBe(true);
+  });
+
+  it("sends images to an Athas model that reads them, outside the text size limit", () => {
+    const image = { mediaType: "image/png", data: "A".repeat(800_000) };
+    const messages: AIMessage[] = [
+      { role: "system", content: "system" },
+      { role: "user", content: "What is this?", images: [image] },
+    ];
+    const fitted = fitMessagesToProviderLimits(
+      messages,
+      "athas",
+      getProviderRequestLimits("athas"),
+      true,
+    );
+    expect(fitted).toEqual(messages);
+    expect(currentImageCount(fitted)).toBe(1);
+  });
+
+  it("strips images for a text-only Athas model and explains why", () => {
+    const messages: AIMessage[] = [
+      {
+        role: "user",
+        content: "What is this?",
+        images: [{ mediaType: "image/png", data: "YWJj" }],
+      },
+    ];
+    const fitted = fitMessagesToProviderLimits(messages, "athas");
+    expect(currentImageCount(fitted)).toBe(0);
+    expect(fitted[0].content).toContain("1 image omitted");
+    expect(imagesOmittedNotice({ omitted: 1, acceptsImages: false, modelName: "GLM 5.3" })).toBe(
+      "An image was not sent: GLM 5.3 cannot read images. Choose a model that supports images to include them.",
+    );
+  });
+
+  it("keeps the newest images within Athas's image limits and notes the rest", () => {
+    // 1.2 MB decoded each: two do not fit the 2.25 MB total, and SVG is not accepted.
+    const large = { mediaType: "image/png", data: "A".repeat(1_600_000) };
+    const svg = { mediaType: "image/svg+xml", data: "YWJj" };
+    const fitted = fitMessagesToProviderLimits(
+      [
+        { role: "user", content: "old", images: [large] },
+        { role: "assistant", content: "ok" },
+        { role: "user", content: "new", images: [large, svg] },
+      ],
+      "athas",
+      null,
+      true,
+    );
+    expect(fitted[0]).toEqual({
+      role: "user",
+      content: "old\n\n[1 image omitted: over the image size or count limit]",
+    });
+    expect(fitted[2]).toMatchObject({ images: [large] });
+    expect(fitted[2].content).toContain("1 image omitted");
   });
 });

@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vite-plus/test";
 import { ATHAS_ROOT } from "../../../extensions/tooling/extension-workspace";
 import type { ExtensionManifest } from "@/extensions/types/extension-manifest";
-import { CLAUDE_CODE_TERMINAL_AGENT_ID } from "@/features/ai/lib/claude-code";
+import { migrateLegacyAgentId } from "@/features/ai/lib/agent-clis";
 
 async function readOfficialManifest(folder: string): Promise<ExtensionManifest> {
   return JSON.parse(
@@ -16,7 +16,7 @@ async function readOfficialIcon(folder: string): Promise<string> {
 }
 
 describe("agent extension manifests", () => {
-  it("uses the current Claude Agent ACP adapter without replacing the terminal integration", async () => {
+  it("runs Claude Agent through the Claude Agent SDK ACP adapter", async () => {
     const manifest = await readOfficialManifest("claude-code");
 
     expect(manifest).toMatchObject({
@@ -37,8 +37,7 @@ describe("agent extension manifests", () => {
         }),
       }),
     ]);
-    expect(CLAUDE_CODE_TERMINAL_AGENT_ID).toBe("claude-code");
-    expect(manifest.agents?.[0]?.id).not.toBe(CLAUDE_CODE_TERMINAL_AGENT_ID);
+    expect(migrateLegacyAgentId("claude-code")).toBe(manifest.agents?.[0]?.id);
   });
 
   it("installs the current Kimi CLI release on every supported desktop target", async () => {

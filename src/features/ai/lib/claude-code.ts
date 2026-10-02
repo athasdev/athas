@@ -1,9 +1,5 @@
-export const CLAUDE_CODE_TERMINAL_AGENT_ID = "claude-code";
-export const CLAUDE_CODE_TERMINAL_COMMAND = "claude";
+/** Claude runs in the chat as Claude Agent, through the Claude Agent SDK ACP adapter, like it does in Zed. */
+export const CLAUDE_ACP_AGENT_ID = "claude-acp";
 
-export const CLAUDE_CODE_TERMINAL_OPTION = {
-  id: CLAUDE_CODE_TERMINAL_AGENT_ID,
-  name: "Claude Code",
-  description: "Open Claude Code in an Athas terminal",
-  isAcp: false,
-};
+/** The id Claude had while Athas could only open it in a terminal. */
+export const LEGACY_CLAUDE_CODE_TERMINAL_AGENT_ID = "claude-code";

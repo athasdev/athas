@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vite-plus/test";
 import { __test__ as apiBaseTest } from "@/utils/api-base";
-import { AuthApiError, isAuthInvalidError, __test__ } from "../services/auth-api";
+import {
+  AuthApiError,
+  describeSessionCheckFailure,
+  isAuthInvalidError,
+  __test__,
+} from "../services/auth-api";
 
 describe("auth-api desktop auth parsers", () => {
   it("parses valid desktop auth init response", () => {
@@ -191,5 +196,30 @@ describe("auth-api desktop auth parsers", () => {
   it("ignores malformed collaboration document stream events", () => {
     expect(__test__.parseCollaborationSseBlock("event: update\ndata: {}\n\n")).toBeNull();
     expect(__test__.parseCollaborationSseBlock("event: ready\n\n")).toBeNull();
+  });
+});
+
+describe("session check failures", () => {
+  it("names a local development server that is not running", () => {
+    expect(
+      describeSessionCheckFailure(new TypeError("error sending request"), "http://localhost:3000"),
+    ).toEqual({
+      reason: "local_server_down",
+      message: "Nothing is answering at localhost:3000.",
+      host: "localhost:3000",
+    });
+  });
+
+  it("tells an unreachable host, a timeout and a server error apart", () => {
+    const timeout = new DOMException("timed out", "TimeoutError");
+    expect(describeSessionCheckFailure(new TypeError("x"), "https://athas.dev").reason).toBe(
+      "unreachable",
+    );
+    expect(describeSessionCheckFailure(timeout, "https://athas.dev").message).toBe(
+      "athas.dev did not answer in time.",
+    );
+    expect(
+      describeSessionCheckFailure(new AuthApiError("down", 503), "https://athas.dev").message,
+    ).toBe("athas.dev had a server error (503).");
   });
 });

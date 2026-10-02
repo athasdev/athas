@@ -10,6 +10,7 @@ const state = vi.hoisted(() => ({
   signIn: vi.fn(async () => {}),
   settings: vi.fn(),
   error: vi.fn(),
+  newChat: vi.fn(),
   base: "http://localhost:3000",
 }));
 vi.mock("@tauri-apps/plugin-opener", () => ({ openUrl: state.openUrl }));
@@ -17,9 +18,11 @@ vi.mock("sonner", () => ({ toast: { error: state.error } }));
 vi.mock("@/utils/api-base", () => ({ getApiBase: () => state.base }));
 vi.mock("@/config/services", () => ({
   getServiceUrls: () => ({
+    websiteBaseUrl: "https://website.test",
     dashboardBillingUrl: "https://website.test/dashboard/settings/billing",
   }),
 }));
+vi.mock("@/features/ai/lib/open-new-agent-chat", () => ({ openNewAgentChat: state.newChat }));
 vi.mock("@/features/window/hooks/use-desktop-sign-in", () => ({
   useDesktopSignIn: () => ({ signIn: state.signIn, isSigningIn: false }),
 }));
@@ -49,11 +52,21 @@ afterEach(async () => {
   await act(async () => root.unmount());
   container.remove();
 });
-async function click(code: string, providerId: string, onRetry?: () => void) {
+async function click(
+  code: string,
+  providerId: string,
+  onRetry?: () => void,
+  extra: { serverCode?: string; billingUrl?: string } = {},
+) {
   await act(async () =>
-    root.render(<ApiErrorActions code={code} providerId={providerId} onRetry={onRetry} />),
+    root.render(
+      <ApiErrorActions code={code} providerId={providerId} onRetry={onRetry} {...extra} />,
+    ),
   );
-  await act(async () => container.querySelector("button")!.click());
+  const button = container.querySelector("button")!;
+  const label = button.textContent;
+  await act(async () => button.click());
+  return label;
 }
 describe("API error recovery", () => {
   it("opens billing on the website, not the API server", async () => {
@@ -61,6 +74,31 @@ describe("API error recovery", () => {
     await click("402", "athas");
     expect(state.openUrl).toHaveBeenCalledWith("https://website.test/dashboard/settings/billing");
     expect(state.signIn).not.toHaveBeenCalled();
+  });
+  it("offers to add credit and opens the billing page the server sent", async () => {
+    const label = await click("402", "athas", undefined, {
+      serverCode: "insufficient_balance",
+      billingUrl: "/dashboard/settings/billing?topup=1",
+    });
+    expect(label).toBe("Add credit");
+    expect(state.openUrl).toHaveBeenCalledWith(
+      "http://localhost:3000/dashboard/settings/billing?topup=1",
+    );
+  });
+  it("ignores a billing link to another site", async () => {
+    const label = await click("402", "athas", undefined, {
+      serverCode: "spending_limit_reached",
+      billingUrl: "https://elsewhere.test/pay",
+    });
+    expect(label).toBe("Manage billing");
+    expect(state.openUrl).toHaveBeenCalledWith("https://website.test/dashboard/settings/billing");
+  });
+  it("starts a new chat when the conversation is too large", async () => {
+    expect(await click("402", "athas", undefined, { serverCode: "request_too_large" })).toBe(
+      "Start new chat",
+    );
+    expect(state.newChat).toHaveBeenCalledOnce();
+    expect(state.openUrl).not.toHaveBeenCalled();
   });
   it("starts sign-in when Athas rejects the session", async () => {
     await click("401", "athas");

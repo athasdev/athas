@@ -44,28 +44,30 @@ function renderComposer(overrides: Partial<AIChatInputBarProps> = {}) {
 }
 
 describe("Agent composer", () => {
-  it.each(["initial", "default"] as const)(
-    "keeps one editable prompt and send action with no context in %s presentation",
-    (presentation) => {
-      const markup = renderComposer({ presentation });
+  it.each(["roomy", "default"] as const)(
+    "keeps one editable prompt and send action with no context at %s size",
+    (size) => {
+      const markup = renderComposer({ size });
       expect(markup.match(/role="textbox"/g)).toHaveLength(1);
       expect(markup).toContain('aria-label="Send message"');
       expect(markup).toContain('aria-label="AI preferences"');
-      expect(markup).toContain('aria-label="Start voice input"');
+      // Voice input stays out of the toolbar where this webview cannot provide it.
+      expect(markup).not.toContain('aria-label="Start voice input"');
       expect(markup).toContain('aria-label="Change model"');
     },
   );
 
-  it("keeps the send action inside the prompt surface", () => {
+  it("keeps the toolbar and send action inside the prompt surface, after the text", () => {
     const markup = renderComposer();
     const surfaceStart = markup.indexOf('data-ai-element="prompt-input"');
+    const textboxStart = markup.indexOf('role="textbox"');
     const toolbarStart = markup.indexOf('data-slot="composer-toolbar"');
     const sendStart = markup.indexOf('aria-label="Send message"');
 
     expect(surfaceStart).toBeGreaterThanOrEqual(0);
-    expect(toolbarStart).toBeGreaterThan(surfaceStart);
-    expect(sendStart).toBeGreaterThan(surfaceStart);
-    expect(sendStart).toBeLessThan(toolbarStart);
+    expect(textboxStart).toBeGreaterThan(surfaceStart);
+    expect(toolbarStart).toBeGreaterThan(textboxStart);
+    expect(sendStart).toBeGreaterThan(toolbarStart);
   });
 
   it("summarizes attached files without exposing a chip for every filename", () => {
@@ -79,21 +81,28 @@ describe("Agent composer", () => {
     );
   });
 
-  it("exposes queue, interrupt and stop while the agent is responding", () => {
+  it("turns send into stop while the agent is responding to an empty composer", () => {
     const markup = renderComposer({ isTyping: true, streamingMessageId: "response" });
-    expect(markup).toContain('aria-label="Send after current response"');
-    expect(markup).toContain('aria-label="Interrupt and send now"');
     expect(markup).toContain('aria-label="Stop generation"');
     expect(markup).not.toContain('aria-label="Send message"');
+    // Queue and interrupt appear once there is something to send.
+    expect(markup).not.toContain('aria-label="Send after current response"');
+    expect(markup).not.toContain('aria-label="Interrupt and send now"');
   });
 
-  it("keeps one toolbar row: context, mode, model, settings and voice", () => {
+  it("offers stop before the first streamed token arrives", () => {
+    const markup = renderComposer({ isTyping: true, streamingMessageId: null });
+    expect(markup).toContain('aria-label="Stop generation"');
+  });
+
+  it("keeps one toolbar row: context, mode, model and settings", () => {
     const markup = renderComposer({ currentAgentId: "custom" });
     const toolbar = markup.slice(markup.indexOf('data-slot="composer-toolbar"'));
     expect(toolbar).toContain('aria-label="Add context"');
     expect(toolbar).toContain('aria-label="Mode: Agent"');
     expect(toolbar).toContain('aria-label="Change model"');
-    expect(toolbar).toContain('aria-label="Context window: ');
+    // A new chat carries only the agent's instructions; a ring there reads as a spinner.
+    expect(toolbar).not.toContain('aria-label="Context window: ');
     expect(toolbar).not.toContain('aria-label="Show slash commands"');
     expect(toolbar).not.toContain('aria-label="Reasoning effort"');
     expect(toolbar).not.toContain("Follow the agent in the editor");

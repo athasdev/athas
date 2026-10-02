@@ -221,7 +221,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
     {
       id: "terminal-generate-name",
       label: "Terminal: Generate Name",
-      description: "Name the active terminal using your Intelligence connection",
+      description: "Name the active terminal using your AI connection",
       icon: <SparkleIcon />,
       category: "Terminal",
       action: () => {

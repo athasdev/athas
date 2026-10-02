@@ -49,6 +49,7 @@ import {
   getOrCreatePaneDropTarget,
   moveBufferToPaneDropTarget,
 } from "../utils/pane-drop-actions";
+import { PaneSurfaceLayer } from "./pane-surface-layer";
 import { type DropZone, SplitDropOverlay } from "./split-drop-overlay";
 
 const AgentTab = lazy(() =>
@@ -1231,7 +1232,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                 )
                 .map((b) => {
                   return (
-                    <div key={b.id} className="absolute inset-0">
+                    <PaneSurfaceLayer key={b.id} active>
                       <Suspense fallback={null}>
                         <TerminalTab
                           sessionId={b.sessionId}
@@ -1245,18 +1246,13 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                           isVisible={isWorkspaceSurfaceActive}
                         />
                       </Suspense>
-                    </div>
+                    </PaneSurfaceLayer>
                   );
                 })}
               {mountedEditorBuffers.map((buffer) => {
                 const isActive = buffer.id === activeBuffer?.id;
                 return (
-                  <div
-                    key={buffer.id}
-                    className="absolute inset-0"
-                    style={isActive ? undefined : { visibility: "hidden" }}
-                    inert={!isActive}
-                  >
+                  <PaneSurfaceLayer key={buffer.id} active={isActive}>
                     <Suspense fallback={null}>
                       <CodeEditor
                         paneId={pane.id}
@@ -1266,16 +1262,16 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                         outline={isActive}
                       />
                     </Suspense>
-                  </div>
+                  </PaneSurfaceLayer>
                 );
               })}
               {isWorkspaceSurfaceActive &&
                 activeBuffer &&
                 activeBuffer.type !== "terminal" &&
                 !isStandardEditorBuffer(activeBuffer) && (
-                  <Suspense key={activeBuffer.id} fallback={null}>
-                    {renderActiveBuffer(activeBuffer)}
-                  </Suspense>
+                  <PaneSurfaceLayer key={activeBuffer.id} active>
+                    <Suspense fallback={null}>{renderActiveBuffer(activeBuffer)}</Suspense>
+                  </PaneSurfaceLayer>
                 )}
             </>
           )}

@@ -71,6 +71,33 @@ async function fetchOllamaTags(baseUrl: string, apiKey?: string | null) {
 }
 
 /**
+ * The `capabilities` Ollama reports for a model through `/api/show`, such as `tools` or
+ * `vision`, or null when the server is unreachable or too old to report them.
+ */
+export async function fetchOllamaModelCapabilities(
+  baseUrl: string,
+  modelId: string,
+  apiKey?: string | null,
+): Promise<string[] | null> {
+  try {
+    const response = await withTimeout(
+      tauriFetch(`${normalizeOllamaBaseUrl(baseUrl)}/api/show`, {
+        method: "POST",
+        headers: buildAuthHeaders(apiKey),
+        body: JSON.stringify({ model: modelId }),
+      }),
+    );
+    if (!response.ok) return null;
+    const data = (await response.json()) as { capabilities?: unknown };
+    return Array.isArray(data.capabilities)
+      ? data.capabilities.filter((entry): entry is string => typeof entry === "string")
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Ping `/api/tags` and return whether the server responded OK. Optionally
  * sends an API key for Ollama Cloud. Returns false on any network or auth
  * error so callers can surface a simple "connected / not connected" state.

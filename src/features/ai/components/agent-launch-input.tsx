@@ -1,8 +1,6 @@
 import { useCallback } from "react";
 import AIChatInputBar from "@/features/ai/components/input/chat-input-bar";
 import { useComposerContextSelection } from "@/features/ai/hooks/use-composer-context-selection";
-import { openTerminalAgent } from "@/features/ai/lib/terminal-agent-terminal";
-import { isTerminalAgent } from "@/features/ai/lib/terminal-agents";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
@@ -39,18 +37,6 @@ export function AgentLaunchInput({
 
   const submit = useCallback(
     (prompt: string, images?: ImageContent[]) => {
-      if (isTerminalAgent(selectedAgentId)) {
-        if (images?.length) {
-          showToast({
-            message: "Terminal agents do not accept pasted images here. Choose a chat agent.",
-            type: "error",
-          });
-          return { accepted: false };
-        }
-        openTerminalAgent(selectedAgentId);
-        return { accepted: true };
-      }
-
       const nextPrompt = prompt.trim();
       if (!nextPrompt && !images?.length) return { accepted: false };
       const access = getAgentMessageAccess(selectedAgentId, useAIChatStore.getState().hasApiKey);
@@ -95,7 +81,7 @@ export function AgentLaunchInput({
       queuedMessages={[]}
       {...composerContext.inputProps}
       isActiveSurface
-      presentation="initial"
+      size="roomy"
       autoFocus={autoFocus}
       onAgentChange={setSelectedAgentId}
       onTerminalChatCreated={openAgentBuffer}

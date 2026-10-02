@@ -1,4 +1,5 @@
-import { ArrowCounterClockwiseIcon } from "@/ui/icons";
+import { cva, type VariantProps } from "class-variance-authority";
+import { ArrowCounterClockwiseIcon, CheckIcon, WarningIcon } from "@/ui/icons";
 import {
   useCallback,
   useId,
@@ -9,16 +10,14 @@ import {
   type ReactNode,
 } from "react";
 import { Button } from "@/ui/button";
-import { Card } from "@/ui/card";
+import { GroupedSection, type GroupedSectionProps } from "@/ui/grouped-section";
 import { cn } from "@/utils/cn";
 import { getSettingSearchTargetKey } from "../lib/settings-search";
 
-interface SectionProps {
+type SectionProps = Omit<GroupedSectionProps, "title"> & {
+  /** Also the search target: `search-index.ts` points at sections by this title. */
   title: string;
-  description?: string;
-  children: ReactNode;
-  className?: string;
-}
+};
 
 interface SettingsViewProps extends ComponentProps<"div"> {
   layout?: "stack" | "fill";
@@ -30,7 +29,7 @@ export function SettingsView({ layout = "stack", className, ...props }: Settings
       data-slot="settings-view"
       className={cn(
         "min-w-0",
-        layout === "stack" ? "space-y-6" : "flex h-full min-h-0 flex-col",
+        layout === "stack" ? "flex flex-col gap-6" : "flex h-full min-h-0 flex-col",
         className,
       )}
       {...props}
@@ -38,35 +37,94 @@ export function SettingsView({ layout = "stack", className, ...props }: Settings
   );
 }
 
-export default function Section({ title, description, children, className }: SectionProps) {
-  const sectionKey = getSettingSearchTargetKey(title);
-
+/**
+ * A titled group of settings: a small muted header, then its rows in one grouped card. Rows
+ * never draw their own borders; the card owns the edge and the hairlines between rows.
+ */
+export default function Section({ title, className, ...props }: SectionProps) {
   return (
-    <section
-      className={cn(
-        "scroll-mt-6 rounded-lg transition-[background-color,box-shadow] data-[settings-search-section-active=true]:bg-primary-soft data-[settings-search-section-active=true]:ring-1 data-[settings-search-section-active=true]:ring-focus",
-        className,
-      )}
+    <GroupedSection
+      title={title}
+      className={cn("scroll-mt-4", className)}
       data-settings-section={title}
-      data-settings-section-key={sectionKey}
-    >
-      <div className="mb-2 px-1">
-        <h2 className="font-medium text-foreground ui-text-base">{title}</h2>
-        {description ? (
-          <p className="mt-0.5 text-subtle-foreground ui-text-sm">{description}</p>
-        ) : null}
-      </div>
-      <Card className="gap-0 divide-y divide-border py-0">{children}</Card>
-    </section>
+      data-settings-section-key={getSettingSearchTargetKey(title)}
+      {...props}
+    />
   );
 }
 
+/** Free content inside a group, such as a progress bar or an alert, on the row grid. */
 export function SettingBlock({ className, ...props }: ComponentProps<"div">) {
-  return <div data-slot="setting-block" className={cn("px-4 py-3", className)} {...props} />;
+  return <div data-slot="setting-block" className={cn("px-3 py-2.5", className)} {...props} />;
 }
 
-interface SettingRowProps {
+const settingRowVariants = cva(
+  "flex min-h-10 w-full min-w-0 max-w-full items-center justify-between gap-4 py-2 pr-3 select-none transition-colors duration-fast focus:outline-none data-[settings-search-active=true]:bg-primary-soft max-[640px]:flex-col max-[640px]:items-stretch max-[640px]:gap-2 @max-[640px]/settings:flex-col @max-[640px]/settings:items-stretch @max-[640px]/settings:gap-2",
+  {
+    variants: {
+      /** `nested` indents a row that only applies when the row above it is on. */
+      level: {
+        root: "pl-3",
+        nested: "pl-8 before:left-8!",
+      },
+    },
+    defaultVariants: { level: "root" },
+  },
+);
+
+const settingControlVariants = cva(
+  "font-sans ui-text-sm min-w-0 max-w-full shrink-0 select-auto max-[640px]:w-full max-[640px]:shrink max-[640px]:[&>div]:flex-wrap max-[640px]:[&>input]:w-full max-[640px]:[&>textarea]:w-full @max-[640px]/settings:w-full @max-[640px]/settings:shrink @max-[640px]/settings:[&>div]:flex-wrap @max-[640px]/settings:[&>input]:w-full @max-[640px]/settings:[&>textarea]:w-full",
+  {
+    variants: {
+      /**
+       * - `auto` — the control's own width, such as a switch, select, or button
+       * - `field` — one shared width for text fields, so fields line up down a page
+       */
+      control: {
+        auto: "",
+        field: "flex w-64 items-center justify-end gap-2",
+      },
+    },
+    defaultVariants: { control: "auto" },
+  },
+);
+
+const settingStatusVariants = cva(
+  "inline-flex min-w-0 items-center gap-1.5 [&_svg]:size-[1em] [&_svg]:shrink-0",
+  {
+    variants: {
+      tone: {
+        success: "text-success",
+        warning: "text-warning",
+        danger: "text-destructive",
+        neutral: "text-subtle-foreground",
+      },
+    },
+    defaultVariants: { tone: "success" },
+  },
+);
+
+/** A short state line for a row, such as a configured key, with a matching mark. */
+export function SettingStatus({
+  tone,
+  children,
+}: VariantProps<typeof settingStatusVariants> & { children: ReactNode }) {
+  const Icon = tone === "danger" || tone === "warning" ? WarningIcon : CheckIcon;
+  return (
+    <span className={settingStatusVariants({ tone })}>
+      {tone === "neutral" ? null : <Icon />}
+      <span className="truncate">{children}</span>
+    </span>
+  );
+}
+
+interface SettingRowProps
+  extends VariantProps<typeof settingRowVariants>, VariantProps<typeof settingControlVariants> {
   label: string;
+  /** Replaces the visible label text. `label` still names the row for search and a11y. */
+  labelContent?: ReactNode;
+  /** A small mark before the label, such as a provider logo. */
+  icon?: ReactNode;
   labelAccessory?: ReactNode;
   description?: ReactNode;
   children: ReactNode;
@@ -79,6 +137,8 @@ interface SettingRowProps {
 
 export function SettingRow({
   label,
+  labelContent,
+  icon,
   labelAccessory,
   description,
   children,
@@ -87,6 +147,8 @@ export function SettingRow({
   canReset = !!onReset,
   resetLabel,
   activateOnClick = true,
+  level,
+  control,
 }: SettingRowProps) {
   const controlRef = useRef<HTMLDivElement>(null);
   const rowId = useId();
@@ -189,19 +251,19 @@ export function SettingRow({
       data-setting-row-key={getSettingSearchTargetKey(label)}
       data-setting-row-label={label}
       tabIndex={-1}
-      className={cn(
-        "flex w-full min-w-0 max-w-full items-center justify-between gap-3 px-4 py-3 select-none transition-[background-color,box-shadow] hover:bg-accent focus-within:bg-accent focus:outline-none data-[settings-search-active=true]:bg-primary-soft data-[settings-search-active=true]:ring-1 data-[settings-search-active=true]:ring-focus max-[640px]:flex-col max-[640px]:items-stretch max-[640px]:gap-2 @max-[640px]/settings:flex-col @max-[640px]/settings:items-stretch @max-[640px]/settings:gap-2",
-        className,
-      )}
+      className={cn(settingRowVariants({ level }), className)}
       onClick={activateOnClick ? handleRowClick : undefined}
     >
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
+          {icon ? (
+            <span className="flex shrink-0 items-center [&_svg]:size-[1em]">{icon}</span>
+          ) : null}
           <div
             id={labelId}
-            className="font-sans ui-text-sm font-medium min-w-0 cursor-default wrap-break-word text-foreground"
+            className="font-sans ui-text-sm min-w-0 cursor-default wrap-break-word text-foreground"
           >
-            {label}
+            {labelContent ?? label}
           </div>
           {labelAccessory}
           {onReset ? (
@@ -225,16 +287,13 @@ export function SettingRow({
         {description && (
           <div
             id={descriptionId}
-            className="font-sans ui-text-sm cursor-default leading-snug text-subtle-foreground"
+            className="font-sans ui-text-sm mt-0.5 cursor-default leading-snug text-subtle-foreground"
           >
             {description}
           </div>
         )}
       </div>
-      <div
-        ref={controlRef}
-        className="font-sans ui-text-sm min-w-0 max-w-full shrink-0 select-auto max-[640px]:w-full max-[640px]:shrink max-[640px]:[&>div]:flex-wrap max-[640px]:[&>input]:w-full max-[640px]:[&>textarea]:w-full @max-[640px]/settings:w-full @max-[640px]/settings:shrink @max-[640px]/settings:[&>div]:flex-wrap @max-[640px]/settings:[&>input]:w-full @max-[640px]/settings:[&>textarea]:w-full"
-      >
+      <div ref={controlRef} className={settingControlVariants({ control })}>
         {children}
       </div>
     </div>

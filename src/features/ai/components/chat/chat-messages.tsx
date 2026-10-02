@@ -86,8 +86,6 @@ const ChatTimelineMessage = memo(function ChatTimelineMessage({
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
   const isToolOnly = isToolOnlyMessage(message);
   const isPlanMessage = message.role === "assistant" && hasPlanBlock(message.content);
-  const hasMessageFooter =
-    message.role === "user" || (message.role === "assistant" && message.content.trim().length > 0);
   const matchesSearch =
     normalizedSearchQuery.length > 0 &&
     message.content.toLowerCase().includes(normalizedSearchQuery);
@@ -101,14 +99,19 @@ const ChatTimelineMessage = memo(function ChatTimelineMessage({
       scrollAnchor={message.role === "user"}
       data-ai-message-id={message.id}
       className={cn(
-        isToolOnly
-          ? isToolOnlyMessage(previousMessage)
-            ? "py-1"
-            : "pt-2 pb-1"
-          : hasMessageFooter
-            ? "pt-2 pb-6"
-            : "py-2",
-        isPlanMessage && "pt-2",
+        // A prompt opens a turn with room above it; the agent's reply sits close beneath it,
+        // and tool-only messages of one turn run together. Message footers sit inside the
+        // message's own box, so a deferred item's content-visibility never clips them.
+        message.role === "user"
+          ? previousMessage
+            ? "mt-3"
+            : undefined
+          : isToolOnly
+            ? isToolOnlyMessage(previousMessage)
+              ? "my-0.5"
+              : "my-1"
+            : "my-1",
+        isPlanMessage && "mt-2",
         matchesSearch && "transition-colors",
         matchesSearch &&
           (isActiveSearchMatch
