@@ -12,6 +12,7 @@
     "check:design": "bun scripts/check/design-system.ts",
     "services:check": "bun run check:services",
     "test:rust": "cargo test --workspace --no-fail-fast",
+    "test:rust:coverage": "bash scripts/check/rust-coverage.sh",
     "lint": "vp lint .",
     "fix": "vp check --fix",
     "format": "vp fmt --write .",
