@@ -2,6 +2,7 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
+import { selectAllActiveEditor } from "../../keymaps/commands/editor-command-actions";
 import { MarkdownPreview } from "../markdown/markdown-preview";
 
 const mocks = vi.hoisted(() => ({
@@ -75,7 +76,6 @@ describe("Markdown preview interactions", () => {
     await act(async () => preview.dispatchEvent(new MouseEvent("pointerup", { bubbles: true })));
     expect(selection.toString()).toBe("Item");
     expect(document.activeElement).not.toBe(preview);
-    const { selectAllActiveEditor } = await import("../../keymaps/commands/editor-command-actions");
     selectAllActiveEditor();
     expect(selection.rangeCount).toBe(1);
     expect(selection.toString()).toBe("Item");

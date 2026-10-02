@@ -1,7 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import type { EditorContent, PaneContent } from "@/features/panes/types/pane-content.types";
-import type { useBufferStore as useBufferStoreHook } from "@/features/editor/stores/buffer.store";
-import type { useKeymapStore as useKeymapStoreHook } from "../stores/keymaps.store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import {
+  closeAllTabs,
+  closeOtherTabs,
+  closeSavedTabs,
+  closeTabsToLeft,
+  closeTabsToRight,
+  showNewTab,
+} from "../commands/file-command-actions";
+import { useKeymapStore } from "../stores/keymaps.store";
 
 const createMockStorage = () => {
   const storage = new Map<string, string>();
@@ -60,16 +68,7 @@ function makeEditorTab(
 }
 
 describe("file command actions", () => {
-  let useBufferStore: typeof useBufferStoreHook;
-  let useKeymapStore: typeof useKeymapStoreHook;
-  let closeAllTabs: () => void;
-  let closeOtherTabs: () => void;
-  let closeSavedTabs: () => void;
-  let closeTabsToLeft: () => void;
-  let closeTabsToRight: () => void;
-  let showNewTab: () => void;
-
-  beforeEach(async () => {
+  beforeEach(() => {
     const testStorage = createMockStorage();
     vi.stubGlobal("localStorage", testStorage);
     vi.stubGlobal("window", {
@@ -85,27 +84,16 @@ describe("file command actions", () => {
       removeEventListener: vi.fn(),
       dispatchEvent: vi.fn(),
     });
-
-    ({ useBufferStore } = await import("@/features/editor/stores/buffer.store"));
-    ({ useKeymapStore } = await import("../stores/keymaps.store"));
-    ({
-      closeAllTabs,
-      closeOtherTabs,
-      closeSavedTabs,
-      closeTabsToLeft,
-      closeTabsToRight,
-      showNewTab,
-    } = await import("../commands/file-command-actions"));
   });
 
   afterEach(() => {
-    useBufferStore?.setState({
+    useBufferStore.setState({
       activeBufferId: null,
       buffers: [],
       pendingClose: null,
       closedBuffersHistory: [],
     });
-    useKeymapStore?.setState((state) => ({
+    useKeymapStore.setState((state) => ({
       contexts: { ...state.contexts, terminalFocus: false },
     }));
     vi.unstubAllGlobals();

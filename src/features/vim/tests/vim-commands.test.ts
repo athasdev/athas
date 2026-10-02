@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import type { EditorContent } from "@/features/panes/types/pane-content.types";
-import type { useBufferStore as useBufferStoreHook } from "../../editor/stores/buffer.store";
-import type { useEditorAppStore as useEditorAppStoreHook } from "../../editor/stores/editor-app.store";
+import { useBufferStore } from "../../editor/stores/buffer.store";
+import { useEditorAppStore } from "../../editor/stores/editor-app.store";
+import { parseAndExecuteVimCommand } from "../stores/vim-commands";
 
 const mocks = vi.hoisted(() => ({
   notifyDocumentSave: vi.fn(),
@@ -80,9 +81,6 @@ function makeEditorBuffer(
 }
 
 describe("vim ex commands", () => {
-  let useBufferStore: typeof useBufferStoreHook;
-  let useEditorAppStore: typeof useEditorAppStoreHook;
-  let parseAndExecuteVimCommand: (input: string) => Promise<boolean>;
   let dispatchedEvents: CustomEvent[];
 
   const activeBuffer = () =>
@@ -90,7 +88,7 @@ describe("vim ex commands", () => {
       .getState()
       .buffers.find((b) => b.id === useBufferStore.getState().activeBufferId);
 
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.stubGlobal("localStorage", createMockStorage());
     dispatchedEvents = [];
     vi.stubGlobal("window", {
@@ -113,10 +111,6 @@ describe("vim ex commands", () => {
     mocks.notifyDocumentSave.mockResolvedValue(undefined);
     mocks.saveDialog.mockResolvedValue(null);
 
-    ({ useBufferStore } = await import("../../editor/stores/buffer.store"));
-    ({ useEditorAppStore } = await import("../../editor/stores/editor-app.store"));
-    ({ parseAndExecuteVimCommand } = await import("../stores/vim-commands"));
-
     useBufferStore.setState({
       activeBufferId: "a",
       buffers: [makeEditorBuffer("a", "/workspace/a.ts", "changed", true)],
@@ -126,7 +120,7 @@ describe("vim ex commands", () => {
   });
 
   afterEach(() => {
-    useBufferStore?.setState({
+    useBufferStore.setState({
       activeBufferId: null,
       buffers: [],
       pendingClose: null,
