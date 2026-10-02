@@ -25,7 +25,10 @@ container (see below) or rely on the `E2E` GitHub workflow.
   Failed tests save a screenshot and the page source.
 - `support/app.ts` holds the selectors and UI helpers the specs share.
 - `fixtures/sample-project/` is copied to `target/e2e/workspace/` before each
-  spec file and opened by passing its path to the app on the command line.
+  spec file and opened by passing its path to the app on the command line. The
+  copy is turned into its own git repository with one commit, so the Git view
+  starts clean and the checkout's ignore rules never hide fixture files. `git`
+  must be on `PATH`.
 - Screenshots, page sources, app logs, and the driver log of failed runs land in
   `target/e2e/artifacts/`.
 
