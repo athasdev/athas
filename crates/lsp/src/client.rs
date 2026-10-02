@@ -111,6 +111,47 @@ fn configuration_value(settings: &Value, section: &str) -> Value {
       .unwrap_or(Value::Null)
 }
 
+/// Parses a `Content-Length` header line. Header names are case-insensitive,
+/// and whitespace around the name and value is ignored.
+fn parse_content_length_header(line: &str) -> Option<usize> {
+   let (name, value) = line.split_once(':')?;
+   if !name.trim().eq_ignore_ascii_case("content-length") {
+      return None;
+   }
+   value.trim().parse().ok()
+}
+
+/// Reads one base-protocol message body from the server. Returns `Ok(None)`
+/// when the stream ends between messages. Headers other than
+/// `Content-Length` are skipped, and header blocks without a usable length
+/// are dropped so the reader can resynchronize on the next message.
+fn read_frame(reader: &mut impl BufRead) -> std::io::Result<Option<Vec<u8>>> {
+   let mut line = String::new();
+   loop {
+      let mut content_length = None;
+      loop {
+         line.clear();
+         if reader.read_line(&mut line)? == 0 {
+            return Ok(None);
+         }
+         if line.trim().is_empty() {
+            break;
+         }
+         if let Some(length) = parse_content_length_header(&line) {
+            content_length = Some(length);
+         }
+      }
+
+      let Some(content_length) = content_length.filter(|length| *length > 0) else {
+         continue;
+      };
+
+      let mut content = vec![0u8; content_length];
+      reader.read_exact(&mut content)?;
+      return Ok(Some(content));
+   }
+}
+
 #[derive(Clone)]
 pub struct LspClient {
    id: String,
@@ -297,65 +338,27 @@ impl LspClient {
       thread::spawn(move || {
          let mut reader = BufReader::new(stdout);
          loop {
-            let mut headers: HashMap<String, String> = HashMap::new();
-            let mut line = String::new();
-
-            // Read headers
-            loop {
-               line.clear();
-               match reader.read_line(&mut line) {
-                  Ok(0) => {
-                     // EOF — server process has exited
-                     log::warn!("LSP server stdout closed (server crashed or exited)");
-                     mark_stopped(
-                        "LSP server stdout closed (server crashed or exited)".to_string(),
-                        &pending_requests_clone,
-                        &is_running_clone,
-                     );
-                     return;
-                  }
-                  Err(e) => {
-                     log::error!("Error reading LSP stdout: {}", e);
-                     mark_stopped(
-                        format!("Error reading LSP stdout: {e}"),
-                        &pending_requests_clone,
-                        &is_running_clone,
-                     );
-                     return;
-                  }
-                  Ok(_) => {}
+            let content = match read_frame(&mut reader) {
+               Ok(Some(content)) => content,
+               Ok(None) => {
+                  log::warn!("LSP server stdout closed (server crashed or exited)");
+                  mark_stopped(
+                     "LSP server stdout closed (server crashed or exited)".to_string(),
+                     &pending_requests_clone,
+                     &is_running_clone,
+                  );
+                  return;
                }
-
-               if line == "\r\n" || line == "\n" {
-                  break;
+               Err(e) => {
+                  log::error!("Error reading LSP stdout: {}", e);
+                  mark_stopped(
+                     format!("Error reading LSP stdout: {e}"),
+                     &pending_requests_clone,
+                     &is_running_clone,
+                  );
+                  return;
                }
-
-               if let Some((key, value)) = line.trim_end().split_once(": ") {
-                  headers.insert(key.to_string(), value.to_string());
-               }
-            }
-
-            // Get content length
-            let content_length = headers
-               .get("Content-Length")
-               .and_then(|s| s.parse::<usize>().ok())
-               .unwrap_or(0);
-
-            if content_length == 0 {
-               continue;
-            }
-
-            // Read content
-            let mut content = vec![0u8; content_length];
-            if reader.read_exact(&mut content).is_err() {
-               log::warn!("LSP server stdout read error (server may have crashed)");
-               mark_stopped(
-                  "LSP server stdout read error (server may have crashed)".to_string(),
-                  &pending_requests_clone,
-                  &is_running_clone,
-               );
-               return;
-            }
+            };
 
             if let Ok(content_str) = String::from_utf8(content)
                && let Ok(message) = serde_json::from_str::<Value>(&content_str)
@@ -1676,6 +1679,93 @@ mod tests {
          .unwrap();
 
       assert_eq!(response, params);
+   }
+
+   #[tokio::test]
+   async fn accepts_headers_in_any_case_order_and_spacing() {
+      let temp = tempfile::tempdir().unwrap();
+      let server = crate::test_support::start_fake_server(temp.path()).await;
+      let params = json!({ "text": "ünïcödé", "n": 7 });
+
+      let response = server
+         .client
+         .request_value("test/looseHeaders", params.clone())
+         .await
+         .unwrap();
+
+      assert_eq!(response, params);
+   }
+
+   fn read_frames(stream: &str) -> (Vec<Value>, std::io::Result<Option<Vec<u8>>>) {
+      let mut reader = std::io::Cursor::new(stream.as_bytes().to_vec());
+      let mut frames = Vec::new();
+      loop {
+         match read_frame(&mut reader) {
+            Ok(Some(body)) => frames.push(serde_json::from_slice(&body).unwrap()),
+            end => return (frames, end),
+         }
+      }
+   }
+
+   #[test]
+   fn parses_content_length_regardless_of_header_case_and_whitespace() {
+      for line in [
+         "Content-Length: 12\r\n",
+         "content-length: 12\r\n",
+         "CONTENT-LENGTH:12\r\n",
+         "  Content-length :   12  \r\n",
+         "Content-Length: 12\n",
+      ] {
+         assert_eq!(parse_content_length_header(line), Some(12), "{line:?}");
+      }
+
+      for line in [
+         "Content-Type: application/vscode-jsonrpc; charset=utf-8\r\n",
+         "Content-Length-Extra: 12\r\n",
+         "Content-Length: twelve\r\n",
+         "Content-Length 12\r\n",
+      ] {
+         assert_eq!(parse_content_length_header(line), None, "{line:?}");
+      }
+   }
+
+   #[test]
+   fn reads_consecutive_frames_with_mixed_headers() {
+      let first = r#"{"id":1}"#;
+      let second = r#"{"id":2}"#;
+      let stream = format!(
+         "content-length: {}\r\nX-Trace: a\r\n\r\n{first}Content-Type: \
+          application/vscode-jsonrpc\nCONTENT-LENGTH:{}\n\n{second}",
+         first.len(),
+         second.len()
+      );
+
+      let (frames, end) = read_frames(&stream);
+
+      assert_eq!(frames, vec![json!({ "id": 1 }), json!({ "id": 2 })]);
+      assert!(matches!(end, Ok(None)));
+   }
+
+   #[test]
+   fn skips_header_blocks_without_a_usable_length() {
+      let body = r#"{"ok":true}"#;
+      let stream = format!(
+         "\r\nX-Only: header\r\n\r\nContent-Length: 0\r\n\r\nContent-Length: {}\r\n\r\n{body}",
+         body.len()
+      );
+
+      let (frames, end) = read_frames(&stream);
+
+      assert_eq!(frames, vec![json!({ "ok": true })]);
+      assert!(matches!(end, Ok(None)));
+   }
+
+   #[test]
+   fn reports_a_truncated_body_as_an_error() {
+      let (frames, end) = read_frames("Content-Length: 50\r\n\r\n{\"id\":1}");
+
+      assert!(frames.is_empty());
+      assert_eq!(end.unwrap_err().kind(), std::io::ErrorKind::UnexpectedEof);
    }
 
    #[tokio::test]

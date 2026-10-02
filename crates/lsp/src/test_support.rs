@@ -113,6 +113,20 @@ fn write_fragmented(message: &Value) {
    }
 }
 
+/// Writes a message whose headers use unusual casing, ordering, and spacing.
+fn write_loose_headers(message: &Value) {
+   let body = message.to_string();
+   write_raw(
+      format!(
+         "X-Fake-Trace: 1\r\ncontent-length:  {} \
+          \r\nCONTENT-TYPE:application/vscode-jsonrpc\r\n\r\n{}",
+         body.len(),
+         body
+      )
+      .as_bytes(),
+   );
+}
+
 fn result(id: &Value, result: Value) -> Value {
    json!({ "jsonrpc": "2.0", "id": id, "result": result })
 }
@@ -148,6 +162,9 @@ fn run_fake_server() -> ! {
          (Some("test/echo"), Some(id)) => write_message(&result(&id, message["params"].clone())),
          (Some("test/fragmented"), Some(id)) => {
             write_fragmented(&result(&id, message["params"].clone()))
+         }
+         (Some("test/looseHeaders"), Some(id)) => {
+            write_loose_headers(&result(&id, message["params"].clone()))
          }
          (Some("test/error"), Some(id)) => write_message(&json!({
             "jsonrpc": "2.0",
