@@ -502,3 +502,39 @@ fn recognizes_image_paths_and_formats_commit_times() {
    assert_eq!(format_git_time(Some(1_700_000_000)), "2023-11-14 22:13:20");
    assert_eq!(format_git_time(None), "");
 }
+
+#[test]
+fn first_commit_in_a_new_repository_has_no_parent() {
+   let repo = TestRepo::new();
+   repo.write("a.txt", "a\n");
+   git_add(repo.path.clone(), "a.txt".to_string()).unwrap();
+
+   git_commit(repo.path.clone(), "First".to_string()).unwrap();
+
+   let head = repo.repo.head().unwrap().peel_to_commit().unwrap();
+   assert_eq!(head.parent_count(), 0);
+   assert_eq!(head.summary(), Some("First"));
+   assert!(repo.status().is_empty());
+}
+
+#[test]
+fn unstaging_works_before_the_first_commit() {
+   let repo = TestRepo::new();
+   repo.write("a.txt", "a\n");
+   repo.write("b.txt", "b\n");
+   git_add_all(repo.path.clone()).unwrap();
+
+   git_reset(repo.path.clone(), "a.txt".to_string()).unwrap();
+   assert_eq!(repo.index_blob("a.txt"), None);
+   assert_eq!(repo.index_blob("b.txt").as_deref(), Some("b\n"));
+
+   git_reset_all(repo.path.clone()).unwrap();
+   assert_eq!(repo.index_blob("b.txt"), None);
+   assert_eq!(
+      repo.status(),
+      vec![
+         entry("a.txt", FileStatus::Untracked, false),
+         entry("b.txt", FileStatus::Untracked, false),
+      ]
+   );
+}
