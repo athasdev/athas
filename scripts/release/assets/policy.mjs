@@ -1,62 +1,32 @@
 export function versionFromTag(tag) {
-  if (!/^v\d+\.\d+\.\d+(?:-preview\.\d+)?$/.test(tag)) {
+  if (!/^v\d+\.\d+\.\d+$/.test(tag)) {
     throw new Error(`Invalid release tag: ${tag}`);
   }
   return tag.slice(1);
-}
-
-export function channelFromTag(tag) {
-  return tag.includes("-preview.") ? "preview" : "stable";
 }
 
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function displayAppPrefix(channel) {
-  return channel === "preview" ? "Athas Preview" : "Athas";
-}
-
-function releaseAssetPrefix(channel) {
-  return channel === "preview" ? "Athas.Preview" : "Athas";
-}
-
-function normalizeReleaseAssetName(name, channel) {
-  if (channel !== "preview") {
+export function normalizedArtifactName(file, name) {
+  if (name !== "Athas.app.tar.gz" && name !== "Athas.app.tar.gz.sig") {
     return name;
   }
 
-  return name.startsWith("Athas Preview")
-    ? name.replace("Athas Preview", releaseAssetPrefix(channel))
-    : name;
-}
-
-export function normalizedArtifactName(file, name, channel) {
-  const releasePrefix = releaseAssetPrefix(channel);
-  const macUpdaterNames = [
-    `${displayAppPrefix(channel)}.app.tar.gz`,
-    `${releasePrefix}.app.tar.gz`,
-  ];
-
-  for (const macUpdaterName of macUpdaterNames) {
-    if (name !== macUpdaterName && name !== `${macUpdaterName}.sig`) {
-      continue;
-    }
-
-    if (file.includes("/aarch64-apple-darwin/")) {
-      return name.replace(macUpdaterName, `${releasePrefix}_aarch64.app.tar.gz`);
-    }
-    if (file.includes("/x86_64-apple-darwin/")) {
-      return name.replace(macUpdaterName, `${releasePrefix}_x64.app.tar.gz`);
-    }
+  if (file.includes("/aarch64-apple-darwin/")) {
+    return name.replace("Athas.app.tar.gz", "Athas_aarch64.app.tar.gz");
+  }
+  if (file.includes("/x86_64-apple-darwin/")) {
+    return name.replace("Athas.app.tar.gz", "Athas_x64.app.tar.gz");
   }
 
-  return normalizeReleaseAssetName(name, channel);
+  return name;
 }
 
-export function requiredAssets(version, channel) {
+export function requiredAssets(version) {
   const escapedVersion = escapeRegExp(version);
-  const appPrefix = escapeRegExp(releaseAssetPrefix(channel));
+  const appPrefix = "Athas";
   return [
     {
       id: "macos-arm64-dmg",
@@ -145,7 +115,7 @@ export function requiredAssets(version, channel) {
 
 export function forbiddenAssetPatterns(version) {
   const escapedVersion = escapeRegExp(version);
-  const appPrefix = "Athas(?:[ .]Preview)?";
+  const appPrefix = "Athas";
   return [
     new RegExp(`^${appPrefix}_${escapedVersion}_(?:amd64|aarch64)\\.AppImage(?:\\.sig)?$`),
     new RegExp(`^${appPrefix}_${escapedVersion}_(?:x64|arm64)-setup-machine\\.exe(?:\\.sig)?$`),

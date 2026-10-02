@@ -1,11 +1,6 @@
 #!/usr/bin/env bun
 import { $ } from "bun";
-import {
-  getWindowsMsiVersion,
-  parsePrerelease,
-  parseStableVersion,
-  parseVersion,
-} from "../version";
+import { getWindowsMsiVersion, parseVersion } from "../version";
 
 const colors = {
   reset: "\x1b[0m",
@@ -128,24 +123,10 @@ async function main() {
   header("Version Info");
   log(`  Current version: v${currentVersion}`, "blue");
 
-  const stableVersion = parseStableVersion(currentVersion);
-  if (!stableVersion) {
-    throw new Error(`Invalid version in package.json: ${currentVersion}`);
-  }
-
-  const prerelease = parsePrerelease(currentVersion);
-  const { major, minor, patch } = stableVersion;
-  if (prerelease) {
-    log(`  Stable patch:    v${major}.${minor}.${patch}`, "dim");
-    log(`  Preview patch:   v${major}.${minor}.${patch}-preview.${prerelease.number + 1}`, "dim");
-  } else {
-    log(`  Stable patch:    v${major}.${minor}.${patch + 1}`, "dim");
-    log(`  Stable minor:    v${major}.${minor + 1}.0`, "dim");
-    log(`  Stable major:    v${major + 1}.0.0`, "dim");
-    log(`  Preview patch:   v${major}.${minor}.${patch + 1}-preview.1`, "dim");
-    log(`  Preview minor:   v${major}.${minor + 1}.0-preview.1`, "dim");
-    log(`  Preview major:   v${major + 1}.0.0-preview.1`, "dim");
-  }
+  const { major, minor, patch } = parseVersion(currentVersion);
+  log(`  Next patch:      v${major}.${minor}.${patch + 1}`, "dim");
+  log(`  Next minor:      v${major}.${minor + 1}.0`, "dim");
+  log(`  Next major:      v${major + 1}.0.0`, "dim");
 
   header("Git Checks");
 
@@ -550,12 +531,9 @@ async function main() {
       log(`\n  All ${passed} checks passed!\n`, "green");
     }
     log("  Ready to release. Run one of:", "cyan");
-    log("    bun release:patch           # Stable patch draft", "dim");
-    log("    bun release:minor           # Stable minor draft", "dim");
-    log("    bun release:major           # Stable major draft", "dim");
-    log("    bun release:preview         # Preview patch draft", "dim");
-    log("    bun release:preview:minor   # Preview minor draft", "dim");
-    log("    bun release:preview:major   # Preview major draft\n", "dim");
+    log("    bun release:patch   # Patch draft", "dim");
+    log("    bun release:minor   # Minor draft", "dim");
+    log("    bun release:major   # Major draft\n", "dim");
     process.exit(0);
   } else {
     log(`\n  ${passed} passed, ${warned} warnings, ${failed} failed\n`, "red");

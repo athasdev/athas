@@ -204,70 +204,6 @@ fn common_system_binary_dirs() -> Vec<PathBuf> {
    dirs
 }
 
-#[cfg(test)]
-mod tests {
-   use super::*;
-
-   #[test]
-   fn finds_binary_in_candidate_dirs() {
-      let temp = tempfile::tempdir().expect("tempdir");
-      let bin_dir = temp.path().join("bin");
-      std::fs::create_dir_all(&bin_dir).expect("bin dir");
-      let binary_path = bin_dir.join(platform_binary_name("go"));
-      std::fs::write(&binary_path, "").expect("binary");
-
-      assert_eq!(find_binary_in_dirs("go", [bin_dir]), Some(binary_path));
-   }
-
-   #[test]
-   fn misses_binary_outside_candidate_dirs() {
-      let temp = tempfile::tempdir().expect("tempdir");
-
-      assert_eq!(
-         find_binary_in_dirs("go", [temp.path().join("missing")]),
-         None
-      );
-   }
-
-   #[test]
-   #[cfg(target_os = "macos")]
-   fn common_system_dirs_include_homebrew_locations() {
-      let dirs = common_system_binary_dirs();
-
-      assert!(dirs.iter().any(|dir| dir == Path::new("/opt/homebrew/bin")));
-      assert!(dirs.iter().any(|dir| dir == Path::new("/usr/local/bin")));
-   }
-
-   #[test]
-   #[cfg(target_os = "macos")]
-   fn detects_go_from_common_system_dirs_when_path_and_goroot_miss() {
-      let temp = tempfile::tempdir().expect("tempdir");
-      let bin_dir = temp.path().join("bin");
-      std::fs::create_dir_all(&bin_dir).expect("bin dir");
-      let go_path = bin_dir.join(platform_binary_name("go"));
-      std::fs::write(&go_path, "").expect("go binary");
-
-      let detected =
-         RuntimeManager::detect_go_from_sources(None, None, vec![bin_dir]).expect("go fallback");
-
-      assert_eq!(detected, go_path);
-   }
-
-   #[test]
-   #[cfg(target_os = "macos")]
-   fn common_system_dirs_find_homebrew_go_when_available() {
-      let homebrew_go = Path::new("/opt/homebrew/bin/go");
-      if !homebrew_go.exists() {
-         return;
-      }
-
-      assert_eq!(
-         find_binary_in_dirs("go", common_system_binary_dirs()).as_deref(),
-         Some(homebrew_go)
-      );
-   }
-}
-
 /// Status of a runtime installation
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -338,5 +274,69 @@ impl From<std::io::Error> for RuntimeError {
 impl From<RuntimeError> for String {
    fn from(err: RuntimeError) -> Self {
       err.to_string()
+   }
+}
+
+#[cfg(test)]
+mod tests {
+   use super::*;
+
+   #[test]
+   fn finds_binary_in_candidate_dirs() {
+      let temp = tempfile::tempdir().expect("tempdir");
+      let bin_dir = temp.path().join("bin");
+      std::fs::create_dir_all(&bin_dir).expect("bin dir");
+      let binary_path = bin_dir.join(platform_binary_name("go"));
+      std::fs::write(&binary_path, "").expect("binary");
+
+      assert_eq!(find_binary_in_dirs("go", [bin_dir]), Some(binary_path));
+   }
+
+   #[test]
+   fn misses_binary_outside_candidate_dirs() {
+      let temp = tempfile::tempdir().expect("tempdir");
+
+      assert_eq!(
+         find_binary_in_dirs("go", [temp.path().join("missing")]),
+         None
+      );
+   }
+
+   #[test]
+   #[cfg(target_os = "macos")]
+   fn common_system_dirs_include_homebrew_locations() {
+      let dirs = common_system_binary_dirs();
+
+      assert!(dirs.iter().any(|dir| dir == Path::new("/opt/homebrew/bin")));
+      assert!(dirs.iter().any(|dir| dir == Path::new("/usr/local/bin")));
+   }
+
+   #[test]
+   #[cfg(target_os = "macos")]
+   fn detects_go_from_common_system_dirs_when_path_and_goroot_miss() {
+      let temp = tempfile::tempdir().expect("tempdir");
+      let bin_dir = temp.path().join("bin");
+      std::fs::create_dir_all(&bin_dir).expect("bin dir");
+      let go_path = bin_dir.join(platform_binary_name("go"));
+      std::fs::write(&go_path, "").expect("go binary");
+
+      let detected =
+         RuntimeManager::detect_go_from_sources(None, None, vec![bin_dir]).expect("go fallback");
+
+      assert_eq!(detected, go_path);
+   }
+
+   #[test]
+   #[cfg(target_os = "macos")]
+   fn common_system_dirs_find_homebrew_go_when_available() {
+      let homebrew_go = Path::new("/opt/homebrew/bin/go");
+      if !homebrew_go.exists() {
+         return;
+      }
+
+      assert_eq!(
+         find_binary_in_dirs("go", common_system_binary_dirs()).as_deref(),
+         Some(homebrew_go)
+      );
    }
 }

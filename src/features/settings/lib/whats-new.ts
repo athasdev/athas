@@ -109,10 +109,6 @@ function releaseTag(version: string): string {
   return `v${version}`;
 }
 
-function updateChannel(version: string): "stable" | "preview" {
-  return version.includes("-preview.") ? "preview" : "stable";
-}
-
 function readText(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value : undefined;
 }
@@ -138,12 +134,7 @@ async function readJson(response: Response): Promise<unknown> {
 }
 
 async function fetchManifestInfo(info: WhatsNewInfo, fetchImpl: FetchLike): Promise<WhatsNewInfo> {
-  const services = getServiceUrls();
-  const updateUrl =
-    updateChannel(info.version) === "preview"
-      ? services.previewUpdateUrl
-      : services.stableUpdateUrl;
-  const response = await fetchImpl(updateUrl, {
+  const response = await fetchImpl(getServiceUrls().stableUpdateUrl, {
     cache: "no-store",
   });
   const manifest = (await readJson(response)) as UpdateManifestResponse | null;

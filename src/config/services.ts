@@ -32,8 +32,5 @@ export function getServiceUrls() {
     stableUpdateUrl: updateBaseUrl
       ? `${trimTrailingSlash(updateBaseUrl)}/api/update/stable`
       : SERVICE_DEFAULTS.stableUpdateUrl,
-    previewUpdateUrl: updateBaseUrl
-      ? `${trimTrailingSlash(updateBaseUrl)}/api/update/preview`
-      : SERVICE_DEFAULTS.previewUpdateUrl,
   };
 }

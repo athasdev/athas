@@ -92,36 +92,6 @@ pub async fn read_local_file(path: String) -> Result<tauri::ipc::Response, Strin
    Ok(tauri::ipc::Response::new(bytes))
 }
 
-#[cfg(test)]
-mod directory_size_tests {
-   use super::calculate_directory_size;
-   use std::fs;
-   use tempfile::tempdir;
-
-   #[test]
-   fn calculates_nested_file_sizes() {
-      let directory = tempdir().expect("temp directory");
-      let nested = directory.path().join("nested");
-      fs::create_dir(&nested).expect("nested directory");
-      fs::write(directory.path().join("first.txt"), b"athas").expect("first file");
-      fs::write(nested.join("second.txt"), b"editor").expect("second file");
-
-      assert_eq!(calculate_directory_size(directory.path()), Ok(11));
-   }
-
-   #[test]
-   fn rejects_files() {
-      let directory = tempdir().expect("temp directory");
-      let file = directory.path().join("file.txt");
-      fs::write(&file, b"athas").expect("file");
-
-      assert_eq!(
-         calculate_directory_size(&file),
-         Err("Path is not a directory".to_string())
-      );
-   }
-}
-
 #[command]
 pub fn open_file_external(path: String) -> Result<(), String> {
    // Canonicalize and confine to $HOME so the platform opener cannot be
@@ -459,5 +429,35 @@ mod copy_dir_tests {
       );
 
       fs::remove_dir_all(root).unwrap();
+   }
+}
+
+#[cfg(test)]
+mod directory_size_tests {
+   use super::calculate_directory_size;
+   use std::fs;
+   use tempfile::tempdir;
+
+   #[test]
+   fn calculates_nested_file_sizes() {
+      let directory = tempdir().expect("temp directory");
+      let nested = directory.path().join("nested");
+      fs::create_dir(&nested).expect("nested directory");
+      fs::write(directory.path().join("first.txt"), b"athas").expect("first file");
+      fs::write(nested.join("second.txt"), b"editor").expect("second file");
+
+      assert_eq!(calculate_directory_size(directory.path()), Ok(11));
+   }
+
+   #[test]
+   fn rejects_files() {
+      let directory = tempdir().expect("temp directory");
+      let file = directory.path().join("file.txt");
+      fs::write(&file, b"athas").expect("file");
+
+      assert_eq!(
+         calculate_directory_size(&file),
+         Err("Path is not a directory".to_string())
+      );
    }
 }
