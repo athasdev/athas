@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vite-plus/test";
+import { describe, expect, it, vi } from "vite-plus/test";
 import {
   createKeybindingsExportPayload,
   getExportableUserKeybindings,
@@ -9,6 +9,8 @@ import {
   getEffectiveKeybindingForCommand,
   getEffectiveKeybindings,
 } from "../utils/effective-keymaps";
+
+vi.mock("@/utils/platform", () => import("./macos-platform-mock"));
 
 describe("keybinding import/export", () => {
   it("exports persisted user overrides even when legacy records are missing source", () => {

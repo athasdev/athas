@@ -71,14 +71,12 @@ fn _git_reset(repo_path: String, file_path: String) -> Result<()> {
 
    let repo = Repository::open(&repo_path).context("Failed to open repository")?;
 
-   let head = repo.head().context("Failed to get HEAD")?;
-   let head_commit = head.peel_to_commit().context("Failed to get HEAD commit")?;
-   let head_tree = head_commit.tree().context("Failed to get HEAD tree")?;
+   let head_tree = head_tree(&repo)?;
    let mut index = repo.index().context("Failed to get index")?;
 
    let path = Path::new(&file_path);
-   match head_tree.get_path(path) {
-      Ok(entry) => {
+   match head_tree.as_ref().map(|tree| tree.get_path(path)) {
+      Some(Ok(entry)) => {
          let object = entry.to_object(&repo).context("Failed to get object")?;
          let blob = object.as_blob().context("Object is not a blob")?;
 
@@ -99,7 +97,7 @@ fn _git_reset(repo_path: String, file_path: String) -> Result<()> {
 
          index.add(&index_entry).context("Failed to update index")?;
       }
-      Err(_) => {
+      Some(Err(_)) | None => {
          index
             .remove_path(path)
             .context("Failed to remove from index")?;
@@ -108,6 +106,18 @@ fn _git_reset(repo_path: String, file_path: String) -> Result<()> {
 
    index.write().context("Failed to write index")?;
    Ok(())
+}
+
+/// The tree of the HEAD commit, or `None` when HEAD is still unborn because
+/// nothing has been committed yet.
+fn head_tree(repo: &Repository) -> Result<Option<git2::Tree<'_>>> {
+   match repo.head() {
+      Ok(head) => Ok(Some(
+         head.peel_to_tree().context("Failed to get HEAD tree")?,
+      )),
+      Err(error) if error.code() == ErrorCode::UnbornBranch => Ok(None),
+      Err(error) => Err(error).context("Failed to get HEAD"),
+   }
 }
 
 pub fn git_add_all(repo_path: String) -> Result<(), String> {
@@ -145,14 +155,14 @@ fn _git_reset_all(repo_path: String) -> Result<()> {
 
    let repo = Repository::open(&repo_path).context("Failed to open repository")?;
 
-   let head = repo.head().context("Failed to get HEAD")?;
-   let head_commit = head.peel_to_commit().context("Failed to get HEAD commit")?;
-   let head_tree = head_commit.tree().context("Failed to get HEAD tree")?;
    let mut index = repo.index().context("Failed to get index")?;
 
-   index
-      .read_tree(&head_tree)
-      .context("Failed to reset index to HEAD")?;
+   match head_tree(&repo)? {
+      Some(tree) => index
+         .read_tree(&tree)
+         .context("Failed to reset index to HEAD")?,
+      None => index.clear().context("Failed to clear index")?,
+   }
    index.write().context("Failed to write index")?;
 
    Ok(())

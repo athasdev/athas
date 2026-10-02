@@ -39,6 +39,14 @@ fn clean_stash_subject(subject: &str) -> String {
    without_context.trim().to_string()
 }
 
+/// Splits a `%gd|%s|%aI` stash line. The ref name and ISO date never contain
+/// `|`, but the subject can, so it is everything between the first and last
+/// separator.
+fn split_stash_line(line: &str) -> Option<(&str, &str)> {
+   let (_, rest) = line.split_once('|')?;
+   rest.rsplit_once('|')
+}
+
 fn _git_get_stashes(repo_path: String) -> Result<Vec<GitStash>> {
    let host = RepositoryHost::detect(&repo_path);
 
@@ -56,12 +64,11 @@ fn _git_get_stashes(repo_path: String) -> Result<Vec<GitStash>> {
    if output.status.success() {
       let stash_text = String::from_utf8_lossy(&output.stdout);
       for (index, line) in stash_text.lines().enumerate() {
-         let parts: Vec<&str> = line.split('|').collect();
-         if parts.len() >= 3 {
+         if let Some((subject, date)) = split_stash_line(line) {
             stashes.push(GitStash {
                index,
-               message: clean_stash_subject(parts[1]),
-               date: parts[2].to_string(),
+               message: clean_stash_subject(subject),
+               date: date.to_string(),
             });
          }
       }
@@ -269,4 +276,42 @@ fn _git_stash_diff(repo_path: String, stash_index: usize) -> Result<Vec<GitDiff>
    }
 
    Ok(results)
+}
+
+#[cfg(test)]
+mod tests {
+   use super::*;
+
+   #[test]
+   fn keeps_separators_inside_stash_subjects() {
+      assert_eq!(
+         split_stash_line("stash@{0}|On main: fix a|b|2026-01-01T10:00:00+00:00"),
+         Some(("On main: fix a|b", "2026-01-01T10:00:00+00:00"))
+      );
+      assert_eq!(
+         split_stash_line("stash@{1}|On main: plain|2026-01-01T10:00:00+00:00"),
+         Some(("On main: plain", "2026-01-01T10:00:00+00:00"))
+      );
+      assert_eq!(split_stash_line("stash@{2}|no date"), None);
+      assert_eq!(split_stash_line("garbage"), None);
+   }
+
+   #[test]
+   fn strips_stash_context_prefixes_and_commit_ids() {
+      assert_eq!(clean_stash_subject("On main: Save work"), "Save work");
+      assert_eq!(
+         clean_stash_subject("WIP on feature/x: 1a2b3c4 Last commit subject"),
+         "Last commit subject"
+      );
+      assert_eq!(
+         clean_stash_subject("index on main: abcdef0123 Message"),
+         "Message"
+      );
+      assert_eq!(
+         clean_stash_subject("Custom: message without context"),
+         "Custom: message without context"
+      );
+      assert_eq!(clean_stash_subject("  deadbeef  "), "deadbeef");
+      assert_eq!(clean_stash_subject("cafe Short word"), "cafe Short word");
+   }
 }

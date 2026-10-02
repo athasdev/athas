@@ -3,11 +3,46 @@ export interface ParsedCsv {
   rows: (string | number | boolean | null)[][];
 }
 
-export function parseCsv(
-  text: string,
-  delimiter: "," | "\t" | ";" | "|" = ",",
-  hasHeader = true,
-): ParsedCsv {
+export type CsvDelimiter = "," | "\t" | ";" | "|";
+
+const CSV_DELIMITERS: CsvDelimiter[] = [",", "\t", ";", "|"];
+
+/**
+ * Pick the delimiter that splits the first lines into the most, and most consistent, columns.
+ */
+export function detectCsvDelimiter(text: string): CsvDelimiter {
+  const lines = text.split("\n").slice(0, 50);
+  const scores = CSV_DELIMITERS.map((delimiter) => {
+    const counts = lines.map((line) => line.split(delimiter).length - 1);
+    const mean = counts.reduce((a, b) => a + b, 0) / Math.max(1, counts.length);
+    const variance = counts.reduce((a, b) => a + (b - mean) ** 2, 0) / Math.max(1, counts.length);
+    return { delimiter, mean, variance };
+  });
+  scores.sort((a, b) => b.mean - a.mean || a.variance - b.variance);
+  return scores[0]?.delimiter ?? ",";
+}
+
+function formatCsvField(value: string | number | boolean | null, delimiter: CsvDelimiter) {
+  const text = String(value ?? "");
+  const needsQuotes =
+    text.includes(delimiter) || text.includes('"') || text.includes("\n") || text.includes("\r");
+  return needsQuotes ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+/**
+ * Serialize a parsed table back to delimited text, quoting fields that need it.
+ */
+export function formatCsv(
+  headers: string[] | null,
+  rows: ParsedCsv["rows"],
+  delimiter: CsvDelimiter,
+): string {
+  return [...(headers ? [headers] : []), ...rows]
+    .map((row) => row.map((value) => formatCsvField(value, delimiter)).join(delimiter))
+    .join("\n");
+}
+
+export function parseCsv(text: string, delimiter: CsvDelimiter = ",", hasHeader = true): ParsedCsv {
   const rows: string[][] = [];
   let field = "";
   let row: string[] = [];

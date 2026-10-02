@@ -35,7 +35,13 @@ pub fn validate_extension_id(extension_id: &str) -> Result<()> {
    if extension_id.is_empty() || extension_id.len() > 128 {
       anyhow::bail!("Invalid integration id length");
    }
-   if extension_id.contains("..") || extension_id.contains('/') || extension_id.contains('\\') {
+   // A leading dot would let "." resolve to the extensions directory itself
+   // or collide with the hidden .installing-/.previous- staging folders.
+   if extension_id.starts_with('.')
+      || extension_id.contains("..")
+      || extension_id.contains('/')
+      || extension_id.contains('\\')
+   {
       anyhow::bail!("Invalid integration id path characters");
    }
    if !extension_id
@@ -557,5 +563,20 @@ mod tests {
       assert!(validate_extension_id("evil$id").is_err());
       assert!(validate_extension_id("").is_err());
       assert!(validate_extension_id(&"a".repeat(129)).is_err());
+      assert!(validate_extension_id("caf\u{e9}").is_err());
+      assert!(validate_extension_id("with space").is_err());
+   }
+
+   #[test]
+   fn validate_extension_id_accepts_the_maximum_length() {
+      assert!(validate_extension_id(&"a".repeat(128)).is_ok());
+   }
+
+   #[test]
+   fn validate_extension_id_rejects_ids_that_resolve_to_hidden_or_parent_dirs() {
+      for id in [".", ".installing-theme", ".previous-theme", "a..b", ".."] {
+         assert!(validate_extension_id(id).is_err(), "{id}");
+      }
+      assert!(validate_extension_id("theme.v2").is_ok());
    }
 }
