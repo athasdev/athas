@@ -40,16 +40,17 @@ export const CollaborationSettings = () => {
     <SettingsView>
       <Section
         title={workspace?.name ?? "Collaboration"}
-        description="Teams workspace status. Manage members, channels, invites, and policies in the web dashboard."
-      >
-        <SettingRow label="Dashboard" description="Open the full collaboration workspace">
-          <Button type="button" variant="default" onClick={openDashboardCollaboration}>
+        actions={
+          <Button type="button" variant="ghost" onClick={openDashboardCollaboration}>
             <UsersIcon />
-            Open
+            Dashboard
           </Button>
-        </SettingRow>
-
-        <SettingRow label="Members" description={`${invitations.length} pending invitations`}>
+        }
+      >
+        <SettingRow
+          label="Members"
+          description={invitations.length > 0 ? `${invitations.length} pending` : undefined}
+        >
           <Badge>
             {activeMembers.length}/{members.length} active
           </Badge>
@@ -57,14 +58,14 @@ export const CollaborationSettings = () => {
 
         <SettingRow
           label="Channels"
-          description={selectedChannel ? `Joined #${selectedChannel.slug}` : "No channel selected"}
+          description={selectedChannel ? `Joined #${selectedChannel.slug}` : undefined}
         >
           <Badge>{channels.length} channels</Badge>
         </SettingRow>
 
         <SettingRow
           label="Presence"
-          description={followedMember ? `Following ${followedMember.name}` : "Not following anyone"}
+          description={followedMember ? `Following ${followedMember.name}` : undefined}
         >
           <div className="flex items-center gap-2">
             <Badge>{collaboration?.presence.length ?? 0} sessions</Badge>
@@ -87,7 +88,7 @@ export const CollaborationSettings = () => {
           description={
             activeDocumentStream.path
               ? `${activeDocumentStream.path} · v${activeDocumentStream.lastServerVersion}`
-              : "No active document stream"
+              : undefined
           }
         >
           <Badge tone={activeDocumentStream.status === "error" ? "danger" : "neutral"}>

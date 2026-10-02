@@ -1,4 +1,11 @@
-import { streamText, tool, isStepCount, type LanguageModelUsage, type ModelMessage } from "ai";
+import {
+  streamText,
+  tool,
+  isStepCount,
+  type LanguageModelUsage,
+  type ModelMessage,
+  type ToolSet,
+} from "ai";
 import { z } from "zod";
 import { invoke } from "@tauri-apps/api/core";
 import type { AIMessage } from "@/features/ai/types/messages.types";
@@ -30,7 +37,13 @@ import {
 import { getCommandAllowPrefix } from "../lib/intelligence-command-policy";
 import { getExtraTools, type ExtraTools, type McpToolCallRequest } from "./intelligence-mcp";
 import { allowMcpTool, isMcpToolAllowed } from "./intelligence-mcp-allowlist";
-import { toIntelligenceAgentError } from "../lib/intelligence-agent-error";
+import { IntelligenceAgentError, toIntelligenceAgentError } from "../lib/intelligence-agent-error";
+import {
+  getOllamaNoToolsMessage,
+  getOllamaReadOnlyNoToolsNotice,
+  isOllamaNoToolsError,
+} from "@/features/ai/lib/ollama-tool-support";
+import { resolveOllamaToolSupport } from "./intelligence-ollama-tools";
 import { normalizeIntelligenceAgentSteps } from "../lib/intelligence-agent-steps";
 import {
   fitStepMessages,
@@ -117,23 +130,6 @@ function hasUnsavedBuffer(path: string) {
   );
 }
 
-/**
- * Strips images the provider cannot take. Athas's hosted API accepts text parts only, so an image
- * would fail this turn and every later one that carries it in the history.
- */
-function withoutUnsupportedImages(providerId: string, messages: AIMessage[]) {
-  if (providerId !== "athas") return { messages, dropped: false };
-  const last = [...messages].reverse().find((message) => message.role === "user");
-  return {
-    messages: messages.map((message): AIMessage =>
-      message.role === "user" && message.images?.length
-        ? { role: "user", content: message.content }
-        : message,
-    ),
-    dropped: Boolean(last?.role === "user" && last.images?.length),
-  };
-}
-
 export async function runIntelligenceAgent(params: {
   sessionId: string;
   providerId: string;
@@ -144,6 +140,11 @@ export async function runIntelligenceAgent(params: {
   /** Model requests this turn may make; defaults to `DEFAULT_INTELLIGENCE_AGENT_STEPS`. */
   maxSteps?: number;
   maxOutputTokens?: number;
+  /**
+   * Notes about how the request was prepared, such as images left out for a text-only model;
+   * shown before the answer and returned with the result.
+   */
+  notices?: string[];
   onChunk: (text: string) => void;
   onToolUse?: (event: Extract<AcpEvent, { type: "tool_start" }>) => void;
   onToolComplete?: (name: string, id?: string, output?: unknown, error?: string) => void;
@@ -621,22 +622,35 @@ export async function runIntelligenceAgent(params: {
             : {}),
         }
       : {};
-    const tools = { ...extraTools.tools, ...builtInTools };
-    const prepared = withoutUnsupportedImages(params.providerId, params.messages);
-    if (prepared.dropped) {
-      const notice = "Images were not sent: Athas hosted models accept text only.";
+    let tools: ToolSet = { ...extraTools.tools, ...builtInTools };
+    // Ollama rejects tools for models that cannot call them. Say so up front in Agent mode rather
+    // than letting the model claim edits it never made; Ask and Plan answer without the workspace.
+    if (params.providerId === "ollama" && Object.keys(tools).length > 0) {
+      const support = await resolveOllamaToolSupport(params.modelId);
+      signal.throwIfAborted();
+      if (support === "unsupported") {
+        if (!params.readOnly)
+          throw new IntelligenceAgentError(getOllamaNoToolsMessage(params.modelId));
+        const notice = getOllamaReadOnlyNoToolsNotice(params.modelId);
+        notices.push(notice);
+        params.onChunk(`_${notice}_\n\n`);
+        tools = {};
+      }
+    }
+    for (const notice of params.notices ?? []) {
       notices.push(notice);
       params.onChunk(`_${notice}_\n\n`);
     }
-    const messages: ModelMessage[] = prepared.messages.map((message) => {
+    const messages: ModelMessage[] = params.messages.map((message) => {
       if (message.role === "user" && message.images?.length)
         return {
           role: "user",
           content: [
             { type: "text", text: message.content },
+            // OpenAI-compatible providers, Athas included, send these as `image_url` data URLs.
             ...message.images.map((image) => ({
-              type: "image" as const,
-              image: image.data,
+              type: "file" as const,
+              data: image.data,
               mediaType: image.mediaType,
             })),
           ],
@@ -692,6 +706,8 @@ export async function runIntelligenceAgent(params: {
     };
   } catch (error) {
     if (signal.aborted) return settleAbort();
+    if (params.providerId === "ollama" && isOllamaNoToolsError(error))
+      throw new IntelligenceAgentError(getOllamaNoToolsMessage(params.modelId));
     throw toIntelligenceAgentError(error);
   } finally {
     controller.abort();

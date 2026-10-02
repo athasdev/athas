@@ -2,7 +2,13 @@ import {
   isAcpAuthenticationError,
   isAcpConfigurationError,
 } from "@/features/ai/lib/acp-authentication";
-import { isRetryableApiError, parseApiError, readErrorBody } from "@/features/ai/lib/api-error";
+import {
+  isRequestTooLarge,
+  isRetryableApiError,
+  parseApiError,
+  readErrorBody,
+} from "@/features/ai/lib/api-error";
+import { formatUsdCents } from "@/features/ai/lib/hosted-usage";
 import type { ChatMessageError } from "@/features/ai/types/chat-error.types";
 
 /** How a failed agent turn is shown: a legacy error block for the transcript plus its structure. */
@@ -27,6 +33,43 @@ export function isBrowserOffline(): boolean {
   return typeof navigator !== "undefined" && navigator.onLine === false;
 }
 
+/** A headline and next step for a hosted request the server refused over billing. */
+function describeHostedBillingFailure(
+  code: string | undefined,
+  walletBalanceCents: number | undefined,
+): { title: string; message: string } | null {
+  switch (code) {
+    case "allowance_exhausted":
+      return {
+        title: "Included credit used up",
+        message:
+          walletBalanceCents && walletBalanceCents > 0
+            ? `Your included Athas credit is used up and your pay-as-you-go balance (${formatUsdCents(walletBalanceCents)}) doesn't cover this request. Add credit to continue, or choose another model.`
+            : "Your included Athas credit for this month is used up. Add pay-as-you-go credit to keep going, or choose another model.",
+      };
+    case "insufficient_balance":
+      return {
+        title: "Not enough credit",
+        message:
+          "Your pay-as-you-go balance doesn't cover this request. Add credit to continue, or choose another model.",
+      };
+    case "spending_limit_reached":
+      return {
+        title: "Spending limit reached",
+        message:
+          "You've reached the monthly spending limit set for Athas AI. Raise it in billing to continue, or choose another model.",
+      };
+    case "entitlement_required":
+      return {
+        title: "Pro or credit required",
+        message:
+          "Athas models need Pro or pay-as-you-go credit. Upgrade or add credit in billing to use them.",
+      };
+    default:
+      return null;
+  }
+}
+
 export function describeAgentTurnFailure(input: {
   error: string;
   canReconnect?: boolean;
@@ -43,6 +86,7 @@ export function describeAgentTurnFailure(input: {
   let title = "API Error";
   let message = mainError;
   let blockCode = status ? String(status) : "";
+  let explainedBilling = false;
 
   if (status === 429) {
     title = "Rate Limit Exceeded";
@@ -53,12 +97,20 @@ export function describeAgentTurnFailure(input: {
       providerId === "athas"
         ? "Your Athas session has expired. Sign in to continue."
         : "The provider rejected your API key. Check its configuration to continue.";
-  } else if (status === 402) {
-    title = "Payment required";
+  } else if (isRequestTooLarge({ code: serverCode, status })) {
+    title = "Conversation too large";
     message =
-      serverCode === "allowance_exhausted"
-        ? "Your included Athas usage for this period is used up. Top up or manage billing to continue."
-        : "Check your balance and spending limits to continue, or choose another model.";
+      "This conversation is too large for one request. Start a new chat, or remove attached files and long pasted text.";
+  } else if (status === 402) {
+    const billing =
+      providerId === "athas"
+        ? describeHostedBillingFailure(serverCode, parsed.walletBalanceCents)
+        : null;
+    explainedBilling = billing !== null;
+    title = billing?.title ?? "Payment required";
+    message =
+      billing?.message ??
+      "Check your balance and spending limits to continue, or choose another model.";
   } else if (status === 403) {
     title = "Access Denied";
     message = "You don't have permission to access this resource.";
@@ -75,7 +127,9 @@ export function describeAgentTurnFailure(input: {
 
   // The server's own explanation is more precise than the generic line for its status.
   const detailMessage = readErrorBody(details).message;
-  if (detailMessage && status !== 401 && serverCode !== "allowance_exhausted") {
+  const ownMessage =
+    status === 401 || isRequestTooLarge({ code: serverCode, status }) || explainedBilling;
+  if (detailMessage && !ownMessage) {
     message = detailMessage;
   }
 
@@ -123,6 +177,7 @@ export function describeAgentTurnFailure(input: {
   const error: ChatMessageError = { title, message, details: details || mainError, providerId };
   if (code) error.code = code;
   if (status) error.status = status;
+  if (parsed.billingUrl && status === 402) error.billingUrl = parsed.billingUrl;
   error.retryable = isRetryableApiError(error);
   if (acpConfig || acpAuth) error.actions = ["restart_agent", "open_agent_terminal"];
 

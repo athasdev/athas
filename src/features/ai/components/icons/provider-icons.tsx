@@ -169,7 +169,6 @@ export function ProviderIcon({
       return <OpenAIIcon {...props} />;
     case "anthropic":
     case "claude-acp":
-    case "claude-code":
       return <AnthropicIcon {...props} />;
     case "gemini":
     case "google":

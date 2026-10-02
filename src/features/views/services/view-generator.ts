@@ -95,7 +95,7 @@ export function createKnownGitHubView(request: string): CustomViewDefinition | n
 export function parseGeneratedViewPlan(value: string): CustomViewDefinition {
   const start = value.indexOf("{");
   const end = value.lastIndexOf("}");
-  if (start < 0 || end <= start) throw new Error("Athas Intelligence did not return a custom view");
+  if (start < 0 || end <= start) throw new Error("Athas AI did not return a custom view");
 
   const parsed = JSON.parse(value.slice(start, end + 1)) as Record<string, unknown>;
   if (parsed.kind === "manual") {
@@ -110,13 +110,13 @@ export function parseGeneratedViewPlan(value: string): CustomViewDefinition {
     typeof parsed.endpointPath !== "string" ||
     typeof parsed.rowsPath !== "string"
   ) {
-    throw new Error("Athas Intelligence returned an unsupported custom view");
+    throw new Error("Athas AI returned an unsupported custom view");
   }
 
   const name = parsed.name.trim();
   const endpointPath = parsed.endpointPath.trim();
   if (!name || !endpointPath.startsWith("/") || endpointPath.startsWith("//")) {
-    throw new Error("Athas Intelligence returned an invalid GitHub view");
+    throw new Error("Athas AI returned an invalid GitHub view");
   }
   const presentation = parsePresentation(parsed.presentation);
 

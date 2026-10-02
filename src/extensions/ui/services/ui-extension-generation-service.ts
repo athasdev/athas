@@ -27,7 +27,7 @@ export async function requestUIExtensionGeneration(params: {
 }): Promise<UIExtensionGenerationResult> {
   const token = await getAuthToken();
   if (!token) {
-    throw new UIExtensionGenerationError("Sign in to use Athas Intelligence.", 401);
+    throw new UIExtensionGenerationError("Sign in to use Athas AI.", 401);
   }
 
   let response: Response;
@@ -49,7 +49,7 @@ export async function requestUIExtensionGeneration(params: {
       );
     }
     throw new UIExtensionGenerationError(
-      "Could not reach Athas Intelligence. Check your connection and try again.",
+      "Could not reach Athas AI. Check your connection and try again.",
       0,
     );
   }
@@ -86,16 +86,16 @@ function describeGenerationFailure(status: number, body: unknown): string {
     typeof (body as { error?: unknown }).error === "string"
       ? (body as { error: string }).error
       : null;
-  if (status === 401) return "Sign in to use Athas Intelligence.";
+  if (status === 401) return "Sign in to use Athas AI.";
   if (status === 402) {
-    // A Pro account that gets 402 has used its included allowance; it is not missing Pro.
+    // A Pro account that gets 402 has used its included credit and balance; it is not missing Pro.
     if (useAuthStore.getState().subscription?.status === "pro") {
-      return "Your included Athas Intelligence usage is used up for this billing period. Top up or wait for it to reset.";
+      return "Your included Athas AI credit is used up and your pay-as-you-go balance is empty. Add balance in billing or wait for next month's included $10.";
     }
     return serverMessage ?? "Generating integrations is included with Athas Pro.";
   }
   if (status === 403) {
-    return serverMessage ?? "Your organization has turned off this Athas Intelligence feature.";
+    return serverMessage ?? "Your organization has turned off this Athas AI feature.";
   }
   return serverMessage ?? `UI integration generation failed (${status})`;
 }

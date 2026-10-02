@@ -26,7 +26,7 @@ export async function fetchIntelligenceSettings(
   if (expectedUserId !== undefined && useAuthStore.getState().user?.id !== expectedUserId) {
     throw new IntelligenceSettingsError("The active account changed. Try again.", 409);
   }
-  if (!token) throw new IntelligenceSettingsError("Sign in to sync Intelligence settings.", 401);
+  if (!token) throw new IntelligenceSettingsError("Sign in to sync your AI settings.", 401);
   const response = await tauriFetch(
     `${getApiBase()}/api/account/intelligence?scope=${encodeURIComponent(scope)}`,
     {
@@ -39,7 +39,7 @@ export async function fetchIntelligenceSettings(
   const data = await response.json();
   if (!response.ok)
     throw new IntelligenceSettingsError(
-      data.error || "Could not sync Intelligence settings.",
+      data.error || "Could not sync your AI settings.",
       response.status,
     );
   if (
@@ -48,7 +48,7 @@ export async function fetchIntelligenceSettings(
     !Number.isSafeInteger(data.revision) ||
     data.revision < 0
   ) {
-    throw new IntelligenceSettingsError("Invalid Intelligence settings response.", 502);
+    throw new IntelligenceSettingsError("Athas returned invalid AI settings.", 502);
   }
   return { ...data, preferences: parseIntelligencePreferences(data.preferences) };
 }

@@ -12,6 +12,8 @@ const emptyVariants = cva("group/empty flex min-h-0 w-full min-w-0 flex-col gap-
       region: "flex-1 items-center justify-center p-3 text-center",
       /** A compact left-aligned row, for an empty state inside a list or menu. */
       inline: "flex-none items-start p-2 text-left",
+      /** Stands in for the rows of a settings section with nothing in it yet. */
+      section: "flex-none items-start px-3 py-2.5 text-left",
     },
   },
   defaultVariants: {
@@ -141,9 +143,11 @@ function EmptyState({
   secondaryAction,
   tertiaryAction,
   layout = "default",
+  variant,
   className,
   ...props
 }: EmptyStateProps) {
+  const centered = variant !== "inline" && variant !== "section";
   const renderAction = (item: EmptyStateAction) => (
     <Button
       type="button"
@@ -159,6 +163,7 @@ function EmptyState({
 
   return (
     <Empty
+      variant={variant}
       className={cn(
         layout === "sidebar" && "min-h-24 select-none rounded-none px-3 py-6",
         className,
@@ -175,7 +180,7 @@ function EmptyState({
         <EmptyDescription>{message}</EmptyDescription>
       ) : null}
       {action || secondaryAction || tertiaryAction ? (
-        <EmptyContent className="flex-row flex-wrap justify-center">
+        <EmptyContent className={cn("flex-row flex-wrap", centered && "justify-center")}>
           {action ? renderAction(action) : null}
           {secondaryAction ? renderAction(secondaryAction) : null}
           {tertiaryAction ? renderAction(tertiaryAction) : null}

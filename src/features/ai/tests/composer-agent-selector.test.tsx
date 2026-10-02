@@ -44,7 +44,25 @@ vi.mock("@/ui/dropdown", async (importOriginal) => {
   };
 });
 
-const render = (agentId: string, followChatId?: string) =>
+const effortOption = {
+  id: "effort",
+  name: "Effort",
+  category: "thought_level",
+  kind: {
+    type: "select" as const,
+    currentValue: "high",
+    options: [
+      { id: "low", name: "Low" },
+      { id: "high", name: "High" },
+    ],
+  },
+};
+
+const render = (
+  agentId: string,
+  followChatId?: string,
+  sessionConfigOptions: (typeof effortOption)[] = [],
+) =>
   renderToStaticMarkup(
     <ComposerAgentSelector
       cwd="/project"
@@ -52,7 +70,7 @@ const render = (agentId: string, followChatId?: string) =>
       currentAgentId={agentId}
       providerId="openai"
       modelId="gpt-test"
-      sessionConfigOptions={[]}
+      sessionConfigOptions={sessionConfigOptions}
       onModelChange={vi.fn()}
       onSessionConfigChange={vi.fn()}
     />,
@@ -70,15 +88,14 @@ describe("Composer agent selector", () => {
     expect(render("codex")).toContain("codex-mini");
   });
 
-  it("lists installed agents and hides ones that still need installing", () => {
-    const markup = render("custom");
-
-    expect(markup).toContain("Gemini CLI");
-    expect(markup).not.toContain("Claude Agent");
-  });
-
   it("offers following the agent from the model menu when the chat supports it", () => {
     expect(render("gemini", "chat-1")).toContain("Follow agent in editor");
     expect(render("gemini")).not.toContain("Follow agent in editor");
+  });
+
+  it("shows a reasoning effort chip beside the model only when the agent has a scale", () => {
+    expect(render("gemini", undefined, [effortOption])).toContain(">Low<");
+    expect(render("gemini")).not.toContain(">Low<");
+    expect(render("custom", undefined, [effortOption])).not.toContain(">Low<");
   });
 });

@@ -60,4 +60,19 @@ describe("agent model choices", () => {
       })?.id,
     ).toBe("auto");
   });
+  it("prefers the hosted catalog's limits over the bundled Athas placeholder", () => {
+    expect(
+      resolveAgentModel({
+        provider: {
+          ...provider,
+          id: "athas",
+          models: [{ id: "auto", name: "Automatic", maxOutputTokens: 32_000 }],
+        },
+        modelId: "auto",
+        dynamicModels: [
+          { id: "auto", name: "Automatic", contextWindow: 1_000_000, maxOutputTokens: 64_000 },
+        ],
+      }),
+    ).toMatchObject({ maxOutputTokens: 64_000, contextWindow: 1_000_000 });
+  });
 });

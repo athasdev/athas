@@ -43,14 +43,14 @@ function ExtensionIconGraphic({ extension }: { extension: UnifiedExtension }) {
   return categoryIcon(extension.category, "size-full text-subtle-foreground");
 }
 
-/** The catalog's icon tile, matching the one on athas.dev: a bordered square with the icon inside. */
+/** The catalog's icon tile: the icon on a quiet surface square. */
 export function ExtensionIcon({ extension }: { extension: UnifiedExtension }) {
   if (extension.appearancePreview) {
     return <AppearancePreviewGraphic preview={extension.appearancePreview} size="catalog" />;
   }
   return (
-    <span className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-border bg-background text-foreground">
-      <span className="size-6">
+    <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-surface text-foreground">
+      <span className="size-5">
         <ExtensionIconGraphic extension={extension} />
       </span>
     </span>

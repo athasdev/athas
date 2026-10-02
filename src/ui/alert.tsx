@@ -3,7 +3,7 @@ import type { ComponentProps } from "react";
 import { cn } from "@/utils/cn";
 
 const alertVariants = cva(
-  "group/alert relative grid w-full gap-0.5 px-2.5 py-2 text-left font-sans ui-text-sm text-foreground has-[>svg]:grid-cols-[auto_1fr] has-[>svg]:gap-x-2 has-data-[slot=alert-action]:pr-18 [&>svg]:row-span-2 [&>svg]:size-4 [&>svg]:translate-y-0.5",
+  "group/alert relative grid w-full gap-0.5 px-2.5 py-2 text-left font-sans ui-text-sm text-foreground has-[>svg]:grid-cols-[auto_1fr] has-[>svg]:gap-x-2 has-data-[slot=alert-action]:pr-18 has-data-[slot=alert-actions]:grid-cols-[1fr_auto] has-data-[slot=alert-actions]:gap-x-3 has-[>svg]:has-data-[slot=alert-actions]:grid-cols-[auto_1fr_auto] [&>svg]:row-span-2 [&>svg]:size-4 [&>svg]:translate-y-0.5",
   {
     variants: {
       tone: {
@@ -18,6 +18,11 @@ const alertVariants = cva(
         card: "rounded-lg",
         /** Edge to edge, for a strip attached to a pane or popover edge. */
         banner: "rounded-none",
+        /**
+         * A calm notice set into another surface, such as the top of a composer: the content
+         * plane behind it, with the tone carried by the icon and, for errors, the title.
+         */
+        inset: "rounded-lg border-0 bg-background",
       },
     },
     defaultVariants: {
@@ -81,4 +86,21 @@ function AlertAction({ className, ...props }: ComponentProps<"div">) {
   );
 }
 
-export { Alert, AlertAction, AlertDescription, AlertTitle, alertVariants };
+/**
+ * Buttons that sit in the alert's own column, vertically centred beside the text. Unlike
+ * `AlertAction`, which floats in the corner, the text never runs underneath them.
+ */
+function AlertActions({ className, ...props }: ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="alert-actions"
+      className={cn(
+        "row-span-2 row-start-1 -col-end-1 flex items-center gap-1 self-center",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+export { Alert, AlertAction, AlertActions, AlertDescription, AlertTitle, alertVariants };

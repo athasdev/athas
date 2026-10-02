@@ -1,7 +1,12 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import type { AuthUser, SubscriptionInfo } from "@/features/window/services/auth-api";
+import type {
+  AuthUser,
+  SessionCheckFailure,
+  SubscriptionInfo,
+} from "@/features/window/services/auth-api";
 import {
+  describeSessionCheckFailure,
   fetchCurrentUser,
   fetchSubscriptionStatus,
   getAuthToken,
@@ -18,10 +23,24 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+  /**
+   * Set while a saved session exists but could not be checked because the server did not
+   * answer. The session is kept and checked again with backoff; it is not a sign-out.
+   */
+  sessionCheck: SessionCheckState | null;
+}
+
+export interface SessionCheckState extends SessionCheckFailure {
+  /** How many checks in a row have failed. */
+  attempt: number;
+  /** When the next automatic check runs, in epoch milliseconds, or null when none is planned. */
+  nextRetryAt: number | null;
 }
 
 interface AuthActions {
   initialize: () => Promise<void>;
+  /** Checks a saved session that could not be verified again, right now. */
+  retrySessionCheck: () => Promise<void>;
   handleAuthCallback: (token: string) => Promise<void>;
   refreshUser: () => Promise<void>;
   refreshSubscription: () => Promise<boolean>;
@@ -51,9 +70,16 @@ export interface AuthStoreDependencies {
    * delay passes) and returns a function that stops waiting.
    */
   waitForReconnect?: (retry: () => void, attempt: number) => () => void;
+  describeSessionCheckFailure?: (error: unknown) => SessionCheckFailure;
+  now?: () => number;
 }
 
-const RECONNECT_BACKOFF_MS = [5_000, 15_000, 30_000, 60_000, 120_000, 300_000];
+const RECONNECT_BACKOFF_MS = [2_000, 5_000, 15_000, 30_000, 60_000, 120_000, 300_000];
+
+/** How long the store waits before checking an unverified session again after `attempt` failures. */
+export function getReconnectDelayMs(attempt: number): number {
+  return RECONNECT_BACKOFF_MS[Math.min(Math.max(attempt, 0), RECONNECT_BACKOFF_MS.length - 1)];
+}
 const SUBSCRIPTION_REFRESH_DEBOUNCE_MS = 1_500;
 
 function waitForBrowserReconnect(retry: () => void, attempt: number): () => void {
@@ -64,10 +90,7 @@ function waitForBrowserReconnect(retry: () => void, attempt: number): () => void
     stop();
     retry();
   };
-  const timer = setTimeout(
-    run,
-    RECONNECT_BACKOFF_MS[Math.min(attempt, RECONNECT_BACKOFF_MS.length - 1)],
-  );
+  const timer = setTimeout(run, getReconnectDelayMs(attempt));
   window.addEventListener("online", run);
   function stop() {
     done = true;
@@ -86,6 +109,8 @@ const defaultAuthStoreDependencies: AuthStoreDependencies = {
   removeAuthToken,
   storeAuthToken,
   waitForReconnect: waitForBrowserReconnect,
+  describeSessionCheckFailure: (error) => describeSessionCheckFailure(error),
+  now: () => Date.now(),
 };
 
 export function createAuthStore(
@@ -106,6 +131,7 @@ export function createAuthStore(
       isAuthenticated: false,
       isLoading: true,
       error: null,
+      sessionCheck: null,
 
       actions: {
         initialize: async () => {
@@ -139,18 +165,20 @@ export function createAuthStore(
                 state.user = user;
                 state.subscription = subscription;
                 state.error = subscriptionError;
+                state.sessionCheck = null;
                 state.isAuthenticated = true;
                 state.isLoading = false;
               });
             } else {
+              reconnectAttempt = 0;
               set((state) => {
+                state.sessionCheck = null;
                 state.isLoading = false;
               });
             }
           } catch (error) {
             if (revision !== sessionRevision) return;
-            const invalid = dependencies.isAuthInvalidError(error);
-            if (invalid) {
+            if (dependencies.isAuthInvalidError(error)) {
               // The session is over either way; a keychain error must not leave it loading.
               await dependencies
                 .removeAuthToken()
@@ -158,9 +186,28 @@ export function createAuthStore(
                   console.error("Failed to remove the expired auth token:", removeError),
                 );
               if (revision !== sessionRevision) return;
-            } else if (dependencies.waitForReconnect) {
-              // The server could not be reached; the saved session may still be fine.
-              const attempt = reconnectAttempt++;
+              reconnectAttempt = 0;
+              set((state) => {
+                state.user = null;
+                state.subscription = null;
+                state.isAuthenticated = false;
+                state.error = null;
+                state.sessionCheck = null;
+                state.isLoading = false;
+              });
+              return;
+            }
+
+            // The server did not answer; the saved session may still be fine, so keep it and
+            // check again with backoff instead of presenting it as signed out.
+            const attempt = reconnectAttempt++;
+            const failure = dependencies.describeSessionCheckFailure?.(error) ?? {
+              reason: "unreachable" as const,
+              message: "Could not reach Athas.",
+              host: "",
+            };
+            const now = dependencies.now?.() ?? Date.now();
+            if (dependencies.waitForReconnect) {
               stopWaitingForReconnect = dependencies.waitForReconnect(() => {
                 stopWaitingForReconnect = null;
                 if (revision !== sessionRevision) return;
@@ -171,12 +218,22 @@ export function createAuthStore(
               state.user = null;
               state.subscription = null;
               state.isAuthenticated = false;
-              state.error = dependencies.isAuthInvalidError(error)
-                ? null
-                : "Could not verify your saved session. Check your connection and try again.";
+              state.error = null;
+              state.sessionCheck = {
+                ...failure,
+                attempt: attempt + 1,
+                nextRetryAt: dependencies.waitForReconnect
+                  ? now + getReconnectDelayMs(attempt)
+                  : null,
+              };
               state.isLoading = false;
             });
           }
+        },
+
+        retrySessionCheck: async () => {
+          if (!get().sessionCheck) return;
+          await get().actions.initialize();
         },
 
         handleAuthCallback: async (token: string) => {
@@ -204,10 +261,12 @@ export function createAuthStore(
               subscriptionError =
                 error instanceof Error ? error.message : "Could not load your Athas access.";
             }
+            reconnectAttempt = 0;
             set((state) => {
               state.user = user;
               state.subscription = subscription;
               state.error = subscriptionError;
+              state.sessionCheck = null;
               state.isAuthenticated = true;
               state.isLoading = false;
             });
@@ -313,7 +372,9 @@ export function createAuthStore(
             state.isAuthenticated = false;
             state.isLoading = false;
             state.error = null;
+            state.sessionCheck = null;
           });
+          reconnectAttempt = 0;
           try {
             await dependencies.removeAuthToken();
           } catch {

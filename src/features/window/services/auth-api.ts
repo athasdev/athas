@@ -193,7 +193,10 @@ export interface SubscriptionInfo {
   autocomplete?: {
     usage?: Record<string, unknown> | null;
   } | null;
-  /** This billing period's hosted AI credits, in credit cents. Absent on older servers. */
+  /**
+   * This billing period's included hosted AI credit and the prepaid balance, all in USD cents
+   * billed at list price plus the usage markup. Absent on older servers.
+   */
   intelligence?: {
     credits?: IntelligenceCredits | null;
   } | null;
@@ -207,7 +210,12 @@ export interface IntelligenceCredits {
   pendingCents: number;
   remainingCents: number;
   requestsCount: number;
-  /** Prepaid usage balance that hosted turns draw from after the allowance, when reported. */
+  /** List price multiplier hosted requests are billed at (1.1 = plus 10%), when reported. */
+  usageMarkup?: number | null;
+  /**
+   * Spendable prepaid balance hosted turns draw from after the included credit, with in-flight
+   * holds subtracted. Null when the server has no prepaid balance enabled.
+   */
   walletBalanceCents?: number | null;
 }
 
@@ -502,6 +510,53 @@ export function isAuthInvalidError(error: unknown): boolean {
   if (!(error instanceof AuthApiError)) return false;
   if (error.status === 401) return true;
   return error.status === 403 && error.code !== undefined && INVALID_SESSION_CODES.has(error.code);
+}
+
+/**
+ * Why a saved session could not be checked, when the answer was not "the session is invalid".
+ * `local_server_down` is a development build pointed at a local server that is not running.
+ */
+export interface SessionCheckFailure {
+  reason: "unreachable" | "local_server_down" | "timeout" | "server_error";
+  /** One line saying what actually happened, naming the host that was asked. */
+  message: string;
+  host: string;
+}
+
+function describeApiHost(apiBase: string): string {
+  try {
+    return new URL(apiBase).host || apiBase;
+  } catch {
+    return apiBase;
+  }
+}
+
+export function describeSessionCheckFailure(
+  error: unknown,
+  apiBase: string = API_BASE,
+): SessionCheckFailure {
+  const host = describeApiHost(apiBase);
+  if (error instanceof AuthApiError) {
+    return {
+      reason: "server_error",
+      message:
+        error.status >= 500
+          ? `${host} had a server error (${error.status}).`
+          : `${host} gave an unexpected answer (${error.status}).`,
+      host,
+    };
+  }
+  if (error instanceof Error && error.name === "TimeoutError") {
+    return { reason: "timeout", message: `${host} did not answer in time.`, host };
+  }
+  if (isLocalApiBase(apiBase)) {
+    return {
+      reason: "local_server_down",
+      message: `Nothing is answering at ${host}.`,
+      host,
+    };
+  }
+  return { reason: "unreachable", message: `Could not reach ${host}.`, host };
 }
 
 function getApiBaseUnavailableMessage(apiBase = API_BASE): string {

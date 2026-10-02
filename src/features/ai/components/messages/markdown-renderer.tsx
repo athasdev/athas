@@ -1,8 +1,9 @@
 import { ChatErrorBlock } from "./chat-error-block";
 import { parseLegacyErrorBlock } from "@/features/ai/lib/chat-error";
-import { CopyIcon } from "@/ui/icons";
+import "./markdown-renderer.css";
+import { CheckIcon, CopyIcon } from "@/ui/icons";
 import type React from "react";
-import { memo, useMemo } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import {
   isExternalMarkdownLink,
   resolveWorkspaceFileLink,
@@ -82,35 +83,46 @@ function CodeBlock({ code, languageHint }: { code: string; languageHint: string 
   const explicitLanguage = languageHint ? normalizeCodeFenceLanguage(languageHint) : "";
   const inferredLanguage = explicitLanguage || inferCodeLanguage(code);
   const languageLabel = explicitLanguage || (inferredLanguage !== "clike" ? inferredLanguage : "");
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (!copied) return;
+    const timeout = setTimeout(() => setCopied(false), 1500);
+    return () => clearTimeout(timeout);
+  }, [copied]);
 
   const segments = useCodeHighlightSegments(code, inferredLanguage);
 
   return (
-    <div className="not-typeset group relative my-2">
-      <pre className="font-mono max-w-full overflow-x-auto rounded border border-border bg-surface p-2">
-        <div className="mb-1 flex items-center justify-between">
-          {languageLabel && (
-            <div className="font-mono text-subtle-foreground ui-text-sm">{languageLabel}</div>
-          )}
-          {code.trim() && (
-            <div className="ml-auto flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => void copyTextToClipboard(code)}
-                tooltip="Copy code"
-                iconOnly
-              >
-                <CopyIcon className="text-subtle-foreground" size={12} />
-              </Button>
-            </div>
-          )}
-        </div>
-        <code className="font-mono block whitespace-pre-wrap break-all text-foreground ui-text-sm">
+    <figure
+      data-ai-element="code-block"
+      className="not-typeset group/code my-2 flex min-w-0 flex-col overflow-hidden rounded-lg bg-surface"
+    >
+      <figcaption className="flex min-h-7 items-center justify-between gap-2 pr-1 pl-3 text-subtle-foreground ui-text-sm">
+        <span className="min-w-0 truncate font-mono">{languageLabel}</span>
+        {code.trim() ? (
+          <span className="opacity-0 transition-opacity duration-fast group-hover/code:opacity-100 focus-within:opacity-100">
+            <Button
+              type="button"
+              variant="ghost"
+              size="xs"
+              onClick={() => {
+                void copyTextToClipboard(code).then(() => setCopied(true));
+              }}
+              aria-label={copied ? "Copied" : "Copy code"}
+            >
+              {copied ? <CheckIcon /> : <CopyIcon />}
+              {copied ? "Copied" : "Copy"}
+            </Button>
+          </span>
+        ) : null}
+      </figcaption>
+      <pre className="max-w-full overflow-x-auto px-3 pb-2.5 font-mono">
+        <code className="block w-max min-w-full whitespace-pre text-foreground ui-text-sm">
           <HighlightedCode code={code} segments={segments} />
         </code>
       </pre>
-    </div>
+    </figure>
   );
 }
 
@@ -547,10 +559,17 @@ interface MarkdownRendererProps {
   content: string;
   chatId?: string | null;
   onRetry?: () => void | Promise<void>;
+  /** Shows a caret after the last block while the reply is still arriving. */
+  isStreaming?: boolean;
 }
 
 // Simple markdown renderer for AI responses
-export default function MarkdownRenderer({ content, chatId, onRetry }: MarkdownRendererProps) {
+export default function MarkdownRenderer({
+  content,
+  chatId,
+  onRetry,
+  isStreaming = false,
+}: MarkdownRendererProps) {
   const normalizedContent = normalizePlainTextFence(content);
 
   // Check for error blocks first
@@ -573,7 +592,7 @@ export default function MarkdownRenderer({ content, chatId, onRetry }: MarkdownR
   }
 
   return (
-    <div className="typeset typeset-chat">
+    <div className="typeset typeset-chat" data-streaming={isStreaming || undefined}>
       <MarkdownBlocks text={normalizedContent} />
     </div>
   );

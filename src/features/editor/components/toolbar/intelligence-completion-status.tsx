@@ -1,6 +1,7 @@
 import { useIntelligenceCompletionStore } from "@/features/editor/stores/intelligence-completion.store";
 import type { IntelligenceCompletionStatus as CompletionStatus } from "@/features/editor/stores/intelligence-completion.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
 import { Button, type ButtonProps } from "@/ui/button";
 import {
   DropdownMenu,
@@ -19,6 +20,7 @@ const PAUSE_TITLES = {
   "sign-in": "Tab paused: sign in required",
   "api-key": "Tab paused: API key required",
   policy: "Tab disabled by your organization",
+  model: "Tab paused: choose a model",
 } as const;
 
 function describeStatus(
@@ -48,6 +50,11 @@ export function IntelligenceCompletionStatus() {
 
   const items: MenuItem[] = [
     ...(showRetry ? [{ id: "retry", label: "Retry now", onClick: resume }] : []),
+    {
+      id: "settings",
+      label: "Tab completion settings",
+      onClick: () => useUIState.getState().openSettings("ai-completion"),
+    },
     {
       id: "toggle",
       label: "Tab autocomplete",

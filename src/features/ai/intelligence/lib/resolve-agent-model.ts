@@ -15,10 +15,14 @@ export function resolveAgentModel(params: {
         : "";
   const modelId = params.modelId.trim() || fallback;
   if (!modelId) return undefined;
+  const fromStatic = params.provider.models.find((model) => model.id === modelId);
+  const fromCatalog = params.dynamicModels.find((model) => model.id === modelId);
+  // Athas's bundled list is only a placeholder until the server's catalog, with real limits, arrives.
   const known =
-    params.provider.models.find((model) => model.id === modelId) ??
-    params.dynamicModels.find((model) => model.id === modelId);
+    params.provider.id === "athas" ? (fromCatalog ?? fromStatic) : (fromStatic ?? fromCatalog);
+  // The Athas server applies each model's own output limit, so it gets no local default.
+  const defaultOutput = params.provider.id === "athas" ? undefined : 4096;
   return known
-    ? { ...known, maxOutputTokens: known.maxOutputTokens ?? known.maxTokens ?? 4096 }
-    : { id: modelId, name: modelId, maxOutputTokens: 4096 };
+    ? { ...known, maxOutputTokens: known.maxOutputTokens ?? known.maxTokens ?? defaultOutput }
+    : { id: modelId, name: modelId, maxOutputTokens: defaultOutput };
 }

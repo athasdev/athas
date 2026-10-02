@@ -34,7 +34,7 @@ details:
     expect(markup).toContain("Manage billing");
     expect(markup).toContain("Completed the first step.");
   });
-  it("renders a full-width user message without an avatar", () => {
+  it("renders the user message as an end-aligned bubble without an avatar", () => {
     const markup = renderToStaticMarkup(
       <ChatMessage
         message={message({})}
@@ -44,12 +44,23 @@ details:
       />,
     );
 
+    expect(markup).toContain('data-align="end"');
     expect(markup).toContain('data-variant="user"');
-    expect(markup).toContain("w-full max-w-full");
     expect(markup).not.toContain('data-slot="message-avatar"');
     // The prompt stays plain selectable text; editing has its own action.
     expect(markup).toMatch(/<div class="select-text[^"]*">Hello<\/div>/);
     expect(markup).toContain('aria-label="Edit prompt"');
+  });
+
+  it("shows the images attached to a prompt", () => {
+    const markup = renderToStaticMarkup(
+      <ChatMessage
+        message={message({ images: [{ mediaType: "image/png", data: "AAAA" }] })}
+        isLastMessage
+      />,
+    );
+    expect(markup).toContain('alt="Attached image 1"');
+    expect(markup).toContain("data:image/png;base64,AAAA");
   });
 
   it("renders the starting status without an avatar", () => {

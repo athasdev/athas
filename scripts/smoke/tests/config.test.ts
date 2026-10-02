@@ -12,9 +12,9 @@ describe("smoke configuration", () => {
 
   it("parses explicit identity and open-only options", () => {
     expect(
-      parseSmokeOptions(["--platform", "linux", "--identity=preview", "--open-only"], "linux"),
+      parseSmokeOptions(["--platform", "linux", "--identity=stable", "--open-only"], "linux"),
     ).toEqual({
-      identity: "preview",
+      identity: "stable",
       openOnly: true,
       targetPlatform: "linux",
     });
@@ -27,8 +27,8 @@ describe("smoke configuration", () => {
   });
 
   it("resolves the expected identity-specific macOS bundle", () => {
-    expect(getSmokeLaunchPath("/repo", "macos", "preview")).toBe(
-      "/repo/target/debug/bundle/macos/Athas Preview.app",
+    expect(getSmokeLaunchPath("/repo", "macos", "smoke")).toBe(
+      "/repo/target/debug/bundle/macos/Athas Smoke.app",
     );
   });
 });

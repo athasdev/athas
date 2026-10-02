@@ -55,7 +55,7 @@ export function NotificationsSettings() {
       <Section title="Activity">
         <SettingRow
           label="Agent Notifications"
-          description="Notify when an agent you are not looking at needs approval, an answer, or a sign-in. The dock or taskbar also asks for attention while Athas is in the background."
+          description="When an agent needs approval, an answer, or a sign-in"
           onReset={() =>
             void handleAgentNotificationsChange(getDefaultSetting("aiAgentNotifications"))
           }
@@ -69,7 +69,6 @@ export function NotificationsSettings() {
         </SettingRow>
         <SettingRow
           label="Agent Finished Notifications"
-          description="Also notify when an agent turn finishes or fails"
           onReset={() =>
             updateSetting(
               "aiAgentFinishNotifications",
@@ -88,7 +87,6 @@ export function NotificationsSettings() {
         </SettingRow>
         <SettingRow
           label="Agent Notification Sound"
-          description="Play the system notification sound with agent notifications"
           onReset={() =>
             updateSetting("aiAgentNotificationSound", getDefaultSetting("aiAgentNotificationSound"))
           }
@@ -104,7 +102,7 @@ export function NotificationsSettings() {
         </SettingRow>
         <SettingRow
           label="Command Notifications"
-          description="Notify when a command longer than ten seconds finishes in a terminal you are not looking at. Requires shell integration."
+          description="Commands over 10s. Needs shell integration"
           onReset={() =>
             updateSetting(
               "terminalCommandNotifications",
@@ -124,7 +122,7 @@ export function NotificationsSettings() {
         </SettingRow>
         <SettingRow
           label="Workflow Run Notifications"
-          description="Notify about runs you trigger and pull requests you author, are assigned to, or are asked to review"
+          description="Your runs and pull requests"
           onReset={() =>
             updateSetting(
               "githubActionNotifications",

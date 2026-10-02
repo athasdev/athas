@@ -1,3 +1,4 @@
+import { cva, type VariantProps } from "class-variance-authority";
 import type { ComponentProps, ReactNode } from "react";
 import { Button } from "@/ui/button";
 import {
@@ -12,14 +13,30 @@ import { ScrollArea } from "@/ui/scroll-area";
 import { SidebarListItem, SidebarSectionLabel } from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
 
-export function Workbench({ className, ...props }: ComponentProps<"div">) {
+const workbenchVariants = cva(
+  "@container/workbench flex size-full min-h-0 min-w-0 overflow-hidden font-sans",
+  {
+    variants: {
+      /**
+       * - `background` — content sits on the document plane
+       * - `surface` — the page is chrome and its grouped cards sit on `background`, as in Settings
+       */
+      plane: { background: "bg-background", surface: "bg-surface" },
+    },
+    defaultVariants: { plane: "background" },
+  },
+);
+
+export function Workbench({
+  className,
+  plane,
+  ...props
+}: ComponentProps<"div"> & VariantProps<typeof workbenchVariants>) {
   return (
     <div
       data-slot="workbench"
-      className={cn(
-        "@container/workbench flex size-full min-h-0 min-w-0 overflow-hidden bg-background font-sans",
-        className,
-      )}
+      data-plane={plane ?? "background"}
+      className={cn(workbenchVariants({ plane }), className)}
       {...props}
     />
   );
@@ -66,10 +83,12 @@ export function WorkbenchNavigation<TValue extends string>({
     <div className="flex size-full min-h-0 min-w-0 @max-[680px]/workbench:flex-col">
       <aside
         data-slot="workbench-navigation"
-        className="flex w-56 shrink-0 flex-col gap-4 border-border border-r bg-surface p-3 @max-[680px]/workbench:w-full @max-[680px]/workbench:gap-3 @max-[680px]/workbench:border-r-0 @max-[680px]/workbench:border-b"
+        className="flex w-52 shrink-0 flex-col gap-3 border-border border-r p-2 @max-[680px]/workbench:w-full @max-[680px]/workbench:border-r-0 @max-[680px]/workbench:border-b"
       >
-        <div className="flex shrink-0 flex-col gap-3">
-          <h1 className="px-1.5 font-medium text-foreground ui-text-base">{title}</h1>
+        <div className="flex shrink-0 flex-col gap-2">
+          <h1 className="flex h-7 items-center px-1.5 font-medium text-foreground ui-text-base">
+            {title}
+          </h1>
           {search}
           <div className="hidden @max-[680px]/workbench:block">
             <DropdownMenu>
@@ -106,7 +125,7 @@ export function WorkbenchNavigation<TValue extends string>({
           {body ? (
             <div className="px-1">{body}</div>
           ) : (
-            <nav aria-label={ariaLabel} className="space-y-4 px-1">
+            <nav aria-label={ariaLabel} className="space-y-3 px-1">
               {groups
                 .filter((group) => group.items.length > 0)
                 .map((group) => (
@@ -154,11 +173,19 @@ function WorkbenchContentTitle({
         {status}
       </div>
       {description ? (
-        <div className="mt-1 text-muted-foreground ui-text-sm">{description}</div>
+        <div className="mt-0.5 text-subtle-foreground ui-text-sm">{description}</div>
       ) : null}
     </div>
   );
 }
+
+const workbenchColumnVariants = cva("mx-auto w-full min-w-0", {
+  variants: {
+    /** `narrow` keeps a label and its control close together, as on a form or settings page. */
+    width: { default: "max-w-5xl", narrow: "max-w-3xl" },
+  },
+  defaultVariants: { width: "default" },
+});
 
 export function WorkbenchContent({
   title,
@@ -168,9 +195,10 @@ export function WorkbenchContent({
   leading,
   status,
   pinnedHeader = false,
+  width,
   children,
   viewportProps,
-}: {
+}: VariantProps<typeof workbenchColumnVariants> & {
   title: string;
   description?: ReactNode;
   actions?: ReactNode;
@@ -184,19 +212,33 @@ export function WorkbenchContent({
   if (pinnedHeader) {
     return (
       <div className="flex size-full min-h-0 min-w-0 flex-col">
-        <header className="flex shrink-0 items-start justify-between gap-4 border-border border-b px-6 pt-5 pb-4 @max-[680px]/workbench:px-3 @max-[680px]/workbench:pt-3 @max-[680px]/workbench:pb-3">
-          <WorkbenchContentTitle title={title} description={description} status={status} />
-          {actions ? (
-            <div className="-mt-1 -mr-2 flex shrink-0 items-center gap-2">{actions}</div>
-          ) : null}
+        <header className="shrink-0 pt-5 pb-3 @max-[680px]/workbench:pt-3">
+          <div
+            className={cn(
+              workbenchColumnVariants({ width }),
+              "flex items-start justify-between gap-4 px-6 @max-[680px]/workbench:px-3",
+            )}
+          >
+            <WorkbenchContentTitle title={title} description={description} status={status} />
+            {actions ? (
+              <div className="-mt-1 flex shrink-0 items-center gap-2">{actions}</div>
+            ) : null}
+          </div>
         </header>
         <ScrollArea
           orientation="vertical"
           className="min-h-0 min-w-0 flex-1"
-          contentClassName="@container/workbench-content mx-auto min-h-full w-full max-w-5xl overflow-x-hidden px-6 py-5 @max-[680px]/workbench:px-3 @max-[680px]/workbench:py-4"
+          contentClassName="@container/workbench-content min-h-full overflow-x-hidden"
           viewportProps={viewportProps}
         >
-          {children}
+          <div
+            className={cn(
+              workbenchColumnVariants({ width }),
+              "px-6 pt-1 pb-10 @max-[680px]/workbench:px-3 @max-[680px]/workbench:pb-4",
+            )}
+          >
+            {children}
+          </div>
         </ScrollArea>
       </div>
     );
@@ -206,18 +248,27 @@ export function WorkbenchContent({
     <ScrollArea
       orientation="vertical"
       className="size-full min-h-0 min-w-0"
-      contentClassName="@container/workbench-content mx-auto min-h-full w-full max-w-5xl overflow-x-hidden px-6 py-6 @max-[680px]/workbench:px-3 @max-[680px]/workbench:py-4"
+      contentClassName="@container/workbench-content min-h-full overflow-x-hidden"
       viewportProps={viewportProps}
     >
-      {breadcrumb ? <div className="mb-8 flex min-w-0">{breadcrumb}</div> : null}
-      {leading ? <div className="mb-5 flex items-center">{leading}</div> : null}
-      <header className="mb-6 flex min-w-0 flex-wrap items-end justify-between gap-4">
-        <WorkbenchContentTitle title={title} description={description} status={status} />
-        {actions ? (
-          <div className="flex max-w-full flex-wrap items-center gap-2">{actions}</div>
-        ) : null}
-      </header>
-      {children}
+      <div
+        className={cn(
+          workbenchColumnVariants({ width }),
+          "px-6 py-5 @max-[680px]/workbench:px-3 @max-[680px]/workbench:py-4",
+        )}
+      >
+        {breadcrumb ? <div className="mb-5 flex min-w-0">{breadcrumb}</div> : null}
+        <header className="mb-6 flex min-w-0 flex-wrap items-center justify-between gap-4">
+          <div className="flex min-w-0 flex-1 basis-64 items-center gap-3">
+            {leading ? <div className="flex shrink-0 items-center">{leading}</div> : null}
+            <WorkbenchContentTitle title={title} description={description} status={status} />
+          </div>
+          {actions ? (
+            <div className="flex max-w-full flex-wrap items-center gap-2">{actions}</div>
+          ) : null}
+        </header>
+        {children}
+      </div>
     </ScrollArea>
   );
 }

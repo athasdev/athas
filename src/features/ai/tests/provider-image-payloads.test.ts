@@ -7,6 +7,7 @@ import { MistralProvider } from "../services/providers/mistral-provider";
 import { OllamaProvider } from "../services/providers/ollama-provider";
 import { AnthropicProvider } from "../services/providers/anthropic-provider";
 import { GeminiProvider } from "../services/providers/gemini-provider";
+import { AthasProvider } from "../services/providers/athas-provider";
 import type { StreamRequest } from "../services/providers/ai-provider-interface";
 
 const config = {
@@ -37,6 +38,7 @@ describe("provider image payloads", () => {
     GrokProvider,
     MistralProvider,
     OllamaProvider,
+    AthasProvider,
   ])(
     "preserves image-only and historical images in OpenAI-compatible requests (%s)",
     (Provider) => {

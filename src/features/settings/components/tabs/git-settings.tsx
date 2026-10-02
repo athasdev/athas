@@ -37,7 +37,6 @@ export const GitSettings = () => {
       <Section title="Integration">
         <SettingRow
           label="Git Integration"
-          description="Enable source control management with Git repositories"
           onReset={() => updateSetting("coreFeatures", getDefaultSetting("coreFeatures"))}
           canReset={settings.coreFeatures.git !== getDefaultSetting("coreFeatures").git}
         >
@@ -46,7 +45,6 @@ export const GitSettings = () => {
 
         <SettingRow
           label="Auto Refresh Git Status"
-          description="Refresh the Git view automatically after relevant file changes and Git events"
           onReset={() =>
             updateSetting("autoRefreshGitStatus", getDefaultSetting("autoRefreshGitStatus"))
           }
@@ -60,7 +58,6 @@ export const GitSettings = () => {
 
         <SettingRow
           label="Confirm Before Discard"
-          description="Show a confirmation before discarding file or repository changes"
           onReset={() =>
             updateSetting("confirmBeforeDiscard", getDefaultSetting("confirmBeforeDiscard"))
           }
@@ -76,7 +73,6 @@ export const GitSettings = () => {
       <Section title="Git View">
         <SettingRow
           label="Folder-Based Changes"
-          description="Show Git changes in a folder tree, similar to Files"
           onReset={() =>
             updateSetting("gitChangesFolderView", getDefaultSetting("gitChangesFolderView"))
           }
@@ -90,7 +86,6 @@ export const GitSettings = () => {
 
         <SettingRow
           label="Show Untracked Files"
-          description="Display untracked files in the Git status panel"
           onReset={() =>
             updateSetting("showUntrackedFiles", getDefaultSetting("showUntrackedFiles"))
           }
@@ -104,7 +99,6 @@ export const GitSettings = () => {
 
         <SettingRow
           label="Show Staged First"
-          description="Render staged changes above unstaged changes in the Git panel"
           onReset={() => updateSetting("showStagedFirst", getDefaultSetting("showStagedFirst"))}
           canReset={settings.showStagedFirst !== getDefaultSetting("showStagedFirst")}
         >
@@ -116,7 +110,6 @@ export const GitSettings = () => {
 
         <SettingRow
           label="Open Diff On Click"
-          description="Open the diff when clicking a changed file instead of opening the file directly"
           onReset={() => updateSetting("openDiffOnClick", getDefaultSetting("openDiffOnClick"))}
           canReset={settings.openDiffOnClick !== getDefaultSetting("openDiffOnClick")}
         >
@@ -128,7 +121,6 @@ export const GitSettings = () => {
 
         <SettingRow
           label="Compact Git Status Badges"
-          description="Use a denser layout for diff stats and staged labels in the Git panel"
           onReset={() =>
             updateSetting("compactGitStatusBadges", getDefaultSetting("compactGitStatusBadges"))
           }
@@ -142,7 +134,6 @@ export const GitSettings = () => {
 
         <SettingRow
           label="Collapse Empty Sections"
-          description="Hide empty Git sections like Staged Changes when they have no items"
           onReset={() =>
             updateSetting("collapseEmptyGitSections", getDefaultSetting("collapseEmptyGitSections"))
           }
@@ -158,7 +149,6 @@ export const GitSettings = () => {
 
         <SettingRow
           label="Remember Last Git Panel Mode"
-          description="Restore the last open bottom Git panel section when reopening the Git view"
           onReset={() =>
             updateSetting("rememberLastGitPanelMode", getDefaultSetting("rememberLastGitPanelMode"))
           }
@@ -174,7 +164,6 @@ export const GitSettings = () => {
 
         <SettingRow
           label="Default Diff View"
-          description="Choose the default layout for Git diffs"
           onReset={() =>
             updateSetting("gitDefaultDiffView", getDefaultSetting("gitDefaultDiffView"))
           }
@@ -197,7 +186,6 @@ export const GitSettings = () => {
       <Section title="Editor">
         <SettingRow
           label="Enable Inline Blame"
-          description="Show inline Git blame metadata for the current line in the editor"
           onReset={() =>
             updateSetting("enableInlineGitBlame", getDefaultSetting("enableInlineGitBlame"))
           }

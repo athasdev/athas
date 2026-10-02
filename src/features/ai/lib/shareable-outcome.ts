@@ -7,7 +7,3 @@ export function redactLocalPaths(content: string) {
     .replace(LOCAL_PATH_PATTERN, (_match, prefix: string) => `${prefix}[local path]`)
     .replace(WINDOWS_PATH_PATTERN, "[local path]");
 }
-
-export function buildShareableOutcomeMarkdown(content: string) {
-  return `## Outcome\n\n${redactLocalPaths(content).trim()}\n`;
-}

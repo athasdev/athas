@@ -1,7 +1,6 @@
 import { cancelIntelligenceAgent } from "@/features/ai/intelligence/services/intelligence-agent-session";
+import { getLocalChatConnection } from "@/features/ai/lib/local-ai-connection";
 import { getProviderAccessFromMap } from "@/features/ai/stores/ai-chat/provider-actions";
-import { isTerminalAgent } from "@/features/ai/lib/terminal-agents";
-import { openTerminalAgent } from "@/features/ai/lib/terminal-agent-terminal";
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { appendChatAcpEvent, type ChatAcpEventInput } from "@/features/ai/lib/acp-event-timeline";
 import { acpNoticeToChatEvent } from "@/features/ai/lib/acp-notices";
@@ -50,7 +49,6 @@ import { recordFrictionSignal } from "@/features/telemetry/services/telemetry";
 import { claimContextualTip } from "@/features/onboarding/lib/contextual-teaching";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
-import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/ui/alert";
 import { Button } from "@/ui/button";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
 import {
@@ -78,7 +76,6 @@ import { AcpQuestionPrompt } from "./acp-question-prompt";
 import { AcpUrlQuestionPrompt } from "./acp-url-question-prompt";
 import { ChatHeader } from "./chat-header";
 import { ChatMessages } from "./chat-messages";
-import { HostedUsageBanner } from "./hosted-usage-banner";
 
 const AIChat = memo(function AIChat({
   className,
@@ -243,9 +240,16 @@ const AIChat = memo(function AIChat({
       const fallbackTitle = getFallbackAgentSessionTitle(userMessage);
       chatActions.updateChatTitle(chatId, fallbackTitle);
 
+      // A chat on a local model titles itself with that model, so its text stays on the machine.
+      const localConnection = getLocalChatConnection(
+        useAIChatStore.getState().actions.getChatById(chatId),
+        useSettingsStore.getState().settings,
+      );
       try {
         const { editedText } = await requestInlineEdit({
-          model: "",
+          ...(localConnection
+            ? { provider: localConnection.providerId, model: localConnection.modelId }
+            : { model: "" }),
           feature: "chat-title",
           beforeSelection: "",
           selectedText: userMessage,
@@ -662,23 +666,8 @@ const AIChat = memo(function AIChat({
   const useInitialComposer = isNewSession && !currentPermission && !currentQuestion;
   const lastMessage = currentChat?.messages[currentChat.messages.length - 1];
   const lastTurnFailed = lastMessage?.role === "assistant" && Boolean(lastMessage.error);
-  const turnNotice = !isOnline
-    ? {
-        tone: "warning" as const,
-        title: "You're offline",
-        description: "Messages you send wait in the queue until the connection is back.",
-        canRetry: false,
-      }
-    : lastTurnFailed && lastMessage?.error?.code === "offline"
-      ? {
-          tone: "info" as const,
-          title: "Back online",
-          description: "Run the last prompt again.",
-          canRetry: true,
-        }
-      : null;
-  const showHostedUsage =
-    !useInitialComposer && currentAgentId === "custom" && sessionProviderId === "athas";
+  const lastTurnFailedOffline =
+    isOnline && lastTurnFailed && lastMessage?.error?.code === "offline";
   const handleQuestionAnswer = async (response: AcpElicitationResponse) => {
     if (!currentQuestion) return;
     const isLink = currentQuestion.request.mode === "url";
@@ -731,10 +720,6 @@ const AIChat = memo(function AIChat({
       allProjectFiles={allProjectFiles}
       currentAgentId={currentAgentId}
       onAgentChange={(agentId, model) => {
-        if (isTerminalAgent(agentId)) {
-          openTerminalAgent(agentId);
-          return;
-        }
         const nextChatId = chatActions.selectChatAgent(effectiveChatId, agentId, {
           activate: !chatId,
           model,
@@ -747,7 +732,7 @@ const AIChat = memo(function AIChat({
       queuedMessages={queuedMessages}
       {...composerContext.inputProps}
       isActiveSurface={isActiveSurface}
-      presentation={useInitialComposer ? "initial" : "default"}
+      size={useInitialComposer ? "roomy" : "default"}
       onSendMessage={handleSendMessage}
       onInterruptAndSend={handleInterruptAndSend}
       onMoveQueuedMessage={(fromIndex, toIndex) => {
@@ -766,6 +751,8 @@ const AIChat = memo(function AIChat({
       onSendQueuedMessageNow={handleSendQueuedMessageNow}
       onEditQueuedMessage={handleEditQueuedMessage}
       onStopStreaming={stopStreaming}
+      lastTurnFailedOffline={lastTurnFailedOffline}
+      onRetryLastTurn={() => void retryLastTurn()}
       restoredPrompt={refusedPrompt}
     />
   );
@@ -892,31 +879,6 @@ const AIChat = memo(function AIChat({
             />
           ) : null}
 
-          {turnNotice ? (
-            <div className="shrink-0 px-2 pb-1">
-              <Alert tone={turnNotice.tone} role="status">
-                <AlertTitle>{turnNotice.title}</AlertTitle>
-                <AlertDescription>{turnNotice.description}</AlertDescription>
-                {turnNotice.canRetry ? (
-                  <AlertAction>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="xs"
-                      onClick={() => void retryLastTurn()}
-                    >
-                      Retry
-                    </Button>
-                  </AlertAction>
-                ) : null}
-              </Alert>
-            </div>
-          ) : null}
-          {showHostedUsage ? (
-            <div className="shrink-0 px-2 pb-1">
-              <HostedUsageBanner />
-            </div>
-          ) : null}
           {!useInitialComposer ? composer : null}
         </>
       )}

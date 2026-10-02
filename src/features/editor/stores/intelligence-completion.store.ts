@@ -1,7 +1,12 @@
 import { create } from "zustand";
 import { createSelectors } from "@/utils/zustand-selectors";
 
-export type IntelligenceCompletionPauseReason = "credits" | "sign-in" | "api-key" | "policy";
+export type IntelligenceCompletionPauseReason =
+  | "credits"
+  | "sign-in"
+  | "api-key"
+  | "policy"
+  | "model";
 
 export type IntelligenceCompletionStatus =
   | { kind: "idle" }
