@@ -8,6 +8,45 @@ declare module "monaco-editor/esm/vs/editor/common/services/resolverService.js" 
 declare module "monaco-editor/esm/vs/editor/standalone/browser/standaloneServices.js" {
   export const StandaloneServices: { get(serviceId: unknown): unknown };
 }
+declare module "monaco-editor/esm/vs/editor/common/core/range.js" {
+  export class Range {
+    constructor(
+      startLineNumber: number,
+      startColumn: number,
+      endLineNumber: number,
+      endColumn: number,
+    );
+  }
+}
+declare module "monaco-editor/esm/vs/editor/common/model/pieceTreeTextBuffer/pieceTreeTextBufferBuilder.js" {
+  interface PieceTreeContentChange {
+    range: {
+      startLineNumber: number;
+      startColumn: number;
+      endLineNumber: number;
+      endColumn: number;
+    };
+    rangeOffset: number;
+    rangeLength: number;
+    text: string;
+  }
+  interface PieceTreeTextBuffer {
+    getEOL(): string;
+    getLength(): number;
+    getLinesContent(): string[];
+    applyEdits(
+      operations: { range: unknown; text: string }[],
+      recordTrimAutoWhitespace: boolean,
+      computeUndoEdits: boolean,
+    ): { changes: PieceTreeContentChange[] };
+  }
+  export class PieceTreeTextBufferBuilder {
+    acceptChunk(chunk: string): void;
+    finish(normalizeEOL?: boolean): {
+      create(defaultEOL: number): { textBuffer: PieceTreeTextBuffer };
+    };
+  }
+}
 
 interface SpeechRecognitionAlternative {
   transcript: string;

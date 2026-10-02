@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vite-plus/test";
 import {
   cleanupBufferHistoryTracking,
+  flushPendingBufferHistory,
   trackBufferHistoryChange,
   trackImmediateBufferHistoryChange,
 } from "@/features/editor/stores/buffer-history-tracking";
@@ -65,5 +66,54 @@ describe("buffer history tracking", () => {
       .getState()
       .actions.redo(BUFFER_ID, currentEntry("alpha\nbeta"));
     expect(redoEntry?.content).toBe("alpha\nbeta\nbeta");
+  });
+
+  it("stores grouped typing as patches and preserves undo and redo", () => {
+    trackBufferHistoryChange({
+      bufferId: BUFFER_ID,
+      currentContent: "one",
+      nextContent: "one!",
+      previousContent: "one",
+      contentChanges: [
+        {
+          rangeOffset: 3,
+          rangeLength: 0,
+          text: "!",
+          startLine: 0,
+          startColumn: 3,
+          endLine: 0,
+          endColumn: 3,
+        },
+      ],
+    });
+    trackBufferHistoryChange({
+      bufferId: BUFFER_ID,
+      currentContent: "one!",
+      nextContent: "one!!",
+      previousContent: "one!",
+      contentChanges: [
+        {
+          rangeOffset: 4,
+          rangeLength: 0,
+          text: "!",
+          startLine: 0,
+          startColumn: 4,
+          endLine: 0,
+          endColumn: 4,
+        },
+      ],
+    });
+    const pending = useHistoryStore.getState().actions.getHistoryState(BUFFER_ID)?.past ?? [];
+    expect(pending).toHaveLength(0);
+
+    flushPendingBufferHistory(BUFFER_ID, "one!!");
+    const stored = useHistoryStore.getState().actions.getHistoryState(BUFFER_ID)?.past[0];
+    expect(stored).toMatchObject({ kind: "patch", beforeLength: 3, afterLength: 5 });
+    expect("content" in (stored ?? {})).toBe(false);
+
+    const undoEntry = useHistoryStore.getState().actions.undo(BUFFER_ID, currentEntry("one!!"));
+    expect(undoEntry?.content).toBe("one");
+    const redoEntry = useHistoryStore.getState().actions.redo(BUFFER_ID, currentEntry("one"));
+    expect(redoEntry?.content).toBe("one!!");
   });
 });
