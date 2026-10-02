@@ -7,7 +7,7 @@
 set -euo pipefail
 
 # A couple of points under the measured workspace, so a drop fails the run.
-fail_under_lines=35
+fail_under_lines=41
 
 out=target/llvm-cov
 
