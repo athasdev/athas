@@ -69,57 +69,107 @@ fn expand_identity_path(key_path: &str, home_dir: &Path) -> PathBuf {
 }
 
 fn get_ssh_config(host: &str) -> SshConfig {
-   let mut config = SshConfig {
-      hostname: None,
-      user: None,
-      identity_file: None,
-      port: None,
+   let Ok(home_dir) = env::var("HOME") else {
+      return SshConfig::default();
    };
+   let home_dir = PathBuf::from(home_dir);
+   match fs::read_to_string(home_dir.join(".ssh").join("config")) {
+      Ok(content) => parse_ssh_config(&content, host, &home_dir),
+      Err(_) => SshConfig::default(),
+   }
+}
 
-   if let Ok(home_dir) = env::var("HOME") {
-      let ssh_config_path = format!("{}/.ssh/config", home_dir);
-      if let Ok(content) = fs::read_to_string(&ssh_config_path) {
-         let mut in_host_section = false;
+/// Matches an ssh_config pattern supporting `*` and `?` wildcards.
+fn ssh_pattern_matches(pattern: &str, value: &str) -> bool {
+   let pattern: Vec<char> = pattern.to_lowercase().chars().collect();
+   let value: Vec<char> = value.to_lowercase().chars().collect();
+   let (mut p, mut v) = (0, 0);
+   let mut backtrack: Option<(usize, usize)> = None;
 
-         for line in content.lines() {
-            let line = line.trim();
-            if line.is_empty() || line.starts_with('#') {
-               continue;
-            }
+   while v < value.len() {
+      if p < pattern.len() && (pattern[p] == '?' || pattern[p] == value[v]) {
+         p += 1;
+         v += 1;
+      } else if p < pattern.len() && pattern[p] == '*' {
+         backtrack = Some((p, v));
+         p += 1;
+      } else if let Some((star, matched)) = backtrack {
+         p = star + 1;
+         v = matched + 1;
+         backtrack = Some((star, matched + 1));
+      } else {
+         return false;
+      }
+   }
 
-            if line.to_lowercase().starts_with("host ") {
-               let current_host_pattern = line[5..].trim();
-               in_host_section = current_host_pattern == host || current_host_pattern == "*";
-               continue;
-            }
+   pattern[p..].iter().all(|ch| *ch == '*')
+}
 
-            if in_host_section {
-               let parts: Vec<&str> = line.splitn(2, ' ').collect();
-               if parts.len() == 2 {
-                  let key = parts[0].to_lowercase();
-                  let value = parts[1].trim();
-
-                  match key.as_str() {
-                     "hostname" => config.hostname = Some(value.to_string()),
-                     "user" => config.user = Some(value.to_string()),
-                     "identityfile" => {
-                        let expanded_path = if let Some(stripped) = value.strip_prefix("~/") {
-                           format!("{}/{}", home_dir, stripped)
-                        } else {
-                           value.to_string()
-                        };
-                        config.identity_file = Some(expanded_path);
-                     }
-                     "port" => {
-                        if let Ok(port) = value.parse::<u16>() {
-                           config.port = Some(port);
-                        }
-                     }
-                     _ => {}
-                  }
-               }
-            }
+/// A `Host` line applies when any pattern matches and no negated pattern does.
+fn host_line_matches(patterns: &str, host: &str) -> bool {
+   let mut matched = false;
+   for pattern in patterns.split_whitespace() {
+      if let Some(negated) = pattern.strip_prefix('!') {
+         if ssh_pattern_matches(negated, host) {
+            return false;
          }
+      } else if ssh_pattern_matches(pattern, host) {
+         matched = true;
+      }
+   }
+   matched
+}
+
+fn split_config_line(line: &str) -> Option<(String, &str)> {
+   let separator = line.find(|ch: char| ch == '=' || ch.is_whitespace())?;
+   let key = line[..separator].to_lowercase();
+   let rest = line[separator..].trim_start();
+   let value = rest.strip_prefix('=').unwrap_or(rest).trim();
+   let value = value
+      .strip_prefix('"')
+      .and_then(|inner| inner.strip_suffix('"'))
+      .unwrap_or(value);
+   (!value.is_empty()).then_some((key, value))
+}
+
+/// Resolves the options that apply to `host`. Like OpenSSH, the first value
+/// obtained for each option wins, so specific `Host` blocks placed before a
+/// trailing `Host *` block keep their values.
+fn parse_ssh_config(content: &str, host: &str, home_dir: &Path) -> SshConfig {
+   let mut config = SshConfig::default();
+   let mut in_matching_section = true;
+
+   for line in content.lines() {
+      let line = line.trim();
+      if line.is_empty() || line.starts_with('#') {
+         continue;
+      }
+      let Some((key, value)) = split_config_line(line) else {
+         continue;
+      };
+
+      match key.as_str() {
+         "host" => in_matching_section = host_line_matches(value, host),
+         // Match criteria are not evaluated; never apply their options.
+         "match" => in_matching_section = false,
+         _ if !in_matching_section => {}
+         "hostname" => {
+            config.hostname.get_or_insert_with(|| value.to_string());
+         }
+         "user" => {
+            config.user.get_or_insert_with(|| value.to_string());
+         }
+         "identityfile" => {
+            config.identity_file.get_or_insert_with(|| {
+               expand_identity_path(value, home_dir)
+                  .to_string_lossy()
+                  .into_owned()
+            });
+         }
+         "port" if config.port.is_none() => {
+            config.port = value.parse::<u16>().ok();
+         }
+         _ => {}
       }
    }
 
@@ -292,5 +342,93 @@ mod tests {
    fn shell_quotes_single_quotes() {
       assert_eq!(shell_quote("it's safe"), "'it'\\''s safe'");
       assert_eq!(shell_quote("'"), "''\\'''");
+   }
+
+   const CONFIG: &str = "\
+# global defaults apply to every host
+ServerAliveInterval 30
+
+Host dev staging
+  HostName 10.0.0.5
+  User deploy
+  Port 2222
+  IdentityFile ~/.ssh/dev_ed25519
+
+Host *.internal !secret.internal
+  User ops
+
+Host=equals
+  HostName\tequals.example.com
+  User = \"quoted user\"
+
+Match host matched
+  User should-not-apply
+
+Host *
+  User fallback
+  Port 22
+  IdentityFile ~/.ssh/id_default
+";
+
+   fn parse(host: &str) -> SshConfig {
+      parse_ssh_config(CONFIG, host, Path::new("/home/me"))
+   }
+
+   #[test]
+   fn first_matching_value_wins_over_trailing_wildcard_block() {
+      let config = parse("staging");
+
+      assert_eq!(config.hostname.as_deref(), Some("10.0.0.5"));
+      assert_eq!(config.user.as_deref(), Some("deploy"));
+      assert_eq!(config.port, Some(2222));
+      let expected_key = Path::new("/home/me").join(".ssh/dev_ed25519");
+      assert_eq!(
+         config.identity_file.as_deref(),
+         Some(expected_key.to_string_lossy().as_ref())
+      );
+   }
+
+   #[test]
+   fn matches_wildcards_and_honors_negated_patterns() {
+      assert_eq!(parse("db.internal").user.as_deref(), Some("ops"));
+      assert_eq!(parse("DB.Internal").user.as_deref(), Some("ops"));
+      assert_eq!(parse("secret.internal").user.as_deref(), Some("fallback"));
+
+      let unknown = parse("example.org");
+      assert_eq!(unknown.hostname, None);
+      assert_eq!(unknown.user.as_deref(), Some("fallback"));
+      assert_eq!(unknown.port, Some(22));
+   }
+
+   #[test]
+   fn accepts_equals_tabs_and_quoted_values_and_skips_match_blocks() {
+      let config = parse("equals");
+      assert_eq!(config.hostname.as_deref(), Some("equals.example.com"));
+      assert_eq!(config.user.as_deref(), Some("quoted user"));
+
+      assert_eq!(parse("matched").user.as_deref(), Some("fallback"));
+   }
+
+   #[test]
+   fn ignores_invalid_ports_and_returns_defaults_for_empty_config() {
+      let config = parse_ssh_config(
+         "Host box\n  Port not-a-port\n",
+         "box",
+         Path::new("/home/me"),
+      );
+      assert_eq!(config.port, None);
+
+      let empty = parse_ssh_config("", "box", Path::new("/home/me"));
+      assert!(empty.hostname.is_none() && empty.user.is_none());
+      assert!(empty.identity_file.is_none() && empty.port.is_none());
+   }
+
+   #[test]
+   fn wildcard_matching_handles_question_marks_and_backtracking() {
+      assert!(ssh_pattern_matches("web-??", "web-01"));
+      assert!(!ssh_pattern_matches("web-??", "web-1"));
+      assert!(ssh_pattern_matches("*.a.*.com", "x.a.b.a.c.com"));
+      assert!(ssh_pattern_matches("*", ""));
+      assert!(!ssh_pattern_matches("prod*", "staging-prod"));
    }
 }
