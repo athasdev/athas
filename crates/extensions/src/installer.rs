@@ -1,11 +1,20 @@
 use super::types::{DownloadInfo, ExtensionMetadata, InstallProgress, InstallStatus};
 use anyhow::{Context, Result};
+use futures_util::StreamExt;
 use serde::Deserialize;
 use std::{
    fs,
    path::{Path, PathBuf},
+   sync::atomic::{AtomicU64, Ordering},
 };
 use tauri::{AppHandle, Emitter, Manager};
+
+/// Absolute upper bound for a single extension download. Mirrors the tool
+/// installer's binary cap so a compromised distribution point cannot OOM the
+/// backend by serving an unbounded body.
+const MAX_EXTENSION_DOWNLOAD_BYTES: u64 = 512 * 1024 * 1024;
+
+static STAGING_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 pub struct ExtensionInstaller {
    app_handle: AppHandle,
@@ -37,6 +46,60 @@ pub fn validate_extension_id(extension_id: &str) -> Result<()> {
    Ok(())
 }
 
+fn require_download_checksum(extension_id: &str, download_info: &DownloadInfo) -> Result<()> {
+   if download_info.checksum.is_empty() && !is_local_dev_download_url(&download_info.url) {
+      anyhow::bail!(
+         "Refusing to install integration {} without a checksum",
+         extension_id
+      );
+   }
+   Ok(())
+}
+
+/// Debug builds may install from a local marketplace server, whose packages
+/// are rebuilt too often to carry checksums.
+fn is_local_dev_download_url(url: &str) -> bool {
+   cfg!(debug_assertions)
+      && (url.starts_with("http://localhost:") || url.starts_with("http://127.0.0.1:"))
+}
+
+fn require_https_download_url(url: &str) -> Result<()> {
+   if url.starts_with("https://") || is_local_dev_download_url(url) {
+      return Ok(());
+   }
+   anyhow::bail!("Integration download URL must use HTTPS");
+}
+
+fn create_exclusive_staging_file(extension_id: &str, bytes: &[u8]) -> Result<PathBuf> {
+   let temp_dir = std::env::temp_dir();
+   for _ in 0..100 {
+      let unique = STAGING_COUNTER.fetch_add(1, Ordering::Relaxed);
+      let candidate = temp_dir.join(format!(
+         ".{}-{}-{}.tar.gz",
+         extension_id,
+         std::process::id(),
+         unique
+      ));
+      match std::fs::OpenOptions::new()
+         .write(true)
+         .create_new(true)
+         .open(&candidate)
+      {
+         Ok(mut file) => {
+            use std::io::Write;
+            file.write_all(bytes)?;
+            return Ok(candidate);
+         }
+         Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
+         Err(error) => return Err(error.into()),
+      }
+   }
+   anyhow::bail!(
+      "Could not create a unique staging file for integration {}",
+      extension_id
+   );
+}
+
 impl ExtensionInstaller {
    pub fn new(app_handle: AppHandle) -> Result<Self> {
       let app_data_dir = app_handle
@@ -62,6 +125,8 @@ impl ExtensionInstaller {
       download_info: &DownloadInfo,
    ) -> Result<PathBuf> {
       validate_extension_id(extension_id)?;
+      require_download_checksum(extension_id, download_info)?;
+      require_https_download_url(&download_info.url)?;
 
       log::info!(
          "Downloading integration {} from {}",
@@ -96,7 +161,42 @@ impl ExtensionInstaller {
 
          anyhow::bail!("Failed to download integration {extension_id}: HTTP {status}{hint}");
       }
-      let bytes = response.bytes().await?;
+      // Stream the body with a hard cap so a compromised distribution
+      // point cannot OOM the backend with an unbounded response.
+      let mut limit = MAX_EXTENSION_DOWNLOAD_BYTES;
+      if download_info.size > 0 {
+         if download_info.size > MAX_EXTENSION_DOWNLOAD_BYTES {
+            anyhow::bail!(
+               "Integration {} declares an excessive size of {} bytes",
+               extension_id,
+               download_info.size
+            );
+         }
+         limit = download_info.size;
+      }
+      if let Some(advertised) = response.content_length()
+         && advertised > limit
+      {
+         anyhow::bail!(
+            "Integration {} advertises {} bytes, above the {} byte limit",
+            extension_id,
+            advertised,
+            limit
+         );
+      }
+      let mut bytes = Vec::new();
+      let mut stream = response.bytes_stream();
+      while let Some(chunk) = stream.next().await {
+         let chunk = chunk?;
+         if bytes.len() as u64 + chunk.len() as u64 > limit {
+            anyhow::bail!(
+               "Integration {} exceeded the {} byte download limit",
+               extension_id,
+               limit
+            );
+         }
+         bytes.extend_from_slice(&chunk);
+      }
 
       if download_info.size > 0 && bytes.len() as u64 != download_info.size {
          anyhow::bail!(
@@ -124,8 +224,15 @@ impl ExtensionInstaller {
          },
       );
 
-      if !download_info.checksum.is_empty() {
-         let checksum = sha256::digest(bytes.as_ref());
+      if download_info.checksum.is_empty() {
+         // Only reachable for local development downloads; see
+         // `require_download_checksum`.
+         log::info!(
+            "Checksum verification skipped for local integration {}",
+            extension_id
+         );
+      } else {
+         let checksum = sha256::digest(bytes.as_slice());
          if checksum != download_info.checksum {
             anyhow::bail!(
                "Checksum mismatch for integration {}: expected {}, got {}",
@@ -134,21 +241,12 @@ impl ExtensionInstaller {
                checksum
             );
          }
-      }
-
-      if download_info.checksum.is_empty() {
-         log::info!(
-            "Checksum verification skipped for integration {}",
-            extension_id
-         );
-      } else {
          log::info!("Checksum verified for integration {}", extension_id);
       }
 
-      // Save to temporary file
-      let temp_dir = std::env::temp_dir();
-      let temp_file = temp_dir.join(format!("{}.tar.gz", extension_id));
-      fs::write(&temp_file, bytes)?;
+      // Stage under an unpredictable, exclusively created name so a local
+      // attacker cannot pre-plant a symlink at the staging path.
+      let temp_file = create_exclusive_staging_file(extension_id, &bytes)?;
 
       Ok(temp_file)
    }
@@ -403,7 +501,42 @@ impl ExtensionInstaller {
 
 #[cfg(test)]
 mod tests {
-   use super::validate_extension_id;
+   use super::{
+      DownloadInfo, require_download_checksum, require_https_download_url, validate_extension_id,
+   };
+
+   fn download(url: &str, checksum: &str) -> DownloadInfo {
+      DownloadInfo {
+         url: url.to_string(),
+         checksum: checksum.to_string(),
+         size: 0,
+      }
+   }
+
+   #[test]
+   fn requires_checksums_for_remote_downloads() {
+      let remote = download("https://athas.dev/ext.tar.gz", "");
+      assert!(require_download_checksum("theme", &remote).is_err());
+      let remote = download("https://athas.dev/ext.tar.gz", "abc");
+      assert!(require_download_checksum("theme", &remote).is_ok());
+   }
+
+   #[test]
+   fn allows_local_development_downloads_without_checksums() {
+      let local = download("http://localhost:14321/ext.tar.gz", "");
+      assert_eq!(
+         require_download_checksum("theme", &local).is_ok(),
+         cfg!(debug_assertions)
+      );
+      assert!(require_download_checksum("theme", &download("http://athas.dev/x", "")).is_err());
+   }
+
+   #[test]
+   fn requires_https_outside_local_development() {
+      assert!(require_https_download_url("https://athas.dev/ext.tar.gz").is_ok());
+      assert!(require_https_download_url("http://athas.dev/ext.tar.gz").is_err());
+      assert!(require_https_download_url("file:///tmp/ext.tar.gz").is_err());
+   }
 
    #[test]
    fn validate_extension_id_accepts_safe_values() {
