@@ -2,9 +2,12 @@
 set -euo pipefail
 
 # Builds a single-file Flatpak bundle from the release tarball. Run
-# package-linux-tarball.sh first. Needs flatpak and flatpak-builder, plus a
-# user-level flathub remote for the GNOME runtime and SDK:
+# package-linux-tarball.sh first. Needs flatpak, a user-level flathub remote
+# for the GNOME runtime and SDK, and Flathub's builder app:
 #   flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+#   flatpak install --user -y flathub org.flatpak.Builder
+# A distro flatpak-builder is used when the app is missing, but releases older
+# than 1.3 call appstream-compose, which GNOME 50's SDK no longer ships.
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${script_dir}/common.sh"
@@ -12,12 +15,18 @@ source "${script_dir}/common.sh"
 arch="$(normalize_linux_arch "${1:?Usage: flatpak.sh <arch> [out-dir]}")"
 out_dir="${2:-release-dist}"
 
-for tool in flatpak flatpak-builder; do
-  if ! command -v "$tool" >/dev/null 2>&1; then
-    echo "${tool} is required to build the Flatpak bundle." >&2
-    exit 1
-  fi
-done
+if ! command -v flatpak >/dev/null 2>&1; then
+  echo "flatpak is required to build the Flatpak bundle." >&2
+  exit 1
+fi
+if flatpak info --user org.flatpak.Builder >/dev/null 2>&1; then
+  builder=(flatpak run --command=flatpak-builder org.flatpak.Builder)
+elif command -v flatpak-builder >/dev/null 2>&1; then
+  builder=(flatpak-builder)
+else
+  echo "org.flatpak.Builder or flatpak-builder is required to build the Flatpak bundle." >&2
+  exit 1
+fi
 
 version="$(bun -e 'console.log(JSON.parse(await Bun.file("package.json").text()).version)')"
 tarball="${out_dir}/${product_name}_${version}_linux-${arch}.tar.gz"
@@ -26,7 +35,10 @@ if [[ ! -f "$tarball" ]]; then
   exit 1
 fi
 
-work_dir="$(mktemp -d)"
+# Inside the checkout rather than /tmp: the builder app has its own /tmp.
+work_dir="${PWD}/target/flatpak-build"
+rm -rf "$work_dir"
+mkdir -p "$work_dir"
 trap 'rm -rf "$work_dir"' EXIT
 
 cp "$tarball" "${work_dir}/athas.tar.gz"
@@ -36,7 +48,7 @@ sed \
   -e "s/@DATE@/$(date -u +%F)/" \
   flatpak/com.code.athas.metainfo.xml > "${work_dir}/${desktop_id}.metainfo.xml"
 
-flatpak-builder \
+"${builder[@]}" \
   --user \
   --arch="$arch" \
   --force-clean \

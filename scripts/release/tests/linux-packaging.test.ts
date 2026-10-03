@@ -147,6 +147,17 @@ describe("Linux release packaging", () => {
     expect(metainfo).toContain('<release version="@VERSION@" date="@DATE@" />');
     expect(script).toContain('cp "$tarball" "${work_dir}/athas.tar.gz"');
     expect(script).toContain("flatpak build-bundle");
+    expect(script).toContain("flatpak run --command=flatpak-builder org.flatpak.Builder");
+  });
+
+  it("installs Flathub's builder app wherever the Flatpak is built", () => {
+    for (const workflow of [".github/workflows/release.yml", ".github/workflows/linux-build.yml"]) {
+      const content = readRepoFile(workflow);
+      expect(content).toContain(
+        "flatpak install --user -y --noninteractive flathub org.flatpak.Builder",
+      );
+      expect(content).not.toMatch(/apt-get install[^\n]*(\\\n[^\n]*)*flatpak-builder/);
+    }
   });
 
   it("builds every Linux package with the stock Tauri bundler in the release workflow", () => {
