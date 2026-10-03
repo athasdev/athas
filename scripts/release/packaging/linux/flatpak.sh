@@ -48,12 +48,23 @@ sed \
   -e "s/@DATE@/$(date -u +%F)/" \
   flatpak/com.code.athas.metainfo.xml > "${work_dir}/${desktop_id}.metainfo.xml"
 
+# The runtime and SDK are installed by the host flatpak: the builder app can
+# only install them over a D-Bus session, which CI runners do not have.
+runtime="$(sed -n 's/^runtime: *//p' flatpak/com.code.athas.yml)"
+sdk="$(sed -n 's/^sdk: *//p' flatpak/com.code.athas.yml)"
+runtime_version="$(sed -n 's/^runtime-version: *"\{0,1\}\([^"]*\)"\{0,1\}$/\1/p' flatpak/com.code.athas.yml)"
+flatpak install --user -y --noninteractive --arch="$arch" flathub \
+  "${runtime}//${runtime_version}" "${sdk}//${runtime_version}"
+
+if [[ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]] && command -v dbus-run-session >/dev/null 2>&1; then
+  builder=(dbus-run-session -- "${builder[@]}")
+fi
+
 "${builder[@]}" \
   --user \
   --arch="$arch" \
   --force-clean \
   --disable-rofiles-fuse \
-  --install-deps-from=flathub \
   --repo="${work_dir}/repo" \
   "${work_dir}/build" \
   "${work_dir}/${desktop_id}.yml"
