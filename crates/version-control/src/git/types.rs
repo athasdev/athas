@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize)]
+#[derive(Serialize, specta::Type)]
 pub struct GitStatus {
    pub branch: String,
    pub ahead: i32,
@@ -8,7 +8,7 @@ pub struct GitStatus {
    pub files: Vec<GitFile>,
 }
 
-#[derive(Serialize, Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Serialize, Debug, Clone, Copy, PartialEq, Eq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub enum FileStatus {
    Modified,
@@ -18,14 +18,14 @@ pub enum FileStatus {
    Untracked,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, specta::Type)]
 pub struct GitFile {
    pub path: String,
    pub status: FileStatus,
    pub staged: bool,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, specta::Type)]
 pub struct GitCommit {
    pub hash: String,
    pub message: String,
@@ -35,7 +35,7 @@ pub struct GitCommit {
    pub date: String,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub enum DiffLineType {
    Added,
@@ -44,7 +44,7 @@ pub enum DiffLineType {
    Header,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, specta::Type)]
 pub struct GitDiffLine {
    pub line_type: DiffLineType,
    pub content: String,
@@ -52,7 +52,7 @@ pub struct GitDiffLine {
    pub new_line_number: Option<u32>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, specta::Type)]
 pub struct GitDiff {
    pub file_path: String,
    pub old_path: Option<String>,
@@ -75,7 +75,7 @@ pub struct GitDiff {
    pub is_truncated: Option<bool>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, specta::Type)]
 pub struct GitDiffStat {
    pub file_path: String,
    pub staged: bool,
@@ -83,13 +83,13 @@ pub struct GitDiffStat {
    pub deletions: usize,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, specta::Type)]
 pub struct GitBlame {
    pub file_path: String,
    pub lines: Vec<GitBlameLine>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, specta::Type)]
 pub struct GitBlameLine {
    pub line_number: usize,
    pub total_lines: usize,
@@ -101,20 +101,20 @@ pub struct GitBlameLine {
    pub commit: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, specta::Type)]
 pub struct GitRemote {
    pub name: String,
    pub url: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, specta::Type)]
 pub struct GitStash {
    pub index: usize,
    pub message: String,
    pub date: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, specta::Type)]
 pub struct GitTag {
    pub name: String,
    pub commit: String,
@@ -123,7 +123,7 @@ pub struct GitTag {
    pub is_annotated: bool,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, specta::Type)]
 pub struct GitWorktree {
    pub path: String,
    pub branch: Option<String>,
@@ -135,7 +135,7 @@ pub struct GitWorktree {
    pub is_current: bool,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, specta::Type)]
 pub struct GitHunk {
    pub file_path: String,
    pub lines: Vec<GitDiffLine>,

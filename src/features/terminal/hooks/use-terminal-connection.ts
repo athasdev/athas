@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { useCallback, useEffect, useRef } from "react";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
 import { TERMINAL_PROCESS_EXIT_EVENT } from "../constants/terminal-events";
@@ -62,10 +62,11 @@ export function useTerminalConnection({
 
   const writeInput = useCallback(
     async (activeConnectionId: string, input: TerminalInput) => {
-      await invoke(remoteConnectionId ? "remote_terminal_write" : "terminal_write", {
-        id: activeConnectionId,
-        input,
-      });
+      if (remoteConnectionId) {
+        await commands.remoteTerminalWrite(activeConnectionId, input);
+        return;
+      }
+      await commands.terminalWrite(activeConnectionId, input);
     },
     [remoteConnectionId],
   );
@@ -97,10 +98,10 @@ export function useTerminalConnection({
       if (!activeConnectionId || outputPausedRef.current === paused) return;
 
       outputPausedRef.current = paused;
-      void invoke(remoteConnectionId ? "remote_terminal_set_paused" : "terminal_set_paused", {
-        id: activeConnectionId,
-        paused,
-      }).catch(() => {
+      const request = remoteConnectionId
+        ? commands.remoteTerminalSetPaused(activeConnectionId, paused)
+        : commands.terminalSetPaused(activeConnectionId, paused);
+      void request.catch(() => {
         outputPausedRef.current = !paused;
       });
     },
@@ -116,10 +117,10 @@ export function useTerminalConnection({
       if (terminalSizesEqual(lastSizeRef.current, size)) return;
       lastSizeRef.current = size;
 
-      void invoke(remoteConnectionId ? "remote_terminal_resize" : "terminal_resize", {
-        id: activeConnectionId,
-        size,
-      }).catch(() => {
+      const request = remoteConnectionId
+        ? commands.remoteTerminalResize(activeConnectionId, size)
+        : commands.terminalResize(activeConnectionId, size);
+      void request.catch(() => {
         lastSizeRef.current = null;
       });
     },

@@ -36,6 +36,13 @@ const postgresConnection: SavedConnection = {
   username: "athas",
 };
 
+const postgresSaveCommand = {
+  ...postgresConnection,
+  workspace_path: null,
+  file_path: null,
+  connection_string: null,
+};
+
 describe("connection store reliability", () => {
   beforeEach(() => {
     mockInvoke.mockReset();
@@ -335,7 +342,7 @@ describe("connection store reliability", () => {
     await useConnectionStore.getState().actions.saveConnection(postgresConnection);
 
     expect(mockInvoke).toHaveBeenNthCalledWith(1, "save_connection", {
-      connection: postgresConnection,
+      connection: postgresSaveCommand,
     });
     expect(mockInvoke).toHaveBeenNthCalledWith(2, "list_saved_connections");
     expect(useConnectionStore.getState().savedConnections).toEqual([postgresConnection]);
@@ -362,7 +369,7 @@ describe("connection store reliability", () => {
     await useConnectionStore.getState().actions.saveConnection(unnormalizedConnection);
 
     expect(mockInvoke).toHaveBeenNthCalledWith(1, "save_connection", {
-      connection: postgresConnection,
+      connection: postgresSaveCommand,
     });
     expect(useConnectionStore.getState().savedConnections).toEqual([postgresConnection]);
     expect(warn).toHaveBeenCalledWith(

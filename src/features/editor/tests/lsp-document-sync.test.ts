@@ -109,8 +109,8 @@ describe("LSP incremental document synchronization", () => {
     expect(invoke).toHaveBeenCalledWith("lsp_document_change_batch", {
       filePath,
       batches: [
-        expect.objectContaining({ modelVersionId: 2, fullContent: undefined }),
-        expect.objectContaining({ modelVersionId: 3, fullContent: undefined }),
+        expect.objectContaining({ modelVersionId: 2, fullContent: null }),
+        expect.objectContaining({ modelVersionId: 3, fullContent: null }),
       ],
     });
     expect(state.documentVersions.get(filePath)).toBe(2);

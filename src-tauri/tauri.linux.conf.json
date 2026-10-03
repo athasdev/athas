@@ -4,12 +4,10 @@
     "windows": [
       {
         "label": "main",
-        "create": false,
         "title": "Athas",
         "width": 1200,
         "height": 800,
-        "decorations": true,
-        "hiddenTitle": false,
+        "decorations": false,
         "transparent": false,
         "resizable": true,
         "fullscreen": false,

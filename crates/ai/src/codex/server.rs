@@ -1,10 +1,7 @@
 use super::types::{
    CodexIntegrationStatus, CodexProtocolEvent, CodexRequestDecision, CodexThreadSettings,
 };
-use crate::{
-   executable_path::{find_executable, user_shell_path},
-   runtime::AthasAppHandle as AppHandle,
-};
+use crate::executable_path::{find_executable, user_shell_path};
 use anyhow::{Context, Result, anyhow, bail};
 use serde_json::{Map, Value, json};
 use std::{
@@ -17,7 +14,7 @@ use std::{
    },
    time::Duration,
 };
-use tauri::Emitter;
+use tauri::{AppHandle, Emitter};
 use tokio::{
    io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
    process::{Child, ChildStdin, Command},

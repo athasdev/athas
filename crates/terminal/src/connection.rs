@@ -1,5 +1,6 @@
 use crate::{
    config::TerminalConfig,
+   flatpak,
    protocol::{TerminalEvent, TerminalEventHandler, TerminalReaderControl, TerminalSize},
    shell::get_shell_by_id,
 };
@@ -43,7 +44,10 @@ impl TerminalConnection {
          pixel_height: size.pixel_height,
       })?;
 
-      let cmd = Self::build_command(&config)?;
+      let mut cmd = Self::build_command(&config)?;
+      if flatpak::is_sandboxed() {
+         cmd = flatpak::host_pty_command(&cmd);
+      }
       let child = pty_pair.slave.spawn_command(cmd)?;
       let writer = Arc::new(Mutex::new(Some(pty_pair.master.take_writer()?)));
       let child = Arc::new(Mutex::new(Some(child)));
@@ -79,7 +83,12 @@ impl TerminalConnection {
 
       // Run the shell as an interactive login shell to source user's profile,
       // then print all environment variables
-      let output = Command::new(&shell).args(["-ilc", "env"]).output();
+      let mut command = if flatpak::is_sandboxed() {
+         flatpak::host_command(&shell)
+      } else {
+         Command::new(&shell)
+      };
+      let output = command.args(["-ilc", "env"]).output();
 
       let mut env_map = HashMap::new();
 
@@ -150,13 +159,11 @@ impl TerminalConnection {
             "cmd.exe".to_string()
          } else {
             std::env::var("SHELL").unwrap_or_else(|_| {
-               if std::path::Path::new("/bin/zsh").exists() {
-                  "/bin/zsh".to_string()
-               } else if std::path::Path::new("/bin/bash").exists() {
-                  "/bin/bash".to_string()
-               } else {
-                  "/bin/sh".to_string()
-               }
+               ["/bin/zsh", "/bin/bash"]
+                  .into_iter()
+                  .find(|shell| crate::shell::shell_path_exists(shell))
+                  .unwrap_or("/bin/sh")
+                  .to_string()
             })
          }
       };

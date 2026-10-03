@@ -46,14 +46,7 @@ export interface Terminal {
   remoteConnectionId?: string;
 }
 
-export interface Shell {
-  id: string;
-  name: string;
-  exec_unix?: string; // search for common paths like /bin/shell_name
-  exec_win?: string; // search for paths in %PATH% matching *.exe
-  kind?: "windows" | "unix" | "wsl";
-  wsl_distribution?: string;
-}
+export type { Shell } from "@/bindings/commands";
 
 export interface TerminalProfile {
   id: string;

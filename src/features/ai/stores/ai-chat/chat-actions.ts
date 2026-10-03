@@ -538,8 +538,8 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
         set((state) => {
           delete state.acpSessions[sessionId];
         });
-        void import("@tauri-apps/api/core")
-          .then(({ invoke }) => invoke("close_acp_session", { sessionId }))
+        void import("@/bindings/commands")
+          .then(({ commands }) => commands.closeAcpSession(sessionId))
           .catch((error) => console.error("Failed to close the chat's agent session:", error));
       }
     },

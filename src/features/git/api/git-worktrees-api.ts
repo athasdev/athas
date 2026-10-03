@@ -1,4 +1,4 @@
-import { invoke as tauriInvoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import type { GitWorktree } from "../types/git.types";
 import { emitGitChanged } from "../events/git-events";
 import { runGitRead } from "../runtime/git-read-coordinator";
@@ -16,7 +16,7 @@ export const getWorktrees = async (repoPath: string): Promise<GitWorktree[]> => 
     }
 
     return await runGitRead(resolvedRepoPath, "worktrees", () =>
-      tauriInvoke<GitWorktree[]>("git_get_worktrees", { repoPath: resolvedRepoPath }),
+      commands.gitGetWorktrees(resolvedRepoPath),
     );
   } catch (error) {
     if (!isNotGitRepositoryError(error)) {
@@ -34,12 +34,7 @@ export const addWorktree = async (
 ): Promise<boolean> => {
   try {
     const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
-    await tauriInvoke("git_add_worktree", {
-      repoPath: resolvedRepoPath,
-      path,
-      branch,
-      createBranch,
-    });
+    await commands.gitAddWorktree(resolvedRepoPath, path, branch ?? null, createBranch);
     emitGitChanged({
       repoPath: resolvedRepoPath,
       scopes: ["repository", "refs"],
@@ -59,7 +54,7 @@ export const removeWorktree = async (
 ): Promise<boolean> => {
   try {
     const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
-    await tauriInvoke("git_remove_worktree", { repoPath: resolvedRepoPath, path, force });
+    await commands.gitRemoveWorktree(resolvedRepoPath, path, force);
     emitGitChanged({
       repoPath: resolvedRepoPath,
       scopes: ["repository", "refs"],

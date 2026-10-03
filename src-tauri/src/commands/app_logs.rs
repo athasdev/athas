@@ -1,15 +1,14 @@
-use crate::app_runtime::AppHandle;
 use serde::Serialize;
 use std::{
    fs::{self, File},
    io::{Read, Seek, SeekFrom},
    path::{Path, PathBuf},
 };
-use tauri::{Manager, command};
+use tauri::{AppHandle, Manager, command};
 
 const MAX_LOG_BYTES: u64 = 1_000_000;
 
-#[derive(Serialize)]
+#[derive(Serialize, specta::Type)]
 pub struct AthasLogFile {
    path: String,
    content: String,
@@ -18,6 +17,7 @@ pub struct AthasLogFile {
 }
 
 #[command]
+#[specta::specta]
 pub fn read_athas_log(app: AppHandle) -> Result<AthasLogFile, String> {
    let log_dir = app
       .path()

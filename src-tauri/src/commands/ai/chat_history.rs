@@ -4,7 +4,7 @@ use athas_ai::{
 use std::path::PathBuf;
 use tauri::{Manager, command};
 
-fn chat_history_db_path(app: &crate::app_runtime::AppHandle) -> Result<PathBuf, String> {
+fn chat_history_db_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
    let app_data_dir = app
       .path()
       .app_data_dir()
@@ -12,18 +12,20 @@ fn chat_history_db_path(app: &crate::app_runtime::AppHandle) -> Result<PathBuf, 
    Ok(app_data_dir.join("chat_history.db"))
 }
 
-fn repository(app: &crate::app_runtime::AppHandle) -> Result<ChatHistoryRepository, String> {
+fn repository(app: &tauri::AppHandle) -> Result<ChatHistoryRepository, String> {
    Ok(ChatHistoryRepository::new(chat_history_db_path(app)?))
 }
 
 #[command]
-pub async fn init_chat_database(app: crate::app_runtime::AppHandle) -> Result<(), String> {
+#[specta::specta]
+pub async fn init_chat_database(app: tauri::AppHandle) -> Result<(), String> {
    repository(&app)?.initialize()
 }
 
 #[command]
+#[specta::specta]
 pub async fn save_chat(
-   app: crate::app_runtime::AppHandle,
+   app: tauri::AppHandle,
    chat: ChatData,
    messages: Vec<MessageData>,
    tool_calls: Vec<ToolCallData>,
@@ -32,37 +34,33 @@ pub async fn save_chat(
 }
 
 #[command]
-pub async fn update_chat_metadata(
-   app: crate::app_runtime::AppHandle,
-   chat: ChatData,
-) -> Result<(), String> {
+#[specta::specta]
+pub async fn update_chat_metadata(app: tauri::AppHandle, chat: ChatData) -> Result<(), String> {
    repository(&app)?.update_chat_metadata(chat)
 }
 
 #[command]
-pub async fn load_all_chats(app: crate::app_runtime::AppHandle) -> Result<Vec<ChatData>, String> {
+#[specta::specta]
+pub async fn load_all_chats(app: tauri::AppHandle) -> Result<Vec<ChatData>, String> {
    repository(&app)?.load_all_chats()
 }
 
 #[command]
-pub async fn load_chat(
-   app: crate::app_runtime::AppHandle,
-   chat_id: String,
-) -> Result<ChatWithMessages, String> {
+#[specta::specta]
+pub async fn load_chat(app: tauri::AppHandle, chat_id: String) -> Result<ChatWithMessages, String> {
    repository(&app)?.load_chat(&chat_id)
 }
 
 #[command]
-pub async fn delete_chat(
-   app: crate::app_runtime::AppHandle,
-   chat_id: String,
-) -> Result<(), String> {
+#[specta::specta]
+pub async fn delete_chat(app: tauri::AppHandle, chat_id: String) -> Result<(), String> {
    repository(&app)?.delete_chat(&chat_id)
 }
 
 #[command]
+#[specta::specta]
 pub async fn save_chat_checkpoints(
-   app: crate::app_runtime::AppHandle,
+   app: tauri::AppHandle,
    chat_id: String,
    data: Option<String>,
    updated_at: i64,
@@ -71,25 +69,23 @@ pub async fn save_chat_checkpoints(
 }
 
 #[command]
+#[specta::specta]
 pub async fn load_chat_checkpoints(
-   app: crate::app_runtime::AppHandle,
+   app: tauri::AppHandle,
    chat_id: String,
 ) -> Result<Option<String>, String> {
    repository(&app)?.load_checkpoints(&chat_id)
 }
 
 #[command]
-pub async fn search_chats(
-   app: crate::app_runtime::AppHandle,
-   query: String,
-) -> Result<Vec<ChatData>, String> {
+#[specta::specta]
+pub async fn search_chats(app: tauri::AppHandle, query: String) -> Result<Vec<ChatData>, String> {
    repository(&app)?.search_chats(&query)
 }
 
 #[command]
-pub async fn get_chat_stats(
-   app: crate::app_runtime::AppHandle,
-) -> Result<serde_json::Value, String> {
+#[specta::specta]
+pub async fn get_chat_stats(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
    let stats: ChatStats = repository(&app)?.get_stats()?;
    Ok(serde_json::json!({
       "total_chats": stats.total_chats,

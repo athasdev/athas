@@ -2,7 +2,6 @@
 //! installs in `<app data>/agents/<agent id>/<version>`, and the launcher Athas starts in
 //! `<app data>/tools/acp`, where installed agents are detected.
 
-use crate::app_runtime::AppHandle;
 use athas_ai::{
    AgentConfig,
    acp::registry::{
@@ -12,7 +11,7 @@ use athas_ai::{
 };
 use athas_runtime::NodeRuntime;
 use std::{fs, path::PathBuf, sync::OnceLock};
-use tauri::Manager;
+use tauri::{AppHandle, Manager};
 use tokio::sync::Mutex;
 
 static REGISTRY_STORE: OnceLock<Mutex<Option<RegistryStore>>> = OnceLock::new();

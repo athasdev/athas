@@ -1,8 +1,5 @@
 use super::types::{AgentConfig, AgentSource};
-use crate::{
-   executable_path::{find_executable, probe_command},
-   runtime::AthasAppHandle as AppHandle,
-};
+use crate::executable_path::{find_executable, probe_command};
 use semver::Version;
 use std::{
    collections::HashMap,
@@ -11,7 +8,7 @@ use std::{
    process::Command,
    time::{Duration, Instant, SystemTime},
 };
-use tauri::Manager;
+use tauri::{AppHandle, Manager};
 
 /// Cache duration for binary detection (60 seconds)
 const DETECTION_CACHE_SECONDS: u64 = 60;

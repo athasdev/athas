@@ -3,11 +3,6 @@ name = "athas-ai"
 version = "0.1.0"
 edition = "2024"
 
-[features]
-default = ["tauri-wry"]
-tauri-wry = ["athas-terminal/tauri-wry", "tauri/wry", "tauri/x11"]
-linux = ["athas-terminal/linux", "tauri/cef"]
-
 [dependencies]
 # Unstable ACP extensions that only add to the protocol: notices are sent only to clients that
 # advertise them, and end-of-turn usage is an optional field of the prompt response.
@@ -33,12 +28,13 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sha2 = "0.10"
 tar = "0.4"
-tauri = { version = "2", default-features = false, features = ["test"] }
+tauri = { version = "2.12", default-features = false, features = ["wry"] }
 tokio = { version = "1.0", features = ["full"] }
 tokio-util = { version = "0.7", features = ["compat"] }
 athas-exec-path = { path = "../exec-path" }
-athas-terminal = { path = "../terminal", default-features = false }
+athas-terminal = { path = "../terminal" }
 tempfile = "3"
 uuid = { version = "1.0", features = ["v4", "serde"] }
 which = "7.0"
 zip = "2.2"
+specta = { version = "=2.0.0-rc.25", features = ["derive", "serde_json"] }

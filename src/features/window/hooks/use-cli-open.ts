@@ -1,12 +1,12 @@
 import { listen } from "@tauri-apps/api/event";
-import { invoke } from "@tauri-apps/api/core";
 import { useEffect } from "react";
+import { commands } from "@/bindings/commands";
 import { enqueueWindowOpenRequest, type WindowOpenRequest } from "../utils/window-open-request";
 import { createPendingQueueDrain } from "../utils/pending-queue-drain";
 import { disposeListener } from "@/utils/tauri-drag-drop";
 
 export interface CliOpenPayload {
-  kind: "path" | "web" | "terminal" | "remote" | "surface" | "empty";
+  kind: "path" | "web" | "terminal" | "remote" | "surface" | "empty" | "new_window";
   path?: string;
   is_directory?: boolean;
   line?: number | null;
@@ -16,7 +16,7 @@ export interface CliOpenPayload {
   working_directory?: string | null;
   connection_id?: string;
   name?: string | null;
-  resource_id?: number;
+  resource_id?: number | null;
 }
 
 const toPositiveInteger = (value: number | null | undefined) =>
@@ -88,7 +88,7 @@ function enqueuePayload(payload: CliOpenPayload) {
 }
 
 const drainPendingRequests = createPendingQueueDrain({
-  take: () => invoke<CliOpenPayload[]>("take_pending_cli_open_requests"),
+  take: () => commands.takePendingCliOpenRequests(),
   handle: enqueuePayload,
   onError: (error) => console.error("Failed to load pending CLI open requests:", error),
 });

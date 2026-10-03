@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { wasmParserLoader } from "@/features/editor/lib/wasm-parser/loader";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { PLATFORM_ARCH } from "@/utils/platform";
@@ -193,12 +193,12 @@ export async function installExtensionLifecycle(params: {
 
   const extensionPackage = resolveExtensionPackage(extension);
 
-  await invoke("install_extension", {
+  await commands.installExtension(
     extensionId,
-    url: extensionPackage.downloadUrl,
-    checksum: extensionPackage.checksum,
-    size: extensionPackage.size,
-  });
+    extensionPackage.downloadUrl,
+    extensionPackage.checksum,
+    extensionPackage.size,
+  );
 
   await reloadInstalledExtensions();
   await activateExtensionContributions(extensionId, extension.manifest);
@@ -236,7 +236,7 @@ export async function uninstallExtensionLifecycle(params: {
   }
 
   await deactivateExtensionContributions(extensionId, extension.manifest);
-  await invoke("uninstall_extension", { extensionId });
+  await commands.uninstallExtension(extensionId);
   await reloadInstalledExtensions();
   onNonLanguageUninstalled();
 }

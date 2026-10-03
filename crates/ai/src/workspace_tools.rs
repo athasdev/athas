@@ -138,7 +138,7 @@ pub fn read_workspace_file(root: &str, path: &str) -> Result<String, String> {
 
 /// One exact replacement of an agent edit. `old_text` must match exactly one location unless
 /// `replace_all` is set.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct WorkspaceReplacement {
    pub old_text: String,
@@ -398,7 +398,7 @@ pub(crate) fn walk_workspace(
    Ok(WorkspaceWalk { files, truncated })
 }
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct ListFilesOptions {
    /// A folder to list, relative to the workspace.
@@ -408,7 +408,7 @@ pub struct ListFilesOptions {
    pub limit: Option<usize>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct WorkspaceFileList {
    pub files: Vec<String>,
@@ -447,7 +447,7 @@ pub fn list_workspace_files(
    })
 }
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct SearchOptions {
    pub query: String,
@@ -462,7 +462,7 @@ pub struct SearchOptions {
    pub max_results: Option<usize>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct WorkspaceMatch {
    pub path: String,
@@ -474,7 +474,7 @@ pub struct WorkspaceMatch {
    pub after: Vec<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct WorkspaceSearchResult {
    pub matches: Vec<WorkspaceMatch>,

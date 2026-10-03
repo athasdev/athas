@@ -14,7 +14,7 @@ use std::{
 };
 
 /// How the agent reaches an MCP server.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, specta::Type)]
 #[serde(rename_all = "lowercase")]
 pub enum McpTransportKind {
    Stdio,
@@ -23,7 +23,7 @@ pub enum McpTransportKind {
 }
 
 /// An MCP server as stored in the user's settings. Carries no secrets.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct McpServerSetting {
    pub id: String,
@@ -47,7 +47,7 @@ fn enabled_by_default() -> bool {
 }
 
 /// A named value whose value may be a secret, such as an API key.
-#[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Eq, specta::Type)]
 pub struct McpNameValue {
    pub name: String,
    pub value: String,
@@ -63,7 +63,7 @@ impl fmt::Debug for McpNameValue {
 }
 
 /// The secret part of an MCP server: stdio environment variables and HTTP/SSE headers.
-#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq, specta::Type)]
 pub struct McpServerSecrets {
    #[serde(default)]
    pub env: Vec<McpNameValue>,
@@ -103,7 +103,7 @@ impl McpServerConfig {
 }
 
 /// An MCP server left out of a session because the agent cannot use its transport.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct AcpSkippedMcpServer {
    pub name: String,

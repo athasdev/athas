@@ -1,6 +1,6 @@
 import { getVersion } from "@tauri-apps/api/app";
-import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { commands } from "@/bindings/commands";
 import { IdeSettingsImportDialog } from "@/features/file-system/components/ide-settings-import-dialog";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { TypedConfirmAction } from "@/features/settings/components/typed-confirm-action";
@@ -72,7 +72,7 @@ export const GeneralSettings = () => {
   useEffect(() => {
     const checkCliStatus = async () => {
       try {
-        const installed = await invoke<boolean>("check_cli_installed");
+        const installed = await commands.checkCliInstalled();
         setCliInstalled(installed);
       } catch (error) {
         console.error("Failed to check CLI status:", error);
@@ -91,7 +91,7 @@ export const GeneralSettings = () => {
   const handleInstallCli = async () => {
     setCliInstalling(true);
     try {
-      const result = await invoke<string>("install_cli_command");
+      const result = await commands.installCliCommand();
       showToast({ message: result, type: "success" });
       setCliInstalled(true);
     } catch (error) {
@@ -107,7 +107,7 @@ export const GeneralSettings = () => {
   const handleUninstallCli = async () => {
     setCliInstalling(true);
     try {
-      const result = await invoke<string>("uninstall_cli_command");
+      const result = await commands.uninstallCliCommand();
       showToast({ message: result, type: "success" });
       setCliInstalled(false);
     } catch (error) {
@@ -119,7 +119,7 @@ export const GeneralSettings = () => {
 
   const handleCopyInstallCommand = async () => {
     try {
-      const command = await invoke<string>("get_cli_install_command");
+      const command = await commands.getCliInstallCommand();
       await writeClipboardText(command);
       showToast({ message: "Install command copied to clipboard", type: "success" });
     } catch (error) {

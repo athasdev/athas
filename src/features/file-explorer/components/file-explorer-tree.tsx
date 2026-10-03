@@ -1,5 +1,5 @@
 import ignore from "ignore";
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import {
   ClickIcon,
   EyeIcon,
@@ -1283,7 +1283,7 @@ function FileExplorerTreeComponent({
             if (!IS_MAC || !current || isDir || mod || e.altKey || e.shiftKey) break;
             e.preventDefault();
             e.stopPropagation();
-            void invoke("toggle_quick_look", { path: current.path }).catch((error) => {
+            void commands.toggleQuickLook(current.path).catch((error) => {
               console.error("Failed to toggle Quick Look:", error);
             });
             break;

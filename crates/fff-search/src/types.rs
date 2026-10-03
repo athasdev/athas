@@ -1,7 +1,7 @@
 use fff_search::GrepMode;
 use serde::Serialize;
 
-#[derive(Debug, Serialize, Clone, PartialEq, Eq)]
+#[derive(Debug, Serialize, Clone, PartialEq, Eq, specta::Type)]
 pub struct FffSearchHit {
    pub path: String,
    pub name: String,
@@ -9,14 +9,14 @@ pub struct FffSearchHit {
    pub score: i32,
 }
 
-#[derive(Debug, Serialize, Clone, PartialEq, Eq)]
+#[derive(Debug, Serialize, Clone, PartialEq, Eq, specta::Type)]
 pub struct FffIndexedFile {
    pub path: String,
    pub name: String,
    pub relative_path: String,
 }
 
-#[derive(Debug, Serialize, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Serialize, Clone, Default, PartialEq, Eq, specta::Type)]
 pub struct FffScanStatus {
    pub is_scanning: bool,
    pub scanned_files_count: usize,

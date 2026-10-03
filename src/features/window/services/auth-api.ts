@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { tauriFetch } from "@/utils/tauri-fetch";
 import { getApiBase, isLocalApiBase } from "@/utils/api-base";
 
@@ -582,7 +582,7 @@ export const getAuthToken = async (): Promise<string | null> => {
   }
 
   try {
-    authTokenCache = await invoke<string | null>("get_auth_token");
+    authTokenCache = await commands.getAuthToken();
     return authTokenCache;
   } catch {
     return null;
@@ -590,13 +590,13 @@ export const getAuthToken = async (): Promise<string | null> => {
 };
 
 export const storeAuthToken = async (token: string): Promise<void> => {
-  await invoke("store_auth_token", { token });
+  await commands.storeAuthToken(token);
   authTokenCache = token;
 };
 
 export const removeAuthToken = async (): Promise<void> => {
   authTokenCache = null;
-  await invoke("remove_auth_token");
+  await commands.removeAuthToken();
 };
 
 const DEFAULT_AUTHENTICATED_FETCH_TIMEOUT_MS = 10_000;

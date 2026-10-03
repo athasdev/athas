@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import type {
   CodexSkillSummary,
   CodexThreadPage,
@@ -72,7 +72,7 @@ export function listCodexComposerModels(cwd: string, force = false) {
     cwd,
     async () => {
       await startCodexComposer(cwd);
-      return normalizeCodexModels(await withCatalogTimeout(invoke("list_codex_models")));
+      return normalizeCodexModels(await withCatalogTimeout(commands.listCodexModels()));
     },
     { ttlMs, force },
   );
@@ -165,7 +165,7 @@ export async function startCodexComposer(cwd: string): Promise<void> {
   return startupCache.load(
     cwd,
     async () => {
-      await withCatalogTimeout(invoke("start_codex_integration", { args: { cwd } }));
+      await withCatalogTimeout(commands.startCodexIntegration({ cwd }));
     },
     { ttlMs: 5_000 },
   );
@@ -181,11 +181,7 @@ export async function listCodexComposerThreads(
     async () => {
       await startCodexComposer(cwd);
       const result = await withCatalogTimeout(
-        invoke("list_codex_threads", {
-          cwd,
-          cursor,
-          limit: CODEX_COMPOSER_THREAD_PAGE_SIZE,
-        }),
+        commands.listCodexThreads(cwd, cursor, CODEX_COMPOSER_THREAD_PAGE_SIZE),
       );
 
       return normalizeCodexThreadPage(result);
@@ -199,7 +195,7 @@ export async function listCodexComposerSkills(cwd: string, force = false) {
     cwd,
     async () => {
       await startCodexComposer(cwd);
-      return normalizeCodexSkills(await withCatalogTimeout(invoke("list_codex_skills", { cwd })));
+      return normalizeCodexSkills(await withCatalogTimeout(commands.listCodexSkills(cwd)));
     },
     { ttlMs, force },
   );

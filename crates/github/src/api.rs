@@ -30,7 +30,7 @@ const GITHUB_REQUEST_INTERVAL: Duration = Duration::from_millis(200);
 
 static GITHUB_REQUEST_GATE: LazyLock<Mutex<Instant>> = LazyLock::new(|| Mutex::new(Instant::now()));
 
-#[derive(Serialize)]
+#[derive(Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub enum GitHubAuthStatus {
    Authenticated,

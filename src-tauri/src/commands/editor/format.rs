@@ -11,7 +11,7 @@ use std::{
 };
 use tauri::command;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, specta::Type)]
 pub struct FormatRequest {
    pub content: String,
    pub language: String,
@@ -21,7 +21,7 @@ pub struct FormatRequest {
    pub workspace_folder: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 pub struct FormatterConfig {
    pub command: String,
    pub args: Option<Vec<String>>,
@@ -30,7 +30,7 @@ pub struct FormatterConfig {
    pub output_method: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, specta::Type)]
 pub struct FormatResponse {
    pub formatted_content: String,
    pub success: bool,
@@ -39,6 +39,7 @@ pub struct FormatResponse {
 
 /// Format code content using the specified formatter
 #[command]
+#[specta::specta]
 pub async fn format_code(request: FormatRequest) -> Result<FormatResponse, String> {
    // If formatter config is provided, use generic formatter
    if let Some(config) = &request.formatter_config {

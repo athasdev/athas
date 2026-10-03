@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Condvar, Mutex};
-use tauri::ipc::InvokeResponseBody;
+use tauri::ipc::{InvokeResponseBody, IpcResponse};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct TerminalSize {
    pub rows: u16,
@@ -32,7 +32,7 @@ impl TerminalSize {
    }
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, specta::Type)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum TerminalInput {
    Text { data: String },
@@ -48,7 +48,7 @@ impl TerminalInput {
    }
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, specta::Type)]
 #[serde(
    tag = "event",
    rename_all = "camelCase",
@@ -71,13 +71,33 @@ pub enum TerminalEvent {
 impl TerminalEvent {
    /// Output travels as raw bytes so the webview receives an ArrayBuffer instead
    /// of a JSON array with one number per byte; every other event stays JSON.
-   pub fn into_ipc_body(self) -> InvokeResponseBody {
-      match self {
+   pub fn into_channel_message(self) -> TerminalChannelMessage {
+      TerminalChannelMessage(match self {
          Self::Output { data } => InvokeResponseBody::Raw(data),
          event => InvokeResponseBody::Json(
             serde_json::to_string(&event).unwrap_or_else(|_| "{\"event\":\"closed\"}".to_string()),
          ),
-      }
+      })
+   }
+}
+
+/// One message on a terminal event channel: an `ArrayBuffer` of output bytes, or
+/// any other [`TerminalEvent`] as JSON.
+pub struct TerminalChannelMessage(InvokeResponseBody);
+
+impl IpcResponse for TerminalChannelMessage {
+   fn body(self) -> tauri::Result<InvokeResponseBody> {
+      Ok(self.0)
+   }
+}
+
+impl specta::Type for TerminalChannelMessage {
+   fn definition(types: &mut specta::Types) -> specta::datatype::DataType {
+      // Register the JSON event shape so the union below can name it.
+      <TerminalEvent as specta::Type>::definition(types);
+      specta::datatype::DataType::Reference(specta_typescript::define(
+         "ArrayBuffer | TerminalEvent",
+      ))
    }
 }
 

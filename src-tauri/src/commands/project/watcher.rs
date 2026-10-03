@@ -11,6 +11,7 @@ fn short_path(path: &str) -> String {
 }
 
 #[command]
+#[specta::specta]
 pub async fn start_watching(
    path: String,
    file_watcher: tauri::State<'_, Arc<FileWatcher>>,
@@ -41,6 +42,7 @@ pub async fn start_watching(
 }
 
 #[command]
+#[specta::specta]
 pub async fn stop_watching(
    path: String,
    file_watcher: tauri::State<'_, Arc<FileWatcher>>,
@@ -49,6 +51,7 @@ pub async fn stop_watching(
 }
 
 #[command]
+#[specta::specta]
 pub async fn set_project_root(
    path: String,
    file_watcher: tauri::State<'_, Arc<FileWatcher>>,

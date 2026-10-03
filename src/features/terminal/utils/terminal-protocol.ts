@@ -1,5 +1,6 @@
 import { Channel } from "@tauri-apps/api/core";
 import type { Terminal } from "@xterm/xterm";
+import type { TerminalEvent as TerminalChannelEvent } from "@/bindings/commands";
 import type { TerminalEvent, TerminalSize } from "../types/terminal.types";
 
 type TerminalEventListener = (event: TerminalEvent) => void;
@@ -13,19 +14,22 @@ const eventStreams = new Map<string, TerminalEventStream>();
 const TERMINAL_OUTPUT_HIGH_WATERMARK = 500_000;
 const TERMINAL_OUTPUT_LOW_WATERMARK = 100_000;
 
-export type TerminalChannelMessage = ArrayBuffer | Uint8Array | TerminalEvent;
+export type TerminalChannelMessage = ArrayBuffer | TerminalChannelEvent;
 
 export interface PendingTerminalEventChannel {
   channel: Channel<TerminalChannelMessage>;
   bind: (connectionId: string) => void;
 }
 
-export function toTerminalEvent(message: TerminalChannelMessage): TerminalEvent {
+export function toTerminalEvent(message: TerminalChannelMessage | Uint8Array): TerminalEvent {
   if (message instanceof ArrayBuffer) {
     return { event: "output", data: new Uint8Array(message) };
   }
   if (message instanceof Uint8Array) {
     return { event: "output", data: message };
+  }
+  if (message.event === "output") {
+    return { event: "output", data: Uint8Array.from(message.data) };
   }
   return message;
 }

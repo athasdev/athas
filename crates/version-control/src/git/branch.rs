@@ -3,7 +3,7 @@ use anyhow::{Context, Result};
 use git2::{BranchType, Repository, Status};
 use serde::Serialize;
 
-#[derive(Serialize)]
+#[derive(Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct CheckoutResult {
    pub success: bool,

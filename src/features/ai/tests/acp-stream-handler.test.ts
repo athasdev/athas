@@ -748,7 +748,10 @@ describe("AcpStreamHandler", () => {
       agentId: "gemini-cli",
       sessionId: null,
       workspacePath: "/workspace",
+      importSession: null,
+      authMethodId: null,
       mcpServers: [],
+      additionalDirectories: null,
     });
   });
 
@@ -786,8 +789,10 @@ describe("AcpStreamHandler", () => {
       agentId: "gemini",
       workspacePath: "/workspace",
       sessionId: null,
+      importSession: null,
       authMethodId: "gemini-api-key",
       mcpServers: [],
+      additionalDirectories: null,
     });
     expect(
       vi.mocked(invoke).mock.calls.some(([command]) => command === "authenticate_acp_agent"),

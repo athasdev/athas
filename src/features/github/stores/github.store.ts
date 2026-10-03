@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { create } from "zustand";
 import { combine } from "zustand/middleware";
@@ -138,9 +138,9 @@ const useGitHubStoreBase = create(
         set({ isCheckingAuth: true, authError: null });
 
         try {
-          const status = await invoke<GitHubAuthStatus>("github_check_auth");
+          const status = await commands.githubCheckAuth();
           if (status === "authenticated") {
-            const user = await invoke<string>("github_get_current_user");
+            const user = await commands.githubGetCurrentUser();
             set({
               isAuthenticated: true,
               isCheckingAuth: false,
@@ -159,10 +159,10 @@ const useGitHubStoreBase = create(
                 githubAccountStatus = getGitHubAccountStatus(syncResult.status);
 
                 if (syncResult.status === "synced") {
-                  const syncedStatus = await invoke<GitHubAuthStatus>("github_check_auth");
+                  const syncedStatus = await commands.githubCheckAuth();
 
                   if (syncedStatus === "authenticated") {
-                    const user = await invoke<string>("github_get_current_user");
+                    const user = await commands.githubGetCurrentUser();
                     set({
                       isAuthenticated: true,
                       isCheckingAuth: false,
@@ -249,10 +249,7 @@ const useGitHubStoreBase = create(
         const requestId = ++prsRequestSeq;
 
         try {
-          const prsResponse = await invoke<PullRequest[]>("github_list_prs", {
-            repoPath,
-            filter: currentFilter,
-          });
+          const prsResponse = await commands.githubListPrs(repoPath, currentFilter);
           const prs = prsResponse.map(normalizePullRequest);
 
           if (requestId !== prsRequestSeq) return;
@@ -307,14 +304,7 @@ const useGitHubStoreBase = create(
         try {
           const cacheKey = getPRDetailsCacheKey(repoPath, prNumber);
           const cachedUrl = get().prDetailsCache[cacheKey]?.details?.url;
-          const url =
-            cachedUrl ||
-            (
-              await invoke<PullRequestDetails>("github_get_pr_details", {
-                repoPath,
-                prNumber,
-              })
-            ).url;
+          const url = cachedUrl || (await commands.githubGetPrDetails(repoPath, prNumber)).url;
 
           if (url.startsWith("https://github.com/")) {
             await openUrl(url);
@@ -326,7 +316,7 @@ const useGitHubStoreBase = create(
 
       checkoutPR: async (repoPath: string, prNumber: number) => {
         try {
-          await invoke("github_checkout_pr", { repoPath, prNumber });
+          await commands.githubCheckoutPr(repoPath, prNumber);
           emitGitChanged({
             repoPath,
             scopes: ["working-tree", "history", "refs"],
@@ -573,13 +563,13 @@ const useGitHubStoreBase = create(
           try {
             const [diff, files, comments] = await Promise.all([
               shouldFetchFiles
-                ? invoke<string>("github_get_pr_diff", { repoPath, prNumber })
+                ? commands.githubGetPrDiff(repoPath, prNumber)
                 : Promise.resolve(undefined),
               shouldFetchFiles
-                ? invoke<PullRequestFile[]>("github_get_pr_files", { repoPath, prNumber })
+                ? commands.githubGetPrFiles(repoPath, prNumber)
                 : Promise.resolve(undefined),
               shouldFetchComments
-                ? invoke<PullRequestComment[]>("github_get_pr_comments", { repoPath, prNumber })
+                ? commands.githubGetPrComments(repoPath, prNumber)
                 : Promise.resolve(undefined),
             ]);
 

@@ -39,8 +39,6 @@ pub fn disable_macos_autofill_heuristics() {
 }
 
 #[cfg(target_os = "macos")]
-use crate::app_runtime::{AppHandle, AthasRuntime};
-#[cfg(target_os = "macos")]
 use objc::{
    class,
    declare::ClassDecl,
@@ -59,6 +57,8 @@ use std::{
       atomic::{AtomicPtr, Ordering},
    },
 };
+#[cfg(target_os = "macos")]
+use tauri::AppHandle;
 #[cfg(target_os = "macos")]
 use tauri::Emitter;
 
@@ -306,7 +306,7 @@ unsafe fn add_delegate_method(
 }
 
 #[cfg(target_os = "macos")]
-pub fn install_dock_menu(app: &tauri::AppHandle<AthasRuntime>) -> Result<(), String> {
+pub fn install_dock_menu(app: &tauri::AppHandle) -> Result<(), String> {
    let _ = DOCK_APP_HANDLE.set(app.clone());
 
    unsafe {
@@ -354,7 +354,7 @@ pub fn install_dock_menu(app: &tauri::AppHandle<AthasRuntime>) -> Result<(), Str
 }
 
 #[cfg(target_os = "macos")]
-pub fn install_accessibility_observer(app: &tauri::AppHandle<AthasRuntime>) -> Result<(), String> {
+pub fn install_accessibility_observer(app: &tauri::AppHandle) -> Result<(), String> {
    let _ = ACCESSIBILITY_APP_HANDLE.set(app.clone());
 
    unsafe {
@@ -422,9 +422,7 @@ pub fn install_native_choice_sheet_handler() -> Result<(), String> {
 }
 
 #[cfg(target_os = "macos")]
-pub fn install_spotlight_activity_handler(
-   app: &tauri::AppHandle<AthasRuntime>,
-) -> Result<(), String> {
+pub fn install_spotlight_activity_handler(app: &tauri::AppHandle) -> Result<(), String> {
    let _ = SPOTLIGHT_APP_HANDLE.set(app.clone());
 
    unsafe {
@@ -458,7 +456,7 @@ pub fn install_spotlight_activity_handler(
 }
 
 #[cfg(target_os = "macos")]
-pub fn install_services_provider(app: &tauri::AppHandle<AthasRuntime>) -> Result<(), String> {
+pub fn install_services_provider(app: &tauri::AppHandle) -> Result<(), String> {
    let _ = SERVICES_APP_HANDLE.set(app.clone());
 
    unsafe {

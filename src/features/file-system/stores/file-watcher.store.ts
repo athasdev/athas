@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { combine } from "zustand/middleware";
 import { createStore } from "zustand/vanilla";
 import { createWorkspaceScopedStore } from "@/features/workspace/stores/create-workspace-scoped-store";
@@ -19,7 +19,7 @@ const createFileWatcherStore = () =>
           }
 
           try {
-            await invoke("set_project_root", { path });
+            await commands.setProjectRoot(path);
           } catch (error) {
             console.error("Failed to set project root:", path, error);
           }
@@ -33,7 +33,7 @@ const createFileWatcherStore = () =>
           }
 
           try {
-            await invoke("start_watching", { path });
+            await commands.startWatching(path);
             set((state) => ({
               watchedPaths: new Set(state.watchedPaths).add(path),
             }));
@@ -50,7 +50,7 @@ const createFileWatcherStore = () =>
           }
 
           try {
-            await invoke("stop_watching", { path });
+            await commands.stopWatching(path);
             set((state) => {
               const newSet = new Set(state.watchedPaths);
               newSet.delete(path);

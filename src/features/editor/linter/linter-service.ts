@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands, type Diagnostic as BackendDiagnostic } from "@/bindings/commands";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { logger } from "@/features/editor/utils/logger";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
@@ -63,26 +63,20 @@ export async function lintContent(options: LintOptions): Promise<LintResult> {
     const workspaceFolder = getWorkspaceFolder(filePath);
 
     try {
-      const response = await invoke<{
-        diagnostics: Diagnostic[];
-        success: boolean;
-        error?: string;
-      }>("lint_code", {
-        request: {
-          content: options.content,
-          language,
-          linter: "generic",
-          linter_config: {
-            command: linterConfig.command,
-            args: linterConfig.args || [],
-            env: linterConfig.env,
-            input_method: linterConfig.inputMethod,
-            diagnostic_format: linterConfig.diagnosticFormat,
-            diagnostic_pattern: linterConfig.diagnosticPattern,
-          },
-          file_path: filePath,
-          workspace_folder: workspaceFolder,
+      const response = await commands.lintCode({
+        content: options.content,
+        language,
+        linter: "generic",
+        linter_config: {
+          command: linterConfig.command,
+          args: linterConfig.args || [],
+          env: linterConfig.env ?? null,
+          input_method: linterConfig.inputMethod ?? null,
+          diagnostic_format: linterConfig.diagnosticFormat ?? null,
+          diagnostic_pattern: linterConfig.diagnosticPattern ?? null,
         },
+        file_path: filePath,
+        workspace_folder: workspaceFolder ?? null,
       });
 
       if (response.success) {
@@ -92,7 +86,7 @@ export async function lintContent(options: LintOptions): Promise<LintResult> {
         );
         return {
           success: true,
-          diagnostics: response.diagnostics,
+          diagnostics: response.diagnostics.map(toLintDiagnostic),
         };
       }
 
@@ -115,6 +109,22 @@ export async function lintContent(options: LintOptions): Promise<LintResult> {
       diagnostics: [],
     };
   }
+}
+
+const LINT_SEVERITIES = new Set<Diagnostic["severity"]>(["error", "warning", "info", "hint"]);
+
+function toLintDiagnostic(diagnostic: BackendDiagnostic): Diagnostic {
+  const severity = diagnostic.severity as Diagnostic["severity"];
+  return {
+    line: diagnostic.line,
+    column: diagnostic.column,
+    endLine: diagnostic.end_line ?? undefined,
+    endColumn: diagnostic.end_column ?? undefined,
+    severity: LINT_SEVERITIES.has(severity) ? severity : "info",
+    message: diagnostic.message,
+    code: diagnostic.code ?? undefined,
+    source: diagnostic.source ?? undefined,
+  };
 }
 
 /**

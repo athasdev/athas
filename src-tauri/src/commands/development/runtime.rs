@@ -1,7 +1,6 @@
-use crate::app_runtime::AppHandle;
 use athas_runtime::{BunRuntime, NodeRuntime, RuntimeManager, RuntimeStatus, RuntimeType};
 use std::path::PathBuf;
-use tauri::Manager;
+use tauri::{AppHandle, Manager};
 
 fn managed_runtime_root(app_handle: &AppHandle) -> Result<PathBuf, String> {
    app_handle
@@ -15,6 +14,7 @@ fn managed_runtime_root(app_handle: &AppHandle) -> Result<PathBuf, String> {
 ///
 /// Supports: "bun", "node", "python", "go", "rust"
 #[tauri::command]
+#[specta::specta]
 pub async fn ensure_runtime(app_handle: AppHandle, runtime_type: String) -> Result<String, String> {
    let rt = parse_runtime_type(&runtime_type)?;
    let managed_root = managed_runtime_root(&app_handle)?;
@@ -26,6 +26,7 @@ pub async fn ensure_runtime(app_handle: AppHandle, runtime_type: String) -> Resu
 
 /// Get the status of a runtime without installing
 #[tauri::command]
+#[specta::specta]
 pub async fn get_runtime_status(
    app_handle: AppHandle,
    runtime_type: String,
@@ -37,6 +38,7 @@ pub async fn get_runtime_status(
 
 /// Get the version of an installed runtime
 #[tauri::command]
+#[specta::specta]
 pub async fn get_runtime_version(
    app_handle: AppHandle,
    runtime_type: String,
@@ -53,6 +55,7 @@ pub async fn get_runtime_version(
 
 /// Get a JavaScript runtime (prefers Bun, falls back to Node)
 #[tauri::command]
+#[specta::specta]
 pub async fn get_js_runtime(app_handle: AppHandle) -> Result<String, String> {
    let managed_root = managed_runtime_root(&app_handle)?;
    let path = RuntimeManager::get_js_runtime(Some(&managed_root))
@@ -63,6 +66,7 @@ pub async fn get_js_runtime(app_handle: AppHandle) -> Result<String, String> {
 
 /// Get status of all runtimes
 #[tauri::command]
+#[specta::specta]
 pub async fn get_all_runtime_statuses(
    app_handle: AppHandle,
 ) -> Result<std::collections::HashMap<String, RuntimeStatus>, String> {

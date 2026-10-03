@@ -1,4 +1,5 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
+import type { DockerProjectConfig as BindingDockerProjectConfig } from "@/bindings/commands";
 import type {
   DockerBuildImageRequest,
   DockerComposeAction,
@@ -17,7 +18,7 @@ import type {
 } from "@/features/docker/types/docker.types";
 
 export function getDockerInventory(): Promise<DockerInventory> {
-  return invoke<DockerInventory>("docker_get_inventory");
+  return commands.dockerGetInventory();
 }
 
 export function runDockerContainerAction(
@@ -25,32 +26,21 @@ export function runDockerContainerAction(
   action: DockerContainerAction,
   force = false,
 ): Promise<void> {
-  return invoke("docker_container_action", {
-    containerId,
-    action,
-    force,
-  });
+  return commands.dockerContainerAction(containerId, action, force).then(() => undefined);
 }
 
 export function startDockerContainerLogStream(containerId: string, tail = 300): Promise<string> {
-  return invoke<string>("docker_start_container_log_stream", {
-    containerId,
-    tail,
-  });
+  return commands.dockerStartContainerLogStream(containerId, tail);
 }
 
 export function stopDockerContainerLogStream(streamId: string): Promise<void> {
-  return invoke("docker_stop_container_log_stream", {
-    streamId,
-  });
+  return commands.dockerStopContainerLogStream(streamId).then(() => undefined);
 }
 
 export function getDockerComposeProject(
   workspacePath: string | undefined,
 ): Promise<DockerComposeProject> {
-  return invoke<DockerComposeProject>("docker_get_compose_project", {
-    workspacePath,
-  });
+  return commands.dockerGetComposeProject(workspacePath ?? null);
 }
 
 export function runDockerComposeAction({
@@ -66,24 +56,34 @@ export function runDockerComposeAction({
   action: DockerComposeAction;
   envFiles?: string[];
 }): Promise<string> {
-  return invoke<string>("docker_compose_action", {
+  return commands.dockerComposeAction(
     workspacePath,
     files,
-    service,
+    service ?? null,
     action,
-    envFiles,
-  });
+    envFiles ?? null,
+  );
 }
 
 export function buildDockerImage(request: DockerBuildImageRequest): Promise<string> {
-  return invoke<string>("docker_build_image", {
-    request,
+  return commands.dockerBuildImage({
+    contextPath: request.contextPath,
+    dockerfilePath: request.dockerfilePath ?? null,
+    tag: request.tag ?? null,
+    buildArgs: request.buildArgs ?? null,
   });
 }
 
 export function runDockerImage(request: DockerRunImageRequest): Promise<string> {
-  return invoke<string>("docker_run_image", {
-    request,
+  return commands.dockerRunImage({
+    image: request.image,
+    name: request.name ?? null,
+    ports: request.ports ?? null,
+    volumes: request.volumes ?? null,
+    env: request.env ?? null,
+    envFiles: request.envFiles ?? null,
+    command: request.command ?? null,
+    detach: request.detach ?? null,
   });
 }
 
@@ -92,31 +92,21 @@ export function runDockerImageAction(
   action: DockerImageAction,
   force = false,
 ): Promise<string> {
-  return invoke<string>("docker_image_action", {
-    imageId,
-    action,
-    force,
-  });
+  return commands.dockerImageAction(imageId, action, force);
 }
 
 export function pruneDockerResources(
   target: DockerPruneTarget,
   includeVolumes = false,
 ): Promise<string> {
-  return invoke<string>("docker_prune_resources", {
-    target,
-    includeVolumes,
-  });
+  return commands.dockerPruneResources(target, includeVolumes);
 }
 
 export function listDockerContainerFiles(
   containerId: string,
   path = "/",
 ): Promise<DockerContainerFileEntry[]> {
-  return invoke<DockerContainerFileEntry[]>("docker_list_container_files", {
-    containerId,
-    path,
-  });
+  return commands.dockerListContainerFiles(containerId, path);
 }
 
 export function copyFromDockerContainer({
@@ -128,11 +118,7 @@ export function copyFromDockerContainer({
   containerPath: string;
   hostPath: string;
 }): Promise<string> {
-  return invoke<string>("docker_copy_from_container", {
-    containerId,
-    containerPath,
-    hostPath,
-  });
+  return commands.dockerCopyFromContainer(containerId, containerPath, hostPath);
 }
 
 export function copyToDockerContainer({
@@ -144,89 +130,64 @@ export function copyToDockerContainer({
   hostPath: string;
   containerPath: string;
 }): Promise<string> {
-  return invoke<string>("docker_copy_to_container", {
-    containerId,
-    hostPath,
-    containerPath,
-  });
+  return commands.dockerCopyToContainer(containerId, hostPath, containerPath);
 }
 
 export function searchDockerRegistry(
   query: string,
   limit = 25,
 ): Promise<DockerRegistrySearchResult[]> {
-  return invoke<DockerRegistrySearchResult[]>("docker_registry_search", {
-    query,
-    limit,
-  });
+  return commands.dockerRegistrySearch(query, limit);
 }
 
 export function loginDockerRegistry(request: DockerRegistryLoginRequest): Promise<string> {
-  return invoke<string>("docker_registry_login", {
-    request,
-  });
+  return commands.dockerRegistryLogin({ ...request, registry: request.registry ?? null });
 }
 
 export function pullDockerRegistryImage(image: string): Promise<string> {
-  return invoke<string>("docker_registry_pull", {
-    image,
-  });
+  return commands.dockerRegistryPull(image);
 }
 
 export function pushDockerRegistryImage(image: string): Promise<string> {
-  return invoke<string>("docker_registry_push", {
-    image,
-  });
+  return commands.dockerRegistryPush(image);
 }
 
 export function tagDockerImage(source: string, target: string): Promise<string> {
-  return invoke<string>("docker_tag_image", {
-    source,
-    target,
-  });
+  return commands.dockerTagImage(source, target);
 }
 
 export function getDockerProjectConfig(
   workspacePath: string | undefined,
 ): Promise<DockerProjectConfig> {
-  return invoke<DockerProjectConfig>("docker_get_project_config", {
-    workspacePath,
-  });
+  return commands.dockerGetProjectConfig(workspacePath ?? null) as Promise<DockerProjectConfig>;
 }
 
 export function saveDockerProjectConfig(
   workspacePath: string,
   config: DockerProjectConfig,
 ): Promise<DockerProjectConfig> {
-  return invoke<DockerProjectConfig>("docker_save_project_config", {
+  return commands.dockerSaveProjectConfig(
     workspacePath,
-    config,
-  });
+    config as BindingDockerProjectConfig,
+  ) as Promise<DockerProjectConfig>;
 }
 
 export function openDockerEnvFile(
   workspacePath: string,
   path: string,
 ): Promise<DockerEnvFileContent> {
-  return invoke<DockerEnvFileContent>("docker_open_env_file", {
-    workspacePath,
-    path,
-  });
+  return commands
+    .dockerOpenEnvFile(workspacePath, path)
+    .then((result) => ({ ...result, file: { ...result.file, keys: result.file.keys ?? [] } }));
 }
 
 export function deleteDockerEnvFile(workspacePath: string, path: string): Promise<void> {
-  return invoke("docker_delete_env_file", {
-    workspacePath,
-    path,
-  });
+  return commands.dockerDeleteEnvFile(workspacePath, path).then(() => undefined);
 }
 
 export function openDockerDevContainer(
   workspacePath: string,
   configPath: string,
 ): Promise<DockerDevContainerOpenResult> {
-  return invoke<DockerDevContainerOpenResult>("docker_open_dev_container", {
-    workspacePath,
-    configPath,
-  });
+  return commands.dockerOpenDevContainer(workspacePath, configPath);
 }

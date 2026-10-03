@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { openUrl } from "@tauri-apps/plugin-opener";
@@ -33,7 +33,6 @@ import type {
   GitHubActionNotificationTarget,
   WorkflowRunDetails,
   WorkflowRunJob,
-  WorkflowRunListItem,
 } from "../types/github.types";
 import { GITHUB_ACTION_DETAILS_TTL_MS, githubActionDetailsCache } from "../utils/github-data-cache";
 import {
@@ -150,14 +149,11 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
     setIsLoading(true);
     setError(null);
     try {
-      const run = await invoke<WorkflowRunListItem | null>(
-        "github_resolve_notification_workflow_run",
-        {
-          repositoryFullName: notification.repositoryFullName,
-          checkSuiteId: notification.checkSuiteId,
-          notificationTitle: notification.title,
-          notificationUpdatedAt: notification.updatedAt,
-        },
+      const run = await commands.githubResolveNotificationWorkflowRun(
+        notification.repositoryFullName,
+        notification.checkSuiteId,
+        notification.title,
+        notification.updatedAt,
       );
       if (!run) {
         setError("Could not match this notification to a GitHub Actions run.");
@@ -213,11 +209,7 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
       try {
         const nextDetails = await githubActionDetailsCache.load(
           cacheKey,
-          () =>
-            invoke<WorkflowRunDetails>("github_get_workflow_run_details", {
-              repoPath,
-              runId: resolvedRunId,
-            }),
+          () => commands.githubGetWorkflowRunDetails(repoPath, resolvedRunId),
           { force: true, ttlMs: GITHUB_ACTION_DETAILS_TTL_MS },
         );
         setDetails(nextDetails);
@@ -297,7 +289,7 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
       });
 
       try {
-        const raw = await invoke<string>("github_get_workflow_job_logs", { repoPath, jobId });
+        const raw = await commands.githubGetWorkflowJobLogs(repoPath, jobId);
         setJobLogs((current) => ({
           ...current,
           [jobId]: { lines: parseWorkflowLog(raw), fetchedAt: Date.now() },

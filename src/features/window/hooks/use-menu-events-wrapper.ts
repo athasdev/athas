@@ -1,7 +1,8 @@
-import { invoke } from "@tauri-apps/api/core";
 import { save } from "@tauri-apps/plugin-dialog";
+import { commands } from "@/bindings/commands";
 import { editorAPI } from "@/features/editor/extensions/api";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { writeFile } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { isEditorKeyboardTarget } from "@/features/keymaps/utils/editor-keyboard-target";
 import { useToast } from "@/features/layout/contexts/toast-context";
@@ -95,10 +96,7 @@ export function useMenuEventsWrapper() {
         if (result) {
           // Save the active buffer content to the new file path
           try {
-            await invoke("write_file", {
-              path: result,
-              contents: activeBuffer.type === "editor" ? activeBuffer.content : "",
-            });
+            await writeFile(result, activeBuffer.type === "editor" ? activeBuffer.content : "");
             console.log("File saved successfully to:", result);
             // Update buffer with new file path if needed
             // This would require updating the buffer store with the new file path
@@ -281,7 +279,7 @@ export function useMenuEventsWrapper() {
     },
     onToggleMenuBar: async () => {
       try {
-        await invoke("toggle_menu_bar");
+        await commands.toggleMenuBar(null);
         console.log("Menu bar toggled successfully");
       } catch (error) {
         console.error("Failed to toggle menu bar:", error);

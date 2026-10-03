@@ -2,7 +2,7 @@ import {
   parseTeamWorkspace,
   TEAM_WORKSPACE_FILE,
 } from "@/features/workspace/team/utils/team-workspace-config";
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { parseRemotePath } from "@/features/remote/utils/remote-path";
 import { joinPath } from "@/utils/path-helpers";
@@ -255,10 +255,7 @@ export function resolveRunWorkingDirectory(
 async function readWorkspaceTextFile(path: string): Promise<string> {
   const remote = parseRemotePath(path);
   if (remote) {
-    return invoke<string>("ssh_read_file", {
-      connectionId: remote.connectionId,
-      filePath: remote.remotePath,
-    });
+    return commands.sshReadFile(remote.connectionId, remote.remotePath);
   }
   return readFileContent(path);
 }

@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { logOutOfAcpAgent } from "@/features/ai/lib/acp-logout";
 import { openNewAgentChat } from "@/features/ai/lib/open-new-agent-chat";
 import {
@@ -405,7 +405,7 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
       action: async () => {
         try {
           showToast({ message: "Installing CLI command...", type: "info" });
-          const result = await invoke<string>("install_cli_command");
+          const result = await commands.installCliCommand();
           showToast({ message: result, type: "success" });
         } catch (error) {
           showToast({

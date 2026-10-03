@@ -1,63 +1,58 @@
-pub fn configure_graphics_fallback() {
-   if !linux_gpu_disabled() {
+use std::path::Path;
+
+/// Sets WebKitGTK rendering overrides before the first webview is created.
+///
+/// Variables the user already exported always win. Nothing changes for
+/// machines that are not affected, because every override here costs
+/// rendering performance or works around a specific driver bug:
+///
+/// - `ATHAS_DISABLE_LINUX_GPU=1` is the manual escape hatch for broken GPU stacks: it turns off the
+///   DMA-BUF renderer and accelerated compositing.
+/// - The proprietary NVIDIA driver breaks the WebKitGTK DMA-BUF renderer before 2.54 (blank
+///   windows, Wayland "Error 71"), so it is disabled there. 2.54 reworked that path and the
+///   workaround no longer helps, so newer versions keep it. Explicit sync on NVIDIA Wayland causes
+///   the same protocol error and costs nothing to turn off.
+pub fn configure_webkit_environment() {
+   if env_flag("ATHAS_DISABLE_LINUX_GPU") {
+      set_env_if_missing("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+      set_env_if_missing("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
       return;
    }
 
-   set_env_if_missing("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
-
-   #[cfg(feature = "linux")]
-   set_env_if_missing("LIBGL_ALWAYS_SOFTWARE", "1");
-}
-
-#[cfg(feature = "linux")]
-pub fn cef_command_line_args() -> Vec<(&'static str, Option<&'static str>)> {
-   let mut args = Vec::new();
-
-   if should_disable_setuid_sandbox() {
-      args.push(("--disable-setuid-sandbox", None));
+   if !nvidia_driver_loaded() {
+      return;
    }
 
-   if linux_gpu_disabled() {
-      args.extend([("--disable-gpu", None), ("--disable-gpu-compositing", None)]);
+   set_env_if_missing("__NV_DISABLE_EXPLICIT_SYNC", "1");
+   if webkit_version() < (2, 54) {
+      set_env_if_missing("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
    }
-
-   args
 }
 
-fn linux_gpu_disabled() -> bool {
-   std::env::var("ATHAS_DISABLE_LINUX_GPU").is_ok_and(|value| env_flag_enabled(&value))
+// /proc/driver/nvidia is also visible inside the Flatpak sandbox, which hides
+// /sys/module.
+fn nvidia_driver_loaded() -> bool {
+   Path::new("/sys/module/nvidia").exists() || Path::new("/proc/driver/nvidia/version").exists()
+}
+
+fn webkit_version() -> (u32, u32) {
+   // SAFETY: Both functions return constants of the linked WebKitGTK library
+   // and are safe to call before GTK is initialized.
+   unsafe {
+      (
+         webkit2gtk_sys::webkit_get_major_version(),
+         webkit2gtk_sys::webkit_get_minor_version(),
+      )
+   }
+}
+
+fn env_flag(key: &str) -> bool {
+   std::env::var(key).is_ok_and(|value| env_flag_enabled(&value))
 }
 
 fn env_flag_enabled(value: &str) -> bool {
    let value = value.trim();
    value == "1" || value.eq_ignore_ascii_case("true")
-}
-
-#[cfg(feature = "linux")]
-fn should_disable_setuid_sandbox() -> bool {
-   if std::env::var_os("APPIMAGE").is_some() {
-      return true;
-   }
-
-   let Ok(executable) = std::env::current_exe() else {
-      return true;
-   };
-   let Some(executable_dir) = executable.parent() else {
-      return true;
-   };
-
-   !setuid_sandbox_is_usable(&executable_dir.join("chrome-sandbox"))
-}
-
-#[cfg(feature = "linux")]
-fn setuid_sandbox_is_usable(path: &std::path::Path) -> bool {
-   use std::os::unix::fs::{MetadataExt, PermissionsExt};
-
-   let Ok(metadata) = path.metadata() else {
-      return false;
-   };
-
-   metadata.is_file() && metadata.uid() == 0 && metadata.permissions().mode() & 0o4777 == 0o4755
 }
 
 fn set_env_if_missing(key: &str, value: &str) {

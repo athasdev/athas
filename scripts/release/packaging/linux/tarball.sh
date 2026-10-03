@@ -1,282 +1,59 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${script_dir}/cef.sh"
+# Portable tarball for package managers that wrap the release binary
+# themselves (the Nix package in nix/package.nix, and the Flatpak manifest).
+# It links against the host WebKitGTK 4.1 and GTK 3 instead of bundling them.
 
-arch_input="${1:?Usage: package-linux-tarball.sh <arch> [out-dir]}"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${script_dir}/common.sh"
+
+arch="$(normalize_linux_arch "${1:?Usage: package-linux-tarball.sh <arch> [out-dir]}")"
 out_dir="${2:-release-dist}"
 
-case "$arch_input" in
-  X64 | x64 | amd64 | x86_64)
-    arch="x86_64"
-    ;;
-  ARM64 | arm64 | aarch64)
-    arch="aarch64"
-    ;;
-  *)
-    echo "Unsupported Linux architecture: $arch_input" >&2
-    exit 1
-    ;;
-esac
-
-product_name="Athas"
-app_dir_name="athas.app"
-icon_dir="prod"
-desktop_id="com.code.athas"
-
 version="$(bun -e 'console.log(JSON.parse(await Bun.file("package.json").text()).version)')"
-binary="target/release/athas"
+binary="${CARGO_TARGET_DIR:-target}/release/athas"
 
 if [[ ! -x "$binary" ]]; then
   echo "Missing release binary at $binary" >&2
   exit 1
 fi
 
-cef_dir="$(find_cef_dir)" || {
-  echo "Could not find a CEF distribution containing libcef.so." >&2
-  echo "Set CEF_PATH or run the Linux build first." >&2
-  exit 1
-}
-
-if command -v readelf >/dev/null 2>&1; then
-  if ! readelf -d "$binary" | grep -q '\$ORIGIN'; then
-    echo "Release binary does not include an \$ORIGIN RUNPATH for bundled CEF." >&2
-    exit 1
-  fi
-fi
-
 staging="$(mktemp -d)"
 trap 'rm -rf "$staging"' EXIT
 
 app_root="${staging}/${app_dir_name}"
-bin_dir="${app_root}/bin"
-libexec_dir="${app_root}/libexec"
+# Tauri resolves resources from <prefix>/lib/<productName> next to <prefix>/bin.
 resource_dir="${app_root}/lib/${product_name}"
-desktop_dir="${app_root}/share/applications"
-icon_base_dir="${app_root}/share/icons/hicolor"
 
-install -d "$bin_dir" "$libexec_dir" "$resource_dir" "$desktop_dir"
-install -m 755 "$binary" "${libexec_dir}/athas"
-cat > "${bin_dir}/athas" <<'EOF'
-#!/usr/bin/env bash
-set -euo pipefail
-
-script_path="${BASH_SOURCE[0]}"
-if resolved_path="$(readlink -f "$script_path" 2>/dev/null)"; then
-  script_path="$resolved_path"
+install -D -m 755 "$binary" "${app_root}/bin/athas"
+# The Tauri bundler stamps the bundle type into the binary while it builds
+# deb, rpm and AppImage packages. A tarball must report an unknown bundle so
+# the in-app updater leaves it to the package manager that installed it.
+perl -0777 -pi -e 's/__TAURI_BUNDLE_TYPE_VAR_(?:DEB|RPM|APP)/__TAURI_BUNDLE_TYPE_VAR_UNK/g' \
+  "${app_root}/bin/athas"
+if command -v strip >/dev/null 2>&1; then
+  strip --strip-unneeded "${app_root}/bin/athas"
 fi
 
-bin_dir="$(cd "$(dirname "$script_path")" && pwd)"
-
-case "$(uname -m)" in
-  x86_64 | amd64)
-    system_lib_dirs=(
-      /usr/lib/x86_64-linux-gnu
-      /usr/lib64
-      /usr/lib
-      /usr/local/lib64
-      /usr/local/lib
-      /lib/x86_64-linux-gnu
-      /lib64
-      /lib
-    )
-    ;;
-  aarch64 | arm64)
-    system_lib_dirs=(
-      /usr/lib/aarch64-linux-gnu
-      /usr/lib64
-      /usr/lib
-      /usr/local/lib
-      /lib/aarch64-linux-gnu
-      /lib64
-      /lib
-    )
-    ;;
-  *)
-    system_lib_dirs=(
-      /usr/lib64
-      /usr/lib
-      /usr/local/lib64
-      /usr/local/lib
-      /lib64
-      /lib
-    )
-    ;;
-esac
-
-libexec_dir="${bin_dir}/../libexec"
-preloads=()
-
-prefer_host_libraries() {
-  local lib dir host_path
-  local group_preloads=()
-
-  for lib in "$@"; do
-    [[ -f "${libexec_dir}/${lib}" ]] || continue
-    host_path=""
-    for dir in "${system_lib_dirs[@]}"; do
-      if [[ -f "${dir}/${lib}" ]]; then
-        host_path="${dir}/${lib}"
-        break
-      fi
-    done
-
-    # Keep a dependency group bundled when any required host copy is missing.
-    [[ -n "$host_path" ]] || return 0
-    group_preloads+=("$host_path")
-  done
-
-  if [[ ${#group_preloads[@]} -gt 0 ]]; then
-    preloads+=("${group_preloads[@]}")
-  fi
-}
-
-# Only replace libraries that integrate with host data or runtime modules.
-# CEF graphics and compiler runtimes such as libstdc++ must stay bundled.
-prefer_host_libraries libxkbcommon.so.0 libxkbcommon-x11.so.0
-prefer_host_libraries libfontconfig.so.1
-prefer_host_libraries \
-  libnspr4.so libplc4.so libplds4.so \
-  libnssutil3.so libnss3.so libsmime3.so libssl3.so \
-  libfreebl3.so libfreeblpriv3.so libsoftokn3.so libnssckbi.so libnssdbm3.so
-
-if [[ ${#preloads[@]} -gt 0 ]]; then
-  preload_str="$(IFS=:; echo "${preloads[*]}")"
-  export LD_PRELOAD="${preload_str}${LD_PRELOAD:+:$LD_PRELOAD}"
-fi
-
-exec "${bin_dir}/../libexec/athas" \
-  --ozone-platform=x11 \
-  --disable-vulkan \
-  --disable-features=Vulkan \
-  "$@"
-EOF
-chmod 755 "${bin_dir}/athas"
-
-mkdir -p "${resource_dir}/bundled"
+install -d "${resource_dir}/bundled"
 cp -R src/extensions/bundled/icon-themes "${resource_dir}/bundled/icon-themes"
 
-cef_files=(
-  libcef.so
-  icudtl.dat
-  v8_context_snapshot.bin
-  chrome_100_percent.pak
-  chrome_200_percent.pak
-  resources.pak
-  libEGL.so
-  libGLESv2.so
-  libvk_swiftshader.so
-  vk_swiftshader_icd.json
-  libvulkan.so.1
-)
-
-for file in "${cef_files[@]}"; do
-  if [[ ! -f "${cef_dir}/${file}" ]]; then
-    echo "CEF file is missing: ${cef_dir}/${file}" >&2
-    exit 1
-  fi
-  install -m 755 "${cef_dir}/${file}" "${libexec_dir}/${file}"
-done
-
-if [[ ! -d "${cef_dir}/locales" ]]; then
-  echo "CEF locales directory is missing: ${cef_dir}/locales" >&2
-  exit 1
-fi
-install -d "${libexec_dir}/locales"
-cp "${cef_dir}/locales/"*.pak "${libexec_dir}/locales/"
-
-if ! command -v ldd >/dev/null 2>&1; then
-  echo "ldd is required to collect Linux tarball runtime libraries." >&2
-  exit 1
-fi
-
-if ! command -v patchelf >/dev/null 2>&1; then
-  echo "patchelf is required to prepare Linux tarball runtime libraries." >&2
-  exit 1
-fi
-
-is_glibc_runtime_library() {
-  case "$1" in
-    ld-linux*.so.* | libc.so.* | libdl.so.* | libm.so.* | libpthread.so.* | libresolv.so.* | librt.so.* | libutil.so.*)
-      return 0
-      ;;
-    *)
-      return 1
-      ;;
-  esac
-}
-
-ldd_output="$(ldd "${libexec_dir}/athas")" || {
-  echo "Could not inspect Linux tarball runtime libraries." >&2
-  exit 1
-}
-
-if grep -q 'not found' <<<"$ldd_output"; then
-  echo "Linux tarball runtime libraries could not be resolved:" >&2
-  grep 'not found' <<<"$ldd_output" >&2
-  exit 1
-fi
-
-while IFS=$'\t' read -r library_name library_path; do
-  if is_glibc_runtime_library "$library_name" || [[ -e "${libexec_dir}/${library_name}" ]]; then
-    continue
-  fi
-
-  install -m 755 "$library_path" "${libexec_dir}/${library_name}"
-done < <(
-  awk '$2 == "=>" && $3 ~ /^\// { print $1 "\t" $3 }' <<<"$ldd_output"
-)
-
-while IFS= read -r -d '' library_path; do
-  patchelf --add-rpath '$ORIGIN' "$library_path"
-done < <(find "$libexec_dir" -maxdepth 1 -type f \( -name '*.so' -o -name '*.so.*' \) -print0)
-
-if command -v strip >/dev/null 2>&1; then
-  find "$libexec_dir" -maxdepth 1 -type f \( -name '*.so' -o -name '*.so.*' \) -exec strip --strip-unneeded {} +
-fi
-
-for size in 32 128; do
-  icon_src="src-tauri/icons/${icon_dir}/${size}x${size}.png"
-  if [[ -f "$icon_src" ]]; then
-    install -D -m 644 "$icon_src" "${icon_base_dir}/${size}x${size}/apps/athas.png"
-  fi
-done
-
-if [[ -f "src-tauri/icons/${icon_dir}/128x128@2x.png" ]]; then
-  install -D -m 644 \
-    "src-tauri/icons/${icon_dir}/128x128@2x.png" \
-    "${icon_base_dir}/256x256@2/apps/athas.png"
-fi
-
-cat > "${desktop_dir}/${desktop_id}.desktop" <<EOF
-[Desktop Entry]
-Type=Application
-Name=${product_name}
-Exec=athas %U
-Icon=athas
-Terminal=false
-Categories=Utility;TextEditor;Development;
-Keywords=Code;Editor;Text;Development;Programming;
-MimeType=text/plain;
-StartupNotify=true
-EOF
+install_linux_icons "${app_root}/share/icons/hicolor" athas
+render_linux_desktop_entry "athas %U" athas > "${staging}/athas.desktop"
+install -D -m 644 "${staging}/athas.desktop" "${app_root}/share/applications/${desktop_id}.desktop"
 
 install -d "$out_dir"
-archive_name="${product_name}_${version}_linux-${arch}.tar.gz"
-archive_path="${out_dir}/${archive_name}"
+archive_path="${out_dir}/${product_name}_${version}_linux-${arch}.tar.gz"
 tar -C "$staging" -czf "$archive_path" "$app_dir_name"
 
 archive_contents="${staging}/archive-contents.txt"
 tar -tzf "$archive_path" > "$archive_contents"
 
 for required in \
-  "${app_dir_name}/libexec/athas" \
-  "${app_dir_name}/libexec/libcef.so" \
-  "${app_dir_name}/libexec/libgdk_pixbuf-2.0.so.0" \
-  "${app_dir_name}/libexec/icudtl.dat" \
-  "${app_dir_name}/libexec/locales/en-US.pak" \
-  "${app_dir_name}/lib/${product_name}/bundled"
+  "${app_dir_name}/bin/athas" \
+  "${app_dir_name}/lib/${product_name}/bundled" \
+  "${app_dir_name}/share/applications/${desktop_id}.desktop"
 do
   if ! grep -Fxq "$required" "$archive_contents" \
     && ! grep -Fxq "${required}/" "$archive_contents"; then

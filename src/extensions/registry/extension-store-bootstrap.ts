@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { listen } from "@tauri-apps/api/event";
 import { extensionInstaller } from "../installer/extension-installer";
 import {
@@ -66,12 +66,12 @@ export async function migrateBundledContributionInstallations(
     if (!extensionPackage) continue;
 
     try {
-      await invoke("install_extension", {
+      await commands.installExtension(
         extensionId,
-        url: extensionPackage.downloadUrl,
-        checksum: extensionPackage.checksum,
-        size: extensionPackage.size,
-      });
+        extensionPackage.downloadUrl,
+        extensionPackage.checksum,
+        extensionPackage.size,
+      );
       markBundledContributionExtensionUninstalled(extensionId);
       installedExternalPackage = true;
     } catch (error) {
@@ -82,7 +82,7 @@ export async function migrateBundledContributionInstallations(
   if (!installedExternalPackage) return backendInstalled;
 
   try {
-    return await invoke<ExtensionInstallationMetadata[]>("list_installed_extensions");
+    return await commands.listInstalledExtensions();
   } catch {
     return backendInstalled;
   }
@@ -99,7 +99,7 @@ export async function loadInstalledExtensionsSnapshot(
   const runtimeIssues = new Map<string, ExtensionRuntimeIssue[]>();
 
   try {
-    backendInstalled = await invoke<ExtensionInstallationMetadata[]>("list_installed_extensions");
+    backendInstalled = await commands.listInstalledExtensions();
   } catch {
     // Backend command may not exist yet, continue with IndexedDB check.
   }

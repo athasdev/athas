@@ -8,10 +8,10 @@ use super::{
    traffic::TrafficInspector,
    types::{AcpAgentStatus, AcpOpenedSession, AcpSessionList, AgentConfig, SessionConfigValue},
 };
-use crate::runtime::AthasAppHandle as AppHandle;
 use anyhow::Result;
 use athas_terminal::TerminalManager;
 use std::{sync::Arc, time::Instant};
+use tauri::AppHandle;
 use tokio::sync::{Mutex, mpsc, oneshot};
 
 type Response<T> = oneshot::Sender<Result<T>>;

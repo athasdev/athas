@@ -1,10 +1,10 @@
-import { invoke } from "@tauri-apps/api/core";
 import { basename, dirname, extname } from "@tauri-apps/api/path";
 import { copyFile } from "@tauri-apps/plugin-fs";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { immer } from "zustand/middleware/immer";
 import type { StoreApi } from "zustand";
 import { createStore } from "zustand/vanilla";
+import { commands } from "@/bindings/commands";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { CodeEditorRef } from "@/features/editor/components/code-editor";
 import { restorePersistedEditorViewState } from "@/features/editor/stores/editor-session-state";
@@ -116,15 +116,8 @@ import {
 import { getSymlinkInfo, openFolder, readDirectory } from "../controllers/platform";
 import { useRecentFoldersStore } from "../stores/recent-folders.store";
 import { useRecentFilesStore } from "../stores/recent-files.store";
-import {
-  buildRemoteWorkspaceTree,
-  type RemoteDirectoryEntry,
-} from "../controllers/remote-workspace";
-import {
-  buildWslWorkspaceTree,
-  getWslProjectName,
-  type WslDirectoryEntry,
-} from "@/features/wsl/controllers/wsl-workspace";
+import { buildRemoteWorkspaceTree } from "../controllers/remote-workspace";
+import { buildWslWorkspaceTree, getWslProjectName } from "@/features/wsl/controllers/wsl-workspace";
 import { buildWslPath, parseWslPath } from "@/features/wsl/utils/wsl-path";
 import { shouldIgnore, updateDirectoryContents } from "../controllers/utils";
 import { prepareProjectTransitionWithUnsavedBuffers } from "../controllers/workspace-project-transition";
@@ -1121,10 +1114,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
           const connection = await ensureRemoteConnectionConnected(connectionId);
 
           // Read remote root directory
-          const entries = await invoke<RemoteDirectoryEntry[]>("ssh_read_directory", {
-            connectionId,
-            path: "/",
-          });
+          const entries = await commands.sshReadDirectory(connectionId, "/");
 
           const { remotePath, wrappedFileTree } = buildRemoteWorkspaceTree(
             connectionId,
@@ -1180,10 +1170,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
 
         try {
           const normalizedLinuxPath = linuxPath || "/";
-          const entries = await invoke<WslDirectoryEntry[]>("wsl_read_directory", {
-            distro,
-            path: normalizedLinuxPath,
-          });
+          const entries = await commands.wslReadDirectory(distro, normalizedLinuxPath);
           const { wslPath, wrappedFileTree } = buildWslWorkspaceTree(
             distro,
             normalizedLinuxPath,
@@ -1449,14 +1436,22 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
               const { rootFolderPath } = get();
               const events = createTerminalEventChannel();
               // Create terminal connection for external editor
-              const connectionId = await invoke<string>("create_terminal", {
-                config: {
-                  workingDirectory: rootFolderPath || undefined,
+              const { windowLabel, frontendSessionId } = getFrontendTerminalSessionArgs();
+              const connectionId = await commands.createTerminal(
+                {
+                  workingDirectory: rootFolderPath || null,
+                  shell: null,
+                  wslDistribution: null,
+                  wslWorkingDirectory: null,
+                  environment: null,
+                  command: null,
+                  args: null,
                   size: { rows: 24, cols: 80, pixelWidth: 0, pixelHeight: 0 },
                 },
-                onEvent: events.channel,
-                ...getFrontendTerminalSessionArgs(),
-              });
+                events.channel,
+                windowLabel,
+                frontendSessionId,
+              );
               events.bind(connectionId);
 
               if (isStaleRequest()) return;
@@ -2232,7 +2227,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
 
         const wslInfo = parseWslPath(path);
         if (wslInfo) {
-          const windowsPath = await invoke<string>("wsl_resolve_windows_path", { path });
+          const windowsPath = await commands.wslResolveWindowsPath(path);
           await revealItemInDir(windowsPath);
           return;
         }
@@ -2267,12 +2262,12 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
             counter++;
           } while (findFileInTree(get().files, `remote://${remoteInfo.connectionId}${finalPath}`));
 
-          await invoke("ssh_copy_path", {
-            connectionId: remoteInfo.connectionId,
-            sourcePath: remoteInfo.remotePath,
-            targetPath: finalPath,
-            isDirectory: fileEntry.isDir,
-          });
+          await commands.sshCopyPath(
+            remoteInfo.connectionId,
+            remoteInfo.remotePath,
+            finalPath,
+            fileEntry.isDir,
+          );
 
           const newEntry: FileEntry = {
             name: finalName,
@@ -2319,12 +2314,12 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
             counter++;
           } while (findFileInTree(get().files, finalPath));
 
-          await invoke("wsl_copy_path", {
-            distro: wslInfo.distro,
-            sourcePath: wslInfo.linuxPath,
-            targetPath: finalLinuxPath,
-            isDirectory: fileEntry.isDir,
-          });
+          await commands.wslCopyPath(
+            wslInfo.distro,
+            wslInfo.linuxPath,
+            finalLinuxPath,
+            fileEntry.isDir,
+          );
 
           const newEntry: FileEntry = {
             name: finalName,

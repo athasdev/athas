@@ -12,15 +12,14 @@ use athas_remote::{
    ssh_read_directory as remote_ssh_read_directory, ssh_read_file as remote_ssh_read_file,
    ssh_rename_path as remote_ssh_rename_path, ssh_write_file as remote_ssh_write_file,
 };
-use athas_terminal::{TerminalInput, TerminalSize};
-use tauri::{
-   Emitter, State,
-   ipc::{Channel, InvokeResponseBody},
-};
+use athas_terminal::{TerminalChannelMessage, TerminalInput, TerminalSize};
+use serde::Deserialize;
+use tauri::{Emitter, State, ipc::Channel};
 
 #[tauri::command]
+#[specta::specta]
 pub async fn ssh_connect(
-   app: crate::app_runtime::AppHandle,
+   app: tauri::AppHandle,
    connection_id: String,
    host: String,
    port: u16,
@@ -52,10 +51,8 @@ pub async fn ssh_connect(
 }
 
 #[tauri::command]
-pub async fn ssh_disconnect(
-   app: crate::app_runtime::AppHandle,
-   connection_id: String,
-) -> Result<(), String> {
+#[specta::specta]
+pub async fn ssh_disconnect(app: tauri::AppHandle, connection_id: String) -> Result<(), String> {
    remote_ssh_disconnect(app.clone(), connection_id.clone()).await?;
 
    let _ = app.emit(
@@ -70,8 +67,9 @@ pub async fn ssh_disconnect(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn ssh_disconnect_only(
-   app: crate::app_runtime::AppHandle,
+   app: tauri::AppHandle,
    connection_id: String,
 ) -> Result<(), String> {
    remote_ssh_disconnect_only(connection_id.clone()).await?;
@@ -88,6 +86,7 @@ pub async fn ssh_disconnect_only(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn ssh_write_file(
    connection_id: String,
    file_path: String,
@@ -97,6 +96,7 @@ pub async fn ssh_write_file(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn ssh_read_directory(
    connection_id: String,
    path: String,
@@ -105,21 +105,25 @@ pub async fn ssh_read_directory(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn ssh_read_file(connection_id: String, file_path: String) -> Result<String, String> {
    remote_ssh_read_file(connection_id, file_path).await
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn ssh_get_connected_ids() -> Result<Vec<String>, String> {
    remote_ssh_get_connected_ids().await
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn ssh_create_file(connection_id: String, file_path: String) -> Result<(), String> {
    remote_ssh_create_file(connection_id, file_path).await
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn ssh_create_directory(
    connection_id: String,
    directory_path: String,
@@ -128,6 +132,7 @@ pub async fn ssh_create_directory(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn ssh_delete_path(
    connection_id: String,
    target_path: String,
@@ -137,6 +142,7 @@ pub async fn ssh_delete_path(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn ssh_rename_path(
    connection_id: String,
    source_path: String,
@@ -146,6 +152,7 @@ pub async fn ssh_rename_path(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn ssh_copy_path(
    connection_id: String,
    source_path: String,
@@ -155,28 +162,36 @@ pub async fn ssh_copy_path(
    remote_ssh_copy_path(connection_id, source_path, target_path, is_directory).await
 }
 
+/// Where a remote terminal connects and starts.
+#[derive(Debug, Clone, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct RemoteTerminalTarget {
+   pub host: String,
+   pub port: u16,
+   pub username: String,
+   pub password: Option<String>,
+   pub key_path: Option<String>,
+   pub working_directory: Option<String>,
+}
+
 #[tauri::command]
+#[specta::specta]
 pub async fn create_remote_terminal(
-   app_handle: crate::app_runtime::AppHandle,
-   host: String,
-   port: u16,
-   username: String,
-   password: Option<String>,
-   key_path: Option<String>,
-   working_directory: Option<String>,
+   app_handle: tauri::AppHandle,
+   target: RemoteTerminalTarget,
    size: TerminalSize,
-   on_event: Channel<InvokeResponseBody>,
+   on_event: Channel<TerminalChannelMessage>,
    window_label: String,
    frontend_session_id: String,
    frontend_sessions: State<'_, FrontendTerminalSessions>,
 ) -> Result<String, String> {
    let connection_id = remote_create_terminal(
-      host,
-      port,
-      username,
-      password,
-      key_path,
-      working_directory,
+      target.host,
+      target.port,
+      target.username,
+      target.password,
+      target.key_path,
+      target.working_directory,
       size,
       app_handle.package_info().version.to_string(),
       on_event,
@@ -194,21 +209,25 @@ pub async fn create_remote_terminal(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn remote_terminal_write(id: String, input: TerminalInput) -> Result<(), String> {
    remote_terminal_write_impl(id, input).await
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn remote_terminal_resize(id: String, size: TerminalSize) -> Result<(), String> {
    remote_terminal_resize_impl(id, size).await
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn remote_terminal_set_paused(id: String, paused: bool) -> Result<(), String> {
    remote_terminal_set_paused_impl(id, paused).await
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn close_remote_terminal(
    id: String,
    frontend_sessions: State<'_, FrontendTerminalSessions>,

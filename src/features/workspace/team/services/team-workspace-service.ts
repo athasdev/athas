@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { writeFile } from "@/features/file-system/controllers/platform";
 import { getWorkspaceResourceProvider } from "@/features/file-system/services/workspace-resource-provider";
 import { parseRemotePath } from "@/features/remote/utils/remote-path";
@@ -34,11 +34,7 @@ export async function saveTeamWorkspace(
   const content = `${JSON.stringify(validated, null, 2)}\n`;
   const remote = parseRemotePath(path);
   if (remote) {
-    await invoke("ssh_write_file", {
-      connectionId: remote.connectionId,
-      filePath: remote.remotePath,
-      content,
-    });
+    await commands.sshWriteFile(remote.connectionId, remote.remotePath, content);
   } else {
     await writeFile(path, content);
   }

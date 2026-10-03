@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import type { ExtensionRuntimeIssue } from "../registry/extension-store-types";
 import { getManifestLanguageContributions } from "../types/extension-contributions";
 import type { ExtensionManifest } from "../types/extension-manifest";
@@ -58,10 +58,10 @@ async function installLanguageTools(
   languageId: string,
   manifest?: ExtensionManifest,
 ): Promise<ToolIssueMap> {
-  const status = await invoke<Record<string, unknown>>("install_language_tools", {
+  const status = await commands.installLanguageTools(
     languageId,
-    tools: getLanguageToolConfigSet(manifest),
-  });
+    getLanguageToolConfigSet(manifest) ?? null,
+  );
   const issues: ToolIssueMap = {};
 
   for (const [tool, toolStatus] of Object.entries(status)) {
@@ -79,11 +79,11 @@ async function getToolPath(
   manifest?: ExtensionManifest,
 ): Promise<string | null> {
   try {
-    return await invoke<string | null>("get_tool_path", {
+    return await commands.getToolPath(
       languageId,
       toolType,
-      tools: getLanguageToolConfigSet(manifest),
-    });
+      getLanguageToolConfigSet(manifest) ?? null,
+    );
   } catch (error) {
     if (!isExpectedMissingToolError(error)) {
       console.warn(`Failed to resolve ${toolType} path for ${languageId}:`, error);
@@ -131,12 +131,10 @@ export async function resolveToolPaths(
   }
 
   let javaDebugBundle =
-    languageId === "java"
-      ? await invoke<string | null>("get_java_debug_bundle_path").catch(() => null)
-      : null;
+    languageId === "java" ? await commands.getJavaDebugBundlePath().catch(() => null) : null;
   if (languageId === "java" && options.repairMissing && toolPaths.lsp && !javaDebugBundle) {
     issues = { ...(await installLanguageTools(languageId, manifest)), ...issues };
-    javaDebugBundle = await invoke<string | null>("get_java_debug_bundle_path").catch(() => null);
+    javaDebugBundle = await commands.getJavaDebugBundlePath().catch(() => null);
   }
   if (languageId === "java" && toolPaths.lsp && !javaDebugBundle) {
     issues.lsp ||= "Java debugger bundle is missing. Reinstall the Java language tools.";

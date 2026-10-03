@@ -2,7 +2,7 @@ import GitHubDeliveryList from "../delivery/components/github-delivery-list";
 import { RELEASE_FILTERS, DEPLOYMENT_FILTERS } from "../delivery/utils/github-delivery";
 import type { ReleaseFilter, DeploymentFilter } from "../delivery/types/github-delivery.types";
 import { TagIcon, RocketIcon } from "@/ui/icons";
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { open } from "@tauri-apps/plugin-dialog";
 import { GitHubAuthStatusMessage } from "./github-auth-status";
 import {
@@ -65,13 +65,7 @@ import { getTimeAgo, getSidebarTime } from "../utils/github-viewer-utils";
 import { getGitHubAvatarUrl } from "../utils/github-avatar-url";
 import { openGitHubContentInNewWindow } from "../utils/open-in-new-window";
 import { groupPullRequests } from "../utils/github-sidebar-groups";
-import type {
-  IssueFilter,
-  IssueListItem,
-  PRFilter,
-  PullRequest,
-  WorkflowRunFilter,
-} from "../types/github.types";
+import type { IssueFilter, PRFilter, PullRequest, WorkflowRunFilter } from "../types/github.types";
 import { useGitHubActionsStore } from "../stores/github-actions.store";
 import GitHubActionsView from "./github-actions-view";
 import { GitHubAvatar } from "./github-avatar";
@@ -347,15 +341,9 @@ const GitHubPRsView = memo(() => {
       if (showGitHubIssues) {
         const issueCacheKey = `${effectiveRepoPath}::${issueFilter}`;
         void githubIssueListCache
-          .load(
-            issueCacheKey,
-            () =>
-              invoke<IssueListItem[]>("github_list_issues", {
-                repoPath: effectiveRepoPath,
-                state: issueFilter,
-              }),
-            { ttlMs: GITHUB_ISSUE_LIST_TTL_MS },
-          )
+          .load(issueCacheKey, () => commands.githubListIssues(effectiveRepoPath, issueFilter), {
+            ttlMs: GITHUB_ISSUE_LIST_TTL_MS,
+          })
           .catch(() => undefined);
       }
 

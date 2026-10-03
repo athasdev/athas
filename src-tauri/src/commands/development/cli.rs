@@ -40,6 +40,7 @@ fn validate_cli_script(path: &std::path::Path) -> bool {
 }
 
 #[command]
+#[specta::specta]
 pub fn check_cli_installed() -> Result<bool, String> {
    let cli_path = get_cli_script_path()?;
 
@@ -211,6 +212,7 @@ fn launcher_needs_rewrite(existing: &str, current: &str) -> bool {
 
 #[cfg(target_os = "macos")]
 #[command]
+#[specta::specta]
 pub fn install_cli_command() -> Result<String, String> {
    ensure_installable_location()?;
    let cli_path = get_cli_script_path()?;
@@ -242,6 +244,7 @@ pub fn install_cli_command() -> Result<String, String> {
 
 #[cfg(all(unix, not(target_os = "macos")))]
 #[command]
+#[specta::specta]
 pub fn install_cli_command() -> Result<String, String> {
    let cli_path = get_cli_script_path()?;
    let bin_dir = cli_path
@@ -274,6 +277,7 @@ pub fn install_cli_command() -> Result<String, String> {
 
 #[cfg(windows)]
 #[command]
+#[specta::specta]
 pub fn install_cli_command() -> Result<String, String> {
    let cli_path = get_cli_script_path()?;
    let powershell_path = get_cli_powershell_path()?;
@@ -304,6 +308,7 @@ pub fn install_cli_command() -> Result<String, String> {
 
 #[cfg(target_os = "macos")]
 #[command]
+#[specta::specta]
 pub fn get_cli_install_command() -> Result<String, String> {
    ensure_installable_location()?;
    let script = current_cli_script()?;
@@ -317,6 +322,7 @@ pub fn get_cli_install_command() -> Result<String, String> {
 
 #[cfg(all(unix, not(target_os = "macos")))]
 #[command]
+#[specta::specta]
 pub fn get_cli_install_command() -> Result<String, String> {
    let script = current_cli_script()?;
    Ok(format!(
@@ -328,6 +334,7 @@ pub fn get_cli_install_command() -> Result<String, String> {
 
 #[cfg(windows)]
 #[command]
+#[specta::specta]
 pub fn get_cli_install_command() -> Result<String, String> {
    let powershell_script = windows_powershell_script()?.replace('\'', "''");
    Ok(format!(
@@ -342,6 +349,7 @@ echo powershell -NoProfile -ExecutionPolicy Bypass -File "%%~dp0athas.ps1" %%*
 
 #[cfg(unix)]
 #[command]
+#[specta::specta]
 pub fn uninstall_cli_command() -> Result<String, String> {
    let cli_path = get_cli_script_path()?;
 
@@ -356,6 +364,7 @@ pub fn uninstall_cli_command() -> Result<String, String> {
 
 #[cfg(windows)]
 #[command]
+#[specta::specta]
 pub fn uninstall_cli_command() -> Result<String, String> {
    let cli_path = get_cli_script_path()?;
    let powershell_path = get_cli_powershell_path()?;

@@ -1,5 +1,5 @@
-import { invoke } from "@tauri-apps/api/core";
 import isEqual from "fast-deep-equal";
+import { commands } from "@/bindings/commands";
 import { defaultSettings } from "@/features/settings/config/default-settings";
 import { applySettingsSideEffects } from "@/features/settings/lib/settings-effects";
 import { normalizeSettings } from "@/features/settings/lib/settings-normalization";
@@ -14,7 +14,7 @@ async function detectInitialTheme() {
   let detectedTheme = getSystemThemePreference() === "dark" ? "athas-dark" : "athas-light";
 
   try {
-    const tauriDetectedTheme = await invoke<string>("get_system_theme");
+    const tauriDetectedTheme = await commands.getSystemTheme();
     detectedTheme = tauriDetectedTheme === "dark" ? "athas-dark" : "athas-light";
   } catch {
     console.log("Tauri theme detection not available, using browser detection");

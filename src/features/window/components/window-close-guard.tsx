@@ -7,9 +7,7 @@ import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { isEditorContent } from "@/features/panes/types/pane-content.types";
 import UnsavedChangesDialog from "@/features/window/components/unsaved-changes-dialog";
-import { consumeCloseRequestSuppression } from "@/features/window/utils/close-request-suppression";
 import { REQUEST_WINDOW_CLOSE_EVENT } from "@/features/window/utils/request-window-close";
-import { IS_LINUX } from "@/utils/platform";
 import { agentsAreDetached } from "@/features/ai/detached/agent-window.store";
 import { toast } from "sonner";
 
@@ -88,11 +86,6 @@ export function WindowCloseGuard() {
         toast.info("Close the agent windows before closing this window.");
         return;
       }
-      if (IS_LINUX && consumeCloseRequestSuppression()) {
-        event.preventDefault();
-        return;
-      }
-
       if (closeInProgressRef.current) {
         persistSessionSnapshot();
         return;

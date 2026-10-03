@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import {
   dropRestoredCheckpoints,
   isCheckpointAvailable,
@@ -81,11 +81,9 @@ function schedulePersist(chatId: string) {
       persistTimers.delete(chatId);
       const state = getChatCheckpoints(chatId);
       const empty = state.checkpoints.length === 0 && state.truncatedAt === null;
-      invoke("save_chat_checkpoints", {
-        chatId,
-        data: empty ? null : JSON.stringify(state),
-        updatedAt: Date.now(),
-      }).catch((error) => console.warn("Could not save agent checkpoints:", error));
+      commands
+        .saveChatCheckpoints(chatId, empty ? null : JSON.stringify(state), Date.now())
+        .catch((error) => console.warn("Could not save agent checkpoints:", error));
     }, PERSIST_DELAY_MS),
   );
 }
@@ -120,7 +118,8 @@ export function ensureCheckpointsLoaded(chatId: string): Promise<void> {
   if (useAgentCheckpointsStore.getState().byChat[chatId]) return Promise.resolve();
   let load = loads.get(chatId);
   if (!load) {
-    load = invoke<string | null>("load_chat_checkpoints", { chatId })
+    load = commands
+      .loadChatCheckpoints(chatId)
       .then((data) => parseChatCheckpoints(data))
       .catch(() => parseChatCheckpoints(null))
       .then((loaded) => {

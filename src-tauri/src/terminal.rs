@@ -1,15 +1,12 @@
-use crate::app_runtime::AppHandle;
 use athas_terminal::{
-   TerminalConfig, TerminalEventHandler, TerminalInput, TerminalManager, TerminalSize, shell::Shell,
+   TerminalChannelMessage, TerminalConfig, TerminalEventHandler, TerminalInput, TerminalManager,
+   TerminalSize, shell::Shell,
 };
 use std::{
    collections::{HashMap, HashSet},
    sync::{Arc, Mutex},
 };
-use tauri::{
-   State,
-   ipc::{Channel, InvokeResponseBody},
-};
+use tauri::{AppHandle, State, ipc::Channel};
 
 #[derive(Default)]
 pub(crate) struct FrontendTerminalSessions {
@@ -156,6 +153,7 @@ pub fn close_window_terminals(app: &AppHandle, label: &str) {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn begin_frontend_terminal_session(
    window_label: String,
    session_id: String,
@@ -178,6 +176,7 @@ pub async fn begin_frontend_terminal_session(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn warm_terminal_environment(terminal_manager: State<'_, Arc<TerminalManager>>) {
    terminal_manager.warm_user_environment();
 }
@@ -200,9 +199,10 @@ fn shell_integration_dir(app_handle: &AppHandle) -> Option<String> {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn create_terminal(
    mut config: TerminalConfig,
-   on_event: Channel<InvokeResponseBody>,
+   on_event: Channel<TerminalChannelMessage>,
    window_label: String,
    frontend_session_id: String,
    app_handle: AppHandle,
@@ -212,7 +212,7 @@ pub async fn create_terminal(
    config.term_program_version = Some(app_handle.package_info().version.to_string());
    config.shell_integration_dir = shell_integration_dir(&app_handle);
    let event_handler: TerminalEventHandler =
-      Arc::new(move |_, event| on_event.send(event.into_ipc_body()).is_ok());
+      Arc::new(move |_, event| on_event.send(event.into_channel_message()).is_ok());
    let connection_id = terminal_manager
       .create_terminal(config, event_handler)
       .map_err(|e| e.to_string())?;
@@ -228,6 +228,7 @@ pub async fn create_terminal(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn terminal_write(
    id: String,
    input: TerminalInput,
@@ -239,6 +240,7 @@ pub async fn terminal_write(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn terminal_resize(
    id: String,
    size: TerminalSize,
@@ -250,6 +252,7 @@ pub async fn terminal_resize(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn terminal_set_paused(
    id: String,
    paused: bool,
@@ -261,6 +264,7 @@ pub async fn terminal_set_paused(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn close_terminal(
    id: String,
    frontend_sessions: State<'_, FrontendTerminalSessions>,
@@ -273,6 +277,7 @@ pub async fn close_terminal(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn list_shells() -> Vec<Shell> {
    athas_terminal::get_shells()
 }

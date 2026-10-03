@@ -1,4 +1,4 @@
-import { invoke as tauriInvoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import type { GitStash } from "../types/git.types";
 import { emitGitChanged } from "../events/git-events";
 import { runGitRead } from "../runtime/git-read-coordinator";
@@ -16,9 +16,7 @@ export const getStashes = async (repoPath: string): Promise<GitStash[]> => {
     }
 
     return await runGitRead(resolvedRepoPath, "stashes", () =>
-      tauriInvoke<GitStash[]>("git_get_stashes", {
-        repoPath: resolvedRepoPath,
-      }),
+      commands.gitGetStashes(resolvedRepoPath),
     );
   } catch (error) {
     if (!isNotGitRepositoryError(error)) {
@@ -36,12 +34,12 @@ export const createStash = async (
 ): Promise<boolean> => {
   try {
     const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
-    await tauriInvoke("git_create_stash", {
-      repoPath: resolvedRepoPath,
-      message,
+    await commands.gitCreateStash(
+      resolvedRepoPath,
+      message ?? null,
       includeUntracked,
-      files,
-    });
+      files ?? null,
+    );
     emitGitChanged({
       repoPath: resolvedRepoPath,
       scopes: ["working-tree", "stashes"],
@@ -57,7 +55,7 @@ export const createStash = async (
 export const applyStash = async (repoPath: string, stashIndex: number): Promise<boolean> => {
   try {
     const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
-    await tauriInvoke("git_apply_stash", { repoPath: resolvedRepoPath, stashIndex });
+    await commands.gitApplyStash(resolvedRepoPath, stashIndex);
     emitGitChanged({
       repoPath: resolvedRepoPath,
       scopes: ["working-tree"],
@@ -73,7 +71,7 @@ export const applyStash = async (repoPath: string, stashIndex: number): Promise<
 export const popStash = async (repoPath: string, stashIndex?: number): Promise<boolean> => {
   try {
     const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
-    await tauriInvoke("git_pop_stash", { repoPath: resolvedRepoPath, stashIndex });
+    await commands.gitPopStash(resolvedRepoPath, stashIndex ?? null);
     emitGitChanged({
       repoPath: resolvedRepoPath,
       scopes: ["working-tree", "stashes"],
@@ -89,7 +87,7 @@ export const popStash = async (repoPath: string, stashIndex?: number): Promise<b
 export const dropStash = async (repoPath: string, stashIndex: number): Promise<boolean> => {
   try {
     const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
-    await tauriInvoke("git_drop_stash", { repoPath: resolvedRepoPath, stashIndex });
+    await commands.gitDropStash(resolvedRepoPath, stashIndex);
     emitGitChanged({
       repoPath: resolvedRepoPath,
       scopes: ["stashes"],
