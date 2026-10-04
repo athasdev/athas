@@ -4,13 +4,12 @@
 //! event. An exit sends the output still waiting first, so the chat never sees them reversed.
 
 use super::{terminal_state::TerminalChange, types::AcpEvent};
-use crate::runtime::AthasAppHandle as AppHandle;
 use std::{
    collections::HashMap,
    sync::{Arc, Mutex},
    time::Duration,
 };
-use tauri::Emitter;
+use tauri::{AppHandle, Emitter};
 
 /// How long output waits for more before it is sent.
 pub(super) const OUTPUT_FLUSH_DELAY: Duration = Duration::from_millis(75);

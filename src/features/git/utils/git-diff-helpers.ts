@@ -96,7 +96,7 @@ export function getImageMimeType(filePath: string): string {
   return extension ? (mimeTypes[extension] ?? "image/png") : "image/png";
 }
 
-export const getImgSrc = (base64: string | undefined, filePath: string) =>
+export const getImgSrc = (base64: string | null | undefined, filePath: string) =>
   base64 ? `data:${getImageMimeType(filePath)};base64,${base64}` : undefined;
 
 export function getFileStatus(diff: GitDiff): string {

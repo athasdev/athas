@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import type { FileEntry } from "@/features/file-system/types/app.types";
 import { DEFAULT_ATTACHMENT_BUDGET, truncateTextToTokens } from "@/features/ai/lib/context-budget";
 
@@ -39,7 +39,7 @@ export async function loadFilesByPaths(
     await Promise.all(
       filePaths.map(async (path): Promise<MentionedFile | null> => {
         try {
-          const raw = await invoke<string>("read_file_custom", { path });
+          const raw = await readFileContent(path);
           const { text, truncated, originalTokens } = truncateTextToTokens(raw, maxTokensPerFile);
           return {
             name: path.split(/[/\\]/).pop() || path,

@@ -9,6 +9,7 @@ log = "0.4"
 reqwest = "0.12"
 serde = { version = "1.0", features = ["derive"] }
 sha2 = "0.10"
+specta = { version = "=2.0.0-rc.25", features = ["derive", "serde_json"] }
 tar = "0.4"
 tempfile = "3.20"
 which = "7.0"

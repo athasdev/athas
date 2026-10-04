@@ -1,0 +1,23 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "identifier": "com.code.athas.e2e",
+  "app": {
+    "appDirectoriesOverride": "./e2e-app-data"
+  },
+  "bundle": {
+    "createUpdaterArtifacts": false,
+    "macOS": {
+      "signingIdentity": null
+    }
+  },
+  "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": ["athas-e2e"]
+      }
+    },
+    "updater": {
+      "active": false
+    }
+  }
+}

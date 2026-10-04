@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import type { PullRequest, PullRequestDetails, PullRequestFile } from "../types/github.types";
 import type { GitHubTokenSyncStatus } from "./github-token-service";
 
@@ -120,10 +120,7 @@ export async function fetchNormalizedPRDetails(
   repoPath: string,
   prNumber: number,
 ): Promise<PullRequestDetails> {
-  const detailsResponse = await invoke<PullRequestDetails>("github_get_pr_details", {
-    repoPath,
-    prNumber,
-  });
+  const detailsResponse = await commands.githubGetPrDetails(repoPath, prNumber);
 
   return normalizePullRequestDetails(detailsResponse);
 }

@@ -2,14 +2,14 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Slash command input specification
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct SlashCommandInput {
    pub hint: String,
 }
 
 /// Available slash command from an ACP agent
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct SlashCommand {
    pub name: String,
@@ -18,7 +18,7 @@ pub struct SlashCommand {
 }
 
 /// A session mode that an ACP agent can operate in
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct SessionMode {
    pub id: String,
@@ -27,7 +27,7 @@ pub struct SessionMode {
 }
 
 /// State of available session modes and current mode
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct SessionModeState {
    pub current_mode_id: Option<String>,
@@ -35,7 +35,7 @@ pub struct SessionModeState {
 }
 
 /// Runtime used to install and launch an ACP agent
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, specta::Type)]
 #[serde(rename_all = "lowercase")]
 pub enum AgentRuntime {
    Node,
@@ -46,7 +46,7 @@ pub enum AgentRuntime {
 }
 
 /// Reason why a prompt turn ended
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "snake_case")]
 pub enum StopReason {
    /// The turn ended successfully
@@ -77,7 +77,7 @@ impl From<agent_client_protocol::schema::v1::StopReason> for StopReason {
 }
 
 /// Priority level for an ACP plan entry
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "snake_case")]
 pub enum AcpPlanEntryPriority {
    High,
@@ -86,7 +86,7 @@ pub enum AcpPlanEntryPriority {
 }
 
 /// Execution status for an ACP plan entry
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "snake_case")]
 pub enum AcpPlanEntryStatus {
    Pending,
@@ -95,7 +95,7 @@ pub enum AcpPlanEntryStatus {
 }
 
 /// A single plan entry streamed by ACP agents
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct AcpPlanEntry {
    pub content: String,
@@ -103,7 +103,7 @@ pub struct AcpPlanEntry {
    pub status: AcpPlanEntryStatus,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct AcpUsageUpdate {
    /// Tokens currently in the context window.
@@ -115,7 +115,7 @@ pub struct AcpUsageUpdate {
 }
 
 /// The tokens one prompt turn used, as the agent reports them in its `session/prompt` answer.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct AcpTurnUsage {
    pub total_tokens: u64,
@@ -126,7 +126,7 @@ pub struct AcpTurnUsage {
    pub cached_write_tokens: Option<u64>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct AcpCost {
    pub amount: f64,
@@ -134,7 +134,7 @@ pub struct AcpCost {
    pub currency: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "snake_case")]
 pub enum AcpPermissionOptionKind {
    AllowOnce,
@@ -143,7 +143,7 @@ pub enum AcpPermissionOptionKind {
    RejectAlways,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct AcpPermissionOption {
    pub id: String,
@@ -151,7 +151,7 @@ pub struct AcpPermissionOption {
    pub kind: AcpPermissionOptionKind,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct AcpPromptCapabilities {
    pub image: bool,
@@ -159,14 +159,14 @@ pub struct AcpPromptCapabilities {
    pub embedded_context: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct AcpMcpCapabilities {
    pub http: bool,
    pub sse: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct AcpAgentCapabilities {
    pub load_session: bool,
@@ -199,7 +199,7 @@ impl From<agent_client_protocol::schema::v1::AgentCapabilities> for AcpAgentCapa
    }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "snake_case")]
 pub enum AcpToolKind {
    Read,
@@ -214,7 +214,7 @@ pub enum AcpToolKind {
    Other,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "snake_case")]
 pub enum AcpToolCallStatus {
    Pending,
@@ -223,7 +223,7 @@ pub enum AcpToolCallStatus {
    Failed,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct AcpToolCallLocation {
    pub path: String,
@@ -232,7 +232,7 @@ pub struct AcpToolCallLocation {
 
 /// The tool call a permission request is about, in the same shapes tool
 /// cards use, so the prompt can show what the agent is about to do.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct AcpPermissionToolCall {
    pub tool_id: String,
@@ -257,7 +257,7 @@ pub struct AcpBufferReadRequest {
 }
 
 /// Configuration for an ACP-compatible agent
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct AgentConfig {
    pub id: String,
@@ -287,7 +287,7 @@ pub struct AgentConfig {
    pub registry: Option<RegistryAgentInfo>,
 }
 
-#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq, specta::Type)]
 #[serde(rename_all = "lowercase")]
 pub enum AgentSource {
    /// Athas ships a manifest for the agent; a copy on PATH is detected by its binary name.
@@ -298,7 +298,7 @@ pub enum AgentSource {
 }
 
 /// What the ACP Registry says about an agent, shown before it is installed.
-#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct RegistryAgentInfo {
    pub id: String,
@@ -374,7 +374,7 @@ impl AgentConfig {
 
 /// Status of one running agent process. Every chat that uses the same agent in the same
 /// workspace shares it, each with its own session.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 #[derive(Default)]
 pub struct AcpAgentStatus {
@@ -395,7 +395,7 @@ pub struct AcpAgentStatus {
 }
 
 /// A session opened (or found already open) for a chat, and the agent that holds it.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct AcpOpenedSession {
    pub session_id: String,
@@ -410,7 +410,7 @@ pub struct AcpOpenedSession {
 }
 
 /// How an ACP sign-in method is completed.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, specta::Type)]
 #[serde(rename_all = "snake_case")]
 pub enum AcpAuthMethodKind {
    /// The agent signs in itself when Athas calls `authenticate` with the method id.
@@ -420,7 +420,7 @@ pub enum AcpAuthMethodKind {
 }
 
 /// The command a terminal sign-in method runs, ready to start in an Athas terminal.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct AcpTerminalAuthLaunch {
    pub label: String,
@@ -430,7 +430,7 @@ pub struct AcpTerminalAuthLaunch {
 }
 
 /// A sign-in method an ACP agent offers, as the frontend shows it.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct AcpAuthMethod {
    pub id: String,
@@ -442,7 +442,7 @@ pub struct AcpAuthMethod {
 }
 
 /// Content block types in ACP messages
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum AcpContentBlock {
    Text {
@@ -472,7 +472,7 @@ pub enum AcpContentBlock {
 }
 
 /// UI action types that agents can request
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(tag = "action", rename_all = "snake_case")]
 pub enum UiAction {
    /// Open a terminal with an optional command
@@ -484,7 +484,7 @@ pub enum UiAction {
 }
 
 /// A selectable value for an ACP session configuration option
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct SessionConfigOptionValue {
    pub id: String,
@@ -493,7 +493,7 @@ pub struct SessionConfigOptionValue {
 }
 
 /// Supported ACP session configuration option variants
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, specta::Type)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum SessionConfigOptionKind {
    #[serde(rename_all = "camelCase")]
@@ -506,7 +506,7 @@ pub enum SessionConfigOptionKind {
    },
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, specta::Type)]
 #[serde(untagged)]
 pub enum SessionConfigValue {
    String(String),
@@ -514,7 +514,7 @@ pub enum SessionConfigValue {
 }
 
 /// ACP session configuration option advertised by the agent
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct SessionConfigOption {
    pub id: String,
@@ -524,7 +524,7 @@ pub struct SessionConfigOption {
    pub kind: SessionConfigOptionKind,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct AcpSessionInfo {
    pub session_id: String,
@@ -535,7 +535,7 @@ pub struct AcpSessionInfo {
    pub meta: Option<serde_json::Value>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct AcpSessionList {
    pub sessions: Vec<AcpSessionInfo>,
@@ -543,7 +543,7 @@ pub struct AcpSessionList {
 }
 
 /// Events emitted to the frontend via Tauri
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum AcpEvent {
    /// User message content chunk

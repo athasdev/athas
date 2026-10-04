@@ -9,7 +9,7 @@ use std::{
    },
 };
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct DocumentChange {
    pub range_offset: usize,
@@ -21,7 +21,7 @@ pub struct DocumentChange {
    pub end_column: u32,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct DocumentChangeBatch {
    pub model_session_id: String,

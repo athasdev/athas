@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import {
   ActivityIcon,
   ChatBubbleTextIcon,
@@ -173,16 +173,16 @@ function GitHubCreateViewContent({
 
     Promise.all([
       getBranches(repoPath),
-      invoke<Label[]>("github_list_labels", { repoPath }).catch(() => []),
+      commands.githubListLabels(repoPath).catch((): Label[] => []),
       kind === "issue"
-        ? invoke<IssueMilestone[]>("github_list_milestones", { repoPath }).catch(() => [])
+        ? commands.githubListMilestones(repoPath).catch((): IssueMilestone[] => [])
         : Promise.resolve([]),
       kind === "issue"
-        ? invoke<IssueType[]>("github_list_issue_types", { repoPath }).catch(() => [])
+        ? commands.githubListIssueTypes(repoPath).catch((): IssueType[] => [])
         : Promise.resolve([]),
       kind === "action"
-        ? invoke<WorkflowListItem[]>("github_list_workflows", { repoPath })
-        : Promise.resolve([]),
+        ? commands.githubListWorkflows(repoPath)
+        : Promise.resolve<WorkflowListItem[]>([]),
     ])
       .then(([nextBranches, nextLabels, nextMilestones, nextIssueTypes, nextWorkflows]) => {
         if (cancelled) return;
@@ -251,15 +251,15 @@ function GitHubCreateViewContent({
 
     try {
       if (kind === "issue") {
-        const issue = await invoke<IssueListItem>("github_create_issue", {
+        const issue = await commands.githubCreateIssue(
           repoPath,
           title,
           body,
-          labels: selectedLabelNames,
+          selectedLabelNames,
           assignees,
-          milestone: milestone === "none" ? null : Number(milestone),
-          issueType: issueType === "none" ? null : issueType,
-        });
+          milestone === "none" ? null : Number(milestone),
+          issueType === "none" ? null : issueType,
+        );
         onIssueCreated(issue);
         toast.success("Issue created", { description: `#${issue.number} ${issue.title}` });
         onClose();
@@ -267,16 +267,16 @@ function GitHubCreateViewContent({
       }
 
       if (kind === "pull-request") {
-        const pullRequest = await invoke<PullRequest>("github_create_pull_request", {
+        const pullRequest = await commands.githubCreatePullRequest(
           repoPath,
           title,
           body,
           head,
           base,
           draft,
-          labels: selectedLabelNames,
+          selectedLabelNames,
           assignees,
-        });
+        );
         onPullRequestCreated(pullRequest);
         toast.success("Pull request created", {
           description: `#${pullRequest.number} ${pullRequest.title}`,
@@ -285,11 +285,7 @@ function GitHubCreateViewContent({
         return;
       }
 
-      await invoke("github_dispatch_workflow", {
-        repoPath,
-        workflowId: Number(workflowId),
-        reference: workflowRef,
-      });
+      await commands.githubDispatchWorkflow(repoPath, Number(workflowId), workflowRef);
       onWorkflowDispatched();
       toast.success("Workflow queued");
       onClose();

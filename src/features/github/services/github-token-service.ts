@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { tauriFetch } from "@/utils/tauri-fetch";
 import { getAuthToken } from "@/features/window/services/auth-api";
 import { getServiceUrls } from "@/config/services";
@@ -22,7 +22,7 @@ interface DesktopGitHubTokenResponse {
 
 const storeGitHubToken = async (token: string): Promise<void> => {
   try {
-    await invoke("store_github_token", { token });
+    await commands.storeGithubToken(token);
   } catch (error) {
     console.error("Error storing GitHub token:", error);
     throw error;
@@ -31,7 +31,7 @@ const storeGitHubToken = async (token: string): Promise<void> => {
 
 const removeGitHubToken = async (): Promise<void> => {
   try {
-    await invoke("remove_github_token");
+    await commands.removeGithubToken();
   } catch (error) {
     console.error("Error removing GitHub token:", error);
     throw error;

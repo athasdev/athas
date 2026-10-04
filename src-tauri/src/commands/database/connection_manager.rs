@@ -1,9 +1,9 @@
 use super::sidecar::run_database_sidecar;
-use crate::app_runtime::AppHandle;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
+use tauri::AppHandle;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 pub struct ConnectionConfig {
    pub id: String,
    pub name: String,
@@ -16,6 +16,7 @@ pub struct ConnectionConfig {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn connect_database(
    app_handle: AppHandle,
    config: ConnectionConfig,
@@ -31,6 +32,7 @@ pub async fn connect_database(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn disconnect_database(
    app_handle: AppHandle,
    connection_id: String,
@@ -47,6 +49,7 @@ pub async fn disconnect_database(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn test_connection(
    app_handle: AppHandle,
    config: ConnectionConfig,

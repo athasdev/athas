@@ -3,44 +3,19 @@
   stdenv,
   fetchurl,
   autoPatchelfHook,
-  makeWrapper,
   wrapGAppsHook3,
-  glib,
-  gtk3,
-  gdk-pixbuf,
-  cairo,
-  pango,
   atk,
-  at-spi2-core,
-  nss,
-  nspr,
+  cairo,
   dbus,
-  cups,
-  expat,
+  gdk-pixbuf,
+  glib,
+  glib-networking,
+  gtk3,
+  libsoup_3,
+  openssl,
+  pango,
+  webkitgtk_4_1,
   zlib,
-  xz,
-  alsa-lib,
-  libxkbcommon,
-  libgbm,
-  mesa,
-  libGL,
-  libdrm,
-  fontconfig,
-  freetype,
-  systemdLibs,
-  libx11,
-  libxcb,
-  libxcomposite,
-  libxdamage,
-  libxext,
-  libxfixes,
-  libxrandr,
-  libxrender,
-  libxcursor,
-  libxi,
-  libxtst,
-  libxscrnsaver,
-  libxshmfence,
 }:
 
 let
@@ -72,45 +47,6 @@ let
       mkSource stdenv.hostPlatform.system
     else
       throw "athas: unsupported system ${stdenv.hostPlatform.system}";
-
-  runtimeLibs = [
-    glib
-    gtk3
-    gdk-pixbuf
-    cairo
-    pango
-    atk
-    at-spi2-core
-    nss
-    nspr
-    dbus
-    cups
-    expat
-    zlib
-    xz
-    alsa-lib
-    libxkbcommon
-    libgbm
-    mesa
-    libGL
-    libdrm
-    fontconfig
-    freetype
-    systemdLibs
-    libx11
-    libxcb
-    libxcomposite
-    libxdamage
-    libxext
-    libxfixes
-    libxrandr
-    libxrender
-    libxcursor
-    libxi
-    libxtst
-    libxscrnsaver
-    libxshmfence
-  ];
 in
 stdenv.mkDerivation {
   inherit pname version src;
@@ -119,29 +55,32 @@ stdenv.mkDerivation {
 
   nativeBuildInputs = [
     autoPatchelfHook
-    makeWrapper
     wrapGAppsHook3
   ];
 
-  buildInputs = runtimeLibs;
-
-  dontWrapGApps = true;
-
-  # The upstream Linux launcher disables Vulkan, so this library is optional.
-  autoPatchelfIgnoreMissingDeps = [ "libvulkan.so.1" ];
+  # The release tarball links against the system WebKitGTK 4.1 and GTK 3;
+  # glib-networking provides TLS for the webview.
+  buildInputs = [
+    atk
+    cairo
+    dbus
+    gdk-pixbuf
+    glib
+    glib-networking
+    gtk3
+    libsoup_3
+    openssl
+    pango
+    stdenv.cc.cc.lib
+    webkitgtk_4_1
+    zlib
+  ];
 
   installPhase = ''
     runHook preInstall
 
-    mkdir -p $out/libexec $out/lib $out/share
-    cp -r libexec/. $out/libexec/
-    cp -r lib/. $out/lib/
-    cp -r share/. $out/share/
-
-    makeWrapper $out/libexec/athas $out/bin/athas \
-      --add-flags "--ozone-platform=x11 --disable-vulkan --disable-features=Vulkan" \
-      --prefix LD_LIBRARY_PATH : "$out/libexec:${lib.makeLibraryPath runtimeLibs}" \
-      "''${gappsWrapperArgs[@]}"
+    mkdir -p $out
+    cp -r bin lib share $out/
 
     runHook postInstall
   '';

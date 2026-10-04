@@ -170,10 +170,6 @@ buildArgs.push(
   }),
 );
 
-if (targetPlatform === "linux") {
-  await $`cargo ${buildArgs} -- --no-default-features --features linux`.cwd(process.cwd());
-} else {
-  await $`bunx ${buildArgs}`.cwd(process.cwd());
-}
+await $`bunx ${buildArgs}`.cwd(process.cwd());
 
 await launchTarget();

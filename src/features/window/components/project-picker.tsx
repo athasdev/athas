@@ -1,5 +1,4 @@
 import { disposeListener } from "@/utils/tauri-drag-drop";
-import { invoke } from "@tauri-apps/api/core";
 import { ProjectCustomIcon } from "./project-custom-icon";
 import { listen } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -36,6 +35,7 @@ import type {
   RemoteConnection,
   RemoteConnectionFormData,
 } from "@/features/remote/types/remote.types";
+import { commands } from "@/bindings/commands";
 import type { WslDistribution } from "@/features/wsl/controllers/wsl-workspace";
 import { getFriendlyRemoteError, isRemoteAuthFailure } from "@/features/remote/utils/remote-errors";
 import Command, {
@@ -123,7 +123,7 @@ const ProjectPicker = memo(({ isOpen, initialStep = "picker", onClose }: Project
 
   const loadWslDistributions = useCallback(async () => {
     try {
-      setWslDistributions(await invoke<WslDistribution[]>("wsl_list_distributions"));
+      setWslDistributions(await commands.wslListDistributions());
     } catch {
       setWslDistributions([]);
     }
@@ -262,9 +262,7 @@ const ProjectPicker = memo(({ isOpen, initialStep = "picker", onClose }: Project
   const handleOpenWslDistribution = useCallback(
     async (distribution: WslDistribution) => {
       try {
-        const home = await invoke<string>("wsl_get_home_dir", { distro: distribution.name }).catch(
-          () => "/",
-        );
+        const home = await commands.wslGetHomeDir(distribution.name).catch(() => "/");
         const selectedPath = await showPromptDialog("Linux project path", {
           title: `Open ${distribution.name}`,
           defaultValue: home,

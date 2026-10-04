@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands, type IdeRecentProject } from "@/bindings/commands";
 import { ArrowLeftIcon, CheckIcon } from "@/ui/icons";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -15,13 +15,6 @@ import Command, {
   CommandList,
 } from "@/ui/command";
 import { matchesSearchQuery } from "@/utils/search-match";
-
-interface ImportableIdeProject {
-  name: string;
-  path: string;
-  sourceId: string;
-  sourceName: string;
-}
 
 interface IdeSettingsImportDialogProps {
   onClose: () => void;
@@ -83,7 +76,7 @@ const IDE_IMPORT_SOURCES: IdeImportSource[] = [
 ];
 
 function IdeSettingsImportContent({ onClose, onBack }: IdeSettingsImportContentProps) {
-  const [projects, setProjects] = useState<ImportableIdeProject[]>([]);
+  const [projects, setProjects] = useState<IdeRecentProject[]>([]);
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
@@ -148,7 +141,7 @@ function IdeSettingsImportContent({ onClose, onBack }: IdeSettingsImportContentP
     setError(null);
 
     try {
-      const nextProjects = await invoke<ImportableIdeProject[]>("get_importable_ide_projects");
+      const nextProjects = await commands.getImportableIdeProjects();
       setProjects(nextProjects);
     } catch (error) {
       console.error("Failed to load editor import data:", error);

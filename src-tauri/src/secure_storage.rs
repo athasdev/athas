@@ -1,4 +1,3 @@
-use crate::app_runtime::AppHandle;
 use serde_json::{Map, Value};
 use std::{
    collections::HashMap,
@@ -8,7 +7,7 @@ use std::{
    path::{Path, PathBuf},
    sync::{LazyLock, Mutex},
 };
-use tauri::Manager;
+use tauri::{AppHandle, Manager};
 
 const SECURE_STORE_FILE: &str = "secure.json";
 type SecretCache = HashMap<(String, String), String>;

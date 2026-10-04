@@ -2,7 +2,7 @@ use rusqlite::{Connection, Result as SqliteResult, ToSql, params};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, specta::Type)]
 pub struct ChatData {
    pub id: String,
    pub title: String,
@@ -21,7 +21,7 @@ pub struct ChatData {
    pub session_settings: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, specta::Type)]
 pub struct MessageData {
    pub id: String,
    pub chat_id: String,
@@ -44,7 +44,7 @@ pub struct MessageData {
    pub turn_usage: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, specta::Type)]
 pub struct ToolCallData {
    pub message_id: String,
    pub name: String,
@@ -58,7 +58,7 @@ pub struct ToolCallData {
    pub meta: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, specta::Type)]
 pub struct ChatWithMessages {
    pub chat: ChatData,
    pub messages: Vec<MessageData>,

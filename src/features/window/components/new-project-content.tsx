@@ -1,7 +1,7 @@
 import { homeDir } from "@tauri-apps/api/path";
-import { invoke } from "@tauri-apps/api/core";
 import { exists } from "@tauri-apps/plugin-fs";
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { commands } from "@/bindings/commands";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { createNewDirectory } from "@/features/file-system/controllers/file-operations";
 import { openFolder } from "@/features/file-system/controllers/platform";
@@ -237,10 +237,7 @@ export default function NewProjectContent({ onBack, onClose }: NewProjectContent
       }
 
       if (source === "clone") {
-        await invoke("git_clone", {
-          repositoryUrl: repositoryUrl.trim(),
-          destinationPath,
-        });
+        await commands.gitClone(repositoryUrl.trim(), destinationPath);
       } else {
         await createNewDirectory(locationPath.trim(), projectName.trim());
       }

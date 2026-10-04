@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { readFile } from "@tauri-apps/plugin-fs";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
@@ -153,7 +153,7 @@ export function PdfViewer({ filePath }: PdfViewerProps) {
 
   const handleOpenExternal = async () => {
     try {
-      await invoke("open_file_external", { path: filePath });
+      await commands.openFileExternal(filePath);
     } catch (err) {
       console.error("Failed to open external viewer (rust):", err);
       // Fallback to opener plugin just in case

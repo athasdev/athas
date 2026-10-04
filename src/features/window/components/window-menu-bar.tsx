@@ -1,6 +1,6 @@
-import { invoke } from "@tauri-apps/api/core";
 import { toast } from "sonner";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { commands } from "@/bindings/commands";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { exit } from "@tauri-apps/plugin-process";
 import type React from "react";
@@ -107,7 +107,7 @@ const WindowMenuBar = ({
   );
 
   const handleOpenWebInspector = useCallback(() => {
-    invoke("reopen_current_webview_devtools").catch((error) => {
+    commands.reopenCurrentWebviewDevtools().catch((error) => {
       toast.error(error instanceof Error ? error.message : String(error));
     });
     closeMenu();

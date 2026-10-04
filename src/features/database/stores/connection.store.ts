@@ -1,4 +1,8 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
+import type {
+  ConnectionConfig,
+  SavedConnection as SavedConnectionCommand,
+} from "@/bindings/commands";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import { createSelectors } from "@/utils/zustand-selectors";
@@ -185,7 +189,16 @@ function normalizeCredentialResult(value: unknown): string | null {
   return typeof value === "string" ? value : null;
 }
 
-function toConnectionCommandConfig(connection: SavedConnection) {
+function toSavedConnectionCommand(connection: SavedConnection): SavedConnectionCommand {
+  return {
+    ...connection,
+    workspace_path: connection.workspace_path ?? null,
+    file_path: connection.file_path ?? null,
+    connection_string: connection.connection_string ?? null,
+  };
+}
+
+function toConnectionCommandConfig(connection: SavedConnection): ConnectionConfig {
   return {
     id: connection.id,
     name: connection.name,
@@ -210,7 +223,7 @@ const useConnectionStoreBase = create<ConnectionState & { actions: ConnectionAct
         set({ isLoadingSaved: true });
         try {
           const connections = normalizeSavedConnectionsResult(
-            await invoke("list_saved_connections"),
+            await commands.listSavedConnections(),
           );
           if (requestId !== savedConnectionsRequestId) return;
           set({ savedConnections: connections });
@@ -248,10 +261,10 @@ const useConnectionStoreBase = create<ConnectionState & { actions: ConnectionAct
         });
 
         try {
-          await invoke("connect_database", {
-            config: toConnectionCommandConfig(normalizedConfig),
-            password: password ?? null,
-          });
+          await commands.connectDatabase(
+            toConnectionCommandConfig(normalizedConfig),
+            password ?? null,
+          );
 
           set((s) => {
             if (!isCurrentConnectRequest(connectionId, requestId)) return;
@@ -286,7 +299,7 @@ const useConnectionStoreBase = create<ConnectionState & { actions: ConnectionAct
         )?.db_type;
 
         try {
-          await invoke("disconnect_database", { connectionId: normalizedConnectionId, dbType });
+          await commands.disconnectDatabase(normalizedConnectionId, dbType ?? null);
         } finally {
           set((s) => {
             if (!isCurrentConnectRequest(normalizedConnectionId, requestId)) return;
@@ -299,7 +312,7 @@ const useConnectionStoreBase = create<ConnectionState & { actions: ConnectionAct
 
       saveConnection: async (connection: SavedConnection) => {
         const normalizedConnection = normalizeConnectionConfig(connection);
-        await invoke("save_connection", { connection: normalizedConnection });
+        await commands.saveConnection(toSavedConnectionCommand(normalizedConnection));
         set((s) => {
           upsertSavedConnection(s.savedConnections, normalizedConnection);
           const activeConnection = s.activeConnections.find(
@@ -315,7 +328,7 @@ const useConnectionStoreBase = create<ConnectionState & { actions: ConnectionAct
         set({ isLoadingSaved: true });
         try {
           const connections = normalizeSavedConnectionsResult(
-            await invoke("list_saved_connections"),
+            await commands.listSavedConnections(),
           );
           if (requestId !== savedConnectionsRequestId) return;
           set({ savedConnections: connections });
@@ -343,7 +356,7 @@ const useConnectionStoreBase = create<ConnectionState & { actions: ConnectionAct
           }
         }
 
-        await invoke("delete_saved_connection", { connectionId: normalizedConnectionId });
+        await commands.deleteSavedConnection(normalizedConnectionId);
         set((s) => {
           s.savedConnections = s.savedConnections.filter((c) => c.id !== normalizedConnectionId);
           s.isLoadingSaved = false;
@@ -351,27 +364,22 @@ const useConnectionStoreBase = create<ConnectionState & { actions: ConnectionAct
       },
 
       storeCredential: async (connectionId: string, password: string) => {
-        await invoke("store_db_credential", {
-          connectionId: normalizeConnectionId(connectionId),
-          password,
-        });
+        await commands.storeDbCredential(normalizeConnectionId(connectionId), password);
       },
 
       getCredential: async (connectionId: string) => {
         return normalizeCredentialResult(
-          await invoke("get_db_credential", {
-            connectionId: normalizeConnectionId(connectionId),
-          }),
+          await commands.getDbCredential(normalizeConnectionId(connectionId)),
         );
       },
 
       testConnection: async (config: SavedConnection, password?: string) => {
         try {
           const normalizedConfig = normalizeConnectionConfig(config);
-          await invoke("test_connection", {
-            config: toConnectionCommandConfig(normalizedConfig),
-            password: password ?? null,
-          });
+          await commands.testConnection(
+            toConnectionCommandConfig(normalizedConfig),
+            password ?? null,
+          );
           return { ok: true };
         } catch (err) {
           return { ok: false, error: normalizeDatabaseError(err) };

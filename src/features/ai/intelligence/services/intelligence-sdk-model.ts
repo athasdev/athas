@@ -12,7 +12,7 @@ import {
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { normalizeOllamaBaseUrl } from "@/features/ai/lib/ollama-endpoint";
 import { getApiBase } from "@/utils/api-base";
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { createIntelligenceModelFetch } from "./intelligence-model-fetch";
 
 export interface IntelligenceSdkModelOptions {
@@ -50,7 +50,7 @@ export async function getIntelligenceSdkModel(
     fetch: tauriFetch as typeof fetch,
     // The Athas token and team scope are read again for every request, not once per run.
     headers: athas ? async () => provider.buildHeaders(undefined) : undefined,
-    refreshToken: athas ? () => invoke<string | null>("get_auth_token") : undefined,
+    refreshToken: athas ? () => commands.getAuthToken() : undefined,
     idempotencyKey: athas ? (index) => `${runId}-${index}` : undefined,
     onCost: options.onCost,
   });

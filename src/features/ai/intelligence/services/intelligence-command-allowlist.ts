@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import {
   getCommandAllowPrefix,
   getCommandPathArguments,
@@ -105,7 +105,7 @@ export async function commandPathsStayInWorkspace(root: string, command: string)
   const paths = getCommandPathArguments(command);
   if (paths.length === 0) return true;
   try {
-    return await invoke<boolean>("intelligence_paths_stay_in_workspace", { root, paths });
+    return await commands.intelligencePathsStayInWorkspace(root, paths);
   } catch {
     return false;
   }

@@ -7,6 +7,7 @@ edition = "2024"
 anyhow = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 fff-search = "0.10"
+specta = { version = "=2.0.0-rc.25", features = ["derive", "serde_json"] }
 
 [dev-dependencies]
 tempfile = "3.8"

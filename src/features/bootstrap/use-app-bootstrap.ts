@@ -1,5 +1,5 @@
-import { invoke } from "@tauri-apps/api/core";
 import { useEffect } from "react";
+import { commands } from "@/bindings/commands";
 import { useExtensionInstallPrompt } from "@/extensions/hooks/use-extension-install-prompt";
 import {
   cleanupAcpBufferReads,
@@ -55,7 +55,7 @@ export function useAppBootstrap() {
     let timer: number | null = null;
     const frame = window.requestAnimationFrame(() => {
       timer = window.setTimeout(() => {
-        void invoke("warm_terminal_environment").catch((error) => {
+        void commands.warmTerminalEnvironment().catch((error) => {
           console.warn("Failed to warm terminal environment:", error);
         });
       }, 0);

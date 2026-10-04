@@ -19,7 +19,7 @@ use uuid::Uuid;
 
 type DebugEventEmitter = Arc<dyn Fn(&str, Value) + Send + Sync>;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct DebugAdapterLaunch {
    #[serde(default)]
@@ -33,7 +33,7 @@ pub struct DebugAdapterLaunch {
    pub port: Option<u16>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct DebugSessionInfo {
    pub id: String,

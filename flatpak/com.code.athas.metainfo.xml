@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.code.athas</id>
+  <name>Athas</name>
+  <summary>Fast, extensible code editor</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>AGPL-3.0-only</project_license>
+  <developer id="dev.athas">
+    <name>Athas</name>
+  </developer>
+  <description>
+    <p>
+      Athas is a lightweight code editor with an integrated terminal, Git tools,
+      language server support and AI agents.
+    </p>
+  </description>
+  <launchable type="desktop-id">com.code.athas.desktop</launchable>
+  <url type="homepage">https://athas.dev</url>
+  <url type="bugtracker">https://github.com/athasdev/athas/issues</url>
+  <url type="vcs-browser">https://github.com/athasdev/athas</url>
+  <categories>
+    <category>Development</category>
+    <category>TextEditor</category>
+  </categories>
+  <content_rating type="oars-1.1" />
+  <releases>
+    <release version="@VERSION@" date="@DATE@" />
+  </releases>
+</component>

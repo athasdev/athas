@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { useCallback, useEffect, useState } from "react";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
@@ -47,12 +47,12 @@ export function CodexSettings() {
     setBusy(true);
     setCatalogError(null);
     try {
-      setStatus(await invoke<CodexIntegrationStatus>("start_codex_integration", { args: { cwd } }));
+      setStatus(await commands.startCodexIntegration({ cwd }));
       refreshModels();
       const [skillsResult, mcpResult, threadResult] = await Promise.all([
-        invoke<any>("list_codex_skills", { cwd }),
-        invoke<any>("list_codex_mcp_servers"),
-        invoke<any>("list_codex_threads", { cwd, cursor: null }),
+        commands.listCodexSkills(cwd),
+        commands.listCodexMcpServers() as Promise<{ data?: unknown[]; servers?: unknown[] }>,
+        commands.listCodexThreads(cwd, null, null),
       ]);
       setDetails({
         skills: normalizeCodexSkills(skillsResult).skills.length,
@@ -144,13 +144,10 @@ export function CodexSettings() {
       </SettingRow>
       <SettingRow label="Account">
         <div className="flex items-center gap-1">
-          <Button
-            variant="default"
-            onClick={() => void invoke("start_codex_login", { loginType: "chatgpt" })}
-          >
+          <Button variant="default" onClick={() => void commands.startCodexLogin("chatgpt")}>
             Sign in
           </Button>
-          <Button variant="ghost" onClick={() => void invoke("logout_codex_account")}>
+          <Button variant="ghost" onClick={() => void commands.logoutCodexAccount()}>
             Sign out
           </Button>
         </div>

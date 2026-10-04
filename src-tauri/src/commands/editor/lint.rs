@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, io::Write, process::Stdio};
 use tauri::command;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, specta::Type)]
 pub struct LintRequest {
    pub content: String,
    pub language: String,
@@ -16,7 +16,7 @@ pub struct LintRequest {
    pub workspace_folder: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 pub struct LinterConfig {
    pub command: String,
    pub args: Option<Vec<String>>,
@@ -26,7 +26,7 @@ pub struct LinterConfig {
    pub diagnostic_pattern: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, specta::Type)]
 pub struct Diagnostic {
    pub line: u32,
    pub column: u32,
@@ -38,7 +38,7 @@ pub struct Diagnostic {
    pub source: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, specta::Type)]
 pub struct LintResponse {
    pub diagnostics: Vec<Diagnostic>,
    pub success: bool,
@@ -50,6 +50,7 @@ pub struct LintResponse {
 /// The linter configuration must be provided by the frontend via the extension registry.
 /// This ensures all linters are extension-driven and no hardcoded linters exist.
 #[command]
+#[specta::specta]
 pub async fn lint_code(request: LintRequest) -> Result<LintResponse, String> {
    // Linter config must be provided by the frontend (from extension registry)
    if let Some(config) = &request.linter_config {

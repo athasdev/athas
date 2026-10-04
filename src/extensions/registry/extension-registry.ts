@@ -49,8 +49,8 @@ class ExtensionRegistry {
     let basePath = "";
 
     try {
-      const { invoke } = await import("@tauri-apps/api/core");
-      basePath = await invoke<string>("get_bundled_extensions_path");
+      const { commands } = await import("@/bindings/commands");
+      basePath = await commands.getBundledExtensionsPath();
       logger.info("ExtensionRegistry", `Bundled integrations path: ${basePath}`);
     } catch (error) {
       logger.error("ExtensionRegistry", "Failed to get bundled integrations path:", error);

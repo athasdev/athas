@@ -1,6 +1,5 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { CSSProperties, MouseEvent, PointerEvent } from "react";
-import { useNativeWindowChrome } from "@/features/window/hooks/use-native-window-chrome";
 import { IS_LINUX, IS_WINDOWS } from "@/utils/platform";
 
 type ResizeDirection =
@@ -207,10 +206,7 @@ const getResizeZoneStyle = (zone: ResizeZone): ResizeHandleStyle => {
 };
 
 export const WindowResizeBorder = () => {
-  const usesNativeWindowChrome = useNativeWindowChrome();
-  const needsCustomResizeBorder = (IS_LINUX && !usesNativeWindowChrome) || IS_WINDOWS;
-
-  if (!needsCustomResizeBorder) {
+  if (!IS_LINUX && !IS_WINDOWS) {
     return null;
   }
 

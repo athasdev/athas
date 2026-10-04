@@ -1,5 +1,5 @@
-import { invoke } from "@tauri-apps/api/core";
 import { createElement } from "react";
+import { commands } from "@/bindings/commands";
 import type { ExtensionManifest } from "@/extensions/types/extension-manifest";
 import { ExternalExtensionView } from "../components/external-extension-view";
 import { useUIExtensionStore } from "../stores/ui-extension-store";
@@ -48,15 +48,10 @@ class UIExtensionHost {
   private loaded = new Map<string, LoadedExtension>();
 
   async loadExtension(manifest: ExtensionManifest, _extensionPath?: string): Promise<void> {
+    const entrypoint = manifest.main;
     return this.loadExtensionSource(
       manifest,
-      manifest.main
-        ? () =>
-            invoke<string>("read_extension_entrypoint", {
-              extensionId: manifest.id,
-              entrypoint: manifest.main,
-            })
-        : undefined,
+      entrypoint ? () => commands.readExtensionEntrypoint(manifest.id, entrypoint) : undefined,
     );
   }
 

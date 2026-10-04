@@ -3,7 +3,6 @@ pub mod chat_history;
 pub mod codex;
 mod executable_path;
 pub mod mcp_stdio;
-mod runtime;
 
 pub use acp::{
    AcpAgentBridge, AcpAgentStatus, AcpOpenedSession, AcpSessionInfo, AcpSessionList, AgentConfig,

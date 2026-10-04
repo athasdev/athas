@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
@@ -113,11 +113,7 @@ async function saveEditorBufferById(bufferId: string): Promise<boolean> {
     if (!connectionId) return false;
 
     try {
-      await invoke("ssh_write_file", {
-        connectionId,
-        filePath: remotePath,
-        content: activeBuffer.content,
-      });
+      await commands.sshWriteFile(connectionId, remotePath, activeBuffer.content);
       markBufferDirty(activeBuffer.id, false);
       return true;
     } catch (error) {

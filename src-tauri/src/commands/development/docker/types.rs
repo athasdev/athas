@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct DockerInventory {
    pub containers: Vec<DockerContainer>,
@@ -9,7 +9,7 @@ pub struct DockerInventory {
    pub networks: Vec<DockerNetwork>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct DockerComposeProject {
    pub workspace_path: Option<String>,
@@ -17,7 +17,7 @@ pub struct DockerComposeProject {
    pub services: Vec<DockerComposeService>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct DockerComposeService {
    pub name: String,
@@ -47,7 +47,7 @@ pub struct DockerLogExitEvent {
    pub error: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct DockerContainer {
    pub id: String,
@@ -65,7 +65,7 @@ pub struct DockerContainer {
    pub stats: Option<DockerContainerStats>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct DockerContainerHealthDetails {
    pub status: String,
@@ -76,7 +76,7 @@ pub struct DockerContainerHealthDetails {
    pub last_finished_at: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct DockerContainerStats {
    pub cpu_percent: String,
@@ -87,7 +87,7 @@ pub struct DockerContainerStats {
    pub pids: String,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct DockerContainerFileEntry {
    pub name: String,
@@ -98,7 +98,7 @@ pub struct DockerContainerFileEntry {
    pub mode: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct DockerBuildImageRequest {
    pub context_path: String,
@@ -107,7 +107,7 @@ pub struct DockerBuildImageRequest {
    pub build_args: Option<Vec<String>>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct DockerRunImageRequest {
    pub image: String,
@@ -120,7 +120,7 @@ pub struct DockerRunImageRequest {
    pub detach: Option<bool>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct DockerRegistryLoginRequest {
    pub registry: Option<String>,
@@ -128,7 +128,7 @@ pub struct DockerRegistryLoginRequest {
    pub password: String,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct DockerRegistrySearchResult {
    pub name: String,
@@ -138,7 +138,7 @@ pub struct DockerRegistrySearchResult {
    pub automated: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct DockerProjectConfig {
    pub workspace_path: Option<String>,
@@ -158,7 +158,7 @@ pub struct DockerProjectConfig {
    pub dev_containers: Vec<DockerDevContainer>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct DockerBuildPreset {
    pub name: String,
@@ -169,7 +169,7 @@ pub struct DockerBuildPreset {
    pub build_args: Vec<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct DockerRunPreset {
    pub name: String,
@@ -186,7 +186,7 @@ pub struct DockerRunPreset {
    pub command: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct DockerComposePreset {
    pub name: String,
@@ -198,7 +198,7 @@ pub struct DockerComposePreset {
    pub env_files: Vec<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct DockerDebugPreset {
    pub name: String,
@@ -208,7 +208,7 @@ pub struct DockerDebugPreset {
    pub source: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct DockerEnvFile {
    pub path: String,
@@ -218,14 +218,14 @@ pub struct DockerEnvFile {
    pub keys: Vec<String>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct DockerEnvFileContent {
    pub file: DockerEnvFile,
    pub content: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct DockerDevContainer {
    pub name: String,
@@ -259,7 +259,7 @@ pub struct DockerDevContainer {
    pub features: Vec<String>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct DockerDevContainerOpenResult {
    pub container_id: String,
@@ -268,7 +268,7 @@ pub struct DockerDevContainerOpenResult {
    pub output: String,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct DockerImage {
    pub id: String,
@@ -279,7 +279,7 @@ pub struct DockerImage {
    pub created_since: String,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct DockerVolume {
    pub name: String,
@@ -288,7 +288,7 @@ pub struct DockerVolume {
    pub mountpoint: String,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct DockerNetwork {
    pub id: String,

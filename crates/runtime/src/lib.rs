@@ -205,7 +205,7 @@ fn common_system_binary_dirs() -> Vec<PathBuf> {
 }
 
 /// Status of a runtime installation
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub enum RuntimeStatus {
    /// Runtime is not installed and not available

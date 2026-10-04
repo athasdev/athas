@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -8,94 +9,63 @@ function readRepoFile(filePath: string) {
   return fs.readFileSync(path.join(repoRoot, filePath), "utf8");
 }
 
+function renderDesktopEntry() {
+  const result = spawnSync(
+    "bash",
+    [
+      "-c",
+      'source scripts/release/packaging/linux/common.sh && render_linux_desktop_entry athas athas && echo "$desktop_id"',
+    ],
+    { cwd: repoRoot, encoding: "utf8" },
+  );
+  expect(result.stderr).toBe("");
+  expect(result.status).toBe(0);
+  const lines = result.stdout.trimEnd().split("\n");
+  return { entry: lines.slice(0, -1), desktopId: lines[lines.length - 1] };
+}
+
 describe("Linux release packaging", () => {
-  it("uses an opaque native window instead of the macOS overlay configuration", () => {
+  it("creates the main window from config with the Athas title bar", () => {
     const config = JSON.parse(readRepoFile("src-tauri/tauri.linux.conf.json"));
     const [window] = config.app.windows;
 
-    expect(window.create).toBe(false);
+    expect(window).not.toHaveProperty("create");
+    expect(window.decorations).toBe(false);
     expect(window.transparent).toBe(false);
-    expect(window.decorations).toBe(true);
     expect(window.resizable).toBe(true);
     expect(window.preventOverflow).toBe(true);
     expect(window).not.toHaveProperty("titleBarStyle");
   });
 
-  it("uses the app-owned CEF runtime style for Linux webviews", () => {
-    const appSetup = readRepoFile("src-tauri/src/app_setup.rs");
-    const windowCommands = readRepoFile("src-tauri/src/commands/ui/window.rs");
-    const alloyRuntime = "browser_runtime_style(tauri_runtime_cef::RuntimeStyle::Alloy)";
+  it("runs on the published Tauri system webview runtime", () => {
+    const workspaceManifest = readRepoFile("Cargo.toml");
+    const appManifest = readRepoFile("src-tauri/Cargo.toml");
 
-    expect(appSetup).toContain(alloyRuntime);
-    expect(windowCommands).toContain(alloyRuntime);
+    expect(workspaceManifest).not.toMatch(/^tauri = \{ git/m);
+    expect(appManifest).not.toContain("tauri-runtime-cef");
+    expect(appManifest).not.toContain("[features]");
+    expect(appManifest).toMatch(/^tauri-build = "2\.\d+"/m);
   });
 
-  it("uses the XDG portal dialog backend without changing the CEF runtime", () => {
-    const cargoManifest = readRepoFile("src-tauri/Cargo.toml");
-    const dialogDependency = cargoManifest
+  it("uses the XDG portal dialog backend", () => {
+    const dialogDependency = readRepoFile("src-tauri/Cargo.toml")
       .split("\n")
       .find((line) => line.startsWith("tauri-plugin-dialog ="));
-    const linuxFeature = cargoManifest.match(/linux = \[[\s\S]*?\n\]/)?.[0];
 
     expect(dialogDependency).toBeDefined();
-    expect(dialogDependency).toContain('version = "2"');
     expect(dialogDependency).toContain("default-features = false");
     expect(dialogDependency).toContain('"xdg-portal"');
     expect(dialogDependency).not.toContain('"gtk3"');
-    expect(linuxFeature).toContain('"tauri/cef"');
-    expect(linuxFeature).toContain('"dep:tauri-runtime-cef"');
   });
 
-  it("does not ship an unusable setuid helper in per-user tarballs", () => {
-    const script = readRepoFile("scripts/release/packaging/linux/tarball.sh");
-    const cefFiles = script.match(/cef_files=\(\n([\s\S]*?)\n\)/)?.[1];
+  it("recommends the portal file chooser and its fallback in native packages", () => {
+    const { linux } = JSON.parse(readRepoFile("src-tauri/tauri.conf.json")).bundle;
 
-    expect(cefFiles).toBeDefined();
-    expect(cefFiles).not.toContain("chrome-sandbox");
-  });
-
-  it("bundles non-glibc runtime libraries in portable tarballs", () => {
-    const script = readRepoFile("scripts/release/packaging/linux/tarball.sh");
-
-    expect(script).toContain('ldd "${libexec_dir}/athas"');
-    expect(script).toContain("is_glibc_runtime_library");
-    expect(script).toContain("patchelf --add-rpath '$ORIGIN'");
-    expect(script).toContain("${app_dir_name}/libexec/libgdk_pixbuf-2.0.so.0");
-    expect(script).not.toContain("export LD_LIBRARY_PATH=");
-  });
-
-  it("preserves the root-owned setuid sandbox contract in Debian packages", () => {
-    const script = readRepoFile("scripts/release/packaging/linux/native.sh");
-
-    expect(script).toContain("chmod 4755");
-    expect(script).toContain("dpkg-deb --root-owner-group");
-  });
-
-  it("declares the X11 keyboard runtime dependency in native packages", () => {
-    const script = readRepoFile("scripts/release/packaging/linux/native.sh");
-    const patchFunction = script.slice(script.indexOf("patch_deb_dependencies()"));
-
-    expect(script).toContain('"libxkbcommon-x11-0",');
-    expect(script).toContain('"libxkbcommon-x11",');
-    expect(patchFunction).toContain("libxkbcommon-x11-0");
-  });
-
-  it("installs the portal file chooser and its fallback in native packages", () => {
-    const script = readRepoFile("scripts/release/packaging/linux/native.sh");
-    const debDependencies = script.match(/deb: \{\n\s+depends: \[([\s\S]*?)\n\s+\],/)?.[1];
-    const rpmDependencies = script.match(/rpm: \{\n\s+depends: \[([\s\S]*?)\n\s+\],/)?.[1];
-    const patchFunction = script.slice(script.indexOf("patch_deb_dependencies()"));
-
-    for (const dependencies of [debDependencies, rpmDependencies]) {
-      expect(dependencies).toBeDefined();
-      expect(dependencies).toContain('"xdg-desktop-portal"');
-      expect(dependencies).toContain('"xdg-desktop-portal-gtk"');
-      expect(dependencies).toContain('"zenity"');
+    for (const format of [linux.deb, linux.rpm]) {
+      expect(format.desktopTemplate).toBe("linux/athas.desktop");
+      expect(format.recommends).toEqual(["xdg-desktop-portal", "zenity"]);
     }
-
-    expect(patchFunction).toContain("xdg-desktop-portal");
-    expect(patchFunction).toContain("xdg-desktop-portal-gtk");
-    expect(patchFunction).toContain("zenity");
+    expect(linux.appimage.bundleMediaFramework).toBe(false);
   });
 
   it("installs native dialog runtime dependencies in Linux development environments", () => {
@@ -109,7 +79,7 @@ describe("Linux release packaging", () => {
 
     expect(primaryInstallCommands).toHaveLength(4);
     for (const command of primaryInstallCommands) {
-      expect(command).toContain("xdg-desktop-portal");
+      expect(command).toMatch(/webkit2gtk/);
       expect(command).toContain("xdg-desktop-portal-gtk");
       expect(command).toContain("zenity");
     }
@@ -127,77 +97,85 @@ describe("Linux release packaging", () => {
     expect(platformController).toContain("useLinuxFolderPickerStore.getState().actions.open()");
   });
 
-  it("loads CEF from the native package resource directory", () => {
-    const buildScript = readRepoFile("src-tauri/build.rs");
-    const packagingScript = readRepoFile("scripts/release/packaging/linux/native.sh");
+  it("renders the shared desktop template for the tarball and Flatpak", () => {
+    const stable = renderDesktopEntry();
 
-    expect(buildScript).toContain("$ORIGIN/../lib/Athas");
-    expect(packagingScript).toContain('patchelf --print-rpath "$release_binary"');
-    expect(packagingScript).toContain('expected_cef_rpath="\\$ORIGIN/../lib/${product_name}"');
+    expect(stable.desktopId).toBe("com.code.athas");
+    expect(stable.entry).toContain("Exec=athas");
+    expect(stable.entry).toContain("StartupWMClass=athas");
+    expect(stable.entry).toContain("Name=Athas");
+    expect(stable.entry).toContain("MimeType=x-scheme-handler/athas");
+    expect(stable.entry).toContain("Categories=Utility;TextEditor;Development;");
+    expect(stable.entry.join("\n")).not.toContain("{{");
   });
 
-  it("does not add bundled extensions twice to native packages", () => {
-    const config = JSON.parse(readRepoFile("src-tauri/tauri.conf.json"));
-    const script = readRepoFile("scripts/release/packaging/linux/native.sh");
+  it("lays out the tarball the way Tauri, Nix and install.sh expect", () => {
+    const script = readRepoFile("scripts/release/packaging/linux/tarball.sh");
+    const nixPackage = readRepoFile("nix/package.nix");
 
-    expect(config.bundle.resources["../src/extensions/bundled/icon-themes"]).toBe(
-      "bundled/icon-themes",
-    );
-    expect(script).not.toContain("src/extensions/bundled");
+    expect(script).toContain('install -D -m 755 "$binary" "${app_root}/bin/athas"');
+    expect(script).toContain('resource_dir="${app_root}/lib/${product_name}"');
+    expect(script).toContain("__TAURI_BUNDLE_TYPE_VAR_UNK");
+    expect(script).not.toMatch(/libcef|libexec|LD_PRELOAD/);
+    expect(nixPackage).toContain("webkitgtk_4_1");
+    expect(nixPackage).toContain("cp -r bin lib share $out/");
   });
 
-  it("classifies Athas desktop entries for Linux application menus", () => {
-    const config = JSON.parse(readRepoFile("src-tauri/tauri.conf.json"));
-    const template = readRepoFile("src-tauri/linux/athas.desktop");
-    const tarball = readRepoFile("scripts/release/packaging/linux/tarball.sh");
-    const categories = "Categories=Utility;TextEditor;Development;";
-    const keywords = "Keywords=Code;Editor;Text;Development;Programming;";
+  it("builds the Flatpak from the release tarball on the GNOME runtime", () => {
+    const manifest = readRepoFile("flatpak/com.code.athas.yml");
+    const metainfo = readRepoFile("flatpak/com.code.athas.metainfo.xml");
+    const script = readRepoFile("scripts/release/packaging/linux/flatpak.sh");
 
-    expect(config.bundle.linux.deb.desktopTemplate).toBe("linux/athas.desktop");
-    expect(config.bundle.linux.rpm.desktopTemplate).toBe("linux/athas.desktop");
-    expect(template.split("\n")).toContain(categories);
-    expect(template.split("\n")).toContain(keywords);
-    expect(tarball).toContain(categories);
-    expect(tarball).toContain(keywords);
+    expect(manifest).toContain("id: com.code.athas");
+    expect(manifest).toContain("runtime: org.gnome.Platform");
+    expect(manifest).toMatch(/runtime-version: "\d+"/);
+    expect(manifest).toContain("command: athas");
+    for (const permission of [
+      "--filesystem=host",
+      "--filesystem=host-os:ro",
+      "--talk-name=org.freedesktop.Flatpak",
+      "--socket=wayland",
+      "--socket=fallback-x11",
+      "--device=dri",
+      "--share=network",
+    ]) {
+      expect(manifest).toContain(`- ${permission}\n`);
+    }
+    expect(manifest).toContain("path: athas.tar.gz");
+    expect(metainfo).toContain("<id>com.code.athas</id>");
+    expect(metainfo).toContain('<launchable type="desktop-id">com.code.athas.desktop</launchable>');
+    expect(metainfo).toContain('<release version="@VERSION@" date="@DATE@" />');
+    expect(script).toContain('cp "$tarball" "${work_dir}/athas.tar.gz"');
+    expect(script).toContain("flatpak build-bundle");
+    expect(script).toContain("--command=flatpak-builder org.flatpak.Builder");
+    expect(script).toContain("--env=FLATPAK_USER_DIR=");
   });
 
-  it("builds Debian and RPM packages together in the release workflow", () => {
-    const workflow = readRepoFile(".github/workflows/release.yml");
-    const linuxBuild = workflow.indexOf("cargo tauri build --no-bundle");
-    const nativePackages = workflow.indexOf("package-linux-native.sh packages");
-
-    expect(linuxBuild).toBeGreaterThan(-1);
-    expect(nativePackages).toBeGreaterThan(linuxBuild);
-    expect(workflow).toContain("--no-default-features --features linux");
-    expect(workflow).toContain("release-dist/*.deb");
-    expect(workflow).toContain("release-dist/*.rpm");
-  });
-
-  it("keeps native package compression fast enough for the release window", () => {
-    const script = readRepoFile("scripts/release/packaging/linux/native.sh");
-
-    expect(script).toContain('compression: { type: "zstd", level: 10 }');
-    expect(script).toContain("dpkg-deb --root-owner-group -Zgzip -b");
-  });
-
-  it("restores the Tauri CEF CLI from a cache that main keeps warm", () => {
-    const action = readRepoFile(".github/actions/tauri-cef-cli/action.yml");
-    const warmup = readRepoFile(".github/workflows/release-cache-warmup.yml");
-
-    expect(action).toContain("path: ~/.cargo/bin/cargo-tauri");
-    expect(action).toContain("--rev ${{ steps.rev.outputs.rev }}");
-    expect(warmup).toContain("ref: main");
-    for (const workflow of ["release.yml", "linux-build.yml", "release-cache-warmup.yml"]) {
-      const content = readRepoFile(`.github/workflows/${workflow}`);
-      expect(content).toContain("uses: ./.github/actions/tauri-cef-cli");
-      expect(content).not.toContain("cargo install tauri-cli");
+  it("installs Flathub's builder app wherever the Flatpak is built", () => {
+    for (const workflow of [".github/workflows/release.yml", ".github/workflows/linux-build.yml"]) {
+      const content = readRepoFile(workflow);
+      expect(content).toContain(
+        "flatpak install --user -y --noninteractive flathub org.flatpak.Builder",
+      );
+      expect(content).not.toMatch(/apt-get install[^\n]*(\\\n[^\n]*)*flatpak-builder/);
     }
   });
 
-  it("does not force software rendering from the AppImage wrapper", () => {
-    const script = readRepoFile("src-tauri/appimage-hooks/AppRun.wrapped");
+  it("builds every Linux package with the stock Tauri bundler in the release workflow", () => {
+    const workflow = readRepoFile(".github/workflows/release.yml");
 
-    expect(script).not.toContain("--disable-gpu");
-    expect(script).not.toContain("LIBGL_ALWAYS_SOFTWARE");
+    expect(workflow).toContain('args: "--bundles deb,rpm,appimage"');
+    expect(workflow).toContain("libwebkit2gtk-4.1-dev");
+    expect(workflow).toContain("bash scripts/release/package-linux-tarball.sh");
+    expect(workflow).toContain("bash scripts/release/packaging/linux/flatpak.sh");
+    expect(workflow).toContain("release-dist/*.flatpak");
+    expect(workflow).not.toMatch(/cef|--features linux|cargo tauri/i);
+  });
+
+  it("starts Flatpak terminals on the host", () => {
+    const connection = readRepoFile("crates/terminal/src/connection.rs");
+
+    expect(connection).toContain("flatpak::host_pty_command(&cmd)");
+    expect(connection).toContain("flatpak::host_command(&shell)");
   });
 });

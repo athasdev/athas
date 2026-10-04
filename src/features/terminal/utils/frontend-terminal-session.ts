@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 
 interface FrontendTerminalSession {
@@ -21,8 +21,5 @@ export function getFrontendTerminalSessionArgs() {
 
 export async function initializeFrontendTerminalSession() {
   const { windowLabel, frontendSessionId } = getFrontendTerminalSessionArgs();
-  await invoke("begin_frontend_terminal_session", {
-    windowLabel,
-    sessionId: frontendSessionId,
-  });
+  await commands.beginFrontendTerminalSession(windowLabel, frontendSessionId);
 }

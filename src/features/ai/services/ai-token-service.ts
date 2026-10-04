@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 
 /**
  * Token management utilities for AI providers
@@ -22,9 +22,7 @@ function notifyTokenChange(providerId: string) {
 // Get API token for a specific provider
 export const getProviderApiToken = async (providerId: string): Promise<string | null> => {
   try {
-    const token = (await invoke("get_ai_provider_token", {
-      providerId,
-    })) as string | null;
+    const token = await commands.getAiProviderToken(providerId);
     return token;
   } catch (error) {
     console.error(`Error getting ${providerId} API token:`, error);
@@ -35,7 +33,7 @@ export const getProviderApiToken = async (providerId: string): Promise<string | 
 // Store API token for a specific provider
 export const storeProviderApiToken = async (providerId: string, token: string): Promise<void> => {
   try {
-    await invoke("store_ai_provider_token", { providerId, token });
+    await commands.storeAiProviderToken(providerId, token);
     notifyTokenChange(providerId);
   } catch (error) {
     console.error(`Error storing ${providerId} API token:`, error);
@@ -46,7 +44,7 @@ export const storeProviderApiToken = async (providerId: string, token: string): 
 // Remove API token for a specific provider
 export const removeProviderApiToken = async (providerId: string): Promise<void> => {
   try {
-    await invoke("remove_ai_provider_token", { providerId });
+    await commands.removeAiProviderToken(providerId);
     notifyTokenChange(providerId);
   } catch (error) {
     console.error(`Error removing ${providerId} API token:`, error);

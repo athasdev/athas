@@ -8,7 +8,7 @@ use std::{
 use tauri::command;
 use url::Url;
 
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct IdeRecentProject {
    pub name: String,
@@ -61,6 +61,7 @@ struct CodeProfileAssociations {
 }
 
 #[command]
+#[specta::specta]
 pub fn get_importable_ide_projects() -> Result<Vec<IdeRecentProject>, String> {
    let mut projects = Vec::new();
    let mut seen = HashSet::new();

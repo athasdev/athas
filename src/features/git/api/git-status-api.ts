@@ -1,4 +1,4 @@
-import { invoke as tauriInvoke } from "@tauri-apps/api/core";
+import { commands, type GitHunk as BindingGitHunk } from "@/bindings/commands";
 import { emitGitChanged } from "../events/git-events";
 import { registerGitCacheInvalidator } from "../runtime/git-cache-registry";
 import { runGitFileOperationBatch } from "../utils/git-operation-batch";
@@ -11,6 +11,15 @@ import {
 
 const inFlightGitStatusRequests = new Map<string, Promise<GitStatus | null>>();
 const gitStatusGenerations = new Map<string, number>();
+
+const toBindingHunk = (hunk: GitHunk): BindingGitHunk => ({
+  file_path: hunk.file_path,
+  lines: hunk.lines.map((line) => ({
+    ...line,
+    old_line_number: line.old_line_number ?? null,
+    new_line_number: line.new_line_number ?? null,
+  })),
+});
 
 registerGitCacheInvalidator(({ repoPath }) => {
   if (!repoPath) {
@@ -50,7 +59,8 @@ export const getGitStatus = async (repoPath: string): Promise<GitStatus | null> 
   if (!gitStatusGenerations.has(resolvedRepoPath)) {
     gitStatusGenerations.set(resolvedRepoPath, generation);
   }
-  const request = tauriInvoke<GitStatus>("git_status", { repoPath: resolvedRepoPath })
+  const request = commands
+    .gitStatus(resolvedRepoPath)
     .then((status) => {
       if (generation !== (gitStatusGenerations.get(resolvedRepoPath) ?? 0)) {
         return getGitStatus(resolvedRepoPath);
@@ -76,7 +86,7 @@ export const getGitStatus = async (repoPath: string): Promise<GitStatus | null> 
 export const stageFile = async (repoPath: string, filePath: string): Promise<boolean> => {
   try {
     const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
-    await tauriInvoke("git_add", { repoPath: resolvedRepoPath, filePath });
+    await commands.gitAdd(resolvedRepoPath, filePath);
     emitGitChanged({
       repoPath: resolvedRepoPath,
       filePath,
@@ -93,7 +103,7 @@ export const stageFile = async (repoPath: string, filePath: string): Promise<boo
 export const unstageFile = async (repoPath: string, filePath: string): Promise<boolean> => {
   try {
     const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
-    await tauriInvoke("git_reset", { repoPath: resolvedRepoPath, filePath });
+    await commands.gitReset(resolvedRepoPath, filePath);
     emitGitChanged({
       repoPath: resolvedRepoPath,
       filePath,
@@ -116,9 +126,12 @@ export const setFilesStaged = async (
 
   try {
     const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
-    const command = staged ? "git_add" : "git_reset";
     const results = await runGitFileOperationBatch(filePaths, async (filePath) => {
-      await tauriInvoke(command, { repoPath: resolvedRepoPath, filePath });
+      if (staged) {
+        await commands.gitAdd(resolvedRepoPath, filePath);
+      } else {
+        await commands.gitReset(resolvedRepoPath, filePath);
+      }
       return true;
     });
 
@@ -142,7 +155,7 @@ export const setFilesStaged = async (
 export const stageAllFiles = async (repoPath: string): Promise<boolean> => {
   try {
     const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
-    await tauriInvoke("git_add_all", { repoPath: resolvedRepoPath });
+    await commands.gitAddAll(resolvedRepoPath);
     emitGitChanged({
       repoPath: resolvedRepoPath,
       scopes: ["working-tree"],
@@ -158,7 +171,7 @@ export const stageAllFiles = async (repoPath: string): Promise<boolean> => {
 export const unstageAllFiles = async (repoPath: string): Promise<boolean> => {
   try {
     const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
-    await tauriInvoke("git_reset_all", { repoPath: resolvedRepoPath });
+    await commands.gitResetAll(resolvedRepoPath);
     emitGitChanged({
       repoPath: resolvedRepoPath,
       scopes: ["working-tree"],
@@ -174,7 +187,7 @@ export const unstageAllFiles = async (repoPath: string): Promise<boolean> => {
 export const stageHunk = async (repoPath: string, hunk: GitHunk): Promise<boolean> => {
   try {
     const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
-    await tauriInvoke("git_stage_hunk", { repoPath: resolvedRepoPath, hunk });
+    await commands.gitStageHunk(resolvedRepoPath, toBindingHunk(hunk));
     emitGitChanged({
       repoPath: resolvedRepoPath,
       filePath: hunk.file_path,
@@ -191,7 +204,7 @@ export const stageHunk = async (repoPath: string, hunk: GitHunk): Promise<boolea
 export const unstageHunk = async (repoPath: string, hunk: GitHunk): Promise<boolean> => {
   try {
     const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
-    await tauriInvoke("git_unstage_hunk", { repoPath: resolvedRepoPath, hunk });
+    await commands.gitUnstageHunk(resolvedRepoPath, toBindingHunk(hunk));
     emitGitChanged({
       repoPath: resolvedRepoPath,
       filePath: hunk.file_path,
@@ -208,7 +221,7 @@ export const unstageHunk = async (repoPath: string, hunk: GitHunk): Promise<bool
 export const discardAllChanges = async (repoPath: string): Promise<boolean> => {
   try {
     const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
-    await tauriInvoke("git_discard_all_changes", { repoPath: resolvedRepoPath });
+    await commands.gitDiscardAllChanges(resolvedRepoPath);
     emitGitChanged({
       repoPath: resolvedRepoPath,
       scopes: ["working-tree"],
@@ -224,7 +237,7 @@ export const discardAllChanges = async (repoPath: string): Promise<boolean> => {
 export const discardFileChanges = async (repoPath: string, filePath: string): Promise<boolean> => {
   try {
     const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
-    await tauriInvoke("git_discard_file_changes", { repoPath: resolvedRepoPath, filePath });
+    await commands.gitDiscardFileChanges(resolvedRepoPath, filePath);
     emitGitChanged({
       repoPath: resolvedRepoPath,
       filePath,
@@ -240,7 +253,7 @@ export const discardFileChanges = async (repoPath: string, filePath: string): Pr
 
 export const initRepository = async (repoPath: string): Promise<boolean> => {
   try {
-    await tauriInvoke("git_init", { repoPath });
+    await commands.gitInit(repoPath);
     emitGitChanged({
       repoPath,
       scopes: ["repository", "working-tree", "refs"],

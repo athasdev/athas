@@ -1,5 +1,5 @@
-import { invoke } from "@tauri-apps/api/core";
 import { useEffect } from "react";
+import { commands } from "@/bindings/commands";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getBufferById } from "@/features/editor/utils/buffer-index";
 import { useProjectStore } from "@/features/window/stores/project.store";
@@ -18,12 +18,14 @@ export function useWindowDocumentState() {
   );
 
   useEffect(() => {
-    void invoke("set_window_document_state", {
-      title: documentState.title,
-      representedPath: documentState.representedPath,
-      isEdited: documentState.isEdited,
-    }).catch((error) => {
-      console.error("Failed to update native window document state:", error);
-    });
+    void commands
+      .setWindowDocumentState(
+        documentState.title,
+        documentState.representedPath ?? null,
+        documentState.isEdited,
+      )
+      .catch((error) => {
+        console.error("Failed to update native window document state:", error);
+      });
   }, [documentState.isEdited, documentState.representedPath, documentState.title]);
 }

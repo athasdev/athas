@@ -15,7 +15,6 @@ use super::{
       SessionRoots, is_inside_roots, path_to_string, real_path, resolve_path_against_workspace,
    },
 };
-use crate::runtime::AthasAppHandle as AppHandle;
 use agent_client_protocol::{self as acp_sdk, schema::v1 as acp};
 use athas_terminal::{
    TerminalConfig, TerminalEvent, TerminalEventHandler, TerminalManager, TerminalSize,
@@ -25,7 +24,7 @@ use std::{
    path::{Path, PathBuf},
    sync::{Arc, Mutex as StdMutex},
 };
-use tauri::{Emitter, Manager};
+use tauri::{AppHandle, Emitter, Manager};
 use tokio::sync::{Mutex, oneshot};
 
 /// Response for permission requests

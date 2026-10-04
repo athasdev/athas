@@ -15,7 +15,7 @@ use tokio_util::sync::CancellationToken;
 static COMMANDS: LazyLock<Mutex<HashMap<String, (CancellationToken, Instant)>>> =
    LazyLock::new(|| Mutex::new(HashMap::new()));
 
-#[derive(Serialize)]
+#[derive(Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct WorkspaceCommandOutput {
    pub stdout: String,
@@ -25,7 +25,7 @@ pub struct WorkspaceCommandOutput {
    pub timed_out: bool,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, specta::Type)]
 pub struct WorkspaceCommandChunk {
    pub stream: &'static str,
    pub data: Vec<u8>,

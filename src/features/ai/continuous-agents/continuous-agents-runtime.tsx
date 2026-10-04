@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { useCallback, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { CodexIntegrationService } from "@/features/ai/integrations/codex/codex-integration-service";
@@ -43,7 +43,7 @@ export function ContinuousAgentsRuntime() {
             ),
           checkReadiness: (task) =>
             checkContinuousAgentReadiness(task, {
-              loadAcpAgents: () => invoke<AgentConfig[]>("get_available_agents"),
+              loadAcpAgents: () => commands.getAvailableAgents() as Promise<AgentConfig[]>,
               loadCodexStatus: () => CodexIntegrationService.status(),
             }),
           claimTask: (currentWorkspacePath, now, taskId) =>

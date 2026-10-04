@@ -1,5 +1,5 @@
-import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { commands } from "@/bindings/commands";
 
 export type StartupMilestone =
   | "frontend:entry"
@@ -21,7 +21,7 @@ export function recordStartupMilestone(milestone: StartupMilestone) {
   if (!isInitialWindow() || recordedMilestones.has(milestone)) return;
 
   recordedMilestones.add(milestone);
-  void invoke("record_startup_milestone", { milestone }).catch(() => {
+  void commands.recordStartupMilestone(milestone).catch(() => {
     recordedMilestones.delete(milestone);
   });
 }

@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { connectionStore } from "@/features/remote/stores/remote-connection.store";
 import { parseRemotePath } from "@/features/remote/utils/remote-path";
 import { closeTerminalConnection } from "@/features/terminal/services/terminal-connection-lifecycle";
@@ -37,9 +37,7 @@ export async function disposeWorkspaceResources({
     return;
   }
 
-  await invoke("ssh_disconnect_only", {
-    connectionId: remote.connectionId,
-  }).catch((error) => {
+  await commands.sshDisconnectOnly(remote.connectionId).catch((error) => {
     console.error("Failed to disconnect remote workspace:", error);
   });
   await connectionStore.updateConnectionStatus(remote.connectionId, false).catch(() => {});

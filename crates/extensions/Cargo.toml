@@ -3,11 +3,6 @@ name = "athas-extensions"
 version = "0.1.0"
 edition = "2024"
 
-[features]
-default = ["tauri-wry"]
-tauri-wry = ["tauri/wry", "tauri/x11"]
-linux = ["tauri/cef"]
-
 [dependencies]
 anyhow = "1.0"
 chrono = { version = "0.4.41", features = ["serde"] }
@@ -18,5 +13,6 @@ reqwest = { version = "0.12", features = ["stream"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sha256 = "1.5"
+specta = { version = "=2.0.0-rc.25", features = ["derive", "serde_json"] }
 tar = "0.4"
-tauri = { version = "2", default-features = false, features = ["test"] }
+tauri = { version = "2.12", default-features = false, features = ["wry"] }

@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import {
   ArrowClockwiseIcon,
@@ -33,11 +33,7 @@ import { writeClipboardText } from "@/utils/clipboard";
 import { useNow } from "../hooks/use-now";
 import { getWorkflowRunsEntry, useGitHubActionsStore } from "../stores/github-actions.store";
 import { useGitHubStore } from "../stores/github.store";
-import type {
-  WorkflowRunDetails,
-  WorkflowRunFilter,
-  WorkflowRunListItem,
-} from "../types/github.types";
+import type { WorkflowRunFilter, WorkflowRunListItem } from "../types/github.types";
 import { GITHUB_ACTION_DETAILS_TTL_MS, githubActionDetailsCache } from "../utils/github-data-cache";
 import { groupWorkflowRuns } from "../utils/github-sidebar-groups";
 import {
@@ -289,11 +285,7 @@ const GitHubActionsView = memo(
         void githubActionDetailsCache
           .load(
             `${repoPath}::${run.databaseId}`,
-            () =>
-              invoke<WorkflowRunDetails>("github_get_workflow_run_details", {
-                repoPath,
-                runId: run.databaseId,
-              }),
+            () => commands.githubGetWorkflowRunDetails(repoPath, run.databaseId),
             { ttlMs: GITHUB_ACTION_DETAILS_TTL_MS },
           )
           .catch(() => undefined);

@@ -1,5 +1,4 @@
 use super::types::{DownloadInfo, ExtensionMetadata, InstallProgress, InstallStatus};
-use crate::runtime::AthasAppHandle as AppHandle;
 use anyhow::{Context, Result};
 use futures_util::StreamExt;
 use serde::Deserialize;
@@ -8,7 +7,7 @@ use std::{
    path::{Path, PathBuf},
    sync::atomic::{AtomicU64, Ordering},
 };
-use tauri::{Emitter, Manager};
+use tauri::{AppHandle, Emitter, Manager};
 
 /// Absolute upper bound for a single extension download. Mirrors the tool
 /// installer's binary cap so a compromised distribution point cannot OOM the

@@ -1,13 +1,13 @@
 use super::{GitHubApi, repo_path, resolve_repo_slug};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, specta::Type)]
 pub struct DeliveryUser {
    pub login: String,
    pub avatar_url: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, specta::Type)]
 pub struct ReleaseAsset {
    pub id: i64,
    pub name: String,
@@ -20,7 +20,7 @@ pub struct ReleaseAsset {
    pub digest: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, specta::Type)]
 pub struct Release {
    pub id: i64,
    pub tag_name: String,
@@ -41,7 +41,7 @@ pub struct Release {
    pub discussion_url: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, specta::Type)]
 pub struct ReleaseInput {
    pub tag_name: String,
    pub target_commitish: String,
@@ -50,7 +50,7 @@ pub struct ReleaseInput {
    pub prerelease: bool,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, specta::Type)]
 pub struct DeploymentStatus {
    pub id: i64,
    pub state: String,
@@ -62,7 +62,7 @@ pub struct DeploymentStatus {
    pub creator: Option<DeliveryUser>,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, specta::Type)]
 pub struct Deployment {
    pub id: i64,
    pub sha: String,

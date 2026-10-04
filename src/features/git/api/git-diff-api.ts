@@ -1,4 +1,4 @@
-import { invoke as tauriInvoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import type { GitDiff, GitDiffStat } from "../types/git.types";
 import { registerGitCacheInvalidator } from "../runtime/git-cache-registry";
 import { runGitRead } from "../runtime/git-read-coordinator";
@@ -168,11 +168,8 @@ export const getFileDiff = async (
     }
 
     const generation = gitDiffCache.getGeneration(resolved.repoPath);
-    const request = tauriInvoke<GitDiff>("git_diff_file", {
-      repoPath: resolved.repoPath,
-      filePath: resolved.filePath,
-      staged,
-    })
+    const request = commands
+      .gitDiffFile(resolved.repoPath, resolved.filePath, staged)
       .then((diff) => {
         if (generation !== gitDiffCache.getGeneration(resolved.repoPath)) {
           return getFileDiff(resolved.repoPath, resolved.filePath, staged, content);
@@ -219,9 +216,8 @@ export const getStatusDiffStats = async (repoPath: string): Promise<GitDiffStat[
     }
 
     const generation = getRepositoryCacheGeneration(resolvedRepoPath);
-    const request = tauriInvoke<GitDiffStat[]>("git_status_diff_stats", {
-      repoPath: resolvedRepoPath,
-    })
+    const request = commands
+      .gitStatusDiffStats(resolvedRepoPath)
       .then((stats) => {
         if (generation !== getRepositoryCacheGeneration(resolvedRepoPath)) {
           return getStatusDiffStats(resolvedRepoPath);
@@ -268,10 +264,7 @@ export const getCommitDiff = async (
 
     const generation = getRepositoryCacheGeneration(resolvedRepoPath);
     const diffs = await runGitRead(resolvedRepoPath, `commit-diff:${commitHash}`, () =>
-      tauriInvoke<GitDiff[]>("git_commit_diff", {
-        repoPath: resolvedRepoPath,
-        commitHash,
-      }),
+      commands.gitCommitDiff(resolvedRepoPath, commitHash, null),
     );
     if (generation !== getRepositoryCacheGeneration(resolvedRepoPath)) {
       return getCommitDiff(resolvedRepoPath, commitHash);
@@ -297,11 +290,7 @@ export const getCommitFileContent = async (
   }
 
   return runGitRead(resolvedRepoPath, `commit-file:${commitHash}:${filePath}`, () =>
-    tauriInvoke<string>("git_file_at_commit", {
-      repoPath: resolvedRepoPath,
-      commitHash,
-      filePath,
-    }),
+    commands.gitFileAtCommit(resolvedRepoPath, commitHash, filePath),
   );
 };
 
@@ -324,11 +313,7 @@ export const getRefDiff = async (
 
     const generation = getRepositoryCacheGeneration(resolvedRepoPath);
     const diffs = await runGitRead(resolvedRepoPath, `ref-diff:${baseRef}:${targetRef}`, () =>
-      tauriInvoke<GitDiff[]>("git_ref_diff", {
-        repoPath: resolvedRepoPath,
-        baseRef,
-        targetRef,
-      }),
+      commands.gitRefDiff(resolvedRepoPath, baseRef, targetRef),
     );
     if (generation !== getRepositoryCacheGeneration(resolvedRepoPath)) {
       return getRefDiff(resolvedRepoPath, baseRef, targetRef);
@@ -361,10 +346,7 @@ export const getStashDiff = async (
 
     const generation = getRepositoryCacheGeneration(resolvedRepoPath);
     const diffs = await runGitRead(resolvedRepoPath, `stash-diff:${stashIndex}`, () =>
-      tauriInvoke<GitDiff[]>("git_stash_diff", {
-        repoPath: resolvedRepoPath,
-        stashIndex,
-      }),
+      commands.gitStashDiff(resolvedRepoPath, stashIndex),
     );
     if (generation !== getRepositoryCacheGeneration(resolvedRepoPath)) {
       return getStashDiff(resolvedRepoPath, stashIndex);

@@ -11,9 +11,7 @@ import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { resolveEscapeGuard } from "@/utils/keyboard/escape-guard";
 import { isNativeTextInputTarget } from "@/utils/keyboard/text-input-target";
 import { isTerminalAltTextInput } from "@/features/terminal/utils/terminal-keyboard";
-import { markCloseTabShortcutHandled } from "@/features/window/utils/close-request-suppression";
 import { useUIState } from "@/features/window/stores/ui-state.store";
-import { IS_LINUX } from "@/utils/platform";
 import { useKeymapStore } from "../stores/keymaps.store";
 import { getEffectiveKeybindings } from "../utils/effective-keymaps";
 import {
@@ -98,9 +96,6 @@ export function useKeymaps() {
       }
 
       if (isCloseTabShortcut(e)) {
-        if (IS_LINUX) {
-          markCloseTabShortcutHandled();
-        }
         e.preventDefault();
         e.stopPropagation();
         keymapRegistry.executeCommand(

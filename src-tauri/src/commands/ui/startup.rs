@@ -35,6 +35,7 @@ fn is_allowed_renderer_milestone(milestone: &str) -> bool {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn record_startup_milestone(
    timing: State<'_, StartupTiming>,
    milestone: String,

@@ -5,6 +5,7 @@ use serde::Serialize;
 use tauri::{AppHandle, Emitter};
 
 #[tauri::command]
+#[specta::specta]
 pub async fn intelligence_read_file(root: String, path: String) -> Result<String, String> {
    tauri::async_runtime::spawn_blocking(move || {
       athas_ai::workspace_tools::read_workspace_file(&root, &path)
@@ -14,6 +15,7 @@ pub async fn intelligence_read_file(root: String, path: String) -> Result<String
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn intelligence_paths_stay_in_workspace(
    root: String,
    paths: Vec<String>,
@@ -29,6 +31,7 @@ pub async fn intelligence_paths_stay_in_workspace(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn intelligence_list_files(
    root: String,
    options: Option<ListFilesOptions>,
@@ -42,7 +45,7 @@ pub async fn intelligence_list_files(
 
 /// A command's output together with the workspace files it changed, which the chat records for
 /// review like the agent's own writes.
-#[derive(Serialize)]
+#[derive(Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct IntelligenceCommandRun {
    #[serde(flatten)]
@@ -52,6 +55,7 @@ pub struct IntelligenceCommandRun {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn intelligence_run_command(
    root: String,
    command: String,
@@ -81,6 +85,7 @@ pub async fn intelligence_run_command(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn chat_run_terminal_command(
    root: String,
    command: String,
@@ -101,11 +106,13 @@ pub async fn chat_run_terminal_command(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn intelligence_cancel_command(id: String) {
    athas_ai::workspace_command::cancel_workspace_command(&id);
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn intelligence_search_files(
    root: String,
    options: SearchOptions,
@@ -119,7 +126,7 @@ pub async fn intelligence_search_files(
 
 /// A write by Athas's own agent, in the shape of the ACP `agent_file_write` event, so the chat
 /// records it for keep-or-reject review exactly like an ACP agent's write.
-#[derive(Serialize)]
+#[derive(Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct IntelligenceFileWrite {
    write_id: u64,
@@ -153,6 +160,7 @@ fn announce_write(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn intelligence_edit_file(
    app: AppHandle,
    root: String,
@@ -169,6 +177,7 @@ pub async fn intelligence_edit_file(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn intelligence_write_file(
    app: AppHandle,
    root: String,
@@ -190,6 +199,7 @@ pub async fn intelligence_write_file(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn intelligence_delete_file(
    app: AppHandle,
    root: String,

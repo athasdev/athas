@@ -60,6 +60,5 @@ pkgs.mkShell (
     LIBCLANG_PATH = "${pkgs.llvmPackages_latest.libclang.lib}/lib";
     LD_LIBRARY_PATH = lib.makeLibraryPath runtimeLibraries;
     PKG_CONFIG_PATH = lib.makeSearchPathOutput "dev" "lib/pkgconfig" runtimeLibraries;
-    WEBKIT_DISABLE_DMABUF_RENDERER = "1";
   }
 )

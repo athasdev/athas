@@ -7,7 +7,7 @@ import {
   resolveEffectiveTheme,
   subscribeSystemThemePreference,
 } from "@/features/settings/lib/theme-resolution";
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import type { Settings, Theme } from "@/features/settings/types/settings.types";
 import { getUiRootAttributes } from "@/features/settings/lib/ui-preferences";
 
@@ -52,10 +52,7 @@ export function syncEffectiveWindowTransparency() {
     enabled ? "enabled" : "disabled",
   );
 
-  void invoke("set_window_transparency_enabled", {
-    enabled,
-    themeType: getCurrentThemeType(),
-  }).catch((error) => {
+  void commands.setWindowTransparencyEnabled(enabled, getCurrentThemeType()).catch((error) => {
     console.warn("Failed to sync window transparency", error);
   });
 }
@@ -156,13 +153,11 @@ function syncNativeWindowAppearance(themeType: "light" | "dark") {
   const transparencyEnabled =
     typeof document === "undefined" ? true : isEffectiveWindowTransparencyEnabled();
 
-  void invoke("set_native_window_appearance", {
-    themeType,
-    transparencyEnabled,
-    followSystem: latestThemeSyncSettings !== null,
-  }).catch((error) => {
-    console.warn("Failed to sync native window appearance", error);
-  });
+  void commands
+    .setNativeWindowAppearance(themeType, transparencyEnabled, latestThemeSyncSettings !== null)
+    .catch((error) => {
+      console.warn("Failed to sync native window appearance", error);
+    });
 }
 
 function cacheFontSettings(settings: Pick<Settings, "fontFamily" | "uiFontFamily" | "uiFontSize">) {

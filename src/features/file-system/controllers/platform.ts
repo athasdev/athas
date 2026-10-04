@@ -1,6 +1,6 @@
-import { invoke } from "@tauri-apps/api/core";
 import { homeDir } from "@tauri-apps/api/path";
 import { open } from "@tauri-apps/plugin-dialog";
+import { commands } from "@/bindings/commands";
 import { useLinuxFolderPickerStore } from "@/features/file-system/stores/linux-folder-picker.store";
 import { invalidateFileTreeGitIgnoreCache } from "@/features/file-explorer/lib/file-tree-gitignore";
 import { parseWslPath } from "@/features/wsl/utils/wsl-path";
@@ -39,17 +39,12 @@ async function promptForPath(title: string): Promise<string | null> {
 export async function readFile(path: string): Promise<string> {
   const wslInfo = parseWslPath(path);
   if (wslInfo) {
-    return await invoke<string>("wsl_read_file", {
-      distro: wslInfo.distro,
-      filePath: wslInfo.linuxPath,
-    });
+    return await commands.wslReadFile(wslInfo.distro, wslInfo.linuxPath);
   }
 
   try {
-    const response = await invoke<ArrayBuffer | number[]>("read_local_file", { path });
-    const content =
-      response instanceof ArrayBuffer ? new Uint8Array(response) : Uint8Array.from(response);
-    return utf8Decoder.decode(content);
+    const response = await commands.readLocalFile(path);
+    return utf8Decoder.decode(new Uint8Array(response));
   } catch {
     const content = await readBinaryFile(path, { baseDir: BaseDirectory.AppData });
     return utf8Decoder.decode(content);
@@ -57,7 +52,7 @@ export async function readFile(path: string): Promise<string> {
 }
 
 export async function getLocalDirectorySize(path: string): Promise<number> {
-  return await invoke<number>("get_local_directory_size", { path });
+  return await commands.getLocalDirectorySize(path);
 }
 
 /**
@@ -68,11 +63,7 @@ export async function getLocalDirectorySize(path: string): Promise<number> {
 export async function writeFile(path: string, content: string): Promise<void> {
   const wslInfo = parseWslPath(path);
   if (wslInfo) {
-    await invoke("wsl_write_file", {
-      distro: wslInfo.distro,
-      filePath: wslInfo.linuxPath,
-      content,
-    });
+    await commands.wslWriteFile(wslInfo.distro, wslInfo.linuxPath, content);
     invalidateFileTreeGitIgnoreCache(path);
     return;
   }
@@ -94,10 +85,7 @@ export async function writeFile(path: string, content: string): Promise<void> {
 export async function createDirectory(path: string): Promise<void> {
   const wslInfo = parseWslPath(path);
   if (wslInfo) {
-    await invoke("wsl_create_directory", {
-      distro: wslInfo.distro,
-      directoryPath: wslInfo.linuxPath,
-    });
+    await commands.wslCreateDirectory(wslInfo.distro, wslInfo.linuxPath);
     return;
   }
 
@@ -111,11 +99,7 @@ export async function createDirectory(path: string): Promise<void> {
 export async function deletePath(path: string): Promise<void> {
   const wslInfo = parseWslPath(path);
   if (wslInfo) {
-    await invoke("wsl_delete_path", {
-      distro: wslInfo.distro,
-      targetPath: wslInfo.linuxPath,
-      isDirectory: true,
-    });
+    await commands.wslDeletePath(wslInfo.distro, wslInfo.linuxPath, true);
     return;
   }
 
@@ -188,20 +172,7 @@ export async function openFiles(): Promise<string[]> {
 export async function readDirectory(path: string): Promise<any[]> {
   const wslInfo = parseWslPath(path);
   if (wslInfo) {
-    const entries = await invoke<
-      Array<{
-        name: string;
-        path: string;
-        is_dir: boolean;
-        size: number;
-        is_symlink: boolean;
-        target?: string | null;
-      }>
-    >("wsl_read_directory", {
-      distro: wslInfo.distro,
-      path: wslInfo.linuxPath,
-    });
-    return entries;
+    return await commands.wslReadDirectory(wslInfo.distro, wslInfo.linuxPath);
   }
 
   try {
@@ -238,15 +209,11 @@ export async function moveFile(sourcePath: string, targetPath: string): Promise<
       throw new Error("Moving files between WSL distributions or local folders is not supported.");
     }
 
-    await invoke("wsl_rename_path", {
-      distro: sourceWsl.distro,
-      sourcePath: sourceWsl.linuxPath,
-      targetPath: targetWsl.linuxPath,
-    });
+    await commands.wslRenamePath(sourceWsl.distro, sourceWsl.linuxPath, targetWsl.linuxPath);
     return;
   }
 
-  await invoke("move_file", { sourcePath, targetPath });
+  await commands.moveFile(sourcePath, targetPath);
 }
 
 /**
@@ -264,20 +231,16 @@ export async function renameFile(sourcePath: string, targetPath: string): Promis
       );
     }
 
-    await invoke("wsl_rename_path", {
-      distro: sourceWsl.distro,
-      sourcePath: sourceWsl.linuxPath,
-      targetPath: targetWsl.linuxPath,
-    });
+    await commands.wslRenamePath(sourceWsl.distro, sourceWsl.linuxPath, targetWsl.linuxPath);
     return;
   }
 
-  await invoke("rename_file", { sourcePath, targetPath });
+  await commands.renameFile(sourcePath, targetPath);
 }
 
 export interface SymlinkInfo {
   is_symlink: boolean;
-  target?: string;
+  target?: string | null;
   is_dir: boolean;
 }
 
@@ -289,11 +252,8 @@ export interface SymlinkInfo {
 export async function getSymlinkInfo(path: string, workspaceRoot?: string): Promise<SymlinkInfo> {
   const wslInfo = parseWslPath(path);
   if (wslInfo) {
-    return await invoke("wsl_get_symlink_info", {
-      distro: wslInfo.distro,
-      path: wslInfo.linuxPath,
-    });
+    return await commands.wslGetSymlinkInfo(wslInfo.distro, wslInfo.linuxPath);
   }
 
-  return await invoke("get_symlink_info", { path, workspaceRoot });
+  return await commands.getSymlinkInfo(path, workspaceRoot ?? null);
 }

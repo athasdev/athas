@@ -1,4 +1,4 @@
-use crate::{ToolConfig, ToolError, ToolRuntime, platform, runtime::AthasAppHandle as AppHandle};
+use crate::{ToolConfig, ToolError, ToolRuntime, platform};
 use athas_runtime::{
    NodeRuntime, RuntimeManager, RuntimeType, process::configure_background_command,
 };
@@ -11,7 +11,7 @@ use std::{
    path::{Component, Path, PathBuf},
    process::Command,
 };
-use tauri::Manager;
+use tauri::{AppHandle, Manager};
 use url::Url;
 use walkdir::WalkDir;
 use xz2::read::XzDecoder;
