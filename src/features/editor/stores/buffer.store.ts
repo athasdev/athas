@@ -177,7 +177,6 @@ interface BufferActions {
   openReferencesBuffer: () => string;
   openContinuousAgentsBuffer: () => string;
   openAcpInspectorBuffer: () => string;
-  openSettingsBuffer: () => string;
   openExtensionsBuffer: () => string;
   openExtensionBuffer: (extensionId: string, name: string) => string;
   openOnboardingBuffer: (
@@ -1072,10 +1071,6 @@ const createBufferStore = (workspaceId: string) => {
 
         openAcpInspectorBuffer: (): string => {
           return get().actions.openContent({ type: "acpInspector" });
-        },
-
-        openSettingsBuffer: (): string => {
-          return get().actions.openContent({ type: "settings" });
         },
 
         openExtensionsBuffer: (): string => {

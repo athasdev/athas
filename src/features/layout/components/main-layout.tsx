@@ -49,6 +49,11 @@ const WindowCloseGuard = lazy(() =>
     default: module.WindowCloseGuard,
   })),
 );
+const SettingsDialog = lazy(() =>
+  import("@/features/settings/components/settings-dialog").then((module) => ({
+    default: module.SettingsDialog,
+  })),
+);
 const PendingBufferCloseDialog = lazy(() =>
   import("@/features/tabs/components/pending-buffer-close-dialog").then((module) => ({
     default: module.PendingBufferCloseDialog,
@@ -370,6 +375,7 @@ export function MainLayout() {
             <LinuxFolderPickerDialog />
             <WindowCloseGuard />
             <PendingBufferCloseDialog />
+            <SettingsDialog />
             <ExtensionDialogs />
             <TerminalHost />
           </Suspense>

@@ -3,21 +3,21 @@ import { By } from "selenium-webdriver";
 import {
   UI_TIMEOUT,
   click,
-  closeTab,
-  editorTab,
   inputValue,
   isDisplayed,
   rootStyleValue,
   runPaletteCommand,
   waitForDisplayed,
+  waitForHidden,
   waitForProjectTree,
   waitForSavedSetting,
   waitUntil,
 } from "../support/app.ts";
 import { e2eTest, useAppSession } from "../support/session.ts";
 
-const SETTINGS_TAB = "Settings";
-const SETTINGS_CONTENT = By.css("[data-settings-content]");
+const SETTINGS_DIALOG = By.css("[data-dialog-content]");
+const SETTINGS_CONTENT = By.css("[data-dialog-content] [data-settings-content]");
+const CLOSE_SETTINGS = By.css('button[aria-label="Close settings"]');
 const APPEARANCE_PAGE = By.css('[data-settings-content][aria-label="Appearance settings"]');
 const APPEARANCE_NAV = By.css("#settings-tab-appearance");
 const UI_FONT_SIZE_ROW = '[data-setting-row-key="uifontsize"]';
@@ -31,7 +31,7 @@ async function appliedUiFontSize() {
 
 async function openAppearanceSettings() {
   await runPaletteCommand("Preferences: Open Settings");
-  await waitForDisplayed(SETTINGS_CONTENT, "The settings page never opened");
+  await waitForDisplayed(SETTINGS_CONTENT, "The settings dialog never opened");
   if (!(await isDisplayed(APPEARANCE_PAGE))) await click(APPEARANCE_NAV);
   await waitForDisplayed(APPEARANCE_PAGE, "The Appearance settings page never opened");
   await waitForDisplayed(UI_FONT_SIZE_INPUT, "The UI Font Size setting is missing");
@@ -46,9 +46,9 @@ describe("settings", () => {
     await waitForProjectTree();
   });
 
-  e2eTest("opens the settings page from the command palette", async () => {
+  e2eTest("opens the settings dialog from the command palette", async () => {
     await openAppearanceSettings();
-    expect(await isDisplayed(editorTab(SETTINGS_TAB))).toBe(true);
+    expect(await isDisplayed(SETTINGS_DIALOG)).toBe(true);
   });
 
   e2eTest("applies a changed UI font size to the workbench", async () => {
@@ -69,7 +69,8 @@ describe("settings", () => {
 
   e2eTest("keeps the changed setting after reopening settings", async () => {
     expect(changedSize).toBeGreaterThan(0);
-    await closeTab(SETTINGS_TAB);
+    await click(CLOSE_SETTINGS);
+    await waitForHidden(SETTINGS_DIALOG, "The settings dialog did not close");
 
     await openAppearanceSettings();
 

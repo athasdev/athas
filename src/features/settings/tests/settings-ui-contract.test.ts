@@ -172,7 +172,7 @@ describe("settings UI contract", () => {
       "utf8",
     );
 
-    expect(existsSync(`${componentsDirectory}/settings-dialog.tsx`)).toBe(false);
+    expect(existsSync(`${componentsDirectory}/settings-dialog.tsx`)).toBe(true);
     expect(existsSync(`${componentsDirectory}/settings-sidebar.tsx`)).toBe(false);
     expect(settingsViewSource).toContain("<WorkbenchNavigation");
     expect(settingsViewSource).toContain('ariaLabel="Settings pages"');
@@ -182,7 +182,8 @@ describe("settings UI contract", () => {
     expect(sectionSource).toContain("<GroupedSection");
     expect(sectionSource).not.toContain("<Accordion");
     expect(sidebarPaneSource).not.toContain("SettingsSidebar");
-    expect(modalSliceSource).toContain("openSettingsBuffer()");
+    expect(modalSliceSource).toContain("isSettingsVisible: true");
+    expect(modalSliceSource).not.toContain("openSettingsBuffer");
     expect(modalSliceSource).not.toContain("setIsSidebarVisible");
     expect(settingsViewSource).toContain("settingsInitialSection");
     expect(settingsViewSource).toContain('section.scrollIntoView({ block: "start"');

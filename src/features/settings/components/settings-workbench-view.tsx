@@ -9,7 +9,9 @@ import {
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import type { SettingsSection } from "@/features/settings/types/settings.types";
 import { useUIState } from "@/features/window/stores/ui-state.store";
+import { Button } from "@/ui/button";
 import { Empty, EmptyDescription } from "@/ui/empty";
+import { XIcon } from "@/ui/icons";
 import { SearchField } from "@/ui/search";
 import { SidebarListItem } from "@/ui/sidebar";
 import {
@@ -79,7 +81,12 @@ function groupSettingsTabs(tabs: SettingsTabItem[]): WorkbenchNavigationGroup<Se
  * The Settings page, opened as one tab in the main view with its own page list and search, so
  * the workbench sidebar keeps showing whatever the user had open.
  */
-const SettingsWorkbenchView = () => {
+interface SettingsWorkbenchViewProps {
+  /** Shows a close button in the page header, for the Settings dialog. */
+  onClose?: () => void;
+}
+
+const SettingsWorkbenchView = ({ onClose }: SettingsWorkbenchViewProps) => {
   const settingsInitialSection = useUIState((state) => state.settingsInitialSection);
   const settingsNavigationRequestId = useUIState((state) => state.settingsNavigationRequestId);
   const lastSettingsTab = useSettingsStore((state) => state.settings.lastSettingsTab);
@@ -288,6 +295,13 @@ const SettingsWorkbenchView = () => {
           title={activeTabItem?.label ?? "Settings"}
           pinnedHeader
           width="narrow"
+          actions={
+            onClose ? (
+              <Button variant="ghost" iconOnly aria-label="Close settings" onClick={onClose}>
+                <XIcon />
+              </Button>
+            ) : undefined
+          }
           viewportProps={{
             ref: contentRef,
             id: activePanelId,

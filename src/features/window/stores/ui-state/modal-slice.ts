@@ -16,7 +16,7 @@ interface ModalState {
   settingsInitialTab: SettingsTab | null;
   settingsInitialSection: string | null;
   settingsNavigationRequestId: number;
-  /** Settings is the active tab, so its navigation replaces the primary sidebar's view. */
+  isSettingsVisible: boolean;
 }
 
 interface ModalActions {
@@ -30,9 +30,9 @@ interface ModalActions {
   setIsDatabaseConnectionVisible: (v: boolean) => void;
   setSettingsInitialTab: (tab: SettingsTab) => void;
   setSettingsInitialSection: (section: string | null) => void;
-  /** Opens the Settings page in the main view, on `tab` and scrolled to `section` when given. */
+  /** Opens the Settings dialog on `tab`, scrolled to `section` when given. */
   openSettings: (tab?: SettingsTab, section?: string) => void;
-  /** Closes the Settings page. */
+  /** Closes the Settings dialog. */
   closeSettings: () => void;
   hasOpenModal: () => boolean;
   closeTopModal: () => boolean;
@@ -53,6 +53,7 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
   settingsInitialTab: null,
   settingsInitialSection: null,
   settingsNavigationRequestId: 0,
+  isSettingsVisible: false,
 
   // Actions
   hasOpenModal: () => {
@@ -63,7 +64,8 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
       state.isGlobalSearchVisible ||
       state.isBranchManagerVisible ||
       state.isProjectPickerVisible ||
-      state.isDatabaseConnectionVisible
+      state.isDatabaseConnectionVisible ||
+      state.isSettingsVisible
     );
   },
 
@@ -92,6 +94,11 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
     }
     if (state.isDatabaseConnectionVisible) {
       set({ isDatabaseConnectionVisible: false });
+      return true;
+    }
+    // Settings stays under the overlays it can open, such as the theme picker.
+    if (state.isSettingsVisible) {
+      set({ isSettingsVisible: false });
       return true;
     }
     return false;
@@ -228,19 +235,9 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
       settingsInitialTab: tab ?? null,
       settingsInitialSection: section ?? null,
       settingsNavigationRequestId: get().settingsNavigationRequestId + 1,
-    });
-    // Settings is one tab in the main view. The buffer store loads lazily because it depends on
-    // this store.
-    void import("@/features/editor/stores/buffer.store").then(({ useBufferStore }) => {
-      useBufferStore.getState().actions.openSettingsBuffer();
+      isSettingsVisible: true,
     });
   },
 
-  closeSettings: () => {
-    void import("@/features/editor/stores/buffer.store").then(({ useBufferStore }) => {
-      const { buffers, actions } = useBufferStore.getState();
-      const settings = buffers.find((buffer) => buffer.type === "settings");
-      if (settings) actions.closeBuffer(settings.id);
-    });
-  },
+  closeSettings: () => set({ isSettingsVisible: false }),
 });

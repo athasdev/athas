@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({
   close: vi.fn(),
   listen: vi.fn(),
   initialize: vi.fn(),
-  actions: { openContent: vi.fn(), openSettingsBuffer: vi.fn(), setActiveBuffer: vi.fn() },
+  actions: { openContent: vi.fn(), setActiveBuffer: vi.fn() },
 }));
 vi.mock("@tauri-apps/api/window", () => ({
   getCurrentWindow: () => ({ onCloseRequested: mocks.close, listen: mocks.listen }),
@@ -26,7 +26,7 @@ vi.mock("@/features/window/stores/auth.store", () => ({
   useAuthStore: { getState: () => ({ actions: { initialize: mocks.initialize } }) },
 }));
 vi.mock("@/features/window/stores/ui-state.store", () => ({
-  useUIState: { getState: () => ({}) },
+  useUIState: { getState: () => ({}), setState: vi.fn() },
 }));
 vi.mock("@/features/window/utils/create-app-window", () => ({ createAppWindow: vi.fn() }));
 vi.mock("@/features/terminal/utils/frontend-terminal-session", () => ({

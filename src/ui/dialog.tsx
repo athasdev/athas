@@ -49,7 +49,7 @@ const dialogContentVariants = cva(
         sm: "max-w-sm",
         md: "max-w-md",
         lg: "max-w-lg",
-        settings: "h-[min(40rem,calc(100dvh-4rem))] max-w-[min(64rem,calc(100vw-2rem))]",
+        settings: "h-[min(48rem,calc(100dvh-4rem))] max-w-[min(72rem,calc(100vw-4rem))]",
       },
     },
     defaultVariants: {

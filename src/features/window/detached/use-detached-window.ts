@@ -96,15 +96,6 @@ export function useDetachedWindow<Message extends { type: string }>({
         actions: {
           ...bufferActions,
           openContent: openInOwner,
-          openSettingsBuffer: () => {
-            const state = useUIState.getState();
-            channel.postMessage({
-              type: "settings",
-              tab: state.settingsInitialTab ?? undefined,
-              section: state.settingsInitialSection ?? undefined,
-            });
-            return "detached-settings-request";
-          },
           setActiveBuffer: (id) => {
             const item = useBufferStore.getState().buffers.find((candidate) => candidate.id === id);
             if (item?.type === "editor") {
@@ -118,6 +109,22 @@ export function useDetachedWindow<Message extends { type: string }>({
           },
         },
       });
+
+    // A detached workbench has no Settings dialog of its own, so it opens the owner's. A
+    // standalone window shows Settings as its content instead.
+    useUIState.setState({
+      openSettings:
+        kind === "standalone"
+          ? (tab, section) => {
+              useUIState.setState((state) => ({
+                settingsInitialTab: tab ?? null,
+                settingsInitialSection: section ?? null,
+                settingsNavigationRequestId: state.settingsNavigationRequestId + 1,
+              }));
+              bufferActions.openContent({ type: "settings" });
+            }
+          : (tab, section) => channel.postMessage({ type: "settings", tab, section }),
+    });
 
     if (kind === "standalone") {
       useBufferStore.setState({
