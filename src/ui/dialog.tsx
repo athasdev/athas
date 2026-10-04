@@ -62,10 +62,6 @@ function Dialog(props: DialogPrimitive.Root.Props) {
   return <DialogPrimitive.Root data-slot="dialog" {...props} />;
 }
 
-function DialogTrigger(props: DialogPrimitive.Trigger.Props) {
-  return <DialogPrimitive.Trigger data-slot="dialog-trigger" {...props} />;
-}
-
 function DialogPortal({ children, ...props }: DialogPrimitive.Portal.Props) {
   return (
     <DialogPrimitive.Portal data-slot="dialog-portal" {...props}>
@@ -156,16 +152,6 @@ function DialogTitle({ className, ...props }: DialogPrimitive.Title.Props) {
     <DialogPrimitive.Title
       data-slot="dialog-title"
       className={cn("font-sans ui-text-base font-medium leading-snug text-foreground", className)}
-      {...props}
-    />
-  );
-}
-
-function DialogDescription({ className, ...props }: DialogPrimitive.Description.Props) {
-  return (
-    <DialogPrimitive.Description
-      data-slot="dialog-description"
-      className={cn("font-sans ui-text-sm leading-normal text-muted-foreground", className)}
       {...props}
     />
   );
@@ -364,6 +350,7 @@ interface PrimitiveChoiceOptions<T extends string> {
 }
 
 let nextDialogId = 1;
+let removeDialog: ((id: number) => void) | null = null;
 let enqueueDialog: ((request: PrimitiveDialogRequest) => void) | null = null;
 const pendingDialogs: PrimitiveDialogRequest[] = [];
 
@@ -384,17 +371,37 @@ export function showAlertDialog(message: ReactNode, title = "Notice"): Promise<v
 
 export function showConfirmDialog(
   message: ReactNode,
-  options: PrimitiveConfirmOptions = {},
+  options: PrimitiveConfirmOptions & { signal?: AbortSignal } = {},
 ): Promise<boolean> {
   return new Promise((resolve) => {
+    const signal = options.signal;
+    if (signal?.aborted) {
+      resolve(false);
+      return;
+    }
+    const id = nextDialogId++;
+    let settled = false;
+    const finish = (value: boolean) => {
+      if (settled) return;
+      settled = true;
+      signal?.removeEventListener("abort", cancel);
+      resolve(value);
+    };
+    const cancel = () => {
+      removeDialog?.(id);
+      const index = pendingDialogs.findIndex((dialog) => dialog.id === id);
+      if (index >= 0) pendingDialogs.splice(index, 1);
+      finish(false);
+    };
+    signal?.addEventListener("abort", cancel, { once: true });
     enqueue({
-      id: nextDialogId++,
+      id,
       type: "confirm",
       title: options.title ?? "Confirm",
       message,
       confirmLabel: options.confirmLabel ?? "Confirm",
       cancelLabel: options.cancelLabel ?? "Cancel",
-      resolve,
+      resolve: finish,
     });
   });
 }
@@ -439,6 +446,7 @@ export function DialogServiceProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     enqueueDialog = (request) => setQueue((current) => [...current, request]);
+    removeDialog = (id) => setQueue((current) => current.filter((dialog) => dialog.id !== id));
 
     if (pendingDialogs.length > 0) {
       setQueue((current) => [...current, ...pendingDialogs.splice(0)]);
@@ -446,13 +454,14 @@ export function DialogServiceProvider({ children }: { children: ReactNode }) {
 
     return () => {
       enqueueDialog = null;
+      removeDialog = null;
     };
   }, []);
 
   const activeDialog = queue[0] ?? null;
   const closeActive = (resolve: () => void) => {
     resolve();
-    setQueue((current) => current.slice(1));
+    setQueue((current) => current.filter((dialog) => dialog.id !== activeDialog?.id));
   };
 
   return (
@@ -604,13 +613,11 @@ export {
   Dialog,
   DialogClose,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogOverlay,
   DialogPortal,
   DialogTitle,
-  DialogTrigger,
 };
 
 export default AppDialog;

@@ -1,20 +1,13 @@
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { getBufferById } from "@/features/editor/utils/buffer-index";
-import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import { isEditorContent } from "@/features/panes/types/pane-content.types";
 import UnsavedChangesDialog from "@/features/window/components/unsaved-changes-dialog";
+import { WindowCloseSession, type PendingWindowClose } from "../services/window-close-session";
 import { REQUEST_WINDOW_CLOSE_EVENT } from "@/features/window/utils/request-window-close";
+import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
 import { agentsAreDetached } from "@/features/ai/detached/agent-window.store";
 import { toast } from "sonner";
-
-interface PendingWindowClose {
-  bufferId: string;
-  fileName: string;
-}
 
 type CloseRequestedHandler = Parameters<ReturnType<typeof getCurrentWindow>["onCloseRequested"]>[0];
 
@@ -24,39 +17,37 @@ async function listenForCloseGuard(
 ) {
   const currentWindow = getCurrentWindow();
   const currentWebviewWindow = getCurrentWebviewWindow();
-  const [unlistenClose, unlistenQuit, unlistenMenuCloseWindow] = await Promise.all([
+  const results = await Promise.allSettled([
     currentWindow.onCloseRequested(handleCloseRequested),
     currentWebviewWindow.listen("menu_quit_app", () => void continueCloseOrPrompt()),
     currentWebviewWindow.listen("menu_close_window", () => void continueCloseOrPrompt()),
   ]);
-
-  return () => {
-    unlistenClose();
-    unlistenQuit();
-    unlistenMenuCloseWindow();
-  };
-}
-
-function getBlockingDirtyBuffer(discardedBufferIds: Set<string>) {
-  return useBufferStore
-    .getState()
-    .buffers.find(
-      (buffer) => isEditorContent(buffer) && buffer.isDirty && !discardedBufferIds.has(buffer.id),
-    );
+  const unlisteners = results.flatMap((result) =>
+    result.status === "fulfilled" ? [result.value] : [],
+  );
+  const failure = results.find((result) => result.status === "rejected");
+  if (failure?.status === "rejected") {
+    unlisteners.forEach((unlisten) => unlisten());
+    throw failure.reason;
+  }
+  return () => unlisteners.forEach((unlisten) => unlisten());
 }
 
 export function WindowCloseGuard() {
+  const [session] = useState(() => new WindowCloseSession());
   const [pendingClose, setPendingClose] = useState<PendingWindowClose | null>(null);
+  const pendingCloseRef = useRef<PendingWindowClose | null>(null);
   const closeInProgressRef = useRef(false);
-  const discardedBufferIdsRef = useRef(new Set<string>());
-  const persistActiveProjectSession = useFileSystemStore(
-    (state) => state.persistActiveProjectSession,
-  );
-  const { setActiveBuffer } = useBufferStore.use.actions();
-  const { handleSave } = useEditorAppStore.use.actions();
-
+  const setDecision = useCallback((request: PendingWindowClose | null) => {
+    pendingCloseRef.current = request;
+    setPendingClose(request);
+  }, []);
   const persistSessionSnapshot = useCallback(() => {
-    useFileSystemStore.getState().persistActiveProjectSession();
+    for (const store of workspaceRuntimeRegistry.getExistingStores<
+      ReturnType<typeof useFileSystemStore.getState>
+    >("file-system")) {
+      store.getState().persistActiveProjectSession({ immediate: true });
+    }
   }, []);
 
   const continueCloseOrPrompt = useCallback(async () => {
@@ -64,20 +55,22 @@ export function WindowCloseGuard() {
       toast.info("Close the agent windows before closing this window.");
       return;
     }
-    const dirtyBuffer = getBlockingDirtyBuffer(discardedBufferIdsRef.current);
-
-    if (dirtyBuffer) {
-      setPendingClose({
-        bufferId: dirtyBuffer.id,
-        fileName: dirtyBuffer.name,
-      });
+    if (closeInProgressRef.current || pendingCloseRef.current) return;
+    const request = session.findBlockingDraft();
+    if (request) {
+      setDecision(request);
       return;
     }
-
-    persistSessionSnapshot();
-    closeInProgressRef.current = true;
-    await getCurrentWindow().close();
-  }, [persistSessionSnapshot]);
+    try {
+      persistSessionSnapshot();
+      closeInProgressRef.current = true;
+      await getCurrentWindow().close();
+    } catch (error) {
+      closeInProgressRef.current = false;
+      session.reset();
+      toast.error(`Could not close this window: ${String(error)}`);
+    }
+  }, [persistSessionSnapshot, session, setDecision]);
 
   const handleCloseRequested = useCallback<CloseRequestedHandler>(
     (event) => {
@@ -86,86 +79,82 @@ export function WindowCloseGuard() {
         toast.info("Close the agent windows before closing this window.");
         return;
       }
-      if (closeInProgressRef.current) {
-        persistSessionSnapshot();
+      const request = session.findBlockingDraft();
+      if (request) {
+        event.preventDefault();
+        closeInProgressRef.current = false;
+        if (!pendingCloseRef.current) setDecision(request);
         return;
       }
-
-      const dirtyBuffer = getBlockingDirtyBuffer(discardedBufferIdsRef.current);
-      if (!dirtyBuffer) {
+      try {
         persistSessionSnapshot();
-        return;
+      } catch (error) {
+        event.preventDefault();
+        closeInProgressRef.current = false;
+        session.reset();
+        toast.error(`Could not save the window session: ${String(error)}`);
       }
-
-      event.preventDefault();
-      setPendingClose({
-        bufferId: dirtyBuffer.id,
-        fileName: dirtyBuffer.name,
-      });
     },
-    [persistSessionSnapshot],
+    [persistSessionSnapshot, session, setDecision],
   );
 
   useEffect(() => {
     let disposed = false;
     let unlistenCloseGuard: (() => void) | undefined;
-
-    void listenForCloseGuard(handleCloseRequested, continueCloseOrPrompt).then((unlisten) => {
-      if (disposed) {
-        unlisten();
-        return;
-      }
-      unlistenCloseGuard = unlisten;
-    });
-    window.addEventListener("beforeunload", persistActiveProjectSession);
+    void listenForCloseGuard(handleCloseRequested, continueCloseOrPrompt)
+      .then((unlisten) => {
+        if (disposed) unlisten();
+        else unlistenCloseGuard = unlisten;
+      })
+      .catch((error) => {
+        if (!disposed)
+          toast.error(`Could not protect unsaved changes while closing: ${String(error)}`);
+      });
+    window.addEventListener("beforeunload", persistSessionSnapshot);
     window.addEventListener(REQUEST_WINDOW_CLOSE_EVENT, continueCloseOrPrompt);
-
     return () => {
       disposed = true;
+      session.reset();
+      pendingCloseRef.current = null;
       unlistenCloseGuard?.();
-      window.removeEventListener("beforeunload", persistActiveProjectSession);
+      window.removeEventListener("beforeunload", persistSessionSnapshot);
       window.removeEventListener(REQUEST_WINDOW_CLOSE_EVENT, continueCloseOrPrompt);
     };
-  }, [continueCloseOrPrompt, handleCloseRequested, persistActiveProjectSession]);
+  }, [continueCloseOrPrompt, handleCloseRequested, persistSessionSnapshot, session]);
 
   const handleSaveAndContinue = useCallback(async () => {
-    if (!pendingClose) return;
-
-    setActiveBuffer(pendingClose.bufferId);
-    await handleSave();
-
-    const pendingBuffer = getBufferById(useBufferStore.getState().buffers, pendingClose.bufferId);
-
-    if (pendingBuffer && isEditorContent(pendingBuffer) && pendingBuffer.isDirty) {
-      return;
-    }
-
-    setPendingClose(null);
+    const request = pendingCloseRef.current;
+    if (!request) return;
+    const saved = await session.save(request);
+    if (pendingCloseRef.current !== request) return;
+    if (!saved && session.isDraftPresent(request)) return;
+    setDecision(null);
     await continueCloseOrPrompt();
-  }, [continueCloseOrPrompt, handleSave, pendingClose, setActiveBuffer]);
+  }, [continueCloseOrPrompt, session, setDecision]);
 
   const handleDiscardAndContinue = useCallback(async () => {
-    if (!pendingClose) return;
-
-    discardedBufferIdsRef.current.add(pendingClose.bufferId);
-    setPendingClose(null);
+    const request = pendingCloseRef.current;
+    if (!request) return;
+    session.discard(request);
+    setDecision(null);
     await continueCloseOrPrompt();
-  }, [continueCloseOrPrompt, pendingClose]);
+  }, [continueCloseOrPrompt, session, setDecision]);
 
   const handleCancel = useCallback(() => {
-    discardedBufferIdsRef.current.clear();
+    session.reset();
     closeInProgressRef.current = false;
-    setPendingClose(null);
-  }, []);
+    setDecision(null);
+  }, [session, setDecision]);
 
-  if (!pendingClose) {
-    return null;
-  }
-
+  if (!pendingClose) return null;
+  const workspaceName =
+    workspaceRuntimeRegistry.getWorkspace(pendingClose.owner.workspaceId)?.descriptor.name ??
+    pendingClose.owner.workspaceId;
   return (
     <UnsavedChangesDialog
-      fileName={pendingClose.fileName}
-      onSave={() => void handleSaveAndContinue()}
+      decisionKey={pendingClose}
+      fileName={`${pendingClose.buffer.name} (${workspaceName})`}
+      onSave={handleSaveAndContinue}
       onDiscard={() => void handleDiscardAndContinue()}
       onCancel={handleCancel}
     />

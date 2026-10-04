@@ -1,3 +1,4 @@
+import { isDirtyContent } from "@/features/panes/types/pane-content.types";
 import { type DragEndEvent, type DragMoveEvent, type DragStartEvent } from "@dnd-kit/core";
 import { SortableContext, horizontalListSortingStrategy } from "@dnd-kit/sortable";
 import { ArrowsInIcon, ArrowsOutIcon, SidebarIcon } from "@/ui/icons";
@@ -17,12 +18,10 @@ import { moveBufferToPaneDropTarget } from "@/features/panes/utils/pane-drop-act
 import { findPaneGroup } from "@/features/panes/utils/pane-tree";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import type { EditorContent, PaneContent } from "@/features/panes/types/pane-content.types";
-import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
 import { getChromeNavigationIndex } from "@/features/layout/utils/chrome-keyboard";
 import { useSidebarStore } from "@/features/layout/stores/sidebar.store";
 import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
 import type { Terminal } from "@/features/terminal/types/terminal.types";
-import UnsavedChangesDialog from "@/features/window/components/unsaved-changes-dialog";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { Button } from "@/ui/button";
 import { ContextMenu, ContextMenuTrigger } from "@/ui/context-menu";
@@ -83,7 +82,6 @@ const TabBar = ({
   disablePaneActions = false,
 }: TabBarProps) => {
   // Get everything from stores
-  const pendingClose = useBufferStore.use.pendingClose();
   const fullscreenPaneId = usePaneStore.use.fullscreenPaneId();
   const { closePane, togglePaneFullscreen, setPaneLocked } = usePaneStore.use.actions();
 
@@ -115,11 +113,8 @@ const TabBar = ({
     handleCloseAllTabs,
     handleCloseTabsToRight,
     reorderBuffers,
-    confirmCloseWithoutSaving,
-    cancelPendingClose,
     convertPreviewToDefinite,
   } = useBufferStore.use.actions();
-  const { handleSave } = useEditorAppStore.use.actions();
   const horizontalTabScroll = useSettingsStore((state) => state.settings.horizontalTabScroll);
   const maxOpenTabs = useSettingsStore((state) => state.settings.maxOpenTabs);
   const updateActivePath = useSidebarStore.use.actions().updateActivePath;
@@ -374,27 +369,6 @@ const TabBar = ({
     [rootFolderPath],
   );
 
-  const handleSaveAndClose = useCallback(async () => {
-    if (!pendingClose) return;
-
-    const buffer = bufferById.get(pendingClose.bufferId);
-    if (!buffer) return;
-
-    // Save the file
-    await handleSave();
-
-    // Then proceed with closing
-    confirmCloseWithoutSaving();
-  }, [pendingClose, bufferById, handleSave, confirmCloseWithoutSaving]);
-
-  const handleDiscardAndClose = useCallback(() => {
-    confirmCloseWithoutSaving();
-  }, [confirmCloseWithoutSaving]);
-
-  const handleCancelClose = useCallback(() => {
-    cancelPendingClose();
-  }, [cancelPendingClose]);
-
   const closeTab = useCallback(
     (bufferId: string) => {
       handleTabClose(bufferId);
@@ -436,7 +410,7 @@ const TabBar = ({
       }
       updateActivePath(buffer.path);
       setSrAnnouncement(
-        `Switched to ${buffer.name}${buffer.type === "editor" && buffer.isDirty ? ", unsaved changes" : ""}`,
+        `Switched to ${buffer.name}${isDirtyContent(buffer) ? ", unsaved changes" : ""}`,
       );
     },
     [externalTabClick, handleTabClick, updateActivePath],
@@ -625,7 +599,7 @@ const TabBar = ({
           handleTabClick(nextBuffer.id);
           updateActivePath(nextBuffer.path);
           setSrAnnouncement(
-            `Switched to ${nextBuffer.name}${nextBuffer.type === "editor" && nextBuffer.isDirty ? ", unsaved changes" : ""}`,
+            `Switched to ${nextBuffer.name}${isDirtyContent(nextBuffer) ? ", unsaved changes" : ""}`,
           );
           tabRefs.current[nextIndex]?.focus();
         }
@@ -650,7 +624,7 @@ const TabBar = ({
           handleTabClick(buffer.id);
           updateActivePath(buffer.path);
           setSrAnnouncement(
-            `Activated ${buffer.name}${buffer.type === "editor" && buffer.isDirty ? ", unsaved changes" : ""}`,
+            `Activated ${buffer.name}${isDirtyContent(buffer) ? ", unsaved changes" : ""}`,
           );
           break;
       }
@@ -845,15 +819,6 @@ const TabBar = ({
           </TabDragOverlay>
         ) : null}
       </TabDndContext>
-
-      {pendingClose && (
-        <UnsavedChangesDialog
-          fileName={bufferById.get(pendingClose.bufferId)?.name || ""}
-          onSave={handleSaveAndClose}
-          onDiscard={handleDiscardAndClose}
-          onCancel={handleCancelClose}
-        />
-      )}
 
       {/* Screen reader live region for announcements */}
       <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">

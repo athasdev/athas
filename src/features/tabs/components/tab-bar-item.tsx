@@ -1,3 +1,4 @@
+import { isDirtyContent } from "@/features/panes/types/pane-content.types";
 import { TagIcon, RocketIcon } from "@/ui/icons";
 import { AgentSessionIcon } from "@/features/ai/components/icons/agent-session-icon";
 import { AgentAttentionDot } from "@/features/ai/components/agent-attention-dot";
@@ -126,7 +127,7 @@ const TabBarItem = memo(function TabBarItem({
       <TabItem
         role="tab"
         aria-selected={isActive}
-        aria-label={`${buffer.name}${buffer.type === "editor" && buffer.isDirty ? " (unsaved)" : ""}${buffer.isPinned ? " (pinned)" : ""}${buffer.isPreview ? " (preview)" : ""}`}
+        aria-label={`${buffer.name}${isDirtyContent(buffer) ? " (unsaved)" : ""}${buffer.isPinned ? " (pinned)" : ""}${buffer.isPreview ? " (preview)" : ""}`}
         tabIndex={isActive ? 0 : -1}
         isActive={isActive}
         isDragged={isDraggedTab}
@@ -283,7 +284,7 @@ const TabBarItem = memo(function TabBarItem({
             {displayName}
           </span>
         )}
-        {buffer.type === "editor" && buffer.isDirty && (
+        {isDirtyContent(buffer) && (
           <div
             className="size-2 shrink-0 rounded-full bg-primary"
             title="Unsaved changes"
