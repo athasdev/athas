@@ -29,7 +29,7 @@ export function buildFileSearchResult(
 ): FileSearchResult | null {
   if (content.includes("\0")) return null;
 
-  const lines = content.split("\n");
+  const lines = content.split(/\r\n|\r|\n/);
   const matches: SearchMatch[] = [];
 
   lines.forEach((line, index) => {

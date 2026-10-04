@@ -94,4 +94,33 @@ describe("global search excerpts", () => {
     ]);
     expect(excerpts).toHaveLength(2);
   });
+  it.each(["\r\n", "\r"])(
+    "preserves expanded line maps and UTF-16 highlights with %j endings",
+    (ending) => {
+      const filePath = "/project/emoji.ts";
+      const match: FileSearchResult = {
+        file_path: filePath,
+        total_matches: 1,
+        matches: [
+          {
+            line_number: 2,
+            line_content: "😀foo",
+            column_start: 2,
+            column_end: 5,
+            match_ranges: [{ start: 2, end: 5 }],
+          },
+        ],
+      };
+      const [excerpt] = buildSearchExcerpts([match], "/project", 10, {
+        contextLinesByFile: { [filePath]: 7 },
+        sourceContentByPath: { [filePath]: ["before", "😀foo", "after"].join(ending) },
+      });
+      expect(excerpt?.lineNumberMap).toEqual([1, 2, 3]);
+      expect(excerpt?.content).toBe("before\n😀foo\nafter");
+      const highlight = excerpt?.highlights[0];
+      expect(excerpt?.content.slice(highlight?.start, highlight?.end)).toBe("foo");
+      expect(excerpt?.matches[0]?.targetLine).toBe(2);
+      expect(excerpt?.matches[0]?.targetColumn).toBe(3);
+    },
+  );
 });

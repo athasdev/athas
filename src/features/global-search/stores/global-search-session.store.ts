@@ -1,5 +1,5 @@
-import { create } from "zustand";
-import { createSelectors } from "@/utils/zustand-selectors";
+import { createStore } from "zustand/vanilla";
+import { createWorkspaceScopedStore } from "@/features/workspace/stores/create-workspace-scoped-store";
 import type { ContentSearchOptions } from "../types/global-search.types";
 
 const DEFAULT_SEARCH_OPTIONS: ContentSearchOptions = {
@@ -35,23 +35,25 @@ interface GlobalSearchSessionState {
   };
 }
 
-export const useGlobalSearchSessionStore = createSelectors(
-  create<GlobalSearchSessionState>()((set) => ({
-    ...initialState,
-    actions: {
-      setQuery: (query) => set({ query }),
-      setReplaceQuery: (replaceQuery) => set({ replaceQuery }),
-      setIncludeQuery: (includeQuery) => set({ includeQuery }),
-      setExcludeQuery: (excludeQuery) => set({ excludeQuery }),
-      setSearchOption: (key, value) => {
-        set((state) => ({
-          searchOptions: {
-            ...state.searchOptions,
-            [key]: value,
-          },
-        }));
+export const useGlobalSearchSessionStore = createWorkspaceScopedStore<GlobalSearchSessionState>(
+  "global-search-session",
+  () =>
+    createStore<GlobalSearchSessionState>()((set) => ({
+      ...initialState,
+      actions: {
+        setQuery: (query) => set({ query }),
+        setReplaceQuery: (replaceQuery) => set({ replaceQuery }),
+        setIncludeQuery: (includeQuery) => set({ includeQuery }),
+        setExcludeQuery: (excludeQuery) => set({ excludeQuery }),
+        setSearchOption: (key, value) => {
+          set((state) => ({
+            searchOptions: {
+              ...state.searchOptions,
+              [key]: value,
+            },
+          }));
+        },
+        reset: () => set(initialState),
       },
-      reset: () => set(initialState),
-    },
-  })),
+    })),
 );

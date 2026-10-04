@@ -100,21 +100,22 @@ fn empty_search_response(is_indexing: bool, indexed_files: usize) -> SearchFiles
    }
 }
 
-fn byte_offset_to_char_offset(text: &str, byte_offset: usize) -> usize {
+fn byte_offset_to_utf16_offset(text: &str, byte_offset: usize) -> usize {
    if byte_offset >= text.len() {
-      return text.chars().count();
+      return text.encode_utf16().count();
    }
 
    text
       .char_indices()
       .take_while(|(index, _)| *index < byte_offset)
-      .count()
+      .map(|(_, character)| character.len_utf16())
+      .sum()
 }
 
-fn byte_range_to_char_range(text: &str, start: usize, end: usize) -> (usize, usize) {
-   let char_start = byte_offset_to_char_offset(text, start);
-   let char_end = byte_offset_to_char_offset(text, end);
-   (char_start, char_end.max(char_start + 1))
+fn byte_range_to_utf16_range(text: &str, start: usize, end: usize) -> (usize, usize) {
+   let char_start = byte_offset_to_utf16_offset(text, start);
+   let char_end = byte_offset_to_utf16_offset(text, end);
+   (char_start, char_end.max(char_start))
 }
 
 #[tauri::command]
@@ -164,13 +165,14 @@ pub fn search_files_content(
          .first()
          .map(|(start, end)| (*start as usize, *end as usize))
          .unwrap_or((grep_match.column, grep_match.column + request.query.len()));
-      let start_end = byte_range_to_char_range(&line_content, start_end_bytes.0, start_end_bytes.1);
+      let start_end =
+         byte_range_to_utf16_range(&line_content, start_end_bytes.0, start_end_bytes.1);
       let match_ranges = grep_match
          .match_byte_offsets
          .iter()
          .map(|(start, end)| {
             let (start, end) =
-               byte_range_to_char_range(&line_content, *start as usize, *end as usize);
+               byte_range_to_utf16_range(&line_content, *start as usize, *end as usize);
             SearchMatchRange { start, end }
          })
          .collect();
@@ -253,8 +255,20 @@ mod tests {
    }
 
    #[test]
-   fn converts_utf8_byte_ranges_to_character_ranges() {
-      assert_eq!(byte_range_to_char_range("aé日z", 1, 6), (1, 3));
+   fn converts_utf8_byte_ranges_to_editor_utf16_ranges() {
+      assert_eq!(byte_range_to_utf16_range("aé日z", 1, 6), (1, 3));
+   }
+
+   #[test]
+   fn converts_search_ranges_after_astral_characters_to_editor_utf16_columns() {
+      assert_eq!(byte_range_to_utf16_range("😀foo", 4, 7), (2, 5));
+      assert_eq!(byte_range_to_utf16_range("a😀foo", 5, 8), (3, 6));
+      assert_eq!(byte_offset_to_utf16_offset("😀", 100), 2);
+   }
+
+   #[test]
+   fn preserves_zero_width_search_ranges_for_replacement() {
+      assert_eq!(byte_range_to_utf16_range("😀foo", 4, 4), (2, 2));
    }
 
    #[test]

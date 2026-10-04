@@ -1,12 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type RefCallback } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { toast } from "sonner";
 import type {
   FileNavigatorItem,
   FileNavigatorViewMode,
 } from "@/features/file-explorer/components/file-navigator-sidebar";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { getBaseName, getRelativePath } from "@/utils/path-helpers";
 import { ScrollArea } from "@/ui/scroll-area";
 import {
@@ -17,14 +15,16 @@ import { useContentSearch } from "../hooks/use-content-search";
 import { useKeyboardNavigation } from "../hooks/use-keyboard-navigation";
 import { useGlobalSearchSessionStore } from "../stores/global-search-session.store";
 import { buildSearchExcerpts } from "../utils/search-excerpts";
-import { replaceAllInSources, replaceNextInSource } from "../utils/source-replace";
+import { useSearchContext } from "../hooks/use-search-context";
+import { useSourceReplacement } from "../hooks/use-source-replacement";
+import {
+  useActiveWorkspaceId,
+  useWorkspaceStoreScopeId,
+} from "@/features/workspace/stores/create-workspace-scoped-store";
 import { GlobalSearchResults } from "./global-search-results";
 import type { MultibufferWorkspaceHandle } from "@/features/editor/components/multibuffer/multibuffer-workspace";
 import { GlobalSearchState } from "./global-search-state";
 import { GlobalSearchToolbar } from "./global-search-toolbar";
-
-const DEFAULT_CONTEXT_LINES = 2;
-const EXPANDED_CONTEXT_LINES = 7;
 
 interface SearchNavigationItem {
   path: string;
@@ -37,6 +37,7 @@ interface SearchMatchIndexEntry {
   filePath: string;
   targetLine: number;
   targetColumn: number;
+  expectedLine?: string;
 }
 
 const isAbsolutePath = (filePath: string) => {
@@ -50,6 +51,10 @@ const getNavigatorPath = (filePath: string, displayPath: string, fileName: strin
 };
 
 const GlobalSearchBuffer = () => {
+  const activeWorkspaceId = useActiveWorkspaceId();
+  const scopedWorkspaceId = useWorkspaceStoreScopeId();
+  const workspaceId = scopedWorkspaceId ?? activeWorkspaceId;
+  const shouldFocusOnMount = useRef(activeWorkspaceId === workspaceId);
   const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
   const inputRef = useRef<HTMLInputElement>(null);
   const replaceInputRef = useRef<HTMLInputElement>(null);
@@ -68,12 +73,7 @@ const GlobalSearchBuffer = () => {
   const [isFileNavigatorVisible, setIsFileNavigatorVisible] = useState(true);
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
   const [prioritizedFilePath, setPrioritizedFilePath] = useState<string | null>(null);
-  const [contextLinesByFile, setContextLinesByFile] = useState<Record<string, number>>({});
-  const [sourceContentByPath, setSourceContentByPath] = useState<Record<string, string>>({});
-  const [replaceOperation, setReplaceOperation] = useState<"next" | "all" | null>(null);
   const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(null);
-  const sourceContentByPathRef = useRef(sourceContentByPath);
-  const activeSearchKeyRef = useRef("");
   const {
     query,
     setQuery,
@@ -93,6 +93,7 @@ const GlobalSearchBuffer = () => {
     rootFolderPath,
     availability,
     searchKey,
+    searchRevision,
     searchOptions,
     setSearchOption,
     includeQuery,
@@ -102,13 +103,38 @@ const GlobalSearchBuffer = () => {
     refreshSearch,
     loadMoreResults: loadMoreBackendResults,
   } = useContentSearch();
-  useEffect(() => {
-    sourceContentByPathRef.current = sourceContentByPath;
-    activeSearchKeyRef.current = searchKey;
-  }, [searchKey, sourceContentByPath]);
+  const {
+    replaceOperation,
+    replaceNext: performReplaceNext,
+    replaceAll: performReplaceAll,
+  } = useSourceReplacement({
+    workspaceId,
+    searchKey,
+    query: debouncedQuery,
+    inputQuery: query,
+    replacement: replaceQuery,
+    options: searchOptions,
+    results,
+    refreshSearch,
+  });
   const trimmedQuery = query.trim();
   const trimmedDebouncedQuery = debouncedQuery.trim();
   const isResultNavigationDisabled = isSearchPending || isSearching || isIndexing;
+  const {
+    contextLinesByFile,
+    sourceContentByPath,
+    expandContext: handleExpandContext,
+    collapseContext: handleCollapseContext,
+    isContextExpanded,
+    isContextLoading,
+  } = useSearchContext({
+    workspaceId,
+    searchKey,
+    searchRevision,
+    inputQuery: query,
+    results,
+    disabled: isResultNavigationDisabled,
+  });
 
   const handleFileClick = useCallback(
     (filePath: string, lineNumber?: number, columnNumber?: number) => {
@@ -146,6 +172,12 @@ const GlobalSearchBuffer = () => {
     const nextExcerptIndexByFilePath = new Map<string, number>();
     const nextNavigationItems: SearchNavigationItem[] = [];
     const nextMatchIndex = new Map<string, SearchMatchIndexEntry>();
+    const linesByPath = new Map(
+      results.map((result) => [
+        result.file_path,
+        new Map(result.matches.map((line) => [line.line_number, line.line_content])),
+      ]),
+    );
 
     for (const result of results) {
       const displayPath = getRelativePath(result.file_path, rootFolderPath);
@@ -184,6 +216,7 @@ const GlobalSearchBuffer = () => {
           filePath: excerpt.filePath,
           targetLine: match.targetLine,
           targetColumn: match.targetColumn,
+          expectedLine: linesByPath.get(match.filePath)?.get(match.targetLine),
         });
       }
     }
@@ -198,7 +231,7 @@ const GlobalSearchBuffer = () => {
   }, [excerpts, results, rootFolderPath]);
 
   const { selectedIndex, scrollContainerRef, handleKeyDown } = useKeyboardNavigation({
-    isVisible: true,
+    isVisible: activeWorkspaceId === workspaceId,
     allResults: isResultNavigationDisabled ? [] : navigationItems,
     onClose: () => {
       if (query) {
@@ -278,118 +311,52 @@ const GlobalSearchBuffer = () => {
     }
     return Array.from(paths);
   }, [results]);
-  const handleExpandContext = useCallback(
-    async (filePath: string) => {
-      const expansionSearchKey = searchKey;
-
-      try {
-        let content = sourceContentByPathRef.current[filePath];
-        if (content === undefined) {
-          content = await readFileContent(filePath);
-        }
-        if (expansionSearchKey !== activeSearchKeyRef.current) return;
-
-        sourceContentByPathRef.current = {
-          ...sourceContentByPathRef.current,
-          [filePath]: content,
-        };
-        setSourceContentByPath(sourceContentByPathRef.current);
-        setContextLinesByFile((previous) => ({
-          ...previous,
-          [filePath]: Math.max(previous[filePath] ?? DEFAULT_CONTEXT_LINES, EXPANDED_CONTEXT_LINES),
-        }));
-      } catch (contextError) {
-        toast.error(
-          contextError instanceof Error ? contextError.message : "Failed to expand search context",
-        );
-      }
-    },
-    [searchKey],
-  );
-
-  const handleCollapseContext = useCallback((filePath: string) => {
-    setContextLinesByFile((prev) => {
-      const next = { ...prev };
-      delete next[filePath];
-      return next;
-    });
-  }, []);
-
-  const isContextExpanded = useCallback(
-    (filePath: string) =>
-      (contextLinesByFile[filePath] ?? DEFAULT_CONTEXT_LINES) > DEFAULT_CONTEXT_LINES,
-    [contextLinesByFile],
-  );
-
   const replaceNext = useCallback(async () => {
-    if (!selectedMatch || !debouncedQuery || replaceOperation) return;
-
-    setReplaceOperation("next");
-    try {
-      const didReplace = await replaceNextInSource(
-        {
-          filePath: selectedMatch.filePath,
-          line: selectedMatch.targetLine,
-          column: selectedMatch.targetColumn,
-        },
-        debouncedQuery,
-        replaceQuery,
-        searchOptions,
-      );
-
-      if (didReplace) {
-        await refreshSearch();
-      }
-    } catch (replaceError) {
-      toast.error(
-        replaceError instanceof Error ? replaceError.message : "Failed to replace search match",
-      );
-    } finally {
-      setReplaceOperation(null);
-    }
-  }, [debouncedQuery, refreshSearch, replaceOperation, replaceQuery, searchOptions, selectedMatch]);
-
+    if (
+      !selectedMatch ||
+      !debouncedQuery ||
+      replaceOperation ||
+      isResultNavigationDisabled ||
+      searchWarning
+    )
+      return;
+    await performReplaceNext({
+      filePath: selectedMatch.filePath,
+      line: selectedMatch.targetLine,
+      column: selectedMatch.targetColumn,
+      expectedLine: selectedMatch.expectedLine,
+    });
+  }, [
+    debouncedQuery,
+    isResultNavigationDisabled,
+    performReplaceNext,
+    replaceOperation,
+    searchWarning,
+    selectedMatch,
+  ]);
   const replaceAll = useCallback(async () => {
     if (
       !debouncedQuery ||
-      filePathsWithResults.length === 0 ||
+      !filePathsWithResults.length ||
       hasMoreResults ||
-      replaceOperation
-    ) {
+      replaceOperation ||
+      isResultNavigationDisabled ||
+      searchWarning
+    )
       return;
-    }
-
-    setReplaceOperation("all");
-    try {
-      const count = await replaceAllInSources(
-        filePathsWithResults,
-        debouncedQuery,
-        replaceQuery,
-        searchOptions,
-      );
-
-      if (count > 0) {
-        await refreshSearch();
-        toast.success(`Replaced ${count} ${count === 1 ? "match" : "matches"}`);
-      }
-    } catch (replaceError) {
-      toast.error(
-        replaceError instanceof Error ? replaceError.message : "Failed to replace search matches",
-      );
-    } finally {
-      setReplaceOperation(null);
-    }
+    await performReplaceAll(filePathsWithResults);
   }, [
     debouncedQuery,
     filePathsWithResults,
     hasMoreResults,
-    refreshSearch,
+    isResultNavigationDisabled,
+    performReplaceAll,
     replaceOperation,
-    replaceQuery,
-    searchOptions,
+    searchWarning,
   ]);
 
   useEffect(() => {
+    if (!shouldFocusOnMount.current) return;
     const frame = requestAnimationFrame(() => {
       inputRef.current?.focus();
       inputRef.current?.select();
@@ -402,9 +369,6 @@ const GlobalSearchBuffer = () => {
     setVisibleMatchLimit(CONTENT_SEARCH_INITIAL_RENDER_LIMIT);
     setPrioritizedFilePath(null);
     pendingFileNavigatorPathRef.current = null;
-    setContextLinesByFile({});
-    setSourceContentByPath({});
-    sourceContentByPathRef.current = {};
     scrollElement?.scrollTo({ top: 0, behavior: "auto" });
   }, [scrollElement, searchKey]);
 
@@ -567,6 +531,7 @@ const GlobalSearchBuffer = () => {
             onExpandContext={handleExpandContext}
             onCollapseContext={handleCollapseContext}
             isContextExpanded={isContextExpanded}
+            isContextLoading={isContextLoading}
             hasMore={hasMore}
             isLoadingMore={isLoadingMore}
             displayedCount={displayedCount}

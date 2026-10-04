@@ -16,13 +16,17 @@ import { CONTENT_SEARCH_PAGE_SIZE, SEARCH_DEBOUNCE_DELAY } from "../constants/li
 import { mergeSearchResults } from "../utils/content-search-results";
 import { createPathFilterPredicate } from "../utils/path-filters";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import {
+  useActiveWorkspaceId,
+  useWorkspaceStoreScopeId,
+} from "@/features/workspace/stores/create-workspace-scoped-store";
 import { useGlobalSearchSessionStore } from "../stores/global-search-session.store";
 
 export type ContentSearchAvailability = "ready" | "no-workspace" | "unsupported";
 
 const CONTEXT_LINES = 2;
 const INDEX_STATUS_POLL_DELAY = 150;
-const PROVIDER_FILE_CACHE_TTL = 2_000;
 
 const canUseContentSearch = (rootPath: string | null | undefined): rootPath is string =>
   Boolean(rootPath) &&
@@ -31,7 +35,8 @@ const canUseContentSearch = (rootPath: string | null | undefined): rootPath is s
   !rootPath?.startsWith("diff://");
 
 const canUseProviderContentSearch = (rootPath: string | null | undefined): rootPath is string =>
-  typeof rootPath === "string" && rootPath.startsWith("wsl://");
+  typeof rootPath === "string" &&
+  (rootPath.startsWith("wsl://") || rootPath.startsWith("remote://"));
 
 function getSearchAvailability(rootPath: string | null | undefined): ContentSearchAvailability {
   if (!rootPath) return "no-workspace";
@@ -43,10 +48,6 @@ function getErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
   if (typeof error === "string") return error;
   return "Unknown search error";
-}
-
-function hasPathFilters(includeQuery: string, excludeQuery: string): boolean {
-  return Boolean(includeQuery.trim() || excludeQuery.trim());
 }
 
 function mergeSearchResponses(
@@ -69,27 +70,40 @@ function mergeSearchResponses(
     searched_files: previous.searched_files + next.searched_files,
     files_with_matches: mergedResults.length,
     regex_fallback_error: previous.regex_fallback_error ?? next.regex_fallback_error,
+    unreadable_files: (previous.unreadable_files ?? 0) + (next.unreadable_files ?? 0),
+    first_read_error: previous.first_read_error ?? next.first_read_error,
   };
 }
 
-interface ProviderFileCache {
-  rootPath: string;
-  expiresAt: number;
-  promise: Promise<FileEntry[]>;
-}
-
 interface ProviderSearchSession {
-  searchKey: string;
-  promise: Promise<FileEntry[]>;
+  requestId: number;
+  promise: Promise<FileEntry[] | null>;
 }
 
 export const useContentSearch = () => {
+  const scopedWorkspaceId = useWorkspaceStoreScopeId();
+  const activeWorkspaceId = useActiveWorkspaceId();
+  const workspaceId = scopedWorkspaceId ?? activeWorkspaceId;
+  const fileSystemStore = useFileSystemStore.getStore(workspaceId);
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
   const workspaceFolders = useFileSystemStore((state) => state.workspaceFolders);
   const nativeRootPaths = useMemo(
     () => getNativeWorkspaceRootPaths(rootFolderPath, workspaceFolders),
     [rootFolderPath, workspaceFolders],
   );
+  const searchRootPaths = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          [rootFolderPath, ...workspaceFolders.map((folder) => folder.path)].filter(
+            (path): path is string =>
+              canUseContentSearch(path) || canUseProviderContentSearch(path),
+          ),
+        ),
+      ),
+    [rootFolderPath, workspaceFolders],
+  );
+  const useProviderSearch = searchRootPaths.some(canUseProviderContentSearch);
   const {
     query,
     includeQuery,
@@ -112,11 +126,22 @@ export const useContentSearch = () => {
     })),
   );
   const [debouncedQuery] = useDebounce(query, SEARCH_DEBOUNCE_DELAY);
+  const [searchRevision, setSearchRevision] = useState(0);
   const [rawResults, setRawResults] = useState<FileSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [searchWarning, setSearchWarning] = useState<string | null>(null);
+  const [regexWarning, setRegexWarning] = useState<string | null>(null);
+  const [readFailures, setReadFailures] = useState({ count: 0, first: null as string | null });
+  const searchWarning =
+    [
+      regexWarning,
+      readFailures.count
+        ? `Search incomplete: ${readFailures.count} ${readFailures.count === 1 ? "file" : "files"} could not be read. ${readFailures.first ?? ""}`
+        : null,
+    ]
+      .filter(Boolean)
+      .join("; ") || null;
   const [nextFileOffset, setNextFileOffset] = useState(0);
   const [hasMoreResults, setHasMoreResults] = useState(false);
   const [searchedFiles, setSearchedFiles] = useState(0);
@@ -127,14 +152,17 @@ export const useContentSearch = () => {
   const [debouncedIncludeQuery] = useDebounce(includeQuery, SEARCH_DEBOUNCE_DELAY);
   const [debouncedExcludeQuery] = useDebounce(excludeQuery, SEARCH_DEBOUNCE_DELAY);
   const [resultsSearchKey, setResultsSearchKey] = useState<string | null>(null);
+  const [resultsOwner, setResultsOwner] = useState<typeof fileSystemStore | null>(null);
   const requestIdRef = useRef(0);
-  const providerFileCacheRef = useRef<ProviderFileCache | null>(null);
+  const mountedRef = useRef(true);
+  const loadingMoreRequestRef = useRef<number | null>(null);
   const providerSearchSessionRef = useRef<ProviderSearchSession | null>(null);
   const availability = getSearchAvailability(rootFolderPath);
   const searchKey = useMemo(
     () =>
       [
-        nativeRootPaths.join("\n") || rootFolderPath || "",
+        workspaceId,
+        JSON.stringify(searchRootPaths),
         debouncedQuery,
         debouncedIncludeQuery,
         debouncedExcludeQuery,
@@ -143,48 +171,68 @@ export const useContentSearch = () => {
         Number(searchOptions.useRegex),
       ].join("\0"),
     [
+      workspaceId,
       debouncedExcludeQuery,
       debouncedIncludeQuery,
       debouncedQuery,
-      nativeRootPaths,
-      rootFolderPath,
+      searchRootPaths,
       searchOptions.caseSensitive,
       searchOptions.useRegex,
       searchOptions.wholeWord,
     ],
   );
+  const lifetime = useMemo(
+    () => ({ fileSystemStore, workspaceId, searchKey, query, includeQuery, excludeQuery }),
+    [fileSystemStore, workspaceId, searchKey, query, includeQuery, excludeQuery],
+  );
+  const lifetimeRef = useRef(lifetime);
+  lifetimeRef.current = lifetime;
+  const isViewCurrent = useCallback(
+    () =>
+      mountedRef.current &&
+      lifetimeRef.current === lifetime &&
+      workspaceRuntimeRegistry.getWorkspace(workspaceId)?.stores.get("file-system") ===
+        fileSystemStore &&
+      fileSystemStore.getState().rootFolderPath === rootFolderPath &&
+      fileSystemStore.getState().workspaceFolders === workspaceFolders,
+    [lifetime, workspaceId, fileSystemStore, rootFolderPath, workspaceFolders],
+  );
+  const isRequestCurrent = useCallback(
+    (requestId: number) => isViewCurrent() && requestId === requestIdRef.current,
+    [isViewCurrent],
+  );
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      requestIdRef.current++;
+      loadingMoreRequestRef.current = null;
+    };
+  }, []);
   const isSearchPending =
     query !== debouncedQuery ||
     includeQuery !== debouncedIncludeQuery ||
     excludeQuery !== debouncedExcludeQuery ||
-    (Boolean(debouncedQuery.trim()) && availability === "ready" && resultsSearchKey !== searchKey);
+    (Boolean(debouncedQuery.trim()) &&
+      availability === "ready" &&
+      (resultsSearchKey !== searchKey || resultsOwner !== fileSystemStore));
 
   const getProviderFiles = useCallback(
-    (rootPath: string, currentSearchKey: string, fileOffset: number) => {
+    (currentRequestId: number, fileOffset: number) => {
       const currentSession = providerSearchSessionRef.current;
-      if (fileOffset > 0 && currentSession?.searchKey === currentSearchKey) {
+      if (fileOffset > 0 && currentSession?.requestId === currentRequestId)
         return currentSession.promise;
-      }
-
-      const now = Date.now();
-      const cached = providerFileCacheRef.current;
-      const promise =
-        cached && cached.rootPath === rootPath && cached.expiresAt > now
-          ? cached.promise
-          : loadProviderSearchFiles();
-
-      if (promise !== cached?.promise) {
-        providerFileCacheRef.current = {
-          rootPath,
-          expiresAt: now + PROVIDER_FILE_CACHE_TTL,
-          promise,
-        };
-      }
-
-      providerSearchSessionRef.current = { searchKey: currentSearchKey, promise };
+      const promise = loadProviderSearchFiles(fileSystemStore, {
+        isCancelled: () => !isRequestCurrent(currentRequestId),
+      });
+      providerSearchSessionRef.current = { requestId: currentRequestId, promise };
+      void promise.catch(() => {
+        if (providerSearchSessionRef.current?.promise === promise)
+          providerSearchSessionRef.current = null;
+      });
       return promise;
     },
-    [],
+    [fileSystemStore, isRequestCurrent],
   );
 
   const requestSearchPage = useCallback(
@@ -192,9 +240,9 @@ export const useContentSearch = () => {
       const searchRootPath = rootFolderPath;
       if (!searchRootPath || availability !== "ready") return null;
 
-      if (canUseProviderContentSearch(searchRootPath)) {
-        const files = await getProviderFiles(searchRootPath, searchKey, fileOffset);
-        if (currentRequestId !== requestIdRef.current) return null;
+      if (useProviderSearch) {
+        const files = await getProviderFiles(currentRequestId, fileOffset);
+        if (!files || !isRequestCurrent(currentRequestId)) return null;
 
         return searchProviderFilesContent({
           files,
@@ -206,7 +254,7 @@ export const useContentSearch = () => {
           contextLines: CONTEXT_LINES,
           includeQuery: debouncedIncludeQuery,
           excludeQuery: debouncedExcludeQuery,
-          isCancelled: () => currentRequestId !== requestIdRef.current,
+          isCancelled: () => !isRequestCurrent(currentRequestId),
         });
       }
 
@@ -227,9 +275,10 @@ export const useContentSearch = () => {
       debouncedIncludeQuery,
       debouncedQuery,
       getProviderFiles,
+      isRequestCurrent,
       nativeRootPaths,
       rootFolderPath,
-      searchKey,
+      useProviderSearch,
       searchOptions,
     ],
   );
@@ -241,13 +290,12 @@ export const useContentSearch = () => {
         debouncedIncludeQuery,
         debouncedExcludeQuery,
       );
-      const shouldSkipEmptyPages = hasPathFilters(debouncedIncludeQuery, debouncedExcludeQuery);
       let response: SearchFilesResponse | null = null;
       let nextOffset = fileOffset;
 
-      while (currentRequestId === requestIdRef.current) {
+      while (isRequestCurrent(currentRequestId)) {
         const page = await requestSearchPage(nextOffset, currentRequestId);
-        if (!page || currentRequestId !== requestIdRef.current) return null;
+        if (!page || !isRequestCurrent(currentRequestId)) return null;
         if (page.is_indexing) return page;
 
         const visibleResults = page.results.filter((result) =>
@@ -255,36 +303,48 @@ export const useContentSearch = () => {
         );
         response = mergeSearchResponses(response, page, visibleResults);
 
-        if (!shouldSkipEmptyPages || visibleResults.length > 0 || !page.has_more) {
+        if (visibleResults.length > 0 || !page.has_more) {
           return response;
         }
 
-        if (page.next_file_offset <= nextOffset) {
-          return {
-            ...response,
-            has_more: false,
-            next_file_offset: 0,
-          };
-        }
+        if (page.next_file_offset <= nextOffset)
+          throw new Error("Search pagination did not advance. Refresh the search to try again.");
 
         nextOffset = page.next_file_offset;
       }
 
       return null;
     },
-    [debouncedExcludeQuery, debouncedIncludeQuery, requestSearchPage, rootFolderPath],
+    [
+      debouncedExcludeQuery,
+      debouncedIncludeQuery,
+      requestSearchPage,
+      rootFolderPath,
+      isRequestCurrent,
+    ],
   );
 
   const performSearch = useCallback(async () => {
+    if (!isViewCurrent()) return;
     const currentRequestId = ++requestIdRef.current;
+    setSearchRevision(currentRequestId);
+    loadingMoreRequestRef.current = null;
+    providerSearchSessionRef.current = null;
     const hasQuery = Boolean(debouncedQuery.trim());
 
-    if (!hasQuery || availability !== "ready") {
+    if (
+      !hasQuery ||
+      availability !== "ready" ||
+      query !== debouncedQuery ||
+      includeQuery !== debouncedIncludeQuery ||
+      excludeQuery !== debouncedExcludeQuery
+    ) {
       setRawResults([]);
       setIsSearching(false);
       setIsLoadingMore(false);
       setError(null);
-      setSearchWarning(null);
+      setRegexWarning(null);
+      setReadFailures({ count: 0, first: null });
       setNextFileOffset(0);
       setHasMoreResults(false);
       setSearchedFiles(0);
@@ -299,7 +359,8 @@ export const useContentSearch = () => {
     setIsSearching(true);
     setIsLoadingMore(false);
     setError(null);
-    setSearchWarning(null);
+    setRegexWarning(null);
+    setReadFailures({ count: 0, first: null });
     setRawResults([]);
     setNextFileOffset(0);
     setHasMoreResults(false);
@@ -309,7 +370,7 @@ export const useContentSearch = () => {
 
     try {
       const response = await requestVisibleSearchPage(0, currentRequestId);
-      if (!response || currentRequestId !== requestIdRef.current) return;
+      if (!response || !isRequestCurrent(currentRequestId)) return;
 
       if (response.is_indexing) {
         setIsIndexing(true);
@@ -325,14 +386,19 @@ export const useContentSearch = () => {
       setHasMoreResults(response.has_more);
       setSearchedFiles(response.searched_files);
       setSearchableFiles(response.searchable_files);
-      setSearchWarning(
+      setRegexWarning(
         response.regex_fallback_error
           ? "Invalid regular expression; showing literal matches"
           : null,
       );
+      setReadFailures({
+        count: response.unreadable_files ?? 0,
+        first: response.first_read_error ?? null,
+      });
       setResultsSearchKey(searchKey);
+      setResultsOwner(fileSystemStore);
     } catch (searchError) {
-      if (currentRequestId !== requestIdRef.current) return;
+      if (!isRequestCurrent(currentRequestId)) return;
       console.error("Search error:", searchError);
       setError(`Search failed: ${getErrorMessage(searchError)}`);
       setRawResults([]);
@@ -340,12 +406,26 @@ export const useContentSearch = () => {
       setHasMoreResults(false);
       setIsIndexing(false);
       setResultsSearchKey(searchKey);
+      setResultsOwner(fileSystemStore);
     } finally {
-      if (currentRequestId === requestIdRef.current) {
+      if (isRequestCurrent(currentRequestId)) {
         setIsSearching(false);
       }
     }
-  }, [availability, debouncedQuery, requestVisibleSearchPage, searchKey]);
+  }, [
+    availability,
+    debouncedQuery,
+    requestVisibleSearchPage,
+    searchKey,
+    isViewCurrent,
+    isRequestCurrent,
+    fileSystemStore,
+    query,
+    includeQuery,
+    excludeQuery,
+    debouncedIncludeQuery,
+    debouncedExcludeQuery,
+  ]);
 
   const loadMoreResults = useCallback(async () => {
     if (
@@ -354,18 +434,22 @@ export const useContentSearch = () => {
       !hasMoreResults ||
       nextFileOffset <= 0 ||
       isSearching ||
-      isLoadingMore
+      isLoadingMore ||
+      loadingMoreRequestRef.current !== null ||
+      !isViewCurrent() ||
+      isSearchPending
     ) {
       return;
     }
 
     const currentRequestId = requestIdRef.current;
+    loadingMoreRequestRef.current = currentRequestId;
     setIsLoadingMore(true);
     setError(null);
 
     try {
       const response = await requestVisibleSearchPage(nextFileOffset, currentRequestId);
-      if (!response || currentRequestId !== requestIdRef.current) return;
+      if (!response || !isRequestCurrent(currentRequestId)) return;
 
       if (response.is_indexing) {
         setIsIndexing(true);
@@ -385,17 +469,24 @@ export const useContentSearch = () => {
           : previous + response.searched_files,
       );
       setSearchableFiles(response.searchable_files);
-      setSearchWarning(
-        response.regex_fallback_error
-          ? "Invalid regular expression; showing literal matches"
-          : null,
+      setRegexWarning(
+        (previous) =>
+          previous ??
+          (response.regex_fallback_error
+            ? "Invalid regular expression; showing literal matches"
+            : null),
       );
+      setReadFailures((previous) => ({
+        count: previous.count + (response.unreadable_files ?? 0),
+        first: previous.first ?? response.first_read_error ?? null,
+      }));
     } catch (searchError) {
-      if (currentRequestId !== requestIdRef.current) return;
+      if (!isRequestCurrent(currentRequestId)) return;
       console.error("Search error:", searchError);
       setError(`Search failed: ${getErrorMessage(searchError)}`);
     } finally {
-      if (currentRequestId === requestIdRef.current) {
+      if (isRequestCurrent(currentRequestId)) {
+        loadingMoreRequestRef.current = null;
         setIsLoadingMore(false);
       }
     }
@@ -405,12 +496,21 @@ export const useContentSearch = () => {
     hasMoreResults,
     isLoadingMore,
     isSearching,
+    isViewCurrent,
+    isRequestCurrent,
+    isSearchPending,
     nextFileOffset,
     requestVisibleSearchPage,
   ]);
 
   useEffect(() => {
-    if (!isIndexing || !debouncedQuery.trim() || !canUseContentSearch(rootFolderPath)) return;
+    if (
+      !isIndexing ||
+      !debouncedQuery.trim() ||
+      !canUseContentSearch(rootFolderPath) ||
+      useProviderSearch
+    )
+      return;
 
     const pollingRequestId = requestIdRef.current;
     let disposed = false;
@@ -422,7 +522,7 @@ export const useContentSearch = () => {
       pollInFlight = true;
       try {
         const status = await fffScanStatus(nativeRootPaths);
-        if (disposed || pollingRequestId !== requestIdRef.current) return;
+        if (disposed || !isRequestCurrent(pollingRequestId)) return;
 
         setIsIndexing(status.is_scanning);
         setScannedFiles(status.scanned_files_count);
@@ -434,7 +534,7 @@ export const useContentSearch = () => {
         clearInterval(timer);
         void performSearch();
       } catch (statusError) {
-        if (disposed || pollingRequestId !== requestIdRef.current) return;
+        if (disposed || !isRequestCurrent(pollingRequestId)) return;
         console.error("Search index status error:", statusError);
         failureCount++;
         if (failureCount >= 3) {
@@ -442,6 +542,7 @@ export const useContentSearch = () => {
           setIsIndexing(false);
           setError(`Search indexing failed: ${getErrorMessage(statusError)}`);
           setResultsSearchKey(searchKey);
+          setResultsOwner(fileSystemStore);
         }
       } finally {
         pollInFlight = false;
@@ -454,18 +555,21 @@ export const useContentSearch = () => {
       disposed = true;
       clearInterval(timer);
     };
-  }, [debouncedQuery, isIndexing, nativeRootPaths, performSearch, rootFolderPath, searchKey]);
+  }, [
+    debouncedQuery,
+    isIndexing,
+    nativeRootPaths,
+    performSearch,
+    rootFolderPath,
+    searchKey,
+    isRequestCurrent,
+    fileSystemStore,
+    useProviderSearch,
+  ]);
 
   useEffect(() => {
     void performSearch();
   }, [performSearch]);
-
-  useEffect(() => {
-    if (providerFileCacheRef.current?.rootPath !== rootFolderPath) {
-      providerFileCacheRef.current = null;
-      providerSearchSessionRef.current = null;
-    }
-  }, [rootFolderPath]);
 
   return {
     query,
@@ -492,6 +596,7 @@ export const useContentSearch = () => {
     setIncludeQuery,
     excludeQuery,
     setExcludeQuery,
+    searchRevision,
     refreshSearch: performSearch,
     loadMoreResults,
   };

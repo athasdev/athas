@@ -66,7 +66,7 @@ function buildSearchExcerpt(
   const fileName = getBaseName(result.file_path, result.file_path);
   const directoryPath = getDirectoryPath(result.file_path, rootFolderPath);
   const sourceContent = options.sourceContentByPath?.[result.file_path];
-  const sourceLines = sourceContent?.split("\n");
+  const sourceLines = sourceContent?.split(/\r\n|\r|\n/);
   const expandedContextLines = options.contextLinesByFile?.[result.file_path];
   const lineTextByNumber = new Map<number, string>();
   const contextRanges: Array<{ start: number; end: number }> = [];

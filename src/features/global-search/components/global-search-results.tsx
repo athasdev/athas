@@ -13,6 +13,7 @@ import {
   type FileNavigatorViewMode,
 } from "@/features/file-explorer/components/file-navigator-sidebar";
 import { useZoomStore } from "@/features/window/stores/zoom.store";
+import { Spinner } from "@/ui/spinner";
 import { Button } from "@/ui/button";
 import type { SearchExcerpt } from "../utils/search-excerpts";
 import { estimateSearchExcerptHeight } from "../utils/search-excerpt-virtualization";
@@ -36,6 +37,7 @@ interface GlobalSearchResultsProps {
   onExpandContext: (filePath: string) => void;
   onCollapseContext: (filePath: string) => void;
   isContextExpanded: (filePath: string) => boolean;
+  isContextLoading: (filePath: string) => boolean;
   hasMore: boolean;
   isLoadingMore: boolean;
   displayedCount: number;
@@ -100,6 +102,7 @@ export function GlobalSearchResults({
   onExpandContext,
   onCollapseContext,
   isContextExpanded,
+  isContextLoading,
   hasMore,
   isLoadingMore,
   displayedCount,
@@ -169,15 +172,29 @@ export function GlobalSearchResults({
               type="button"
               variant="ghost"
               iconOnly
+              disabled={isContextLoading(excerpt.filePath)}
+              aria-busy={isContextLoading(excerpt.filePath) || undefined}
               onClick={(event) => {
                 event.stopPropagation();
                 if (isExpanded) onCollapseContext(excerpt.filePath);
                 else onExpandContext(excerpt.filePath);
               }}
-              tooltip={isExpanded ? "Collapse context" : "Expand context"}
+              tooltip={
+                isContextLoading(excerpt.filePath)
+                  ? "Loading context"
+                  : isExpanded
+                    ? "Collapse context"
+                    : "Expand context"
+              }
               aria-label={isExpanded ? "Collapse context" : "Expand context"}
             >
-              {isExpanded ? <MinusIcon size={14} /> : <PlusIcon size={14} />}
+              {isContextLoading(excerpt.filePath) ? (
+                <Spinner compact label="Loading context" />
+              ) : isExpanded ? (
+                <MinusIcon size={14} />
+              ) : (
+                <PlusIcon size={14} />
+              )}
             </Button>
           ),
           render: () => (
@@ -193,6 +210,7 @@ export function GlobalSearchResults({
     [
       excerpts,
       isContextExpanded,
+      isContextLoading,
       onCollapseContext,
       onExpandContext,
       onOpen,
