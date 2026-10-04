@@ -192,6 +192,12 @@ export class EditorUndoGroupTracker {
     return this.lastBufferContent.get(bufferId);
   }
 
+  hasPendingChange(bufferId: string): boolean {
+    const patch = this.pendingPatchUndoGroups.get(bufferId);
+    const snapshot = this.pendingUndoGroups.get(bufferId);
+    return !!patch || !!(snapshot && snapshot.baseEntry.content !== snapshot.latestContent);
+  }
+
   flush(bufferId: string, currentContent: string): StoredHistoryEntry | null {
     const pendingPatchGroup = this.pendingPatchUndoGroups.get(bufferId);
     this.pendingPatchUndoGroups.delete(bufferId);

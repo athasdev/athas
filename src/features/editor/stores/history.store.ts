@@ -1,6 +1,7 @@
 import isEqual from "fast-deep-equal";
 import { immer } from "zustand/middleware/immer";
-import { createWithEqualityFn } from "zustand/traditional";
+import { createStore } from "zustand/vanilla";
+import { createWorkspaceScopedStore } from "@/features/workspace/stores/create-workspace-scoped-store";
 import type {
   BufferHistory,
   HistoryEntry,
@@ -8,7 +9,6 @@ import type {
   PatchHistoryEntry,
   StoredHistoryEntry,
 } from "@/features/editor/types/history.types";
-import { createSelectors } from "@/utils/zustand-selectors";
 import { applyHistoryPatchBatches } from "../history/history-patches";
 
 interface HistoryStoreState {
@@ -22,6 +22,7 @@ interface HistoryActions {
   redo: (bufferId: string, currentEntry?: HistoryEntry) => HistoryEntry | null;
   canUndo: (bufferId: string) => boolean;
   canRedo: (bufferId: string) => boolean;
+  discardFuture: (bufferId: string) => void;
   clearHistory: (bufferId: string) => void;
   clearAllHistories: () => void;
   getHistoryState: (bufferId: string) => HistoryState | null;
@@ -127,151 +128,160 @@ function trimHistoryToByteBudget(history: HistoryState): void {
   }
 }
 
-export const useHistoryStore = createSelectors(
-  createWithEqualityFn<HistoryStoreState>()(
-    immer((set, get) => ({
-      bufferHistories: {},
+export const useHistoryStore = createWorkspaceScopedStore<HistoryStoreState>(
+  "editor-history",
+  () =>
+    createStore<HistoryStoreState>()(
+      immer((set, get) => ({
+        bufferHistories: {},
 
-      actions: {
-        pushHistory: (bufferId: string, entry: StoredHistoryEntry) => {
-          set((state) => {
-            if (!state.bufferHistories[bufferId]) {
-              state.bufferHistories[bufferId] = createDefaultHistoryState();
-            }
-
-            const history = state.bufferHistories[bufferId];
-            const lastEntry = history.past[history.past.length - 1];
-
-            if (
-              lastEntry &&
-              !isPatchHistoryEntry(lastEntry) &&
-              !isPatchHistoryEntry(entry) &&
-              lastEntry.content === entry.content
-            ) {
-              return;
-            }
-
-            // Add to past
-            history.past.push(entry);
-
-            // Clear future on new change
-            history.future = [];
-
-            // Enforce max size
-            if (history.past.length > history.maxHistorySize) {
-              history.past.shift();
-            }
-            trimHistoryToByteBudget(history);
-          });
-        },
-
-        undo: (bufferId: string, currentEntry?: HistoryEntry) => {
-          const history = get().bufferHistories[bufferId];
-          if (!history || history.past.length === 0) {
-            return null;
-          }
-
-          let entry: HistoryEntry | null = null;
-
-          set((state) => {
-            const hist = state.bufferHistories[bufferId];
-            if (hist && hist.past.length > 0) {
-              const lastEntry = hist.past[hist.past.length - 1];
-              if (lastEntry) {
-                if (isPatchHistoryEntry(lastEntry)) {
-                  if (!currentEntry) return;
-                  const resolved = resolvePatchEntry(lastEntry, currentEntry, "reverse");
-                  if (!resolved) return;
-                  hist.past.pop();
-                  hist.future.push({
-                    ...cloneStoredHistoryEntry(lastEntry),
-                    cursorPosition: currentEntry.cursorPosition,
-                    selection: currentEntry.selection,
-                  });
-                  entry = resolved;
-                } else {
-                  hist.past.pop();
-                  if (currentEntry) {
-                    hist.future.push(cloneHistoryEntry(currentEntry));
-                  }
-                  entry = cloneHistoryEntry(lastEntry);
-                }
-                trimHistoryToByteBudget(hist);
+        actions: {
+          pushHistory: (bufferId: string, entry: StoredHistoryEntry) => {
+            set((state) => {
+              if (!state.bufferHistories[bufferId]) {
+                state.bufferHistories[bufferId] = createDefaultHistoryState();
               }
-            }
-          });
 
-          return entry;
-        },
+              const history = state.bufferHistories[bufferId];
+              const lastEntry = history.past[history.past.length - 1];
 
-        redo: (bufferId: string, currentEntry?: HistoryEntry) => {
-          const history = get().bufferHistories[bufferId];
-          if (!history || history.future.length === 0) {
-            return null;
-          }
-
-          let entry: HistoryEntry | null = null;
-
-          set((state) => {
-            const hist = state.bufferHistories[bufferId];
-            if (hist && hist.future.length > 0) {
-              const nextEntry = hist.future[hist.future.length - 1];
-              if (nextEntry) {
-                if (isPatchHistoryEntry(nextEntry)) {
-                  if (!currentEntry) return;
-                  const resolved = resolvePatchEntry(nextEntry, currentEntry, "forward");
-                  if (!resolved) return;
-                  hist.future.pop();
-                  hist.past.push({
-                    ...cloneStoredHistoryEntry(nextEntry),
-                    cursorPosition: currentEntry.cursorPosition,
-                    selection: currentEntry.selection,
-                  });
-                  entry = resolved;
-                } else {
-                  hist.future.pop();
-                  if (currentEntry) {
-                    hist.past.push(cloneHistoryEntry(currentEntry));
-                  }
-                  entry = cloneHistoryEntry(nextEntry);
-                }
-                trimHistoryToByteBudget(hist);
+              if (
+                lastEntry &&
+                !isPatchHistoryEntry(lastEntry) &&
+                !isPatchHistoryEntry(entry) &&
+                lastEntry.content === entry.content
+              ) {
+                return;
               }
+
+              // Add to past
+              history.past.push(entry);
+
+              // Clear future on new change
+              history.future = [];
+
+              // Enforce max size
+              if (history.past.length > history.maxHistorySize) {
+                history.past.shift();
+              }
+              trimHistoryToByteBudget(history);
+            });
+          },
+
+          undo: (bufferId: string, currentEntry?: HistoryEntry) => {
+            const history = get().bufferHistories[bufferId];
+            if (!history || history.past.length === 0) {
+              return null;
             }
-          });
 
-          return entry;
-        },
+            let entry: HistoryEntry | null = null;
 
-        canUndo: (bufferId: string) => {
-          const history = get().bufferHistories[bufferId];
-          return history ? history.past.length > 0 : false;
-        },
+            set((state) => {
+              const hist = state.bufferHistories[bufferId];
+              if (hist && hist.past.length > 0) {
+                const lastEntry = hist.past[hist.past.length - 1];
+                if (lastEntry) {
+                  if (isPatchHistoryEntry(lastEntry)) {
+                    if (!currentEntry) return;
+                    const resolved = resolvePatchEntry(lastEntry, currentEntry, "reverse");
+                    if (!resolved) return;
+                    hist.past.pop();
+                    hist.future.push({
+                      ...cloneStoredHistoryEntry(lastEntry),
+                      cursorPosition: currentEntry.cursorPosition,
+                      selection: currentEntry.selection,
+                    });
+                    entry = resolved;
+                  } else {
+                    hist.past.pop();
+                    if (currentEntry) {
+                      hist.future.push(cloneHistoryEntry(currentEntry));
+                    }
+                    entry = cloneHistoryEntry(lastEntry);
+                  }
+                  trimHistoryToByteBudget(hist);
+                }
+              }
+            });
 
-        canRedo: (bufferId: string) => {
-          const history = get().bufferHistories[bufferId];
-          return history ? history.future.length > 0 : false;
-        },
+            return entry;
+          },
 
-        clearHistory: (bufferId: string) => {
-          set((state) => {
-            if (state.bufferHistories[bufferId]) {
-              state.bufferHistories[bufferId] = createDefaultHistoryState();
+          redo: (bufferId: string, currentEntry?: HistoryEntry) => {
+            const history = get().bufferHistories[bufferId];
+            if (!history || history.future.length === 0) {
+              return null;
             }
-          });
-        },
 
-        clearAllHistories: () => {
-          set((state) => {
-            state.bufferHistories = {};
-          });
-        },
+            let entry: HistoryEntry | null = null;
 
-        getHistoryState: (bufferId: string) => {
-          return get().bufferHistories[bufferId] || null;
+            set((state) => {
+              const hist = state.bufferHistories[bufferId];
+              if (hist && hist.future.length > 0) {
+                const nextEntry = hist.future[hist.future.length - 1];
+                if (nextEntry) {
+                  if (isPatchHistoryEntry(nextEntry)) {
+                    if (!currentEntry) return;
+                    const resolved = resolvePatchEntry(nextEntry, currentEntry, "forward");
+                    if (!resolved) return;
+                    hist.future.pop();
+                    hist.past.push({
+                      ...cloneStoredHistoryEntry(nextEntry),
+                      cursorPosition: currentEntry.cursorPosition,
+                      selection: currentEntry.selection,
+                    });
+                    entry = resolved;
+                  } else {
+                    hist.future.pop();
+                    if (currentEntry) {
+                      hist.past.push(cloneHistoryEntry(currentEntry));
+                    }
+                    entry = cloneHistoryEntry(nextEntry);
+                  }
+                  trimHistoryToByteBudget(hist);
+                }
+              }
+            });
+
+            return entry;
+          },
+
+          canUndo: (bufferId: string) => {
+            const history = get().bufferHistories[bufferId];
+            return history ? history.past.length > 0 : false;
+          },
+
+          canRedo: (bufferId: string) => {
+            const history = get().bufferHistories[bufferId];
+            return history ? history.future.length > 0 : false;
+          },
+
+          discardFuture: (bufferId: string) => {
+            if (!get().bufferHistories[bufferId]?.future.length) return;
+            set((state) => {
+              state.bufferHistories[bufferId].future = [];
+            });
+          },
+
+          clearHistory: (bufferId: string) => {
+            set((state) => {
+              if (state.bufferHistories[bufferId]) {
+                state.bufferHistories[bufferId] = createDefaultHistoryState();
+              }
+            });
+          },
+
+          clearAllHistories: () => {
+            set((state) => {
+              state.bufferHistories = {};
+            });
+          },
+
+          getHistoryState: (bufferId: string) => {
+            return get().bufferHistories[bufferId] || null;
+          },
         },
-      },
-    })),
-    isEqual,
-  ),
+      })),
+    ),
+  isEqual,
 );

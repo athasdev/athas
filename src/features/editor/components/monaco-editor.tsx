@@ -50,6 +50,10 @@ import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { recordStartupMilestone } from "@/features/bootstrap/startup-performance";
 import { useVimStore } from "@/features/vim/stores/vim.store";
+import {
+  useActiveWorkspaceId,
+  useWorkspaceStoreScopeId,
+} from "@/features/workspace/stores/create-workspace-scoped-store";
 import { AnchoredTooltip } from "@/ui/tooltip";
 import { frontendTrace } from "@/utils/frontend-trace";
 import { isNativeTextInputTarget } from "@/utils/keyboard/text-input-target";
@@ -86,6 +90,9 @@ import {
 import { toMonacoLanguageId } from "../engines/monaco/language";
 import { ensureMonacoLanguageTokenizer } from "../engines/monaco/language-contributions";
 import { acquireMonacoModel } from "../engines/monaco/model-lifecycle";
+import { registerMonacoHistoryActions } from "../engines/monaco/history-actions";
+import { applyBufferHistory } from "../services/buffer-history-service";
+import { captureBufferStoreOwner } from "../services/buffer-store-owner";
 import { getEditorBottomScrollPadding } from "../engines/monaco/scroll-padding";
 import { getMonacoScrollbarOptions } from "../engines/monaco/scrollbar-options";
 import {
@@ -227,6 +234,10 @@ export function MonacoEditor({
   const latestDocumentChangeRef = useRef(onDocumentChange);
   const isActiveSurfaceRef = useRef(isActiveSurface);
   const activeBufferId = useBufferStore((state) => propBufferId ?? state.activeBufferId);
+  const activeWorkspaceId = useActiveWorkspaceId();
+  const scopedWorkspaceId = useWorkspaceStoreScopeId();
+  const workspaceId = scopedWorkspaceId ?? activeWorkspaceId;
+  const historyOwner = useMemo(() => captureBufferStoreOwner(workspaceId), [workspaceId]);
   const activeBuffer = useBufferStore(
     useCallback((state) => getBufferById(state.buffers, activeBufferId), [activeBufferId]),
   );
@@ -568,6 +579,36 @@ export function MonacoEditor({
       selection ? toEditorRange(model, selection) : undefined,
     );
   }, [setCursorAndSelection]);
+
+  const applyHistory = useCallback(
+    (direction: "undo" | "redo") => {
+      const editor = editorRef.current;
+      const model = modelRef.current;
+      if (
+        !editor ||
+        !model ||
+        !activeBufferId ||
+        !isActiveSurfaceRef.current ||
+        readOnly ||
+        isPreviewMode
+      )
+        return;
+      const position = editor.getPosition();
+      const selection = editor.getSelection();
+      const entry = applyBufferHistory(historyOwner, activeBufferId, direction, {
+        cursorPosition: position ? toEditorPosition(model, position) : undefined,
+        selection: selection ? toEditorRange(model, selection) : undefined,
+      });
+      if (!entry) return;
+      runWithExternalModelUpdate(model, () => model.setValue(entry.content));
+      const restoredPosition = entry.cursorPosition ?? { line: 0, column: 0, offset: 0 };
+      editor.setPosition(toClampedMonacoPosition(model, restoredPosition));
+      if (entry.selection) editor.setSelection(toMonacoRange(model, entry.selection));
+      bufferMatchesModelRef.current = modelMatchesContent(model, entry.content);
+      syncCursorAndSelection();
+    },
+    [activeBufferId, historyOwner, isPreviewMode, readOnly, syncCursorAndSelection],
+  );
 
   const getMonacoCursorOffset = useCallback(() => {
     const editor = editorRef.current;
@@ -1017,6 +1058,7 @@ export function MonacoEditor({
     requestAnimationFrame(syncNestedEditorFonts);
 
     editor.addCommand(KeyMod.CtrlCmd | KeyCode.KeyA, selectEntireModel);
+    const historyActions = registerMonacoHistoryActions(editor, applyHistory);
 
     const handleWindowSelectAllShortcut = (event: KeyboardEvent) => {
       const isSelectAllShortcut =
@@ -1278,6 +1320,7 @@ export function MonacoEditor({
       renderedGitBlameKeyRef.current = null;
       inlineGitBlamePresentationRef.current = null;
       createdEditorDisposable.dispose();
+      historyActions.dispose();
       if (editorRef.current === editor) editorRef.current = null;
       if (modelRef.current === model) modelRef.current = null;
       editor.dispose();
@@ -1285,6 +1328,7 @@ export function MonacoEditor({
     };
   }, [
     activeBufferId,
+    applyHistory,
     autoCompletion,
     cancelInlineGitBlameClose,
     cancelInlineGitBlameOpen,
@@ -1456,12 +1500,10 @@ export function MonacoEditor({
           runMonacoSelectionAction("editor.action.insertCursorAtEndOfEachLineSelected"),
         removeSecondaryCursors: () => runMonacoSelectionAction("removeSecondaryCursors"),
         undo: () => {
-          editorRef.current?.trigger("athas-api", "undo", null);
-          syncCursorAndSelection();
+          applyHistory("undo");
         },
         redo: () => {
-          editorRef.current?.trigger("athas-api", "redo", null);
-          syncCursorAndSelection();
+          applyHistory("redo");
         },
       });
     }
@@ -1526,6 +1568,7 @@ export function MonacoEditor({
     };
   }, [
     activeBufferId,
+    applyHistory,
     executeMonacoTextEdit,
     filePath,
     isActiveSurface,

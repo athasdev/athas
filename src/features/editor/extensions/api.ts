@@ -1,9 +1,8 @@
 import { useBufferStore } from "../stores/buffer.store";
 import { useEditorDecorationsStore } from "../stores/decorations.store";
-import {
-  flushPendingBufferHistory,
-  syncBufferHistoryContent,
-} from "../stores/buffer-history-tracking";
+import { applyBufferHistory } from "../services/buffer-history-service";
+import { captureBufferStoreOwner } from "../services/buffer-store-owner";
+import { hasPendingBufferHistory } from "../stores/buffer-history-tracking";
 import { useHistoryStore } from "../stores/history.store";
 import { useEditorSettingsStore } from "../stores/settings.store";
 import { useEditorStateStore } from "../stores/state.store";
@@ -603,19 +602,14 @@ class EditorAPIImpl implements EditorAPI {
     if (!activeBuffer || !isEditorContent(activeBuffer)) return;
     const textareaOwningPreviousContent = this.getTextareaOwningContent(activeBuffer.content);
 
-    flushPendingBufferHistory(activeBufferId, activeBuffer.content);
-
-    const historyStore = useHistoryStore.getState();
-    const entry = historyStore.actions.undo(
+    const entry = applyBufferHistory(
+      captureBufferStoreOwner(),
       activeBufferId,
+      "undo",
       this.getCurrentHistoryEntry(activeBuffer.content),
     );
 
     if (entry) {
-      // Restore content
-      bufferStore.actions.updateBufferContent(activeBufferId, entry.content, false);
-      syncBufferHistoryContent(activeBufferId, entry.content);
-
       if (textareaOwningPreviousContent) {
         textareaOwningPreviousContent.value = entry.content;
       }
@@ -658,19 +652,14 @@ class EditorAPIImpl implements EditorAPI {
     if (!activeBuffer || !isEditorContent(activeBuffer)) return;
     const textareaOwningPreviousContent = this.getTextareaOwningContent(activeBuffer.content);
 
-    flushPendingBufferHistory(activeBufferId, activeBuffer.content);
-
-    const historyStore = useHistoryStore.getState();
-    const entry = historyStore.actions.redo(
+    const entry = applyBufferHistory(
+      captureBufferStoreOwner(),
       activeBufferId,
+      "redo",
       this.getCurrentHistoryEntry(activeBuffer.content),
     );
 
     if (entry) {
-      // Restore content
-      bufferStore.actions.updateBufferContent(activeBufferId, entry.content, false);
-      syncBufferHistoryContent(activeBufferId, entry.content);
-
       if (textareaOwningPreviousContent) {
         textareaOwningPreviousContent.value = entry.content;
       }
@@ -699,13 +688,20 @@ class EditorAPIImpl implements EditorAPI {
     const activeBufferId = useBufferStore.getState().activeBufferId;
     if (!activeBufferId) return false;
 
-    return useHistoryStore.getState().actions.canUndo(activeBufferId);
+    const buffer = getBufferById(useBufferStore.getState().buffers, activeBufferId);
+    if (!buffer || buffer.type !== "editor" || buffer.readOnly || buffer.isVirtual) return false;
+    return (
+      hasPendingBufferHistory(activeBufferId) ||
+      useHistoryStore.getState().actions.canUndo(activeBufferId)
+    );
   }
 
   canRedo(): boolean {
     const activeBufferId = useBufferStore.getState().activeBufferId;
     if (!activeBufferId) return false;
 
+    const buffer = getBufferById(useBufferStore.getState().buffers, activeBufferId);
+    if (!buffer || buffer.type !== "editor" || buffer.readOnly || buffer.isVirtual) return false;
     return useHistoryStore.getState().actions.canRedo(activeBufferId);
   }
 

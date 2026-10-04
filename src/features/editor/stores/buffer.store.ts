@@ -31,10 +31,7 @@ import {
   getBufferByPath,
   getBufferIndexById,
 } from "@/features/editor/utils/buffer-index";
-import {
-  findDirtyEditorBuffer,
-  isDirtyEditorBuffer,
-} from "@/features/editor/utils/editor-buffer-selectors";
+import type { ImageDraftState } from "@/features/viewer/image/editor/services/image-edit-session";
 import { usePaneStore } from "@/features/panes/stores/pane.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { SINGLETON_TOOL_BUFFER_METADATA } from "@/features/panes/constants/tool-buffers";
@@ -59,14 +56,33 @@ import { applyEditorTextChanges } from "@/features/editor/utils/editor-text-chan
 import { createWorkspaceScopedStore } from "@/features/workspace/stores/create-workspace-scoped-store";
 import {
   isEditorContent,
+  isDirtyContent,
   isEditableContent,
   isVirtualContent,
   shouldStartLsp,
 } from "@/features/panes/types/pane-content.types";
 import { createSelectors } from "@/utils/zustand-selectors";
+import { getBaseName } from "@/utils/path-helpers";
 
 /** @deprecated Use `PaneContent` directly. Kept for backward compatibility. */
 export type Buffer = PaneContent;
+
+function continueCloseGroup(actions: BufferActions, request: PendingClose) {
+  switch (request.type) {
+    case "all":
+      actions.handleCloseAllTabs();
+      break;
+    case "others":
+      if (request.keepBufferId) actions.handleCloseOtherTabs(request.keepBufferId);
+      break;
+    case "to-left":
+      actions.handleCloseTabsToLeft(request.anchorBufferId ?? request.bufferId);
+      break;
+    case "to-right":
+      actions.handleCloseTabsToRight(request.anchorBufferId ?? request.bufferId);
+      break;
+  }
+}
 
 const lastAppliedModelVersionByBuffer = new Map<
   string,
@@ -90,6 +106,7 @@ interface BufferState {
 }
 
 interface BufferActions {
+  confirmCloseAfterSaving: (request: PendingClose) => boolean;
   openContent: (spec: OpenContentSpec) => string;
   openBuffer: (
     path: string,
@@ -185,6 +202,8 @@ interface BufferActions {
   updateBufferTokens: (bufferId: string, tokens: TokenEntry[]) => void;
   updateBufferLanguage: (bufferId: string, language: string) => void;
   markBufferDirty: (bufferId: string, isDirty: boolean) => void;
+  updateImageDraft: (bufferId: string, draft: ImageDraftState) => void;
+  markBufferSaved: (bufferId: string, content: string, path?: string) => void;
   updateBufferPath: (bufferId: string, newPath: string) => void;
   updateBuffer: (updatedBuffer: PaneContent) => void;
   handleTabClick: (bufferId: string) => void;
@@ -235,7 +254,7 @@ const applyWorkspaceAutoEviction = (
   );
 
   if (evictedBuffer) {
-    cleanupBufferHistoryTracking(evictedBuffer.id);
+    cleanupBufferHistoryTracking(evictedBuffer.id, workspaceId);
     removeBufferFromWorkspacePanes(evictedBuffer.id, false, workspaceId);
   }
 
@@ -506,7 +525,7 @@ const createBufferStore = (workspaceId: string) => {
                   ? getBufferById(newBuffers, previewTargetPane.previewBufferId)
                   : null;
                 if (existingPreview?.isPreview) {
-                  cleanupBufferHistoryTracking(existingPreview.id);
+                  cleanupBufferHistoryTracking(existingPreview.id, workspaceId);
                   removeBufferFromPanes(existingPreview.id, true);
                   newBuffers = newBuffers.filter((b) => b.id !== existingPreview.id);
                 }
@@ -539,7 +558,7 @@ const createBufferStore = (workspaceId: string) => {
             case "terminal": {
               const terminalCount = buffers.filter((b) => b.type === "terminal").length;
               const terminalNumber = terminalCount + 1;
-              const sessionId = spec.sessionId ?? `terminal-tab-${Date.now()}`;
+              const sessionId = spec.sessionId ?? `terminal-tab-${crypto.randomUUID()}`;
               const path = spec.path ?? `terminal://${sessionId}`;
               const displayName = spec.name ?? `Terminal ${terminalNumber}`;
 
@@ -776,7 +795,7 @@ const createBufferStore = (workspaceId: string) => {
                     logger.error("BufferStore", "Failed to close old external editor terminal:", e);
                   });
                 }
-                cleanupBufferHistoryTracking(existingExternalEditor.id);
+                cleanupBufferHistoryTracking(existingExternalEditor.id, workspaceId);
                 removeBufferFromPanes(existingExternalEditor.id);
                 newBuffers = newBuffers.filter((b) => b.id !== existingExternalEditor.id);
               }
@@ -1076,8 +1095,7 @@ const createBufferStore = (workspaceId: string) => {
 
           if (!buffer) return;
 
-          // Only EditorContent can be dirty
-          if (isEditorContent(buffer) && buffer.isDirty) {
+          if (isDirtyContent(buffer)) {
             set((state) => {
               state.pendingClose = {
                 bufferId,
@@ -1096,7 +1114,7 @@ const createBufferStore = (workspaceId: string) => {
 
           if (bufferIndex === -1) return;
 
-          cleanupBufferHistoryTracking(bufferId);
+          cleanupBufferHistoryTracking(bufferId, workspaceId);
 
           const replacementBufferId =
             activeBufferId === bufferId ? getPaneReplacementBufferId([bufferId], buffers) : null;
@@ -1131,7 +1149,7 @@ const createBufferStore = (workspaceId: string) => {
           // Close terminal session for terminal tab buffers
           if (closedBuffer.type === "terminal") {
             import("@/features/terminal/stores/terminal.store").then(({ useTerminalStore }) => {
-              const terminalStore = useTerminalStore.getState();
+              const terminalStore = useTerminalStore.getStore(workspaceId).getState();
               const session = terminalStore.actions.getSession(closedBuffer.sessionId);
               if (session?.connectionId) {
                 closeTerminalConnection(session).catch((e) => {
@@ -1407,6 +1425,15 @@ const createBufferStore = (workspaceId: string) => {
           });
         },
 
+        updateImageDraft: (bufferId, draft) => {
+          set((state) => {
+            const buffer = state.buffers.find((item) => item.id === bufferId);
+            if (!buffer || buffer.type !== "image") return;
+            buffer.imageDraft = draft;
+            if (isDirtyContent(buffer)) buffer.isPreview = false;
+          });
+        },
+
         markBufferDirty: (bufferId: string, isDirty: boolean) => {
           set((state) => {
             const buffer = state.buffers.find((b) => b.id === bufferId);
@@ -1415,6 +1442,21 @@ const createBufferStore = (workspaceId: string) => {
               if (!isDirty) {
                 buffer.savedContent = buffer.content;
               }
+            }
+          });
+        },
+
+        markBufferSaved: (bufferId: string, content: string, path?: string) => {
+          set((state) => {
+            const buffer = state.buffers.find((item) => item.id === bufferId);
+            if (!buffer || !isEditorContent(buffer)) return;
+            buffer.savedContent = content;
+            buffer.isDirty = buffer.content !== content;
+            if (path !== undefined) {
+              buffer.path = path;
+              buffer.name = getBaseName(path);
+              buffer.isVirtual = false;
+              buffer.language = detectLanguageFromFileName(buffer.name);
             }
           });
         },
@@ -1527,7 +1569,7 @@ const createBufferStore = (workspaceId: string) => {
           const { buffers } = get();
           const buffersToClose = buffers.filter((b) => b.id !== keepBufferId && !b.isPinned);
 
-          const dirtyBuffer = findDirtyEditorBuffer(buffersToClose);
+          const dirtyBuffer = buffersToClose.find(isDirtyContent);
           if (dirtyBuffer) {
             set((state) => {
               state.pendingClose = {
@@ -1546,7 +1588,7 @@ const createBufferStore = (workspaceId: string) => {
           const { buffers } = get();
           const buffersToClose = buffers.filter((b) => !b.isPinned);
 
-          const dirtyBuffer = findDirtyEditorBuffer(buffersToClose);
+          const dirtyBuffer = buffersToClose.find(isDirtyContent);
           if (dirtyBuffer) {
             set((state) => {
               state.pendingClose = {
@@ -1563,7 +1605,7 @@ const createBufferStore = (workspaceId: string) => {
         handleCloseSavedTabs: () => {
           const { buffers } = get();
           const buffersToClose = buffers.filter(
-            (buffer) => !buffer.isPinned && !isDirtyEditorBuffer(buffer),
+            (buffer) => !buffer.isPinned && !isDirtyContent(buffer),
           );
 
           buffersToClose.forEach((buffer) => get().actions.closeBufferForce(buffer.id));
@@ -1576,7 +1618,7 @@ const createBufferStore = (workspaceId: string) => {
 
           const buffersToClose = buffers.slice(0, bufferIndex).filter((b) => !b.isPinned);
 
-          const dirtyBuffer = findDirtyEditorBuffer(buffersToClose);
+          const dirtyBuffer = buffersToClose.find(isDirtyContent);
           if (dirtyBuffer) {
             set((state) => {
               state.pendingClose = {
@@ -1598,7 +1640,7 @@ const createBufferStore = (workspaceId: string) => {
 
           const buffersToClose = buffers.slice(bufferIndex + 1).filter((b) => !b.isPinned);
 
-          const dirtyBuffer = findDirtyEditorBuffer(buffersToClose);
+          const dirtyBuffer = buffersToClose.find(isDirtyContent);
           if (dirtyBuffer) {
             set((state) => {
               state.pendingClose = {
@@ -1709,55 +1751,29 @@ const createBufferStore = (workspaceId: string) => {
           });
         },
 
-        confirmCloseWithoutSaving: () => {
-          const { pendingClose } = get();
-          if (!pendingClose) return;
-
-          const { anchorBufferId, bufferId, type, keepBufferId } = pendingClose;
-
+        confirmCloseAfterSaving: (request) => {
+          if (get().pendingClose !== request) return false;
+          const buffer = getBufferById(get().buffers, request.bufferId);
+          if (!buffer || isDirtyContent(buffer)) return false;
           set((state) => {
             state.pendingClose = null;
           });
+          if (request.type === "single") get().actions.closeBufferForce(request.bufferId);
+          else continueCloseGroup(get().actions, request);
+          return true;
+        },
 
-          switch (type) {
-            case "single":
-              get().actions.closeBufferForce(bufferId);
-              break;
-            case "others":
-              if (keepBufferId) {
-                const { buffers } = get();
-                const buffersToClose = buffers.filter((b) => b.id !== keepBufferId && !b.isPinned);
-                buffersToClose.forEach((buffer) => get().actions.closeBufferForce(buffer.id));
-              }
-              break;
-            case "all":
-              {
-                const { buffers } = get();
-                const buffersToClose = buffers.filter((b) => !b.isPinned);
-                buffersToClose.forEach((buffer) => get().actions.closeBufferForce(buffer.id));
-              }
-              break;
-            case "to-left":
-              {
-                const { buffers } = get();
-                const bufferIndex = buffers.findIndex((b) => b.id === (anchorBufferId ?? bufferId));
-                if (bufferIndex !== -1) {
-                  const buffersToClose = buffers.slice(0, bufferIndex).filter((b) => !b.isPinned);
-                  buffersToClose.forEach((buffer) => get().actions.closeBufferForce(buffer.id));
-                }
-              }
-              break;
-            case "to-right":
-              {
-                const { buffers } = get();
-                const bufferIndex = buffers.findIndex((b) => b.id === (anchorBufferId ?? bufferId));
-                if (bufferIndex !== -1) {
-                  const buffersToClose = buffers.slice(bufferIndex + 1).filter((b) => !b.isPinned);
-                  buffersToClose.forEach((buffer) => get().actions.closeBufferForce(buffer.id));
-                }
-              }
-              break;
+        confirmCloseWithoutSaving: () => {
+          const request = get().pendingClose;
+          if (!request) return;
+          set((state) => {
+            state.pendingClose = null;
+          });
+          const buffer = getBufferById(get().buffers, request.bufferId);
+          if (request.type === "single" || !buffer?.isPinned) {
+            get().actions.closeBufferForce(request.bufferId);
           }
+          if (request.type !== "single") continueCloseGroup(get().actions, request);
         },
 
         cancelPendingClose: () => {

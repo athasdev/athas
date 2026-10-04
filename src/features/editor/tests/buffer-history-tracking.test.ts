@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it } from "vite-plus/test";
+import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
 import {
   cleanupBufferHistoryTracking,
   flushPendingBufferHistory,
@@ -115,5 +116,58 @@ describe("buffer history tracking", () => {
     expect(undoEntry?.content).toBe("one");
     const redoEntry = useHistoryStore.getState().actions.redo(BUFFER_ID, currentEntry("one"));
     expect(redoEntry?.content).toBe("one!!");
+  });
+});
+
+describe("workspace-scoped Undo groups", () => {
+  beforeEach(() => {
+    workspaceRuntimeRegistry.resetForTests();
+    workspaceRuntimeRegistry.activateWorkspace({ id: "first", name: "First" });
+  });
+  afterEach(() => workspaceRuntimeRegistry.resetForTests());
+  it("flushes inactive typing into its owner without mixing identical buffer IDs", () => {
+    trackBufferHistoryChange({
+      bufferId: BUFFER_ID,
+      currentContent: "one",
+      nextContent: "one!",
+      workspaceId: "first",
+    });
+    workspaceRuntimeRegistry.activateWorkspace({ id: "second", name: "Second" });
+    trackBufferHistoryChange({
+      bufferId: BUFFER_ID,
+      currentContent: "two",
+      nextContent: "two!",
+      workspaceId: "second",
+    });
+    flushPendingBufferHistory(BUFFER_ID, "one!", "first");
+    flushPendingBufferHistory(BUFFER_ID, "two!", "second");
+    expect(
+      useHistoryStore.getStore("first").getState().actions.undo(BUFFER_ID, currentEntry("one!"))
+        ?.content,
+    ).toBe("one");
+    expect(
+      useHistoryStore.getStore("second").getState().actions.undo(BUFFER_ID, currentEntry("two!"))
+        ?.content,
+    ).toBe("two");
+  });
+  it("does not reuse pending groups from a retired workspace generation", () => {
+    trackBufferHistoryChange({
+      bufferId: BUFFER_ID,
+      currentContent: "old",
+      nextContent: "old!",
+      workspaceId: "first",
+    });
+    workspaceRuntimeRegistry.removeWorkspace("first");
+    workspaceRuntimeRegistry.activateWorkspace({ id: "first", name: "Reopened" });
+    trackBufferHistoryChange({
+      bufferId: BUFFER_ID,
+      currentContent: "new",
+      nextContent: "new!",
+      workspaceId: "first",
+    });
+    flushPendingBufferHistory(BUFFER_ID, "new!", "first");
+    const actions = useHistoryStore.getState().actions;
+    expect(actions.undo(BUFFER_ID, currentEntry("new!"))?.content).toBe("new");
+    expect(actions.undo(BUFFER_ID, currentEntry("new"))).toBeNull();
   });
 });

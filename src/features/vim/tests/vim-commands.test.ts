@@ -15,8 +15,13 @@ vi.mock("@/features/editor/lsp/lsp-client", () => ({
   LspClient: {
     getInstance: () => ({
       notifyDocumentSave: mocks.notifyDocumentSave,
+      stopForFile: vi.fn(),
     }),
   },
+}));
+
+vi.mock("@/features/file-system/services/workspace-resource-provider", () => ({
+  getWorkspaceResourceProvider: () => ({ writeText: mocks.writeFile }),
 }));
 
 vi.mock("@/features/file-system/controllers/platform", async (importOriginal) => {
@@ -137,7 +142,7 @@ describe("vim ex commands", () => {
 
     expect(handled).toBe(true);
     expect(handleSave).toHaveBeenCalledTimes(1);
-    expect(mocks.writeFile).toHaveBeenCalledWith("/workspace/a.ts", "changed");
+    expect(mocks.writeFile).toHaveBeenCalledWith("/workspace/a.ts", "changed", "");
   });
 
   it(":wq saves and closes the buffer without a save prompt", async () => {
@@ -147,7 +152,7 @@ describe("vim ex commands", () => {
 
     expect(handled).toBe(true);
     expect(handleSave).toHaveBeenCalledTimes(1);
-    expect(mocks.writeFile).toHaveBeenCalledWith("/workspace/a.ts", "changed");
+    expect(mocks.writeFile).toHaveBeenCalledWith("/workspace/a.ts", "changed", "");
     expect(activeBuffer()).toBeUndefined();
     expect(useBufferStore.getState().pendingClose).toBeNull();
   });
@@ -156,7 +161,7 @@ describe("vim ex commands", () => {
     const handled = await parseAndExecuteVimCommand("x");
 
     expect(handled).toBe(true);
-    expect(mocks.writeFile).toHaveBeenCalledWith("/workspace/a.ts", "changed");
+    expect(mocks.writeFile).toHaveBeenCalledWith("/workspace/a.ts", "changed", "");
     expect(activeBuffer()).toBeUndefined();
   });
 

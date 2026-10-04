@@ -1,5 +1,5 @@
 import { isSingletonToolBuffer } from "@/features/panes/constants/tool-buffers";
-import type { PaneContent } from "@/features/panes/types/pane-content.types";
+import { isDirtyContent, type PaneContent } from "@/features/panes/types/pane-content.types";
 
 const AUTO_EVICTION_PROTECTED_TYPES = new Set<PaneContent["type"]>([
   "agent",
@@ -15,7 +15,7 @@ function canAutoEvictBuffer(
   buffer: PaneContent,
   { includePreviews = true }: AutoEvictionOptions = {},
 ): boolean {
-  if (buffer.isPinned) return false;
+  if (buffer.isPinned || isDirtyContent(buffer)) return false;
   if (!includePreviews && buffer.isPreview) return false;
   if (isSingletonToolBuffer(buffer)) return false;
   return !AUTO_EVICTION_PROTECTED_TYPES.has(buffer.type);

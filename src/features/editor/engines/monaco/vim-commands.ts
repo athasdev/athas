@@ -7,6 +7,8 @@ let monacoVimCommandsRegistered = false;
 export function registerMonacoVimCommands(): void {
   if (monacoVimCommandsRegistered) return;
   monacoVimCommandsRegistered = true;
+  VimMode.commands.undo = (cm) => cm.editor.trigger("athas-vim", "undo", null);
+  VimMode.commands.redo = (cm) => cm.editor.trigger("athas-vim", "redo", null);
 
   const vimApi = (
     VimMode as unknown as {

@@ -71,3 +71,23 @@ describe("buffer auto eviction", () => {
     expect(result.buffers.map((item) => item.id)).toEqual(["preview"]);
   });
 });
+
+it("preserves dirty editor and image drafts when opening another tab", () => {
+  const image = buffer("image", "image", {
+    imageDraft: {
+      initialSrc: "disk",
+      history: ["disk", "edit"],
+      index: 1,
+      savedSrc: "disk",
+      revision: 1,
+      processing: 0,
+      error: null,
+    },
+  });
+  const result = evictLeastRecentAutoClosableBuffer(
+    [buffer("dirty", "editor", { isDirty: true }), image, buffer("clean")],
+    1,
+  );
+  expect(result.evictedBuffer?.id).toBe("clean");
+  expect(result.buffers.map((item) => item.id)).toEqual(["dirty", "image"]);
+});

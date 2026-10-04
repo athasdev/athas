@@ -1,3 +1,4 @@
+import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
 import { EditorUndoGroupTracker } from "@/features/editor/history/undo-group-tracker";
 import type {
   EditorModelTextChange,
@@ -7,19 +8,43 @@ import type {
 } from "@/features/editor/types/editor.types";
 import { useHistoryStore } from "@/features/editor/stores/history.store";
 
-const undoGroupTracker = new EditorUndoGroupTracker();
-
-export function cleanupBufferHistoryTracking(bufferId: string): void {
-  undoGroupTracker.cleanup(bufferId);
+const trackers = new WeakMap<ReturnType<typeof useHistoryStore.getStore>, EditorUndoGroupTracker>();
+function getHistoryOwner(workspaceId?: string) {
+  const store = useHistoryStore.getStore(
+    workspaceId ?? workspaceRuntimeRegistry.getActiveWorkspaceId(),
+  );
+  let tracker = trackers.get(store);
+  if (!tracker) {
+    tracker = new EditorUndoGroupTracker();
+    trackers.set(store, tracker);
+  }
+  return { store, tracker };
 }
 
-export function flushPendingBufferHistory(bufferId: string, currentContent: string): void {
-  const entry = undoGroupTracker.flush(bufferId, currentContent);
-  if (entry) useHistoryStore.getState().actions.pushHistory(bufferId, entry);
+export function cleanupBufferHistoryTracking(bufferId: string, workspaceId?: string): void {
+  getHistoryOwner(workspaceId).tracker.cleanup(bufferId);
 }
 
-export function syncBufferHistoryContent(bufferId: string, content: string): void {
-  undoGroupTracker.sync(bufferId, content);
+export function hasPendingBufferHistory(bufferId: string, workspaceId?: string): boolean {
+  return getHistoryOwner(workspaceId).tracker.hasPendingChange(bufferId);
+}
+
+export function flushPendingBufferHistory(
+  bufferId: string,
+  currentContent: string,
+  workspaceId?: string,
+): void {
+  const { store, tracker } = getHistoryOwner(workspaceId);
+  const entry = tracker.flush(bufferId, currentContent);
+  if (entry) store.getState().actions.pushHistory(bufferId, entry);
+}
+
+export function syncBufferHistoryContent(
+  bufferId: string,
+  content: string,
+  workspaceId?: string,
+): void {
+  getHistoryOwner(workspaceId).tracker.sync(bufferId, content);
 }
 
 export function trackImmediateBufferHistoryChange({
@@ -28,20 +53,23 @@ export function trackImmediateBufferHistoryChange({
   nextContent,
   previousCursorPosition,
   previousSelection,
+  workspaceId,
 }: {
   bufferId: string;
   currentContent: string;
   nextContent: string;
   previousCursorPosition?: Position;
   previousSelection?: Range;
+  workspaceId?: string;
 }): void {
+  const { store, tracker } = getHistoryOwner(workspaceId);
   if (currentContent === nextContent) {
-    undoGroupTracker.sync(bufferId, nextContent);
+    tracker.sync(bufferId, nextContent);
     return;
   }
 
-  flushPendingBufferHistory(bufferId, currentContent);
-  useHistoryStore.getState().actions.pushHistory(bufferId, {
+  flushPendingBufferHistory(bufferId, currentContent, workspaceId);
+  store.getState().actions.pushHistory(bufferId, {
     content: currentContent,
     cursorPosition: previousCursorPosition ? { ...previousCursorPosition } : undefined,
     selection: previousSelection
@@ -52,7 +80,7 @@ export function trackImmediateBufferHistoryChange({
       : undefined,
     timestamp: Date.now(),
   });
-  undoGroupTracker.sync(bufferId, nextContent);
+  tracker.sync(bufferId, nextContent);
 }
 
 export function trackBufferHistoryChange({
@@ -65,6 +93,7 @@ export function trackBufferHistoryChange({
   skipUndoGrouping,
   contentChange,
   contentChanges,
+  workspaceId,
 }: {
   bufferId: string;
   currentContent: string;
@@ -75,7 +104,9 @@ export function trackBufferHistoryChange({
   skipUndoGrouping?: boolean;
   contentChange?: EditorTextChange;
   contentChanges?: readonly EditorModelTextChange[];
+  workspaceId?: string;
 }): void {
+  const { store, tracker } = getHistoryOwner(workspaceId);
   if (skipUndoGrouping) {
     trackImmediateBufferHistoryChange({
       bufferId,
@@ -83,30 +114,32 @@ export function trackBufferHistoryChange({
       nextContent,
       previousCursorPosition,
       previousSelection,
+      workspaceId,
     });
     return;
   }
 
-  const lastTrackedContent = undoGroupTracker.getTrackedContent(bufferId);
+  const lastTrackedContent = tracker.getTrackedContent(bufferId);
   const contentBeforeChange = contentChanges?.length
     ? (previousContent ?? currentContent)
     : (lastTrackedContent ?? previousContent ?? currentContent);
+  if (contentBeforeChange !== nextContent) store.getState().actions.discardFuture(bufferId);
 
   if (!contentChanges?.length && lastTrackedContent === undefined) {
-    undoGroupTracker.sync(bufferId, contentBeforeChange);
+    tracker.sync(bufferId, contentBeforeChange);
   }
 
   const historyEntries = contentChanges?.length
-    ? undoGroupTracker.trackChanges(bufferId, contentBeforeChange, nextContent, contentChanges, {
+    ? tracker.trackChanges(bufferId, contentBeforeChange, nextContent, contentChanges, {
         previousCursorPosition,
         previousSelection,
       })
-    : undoGroupTracker.track(bufferId, contentBeforeChange, nextContent, {
+    : tracker.track(bufferId, contentBeforeChange, nextContent, {
         previousCursorPosition,
         previousSelection,
         contentChange,
       });
-  const { pushHistory } = useHistoryStore.getState().actions;
+  const { pushHistory } = store.getState().actions;
   for (const entry of historyEntries) {
     pushHistory(bufferId, entry);
   }
