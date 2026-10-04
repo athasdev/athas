@@ -24,7 +24,8 @@ export const listLocalHistoryFile = async (path: string): Promise<LocalHistoryEn
 };
 
 export const readLocalHistoryEntry = async (path: string, entryId: string): Promise<string> => {
-  return commands.localHistoryReadEntry(path, entryId);
+  const content = await commands.localHistoryReadEntry(path, entryId);
+  return content.replace(/^\uFEFF/, "");
 };
 
 export const deleteLocalHistoryEntry = async (path: string, entryId: string): Promise<void> => {

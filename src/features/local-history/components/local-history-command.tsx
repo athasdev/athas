@@ -9,9 +9,13 @@ import {
   TrashIcon,
 } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { restoreLocalHistorySnapshot } from "../services/restore-local-history";
+import {
+  useActiveWorkspaceId,
+  useWorkspaceStoreScopeId,
+} from "@/features/workspace/stores/create-workspace-scoped-store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { emitGitChanged } from "@/features/git/events/git-events";
-import { readFile, writeFile } from "@/features/file-system/controllers/platform";
+import { readFile } from "@/features/file-system/controllers/platform";
 import {
   deleteLocalHistoryEntry,
   listLocalHistoryFile,
@@ -65,9 +69,14 @@ export function LocalHistoryCommandContent({
   onBack,
   onClose,
 }: LocalHistoryCommandContentProps) {
+  const scopedWorkspaceId = useWorkspaceStoreScopeId();
+  const activeWorkspaceId = useActiveWorkspaceId();
+  const workspaceId = scopedWorkspaceId ?? activeWorkspaceId;
   const storedTargetPath = useLocalHistoryStore.use.targetPath();
   const targetPath = storedTargetPath ?? activeFilePath ?? null;
   const fileName = targetPath ? getBaseName(targetPath, "file") : "Local History";
+  const [isRestoring, setIsRestoring] = useState(false);
+  const restoreRequestRef = useRef<AbortController | null>(null);
   const [query, setQuery] = useState("");
   const [entries, setEntries] = useState<LocalHistoryEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -76,6 +85,14 @@ export function LocalHistoryCommandContent({
   const [renameValue, setRenameValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    restoreRequestRef.current = controller;
+    setIsRestoring(false);
+    if (!isActive) controller.abort();
+    return () => controller.abort();
+  }, [isActive, targetPath, workspaceId]);
 
   const filteredEntries = useMemo(
     () =>
@@ -280,33 +297,30 @@ export function LocalHistoryCommandContent({
     async (entry: LocalHistoryEntry) => {
       if (!targetPath) return;
 
+      const controller = restoreRequestRef.current;
+      if (!controller || controller.signal.aborted) return;
+      setIsRestoring(true);
       try {
-        const content = await readLocalHistoryEntry(targetPath, entry.id);
-        await recordLocalHistoryFile(targetPath, "restore");
-        await writeFile(targetPath, content);
-
-        const bufferStore = useBufferStore.getState();
-        const openBuffer = bufferStore.buffers.find(
-          (buffer) => buffer.type === "editor" && buffer.path === targetPath,
-        );
-        if (openBuffer) {
-          bufferStore.actions.updateBufferContent(openBuffer.id, content, false);
-          bufferStore.actions.markBufferDirty(openBuffer.id, false);
-        }
-
-        emitGitChanged({
-          filePath: targetPath,
-          scopes: ["working-tree"],
-          source: "restore-local-history",
+        const restored = await restoreLocalHistorySnapshot({
+          path: targetPath,
+          entryId: entry.id,
+          workspaceId,
+          signal: controller.signal,
         });
-        toast.success("Snapshot restored");
-        onClose();
+        if (controller.signal.aborted) return;
+        if (restored) {
+          toast.success("Snapshot restored");
+          onClose();
+        }
       } catch (error) {
+        if (controller.signal.aborted) return;
         console.error("Failed to restore local history snapshot:", error);
-        toast.error("Failed to restore snapshot");
+        toast.error(error instanceof Error ? error.message : "Failed to restore snapshot");
+      } finally {
+        if (restoreRequestRef.current === controller) setIsRestoring(false);
       }
     },
-    [onClose, targetPath],
+    [onClose, targetPath, workspaceId],
   );
 
   const deleteSnapshot = useCallback(
@@ -499,6 +513,7 @@ export function LocalHistoryCommandContent({
                   type="button"
                   variant="ghost"
                   tooltip="Restore snapshot"
+                  disabled={isRestoring}
                   onClick={(event) => {
                     event.stopPropagation();
                     void restoreSnapshot(entry);
