@@ -1,7 +1,6 @@
 import type React from "react";
 import { Component, type ReactNode } from "react";
-import { Button } from "@/ui/button";
-import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
+import { EmptyState } from "@/ui/empty";
 
 interface Props {
   children: ReactNode;
@@ -31,23 +30,16 @@ export class TerminalErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       return (
         this.props.fallback || (
-          <Empty className="h-full bg-background p-4" tone="error" role="alert">
-            <EmptyHeader>
-              <EmptyTitle>Terminal Error</EmptyTitle>
-              <EmptyDescription>
-                {this.state.error?.message || "Failed to initialize terminal"}
-              </EmptyDescription>
-            </EmptyHeader>
-            <EmptyContent>
-              <Button
-                type="button"
-                variant="default"
-                onClick={() => this.setState({ hasError: false, error: undefined })}
-              >
-                Retry
-              </Button>
-            </EmptyContent>
-          </Empty>
+          <EmptyState
+            tone="error"
+            role="alert"
+            title="Terminal failed to start"
+            message={this.state.error?.message || "Failed to initialize terminal"}
+            action={{
+              label: "Retry",
+              onClick: () => this.setState({ hasError: false, error: undefined }),
+            }}
+          />
         )
       );
     }

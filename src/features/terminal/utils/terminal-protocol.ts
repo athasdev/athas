@@ -6,6 +6,7 @@ import type { TerminalEvent, TerminalSize } from "../types/terminal.types";
 type TerminalEventListener = (event: TerminalEvent) => void;
 
 interface TerminalEventStream {
+  disposed: boolean;
   listeners: Set<TerminalEventListener>;
   pending: TerminalEvent[];
 }
@@ -19,6 +20,7 @@ export type TerminalChannelMessage = ArrayBuffer | TerminalChannelEvent;
 export interface PendingTerminalEventChannel {
   channel: Channel<TerminalChannelMessage>;
   bind: (connectionId: string) => void;
+  dispose: () => void;
 }
 
 export function toTerminalEvent(message: TerminalChannelMessage | Uint8Array): TerminalEvent {
@@ -36,12 +38,14 @@ export function toTerminalEvent(message: TerminalChannelMessage | Uint8Array): T
 
 export function createTerminalEventChannel(): PendingTerminalEventChannel {
   const stream: TerminalEventStream = {
+    disposed: false,
     listeners: new Set(),
     pending: [],
   };
   let connectionId: string | null = null;
 
   const channel = new Channel<TerminalChannelMessage>((message) => {
+    if (stream.disposed) return;
     const event = toTerminalEvent(message);
     if (!connectionId) {
       stream.pending.push(event);
@@ -54,9 +58,15 @@ export function createTerminalEventChannel(): PendingTerminalEventChannel {
   return {
     channel,
     bind: (id) => {
+      if (stream.disposed) return;
       connectionId = id;
       eventStreams.set(id, stream);
       flushPendingEvents(stream);
+    },
+    dispose: () => {
+      disposeStream(stream);
+      if (connectionId && eventStreams.get(connectionId) === stream)
+        eventStreams.delete(connectionId);
     },
   };
 }
@@ -77,7 +87,15 @@ export function subscribeToTerminalEvents(
 }
 
 export function releaseTerminalEventChannel(connectionId: string): void {
+  const stream = eventStreams.get(connectionId);
+  if (stream) disposeStream(stream);
   eventStreams.delete(connectionId);
+}
+
+function disposeStream(stream: TerminalEventStream) {
+  stream.disposed = true;
+  stream.pending.length = 0;
+  stream.listeners.clear();
 }
 
 function flushPendingEvents(stream: TerminalEventStream): void {

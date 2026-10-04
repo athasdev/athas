@@ -1,3 +1,7 @@
+import {
+  useActiveWorkspaceId,
+  useWorkspaceStoreScopeId,
+} from "@/features/workspace/stores/create-workspace-scoped-store";
 import { commands } from "@/bindings/commands";
 import type React from "react";
 import type {
@@ -75,6 +79,9 @@ const TerminalContainer = ({
   onFullScreen,
   isFullScreen = false,
 }: TerminalContainerProps) => {
+  const activeWorkspaceId = useActiveWorkspaceId();
+  const workspaceId = useWorkspaceStoreScopeId() ?? activeWorkspaceId;
+  const terminalStoreApi = useTerminalStore.getStore(workspaceId);
   const getDisplayNameFromDirectory = useCallback((directory: string) => {
     const normalized = directory.replace(/[\\/]+$/, "");
     return normalized.split(/[\\/]/).pop() || "terminal";
@@ -112,7 +119,7 @@ const TerminalContainer = ({
   // Wrapper to add logging and ensure terminal closes properly
   const closeTerminal = useCallback(
     (terminalId: string, options: CloseTerminalOptions = {}) => {
-      const terminalStore = useTerminalStore.getState();
+      const terminalStore = terminalStoreApi.getState();
       const session = terminalStore.actions.getSession(terminalId);
       originalCloseTerminal(terminalId);
 
@@ -126,7 +133,7 @@ const TerminalContainer = ({
 
       terminalStore.actions.removeSession(terminalId);
     },
-    [originalCloseTerminal],
+    [originalCloseTerminal, terminalStoreApi],
   );
 
   const wasVisibleRef = useRef(false);
@@ -290,7 +297,7 @@ const TerminalContainer = ({
       if (!trimmedName) return;
 
       updateTerminalName(terminalId, trimmedName);
-      useTerminalStore.getState().actions.updateSession(terminalId, {
+      terminalStoreApi.getState().actions.updateSession(terminalId, {
         name: trimmedName,
         customName: true,
       });
@@ -300,7 +307,7 @@ const TerminalContainer = ({
         .filter((buffer) => buffer.type === "terminal" && buffer.sessionId === terminalId)
         .forEach((buffer) => actions.updateBuffer({ ...buffer, name: trimmedName }));
     },
-    [updateTerminalName],
+    [updateTerminalName, terminalStoreApi],
   );
 
   const handleCloseOtherTabs = useCallback(
@@ -572,13 +579,13 @@ const TerminalContainer = ({
 
   useEffect(() => {
     if (!activeTerminalId || !isTerminalPaneVisible) return;
-    const session = useTerminalStore.getState().sessions.get(activeTerminalId);
+    const session = terminalStoreApi.getState().sessions.get(activeTerminalId);
     if (session?.lastCommand) {
-      useTerminalStore.getState().actions.updateSession(activeTerminalId, {
+      terminalStoreApi.getState().actions.updateSession(activeTerminalId, {
         lastCommand: undefined,
       });
     }
-  }, [activeTerminalId, isTerminalPaneVisible]);
+  }, [activeTerminalId, isTerminalPaneVisible, terminalStoreApi]);
 
   useEffect(() => {
     const activateTerminal = (terminalId: string) => {
@@ -601,7 +608,7 @@ const TerminalContainer = ({
       const isTerminalVisible = isTerminalPaneVisible && isShownInPane;
 
       if (!isTerminalVisible) {
-        useTerminalStore.getState().actions.updateSession(terminal.id, {
+        terminalStoreApi.getState().actions.updateSession(terminal.id, {
           lastCommand: detail.command,
         });
       }
@@ -612,7 +619,7 @@ const TerminalContainer = ({
           terminalId: terminal.id,
           terminalName: getTerminalDisplayName(
             terminal,
-            useTerminalStore.getState().sessions.get(terminal.id),
+            terminalStoreApi.getState().sessions.get(terminal.id),
           ),
           command: detail.command,
           isTerminalVisible,
@@ -640,6 +647,7 @@ const TerminalContainer = ({
     setBottomPaneActiveTab,
     setIsBottomPaneVisible,
     terminalCommandNotifications,
+    terminalStoreApi,
     terminals,
   ]);
 

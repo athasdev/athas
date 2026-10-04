@@ -46,6 +46,29 @@ describe("terminal protocol", () => {
     expect(getTerminalOutputFlowAction(100_000, true)).toBe("resume");
   });
 
+  it("discards events and prevents rebinding when a launch channel is disposed", () => {
+    const events = createTerminalEventChannel();
+    events.channel.onmessage(new Uint8Array([65]).buffer);
+    events.dispose();
+    events.bind("cancelled-terminal");
+    const received = vi.fn();
+    subscribeToTerminalEvents("cancelled-terminal", received);
+    events.channel.onmessage(new Uint8Array([66]).buffer);
+    expect(received).not.toHaveBeenCalled();
+  });
+
+  it("releases active channels without retaining late output or notifying retired subscribers", () => {
+    const events = createTerminalEventChannel();
+    events.bind("released-terminal");
+    const received = vi.fn();
+    subscribeToTerminalEvents("released-terminal", received);
+    releaseTerminalEventChannel("released-terminal");
+    events.channel.onmessage(new Uint8Array([65]).buffer);
+    events.bind("released-terminal");
+    subscribeToTerminalEvents("released-terminal", received);
+    expect(received).not.toHaveBeenCalled();
+  });
+
   it("reports the rendered grid pixels and deduplicates identical sizes", () => {
     const screen = {
       getBoundingClientRect: () => ({ width: 811.4, height: 423.6 }),

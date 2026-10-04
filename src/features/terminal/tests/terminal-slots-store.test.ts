@@ -15,6 +15,7 @@ describe("terminal slots store", () => {
     const onTerminalExit = vi.fn();
 
     useTerminalSlotsStore.getState().actions.register("session-a", {
+      workspaceId: "workspace-a",
       el,
       isActive: false,
       isVisible: true,
@@ -42,11 +43,13 @@ describe("terminal slots store", () => {
     const newEl = slotElement("new-slot");
 
     useTerminalSlotsStore.getState().actions.register("session-a", {
+      workspaceId: "workspace-a",
       el: oldEl,
       isActive: false,
       isVisible: true,
     });
     useTerminalSlotsStore.getState().actions.register("session-a", {
+      workspaceId: "workspace-a",
       el: newEl,
       isActive: true,
       isVisible: true,
@@ -61,6 +64,7 @@ describe("terminal slots store", () => {
     const el = slotElement("slot-a");
 
     useTerminalSlotsStore.getState().actions.register("session-a", {
+      workspaceId: "workspace-a",
       el,
       isActive: false,
       isVisible: true,

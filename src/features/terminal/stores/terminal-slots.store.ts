@@ -3,6 +3,7 @@ import type { TerminalEmulatorHandle } from "../types/terminal.types";
 import { createSelectors } from "@/utils/zustand-selectors";
 
 export interface TerminalSlotProps {
+  workspaceId: string;
   el: HTMLDivElement;
   isActive: boolean;
   isVisible: boolean;

@@ -1,7 +1,12 @@
+import {
+  useActiveWorkspaceId,
+  useWorkspaceStoreScopeId,
+} from "@/features/workspace/stores/create-workspace-scoped-store";
+import { useTerminalStore } from "../stores/terminal.store";
 import { useEffect, useLayoutEffect, useRef } from "react";
 import { type TerminalSlotProps, useTerminalSlotsStore } from "../stores/terminal-slots.store";
 
-interface Props extends Omit<TerminalSlotProps, "el"> {
+interface Props extends Omit<TerminalSlotProps, "el" | "workspaceId"> {
   sessionId: string;
 }
 
@@ -23,14 +28,18 @@ export function TerminalSlot({
   onReady,
   onActivate,
 }: Props) {
+  const activeWorkspaceId = useActiveWorkspaceId();
+  const workspaceId = useWorkspaceStoreScopeId() ?? activeWorkspaceId;
   const ref = useRef<HTMLDivElement>(null);
 
   // Layout effects, so the terminal moves into this slot before the empty slot paints.
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
+    useTerminalStore.getStore(workspaceId).getState().actions.registerSession(sessionId);
     const { register, unregister } = useTerminalSlotsStore.getState().actions;
     register(sessionId, {
+      workspaceId,
       el,
       isActive,
       isVisible,
@@ -47,7 +56,7 @@ export function TerminalSlot({
     return () => unregister(sessionId, el);
     // Mount/unmount only — prop updates handled below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId]);
+  }, [sessionId, workspaceId]);
 
   useLayoutEffect(() => {
     useTerminalSlotsStore.getState().actions.update(sessionId, {

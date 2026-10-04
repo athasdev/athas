@@ -1,4 +1,6 @@
-import { useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from "react";
+import { TerminalErrorBoundary } from "./terminal-error-boundary";
+import { WorkspaceStoreScopeContext } from "@/features/workspace/stores/create-workspace-scoped-store";
+import { useEffect, useLayoutEffect, useReducer, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useShallow } from "zustand/react/shallow";
 import { useTerminalSlotsStore } from "../stores/terminal-slots.store";
@@ -17,53 +19,43 @@ export function TerminalHost() {
   const activeSessionStoreIds = useTerminalStore(
     useShallow((state) => Array.from(state.sessions.keys())),
   );
-  const sessionStoreIds = workspaceRuntimeRegistry
+  const sessions = workspaceRuntimeRegistry
     .getExistingStores<TerminalStore>("terminal")
-    .flatMap((store) => [...store.getState().sessions.keys()]);
+    .flatMap((store) =>
+      [...store.getState().sessions.keys()].map((sessionId) => ({
+        sessionId,
+        workspaceId: store.getState().workspaceId,
+      })),
+    );
 
   useEffect(
     () => workspaceRuntimeRegistry.subscribeToStoreKey("terminal", refreshWorkspaceSessions),
-    [activeSessionStoreIds],
-  );
-
-  const knownRef = useRef<{ all: Set<string>; everInStore: Set<string> }>({
-    all: new Set(),
-    everInStore: new Set(),
-  });
-
-  for (const id of slotIds) knownRef.current.all.add(id);
-  for (const id of sessionStoreIds) {
-    knownRef.current.all.add(id);
-    knownRef.current.everInStore.add(id);
-  }
-
-  // Once a session has been registered in the terminal store (PTY connected),
-  // its disappearance from there means it was explicitly closed — drop it.
-  for (const id of Array.from(knownRef.current.all)) {
-    if (knownRef.current.everInStore.has(id) && !sessionStoreIds.includes(id)) {
-      knownRef.current.all.delete(id);
-      knownRef.current.everInStore.delete(id);
-    }
-  }
-
-  const liveIds = useMemo(
-    () => Array.from(knownRef.current.all),
-    // Recompute whenever either source changes.
-    [slotIds, sessionStoreIds],
+    [activeSessionStoreIds, slotIds],
   );
 
   return (
     <>
-      {liveIds.map((sessionId) => (
-        <TerminalPortal key={sessionId} sessionId={sessionId} />
+      {sessions.map(({ sessionId, workspaceId }) => (
+        <WorkspaceStoreScopeContext.Provider
+          key={`${workspaceId}/${sessionId}`}
+          value={workspaceId}
+        >
+          <TerminalPortal sessionId={sessionId} workspaceId={workspaceId} />
+        </WorkspaceStoreScopeContext.Provider>
       ))}
     </>
   );
 }
 
-function TerminalPortal({ sessionId }: { sessionId: string }) {
-  const slotEl = useTerminalSlotsStore((state) => state.slots.get(sessionId)?.el);
-  const slot = useTerminalSlotsStore((state) => state.slots.get(sessionId));
+function TerminalPortal({ sessionId, workspaceId }: { sessionId: string; workspaceId: string }) {
+  const slot = useTerminalSlotsStore((state) => {
+    const slot = state.slots.get(sessionId);
+    return slot?.workspaceId === workspaceId ? slot : undefined;
+  });
+  const slotEl = slot?.el;
+  const lastSlotRef = useRef(slot);
+  if (slot) lastSlotRef.current = slot;
+  const metadata = slot ?? lastSlotRef.current;
 
   // Stable wrapper that hosts the terminal DOM for the lifetime of this session.
   const [wrapper] = useState(() => {
@@ -120,19 +112,21 @@ function TerminalPortal({ sessionId }: { sessionId: string }) {
   if (!wrapper) return null;
 
   return createPortal(
-    <TerminalEmulator
-      sessionId={sessionId}
-      isActive={slot?.isActive ?? false}
-      isVisible={slot?.isVisible ?? true}
-      shell={slot?.shell}
-      initialCommand={slot?.initialCommand}
-      environment={slot?.environment}
-      workingDirectory={slot?.workingDirectory}
-      remoteConnectionId={slot?.remoteConnectionId}
-      onTerminalExit={slot?.onTerminalExit}
-      onTerminalRef={slot?.onTerminalRef}
-      onReady={slot?.onReady}
-    />,
+    <TerminalErrorBoundary>
+      <TerminalEmulator
+        sessionId={sessionId}
+        isActive={slot?.isActive ?? false}
+        isVisible={slot?.isVisible ?? false}
+        shell={metadata?.shell}
+        initialCommand={metadata?.initialCommand}
+        environment={metadata?.environment}
+        workingDirectory={metadata?.workingDirectory}
+        remoteConnectionId={metadata?.remoteConnectionId}
+        onTerminalExit={metadata?.onTerminalExit}
+        onTerminalRef={slot?.onTerminalRef}
+        onReady={slot?.onReady}
+      />
+    </TerminalErrorBoundary>,
     wrapper,
   );
 }

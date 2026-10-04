@@ -147,3 +147,16 @@
 .xterm-container .terminal-link-tooltip-hint {
   color: var(--subtle-foreground);
 }
+
+.xterm-container .xterm-screen a,
+.xterm-container .xterm-link,
+.xterm-container [style*="text-decoration"] {
+  color: var(--primary) !important;
+  text-decoration: underline !important;
+  cursor: pointer !important;
+}
+
+.xterm-container .xterm-screen a:hover,
+.xterm-container .xterm-link:hover {
+  opacity: 0.8 !important;
+}

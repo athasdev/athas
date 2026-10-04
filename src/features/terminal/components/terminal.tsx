@@ -1,3 +1,11 @@
+import { EmptyState } from "@/ui/empty";
+import { getFriendlyRemoteError } from "@/features/remote/utils/remote-errors";
+import { launchTerminalSession } from "../services/terminal-session-launch";
+import {
+  useActiveWorkspaceId,
+  useWorkspaceStoreScopeId,
+} from "@/features/workspace/stores/create-workspace-scoped-store";
+import { withRemoteHostTrust } from "@/features/remote/services/remote-host-trust";
 import { commands } from "@/bindings/commands";
 import type { ISearchOptions } from "@xterm/addon-search";
 import { Terminal } from "@xterm/xterm";
@@ -29,10 +37,8 @@ import { currentPlatform } from "@/utils/platform";
 import {
   createTerminalAddons,
   createTerminalLinkHandler,
-  injectLinkStyles,
   loadWebLinksAddon,
   registerFileLinksProvider,
-  removeLinkStyles,
   type TerminalAddons,
 } from "../hooks/use-terminal-addons";
 import { useTerminalConnection } from "../hooks/use-terminal-connection";
@@ -49,7 +55,7 @@ import { formatDroppedPathsForTerminal, getTerminalQuoteStyle } from "../utils/t
 import { resolveTerminalFont } from "../utils/resolve-font";
 import { getTerminalKeyAction } from "../utils/terminal-keyboard";
 import { getTerminalCompatibilityOptions } from "../utils/terminal-options";
-import { createTerminalEventChannel, getTerminalSize } from "../utils/terminal-protocol";
+import { getTerminalSize } from "../utils/terminal-protocol";
 import { getFrontendTerminalSessionArgs } from "../utils/frontend-terminal-session";
 import { TerminalSearch, type TerminalSearchOptions } from "./terminal-search";
 import "@xterm/xterm/css/xterm.css";
@@ -86,12 +92,21 @@ export const TerminalEmulator = ({
   workingDirectory,
   remoteConnectionId,
 }: TerminalEmulatorProps) => {
+  const activeWorkspaceId = useActiveWorkspaceId();
+  const workspaceId = useWorkspaceStoreScopeId() ?? activeWorkspaceId;
+  const terminalOwner = useTerminalStore.getStore(workspaceId);
+  const readyCallbackRef = useRef(onReady);
+  const terminalRefCallbackRef = useRef(onTerminalRef);
+  readyCallbackRef.current = onReady;
+  terminalRefCallbackRef.current = onTerminalRef;
+  const initializationRevisionRef = useRef(0);
   const terminalContainerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const addonsRef = useRef<TerminalAddons | null>(null);
   const shellIntegrationRef = useRef<TerminalShellIntegration | null>(null);
   const linkTooltipRef = useRef<TerminalLinkTooltip | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [initializationError, setInitializationError] = useState<string | null>(null);
   const [isSearchVisible, setIsSearchVisible] = useState(false);
   const [searchResults, setSearchResults] = useState({ current: 0, total: 0 });
   const isInitializingRef = useRef(false);
@@ -138,11 +153,12 @@ export const TerminalEmulator = ({
   const effectiveTerminalFontSize = Math.round(terminalFontSize * zoomLevel * 10) / 10;
   const effectiveTerminalLetterSpacing = terminalLetterSpacing * zoomLevel;
   const effectiveTerminalCursorWidth = Math.max(1, Math.round(terminalCursorWidth * zoomLevel));
-  const terminalIsRemote = Boolean(
-    remoteConnectionId ||
-    session?.remoteConnectionId ||
-    parseRemotePath(workingDirectory || session?.currentDirectory || rootFolderPath || ""),
-  );
+  const effectiveRemoteConnectionId =
+    remoteConnectionId ??
+    session?.remoteConnectionId ??
+    parseRemotePath(workingDirectory || session?.currentDirectory || rootFolderPath || "")
+      ?.connectionId;
+  const terminalIsRemote = Boolean(effectiveRemoteConnectionId);
 
   useEffect(() => {
     workspaceRootRef.current = rootFolderPath;
@@ -161,7 +177,8 @@ export const TerminalEmulator = ({
     initialCommand,
     isInitialized,
     onTerminalExit,
-    remoteConnectionId,
+    remoteConnectionId: effectiveRemoteConnectionId,
+    sessionSignal: terminalOwner.getState().actions.getSessionSignal(sessionId),
     reuseExistingConnection: hadExistingConnectionOnMountRef.current,
     sessionId,
     terminal: terminalRef.current,
@@ -307,6 +324,24 @@ export const TerminalEmulator = ({
     terminal.paste(text);
   }, []);
 
+  const disposeTerminalFrontend = useCallback(() => {
+    terminalInputCleanupRef.current();
+    terminalInputCleanupRef.current = () => {};
+    if (fitFrameRef.current !== null) {
+      cancelAnimationFrame(fitFrameRef.current);
+      fitFrameRef.current = null;
+    }
+    shellIntegrationRef.current?.dispose();
+    shellIntegrationRef.current = null;
+    linkTooltipRef.current?.dispose();
+    linkTooltipRef.current = null;
+    if (terminalRef.current) {
+      terminalRef.current.dispose();
+      terminalRef.current = null;
+      addonsRef.current = null;
+    }
+  }, []);
+
   const initializeTerminal = useCallback(async () => {
     const container = terminalContainerRef.current;
     if (!container || isInitialized || isInitializingRef.current) return;
@@ -316,15 +351,27 @@ export const TerminalEmulator = ({
     if (rect.width <= 0 || rect.height <= 0 || !isContainerVisible) return;
 
     isInitializingRef.current = true;
+    const revision = ++initializationRevisionRef.current;
+    const finishInitialization = () => {
+      if (initializationRevisionRef.current === revision) isInitializingRef.current = false;
+    };
+    let initialized = false;
     const initializationStartedAt = performance.now();
-    const resolved = await resolveTerminalFont(terminalFontFamily, effectiveTerminalFontSize);
-
-    if (!terminalContainerRef.current) {
+    const lifetime = terminalOwner.getState().actions.getSessionSignal(sessionId);
+    if (!lifetime || lifetime.aborted) {
       isInitializingRef.current = false;
       return;
     }
-
     try {
+      const resolved = await resolveTerminalFont(terminalFontFamily, effectiveTerminalFontSize);
+      if (
+        initializationRevisionRef.current !== revision ||
+        terminalContainerRef.current !== container ||
+        lifetime.aborted
+      ) {
+        finishInitialization();
+        return;
+      }
       let linkTooltip: TerminalLinkTooltip | null = null;
       const linkOptions = {
         get tooltip() {
@@ -440,7 +487,6 @@ export const TerminalEmulator = ({
 
       loadWebLinksAddon(terminal, linkOptions);
       registerFileLinksProvider(terminal, linkOptions);
-      injectLinkStyles(sessionId, terminalContainerRef.current.id || `terminal-${sessionId}`);
       shellIntegrationRef.current?.dispose();
       shellIntegrationRef.current = terminalShellIntegration
         ? new TerminalShellIntegration(terminal, {
@@ -465,6 +511,7 @@ export const TerminalEmulator = ({
       terminalRef.current = terminal;
       addonsRef.current = addons;
       addons.progressAddon.onChange((progress) => {
+        if (lifetime.aborted || terminalRef.current !== terminal) return;
         updateSession(sessionId, {
           progress: progress.state === 0 ? undefined : progress,
         });
@@ -493,68 +540,84 @@ export const TerminalEmulator = ({
         const wslInfo = targetDirectory ? parseWslPath(targetDirectory) : null;
         activeRemoteConnectionId = activeRemoteConnectionId || remoteInfo?.connectionId;
         const size = getTerminalSize(terminal);
-        const events = createTerminalEventChannel();
         const launch = existingSession?.launch;
         const { windowLabel, frontendSessionId } = getFrontendTerminalSessionArgs();
 
-        activeConnectionId = activeRemoteConnectionId
-          ? await (async () => {
-              const connection = await connectionStore.getConnection(activeRemoteConnectionId);
-              if (!connection) {
-                throw new Error("Remote terminal connection not found.");
-              }
+        const createdConnectionId = await launchTerminalSession({
+          owner: terminalOwner,
+          sessionId,
+          updates: {
+            currentDirectory: targetDirectory,
+            remoteConnectionId: activeRemoteConnectionId,
+          },
+          launch: async (events, signal) => {
+            signal.throwIfAborted();
+            return activeRemoteConnectionId
+              ? await (async () => {
+                  const connection = await connectionStore.getConnection(activeRemoteConnectionId);
+                  if (!connection) {
+                    throw new Error("Remote terminal connection not found.");
+                  }
 
-              return commands.createRemoteTerminal(
-                {
-                  host: connection.host,
-                  port: connection.port,
-                  username: connection.username,
-                  password: connection.password || null,
-                  keyPath: connection.keyPath || null,
-                  workingDirectory: remoteInfo?.remotePath || "/",
-                },
-                size,
-                events.channel,
-                windowLabel,
-                frontendSessionId,
-              );
-            })()
-          : await commands.createTerminal(
-              {
-                workingDirectory: targetDirectory || null,
-                shell:
-                  shell ||
-                  existingSession?.shell ||
-                  (wslInfo ? getWslShellId(wslInfo.distro) : null),
-                wslDistribution: wslInfo?.distro ?? null,
-                wslWorkingDirectory: wslInfo?.linuxPath ?? null,
-                environment:
-                  (launch?.environment ? { ...environment, ...launch.environment } : environment) ??
-                  null,
-                command: launch?.command ?? null,
-                args: launch?.args ?? null,
-                size,
-                shellIntegration: terminalShellIntegration,
-              },
-              events.channel,
-              windowLabel,
-              frontendSessionId,
-            );
-
-        events.bind(activeConnectionId);
-
-        updateSession(sessionId, {
-          connectionId: activeConnectionId,
-          currentDirectory: targetDirectory,
-          remoteConnectionId: activeRemoteConnectionId,
+                  return withRemoteHostTrust(
+                    connection,
+                    () => {
+                      signal.throwIfAborted();
+                      return commands.createRemoteTerminal(
+                        {
+                          host: connection.host,
+                          port: connection.port,
+                          username: connection.username,
+                          password: connection.password || null,
+                          keyPath: connection.keyPath || null,
+                          workingDirectory: remoteInfo?.remotePath || "/",
+                        },
+                        size,
+                        events.channel,
+                        windowLabel,
+                        frontendSessionId,
+                      );
+                    },
+                    { signal },
+                  );
+                })()
+              : await commands.createTerminal(
+                  {
+                    workingDirectory: targetDirectory || null,
+                    shell:
+                      shell ||
+                      existingSession?.shell ||
+                      (wslInfo ? getWslShellId(wslInfo.distro) : null),
+                    wslDistribution: wslInfo?.distro ?? null,
+                    wslWorkingDirectory: wslInfo?.linuxPath ?? null,
+                    environment:
+                      (launch?.environment
+                        ? { ...environment, ...launch.environment }
+                        : environment) ?? null,
+                    command: launch?.command ?? null,
+                    args: launch?.args ?? null,
+                    size,
+                    shellIntegration: terminalShellIntegration,
+                  },
+                  events.channel,
+                  windowLabel,
+                  frontendSessionId,
+                );
+          },
         });
+        if (!createdConnectionId || lifetime.aborted || terminalRef.current !== terminal) {
+          finishInitialization();
+          return;
+        }
+        activeConnectionId = createdConnectionId;
       }
 
       // No snapshot replay: xterm is portaled and never remounts mid-session,
       // so the live PTY redrawing via SIGWINCH is the source of truth.
 
       setIsInitialized(true);
-      isInitializingRef.current = false;
+      initialized = true;
+      finishInitialization();
 
       // Re-fit after connection is established so onResize can notify the PTY
       fitTerminal();
@@ -569,14 +632,18 @@ export const TerminalEmulator = ({
         }),
       );
 
-      onTerminalRef?.(createSessionHandle(terminal));
-      onReady?.();
+      terminalRefCallbackRef.current?.(createSessionHandle(terminal));
+      readyCallbackRef.current?.();
     } catch (error) {
       console.error("Failed to initialize terminal:", error);
-      isInitializingRef.current = false;
+      if (!initialized && initializationRevisionRef.current === revision && !lifetime.aborted) {
+        setInitializationError(getFriendlyRemoteError(error));
+      }
+      finishInitialization();
     }
   }, [
     currentConnectionIdRef,
+    terminalOwner,
     environment,
     fitTerminal,
     getSession,
@@ -667,10 +734,8 @@ export const TerminalEmulator = ({
     fitTerminal,
   ]);
 
-  useEffect(() => () => removeLinkStyles(sessionId), [sessionId]);
-
   useEffect(() => {
-    if (isInitialized || !isVisible || !terminalContainerRef.current) return;
+    if (isInitialized || initializationError || !isVisible || !terminalContainerRef.current) return;
 
     let rafId: number | null = null;
     const container = terminalContainerRef.current;
@@ -693,7 +758,7 @@ export const TerminalEmulator = ({
     return () => {
       if (rafId !== null) cancelAnimationFrame(rafId);
     };
-  }, [initializeTerminal, isInitialized, isVisible]);
+  }, [initializeTerminal, initializationError, isInitialized, isVisible]);
 
   // Dispose only the terminal frontend on unmount. The PTY process is owned by
   // the buffer store and killed in closeBufferForce when the user actually
@@ -701,23 +766,11 @@ export const TerminalEmulator = ({
   // other layout changes from killing running terminal processes.
   useEffect(() => {
     return () => {
-      terminalInputCleanupRef.current();
-      terminalInputCleanupRef.current = () => {};
-      if (fitFrameRef.current !== null) {
-        cancelAnimationFrame(fitFrameRef.current);
-        fitFrameRef.current = null;
-      }
-      shellIntegrationRef.current?.dispose();
-      shellIntegrationRef.current = null;
-      linkTooltipRef.current?.dispose();
-      linkTooltipRef.current = null;
-      if (terminalRef.current) {
-        terminalRef.current.dispose();
-        terminalRef.current = null;
-        addonsRef.current = null;
-      }
+      initializationRevisionRef.current += 1;
+      isInitializingRef.current = false;
+      disposeTerminalFrontend();
     };
-  }, []);
+  }, [disposeTerminalFrontend]);
 
   // The terminal frontend stays mounted while slots move between panes. When a new
   // slot owner provides a fresh ref callback, hand the live terminal handle to
@@ -985,6 +1038,24 @@ export const TerminalEmulator = ({
 
   return (
     <div className="relative flex size-full min-w-0 flex-col overflow-hidden bg-background">
+      {initializationError && (
+        <div className="absolute inset-0 z-10 flex bg-background">
+          <EmptyState
+            tone="error"
+            role="alert"
+            title="Terminal failed to start"
+            message={initializationError}
+            action={{
+              label: "Retry",
+              onClick: () => {
+                disposeTerminalFrontend();
+                setInitializationError(null);
+                void initializeTerminal();
+              },
+            }}
+          />
+        </div>
+      )}
       <TerminalSearch
         isVisible={isSearchVisible}
         onSearch={handleSearch}
@@ -997,7 +1068,6 @@ export const TerminalEmulator = ({
       <div className="flex min-h-0 min-w-0 flex-1 flex-col pl-4">
         <div
           ref={terminalContainerRef}
-          id={`terminal-${sessionId}`}
           data-terminal-drop-target
           data-terminal-session-id={sessionId}
           className={`xterm-container flex h-full min-h-0 min-w-0 flex-1 text-foreground ${!isActive ? "opacity-60" : ""}`}

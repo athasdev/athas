@@ -1,5 +1,8 @@
-import { beforeEach, describe, expect, it } from "vite-plus/test";
-import { useTerminalTabsStore } from "@/features/terminal/stores/terminal-tabs.store";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
+import {
+  generateTerminalId,
+  useTerminalTabsStore,
+} from "@/features/terminal/stores/terminal-tabs.store";
 import { getLayoutTerminalIds } from "@/features/terminal/utils/terminal-layout";
 import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
 
@@ -11,6 +14,19 @@ function createTerminal(id: string) {
 }
 
 describe("terminal splits", () => {
+  it("creates distinct sessions when identical commands open in the same clock tick", () => {
+    const clock = vi.spyOn(Date, "now").mockReturnValue(1000);
+    try {
+      const first = generateTerminalId("Shell");
+      const second = generateTerminalId("Shell");
+      createTerminal(first);
+      createTerminal(second);
+      expect(first).not.toBe(second);
+      expect(useTerminalTabsStore.getState().terminals).toHaveLength(2);
+    } finally {
+      clock.mockRestore();
+    }
+  });
   beforeEach(() => {
     workspaceRuntimeRegistry.resetForTests();
     workspaceRuntimeRegistry.activateWorkspace({

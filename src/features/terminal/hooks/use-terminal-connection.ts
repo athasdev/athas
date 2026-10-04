@@ -28,6 +28,7 @@ interface UseTerminalConnectionOptions {
   remoteConnectionId?: string;
   reuseExistingConnection?: boolean;
   sessionId: string;
+  sessionSignal?: AbortSignal;
   terminal: Terminal | null;
   updateSession: (
     sessionId: string,
@@ -49,6 +50,7 @@ export function useTerminalConnection({
   remoteConnectionId,
   reuseExistingConnection = false,
   sessionId,
+  sessionSignal,
   terminal,
   updateSession,
 }: UseTerminalConnectionOptions) {
@@ -102,6 +104,7 @@ export function useTerminalConnection({
         ? commands.remoteTerminalSetPaused(activeConnectionId, paused)
         : commands.terminalSetPaused(activeConnectionId, paused);
       void request.catch(() => {
+        if (currentConnectionIdRef.current !== activeConnectionId) return;
         outputPausedRef.current = !paused;
       });
     },
@@ -111,7 +114,7 @@ export function useTerminalConnection({
   const sendTerminalSize = useCallback(
     (activeTerminal: Terminal) => {
       const activeConnectionId = currentConnectionIdRef.current;
-      if (!activeConnectionId) return;
+      if (!activeConnectionId || sessionSignal?.aborted) return;
 
       const size = getTerminalSize(activeTerminal);
       if (terminalSizesEqual(lastSizeRef.current, size)) return;
@@ -121,10 +124,11 @@ export function useTerminalConnection({
         ? commands.remoteTerminalResize(activeConnectionId, size)
         : commands.terminalResize(activeConnectionId, size);
       void request.catch(() => {
+        if (currentConnectionIdRef.current !== activeConnectionId) return;
         lastSizeRef.current = null;
       });
     },
-    [remoteConnectionId],
+    [remoteConnectionId, sessionSignal],
   );
 
   useEffect(() => {
@@ -142,29 +146,45 @@ export function useTerminalConnection({
   }, [connectionId, flush, sessionId, updateSession]);
 
   useEffect(() => {
-    if (!terminal || !isInitialized || !connectionId) return;
+    if (!terminal || !isInitialized || !connectionId || sessionSignal?.aborted) return;
+    const isCurrent = () =>
+      !sessionSignal?.aborted && currentConnectionIdRef.current === connectionId;
 
     const disposables: IDisposable[] = [];
 
-    disposables.push(terminal.onData(write));
-    if (terminal.onBinary) disposables.push(terminal.onBinary(writeBinary));
-    disposables.push(terminal.onResize(() => sendTerminalSize(terminal)));
+    disposables.push(
+      terminal.onData((data) => {
+        if (isCurrent()) write(data);
+      }),
+    );
+    if (terminal.onBinary)
+      disposables.push(
+        terminal.onBinary((data) => {
+          if (isCurrent()) writeBinary(data);
+        }),
+      );
+    disposables.push(
+      terminal.onResize(() => {
+        if (isCurrent()) sendTerminalSize(terminal);
+      }),
+    );
     disposables.push(
       terminal.onTitleChange((title) => {
+        if (!isCurrent()) return;
         updateSession(sessionId, { title: normalizeTerminalTitle(title) ?? "" });
       }),
     );
     disposables.push(
       terminal.parser.registerOscHandler(7, (payload) => {
         const currentDirectory = parseOsc7Directory(payload);
-        if (currentDirectory) updateSession(sessionId, { currentDirectory });
+        if (currentDirectory && isCurrent()) updateSession(sessionId, { currentDirectory });
         return true;
       }),
     );
     disposables.push(
       terminal.onSelectionChange(() => {
         const selection = terminal.getSelection();
-        if (selection) updateSession(sessionId, { selection });
+        if (selection && isCurrent()) updateSession(sessionId, { selection });
       }),
     );
     const unlistenThemeChange = themeRegistry.onThemeChange(() => {
@@ -184,6 +204,7 @@ export function useTerminalConnection({
     });
 
     const unsubscribeEvents = subscribeToTerminalEvents(connectionId, (event) => {
+      if (!isCurrent()) return;
       if (event.event === "output") {
         outputBuffer.enqueue(event.data);
         return;
@@ -192,7 +213,7 @@ export function useTerminalConnection({
       if (event.event === "error") {
         hadTerminalErrorRef.current = true;
         void outputBuffer.whenDrained().then(() => {
-          if (outputBuffer.isDisposed()) return;
+          if (outputBuffer.isDisposed() || !isCurrent()) return;
           terminal.writeln(`\r\n\x1b[31mError: ${event.message}\x1b[0m`);
         });
         return;
@@ -203,24 +224,25 @@ export function useTerminalConnection({
         return;
       }
 
+      const exitInfo = lastExitInfoRef.current;
+      const hadError = hadTerminalErrorRef.current;
       void outputBuffer.whenDrained().then(() => {
         void closeTerminalConnection({ connectionId, remoteConnectionId }).catch(() => {});
         releaseTerminalEventChannel(connectionId);
+        if (outputBuffer.isDisposed() || !isCurrent()) return;
         window.dispatchEvent(
           new CustomEvent(TERMINAL_PROCESS_EXIT_EVENT, {
             detail: {
               sessionId,
-              exitCode: hadTerminalErrorRef.current
-                ? null
-                : (lastExitInfoRef.current?.exitCode ?? null),
-              signal: lastExitInfoRef.current?.signal ?? null,
+              exitCode: hadError ? null : (exitInfo?.exitCode ?? null),
+              signal: exitInfo?.signal ?? null,
             },
           }),
         );
 
-        const exitCode = lastExitInfoRef.current?.exitCode;
-        const signal = lastExitInfoRef.current?.signal;
-        const exitedCleanly = !hadTerminalErrorRef.current && exitCode === 0 && signal == null;
+        const exitCode = exitInfo?.exitCode;
+        const signal = exitInfo?.signal;
+        const exitedCleanly = !hadError && exitCode === 0 && signal == null;
         if (exitedCleanly) {
           onTerminalExitRef.current?.(sessionId);
           return;
@@ -229,7 +251,7 @@ export function useTerminalConnection({
         // explain the exit in.
         if (outputBuffer.isDisposed()) return;
 
-        if (!hadTerminalErrorRef.current) {
+        if (!hadError) {
           const details =
             signal != null
               ? `signal ${signal}`
@@ -261,6 +283,7 @@ export function useTerminalConnection({
     remoteConnectionId,
     sendTerminalSize,
     sessionId,
+    sessionSignal,
     setOutputPaused,
     terminal,
     updateSession,
@@ -274,15 +297,23 @@ export function useTerminalConnection({
 
     initialCommandSentForConnectionRef.current = connectionId;
     const timeoutId = window.setTimeout(() => {
+      if (sessionSignal?.aborted || currentConnectionIdRef.current !== connectionId) return;
       write(`${initialCommand}\n`);
     }, 300);
 
     return () => window.clearTimeout(timeoutId);
-  }, [connectionId, initialCommand, reuseExistingConnection, write]);
+  }, [connectionId, initialCommand, reuseExistingConnection, sessionSignal, write]);
+
+  const writeBuffered = useCallback(
+    (data: string) => {
+      if (!sessionSignal?.aborted) write(data);
+    },
+    [sessionSignal, write],
+  );
 
   return {
     currentConnectionIdRef,
     sendTerminalSize,
-    writeBuffered: write,
+    writeBuffered,
   };
 }

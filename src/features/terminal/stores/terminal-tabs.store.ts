@@ -17,7 +17,7 @@ import {
 import { createWorkspaceScopedStore } from "@/features/workspace/stores/create-workspace-scoped-store";
 
 export const generateTerminalId = (name: string): string => {
-  return `terminal_${name.replace(/[^a-zA-Z0-9]/g, "_")}_${Date.now()}`;
+  return `terminal_${name.replace(/[^a-zA-Z0-9]/g, "_")}_${crypto.randomUUID()}`;
 };
 
 const terminalReducer = (state: TerminalState, action: TerminalAction): TerminalState => {
