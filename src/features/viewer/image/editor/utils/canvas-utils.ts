@@ -1,3 +1,4 @@
+import { getImageDimensionError } from "./image-dimensions";
 import type { ImageDimensions } from "../types/image-operation.types";
 
 /**
@@ -18,6 +19,8 @@ export async function loadImage(src: string): Promise<HTMLImageElement> {
  * Create a canvas element with specified dimensions
  */
 export function createCanvas(width: number, height: number): HTMLCanvasElement {
+  const error = getImageDimensionError(width, height);
+  if (error) throw new Error(error);
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
@@ -46,7 +49,13 @@ export async function getCanvasBlob(
   return new Promise((resolve, reject) => {
     canvas.toBlob(
       (blob) => {
-        if (blob) {
+        if (blob && blob.type !== mimeType) {
+          reject(
+            new Error(
+              `This system cannot encode ${mimeType.replace("image/", "").toUpperCase()} images.`,
+            ),
+          );
+        } else if (blob) {
           resolve(blob);
         } else {
           reject(new Error("Failed to create blob from canvas"));
@@ -78,6 +87,13 @@ export function calculateAspectRatioDimensions(
   targetWidth?: number,
   targetHeight?: number,
 ): ImageDimensions {
+  if (
+    !Number.isFinite(originalWidth) ||
+    !Number.isFinite(originalHeight) ||
+    originalWidth <= 0 ||
+    originalHeight <= 0
+  )
+    throw new Error("Invalid original image dimensions.");
   if (!targetWidth && !targetHeight) {
     return { width: originalWidth, height: originalHeight };
   }
@@ -87,13 +103,13 @@ export function calculateAspectRatioDimensions(
   if (targetWidth && !targetHeight) {
     return {
       width: targetWidth,
-      height: Math.round(targetWidth / aspectRatio),
+      height: Math.max(1, Math.round(targetWidth / aspectRatio)),
     };
   }
 
   if (!targetWidth && targetHeight) {
     return {
-      width: Math.round(targetHeight * aspectRatio),
+      width: Math.max(1, Math.round(targetHeight * aspectRatio)),
       height: targetHeight,
     };
   }
@@ -104,8 +120,8 @@ export function calculateAspectRatioDimensions(
   const scale = Math.min(widthScale, heightScale);
 
   return {
-    width: Math.round(originalWidth * scale),
-    height: Math.round(originalHeight * scale),
+    width: Math.max(1, Math.round(originalWidth * scale)),
+    height: Math.max(1, Math.round(originalHeight * scale)),
   };
 }
 

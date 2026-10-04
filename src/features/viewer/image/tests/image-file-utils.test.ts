@@ -25,10 +25,13 @@ describe("image file utils", () => {
     expect(getDataURLSize(dataURL(Array.from({ length }, (_, index) => index % 256)))).toBe(length);
   });
 
-  it("reports zero for URLs that are not base64 data URLs", () => {
+  it("reports zero for URLs that are not data URLs", () => {
     expect(getDataURLSize("")).toBe(0);
     expect(getDataURLSize("asset://localhost/Users/me/photo,final.png")).toBe(0);
-    expect(getDataURLSize("data:image/svg+xml,<svg/>")).toBe(0);
+  });
+
+  it("measures the decoded text of non-base64 data URLs", () => {
+    expect(getDataURLSize("data:image/svg+xml,<svg/>")).toBe(6);
   });
 
   it("writes the decoded image bytes to the chosen path", async () => {

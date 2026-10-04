@@ -30,8 +30,10 @@ interface ImageContextMenuProps {
   onFlipVertical: () => void;
   onResize: () => void;
   onUndo: () => void;
+  onRedo: () => void;
   onSave: () => void;
   canUndo: boolean;
+  canRedo: boolean;
   hasChanges: boolean;
   isProcessing: boolean;
   currentImageSrc: string;
@@ -51,8 +53,10 @@ export function ImageContextMenu({
   onFlipVertical,
   onResize,
   onUndo,
+  onRedo,
   onSave,
   canUndo,
+  canRedo,
   hasChanges,
   isProcessing,
   currentImageSrc,
@@ -166,6 +170,13 @@ export function ImageContextMenu({
       icon: <ArrowCounterClockwiseIcon />,
       disabled: !canUndo || isProcessing,
       onClick: onUndo,
+    },
+    {
+      id: "redo",
+      label: "Redo",
+      icon: <ArrowClockwiseIcon />,
+      disabled: !canRedo || isProcessing,
+      onClick: onRedo,
     },
     ...(hasChanges
       ? [

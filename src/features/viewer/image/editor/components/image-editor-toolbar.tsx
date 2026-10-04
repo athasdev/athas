@@ -29,8 +29,10 @@ interface ImageEditorToolbarProps {
   onFlipVertical: () => void;
   onResize: () => void;
   onUndo: () => void;
+  onRedo: () => void;
   onSave: () => void;
   canUndo: boolean;
+  canRedo: boolean;
   hasChanges: boolean;
   isProcessing: boolean;
   currentImageSrc: string;
@@ -53,8 +55,10 @@ export function ImageEditorToolbar({
   onFlipVertical,
   onResize,
   onUndo,
+  onRedo,
   onSave,
   canUndo,
+  canRedo,
   hasChanges,
   isProcessing,
   currentImageSrc,
@@ -139,6 +143,16 @@ export function ImageEditorToolbar({
         iconOnly
       >
         <ArrowCounterClockwiseIcon />
+      </Button>
+
+      <Button
+        onClick={onRedo}
+        variant="ghost"
+        disabled={!canRedo || isProcessing}
+        tooltip="Redo last operation"
+        iconOnly
+      >
+        <ArrowClockwiseIcon />
       </Button>
 
       {hasChanges && (

@@ -1,227 +1,90 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import type {
-  ConversionOptions,
   FlipDirection,
   ImageFormat,
   ResizeOptions,
   RotationDegrees,
 } from "../types/image-operation.types";
-import { blobToDataURL } from "../utils/canvas-utils";
+import { ImageEditSession } from "../services/image-edit-session";
 import { convertImageFormat } from "../utils/image-conversion";
-import {
-  flipImage,
-  resizeImage,
-  rotate90CCW,
-  rotate90CW,
-  rotate180,
-  rotateImage,
-} from "../utils/image-transforms";
-
+import { flipImage, resizeImage, rotateImage } from "../utils/image-transforms";
 export interface UseImageOperationsOptions {
   initialSrc: string;
+  sourceKey?: unknown;
+  session?: ImageEditSession;
   onImageUpdate?: (newSrc: string) => void;
 }
-
-export function useImageOperations(options: UseImageOperationsOptions) {
-  const { initialSrc, onImageUpdate } = options;
-
-  const [imageSrc, setImageSrc] = useState(initialSrc);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // History for undo/redo
-  const [history, setHistory] = useState<string[]>([initialSrc]);
-  const [historyIndex, setHistoryIndex] = useState(0);
-
-  // Reset when initialSrc changes (e.g., different image loaded)
+export function useImageOperations({
+  initialSrc,
+  sourceKey,
+  session: ownedSession,
+  onImageUpdate,
+}: UseImageOperationsOptions) {
+  const session = useMemo(() => ownedSession ?? new ImageEditSession(), [ownedSession, sourceKey]);
+  const state = useSyncExternalStore(session.subscribe, session.getSnapshot);
+  const onUpdate = useRef(onImageUpdate);
+  onUpdate.current = onImageUpdate;
   useEffect(() => {
-    if (initialSrc) {
-      setImageSrc(initialSrc);
-      setHistory([initialSrc]);
-      setHistoryIndex(0);
-      setError(null);
-    }
-  }, [initialSrc]);
-
-  const updateImage = useCallback(
-    async (blob: Blob) => {
-      try {
-        const dataURL = await blobToDataURL(blob);
-        setImageSrc(dataURL);
-        onImageUpdate?.(dataURL);
-
-        // Add to history (remove any forward history if we're not at the end)
-        const newHistory = history.slice(0, historyIndex + 1);
-        newHistory.push(dataURL);
-        setHistory(newHistory);
-        setHistoryIndex(newHistory.length - 1);
-
-        setError(null);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to update image");
+    session.setSource(initialSrc, !!ownedSession);
+    if (!ownedSession) return () => session.dispose();
+  }, [session, initialSrc, ownedSession]);
+  useEffect(() => {
+    if (!onUpdate.current) return;
+    let previous = session.getSnapshot().history[session.getSnapshot().index];
+    return session.subscribe(() => {
+      const current = session.getSnapshot();
+      const source = current.history[current.index];
+      if (source !== previous) {
+        previous = source;
+        onUpdate.current?.(source);
       }
-    },
-    [history, historyIndex, onImageUpdate],
-  );
-
+    });
+  }, [session]);
   const convertFormat = useCallback(
-    async (format: ImageFormat, quality?: number) => {
-      setIsProcessing(true);
-      setError(null);
-
-      try {
-        const options: ConversionOptions = { format, quality };
-        const result = await convertImageFormat(imageSrc, options);
-        await updateImage(result.blob);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to convert format");
-      } finally {
-        setIsProcessing(false);
-      }
-    },
-    [imageSrc, updateImage],
+    (format: ImageFormat, quality?: number) =>
+      session.runOperation(
+        (source) => convertImageFormat(source, { format, quality }),
+        "Failed to convert format",
+      ),
+    [session],
   );
-
   const rotate = useCallback(
-    async (degrees: RotationDegrees) => {
-      setIsProcessing(true);
-      setError(null);
-
-      try {
-        const result = await rotateImage(imageSrc, degrees);
-        await updateImage(result.blob);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to rotate image");
-      } finally {
-        setIsProcessing(false);
-      }
-    },
-    [imageSrc, updateImage],
+    (degrees: RotationDegrees) =>
+      session.runOperation((source) => rotateImage(source, degrees), "Failed to rotate image"),
+    [session],
   );
-
-  const rotateCW = useCallback(async () => {
-    setIsProcessing(true);
-    setError(null);
-
-    try {
-      const result = await rotate90CW(imageSrc);
-      await updateImage(result.blob);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to rotate image");
-    } finally {
-      setIsProcessing(false);
-    }
-  }, [imageSrc, updateImage]);
-
-  const rotateCCW = useCallback(async () => {
-    setIsProcessing(true);
-    setError(null);
-
-    try {
-      const result = await rotate90CCW(imageSrc);
-      await updateImage(result.blob);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to rotate image");
-    } finally {
-      setIsProcessing(false);
-    }
-  }, [imageSrc, updateImage]);
-
-  const rotate180Degrees = useCallback(async () => {
-    setIsProcessing(true);
-    setError(null);
-
-    try {
-      const result = await rotate180(imageSrc);
-      await updateImage(result.blob);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to rotate image");
-    } finally {
-      setIsProcessing(false);
-    }
-  }, [imageSrc, updateImage]);
-
+  const rotateCW = useCallback(() => rotate(90), [rotate]);
+  const rotateCCW = useCallback(() => rotate(270), [rotate]);
+  const rotate180 = useCallback(() => rotate(180), [rotate]);
   const flip = useCallback(
-    async (direction: FlipDirection) => {
-      setIsProcessing(true);
-      setError(null);
-
-      try {
-        const result = await flipImage(imageSrc, direction);
-        await updateImage(result.blob);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to flip image");
-      } finally {
-        setIsProcessing(false);
-      }
-    },
-    [imageSrc, updateImage],
+    (direction: FlipDirection) =>
+      session.runOperation((source) => flipImage(source, direction), "Failed to flip image"),
+    [session],
   );
-
   const resize = useCallback(
-    async (options: ResizeOptions) => {
-      setIsProcessing(true);
-      setError(null);
-
-      try {
-        const result = await resizeImage(imageSrc, options);
-        await updateImage(result.blob);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to resize image");
-      } finally {
-        setIsProcessing(false);
-      }
-    },
-    [imageSrc, updateImage],
+    (options: ResizeOptions) =>
+      session.runOperation((source) => resizeImage(source, options), "Failed to resize image"),
+    [session],
   );
-
-  const undo = useCallback(() => {
-    if (historyIndex > 0) {
-      const newIndex = historyIndex - 1;
-      setHistoryIndex(newIndex);
-      setImageSrc(history[newIndex]);
-      onImageUpdate?.(history[newIndex]);
-    }
-  }, [history, historyIndex, onImageUpdate]);
-
-  const redo = useCallback(() => {
-    if (historyIndex < history.length - 1) {
-      const newIndex = historyIndex + 1;
-      setHistoryIndex(newIndex);
-      setImageSrc(history[newIndex]);
-      onImageUpdate?.(history[newIndex]);
-    }
-  }, [history, historyIndex, onImageUpdate]);
-
-  const reset = useCallback(() => {
-    setImageSrc(initialSrc);
-    setHistory([initialSrc]);
-    setHistoryIndex(0);
-    setError(null);
-    onImageUpdate?.(initialSrc);
-  }, [initialSrc, onImageUpdate]);
-
   return {
-    imageSrc,
-    isProcessing,
-    error,
-    // Format conversion
+    imageSrc: state.history[state.index],
+    isProcessing: state.processing > 0,
+    error: state.error,
     convertFormat,
-    // Rotation
     rotate,
     rotateCW,
     rotateCCW,
-    rotate180: rotate180Degrees,
-    // Flip
+    rotate180,
     flip,
-    // Resize
     resize,
-    // History
-    undo,
-    redo,
-    reset,
-    canUndo: historyIndex > 0,
-    canRedo: historyIndex < history.length - 1,
-    hasChanges: historyIndex > 0,
+    undo: session.undo,
+    redo: session.redo,
+    reset: session.reset,
+    captureSave: session.captureSave,
+    isSaveCurrent: session.isSaveCurrent,
+    markSaved: session.markSaved,
+    canUndo: state.index > 0,
+    canRedo: state.index < state.history.length - 1,
+    hasChanges: state.history[state.index] !== state.savedSrc,
   };
 }

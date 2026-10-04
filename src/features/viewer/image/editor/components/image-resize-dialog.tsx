@@ -1,9 +1,10 @@
+import { getImageDimensionError } from "../utils/image-dimensions";
 import { ImageIcon } from "@/ui/icons";
 import { useEffect, useState } from "react";
 import { Button } from "@/ui/button";
 import { Checkbox } from "@/ui/checkbox";
 import Dialog from "@/ui/dialog";
-import { Field, FieldLabel } from "@/ui/field";
+import { Field, FieldError, FieldLabel } from "@/ui/field";
 import Input from "@/ui/input";
 
 interface ImageResizeDialogProps {
@@ -25,6 +26,7 @@ export function ImageResizeDialog({
   const [height, setHeight] = useState(currentHeight);
   const [maintainAspectRatio, setMaintainAspectRatio] = useState(true);
   const aspectRatio = currentWidth / currentHeight;
+  const dimensionError = getImageDimensionError(width, height);
 
   useEffect(() => {
     if (isOpen) {
@@ -36,18 +38,19 @@ export function ImageResizeDialog({
   const handleWidthChange = (newWidth: number) => {
     setWidth(newWidth);
     if (maintainAspectRatio) {
-      setHeight(Math.round(newWidth / aspectRatio));
+      setHeight(Math.max(1, Math.round(newWidth / aspectRatio)));
     }
   };
 
   const handleHeightChange = (newHeight: number) => {
     setHeight(newHeight);
     if (maintainAspectRatio) {
-      setWidth(Math.round(newHeight * aspectRatio));
+      setWidth(Math.max(1, Math.round(newHeight * aspectRatio)));
     }
   };
 
   const handleSubmit = () => {
+    if (dimensionError) return;
     onResize(width, height, maintainAspectRatio);
     onClose();
   };
@@ -66,7 +69,7 @@ export function ImageResizeDialog({
           <Button type="button" variant="default" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="button" variant="accent" onClick={handleSubmit}>
+          <Button type="button" variant="accent" disabled={!!dimensionError} onClick={handleSubmit}>
             Resize
           </Button>
         </>
@@ -104,6 +107,8 @@ export function ImageResizeDialog({
         />
         <FieldLabel htmlFor="maintainAspectRatio">Maintain aspect ratio</FieldLabel>
       </Field>
+
+      {dimensionError ? <FieldError>{dimensionError}</FieldError> : null}
 
       <div className="ui-text-sm text-subtle-foreground">
         Original: {currentWidth} × {currentHeight}px

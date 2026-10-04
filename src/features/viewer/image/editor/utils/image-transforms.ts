@@ -1,3 +1,4 @@
+import { getImageDimensionError } from "./image-dimensions";
 import type {
   FlipDirection,
   ImageOperationResult,
@@ -93,6 +94,8 @@ export async function resizeImage(
   options: ResizeOptions,
 ): Promise<ImageOperationResult> {
   const { width, height, maintainAspectRatio = true } = options;
+  const error = getImageDimensionError(width, height);
+  if (error) throw new Error(error);
   const img = await loadImage(imageSrc);
 
   let finalWidth = width;

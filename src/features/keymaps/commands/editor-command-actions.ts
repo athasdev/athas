@@ -1,3 +1,5 @@
+import { getImageBufferSession } from "@/features/viewer/image/editor/services/image-buffer-session";
+import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { editorAPI } from "@/features/editor/extensions/api";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
@@ -212,11 +214,28 @@ export function selectAllActiveEditor(): void {
   editorAPI.selectAll();
 }
 
+function getActiveImageSession() {
+  const workspaceId = workspaceRuntimeRegistry.getActiveWorkspaceId();
+  const store = useBufferStore.getStore(workspaceId);
+  const buffer = store.getState().actions.getActiveBuffer();
+  return buffer?.type === "image" ? getImageBufferSession({ workspaceId, store }, buffer.id) : null;
+}
+
 export function undoActiveEditor(): void {
+  const image = getActiveImageSession();
+  if (image) {
+    image.undo();
+    return;
+  }
   editorAPI.undo();
 }
 
 export function redoActiveEditor(): void {
+  const image = getActiveImageSession();
+  if (image) {
+    image.redo();
+    return;
+  }
   editorAPI.redo();
 }
 
