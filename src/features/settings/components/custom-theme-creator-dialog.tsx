@@ -141,7 +141,7 @@ export function CustomThemeCreatorDialog({
           </Button>
           <Button
             type="button"
-            variant="default"
+            variant="outline"
             onClick={() => void handleSave()}
             disabled={isSaving}
           >
@@ -195,7 +195,8 @@ export function CustomThemeCreatorDialog({
         <Field>
           <FieldLabel htmlFor="custom-theme-base">Base theme</FieldLabel>
           <Select
-            variant="default"
+            variant="surface"
+            width="full"
             id="custom-theme-base"
             value={selectedBaseThemeId}
             options={themeOptions}

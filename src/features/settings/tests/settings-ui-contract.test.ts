@@ -97,6 +97,18 @@ describe("settings UI contract", () => {
     expect(selects.filter(({ size }) => size !== null)).toEqual([]);
   });
 
+  it("renders selectors and actions on the shared field surface", () => {
+    const buttons = settingsComponentFiles.flatMap((filePath) =>
+      collectControlProps(filePath, "Button"),
+    );
+    const selects = settingsComponentFiles.flatMap((filePath) =>
+      collectControlProps(filePath, "Select"),
+    );
+
+    expect(selects.filter(({ variant }) => variant !== "surface")).toEqual([]);
+    expect(buttons.filter(({ variant }) => variant === null || variant === "default")).toEqual([]);
+  });
+
   it("inherits the shared control shape instead of selecting pill surfaces", () => {
     const buttons = settingsComponentFiles.flatMap((filePath) =>
       collectControlProps(filePath, "Button"),

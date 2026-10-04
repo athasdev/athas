@@ -73,7 +73,7 @@ export function AthasPlanSection() {
                   aria-label={`Included credit: ${usage.usedPercent}% used`}
                 />
               ) : null}
-              <Button variant="ghost" onClick={openBilling}>
+              <Button variant="outline" onClick={openBilling}>
                 Manage
               </Button>
             </div>
@@ -92,7 +92,9 @@ export function AthasPlanSection() {
         >
           <div className="flex items-center gap-2">
             {balance ? <span className="text-foreground tabular-nums">{balance}</span> : null}
-            <Button onClick={openBilling}>Add Credit</Button>
+            <Button variant="outline" onClick={openBilling}>
+              Add Credit
+            </Button>
           </div>
         </SettingRow>
       ) : null}

@@ -17,7 +17,7 @@ import { e2eTest, useAppSession } from "../support/session.ts";
 
 const SETTINGS_DIALOG = By.css("[data-dialog-content]");
 const SETTINGS_CONTENT = By.css("[data-dialog-content] [data-settings-content]");
-const CLOSE_SETTINGS = By.css('button[aria-label="Close settings"]');
+const CLOSE_SETTINGS = By.css('[data-dialog-content] button[aria-label="Close dialog"]');
 const APPEARANCE_PAGE = By.css('[data-settings-content][aria-label="Appearance settings"]');
 const APPEARANCE_NAV = By.css("#settings-tab-appearance");
 const UI_FONT_SIZE_ROW = '[data-setting-row-key="uifontsize"]';

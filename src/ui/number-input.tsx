@@ -15,6 +15,8 @@ interface InputProps extends Omit<
   max?: number | string;
   step?: number | string;
   onChange?: (value: number) => void;
+  /** `full` fills the parent, such as a settings row's shared number width. */
+  width?: "content" | "full";
 }
 
 const numberInputGroupVariants = cva("flex min-w-0 items-center gap-1", {
@@ -23,6 +25,13 @@ const numberInputGroupVariants = cva("flex min-w-0 items-center gap-1", {
       true: "opacity-50",
       false: "",
     },
+    width: {
+      content: "",
+      full: "w-full",
+    },
+  },
+  defaultVariants: {
+    width: "content",
   },
 });
 
@@ -45,6 +54,7 @@ export default function NumberInput({
   readOnly,
   name,
   id,
+  width,
   ...props
 }: InputProps) {
   const numericStep = toNumber(step) ?? 1;
@@ -70,7 +80,7 @@ export default function NumberInput({
       onValueChange={(nextValue) => {
         if (nextValue !== null) onChange?.(nextValue);
       }}
-      className={cn(numberInputGroupVariants({ disabled }), className)}
+      className={cn(numberInputGroupVariants({ disabled, width }), className)}
     >
       <NumberFieldPrimitive.Decrement
         render={<Button type="button" variant="ghost" iconOnly />}

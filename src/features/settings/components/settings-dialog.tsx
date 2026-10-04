@@ -19,7 +19,7 @@ export function SettingsDialog() {
       onClose={closeSettings}
     >
       <Suspense fallback={null}>
-        <SettingsWorkbenchView onClose={closeSettings} />
+        <SettingsWorkbenchView />
       </Suspense>
     </AppDialog>
   );

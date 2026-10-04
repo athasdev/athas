@@ -111,6 +111,7 @@ export const TerminalSettings = () => {
       <Section title="Launch">
         <SettingRow
           label="Default Shell"
+          control="select"
           onReset={() =>
             updateSetting("terminalDefaultShellId", getDefaultSetting("terminalDefaultShellId"))
           }
@@ -125,7 +126,8 @@ export const TerminalSettings = () => {
                 value === DEFAULT_SHELL_OPTION_VALUE ? "" : value,
               )
             }
-            variant="default"
+            variant="surface"
+            width="full"
             searchable
             searchableTrigger="input"
           />
@@ -133,6 +135,7 @@ export const TerminalSettings = () => {
 
         <SettingRow
           label="Default Profile"
+          control="select"
           description="Used by the toolbar button and new terminals"
           onReset={() =>
             updateSetting("terminalDefaultProfileId", getDefaultSetting("terminalDefaultProfileId"))
@@ -150,7 +153,8 @@ export const TerminalSettings = () => {
                 value === SYSTEM_DEFAULT_PROFILE_ID ? "" : value,
               )
             }
-            variant="default"
+            variant="surface"
+            width="full"
             searchable
             searchableTrigger="input"
           />
@@ -239,7 +243,7 @@ export const TerminalSettings = () => {
                       })
                     }
                     width="full"
-                    variant="default"
+                    variant="surface"
                     searchable
                     searchableTrigger="input"
                   />
@@ -289,33 +293,39 @@ export const TerminalSettings = () => {
       <Section title="Typography">
         <SettingRow
           label="Font Family"
+          control="select"
           onReset={() =>
             updateSetting("terminalFontFamily", getDefaultSetting("terminalFontFamily"))
           }
           canReset={settings.terminalFontFamily !== getDefaultSetting("terminalFontFamily")}
+          labelAccessory={
+            <span className="flex size-5 items-center justify-center">
+              <Button variant="ghost" iconOnly tooltip={FONT_HELP_TEXT} aria-label="Font help">
+                <InfoIcon />
+              </Button>
+            </span>
+          }
         >
-          <div className="flex items-center gap-2">
-            <Select
-              value={settings.terminalFontFamily}
-              options={fontOptions}
-              onChange={(val) => updateSetting("terminalFontFamily", val)}
-              variant="default"
-              searchable
-              searchableTrigger="input"
-              placeholder="Select font..."
-            />
-            <Button variant="ghost" iconOnly tooltip={FONT_HELP_TEXT} aria-label="Font help">
-              <InfoIcon />
-            </Button>
-          </div>
+          <Select
+            value={settings.terminalFontFamily}
+            options={fontOptions}
+            onChange={(val) => updateSetting("terminalFontFamily", val)}
+            variant="surface"
+            width="full"
+            searchable
+            searchableTrigger="input"
+            placeholder="Select font..."
+          />
         </SettingRow>
 
         <SettingRow
           label="Font Size"
+          control="number"
           onReset={() => updateSetting("terminalFontSize", getDefaultSetting("terminalFontSize"))}
           canReset={settings.terminalFontSize !== getDefaultSetting("terminalFontSize")}
         >
           <NumberInput
+            width="full"
             min="8"
             max="32"
             value={settings.terminalFontSize}
@@ -325,12 +335,14 @@ export const TerminalSettings = () => {
 
         <SettingRow
           label="Line Height"
+          control="number"
           onReset={() =>
             updateSetting("terminalLineHeight", getDefaultSetting("terminalLineHeight"))
           }
           canReset={settings.terminalLineHeight !== getDefaultSetting("terminalLineHeight")}
         >
           <NumberInput
+            width="full"
             min="1"
             max="2"
             step={0.1}
@@ -341,12 +353,14 @@ export const TerminalSettings = () => {
 
         <SettingRow
           label="Letter Spacing"
+          control="number"
           onReset={() =>
             updateSetting("terminalLetterSpacing", getDefaultSetting("terminalLetterSpacing"))
           }
           canReset={settings.terminalLetterSpacing !== getDefaultSetting("terminalLetterSpacing")}
         >
           <NumberInput
+            width="full"
             min="-5"
             max="5"
             step={0.1}
@@ -357,12 +371,14 @@ export const TerminalSettings = () => {
 
         <SettingRow
           label="Scrollback"
+          control="number"
           onReset={() =>
             updateSetting("terminalScrollback", getDefaultSetting("terminalScrollback"))
           }
           canReset={settings.terminalScrollback !== getDefaultSetting("terminalScrollback")}
         >
           <NumberInput
+            width="full"
             min="1000"
             max="100000"
             step={1000}
@@ -373,6 +389,7 @@ export const TerminalSettings = () => {
 
         <SettingRow
           label="Minimum Contrast"
+          control="number"
           description="1 keeps theme colors, 4.5 meets WCAG AA"
           onReset={() =>
             updateSetting(
@@ -386,6 +403,7 @@ export const TerminalSettings = () => {
           }
         >
           <NumberInput
+            width="full"
             min="1"
             max="21"
             step={0.5}
@@ -453,6 +471,7 @@ export const TerminalSettings = () => {
       <Section title="Cursor">
         <SettingRow
           label="Cursor Style"
+          control="select"
           onReset={() =>
             updateSetting("terminalCursorStyle", getDefaultSetting("terminalCursorStyle"))
           }
@@ -468,7 +487,8 @@ export const TerminalSettings = () => {
             onChange={(val) =>
               updateSetting("terminalCursorStyle", val as "block" | "underline" | "bar")
             }
-            variant="default"
+            variant="surface"
+            width="full"
           />
         </SettingRow>
 
@@ -487,12 +507,14 @@ export const TerminalSettings = () => {
 
         <SettingRow
           label="Cursor Width"
+          control="number"
           onReset={() =>
             updateSetting("terminalCursorWidth", getDefaultSetting("terminalCursorWidth"))
           }
           canReset={settings.terminalCursorWidth !== getDefaultSetting("terminalCursorWidth")}
         >
           <NumberInput
+            width="full"
             min="1"
             max="6"
             value={settings.terminalCursorWidth}
@@ -502,6 +524,7 @@ export const TerminalSettings = () => {
 
         <SettingRow
           label="Inactive Cursor Style"
+          control="select"
           onReset={() =>
             updateSetting(
               "terminalCursorInactiveStyle",
@@ -528,7 +551,8 @@ export const TerminalSettings = () => {
                 value as typeof settings.terminalCursorInactiveStyle,
               )
             }
-            variant="default"
+            variant="surface"
+            width="full"
           />
         </SettingRow>
       </Section>

@@ -64,6 +64,7 @@ export const FileTreeSettings = () => {
       <Section title="Display">
         <SettingRow
           label="Sort Order"
+          control="select"
           onReset={() => updateSetting("fileTreeSortOrder", getDefaultSetting("fileTreeSortOrder"))}
           canReset={settings.fileTreeSortOrder !== getDefaultSetting("fileTreeSortOrder")}
         >
@@ -74,18 +75,21 @@ export const FileTreeSettings = () => {
               { value: "name", label: "Name" },
             ]}
             onChange={(value) => updateSetting("fileTreeSortOrder", value as FileTreeSortOrder)}
-            variant="default"
+            variant="surface"
+            width="full"
           />
         </SettingRow>
 
         <SettingRow
           label="Indent Size"
+          control="number"
           onReset={() =>
             updateSetting("fileTreeIndentSize", getDefaultSetting("fileTreeIndentSize"))
           }
           canReset={settings.fileTreeIndentSize !== getDefaultSetting("fileTreeIndentSize")}
         >
           <NumberInput
+            width="full"
             min="8"
             max="32"
             value={settings.fileTreeIndentSize}

@@ -29,7 +29,7 @@ export function SettingsView({ layout = "stack", className, ...props }: Settings
       data-slot="settings-view"
       className={cn(
         "min-w-0",
-        layout === "stack" ? "flex flex-col gap-6" : "flex h-full min-h-0 flex-col",
+        layout === "stack" ? "flex flex-col gap-8" : "flex h-full min-h-0 flex-col",
         className,
       )}
       {...props}
@@ -38,13 +38,14 @@ export function SettingsView({ layout = "stack", className, ...props }: Settings
 }
 
 /**
- * A titled group of settings: a small muted header, then its rows in one grouped card. Rows
- * never draw their own borders; the card owns the edge and the hairlines between rows.
+ * A titled group of settings: a small muted header, then its rows on the page surface with no
+ * card or hairlines. Spacing alone separates rows and sections.
  */
-export default function Section({ title, className, ...props }: SectionProps) {
+export default function Section({ title, variant = "flat", className, ...props }: SectionProps) {
   return (
     <GroupedSection
       title={title}
+      variant={variant}
       className={cn("scroll-mt-4", className)}
       data-settings-section={title}
       data-settings-section-key={getSettingSearchTargetKey(title)}
@@ -59,7 +60,7 @@ export function SettingBlock({ className, ...props }: ComponentProps<"div">) {
 }
 
 const settingRowVariants = cva(
-  "flex min-h-10 w-full min-w-0 max-w-full items-center justify-between gap-4 py-2 pr-3 select-none transition-colors duration-fast focus:outline-none data-[settings-search-active=true]:bg-primary-soft max-[640px]:flex-col max-[640px]:items-stretch max-[640px]:gap-2 @max-[640px]/settings:flex-col @max-[640px]/settings:items-stretch @max-[640px]/settings:gap-2",
+  "flex min-h-11 w-full min-w-0 max-w-full items-center justify-between gap-6 py-2.5 pr-3 select-none transition-colors duration-fast focus:outline-none rounded-md data-[settings-search-active=true]:bg-primary-soft max-[640px]:flex-col max-[640px]:items-stretch max-[640px]:gap-2 @max-[640px]/settings:flex-col @max-[640px]/settings:items-stretch @max-[640px]/settings:gap-2",
   {
     variants: {
       /** `nested` indents a row that only applies when the row above it is on. */
@@ -77,12 +78,16 @@ const settingControlVariants = cva(
   {
     variants: {
       /**
-       * - `auto` — the control's own width, such as a switch, select, or button
+       * - `auto` — the control's own width, such as a switch or button
+       * - `select` — one shared width for dropdowns and pickers; the trigger fills it
        * - `field` — one shared width for text fields, so fields line up down a page
+       * - `number` — one shared width for number steppers; the stepper fills it
        */
       control: {
         auto: "",
+        select: "flex w-48 items-center justify-end gap-2",
         field: "flex w-64 items-center justify-end gap-2",
+        number: "flex w-32 items-center justify-end gap-2",
       },
     },
     defaultVariants: { control: "auto" },

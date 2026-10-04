@@ -79,11 +79,13 @@ function AgentBehaviorSection() {
       </SettingRow>
       <SettingRow
         label="Steps before pausing"
+        control="number"
         description="Model requests per turn before asking to continue"
         onReset={() => updateSetting("aiAgentMaxSteps", getDefaultSetting("aiAgentMaxSteps"))}
         canReset={settings.aiAgentMaxSteps !== getDefaultSetting("aiAgentMaxSteps")}
       >
         <NumberInput
+          width="full"
           min={String(MIN_INTELLIGENCE_AGENT_STEPS)}
           max={String(MAX_INTELLIGENCE_AGENT_STEPS)}
           step="1"
@@ -137,6 +139,7 @@ function ChatHistorySection() {
       <SettingRow label="Clear chat history">
         <TypedConfirmAction
           actionLabel="Clear All"
+          variant="danger"
           busyLabel="Clearing..."
           isBusy={isClearing}
           onConfirm={async () => {

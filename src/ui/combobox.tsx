@@ -132,8 +132,15 @@ const ComboboxInput = forwardRef<HTMLInputElement, ComboboxInputProps>(function 
         {...props}
       />
       {hasEndActions ? (
-        <div className="flex shrink-0 items-center pr-0.5">
-          {showTrigger ? <ComboboxTrigger disabled={disabled} /> : null}
+        <div className="flex shrink-0 items-center pr-1.5">
+          {showTrigger ? (
+            <ComboboxTrigger
+              disabled={disabled}
+              render={<Button variant="ghost" iconOnly size="xs" />}
+            >
+              <ChevronDownIcon size={12} className="pointer-events-none text-subtle-foreground" />
+            </ComboboxTrigger>
+          ) : null}
           {showClear ? <ComboboxClear disabled={disabled} /> : null}
         </div>
       ) : null}

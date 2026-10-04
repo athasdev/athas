@@ -84,7 +84,7 @@ export function CodexSettings() {
             {status?.initialized ? "Connected" : status?.installed ? "Installed" : "Unavailable"}
           </Badge>
           <Button
-            variant="default"
+            variant="outline"
             onClick={() => void connect()}
             disabled={!status?.installed || busy}
           >
@@ -98,7 +98,7 @@ export function CodexSettings() {
           </Button>
         </div>
       </SettingRow>
-      <SettingRow label="Model">
+      <SettingRow label="Model" control="select">
         <Select
           value={settings.model ?? ""}
           options={[
@@ -110,29 +110,37 @@ export function CodexSettings() {
           ]}
           placeholder="Codex default"
           onChange={(model) => update(getCodexModelPatch(model || undefined, models, settings))}
+          variant="surface"
+          width="full"
           searchable
         />
       </SettingRow>
-      <SettingRow label="Reasoning">
+      <SettingRow label="Reasoning" control="select">
         <Select
           value={settings.effort ?? "medium"}
           options={effortOptions}
           disabled={effortOptions.length === 0}
           onChange={(effort) => update({ effort })}
+          variant="surface"
+          width="full"
         />
       </SettingRow>
-      <SettingRow label="Workspace Access">
+      <SettingRow label="Workspace Access" control="select">
         <Select
           value={settings.sandbox ?? "workspace-write"}
           options={sandboxOptions}
           onChange={(sandbox) => update({ sandbox })}
+          variant="surface"
+          width="full"
         />
       </SettingRow>
-      <SettingRow label="Approvals">
+      <SettingRow label="Approvals" control="select">
         <Select
           value={settings.approvalPolicy ?? "on-request"}
           options={approvalOptions}
           onChange={(approvalPolicy) => update({ approvalPolicy })}
+          variant="surface"
+          width="full"
         />
       </SettingRow>
       <SettingRow label="Capabilities" description={catalogError ?? undefined}>
@@ -143,11 +151,11 @@ export function CodexSettings() {
         </div>
       </SettingRow>
       <SettingRow label="Account">
-        <div className="flex items-center gap-1">
-          <Button variant="default" onClick={() => void commands.startCodexLogin("chatgpt")}>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => void commands.startCodexLogin("chatgpt")}>
             Sign in
           </Button>
-          <Button variant="ghost" onClick={() => void commands.logoutCodexAccount()}>
+          <Button variant="outline" onClick={() => void commands.logoutCodexAccount()}>
             Sign out
           </Button>
         </div>

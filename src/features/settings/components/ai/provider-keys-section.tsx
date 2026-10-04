@@ -91,7 +91,7 @@ function ProviderKeyRow({
         description={<SettingStatus>API key configured</SettingStatus>}
         activateOnClick={false}
       >
-        <Button variant="ghost" onClick={() => void reset()}>
+        <Button variant="outline" tone="danger" onClick={() => void reset()}>
           Reset Key
         </Button>
       </SettingRow>
@@ -126,6 +126,7 @@ function ProviderKeyRow({
         disabled={!byokAllowed || status === "saving"}
       />
       <Button
+        variant="outline"
         onClick={() => void save()}
         disabled={!byokAllowed || !draft.trim() || status === "saving"}
       >
@@ -170,7 +171,7 @@ export function ProviderKeysSection() {
                 label={action.label}
                 description={action.getDescription?.() || action.description}
               >
-                <Button onClick={() => void action.execute()}>
+                <Button variant="outline" onClick={() => void action.execute()}>
                   <Icon />
                   <span>{action.buttonLabel}</span>
                 </Button>

@@ -164,6 +164,7 @@ export const GitSettings = () => {
 
         <SettingRow
           label="Default Diff View"
+          control="select"
           onReset={() =>
             updateSetting("gitDefaultDiffView", getDefaultSetting("gitDefaultDiffView"))
           }
@@ -176,7 +177,8 @@ export const GitSettings = () => {
               { value: "split", label: "Split" },
             ]}
             onChange={(value) => updateSetting("gitDefaultDiffView", value as "unified" | "split")}
-            variant="default"
+            variant="surface"
+            width="full"
           />
         </SettingRow>
       </Section>

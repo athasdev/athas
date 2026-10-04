@@ -52,7 +52,6 @@ export function TypedConfirmAction({
             onChange={(event) => setValue(event.target.value)}
             placeholder={`Type '${confirmWord}'`}
             variant="default"
-
             onKeyDown={(event) => {
               if (event.key === "Escape") {
                 event.preventDefault();
@@ -70,7 +69,7 @@ export function TypedConfirmAction({
         </span>
         <Button
           type="button"
-          variant="default"
+          variant="outline"
           tone={variant === "danger" ? "danger" : "default"}
           disabled={isBusy || value.trim().toLowerCase() !== confirmWord}
           onClick={() => void handleConfirm()}
@@ -87,7 +86,7 @@ export function TypedConfirmAction({
   return (
     <Button
       type="button"
-      variant="default"
+      variant="outline"
       tone={variant === "danger" ? "danger" : "default"}
       disabled={isBusy}
       onClick={() => setIsConfirming(true)}

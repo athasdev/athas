@@ -189,7 +189,7 @@ export const GeneralSettings = () => {
               <Button
                 onClick={downloadAndInstall}
                 disabled={downloading || installing}
-                variant="default"
+                variant="accent"
               >
                 {downloading
                   ? "Downloading..."
@@ -201,7 +201,7 @@ export const GeneralSettings = () => {
               <Button
                 onClick={handleCheckForUpdates}
                 disabled={checking || downloading || installing}
-                variant="default"
+                variant="outline"
               >
                 {checking ? "Checking..." : "Check for updates"}
               </Button>
@@ -240,14 +240,14 @@ export const GeneralSettings = () => {
                 <Button
                   onClick={() => void handleInstallCli()}
                   disabled={cliInstalling || cliChecking}
-                  variant="default"
+                  variant="outline"
                 >
                   {cliInstalling ? "Installing..." : "Install"}
                 </Button>
                 <Button
                   onClick={handleCopyInstallCommand}
                   disabled={cliChecking}
-                  variant="default"
+                  variant="outline"
                   tooltip="Copy install command to clipboard"
                 >
                   Copy
@@ -258,13 +258,13 @@ export const GeneralSettings = () => {
         </SettingRow>
 
         <SettingRow label="Import From Another Editor">
-          <Button onClick={() => setIsImportDialogOpen(true)} variant="default">
+          <Button onClick={() => setIsImportDialogOpen(true)} variant="outline">
             Import
           </Button>
         </SettingRow>
 
         <SettingRow label="Report a Bug">
-          <Button onClick={() => setIsReportBugDialogOpen(true)} variant="default">
+          <Button onClick={() => setIsReportBugDialogOpen(true)} variant="outline">
             Report
           </Button>
         </SettingRow>

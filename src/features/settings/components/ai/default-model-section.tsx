@@ -60,27 +60,32 @@ export function DefaultModelSection() {
           description="Use Athas, your own API key, or Ollama"
           activateOnClick={false}
         >
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" onClick={() => openModelsPage("Ollama")}>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => openModelsPage("Ollama")}>
               Use Ollama
             </Button>
-            <Button onClick={() => openModelsPage()}>Add API Key</Button>
+            <Button variant="accent" onClick={() => openModelsPage()}>
+              Add API Key
+            </Button>
           </div>
         </SettingRow>
       ) : null}
       {state.scopes.length > 1 ? (
-        <SettingRow label="Settings for">
+        <SettingRow label="Settings for" control="select">
           <Select
             aria-label="Model settings scope"
             value={state.scope}
             options={state.scopes.map((scope) => ({ value: scope.id, label: scope.name }))}
             disabled={loading}
             onChange={(scope) => void actions.setScope(scope)}
+            variant="surface"
+            width="full"
           />
         </SettingRow>
       ) : null}
       <SettingRow
         label="Default model"
+        control="select"
         description={describeDefault({
           connection: defaultConnection,
           available,
@@ -91,6 +96,7 @@ export function DefaultModelSection() {
       >
         <ModelConnectionPicker
           aria-label="Default model"
+          width="full"
           value={available ? defaultConnection : null}
           onChange={changeDefault}
           disabled={locked}
@@ -102,11 +108,19 @@ export function DefaultModelSection() {
           description={<SettingStatus tone="danger">{error}</SettingStatus>}
         >
           <div className="flex gap-2">
-            <Button disabled={loading || !state.editable} onClick={() => void actions.save()}>
+            <Button
+              variant="outline"
+              disabled={loading || !state.editable}
+              onClick={() => void actions.save()}
+            >
               Try again
             </Button>
             {state.userId !== null ? (
-              <Button disabled={loading} onClick={() => void actions.refresh(true)}>
+              <Button
+                variant="outline"
+                disabled={loading}
+                onClick={() => void actions.refresh(true)}
+              >
                 Use saved settings
               </Button>
             ) : null}

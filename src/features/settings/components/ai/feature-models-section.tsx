@@ -48,9 +48,10 @@ export function FeatureModelsSection() {
       </SettingRow>
       {open
         ? AI_FEATURE_MODEL_OVERRIDES.map(({ task, label }) => (
-            <SettingRow key={task} label={label} level="nested">
+            <SettingRow key={task} label={label} level="nested" control="select">
               <ModelConnectionPicker
                 aria-label={`${label} model`}
+                width="full"
                 value={state.preferences.tasks[task] ?? null}
                 inheritLabel={SAME_AS_DEFAULT}
                 onChange={(connection) =>

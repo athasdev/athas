@@ -34,7 +34,10 @@ export function AgentsSection() {
             {agent.isBusy ? (
               <Spinner compact label={action === "update" ? "Updating" : "Installing"} />
             ) : action ? (
-              <Button onClick={() => void runAgentAction(agent.id, agent.name, action)}>
+              <Button
+                variant="outline"
+                onClick={() => void runAgentAction(agent.id, agent.name, action)}
+              >
                 {action === "update" ? "Update" : "Install"}
               </Button>
             ) : null}
@@ -51,7 +54,7 @@ export function AgentsSection() {
           label="Could not load agents"
           description={<SettingStatus tone="danger">{loadError}</SettingStatus>}
         >
-          <Button onClick={() => void refresh()}>
+          <Button variant="outline" onClick={() => void refresh()}>
             <ArrowClockwiseIcon />
             <span>Try again</span>
           </Button>

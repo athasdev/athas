@@ -95,11 +95,11 @@ export const AccountSettings = () => {
       <Section title="Account">
         {isAuthenticated ? (
           <SettingRow label="Signed In" description={user?.email} activateOnClick={false}>
-            <div className="flex items-center gap-1">
-              <Button variant="ghost" onClick={handleManageAccount}>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={handleManageAccount}>
                 Dashboard
               </Button>
-              <Button variant="default" onClick={() => void logout()}>
+              <Button variant="outline" onClick={() => void logout()}>
                 Sign Out
               </Button>
             </div>
@@ -120,7 +120,7 @@ export const AccountSettings = () => {
             label="Plan"
             labelAccessory={isPaidPlan ? <Badge tone="accent">{planLabel}</Badge> : null}
           >
-            <Button variant="default" onClick={handleManagePlan}>
+            <Button variant={isPaidPlan ? "outline" : "accent"} onClick={handleManagePlan}>
               {isPaidPlan ? "Manage Plan" : "Upgrade"}
             </Button>
           </SettingRow>
@@ -136,18 +136,18 @@ export const AccountSettings = () => {
                 : settingsSyncDescription
             }
           >
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-2">
               {hasSettingsSync && settingsSyncEnabled ? (
                 <>
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     onClick={() => void handleSyncNow()}
                     disabled={settingsSyncIsSyncing}
                   >
                     {settingsSyncIsSyncing ? "Syncing..." : "Sync Now"}
                   </Button>
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     onClick={() => void handleRestoreFromCloud()}
                     disabled={settingsSyncIsSyncing}
                     tooltip="Replace this device's settings with the cloud copy"

@@ -201,6 +201,7 @@ export const AppearanceSettings = () => {
         {!settings.syncSystemTheme ? (
           <SettingRow
             label="Color Theme"
+            control="select"
             onReset={() => updateSetting("theme", getDefaultSetting("theme"))}
             canReset={settings.theme !== getDefaultSetting("theme")}
           >
@@ -208,7 +209,8 @@ export const AppearanceSettings = () => {
               value={settings.theme}
               options={normalizedThemeOptions}
               onChange={(value) => updateSetting("theme", value)}
-              variant="default"
+              variant="surface"
+              width="full"
               searchable
               searchableTrigger="input"
             />
@@ -219,6 +221,7 @@ export const AppearanceSettings = () => {
           <>
             <SettingRow
               label="Preferred Light Theme"
+              control="select"
               level="nested"
               onReset={() => updateSetting("autoThemeLight", getDefaultSetting("autoThemeLight"))}
               canReset={settings.autoThemeLight !== getDefaultSetting("autoThemeLight")}
@@ -227,7 +230,8 @@ export const AppearanceSettings = () => {
                 value={settings.autoThemeLight}
                 options={lightThemeOptions}
                 onChange={(value) => updateSetting("autoThemeLight", value)}
-                variant="default"
+                variant="surface"
+                width="full"
                 searchable
                 searchableTrigger="input"
               />
@@ -235,6 +239,7 @@ export const AppearanceSettings = () => {
 
             <SettingRow
               label="Preferred Dark Theme"
+              control="select"
               level="nested"
               onReset={() => updateSetting("autoThemeDark", getDefaultSetting("autoThemeDark"))}
               canReset={settings.autoThemeDark !== getDefaultSetting("autoThemeDark")}
@@ -243,7 +248,8 @@ export const AppearanceSettings = () => {
                 value={settings.autoThemeDark}
                 options={darkThemeOptions}
                 onChange={(value) => updateSetting("autoThemeDark", value)}
-                variant="default"
+                variant="surface"
+                width="full"
                 searchable
                 searchableTrigger="input"
               />
@@ -253,6 +259,7 @@ export const AppearanceSettings = () => {
 
         <SettingRow
           label="Icons"
+          control="select"
           onReset={() => updateSetting("iconTheme", getDefaultSetting("iconTheme"))}
           canReset={settings.iconTheme !== getDefaultSetting("iconTheme")}
         >
@@ -260,7 +267,8 @@ export const AppearanceSettings = () => {
             value={settings.iconTheme}
             options={normalizedIconThemeOptions}
             onChange={handleIconThemeChange}
-            variant="default"
+            variant="surface"
+            width="full"
             searchable
             searchableTrigger="input"
           />
@@ -275,11 +283,11 @@ export const AppearanceSettings = () => {
           }
         >
           <div className="flex items-center gap-2">
-            <Button type="button" onClick={() => setIsThemeCreatorOpen(true)}>
+            <Button type="button" variant="outline" onClick={() => setIsThemeCreatorOpen(true)}>
               <FilePlusIcon />
               Create
             </Button>
-            <Button type="button" onClick={handleUploadTheme}>
+            <Button type="button" variant="outline" onClick={handleUploadTheme}>
               <UploadIcon />
               Import
             </Button>
@@ -305,6 +313,7 @@ export const AppearanceSettings = () => {
       <Section title="Typography">
         <SettingRow
           label="UI Font Family"
+          control="select"
           onReset={() => updateSetting("uiFontFamily", getDefaultSetting("uiFontFamily"))}
           canReset={settings.uiFontFamily !== getDefaultSetting("uiFontFamily")}
         >
@@ -317,6 +326,7 @@ export const AppearanceSettings = () => {
 
         <SettingRow
           label="UI Font Size"
+          control="number"
           onReset={() => updateSetting("uiFontSize", getDefaultSetting("uiFontSize"))}
           canReset={settings.uiFontSize !== getDefaultSetting("uiFontSize")}
         >
@@ -326,7 +336,7 @@ export const AppearanceSettings = () => {
             step={String(UI_FONT_SIZE_STEP)}
             value={settings.uiFontSize}
             onChange={(value) => updateSetting("uiFontSize", value)}
-            className="tabular-nums"
+            width="full"
             aria-label={`UI font size: ${formatUiFontSize(settings.uiFontSize)} pixels`}
           />
         </SettingRow>
@@ -335,6 +345,7 @@ export const AppearanceSettings = () => {
       <Section title="Interface">
         <SettingRow
           label="UI Density"
+          control="select"
           description="Space around tabs, toolbars, and workspace panes"
           onReset={() => updateSetting("uiDensity", getDefaultSetting("uiDensity"))}
           canReset={settings.uiDensity !== getDefaultSetting("uiDensity")}
@@ -346,6 +357,8 @@ export const AppearanceSettings = () => {
               { value: "comfortable", label: "Comfortable" },
             ]}
             onChange={(value) => updateSetting("uiDensity", normalizeUiDensity(value))}
+            variant="surface"
+            width="full"
             aria-label="UI density"
           />
         </SettingRow>
@@ -374,6 +387,7 @@ export const AppearanceSettings = () => {
 
         <SettingRow
           label="Tab Close Buttons"
+          control="select"
           onReset={() =>
             updateSetting("tabCloseButtonVisibility", getDefaultSetting("tabCloseButtonVisibility"))
           }
@@ -391,7 +405,8 @@ export const AppearanceSettings = () => {
             onChange={(value) =>
               updateSetting("tabCloseButtonVisibility", value as TabCloseButtonVisibility)
             }
-            variant="default"
+            variant="surface"
+            width="full"
           />
         </SettingRow>
       </Section>

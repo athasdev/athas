@@ -111,6 +111,7 @@ export const GitHubCredentials = () => {
     <Section title="GitHub Account">
       <SettingRow
         label="Token Source"
+        control="select"
         onReset={() => updateSetting("githubTokenSource", getDefaultSetting("githubTokenSource"))}
         canReset={tokenSource !== getDefaultSetting("githubTokenSource")}
       >
@@ -118,7 +119,8 @@ export const GitHubCredentials = () => {
           value={tokenSource}
           options={TOKEN_SOURCE_OPTIONS}
           onChange={(value) => updateSetting("githubTokenSource", value as TokenSourceSetting)}
-          variant="default"
+          variant="surface"
+          width="full"
         />
       </SettingRow>
 
@@ -143,7 +145,7 @@ export const GitHubCredentials = () => {
           ) : status?.source && status.login ? (
             <Badge>{GITHUB_TOKEN_SOURCE_LABELS[status.source]}</Badge>
           ) : null}
-          <Button type="button" variant="ghost" onClick={() => void loadStatus()}>
+          <Button type="button" variant="outline" onClick={() => void loadStatus()}>
             Refresh
           </Button>
         </div>
@@ -179,7 +181,7 @@ export const GitHubCredentials = () => {
         />
         <Button
           type="button"
-          variant="default"
+          variant="outline"
           onClick={() => void handleSavePat()}
           disabled={!patInput.trim() || isSavingPat}
         >
@@ -206,7 +208,7 @@ export const GitHubCredentials = () => {
         activateOnClick={false}
       >
         {status?.ghCliInstalled ? (
-          <Button type="button" variant="ghost" onClick={() => void handleRefreshGhCli()}>
+          <Button type="button" variant="outline" onClick={() => void handleRefreshGhCli()}>
             Re-read token
           </Button>
         ) : null}

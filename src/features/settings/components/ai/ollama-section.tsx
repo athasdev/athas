@@ -275,7 +275,12 @@ export function OllamaSection() {
           description={<SettingStatus>Configured</SettingStatus>}
           activateOnClick={false}
         >
-          <Button type="button" variant="ghost" onClick={() => void handleRemoveOllamaApiKey()}>
+          <Button
+            type="button"
+            variant="outline"
+            tone="danger"
+            onClick={() => void handleRemoveOllamaApiKey()}
+          >
             Reset Key
           </Button>
         </SettingRow>
@@ -315,6 +320,7 @@ export function OllamaSection() {
           />
           <Button
             type="button"
+            variant="outline"
             onClick={() => void handleSaveOllamaApiKey()}
             disabled={!ollamaApiKeyInput.trim() || isSavingOllamaKey}
           >

@@ -125,7 +125,8 @@ export function CustomEndpointSection() {
         >
           <Button
             type="button"
-            variant="ghost"
+            variant="outline"
+            tone="danger"
             onClick={() => void removeApiKey()}
             disabled={isSavingApiKey}
           >
@@ -152,6 +153,7 @@ export function CustomEndpointSection() {
           />
           <Button
             type="button"
+            variant="outline"
             onClick={() => void saveApiKey()}
             disabled={!apiKeyInput.trim() || isSavingApiKey}
           >

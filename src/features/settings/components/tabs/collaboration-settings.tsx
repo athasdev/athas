@@ -71,7 +71,7 @@ export const CollaborationSettings = () => {
             <Badge>{collaboration?.presence.length ?? 0} sessions</Badge>
             <Button
               type="button"
-              variant="default"
+              variant="outline"
               disabled={!presenceTarget.channelId && !presenceTarget.followingUserId}
               onClick={() => {
                 collaborationRuntimeActions.setPresenceChannel(null);
@@ -113,7 +113,7 @@ export const CollaborationSettings = () => {
             >
               <Button
                 type="button"
-                variant={presenceTarget.channelId === channel.id ? "accent" : "default"}
+                variant={presenceTarget.channelId === channel.id ? "accent" : "outline"}
                 disabled={!collaboration?.capabilities.presence}
                 onClick={() => collaborationRuntimeActions.setPresenceChannel(channel.id)}
               >
@@ -126,7 +126,7 @@ export const CollaborationSettings = () => {
             <SettingRow key={`follow-${member.id}`} label={member.name} description={member.email}>
               <Button
                 type="button"
-                variant={presenceTarget.followingUserId === member.userId ? "accent" : "default"}
+                variant={presenceTarget.followingUserId === member.userId ? "accent" : "outline"}
                 disabled={!collaboration?.capabilities.presence}
                 onClick={() => collaborationRuntimeActions.setFollowingUser(member.userId)}
               >

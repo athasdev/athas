@@ -267,16 +267,20 @@ export const KeyboardSettings = () => {
             {...editorStepTransition}
           >
             <div className="mb-3 flex items-center justify-between gap-3">
-              <Button variant="default" onClick={() => setIsEditingKeybindings(false)}>
+              <Button variant="ghost" onClick={() => setIsEditingKeybindings(false)}>
                 <ArrowLeftIcon />
                 Back
               </Button>
               <div className="flex items-center gap-2">
-                <TypedConfirmAction actionLabel="Reset to Defaults" onConfirm={handleResetAll} />
-                <Button variant="default" onClick={handleImport}>
+                <TypedConfirmAction
+                  actionLabel="Reset to Defaults"
+                  variant="danger"
+                  onConfirm={handleResetAll}
+                />
+                <Button variant="outline" onClick={handleImport}>
                   Import
                 </Button>
-                <Button variant="default" onClick={() => void handleExport()}>
+                <Button variant="outline" onClick={() => void handleExport()}>
                   Export
                 </Button>
               </div>
@@ -370,6 +374,7 @@ export const KeyboardSettings = () => {
 
               <SettingRow
                 label="Keybinding Preset"
+                control="select"
                 onReset={() =>
                   updateSetting("keybindingPreset", getDefaultSetting("keybindingPreset"))
                 }
@@ -379,7 +384,8 @@ export const KeyboardSettings = () => {
                   value={keybindingPreset}
                   onChange={(value) => updateSetting("keybindingPreset", value as KeybindingPreset)}
                   options={keybindingPresetOptions}
-                  variant="default"
+                  variant="surface"
+                  width="full"
                   aria-label="Keybinding preset"
                 />
               </SettingRow>
@@ -407,7 +413,7 @@ export const KeyboardSettings = () => {
                     : undefined
                 }
               >
-                <Button variant="default" onClick={() => setIsEditingKeybindings(true)}>
+                <Button variant="outline" onClick={() => setIsEditingKeybindings(true)}>
                   Edit
                 </Button>
               </SettingRow>

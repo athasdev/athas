@@ -77,6 +77,7 @@ export function TabCompletionSection() {
       </SettingRow>
       <SettingRow
         label="Model"
+        control="select"
         labelAccessory={
           allowed && enabled && !resolved ? <Badge tone="warning">Off until chosen</Badge> : null
         }
@@ -85,6 +86,7 @@ export function TabCompletionSection() {
         <ModelConnectionPicker
           aria-label="Tab completion model"
           purpose="completion"
+          width="full"
           value={choice}
           inheritLabel={AUTOMATIC}
           onChange={(connection) =>

@@ -279,6 +279,19 @@ const AppDialog = ({
             {footer && (
               <div className="flex shrink-0 items-center justify-end gap-2 px-4 py-3">{footer}</div>
             )}
+
+            {/* Content that brings its own header still gets a close button in the corner. It
+                comes last so the dialog's initial focus lands on the content, not on it. */}
+            {hideHeader ? (
+              <div className="absolute top-2.5 right-2.5 z-10">
+                <DialogPrimitive.Close
+                  render={<Button variant="ghost" iconOnly />}
+                  aria-label="Close dialog"
+                >
+                  <XIcon />
+                </DialogPrimitive.Close>
+              </div>
+            ) : null}
           </DialogPrimitive.Popup>
         </OverlayRoot>
       </DialogPrimitive.Portal>

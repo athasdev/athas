@@ -95,7 +95,10 @@ export function SharingSettings() {
           />
         </SettingRow>
         <SettingRow label="Web Library">
-          <Button onClick={() => void openUrl(`${base}/dashboard/settings/sharing`)}>
+          <Button
+            variant="outline"
+            onClick={() => void openUrl(`${base}/dashboard/settings/sharing`)}
+          >
             Open on web
           </Button>
         </SettingRow>
@@ -125,7 +128,7 @@ export function SharingSettings() {
               label={item.title}
               description={`${item.visibility} · ${item.live ? "Live" : "Snapshot"}`}
             >
-              <div className="flex flex-wrap items-center gap-1">
+              <div className="flex flex-wrap items-center gap-2">
                 {item.sourceId && item.kind !== "snippet" && (
                   <Switch
                     aria-label={`Live updates for ${item.title}`}
@@ -136,17 +139,18 @@ export function SharingSettings() {
                     }
                   />
                 )}
-                <Button variant="ghost" disabled={busy} onClick={() => void copyLink(item.id)}>
+                <Button variant="outline" disabled={busy} onClick={() => void copyLink(item.id)}>
                   Copy link
                 </Button>
-                <Button variant="ghost" disabled={busy} onClick={() => setEditing(item)}>
+                <Button variant="outline" disabled={busy} onClick={() => setEditing(item)}>
                   Access
                 </Button>
-                <Button variant="ghost" onClick={() => void openUrl(`${base}/s/${item.id}`)}>
+                <Button variant="outline" onClick={() => void openUrl(`${base}/s/${item.id}`)}>
                   Open
                 </Button>
                 <Button
-                  variant="ghost"
+                  variant="outline"
+                  tone="danger"
                   disabled={busy}
                   onClick={() => void run(() => revokeShare(item.id))}
                 >
@@ -161,7 +165,7 @@ export function SharingSettings() {
           <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
             <span>{error || syncError}</span>
             {error && (
-              <Button disabled={busy} onClick={() => void run()}>
+              <Button variant="outline" disabled={busy} onClick={() => void run()}>
                 Retry
               </Button>
             )}

@@ -195,6 +195,7 @@ export function WorkbenchContent({
   leading,
   status,
   pinnedHeader = false,
+  hideTitle = false,
   width,
   children,
   viewportProps,
@@ -206,9 +207,35 @@ export function WorkbenchContent({
   leading?: ReactNode;
   status?: ReactNode;
   pinnedHeader?: boolean;
+  /**
+   * Keeps the title for screen readers only, for pages whose sections carry their own headings
+   * and whose navigation already shows where the user is.
+   */
+  hideTitle?: boolean;
   children: ReactNode;
   viewportProps?: ComponentProps<typeof ScrollArea>["viewportProps"];
 }) {
+  if (hideTitle) {
+    return (
+      <ScrollArea
+        orientation="vertical"
+        className="size-full min-h-0 min-w-0"
+        contentClassName="@container/workbench-content min-h-full overflow-x-hidden"
+        viewportProps={viewportProps}
+      >
+        <div
+          className={cn(
+            workbenchColumnVariants({ width }),
+            "px-6 pt-6 pb-10 @max-[680px]/workbench:px-3 @max-[680px]/workbench:pt-4",
+          )}
+        >
+          <h2 className="sr-only">{title}</h2>
+          {children}
+        </div>
+      </ScrollArea>
+    );
+  }
+
   if (pinnedHeader) {
     return (
       <div className="flex size-full min-h-0 min-w-0 flex-col">

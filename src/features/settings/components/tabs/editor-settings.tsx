@@ -70,6 +70,7 @@ export const EditorSettings = () => {
       <Section title="Font">
         <SettingRow
           label="Font Family"
+          control="select"
           onReset={() => updateSetting("fontFamily", getDefaultSetting("fontFamily"))}
           canReset={settings.fontFamily !== getDefaultSetting("fontFamily")}
         >
@@ -81,10 +82,12 @@ export const EditorSettings = () => {
         </SettingRow>
         <SettingRow
           label="Font Size"
+          control="number"
           onReset={() => updateSetting("fontSize", getDefaultSetting("fontSize"))}
           canReset={settings.fontSize !== getDefaultSetting("fontSize")}
         >
           <NumberInput
+            width="full"
             min="8"
             max="32"
             value={settings.fontSize}
@@ -93,10 +96,12 @@ export const EditorSettings = () => {
         </SettingRow>
         <SettingRow
           label="Line Height"
+          control="number"
           onReset={() => updateSetting("editorLineHeight", getDefaultSetting("editorLineHeight"))}
           canReset={settings.editorLineHeight !== getDefaultSetting("editorLineHeight")}
         >
           <NumberInput
+            width="full"
             min="1"
             max="2"
             step={0.1}
@@ -166,6 +171,7 @@ export const EditorSettings = () => {
         </SettingRow>
         <SettingRow
           label="Render Whitespace"
+          control="select"
           onReset={() => updateSetting("renderWhitespace", getDefaultSetting("renderWhitespace"))}
           canReset={settings.renderWhitespace !== getDefaultSetting("renderWhitespace")}
         >
@@ -175,7 +181,8 @@ export const EditorSettings = () => {
             onChange={(value) =>
               updateSetting("renderWhitespace", value as typeof settings.renderWhitespace)
             }
-            variant="default"
+            variant="surface"
+            width="full"
           />
         </SettingRow>
         <SettingRow
@@ -265,6 +272,7 @@ export const EditorSettings = () => {
       <Section title="Cursor and Scrolling">
         <SettingRow
           label="Cursor Style"
+          control="select"
           onReset={() => updateSetting("editorCursorStyle", getDefaultSetting("editorCursorStyle"))}
           canReset={settings.editorCursorStyle !== getDefaultSetting("editorCursorStyle")}
         >
@@ -281,11 +289,13 @@ export const EditorSettings = () => {
             onChange={(value) =>
               updateSetting("editorCursorStyle", value as typeof settings.editorCursorStyle)
             }
-            variant="default"
+            variant="surface"
+            width="full"
           />
         </SettingRow>
         <SettingRow
           label="Cursor Blinking"
+          control="select"
           onReset={() =>
             updateSetting("editorCursorBlinking", getDefaultSetting("editorCursorBlinking"))
           }
@@ -303,7 +313,8 @@ export const EditorSettings = () => {
             onChange={(value) =>
               updateSetting("editorCursorBlinking", value as typeof settings.editorCursorBlinking)
             }
-            variant="default"
+            variant="surface"
+            width="full"
           />
         </SettingRow>
         <SettingRow
@@ -339,10 +350,12 @@ export const EditorSettings = () => {
       <Section title="Tabs and Files">
         <SettingRow
           label="Tab Size"
+          control="number"
           onReset={() => updateSetting("tabSize", getDefaultSetting("tabSize"))}
           canReset={settings.tabSize !== getDefaultSetting("tabSize")}
         >
           <NumberInput
+            width="full"
             min="1"
             max="8"
             value={settings.tabSize}
@@ -351,10 +364,12 @@ export const EditorSettings = () => {
         </SettingRow>
         <SettingRow
           label="Max Open Tabs"
+          control="number"
           onReset={() => updateSetting("maxOpenTabs", getDefaultSetting("maxOpenTabs"))}
           canReset={settings.maxOpenTabs !== getDefaultSetting("maxOpenTabs")}
         >
           <NumberInput
+            width="full"
             min="1"
             max="100"
             value={settings.maxOpenTabs}
@@ -385,6 +400,7 @@ export const EditorSettings = () => {
         </SettingRow>
         <SettingRow
           label="Default Language"
+          control="select"
           onReset={() => updateSetting("defaultLanguage", getDefaultSetting("defaultLanguage"))}
           canReset={settings.defaultLanguage !== getDefaultSetting("defaultLanguage")}
         >
@@ -392,7 +408,8 @@ export const EditorSettings = () => {
             value={settings.defaultLanguage}
             options={languageOptions}
             onChange={(value) => updateSetting("defaultLanguage", value)}
-            variant="default"
+            variant="surface"
+            width="full"
             searchable
             searchableTrigger="input"
           />

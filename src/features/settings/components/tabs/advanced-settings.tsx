@@ -130,12 +130,12 @@ export const AdvancedSettings = () => {
       </Section>
       <Section title="Data">
         <SettingRow label="Export Settings">
-          <Button variant="default" onClick={() => void handleExportSettings()}>
+          <Button variant="outline" onClick={() => void handleExportSettings()}>
             Export
           </Button>
         </SettingRow>
         <SettingRow label="Import Settings">
-          <Button variant="default" onClick={handleImportSettings}>
+          <Button variant="outline" onClick={handleImportSettings}>
             Import
           </Button>
         </SettingRow>
@@ -155,11 +155,11 @@ export const AdvancedSettings = () => {
           <Switch checked={telemetry} onChange={(checked) => updateSetting("telemetry", checked)} />
         </SettingRow>
         <SettingRow label="Telemetry Log">
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" onClick={handleClearTelemetryLog}>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={handleClearTelemetryLog}>
               Clear
             </Button>
-            <Button variant="default" onClick={() => setShowTelemetryLog((value) => !value)}>
+            <Button variant="outline" onClick={() => setShowTelemetryLog((value) => !value)}>
               {showTelemetryLog ? "Hide" : "Show"}
             </Button>
           </div>
@@ -191,7 +191,11 @@ export const AdvancedSettings = () => {
       </Section>
       <Section title="Reset" tone="danger">
         <SettingRow label="Reset Settings" description="Restores every setting to its default">
-          <TypedConfirmAction actionLabel="Reset" onConfirm={handleResetSettings} />
+          <TypedConfirmAction
+            actionLabel="Reset"
+            variant="danger"
+            onConfirm={handleResetSettings}
+          />
         </SettingRow>
       </Section>
     </SettingsView>

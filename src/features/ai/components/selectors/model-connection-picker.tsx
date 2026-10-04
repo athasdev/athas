@@ -16,6 +16,7 @@ import {
   DropdownMenuViewport,
 } from "@/ui/dropdown";
 import { ChevronDownIcon } from "@/ui/icons";
+import { cn } from "@/utils/cn";
 import { useMenuSearch } from "@/ui/menu-search";
 import {
   AthasModelSections,
@@ -41,6 +42,8 @@ interface ModelConnectionPickerProps {
    * catalog, since hosted completions always run on it.
    */
   purpose?: "chat" | "completion";
+  /** `full` fills the parent, such as a settings row's shared dropdown width. */
+  width?: "content" | "full";
   "aria-label": string;
 }
 
@@ -62,6 +65,7 @@ export function ModelConnectionPicker({
   inheritLabel,
   disabled,
   purpose = "chat",
+  width = "content",
   "aria-label": ariaLabel,
 }: ModelConnectionPickerProps) {
   const [isContentMounted, setIsContentMounted] = useState(false);
@@ -92,22 +96,25 @@ export function ModelConnectionPicker({
         if (!open) search.reset();
       }}
     >
-      <span className="inline-flex min-w-0 max-w-full">
+      <span className={cn("inline-flex min-w-0 max-w-full", width === "full" && "w-full")}>
         <DropdownMenuTrigger
           disabled={disabled}
           render={
             <Button
               type="button"
               variant="outline"
-              truncate
+              width={width}
+              align="between"
               aria-label={`${ariaLabel}: ${label}`}
               title={title}
             />
           }
         >
-          {value ? <ProviderIcon providerId={getModelIconId(providerId, modelId)} /> : null}
-          <span className="min-w-0 truncate">{label}</span>
-          <ChevronDownIcon />
+          <span className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden">
+            {value ? <ProviderIcon providerId={getModelIconId(providerId, modelId)} /> : null}
+            <span className="min-w-0 truncate">{label}</span>
+          </span>
+          <ChevronDownIcon size={12} className="shrink-0 text-subtle-foreground" />
         </DropdownMenuTrigger>
       </span>
       <DropdownMenuContent align="end" viewport="searchable" size="wide">
