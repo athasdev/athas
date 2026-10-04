@@ -172,20 +172,20 @@
     --ui-text-chrome: var(--ui-text-sm);
     --athas-title-bar-height: 2.5rem;
     --athas-title-bar-leading-inset: var(--athas-chrome-padding-inline);
-    --athas-tab-bar-height: 1.875rem;
+    --athas-tab-bar-height: 1.75rem;
     --athas-pane-header-height: var(--athas-tab-bar-height);
     --athas-tab-height: 1.5rem;
     --athas-tab-max-width: 12.5rem;
-    --athas-sidebar-header-height: 2rem;
-    --athas-workbench-gap: 8px;
+    --athas-sidebar-header-height: 1.75rem;
+    --athas-workbench-gap: 4px;
     --athas-chrome-control-height: 1.5rem;
     --athas-rail-control-size: 2rem;
     --athas-chrome-hit-target: 1.75rem;
     --athas-chrome-line-height: 1rem;
     --athas-chrome-gap-tight: 2px;
     --athas-chrome-gap: 4px;
-    --athas-chrome-gap-loose: 6px;
-    --athas-chrome-padding-inline: 8px;
+    --athas-chrome-gap-loose: 4px;
+    --athas-chrome-padding-inline: 6px;
     --athas-chrome-radius: var(--radius);
     --radius: 0.25rem;
     --app-duration-fast: 150ms;
@@ -288,6 +288,14 @@
       0 8px 18px rgb(0 0 0 / 0.36), 0 18px 44px rgb(0 0 0 / 0.34),
       0 0 0 0.5px rgb(255 255 255 / 0.12);
     --shadow-editor-sticky: 0 10px 20px -16px rgb(0 0 0 / 0.72);
+  }
+
+  :root[data-ui-density="comfortable"] {
+    --athas-tab-bar-height: 1.875rem;
+    --athas-sidebar-header-height: 2rem;
+    --athas-workbench-gap: 8px;
+    --athas-chrome-gap-loose: 6px;
+    --athas-chrome-padding-inline: 8px;
   }
 
   html {

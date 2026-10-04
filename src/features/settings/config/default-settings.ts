@@ -68,6 +68,7 @@ export const defaultSettings: Settings = {
   // UI
   uiFontFamily: DEFAULT_UI_FONT_FAMILY,
   uiFontSize: UI_FONT_SIZE_DEFAULT,
+  uiDensity: "compact",
   reduceMotion: false,
   showTabIcons: true,
   tabCloseButtonVisibility: "active",
@@ -100,6 +101,7 @@ export const defaultSettings: Settings = {
   aiAgentNotificationSound: false,
   aiFollowAgent: false,
   aiAgentMaxSteps: DEFAULT_INTELLIGENCE_AGENT_STEPS,
+  aiUserRules: "",
   aiSkills: [],
   mcpServers: [],
   v0DesignSystems: [],

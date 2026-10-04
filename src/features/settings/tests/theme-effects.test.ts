@@ -15,6 +15,7 @@ vi.mock("@/features/settings/lib/appearance-bootstrap", () => ({
   cacheFontsForBootstrap: vi.fn(),
   cacheThemeForBootstrap: vi.fn(),
   cacheWindowTransparencyForBootstrap: vi.fn(),
+  cacheUiDensityForBootstrap: vi.fn(),
 }));
 vi.mock("@/extensions/themes/theme-registry", () => ({
   themeRegistry: {

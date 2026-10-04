@@ -22,6 +22,7 @@ import {
   normalizeItemOrder,
 } from "@/features/layout/config/item-order";
 import { normalizeUiFontSize } from "@/features/settings/lib/ui-font-size";
+import { normalizeUiDensity } from "@/features/settings/lib/ui-preferences";
 import type { GitSidebarItemId } from "@/features/layout/config/item-order";
 import type { Settings, SettingsSection } from "@/features/settings/types/settings.types";
 
@@ -430,6 +431,8 @@ function normalizeAISettings(settings: Settings): Settings {
   normalizedSettings.aiAgentMaxSteps = normalizeIntelligenceAgentSteps(
     normalizedSettings.aiAgentMaxSteps,
   );
+  normalizedSettings.aiUserRules =
+    typeof normalizedSettings.aiUserRules === "string" ? normalizedSettings.aiUserRules : "";
   normalizedSettings.aiSkills = normalizeAISkills(normalizedSettings.aiSkills);
   normalizedSettings.mcpServers = normalizeMcpServers(normalizedSettings.mcpServers);
   normalizedSettings.v0DesignSystems = normalizeLegacyV0DesignSystems(
@@ -499,6 +502,7 @@ export function normalizeSettings(settings: Settings): Settings {
     GIT_SIDEBAR_ITEM_IDS.includes(itemId as GitSidebarItemId),
   );
 
+  normalizedSettings.uiDensity = normalizeUiDensity(normalizedSettings.uiDensity);
   normalizedSettings.uiFontSize = normalizeUiFontSize(normalizedSettings.uiFontSize);
   normalizedSettings.fontFamily = normalizeConfiguredFontFamily(
     normalizedSettings.fontFamily === "Geist Mono"
@@ -592,6 +596,10 @@ export function normalizeSettingValue<K extends keyof Settings>(
   key: K,
   value: Settings[K],
 ): Settings[K] {
+  if (key === "uiDensity") {
+    return normalizeUiDensity(value) as Settings[K];
+  }
+
   if (key === "uiFontSize") {
     return normalizeUiFontSize(value as number) as Settings[K];
   }
@@ -676,6 +684,8 @@ export function normalizeSettingValue<K extends keyof Settings>(
   if (key === "keybindingPreset" && !isKeybindingPreset(value as string)) {
     return "none" as Settings[K];
   }
+
+  if (key === "aiUserRules") return (typeof value === "string" ? value : "") as Settings[K];
 
   if (key === "aiSkills") {
     return normalizeAISkills(value as Settings["aiSkills"]) as Settings[K];

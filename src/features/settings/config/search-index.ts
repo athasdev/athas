@@ -3,6 +3,24 @@ import { IS_LINUX, IS_MAC, IS_WINDOWS } from "@/utils/platform";
 
 export const settingsSearchIndex: SettingSearchRecord[] = [
   {
+    id: "agent-user-rules",
+    tab: "ai-agents",
+    section: "Agent instructions",
+    label: "User rules",
+    description: "Instructions and workspace context exclusions",
+    keywords: [
+      "rules",
+      "instructions",
+      "AGENTS.md",
+      "CLAUDE.md",
+      "ignore",
+      "privacy",
+      "athasignore",
+      "aiignore",
+      "cursorignore",
+    ],
+  },
+  {
     id: "cloud-agent-sessions",
     tab: "sharing",
     section: "Cloud Sessions",
@@ -561,6 +579,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     label: "Show Tab Icons",
     description: "Show file and view icons in editor tabs",
     keywords: ["tab", "icon", "file", "view", "interface", "hide"],
+  },
+  {
+    id: "appearance-ui-density",
+    tab: "appearance",
+    section: "Interface",
+    label: "UI Density",
+    description: "Space around tabs, toolbars, and workspace panes",
+    keywords: ["window", "chrome", "density", "compact", "comfortable", "spacing", "layout"],
   },
   {
     id: "appearance-tab-close-buttons",

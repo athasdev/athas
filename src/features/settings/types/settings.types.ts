@@ -8,6 +8,7 @@ import type {
 } from "@/features/layout/config/item-order";
 
 export type Theme = string;
+export type UiDensity = "compact" | "comfortable";
 export type RenderWhitespaceMode = "none" | "boundary" | "trailing" | "all";
 type EditorCursorStyle =
   | "line"
@@ -98,6 +99,7 @@ export interface Settings {
   terminalDefaultProfileId: string;
   // UI
   uiFontFamily: string;
+  uiDensity: UiDensity;
   uiFontSize: number;
   reduceMotion: boolean;
   showTabIcons: boolean;
@@ -134,6 +136,7 @@ export interface Settings {
   aiFollowAgent: boolean;
   /** Model requests one built-in agent turn may make before it pauses to ask to continue. */
   aiAgentMaxSteps: number;
+  aiUserRules: string;
   aiSkills: AIChatSkill[];
   /** MCP servers offered to agents. Secrets live in secure storage, not here. */
   mcpServers: McpServerSetting[];

@@ -15,6 +15,7 @@ import {
   UI_FONT_SIZE_STEP,
 } from "@/features/settings/lib/ui-font-size";
 import { getDefaultSetting } from "@/features/settings/config/default-settings";
+import { normalizeUiDensity } from "@/features/settings/lib/ui-preferences";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import type { TabCloseButtonVisibility } from "@/features/settings/types/settings.types";
 import { Button } from "@/ui/button";
@@ -48,6 +49,7 @@ export const AppearanceSettings = () => {
       theme: state.settings.theme,
       uiFontFamily: state.settings.uiFontFamily,
       uiFontSize: state.settings.uiFontSize,
+      uiDensity: state.settings.uiDensity,
       windowTransparency: state.settings.windowTransparency,
     })),
   );
@@ -331,6 +333,23 @@ export const AppearanceSettings = () => {
       </Section>
 
       <Section title="Interface">
+        <SettingRow
+          label="UI Density"
+          description="Space around tabs, toolbars, and workspace panes"
+          onReset={() => updateSetting("uiDensity", getDefaultSetting("uiDensity"))}
+          canReset={settings.uiDensity !== getDefaultSetting("uiDensity")}
+        >
+          <Select
+            value={settings.uiDensity}
+            options={[
+              { value: "compact", label: "Compact" },
+              { value: "comfortable", label: "Comfortable" },
+            ]}
+            onChange={(value) => updateSetting("uiDensity", normalizeUiDensity(value))}
+            aria-label="UI density"
+          />
+        </SettingRow>
+
         <SettingRow
           label="Reduce Motion"
           onReset={() => updateSetting("reduceMotion", getDefaultSetting("reduceMotion"))}

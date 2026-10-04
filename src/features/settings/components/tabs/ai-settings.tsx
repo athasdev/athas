@@ -14,6 +14,7 @@ import { getDefaultSetting } from "@/features/settings/config/default-settings";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import NumberInput from "@/ui/number-input";
 import Switch from "@/ui/switch";
+import Textarea from "@/ui/textarea";
 import { AgentsSection } from "../ai/agents-section";
 import { AthasPlanSection } from "../ai/athas-plan-section";
 import { CustomEndpointSection } from "../ai/custom-endpoint-section";
@@ -22,7 +23,7 @@ import { FeatureModelsSection } from "../ai/feature-models-section";
 import { OllamaSection } from "../ai/ollama-section";
 import { ProviderKeysSection } from "../ai/provider-keys-section";
 import { TabCompletionSection } from "../ai/tab-completion-section";
-import Section, { SettingsView, SettingRow } from "../settings-section";
+import Section, { SettingsView, SettingRow, SettingBlock } from "../settings-section";
 
 /** Settings > AI: the Athas plan and the model everything uses unless told otherwise. */
 export function AIOverviewSettings() {
@@ -94,6 +95,39 @@ function AgentBehaviorSection() {
   );
 }
 
+function AgentInstructionsSection() {
+  const userRules = useSettingsStore((state) => state.settings.aiUserRules);
+  const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
+  return (
+    <Section title="Agent instructions">
+      <SettingRow
+        label="User rules"
+        control="field"
+        description="Instructions for Athas's built-in agent across projects. External agents use their own configuration."
+        onReset={() => updateSetting("aiUserRules", "")}
+        canReset={Boolean(userRules)}
+      >
+        <Textarea
+          aria-label="User rules"
+          value={userRules}
+          rows={4}
+          font="mono"
+          placeholder="Prefer small changes and run the relevant tests."
+          onChange={(event) => updateSetting("aiUserRules", event.target.value)}
+        />
+      </SettingRow>
+      <SettingBlock>
+        <p className="ui-text-sm text-muted-foreground">
+          Project instructions load from AGENTS.md, CLAUDE.md, .athas/rules and .cursor/rules. Root
+          .athasignore, .aiignore and .cursorignore files exclude paths from automatic context, Tab
+          completion and built-in workspace tools. External agents, terminal commands and MCP tools
+          follow their own access rules.
+        </p>
+      </SettingBlock>
+    </Section>
+  );
+}
+
 function ChatHistorySection() {
   const { showToast } = useToast();
   const [isClearing, setIsClearing] = useState(false);
@@ -127,6 +161,7 @@ export function AIAgentsSettings() {
       <AgentsSection />
       <CodexSettings />
       <AgentBehaviorSection />
+      <AgentInstructionsSection />
       <AgentAllowedActionsSettings />
       <ChatHistorySection />
     </SettingsView>

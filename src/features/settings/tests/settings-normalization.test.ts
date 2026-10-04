@@ -7,6 +7,26 @@ import {
 import { normalizeSettings, normalizeSettingValue } from "../lib/settings-normalization";
 
 describe("settings normalization", () => {
+  it("normalizes density on import and on individual updates", () => {
+    expect(
+      normalizeSettings({ ...getDefaultSettingsSnapshot(), uiDensity: "comfortable" }).uiDensity,
+    ).toBe("comfortable");
+    expect(
+      normalizeSettings({ ...getDefaultSettingsSnapshot(), uiDensity: "invalid" as never })
+        .uiDensity,
+    ).toBe("compact");
+    expect(normalizeSettingValue("uiDensity", "comfortable")).toBe("comfortable");
+    expect(normalizeSettingValue("uiDensity", null as never)).toBe("compact");
+  });
+  it("preserves multiline personal rules and normalizes invalid saved values", () => {
+    const rules = "Use Bun.\n\nKeep changes focused.\n";
+    expect(normalizeSettingValue("aiUserRules", rules)).toBe(rules);
+    expect(normalizeSettingValue("aiUserRules", null as never)).toBe("");
+    expect(
+      normalizeSettings({ ...getDefaultSettingsSnapshot(), aiUserRules: 42 as never }).aiUserRules,
+    ).toBe("");
+  });
+
   it("adds delivery sections to saved GitHub ordering without losing user order", () => {
     const normalized = normalizeSettings({
       ...getDefaultSettingsSnapshot(),

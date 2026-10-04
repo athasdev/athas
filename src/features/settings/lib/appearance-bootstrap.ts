@@ -1,4 +1,6 @@
 import type { ThemeDefinition } from "@/extensions/themes/theme.types";
+import type { UiDensity } from "@/features/settings/types/settings.types";
+import { normalizeUiDensity } from "./ui-preferences";
 import {
   getAthasDefaultCssVariables,
   getAthasDefaultSyntaxTokens,
@@ -25,6 +27,7 @@ export interface AppearanceBootstrapCache {
   editorFontFamily: string;
   uiFontFamily: string;
   uiFontSize: number;
+  uiDensity: UiDensity;
   windowTransparency: boolean;
 }
 
@@ -52,6 +55,7 @@ export const DEFAULT_APPEARANCE_BOOTSTRAP_CACHE: AppearanceBootstrapCache = {
   editorFontFamily: DEFAULT_MONO_FONT_FAMILY,
   uiFontFamily: DEFAULT_UI_FONT_FAMILY,
   uiFontSize: UI_FONT_SIZE_DEFAULT,
+  uiDensity: "compact",
   windowTransparency: false,
 };
 
@@ -106,6 +110,7 @@ function parseBootstrapCache(raw: unknown): AppearanceBootstrapCache | null {
     editorFontFamily,
     uiFontFamily,
     uiFontSize,
+    uiDensity: normalizeUiDensity(record.uiDensity),
     windowTransparency: record.windowTransparency === true,
   };
 }
@@ -139,6 +144,7 @@ export function applyBootstrapAppearance(cache: AppearanceBootstrapCache): void 
   applyPlatformClass(root);
   root.setAttribute("data-theme", cache.themeId);
   root.setAttribute("data-theme-type", cache.themeType);
+  root.setAttribute("data-ui-density", normalizeUiDensity(cache.uiDensity));
   root.setAttribute("data-window-transparency", cache.windowTransparency ? "enabled" : "disabled");
 
   for (const [key, value] of Object.entries(cache.cssVariables)) {
@@ -176,6 +182,7 @@ export function cacheThemeForBootstrap(theme: ThemeDefinition): void {
     editorFontFamily: existing.editorFontFamily,
     uiFontFamily: existing.uiFontFamily,
     uiFontSize: existing.uiFontSize,
+    uiDensity: existing.uiDensity,
     windowTransparency: existing.windowTransparency,
   };
   writeAppearanceBootstrapCache(next);
@@ -187,6 +194,11 @@ export function cacheWindowTransparencyForBootstrap(enabled: boolean): void {
     ...existing,
     windowTransparency: enabled,
   });
+}
+
+export function cacheUiDensityForBootstrap(density: UiDensity): void {
+  const existing = readAppearanceBootstrapCache() || DEFAULT_APPEARANCE_BOOTSTRAP_CACHE;
+  writeAppearanceBootstrapCache({ ...existing, uiDensity: normalizeUiDensity(density) });
 }
 
 export function cacheFontsForBootstrap(

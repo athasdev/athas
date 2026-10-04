@@ -2,6 +2,7 @@ import {
   cacheFontsForBootstrap,
   cacheThemeForBootstrap,
   cacheWindowTransparencyForBootstrap,
+  cacheUiDensityForBootstrap,
 } from "@/features/settings/lib/appearance-bootstrap";
 import {
   resolveEffectiveTheme,
@@ -63,12 +64,13 @@ function applyWindowTransparency(enabled: boolean) {
   syncEffectiveWindowTransparency();
 }
 
-function applyUiPreferences(settings: Pick<Settings, "reduceMotion">) {
+function applyUiPreferences(settings: Pick<Settings, "reduceMotion" | "uiDensity">) {
   if (typeof document === "undefined") return;
 
   for (const [name, value] of Object.entries(getUiRootAttributes(settings))) {
     document.documentElement.setAttribute(name, value);
   }
+  cacheUiDensityForBootstrap(settings.uiDensity);
 }
 
 function stopSystemThemeSync() {
@@ -246,7 +248,7 @@ export function applySettingSideEffect<K extends keyof Settings>(
     applyWindowTransparency(value as boolean);
   }
 
-  if (key === "reduceMotion") {
+  if (key === "reduceMotion" || key === "uiDensity") {
     applyUiPreferences(getSettings());
   }
 }
