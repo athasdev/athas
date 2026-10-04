@@ -57,12 +57,18 @@ export function DebugVariablesPanel({
 
     if (!shouldLoadChildren) return;
 
+    const inspectionRevision = useDebuggerStore.getState().inspectionRevision;
     try {
       const seq = await sendDebugAdapterRequest(activeSessionId, "variables", {
         variablesReference,
       });
-      debuggerActions.registerAdapterRequest(seq, { command: "variables", variablesReference });
+      debuggerActions.registerAdapterRequest(activeSessionId, seq, {
+        command: "variables",
+        variablesReference,
+        inspectionRevision,
+      });
     } catch {
+      if (useDebuggerStore.getState().inspectionRevision !== inspectionRevision) return;
       setExpandedVariableReferences((current) => {
         const next = new Set(current);
         next.delete(variablesReference);
@@ -74,11 +80,17 @@ export function DebugVariablesPanel({
   const editVariable = async (variable: DebugVariable, parentReference: number) => {
     if (!activeSessionId || !canSetVariables) return;
 
+    const inspectionRevision = useDebuggerStore.getState().inspectionRevision;
     const value = await showPromptDialog(`Set ${variable.name}:`, {
       title: "Set Variable",
       defaultValue: variable.value,
     });
-    if (value === null) return;
+    if (
+      value === null ||
+      useDebuggerStore.getState().activeSession?.id !== activeSessionId ||
+      useDebuggerStore.getState().inspectionRevision !== inspectionRevision
+    )
+      return;
 
     const updatedVariable = await setDebugVariable(
       activeSessionId,
@@ -86,6 +98,11 @@ export function DebugVariablesPanel({
       variable.name,
       value,
     );
+    if (
+      useDebuggerStore.getState().activeSession?.id !== activeSessionId ||
+      useDebuggerStore.getState().inspectionRevision !== inspectionRevision
+    )
+      return;
     const variables = variablesByReference[parentReference] ?? [];
     debuggerActions.setVariables(
       parentReference,

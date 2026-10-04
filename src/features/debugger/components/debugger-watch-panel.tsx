@@ -13,6 +13,7 @@ import {
 } from "@/ui/context-menu";
 import { EmptyState } from "@/ui/empty";
 import Input from "@/ui/input";
+import { Item, ItemContent } from "@/ui/item";
 
 interface DebugWatchPanelProps {
   activeSessionId?: string;
@@ -46,14 +47,25 @@ export function DebugWatchPanel({
     async (expressionId: string, expression: string) => {
       if (!activeSessionId || !isPaused) return;
 
+      const inspectionRevision = useDebuggerStore.getState().inspectionRevision;
       try {
         const seq = await sendDebugAdapterRequest(activeSessionId, "evaluate", {
           expression,
           frameId: selectedFrameId ?? undefined,
           context: "watch",
         });
-        debuggerActions.registerAdapterRequest(seq, { command: "evaluate", expressionId });
+        debuggerActions.registerAdapterRequest(activeSessionId, seq, {
+          command: "evaluate",
+          expressionId,
+          frameId: selectedFrameId,
+          inspectionRevision,
+        });
       } catch (error) {
+        if (
+          useDebuggerStore.getState().activeSession?.id !== activeSessionId ||
+          useDebuggerStore.getState().inspectionRevision !== inspectionRevision
+        )
+          return;
         debuggerActions.setWatchResult({
           expressionId,
           value: "",
@@ -83,7 +95,6 @@ export function DebugWatchPanel({
     if (!watchExpression) return;
 
     setNewExpression("");
-    void evaluateExpression(watchExpression.id, watchExpression.expression);
   };
 
   return (
@@ -131,40 +142,42 @@ export function DebugWatchPanel({
             return (
               <ContextMenu key={watchExpression.id}>
                 <ContextMenuTrigger
-                  className="group rounded-lg border border-border bg-surface px-2 py-1.5"
+                  render={<Item variant="muted" size="compact" />}
                   onContextMenu={(event) => event.stopPropagation()}
                 >
-                  <div className="flex items-start gap-2">
-                    <button
-                      type="button"
-                      className="min-w-0 flex-1 truncate text-left font-mono ui-text-sm text-foreground"
-                      onClick={() =>
-                        void evaluateExpression(watchExpression.id, watchExpression.expression)
-                      }
-                    >
-                      {watchExpression.expression}
-                    </button>
-                    <span className="inline-flex min-w-0 opacity-0 group-hover:opacity-100 focus-within:opacity-100">
-                      <Button
-                        variant="ghost"
-                        tooltip="Remove watch"
-                        onClick={() => debuggerActions.removeWatchExpression(watchExpression.id)}
-                        iconOnly
+                  <ItemContent>
+                    <div className="flex items-start gap-2">
+                      <button
+                        type="button"
+                        className="min-w-0 flex-1 truncate text-left font-mono ui-text-sm text-foreground"
+                        onClick={() =>
+                          void evaluateExpression(watchExpression.id, watchExpression.expression)
+                        }
                       >
-                        <TrashIcon />
-                      </Button>
-                    </span>
-                  </div>
-                  <div className="mt-1 truncate font-mono ui-text-sm text-subtle-foreground">
-                    {isPending
-                      ? "Evaluating..."
-                      : result?.error
-                        ? result.error
-                        : result?.value || "Not evaluated"}
-                    {result?.type && !result.error ? (
-                      <span className="ml-1 text-subtle-foreground">({result.type})</span>
-                    ) : null}
-                  </div>
+                        {watchExpression.expression}
+                      </button>
+                      <span className="inline-flex min-w-0 opacity-0 group-hover/item:opacity-100 focus-within:opacity-100">
+                        <Button
+                          variant="ghost"
+                          tooltip="Remove watch"
+                          onClick={() => debuggerActions.removeWatchExpression(watchExpression.id)}
+                          iconOnly
+                        >
+                          <TrashIcon />
+                        </Button>
+                      </span>
+                    </div>
+                    <div className="mt-1 truncate font-mono ui-text-sm text-subtle-foreground">
+                      {isPending
+                        ? "Evaluating..."
+                        : result?.error
+                          ? result.error
+                          : result?.value || "Not evaluated"}
+                      {result?.type && !result.error ? (
+                        <span className="ml-1 text-subtle-foreground">({result.type})</span>
+                      ) : null}
+                    </div>
+                  </ItemContent>
                 </ContextMenuTrigger>
                 <ContextMenuContent>
                   <ContextMenuItem

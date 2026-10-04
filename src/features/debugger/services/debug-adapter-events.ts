@@ -39,6 +39,8 @@ export function initializeDebuggerEventBridge(): Promise<void> {
 }
 
 async function handleDebugProtocolMessage(payload: DebugProtocolMessage) {
+  const activeSession = useDebuggerStore.getState().activeSession;
+  if (activeSession && activeSession.id !== payload.sessionId) return;
   const message = asRecord(payload.message);
   if (!message) return;
 
@@ -196,10 +198,22 @@ async function handleDebugResponse(sessionId: string, message: Record<string, un
   const command = typeof message.command === "string" ? message.command : "";
   const body = asRecord(message.body);
   const store = useDebuggerStore.getState();
-  const context = requestSeq ? store.pendingRequests[requestSeq] : undefined;
+  const context = requestSeq !== null ? store.pendingRequests[requestSeq] : undefined;
+  if (command !== "initialize" && (!context || context.command !== command)) return;
 
-  if (requestSeq) {
+  if (requestSeq !== null) {
     store.actions.clearAdapterRequest(requestSeq);
+  }
+
+  if (
+    context?.inspectionRevision !== undefined &&
+    context.inspectionRevision !== store.inspectionRevision
+  )
+    return;
+
+  if (context?.command === "evaluate") {
+    if (context.frameId !== undefined && context.frameId !== store.selectedFrameId) return;
+    if (store.activeSession?.status !== "paused") return;
   }
 
   if (message.success === false) {
@@ -220,7 +234,7 @@ async function handleDebugResponse(sessionId: string, message: Record<string, un
     const threads = toThreads(body?.threads);
     store.actions.setThreads(threads);
     const firstThreadId = threads[0]?.id;
-    if (typeof firstThreadId === "number") {
+    if (typeof firstThreadId === "number" && store.activeSession?.status === "paused") {
       await requestStackTrace(sessionId, firstThreadId);
     }
     return;
@@ -283,32 +297,44 @@ async function handleDebugResponse(sessionId: string, message: Record<string, un
 }
 
 async function requestThreads(sessionId: string) {
+  const inspectionRevision = useDebuggerStore.getState().inspectionRevision;
   const seq = await sendDebugAdapterRequest(sessionId, "threads");
-  useDebuggerStore.getState().actions.registerAdapterRequest(seq, { command: "threads" });
+  useDebuggerStore
+    .getState()
+    .actions.registerAdapterRequest(sessionId, seq, { command: "threads", inspectionRevision });
 }
 
 async function requestStackTrace(sessionId: string, threadId: number) {
+  const inspectionRevision = useDebuggerStore.getState().inspectionRevision;
   const seq = await sendDebugAdapterRequest(sessionId, "stackTrace", {
     threadId,
     startFrame: 0,
     levels: 50,
   });
-  useDebuggerStore.getState().actions.registerAdapterRequest(seq, {
+  useDebuggerStore.getState().actions.registerAdapterRequest(sessionId, seq, {
     command: "stackTrace",
     threadId,
+    inspectionRevision,
   });
 }
 
 async function requestScopes(sessionId: string, frameId: number) {
+  const inspectionRevision = useDebuggerStore.getState().inspectionRevision;
   const seq = await sendDebugAdapterRequest(sessionId, "scopes", { frameId });
-  useDebuggerStore.getState().actions.registerAdapterRequest(seq, { command: "scopes", frameId });
+  useDebuggerStore.getState().actions.registerAdapterRequest(sessionId, seq, {
+    command: "scopes",
+    frameId,
+    inspectionRevision,
+  });
 }
 
 async function requestVariables(sessionId: string, variablesReference: number) {
+  const inspectionRevision = useDebuggerStore.getState().inspectionRevision;
   const seq = await sendDebugAdapterRequest(sessionId, "variables", { variablesReference });
-  useDebuggerStore.getState().actions.registerAdapterRequest(seq, {
+  useDebuggerStore.getState().actions.registerAdapterRequest(sessionId, seq, {
     command: "variables",
     variablesReference,
+    inspectionRevision,
   });
 }
 

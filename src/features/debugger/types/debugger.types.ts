@@ -140,11 +140,12 @@ export interface DebugWatchResult {
   evaluatedAt: number;
 }
 
-export type DebugRequestContext =
+export type DebugRequestContext = (
   | { command: "initialize" }
   | { command: "setBreakpoints"; filePath: string; breakpointIds: string[] }
   | { command: "threads" }
   | { command: "stackTrace"; threadId: number }
   | { command: "scopes"; frameId: number }
   | { command: "variables"; variablesReference: number }
-  | { command: "evaluate"; expressionId: string };
+  | { command: "evaluate"; expressionId: string; frameId?: number | null }
+) & { inspectionRevision?: number };

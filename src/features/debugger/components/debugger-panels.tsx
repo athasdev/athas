@@ -19,6 +19,7 @@ import {
 import { EmptyState } from "@/ui/empty";
 import Input from "@/ui/input";
 import { Popover, PopoverContent, PopoverTitle, PopoverTrigger } from "@/ui/popover";
+import { Item } from "@/ui/item";
 import { SidebarListItem } from "@/ui/sidebar";
 import { Spinner } from "@/ui/spinner";
 import { cn } from "@/utils/cn";
@@ -111,27 +112,36 @@ export function DebugBreakpointsList({
   }
 
   return (
-    <div className="py-1">
+    <div className="px-2 py-1">
       {breakpoints.map((breakpoint) => (
         <ContextMenu key={breakpoint.id}>
           <ContextMenuTrigger
-            className="group font-sans flex items-center gap-2 px-3 py-1.5 ui-text-sm hover:bg-accent"
+            render={<Item size="compact" interactive />}
             onContextMenu={(event) => event.stopPropagation()}
           >
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              iconOnly
               aria-label={breakpoint.enabled ? "Disable breakpoint" : "Enable breakpoint"}
-              title={breakpoint.message}
-              className={cn(
-                "size-3 rounded-full border",
-                breakpoint.enabled && breakpoint.verified !== false
-                  ? "border-destructive bg-destructive"
-                  : breakpoint.enabled
-                    ? "border-warning bg-warning-soft"
-                    : "border-subtle-foreground bg-transparent",
-              )}
+              tooltip={
+                breakpoint.message ||
+                (breakpoint.enabled ? "Disable breakpoint" : "Enable breakpoint")
+              }
               onClick={() => onToggle(breakpoint)}
-            />
+            >
+              <span
+                className={cn(
+                  "size-3 rounded-full border",
+                  breakpoint.enabled && breakpoint.verified !== false
+                    ? "border-destructive bg-destructive"
+                    : breakpoint.enabled
+                      ? "border-warning bg-warning-soft"
+                      : "border-subtle-foreground bg-transparent",
+                )}
+                aria-hidden="true"
+              />
+            </Button>
             <button
               type="button"
               className="min-w-0 flex-1 text-left"
@@ -148,7 +158,7 @@ export function DebugBreakpointsList({
               breakpoint={breakpoint}
               onUpdate={(options) => onUpdateOptions(breakpoint, options)}
             />
-            <span className="inline-flex min-w-0 opacity-0 group-hover:opacity-100 focus-within:opacity-100">
+            <span className="inline-flex min-w-0 opacity-0 group-hover/item:opacity-100 focus-within:opacity-100">
               <Button
                 variant="ghost"
                 tooltip="Remove breakpoint"
@@ -241,7 +251,7 @@ function BreakpointOptions({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <span className="inline-flex min-w-0 opacity-0 group-hover:opacity-100 focus-within:opacity-100">
+      <span className="inline-flex min-w-0 opacity-0 group-hover/item:opacity-100 focus-within:opacity-100">
         <PopoverTrigger render={<Button variant="ghost" tooltip="Edit breakpoint" iconOnly />}>
           <PencilIcon />
         </PopoverTrigger>

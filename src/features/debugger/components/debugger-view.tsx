@@ -436,9 +436,14 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
     debuggerActions.selectStackFrame(frameId);
 
     if (activeSession?.id) {
+      const inspectionRevision = useDebuggerStore.getState().inspectionRevision;
       try {
         const seq = await sendDebugAdapterRequest(activeSession.id, "scopes", { frameId });
-        debuggerActions.registerAdapterRequest(seq, { command: "scopes", frameId });
+        debuggerActions.registerAdapterRequest(activeSession.id, seq, {
+          command: "scopes",
+          frameId,
+          inspectionRevision,
+        });
       } catch {
         // Some adapters may not allow scope requests after the session moves on.
       }

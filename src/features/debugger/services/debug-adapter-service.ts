@@ -345,7 +345,7 @@ export async function syncDebugBreakpoints(
           logMessage: breakpoint.logMessage,
         })),
       });
-      useDebuggerStore.getState().actions.registerAdapterRequest(seq, {
+      useDebuggerStore.getState().actions.registerAdapterRequest(sessionId, seq, {
         command: "setBreakpoints",
         filePath,
         breakpointIds: fileBreakpoints.map((breakpoint) => breakpoint.id),

@@ -41,6 +41,8 @@ interface DebuggerState {
   stoppedState: DebugStoppedState | null;
   pendingRequests: Record<number, DebugRequestContext>;
   adapterCapabilities: DebugAdapterCapabilities;
+  inspectionRevision: number;
+  latestRequestSequences: Record<string, number>;
   actions: {
     hydrate: () => void;
     setWorkspaceConfigs: (configs: DebugLaunchConfig[]) => void;
@@ -69,7 +71,7 @@ interface DebuggerState {
     recordAdapterMessage: (message: DebugProtocolMessage) => void;
     recordAdapterOutput: (output: DebugProcessOutput) => void;
     recordSessionEnded: (event: DebugSessionEnded) => void;
-    registerAdapterRequest: (seq: number, context: DebugRequestContext) => void;
+    registerAdapterRequest: (sessionId: string, seq: number, context: DebugRequestContext) => void;
     clearAdapterRequest: (seq: number) => void;
     setAdapterCapabilities: (capabilities: DebugAdapterCapabilities) => void;
     setThreads: (threads: DebugThread[]) => void;
@@ -176,6 +178,8 @@ export const useDebuggerStore = createSelectors(
     stoppedState: null,
     pendingRequests: {},
     adapterCapabilities: {},
+    inspectionRevision: 0,
+    latestRequestSequences: {},
     actions: {
       hydrate: () => {
         set({
@@ -315,6 +319,8 @@ export const useDebuggerStore = createSelectors(
       },
 
       setWatchResult: (result) => {
+        if (!get().watchExpressions.some((expression) => expression.id === result.expressionId))
+          return;
         set((state) => ({
           watchResults: {
             ...state.watchResults,
@@ -329,6 +335,8 @@ export const useDebuggerStore = createSelectors(
 
       startSession: (session) => {
         set({
+          inspectionRevision: get().inspectionRevision + 1,
+          latestRequestSequences: {},
           activeSession: session,
           threads: [],
           stackFrames: [],
@@ -375,15 +383,56 @@ export const useDebuggerStore = createSelectors(
             state.activeSession?.id === event.sessionId
               ? { ...state.activeSession, status: "idle" }
               : state.activeSession,
-          stoppedState: null,
-          watchResults: {},
+          ...(state.activeSession?.id === event.sessionId
+            ? {
+                stoppedState: null,
+                watchResults: {},
+                pendingRequests: {},
+                inspectionRevision: state.inspectionRevision + 1,
+                latestRequestSequences: {},
+              }
+            : {}),
         }));
       },
 
-      registerAdapterRequest: (seq, context) => {
+      registerAdapterRequest: (sessionId, seq, context) => {
+        if (get().activeSession && get().activeSession?.id !== sessionId) return;
+        const state = get();
+        if (
+          context.inspectionRevision !== undefined &&
+          context.inspectionRevision !== state.inspectionRevision
+        )
+          return;
+        const key =
+          context.command === "evaluate"
+            ? `evaluate:${context.expressionId}`
+            : context.command === "variables"
+              ? `variables:${context.variablesReference}`
+              : context.command === "setBreakpoints"
+                ? `setBreakpoints:${context.filePath}`
+                : context.command;
+        if ((state.latestRequestSequences[key] ?? -1) >= seq) return;
+        if (
+          (context.command === "scopes" || context.command === "evaluate") &&
+          context.frameId !== undefined &&
+          context.frameId !== state.selectedFrameId
+        )
+          return;
         set((state) => ({
+          latestRequestSequences: { ...state.latestRequestSequences, [key]: seq },
           pendingRequests: {
-            ...state.pendingRequests,
+            ...Object.fromEntries(
+              Object.entries(state.pendingRequests).filter(([, pending]) => {
+                if (pending.command !== context.command) return true;
+                if (pending.command === "evaluate" && context.command === "evaluate")
+                  return pending.expressionId !== context.expressionId;
+                if (pending.command === "variables" && context.command === "variables")
+                  return pending.variablesReference !== context.variablesReference;
+                if (pending.command === "setBreakpoints" && context.command === "setBreakpoints")
+                  return pending.filePath !== context.filePath;
+                return false;
+              }),
+            ),
             [seq]: context,
           },
         }));
@@ -413,7 +462,21 @@ export const useDebuggerStore = createSelectors(
       },
 
       selectStackFrame: (frameId) => {
-        set({ selectedFrameId: frameId });
+        set((state) => ({
+          selectedFrameId: frameId,
+          inspectionRevision: state.inspectionRevision + 1,
+          latestRequestSequences: {},
+          scopes: [],
+          variablesByReference: {},
+          pendingRequests: Object.fromEntries(
+            Object.entries(state.pendingRequests).filter(
+              ([, request]) =>
+                request.command === "initialize" ||
+                request.command === "setBreakpoints" ||
+                request.command === "threads",
+            ),
+          ),
+        }));
       },
 
       setScopes: (scopes) => {
@@ -430,7 +493,21 @@ export const useDebuggerStore = createSelectors(
       },
 
       setStoppedState: (stoppedState) => {
-        set({ stoppedState });
+        set((state) => ({
+          stoppedState,
+          inspectionRevision: state.inspectionRevision + 1,
+          latestRequestSequences: {},
+          stackFrames: [],
+          selectedFrameId: null,
+          scopes: [],
+          variablesByReference: {},
+          pendingRequests: Object.fromEntries(
+            Object.entries(state.pendingRequests).filter(
+              ([, request]) =>
+                request.command === "initialize" || request.command === "setBreakpoints",
+            ),
+          ),
+        }));
       },
 
       clearAdapterTranscript: () => {
