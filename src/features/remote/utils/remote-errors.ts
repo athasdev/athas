@@ -1,6 +1,8 @@
 export function isRemoteAuthFailure(error: unknown): boolean {
   const message = getRemoteErrorMessage(error).toLowerCase();
 
+  if (isHostTrustError(message)) return false;
+
   return (
     message.includes("no valid authentication method") ||
     message.includes("authentication failed") ||
@@ -13,9 +15,21 @@ function getRemoteErrorMessage(error: unknown): string {
   return String(error);
 }
 
+function isHostTrustError(message: string): boolean {
+  return (
+    message.startsWith("athas_ssh_unknown_host:") ||
+    message.includes("ssh trusted hosts") ||
+    message.includes("ssh server trust") ||
+    message.includes("host key verification failed") ||
+    message.includes("ssh server key changed")
+  );
+}
+
 export function getFriendlyRemoteError(error: unknown): string {
   const rawError = getRemoteErrorMessage(error);
   const message = rawError.toLowerCase();
+
+  if (isHostTrustError(message)) return rawError;
 
   if (message.includes("authentication failed") || message.includes("username/password")) {
     return "Incorrect username or password. Please try again.";
@@ -35,10 +49,6 @@ export function getFriendlyRemoteError(error: unknown): string {
 
   if (message.includes("timed out") || message.includes("timeout")) {
     return "Connection timed out. The server may be unavailable.";
-  }
-
-  if (message.includes("host key verification failed")) {
-    return "Host key verification failed. Verify the server identity in your SSH config.";
   }
 
   if (message.includes("connection not found")) {

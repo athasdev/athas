@@ -8,6 +8,7 @@ const remoteInvokeCommands = [
   "get_remote_credential",
   "remove_remote_credential",
   "ssh_connect",
+  "ssh_trust_host",
   "ssh_disconnect",
   "ssh_disconnect_only",
   "ssh_create_file",

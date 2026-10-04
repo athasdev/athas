@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { connectionStore } from "../stores/remote-connection.store";
 import type { RemoteConnection } from "../types/remote.types";
 import { getFriendlyRemoteError } from "../utils/remote-errors";
+import { withRemoteHostTrust } from "./remote-host-trust";
 import { establishRemoteConnection } from "./remote-connection-client";
 
 export async function loadRemoteConnections(): Promise<RemoteConnection[]> {
@@ -51,14 +52,16 @@ export async function testRemoteConnection(connection: {
   const tempId = `test-${Date.now()}`;
 
   try {
-    await commands.sshConnect(
-      tempId,
-      connection.host,
-      connection.port,
-      connection.username,
-      connection.password || null,
-      connection.keyPath || null,
-      connection.type === "sftp",
+    await withRemoteHostTrust(connection, () =>
+      commands.sshConnect(
+        tempId,
+        connection.host,
+        connection.port,
+        connection.username,
+        connection.password || null,
+        connection.keyPath || null,
+        connection.type === "sftp",
+      ),
     );
   } catch (error) {
     throw new Error(getFriendlyRemoteError(error));

@@ -1,9 +1,10 @@
 use ssh2::Session;
 use std::{
-   env, fs,
+   fs,
    io::Read,
-   net::TcpStream,
+   net::{TcpStream, ToSocketAddrs},
    path::{Path, PathBuf},
+   time::Duration,
 };
 
 #[derive(Debug, Clone, Default)]
@@ -41,7 +42,9 @@ pub(super) fn exec_remote_command(session: &Session, command: &str) -> Result<St
    channel.close().ok();
    channel.wait_close().ok();
 
-   let exit_status = channel.exit_status().unwrap_or_default();
+   let exit_status = channel
+      .exit_status()
+      .map_err(|error| format!("Failed to read remote exit status: {error}"))?;
    if exit_status != 0 {
       let details = if stderr.trim().is_empty() {
          stdout.trim().to_string()
@@ -69,10 +72,9 @@ fn expand_identity_path(key_path: &str, home_dir: &Path) -> PathBuf {
 }
 
 fn get_ssh_config(host: &str) -> SshConfig {
-   let Ok(home_dir) = env::var("HOME") else {
+   let Some(home_dir) = dirs::home_dir() else {
       return SshConfig::default();
    };
-   let home_dir = PathBuf::from(home_dir);
    match fs::read_to_string(home_dir.join(".ssh").join("config")) {
       Ok(content) => parse_ssh_config(&content, host, &home_dir),
       Err(_) => SshConfig::default(),
@@ -184,7 +186,8 @@ pub(super) fn create_ssh_session(
    key_path: Option<&str>,
 ) -> Result<Session, String> {
    let ssh_config = get_ssh_config(host);
-   let home_dir = env::var("HOME").unwrap_or_default();
+   let home_dir = dirs::home_dir()
+      .ok_or("Cannot locate SSH trusted hosts: the home directory is unavailable.")?;
    create_ssh_session_with_config(
       host,
       port,
@@ -192,8 +195,47 @@ pub(super) fn create_ssh_session(
       password,
       key_path,
       &ssh_config,
-      Path::new(&home_dir),
+      &home_dir,
    )
+}
+
+fn handshake_session(host: &str, port: u16) -> Result<Session, String> {
+   crate::ssh_host_trust::validate_endpoint(host, port)?;
+   let addresses = (host, port)
+      .to_socket_addrs()
+      .map_err(|error| format!("Failed to resolve {host}:{port}: {error}"))?;
+   let mut last_error = "No server addresses found".to_string();
+   let mut stream = None;
+   for address in addresses {
+      match TcpStream::connect_timeout(&address, Duration::from_secs(10)) {
+         Ok(tcp) => {
+            stream = Some(tcp);
+            break;
+         }
+         Err(error) => last_error = error.to_string(),
+      }
+   }
+   let tcp = stream.ok_or_else(|| format!("Failed to connect to {host}:{port}: {last_error}"))?;
+   let mut session = Session::new().map_err(|error| error.to_string())?;
+   session.set_timeout(10_000);
+   session.set_tcp_stream(tcp);
+   session.handshake().map_err(|error| {
+      format!(
+         "SSH handshake with {host}:{port} failed before authentication: {error}. No private key \
+          has been read yet; check the server SSH logs and network connection."
+      )
+   })?;
+   Ok(session)
+}
+
+pub(super) fn trust_ssh_host(host: &str, port: u16, fingerprint: &str) -> Result<(), String> {
+   let config = get_ssh_config(host);
+   let host = config.hostname.as_deref().unwrap_or(host);
+   let port = config.port.unwrap_or(port);
+   let home = dirs::home_dir()
+      .ok_or("Cannot locate SSH trusted hosts: the home directory is unavailable.")?;
+   let session = handshake_session(host, port)?;
+   crate::ssh_host_trust::trust_session(&session, host, port, &home, fingerprint)
 }
 
 fn create_ssh_session_with_config(
@@ -217,22 +259,8 @@ fn create_ssh_session_with_config(
    let actual_port = ssh_config.port.unwrap_or(port);
    let actual_username = ssh_config.user.as_deref().unwrap_or(username);
 
-   let tcp = TcpStream::connect((actual_host, actual_port)).map_err(|e| {
-      format!(
-         "Failed to connect to {}:{}: {}",
-         actual_host, actual_port, e
-      )
-   })?;
-
-   let mut sess = Session::new().map_err(|e| format!("Failed to create session: {}", e))?;
-   sess.set_tcp_stream(tcp);
-   sess.handshake().map_err(|e| {
-      format!(
-         "SSH handshake with {}:{} failed before authentication: {}. No private key has been read \
-          yet; check the server SSH logs and network connection.",
-         actual_host, actual_port, e
-      )
-   })?;
+   let sess = handshake_session(actual_host, actual_port)?;
+   crate::ssh_host_trust::verify_session(&sess, actual_host, actual_port, home_dir)?;
 
    let default_key_paths = [
       home_dir.join(".ssh/id_ed25519"),

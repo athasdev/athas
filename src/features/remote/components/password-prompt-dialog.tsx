@@ -4,6 +4,7 @@ import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
 import { Field, FieldError, FieldLabel } from "@/ui/field";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/ui/input-group";
+import { getFriendlyRemoteError } from "../utils/remote-errors";
 import type { RemoteConnection } from "../types/remote.types";
 
 interface PasswordPromptDialogProps {
@@ -50,25 +51,7 @@ const PasswordPromptDialog = ({
       await onConnect(connection.id, password);
       onClose();
     } catch (error) {
-      const rawError = error instanceof Error ? error.message : String(error);
-      let friendlyError = rawError;
-
-      if (rawError.includes("Authentication failed") || rawError.includes("username/password")) {
-        friendlyError = "Incorrect username or password. Please try again.";
-      } else if (rawError.includes("Connection refused") || rawError.includes("unreachable")) {
-        friendlyError = "Cannot connect to server. Check the host address and port.";
-      } else if (rawError.includes("timeout")) {
-        friendlyError = "Connection timed out. The server may be unavailable.";
-      } else if (rawError.includes("Host key verification failed")) {
-        friendlyError =
-          "Host key verification failed. The server's identity could not be verified.";
-      } else if (rawError.includes("Permission denied")) {
-        friendlyError = "Permission denied. Check your username and password.";
-      } else if (rawError.includes("No route to host")) {
-        friendlyError = "Cannot reach the server. Check your network connection.";
-      }
-
-      setErrorMessage(friendlyError || "Connection failed");
+      setErrorMessage(getFriendlyRemoteError(error));
     } finally {
       setIsConnecting(false);
     }

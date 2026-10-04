@@ -18,6 +18,12 @@ use tauri::{Emitter, State, ipc::Channel};
 
 #[tauri::command]
 #[specta::specta]
+pub async fn ssh_trust_host(host: String, port: u16, fingerprint: String) -> Result<(), String> {
+   athas_remote::ssh_trust_host(host, port, fingerprint).await
+}
+
+#[tauri::command]
+#[specta::specta]
 pub async fn ssh_connect(
    app: tauri::AppHandle,
    connection_id: String,
@@ -93,6 +99,27 @@ pub async fn ssh_write_file(
    content: String,
 ) -> Result<(), String> {
    remote_ssh_write_file(connection_id, file_path, content).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn ssh_write_file_checked(
+   connection_id: String,
+   file_path: String,
+   content: String,
+   expected_content: Option<String>,
+) -> Result<(), String> {
+   athas_remote::ssh_write_file_checked(connection_id, file_path, content, expected_content).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn ssh_delete_file_checked(
+   connection_id: String,
+   file_path: String,
+   expected_content: String,
+) -> Result<(), String> {
+   athas_remote::ssh_delete_file_checked(connection_id, file_path, expected_content).await
 }
 
 #[tauri::command]
