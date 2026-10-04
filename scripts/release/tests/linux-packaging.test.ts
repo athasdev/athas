@@ -147,7 +147,8 @@ describe("Linux release packaging", () => {
     expect(metainfo).toContain('<release version="@VERSION@" date="@DATE@" />');
     expect(script).toContain('cp "$tarball" "${work_dir}/athas.tar.gz"');
     expect(script).toContain("flatpak build-bundle");
-    expect(script).toContain("flatpak run --command=flatpak-builder org.flatpak.Builder");
+    expect(script).toContain("--command=flatpak-builder org.flatpak.Builder");
+    expect(script).toContain("--env=FLATPAK_USER_DIR=");
   });
 
   it("installs Flathub's builder app wherever the Flatpak is built", () => {

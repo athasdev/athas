@@ -20,7 +20,8 @@ if ! command -v flatpak >/dev/null 2>&1; then
   exit 1
 fi
 if flatpak info --user org.flatpak.Builder >/dev/null 2>&1; then
-  builder=(flatpak run --command=flatpak-builder org.flatpak.Builder)
+  user_dir="${FLATPAK_USER_DIR:-${XDG_DATA_HOME:-${HOME}/.local/share}/flatpak}"
+  builder=(flatpak run "--env=FLATPAK_USER_DIR=${user_dir}" --command=flatpak-builder org.flatpak.Builder)
 elif command -v flatpak-builder >/dev/null 2>&1; then
   builder=(flatpak-builder)
 else
@@ -48,8 +49,9 @@ sed \
   -e "s/@DATE@/$(date -u +%F)/" \
   flatpak/com.code.athas.metainfo.xml > "${work_dir}/${desktop_id}.metainfo.xml"
 
-# The runtime and SDK are installed by the host flatpak: the builder app can
-# only install them over a D-Bus session, which CI runners do not have.
+# The runtime and SDK go into the host's user installation, where the flathub
+# remote lives. The builder app would otherwise use its own installation under
+# ~/.var/app, so it is pointed at the host's with FLATPAK_USER_DIR.
 runtime="$(sed -n 's/^runtime: *//p' flatpak/com.code.athas.yml)"
 sdk="$(sed -n 's/^sdk: *//p' flatpak/com.code.athas.yml)"
 runtime_version="$(sed -n 's/^runtime-version: *"\{0,1\}\([^"]*\)"\{0,1\}$/\1/p' flatpak/com.code.athas.yml)"
