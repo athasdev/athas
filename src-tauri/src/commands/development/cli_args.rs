@@ -24,8 +24,9 @@ impl PendingCliOpenRequests {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn take_pending_cli_open_requests(
-   window: tauri::WebviewWindow<crate::app_runtime::AthasRuntime>,
+   window: tauri::WebviewWindow,
    state: State<'_, PendingCliOpenRequests>,
 ) -> Vec<CliRequest> {
    let mut pending = state.0.lock().expect("pending CLI requests lock poisoned");
@@ -43,10 +44,21 @@ pub struct OpenRequest {
    pub line: Option<u32>,
 }
 
-#[derive(Debug, Clone, Serialize, PartialEq)]
+/// Names `CliRequest` from inside itself. Specta recurses forever when an
+/// internally tagged enum contains itself, so the nested request is typed by name.
+pub struct CliRequestReference;
+
+impl specta::Type for CliRequestReference {
+   fn definition(_: &mut specta::Types) -> specta::datatype::DataType {
+      specta::datatype::DataType::Reference(specta_typescript::define("CliRequest"))
+   }
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq, specta::Type)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum CliRequest {
    NewWindow {
+      #[specta(type = CliRequestReference)]
       request: Box<CliRequest>,
    },
    Surface {
@@ -137,18 +149,6 @@ fn quote_command_arg(arg: &str) -> String {
    }
 }
 
-fn is_chromium_runtime_arg(arg: &str) -> bool {
-   matches!(
-      arg,
-      "--disable-features=Vulkan"
-         | "--disable-gpu"
-         | "--disable-gpu-compositing"
-         | "--disable-setuid-sandbox"
-         | "--disable-vulkan"
-         | "--ozone-platform=x11"
-   )
-}
-
 fn parse_reused_cli_args(args: &[String], cwd: &Path) -> Vec<CliRequest> {
    let args = args.iter().map(String::as_str).collect::<Vec<_>>();
 
@@ -216,11 +216,7 @@ fn parse_reused_cli_args(args: &[String], cwd: &Path) -> Vec<CliRequest> {
 }
 
 pub fn parse_cli_args(args: &[String], cwd: &Path) -> Vec<CliRequest> {
-   let mut args = args
-      .iter()
-      .skip_while(|arg| is_chromium_runtime_arg(arg))
-      .cloned()
-      .collect::<Vec<_>>();
+   let mut args = args.to_vec();
    let mut new_window = None;
    let mut working_directory = cwd.to_path_buf();
    let mut index = 0;
@@ -485,28 +481,6 @@ mod tests {
    fn parse_cli_args_web_command() {
       let cwd = std::env::current_dir().unwrap();
       let args = vec!["web".to_string(), "https://athas.dev".to_string()];
-      assert_eq!(
-         parse_cli_args(&args, &cwd),
-         vec![CliRequest::Web {
-            url: "https://athas.dev".to_string()
-         }]
-      );
-   }
-
-   #[test]
-   fn parse_cli_args_ignores_linux_chromium_runtime_flags() {
-      let cwd = std::env::current_dir().unwrap();
-      let args = vec![
-         "--ozone-platform=x11".to_string(),
-         "--disable-vulkan".to_string(),
-         "--disable-features=Vulkan".to_string(),
-         "--disable-gpu".to_string(),
-         "--disable-gpu-compositing".to_string(),
-         "--disable-setuid-sandbox".to_string(),
-         "web".to_string(),
-         "https://athas.dev".to_string(),
-      ];
-
       assert_eq!(
          parse_cli_args(&args, &cwd),
          vec![CliRequest::Web {

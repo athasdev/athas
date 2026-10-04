@@ -1,15 +1,4 @@
-export interface CodexIntegrationStatus {
-  installed: boolean;
-  version: string | null;
-  running: boolean;
-  initialized: boolean;
-  state: string;
-  error: string | null;
-  cwd: string | null;
-  threadId: string | null;
-  turnId: string | null;
-  account: Record<string, unknown> | null;
-}
+export type { CodexIntegrationStatus } from "@/bindings/commands";
 
 export interface CodexProtocolEvent {
   method: string;

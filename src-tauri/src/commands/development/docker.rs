@@ -1,4 +1,3 @@
-use crate::app_runtime::AppHandle;
 use serde::Deserialize;
 use std::{
    collections::HashMap,
@@ -7,7 +6,7 @@ use std::{
    process::Stdio,
    sync::Arc,
 };
-use tauri::{Emitter, State};
+use tauri::{AppHandle, Emitter, State};
 use tokio::{
    io::{AsyncBufReadExt, AsyncRead, BufReader},
    process::Command,
@@ -51,6 +50,7 @@ pub struct DockerLogStreams {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn docker_get_inventory() -> Result<DockerInventory, String> {
    Ok(DockerInventory {
       containers: docker_list_containers().await?,
@@ -61,6 +61,7 @@ pub async fn docker_get_inventory() -> Result<DockerInventory, String> {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn docker_container_action(
    container_id: String,
    action: String,
@@ -90,6 +91,7 @@ pub async fn docker_container_action(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn docker_get_container_logs(
    container_id: String,
    tail: Option<u16>,
@@ -103,6 +105,7 @@ pub async fn docker_get_container_logs(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn docker_start_container_log_stream(
    container_id: String,
    tail: Option<u16>,
@@ -135,6 +138,7 @@ pub async fn docker_start_container_log_stream(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn docker_stop_container_log_stream(
    stream_id: String,
    streams: State<'_, DockerLogStreams>,
@@ -151,6 +155,7 @@ pub async fn docker_stop_container_log_stream(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn docker_get_compose_project(
    workspace_path: Option<String>,
 ) -> Result<DockerComposeProject, String> {
@@ -185,6 +190,7 @@ pub async fn docker_get_compose_project(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn docker_compose_action(
    workspace_path: String,
    files: Vec<String>,
@@ -246,6 +252,7 @@ pub async fn docker_compose_action(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn docker_build_image(request: DockerBuildImageRequest) -> Result<String, String> {
    let context_path = normalize_required_path(request.context_path, "Build context path")?;
    let mut args = vec!["build".to_string()];
@@ -274,6 +281,7 @@ pub async fn docker_build_image(request: DockerBuildImageRequest) -> Result<Stri
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn docker_run_image(request: DockerRunImageRequest) -> Result<String, String> {
    let image = normalize_optional_value(Some(request.image))
       .ok_or_else(|| "Image is required.".to_string())?;
@@ -319,6 +327,7 @@ pub async fn docker_run_image(request: DockerRunImageRequest) -> Result<String, 
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn docker_image_action(
    image_id: String,
    action: String,
@@ -341,6 +350,7 @@ pub async fn docker_image_action(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn docker_prune_resources(
    target: String,
    include_volumes: Option<bool>,
@@ -384,6 +394,7 @@ pub async fn docker_prune_resources(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn docker_list_container_files(
    container_id: String,
    path: Option<String>,
@@ -399,6 +410,7 @@ pub async fn docker_list_container_files(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn docker_copy_from_container(
    container_id: String,
    container_path: String,
@@ -420,6 +432,7 @@ pub async fn docker_copy_from_container(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn docker_copy_to_container(
    container_id: String,
    host_path: String,
@@ -440,6 +453,7 @@ pub async fn docker_copy_to_container(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn docker_registry_search(
    query: String,
    limit: Option<u16>,
@@ -462,6 +476,7 @@ pub async fn docker_registry_search(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn docker_registry_login(request: DockerRegistryLoginRequest) -> Result<String, String> {
    let username = normalize_optional_value(Some(request.username))
       .ok_or_else(|| "Username is required.".to_string())?;
@@ -483,6 +498,7 @@ pub async fn docker_registry_login(request: DockerRegistryLoginRequest) -> Resul
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn docker_registry_pull(image: String) -> Result<String, String> {
    let image =
       normalize_optional_value(Some(image)).ok_or_else(|| "Image is required.".to_string())?;
@@ -490,6 +506,7 @@ pub async fn docker_registry_pull(image: String) -> Result<String, String> {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn docker_registry_push(image: String) -> Result<String, String> {
    let image =
       normalize_optional_value(Some(image)).ok_or_else(|| "Image is required.".to_string())?;
@@ -497,6 +514,7 @@ pub async fn docker_registry_push(image: String) -> Result<String, String> {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn docker_tag_image(source: String, target: String) -> Result<String, String> {
    let source = normalize_optional_value(Some(source))
       .ok_or_else(|| "Source image is required.".to_string())?;
@@ -506,6 +524,7 @@ pub async fn docker_tag_image(source: String, target: String) -> Result<String, 
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn docker_get_project_config(
    workspace_path: Option<String>,
 ) -> Result<DockerProjectConfig, String> {
@@ -524,6 +543,7 @@ pub async fn docker_get_project_config(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn docker_save_project_config(
    workspace_path: String,
    config: DockerProjectConfig,
@@ -557,6 +577,7 @@ pub async fn docker_save_project_config(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn docker_read_env_file(workspace_path: String, path: String) -> Result<String, String> {
    let workspace_path = normalize_workspace_path(workspace_path)
       .ok_or_else(|| "Workspace path is required.".to_string())?;
@@ -569,6 +590,7 @@ pub async fn docker_read_env_file(workspace_path: String, path: String) -> Resul
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn docker_open_env_file(
    workspace_path: String,
    path: String,
@@ -594,6 +616,7 @@ pub async fn docker_open_env_file(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn docker_write_env_file(
    workspace_path: String,
    path: String,
@@ -611,6 +634,7 @@ pub async fn docker_write_env_file(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn docker_delete_env_file(workspace_path: String, path: String) -> Result<(), String> {
    let workspace_path = normalize_workspace_path(workspace_path)
       .ok_or_else(|| "Workspace path is required.".to_string())?;
@@ -626,6 +650,7 @@ pub async fn docker_delete_env_file(workspace_path: String, path: String) -> Res
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn docker_open_dev_container(
    workspace_path: String,
    config_path: String,

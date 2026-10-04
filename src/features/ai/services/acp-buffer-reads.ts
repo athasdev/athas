@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getSourceEditorBufferByPath } from "@/features/editor/utils/buffer-index";
@@ -29,7 +29,7 @@ export function getOpenBufferContent(path: string): string | null {
 
 /** Answers an agent's `fs/read_text_file` with the open buffer, so it sees unsaved edits. */
 export async function answerAcpBufferRead({ requestId, path }: AcpBufferReadRequest) {
-  await invoke("respond_acp_buffer_read", { requestId, content: getOpenBufferContent(path) });
+  await commands.respondAcpBufferRead(requestId, getOpenBufferContent(path));
 }
 
 export async function initializeAcpBufferReads() {

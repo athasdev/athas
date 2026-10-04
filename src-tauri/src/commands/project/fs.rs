@@ -1,11 +1,26 @@
 use super::path_guard::{require_path_under_home, require_symlink_container_under_home};
-use crate::app_runtime::AppHandle;
 use serde::Serialize;
 use std::{fs, path::Path, time::Instant};
 #[cfg(target_os = "macos")]
 use tauri::Manager;
-use tauri::command;
+use tauri::{AppHandle, command};
 use walkdir::WalkDir;
+
+/// Raw file contents. The webview receives an `ArrayBuffer` instead of a JSON
+/// array with one number per byte.
+pub struct FileBytes(Vec<u8>);
+
+impl tauri::ipc::IpcResponse for FileBytes {
+   fn body(self) -> tauri::Result<tauri::ipc::InvokeResponseBody> {
+      Ok(tauri::ipc::InvokeResponseBody::Raw(self.0))
+   }
+}
+
+impl specta::Type for FileBytes {
+   fn definition(_: &mut specta::Types) -> specta::datatype::DataType {
+      specta::datatype::DataType::Reference(specta_typescript::define("ArrayBuffer"))
+   }
+}
 
 fn calculate_directory_size(path: &Path) -> Result<u64, String> {
    if !path.is_dir() {
@@ -30,6 +45,7 @@ fn calculate_directory_size(path: &Path) -> Result<u64, String> {
 }
 
 #[command]
+#[specta::specta]
 pub async fn get_local_directory_size(path: String) -> Result<u64, String> {
    tauri::async_runtime::spawn_blocking(move || {
       let resolved = require_path_under_home(&path)?;
@@ -40,7 +56,8 @@ pub async fn get_local_directory_size(path: String) -> Result<u64, String> {
 }
 
 #[command]
-pub async fn read_local_file(path: String) -> Result<tauri::ipc::Response, String> {
+#[specta::specta]
+pub async fn read_local_file(path: String) -> Result<FileBytes, String> {
    let short_path = Path::new(&path)
       .file_name()
       .and_then(|name| name.to_str())
@@ -89,10 +106,11 @@ pub async fn read_local_file(path: String) -> Result<tauri::ipc::Response, Strin
       );
    }
 
-   Ok(tauri::ipc::Response::new(bytes))
+   Ok(FileBytes(bytes))
 }
 
 #[command]
+#[specta::specta]
 pub fn open_file_external(path: String) -> Result<(), String> {
    // Canonicalize and confine to $HOME so the platform opener cannot be
    // invoked on system locations or on a scheme-like string that would be
@@ -125,6 +143,7 @@ pub fn open_file_external(path: String) -> Result<(), String> {
 }
 
 #[command]
+#[specta::specta]
 pub async fn toggle_quick_look(app: AppHandle, path: String) -> Result<(), String> {
    let resolved = require_path_under_home(&path)?;
    if !resolved.is_file() {
@@ -150,10 +169,8 @@ pub async fn toggle_quick_look(app: AppHandle, path: String) -> Result<(), Strin
 }
 
 #[command]
-pub async fn show_share_picker(
-   window: tauri::WebviewWindow<crate::app_runtime::AthasRuntime>,
-   path: String,
-) -> Result<(), String> {
+#[specta::specta]
+pub async fn show_share_picker(window: tauri::WebviewWindow, path: String) -> Result<(), String> {
    let resolved = require_path_under_home(&path)?;
    if !resolved.is_file() {
       return Err("Share is only available for local files".to_string());
@@ -182,7 +199,7 @@ pub async fn show_share_picker(
    Ok(())
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, specta::Type)]
 pub struct SymlinkInfo {
    is_symlink: bool,
    target: Option<String>,
@@ -190,6 +207,7 @@ pub struct SymlinkInfo {
 }
 
 #[command]
+#[specta::specta]
 pub fn get_symlink_info(
    path: String,
    workspace_root: Option<String>,
@@ -250,6 +268,7 @@ pub fn get_symlink_info(
 }
 
 #[command]
+#[specta::specta]
 pub fn rename_file(source_path: String, target_path: String) -> Result<(), String> {
    let source_buf = require_path_under_home(&source_path)?;
    let target_buf = require_path_under_home(&target_path)?;
@@ -270,6 +289,7 @@ pub fn rename_file(source_path: String, target_path: String) -> Result<(), Strin
 }
 
 #[command]
+#[specta::specta]
 pub fn move_file(source_path: String, target_path: String) -> Result<(), String> {
    let source_buf = require_path_under_home(&source_path)?;
    let target_buf = require_path_under_home(&target_path)?;

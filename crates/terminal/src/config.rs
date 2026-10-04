@@ -2,7 +2,7 @@ use crate::protocol::TerminalSize;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct TerminalConfig {
    pub working_directory: Option<String>,

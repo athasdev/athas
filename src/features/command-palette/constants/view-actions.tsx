@@ -1,3 +1,4 @@
+import { commands } from "@/bindings/commands";
 import { toast } from "sonner";
 import { renameTerminalWithIntelligence } from "@/features/terminal/services/intelligence-terminal-title";
 import {
@@ -144,8 +145,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
             action: async () => {
               const newValue = !settings.nativeMenuBar;
               updateSetting("nativeMenuBar", newValue);
-              const { invoke } = await import("@tauri-apps/api/core");
-              await invoke("toggle_menu_bar", { toggle: newValue });
+              await commands.toggleMenuBar(newValue);
               onClose();
             },
           },

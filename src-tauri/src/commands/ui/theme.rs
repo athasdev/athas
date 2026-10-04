@@ -3,7 +3,7 @@ use std::{collections::HashMap, fs, path::Path, process::Command};
 use tauri::State;
 use tokio::sync::RwLock;
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct SystemAccessibilityPreferences {
    reduce_transparency: bool,
@@ -12,7 +12,7 @@ pub struct SystemAccessibilityPreferences {
    reduce_motion: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 pub struct TomlTheme {
    pub id: String,
    pub name: String,
@@ -131,13 +131,15 @@ fn get_system_theme_sync() -> String {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn get_system_theme() -> Result<String, String> {
    Ok(get_system_theme_sync())
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn get_system_accessibility_preferences(
-   app: crate::app_runtime::AppHandle,
+   app: tauri::AppHandle,
 ) -> Result<SystemAccessibilityPreferences, String> {
    #[cfg(target_os = "macos")]
    {
@@ -223,24 +225,28 @@ pub fn load_themes_from_directory(themes_dir: &Path) -> Result<Vec<TomlTheme>, S
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn load_toml_themes(themes_dir: String) -> Result<Vec<TomlTheme>, String> {
    let themes_path = Path::new(&themes_dir);
    load_themes_from_directory(themes_path)
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn load_single_toml_theme(theme_path: String) -> Result<Vec<TomlTheme>, String> {
    let path = Path::new(&theme_path);
    load_theme_from_toml(path)
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn get_cached_themes(cache: State<'_, ThemeCache>) -> Result<Vec<TomlTheme>, String> {
    let themes = cache.read().await;
    Ok(themes.values().cloned().collect())
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn cache_themes(
    themes: Vec<TomlTheme>,
    cache: State<'_, ThemeCache>,
@@ -253,6 +259,7 @@ pub async fn cache_themes(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn get_temp_dir() -> Result<String, String> {
    let temp_dir = std::env::temp_dir();
    temp_dir
@@ -262,6 +269,7 @@ pub async fn get_temp_dir() -> Result<String, String> {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn write_temp_file(file_name: String, content: String) -> Result<(), String> {
    let temp_dir = std::env::temp_dir();
    let file_path = temp_dir.join(&file_name);
@@ -273,6 +281,7 @@ pub async fn write_temp_file(file_name: String, content: String) -> Result<(), S
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn delete_temp_file(file_name: String) -> Result<(), String> {
    let temp_dir = std::env::temp_dir();
    let file_path = temp_dir.join(&file_name);

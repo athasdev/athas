@@ -1,4 +1,3 @@
-import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type {
   DebugAdapterLaunch,
@@ -11,6 +10,7 @@ import type {
   DebugSessionEnded,
   DebugVariable,
 } from "@/features/debugger/types/debugger.types";
+import { commands } from "@/bindings/commands";
 import { LspClient } from "@/features/editor/lsp/lsp-client";
 import { fileUriFromPath } from "@/features/editor/lsp/workspace-edit";
 import { useDebuggerStore } from "@/features/debugger/stores/debugger.store";
@@ -29,7 +29,13 @@ interface DebugProtocolWaiter {
 async function startDebugAdapterSession(
   launch: DebugAdapterLaunch,
 ): Promise<DebugAdapterSessionInfo> {
-  return await invoke<DebugAdapterSessionInfo>("debug_start_session", { launch });
+  const session = await commands.debugStartSession({
+    ...launch,
+    cwd: launch.cwd ?? null,
+    host: launch.host ?? null,
+    port: launch.port ?? null,
+  });
+  return { ...session, cwd: session.cwd ?? undefined };
 }
 
 export async function sendDebugAdapterRequest(
@@ -37,11 +43,7 @@ export async function sendDebugAdapterRequest(
   command: string,
   argumentsPayload?: unknown,
 ): Promise<number> {
-  return await invoke<number>("debug_send_request", {
-    sessionId,
-    command,
-    arguments: argumentsPayload,
-  });
+  return await commands.debugSendRequest(sessionId, command, argumentsPayload ?? null);
 }
 
 export async function sendDebugAdapterResponse(
@@ -52,9 +54,9 @@ export async function sendDebugAdapterResponse(
   body?: unknown,
   message?: string,
 ): Promise<void> {
-  await invoke("debug_send_raw_message", {
+  await commands.debugSendRawMessage(
     sessionId,
-    message: withoutUndefinedValues({
+    withoutUndefinedValues({
       type: "response",
       request_seq: requestSeq,
       command,
@@ -62,11 +64,11 @@ export async function sendDebugAdapterResponse(
       body,
       message,
     }),
-  });
+  );
 }
 
 export async function stopDebugAdapterSession(sessionId: string): Promise<void> {
-  await invoke("debug_stop_session", { sessionId });
+  await commands.debugStopSession(sessionId);
 }
 
 export async function disconnectDebugAdapterSession(

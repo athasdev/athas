@@ -3,11 +3,10 @@ use super::{
    auth::ACP_AUTHENTICATE_TIMEOUT,
    types::{AcpAuthMethod, AcpEvent, AcpTurnUsage, StopReason},
 };
-use crate::runtime::AthasAppHandle as AppHandle;
 use agent_client_protocol::schema::v1 as acp;
 use anyhow::{Context, Result, bail};
 use std::{sync::Arc, time::Duration};
-use tauri::Emitter;
+use tauri::{AppHandle, Emitter};
 
 const ACP_PROMPT_TURN_TIMEOUT: Duration = Duration::from_secs(30 * 60);
 /// How long a timed-out turn gets to wind down after `session/cancel` before it is reported.

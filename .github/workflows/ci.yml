@@ -69,11 +69,6 @@ jobs:
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.3.14
-
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
 
@@ -82,6 +77,22 @@ jobs:
         with:
           packages: libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
           version: 1.0
+
+      # The bindings staleness check formats generated TypeScript with vp fmt.
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@v1.18.0
+        with:
+          node-version-file: .node-version
+          cache: true
+          run-install: false
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Install dependencies
+        run: vp install --ignore-scripts && bun scripts/postinstall.ts
 
       - name: Run Rust checks with coverage
         run: bash scripts/check/rust.sh --coverage

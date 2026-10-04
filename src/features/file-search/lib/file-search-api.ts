@@ -1,4 +1,11 @@
-import { invoke } from "@tauri-apps/api/core";
+import {
+  commands,
+  type FffIndexedFile,
+  type FffScanStatus,
+  type FffSearchHit,
+} from "@/bindings/commands";
+
+export type { FffIndexedFile, FffScanStatus, FffSearchHit };
 
 export interface SearchMatchRange {
   start: number;
@@ -45,39 +52,27 @@ export interface SearchFilesRequest {
   context_lines?: number;
 }
 
-export interface FffSearchHit {
-  path: string;
-  name: string;
-  relative_path: string;
-  score: number;
-}
-
-export interface FffIndexedFile {
-  path: string;
-  name: string;
-  relative_path: string;
-}
-
-export interface FffScanStatus {
-  is_scanning: boolean;
-  scanned_files_count: number;
-  indexed_files: number;
-  is_watcher_ready: boolean;
-  is_warmup_complete: boolean;
-}
-
 export async function searchFilesContent(
   request: SearchFilesRequest,
 ): Promise<SearchFilesResponse> {
-  return invoke<SearchFilesResponse>("search_files_content", { request });
+  return commands.searchFilesContent({
+    root_paths: request.root_paths,
+    query: request.query,
+    case_sensitive: request.case_sensitive ?? null,
+    whole_word: request.whole_word ?? null,
+    use_regex: request.use_regex ?? null,
+    max_results: request.max_results ?? null,
+    file_offset: request.file_offset ?? null,
+    context_lines: request.context_lines ?? null,
+  });
 }
 
 export async function fffEnsureWorkspaces(rootPaths: readonly string[]): Promise<void> {
-  return invoke("fff_ensure_workspaces", { rootPaths });
+  await commands.fffEnsureWorkspaces([...rootPaths]);
 }
 
 export async function fffScanStatus(rootPaths: readonly string[]): Promise<FffScanStatus> {
-  return invoke<FffScanStatus>("fff_scan_status", { rootPaths });
+  return commands.fffScanStatus([...rootPaths]);
 }
 
 export async function fffSearchFiles(
@@ -85,13 +80,13 @@ export async function fffSearchFiles(
   rootPaths: readonly string[],
   limit = 100,
 ): Promise<FffSearchHit[]> {
-  return invoke<FffSearchHit[]>("fff_search_files", { query, limit, rootPaths });
+  return commands.fffSearchFiles(query, limit, [...rootPaths]);
 }
 
 export async function fffListFiles(rootPaths: readonly string[]): Promise<FffIndexedFile[]> {
-  return invoke<FffIndexedFile[]>("fff_list_files", { rootPaths });
+  return commands.fffListFiles([...rootPaths]);
 }
 
 export async function fffTrackAccess(path: string): Promise<void> {
-  return invoke("fff_track_access", { path });
+  await commands.fffTrackAccess(path);
 }

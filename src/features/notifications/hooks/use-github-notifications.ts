@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useCallback, useEffect, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
@@ -36,7 +36,7 @@ export function useGitHubNotifications() {
     try {
       const nextNotifications = await githubNotificationListCache.load(
         cacheKey,
-        () => invoke<GitHubNotification[]>("github_list_notifications"),
+        () => commands.githubListNotifications(),
         { force, ttlMs: GITHUB_NOTIFICATION_LIST_TTL_MS },
       );
       setNotifications(nextNotifications);

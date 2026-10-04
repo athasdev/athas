@@ -28,7 +28,11 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
+import type {
+  NotebookRunResult as CommandNotebookRunResult,
+  PythonDisplayData,
+} from "@/bindings/commands";
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
@@ -61,16 +65,8 @@ import {
   type NotebookOutput,
 } from "./notebook-model";
 
-interface NotebookRunResult {
-  stdout: string;
-  stderr: string;
-  status: number | null;
-  timedOut: boolean;
-  displayData?: Array<{
-    outputType?: string;
-    data: Record<string, NotebookMimeValue>;
-    metadata?: Record<string, unknown>;
-  }>;
+interface NotebookRunResult extends Omit<CommandNotebookRunResult, "displayData"> {
+  displayData: Array<Omit<PythonDisplayData, "data"> & { data: Record<string, NotebookMimeValue> }>;
 }
 
 const NOTEBOOK_CELL_ID_PREFIX = "notebook-cell";
@@ -626,11 +622,11 @@ export function NotebookEditor() {
 
     setRunningCell(cellIndex);
     try {
-      const result = await invoke<NotebookRunResult>("notebook_run_python_cell", {
-        code: notebookCellSource(cell),
-        cwd: notebookWorkingDirectory(path),
-        setupCode: "",
-      });
+      const result = (await commands.notebookRunPythonCell(
+        notebookCellSource(cell),
+        notebookWorkingDirectory(path),
+        "",
+      )) as NotebookRunResult;
       const latestNotebook = currentNotebook() ?? runNotebook;
       const executionCount = maxExecutionCount(latestNotebook) + 1;
       const nextNotebook = updateNotebookCellOutputs(

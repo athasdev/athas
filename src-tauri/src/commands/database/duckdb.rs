@@ -10,16 +10,19 @@ use athas_database::{
 };
 
 #[tauri::command]
+#[specta::specta]
 pub async fn get_duckdb_tables(path: String) -> Result<Vec<TableInfo>, String> {
    db_get_duckdb_tables(path).await
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn query_duckdb(path: String, query: String) -> Result<QueryResult, String> {
    db_query_duckdb(path, query).await
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn query_duckdb_filtered(
    path: String,
    params: FilteredQueryParams,
@@ -28,11 +31,13 @@ pub async fn query_duckdb_filtered(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn execute_duckdb(path: String, statement: String) -> Result<i64, String> {
    db_execute_duckdb(path, statement).await
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn insert_duckdb_row(
    path: String,
    table: String,
@@ -43,6 +48,7 @@ pub async fn insert_duckdb_row(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn update_duckdb_row(
    path: String,
    table: String,
@@ -63,6 +69,7 @@ pub async fn update_duckdb_row(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn delete_duckdb_row(
    path: String,
    table: String,
@@ -73,6 +80,7 @@ pub async fn delete_duckdb_row(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn get_duckdb_foreign_keys(
    path: String,
    table: String,

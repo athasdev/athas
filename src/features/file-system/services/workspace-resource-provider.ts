@@ -1,11 +1,9 @@
-import { invoke } from "@tauri-apps/api/core";
 import { readFile as readLocalFileBytes } from "@tauri-apps/plugin-fs";
+import { commands } from "@/bindings/commands";
 import { parseRemotePath } from "@/features/remote/utils/remote-path";
-import type { WslDirectoryEntry } from "@/features/wsl/controllers/wsl-workspace";
 import { parseWslPath } from "@/features/wsl/utils/wsl-path";
 import { readDirectoryContents, readFileContent } from "../controllers/file-operations";
 import { sortFileEntries } from "../controllers/file-tree-utils";
-import type { RemoteDirectoryEntry } from "../controllers/remote-workspace";
 import type { FileEntry } from "../types/app.types";
 
 export interface WorkspaceResourceProvider {
@@ -32,10 +30,7 @@ const remoteWorkspaceResourceProvider: WorkspaceResourceProvider = {
       throw new Error(`Invalid remote workspace path: ${path}`);
     }
 
-    const entries = await invoke<RemoteDirectoryEntry[]>("ssh_read_directory", {
-      connectionId: remoteInfo.connectionId,
-      path: remoteInfo.remotePath,
-    });
+    const entries = await commands.sshReadDirectory(remoteInfo.connectionId, remoteInfo.remotePath);
 
     return entries.map((entry) => ({
       name: entry.name,
@@ -50,10 +45,7 @@ const remoteWorkspaceResourceProvider: WorkspaceResourceProvider = {
       throw new Error(`Invalid remote workspace path: ${path}`);
     }
 
-    return await invoke<string>("ssh_read_file", {
-      connectionId: remoteInfo.connectionId,
-      filePath: remoteInfo.remotePath,
-    });
+    return await commands.sshReadFile(remoteInfo.connectionId, remoteInfo.remotePath);
   },
   async readBytes() {
     return null;
@@ -68,10 +60,7 @@ const wslWorkspaceResourceProvider: WorkspaceResourceProvider = {
       throw new Error(`Invalid WSL workspace path: ${path}`);
     }
 
-    const entries = await invoke<WslDirectoryEntry[]>("wsl_read_directory", {
-      distro: wslInfo.distro,
-      path: wslInfo.linuxPath,
-    });
+    const entries = await commands.wslReadDirectory(wslInfo.distro, wslInfo.linuxPath);
 
     return entries.map((entry) => ({
       name: entry.name,
@@ -88,10 +77,7 @@ const wslWorkspaceResourceProvider: WorkspaceResourceProvider = {
       throw new Error(`Invalid WSL workspace path: ${path}`);
     }
 
-    return await invoke<string>("wsl_read_file", {
-      distro: wslInfo.distro,
-      filePath: wslInfo.linuxPath,
-    });
+    return await commands.wslReadFile(wslInfo.distro, wslInfo.linuxPath);
   },
   async readBytes(path) {
     const wslInfo = parseWslPath(path);
@@ -99,10 +85,7 @@ const wslWorkspaceResourceProvider: WorkspaceResourceProvider = {
       throw new Error(`Invalid WSL workspace path: ${path}`);
     }
 
-    const bytes = await invoke<number[]>("wsl_read_file_bytes", {
-      distro: wslInfo.distro,
-      filePath: wslInfo.linuxPath,
-    });
+    const bytes = await commands.wslReadFileBytes(wslInfo.distro, wslInfo.linuxPath);
     return Uint8Array.from(bytes);
   },
 };

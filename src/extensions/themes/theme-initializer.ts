@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { loadCustomThemes } from "./custom-theme-store";
 import { toThemeDefinition } from "./theme-file";
 import { themeLoader } from "./theme-loader";
@@ -16,7 +16,7 @@ const rebuildNativeMenu = async () => {
       category: theme.category,
     }));
 
-    await invoke("rebuild_menu_themes", { themes: themeData });
+    await commands.rebuildMenuThemes(themeData);
   } catch (error) {
     console.error("Failed to rebuild native menu:", error);
   }

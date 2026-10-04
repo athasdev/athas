@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 
 interface TerminalConnectionReference {
   connectionId?: string;
@@ -13,7 +13,10 @@ export async function closeTerminalConnection({
     return;
   }
 
-  await invoke(remoteConnectionId ? "close_remote_terminal" : "close_terminal", {
-    id: connectionId,
-  });
+  if (remoteConnectionId) {
+    await commands.closeRemoteTerminal(connectionId);
+    return;
+  }
+
+  await commands.closeTerminal(connectionId);
 }

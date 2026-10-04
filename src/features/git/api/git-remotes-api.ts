@@ -1,4 +1,4 @@
-import { invoke as tauriInvoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import type { GitRemote } from "../types/git.types";
 import { emitGitChanged } from "../events/git-events";
 import { runGitRead } from "../runtime/git-read-coordinator";
@@ -21,9 +21,7 @@ export const getRemotes = async (repoPath: string): Promise<GitRemote[]> => {
     }
 
     return await runGitRead(resolvedRepoPath, "remotes", () =>
-      tauriInvoke<GitRemote[]>("git_get_remotes", {
-        repoPath: resolvedRepoPath,
-      }),
+      commands.gitGetRemotes(resolvedRepoPath),
     );
   } catch (error) {
     if (!isNotGitRepositoryError(error)) {
@@ -36,7 +34,7 @@ export const getRemotes = async (repoPath: string): Promise<GitRemote[]> => {
 export const addRemote = async (repoPath: string, name: string, url: string): Promise<boolean> => {
   try {
     const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
-    await tauriInvoke("git_add_remote", { repoPath: resolvedRepoPath, name, url });
+    await commands.gitAddRemote(resolvedRepoPath, name, url);
     emitGitChanged({
       repoPath: resolvedRepoPath,
       scopes: ["remotes"],
@@ -52,7 +50,7 @@ export const addRemote = async (repoPath: string, name: string, url: string): Pr
 export const removeRemote = async (repoPath: string, name: string): Promise<boolean> => {
   try {
     const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
-    await tauriInvoke("git_remove_remote", { repoPath: resolvedRepoPath, name });
+    await commands.gitRemoveRemote(resolvedRepoPath, name);
     emitGitChanged({
       repoPath: resolvedRepoPath,
       scopes: ["remotes"],
@@ -72,7 +70,7 @@ export const pushChanges = async (
 ): Promise<GitRemoteActionResult> => {
   try {
     const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
-    await tauriInvoke("git_push", { repoPath: resolvedRepoPath, branch, remote });
+    await commands.gitPush(resolvedRepoPath, branch ?? null, remote);
     emitGitChanged({
       repoPath: resolvedRepoPath,
       scopes: ["refs", "remotes"],
@@ -95,7 +93,7 @@ export const pullChanges = async (
 ): Promise<GitRemoteActionResult> => {
   try {
     const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
-    await tauriInvoke("git_pull", { repoPath: resolvedRepoPath, branch, remote });
+    await commands.gitPull(resolvedRepoPath, branch ?? null, remote);
     emitGitChanged({
       repoPath: resolvedRepoPath,
       scopes: ["working-tree", "history", "refs", "remotes"],
@@ -117,7 +115,7 @@ export const fetchChanges = async (
 ): Promise<GitRemoteActionResult> => {
   try {
     const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
-    await tauriInvoke("git_fetch", { repoPath: resolvedRepoPath, remote });
+    await commands.gitFetch(resolvedRepoPath, remote ?? null);
     emitGitChanged({
       repoPath: resolvedRepoPath,
       scopes: ["refs", "remotes"],

@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
@@ -111,8 +111,9 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
     if (!repoPath) return;
     let cancelled = false;
 
-    void invoke<Label[]>("github_list_labels", { repoPath })
-      .catch(() => [])
+    void commands
+      .githubListLabels(repoPath)
+      .catch((): Label[] => [])
       .then((nextLabels) => {
         if (!cancelled) setLabels(nextLabels);
       });
@@ -361,14 +362,14 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
       const next = { ...selectedPRDetails, ...changes };
       setMutationKey("edit");
       try {
-        await invoke<PullRequestDetails>("github_update_pull_request", {
+        await commands.githubUpdatePullRequest(
           repoPath,
           prNumber,
-          title: next.title,
-          body: next.body,
-          labels: next.labels.map((label) => label.name),
-          assignees: next.assignees.map((assignee) => assignee.login),
-        });
+          next.title,
+          next.body,
+          next.labels.map((label) => label.name),
+          next.assignees.map((assignee) => assignee.login),
+        );
         await refreshPR("comments");
         toast.success("Pull request updated");
         return true;
@@ -405,7 +406,7 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
     if (!repoPath || !body || mutationKey) return false;
     setMutationKey("comment");
     try {
-      await invoke("github_add_pr_comment", { repoPath, prNumber, body });
+      await commands.githubAddPrComment(repoPath, prNumber, body);
       setCommentDraft("");
       toast.success("Comment added");
       void refreshPR("comments").catch(() => {
@@ -422,7 +423,7 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
       if (!repoPath || mutationKey) return false;
       setMutationKey(`comment-${commentId}`);
       try {
-        await invoke("github_update_issue_comment", { repoPath, commentId, body });
+        await commands.githubUpdateIssueComment(repoPath, commentId, body);
         await refreshPR("comments");
         toast.success("Comment updated");
         return true;
@@ -441,7 +442,7 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
       if (!repoPath || mutationKey) return;
       setMutationKey(`comment-${commentId}`);
       try {
-        await invoke("github_delete_issue_comment", { repoPath, commentId });
+        await commands.githubDeleteIssueComment(repoPath, commentId);
         await refreshPR("comments");
         toast.success("Comment deleted");
       } catch (error) {
@@ -459,14 +460,14 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
       setMutationKey(inlineAction);
       try {
         if (inlineAction === "approve" || inlineAction === "request-changes") {
-          await invoke("github_submit_pr_review", {
+          await commands.githubSubmitPrReview(
             repoPath,
             prNumber,
-            event: inlineAction === "approve" ? "APPROVE" : "REQUEST_CHANGES",
+            inlineAction === "approve" ? "APPROVE" : "REQUEST_CHANGES",
             body,
-          });
+          );
         } else {
-          await invoke("github_merge_pull_request", { repoPath, prNumber, method });
+          await commands.githubMergePullRequest(repoPath, prNumber, method);
         }
 
         await refreshPR(inlineAction === "merge" ? "full" : "comments");
@@ -498,7 +499,7 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
 
     setMutationKey("close");
     try {
-      await invoke("github_close_pull_request", { repoPath, prNumber });
+      await commands.githubClosePullRequest(repoPath, prNumber);
       await refreshPR("full");
       toast.success("Pull request closed");
     } catch (error) {

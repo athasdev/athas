@@ -54,6 +54,7 @@ fn restore_provider_path(original_path: &str, backend_path: String) -> String {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn git_clone(repository_url: String, destination_path: String) -> Result<(), String> {
    run_blocking(move || {
       git_backend::git_clone(repository_url, resolve_backend_path(destination_path))
@@ -62,6 +63,7 @@ pub async fn git_clone(repository_url: String, destination_path: String) -> Resu
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn git_status(repo_path: String) -> Result<git_backend::GitStatus, String> {
    let started_at = Instant::now();
    let short = short_repo_path(&repo_path);
@@ -92,11 +94,13 @@ pub async fn git_status(repo_path: String) -> Result<git_backend::GitStatus, Str
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn git_init(repo_path: String) -> Result<(), String> {
    run_blocking(move || git_backend::git_init(resolve_backend_path(repo_path))).await
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn git_discover_repo(path: String) -> Result<Option<String>, String> {
    run_blocking(move || {
       let backend_path = resolve_backend_path(path.clone());
@@ -107,11 +111,13 @@ pub async fn git_discover_repo(path: String) -> Result<Option<String>, String> {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn git_commit(repo_path: String, message: String) -> Result<(), String> {
    git_backend::git_commit(resolve_backend_path(repo_path), message)
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn git_log(
    repo_path: String,
    limit: Option<u32>,
@@ -121,6 +127,7 @@ pub fn git_log(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn git_diff_file(
    repo_path: String,
    file_path: String,
@@ -133,6 +140,7 @@ pub async fn git_diff_file(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn git_diff_file_with_content(
    repo_path: String,
    file_path: String,
@@ -151,6 +159,7 @@ pub async fn git_diff_file_with_content(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn git_status_diff_stats(
    repo_path: String,
 ) -> Result<Vec<git_backend::GitDiffStat>, String> {
@@ -158,6 +167,7 @@ pub async fn git_status_diff_stats(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn git_commit_diff(
    repo_path: String,
    commit_hash: String,
@@ -170,6 +180,7 @@ pub async fn git_commit_diff(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn git_file_at_commit(
    repo_path: String,
    commit_hash: String,
@@ -182,6 +193,7 @@ pub async fn git_file_at_commit(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn git_ref_diff(
    repo_path: String,
    base_ref: String,
@@ -194,6 +206,7 @@ pub async fn git_ref_diff(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn git_blame_file(
    root_path: String,
    file_path: String,
@@ -206,11 +219,13 @@ pub async fn git_blame_file(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn git_branches(repo_path: String) -> Result<Vec<String>, String> {
    git_backend::git_branches(resolve_backend_path(repo_path))
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn git_checkout(
    repo_path: String,
    branch_name: String,
@@ -219,6 +234,7 @@ pub fn git_checkout(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn git_create_branch(
    repo_path: String,
    branch_name: String,
@@ -228,11 +244,13 @@ pub fn git_create_branch(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn git_delete_branch(repo_path: String, branch_name: String) -> Result<(), String> {
    git_backend::git_delete_branch(resolve_backend_path(repo_path), branch_name)
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn git_push(
    repo_path: String,
    branch: Option<String>,
@@ -243,6 +261,7 @@ pub async fn git_push(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn git_pull(
    repo_path: String,
    branch: Option<String>,
@@ -253,61 +272,73 @@ pub async fn git_pull(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn git_fetch(repo_path: String, remote: Option<String>) -> Result<(), String> {
    run_blocking(move || git_backend::git_fetch(resolve_backend_path(repo_path), remote)).await
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn git_get_remotes(repo_path: String) -> Result<Vec<git_backend::GitRemote>, String> {
    git_backend::git_get_remotes(resolve_backend_path(repo_path))
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn git_add_remote(repo_path: String, name: String, url: String) -> Result<(), String> {
    git_backend::git_add_remote(resolve_backend_path(repo_path), name, url)
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn git_remove_remote(repo_path: String, name: String) -> Result<(), String> {
    git_backend::git_remove_remote(resolve_backend_path(repo_path), name)
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn git_add(repo_path: String, file_path: String) -> Result<(), String> {
    run_blocking(move || git_backend::git_add(resolve_backend_path(repo_path), file_path)).await
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn git_reset(repo_path: String, file_path: String) -> Result<(), String> {
    run_blocking(move || git_backend::git_reset(resolve_backend_path(repo_path), file_path)).await
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn git_add_all(repo_path: String) -> Result<(), String> {
    run_blocking(move || git_backend::git_add_all(resolve_backend_path(repo_path))).await
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn git_reset_all(repo_path: String) -> Result<(), String> {
    run_blocking(move || git_backend::git_reset_all(resolve_backend_path(repo_path))).await
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn git_discard_file_changes(repo_path: String, file_path: String) -> Result<(), String> {
    git_backend::git_discard_file_changes(resolve_backend_path(repo_path), file_path)
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn git_discard_all_changes(repo_path: String) -> Result<(), String> {
    git_backend::git_discard_all_changes(resolve_backend_path(repo_path))
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn git_get_stashes(repo_path: String) -> Result<Vec<git_backend::GitStash>, String> {
    git_backend::git_get_stashes(resolve_backend_path(repo_path))
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn git_create_stash(
    repo_path: String,
    message: Option<String>,
@@ -323,21 +354,25 @@ pub fn git_create_stash(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn git_apply_stash(repo_path: String, stash_index: usize) -> Result<(), String> {
    git_backend::git_apply_stash(resolve_backend_path(repo_path), stash_index)
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn git_pop_stash(repo_path: String, stash_index: Option<usize>) -> Result<(), String> {
    git_backend::git_pop_stash(resolve_backend_path(repo_path), stash_index)
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn git_drop_stash(repo_path: String, stash_index: usize) -> Result<(), String> {
    git_backend::git_drop_stash(resolve_backend_path(repo_path), stash_index)
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn git_stash_diff(
    repo_path: String,
    stash_index: usize,
@@ -347,11 +382,13 @@ pub async fn git_stash_diff(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn git_get_tags(repo_path: String) -> Result<Vec<git_backend::GitTag>, String> {
    git_backend::git_get_tags(resolve_backend_path(repo_path))
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn git_create_tag(
    repo_path: String,
    name: String,
@@ -369,17 +406,20 @@ pub fn git_create_tag(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn git_delete_tag(repo_path: String, name: String) -> Result<(), String> {
    git_backend::git_delete_tag(resolve_backend_path(repo_path), name)
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn git_push_tag(repo_path: String, name: String, remote: String) -> Result<(), String> {
    run_blocking(move || git_backend::git_push_tag(resolve_backend_path(repo_path), name, remote))
       .await
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn git_delete_remote_tag(
    repo_path: String,
    name: String,
@@ -392,6 +432,7 @@ pub async fn git_delete_remote_tag(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn git_checkout_tag(
    repo_path: String,
    name: String,
@@ -400,6 +441,7 @@ pub fn git_checkout_tag(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn git_get_worktrees(repo_path: String) -> Result<Vec<git_backend::GitWorktree>, String> {
    let worktrees = git_backend::git_get_worktrees(resolve_backend_path(repo_path.clone()))?;
    Ok(worktrees
@@ -412,6 +454,7 @@ pub fn git_get_worktrees(repo_path: String) -> Result<Vec<git_backend::GitWorktr
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn git_add_worktree(
    repo_path: String,
    path: String,
@@ -422,21 +465,25 @@ pub fn git_add_worktree(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn git_remove_worktree(repo_path: String, path: String, force: bool) -> Result<(), String> {
    git_backend::git_remove_worktree(resolve_backend_path(repo_path), path, force)
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn git_prune_worktrees(repo_path: String) -> Result<(), String> {
    git_backend::git_prune_worktrees(resolve_backend_path(repo_path))
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn git_stage_hunk(repo_path: String, hunk: git_backend::GitHunk) -> Result<(), String> {
    git_backend::git_stage_hunk(resolve_backend_path(repo_path), hunk)
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn git_unstage_hunk(repo_path: String, hunk: git_backend::GitHunk) -> Result<(), String> {
    git_backend::git_unstage_hunk(resolve_backend_path(repo_path), hunk)
 }

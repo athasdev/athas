@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { connectionStore } from "../stores/remote-connection.store";
 import type { RemoteConnection } from "../types/remote.types";
 
@@ -6,15 +6,15 @@ export async function establishRemoteConnection(
   connection: RemoteConnection,
   providedPassword?: string,
 ) {
-  await invoke("ssh_connect", {
-    connectionId: connection.id,
-    host: connection.host,
-    port: connection.port,
-    username: connection.username,
-    password: providedPassword || connection.password || null,
-    keyPath: connection.keyPath || null,
-    useSftp: connection.type === "sftp",
-  });
+  await commands.sshConnect(
+    connection.id,
+    connection.host,
+    connection.port,
+    connection.username,
+    providedPassword || connection.password || null,
+    connection.keyPath || null,
+    connection.type === "sftp",
+  );
 
   await connectionStore.updateConnectionStatus(connection.id, true, new Date().toISOString());
 }

@@ -7,8 +7,9 @@ fn provider_key(provider_id: &str) -> String {
 
 /// Store an AI provider token using OS keychain when available.
 #[command]
+#[specta::specta]
 pub async fn store_ai_provider_token(
-   app: crate::app_runtime::AppHandle,
+   app: tauri::AppHandle,
    provider_id: String,
    token: String,
 ) -> Result<(), String> {
@@ -17,8 +18,9 @@ pub async fn store_ai_provider_token(
 
 /// Get an AI provider token
 #[command]
+#[specta::specta]
 pub async fn get_ai_provider_token(
-   app: crate::app_runtime::AppHandle,
+   app: tauri::AppHandle,
    provider_id: String,
 ) -> Result<Option<String>, String> {
    get_secret(&app, &provider_key(&provider_id))
@@ -26,8 +28,9 @@ pub async fn get_ai_provider_token(
 
 /// Remove an AI provider token
 #[command]
+#[specta::specta]
 pub async fn remove_ai_provider_token(
-   app: crate::app_runtime::AppHandle,
+   app: tauri::AppHandle,
    provider_id: String,
 ) -> Result<(), String> {
    remove_secret(&app, &provider_key(&provider_id))

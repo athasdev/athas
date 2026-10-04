@@ -14,3 +14,4 @@ if [[ "${1:-}" == "--coverage" ]]; then
 else
   cargo test --workspace --no-fail-fast
 fi
+bun scripts/generate-bindings.ts --check

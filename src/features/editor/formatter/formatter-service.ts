@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { getLanguageIdFromPath } from "@/features/editor/utils/language-id";
 import { logger } from "@/features/editor/utils/logger";
@@ -71,25 +71,19 @@ export async function formatContent(options: FormatOptions): Promise<FormatResul
     const workspaceFolder = getWorkspaceFolder(filePath);
 
     try {
-      const response = await invoke<{
-        formatted_content: string;
-        success: boolean;
-        error?: string;
-      }>("format_code", {
-        request: {
-          content: options.content,
-          language,
-          formatter: formatterName,
-          formatter_config: {
-            command: formatterConfig.command,
-            args: formatterConfig.args || [],
-            env: formatterConfig.env,
-            input_method: formatterConfig.inputMethod,
-            output_method: formatterConfig.outputMethod,
-          },
-          file_path: filePath,
-          workspace_folder: workspaceFolder,
+      const response = await commands.formatCode({
+        content: options.content,
+        language,
+        formatter: formatterName,
+        formatter_config: {
+          command: formatterConfig.command,
+          args: formatterConfig.args || [],
+          env: formatterConfig.env ?? null,
+          input_method: formatterConfig.inputMethod ?? null,
+          output_method: formatterConfig.outputMethod ?? null,
         },
+        file_path: filePath,
+        workspace_folder: workspaceFolder ?? null,
       });
 
       if (response.success) {

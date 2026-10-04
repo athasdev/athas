@@ -8,16 +8,19 @@ use athas_database::providers::{
 };
 
 #[tauri::command]
+#[specta::specta]
 pub async fn get_sqlite_tables(path: String) -> Result<Vec<TableInfo>, String> {
    db_get_sqlite_tables(path).await
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn execute_sqlite(path: String, statement: String) -> Result<i64, String> {
    db_execute_sqlite(path, statement).await
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn insert_sqlite_row(
    path: String,
    table: String,
@@ -28,6 +31,7 @@ pub async fn insert_sqlite_row(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn update_sqlite_row(
    path: String,
    table: String,
@@ -48,6 +52,7 @@ pub async fn update_sqlite_row(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn delete_sqlite_row(
    path: String,
    table: String,
@@ -58,11 +63,13 @@ pub async fn delete_sqlite_row(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn query_sqlite(path: String, query: String) -> Result<QueryResult, String> {
    db_query_sqlite(path, query).await
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn query_sqlite_filtered(
    path: String,
    params: FilteredQueryParams,
@@ -71,6 +78,7 @@ pub async fn query_sqlite_filtered(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn get_sqlite_foreign_keys(
    path: String,
    table: String,

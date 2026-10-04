@@ -1,6 +1,6 @@
 import { FieldError } from "@/ui/field";
 import { useRef, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { open } from "@tauri-apps/plugin-dialog";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { toast } from "sonner";
@@ -75,7 +75,7 @@ export function ReleaseAssets({
       const files = Array.isArray(selected) ? selected : [selected];
       for (const [index, filePath] of files.entries()) {
         setBusy(`Uploading ${index + 1} of ${files.length} · ${filePath.split(/[\\/]/).pop()}`);
-        await invoke("github_upload_release_asset", { repoPath, id: release.id, filePath });
+        await commands.githubUploadReleaseAsset(repoPath, release.id, filePath);
         uploaded++;
       }
       toast.success(`${uploaded} ${uploaded === 1 ? "asset" : "assets"} uploaded`);
@@ -91,7 +91,7 @@ export function ReleaseAssets({
     begin();
     setBusy("Deleting asset");
     try {
-      await invoke("github_delete_release_asset", { repoPath, assetId: deleting.id });
+      await commands.githubDeleteReleaseAsset(repoPath, deleting.id);
       notifyDeliveryChanged("releases", repoPath, release.id);
       toast.success("Asset deleted");
       setDeleting(null);

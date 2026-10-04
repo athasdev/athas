@@ -11,11 +11,12 @@
 //! also pin a single source explicitly, because an Athas token that authenticates
 //! fine while being blind to org repositories would otherwise always win.
 
-use crate::{app_runtime::AppHandle, secure_storage::get_secret};
+use crate::secure_storage::get_secret;
 use std::{
    sync::Mutex,
    time::{Duration, Instant},
 };
+use tauri::AppHandle;
 use tauri_plugin_store::StoreExt;
 
 pub const ATHAS_ACCOUNT_SECRET_KEY: &str = "github_token";
@@ -29,7 +30,7 @@ const GH_TOKEN_CACHE_TTL: Duration = Duration::from_secs(60);
 
 static GH_TOKEN_CACHE: Mutex<Option<(Instant, Option<String>)>> = Mutex::new(None);
 
-#[derive(Clone, Copy, PartialEq, Eq, serde::Serialize)]
+#[derive(Clone, Copy, PartialEq, Eq, serde::Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub enum GitHubTokenSource {
    Athas,

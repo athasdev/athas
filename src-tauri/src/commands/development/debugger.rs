@@ -3,6 +3,7 @@ use serde_json::Value;
 use tauri::{State, command};
 
 #[command]
+#[specta::specta]
 pub async fn debug_start_session(
    manager: State<'_, DebugManager>,
    launch: DebugAdapterLaunch,
@@ -13,18 +14,20 @@ pub async fn debug_start_session(
 }
 
 #[command]
+#[specta::specta]
 pub async fn debug_send_request(
    manager: State<'_, DebugManager>,
    session_id: String,
    command: String,
-   arguments: Option<Value>,
+   request_arguments: Option<Value>,
 ) -> Result<u64, String> {
    manager
-      .send_request(&session_id, command, arguments)
+      .send_request(&session_id, command, request_arguments)
       .map_err(|error| error.to_string())
 }
 
 #[command]
+#[specta::specta]
 pub async fn debug_send_raw_message(
    manager: State<'_, DebugManager>,
    session_id: String,
@@ -36,6 +39,7 @@ pub async fn debug_send_raw_message(
 }
 
 #[command]
+#[specta::specta]
 pub async fn debug_stop_session(
    manager: State<'_, DebugManager>,
    session_id: String,
@@ -46,6 +50,7 @@ pub async fn debug_stop_session(
 }
 
 #[command]
+#[specta::specta]
 pub async fn debug_list_sessions(
    manager: State<'_, DebugManager>,
 ) -> Result<Vec<DebugSessionInfo>, String> {

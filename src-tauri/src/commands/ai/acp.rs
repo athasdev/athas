@@ -4,7 +4,7 @@ use super::{
    },
    mcp::resolve_mcp_servers,
 };
-use crate::{app_runtime::AppHandle, service_urls};
+use crate::service_urls;
 use athas_ai::{
    AcpAgentBridge, AcpAgentStatus, AcpOpenedSession, AcpSessionList, AgentConfig, AgentRuntime,
    AgentSource, McpServerSetting, SessionConfigValue,
@@ -20,7 +20,7 @@ use std::{
    sync::Arc,
    time::{Duration, Instant},
 };
-use tauri::{Manager, State};
+use tauri::{AppHandle, Manager, State};
 use tokio::sync::Mutex;
 
 pub type AcpBridgeState = Arc<Mutex<AcpAgentBridge>>;
@@ -40,7 +40,7 @@ fn is_acp_agent_id(agent_id: &str) -> bool {
    !NON_ACP_AGENT_IDS.contains(&agent_id)
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, specta::Type)]
 pub struct PermissionResponseArgs {
    #[serde(alias = "requestId")]
    request_id: String,
@@ -52,6 +52,7 @@ pub struct PermissionResponseArgs {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn get_available_agents(
    app_handle: AppHandle,
    bridge: State<'_, AcpBridgeState>,
@@ -63,6 +64,7 @@ pub async fn get_available_agents(
 /// Downloads the ACP Registry again now instead of waiting for the hourly refresh, and asks every
 /// agent on PATH for its version again.
 #[tauri::command]
+#[specta::specta]
 pub async fn refresh_acp_agent_registry(
    app_handle: AppHandle,
    bridge: State<'_, AcpBridgeState>,
@@ -79,6 +81,7 @@ pub async fn refresh_acp_agent_registry(
 /// their stored secrets and offered to the agent. `additional_directories` are the workspace's
 /// other roots, offered to agents that support them.
 #[tauri::command]
+#[specta::specta]
 #[allow(clippy::too_many_arguments)]
 pub async fn open_acp_session(
    app_handle: AppHandle,
@@ -114,6 +117,7 @@ pub async fn open_acp_session(
 
 /// Lets go of a chat's session (the chat was deleted); the agent keeps serving other chats.
 #[tauri::command]
+#[specta::specta]
 pub async fn close_acp_session(
    bridge: State<'_, AcpBridgeState>,
    session_id: String,
@@ -126,6 +130,7 @@ pub async fn close_acp_session(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn install_acp_agent(
    app_handle: AppHandle,
    bridge: State<'_, AcpBridgeState>,
@@ -146,6 +151,7 @@ pub async fn install_acp_agent(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn update_acp_agent(
    app_handle: AppHandle,
    bridge: State<'_, AcpBridgeState>,
@@ -167,6 +173,7 @@ pub async fn update_acp_agent(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn uninstall_acp_agent(
    app_handle: AppHandle,
    bridge: State<'_, AcpBridgeState>,
@@ -475,6 +482,7 @@ async fn refresh_registered_agents(app_handle: &AppHandle, bridge: &AcpBridgeSta
 /// Starts `agent_id` in `workspace_path` without opening a session, so its sessions can be
 /// browsed before any chat uses it. Does nothing when it already runs there.
 #[tauri::command]
+#[specta::specta]
 pub async fn start_acp_agent(
    app_handle: AppHandle,
    bridge: State<'_, AcpBridgeState>,
@@ -496,6 +504,7 @@ pub async fn start_acp_agent(
 /// Stops the agent running `agent_id` in `workspace_path`, ending every session on it. Without
 /// an agent id every agent is stopped.
 #[tauri::command]
+#[specta::specta]
 pub async fn stop_acp_agent(
    bridge: State<'_, AcpBridgeState>,
    agent_id: Option<String>,
@@ -510,6 +519,7 @@ pub async fn stop_acp_agent(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn send_acp_prompt(
    bridge: State<'_, AcpBridgeState>,
    session_id: String,
@@ -524,6 +534,7 @@ pub async fn send_acp_prompt(
 
 /// Every running agent and the sessions open on it.
 #[tauri::command]
+#[specta::specta]
 pub async fn get_acp_status(
    bridge: State<'_, AcpBridgeState>,
 ) -> Result<Vec<AcpAgentStatus>, String> {
@@ -532,6 +543,7 @@ pub async fn get_acp_status(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn respond_acp_permission(
    bridge: State<'_, AcpBridgeState>,
    args: PermissionResponseArgs,
@@ -552,6 +564,7 @@ pub async fn respond_acp_permission(
 /// JSON: `{ "action": "accept", "content": {...} }`, `{ "action": "decline" }` or `{ "action":
 /// "cancel" }`.
 #[tauri::command]
+#[specta::specta]
 pub async fn respond_acp_elicitation(
    bridge: State<'_, AcpBridgeState>,
    request_id: String,
@@ -567,6 +580,7 @@ pub async fn respond_acp_elicitation(
 /// Answers the ACP client's `acp-buffer-read` event: what the editor holds for the file an agent
 /// is reading, unsaved changes included, or null when the file is not open.
 #[tauri::command]
+#[specta::specta]
 pub async fn respond_acp_buffer_read(
    bridge: State<'_, AcpBridgeState>,
    request_id: String,
@@ -578,6 +592,7 @@ pub async fn respond_acp_buffer_read(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn set_acp_session_mode(
    bridge: State<'_, AcpBridgeState>,
    session_id: String,
@@ -590,7 +605,7 @@ pub async fn set_acp_session_mode(
       .map_err(|e| e.to_string())
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, specta::Type)]
 pub struct SessionConfigOptionArgs {
    #[serde(alias = "sessionId")]
    session_id: String,
@@ -600,7 +615,7 @@ pub struct SessionConfigOptionArgs {
 }
 
 /// Names the agent process a request is for: `agent_id` running in `workspace_path`.
-#[derive(Deserialize)]
+#[derive(Deserialize, specta::Type)]
 pub struct AgentTargetArgs {
    #[serde(alias = "agentId")]
    agent_id: String,
@@ -608,7 +623,7 @@ pub struct AgentTargetArgs {
    workspace_path: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, specta::Type)]
 pub struct SessionListArgs {
    #[serde(flatten)]
    agent: AgentTargetArgs,
@@ -616,7 +631,7 @@ pub struct SessionListArgs {
    cursor: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, specta::Type)]
 pub struct SessionDeleteArgs {
    #[serde(flatten)]
    agent: AgentTargetArgs,
@@ -625,6 +640,7 @@ pub struct SessionDeleteArgs {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn set_acp_session_config_option(
    bridge: State<'_, AcpBridgeState>,
    args: SessionConfigOptionArgs,
@@ -637,6 +653,7 @@ pub async fn set_acp_session_config_option(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn list_acp_sessions(
    bridge: State<'_, AcpBridgeState>,
    args: SessionListArgs,
@@ -654,6 +671,7 @@ pub async fn list_acp_sessions(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn delete_acp_session(
    bridge: State<'_, AcpBridgeState>,
    args: SessionDeleteArgs,
@@ -670,6 +688,7 @@ pub async fn delete_acp_session(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn logout_acp_agent(
    bridge: State<'_, AcpBridgeState>,
    agent_id: String,
@@ -684,6 +703,7 @@ pub async fn logout_acp_agent(
 
 /// Signs in to the running agent with an `agent` method the user picked.
 #[tauri::command]
+#[specta::specta]
 pub async fn authenticate_acp_agent(
    bridge: State<'_, AcpBridgeState>,
    agent_id: String,
@@ -700,6 +720,7 @@ pub async fn authenticate_acp_agent(
 /// Cancels the prompt turn in `session_id`; other chats keep running. Without a session (the
 /// chat's agent is still starting), the startup of `agent_id` in `workspace_path` is stopped.
 #[tauri::command]
+#[specta::specta]
 pub async fn cancel_acp_prompt(
    bridge: State<'_, AcpBridgeState>,
    session_id: Option<String>,

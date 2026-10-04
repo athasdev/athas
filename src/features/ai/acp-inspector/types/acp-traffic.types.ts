@@ -1,41 +1,19 @@
+import type {
+  InitializeExchange,
+  TrafficDirection,
+  TrafficEntry_Serialize,
+  TrafficProcess,
+} from "@/bindings/commands";
+
 /** Which way a recorded line went: from the agent, to the agent, or the agent's stderr. */
-export type AcpTrafficDirection = "in" | "out" | "stderr";
+export type AcpTrafficDirection = TrafficDirection;
 
 /** One line recorded by the Rust tap on an agent process's stdio. */
-export interface AcpTrafficEntry {
-  seq: number;
-  timestampMs: number;
-  direction: AcpTrafficDirection;
-  /** The line with secrets redacted, cut short when `truncated`. */
-  line: string;
-  truncated: boolean;
-  originalBytes: number;
-  /** For a truncated line, the method it carried. */
-  method?: string;
-  /** For a truncated line, the JSON-RPC id it carried. */
-  id?: string | number | null;
-}
+export type AcpTrafficEntry = TrafficEntry_Serialize;
 
-export interface AcpTrafficProcess {
-  processKey: string;
-  agentId: string;
-  agentName: string;
-  workspacePath: string | null;
-  running: boolean;
-  startedAtMs: number;
-  entryCount: number;
-}
+export type AcpTrafficProcess = TrafficProcess;
 
-export interface AcpInitializeExchange {
-  request: unknown;
-  response: unknown;
-}
-
-export interface AcpTrafficBacklog {
-  process: AcpTrafficProcess;
-  initialize: AcpInitializeExchange;
-  entries: AcpTrafficEntry[];
-}
+export type AcpInitializeExchange = InitializeExchange;
 
 /** The `acp-traffic` event payload. */
 export type AcpTrafficEvent =

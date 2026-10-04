@@ -1,5 +1,5 @@
 use super::{
-   exec_guard::{validate_exec_command, validate_exec_env},
+   exec_guard::{validate_exec_args, validate_exec_command, validate_exec_env},
    extension_command::build_extension_command,
 };
 use athas_runtime::process::configure_background_command;
@@ -11,7 +11,7 @@ use std::{
 };
 use tauri::command;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, specta::Type)]
 pub struct FormatRequest {
    pub content: String,
    pub language: String,
@@ -21,7 +21,7 @@ pub struct FormatRequest {
    pub workspace_folder: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 pub struct FormatterConfig {
    pub command: String,
    pub args: Option<Vec<String>>,
@@ -30,7 +30,7 @@ pub struct FormatterConfig {
    pub output_method: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, specta::Type)]
 pub struct FormatResponse {
    pub formatted_content: String,
    pub success: bool,
@@ -39,6 +39,7 @@ pub struct FormatResponse {
 
 /// Format code content using the specified formatter
 #[command]
+#[specta::specta]
 pub async fn format_code(request: FormatRequest) -> Result<FormatResponse, String> {
    // If formatter config is provided, use generic formatter
    if let Some(config) = &request.formatter_config {
@@ -72,6 +73,9 @@ async fn format_with_generic(
    // before the template variables get a chance to be substituted.
    validate_exec_command(&config.command)
       .map_err(|e| format!("Invalid formatter config: {}", e))?;
+   if let Some(args) = config.args.as_deref() {
+      validate_exec_args(args).map_err(|e| format!("Invalid formatter config: {}", e))?;
+   }
    if let Some(env) = &config.env {
       validate_exec_env(env).map_err(|e| format!("Invalid formatter config: {}", e))?;
    }

@@ -23,6 +23,7 @@ use athas_database::{
 use std::sync::Arc;
 
 #[tauri::command]
+#[specta::specta]
 pub async fn get_postgres_tables(
    connection_id: String,
    state: tauri::State<'_, Arc<ConnectionManager>>,
@@ -31,6 +32,7 @@ pub async fn get_postgres_tables(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn query_postgres(
    connection_id: String,
    query: String,
@@ -40,6 +42,7 @@ pub async fn query_postgres(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn query_postgres_filtered(
    connection_id: String,
    params: FilteredQueryParams,
@@ -49,6 +52,7 @@ pub async fn query_postgres_filtered(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn execute_postgres(
    connection_id: String,
    statement: String,
@@ -58,6 +62,7 @@ pub async fn execute_postgres(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn get_postgres_foreign_keys(
    connection_id: String,
    table: String,
@@ -67,6 +72,7 @@ pub async fn get_postgres_foreign_keys(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn get_postgres_table_schema(
    connection_id: String,
    table: String,
@@ -76,6 +82,7 @@ pub async fn get_postgres_table_schema(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn get_postgres_subscription_info(
    connection_id: String,
    subscription: String,
@@ -85,6 +92,7 @@ pub async fn get_postgres_subscription_info(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn get_postgres_subscription_status(
    connection_id: String,
    subscription: String,
@@ -94,6 +102,7 @@ pub async fn get_postgres_subscription_status(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn create_postgres_subscription(
    connection_id: String,
    params: CreatePostgresSubscriptionParams,
@@ -103,6 +112,7 @@ pub async fn create_postgres_subscription(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn drop_postgres_subscription(
    connection_id: String,
    subscription: String,
@@ -119,6 +129,7 @@ pub async fn drop_postgres_subscription(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn set_postgres_subscription_enabled(
    connection_id: String,
    subscription: String,
@@ -135,6 +146,7 @@ pub async fn set_postgres_subscription_enabled(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn refresh_postgres_subscription(
    connection_id: String,
    subscription: String,
@@ -151,6 +163,7 @@ pub async fn refresh_postgres_subscription(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn insert_postgres_row(
    connection_id: String,
    table: String,
@@ -169,6 +182,7 @@ pub async fn insert_postgres_row(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn update_postgres_row(
    connection_id: String,
    table: String,
@@ -191,6 +205,7 @@ pub async fn update_postgres_row(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn delete_postgres_row(
    connection_id: String,
    table: String,

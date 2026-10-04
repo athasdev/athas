@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { ClipboardAddon, type ClipboardSelectionType } from "@xterm/addon-clipboard";
 import { FitAddon } from "@xterm/addon-fit";
 import { UnicodeGraphemesAddon } from "@xterm/addon-unicode-graphemes";
@@ -70,7 +70,7 @@ export const ExternalEditorTerminal = ({
   const { write, writeBinary, flush } = useTerminalWriteBuffer({
     getConnectionId: () => terminalConnectionId,
     writeChunk: async (connectionId, input) => {
-      await invoke("terminal_write", { id: connectionId, input });
+      await commands.terminalWrite(connectionId, input);
     },
   });
 
@@ -91,7 +91,7 @@ export const ExternalEditorTerminal = ({
       const size = getTerminalSize(terminal);
       if (terminalSizesEqual(lastSizeRef.current, size)) return;
       lastSizeRef.current = size;
-      void invoke("terminal_resize", { id: terminalConnectionId, size }).catch((error) => {
+      void commands.terminalResize(terminalConnectionId, size).catch((error) => {
         lastSizeRef.current = null;
         console.error("Failed to resize terminal:", error);
       });
@@ -238,7 +238,7 @@ export const ExternalEditorTerminal = ({
     const setOutputPaused = (paused: boolean) => {
       if (outputPausedRef.current === paused) return;
       outputPausedRef.current = paused;
-      void invoke("terminal_set_paused", { id: terminalConnectionId, paused }).catch(() => {
+      void commands.terminalSetPaused(terminalConnectionId, paused).catch(() => {
         outputPausedRef.current = !paused;
       });
     };

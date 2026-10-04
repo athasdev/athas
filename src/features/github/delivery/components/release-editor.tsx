@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import { Checkbox } from "@/ui/checkbox";
@@ -7,6 +7,7 @@ import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/ui/field";
 import { Spinner } from "@/ui/spinner";
 import { GitHubMarkdownEditor } from "../../components/github-markdown-editor";
 import { ViewerErrorState } from "@/features/viewer/components/viewer-state";
+import { normalizeRelease } from "../services/github-delivery-service";
 import type { Release, ReleaseInput } from "../types/github-delivery.types";
 
 export function ReleaseEditor({
@@ -71,17 +72,13 @@ export function ReleaseEditor({
     setBusy("save");
     setError(null);
     try {
-      const saved = await invoke<Release>("github_save_release", {
-        repoPath,
-        id: release?.id ?? null,
-        input: {
-          ...input,
-          tag_name: input.tag_name.trim(),
-          target_commitish: input.target_commitish.trim(),
-        },
+      const saved = await commands.githubSaveRelease(repoPath, release?.id ?? null, {
+        ...input,
+        tag_name: input.tag_name.trim(),
+        target_commitish: input.target_commitish.trim(),
       });
       removeDraft();
-      onSave(saved);
+      onSave(normalizeRelease(saved));
     } catch (error) {
       setError(String(error));
     } finally {
@@ -95,12 +92,12 @@ export function ReleaseEditor({
     setBusy("generate");
     setError(null);
     try {
-      const notes = await invoke<{ name: string; body: string }>("github_generate_release_notes", {
+      const notes = (await commands.githubGenerateReleaseNotes(
         repoPath,
-        tag: input.tag_name.trim(),
-        target: input.target_commitish.trim(),
-        previousTag: previousTag.trim() || null,
-      });
+        input.tag_name.trim(),
+        input.target_commitish.trim(),
+        previousTag.trim() || null,
+      )) as { name: string; body: string };
       setInput((current) => ({
         ...current,
         name: current.name || notes.name,

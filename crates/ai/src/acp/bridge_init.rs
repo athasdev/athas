@@ -17,7 +17,7 @@ use super::{
    },
    workspace_path::{self, path_to_string},
 };
-use crate::{executable_path::find_executable, runtime::AthasAppHandle as AppHandle};
+use crate::executable_path::find_executable;
 use agent_client_protocol::{
    self as acp_sdk,
    schema::{ProtocolVersion, v1 as acp},
@@ -31,7 +31,7 @@ use std::{
    process::Stdio,
    sync::Arc,
 };
-use tauri::Emitter;
+use tauri::{AppHandle, Emitter};
 use tokio::{
    process::{Child, Command},
    sync::Mutex,

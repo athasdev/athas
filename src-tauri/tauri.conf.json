@@ -61,11 +61,16 @@
       "entitlements": null
     },
     "linux": {
+      "appimage": {
+        "bundleMediaFramework": false
+      },
       "deb": {
-        "desktopTemplate": "linux/athas.desktop"
+        "desktopTemplate": "linux/athas.desktop",
+        "recommends": ["xdg-desktop-portal", "zenity"]
       },
       "rpm": {
-        "desktopTemplate": "linux/athas.desktop"
+        "desktopTemplate": "linux/athas.desktop",
+        "recommends": ["xdg-desktop-portal", "zenity"]
       }
     },
     "windows": {

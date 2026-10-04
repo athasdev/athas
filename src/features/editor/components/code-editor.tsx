@@ -1,5 +1,5 @@
 import type React from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import {
   useCallback,
   useEffect,
@@ -101,14 +101,6 @@ interface GoToLineEventDetail {
 
 const PYTHON_SCRIPT_CELL_COMMAND = "athas.runPythonScriptCell";
 const R_MARKDOWN_CHUNK_COMMAND = "athas.runRMarkdownChunk";
-
-interface NotebookRunResult {
-  stdout: string;
-  stderr: string;
-  status: number | null;
-  timedOut: boolean;
-  displayData?: Array<unknown>;
-}
 
 function isPythonScriptFile(filePath: string): boolean {
   const normalized = filePath.toLowerCase();
@@ -368,11 +360,8 @@ const CodeEditor = ({
         const cell = pythonScriptCells[cellIndex];
         if (!cell) return;
 
-        void invoke<NotebookRunResult>("notebook_run_python_cell", {
-          code: cell.code,
-          setupCode: cell.setupCode,
-          cwd: editorWorkingDirectory(filePath),
-        })
+        void commands
+          .notebookRunPythonCell(cell.code, editorWorkingDirectory(filePath), cell.setupCode)
           .then((result) => {
             if (result.timedOut) {
               toast.error("Python cell timed out.");
@@ -412,11 +401,8 @@ const CodeEditor = ({
           return;
         }
 
-        void invoke<NotebookRunResult>("notebook_run_r_cell", {
-          code: chunk.code,
-          setupCode: chunk.setupCode,
-          cwd: editorWorkingDirectory(filePath),
-        })
+        void commands
+          .notebookRunRCell(chunk.code, editorWorkingDirectory(filePath), chunk.setupCode)
           .then((result) => {
             const currentValue = valueRef.current;
             const currentChunk = getRMarkdownChunks(currentValue)[chunkIndex] ?? chunk;

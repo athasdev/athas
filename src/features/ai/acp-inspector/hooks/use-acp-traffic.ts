@@ -1,10 +1,9 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { listen } from "@tauri-apps/api/event";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { appendTrafficEntries } from "../lib/acp-traffic-messages";
 import type {
   AcpInitializeExchange,
-  AcpTrafficBacklog,
   AcpTrafficEntry,
   AcpTrafficEvent,
   AcpTrafficProcess,
@@ -45,7 +44,7 @@ export function useAcpTraffic() {
     loadingRef.current = true;
     pendingRef.current = [];
     try {
-      const backlog = await invoke<AcpTrafficBacklog | null>("get_acp_traffic", { processKey });
+      const backlog = await commands.getAcpTraffic(processKey);
       if (selectedKeyRef.current !== processKey) return;
       startedAtRef.current = backlog?.process.startedAtMs ?? null;
       setEntries(appendTrafficEntries(backlog?.entries ?? [], pendingRef.current));
@@ -99,8 +98,8 @@ export function useAcpTraffic() {
         return;
       }
       unlisten = stopListening;
-      await invoke("subscribe_acp_traffic");
-      const initial = await invoke<AcpTrafficProcess[]>("get_acp_traffic_processes");
+      await commands.subscribeAcpTraffic();
+      const initial = await commands.getAcpTrafficProcesses();
       if (disposed) return;
       setProcesses(initial);
       setSelectedKey((current) => current ?? initial[0]?.processKey ?? null);
@@ -119,14 +118,14 @@ export function useAcpTraffic() {
       window.clearInterval(flush);
       if (unlisten) {
         unlisten();
-        void invoke("unsubscribe_acp_traffic");
+        void commands.unsubscribeAcpTraffic();
       }
     };
   }, [loadBacklog]);
 
   const clear = useCallback(async () => {
     if (!selectedKey) return;
-    await invoke("clear_acp_traffic", { processKey: selectedKey });
+    await commands.clearAcpTraffic(selectedKey);
     pendingRef.current = [];
     setEntries([]);
   }, [selectedKey]);
@@ -134,7 +133,7 @@ export function useAcpTraffic() {
   const exportTo = useCallback(
     async (path: string) => {
       if (!selectedKey) return;
-      await invoke("export_acp_traffic", { processKey: selectedKey, path });
+      await commands.exportAcpTraffic(selectedKey, path);
     },
     [selectedKey],
   );

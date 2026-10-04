@@ -1,0 +1,46 @@
+# Flatpak bundle for Athas, built from the release tarball by
+# scripts/release/packaging/linux/flatpak.sh. It is published as a release
+# artifact, not submitted to Flathub.
+#
+# Host integration:
+# - The integrated terminal (and agent terminals) start the user's shell on
+#   the host through `flatpak-spawn --host`, allowed by the
+#   org.freedesktop.Flatpak talk name below.
+# - Everything else Athas launches (language servers, formatters, linters,
+#   debug adapters, agents, the git CLI) runs inside the sandbox. Tools that
+#   Athas downloads into its data directory work; tools that only exist on the
+#   host do not. Use the deb, rpm or AppImage build when that matters.
+id: com.code.athas
+runtime: org.gnome.Platform
+runtime-version: "50"
+sdk: org.gnome.Sdk
+command: athas
+rename-icon: athas
+finish-args:
+  - --share=ipc
+  - --share=network
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --socket=ssh-auth
+  - --device=dri
+  # An editor opens arbitrary project directories.
+  - --filesystem=host
+  # Lets the terminal find host shells under /run/host.
+  - --filesystem=host-os:ro
+  - --talk-name=org.freedesktop.Flatpak
+  - --talk-name=org.freedesktop.Notifications
+  - --talk-name=org.freedesktop.secrets
+modules:
+  - name: athas
+    buildsystem: simple
+    sources:
+      - type: archive
+        path: athas.tar.gz
+      - type: file
+        path: com.code.athas.metainfo.xml
+    build-commands:
+      - install -Dm755 bin/athas /app/bin/athas
+      - cp -R lib /app/lib
+      - install -Dm644 share/applications/com.code.athas.desktop /app/share/applications/com.code.athas.desktop
+      - cp -R share/icons /app/share/icons
+      - install -Dm644 com.code.athas.metainfo.xml /app/share/metainfo/com.code.athas.metainfo.xml

@@ -1,5 +1,5 @@
 import type { AcpElicitationResponse } from "../lib/acp-elicitation";
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { listen } from "@tauri-apps/api/event";
 import { toast } from "sonner";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
@@ -11,7 +11,6 @@ import type {
   AcpSessionList,
   AcpStopReason,
   AcpTurnUsage,
-  AgentConfig,
 } from "@/features/ai/types/acp.types";
 import type { ContextInfo } from "@/features/ai/types/ai-context.types";
 import type { AgentCompletionResult } from "@/features/ai/types/agent-completion.types";
@@ -175,10 +174,7 @@ export class AcpStreamHandler {
       this.awaitingFirstResponse = true;
       try {
         await withTimeout(
-          invoke("send_acp_prompt", {
-            sessionId: this.activeSessionId,
-            prompt: this.buildPrompt(userMessage, context),
-          }),
+          commands.sendAcpPrompt(this.activeSessionId, this.buildPrompt(userMessage, context)),
           ACP_PROMPT_TIMEOUT_MS,
           `${this.agentId} did not accept the prompt in time`,
         );
@@ -255,10 +251,10 @@ export class AcpStreamHandler {
         ) {
           throw error;
         }
-        const availableAgents = await invoke<AgentConfig[]>("get_available_agents");
+        const availableAgents = await commands.getAvailableAgents();
         const agent = availableAgents.find((item) => item.id === this.agentId);
         if (!agent?.installed && agent?.canInstall) {
-          await invoke<AgentConfig>("install_acp_agent", { agentId: this.agentId });
+          await commands.installAcpAgent(this.agentId);
           opened = await this.openSession(workspacePath, desiredSessionId);
         } else {
           throw error;
@@ -302,16 +298,15 @@ export class AcpStreamHandler {
   ): Promise<AcpOpenedSession> {
     try {
       return await withTimeout(
-        invoke<AcpOpenedSession>("open_acp_session", {
-          agentId: this.agentId,
+        commands.openAcpSession(
+          this.agentId,
           workspacePath,
           sessionId,
-          ...(this.authMethodId ? { authMethodId: this.authMethodId } : {}),
-          mcpServers: useSettingsStore
-            .getState()
-            .settings.mcpServers.filter((server) => server.enabled),
-          ...AcpStreamHandler.additionalDirectories(workspacePath),
-        }),
+          null,
+          this.authMethodId || null,
+          useSettingsStore.getState().settings.mcpServers.filter((server) => server.enabled),
+          AcpStreamHandler.additionalDirectories(workspacePath),
+        ) as Promise<AcpOpenedSession>,
         ACP_START_TIMEOUT_MS,
         `${this.agentId} startup timed out`,
       );
@@ -319,11 +314,7 @@ export class AcpStreamHandler {
       if (error instanceof Error && error.message.includes("startup timed out")) {
         // Stop the startup that is still running so the next attempt starts clean. Other chats
         // already using the agent are not affected.
-        void invoke("cancel_acp_prompt", {
-          sessionId: null,
-          agentId: this.agentId,
-          workspacePath,
-        }).catch(() => undefined);
+        void commands.cancelAcpPrompt(null, this.agentId, workspacePath).catch(() => undefined);
       }
       throw error;
     }
@@ -335,7 +326,7 @@ export class AcpStreamHandler {
       workspacePath,
       useFileSystemStore.getState().workspaceFolders,
     );
-    return additionalDirectories.length > 0 ? { additionalDirectories } : {};
+    return additionalDirectories.length > 0 ? additionalDirectories : null;
   }
 
   /** Tells the user once per agent start which configured MCP servers the agent left out. */
@@ -786,7 +777,7 @@ export class AcpStreamHandler {
     workspacePath: string | null;
   }): Promise<void> {
     try {
-      await invoke("cancel_acp_prompt", target);
+      await commands.cancelAcpPrompt(target.sessionId, target.agentId, target.workspacePath);
     } catch (error) {
       console.error("Failed to cancel ACP prompt on backend:", error);
     }
@@ -823,9 +814,7 @@ export class AcpStreamHandler {
     cancelled = false,
     optionId?: string,
   ): Promise<void> {
-    await invoke("respond_acp_permission", {
-      args: { requestId, approved, cancelled, optionId },
-    });
+    await commands.respondAcpPermission({ requestId, approved, cancelled, optionId });
   }
 
   /** Answers an agent's `elicitation/create` request. */
@@ -833,7 +822,7 @@ export class AcpStreamHandler {
     requestId: string,
     response: AcpElicitationResponse,
   ): Promise<void> {
-    await invoke("respond_acp_elicitation", { requestId, response });
+    await commands.respondAcpElicitation(requestId, response);
   }
 
   // Static method to get available agents
@@ -845,7 +834,7 @@ export class AcpStreamHandler {
       installed: boolean;
     }>
   > {
-    return invoke("get_available_agents");
+    return commands.getAvailableAgents();
   }
 
   /**
@@ -853,10 +842,7 @@ export class AcpStreamHandler {
    * there, so its sessions can be listed before any chat uses it.
    */
   static async startAgent(agentId: string, workspacePath?: string | null): Promise<void> {
-    await invoke("start_acp_agent", {
-      agentId,
-      workspacePath: workspacePath ?? AcpStreamHandler.currentWorkspacePath(),
-    });
+    await commands.startAcpAgent(agentId, workspacePath ?? AcpStreamHandler.currentWorkspacePath());
   }
 
   static async listSessions(args: {
@@ -865,13 +851,11 @@ export class AcpStreamHandler {
     cwd?: string;
     cursor?: string | null;
   }): Promise<AcpSessionList> {
-    return invoke<AcpSessionList>("list_acp_sessions", {
-      args: {
-        agentId: args.agentId,
-        workspacePath: args.workspacePath ?? AcpStreamHandler.currentWorkspacePath(),
-        cwd: args.cwd,
-        cursor: args.cursor ?? undefined,
-      },
+    return commands.listAcpSessions({
+      agentId: args.agentId,
+      workspacePath: args.workspacePath ?? AcpStreamHandler.currentWorkspacePath(),
+      cwd: args.cwd ?? null,
+      cursor: args.cursor ?? null,
     });
   }
 
@@ -881,16 +865,15 @@ export class AcpStreamHandler {
    */
   static async importSession(agentId: string, sessionId: string): Promise<AcpOpenedSession> {
     const opened = await withTimeout(
-      invoke<AcpOpenedSession>("open_acp_session", {
+      commands.openAcpSession(
         agentId,
-        workspacePath: AcpStreamHandler.currentWorkspacePath(),
+        AcpStreamHandler.currentWorkspacePath(),
         sessionId,
-        importSession: true,
-        mcpServers: useSettingsStore
-          .getState()
-          .settings.mcpServers.filter((server) => server.enabled),
-        ...AcpStreamHandler.additionalDirectories(AcpStreamHandler.currentWorkspacePath()),
-      }),
+        true,
+        null,
+        useSettingsStore.getState().settings.mcpServers.filter((server) => server.enabled),
+        AcpStreamHandler.additionalDirectories(AcpStreamHandler.currentWorkspacePath()),
+      ) as Promise<AcpOpenedSession>,
       ACP_START_TIMEOUT_MS,
       `${agentId} did not load the session in time`,
     );
@@ -899,8 +882,10 @@ export class AcpStreamHandler {
   }
 
   static async deleteSession(agentId: string, sessionId: string): Promise<void> {
-    await invoke("delete_acp_session", {
-      args: { agentId, workspacePath: AcpStreamHandler.currentWorkspacePath(), sessionId },
+    await commands.deleteAcpSession({
+      agentId,
+      workspacePath: AcpStreamHandler.currentWorkspacePath(),
+      sessionId,
     });
   }
 
@@ -909,7 +894,7 @@ export class AcpStreamHandler {
    * supports `session/close` and keeps running for other chats.
    */
   static async closeSession(sessionId: string): Promise<void> {
-    await invoke("close_acp_session", { sessionId });
+    await commands.closeAcpSession(sessionId);
     useAIChatStore.getState().actions.clearAcpSession(sessionId);
   }
 
@@ -918,10 +903,7 @@ export class AcpStreamHandler {
    * shows the agent's sign-in methods.
    */
   static async logoutAgent(agentId: string): Promise<void> {
-    await invoke("logout_acp_agent", {
-      agentId,
-      workspacePath: AcpStreamHandler.currentWorkspacePath(),
-    });
+    await commands.logoutAcpAgent(agentId, AcpStreamHandler.currentWorkspacePath());
   }
 
   /**
@@ -935,13 +917,13 @@ export class AcpStreamHandler {
   ): Promise<void> {
     const workspacePath = AcpStreamHandler.currentWorkspacePath();
     const agentKey = getAcpAgentKey(agentId, workspacePath);
-    const statuses = await invoke<AcpAgentStatus[]>("get_acp_status");
+    const statuses = await commands.getAcpStatus();
     const isRunning = statuses.some(
       (status) =>
         status.running && getAcpAgentKey(status.agentId, status.workspacePath) === agentKey,
     );
     if (isRunning) {
-      await invoke("authenticate_acp_agent", { agentId, workspacePath, methodId });
+      await commands.authenticateAcpAgent(agentId, workspacePath, methodId);
       return;
     }
 
@@ -988,7 +970,7 @@ export class AcpStreamHandler {
     for (const handler of AcpStreamHandler.activeHandlers.values()) {
       if (handler.agentId === agentId) handler.forceStop();
     }
-    await invoke("stop_acp_agent", { agentId, workspacePath });
+    await commands.stopAcpAgent(agentId, workspacePath);
     const normalize = (path: string | null) => path?.replace(/[\\/]+$/, "") || null;
     if (normalize(AcpStreamHandler.currentWorkspacePath()) === normalize(workspacePath)) {
       await AcpStreamHandler.warmup(agentId);
@@ -1003,10 +985,7 @@ export class AcpStreamHandler {
     for (const handler of AcpStreamHandler.activeHandlers.values()) {
       if (handler.agentId === agentId) handler.forceStop();
     }
-    await invoke("stop_acp_agent", {
-      agentId,
-      workspacePath: AcpStreamHandler.currentWorkspacePath(),
-    });
+    await commands.stopAcpAgent(agentId, AcpStreamHandler.currentWorkspacePath());
   }
 
   /**

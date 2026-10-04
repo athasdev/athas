@@ -22,9 +22,9 @@ export async function saveActiveFile(): Promise<void> {
 }
 
 export async function saveActiveFileAs(): Promise<void> {
-  const [{ save }, { invoke }] = await Promise.all([
+  const [{ save }, { writeFile }] = await Promise.all([
     import("@tauri-apps/plugin-dialog"),
-    import("@tauri-apps/api/core"),
+    import("@/features/file-system/controllers/platform"),
   ]);
   const bufferStore = useBufferStore.getState();
   const activeBuffer = bufferStore.buffers.find((b) => b.id === bufferStore.activeBufferId);
@@ -44,10 +44,7 @@ export async function saveActiveFileAs(): Promise<void> {
   });
 
   if (result) {
-    await invoke("write_file", {
-      path: result,
-      contents: activeBuffer.type === "editor" ? activeBuffer.content : "",
-    });
+    await writeFile(result, activeBuffer.type === "editor" ? activeBuffer.content : "");
   }
 }
 

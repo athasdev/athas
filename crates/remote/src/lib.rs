@@ -1,5 +1,4 @@
 mod file_ops;
-mod runtime;
 mod ssh_helpers;
 mod state;
 mod terminal;
@@ -9,7 +8,6 @@ use crate::{
       read_directory as read_directory_inner, read_file as read_file_inner,
       write_file as write_file_inner,
    },
-   runtime::AthasAppHandle as AppHandle,
    ssh_helpers::{create_ssh_session, exec_remote_command, shell_quote},
    state::CONNECTIONS,
    terminal::{
@@ -18,15 +16,12 @@ use crate::{
       set_remote_terminal_paused, write_remote_terminal,
    },
 };
-use athas_terminal::{TerminalInput, TerminalSize};
+use athas_terminal::{TerminalChannelMessage, TerminalInput, TerminalSize};
 pub use file_ops::RemoteFileEntry;
 use serde::{Deserialize, Serialize};
-use tauri::{
-   Manager,
-   ipc::{Channel, InvokeResponseBody},
-};
+use tauri::{AppHandle, Manager, ipc::Channel};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 pub struct SshConnection {
    pub id: String,
    pub name: String,
@@ -229,7 +224,7 @@ pub async fn create_remote_terminal(
    working_directory: Option<String>,
    size: TerminalSize,
    term_program_version: String,
-   on_event: Channel<InvokeResponseBody>,
+   on_event: Channel<TerminalChannelMessage>,
 ) -> Result<String, String> {
    create_remote_terminal_inner(
       host,

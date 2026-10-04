@@ -13,6 +13,7 @@ async fn traffic(bridge: &State<'_, AcpBridgeState>) -> TrafficInspector {
 
 /// Every agent process with a traffic log, running ones first.
 #[tauri::command]
+#[specta::specta]
 pub async fn get_acp_traffic_processes(
    bridge: State<'_, AcpBridgeState>,
 ) -> Result<Vec<TrafficProcess>, String> {
@@ -21,6 +22,7 @@ pub async fn get_acp_traffic_processes(
 
 /// The recorded lines and `initialize` exchange of one process.
 #[tauri::command]
+#[specta::specta]
 pub async fn get_acp_traffic(
    bridge: State<'_, AcpBridgeState>,
    process_key: String,
@@ -30,6 +32,7 @@ pub async fn get_acp_traffic(
 
 /// Starts sending new lines as `acp-traffic` events while an inspector is open.
 #[tauri::command]
+#[specta::specta]
 pub async fn subscribe_acp_traffic(bridge: State<'_, AcpBridgeState>) -> Result<(), String> {
    traffic(&bridge).await.subscribe();
    Ok(())
@@ -37,6 +40,7 @@ pub async fn subscribe_acp_traffic(bridge: State<'_, AcpBridgeState>) -> Result<
 
 /// Stops sending `acp-traffic` events once no inspector is open.
 #[tauri::command]
+#[specta::specta]
 pub async fn unsubscribe_acp_traffic(bridge: State<'_, AcpBridgeState>) -> Result<(), String> {
    traffic(&bridge).await.unsubscribe();
    Ok(())
@@ -44,6 +48,7 @@ pub async fn unsubscribe_acp_traffic(bridge: State<'_, AcpBridgeState>) -> Resul
 
 /// Drops the recorded lines of one process.
 #[tauri::command]
+#[specta::specta]
 pub async fn clear_acp_traffic(
    bridge: State<'_, AcpBridgeState>,
    process_key: String,
@@ -54,6 +59,7 @@ pub async fn clear_acp_traffic(
 
 /// Writes one process's log to `path` as JSON Lines.
 #[tauri::command]
+#[specta::specta]
 pub async fn export_acp_traffic(
    bridge: State<'_, AcpBridgeState>,
    process_key: String,

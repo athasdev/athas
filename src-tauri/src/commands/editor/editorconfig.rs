@@ -12,6 +12,7 @@ const SUPPORTED_KEYS: &[&str] = &[
 ];
 
 #[tauri::command]
+#[specta::specta]
 pub fn get_editorconfig_properties(file_path: String) -> Result<HashMap<String, String>, String> {
    let path = Path::new(&file_path);
    if !path.exists() {

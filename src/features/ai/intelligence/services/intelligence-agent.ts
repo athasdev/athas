@@ -7,7 +7,11 @@ import {
   type ToolSet,
 } from "ai";
 import { z } from "zod";
-import { invoke } from "@tauri-apps/api/core";
+import {
+  commands,
+  type IntelligenceCommandRun,
+  type IntelligenceFileWrite,
+} from "@/bindings/commands";
 import type { AIMessage } from "@/features/ai/types/messages.types";
 import type {
   AcpEvent,
@@ -61,29 +65,6 @@ const READ_CHARS = 24000;
 const MCP_INPUT_PREVIEW_CHARS = 4000;
 const UNSAVED_CHANGES =
   "The editor has unsaved changes to this file. Ask the user to save or discard them first.";
-
-/** The shape Rust returns for a write that landed, matching the ACP `agent_file_write` event. */
-interface IntelligenceFileWrite {
-  writeId: number;
-  path: string;
-  previousContent: string | null;
-  content: string;
-}
-
-/** What Rust returns for `run_command`: the output and the workspace files the command changed. */
-interface IntelligenceCommandRun {
-  stdout: string;
-  stderr: string;
-  exitCode: number | null;
-  cancelled: boolean;
-  timedOut: boolean;
-  fileChanges: {
-    /** `previousContent` is null for a file the command created, `content` for one it deleted. */
-    changes: { path: string; previousContent: string | null; content: string | null }[];
-    skipped: { path: string; reason: string }[];
-    incomplete: boolean;
-  } | null;
-}
 
 function toTurnUsage(usage: LanguageModelUsage | undefined): AcpTurnUsage | undefined {
   if (!usage) return undefined;
@@ -333,7 +314,12 @@ export async function runIntelligenceAgent(params: {
             }),
             execute: async (input, { toolCallId }) =>
               runTool("list_files", "search", input, toolCallId, () =>
-                invoke("intelligence_list_files", { root, options: input }),
+                commands.intelligenceListFiles(root, {
+                  path: input.path ?? null,
+                  glob: input.glob ?? null,
+                  offset: input.offset ?? null,
+                  limit: input.limit ?? null,
+                }),
               ),
           }),
           search_files: tool({
@@ -350,7 +336,15 @@ export async function runIntelligenceAgent(params: {
             }),
             execute: async (input, { toolCallId }) =>
               runTool("search_files", "search", input, toolCallId, () =>
-                invoke("intelligence_search_files", { root, options: input }),
+                commands.intelligenceSearchFiles(root, {
+                  query: input.query,
+                  regex: input.regex,
+                  caseSensitive: input.caseSensitive ?? null,
+                  path: input.path ?? null,
+                  glob: input.glob ?? null,
+                  contextLines: input.contextLines ?? null,
+                  maxResults: input.maxResults ?? null,
+                }),
               ),
           }),
           read_file: tool({
@@ -366,10 +360,7 @@ export async function runIntelligenceAgent(params: {
                 input,
                 toolCallId,
                 async () => {
-                  const content = await invoke<string>("intelligence_read_file", {
-                    root,
-                    path: input.path,
-                  });
+                  const content = await commands.intelligenceReadFile(root, input.path);
                   readFiles.set(input.path, content);
                   const lines = content.split("\n");
                   return {
@@ -462,13 +453,14 @@ export async function runIntelligenceAgent(params: {
                       signal.throwIfAborted();
                       const id = crypto.randomUUID();
                       const cancel = () => {
-                        void invoke("intelligence_cancel_command", { id }).catch(() => {});
+                        void commands.intelligenceCancelCommand(id).catch(() => {});
                       };
                       signal.addEventListener("abort", cancel, { once: true });
                       try {
-                        const { fileChanges, ...output } = await invoke<IntelligenceCommandRun>(
-                          "intelligence_run_command",
-                          { root, command: input.command, id },
+                        const { fileChanges, ...output } = await commands.intelligenceRunCommand(
+                          root,
+                          input.command,
+                          id,
                         );
                         return {
                           ...output,
@@ -510,9 +502,11 @@ export async function runIntelligenceAgent(params: {
                           if (hasUnsavedBuffer(absolutePath(input.path)))
                             throw new Error(UNSAVED_CHANGES);
                           signal.throwIfAborted();
-                          const write = await invoke<IntelligenceFileWrite>(
-                            "intelligence_edit_file",
-                            { root, path: input.path, expectedContent, edits: input.edits },
+                          const write = await commands.intelligenceEditFile(
+                            root,
+                            input.path,
+                            expectedContent,
+                            input.edits,
                           );
                           return landWrite(write, input.path);
                         }),
@@ -542,14 +536,11 @@ export async function runIntelligenceAgent(params: {
                           if (hasUnsavedBuffer(absolutePath(input.path)))
                             throw new Error(UNSAVED_CHANGES);
                           signal.throwIfAborted();
-                          const write = await invoke<IntelligenceFileWrite>(
-                            "intelligence_write_file",
-                            {
-                              root,
-                              path: input.path,
-                              expectedContent: readFiles.get(input.path) ?? null,
-                              content: input.content,
-                            },
+                          const write = await commands.intelligenceWriteFile(
+                            root,
+                            input.path,
+                            readFiles.get(input.path) ?? null,
+                            input.content,
                           );
                           return landWrite(write, input.path);
                         }),
@@ -595,11 +586,7 @@ export async function runIntelligenceAgent(params: {
                           if (!decision.approved)
                             return { deleted: false, reason: "The user declined the deletion." };
                           signal.throwIfAborted();
-                          await invoke("intelligence_delete_file", {
-                            root,
-                            path: input.path,
-                            expectedContent,
-                          });
+                          await commands.intelligenceDeleteFile(root, input.path, expectedContent);
                           // Checkpoint restore can bring the file back.
                           recordAgentFileDelete(params.sessionId, {
                             // Written like the paths Rust reports for writes: no `.` segments.

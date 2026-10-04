@@ -14,7 +14,7 @@ export interface GitStatus {
 export interface GitCommit {
   hash: string;
   message: string;
-  description?: string;
+  description?: string | null;
   author: string;
   email?: string;
   date: string;
@@ -23,26 +23,26 @@ export interface GitCommit {
 export interface GitDiffLine {
   line_type: "added" | "removed" | "context" | "header";
   content: string;
-  old_line_number?: number;
-  new_line_number?: number;
+  old_line_number?: number | null;
+  new_line_number?: number | null;
 }
 
 export interface GitDiff {
   file_path: string;
-  old_path?: string;
-  new_path?: string;
+  old_path?: string | null;
+  new_path?: string | null;
   is_new: boolean;
   is_deleted: boolean;
   is_renamed: boolean;
   lines: GitDiffLine[];
   is_binary?: boolean;
   is_image?: boolean;
-  old_blob_base64?: string;
-  new_blob_base64?: string;
-  raw_patch?: string;
-  additions?: number;
-  deletions?: number;
-  is_truncated?: boolean;
+  old_blob_base64?: string | null;
+  new_blob_base64?: string | null;
+  raw_patch?: string | null;
+  additions?: number | null;
+  deletions?: number | null;
+  is_truncated?: boolean | null;
 }
 
 export interface GitDiffStat {
@@ -71,19 +71,19 @@ export interface GitStash {
 export interface GitTag {
   name: string;
   commit: string;
-  message?: string;
+  message?: string | null;
   date: string;
   is_annotated: boolean;
 }
 
 export interface GitWorktree {
   path: string;
-  branch?: string;
+  branch?: string | null;
   head: string;
   is_bare: boolean;
   is_detached: boolean;
-  locked_reason?: string;
-  prunable_reason?: string;
+  locked_reason?: string | null;
+  prunable_reason?: string | null;
   is_current: boolean;
 }
 

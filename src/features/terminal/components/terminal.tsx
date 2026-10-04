@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import type { ISearchOptions } from "@xterm/addon-search";
 import { Terminal } from "@xterm/xterm";
 import {
@@ -45,7 +45,7 @@ import type {
   TerminalCommandSummary,
   TerminalEmulatorHandle,
 } from "../types/terminal.types";
-import { formatDroppedPathsForTerminal } from "../utils/terminal-file-drop";
+import { formatDroppedPathsForTerminal, getTerminalQuoteStyle } from "../utils/terminal-file-drop";
 import { resolveTerminalFont } from "../utils/resolve-font";
 import { getTerminalKeyAction } from "../utils/terminal-keyboard";
 import { getTerminalCompatibilityOptions } from "../utils/terminal-options";
@@ -191,14 +191,20 @@ export const TerminalEmulator = ({
 
   const insertDroppedPaths = useCallback(
     (paths: string[]) => {
-      const text = formatDroppedPathsForTerminal(paths);
+      const session = getSession(sessionId);
+      const quoteStyle = getTerminalQuoteStyle(
+        shell || session?.shell,
+        currentPlatform,
+        Boolean(remoteConnectionId || session?.remoteConnectionId),
+      );
+      const text = formatDroppedPathsForTerminal(paths, quoteStyle);
       if (!text) return false;
 
       writeBuffered(text);
       requestAnimationFrame(() => terminalRef.current?.focus());
       return true;
     },
-    [writeBuffered],
+    [getSession, remoteConnectionId, sessionId, shell, writeBuffered],
   );
 
   const handleTerminalFileDrop = useCallback(
@@ -489,6 +495,7 @@ export const TerminalEmulator = ({
         const size = getTerminalSize(terminal);
         const events = createTerminalEventChannel();
         const launch = existingSession?.launch;
+        const { windowLabel, frontendSessionId } = getFrontendTerminalSessionArgs();
 
         activeConnectionId = activeRemoteConnectionId
           ? await (async () => {
@@ -497,38 +504,42 @@ export const TerminalEmulator = ({
                 throw new Error("Remote terminal connection not found.");
               }
 
-              return invoke<string>("create_remote_terminal", {
-                host: connection.host,
-                port: connection.port,
-                username: connection.username,
-                password: connection.password || null,
-                keyPath: connection.keyPath || null,
-                workingDirectory: remoteInfo?.remotePath || "/",
+              return commands.createRemoteTerminal(
+                {
+                  host: connection.host,
+                  port: connection.port,
+                  username: connection.username,
+                  password: connection.password || null,
+                  keyPath: connection.keyPath || null,
+                  workingDirectory: remoteInfo?.remotePath || "/",
+                },
                 size,
-                onEvent: events.channel,
-                ...getFrontendTerminalSessionArgs(),
-              });
+                events.channel,
+                windowLabel,
+                frontendSessionId,
+              );
             })()
-          : await invoke<string>("create_terminal", {
-              config: {
-                workingDirectory: targetDirectory || undefined,
+          : await commands.createTerminal(
+              {
+                workingDirectory: targetDirectory || null,
                 shell:
                   shell ||
                   existingSession?.shell ||
-                  (wslInfo ? getWslShellId(wslInfo.distro) : undefined),
-                wslDistribution: wslInfo?.distro,
-                wslWorkingDirectory: wslInfo?.linuxPath,
-                environment: launch?.environment
-                  ? { ...environment, ...launch.environment }
-                  : environment,
-                command: launch?.command,
-                args: launch?.args,
+                  (wslInfo ? getWslShellId(wslInfo.distro) : null),
+                wslDistribution: wslInfo?.distro ?? null,
+                wslWorkingDirectory: wslInfo?.linuxPath ?? null,
+                environment:
+                  (launch?.environment ? { ...environment, ...launch.environment } : environment) ??
+                  null,
+                command: launch?.command ?? null,
+                args: launch?.args ?? null,
                 size,
                 shellIntegration: terminalShellIntegration,
               },
-              onEvent: events.channel,
-              ...getFrontendTerminalSessionArgs(),
-            });
+              events.channel,
+              windowLabel,
+              frontendSessionId,
+            );
 
         events.bind(activeConnectionId);
 

@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { load } from "@tauri-apps/plugin-store";
 
 const CONNECTIONS_STORE = "remote-connections.json";
@@ -39,15 +39,15 @@ class ConnectionStore {
   }
 
   private async storePassword(connectionId: string, password: string) {
-    await invoke("store_remote_credential", { connectionId, password });
+    await commands.storeRemoteCredential(connectionId, password);
   }
 
   private async getPassword(connectionId: string): Promise<string | null> {
-    return (await invoke("get_remote_credential", { connectionId })) as string | null;
+    return await commands.getRemoteCredential(connectionId);
   }
 
   private async removePassword(connectionId: string) {
-    await invoke("remove_remote_credential", { connectionId });
+    await commands.removeRemoteCredential(connectionId);
   }
 
   private async syncWorkspaceTabName(connectionId: string, connectionName: string) {
@@ -215,7 +215,7 @@ class ConnectionStore {
 
   private async getConnectedIds(): Promise<string[]> {
     try {
-      return (await invoke("ssh_get_connected_ids")) as string[];
+      return await commands.sshGetConnectedIds();
     } catch {
       return [];
     }

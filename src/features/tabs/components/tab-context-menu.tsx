@@ -12,7 +12,7 @@ import {
   SquareArrowUpIcon,
   TerminalWindowIcon,
 } from "@/ui/icons";
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import { isVirtualContent } from "@/features/panes/types/pane-content.types";
@@ -151,7 +151,7 @@ const TabContextMenu = ({
                   label: "Share…",
                   icon: <SquareArrowUpIcon />,
                   onClick: () => {
-                    void invoke("show_share_picker", { path: buffer.path }).catch((error) => {
+                    void commands.showSharePicker(buffer.path).catch((error) => {
                       toast.error(`Unable to share file: ${String(error)}`);
                     });
                   },

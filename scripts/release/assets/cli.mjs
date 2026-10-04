@@ -136,12 +136,23 @@ function assetById(assets, id) {
   return asset;
 }
 
+function updaterEntry(repo, tag, asset) {
+  return {
+    signature: readSignature(asset.signaturePath),
+    url: releaseUrl(repo, tag, asset.name),
+  };
+}
+
 function buildLatestJson({ tag, repo, notes, assets }) {
   const version = versionFromTag(tag);
   const macArm = assetById(assets, "macos-arm64-updater");
   const macX64 = assetById(assets, "macos-x64-updater");
-  const linuxX64Tarball = assetById(assets, "linux-x64-tarball");
-  const linuxArmTarball = assetById(assets, "linux-arm64-tarball");
+  const linuxX64AppImage = assetById(assets, "linux-x64-appimage");
+  const linuxArmAppImage = assetById(assets, "linux-arm64-appimage");
+  const linuxX64Deb = assetById(assets, "linux-x64-deb");
+  const linuxArmDeb = assetById(assets, "linux-arm64-deb");
+  const linuxX64Rpm = assetById(assets, "linux-x64-rpm");
+  const linuxArmRpm = assetById(assets, "linux-arm64-rpm");
   const winX64Nsis = assetById(assets, "windows-x64-nsis");
   const winArmNsis = assetById(assets, "windows-arm64-nsis");
 
@@ -166,22 +177,14 @@ function buildLatestJson({ tag, repo, notes, assets }) {
         signature: readSignature(macX64.signaturePath),
         url: releaseUrl(repo, tag, macX64.name),
       },
-      "linux-aarch64": {
-        signature: readSignature(linuxArmTarball.signaturePath),
-        url: releaseUrl(repo, tag, linuxArmTarball.name),
-      },
-      "linux-aarch64-tar.gz": {
-        signature: readSignature(linuxArmTarball.signaturePath),
-        url: releaseUrl(repo, tag, linuxArmTarball.name),
-      },
-      "linux-x86_64": {
-        signature: readSignature(linuxX64Tarball.signaturePath),
-        url: releaseUrl(repo, tag, linuxX64Tarball.name),
-      },
-      "linux-x86_64-tar.gz": {
-        signature: readSignature(linuxX64Tarball.signaturePath),
-        url: releaseUrl(repo, tag, linuxX64Tarball.name),
-      },
+      "linux-aarch64": updaterEntry(repo, tag, linuxArmAppImage),
+      "linux-aarch64-appimage": updaterEntry(repo, tag, linuxArmAppImage),
+      "linux-aarch64-deb": updaterEntry(repo, tag, linuxArmDeb),
+      "linux-aarch64-rpm": updaterEntry(repo, tag, linuxArmRpm),
+      "linux-x86_64": updaterEntry(repo, tag, linuxX64AppImage),
+      "linux-x86_64-appimage": updaterEntry(repo, tag, linuxX64AppImage),
+      "linux-x86_64-deb": updaterEntry(repo, tag, linuxX64Deb),
+      "linux-x86_64-rpm": updaterEntry(repo, tag, linuxX64Rpm),
       "windows-x86_64": {
         signature: readSignature(winX64Nsis.signaturePath),
         url: releaseUrl(repo, tag, winX64Nsis.name),
@@ -256,9 +259,13 @@ function validateLatestJson(latestJson, { tag, repo, assetNames }) {
     "darwin-x86_64",
     "darwin-x86_64-app",
     "linux-aarch64",
-    "linux-aarch64-tar.gz",
+    "linux-aarch64-appimage",
+    "linux-aarch64-deb",
+    "linux-aarch64-rpm",
     "linux-x86_64",
-    "linux-x86_64-tar.gz",
+    "linux-x86_64-appimage",
+    "linux-x86_64-deb",
+    "linux-x86_64-rpm",
     "windows-x86_64",
     "windows-x86_64-nsis",
     "windows-aarch64",

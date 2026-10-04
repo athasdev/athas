@@ -25,34 +25,116 @@ const FORBIDDEN_ENV_KEYS: &[&str] = &[
    "DYLD_FALLBACK_FRAMEWORK_PATH",
    "DYLD_FORCE_FLAT_NAMESPACE",
    "DYLD_IMAGE_SUFFIX",
+   "NODE_OPTIONS",
+   "JAVA_TOOL_OPTIONS",
+   "JDK_JAVA_OPTIONS",
 ];
+
+/// Binary names that interpret a `-c`-style argument as code. Blocking them
+/// by basename closes the `command: "sh", args: ["-c", payload]` shape no
+/// matter how the binary is referenced.
+const SHELL_BINARIES: &[&str] = &[
+   "sh",
+   "bash",
+   "dash",
+   "ash",
+   "zsh",
+   "fish",
+   "ksh",
+   "csh",
+   "tcsh",
+   "powershell",
+   "pwsh",
+   "cmd",
+   "wsl",
+];
+
+/// Binary names that run their arguments as another program, so
+/// `command: "env", args: ["sh", "-c", payload]` cannot reach a shell.
+const LAUNCHER_BINARIES: &[&str] = &[
+   "env", "busybox", "toybox", "xargs", "nohup", "nice", "timeout", "sudo", "doas", "setsid",
+   "stdbuf",
+];
+
+/// Windows resolves these suffixes as executables, so `cmd.exe` is `cmd`.
+const EXECUTABLE_SUFFIXES: &[&str] = &[".exe", ".com", ".bat", ".cmd"];
+
+fn executable_stem(file_name: &str) -> &str {
+   EXECUTABLE_SUFFIXES
+      .iter()
+      .find_map(|suffix| {
+         let split = file_name.len().checked_sub(suffix.len())?;
+         let (stem, ext) = file_name.split_at_checked(split)?;
+         ext.eq_ignore_ascii_case(suffix).then_some(stem)
+      })
+      .unwrap_or(file_name)
+}
 
 /// Validate the `command` field of a formatter/linter config.
 ///
 /// The name must be a bare executable (looked up via `PATH`) or an absolute
 /// path. Relative paths that traverse the filesystem (containing `..` or a
 /// path separator) are rejected so callers cannot smuggle a project-relative
-/// binary that would be resolved against a surprising CWD.
+/// binary that would be resolved against a surprising CWD. Known shells are
+/// rejected by basename because their `-c` arguments execute arbitrary code,
+/// and binaries staged under temporary directories are rejected because
+/// those locations are writable by other local users.
 pub fn validate_exec_command(command: &str) -> Result<(), String> {
    let trimmed = command.trim();
    if trimmed.is_empty() {
       return Err("Command must not be empty".to_string());
+   }
+   if trimmed.contains('\0') {
+      return Err("Command must not contain NUL bytes".to_string());
    }
 
    if trimmed.contains("..") {
       return Err("Command must not contain '..'".to_string());
    }
 
+   let file_name = executable_stem(trimmed.rsplit(['/', '\\']).next().unwrap_or(trimmed));
+   if SHELL_BINARIES
+      .iter()
+      .any(|shell| file_name.eq_ignore_ascii_case(shell))
+   {
+      return Err("Shell interpreters are not allowed as tool commands".to_string());
+   }
+   if LAUNCHER_BINARIES
+      .iter()
+      .any(|launcher| file_name.eq_ignore_ascii_case(launcher))
+   {
+      return Err("Program launchers are not allowed as tool commands".to_string());
+   }
+
    let has_separator = trimmed.contains('/') || trimmed.contains('\\');
    if has_separator {
-      let is_absolute = std::path::Path::new(trimmed).is_absolute();
-      if !is_absolute {
+      let path = std::path::Path::new(trimmed);
+      if !path.is_absolute() {
          return Err(
             "Command with path separators must be an absolute path, not relative".to_string(),
          );
       }
+      if is_temporary_path(path) {
+         return Err("Tool commands must not run from temporary directories".to_string());
+      }
    }
 
+   Ok(())
+}
+
+fn is_temporary_path(path: &std::path::Path) -> bool {
+   if path.starts_with(std::env::temp_dir()) {
+      return true;
+   }
+   path.starts_with("/dev/shm")
+}
+
+/// Validate the `args` of a formatter/linter config. NUL bytes would panic
+/// the process spawn, turning a malicious config into a backend crash.
+pub fn validate_exec_args(args: &[String]) -> Result<(), String> {
+   if args.iter().any(|arg| arg.contains('\0')) {
+      return Err("Tool arguments must not contain NUL bytes".to_string());
+   }
    Ok(())
 }
 
@@ -133,6 +215,45 @@ mod tests {
       let mut env = HashMap::new();
       env.insert("ld_preload".to_string(), "/tmp/evil.so".to_string());
       assert!(validate_exec_env(&env).is_err());
+   }
+
+   #[test]
+   fn rejects_shell_interpreters() {
+      assert!(validate_exec_command("sh").is_err());
+      assert!(validate_exec_command("bash").is_err());
+      assert!(validate_exec_command("/bin/sh").is_err());
+      assert!(validate_exec_command("cmd.exe").is_err());
+      assert!(validate_exec_command("PowerShell.EXE").is_err());
+      assert!(validate_exec_command("pwsh.exe").is_err());
+   }
+
+   #[test]
+   fn rejects_program_launchers() {
+      assert!(validate_exec_command("env").is_err());
+      assert!(validate_exec_command("/usr/bin/env").is_err());
+      assert!(validate_exec_command("busybox").is_err());
+      assert!(validate_exec_command("xargs").is_err());
+   }
+
+   #[test]
+   fn accepts_tools_named_like_executables() {
+      assert!(validate_exec_command("prettier").is_ok());
+      assert!(validate_exec_command("rustfmt.exe").is_ok());
+      assert!(validate_exec_command("environment-check").is_ok());
+   }
+
+   #[test]
+   fn rejects_temporary_directory_commands() {
+      let staged = std::env::temp_dir().join("evil");
+      assert!(validate_exec_command(staged.to_str().unwrap()).is_err());
+      assert!(validate_exec_command("/dev/shm/evil").is_err());
+   }
+
+   #[test]
+   fn rejects_nul_bytes() {
+      assert!(validate_exec_command("prettier\0").is_err());
+      assert!(validate_exec_args(&["--write\0".to_string()]).is_err());
+      assert!(validate_exec_args(&["--write".to_string()]).is_ok());
    }
 
    #[test]

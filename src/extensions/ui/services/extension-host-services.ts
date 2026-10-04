@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { tauriFetch } from "@/utils/tauri-fetch";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { toast } from "sonner";
@@ -111,23 +111,13 @@ export async function callExtensionHostService(
     }
     case "secrets.get":
       requirePermission(manifest.permissions?.secrets === true, "secrets");
-      return invoke<string | null>("get_extension_secret", {
-        extensionId,
-        key: String(params[0]),
-      });
+      return commands.getExtensionSecret(extensionId, String(params[0]));
     case "secrets.set":
       requirePermission(manifest.permissions?.secrets === true, "secrets");
-      return invoke("set_extension_secret", {
-        extensionId,
-        key: String(params[0]),
-        value: String(params[1]),
-      });
+      return commands.setExtensionSecret(extensionId, String(params[0]), String(params[1]));
     case "secrets.delete":
       requirePermission(manifest.permissions?.secrets === true, "secrets");
-      return invoke("delete_extension_secret", {
-        extensionId,
-        key: String(params[0]),
-      });
+      return commands.deleteExtensionSecret(extensionId, String(params[0]));
     case "storage.get": {
       const value = localStorage.getItem(`${STORAGE_PREFIX}${extensionId}:${String(params[0])}`);
       return value === null ? undefined : JSON.parse(value);

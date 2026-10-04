@@ -19,27 +19,15 @@ concurrency:
 jobs:
   build:
     if: github.repository == 'athasdev/athas'
-    name: Build Linux tarball
+    name: Build Linux packages
     runs-on: ${{ inputs.runner || 'ubuntu-22.04' }}
-    timeout-minutes: 120
+    timeout-minutes: 90
     env:
       CARGO_TERM_COLOR: always
-      CEF_PATH: ${{ github.workspace }}/.cache/tauri-cef
-      NO_STRIP: "true"
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-
-      - name: Free disk space
-        run: |
-          echo "Disk usage before cleanup:"
-          df -h
-          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /opt/hostedtoolcache/CodeQL || true
-          sudo docker system prune -af || true
-          sudo apt-get clean
-          echo "Disk usage after cleanup:"
-          df -h
 
       - name: Setup Vite+
         uses: voidzero-dev/setup-vp@v1.18.0
@@ -61,12 +49,6 @@ jobs:
         with:
           cache-on-failure: true
 
-      - name: Cache CEF binaries
-        uses: actions/cache@v4
-        with:
-          path: .cache/tauri-cef
-          key: ${{ runner.os }}-${{ runner.arch }}-cef-v146.4.1
-
       - name: Cache Bun dependencies
         uses: actions/cache@v4
         with:
@@ -78,46 +60,30 @@ jobs:
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libappindicator3-dev librsvg2-dev patchelf xdg-utils file
-
-      - name: Install Tauri CEF CLI
-        uses: ./.github/actions/tauri-cef-cli
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev \
+            libdbus-1-dev libssl-dev patchelf xdg-utils file flatpak
+          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          flatpak install --user -y --noninteractive flathub org.flatpak.Builder
 
       - name: Install frontend dependencies
         run: vp install --ignore-scripts && bun scripts/postinstall.ts
 
-      - name: Check Linux feature graph
+      - name: Build Linux packages
+        run: bun tauri build --bundles deb,rpm,appimage --no-sign
+
+      - name: Package Linux tarball and Flatpak
         run: |
           set -euo pipefail
-          cargo tree -p athas --no-default-features --features linux -i tauri-runtime-cef
-          cargo tree -p athas --no-default-features --features linux -i tauri-runtime-wry >/tmp/tauri-runtime-wry.txt 2>&1 || true
-          if grep -q '^tauri-runtime-wry ' /tmp/tauri-runtime-wry.txt; then
-            echo "tauri-runtime-wry must not be present in the Linux build"
-            cat /tmp/tauri-runtime-wry.txt
-            exit 1
-          fi
-          cargo tree -p athas --no-default-features --features linux -i webkit2gtk >/tmp/webkit2gtk.txt 2>&1 || true
-          if grep -q '^webkit2gtk ' /tmp/webkit2gtk.txt; then
-            echo "webkit2gtk must not be present in the Linux build"
-            cat /tmp/webkit2gtk.txt
-            exit 1
-          fi
+          bash scripts/release/package-linux-tarball.sh "${{ runner.arch }}" release-dist
+          bash scripts/release/packaging/linux/flatpak.sh "${{ runner.arch }}" release-dist
+          find target/release/bundle -maxdepth 2 -type f \
+            \( -name '*.deb' -o -name '*.rpm' -o -name '*.AppImage' \) -exec cp {} release-dist/ \;
+          ls -lh release-dist
 
-      - name: Build Linux app
-        run: |
-          cargo tauri build \
-            --no-bundle \
-            --config '{"bundle":{"createUpdaterArtifacts":false}}' \
-            -- \
-            --no-default-features \
-            --features linux
-
-      - name: Package Linux tarball
-        run: bash scripts/release/package-linux-tarball.sh "${{ runner.arch }}" release-dist
-
-      - name: Upload Linux tarball
+      - name: Upload Linux packages
         uses: actions/upload-artifact@v4
         with:
           name: linux-${{ runner.arch }}
-          path: release-dist/*.tar.gz
+          path: release-dist/*
           if-no-files-found: error

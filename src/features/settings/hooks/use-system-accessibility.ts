@@ -1,15 +1,8 @@
-import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect } from "react";
+import { commands, type SystemAccessibilityPreferences } from "@/bindings/commands";
 import { syncEffectiveWindowTransparency } from "@/features/settings/lib/settings-effects";
 import { disposeListener } from "@/utils/tauri-drag-drop";
-
-interface SystemAccessibilityPreferences {
-  reduceTransparency: boolean;
-  increaseContrast: boolean;
-  differentiateWithoutColor: boolean;
-  reduceMotion: boolean;
-}
 
 function setBooleanAttribute(name: string, enabled: boolean) {
   document.documentElement.setAttribute(name, enabled ? "true" : "false");
@@ -29,9 +22,7 @@ export function useSystemAccessibility() {
       };
 
       try {
-        nativePreferences = await invoke<SystemAccessibilityPreferences>(
-          "get_system_accessibility_preferences",
-        );
+        nativePreferences = await commands.getSystemAccessibilityPreferences();
       } catch {
         nativePreferences.reduceTransparency = transparencyQuery.matches;
         nativePreferences.increaseContrast = contrastQuery.matches;

@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { parseChatSessionSettings } from "@/features/ai/lib/chat-session-settings";
 import type { Chat, ToolCall } from "@/features/ai/types/ai-chat.types";
 import type { AcpTurnUsage } from "@/features/ai/types/acp.types";
@@ -112,7 +112,7 @@ const activeChatSaves = new Map<string, Promise<void>>();
  */
 export const initChatDatabase = async (): Promise<void> => {
   try {
-    await invoke("init_chat_database");
+    await commands.initChatDatabase();
   } catch (error) {
     console.error("Error initializing chat database:", error);
     throw error;
@@ -253,11 +253,7 @@ export const saveChatToDb = async (chat: Chat): Promise<void> => {
         pendingChatSaves.delete(chat.id);
         if (!next) continue;
 
-        await invoke("save_chat", {
-          chat: next.chat,
-          messages: next.messages,
-          toolCalls: next.tool_calls,
-        });
+        await commands.saveChat(next.chat, next.messages, next.tool_calls);
       }
     } catch (error) {
       console.error("Error saving chat to database:", error);
@@ -274,7 +270,7 @@ export const saveChatToDb = async (chat: Chat): Promise<void> => {
 export const saveChatMetadataToDb = async (chat: Chat): Promise<void> => {
   try {
     const { chat: chatData } = chatToData(chat);
-    await invoke("update_chat_metadata", { chat: chatData });
+    await commands.updateChatMetadata(chatData);
   } catch (error) {
     console.error(`Error updating chat metadata for ${chat.id}:`, error);
     throw error;
@@ -286,7 +282,7 @@ export const saveChatMetadataToDb = async (chat: Chat): Promise<void> => {
  */
 export const loadAllChatsFromDb = async (): Promise<Omit<Chat, "messages">[]> => {
   try {
-    const chats = (await invoke("load_all_chats")) as ChatData[];
+    const chats = await commands.loadAllChats();
     return chats.map((chat) => ({
       id: chat.id,
       title: chat.title,
@@ -314,7 +310,7 @@ export const loadAllChatsFromDb = async (): Promise<Omit<Chat, "messages">[]> =>
  */
 export const loadChatFromDb = async (chatId: string): Promise<Chat> => {
   try {
-    const data = (await invoke("load_chat", { chatId })) as ChatWithMessages;
+    const data = await commands.loadChat(chatId);
     return dataToChat(data);
   } catch (error) {
     if (!String(error).includes("Query returned no rows")) {
@@ -329,7 +325,7 @@ export const loadChatFromDb = async (chatId: string): Promise<Chat> => {
  */
 export const deleteChatFromDb = async (chatId: string): Promise<void> => {
   try {
-    await invoke("delete_chat", { chatId });
+    await commands.deleteChat(chatId);
   } catch (error) {
     console.error(`Error deleting chat ${chatId} from database:`, error);
     throw error;

@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { coalesceAssistantResponses } from "@/features/ai/lib/assistant-response";
 import type { Message } from "@/features/ai/types/ai-chat.types";
 
@@ -75,6 +75,6 @@ export function normalizeCodexThreadMessages(value: unknown): Message[] {
 }
 
 export async function readCodexThreadMessages(threadId: string): Promise<Message[]> {
-  const result = await invoke("read_codex_thread", { threadId });
+  const result = await commands.readCodexThread(threadId);
   return normalizeCodexThreadMessages(result);
 }

@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 const MONOSPACE_SAMPLE: [char; 8] = [' ', '0', 'A', 'M', 'W', 'i', 'm', '_'];
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash, specta::Type)]
 pub struct FontInfo {
    pub name: String,
    pub family: String,
@@ -76,11 +76,13 @@ fn get_system_fonts_sync() -> Vec<FontInfo> {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn get_system_fonts() -> Result<Vec<FontInfo>, String> {
    Ok(get_system_fonts_sync())
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn get_monospace_fonts() -> Result<Vec<FontInfo>, String> {
    let all_fonts = get_system_fonts_sync();
    let monospace_fonts: Vec<FontInfo> = all_fonts
@@ -91,6 +93,7 @@ pub async fn get_monospace_fonts() -> Result<Vec<FontInfo>, String> {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn validate_font(font_family: String) -> Result<bool, String> {
    let fonts = get_system_fonts_sync();
    let is_valid = fonts.iter().any(|font| font.family == font_family);

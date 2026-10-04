@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands, type AthasLogFile as AthasLogFileResponse } from "@/bindings/commands";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
@@ -8,13 +8,6 @@ interface AthasLogFile {
   path: string;
   content: string;
   targetLine: number;
-  truncated: boolean;
-}
-
-interface AthasLogFileResponse {
-  path: string;
-  content: string;
-  target_line: number;
   truncated: boolean;
 }
 
@@ -68,7 +61,7 @@ function cacheLogViewState(bufferId: string, content: string, targetLine: number
 }
 
 export async function openAthasLogBuffer() {
-  const logFile = toAthasLogFile(await invoke<AthasLogFileResponse>("read_athas_log"));
+  const logFile = toAthasLogFile(await commands.readAthasLog());
   const bufferId = useBufferStore.getState().actions.openContent({
     type: "editor",
     path: logFile.path,

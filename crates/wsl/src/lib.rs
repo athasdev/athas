@@ -18,7 +18,7 @@ const GIT_PROBE_RETRY_INTERVAL: Duration = Duration::from_secs(60);
 #[cfg(windows)]
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
 pub struct WslDistribution {
    pub name: String,
    pub state: Option<String>,
@@ -32,7 +32,7 @@ pub struct WslPath {
    pub linux_path: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 pub struct WslFileEntry {
    pub name: String,
    pub path: String,
@@ -42,7 +42,7 @@ pub struct WslFileEntry {
    pub target: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 pub struct WslSymlinkInfo {
    pub is_symlink: bool,
    pub target: Option<String>,

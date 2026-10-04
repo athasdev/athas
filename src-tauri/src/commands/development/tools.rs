@@ -1,4 +1,3 @@
-use crate::app_runtime::AppHandle;
 use athas_tooling::{
    LanguageToolConfigSet, LanguageToolStatus, ToolInstaller, ToolRegistry, ToolStatus, ToolType,
 };
@@ -9,8 +8,10 @@ use std::{
    io::Write,
    time::{SystemTime, UNIX_EPOCH},
 };
+use tauri::AppHandle;
 
 #[tauri::command]
+#[specta::specta]
 pub fn frontend_trace(level: String, scope: String, message: String, payload: Option<Value>) {
    #[cfg(debug_assertions)]
    if scope == "bench:file-open" {
@@ -136,6 +137,7 @@ fn format_value(value: &Value) -> String {
 
 /// Install all tools for a language
 #[tauri::command]
+#[specta::specta]
 pub async fn install_language_tools(
    app_handle: AppHandle,
    language_id: String,
@@ -182,6 +184,7 @@ pub async fn install_language_tools(
 
 /// Install a specific tool type for a language
 #[tauri::command]
+#[specta::specta]
 pub async fn install_tool(
    app_handle: AppHandle,
    language_id: String,
@@ -216,6 +219,7 @@ pub async fn install_tool(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn get_java_debug_bundle_path(app_handle: AppHandle) -> Result<Option<String>, String> {
    let path = ToolInstaller::java_debug_bundle_path(&app_handle).map_err(|e| e.to_string())?;
    Ok(path.exists().then(|| path.to_string_lossy().to_string()))
@@ -223,6 +227,7 @@ pub fn get_java_debug_bundle_path(app_handle: AppHandle) -> Result<Option<String
 
 /// Get the status of all tools for a language
 #[tauri::command]
+#[specta::specta]
 pub async fn get_language_tool_status(
    app_handle: AppHandle,
    language_id: String,
@@ -272,6 +277,7 @@ pub async fn get_language_tool_status(
 
 /// Get the path to a tool's binary
 #[tauri::command]
+#[specta::specta]
 pub async fn get_tool_path(
    app_handle: AppHandle,
    language_id: String,
@@ -306,6 +312,7 @@ pub async fn get_tool_path(
 
 /// Get available tools for a language
 #[tauri::command]
+#[specta::specta]
 pub fn get_available_tools(
    language_id: String,
    tools: Option<LanguageToolConfigSet>,

@@ -22,7 +22,7 @@ import {
   WarningIcon,
   XIcon,
 } from "@/ui/icons";
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { useCallback, useMemo, useState } from "react";
 import { writeClipboardText } from "@/utils/clipboard";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
@@ -426,7 +426,7 @@ export function useFileExplorerContextMenu({
             label: "Quick Look",
             icon: <EyeIcon />,
             onClick: () => {
-              void invoke("toggle_quick_look", { path: contextMenu.path }).catch((error) => {
+              void commands.toggleQuickLook(contextMenu.path).catch((error) => {
                 toast.error(`Unable to preview file: ${String(error)}`);
               });
             },
@@ -436,7 +436,7 @@ export function useFileExplorerContextMenu({
             label: "Share…",
             icon: <SquareArrowUpIcon />,
             onClick: () => {
-              void invoke("show_share_picker", { path: contextMenu.path }).catch((error) => {
+              void commands.showSharePicker(contextMenu.path).catch((error) => {
                 toast.error(`Unable to share file: ${String(error)}`);
               });
             },

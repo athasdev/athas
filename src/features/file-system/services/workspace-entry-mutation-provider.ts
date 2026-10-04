@@ -1,5 +1,5 @@
-import { invoke } from "@tauri-apps/api/core";
 import { dirname, join } from "@tauri-apps/api/path";
+import { commands } from "@/bindings/commands";
 import { parseRemotePath } from "@/features/remote/utils/remote-path";
 import { buildWslPath, parseWslPath } from "@/features/wsl/utils/wsl-path";
 import { joinPath } from "@/utils/path-helpers";
@@ -62,10 +62,7 @@ const remoteMutationProvider: WorkspaceEntryMutationProvider = {
     }
 
     const filePath = joinPath(directoryPath, fileName);
-    await invoke("ssh_create_file", {
-      connectionId: remote.connectionId,
-      filePath: joinPath(remote.remotePath, fileName),
-    });
+    await commands.sshCreateFile(remote.connectionId, joinPath(remote.remotePath, fileName));
     return filePath;
   },
   async createDirectory(parentPath, folderName) {
@@ -75,10 +72,7 @@ const remoteMutationProvider: WorkspaceEntryMutationProvider = {
     }
 
     const directoryPath = joinPath(parentPath, folderName);
-    await invoke("ssh_create_directory", {
-      connectionId: remote.connectionId,
-      directoryPath: joinPath(remote.remotePath, folderName),
-    });
+    await commands.sshCreateDirectory(remote.connectionId, joinPath(remote.remotePath, folderName));
     return directoryPath;
   },
   async deletePath(path, isDirectory) {
@@ -87,11 +81,7 @@ const remoteMutationProvider: WorkspaceEntryMutationProvider = {
       throw new Error(`Invalid remote workspace path: ${path}`);
     }
 
-    await invoke("ssh_delete_path", {
-      connectionId: remote.connectionId,
-      targetPath: remote.remotePath,
-      isDirectory,
-    });
+    await commands.sshDeletePath(remote.connectionId, remote.remotePath, isDirectory);
   },
   async movePath(sourcePath, targetPath) {
     const source = parseRemotePath(sourcePath);
@@ -100,11 +90,7 @@ const remoteMutationProvider: WorkspaceEntryMutationProvider = {
       throw new Error("Moving files between SSH connections or local folders is not supported.");
     }
 
-    await invoke("ssh_rename_path", {
-      connectionId: source.connectionId,
-      sourcePath: source.remotePath,
-      targetPath: target.remotePath,
-    });
+    await commands.sshRenamePath(source.connectionId, source.remotePath, target.remotePath);
   },
   async renamePath(path, newName) {
     const remote = parseRemotePath(path);
@@ -117,11 +103,7 @@ const remoteMutationProvider: WorkspaceEntryMutationProvider = {
     const parentPath = segments.join("/") || "/";
     const targetRemotePath = joinPath(parentPath, newName);
     const targetPath = `remote://${remote.connectionId}${targetRemotePath}`;
-    await invoke("ssh_rename_path", {
-      connectionId: remote.connectionId,
-      sourcePath: remote.remotePath,
-      targetPath: targetRemotePath,
-    });
+    await commands.sshRenamePath(remote.connectionId, remote.remotePath, targetRemotePath);
     return targetPath;
   },
 };

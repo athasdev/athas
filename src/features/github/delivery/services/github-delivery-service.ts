@@ -1,4 +1,8 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
+import type {
+  Deployment as BindingDeployment,
+  Release as BindingRelease,
+} from "@/bindings/commands";
 import { createTimedResourceCache } from "@/utils/timed-resource-cache";
 import type {
   DeliveryKind,
@@ -15,6 +19,20 @@ export const DELIVERY_PAGE_SIZE = 20;
 export const deliveryListCache = createTimedResourceCache<DeliveryResource[]>();
 export const deliveryDetailCache = createTimedResourceCache<DeliveryResource>();
 
+export function normalizeRelease(release: BindingRelease): Release {
+  return { ...release, immutable: release.immutable ?? false };
+}
+
+function normalizeDeployment(deployment: BindingDeployment): Deployment {
+  return {
+    ...deployment,
+    transient_environment: deployment.transient_environment ?? false,
+    production_environment: deployment.production_environment ?? false,
+    statuses: deployment.statuses ?? [],
+    status_error: deployment.status_error ?? null,
+  };
+}
+
 export function loadDeliveryPage(
   kind: DeliveryKind,
   repoPath: string,
@@ -23,11 +41,12 @@ export function loadDeliveryPage(
 ) {
   return deliveryListCache.load(
     deliveryKey(kind, repoPath, page),
-    () =>
-      invoke<DeliveryResource[]>(
-        kind === "releases" ? "github_list_releases" : "github_list_deployments",
-        { repoPath, page },
-      ),
+    (): Promise<DeliveryResource[]> =>
+      kind === "releases"
+        ? commands.githubListReleases(repoPath, page).then((items) => items.map(normalizeRelease))
+        : commands
+            .githubListDeployments(repoPath, page)
+            .then((items) => items.map(normalizeDeployment)),
     { ttlMs: DELIVERY_LIST_TTL, force },
   );
 }
@@ -40,11 +59,10 @@ export function loadDeliveryDetail(
 ) {
   return deliveryDetailCache.load(
     deliveryKey(kind, repoPath, id),
-    () =>
-      invoke<Release | Deployment>(
-        kind === "releases" ? "github_get_release" : "github_get_deployment",
-        { repoPath, id },
-      ),
+    (): Promise<DeliveryResource> =>
+      kind === "releases"
+        ? commands.githubGetRelease(repoPath, id).then(normalizeRelease)
+        : commands.githubGetDeployment(repoPath, id).then(normalizeDeployment),
     { ttlMs: DELIVERY_TTL, force },
   );
 }

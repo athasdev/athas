@@ -1,6 +1,1 @@
-export interface FontInfo {
-  name: string;
-  family: string;
-  style: string;
-  is_monospace: boolean;
-}
+export type { FontInfo } from "@/bindings/commands";

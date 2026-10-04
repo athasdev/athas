@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings/commands";
 import { tauriFetch } from "@/utils/tauri-fetch";
 import { viewTableToCsv, jsonToViewTable } from "@/features/views/lib/view-model";
 import {
@@ -44,7 +44,7 @@ export async function loadViewTable(
       throw new Error("GitHub authentication can only be used with api.github.com");
     }
 
-    const token = await invoke<string | null>("get_github_token");
+    const token = await commands.getGithubToken();
     if (!token) throw new Error("Connect a GitHub account before using GitHub authentication");
 
     headers.Authorization = `Bearer ${token}`;

@@ -276,13 +276,41 @@ impl GitCommand {
 pub fn describe_failure(output: &Output) -> String {
    let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
-   if !stderr.is_empty() {
+   let details = if !stderr.is_empty() {
       stderr
    } else if !stdout.is_empty() {
       stdout
    } else {
       "Git returned a non-zero exit status without output.".to_string()
+   };
+   redact_url_credentials(&details)
+}
+
+/// Replace `user:password@` userinfo in URLs with `***` so embedded
+/// credentials never reach UI errors or logs.
+fn redact_url_credentials(text: &str) -> String {
+   let mut redacted = String::with_capacity(text.len());
+   let mut rest = text;
+   while let Some(scheme_end) = rest.find("://") {
+      let after_scheme = &rest[scheme_end + 3..];
+      let userinfo_end = after_scheme
+         .find(['@', '/', ' ', '\n', '"', '\''])
+         .map(|index| (index, after_scheme.as_bytes().get(index)));
+      match userinfo_end {
+         Some((index, Some(b'@'))) => {
+            redacted.push_str(&rest[..scheme_end + 3]);
+            redacted.push_str("***@");
+            rest = &after_scheme[index + 1..];
+         }
+         _ => {
+            let keep = scheme_end + 3;
+            redacted.push_str(&rest[..keep]);
+            rest = &rest[keep..];
+         }
+      }
    }
+   redacted.push_str(rest);
+   redacted
 }
 
 /// Applies process-wide libgit2 settings that the app relies on.
@@ -306,6 +334,20 @@ pub fn configure_libgit2() {
 #[cfg(test)]
 mod tests {
    use super::*;
+
+   #[test]
+   fn redacts_embedded_credentials_from_git_output() {
+      assert_eq!(
+         redact_url_credentials(
+            "repository 'https://user:s3cret@github.com/org/repo.git' not found"
+         ),
+         "repository 'https://***@github.com/org/repo.git' not found"
+      );
+      assert_eq!(
+         redact_url_credentials("https://github.com/org/repo.git"),
+         "https://github.com/org/repo.git"
+      );
+   }
 
    #[test]
    fn detects_wsl_hosts_from_uris_and_share_paths() {

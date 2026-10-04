@@ -9,6 +9,7 @@ use athas_database::{
 use std::sync::Arc;
 
 #[tauri::command]
+#[specta::specta]
 pub async fn redis_scan_keys(
    connection_id: String,
    pattern: Option<String>,
@@ -19,6 +20,7 @@ pub async fn redis_scan_keys(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn redis_get_value(
    connection_id: String,
    key: String,
@@ -28,6 +30,7 @@ pub async fn redis_get_value(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn redis_set_value(
    connection_id: String,
    key: String,
@@ -39,6 +42,7 @@ pub async fn redis_set_value(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn redis_delete_key(
    connection_id: String,
    key: String,
@@ -48,6 +52,7 @@ pub async fn redis_delete_key(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn redis_get_info(
    connection_id: String,
    state: tauri::State<'_, Arc<ConnectionManager>>,

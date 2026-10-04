@@ -14,6 +14,7 @@ use athas_database::{
 use std::sync::Arc;
 
 #[tauri::command]
+#[specta::specta]
 pub async fn get_mysql_tables(
    connection_id: String,
    state: tauri::State<'_, Arc<ConnectionManager>>,
@@ -22,6 +23,7 @@ pub async fn get_mysql_tables(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn query_mysql(
    connection_id: String,
    query: String,
@@ -31,6 +33,7 @@ pub async fn query_mysql(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn query_mysql_filtered(
    connection_id: String,
    params: FilteredQueryParams,
@@ -40,6 +43,7 @@ pub async fn query_mysql_filtered(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn execute_mysql(
    connection_id: String,
    statement: String,
@@ -49,6 +53,7 @@ pub async fn execute_mysql(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn get_mysql_foreign_keys(
    connection_id: String,
    table: String,
@@ -58,6 +63,7 @@ pub async fn get_mysql_foreign_keys(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn get_mysql_table_schema(
    connection_id: String,
    table: String,
@@ -67,6 +73,7 @@ pub async fn get_mysql_table_schema(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn insert_mysql_row(
    connection_id: String,
    table: String,
@@ -85,6 +92,7 @@ pub async fn insert_mysql_row(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn update_mysql_row(
    connection_id: String,
    table: String,
@@ -107,6 +115,7 @@ pub async fn update_mysql_row(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn delete_mysql_row(
    connection_id: String,
    table: String,
