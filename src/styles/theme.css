@@ -27,7 +27,7 @@
  */
 @theme inline {
   --font-sans: var(--app-font-family);
-  --font-heading: "Inter Display", var(--app-font-family);
+  --font-heading: var(--app-font-family);
   --font-mono: var(--editor-font-family);
   --leading-row: 1.35;
   --leading-chrome: var(--athas-chrome-line-height);
