@@ -662,6 +662,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "athas-exec-path",
+ "athas-project",
  "athas-terminal",
  "base64 0.22.1",
  "bzip2",
@@ -806,14 +807,19 @@ dependencies = [
 name = "athas-remote"
 version = "0.1.0"
 dependencies = [
+ "athas-project",
  "athas-terminal",
+ "base64 0.22.1",
+ "dirs 5.0.1",
  "lazy_static",
  "log",
  "serde",
  "serde_json",
+ "sha2",
  "specta",
  "ssh2",
  "tauri",
+ "tempfile",
  "uuid",
 ]
 
@@ -893,6 +899,7 @@ dependencies = [
 name = "athas-wsl"
 version = "0.1.0"
 dependencies = [
+ "athas-project",
  "serde",
  "specta",
 ]

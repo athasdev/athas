@@ -1,3 +1,4 @@
+import type { ImageDraftState } from "@/features/viewer/image/editor/services/image-edit-session";
 import type { DatabaseType } from "@/features/database/types/provider.types";
 import type { MultiFileDiff } from "@/features/git/types/git-diff.types";
 import type { GitDiff } from "@/features/git/types/git.types";
@@ -102,8 +103,9 @@ export interface DiffContent extends PaneContentBase {
   diffData?: GitDiff | MultiFileDiff;
 }
 
-interface ImageContent extends PaneContentBase {
+export interface ImageContent extends PaneContentBase {
   type: "image";
+  imageDraft?: ImageDraftState;
 }
 
 interface PdfContent extends PaneContentBase {
@@ -517,3 +519,10 @@ export type OpenContentSpec =
       type: "onboarding";
       context: import("@/features/onboarding/lib/onboarding-state").OnboardingContext;
     };
+
+export function isDirtyContent(buffer: PaneContent): boolean {
+  if (isEditorContent(buffer)) return buffer.isDirty;
+  if (buffer.type !== "image" || !buffer.imageDraft) return false;
+  const draft = buffer.imageDraft;
+  return draft.processing > 0 || draft.history[draft.index] !== draft.savedSrc;
+}

@@ -1,5 +1,7 @@
 mod file_ops;
+mod sftp_atomic_rename;
 mod ssh_helpers;
+mod ssh_host_trust;
 mod state;
 mod terminal;
 
@@ -29,6 +31,10 @@ pub struct SshConnection {
    pub port: u16,
    pub username: String,
    pub connected: bool,
+}
+
+pub async fn ssh_trust_host(host: String, port: u16, fingerprint: String) -> Result<(), String> {
+   ssh_helpers::trust_ssh_host(&host, port, &fingerprint)
 }
 
 pub async fn ssh_connect(
@@ -123,18 +129,7 @@ pub async fn ssh_get_connected_ids() -> Result<Vec<String>, String> {
 }
 
 pub async fn ssh_create_file(connection_id: String, file_path: String) -> Result<(), String> {
-   let connections = CONNECTIONS
-      .lock()
-      .map_err(|e| format!("Failed to lock connections: {}", e))?;
-   let (session, _) = connections
-      .get(&connection_id)
-      .ok_or("Connection not found")?;
-
-   let command = format!(
-      "mkdir -p \"$(dirname {0})\" && : > {0}",
-      shell_quote(&file_path)
-   );
-   exec_remote_command(session, &command).map(|_| ())
+   file_ops::mutate_file(connection_id, file_path, Some(None), Some(String::new())).await
 }
 
 pub async fn ssh_create_directory(
@@ -262,6 +257,29 @@ pub async fn ssh_write_file(
    content: String,
 ) -> Result<(), String> {
    write_file_inner(connection_id, file_path, content).await
+}
+
+pub async fn ssh_write_file_checked(
+   connection_id: String,
+   file_path: String,
+   content: String,
+   expected_content: Option<String>,
+) -> Result<(), String> {
+   file_ops::mutate_file(
+      connection_id,
+      file_path,
+      Some(expected_content),
+      Some(content),
+   )
+   .await
+}
+
+pub async fn ssh_delete_file_checked(
+   connection_id: String,
+   file_path: String,
+   expected_content: String,
+) -> Result<(), String> {
+   file_ops::mutate_file(connection_id, file_path, Some(Some(expected_content)), None).await
 }
 
 pub async fn ssh_read_directory(

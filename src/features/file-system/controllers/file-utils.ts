@@ -91,6 +91,21 @@ export const isBinaryFile = (path: string): boolean => {
     ".iso",
     ".dmg",
     ".msi",
+    ".psd",
+    ".sketch",
+    ".mov",
+    ".mp4",
+    ".avi",
+    ".mkv",
+    ".webm",
+    ".flv",
+    ".mp3",
+    ".wav",
+    ".flac",
+    ".aac",
+    ".ogg",
+    ".m4a",
+    ".opus",
   ];
   if (binarySuffixes.some((suffix) => lowerPath.endsWith(suffix))) {
     return true;

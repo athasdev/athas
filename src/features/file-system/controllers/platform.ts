@@ -4,6 +4,7 @@ import { commands } from "@/bindings/commands";
 import { useLinuxFolderPickerStore } from "@/features/file-system/stores/linux-folder-picker.store";
 import { invalidateFileTreeGitIgnoreCache } from "@/features/file-explorer/lib/file-tree-gitignore";
 import { parseWslPath } from "@/features/wsl/utils/wsl-path";
+import { stripTrailingPathSeparators } from "@/utils/path-helpers";
 import { IS_LINUX } from "@/utils/platform";
 import {
   BaseDirectory,
@@ -11,7 +12,6 @@ import {
   readFile as readBinaryFile,
   readDir,
   remove,
-  writeTextFile,
 } from "@tauri-apps/plugin-fs";
 
 const utf8Decoder = new TextDecoder("utf-8");
@@ -68,13 +68,7 @@ export async function writeFile(path: string, content: string): Promise<void> {
     return;
   }
 
-  try {
-    // Try to write as absolute path first
-    await writeTextFile(path, content);
-  } catch {
-    // Fallback to writing to app data directory
-    await writeTextFile(path, content, { baseDir: BaseDirectory.AppData });
-  }
+  await commands.writeLocalFile(path, content);
   invalidateFileTreeGitIgnoreCache(path);
 }
 
@@ -170,22 +164,27 @@ export async function openFiles(): Promise<string[]> {
  * @param path The directory path to read
  */
 export async function readDirectory(path: string): Promise<any[]> {
+  if (!path) throw new Error("A directory path is required.");
   const wslInfo = parseWslPath(path);
   if (wslInfo) {
     return await commands.wslReadDirectory(wslInfo.distro, wslInfo.linuxPath);
   }
 
   try {
-    // Normalize the path - remove any trailing slashes
-    const normalizedPath = path.replace(/[/\\]+$/, "");
+    const isWindowsPath = /^[A-Za-z]:[\\/]/.test(path) || path.startsWith("\\\\") || path === "\\";
+    const normalizedPath = isWindowsPath
+      ? stripTrailingPathSeparators(path)
+      : path.replace(/\/+$/, "") || "/";
 
     const entries = await readDir(normalizedPath);
 
-    // Use the appropriate path separator based on the input path
-    const separator = normalizedPath.includes("\\") ? "\\" : "/";
+    const separator = isWindowsPath && normalizedPath.includes("\\") ? "\\" : "/";
+    const prefix = normalizedPath.endsWith(separator)
+      ? normalizedPath
+      : `${normalizedPath}${separator}`;
     return entries.map((entry) => ({
       name: entry.name,
-      path: `${normalizedPath}${separator}${entry.name}`,
+      path: `${prefix}${entry.name}`,
       is_dir: entry.isDirectory,
       is_symlink: entry.isSymlink,
     }));

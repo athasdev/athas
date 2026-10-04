@@ -98,6 +98,13 @@ export class WorkspaceRuntimeRegistry {
       .filter((store): store is StoreApi<unknown> => !!store) as StoreApi<T>[];
   }
 
+  getExistingStoreEntries<T>(key: string): Array<{ workspaceId: string; store: StoreApi<T> }> {
+    return [...this.runtimes.entries()].flatMap(([workspaceId, runtime]) => {
+      const store = runtime.stores.get(key);
+      return store ? [{ workspaceId, store: store as StoreApi<T> }] : [];
+    });
+  }
+
   getActiveWorkspaceId = () => this.activeWorkspaceId;
 
   getActiveWorkspace() {

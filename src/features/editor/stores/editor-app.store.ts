@@ -1,16 +1,12 @@
-import { commands } from "@/bindings/commands";
+import { captureBufferStoreOwner } from "@/features/editor/services/buffer-store-owner";
+import { savePaneContent } from "@/features/panes/services/pane-content-save-service";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { parseCollaborationNoteBufferPath } from "@/features/collaboration/lib/collaboration-sidebar-model";
-import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import { useFileWatcherStore } from "@/features/file-system/stores/file-watcher.store";
-import { emitGitChanged } from "@/features/git/events/git-events";
-import { recordLocalHistoryFile } from "@/features/local-history/api/local-history-api";
-import { isEditorContent } from "@/features/panes/types/pane-content.types";
+import { isDirtyContent, isEditorContent } from "@/features/panes/types/pane-content.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { cleanupEditorAutoSave, scheduleEditorAutoSave } from "../services/editor-save-service";
 import { createSelectors } from "@/utils/zustand-selectors";
-import { writeFile } from "@/features/file-system/controllers/platform";
 import type {
   EditorContentChangeOptions,
   EditorDocumentChangeBatch,
@@ -19,180 +15,11 @@ import type {
   Range,
 } from "../types/editor.types";
 import { getBufferById } from "../utils/buffer-index";
-import { getDirtyWritableEditorBuffers } from "../utils/editor-buffer-selectors";
 import { trackBufferHistoryChange } from "./buffer-history-tracking";
 import { useBufferStore } from "./buffer.store";
 import { discardEditorViewContentChange, queueEditorViewContentChange } from "./view.store";
 
-async function recordLocalHistoryBeforeWrite(
-  path: string,
-  reason: "save" | "auto-save" | "restore",
-): Promise<void> {
-  try {
-    await recordLocalHistoryFile(path, reason);
-  } catch (error) {
-    console.warn("Failed to record local history:", error);
-  }
-}
-
-async function saveEditorBufferById(bufferId: string): Promise<boolean> {
-  const { buffers } = useBufferStore.getState();
-  const { markBufferDirty, updateBufferContent, updateBufferPath } =
-    useBufferStore.getState().actions;
-  const { updateSettingsFromJSON } = useSettingsStore.getState().actions;
-  const { markPendingSave } = useFileWatcherStore.getState().actions;
-  const activeBuffer = getBufferById(buffers, bufferId);
-  if (!activeBuffer || !isEditorContent(activeBuffer)) return false;
-  if (activeBuffer.readOnly) return false;
-
-  const collaborationNoteTarget = parseCollaborationNoteBufferPath(activeBuffer.path);
-
-  if (activeBuffer.path.startsWith("untitled:")) {
-    const { save: saveDialog } = await import("@tauri-apps/plugin-dialog");
-    const result = await saveDialog({
-      title: "Save",
-      defaultPath: activeBuffer.name,
-      filters: [{ name: "All Files", extensions: ["*"] }],
-    });
-    if (!result) return false;
-
-    await writeFile(result, activeBuffer.content);
-    updateBufferPath(activeBuffer.id, result);
-    markBufferDirty(activeBuffer.id, false);
-    return true;
-  }
-
-  if (collaborationNoteTarget) {
-    const [{ updateCollaborationChannelNote }, { useAuthStore }, { updateCollaborationNoteFile }] =
-      await Promise.all([
-        import("@/features/window/services/auth-api"),
-        import("@/features/window/stores/auth.store"),
-        import("@/features/collaboration/lib/collaboration-sidebar-model"),
-      ]);
-    const { subscription, actions } = useAuthStore.getState();
-    const collaboration = subscription?.collaboration;
-    const channelNote = collaboration?.channelNotes.find(
-      (note) => note.channelId === collaborationNoteTarget.channelId,
-    );
-
-    if (!channelNote) {
-      markBufferDirty(activeBuffer.id, true);
-      return false;
-    }
-
-    const nextCollaboration = await updateCollaborationChannelNote({
-      channelId: collaborationNoteTarget.channelId,
-      contentMarkdown: updateCollaborationNoteFile({
-        contentMarkdown: channelNote.contentMarkdown,
-        path: collaborationNoteTarget.notePath,
-        fileContent: activeBuffer.content,
-      }),
-    });
-    actions.setCollaborationSnapshot(nextCollaboration);
-    markBufferDirty(activeBuffer.id, false);
-    return true;
-  }
-
-  if (activeBuffer.isVirtual) {
-    if (activeBuffer.path === "settings://user-settings.json") {
-      const success = updateSettingsFromJSON(activeBuffer.content);
-      markBufferDirty(activeBuffer.id, !success);
-      return success;
-    }
-
-    markBufferDirty(activeBuffer.id, false);
-    return true;
-  }
-
-  if (activeBuffer.path.startsWith("remote://")) {
-    markBufferDirty(activeBuffer.id, true);
-    const pathParts = activeBuffer.path.replace("remote://", "").split("/");
-    const connectionId = pathParts.shift();
-    const remotePath = `/${pathParts.join("/")}`;
-
-    if (!connectionId) return false;
-
-    try {
-      await commands.sshWriteFile(connectionId, remotePath, activeBuffer.content);
-      markBufferDirty(activeBuffer.id, false);
-      return true;
-    } catch (error) {
-      console.error("Error saving remote file:", error);
-      markBufferDirty(activeBuffer.id, true);
-      return false;
-    }
-  }
-
-  try {
-    markPendingSave(activeBuffer.path);
-
-    let contentToSave = activeBuffer.content;
-    const { settings } = useSettingsStore.getState();
-
-    if (settings.formatOnSave) {
-      const { formatContent } = await import("@/features/editor/formatter/formatter-service");
-      const languageId = extensionRegistry.getLanguageId(activeBuffer.path);
-
-      const formatResult = await formatContent({
-        filePath: activeBuffer.path,
-        content: activeBuffer.content,
-        languageId: languageId || undefined,
-      });
-
-      if (formatResult.success && formatResult.formattedContent) {
-        contentToSave = formatResult.formattedContent;
-        updateBufferContent(activeBuffer.id, contentToSave, false);
-      }
-    }
-
-    await recordLocalHistoryBeforeWrite(activeBuffer.path, "save");
-    await writeFile(activeBuffer.path, contentToSave);
-    const { LspClient } = await import("@/features/editor/lsp/lsp-client");
-    await LspClient.getInstance().notifyDocumentSave(activeBuffer.path);
-    markBufferDirty(activeBuffer.id, false);
-
-    if (settings.lintOnSave) {
-      const { lintContent } = await import("@/features/editor/linter/linter-service");
-      const { convertLintDiagnostic, useDiagnosticsStore } =
-        await import("@/features/diagnostics/stores/diagnostics.store");
-      const languageId = extensionRegistry.getLanguageId(activeBuffer.path);
-
-      const lintResult = await lintContent({
-        filePath: activeBuffer.path,
-        content: contentToSave,
-        languageId: languageId || undefined,
-      });
-
-      if (lintResult.success && lintResult.diagnostics) {
-        useDiagnosticsStore.getState().actions.setDiagnostics(
-          activeBuffer.path,
-          lintResult.diagnostics.map((diagnostic) =>
-            convertLintDiagnostic(activeBuffer.path, diagnostic),
-          ),
-          "linter",
-        );
-      }
-    }
-
-    const rootFolderPath = useFileSystemStore.getState().rootFolderPath;
-    if (rootFolderPath) {
-      emitGitChanged({
-        repoPath: rootFolderPath,
-        filePath: activeBuffer.path,
-        scopes: ["working-tree"],
-        source: "save",
-      });
-    }
-    return true;
-  } catch (error) {
-    console.error("Error saving local file:", error);
-    markBufferDirty(activeBuffer.id, true);
-    return false;
-  }
-}
-
 interface AppState {
-  autoSaveTimeoutId: NodeJS.Timeout | null;
   quickEditState: {
     isOpen: boolean;
     selectedText: string;
@@ -217,6 +44,7 @@ interface AppActions {
     options?: EditorContentChangeOptions,
   ) => Promise<void>;
   handleSave: () => Promise<boolean>;
+  handleSaveAs: () => Promise<boolean>;
   handleSaveAll: () => Promise<number>;
   openQuickEdit: (params: {
     text: string;
@@ -228,8 +56,7 @@ interface AppActions {
 
 export const useEditorAppStore = createSelectors(
   create<AppState>()(
-    immer((set, get) => ({
-      autoSaveTimeoutId: null,
+    immer((set) => ({
       quickEditState: {
         isOpen: false,
         selectedText: "",
@@ -250,7 +77,7 @@ export const useEditorAppStore = createSelectors(
           queueEditorViewContentChange(bufferId, previousContentRevision, batch);
           const collaborationNoteTarget = parseCollaborationNoteBufferPath(activeBuffer.path);
           const isRemoteFile = activeBuffer.path.startsWith("remote://");
-          const result = applyBufferContentChanges(bufferId, batch, isRemoteFile ? false : true);
+          const result = applyBufferContentChanges(bufferId, batch, true);
           if (!result.accepted) {
             discardEditorViewContentChange(bufferId);
             return result;
@@ -280,43 +107,7 @@ export const useEditorAppStore = createSelectors(
             !activeBuffer.isVirtual &&
             settings.autoSave
           ) {
-            const { autoSaveTimeoutId } = get();
-            if (autoSaveTimeoutId) clearTimeout(autoSaveTimeoutId);
-
-            const newTimeoutId = setTimeout(async () => {
-              const latestBuffer = getBufferById(useBufferStore.getState().buffers, bufferId);
-              if (!latestBuffer || !isEditorContent(latestBuffer)) return;
-              const savingRevision = latestBuffer.contentRevision ?? 0;
-              try {
-                useFileWatcherStore.getState().actions.markPendingSave(latestBuffer.path);
-                await recordLocalHistoryBeforeWrite(latestBuffer.path, "auto-save");
-                await writeFile(latestBuffer.path, latestBuffer.content);
-                const currentBuffer = getBufferById(useBufferStore.getState().buffers, bufferId);
-                if (
-                  currentBuffer &&
-                  isEditorContent(currentBuffer) &&
-                  (currentBuffer.contentRevision ?? 0) === savingRevision
-                ) {
-                  markBufferDirty(bufferId, false);
-                }
-
-                const rootFolderPath = useFileSystemStore.getState().rootFolderPath;
-                if (rootFolderPath) {
-                  emitGitChanged({
-                    repoPath: rootFolderPath,
-                    filePath: latestBuffer.path,
-                    scopes: ["working-tree"],
-                    source: "auto-save",
-                  });
-                }
-              } catch (error) {
-                console.error("Error saving file:", error);
-                markBufferDirty(bufferId, true);
-              }
-            }, 150);
-            set((state) => {
-              state.autoSaveTimeoutId = newTimeoutId;
-            });
+            scheduleEditorAutoSave(bufferId);
           }
 
           return result;
@@ -332,7 +123,6 @@ export const useEditorAppStore = createSelectors(
           const { activeBufferId, buffers } = useBufferStore.getState();
           const { updateBufferContent, markBufferDirty } = useBufferStore.getState().actions;
           const { settings } = useSettingsStore.getState();
-          const { markPendingSave } = useFileWatcherStore.getState().actions;
           const contentAlreadyApplied = options?.contentAlreadyApplied === true;
 
           const activeBuffer = getBufferById(buffers, activeBufferId);
@@ -356,7 +146,7 @@ export const useEditorAppStore = createSelectors(
 
           if (isRemoteFile) {
             if (!contentAlreadyApplied) {
-              updateBufferContent(activeBuffer.id, content, false);
+              updateBufferContent(activeBuffer.id, content, true);
             }
           } else if (collaborationNoteTarget) {
             if (!contentAlreadyApplied) {
@@ -369,52 +159,7 @@ export const useEditorAppStore = createSelectors(
             }
 
             if (!activeBuffer.isVirtual && settings.autoSave) {
-              const { autoSaveTimeoutId } = get();
-              if (autoSaveTimeoutId) {
-                clearTimeout(autoSaveTimeoutId);
-              }
-
-              const newTimeoutId = setTimeout(async () => {
-                const latestBuffer = getBufferById(
-                  useBufferStore.getState().buffers,
-                  activeBuffer.id,
-                );
-                if (!latestBuffer || !isEditorContent(latestBuffer)) return;
-                const savingRevision = latestBuffer.contentRevision ?? 0;
-                try {
-                  markPendingSave(latestBuffer.path);
-                  await recordLocalHistoryBeforeWrite(latestBuffer.path, "auto-save");
-                  await writeFile(latestBuffer.path, latestBuffer.content);
-                  const currentBuffer = getBufferById(
-                    useBufferStore.getState().buffers,
-                    activeBuffer.id,
-                  );
-                  if (
-                    currentBuffer &&
-                    isEditorContent(currentBuffer) &&
-                    (currentBuffer.contentRevision ?? 0) === savingRevision
-                  ) {
-                    markBufferDirty(activeBuffer.id, false);
-                  }
-
-                  const rootFolderPath = useFileSystemStore.getState().rootFolderPath;
-                  if (rootFolderPath) {
-                    emitGitChanged({
-                      repoPath: rootFolderPath,
-                      filePath: latestBuffer.path,
-                      scopes: ["working-tree"],
-                      source: "auto-save",
-                    });
-                  }
-                } catch (error) {
-                  console.error("Error saving file:", error);
-                  markBufferDirty(activeBuffer.id, true);
-                }
-              }, 150);
-
-              set((state) => {
-                state.autoSaveTimeoutId = newTimeoutId;
-              });
+              scheduleEditorAutoSave(activeBuffer.id);
             }
           }
         },
@@ -422,21 +167,35 @@ export const useEditorAppStore = createSelectors(
         handleSave: async () => {
           const { activeBufferId, buffers } = useBufferStore.getState();
           const activeBuffer = getBufferById(buffers, activeBufferId);
-          if (!activeBuffer || !isEditorContent(activeBuffer) || activeBuffer.readOnly)
+          if (
+            !activeBuffer ||
+            (activeBuffer.type !== "image" &&
+              (!isEditorContent(activeBuffer) || activeBuffer.readOnly))
+          )
             return false;
 
-          return saveEditorBufferById(activeBuffer.id);
+          return savePaneContent(captureBufferStoreOwner(), activeBuffer.id);
+        },
+
+        handleSaveAs: async () => {
+          const { activeBufferId } = useBufferStore.getState();
+          if (!activeBufferId) return false;
+          return savePaneContent(captureBufferStoreOwner(), activeBufferId, true);
         },
 
         handleSaveAll: async () => {
-          const dirtyBufferIds = getDirtyWritableEditorBuffers(
-            useBufferStore.getState().buffers,
-          ).map((buffer) => buffer.id);
+          const owner = captureBufferStoreOwner();
+          const dirtyBufferIds = owner.store
+            .getState()
+            .buffers.filter(
+              (buffer) => isDirtyContent(buffer) && (buffer.type !== "editor" || !buffer.readOnly),
+            )
+            .map((buffer) => buffer.id);
           const saveResults = await Promise.all(
             dirtyBufferIds.map(async (bufferId) => {
-              const saved = await saveEditorBufferById(bufferId);
-              const nextBuffer = getBufferById(useBufferStore.getState().buffers, bufferId);
-              return saved && (!nextBuffer || !isEditorContent(nextBuffer) || !nextBuffer.isDirty);
+              const saved = await savePaneContent(owner, bufferId);
+              const nextBuffer = getBufferById(owner.store.getState().buffers, bufferId);
+              return saved && (!nextBuffer || !isDirtyContent(nextBuffer));
             }),
           );
 
@@ -455,10 +214,7 @@ export const useEditorAppStore = createSelectors(
         },
 
         cleanup: () => {
-          const { autoSaveTimeoutId } = get();
-          if (autoSaveTimeoutId) {
-            clearTimeout(autoSaveTimeoutId);
-          }
+          cleanupEditorAutoSave();
         },
       },
     })),

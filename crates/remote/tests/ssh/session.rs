@@ -99,3 +99,61 @@ fn reports_configured_key_failure() {
       "{error}"
    );
 }
+
+#[test]
+#[ignore = "requires an isolated local SSH server and ATHAS_SSH_TEST_PORT, ATHAS_SSH_TEST_USER, \
+            ATHAS_SSH_TEST_HOME"]
+fn verifies_and_persists_server_trust_before_authentication() {
+   let port = std::env::var("ATHAS_SSH_TEST_PORT")
+      .unwrap()
+      .parse()
+      .unwrap();
+   let username = std::env::var("ATHAS_SSH_TEST_USER").unwrap();
+   let key =
+      PathBuf::from(std::env::var("ATHAS_SSH_TEST_HOME").unwrap()).join(".ssh/custom_ed25519");
+   let home = tempfile::tempdir().unwrap();
+   let connect = |identity: &Path| {
+      create_ssh_session_with_config(
+         "127.0.0.1",
+         port,
+         &username,
+         None,
+         identity.to_str(),
+         &SshConfig::default(),
+         home.path(),
+      )
+   };
+   let unknown = connect(Path::new("/missing/private-key")).err().unwrap();
+   assert!(unknown.starts_with("ATHAS_SSH_UNKNOWN_HOST:"), "{unknown}");
+   assert!(!unknown.contains("private-key failed"));
+   let session = super::handshake_session("127.0.0.1", port).unwrap();
+   assert!(!session.authenticated());
+   let details: serde_json::Value =
+      serde_json::from_str(unknown.strip_prefix("ATHAS_SSH_UNKNOWN_HOST:").unwrap()).unwrap();
+   let fingerprint = details["fingerprint"].as_str().unwrap();
+   assert!(
+      crate::ssh_host_trust::trust_session(&session, "127.0.0.1", port, home.path(), "wrong-key")
+         .is_err()
+   );
+   assert!(!home.path().join(".ssh/athas_known_hosts").exists());
+   crate::ssh_host_trust::trust_session(&session, "127.0.0.1", port, home.path(), fingerprint)
+      .unwrap();
+   assert!(!session.authenticated());
+   let authenticated = connect(&key).unwrap();
+   assert!(authenticated.authenticated());
+   assert_eq!(
+      super::exec_remote_command(&authenticated, "printf verified").unwrap(),
+      "verified"
+   );
+   authenticated.sftp().unwrap();
+   let trusted = home.path().join(".ssh/athas_known_hosts");
+   let before = std::fs::read_to_string(&trusted).unwrap();
+   let name = before.split_whitespace().next().unwrap();
+   std::fs::write(&trusted, format!("{name} ssh-ed25519 b3RoZXIta2V5\n")).unwrap();
+   let changed = connect(Path::new("/missing/private-key")).err().unwrap();
+   assert!(
+      changed.contains("Host key verification failed"),
+      "{changed}"
+   );
+   assert!(!changed.contains("private-key failed"));
+}

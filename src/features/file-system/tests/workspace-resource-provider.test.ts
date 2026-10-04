@@ -89,6 +89,22 @@ describe("workspace resource provider", () => {
     });
   });
 
+  it.each([
+    [
+      "remote://connection-1/repo/a.ts",
+      "ssh_write_file",
+      { connectionId: "connection-1", filePath: "/repo/a.ts", content: "updated" },
+    ],
+    [
+      "wsl://Ubuntu/home/me/a.ts",
+      "wsl_write_file",
+      { distro: "Ubuntu", filePath: "/home/me/a.ts", content: "updated" },
+    ],
+  ])("writes %s through the correct backend", async (path, command, args) => {
+    await getWorkspaceResourceProvider(path as string).writeText(path as string, "updated");
+    expect(invoke).toHaveBeenCalledWith(command, args);
+  });
+
   it("preserves WSL symlink metadata", async () => {
     invoke.mockResolvedValue([
       {
@@ -140,6 +156,88 @@ describe("workspace resource provider", () => {
     expect(invoke).toHaveBeenNthCalledWith(2, "wsl_read_file_bytes", {
       distro: "Ubuntu",
       filePath: "/home/me/readme.md",
+    });
+  });
+  it("sends expected local content to the native checked-write command", async () => {
+    const provider = getWorkspaceResourceProvider("/workspace/a.ts");
+    await provider.writeText("/workspace/a.ts", "after", "before");
+    expect(invoke).toHaveBeenCalledExactlyOnceWith("write_local_file_checked", {
+      path: "/workspace/a.ts",
+      content: "after",
+      expectedContent: "before",
+    });
+    await provider.deleteText("/workspace/a.ts", "after");
+    expect(invoke).toHaveBeenLastCalledWith("delete_local_file_checked", {
+      path: "/workspace/a.ts",
+      expectedContent: "after",
+    });
+  });
+
+  it.each([
+    [
+      "remote://connection/repo/a.ts",
+      "ssh_write_file_checked",
+      "ssh_delete_file_checked",
+      { connectionId: "connection", filePath: "/repo/a.ts" },
+    ],
+    [
+      "wsl://Ubuntu/home/test/a.ts",
+      "wsl_write_file_checked",
+      "wsl_delete_file_checked",
+      { distro: "Ubuntu", filePath: "/home/test/a.ts" },
+    ],
+  ])(
+    "passes the expected text to the checked backend for %s",
+    async (path, writeCommand, deleteCommand, args) => {
+      const provider = getWorkspaceResourceProvider(path as string);
+      await provider.writeText(path as string, "after", "before");
+      expect(invoke).toHaveBeenCalledExactlyOnceWith(writeCommand, {
+        ...(args as object),
+        content: "after",
+        expectedContent: "before",
+      });
+      await provider.deleteText(path as string, "after");
+      expect(invoke).toHaveBeenLastCalledWith(deleteCommand, {
+        ...(args as object),
+        expectedContent: "after",
+      });
+      invoke.mockRejectedValueOnce(new Error("The file changed while preparing the update."));
+      await expect(provider.writeText(path as string, "after", "before")).rejects.toThrow(
+        "changed",
+      );
+      expect(
+        invoke.mock.calls.filter(
+          ([command]) => command === "ssh_read_file" || command === "wsl_read_file",
+        ),
+      ).toHaveLength(0);
+    },
+  );
+
+  it.each(["remote://connection/repo/a.ts", "wsl://Ubuntu/home/test/a.ts"])(
+    "can request restoration of missing files on %s",
+    async (path) => {
+      await getWorkspaceResourceProvider(path).writeText(path, "restored", null);
+      expect(invoke).toHaveBeenCalledOnce();
+      expect(invoke.mock.calls[0][1]).toMatchObject({ content: "restored", expectedContent: null });
+    },
+  );
+
+  it("preserves SSH symlink metadata for context exclusion checks", async () => {
+    invoke.mockResolvedValue([
+      {
+        name: ".aiignore",
+        path: "/repo/.aiignore",
+        is_dir: false,
+        size: 10,
+        is_symlink: true,
+        target: "/outside/policy",
+      },
+    ]);
+    const entries = await readWorkspaceDirectoryEntries("remote://connection/repo");
+    expect(entries[0]).toMatchObject({
+      name: ".aiignore",
+      isSymlink: true,
+      symlinkTarget: "/outside/policy",
     });
   });
 });

@@ -9,6 +9,8 @@ use std::{
    time::{Duration, Instant},
 };
 
+static FILE_MUTATION_LOCK: Mutex<()> = Mutex::new(());
+
 const WSL_EXE: &str = "wsl.exe";
 const WSL_URI_PREFIX: &str = "wsl://";
 const WSL_LOCALHOST_SERVER: &str = "wsl.localhost";
@@ -449,52 +451,77 @@ pub fn read_file_bytes(distro: &str, linux_path: &str) -> Result<Vec<u8>, String
 }
 
 pub fn write_file(distro: &str, linux_path: &str, content: &[u8]) -> Result<(), String> {
-   let path = normalize_linux_path(linux_path);
-   let output = run_wsl(
+   mutate_text_file(
       distro,
-      &[
-         "--exec",
-         "sh",
-         "-lc",
-         r#"mkdir -p "$(dirname "$1")" && cat > "$1""#,
-         "athas-write-file",
-         &path,
-      ],
+      linux_path,
+      athas_project::shell_file_mutations::TextExpectation::Any,
       Some(content),
-   )?;
+   )
+}
 
+pub fn write_file_checked(
+   distro: &str,
+   linux_path: &str,
+   content: &str,
+   expected: Option<&str>,
+) -> Result<(), String> {
+   use athas_project::shell_file_mutations::TextExpectation;
+   mutate_text_file(
+      distro,
+      linux_path,
+      expected.map_or(TextExpectation::Missing, TextExpectation::Content),
+      Some(content.as_bytes()),
+   )
+}
+
+pub fn delete_file_checked(distro: &str, linux_path: &str, expected: &str) -> Result<(), String> {
+   mutate_text_file(
+      distro,
+      linux_path,
+      athas_project::shell_file_mutations::TextExpectation::Content(expected),
+      None,
+   )
+}
+
+fn mutate_text_file(
+   distro: &str,
+   linux_path: &str,
+   expected: athas_project::shell_file_mutations::TextExpectation<'_>,
+   content: Option<&[u8]>,
+) -> Result<(), String> {
+   use athas_project::shell_file_mutations::{ShellTextMutation, TEXT_MUTATION_SCRIPT};
+   let guard = FILE_MUTATION_LOCK
+      .lock()
+      .map_err(|error| error.to_string())?;
+   let path = normalize_linux_path(linux_path);
+   let request = ShellTextMutation::new_bytes(&path, expected, content)?;
+   let mut args = vec!["--exec", "sh", "-c", TEXT_MUTATION_SCRIPT, "athas-edit"];
+   args.extend(request.arguments.iter().map(String::as_str));
+   let output = run_wsl(distro, &args, Some(&request.input))?;
+   drop(guard);
    if output.status_success {
       Ok(())
    } else {
-      Err(format_wsl_error("Failed to write WSL file", &output))
+      Err(format_wsl_error("Failed to update WSL file", &output))
    }
 }
 
 pub fn create_file(distro: &str, linux_path: &str) -> Result<(), String> {
-   let path = normalize_linux_path(linux_path);
-   let output = run_wsl(
+   mutate_text_file(
       distro,
-      &[
-         "--exec",
-         "sh",
-         "-lc",
-         r#"mkdir -p "$(dirname "$1")" && : > "$1""#,
-         "athas-create-file",
-         &path,
-      ],
-      None,
-   )?;
-
-   if output.status_success {
-      Ok(())
-   } else {
-      Err(format_wsl_error("Failed to create WSL file", &output))
-   }
+      linux_path,
+      athas_project::shell_file_mutations::TextExpectation::Missing,
+      Some(b""),
+   )
 }
 
 pub fn create_directory(distro: &str, linux_path: &str) -> Result<(), String> {
+   let guard = FILE_MUTATION_LOCK
+      .lock()
+      .map_err(|error| error.to_string())?;
    let path = normalize_linux_path(linux_path);
    let output = run_wsl(distro, &["--exec", "mkdir", "-p", &path], None)?;
+   drop(guard);
    if output.status_success {
       Ok(())
    } else {
@@ -503,6 +530,9 @@ pub fn create_directory(distro: &str, linux_path: &str) -> Result<(), String> {
 }
 
 pub fn delete_path(distro: &str, linux_path: &str, is_directory: bool) -> Result<(), String> {
+   let guard = FILE_MUTATION_LOCK
+      .lock()
+      .map_err(|error| error.to_string())?;
    let path = normalize_linux_path(linux_path);
    let mut args = vec!["--exec", "rm"];
    if is_directory {
@@ -513,6 +543,7 @@ pub fn delete_path(distro: &str, linux_path: &str, is_directory: bool) -> Result
    args.push(&path);
 
    let output = run_wsl(distro, &args, None)?;
+   drop(guard);
    if output.status_success {
       Ok(())
    } else {
@@ -521,6 +552,9 @@ pub fn delete_path(distro: &str, linux_path: &str, is_directory: bool) -> Result
 }
 
 pub fn rename_path(distro: &str, source_path: &str, target_path: &str) -> Result<(), String> {
+   let guard = FILE_MUTATION_LOCK
+      .lock()
+      .map_err(|error| error.to_string())?;
    let source = normalize_linux_path(source_path);
    let target = normalize_linux_path(target_path);
    let output = run_wsl(
@@ -537,6 +571,7 @@ pub fn rename_path(distro: &str, source_path: &str, target_path: &str) -> Result
       None,
    )?;
 
+   drop(guard);
    if output.status_success {
       Ok(())
    } else {
@@ -550,6 +585,9 @@ pub fn copy_path(
    target_path: &str,
    _is_directory: bool,
 ) -> Result<(), String> {
+   let guard = FILE_MUTATION_LOCK
+      .lock()
+      .map_err(|error| error.to_string())?;
    let source = normalize_linux_path(source_path);
    let target = normalize_linux_path(target_path);
    let output = run_wsl(
@@ -566,6 +604,7 @@ pub fn copy_path(
       None,
    )?;
 
+   drop(guard);
    if output.status_success {
       Ok(())
    } else {

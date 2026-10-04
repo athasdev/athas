@@ -1,12 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import type { EditorContent, PaneContent } from "@/features/panes/types/pane-content.types";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
 import {
   closeAllTabs,
   closeOtherTabs,
   closeSavedTabs,
   closeTabsToLeft,
   closeTabsToRight,
+  saveActiveFileAs,
   showNewTab,
 } from "../commands/file-command-actions";
 import { useKeymapStore } from "../stores/keymaps.store";
@@ -234,5 +236,14 @@ describe("file command actions", () => {
     useBufferStore.getState().actions.confirmCloseWithoutSaving();
 
     expect(useBufferStore.getState().buffers.map((buffer) => buffer.id)).toEqual(["a", "b"]);
+  });
+
+  it("routes Save As through the shared editor save lifecycle", async () => {
+    const saveAs = vi
+      .spyOn(useEditorAppStore.getState().actions, "handleSaveAs")
+      .mockResolvedValueOnce(true);
+    await saveActiveFileAs();
+    expect(saveAs).toHaveBeenCalledOnce();
+    saveAs.mockRestore();
   });
 });

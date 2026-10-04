@@ -39,6 +39,27 @@ pub fn wsl_write_file(distro: String, file_path: String, content: String) -> Res
 
 #[command]
 #[specta::specta]
+pub fn wsl_write_file_checked(
+   distro: String,
+   file_path: String,
+   content: String,
+   expected_content: Option<String>,
+) -> Result<(), String> {
+   athas_wsl::write_file_checked(&distro, &file_path, &content, expected_content.as_deref())
+}
+
+#[command]
+#[specta::specta]
+pub fn wsl_delete_file_checked(
+   distro: String,
+   file_path: String,
+   expected_content: String,
+) -> Result<(), String> {
+   athas_wsl::delete_file_checked(&distro, &file_path, &expected_content)
+}
+
+#[command]
+#[specta::specta]
 pub fn wsl_create_file(distro: String, file_path: String) -> Result<(), String> {
    athas_wsl::create_file(&distro, &file_path)
 }

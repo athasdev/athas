@@ -111,6 +111,50 @@ pub async fn read_local_file(path: String) -> Result<FileBytes, String> {
 
 #[command]
 #[specta::specta]
+pub async fn write_local_file(path: String, content: String) -> Result<(), String> {
+   tauri::async_runtime::spawn_blocking(move || {
+      let resolved = require_path_under_home(&path)?;
+      athas_project::file_mutations::mutate_text(&resolved, None, |_| Ok(Some(content))).map(|_| ())
+   })
+   .await
+   .map_err(|error| format!("File write failed: {error}"))?
+}
+
+#[command]
+#[specta::specta]
+pub async fn write_local_file_checked(
+   path: String,
+   expected_content: Option<String>,
+   content: String,
+) -> Result<(), String> {
+   tauri::async_runtime::spawn_blocking(move || {
+      let resolved = require_path_under_home(&path)?;
+      athas_project::file_mutations::replace_text_if_unchanged(
+         &resolved,
+         expected_content.as_deref(),
+         &content,
+      )
+   })
+   .await
+   .map_err(|error| format!("Checked file write failed: {error}"))?
+}
+
+#[command]
+#[specta::specta]
+pub async fn delete_local_file_checked(
+   path: String,
+   expected_content: String,
+) -> Result<(), String> {
+   tauri::async_runtime::spawn_blocking(move || {
+      let resolved = require_path_under_home(&path)?;
+      athas_project::file_mutations::delete_text_if_unchanged(&resolved, &expected_content)
+   })
+   .await
+   .map_err(|error| format!("Checked file deletion failed: {error}"))?
+}
+
+#[command]
+#[specta::specta]
 pub fn open_file_external(path: String) -> Result<(), String> {
    // Canonicalize and confine to $HOME so the platform opener cannot be
    // invoked on system locations or on a scheme-like string that would be

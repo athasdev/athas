@@ -39,6 +39,8 @@ export interface SearchFilesResponse {
   is_indexing: boolean;
   indexed_files: number;
   regex_fallback_error?: string | null;
+  unreadable_files?: number;
+  first_read_error?: string | null;
 }
 
 export interface SearchFilesRequest {

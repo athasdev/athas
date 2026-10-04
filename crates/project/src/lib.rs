@@ -1,3 +1,6 @@
+pub mod file_mutations;
+pub mod shell_file_mutations;
+
 use anyhow::{Context, Result, bail};
 use notify::RecursiveMode;
 use notify_debouncer_mini::{DebounceEventResult, Debouncer, new_debouncer};

@@ -17,6 +17,12 @@ export const commands = {
    */
   selfUpdateSupported: () => __TAURI_INVOKE<boolean>("self_update_supported"),
   readLocalFile: (path: string) => __TAURI_INVOKE<ArrayBuffer>("read_local_file", { path }),
+  writeLocalFileChecked: (path: string, expectedContent: string | null, content: string) =>
+    __TAURI_INVOKE<null>("write_local_file_checked", { path, expectedContent, content }),
+  writeLocalFile: (path: string, content: string) =>
+    __TAURI_INVOKE<null>("write_local_file", { path, content }),
+  deleteLocalFileChecked: (path: string, expectedContent: string) =>
+    __TAURI_INVOKE<null>("delete_local_file_checked", { path, expectedContent }),
   getLocalDirectorySize: (path: string) =>
     __TAURI_INVOKE<number>("get_local_directory_size", { path }),
   openFileExternal: (path: string) => __TAURI_INVOKE<null>("open_file_external", { path }),
@@ -600,6 +606,8 @@ export const commands = {
       keyPath,
       useSftp,
     }),
+  sshTrustHost: (host: string, port: number, fingerprint: string) =>
+    __TAURI_INVOKE<null>("ssh_trust_host", { host, port, fingerprint }),
   sshDisconnect: (connectionId: string) => __TAURI_INVOKE<null>("ssh_disconnect", { connectionId }),
   sshDisconnectOnly: (connectionId: string) =>
     __TAURI_INVOKE<null>("ssh_disconnect_only", { connectionId }),
@@ -619,6 +627,20 @@ export const commands = {
   ) => __TAURI_INVOKE<null>("ssh_copy_path", { connectionId, sourcePath, targetPath, isDirectory }),
   sshWriteFile: (connectionId: string, filePath: string, content: string) =>
     __TAURI_INVOKE<null>("ssh_write_file", { connectionId, filePath, content }),
+  sshWriteFileChecked: (
+    connectionId: string,
+    filePath: string,
+    content: string,
+    expectedContent: string | null,
+  ) =>
+    __TAURI_INVOKE<null>("ssh_write_file_checked", {
+      connectionId,
+      filePath,
+      content,
+      expectedContent,
+    }),
+  sshDeleteFileChecked: (connectionId: string, filePath: string, expectedContent: string) =>
+    __TAURI_INVOKE<null>("ssh_delete_file_checked", { connectionId, filePath, expectedContent }),
   sshReadDirectory: (connectionId: string, path: string) =>
     __TAURI_INVOKE<RemoteFileEntry[]>("ssh_read_directory", { connectionId, path }),
   sshReadFile: (connectionId: string, filePath: string) =>
@@ -655,6 +677,15 @@ export const commands = {
     __TAURI_INVOKE<number[]>("wsl_read_file_bytes", { distro, filePath }),
   wslWriteFile: (distro: string, filePath: string, content: string) =>
     __TAURI_INVOKE<null>("wsl_write_file", { distro, filePath, content }),
+  wslWriteFileChecked: (
+    distro: string,
+    filePath: string,
+    content: string,
+    expectedContent: string | null,
+  ) =>
+    __TAURI_INVOKE<null>("wsl_write_file_checked", { distro, filePath, content, expectedContent }),
+  wslDeleteFileChecked: (distro: string, filePath: string, expectedContent: string) =>
+    __TAURI_INVOKE<null>("wsl_delete_file_checked", { distro, filePath, expectedContent }),
   wslCreateFile: (distro: string, filePath: string) =>
     __TAURI_INVOKE<null>("wsl_create_file", { distro, filePath }),
   wslCreateDirectory: (distro: string, directoryPath: string) =>
@@ -857,6 +888,7 @@ export const commands = {
       linter?: ToolConfig | null;
     } | null,
     initializationOptions: unknown | null,
+    workspaceEditOwner: string | null,
   ) =>
     __TAURI_INVOKE<null>("lsp_start", {
       workspacePath,
@@ -865,6 +897,7 @@ export const commands = {
       languageId,
       tools,
       initializationOptions,
+      workspaceEditOwner,
     }),
   lspStop: (workspacePath: string) => __TAURI_INVOKE<null>("lsp_stop", { workspacePath }),
   lspStartForFile: (
@@ -879,6 +912,7 @@ export const commands = {
       linter?: ToolConfig | null;
     } | null,
     initializationOptions: unknown | null,
+    workspaceEditOwner: string | null,
   ) =>
     __TAURI_INVOKE<null>("lsp_start_for_file", {
       filePath,
@@ -888,6 +922,7 @@ export const commands = {
       languageId,
       tools,
       initializationOptions,
+      workspaceEditOwner,
     }),
   lspStopForFile: (filePath: string) => __TAURI_INVOKE<null>("lsp_stop_for_file", { filePath }),
   lspGetCompletions: (
@@ -1017,13 +1052,17 @@ export const commands = {
     requestId: unknown,
     applied: boolean,
     failureReason: string | null,
+    failedChange: number | null,
   ) =>
     __TAURI_INVOKE<null>("lsp_respond_workspace_edit", {
       clientId,
       requestId,
       applied,
       failureReason,
+      failedChange,
     }),
+  lspValidateWorkspaceEditOwner: (clientId: string, ownerToken: string) =>
+    __TAURI_INVOKE<boolean>("lsp_validate_workspace_edit_owner", { clientId, ownerToken }),
   lspGetJavaClassFileContents: (filePath: string, uri: string) =>
     __TAURI_INVOKE<string>("lsp_get_java_class_file_contents", { filePath, uri }),
   lspDocumentOpen: (filePath: string, content: string, languageId: string | null) =>
@@ -5767,6 +5806,8 @@ export type RemoteFileEntry = {
   path: string;
   is_dir: boolean;
   size: number;
+  is_symlink: boolean;
+  target: string | null;
 };
 
 /**  Where a remote terminal connects and starts. */

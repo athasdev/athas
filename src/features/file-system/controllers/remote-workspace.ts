@@ -6,6 +6,8 @@ export interface RemoteDirectoryEntry {
   path: string;
   is_dir: boolean;
   size: number;
+  is_symlink?: boolean;
+  target?: string | null;
 }
 
 export interface RemoteWorkspaceTree {
@@ -25,6 +27,9 @@ export function buildRemoteWorkspaceTree(
     path: `remote://${connectionId}${entry.path}`,
     isDir: entry.is_dir,
     children: entry.is_dir ? [] : undefined,
+    ...(entry.is_symlink !== undefined
+      ? { isSymlink: entry.is_symlink, symlinkTarget: entry.target ?? undefined }
+      : {}),
   }));
 
   return {

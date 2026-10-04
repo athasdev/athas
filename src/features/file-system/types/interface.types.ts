@@ -82,5 +82,5 @@ export interface FsActions {
 
   // Session restoration
   restoreSession: (projectPath: string, skipBufferPath?: string) => Promise<void>;
-  persistActiveProjectSession: () => void;
+  persistActiveProjectSession: (options?: { immediate?: boolean }) => void;
 }

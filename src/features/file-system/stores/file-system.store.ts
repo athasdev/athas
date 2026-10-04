@@ -915,7 +915,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
         }
       },
 
-      persistActiveProjectSession: () => {
+      persistActiveProjectSession: (options) => {
         const currentRootPath = get().rootFolderPath;
         if (!currentRootPath) {
           return;
@@ -951,6 +951,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
           workspaceFolders,
           uiState,
         });
+        if (options?.immediate) workspaceSessionWriteQueue.flush(currentRootPath);
       },
 
       closeFolder: async () => {

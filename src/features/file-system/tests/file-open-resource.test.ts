@@ -13,6 +13,8 @@ const createProvider = (
   kind,
   readDirectory: vi.fn().mockResolvedValue([]),
   readText: vi.fn().mockResolvedValue("text"),
+  writeText: vi.fn(),
+  deleteText: vi.fn(),
   readBytes: vi.fn().mockResolvedValue(null),
   ...overrides,
 });
@@ -53,6 +55,8 @@ describe("file open resources", () => {
 
   it("classifies null-byte content as binary", async () => {
     const provider = createProvider("local", {
+      writeText: vi.fn(),
+      deleteText: vi.fn(),
       readBytes: vi.fn().mockResolvedValue(Uint8Array.from([104, 0, 105])),
     });
     const resource = createFileOpenResource(
