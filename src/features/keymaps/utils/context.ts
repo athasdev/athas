@@ -197,8 +197,23 @@ function evaluatePrimary(
   }
 
   if (token.type === "identifier") {
-    const value = context[token.value as keyof KeymapContext] ?? false;
-    return { value, consumed: 1 };
+    const contextValue = context[token.value as keyof KeymapContext];
+    const operator = tokens[1];
+    const operand = tokens[2];
+
+    if (
+      operator?.type === "operator" &&
+      (operator.value === "==" || operator.value === "!=") &&
+      (operand?.type === "literal" || operand?.type === "identifier")
+    ) {
+      const equal =
+        typeof operand.value === "boolean"
+          ? (contextValue ?? false) === operand.value
+          : contextValue !== undefined && String(contextValue) === operand.value;
+      return { value: operator.value === "==" ? equal : !equal, consumed: 3 };
+    }
+
+    return { value: contextValue ?? false, consumed: 1 };
   }
 
   return { value: true, consumed: 1 };

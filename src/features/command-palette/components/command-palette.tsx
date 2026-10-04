@@ -29,6 +29,8 @@ import { useVimStore } from "@/features/vim/stores/vim.store";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { useZoomStore } from "@/features/window/stores/zoom.store";
+import { useKeymapStore } from "@/features/keymaps/stores/keymaps.store";
+import { getEffectiveShortcutsByCommand } from "@/features/keymaps/utils/effective-keymaps";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import Command, {
   CommandEmpty,
@@ -135,6 +137,17 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
 
   const lastEnteredActions = useActionsStore.use.lastEnteredActionsStack();
   const pushAction = useActionsStore.use.actions().pushAction;
+  const userKeybindings = useKeymapStore.use.keybindings();
+  const keybindingPreset = useSettingsStore((state) => state.settings.keybindingPreset);
+  const shortcutsByCommand = useMemo(
+    () =>
+      getEffectiveShortcutsByCommand({
+        preset: keybindingPreset,
+        registryKeybindings: keymapRegistry.getAllKeybindings(),
+        userKeybindings,
+      }),
+    [keybindingPreset, userKeybindings],
+  );
   const aiCompletion = useSettingsStore((state) => state.settings.aiCompletion);
   const autoCompletion = useSettingsStore((state) => state.settings.autoCompletion);
   const autoDetectLanguage = useSettingsStore((state) => state.settings.autoDetectLanguage);
@@ -559,7 +572,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
                       commandSettings.coreFeatures.persistentCommands &&
                       lastEnteredActions.includes(action.id);
                     const binding = action.commandId
-                      ? keymapRegistry.getKeybinding(action.commandId)?.key
+                      ? shortcutsByCommand.get(action.commandId)
                       : undefined;
 
                     return (

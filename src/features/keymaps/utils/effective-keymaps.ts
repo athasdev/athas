@@ -85,3 +85,16 @@ export function getEffectiveKeybindingForCommand({
 
   return matchingKeybindings.find((binding) => binding.enabled !== false) ?? matchingKeybindings[0];
 }
+
+export function getEffectiveShortcutsByCommand(
+  input: EffectiveKeybindingsInput,
+): Map<string, string> {
+  const shortcuts = new Map<string, string>();
+
+  for (const binding of getEffectiveKeybindings(input)) {
+    if (binding.enabled === false || shortcuts.has(binding.command)) continue;
+    shortcuts.set(binding.command, binding.key);
+  }
+
+  return shortcuts;
+}

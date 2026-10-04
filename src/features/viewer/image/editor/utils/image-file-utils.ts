@@ -43,13 +43,13 @@ export async function saveImageToFile(
 }
 
 /**
- * Get file size from data URL in bytes
+ * Get the decoded byte size of a base64 data URL, or 0 for any other URL
  */
 export function getDataURLSize(dataURL: string): number {
-  // Remove data URL prefix (e.g., "data:image/png;base64,")
-  const base64 = dataURL.split(",")[1];
+  const base64 = /^data:[^,]*;base64,(.*)$/s.exec(dataURL)?.[1];
   if (!base64) return 0;
 
-  // Calculate size: base64 string length * 0.75 (base64 overhead)
-  return Math.round((base64.length * 3) / 4);
+  // Every 4 base64 characters encode 3 bytes; trailing "=" padding encodes none.
+  const padding = base64.endsWith("==") ? 2 : base64.endsWith("=") ? 1 : 0;
+  return Math.floor((base64.length * 3) / 4) - padding;
 }

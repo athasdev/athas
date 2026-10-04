@@ -49,3 +49,51 @@ impl From<anyhow::Error> for LspError {
 }
 
 pub type LspResult<T> = Result<T, LspError>;
+
+#[cfg(test)]
+mod tests {
+   use super::*;
+
+   fn code_for(message: &str) -> Option<String> {
+      LspError::from(anyhow::anyhow!(message.to_string())).code
+   }
+
+   #[test]
+   fn classifies_backend_errors_into_frontend_codes() {
+      assert_eq!(
+         code_for("Failed to spawn LSP server: command=\"x\"").as_deref(),
+         Some("tool_not_found")
+      );
+      assert_eq!(
+         code_for("Language server binary not found at '/x'").as_deref(),
+         Some("tool_not_found")
+      );
+      assert_eq!(
+         code_for("Language server binary exists but is not executable: '/x'").as_deref(),
+         Some("tool_not_executable")
+      );
+      assert_eq!(
+         code_for("Permission denied (os error 13)").as_deref(),
+         Some("tool_not_executable")
+      );
+      assert_eq!(
+         code_for("Invalid workspace path").as_deref(),
+         Some("initialization_failed")
+      );
+      assert_eq!(code_for("LSP server is not running"), None);
+   }
+
+   #[test]
+   fn keeps_the_original_message_and_omits_empty_codes_on_the_wire() {
+      let error = LspError::from(anyhow::anyhow!("Something else broke"));
+      assert_eq!(error.message, "Something else broke");
+      assert_eq!(
+         serde_json::to_value(&error).unwrap(),
+         serde_json::json!({ "message": "Something else broke" })
+      );
+      assert_eq!(
+         serde_json::to_value(LspError::with_code("custom", "Boom")).unwrap(),
+         serde_json::json!({ "message": "Boom", "code": "custom" })
+      );
+   }
+}

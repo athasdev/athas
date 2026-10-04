@@ -24,3 +24,53 @@ pub(super) fn execute_command_params(
       work_done_progress_params: Default::default(),
    }
 }
+
+#[cfg(test)]
+mod tests {
+   use super::*;
+
+   #[test]
+   fn converts_absolute_file_paths_to_file_uris() {
+      let temp = tempfile::tempdir().unwrap();
+      let path = temp.path().join("dir with space").join("main.rs");
+
+      let identifier = text_document_identifier(path.to_str().unwrap()).unwrap();
+
+      assert_eq!(identifier.uri.scheme(), "file");
+      assert!(
+         identifier
+            .uri
+            .path()
+            .ends_with("/dir%20with%20space/main.rs")
+      );
+      assert_eq!(identifier.uri.to_file_path().unwrap(), path);
+   }
+
+   #[test]
+   fn rejects_relative_file_paths() {
+      assert!(text_document_identifier("relative/main.rs").is_err());
+   }
+
+   #[test]
+   fn recognizes_unsupported_method_errors() {
+      let method = "textDocument/inlayHint";
+      for message in [
+         "LSP error: Object {\"code\": Number(-32601)}",
+         "Method not found",
+         "Unhandled method textDocument/inlayHint",
+      ] {
+         assert!(
+            is_unsupported_method(&anyhow!(message), method),
+            "{message}"
+         );
+      }
+      assert!(!is_unsupported_method(
+         &anyhow!("Unhandled method textDocument/hover"),
+         method
+      ));
+      assert!(!is_unsupported_method(
+         &anyhow!("Request cancelled"),
+         method
+      ));
+   }
+}
