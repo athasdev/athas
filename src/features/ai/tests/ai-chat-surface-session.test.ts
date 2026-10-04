@@ -16,7 +16,12 @@ vi.mock("@/features/window/stores/project.store", () => ({
 }));
 
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
-import { loadAllChatsFromDb, loadChatFromDb } from "@/features/ai/services/ai-chat-history-service";
+import {
+  loadAllChatsFromDb,
+  loadChatFromDb,
+  saveChatToDb,
+} from "@/features/ai/services/ai-chat-history-service";
+import type { Chat } from "../types/ai-chat.types";
 
 describe("AI chat surface sessions", () => {
   it("updates only the chosen API session model and preserves CLI sessions", () => {
@@ -44,8 +49,8 @@ describe("AI chat surface sessions", () => {
     actions.enqueueAgentMessage(chatId, "", images);
     actions.prependAgentMessage(chatId, "next");
     actions.moveQueuedAgentMessage(chatId, 1, 0);
-    expect(actions.dequeueAgentMessage(chatId)).toEqual({ content: "", images });
-    expect(actions.dequeueAgentMessage(chatId)).toEqual({ content: "next" });
+    expect(actions.dequeueAgentMessage(chatId)).toMatchObject({ content: "", images });
+    expect(actions.dequeueAgentMessage(chatId)).toMatchObject({ content: "next" });
     expect(actions.dequeueAgentMessage(chatId)).toBeNull();
   });
 
@@ -130,7 +135,7 @@ describe("AI chat surface sessions", () => {
       runId: "run-1",
       phase: "starting",
     });
-    expect(actions.dequeueAgentMessage(chatId)).toEqual({ content: "second message" });
+    expect(actions.dequeueAgentMessage(chatId)).toMatchObject({ content: "second message" });
 
     actions.finishAgentRun(chatId, "run-1");
     expect(useAIChatStore.getState().agentRuns[chatId]).toBeUndefined();
@@ -145,14 +150,14 @@ describe("AI chat surface sessions", () => {
     actions.prependAgentMessage(chatId, "interrupt now");
     actions.moveQueuedAgentMessage(chatId, 2, 1);
 
-    expect(useAIChatStore.getState().agentMessageQueues[chatId]).toEqual([
+    expect(useAIChatStore.getState().agentMessageQueues[chatId]).toMatchObject([
       { content: "interrupt now" },
       { content: "last" },
       { content: "later" },
     ]);
 
     actions.removeQueuedAgentMessage(chatId, 1);
-    expect(useAIChatStore.getState().agentMessageQueues[chatId]).toEqual([
+    expect(useAIChatStore.getState().agentMessageQueues[chatId]).toMatchObject([
       { content: "interrupt now" },
       { content: "later" },
     ]);
@@ -236,6 +241,131 @@ describe("AI chat history loading", () => {
     useAIChatStore.getState().actions.switchToChat("old");
 
     expect(loadChatFromDb).not.toHaveBeenCalled();
+  });
+
+  it("shares one history load between simultaneous consumers", async () => {
+    let resolve: (chat: Chat) => void = () => {};
+    vi.mocked(loadChatFromDb).mockImplementationOnce(
+      () =>
+        new Promise<Chat>((done) => {
+          resolve = done;
+        }),
+    );
+    useAIChatStore.setState({ chats: [{ ...historyRow("shared-load"), messages: [] }] });
+    const actions = useAIChatStore.getState().actions;
+    const first = actions.loadChatMessages("shared-load");
+    const second = actions.loadChatMessages("shared-load");
+    expect(loadChatFromDb).toHaveBeenCalledTimes(1);
+    resolve({ ...historyRow("shared-load"), messages: [] });
+    await Promise.all([first, second]);
+    expect(useAIChatStore.getState().chatMessageLoadStates["shared-load"]).toBe("loaded");
+  });
+
+  it("merges live replies with persisted history without resetting session choices", async () => {
+    let resolve: (chat: Chat) => void = () => {};
+    vi.mocked(loadChatFromDb).mockImplementationOnce(
+      () =>
+        new Promise<Chat>((done) => {
+          resolve = done;
+        }),
+    );
+    const row = historyRow("live-load");
+    useAIChatStore.setState({ chats: [{ ...row, messages: [] }] });
+    const actions = useAIChatStore.getState().actions;
+    const loading = actions.loadChatMessages(row.id);
+    actions.setChatPinned(row.id, true);
+    actions.setChatModel(row.id, "openai", "new-model");
+    actions.addMessage(row.id, {
+      id: "live",
+      role: "assistant",
+      content: "Hello",
+      timestamp: row.createdAt,
+      isStreaming: true,
+    });
+    actions.appendMessageContent(row.id, "live", " world");
+    expect(saveChatToDb).not.toHaveBeenCalled();
+    resolve({
+      ...row,
+      messages: [{ id: "old", role: "user", content: "Earlier", timestamp: row.createdAt }],
+    });
+    await loading;
+    const chat = actions.getChatById(row.id);
+    expect(chat).toMatchObject({ isPinned: true, providerId: "openai", modelId: "new-model" });
+    expect(chat?.messages.map(({ id, content }) => ({ id, content }))).toEqual([
+      { id: "old", content: "Earlier" },
+      { id: "live", content: "Hello world" },
+    ]);
+    expect(saveChatToDb).toHaveBeenCalledWith(
+      expect.objectContaining({ messages: chat?.messages }),
+    );
+  });
+
+  it("preserves edited and truncated messages when a reload finishes", async () => {
+    let resolve: (chat: Chat) => void = () => {};
+    vi.mocked(loadChatFromDb).mockImplementationOnce(
+      () =>
+        new Promise<Chat>((done) => {
+          resolve = done;
+        }),
+    );
+    const chat: Chat = {
+      ...historyRow("edited-load"),
+      messages: [
+        { id: "user", role: "user", content: "Before", timestamp: new Date() },
+        { id: "reply", role: "assistant", content: "Old reply", timestamp: new Date() },
+      ],
+    };
+    useAIChatStore.setState({ chats: [chat] });
+    const actions = useAIChatStore.getState().actions;
+    const loading = actions.loadChatMessages(chat.id);
+    actions.replaceUserMessage(chat.id, "user", "Changed");
+    resolve(chat);
+    await loading;
+    expect(actions.getChatById(chat.id)?.messages).toHaveLength(1);
+    expect(actions.getChatById(chat.id)?.messages[0].content).toBe("Changed");
+  });
+
+  it("keeps a live session when its history row is missing", async () => {
+    let reject: (reason: Error) => void = () => {};
+    vi.mocked(loadChatFromDb).mockImplementationOnce(
+      () =>
+        new Promise<Chat>((resolve, fail) => {
+          void resolve;
+          reject = fail;
+        }),
+    );
+    const row = historyRow("missing-live");
+    useAIChatStore.setState({ chats: [{ ...row, messages: [] }] });
+    const actions = useAIChatStore.getState().actions;
+    const loading = actions.loadChatMessages(row.id);
+    actions.addMessage(row.id, {
+      id: "new",
+      role: "user",
+      content: "Live",
+      timestamp: row.createdAt,
+    });
+    reject(new Error("Query returned no rows"));
+    await loading;
+    expect(actions.getChatById(row.id)?.messages[0].content).toBe("Live");
+    expect(useAIChatStore.getState().chatMessageLoadStates[row.id]).toBe("loaded");
+  });
+
+  it("does not restore a removed chat or its loading state", async () => {
+    let resolve: (chat: Chat) => void = () => {};
+    vi.mocked(loadChatFromDb).mockImplementationOnce(
+      () =>
+        new Promise<Chat>((done) => {
+          resolve = done;
+        }),
+    );
+    const row = historyRow("removed-load");
+    useAIChatStore.setState({ chats: [{ ...row, messages: [] }] });
+    const loading = useAIChatStore.getState().actions.loadChatMessages(row.id);
+    useAIChatStore.setState({ chats: [], chatMessageLoadStates: {} });
+    resolve({ ...row, messages: [] });
+    await loading;
+    expect(useAIChatStore.getState().chats).toEqual([]);
+    expect(useAIChatStore.getState().chatMessageLoadStates[row.id]).toBeUndefined();
   });
 
   it("loads the session that takes over after the current one is archived", async () => {

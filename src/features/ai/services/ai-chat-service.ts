@@ -172,8 +172,11 @@ export const getChatCompletionStream = async (
       }
     }
 
-    if (context.projectRoot) {
-      context = { ...context, projectRules: await loadContextProjectRules(context) };
+    if (context.projectRoot || settings.aiUserRules) {
+      context = {
+        ...context,
+        projectRules: await loadContextProjectRules(context, { userRules: settings.aiUserRules }),
+      };
     }
     const contextPrompt = buildContextPrompt(context);
     let systemPrompt = systemPromptOverride || buildSystemPrompt(contextPrompt, mode, outputStyle);

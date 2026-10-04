@@ -30,7 +30,7 @@ export function openAcpTerminalOutput(output: unknown): string | null {
   const name = "ACP Terminal";
   const currentDirectory = useProjectStore.getState().rootFolderPath ?? "";
 
-  useTerminalStore.getState().actions.updateSession(terminal.terminalId, {
+  useTerminalStore.getState().actions.registerSession(terminal.terminalId, {
     id: terminal.terminalId,
     name,
     currentDirectory,

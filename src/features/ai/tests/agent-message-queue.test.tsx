@@ -82,7 +82,7 @@ describe("agent message queue store", () => {
 
     expect(setQueuedMessageEditing("edit-chat", null)).toBe(true);
     expect(setQueuedMessageEditing("edit-chat", null)).toBe(false);
-    expect(actions.dequeueAgentMessage("edit-chat")).toEqual({ content: "first" });
+    expect(actions.dequeueAgentMessage("edit-chat")).toMatchObject({ content: "first" });
   });
 
   it("keeps sending when the user edits a later message", () => {
@@ -92,8 +92,26 @@ describe("agent message queue store", () => {
     const second = useAIChatStore.getState().agentMessageQueues["later-chat"][1];
 
     setQueuedMessageEditing("later-chat", second);
-    expect(actions.dequeueAgentMessage("later-chat")).toEqual({ content: "first" });
+    expect(actions.dequeueAgentMessage("later-chat")).toMatchObject({ content: "first" });
     expect(setQueuedMessageEditing("later-chat", null)).toBe(false);
+  });
+
+  it("holds an edited message after immutable updates and reordering", () => {
+    const actions = useAIChatStore.getState().actions;
+    actions.enqueueAgentMessage("immutable-chat", "duplicate");
+    actions.enqueueAgentMessage("immutable-chat", "duplicate");
+    const [first, second] = useAIChatStore.getState().agentMessageQueues["immutable-chat"];
+    expect(first.id).toBeTruthy();
+    expect(second.id).not.toBe(first.id);
+    setQueuedMessageEditing("immutable-chat", second);
+    actions.updateQueuedAgentMessage("immutable-chat", 1, "edited elsewhere");
+    actions.moveQueuedAgentMessage("immutable-chat", 1, 0);
+    expect(actions.dequeueAgentMessage("immutable-chat")).toBeNull();
+    expect(setQueuedMessageEditing("immutable-chat", null)).toBe(true);
+    expect(actions.dequeueAgentMessage("immutable-chat")).toMatchObject({
+      id: second.id,
+      content: "edited elsewhere",
+    });
   });
 
   it("edits a queued message's text and keeps its images", () => {
@@ -103,7 +121,7 @@ describe("agent message queue store", () => {
     actions.enqueueAgentMessage("chat", "second");
     actions.updateQueuedAgentMessage("chat", 0, "first, reworded");
     actions.updateQueuedAgentMessage("chat", 5, "ignored");
-    expect(useAIChatStore.getState().agentMessageQueues.chat).toEqual([
+    expect(useAIChatStore.getState().agentMessageQueues.chat).toMatchObject([
       { content: "first, reworded", images },
       { content: "second" },
     ]);
@@ -115,7 +133,7 @@ describe("agent message queue store", () => {
     actions.enqueueAgentMessage("chat", "b");
     actions.enqueueAgentMessage("chat", "c");
     actions.moveQueuedAgentMessage("chat", 2, 0);
-    expect(actions.dequeueAgentMessage("chat")).toEqual({ content: "c" });
+    expect(actions.dequeueAgentMessage("chat")).toMatchObject({ content: "c" });
   });
 });
 
@@ -127,6 +145,7 @@ describe("AgentMessageQueue", () => {
     onMove: vi.fn(),
     onRemove: vi.fn(),
     onSendNow: vi.fn(),
+    onEditingChange: vi.fn(),
   };
 
   function render(messages: QueuedAgentMessage[]) {
@@ -214,6 +233,34 @@ describe("AgentMessageQueue", () => {
     await render([second]);
     await act(async () => button("Save queued message").click());
     expect(handlers.onUpdate).toHaveBeenCalledExactlyOnceWith(0, "b2");
+  });
+
+  it("preserves the draft and focus across immutable queue updates", async () => {
+    await render([
+      { id: "first", content: "a" },
+      { id: "second", content: "b" },
+    ]);
+    await act(async () => button("Edit queued message", 1).click());
+    await act(async () => editDraft("draft"));
+    const textarea = container.querySelector<HTMLTextAreaElement>("textarea")!;
+    await render([
+      { id: "second", content: "server update" },
+      { id: "first", content: "a" },
+    ]);
+    expect(container.querySelector("textarea")).toBe(textarea);
+    expect(document.activeElement).toBe(textarea);
+    expect(textarea.value).toBe("draft");
+    await act(async () => button("Save queued message").click());
+    expect(handlers.onUpdate).toHaveBeenCalledExactlyOnceWith(0, "draft");
+  });
+
+  it("releases the edit hold when the edited message is removed", async () => {
+    await render([{ id: "first", content: "a" }]);
+    await act(async () => button("Edit queued message").click());
+    await render([]);
+    expect(handlers.onEditingChange).toHaveBeenLastCalledWith(null);
+    await render([{ id: "first", content: "restored" }]);
+    expect(container.querySelector("textarea")).toBeNull();
   });
 
   it("discards a text-only message whose text is cleared", async () => {

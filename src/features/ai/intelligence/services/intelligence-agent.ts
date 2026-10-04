@@ -305,7 +305,7 @@ export async function runIntelligenceAgent(params: {
       ? {
           list_files: tool({
             description:
-              "List workspace files in path order, respecting .gitignore and leaving out credentials. Returns one page: pass nextOffset back as offset for the next. Narrow with path (a folder) or glob (like *.ts or src/**/*.rs).",
+              "List workspace files in path order, respecting .gitignore, root .athasignore/.aiignore/.cursorignore, and leaving out credentials. Returns one page: pass nextOffset back as offset for the next. Narrow with path (a folder) or glob (like *.ts or src/**/*.rs).",
             inputSchema: z.object({
               path: z.string().max(1024).optional(),
               glob: z.string().max(200).optional(),
@@ -324,7 +324,7 @@ export async function runIntelligenceAgent(params: {
           }),
           search_files: tool({
             description:
-              "Search file contents across the whole workspace, like ripgrep: .gitignore is respected and binary files are skipped. Literal text by default; set regex for a regular expression. Case-insensitive unless the query has an uppercase letter or caseSensitive is set. Narrow with path or glob, and ask for contextLines around each match.",
+              "Search file contents across the whole workspace, like ripgrep: .gitignore and root .athasignore/.aiignore/.cursorignore are respected; credentials and binary files are skipped. Literal text by default; set regex for a regular expression. Case-insensitive unless the query has an uppercase letter or caseSensitive is set. Narrow with path or glob, and ask for contextLines around each match.",
             inputSchema: z.object({
               query: z.string().min(1).max(500),
               regex: z.boolean().optional(),

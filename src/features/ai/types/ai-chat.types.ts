@@ -64,6 +64,7 @@ export interface ImageContent {
 }
 
 export interface QueuedAgentMessage {
+  id?: string;
   content: string;
   images?: ImageContent[];
 }

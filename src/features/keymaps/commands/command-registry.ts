@@ -1248,6 +1248,34 @@ async function agentHunkActions() {
 
 const agentEditCommands: Command[] = [
   {
+    id: "ai.openChatTranscript",
+    title: "Open Conversation as Markdown",
+    category: "Agent",
+    description: "Open a local snapshot of the conversation and its tool activity",
+    execute: async () => {
+      const { useAIChatStore } = await import("@/features/ai/stores/ai-chat.store");
+      const { openChatTranscript } = await import("@/features/ai/services/chat-transcript-service");
+      const active = useBufferStore.getState().actions.getActiveBuffer();
+      const chatId =
+        active?.type === "agent" ? active.sessionId : useAIChatStore.getState().currentChatId;
+      if (chatId) await openChatTranscript(chatId);
+    },
+  },
+  {
+    id: "ai.reviewAgentChanges",
+    title: "Review Agent Changes",
+    category: "Agent",
+    description: "Review and keep or reject agent edits across files",
+    execute: async () => {
+      const { useAIChatStore } = await import("@/features/ai/stores/ai-chat.store");
+      const { openAgentEditsReview } = await import("@/features/ai/services/agent-edits-service");
+      const active = useBufferStore.getState().actions.getActiveBuffer();
+      const chatId =
+        active?.type === "agent" ? active.sessionId : useAIChatStore.getState().currentChatId;
+      if (chatId) openAgentEditsReview(chatId);
+    },
+  },
+  {
     id: "ai.keepAgentHunk",
     title: "Keep Agent Change",
     category: "AI",

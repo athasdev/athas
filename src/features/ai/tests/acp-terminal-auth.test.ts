@@ -38,7 +38,7 @@ vi.mock("@/features/editor/stores/buffer.store", () => ({
 }));
 
 vi.mock("@/features/terminal/stores/terminal.store", () => ({
-  useTerminalStore: { getState: () => ({ actions: { updateSession: () => undefined } }) },
+  useTerminalStore: { getState: () => ({ actions: { registerSession: () => undefined } }) },
 }));
 
 const launch = { label: "Sign in", command: "agent", args: ["login"], env: {} };

@@ -1,4 +1,11 @@
 import { shareAgent } from "@/features/sharing/services/open-share";
+import { openChatTranscript } from "@/features/ai/services/chat-transcript-service";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/ui/dropdown";
 import { UploadIcon } from "@/ui/icons";
 import {
   ArrowDownIcon,
@@ -9,6 +16,8 @@ import {
   SidebarRightIcon,
   WindowExpandIcon,
   XIcon,
+  DotsIcon,
+  FileIcon,
 } from "@/ui/icons";
 import { useEffect, useMemo, useRef } from "react";
 import { selectAgentSessions } from "@/features/ai/lib/agent-session-list";
@@ -173,6 +182,7 @@ export function ChatHeader({
         <PaneContentHeader
           surface="transparent"
           separated={false}
+          title={currentChat?.title || "Agent"}
           actions={
             <>
               <Button
@@ -184,17 +194,6 @@ export function ChatHeader({
                 aria-label="Search messages"
               >
                 <SearchIcon />
-              </Button>
-
-              <Button
-                variant="ghost"
-                iconOnly
-                tooltip="Share agent to web"
-                aria-label="Share agent to web"
-                disabled={!currentChat?.messages.length}
-                onClick={() => shareAgent(effectiveChatId ?? undefined)}
-              >
-                <UploadIcon />
               </Button>
 
               {!standalone && (
@@ -239,22 +238,49 @@ export function ChatHeader({
                   <PlusIcon />
                 </Button>
               )}
-              {effectiveChatId && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  iconOnly
-                  onClick={() =>
-                    standalone ? requestWindowClose() : void openAgentInNewWindow(effectiveChatId)
-                  }
-                  tooltip={standalone ? "Return agent to main window" : "Open agent in new window"}
-                  aria-label={
-                    standalone ? "Return agent to main window" : "Open agent in new window"
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      iconOnly
+                      aria-label="Conversation actions"
+                      tooltip="Conversation actions"
+                    />
                   }
                 >
-                  {standalone ? <ArrowLeftIcon /> : <WindowExpandIcon />}
-                </Button>
-              )}
+                  <DotsIcon />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" size="default">
+                  <DropdownMenuItem
+                    disabled={!effectiveChatId}
+                    onClick={() => effectiveChatId && void openChatTranscript(effectiveChatId)}
+                  >
+                    <FileIcon />
+                    Open conversation as Markdown
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    disabled={!currentChat?.messages.length}
+                    onClick={() => shareAgent(effectiveChatId ?? undefined)}
+                  >
+                    <UploadIcon />
+                    Share agent to web
+                  </DropdownMenuItem>
+                  {effectiveChatId && (
+                    <DropdownMenuItem
+                      onClick={() =>
+                        standalone
+                          ? requestWindowClose()
+                          : void openAgentInNewWindow(effectiveChatId)
+                      }
+                    >
+                      {standalone ? <ArrowLeftIcon /> : <WindowExpandIcon />}
+                      {standalone ? "Return agent to main window" : "Open agent in new window"}
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </>
           }
         />

@@ -36,30 +36,27 @@ export function formatTruncationMarker(shownTokens: number, originalTokens: numb
  */
 export function truncateTextToTokens(text: string, maxTokens: number): TruncatedText {
   const originalTokens = estimateTokens(text);
-  if (originalTokens <= maxTokens) return { text, truncated: false, originalTokens };
-  if (maxTokens <= 0) {
-    return { text: formatTruncationMarker(0, originalTokens), truncated: true, originalTokens };
+  const limit = Number.isFinite(maxTokens) ? Math.max(0, Math.floor(maxTokens)) : 0;
+  if (originalTokens <= limit) return { text, truncated: false, originalTokens };
+  const maxChars = limit * CHARS_PER_TOKEN;
+  const marker = formatTruncationMarker(limit, originalTokens);
+  if (maxChars < marker.length + 2) {
+    return { text: "[truncated]".slice(0, maxChars), truncated: true, originalTokens };
   }
-
-  const maxChars = maxTokens * CHARS_PER_TOKEN;
-  const headChars = Math.floor(maxChars * 0.8);
-  const tailChars = maxChars - headChars;
+  const contentChars = maxChars - marker.length - 2;
+  const headChars = Math.floor(contentChars * 0.8);
+  const tailChars = contentChars - headChars;
   let head = text.slice(0, headChars);
   const headBreak = head.lastIndexOf("\n");
   if (headBreak > headChars / 2) head = head.slice(0, headBreak);
   let tail = tailChars > 0 ? text.slice(text.length - tailChars) : "";
   const tailBreak = tail.indexOf("\n");
   if (tailBreak >= 0 && tailBreak < tail.length / 2) tail = tail.slice(tailBreak + 1);
-
-  const marker = formatTruncationMarker(
+  const fittedMarker = formatTruncationMarker(
     estimateTokens(head) + estimateTokens(tail),
     originalTokens,
   );
-  return {
-    text: tail ? `${head}\n${marker}\n${tail}` : `${head}\n${marker}`,
-    truncated: true,
-    originalTokens,
-  };
+  return { text: `${head}\n${fittedMarker}\n${tail}`, truncated: true, originalTokens };
 }
 
 export interface BudgetedAttachment {
@@ -70,14 +67,16 @@ export interface BudgetedAttachment {
 
 /**
  * Fits attachments into one message's budget. Each attachment is cut to the per-attachment
- * cap, and once the total is spent the rest keep only a note, so the model still knows the
- * file was attached and can read it with a tool.
+ * cap, and once the total is spent their content is omitted. Paths and truncation metadata
+ * remain available so the model can read the files with a tool.
  */
 export function applyAttachmentBudget<T extends BudgetedAttachment>(
   attachments: T[],
   budget: AttachmentBudget = DEFAULT_ATTACHMENT_BUDGET,
 ): { attachments: T[]; usedTokens: number; truncated: boolean } {
-  let remaining = budget.totalTokens;
+  let remaining = Number.isFinite(budget.totalTokens)
+    ? Math.max(0, Math.floor(budget.totalTokens))
+    : 0;
   let usedTokens = 0;
   let anyTruncated = false;
 
@@ -88,7 +87,7 @@ export function applyAttachmentBudget<T extends BudgetedAttachment>(
       anyTruncated = true;
       return {
         ...attachment,
-        content: `[omitted: the context budget for attachments is spent (${originalTokens} tokens); read the file if it is needed]`,
+        content: "",
         truncated: true,
         originalTokens,
       };

@@ -144,15 +144,23 @@ export function planCheckpointRestore(
   return { messageIds: undone.map((checkpoint) => checkpoint.messageId), files: restoreFiles };
 }
 
-/** Forgets the turns a restore undid. */
+/** Forgets restored files and keeps failed files available for another attempt. */
 export function dropRestoredCheckpoints(
   state: ChatCheckpoints,
   messageIds: readonly string[],
+  failedPaths: readonly string[] = [],
 ): ChatCheckpoints {
   const undone = new Set(messageIds);
+  const failed = new Set(failedPaths);
   return {
     ...state,
-    checkpoints: state.checkpoints.filter((checkpoint) => !undone.has(checkpoint.messageId)),
+    checkpoints: state.checkpoints.flatMap((checkpoint) => {
+      if (!undone.has(checkpoint.messageId)) return [checkpoint];
+      const files = Object.fromEntries(
+        Object.entries(checkpoint.files).filter(([path]) => failed.has(path)),
+      );
+      return Object.keys(files).length > 0 ? [{ ...checkpoint, files }] : [];
+    }),
   };
 }
 

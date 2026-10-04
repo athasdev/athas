@@ -5,6 +5,10 @@ const editedMessages = new Map<string, QueuedAgentMessage>();
 /** Chats whose queue stopped at a message being edited when a turn ended. */
 const heldForEdit = new Set<string>();
 
+export function isSameQueuedMessage(left: QueuedAgentMessage, right: QueuedAgentMessage): boolean {
+  return left === right || Boolean(left.id && right.id && left.id === right.id);
+}
+
 /**
  * Records which queued message of `chatId` the user is editing, or none. Returns true when the
  * edit ends and the queue had stopped for it, so the caller should send the next message now.
@@ -26,7 +30,8 @@ export function setQueuedMessageEditing(
  * being edited is not sent automatically; the queue waits and resumes when the edit ends.
  */
 export function holdsQueueForEdit(chatId: string, next: QueuedAgentMessage | undefined): boolean {
-  if (!next || editedMessages.get(chatId) !== next) return false;
+  const edited = editedMessages.get(chatId);
+  if (!next || !edited || !isSameQueuedMessage(edited, next)) return false;
   heldForEdit.add(chatId);
   return true;
 }

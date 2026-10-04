@@ -12,6 +12,7 @@ import { withExitedAcpTerminalSnapshots } from "@/features/ai/lib/acp-terminal-o
 import type { ChatAcpEventInput } from "@/features/ai/lib/acp-event-timeline";
 import { startAssistantResponseContinuation } from "@/features/ai/lib/assistant-response";
 import { buildConversationHistory } from "@/features/ai/lib/conversation-history";
+import { filterAgentContext, loadAgentContextPolicy } from "@/features/ai/lib/agent-context-policy";
 import {
   discardToolEditSnapshot,
   resolveToolEditDiff,
@@ -256,27 +257,29 @@ async function buildTurnContext(
   turn: TurnSetup,
   host: AgentTurnHost,
 ): Promise<{ message: string; context: ContextInfo } | null> {
+  const rawContext = await host.buildContext(turn.agentId, turn.providerId);
+  const allowsPath = await loadAgentContextPolicy(rawContext.projectRoot);
+  const context = filterAgentContext(rawContext, allowsPath);
   const { mentionedFiles } = await parseMentionsAndLoadFiles(
     turn.trimmedContent,
     host.allProjectFiles,
+    allowsPath,
   );
   const mentionedPaths = new Set(mentionedFiles.map((file) => file.path));
-  // `athas-context:*` selections (folders, diffs, problems, past chats) resolve separately.
   const contextSelections = partitionContextSelections(host.selectedFilesPaths);
   const attachedFiles = turn.isAcp
     ? []
     : await loadFilesByPaths(
-        contextSelections.filePaths.filter((path) => !mentionedPaths.has(path)),
+        contextSelections.filePaths.filter((path) => allowsPath(path) && !mentionedPaths.has(path)),
       );
-  const context = await host.buildContext(turn.agentId, turn.providerId);
   context.images = turn.userMessage.images;
-  const { attachments: referencedFiles } = applyAttachmentBudget([
-    ...mentionedFiles,
-    ...attachedFiles,
-  ]);
+  const { attachments: referencedFiles } = applyAttachmentBudget(
+    [...mentionedFiles, ...attachedFiles].filter((file) => allowsPath(file.path)),
+  );
   context.mentionedFiles = referencedFiles;
   context.contextReferences = await resolveContextReferences(contextSelections.references, {
     projectRoot: context.projectRoot,
+    allowsPath,
   });
 
   // Direct ACP UI intents run locally so they are always reliable.

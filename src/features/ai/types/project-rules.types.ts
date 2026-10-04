@@ -25,6 +25,7 @@ export interface LoadedProjectRules {
 }
 
 export interface ProjectRuleDirectoryEntry {
+  isSymlink?: boolean;
   name: string;
   path: string;
   isDir: boolean;

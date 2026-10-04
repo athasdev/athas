@@ -20,8 +20,11 @@ const mocks = vi.hoisted(() => ({
   closeBufferForce: vi.fn(),
   openContent: vi.fn(),
   markPendingSave: vi.fn(),
+  clearPendingSave: vi.fn(),
   showToast: vi.fn(),
   showConfirmDialog: vi.fn(),
+  writeFile: vi.fn(),
+  deleteFileOrDirectory: vi.fn(),
   recordCheckpointAgentWrite: vi.fn(),
   currentTurn: null as string | null,
 }));
@@ -47,24 +50,23 @@ vi.mock("@/features/editor/utils/buffer-index", () => ({
   getBufferByPath: (buffers: Array<{ path: string }>, path: string) =>
     buffers.find((buffer) => buffer.path === path) ?? null,
 }));
-vi.mock("@/features/file-system/controllers/file-operations", () => ({
-  readFileContent: async (path: string) => {
-    const content = mocks.disk.get(path);
-    if (content === undefined) throw new Error("missing");
-    return content;
-  },
-  deleteFileOrDirectory: async (path: string) => {
-    mocks.disk.delete(path);
-  },
+vi.mock("@/features/file-system/services/workspace-resource-provider", () => ({
+  getWorkspaceResourceProvider: () => ({
+    readText: async (path: string) => {
+      const content = mocks.disk.get(path);
+      if (content === undefined) throw new Error("missing");
+      return content;
+    },
+    writeText: mocks.writeFile,
+    deleteText: mocks.deleteFileOrDirectory,
+  }),
 }));
-vi.mock("@/features/file-system/controllers/platform", () => ({
-  writeFile: async (path: string, content: string) => {
-    mocks.disk.set(path, content);
-  },
-}));
+
 vi.mock("@/features/file-system/stores/file-watcher.store", () => ({
   useFileWatcherStore: {
-    getState: () => ({ actions: { markPendingSave: mocks.markPendingSave } }),
+    getState: () => ({
+      actions: { markPendingSave: mocks.markPendingSave, clearPendingSave: vi.fn() },
+    }),
   },
 }));
 vi.mock("@/features/git/events/git-events", () => ({ emitGitChanged: vi.fn() }));
@@ -110,6 +112,12 @@ describe("agent edits service", () => {
       mock.mockReset();
     }
     mocks.currentTurn = null;
+    mocks.writeFile.mockReset().mockImplementation(async (path: string, content: string) => {
+      mocks.disk.set(path, content);
+    });
+    mocks.deleteFileOrDirectory.mockReset().mockImplementation(async (path: string) => {
+      mocks.disk.delete(path);
+    });
     useAgentEditsStore.setState({ byChat: {}, reviewChatId: null });
   });
 
@@ -154,6 +162,132 @@ describe("agent edits service", () => {
     expect(hunks()).toEqual([
       { baseStart: 3, baseLines: ["d"], currentStart: 3, currentLines: ["D"] },
     ]);
+  });
+
+  it.each([keepAgentHunk, rejectAgentHunk])(
+    "ignores a stale hunk whose original text changed",
+    async (review) => {
+      agentWrites("before", "after");
+      const stale = hunks()[0];
+      const current = entry()!;
+      useAgentEditsStore.getState().actions.setEntry(CHAT, PATH, {
+        ...current,
+        baseline: "different",
+        revision: current.revision + 1,
+      });
+      await review(CHAT, PATH, stale);
+      expect(mocks.disk.get(PATH)).toBe("after");
+      expect(entry()?.baseline).toBe("different");
+      expect(mocks.writeFile).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([keepAgentHunk, rejectAgentHunk])(
+    "distinguishes replacing a blank line from inserting a line",
+    async (review) => {
+      agentWrites("\ncommon", "after\ncommon");
+      const stale = { ...hunks()[0], baseLines: [] };
+      await review(CHAT, PATH, stale);
+      expect(entry()?.baseline).toBe("\ncommon");
+      expect(mocks.writeFile).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([keepAgentHunk, rejectAgentHunk])(
+    "distinguishes deleting a line from replacing it with a blank line",
+    async (review) => {
+      agentWrites("before\ncommon", "common");
+      const stale = { ...hunks()[0], currentLines: [""] };
+      await review(CHAT, PATH, stale);
+      expect(entry()?.baseline).toBe("before\ncommon");
+      expect(mocks.writeFile).not.toHaveBeenCalled();
+    },
+  );
+
+  it("serializes concurrent rejects so both changes are undone", async () => {
+    const original = lines("a", "b", "c", "d");
+    agentWrites(original, lines("A", "b", "c", "D"));
+    const [first, last] = hunks();
+    await Promise.all([rejectAgentHunk(CHAT, PATH, first), rejectAgentHunk(CHAT, PATH, last)]);
+    expect(mocks.disk.get(PATH)).toBe(original);
+    expect(entry()).toBeUndefined();
+  });
+
+  it("serializes keep and reject without losing the kept hunk", async () => {
+    agentWrites(lines("a", "b", "c", "d"), lines("A", "b", "c", "D"));
+    const [first, last] = hunks();
+    await Promise.all([keepAgentHunk(CHAT, PATH, first), rejectAgentHunk(CHAT, PATH, last)]);
+    expect(mocks.disk.get(PATH)).toBe(lines("A", "b", "c", "d"));
+    expect(entry()).toBeUndefined();
+  });
+
+  it("keeps the editor and review available when deleting an agent file fails", async () => {
+    mocks.buffers = [{ id: "b1", type: "editor", path: PATH, isDirty: false, content: "new" }];
+    agentWrites(null, "new");
+    mocks.deleteFileOrDirectory.mockRejectedValueOnce(new Error("Permission denied"));
+    await rejectAllAgentEdits(CHAT);
+    expect(mocks.closeBufferForce).not.toHaveBeenCalled();
+    expect(mocks.disk.get(PATH)).toBe("new");
+    expect(entry()?.current).toBe("new");
+    expect(mocks.showToast).toHaveBeenCalledWith(expect.objectContaining({ type: "error" }));
+  });
+
+  it("preserves a newer agent write when a review write fails", async () => {
+    agentWrites("a", "A");
+    mocks.writeFile.mockImplementationOnce(async () => {
+      agentWrites("A", "newer");
+      throw new Error("Disk full");
+    });
+    await rejectAllAgentEdits(CHAT);
+    expect(entry()?.current).toBe("newer");
+    expect(mocks.disk.get(PATH)).toBe("newer");
+  });
+
+  it("keeps a file recreated by the agent after review deletion", async () => {
+    agentWrites(null, "created");
+    mocks.buffers = [
+      { id: "buffer", type: "editor", path: PATH, isDirty: false, content: "created" },
+    ];
+    mocks.deleteFileOrDirectory.mockImplementationOnce(async (path: string, expected: string) => {
+      expect(expected).toBe("created");
+      mocks.disk.delete(path);
+      agentWrites(null, "recreated");
+    });
+    await rejectAllAgentEdits(CHAT);
+    expect(entry()?.current).toBe("recreated");
+    expect(mocks.closeBufferForce).not.toHaveBeenCalled();
+    expect(mocks.disk.get(PATH)).toBe("recreated");
+  });
+
+  it("preserves newer agent output when a review write finishes afterward", async () => {
+    agentWrites("before", "after");
+    mocks.buffers = [
+      { id: "buffer", type: "editor", path: PATH, isDirty: false, content: "after" },
+    ];
+    mocks.writeFile.mockImplementationOnce(async (path: string, content: string) => {
+      mocks.disk.set(path, content);
+      agentWrites(content, "newer");
+    });
+    await rejectAllAgentEdits(CHAT);
+    expect(entry()?.current).toBe("newer");
+    expect(mocks.updateBufferContent).not.toHaveBeenCalled();
+  });
+
+  it("keeps overlapping edits typed while a review write is in flight", async () => {
+    agentWrites("before", "after");
+    mocks.buffers = [
+      { id: "buffer", type: "editor", path: PATH, isDirty: false, content: "after" },
+    ];
+    mocks.writeFile.mockImplementationOnce(async (path: string, content: string) => {
+      mocks.disk.set(path, content);
+      mocks.buffers = [
+        { id: "buffer", type: "editor", path: PATH, isDirty: true, content: "typed meanwhile" },
+      ];
+    });
+    await rejectAllAgentEdits(CHAT);
+    expect(mocks.disk.get(PATH)).toBe("before");
+    expect(mocks.updateBufferContent).not.toHaveBeenCalled();
+    expect(mocks.buffers[0].content).toBe("typed meanwhile");
   });
 
   it("rejects a hunk on disk and in a clean editor", async () => {

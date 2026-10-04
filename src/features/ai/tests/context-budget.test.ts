@@ -26,8 +26,19 @@ describe("context budget", () => {
     expect(result.text.startsWith("line 0 ")).toBe(true);
     expect(result.text.endsWith(`line 399 ${"x".repeat(30)}`)).toBe(true);
     expect(result.text).toMatch(/\[truncated: showing about \d+ of \d+ tokens\]/);
-    expect(estimateTokens(result.text)).toBeLessThanOrEqual(520);
+    expect(estimateTokens(result.text)).toBeLessThanOrEqual(500);
   });
+
+  it.each([0, 1, 2, 10, 20, 100, -1, Number.NaN])(
+    "never exceeds a small or invalid budget %s",
+    (limit) => {
+      const result = truncateTextToTokens(lines(400), limit);
+      expect(estimateTokens(result.text)).toBeLessThanOrEqual(
+        Number.isFinite(limit) ? Math.max(0, limit) : 0,
+      );
+      expect(result.truncated).toBe(true);
+    },
+  );
 
   it("leaves text within the budget untouched", () => {
     expect(truncateTextToTokens("short", 10)).toEqual({
@@ -37,22 +48,34 @@ describe("context budget", () => {
     });
   });
 
-  it("caps each attachment and the total, keeping a note for files past the budget", () => {
-    const big: MentionedFile = { name: "a.ts", path: "/w/a.ts", content: lines(400) };
-    const second: MentionedFile = { name: "b.ts", path: "/w/b.ts", content: lines(400) };
-    const third: MentionedFile = { name: "c.ts", path: "/w/c.ts", content: "small" };
+  it("caps attachments and preserves metadata after the budget is exhausted", () => {
+    const big: MentionedFile = { name: "a.ts", path: "/w/a.ts", content: "x".repeat(16000) };
+    const second: MentionedFile = { name: "b.ts", path: "/w/b.ts", content: "x".repeat(16000) };
+    const third: MentionedFile = { name: "c.ts", path: "/w/c.ts", content: "s".repeat(8000) };
     const { attachments, truncated, usedTokens } = applyAttachmentBudget([big, second, third], {
       perAttachmentTokens: 1_000,
       totalTokens: 1_500,
     });
 
     expect(truncated).toBe(true);
-    expect(estimateTokens(attachments[0].content)).toBeLessThanOrEqual(1_020);
+    expect(estimateTokens(attachments[0].content)).toBeLessThanOrEqual(1_000);
     expect(attachments[0].truncated).toBe(true);
-    expect(estimateTokens(attachments[1].content)).toBeLessThanOrEqual(520);
-    expect(attachments[2].content).toContain("[omitted: the context budget");
+    expect(estimateTokens(attachments[1].content)).toBeLessThanOrEqual(500);
+    expect(attachments[2].truncated).toBe(true);
     expect(attachments[2].path).toBe("/w/c.ts");
-    expect(usedTokens).toBeLessThanOrEqual(1_540);
+    expect(usedTokens).toBeLessThanOrEqual(1_500);
+  });
+
+  it("omits content and accounts for zero tokens when the budget is zero", () => {
+    const result = applyAttachmentBudget([{ content: "Some text", path: "/w/a.ts" }], {
+      perAttachmentTokens: 100,
+      totalTokens: 0,
+    });
+    expect(result).toMatchObject({
+      usedTokens: 0,
+      truncated: true,
+      attachments: [{ content: "", path: "/w/a.ts", truncated: true }],
+    });
   });
 
   it("marks truncated files for the model", () => {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 import {
   collectRuleContextPaths,
+  loadContextProjectRules,
   loadProjectRules,
   matchesRuleGlob,
   parseRuleFrontmatter,
@@ -117,9 +118,43 @@ describe("project rules", () => {
     const loaded = await loadProjectRules({ projectRoot: "/w", reader, maxTokens: 3_000 });
 
     expect(loaded.truncated).toBe(true);
-    expect(loaded.tokens).toBeLessThanOrEqual(3_100);
+    expect(loaded.tokens).toBeLessThanOrEqual(3_000);
     expect(loaded.text).toContain("[truncated: showing about");
     expect(loaded.text).toContain(".athas/rules/two.md");
+  });
+
+  it("bounds descriptions, omitted file names, and zero budgets", async () => {
+    const reader = memoryReader({
+      "/w/.cursor/rules/large.mdc": `---\ndescription: ${"d".repeat(8000)}\n---\nManual rule`,
+    });
+    for (const maxTokens of [0, 10, 100]) {
+      const loaded = await loadProjectRules({ projectRoot: "/w", reader, maxTokens });
+      expect(loaded.tokens).toBeLessThanOrEqual(maxTokens);
+      expect(loaded.truncated).toBe(true);
+    }
+  });
+
+  it("does not use outside or traversal context to load nested rules", async () => {
+    const reader = memoryReader({ "/w/AGENTS.md": "Root", "/w/elsewhere/AGENTS.md": "Wrong" });
+    const readDirectory = reader.readDirectory;
+    const visited: string[] = [];
+    reader.readDirectory = async (path) => {
+      visited.push(path);
+      return readDirectory(path);
+    };
+    const loaded = await loadProjectRules({
+      projectRoot: "/w",
+      contextPaths: ["/elsewhere/a.ts", "/w/../elsewhere/a.ts"],
+      reader,
+    });
+    expect(loaded.rules.map((rule) => rule.path)).toEqual(["AGENTS.md"]);
+    expect(visited.some((path) => path.includes("elsewhere") || path.includes(".."))).toBe(false);
+  });
+
+  it("applies personal rules even when no project is open", async () => {
+    const loaded = await loadContextProjectRules({}, { userRules: "Keep changes focused." });
+    expect(loaded?.text).toContain("## User rules\nKeep changes focused.");
+    expect(await loadContextProjectRules({}, { userRules: "  " })).toBeUndefined();
   });
 
   it("returns no text for a project without rules", async () => {

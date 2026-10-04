@@ -1,4 +1,5 @@
-import { readFileContent } from "@/features/file-system/controllers/file-operations";
+import { getWorkspaceResourceProvider } from "@/features/file-system/services/workspace-resource-provider";
+import type { AgentContextPathPolicy } from "./agent-context-policy";
 import type { FileEntry } from "@/features/file-system/types/app.types";
 import { DEFAULT_ATTACHMENT_BUDGET, truncateTextToTokens } from "@/features/ai/lib/context-budget";
 
@@ -39,7 +40,7 @@ export async function loadFilesByPaths(
     await Promise.all(
       filePaths.map(async (path): Promise<MentionedFile | null> => {
         try {
-          const raw = await readFileContent(path);
+          const raw = await getWorkspaceResourceProvider(path).readText(path);
           const { text, truncated, originalTokens } = truncateTextToTokens(raw, maxTokensPerFile);
           return {
             name: path.split(/[/\\]/).pop() || path,
@@ -142,8 +143,11 @@ export function resolveMentionPaths(message: string, allProjectFiles: FileEntry[
 export async function parseMentionsAndLoadFiles(
   message: string,
   allProjectFiles: FileEntry[],
+  allowsPath: AgentContextPathPolicy = () => true,
 ): Promise<{ processedMessage: string; mentionedFiles: MentionedFile[] }> {
-  const mentionedFiles = await loadFilesByPaths(resolveMentionPaths(message, allProjectFiles));
+  const mentionedFiles = await loadFilesByPaths(
+    resolveMentionPaths(message, allProjectFiles).filter((path) => allowsPath(path)),
+  );
 
   return { processedMessage: appendReferencedFiles(message, mentionedFiles), mentionedFiles };
 }

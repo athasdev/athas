@@ -264,8 +264,12 @@ export function formatProjectRules(
     );
   }
 
-  const text = `${header}\n\n${sections.join("\n\n")}`;
-  return { text, tokens: estimateTokens(text), truncated };
+  const fitted = truncateTextToTokens(`${header}\n\n${sections.join("\n\n")}`, maxTokens);
+  return {
+    text: fitted.text,
+    tokens: estimateTokens(fitted.text),
+    truncated: truncated || fitted.truncated,
+  };
 }
 
 export interface LoadProjectRulesOptions {
@@ -325,10 +329,14 @@ export async function loadProjectRules({
     return rules;
   };
 
-  const relativeContextPaths = contextPaths.map((path) => toRelative(path, projectRoot));
+  const scopedPaths = contextPaths.filter(
+    (path) =>
+      pathStartsWithRoot(path, projectRoot) && !normalizePath(path).split("/").includes(".."),
+  );
+  const relativeContextPaths = scopedPaths.map((path) => toRelative(path, projectRoot));
   const [rootRules, nestedRules, folderRules, legacyCursorRules] = await Promise.all([
     loadDirectoryRules(""),
-    Promise.all(nestedDirectories(projectRoot, contextPaths).map(loadDirectoryRules)).then(
+    Promise.all(nestedDirectories(projectRoot, scopedPaths).map(loadDirectoryRules)).then(
       (groups) => groups.flat(),
     ),
     Promise.all(
@@ -387,7 +395,12 @@ export async function loadContextProjectRules(
   context: ContextInfo,
   options: Pick<LoadProjectRulesOptions, "userRules" | "reader"> = {},
 ): Promise<LoadedProjectRules | undefined> {
-  if (!context.projectRoot) return undefined;
+  if (!context.projectRoot) {
+    const content = options.userRules?.trim();
+    if (!content) return undefined;
+    const rules: ProjectRule[] = [{ source: "user", alwaysApply: true, globs: [], content }];
+    return { rules, available: [], ...formatProjectRules(rules, []) };
+  }
   try {
     return await loadProjectRules({
       projectRoot: context.projectRoot,

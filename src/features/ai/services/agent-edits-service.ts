@@ -18,11 +18,7 @@ import type {
 } from "@/features/ai/types/agent-edits.types";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getBufferByPath } from "@/features/editor/utils/buffer-index";
-import {
-  deleteFileOrDirectory,
-  readFileContent,
-} from "@/features/file-system/controllers/file-operations";
-import { writeFile } from "@/features/file-system/controllers/platform";
+import { getWorkspaceResourceProvider } from "@/features/file-system/services/workspace-resource-provider";
 import { useFileWatcherStore } from "@/features/file-system/stores/file-watcher.store";
 import { emitGitChanged } from "@/features/git/events/git-events";
 import { showToast } from "@/features/layout/contexts/toast-context";
@@ -40,6 +36,19 @@ const UNCLAIMED_WRITE_TIMEOUT_MS = 2000;
 const MAX_REMEMBERED_WRITES = 500;
 
 const reconcileTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const reviewTasks = new Map<string, Promise<void>>();
+
+function reviewFile(path: string, task: () => Promise<void>): Promise<void> {
+  const previous = reviewTasks.get(path) ?? Promise.resolve();
+  const next = previous.catch(() => undefined).then(task);
+  reviewTasks.set(path, next);
+  void next
+    .finally(() => {
+      if (reviewTasks.get(path) === next) reviewTasks.delete(path);
+    })
+    .catch(() => undefined);
+  return next;
+}
 /** Agent writes a chat recorded, by write id. */
 const recordedWrites = new Set<number>();
 /** Agent writes whose `file-changed` came before any chat recorded them, by write id. */
@@ -67,7 +76,7 @@ function notifyDropped(path: string, reason: string) {
 
 async function readDisk(path: string): Promise<string | null> {
   try {
-    return await readFileContent(path);
+    return await getWorkspaceResourceProvider(path).readText(path);
   } catch {
     return null;
   }
@@ -118,7 +127,9 @@ export function scheduleAgentEditsDiskCheck(path: string) {
     path,
     setTimeout(() => {
       reconcileTimers.delete(path);
-      for (const chatId of chatsTracking(path)) void syncWithDisk(chatId, path);
+      void reviewFile(path, async () => {
+        for (const chatId of chatsTracking(path)) await syncWithDisk(chatId, path);
+      });
     }, RECONCILE_DELAY_MS),
   );
 }
@@ -242,9 +253,9 @@ function findEditorBuffer(path: string) {
 }
 
 /** Writes review results to disk without the file watcher treating them as outside changes. */
-async function writeReviewed(path: string, content: string) {
+async function writeReviewed(path: string, content: string, expectedContent: string) {
   useFileWatcherStore.getState().actions.markPendingSave(path);
-  await writeFile(path, content);
+  await getWorkspaceResourceProvider(path).writeText(path, content, expectedContent);
   emitGitChanged({ filePath: path, scopes: ["working-tree"], source: "agent-edit-review" });
 }
 
@@ -263,6 +274,7 @@ async function rejectHunks(chatId: string, entry: AgentEditEntry, hunks: AgentEd
   if (reverted === null) return;
 
   const buffer = findEditorBuffer(entry.path);
+  const originalBufferContent = buffer?.content;
   const unsaved = buffer?.isDirty ? buffer.content : null;
   const removesFile = entry.created && reverted === "";
   if (removesFile && unsaved !== null) {
@@ -288,23 +300,46 @@ async function rejectHunks(chatId: string, entry: AgentEditEntry, hunks: AgentEd
   try {
     if (removesFile) {
       useFileWatcherStore.getState().actions.markPendingSave(entry.path);
-      if (buffer) useBufferStore.getState().actions.closeBufferForce(buffer.id);
-      await deleteFileOrDirectory(entry.path);
+      await getWorkspaceResourceProvider(entry.path).deleteText(entry.path, entry.current);
+      if (getAgentEditEntries(chatId)[entry.path]) return;
+      const latestBuffer = findEditorBuffer(entry.path);
+      if (
+        buffer &&
+        latestBuffer?.id === buffer.id &&
+        latestBuffer.content === originalBufferContent
+      )
+        useBufferStore.getState().actions.closeBufferForce(buffer.id);
       rebaseOtherChats(entry.path, chatId, null);
       return;
     }
-    await writeReviewed(entry.path, reverted);
+    await writeReviewed(entry.path, reverted, entry.current);
+    const latestEntry = getAgentEditEntries(chatId)[entry.path];
+    if (latestEntry && latestEntry.revision !== entry.revision + 1) return;
     rebaseOtherChats(entry.path, chatId, reverted);
   } catch (error) {
-    setEntry(chatId, entry.path, entry);
+    useFileWatcherStore.getState().actions.clearPendingSave(entry.path);
+    const latest = getAgentEditEntries(chatId)[entry.path];
+    if (!latest || latest.revision === entry.revision + 1) setEntry(chatId, entry.path, entry);
     showToast({ type: "error", message: `Could not reject the change in ${name}: ${error}` });
     return;
   }
 
-  if (!buffer) return;
+  const latestBuffer = findEditorBuffer(entry.path);
+  if (!latestBuffer || latestBuffer.readOnly) return;
+  const latestText = latestBuffer.isDirty
+    ? transferLineEdits(entry.current, latestBuffer.content, edits)
+    : reverted;
+  if (latestText === null) {
+    showToast({
+      type: "warning",
+      message: "The file was reverted on disk. Newer unsaved edits were kept in the editor.",
+    });
+    return;
+  }
   const { updateBufferContent } = useBufferStore.getState().actions;
-  updateBufferContent(buffer.id, reverted, false);
-  if (unsaved !== null) updateBufferContent(buffer.id, bufferText, true);
+  updateBufferContent(latestBuffer.id, reverted, false);
+  if (latestBuffer.isDirty && latestText !== reverted)
+    updateBufferContent(latestBuffer.id, latestText, true);
 }
 
 function keepHunks(chatId: string, entry: AgentEditEntry, hunks: AgentEditHunk[]) {
@@ -325,31 +360,42 @@ function findHunk(entry: AgentEditEntry, hunk: AgentEditHunk): AgentEditHunk | n
       (candidate) =>
         candidate.baseStart === hunk.baseStart &&
         candidate.currentStart === hunk.currentStart &&
-        candidate.currentLines.join("\n") === hunk.currentLines.join("\n"),
+        candidate.baseLines.length === hunk.baseLines.length &&
+        candidate.baseLines.every((line, index) => line === hunk.baseLines[index]) &&
+        candidate.currentLines.length === hunk.currentLines.length &&
+        candidate.currentLines.every((line, index) => line === hunk.currentLines[index]),
     ) ?? null
   );
 }
 
 export async function keepAgentHunk(chatId: string, path: string, hunk: AgentEditHunk) {
-  const entry = await syncWithDisk(chatId, path);
-  const current = entry && findHunk(entry, hunk);
-  if (entry && current) keepHunks(chatId, entry, [current]);
+  await reviewFile(path, async () => {
+    const entry = await syncWithDisk(chatId, path);
+    const current = entry && findHunk(entry, hunk);
+    if (entry && current) keepHunks(chatId, entry, [current]);
+  });
 }
 
 export async function rejectAgentHunk(chatId: string, path: string, hunk: AgentEditHunk) {
-  const entry = await syncWithDisk(chatId, path);
-  const current = entry && findHunk(entry, hunk);
-  if (entry && current) await rejectHunks(chatId, entry, [current]);
+  await reviewFile(path, async () => {
+    const entry = await syncWithDisk(chatId, path);
+    const current = entry && findHunk(entry, hunk);
+    if (entry && current) await rejectHunks(chatId, entry, [current]);
+  });
 }
 
 export async function keepAgentFile(chatId: string, path: string) {
-  const entry = await syncWithDisk(chatId, path);
-  if (entry) keepHunks(chatId, entry, computeAgentHunks(entry.baseline, entry.current));
+  await reviewFile(path, async () => {
+    const entry = await syncWithDisk(chatId, path);
+    if (entry) keepHunks(chatId, entry, computeAgentHunks(entry.baseline, entry.current));
+  });
 }
 
 export async function rejectAgentFile(chatId: string, path: string) {
-  const entry = await syncWithDisk(chatId, path);
-  if (entry) await rejectHunks(chatId, entry, computeAgentHunks(entry.baseline, entry.current));
+  await reviewFile(path, async () => {
+    const entry = await syncWithDisk(chatId, path);
+    if (entry) await rejectHunks(chatId, entry, computeAgentHunks(entry.baseline, entry.current));
+  });
 }
 
 export async function keepAllAgentEdits(chatId: string) {

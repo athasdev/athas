@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test"
 import {
   clearChatCheckpoints,
   currentTurnMessageId,
+  ensureCheckpointsLoaded,
   forgetChatCheckpoints,
   listCheckpoints,
   recordCheckpointAgentWrite,
@@ -13,10 +14,13 @@ import { getAgentEditEntries, useAgentEditsStore } from "@/features/ai/stores/ag
 
 const mocks = vi.hoisted(() => ({
   disk: new Map<string, string>(),
+  load: vi.fn(),
   saved: new Map<string, string | null>(),
   buffers: [] as Array<Record<string, unknown>>,
   chats: [] as Array<{ id: string; messages: Array<Record<string, unknown>> }>,
   agentRuns: {} as Record<string, { assistantMessageId: string }>,
+  writeFile: vi.fn(),
+  deleteFileOrDirectory: vi.fn(),
   updateBufferContent: vi.fn(),
   closeBufferForce: vi.fn(),
   showToast: vi.fn(),
@@ -25,7 +29,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: async (command: string, args: Record<string, unknown>) => {
-    if (command === "load_chat_checkpoints") return mocks.saved.get(args.chatId as string) ?? null;
+    if (command === "load_chat_checkpoints") return mocks.load(args.chatId);
     if (command === "save_chat_checkpoints") {
       mocks.saved.set(args.chatId as string, args.data as string | null);
     }
@@ -50,23 +54,22 @@ vi.mock("@/features/editor/utils/buffer-index", () => ({
   getBufferByPath: (buffers: Array<{ path: string }>, path: string) =>
     buffers.find((buffer) => buffer.path === path) ?? null,
 }));
-vi.mock("@/features/file-system/controllers/file-operations", () => ({
-  readFileContent: async (path: string) => {
-    const content = mocks.disk.get(path);
-    if (content === undefined) throw new Error("missing");
-    return content;
-  },
-  deleteFileOrDirectory: async (path: string) => {
-    mocks.disk.delete(path);
-  },
+vi.mock("@/features/file-system/services/workspace-resource-provider", () => ({
+  getWorkspaceResourceProvider: () => ({
+    readText: async (path: string) => {
+      const content = mocks.disk.get(path);
+      if (content === undefined) throw new Error("missing");
+      return content;
+    },
+    writeText: mocks.writeFile,
+    deleteText: mocks.deleteFileOrDirectory,
+  }),
 }));
-vi.mock("@/features/file-system/controllers/platform", () => ({
-  writeFile: async (path: string, content: string) => {
-    mocks.disk.set(path, content);
-  },
-}));
+
 vi.mock("@/features/file-system/stores/file-watcher.store", () => ({
-  useFileWatcherStore: { getState: () => ({ actions: { markPendingSave: vi.fn() } }) },
+  useFileWatcherStore: {
+    getState: () => ({ actions: { markPendingSave: vi.fn(), clearPendingSave: vi.fn() } }),
+  },
 }));
 vi.mock("@/features/git/events/git-events", () => ({ emitGitChanged: vi.fn() }));
 vi.mock("@/features/layout/contexts/toast-context", () => ({ showToast: mocks.showToast }));
@@ -88,6 +91,9 @@ async function agentWrites(messageId: string, path: string, content: string) {
 describe("agent checkpoints service", () => {
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    mocks.load
+      .mockReset()
+      .mockImplementation(async (chatId: string) => mocks.saved.get(chatId) ?? null);
     mocks.disk.clear();
     mocks.saved.clear();
     mocks.buffers.length = 0;
@@ -111,6 +117,12 @@ describe("agent checkpoints service", () => {
     ]) {
       mock.mockReset();
     }
+    mocks.writeFile.mockReset().mockImplementation(async (path: string, content: string) => {
+      mocks.disk.set(path, content);
+    });
+    mocks.deleteFileOrDirectory.mockReset().mockImplementation(async (path: string) => {
+      mocks.disk.delete(path);
+    });
     useAgentCheckpointsStore.setState({ byChat: {} });
     useAgentEditsStore.setState({ byChat: {}, reviewChatId: null });
   });
@@ -147,6 +159,90 @@ describe("agent checkpoints service", () => {
     expect(mocks.disk.has("/new")).toBe(false);
     expect(mocks.showConfirmDialog).not.toHaveBeenCalled();
     expect((await listCheckpoints(CHAT)).map((checkpoint) => checkpoint.messageId)).toEqual(["u1"]);
+  });
+
+  it("keeps failed file snapshots across turns and retries only those files", async () => {
+    mocks.disk.set("/a", "a0");
+    mocks.disk.set("/b", "b0");
+    await agentWrites("u1", "/a", "a1");
+    await agentWrites("u1", "/b", "b1");
+    await agentWrites("u2", "/b", "b2");
+    mocks.writeFile
+      .mockImplementationOnce(async (path: string, content: string) => {
+        mocks.disk.set(path, content);
+      })
+      .mockRejectedValueOnce(new Error("Disk full"));
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      expect(await restoreCheckpoint(CHAT, "u1")).toEqual({
+        status: "restored",
+        restoredPaths: ["/a"],
+        failedPaths: ["/b"],
+      });
+    } finally {
+      log.mockRestore();
+    }
+    expect(
+      (await listCheckpoints(CHAT)).map((checkpoint) => checkpoint.files.map((file) => file.path)),
+    ).toEqual([["/b"], ["/b"]]);
+    await vi.runAllTimersAsync();
+    useAgentCheckpointsStore.setState({ byChat: {} });
+    expect(await restoreCheckpoint(CHAT, "u1")).toEqual({
+      status: "restored",
+      restoredPaths: ["/b"],
+      failedPaths: [],
+    });
+    expect(mocks.disk.get("/a")).toBe("a0");
+    expect(mocks.disk.get("/b")).toBe("b0");
+    expect(await listCheckpoints(CHAT)).toEqual([]);
+  });
+
+  it("keeps an editor open and its snapshot when checkpoint deletion fails", async () => {
+    await agentWrites("u1", "/new", "created");
+    mocks.buffers.push({
+      id: "new-buffer",
+      type: "editor",
+      path: "/new",
+      isDirty: false,
+      content: "created",
+    });
+    mocks.deleteFileOrDirectory.mockRejectedValueOnce(new Error("Permission denied"));
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      expect(await restoreCheckpoint(CHAT, "u1")).toMatchObject({ failedPaths: ["/new"] });
+    } finally {
+      log.mockRestore();
+    }
+    expect(mocks.closeBufferForce).not.toHaveBeenCalled();
+    expect((await listCheckpoints(CHAT))[0].files[0].path).toBe("/new");
+    await restoreCheckpoint(CHAT, "u1");
+    expect(mocks.closeBufferForce).toHaveBeenCalledWith("new-buffer");
+    expect(mocks.disk.has("/new")).toBe(false);
+  });
+
+  it("keeps edits typed while a checkpoint write is in flight", async () => {
+    mocks.disk.set("/a", "before");
+    await agentWrites("u1", "/a", "after");
+    mocks.buffers.push({
+      id: "buffer",
+      type: "editor",
+      path: "/a",
+      isDirty: false,
+      content: "after",
+    });
+    mocks.writeFile.mockImplementationOnce(
+      async (path: string, content: string, expected: string) => {
+        expect(expected).toBe("after");
+        mocks.disk.set(path, content);
+        mocks.buffers = [
+          { id: "buffer", type: "editor", path: "/a", isDirty: true, content: "typed meanwhile" },
+        ];
+      },
+    );
+    await restoreCheckpoint(CHAT, "u1");
+    expect(mocks.disk.get("/a")).toBe("before");
+    expect(mocks.updateBufferContent).not.toHaveBeenCalled();
+    expect(mocks.buffers[0].content).toBe("typed meanwhile");
   });
 
   it("asks before discarding changes made after the agent's and unsaved edits", async () => {
@@ -211,6 +307,114 @@ describe("agent checkpoints service", () => {
     await vi.runAllTimersAsync();
     expect(mocks.saved.get(CHAT)).toBeNull();
     expect(await listCheckpoints(CHAT)).toEqual([]);
+  });
+
+  it("does not restore a forgotten chat from an in-flight load or queued write", async () => {
+    let finish: (data: string | null) => void = () => {};
+    let markStarted: () => void = () => {};
+    const started = new Promise<void>((resolve) => {
+      markStarted = resolve;
+    });
+    mocks.load.mockImplementationOnce(
+      () =>
+        new Promise<string | null>((resolve) => {
+          finish = resolve;
+          markStarted();
+        }),
+    );
+    const pending = recordCheckpointAgentWrite(CHAT, "u1", {
+      path: "/a",
+      previousContent: "before",
+      content: "after",
+    });
+    await started;
+    expect(mocks.load).toHaveBeenCalledOnce();
+    forgetChatCheckpoints(CHAT);
+    mocks.chats = [];
+    finish(null);
+    await pending;
+    await vi.runAllTimersAsync();
+    expect(useAgentCheckpointsStore.getState().byChat[CHAT]).toBeUndefined();
+    expect(mocks.saved.has(CHAT)).toBe(false);
+  });
+
+  it("keeps a cleared chat empty when a queued write finishes loading", async () => {
+    let finish: (data: string | null) => void = () => {};
+    let markStarted: () => void = () => {};
+    const started = new Promise<void>((resolve) => {
+      markStarted = resolve;
+    });
+    mocks.load.mockImplementationOnce(
+      () =>
+        new Promise<string | null>((resolve) => {
+          finish = resolve;
+          markStarted();
+        }),
+    );
+    const pending = recordCheckpointAgentWrite(CHAT, "u1", {
+      path: "/a",
+      previousContent: "before",
+      content: "after",
+    });
+    await started;
+    const cleared = clearChatCheckpoints(CHAT);
+    finish(null);
+    await Promise.all([pending, cleared]);
+    await vi.runAllTimersAsync();
+    expect(await listCheckpoints(CHAT)).toEqual([]);
+    expect(mocks.saved.get(CHAT)).toBeNull();
+  });
+
+  it("does not let an old load replace or detach a reopened chat's load", async () => {
+    let finishOld: (data: string | null) => void = () => {};
+    let finishNew: (data: string | null) => void = () => {};
+    mocks.load
+      .mockImplementationOnce(
+        () =>
+          new Promise<string | null>((resolve) => {
+            finishOld = resolve;
+          }),
+      )
+      .mockImplementationOnce(
+        () =>
+          new Promise<string | null>((resolve) => {
+            finishNew = resolve;
+          }),
+      );
+    const oldLoad = ensureCheckpointsLoaded(CHAT);
+    forgetChatCheckpoints(CHAT);
+    const newLoad = ensureCheckpointsLoaded(CHAT);
+    finishOld(null);
+    await oldLoad;
+    expect(ensureCheckpointsLoaded(CHAT)).toBe(newLoad);
+    expect(mocks.load).toHaveBeenCalledTimes(2);
+    finishNew(
+      JSON.stringify({
+        checkpoints: [
+          {
+            messageId: "u2",
+            createdAt: 3,
+            files: { "/new": { path: "/new", before: null, after: "new" } },
+          },
+        ],
+        truncatedAt: null,
+      }),
+    );
+    await newLoad;
+    expect((await listCheckpoints(CHAT)).map((checkpoint) => checkpoint.messageId)).toEqual(["u2"]);
+  });
+
+  it("cancels a restore if the chat is forgotten while confirmation is open", async () => {
+    mocks.disk.set("/a", "before");
+    await agentWrites("u1", "/a", "after");
+    mocks.disk.set("/a", "user change");
+    mocks.showConfirmDialog.mockImplementationOnce(async () => {
+      forgetChatCheckpoints(CHAT);
+      return true;
+    });
+    expect(await restoreCheckpoint(CHAT, "u1")).toEqual({ status: "cancelled" });
+    expect(mocks.disk.get("/a")).toBe("user change");
+    expect(mocks.writeFile).not.toHaveBeenCalled();
   });
 
   it("does not save a deleted chat's checkpoints back", async () => {

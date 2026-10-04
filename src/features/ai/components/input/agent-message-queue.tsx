@@ -16,6 +16,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/ui/collap
 import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemTitle } from "@/ui/item";
 import Textarea from "@/ui/textarea";
 import type { QueuedAgentMessage } from "@/features/ai/types/ai-chat.types";
+import { isSameQueuedMessage } from "@/features/ai/lib/agent-queue-controls";
 
 interface AgentMessageQueueProps {
   messages: QueuedAgentMessage[];
@@ -43,12 +44,16 @@ export function AgentMessageQueue({
   onEditingChange,
 }: AgentMessageQueueProps) {
   const [isOpen, setIsOpen] = useState(true);
-  // Held by reference: the queue can shift while the user types if a turn ends.
   const [editing, setEditing] = useState<{ message: QueuedAgentMessage; draft: string } | null>(
     null,
   );
 
   const editedMessage = editing?.message ?? null;
+  useEffect(() => {
+    if (editedMessage && !messages.some((message) => isSameQueuedMessage(message, editedMessage))) {
+      setEditing(null);
+    }
+  }, [messages, editedMessage]);
   useEffect(() => {
     if (!editedMessage) return;
     onEditingChange?.(editedMessage);
@@ -59,7 +64,7 @@ export function AgentMessageQueue({
 
   const saveEdit = () => {
     if (!editing) return;
-    const index = messages.indexOf(editing.message);
+    const index = messages.findIndex((message) => isSameQueuedMessage(message, editing.message));
     setEditing(null);
     if (index === -1) return;
     // A message needs text or images; clearing an image-less one discards it.
@@ -81,17 +86,17 @@ export function AgentMessageQueue({
         <ItemGroup aria-label="Queued messages">
           {messages.map((message, index) => {
             const images = imageCountLabel(message);
-            const isEditing = editing?.message === message;
+            const isEditing = Boolean(editing && isSameQueuedMessage(editing.message, message));
             return (
               <Item
-                key={`${index}-${message.content}`}
+                key={message.id ?? `${index}-${message.content}`}
                 variant="muted"
                 size="compact"
                 role="listitem"
               >
                 <ItemContent>
                   <ItemTitle>{index === 0 ? "Sends next" : `Sends #${index + 1}`}</ItemTitle>
-                  {isEditing ? (
+                  {isEditing && editing ? (
                     <Textarea
                       autoFocus
                       autoSize

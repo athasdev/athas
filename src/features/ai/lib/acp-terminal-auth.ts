@@ -44,7 +44,7 @@ export function runAcpTerminalAuth(
     window.addEventListener(TERMINAL_PROCESS_EXIT_EVENT, handleExit);
     options.signal?.addEventListener("abort", handleAbort);
 
-    useTerminalStore.getState().actions.updateSession(sessionId, {
+    useTerminalStore.getState().actions.registerSession(sessionId, {
       launch: { command: launch.command, args: launch.args, environment: launch.env },
     });
     // Closing the tab ends the command without an exit event, so the wait would never end.

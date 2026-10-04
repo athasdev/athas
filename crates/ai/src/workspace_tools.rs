@@ -2,7 +2,7 @@ use regex::{Regex, RegexBuilder};
 use serde::{Deserialize, Serialize};
 use std::{
    fs,
-   io::{Read, Write},
+   io::Read,
    path::{Component, Path, PathBuf},
 };
 
@@ -21,12 +21,52 @@ const MAX_CONTEXT_LINES: usize = 5;
 const MAX_LINE_CHARS: usize = 300;
 const MAX_EDITS: usize = 64;
 
+const AI_IGNORE_FILES: [&str; 3] = [".athasignore", ".aiignore", ".cursorignore"];
+
+struct AiIgnore(Vec<ignore::gitignore::Gitignore>);
+
+impl AiIgnore {
+   fn load(root: &Path) -> Result<Self, String> {
+      let mut matchers = Vec::new();
+      for name in AI_IGNORE_FILES {
+         let path = root.join(name);
+         let metadata = match fs::symlink_metadata(&path) {
+            Ok(metadata) => metadata,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
+            Err(error) => return Err(format!("Could not read {name}: {error}")),
+         };
+         if !metadata.is_file() || metadata.len() > MAX_FILE_BYTES {
+            return Err(format!(
+               "{name} must be a regular text file smaller than 256 KiB."
+            ));
+         }
+         let mut builder = ignore::gitignore::GitignoreBuilder::new(root);
+         if let Some(error) = builder.add(&path) {
+            return Err(format!("Could not read {name}: {error}"));
+         }
+         matchers.push(builder.build().map_err(|error| error.to_string())?);
+      }
+      Ok(Self(matchers))
+   }
+
+   fn excludes(&self, path: &Path, is_dir: bool) -> bool {
+      self.0.iter().any(|matcher| {
+         matcher
+            .matched_path_or_any_parents(path, is_dir)
+            .is_ignore()
+      })
+   }
+}
+
 fn excluded_path(relative: &Path) -> bool {
    relative.components().any(|part| {
       let name = part.as_os_str().to_string_lossy().to_ascii_lowercase();
       name == ".git"
          || name == ".env"
          || name.starts_with(".env.")
+         || ["id_rsa", "id_ed25519", "id_ecdsa", "id_dsa"]
+            .iter()
+            .any(|prefix| name.starts_with(prefix))
          || [".pem", ".key", ".p12", ".pfx"]
             .iter()
             .any(|extension| name.ends_with(extension))
@@ -47,6 +87,9 @@ fn permitted_path(root: &str, relative: &str, create: bool) -> Result<PathBuf, S
       return Err("This file is excluded from automatic workspace tools.".into());
    }
    let target = root.join(relative);
+   if AiIgnore::load(&root)?.excludes(&target, target.is_dir()) {
+      return Err("This path is excluded by the workspace AI ignore files.".into());
+   }
    let mut component_path = root.clone();
    for component in relative.components() {
       component_path.push(component);
@@ -91,6 +134,9 @@ pub fn paths_stay_in_workspace(root: &str, paths: &[String]) -> bool {
    let Ok(root) = fs::canonicalize(root) else {
       return false;
    };
+   let Ok(ai_ignore) = AiIgnore::load(&root) else {
+      return false;
+   };
    paths.iter().all(|path| {
       let mut existing = root.join(path);
       let mut missing = Vec::new();
@@ -112,9 +158,9 @@ pub fn paths_stay_in_workspace(root: &str, paths: &[String]) -> bool {
          .iter()
          .rev()
          .fold(resolved, |path, part| path.join(part));
-      resolved
-         .strip_prefix(&root)
-         .is_ok_and(|relative| !excluded_path(relative))
+      resolved.strip_prefix(&root).is_ok_and(|relative| {
+         !excluded_path(relative) && !ai_ignore.excludes(&resolved, resolved.is_dir())
+      })
    })
 }
 
@@ -158,14 +204,6 @@ pub struct WorkspaceFileWrite {
    pub content: String,
 }
 
-fn current_content(root: &str, path: &str, target: &Path) -> Result<Option<String>, String> {
-   match read_workspace_file(root, path) {
-      Ok(content) => Ok(Some(content)),
-      Err(_) if !target.exists() => Ok(None),
-      Err(error) => Err(error),
-   }
-}
-
 pub(crate) fn display_path(root: &str, relative: &str) -> String {
    let relative = Path::new(relative)
       .components()
@@ -175,35 +213,6 @@ pub(crate) fn display_path(root: &str, relative: &str) -> String {
       .join(relative)
       .to_string_lossy()
       .into_owned()
-}
-
-fn persist(target: &Path, content: &str) -> Result<(), String> {
-   if content.len() as u64 > MAX_FILE_BYTES {
-      return Err("The edited file would be larger than 256 KiB.".into());
-   }
-   let parent = target.parent().ok_or("Missing parent")?;
-   fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-   let mut builder = tempfile::Builder::new();
-   // A temporary file is private (0600); a file the agent creates should get the same mode as
-   // any other new file, 0666 less the umask, like an editor save would give it.
-   #[cfg(unix)]
-   if !target.exists() {
-      use std::os::unix::fs::PermissionsExt;
-      builder.permissions(fs::Permissions::from_mode(0o666));
-   }
-   let mut temporary = builder.tempfile_in(parent).map_err(|e| e.to_string())?;
-   if let Ok(metadata) = fs::metadata(target) {
-      temporary
-         .as_file()
-         .set_permissions(metadata.permissions())
-         .map_err(|e| e.to_string())?;
-   }
-   temporary
-      .write_all(content.as_bytes())
-      .map_err(|e| e.to_string())?;
-   temporary.as_file().sync_all().map_err(|e| e.to_string())?;
-   temporary.persist(target).map_err(|e| e.to_string())?;
-   Ok(())
 }
 
 const CHANGED_SINCE_READ: &str =
@@ -220,44 +229,49 @@ pub fn edit_workspace_file(
       return Err(format!("Send between 1 and {MAX_EDITS} edits."));
    }
    let target = permitted_path(root, path, false)?;
-   let current = current_content(root, path, &target)?
-      .ok_or("The file does not exist. Use write_file to create it.")?;
-   if current != expected_content {
-      return Err(CHANGED_SINCE_READ.into());
-   }
-   let mut content = current.clone();
-   for (index, edit) in edits.iter().enumerate() {
-      let number = index + 1;
-      if edit.old_text.is_empty() {
-         return Err(format!("Edit {number}: oldText must not be empty."));
-      }
-      let count = content.matches(edit.old_text.as_str()).count();
-      if count == 0 {
-         return Err(format!(
-            "Edit {number}: oldText was not found. Earlier edits in the same call apply first; no \
-             edit was applied."
-         ));
-      }
-      if count > 1 && !edit.replace_all {
-         return Err(format!(
-            "Edit {number}: oldText matches {count} locations. Include more surrounding lines or \
-             set replaceAll; no edit was applied."
-         ));
-      }
-      content = if edit.replace_all {
-         content.replace(edit.old_text.as_str(), &edit.new_text)
-      } else {
-         content.replacen(edit.old_text.as_str(), &edit.new_text, 1)
-      };
-   }
-   if content == current {
-      return Err("The edits leave the file unchanged.".into());
-   }
-   persist(&target, &content)?;
+   let result =
+      athas_project::file_mutations::mutate_text(&target, Some(MAX_FILE_BYTES), |current| {
+         let current = current.ok_or("The file does not exist. Use write_file to create it.")?;
+         if current != expected_content {
+            return Err(CHANGED_SINCE_READ.into());
+         }
+         let mut content = current.to_string();
+         for (index, edit) in edits.iter().enumerate() {
+            let number = index + 1;
+            if edit.old_text.is_empty() {
+               return Err(format!("Edit {number}: oldText must not be empty."));
+            }
+            let count = content.matches(edit.old_text.as_str()).count();
+            if count == 0 {
+               return Err(format!(
+                  "Edit {number}: oldText was not found. Earlier edits in the same call apply \
+                   first; no edit was applied."
+               ));
+            }
+            if count > 1 && !edit.replace_all {
+               return Err(format!(
+                  "Edit {number}: oldText matches {count} locations. Include more surrounding \
+                   lines or set replaceAll; no edit was applied."
+               ));
+            }
+            content = if edit.replace_all {
+               content.replace(edit.old_text.as_str(), &edit.new_text)
+            } else {
+               content.replacen(edit.old_text.as_str(), &edit.new_text, 1)
+            };
+         }
+         if content == current {
+            return Err("The edits leave the file unchanged.".into());
+         }
+         if content.len() as u64 > MAX_FILE_BYTES {
+            return Err("The edited file would be larger than 256 KiB.".into());
+         }
+         Ok(Some(content))
+      })?;
    Ok(WorkspaceFileWrite {
       path: display_path(root, path),
-      previous_content: Some(current),
-      content,
+      previous_content: result.previous_content,
+      content: result.content.unwrap_or_default(),
    })
 }
 
@@ -270,19 +284,24 @@ pub fn write_workspace_file(
    content: &str,
 ) -> Result<WorkspaceFileWrite, String> {
    let target = permitted_path(root, path, true)?;
-   let current = current_content(root, path, &target)?;
-   if current.as_deref() != expected_content {
-      return Err(if expected_content.is_none() {
-         "The file already exists. Read it first, then edit or overwrite it.".into()
-      } else {
-         CHANGED_SINCE_READ.into()
-      });
-   }
-   persist(&target, content)?;
+   let result =
+      athas_project::file_mutations::mutate_text(&target, Some(MAX_FILE_BYTES), |current| {
+         if current != expected_content {
+            return Err(if expected_content.is_none() {
+               "The file already exists. Read it first, then edit or overwrite it.".into()
+            } else {
+               CHANGED_SINCE_READ.into()
+            });
+         }
+         if content.len() as u64 > MAX_FILE_BYTES {
+            return Err("The edited file would be larger than 256 KiB.".into());
+         }
+         Ok(Some(content.to_string()))
+      })?;
    Ok(WorkspaceFileWrite {
       path: display_path(root, path),
-      previous_content: current,
-      content: content.to_string(),
+      previous_content: result.previous_content,
+      content: result.content.unwrap_or_default(),
    })
 }
 
@@ -293,13 +312,12 @@ pub fn delete_workspace_file(
    expected_content: &str,
 ) -> Result<String, String> {
    let target = permitted_path(root, path, false)?;
-   if !fs::metadata(&target).is_ok_and(|metadata| metadata.is_file()) {
-      return Err("Only files can be deleted.".into());
-   }
-   if read_workspace_file(root, path)? != expected_content {
-      return Err(CHANGED_SINCE_READ.into());
-   }
-   fs::remove_file(&target).map_err(|e| e.to_string())?;
+   athas_project::file_mutations::mutate_text(&target, Some(MAX_FILE_BYTES), |current| {
+      if current != Some(expected_content) {
+         return Err(CHANGED_SINCE_READ.into());
+      }
+      Ok(None)
+   })?;
    Ok(display_path(root, path))
 }
 
@@ -342,16 +360,12 @@ pub(crate) fn walk_workspace(
          {
             return Err("Use a relative path inside the workspace.".into());
          }
-         let start = fs::canonicalize(canonical_root.join(relative))
-            .map_err(|_| format!("{subpath} does not exist in the workspace."))?;
-         if !start.starts_with(&canonical_root) {
-            return Err("The path must remain inside the workspace.".into());
-         }
-         start
+         permitted_path(root, subpath, false)?
       }
       None => canonical_root.clone(),
    };
    let matcher = glob_matcher(glob)?;
+   let ai_ignore = AiIgnore::load(&canonical_root)?;
    let walker = ignore::WalkBuilder::new(&start)
       .hidden(false)
       .git_ignore(true)
@@ -361,9 +375,14 @@ pub(crate) fn walk_workspace(
       .parents(true)
       .follow_links(false)
       .sort_by_file_name(|a, b| a.cmp(b))
-      .filter_entry(|entry| {
+      .filter_entry(move |entry| {
          let name = entry.file_name();
-         name != ".git" && name != "node_modules"
+         name != ".git"
+            && name != "node_modules"
+            && !ai_ignore.excludes(
+               entry.path(),
+               entry.file_type().is_some_and(|kind| kind.is_dir()),
+            )
       })
       .build();
    let mut files = Vec::new();
@@ -645,6 +664,101 @@ mod tests {
       assert!(read_workspace_file(root, ".env").is_err());
       assert!(read_workspace_file(root, "/etc/passwd").is_err());
    }
+
+   #[test]
+   fn honors_ai_ignore_files_for_discovery_read_write_delete_and_command_paths() {
+      for name in AI_IGNORE_FILES {
+         let dir = tempfile::tempdir().unwrap();
+         let root = dir.path().to_str().unwrap();
+         fs::write(
+            dir.path().join(name),
+            "private/\n*.secret\n!public.secret\n",
+         )
+         .unwrap();
+         fs::create_dir(dir.path().join("private")).unwrap();
+         for path in [
+            "private/a.ts",
+            "hidden.secret",
+            "public.secret",
+            "public.ts",
+         ] {
+            fs::write(dir.path().join(path), "needle").unwrap();
+         }
+         let files = list_workspace_files(root, &ListFilesOptions::default())
+            .unwrap()
+            .files;
+         assert!(files.contains(&"public.ts".into()));
+         assert!(files.contains(&"public.secret".into()));
+         assert!(!files.contains(&"private/a.ts".into()));
+         assert!(!files.contains(&"hidden.secret".into()));
+         let found = search_workspace_files(
+            root,
+            &SearchOptions {
+               query: "needle".into(),
+               ..Default::default()
+            },
+         )
+         .unwrap();
+         assert_eq!(found.matches.len(), 2);
+         assert!(read_workspace_file(root, "private/a.ts").is_err());
+         assert!(write_workspace_file(root, "private/new.ts", None, "new").is_err());
+         assert!(delete_workspace_file(root, "hidden.secret", "needle").is_err());
+         assert!(!paths_stay_in_workspace(root, &["hidden.secret".into()]));
+         assert!(!paths_stay_in_workspace(root, &["private/new.ts".into()]));
+         assert!(read_workspace_file(root, "public.secret").is_ok());
+         assert!(
+            list_workspace_files(
+               root,
+               &ListFilesOptions {
+                  path: Some("private".into()),
+                  ..Default::default()
+               }
+            )
+            .is_err()
+         );
+      }
+   }
+
+   #[test]
+   fn combines_ai_exclusions_without_overriding_credentials_or_other_ignore_files() {
+      let dir = tempfile::tempdir().unwrap();
+      let root = dir.path().to_str().unwrap();
+      fs::write(dir.path().join(".athasignore"), "*.ts\n").unwrap();
+      fs::write(dir.path().join(".cursorignore"), "!*.ts\n!.env\n").unwrap();
+      fs::write(dir.path().join("a.ts"), "private").unwrap();
+      fs::write(dir.path().join(".env"), "secret").unwrap();
+      assert!(read_workspace_file(root, "a.ts").is_err());
+      assert!(read_workspace_file(root, ".env").is_err());
+      fs::write(dir.path().join(".athasignore"), "[z-a]\n").unwrap();
+      assert!(read_workspace_file(root, "a.ts").is_err());
+   }
+
+   #[cfg(unix)]
+   #[test]
+   fn refuses_symlinked_ignore_files_and_symlinked_search_roots() {
+      let dir = tempfile::tempdir().unwrap();
+      let outside = tempfile::tempdir().unwrap();
+      let root = dir.path().to_str().unwrap();
+      fs::write(outside.path().join("rules"), "*.ts\n").unwrap();
+      fs::write(dir.path().join("a.ts"), "text").unwrap();
+      std::os::unix::fs::symlink(outside.path().join("rules"), dir.path().join(".aiignore"))
+         .unwrap();
+      assert!(read_workspace_file(root, "a.ts").is_err());
+      assert!(list_workspace_files(root, &ListFilesOptions::default()).is_err());
+      fs::remove_file(dir.path().join(".aiignore")).unwrap();
+      fs::create_dir(dir.path().join("src")).unwrap();
+      std::os::unix::fs::symlink(dir.path().join("src"), dir.path().join("alias")).unwrap();
+      assert!(
+         list_workspace_files(
+            root,
+            &ListFilesOptions {
+               path: Some("alias".into()),
+               ..Default::default()
+            }
+         )
+         .is_err()
+      );
+   }
    fn replace(old_text: &str, new_text: &str) -> WorkspaceReplacement {
       WorkspaceReplacement {
          old_text: old_text.into(),
@@ -836,5 +950,42 @@ mod tests {
       std::os::unix::fs::symlink(dir.path().join(".env"), dir.path().join("alias")).unwrap();
       assert!(read_workspace_file(root, "alias").is_err());
       assert!(write_workspace_file(root, "linked/new", None, "content").is_err());
+   }
+
+   #[test]
+   fn concurrent_writes_cannot_both_replace_the_same_expected_content() {
+      let dir = tempfile::tempdir().unwrap();
+      let root = dir.path().to_str().unwrap().to_string();
+      fs::write(dir.path().join("race.ts"), "before").unwrap();
+      let start = std::sync::Arc::new(std::sync::Barrier::new(16));
+      let threads: Vec<_> = (0..16)
+         .map(|index| {
+            let root = root.clone();
+            let start = start.clone();
+            std::thread::spawn(move || {
+               start.wait();
+               write_workspace_file(&root, "race.ts", Some("before"), &format!("winner {index}"))
+            })
+         })
+         .collect();
+      let results: Vec<_> = threads
+         .into_iter()
+         .map(|thread| thread.join().unwrap())
+         .collect();
+      let winners: Vec<_> = results
+         .iter()
+         .filter_map(|result| result.as_ref().ok())
+         .collect();
+      assert_eq!(winners.len(), 1);
+      assert_eq!(
+         fs::read_to_string(dir.path().join("race.ts")).unwrap(),
+         winners[0].content
+      );
+      assert!(
+         results
+            .iter()
+            .filter_map(|result| result.as_ref().err())
+            .all(|error| error == CHANGED_SINCE_READ)
+      );
    }
 }

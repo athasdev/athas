@@ -1,4 +1,5 @@
 import { estimateTokens, truncateTextToTokens } from "@/features/ai/lib/context-budget";
+import type { AgentContextPathPolicy } from "./agent-context-policy";
 import {
   buildConversationHistory,
   summarizeConversationExtractively,
@@ -132,7 +133,10 @@ function fit(content: string, maxTokens: number) {
 async function resolveFolder(
   path: string,
   sources: ContextReferenceSources,
+  allows: AgentContextPathPolicy,
 ): Promise<{ content: string; truncated: boolean }> {
+  if (!allows(path, true))
+    return { content: "This folder is excluded from AI context.", truncated: false };
   const tree: string[] = [];
   const files: { path: string; relativePath: string; depth: number }[] = [];
   let truncated = false;
@@ -148,6 +152,7 @@ async function resolveFolder(
       continue;
     }
     for (const entry of entries) {
+      if (!allows(entry.path, entry.isDir)) continue;
       if (entryCount >= FOLDER_MAX_ENTRIES) {
         truncated = true;
         break;
@@ -219,11 +224,14 @@ async function resolveGitDiff(
   scope: GitDiffScope,
   repoPath: string,
   sources: ContextReferenceSources,
+  allows: AgentContextPathPolicy,
 ): Promise<{ content: string; truncated: boolean }> {
   const status = await sources.getGitStatus(repoPath);
   if (!status) return { content: "Not a Git repository.", truncated: false };
   const staged = scope === "staged";
-  const files = status.files.filter((file) => file.staged === staged);
+  const files = status.files.filter(
+    (file) => file.staged === staged && allows(joinPath(repoPath, file.path)),
+  );
   if (files.length === 0) {
     return { content: staged ? "No staged changes." : "No unstaged changes.", truncated: false };
   }
@@ -319,6 +327,7 @@ export interface ResolveContextReferencesOptions {
   /** The Git repository for diffs; defaults to the project root. */
   repoPath?: string | null;
   sources?: ContextReferenceSources;
+  allowsPath?: AgentContextPathPolicy;
 }
 
 /**
@@ -327,7 +336,7 @@ export interface ResolveContextReferencesOptions {
  */
 export async function resolveContextReferences(
   values: string[],
-  { projectRoot, repoPath, sources }: ResolveContextReferencesOptions = {},
+  { projectRoot, repoPath, sources, allowsPath = () => true }: ResolveContextReferencesOptions = {},
 ): Promise<ResolvedContextReference[]> {
   const references = values
     .map((value) => ({ id: value, reference: parseContextReference(value) }))
@@ -350,12 +359,15 @@ export async function resolveContextReferences(
       try {
         const resolved =
           reference.kind === "folder"
-            ? await resolveFolder(reference.path, io)
+            ? await resolveFolder(reference.path, io, allowsPath)
             : reference.kind === "gitDiff"
-              ? await resolveGitDiff(reference.scope, diffRepoPath, io)
+              ? await resolveGitDiff(reference.scope, diffRepoPath, io, allowsPath)
               : reference.kind === "problems"
                 ? fit(
-                    formatDiagnostics(io.getDiagnostics(), projectRoot),
+                    formatDiagnostics(
+                      io.getDiagnostics().filter((diagnostic) => allowsPath(diagnostic.filePath)),
+                      projectRoot,
+                    ),
                     CONTEXT_REFERENCE_BUDGETS.problems,
                   )
                 : await resolveChat(reference.chatId, io);

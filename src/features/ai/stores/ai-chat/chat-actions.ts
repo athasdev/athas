@@ -49,7 +49,7 @@ type ChatActions = Omit<
 
 const getCurrentWorkspacePath = () => useProjectStore.getState().rootFolderPath || null;
 
-const createChatId = () =>
+const createId = () =>
   globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
 function getNewChatMetadata(agentId: AgentType) {
@@ -72,7 +72,7 @@ function getNewChatMetadata(agentId: AgentType) {
   };
 }
 
-function createChat(agentId: AgentType, id: string = createChatId()): Chat {
+function createChat(agentId: AgentType, id: string = createId()): Chat {
   // One clock read for both, so "never received a message" stays detectable as
   // lastMessageAt === createdAt.
   const now = new Date();
@@ -92,7 +92,9 @@ function createChat(agentId: AgentType, id: string = createChatId()): Chat {
 
 async function syncChatToDatabase(get: GetAIChatStore, chatId: string) {
   try {
-    const chat = get().chats.find((candidate) => candidate.id === chatId);
+    const state = get();
+    if (state.chatMessageLoadStates[chatId] === "loading") return;
+    const chat = state.chats.find((candidate) => candidate.id === chatId);
     if (chat) {
       await saveChatToDb(chat);
     }
@@ -120,24 +122,57 @@ function scheduleChatSync(get: GetAIChatStore, chatId: string) {
   );
 }
 
-async function loadChatMessages(set: SetAIChatStore, chatId: string) {
+const chatMessageLoads = new Map<string, Promise<void>>();
+
+function loadChatMessages(set: SetAIChatStore, get: GetAIChatStore, chatId: string): Promise<void> {
+  const pending = chatMessageLoads.get(chatId);
+  if (pending) return pending;
+  const loading = readChatMessages(set, get, chatId).finally(() => {
+    if (chatMessageLoads.get(chatId) === loading) chatMessageLoads.delete(chatId);
+  });
+  chatMessageLoads.set(chatId, loading);
+  return loading;
+}
+
+async function readChatMessages(set: SetAIChatStore, get: GetAIChatStore, chatId: string) {
+  const before = get().actions.getChatById(chatId);
   set((state) => {
     state.chatMessageLoadStates[chatId] = "loading";
   });
   try {
     const fullChat = await loadChatFromDb(chatId);
+    const current = get().actions.getChatById(chatId);
+    const changedMessages = current?.messages !== before?.messages;
     set((state) => {
       const chatIndex = state.chats.findIndex((candidate) => candidate.id === chatId);
       if (chatIndex !== -1) {
-        state.chats[chatIndex] = fullChat;
+        const chat = state.chats[chatIndex];
+        const liveMessages = new Map(chat.messages.map((message) => [message.id, message]));
+        const persistedIds = new Set(fullChat.messages.map((message) => message.id));
+        const messages =
+          before?.messages?.length && changedMessages
+            ? chat.messages
+            : [
+                ...fullChat.messages.map((message) => liveMessages.get(message.id) ?? message),
+                ...chat.messages.filter((message) => !persistedIds.has(message.id)),
+              ];
+        state.chats[chatIndex] = { ...fullChat, ...chat, messages };
         state.chatMessageLoadStates[chatId] = "loaded";
       } else {
         // The chat left the list mid-fetch; don't leave a stuck "loading" behind.
         delete state.chatMessageLoadStates[chatId];
       }
     });
+    if (changedMessages) await syncChatToDatabase(get, chatId);
   } catch (error) {
     if (String(error).includes("Query returned no rows")) {
+      if (get().actions.getChatById(chatId)?.messages.length) {
+        set((state) => {
+          state.chatMessageLoadStates[chatId] = "loaded";
+        });
+        await syncChatToDatabase(get, chatId);
+        return;
+      }
       set((state) => {
         state.chats = state.chats.filter((chat) => chat.id !== chatId);
         if (state.currentChatId === chatId) {
@@ -149,7 +184,9 @@ async function loadChatMessages(set: SetAIChatStore, chatId: string) {
       return;
     }
     set((state) => {
-      state.chatMessageLoadStates[chatId] = "error";
+      if (state.chats.some((chat) => chat.id === chatId))
+        state.chatMessageLoadStates[chatId] = "error";
+      else delete state.chatMessageLoadStates[chatId];
     });
     console.error(`Failed to load messages for chat ${chatId}:`, error);
   }
@@ -161,7 +198,7 @@ async function loadChatMessages(set: SetAIChatStore, chatId: string) {
 function ensureChatMessagesLoaded(set: SetAIChatStore, get: GetAIChatStore, chatId: string) {
   const loadState = get().chatMessageLoadStates[chatId];
   if (loadState === "loaded" || loadState === "loading") return;
-  void loadChatMessages(set, chatId);
+  void loadChatMessages(set, get, chatId);
 }
 
 /** Streamed changes to one message that have not reached the store yet. */
@@ -344,11 +381,19 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
       }),
     enqueueAgentMessage: (chatId, message, images) =>
       set((state) => {
-        (state.agentMessageQueues[chatId] ??= []).push({ content: message, images });
+        (state.agentMessageQueues[chatId] ??= []).push({
+          id: createId(),
+          content: message,
+          images,
+        });
       }),
     prependAgentMessage: (chatId, message, images) =>
       set((state) => {
-        (state.agentMessageQueues[chatId] ??= []).unshift({ content: message, images });
+        (state.agentMessageQueues[chatId] ??= []).unshift({
+          id: createId(),
+          content: message,
+          images,
+        });
       }),
     dequeueAgentMessage: (chatId) => {
       const message = get().agentMessageQueues[chatId]?.[0] ?? null;
@@ -720,9 +765,10 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
           const inMemoryChats = new Map(state.chats.map((chat) => [chat.id, chat]));
           state.chats = [
             ...chats.map((chat) =>
-              state.chatMessageLoadStates[chat.id] === "loaded"
-                ? (inMemoryChats.get(chat.id) ?? (chat as Chat))
-                : (chat as Chat),
+              state.chatMessageLoadStates[chat.id] === "loaded" ||
+              state.chatMessageLoadStates[chat.id] === "loading"
+                ? (inMemoryChats.get(chat.id) ?? { ...chat, messages: [] })
+                : { ...chat, messages: [] },
             ),
             ...state.chats.filter((chat) => !persistedIds.has(chat.id)),
           ];
@@ -733,7 +779,7 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
         console.error("Failed to load chats from database:", error);
       }
     },
-    loadChatMessages: (chatId) => loadChatMessages(set, chatId),
+    loadChatMessages: (chatId) => loadChatMessages(set, get, chatId),
     clearAllChats: async () => {
       try {
         await Promise.all(get().chats.map((chat) => deleteChatFromDb(chat.id)));

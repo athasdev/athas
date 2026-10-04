@@ -148,6 +148,39 @@ describe("context references", () => {
     ]);
   });
 
+  it("never reads excluded folder contents or diffs and excludes their diagnostics", async () => {
+    const io = sources();
+    const reads: string[] = [];
+    const readText = io.readText;
+    const getFileDiff = io.getFileDiff;
+    io.readText = async (path) => {
+      reads.push(path);
+      return readText(path);
+    };
+    io.getFileDiff = async (repo, path, staged) => {
+      reads.push(path);
+      return getFileDiff(repo, path, staged);
+    };
+    const refs = await resolveContextReferences(
+      [
+        formatContextReference({ kind: "folder", path: "/w/src" }),
+        "athas-context:git-diff:working",
+        "athas-context:problems",
+      ],
+      {
+        projectRoot: "/w",
+        repoPath: "/w",
+        sources: io,
+        allowsPath: (path) => !path.endsWith("a.ts") && !path.includes("/lib"),
+      },
+    );
+    expect(reads).not.toContain("/w/src/a.ts");
+    expect(reads).not.toContain("src/a.ts");
+    expect(reads).not.toContain("/w/src/lib/b.ts");
+    expect(refs[0].content).not.toContain("lib/b.ts");
+    expect(refs[2].content).not.toContain("Unused variable");
+  });
+
   it("summarises a past chat and notes a deleted one", async () => {
     const [chat, gone] = await resolveContextReferences(
       [

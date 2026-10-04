@@ -3,6 +3,8 @@ import type * as Monaco from "monaco-editor";
 
 const mocks = vi.hoisted(() => ({
   request: vi.fn(),
+  policy: vi.fn<(root: string) => Promise<(path: string) => boolean>>(async () => () => true),
+  root: null as string | null,
   editors: vi.fn(),
   markers: vi.fn(() => [] as unknown[]),
   enabled: true,
@@ -11,6 +13,10 @@ const mocks = vi.hoisted(() => ({
   tokenListeners: new Set<(providerId: string) => void>(),
   settingsListeners: new Set<(...args: any[]) => void>(),
   chatListeners: new Set<(...args: any[]) => void>(),
+}));
+vi.mock("@/features/ai/lib/agent-context-policy", () => ({ loadAgentContextPolicy: mocks.policy }));
+vi.mock("@/features/window/stores/project.store", () => ({
+  useProjectStore: { getState: () => ({ rootFolderPath: mocks.root }), subscribe: () => () => {} },
 }));
 vi.mock("monaco-editor", () => ({
   editor: {
@@ -133,6 +139,8 @@ function setup(path = "/project/file.ts") {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.root = null;
+  mocks.policy.mockResolvedValue(() => true);
   mocks.enabled = true;
   mocks.authenticated = true;
   mocks.markers.mockReturnValue([]);
@@ -170,6 +178,38 @@ describe("Intelligence editor completions", () => {
       expect(mocks.request).not.toHaveBeenCalled();
     },
   );
+
+  it("does not send files excluded by the workspace policy", async () => {
+    mocks.root = "/project";
+    mocks.policy.mockResolvedValue(() => false);
+    expect(await setup().run()).toEqual({ items: [] });
+    expect(mocks.policy).toHaveBeenCalledWith("/project");
+    expect(mocks.request).not.toHaveBeenCalled();
+    expect(useIntelligenceCompletionStore.getState().pending).toBe(0);
+  });
+
+  it("does not send code when exclusion loading fails", async () => {
+    mocks.root = "/project";
+    mocks.policy.mockRejectedValue(new Error("Ignore file unreadable"));
+    expect(await setup().run()).toEqual({ items: [] });
+    expect(mocks.request).not.toHaveBeenCalled();
+  });
+
+  it("discards context changed while exclusions are loading", async () => {
+    mocks.root = "/project";
+    let resolve!: (policy: (path: string) => boolean) => void;
+    mocks.policy.mockReturnValue(
+      new Promise((done) => {
+        resolve = done;
+      }),
+    );
+    const state = setup();
+    const pending = state.run();
+    state.edit();
+    resolve(() => true);
+    expect(await pending).toEqual({ items: [] });
+    expect(mocks.request).not.toHaveBeenCalled();
+  });
 
   it("does not request completions when disabled or read-only", async () => {
     const state = setup();

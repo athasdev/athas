@@ -13,6 +13,8 @@ import {
   type IntelligenceCompletionPauseReason,
   useIntelligenceCompletionStore,
 } from "@/features/editor/stores/intelligence-completion.store";
+import { loadAgentContextPolicy } from "@/features/ai/lib/agent-context-policy";
+import { useProjectStore } from "@/features/window/stores/project.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import {
@@ -136,12 +138,27 @@ export function createIntelligenceCompletionsProvider(): Monaco.languages.Inline
         useSettingsStore.subscribe((next, previous) => {
           if (next.settings !== previous.settings) controller.abort();
         }),
+        useProjectStore.subscribe((next, previous) => {
+          if (next.rootFolderPath !== previous.rootFolderPath) controller.abort();
+        }),
         model.onDidChangeContent(() => controller.abort()),
         model.onWillDispose(() => controller.abort()),
       ];
       const status = useIntelligenceCompletionStore.getState().actions;
       status.requestStarted();
       try {
+        const projectRoot = useProjectStore.getState().rootFolderPath;
+        if (projectRoot) {
+          const allowsPath = await loadAgentContextPolicy(projectRoot);
+          if (!allowsPath(filePath)) return { items: [] };
+        }
+        if (
+          controller.signal.aborted ||
+          token.isCancellationRequested ||
+          model.isDisposed() ||
+          model.getVersionId() !== version
+        )
+          return { items: [] };
         const { editedText } = await requestInlineEdit(
           {
             feature: "autocomplete",

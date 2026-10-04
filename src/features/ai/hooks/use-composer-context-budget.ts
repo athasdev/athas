@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { getComposerContextBudget } from "@/features/ai/lib/composer-context-budget";
 import { selectChatMode } from "@/features/ai/lib/composer-modes";
 import { loadContextProjectRules } from "@/features/ai/lib/project-rules";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { getProviderById } from "@/features/ai/types/providers.types";
 import type { EditorSelectionContext } from "@/features/ai/types/ai-context.types";
@@ -33,6 +34,7 @@ export function useComposerContextBudget({
   selectedFilesPaths: Set<string>;
   editorContexts: EditorSelectionContext[];
 }): ContextBudget | null {
+  const userRules = useSettingsStore((state) => state.settings.aiUserRules);
   const mode = useAIChatStore((state) => selectChatMode(state, chatId));
   const messages = useAIChatStore(
     (state) => state.chats.find((chat) => chat.id === chatId)?.messages ?? EMPTY_MESSAGES,
@@ -53,21 +55,24 @@ export function useComposerContextBudget({
     .join("\n");
 
   useEffect(() => {
-    if (!enabled || !projectRoot) {
+    if (!enabled) {
       setRules(null);
       return;
     }
     let cancelled = false;
-    void loadContextProjectRules({
-      projectRoot,
-      selectedProjectFiles: rulePaths ? rulePaths.split("\n") : [],
-    }).then((loaded) => {
+    void loadContextProjectRules(
+      {
+        projectRoot: projectRoot ?? undefined,
+        selectedProjectFiles: rulePaths ? rulePaths.split("\n") : [],
+      },
+      { userRules },
+    ).then((loaded) => {
       if (!cancelled) setRules(loaded ? { text: loaded.text, truncated: loaded.truncated } : null);
     });
     return () => {
       cancelled = true;
     };
-  }, [enabled, projectRoot, rulePaths]);
+  }, [enabled, projectRoot, rulePaths, userRules]);
 
   return useMemo(
     () =>

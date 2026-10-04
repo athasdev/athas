@@ -218,29 +218,31 @@ impl ChatHistoryRepository {
       updated_at: i64,
    ) -> Result<(), String> {
       let conn = self.open_connection()?;
-      match data {
-         Some(data) => conn.execute(
-            "INSERT OR REPLACE INTO chat_checkpoints (chat_id, data, updated_at) VALUES (?1, ?2, \
-             ?3)",
-            params![chat_id, data, updated_at],
-         ),
-         None => conn.execute(
-            "DELETE FROM chat_checkpoints WHERE chat_id = ?1",
-            params![chat_id],
-         ),
-      }
-      .map_err(|e| format!("Failed to save chat checkpoints: {}", e))?;
+      conn
+         .execute(
+            "INSERT INTO chat_checkpoints (chat_id, data, updated_at)
+             SELECT ?1, ?2, ?3 WHERE EXISTS (SELECT 1 FROM chats WHERE id = ?1)
+             ON CONFLICT(chat_id) DO UPDATE SET data = excluded.data, updated_at = \
+             excluded.updated_at
+             WHERE excluded.updated_at >= chat_checkpoints.updated_at",
+            params![
+               chat_id,
+               data.unwrap_or_else(|| "null".to_string()),
+               updated_at
+            ],
+         )
+         .map_err(|e| format!("Failed to save chat checkpoints: {}", e))?;
       Ok(())
    }
 
    pub fn load_checkpoints(&self, chat_id: &str) -> Result<Option<String>, String> {
       let conn = self.open_connection()?;
       match conn.query_row(
-         "SELECT data FROM chat_checkpoints WHERE chat_id = ?1",
+         "SELECT NULLIF(data, 'null') FROM chat_checkpoints WHERE chat_id = ?1",
          params![chat_id],
          |row| row.get(0),
       ) {
-         Ok(data) => Ok(Some(data)),
+         Ok(data) => Ok(data),
          Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
          Err(e) => Err(format!("Failed to load chat checkpoints: {}", e)),
       }
@@ -252,6 +254,17 @@ impl ChatHistoryRepository {
       messages: Vec<MessageData>,
       tool_calls: Vec<ToolCallData>,
    ) -> Result<(), String> {
+      if messages.iter().any(|message| message.chat_id != chat.id) {
+         return Err("A message belongs to a different chat".to_string());
+      }
+      let message_ids: std::collections::HashSet<&str> =
+         messages.iter().map(|message| message.id.as_str()).collect();
+      if tool_calls
+         .iter()
+         .any(|call| !message_ids.contains(call.message_id.as_str()))
+      {
+         return Err("A tool call belongs to a message outside this chat snapshot".to_string());
+      }
       let conn = self.open_connection()?;
 
       conn
@@ -259,9 +272,16 @@ impl ChatHistoryRepository {
          .map_err(|e| format!("Failed to begin transaction: {}", e))?;
 
       match conn.execute(
-         "INSERT OR REPLACE INTO chats (id, title, created_at, last_message_at, agent_id, \
-          acp_session_id, workspace_path, provider_id, model_id, branch, is_pinned, archived_at, \
-          session_settings) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
+         "INSERT INTO chats (id, title, created_at, last_message_at, agent_id, acp_session_id, \
+          workspace_path, provider_id, model_id, branch, is_pinned, archived_at, \
+          session_settings) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)
+          ON CONFLICT(id) DO UPDATE SET title = excluded.title, created_at = excluded.created_at,
+          last_message_at = excluded.last_message_at, agent_id = excluded.agent_id,
+          acp_session_id = excluded.acp_session_id, workspace_path = excluded.workspace_path,
+          provider_id = excluded.provider_id, model_id = excluded.model_id, branch = \
+          excluded.branch,
+          is_pinned = excluded.is_pinned, archived_at = excluded.archived_at,
+          session_settings = excluded.session_settings",
          params![
             chat.id,
             chat.title,
@@ -449,16 +469,32 @@ impl ChatHistoryRepository {
    }
 
    pub fn delete_chat(&self, chat_id: &str) -> Result<(), String> {
-      let conn = self.open_connection()?;
-      conn
-         .execute("DELETE FROM chats WHERE id = ?1", params![chat_id])
-         .map_err(|e| format!("Failed to delete chat: {}", e))?;
-      conn
+      let mut conn = self.open_connection()?;
+      let transaction = conn
+         .transaction()
+         .map_err(|e| format!("Failed to begin chat deletion: {e}"))?;
+      transaction
+         .execute(
+            "DELETE FROM tool_calls WHERE message_id IN (SELECT id FROM messages WHERE chat_id = \
+             ?1)",
+            params![chat_id],
+         )
+         .map_err(|e| format!("Failed to delete chat tool calls: {e}"))?;
+      transaction
+         .execute("DELETE FROM messages WHERE chat_id = ?1", params![chat_id])
+         .map_err(|e| format!("Failed to delete chat messages: {e}"))?;
+      transaction
          .execute(
             "DELETE FROM chat_checkpoints WHERE chat_id = ?1",
             params![chat_id],
          )
-         .map_err(|e| format!("Failed to delete chat checkpoints: {}", e))?;
+         .map_err(|e| format!("Failed to delete chat checkpoints: {e}"))?;
+      transaction
+         .execute("DELETE FROM chats WHERE id = ?1", params![chat_id])
+         .map_err(|e| format!("Failed to delete chat: {e}"))?;
+      transaction
+         .commit()
+         .map_err(|e| format!("Failed to commit chat deletion: {e}"))?;
       Ok(())
    }
 
@@ -513,8 +549,12 @@ impl ChatHistoryRepository {
             .map_err(|e| format!("Failed to create chat history directory: {}", e))?;
       }
 
-      Connection::open(&self.db_path)
-         .map_err(|e| format!("Failed to open chat history database: {}", e))
+      let conn = Connection::open(&self.db_path)
+         .map_err(|e| format!("Failed to open chat history database: {}", e))?;
+      conn
+         .pragma_update(None, "foreign_keys", true)
+         .map_err(|e| format!("Failed to enable chat history constraints: {e}"))?;
+      Ok(conn)
    }
 
    fn load_tool_calls(
@@ -671,6 +711,12 @@ mod tests {
       let repository = ChatHistoryRepository::new(directory.path().join("history.db"));
       repository.initialize().unwrap();
       assert_eq!(repository.load_checkpoints("chat").unwrap(), None);
+      let chat: ChatData = serde_json::from_value(serde_json::json!({
+         "id": "chat", "title": "Chat", "created_at": 1, "last_message_at": 2,
+         "is_pinned": false
+      }))
+      .unwrap();
+      repository.save_chat(chat, vec![], vec![]).unwrap();
 
       repository
          .save_checkpoints("chat", Some("[1]".to_string()), 1)
@@ -691,5 +737,197 @@ mod tests {
          .unwrap();
       repository.delete_chat("chat").unwrap();
       assert_eq!(repository.load_checkpoints("chat").unwrap(), None);
+   }
+
+   fn sample_chat(id: &str) -> ChatData {
+      serde_json::from_value(serde_json::json!({
+         "id": id, "title": "Chat", "created_at": 1, "last_message_at": 2, "is_pinned": false
+      }))
+      .unwrap()
+   }
+
+   fn sample_message(chat_id: &str, id: &str) -> MessageData {
+      serde_json::from_value(serde_json::json!({
+         "id": id, "chat_id": chat_id, "role": "assistant", "content": "Reply",
+         "timestamp": 2, "is_streaming": false, "is_tool_use": false
+      }))
+      .unwrap()
+   }
+
+   fn sample_tool_call(message_id: &str) -> ToolCallData {
+      serde_json::from_value(serde_json::json!({
+         "message_id": message_id, "name": "read_file", "timestamp": 2, "is_complete": true
+      }))
+      .unwrap()
+   }
+
+   #[test]
+   fn ignores_checkpoint_saves_for_missing_and_deleted_chats() {
+      let directory = tempfile::tempdir().unwrap();
+      let repository = ChatHistoryRepository::new(directory.path().join("history.db"));
+      repository.initialize().unwrap();
+      repository
+         .save_checkpoints("missing", Some("snapshots".to_string()), 1)
+         .unwrap();
+      assert_eq!(repository.load_checkpoints("missing").unwrap(), None);
+      repository
+         .save_chat(sample_chat("chat"), vec![], vec![])
+         .unwrap();
+      repository
+         .save_checkpoints("chat", Some("snapshots".to_string()), 2)
+         .unwrap();
+      repository.delete_chat("chat").unwrap();
+      repository
+         .save_checkpoints("chat", Some("late snapshots".to_string()), 3)
+         .unwrap();
+      assert_eq!(repository.load_checkpoints("chat").unwrap(), None);
+      let conn = repository.open_connection().unwrap();
+      assert_eq!(
+         conn
+            .query_row("SELECT COUNT(*) FROM chat_checkpoints", [], |row| row
+               .get::<_, i64>(0))
+            .unwrap(),
+         0
+      );
+   }
+
+   #[test]
+   fn keeps_newer_checkpoints_and_does_not_resurrect_a_cleared_snapshot() {
+      let directory = tempfile::tempdir().unwrap();
+      let repository = ChatHistoryRepository::new(directory.path().join("history.db"));
+      repository.initialize().unwrap();
+      repository
+         .save_chat(sample_chat("chat"), vec![], vec![])
+         .unwrap();
+      repository
+         .save_checkpoints("chat", Some("newer".to_string()), 20)
+         .unwrap();
+      repository
+         .save_checkpoints("chat", Some("older".to_string()), 10)
+         .unwrap();
+      assert_eq!(
+         repository.load_checkpoints("chat").unwrap().as_deref(),
+         Some("newer")
+      );
+      repository.save_checkpoints("chat", None, 30).unwrap();
+      repository
+         .save_checkpoints("chat", Some("late".to_string()), 25)
+         .unwrap();
+      assert_eq!(repository.load_checkpoints("chat").unwrap(), None);
+      repository
+         .save_checkpoints("chat", Some("next turn".to_string()), 40)
+         .unwrap();
+      repository.save_checkpoints("chat", None, 35).unwrap();
+      assert_eq!(
+         repository.load_checkpoints("chat").unwrap().as_deref(),
+         Some("next turn")
+      );
+   }
+
+   #[test]
+   fn replaces_streamed_tool_calls_and_deletes_only_the_chosen_chats_history() {
+      let directory = tempfile::tempdir().unwrap();
+      let repository = ChatHistoryRepository::new(directory.path().join("history.db"));
+      repository.initialize().unwrap();
+      for id in ["one", "two"] {
+         repository
+            .save_chat(
+               sample_chat(id),
+               vec![sample_message(id, id)],
+               vec![sample_tool_call(id)],
+            )
+            .unwrap();
+      }
+      repository
+         .save_checkpoints("one", Some("checkpoint".to_string()), 1)
+         .unwrap();
+      let mut reply = sample_message("one", "one");
+      reply.content = "Updated reply".to_string();
+      repository
+         .save_chat(
+            sample_chat("one"),
+            vec![reply],
+            vec![sample_tool_call("one")],
+         )
+         .unwrap();
+      assert_eq!(repository.load_chat("one").unwrap().tool_calls.len(), 1);
+      assert_eq!(repository.get_stats().unwrap().total_tool_calls, 2);
+      assert_eq!(
+         repository.load_checkpoints("one").unwrap().as_deref(),
+         Some("checkpoint")
+      );
+      repository.delete_chat("one").unwrap();
+      let stats = repository.get_stats().unwrap();
+      assert_eq!(stats.total_chats, 1);
+      assert_eq!(stats.total_messages, 1);
+      assert_eq!(stats.total_tool_calls, 1);
+      assert_eq!(repository.load_chat("two").unwrap().messages.len(), 1);
+      assert_eq!(repository.load_checkpoints("one").unwrap(), None);
+   }
+
+   #[test]
+   fn rejects_foreign_messages_and_tool_calls_without_changing_either_chat() {
+      let directory = tempfile::tempdir().unwrap();
+      let repository = ChatHistoryRepository::new(directory.path().join("history.db"));
+      repository.initialize().unwrap();
+      for id in ["one", "two"] {
+         repository
+            .save_chat(sample_chat(id), vec![sample_message(id, id)], vec![])
+            .unwrap();
+      }
+      assert!(
+         repository
+            .save_chat(
+               sample_chat("one"),
+               vec![sample_message("two", "foreign")],
+               vec![]
+            )
+            .is_err()
+      );
+      assert!(
+         repository
+            .save_chat(
+               sample_chat("one"),
+               vec![sample_message("one", "one")],
+               vec![sample_tool_call("two")]
+            )
+            .is_err()
+      );
+      assert_eq!(repository.load_chat("one").unwrap().messages[0].id, "one");
+      assert_eq!(repository.load_chat("two").unwrap().messages[0].id, "two");
+      assert_eq!(repository.get_stats().unwrap().total_tool_calls, 0);
+   }
+
+   #[test]
+   fn rolls_back_the_whole_deletion_when_one_statement_fails() {
+      let directory = tempfile::tempdir().unwrap();
+      let repository = ChatHistoryRepository::new(directory.path().join("history.db"));
+      repository.initialize().unwrap();
+      repository
+         .save_chat(
+            sample_chat("chat"),
+            vec![sample_message("chat", "reply")],
+            vec![sample_tool_call("reply")],
+         )
+         .unwrap();
+      repository
+         .save_checkpoints("chat", Some("snapshot".to_string()), 1)
+         .unwrap();
+      repository
+         .open_connection()
+         .unwrap()
+         .execute_batch(
+            "CREATE TRIGGER fail_chat_deletion BEFORE DELETE ON chats BEGIN SELECT RAISE(ABORT, \
+             'blocked'); END;",
+         )
+         .unwrap();
+      assert!(repository.delete_chat("chat").is_err());
+      let loaded = repository.load_chat("chat").unwrap();
+      assert_eq!(loaded.messages.len(), 1);
+      assert_eq!(loaded.tool_calls.len(), 1);
+      assert_eq!(
+         repository.load_checkpoints("chat").unwrap().as_deref(),
+         Some("snapshot")
+      );
    }
 }
