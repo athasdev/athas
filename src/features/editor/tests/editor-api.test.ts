@@ -1,17 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import type { editorAPI as editorAPIInstance } from "../extensions/api";
-import type { useBufferStore as useBufferStoreHook } from "../stores/buffer.store";
-import type { useEditorStateStore as useEditorStateStoreHook } from "../stores/state.store";
-import type { useHistoryStore as useHistoryStoreHook } from "../stores/history.store";
-import type { useEditorSettingsStore as useEditorSettingsStoreHook } from "../stores/settings.store";
+import { editorAPI } from "../extensions/api";
+import { useBufferStore } from "../stores/buffer.store";
+import { useEditorStateStore } from "../stores/state.store";
+import { useHistoryStore } from "../stores/history.store";
+import { useEditorSettingsStore } from "../stores/settings.store";
 import { calculateCursorPositionFromContent } from "../utils/position";
 import type { EditorContent } from "@/features/panes/types/pane-content.types";
-
-type EditorAPIInstance = typeof editorAPIInstance;
-type BufferStoreHook = typeof useBufferStoreHook;
-type EditorStateStoreHook = typeof useEditorStateStoreHook;
-type HistoryStoreHook = typeof useHistoryStoreHook;
-type EditorSettingsStoreHook = typeof useEditorSettingsStoreHook;
 
 const createMockStorage = () => {
   const storage = new Map<string, string>();
@@ -52,13 +46,8 @@ const makeBuffer = (content: string, language = "typescript"): EditorContent => 
 
 describe("editor API model operations", () => {
   const onChange = vi.fn();
-  let editorAPI: EditorAPIInstance;
-  let useBufferStore: BufferStoreHook;
-  let useEditorStateStore: EditorStateStoreHook;
-  let useHistoryStore: HistoryStoreHook;
-  let useEditorSettingsStore: EditorSettingsStoreHook;
 
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.stubGlobal("localStorage", createMockStorage());
     const styleHost = { appendChild: vi.fn() };
     const documentStub = {
@@ -85,12 +74,6 @@ describe("editor API model operations", () => {
     });
     vi.stubGlobal("HTMLTextAreaElement", class MockTextAreaElement {});
     vi.stubGlobal("document", documentStub);
-
-    ({ editorAPI } = await import("../extensions/api"));
-    ({ useBufferStore } = await import("../stores/buffer.store"));
-    ({ useEditorStateStore } = await import("../stores/state.store"));
-    ({ useHistoryStore } = await import("../stores/history.store"));
-    ({ useEditorSettingsStore } = await import("../stores/settings.store"));
 
     onChange.mockReset();
     editorAPI.setTextareaRef?.(null);

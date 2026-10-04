@@ -75,4 +75,79 @@ describe("command palette results", () => {
 
     expect(sections[0]?.actions.map((item) => item.id)).toEqual(["open-settings", "open-file"]);
   });
+
+  it("files unknown and extension categories under Integrations", () => {
+    expect(getCommandPaletteFilter(action("custom", "My Extension"))).toBe("extensions");
+
+    const sections = getCommandPaletteSections({
+      actions: [action("custom", "My Extension"), action("save", "File")],
+      filter: "extensions",
+      query: "",
+      recentActionIds: [],
+      showRecent: true,
+    });
+
+    expect(sections).toEqual([
+      {
+        id: "extensions",
+        label: "Integrations",
+        actions: [expect.objectContaining({ id: "custom" })],
+      },
+    ]);
+  });
+
+  it("ignores recent history when persistent commands are off", () => {
+    const sections = getCommandPaletteSections({
+      actions: [action("one", "File"), action("two", "Git")],
+      filter: "all",
+      query: "",
+      recentActionIds: ["two"],
+      showRecent: false,
+    });
+
+    expect(sections.map((section) => section.id)).toEqual(["commands"]);
+    expect(sections[0]?.actions.map((item) => item.id)).toEqual(["one", "two"]);
+  });
+
+  it("matches descriptions and categories, ignoring punctuation and case", () => {
+    const actions = [
+      action("toggle-minimap", "View", "Show or hide the minimap"),
+      action("pull", "Git", "Pull changes"),
+    ];
+    const search = (query: string) =>
+      flattenCommandPaletteSections(
+        getCommandPaletteSections({
+          actions,
+          filter: "all",
+          query,
+          recentActionIds: [],
+          showRecent: true,
+        }),
+      ).map((item) => item.id);
+
+    expect(search("HIDE the")).toEqual(["toggle-minimap"]);
+    expect(search("git")).toEqual(["pull"]);
+    expect(search("mini-map")).toEqual(["toggle-minimap"]);
+  });
+
+  it("returns no sections when nothing matches", () => {
+    expect(
+      getCommandPaletteSections({
+        actions: [action("one", "File")],
+        filter: "all",
+        query: "nothing",
+        recentActionIds: ["one"],
+        showRecent: true,
+      }),
+    ).toEqual([]);
+    expect(
+      getCommandPaletteSections({
+        actions: [action("one", "File")],
+        filter: "git",
+        query: "",
+        recentActionIds: [],
+        showRecent: true,
+      }),
+    ).toEqual([]);
+  });
 });

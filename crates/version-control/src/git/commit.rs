@@ -1,6 +1,6 @@
 use crate::git::{GitCommit, IntoStringError, RepositoryHost};
 use anyhow::{Context, Result};
-use git2::{Repository, Sort};
+use git2::{Commit, ErrorCode, Repository, Sort};
 
 pub fn git_commit(repo_path: String, message: String) -> Result<(), String> {
    _git_commit(repo_path, message).into_string_error()
@@ -23,13 +23,21 @@ fn _git_commit(repo_path: String, message: String) -> Result<()> {
    let tree_id = index.write_tree().context("Failed to write tree")?;
    let tree = repo.find_tree(tree_id).context("Failed to find tree")?;
    let sig = repo.signature().context("Failed to get signature")?;
-   let head = repo.head().context("Failed to get HEAD")?;
-   let parent_commit = head
-      .peel_to_commit()
-      .context("Failed to get parent commit")?;
+   // A freshly initialized repository has no HEAD commit yet; its first
+   // commit is a root commit without parents.
+   let parent_commit = match repo.head() {
+      Ok(head) => Some(
+         head
+            .peel_to_commit()
+            .context("Failed to get parent commit")?,
+      ),
+      Err(error) if error.code() == ErrorCode::UnbornBranch => None,
+      Err(error) => return Err(error).context("Failed to get HEAD"),
+   };
+   let parents: Vec<&Commit> = parent_commit.iter().collect();
 
    repo
-      .commit(Some("HEAD"), &sig, &sig, &message, &tree, &[&parent_commit])
+      .commit(Some("HEAD"), &sig, &sig, &message, &tree, &parents)
       .context("Failed to create commit")?;
 
    Ok(())

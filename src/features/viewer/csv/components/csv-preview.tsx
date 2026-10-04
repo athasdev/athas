@@ -4,25 +4,8 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { hasTextContent } from "@/features/panes/types/pane-content.types";
 import { Button } from "@/ui/button";
 import Select from "@/ui/select";
-import { parseCsv } from "../lib/csv-utils";
+import { type CsvDelimiter, detectCsvDelimiter, formatCsv, parseCsv } from "../lib/csv-utils";
 import { CsvTableView } from "./csv-table-view";
-
-type Delim = "," | "\t" | ";" | "|";
-
-function autodetectDelimiter(text: string): Delim {
-  // Sample first ~50 lines to score delimiters
-  const lines = text.split("\n").slice(0, 50);
-  const candidates: Delim[] = [",", "\t", ";", "|"];
-  const scores = candidates.map((d) => {
-    const counts = lines.map((l) => (l.match(new RegExp(`\\${d}`, "g")) || []).length);
-    const mean = counts.reduce((a, b) => a + b, 0) / Math.max(1, counts.length);
-    const variance = counts.reduce((a, b) => a + (b - mean) ** 2, 0) / Math.max(1, counts.length);
-    return { d, mean, variance };
-  });
-  // Prefer higher mean (more columns) and lower variance (consistent)
-  scores.sort((a, b) => b.mean - a.mean || a.variance - b.variance);
-  return scores[0]?.d || ",";
-}
 
 export function CsvPreview() {
   const sourceContent = useBufferStore((state) => {
@@ -36,21 +19,23 @@ export function CsvPreview() {
       : activeBuffer;
     return sourceBuffer && hasTextContent(sourceBuffer) ? sourceBuffer.content : "";
   });
-  const [delimiter, setDelimiter] = useState<Delim | "auto">("auto");
+  const [delimiter, setDelimiter] = useState<CsvDelimiter | "auto">("auto");
   const [hasHeader, setHasHeader] = useState(true);
 
-  const { headers, rows } = useMemo(() => {
-    const delim = delimiter === "auto" ? autodetectDelimiter(sourceContent) : delimiter;
-    return parseCsv(sourceContent, delim, hasHeader);
-  }, [sourceContent, delimiter, hasHeader]);
+  const resolvedDelimiter = useMemo(
+    () => (delimiter === "auto" ? detectCsvDelimiter(sourceContent) : delimiter),
+    [sourceContent, delimiter],
+  );
+  const { headers, rows } = useMemo(
+    () => parseCsv(sourceContent, resolvedDelimiter, hasHeader),
+    [sourceContent, resolvedDelimiter, hasHeader],
+  );
 
   const handleCopyCsv = async () => {
     try {
-      const sep = delimiter === "\t" ? "\t" : delimiter;
-      const head = headers.join(sep);
-      const body = rows.map((r) => r.map((c) => String(c ?? "")).join(sep)).join("\n");
-      const text = hasHeader ? `${head}\n${body}` : body;
-      await navigator.clipboard.writeText(text);
+      await navigator.clipboard.writeText(
+        formatCsv(hasHeader ? headers : null, rows, resolvedDelimiter),
+      );
     } catch {
       // no-op
     }

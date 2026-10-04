@@ -37,6 +37,21 @@ jobs:
       - name: Run frontend checks
         run: bash scripts/check/frontend.sh
 
+      - name: Run frontend tests with coverage
+        run: vp test run --coverage
+
+      - name: Summarize frontend coverage
+        if: ${{ !cancelled() && hashFiles('coverage/coverage-summary.json') != '' }}
+        run: bun scripts/check/coverage-summary.ts "Frontend coverage" coverage/coverage-summary.json >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload frontend coverage
+        if: ${{ !cancelled() && hashFiles('coverage/lcov.info') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: coverage/
+          retention-days: 14
+
   rust:
     if: github.repository == 'athasdev/athas'
     name: Rust — fmt, check, clippy, test
@@ -49,7 +64,10 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@nightly
         with:
-          components: rustfmt, clippy
+          components: rustfmt, clippy, llvm-tools-preview
+
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
@@ -76,8 +94,23 @@ jobs:
       - name: Install dependencies
         run: vp install --ignore-scripts && bun scripts/postinstall.ts
 
-      - name: Run Rust checks
-        run: bash scripts/check/rust.sh
+      - name: Run Rust checks with coverage
+        run: bash scripts/check/rust.sh --coverage
+
+      - name: Summarize Rust coverage
+        if: ${{ !cancelled() && hashFiles('target/llvm-cov/summary.json') != '' }}
+        run: bun scripts/check/coverage-summary.ts "Rust coverage" target/llvm-cov/summary.json >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Rust coverage
+        if: ${{ !cancelled() && hashFiles('target/llvm-cov/lcov.info') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-coverage
+          path: |
+            target/llvm-cov/lcov.info
+            target/llvm-cov/summary.json
+            target/llvm-cov/html/
+          retention-days: 14
 
   audit:
     if: github.repository == 'athasdev/athas'

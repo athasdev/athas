@@ -1598,3 +1598,58 @@ impl Drop for LspManager {
       self.shutdown();
    }
 }
+
+#[cfg(test)]
+mod tests {
+   use super::*;
+   use crate::types::LspError;
+
+   fn error_code(error: anyhow::Error) -> Option<String> {
+      LspError::from(error).code
+   }
+
+   #[test]
+   fn missing_bare_command_reports_an_unresolved_tool() {
+      let error =
+         LspManager::validate_server_path(Path::new("definitely-not-a-real-lsp-xyz")).unwrap_err();
+      assert!(
+         error
+            .to_string()
+            .contains("could not resolve an installed binary")
+      );
+      assert_eq!(error_code(error).as_deref(), Some("tool_not_found"));
+   }
+
+   #[test]
+   fn missing_absolute_binary_reports_its_path() {
+      let temp = tempfile::tempdir().unwrap();
+      let missing = temp.path().join("bin").join("missing-server");
+
+      let error = LspManager::validate_server_path(&missing).unwrap_err();
+
+      assert!(error.to_string().contains("binary not found"));
+      assert!(error.to_string().contains("missing-server"));
+      assert_eq!(error_code(error).as_deref(), Some("tool_not_found"));
+   }
+
+   #[cfg(unix)]
+   #[test]
+   fn requires_native_binaries_to_be_executable_but_not_js_entrypoints() {
+      use std::os::unix::fs::PermissionsExt;
+
+      let temp = tempfile::tempdir().unwrap();
+      let native = temp.path().join("native-server");
+      let script = temp.path().join("server.mjs");
+      fs::write(&native, "").unwrap();
+      fs::write(&script, "").unwrap();
+      fs::set_permissions(&native, fs::Permissions::from_mode(0o644)).unwrap();
+      fs::set_permissions(&script, fs::Permissions::from_mode(0o644)).unwrap();
+
+      let error = LspManager::validate_server_path(&native).unwrap_err();
+      assert_eq!(error_code(error).as_deref(), Some("tool_not_executable"));
+      assert!(LspManager::validate_server_path(&script).is_ok());
+
+      fs::set_permissions(&native, fs::Permissions::from_mode(0o755)).unwrap();
+      assert!(LspManager::validate_server_path(&native).is_ok());
+   }
+}

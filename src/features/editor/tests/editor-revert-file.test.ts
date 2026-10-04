@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import type { EditorContent } from "@/features/panes/types/pane-content.types";
-import type { useBufferStore as useBufferStoreHook } from "../stores/buffer.store";
+import { revertActiveFile } from "@/features/keymaps/commands/file-command-actions";
+import { useBufferStore } from "../stores/buffer.store";
 
 const mocks = vi.hoisted(() => ({
   readFileContent: vi.fn(),
@@ -55,10 +56,7 @@ function makeDirtyEditorBuffer(): EditorContent {
 }
 
 describe("editor revert file command", () => {
-  let useBufferStore: typeof useBufferStoreHook;
-  let revertActiveFile: () => Promise<void>;
-
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.stubGlobal("localStorage", createMockStorage());
     vi.stubGlobal("window", {
       __TAURI_INTERNALS__: {
@@ -75,9 +73,6 @@ describe("editor revert file command", () => {
 
     mocks.readFileContent.mockResolvedValue("disk");
 
-    ({ useBufferStore } = await import("../stores/buffer.store"));
-    ({ revertActiveFile } = await import("@/features/keymaps/commands/file-command-actions"));
-
     useBufferStore.setState({
       activeBufferId: "revert-buffer",
       buffers: [makeDirtyEditorBuffer()],
@@ -87,7 +82,7 @@ describe("editor revert file command", () => {
   });
 
   afterEach(() => {
-    useBufferStore?.setState({
+    useBufferStore.setState({
       activeBufferId: null,
       buffers: [],
       pendingClose: null,
