@@ -520,8 +520,8 @@ const DiagnosticsPane = ({ diagnostics, onDiagnosticClick }: DiagnosticsPaneProp
 
       if (result.applied) {
         showToast({
-          message: `Applied: ${action.title}`,
-          type: "success",
+          message: result.reason || `Applied: ${action.title}`,
+          type: result.reason ? "warning" : "success",
         });
         return;
       }

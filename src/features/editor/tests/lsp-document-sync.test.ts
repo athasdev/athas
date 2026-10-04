@@ -48,6 +48,7 @@ describe("LSP incremental document synchronization", () => {
     openingDocuments: Map<string, Promise<void>>;
     documentLifecycleGenerations: Map<string, number>;
     documentVersions: Map<string, number>;
+    documentChangeSendsPending: Set<string>;
     documentChangeQueues: Map<string, EditorDocumentChangeEvent[]>;
     documentChangeTimers: Map<string, ReturnType<typeof setTimeout>>;
     documentChangeSendChains: Map<string, Promise<void>>;
@@ -69,6 +70,7 @@ describe("LSP incremental document synchronization", () => {
     state.closingDocuments.clear();
     state.openingDocuments.clear();
     state.documentLifecycleGenerations.clear();
+    state.documentChangeSendsPending.clear();
     state.documentVersions.clear();
     state.documentVersions.set(filePath, 1);
     state.documentChangeQueues.clear();
@@ -98,6 +100,41 @@ describe("LSP incremental document synchronization", () => {
   });
 
   afterEach(() => vi.useRealTimers());
+
+  it("does not attach an old change acknowledgement to a reopened document", async () => {
+    let finish: (version: number) => void = () => {};
+    vi.mocked(invoke).mockImplementationOnce(
+      () =>
+        new Promise<number>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    publishEditorDocumentChange(event(2, 0, "a"));
+    await vi.advanceTimersByTimeAsync(40);
+    state.documentLifecycleGenerations.set(filePath, 2);
+    state.documentVersions.set(filePath, 7);
+    finish(2);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(state.documentVersions.get(filePath)).toBe(7);
+  });
+
+  it("does not retry old failed deltas after a document generation changes", async () => {
+    let fail: (error: Error) => void = () => {};
+    vi.mocked(invoke).mockImplementationOnce(
+      () =>
+        new Promise<number>((resolve, reject) => {
+          fail = reject;
+        }),
+    );
+    publishEditorDocumentChange(event(2, 0, "a"));
+    await vi.advanceTimersByTimeAsync(40);
+    state.documentLifecycleGenerations.set(filePath, 2);
+    fail(new Error("Retired document"));
+    await vi.advanceTimersByTimeAsync(100);
+    expect(invoke).toHaveBeenCalledOnce();
+    expect(state.documentChangeQueues.has(filePath)).toBe(false);
+  });
 
   it("coalesces consecutive editor events into one IPC request without full content", async () => {
     publishEditorDocumentChange(event(2, 0, "a"));

@@ -1,5 +1,5 @@
 use super::{
-   client::{LspClient, LspServerEnv},
+   client::{LspClient, LspInitialization, LspServerEnv},
    config::{LspRegistry, LspSettings},
    document_sync::{DocumentChangeBatch, DocumentSessions, PendingDocumentChanges, SyncMode},
    manager_state::{LspInstance, WorkspaceClients},
@@ -194,7 +194,7 @@ impl LspManager {
       server_path_override: Option<String>,
       server_args_override: Option<Vec<String>>,
       server_env_override: Option<LspServerEnv>,
-      initialization_options: Option<serde_json::Value>,
+      initialization: LspInitialization,
    ) -> Result<()> {
       log::info!("Starting LSP for workspace: {:?}", workspace_path);
 
@@ -228,6 +228,18 @@ impl LspManager {
 
       Self::validate_server_path(&server_path)?;
 
+      if self
+         .workspace_clients
+         .get_workspace_server(
+            &workspace_path,
+            &server_name,
+            initialization.workspace_edit_owner.as_deref(),
+         )
+         .is_some()
+      {
+         return Ok(());
+      }
+
       let root_uri = Url::from_file_path(&workspace_path)
          .map_err(|_| anyhow::anyhow!("Invalid workspace path"))?;
 
@@ -242,22 +254,7 @@ impl LspManager {
       .await?;
 
       // Initialize the client
-      client
-         .initialize(root_uri, initialization_options.clone())
-         .await?;
-
-      // Check if LSP already running for this workspace+language
-      if self
-         .workspace_clients
-         .contains_workspace_server(&workspace_path, &server_name)
-      {
-         log::info!(
-            "LSP '{}' already running for workspace: {:?}",
-            server_name,
-            workspace_path
-         );
-         return Ok(());
-      }
+      client.initialize(root_uri, initialization.clone()).await?;
 
       self.workspace_clients.insert(
          workspace_path,
@@ -285,7 +282,7 @@ impl LspManager {
       server_path_override: Option<String>,
       server_args_override: Option<Vec<String>>,
       server_env_override: Option<LspServerEnv>,
-      initialization_options: Option<serde_json::Value>,
+      initialization: LspInitialization,
    ) -> Result<()> {
       log::info!("Starting LSP for file: {:?}", file_path);
 
@@ -314,11 +311,12 @@ impl LspManager {
       Self::validate_server_path(&server_path)?;
 
       // Check if LSP already running for this workspace+language
-      if let Some(ref_count) =
-         self
-            .workspace_clients
-            .track_file(&workspace_path, &server_name, &file_path)
-      {
+      if let Some(ref_count) = self.workspace_clients.track_file(
+         &workspace_path,
+         &server_name,
+         &file_path,
+         initialization.workspace_edit_owner.as_deref(),
+      ) {
          log::info!(
             "Reusing existing LSP '{}' for file (ref_count: {})",
             server_name,
@@ -341,9 +339,7 @@ impl LspManager {
       .await?;
 
       // Initialize the client
-      client
-         .initialize(root_uri, initialization_options.clone())
-         .await?;
+      client.initialize(root_uri, initialization.clone()).await?;
 
       // Store the new instance
       self.workspace_clients.insert(
@@ -1368,18 +1364,26 @@ impl LspManager {
       client.workspace_execute_command(params).await
    }
 
+   pub fn validate_workspace_edit_owner(&self, client_id: &str, owner: &str) -> bool {
+      self
+         .workspace_clients
+         .get_client_by_id(client_id)
+         .is_some_and(|client| client.workspace_edit_owner_matches(owner))
+   }
+
    pub fn respond_workspace_edit(
       &self,
       client_id: &str,
       request_id: Value,
       applied: bool,
       failure_reason: Option<String>,
+      failed_change: Option<u32>,
    ) -> Result<()> {
       let client = self
          .workspace_clients
          .get_client_by_id(client_id)
          .ok_or_else(|| anyhow::anyhow!("Language server is no longer available"))?;
-      client.respond_workspace_edit(request_id, applied, failure_reason)
+      client.respond_workspace_edit(request_id, applied, failure_reason, failed_change)
    }
 
    pub async fn get_java_class_file_contents(&self, file_path: &str, uri: Url) -> Result<String> {

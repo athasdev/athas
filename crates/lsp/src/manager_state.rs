@@ -28,16 +28,6 @@ impl WorkspaceClients {
       }
    }
 
-   pub(super) fn contains_workspace_server(
-      &self,
-      workspace_path: &Path,
-      server_name: &str,
-   ) -> bool {
-      let mut clients = self.inner.lock().unwrap();
-      Self::prune_dead_instances(&mut clients);
-      clients.contains_key(&(workspace_path.to_path_buf(), server_name.to_string()))
-   }
-
    pub(super) fn insert(
       &self,
       workspace_path: PathBuf,
@@ -51,15 +41,30 @@ impl WorkspaceClients {
          .insert((workspace_path, server_name), instance);
    }
 
+   pub(super) fn get_workspace_server(
+      &self,
+      workspace_path: &Path,
+      server_name: &str,
+      owner: Option<&str>,
+   ) -> Option<LspClient> {
+      let mut clients = self.inner.lock().unwrap();
+      Self::prune_dead_instances(&mut clients);
+      let key = (workspace_path.to_path_buf(), server_name.to_string());
+      Self::remove_previous_owner(&mut clients, &key, owner);
+      clients.get(&key).map(|instance| instance.client.clone())
+   }
+
    pub(super) fn track_file(
       &self,
       workspace_path: &Path,
       server_name: &str,
       file_path: &Path,
+      owner: Option<&str>,
    ) -> Option<usize> {
       let mut clients = self.inner.lock().unwrap();
       Self::prune_dead_instances(&mut clients);
       let key = (workspace_path.to_path_buf(), server_name.to_string());
+      Self::remove_previous_owner(&mut clients, &key, owner);
       let instance = clients.get_mut(&key)?;
       // stop_file releases a file once, so a file that is already tracked
       // must not add another reference or the count can never reach zero.
@@ -68,6 +73,24 @@ impl WorkspaceClients {
          instance.ref_count += 1;
       }
       Some(instance.ref_count)
+   }
+
+   fn remove_previous_owner(
+      clients: &mut HashMap<WorkspaceKey, LspInstance>,
+      key: &WorkspaceKey,
+      owner: Option<&str>,
+   ) {
+      if clients
+         .get(key)
+         .is_some_and(|instance| !instance.client.workspace_edit_owner_is(owner))
+         && let Some(mut instance) = clients.remove(key)
+         && let Err(error) = instance
+            .child
+            .kill()
+            .and_then(|()| instance.child.wait().map(|_| ()))
+      {
+         log::warn!("Failed to stop language server for retired workspace owner: {error}");
+      }
    }
 
    pub(super) fn stop_file(&self, file_path: &Path) {
@@ -249,6 +272,100 @@ impl WorkspaceClients {
    }
 }
 
+#[cfg(all(test, unix))]
+mod owner_tests {
+   use super::*;
+   use std::process::Command;
+
+   fn clients(owner: &str) -> WorkspaceClients {
+      let child = Command::new("sleep").arg("30").spawn().unwrap();
+      let clients = WorkspaceClients::new();
+      clients.insert(
+         PathBuf::from("/workspace"),
+         "server".into(),
+         LspInstance {
+            client: LspClient::workspace_edit_test_client(Some(owner)),
+            child,
+            server_name: "server".into(),
+            ref_count: 1,
+            files: vec![PathBuf::from("/workspace/a.ts")],
+         },
+      );
+      clients
+   }
+
+   #[test]
+   fn same_owner_reuses_server_without_duplicating_file_references() {
+      let clients = clients("owner-1");
+      assert!(
+         clients
+            .get_workspace_server(Path::new("/workspace"), "server", Some("owner-1"))
+            .is_some()
+      );
+      assert_eq!(
+         clients.track_file(
+            Path::new("/workspace"),
+            "server",
+            Path::new("/workspace/a.ts"),
+            Some("owner-1")
+         ),
+         Some(1)
+      );
+      assert_eq!(
+         clients.track_file(
+            Path::new("/workspace"),
+            "server",
+            Path::new("/workspace/b.ts"),
+            Some("owner-1")
+         ),
+         Some(2)
+      );
+      clients.stop_file(Path::new("/workspace/a.ts"));
+      assert!(
+         clients
+            .get_workspace_server(Path::new("/workspace"), "server", Some("owner-1"))
+            .is_some()
+      );
+      clients.stop_file(Path::new("/workspace/b.ts"));
+      assert!(
+         clients
+            .get_workspace_server(Path::new("/workspace"), "server", Some("owner-1"))
+            .is_none()
+      );
+   }
+
+   #[test]
+   fn reopened_workspace_cannot_rebind_an_old_server_to_the_new_owner() {
+      let clients = clients("owner-1");
+      assert!(
+         clients
+            .get_workspace_server(Path::new("/workspace"), "server", Some("owner-2"))
+            .is_none()
+      );
+      assert!(clients.get_client_by_id("test-client").is_none());
+      assert!(
+         clients
+            .get_workspace_server(Path::new("/workspace"), "server", Some("owner-1"))
+            .is_none()
+      );
+   }
+
+   #[test]
+   fn starting_a_file_for_a_reopened_owner_retires_the_old_server() {
+      let clients = clients("owner-1");
+      assert_eq!(
+         clients.track_file(
+            Path::new("/workspace"),
+            "server",
+            Path::new("/workspace/b.ts"),
+            Some("owner-2")
+         ),
+         None
+      );
+      assert!(clients.get_client_by_id("test-client").is_none());
+   }
+}
+
 #[cfg(test)]
 mod tests {
    use super::*;
@@ -273,6 +390,16 @@ mod tests {
       }
    }
 
+   fn contains_workspace_server(
+      clients: &WorkspaceClients,
+      workspace: &Path,
+      server_name: &str,
+   ) -> bool {
+      clients
+         .get_workspace_server(workspace, server_name, None)
+         .is_some()
+   }
+
    fn instance_count(clients: &WorkspaceClients) -> usize {
       clients.inner.lock().unwrap().len()
    }
@@ -291,24 +418,44 @@ mod tests {
          instance(&workspace, "typescript", std::slice::from_ref(&first)).await,
       );
 
-      assert!(clients.contains_workspace_server(&workspace, "typescript"));
-      assert!(!clients.contains_workspace_server(&workspace, "rust-analyzer"));
+      assert!(contains_workspace_server(
+         &clients,
+         &workspace,
+         "typescript"
+      ));
+      assert!(!contains_workspace_server(
+         &clients,
+         &workspace,
+         "rust-analyzer"
+      ));
       assert_eq!(
-         clients.track_file(&workspace, "rust-analyzer", &second),
+         clients.track_file(&workspace, "rust-analyzer", &second, None),
          None
       );
       assert_eq!(
-         clients.track_file(&workspace, "typescript", &second),
+         clients.track_file(&workspace, "typescript", &second, None),
          Some(2)
       );
 
       clients.stop_file(&first);
-      assert!(clients.contains_workspace_server(&workspace, "typescript"));
+      assert!(contains_workspace_server(
+         &clients,
+         &workspace,
+         "typescript"
+      ));
       clients.stop_file(&workspace.join("never-opened.ts"));
-      assert!(clients.contains_workspace_server(&workspace, "typescript"));
+      assert!(contains_workspace_server(
+         &clients,
+         &workspace,
+         "typescript"
+      ));
 
       clients.stop_file(&second);
-      assert!(!clients.contains_workspace_server(&workspace, "typescript"));
+      assert!(!contains_workspace_server(
+         &clients,
+         &workspace,
+         "typescript"
+      ));
       assert_eq!(instance_count(&clients), 0);
    }
 
@@ -371,10 +518,17 @@ mod tests {
          instance(&workspace, "typescript", std::slice::from_ref(&file)).await,
       );
 
-      assert_eq!(clients.track_file(&workspace, "typescript", &file), Some(1));
+      assert_eq!(
+         clients.track_file(&workspace, "typescript", &file, None),
+         Some(1)
+      );
       clients.stop_file(&file);
 
-      assert!(!clients.contains_workspace_server(&workspace, "typescript"));
+      assert!(!contains_workspace_server(
+         &clients,
+         &workspace,
+         "typescript"
+      ));
    }
 
    #[tokio::test]
@@ -390,7 +544,11 @@ mod tests {
       clients.insert(workspace.clone(), "rust-analyzer".to_string(), dead);
 
       assert!(clients.get_client_for_file(&file).is_none());
-      assert!(!clients.contains_workspace_server(&workspace, "rust-analyzer"));
+      assert!(!contains_workspace_server(
+         &clients,
+         &workspace,
+         "rust-analyzer"
+      ));
       assert_eq!(instance_count(&clients), 0);
    }
 }

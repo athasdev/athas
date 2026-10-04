@@ -32,6 +32,13 @@ const MAX_PROTOCOL_FRAME_BYTES: usize = 64 * 1024 * 1024;
 struct LspServerContext {
    root_uri: Option<Url>,
    settings: Value,
+   workspace_edit_owner: Option<String>,
+}
+
+#[derive(Clone, Default)]
+pub struct LspInitialization {
+   pub options: Option<Value>,
+   pub workspace_edit_owner: Option<String>,
 }
 
 fn find_node_modules_dir(server_path: &Path) -> Option<PathBuf> {
@@ -414,15 +421,13 @@ impl LspClient {
       Ok((client, child))
    }
 
-   pub async fn initialize(
-      &self,
-      root_uri: Url,
-      initialization_options: Option<Value>,
-   ) -> Result<()> {
+   pub async fn initialize(&self, root_uri: Url, initialization: LspInitialization) -> Result<()> {
+      let initialization_options = initialization.options;
       log::info!("Initializing LSP server with root_uri: {}", root_uri);
 
       if let Ok(mut context) = self.server_context.lock() {
          context.root_uri = Some(root_uri.clone());
+         context.workspace_edit_owner = initialization.workspace_edit_owner;
          context.settings = initialization_options
             .as_ref()
             .and_then(|options| options.get("settings"))
@@ -601,6 +606,7 @@ impl LspClient {
                apply_edit: Some(true),
                workspace_edit: Some(WorkspaceEditClientCapabilities {
                   document_changes: Some(true),
+                  failure_handling: Some(FailureHandlingKind::Abort),
                   ..Default::default()
                }),
                configuration: Some(true),
@@ -746,6 +752,7 @@ impl LspClient {
                      "lsp://workspace-edit",
                      json!({
                         "clientId": client_id,
+                        "ownerToken": server_context.lock().ok().and_then(|context| context.workspace_edit_owner.clone()),
                         "requestId": id,
                         "edit": edit,
                      }),
@@ -779,20 +786,50 @@ impl LspClient {
       &self.id
    }
 
+   pub(crate) fn workspace_edit_owner_matches(&self, owner: &str) -> bool {
+      self.workspace_edit_owner_is(Some(owner))
+   }
+
+   pub(crate) fn workspace_edit_owner_is(&self, owner: Option<&str>) -> bool {
+      self.is_running.load(Ordering::SeqCst)
+         && self
+            .server_context
+            .lock()
+            .is_ok_and(|context| context.workspace_edit_owner.as_deref() == owner)
+   }
+
+   #[cfg(test)]
+   pub(crate) fn workspace_edit_test_client(owner: Option<&str>) -> Self {
+      let (stdin_tx, _) = bounded(1);
+      Self {
+         id: "test-client".to_string(),
+         request_counter: Arc::new(AtomicU64::new(1)),
+         stdin_tx,
+         pending_requests: Arc::new(Mutex::new(HashMap::new())),
+         capabilities: Arc::new(Mutex::new(None)),
+         is_running: Arc::new(AtomicBool::new(true)),
+         server_context: Arc::new(Mutex::new(LspServerContext {
+            workspace_edit_owner: owner.map(str::to_string),
+            ..Default::default()
+         })),
+      }
+   }
+
    pub fn respond_workspace_edit(
       &self,
       request_id: Value,
       applied: bool,
       failure_reason: Option<String>,
+      failed_change: Option<u32>,
    ) -> Result<()> {
-      Self::send_server_response(
-         &self.stdin_tx,
-         request_id,
-         json!({
-            "applied": applied,
-            "failureReason": failure_reason,
-         }),
-      )
+      let mut result = json!({ "applied": applied });
+      if let Some(reason) = failure_reason {
+         result["failureReason"] = json!(reason);
+      }
+      if let Some(index) = failed_change {
+         result["failedChange"] = json!(index);
+      }
+      Self::send_server_response(&self.stdin_tx, request_id, result)
    }
 
    fn handle_notification(notification: Value, app_handle: &Option<AppHandle>) {
@@ -1364,6 +1401,19 @@ mod tests {
    }
 
    #[test]
+   fn validates_workspace_edit_owner_and_running_state() {
+      let client = LspClient::workspace_edit_test_client(Some("owner-1"));
+      assert!(client.workspace_edit_owner_matches("owner-1"));
+      assert!(!client.workspace_edit_owner_matches("owner-2"));
+      assert!(!client.workspace_edit_owner_is(None));
+      client.is_running.store(false, Ordering::SeqCst);
+      assert!(!client.workspace_edit_owner_matches("owner-1"));
+      let anonymous = LspClient::workspace_edit_test_client(None);
+      assert!(anonymous.workspace_edit_owner_is(None));
+      assert!(!anonymous.workspace_edit_owner_matches("owner-1"));
+   }
+
+   #[test]
    fn responds_to_server_workspace_edits() {
       let (stdin_tx, stdin_rx) = bounded(1);
       let client = LspClient {
@@ -1377,7 +1427,12 @@ mod tests {
       };
 
       client
-         .respond_workspace_edit(json!(42), false, Some("Unsupported edit".to_string()))
+         .respond_workspace_edit(
+            json!(42),
+            false,
+            Some("Unsupported edit".to_string()),
+            Some(2),
+         )
          .unwrap();
 
       let framed = stdin_rx.recv().unwrap();
@@ -1386,6 +1441,7 @@ mod tests {
       assert_eq!(response["id"], json!(42));
       assert_eq!(response["result"]["applied"], json!(false));
       assert_eq!(response["result"]["failureReason"], "Unsupported edit");
+      assert_eq!(response["result"]["failedChange"], json!(2));
    }
 
    fn test_client() -> (LspClient, crossbeam_channel::Receiver<String>) {
@@ -1666,9 +1722,12 @@ mod tests {
          .client
          .initialize(
             Url::from_file_path(temp.path()).unwrap(),
-            Some(json!({
-               "fakeCapabilities": { "codeLensProvider": {}, "codeActionProvider": true }
-            })),
+            LspInitialization {
+               options: Some(json!({
+                  "fakeCapabilities": { "codeLensProvider": {}, "codeActionProvider": true }
+               })),
+               workspace_edit_owner: None,
+            },
          )
          .await
          .unwrap();
@@ -1737,7 +1796,10 @@ mod tests {
          .client
          .initialize(
             Url::from_file_path(temp.path()).unwrap(),
-            Some(json!({ "settings": { "fake": { "level": 2 } } })),
+            LspInitialization {
+               options: Some(json!({ "settings": { "fake": { "level": 2 } } })),
+               workspace_edit_owner: None,
+            },
          )
          .await
          .unwrap();

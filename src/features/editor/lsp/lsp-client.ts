@@ -1,4 +1,5 @@
 import { commands, type DocumentChangeBatch } from "@/bindings/commands";
+import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
 import { listen } from "@tauri-apps/api/event";
 import type {
   CallHierarchyIncomingCall,
@@ -33,6 +34,11 @@ import type { LspSemanticTokensResponse } from "./semantic-token-types";
 import { useLspStore } from "./stores/lsp.store";
 import {
   applyWorkspaceEdit,
+  captureWorkspaceEditContext,
+  isWorkspaceEditContextLive,
+  normalizeWorkspaceEditPath,
+  WorkspaceEditFailure,
+  type WorkspaceEditContext,
   applyTextEditsToContent,
   filePathFromUri,
   isWorkspaceEdit,
@@ -66,6 +72,7 @@ interface PrepareRenameResult {
 
 interface ServerWorkspaceEditRequest {
   clientId: string;
+  ownerToken: string;
   requestId: unknown;
   edit: unknown;
 }
@@ -161,7 +168,8 @@ function hasCodeActionCommand(actionPayload: unknown): boolean {
 function withoutWorkspaceEdit(actionPayload: unknown): unknown {
   if (!isRecord(actionPayload)) return actionPayload;
 
-  const { edit: _edit, ...commandPayload } = actionPayload;
+  const commandPayload = { ...actionPayload };
+  delete commandPayload.edit;
   return commandPayload;
 }
 
@@ -169,6 +177,79 @@ const MAX_DOCUMENT_CHANGE_RETRIES = 2;
 
 export class LspClient {
   private static instance: LspClient | null = null;
+  private workspaceEditTokens = new WeakMap<WorkspaceEditContext["store"], Map<string, string>>();
+  private workspaceEditOwners = new Map<
+    string,
+    { workspaceId: string; store: WorkspaceEditContext["store"]; workspacePath: string }
+  >();
+  private workspaceServerOwners = new Map<string, string>();
+  private codeActionContexts = new WeakMap<object, WorkspaceEditContext>();
+  private documentChangeSendsPending = new Set<string>();
+
+  createWorkspaceEditContext(workspaceId?: string): WorkspaceEditContext {
+    const context = captureWorkspaceEditContext(workspaceId);
+    context.getDocumentVersion = (path) => {
+      const sourcePath = context.sources.get(normalizeWorkspaceEditPath(path))?.path ?? path;
+      if (
+        this.documentChangeQueues.has(sourcePath) ||
+        this.documentChangeSendsPending.has(sourcePath) ||
+        this.documentsNeedingResync.has(sourcePath) ||
+        this.openingDocuments.has(sourcePath) ||
+        this.closingDocuments.has(sourcePath)
+      )
+        return undefined;
+      return this.documentVersions.get(sourcePath);
+    };
+    return context;
+  }
+  createDocumentWorkspaceEditContext(filePath: string): WorkspaceEditContext {
+    const context = this.createWorkspaceEditContext();
+    let expected = context.sources.get(normalizeWorkspaceEditPath(filePath));
+    context.isCurrent = () => {
+      const current = context.store.getState().buffers.find((buffer) => buffer.id === expected?.id);
+      return (
+        expected !== undefined &&
+        current?.type === "editor" &&
+        current.path === expected.path &&
+        current.content === expected.content &&
+        (current.contentRevision ?? 0) === (expected.contentRevision ?? 0) &&
+        !current.readOnly
+      );
+    };
+    context.onBufferApplied = (buffer) => {
+      if (buffer.id === expected?.id) expected = buffer;
+    };
+    return context;
+  }
+  private registerWorkspaceEditOwner(workspacePath: string) {
+    const context = this.createWorkspaceEditContext();
+    let tokens = this.workspaceEditTokens.get(context.store);
+    if (!tokens) {
+      tokens = new Map();
+      this.workspaceEditTokens.set(context.store, tokens);
+    }
+    let token = tokens.get(workspacePath);
+    if (!token) {
+      token = crypto.randomUUID();
+      tokens.set(workspacePath, token);
+    }
+    this.workspaceEditOwners.set(token, {
+      workspaceId: context.workspaceId,
+      store: context.store,
+      workspacePath,
+    });
+    return { context, token };
+  }
+  private activateWorkspaceEditOwner(
+    workspacePath: string,
+    token: string,
+    context: WorkspaceEditContext,
+  ) {
+    if (!isWorkspaceEditContextLive(context))
+      throw new Error("Language server workspace owner is no longer available");
+    this.workspaceServerOwners.set(workspacePath, token);
+  }
+
   private activeLanguageServers = new Set<string>(); // workspace:language format
   private activeLanguages = new Set<string>(); // Track active language IDs for status
   private activeServerFiles = new Map<string, Set<string>>(); // workspace:language -> tracked files
@@ -191,6 +272,14 @@ export class LspClient {
     this.setupCrashListener();
     this.setupWorkspaceEditListener();
     subscribeToEditorDocumentChanges((event) => this.queueDocumentChange(event));
+    workspaceRuntimeRegistry.subscribe(() => {
+      for (const [token, owner] of this.workspaceEditOwners) {
+        if (isWorkspaceEditContextLive(owner)) continue;
+        this.workspaceEditOwners.delete(token);
+        if (this.workspaceServerOwners.get(owner.workspacePath) === token)
+          this.workspaceServerOwners.delete(owner.workspacePath);
+      }
+    });
   }
 
   private queueDocumentChange(event: EditorDocumentChangeEvent): void {
@@ -261,20 +350,31 @@ export class LspClient {
     }
 
     const previous = this.documentChangeSendChains.get(filePath) ?? Promise.resolve();
+    const generation = this.documentLifecycleGenerations.get(filePath);
+    this.documentChangeSendsPending.add(filePath);
     const send = previous
       .catch(() => undefined)
       .then(async () => {
         const opening = this.openingDocuments.get(filePath);
         if (opening) await opening;
-        if (!this.openDocuments.has(filePath)) return;
+        if (
+          !this.openDocuments.has(filePath) ||
+          this.documentLifecycleGenerations.get(filePath) !== generation
+        )
+          return;
         const version = await commands.lspDocumentChangeBatch(filePath, batches);
+        if (this.documentLifecycleGenerations.get(filePath) !== generation) return;
         this.documentVersions.set(filePath, version);
         this.documentChangeRetries.delete(filePath);
         if (resyncContent !== null) this.documentsNeedingResync.delete(filePath);
       })
       .catch((error) => {
         logger.error("LSPClient", "LSP document change error:", error);
-        if (!this.openDocuments.has(filePath)) return;
+        if (
+          !this.openDocuments.has(filePath) ||
+          this.documentLifecycleGenerations.get(filePath) !== generation
+        )
+          return;
         if (resyncContent !== null) {
           // Stays flagged: the next edit or request tries the full replacement again.
           return;
@@ -293,6 +393,10 @@ export class LspClient {
           filePath,
           setTimeout(() => void this.flushDocumentChanges(filePath), 80 * (retries + 1)),
         );
+      })
+      .finally(() => {
+        if (this.documentChangeSendChains.get(filePath) === send)
+          this.documentChangeSendsPending.delete(filePath);
       });
     this.documentChangeSendChains.set(filePath, send);
     return send;
@@ -304,6 +408,7 @@ export class LspClient {
     this.documentChangeTimers.delete(filePath);
     this.documentChangeQueues.delete(filePath);
     this.documentChangeSendChains.delete(filePath);
+    this.documentChangeSendsPending.delete(filePath);
     this.documentChangeRetries.delete(filePath);
     this.documentsNeedingResync.delete(filePath);
     this.documentVersions.delete(filePath);
@@ -313,8 +418,14 @@ export class LspClient {
     }
   }
 
-  private async invokeForDocument<T>(filePath: string, request: () => Promise<T>): Promise<T> {
+  private async invokeForDocument<T>(
+    filePath: string,
+    request: () => Promise<T>,
+    isCurrent?: () => boolean,
+  ): Promise<T> {
     await this.flushDocumentChangesBeforeOperation(filePath);
+    if (isCurrent?.() === false)
+      throw new Error("Language server request owner is no longer available");
     return request();
   }
 
@@ -644,15 +755,40 @@ export class LspClient {
   private async applyServerWorkspaceEdit(request: ServerWorkspaceEditRequest): Promise<void> {
     let applied = false;
     let failureReason: string | undefined;
+    let failedChange: number | undefined;
 
     try {
       if (!isWorkspaceEdit(request.edit)) {
         throw new Error("Language server returned an unsupported workspace edit");
       }
-      await applyWorkspaceEdit(request.edit);
+      const owner = this.workspaceEditOwners.get(request.ownerToken);
+      if (
+        !owner ||
+        !isWorkspaceEditContextLive(owner) ||
+        this.workspaceServerOwners.get(owner.workspacePath) !== request.ownerToken
+      )
+        throw new Error("The language server workspace owner is no longer available");
+      const context = this.createWorkspaceEditContext(owner.workspaceId);
+      context.isCurrent = () =>
+        this.workspaceEditOwners.get(request.ownerToken) === owner &&
+        this.workspaceServerOwners.get(owner.workspacePath) === request.ownerToken;
+      context.beforeApply = async () => {
+        const valid = await commands.lspValidateWorkspaceEditOwner(
+          request.clientId,
+          request.ownerToken,
+        );
+        if (!valid) throw new Error("The language server was stopped or replaced");
+      };
+      await applyWorkspaceEdit(request.edit, context);
       applied = true;
     } catch (error) {
       failureReason = stringifyLspError(error);
+      if (
+        error instanceof WorkspaceEditFailure &&
+        isRecord(request.edit) &&
+        Array.isArray(request.edit.documentChanges)
+      )
+        failedChange = error.failedChange;
       logger.warn("LSPClient", "Failed to apply server workspace edit:", error);
     }
 
@@ -662,6 +798,7 @@ export class LspClient {
         request.requestId,
         applied,
         failureReason ?? null,
+        failedChange ?? null,
       );
     } catch (error) {
       logger.warn("LSPClient", "Failed to acknowledge server workspace edit:", error);
@@ -669,6 +806,7 @@ export class LspClient {
   }
 
   async start(workspacePath: string, filePath?: string): Promise<void> {
+    const { context, token } = this.registerWorkspaceEditOwner(workspacePath);
     try {
       logger.debug("LSPClient", "Starting LSP with workspace:", workspacePath);
 
@@ -702,7 +840,10 @@ export class LspClient {
         // Check if this language server is already running for this workspace
         if (serverPath && languageId) {
           const serverKey = `${workspacePath}:${languageId}`;
-          if (this.activeLanguageServers.has(serverKey)) {
+          if (
+            this.activeLanguageServers.has(serverKey) &&
+            this.workspaceServerOwners.get(workspacePath) === token
+          ) {
             logger.debug("LSPClient", `LSP for ${languageId} already running in workspace`);
             return;
           }
@@ -728,6 +869,7 @@ export class LspClient {
         serverArgs,
       });
 
+      this.activateWorkspaceEditOwner(workspacePath, token, context);
       await commands.lspStart(
         workspacePath,
         serverPath,
@@ -735,6 +877,7 @@ export class LspClient {
         languageId || null,
         tools || null,
         initOptions || null,
+        token,
       );
 
       // Track this language server
@@ -790,6 +933,7 @@ export class LspClient {
     workspacePath: string,
     options: { forceRetry?: boolean; repairAttempted?: boolean } = {},
   ): Promise<boolean> {
+    const { context, token } = this.registerWorkspaceEditOwner(workspacePath);
     try {
       logger.debug("LSPClient", "Starting LSP for file:", filePath);
 
@@ -865,6 +1009,7 @@ export class LspClient {
       });
 
       try {
+        this.activateWorkspaceEditOwner(workspacePath, token, context);
         await commands.lspStartForFile(
           filePath,
           workspacePath,
@@ -873,6 +1018,7 @@ export class LspClient {
           languageId || null,
           tools || null,
           initializationOptions || null,
+          token,
         );
         if (languageId) {
           const serverKey = `${workspacePath}:${languageId}`;
@@ -1601,6 +1747,7 @@ export class LspClient {
         },
     diagnostics?: Diagnostic[],
   ): Promise<DiagnosticCodeAction[]> {
+    const context = this.createDocumentWorkspaceEditContext(filePath);
     try {
       const isDiagnostic = "message" in rangeOrDiagnostic;
       const range = isDiagnostic
@@ -1627,7 +1774,10 @@ export class LspClient {
           })),
         }),
       );
-      return actions.map((action) => nullFieldsToUndefined(action));
+      const normalizedActions = actions.map((action) => nullFieldsToUndefined(action));
+      for (const action of normalizedActions)
+        if (isRecord(action.payload)) this.codeActionContexts.set(action.payload, context);
+      return normalizedActions;
     } catch (error) {
       logger.warn("LSPClient", "LSP code action request failed:", error);
       return [];
@@ -1638,11 +1788,22 @@ export class LspClient {
     filePath: string,
     actionPayload: unknown,
   ): Promise<ApplyDiagnosticCodeActionResult> {
+    const context = isRecord(actionPayload)
+      ? (this.codeActionContexts.get(actionPayload) ?? this.createWorkspaceEditContext())
+      : this.createWorkspaceEditContext();
+    let appliedEdit = false;
     try {
-      let appliedEdit = false;
+      if (!isWorkspaceEditContextLive(context)) throw new Error("The action document changed");
+      if (isRecord(actionPayload) && isRecord(actionPayload.disabled))
+        return {
+          applied: false,
+          reason: String(actionPayload.disabled.reason ?? "Action is disabled"),
+        };
       const edit = getCodeActionEdit(actionPayload);
-      if (isWorkspaceEdit(edit)) {
-        await applyWorkspaceEdit(edit);
+      if (edit !== undefined && edit !== null) {
+        if (!isWorkspaceEdit(edit))
+          throw new Error("Language server returned an unsupported workspace edit");
+        await applyWorkspaceEdit(edit, context);
         appliedEdit = true;
 
         if (!hasCodeActionCommand(actionPayload)) {
@@ -1653,8 +1814,10 @@ export class LspClient {
       }
 
       const result = nullFieldsToUndefined(
-        await this.invokeForDocument(filePath, () =>
-          commands.lspApplyCodeAction(filePath, actionPayload),
+        await this.invokeForDocument(
+          filePath,
+          () => commands.lspApplyCodeAction(filePath, actionPayload),
+          () => isWorkspaceEditContextLive(context),
         ),
       );
 
@@ -1662,8 +1825,10 @@ export class LspClient {
     } catch (error) {
       logger.warn("LSPClient", "LSP apply code action failed:", error);
       return {
-        applied: false,
-        reason: stringifyLspError(error),
+        applied: appliedEdit,
+        reason: appliedEdit
+          ? `Edits applied, but the command failed: ${stringifyLspError(error)}`
+          : stringifyLspError(error),
       };
     }
   }

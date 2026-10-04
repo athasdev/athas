@@ -9,7 +9,7 @@ use super::{
       LspApplyCodeActionResult, LspCodeActionContext, LspCodeActionItem, LspSemanticTokensResponse,
    },
 };
-use athas_lsp::{DocumentChangeBatch, LspError, LspManager, LspResult};
+use athas_lsp::{DocumentChangeBatch, LspError, LspManager, LspResult, client::LspInitialization};
 use athas_tooling::{LanguageToolConfigSet, ToolInstaller, ToolRegistry, ToolType};
 use lsp_types::{
    CallHierarchyIncomingCall, CallHierarchyItem, CallHierarchyOutgoingCall, CodeActionOrCommand,
@@ -110,6 +110,7 @@ pub async fn lsp_start(
    language_id: Option<String>,
    tools: Option<LanguageToolConfigSet>,
    initialization_options: Option<Value>,
+   workspace_edit_owner: Option<String>,
 ) -> LspResult<()> {
    log::info!("lsp_start command called with path: {}", workspace_path);
    let (server_path, server_args, server_env) =
@@ -122,7 +123,10 @@ pub async fn lsp_start(
          server_path,
          server_args,
          server_env,
-         initialization_options,
+         LspInitialization {
+            options: initialization_options,
+            workspace_edit_owner,
+         },
       )
       .await
       .map_err(|e| {
@@ -155,6 +159,7 @@ pub async fn lsp_start_for_file(
    language_id: Option<String>,
    tools: Option<LanguageToolConfigSet>,
    initialization_options: Option<Value>,
+   workspace_edit_owner: Option<String>,
 ) -> LspResult<()> {
    log::info!("lsp_start_for_file command called for file: {}", file_path);
    let (server_path, server_args, server_env) =
@@ -168,7 +173,10 @@ pub async fn lsp_start_for_file(
          server_path,
          server_args,
          server_env,
-         initialization_options,
+         LspInitialization {
+            options: initialization_options,
+            workspace_edit_owner,
+         },
       )
       .await
       .map_err(|e| {
@@ -411,15 +419,32 @@ pub async fn lsp_execute_command(
 
 #[tauri::command]
 #[specta::specta]
+pub fn lsp_validate_workspace_edit_owner(
+   lsp_manager: State<'_, LspManager>,
+   client_id: String,
+   owner_token: String,
+) -> bool {
+   lsp_manager.validate_workspace_edit_owner(&client_id, &owner_token)
+}
+
+#[tauri::command]
+#[specta::specta]
 pub fn lsp_respond_workspace_edit(
    lsp_manager: State<'_, LspManager>,
    client_id: String,
    request_id: Value,
    applied: bool,
    failure_reason: Option<String>,
+   failed_change: Option<u32>,
 ) -> LspResult<()> {
    lsp_manager
-      .respond_workspace_edit(&client_id, request_id, applied, failure_reason)
+      .respond_workspace_edit(
+         &client_id,
+         request_id,
+         applied,
+         failure_reason,
+         failed_change,
+      )
       .map_err(LspError::from)
 }
 

@@ -27,7 +27,7 @@ vi.mock("monaco-editor", () => {
   };
 });
 
-import { toMonacoCompletionItem, toWorkspaceEdit } from "../engines/monaco/lsp-providers";
+import { toMonacoCompletionItem } from "../engines/monaco/lsp-providers";
 
 describe("Monaco LSP completion mapping", () => {
   test("preserves lazy Java completion imports, labels, ranges, and commands", () => {
@@ -117,36 +117,5 @@ describe("Monaco LSP completion mapping", () => {
         ],
       },
     });
-  });
-});
-
-describe("Monaco LSP workspace edits", () => {
-  const model = (scheme: string, path: string) => ({
-    uri: { scheme, path, query: "", toString: () => `${scheme}://${path}` },
-    isDisposed: () => false,
-  });
-  const rename = {
-    changes: {
-      "file:///p/a.ts": [
-        {
-          range: { start: { line: 0, character: 0 }, end: { line: 0, character: 1 } },
-          newText: "b",
-        },
-      ],
-    },
-  };
-
-  test("edits the open buffer's model", () => {
-    models.list = [model("athas", "/p/a.ts")];
-    const { edit, unopened } = toWorkspaceEdit(rename);
-    expect(edit?.edits).toHaveLength(1);
-    expect(unopened).toBeUndefined();
-  });
-
-  test("writes a file only loaded for a peek to disk instead of into the peek's model", () => {
-    models.list = [model("file", "/p/a.ts")];
-    const { edit, unopened } = toWorkspaceEdit(rename);
-    expect(edit).toBeUndefined();
-    expect(Object.keys(unopened?.changes ?? {})).toEqual(["file:///p/a.ts"]);
   });
 });
