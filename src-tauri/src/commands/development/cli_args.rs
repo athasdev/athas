@@ -67,6 +67,10 @@ pub enum CliRequest {
       command: Option<String>,
       working_directory: Option<String>,
    },
+   AgentSession {
+      chat_id: String,
+      working_directory: String,
+   },
    Remote {
       connection_id: String,
       name: Option<String>,
@@ -270,6 +274,14 @@ pub fn parse_cli_args(args: &[String], cwd: &Path) -> Vec<CliRequest> {
    let requests = match command {
       "window" if args.len() == 1 => vec![CliRequest::Empty],
       "" if new_window == Some(true) => vec![CliRequest::Empty],
+      "agent-session" if args.len() == 2 && !args[1].is_empty() => vec![CliRequest::AgentSession {
+         chat_id: args[1].clone(),
+         working_directory: working_directory
+            .canonicalize()
+            .unwrap_or(working_directory)
+            .to_string_lossy()
+            .into_owned(),
+      }],
       "settings" | "extensions" | "pr" | "issue" | "action" => {
          let expected = if matches!(command, "pr" | "issue" | "action") {
             2
@@ -489,6 +501,24 @@ mod tests {
          parse_cli_args(&args, &cwd),
          vec![CliRequest::Web {
             url: "https://athas.dev".to_string()
+         }]
+      );
+   }
+
+   #[test]
+   fn parse_cli_args_agent_session_opens_in_workbench() {
+      let cwd = std::env::current_dir().unwrap();
+      let args = vec![
+         "agent-session".to_string(),
+         "chat-123".to_string(),
+         "--cwd".to_string(),
+         cwd.to_string_lossy().into_owned(),
+      ];
+      assert_eq!(
+         parse_cli_args(&args, &cwd),
+         vec![CliRequest::AgentSession {
+            chat_id: "chat-123".into(),
+            working_directory: cwd.canonicalize().unwrap().to_string_lossy().into_owned(),
          }]
       );
    }

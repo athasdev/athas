@@ -35,9 +35,14 @@ fi
 
 version="$(bun -e 'console.log(JSON.parse(await Bun.file("package.json").text()).version)')"
 binary="target/release/athas"
+agent_binary="src-tauri/binaries/athas-agent-${arch}-unknown-linux-gnu"
 
 if [[ ! -x "$binary" ]]; then
   echo "Missing release binary at $binary" >&2
+  exit 1
+fi
+if [[ ! -x "$agent_binary" ]]; then
+  echo "Missing Agent CLI binary at $agent_binary" >&2
   exit 1
 fi
 
@@ -66,6 +71,8 @@ icon_base_dir="${app_root}/share/icons/hicolor"
 
 install -d "$bin_dir" "$libexec_dir" "$resource_dir" "$desktop_dir"
 install -m 755 "$binary" "${libexec_dir}/athas"
+install -m 755 "$agent_binary" "${libexec_dir}/athas-agent"
+printf 'ATHAS_APP_IDENTIFIER=%s\n' "$desktop_id" > "${libexec_dir}/agent.env"
 cat > "${bin_dir}/athas" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
@@ -114,6 +121,14 @@ case "$(uname -m)" in
 esac
 
 libexec_dir="${bin_dir}/../libexec"
+case "${1:-}" in
+  agent | run)
+    source "${libexec_dir}/agent.env"
+    export ATHAS_APP_IDENTIFIER
+    export ATHAS_DESKTOP_BIN="${libexec_dir}/athas"
+    exec "${libexec_dir}/athas-agent" "$@"
+    ;;
+esac
 preloads=()
 
 prefer_host_libraries() {

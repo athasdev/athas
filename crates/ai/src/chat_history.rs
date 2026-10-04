@@ -259,9 +259,15 @@ impl ChatHistoryRepository {
          .map_err(|e| format!("Failed to begin transaction: {}", e))?;
 
       match conn.execute(
-         "INSERT OR REPLACE INTO chats (id, title, created_at, last_message_at, agent_id, \
-          acp_session_id, workspace_path, provider_id, model_id, branch, is_pinned, archived_at, \
-          session_settings) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
+         "INSERT INTO chats (id, title, created_at, last_message_at, agent_id, acp_session_id, \
+          workspace_path, provider_id, model_id, branch, is_pinned, archived_at, \
+          session_settings) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13) ON \
+          CONFLICT(id) DO UPDATE SET title = excluded.title, created_at = excluded.created_at, \
+          last_message_at = excluded.last_message_at, agent_id = excluded.agent_id, \
+          acp_session_id = excluded.acp_session_id, workspace_path = excluded.workspace_path, \
+          provider_id = excluded.provider_id, model_id = excluded.model_id, branch = \
+          excluded.branch, is_pinned = excluded.is_pinned, archived_at = excluded.archived_at, \
+          session_settings = excluded.session_settings",
          params![
             chat.id,
             chat.title,
@@ -513,8 +519,15 @@ impl ChatHistoryRepository {
             .map_err(|e| format!("Failed to create chat history directory: {}", e))?;
       }
 
-      Connection::open(&self.db_path)
-         .map_err(|e| format!("Failed to open chat history database: {}", e))
+      let connection = Connection::open(&self.db_path)
+         .map_err(|e| format!("Failed to open chat history database: {}", e))?;
+      connection
+         .busy_timeout(std::time::Duration::from_secs(5))
+         .map_err(|e| format!("Failed to configure chat history database: {}", e))?;
+      connection
+         .execute_batch("PRAGMA foreign_keys = ON")
+         .map_err(|e| format!("Failed to enforce chat history references: {}", e))?;
+      Ok(connection)
    }
 
    fn load_tool_calls(
@@ -691,5 +704,42 @@ mod tests {
          .unwrap();
       repository.delete_chat("chat").unwrap();
       assert_eq!(repository.load_checkpoints("chat").unwrap(), None);
+   }
+
+   #[test]
+   fn resaving_a_chat_keeps_checkpoints_and_one_copy_of_each_tool_call() {
+      let directory = tempfile::tempdir().unwrap();
+      let repository = ChatHistoryRepository::new(directory.path().join("history.db"));
+      repository.initialize().unwrap();
+      let chat: ChatData = serde_json::from_value(serde_json::json!({
+         "id": "chat", "title": "Chat", "created_at": 1, "last_message_at": 2,
+         "is_pinned": false
+      }))
+      .unwrap();
+      let message: MessageData = serde_json::from_value(serde_json::json!({
+         "id": "message", "chat_id": "chat", "role": "assistant", "content": "Done",
+         "timestamp": 2, "is_streaming": false, "is_tool_use": false, "tool_name": null
+      }))
+      .unwrap();
+      let tool_call: ToolCallData = serde_json::from_value(serde_json::json!({
+         "message_id": "message", "name": "read_file", "input": "{}", "output": "ok",
+         "error": null, "timestamp": 2, "is_complete": true
+      }))
+      .unwrap();
+      repository
+         .save_chat(chat.clone(), vec![message.clone()], vec![tool_call.clone()])
+         .unwrap();
+      repository
+         .save_checkpoints("chat", Some("[1]".into()), 2)
+         .unwrap();
+      repository
+         .save_chat(chat, vec![message], vec![tool_call])
+         .unwrap();
+
+      assert_eq!(repository.load_chat("chat").unwrap().tool_calls.len(), 1);
+      assert_eq!(
+         repository.load_checkpoints("chat").unwrap().as_deref(),
+         Some("[1]")
+      );
    }
 }

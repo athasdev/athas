@@ -6,7 +6,7 @@
   "build": {
     "beforeDevCommand": "vp dev",
     "devUrl": "http://127.0.0.1:1420",
-    "beforeBuildCommand": "vp build",
+    "beforeBuildCommand": "bun scripts/build-agent-sidecar.ts && vp build",
     "frontendDist": "../dist"
   },
   "app": {

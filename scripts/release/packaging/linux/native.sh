@@ -206,7 +206,7 @@ await Bun.write(
 );
 '
 
-config_args+=(--config "$native_config")
+config_args+=(--config "$native_config" --config src-tauri/tauri.agent.conf.json)
 
 cargo tauri build \
   --bundles "$bundles" \

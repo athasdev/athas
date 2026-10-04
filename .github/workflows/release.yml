@@ -363,7 +363,7 @@ jobs:
           NO_STRIP: "true"
           RUSTFLAGS: ${{ matrix.rustflags }}
         run: |
-          cargo tauri build --no-bundle ${{ needs.release-metadata.outputs.is_prerelease == 'true' && '--config src-tauri/tauri.preview.conf.json' || '' }} -- --no-default-features --features linux
+          cargo tauri build --no-bundle --config src-tauri/tauri.agent.conf.json ${{ needs.release-metadata.outputs.is_prerelease == 'true' && '--config src-tauri/tauri.preview.conf.json' || '' }} -- --no-default-features --features linux
 
       - name: Build Linux native packages
         if: matrix.os == 'linux'
@@ -386,7 +386,7 @@ jobs:
           APPLE_PASSWORD: ${{ matrix.os == 'macos' && secrets.APPLE_PASSWORD || '' }}
           APPLE_TEAM_ID: ${{ matrix.os == 'macos' && secrets.APPLE_TEAM_ID || '' }}
           RUSTFLAGS: ${{ matrix.rustflags }}
-        run: bun tauri build ${{ matrix.args }} ${{ needs.release-metadata.outputs.is_prerelease == 'true' && '--config src-tauri/tauri.preview.conf.json' || '' }}
+        run: bun tauri build ${{ matrix.args }} --config src-tauri/tauri.agent.conf.json ${{ needs.release-metadata.outputs.is_prerelease == 'true' && '--config src-tauri/tauri.preview.conf.json' || '' }}
 
       - name: Package Linux tarball (Linux only)
         if: matrix.os == 'linux'

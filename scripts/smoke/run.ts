@@ -138,6 +138,7 @@ if (openOnly) {
 
 const target = smokeTargets[identity];
 const buildArgs = ["tauri", "build", "--debug"];
+buildArgs.push("--config", "src-tauri/tauri.agent.conf.json");
 
 if (targetPlatform === "macos") {
   buildArgs.push("--bundles", "app");

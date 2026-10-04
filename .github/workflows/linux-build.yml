@@ -107,6 +107,7 @@ jobs:
         run: |
           cargo tauri build \
             --no-bundle \
+            --config src-tauri/tauri.agent.conf.json \
             --config '{"bundle":{"createUpdaterArtifacts":false}}' \
             -- \
             --no-default-features \

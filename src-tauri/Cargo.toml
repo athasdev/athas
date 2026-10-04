@@ -62,6 +62,7 @@ athas-version-control = { path = "../crates/version-control" }
 athas-extensions = { path = "../crates/extensions", default-features = false }
 athas-terminal = { path = "../crates/terminal", default-features = false }
 athas-ai = { path = "../crates/ai", default-features = false }
+athas-agent-cli = { path = "../crates/agent-cli" }
 athas-github = { path = "../crates/github" }
 athas-fff-search = { path = "../crates/fff-search" }
 athas-debugger = { path = "../crates/debugger", default-features = false }

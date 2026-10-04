@@ -1,0 +1,26 @@
+[package]
+name = "athas-agent-cli"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "athas-agent"
+path = "src/main.rs"
+
+[dependencies]
+athas-ai = { path = "../ai", default-features = false }
+anyhow = "1.0"
+crossterm = "0.28.1"
+dirs = "5.0"
+futures = "0.3"
+keyring = { version = "3.6.3", features = [
+  "apple-native",
+  "crypto-rust",
+  "sync-secret-service",
+  "windows-native",
+] }
+ratatui = { version = "0.30.2", default-features = false, features = ["crossterm_0_28", "std"] }
+reqwest = { version = "0.12", features = ["json", "stream"] }
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+uuid = { version = "1.0", features = ["v4"] }

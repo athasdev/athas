@@ -61,7 +61,7 @@ pub fn configure_app(app: &mut tauri::App<AthasRuntime>) -> Result<(), Box<dyn s
    listen_for_deep_links(app);
 
    #[cfg(unix)]
-   commands::development::cli::auto_fix_cli_on_startup();
+   commands::development::cli::auto_fix_cli_on_startup(app.handle());
 
    app.on_menu_event(handle_menu_event);
    app.state::<commands::ui::StartupTiming>()

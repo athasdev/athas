@@ -28,6 +28,10 @@ mod terminal;
 #[cfg_attr(all(target_os = "linux", feature = "linux"), tauri::cef_entry_point)]
 fn main() {
    let mut cli_args = std::env::args().skip(1).collect::<Vec<_>>();
+   if let Some(command @ ("agent" | "run")) = cli_args.first().map(String::as_str) {
+      let binary = std::env::current_exe().unwrap_or_default();
+      std::process::exit(athas_agent_cli::run_cli(command, &cli_args[1..], binary));
+   }
    let validate_cli = cli_args.first().is_some_and(|arg| arg == "--validate-cli");
    if validate_cli {
       cli_args.remove(0);

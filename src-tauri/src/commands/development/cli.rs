@@ -69,6 +69,8 @@ Usage:
   athas action <run-id> [--cwd <repository>]
   athas remote [--new-window] <connection-id> [name]
   athas web <url>
+  athas agent [--cwd <directory>] --model <model>
+  athas run [--cwd <directory>] --model <model> <prompt>
 
 Options:
   -n, --new-window     Open each target in a new window
@@ -88,22 +90,36 @@ Examples:
   athas terminal 'git status && git diff'
   athas --new-window src/main.rs:120
   athas pr 42 --cwd ~/projects/my-app
+  athas agent --model gpt-4.1
+  athas run --model gpt-4.1 "Explain this repository"
 "#;
 
 #[cfg(unix)]
-fn unix_cli_script(binary: &std::path::Path) -> String {
+fn unix_cli_script_for_id(binary: &std::path::Path, identifier: &str) -> String {
    let binary = binary.to_string_lossy().replace('\'', "'\\''");
+   let identifier = identifier.replace('\'', "'\\''");
    format!(
       r#"#!/bin/bash
 # Athas CLI launcher
 athas_binary='{binary}'
 case "${{1:-}}" in
     help|-h|--help) exec "$athas_binary" --help ;;
+    agent|run)
+      athas_agent_binary="$(dirname "$athas_binary")/athas-agent"
+      if [ -x "$athas_agent_binary" ]; then
+        exec env ATHAS_DESKTOP_BIN="$athas_binary" ATHAS_APP_IDENTIFIER='{identifier}' "$athas_agent_binary" "$@"
+      fi
+      exec "$athas_binary" "$@" ;;
 esac
 "$athas_binary" --validate-cli "$@" || exit $?
 nohup "$athas_binary" "$@" >/dev/null 2>&1 &
 "#
    )
+}
+
+#[cfg(all(test, unix))]
+fn unix_cli_script(binary: &std::path::Path) -> String {
+   unix_cli_script_for_id(binary, "com.code.athas")
 }
 
 #[cfg(windows)]
@@ -115,9 +131,10 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0athas.ps1" %*
 }
 
 #[cfg(windows)]
-fn windows_powershell_script() -> Result<String, String> {
+fn windows_powershell_script(identifier: &str) -> Result<String, String> {
    let binary = std::env::current_exe().map_err(|error| error.to_string())?;
    let binary = binary.to_string_lossy().replace('\'', "''");
+   let identifier = identifier.replace('\'', "''");
    Ok(format!(
       r#"$ErrorActionPreference = 'Stop'
 $athasBinary = '{binary}'
@@ -126,6 +143,17 @@ if ($args.Count -gt 0 -and $args[0] -in @('help', '-h', '--help')) {{
 {CLI_HELP_TEXT}
 '@
   exit 0
+}}
+if ($args.Count -gt 0 -and $args[0] -in @('agent', 'run')) {{
+  $agentBinary = Join-Path (Split-Path $athasBinary) 'athas-agent.exe'
+  if (-not (Test-Path -LiteralPath $agentBinary)) {{
+    Write-Error 'Athas Agent CLI is missing from this installation.'
+    exit 1
+  }}
+  $env:ATHAS_DESKTOP_BIN = $athasBinary
+  $env:ATHAS_APP_IDENTIFIER = '{identifier}'
+  & $agentBinary @args
+  exit $LASTEXITCODE
 }}
 function Quote-NativeArgument([string]$value) {{
   $value = [regex]::Replace($value, '(\\*)"', '$1$1\"')
@@ -151,13 +179,13 @@ $start.Arguments = $encodedArgs
    ))
 }
 
-#[cfg(any(target_os = "macos", test))]
+#[cfg(unix)]
 const UNIX_CLI_SCRIPT_HEADER: &str = "#!/bin/bash\n# Athas CLI launcher\n";
 
 #[cfg(unix)]
-fn current_cli_script() -> Result<String, String> {
+fn current_cli_script(identifier: &str) -> Result<String, String> {
    let binary = std::env::current_exe().map_err(|error| error.to_string())?;
-   Ok(unix_cli_script(&binary))
+   Ok(unix_cli_script_for_id(&binary, identifier))
 }
 
 /// macOS mounts apps opened straight from Downloads or a disk image at a random
@@ -185,7 +213,7 @@ fn ensure_installable_location() -> Result<(), String> {
 
 /// Returns the binary an Athas launcher script execs, or `None` for launchers
 /// written by older versions that went through `open` and URL schemes instead.
-#[cfg(any(target_os = "macos", test))]
+#[cfg(unix)]
 fn launcher_binary(script: &str) -> Option<std::path::PathBuf> {
    let quoted = script
       .lines()
@@ -198,20 +226,22 @@ fn launcher_binary(script: &str) -> Option<std::path::PathBuf> {
 /// Scripts Athas did not write are left alone, and a working launcher that
 /// points at another existing Athas build (for example a preview channel) is
 /// kept so channels do not keep overwriting each other.
-#[cfg(any(target_os = "macos", test))]
+#[cfg(unix)]
 fn launcher_needs_rewrite(existing: &str, current: &str) -> bool {
    if !existing.starts_with(UNIX_CLI_SCRIPT_HEADER) || existing == current {
       return false;
    }
    match launcher_binary(existing) {
-      Some(binary) => !binary.exists(),
+      Some(binary) => {
+         launcher_binary(current).as_deref() == Some(binary.as_path()) || !binary.exists()
+      }
       None => true,
    }
 }
 
 #[cfg(target_os = "macos")]
 #[command]
-pub fn install_cli_command() -> Result<String, String> {
+pub fn install_cli_command(app: crate::app_runtime::AppHandle) -> Result<String, String> {
    ensure_installable_location()?;
    let cli_path = get_cli_script_path()?;
    let bin_dir = cli_path
@@ -222,7 +252,7 @@ pub fn install_cli_command() -> Result<String, String> {
       fs::create_dir_all(bin_dir).map_err(|e| format!("Failed to create directory: {}", e))?;
    }
 
-   fs::write(&cli_path, current_cli_script()?)
+   fs::write(&cli_path, current_cli_script(&app.config().identifier)?)
       .map_err(|e| format!("Failed to write CLI script: {}", e))?;
 
    let mut perms = fs::metadata(&cli_path)
@@ -242,13 +272,13 @@ pub fn install_cli_command() -> Result<String, String> {
 
 #[cfg(all(unix, not(target_os = "macos")))]
 #[command]
-pub fn install_cli_command() -> Result<String, String> {
+pub fn install_cli_command(app: crate::app_runtime::AppHandle) -> Result<String, String> {
    let cli_path = get_cli_script_path()?;
    let bin_dir = cli_path
       .parent()
       .ok_or_else(|| "Failed to get parent directory".to_string())?;
 
-   let script_content = current_cli_script()?;
+   let script_content = current_cli_script(&app.config().identifier)?;
 
    if !bin_dir.exists() {
       fs::create_dir_all(bin_dir).map_err(|e| format!("Failed to create directory: {}", e))?;
@@ -274,7 +304,7 @@ pub fn install_cli_command() -> Result<String, String> {
 
 #[cfg(windows)]
 #[command]
-pub fn install_cli_command() -> Result<String, String> {
+pub fn install_cli_command(app: crate::app_runtime::AppHandle) -> Result<String, String> {
    let cli_path = get_cli_script_path()?;
    let powershell_path = get_cli_powershell_path()?;
    let bin_dir = cli_path
@@ -287,8 +317,11 @@ pub fn install_cli_command() -> Result<String, String> {
 
    fs::write(&cli_path, windows_cmd_script())
       .map_err(|e| format!("Failed to write CLI script: {}", e))?;
-   fs::write(&powershell_path, windows_powershell_script()?)
-      .map_err(|e| format!("Failed to write PowerShell CLI script: {}", e))?;
+   fs::write(
+      &powershell_path,
+      windows_powershell_script(&app.config().identifier)?,
+   )
+   .map_err(|e| format!("Failed to write PowerShell CLI script: {}", e))?;
 
    let path_instruction = format!(
       "CLI command installed successfully at {}.\n\nTo use 'athas' from anywhere, add the \
@@ -304,9 +337,9 @@ pub fn install_cli_command() -> Result<String, String> {
 
 #[cfg(target_os = "macos")]
 #[command]
-pub fn get_cli_install_command() -> Result<String, String> {
+pub fn get_cli_install_command(app: crate::app_runtime::AppHandle) -> Result<String, String> {
    ensure_installable_location()?;
-   let script = current_cli_script()?;
+   let script = current_cli_script(&app.config().identifier)?;
 
    Ok(format!(
       "mkdir -p ~/.local/bin && cat > ~/.local/bin/athas << 'SCRIPT'\n{}\nSCRIPT\nchmod +x \
@@ -317,8 +350,8 @@ pub fn get_cli_install_command() -> Result<String, String> {
 
 #[cfg(all(unix, not(target_os = "macos")))]
 #[command]
-pub fn get_cli_install_command() -> Result<String, String> {
-   let script = current_cli_script()?;
+pub fn get_cli_install_command(app: crate::app_runtime::AppHandle) -> Result<String, String> {
+   let script = current_cli_script(&app.config().identifier)?;
    Ok(format!(
       "mkdir -p ~/.local/bin && cat > ~/.local/bin/athas << 'EOF'\n{}\nEOF\nchmod +x \
        ~/.local/bin/athas",
@@ -328,8 +361,8 @@ pub fn get_cli_install_command() -> Result<String, String> {
 
 #[cfg(windows)]
 #[command]
-pub fn get_cli_install_command() -> Result<String, String> {
-   let powershell_script = windows_powershell_script()?.replace('\'', "''");
+pub fn get_cli_install_command(app: crate::app_runtime::AppHandle) -> Result<String, String> {
+   let powershell_script = windows_powershell_script(&app.config().identifier)?.replace('\'', "''");
    Ok(format!(
       r#"mkdir "%USERPROFILE%\.athas\bin" 2>nul && (
 echo @echo off
@@ -376,7 +409,7 @@ pub fn uninstall_cli_command() -> Result<String, String> {
 /// On Linux, silently fix a CLI script that contains macOS commands (`open -a`).
 /// Called once during app startup to auto-repair wrong-platform scripts.
 #[cfg(all(unix, not(target_os = "macos")))]
-pub fn auto_fix_cli_on_startup() {
+pub fn auto_fix_cli_on_startup(app: &crate::app_runtime::AppHandle) {
    let cli_path = match get_cli_script_path() {
       Ok(p) => p,
       Err(_) => return,
@@ -386,7 +419,13 @@ pub fn auto_fix_cli_on_startup() {
       return;
    }
 
-   if validate_cli_script(&cli_path) {
+   let Ok(existing) = fs::read_to_string(&cli_path) else {
+      return;
+   };
+   let Ok(current) = current_cli_script(&app.config().identifier) else {
+      return;
+   };
+   if validate_cli_script(&cli_path) && !launcher_needs_rewrite(&existing, &current) {
       return;
    }
 
@@ -395,7 +434,7 @@ pub fn auto_fix_cli_on_startup() {
       cli_path.display()
    );
 
-   match install_cli_command() {
+   match install_cli_command(app.clone()) {
       Ok(_) => log::info!("CLI script auto-fixed successfully"),
       Err(e) => log::warn!("Failed to auto-fix CLI script: {}", e),
    }
@@ -405,7 +444,7 @@ pub fn auto_fix_cli_on_startup() {
 /// `open "athas://open?..."`, which could leave a blank window instead of
 /// opening the requested path.
 #[cfg(target_os = "macos")]
-pub fn auto_fix_cli_on_startup() {
+pub fn auto_fix_cli_on_startup(app: &crate::app_runtime::AppHandle) {
    if cfg!(debug_assertions) {
       return;
    }
@@ -418,12 +457,17 @@ pub fn auto_fix_cli_on_startup() {
    let Ok(binary) = std::env::current_exe() else {
       return;
    };
-   if is_translocated(&binary) || !launcher_needs_rewrite(&existing, &unix_cli_script(&binary)) {
+   if is_translocated(&binary)
+      || !launcher_needs_rewrite(
+         &existing,
+         &unix_cli_script_for_id(&binary, &app.config().identifier),
+      )
+   {
       return;
    }
 
    log::info!("Updating outdated CLI launcher at {}", cli_path.display());
-   match install_cli_command() {
+   match install_cli_command(app.clone()) {
       Ok(_) => log::info!("CLI launcher updated"),
       Err(error) => log::warn!("Failed to update CLI launcher: {error}"),
    }
@@ -467,6 +511,14 @@ mod tests {
 
       let other_channel = unix_cli_script(std::path::Path::new("/bin/bash"));
       assert!(!launcher_needs_rewrite(&other_channel, &current));
+   }
+
+   #[test]
+   fn rewrites_an_older_launcher_for_the_same_binary() {
+      let binary = std::path::Path::new("/bin/sh");
+      let current = unix_cli_script(binary);
+      let older = format!("{}# previous version\n", current);
+      assert!(launcher_needs_rewrite(&older, &current));
    }
 
    #[test]

@@ -25,14 +25,39 @@ const binary = resolve(
   process.platform === "win32" ? "athas.exe" : "athas",
 );
 
+const args = process.argv.slice(2);
+if (["agent", "run"].includes(args[0])) {
+  const compiled = Bun.spawnSync(
+    ["cargo", "build", "-p", "athas-agent-cli", "--bin", "athas-agent"],
+    { cwd: repoRoot, stdout: "inherit", stderr: "inherit" },
+  );
+  if (compiled.exitCode !== 0) process.exit(compiled.exitCode);
+  const agentBinary = resolve(
+    targetDirectory,
+    process.env.CARGO_BUILD_TARGET ?? "",
+    "debug",
+    process.platform === "win32" ? "athas-agent.exe" : "athas-agent",
+  );
+  const child = Bun.spawn([agentBinary, ...args], {
+    cwd: process.cwd(),
+    env: {
+      ...process.env,
+      ATHAS_DESKTOP_BIN: binary,
+      ATHAS_APP_IDENTIFIER: process.env.ATHAS_APP_IDENTIFIER ?? "com.code.athas",
+      ATHAS_API_URL: process.env.ATHAS_API_URL ?? "https://athas.dev",
+    },
+    stdin: "inherit",
+    stdout: "inherit",
+    stderr: "inherit",
+  });
+  process.exit(await child.exited);
+}
 if (!existsSync(binary)) {
   console.error(
     "The Athas development binary is not built yet. Start bun dev, then retry bun run cli.",
   );
   process.exit(1);
 }
-
-const args = process.argv.slice(2);
 const validation = Bun.spawnSync([binary, "--validate-cli", ...args], {
   cwd: process.cwd(),
   stdout: "inherit",

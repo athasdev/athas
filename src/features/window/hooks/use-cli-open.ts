@@ -4,9 +4,12 @@ import { useEffect } from "react";
 import { enqueueWindowOpenRequest, type WindowOpenRequest } from "../utils/window-open-request";
 import { createPendingQueueDrain } from "../utils/pending-queue-drain";
 import { disposeListener } from "@/utils/tauri-drag-drop";
+import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { openAgentHistoryChat } from "@/features/ai/lib/open-agent-history";
 
 export interface CliOpenPayload {
-  kind: "path" | "web" | "terminal" | "remote" | "surface" | "empty";
+  kind: "path" | "web" | "terminal" | "remote" | "surface" | "empty" | "agent_session";
   path?: string;
   is_directory?: boolean;
   line?: number | null;
@@ -17,6 +20,7 @@ export interface CliOpenPayload {
   connection_id?: string;
   name?: string | null;
   resource_id?: number;
+  chat_id?: string;
 }
 
 const toPositiveInteger = (value: number | null | undefined) =>
@@ -81,6 +85,21 @@ function mapCliOpenPayloadToWindowOpenRequest(payload: CliOpenPayload): WindowOp
 }
 
 function enqueuePayload(payload: CliOpenPayload) {
+  if (payload.kind === "agent_session") {
+    if (!payload.chat_id || !payload.working_directory) return;
+    void (async () => {
+      const opened = await useFileSystemStore
+        .getState()
+        .handleOpenFolderByPath(payload.working_directory!);
+      if (!opened) return;
+      await useAIChatStore.getState().actions.initializeDatabase();
+      await useAIChatStore.getState().actions.loadChatsFromDatabase();
+      if (useAIChatStore.getState().actions.getChatById(payload.chat_id!)) {
+        openAgentHistoryChat(payload.chat_id!);
+      }
+    })().catch((error) => console.error("Failed to open Agent session from CLI:", error));
+    return;
+  }
   const request = mapCliOpenPayloadToWindowOpenRequest(payload);
   if (request) {
     void enqueueWindowOpenRequest(request);

@@ -75,6 +75,7 @@ src-tauri/.claude/settings.local.json
 
 # Tauri gen files
 src-tauri/gen/
+src-tauri/binaries/athas-agent-*
 apps/desktop/src-tauri/gen/
 **/src-tauri/gen/
 
