@@ -29,7 +29,6 @@ import { useZoomStore } from "@/features/window/stores/zoom.store";
 import { editorAPI } from "../extensions/api";
 import CodeLensOverlay from "../lsp/code-lens-overlay";
 import RenameInput from "../lsp/rename-input";
-import { SignatureHelpTooltip } from "../lsp/signature-help-tooltip";
 import type { CodeLensItem } from "../lsp/use-code-lens";
 import { useRename } from "../lsp/use-rename";
 import { MarkdownPreview } from "../markdown/markdown-preview";
@@ -53,7 +52,6 @@ import type {
 import { ScrollDebugOverlay } from "./debug/scroll-debug-overlay";
 import { HtmlPreview } from "./html/html-preview";
 import { CodeMirrorEditor } from "./codemirror-editor";
-import { MonacoEditor } from "./monaco-editor";
 import { SvgPreview } from "./svg/svg-preview";
 import { EditorStylesheet } from "./stylesheet";
 import Breadcrumb, { type BreadcrumbProps } from "./toolbar/breadcrumb";
@@ -162,8 +160,6 @@ const CodeEditor = ({
   );
   const editorViewKey = paneId && activeBufferId ? `${paneId}:${activeBufferId}` : activeBufferId;
   const { handleContentChange, handleDocumentChange } = useEditorAppStore.use.actions();
-  const editorEngine = useSettingsStore((state) => state.settings.editorEngine);
-  const TextEditor = editorEngine === "codemirror" ? CodeMirrorEditor : MonacoEditor;
   const editorFontSize = useSettingsStore((state) => state.settings.fontSize);
   const editorLineHeight = useSettingsStore((state) => state.settings.editorLineHeight);
   const codeLensEnabled = useSettingsStore((state) => state.settings.codeLens);
@@ -562,15 +558,6 @@ const CodeEditor = ({
               />
             )}
 
-            {/* Signature Help */}
-            {enableRichEditorServices && (
-              <SignatureHelpTooltip
-                editorRef={editorRef}
-                filePath={filePath}
-                resolveModelPosition={resolveModelPosition}
-              />
-            )}
-
             {/* Rename Input */}
             {enableRichEditorServices && rename.renameState && (
               <RenameInput
@@ -604,8 +591,7 @@ const CodeEditor = ({
               ) : showNotebookEditor ? (
                 <NotebookEditor />
               ) : (
-                <TextEditor
-                  key={editorEngine}
+                <CodeMirrorEditor
                   bufferId={activeBufferId ?? undefined}
                   viewStateKey={editorViewKey ?? undefined}
                   isActiveSurface={isActiveSurface}

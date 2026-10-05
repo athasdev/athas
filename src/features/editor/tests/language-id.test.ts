@@ -7,11 +7,7 @@ import {
   hasLineBasedSyntaxHighlighter,
   tokenizeLineBasedSyntax,
 } from "../utils/line-based-syntax";
-import {
-  MONACO_HIGHLIGHT_LANGUAGE_IDS,
-  MONACO_LANGUAGE_BY_ATHAS_ID,
-  toMonacoLanguageId,
-} from "../engines/monaco/language";
+import { hasCodeMirrorLanguage } from "../engines/codemirror/languages";
 import { getLanguageOverlayTokens } from "../lib/wasm-parser/language-overlays";
 
 describe("getLanguageIdFromPath", () => {
@@ -78,32 +74,25 @@ describe("getLanguageIdFromPath", () => {
     expect(getLanguageDisplayName("astro")).toBe("Astro");
   });
 
-  it("maps Monaco-highlighted extensions to registered Monaco language ids", () => {
-    expect(toMonacoLanguageId(getLanguageIdFromPath("/tmp/component.tsx"))).toBe("typescript");
-    expect(toMonacoLanguageId(getLanguageIdFromPath("/tmp/exploration.ipy"))).toBe("python");
-    expect(toMonacoLanguageId(getLanguageIdFromPath("/tmp/analysis.R"))).toBe("r");
-    expect(toMonacoLanguageId(getLanguageIdFromPath("/tmp/report.Rmd"))).toBe("markdown");
-    expect(toMonacoLanguageId(getLanguageIdFromPath("/tmp/notebook.ipynb"))).toBe("json");
-    expect(toMonacoLanguageId(getLanguageIdFromPath("/tmp/.gitignore"))).toBe("gitignore");
-    expect(toMonacoLanguageId(getLanguageIdFromPath("/tmp/.dockerignore"))).toBe("gitignore");
-    expect(toMonacoLanguageId(getLanguageIdFromPath("/tmp/.gitattributes"))).toBe("gitattributes");
-    expect(toMonacoLanguageId(getLanguageIdFromPath("/tmp/bun.lock"))).toBe("lockfile");
-    expect(toMonacoLanguageId(getLanguageIdFromPath("/tmp/flake.nix"))).toBe("nix");
-    expect(toMonacoLanguageId(getLanguageIdFromPath("/tmp/main.zig"))).toBe("zig");
-    expect(toMonacoLanguageId(getLanguageIdFromPath("/tmp/Main.elm"))).toBe("elm");
-    expect(toMonacoLanguageId(getLanguageIdFromPath("/tmp/init.el"))).toBe("elisp");
-  });
-});
-
-describe("toMonacoLanguageId", () => {
-  it("maps every Monaco-backed Athas language to a bundled highlight contribution", () => {
-    for (const [athasLanguageId, monacoLanguageId] of Object.entries(MONACO_LANGUAGE_BY_ATHAS_ID)) {
-      if (monacoLanguageId === "plaintext") continue;
-
-      expect(
-        MONACO_HIGHLIGHT_LANGUAGE_IDS.has(toMonacoLanguageId(athasLanguageId)),
-        `${athasLanguageId} maps to ${monacoLanguageId}`,
-      ).toBe(true);
+  it("resolves highlighted files to a CodeMirror language", () => {
+    for (const path of [
+      "/tmp/component.tsx",
+      "/tmp/exploration.ipy",
+      "/tmp/analysis.R",
+      "/tmp/report.Rmd",
+      "/tmp/notebook.ipynb",
+      "/tmp/.gitignore",
+      "/tmp/.dockerignore",
+      "/tmp/.gitattributes",
+      "/tmp/bun.lock",
+      "/tmp/flake.nix",
+      "/tmp/main.zig",
+      "/tmp/Main.elm",
+      "/tmp/init.el",
+      "/tmp/Makefile",
+      "/tmp/Dockerfile.dev",
+    ]) {
+      expect(hasCodeMirrorLanguage(getLanguageIdFromPath(path) ?? ""), path).toBe(true);
     }
   });
 });

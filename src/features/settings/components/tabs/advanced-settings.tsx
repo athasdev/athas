@@ -32,9 +32,8 @@ function getTelemetryStatusVariant(status: TelemetryLogEntry["status"]): BadgeTo
 }
 
 export const AdvancedSettings = () => {
-  const webgpu = usePerformanceExperiments.use.webgpu();
   const showMonitor = usePerformanceExperiments.use.showMonitor();
-  const { toggleWebgpu, toggleMonitor } = usePerformanceExperiments.use.actions();
+  const { toggleMonitor } = usePerformanceExperiments.use.actions();
   const telemetry = useSettingsStore((state) => state.settings.telemetry);
   const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
   const resetToDefaults = useSettingsStore((state) => state.actions.resetToDefaults);
@@ -121,9 +120,6 @@ export const AdvancedSettings = () => {
   return (
     <SettingsView>
       <Section title="Performance experiments">
-        <SettingRow label="Experimental WebGPU renderer" description="Falls back to DOM rendering">
-          <Switch checked={webgpu} onChange={toggleWebgpu} />
-        </SettingRow>
         <SettingRow label="Show performance monitor">
           <Switch checked={showMonitor} onChange={toggleMonitor} />
         </SettingRow>

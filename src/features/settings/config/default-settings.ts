@@ -24,7 +24,6 @@ export const defaultSettings: Settings = {
   autoSave: false,
   quickOpenPreview: true,
   // Editor
-  editorEngine: "monaco",
   fontFamily: DEFAULT_MONO_FONT_FAMILY,
   fontSize: DEFAULT_CODE_FONT_SIZE,
   editorLineHeight: 1.4,

@@ -661,12 +661,6 @@ const viewCommands: Command[] = [
     execute: () => usePerformanceExperiments.getState().actions.toggleMonitor(),
   },
   {
-    id: "editor.toggleWebgpu",
-    title: "Toggle Experimental WebGPU Renderer",
-    category: "View",
-    execute: () => usePerformanceExperiments.getState().actions.toggleWebgpu(),
-  },
-  {
     id: "workbench.toggleSidebar",
     title: "Toggle Sidebar",
     category: "View",

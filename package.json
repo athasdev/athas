@@ -141,8 +141,6 @@
     "immer": "^11.1.8",
     "jsonc-parser": "^3.3.1",
     "lexical": "^0.48.0",
-    "monaco-editor": "^0.55.1",
-    "monaco-vim": "^0.4.4",
     "motion": "^12.43.0",
     "nanoid": "^5.1.16",
     "nucleo-ui-fill-18": "^1.5.1",

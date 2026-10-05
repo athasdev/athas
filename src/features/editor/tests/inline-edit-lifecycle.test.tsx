@@ -10,7 +10,6 @@ import { requestInlineEdit } from "../services/editor-inline-edit-service";
 import { toast } from "sonner";
 import { useIntelligenceSettingsStore } from "@/features/ai/intelligence/stores/intelligence-settings.store";
 
-vi.mock("monaco-editor", () => ({}));
 vi.mock("@/features/ai/stores/ai-chat.store", () => {
   const state = {
     providerApiKeys: new Map([["openai", true]]),

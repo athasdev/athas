@@ -128,16 +128,19 @@ describe("keyboard shortcut dispatch", () => {
     expect(executed.map((entry) => entry.command)).toEqual(["editor.format"]);
   });
 
-  it("treats a keydown inside the Monaco editor as editor focus", () => {
+  it("treats a keydown inside the CodeMirror editor as editor focus", () => {
     keymapRegistry.registerKeybinding({
       key: "cmd+shift+i",
       command: "editor.format",
       when: "editorFocus",
       source: "default",
     });
+    const host = document.createElement("div");
+    host.dataset.editorEngine = "codemirror";
     const editor = document.createElement("div");
-    editor.className = "monaco-editor";
-    document.body.append(editor);
+    editor.className = "cm-editor";
+    host.append(editor);
+    document.body.append(host);
 
     press({ key: "i", code: "KeyI", metaKey: true, shiftKey: true }, editor);
 

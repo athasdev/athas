@@ -26,10 +26,6 @@ import { normalizeUiDensity } from "@/features/settings/lib/ui-preferences";
 import type { GitSidebarItemId } from "@/features/layout/config/item-order";
 import type { Settings, SettingsSection } from "@/features/settings/types/settings.types";
 
-function normalizeEditorEngine(value: unknown): Settings["editorEngine"] {
-  return value === "codemirror" ? "codemirror" : "monaco";
-}
-
 const AI_MODEL_MIGRATIONS: Record<string, Record<string, string>> = {
   anthropic: {
     "claude-fable-5": "claude-fable-5-1",
@@ -507,7 +503,6 @@ export function normalizeSettings(settings: Settings): Settings {
   );
 
   normalizedSettings.uiDensity = normalizeUiDensity(normalizedSettings.uiDensity);
-  normalizedSettings.editorEngine = normalizeEditorEngine(normalizedSettings.editorEngine);
   normalizedSettings.uiFontSize = normalizeUiFontSize(normalizedSettings.uiFontSize);
   normalizedSettings.fontFamily = normalizeConfiguredFontFamily(
     normalizedSettings.fontFamily === "Geist Mono"
@@ -603,10 +598,6 @@ export function normalizeSettingValue<K extends keyof Settings>(
 ): Settings[K] {
   if (key === "uiDensity") {
     return normalizeUiDensity(value) as Settings[K];
-  }
-
-  if (key === "editorEngine") {
-    return normalizeEditorEngine(value) as Settings[K];
   }
 
   if (key === "uiFontSize") {
