@@ -1100,8 +1100,6 @@ export const commands = {
     __TAURI_INVOKE<null>("set_extension_secret", { extensionId, key, value }),
   deleteExtensionSecret: (extensionId: string, key: string) =>
     __TAURI_INVOKE<null>("delete_extension_secret", { extensionId, key }),
-  fuzzyMatch: (request: FuzzyMatchRequest) =>
-    __TAURI_INVOKE<FuzzyMatchItem[]>("fuzzy_match", { request }),
   fffEnsureWorkspaces: (rootPaths: string[]) =>
     __TAURI_INVOKE<null>("fff_ensure_workspaces", { rootPaths }),
   fffSearchFiles: (query: string, limit: number | null, rootPaths: string[]) =>
@@ -4992,19 +4990,6 @@ export type FormatterConfig = {
   env: { [key in string]: string } | null;
   input_method: string | null;
   output_method: string | null;
-};
-
-export type FuzzyMatchItem = {
-  text: string;
-  score: number;
-  indices: number[];
-};
-
-export type FuzzyMatchRequest = {
-  pattern: string;
-  items: string[];
-  case_sensitive: boolean | null;
-  normalize: boolean | null;
 };
 
 /**  Whether the `gh` CLI can supply a credential, for the one-click switch in empty states. */

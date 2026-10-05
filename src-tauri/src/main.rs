@@ -495,7 +495,6 @@ pub(crate) fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
          set_extension_secret,
          delete_extension_secret,
          // Fuzzy matching commands
-         fuzzy_match,
          fff_ensure_workspaces,
          fff_search_files,
          fff_scan_status,

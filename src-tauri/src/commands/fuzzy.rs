@@ -1,87 +1,9 @@
 use athas_fff_search::{FffIndexedFile, FffScanStatus, FffSearch, FffSearchHit};
-use nucleo_matcher::{
-   Config, Matcher, Utf32Str,
-   pattern::{Atom, AtomKind, CaseMatching, Normalization},
-};
-use serde::{Deserialize, Serialize};
 use std::{
    path::PathBuf,
    sync::{Mutex, OnceLock},
 };
 use tauri::{AppHandle, Manager, State};
-
-#[derive(Debug, Serialize, Deserialize, specta::Type)]
-pub struct FuzzyMatchItem {
-   pub text: String,
-   pub score: i64,
-   pub indices: Vec<u32>,
-}
-
-#[derive(Debug, Serialize, Deserialize, specta::Type)]
-pub struct FuzzyMatchRequest {
-   pub pattern: String,
-   pub items: Vec<String>,
-   pub case_sensitive: Option<bool>,
-   pub normalize: Option<bool>,
-}
-
-#[tauri::command]
-#[specta::specta]
-pub fn fuzzy_match(request: FuzzyMatchRequest) -> Vec<FuzzyMatchItem> {
-   if request.pattern.is_empty() || request.items.is_empty() {
-      return request
-         .items
-         .into_iter()
-         .map(|text| FuzzyMatchItem {
-            text,
-            score: 0,
-            indices: vec![],
-         })
-         .collect();
-   }
-
-   let case_matching = if request.case_sensitive.unwrap_or(false) {
-      CaseMatching::Respect
-   } else {
-      CaseMatching::Smart
-   };
-
-   let normalization = if request.normalize.unwrap_or(true) {
-      Normalization::Smart
-   } else {
-      Normalization::Never
-   };
-
-   let atom = Atom::new(
-      &request.pattern,
-      case_matching,
-      normalization,
-      AtomKind::Fuzzy,
-      false,
-   );
-
-   let mut matcher = Matcher::new(Config::DEFAULT);
-   let mut matches: Vec<FuzzyMatchItem> = Vec::new();
-
-   for item in request.items {
-      let mut indices = Vec::new();
-      let mut buf = Vec::new();
-      let utf32_str = Utf32Str::new(&item, &mut buf);
-
-      if let Some(score) = atom.indices(utf32_str, &mut matcher, &mut indices) {
-         matches.push(FuzzyMatchItem {
-            text: item,
-            score: score as i64,
-            indices,
-         });
-      }
-   }
-
-   // Sort by score in descending order
-   matches.sort_by_key(|item| std::cmp::Reverse(item.score));
-
-   matches
-}
 
 pub struct FffSearchState {
    fff: OnceLock<FffSearch>,
