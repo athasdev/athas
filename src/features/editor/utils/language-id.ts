@@ -98,6 +98,36 @@ const EXTENSION_TO_LANGUAGE: Record<string, string> = {
   svelte: "svelte",
   erb: "embedded_template",
   lock: "lockfile",
+  mk: "makefile",
+  cmake: "cmake",
+  hs: "haskell",
+  fs: "fsharp",
+  fsi: "fsharp",
+  fsx: "fsharp",
+  clj: "clojure",
+  cljs: "clojure",
+  cljc: "clojure",
+  edn: "clojure",
+  lisp: "lisp",
+  ps1: "powershell",
+  psm1: "powershell",
+  bat: "batch",
+  cmd: "batch",
+  ini: "ini",
+  cfg: "ini",
+  tex: "latex",
+  rst: "restructuredtext",
+  vim: "vim",
+  erl: "erlang",
+  hrl: "erlang",
+  jl: "julia",
+  pl: "perl",
+  pm: "perl",
+  groovy: "groovy",
+  gradle: "groovy",
+  hcl: "terraform",
+  v: "verilog",
+  sv: "systemverilog",
 };
 
 const FILENAME_TO_LANGUAGE: Record<string, string> = {
@@ -122,6 +152,12 @@ const FILENAME_TO_LANGUAGE: Record<string, string> = {
   "go.mod": "go",
   "go.sum": "go",
   "go.work": "go",
+  makefile: "makefile",
+  gnumakefile: "makefile",
+  "cmakelists.txt": "cmake",
+  gemfile: "ruby",
+  rakefile: "ruby",
+  ".vimrc": "vim",
 };
 
 function isEnvFileName(fileName: string): boolean {
@@ -258,6 +294,9 @@ export function getLanguageIdFromPath(filePath: string): string | null {
   const fromFilename = FILENAME_TO_LANGUAGE[fileName];
   if (fromFilename) {
     return fromFilename;
+  }
+  if (fileName.startsWith("dockerfile.") || fileName.endsWith(".dockerfile")) {
+    return "dockerfile";
   }
 
   const extension = filePath.split(".").pop()?.toLowerCase() || "";
