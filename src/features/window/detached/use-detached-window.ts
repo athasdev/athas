@@ -11,6 +11,7 @@ import { createAppWindow } from "@/features/window/utils/create-app-window";
 import { initializeFrontendTerminalSession } from "@/features/terminal/utils/frontend-terminal-session";
 import { frontendTrace } from "@/utils/frontend-trace";
 import { applyPlatformClass } from "@/utils/platform";
+import { listenToMenuActions } from "../lib/menu-actions";
 import {
   type DetachedWindowBaseMessage,
   type DetachedWindowKind,
@@ -169,8 +170,9 @@ export function useDetachedWindow<Message extends { type: string }>({
           event.preventDefault();
           requestClose();
         }),
-        getCurrentWindow().listen("menu_close_window", requestClose),
-        getCurrentWindow().listen("menu_quit_app", requestClose),
+        listenToMenuActions(({ action }) => {
+          if (action === "close_window" || action === "quit_app") requestClose();
+        }),
       ].map((listener) =>
         listener.then((unlisten) => {
           if (disposed || listenersFailed) unlisten();

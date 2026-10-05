@@ -1,74 +1,70 @@
 import type { UnlistenFn } from "@tauri-apps/api/event";
-import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type RefObject } from "react";
+import { listenToMenuActions } from "../lib/menu-actions";
+
+type Handlers = RefObject<UseMenuEventsProps>;
+
+/** Menu action ids, as Rust and the in-window menu bar send them, mapped to their handlers. */
+const MENU_ACTION_HANDLERS: Record<
+  string,
+  (handlers: UseMenuEventsProps, value: string) => unknown
+> = {
+  new_window: (h) => h.onNewWindow(),
+  new_file: (h) => h.onNewFile(),
+  open_folder: (h) => h.onOpenFolder(),
+  close_folder: (h) => h.onCloseFolder(),
+  save: (h) => h.onSave(),
+  save_as: (h) => h.onSaveAs(),
+  close_tab: (h) => h.onCloseTab(),
+  undo: (h) => h.onUndo(),
+  redo: (h) => h.onRedo(),
+  select_all: (h) => h.onSelectAll(),
+  find: (h) => h.onFind(),
+  find_replace: (h) => h.onFindReplace(),
+  toggle_comment: (h) => h.onToggleComment(),
+  command_palette: (h) => h.onCommandPalette(),
+  toggle_sidebar: (h) => h.onToggleSidebar(),
+  toggle_terminal: (h) => h.onToggleTerminal(),
+  split_editor: (h) => h.onSplitEditor(),
+  toggle_vim: (h) => h.onToggleVim(),
+  quick_open: (h) => h.onQuickOpen(),
+  next_tab: (h) => h.onNextTab(),
+  prev_tab: (h) => h.onPrevTab(),
+  theme_change: (h, value) => h.onThemeChange(value),
+  execute_command: (h, value) => h.onExecuteCommand(value),
+  documentation: (h) => h.onDocumentation(),
+  changelog: (h) => h.onChangelog(),
+  whats_new: (h) => h.onWhatsNew(),
+  report_bug: (h) => h.onReportBug(),
+  request_feature: (h) => h.onRequestFeature(),
+  check_updates: (h) => h.onCheckForUpdates(),
+  open_github_notifications: (h) => h.onOpenGitHubNotifications(),
+  open_settings: (h) => h.onOpenSettings(),
+  open_extensions: (h) => h.onOpenExtensions(),
+  toggle_menu_bar: (h) => h.onToggleMenuBar(),
+};
+
+let listenersAreSetup = false;
+let currentHandlers: Handlers | null = null;
+let removeListener: UnlistenFn | null = null;
 
 function cleanupMenuListeners() {
   if (!listenersAreSetup) return;
-
-  cleanupFunctions.forEach((cleanup) => cleanup());
-
-  cleanupFunctions = [];
+  removeListener?.();
+  removeListener = null;
   listenersAreSetup = false;
   currentHandlers = null;
 }
 
-let listenersAreSetup = false;
-let currentHandlers: any = null;
-let cleanupFunctions: UnlistenFn[] = [];
-
-async function setupMenuListeners(handlers: any) {
-  if (listenersAreSetup) {
-    currentHandlers = handlers;
-    return;
-  }
-
-  listenersAreSetup = true;
+async function setupMenuListeners(handlers: Handlers) {
   currentHandlers = handlers;
-  const currentWindow = getCurrentWebviewWindow();
+  if (listenersAreSetup) return;
+  listenersAreSetup = true;
 
-  const removeListeners = await Promise.all([
-    currentWindow.listen("menu_new_window", () => currentHandlers.current.onNewWindow()),
-    currentWindow.listen("menu_new_file", () => currentHandlers.current.onNewFile()),
-    currentWindow.listen("menu_open_folder", () => currentHandlers.current.onOpenFolder()),
-    currentWindow.listen("menu_close_folder", () => currentHandlers.current.onCloseFolder()),
-    currentWindow.listen("menu_save", () => currentHandlers.current.onSave()),
-    currentWindow.listen("menu_save_as", () => currentHandlers.current.onSaveAs()),
-    currentWindow.listen("menu_close_tab", () => currentHandlers.current.onCloseTab()),
-    currentWindow.listen("menu_undo", () => currentHandlers.current.onUndo()),
-    currentWindow.listen("menu_redo", () => currentHandlers.current.onRedo()),
-    currentWindow.listen("menu_select_all", () => currentHandlers.current.onSelectAll()),
-    currentWindow.listen("menu_find", () => currentHandlers.current.onFind()),
-    currentWindow.listen("menu_find_replace", () => currentHandlers.current.onFindReplace()),
-    currentWindow.listen("menu_toggle_comment", () => currentHandlers.current.onToggleComment()),
-    currentWindow.listen("menu_command_palette", () => currentHandlers.current.onCommandPalette()),
-    currentWindow.listen("menu_toggle_sidebar", () => currentHandlers.current.onToggleSidebar()),
-    currentWindow.listen("menu_toggle_terminal", () => currentHandlers.current.onToggleTerminal()),
-    currentWindow.listen("menu_split_editor", () => currentHandlers.current.onSplitEditor()),
-    currentWindow.listen("menu_toggle_vim", () => currentHandlers.current.onToggleVim()),
-    currentWindow.listen("menu_quick_open", () => currentHandlers.current.onQuickOpen()),
-    currentWindow.listen("menu_next_tab", () => currentHandlers.current.onNextTab()),
-    currentWindow.listen("menu_prev_tab", () => currentHandlers.current.onPrevTab()),
-    currentWindow.listen("menu_theme_change", (event) =>
-      currentHandlers.current.onThemeChange(event.payload as string),
-    ),
-    currentWindow.listen("menu_execute_command", (event) =>
-      currentHandlers.current.onExecuteCommand(event.payload as string),
-    ),
-    currentWindow.listen("menu_documentation", () => currentHandlers.current.onDocumentation()),
-    currentWindow.listen("menu_changelog", () => currentHandlers.current.onChangelog()),
-    currentWindow.listen("menu_whats_new", () => currentHandlers.current.onWhatsNew()),
-    currentWindow.listen("menu_report_bug", () => currentHandlers.current.onReportBug()),
-    currentWindow.listen("menu_request_feature", () => currentHandlers.current.onRequestFeature()),
-    currentWindow.listen("menu_check_updates", () => currentHandlers.current.onCheckForUpdates()),
-    currentWindow.listen("menu_open_github_notifications", () =>
-      currentHandlers.current.onOpenGitHubNotifications(),
-    ),
-    currentWindow.listen("menu_open_settings", () => currentHandlers.current.onOpenSettings()),
-    currentWindow.listen("menu_open_extensions", () => currentHandlers.current.onOpenExtensions()),
-    currentWindow.listen("menu_toggle_menu_bar", () => currentHandlers.current.onToggleMenuBar()),
-  ]);
-
-  cleanupFunctions = removeListeners;
+  removeListener = await listenToMenuActions(({ action, value }) => {
+    const handle = MENU_ACTION_HANDLERS[action];
+    if (handle && currentHandlers) void handle(currentHandlers.current, value ?? "");
+  });
 
   window.addEventListener("beforeunload", cleanupMenuListeners);
 }

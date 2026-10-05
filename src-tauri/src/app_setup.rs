@@ -384,11 +384,21 @@ fn command_id_for_menu_event(event_id: &str) -> Option<&'static str> {
    }
 }
 
-fn emit_menu_event<P>(window: &tauri::WebviewWindow, event: &str, payload: P)
-where
-   P: Serialize + Clone,
-{
-   let _ = window.emit_to(window.label(), event, payload);
+/// The one event every menu, dock and menu bar action reaches the webview through.
+const MENU_ACTION_EVENT: &str = "menu://action";
+
+#[derive(Clone, Serialize)]
+struct MenuAction<'a> {
+   action: &'a str,
+   value: Option<&'a str>,
+}
+
+fn emit_menu_action(window: &tauri::WebviewWindow, action: &str, value: Option<&str>) {
+   let _ = window.emit_to(
+      window.label(),
+      MENU_ACTION_EVENT,
+      MenuAction { action, value },
+   );
 }
 
 fn perform_macos_window_tab_action(window: &tauri::WebviewWindow, action: &str) {
@@ -451,67 +461,67 @@ fn handle_menu_event(app_handle: &tauri::AppHandle, event: tauri::menu::MenuEven
             match event_id {
                "quit" => {
                   info!("Quit menu item clicked");
-                  emit_menu_event(&window, "menu_quit_app", ());
+                  emit_menu_action(&window, "quit_app", None);
                }
                "quit_app" => {
                   info!("Quit app menu item triggered");
-                  emit_menu_event(&window, "menu_quit_app", ());
+                  emit_menu_action(&window, "quit_app", None);
                }
                "new_file" => {
-                  emit_menu_event(&window, "menu_new_file", ());
+                  emit_menu_action(&window, "new_file", None);
                }
                "open_folder" => {
-                  emit_menu_event(&window, "menu_open_folder", ());
+                  emit_menu_action(&window, "open_folder", None);
                }
                "close_folder" => {
-                  emit_menu_event(&window, "menu_close_folder", ());
+                  emit_menu_action(&window, "close_folder", None);
                }
                "save" => {
-                  emit_menu_event(&window, "menu_save", ());
+                  emit_menu_action(&window, "save", None);
                }
                "save_as" => {
-                  emit_menu_event(&window, "menu_save_as", ());
+                  emit_menu_action(&window, "save_as", None);
                }
                "close_tab" => {
                   debug!("Close tab menu item triggered");
-                  emit_menu_event(&window, "menu_close_tab", ());
+                  emit_menu_action(&window, "close_tab", None);
                }
                "close_window" => {
                   debug!("Close window menu item triggered");
-                  emit_menu_event(&window, "menu_close_window", ());
+                  emit_menu_action(&window, "close_window", None);
                }
                "undo" => {
-                  emit_menu_event(&window, "menu_undo", ());
+                  emit_menu_action(&window, "undo", None);
                }
                "redo" => {
-                  emit_menu_event(&window, "menu_redo", ());
+                  emit_menu_action(&window, "redo", None);
                }
                "select_all" => {
-                  emit_menu_event(&window, "menu_select_all", ());
+                  emit_menu_action(&window, "select_all", None);
                }
                "find" => {
-                  emit_menu_event(&window, "menu_find", ());
+                  emit_menu_action(&window, "find", None);
                }
                "find_replace" => {
-                  emit_menu_event(&window, "menu_find_replace", ());
+                  emit_menu_action(&window, "find_replace", None);
                }
                "toggle_comment" => {
-                  emit_menu_event(&window, "menu_toggle_comment", ());
+                  emit_menu_action(&window, "toggle_comment", None);
                }
                "command_palette" => {
-                  emit_menu_event(&window, "menu_command_palette", ());
+                  emit_menu_action(&window, "command_palette", None);
                }
                "toggle_sidebar" => {
-                  emit_menu_event(&window, "menu_toggle_sidebar", ());
+                  emit_menu_action(&window, "toggle_sidebar", None);
                }
                "toggle_terminal" => {
-                  emit_menu_event(&window, "menu_toggle_terminal", ());
+                  emit_menu_action(&window, "toggle_terminal", None);
                }
                "open_github_notifications" => {
-                  emit_menu_event(&window, "menu_open_github_notifications", ());
+                  emit_menu_action(&window, "open_github_notifications", None);
                }
                "split_editor" => {
-                  emit_menu_event(&window, "menu_split_editor", ());
+                  emit_menu_action(&window, "split_editor", None);
                }
                "toggle_menu_bar" => {
                   #[cfg(target_os = "linux")]
@@ -557,13 +567,13 @@ fn handle_menu_event(app_handle: &tauri::AppHandle, event: tauri::menu::MenuEven
                   }
                }
                "toggle_vim" => {
-                  emit_menu_event(&window, "menu_toggle_vim", ());
+                  emit_menu_action(&window, "toggle_vim", None);
                }
                "quick_open" => {
-                  emit_menu_event(&window, "menu_quick_open", ());
+                  emit_menu_action(&window, "quick_open", None);
                }
                "next_tab" => {
-                  emit_menu_event(&window, "menu_next_tab", ());
+                  emit_menu_action(&window, "next_tab", None);
                }
                "show_previous_window_tab" => {
                   perform_macos_window_tab_action(&window, "previous");
@@ -578,11 +588,11 @@ fn handle_menu_event(app_handle: &tauri::AppHandle, event: tauri::menu::MenuEven
                   perform_macos_window_tab_action(&window, "merge");
                }
                "prev_tab" => {
-                  emit_menu_event(&window, "menu_prev_tab", ());
+                  emit_menu_action(&window, "prev_tab", None);
                }
                command_event_id if command_id_for_menu_event(command_event_id).is_some() => {
                   let command_id = command_id_for_menu_event(command_event_id).unwrap();
-                  emit_menu_event(&window, "menu_execute_command", command_id);
+                  emit_menu_action(&window, "execute_command", Some(command_id));
                }
                "open_web_inspector" => {
                   #[cfg(any(debug_assertions, feature = "devtools"))]
@@ -594,28 +604,28 @@ fn handle_menu_event(app_handle: &tauri::AppHandle, event: tauri::menu::MenuEven
                   }
                }
                "documentation" => {
-                  emit_menu_event(&window, "menu_documentation", ());
+                  emit_menu_action(&window, "documentation", None);
                }
                "changelog" => {
-                  emit_menu_event(&window, "menu_changelog", ());
+                  emit_menu_action(&window, "changelog", None);
                }
                "whats_new" => {
-                  emit_menu_event(&window, "menu_whats_new", ());
+                  emit_menu_action(&window, "whats_new", None);
                }
                "report_bug" => {
-                  emit_menu_event(&window, "menu_report_bug", ());
+                  emit_menu_action(&window, "report_bug", None);
                }
                "request_feature" => {
-                  emit_menu_event(&window, "menu_request_feature", ());
+                  emit_menu_action(&window, "request_feature", None);
                }
                "check_updates" => {
-                  emit_menu_event(&window, "menu_check_updates", ());
+                  emit_menu_action(&window, "check_updates", None);
                }
                "open_settings" => {
-                  emit_menu_event(&window, "menu_open_settings", ());
+                  emit_menu_action(&window, "open_settings", None);
                }
                "open_extensions" => {
-                  emit_menu_event(&window, "menu_open_extensions", ());
+                  emit_menu_action(&window, "open_extensions", None);
                }
                "minimize_window" => {
                   if let Err(e) = window.minimize() {
@@ -634,7 +644,7 @@ fn handle_menu_event(app_handle: &tauri::AppHandle, event: tauri::menu::MenuEven
                   }
                }
                theme_id if theme_id.contains('-') => {
-                  emit_menu_event(&window, "menu_theme_change", theme_id);
+                  emit_menu_action(&window, "theme_change", Some(theme_id));
                }
                _ => {}
             }

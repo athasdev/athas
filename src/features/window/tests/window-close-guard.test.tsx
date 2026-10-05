@@ -213,7 +213,7 @@ describe("window close guard", () => {
     mocks.webviewListen.mockRejectedValueOnce(new Error("Native event unavailable"));
     await render();
     expect(mocks.unlistenNative).toHaveBeenCalledOnce();
-    expect(mocks.unlistenWebview).toHaveBeenCalledOnce();
+    expect(mocks.unlistenWebview).not.toHaveBeenCalled();
     expect(mocks.error).toHaveBeenCalledWith(
       expect.stringContaining("Could not protect unsaved changes"),
     );

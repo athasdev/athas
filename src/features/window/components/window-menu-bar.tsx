@@ -1,13 +1,13 @@
 import { toast } from "sonner";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { commands } from "@/bindings/commands";
-import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { exit } from "@tauri-apps/plugin-process";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useRegisteredThemes } from "@/extensions/themes/use-registered-themes";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { createAppWindow } from "@/features/window/utils/create-app-window";
+import { emitMenuAction } from "../lib/menu-actions";
 import {
   Menubar,
   MenubarContent,
@@ -98,9 +98,8 @@ const WindowMenuBar = ({
   }, [shouldRaiseWindowForMenu]);
 
   const handleClickEmit = useCallback(
-    (event: string, payload?: unknown) => {
-      const currentWindow = getCurrentWebviewWindow();
-      void currentWindow.emitTo(currentWindow.label, event, payload);
+    (action: string, value?: string) => {
+      void emitMenuAction(action, value);
       closeMenu();
     },
     [closeMenu],
@@ -115,7 +114,7 @@ const WindowMenuBar = ({
 
   const handleCommand = useCallback(
     (commandId: string) => {
-      handleClickEmit("menu_execute_command", commandId);
+      handleClickEmit("execute_command", commandId);
     },
     [handleClickEmit],
   );
@@ -135,18 +134,16 @@ const WindowMenuBar = ({
           <MenubarItem shortcut="mod+shift+n" onClick={handleNewWindow}>
             New Window
           </MenubarItem>
-          <MenubarItem onClick={() => handleClickEmit("menu_new_file")}>New File</MenubarItem>
-          <MenubarItem shortcut="mod+o" onClick={() => handleClickEmit("menu_open_folder")}>
+          <MenubarItem onClick={() => handleClickEmit("new_file")}>New File</MenubarItem>
+          <MenubarItem shortcut="mod+o" onClick={() => handleClickEmit("open_folder")}>
             Open Folder
           </MenubarItem>
-          <MenubarItem onClick={() => handleClickEmit("menu_close_folder")}>
-            Close Folder
-          </MenubarItem>
+          <MenubarItem onClick={() => handleClickEmit("close_folder")}>Close Folder</MenubarItem>
           <MenubarSeparator />
-          <MenubarItem shortcut="mod+s" onClick={() => handleClickEmit("menu_save")}>
+          <MenubarItem shortcut="mod+s" onClick={() => handleClickEmit("save")}>
             Save
           </MenubarItem>
-          <MenubarItem shortcut="mod+shift+s" onClick={() => handleClickEmit("menu_save_as")}>
+          <MenubarItem shortcut="mod+shift+s" onClick={() => handleClickEmit("save_as")}>
             Save As...
           </MenubarItem>
           <MenubarItem shortcut="mod+alt+s" onClick={() => handleCommand("file.saveAll")}>
@@ -157,7 +154,7 @@ const WindowMenuBar = ({
             Show Local History
           </MenubarItem>
           <MenubarSeparator />
-          <MenubarItem shortcut="mod+w" onClick={() => handleClickEmit("menu_close_tab")}>
+          <MenubarItem shortcut="mod+w" onClick={() => handleClickEmit("close_tab")}>
             Close Tab
           </MenubarItem>
           <MenubarItem
@@ -190,10 +187,10 @@ const WindowMenuBar = ({
       ),
       Edit: (
         <MenubarContent>
-          <MenubarItem shortcut="mod+z" onClick={() => handleClickEmit("menu_undo")}>
+          <MenubarItem shortcut="mod+z" onClick={() => handleClickEmit("undo")}>
             Undo
           </MenubarItem>
-          <MenubarItem shortcut="mod+shift+z" onClick={() => handleClickEmit("menu_redo")}>
+          <MenubarItem shortcut="mod+shift+z" onClick={() => handleClickEmit("redo")}>
             Redo
           </MenubarItem>
           <MenubarSeparator />
@@ -210,13 +207,13 @@ const WindowMenuBar = ({
             Select All
           </MenubarItem>
           <MenubarSeparator />
-          <MenubarItem shortcut="mod+f" onClick={() => handleClickEmit("menu_find")}>
+          <MenubarItem shortcut="mod+f" onClick={() => handleClickEmit("find")}>
             Find
           </MenubarItem>
-          <MenubarItem shortcut="mod+alt+f" onClick={() => handleClickEmit("menu_find_replace")}>
+          <MenubarItem shortcut="mod+alt+f" onClick={() => handleClickEmit("find_replace")}>
             Find and Replace
           </MenubarItem>
-          <MenubarItem shortcut="mod+/" onClick={() => handleClickEmit("menu_toggle_comment")}>
+          <MenubarItem shortcut="mod+/" onClick={() => handleClickEmit("toggle_comment")}>
             Toggle Comment
           </MenubarItem>
           <MenubarItem shortcut="mod+." onClick={() => handleCommand("editor.quickFix")}>
@@ -257,20 +254,17 @@ const WindowMenuBar = ({
             Format Selection
           </MenubarItem>
           <MenubarSeparator />
-          <MenubarItem
-            shortcut="mod+shift+p"
-            onClick={() => handleClickEmit("menu_command_palette")}
-          >
+          <MenubarItem shortcut="mod+shift+p" onClick={() => handleClickEmit("command_palette")}>
             Command Palette
           </MenubarItem>
         </MenubarContent>
       ),
       View: (
         <MenubarContent>
-          <MenubarItem shortcut="mod+b" onClick={() => handleClickEmit("menu_toggle_sidebar")}>
+          <MenubarItem shortcut="mod+b" onClick={() => handleClickEmit("toggle_sidebar")}>
             Toggle Sidebar
           </MenubarItem>
-          <MenubarItem shortcut="mod+j" onClick={() => handleClickEmit("menu_toggle_terminal")}>
+          <MenubarItem shortcut="mod+j" onClick={() => handleClickEmit("toggle_terminal")}>
             Toggle Terminal
           </MenubarItem>
           <MenubarSeparator />
@@ -304,9 +298,7 @@ const WindowMenuBar = ({
             Run and Debug
           </MenubarItem>
           <MenubarSeparator />
-          <MenubarItem onClick={() => handleClickEmit("menu_split_editor")}>
-            Split Editor
-          </MenubarItem>
+          <MenubarItem onClick={() => handleClickEmit("split_editor")}>Split Editor</MenubarItem>
           <MenubarItem onClick={() => handleCommand("workbench.toggleMinimap")}>
             Toggle Minimap
           </MenubarItem>
@@ -336,7 +328,7 @@ const WindowMenuBar = ({
               {themes.map((theme) => (
                 <MenubarItem
                   key={theme.id}
-                  onClick={() => handleClickEmit("menu_theme_change", theme.id)}
+                  onClick={() => handleClickEmit("theme_change", theme.id)}
                 >
                   {theme.name}
                 </MenubarItem>
@@ -347,7 +339,7 @@ const WindowMenuBar = ({
       ),
       Go: (
         <MenubarContent>
-          <MenubarItem shortcut="mod+p" onClick={() => handleClickEmit("menu_quick_open")}>
+          <MenubarItem shortcut="mod+p" onClick={() => handleClickEmit("quick_open")}>
             Quick Open
           </MenubarItem>
           <MenubarSeparator />
@@ -380,10 +372,10 @@ const WindowMenuBar = ({
             Rename Symbol
           </MenubarItem>
           <MenubarSeparator />
-          <MenubarItem shortcut="mod+alt+right" onClick={() => handleClickEmit("menu_next_tab")}>
+          <MenubarItem shortcut="mod+alt+right" onClick={() => handleClickEmit("next_tab")}>
             Next Tab
           </MenubarItem>
-          <MenubarItem shortcut="mod+alt+left" onClick={() => handleClickEmit("menu_prev_tab")}>
+          <MenubarItem shortcut="mod+alt+left" onClick={() => handleClickEmit("prev_tab")}>
             Previous Tab
           </MenubarItem>
         </MenubarContent>
@@ -434,12 +426,8 @@ const WindowMenuBar = ({
             Web Inspector
           </MenubarItem>
           <MenubarSeparator />
-          <MenubarItem onClick={() => handleClickEmit("menu_open_settings")}>
-            Preferences
-          </MenubarItem>
-          <MenubarItem onClick={() => handleClickEmit("menu_open_extensions")}>
-            Integrations
-          </MenubarItem>
+          <MenubarItem onClick={() => handleClickEmit("open_settings")}>Preferences</MenubarItem>
+          <MenubarItem onClick={() => handleClickEmit("open_extensions")}>Integrations</MenubarItem>
           <MenubarItem onClick={() => handleCommand("workbench.openKeyboardShortcuts")}>
             Keyboard Shortcuts
           </MenubarItem>
@@ -468,7 +456,7 @@ const WindowMenuBar = ({
           {!IS_LINUX && (
             <>
               <MenubarSeparator />
-              <MenubarItem shortcut="alt+m" onClick={() => handleClickEmit("menu_toggle_menu_bar")}>
+              <MenubarItem shortcut="alt+m" onClick={() => handleClickEmit("toggle_menu_bar")}>
                 Toggle Menu Bar
               </MenubarItem>
               <MenubarSeparator />
@@ -489,21 +477,19 @@ const WindowMenuBar = ({
       ),
       Help: (
         <MenubarContent>
-          <MenubarItem onClick={() => handleClickEmit("menu_documentation")}>
-            Documentation
-          </MenubarItem>
+          <MenubarItem onClick={() => handleClickEmit("documentation")}>Documentation</MenubarItem>
           <MenubarItem onClick={() => handleCommand("workbench.openKeyboardShortcuts")}>
             Keyboard Shortcuts
           </MenubarItem>
-          <MenubarItem onClick={() => handleClickEmit("menu_whats_new")}>What's New</MenubarItem>
-          <MenubarItem onClick={() => handleClickEmit("menu_changelog")}>Changelog</MenubarItem>
+          <MenubarItem onClick={() => handleClickEmit("whats_new")}>What's New</MenubarItem>
+          <MenubarItem onClick={() => handleClickEmit("changelog")}>Changelog</MenubarItem>
           <MenubarSeparator />
-          <MenubarItem onClick={() => handleClickEmit("menu_report_bug")}>Report a Bug</MenubarItem>
-          <MenubarItem onClick={() => handleClickEmit("menu_request_feature")}>
+          <MenubarItem onClick={() => handleClickEmit("report_bug")}>Report a Bug</MenubarItem>
+          <MenubarItem onClick={() => handleClickEmit("request_feature")}>
             Request a Feature
           </MenubarItem>
           <MenubarSeparator />
-          <MenubarItem onClick={() => handleClickEmit("menu_check_updates")}>
+          <MenubarItem onClick={() => handleClickEmit("check_updates")}>
             Check for Updates
           </MenubarItem>
         </MenubarContent>

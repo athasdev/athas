@@ -13,6 +13,9 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@tauri-apps/api/window", () => ({
   getCurrentWindow: () => ({ onCloseRequested: mocks.close, listen: mocks.listen }),
 }));
+vi.mock("@tauri-apps/api/webviewWindow", () => ({
+  getCurrentWebviewWindow: () => ({ label: "main", listen: mocks.listen }),
+}));
 vi.mock("@/features/editor/stores/buffer.store", () => ({
   useBufferStore: { getState: () => ({ actions: mocks.actions }), setState: vi.fn() },
 }));
@@ -81,19 +84,14 @@ afterEach(async () => {
 describe("Detached window lifecycle", () => {
   it("cleans successful and late subscriptions when another subscription fails", async () => {
     const late = Promise.withResolvers<() => void>();
-    const firstCleanup = vi.fn();
     const lateCleanup = vi.fn();
-    mocks.close.mockResolvedValue(firstCleanup);
-    mocks.listen
-      .mockRejectedValueOnce(new Error("Could not listen"))
-      .mockReturnValueOnce(late.promise);
+    mocks.close.mockReturnValue(late.promise);
+    mocks.listen.mockRejectedValueOnce(new Error("Could not listen"));
     await act(async () => root.render(<Window />));
     expect(container.textContent).toContain("Could not listen");
-    expect(firstCleanup).toHaveBeenCalledTimes(1);
     await act(async () => late.resolve(lateCleanup));
     expect(lateCleanup).toHaveBeenCalledTimes(1);
     await act(async () => root.render(null));
-    expect(firstCleanup).toHaveBeenCalledTimes(1);
     expect(lateCleanup).toHaveBeenCalledTimes(1);
   });
 

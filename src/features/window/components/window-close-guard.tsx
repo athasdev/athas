@@ -1,4 +1,3 @@
-import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
@@ -8,6 +7,7 @@ import { REQUEST_WINDOW_CLOSE_EVENT } from "@/features/window/utils/request-wind
 import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
 import { agentsAreDetached } from "@/features/ai/detached/agent-window.store";
 import { toast } from "sonner";
+import { listenToMenuActions } from "../lib/menu-actions";
 
 type CloseRequestedHandler = Parameters<ReturnType<typeof getCurrentWindow>["onCloseRequested"]>[0];
 
@@ -16,11 +16,11 @@ async function listenForCloseGuard(
   continueCloseOrPrompt: () => Promise<void>,
 ) {
   const currentWindow = getCurrentWindow();
-  const currentWebviewWindow = getCurrentWebviewWindow();
   const results = await Promise.allSettled([
     currentWindow.onCloseRequested(handleCloseRequested),
-    currentWebviewWindow.listen("menu_quit_app", () => void continueCloseOrPrompt()),
-    currentWebviewWindow.listen("menu_close_window", () => void continueCloseOrPrompt()),
+    listenToMenuActions(({ action }) => {
+      if (action === "quit_app" || action === "close_window") void continueCloseOrPrompt();
+    }),
   ]);
   const unlisteners = results.flatMap((result) =>
     result.status === "fulfilled" ? [result.value] : [],
