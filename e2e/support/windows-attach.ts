@@ -23,6 +23,28 @@ async function devToolsReady() {
   }
 }
 
+async function devToolsAnswers() {
+  try {
+    return (await fetch(`http://${DEBUGGER_ADDRESS}/json/version`)).ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * WebView2 helpers of the previous spec's app can outlive it for a moment and keep the fixed
+ * DevTools port. Attaching then would reach that dying page instead of the new app.
+ */
+async function waitForDevToolsPortToClose() {
+  const deadline = Date.now() + DEVTOOLS_TIMEOUT;
+  while (await devToolsAnswers()) {
+    if (Date.now() > deadline) {
+      throw new Error(`An earlier app still holds DevTools on ${DEBUGGER_ADDRESS}`);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+}
+
 /**
  * Launches the e2e build with the workspace as a plain argument and waits for
  * its DevTools endpoint, then returns capabilities that attach msedgedriver to
@@ -32,6 +54,7 @@ async function devToolsReady() {
 export async function launchAppForAttach(logName: string) {
   const logsDir = path.join(artifactsDir, "app-output");
   mkdirSync(logsDir, { recursive: true });
+  await waitForDevToolsPortToClose();
   const child = spawn(appBinary, [workspaceDir], { stdio: ["ignore", "pipe", "pipe"] });
   app = child;
   logProcessOutput(child, path.join(logsDir, `${logName}.log`));

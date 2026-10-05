@@ -21,7 +21,10 @@ import { e2eTest, useAppSession } from "../support/session.ts";
 const MARKER = "athas-e2e-search-target";
 const SEARCH_INPUT = By.css('input[aria-label="Search in files"]');
 const RESULTS = '[data-slot="multibuffer-workspace"]';
-const RESULT_HEADERS = By.css(`${RESULTS} button[aria-label^="Open "]`);
+// One "Open <path>" button per file header; result lines have "Open line N" buttons.
+const RESULT_HEADERS = By.css(
+  `${RESULTS} button[aria-label^="Open "]:not([aria-label^="Open line "])`,
+);
 const FAREWELL_RESULT = By.css(`${RESULTS} button[aria-label^="Open "][aria-label$="farewell.ts"]`);
 
 describe("global search", () => {

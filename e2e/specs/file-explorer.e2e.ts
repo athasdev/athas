@@ -29,6 +29,19 @@ function waitForPath(segments: string[], present: boolean, message: string) {
   return waitUntil(() => existsSync(workspaceFile(...segments)) === present, UI_TIMEOUT, message);
 }
 
+// The context menu re-renders while it opens, so an item found a moment earlier can go stale.
+// Find it again until the click lands.
+async function clickMenuItem(label: string) {
+  await waitUntil(
+    async () => {
+      await click(menuItem(label));
+      return true;
+    },
+    UI_TIMEOUT,
+    `Could not click the "${label}" menu item`,
+  );
+}
+
 describe("file explorer", () => {
   useAppSession("file-explorer");
 
@@ -40,7 +53,7 @@ describe("file explorer", () => {
   e2eTest("creates a file from the folder context menu", async () => {
     await contextClick(treeItem("src"));
     await waitForDisplayed(menuItem("New File"), "The folder context menu did not open");
-    await click(menuItem("New File"));
+    await clickMenuItem("New File");
 
     await waitForDisplayed(NEW_FILE_INPUT, "The new file name field never appeared");
     await typeInto(NEW_FILE_INPUT, CREATED);
@@ -53,7 +66,7 @@ describe("file explorer", () => {
   e2eTest("renames a file from its context menu", async () => {
     await contextClick(treeItem(CREATED));
     await waitForDisplayed(menuItem("Rename"), "The file context menu did not open");
-    await click(menuItem("Rename"));
+    await clickMenuItem("Rename");
 
     await waitForDisplayed(RENAME_INPUT, "The rename field never appeared");
     // The field fills in the current name; whether it arrives selected is
