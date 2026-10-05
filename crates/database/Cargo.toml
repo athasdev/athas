@@ -63,3 +63,6 @@ sqlx = { version = "0.8.6", default-features = false, features = [
   "mysql",
 ], optional = true }
 tokio = { version = "1.0", features = ["full"] }
+
+[lints]
+workspace = true

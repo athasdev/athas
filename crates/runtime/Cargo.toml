@@ -14,3 +14,6 @@ tar = "0.4"
 tempfile = "3.20"
 which = "7.0"
 zip = "2.2"
+
+[lints]
+workspace = true

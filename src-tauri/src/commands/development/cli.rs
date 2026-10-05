@@ -44,16 +44,10 @@ fn validate_cli_script(path: &std::path::Path) -> bool {
 pub fn check_cli_installed() -> Result<bool, String> {
    let cli_path = get_cli_script_path()?;
 
-   if !cli_path.exists() {
-      return Ok(false);
-   }
-
+   let installed = cli_path.exists();
    #[cfg(all(unix, not(target_os = "macos")))]
-   if !validate_cli_script(&cli_path) {
-      return Ok(false);
-   }
-
-   Ok(true)
+   let installed = installed && validate_cli_script(&cli_path);
+   Ok(installed)
 }
 
 pub const CLI_HELP_TEXT: &str = r#"Athas CLI

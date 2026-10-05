@@ -370,19 +370,20 @@ fn parse_directory_entries(output: &str) -> Result<Vec<RemoteFileEntry>, String>
    if !fields.len().is_multiple_of(6) {
       return Err("Invalid remote directory listing.".into());
    }
-   fields
-      .chunks_exact(6)
-      .map(|field| {
+   let (entries, _) = fields.as_chunks::<6>();
+   entries
+      .iter()
+      .map(|[name, path, kind, size, linked, target]| {
          Ok(RemoteFileEntry {
-            name: field[0].into(),
-            path: field[1].into(),
-            is_dir: field[2] == "d",
-            size: field[3]
+            name: (*name).into(),
+            path: (*path).into(),
+            is_dir: *kind == "d",
+            size: size
                .trim()
                .parse::<u64>()
                .map_err(|error| error.to_string())?,
-            is_symlink: field[4] == "true",
-            target: (!field[5].is_empty()).then(|| field[5].into()),
+            is_symlink: *linked == "true",
+            target: (!target.is_empty()).then(|| (*target).into()),
          })
       })
       .collect()

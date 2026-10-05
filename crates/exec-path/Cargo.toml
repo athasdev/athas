@@ -7,3 +7,6 @@ edition = "2024"
 libc = "0.2"
 tempfile = "3"
 which = "7.0"
+
+[lints]
+workspace = true
