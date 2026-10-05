@@ -21,6 +21,8 @@ export interface CodeMirrorHost {
   isReadOnly: boolean;
   /** A buffer with no file behind it (diff sides, logs, scratch views). */
   isVirtual: boolean;
+  /** Lines are numbered from a map (stitched views), so they don't match the file's lines. */
+  hasLineNumberMap?: boolean;
   /** The buffer's line separator; positions handed to the rest of the app count CRLF as two. */
   getSeparator: () => LineSeparator;
   /** Runs the Athas buffer history, which owns undo and redo instead of CodeMirror. */

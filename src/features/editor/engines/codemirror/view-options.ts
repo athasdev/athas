@@ -71,7 +71,7 @@ export function codeMirrorViewExtensions(options: CodeMirrorViewOptions): Extens
       : [],
     options.bracketPairColors ? bracketPairColors : [],
     options.highlightOccurrences
-      ? highlightSelectionMatches({ highlightWordAroundCursor: true })
+      ? highlightSelectionMatches({ highlightWordAroundCursor: false })
       : [],
     options.scrollBeyondLastLine ? scrollPastEnd() : bottomScrollPadding,
     options.scrollable ? [] : unscrollable,

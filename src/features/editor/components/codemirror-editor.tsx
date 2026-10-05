@@ -35,6 +35,7 @@ import {
 import { CodeMirrorFeatures } from "../engines/codemirror/features/codemirror-features";
 import type { CodeMirrorHost } from "../engines/codemirror/host";
 import { loadCodeMirrorLanguage } from "../engines/codemirror/languages";
+import { lspFoldingChanged } from "../engines/codemirror/navigation/lsp-folding";
 import { matchHighlightsField, setMatchHighlights } from "../engines/codemirror/match-highlights";
 import {
   fromBufferOffset,
@@ -327,7 +328,8 @@ export function CodeMirrorEditor({
           crosshairCursor(),
           highlightActiveLine(),
           highlightActiveLineGutter(),
-          foldGutter(),
+          foldGutter({ foldingChanged: lspFoldingChanged }),
+          EditorView.clickAddsSelectionRange.of((event) => event.altKey),
           search({ top: true }),
           keymap.of([
             ...closeBracketsKeymap,
@@ -529,6 +531,7 @@ export function CodeMirrorEditor({
 
   const bufferId = buffer?.id ?? null;
   const isVirtual = Boolean(buffer?.isVirtual);
+  const hasLineNumberMap = Boolean(lineNumberMap);
   const host = useMemo<CodeMirrorHost | null>(() => {
     const shell = shellRef.current;
     if (!view || !shell || !bufferId) return null;
@@ -542,6 +545,7 @@ export function CodeMirrorEditor({
       isActiveSurface,
       isReadOnly,
       isVirtual,
+      hasLineNumberMap,
       getSeparator: () => sessionRef.current?.separator ?? "\n",
       applyHistory,
     };

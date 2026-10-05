@@ -86,6 +86,7 @@ import {
   showCallHierarchy,
   showTypeHierarchy,
 } from "./navigation-command-actions";
+import { getActiveCodeMirrorNavigation } from "@/features/editor/engines/codemirror/navigation/active-navigation";
 import {
   organizeJavaImports,
   refreshJavaProject,
@@ -1007,6 +1008,14 @@ const navigationCommands: Command[] = [
     execute: goToReferences,
   },
   {
+    id: "editor.peekReferences",
+    title: "Peek References",
+    category: "Navigation",
+    execute: () => {
+      if (!getActiveCodeMirrorNavigation()?.peekReferences()) void goToReferences();
+    },
+  },
+  {
     id: "editor.showCallHierarchy",
     title: "Show Call Hierarchy",
     category: "Navigation",
@@ -1043,14 +1052,18 @@ const navigationCommands: Command[] = [
     title: "Expand Selection",
     category: "Selection",
     keybinding: "cmd+ctrl+shift+right",
-    execute: expandActiveEditorSelection,
+    execute: () => {
+      if (!getActiveCodeMirrorNavigation()?.expandSelection()) expandActiveEditorSelection();
+    },
   },
   {
     id: "editor.shrinkSelection",
     title: "Shrink Selection",
     category: "Selection",
     keybinding: "cmd+ctrl+shift+left",
-    execute: shrinkActiveEditorSelection,
+    execute: () => {
+      if (!getActiveCodeMirrorNavigation()?.shrinkSelection()) shrinkActiveEditorSelection();
+    },
   },
   {
     id: "editor.renameSymbol",
@@ -1241,9 +1254,9 @@ const windowCommands: Command[] = [
   },
 ];
 
-/** Loaded on use, so the keymap layer does not pull in the Monaco integration up front. */
+/** Loaded on use, so the keymap layer does not pull in the agent edit review up front. */
 async function agentHunkActions() {
-  return import("@/features/editor/engines/monaco/agent-edits-code-lens");
+  return import("@/features/editor/agent-edits/agent-hunk-actions");
 }
 
 const agentEditCommands: Command[] = [

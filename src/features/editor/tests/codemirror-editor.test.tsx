@@ -95,6 +95,9 @@ vi.mock("@/features/settings/stores/settings.store", () => ({
   useSettingsStore: (selector: (value: unknown) => unknown) =>
     selector({ settings: { vimMode: false, vimRelativeLineNumbers: false } }),
 }));
+vi.mock("../engines/codemirror/features/codemirror-features", () => ({
+  CodeMirrorFeatures: () => null,
+}));
 vi.mock("../hooks/use-editor-view-settings", () => ({
   useEditorViewSettings: () => ({
     fontFamily: "monospace",
