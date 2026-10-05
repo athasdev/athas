@@ -14,6 +14,9 @@ log = "0.4"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 specta = { version = "=2.0.0-rc.25", features = ["derive", "serde_json"] }
+# libssh2 has no pure-Rust crypto backend: on macOS and Linux it links
+# OpenSSL's libcrypto, so OpenSSL is vendored here for portable builds.
+# This is the only crate in the workspace that pulls in OpenSSL.
 ssh2 = { version = "0.9", features = ["vendored-openssl"] }
 tauri = { version = "2.12", default-features = false, features = ["wry"] }
 uuid = { version = "1", features = ["v4"] }

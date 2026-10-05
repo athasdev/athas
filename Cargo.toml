@@ -19,6 +19,17 @@ members = [
 ]
 resolver = "2"
 
+# Shared dependency specs that pin the workspace to a single TLS stack.
+# reqwest uses rustls only (bundled webpki roots plus the OS trust store),
+# and libgit2 is built without its HTTPS/SSH transports because every remote
+# operation shells out to the git CLI. Neither pulls in native-tls/OpenSSL.
+[workspace.dependencies]
+git2 = { version = "0.20", default-features = false, features = ["vendored-libgit2"] }
+reqwest = { version = "0.12", default-features = false, features = [
+  "rustls-tls",
+  "rustls-tls-native-roots",
+] }
+
 [workspace.lints.clippy]
 uninlined_format_args = "allow"
 new_without_default = "allow"

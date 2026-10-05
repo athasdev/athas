@@ -8,7 +8,7 @@ athas-runtime = { path = "../runtime" }
 flate2 = "1.0"
 futures-util = "0.3"
 log = "0.4"
-reqwest = { version = "0.12", features = ["stream"] }
+reqwest = { workspace = true, features = ["stream"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tauri = { version = "2.12", default-features = false, features = ["wry"] }
