@@ -18,6 +18,9 @@ const toQuickOpenFiles = (files: readonly Pick<FffIndexedFile, "name" | "path">[
       isDir: false,
     }));
 
+/** While the index grows, the full list is re-read at most this often; once more when it is done. */
+const RELIST_WHILE_SCANNING_MS = 2000;
+
 function startPolling(callback: () => void, interval: number) {
   const intervalId = setInterval(callback, interval);
   return () => clearInterval(intervalId);
@@ -46,9 +49,10 @@ export const useFileLoader = (isVisible: boolean) => {
     const isAlreadyLoaded = loadedForRootRef.current === workspaceKey;
     let cancelled = false;
     let pollInFlight = false;
-    // The scan status is cheap; the full file list is not. Re-list only when the index grew or
-    // the scan finished, instead of fetching and re-ranking every file on each poll.
+    // The scan status is cheap; the full file list is not. Re-list when the scan finished, or
+    // when the index grew and the last list is old enough, instead of on every poll.
     let listedIndexedFiles = -1;
+    let listedAt = 0;
 
     const pollNativeIndex = async () => {
       if (pollInFlight) return;
@@ -57,10 +61,13 @@ export const useFileLoader = (isVisible: boolean) => {
         const status = await fffScanStatus(nativeRootPaths);
         if (cancelled) return;
 
-        if (status.indexed_files !== listedIndexedFiles || !status.is_scanning) {
+        const grew = status.indexed_files !== listedIndexedFiles;
+        const listIsStale = Date.now() - listedAt >= RELIST_WHILE_SCANNING_MS;
+        if (grew && (!status.is_scanning || listIsStale || listedIndexedFiles < 0)) {
           const indexedFiles = await fffListFiles(nativeRootPaths);
           if (cancelled) return;
           listedIndexedFiles = status.indexed_files;
+          listedAt = Date.now();
           setFiles(toQuickOpenFiles(indexedFiles));
         }
         setIsIndexing(status.is_scanning);
