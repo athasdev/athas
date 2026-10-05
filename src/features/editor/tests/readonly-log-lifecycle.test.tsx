@@ -1,51 +1,35 @@
 // @vitest-environment jsdom
+import { foldable } from "@codemirror/language";
+import { EditorView } from "@codemirror/view";
 import { act, startTransition, Suspense } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { MonacoReadonlyView } from "../components/monaco-readonly-view";
 
-const monaco = vi.hoisted(() => ({ createModel: vi.fn(), create: vi.fn(), setTheme: vi.fn() }));
-vi.mock("monaco-editor", () => ({
-  editor: monaco,
-  Uri: { parse: (value: string) => ({ toString: () => value }) },
-}));
-vi.mock("../engines/monaco/monaco-environment", () => ({}));
-vi.mock("../engines/monaco/theme", () => ({ defineMonacoTheme: () => "test" }));
-vi.mock("../engines/monaco/use-monaco-editor-settings", () => ({
-  useMonacoEditorSettings: () => ({
+vi.mock("../hooks/use-editor-view-settings", () => ({
+  useEditorViewSettings: () => ({
     fontFamily: "monospace",
     fontSize: 14,
     lineHeight: 20,
-    themeId: "test",
     editorItalicComments: false,
   }),
 }));
 vi.mock("../extensions/api", () => ({
   editorAPI: { setActiveFindAdapter: vi.fn(), clearActiveFindAdapter: vi.fn() },
 }));
-let text = "";
-let numbers: string | ((line: number) => string);
-const model = {
-  getValue: () => text,
-  getLineCount: () => text.split("\n").length,
-  getLineMaxColumn: () => text.split("\n").slice(-1)[0]!.length + 1,
-  isDisposed: () => false,
-  applyEdits: vi.fn((edits: Array<{ text: string }>) => {
-    text += edits[0].text;
-  }),
-  setValue: vi.fn((value: string) => {
-    text = value;
-  }),
-  dispose: vi.fn(),
-};
-const editor = {
-  onDidFocusEditorWidget: vi.fn(() => ({ dispose: vi.fn() })),
-  onDidBlurEditorWidget: vi.fn(() => ({ dispose: vi.fn() })),
-  updateOptions: vi.fn((options: { lineNumbers?: typeof numbers }) => {
-    if (options.lineNumbers) numbers = options.lineNumbers;
-  }),
-  dispose: vi.fn(),
-};
+vi.mock("@/features/file-system/stores/file-system.store", () => ({
+  useFileSystemStore: { getState: () => ({ handleFileSelect: vi.fn() }) },
+}));
+
+const emptyRects = () => Object.assign([], { item: () => null }) as unknown as DOMRectList;
+Range.prototype.getClientRects = emptyRects;
+Range.prototype.getBoundingClientRect = () => new DOMRect();
+
+const { CodeMirrorReadonlyView } = await import("../components/codemirror-readonly-view");
+const { updateWorkflowLog, workflowLogExtension } =
+  await import("@/features/github/lib/github-workflow-log-codemirror");
+const { buildWorkflowLogModel } = await import("@/features/github/utils/github-workflow-log-model");
+const { parseWorkflowLog } = await import("@/features/github/utils/github-workflow-logs");
+
 let root: Root;
 let container: HTMLDivElement;
 const suspended = new Promise(() => {});
@@ -63,24 +47,31 @@ function View({
 }) {
   return (
     <>
-      <MonacoReadonlyView content={content} lineNumberFormatter={formatter} />
+      <CodeMirrorReadonlyView content={content} lineNumberFormatter={formatter} />
       {pending && <Pending />}
     </>
   );
 }
+
+function view() {
+  const element = container.querySelector(".cm-editor");
+  if (!(element instanceof HTMLElement)) throw new Error("No CodeMirror editor rendered");
+  const found = EditorView.findFromDOM(element);
+  if (!found) throw new Error("No EditorView for the editor element");
+  return found;
+}
+
+function firstLineNumber() {
+  const numbers = [...container.querySelectorAll(".cm-lineNumbers .cm-gutterElement")]
+    .map((element) => element.textContent)
+    .filter((text) => text && text.length > 0);
+  // The first element is the width spacer; the rest belong to lines.
+  return numbers[1];
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
-  monaco.createModel.mockImplementation((value: string) => {
-    text = value;
-    return model;
-  });
-  monaco.create.mockImplementation(
-    (container: HTMLElement, options: { lineNumbers: typeof numbers }) => {
-      numbers = options.lineNumbers;
-      return editor;
-    },
-  );
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);
@@ -91,24 +82,27 @@ afterEach(async () => {
 });
 
 describe("Read-only log view lifecycle", () => {
-  it("appends live output without replacing the model and reports full replacements", async () => {
+  it("appends live output as an insertion and reports full replacements", async () => {
     const applied = vi.fn();
     await act(async () =>
-      root.render(<MonacoReadonlyView content="first" onContentApplied={applied} />),
+      root.render(<CodeMirrorReadonlyView content="first" onContentApplied={applied} />),
     );
+    const editor = view();
+    editor.dispatch({ selection: { anchor: 2 } });
     await act(async () =>
-      root.render(<MonacoReadonlyView content={"first\nsecond"} onContentApplied={applied} />),
+      root.render(<CodeMirrorReadonlyView content={"first\nsecond"} onContentApplied={applied} />),
     );
-    expect(text).toBe("first\nsecond");
-    expect(model.applyEdits).toHaveBeenCalledTimes(1);
-    expect(model.setValue).not.toHaveBeenCalled();
+    expect(editor.state.doc.toString()).toBe("first\nsecond");
+    expect(editor.state.selection.main.head).toBe(2);
     expect(applied).toHaveBeenLastCalledWith(editor, true);
+
     await act(async () =>
-      root.render(<MonacoReadonlyView content="different job" onContentApplied={applied} />),
+      root.render(<CodeMirrorReadonlyView content="different job" onContentApplied={applied} />),
     );
-    expect(model.setValue).toHaveBeenCalledWith("different job");
+    expect(view()).toBe(editor);
+    expect(editor.state.doc.toString()).toBe("different job");
     expect(applied).toHaveBeenLastCalledWith(editor, false);
-    expect(monaco.create).toHaveBeenCalledTimes(1);
+    expect(editor.state.readOnly).toBe(true);
   });
 
   it("keeps visible line numbers and text tied to committed output", async () => {
@@ -128,8 +122,8 @@ describe("Read-only log view lifecycle", () => {
         ),
       ),
     );
-    expect(text).toBe("first");
-    expect(typeof numbers === "function" && numbers(1)).toBe("10");
+    expect(view().state.doc.toString()).toBe("first");
+    expect(firstLineNumber()).toBe("10");
     await act(async () =>
       root.render(
         <Suspense>
@@ -137,35 +131,79 @@ describe("Read-only log view lifecycle", () => {
         </Suspense>,
       ),
     );
-    expect(text).toBe("latest");
-    expect(typeof numbers === "function" && numbers(1)).toBe("20");
+    expect(view().state.doc.toString()).toBe("latest");
+    expect(firstLineNumber()).toBe("20");
   });
 
   it("updates line numbers when filtering produces identical text", async () => {
+    const applied = vi.fn();
     await act(async () =>
-      root.render(<MonacoReadonlyView content="repeated log" lineNumberFormatter={() => "8"} />),
+      root.render(
+        <CodeMirrorReadonlyView
+          content="repeated log"
+          lineNumberFormatter={() => "8"}
+          onContentApplied={applied}
+        />,
+      ),
     );
     await act(async () =>
-      root.render(<MonacoReadonlyView content="repeated log" lineNumberFormatter={() => "42"} />),
+      root.render(
+        <CodeMirrorReadonlyView
+          content="repeated log"
+          lineNumberFormatter={() => "42"}
+          onContentApplied={applied}
+        />,
+      ),
     );
-    expect(typeof numbers === "function" && numbers(1)).toBe("42");
-    expect(model.setValue).not.toHaveBeenCalled();
+    expect(firstLineNumber()).toBe("42");
+    expect(applied).not.toHaveBeenCalled();
   });
 
-  it("uses current setup callbacks when a language change recreates the editor", async () => {
+  it("keeps the editor across language changes and cleans up before destroying it", async () => {
     const cleanup = vi.fn();
     const first = vi.fn(() => cleanup);
     const latest = vi.fn();
-    await act(async () => root.render(<MonacoReadonlyView content="first" onReady={first} />));
+    await act(async () => root.render(<CodeMirrorReadonlyView content="first" onReady={first} />));
+    const editor = view();
+    const destroy = vi.spyOn(editor, "destroy");
     await act(async () =>
-      root.render(<MonacoReadonlyView content="latest" onReady={latest} languageId="typescript" />),
+      root.render(<CodeMirrorReadonlyView content="latest" onReady={latest} languageId="json" />),
     );
+    expect(view()).toBe(editor);
+    expect(first).toHaveBeenCalledWith(editor);
+    expect(latest).not.toHaveBeenCalled();
+    expect(editor.state.doc.toString()).toBe("latest");
+
+    await act(async () => root.render(<></>));
     expect(cleanup).toHaveBeenCalledTimes(1);
-    expect(cleanup.mock.invocationCallOrder[0]).toBeLessThan(
-      editor.dispose.mock.invocationCallOrder[0],
+    expect(cleanup.mock.invocationCallOrder[0]).toBeLessThan(destroy.mock.invocationCallOrder[0]);
+  });
+
+  it("folds workflow log groups and decorates problem lines", async () => {
+    const lines = parseWorkflowLog(
+      ["##[group]Install", "step one", "step two", "##[endgroup]", "##[error]Broke"].join("\n"),
     );
-    expect(latest).toHaveBeenCalledWith(editor);
-    expect(text).toBe("latest");
-    expect(model.dispose).toHaveBeenCalledTimes(1);
+    const model = buildWorkflowLogModel(lines, { showTimestamps: false });
+    await act(async () =>
+      root.render(
+        <CodeMirrorReadonlyView content={model.text} extensions={workflowLogExtension} folding />,
+      ),
+    );
+    const editor = view();
+    act(() =>
+      updateWorkflowLog(editor, {
+        model,
+        showTimestamps: false,
+        highlightLine: null,
+        repoPath: "/repo",
+      }),
+    );
+
+    const group = editor.state.doc.line(1);
+    expect(foldable(editor.state, group.from, group.to)).toEqual({
+      from: group.to,
+      to: editor.state.doc.line(3).to,
+    });
+    expect(container.querySelector(".cm-line.gha-log-line-error")?.textContent).toContain("Broke");
   });
 });

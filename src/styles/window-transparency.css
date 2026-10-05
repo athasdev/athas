@@ -86,7 +86,7 @@ html:is(.platform-macos, .platform-windows):not([data-window-transparency="disab
 
 html:is(.platform-macos, .platform-windows):not([data-window-transparency="disabled"])
   .athas-glass-island
-  :is(.monaco-editor-shell, .monaco-editor, .monaco-editor-background, .monaco-editor .margin) {
+  :is([data-editor-engine="codemirror"], .cm-editor, .cm-gutters) {
   background-color: transparent !important;
 }
 

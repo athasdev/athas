@@ -10,7 +10,7 @@ export const STARTUP_TIMEOUT = 60_000;
 export const UI_TIMEOUT = 15_000;
 
 export const FILE_TREE = By.css('[role="tree"][aria-label="File Explorer"]');
-export const EDITOR_LINES = By.css(".monaco-editor .view-lines");
+export const EDITOR_LINES = By.css(".cm-editor .cm-content");
 const WORKBENCH = By.css('[data-slot="workbench-title-row"]');
 const PALETTE_INPUT = By.css('input[placeholder="Search commands and actions..."]');
 
@@ -42,9 +42,8 @@ export async function waitUntil(
 }
 
 /**
- * The first match that is actually shown. Inactive tabs keep their Monaco
- * editors mounted but hidden, so the first DOM match is often not the one on
- * screen.
+ * The first match that is actually shown. Inactive tabs keep their editors
+ * mounted but hidden, so the first DOM match is often not the one on screen.
  */
 async function findVisible(locator: Locator): Promise<WebElement | undefined> {
   for (const element of await driver().findElements(locator)) {
@@ -115,7 +114,7 @@ export async function waitForProjectTree() {
   );
 }
 
-/** Monaco renders spaces as non-breaking spaces in its view layer. */
+/** The visible editor's rendered text, with non-breaking spaces read as spaces. */
 export async function readEditorText() {
   const text = await (await visibleElement(EDITOR_LINES)).getText();
   return text.replace(/\u00a0/g, " ");

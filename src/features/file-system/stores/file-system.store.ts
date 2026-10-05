@@ -1274,10 +1274,15 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
 
         const isKnownTextPath = isKnownTextFile(path);
         if (isKnownTextPath) {
-          void import("@/features/editor/engines/monaco/prepare-language")
-            .then(({ prepareMonacoLanguageForPath }) => prepareMonacoLanguageForPath(path))
+          void Promise.all([
+            import("@/features/editor/engines/codemirror/languages"),
+            import("@/features/editor/utils/language-id"),
+          ])
+            .then(([{ loadCodeMirrorLanguage }, { getLanguageIdFromPath }]) =>
+              loadCodeMirrorLanguage(getLanguageIdFromPath(path)),
+            )
             .catch((error) => {
-              console.error(`Failed to prepare Monaco language for ${path}:`, error);
+              console.error(`Failed to preload the editor language for ${path}:`, error);
             });
         }
         const selectedFileEntry = findFileInTree(get().files, path);

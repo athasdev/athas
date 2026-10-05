@@ -1,262 +1,244 @@
-import "../engines/monaco/monaco-environment";
-import "../engines/monaco/language-contributions";
-import "monaco-editor/min/vs/editor/editor.main.css";
-import "../styles/monaco-editor.css";
-
-import { editor as monacoEditor, Uri } from "monaco-editor";
-import type * as Monaco from "monaco-editor";
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { themeRegistry } from "@/extensions/themes/theme-registry";
-import { toMonacoLanguageId } from "../engines/monaco/language";
-import { defineActiveMonacoTheme, defineMonacoTheme } from "../engines/monaco/theme";
-import { monacoCodeCellScrollbarOptions } from "../engines/monaco/scrollbar-options";
-import { useMonacoEditorSettings } from "../engines/monaco/use-monaco-editor-settings";
+import {
+  autocompletion,
+  closeBrackets,
+  closeBracketsKeymap,
+  completeAnyWord,
+  completionKeymap,
+} from "@codemirror/autocomplete";
+import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
+import { bracketMatching, indentOnInput } from "@codemirror/language";
+import { search, searchKeymap } from "@codemirror/search";
+import { Annotation, Compartment, EditorState, type Extension, Prec } from "@codemirror/state";
+import {
+  dropCursor,
+  EditorView,
+  highlightActiveLine,
+  highlightActiveLineGutter,
+  highlightSpecialChars,
+  keymap,
+} from "@codemirror/view";
+import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import {
+  detectLineSeparator,
+  minimalReplacement,
+  toBufferText,
+  type LineSeparator,
+} from "../engines/codemirror/document-change";
+import { loadCodeMirrorLanguage } from "../engines/codemirror/languages";
+import { athasEditorTheme } from "../engines/codemirror/theme";
+import { codeMirrorViewExtensions } from "../engines/codemirror/view-options";
+import { useEditorViewSettings } from "../hooks/use-editor-view-settings";
 
 interface NotebookCodeCellEditorProps {
   id: string;
   value: string;
   language: string;
   onChange: (value: string) => void;
+  /** Runs the cell, bound to Shift+Enter and Mod+Enter inside the editor. */
+  onRun?: () => void;
 }
 
-function editorHeight(editor: Monaco.editor.IStandaloneCodeEditor, lineHeight: number): number {
-  return Math.max(92, Math.min(520, editor.getContentHeight() + lineHeight));
+const MIN_HEIGHT_PX = 92;
+const MAX_HEIGHT_PX = 520;
+
+const externalChange = Annotation.define<boolean>();
+
+/** Notebook language names (`language_info.name`) as Athas language ids. */
+function toLanguageId(language: string) {
+  const normalized = language.trim().toLowerCase();
+  if (normalized === "python3") return "python";
+  if (normalized === "shell" || normalized === "sh") return "bash";
+  return normalized;
 }
+
+/**
+ * The cell grows with its content between a minimum and maximum height, with one spare line below
+ * the last, instead of the page-sized padding a full editor keeps below its last line.
+ */
+function cellSizing(lineHeight: number): Extension {
+  return EditorView.theme({
+    "&.cm-editor": {
+      height: "auto",
+      minHeight: `${MIN_HEIGHT_PX}px`,
+      maxHeight: `${MAX_HEIGHT_PX}px`,
+    },
+    ".cm-scroller": { overflow: "auto", overscrollBehavior: "auto" },
+    ".cm-content": { paddingBottom: `${lineHeight}px !important` },
+    ".cm-gutters": { minHeight: `${MIN_HEIGHT_PX}px` },
+  });
+}
+
+const wordCompletions = EditorState.languageData.of(() => [{ autocomplete: completeAnyWord }]);
 
 export function NotebookCodeCellEditor({
   id,
   value,
   language,
   onChange,
+  onRun,
 }: NotebookCodeCellEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
-  const modelRef = useRef<Monaco.editor.ITextModel | null>(null);
-  const applyingExternalChangeRef = useRef(false);
-  const onChangeRef = useRef(onChange);
-  const [height, setHeight] = useState(120);
-  const {
-    fontFamily,
-    fontSize,
-    lineHeight,
-    tabSize,
-    wordWrap,
-    lineNumbers,
-    renderWhitespace,
-    renderIndentGuides,
-    highlightOccurrences,
-    editorFontLigatures,
-    editorItalicComments,
-    editorStickyScroll,
-    editorBracketPairColorization,
-    editorSmoothScrolling,
-    experimentalGpuAcceleration,
-    editorScrollBeyondLastLine,
-    editorCursorStyle,
-    editorCursorBlinking,
-    themeId,
-  } = useMonacoEditorSettings();
-  const monacoLanguage = toMonacoLanguageId(language);
-  const modelUri = useMemo(
-    () => Uri.parse(`athas://notebook-cell/${encodeURIComponent(id)}.${monacoLanguage}`),
-    [id, monacoLanguage],
+  const viewRef = useRef<EditorView | null>(null);
+  const separatorRef = useRef<LineSeparator>(detectLineSeparator(value));
+  const latest = useRef({ onChange, onRun });
+  latest.current = { onChange, onRun };
+  const settings = useEditorViewSettings();
+  const languageId = toLanguageId(language);
+  const compartments = useMemo(
+    () => ({ language: new Compartment(), view: new Compartment() }),
+    [],
   );
 
-  useEffect(() => {
-    onChangeRef.current = onChange;
-  }, [onChange]);
+  const viewExtensions = useMemo<Extension>(
+    () => [
+      codeMirrorViewExtensions({
+        fontFamily: settings.fontFamily,
+        fontSize: settings.fontSize,
+        lineHeight: settings.lineHeight,
+        fontLigatures: settings.editorFontLigatures,
+        italicComments: settings.editorItalicComments,
+        tabSize: settings.tabSize,
+        wordWrap: settings.wordWrap,
+        lineNumbers: settings.lineNumbers,
+        lineNumberOptions: {},
+        renderWhitespace: settings.renderWhitespace,
+        indentGuides: settings.renderIndentGuides,
+        bracketPairColors: settings.editorBracketPairColorization,
+        highlightOccurrences: settings.highlightOccurrences,
+        scrollBeyondLastLine: false,
+        scrollable: true,
+        cursorStyle: settings.editorCursorStyle,
+        cursorBlinking: settings.editorCursorBlinking,
+      }),
+      cellSizing(settings.lineHeight),
+    ],
+    [
+      settings.editorBracketPairColorization,
+      settings.editorCursorBlinking,
+      settings.editorCursorStyle,
+      settings.editorFontLigatures,
+      settings.editorItalicComments,
+      settings.fontFamily,
+      settings.fontSize,
+      settings.highlightOccurrences,
+      settings.lineHeight,
+      settings.lineNumbers,
+      settings.renderIndentGuides,
+      settings.renderWhitespace,
+      settings.tabSize,
+      settings.wordWrap,
+    ],
+  );
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    const model = monacoEditor.createModel(value, monacoLanguage, modelUri);
-    const editor = monacoEditor.create(container, {
-      model,
-      automaticLayout: true,
-      fontFamily,
-      fontSize,
-      lineHeight,
-      tabSize,
-      insertSpaces: true,
-      minimap: { enabled: false },
-      fontLigatures: editorFontLigatures,
-      stickyScroll: { enabled: editorStickyScroll },
-      bracketPairColorization: { enabled: editorBracketPairColorization },
-      smoothScrolling: editorSmoothScrolling,
-      experimentalGpuAcceleration,
-      scrollBeyondLastLine: editorScrollBeyondLastLine,
-      cursorStyle: editorCursorStyle,
-      cursorBlinking: editorCursorBlinking,
-      lineNumbers: lineNumbers ? "on" : "off",
-      glyphMargin: false,
-      folding: false,
-      lineDecorationsWidth: 8,
-      lineNumbersMinChars: 3,
-      renderLineHighlight: "line",
-      overviewRulerLanes: 0,
-      hideCursorInOverviewRuler: true,
-      renderWhitespace: renderWhitespace === "none" ? "none" : renderWhitespace,
-      wordWrap: wordWrap ? "on" : "off",
-      guides: {
-        indentation: renderIndentGuides,
-        highlightActiveIndentation: renderIndentGuides,
-      },
-      occurrencesHighlight: highlightOccurrences ? "singleFile" : "off",
-      selectionHighlight: highlightOccurrences,
-      quickSuggestions: true,
-      suggestOnTriggerCharacters: true,
-      parameterHints: { enabled: true },
-      contextmenu: true,
-      theme: defineActiveMonacoTheme(themeId, editorItalicComments),
-      fixedOverflowWidgets: true,
-      scrollbar: monacoCodeCellScrollbarOptions,
-    });
+    const run = () => {
+      const handler = latest.current.onRun;
+      if (!handler) return false;
+      handler();
+      return true;
+    };
 
-    editorRef.current = editor;
-    modelRef.current = model;
-    setHeight(editorHeight(editor, lineHeight));
-
-    const contentDisposable = editor.onDidChangeModelContent(() => {
-      if (applyingExternalChangeRef.current) return;
-      onChangeRef.current(model.getValue());
+    const view = new EditorView({
+      parent: container,
+      state: EditorState.create({
+        doc: value,
+        extensions: [
+          Prec.high(
+            keymap.of([
+              { key: "Shift-Enter", run, preventDefault: true },
+              { key: "Mod-Enter", run, preventDefault: true },
+            ]),
+          ),
+          history(),
+          highlightSpecialChars(),
+          dropCursor(),
+          EditorState.allowMultipleSelections.of(true),
+          indentOnInput(),
+          bracketMatching(),
+          closeBrackets(),
+          autocompletion(),
+          wordCompletions,
+          highlightActiveLine(),
+          highlightActiveLineGutter(),
+          search({ top: true }),
+          keymap.of([
+            ...closeBracketsKeymap,
+            ...defaultKeymap,
+            ...historyKeymap,
+            ...searchKeymap,
+            ...completionKeymap,
+            indentWithTab,
+          ]),
+          athasEditorTheme,
+          compartments.language.of([]),
+          compartments.view.of(viewExtensions),
+          EditorView.contentAttributes.of({ "aria-label": "Code cell source" }),
+          EditorView.updateListener.of((update) => {
+            if (!update.docChanged) return;
+            if (update.transactions.some((transaction) => transaction.annotation(externalChange))) {
+              return;
+            }
+            latest.current.onChange(toBufferText(update.state.doc, separatorRef.current));
+          }),
+        ],
+      }),
     });
-    const sizeDisposable = editor.onDidContentSizeChange(() => {
-      setHeight(editorHeight(editor, lineHeight));
-    });
+    viewRef.current = view;
 
     return () => {
-      contentDisposable.dispose();
-      sizeDisposable.dispose();
-      editor.dispose();
-      model.dispose();
-      editorRef.current = null;
-      modelRef.current = null;
+      viewRef.current = null;
+      view.destroy();
     };
-  }, [
-    fontFamily,
-    fontSize,
-    editorBracketPairColorization,
-    editorCursorBlinking,
-    editorCursorStyle,
-    editorFontLigatures,
-    editorItalicComments,
-    editorScrollBeyondLastLine,
-    editorSmoothScrolling,
-    experimentalGpuAcceleration,
-    editorStickyScroll,
-    highlightOccurrences,
-    id,
-    lineHeight,
-    lineNumbers,
-    modelUri,
-    monacoLanguage,
-    renderIndentGuides,
-    renderWhitespace,
-    tabSize,
-    themeId,
-    wordWrap,
-  ]);
+    // The editor is rebuilt only for another cell; settings and value are applied below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   useEffect(() => {
-    const model = modelRef.current;
-    if (!model || model.getValue() === value) return;
-    applyingExternalChangeRef.current = true;
-    model.setValue(value);
-    applyingExternalChangeRef.current = false;
-    const editor = editorRef.current;
-    if (editor) setHeight(editorHeight(editor, lineHeight));
-  }, [lineHeight, value]);
-
-  useEffect(() => {
-    const editor = editorRef.current;
-    const model = modelRef.current;
-    if (!editor || !model) return;
-    monacoEditor.setModelLanguage(model, monacoLanguage);
-    editor.updateOptions({
-      fontFamily,
-      fontSize,
-      lineHeight,
-      lineNumbers: lineNumbers ? "on" : "off",
-      tabSize,
-      fontLigatures: editorFontLigatures,
-      stickyScroll: { enabled: editorStickyScroll },
-      bracketPairColorization: { enabled: editorBracketPairColorization },
-      smoothScrolling: editorSmoothScrolling,
-      experimentalGpuAcceleration,
-      scrollBeyondLastLine: editorScrollBeyondLastLine,
-      cursorStyle: editorCursorStyle,
-      cursorBlinking: editorCursorBlinking,
-      renderWhitespace: renderWhitespace === "none" ? "none" : renderWhitespace,
-      wordWrap: wordWrap ? "on" : "off",
-      guides: {
-        indentation: renderIndentGuides,
-        highlightActiveIndentation: renderIndentGuides,
+    const view = viewRef.current;
+    if (!view) return;
+    separatorRef.current = detectLineSeparator(value);
+    const current = toBufferText(view.state.doc, separatorRef.current);
+    const replacement = minimalReplacement(current, value);
+    if (!replacement) return;
+    const toDocPosition = (offset: number) => {
+      const text = current.slice(0, offset);
+      return separatorRef.current === "\r\n" ? text.replace(/\r\n/g, "\n").length : offset;
+    };
+    view.dispatch({
+      changes: {
+        from: toDocPosition(replacement.from),
+        to: toDocPosition(replacement.to),
+        insert: replacement.insert,
       },
-      occurrencesHighlight: highlightOccurrences ? "singleFile" : "off",
-      selectionHighlight: highlightOccurrences,
+      annotations: externalChange.of(true),
     });
-    monacoEditor.setTheme(defineActiveMonacoTheme(themeId, editorItalicComments));
-    setHeight(editorHeight(editor, lineHeight));
-  }, [
-    fontFamily,
-    fontSize,
-    editorBracketPairColorization,
-    editorCursorBlinking,
-    editorCursorStyle,
-    editorFontLigatures,
-    editorItalicComments,
-    editorScrollBeyondLastLine,
-    editorSmoothScrolling,
-    experimentalGpuAcceleration,
-    editorStickyScroll,
-    highlightOccurrences,
-    lineHeight,
-    lineNumbers,
-    monacoLanguage,
-    renderIndentGuides,
-    renderWhitespace,
-    tabSize,
-    themeId,
-    wordWrap,
-  ]);
+  }, [value]);
 
   useEffect(() => {
-    const applyTheme = (nextThemeId?: string) => {
-      monacoEditor.setTheme(
-        nextThemeId
-          ? defineMonacoTheme(nextThemeId, editorItalicComments)
-          : defineActiveMonacoTheme(themeId, editorItalicComments),
-      );
-    };
+    viewRef.current?.dispatch({ effects: compartments.view.reconfigure(viewExtensions) });
+  }, [compartments, viewExtensions]);
 
-    applyTheme();
-
-    const unsubscribeRegistry = themeRegistry.onRegistryChange(applyTheme);
-    const unsubscribeTheme = themeRegistry.onThemeChange(applyTheme);
-    const unsubscribeReady = themeRegistry.onReady(applyTheme);
-
+  useEffect(() => {
+    let cancelled = false;
+    void loadCodeMirrorLanguage(languageId).then((extension) => {
+      const view = viewRef.current;
+      if (cancelled || !view) return;
+      view.dispatch({ effects: compartments.language.reconfigure(extension ?? []) });
+    });
     return () => {
-      unsubscribeRegistry();
-      unsubscribeTheme();
-      unsubscribeReady();
+      cancelled = true;
     };
-  }, [editorItalicComments, themeId]);
-
-  useEffect(() => {
-    editorRef.current?.layout();
-  }, [height]);
-
-  const shellStyle = {
-    height,
-    "--athas-monaco-font-family": fontFamily,
-    "--athas-monaco-font-size": `${fontSize}px`,
-    "--athas-monaco-line-height": `${lineHeight}px`,
-  } as CSSProperties;
+  }, [compartments, id, languageId]);
 
   return (
-    <div className="monaco-editor-shell overflow-hidden bg-background" style={shellStyle}>
-      <div ref={containerRef} className="size-full" />
-    </div>
+    <div
+      ref={containerRef}
+      className="overflow-hidden bg-background"
+      data-editor-engine="codemirror"
+      data-notebook-cell-editor
+    />
   );
 }

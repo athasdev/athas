@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 
-const ALLOWED_CONTEXT_MENU_SELECTOR =
-  ".monaco-editor, .monaco-editor-shell, .monaco-menu-container";
+/** Editors keep the native context menu for cut, copy, and paste. */
+const ALLOWED_CONTEXT_MENU_SELECTOR = ".cm-editor";
 
 function hasClosest(target: EventTarget | null): target is EventTarget & {
   closest: (selector: string) => unknown;

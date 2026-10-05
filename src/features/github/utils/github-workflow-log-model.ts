@@ -58,7 +58,7 @@ function renderRowText(line: WorkflowLogLine, showTimestamps: boolean): string {
 }
 
 /**
- * Turns parsed log lines into a single text document plus the metadata Monaco
+ * Turns parsed log lines into a single text document plus the metadata the viewer
  * needs: fold ranges for `##[group]` blocks, the lines that hold problems, and
  * the rows behind each model line. `##[endgroup]` markers close a group and are
  * not rendered.

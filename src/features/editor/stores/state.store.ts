@@ -165,44 +165,6 @@ function rangesEqual(left?: Range, right?: Range): boolean {
   return positionsEqual(left.start, right.start) && positionsEqual(left.end, right.end);
 }
 
-const ensureCursorVisible = (position: Position) => {
-  if (typeof window === "undefined") return;
-
-  const editorElement = useEditorStateStore.getState().editorRef?.current;
-  const scopedTextarea =
-    editorElement?.querySelector<HTMLTextAreaElement>("[data-monaco-editor-scroll] textarea") ??
-    null;
-  const focusedTextarea =
-    document.activeElement instanceof HTMLTextAreaElement &&
-    !!document.activeElement.closest("[data-monaco-editor-scroll]")
-      ? document.activeElement
-      : null;
-  const textarea = scopedTextarea ?? focusedTextarea;
-
-  if (!textarea) return;
-
-  const computedStyle = window.getComputedStyle(textarea);
-  const lineHeight =
-    Number.parseFloat(computedStyle.lineHeight) || EDITOR_CONSTANTS.DEFAULT_LINE_HEIGHT;
-  const paddingTop =
-    Number.parseFloat(computedStyle.paddingTop) || EDITOR_CONSTANTS.EDITOR_PADDING_TOP;
-  const targetTop = position.line * lineHeight + paddingTop;
-  const targetBottom = targetTop + lineHeight;
-  const currentScrollTop = textarea.scrollTop;
-  const viewportHeight = textarea.clientHeight || 0;
-  const bottomSafePadding = Math.max(
-    EDITOR_CONSTANTS.COMPLETION_DROPDOWN_SAFE_AREA,
-    lineHeight * EDITOR_CONSTANTS.CURSOR_BOTTOM_SAFE_AREA_LINES,
-  );
-  const safeViewportHeight = Math.max(lineHeight * 2, viewportHeight - bottomSafePadding);
-
-  if (targetTop < currentScrollTop) {
-    textarea.scrollTop = targetTop;
-  } else if (targetBottom > currentScrollTop + safeViewportHeight) {
-    textarea.scrollTop = Math.max(0, targetBottom - safeViewportHeight);
-  }
-};
-
 // State Interface
 interface EditorState {
   // Cursor state
@@ -244,7 +206,7 @@ interface EditorStateActions {
   requestNavigation: (target: EditorNavigationTarget | null) => void;
   requestReveal: (target: EditorRevealTarget | null) => void;
   // Cursor actions
-  setCursorPosition: (position: Position, options?: { ensureVisible?: boolean }) => void;
+  setCursorPosition: (position: Position) => void;
   setSelection: (selection?: Range) => void;
   setCursorAndSelection: (position: Position, selection?: Range) => void;
   setDesiredColumn: (column?: number) => void;
@@ -320,7 +282,7 @@ export const useEditorStateStore = createSelectors(
         requestNavigation: (pendingNavigation) => set({ pendingNavigation }),
         requestReveal: (pendingReveal) => set({ pendingReveal }),
         // Cursor actions
-        setCursorPosition: (position, options) => {
+        setCursorPosition: (position) => {
           const currentState = useEditorStateStore.getState();
           const { activeBufferId } = useBufferStore.getState();
           const activeEditorViewKey = currentState.activeEditorViewKey;
@@ -330,9 +292,6 @@ export const useEditorStateStore = createSelectors(
           }
           if (!positionsEqual(currentState.cursorPosition, position)) {
             set({ cursorPosition: position });
-          }
-          if (options?.ensureVisible !== false) {
-            ensureCursorVisible(position);
           }
         },
         setSelection: (selection) => {

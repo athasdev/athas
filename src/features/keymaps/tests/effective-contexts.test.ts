@@ -2,7 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 import { resolveEffectiveKeymapContexts } from "../utils/effective-contexts";
 
 describe("resolveEffectiveKeymapContexts", () => {
-  it("treats live Monaco/editor key targets as editor focus", () => {
+  it("treats live editor key targets as editor focus", () => {
     expect(
       resolveEffectiveKeymapContexts(
         { editorFocus: false, terminalFocus: false },

@@ -1,4 +1,4 @@
-/* Decorations applied by the GitHub Actions log viewer on top of Monaco. */
+/* Decorations applied by the GitHub Actions log viewer on top of CodeMirror. */
 .gha-log-timestamp {
   color: var(--subtle-foreground);
   opacity: 0.8;
@@ -67,4 +67,14 @@
 
 .gha-log-ansi-gray {
   color: var(--terminal-bright-black, var(--subtle-foreground));
+}
+
+.gha-log-file-link {
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 45%, transparent);
+  text-underline-offset: 2px;
+}
+
+.gha-log-file-link:hover {
+  text-decoration-color: currentColor;
 }

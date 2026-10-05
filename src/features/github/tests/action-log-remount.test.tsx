@@ -6,23 +6,29 @@ import { GitHubActionLogPanel } from "../components/github-action-log-panel";
 import { parseWorkflowLog } from "../utils/github-workflow-logs";
 
 const mocks = vi.hoisted(() => ({
-  register: vi.fn(),
   update: vi.fn(),
-  dispose: vi.fn(),
-  reveal: vi.fn(),
-  revealCenter: vi.fn(),
-  layoutDispose: vi.fn(),
-  scrollDispose: vi.fn(),
+  dispatch: vi.fn(),
+  addScroll: vi.fn(),
+  removeScroll: vi.fn(),
 }));
 const editor = {
-  getModel: () => ({ isDisposed: () => false, getLineCount: () => 2 }),
-  onDidLayoutChange: () => ({ dispose: mocks.layoutDispose }),
-  onDidScrollChange: () => ({ dispose: mocks.scrollDispose }),
-  revealLine: mocks.reveal,
-  revealLineInCenter: mocks.revealCenter,
+  state: {
+    doc: {
+      lines: 2,
+      line: (number: number) => ({ number, from: (number - 1) * 10 }),
+    },
+  },
+  scrollDOM: {
+    scrollHeight: 0,
+    scrollTop: 0,
+    clientHeight: 0,
+    addEventListener: mocks.addScroll,
+    removeEventListener: mocks.removeScroll,
+  },
+  dispatch: mocks.dispatch,
 };
-vi.mock("@/features/editor/components/monaco-readonly-view", () => ({
-  MonacoReadonlyView: function ReadonlyView({
+vi.mock("@/features/editor/components/codemirror-readonly-view", () => ({
+  CodeMirrorReadonlyView: function ReadonlyView({
     onReady,
   }: {
     onReady: (value: typeof editor) => () => void;
@@ -31,15 +37,19 @@ vi.mock("@/features/editor/components/monaco-readonly-view", () => ({
     return <div>Log editor</div>;
   },
 }));
-vi.mock("../lib/github-workflow-log-monaco", () => ({
-  ensureWorkflowLogLanguage: vi.fn(),
-  WORKFLOW_LOG_LANGUAGE_ID: "workflow",
-  createViewportDecorator: () => ({ update: mocks.update, dispose: mocks.dispose }),
-  registerWorkflowLogModel: mocks.register,
+vi.mock("../lib/github-workflow-log-codemirror", () => ({
+  workflowLogExtension: [],
+  updateWorkflowLog: mocks.update,
 }));
 vi.mock("@/features/keymaps/hooks/use-command-shortcut", () => ({
   useCommandShortcut: () => undefined,
 }));
+function revealedTargets() {
+  return mocks.dispatch.mock.calls.map(([spec]) => {
+    const target = spec.effects.value as { range: { head: number }; y: string };
+    return { pos: target.range.head, y: target.y };
+  });
+}
 let root: Root;
 let container: HTMLDivElement;
 const props: ComponentProps<typeof GitHubActionLogPanel> = {
@@ -75,7 +85,6 @@ const props: ComponentProps<typeof GitHubActionLogPanel> = {
 };
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.register.mockReturnValue(vi.fn());
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   container = document.createElement("div");
   document.body.append(container);
@@ -101,12 +110,12 @@ describe("Workflow log editor remount", () => {
         />,
       ),
     );
-    expect(mocks.register.mock.calls[0][1]).toMatchObject({
+    expect(mocks.update.mock.calls[0][1]).toMatchObject({
       repoPath: "/new",
       showTimestamps: true,
+      highlightLine: 2,
     });
-    expect(mocks.update.mock.calls[0][0]).toMatchObject({ showTimestamps: true, highlightLine: 2 });
-    expect(mocks.revealCenter).toHaveBeenCalledWith(2);
+    expect(revealedTargets()).toContainEqual({ pos: 10, y: "center" });
   });
 
   it("follows live output when an initially empty viewer mounts its editor", async () => {
@@ -116,10 +125,9 @@ describe("Workflow log editor remount", () => {
         <GitHubActionLogPanel {...props} lines={parseWorkflowLog("first\nsecond")} isLive />,
       ),
     );
-    expect(mocks.reveal).toHaveBeenCalledWith(2);
+    expect(revealedTargets()).toContainEqual({ pos: 10, y: "end" });
+    const handleScroll = mocks.addScroll.mock.calls[0][1];
     await act(async () => root.render(<GitHubActionLogPanel {...props} />));
-    expect(mocks.dispose).toHaveBeenCalledTimes(1);
-    expect(mocks.scrollDispose).toHaveBeenCalledTimes(1);
-    expect(mocks.layoutDispose).toHaveBeenCalledTimes(1);
+    expect(mocks.removeScroll).toHaveBeenCalledWith("scroll", handleScroll);
   });
 });

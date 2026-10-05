@@ -12,11 +12,14 @@ import {
   SearchIcon,
   TextAlignJustifyIcon,
 } from "@/ui/icons";
+import { foldAll, unfoldAll } from "@codemirror/language";
+import { openSearchPanel } from "@codemirror/search";
+import { EditorView } from "@codemirror/view";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  MonacoReadonlyView,
-  type MonacoReadonlyEditor,
-} from "@/features/editor/components/monaco-readonly-view";
+  CodeMirrorReadonlyView,
+  type ReadonlyEditorView,
+} from "@/features/editor/components/codemirror-readonly-view";
 import { Button } from "@/ui/button";
 import {
   DropdownMenu,
@@ -30,12 +33,7 @@ import { Spinner } from "@/ui/spinner";
 import { Toggle } from "@/ui/toggle";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
-import {
-  createViewportDecorator,
-  ensureWorkflowLogLanguage,
-  registerWorkflowLogModel,
-  WORKFLOW_LOG_LANGUAGE_ID,
-} from "../lib/github-workflow-log-monaco";
+import { updateWorkflowLog, workflowLogExtension } from "../lib/github-workflow-log-codemirror";
 import type { WorkflowRunJob, WorkflowRunStep } from "../types/github.types";
 import { buildWorkflowLogModel, findAdjacentProblemLine } from "../utils/github-workflow-log-model";
 import type { WorkflowLogLine } from "../utils/github-workflow-logs";
@@ -50,33 +48,38 @@ import { WORKFLOW_TONE_TEXT_CLASS, WorkflowStatusIcon } from "./github-workflow-
 const TAIL_THRESHOLD_PX = 48;
 const REVEAL_SETTLE_MS = 600;
 
+function revealLine(view: EditorView, line: number, mode: "center" | "bottom") {
+  const { doc } = view.state;
+  const target = doc.line(Math.min(Math.max(1, line), doc.lines));
+  view.dispatch({
+    effects: EditorView.scrollIntoView(target.from, { y: mode === "center" ? "center" : "end" }),
+  });
+}
+
 /**
- * Reveals a line now and again after the next layout passes. Monaco may not
- * know its final height when the viewer first mounts, so a single reveal can
- * land in the wrong place once automatic layout resizes the editor.
+ * Reveals a line now and again whenever the viewer resizes shortly after. The
+ * editor may not know its final height when it first mounts, so a single
+ * reveal can land in the wrong place once layout settles.
  */
 function revealLineWhenSettled(
-  editor: MonacoReadonlyEditor,
+  view: EditorView,
   line: number,
   mode: "center" | "bottom",
 ): () => void {
-  const reveal = () => {
-    if (editor.getModel()?.isDisposed()) return;
-    if (mode === "center") editor.revealLineInCenter(line);
-    else editor.revealLine(line);
-  };
-  reveal();
-  const layoutDisposable = editor.onDidLayoutChange(reveal);
-  const timer = window.setTimeout(() => layoutDisposable.dispose(), REVEAL_SETTLE_MS);
+  revealLine(view, line, mode);
+  if (typeof ResizeObserver === "undefined") return () => undefined;
+  const observer = new ResizeObserver(() => revealLine(view, line, mode));
+  observer.observe(view.scrollDOM);
+  const timer = window.setTimeout(() => observer.disconnect(), REVEAL_SETTLE_MS);
   return () => {
-    layoutDisposable.dispose();
+    observer.disconnect();
     window.clearTimeout(timer);
   };
 }
 
-// The language must exist before the first model is created with it, so this
-// runs at module load rather than in an effect that fires after the editor.
-ensureWorkflowLogLanguage();
+function lastLine(view: EditorView) {
+  return view.state.doc.lines;
+}
 
 interface GitHubActionLogPanelProps {
   job: WorkflowRunJob | null;
@@ -123,9 +126,7 @@ export function GitHubActionLogPanel({
   onExport,
   onOpenOnGitHub,
 }: GitHubActionLogPanelProps) {
-  const editorRef = useRef<MonacoReadonlyEditor | null>(null);
-  const decoratorRef = useRef<ReturnType<typeof createViewportDecorator> | null>(null);
-  const unregisterModelRef = useRef<(() => void) | null>(null);
+  const editorRef = useRef<ReadonlyEditorView | null>(null);
   const followTailRef = useRef(true);
   const [followTail, setFollowTail] = useState(true);
   const [activeProblemLine, setActiveProblemLine] = useState<number | null>(null);
@@ -160,16 +161,11 @@ export function GitHubActionLogPanel({
   useEffect(() => {
     const editor = editorRef.current;
     if (!editor) return;
-    unregisterModelRef.current?.();
-    unregisterModelRef.current = registerWorkflowLogModel(editor, {
-      model,
-      showTimestamps,
-      repoPath,
-    });
-    decoratorRef.current?.update({
+    updateWorkflowLog(editor, {
       model,
       showTimestamps,
       highlightLine: currentProblemLine,
+      repoPath,
     });
   }, [currentProblemLine, model, repoPath, showTimestamps]);
 
@@ -179,9 +175,9 @@ export function GitHubActionLogPanel({
     return revealLineWhenSettled(editor, currentProblemLine, "center");
   }, [currentProblemLine]);
 
-  const updateFollowTail = useCallback((editor: MonacoReadonlyEditor) => {
-    const distance =
-      editor.getScrollHeight() - editor.getScrollTop() - editor.getLayoutInfo().height;
+  const updateFollowTail = useCallback((editor: ReadonlyEditorView) => {
+    const { scrollHeight, scrollTop, clientHeight } = editor.scrollDOM;
+    const distance = scrollHeight - scrollTop - clientHeight;
     const next = distance < TAIL_THRESHOLD_PX;
     if (followTailRef.current === next) return;
     followTailRef.current = next;
@@ -189,37 +185,26 @@ export function GitHubActionLogPanel({
   }, []);
 
   const handleReady = useCallback(
-    (editor: MonacoReadonlyEditor) => {
+    (editor: ReadonlyEditorView) => {
       editorRef.current = editor;
-      const decorator = createViewportDecorator(editor);
-      decoratorRef.current = decorator;
-      unregisterModelRef.current = registerWorkflowLogModel(editor, {
-        model,
-        showTimestamps,
-        repoPath,
-      });
-      decorator.update({
+      updateWorkflowLog(editor, {
         model,
         showTimestamps,
         highlightLine: currentProblemLine,
+        repoPath,
       });
-      const scrollDisposable = editor.onDidScrollChange((event) => {
-        if (event.scrollTopChanged || event.scrollHeightChanged) updateFollowTail(editor);
-      });
+      const handleScroll = () => updateFollowTail(editor);
+      editor.scrollDOM.addEventListener("scroll", handleScroll, { passive: true });
       const cancelReveal =
         currentProblemLine !== null
           ? revealLineWhenSettled(editor, currentProblemLine, "center")
           : isLive && followTailRef.current
-            ? revealLineWhenSettled(editor, editor.getModel()?.getLineCount() ?? 1, "bottom")
+            ? revealLineWhenSettled(editor, lastLine(editor), "bottom")
             : null;
 
       return () => {
         cancelReveal?.();
-        scrollDisposable.dispose();
-        decorator.dispose();
-        unregisterModelRef.current?.();
-        unregisterModelRef.current = null;
-        decoratorRef.current = null;
+        editor.scrollDOM.removeEventListener("scroll", handleScroll);
         editorRef.current = null;
       };
     },
@@ -227,12 +212,11 @@ export function GitHubActionLogPanel({
   );
 
   const handleContentApplied = useCallback(
-    (editor: MonacoReadonlyEditor, appended: boolean) => {
+    (editor: ReadonlyEditorView, appended: boolean) => {
       if (isLive && followTailRef.current && currentProblemLine === null) {
-        const lastLine = editor.getModel()?.getLineCount() ?? 1;
-        editor.revealLine(lastLine);
+        revealLine(editor, lastLine(editor), "bottom");
       } else if (!appended && currentProblemLine === null) {
-        editor.setScrollTop(0);
+        editor.scrollDOM.scrollTop = 0;
       }
     },
     [currentProblemLine, isLive],
@@ -243,7 +227,7 @@ export function GitHubActionLogPanel({
     if (!editor) return;
     followTailRef.current = true;
     setFollowTail(true);
-    editor.revealLine(editor.getModel()?.getLineCount() ?? 1);
+    revealLine(editor, lastLine(editor), "bottom");
   };
 
   const jumpToProblem = (direction: 1 | -1) => {
@@ -254,8 +238,9 @@ export function GitHubActionLogPanel({
     setActiveProblemLine(next);
   };
 
-  const triggerEditorAction = (action: string) => {
-    editorRef.current?.trigger("github-actions-log", action, null);
+  const runEditorCommand = (command: (view: EditorView) => boolean) => {
+    const editor = editorRef.current;
+    if (editor) command(editor);
   };
 
   const lineNumberFormatter = useCallback(
@@ -428,19 +413,19 @@ export function GitHubActionLogPanel({
             <DropdownMenuContent align="end">
               <DropdownMenuItem
                 disabled={model.foldRanges.length === 0}
-                onClick={() => triggerEditorAction("editor.foldAll")}
+                onClick={() => runEditorCommand(foldAll)}
               >
                 Collapse all groups
               </DropdownMenuItem>
               <DropdownMenuItem
                 disabled={model.foldRanges.length === 0}
-                onClick={() => triggerEditorAction("editor.unfoldAll")}
+                onClick={() => runEditorCommand(unfoldAll)}
               >
                 Expand all groups
               </DropdownMenuItem>
               <DropdownMenuItem
                 disabled={model.rows.length === 0}
-                onClick={() => triggerEditorAction("actions.find")}
+                onClick={() => runEditorCommand(openSearchPanel)}
               >
                 Find in logs
               </DropdownMenuItem>
@@ -479,9 +464,9 @@ export function GitHubActionLogPanel({
             message={hasQuery ? "No log lines match this filter" : "No log output for this step"}
           />
         ) : (
-          <MonacoReadonlyView
+          <CodeMirrorReadonlyView
             content={model.text}
-            languageId={WORKFLOW_LOG_LANGUAGE_ID}
+            extensions={workflowLogExtension}
             wordWrap={wrap}
             folding
             lineNumberFormatter={lineNumberFormatter}

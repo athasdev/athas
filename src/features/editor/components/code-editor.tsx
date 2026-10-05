@@ -224,10 +224,9 @@ const CodeEditor = ({
     if (!activeBufferId || !editorRef.current) return;
 
     const focusTarget =
-      editorRef.current
-        .querySelector<HTMLElement>("[data-monaco-editor-scroll]")
-        ?.querySelector<HTMLTextAreaElement>("textarea") ??
-      editorRef.current.querySelector<HTMLTextAreaElement>("textarea");
+      editorRef.current.querySelector<HTMLElement>(
+        '[data-editor-engine="codemirror"] .cm-content',
+      ) ?? editorRef.current.querySelector<HTMLTextAreaElement>("textarea");
 
     if (!focusTarget) return;
 
@@ -285,9 +284,11 @@ const CodeEditor = ({
       return;
     }
 
-    const monacoContent = container.querySelector<HTMLElement>(".monaco-editor .view-lines");
-    if (monacoContent) {
-      const contentRect = monacoContent.getBoundingClientRect();
+    const editorContent = container.querySelector<HTMLElement>(
+      '[data-editor-engine="codemirror"] .cm-content',
+    );
+    if (editorContent) {
+      const contentRect = editorContent.getBoundingClientRect();
       setCodeLensContentLeft(Math.max(0, contentRect.left - containerRect.left));
       return;
     }
@@ -454,7 +455,7 @@ const CodeEditor = ({
     [filePath, onChange, pythonScriptCells, rMarkdownChunks],
   );
 
-  // Keep app-owned overlays aligned with Monaco's scroll position.
+  // Keep app-owned overlays aligned with the editor's scroll position.
   const syncLspOverlayTransform = useCallback((scrollTop: number, scrollLeft: number) => {
     const transform = `translate(-${scrollLeft}px, -${scrollTop}px)`;
     for (const ref of [codeLensRef, renameInputRef]) {
@@ -552,7 +553,7 @@ const CodeEditor = ({
                 lenses={inlineCodeLenses}
                 fontSize={zoomedFontSize}
                 lineHeight={zoomedLineHeight}
-                scrollTop={editorRef.current?.querySelector("textarea")?.scrollTop ?? 0}
+                scrollTop={editorRef.current?.querySelector(".cm-scroller")?.scrollTop ?? 0}
                 viewportHeight={editorRef.current?.clientHeight ?? 600}
                 contentLeft={codeLensContentLeft}
                 getLineText={getCodeLensLineText}

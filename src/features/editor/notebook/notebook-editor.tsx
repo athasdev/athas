@@ -506,6 +506,7 @@ function NotebookCellView({
               value={source}
               language={language}
               onChange={(value) => onSourceChange(cellIndex, value)}
+              onRun={() => onRun(cellIndex)}
             />
           ) : (
             <textarea
