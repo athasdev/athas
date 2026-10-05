@@ -13,7 +13,7 @@ import {
   keymap,
   rectangularSelection,
 } from "@codemirror/view";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   useActiveWorkspaceId,
   useWorkspaceStoreScopeId,
@@ -32,6 +32,8 @@ import {
   createCodeMirrorEditorAdapter,
   createCodeMirrorFindAdapter,
 } from "../engines/codemirror/editor-adapter";
+import { CodeMirrorFeatures } from "../engines/codemirror/features/codemirror-features";
+import type { CodeMirrorHost } from "../engines/codemirror/host";
 import { loadCodeMirrorLanguage } from "../engines/codemirror/languages";
 import { matchHighlightsField, setMatchHighlights } from "../engines/codemirror/match-highlights";
 import {
@@ -93,6 +95,8 @@ export function CodeMirrorEditor({
   className,
 }: CodeEditorViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const shellRef = useRef<HTMLDivElement>(null);
+  const [view, setView] = useState<EditorView | null>(null);
   const sessionRef = useRef<EditorSession | null>(null);
   const sourceIdRef = useRef(`codemirror-editor-${nextEditorSourceId++}`);
   const activeBufferId = useBufferStore((state) => propBufferId ?? state.activeBufferId);
@@ -352,9 +356,11 @@ export function CodeMirrorEditor({
     session.view = view;
     sessionRef.current = session;
     syncCursorAndSelection(session);
+    setView(view);
 
     return () => {
       sessionRef.current = null;
+      setView(null);
       view.destroy();
     };
     // The editor is rebuilt only for another buffer; settings and content are applied below.
@@ -521,10 +527,31 @@ export function CodeMirrorEditor({
     if (isActiveSurface && !isReadOnly) sessionRef.current?.view.focus();
   }, [isActiveSurface, isReadOnly, buffer?.id]);
 
+  const bufferId = buffer?.id ?? null;
+  const isVirtual = Boolean(buffer?.isVirtual);
+  const host = useMemo<CodeMirrorHost | null>(() => {
+    const shell = shellRef.current;
+    if (!view || !shell || !bufferId) return null;
+    return {
+      view,
+      container: shell,
+      bufferId,
+      filePath,
+      languageId: languageId ?? null,
+      viewStateKey: viewStateKey ?? null,
+      isActiveSurface,
+      isReadOnly,
+      isVirtual,
+      getSeparator: () => sessionRef.current?.separator ?? "\n",
+      applyHistory,
+    };
+  }, [applyHistory, buffer, filePath, isActiveSurface, isReadOnly, languageId, view, viewStateKey]);
+
   if (!buffer) return null;
 
   return (
     <div
+      ref={shellRef}
       data-editor-engine="codemirror"
       className={`absolute inset-0 min-h-0 bg-background ${className ?? ""}`}
       onMouseMove={onMouseMove}
@@ -548,6 +575,7 @@ export function CodeMirrorEditor({
     >
       {backgroundLayer}
       <div ref={containerRef} className="absolute inset-0" />
+      {host ? <CodeMirrorFeatures host={host} /> : null}
     </div>
   );
 }
