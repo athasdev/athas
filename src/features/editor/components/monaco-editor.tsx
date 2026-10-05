@@ -20,8 +20,6 @@ import {
   useState,
   type CSSProperties,
   type RefObject,
-  type MouseEventHandler,
-  type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
 import { useOnClickOutside } from "usehooks-ts";
@@ -62,26 +60,20 @@ import EditorContextMenu from "../context-menu/context-menu";
 import { toggleCaseText } from "../utils/text-operations";
 import { useBufferStore } from "../stores/buffer.store";
 import { useEditorStateStore } from "../stores/state.store";
-import type {
-  EditorContentChangeOptions,
-  EditorDocumentChangeBatch,
-  EditorDocumentChangeResult,
-  Position,
-  Range,
-} from "../types/editor.types";
+import type { Position, Range } from "../types/editor.types";
 import { getBufferById } from "../utils/buffer-index";
 import { createEditorSelectionContextFromText } from "../utils/editor-agent-context";
 import { fileOpenBenchmark } from "../utils/file-open-benchmark";
 import { getLanguageIdFromPath } from "../utils/language-id";
 import { editorAPI } from "../extensions/api";
-import type { EditorModelPositionResolver } from "../view-model/view-layout";
+import type { CodeEditorViewProps } from "../types/code-editor-view.types";
 import { syncContainedEditorFontOptions } from "../engines/monaco/contained-editors";
 import {
   isExternalModelUpdate,
   modelMatchesContent,
   runWithExternalModelUpdate,
 } from "../engines/monaco/content-sync";
-import { deliverModelContentChange } from "../engines/monaco/document-change-batch";
+import { deliverModelContentChange } from "../services/document-change-batch";
 import {
   clampMonacoHoverWidgets,
   mutationsContainMonacoHoverWidget,
@@ -146,40 +138,6 @@ interface SelectionAgentActionState {
   context: EditorSelectionContext;
 }
 
-interface MonacoEditorProps {
-  bufferId?: string;
-  viewStateKey?: string;
-  isActiveSurface?: boolean;
-  isPreviewMode?: boolean;
-  readOnly?: boolean;
-  scrollable?: boolean;
-  backgroundLayer?: ReactNode;
-  onReadonlySurfaceClick?: (position: { line: number; column: number }) => void;
-  highlightMatches?: Array<{ start: number; end: number }>;
-  currentHighlightIndex?: number;
-  lineNumberStart?: number;
-  lineNumberMap?: Array<number | null>;
-  onContentChange?: (
-    content: string,
-    previousContent?: string,
-    previousCursorPosition?: Position,
-    previousSelection?: Range,
-    options?: EditorContentChangeOptions,
-  ) => void;
-  onDocumentChange?: (
-    batch: EditorDocumentChangeBatch,
-    previousCursorPosition?: Position,
-    previousSelection?: Range,
-  ) => EditorDocumentChangeResult;
-  onScrollOffsetChange?: (scrollTop: number, scrollLeft: number) => void;
-  onModelPositionResolverChange?: (resolver: EditorModelPositionResolver | null) => void;
-  onMouseMove?: MouseEventHandler<HTMLDivElement>;
-  onMouseLeave?: () => void;
-  onMouseEnter?: () => void;
-  onClick?: MouseEventHandler<HTMLDivElement>;
-  className?: string;
-}
-
 export function MonacoEditor({
   bufferId: propBufferId,
   viewStateKey,
@@ -202,7 +160,7 @@ export function MonacoEditor({
   onMouseEnter,
   onClick,
   className,
-}: MonacoEditorProps) {
+}: CodeEditorViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
 

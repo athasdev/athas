@@ -5,7 +5,7 @@ import { modelMatchesContent } from "../engines/monaco/content-sync";
 import {
   deliverModelContentChange,
   type ModelContentChangeEvent,
-} from "../engines/monaco/document-change-batch";
+} from "../services/document-change-batch";
 import type { EditorDocumentChangeBatch, EditorDocumentChangeResult } from "../types/editor.types";
 
 const storage = new Map<string, string>();

@@ -56,6 +56,8 @@ export interface Settings {
   autoSave: boolean;
   quickOpenPreview: boolean;
   // Editor
+  /** The text editor implementation. CodeMirror replaces Monaco once it reaches parity. */
+  editorEngine: "monaco" | "codemirror";
   fontFamily: string;
   fontSize: number;
   editorLineHeight: number;

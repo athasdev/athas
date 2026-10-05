@@ -1,0 +1,70 @@
+import { getTypographyFontFallbacks } from "@/features/settings/config/typography-defaults";
+import { buildFontFamilyStack } from "@/features/settings/lib/font-family-resolution";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useZoomStore } from "@/features/window/stores/zoom.store";
+import { IS_WINDOWS } from "@/utils/platform";
+import { useShallow } from "zustand/react/shallow";
+import { useEditorSettingsStore } from "../stores/settings.store";
+import { calculateLineHeight } from "../utils/lines";
+
+/** The editor's visual settings, resolved for whichever engine draws the text. */
+export function useEditorViewSettings() {
+  const baseFontSize = useEditorSettingsStore.use.fontSize();
+  const fontFamilySetting = useEditorSettingsStore.use.fontFamily();
+  const editorLineHeight = useEditorSettingsStore.use.lineHeight();
+  const tabSize = useEditorSettingsStore.use.tabSize();
+  const wordWrap = useEditorSettingsStore.use.wordWrap();
+  const lineNumbers = useEditorSettingsStore.use.lineNumbers();
+  const renderWhitespace = useEditorSettingsStore.use.renderWhitespace();
+  const renderIndentGuides = useEditorSettingsStore.use.renderIndentGuides();
+  const highlightOccurrences = useEditorSettingsStore.use.highlightOccurrences();
+  const themeId = useEditorSettingsStore.use.theme();
+  const {
+    editorFontLigatures,
+    editorItalicComments,
+    editorStickyScroll,
+    editorBracketPairColorization,
+    editorSmoothScrolling,
+    editorScrollBeyondLastLine,
+    editorCursorStyle,
+    editorCursorBlinking,
+  } = useSettingsStore(
+    useShallow((state) => ({
+      editorFontLigatures: state.settings.editorFontLigatures,
+      editorItalicComments: state.settings.editorItalicComments,
+      editorStickyScroll: state.settings.editorStickyScroll,
+      editorBracketPairColorization: state.settings.editorBracketPairColorization,
+      editorSmoothScrolling: state.settings.editorSmoothScrolling,
+      editorScrollBeyondLastLine: state.settings.editorScrollBeyondLastLine,
+      editorCursorStyle: state.settings.editorCursorStyle,
+      editorCursorBlinking: state.settings.editorCursorBlinking,
+    })),
+  );
+  const zoomLevel = useZoomStore.use.editorZoomLevel();
+  const fontSize = baseFontSize * zoomLevel;
+  const fontFamily = buildFontFamilyStack(
+    fontFamilySetting,
+    getTypographyFontFallbacks(IS_WINDOWS).mono,
+  );
+
+  return {
+    fontFamily,
+    fontSize,
+    lineHeight: calculateLineHeight(fontSize, editorLineHeight),
+    tabSize,
+    wordWrap,
+    lineNumbers,
+    renderWhitespace,
+    renderIndentGuides,
+    highlightOccurrences,
+    editorFontLigatures,
+    editorItalicComments,
+    editorStickyScroll,
+    editorBracketPairColorization,
+    editorSmoothScrolling,
+    editorScrollBeyondLastLine,
+    editorCursorStyle,
+    editorCursorBlinking,
+    themeId,
+  };
+}

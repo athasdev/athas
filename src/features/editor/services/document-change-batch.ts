@@ -2,7 +2,7 @@ import type {
   EditorDocumentChangeBatch,
   EditorDocumentChangeResult,
   EditorModelTextChange,
-} from "../../types/editor.types";
+} from "../types/editor.types";
 
 interface ModelContentChange {
   rangeOffset: number;
@@ -78,10 +78,12 @@ function createBatch(
 }
 
 /**
- * Sends one Monaco content event to the buffer. The event's offsets describe the model's text, so
- * they are only sent as a delta while the buffer holds that same text. Otherwise, and whenever a
- * delta does not land cleanly, the buffer takes the model's full text instead. The model is the
- * copy the user is typing into, so it is never rolled back to the buffer.
+ * Sends one editor content event to the buffer. Both engines describe their edits in this shape:
+ * each change's range is in the document as it was before the event, ordered last to first. The
+ * offsets describe the editor's text, so they are only sent as a delta while the buffer holds
+ * that same text. Otherwise, and whenever a delta does not land cleanly, the buffer takes the
+ * editor's full text instead. The editor is the copy the user is typing into, so it is never
+ * rolled back to the buffer.
  */
 export function deliverModelContentChange(options: DeliverModelContentChangeOptions): {
   result: EditorDocumentChangeResult;

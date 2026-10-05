@@ -52,6 +52,7 @@ import type {
 } from "../types/editor.types";
 import { ScrollDebugOverlay } from "./debug/scroll-debug-overlay";
 import { HtmlPreview } from "./html/html-preview";
+import { CodeMirrorEditor } from "./codemirror-editor";
 import { MonacoEditor } from "./monaco-editor";
 import { SvgPreview } from "./svg/svg-preview";
 import { EditorStylesheet } from "./stylesheet";
@@ -161,6 +162,8 @@ const CodeEditor = ({
   );
   const editorViewKey = paneId && activeBufferId ? `${paneId}:${activeBufferId}` : activeBufferId;
   const { handleContentChange, handleDocumentChange } = useEditorAppStore.use.actions();
+  const editorEngine = useSettingsStore((state) => state.settings.editorEngine);
+  const TextEditor = editorEngine === "codemirror" ? CodeMirrorEditor : MonacoEditor;
   const editorFontSize = useSettingsStore((state) => state.settings.fontSize);
   const editorLineHeight = useSettingsStore((state) => state.settings.editorLineHeight);
   const codeLensEnabled = useSettingsStore((state) => state.settings.codeLens);
@@ -600,7 +603,8 @@ const CodeEditor = ({
               ) : showNotebookEditor ? (
                 <NotebookEditor />
               ) : (
-                <MonacoEditor
+                <TextEditor
+                  key={editorEngine}
                   bufferId={activeBufferId ?? undefined}
                   viewStateKey={editorViewKey ?? undefined}
                   isActiveSurface={isActiveSurface}
