@@ -1,25 +1,16 @@
 import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
 import { defaultKeymap, indentWithTab } from "@codemirror/commands";
-import {
-  bracketMatching,
-  foldGutter,
-  foldKeymap,
-  indentOnInput,
-  indentUnit,
-} from "@codemirror/language";
-import { highlightSelectionMatches, search, searchKeymap } from "@codemirror/search";
+import { bracketMatching, foldGutter, foldKeymap, indentOnInput } from "@codemirror/language";
+import { search, searchKeymap } from "@codemirror/search";
 import { Compartment, EditorSelection, EditorState, type Extension } from "@codemirror/state";
 import {
   crosshairCursor,
-  drawSelection,
   dropCursor,
   EditorView,
   highlightActiveLine,
   highlightActiveLineGutter,
   highlightSpecialChars,
-  highlightWhitespace,
   keymap,
-  lineNumbers as lineNumbersGutter,
   rectangularSelection,
 } from "@codemirror/view";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
@@ -27,7 +18,7 @@ import {
   useActiveWorkspaceId,
   useWorkspaceStoreScopeId,
 } from "@/features/workspace/stores/create-workspace-scoped-store";
-import { cn } from "@/utils/cn";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { editorAPI } from "../extensions/api";
 import { useEditorViewSettings } from "../hooks/use-editor-view-settings";
 import {
@@ -42,17 +33,20 @@ import {
   createCodeMirrorFindAdapter,
 } from "../engines/codemirror/editor-adapter";
 import { loadCodeMirrorLanguage } from "../engines/codemirror/languages";
+import { matchHighlightsField, setMatchHighlights } from "../engines/codemirror/match-highlights";
 import {
+  fromBufferOffset,
   fromEditorPosition,
   fromEditorRange,
   toEditorPosition,
   toEditorRange,
 } from "../engines/codemirror/position";
+import { createCodeMirrorPositionResolver } from "../engines/codemirror/position-resolver";
+import { athasEditorTheme } from "../engines/codemirror/theme";
 import {
-  athasEditorFont,
-  athasEditorTheme,
-  athasSyntaxHighlighting,
-} from "../engines/codemirror/theme";
+  type CodeMirrorViewOptions,
+  codeMirrorViewExtensions,
+} from "../engines/codemirror/view-options";
 import { applyBufferHistory } from "../services/buffer-history-service";
 import { captureBufferStoreOwner } from "../services/buffer-store-owner";
 import { deliverModelContentChange } from "../services/document-change-batch";
@@ -81,9 +75,17 @@ export function CodeMirrorEditor({
   isActiveSurface = true,
   isPreviewMode = false,
   readOnly = false,
+  scrollable = true,
+  backgroundLayer,
+  onReadonlySurfaceClick,
+  highlightMatches,
+  currentHighlightIndex,
+  lineNumberStart,
+  lineNumberMap,
   onContentChange,
   onDocumentChange,
   onScrollOffsetChange,
+  onModelPositionResolverChange,
   onMouseMove,
   onMouseLeave,
   onMouseEnter,
@@ -112,8 +114,58 @@ export function CodeMirrorEditor({
   const filePath = buffer?.path ?? "";
   const languageId = buffer?.languageOverride ?? getLanguageIdFromPath(filePath);
   const settings = useEditorViewSettings();
+  const relativeLineNumbers = useSettingsStore(
+    (state) => state.settings.vimMode && state.settings.vimRelativeLineNumbers,
+  );
   const { setCursorAndSelection, setScrollForBuffer } = useEditorStateStore.use.actions();
   const isReadOnly = readOnly || isPreviewMode;
+  const viewOptions = useMemo<CodeMirrorViewOptions>(
+    () => ({
+      fontFamily: settings.fontFamily,
+      fontSize: settings.fontSize,
+      lineHeight: settings.lineHeight,
+      fontLigatures: settings.editorFontLigatures,
+      italicComments: settings.editorItalicComments,
+      tabSize: settings.tabSize,
+      wordWrap: settings.wordWrap,
+      lineNumbers: settings.lineNumbers,
+      lineNumberOptions: {
+        start: lineNumberStart,
+        map: lineNumberMap,
+        relative: relativeLineNumbers,
+      },
+      renderWhitespace: settings.renderWhitespace,
+      indentGuides: settings.renderIndentGuides,
+      bracketPairColors: settings.editorBracketPairColorization,
+      highlightOccurrences: isActiveSurface && settings.highlightOccurrences,
+      scrollBeyondLastLine: settings.editorScrollBeyondLastLine,
+      scrollable,
+      cursorStyle: settings.editorCursorStyle,
+      cursorBlinking: settings.editorCursorBlinking,
+    }),
+    [
+      isActiveSurface,
+      lineNumberMap,
+      lineNumberStart,
+      relativeLineNumbers,
+      scrollable,
+      settings.editorBracketPairColorization,
+      settings.editorCursorBlinking,
+      settings.editorCursorStyle,
+      settings.editorFontLigatures,
+      settings.editorItalicComments,
+      settings.editorScrollBeyondLastLine,
+      settings.fontFamily,
+      settings.fontSize,
+      settings.highlightOccurrences,
+      settings.lineHeight,
+      settings.lineNumbers,
+      settings.renderIndentGuides,
+      settings.renderWhitespace,
+      settings.tabSize,
+      settings.wordWrap,
+    ],
+  );
 
   const latest = useRef({
     onContentChange,
@@ -138,12 +190,7 @@ export function CodeMirrorEditor({
     () => ({
       language: new Compartment(),
       readOnly: new Compartment(),
-      font: new Compartment(),
-      highlighting: new Compartment(),
-      lineNumbers: new Compartment(),
-      wrap: new Compartment(),
-      tabSize: new Compartment(),
-      whitespace: new Compartment(),
+      view: new Compartment(),
     }),
     [],
   );
@@ -267,7 +314,6 @@ export function CodeMirrorEditor({
         extensions: [
           historyKeymap,
           highlightSpecialChars(),
-          drawSelection(),
           dropCursor(),
           EditorState.allowMultipleSelections.of(true),
           indentOnInput(),
@@ -277,7 +323,6 @@ export function CodeMirrorEditor({
           crosshairCursor(),
           highlightActiveLine(),
           highlightActiveLineGutter(),
-          highlightSelectionMatches(),
           foldGutter(),
           search({ top: true }),
           keymap.of([
@@ -290,16 +335,8 @@ export function CodeMirrorEditor({
           athasEditorTheme,
           compartments.language.of([]),
           compartments.readOnly.of(readOnlyExtension(isReadOnly)),
-          compartments.font.of(
-            athasEditorFont(settings.fontFamily, settings.fontSize, settings.lineHeight),
-          ),
-          compartments.highlighting.of(athasSyntaxHighlighting(settings.editorItalicComments)),
-          compartments.lineNumbers.of(settings.lineNumbers ? lineNumbersGutter() : []),
-          compartments.wrap.of(settings.wordWrap ? EditorView.lineWrapping : []),
-          compartments.tabSize.of(tabSizeExtension(settings.tabSize)),
-          compartments.whitespace.of(
-            settings.renderWhitespace === "none" ? [] : highlightWhitespace(),
-          ),
+          compartments.view.of(codeMirrorViewExtensions(viewOptions)),
+          matchHighlightsField,
           updateListener,
           EditorView.domEventHandlers({
             scroll: (_event, editorView) => {
@@ -338,37 +375,36 @@ export function CodeMirrorEditor({
   }, [buffer?.id, compartments, languageId]);
 
   useEffect(() => {
+    sessionRef.current?.view.dispatch({
+      effects: [
+        compartments.readOnly.reconfigure(readOnlyExtension(isReadOnly)),
+        compartments.view.reconfigure(codeMirrorViewExtensions(viewOptions)),
+      ],
+    });
+  }, [compartments, isReadOnly, viewOptions]);
+
+  useEffect(() => {
     const session = sessionRef.current;
     if (!session) return;
     session.view.dispatch({
-      effects: [
-        compartments.readOnly.reconfigure(readOnlyExtension(isReadOnly)),
-        compartments.font.reconfigure(
-          athasEditorFont(settings.fontFamily, settings.fontSize, settings.lineHeight),
-        ),
-        compartments.highlighting.reconfigure(
-          athasSyntaxHighlighting(settings.editorItalicComments),
-        ),
-        compartments.lineNumbers.reconfigure(settings.lineNumbers ? lineNumbersGutter() : []),
-        compartments.wrap.reconfigure(settings.wordWrap ? EditorView.lineWrapping : []),
-        compartments.tabSize.reconfigure(tabSizeExtension(settings.tabSize)),
-        compartments.whitespace.reconfigure(
-          settings.renderWhitespace === "none" ? [] : highlightWhitespace(),
-        ),
-      ],
+      effects: setMatchHighlights.of({
+        matches: highlightMatches ?? [],
+        current: currentHighlightIndex,
+        separator: session.separator,
+      }),
     });
-  }, [
-    compartments,
-    isReadOnly,
-    settings.fontFamily,
-    settings.fontSize,
-    settings.lineHeight,
-    settings.editorItalicComments,
-    settings.lineNumbers,
-    settings.wordWrap,
-    settings.tabSize,
-    settings.renderWhitespace,
-  ]);
+  }, [buffer?.id, currentHighlightIndex, highlightMatches]);
+
+  useEffect(() => {
+    if (!onModelPositionResolverChange) return;
+    onModelPositionResolverChange(
+      createCodeMirrorPositionResolver(
+        () => sessionRef.current?.view ?? null,
+        () => sessionRef.current?.separator ?? "\n",
+      ),
+    );
+    return () => onModelPositionResolverChange(null);
+  }, [buffer?.id, onModelPositionResolverChange]);
 
   // Brings the editor up to date when the buffer changed elsewhere: another pane, a reload from
   // disk, undo, or an agent edit. A store update that only echoes this editor's text is ignored.
@@ -485,25 +521,39 @@ export function CodeMirrorEditor({
     if (isActiveSurface && !isReadOnly) sessionRef.current?.view.focus();
   }, [isActiveSurface, isReadOnly, buffer?.id]);
 
+  if (!buffer) return null;
+
   return (
     <div
-      ref={containerRef}
       data-editor-engine="codemirror"
-      className={cn("size-full overflow-hidden", className)}
+      className={`absolute inset-0 min-h-0 bg-background ${className ?? ""}`}
       onMouseMove={onMouseMove}
       onMouseLeave={onMouseLeave}
       onMouseEnter={onMouseEnter}
-      onClick={onClick}
-    />
+      onClick={(event) => {
+        const session = sessionRef.current;
+        if (readOnly && onReadonlySurfaceClick && session) {
+          const position = session.view.posAtCoords({ x: event.clientX, y: event.clientY });
+          if (position !== null) {
+            const { line, column } = toEditorPosition(
+              session.view.state.doc,
+              position,
+              session.separator,
+            );
+            onReadonlySurfaceClick({ line, column });
+          }
+        }
+        onClick?.(event);
+      }}
+    >
+      {backgroundLayer}
+      <div ref={containerRef} className="absolute inset-0" />
+    </div>
   );
 }
 
 function readOnlyExtension(isReadOnly: boolean): Extension {
   return [EditorState.readOnly.of(isReadOnly), EditorView.editable.of(!isReadOnly)];
-}
-
-function tabSizeExtension(tabSize: number): Extension {
-  return [EditorState.tabSize.of(tabSize), indentUnit.of(" ".repeat(tabSize))];
 }
 
 /**
@@ -518,7 +568,7 @@ function replaceWithBufferText(session: EditorSession, bufferText: string) {
   const replacement = minimalReplacement(current, bufferText);
   if (!replacement) return;
   const toDocPosition = (bufferOffset: number) =>
-    bufferOffsetToDocPosition(current, bufferOffset, separator);
+    fromBufferOffset(view.state.doc, bufferOffset, separator);
   session.applyingExternalUpdate = true;
   try {
     view.dispatch({
@@ -531,15 +581,4 @@ function replaceWithBufferText(session: EditorSession, bufferText: string) {
   } finally {
     session.applyingExternalUpdate = false;
   }
-}
-
-/** Converts an offset in the buffer's text (CRLF counting twice) to a document position. */
-function bufferOffsetToDocPosition(bufferText: string, offset: number, separator: LineSeparator) {
-  if (separator === "\n") return offset;
-  let crlfBefore = 0;
-  for (let index = bufferText.indexOf("\r\n"); index !== -1 && index < offset;) {
-    crlfBefore++;
-    index = bufferText.indexOf("\r\n", index + 2);
-  }
-  return offset - crlfBefore;
 }

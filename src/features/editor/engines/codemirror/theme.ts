@@ -44,12 +44,20 @@ export const athasEditorTheme = EditorView.theme({
     border: "1px solid var(--border)",
     borderRadius: "6px",
   },
+  ".cm-athas-match": { backgroundColor: "color-mix(in srgb, var(--primary) 26%, transparent)" },
+  ".cm-athas-match-current": {
+    outline: "1px solid color-mix(in srgb, var(--primary) 72%, white 8%)",
+  },
+  ".cm-athas-bracket-0": { color: "var(--syntax-type)" },
+  ".cm-athas-bracket-1": { color: "var(--syntax-keyword)" },
+  ".cm-athas-bracket-2": { color: "var(--syntax-function)" },
   ".cm-panels": { backgroundColor: "var(--overlay)", color: "var(--foreground)" },
   ".cm-panels.cm-panels-top": { borderBottom: "1px solid var(--border)" },
   ".cm-panels.cm-panels-bottom": { borderTop: "1px solid var(--border)" },
 });
 
-const syntax = (name: string) => `var(--syntax-${name})`;
+const syntax = (name: string, fallback?: string) =>
+  fallback ? `var(--syntax-${name}, var(--syntax-${fallback}))` : `var(--syntax-${name})`;
 
 /** Font family, size and line height from the editor settings, reconfigured when they change. */
 export function athasEditorFont(fontFamily: string, fontSize: number, lineHeight: number) {
@@ -92,14 +100,18 @@ const athasHighlightStyle = HighlightStyle.define([
     tag: [t.punctuation, t.separator, t.bracket, t.paren, t.brace, t.squareBracket],
     color: syntax("punctuation"),
   },
-  { tag: t.heading, color: syntax("markdown-heading"), fontWeight: "600" },
-  { tag: t.strong, color: syntax("markdown-bold"), fontWeight: "600" },
-  { tag: t.emphasis, color: syntax("markdown-italic"), fontStyle: "italic" },
-  { tag: t.strikethrough, color: syntax("markdown-strikethrough"), textDecoration: "line-through" },
-  { tag: [t.link, t.url], color: syntax("markdown-link") },
-  { tag: t.quote, color: syntax("markdown-quote") },
-  { tag: t.monospace, color: syntax("markdown-code") },
-  { tag: t.list, color: syntax("markdown-list") },
+  { tag: t.heading, color: syntax("markdown-heading", "function"), fontWeight: "600" },
+  { tag: t.strong, color: syntax("markdown-bold", "number"), fontWeight: "600" },
+  { tag: t.emphasis, color: syntax("markdown-italic", "keyword"), fontStyle: "italic" },
+  {
+    tag: t.strikethrough,
+    color: syntax("markdown-strikethrough", "variable"),
+    textDecoration: "line-through",
+  },
+  { tag: [t.link, t.url], color: syntax("markdown-link", "constant") },
+  { tag: t.quote, color: syntax("markdown-quote", "comment") },
+  { tag: t.monospace, color: syntax("markdown-code", "string") },
+  { tag: t.list, color: syntax("markdown-list", "keyword") },
   { tag: t.invalid, color: "var(--destructive)" },
 ]);
 

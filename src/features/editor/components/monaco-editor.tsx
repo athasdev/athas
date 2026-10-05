@@ -85,7 +85,7 @@ import { acquireMonacoModel } from "../engines/monaco/model-lifecycle";
 import { registerMonacoHistoryActions } from "../engines/monaco/history-actions";
 import { applyBufferHistory } from "../services/buffer-history-service";
 import { captureBufferStoreOwner } from "../services/buffer-store-owner";
-import { getEditorBottomScrollPadding } from "../engines/monaco/scroll-padding";
+import { getEditorBottomScrollPadding } from "../utils/scroll-padding";
 import { getMonacoScrollbarOptions } from "../engines/monaco/scrollbar-options";
 import {
   clampMonacoPosition,

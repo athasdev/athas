@@ -91,6 +91,10 @@ vi.mock("../extensions/api", () => {
     },
   };
 });
+vi.mock("@/features/settings/stores/settings.store", () => ({
+  useSettingsStore: (selector: (value: unknown) => unknown) =>
+    selector({ settings: { vimMode: false, vimRelativeLineNumbers: false } }),
+}));
 vi.mock("../hooks/use-editor-view-settings", () => ({
   useEditorViewSettings: () => ({
     fontFamily: "monospace",
@@ -100,13 +104,24 @@ vi.mock("../hooks/use-editor-view-settings", () => ({
     wordWrap: false,
     lineNumbers: true,
     renderWhitespace: "none",
+    renderIndentGuides: true,
+    highlightOccurrences: true,
+    editorFontLigatures: true,
     editorItalicComments: false,
+    editorBracketPairColorization: true,
+    editorScrollBeyondLastLine: false,
+    editorCursorStyle: "line",
+    editorCursorBlinking: "blink",
   }),
 }));
 vi.mock("../services/buffer-history-service", () => ({
   applyBufferHistory: state.applyBufferHistory,
 }));
 vi.mock("../services/buffer-store-owner", () => ({ captureBufferStoreOwner: () => ({}) }));
+
+const emptyRects = () => Object.assign([], { item: () => null }) as unknown as DOMRectList;
+Range.prototype.getClientRects = emptyRects;
+Range.prototype.getBoundingClientRect = () => new DOMRect();
 
 const { CodeMirrorEditor } = await import("../components/codemirror-editor");
 const { editorAPI } = await import("../extensions/api");
@@ -295,5 +310,59 @@ describe("CodeMirror editor", () => {
 
     act(() => editorAPI.insertText("x", { line: 0, column: 0, offset: 0 }));
     expect(view().state.doc.toString()).toBe("const a = 1;\n");
+  });
+
+  it("highlights outside search matches and moves the current one", async () => {
+    await act(async () =>
+      root.render(
+        <CodeMirrorEditor
+          bufferId="buffer-1"
+          highlightMatches={[
+            { start: 0, end: 5 },
+            { start: 6, end: 7 },
+          ]}
+          currentHighlightIndex={1}
+        />,
+      ),
+    );
+
+    const marks = [...container.querySelectorAll(".cm-athas-match")].map((node) => [
+      node.textContent,
+      node.classList.contains("cm-athas-match-current"),
+    ]);
+    expect(marks).toEqual([
+      ["const", false],
+      ["a", true],
+    ]);
+  });
+
+  it("numbers lines from a mapped start", async () => {
+    await act(async () =>
+      root.render(<CodeMirrorEditor bufferId="buffer-1" lineNumberStart={41} />),
+    );
+
+    const numbers = [...container.querySelectorAll(".cm-lineNumbers .cm-gutterElement")]
+      .map((node) => node.textContent)
+      .filter(Boolean);
+    expect(numbers).toContain("41");
+  });
+
+  it("reports read-only clicks as editor positions", async () => {
+    const onReadonlySurfaceClick = vi.fn();
+    await act(async () =>
+      root.render(
+        <CodeMirrorEditor
+          bufferId="buffer-1"
+          readOnly
+          onReadonlySurfaceClick={onReadonlySurfaceClick}
+        />,
+      ),
+    );
+    vi.spyOn(view(), "posAtCoords").mockReturnValue(6);
+
+    act(() => {
+      container.firstElementChild?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(onReadonlySurfaceClick).toHaveBeenCalledWith({ line: 0, column: 6 });
   });
 });

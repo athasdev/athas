@@ -102,6 +102,7 @@
     "@lexical/rich-text": "^0.48.0",
     "@lezer/highlight": "^1.2.5",
     "@mdxeditor/editor": "^4.1.1",
+    "@replit/codemirror-indentation-markers": "^6.5.3",
     "@replit/codemirror-minimap": "^0.5.2",
     "@replit/codemirror-vim": "^6.4.0",
     "@shadcn/react": "^0.3.1",

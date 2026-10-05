@@ -1,6 +1,6 @@
 import type { RefObject } from "react";
 import { describe, expect, it } from "vite-plus/test";
-import { getEditorBottomScrollPadding } from "../engines/monaco/scroll-padding";
+import { getEditorBottomScrollPadding } from "../utils/scroll-padding";
 import { applyEditorScrollTransform } from "../utils/scroll-layers";
 
 function layerRef(dataset: Partial<DOMStringMap> = {}): RefObject<HTMLElement | null> {

@@ -38,3 +38,22 @@ export function fromEditorRange(doc: Text, range: Range): SelectionRange {
   const end = fromEditorPosition(doc, range.end);
   return EditorSelection.range(Math.min(start, end), Math.max(start, end));
 }
+
+/**
+ * The document position for an offset in the buffer's text, where each CRLF counts as two
+ * characters but the document holds a single line break.
+ */
+export function fromBufferOffset(doc: Text, offset: number, separator: LineSeparator): number {
+  const extra = separator.length - 1;
+  if (extra === 0) return Math.max(0, Math.min(doc.length, offset));
+  let low = 1;
+  let high = doc.lines;
+  while (low < high) {
+    const middle = (low + high + 1) >> 1;
+    if (doc.line(middle).from + (middle - 1) * extra <= offset) low = middle;
+    else high = middle - 1;
+  }
+  const line = doc.line(low);
+  const column = offset - (line.from + (low - 1) * extra);
+  return line.from + Math.max(0, Math.min(line.length, column));
+}
