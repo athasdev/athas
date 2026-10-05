@@ -1,0 +1,47 @@
+.cm-editor .cm-scroller .cm-fat-cursor {
+  background: var(--cursor, var(--foreground));
+  color: var(--background) !important;
+}
+
+.cm-editor:not(.cm-focused) .cm-scroller .cm-fat-cursor {
+  background: none;
+  color: transparent !important;
+  outline: 1px solid var(--cursor, var(--foreground));
+}
+
+.cm-editor .cm-panels.cm-panels-bottom:has(> .cm-vim-panel) {
+  position: absolute;
+  top: auto;
+  right: 10px;
+  bottom: 8px;
+  left: 10px;
+  z-index: 20;
+  border: none;
+  background: transparent;
+  pointer-events: none;
+}
+
+.cm-editor .cm-panels-bottom .cm-vim-panel {
+  min-height: var(--athas-chrome-control-height);
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--overlay);
+  color: var(--foreground);
+  box-shadow: var(--shadow-card);
+  font: var(--ui-text-sm) / 1.45 var(--editor-font-family);
+  pointer-events: auto;
+}
+
+.cm-editor .cm-panels-bottom .cm-vim-panel:empty {
+  display: none;
+}
+
+.cm-editor .cm-panels-bottom .cm-vim-panel input {
+  width: min(520px, calc(100% - 20px));
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}

@@ -1,9 +1,11 @@
 import { addCursorAbove, addCursorBelow, selectAll, simplifySelection } from "@codemirror/commands";
-import { openSearchPanel, selectNextOccurrence, selectSelectionMatches } from "@codemirror/search";
+import { selectNextOccurrence, selectSelectionMatches } from "@codemirror/search";
 import { EditorSelection, type SelectionRange } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
 import type { ActiveEditorAdapter, ActiveFindAdapter } from "../../extensions/api";
+import { createCodeMirrorLineCommands } from "./editor-commands";
 import { fromEditorPosition, fromEditorRange } from "./position";
+import { openCodeMirrorSearch } from "./search";
 
 /** The shared editor API's edit and selection operations, carried out on a CodeMirror view. */
 export function createCodeMirrorEditorAdapter(
@@ -57,6 +59,7 @@ export function createCodeMirrorEditorAdapter(
     insertCursorBelow: run(addCursorBelow),
     insertCursorsAtLineEnds: run(insertCursorsAtLineEnds),
     removeSecondaryCursors: run(simplifySelection),
+    ...createCodeMirrorLineCommands(getView),
     undo: history.undo,
     redo: history.redo,
   };
@@ -70,11 +73,7 @@ export function createCodeMirrorFindAdapter(
     ownerId,
     openFind: (replace) => {
       const view = getView();
-      if (!view) return;
-      openSearchPanel(view);
-      if (!replace) return;
-      const field = view.dom.querySelector<HTMLInputElement>(".cm-search input[name=replace]");
-      field?.focus();
+      if (view) openCodeMirrorSearch(view, { replace });
     },
   };
 }

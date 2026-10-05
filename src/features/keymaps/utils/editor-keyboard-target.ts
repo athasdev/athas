@@ -1,5 +1,14 @@
+import { isNativeTextInputTarget } from "@/utils/keyboard/text-input-target";
+
 export function isEditorKeyboardTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
+
+  if (target.closest('[data-editor-engine="codemirror"]') !== null) {
+    // Panels (find, vim's command line) keep their fields' native keys, and so do the text
+    // fields of overlays hosted around the editor.
+    if (target.closest(".cm-panels") !== null) return false;
+    return target.closest(".cm-editor") !== null || !isNativeTextInputTarget(target, null);
+  }
 
   return (
     target.closest("[data-monaco-editor-scroll]") !== null ||

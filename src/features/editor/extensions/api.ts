@@ -60,6 +60,13 @@ export interface ActiveEditorAdapter {
   insertCursorBelow?: () => void;
   insertCursorsAtLineEnds?: () => void;
   removeSecondaryCursors?: () => void;
+  toggleComment?: () => void;
+  duplicateLine?: () => void;
+  deleteLine?: () => void;
+  moveLineUp?: () => void;
+  moveLineDown?: () => void;
+  copyLineUp?: () => void;
+  copyLineDown?: () => void;
   undo: () => void;
   redo: () => void;
 }
@@ -345,14 +352,29 @@ class EditorAPIImpl implements EditorAPI {
   }
 
   duplicateLine(): void {
+    if (this.activeEditorAdapter?.duplicateLine) {
+      this.activeEditorAdapter.duplicateLine();
+      return;
+    }
+
     this.applyLineOperation(duplicateLineOperation);
   }
 
   deleteLine(): void {
+    if (this.activeEditorAdapter?.deleteLine) {
+      this.activeEditorAdapter.deleteLine();
+      return;
+    }
+
     this.applyLineOperation(deleteLineOperation);
   }
 
   toggleComment(): void {
+    if (this.activeEditorAdapter?.toggleComment) {
+      this.activeEditorAdapter.toggleComment();
+      return;
+    }
+
     const content = this.getContent();
     const editorState = useEditorStateStore.getState();
     const textareaOwnsFullContent = this.textareaRef?.value === content;
@@ -533,18 +555,38 @@ class EditorAPIImpl implements EditorAPI {
   }
 
   moveLineUp(): void {
+    if (this.activeEditorAdapter?.moveLineUp) {
+      this.activeEditorAdapter.moveLineUp();
+      return;
+    }
+
     this.applyLineOperation(moveLineUpOperation);
   }
 
   moveLineDown(): void {
+    if (this.activeEditorAdapter?.moveLineDown) {
+      this.activeEditorAdapter.moveLineDown();
+      return;
+    }
+
     this.applyLineOperation(moveLineDownOperation);
   }
 
   copyLineUp(): void {
+    if (this.activeEditorAdapter?.copyLineUp) {
+      this.activeEditorAdapter.copyLineUp();
+      return;
+    }
+
     this.applyLineOperation(copyLineUpOperation);
   }
 
   copyLineDown(): void {
+    if (this.activeEditorAdapter?.copyLineDown) {
+      this.activeEditorAdapter.copyLineDown();
+      return;
+    }
+
     this.applyLineOperation(copyLineDownOperation);
   }
 
