@@ -19,7 +19,7 @@ use lsp_types::{
 };
 use serde_json::Value;
 use std::{collections::HashMap, path::PathBuf};
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Manager, State};
 
 type LspLaunchRequest = (
    Option<String>,
@@ -102,7 +102,7 @@ fn locations_from_goto_response(response: Option<GotoDefinitionResponse>) -> Opt
 #[tauri::command]
 #[specta::specta]
 pub async fn lsp_start(
-   app_handle: AppHandle,
+   window: tauri::WebviewWindow,
    lsp_manager: State<'_, LspManager>,
    workspace_path: String,
    server_path: Option<String>,
@@ -113,10 +113,15 @@ pub async fn lsp_start(
    workspace_edit_owner: Option<String>,
 ) -> LspResult<()> {
    log::info!("lsp_start command called with path: {}", workspace_path);
-   let (server_path, server_args, server_env) =
-      resolve_lsp_launch_request(&app_handle, language_id, server_path, server_args, tools)
-         .await
-         .map_err(|e| LspError::from(anyhow::anyhow!(e)))?;
+   let (server_path, server_args, server_env) = resolve_lsp_launch_request(
+      window.app_handle(),
+      language_id,
+      server_path,
+      server_args,
+      tools,
+   )
+   .await
+   .map_err(|e| LspError::from(anyhow::anyhow!(e)))?;
    lsp_manager
       .start_lsp_for_workspace(
          PathBuf::from(workspace_path),
@@ -126,6 +131,7 @@ pub async fn lsp_start(
          LspInitialization {
             options: initialization_options,
             workspace_edit_owner,
+            window_label: Some(window.label().to_string()),
          },
       )
       .await
@@ -150,7 +156,7 @@ pub fn lsp_stop(lsp_manager: State<'_, LspManager>, workspace_path: String) -> L
 #[tauri::command]
 #[specta::specta]
 pub async fn lsp_start_for_file(
-   app_handle: AppHandle,
+   window: tauri::WebviewWindow,
    lsp_manager: State<'_, LspManager>,
    file_path: String,
    workspace_path: String,
@@ -162,10 +168,15 @@ pub async fn lsp_start_for_file(
    workspace_edit_owner: Option<String>,
 ) -> LspResult<()> {
    log::info!("lsp_start_for_file command called for file: {}", file_path);
-   let (server_path, server_args, server_env) =
-      resolve_lsp_launch_request(&app_handle, language_id, server_path, server_args, tools)
-         .await
-         .map_err(|e| LspError::from(anyhow::anyhow!(e)))?;
+   let (server_path, server_args, server_env) = resolve_lsp_launch_request(
+      window.app_handle(),
+      language_id,
+      server_path,
+      server_args,
+      tools,
+   )
+   .await
+   .map_err(|e| LspError::from(anyhow::anyhow!(e)))?;
    lsp_manager
       .start_lsp_for_file(
          PathBuf::from(file_path),
@@ -176,6 +187,7 @@ pub async fn lsp_start_for_file(
          LspInitialization {
             options: initialization_options,
             workspace_edit_owner,
+            window_label: Some(window.label().to_string()),
          },
       )
       .await

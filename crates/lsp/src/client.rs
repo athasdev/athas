@@ -2,6 +2,7 @@ use anyhow::{Context, Result, bail};
 use athas_runtime::{NodeRuntime, process::configure_background_command};
 use crossbeam_channel::{Sender, bounded};
 use lsp_types::*;
+use serde::Deserialize;
 use serde_json::{Value, json};
 use std::{
    collections::HashMap,
@@ -33,12 +34,15 @@ struct LspServerContext {
    root_uri: Option<Url>,
    settings: Value,
    workspace_edit_owner: Option<String>,
+   /// The window that started this client; diagnostics are sent to it only.
+   window_label: Option<String>,
 }
 
 #[derive(Clone, Default)]
 pub struct LspInitialization {
    pub options: Option<Value>,
    pub workspace_edit_owner: Option<String>,
+   pub window_label: Option<String>,
 }
 
 fn find_node_modules_dir(server_path: &Path) -> Option<PathBuf> {
@@ -385,7 +389,7 @@ impl LspClient {
                // Log all messages for debugging
                let method = message.get("method").and_then(|m| m.as_str());
                if let Some(m) = method {
-                  log::info!("LSP Notification received: {}", m);
+                  log::trace!("LSP message received: {}", m);
                }
 
                if message.get("id").is_some() && message.get("method").is_some() {
@@ -399,7 +403,7 @@ impl LspClient {
                } else if message.get("id").is_some() {
                   Self::handle_response(message, &pending_requests_clone);
                } else if message.get("method").is_some() {
-                  Self::handle_notification(message, &app_handle_clone);
+                  Self::handle_notification(message, &app_handle_clone, &server_context_clone);
                }
             }
          }
@@ -428,6 +432,7 @@ impl LspClient {
       if let Ok(mut context) = self.server_context.lock() {
          context.root_uri = Some(root_uri.clone());
          context.workspace_edit_owner = initialization.workspace_edit_owner;
+         context.window_label = initialization.window_label;
          context.settings = initialization_options
             .as_ref()
             .and_then(|options| options.get("settings"))
@@ -832,50 +837,46 @@ impl LspClient {
       Self::send_server_response(&self.stdin_tx, request_id, result)
    }
 
-   fn handle_notification(notification: Value, app_handle: &Option<AppHandle>) {
+   fn handle_notification(
+      notification: Value,
+      app_handle: &Option<AppHandle>,
+      server_context: &Arc<Mutex<LspServerContext>>,
+   ) {
       let method = notification.get("method").and_then(|m| m.as_str());
       let params = notification.get("params");
 
-      log::info!(
-         "handle_notification called with method: {:?}, has_params: {}, has_app_handle: {}",
-         method,
-         params.is_some(),
-         app_handle.is_some()
-      );
-
       match method {
          Some("textDocument/publishDiagnostics") => {
-            log::info!("Processing publishDiagnostics notification");
-            if let Some(params) = params {
-               log::info!("Diagnostics params: {:?}", params);
-
-               // Parse diagnostics
-               match serde_json::from_value::<PublishDiagnosticsParams>(params.clone()) {
-                  Ok(diagnostic_params) => {
-                     log::info!(
-                        "Parsed diagnostics: uri={}, count={}",
-                        diagnostic_params.uri,
-                        diagnostic_params.diagnostics.len()
-                     );
-                     // Emit event to frontend
-                     if let Some(app) = app_handle {
-                        match app.emit("lsp://diagnostics", &diagnostic_params) {
-                           Ok(_) => log::info!(
-                              "Successfully emitted diagnostics for file: {}",
-                              diagnostic_params.uri
-                           ),
-                           Err(e) => log::error!("Failed to emit diagnostics: {}", e),
-                        }
-                     } else {
-                        log::error!("No app_handle available to emit diagnostics");
-                     }
-                  }
-                  Err(e) => {
-                     log::error!("Failed to parse diagnostics params: {}", e);
-                  }
-               }
-            } else {
+            let Some(params) = notification.get("params") else {
                log::warn!("publishDiagnostics notification has no params");
+               return;
+            };
+            let diagnostic_params = match PublishDiagnosticsParams::deserialize(params) {
+               Ok(diagnostic_params) => diagnostic_params,
+               Err(e) => {
+                  log::error!("Failed to parse diagnostics params: {}", e);
+                  return;
+               }
+            };
+            log::debug!(
+               "Diagnostics: uri={}, count={}",
+               diagnostic_params.uri,
+               diagnostic_params.diagnostics.len()
+            );
+            let Some(app) = app_handle else {
+               log::error!("No app_handle available to emit diagnostics");
+               return;
+            };
+            let window_label = server_context
+               .lock()
+               .ok()
+               .and_then(|context| context.window_label.clone());
+            let emitted = match window_label {
+               Some(label) => app.emit_to(label.as_str(), "lsp://diagnostics", &diagnostic_params),
+               None => app.emit("lsp://diagnostics", &diagnostic_params),
+            };
+            if let Err(e) = emitted {
+               log::error!("Failed to emit diagnostics: {}", e);
             }
          }
          Some("window/logMessage") => {
@@ -1727,6 +1728,7 @@ mod tests {
                   "fakeCapabilities": { "codeLensProvider": {}, "codeActionProvider": true }
                })),
                workspace_edit_owner: None,
+               window_label: None,
             },
          )
          .await
@@ -1799,6 +1801,7 @@ mod tests {
             LspInitialization {
                options: Some(json!({ "settings": { "fake": { "level": 2 } } })),
                workspace_edit_owner: None,
+               window_label: None,
             },
          )
          .await
