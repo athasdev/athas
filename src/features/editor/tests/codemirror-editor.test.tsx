@@ -15,6 +15,11 @@ const state = vi.hoisted(() => ({
   } as Record<string, unknown>,
   setCursorAndSelection: vi.fn(),
   applyBufferHistory: vi.fn(),
+  requestNavigation: vi.fn(),
+  requestReveal: vi.fn(),
+  pendingNavigation: null as unknown,
+  pendingReveal: null as unknown,
+  cachedViewStates: {} as Record<string, unknown>,
 }));
 
 vi.mock("../stores/buffer.store", () => {
@@ -31,11 +36,21 @@ vi.mock("@/features/workspace/stores/create-workspace-scoped-store", () => ({
   useWorkspaceStoreScopeId: () => null,
 }));
 vi.mock("../stores/state.store", () => {
-  const store = {
-    getState: () => ({ cursorPosition: { line: 0, column: 0, offset: 0 }, selection: undefined }),
-  };
+  const getState = () => ({
+    cursorPosition: { line: 0, column: 0, offset: 0 },
+    selection: undefined,
+    pendingNavigation: state.pendingNavigation,
+    pendingReveal: state.pendingReveal,
+    actions: {
+      getCachedViewState: (key: string) => state.cachedViewStates[key] ?? null,
+      requestNavigation: state.requestNavigation,
+      requestReveal: state.requestReveal,
+    },
+  });
+  const store = (selector: (value: unknown) => unknown) => selector(getState());
   return {
     useEditorStateStore: Object.assign(store, {
+      getState,
       use: {
         actions: () => ({
           setCursorAndSelection: state.setCursorAndSelection,
@@ -43,6 +58,37 @@ vi.mock("../stores/state.store", () => {
         }),
       },
     }),
+  };
+});
+vi.mock("../extensions/api", () => {
+  type Adapter = { ownerId: string } & Record<string, (...args: unknown[]) => void>;
+  const handlers = new Map<string, Set<(payload: unknown) => void>>();
+  let editorAdapter: Adapter | null = null;
+  return {
+    editorAPI: {
+      setTextareaRef: vi.fn(),
+      setViewportRef: vi.fn(),
+      getViewportRef: () => null,
+      setActiveFindAdapter: vi.fn(),
+      clearActiveFindAdapter: vi.fn(),
+      setActiveEditorAdapter: (adapter: Adapter) => {
+        editorAdapter = adapter;
+      },
+      clearActiveEditorAdapter: (ownerId: string) => {
+        if (editorAdapter?.ownerId === ownerId) editorAdapter = null;
+      },
+      insertText: (...args: unknown[]) => editorAdapter?.insertText(...args),
+      selectAll: () => editorAdapter?.selectAll(),
+      on: (event: string, handler: (payload: unknown) => void) => {
+        const set = handlers.get(event) ?? new Set();
+        handlers.set(event, set);
+        set.add(handler);
+        return () => set.delete(handler);
+      },
+      setCursorPosition: (position: unknown) => {
+        for (const handler of handlers.get("cursorChange") ?? []) handler(position);
+      },
+    },
   };
 });
 vi.mock("../hooks/use-editor-view-settings", () => ({
@@ -63,6 +109,7 @@ vi.mock("../services/buffer-history-service", () => ({
 vi.mock("../services/buffer-store-owner", () => ({ captureBufferStoreOwner: () => ({}) }));
 
 const { CodeMirrorEditor } = await import("../components/codemirror-editor");
+const { editorAPI } = await import("../extensions/api");
 
 let container: HTMLDivElement;
 let root: Root;
@@ -87,6 +134,11 @@ describe("CodeMirror editor", () => {
     };
     state.setCursorAndSelection.mockClear();
     state.applyBufferHistory.mockReset();
+    state.requestNavigation.mockClear();
+    state.requestReveal.mockClear();
+    state.pendingNavigation = null;
+    state.pendingReveal = null;
+    state.cachedViewStates = {};
     container = document.createElement("div");
     document.body.append(container);
     root = createRoot(container);
@@ -179,5 +231,69 @@ describe("CodeMirror editor", () => {
     );
     expect(editorView.state.doc.toString()).toBe("const a = 0;\n");
     expect(editorView.state.selection.main.head).toBe(10);
+  });
+
+  it("restores the cached cursor for its view before paint", async () => {
+    state.cachedViewStates["view-1"] = {
+      cursor: { line: 0, column: 6, offset: 6 },
+      scrollTop: 0,
+      scrollLeft: 0,
+    };
+    await act(async () =>
+      root.render(<CodeMirrorEditor bufferId="buffer-1" viewStateKey="view-1" />),
+    );
+
+    expect(view().state.selection.main.head).toBe(6);
+  });
+
+  it("selects a pending navigation target and clears the request", async () => {
+    state.pendingNavigation = {
+      bufferId: "buffer-1",
+      range: {
+        start: { line: 0, column: 6, offset: 6 },
+        end: { line: 0, column: 7, offset: 7 },
+      },
+    };
+    await act(async () => root.render(<CodeMirrorEditor bufferId="buffer-1" />));
+
+    const { main } = view().state.selection;
+    expect([main.from, main.to]).toEqual([6, 7]);
+    expect(state.requestNavigation).toHaveBeenCalledWith(null);
+  });
+
+  it("clears a reveal request once it has scrolled", async () => {
+    state.pendingReveal = { bufferId: "buffer-1", line: 1 };
+    await act(async () => root.render(<CodeMirrorEditor bufferId="buffer-1" />));
+
+    expect(state.requestReveal).toHaveBeenCalledWith(null);
+  });
+
+  it("edits through the shared editor API while it is the active surface", async () => {
+    const onDocumentChange = vi.fn(() => ({
+      accepted: true,
+      synchronized: true,
+      contentRevision: 2,
+    }));
+    await act(async () =>
+      root.render(<CodeMirrorEditor bufferId="buffer-1" onDocumentChange={onDocumentChange} />),
+    );
+
+    act(() => editorAPI.insertText("// ", { line: 0, column: 0, offset: 0 }));
+    expect(view().state.doc.toString()).toBe("// const a = 1;\n");
+    expect(onDocumentChange).toHaveBeenCalledTimes(1);
+
+    act(() => editorAPI.selectAll());
+    const { main } = view().state.selection;
+    expect([main.from, main.to]).toEqual([0, view().state.doc.length]);
+
+    act(() => editorAPI.setCursorPosition({ line: 0, column: 3, offset: 3 }));
+    expect(view().state.selection.main.head).toBe(3);
+  });
+
+  it("does not take edits from the shared editor API when read-only", async () => {
+    await act(async () => root.render(<CodeMirrorEditor bufferId="buffer-1" readOnly />));
+
+    act(() => editorAPI.insertText("x", { line: 0, column: 0, offset: 0 }));
+    expect(view().state.doc.toString()).toBe("const a = 1;\n");
   });
 });

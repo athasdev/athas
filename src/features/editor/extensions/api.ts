@@ -47,7 +47,7 @@ import type {
 } from "../types/editor-extension.types";
 import { calculateLineHeight } from "../utils/lines";
 
-interface ActiveEditorAdapter {
+export interface ActiveEditorAdapter {
   ownerId: string;
   insertText: (text: string, position?: Position) => void;
   deleteRange: (range: Range) => void;
@@ -64,7 +64,7 @@ interface ActiveEditorAdapter {
   redo: () => void;
 }
 
-interface ActiveFindAdapter {
+export interface ActiveFindAdapter {
   ownerId: string;
   openFind: (replace: boolean) => void;
 }

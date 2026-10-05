@@ -28,6 +28,7 @@ import {
   useWorkspaceStoreScopeId,
 } from "@/features/workspace/stores/create-workspace-scoped-store";
 import { cn } from "@/utils/cn";
+import { editorAPI } from "../extensions/api";
 import { useEditorViewSettings } from "../hooks/use-editor-view-settings";
 import {
   detectLineSeparator,
@@ -36,6 +37,10 @@ import {
   toModelContentChangeEvent,
   type LineSeparator,
 } from "../engines/codemirror/document-change";
+import {
+  createCodeMirrorEditorAdapter,
+  createCodeMirrorFindAdapter,
+} from "../engines/codemirror/editor-adapter";
 import { loadCodeMirrorLanguage } from "../engines/codemirror/languages";
 import {
   fromEditorPosition,
@@ -377,9 +382,108 @@ export function CodeMirrorEditor({
       toBufferText(session.view.state.doc, session.separator) === content;
   }, [content, contentRevision]);
 
+  // Before paint, so a freshly created editor never shows line 1 and then jumps.
+  useLayoutEffect(() => {
+    const session = sessionRef.current;
+    if (!session || !isActiveSurface) return;
+    const cached = useEditorStateStore
+      .getState()
+      .actions.getCachedViewState(viewStateKey ?? activeBufferId ?? "");
+    if (!cached) return;
+    const { view } = session;
+    const doc = view.state.doc;
+    view.dispatch({
+      selection: cached.selection
+        ? EditorSelection.create([fromEditorRange(doc, cached.selection)])
+        : EditorSelection.cursor(fromEditorPosition(doc, cached.cursor)),
+    });
+    view.scrollDOM.scrollTop = cached.scrollTop;
+    view.scrollDOM.scrollLeft = cached.scrollLeft;
+  }, [activeBufferId, buffer?.id, isActiveSurface, viewStateKey]);
+
+  useLayoutEffect(() => {
+    if (!isActiveSurface || !buffer) return;
+    const ownerId = viewStateKey ?? activeBufferId ?? buffer.id;
+    const container = containerRef.current;
+    const getView = () => sessionRef.current?.view ?? null;
+    editorAPI.setTextareaRef(null);
+    if (container) editorAPI.setViewportRef(container);
+    editorAPI.setActiveFindAdapter(createCodeMirrorFindAdapter(ownerId, getView));
+    if (!isReadOnly) {
+      editorAPI.setActiveEditorAdapter(
+        createCodeMirrorEditorAdapter(ownerId, getView, {
+          undo: () => applyHistory("undo"),
+          redo: () => applyHistory("redo"),
+        }),
+      );
+    }
+
+    const unsubscribeCursor = editorAPI.on("cursorChange", (position) => {
+      const view = getView();
+      if (!view) return;
+      const head = fromEditorPosition(view.state.doc, position);
+      view.dispatch({
+        selection: EditorSelection.cursor(head),
+        effects: EditorView.scrollIntoView(head, { y: "center" }),
+      });
+    });
+    const unsubscribeSelection = editorAPI.on("selectionChange", (selection) => {
+      const view = getView();
+      if (!view) return;
+      view.dispatch({
+        selection: selection
+          ? EditorSelection.create([fromEditorRange(view.state.doc, selection)])
+          : EditorSelection.cursor(view.state.selection.main.head),
+      });
+    });
+
+    return () => {
+      unsubscribeCursor();
+      unsubscribeSelection();
+      editorAPI.clearActiveFindAdapter(ownerId);
+      if (!isReadOnly) editorAPI.clearActiveEditorAdapter(ownerId);
+      if (container && editorAPI.getViewportRef() === container) editorAPI.setViewportRef(null);
+    };
+  }, [activeBufferId, applyHistory, buffer?.id, isActiveSurface, isReadOnly, viewStateKey]);
+
+  const pendingNavigation = useEditorStateStore((state) =>
+    state.pendingNavigation?.bufferId === activeBufferId ? state.pendingNavigation : null,
+  );
+
   useEffect(() => {
-    if (isActiveSurface) sessionRef.current?.view.focus();
-  }, [isActiveSurface, buffer?.id]);
+    const view = sessionRef.current?.view;
+    if (!view || !isActiveSurface || !pendingNavigation) return;
+    const range = fromEditorRange(view.state.doc, pendingNavigation.range);
+    view.dispatch({
+      selection: EditorSelection.create([range]),
+      effects: EditorView.scrollIntoView(range, { y: "center" }),
+    });
+    view.focus();
+    if (useEditorStateStore.getState().pendingNavigation === pendingNavigation) {
+      useEditorStateStore.getState().actions.requestNavigation(null);
+    }
+  }, [isActiveSurface, pendingNavigation]);
+
+  const pendingReveal = useEditorStateStore((state) =>
+    state.pendingReveal?.bufferId === activeBufferId ? state.pendingReveal : null,
+  );
+
+  // Scrolls a line into view for whoever asked (the agent follower) without taking focus or
+  // moving the cursor, so it works in a pane the user is not typing in.
+  useEffect(() => {
+    const view = sessionRef.current?.view;
+    if (!view || !pendingReveal) return;
+    const doc = view.state.doc;
+    const line = doc.line(Math.min(Math.max(1, pendingReveal.line), doc.lines));
+    view.dispatch({ effects: EditorView.scrollIntoView(line.from, { y: "center" }) });
+    if (useEditorStateStore.getState().pendingReveal === pendingReveal) {
+      useEditorStateStore.getState().actions.requestReveal(null);
+    }
+  }, [buffer?.id, pendingReveal]);
+
+  useEffect(() => {
+    if (isActiveSurface && !isReadOnly) sessionRef.current?.view.focus();
+  }, [isActiveSurface, isReadOnly, buffer?.id]);
 
   return (
     <div
