@@ -111,6 +111,7 @@ fn register_managed_state(app: &mut tauri::App) {
    app.manage(ThemeCache::new(std::collections::HashMap::new()));
    app.manage(FileClipboard::new(None));
    app.manage(FffSearchState::new());
+   app.manage(commands::IpcStreams::default());
    app.manage(commands::development::docker::DockerLogStreams::default());
    app.manage(commands::development::cli_args::PendingCliOpenRequests::default());
    app.manage(commands::development::deep_links::PendingDeepLinks::default());

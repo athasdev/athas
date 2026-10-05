@@ -6,7 +6,7 @@ import type {
   FileSearchResult,
   SearchFilesResponse,
 } from "@/features/file-search/lib/file-search-api";
-import { fffScanStatus, searchFilesContent } from "@/features/file-search/lib/file-search-api";
+import { searchFilesContent } from "@/features/file-search/lib/file-search-api";
 import { getNativeWorkspaceRootPaths } from "@/features/file-search/utils/file-search-paths";
 import {
   loadProviderSearchFiles,
@@ -26,7 +26,6 @@ import { useGlobalSearchSessionStore } from "../stores/global-search-session.sto
 export type ContentSearchAvailability = "ready" | "no-workspace" | "unsupported";
 
 const CONTEXT_LINES = 2;
-const INDEX_STATUS_POLL_DELAY = 150;
 
 const canUseContentSearch = (rootPath: string | null | undefined): rootPath is string =>
   Boolean(rootPath) &&
@@ -236,7 +235,11 @@ export const useContentSearch = () => {
   );
 
   const requestSearchPage = useCallback(
-    async (fileOffset: number, currentRequestId: number): Promise<SearchFilesResponse | null> => {
+    async (
+      fileOffset: number,
+      currentRequestId: number,
+      onResults?: (results: FileSearchResult[]) => void,
+    ): Promise<SearchFilesResponse | null> => {
       const searchRootPath = rootFolderPath;
       if (!searchRootPath || availability !== "ready") return null;
 
@@ -258,16 +261,32 @@ export const useContentSearch = () => {
         });
       }
 
-      return searchFilesContent({
-        root_paths: nativeRootPaths,
-        query: debouncedQuery,
-        case_sensitive: searchOptions.caseSensitive,
-        whole_word: searchOptions.wholeWord,
-        use_regex: searchOptions.useRegex,
-        max_results: CONTENT_SEARCH_PAGE_SIZE,
-        file_offset: fileOffset,
-        context_lines: CONTEXT_LINES,
-      });
+      return searchFilesContent(
+        {
+          root_paths: nativeRootPaths,
+          query: debouncedQuery,
+          case_sensitive: searchOptions.caseSensitive,
+          whole_word: searchOptions.wholeWord,
+          use_regex: searchOptions.useRegex,
+          max_results: CONTENT_SEARCH_PAGE_SIZE,
+          file_offset: fileOffset,
+          context_lines: CONTEXT_LINES,
+        },
+        {
+          isCancelled: () => !isRequestCurrent(currentRequestId),
+          onIndexing: (indexed) => {
+            if (!isRequestCurrent(currentRequestId)) return;
+            setIsIndexing(true);
+            setIndexedFiles(indexed);
+            setScannedFiles(indexed);
+          },
+          onResults: (results) => {
+            if (!isRequestCurrent(currentRequestId)) return;
+            setIsIndexing(false);
+            onResults?.(results);
+          },
+        },
+      );
     },
     [
       availability,
@@ -284,17 +303,27 @@ export const useContentSearch = () => {
   );
 
   const requestVisibleSearchPage = useCallback(
-    async (fileOffset: number, currentRequestId: number): Promise<SearchFilesResponse | null> => {
+    async (
+      fileOffset: number,
+      currentRequestId: number,
+      onVisibleResults?: (results: FileSearchResult[]) => void,
+    ): Promise<SearchFilesResponse | null> => {
       const matchesPathFilters = createPathFilterPredicate(
         rootFolderPath,
         debouncedIncludeQuery,
         debouncedExcludeQuery,
       );
+      const showStreamedResults = onVisibleResults
+        ? (results: FileSearchResult[]) => {
+            const visible = results.filter((result) => matchesPathFilters(result.file_path));
+            if (visible.length > 0) onVisibleResults(visible);
+          }
+        : undefined;
       let response: SearchFilesResponse | null = null;
       let nextOffset = fileOffset;
 
       while (isRequestCurrent(currentRequestId)) {
-        const page = await requestSearchPage(nextOffset, currentRequestId);
+        const page = await requestSearchPage(nextOffset, currentRequestId, showStreamedResults);
         if (!page || !isRequestCurrent(currentRequestId)) return null;
         if (page.is_indexing) return page;
 
@@ -369,7 +398,10 @@ export const useContentSearch = () => {
     setIsIndexing(false);
 
     try {
-      const response = await requestVisibleSearchPage(0, currentRequestId);
+      // Matches stream in while the page is read; the finished page replaces them below.
+      const response = await requestVisibleSearchPage(0, currentRequestId, (results) =>
+        setRawResults((previous) => mergeSearchResults(previous, results)),
+      );
       if (!response || !isRequestCurrent(currentRequestId)) return;
 
       if (response.is_indexing) {
@@ -379,6 +411,7 @@ export const useContentSearch = () => {
         return;
       }
 
+      setIsIndexing(false);
       setIndexedFiles(response.indexed_files);
       setScannedFiles(response.indexed_files);
       setRawResults(response.results);
@@ -501,70 +534,6 @@ export const useContentSearch = () => {
     isSearchPending,
     nextFileOffset,
     requestVisibleSearchPage,
-  ]);
-
-  useEffect(() => {
-    if (
-      !isIndexing ||
-      !debouncedQuery.trim() ||
-      !canUseContentSearch(rootFolderPath) ||
-      useProviderSearch
-    )
-      return;
-
-    const pollingRequestId = requestIdRef.current;
-    let disposed = false;
-    let failureCount = 0;
-    let pollInFlight = false;
-
-    const pollScanStatus = async () => {
-      if (pollInFlight) return;
-      pollInFlight = true;
-      try {
-        const status = await fffScanStatus(nativeRootPaths);
-        if (disposed || !isRequestCurrent(pollingRequestId)) return;
-
-        setIsIndexing(status.is_scanning);
-        setScannedFiles(status.scanned_files_count);
-        setIndexedFiles(status.indexed_files);
-        failureCount = 0;
-
-        if (status.is_scanning) return;
-
-        clearInterval(timer);
-        void performSearch();
-      } catch (statusError) {
-        if (disposed || !isRequestCurrent(pollingRequestId)) return;
-        console.error("Search index status error:", statusError);
-        failureCount++;
-        if (failureCount >= 3) {
-          clearInterval(timer);
-          setIsIndexing(false);
-          setError(`Search indexing failed: ${getErrorMessage(statusError)}`);
-          setResultsSearchKey(searchKey);
-          setResultsOwner(fileSystemStore);
-        }
-      } finally {
-        pollInFlight = false;
-      }
-    };
-
-    const timer = setInterval(() => void pollScanStatus(), INDEX_STATUS_POLL_DELAY);
-
-    return () => {
-      disposed = true;
-      clearInterval(timer);
-    };
-  }, [
-    debouncedQuery,
-    isIndexing,
-    nativeRootPaths,
-    performSearch,
-    rootFolderPath,
-    searchKey,
-    isRequestCurrent,
-    fileSystemStore,
-    useProviderSearch,
   ]);
 
   useEffect(() => {

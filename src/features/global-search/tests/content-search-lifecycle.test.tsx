@@ -104,7 +104,10 @@ describe("content search ownership and requests", () => {
     setupWorkspace("other", "/other");
     workspaceRuntimeRegistry.activateWorkspace({ id: "other", name: "Other" });
     await mount();
-    expect(io.search).toHaveBeenCalledWith(expect.objectContaining({ root_paths: ["/w"] }));
+    expect(io.search).toHaveBeenCalledWith(
+      expect.objectContaining({ root_paths: ["/w"] }),
+      expect.any(Object),
+    );
     expect(search.results[0]?.file_path).toBe("/w/a.ts");
   });
   it("enumerates provider files from the parked owner", async () => {
@@ -144,7 +147,10 @@ describe("content search ownership and requests", () => {
     io.search.mockResolvedValue(response("/w/new.ts"));
     await act(async () => vi.advanceTimersByTimeAsync(250));
     expect(search.results[0]?.file_path).toBe("/w/new.ts");
-    expect(io.search).toHaveBeenLastCalledWith(expect.objectContaining({ query: "bar" }));
+    expect(io.search).toHaveBeenLastCalledWith(
+      expect.objectContaining({ query: "bar" }),
+      expect.any(Object),
+    );
   });
   it("prevents retained callbacks from launching work after unmount", async () => {
     await mount();

@@ -12,6 +12,7 @@ pub mod version_control;
 // Standalone modules (not domain-specific)
 pub mod extensions;
 pub mod fuzzy;
+pub mod ipc_streams;
 
 // Re-export all commands from domain modules
 pub use ai::*;
@@ -23,6 +24,7 @@ pub use editor::*;
 // Re-export standalone modules
 pub use extensions::*;
 pub use fuzzy::*;
+pub use ipc_streams::*;
 pub use project::*;
 pub use ui::*;
 pub use version_control::*;

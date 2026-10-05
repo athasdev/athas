@@ -501,7 +501,8 @@ pub(crate) fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
          fff_list_files,
          fff_track_access,
          // Search commands
-         search_files_content,
+         search_files_content_stream,
+         cancel_ipc_stream,
          // EditorConfig commands
          get_editorconfig_properties,
          // Format commands

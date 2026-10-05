@@ -1,5 +1,7 @@
+import { Channel } from "@tauri-apps/api/core";
 import {
   commands,
+  type ContentSearchEvent,
   type FffIndexedFile,
   type FffScanStatus,
   type FffSearchHit,
@@ -54,18 +56,80 @@ export interface SearchFilesRequest {
   context_lines?: number;
 }
 
-export async function searchFilesContent(
+export interface SearchFilesStreamHandlers {
+  /** The index is still being built; the backend starts searching once it is ready. */
+  onIndexing?: (indexedFiles: number) => void;
+  /** Matches found since the previous batch, as they arrive. */
+  onResults?: (results: FileSearchResult[]) => void;
+  /** Stops the search in the backend when it returns true; checked as batches arrive. */
+  isCancelled?: () => boolean;
+}
+
+let nextSearchStreamId = 0;
+
+/**
+ * Searches file contents and resolves with one page. Matches stream in over a channel as the
+ * index is read, so callers can show them before the page is complete, and indexing progress
+ * arrives on the same channel instead of through polling.
+ */
+export function searchFilesContent(
   request: SearchFilesRequest,
+  handlers: SearchFilesStreamHandlers = {},
 ): Promise<SearchFilesResponse> {
-  return commands.searchFilesContent({
-    root_paths: request.root_paths,
-    query: request.query,
-    case_sensitive: request.case_sensitive ?? null,
-    whole_word: request.whole_word ?? null,
-    use_regex: request.use_regex ?? null,
-    max_results: request.max_results ?? null,
-    file_offset: request.file_offset ?? null,
-    context_lines: request.context_lines ?? null,
+  const searchId = `content-search-${++nextSearchStreamId}`;
+  const results: FileSearchResult[] = [];
+
+  return new Promise<SearchFilesResponse>((resolve, reject) => {
+    let cancelled = false;
+    const cancel = () => {
+      if (cancelled) return;
+      cancelled = true;
+      void commands.cancelIpcStream(searchId).catch(() => {});
+    };
+
+    const channel = new Channel<ContentSearchEvent>((event) => {
+      if (handlers.isCancelled?.()) cancel();
+      switch (event.kind) {
+        case "indexing":
+          handlers.onIndexing?.(event.indexed_files);
+          break;
+        case "results":
+          results.push(...event.results);
+          handlers.onResults?.(event.results);
+          break;
+        case "done":
+          resolve({
+            results,
+            total_files: event.summary.total_files,
+            searched_files: event.summary.searched_files,
+            searchable_files: event.summary.searchable_files,
+            files_with_matches: results.length,
+            next_file_offset: event.summary.next_file_offset,
+            has_more: event.summary.has_more,
+            is_indexing: false,
+            indexed_files: event.summary.indexed_files,
+            regex_fallback_error: event.summary.regex_fallback_error,
+          });
+          break;
+      }
+    });
+
+    commands
+      .searchFilesContentStream(
+        {
+          search_id: searchId,
+          root_paths: request.root_paths,
+          query: request.query,
+          case_sensitive: request.case_sensitive ?? null,
+          whole_word: request.whole_word ?? null,
+          use_regex: request.use_regex ?? null,
+          max_results: request.max_results ?? null,
+          file_offset: request.file_offset ?? null,
+          context_lines: request.context_lines ?? null,
+        },
+        channel,
+      )
+      .catch(reject);
   });
 }
 

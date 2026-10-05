@@ -1113,8 +1113,14 @@ export const commands = {
   fffListFiles: (rootPaths: string[]) =>
     __TAURI_INVOKE<FffIndexedFile[]>("fff_list_files", { rootPaths }),
   fffTrackAccess: (path: string) => __TAURI_INVOKE<null>("fff_track_access", { path }),
-  searchFilesContent: (request: SearchFilesRequest) =>
-    __TAURI_INVOKE<SearchFilesResponse>("search_files_content", { request }),
+  /**
+   *  Streams content search matches over `on_event` as the index is read, instead of
+   *  returning fixed pages. Waits for indexing in the backend and reports its progress
+   *  on the same channel. Cancel with `cancel_ipc_stream(request.search_id)`.
+   */
+  searchFilesContentStream: (request: SearchFilesRequest, onEvent: Channel<ContentSearchEvent>) =>
+    __TAURI_INVOKE<null>("search_files_content_stream", { request, onEvent }),
+  cancelIpcStream: (streamId: string) => __TAURI_INVOKE<void>("cancel_ipc_stream", { streamId }),
   getEditorconfigProperties: (filePath: string) =>
     __TAURI_INVOKE<{ [key in string]: string }>("get_editorconfig_properties", { filePath }),
   /**  Format code content using the specified formatter */
@@ -4549,6 +4555,31 @@ export type ConnectionConfig = {
   connection_string: string | null;
 };
 
+/**  One message of a streamed content search, in the order the webview receives them. */
+export type ContentSearchEvent =
+  /**  The workspace index is still being built; the search starts once it is ready. */
+  | { kind: "indexing"; scanned_files: number; indexed_files: number }
+  /**  Matches found since the previous batch, with cumulative progress. */
+  | {
+      kind: "results";
+      results: FileSearchResult[];
+      searched_files: number;
+      searchable_files: number;
+    }
+  /**  The last message: the search finished, used its match budget, or was cancelled. */
+  | { kind: "done"; summary: ContentSearchSummary };
+
+export type ContentSearchSummary = {
+  total_files: number;
+  searched_files: number;
+  searchable_files: number;
+  next_file_offset: number;
+  has_more: boolean;
+  indexed_files: number;
+  regex_fallback_error: string | null;
+  cancelled: boolean;
+};
+
 export type CreateAppWindowRequest = {
   /**
    *  A bare window that hosts one thing (an agent session, a pull request)
@@ -5835,27 +5866,17 @@ export type SavedConnection = {
 };
 
 export type SearchFilesRequest = {
+  /**  Names the stream so the webview can cancel it with `cancel_ipc_stream`. */
+  search_id: string;
   root_paths: string[];
   query: string;
   case_sensitive: boolean | null;
   whole_word: boolean | null;
   use_regex: boolean | null;
+  /**  Matches to send before stopping with `has_more`. */
   max_results: number | null;
   file_offset: number | null;
   context_lines: number | null;
-};
-
-export type SearchFilesResponse = {
-  results: FileSearchResult[];
-  total_files: number;
-  searched_files: number;
-  searchable_files: number;
-  files_with_matches: number;
-  next_file_offset: number;
-  has_more: boolean;
-  is_indexing: boolean;
-  indexed_files: number;
-  regex_fallback_error: string | null;
 };
 
 export type SearchMatch = {
