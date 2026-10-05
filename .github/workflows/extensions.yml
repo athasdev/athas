@@ -92,7 +92,7 @@ jobs:
           path: extensions/generated/cdn/
 
       - name: Deploy extensions CDN
-        uses: burnett01/rsync-deployments@7.0.2
+        uses: burnett01/rsync-deployments@8.0.5
         with:
           switches: -avz --delete
           path: extensions/generated/cdn/
