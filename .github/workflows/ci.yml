@@ -15,7 +15,7 @@ jobs:
   bun:
     if: github.repository == 'athasdev/athas'
     name: Bun — typecheck, frontend check
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
 
@@ -46,7 +46,7 @@ jobs:
 
       - name: Upload frontend coverage
         if: ${{ !cancelled() && hashFiles('coverage/lcov.info') != '' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: frontend-coverage
           path: coverage/
@@ -55,11 +55,11 @@ jobs:
   rust:
     if: github.repository == 'athasdev/athas'
     name: Rust — fmt, check, clippy, test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       CARGO_TERM_COLOR: always
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@nightly
@@ -103,7 +103,7 @@ jobs:
 
       - name: Upload Rust coverage
         if: ${{ !cancelled() && hashFiles('target/llvm-cov/lcov.info') != '' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: rust-coverage
           path: |
@@ -115,7 +115,7 @@ jobs:
   audit:
     if: github.repository == 'athasdev/athas'
     name: Audit — cargo audit, bun audit
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
 

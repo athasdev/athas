@@ -51,7 +51,7 @@ jobs:
           bun-version: 1.3.14
 
       - name: Cache Bun dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.bun/install/cache
           key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
@@ -111,7 +111,7 @@ jobs:
 
       - name: Upload e2e artifacts
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: e2e-${{ runner.os }}
           path: target/e2e/artifacts

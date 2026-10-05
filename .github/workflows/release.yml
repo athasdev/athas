@@ -106,7 +106,7 @@ jobs:
             > release-body.md
 
       - name: Upload release metadata
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: release-metadata
           path: release-body.md
@@ -214,7 +214,7 @@ jobs:
           cache-on-failure: true
 
       - name: Cache Bun dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.bun/install/cache
           key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
@@ -410,7 +410,7 @@ jobs:
           }
 
       - name: Upload platform artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: release-${{ matrix.artifact }}
           path: |
@@ -442,13 +442,13 @@ jobs:
           bun-version: 1.3.14
 
       - name: Download release metadata
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: release-metadata
           path: release-metadata
 
       - name: Download platform artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           pattern: release-*
           path: release-artifacts
