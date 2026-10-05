@@ -1,7 +1,9 @@
-use super::types::{FlatInlayHint, FlatSymbol, FlatWorkspaceSymbol, LspDiagnosticContext};
+use super::types::{
+   FlatInlayHint, FlatSymbol, FlatWorkspaceSymbol, LspDiagnosticContext, SemanticTokensPayload,
+};
 use lsp_types::{
    Diagnostic as LspDiagnostic, DiagnosticSeverity, DocumentSymbol, InlayHint, InlayHintLabel,
-   NumberOrString, OneOf, Position, Range, SymbolKind, Url, WorkspaceSymbolResponse,
+   NumberOrString, OneOf, Position, Range, SemanticToken, SymbolKind, Url, WorkspaceSymbolResponse,
 };
 
 fn symbol_kind_to_string(kind: SymbolKind) -> String {
@@ -133,6 +135,37 @@ pub(super) fn convert_diagnostic_context_to_lsp(context: LspDiagnosticContext) -
       tags: None,
       data: None,
    }
+}
+
+/// Packs semantic tokens and their legend into the binary layout documented on
+/// [`SemanticTokensPayload`].
+pub(super) fn encode_semantic_tokens_payload(
+   tokens: &[SemanticToken],
+   token_types: &[String],
+   token_modifiers: &[String],
+) -> SemanticTokensPayload {
+   let legend = serde_json::to_vec(&serde_json::json!({
+      "tokenTypes": token_types,
+      "tokenModifiers": token_modifiers,
+   }))
+   .unwrap_or_else(|_| b"{\"tokenTypes\":[],\"tokenModifiers\":[]}".to_vec());
+   let integer_count = tokens.len() * 5;
+   let mut bytes = Vec::with_capacity(8 + integer_count * 4 + legend.len());
+   bytes.extend_from_slice(&(integer_count as u32).to_le_bytes());
+   bytes.extend_from_slice(&(legend.len() as u32).to_le_bytes());
+   for token in tokens {
+      for value in [
+         token.delta_line,
+         token.delta_start,
+         token.length,
+         token.token_type,
+         token.token_modifiers_bitset,
+      ] {
+         bytes.extend_from_slice(&value.to_le_bytes());
+      }
+   }
+   bytes.extend_from_slice(&legend);
+   SemanticTokensPayload(bytes)
 }
 
 pub(super) fn symbol_kind_label(kind: SymbolKind) -> String {
@@ -285,5 +318,62 @@ mod tests {
    fn empty_input_yields_empty_output() {
       let flattened = flatten_workspace_symbol_response(Vec::new());
       assert!(flattened.is_empty());
+   }
+
+   fn read_u32(bytes: &[u8], index: usize) -> u32 {
+      u32::from_le_bytes(bytes[index * 4..index * 4 + 4].try_into().unwrap())
+   }
+
+   #[test]
+   fn packs_relative_semantic_tokens_and_legend_into_binary_payload() {
+      let tokens = [
+         SemanticToken {
+            delta_line: 0,
+            delta_start: 4,
+            length: 3,
+            token_type: 1,
+            token_modifiers_bitset: 2,
+         },
+         SemanticToken {
+            delta_line: 2,
+            delta_start: 1,
+            length: 5,
+            token_type: 0,
+            token_modifiers_bitset: 0,
+         },
+      ];
+      let SemanticTokensPayload(bytes) = encode_semantic_tokens_payload(
+         &tokens,
+         &["variable".to_string(), "function".to_string()],
+         &["declaration".to_string()],
+      );
+
+      let integer_count = read_u32(&bytes, 0) as usize;
+      let legend_len = read_u32(&bytes, 1) as usize;
+      assert_eq!(integer_count, 10);
+      assert_eq!(
+         (0..integer_count)
+            .map(|index| read_u32(&bytes, index + 2))
+            .collect::<Vec<_>>(),
+         vec![0, 4, 3, 1, 2, 2, 1, 5, 0, 0]
+      );
+      let legend_start = 8 + integer_count * 4;
+      assert_eq!(bytes.len(), legend_start + legend_len);
+      let legend: serde_json::Value = serde_json::from_slice(&bytes[legend_start..]).unwrap();
+      assert_eq!(
+         legend,
+         serde_json::json!({
+            "tokenTypes": ["variable", "function"],
+            "tokenModifiers": ["declaration"],
+         })
+      );
+   }
+
+   #[test]
+   fn packs_an_empty_semantic_token_payload_with_an_empty_legend() {
+      let SemanticTokensPayload(bytes) = encode_semantic_tokens_payload(&[], &[], &[]);
+      assert_eq!(read_u32(&bytes, 0), 0);
+      let legend: serde_json::Value = serde_json::from_slice(&bytes[8..]).unwrap();
+      assert_eq!(legend["tokenTypes"], serde_json::json!([]));
    }
 }

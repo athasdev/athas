@@ -1,12 +1,12 @@
 use super::{
    convert::{
-      convert_diagnostic_context_to_lsp, flatten_document_symbols, flatten_inlay_hint,
-      flatten_workspace_symbol_response, symbol_kind_label,
+      convert_diagnostic_context_to_lsp, encode_semantic_tokens_payload, flatten_document_symbols,
+      flatten_inlay_hint, flatten_workspace_symbol_response, symbol_kind_label,
    },
    types::{
-      FlatCodeLens, FlatInlayHint, FlatSemanticToken, FlatSymbol, FlatTextEdit,
-      FlatTextEditPosition, FlatTextEditRange, FlatWorkspaceSymbol, IntoLsp, Lsp,
-      LspApplyCodeActionResult, LspCodeActionContext, LspCodeActionItem, LspSemanticTokensResponse,
+      FlatCodeLens, FlatInlayHint, FlatSymbol, FlatTextEdit, FlatTextEditPosition,
+      FlatTextEditRange, FlatWorkspaceSymbol, IntoLsp, Lsp, LspApplyCodeActionResult,
+      LspCodeActionContext, LspCodeActionItem, SemanticTokensPayload,
    },
 };
 use athas_lsp::{DocumentChangeBatch, LspError, LspManager, LspResult, client::LspInitialization};
@@ -469,7 +469,7 @@ pub async fn lsp_get_java_class_file_contents(
 pub async fn lsp_get_semantic_tokens(
    lsp_manager: State<'_, LspManager>,
    file_path: String,
-) -> LspResult<LspSemanticTokensResponse> {
+) -> LspResult<SemanticTokensPayload> {
    let response = lsp_manager
       .get_semantic_tokens(&file_path)
       .await
@@ -481,42 +481,15 @@ pub async fn lsp_get_semantic_tokens(
    let data = match response {
       Some(SemanticTokensResult::Tokens(tokens)) => tokens.data,
       Some(SemanticTokensResult::Partial(partial)) => partial.data,
-      None => {
-         return Ok(LspSemanticTokensResponse {
-            tokens: Vec::new(),
-            token_types: Vec::new(),
-            token_modifiers: Vec::new(),
-         });
-      }
+      None => return Ok(encode_semantic_tokens_payload(&[], &[], &[])),
    };
    let (token_types, token_modifiers) = lsp_manager.semantic_token_legend(&file_path);
 
-   let mut tokens = Vec::with_capacity(data.len());
-   let mut current_line: u32 = 0;
-   let mut current_char: u32 = 0;
-
-   for token in &data {
-      if token.delta_line > 0 {
-         current_line += token.delta_line;
-         current_char = token.delta_start;
-      } else {
-         current_char += token.delta_start;
-      }
-
-      tokens.push(FlatSemanticToken {
-         line: current_line,
-         start_char: current_char,
-         length: token.length,
-         token_type: token.token_type,
-         token_modifiers: token.token_modifiers_bitset,
-      });
-   }
-
-   Ok(LspSemanticTokensResponse {
-      tokens,
-      token_types,
-      token_modifiers,
-   })
+   Ok(encode_semantic_tokens_payload(
+      &data,
+      &token_types,
+      &token_modifiers,
+   ))
 }
 
 #[tauri::command]

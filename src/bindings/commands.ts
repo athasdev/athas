@@ -954,7 +954,7 @@ export const commands = {
   lspGetTypeDefinition: (filePath: string, line: number, character: number) =>
     __TAURI_INVOKE<Lsp.Location[] | null>("lsp_get_type_definition", { filePath, line, character }),
   lspGetSemanticTokens: (filePath: string) =>
-    __TAURI_INVOKE<LspSemanticTokensResponse>("lsp_get_semantic_tokens", { filePath }),
+    __TAURI_INVOKE<ArrayBuffer>("lsp_get_semantic_tokens", { filePath }),
   lspGetCodeLens: (filePath: string) =>
     __TAURI_INVOKE<FlatCodeLens[]>("lsp_get_code_lens", { filePath }),
   lspFormatDocument: (filePath: string) =>
@@ -4922,14 +4922,6 @@ export type FlatInlayHint = {
   paddingRight: boolean;
 };
 
-export type FlatSemanticToken = {
-  line: number;
-  startChar: number;
-  length: number;
-  tokenType: number;
-  tokenModifiers: number;
-};
-
 export type FlatSymbol = {
   name: string;
   kind: string;
@@ -5455,12 +5447,6 @@ export type LspError_Deserialize = {
 export type LspError_Serialize = {
   message: string;
   code?: string | null;
-};
-
-export type LspSemanticTokensResponse = {
-  tokens: FlatSemanticToken[];
-  tokenTypes: string[];
-  tokenModifiers: string[];
 };
 
 /**  A named value whose value may be a secret, such as an API key. */

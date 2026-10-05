@@ -88,86 +88,83 @@ export function toMonacoSemanticTokenType(tokenType: string): number | undefined
   return normalizedIndex >= 0 ? normalizedIndex : undefined;
 }
 
-function toMonacoModifierSet(rawModifierSet: number, serverModifiers: readonly string[]): number {
-  let modifierSet = 0;
-  const rawBits = rawModifierSet >>> 0;
-
-  for (let index = 0; index < serverModifiers.length && index < 32; index += 1) {
-    if (((rawBits >>> index) & 1) === 0) continue;
-
-    const normalizedModifier = normalizedTokenName(serverModifiers[index]);
+function monacoModifierBits(serverModifiers: readonly string[]): number[] {
+  return serverModifiers.slice(0, 32).map((serverModifier) => {
+    const normalizedModifier = normalizedTokenName(serverModifier);
     const monacoIndex = MONACO_SEMANTIC_TOKEN_MODIFIERS.findIndex(
       (modifier) => normalizedTokenName(modifier) === normalizedModifier,
     );
-    if (monacoIndex >= 0) modifierSet |= 1 << monacoIndex;
-  }
+    return monacoIndex >= 0 ? 1 << monacoIndex : 0;
+  });
+}
 
+function toMonacoModifierSet(rawModifierSet: number, modifierBits: readonly number[]): number {
+  let modifierSet = 0;
+  for (let index = 0; index < modifierBits.length; index += 1) {
+    if ((rawModifierSet >>> index) & 1) modifierSet |= modifierBits[index];
+  }
   return modifierSet >>> 0;
 }
 
-function isNonNegativeInteger(value: number): boolean {
-  return Number.isSafeInteger(value) && value >= 0;
-}
-
+/**
+ * Translates the server's relative token stream into Monaco's legend in one pass, clamping
+ * tokens to their line and dropping unknown, empty, out-of-range, and overlapping tokens.
+ * The relative encoding is ordered by construction, so no sorting is needed.
+ */
 export function encodeMonacoSemanticTokens(
   response: LspSemanticTokensResponse,
   model: SemanticTokenModel,
 ): Uint32Array {
-  const tokens = response.tokens
-    .flatMap((token) => {
-      if (
-        !isNonNegativeInteger(token.line) ||
-        !isNonNegativeInteger(token.startChar) ||
-        !Number.isSafeInteger(token.length) ||
-        token.length <= 0 ||
-        !isNonNegativeInteger(token.tokenType) ||
-        !isNonNegativeInteger(token.tokenModifiers) ||
-        token.line >= model.getLineCount()
-      ) {
-        return [];
-      }
+  const { data } = response;
+  const tokenTypes = response.tokenTypes.map(toMonacoSemanticTokenType);
+  const modifierBits = monacoModifierBits(response.tokenModifiers);
+  const lineCount = model.getLineCount();
+  const integerCount = data.length - (data.length % 5);
+  const encoded = new Uint32Array(integerCount);
 
-      const tokenTypeName = response.tokenTypes[token.tokenType];
-      if (!tokenTypeName) return [];
-
-      const monacoTokenType = toMonacoSemanticTokenType(tokenTypeName);
-      if (monacoTokenType === undefined) return [];
-
-      const lineLength = model.getLineMaxColumn(token.line + 1) - 1;
-      if (token.startChar >= lineLength) return [];
-
-      return [
-        {
-          line: token.line,
-          startChar: token.startChar,
-          length: Math.min(token.length, lineLength - token.startChar),
-          tokenType: monacoTokenType,
-          tokenModifiers: toMonacoModifierSet(token.tokenModifiers, response.tokenModifiers),
-        },
-      ];
-    })
-    .sort((left, right) => left.line - right.line || left.startChar - right.startChar);
-
-  const data: number[] = [];
+  let line = 0;
+  let startChar = 0;
+  let written = 0;
   let previousLine = 0;
   let previousStartChar = 0;
   let previousEndChar = 0;
+  let measuredLine = -1;
+  let lineLength = 0;
 
-  for (const token of tokens) {
-    if (token.line === previousLine && token.startChar < previousEndChar) continue;
+  for (let index = 0; index < integerCount; index += 5) {
+    const deltaLine = data[index];
+    if (deltaLine > 0) {
+      line += deltaLine;
+      startChar = data[index + 1];
+    } else {
+      startChar += data[index + 1];
+    }
+    if (line >= lineCount) break;
 
-    const deltaLine = token.line - previousLine;
-    data.push(
-      deltaLine,
-      deltaLine === 0 ? token.startChar - previousStartChar : token.startChar,
-      token.length,
-      token.tokenType,
-      token.tokenModifiers,
-    );
-    previousLine = token.line;
-    previousStartChar = token.startChar;
-    previousEndChar = token.startChar + token.length;
+    const length = data[index + 2];
+    const tokenType = tokenTypes[data[index + 3]];
+    if (length === 0 || tokenType === undefined) continue;
+
+    if (line !== measuredLine) {
+      measuredLine = line;
+      lineLength = model.getLineMaxColumn(line + 1) - 1;
+    }
+    if (startChar >= lineLength) continue;
+    if (line === previousLine && startChar < previousEndChar) continue;
+
+    const clampedLength = Math.min(length, lineLength - startChar);
+    const encodedDeltaLine = line - previousLine;
+    encoded[written] = encodedDeltaLine;
+    encoded[written + 1] = encodedDeltaLine === 0 ? startChar - previousStartChar : startChar;
+    encoded[written + 2] = clampedLength;
+    encoded[written + 3] = tokenType;
+    encoded[written + 4] = toMonacoModifierSet(data[index + 4], modifierBits);
+    written += 5;
+
+    previousLine = line;
+    previousStartChar = startChar;
+    previousEndChar = startChar + clampedLength;
   }
 
-  return Uint32Array.from(data);
+  return written === encoded.length ? encoded : encoded.slice(0, written);
 }

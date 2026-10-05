@@ -5,7 +5,7 @@ import { createMonacoSemanticTokenProvider } from "../engines/monaco/semantic-to
 const response: LspSemanticTokensResponse = {
   tokenTypes: ["variable"],
   tokenModifiers: [],
-  tokens: [{ line: 0, startChar: 0, length: 3, tokenType: 0, tokenModifiers: 0 }],
+  data: Uint32Array.of(0, 0, 3, 0, 0),
 };
 
 function model() {
@@ -113,7 +113,7 @@ describe("Monaco semantic token provider", () => {
 
   it("falls through when the server has no semantic token legend", async () => {
     const { provider } = setup(
-      vi.fn(async () => ({ tokens: [], tokenTypes: [], tokenModifiers: [] })),
+      vi.fn(async () => ({ data: new Uint32Array(), tokenTypes: [], tokenModifiers: [] })),
     );
 
     const result = await provider.provideDocumentSemanticTokens(model() as never, null, {
@@ -129,7 +129,7 @@ describe("Monaco semantic token provider", () => {
       vi.fn(async () => ({
         tokenTypes: ["unknownCustomToken"],
         tokenModifiers: [],
-        tokens: [{ line: 0, startChar: 0, length: 3, tokenType: 0, tokenModifiers: 0 }],
+        data: Uint32Array.of(0, 0, 3, 0, 0),
       })),
     );
 

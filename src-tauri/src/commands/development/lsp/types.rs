@@ -84,22 +84,27 @@ pub struct FlatInlayHint {
    pub padding_right: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
-#[serde(rename_all = "camelCase")]
-pub struct FlatSemanticToken {
-   pub line: u32,
-   pub start_char: u32,
-   pub length: u32,
-   pub token_type: u32,
-   pub token_modifiers: u32,
+/// Semantic tokens in the LSP's compact relative encoding, sent to the webview as
+/// an `ArrayBuffer` instead of one JSON object per token.
+///
+/// Layout, all little-endian:
+/// - `u32` number of token integers (five per token)
+/// - `u32` byte length of the legend JSON
+/// - the token integers exactly as the server encoded them
+/// - the legend as UTF-8 JSON: `{"tokenTypes":[...],"tokenModifiers":[...]}`
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SemanticTokensPayload(pub Vec<u8>);
+
+impl tauri::ipc::IpcResponse for SemanticTokensPayload {
+   fn body(self) -> tauri::Result<tauri::ipc::InvokeResponseBody> {
+      Ok(tauri::ipc::InvokeResponseBody::Raw(self.0))
+   }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
-#[serde(rename_all = "camelCase")]
-pub struct LspSemanticTokensResponse {
-   pub tokens: Vec<FlatSemanticToken>,
-   pub token_types: Vec<String>,
-   pub token_modifiers: Vec<String>,
+impl specta::Type for SemanticTokensPayload {
+   fn definition(_: &mut specta::Types) -> specta::datatype::DataType {
+      specta::datatype::DataType::Reference(specta_typescript::define("ArrayBuffer"))
+   }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]

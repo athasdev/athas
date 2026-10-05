@@ -30,7 +30,10 @@ import { useBufferStore } from "../stores/buffer.store";
 import type { EditorDocumentChangeEvent } from "../types/editor.types";
 import { getSourceEditorBufferByPath } from "../utils/buffer-index";
 import { logger } from "../utils/logger";
-import type { LspSemanticTokensResponse } from "./semantic-token-types";
+import {
+  decodeSemanticTokensPayload,
+  type LspSemanticTokensResponse,
+} from "./semantic-token-types";
 import { useLspStore } from "./stores/lsp.store";
 import {
   applyWorkspaceEdit,
@@ -1327,7 +1330,10 @@ export class LspClient {
 
   async getSemanticTokens(filePath: string): Promise<LspSemanticTokensResponse | null> {
     try {
-      return await this.invokeForDocument(filePath, () => commands.lspGetSemanticTokens(filePath));
+      const payload = await this.invokeForDocument(filePath, () =>
+        commands.lspGetSemanticTokens(filePath),
+      );
+      return decodeSemanticTokensPayload(payload);
     } catch (error) {
       if (isCanceledLspRequest(error)) return null;
       logger.warn("LSPClient", `LSP semantic tokens unavailable: ${stringifyLspError(error)}`);

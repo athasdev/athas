@@ -74,7 +74,7 @@ export function createMonacoSemanticTokenProvider({
       if (response.tokenTypes.length === 0) return null;
 
       const data = encodeMonacoSemanticTokens(response, model);
-      if (response.tokens.length > 0 && data.length === 0) return null;
+      if (response.data.length > 0 && data.length === 0) return null;
 
       return {
         resultId: `${model.uri.toString()}:${modelVersion}`,
