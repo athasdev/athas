@@ -1,10 +1,10 @@
-use athas_fff_search::{FffGrepOptions, FffScanStatus, FffSearch};
+use athas_fff_search::{FffFsChange, FffGrepOptions, FffScanStatus, FffSearch};
 use fff_search::GrepMode;
 use std::{
    fs,
    path::{Path, PathBuf},
    sync::Mutex,
-   time::Duration,
+   time::{Duration, Instant},
 };
 use tempfile::TempDir;
 
@@ -285,4 +285,114 @@ fn frecency_database_directory_is_created_and_access_tracking_works() {
    assert!(db_path.parent().unwrap().is_dir());
    search.track_access(&file).unwrap();
    create_search(false).track_access(&file).unwrap();
+}
+
+fn indexed_names(search: &FffSearch, root: &Path) -> Vec<String> {
+   let mut names: Vec<String> = search
+      .list_files([root])
+      .unwrap()
+      .into_iter()
+      .map(|file| file.relative_path.replace('\\', "/"))
+      .collect();
+   names.sort();
+   names
+}
+
+fn change(path: PathBuf, removed: bool, is_dir: bool) -> FffFsChange {
+   FffFsChange {
+      path,
+      removed,
+      is_dir,
+   }
+}
+
+fn wait_until(mut condition: impl FnMut() -> bool) -> bool {
+   let deadline = Instant::now() + Duration::from_secs(5);
+   while !condition() {
+      if Instant::now() > deadline {
+         return false;
+      }
+      std::thread::sleep(Duration::from_millis(20));
+   }
+   true
+}
+
+#[test]
+fn applies_watcher_changes_without_its_own_watcher() {
+   let _guard = lock_tests();
+   let (_temp_dir, root, search) = scanned_root(&[("keep.rs", ""), ("gone.rs", "")]);
+
+   fs::write(root.join("added.rs"), "").unwrap();
+   fs::remove_file(root.join("gone.rs")).unwrap();
+   fs::create_dir_all(root.join("moved/inner")).unwrap();
+   fs::write(root.join("moved/inner/deep.rs"), "").unwrap();
+   search
+      .apply_changes(
+         &root,
+         &[
+            change(root.join("added.rs"), false, false),
+            change(root.join("gone.rs"), true, false),
+            change(root.join("moved"), false, true),
+         ],
+         false,
+         false,
+      )
+      .unwrap();
+   assert_eq!(
+      indexed_names(&search, &root),
+      vec!["added.rs", "keep.rs", "moved/inner/deep.rs"]
+   );
+
+   fs::remove_dir_all(root.join("moved")).unwrap();
+   search
+      .apply_changes(
+         &root,
+         &[change(root.join("moved"), true, false)],
+         false,
+         false,
+      )
+      .unwrap();
+   assert_eq!(indexed_names(&search, &root), vec!["added.rs", "keep.rs"]);
+}
+
+#[test]
+fn ignore_rule_changes_and_lost_events_rescan_the_index() {
+   let _guard = lock_tests();
+   let (_temp_dir, root, search) = scanned_root(&[("keep.rs", ""), ("noise.log", "")]);
+   assert_eq!(indexed_names(&search, &root), vec!["keep.rs", "noise.log"]);
+
+   fs::write(root.join(".ignore"), "*.log\n").unwrap();
+   search
+      .apply_changes(
+         &root,
+         &[change(root.join(".ignore"), false, false)],
+         false,
+         false,
+      )
+      .unwrap();
+   assert!(wait_until(
+      || !indexed_names(&search, &root).contains(&"noise.log".to_string())
+   ));
+
+   fs::write(root.join("late.rs"), "").unwrap();
+   search.apply_changes(&root, &[], true, false).unwrap();
+   assert!(wait_until(
+      || indexed_names(&search, &root).contains(&"late.rs".to_string())
+   ));
+}
+
+#[test]
+fn changes_for_roots_that_were_never_indexed_are_ignored() {
+   let _guard = lock_tests();
+   let temp_dir = TempDir::new().unwrap();
+   let search = create_search(false);
+   search
+      .apply_changes(
+         temp_dir.path(),
+         &[change(temp_dir.path().join("a.rs"), false, false)],
+         false,
+         true,
+      )
+      .unwrap();
+   assert_eq!(search.indexed_workspace_count().unwrap(), 0);
 }

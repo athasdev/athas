@@ -25,6 +25,14 @@ pub struct FffScanStatus {
    pub is_warmup_complete: bool,
 }
 
+/// One filesystem change, as reported by the app's file watcher, to fold into an index.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FffFsChange {
+   pub path: std::path::PathBuf,
+   pub removed: bool,
+   pub is_dir: bool,
+}
+
 #[derive(Debug, Clone)]
 pub struct FffGrepOptions {
    pub pattern: String,

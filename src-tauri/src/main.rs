@@ -73,6 +73,7 @@ fn main() {
       .on_window_event(|window, event| {
          if matches!(event, tauri::WindowEvent::Destroyed) {
             terminal::close_window_terminals(window.app_handle(), window.label());
+            commands::forget_window_watches(window.app_handle(), window.label());
          }
       })
       .manage(startup_timing)
@@ -303,7 +304,6 @@ pub(crate) fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
          set_window_transparency_enabled,
          reopen_current_webview_devtools,
          // File watcher commands
-         start_watching,
          stop_watching,
          set_project_root,
          store_remote_credential,
@@ -566,6 +566,12 @@ pub(crate) fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
          menu::rebuild_menu_themes,
          menu::sync_native_menu_state,
       ])
+      // Event payloads, which no command signature reaches.
+      .typ::<athas_project::WorkspaceFileChanges>()
+      .constant(
+         "WORKSPACE_FILE_CHANGES_EVENT",
+         athas_project::WORKSPACE_FILE_CHANGES_EVENT,
+      )
 }
 
 fn window_state_flags() -> StateFlags {

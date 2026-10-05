@@ -2,7 +2,7 @@
 use crate::menu;
 use crate::{
    commands::{self, FffSearchState, FileClipboard, ThemeCache},
-   file_events::TauriFileChangeEmitter,
+   file_events::TauriWorkspaceChangeSink,
    terminal::{FrontendTerminalSessions, ManagedTerminalManager as TerminalManager},
 };
 use athas_ai::{AcpAgentBridge, CodexAppServer};
@@ -92,7 +92,7 @@ fn register_managed_state(app: &mut tauri::App) {
    log::info!("Starting app!");
 
    app.manage(Arc::new(FileWatcher::new(Arc::new(
-      TauriFileChangeEmitter::new(app.handle().clone()),
+      TauriWorkspaceChangeSink::new(app.handle().clone()),
    ))));
 
    let terminal_manager = Arc::new(TerminalManager::new());

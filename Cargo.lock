@@ -746,6 +746,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "fff-search",
+ "ignore",
  "serde",
  "specta",
  "tempfile",
@@ -787,13 +788,14 @@ name = "athas-project"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "dunce",
+ "ignore",
  "log",
- "notify 8.2.0",
- "notify-debouncer-mini",
+ "notify",
  "serde",
  "serde_json",
+ "specta",
  "tempfile",
- "tokio",
 ]
 
 [[package]]
@@ -2420,7 +2422,7 @@ checksum = "29a4ebea7b8a2840cd59358bbf396f6f04313ce8eae84ac79703ce80298b8731"
 dependencies = [
  "file-id",
  "log",
- "notify 9.0.0-rc.4",
+ "notify",
  "notify-types",
  "rustc-hash",
  "walkdir",
@@ -2455,7 +2457,7 @@ dependencies = [
  "memchr",
  "memmap2",
  "neo_frizbee",
- "notify 9.0.0-rc.4",
+ "notify",
  "parking_lot",
  "pathdiff",
  "rayon",
@@ -2608,15 +2610,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cb4cb245038516f5f85277875cdaa4f7d2c9a0fa0468de06ed190163b1581fcf"
 dependencies = [
  "percent-encoding",
-]
-
-[[package]]
-name = "fsevent-sys"
-version = "4.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "76ee7a02da4d231650c7cea31349b889be2f45ddb3ef3032d2ec8185f6313fd2"
-dependencies = [
- "libc",
 ]
 
 [[package]]
@@ -4645,24 +4638,6 @@ dependencies = [
 
 [[package]]
 name = "notify"
-version = "8.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4d3d07927151ff8575b7087f245456e549fea62edf0ec4e565a5ee50c8402bc3"
-dependencies = [
- "bitflags 2.13.0",
- "fsevent-sys",
- "inotify",
- "kqueue",
- "libc",
- "log",
- "mio",
- "notify-types",
- "walkdir",
- "windows-sys 0.60.2",
-]
-
-[[package]]
-name = "notify"
 version = "9.0.0-rc.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b44b771d4dd781ef14c84078693e67495da6b47f609f72e8a4da8420a861240e"
@@ -4679,18 +4654,6 @@ dependencies = [
  "walkdir",
  "windows-sys 0.61.2",
  "xxhash-rust",
-]
-
-[[package]]
-name = "notify-debouncer-mini"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a689eb4262184d9a1727f9087cd03883ea716682ab03ed24efec57d7716dccb8"
-dependencies = [
- "log",
- "notify 8.2.0",
- "notify-types",
- "tempfile",
 ]
 
 [[package]]

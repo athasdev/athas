@@ -2,7 +2,8 @@ use anyhow::{Context, Result};
 pub use fff_search::GrepMode;
 use fff_search::{
    FileItem, FilePicker, FilePickerOptions, FrecencyTracker, FuzzySearchOptions, GrepSearchOptions,
-   PaginationArgs, QueryParser, SharedFilePicker, SharedFrecency, parse_grep_query,
+   PaginationArgs, QueryParser, SharedFilePicker, SharedFrecency, constants::MAX_OVERFLOW_FILES,
+   parse_grep_query,
 };
 mod types;
 use std::{
@@ -39,9 +40,11 @@ impl FffSearch {
          .init(tracker)
          .context("initializing shared frecency")?;
 
+      // The app's own file watcher feeds every index through `apply_changes`, so fff never
+      // starts a second OS watcher over the same tree.
       Ok(Self {
          frecency,
-         watch: true,
+         watch: false,
          workspaces: RwLock::new(HashMap::new()),
       })
    }
@@ -291,6 +294,106 @@ impl FffSearch {
       Ok(response)
    }
 
+   /// Folds a batch of filesystem changes under `base_path` into its index, the job fff's own
+   /// watcher does when it runs. Roots that were never indexed are skipped. Falls back to a full
+   /// rescan when events were lost, ignore rules changed, or the index's overflow area fills up.
+   pub fn apply_changes(
+      &self,
+      base_path: &Path,
+      changes: &[FffFsChange],
+      rescan: bool,
+      git_changed: bool,
+   ) -> Result<()> {
+      let Some(workspace) = self
+         .workspaces
+         .read()
+         .map_err(|error| anyhow::anyhow!("reading workspace indexes: {error}"))?
+         .get(base_path)
+         .cloned()
+      else {
+         return Ok(());
+      };
+
+      let ignore_rules_changed = changes.iter().any(|change| {
+         matches!(
+            change.path.file_name().and_then(|name| name.to_str()),
+            Some(".gitignore" | ".ignore")
+         )
+      });
+      let mut needs_rescan = rescan || ignore_rules_changed;
+      let mut git_paths = Vec::new();
+
+      if !needs_rescan {
+         let mut guard = workspace.picker.write().context("writing picker")?;
+         let Some(picker) = guard.as_mut() else {
+            return Ok(());
+         };
+
+         if picker.is_scan_active() {
+            // Changes landing mid-scan may miss the walker; let the scan run again afterwards.
+            needs_rescan = true;
+         } else {
+            let picker_base = picker.base_path().to_path_buf();
+            let to_picker_path = |path: &Path| match path.strip_prefix(base_path) {
+               Ok(relative) => picker_base.join(relative),
+               Err(_) => path.to_path_buf(),
+            };
+
+            for change in changes {
+               let path = to_picker_path(&change.path);
+               if change.removed {
+                  if !picker.remove_file_by_path(&path) {
+                     picker.remove_all_files_in_dir(&path);
+                  }
+               } else if change.is_dir {
+                  let Some(files) = files_in_new_directory(&path) else {
+                     needs_rescan = true;
+                     break;
+                  };
+                  for file in files {
+                     if picker.handle_create_or_modify(&file).is_none() {
+                        needs_rescan = true;
+                        break;
+                     }
+                     git_paths.push(file);
+                  }
+               } else if picker.handle_create_or_modify(&path).is_some() {
+                  git_paths.push(path);
+               } else {
+                  needs_rescan = true;
+               }
+
+               if needs_rescan {
+                  break;
+               }
+            }
+
+            needs_rescan |= picker.get_overflow_files().len() > MAX_OVERFLOW_FILES;
+         }
+      }
+
+      if needs_rescan {
+         workspace
+            .picker
+            .trigger_full_rescan_async(&self.frecency)
+            .context("rescanning workspace index")?;
+         return Ok(());
+      }
+
+      if git_changed {
+         workspace
+            .picker
+            .refresh_git_status(&self.frecency)
+            .context("refreshing git status")?;
+      } else if !git_paths.is_empty() {
+         workspace
+            .picker
+            .update_git_status_for_paths(&git_paths, &self.frecency)
+            .context("updating git status")?;
+      }
+      Ok(())
+   }
+
    pub fn track_access(&self, path: &Path) -> Result<()> {
       let guard = self.frecency.read().context("reading frecency")?;
       if let Some(tracker) = guard.as_ref() {
@@ -376,7 +479,8 @@ impl FffSearch {
          status.is_scanning |= progress.is_scanning;
          status.scanned_files_count += progress.scanned_files_count;
          status.indexed_files += picker.live_file_count();
-         status.is_watcher_ready &= progress.is_watcher_ready;
+         // Without fff's own watcher the index is kept current by `apply_changes`.
+         status.is_watcher_ready &= !self.watch || progress.is_watcher_ready;
          status.is_warmup_complete &= progress.is_warmup_complete;
       }
       Ok(status)
@@ -396,6 +500,26 @@ where
          seen.insert(path.clone()).then_some(path)
       })
       .collect()
+}
+
+/// Files under a directory that appeared in one piece (created or moved in), honouring ignore
+/// files. `None` when there are too many to add one by one and a rescan is cheaper.
+fn files_in_new_directory(directory: &Path) -> Option<Vec<PathBuf>> {
+   let mut files = Vec::new();
+   for entry in ignore::WalkBuilder::new(directory)
+      .hidden(false)
+      .require_git(false)
+      .build()
+      .flatten()
+   {
+      if entry.file_type().is_some_and(|kind| kind.is_file()) {
+         if files.len() >= MAX_OVERFLOW_FILES {
+            return None;
+         }
+         files.push(entry.into_path());
+      }
+   }
+   Some(files)
 }
 
 fn indexed_file(item: &FileItem, picker: &FilePicker) -> FffIndexedFile {

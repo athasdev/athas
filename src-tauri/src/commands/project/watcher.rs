@@ -1,6 +1,6 @@
-use athas_project::FileWatcher;
+use athas_project::{FileWatcher, Subscriber};
 use std::{path::Path, sync::Arc, time::Instant};
-use tauri::command;
+use tauri::{AppHandle, Manager, WebviewWindow, command};
 
 fn short_path(path: &str) -> String {
    Path::new(path)
@@ -10,61 +10,34 @@ fn short_path(path: &str) -> String {
       .to_string()
 }
 
-#[command]
-#[specta::specta]
-pub async fn start_watching(
-   path: String,
-   file_watcher: tauri::State<'_, Arc<FileWatcher>>,
-) -> Result<(), String> {
-   let started_at = Instant::now();
-   let short = short_path(&path);
-   log::info!("[watcher] start_watching:start {}", short);
-   let path_for_call = path.clone();
-   file_watcher
-      .watch_path(path_for_call)
-      .await
-      .inspect(|_| {
-         log::info!(
-            "[watcher] start_watching:end {} {}ms",
-            short,
-            started_at.elapsed().as_millis(),
-         );
-      })
-      .map_err(|e| {
-         log::error!(
-            "[watcher] start_watching:error {} {}ms {}",
-            short,
-            started_at.elapsed().as_millis(),
-            e
-         );
-         e.to_string()
-      })
+fn window_subscriber(window: &WebviewWindow) -> Subscriber {
+   Subscriber::Window(window.label().to_string())
 }
 
-#[command]
-#[specta::specta]
-pub async fn stop_watching(
-   path: String,
-   file_watcher: tauri::State<'_, Arc<FileWatcher>>,
-) -> Result<(), String> {
-   file_watcher.stop_watching(path).map_err(|e| e.to_string())
+/// Stops every watch a closed window held.
+pub fn forget_window_watches(app: &AppHandle, label: &str) {
+   if let Some(watcher) = app.try_state::<Arc<FileWatcher>>() {
+      watcher.forget_subscriber(&Subscriber::Window(label.to_string()));
+   }
 }
 
+/// Watches a workspace root for the calling window. Batches for it go to that window only.
 #[command]
 #[specta::specta]
 pub async fn set_project_root(
    path: String,
+   window: WebviewWindow,
    file_watcher: tauri::State<'_, Arc<FileWatcher>>,
 ) -> Result<(), String> {
    let started_at = Instant::now();
    let short = short_path(&path);
    log::info!("[watcher] set_project_root:start {}", short);
-   let path_for_call = path.clone();
-   // Watching the project root recursively can overwhelm large repositories.
-   // Keep root watching shallow; explicit file watches can stay recursive when needed.
-   file_watcher
-      .watch_project_root(path_for_call)
+   let watcher = Arc::clone(&file_watcher);
+   let subscriber = window_subscriber(&window);
+   // Registering per-directory watches on Linux walks the tree.
+   tauri::async_runtime::spawn_blocking(move || watcher.watch_root(&path, subscriber))
       .await
+      .map_err(|error| error.to_string())?
       .inspect(|_| {
          log::info!(
             "[watcher] set_project_root:end {} {}ms",
@@ -81,4 +54,17 @@ pub async fn set_project_root(
          );
          e.to_string()
       })
+}
+
+/// Stops watching a workspace root for the calling window. The root stays watched while other
+/// windows or the search index still use it.
+#[command]
+#[specta::specta]
+pub async fn stop_watching(
+   path: String,
+   window: WebviewWindow,
+   file_watcher: tauri::State<'_, Arc<FileWatcher>>,
+) -> Result<(), String> {
+   file_watcher.unwatch_root(&path, &window_subscriber(&window));
+   Ok(())
 }

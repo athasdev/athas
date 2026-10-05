@@ -561,8 +561,12 @@ export const commands = {
   setWindowTransparencyEnabled: (enabled: boolean, themeType: string | null) =>
     __TAURI_INVOKE<null>("set_window_transparency_enabled", { enabled, themeType }),
   reopenCurrentWebviewDevtools: () => __TAURI_INVOKE<null>("reopen_current_webview_devtools"),
-  startWatching: (path: string) => __TAURI_INVOKE<null>("start_watching", { path }),
+  /**
+   *  Stops watching a workspace root for the calling window. The root stays watched while other
+   *  windows or the search index still use it.
+   */
   stopWatching: (path: string) => __TAURI_INVOKE<null>("stop_watching", { path }),
+  /**  Watches a workspace root for the calling window. Batches for it go to that window only. */
   setProjectRoot: (path: string) => __TAURI_INVOKE<null>("set_project_root", { path }),
   storeRemoteCredential: (connectionId: string, password: string) =>
     __TAURI_INVOKE<null>("store_remote_credential", { connectionId, password }),
@@ -1276,6 +1280,9 @@ export const commands = {
   syncNativeMenuState: (state: NativeMenuState) =>
     __TAURI_INVOKE<null>("sync_native_menu_state", { state }),
 };
+
+/* Constants */
+export const WORKSPACE_FILE_CHANGES_EVENT = "workspace-file-changes" as const;
 
 /* Types */
 export type AcpAgentCapabilities = {
@@ -6450,6 +6457,30 @@ export type WorkspaceCommandOutput = {
   exitCode: number | null;
   cancelled: boolean;
   timedOut: boolean;
+};
+
+export type WorkspaceFileChange = {
+  path: string;
+  kind: WorkspaceFileChangeKind;
+  /**  False for removed paths, whose type can no longer be read. */
+  is_dir: boolean;
+};
+
+export type WorkspaceFileChangeKind = "created" | "modified" | "removed";
+
+/**  Everything that changed under one workspace root during one debounce window. */
+export type WorkspaceFileChanges = {
+  /**  The root exactly as it was passed to the watcher. */
+  root: string;
+  /**  Worktree changes that pass the ignore rules, one entry per path. */
+  changes: WorkspaceFileChange[];
+  /**  Repository state (HEAD, the index, refs) changed; refresh the Git view. */
+  git_changed: boolean;
+  /**
+   *  Events were lost or too many paths changed to list; `changes` may be incomplete and the
+   *  whole root should be re-read.
+   */
+  rescan: boolean;
 };
 
 export type WorkspaceFileList = {

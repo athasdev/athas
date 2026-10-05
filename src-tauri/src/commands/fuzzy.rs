@@ -1,7 +1,8 @@
 use athas_fff_search::{FffIndexedFile, FffScanStatus, FffSearch, FffSearchHit};
+use athas_project::{FileWatcher, Subscriber};
 use std::{
    path::PathBuf,
-   sync::{Mutex, OnceLock},
+   sync::{Arc, Mutex, OnceLock},
 };
 use tauri::{AppHandle, Manager, State};
 
@@ -16,6 +17,11 @@ impl FffSearchState {
          fff: OnceLock::new(),
          init_lock: Mutex::new(()),
       }
+   }
+
+   /// The index, if anything has asked for it yet.
+   pub(crate) fn get(&self) -> Option<&FffSearch> {
+      self.fff.get()
    }
 
    pub(crate) fn get_or_init(&self, app: &AppHandle) -> Result<&FffSearch, String> {
@@ -54,7 +60,21 @@ impl FffSearchState {
    ) -> Result<(), String> {
       let fff = self.get_or_init(app)?;
       fff.ensure_workspaces(base_paths.iter().map(PathBuf::as_path))
-         .map_err(|e| format!("fff ensure_workspaces: {e}"))
+         .map_err(|e| format!("fff ensure_workspaces: {e}"))?;
+
+      // fff runs without a watcher of its own; the app's watcher keeps every indexed root
+      // current. Watching an already watched root only records the subscription.
+      if let Some(watcher) = app.try_state::<Arc<FileWatcher>>() {
+         for base_path in base_paths {
+            if let Err(error) = watcher.watch_root(base_path, Subscriber::SearchIndex) {
+               log::warn!(
+                  "[FileWatcher] Search index root {} is not watched: {error}",
+                  base_path.display()
+               );
+            }
+         }
+      }
+      Ok(())
    }
 
    pub(crate) fn scan_status(

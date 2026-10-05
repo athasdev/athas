@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { handleFileChange } from "../services/file-watcher-listener";
+import { handleFileChange, handleWorkspaceFileChanges } from "../services/file-watcher-listener";
 
 const mocks = vi.hoisted(() => ({
   buffers: [] as Array<Record<string, unknown>>,
@@ -11,6 +11,8 @@ const mocks = vi.hoisted(() => ({
   showToast: vi.fn(),
   emitGitChanged: vi.fn(),
   pendingSaves: new Set<string>(),
+  refreshedWorkspaces: [] as string[],
+  workspaceRoots: [] as Array<{ workspaceId: string; rootFolderPath: string }>,
 }));
 
 vi.mock("@tauri-apps/api/event", () => ({ listen: vi.fn() }));
@@ -33,14 +35,29 @@ vi.mock("@/features/editor/stores/buffer.store", () => ({
 vi.mock("@/features/git/events/git-events", () => ({ emitGitChanged: mocks.emitGitChanged }));
 vi.mock("@/features/layout/contexts/toast-context", () => ({ showToast: mocks.showToast }));
 vi.mock("@/features/workspace/runtime/workspace-runtime-registry", () => ({
-  workspaceRuntimeRegistry: { getActiveWorkspaceId: () => "ws", hasWorkspace: () => true },
+  workspaceRuntimeRegistry: {
+    getActiveWorkspaceId: () => "ws",
+    hasWorkspace: () => true,
+    getExistingStoreEntries: () =>
+      mocks.workspaceRoots.map(({ workspaceId, rootFolderPath }) => ({
+        workspaceId,
+        store: { getState: () => ({ rootFolderPath, workspaceFolders: [] }) },
+      })),
+  },
 }));
 vi.mock("../controllers/file-operations", () => ({
   readFileContent: async () => mocks.diskContent,
 }));
 vi.mock("../stores/file-system.store", () => ({
   useFileSystemStore: {
-    getStore: () => ({ getState: () => ({ refreshDirectory: mocks.refreshDirectory }) }),
+    getStore: (workspaceId: string) => ({
+      getState: () => ({
+        refreshDirectory: (path: string) => {
+          mocks.refreshedWorkspaces.push(workspaceId);
+          return mocks.refreshDirectory(path);
+        },
+      }),
+    }),
   },
 }));
 vi.mock("../stores/file-watcher.store", () => ({
@@ -66,6 +83,8 @@ describe("file watcher listener", () => {
     mocks.buffers = [];
     mocks.diskContent = "";
     mocks.pendingSaves.clear();
+    mocks.refreshedWorkspaces = [];
+    mocks.workspaceRoots = [];
     for (const mock of [
       mocks.reloadBufferFromDisk,
       mocks.markBufferDirty,
@@ -140,5 +159,67 @@ describe("file watcher listener", () => {
     await handleFileChange({ path: "/repo/a.ts", event_type: "reloaded" });
 
     expect(mocks.reloadBufferFromDisk).not.toHaveBeenCalled();
+  });
+
+  describe("watcher batches", () => {
+    async function deliver(batch: Parameters<typeof handleWorkspaceFileChanges>[0]) {
+      vi.useFakeTimers();
+      try {
+        await handleWorkspaceFileChanges(batch);
+        await vi.advanceTimersByTimeAsync(300);
+      } finally {
+        vi.useRealTimers();
+      }
+    }
+
+    it("refreshes each changed folder once and reloads open editors", async () => {
+      mocks.buffers = [editor("old", false)];
+
+      await deliver({
+        root: "/repo",
+        changes: [
+          { path: "/repo/new.ts", kind: "created", is_dir: false },
+          { path: "/repo/other.ts", kind: "removed", is_dir: false },
+          { path: "/repo/a.ts", kind: "modified", is_dir: false },
+        ],
+        git_changed: false,
+        rescan: false,
+      });
+
+      expect(mocks.refreshDirectory).toHaveBeenCalledTimes(1);
+      expect(mocks.refreshDirectory).toHaveBeenCalledWith("/repo");
+      expect(mocks.reloadBufferFromDisk).toHaveBeenCalledWith("buffer-1");
+    });
+
+    it("applies a batch to the workspace that owns its root", async () => {
+      mocks.workspaceRoots = [
+        { workspaceId: "first", rootFolderPath: "/first" },
+        { workspaceId: "second", rootFolderPath: "/second" },
+      ];
+
+      await deliver({
+        root: "/second",
+        changes: [{ path: "/second/new.ts", kind: "created", is_dir: false }],
+        git_changed: false,
+        rescan: false,
+      });
+
+      expect(mocks.refreshedWorkspaces).toEqual(["second"]);
+    });
+
+    it("refreshes the Git view when repository state changed", async () => {
+      await deliver({ root: "/repo", changes: [], git_changed: true, rescan: false });
+
+      expect(mocks.emitGitChanged).toHaveBeenCalledWith(
+        expect.objectContaining({ repoPath: "/repo", scopes: expect.arrayContaining(["refs"]) }),
+      );
+    });
+
+    it("re-reads the whole root after a rescan", async () => {
+      await deliver({ root: "/repo", changes: [], git_changed: false, rescan: true });
+
+      expect(mocks.refreshDirectory).toHaveBeenCalledWith("/repo");
+      expect(mocks.emitGitChanged).toHaveBeenCalled();
+    });
   });
 });

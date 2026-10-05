@@ -4,7 +4,8 @@ import { createStore } from "zustand/vanilla";
 import { createWorkspaceScopedStore } from "@/features/workspace/stores/create-workspace-scoped-store";
 
 const initialState = {
-  watchedPaths: new Set<string>(),
+  /** The workspace root this window's watcher subscription is for, "" when none. */
+  projectRoot: "",
   pendingSaves: new Map<string, number>(), // path -> timestamp
 };
 
@@ -12,52 +13,27 @@ const createFileWatcherStore = () =>
   createStore(
     combine(initialState, (set, get) => ({
       actions: {
-        // Set the project root and start watching it
+        /**
+         * Watches `path` for this window and releases the previous root, so switching or
+         * closing a folder stops its watch. An empty path only releases.
+         */
         setProjectRoot: async (path: string) => {
-          if (!path.trim()) {
+          const next = path.trim() ? path : "";
+          const previous = get().projectRoot;
+          if (next === previous) {
             return;
           }
+          set({ projectRoot: next });
 
-          try {
-            await commands.setProjectRoot(path);
-          } catch (error) {
-            console.error("Failed to set project root:", path, error);
+          if (previous) {
+            await commands
+              .stopWatching(previous)
+              .catch((error) => console.error("Failed to stop watching:", previous, error));
           }
-        },
-
-        // Start watching a path (file or directory)
-        startWatching: async (path: string) => {
-          const { watchedPaths } = get();
-          if (watchedPaths.has(path)) {
-            return;
-          }
-
-          try {
-            await commands.startWatching(path);
-            set((state) => ({
-              watchedPaths: new Set(state.watchedPaths).add(path),
-            }));
-          } catch (error) {
-            console.error("Failed to start watching:", path, error);
-          }
-        },
-
-        // Stop watching a path
-        stopWatching: async (path: string) => {
-          const { watchedPaths } = get();
-          if (!watchedPaths.has(path)) {
-            return;
-          }
-
-          try {
-            await commands.stopWatching(path);
-            set((state) => {
-              const newSet = new Set(state.watchedPaths);
-              newSet.delete(path);
-              return { watchedPaths: newSet };
-            });
-          } catch (error) {
-            console.error("Failed to stop watching:", path, error);
+          if (next) {
+            await commands
+              .setProjectRoot(next)
+              .catch((error) => console.error("Failed to set project root:", next, error));
           }
         },
 
@@ -78,7 +54,8 @@ const createFileWatcherStore = () =>
             return { pendingSaves: newPendingSaves };
           });
 
-          // Auto-clear after 800ms to prevent stuck states (longer than Rust's 300ms debounce)
+          // Auto-clear after 800ms to prevent stuck states (longer than the watcher's 500ms
+          // longest batch window)
           setTimeout(() => {
             const { pendingSaves } = get();
             const timestamp = pendingSaves.get(path);
@@ -96,7 +73,7 @@ const createFileWatcherStore = () =>
         // Reset state
         reset: () => {
           set({
-            watchedPaths: new Set(),
+            projectRoot: "",
             pendingSaves: new Map(),
           });
         },
