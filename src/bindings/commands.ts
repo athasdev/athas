@@ -678,7 +678,7 @@ export const commands = {
   wslReadFile: (distro: string, filePath: string) =>
     __TAURI_INVOKE<string>("wsl_read_file", { distro, filePath }),
   wslReadFileBytes: (distro: string, filePath: string) =>
-    __TAURI_INVOKE<number[]>("wsl_read_file_bytes", { distro, filePath }),
+    __TAURI_INVOKE<ArrayBuffer>("wsl_read_file_bytes", { distro, filePath }),
   wslWriteFile: (distro: string, filePath: string, content: string) =>
     __TAURI_INVOKE<null>("wsl_write_file", { distro, filePath, content }),
   wslWriteFileChecked: (

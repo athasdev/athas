@@ -1,3 +1,4 @@
+use super::fs::FileBytes;
 use athas_wsl::{WslDistribution, WslFileEntry, WslSymlinkInfo};
 use tauri::command;
 
@@ -27,8 +28,8 @@ pub fn wsl_read_file(distro: String, file_path: String) -> Result<String, String
 
 #[command]
 #[specta::specta]
-pub fn wsl_read_file_bytes(distro: String, file_path: String) -> Result<Vec<u8>, String> {
-   athas_wsl::read_file_bytes(&distro, &file_path)
+pub fn wsl_read_file_bytes(distro: String, file_path: String) -> Result<FileBytes, String> {
+   athas_wsl::read_file_bytes(&distro, &file_path).map(FileBytes)
 }
 
 #[command]

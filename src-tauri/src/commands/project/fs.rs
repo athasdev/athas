@@ -8,7 +8,7 @@ use walkdir::WalkDir;
 
 /// Raw file contents. The webview receives an `ArrayBuffer` instead of a JSON
 /// array with one number per byte.
-pub struct FileBytes(Vec<u8>);
+pub struct FileBytes(pub(crate) Vec<u8>);
 
 impl tauri::ipc::IpcResponse for FileBytes {
    fn body(self) -> tauri::Result<tauri::ipc::InvokeResponseBody> {

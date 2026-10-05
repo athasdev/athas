@@ -151,7 +151,7 @@ const wslWorkspaceResourceProvider: WorkspaceResourceProvider = {
     }
 
     const bytes = await commands.wslReadFileBytes(wslInfo.distro, wslInfo.linuxPath);
-    return Uint8Array.from(bytes);
+    return new Uint8Array(bytes);
   },
 };
 

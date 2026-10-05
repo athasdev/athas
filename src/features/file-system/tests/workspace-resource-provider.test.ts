@@ -140,7 +140,7 @@ describe("workspace resource provider", () => {
         return Promise.resolve("WSL text");
       }
       if (command === "wsl_read_file_bytes") {
-        return Promise.resolve([87, 83, 76]);
+        return Promise.resolve(Uint8Array.of(87, 83, 76).buffer);
       }
       return Promise.reject(new Error(`Unexpected command: ${command}`));
     });
