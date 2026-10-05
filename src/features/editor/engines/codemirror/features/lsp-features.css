@@ -1,0 +1,441 @@
+/* Shared card for the completion popup, its details, hover, and parameter hints. */
+.cm-editor .cm-tooltip.cm-tooltip-autocomplete,
+.cm-editor .cm-tooltip.cm-completionInfo,
+.cm-editor .cm-tooltip.cm-tooltip-hover,
+.cm-editor .cm-tooltip:has(> .cm-athas-signatureHelp) {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--foreground);
+  box-shadow: var(--shadow-popover);
+  font-family: var(--app-font-family);
+}
+
+/* Completion popup */
+.cm-editor .cm-tooltip.cm-tooltip-autocomplete.cm-athas-completion {
+  overflow: hidden;
+}
+
+.cm-editor .cm-tooltip.cm-tooltip-autocomplete.cm-athas-completion > ul {
+  min-width: 260px;
+  max-width: min(560px, 90vw);
+  max-height: 14em;
+  padding-block: 4px;
+  font-family: var(--editor-font-family);
+}
+
+.cm-editor .cm-tooltip.cm-tooltip-autocomplete.cm-athas-completion > ul > li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-inline: 4px;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  color: var(--muted-foreground);
+  line-height: 1.6;
+}
+
+.cm-editor .cm-tooltip.cm-tooltip-autocomplete.cm-athas-completion > ul > li:hover {
+  background: var(--accent);
+  color: var(--foreground);
+}
+
+.cm-editor .cm-tooltip.cm-tooltip-autocomplete.cm-athas-completion > ul > li[aria-selected] {
+  background: var(--selected);
+  color: var(--foreground);
+}
+
+.cm-editor .cm-athas-completion .cm-completionLabel {
+  flex: 0 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cm-editor .cm-athas-completion .cm-completionMatchedText {
+  color: var(--primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.cm-editor .cm-athas-completion .cm-completionDetail {
+  flex: 0 1 auto;
+  overflow: hidden;
+  margin-left: 0;
+  color: var(--subtle-foreground);
+  font-style: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cm-editor .cm-athas-completion .cm-athas-completionDescription {
+  flex: 1 1 auto;
+  overflow: hidden;
+  min-width: 0;
+  padding-left: 12px;
+  color: var(--subtle-foreground);
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cm-editor
+  .cm-athas-completion
+  li:not([aria-selected])
+  .cm-athas-completionDescription-selectedOnly {
+  visibility: hidden;
+}
+
+.cm-editor .cm-athas-completion .cm-athas-completion-deprecated .cm-completionLabel {
+  opacity: 0.66;
+  text-decoration: line-through;
+}
+
+/* Completion kind icons */
+.cm-editor .cm-athas-completion .cm-completionIcon {
+  flex: none;
+  width: 1.2em;
+  padding: 0;
+  margin: 0;
+  color: var(--subtle-foreground);
+  font-size: 0.9em;
+  opacity: 1;
+  text-align: center;
+}
+
+.cm-editor .cm-athas-completion .cm-completionIcon::after {
+  content: "\2022";
+}
+
+.cm-editor .cm-athas-completion .cm-completionIcon-text::after {
+  content: "abc";
+  font-size: 0.7em;
+}
+
+.cm-editor .cm-athas-completion .cm-completionIcon-method::after,
+.cm-editor .cm-athas-completion .cm-completionIcon-function::after,
+.cm-editor .cm-athas-completion .cm-completionIcon-constructor::after {
+  content: "\0192";
+}
+
+.cm-editor .cm-athas-completion .cm-completionIcon-field::after,
+.cm-editor .cm-athas-completion .cm-completionIcon-property::after {
+  content: "\25A1";
+}
+
+.cm-editor .cm-athas-completion .cm-completionIcon-variable::after {
+  content: "\1D465";
+}
+
+.cm-editor .cm-athas-completion .cm-completionIcon-class::after,
+.cm-editor .cm-athas-completion .cm-completionIcon-struct::after {
+  content: "\25CB";
+}
+
+.cm-editor .cm-athas-completion .cm-completionIcon-interface::after {
+  content: "\25CC";
+}
+
+.cm-editor .cm-athas-completion .cm-completionIcon-module::after {
+  content: "{}";
+}
+
+.cm-editor .cm-athas-completion .cm-completionIcon-unit::after,
+.cm-editor .cm-athas-completion .cm-completionIcon-value::after {
+  content: "#";
+}
+
+.cm-editor .cm-athas-completion .cm-completionIcon-enum::after {
+  content: "\222A";
+}
+
+.cm-editor .cm-athas-completion .cm-completionIcon-enumMember::after,
+.cm-editor .cm-athas-completion .cm-completionIcon-constant::after {
+  content: "\1D436";
+}
+
+.cm-editor .cm-athas-completion .cm-completionIcon-keyword::after {
+  content: "\2318";
+}
+
+.cm-editor .cm-athas-completion .cm-completionIcon-snippet::after {
+  content: "\2026";
+}
+
+.cm-editor .cm-athas-completion .cm-completionIcon-color::after {
+  content: "\25D0";
+}
+
+.cm-editor .cm-athas-completion .cm-completionIcon-file::after,
+.cm-editor .cm-athas-completion .cm-completionIcon-reference::after {
+  content: "\25A4";
+}
+
+.cm-editor .cm-athas-completion .cm-completionIcon-folder::after {
+  content: "\25B8";
+}
+
+.cm-editor .cm-athas-completion .cm-completionIcon-event::after {
+  content: "\21AF";
+}
+
+.cm-editor .cm-athas-completion .cm-completionIcon-operator::after {
+  content: "\00B1";
+}
+
+.cm-editor .cm-athas-completion .cm-completionIcon-typeParameter::after {
+  content: "T";
+}
+
+.cm-editor
+  .cm-athas-completion
+  :is(.cm-completionIcon-method, .cm-completionIcon-function, .cm-completionIcon-constructor) {
+  color: var(--symbol-function);
+}
+
+.cm-editor .cm-athas-completion :is(.cm-completionIcon-variable, .cm-completionIcon-field) {
+  color: var(--symbol-variable);
+}
+
+.cm-editor .cm-athas-completion .cm-completionIcon-property {
+  color: var(--symbol-property);
+}
+
+.cm-editor
+  .cm-athas-completion
+  :is(.cm-completionIcon-class, .cm-completionIcon-struct, .cm-completionIcon-module) {
+  color: var(--symbol-type);
+}
+
+.cm-editor .cm-athas-completion .cm-completionIcon-interface {
+  color: var(--symbol-interface);
+}
+
+.cm-editor .cm-athas-completion :is(.cm-completionIcon-enum, .cm-completionIcon-enumMember) {
+  color: var(--symbol-enum);
+}
+
+.cm-editor .cm-athas-completion .cm-completionIcon-typeParameter {
+  color: var(--symbol-type-parameter);
+}
+
+.cm-editor .cm-athas-completion :is(.cm-completionIcon-constant, .cm-completionIcon-value) {
+  color: var(--syntax-constant);
+}
+
+.cm-editor .cm-athas-completion :is(.cm-completionIcon-keyword, .cm-completionIcon-operator) {
+  color: var(--syntax-keyword);
+}
+
+/* Completion details beside the popup */
+.cm-editor .cm-tooltip.cm-completionInfo {
+  max-height: 22em;
+  overflow: auto;
+  padding: 0;
+}
+
+.cm-editor .cm-athas-completionInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 7px 10px;
+  color: var(--muted-foreground);
+  font-size: var(--ui-text-sm);
+  line-height: 1.5;
+}
+
+.cm-editor .cm-athas-completionInfoDetail {
+  color: var(--foreground);
+  font-family: var(--editor-font-family);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Hover */
+.cm-editor .cm-tooltip.cm-tooltip-hover {
+  overflow: hidden;
+  padding: 0;
+}
+
+.cm-editor .cm-tooltip-hover > * + * {
+  border-top: 1px solid var(--border);
+}
+
+.cm-editor .cm-athas-hover {
+  box-sizing: border-box;
+  min-width: 120px;
+  max-width: var(--athas-hover-max-width, 500px);
+  max-height: var(--athas-hover-max-height, 360px);
+  overflow: auto;
+  padding: 7px 10px;
+}
+
+/* Rendered markdown from the language server */
+.cm-editor .cm-athas-markdown {
+  color: var(--foreground);
+  font-family: var(--app-font-family);
+  font-size: var(--ui-text-sm);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.cm-editor .cm-athas-markdown.cm-athas-plaintext {
+  white-space: pre-wrap;
+}
+
+.cm-editor .cm-athas-markdown :is(p, ul, ol) {
+  margin: 0.2em 0;
+}
+
+.cm-editor .cm-athas-markdown :is(ul, ol) {
+  padding-left: 1.4em;
+}
+
+.cm-editor .cm-athas-markdown a {
+  color: var(--primary);
+}
+
+.cm-editor .cm-athas-markdown hr {
+  margin: 0.55em 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+
+.cm-editor .cm-athas-markdown code {
+  padding: 0.08em 0.32em;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--foreground);
+  font-family: var(--editor-font-family);
+  font-size: 0.92em;
+}
+
+.cm-editor .cm-athas-markdown pre {
+  margin: 0.35em 0;
+  padding: 0.45em 0.55em;
+  overflow-x: hidden;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--foreground);
+}
+
+.cm-editor .cm-athas-markdown pre code {
+  display: block;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  font-size: 0.95em;
+  line-height: inherit;
+  white-space: pre-wrap;
+}
+
+/* Diagnostics */
+.cm-editor .cm-content .cm-lintRange {
+  background-image: none;
+  padding-bottom: 0;
+  text-decoration-line: underline;
+  text-decoration-style: wavy;
+  text-decoration-skip-ink: none;
+  text-underline-offset: 3px;
+}
+
+.cm-editor .cm-content .cm-lintRange-error {
+  text-decoration-color: var(--destructive);
+}
+
+.cm-editor .cm-content .cm-lintRange-warning {
+  text-decoration-color: var(--warning);
+}
+
+.cm-editor .cm-content .cm-lintRange-info,
+.cm-editor .cm-content .cm-lintRange-hint {
+  text-decoration-color: var(--info);
+}
+
+.cm-editor .cm-content .cm-lintRange-active {
+  background-color: var(--selected);
+}
+
+.cm-editor .cm-content .cm-lintPoint::after {
+  border-bottom-color: var(--destructive);
+}
+
+.cm-editor .cm-content .cm-lintPoint-warning::after {
+  border-bottom-color: var(--warning);
+}
+
+.cm-editor .cm-content .cm-lintPoint-info::after,
+.cm-editor .cm-content .cm-lintPoint-hint::after {
+  border-bottom-color: var(--info);
+}
+
+.cm-editor .cm-tooltip-lint {
+  padding: 0;
+}
+
+.cm-editor .cm-tooltip-lint .cm-diagnostic {
+  padding: 7px 10px;
+  border-left: 0;
+  color: var(--foreground);
+  font-family: var(--app-font-family);
+  font-size: var(--ui-text-sm);
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.cm-editor .cm-tooltip-lint .cm-diagnostic + .cm-diagnostic {
+  border-top: 1px solid var(--border);
+}
+
+.cm-editor .cm-athas-diagnosticSource {
+  color: var(--subtle-foreground);
+}
+
+/* Parameter hints */
+.cm-editor .cm-athas-signatureHelp {
+  max-width: min(500px, 90vw);
+  font-size: var(--ui-text-sm);
+}
+
+.cm-editor .cm-athas-signatureRow {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 7px 9px;
+}
+
+.cm-editor .cm-athas-signatureLabel {
+  color: var(--foreground);
+  font-family: var(--editor-font-family);
+  overflow-wrap: anywhere;
+}
+
+.cm-editor .cm-athas-signatureActiveParameter {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.cm-editor .cm-athas-signatureCount {
+  flex: none;
+  color: var(--subtle-foreground);
+  font-size: var(--ui-text-caption);
+}
+
+.cm-editor .cm-athas-signatureDocs {
+  padding: 2px 9px 8px;
+  color: var(--muted-foreground);
+}
+
+.cm-editor .cm-athas-signatureRow + .cm-athas-signatureDocs {
+  border-top: 1px solid var(--border);
+  padding-top: 6px;
+}
+
+/* AI ghost text */
+.cm-editor .cm-athas-ghostText {
+  color: var(--subtle-foreground);
+  opacity: 0.7;
+  white-space: pre;
+  pointer-events: none;
+}
