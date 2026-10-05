@@ -28,9 +28,9 @@ import {
   requestInlineEdit,
 } from "@/features/editor/services/editor-inline-edit-service";
 import { rebaseInlineEditRange } from "./inline-edit-rebase";
-import type { InlineEditPreview } from "./monaco-inline-edit-preview";
+import type { InlineEditPreview } from "./inline-edit-preview";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
-import { buildLineOffsets } from "@/features/editor/engines/monaco/position";
+import { buildLineOffsets } from "@/features/editor/utils/line-offsets";
 import type { Position, Range } from "@/features/editor/types/editor.types";
 import {
   calculateCursorPositionFromContent,

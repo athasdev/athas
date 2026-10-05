@@ -1,17 +1,9 @@
 import { editor as monacoEditor, Range } from "monaco-editor";
 import type * as Monaco from "monaco-editor";
 import "./inline-edit-preview.css";
+import type { InlineEditPreview } from "./inline-edit-preview";
 
-export interface InlineEditPreview {
-  startOffset: number;
-  endOffset: number;
-  editedText: string;
-  /**
-   * Scrolls the proposal into view. Only its first showing does; the preview is rebuilt as the
-   * user types elsewhere, and scrolling back each time would fight them.
-   */
-  reveal?: boolean;
-}
+export type { InlineEditPreview };
 
 /**
  * Shows a proposed inline edit as a diff: the affected lines are tinted as removed and the
