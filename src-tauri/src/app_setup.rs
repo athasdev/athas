@@ -245,10 +245,13 @@ fn configure_initial_window(app: &tauri::App) {
 }
 
 fn get_active_webview_window(app: &tauri::AppHandle) -> Option<tauri::WebviewWindow> {
-   app.get_focused_window()
-      .and_then(|window| app.get_webview_window(window.label()))
-      .or_else(|| app.get_webview_window("main"))
-      .or_else(|| app.webview_windows().into_values().next())
+   let windows = app.webview_windows();
+   windows
+      .values()
+      .find(|window| window.is_focused().unwrap_or(false))
+      .cloned()
+      .or_else(|| windows.get("main").cloned())
+      .or_else(|| windows.into_values().next())
 }
 
 fn focus_active_window(app: &tauri::AppHandle) {
