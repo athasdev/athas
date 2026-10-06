@@ -52,6 +52,7 @@ import TabContextMenu from "./tab-context-menu";
 
 const EMPTY_TOKENS: EditorContent["tokens"] = [];
 const tabShellCache = new WeakMap<PaneContent, PaneContent>();
+const tabShellById = new Map<string, PaneContent>();
 
 /**
  * A buffer as the tab bar sees it: its text replaced with empty strings. The tab bar never reads
@@ -62,12 +63,25 @@ function toTabShell(buffer: PaneContent): PaneContent {
   if (buffer.type !== "editor" && buffer.type !== "diff") return buffer;
   const cached = tabShellCache.get(buffer);
   if (cached) return cached;
-  const shell: PaneContent =
+  const next: PaneContent =
     buffer.type === "editor"
-      ? { ...buffer, content: "", savedContent: "", tokens: EMPTY_TOKENS }
+      ? { ...buffer, content: "", savedContent: "", contentRevision: 0, tokens: EMPTY_TOKENS }
       : { ...buffer, content: "", savedContent: "" };
+  // Every keystroke replaces the buffer object; keep the previous shell while nothing a tab
+  // shows has changed, so the bar's selection stays equal.
+  const previous = tabShellById.get(buffer.id);
+  const shell = previous && shallowEqualObjects(previous, next) ? previous : next;
+  tabShellById.set(buffer.id, shell);
   tabShellCache.set(buffer, shell);
   return shell;
+}
+
+function shallowEqualObjects(left: object, right: object) {
+  const leftEntries = Object.entries(left);
+  if (leftEntries.length !== Object.keys(right).length) return false;
+  return leftEntries.every(([key, value]) =>
+    Object.is(value, (right as Record<string, unknown>)[key]),
+  );
 }
 
 interface TabBarProps {
@@ -97,11 +111,13 @@ const TabBar = ({
   const paneBufferIdSet = useMemo(() => {
     return pane ? new Set(pane.bufferIds) : null;
   }, [pane?.bufferIds]);
-  const buffers = useBufferStore((state) =>
-    (paneBufferIdSet
-      ? state.buffers.filter((buffer) => paneBufferIdSet.has(buffer.id))
-      : state.buffers
-    ).map(toTabShell),
+  const buffers = useBufferStore(
+    useShallow((state) =>
+      (paneBufferIdSet
+        ? state.buffers.filter((buffer) => paneBufferIdSet.has(buffer.id))
+        : state.buffers
+      ).map(toTabShell),
+    ),
   );
   const globalActiveBufferId = useBufferStore((state) => (pane ? null : state.activeBufferId));
   const activeBufferCandidate = pane ? pane.activeBufferId : globalActiveBufferId;

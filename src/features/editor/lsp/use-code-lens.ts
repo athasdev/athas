@@ -10,13 +10,22 @@ export interface CodeLensItem {
   arguments?: unknown[];
 }
 
+const NO_LENSES: CodeLensItem[] = [];
+
 export const useCodeLens = (filePath: string | undefined, enabled: boolean) => {
-  const [lenses, setLenses] = useState<CodeLensItem[]>([]);
+  const [lenses, setLensesState] = useState<CodeLensItem[]>(NO_LENSES);
   const requestIdRef = useRef(0);
+  // Disabled callers don't follow the document revision, which changes on every keystroke.
   const lspStatusRevision = useLspStore((state) => {
+    if (!enabled || !filePath) return "";
     const { status, activeWorkspaces, supportedLanguages, documentRevision } = state.lspStatus;
     return `${status}:${activeWorkspaces.join("|")}:${supportedLanguages?.join("|") ?? ""}:${documentRevision}`;
   });
+  const setLenses = useCallback((next: CodeLensItem[]) => {
+    setLensesState((current) =>
+      next.length === 0 ? (current.length === 0 ? current : NO_LENSES) : next,
+    );
+  }, []);
 
   const fetchLenses = useCallback(async () => {
     if (!filePath || !enabled || !extensionRegistry.isLspSupported(filePath)) {
@@ -35,7 +44,7 @@ export const useCodeLens = (filePath: string | undefined, enabled: boolean) => {
 
     if (id !== requestIdRef.current) return;
     setLenses(result);
-  }, [filePath, enabled]);
+  }, [filePath, enabled, setLenses]);
 
   useEffect(() => {
     void fetchLenses();

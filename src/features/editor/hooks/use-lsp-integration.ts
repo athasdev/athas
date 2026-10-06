@@ -11,13 +11,14 @@ import { useFileSystemStore } from "@/features/file-system/stores/file-system.st
 interface UseLspIntegrationOptions {
   enabled?: boolean;
   filePath: string | undefined;
-  value: string;
+  /** The document text, read when the document is opened with the server. */
+  getValue: () => string;
 }
 
 export const useLspIntegration = ({
   enabled = true,
   filePath,
-  value,
+  getValue,
 }: UseLspIntegrationOptions) => {
   const lspClient = useMemo(() => LspClient.getInstance(), []);
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
@@ -27,11 +28,10 @@ export const useLspIntegration = ({
     () => Boolean(activeFilePath && extensionRegistry.isLspSupported(activeFilePath)),
     [activeFilePath, installedExtensions],
   );
-  const latestValueRef = useRef(value);
-
+  const getValueRef = useRef(getValue);
   useEffect(() => {
-    latestValueRef.current = value;
-  }, [value]);
+    getValueRef.current = getValue;
+  }, [getValue]);
 
   useEffect(() => {
     if (!enabled || !filePath || !isLspSupported) return;
@@ -70,7 +70,7 @@ export const useLspIntegration = ({
         const started = await lspClient.startForFile(filePath, workspacePath);
         if (!started || cancelled) return;
 
-        await lspClient.notifyDocumentOpen(filePath, latestValueRef.current);
+        await lspClient.notifyDocumentOpen(filePath, getValueRef.current());
         logger.debug("LspIntegration", `LSP started and document opened for ${filePath}`);
       } catch (error) {
         console.error("LSP initialization error:", error);

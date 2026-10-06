@@ -21,7 +21,8 @@ import { getBufferById } from "@/features/editor/utils/buffer-index";
 import { calculateLineHeight } from "@/features/editor/utils/lines";
 import { resolveGoToLineTarget } from "@/features/editor/utils/go-to-line";
 import type { EditorModelPositionResolver } from "@/features/editor/view-model/view-layout";
-import { hasTextContent } from "@/features/panes/types/pane-content.types";
+import { hasTextContent, type PaneContent } from "@/features/panes/types/pane-content.types";
+import { useShallow } from "zustand/react/shallow";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { toast } from "sonner";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
@@ -144,7 +145,6 @@ const CodeEditor = ({
   const editorRef = useRef<HTMLDivElement>(null);
   const codeLensRef = useRef<HTMLDivElement>(null);
   const renameInputRef = useRef<HTMLDivElement>(null);
-  const valueRef = useRef("");
   const editorModelPositionResolverRef = useRef<EditorModelPositionResolver | null>(null);
   const [codeLensContentLeft, setCodeLensContentLeft] = useState<number>(
     EDITOR_CONSTANTS.EDITOR_PADDING_LEFT,
@@ -155,9 +155,30 @@ const CodeEditor = ({
 
   const activeBufferId = useBufferStore((state) => propBufferId ?? state.activeBufferId);
   const zoomLevel = useZoomStore.use.editorZoomLevel();
+  // Only what the wrapper needs: the text changes on every keystroke, and re-rendering here
+  // re-renders the whole editor surface with it.
   const activeBuffer = useBufferStore(
-    useCallback((state) => getBufferById(state.buffers, activeBufferId), [activeBufferId]),
+    useShallow(
+      useCallback(
+        (state: { buffers: PaneContent[] }) => {
+          const buffer = getBufferById(state.buffers, activeBufferId);
+          if (!buffer) return null;
+          return {
+            id: buffer.id,
+            type: buffer.type,
+            path: buffer.path,
+            isPreview: buffer.isPreview,
+            isMarkdownPreview: buffer.type === "editor" && buffer.isMarkdownPreview === true,
+          };
+        },
+        [activeBufferId],
+      ),
+    ),
   );
+  const getValue = useCallback(() => {
+    const buffer = getBufferById(useBufferStore.getState().buffers, activeBufferId);
+    return buffer && hasTextContent(buffer) ? buffer.content : "";
+  }, [activeBufferId]);
   const editorViewKey = paneId && activeBufferId ? `${paneId}:${activeBufferId}` : activeBufferId;
   const { handleContentChange, handleDocumentChange } = useEditorAppStore.use.actions();
   const editorFontSize = useSettingsStore((state) => state.settings.fontSize);
@@ -169,11 +190,6 @@ const CodeEditor = ({
   const zoomedFontSize = editorFontSize * zoomLevel;
   const zoomedLineHeight = calculateLineHeight(zoomedFontSize, editorLineHeight);
 
-  // Extract values from active buffer or use defaults
-  const value = activeBuffer && hasTextContent(activeBuffer) ? activeBuffer.content : "";
-  useEffect(() => {
-    valueRef.current = value;
-  }, [value]);
   const filePath = activeBuffer?.path || "";
   const onChange = activeBuffer
     ? (onContentChange ?? (isActiveSurface ? handleContentChange : () => {}))
@@ -188,8 +204,7 @@ const CodeEditor = ({
       : undefined;
   const isPreviewBuffer = activeBuffer?.isPreview ?? false;
   const showMarkdownPreview =
-    activeBuffer?.type === "markdownPreview" ||
-    (activeBuffer?.type === "editor" && activeBuffer.isMarkdownPreview === true);
+    activeBuffer?.type === "markdownPreview" || activeBuffer?.isMarkdownPreview === true;
   const showNotebookEditor =
     activeBuffer?.type === "editor" && filePath.toLowerCase().endsWith(".ipynb");
   const enableInteractiveServices =
@@ -263,9 +278,12 @@ const CodeEditor = ({
     },
     [],
   );
-  const getCodeLensLineText = useCallback((line: number) => {
-    return valueRef.current.split("\n")[line];
-  }, []);
+  const getCodeLensLineText = useCallback(
+    (line: number) => {
+      return getValue().split("\n")[line];
+    },
+    [getValue],
+  );
   const measureCodeLensContentLeft = useCallback(() => {
     const container = editorRef.current;
     if (!container) return;
@@ -311,16 +329,31 @@ const CodeEditor = ({
   useLspIntegration({
     enabled: enableRichEditorServices,
     filePath,
-    value,
+    getValue,
   });
+  // Run-cell lenses need the text, but only for Python scripts and R Markdown files.
+  const needsCellText =
+    enableInteractiveServices && (isPythonScriptFile(filePath) || isRMarkdownFile(filePath));
+  const cellText = useBufferStore(
+    useCallback(
+      (state: { buffers: PaneContent[] }) => {
+        if (!needsCellText) return "";
+        const buffer = getBufferById(state.buffers, activeBufferId);
+        return buffer && hasTextContent(buffer) ? buffer.content : "";
+      },
+      [activeBufferId, needsCellText],
+    ),
+  );
 
   // Rename symbol support
   const rename = useRename(enableRichEditorServices ? filePath : undefined);
 
   const pythonScriptCells = useMemo(
     () =>
-      enableInteractiveServices && isPythonScriptFile(filePath) ? getPythonScriptCells(value) : [],
-    [enableInteractiveServices, filePath, value],
+      enableInteractiveServices && isPythonScriptFile(filePath)
+        ? getPythonScriptCells(cellText)
+        : [],
+    [enableInteractiveServices, filePath, cellText],
   );
   const pythonScriptCellLenses = useMemo<CodeLensItem[]>(
     () =>
@@ -333,8 +366,9 @@ const CodeEditor = ({
     [pythonScriptCells],
   );
   const rMarkdownChunks = useMemo(
-    () => (enableInteractiveServices && isRMarkdownFile(filePath) ? getRMarkdownChunks(value) : []),
-    [enableInteractiveServices, filePath, value],
+    () =>
+      enableInteractiveServices && isRMarkdownFile(filePath) ? getRMarkdownChunks(cellText) : [],
+    [enableInteractiveServices, filePath, cellText],
   );
   const rMarkdownChunkLenses = useMemo<CodeLensItem[]>(
     () =>
@@ -396,7 +430,7 @@ const CodeEditor = ({
         if (!chunk) return;
 
         if (!rMarkdownChunkShouldEvaluate(chunk)) {
-          onChange(clearRMarkdownChunkOutput(valueRef.current, chunk));
+          onChange(clearRMarkdownChunkOutput(getValue(), chunk));
           toast.success("R chunk skipped because eval=FALSE.");
           return;
         }
@@ -404,7 +438,7 @@ const CodeEditor = ({
         void commands
           .notebookRunRCell(chunk.code, editorWorkingDirectory(filePath), chunk.setupCode)
           .then((result) => {
-            const currentValue = valueRef.current;
+            const currentValue = getValue();
             const currentChunk = getRMarkdownChunks(currentValue)[chunkIndex] ?? chunk;
             const semanticResult = applyRMarkdownChunkOptionSemantics(result, currentChunk);
             if (rMarkdownChunkShouldPersistOutput(currentChunk)) {
@@ -471,7 +505,7 @@ const CodeEditor = ({
     const goToLine = (lineNumber: number, columnNumber?: number) => {
       if (!editorRef.current) return false;
 
-      const currentContent = valueRef.current;
+      const currentContent = getValue();
       if (!currentContent) return false;
 
       const target = resolveGoToLineTarget({

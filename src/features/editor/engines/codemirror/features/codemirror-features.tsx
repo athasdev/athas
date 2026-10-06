@@ -1,3 +1,4 @@
+import { memo } from "react";
 import type { CodeMirrorHost } from "../host";
 import { CodeMirrorAgentEdits } from "./codemirror-agent-edits";
 import { CodeMirrorBreakpoints } from "./codemirror-breakpoints";
@@ -14,8 +15,15 @@ import { CodeMirrorSelectionAgentAction } from "./codemirror-selection-agent-act
 import { CodeMirrorStickyScroll } from "./sticky-scroll/codemirror-sticky-scroll";
 import { CodeMirrorVim } from "./codemirror-vim";
 
-/** Every editor feature rendered into a CodeMirror editor once its view exists. */
-export function CodeMirrorFeatures({ host }: { host: CodeMirrorHost }) {
+/**
+ * Every editor feature rendered into a CodeMirror editor once its view exists. Memoized on the
+ * host, so features only re-render when the host itself changes.
+ */
+export const CodeMirrorFeatures = memo(function CodeMirrorFeatures({
+  host,
+}: {
+  host: CodeMirrorHost;
+}) {
   return (
     <>
       <CodeMirrorVim host={host} />
@@ -34,4 +42,4 @@ export function CodeMirrorFeatures({ host }: { host: CodeMirrorHost }) {
       <CodeMirrorLspFeatures host={host} />
     </>
   );
-}
+});

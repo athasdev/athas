@@ -13,6 +13,7 @@ import {
   keymap,
   rectangularSelection,
 } from "@codemirror/view";
+import { useShallow } from "zustand/react/shallow";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   useActiveWorkspaceId,
@@ -55,6 +56,7 @@ import { captureBufferStoreOwner } from "../services/buffer-store-owner";
 import { deliverModelContentChange } from "../services/document-change-batch";
 import { useBufferStore } from "../stores/buffer.store";
 import { useEditorStateStore } from "../stores/state.store";
+import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import type { CodeEditorViewProps } from "../types/code-editor-view.types";
 import { getBufferById } from "../utils/buffer-index";
 import { getLanguageIdFromPath } from "../utils/language-id";
@@ -105,17 +107,25 @@ export function CodeMirrorEditor({
   const scopedWorkspaceId = useWorkspaceStoreScopeId();
   const workspaceId = scopedWorkspaceId ?? activeWorkspaceId;
   const historyOwner = useMemo(() => captureBufferStoreOwner(workspaceId), [workspaceId]);
+  // The text is not part of the selection: it changes on every keystroke, and the editor follows
+  // it through a store subscription below instead of re-rendering.
   const buffer = useBufferStore(
-    useCallback(
-      (state) => {
-        const found = getBufferById(state.buffers, activeBufferId);
-        return found?.type === "editor" ? found : null;
-      },
-      [activeBufferId],
+    useShallow(
+      useCallback(
+        (state: { buffers: PaneContent[] }) => {
+          const found = getBufferById(state.buffers, activeBufferId);
+          if (found?.type !== "editor") return null;
+          return {
+            id: found.id,
+            path: found.path,
+            languageOverride: found.languageOverride,
+            isVirtual: found.isVirtual,
+          };
+        },
+        [activeBufferId],
+      ),
     ),
   );
-  const content = buffer?.content ?? "";
-  const contentRevision = buffer?.contentRevision ?? 0;
   const filePath = buffer?.path ?? "";
   const languageId = buffer?.languageOverride ?? getLanguageIdFromPath(filePath);
   const settings = useEditorViewSettings();
@@ -250,6 +260,9 @@ export function CodeMirrorEditor({
     const container = containerRef.current;
     if (!container || !buffer) return;
 
+    const initial = getBufferById(historyOwner.store.getState().buffers, buffer.id);
+    const content = initial?.type === "editor" ? initial.content : "";
+    const contentRevision = initial?.type === "editor" ? (initial.contentRevision ?? 0) : 0;
     const separator = detectLineSeparator(content);
     const session: EditorSession = {
       view: null as unknown as EditorView,
@@ -416,15 +429,26 @@ export function CodeMirrorEditor({
 
   // Brings the editor up to date when the buffer changed elsewhere: another pane, a reload from
   // disk, undo, or an agent edit. A store update that only echoes this editor's text is ignored.
+  // Subscribed directly, so typing never re-renders the editor component.
   useEffect(() => {
-    const session = sessionRef.current;
-    if (!session) return;
-    if (contentRevision > 0 && contentRevision <= session.appliedContentRevision) return;
-    session.appliedContentRevision = Math.max(session.appliedContentRevision, contentRevision);
-    replaceWithBufferText(session, content);
-    session.bufferMatchesModel =
-      toBufferText(session.view.state.doc, session.separator) === content;
-  }, [content, contentRevision]);
+    const bufferId = buffer?.id;
+    if (!bufferId) return;
+    let lastSeen: unknown = null;
+    const sync = (buffers: PaneContent[]) => {
+      const session = sessionRef.current;
+      const current = getBufferById(buffers, bufferId);
+      if (!session || current?.type !== "editor" || current === lastSeen) return;
+      lastSeen = current;
+      const contentRevision = current.contentRevision ?? 0;
+      if (contentRevision > 0 && contentRevision <= session.appliedContentRevision) return;
+      session.appliedContentRevision = Math.max(session.appliedContentRevision, contentRevision);
+      replaceWithBufferText(session, current.content);
+      session.bufferMatchesModel =
+        toBufferText(session.view.state.doc, session.separator) === current.content;
+    };
+    sync(historyOwner.store.getState().buffers);
+    return historyOwner.store.subscribe((state) => sync(state.buffers));
+  }, [buffer?.id, historyOwner]);
 
   // Before paint, so a freshly created editor never shows line 1 and then jumps.
   useLayoutEffect(() => {
@@ -549,7 +573,18 @@ export function CodeMirrorEditor({
       getSeparator: () => sessionRef.current?.separator ?? "\n",
       applyHistory,
     };
-  }, [applyHistory, buffer, filePath, isActiveSurface, isReadOnly, languageId, view, viewStateKey]);
+  }, [
+    applyHistory,
+    bufferId,
+    filePath,
+    hasLineNumberMap,
+    isActiveSurface,
+    isReadOnly,
+    isVirtual,
+    languageId,
+    view,
+    viewStateKey,
+  ]);
 
   if (!buffer) return null;
 

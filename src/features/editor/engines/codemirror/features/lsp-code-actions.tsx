@@ -46,7 +46,8 @@ export function CodeMirrorCodeActions({ host }: { host: CodeMirrorHost }) {
   const diagnostics = useDiagnosticsStore(
     (state) => state.diagnosticsByFile.get(filePath) ?? NO_DIAGNOSTICS,
   );
-  const [selectionRevision, setSelectionRevision] = useState(0);
+  // Selection changes ask for a debounced refresh directly, without a render per keystroke.
+  const scheduleRefreshRef = useRef<() => void>(() => {});
   const [lightbulb, setLightbulb] = useState<Lightbulb | null>(null);
   const [placement, setPlacement] = useState<Placement | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -92,7 +93,7 @@ export function CodeMirrorCodeActions({ host }: { host: CodeMirrorHost }) {
         if (update.selectionSet || update.docChanged) {
           const line = update.state.doc.lineAt(update.state.selection.main.head).number;
           if (lightbulbRef.current && lightbulbRef.current.line !== line) setLightbulb(null);
-          setSelectionRevision((current) => current + 1);
+          scheduleRefreshRef.current();
         }
         if (update.geometryChanged || update.viewportChanged || update.heightChanged) measure();
       }),
@@ -111,7 +112,10 @@ export function CodeMirrorCodeActions({ host }: { host: CodeMirrorHost }) {
   useEffect(() => {
     if (menuOpen) return;
     let cancelled = false;
-    const timer = setTimeout(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let latestRequest = 0;
+    const refresh = () => {
+      const request = ++latestRequest;
       const client = LspClient.getInstance();
       if (!client.isDocumentOpen(filePath)) return;
       const { state } = view;
@@ -133,7 +137,7 @@ export function CodeMirrorCodeActions({ host }: { host: CodeMirrorHost }) {
           touching,
         )
         .then((actions) => {
-          if (cancelled || view.state.doc !== state.doc) return;
+          if (cancelled || request !== latestRequest || view.state.doc !== state.doc) return;
           const enabled = actions.filter((action) => !action.disabledReason);
           setLightbulb(
             enabled.length > 0
@@ -141,12 +145,19 @@ export function CodeMirrorCodeActions({ host }: { host: CodeMirrorHost }) {
               : null,
           );
         });
-    }, REFRESH_DELAY_MS);
+    };
+    const schedule = () => {
+      if (timer !== null) clearTimeout(timer);
+      timer = setTimeout(refresh, REFRESH_DELAY_MS);
+    };
+    scheduleRefreshRef.current = schedule;
+    schedule();
     return () => {
       cancelled = true;
-      clearTimeout(timer);
+      if (timer !== null) clearTimeout(timer);
+      scheduleRefreshRef.current = () => {};
     };
-  }, [diagnostics, filePath, menuOpen, revision, selectionRevision, view]);
+  }, [diagnostics, filePath, menuOpen, revision, view]);
 
   const groups = useMemo(() => groupCodeActions(lightbulb?.actions ?? []), [lightbulb]);
 

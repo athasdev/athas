@@ -4,6 +4,8 @@ import { InlineEditPopover } from "../../../inline-edit/inline-edit-popover";
 import type { InlineEditPreview } from "../../../inline-edit/inline-edit-preview";
 import { useInlineEdit } from "../../../inline-edit/use-inline-edit";
 import { useEditorViewSettings } from "../../../hooks/use-editor-view-settings";
+import { useShallow } from "zustand/react/shallow";
+import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import { useBufferStore } from "../../../stores/buffer.store";
 import { useInlineEditToolbarStore } from "../../../stores/inline-edit-toolbar.store";
 import { useEditorStateStore } from "../../../stores/state.store";
@@ -27,16 +29,25 @@ export function CodeMirrorInlineEdit({ host }: { host: CodeMirrorHost }) {
   useCodeMirrorExtension(view, inlineEditPreviewExtension);
 
   const { fontSize, fontFamily, lineHeight, tabSize } = useEditorViewSettings();
+  const inlineEditRequested = useInlineEditToolbarStore.use.isVisible();
+  // The text only matters while inline edit is open; following it otherwise re-rendered this
+  // feature on every keystroke.
   const buffer = useBufferStore(
-    useCallback(
-      (state) => {
-        const found = getBufferById(state.buffers, bufferId);
-        return found?.type === "editor" ? found : null;
-      },
-      [bufferId],
+    useShallow(
+      useCallback(
+        (state: { buffers: PaneContent[] }) => {
+          const found = getBufferById(state.buffers, bufferId);
+          if (found?.type !== "editor") return null;
+          return {
+            id: found.id,
+            path: found.path,
+            content: inlineEditRequested ? found.content : "",
+          };
+        },
+        [bufferId, inlineEditRequested],
+      ),
     ),
   );
-  const inlineEditRequested = useInlineEditToolbarStore.use.isVisible();
   const selection = useEditorStateStore((state) =>
     host.isActiveSurface && inlineEditRequested ? state.selection : undefined,
   );

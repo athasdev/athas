@@ -120,7 +120,21 @@ vi.mock("../hooks/use-editor-view-settings", () => ({
 vi.mock("../services/buffer-history-service", () => ({
   applyBufferHistory: state.applyBufferHistory,
 }));
-vi.mock("../services/buffer-store-owner", () => ({ captureBufferStoreOwner: () => ({}) }));
+const bufferListeners = new Set<(value: { buffers: unknown[] }) => void>();
+function notifyBufferChange() {
+  for (const listener of bufferListeners) listener({ buffers: [state.buffer] });
+}
+vi.mock("../services/buffer-store-owner", () => ({
+  captureBufferStoreOwner: () => ({
+    store: {
+      getState: () => ({ buffers: [state.buffer] }),
+      subscribe: (listener: (value: { buffers: unknown[] }) => void) => {
+        bufferListeners.add(listener);
+        return () => bufferListeners.delete(listener);
+      },
+    },
+  }),
+}));
 
 const emptyRects = () => Object.assign([], { item: () => null }) as unknown as DOMRectList;
 Range.prototype.getClientRects = emptyRects;
@@ -200,9 +214,7 @@ describe("CodeMirror editor", () => {
     );
 
     state.buffer = { ...state.buffer, content: "const b = 2;\n", contentRevision: 2 };
-    await act(async () =>
-      root.render(<CodeMirrorEditor bufferId="buffer-1" onDocumentChange={onDocumentChange} />),
-    );
+    act(() => notifyBufferChange());
 
     expect(view().state.doc.toString()).toBe("const b = 2;\n");
     expect(onDocumentChange).not.toHaveBeenCalled();
@@ -220,9 +232,7 @@ describe("CodeMirror editor", () => {
     act(() => view().dispatch({ changes: { from: 0, insert: "// x\n" } }));
 
     state.buffer = { ...state.buffer, content: "// stale echo\n", contentRevision: 2 };
-    await act(async () =>
-      root.render(<CodeMirrorEditor bufferId="buffer-1" onDocumentChange={onDocumentChange} />),
-    );
+    act(() => notifyBufferChange());
 
     expect(view().state.doc.toString()).toBe("// x\nconst a = 1;\n");
   });

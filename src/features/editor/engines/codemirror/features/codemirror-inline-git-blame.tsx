@@ -27,19 +27,19 @@ const INLINE_GIT_BLAME_CARD_CLOSE_DELAY_MS = 120;
 export function CodeMirrorInlineGitBlame({ host }: { host: CodeMirrorHost }) {
   const { view, container, filePath, bufferId, isActiveSurface } = host;
   const enabled = useSettingsStore((state) => state.settings.enableInlineGitBlame);
+  const blameActive = Boolean(isActiveSurface && enabled && filePath);
+  // Blame follows unsaved text, but only while it is shown here.
   const content = useBufferStore(
     useCallback(
       (state) => {
+        if (!blameActive) return "";
         const found = getBufferById(state.buffers, bufferId);
         return found?.type === "editor" ? found.content : "";
       },
-      [bufferId],
+      [blameActive, bufferId],
     ),
   );
-  const { getBlameForLine } = useGitBlame(
-    isActiveSurface && enabled && filePath ? filePath : undefined,
-    content,
-  );
+  const { getBlameForLine } = useGitBlame(blameActive ? filePath : undefined, content);
 
   const renderTimerRef = useRef<number | null>(null);
   const renderedKeyRef = useRef<string | null>(null);
