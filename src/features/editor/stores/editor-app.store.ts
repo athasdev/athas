@@ -17,7 +17,6 @@ import type {
 import { getBufferById } from "../utils/buffer-index";
 import { trackBufferHistoryChange } from "./buffer-history-tracking";
 import { useBufferStore } from "./buffer.store";
-import { discardEditorViewContentChange, queueEditorViewContentChange } from "./view.store";
 
 interface AppState {
   quickEditState: {
@@ -73,15 +72,10 @@ export const useEditorAppStore = createSelectors(
           }
 
           const previousContent = activeBuffer.content;
-          const previousContentRevision = activeBuffer.contentRevision ?? 0;
-          queueEditorViewContentChange(bufferId, previousContentRevision, batch);
           const collaborationNoteTarget = parseCollaborationNoteBufferPath(activeBuffer.path);
           const isRemoteFile = activeBuffer.path.startsWith("remote://");
           const result = applyBufferContentChanges(bufferId, batch, true);
-          if (!result.accepted) {
-            discardEditorViewContentChange(bufferId);
-            return result;
-          }
+          if (!result.accepted) return result;
 
           const updatedBuffer = getBufferById(useBufferStore.getState().buffers, bufferId);
           if (!updatedBuffer || !isEditorContent(updatedBuffer)) return result;

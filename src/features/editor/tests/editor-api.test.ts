@@ -471,7 +471,7 @@ describe("editor API model operations", () => {
     );
   });
 
-  it("reads individual lines from sparse large-file view state", () => {
+  it("reads individual lines from large documents", () => {
     const largeContent = Array.from({ length: 50_001 }, (_, index) => `line-${index}`).join("\n");
     useBufferStore.setState({
       activeBufferId: "buffer_editor_api_test",
@@ -480,7 +480,6 @@ describe("editor API model operations", () => {
 
     expect(editorAPI.getLineCount()).toBe(50_001);
     expect(editorAPI.getLines()).toHaveLength(50_001);
-    expect(Object.keys(editorAPI.getLines())).toHaveLength(0);
     expect(editorAPI.getLine(50_000)).toBe("line-50000");
     expect(editorAPI.getLine(50_001)).toBeUndefined();
   });

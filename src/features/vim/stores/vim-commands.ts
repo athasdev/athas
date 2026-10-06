@@ -205,7 +205,7 @@ export const parseAndExecuteVimCommand = async (commandInput: string): Promise<b
     const isGlobalOnLine = flags.includes("g");
     const isCaseInsensitive = flags.includes("i");
 
-    const lines = useEditorViewStore.getState().lines;
+    const lines = useEditorViewStore.getState().actions.getLines();
     const cursorState = useEditorStateStore.getState();
     const bufferState = useBufferStore.getState();
     const { activeBufferId } = bufferState;

@@ -566,6 +566,34 @@ export const commands = {
   setWindowTransparencyEnabled: (enabled: boolean, themeType: string | null) =>
     __TAURI_INVOKE<null>("set_window_transparency_enabled", { enabled, themeType }),
   reopenCurrentWebviewDevtools: () => __TAURI_INVOKE<null>("reopen_current_webview_devtools"),
+  browserCreate: (request: BrowserCreateRequest, onEvent: Channel<BrowserEvent>) =>
+    __TAURI_INVOKE<string>("browser_create", { request, onEvent }),
+  /**  Moves a tab over its pane, or hides it when `bounds` is `None`. */
+  browserSetBounds: (
+    label: string,
+    bounds: {
+      x: number | null;
+      y: number | null;
+      width: number | null;
+      height: number | null;
+    } | null,
+  ) => __TAURI_INVOKE<null>("browser_set_bounds", { label, bounds }),
+  browserNavigate: (label: string, url: string) =>
+    __TAURI_INVOKE<null>("browser_navigate", { label, url }),
+  browserPerform: (label: string, action: BrowserNavigationAction) =>
+    __TAURI_INVOKE<null>("browser_perform", { label, action }),
+  browserSetZoom: (label: string, zoom: number | null) =>
+    __TAURI_INVOKE<null>("browser_set_zoom", { label, zoom }),
+  browserFocus: (label: string) => __TAURI_INVOKE<null>("browser_focus", { label }),
+  browserOpenDevtools: (label: string) => __TAURI_INVOKE<null>("browser_open_devtools", { label }),
+  /**  Clears cookies, storage and cache of the browser profile the tab uses. */
+  browserClearData: (label: string) => __TAURI_INVOKE<null>("browser_clear_data", { label }),
+  browserClose: (label: string) => __TAURI_INVOKE<null>("browser_close", { label }),
+  /**
+   *  Closes every browser tab of the calling window. The workbench calls this when
+   *  it starts, so tabs left by a reloaded workbench don't cover the new one.
+   */
+  browserCloseWindowTabs: () => __TAURI_INVOKE<null>("browser_close_window_tabs"),
   /**
    *  Stops watching a workspace root for the calling window. The root stays watched while other
    *  windows or the search index still use it.
@@ -4458,6 +4486,66 @@ export type AthasLogFile = {
   target_line: number;
   truncated: boolean;
 };
+
+/**  Where a browser tab sits in its window, in CSS pixels of the workbench. */
+export type BrowserBounds = {
+  x: number | null;
+  y: number | null;
+  width: number | null;
+  height: number | null;
+};
+
+export type BrowserCreateRequest = {
+  url: string;
+  bounds: BrowserBounds;
+  zoom: number | null;
+  /**  Workbench shortcuts the page hands back to Athas while it has focus. */
+  keyBindings: BrowserKeyBinding[];
+};
+
+/**
+ *  One update from a browser tab, delivered on the channel the frontend passed
+ *  when it created the tab.
+ */
+export type BrowserEvent =
+  /**  The main frame started loading a page. */
+  | { event: "loadStarted"; url: string }
+  /**  The main frame finished loading a page. */
+  | { event: "loadFinished"; url: string }
+  /**
+   *  The address of the main frame changed, including same-document changes
+   *  such as `history.pushState`. History availability is `None` when the
+   *  engine doesn't expose it to the page.
+   */
+  | { event: "urlChanged"; url: string; canGoBack: boolean | null; canGoForward: boolean | null }
+  | { event: "titleChanged"; title: string }
+  | { event: "faviconChanged"; url: string | null }
+  /**  The page took keyboard focus, so the pane showing it becomes active. */
+  | { event: "focused" }
+  /**  The user pressed a workbench shortcut while the page had focus. */
+  | { event: "shortcut"; command: string }
+  /**  The page asked for a new window; Athas opens the URL as a tab instead. */
+  | { event: "openInNewTab"; url: string }
+  | { event: "downloadStarted"; url: string; path: string }
+  | { event: "downloadFinished"; url: string; path: string | null; success: boolean };
+
+/**
+ *  A workbench shortcut the bridge intercepts while a page has focus, so the
+ *  keys reach Athas instead of the page.
+ */
+export type BrowserKeyBinding = {
+  command: string;
+  /**  `KeyboardEvent.key`, lowercased. Ignored when `code` is set. */
+  key: string;
+  /**  `KeyboardEvent.code`, for keys whose character depends on Shift. */
+  code: string | null;
+  meta: boolean;
+  ctrl: boolean;
+  alt: boolean;
+  shift: boolean;
+};
+
+export type BrowserNavigationAction = "back" | "forward" | "reload" | "stop";
 
 export type ChatData = {
   id: string;

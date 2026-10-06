@@ -22,7 +22,7 @@ const createMockStorage = () => {
   };
 };
 
-describe("editor view store large files", () => {
+describe("editor view store", () => {
   beforeEach(() => {
     vi.stubGlobal("localStorage", createMockStorage());
     vi.stubGlobal("window", {
@@ -42,21 +42,16 @@ describe("editor view store large files", () => {
   afterEach(async () => {
     usePaneStore.getState().actions.reset();
     const { useBufferStore } = await import("../stores/buffer.store");
-    const { useEditorViewStore } = await import("../stores/view.store");
     useBufferStore.setState({
       buffers: [],
       activeBufferId: null,
       pendingClose: null,
       closedBuffersHistory: [],
     });
-    useEditorViewStore.setState({
-      lines: [""],
-      lineCount: 1,
-    });
     vi.unstubAllGlobals();
   });
 
-  it("tracks large active buffers by line count without storing every line", async () => {
+  it("reads lines from the active buffer only when asked, and follows edits", async () => {
     const { useBufferStore } = await import("../stores/buffer.store");
     const { useEditorViewStore } = await import("../stores/view.store");
     const bufferActions = useBufferStore.getState().actions;
@@ -68,78 +63,16 @@ describe("editor view store large files", () => {
       name: "sqlite.c",
       content: "",
     });
-
     bufferActions.updateBufferContent(bufferId, content);
 
-    const viewState = useEditorViewStore.getState();
-    expect(viewState.lineCount).toBe(50_000);
-    expect(viewState.lines).toHaveLength(0);
-    expect(useEditorViewStore.getState().actions.getLines()).toHaveLength(50_000);
-  });
+    const { actions } = useEditorViewStore.getState();
+    expect(actions.getLineCount()).toBe(50_000);
+    expect(actions.getLines()[49_999]).toBe("line 49999");
+    expect(actions.getLines()).toBe(actions.getLines());
 
-  it("updates cached lines incrementally for small typing edits", async () => {
-    const { applyIncrementalLineEdit } = await import("../stores/view.store");
-    const previousContent = "first line\nsecond line\nthird line";
-    const previousLines = previousContent.split("\n");
-
-    expect(
-      applyIncrementalLineEdit(
-        previousContent,
-        "first line\nsecond fast line\nthird line",
-        previousLines,
-      ),
-    ).toEqual(["first line", "second fast line", "third line"]);
-
-    expect(
-      applyIncrementalLineEdit(
-        previousContent,
-        "first line\nsecond line\ninserted\nthird line",
-        previousLines,
-      ),
-    ).toEqual(["first line", "second line", "inserted", "third line"]);
-
-    expect(
-      applyIncrementalLineEdit(previousContent, "first line\nthird line", previousLines),
-    ).toEqual(["first line", "third line"]);
-
-    expect(
-      applyIncrementalLineEdit(previousContent, `x${".".repeat(1001)}`, previousLines),
-    ).toBeNull();
-  });
-
-  it("matches full line rebuild for boundary edits", async () => {
-    const { applyIncrementalLineEdit } = await import("../stores/view.store");
-    const cases = [
-      ["alpha\nbeta\ngamma", "xalpha\nbeta\ngamma"],
-      ["alpha\nbeta\ngamma", "alpha\nxbeta\ngamma"],
-      ["alpha\nbeta\ngamma", "alpha\nbeta\ngammax"],
-      ["alpha\nbeta\ngamma", "alpha\nbeta\n\ngamma"],
-      ["alpha\nbeta\ngamma", "alpha\nbe\nta\ngamma"],
-      ["alpha\nbeta\ngamma\n", "alpha\nbeta\ngamma\nx"],
-      ["alpha\nbeta\ngamma", "alpha\nbeta"],
-    ];
-
-    for (const [previousContent, nextContent] of cases) {
-      expect(
-        applyIncrementalLineEdit(previousContent, nextContent, previousContent.split("\n")),
-      ).toEqual(nextContent.split("\n"));
-    }
-  });
-
-  it("applies Monaco line ranges without scanning the surrounding document", async () => {
-    const { applyEditorTextChangeToLines } = await import("../stores/view.store");
-    const previousLines = ["alpha", "beta", "gamma"];
-
-    expect(
-      applyEditorTextChangeToLines(previousLines, {
-        rangeOffset: 7,
-        rangeLength: 2,
-        text: "E\nnew",
-        startLine: 1,
-        startColumn: 1,
-        endLine: 1,
-        endColumn: 3,
-      }),
-    ).toEqual(["alpha", "bE", "newa", "gamma"]);
+    bufferActions.updateBufferContent(bufferId, "a\nb");
+    expect(actions.getLineCount()).toBe(2);
+    expect(actions.getLines()).toEqual(["a", "b"]);
+    expect(actions.getContent()).toBe("a\nb");
   });
 });

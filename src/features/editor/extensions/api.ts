@@ -36,7 +36,6 @@ import {
   moveLineUp as moveLineUpOperation,
 } from "../utils/line-operations";
 import { resolveCursorPositionsAtLineEndsForSelection } from "../utils/multi-cursor";
-import { getLineSlice } from "../utils/large-file";
 import { getBufferById } from "../utils/buffer-index";
 import type {
   EditorAPI,
@@ -338,17 +337,11 @@ class EditorAPIImpl implements EditorAPI {
     const lineIndex = Math.trunc(lineNumber);
     if (!Number.isFinite(lineNumber) || lineIndex < 0) return undefined;
 
-    const { lines, lineCount } = useEditorViewStore.getState();
-    if (lineIndex >= lineCount) return undefined;
-
-    const line = lines[lineIndex];
-    if (line !== undefined) return line;
-
-    return getLineSlice(this.getContent(), lineIndex).line;
+    return useEditorViewStore.getState().actions.getLines()[lineIndex];
   }
 
   getLineCount(): number {
-    return useEditorViewStore.getState().lineCount;
+    return useEditorViewStore.getState().actions.getLineCount();
   }
 
   duplicateLine(): void {

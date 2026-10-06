@@ -72,6 +72,11 @@ interface EditorSession {
   appliedContentRevision: number;
   /** Set while the editor applies a buffer update, so it is not sent back as an edit. */
   applyingExternalUpdate: boolean;
+  /**
+   * Set while the editor hands its own edit to the buffer store, whose subscribers run before the
+   * new revision is recorded; the buffer subscription skips those echoes.
+   */
+  deliveringOwnChange: boolean;
 }
 
 export function CodeMirrorEditor({
@@ -272,6 +277,7 @@ export function CodeMirrorEditor({
       bufferMatchesModel: true,
       appliedContentRevision: contentRevision,
       applyingExternalUpdate: false,
+      deliveringOwnChange: false,
     };
 
     const historyKeymap = keymap.of([
@@ -284,42 +290,47 @@ export function CodeMirrorEditor({
       if (update.docChanged && !session.applyingExternalUpdate) {
         session.versionId += 1;
         const editorState = useEditorStateStore.getState();
-        const handleDocumentChange = latest.current.onDocumentChange;
-        if (handleDocumentChange) {
-          const event = toModelContentChangeEvent(
-            update.changes,
-            update.startState.doc,
-            session.versionId,
-            session.separator,
-          );
-          const { result, bufferMatchesModel } = deliverModelContentChange({
-            event,
-            model: {
-              getValue: () => toBufferText(update.state.doc, session.separator),
-              getValueLength: () =>
-                update.state.doc.length +
-                (update.state.doc.lines - 1) * (session.separator.length - 1),
-            },
-            sourceId: sourceIdRef.current,
-            modelSessionId: session.modelSessionId,
-            bufferMatchesModel: session.bufferMatchesModel,
-            apply: (batch) =>
-              handleDocumentChange(batch, editorState.cursorPosition, editorState.selection),
-          });
-          session.bufferMatchesModel = bufferMatchesModel;
-          if (result.synchronized) {
-            session.appliedContentRevision = Math.max(
-              session.appliedContentRevision,
-              result.contentRevision,
+        session.deliveringOwnChange = true;
+        try {
+          const handleDocumentChange = latest.current.onDocumentChange;
+          if (handleDocumentChange) {
+            const event = toModelContentChangeEvent(
+              update.changes,
+              update.startState.doc,
+              session.versionId,
+              session.separator,
+            );
+            const { result, bufferMatchesModel } = deliverModelContentChange({
+              event,
+              model: {
+                getValue: () => toBufferText(update.state.doc, session.separator),
+                getValueLength: () =>
+                  update.state.doc.length +
+                  (update.state.doc.lines - 1) * (session.separator.length - 1),
+              },
+              sourceId: sourceIdRef.current,
+              modelSessionId: session.modelSessionId,
+              bufferMatchesModel: session.bufferMatchesModel,
+              apply: (batch) =>
+                handleDocumentChange(batch, editorState.cursorPosition, editorState.selection),
+            });
+            session.bufferMatchesModel = bufferMatchesModel;
+            if (result.synchronized) {
+              session.appliedContentRevision = Math.max(
+                session.appliedContentRevision,
+                result.contentRevision,
+              );
+            }
+          } else {
+            latest.current.onContentChange?.(
+              toBufferText(update.state.doc, session.separator),
+              undefined,
+              editorState.cursorPosition,
+              editorState.selection,
             );
           }
-        } else {
-          latest.current.onContentChange?.(
-            toBufferText(update.state.doc, session.separator),
-            undefined,
-            editorState.cursorPosition,
-            editorState.selection,
-          );
+        } finally {
+          session.deliveringOwnChange = false;
         }
       }
       if (update.docChanged || update.selectionSet) syncCursorAndSelection(session);
@@ -437,7 +448,8 @@ export function CodeMirrorEditor({
     const sync = (buffers: PaneContent[]) => {
       const session = sessionRef.current;
       const current = getBufferById(buffers, bufferId);
-      if (!session || current?.type !== "editor" || current === lastSeen) return;
+      if (!session || session.deliveringOwnChange) return;
+      if (current?.type !== "editor" || current === lastSeen) return;
       lastSeen = current;
       const contentRevision = current.contentRevision ?? 0;
       if (contentRevision > 0 && contentRevision <= session.appliedContentRevision) return;
