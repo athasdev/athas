@@ -7,6 +7,7 @@ import type {
   Range,
 } from "@/features/editor/types/editor.types";
 import { useHistoryStore } from "@/features/editor/stores/history.store";
+import { editorTextChangesAreNoop } from "@/features/editor/utils/editor-text-changes";
 
 const trackers = new WeakMap<ReturnType<typeof useHistoryStore.getStore>, EditorUndoGroupTracker>();
 function getHistoryOwner(workspaceId?: string) {
@@ -123,7 +124,10 @@ export function trackBufferHistoryChange({
   const contentBeforeChange = contentChanges?.length
     ? (previousContent ?? currentContent)
     : (lastTrackedContent ?? previousContent ?? currentContent);
-  if (contentBeforeChange !== nextContent) store.getState().actions.discardFuture(bufferId);
+  const contentChanged = contentChanges?.length
+    ? !editorTextChangesAreNoop(contentBeforeChange, contentChanges)
+    : contentBeforeChange !== nextContent;
+  if (contentChanged) store.getState().actions.discardFuture(bufferId);
 
   if (!contentChanges?.length && lastTrackedContent === undefined) {
     tracker.sync(bufferId, contentBeforeChange);

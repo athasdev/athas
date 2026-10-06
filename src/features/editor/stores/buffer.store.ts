@@ -53,6 +53,7 @@ import type {
 } from "@/features/editor/types/editor.types";
 import { publishEditorDocumentChange } from "@/features/editor/services/editor-document-events";
 import { applyEditorTextChanges } from "@/features/editor/utils/editor-text-changes";
+import { SavedContentTracker } from "@/features/editor/utils/saved-content-tracker";
 import { createWorkspaceScopedStore } from "@/features/workspace/stores/create-workspace-scoped-store";
 import {
   isEditorContent,
@@ -83,6 +84,8 @@ function continueCloseGroup(actions: BufferActions, request: PendingClose) {
       break;
   }
 }
+
+const savedContentTracker = new SavedContentTracker();
 
 const lastAppliedModelVersionByBuffer = new Map<
   string,
@@ -1110,6 +1113,7 @@ const createBufferStore = (workspaceId: string) => {
           if (bufferIndex === -1) return;
 
           cleanupBufferHistoryTracking(bufferId, workspaceId);
+          savedContentTracker.forget(bufferId);
 
           const replacementBufferId =
             activeBufferId === bufferId ? getPaneReplacementBufferId([bufferId], buffers) : null;
@@ -1366,6 +1370,20 @@ const createBufferStore = (workspaceId: string) => {
           }
 
           const contentRevision = (buffer.contentRevision ?? 0) + 1;
+          let isDirty = false;
+          if (!buffer.isVirtual) {
+            if (markDirty) {
+              isDirty = savedContentTracker.isDirtyAfterChanges(
+                bufferId,
+                buffer.content,
+                nextContent,
+                buffer.savedContent,
+                batch.fullContent === undefined ? batch.changes : [],
+              );
+            } else {
+              savedContentTracker.markSaved(bufferId, nextContent);
+            }
+          }
           let promotedPreviewBufferId: string | null = null;
           set((state) => {
             const current = state.buffers.find((item) => item.id === bufferId);
@@ -1377,7 +1395,7 @@ const createBufferStore = (workspaceId: string) => {
               current.savedContent = nextContent;
               current.isDirty = false;
             } else {
-              current.isDirty = nextContent !== current.savedContent;
+              current.isDirty = isDirty;
               if (current.isPreview && current.isDirty) {
                 current.isPreview = false;
                 promotedPreviewBufferId = current.id;
@@ -1447,6 +1465,7 @@ const createBufferStore = (workspaceId: string) => {
             if (!buffer || !isEditorContent(buffer)) return;
             buffer.savedContent = content;
             buffer.isDirty = buffer.content !== content;
+            if (!buffer.isDirty) savedContentTracker.markSaved(bufferId, content);
             if (path !== undefined) {
               buffer.path = path;
               buffer.name = getBaseName(path);

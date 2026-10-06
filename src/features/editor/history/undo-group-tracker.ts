@@ -13,6 +13,7 @@ import type {
   Range,
 } from "../types/editor.types";
 import { createHistoryPatchBatch } from "./history-patches";
+import { editorTextChangesAreNoop } from "../utils/editor-text-changes";
 
 interface PendingUndoGroup {
   baseEntry: HistoryEntry;
@@ -129,7 +130,7 @@ export class EditorUndoGroupTracker {
     changes: readonly EditorModelTextChange[],
     options: Omit<UndoTrackOptions, "contentChange"> = {},
   ): StoredHistoryEntry[] {
-    if (changes.length === 0 || previousContent === nextContent) return [];
+    if (changes.length === 0 || editorTextChangesAreNoop(previousContent, changes)) return [];
     const patch = createHistoryPatchBatch(previousContent, changes);
     if (!patch || patch.afterLength !== nextContent.length) {
       return this.track(bufferId, previousContent, nextContent, options);

@@ -42,3 +42,18 @@ export function applyEditorTextChanges(
   pieces.push(content.slice(sourceOffset));
   return pieces.join("");
 }
+
+/**
+ * Whether applying `changes` to `content` leaves it unchanged. Costs as much as the changed
+ * ranges, not the whole document.
+ */
+export function editorTextChangesAreNoop(
+  content: string,
+  changes: readonly EditorModelTextChange[],
+): boolean {
+  return changes.every(
+    (change) =>
+      change.text.length === change.rangeLength &&
+      content.slice(change.rangeOffset, change.rangeOffset + change.rangeLength) === change.text,
+  );
+}
