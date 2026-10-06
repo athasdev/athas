@@ -14,6 +14,7 @@ export const athasEditorTheme = EditorView.theme({
     backgroundColor: "var(--background)",
   },
   "&.cm-focused": { outline: "none" },
+  ".cm-scroller": { overscrollBehavior: "none" },
   ".cm-content": { caretColor: "var(--cursor, var(--foreground))", padding: "0" },
   ".cm-cursor, .cm-dropCursor": { borderLeftColor: "var(--cursor, var(--foreground))" },
   "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, ::selection":
