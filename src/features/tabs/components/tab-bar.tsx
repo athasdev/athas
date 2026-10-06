@@ -728,6 +728,13 @@ const TabBar = ({
                         onCopyRelativePath={handleCopyRelativePath}
                         onReload={(bufferId) => {
                           const targetBuffer = bufferById.get(bufferId);
+                          if (targetBuffer?.type === "browser") {
+                            void import("@/features/browser/services/browser-tab-manager").then(
+                              ({ browserTabManager }) =>
+                                browserTabManager.perform(bufferId, "reload"),
+                            );
+                            return;
+                          }
                           if (targetBuffer && targetBuffer.type !== "extension") {
                             const { closeBuffer, openBuffer } = useBufferStore.getState().actions;
                             closeBuffer(bufferId);

@@ -574,6 +574,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "athas-ai",
+ "athas-browser",
  "athas-database",
  "athas-debugger",
  "athas-extensions",
@@ -644,6 +645,7 @@ dependencies = [
  "walkdir",
  "webkit2gtk-sys",
  "which",
+ "wry",
  "zip 2.4.2",
 ]
 
@@ -680,6 +682,17 @@ dependencies = [
  "uuid",
  "which",
  "zip 2.4.2",
+]
+
+[[package]]
+name = "athas-browser"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "sha2",
+ "specta",
+ "url",
 ]
 
 [[package]]

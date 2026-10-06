@@ -9,6 +9,7 @@ import type {
   BufferSession,
   WorkspaceFolderSession,
 } from "@/features/workspace/types/workspace-session.types";
+import { isRestorableBufferSession } from "@/features/workspace/persistence/workspace-session-codec";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { createSafeJSONStorage } from "@/utils/zustand-storage";
 
@@ -190,9 +191,7 @@ const useSessionStoreBase = create<SessionState>()(
         getSession: (projectPath) => {
           const session = get().sessions[projectPath];
           if (!session) return null;
-          const buffers = session.buffers.filter(
-            (buffer) => buffer.type === "editor" || buffer.type === "terminal",
-          );
+          const buffers = session.buffers.filter(isRestorableBufferSession);
           if (buffers.length === session.buffers.length) return session;
           return {
             ...session,

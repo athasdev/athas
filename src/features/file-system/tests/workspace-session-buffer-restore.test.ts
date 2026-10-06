@@ -25,6 +25,28 @@ describe("workspace session buffer restore", () => {
     expect(context.pinBuffer).not.toHaveBeenCalled();
   });
 
+  it("restores a browser tab under its saved path with its address and zoom", async () => {
+    const context = createContext();
+    const buffer: BufferSession = {
+      type: "browser",
+      path: "browser://tab-1",
+      name: "Vite App",
+      isPinned: false,
+      url: "http://localhost:5173/",
+      zoom: 0.9,
+    };
+
+    await expect(restoreWorkspaceSessionBuffer(buffer, context)).resolves.toBe("virtual-buffer");
+    expect(context.openContent).toHaveBeenCalledWith({
+      type: "browser",
+      name: "Vite App",
+      url: "http://localhost:5173/",
+      zoom: 0.9,
+      path: "browser://tab-1",
+    });
+    expect(context.openFile).not.toHaveBeenCalled();
+  });
+
   it("restores and pins a terminal with its persisted launch options", async () => {
     const context = createContext();
     const buffer: BufferSession = {

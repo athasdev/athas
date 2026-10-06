@@ -68,6 +68,12 @@ export function useAppBootstrap() {
   }, []);
 
   useEffect(() => {
+    void import("@/features/browser/services/browser-tab-manager").then(({ browserTabManager }) =>
+      browserTabManager.cleanupStaleTabs(),
+    );
+  }, []);
+
+  useEffect(() => {
     void useAuthStore.getState().actions.initialize();
   }, []);
 

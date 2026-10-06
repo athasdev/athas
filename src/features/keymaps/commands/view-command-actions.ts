@@ -7,6 +7,7 @@ import { useWhatsNewStore } from "@/features/settings/stores/whats-new.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { useZoomStore } from "@/features/window/stores/zoom.store";
 import { useKeymapStore } from "../stores/keymaps.store";
+import { zoomActiveBrowserTab } from "./browser-command-actions";
 
 function getZoomTarget(): "editor" | "terminal" {
   const terminalContainer = document.querySelector('[data-terminal-container="active"]');
@@ -166,14 +167,17 @@ export function toggleRenderWhitespace(): void {
 }
 
 export function zoomIn(): void {
+  if (zoomActiveBrowserTab(1)) return;
   useZoomStore.getState().actions.zoomIn(getZoomTarget());
 }
 
 export function zoomOut(): void {
+  if (zoomActiveBrowserTab(-1)) return;
   useZoomStore.getState().actions.zoomOut(getZoomTarget());
 }
 
 export function resetZoom(): void {
+  if (zoomActiveBrowserTab(0)) return;
   useZoomStore.getState().actions.resetZoom(getZoomTarget());
 }
 

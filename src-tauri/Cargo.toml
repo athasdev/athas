@@ -33,6 +33,7 @@ athas-wsl = { path = "../crates/wsl" }
 athas-project = { path = "../crates/project" }
 athas-version-control = { path = "../crates/version-control" }
 athas-extensions = { path = "../crates/extensions" }
+athas-browser = { path = "../crates/browser" }
 athas-terminal = { path = "../crates/terminal" }
 athas-ai = { path = "../crates/ai" }
 athas-github = { path = "../crates/github" }
@@ -78,6 +79,8 @@ url = "2.5"
 uuid = { version = "1.0", features = ["v4", "serde"] }
 walkdir = "2.5.0"
 which = "7.0"
+# The same wry Tauri runs on; browser tabs use it directly (see src/browser.rs).
+wry = { version = "0.57", default-features = false, features = ["os-webview"] }
 zip = "2.2"
 tempfile = "3.20.0"
 fontdb = "0.23.0"

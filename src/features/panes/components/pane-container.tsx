@@ -130,6 +130,11 @@ const BinaryFileViewer = lazy(() =>
     default: m.BinaryFileViewer,
   })),
 );
+const BrowserView = lazy(() =>
+  import("@/features/browser/components/browser-view").then((m) => ({
+    default: m.BrowserView,
+  })),
+);
 const TerminalTab = lazy(() =>
   import("@/features/terminal/components/terminal-tab").then((m) => ({
     default: m.TerminalTab,
@@ -223,31 +228,33 @@ function BufferPreviewCard({ buffer }: { buffer: PaneRenderBuffer }) {
   const summary =
     buffer.type === "terminal"
       ? "Terminal session"
-      : buffer.type === "pullRequest"
-        ? `Pull request #${buffer.prNumber}`
-        : buffer.type === "githubIssue"
-          ? `Issue #${buffer.issueNumber}`
-          : buffer.type === "githubAction"
-            ? `Workflow run #${buffer.runId}`
-            : buffer.type === "diff"
-              ? "Diff preview"
-              : buffer.type === "image"
-                ? "Image preview"
-                : buffer.type === "pdf"
-                  ? "PDF preview"
-                  : buffer.type === "binary"
-                    ? "Binary file preview"
-                    : buffer.type === "database"
-                      ? `${buffer.databaseType} viewer`
-                      : buffer.type === "externalEditor"
-                        ? "External editor session"
-                        : buffer.type === "globalSearch"
-                          ? "Search results"
-                          : buffer.type === "diagnostics"
-                            ? "Diagnostics"
-                            : buffer.type === "references"
-                              ? "References"
-                              : previewText || "No preview available";
+      : buffer.type === "browser"
+        ? buffer.url
+        : buffer.type === "pullRequest"
+          ? `Pull request #${buffer.prNumber}`
+          : buffer.type === "githubIssue"
+            ? `Issue #${buffer.issueNumber}`
+            : buffer.type === "githubAction"
+              ? `Workflow run #${buffer.runId}`
+              : buffer.type === "diff"
+                ? "Diff preview"
+                : buffer.type === "image"
+                  ? "Image preview"
+                  : buffer.type === "pdf"
+                    ? "PDF preview"
+                    : buffer.type === "binary"
+                      ? "Binary file preview"
+                      : buffer.type === "database"
+                        ? `${buffer.databaseType} viewer`
+                        : buffer.type === "externalEditor"
+                          ? "External editor session"
+                          : buffer.type === "globalSearch"
+                            ? "Search results"
+                            : buffer.type === "diagnostics"
+                              ? "Diagnostics"
+                              : buffer.type === "references"
+                                ? "References"
+                                : previewText || "No preview available";
 
   const previewLines = summary.split("\n").slice(0, 12);
 
@@ -954,6 +961,9 @@ export function PaneContainer({ pane }: PaneContainerProps) {
 
         case "agent":
           return <AgentTab buffer={buffer} isActive={isActivePane} />;
+
+        case "browser":
+          return <BrowserView buffer={buffer} paneId={pane.id} isActive={isActivePane} />;
 
         case "diff":
           return (

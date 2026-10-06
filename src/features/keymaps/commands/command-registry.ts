@@ -11,6 +11,12 @@ import {
 } from "@/features/panes/utils/pane-command-actions";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import {
+  focusBrowserAddressBar,
+  openNewBrowserTab,
+  openUrlInBrowserTab,
+  runActiveBrowserAction,
+} from "./browser-command-actions";
+import {
   restartDebugSession,
   startGeneratedDebugSession,
   stopDebugSession,
@@ -1304,8 +1310,59 @@ const agentEditCommands: Command[] = [
   },
 ];
 
+const browserCommands: Command[] = [
+  {
+    id: "browser.newTab",
+    title: "New Browser Tab",
+    category: "Browser",
+    execute: () => openNewBrowserTab(),
+  },
+  {
+    id: "browser.openUrl",
+    title: "Open URL in Browser Tab",
+    category: "Browser",
+    execute: openUrlInBrowserTab,
+  },
+  {
+    id: "browser.focusAddressBar",
+    title: "Focus Address Bar",
+    category: "Browser",
+    keybinding: "cmd+l",
+    execute: focusBrowserAddressBar,
+  },
+  {
+    id: "browser.reload",
+    title: "Reload Page",
+    category: "Browser",
+    keybinding: "cmd+r",
+    execute: () => runActiveBrowserAction("reload"),
+  },
+  {
+    id: "browser.back",
+    title: "Go Back",
+    category: "Browser",
+    keybinding: "cmd+[",
+    execute: () => runActiveBrowserAction("back"),
+  },
+  {
+    id: "browser.forward",
+    title: "Go Forward",
+    category: "Browser",
+    keybinding: "cmd+]",
+    execute: () => runActiveBrowserAction("forward"),
+  },
+  {
+    id: "browser.openDevTools",
+    title: "Open Page Developer Tools",
+    category: "Browser",
+    keybinding: "cmd+alt+i",
+    execute: () => runActiveBrowserAction("devtools"),
+  },
+];
+
 const allCommands: Command[] = [
   ...fileCommands,
+  ...browserCommands,
   ...editCommands,
   ...terminalCommands,
   ...lspCommands,

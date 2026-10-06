@@ -5,6 +5,11 @@
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 use app_setup::{configure_app, shutdown_background_services};
+use browser::{
+   browser_clear_data, browser_close, browser_close_window_tabs, browser_create, browser_focus,
+   browser_focus_workbench, browser_navigate, browser_open_devtools, browser_perform,
+   browser_set_bounds, browser_set_zoom,
+};
 use commands::*;
 use tauri::Manager;
 use tauri_plugin_window_state::StateFlags;
@@ -17,6 +22,7 @@ mod app_setup;
 #[cfg(debug_assertions)]
 mod bindings;
 mod bootstrap;
+mod browser;
 mod commands;
 mod file_events;
 mod logger;
@@ -73,6 +79,7 @@ fn main() {
       .on_window_event(|window, event| {
          if matches!(event, tauri::WindowEvent::Destroyed) {
             terminal::close_window_terminals(window.app_handle(), window.label());
+            browser::forget_window(window.app_handle(), window.label());
             commands::forget_window_watches(window.app_handle(), window.label());
          }
       })
@@ -303,6 +310,18 @@ pub(crate) fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
          set_native_window_appearance,
          set_window_transparency_enabled,
          reopen_current_webview_devtools,
+         // Browser tab commands
+         browser_create,
+         browser_set_bounds,
+         browser_navigate,
+         browser_perform,
+         browser_set_zoom,
+         browser_focus,
+         browser_focus_workbench,
+         browser_open_devtools,
+         browser_clear_data,
+         browser_close,
+         browser_close_window_tabs,
          // File watcher commands
          stop_watching,
          set_project_root,

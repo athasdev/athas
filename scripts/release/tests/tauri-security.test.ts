@@ -6,7 +6,11 @@ const repoRoot = path.resolve(import.meta.dirname, "../../..");
 const tauriDir = path.join(repoRoot, "src-tauri");
 
 type PermissionEntry = string | { identifier: string; allow?: Record<string, unknown>[] };
-type Capability = { identifier: string; permissions: PermissionEntry[] };
+type Capability = {
+  identifier: string;
+  permissions: PermissionEntry[];
+  remote?: { urls: string[] };
+};
 
 function readJson<T>(filePath: string): T {
   return JSON.parse(fs.readFileSync(filePath, "utf8")) as T;
@@ -69,6 +73,14 @@ describe("Tauri security surface", () => {
         const match = FORBIDDEN_PERMISSIONS.find((pattern) => pattern.test(id));
         expect(match, `${capability.identifier} grants ${id}`).toBeUndefined();
       }
+    }
+  });
+
+  it("gives remote pages no capabilities", () => {
+    // Browser tabs are wry webviews outside Tauri's webview manager and talk to the
+    // workbench only through their own bridge, so no capability needs remote URLs.
+    for (const capability of readCapabilities()) {
+      expect(capability.remote, `${capability.identifier} remote`).toBeUndefined();
     }
   });
 

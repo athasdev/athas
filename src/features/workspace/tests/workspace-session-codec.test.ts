@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import type {
+  BrowserContent,
   EditorContent,
   PaneContent,
   TerminalContent,
@@ -102,6 +103,37 @@ describe("workspace session codec", () => {
       workingDirectory: "/workspace",
       remoteConnectionId: "remote-1",
     });
+  });
+
+  it("encodes browser tabs with their address and zoom", () => {
+    const browser: BrowserContent = {
+      id: "browser-1",
+      type: "browser",
+      path: "browser://tab-1",
+      name: "Athas Docs",
+      isPinned: true,
+      isPreview: false,
+      isActive: true,
+      url: "https://athas.dev/docs",
+      favicon: "https://athas.dev/favicon.ico",
+      zoom: 1.25,
+    };
+
+    expect(encodeWorkspaceBuffer(browser, { workspaceRootPath: "/workspace" })).toEqual({
+      type: "browser",
+      path: "browser://tab-1",
+      name: "Athas Docs",
+      isPinned: true,
+      url: "https://athas.dev/docs",
+      zoom: 1.25,
+    });
+    expect(
+      buildWorkspaceBufferSnapshot({
+        buffers: [browser],
+        activeBufferId: browser.id,
+        workspaceRootPath: "/workspace",
+      }).activeBufferPath,
+    ).toBe("browser://tab-1");
   });
 
   it("rejects virtual editors and unsupported pane content", () => {

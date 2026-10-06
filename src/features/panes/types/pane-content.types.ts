@@ -19,6 +19,7 @@ export interface TokenEntry {
 export type PaneContentType =
   | "editor"
   | "terminal"
+  | "browser"
   | "agent"
   | "newTab"
   | "diff"
@@ -85,6 +86,14 @@ export interface TerminalContent extends PaneContentBase {
   initialCommand?: string;
   workingDirectory?: string;
   remoteConnectionId?: string;
+}
+
+export interface BrowserContent extends PaneContentBase {
+  type: "browser";
+  /** Address the tab shows; kept current as the page navigates so it survives restarts. */
+  url: string;
+  favicon?: string;
+  zoom?: number;
 }
 
 export interface AgentContent extends PaneContentBase {
@@ -257,6 +266,7 @@ interface OnboardingContent extends PaneContentBase {
 export type PaneContent =
   | EditorContent
   | TerminalContent
+  | BrowserContent
   | AgentContent
   | NewTabContent
   | DiffContent
@@ -299,6 +309,7 @@ export function isEditorContent(c: PaneContent): c is EditorContent {
 /** Content types that are virtual (not backed by a real file on disk). */
 const VIRTUAL_TYPES: ReadonlySet<PaneContentType> = new Set([
   "terminal",
+  "browser",
   "agent",
   "newTab",
   "pullRequest",
@@ -380,6 +391,14 @@ export type OpenContentSpec =
       workingDirectory?: string;
       remoteConnectionId?: string;
       sessionId?: string;
+      path?: string;
+    }
+  | {
+      type: "browser";
+      url?: string;
+      name?: string;
+      zoom?: number;
+      /** Restores a saved tab under its old path so the pane layout finds it again. */
       path?: string;
     }
   | { type: "agent"; sessionId?: string }

@@ -16,6 +16,7 @@ members = [
   "crates/fff-search",
   "crates/debugger",
   "crates/database",
+  "crates/browser",
 ]
 resolver = "2"
 

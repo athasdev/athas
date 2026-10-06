@@ -66,6 +66,11 @@ export function getEditorWorkspaceScope(
     : "external";
 }
 
+/** Saved buffer kinds this version restores; sessions from older versions may hold others. */
+export function isRestorableBufferSession(buffer: BufferSession): boolean {
+  return buffer.type === "editor" || buffer.type === "terminal" || buffer.type === "browser";
+}
+
 export function encodeWorkspaceBuffer(
   buffer: PaneContent,
   {
@@ -101,6 +106,17 @@ export function encodeWorkspaceBuffer(
     };
   }
 
+  if (buffer.type === "browser") {
+    return {
+      type: "browser",
+      path: buffer.path,
+      name: buffer.name,
+      isPinned: buffer.isPinned,
+      url: buffer.url,
+      zoom: buffer.zoom,
+    };
+  }
+
   return null;
 }
 
@@ -117,9 +133,7 @@ export function buildWorkspaceBufferSnapshot({
   const persistedBuffers = [
     ...openBuffers,
     ...pendingBuffers.filter(
-      (buffer) =>
-        (buffer.type === "editor" || buffer.type === "terminal") &&
-        !openBufferPaths.has(buffer.path),
+      (buffer) => isRestorableBufferSession(buffer) && !openBufferPaths.has(buffer.path),
     ),
   ];
   const activeBuffer = buffers.find((buffer) => buffer.id === activeBufferId);

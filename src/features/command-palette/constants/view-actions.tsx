@@ -8,6 +8,7 @@ import {
   ArrowRightIcon,
   ArrowUpIcon,
   BroomIcon,
+  GlobeIcon,
   ColumnsIcon,
   CopyIcon,
   ListIcon,
@@ -204,6 +205,30 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       action: () => {
         resetZoom("editor");
         onClose();
+      },
+    },
+    {
+      id: "browser-new-tab",
+      label: "Browser: New Browser Tab",
+      description: "Browse the web or a local server in a tab",
+      icon: <GlobeIcon />,
+      category: "Browser",
+      commandId: "browser.newTab",
+      action: () => {
+        onClose();
+        void keymapRegistry.executeCommand("browser.newTab");
+      },
+    },
+    {
+      id: "browser-open-url",
+      label: "Browser: Open URL...",
+      description: "Open an address or a web search in a new browser tab",
+      icon: <GlobeIcon />,
+      category: "Browser",
+      commandId: "browser.openUrl",
+      action: () => {
+        onClose();
+        void keymapRegistry.executeCommand("browser.openUrl");
       },
     },
     {

@@ -23,7 +23,16 @@ interface TerminalBufferSession {
   remoteConnectionId?: string;
 }
 
-export type BufferSession = EditorBufferSession | TerminalBufferSession;
+interface BrowserBufferSession {
+  type: "browser";
+  path: string;
+  name: string;
+  isPinned: boolean;
+  url: string;
+  zoom?: number;
+}
+
+export type BufferSession = EditorBufferSession | TerminalBufferSession | BrowserBufferSession;
 
 export interface WorkspaceFolderSession {
   path: string;

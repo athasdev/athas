@@ -109,7 +109,23 @@ const TabContextMenu = ({
       : []),
   ];
   const fileItems: MenuActionItem[] = [
-    ...(buffer.type !== "newTab"
+    ...(buffer.type === "browser"
+      ? [
+          {
+            id: "copy-address",
+            label: "Copy Address",
+            icon: <CopyIcon />,
+            onClick: async () => {
+              try {
+                await writeClipboardText(buffer.url);
+              } catch (error) {
+                console.error("Failed to copy address:", error);
+              }
+            },
+          },
+        ]
+      : []),
+    ...(buffer.type !== "newTab" && buffer.type !== "browser"
       ? [
           {
             id: "copy-path",

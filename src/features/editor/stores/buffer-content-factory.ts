@@ -43,6 +43,16 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         remoteConnectionId: spec.remoteConnectionId,
       };
     }
+    case "browser":
+      return {
+        ...base,
+        type: "browser",
+        path: spec.path ?? `browser://${id}`,
+        name: spec.name ?? "New Tab",
+        isPreview: false,
+        url: spec.url ?? "about:blank",
+        zoom: spec.zoom,
+      };
     case "agent":
       return {
         ...base,

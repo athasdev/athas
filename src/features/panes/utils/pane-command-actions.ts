@@ -10,7 +10,11 @@ import { getAllPaneGroups } from "./pane-tree";
 const getShareableSplitBufferId = (bufferId: string | null | undefined) => {
   if (!bufferId) return undefined;
   const activeBuffer = getBufferById(useBufferStore.getState().buffers, bufferId);
-  if (activeBuffer?.type === "terminal" || activeBuffer?.type === "agent") {
+  if (
+    activeBuffer?.type === "terminal" ||
+    activeBuffer?.type === "agent" ||
+    activeBuffer?.type === "browser"
+  ) {
     return undefined;
   }
 

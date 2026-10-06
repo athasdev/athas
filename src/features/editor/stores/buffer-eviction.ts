@@ -3,6 +3,7 @@ import { isDirtyContent, type PaneContent } from "@/features/panes/types/pane-co
 
 const AUTO_EVICTION_PROTECTED_TYPES = new Set<PaneContent["type"]>([
   "agent",
+  "browser",
   "externalEditor",
   "terminal",
 ]);

@@ -10,11 +10,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/ui/dropdown";
-import { FilePlusIcon, PlusIcon, SparkleIcon, TerminalWindowIcon } from "@/ui/icons";
+import { FilePlusIcon, GlobeIcon, PlusIcon, SparkleIcon, TerminalWindowIcon } from "@/ui/icons";
 
 export function NewTabMenu({ paneId }: { paneId: string }) {
   const { setActivePane } = usePaneStore.use.actions();
-  const { openBuffer, openTerminalBuffer } = useBufferStore.use.actions();
+  const { openBuffer, openBrowserBuffer, openTerminalBuffer } = useBufferStore.use.actions();
   const terminalEnabled = useSettingsStore((state) => state.settings.coreFeatures.terminal);
   const openAgent = useNewAgentAction();
 
@@ -50,6 +50,10 @@ export function NewTabMenu({ paneId }: { paneId: string }) {
         >
           <FilePlusIcon />
           New File
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => createInPane(() => openBrowserBuffer())}>
+          <GlobeIcon />
+          New Browser Tab
         </DropdownMenuItem>
         {terminalEnabled && (
           <DropdownMenuItem onClick={() => createInPane(openTerminalBuffer)}>

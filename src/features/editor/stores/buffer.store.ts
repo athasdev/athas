@@ -44,6 +44,7 @@ import type {
   GitHubActionOpenTarget,
   OpenContentSpec,
   PaneContent,
+  BrowserContent,
   TerminalContent,
   TokenEntry,
 } from "@/features/panes/types/pane-content.types";
@@ -175,6 +176,7 @@ interface BufferActions {
     sessionId?: string;
   }) => string;
   openAgentBuffer: (sessionId?: string) => string;
+  openBrowserBuffer: (url?: string) => string;
   openGlobalSearchBuffer: () => string;
   openDiagnosticsBuffer: () => string;
   openReferencesBuffer: () => string;
@@ -208,6 +210,10 @@ interface BufferActions {
   markBufferSaved: (bufferId: string, content: string, path?: string) => void;
   updateBufferPath: (bufferId: string, newPath: string) => void;
   updateBuffer: (updatedBuffer: PaneContent) => void;
+  updateBrowserBuffer: (
+    bufferId: string,
+    patch: Partial<Pick<BrowserContent, "url" | "name" | "favicon" | "zoom">>,
+  ) => void;
   handleTabClick: (bufferId: string) => void;
   handleTabClose: (bufferId: string) => void;
   handleTabPin: (bufferId: string) => void;
@@ -423,6 +429,13 @@ const scheduleExtensionSupportCheck = (path: string) => {
   globalThis.setTimeout(() => checkExtensionSupport(path), 50);
 };
 
+function closeBrowserTabs(bufferIds: string[]) {
+  if (bufferIds.length === 0) return;
+  void import("@/features/browser/services/browser-tab-manager").then(({ browserTabManager }) => {
+    for (const bufferId of bufferIds) browserTabManager.close(bufferId);
+  });
+}
+
 const createBufferStore = (workspaceId: string) => {
   const paneStore = usePaneStore.getStore(workspaceId);
   const applyAutoEviction = (
@@ -583,6 +596,30 @@ const createBufferStore = (workspaceId: string) => {
               }) as TerminalContent;
               newBuffer.path = path;
               newBuffer.name = displayName;
+
+              set((state) => {
+                state.buffers = [...deactivateBuffers(newBuffers), newBuffer];
+                state.activeBufferId = newBuffer.id;
+              });
+
+              syncBufferToPane(newBuffer.id);
+              saveWorkspaceSession(get().buffers, get().activeBufferId);
+              return newBuffer.id;
+            }
+
+            case "browser": {
+              if (spec.path) {
+                const existing = buffers.find((b) => b.type === "browser" && b.path === spec.path);
+                if (existing) {
+                  return activateExistingBuffer(existing.id);
+                }
+              }
+
+              let newBuffers = closeNewTabInActivePane([...buffers]);
+              newBuffers = applyAutoEviction(newBuffers, maxOpenTabs);
+
+              const path = spec.path ?? `browser://${crypto.randomUUID()}`;
+              const newBuffer = createPaneContent(generateBufferId(path), { ...spec, path });
 
               set((state) => {
                 state.buffers = [...deactivateBuffers(newBuffers), newBuffer];
@@ -1056,6 +1093,10 @@ const createBufferStore = (workspaceId: string) => {
           return get().actions.openContent({ type: "agent", sessionId });
         },
 
+        openBrowserBuffer: (url?: string): string => {
+          return get().actions.openContent({ type: "browser", url });
+        },
+
         openGlobalSearchBuffer: (): string => {
           return get().actions.openContent({ type: "globalSearch" });
         },
@@ -1159,6 +1200,10 @@ const createBufferStore = (workspaceId: string) => {
             });
           }
 
+          if (closedBuffer.type === "browser") {
+            closeBrowserTabs([closedBuffer.id]);
+          }
+
           // Stop LSP for this file (only for real editor files)
           if (shouldStartLsp(closedBuffer)) {
             import("@/features/editor/lsp/lsp-client")
@@ -1224,6 +1269,11 @@ const createBufferStore = (workspaceId: string) => {
               : null;
 
           bufferIds.forEach((id) => removeBufferFromPanes(id));
+          closeBrowserTabs(
+            buffers
+              .filter((buffer) => buffer.type === "browser" && closingBufferIds.has(buffer.id))
+              .map((buffer) => buffer.id),
+          );
 
           set((state) => {
             state.buffers = state.buffers.filter((b) => !closingBufferIds.has(b.id));
@@ -1487,6 +1537,23 @@ const createBufferStore = (workspaceId: string) => {
               buffer.language = detectLanguageFromFileName(newName);
             }
           });
+        },
+
+        updateBrowserBuffer: (bufferId, patch) => {
+          const buffer = getBufferById(get().buffers, bufferId);
+          if (buffer?.type !== "browser") return;
+          const changed = (Object.keys(patch) as (keyof typeof patch)[]).filter(
+            (key) => patch[key] !== buffer[key],
+          );
+          if (changed.length === 0) return;
+
+          set((state) => {
+            const target = getBufferById(state.buffers, bufferId);
+            if (target?.type === "browser") Object.assign(target, patch);
+          });
+          if (changed.some((key) => key !== "favicon")) {
+            saveWorkspaceSession(get().buffers, get().activeBufferId);
+          }
         },
 
         updateBuffer: (updatedBuffer: PaneContent) => {
