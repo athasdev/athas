@@ -46,6 +46,7 @@ pub fn configure_app(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Err
       log::warn!("Failed to install macOS Services provider: {error}");
    }
    register_managed_state(app);
+   allow_dev_bundled_extension_assets(app);
    emit_cli_open_requests(app);
    configure_initial_window(app);
    listen_for_deep_links(app);
@@ -115,6 +116,18 @@ fn register_managed_state(app: &mut tauri::App) {
    app.manage(commands::development::docker::DockerLogStreams::default());
    app.manage(commands::development::cli_args::PendingCliOpenRequests::default());
    app.manage(commands::development::deep_links::PendingDeepLinks::default());
+}
+
+/// Production builds serve bundled extensions from `$RESOURCE`, which the static
+/// asset scope already covers. Development builds read them from the source
+/// tree instead, so that directory is allowed explicitly.
+fn allow_dev_bundled_extension_assets(app: &tauri::App) {
+   if !cfg!(debug_assertions) {
+      return;
+   }
+   if let Ok(path) = commands::get_bundled_extensions_path(app.handle().clone()) {
+      commands::allow_internal_asset_directory(app.handle(), std::path::Path::new(&path));
+   }
 }
 
 fn listen_for_deep_links(app: &tauri::App) {

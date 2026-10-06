@@ -155,9 +155,7 @@ export function PdfViewer({ filePath }: PdfViewerProps) {
     try {
       await commands.openFileExternal(filePath);
     } catch (err) {
-      console.error("Failed to open external viewer (rust):", err);
-      // Fallback to opener plugin just in case
-      await openUrl(filePath).catch((e) => console.error("Fallback open failed:", e));
+      console.error("Failed to open the PDF in the system viewer:", err);
     }
   };
 

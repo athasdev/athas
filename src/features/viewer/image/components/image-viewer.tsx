@@ -1,4 +1,3 @@
-import { convertFileSrc } from "@tauri-apps/api/core";
 import { ArrowDownIcon, ArrowUpIcon, XIcon } from "@/ui/icons";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
@@ -36,6 +35,7 @@ import { cn } from "@/utils/cn";
 import { formatFileSize } from "@/utils/format-file-size";
 import { getImageMimeType } from "@/utils/image-file-types";
 import { ImageContextMenu } from "./image-context-menu";
+import { resolveAssetUrl } from "@/utils/asset-access";
 
 interface ImageViewerProps {
   filePath: string;
@@ -114,7 +114,7 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
       } catch (error) {
         console.error("Failed to load image:", error);
         try {
-          await applyImageSource(convertFileSrc(filePath));
+          await applyImageSource(await resolveAssetUrl(filePath));
         } catch (fallbackError) {
           if (cancelled) return;
           setLoadError(

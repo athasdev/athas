@@ -1,4 +1,4 @@
-import { open } from "@tauri-apps/plugin-shell";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { ClipboardAddon, type ClipboardSelectionType } from "@xterm/addon-clipboard";
 import { FitAddon } from "@xterm/addon-fit";
 import { ImageAddon } from "@xterm/addon-image";
@@ -115,7 +115,7 @@ function reportRendererFallback(reason: "unavailable" | "context-loss", error?: 
 export function openExternalTerminalLink(uri: string): void {
   const target = resolveExternalLinkTarget(uri);
   if (!target) return;
-  open(target).catch((error) => console.error("Failed to open link:", error));
+  openUrl(target).catch((error) => console.error("Failed to open link:", error));
 }
 
 interface TerminalLinkOptions {

@@ -5,7 +5,11 @@ import { getBufferById, getBufferByPath } from "@/features/editor/utils/buffer-i
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { hasTextContent } from "@/features/panes/types/pane-content.types";
 import { Empty, EmptyDescription } from "@/ui/empty";
-import { buildHtmlPreviewDocument } from "@/features/editor/utils/html-preview-document";
+import {
+  buildHtmlPreviewDocument,
+  getHtmlPreviewAssetDirectories,
+} from "@/features/editor/utils/html-preview-document";
+import { ensureAssetAccess } from "@/utils/asset-access";
 
 export function HtmlPreview() {
   const { hasSourceBuffer, sourceContent, sourcePath } = useBufferStore(
@@ -29,7 +33,15 @@ export function HtmlPreview() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setIframeContent(buildHtmlPreviewDocument(sourceContent, { sourcePath, rootFolderPath }));
+    let cancelled = false;
+    const directories = getHtmlPreviewAssetDirectories({ sourcePath, rootFolderPath });
+    void Promise.all(directories.map(ensureAssetAccess)).then(() => {
+      if (cancelled) return;
+      setIframeContent(buildHtmlPreviewDocument(sourceContent, { sourcePath, rootFolderPath }));
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [sourceContent, sourcePath, rootFolderPath]);
 
   if (!hasSourceBuffer) {

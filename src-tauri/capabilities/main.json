@@ -1,11 +1,10 @@
 {
   "$schema": "https://schema.tauri.app/config/2/capability",
   "identifier": "main-capability",
-  "description": "Capability for all windows",
+  "description": "Capability for all windows. Plugin access is limited to the commands the frontend calls; guarded by scripts/release/tests/tauri-security.test.ts.",
   "windows": ["*"],
   "permissions": [
     "core:default",
-    "core:window:default",
     "core:window:allow-close",
     "core:window:allow-destroy",
     "core:window:allow-set-focus",
@@ -17,96 +16,70 @@
     "core:window:allow-start-resize-dragging",
     "core:window:allow-set-always-on-top",
     "core:window:allow-toggle-maximize",
-    "core:event:default",
+    "core:window:allow-set-title",
+    "core:window:allow-set-badge-count",
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        { "url": "https://*" },
+        { "url": "http://*" },
+        { "url": "mailto:*" },
+        { "url": "tel:*" }
+      ]
+    },
     "opener:allow-reveal-item-in-dir",
-    "opener:default",
-    "window-state:default",
-    "clipboard-manager:default",
     "clipboard-manager:allow-read-text",
     "clipboard-manager:allow-write-text",
     "dialog:allow-open",
     "dialog:allow-save",
-    "dialog:allow-message",
-    "dialog:allow-confirm",
-    "dialog:allow-ask",
-    "fs:default",
     {
       "identifier": "fs:scope",
-      "allow": [
-        {
-          "path": "**"
-        }
-      ],
+      "allow": [{ "path": "**" }],
       "requireLiteralLeadingDot": false
     },
+    "fs:deny-default",
     "fs:allow-read-file",
-    "fs:allow-read-text-file",
-    "fs:allow-write-file",
     "fs:allow-read-dir",
     "fs:allow-exists",
-    "fs:allow-mkdir",
+    "fs:allow-write-file",
     "fs:allow-write-text-file",
-    "fs:allow-remove",
     "fs:allow-copy-file",
     {
-      "identifier": "http:default",
+      "identifier": "http:allow-fetch",
       "allow": [
-        {
-          "url": "https://athas.dev/**"
-        },
-        {
-          "url": "https://api.openai.com/**"
-        },
-        {
-          "url": "https://openrouter.ai/**"
-        },
-        {
-          "url": "http://localhost:3000/**"
-        },
-        {
-          "url": "http://127.0.0.1:3000/**"
-        },
-        {
-          "url": "https://generativelanguage.googleapis.com/**"
-        },
-        {
-          "url": "http://*:*/**"
-        },
-        {
-          "url": "https://*:*/**"
-        },
-        {
-          "url": "http://localhost:*/**"
-        },
-        {
-          "url": "http://127.0.0.1:*/**"
-        },
-        {
-          "url": "https://localhost:*/**"
-        },
-        {
-          "url": "https://127.0.0.1:*/**"
-        }
+        { "url": "https://athas.dev/**" },
+        { "url": "https://api.openai.com/**" },
+        { "url": "https://openrouter.ai/**" },
+        { "url": "http://localhost:3000/**" },
+        { "url": "http://127.0.0.1:3000/**" },
+        { "url": "https://generativelanguage.googleapis.com/**" },
+        { "url": "http://*:*/**" },
+        { "url": "https://*:*/**" },
+        { "url": "http://localhost:*/**" },
+        { "url": "http://127.0.0.1:*/**" },
+        { "url": "https://localhost:*/**" },
+        { "url": "https://127.0.0.1:*/**" }
       ]
     },
-    "http:allow-fetch",
+    "http:allow-fetch-send",
+    "http:allow-fetch-read-body",
+    "http:allow-fetch-cancel",
+    "http:allow-fetch-cancel-body",
     "notification:allow-is-permission-granted",
     "notification:allow-request-permission",
     "notification:allow-notify",
-    "core:window:allow-set-badge-count",
     "process:allow-restart",
     "process:allow-exit",
-    {
-      "identifier": "shell:allow-open",
-      "allow": [
-        {
-          "validator": "^(https?://|file://|mailto:).*"
-        }
-      ]
-    },
-    "store:default",
-    "deep-link:default",
+    "store:allow-load",
+    "store:allow-get",
+    "store:allow-set",
+    "store:allow-has",
+    "store:allow-delete",
+    "store:allow-keys",
+    "store:allow-entries",
+    "store:allow-save",
     "drag:allow-start-drag",
-    "updater:default"
+    "updater:allow-check",
+    "updater:allow-download-and-install"
   ]
 }

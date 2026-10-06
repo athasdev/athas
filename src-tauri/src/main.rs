@@ -90,7 +90,6 @@ fn main() {
       )
       .plugin(tauri_plugin_fs::init())
       .plugin(tauri_plugin_dialog::init())
-      .plugin(tauri_plugin_shell::init())
       .plugin(tauri_plugin_opener::init())
       .plugin(tauri_plugin_os::init())
       .plugin(tauri_plugin_http::init())
@@ -140,6 +139,7 @@ pub(crate) fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
          write_local_file,
          delete_local_file_checked,
          get_local_directory_size,
+         allow_asset_path::<tauri::Wry>,
          open_file_external,
          toggle_quick_look,
          show_share_picker,

@@ -18,7 +18,7 @@ function getHttpScopeUrls() {
   const capability = JSON.parse(readFileSync(capabilityPath, "utf8")) as Capability;
   const httpScope = capability.permissions.find(
     (permission): permission is Extract<CapabilityPermission, { identifier?: string }> =>
-      typeof permission === "object" && permission.identifier === "http:default",
+      typeof permission === "object" && permission.identifier === "http:allow-fetch",
   );
 
   return httpScope?.allow?.map((entry) => entry.url).filter(Boolean) ?? [];

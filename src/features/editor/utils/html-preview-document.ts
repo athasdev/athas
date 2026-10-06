@@ -159,6 +159,18 @@ function injectBaseTag(content: string, baseUrl: string): string {
   return `${baseTag}\n${content}`;
 }
 
+/** Directories the preview loads `asset:` URLs from; they must be allowed before rendering. */
+export function getHtmlPreviewAssetDirectories({
+  sourcePath,
+  rootFolderPath,
+}: Pick<BuildHtmlPreviewDocumentOptions, "sourcePath" | "rootFolderPath">): string[] {
+  if (!sourcePath) return [];
+  const directories = [getDirName(sourcePath), rootFolderPath].filter(
+    (directory): directory is string => Boolean(directory),
+  );
+  return [...new Set(directories)];
+}
+
 export function buildHtmlPreviewDocument(
   sourceContent: string,
   {

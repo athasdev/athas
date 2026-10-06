@@ -1,6 +1,7 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { readDir } from "@tauri-apps/plugin-fs";
 import { matchesSearchQuery } from "@/utils/search-match";
+import { ensureAssetAccess } from "@/utils/asset-access";
 
 export interface ProjectIconFile {
   name: string;
@@ -117,6 +118,7 @@ export async function scanProjectIconFiles(projectPath: string): Promise<Project
     }
   }
 
+  await ensureAssetAccess(projectPath);
   await scanDirectory(projectPath, 0);
 
   return results.sort((left, right) => {

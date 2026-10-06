@@ -1,6 +1,6 @@
 import "./styles.css";
 import { exists } from "@tauri-apps/plugin-fs";
-import { open } from "@tauri-apps/plugin-shell";
+import { openExternalBrowserUrl } from "@/features/window/utils/external-navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { editorAPI } from "@/features/editor/extensions/api";
@@ -183,7 +183,7 @@ export function MarkdownPreview({
 
       if (isExternalLink) {
         try {
-          await open(href);
+          await openExternalBrowserUrl(href);
         } catch (error) {
           logger.error("MarkdownPreview", "Failed to open external link:", error);
         }

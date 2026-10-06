@@ -1,4 +1,4 @@
-import { convertFileSrc } from "@tauri-apps/api/core";
+import { useAssetUrl } from "@/features/window/hooks/use-asset-url";
 import { findProjectSymbol, getProjectIconCategory } from "@/features/window/utils/project-symbols";
 import { FolderIcon } from "@/ui/icons";
 import { cn } from "@/utils/cn";
@@ -14,6 +14,8 @@ export function ProjectCustomIcon({
   imageClassName?: string;
 }) {
   const symbol = findProjectSymbol(value);
+  const isImageFile = getProjectIconCategory(value) === "files";
+  const imageSrc = useAssetUrl(isImageFile ? value : null);
   if (symbol?.emoji) {
     return (
       <span
@@ -31,11 +33,12 @@ export function ProjectCustomIcon({
     const Icon = symbol.icon;
     return <Icon aria-hidden="true" className={cn("size-[1em] shrink-0", className)} />;
   }
-  if (getProjectIconCategory(value) !== "files")
-    return <FolderIcon aria-hidden="true" className={className} />;
+  if (!isImageFile) return <FolderIcon aria-hidden="true" className={className} />;
+  if (!imageSrc)
+    return <span aria-hidden="true" className={cn("size-[1em] shrink-0", className)} />;
   return (
     <img
-      src={convertFileSrc(value)}
+      src={imageSrc}
       alt=""
       className={cn("size-[1em] shrink-0 rounded-md object-contain", className, imageClassName)}
     />

@@ -1,11 +1,20 @@
+// @vitest-environment jsdom
 import { convertFileSrc } from "@tauri-apps/api/core";
+import { act } from "react";
+import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
+import { commands } from "@/bindings/commands";
 import { ProjectCustomIcon } from "../components/project-custom-icon";
 
 vi.mock("@tauri-apps/api/core", () => ({
   convertFileSrc: vi.fn((path: string) => `asset://${path}`),
 }));
+vi.mock("@/bindings/commands", () => ({
+  commands: { allowAssetPath: vi.fn(async () => null) },
+}));
+
+Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
 describe("custom project icon rendering", () => {
   beforeEach(() => vi.clearAllMocks());
@@ -24,11 +33,17 @@ describe("custom project icon rendering", () => {
     expect(convertFileSrc).not.toHaveBeenCalled();
   });
 
-  it("continues loading existing project image files through Tauri", () => {
-    const markup = renderToStaticMarkup(<ProjectCustomIcon value="/project/logo.png" />);
+  it("allows project image files in the asset scope before loading them", async () => {
+    const container = document.createElement("div");
+    const root = createRoot(container);
+    await act(async () => {
+      root.render(<ProjectCustomIcon value="/project/logo.png" />);
+    });
+
+    expect(commands.allowAssetPath).toHaveBeenCalledWith("/project/logo.png");
     expect(convertFileSrc).toHaveBeenCalledWith("/project/logo.png");
-    expect(markup).toContain('src="asset:///project/logo.png"');
-    expect(markup).toContain("<img");
+    expect(container.querySelector("img")?.getAttribute("src")).toBe("asset:///project/logo.png");
+    act(() => root.unmount());
   });
 
   it("falls back safely for symbols absent from the current catalog", () => {

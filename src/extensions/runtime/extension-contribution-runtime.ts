@@ -72,10 +72,6 @@ function resolveIcon(
     return { url: convertFileSrc(`${extensionPath}/${definition.slice(2)}`) };
   }
 
-  if (definition.startsWith("/")) {
-    return { url: convertFileSrc(definition) };
-  }
-
   return {};
 }
 

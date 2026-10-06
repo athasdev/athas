@@ -25,6 +25,11 @@ export const commands = {
     __TAURI_INVOKE<null>("delete_local_file_checked", { path, expectedContent }),
   getLocalDirectorySize: (path: string) =>
     __TAURI_INVOKE<number>("get_local_directory_size", { path }),
+  /**
+   *  Allow `path` to be served through the asset protocol. Directories are
+   *  allowed recursively; files are allowed individually.
+   */
+  allowAssetPath: (path: string) => __TAURI_INVOKE<null>("allow_asset_path", { path }),
   openFileExternal: (path: string) => __TAURI_INVOKE<null>("open_file_external", { path }),
   toggleQuickLook: (path: string) => __TAURI_INVOKE<null>("toggle_quick_look", { path }),
   showSharePicker: (path: string) => __TAURI_INVOKE<null>("show_share_picker", { path }),
