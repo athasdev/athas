@@ -26,7 +26,7 @@ use anyhow::{Result, bail};
 use athas_terminal::TerminalManager;
 use serde_json::json;
 use std::{
-   collections::VecDeque,
+   collections::{HashMap, VecDeque},
    path::{Path, PathBuf},
    process::Stdio,
    sync::Arc,
@@ -40,6 +40,12 @@ use tokio_util::{
    compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt},
    sync::CancellationToken,
 };
+
+/// Environment Athas adds to an agent's process from settings kept outside its config, such as a
+/// provider key from the keychain, by agent id. It stays out of `AgentConfig` so the frontend
+/// never sees it, and is read at each start, so a changed key applies the next time the agent
+/// starts.
+pub type AgentLaunchEnv = Arc<dyn Fn(&str) -> HashMap<String, String> + Send + Sync>;
 
 /// An agent process that finished `initialize` and can hold sessions.
 pub(super) struct StartedConnection {
@@ -107,18 +113,19 @@ pub(super) struct StartupAuth {
 /// that startup was stopped.
 pub(super) async fn start_connection(
    config: &AgentConfig,
+   launch_env: HashMap<String, String>,
    workspace_path: Option<PathBuf>,
    app_handle: AppHandle,
    terminal_manager: Arc<TerminalManager>,
    traffic: TrafficInspector,
    stop: CancellationToken,
 ) -> Result<StartedConnection> {
-   let mut child = spawn_agent_process(config, workspace_path.as_deref())?;
+   let mut child = spawn_agent_process(config, &launch_env, workspace_path.as_deref())?;
    let tap = traffic.start_process(
       &config.id,
       &config.name,
       workspace_path.as_deref(),
-      secret_env_values(&config.env_vars),
+      secret_env_values(launch_env.iter().chain(&config.env_vars)),
    );
    let process_group_id = child.id();
    let stdin = child
@@ -400,19 +407,45 @@ fn configure_background_agent_command(command: &mut Command) {
    }
 }
 
-fn spawn_agent_process(config: &AgentConfig, workspace_path: Option<&Path>) -> Result<Child> {
+/// Flags an agent is always started with, whatever its manifest or registry entry says. They are
+/// kept out of `AgentConfig::args` because terminal sign-in runs the agent's command with those
+/// args, and the wrapped CLI rejects flags it does not know.
+///
+/// The Claude adapter's `--hide-claude-auth` leaves out claude.ai subscription sign-in and refuses
+/// sessions signed in with a subscription: Anthropic does not allow third-party apps to offer
+/// Claude.ai login or route requests through Free, Pro or Max plan credentials.
+const LAUNCH_ONLY_ARGS: &[(&str, &[&str])] = &[("claude-acp", &["--hide-claude-auth"])];
+
+fn launch_args(config: &AgentConfig) -> Vec<String> {
+   let mut args = config.args.clone();
+   if let Some((_, extra)) = LAUNCH_ONLY_ARGS.iter().find(|(id, _)| *id == config.id) {
+      for arg in *extra {
+         if !args.iter().any(|existing| existing == arg) {
+            args.push((*arg).to_string());
+         }
+      }
+   }
+   args
+}
+
+fn spawn_agent_process(
+   config: &AgentConfig,
+   launch_env: &HashMap<String, String>,
+   workspace_path: Option<&Path>,
+) -> Result<Child> {
    let binary = config.binary_path.as_deref().unwrap_or(&config.binary_name);
+   let args = launch_args(config);
    log::info!(
       "Starting agent '{}' (binary: {}, resolved: {}, args: {:?})",
       config.name,
       config.binary_name,
       binary,
-      config.args
+      args
    );
 
    let mut cmd = Command::new(binary);
    configure_background_agent_command(&mut cmd);
-   cmd.args(&config.args)
+   cmd.args(&args)
       .stdin(Stdio::piped())
       .stdout(Stdio::piped())
       .stderr(Stdio::piped());
@@ -423,7 +456,8 @@ fn spawn_agent_process(config: &AgentConfig, workspace_path: Option<&Path>) -> R
       cmd.env("PATH", format!("{current}:{shell_path}"));
    }
 
-   for (key, value) in &config.env_vars {
+   // The agent's own config comes last, so an env var it sets explicitly wins.
+   for (key, value) in launch_env.iter().chain(&config.env_vars) {
       cmd.env(key, value);
    }
 
@@ -971,6 +1005,19 @@ mod tests {
       };
       let request = serde_json::to_value(new_session_request("/work/app".into(), scope)).unwrap();
       assert!(request.get("additionalDirectories").is_none());
+   }
+
+   #[test]
+   fn the_claude_adapter_always_starts_without_subscription_sign_in() {
+      let claude = AgentConfig::new("claude-acp", "Claude Agent", "claude-agent-acp");
+      assert_eq!(launch_args(&claude), vec!["--hide-claude-auth".to_string()]);
+
+      // A registry entry that already passes the flag does not get it twice.
+      let claude = claude.with_args(vec!["--hide-claude-auth"]);
+      assert_eq!(launch_args(&claude), vec!["--hide-claude-auth".to_string()]);
+
+      let gemini = AgentConfig::new("gemini-cli", "Gemini CLI", "gemini").with_args(vec!["--acp"]);
+      assert_eq!(launch_args(&gemini), vec!["--acp".to_string()]);
    }
 
    #[test]

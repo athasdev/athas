@@ -6,7 +6,7 @@ pub mod mcp_stdio;
 
 pub use acp::{
    AcpAgentBridge, AcpAgentStatus, AcpOpenedSession, AcpSessionInfo, AcpSessionList, AgentConfig,
-   AgentRuntime, AgentSource, McpServerConfig, McpServerSecrets, McpServerSetting,
+   AgentLaunchEnv, AgentRuntime, AgentSource, McpServerConfig, McpServerSecrets, McpServerSetting,
    RegistryAgentInfo, SessionConfigValue,
 };
 pub use chat_history::{

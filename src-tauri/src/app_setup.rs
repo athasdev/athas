@@ -103,6 +103,7 @@ fn register_managed_state(app: &mut tauri::App) {
    let acp_bridge = Arc::new(Mutex::new(AcpAgentBridge::new(
       app.handle().clone(),
       terminal_manager,
+      commands::agent_launch_env(app.handle().clone()),
    )));
    app.manage(acp_bridge);
    app.manage(CodexAppServer::new(app.handle().clone()));

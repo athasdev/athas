@@ -16,6 +16,14 @@ pub async fn store_ai_provider_token(
    store_secret(&app, &provider_key(&provider_id), &token)
 }
 
+/// The token saved for `provider_id`, if any.
+pub(crate) fn ai_provider_token(
+   app: &tauri::AppHandle,
+   provider_id: &str,
+) -> Result<Option<String>, String> {
+   get_secret(app, &provider_key(provider_id))
+}
+
 /// Get an AI provider token
 #[command]
 #[specta::specta]
@@ -23,7 +31,7 @@ pub async fn get_ai_provider_token(
    app: tauri::AppHandle,
    provider_id: String,
 ) -> Result<Option<String>, String> {
-   get_secret(&app, &provider_key(&provider_id))
+   ai_provider_token(&app, &provider_id)
 }
 
 /// Remove an AI provider token

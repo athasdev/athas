@@ -1,7 +1,7 @@
 use super::{
    auth::{ACP_AUTHENTICATE_TIMEOUT, authenticate_method, automatic_auth_method},
    bridge_commands::{AcpCommand, OpenRequest, WorkerFollowUp, run_worker_loop},
-   bridge_init::{ConnectionHandle, SessionTarget, StartedConnection},
+   bridge_init::{AgentLaunchEnv, ConnectionHandle, SessionTarget, StartedConnection},
    bridge_prompt::{PromptAuth, run_prompt},
    client::{AthasAcpClient, ClientResponders, PermissionResponse},
    config::AgentRegistry,
@@ -180,6 +180,7 @@ pub(super) struct AcpWorker {
    logged_out_agents: Rc<RefCell<HashSet<String>>>,
    responders: ResponderRegistry,
    traffic: TrafficInspector,
+   launch_env: AgentLaunchEnv,
    followup_tx: mpsc::UnboundedSender<WorkerFollowUp>,
 }
 
@@ -188,6 +189,7 @@ impl AcpWorker {
       app_handle: AppHandle,
       responders: ResponderRegistry,
       traffic: TrafficInspector,
+      launch_env: AgentLaunchEnv,
       followup_tx: mpsc::UnboundedSender<WorkerFollowUp>,
    ) -> Self {
       Self {
@@ -199,6 +201,7 @@ impl AcpWorker {
          logged_out_agents: Rc::default(),
          responders,
          traffic,
+         launch_env,
          followup_tx,
       }
    }
@@ -209,6 +212,10 @@ impl AcpWorker {
 
    pub(super) fn traffic(&self) -> TrafficInspector {
       self.traffic.clone()
+   }
+
+   pub(super) fn launch_env(&self, agent_id: &str) -> HashMap<String, String> {
+      (self.launch_env)(agent_id)
    }
 
    fn emit(&self, event: AcpEvent) {
@@ -930,7 +937,11 @@ pub struct AcpAgentBridge {
 }
 
 impl AcpAgentBridge {
-   pub fn new(app_handle: AppHandle, terminal_manager: Arc<TerminalManager>) -> Self {
+   pub fn new(
+      app_handle: AppHandle,
+      terminal_manager: Arc<TerminalManager>,
+      launch_env: AgentLaunchEnv,
+   ) -> Self {
       let mut registry = AgentRegistry::new(&app_handle);
       registry.detect_installed();
 
@@ -961,6 +972,7 @@ impl AcpAgentBridge {
                worker_app_handle,
                worker_responders,
                worker_traffic,
+               launch_env,
             )
             .await;
          });

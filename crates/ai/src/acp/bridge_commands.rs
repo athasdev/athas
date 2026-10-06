@@ -1,7 +1,8 @@
 use super::{
    bridge::{AcpWorker, ResponderRegistry, Shutdown, connection_key},
    bridge_init::{
-      ACP_STARTUP_STOPPED, OpenedSession, SessionTarget, StartedConnection, start_connection,
+      ACP_STARTUP_STOPPED, AgentLaunchEnv, OpenedSession, SessionTarget, StartedConnection,
+      start_connection,
    },
    mcp_servers::McpServerConfig,
    sessions::{ConnectionKey, Startups},
@@ -191,10 +192,12 @@ fn join_startup(
    }
    let app_handle = worker.app_handle();
    let traffic = worker.traffic();
+   let launch_env = worker.launch_env(&config.id);
    let followup_tx = followup_tx.clone();
    tokio::task::spawn_local(async move {
       let result = start_connection(
          &config,
+         launch_env,
          key.workspace_path.clone(),
          app_handle,
          terminal_manager,
@@ -217,9 +220,16 @@ pub(super) async fn run_worker_loop(
    app_handle: AppHandle,
    responders: ResponderRegistry,
    traffic: TrafficInspector,
+   launch_env: AgentLaunchEnv,
 ) {
    let (followup_tx, mut followup_rx) = mpsc::unbounded_channel::<WorkerFollowUp>();
-   let mut worker = AcpWorker::new(app_handle, responders, traffic, followup_tx.clone());
+   let mut worker = AcpWorker::new(
+      app_handle,
+      responders,
+      traffic,
+      launch_env,
+      followup_tx.clone(),
+   );
    let mut startups = Startups::<StartupWaiter>::default();
    let mut health_check = tokio::time::interval(std::time::Duration::from_secs(1));
    health_check.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);

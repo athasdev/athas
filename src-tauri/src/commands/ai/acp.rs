@@ -3,11 +3,12 @@ use super::{
       install_registry_agent, installs_from_registry, registry_snapshot, remove_registry_install,
    },
    mcp::resolve_mcp_servers,
+   tokens::ai_provider_token,
 };
 use crate::service_urls;
 use athas_ai::{
-   AcpAgentBridge, AcpAgentStatus, AcpOpenedSession, AcpSessionList, AgentConfig, AgentRuntime,
-   AgentSource, McpServerSetting, SessionConfigValue,
+   AcpAgentBridge, AcpAgentStatus, AcpOpenedSession, AcpSessionList, AgentConfig, AgentLaunchEnv,
+   AgentRuntime, AgentSource, McpServerSetting, SessionConfigValue,
    acp::registry::{catalog::merge_registry_agents, current_registry_platform},
 };
 use athas_runtime::{RuntimeManager, RuntimeType};
@@ -38,6 +39,34 @@ const BUNDLED_AGENT_MANIFESTS: &[&str] = &[
 
 fn is_acp_agent_id(agent_id: &str) -> bool {
    !NON_ACP_AGENT_IDS.contains(&agent_id)
+}
+
+/// Provider keys from Athas's AI settings that an ACP agent is started with, as (agent id,
+/// provider id, env var). With the user's Anthropic API key, the Claude adapter bills usage to
+/// that key and needs no sign-in of its own, which would replace the Claude CLI's login.
+const AGENT_PROVIDER_KEYS: &[(&str, &str, &str)] =
+   &[("claude-acp", "anthropic", "ANTHROPIC_API_KEY")];
+
+/// Reads the provider keys an agent is started with from the keychain at each start.
+pub fn agent_launch_env(app_handle: AppHandle) -> AgentLaunchEnv {
+   Arc::new(move |agent_id| {
+      AGENT_PROVIDER_KEYS
+         .iter()
+         .filter(|(id, ..)| *id == agent_id)
+         .filter_map(|(_, provider_id, env_var)| {
+            match ai_provider_token(&app_handle, provider_id) {
+               Ok(Some(key)) if !key.trim().is_empty() => {
+                  Some((env_var.to_string(), key.trim().to_string()))
+               }
+               Ok(_) => None,
+               Err(error) => {
+                  log::warn!("Could not read the {provider_id} key for {agent_id}: {error}");
+                  None
+               }
+            }
+         })
+         .collect()
+   })
 }
 
 #[derive(Deserialize, specta::Type)]
