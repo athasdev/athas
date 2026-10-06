@@ -111,3 +111,93 @@ export function getFileTreeScrollTop({
 
   return Math.max(0, Math.min(targetScrollTop, maxScrollTop));
 }
+
+export const FILE_TREE_MAX_STICKY_ROWS = 7;
+
+export interface FileTreeStickyRow {
+  index: number;
+  /**
+   * Offset from the top of the viewport; negative while a header is being pushed out. Deeper rows
+   * draw under shallower ones.
+   */
+  top: number;
+}
+
+export interface FileTreeStickyLayout {
+  rows: FileTreeStickyRow[];
+  /** Height of the visible part of the sticky stack. */
+  height: number;
+}
+
+const NO_STICKY_ROWS: FileTreeStickyLayout = { rows: [], height: 0 };
+
+/**
+ * The folder headers to pin above the tree: the ancestors of the row just below the pinned stack,
+ * outermost first. Each header is pushed up as the end of its folder scrolls under it, the way
+ * VS Code's sticky scroll hands one header over to the next instead of snapping.
+ */
+export function getFileTreeStickyLayout({
+  scrollTop,
+  rowCount,
+  rowHeight,
+  viewportHeight,
+  getAncestors,
+  getSubtreeEnd,
+  maxRows = FILE_TREE_MAX_STICKY_ROWS,
+  padding = FILE_TREE_VIEWPORT_PADDING,
+}: {
+  scrollTop: number;
+  rowCount: number;
+  rowHeight: number;
+  viewportHeight: number;
+  /** Ancestor row indexes of a row, outermost first. */
+  getAncestors: (index: number) => readonly number[];
+  /** The last row index inside a folder row's subtree. */
+  getSubtreeEnd: (index: number) => number;
+  maxRows?: number;
+  padding?: number;
+}): FileTreeStickyLayout {
+  if (rowCount <= 0 || rowHeight <= 0 || scrollTop <= padding) return NO_STICKY_ROWS;
+  // Never let the stack take more than half of the tree.
+  const limit = Math.min(maxRows, Math.max(1, Math.floor(viewportHeight / rowHeight / 2)));
+
+  let stack: readonly number[] = [];
+  while (stack.length < limit) {
+    const probe = getFileTreeFirstVisibleIndex({
+      rowCount,
+      rowHeight,
+      scrollTop: scrollTop + stack.length * rowHeight,
+      padding,
+    });
+    if (probe < 0) break;
+    const ancestors = getAncestors(probe);
+    if (ancestors.length <= stack.length) break;
+    if (stack.some((index, level) => ancestors[level] !== index)) break;
+    stack = ancestors.slice(0, stack.length + 1);
+  }
+  if (stack.length === 0) return NO_STICKY_ROWS;
+
+  // A header slides up under the one above it, which stays put until its own folder ends.
+  const rows = stack
+    .map((index, level) => {
+      const subtreeBottom = padding + (getSubtreeEnd(index) + 1) * rowHeight - scrollTop;
+      return { index, top: Math.min(level * rowHeight, subtreeBottom - rowHeight) };
+    })
+    .filter((row) => row.top + rowHeight > 0);
+  const height = Math.max(0, ...rows.map((row) => row.top + rowHeight));
+  return height > 0 ? { rows, height } : NO_STICKY_ROWS;
+}
+
+/** For each row, the index of the last row inside its subtree (itself for files and closed folders). */
+export function getFileTreeSubtreeEnds(depths: readonly number[]): Int32Array {
+  const ends = new Int32Array(depths.length);
+  const open: number[] = [];
+  for (let index = 0; index < depths.length; index++) {
+    while (open.length > 0 && depths[open[open.length - 1]!]! >= depths[index]!) {
+      ends[open.pop()!] = index - 1;
+    }
+    open.push(index);
+  }
+  while (open.length > 0) ends[open.pop()!] = depths.length - 1;
+  return ends;
+}

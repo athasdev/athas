@@ -85,6 +85,7 @@ import {
   getVisibleFileTreeRowKey,
   useFileExplorerVisibleRows,
 } from "../hooks/use-file-explorer-visible-rows";
+import { getFileTreeSubtreeEnds } from "@/features/file-explorer/lib/file-tree-viewport";
 import { FileExplorerViewport, type FileExplorerViewportHandle } from "./file-explorer-viewport";
 import { FileExplorerTreeItem } from "./file-explorer-tree-item";
 import type { FileTreeGuideTarget } from "./file-explorer-tree-item";
@@ -282,11 +283,7 @@ function FileExplorerTreeComponent({
     handleMoveError,
   );
 
-  const [mouseDownInfo, setMouseDownInfo] = useState<{
-    x: number;
-    y: number;
-    file: FileEntry;
-  } | null>(null);
+  const pressedRowRef = useRef<{ x: number; y: number; file: FileEntry } | null>(null);
 
   const userIgnore = useMemo(() => {
     const ig = ignore();
@@ -526,14 +523,19 @@ function FileExplorerTreeComponent({
     expandedPathsOverride: displayedExpandedPaths,
     rootFolderPath,
   });
-  const getStickyRowIndexes = useCallback(
-    (firstVisibleIndex: number) =>
-      getStickyAncestorRows(visibleRows, firstVisibleIndex).flatMap((row) => {
-        const index = visibleRowIndexByPath.get(row.file.path);
-        return index === undefined ? [] : [index];
+  const getStickyAncestors = useCallback(
+    (index: number) =>
+      getStickyAncestorRows(visibleRows, index).flatMap((row) => {
+        const ancestorIndex = visibleRowIndexByPath.get(row.file.path);
+        return ancestorIndex === undefined ? [] : [ancestorIndex];
       }),
     [visibleRowIndexByPath, visibleRows],
   );
+  const subtreeEnds = useMemo(
+    () => getFileTreeSubtreeEnds(visibleRows.map((row) => row.depth)),
+    [visibleRows],
+  );
+  const getSubtreeEnd = useCallback((index: number) => subtreeEnds[index] ?? index, [subtreeEnds]);
 
   useLayoutEffect(() => {
     const wasSearchActive = wasTreeSearchActiveRef.current;
@@ -1075,29 +1077,29 @@ function FileExplorerTreeComponent({
       if (e.button !== 0) return;
       const t = getTargetItem(e.target);
       if (!t) return;
-      setMouseDownInfo({ x: e.clientX, y: e.clientY, file: t.file });
+      pressedRowRef.current = { x: e.clientX, y: e.clientY, file: t.file };
     },
     [pathToFile],
   );
 
   const handleContainerMouseMove = useCallback(
     (e: React.MouseEvent) => {
-      if (mouseDownInfo && !dragState.isDragging) {
-        const dx = e.clientX - mouseDownInfo.x;
-        const dy = e.clientY - mouseDownInfo.y;
+      const pressed = pressedRowRef.current;
+      if (pressed && !dragState.isDragging) {
+        const dx = e.clientX - pressed.x;
+        const dy = e.clientY - pressed.y;
         if (Math.hypot(dx, dy) > 5) {
-          startDrag(e, mouseDownInfo.file);
-          setMouseDownInfo(null);
+          startDrag(e, pressed.file);
+          pressedRowRef.current = null;
         }
       }
     },
-    [mouseDownInfo, dragState.isDragging, startDrag],
+    [dragState.isDragging, startDrag],
   );
 
-  const handleContainerMouseUp = useCallback(() => setMouseDownInfo(null), []);
-  const handleContainerMouseLeave = useCallback(() => setMouseDownInfo(null), []);
-
-  // No recursive render; rows are virtualized
+  const releasePressedRow = useCallback(() => {
+    pressedRowRef.current = null;
+  }, []);
 
   const handleRootDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -1306,8 +1308,8 @@ function FileExplorerTreeComponent({
       onContextMenu={handleContainerContextMenu}
       onMouseDown={handleContainerMouseDown}
       onMouseMove={handleContainerMouseMove}
-      onMouseUp={handleContainerMouseUp}
-      onMouseLeave={handleContainerMouseLeave}
+      onMouseUp={releasePressedRow}
+      onMouseLeave={releasePressedRow}
     >
       <div
         className="shrink-0"
@@ -1542,7 +1544,8 @@ function FileExplorerTreeComponent({
         rowCount={visibleRows.length}
         rowHeight={rowHeight}
         getRowKey={(index) => getVisibleFileTreeRowKey(visibleRows, index)}
-        getStickyIndexes={getStickyRowIndexes}
+        getStickyAncestors={getStickyAncestors}
+        getSubtreeEnd={getSubtreeEnd}
         emptyState={
           !rootFolderPath ? (
             <div className="absolute inset-0 flex items-center justify-center">
@@ -1569,7 +1572,7 @@ function FileExplorerTreeComponent({
             </div>
           ) : null
         }
-        renderRow={(index) => {
+        renderRow={(index, placement) => {
           const row = visibleRows[index];
           if (!row) return null;
           const previousRow = visibleRows[index - 1];
@@ -1614,7 +1617,7 @@ function FileExplorerTreeComponent({
               onSubmit={handleInlineEditSubmit}
               onCancel={handleInlineEditCancel}
               getGitStatusDecoration={getGitStatusDecoration}
-              rowId={getFileTreeRowId(row.file.path)}
+              rowId={placement === "list" ? getFileTreeRowId(row.file.path) : undefined}
               searchQuery={displayedTreeSearch?.query}
             />
           );

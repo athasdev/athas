@@ -15,7 +15,6 @@ interface DragState {
   draggedItem: { path: string; name: string; isDir: boolean } | null;
   dragOverPath: string | null;
   dragOverIsDir: boolean;
-  mousePosition: { x: number; y: number };
 }
 
 const initialDragState: DragState = {
@@ -23,7 +22,6 @@ const initialDragState: DragState = {
   draggedItem: null,
   dragOverPath: null,
   dragOverIsDir: false,
-  mousePosition: { x: 0, y: 0 },
 };
 
 type FileMoveHandler = (oldPath: string, newPath: string) => void | Promise<void>;
@@ -48,6 +46,22 @@ export function useFileExplorerDragDrop(
 ) {
   const [dragState, setDragState] = useState<DragState>(initialDragState);
   const dragPreviewRef = useRef<HTMLDivElement | null>(null);
+  // The pointer moves the preview directly; keeping it in state re-rendered the whole tree on
+  // every mouse move of a drag.
+  const pointerRef = useRef({ x: 0, y: 0 });
+  const placeDragPreview = useCallback(() => {
+    const preview = dragPreviewRef.current;
+    if (!preview) return;
+    preview.style.left = `${pointerRef.current.x + 10}px`;
+    preview.style.top = `${pointerRef.current.y - 10}px`;
+  }, []);
+  const setDragOver = useCallback((path: string | null, isDir: boolean) => {
+    setDragState((prev) =>
+      prev.dragOverPath === path && prev.dragOverIsDir === isDir
+        ? prev
+        : { ...prev, dragOverPath: path, dragOverIsDir: isDir },
+    );
+  }, []);
   const autoExpandRef = useRef<{
     path: string;
     timeoutId: number;
@@ -106,6 +120,7 @@ export function useFileExplorerDragDrop(
       preview.textContent = dragState.draggedItem?.name || "";
       document.body.appendChild(preview);
       dragPreviewRef.current = preview;
+      placeDragPreview();
     }
 
     return () => {
@@ -114,23 +129,14 @@ export function useFileExplorerDragDrop(
         dragPreviewRef.current = null;
       }
     };
-  }, [dragState.isDragging, dragState.draggedItem?.name]);
-
-  useEffect(() => {
-    if (dragPreviewRef.current) {
-      dragPreviewRef.current.style.left = `${dragState.mousePosition.x + 10}px`;
-      dragPreviewRef.current.style.top = `${dragState.mousePosition.y - 10}px`;
-    }
-  }, [dragState.mousePosition]);
+  }, [dragState.isDragging, dragState.draggedItem?.name, placeDragPreview]);
 
   useEffect(() => {
     if (!dragState.isDragging) return;
 
     const handleMouseMove = (e: MouseEvent) => {
-      setDragState((prev) => ({
-        ...prev,
-        mousePosition: { x: e.clientX, y: e.clientY },
-      }));
+      pointerRef.current = { x: e.clientX, y: e.clientY };
+      placeDragPreview();
 
       const elementUnder = document.elementFromPoint(e.clientX, e.clientY);
       const fileTreeItem = elementUnder?.closest("[data-file-path]");
@@ -152,55 +158,31 @@ export function useFileExplorerDragDrop(
           const nextDragOverPath = isDropIntoSelf ? null : path;
           const nextDragOverIsDir = isDropIntoSelf ? false : isDir;
 
-          setDragState((prev) => ({
-            ...prev,
-            dragOverPath: nextDragOverPath,
-            dragOverIsDir: nextDragOverIsDir,
-          }));
+          setDragOver(nextDragOverPath, nextDragOverIsDir);
           if (nextDragOverPath) {
             scheduleAutoExpand(nextDragOverPath, nextDragOverIsDir);
           } else {
             clearAutoExpand();
           }
         } else {
-          setDragState((prev) => ({
-            ...prev,
-            dragOverPath: null,
-            dragOverIsDir: false,
-          }));
+          setDragOver(null, false);
           clearAutoExpand();
         }
       } else if (fileTreeContainer) {
         clearEditorDropHover();
-        setDragState((prev) => ({
-          ...prev,
-          dragOverPath: "__ROOT__",
-          dragOverIsDir: true,
-        }));
+        setDragOver("__ROOT__", true);
         clearAutoExpand();
       } else if (aiContextDropTarget && dragState.draggedItem) {
         clearEditorDropHover();
-        setDragState((prev) => ({
-          ...prev,
-          dragOverPath: null,
-          dragOverIsDir: false,
-        }));
+        setDragOver(null, false);
         clearAutoExpand();
       } else if (editorDropTarget && dragState.draggedItem && !dragState.draggedItem.isDir) {
         setInternalTabDragHover({ x: e.clientX, y: e.clientY });
-        setDragState((prev) => ({
-          ...prev,
-          dragOverPath: null,
-          dragOverIsDir: false,
-        }));
+        setDragOver(null, false);
         clearAutoExpand();
       } else {
         clearEditorDropHover();
-        setDragState((prev) => ({
-          ...prev,
-          dragOverPath: null,
-          dragOverIsDir: false,
-        }));
+        setDragOver(null, false);
         clearAutoExpand();
       }
     };
@@ -295,8 +277,10 @@ export function useFileExplorerDragDrop(
     dragState,
     onFileMove,
     onMoveError,
+    placeDragPreview,
     rootFolderPath,
     scheduleAutoExpand,
+    setDragOver,
   ]);
 
   const startDrag = useCallback((e: React.MouseEvent, file: FileEntry) => {
@@ -315,8 +299,8 @@ export function useFileExplorerDragDrop(
       draggedItem: { path: file.path, name: file.name, isDir: file.isDir },
       dragOverPath: null,
       dragOverIsDir: false,
-      mousePosition: { x: e.clientX, y: e.clientY },
     });
+    pointerRef.current = { x: e.clientX, y: e.clientY };
 
     // Store drag data globally for pane containers to access
     window.__fileDragData = {

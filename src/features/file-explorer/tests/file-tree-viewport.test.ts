@@ -1,6 +1,8 @@
 import { describe, expect, test } from "vite-plus/test";
 import {
   getFileTreeFirstVisibleIndex,
+  getFileTreeStickyLayout,
+  getFileTreeSubtreeEnds,
   getFileTreeScrollTop,
   getFileTreeTotalHeight,
   getFileTreeVirtualRange,
@@ -122,5 +124,69 @@ describe("file tree viewport geometry", () => {
         viewportStartOffset: 90,
       }),
     ).toBe(450);
+  });
+});
+
+describe("file tree sticky headers", () => {
+  // src/ { a/ { a1, a2 }, b/ { b1 } }, z
+  const depths = [0, 1, 2, 2, 1, 2, 0];
+  const subtreeEnds = getFileTreeSubtreeEnds(depths);
+  const getAncestors = (index: number) => {
+    const ancestors: number[] = [];
+    let depth = depths[index]!;
+    for (let candidate = index - 1; candidate >= 0 && depth > 0; candidate--) {
+      if (depths[candidate]! < depth) {
+        ancestors.unshift(candidate);
+        depth = depths[candidate]!;
+      }
+    }
+    return ancestors;
+  };
+  const layout = (scrollTop: number) =>
+    getFileTreeStickyLayout({
+      scrollTop,
+      rowCount: depths.length,
+      rowHeight: 10,
+      viewportHeight: 100,
+      padding: 0,
+      getAncestors,
+      getSubtreeEnd: (index) => subtreeEnds[index]!,
+    });
+
+  test("finds where each folder's subtree ends", () => {
+    expect([...subtreeEnds]).toEqual([5, 3, 2, 3, 5, 5, 6]);
+  });
+
+  test("pins nothing at the top of the tree", () => {
+    expect(layout(0)).toEqual({ rows: [], height: 0 });
+  });
+
+  test("pins the ancestors of the row under the stack", () => {
+    expect(layout(15)).toEqual({
+      rows: [
+        { index: 0, top: 0 },
+        { index: 1, top: 10 },
+      ],
+      height: 20,
+    });
+  });
+
+  test("slides a header up under its parent as its folder ends", () => {
+    expect(layout(28)).toEqual({
+      rows: [
+        { index: 0, top: 0 },
+        { index: 1, top: 2 },
+      ],
+      height: 12,
+    });
+  });
+
+  test("hands over to the next sibling folder", () => {
+    expect(layout(48).rows.map((row) => row.index)).toEqual([0, 4]);
+  });
+
+  test("pushes the outermost header out as the tree reaches the next root item", () => {
+    expect(layout(55)).toEqual({ rows: [{ index: 0, top: -5 }], height: 5 });
+    expect(layout(60)).toEqual({ rows: [], height: 0 });
   });
 });
