@@ -16,7 +16,10 @@ interface SelectionAgentActionState {
   context: EditorSelectionContext;
 }
 
-/** The "Edit with agent" action shown above selected text once the pointer lets go. */
+/**
+ * The selection toolbar shown above selected text once the pointer lets go: Edit opens inline
+ * edit on the selection, and the chat button adds it to the agent chat.
+ */
 export function CodeMirrorSelectionAgentAction({ host }: { host: CodeMirrorHost }) {
   const { view, bufferId, isActiveSurface, isReadOnly } = host;
   const languageId = host.languageId;
@@ -156,7 +159,11 @@ export function CodeMirrorSelectionAgentAction({ host }: { host: CodeMirrorHost 
     <EditorSelectionAgentAction
       anchorRect={action.anchorRect}
       onClose={clearAction}
-      onSelect={() => {
+      onEdit={() => {
+        clearAction();
+        useInlineEditToolbarStore.getState().actions.show(host.viewStateKey ?? bufferId);
+      }}
+      onAddToChat={() => {
         addEditorSelectionsToAgentChat([action.context]);
         clearAction();
       }}

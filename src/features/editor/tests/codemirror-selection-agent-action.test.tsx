@@ -9,11 +9,15 @@ import type { CodeMirrorHost } from "../engines/codemirror/host";
 const mocks = vi.hoisted(() => ({
   inlineEditVisible: false,
   addEditorSelectionsToAgentChat: vi.fn(),
+  showInlineEdit: vi.fn(),
   anchorRects: [] as Array<{ x: number; y: number; width: number; height: number }>,
 }));
 
 vi.mock("../stores/inline-edit-toolbar.store", () => ({
-  useInlineEditToolbarStore: { use: { isVisible: () => mocks.inlineEditVisible } },
+  useInlineEditToolbarStore: {
+    use: { isVisible: () => mocks.inlineEditVisible },
+    getState: () => ({ actions: { show: mocks.showInlineEdit } }),
+  },
 }));
 vi.mock("../stores/buffer.store", () => ({
   useBufferStore: (selector: (state: unknown) => unknown) =>
@@ -29,16 +33,23 @@ vi.mock("@/features/ai/lib/add-selection-to-agent-chat", () => ({
 vi.mock("../components/selection/editor-selection-agent-action", () => ({
   EditorSelectionAgentAction: ({
     anchorRect,
-    onSelect,
+    onEdit,
+    onAddToChat,
   }: {
     anchorRect: { x: number; y: number; width: number; height: number };
-    onSelect: () => void;
+    onEdit: () => void;
+    onAddToChat: () => void;
   }) => {
     mocks.anchorRects.push(anchorRect);
     return (
-      <button type="button" data-testid="agent-action" onClick={onSelect}>
-        Edit with agent
-      </button>
+      <>
+        <button type="button" data-testid="agent-action" onClick={onAddToChat}>
+          Add to chat
+        </button>
+        <button type="button" data-testid="inline-edit-action" onClick={onEdit}>
+          Edit
+        </button>
+      </>
     );
   },
 }));
@@ -127,6 +138,18 @@ describe("CodeMirror selection agent action", () => {
         startColumn: 7,
       }),
     ]);
+    expect(action()).toBeNull();
+  });
+
+  it("opens inline edit on the selection from the Edit action", () => {
+    mount({ viewStateKey: "pane-1:buffer-1" });
+    act(() => view.dispatch({ selection: { anchor: 6, head: 7 } }));
+
+    act(() =>
+      document.querySelector<HTMLButtonElement>('[data-testid="inline-edit-action"]')!.click(),
+    );
+    expect(mocks.showInlineEdit).toHaveBeenCalledWith("pane-1:buffer-1");
+    expect(mocks.addEditorSelectionsToAgentChat).not.toHaveBeenCalled();
     expect(action()).toBeNull();
   });
 

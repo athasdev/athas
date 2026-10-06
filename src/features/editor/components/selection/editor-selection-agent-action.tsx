@@ -1,18 +1,23 @@
 import { useId } from "react";
 import { Button } from "@/ui/button";
-import { SparkleIcon } from "@/ui/icons";
+import { ChatBubbleTextIcon, SparkleIcon } from "@/ui/icons";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 
 interface EditorSelectionAgentActionProps {
   anchorRect: { x: number; y: number; width: number; height: number };
   onClose: () => void;
-  onSelect: () => void;
+  /** Rewrites the selection in place with inline edit. */
+  onEdit: () => void;
+  /** Sends the selection to the agent chat as context. */
+  onAddToChat: () => void;
 }
 
+/** The small toolbar above selected code: edit it inline, or hand it to the agent chat. */
 export function EditorSelectionAgentAction({
   anchorRect,
   onClose,
-  onSelect,
+  onEdit,
+  onAddToChat,
 }: EditorSelectionAgentActionProps) {
   const triggerId = useId();
   const anchorX = anchorRect.x + anchorRect.width / 2;
@@ -48,15 +53,29 @@ export function EditorSelectionAgentAction({
         size="auto"
         className="p-1"
       >
-        <Button
-          type="button"
-          variant="ghost"
-          onMouseDown={(event) => event.preventDefault()}
-          onClick={onSelect}
-        >
-          <SparkleIcon />
-          Edit with agent
-        </Button>
+        <div className="flex items-center gap-0.5">
+          <Button
+            type="button"
+            variant="ghost"
+            tooltip="Edit selection inline"
+            commandId="editor.inlineEdit"
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={onEdit}
+          >
+            <SparkleIcon />
+            Edit
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            iconOnly
+            tooltip="Add to chat"
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={onAddToChat}
+          >
+            <ChatBubbleTextIcon />
+          </Button>
+        </div>
       </PopoverContent>
     </Popover>
   );
