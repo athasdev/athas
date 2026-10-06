@@ -5,7 +5,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
-import { setSyntaxHighlightingFilePath } from "@/features/editor/extensions/builtin/syntax-highlighting";
 import { LspClient } from "@/features/editor/lsp/lsp-client";
 import { type LspStatus, useLspStore } from "@/features/editor/lsp/stores/lsp.store";
 import { getBufferById } from "@/features/editor/utils/buffer-index";
@@ -240,10 +239,6 @@ export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {})
       if (languageId === currentFileLanguageId) return;
 
       useBufferStore.getState().actions.updateBufferLanguage(resolvedBufferId, languageId);
-
-      if (activeBuffer.path) {
-        await setSyntaxHighlightingFilePath(activeBuffer.path);
-      }
 
       if (
         rootFolderPath &&

@@ -27,7 +27,6 @@ interface ValidationError {
 const verifyLocalPackages = process.argv.includes("--verify-local-packages");
 const verifyAgentRegistry = process.argv.includes("--verify-agent-registry");
 const errors: ValidationError[] = [];
-const warnings: ValidationError[] = [];
 const validToolRuntimes = new Set([
   "bun",
   "node",
@@ -82,10 +81,6 @@ function registryPlatformArch(platformArch: string): string {
 
 function error(extension: string, message: string) {
   errors.push({ extension, message });
-}
-
-function warn(extension: string, message: string) {
-  warnings.push({ extension, message });
 }
 
 async function fileExists(path: string): Promise<boolean> {
@@ -491,17 +486,6 @@ async function validateExtension(folder: string): Promise<void> {
     error(folder, "Source manifest must keep installation metadata in extensions/artifacts.json");
   }
   validateLanguageToolConfigs(folder, manifest);
-
-  const capabilities = manifest.capabilities as Record<string, unknown> | undefined;
-  if (capabilities?.grammar) {
-    const grammar = capabilities.grammar as Record<string, string>;
-    if (grammar.wasmPath && !(await fileExists(join(extensionDir, grammar.wasmPath)))) {
-      warn(folder, `Grammar wasmPath not in repo (expected on CDN): ${grammar.wasmPath}`);
-    }
-    if (grammar.highlightQuery && !(await fileExists(join(extensionDir, grammar.highlightQuery)))) {
-      warn(folder, `Highlight query file not found: ${grammar.highlightQuery}`);
-    }
-  }
 }
 
 async function validateJsonFile(name: string, expectedShape: "array" | "object"): Promise<void> {
@@ -704,13 +688,6 @@ if (verifyAgentRegistry) {
 await validateJsonFile("registry.json", "object");
 await validateJsonFile("index.json", "array");
 await validateJsonFile("manifests.json", "object");
-
-if (warnings.length > 0) {
-  console.log(`\nWarnings (${warnings.length}):`);
-  for (const w of warnings) {
-    console.log(`  [${w.extension}] ${w.message}`);
-  }
-}
 
 if (errors.length > 0) {
   console.log(`\nErrors (${errors.length}):`);

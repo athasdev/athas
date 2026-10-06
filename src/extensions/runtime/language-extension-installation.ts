@@ -1,9 +1,5 @@
-import {
-  getHighlightQueryUrl,
-  getHighlightQueryUrlForExtension,
-  getLanguageExtensionById,
-  getWasmUrlForLanguage,
-} from "../languages/language-packager";
+import { installedLanguages } from "../installer/installed-languages";
+import { getLanguageExtensionById } from "../languages/language-packager";
 import type { AvailableExtension } from "../registry/extension-store-types";
 import { getManifestLanguageContributions } from "../types/extension-contributions";
 import type { ExtensionManifest } from "../types/extension-manifest";
@@ -19,60 +15,28 @@ export async function registerLanguageProvider(params: {
     await import("@/extensions/languages/language-provider-registry");
   const runtimeExtensionId = `${extensionId}:${languageId}`;
   if (languageProviderRegistry.has(runtimeExtensionId)) return;
-
-  const [{ tokenizeCode }, { convertToEditorTokens }] = await Promise.all([
-    import("@/features/editor/lib/wasm-parser/tokenizer"),
-    import("@/features/editor/lib/wasm-parser/converter"),
-  ]);
-  languageProviderRegistry.register(runtimeExtensionId, {
-    id: languageId,
-    extensions,
-    aliases,
-    getTokens: async (content: string) => {
-      const wasmPath = getWasmUrlForLanguage(languageId);
-      const highlightQueryUrl = getHighlightQueryUrl(languageId);
-      const highlightTokens = await tokenizeCode(content, languageId, {
-        languageId,
-        wasmPath,
-        highlightQueryUrl,
-      });
-      return convertToEditorTokens(highlightTokens);
-    },
-  });
+  languageProviderRegistry.register(runtimeExtensionId, { id: languageId, extensions, aliases });
 }
 
+/**
+ * Records a language integration's languages as installed. There is nothing to download: syntax
+ * highlighting comes with the editor, and the integration's tools (language server, formatter,
+ * linter) are resolved separately.
+ */
 export async function installLanguageExtensionManifest(
   extensionId: string,
   manifest: ExtensionManifest,
   onProgress: (progress: number) => void,
 ): Promise<void> {
   const languageConfigs = getManifestLanguageContributions(manifest);
-  const progressByLanguage = languageConfigs.map(() => 0);
-
-  // The installer (downloads, retries, checksums) only loads when something is installed.
-  const { extensionInstaller } = await import("../installer/extension-installer");
-  await Promise.all(
-    languageConfigs.map((languageConfig, index) => {
-      const languageId = languageConfig.id;
-      const wasmUrl = getWasmUrlForLanguage(languageId);
-      const highlightQueryUrl =
-        getHighlightQueryUrl(languageId) ||
-        getHighlightQueryUrlForExtension(manifest) ||
-        wasmUrl.replace(/parser\.wasm$/, "highlights.scm");
-
-      return extensionInstaller.installLanguage(languageId, wasmUrl, highlightQueryUrl, {
-        extensionId,
-        version: manifest.version,
-        checksum: manifest.installation?.checksum || "",
-        onProgress: (progress) => {
-          progressByLanguage[index] = progress.percentage;
-          onProgress(
-            progressByLanguage.reduce((sum, value) => sum + value, 0) / progressByLanguage.length,
-          );
-        },
-      });
-    }),
-  );
+  for (const languageConfig of languageConfigs) {
+    await installedLanguages.add({
+      languageId: languageConfig.id,
+      extensionId,
+      version: manifest.version,
+    });
+  }
+  onProgress(100);
 }
 
 export function getExtensionManifestForLanguage(

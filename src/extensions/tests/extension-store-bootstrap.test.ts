@@ -88,7 +88,9 @@ describe("extension-store bootstrap", () => {
           enabled: true,
         },
       ],
-      indexedDBInstalled: [{ languageId: "athas.theme.market", version: "1.0.0" }],
+      installedLanguageEntries: [
+        { languageId: "athas.theme.market", version: "1.0.0", installedAt: 0 },
+      ],
       availableExtensions,
     });
 

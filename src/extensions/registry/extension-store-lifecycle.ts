@@ -1,6 +1,4 @@
 import { commands } from "@/bindings/commands";
-import { wasmParserLoader } from "@/features/editor/lib/wasm-parser/loader";
-import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { PLATFORM_ARCH } from "@/utils/platform";
 import { getServiceUrls } from "@/config/services";
 import { installedLanguages } from "../installer/installed-languages";
@@ -8,10 +6,7 @@ import {
   activateExtensionContributions,
   deactivateExtensionContributions,
 } from "../runtime/extension-contribution-runtime";
-import {
-  getManifestLanguageContributions,
-  matchesLanguageContribution,
-} from "../types/extension-contributions";
+import { getManifestLanguageContributions } from "../types/extension-contributions";
 import type { PlatformPackage } from "../types/extension-manifest";
 import { extensionRegistry } from "./extension-registry";
 import {
@@ -20,32 +15,6 @@ import {
 } from "../runtime/language-extension-installation";
 import { buildRuntimeManifest, resolveToolPaths } from "../runtime/language-tool-resolution";
 import type { AvailableExtension, ExtensionInstallationMetadata } from "./extension-store-types";
-
-async function refreshSyntaxHighlightingForActiveBuffer(extension: AvailableExtension) {
-  const languages = getManifestLanguageContributions(extension.manifest);
-  if (languages.length === 0) {
-    return;
-  }
-
-  const bufferState = useBufferStore.getState();
-  const activeBuffer = bufferState.buffers.find((buffer) => buffer.isActive);
-
-  if (!activeBuffer) {
-    return;
-  }
-
-  const matchesLanguage = languages.some((language) =>
-    matchesLanguageContribution(activeBuffer.path, language),
-  );
-
-  if (!matchesLanguage) {
-    return;
-  }
-
-  const { setSyntaxHighlightingFilePath } =
-    await import("@/features/editor/extensions/builtin/syntax-highlighting");
-  setSyntaxHighlightingFilePath(activeBuffer.path);
-}
 
 async function unloadLanguageProviders(extensionId: string, languageIds: string[]) {
   const { languageProviderRegistry } =
@@ -59,12 +28,7 @@ async function unloadLanguageProviders(extensionId: string, languageIds: string[
 }
 
 async function uninstallLanguageArtifacts(languageIds: string[]) {
-  await Promise.all(
-    languageIds.map(async (languageId) => {
-      wasmParserLoader.unloadParser(languageId);
-      await installedLanguages.uninstall(languageId);
-    }),
-  );
+  await Promise.all(languageIds.map((languageId) => installedLanguages.uninstall(languageId)));
 }
 
 function withCdnCacheBuster(url: string): string {
@@ -186,8 +150,6 @@ export async function installExtensionLifecycle(params: {
         }),
       ),
     );
-
-    await refreshSyntaxHighlightingForActiveBuffer(extension);
     return;
   }
 
@@ -275,8 +237,6 @@ export async function enableExtensionLifecycle(params: {
         }),
       ),
     );
-
-    await refreshSyntaxHighlightingForActiveBuffer(extension);
     return;
   }
 
@@ -305,7 +265,6 @@ export async function disableExtensionLifecycle(params: {
       isEnabled: false,
       state: "deactivated",
     });
-    await refreshSyntaxHighlightingForActiveBuffer(extension);
     return;
   }
 

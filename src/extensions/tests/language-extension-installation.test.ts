@@ -3,17 +3,14 @@ import type { AvailableExtension } from "@/extensions/registry/extension-store-t
 import type { ExtensionManifest } from "@/extensions/types/extension-manifest";
 
 const mocks = vi.hoisted(() => ({
-  installLanguage: vi.fn(),
+  addInstalledLanguage: vi.fn(async () => {}),
   bundledManifests: new Map<string, unknown>(),
 }));
 
-vi.mock("@/extensions/installer/extension-installer", () => ({
-  extensionInstaller: { installLanguage: mocks.installLanguage },
+vi.mock("@/extensions/installer/installed-languages", () => ({
+  installedLanguages: { add: mocks.addInstalledLanguage },
 }));
 vi.mock("@/extensions/languages/language-packager", () => ({
-  getWasmUrlForLanguage: (id: string) => `https://cdn.test/${id}/parser.wasm`,
-  getHighlightQueryUrl: (id: string) => (id === "python" ? "" : `https://cdn.test/${id}/q.scm`),
-  getHighlightQueryUrlForExtension: () => "",
   getLanguageExtensionById: (id: string) => mocks.bundledManifests.get(id),
 }));
 
@@ -33,70 +30,29 @@ function manifest(id: string, languageIds: string[]): ExtensionManifest {
       id: languageId,
       extensions: [`.${languageId}`],
     })),
-    installation: { checksum: "abc123" } as ExtensionManifest["installation"],
   };
 }
 
 afterEach(() => {
-  mocks.installLanguage.mockReset();
+  mocks.addInstalledLanguage.mockClear();
   mocks.bundledManifests.clear();
 });
 
 describe("language integration installation", () => {
-  it("installs every contributed language with its parser, query, and checksum", async () => {
-    mocks.installLanguage.mockResolvedValue(undefined);
-
-    await installLanguageExtensionManifest(
-      "athas.web",
-      manifest("athas.web", ["css", "python"]),
-      () => {},
-    );
-
-    expect(mocks.installLanguage).toHaveBeenCalledWith(
-      "css",
-      "https://cdn.test/css/parser.wasm",
-      "https://cdn.test/css/q.scm",
-      expect.objectContaining({ extensionId: "athas.web", version: "3.0.0", checksum: "abc123" }),
-    );
-    expect(mocks.installLanguage).toHaveBeenCalledWith(
-      "python",
-      "https://cdn.test/python/parser.wasm",
-      "https://cdn.test/python/highlights.scm",
-      expect.anything(),
-    );
-  });
-
-  it("reports progress as the average across languages", async () => {
-    const progressCallbacks: Array<(progress: { percentage: number }) => void> = [];
-    mocks.installLanguage.mockImplementation(async (_id, _wasm, _query, options) => {
-      progressCallbacks.push(options.onProgress);
-    });
+  it("records every contributed language as installed without downloading anything", async () => {
     const onProgress = vi.fn();
 
     await installLanguageExtensionManifest(
       "athas.web",
-      manifest("athas.web", ["css", "html"]),
+      manifest("athas.web", ["css", "python"]),
       onProgress,
     );
-    progressCallbacks[0]?.({ percentage: 50 });
-    progressCallbacks[1]?.({ percentage: 100 });
-    progressCallbacks[0]?.({ percentage: 100 });
 
-    expect(onProgress.mock.calls.map(([value]) => value)).toEqual([25, 75, 100]);
-  });
-
-  it("fails the install when any language fails", async () => {
-    mocks.installLanguage
-      .mockResolvedValueOnce(undefined)
-      .mockRejectedValueOnce(new Error("checksum mismatch"));
-
-    await expect(
-      installLanguageExtensionManifest(
-        "athas.web",
-        manifest("athas.web", ["css", "html"]),
-        () => {},
-      ),
-    ).rejects.toThrow("checksum mismatch");
+    expect(mocks.addInstalledLanguage.mock.calls).toEqual([
+      [{ languageId: "css", extensionId: "athas.web", version: "3.0.0" }],
+      [{ languageId: "python", extensionId: "athas.web", version: "3.0.0" }],
+    ]);
+    expect(onProgress).toHaveBeenCalledWith(100);
   });
 
   it("finds a language manifest from the catalog before the bundled packager", () => {

@@ -2,7 +2,7 @@
 import { javascript } from "@codemirror/lang-javascript";
 import { markdown } from "@codemirror/lang-markdown";
 import { python } from "@codemirror/lang-python";
-import { StreamLanguage } from "@codemirror/language";
+import { forceParsing, StreamLanguage } from "@codemirror/language";
 import { kotlin } from "@codemirror/legacy-modes/mode/clike";
 import { EditorState, type Extension } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
@@ -20,8 +20,13 @@ Range.prototype.getBoundingClientRect = () => new DOMRect();
 const LINE_HEIGHT = 10;
 
 function headerLines(doc: string, extension: Extension, lineNumber: number) {
-  const state = EditorState.create({ doc, extensions: [extension] });
-  return enclosingScopes(state, lineNumber).map((scope) => scope.line);
+  // Parse the whole document first: state creation only parses within a time budget, which a
+  // busy test run can exhaust before the tree is complete.
+  const view = new EditorView({ state: EditorState.create({ doc, extensions: [extension] }) });
+  forceParsing(view, doc.length, 5000);
+  const lines = enclosingScopes(view.state, lineNumber).map((scope) => scope.line);
+  view.destroy();
+  return lines;
 }
 
 const jsSource = [

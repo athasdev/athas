@@ -1,18 +1,14 @@
 import { logger } from "@/features/editor/utils/logger";
 
-export interface LanguageToken {
-  start: number;
-  end: number;
-  token_type: string;
-  class_name: string;
-}
-
+/**
+ * A language an installed integration contributes, looked up by id, file extension, alias or file
+ * name to detect the language of a file. Highlighting comes from the editor's own languages.
+ */
 export interface LanguageProvider {
   id: string;
   extensions: string[];
   aliases?: string[];
   filenames?: string[];
-  getTokens(content: string): Promise<LanguageToken[]>;
 }
 
 interface LanguageProviderRegistration {
