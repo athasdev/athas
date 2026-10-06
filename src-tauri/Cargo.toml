@@ -13,7 +13,7 @@ name = "athas_text_lib"
 crate-type = ["rlib"]
 
 [build-dependencies]
-tauri-build = "2.7"
+tauri-build = { version = "2.7", features = [] }
 
 [dependencies]
 anyhow = "1.0"

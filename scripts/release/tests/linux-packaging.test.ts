@@ -44,7 +44,10 @@ describe("Linux release packaging", () => {
     expect(workspaceManifest).not.toMatch(/^tauri = \{ git/m);
     expect(appManifest).not.toContain("tauri-runtime-cef");
     expect(appManifest).not.toContain("[features]");
-    expect(appManifest).toMatch(/^tauri-build = "2\.\d+"/m);
+    // The Tauri CLI rewrites this line into table form when it syncs features, so accept both.
+    expect(appManifest).toMatch(
+      /^tauri-build = (?:"2\.\d+"|\{ version = "2\.\d+", features = \[\] \})$/m,
+    );
   });
 
   it("uses the XDG portal dialog backend", () => {
