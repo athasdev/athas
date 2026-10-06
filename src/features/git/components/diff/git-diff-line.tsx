@@ -1,5 +1,5 @@
 import { memo, useMemo } from "react";
-import type { HighlightToken } from "@/features/editor/types/wasm-parser/wasm-parser.types";
+import type { SyntaxLineToken } from "@/features/editor/syntax/syntax-highlight";
 import { cn } from "@/utils/cn";
 import type { DiffLineProps, DiffSearchHighlight } from "../../types/git-diff.types";
 import {
@@ -56,7 +56,7 @@ const renderWhitespace = (content: string, showWhitespace: boolean) => {
 
 const renderHighlightedContent = (
   content: string,
-  tokens: HighlightToken[] | undefined,
+  tokens: SyntaxLineToken[] | undefined,
   showWhitespace: boolean,
   searchHighlights: DiffSearchHighlight[] = [],
 ) => {
@@ -130,14 +130,14 @@ const renderHighlightedContent = (
   let lastEnd = 0;
 
   for (const [tokenIndex, token] of tokens.entries()) {
-    const start = token.startPosition.column;
-    const end = token.endPosition.column;
+    const start = token.startColumn;
+    const end = token.endColumn;
 
     if (start > lastEnd) {
       result.push(renderSegment(lastEnd, start, `plain-${lastEnd}-${tokenIndex}`));
     }
 
-    result.push(renderSegment(start, end, `token-${start}-${end}-${tokenIndex}`, token.type));
+    result.push(renderSegment(start, end, `token-${start}-${end}-${tokenIndex}`, token.className));
 
     lastEnd = end;
   }
@@ -151,7 +151,7 @@ const renderHighlightedContent = (
 
 export function renderDiffLineContent(
   content: string,
-  tokens: HighlightToken[] | undefined,
+  tokens: SyntaxLineToken[] | undefined,
   showWhitespace: boolean,
   searchHighlights?: DiffSearchHighlight[],
 ) {

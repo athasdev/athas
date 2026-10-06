@@ -1,17 +1,10 @@
-import { getLanguageAssetConfig } from "@/features/editor/lib/wasm-parser/extension-assets";
-import { tokenizerWorkerClient } from "@/features/editor/lib/wasm-parser/tokenizer-worker-client";
+import { highlightCode, highlightCodeIfReady } from "@/features/editor/syntax/syntax-highlight";
 import { getLanguageIdFromPath } from "@/features/editor/utils/language-id";
-import {
-  hasLineBasedSyntaxFallback,
-  hasLineBasedSyntaxHighlighter,
-  tokenizeLineBasedSyntax,
-} from "@/features/editor/utils/line-based-syntax";
 import type { Token } from "@/features/editor/utils/html";
 
 const MAX_TOKEN_CACHE_ENTRIES = 200;
 const EMPTY_TOKENS: Token[] = [];
-const parserTokenCache = new Map<string, Token[]>();
-const fallbackTokenCache = new Map<string, Token[]>();
+const tokenCache = new Map<string, Token[]>();
 const pendingTokenizations = new Map<string, Promise<Token[]>>();
 
 export interface SearchExcerptTokenSnapshot {
@@ -24,36 +17,34 @@ function getTokenCacheKey(languageId: string, content: string) {
   return `${languageId}\0${content}`;
 }
 
-function getWorkerBufferId(languageId: string, content: string) {
-  let hash = 2166136261;
-  for (let index = 0; index < content.length; index++) {
-    hash ^= content.charCodeAt(index);
-    hash = Math.imul(hash, 16777619);
-  }
-
-  return `search-preview:${languageId}:${content.length}:${(hash >>> 0).toString(36)}`;
-}
-
-function getCachedTokens(cache: Map<string, Token[]>, key: string) {
-  const cached = cache.get(key);
+function getCachedTokens(key: string) {
+  const cached = tokenCache.get(key);
   if (cached === undefined) return null;
 
-  cache.delete(key);
-  cache.set(key, cached);
+  tokenCache.delete(key);
+  tokenCache.set(key, cached);
   return cached;
 }
 
-function cacheTokens(cache: Map<string, Token[]>, key: string, tokens: Token[]) {
-  cache.delete(key);
-  cache.set(key, tokens);
+function cacheTokens(key: string, tokens: Token[]) {
+  tokenCache.delete(key);
+  tokenCache.set(key, tokens);
 
-  while (cache.size > MAX_TOKEN_CACHE_ENTRIES) {
-    const oldestKey = cache.keys().next().value;
+  while (tokenCache.size > MAX_TOKEN_CACHE_ENTRIES) {
+    const oldestKey = tokenCache.keys().next().value;
     if (typeof oldestKey !== "string") break;
-    cache.delete(oldestKey);
+    tokenCache.delete(oldestKey);
   }
 
   return tokens;
+}
+
+function toTokens(segments: readonly { start: number; end: number; className: string }[]) {
+  return segments.map((segment) => ({
+    start: segment.start,
+    end: segment.end,
+    class_name: segment.className,
+  }));
 }
 
 function getSearchExcerptLanguage(filePath: string) {
@@ -62,6 +53,10 @@ function getSearchExcerptLanguage(filePath: string) {
   return languageId;
 }
 
+/**
+ * Tokens for a search result excerpt, available right away once its language has loaded; until
+ * then the snapshot is incomplete and `loadSearchExcerptTokens` finishes it.
+ */
 export function getSearchExcerptTokenSnapshot(
   filePath: string,
   content: string,
@@ -72,18 +67,11 @@ export function getSearchExcerptTokenSnapshot(
   }
 
   const key = getTokenCacheKey(languageId, content);
-  const parserTokens = getCachedTokens(parserTokenCache, key);
-  if (parserTokens) {
-    return { key, tokens: parserTokens, complete: true };
-  }
+  const cached = getCachedTokens(key);
+  if (cached) return { key, tokens: cached, complete: true };
 
-  if (hasLineBasedSyntaxFallback(languageId)) {
-    const cachedFallback = getCachedTokens(fallbackTokenCache, key);
-    const tokens =
-      cachedFallback ??
-      cacheTokens(fallbackTokenCache, key, tokenizeLineBasedSyntax(content, languageId));
-    return { key, tokens, complete: hasLineBasedSyntaxHighlighter(languageId) };
-  }
+  const ready = highlightCodeIfReady(content, languageId);
+  if (ready) return { key, tokens: cacheTokens(key, toTokens(ready)), complete: true };
 
   return { key, tokens: EMPTY_TOKENS, complete: false };
 }
@@ -98,30 +86,8 @@ export async function loadSearchExcerptTokens(filePath: string, content: string)
   const languageId = getSearchExcerptLanguage(filePath);
   if (!languageId) return EMPTY_TOKENS;
 
-  const assets = getLanguageAssetConfig(languageId);
-  const tokenization = tokenizerWorkerClient
-    .tokenize({
-      bufferId: getWorkerBufferId(languageId, content),
-      content,
-      languageId,
-      wasmPath: assets.wasmPath,
-      highlightQueryUrl: assets.highlightQueryUrl,
-      mode: "full",
-    })
-    .then((result) =>
-      result.tokens.map((token) => ({
-        start: token.startIndex,
-        end: token.endIndex,
-        class_name: token.type,
-      })),
-    )
-    .then((tokens) =>
-      cacheTokens(
-        parserTokenCache,
-        snapshot.key,
-        tokens.length > 0 || snapshot.tokens.length === 0 ? tokens : snapshot.tokens,
-      ),
-    )
+  const tokenization = highlightCode(content, languageId)
+    .then((segments) => cacheTokens(snapshot.key, toTokens(segments)))
     .finally(() => pendingTokenizations.delete(snapshot.key));
 
   pendingTokenizations.set(snapshot.key, tokenization);
