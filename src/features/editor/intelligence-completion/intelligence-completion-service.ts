@@ -13,12 +13,17 @@ import {
   type IntelligenceCompletionPauseReason,
   useIntelligenceCompletionStore,
 } from "@/features/editor/stores/intelligence-completion.store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { getLanguageIdFromPath } from "@/features/editor/utils/language-id";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import {
+  clearRecentEdits,
   getNearbyDiagnostics,
   getRecentEdits,
+  getRelatedFileSnippets,
+  type RelatedFileCandidate,
   SENSITIVE_FILE_PATTERN,
 } from "./intelligence-completion-context";
 
@@ -72,7 +77,42 @@ export function reportIntelligenceCompletionError(error: unknown) {
     actions.fail(error.message);
     return;
   }
-  actions.fail("Tab autocomplete failed. Try again.");
+  // Provider SDK and network errors: keep their own message, so the status menu says what
+  // actually went wrong instead of a generic failure.
+  const { message, status, name } = describeUnknownError(error);
+  if (name === "AI_LoadAPIKeyError" || status === 401 || status === 402) {
+    actions.pause("api-key", message ?? PAUSE_NOTICES["api-key"]);
+    return;
+  }
+  actions.fail(message ?? "Tab autocomplete failed. Try again.");
+}
+
+const MAX_ERROR_MESSAGE_CHARS = 240;
+
+function describeUnknownError(error: unknown): {
+  message: string | null;
+  status: number | null;
+  name: string | null;
+} {
+  const raw =
+    typeof error === "string"
+      ? error
+      : error instanceof Error
+        ? error.message
+        : error && typeof error === "object" && "message" in error
+          ? String((error as { message: unknown }).message)
+          : "";
+  const status =
+    error && typeof error === "object" && "statusCode" in error
+      ? Number((error as { statusCode: unknown }).statusCode) || null
+      : null;
+  const name = error instanceof Error ? error.name : null;
+  const firstLine = raw.trim().split(/\r?\n/, 1)[0] ?? "";
+  const message =
+    firstLine.length > MAX_ERROR_MESSAGE_CHARS
+      ? `${firstLine.slice(0, MAX_ERROR_MESSAGE_CHARS - 1)}…`
+      : firstLine;
+  return { message: message || null, status, name };
 }
 
 /**
@@ -143,6 +183,12 @@ export async function requestIntelligenceCompletion(
     useDiagnosticsStore.getState().diagnosticsByFile.get(filePath) ?? [],
     line,
   );
+  const relatedFiles = getRelatedFileSnippets(
+    filePath,
+    request.languageId,
+    beforeSelection,
+    getOpenFileCandidates(),
+  );
   const status = useIntelligenceCompletionStore.getState().actions;
   status.requestStarted();
   try {
@@ -165,6 +211,7 @@ export async function requestIntelligenceCompletion(
           "Insert a completion at the cursor. Finish the whole statement or block when the next step is clear.",
         ...(recentEdits.length ? { recentEdits } : {}),
         ...(diagnostics.length ? { diagnostics } : {}),
+        ...(relatedFiles.length ? { relatedFiles } : {}),
       },
       { signal: controller.signal, timeoutMs: 10000 },
     );
@@ -180,6 +227,21 @@ export async function requestIntelligenceCompletion(
     request.signal.removeEventListener("abort", abort);
     for (const unsubscribe of unsubscribers) unsubscribe();
   }
+}
+
+/** Open text files that may be worth summarizing for the model. */
+function getOpenFileCandidates(): RelatedFileCandidate[] {
+  return useBufferStore.getState().buffers.flatMap((buffer) =>
+    buffer.type === "editor" && !buffer.isVirtual && buffer.path
+      ? [
+          {
+            path: buffer.path,
+            content: buffer.content,
+            languageId: buffer.languageOverride ?? getLanguageIdFromPath(buffer.path),
+          },
+        ]
+      : [],
+  );
 }
 
 let resumeRegistered = false;
@@ -209,6 +271,10 @@ export function registerIntelligenceCompletionResume() {
     if (next.scope !== previous.scope || next.preferences !== previous.preferences) resume();
   });
   onProviderApiTokenChange(resume);
+  // Edits from the previous project say nothing about the next one.
+  useProjectStore.subscribe((next, previous) => {
+    if (next.rootFolderPath !== previous.rootFolderPath) clearRecentEdits();
+  });
   useAIChatStore.subscribe((next, previous) => {
     if (next.providerApiKeys !== previous.providerApiKeys) resume();
   });

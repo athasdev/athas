@@ -17,7 +17,7 @@ import {
 } from "@/ui/dropdown";
 import { ChevronDownIcon } from "@/ui/icons";
 import { cn } from "@/utils/cn";
-import { useMenuSearch } from "@/ui/menu-search";
+import { type MenuSearch, useMenuSearch } from "@/ui/menu-search";
 import {
   AthasModelSections,
   ModelResultsProvider,
@@ -70,12 +70,10 @@ export function ModelConnectionPicker({
 }: ModelConnectionPickerProps) {
   const [isContentMounted, setIsContentMounted] = useState(false);
   const search = useMenuSearch();
-  const { reportResults, hasNoResults } = useModelSearchResults();
   const providerId = value?.providerId ?? "";
   const modelId = value?.modelId ?? "";
   const provider = useProviderById(providerId);
   const modelName = useModelName(providerId, modelId);
-  const providers = useConnectedModelProviders(providerId ? [providerId] : []);
   const label = !value
     ? (inheritLabel ?? "Choose a model")
     : value.providerId === "auto"
@@ -118,62 +116,103 @@ export function ModelConnectionPicker({
         </DropdownMenuTrigger>
       </span>
       <DropdownMenuContent align="end" viewport="searchable" size="wide">
-        <DropdownMenuSearch
-          value={search.query}
-          onChange={(event) => search.setQuery(event.target.value)}
-          placeholder="Select a model…"
-          autoFocus
+        <ModelConnectionMenuList
+          value={value}
+          onChange={onChange}
+          inheritLabel={inheritLabel}
+          purpose={purpose}
+          search={search}
+          isOpen={isContentMounted}
         />
-        <DropdownMenuViewport>
-          {inheritLabel && !search.isSearching ? (
-            <>
-              <DropdownMenuRadioGroup
-                value={value ? "" : INHERIT_VALUE}
-                onValueChange={() => onChange(null)}
-              >
-                <DropdownMenuRadioItem value={INHERIT_VALUE} closeOnClick>
-                  {inheritLabel}
-                </DropdownMenuRadioItem>
-              </DropdownMenuRadioGroup>
-              <DropdownMenuSeparator />
-            </>
-          ) : null}
-          {isContentMounted ? (
-            <ModelResultsProvider value={reportResults}>
-              {purpose === "completion" ? (
-                <ModelSection
-                  id="athas"
-                  label="Athas"
-                  models={[{ id: "auto", name: ATHAS_TAB_MODEL_LABEL, keywords: ["automatic"] }]}
-                  selected={value && providerId === "athas" ? modelId || "auto" : ""}
-                  onSelect={(id) => onChange({ providerId: "athas", modelId: id })}
-                  providerId="athas"
-                  search={search}
-                />
-              ) : (
-                <AthasModelSections
-                  selected={value && providerId === "athas" ? modelId || "auto" : ""}
-                  search={search}
-                  onSelect={(id) => onChange({ providerId: "athas", modelId: id })}
-                />
-              )}
-              {providers.map((item) => (
-                <ProviderModels
-                  key={item.id}
-                  providerId={item.id}
-                  providerName={item.name}
-                  selected={item.id === providerId ? modelId : ""}
-                  search={search}
-                  onSelect={(id) => onChange({ providerId: item.id, modelId: id })}
-                />
-              ))}
-            </ModelResultsProvider>
-          ) : null}
-          {isContentMounted && search.isSearching && hasNoResults ? (
-            <DropdownMenuEmpty>No matching models</DropdownMenuEmpty>
-          ) : null}
-        </DropdownMenuViewport>
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+interface ModelConnectionMenuListProps {
+  value: IntelligenceConnection | null;
+  onChange: (connection: IntelligenceConnection | null) => void;
+  inheritLabel?: string;
+  purpose?: "chat" | "completion";
+  search: MenuSearch;
+  /** Model sections render only while the menu is open, since they read provider catalogs. */
+  isOpen: boolean;
+}
+
+/**
+ * The searchable model list itself, for a picker's own menu or a submenu of another menu such as
+ * the Tab completion status menu. Render it inside a content with `viewport="searchable"`.
+ */
+export function ModelConnectionMenuList({
+  value,
+  onChange,
+  inheritLabel,
+  purpose = "chat",
+  search,
+  isOpen,
+}: ModelConnectionMenuListProps) {
+  const { reportResults, hasNoResults } = useModelSearchResults();
+  const providerId = value?.providerId ?? "";
+  const modelId = value?.modelId ?? "";
+  const providers = useConnectedModelProviders(providerId ? [providerId] : []);
+
+  return (
+    <>
+      <DropdownMenuSearch
+        value={search.query}
+        onChange={(event) => search.setQuery(event.target.value)}
+        placeholder="Select a model…"
+        autoFocus
+      />
+      <DropdownMenuViewport>
+        {inheritLabel && !search.isSearching ? (
+          <>
+            <DropdownMenuRadioGroup
+              value={value ? "" : INHERIT_VALUE}
+              onValueChange={() => onChange(null)}
+            >
+              <DropdownMenuRadioItem value={INHERIT_VALUE} closeOnClick>
+                {inheritLabel}
+              </DropdownMenuRadioItem>
+            </DropdownMenuRadioGroup>
+            <DropdownMenuSeparator />
+          </>
+        ) : null}
+        {isOpen ? (
+          <ModelResultsProvider value={reportResults}>
+            {purpose === "completion" ? (
+              <ModelSection
+                id="athas"
+                label="Athas"
+                models={[{ id: "auto", name: ATHAS_TAB_MODEL_LABEL, keywords: ["automatic"] }]}
+                selected={value && providerId === "athas" ? modelId || "auto" : ""}
+                onSelect={(id) => onChange({ providerId: "athas", modelId: id })}
+                providerId="athas"
+                search={search}
+              />
+            ) : (
+              <AthasModelSections
+                selected={value && providerId === "athas" ? modelId || "auto" : ""}
+                search={search}
+                onSelect={(id) => onChange({ providerId: "athas", modelId: id })}
+              />
+            )}
+            {providers.map((item) => (
+              <ProviderModels
+                key={item.id}
+                providerId={item.id}
+                providerName={item.name}
+                selected={item.id === providerId ? modelId : ""}
+                search={search}
+                onSelect={(id) => onChange({ providerId: item.id, modelId: id })}
+              />
+            ))}
+          </ModelResultsProvider>
+        ) : null}
+        {isOpen && search.isSearching && hasNoResults ? (
+          <DropdownMenuEmpty>No matching models</DropdownMenuEmpty>
+        ) : null}
+      </DropdownMenuViewport>
+    </>
   );
 }

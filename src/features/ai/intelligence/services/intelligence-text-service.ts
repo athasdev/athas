@@ -41,6 +41,12 @@ export interface AutocompleteRecentEdit {
   snippet: string;
 }
 
+/** A summary of another open file, such as a module the current file imports. */
+export interface AutocompleteRelatedFile {
+  filePath: string;
+  snippet: string;
+}
+
 export interface AutocompleteDiagnostic {
   line: number;
   severity: "error" | "warning" | "info" | "hint";
@@ -67,6 +73,7 @@ export interface InlineEditRequest {
   languageId?: string;
   recentEdits?: AutocompleteRecentEdit[];
   diagnostics?: AutocompleteDiagnostic[];
+  relatedFiles?: AutocompleteRelatedFile[];
 }
 
 export class InlineEditError extends Error {
@@ -191,6 +198,7 @@ async function sendInlineEditRequest(
               languageId: normalizedRequest.languageId,
               ...(request.recentEdits?.length ? { recentEdits: request.recentEdits } : {}),
               ...(request.diagnostics?.length ? { diagnostics: request.diagnostics } : {}),
+              ...(request.relatedFiles?.length ? { relatedFiles: request.relatedFiles } : {}),
             }
           : { ...normalizedRequest, beforeSelection, afterSelection },
       ),
@@ -390,7 +398,7 @@ async function requestProviderInlineEdit(
 function buildInlineEditMessages(request: InlineEditRequest): AIMessage[] {
   const instructions = {
     autocomplete:
-      "Complete the code at the cursor between before and after. Return only the new text to insert, preserving indentation. The completion may span several lines when the next logical step does, such as finishing a function body. Use recentEdits and diagnostics, when present, as hints for what the user is doing. Do not repeat surrounding code, use markdown fences, or explain. Return nothing when a completion is not useful.",
+      "Complete the code at the cursor between before and after. Return only the new text to insert, preserving indentation. The completion may span several lines when the next logical step does, such as finishing a function body. Use recentEdits, diagnostics and relatedFiles (summaries of other open files, such as modules this file imports), when present, as hints for what the user is doing and which APIs exist. Do not repeat surrounding code, use markdown fences, or explain. Return nothing when a completion is not useful.",
     "inline-edit":
       "Rewrite only the selected code. Return replacement code without markdown fences or explanations. Preserve the surrounding code.",
     "commit-message":
@@ -418,6 +426,7 @@ function buildInlineEditMessages(request: InlineEditRequest): AIMessage[] {
         after: request.afterSelection || "",
         ...(request.recentEdits?.length ? { recentEdits: request.recentEdits } : {}),
         ...(request.diagnostics?.length ? { diagnostics: request.diagnostics } : {}),
+        ...(request.relatedFiles?.length ? { relatedFiles: request.relatedFiles } : {}),
       }),
     },
   ];

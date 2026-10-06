@@ -53,7 +53,9 @@ import {
   clearRecentEdits,
   getNearbyDiagnostics,
   getRecentEdits,
+  getRelatedFileSnippets,
   recordRecentEdit,
+  summarizeRelatedFile,
 } from "../intelligence-completion/intelligence-completion-context";
 import {
   requestIntelligenceCompletion,
@@ -124,6 +126,57 @@ describe("intelligence completion context", () => {
   });
 });
 
+describe("related file context", () => {
+  const files = [
+    { path: "/p/src/b.ts", content: "export const b = 1;", languageId: "typescript" },
+    {
+      path: "/p/src/math.ts",
+      content: "// helpers\nexport function add(a: number, b: number) {\n  return a + b;\n}",
+      languageId: "typescript",
+    },
+    { path: "/p/src/ui/index.ts", content: "export { Button } from './button';" },
+    { path: "/p/.env", content: "SECRET=1", languageId: "dotenv" },
+    { path: "/p/src/a.ts", content: "import { add } from './math';", languageId: "typescript" },
+  ];
+
+  it("puts the files the code imports first, then same-language files", () => {
+    const related = getRelatedFileSnippets(
+      "/p/src/a.ts",
+      "typescript",
+      "import { add } from './math';\nimport { Button } from './ui';\nadd(",
+      files,
+    );
+    expect(related.map((file) => file.filePath)).toEqual([
+      "/p/src/math.ts",
+      "/p/src/ui/index.ts",
+      "/p/src/b.ts",
+    ]);
+    expect(related[0]?.snippet).toBe("export function add(a: number, b: number) {");
+  });
+
+  it("never sends sensitive files or the file itself", () => {
+    const related = getRelatedFileSnippets(
+      "/p/src/a.ts",
+      "dotenv",
+      "import x from '../.env'",
+      files,
+    );
+    expect(related.map((file) => file.filePath)).not.toContain("/p/.env");
+    expect(related.map((file) => file.filePath)).not.toContain("/p/src/a.ts");
+  });
+
+  it("follows Python module imports", () => {
+    const related = getRelatedFileSnippets("/p/app.py", "python", "from pkg.models import User\n", [
+      { path: "/p/pkg/models.py", content: "class User:\n    name: str", languageId: "python" },
+    ]);
+    expect(related).toEqual([{ filePath: "/p/pkg/models.py", snippet: "class User:" }]);
+  });
+
+  it("falls back to a file's opening lines when it has no declarations", () => {
+    expect(summarizeRelatedFile("a = 1\n\nb = 2")).toBe("a = 1\nb = 2");
+  });
+});
+
 describe("intelligence completion requests", () => {
   it("trims a repeated suffix from multi-line completions", () => {
     expect(trimSuffixOverlap("a();\n}", "}\n")).toBe("a();\n");
@@ -181,5 +234,37 @@ describe("intelligence completion requests", () => {
     });
     await requestIntelligenceCompletion(completionRequest({ signal: controller.signal }));
     expect(useIntelligenceCompletionStore.getState().status.kind).toBe("idle");
+  });
+
+  it("reports a provider's own error message instead of a generic failure", async () => {
+    const apiError = Object.assign(new Error("model `gpt-x` does not exist\nrequest id: 1"), {
+      statusCode: 404,
+    });
+    mocks.request.mockRejectedValueOnce(apiError);
+    await requestIntelligenceCompletion(completionRequest());
+    expect(useIntelligenceCompletionStore.getState().status).toMatchObject({
+      kind: "error",
+      message: "model `gpt-x` does not exist",
+    });
+
+    useIntelligenceCompletionStore.getState().actions.resume();
+    mocks.request.mockRejectedValueOnce("url not allowed on the configured scope");
+    await requestIntelligenceCompletion(completionRequest());
+    expect(useIntelligenceCompletionStore.getState().status).toMatchObject({
+      kind: "error",
+      message: "url not allowed on the configured scope",
+    });
+  });
+
+  it("pauses on a provider's authentication error", async () => {
+    mocks.request.mockRejectedValueOnce(
+      Object.assign(new Error("Incorrect API key provided"), { statusCode: 401 }),
+    );
+    await requestIntelligenceCompletion(completionRequest());
+    expect(useIntelligenceCompletionStore.getState().status).toMatchObject({
+      kind: "paused",
+      reason: "api-key",
+      message: "Incorrect API key provided",
+    });
   });
 });
