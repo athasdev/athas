@@ -1,21 +1,35 @@
 import { Activity, lazy, memo, type ReactNode, Suspense, useState } from "react";
-import { CollaborationSidebarView } from "@/features/collaboration/components/collaboration-sidebar";
-import { DockerSidebar } from "@/features/docker/components/docker-sidebar";
 import { FileExplorerPane } from "@/features/file-explorer/components/file-explorer-pane";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import GitView from "@/features/git/components/git-view";
-import GitHubPRsView from "@/features/github/components/github-prs-view";
 import {
   getActiveSidebarView,
   getSidebarPaneLevel,
   type SidebarView,
 } from "@/features/layout/utils/sidebar-pane-utils";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { ViewsSidebar } from "@/features/views/components/views-sidebar";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { ExtensionErrorBoundary } from "@/extensions/ui/components/extension-error-boundary";
 import { useExtensionViews } from "@/extensions/ui/hooks/use-extension-views";
+
+// Every view except the file tree loads on demand, so startup only parses the default one.
+const GitView = lazy(() => import("@/features/git/components/git-view"));
+const GitHubPRsView = lazy(() => import("@/features/github/components/github-prs-view"));
+const ViewsSidebar = lazy(() =>
+  import("@/features/views/components/views-sidebar").then((module) => ({
+    default: module.ViewsSidebar,
+  })),
+);
+const DockerSidebar = lazy(() =>
+  import("@/features/docker/components/docker-sidebar").then((module) => ({
+    default: module.DockerSidebar,
+  })),
+);
+const CollaborationSidebarView = lazy(() =>
+  import("@/features/collaboration/components/collaboration-sidebar").then((module) => ({
+    default: module.CollaborationSidebarView,
+  })),
+);
 
 // Loaded on demand so the layout does not pull the AI stores into its import graph.
 const AgentContextSidebar = lazy(() =>
@@ -90,21 +104,49 @@ export const SidebarPane = memo(
             {
               id: "git" as const,
               content: (
-                <GitView
-                  repoPath={rootFolderPath}
-                  onFileSelect={handleFileSelect}
-                  isActive={isGitViewActive}
-                />
+                <Suspense fallback={null}>
+                  <GitView
+                    repoPath={rootFolderPath}
+                    onFileSelect={handleFileSelect}
+                    isActive={isGitViewActive}
+                  />
+                </Suspense>
               ),
             },
           ]
         : []),
-      ...(coreFeatures.github ? [{ id: "github-prs" as const, content: <GitHubPRsView /> }] : []),
+      ...(coreFeatures.github
+        ? [
+            {
+              id: "github-prs" as const,
+              content: (
+                <Suspense fallback={null}>
+                  <GitHubPRsView />
+                </Suspense>
+              ),
+            },
+          ]
+        : []),
       {
         id: "views",
-        content: <ViewsSidebar projectPath={rootFolderPath ?? null} />,
+        content: (
+          <Suspense fallback={null}>
+            <ViewsSidebar projectPath={rootFolderPath ?? null} />
+          </Suspense>
+        ),
       },
-      ...(coreFeatures.docker ? [{ id: "docker" as const, content: <DockerSidebar /> }] : []),
+      ...(coreFeatures.docker
+        ? [
+            {
+              id: "docker" as const,
+              content: (
+                <Suspense fallback={null}>
+                  <DockerSidebar />
+                </Suspense>
+              ),
+            },
+          ]
+        : []),
       {
         id: "workspaces",
         content: (
@@ -146,7 +188,11 @@ export const SidebarPane = memo(
         ? [
             {
               id: "collaboration" as const,
-              content: <CollaborationSidebarView />,
+              content: (
+                <Suspense fallback={null}>
+                  <CollaborationSidebarView />
+                </Suspense>
+              ),
             },
           ]
         : []),
