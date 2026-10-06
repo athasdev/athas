@@ -18,7 +18,14 @@ const CONTINUOUS_AGENT_SCHEDULER_LOCK = "athas-continuous-agent-scheduler";
 
 export function ContinuousAgentsRuntime() {
   const workspacePath = useProjectStore((state) => state.rootFolderPath ?? null);
-  const tasks = useContinuousAgentsStore((state) => state.tasks);
+  // Only what decides when a run is due. Each check rehydrates the store, which replaces the task
+  // array even when nothing changed; depending on the array itself re-ran the check every 100 ms.
+  const scheduleSignature = useContinuousAgentsStore((state) =>
+    state.tasks
+      .filter((task) => task.enabled && task.workspacePath === workspacePath)
+      .map((task) => `${task.id}:${task.nextRunAt}`)
+      .join("|"),
+  );
   const runningRef = useRef(false);
 
   const runNextDueTask = useCallback(async () => {
@@ -104,9 +111,10 @@ export function ContinuousAgentsRuntime() {
   }, []);
 
   useEffect(() => {
+    if (!scheduleSignature) return;
     const timeout = window.setTimeout(() => void runNextDueTask(), 100);
     return () => window.clearTimeout(timeout);
-  }, [runNextDueTask, tasks, workspacePath]);
+  }, [runNextDueTask, scheduleSignature]);
 
   useEffect(() => {
     const interval = window.setInterval(
