@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { getDatabaseProviderExtensions } from "../database/database-provider-extensions";
-import { extensionInstaller } from "../installer/extension-installer";
+import { installedLanguages } from "../installer/installed-languages";
 import { getPackagedLanguageExtensions } from "../languages/language-packager";
 import { loadMarketplaceContributionExtensions } from "../marketplace/marketplace-extensions";
 import { extensionRegistry } from "./extension-registry";
@@ -411,7 +411,7 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
         });
 
         try {
-          const installed = await extensionInstaller.listInstalled();
+          const installed = await installedLanguages.list();
           const updates: string[] = [];
 
           for (const ext of installed) {

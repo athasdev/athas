@@ -8,6 +8,7 @@ import {
   type ParserCacheEntry,
 } from "@/features/editor/lib/wasm-parser/cache-indexeddb";
 import { logger } from "@/features/editor/utils/logger";
+import { type InstalledLanguage, installedLanguages } from "./installed-languages";
 import { Cause, Data, Effect, Exit, Option, Schedule } from "effect";
 
 export interface ExtensionDownloadProgress {
@@ -377,52 +378,28 @@ export class ExtensionInstaller {
    * Uninstall a language extension
    */
   async uninstallLanguage(languageId: string): Promise<void> {
-    logger.info("ExtensionInstaller", `Uninstalling language integration: ${languageId}`);
-
-    try {
-      await indexedDBParserCache.delete(languageId);
-      logger.info("ExtensionInstaller", `Successfully uninstalled ${languageId}`);
-    } catch (error) {
-      logger.error("ExtensionInstaller", `Failed to uninstall ${languageId}:`, error);
-      throw error;
-    }
+    await installedLanguages.uninstall(languageId);
   }
 
   /**
    * Check if a language extension is installed
    */
   async isInstalled(languageId: string): Promise<boolean> {
-    return await indexedDBParserCache.has(languageId);
+    return await installedLanguages.has(languageId);
   }
 
   /**
    * Get installed language version
    */
   async getInstalledVersion(languageId: string): Promise<string | null> {
-    const entry = await indexedDBParserCache.get(languageId);
-    return entry?.version || null;
+    return await installedLanguages.version(languageId);
   }
 
   /**
    * List all installed languages
    */
-  async listInstalled(): Promise<
-    Array<{
-      languageId: string;
-      extensionId?: string;
-      version: string;
-      size: number;
-      downloadedAt?: number;
-    }>
-  > {
-    const entries = await indexedDBParserCache.list();
-    return entries.map((entry) => ({
-      languageId: entry.languageId,
-      extensionId: entry.extensionId,
-      version: entry.version,
-      size: entry.size,
-      downloadedAt: entry.downloadedAt,
-    }));
+  async listInstalled(): Promise<InstalledLanguage[]> {
+    return await installedLanguages.list();
   }
 
   /**

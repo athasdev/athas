@@ -64,8 +64,13 @@ interface ExternalLanguageManifest {
   };
 }
 
+// Only language manifests are read here. Icon themes are excluded because they inline every
+// icon's SVG (over half a megabyte), which this eager import put on the startup path.
 const BUNDLED_LANGUAGE_MANIFESTS = import.meta.glob<ExternalLanguageManifest>(
-  "../../../extensions/official/*/extension.json",
+  [
+    "../../../extensions/official/*/extension.json",
+    "!../../../extensions/official/icons-*/extension.json",
+  ],
   { eager: true, import: "default" },
 );
 

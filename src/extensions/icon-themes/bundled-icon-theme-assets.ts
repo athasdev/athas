@@ -1,7 +1,7 @@
 const BUNDLED_ICON_THEME_ASSETS = import.meta.glob("../bundled/icon-themes/pierre/**/*.svg", {
   eager: true,
   import: "default",
-  query: "?url",
+  query: "?url&no-inline",
 }) as Record<string, string>;
 
 const BUNDLED_ICON_THEME_DIRECTORIES: Record<string, string> = {

@@ -1,4 +1,3 @@
-import { extensionInstaller } from "../installer/extension-installer";
 import {
   getHighlightQueryUrl,
   getHighlightQueryUrlForExtension,
@@ -50,6 +49,8 @@ export async function installLanguageExtensionManifest(
   const languageConfigs = getManifestLanguageContributions(manifest);
   const progressByLanguage = languageConfigs.map(() => 0);
 
+  // The installer (downloads, retries, checksums) only loads when something is installed.
+  const { extensionInstaller } = await import("../installer/extension-installer");
   await Promise.all(
     languageConfigs.map((languageConfig, index) => {
       const languageId = languageConfig.id;

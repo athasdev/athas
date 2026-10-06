@@ -1,6 +1,6 @@
 import { commands } from "@/bindings/commands";
 import { listen } from "@tauri-apps/api/event";
-import { extensionInstaller } from "../installer/extension-installer";
+import { installedLanguages } from "../installer/installed-languages";
 import {
   markBundledContributionExtensionUninstalled,
   readInstalledBundledContributionExtensionIds,
@@ -108,7 +108,7 @@ export async function loadInstalledExtensionsSnapshot(
     availableExtensions,
     backendInstalled,
   );
-  const indexedDBInstalled = await extensionInstaller.listInstalled();
+  const indexedDBInstalled = await installedLanguages.list();
   const disabledExtensionIds = readDisabledExtensionIds();
 
   await Promise.all(

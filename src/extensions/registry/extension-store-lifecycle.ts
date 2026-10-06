@@ -3,7 +3,7 @@ import { wasmParserLoader } from "@/features/editor/lib/wasm-parser/loader";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { PLATFORM_ARCH } from "@/utils/platform";
 import { getServiceUrls } from "@/config/services";
-import { extensionInstaller } from "../installer/extension-installer";
+import { installedLanguages } from "../installer/installed-languages";
 import {
   activateExtensionContributions,
   deactivateExtensionContributions,
@@ -62,7 +62,7 @@ async function uninstallLanguageArtifacts(languageIds: string[]) {
   await Promise.all(
     languageIds.map(async (languageId) => {
       wasmParserLoader.unloadParser(languageId);
-      await extensionInstaller.uninstallLanguage(languageId);
+      await installedLanguages.uninstall(languageId);
     }),
   );
 }
