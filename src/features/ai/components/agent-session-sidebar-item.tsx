@@ -12,6 +12,7 @@ import {
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/ui/hover-card";
 import {
   ArchiveIcon,
+  ClockIcon,
   CubeIcon,
   DotsIcon,
   FolderIcon,
@@ -24,12 +25,17 @@ import {
   WindowExpandIcon,
 } from "@/ui/icons";
 import { SidebarIconButton, SidebarListActionRow, SidebarListItem } from "@/ui/sidebar";
+import { Spinner } from "@/ui/spinner";
 import { cn } from "@/utils/cn";
+import { formatCompactRelativeDate } from "@/utils/date";
 
 export interface AgentSessionSidebarItemProps {
   title: string;
   providerIconId: string;
   createdAt: Date;
+  lastActiveAt: Date;
+  /** The agent is still writing its latest reply. */
+  working?: boolean;
   agentLabel: string;
   modelLabel: string;
   projectName: string;
@@ -47,6 +53,8 @@ export interface AgentSessionSidebarItemProps {
   onRename?: () => void;
   onDelete?: () => void;
 }
+
+const WEEK_MS = 7 * 86_400_000;
 
 const agentSessionDateFormatter = new Intl.DateTimeFormat(undefined, {
   dateStyle: "medium",
@@ -86,6 +94,7 @@ export function AgentSessionSidebarItem({
   attention,
   branch,
   createdAt,
+  lastActiveAt,
   modelLabel,
   onArchive,
   onOpen,
@@ -99,8 +108,14 @@ export function AgentSessionSidebarItem({
   providerIconId,
   title,
   workspacePath,
+  working = false,
 }: AgentSessionSidebarItemProps) {
-  const formattedDate = agentSessionDateFormatter.format(createdAt);
+  const startedAt = agentSessionDateFormatter.format(createdAt);
+  const lastActive = formatCompactRelativeDate(lastActiveAt, {
+    afterWeek: Date.now() - lastActiveAt.getTime() < WEEK_MS ? "days" : "weeks",
+    includeAgo: false,
+    justNowLabel: "now",
+  });
 
   return (
     <HoverCard>
@@ -161,7 +176,15 @@ export function AgentSessionSidebarItem({
             <SidebarListItem
               active={active}
               leading={<ProviderIcon providerId={providerIconId} size={16} />}
-              trailing={attention ? <AgentAttentionDot attention={attention} /> : undefined}
+              trailing={
+                attention ? (
+                  <AgentAttentionDot attention={attention} />
+                ) : working ? (
+                  <Spinner label="Agent is working" compact />
+                ) : (
+                  <span className="text-subtle-foreground ui-text-caption">{lastActive}</span>
+                )
+              }
             >
               {title}
             </SidebarListItem>
@@ -184,7 +207,11 @@ export function AgentSessionSidebarItem({
           <div className="min-w-0 flex-1">
             <div className="line-clamp-2 font-medium text-foreground ui-text-base">{title}</div>
             <div className="mt-1 flex min-w-0 items-center gap-1.5 text-subtle-foreground ui-text-sm">
-              <span className="min-w-0 truncate">{formattedDate}</span>
+              <span className="min-w-0 truncate">
+                {working
+                  ? "Working now"
+                  : `Active ${formatCompactRelativeDate(lastActiveAt, { justNowLabel: "just now" })}`}
+              </span>
               {pinned ? (
                 <span className="flex shrink-0 items-center gap-1 rounded-full bg-background px-1.5 py-0.5 text-subtle-foreground ring-1 ring-border">
                   <PinIcon className="size-3" />
@@ -206,6 +233,11 @@ export function AgentSessionSidebarItem({
             icon={<FolderIcon className="size-3.5" />}
             label="Project"
             value={projectName}
+          />
+          <MetadataRow
+            icon={<ClockIcon className="size-3.5" />}
+            label="Started"
+            value={startedAt}
           />
           {branch ? (
             <MetadataRow
