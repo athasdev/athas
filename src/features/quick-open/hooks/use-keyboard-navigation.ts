@@ -7,70 +7,78 @@ import {
   KEY_ENTER,
   KEY_ESCAPE,
   KEY_K,
+  KEY_TAB,
 } from "../constants/keyboard-keys";
-import type { FileItem } from "@/features/file-search/types/file-search.types";
 
-interface UseKeyboardNavigationProps {
+interface UseKeyboardNavigationProps<T extends { key: string }> {
   isVisible: boolean;
-  allResults: FileItem[];
+  allResults: readonly T[];
   onClose: () => void;
-  onSelect: (path: string) => void;
+  onSelect: (item: T) => void;
+  /** Tab and Shift+Tab move between sections when given. */
+  onCycleSection?: (direction: 1 | -1) => void;
+  /** Resets the selection to the first row whenever it changes, such as on a section switch. */
+  resetKey?: string;
 }
 
-export const useKeyboardNavigation = ({
+export const useKeyboardNavigation = <T extends { key: string }>({
   isVisible,
   allResults,
   onClose,
   onSelect,
-}: UseKeyboardNavigationProps) => {
-  const [selection, setSelection] = useState<{ index: number; path: string | null }>({
+  onCycleSection,
+  resetKey,
+}: UseKeyboardNavigationProps<T>) => {
+  // The selection follows its row by key, so results arriving asynchronously and reordering the
+  // list do not move it to a different row.
+  const [selection, setSelection] = useState<{ index: number; key: string | null }>({
     index: 0,
-    path: null,
+    key: null,
   });
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const resultIndexByPath = useMemo(() => {
-    const indexByPath = new Map<string, number>();
+  const resultIndexByKey = useMemo(() => {
+    const indexByKey = new Map<string, number>();
     for (let index = 0; index < allResults.length; index++) {
       const result = allResults[index];
       if (result) {
-        indexByPath.set(result.path, index);
+        indexByKey.set(result.key, index);
       }
     }
-    return indexByPath;
+    return indexByKey;
   }, [allResults]);
 
   const selectedIndex =
-    (selection.path ? resultIndexByPath.get(selection.path) : undefined) ??
+    (selection.key ? resultIndexByKey.get(selection.key) : undefined) ??
     Math.min(selection.index, Math.max(0, allResults.length - 1));
 
   const setSelectedIndex = useCallback(
     (next: SetStateAction<number>) => {
       setSelection((previous) => {
         const currentIndex =
-          (previous.path ? resultIndexByPath.get(previous.path) : undefined) ??
+          (previous.key ? resultIndexByKey.get(previous.key) : undefined) ??
           Math.min(previous.index, Math.max(0, allResults.length - 1));
         const index = typeof next === "function" ? next(currentIndex) : next;
-        const path = allResults[index]?.path ?? null;
-        return previous.index === index && previous.path === path ? previous : { index, path };
+        const key = allResults[index]?.key ?? null;
+        return previous.index === index && previous.key === key ? previous : { index, key };
       });
     },
-    [allResults, resultIndexByPath],
+    [allResults, resultIndexByKey],
   );
 
   useEffect(() => {
-    const path = allResults[selectedIndex]?.path ?? null;
+    const key = allResults[selectedIndex]?.key ?? null;
     setSelection((previous) =>
-      previous.index === selectedIndex && previous.path === path
+      previous.index === selectedIndex && previous.key === key
         ? previous
-        : { index: selectedIndex, path },
+        : { index: selectedIndex, key },
     );
   }, [allResults, selectedIndex]);
 
   useEffect(() => {
     if (isVisible) {
-      setSelection({ index: 0, path: null });
+      setSelection({ index: 0, key: null });
     }
-  }, [isVisible]);
+  }, [isVisible, resetKey]);
 
   const handleInputKeyDown = useCallback(
     (event: ReactKeyboardEvent<HTMLInputElement>) => {
@@ -78,6 +86,12 @@ export const useKeyboardNavigation = ({
       if (event.key === KEY_ESCAPE || (event.key === KEY_K && (event.metaKey || event.ctrlKey))) {
         event.preventDefault();
         onClose();
+        return;
+      }
+
+      if (event.key === KEY_TAB && onCycleSection && !event.altKey && !event.metaKey) {
+        event.preventDefault();
+        onCycleSection(event.shiftKey ? -1 : 1);
         return;
       }
 
@@ -100,11 +114,11 @@ export const useKeyboardNavigation = ({
         event.preventDefault();
         const selectedResult = allResults[selectedIndex] ?? allResults[0];
         if (selectedResult) {
-          onSelect(selectedResult.path);
+          onSelect(selectedResult);
         }
       }
     },
-    [allResults, onClose, onSelect, selectedIndex, setSelectedIndex],
+    [allResults, onClose, onCycleSection, onSelect, selectedIndex, setSelectedIndex],
   );
 
   // Auto-scroll selected item into view

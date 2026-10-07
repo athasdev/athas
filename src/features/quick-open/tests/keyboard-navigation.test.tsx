@@ -2,49 +2,45 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import type { FileItem } from "@/features/file-search/types/file-search.types";
 import { useKeyboardNavigation } from "../hooks/use-keyboard-navigation";
-import { FileListItem } from "../components/file-list-item";
+import { QuickOpenItemRow } from "../components/quick-open-item-row";
+import type { QuickOpenItem } from "../types/quick-open.types";
 
-vi.mock("@/extensions/icon-themes/components/themed-file-icon", () => ({
-  ThemedFileIcon: () => null,
-}));
 vi.mock("@/features/keymaps/hooks/use-command-shortcut", () => ({
   useCommandShortcut: () => undefined,
 }));
 
-const files: FileItem[] = ["first.ts", "second.ts", "third.ts"].map((name) => ({
-  name,
-  path: `/repo/${name}`,
-  isDir: false,
-}));
 const onSelect = vi.fn();
 const onClose = vi.fn();
+const onCycleSection = vi.fn();
+const files: QuickOpenItem[] = ["first.ts", "second.ts", "third.ts"].map((name) => ({
+  key: `/repo/${name}`,
+  icon: null,
+  title: name,
+  select: () => onSelect(`/repo/${name}`),
+}));
 let container: HTMLDivElement;
 let root: Root;
 
-function Search({ results }: { results: FileItem[] }) {
+function Search({ results }: { results: QuickOpenItem[] }) {
   const { selectedIndex, setSelectedIndex, handleInputKeyDown, scrollContainerRef } =
     useKeyboardNavigation({
       isVisible: true,
       allResults: [...results],
       onClose,
-      onSelect,
+      onSelect: (item) => item.select(),
+      onCycleSection,
     });
   return (
     <div ref={scrollContainerRef}>
       <input aria-label="Search files" onKeyDown={handleInputKeyDown} />
-      {results.map((file, index) => (
-        <FileListItem
-          key={file.path}
-          file={file}
-          category="other"
+      {results.map((item, index) => (
+        <QuickOpenItemRow
+          key={item.key}
+          item={item}
           index={index}
           isSelected={index === selectedIndex}
-          onClick={onSelect}
-          onMouseMove={setSelectedIndex}
-          rootFolderPath="/repo"
-          searchQuery=""
+          onHover={setSelectedIndex}
         />
       ))}
     </div>
@@ -64,6 +60,7 @@ beforeEach(() => {
   Element.prototype.scrollIntoView = vi.fn();
   onSelect.mockClear();
   onClose.mockClear();
+  onCycleSection.mockClear();
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);
@@ -122,5 +119,13 @@ describe("Quick Open keyboard navigation", () => {
     await act(async () => first.dispatchEvent(new MouseEvent("mousemove", { bubbles: true })));
     await press("Enter");
     expect(onSelect).toHaveBeenLastCalledWith("/repo/first.ts");
+  });
+
+  it("moves between sections with Tab and Shift+Tab", async () => {
+    await act(async () => root.render(<Search results={files} />));
+    await press("Tab");
+    await press("Tab", { shiftKey: true });
+    expect(onCycleSection.mock.calls).toEqual([[1], [-1]]);
+    expect(onSelect).not.toHaveBeenCalled();
   });
 });

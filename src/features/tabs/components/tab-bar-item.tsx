@@ -1,40 +1,17 @@
 import { isDirtyContent } from "@/features/panes/types/pane-content.types";
-import { BrowserTabIcon } from "@/features/browser/components/browser-tab-icon";
-import { TagIcon, RocketIcon } from "@/ui/icons";
-import { AgentSessionIcon } from "@/features/ai/components/icons/agent-session-icon";
 import { AgentAttentionDot } from "@/features/ai/components/agent-attention-dot";
 import { useChatAttention } from "@/features/ai/hooks/use-chat-attention";
-import {
-  ActivityIcon,
-  ArrowsClockwiseIcon,
-  ArrowsLeftRightIcon,
-  ChatBubbleTextIcon,
-  DatabaseIcon,
-  GitBranchIcon,
-  GitDiffIcon,
-  GitPullRequestIcon,
-  GridIcon,
-  PackageIcon,
-  PinIcon,
-  SearchIcon,
-  SettingsIcon,
-  TerminalWindowIcon,
-  WarningCircleIcon,
-  XIcon,
-} from "@/ui/icons";
-import { memo, useCallback, useEffect, useState } from "react";
+import { PinIcon, XIcon } from "@/ui/icons";
+import { memo, useCallback } from "react";
 import type { RefCallback } from "react";
-import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
+import { BufferTypeIcon } from "./buffer-type-icon";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import { shouldShowTabCloseButton } from "@/features/settings/lib/ui-preferences";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
 import { InlineRenameInput } from "@/ui/input";
 import { TabItem } from "@/ui/tab-bar";
-import { getBaseName } from "@/utils/path-helpers";
 import { cn } from "@/utils/cn";
-import type { MultiFileDiff } from "@/features/git/types/git-diff.types";
-import type { GitDiff } from "@/features/git/types/git.types";
 
 interface TabBarItemProps {
   buffer: PaneContent;
@@ -78,7 +55,6 @@ const TabBarItem = memo(function TabBarItem({
   onRenameSubmit,
   onRenameCancel,
 }: TabBarItemProps) {
-  const [avatarError, setAvatarError] = useState(false);
   const agentAttention = useChatAttention(buffer.type === "agent" ? buffer.sessionId : null);
   const showTabIcons = useSettingsStore((state) => state.settings.showTabIcons);
   const tabCloseButtonVisibility = useSettingsStore(
@@ -89,27 +65,6 @@ const TabBarItem = memo(function TabBarItem({
     isActive,
     buffer.isPinned,
   );
-  const authorAvatarUrl =
-    buffer.type === "pullRequest" || buffer.type === "githubIssue"
-      ? buffer.authorAvatarUrl
-      : undefined;
-
-  useEffect(() => {
-    setAvatarError(false);
-  }, [authorAvatarUrl]);
-
-  const getDiffIconName = () => {
-    if (buffer.type !== "diff") return buffer.name;
-    if (buffer.path === "diff://working-tree/all-files") return null;
-
-    const diffData = buffer.diffData;
-    if (diffData && !("files" in diffData)) {
-      return getDiffFileName(diffData);
-    }
-
-    return displayName;
-  };
-
   const handleAuxClick = useCallback(
     (e: React.MouseEvent) => {
       // Only handle middle click here
@@ -176,87 +131,7 @@ const TabBarItem = memo(function TabBarItem({
       >
         {showTabIcons && buffer.type !== "newTab" ? (
           <div className="grid size-3 shrink-0 place-content-center">
-            {buffer.type === "extension" ? (
-              <PackageIcon className="text-subtle-foreground" />
-            ) : buffer.type === "diff" && isMultiFileDiff(buffer.diffData) ? (
-              <GitBranchIcon className="text-subtle-foreground" />
-            ) : buffer.type === "terminal" ? (
-              <TerminalWindowIcon className="text-subtle-foreground" />
-            ) : buffer.type === "browser" ? (
-              <BrowserTabIcon favicon={buffer.favicon} />
-            ) : buffer.type === "agent" ? (
-              <AgentSessionIcon
-                sessionId={buffer.sessionId}
-                size={12}
-                className="text-subtle-foreground"
-              />
-            ) : buffer.type === "database" ? (
-              <DatabaseIcon className="text-subtle-foreground" />
-            ) : buffer.type === "pullRequest" ? (
-              authorAvatarUrl && !avatarError ? (
-                <img
-                  src={authorAvatarUrl}
-                  alt=""
-                  className="size-3 rounded-full object-cover"
-                  loading="lazy"
-                  onError={() => setAvatarError(true)}
-                />
-              ) : (
-                <GitPullRequestIcon className="text-subtle-foreground" />
-              )
-            ) : buffer.type === "githubIssue" ? (
-              authorAvatarUrl && !avatarError ? (
-                <img
-                  src={authorAvatarUrl}
-                  alt=""
-                  className="size-3 rounded-full object-cover"
-                  loading="lazy"
-                  onError={() => setAvatarError(true)}
-                />
-              ) : (
-                <ChatBubbleTextIcon className="text-subtle-foreground" />
-              )
-            ) : buffer.type === "githubDelivery" ? (
-              buffer.kind === "releases" ? (
-                <TagIcon />
-              ) : (
-                <RocketIcon />
-              )
-            ) : buffer.type === "githubAction" ? (
-              <ActivityIcon className="text-subtle-foreground" />
-            ) : buffer.type === "githubForm" ? (
-              buffer.formKind === "pull-request" ? (
-                <GitPullRequestIcon className="text-subtle-foreground" />
-              ) : buffer.formKind === "issue" ? (
-                <ChatBubbleTextIcon className="text-subtle-foreground" />
-              ) : (
-                <ActivityIcon className="text-subtle-foreground" />
-              )
-            ) : buffer.type === "customView" ? (
-              <GridIcon className="text-subtle-foreground" />
-            ) : buffer.type === "globalSearch" ? (
-              <SearchIcon className="text-subtle-foreground" />
-            ) : buffer.type === "diagnostics" ? (
-              <WarningCircleIcon className="text-subtle-foreground" />
-            ) : buffer.type === "references" ? (
-              <SearchIcon className="text-subtle-foreground" />
-            ) : buffer.type === "continuousAgents" ? (
-              <ArrowsClockwiseIcon className="text-subtle-foreground" />
-            ) : buffer.type === "acpInspector" ? (
-              <ArrowsLeftRightIcon className="text-subtle-foreground" />
-            ) : buffer.type === "agentChanges" ? (
-              <GitDiffIcon className="text-subtle-foreground" />
-            ) : buffer.type === "workspaces" ? (
-              <GridIcon />
-            ) : buffer.type === "settings" ? (
-              <SettingsIcon className="text-subtle-foreground" />
-            ) : (
-              <ThemedFileIcon
-                fileName={getDiffIconName() ?? buffer.name}
-                isDir={false}
-                className="text-subtle-foreground"
-              />
-            )}
+            <BufferTypeIcon buffer={buffer} displayName={displayName} />
           </div>
         ) : null}
         {isEditing ? (
@@ -300,14 +175,5 @@ const TabBarItem = memo(function TabBarItem({
     </div>
   );
 });
-
-function isMultiFileDiff(diffData: GitDiff | MultiFileDiff | undefined): diffData is MultiFileDiff {
-  return Boolean(diffData && "files" in diffData);
-}
-
-function getDiffFileName(diff: GitDiff): string {
-  const filePath = diff.new_path || diff.old_path || diff.file_path || "";
-  return getBaseName(filePath, filePath || "diff");
-}
 
 export default TabBarItem;
