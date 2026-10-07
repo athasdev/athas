@@ -6,10 +6,11 @@ import {
   matchQuickOpenPrefix,
   QUICK_OPEN_SECTIONS,
 } from "../constants/quick-open-sections";
-import { useCommandsSection } from "../sections/use-commands-section";
+import { useAgentsSection } from "../sections/use-agents-section";
 import { useFilesSection } from "../sections/use-files-section";
-import { useSettingsSection } from "../sections/use-settings-section";
-import { useSymbolsSection, useWorkspaceSymbolsSection } from "../sections/use-symbol-sections";
+import { useGitHubSection } from "../sections/use-github-section";
+import { useGitSection } from "../sections/use-git-section";
+import { useSymbolsSection } from "../sections/use-symbols-section";
 import { useTabsSection } from "../sections/use-tabs-section";
 import { useTextSection } from "../sections/use-text-section";
 import type { QuickOpenItem, QuickOpenSectionId } from "../types/quick-open.types";
@@ -37,10 +38,10 @@ export const useQuickOpen = () => {
     files: useFilesSection({ ...input("files"), isVisible }),
     text: useTextSection(input("text")),
     symbols: useSymbolsSection(input("symbols")),
-    "workspace-symbols": useWorkspaceSymbolsSection(input("workspace-symbols")),
-    commands: useCommandsSection(input("commands")),
+    git: useGitSection(input("git")),
+    github: useGitHubSection(input("github")),
+    agents: useAgentsSection(input("agents")),
     tabs: useTabsSection(input("tabs")),
-    settings: useSettingsSection(input("settings")),
   } satisfies Record<QuickOpenSectionId, unknown>;
   const result = results[section];
 

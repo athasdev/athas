@@ -7,11 +7,16 @@ import Command, {
   CommandTabs,
 } from "@/ui/command";
 import { Kbd, KbdGroup } from "@/ui/kbd";
+import { Fragment } from "react";
 import { QUICK_OPEN_SECTIONS } from "../constants/quick-open-sections";
 import { useQuickOpen } from "../hooks/use-quick-open";
 import { QuickOpenItemRow } from "./quick-open-item-row";
 
-const PREFIX_HINTS = QUICK_OPEN_SECTIONS.filter((section) => section.prefix);
+const PREFIX_HINTS = QUICK_OPEN_SECTIONS.flatMap((section) =>
+  (section.prefixes ?? [])
+    .slice(0, 1)
+    .map((prefix) => ({ id: section.id, prefix, label: section.label })),
+);
 
 const QuickOpen = () => {
   const {
@@ -80,13 +85,19 @@ const QuickOpen = () => {
         {result.items.length === 0
           ? result.empty
           : result.items.map((item, index) => (
-              <QuickOpenItemRow
-                key={item.key}
-                item={item}
-                index={index}
-                isSelected={index === selectedIndex}
-                onHover={setSelectedIndex}
-              />
+              <Fragment key={item.key}>
+                {item.group && item.group !== result.items[index - 1]?.group ? (
+                  <div className="ui-text-chrome px-2.5 pt-2 pb-1 font-medium text-subtle-foreground">
+                    {item.group}
+                  </div>
+                ) : null}
+                <QuickOpenItemRow
+                  item={item}
+                  index={index}
+                  isSelected={index === selectedIndex}
+                  onHover={setSelectedIndex}
+                />
+              </Fragment>
             ))}
       </CommandList>
 

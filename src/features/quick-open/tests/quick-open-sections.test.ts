@@ -1,42 +1,15 @@
 import { describe, expect, it } from "vite-plus/test";
-import type { Command } from "@/features/keymaps/types/keymaps.types";
 import { matchQuickOpenPrefix } from "../constants/quick-open-sections";
-import { rankCommands } from "../sections/use-commands-section";
 import { toTextMatches } from "../sections/use-text-section";
 
 describe("quick open sections", () => {
   it("jumps to a section from its prefix and keeps the rest of the query", () => {
-    expect(matchQuickOpenPrefix(">toggle")).toEqual({ section: "commands", query: "toggle" });
     expect(matchQuickOpenPrefix("@ render")).toEqual({ section: "symbols", query: "render" });
-    expect(matchQuickOpenPrefix("#Store")).toEqual({
-      section: "workspace-symbols",
-      query: "Store",
-    });
+    expect(matchQuickOpenPrefix("#Store")).toEqual({ section: "symbols", query: "Store" });
     expect(matchQuickOpenPrefix("%todo")).toEqual({ section: "text", query: "todo" });
     expect(matchQuickOpenPrefix("main.ts")).toBeNull();
-  });
-
-  it("ranks commands by title before category", () => {
-    const command = (id: string, title: string, category: string): Command => ({
-      id,
-      title,
-      category,
-      execute: () => {},
-    });
-    const commands = [
-      command("view.toggleTerminal", "Toggle Terminal", "View"),
-      command("terminal.new", "New Terminal", "Terminal"),
-      command("file.save", "Save", "File"),
-    ];
-    expect(rankCommands(commands, "terminal").map((c) => c.id)).toEqual([
-      "terminal.new",
-      "view.toggleTerminal",
-    ]);
-    expect(rankCommands(commands, "").map((c) => c.id)).toEqual([
-      "file.save",
-      "terminal.new",
-      "view.toggleTerminal",
-    ]);
+    // Commands live in the command palette, not here.
+    expect(matchQuickOpenPrefix(">toggle")).toBeNull();
   });
 
   it("cuts long lines so the match stays visible and opens at a 1-based column", () => {

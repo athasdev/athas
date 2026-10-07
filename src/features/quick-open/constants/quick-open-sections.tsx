@@ -2,10 +2,10 @@ import type { ReactNode } from "react";
 import {
   CodeIcon,
   FilesIcon,
-  HashIcon,
-  SettingsIcon,
+  GitBranchIcon,
+  GitPullRequestIcon,
+  SparkleIcon,
   StackIcon,
-  TerminalIcon,
   TextAlignLeftIcon,
 } from "@/ui/icons";
 import type { QuickOpenSectionId } from "../types/quick-open.types";
@@ -14,8 +14,8 @@ export interface QuickOpenSectionDefinition {
   id: QuickOpenSectionId;
   label: string;
   icon: ReactNode;
-  /** Typing this first in the Files section jumps to the section, like VS Code's quick open. */
-  prefix?: string;
+  /** Typing one of these first in Files jumps to the section, like VS Code's quick open. */
+  prefixes?: readonly string[];
   placeholder: string;
 }
 
@@ -25,37 +25,35 @@ export const QUICK_OPEN_SECTIONS: readonly QuickOpenSectionDefinition[] = [
     id: "text",
     label: "Text",
     icon: <TextAlignLeftIcon />,
-    prefix: "%",
+    prefixes: ["%"],
     placeholder: "Search text in files...",
   },
   {
     id: "symbols",
     label: "Symbols",
     icon: <CodeIcon />,
-    prefix: "@",
-    placeholder: "Go to a symbol in this file...",
+    prefixes: ["@", "#"],
+    placeholder: "Search symbols in this file and the project...",
   },
   {
-    id: "workspace-symbols",
-    label: "Workspace",
-    icon: <HashIcon />,
-    prefix: "#",
-    placeholder: "Search symbols across the project...",
+    id: "git",
+    label: "Git",
+    icon: <GitBranchIcon />,
+    placeholder: "Search changes, branches and commits...",
   },
   {
-    id: "commands",
-    label: "Commands",
-    icon: <TerminalIcon />,
-    prefix: ">",
-    placeholder: "Run a command...",
+    id: "github",
+    label: "GitHub",
+    icon: <GitPullRequestIcon />,
+    placeholder: "Search pull requests and issues...",
+  },
+  {
+    id: "agents",
+    label: "Agents",
+    icon: <SparkleIcon />,
+    placeholder: "Search agent chats, or start one...",
   },
   { id: "tabs", label: "Tabs", icon: <StackIcon />, placeholder: "Switch to an open tab..." },
-  {
-    id: "settings",
-    label: "Settings",
-    icon: <SettingsIcon />,
-    placeholder: "Search settings...",
-  },
 ];
 
 export function getQuickOpenSection(id: QuickOpenSectionId): QuickOpenSectionDefinition {
@@ -67,8 +65,9 @@ export function matchQuickOpenPrefix(
   value: string,
 ): { section: QuickOpenSectionId; query: string } | null {
   for (const section of QUICK_OPEN_SECTIONS) {
-    if (section.prefix && value.startsWith(section.prefix)) {
-      return { section: section.id, query: value.slice(section.prefix.length).trimStart() };
+    const prefix = section.prefixes?.find((candidate) => value.startsWith(candidate));
+    if (prefix) {
+      return { section: section.id, query: value.slice(prefix.length).trimStart() };
     }
   }
   return null;

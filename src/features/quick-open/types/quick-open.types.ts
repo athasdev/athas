@@ -4,10 +4,10 @@ export type QuickOpenSectionId =
   | "files"
   | "text"
   | "symbols"
-  | "workspace-symbols"
-  | "commands"
-  | "tabs"
-  | "settings";
+  | "git"
+  | "github"
+  | "agents"
+  | "tabs";
 
 /** One result row, whatever the section: rendered the same way and opened with `select`. */
 export interface QuickOpenItem {
@@ -16,6 +16,8 @@ export interface QuickOpenItem {
   title: ReactNode;
   description?: ReactNode;
   accessory?: ReactNode;
+  /** Rows sharing a group are listed under its heading, in the order they come. */
+  group?: string;
   select: () => void;
 }
 
