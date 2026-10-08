@@ -8,7 +8,7 @@ import {
   getAgentErrorMessage,
   type AgentAction,
   type PendingAgentAction,
-} from "@/features/ai/lib/agent-options";
+} from "@/features/ai/services/agent-options";
 import { withAgentRequestTimeout } from "@/features/ai/lib/agent-request-timeout";
 import type { AgentConfig } from "@/features/ai/types/acp.types";
 import { createSelectors } from "@/utils/zustand-selectors";

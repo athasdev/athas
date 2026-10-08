@@ -7,7 +7,7 @@ export interface ReferenceEntry {
   location: LspLocation;
 }
 
-export interface ReferenceGroup {
+interface ReferenceGroup {
   filePath: string;
   fileName: string;
   directory: string;

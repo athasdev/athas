@@ -24,6 +24,7 @@ vi.mock("@/extensions/ui/components/extension-diff-preview", () => ({
 }));
 
 const call = (overrides: Partial<ToolCall>): ToolCall => ({
+  id: "tool",
   name: "tool",
   input: {},
   timestamp: new Date(0),

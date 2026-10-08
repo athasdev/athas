@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { cn } from "@/utils/cn";
-import { getPaneDropZoneFromRect, type PaneDropZone } from "../utils/pane-drop-zones";
+import { getPaneDropZoneFromRect, type PaneDropZone } from "../services/pane-drop-zones";
 
 export type DropZone = PaneDropZone;
 

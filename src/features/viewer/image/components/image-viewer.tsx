@@ -7,13 +7,10 @@ import {
   saveImageBufferById,
 } from "../editor/services/image-buffer-session";
 import { FilePathBreadcrumb } from "@/features/editor/components/toolbar/file-path-breadcrumb";
-import {
-  PaneContentHeader,
-  PaneContentStatusBar,
-} from "@/features/panes/components/pane-content-chrome";
+import { PaneContentHeader, PaneContentStatusBar } from "@/ui/pane-content-chrome";
 import { useResizeObserver } from "@/features/panes/hooks/use-resize-observer";
 import { ViewerLayout } from "@/features/viewer/components/viewer-layout";
-import { ViewerErrorState, ViewerLoadingState } from "@/features/viewer/components/viewer-state";
+import { ViewerErrorState, ViewerLoadingState } from "@/ui/viewer-state";
 import { ImageEditorToolbar } from "@/features/viewer/image/editor/components/image-editor-toolbar";
 import { ImageResizeDialog } from "@/features/viewer/image/editor/components/image-resize-dialog";
 import { useImageOperations } from "@/features/viewer/image/editor/hooks/use-image-operations";
@@ -30,10 +27,11 @@ import { useViewerZoom } from "@/features/viewer/hooks/use-viewer-zoom";
 import { Button } from "@/ui/button";
 import { Alert, AlertDescription } from "@/ui/alert";
 import { ChromeSeparator } from "@/ui/chrome";
-import UnsavedChangesDialog from "@/features/window/components/unsaved-changes-dialog";
+import UnsavedChangesDialog from "@/features/tabs/components/unsaved-changes-dialog";
 import { cn } from "@/utils/cn";
 import { formatFileSize } from "@/utils/format-file-size";
 import { getImageMimeType } from "@/utils/image-file-types";
+import { readFileBytes } from "@/utils/local-files";
 import { ImageContextMenu } from "./image-context-menu";
 import { resolveAssetUrl } from "@/utils/asset-access";
 
@@ -102,8 +100,7 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
       };
 
       try {
-        const { readFile } = await import("@tauri-apps/plugin-fs");
-        const contents = await readFile(filePath);
+        const contents = await readFileBytes(filePath);
         fileSize = contents.byteLength;
         const mimeType = getImageMimeType(filePath);
 

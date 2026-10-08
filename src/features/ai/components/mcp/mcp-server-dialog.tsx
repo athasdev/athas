@@ -3,7 +3,7 @@ import {
   hasMcpServerDraftErrors,
   MCP_TRANSPORT_LABELS,
   validateMcpServerDraft,
-} from "@/features/ai/lib/mcp-servers";
+} from "@/features/ai/services/mcp-servers";
 import type {
   McpNameValue,
   McpServerDraft,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { getNativeWorkspaceRootPaths } from "../utils/file-search-paths";
+import { getNativeWorkspaceRootPaths } from "../services/file-search-paths";
 
 describe("getNativeWorkspaceRootPaths", () => {
   it("keeps unique local workspace roots in their configured order", () => {

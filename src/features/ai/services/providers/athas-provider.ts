@@ -1,7 +1,7 @@
 import { useIntelligenceSettingsStore } from "@/features/ai/intelligence/stores/intelligence-settings.store";
-import { useAuthStore } from "@/features/window/stores/auth.store";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { getApiBase } from "@/utils/api-base";
-import { getAuthToken } from "@/features/window/services/auth-api";
+import { getAuthToken } from "@/features/auth/services/auth-api";
 import { tauriFetch } from "@/utils/tauri-fetch";
 import {
   AIProvider,
@@ -15,7 +15,7 @@ import { toOpenAIMessage } from "@/features/ai/lib/image-attachments";
  * The server offers hosted models only to accounts with Athas Pro or a pay-as-you-go balance.
  * Carries a 402 so chat recovery offers billing instead of provider settings.
  */
-export class HostedEntitlementError extends Error {
+class HostedEntitlementError extends Error {
   readonly status = 402;
   readonly code = "entitlement_required";
 

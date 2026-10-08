@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef } from "react";
 import type { SlashCommand } from "@/features/ai/types/acp.types";
 import type { SlashCommandState } from "@/features/ai/types/chat-composer.types";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import {
   CommandEmpty,
   CommandItemBadge,

@@ -1,6 +1,6 @@
 import { toast } from "sonner";
 import { renameTerminalWithIntelligence } from "../services/intelligence-terminal-title";
-import { openTerminalWindow } from "@/features/window/detached/standalone-content-service";
+import { openTerminalWindow } from "@/features/window/detached/services/standalone-content-service";
 import {
   ArrowCounterClockwiseIcon,
   ColumnsIcon,

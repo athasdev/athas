@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { openFolder } from "@/features/file-system/controllers/platform";
-import { useAuthStore } from "@/features/window/stores/auth.store";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { openFolder } from "@/features/file-system/api/file-system-api";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { Button } from "@/ui/button";
 import { PlusIcon } from "@/ui/icons";
 import Select from "@/ui/select";
@@ -18,15 +18,16 @@ import { getBaseName } from "@/utils/path-helpers";
 import { WORKSPACE_SECTIONS } from "../config/workspace-sections";
 import { useWorkspaceSelection } from "../hooks/use-workspace-selection";
 import { useWorkspaceManagementStore } from "../stores/workspace-management.store";
+import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 export function WorkspaceSidebar() {
   const { root, paths, drafts } = useWorkspaceSelection();
   const section = useWorkspaceManagementStore.use.section();
   const { register, select, setSection } = useWorkspaceManagementStore.use.actions();
   const enterprise = useAuthStore((state) => state.subscription?.enterprise?.has_access);
+  const activeBufferId = useActiveBufferId();
   const isManagementActive = useBufferStore(
-    (state) =>
-      state.buffers.find((buffer) => buffer.id === state.activeBufferId)?.type === "workspaces",
+    (state) => state.buffers.find((buffer) => buffer.id === activeBufferId)?.type === "workspaces",
   );
   const [actionError, setActionError] = useState<string | null>(null);
   const openDetails = () => useBufferStore.getState().actions.openContent({ type: "workspaces" });

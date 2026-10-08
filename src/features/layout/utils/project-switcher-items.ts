@@ -1,6 +1,6 @@
 import type { RemoteConnection } from "@/features/remote/types/remote.types";
-import { parseRemotePath } from "@/features/remote/utils/remote-path";
-import type { ProjectTab } from "@/features/window/stores/workspace-tabs.store";
+import { parseRemotePath } from "@/features/remote/services/remote-path";
+import type { ProjectTab } from "@/features/workspace/stores/workspace-tabs.store";
 
 export function getProjectRemoteConnectionId(projectPath?: string) {
   return projectPath ? parseRemotePath(projectPath)?.connectionId : undefined;

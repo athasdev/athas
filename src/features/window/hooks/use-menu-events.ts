@@ -1,6 +1,6 @@
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import { useEffect, useRef, type RefObject } from "react";
-import { listenToMenuActions } from "../lib/menu-actions";
+import { listenToMenuActions } from "../services/menu-actions";
 
 type Handlers = RefObject<UseMenuEventsProps>;
 

@@ -6,9 +6,9 @@ import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { AIMessage } from "@/features/ai/types/messages.types";
 import { getModelById, getProviderById } from "@/features/ai/types/providers.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { useAuthStore } from "@/features/window/stores/auth.store";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { useIntelligenceSettingsStore } from "../stores/intelligence-settings.store";
-import { getAuthToken } from "@/features/window/services/auth-api";
+import { getAuthToken } from "@/features/auth/services/auth-api";
 import { getApiBase } from "@/utils/api-base";
 import { processStreamingResponse } from "@/utils/stream-utils";
 import {
@@ -20,7 +20,7 @@ import { toIntelligenceSdkPrompt } from "../lib/intelligence-sdk-prompt";
 
 const API_BASE = getApiBase();
 const DEFAULT_INLINE_EDIT_INSTRUCTION = "Improve this code while preserving behavior.";
-export const HOSTED_TEXT_FIELD_LIMIT = 12000;
+const HOSTED_TEXT_FIELD_LIMIT = 12000;
 const HOSTED_AUTOCOMPLETE_SUFFIX_LIMIT = 4000;
 
 type IntelligenceTextFeature = NonNullable<InlineEditRequest["feature"]>;
@@ -53,7 +53,7 @@ export interface AutocompleteDiagnostic {
   message: string;
 }
 
-export interface InlineEditRequest {
+interface InlineEditRequest {
   feature?:
     | "autocomplete"
     | "inline-edit"
@@ -89,11 +89,11 @@ export class InlineEditError extends Error {
   }
 }
 
-export function getDefaultIntelligenceTimeoutMs(feature: IntelligenceTextFeature = "inline-edit") {
+function getDefaultIntelligenceTimeoutMs(feature: IntelligenceTextFeature = "inline-edit") {
   return DEFAULT_TIMEOUT_MS[feature];
 }
 
-export interface RequestInlineEditOptions {
+interface RequestInlineEditOptions {
   useHosted?: boolean;
   useByok?: boolean;
   signal?: AbortSignal;

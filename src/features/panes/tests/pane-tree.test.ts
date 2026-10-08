@@ -7,7 +7,7 @@ import {
   resizeFlattenedPaneSplit,
   setActivePaneBuffer,
   splitPane,
-} from "../utils/pane-tree";
+} from "../services/pane-tree";
 import type { PaneGroup, PaneNode } from "../types/pane.types";
 
 function createNamedPane(id: string): PaneGroup {

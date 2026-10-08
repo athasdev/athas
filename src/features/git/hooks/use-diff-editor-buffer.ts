@@ -1,10 +1,9 @@
 import { useEffect, useMemo } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { getBufferIndexById } from "@/features/editor/utils/buffer-index";
-import { detectLanguageFromPath } from "@/features/editor/utils/language-detection";
+import { getBufferIndexById } from "@/features/editor/stores/buffer-index";
+import { detectLanguageFromPath } from "@/features/editor/services/language-detection";
 import type { EditorContent } from "@/features/panes/types/pane-content.types";
-import type { TokenEntry } from "@/features/panes/types/pane-content.types";
-import { createDiffTokensForEditorContent, getDiffEditorPath } from "../utils/diff-editor-content";
+import { getDiffEditorPath } from "../services/diff-editor-content";
 
 interface UseDiffEditorBufferOptions {
   cacheKey: string;
@@ -13,7 +12,6 @@ interface UseDiffEditorBufferOptions {
   name: string;
   pathOverride?: string;
   languageOverride?: string;
-  tokens?: TokenEntry[];
 }
 
 export function useDiffEditorBuffer({
@@ -23,7 +21,6 @@ export function useDiffEditorBuffer({
   name,
   pathOverride,
   languageOverride,
-  tokens,
 }: UseDiffEditorBufferOptions): string {
   const bufferId = useMemo(
     () => `diff_editor_${cacheKey.replace(/[^a-zA-Z0-9_]/g, "_")}`,
@@ -44,13 +41,8 @@ export function useDiffEditorBuffer({
       savedContent: content,
       isDirty: false,
       isVirtual: true,
-      isPreview: false,
-      isPinned: false,
-      isActive: false,
       language: detectLanguageFromPath(bufferPath),
       languageOverride,
-      tokens:
-        tokens ?? (languageOverride === "diff" ? createDiffTokensForEditorContent(content) : []),
     };
 
     useBufferStore.setState((state) => {
@@ -80,7 +72,7 @@ export function useDiffEditorBuffer({
         buffers: state.buffers.filter((buffer) => buffer.id !== bufferId),
       }));
     };
-  }, [bufferId, bufferPath, content, languageOverride, name, sourcePath, tokens]);
+  }, [bufferId, bufferPath, content, languageOverride, name, sourcePath]);
 
   return bufferId;
 }

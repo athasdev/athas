@@ -1,6 +1,6 @@
 import { ActivityRailNavigation } from "@/features/layout/components/sidebar/activity-navigation";
 import type { ActivityNavigationItem } from "@/features/layout/hooks/use-activity-navigation-items";
-import type { ProjectTab } from "@/features/window/stores/workspace-tabs.store";
+import type { ProjectTab } from "@/features/workspace/stores/workspace-tabs.store";
 import { Spinner } from "@/ui/spinner";
 import { cn } from "@/utils/cn";
 

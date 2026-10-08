@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { getViewBufferPath } from "@/features/views/lib/view-buffer";
+import { getViewBufferPath } from "@/features/editor/services/virtual-buffer-paths";
 import { useViewsStore } from "@/features/views/stores/views.store";
 import type { CustomViewDefinition } from "@/features/views/types/view.types";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
@@ -12,6 +12,7 @@ import {
   SidebarScrollArea,
   SidebarWorkspace,
 } from "@/ui/sidebar";
+import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 interface ViewsSidebarProps {
   projectPath: string | null;
@@ -26,11 +27,15 @@ export function ViewsSidebar({ projectPath }: ViewsSidebarProps) {
     projectPath ? state.loadedProjectPaths.includes(projectPath) : false,
   );
   const viewActions = useViewsStore.use.actions();
-  const activeBuffer = useBufferStore((state) =>
-    state.activeBufferId
-      ? state.buffers.find((buffer) => buffer.id === state.activeBufferId)
-      : undefined,
-  );
+  const activeBufferId = useActiveBufferId();
+  const activeViewId = useBufferStore((state) => {
+    const buffer = activeBufferId
+      ? state.buffers.find((candidate) => candidate.id === activeBufferId)
+      : undefined;
+    return buffer?.type === "customView" && buffer.projectPath === projectPath
+      ? (buffer.viewId ?? null)
+      : null;
+  });
 
   useEffect(() => {
     if (projectPath) viewActions.loadProject(projectPath);
@@ -103,11 +108,7 @@ export function ViewsSidebar({ projectPath }: ViewsSidebarProps) {
                 <SidebarListItem
                   leading={<StackIcon />}
                   description={view.kind === "github" ? "GitHub view" : "JSON view"}
-                  active={
-                    activeBuffer?.type === "customView" &&
-                    activeBuffer.projectPath === projectPath &&
-                    activeBuffer.viewId === view.id
-                  }
+                  active={activeViewId === view.id}
                   onClick={() => openView(view)}
                 >
                   {view.name}

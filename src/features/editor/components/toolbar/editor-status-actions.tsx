@@ -1,23 +1,24 @@
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
 import { BoltIcon, BoltSlashIcon, SlidersIcon, SquareIcon } from "@/ui/icons";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
-import { LspClient } from "@/features/editor/lsp/lsp-client";
+import { LspClient } from "@/features/editor/lsp/services/lsp-client";
 import { type LspStatus, useLspStore } from "@/features/editor/lsp/stores/lsp.store";
-import { getBufferById } from "@/features/editor/utils/buffer-index";
-import { setOutlineVisibilityPreference } from "@/features/outline/actions/outline-visibility";
+import { getBufferById } from "@/features/editor/stores/buffer-index";
+import { setOutlineVisibilityPreference } from "@/features/outline/services/outline-visibility";
 import { Spinner } from "@/ui/spinner";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import {
   getAllLanguages,
   getLanguageDisplayName,
   getLanguageIdFromPath,
-} from "@/features/editor/utils/language-id";
+} from "@/features/editor/services/language-id";
 import { hasTextContent } from "@/features/panes/types/pane-content.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useEditorSettingOverridesStore } from "@/features/editor/stores/editor-setting-overrides.store";
+import { isWordWrapShown, toggleShownWordWrap } from "@/features/editor/services/word-wrap-toggle";
 import { Button, type ButtonProps } from "@/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
 import {
@@ -30,8 +31,11 @@ import {
 import Select, { type SelectOption } from "@/ui/select";
 import { toast } from "sonner";
 import VimStatusIndicator from "@/features/vim/components/vim-status-indicator";
-import { IntelligenceCompletionStatus } from "./intelligence-completion-status";
-import { getFilenameFromPath } from "@/features/file-system/controllers/file-utils";
+import { useEditorFeatures } from "@/features/editor/services/editor-feature-registry";
+import { getFilenameFromPath } from "@/features/file-system/services/file-utils";
+import { readBufferText } from "@/features/editor/services/buffer-text";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
+import { useBufferIdOrActive } from "@/features/panes/hooks/use-pane-buffer-state";
 
 const editorMenuRowClass =
   "group flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-accent";
@@ -48,19 +52,38 @@ function canStartLanguageServerForPath(filePath: string, languageId: string) {
   );
 }
 
+function ContributedStatusActions() {
+  const contributions = useEditorFeatures();
+  return contributions.flatMap((contribution) =>
+    (contribution.statusActions ?? []).map((StatusAction, index) => (
+      <StatusAction key={`${contributions.indexOf(contribution)}-${index}`} />
+    )),
+  );
+}
+
 interface EditorStatusActionsProps {
   bufferId?: string;
 }
 
 export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {}) {
-  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
-  const resolvedBufferId = useBufferStore((state) => bufferId ?? state.activeBufferId);
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
+  const resolvedBufferId = useBufferIdOrActive(bufferId);
   const breadcrumbsEnabled = useSettingsStore((state) => state.settings.coreFeatures.breadcrumbs);
   const showMinimap = useSettingsStore((state) => state.settings.showMinimap);
   const showOutline = useSettingsStore((state) => state.settings.showOutline);
-  const lineNumbers = useSettingsStore((state) => state.settings.lineNumbers);
+  const lineNumbersOverride = useEditorSettingOverridesStore(
+    (state) => state.overrides.lineNumbers,
+  );
+  const lineNumbersSetting = useSettingsStore((state) => state.settings.lineNumbers);
+  const lineNumbers = lineNumbersOverride ?? lineNumbersSetting;
   const vimRelativeLineNumbers = useSettingsStore((state) => state.settings.vimRelativeLineNumbers);
-  const wordWrap = useSettingsStore((state) => state.settings.wordWrap);
+  const wordWrapOverride = useEditorSettingOverridesStore((state) => state.overrides.wordWrap);
+  const wordWrapSetting = useSettingsStore((state) => state.settings.wordWrap);
+  const horizontalTabScroll = useSettingsStore((state) => state.settings.horizontalTabScroll);
+  const wordWrap = isWordWrapShown(
+    { wordWrap: wordWrapSetting, horizontalTabScroll },
+    wordWrapOverride,
+  );
   const parameterHints = useSettingsStore((state) => state.settings.parameterHints);
   const autoCompletion = useSettingsStore((state) => state.settings.autoCompletion);
   const inlayHints = useSettingsStore((state) => state.settings.inlayHints);
@@ -213,7 +236,9 @@ export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {})
         ? useBufferStore.getState().buffers.find((buffer) => buffer.id === resolvedBufferId)
         : null;
       const bufferContent =
-        fullActiveBuffer && hasTextContent(fullActiveBuffer) ? fullActiveBuffer.content : "";
+        fullActiveBuffer && hasTextContent(fullActiveBuffer)
+          ? readBufferText(fullActiveBuffer)
+          : "";
       await lspClient.notifyDocumentOpen(activeBuffer.path, bufferContent);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to start language server");
@@ -257,7 +282,9 @@ export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {})
             .getState()
             .buffers.find((buffer) => buffer.id === resolvedBufferId);
           const bufferContent =
-            fullActiveBuffer && hasTextContent(fullActiveBuffer) ? fullActiveBuffer.content : "";
+            fullActiveBuffer && hasTextContent(fullActiveBuffer)
+              ? readBufferText(fullActiveBuffer)
+              : "";
           await lspClient.notifyDocumentOpen(activeBuffer.path, bufferContent);
         } catch {
           // LSP restart is best-effort
@@ -320,7 +347,7 @@ export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {})
       label: "Word Wrap",
       checked: wordWrap,
       shortcut: null,
-      onToggle: () => updateSetting("wordWrap", !wordWrap),
+      onToggle: toggleShownWordWrap,
       disabled: false,
     },
     {
@@ -429,7 +456,11 @@ export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {})
 
       <VimStatusIndicator />
 
-      {activeBuffer?.type === "editor" && <IntelligenceCompletionStatus />}
+      {activeBuffer?.type === "editor" && (
+        <Suspense fallback={null}>
+          <ContributedStatusActions />
+        </Suspense>
+      )}
 
       <div className="relative flex items-center self-center">
         <DropdownMenu>

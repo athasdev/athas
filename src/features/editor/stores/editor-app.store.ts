@@ -2,7 +2,7 @@ import { captureBufferStoreOwner } from "@/features/editor/services/buffer-store
 import { savePaneContent } from "@/features/panes/services/pane-content-save-service";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import { parseCollaborationNoteBufferPath } from "@/features/collaboration/lib/collaboration-sidebar-model";
+import { parseCollaborationNoteBufferPath } from "@/features/editor/services/virtual-buffer-paths";
 import { isDirtyContent, isEditorContent } from "@/features/panes/types/pane-content.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { cleanupEditorAutoSave, scheduleEditorAutoSave } from "../services/editor-save-service";
@@ -14,17 +14,14 @@ import type {
   Position,
   Range,
 } from "../types/editor.types";
-import { getBufferById } from "../utils/buffer-index";
-import { trackBufferHistoryChange } from "./buffer-history-tracking";
+import { readBufferText } from "../services/buffer-text";
+import type { LiveDocumentEdit } from "../services/live-document-registry";
+import { getBufferById } from "./buffer-index";
+import { trackBufferHistoryChange } from "../services/buffer-history-tracking";
 import { useBufferStore } from "./buffer.store";
+import { getActiveBufferId } from "@/features/panes/stores/pane-selectors";
 
 interface AppState {
-  quickEditState: {
-    isOpen: boolean;
-    selectedText: string;
-    cursorPosition: { x: number; y: number };
-    selectionRange: { start: number; end: number };
-  };
   actions: AppActions;
 }
 
@@ -34,6 +31,7 @@ interface AppActions {
     batch: EditorDocumentChangeBatch,
     previousCursorPosition?: Position,
     previousSelection?: Range,
+    liveEdit?: LiveDocumentEdit,
   ) => EditorDocumentChangeResult;
   handleContentChange: (
     content: string,
@@ -45,53 +43,77 @@ interface AppActions {
   handleSave: () => Promise<boolean>;
   handleSaveAs: () => Promise<boolean>;
   handleSaveAll: () => Promise<number>;
-  openQuickEdit: (params: {
-    text: string;
-    cursorPosition: { x: number; y: number };
-    selectionRange: { start: number; end: number };
-  }) => void;
   cleanup: () => void;
 }
 
 export const useEditorAppStore = createSelectors(
   create<AppState>()(
-    immer((set) => ({
-      quickEditState: {
-        isOpen: false,
-        selectedText: "",
-        cursorPosition: { x: 0, y: 0 },
-        selectionRange: { start: 0, end: 0 },
-      },
+    immer(() => ({
       actions: {
-        handleDocumentChange: (bufferId, batch, previousCursorPosition, previousSelection) => {
+        handleDocumentChange: (
+          bufferId,
+          batch,
+          previousCursorPosition,
+          previousSelection,
+          liveEdit,
+        ) => {
           const { buffers } = useBufferStore.getState();
-          const { applyBufferContentChanges, markBufferDirty } = useBufferStore.getState().actions;
+          const { applyBufferContentChanges, applyLiveDocumentChange, markBufferDirty } =
+            useBufferStore.getState().actions;
           const activeBuffer = getBufferById(buffers, bufferId);
           if (!activeBuffer || !isEditorContent(activeBuffer)) {
             return { accepted: false, synchronized: false, contentRevision: 0 };
           }
 
-          const previousContent = activeBuffer.content;
           const collaborationNoteTarget = parseCollaborationNoteBufferPath(activeBuffer.path);
           const isRemoteFile = activeBuffer.path.startsWith("remote://");
-          const result = applyBufferContentChanges(bufferId, batch, true);
-          if (!result.accepted) return result;
+          const isLive =
+            liveEdit !== undefined &&
+            !batch.isFlush &&
+            !batch.isEolChange &&
+            batch.fullContent === undefined;
 
-          const updatedBuffer = getBufferById(useBufferStore.getState().buffers, bufferId);
-          if (!updatedBuffer || !isEditorContent(updatedBuffer)) return result;
+          let result: EditorDocumentChangeResult;
+          if (isLive) {
+            // The view keeps the text: history and the dirty flag work from the change itself, so
+            // a keystroke never copies the document.
+            result = applyLiveDocumentChange(
+              bufferId,
+              batch,
+              liveEdit,
+              collaborationNoteTarget !== null,
+            );
+            if (!result.accepted) return result;
+            trackBufferHistoryChange({
+              bufferId,
+              currentContent: liveEdit.previousText,
+              nextContent: liveEdit.nextText,
+              previousContent: liveEdit.previousText,
+              previousCursorPosition,
+              previousSelection,
+              contentChanges: batch.changes,
+            });
+          } else {
+            const previousContent = readBufferText(activeBuffer);
+            result = applyBufferContentChanges(bufferId, batch, true);
+            if (!result.accepted) return result;
 
-          trackBufferHistoryChange({
-            bufferId,
-            currentContent: previousContent,
-            nextContent: updatedBuffer.content,
-            previousContent,
-            previousCursorPosition,
-            previousSelection,
-            contentChanges: batch.changes,
-          });
+            const updatedBuffer = getBufferById(useBufferStore.getState().buffers, bufferId);
+            if (!updatedBuffer || !isEditorContent(updatedBuffer)) return result;
 
-          if (collaborationNoteTarget) {
-            markBufferDirty(bufferId, updatedBuffer.content !== updatedBuffer.savedContent);
+            trackBufferHistoryChange({
+              bufferId,
+              currentContent: previousContent,
+              nextContent: updatedBuffer.content,
+              previousContent,
+              previousCursorPosition,
+              previousSelection,
+              contentChanges: batch.changes,
+            });
+
+            if (collaborationNoteTarget) {
+              markBufferDirty(bufferId, updatedBuffer.content !== updatedBuffer.savedContent);
+            }
           }
 
           const { settings } = useSettingsStore.getState();
@@ -114,7 +136,8 @@ export const useEditorAppStore = createSelectors(
           previousSelection?: Range,
           options?: EditorContentChangeOptions,
         ) => {
-          const { activeBufferId, buffers } = useBufferStore.getState();
+          const { buffers } = useBufferStore.getState();
+          const activeBufferId = getActiveBufferId();
           const { updateBufferContent, markBufferDirty } = useBufferStore.getState().actions;
           const { settings } = useSettingsStore.getState();
           const contentAlreadyApplied = options?.contentAlreadyApplied === true;
@@ -126,7 +149,7 @@ export const useEditorAppStore = createSelectors(
           if (activeBufferId) {
             trackBufferHistoryChange({
               bufferId: activeBufferId,
-              currentContent: activeBuffer.content,
+              currentContent: readBufferText(activeBuffer),
               nextContent: content,
               previousContent,
               previousCursorPosition,
@@ -159,8 +182,7 @@ export const useEditorAppStore = createSelectors(
         },
 
         handleSave: async () => {
-          const { activeBufferId, buffers } = useBufferStore.getState();
-          const activeBuffer = getBufferById(buffers, activeBufferId);
+          const activeBuffer = useBufferStore.getState().actions.getActiveBuffer();
           if (
             !activeBuffer ||
             (activeBuffer.type !== "image" &&
@@ -172,7 +194,7 @@ export const useEditorAppStore = createSelectors(
         },
 
         handleSaveAs: async () => {
-          const { activeBufferId } = useBufferStore.getState();
+          const activeBufferId = getActiveBufferId();
           if (!activeBufferId) return false;
           return savePaneContent(captureBufferStoreOwner(), activeBufferId, true);
         },
@@ -194,17 +216,6 @@ export const useEditorAppStore = createSelectors(
           );
 
           return saveResults.filter(Boolean).length;
-        },
-
-        openQuickEdit: (params) => {
-          set((state) => {
-            state.quickEditState = {
-              isOpen: true,
-              selectedText: params.text,
-              cursorPosition: params.cursorPosition,
-              selectionRange: params.selectionRange,
-            };
-          });
         },
 
         cleanup: () => {

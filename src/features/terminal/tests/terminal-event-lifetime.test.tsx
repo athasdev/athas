@@ -8,7 +8,7 @@ import { useTerminalConnection } from "../hooks/use-terminal-connection";
 import {
   createTerminalEventChannel,
   releaseTerminalEventChannel,
-} from "../utils/terminal-protocol";
+} from "../services/terminal-protocol";
 
 const mocks = vi.hoisted(() => ({ invoke: vi.fn(), write: vi.fn(), flush: vi.fn(async () => {}) }));
 vi.mock("@tauri-apps/api/core", () => ({
@@ -74,7 +74,6 @@ beforeEach(() => {
       title = callback;
       return disposable;
     },
-    onSelectionChange: () => disposable,
     parser: { registerOscHandler: () => disposable },
     write: (bytes: Uint8Array, callback: () => void) => {
       writtenBytes.push(bytes);

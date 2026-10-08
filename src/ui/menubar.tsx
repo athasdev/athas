@@ -1,6 +1,6 @@
 import { Menu, Menubar as BaseMenubar } from "@base-ui/react";
 import { createContext, useContext, useMemo, type ComponentProps } from "react";
-import Keybinding from "@/features/keymaps/components/keybinding";
+import Keybinding from "@/ui/keybinding";
 import { menuItemVariants, menuSeparatorVariants, menuSurfaceVariants } from "@/ui/dropdown";
 import { ChevronRightIcon } from "@/ui/icons";
 import { cn } from "@/utils/cn";

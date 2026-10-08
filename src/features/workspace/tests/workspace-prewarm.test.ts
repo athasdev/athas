@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 import {
   orderWorkspacePrewarmCandidates,
   scheduleWorkspacePrewarm,
 } from "@/features/workspace/services/workspace-prewarm";
-import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
-import type { ProjectTab } from "@/features/window/stores/workspace-tabs.store";
+import { useWorkspaceTabsStore } from "@/features/workspace/stores/workspace-tabs.store";
+import type { ProjectTab } from "@/features/workspace/stores/workspace-tabs.store";
 
 const createTab = (id: string): ProjectTab => ({
   id,

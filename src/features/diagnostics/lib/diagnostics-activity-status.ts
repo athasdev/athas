@@ -1,8 +1,8 @@
 import type { Diagnostic } from "@/features/diagnostics/types/diagnostics.types";
 
-export type DiagnosticsActivityTone = "default" | "warning" | "error";
+type DiagnosticsActivityTone = "default" | "warning" | "error";
 
-export interface DiagnosticsActivityStatus {
+interface DiagnosticsActivityStatus {
   count: number;
   tone: DiagnosticsActivityTone;
   tooltip: string;
@@ -14,24 +14,18 @@ function formatSeverityCount(count: number, severity: Diagnostic["severity"]) {
 
 export function buildDiagnosticsActivityStatus(
   diagnosticsEnabled: boolean,
-  diagnostics: Diagnostic[],
+  counts: Record<Diagnostic["severity"], number>,
 ): DiagnosticsActivityStatus | null {
-  if (!diagnosticsEnabled || diagnostics.length === 0) return null;
+  const total = counts.error + counts.warning + counts.info;
+  if (!diagnosticsEnabled || total === 0) return null;
 
-  const counts = diagnostics.reduce(
-    (result, diagnostic) => {
-      result[diagnostic.severity] += 1;
-      return result;
-    },
-    { error: 0, warning: 0, info: 0 },
-  );
   const details = (["error", "warning", "info"] as const)
     .filter((severity) => counts[severity] > 0)
     .map((severity) => formatSeverityCount(counts[severity], severity));
 
   return {
-    count: diagnostics.length,
+    count: total,
     tone: counts.error > 0 ? "error" : counts.warning > 0 ? "warning" : "default",
-    tooltip: `${diagnostics.length} diagnostic${diagnostics.length === 1 ? "" : "s"}: ${details.join(", ")}`,
+    tooltip: `${total} diagnostic${total === 1 ? "" : "s"}: ${details.join(", ")}`,
   };
 }

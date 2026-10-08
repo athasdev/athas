@@ -1,5 +1,5 @@
-import { shareEditor } from "@/features/sharing/services/open-share";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
+import { keymapRegistry } from "@/features/keymaps/services/keymap-registry";
 import { ContextMenuPopup } from "@/ui/context-menu";
 import {
   buildEditorContextMenuGroups,
@@ -22,8 +22,8 @@ const EditorContextMenu = ({ isOpen, position, onClose, ...handlers }: EditorCon
 
   const groups = buildEditorContextMenuGroups({
     hasSelection,
-    onShareSelection: () => shareEditor(true),
-    onShareBuffer: () => shareEditor(),
+    onShareSelection: () => void keymapRegistry.executeCommand("share.selection"),
+    onShareBuffer: () => void keymapRegistry.executeCommand("share.buffer"),
     ...handlers,
   });
 

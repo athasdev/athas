@@ -1,5 +1,5 @@
-import type { HostedUsageState } from "@/features/ai/lib/hosted-usage";
-import type { SessionCheckState } from "@/features/window/stores/auth.store";
+import type { HostedUsageState } from "@/features/ai/services/hosted-usage";
+import type { SessionCheckState } from "@/features/auth/stores/auth.store";
 
 /**
  * What a composer notice is about, in the order the slot prefers them: only the first

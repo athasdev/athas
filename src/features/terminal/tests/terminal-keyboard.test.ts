@@ -3,7 +3,7 @@ import {
   getTerminalKeyAction,
   isTerminalAltGraphInput,
   isTerminalAltTextInput,
-} from "../utils/terminal-keyboard";
+} from "../services/terminal-keyboard";
 
 function keyboardEvent({
   altKey = false,

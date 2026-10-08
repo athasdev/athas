@@ -4,7 +4,7 @@ import { createSelectors } from "@/utils/zustand-selectors";
 import { createSafeJSONStorage } from "@/utils/zustand-storage";
 import { getBaseName, stripTrailingPathSeparators } from "@/utils/path-helpers";
 import { readTeamWorkspaceContent, saveTeamWorkspace } from "../services/team-workspace-service";
-import { createTeamWorkspace, parseTeamWorkspace } from "../utils/team-workspace-config";
+import { createTeamWorkspace, parseTeamWorkspace } from "../services/team-workspace-config";
 import type { TeamWorkspace } from "../types/team-workspace";
 
 export type WorkspaceSection =
@@ -14,7 +14,7 @@ export type WorkspaceSection =
   | "tasks"
   | "ai"
   | "extensions";
-export interface WorkspaceDraft {
+interface WorkspaceDraft {
   config: TeamWorkspace;
   original: string | null;
   saved: string;

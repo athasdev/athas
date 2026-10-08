@@ -5,6 +5,7 @@ import { type CodeMirrorHost, useCodeMirrorExtension } from "../host";
 import {
   breakpointGutter,
   breakpointHoverLine,
+  hasBreakpointMarkers,
   setBreakpoints,
   setHoveredBreakpointLine,
 } from "./breakpoints";
@@ -38,6 +39,8 @@ export function CodeMirrorBreakpoints({ host }: { host: CodeMirrorHost }) {
 
   useEffect(() => {
     if (!showGutter) return;
+    // A new editor has no breakpoints drawn; a file without any needs no update.
+    if (breakpointsForFile.length === 0 && !hasBreakpointMarkers(view.state)) return;
     view.dispatch({ effects: setBreakpoints.of(breakpointsForFile) });
   }, [breakpointsForFile, extension, showGutter, view]);
 

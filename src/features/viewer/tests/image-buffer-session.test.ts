@@ -6,34 +6,33 @@ import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
 import { isDirtyContent, type ImageContent } from "@/features/panes/types/pane-content.types";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 import { savePendingPaneClose } from "@/features/panes/services/pane-content-save-service";
 import { WindowCloseSession } from "@/features/window/services/window-close-session";
 import {
   getImageBufferSession,
   saveImageBufferById,
 } from "../image/editor/services/image-buffer-session";
+import { seedActiveBuffer } from "@/features/panes/tests/helpers/seed-pane-tabs";
 const mocks = vi.hoisted(() => ({ save: vi.fn(), dataURL: vi.fn(), toast: vi.fn() }));
 vi.mock("@tauri-apps/api/webviewWindow", () => ({
   getCurrentWebviewWindow: () => ({ label: "main" }),
 }));
 vi.mock("../image/editor/utils/image-file-utils", () => ({ saveImageToFile: mocks.save }));
 vi.mock("../image/editor/utils/canvas-utils", () => ({ blobToDataURL: mocks.dataURL }));
-vi.mock("@/features/layout/contexts/toast-context", () => ({ showToast: mocks.toast }));
+vi.mock("@/utils/toast", () => ({ showToast: mocks.toast }));
 function image(id = "image"): ImageContent {
   return {
     id,
     type: "image",
     path: `/${id}.png`,
     name: `${id}.png`,
-    isPinned: false,
-    isActive: false,
-    isPreview: false,
   };
 }
 function owner(workspaceId = "owner", images = [image()]) {
   const store = useBufferStore.getStore(workspaceId);
-  store.setState({ buffers: images, activeBufferId: images[0]?.id, pendingClose: null });
+  store.setState({ buffers: images, pendingClose: null });
+  seedActiveBuffer(images[0]?.id, workspaceId);
   return { workspaceId, store };
 }
 function deferred<T>() {

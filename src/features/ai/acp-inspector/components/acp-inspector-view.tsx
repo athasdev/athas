@@ -1,4 +1,4 @@
-import { save } from "@tauri-apps/plugin-dialog";
+import { pickSavePath } from "@/utils/file-dialogs";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
@@ -103,7 +103,7 @@ export default function AcpInspectorView() {
   const handleExport = async () => {
     if (!selectedProcess) return;
     try {
-      const path = await save({
+      const path = await pickSavePath({
         defaultPath: exportFileName(selectedProcess),
         filters: [
           { name: "JSON Lines", extensions: ["jsonl"] },

@@ -1,7 +1,7 @@
-import { buildRemoteRootPath } from "@/features/remote/utils/remote-path";
+import { buildRemoteRootPath } from "@/features/remote/services/remote-path";
 import type { FileEntry } from "../types/app.types";
 
-export interface RemoteDirectoryEntry {
+interface RemoteDirectoryEntry {
   name: string;
   path: string;
   is_dir: boolean;
@@ -10,7 +10,7 @@ export interface RemoteDirectoryEntry {
   target?: string | null;
 }
 
-export interface RemoteWorkspaceTree {
+interface RemoteWorkspaceTree {
   remotePath: string;
   fileTree: FileEntry[];
   wrappedFileTree: FileEntry[];

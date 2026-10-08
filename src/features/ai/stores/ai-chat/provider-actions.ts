@@ -1,4 +1,4 @@
-import { canUseProviderWithoutApiKey } from "@/features/ai/lib/provider-access";
+import { canUseProviderWithoutApiKey } from "@/features/ai/services/provider-access";
 import {
   getProviderApiToken,
   removeProviderApiToken,
@@ -7,7 +7,7 @@ import {
 } from "@/features/ai/services/ai-token-service";
 import { getAvailableProviders, getProviderById } from "@/features/ai/types/providers.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { useAuthStore } from "@/features/window/stores/auth.store";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
 import type { AIChatActions } from "./ai-chat-store.types";
 import type { GetAIChatStore, SetAIChatStore } from "./ai-chat-store-context";
 

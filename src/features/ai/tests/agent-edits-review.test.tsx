@@ -29,7 +29,7 @@ vi.mock("@/features/ai/stores/ai-chat.store", () => ({
       ],
     }),
 }));
-vi.mock("@/features/window/stores/project.store", () => ({
+vi.mock("@/features/workspace/stores/project.store", () => ({
   useProjectStore: (select: (state: { rootFolderPath: string }) => unknown) =>
     select({ rootFolderPath: "/repo" }),
 }));

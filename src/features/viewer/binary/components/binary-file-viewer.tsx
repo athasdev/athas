@@ -1,24 +1,25 @@
-import { readFile } from "@tauri-apps/plugin-fs";
+import { readFileBytes } from "@/utils/local-files";
 import { useEffect, useState } from "react";
 import { FilePathBreadcrumb } from "@/features/editor/components/toolbar/file-path-breadcrumb";
-import { PaneContentHeader } from "@/features/panes/components/pane-content-chrome";
+import { PaneContentHeader } from "@/ui/pane-content-chrome";
 import { ViewerLayout } from "@/features/viewer/components/viewer-layout";
-import { ViewerErrorState, ViewerLoadingState } from "@/features/viewer/components/viewer-state";
+import { ViewerErrorState, ViewerLoadingState } from "@/ui/viewer-state";
 import { ScrollArea } from "@/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/ui/table";
 import { formatFileSize } from "@/utils/format-file-size";
 import { cn } from "@/utils/cn";
 import { getRelativePath } from "@/utils/path-helpers";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import type { BinaryMetadata } from "../lib/binary-metadata";
 import { getBinaryMetadata } from "../lib/binary-metadata";
 
 interface BinaryFileViewerProps {
   filePath: string;
   fileName: string;
-  rootFolderPath?: string;
 }
 
-export function BinaryFileViewer({ filePath, fileName, rootFolderPath }: BinaryFileViewerProps) {
+export function BinaryFileViewer({ filePath, fileName }: BinaryFileViewerProps) {
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const [metadata, setMetadata] = useState<BinaryMetadata | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +33,7 @@ export function BinaryFileViewer({ filePath, fileName, rootFolderPath }: BinaryF
       setLoading(true);
       setError(null);
       try {
-        const data = await readFile(filePath);
+        const data = await readFileBytes(filePath);
         if (cancelled) return;
         setMetadata(getBinaryMetadata(data, filePath));
       } catch (err) {

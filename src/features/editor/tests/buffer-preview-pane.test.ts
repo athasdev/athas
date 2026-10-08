@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { ROOT_PANE_ID } from "@/features/panes/constants/pane";
 import { usePaneStore } from "@/features/panes/stores/pane.store";
+import { isBufferPinned, isBufferPreview } from "@/features/panes/stores/pane-selectors";
+import { getActiveBufferId } from "@/features/panes/stores/pane-selectors";
 
 const createMockStorage = () => {
   const storage = new Map<string, string>();
@@ -45,7 +47,6 @@ describe("buffer preview pane integration", () => {
     const { useBufferStore } = await import("../stores/buffer.store");
     useBufferStore.setState({
       buffers: [],
-      activeBufferId: null,
       pendingClose: null,
       closedBuffersHistory: [],
     });
@@ -116,9 +117,7 @@ describe("buffer preview pane integration", () => {
 
     bufferActions.convertPreviewToDefinite(previewId);
 
-    expect(
-      useBufferStore.getState().buffers.find((buffer) => buffer.id === previewId)?.isPreview,
-    ).toBe(false);
+    expect(isBufferPreview(previewId)).toBe(false);
     expect(paneActions.getPaneById(ROOT_PANE_ID)?.previewBufferId).toBeNull();
   });
 
@@ -137,10 +136,9 @@ describe("buffer preview pane integration", () => {
 
     bufferActions.handleTabPin(previewId);
 
-    const buffer = useBufferStore.getState().buffers.find((item) => item.id === previewId);
     const pane = paneActions.getPaneById(ROOT_PANE_ID);
-    expect(buffer?.isPreview).toBe(false);
-    expect(buffer?.isPinned).toBe(true);
+    expect(isBufferPreview(previewId)).toBe(false);
+    expect(isBufferPinned(previewId)).toBe(true);
     expect(pane?.previewBufferId).toBeNull();
     expect(pane?.pinnedBufferIds).toEqual([previewId]);
   });
@@ -262,7 +260,7 @@ describe("buffer preview pane integration", () => {
 
     expect(reopenedTypescriptId).toBe(typescriptId);
     expect(rustId).not.toBe(typescriptId);
-    expect(useBufferStore.getState().activeBufferId).toBe(typescriptId);
+    expect(getActiveBufferId()).toBe(typescriptId);
     expect(useBufferStore.getState().buffers).toEqual(
       expect.arrayContaining([
         expect.objectContaining({

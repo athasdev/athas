@@ -1,12 +1,12 @@
-import { isComposingKeyboardEvent } from "@/features/keymaps/utils/is-composing-keyboard-event";
+import { isComposingKeyboardEvent } from "@/utils/keyboard/is-composing-keyboard-event";
 import { ChevronLeftIcon, SettingsIcon, UploadIcon } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getThemeAppearancePreview } from "@/extensions/appearance/appearance-preview";
 import { AppearancePreviewGraphic } from "@/extensions/appearance/components/appearance-preview";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
 import { useRegisteredThemes } from "@/extensions/themes/use-registered-themes";
-import { chooseThemeFile, uploadTheme } from "@/features/settings/utils/theme-upload";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { chooseThemeFile, uploadTheme } from "@/features/settings/services/theme-upload";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import {
   CommandEmpty,
   CommandHeader,

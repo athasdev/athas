@@ -26,7 +26,7 @@ export function estimateTokens(text: string): number {
   return Math.ceil(text.length / CHARS_PER_TOKEN);
 }
 
-export function formatTruncationMarker(shownTokens: number, originalTokens: number): string {
+function formatTruncationMarker(shownTokens: number, originalTokens: number): string {
   return `... [truncated: showing about ${shownTokens} of ${originalTokens} tokens] ...`;
 }
 
@@ -59,7 +59,7 @@ export function truncateTextToTokens(text: string, maxTokens: number): Truncated
   return { text: `${head}\n${fittedMarker}\n${tail}`, truncated: true, originalTokens };
 }
 
-export interface BudgetedAttachment {
+interface BudgetedAttachment {
   content: string;
   truncated?: boolean;
   originalTokens?: number;

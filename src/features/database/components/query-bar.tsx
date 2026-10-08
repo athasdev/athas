@@ -1,7 +1,9 @@
 import { SearchIcon, XIcon } from "@/ui/icons";
 import { type KeyboardEvent, type RefObject, useEffect, useMemo, useRef, useState } from "react";
-import { loadCodeMirrorLanguage } from "@/features/editor/engines/codemirror/languages";
-import { highlightCodeIfReady } from "@/features/editor/syntax/syntax-highlight";
+import {
+  highlightCodeIfReady,
+  loadHighlightLanguage,
+} from "@/features/editor/services/syntax-highlight";
 import { Button } from "@/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/ui/input-group";
 import Textarea from "@/ui/textarea";
@@ -61,7 +63,7 @@ function SqlEditor({
   useEffect(() => {
     if (isSqlLoaded) return;
     let cancelled = false;
-    void loadCodeMirrorLanguage("sql").then(() => {
+    void loadHighlightLanguage("sql").then(() => {
       if (!cancelled) setIsSqlLoaded(true);
     });
     return () => {

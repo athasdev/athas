@@ -6,30 +6,30 @@
  */
 
 import { useEffect, useState } from "react";
-import { logger } from "@/features/editor/utils/logger";
+import { logger } from "@/utils/logger";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { resolveEscapeGuard } from "@/utils/keyboard/escape-guard";
 import { isNativeTextInputTarget } from "@/utils/keyboard/text-input-target";
-import { isTerminalAltTextInput } from "@/features/terminal/utils/terminal-keyboard";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { isTerminalAltTextInput } from "@/features/terminal/services/terminal-keyboard";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { useKeymapStore } from "../stores/keymaps.store";
-import { getEffectiveKeybindings } from "../utils/effective-keymaps";
+import { getEffectiveKeybindings } from "../services/effective-keymaps";
 import {
   getMarkdownPreviewKeyboardTarget,
   isEditorKeyboardTarget,
-} from "../utils/editor-keyboard-target";
+} from "../services/editor-keyboard-target";
 import { resolveEffectiveKeymapContexts } from "../utils/effective-contexts";
-import { evaluateWhenClause } from "../utils/context";
+import { evaluateWhenClause } from "../services/when-clause";
 import { eventToKey, keysMatch, matchKeybinding } from "../utils/matcher";
 import { isNativeMenuAccelerator } from "../utils/native-menu-accelerators";
-import { parseKeybinding } from "../utils/parser";
-import type { ParsedKey } from "../utils/parser";
-import { keymapRegistry } from "../utils/registry";
+import { parseKeybinding } from "@/utils/keyboard/keybinding-parser";
+import type { ParsedKey } from "@/utils/keyboard/keybinding-parser";
+import { keymapRegistry } from "../services/keymap-registry";
 import { isVimOwnedShortcut } from "../utils/vim-shortcuts";
 import {
   isInWorkbenchNavigationScope,
   WORKBENCH_NAVIGATION_COMMANDS,
-} from "../utils/workbench-navigation-commands";
+} from "../services/workbench-navigation-commands";
 
 const CHORD_TIMEOUT = 1000; // 1 second to complete chord
 const closeTabShortcut = parseKeybinding("cmd+w").parts[0];

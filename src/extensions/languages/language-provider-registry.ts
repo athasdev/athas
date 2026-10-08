@@ -1,4 +1,4 @@
-import { logger } from "@/features/editor/utils/logger";
+import { logger } from "@/utils/logger";
 
 /**
  * A language an installed integration contributes, looked up by id, file extension, alias or file

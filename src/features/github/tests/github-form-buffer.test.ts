@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createPaneContent } from "@/features/editor/stores/buffer-content-factory";
-import { getRepositoryDisplayName } from "../utils/github-viewer-utils";
+import { getRepositoryDisplayName } from "../services/github-viewer-utils";
 
 describe("GitHub form buffers", () => {
   it("uses only the repository name in form chrome", () => {
@@ -21,7 +21,6 @@ describe("GitHub form buffers", () => {
     expect(buffer).toMatchObject({
       type: "githubForm",
       name: "New Pull Request",
-      isPreview: false,
       repoPath: "/workspace/athas",
       defaultHead: "feature/forms",
     });

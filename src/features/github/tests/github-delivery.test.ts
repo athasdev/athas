@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vite-plus/test";
+import { deliveryBufferPath } from "@/features/editor/services/virtual-buffer-paths";
 import {
-  deliveryBufferPath,
   deploymentState,
   groupDelivery,
   matchesDelivery,
   safeDeliveryUrl,
-} from "../delivery/utils/github-delivery";
+} from "../delivery/services/github-delivery";
 import { deploymentFixture, releaseFixture } from "./github-delivery-fixtures";
 
 describe("GitHub delivery", () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { buildAgentOptions, loadAgentAvailability } from "@/features/ai/lib/agent-options";
+import { buildAgentOptions, loadAgentAvailability } from "@/features/ai/services/agent-options";
 import type { AgentConfig } from "@/features/ai/types/acp.types";
 
 function agentConfig(overrides: Partial<AgentConfig> = {}): AgentConfig {

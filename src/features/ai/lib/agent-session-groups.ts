@@ -1,9 +1,9 @@
-import type { Chat } from "@/features/ai/types/ai-chat.types";
+import type { ChatSession, Message } from "@/features/ai/types/ai-chat.types";
 
-export interface AgentSessionGroup {
+export interface AgentSessionGroup<T extends ChatSession = ChatSession> {
   id: "today" | "yesterday" | "week" | "month" | "older";
   label: string;
-  chats: Chat[];
+  chats: T[];
 }
 
 const GROUPS: readonly Omit<AgentSessionGroup, "chats">[] = [
@@ -29,12 +29,12 @@ function groupIdFor(date: Date, startOfToday: number): AgentSessionGroup["id"] {
  * Splits sessions, already in display order, by when they were last active, so a long history
  * reads as a timeline. Empty groups are left out.
  */
-export function groupAgentSessionsByActivity(
-  chats: readonly Chat[],
+export function groupAgentSessionsByActivity<T extends ChatSession>(
+  chats: readonly T[],
   now: Date = new Date(),
-): AgentSessionGroup[] {
+): AgentSessionGroup<T>[] {
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-  const byGroup = new Map<AgentSessionGroup["id"], Chat[]>();
+  const byGroup = new Map<AgentSessionGroup["id"], T[]>();
   for (const chat of chats) {
     const id = groupIdFor(chat.lastMessageAt, startOfToday);
     const group = byGroup.get(id);
@@ -47,7 +47,7 @@ export function groupAgentSessionsByActivity(
   });
 }
 
-/** Whether the agent is still writing its latest reply in this session. */
-export function isAgentSessionWorking(chat: Pick<Chat, "messages">): boolean {
-  return chat.messages[chat.messages.length - 1]?.isStreaming === true;
+/** Whether the agent is still writing its latest reply, given the session's messages. */
+export function isAgentSessionWorking(messages: readonly Message[] | undefined): boolean {
+  return messages?.[messages.length - 1]?.isStreaming === true;
 }

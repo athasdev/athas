@@ -13,7 +13,7 @@ vi.mock("../hooks/use-editor-view-settings", () => ({
     editorItalicComments: false,
   }),
 }));
-vi.mock("../extensions/api", () => ({
+vi.mock("../services/editor-api", () => ({
   editorAPI: { setActiveFindAdapter: vi.fn(), clearActiveFindAdapter: vi.fn() },
 }));
 vi.mock("@/features/file-system/stores/file-system.store", () => ({

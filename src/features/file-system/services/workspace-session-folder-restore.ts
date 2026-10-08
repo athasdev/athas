@@ -2,7 +2,7 @@ import {
   normalizeWorkspaceFolders,
   selectRestoredWorkspaceFolders,
   type WorkspaceFolderSession,
-} from "@/features/file-system/controllers/workspace-session";
+} from "@/features/file-system/services/workspace-session";
 import type { FileEntry } from "@/features/file-system/types/app.types";
 
 interface RestoreWorkspaceSessionFoldersOptions {

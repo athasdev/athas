@@ -1,40 +1,34 @@
 import type React from "react";
-import { commands } from "@/bindings/commands";
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { runPythonCell, runRCell } from "@/features/editor/services/notebook-cell-runner";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { CsvPreview } from "@/features/viewer/csv/components/csv-preview";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { useLspIntegration } from "@/features/editor/hooks/use-lsp-integration";
 import { useEditorScroll } from "@/features/editor/hooks/use-scroll";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import { useEditorViewStore } from "@/features/editor/stores/view.store";
-import { getBufferById } from "@/features/editor/utils/buffer-index";
-import { calculateLineHeight } from "@/features/editor/utils/lines";
+import { getBufferById } from "@/features/editor/stores/buffer-index";
+import { calculateLineHeight } from "@/features/editor/services/lines";
 import { resolveGoToLineTarget } from "@/features/editor/utils/go-to-line";
-import type { EditorModelPositionResolver } from "@/features/editor/view-model/view-layout";
-import { hasTextContent, type PaneContent } from "@/features/panes/types/pane-content.types";
+import type { EditorModelPositionResolver } from "@/features/editor/types/code-editor-view.types";
+import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import { useShallow } from "zustand/react/shallow";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { toast } from "sonner";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
-import { useZoomStore } from "@/features/window/stores/zoom.store";
-import { editorAPI } from "../extensions/api";
+import { useEditorSettingOverridesStore } from "@/features/editor/stores/editor-setting-overrides.store";
+import { useZoomStore } from "@/features/layout/stores/zoom.store";
+import { readBufferText } from "../services/buffer-text";
+import type { LiveDocumentEdit } from "../services/live-document-registry";
 import CodeLensOverlay from "../lsp/code-lens-overlay";
 import RenameInput from "../lsp/rename-input";
-import type { CodeLensItem } from "../lsp/use-code-lens";
+import type { CodeLensItem } from "../lsp/hooks/use-code-lens";
 import { useRename } from "../lsp/use-rename";
 import { MarkdownPreview } from "../markdown/markdown-preview";
 import { NotebookEditor } from "../notebook/notebook-editor";
 import { getPythonScriptCells } from "../notebook/python-script-cells";
+import { type ScriptCellKind, useScriptCells } from "../notebook/use-script-cells";
 import {
   applyRMarkdownChunkOptionSemantics,
   clearRMarkdownChunkOutput,
@@ -54,9 +48,20 @@ import { ScrollDebugOverlay } from "./debug/scroll-debug-overlay";
 import { HtmlPreview } from "./html/html-preview";
 import { CodeMirrorEditor } from "./codemirror-editor";
 import { SvgPreview } from "./svg/svg-preview";
-import { EditorStylesheet } from "./stylesheet";
+import "./code-editor.css";
 import Breadcrumb, { type BreadcrumbProps } from "./toolbar/breadcrumb";
 import { OutlineSidebar } from "@/features/outline/components/outline-sidebar";
+import { runAfterNextPaint } from "@/utils/after-paint";
+import { type AppEventMap, onAppEvent } from "@/utils/app-events";
+import {
+  useBufferIdOrActive,
+  useIsBufferPreview,
+} from "@/features/panes/hooks/use-pane-buffer-state";
+import { loadEditorFeatures } from "../services/editor-feature-registry";
+import { fileOpenBenchmark } from "../services/file-open-benchmark";
+
+// Contributed editor features load with the editor, so the first editor rarely waits on them.
+void loadEditorFeatures();
 
 interface CodeEditorProps {
   onKeyDown?: (e: React.KeyboardEvent<HTMLDivElement>) => void;
@@ -86,17 +91,6 @@ interface CodeEditorProps {
     previousSelection?: Range,
     options?: EditorContentChangeOptions,
   ) => void;
-}
-
-export interface CodeEditorRef {
-  editor: HTMLDivElement | null;
-  textarea: HTMLDivElement | null;
-}
-
-interface GoToLineEventDetail {
-  line?: number;
-  column?: number;
-  path?: string;
 }
 
 const PYTHON_SCRIPT_CELL_COMMAND = "athas.runPythonScriptCell";
@@ -149,11 +143,12 @@ const CodeEditor = ({
   const [codeLensContentLeft, setCodeLensContentLeft] = useState<number>(
     EDITOR_CONSTANTS.EDITOR_PADDING_LEFT,
   );
-  const { setRefs, setContent, setFileInfo, setActiveEditorViewKey } =
-    useEditorStateStore.use.actions();
-  const { setDisabled } = useEditorSettingsStore.use.actions();
+  const [codeLensViewportHeight, setCodeLensViewportHeight] = useState(600);
+  const [codeLensScrollTop, setCodeLensScrollTop] = useState(0);
+  const showInlineCodeLensesRef = useRef(false);
+  const { setChangeHandler, setActiveEditorViewKey } = useEditorStateStore.use.actions();
 
-  const activeBufferId = useBufferStore((state) => propBufferId ?? state.activeBufferId);
+  const activeBufferId = useBufferIdOrActive(propBufferId);
   const zoomLevel = useZoomStore.use.editorZoomLevel();
   // Only what the wrapper needs: the text changes on every keystroke, and re-rendering here
   // re-renders the whole editor surface with it.
@@ -167,7 +162,6 @@ const CodeEditor = ({
             id: buffer.id,
             type: buffer.type,
             path: buffer.path,
-            isPreview: buffer.isPreview,
             isMarkdownPreview: buffer.type === "editor" && buffer.isMarkdownPreview === true,
           };
         },
@@ -177,12 +171,16 @@ const CodeEditor = ({
   );
   const getValue = useCallback(() => {
     const buffer = getBufferById(useBufferStore.getState().buffers, activeBufferId);
-    return buffer && hasTextContent(buffer) ? buffer.content : "";
+    return buffer ? readBufferText(buffer) : "";
   }, [activeBufferId]);
   const editorViewKey = paneId && activeBufferId ? `${paneId}:${activeBufferId}` : activeBufferId;
   const { handleContentChange, handleDocumentChange } = useEditorAppStore.use.actions();
-  const editorFontSize = useSettingsStore((state) => state.settings.fontSize);
-  const editorLineHeight = useSettingsStore((state) => state.settings.editorLineHeight);
+  const settingsFontSize = useSettingsStore((state) => state.settings.fontSize);
+  const settingsLineHeight = useSettingsStore((state) => state.settings.editorLineHeight);
+  const fontSizeOverride = useEditorSettingOverridesStore((state) => state.overrides.fontSize);
+  const lineHeightOverride = useEditorSettingOverridesStore((state) => state.overrides.lineHeight);
+  const editorFontSize = fontSizeOverride ?? settingsFontSize;
+  const editorLineHeight = lineHeightOverride ?? settingsLineHeight;
   const codeLensEnabled = useSettingsStore((state) => state.settings.codeLens);
   const showOutlineSetting = useSettingsStore((state) => state.settings.showOutline);
 
@@ -191,6 +189,7 @@ const CodeEditor = ({
   const zoomedLineHeight = calculateLineHeight(zoomedFontSize, editorLineHeight);
 
   const filePath = activeBuffer?.path || "";
+  fileOpenBenchmark.markOnce(filePath, "editor-chunk-ready");
   const onChange = activeBuffer
     ? (onContentChange ?? (isActiveSurface ? handleContentChange : () => {}))
     : () => {};
@@ -200,9 +199,17 @@ const CodeEditor = ({
           batch: EditorDocumentChangeBatch,
           previousCursorPosition?: Position,
           previousSelection?: Range,
-        ) => handleDocumentChange(activeBuffer.id, batch, previousCursorPosition, previousSelection)
+          liveEdit?: LiveDocumentEdit,
+        ) =>
+          handleDocumentChange(
+            activeBuffer.id,
+            batch,
+            previousCursorPosition,
+            previousSelection,
+            liveEdit,
+          )
       : undefined;
-  const isPreviewBuffer = activeBuffer?.isPreview ?? false;
+  const isPreviewBuffer = useIsBufferPreview(activeBuffer?.id);
   const showMarkdownPreview =
     activeBuffer?.type === "markdownPreview" || activeBuffer?.isMarkdownPreview === true;
   const showNotebookEditor =
@@ -215,14 +222,6 @@ const CodeEditor = ({
   const showHtmlPreview = activeBuffer?.type === "htmlPreview";
   const showCsvPreview = activeBuffer?.type === "csvPreview";
   const showSvgPreview = activeBuffer?.type === "svgPreview";
-
-  // Initialize refs in store
-  useEffect(() => {
-    if (!isActiveSurface) return;
-    setRefs({
-      editorRef,
-    });
-  }, [isActiveSurface, setRefs]);
 
   useEffect(() => {
     if (!isActiveSurface) return;
@@ -241,32 +240,14 @@ const CodeEditor = ({
 
     if (!focusTarget) return;
 
-    // Small delay to ensure the editor surface is mounted.
-    const focusTimer = setTimeout(() => {
-      focusTarget.focus();
-    }, 0);
-
-    return () => clearTimeout(focusTimer);
+    // After the editor has painted: focusing lays out the window.
+    return runAfterNextPaint(() => focusTarget.focus());
   }, [activeBufferId, enableInteractiveServices]);
 
-  // Sync content and file info with editor instance store
   useEffect(() => {
     if (!isActiveSurface) return;
-    setContent("", onChange);
-  }, [isActiveSurface, onChange, setContent]);
-
-  useEffect(() => {
-    if (!isActiveSurface) return;
-    setFileInfo(filePath);
-  }, [filePath, isActiveSurface, setFileInfo]);
-
-  // Editor view store automatically syncs with active buffer
-
-  // Set disabled state
-  useEffect(() => {
-    if (!isActiveSurface) return;
-    setDisabled(false);
-  }, [isActiveSurface, setDisabled]);
+    setChangeHandler(onChange);
+  }, [isActiveSurface, onChange, setChangeHandler]);
 
   const resolveModelPosition = useCallback<EditorModelPositionResolver>(
     (line, column) => editorModelPositionResolverRef.current?.(line, column) ?? null,
@@ -278,16 +259,24 @@ const CodeEditor = ({
     },
     [],
   );
+  const codeLensLinesRef = useRef<{ content: string; lines: string[] } | null>(null);
   const getCodeLensLineText = useCallback(
     (line: number) => {
-      return getValue().split("\n")[line];
+      const content = getValue();
+      let cached = codeLensLinesRef.current;
+      if (cached?.content !== content) {
+        cached = { content, lines: content.split("\n") };
+        codeLensLinesRef.current = cached;
+      }
+      return cached.lines[line];
     },
     [getValue],
   );
-  const measureCodeLensContentLeft = useCallback(() => {
+  const measureCodeLensLayout = useCallback(() => {
     const container = editorRef.current;
     if (!container) return;
 
+    setCodeLensViewportHeight(container.clientHeight);
     const containerRect = container.getBoundingClientRect();
     const contentContainer = container.querySelector<HTMLElement>(
       "[data-editor-content-container]",
@@ -310,20 +299,22 @@ const CodeEditor = ({
     setCodeLensContentLeft(EDITOR_CONSTANTS.EDITOR_PADDING_LEFT);
   }, []);
 
-  useLayoutEffect(() => {
+  // Measured from the next frame on: code lenses only show once the language server or the
+  // script cells have produced some, and measuring here would force a layout and a second render
+  // before the editor's first paint.
+  useEffect(() => {
     const container = editorRef.current;
     if (!container) return;
 
-    measureCodeLensContentLeft();
-    const animationFrame = requestAnimationFrame(measureCodeLensContentLeft);
-    const resizeObserver = new ResizeObserver(measureCodeLensContentLeft);
+    const animationFrame = requestAnimationFrame(measureCodeLensLayout);
+    const resizeObserver = new ResizeObserver(measureCodeLensLayout);
     resizeObserver.observe(container);
 
     return () => {
       cancelAnimationFrame(animationFrame);
       resizeObserver.disconnect();
     };
-  }, [activeBufferId, measureCodeLensContentLeft, showToolbar, zoomedFontSize, zoomedLineHeight]);
+  }, [activeBufferId, measureCodeLensLayout, showToolbar, zoomedFontSize, zoomedLineHeight]);
 
   // Consolidated LSP document lifecycle
   useLspIntegration({
@@ -331,30 +322,21 @@ const CodeEditor = ({
     filePath,
     getValue,
   });
-  // Run-cell lenses need the text, but only for Python scripts and R Markdown files.
-  const needsCellText =
-    enableInteractiveServices && (isPythonScriptFile(filePath) || isRMarkdownFile(filePath));
-  const cellText = useBufferStore(
-    useCallback(
-      (state: { buffers: PaneContent[] }) => {
-        if (!needsCellText) return "";
-        const buffer = getBufferById(state.buffers, activeBufferId);
-        return buffer && hasTextContent(buffer) ? buffer.content : "";
-      },
-      [activeBufferId, needsCellText],
-    ),
+  const scriptCellKind: ScriptCellKind | null = !enableInteractiveServices
+    ? null
+    : isPythonScriptFile(filePath)
+      ? "python"
+      : isRMarkdownFile(filePath)
+        ? "rmarkdown"
+        : null;
+  const { pythonScriptCells, rMarkdownChunks } = useScriptCells(
+    activeBufferId ?? null,
+    scriptCellKind,
   );
 
   // Rename symbol support
   const rename = useRename(enableRichEditorServices ? filePath : undefined);
 
-  const pythonScriptCells = useMemo(
-    () =>
-      enableInteractiveServices && isPythonScriptFile(filePath)
-        ? getPythonScriptCells(cellText)
-        : [],
-    [enableInteractiveServices, filePath, cellText],
-  );
   const pythonScriptCellLenses = useMemo<CodeLensItem[]>(
     () =>
       pythonScriptCells.map((cell) => ({
@@ -364,11 +346,6 @@ const CodeEditor = ({
         arguments: [cell.index],
       })),
     [pythonScriptCells],
-  );
-  const rMarkdownChunks = useMemo(
-    () =>
-      enableInteractiveServices && isRMarkdownFile(filePath) ? getRMarkdownChunks(cellText) : [],
-    [enableInteractiveServices, filePath, cellText],
   );
   const rMarkdownChunkLenses = useMemo<CodeLensItem[]>(
     () =>
@@ -384,6 +361,13 @@ const CodeEditor = ({
     () => (codeLensEnabled ? [...pythonScriptCellLenses, ...rMarkdownChunkLenses] : []),
     [codeLensEnabled, pythonScriptCellLenses, rMarkdownChunkLenses],
   );
+  const showInlineCodeLenses = enableCodeLens && inlineCodeLenses.length > 0;
+
+  useEffect(() => {
+    showInlineCodeLensesRef.current = showInlineCodeLenses;
+    if (!showInlineCodeLenses) return;
+    setCodeLensScrollTop(editorRef.current?.querySelector(".cm-scroller")?.scrollTop ?? 0);
+  }, [activeBufferId, showInlineCodeLenses]);
 
   const handleCodeLensExecute = useCallback(
     (lens: { title: string; command?: string; arguments?: unknown[] }) => {
@@ -391,11 +375,10 @@ const CodeEditor = ({
 
       if (lens.command === PYTHON_SCRIPT_CELL_COMMAND) {
         const cellIndex = typeof lens.arguments?.[0] === "number" ? lens.arguments[0] : -1;
-        const cell = pythonScriptCells[cellIndex];
+        const cell = getPythonScriptCells(getValue())[cellIndex];
         if (!cell) return;
 
-        void commands
-          .notebookRunPythonCell(cell.code, editorWorkingDirectory(filePath), cell.setupCode)
+        void runPythonCell(cell.code, editorWorkingDirectory(filePath), cell.setupCode)
           .then((result) => {
             if (result.timedOut) {
               toast.error("Python cell timed out.");
@@ -426,7 +409,7 @@ const CodeEditor = ({
 
       if (lens.command === R_MARKDOWN_CHUNK_COMMAND) {
         const chunkIndex = typeof lens.arguments?.[0] === "number" ? lens.arguments[0] : -1;
-        const chunk = rMarkdownChunks[chunkIndex];
+        const chunk = getRMarkdownChunks(getValue())[chunkIndex];
         if (!chunk) return;
 
         if (!rMarkdownChunkShouldEvaluate(chunk)) {
@@ -435,8 +418,7 @@ const CodeEditor = ({
           return;
         }
 
-        void commands
-          .notebookRunRCell(chunk.code, editorWorkingDirectory(filePath), chunk.setupCode)
+        void runRCell(chunk.code, editorWorkingDirectory(filePath), chunk.setupCode)
           .then((result) => {
             const currentValue = getValue();
             const currentChunk = getRMarkdownChunks(currentValue)[chunkIndex] ?? chunk;
@@ -482,7 +464,7 @@ const CodeEditor = ({
         return;
       }
     },
-    [filePath, onChange, pythonScriptCells, rMarkdownChunks],
+    [filePath, getValue, onChange],
   );
 
   // Keep app-owned overlays aligned with the editor's scroll position.
@@ -493,6 +475,11 @@ const CodeEditor = ({
         ref.current.style.transform = transform;
       }
     }
+    if (!showInlineCodeLensesRef.current) return;
+    // The overlay renders half a viewport beyond each edge, so a quarter-viewport step keeps
+    // every visible lens rendered without re-rendering on each scroll event.
+    const step = (editorRef.current?.clientHeight ?? 0) / 4;
+    setCodeLensScrollTop((current) => (Math.abs(current - scrollTop) < step ? current : scrollTop));
   }, []);
 
   // Scroll management
@@ -502,7 +489,7 @@ const CodeEditor = ({
   useEffect(() => {
     if (!isActiveSurface) return;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
-    const goToLine = (lineNumber: number, columnNumber?: number) => {
+    const goToLine = (lineNumber: number, columnNumber: number | undefined, focus: boolean) => {
       if (!editorRef.current) return false;
 
       const currentContent = getValue();
@@ -515,36 +502,39 @@ const CodeEditor = ({
         lineCount: useEditorViewStore.getState().actions.getLineCount(),
       });
 
-      editorAPI.setSelection(undefined);
-      editorAPI.setCursorPosition({
-        line: target.line,
-        column: target.column,
-        offset: target.offset,
+      if (!activeBufferId) return false;
+      const position = { line: target.line, column: target.column, offset: target.offset };
+      // Moves the cursor and centers it; only a go-to-line typed in the editor takes focus.
+      useEditorStateStore.getState().actions.requestNavigation({
+        bufferId: activeBufferId,
+        range: { start: position, end: position },
+        focus,
       });
 
       return true;
     };
 
-    const handleGoToLine = (event: CustomEvent<GoToLineEventDetail>) => {
-      const lineNumber = event.detail?.line;
-      const columnNumber = event.detail?.column;
-      const targetPath = event.detail?.path;
+    const handleGoToLine = (request: AppEventMap["editor:go-to-line"]) => {
+      const lineNumber = request.line;
+      const columnNumber = request.column;
+      const targetPath = request.path;
+      const focus = request.focus ?? false;
       if (targetPath && targetPath !== filePath) return;
       if (!lineNumber) return;
 
       // Try immediately, then retry if content not ready yet
-      if (!goToLine(lineNumber, columnNumber)) {
+      if (!goToLine(lineNumber, columnNumber, focus)) {
         if (retryTimer) clearTimeout(retryTimer);
-        retryTimer = setTimeout(() => goToLine(lineNumber, columnNumber), 150);
+        retryTimer = setTimeout(() => goToLine(lineNumber, columnNumber, focus), 150);
       }
     };
 
-    window.addEventListener("menu-go-to-line", handleGoToLine as EventListener);
+    const unsubscribe = onAppEvent("editor:go-to-line", handleGoToLine);
     return () => {
       if (retryTimer) clearTimeout(retryTimer);
-      window.removeEventListener("menu-go-to-line", handleGoToLine as EventListener);
+      unsubscribe();
     };
-  }, [filePath, isActiveSurface]);
+  }, [activeBufferId, filePath, isActiveSurface]);
 
   if (!activeBuffer) {
     return <div className="flex flex-1 items-center justify-center text-foreground"></div>;
@@ -552,7 +542,6 @@ const CodeEditor = ({
 
   return (
     <>
-      <EditorStylesheet />
       <div className="absolute inset-0 flex flex-col overflow-hidden">
         {/* Breadcrumbs */}
         {showToolbar && (
@@ -577,14 +566,14 @@ const CodeEditor = ({
             }}
           >
             {/* Code Lens */}
-            {enableCodeLens && inlineCodeLenses.length > 0 && (
+            {showInlineCodeLenses && (
               <CodeLensOverlay
                 ref={codeLensRef}
                 lenses={inlineCodeLenses}
                 fontSize={zoomedFontSize}
                 lineHeight={zoomedLineHeight}
-                scrollTop={editorRef.current?.querySelector(".cm-scroller")?.scrollTop ?? 0}
-                viewportHeight={editorRef.current?.clientHeight ?? 600}
+                scrollTop={codeLensScrollTop}
+                viewportHeight={codeLensViewportHeight}
                 contentLeft={codeLensContentLeft}
                 getLineText={getCodeLensLineText}
                 onExecute={handleCodeLensExecute}

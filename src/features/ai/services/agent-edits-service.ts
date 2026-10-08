@@ -17,13 +17,15 @@ import type {
   AgentFileWrite,
 } from "@/features/ai/types/agent-edits.types";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { getBufferByPath } from "@/features/editor/utils/buffer-index";
+import { getBufferByPath } from "@/features/editor/stores/buffer-index";
 import { getWorkspaceResourceProvider } from "@/features/file-system/services/workspace-resource-provider";
 import { useFileWatcherStore } from "@/features/file-system/stores/file-watcher.store";
 import { emitGitChanged } from "@/features/git/events/git-events";
-import { showToast } from "@/features/layout/contexts/toast-context";
+import { showToast } from "@/utils/toast";
 import { showConfirmDialog } from "@/ui/dialog";
 import { getBaseName } from "@/utils/path-helpers";
+import { onAppEvent } from "@/utils/app-events";
+import { readBufferText } from "@/features/editor/services/buffer-text";
 
 /** Gathers the file watcher's burst of events for one change into one disk check. */
 const RECONCILE_DELAY_MS = 150;
@@ -135,13 +137,11 @@ export function scheduleAgentEditsDiskCheck(path: string) {
 }
 
 function listenForFileChanges() {
-  if (listening || typeof window === "undefined") return;
+  if (listening) return;
   listening = true;
   // Fired for every change the file watcher reports, including the user's own saves.
-  window.addEventListener("file-external-change", (event) => {
-    const detail = (event as CustomEvent<{ path?: string; agentWriteId?: number }>).detail;
-    if (!detail?.path) return;
-    const { path, agentWriteId } = detail;
+  onAppEvent("file:external-change", ({ path, agentWriteId }) => {
+    if (!path) return;
     if (agentWriteId !== undefined) {
       // The change is that agent write; a chat that recorded it already has it in its log.
       if (recordedWrites.has(agentWriteId)) return;
@@ -274,8 +274,8 @@ async function rejectHunks(chatId: string, entry: AgentEditEntry, hunks: AgentEd
   if (reverted === null) return;
 
   const buffer = findEditorBuffer(entry.path);
-  const originalBufferContent = buffer?.content;
-  const unsaved = buffer?.isDirty ? buffer.content : null;
+  const originalBufferContent = buffer ? readBufferText(buffer) : undefined;
+  const unsaved = buffer?.isDirty ? (originalBufferContent ?? null) : null;
   const removesFile = entry.created && reverted === "";
   if (removesFile && unsaved !== null) {
     const confirmed = await showConfirmDialog(
@@ -306,7 +306,7 @@ async function rejectHunks(chatId: string, entry: AgentEditEntry, hunks: AgentEd
       if (
         buffer &&
         latestBuffer?.id === buffer.id &&
-        latestBuffer.content === originalBufferContent
+        readBufferText(latestBuffer) === originalBufferContent
       )
         useBufferStore.getState().actions.closeBufferForce(buffer.id);
       rebaseOtherChats(entry.path, chatId, null);
@@ -327,7 +327,7 @@ async function rejectHunks(chatId: string, entry: AgentEditEntry, hunks: AgentEd
   const latestBuffer = findEditorBuffer(entry.path);
   if (!latestBuffer || latestBuffer.readOnly) return;
   const latestText = latestBuffer.isDirty
-    ? transferLineEdits(entry.current, latestBuffer.content, edits)
+    ? transferLineEdits(entry.current, readBufferText(latestBuffer), edits)
     : reverted;
   if (latestText === null) {
     showToast({

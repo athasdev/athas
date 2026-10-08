@@ -1,10 +1,10 @@
 export const DEFAULT_FILE_NAVIGATOR_WIDTH = 224;
-export const MIN_FILE_NAVIGATOR_WIDTH = 176;
-export const MAX_FILE_NAVIGATOR_WIDTH = 420;
+const MIN_FILE_NAVIGATOR_WIDTH = 176;
+const MAX_FILE_NAVIGATOR_WIDTH = 420;
 
 const MAX_FILE_NAVIGATOR_PARENT_RATIO = 0.5;
 
-export interface FileNavigatorLayout {
+interface FileNavigatorLayout {
   width: number;
   minWidth: number;
   maxWidth: number;

@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { getProjectNameFromPath, isRemoteProjectPath } from "../components/sidebar/project-glyph";
+import {
+  getProjectNameFromPath,
+  isRemoteProjectPath,
+} from "@/features/workspace/services/project-tab-path";
 
 describe("activity project switcher", () => {
   it("uses the shared project path rules for local and remote projects", () => {

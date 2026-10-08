@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { openAgentHistoryChat } from "@/features/ai/lib/open-agent-history";
+import { openAgentHistoryChat } from "@/features/ai/services/open-agent-history";
 
 const mocks = vi.hoisted(() => ({
   chat: {

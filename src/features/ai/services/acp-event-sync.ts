@@ -118,7 +118,7 @@ export function applyAcpEvent(payload: AcpEvent): void {
       // the chat outlives this window.
       const chat = store.chats.find((item) => item.acpSessionId === payload.sessionId);
       const updated = chat
-        ? withAcpTerminalSnapshot(chat.messages, payload.terminalId, {
+        ? withAcpTerminalSnapshot(store.messagesByChat[chat.id] ?? [], payload.terminalId, {
             output: terminal.output,
             truncated: terminal.truncated,
             exit: terminal.exit,

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import type { EditorContent } from "@/features/panes/types/pane-content.types";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 import { WindowCloseSession } from "../services/window-close-session";
 const save = vi.hoisted(() => vi.fn());
 vi.mock("@/features/editor/services/editor-save-service", () => ({ saveEditorBufferById: save }));
@@ -15,11 +15,7 @@ function draft(content = "draft"): EditorContent {
     savedContent: "disk",
     isDirty: true,
     isVirtual: false,
-    isPinned: false,
-    isPreview: false,
-    isActive: false,
     language: "typescript",
-    tokens: [],
   };
 }
 function owner(id: string) {

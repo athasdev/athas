@@ -7,7 +7,7 @@ import {
   markWhatsNewRead,
   queuePendingWhatsNew,
   resolveWhatsNewInfo,
-} from "../lib/whats-new";
+} from "../services/whats-new";
 
 afterEach(() => {
   vi.unstubAllGlobals();

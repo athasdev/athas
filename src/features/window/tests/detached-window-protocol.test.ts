@@ -2,7 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 import {
   getDetachedWindowChannelName,
   parseDetachedWindowUrl,
-} from "@/features/window/detached/detached-window-protocol";
+} from "@/features/window/detached/services/detached-window-protocol";
 
 describe("parseDetachedWindowUrl", () => {
   it("recognizes every detached window kind", () => {

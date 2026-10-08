@@ -1,16 +1,9 @@
-import type { CodeEditorRef } from "@/features/editor/components/code-editor";
+import type { CodeEditorRef } from "@/features/editor/types/code-editor-view.types";
+import type { OpenContentOptions } from "@/features/editor/stores/buffer.store";
 import type { FileEntry } from "./app.types";
-
-interface WorkspaceFolder {
-  path: string;
-  name: string;
-  isPrimary?: boolean;
-}
 
 export interface FsState {
   files: FileEntry[];
-  rootFolderPath?: string;
-  workspaceFolders: WorkspaceFolder[];
   filesVersion: number;
   isFileTreeLoading: boolean;
   isSwitchingProject: boolean;
@@ -43,8 +36,9 @@ export interface FsActions {
     column?: number,
     codeEditorRef?: React.RefObject<CodeEditorRef | null>,
     isPreview?: boolean,
+    openOptions?: OpenContentOptions,
   ) => Promise<void>;
-  handleFileOpen: (path: string, isDir: boolean) => Promise<void>;
+  handleFileOpen: (path: string, isDir: boolean, openOptions?: OpenContentOptions) => Promise<void>;
   toggleFolder: (path: string) => Promise<void>;
   revealPathInTree: (targetPath: string) => Promise<void>;
   handleCreateNewFile: () => Promise<void>;

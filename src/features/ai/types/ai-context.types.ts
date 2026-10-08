@@ -5,19 +5,7 @@ import type { MentionedFile } from "@/features/ai/lib/file-mentions";
 import type { ImageContent } from "./ai-chat.types";
 import type { LoadedProjectRules } from "./project-rules.types";
 import type { ResolvedContextReference } from "./context-references.types";
-
-export interface EditorSelectionContext {
-  id: string;
-  bufferId: string;
-  filePath: string;
-  fileName: string;
-  languageId: string;
-  selectedText: string;
-  startLine: number;
-  startColumn: number;
-  endLine: number;
-  endColumn: number;
-}
+import type { EditorSelectionContext } from "@/features/editor/types/editor-selection.types";
 
 export interface ContextInfo {
   images?: ImageContent[];

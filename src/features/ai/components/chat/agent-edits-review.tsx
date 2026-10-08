@@ -19,7 +19,7 @@ import {
 import { pickAgentEditsChatId, useAgentEditsStore } from "@/features/ai/stores/agent-edits.store";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { AgentEditEntry, AgentEditHunk } from "@/features/ai/types/agent-edits.types";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { Button } from "@/ui/button";
 import { ButtonGroup } from "@/ui/button-group";
 import { EmptyState } from "@/ui/empty";

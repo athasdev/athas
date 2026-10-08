@@ -14,8 +14,8 @@ import {
 import type React from "react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
-import { fuzzyScore } from "@/features/quick-open/utils/fuzzy-search";
-import { writeSidebarResourceDragData } from "@/features/sidebar/utils/sidebar-resource-drag";
+import { fuzzyScore } from "@/utils/fuzzy-search";
+import { writeSidebarResourceDragData } from "@/features/sidebar/services/sidebar-resource-drag";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { NativeScrollArea } from "@/ui/scroll-area";
 import { Button } from "@/ui/button";
@@ -40,7 +40,7 @@ import {
   SidebarToolbar,
 } from "@/ui/sidebar";
 import { SidebarTree, SidebarTreeRow } from "@/features/sidebar/components/sidebar-tree";
-import { compactPathTreeBranch, type PathTreeNode } from "@/features/sidebar/lib/path-tree";
+import { compactPathTreeBranch, type PathTreeNode } from "@/utils/path-tree";
 import { cn } from "@/utils/cn";
 import { createStash } from "../../api/git-stash-api";
 import {

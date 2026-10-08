@@ -8,7 +8,7 @@ import type { GitHubTokenSource } from "@/bindings/commands";
  * token in particular is read from the CLI on demand and never leaves the
  * machine — it is not persisted into Athas' own keychain entry.
  */
-export type { GhCliAvailability, GitHubTokenSource, GitHubTokenStatus } from "@/bindings/commands";
+export type { GitHubTokenStatus } from "@/bindings/commands";
 
 export const getGhCliAvailability = async () => await commands.githubGhCliAvailability();
 

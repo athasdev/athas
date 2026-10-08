@@ -1,4 +1,4 @@
-import { isComposingKeyboardEvent } from "@/features/keymaps/utils/is-composing-keyboard-event";
+import { isComposingKeyboardEvent } from "@/utils/keyboard/is-composing-keyboard-event";
 import {
   type KeyboardEvent as ReactKeyboardEvent,
   useCallback,

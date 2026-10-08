@@ -1,1 +1,1 @@
-export type DatabaseType = "sqlite" | "postgres" | "mysql" | "duckdb" | "mongodb" | "redis";
+export type { DatabaseType } from "@/features/panes/types/pane-content.types";

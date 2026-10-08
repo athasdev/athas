@@ -1,5 +1,5 @@
-import type { Token } from "@/features/editor/utils/html";
-import { splitLines } from "@/features/editor/utils/lines";
+import type { Token } from "@/features/editor/types/editor.types";
+import { splitLines } from "@/features/editor/services/lines";
 import type { SearchExcerptHighlight } from "./search-excerpts";
 
 interface SearchExcerptTextSegment {

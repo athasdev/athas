@@ -11,6 +11,7 @@ import type { AgentCompletionResult } from "@/features/ai/types/agent-completion
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { runCodexDynamicTool } from "./codex-dynamic-tools";
 import { imageDataUrl } from "@/features/ai/lib/image-attachments";
+import { emitAppEvent } from "@/utils/app-events";
 import type { CodexProtocolEvent, CodexThreadSettings } from "./codex-types";
 
 interface CodexHandlers {
@@ -25,7 +26,6 @@ interface CodexHandlers {
 }
 
 export const codexSettingsKey = "athas-codex-integration-settings";
-export const codexSettingsChanged = "athas-codex-settings-changed";
 export const defaultCodexSettings: CodexThreadSettings = {
   effort: "medium",
   approvalPolicy: "on-request",
@@ -60,7 +60,7 @@ function codexThreadSettingsArg(): CodexThreadSettingsArg {
 
 export function saveCodexSettings(settings: CodexThreadSettings) {
   localStorage.setItem(codexSettingsKey, JSON.stringify(settings));
-  window.dispatchEvent(new Event(codexSettingsChanged));
+  emitAppEvent("ai:codex-settings-changed");
 }
 
 function itemId(params: Record<string, any>) {

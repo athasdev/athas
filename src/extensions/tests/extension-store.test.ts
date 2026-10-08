@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { enableMapSet } from "immer";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import type { SubscriptionInfo } from "@/features/window/services/auth-api";
-import { useAuthStore } from "@/features/window/stores/auth.store";
+import type { SubscriptionInfo } from "@/features/auth/services/auth-api";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { PLATFORM_ARCH } from "@/utils/platform";
 import { installedLanguages } from "../installer/installed-languages";
 import { languageProviderRegistry } from "../languages/language-provider-registry";

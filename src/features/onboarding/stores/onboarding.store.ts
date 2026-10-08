@@ -5,7 +5,7 @@ import {
   markOnboardingSeen,
   resolveOnboardingContext,
   type OnboardingContext,
-} from "@/features/onboarding/lib/onboarding-state";
+} from "@/features/onboarding/services/onboarding-state";
 import { initializeSettingsStore } from "@/features/settings/stores/settings.store";
 import { createSelectors } from "@/utils/zustand-selectors";
 

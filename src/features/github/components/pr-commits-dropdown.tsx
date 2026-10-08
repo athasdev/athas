@@ -1,4 +1,4 @@
-import { openCommitDiffBuffer } from "@/features/git/utils/open-commit-diff-buffer";
+import { openCommitDiffBuffer } from "@/features/git/services/open-commit-diff-buffer";
 import { Button } from "@/ui/button";
 import {
   DropdownMenu,
@@ -13,7 +13,7 @@ import { useMenuSearch } from "@/ui/menu-search";
 import { ChevronDownIcon, GitCommitIcon } from "@/ui/icons";
 import { toast } from "sonner";
 import type { Commit } from "../types/github-pr-viewer.types";
-import { getTimeAgo } from "../utils/github-viewer-utils";
+import { getTimeAgo } from "../services/github-viewer-utils";
 
 interface PRCommitsDropdownProps {
   commits: Commit[];

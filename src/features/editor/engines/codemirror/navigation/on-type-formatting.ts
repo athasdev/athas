@@ -1,6 +1,6 @@
 import { Transaction } from "@codemirror/state";
 
-export interface OnTypeFormattingTrigger {
+interface OnTypeFormattingTrigger {
   character: string;
   /** The document position just after the typed character, where the server formats from. */
   position: number;

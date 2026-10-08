@@ -1,5 +1,18 @@
 import type { EditorModelTextChange } from "../types/editor.types";
 
+/**
+ * Read access to a text by offsets. A string is one; an editor document can be one without being
+ * copied into a string.
+ */
+export interface TextSlice {
+  readonly length: number;
+  slice(start: number, end: number): string;
+}
+
+export function textSliceToString(text: TextSlice): string {
+  return typeof text === "string" ? text : text.slice(0, text.length);
+}
+
 function orderedChanges(
   contentLength: number,
   changes: readonly EditorModelTextChange[],
@@ -48,7 +61,7 @@ export function applyEditorTextChanges(
  * ranges, not the whole document.
  */
 export function editorTextChangesAreNoop(
-  content: string,
+  content: TextSlice,
   changes: readonly EditorModelTextChange[],
 ): boolean {
   return changes.every(

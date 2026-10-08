@@ -1,10 +1,10 @@
 import type { FoldRegion } from "../stores/fold.store";
-import type { Token } from "./html";
-import { buildLineOffsetMap } from "./html";
+import type { Token } from "../types/editor.types";
+import { buildLineOffsetMap } from "../services/line-offset-map";
 import {
   createCollapsedDiffAccordionLine,
   parseDiffAccordionLine,
-} from "@/features/git/utils/diff-editor-content";
+} from "@/features/git/services/diff-editor-content";
 
 interface LineMapping {
   actualToVirtual: Map<number, number>;

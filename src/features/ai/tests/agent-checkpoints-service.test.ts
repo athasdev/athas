@@ -37,7 +37,13 @@ vi.mock("@tauri-apps/api/core", () => ({
   },
 }));
 vi.mock("@/features/ai/stores/ai-chat.store", () => ({
-  useAIChatStore: { getState: () => ({ chats: mocks.chats, agentRuns: mocks.agentRuns }) },
+  useAIChatStore: {
+    getState: () => ({
+      chats: mocks.chats,
+      messagesByChat: Object.fromEntries(mocks.chats.map((chat) => [chat.id, chat.messages])),
+      agentRuns: mocks.agentRuns,
+    }),
+  },
 }));
 vi.mock("@/features/editor/stores/buffer.store", () => ({
   useBufferStore: {
@@ -50,7 +56,7 @@ vi.mock("@/features/editor/stores/buffer.store", () => ({
     }),
   },
 }));
-vi.mock("@/features/editor/utils/buffer-index", () => ({
+vi.mock("@/features/editor/stores/buffer-index", () => ({
   getBufferByPath: (buffers: Array<{ path: string }>, path: string) =>
     buffers.find((buffer) => buffer.path === path) ?? null,
 }));
@@ -72,7 +78,7 @@ vi.mock("@/features/file-system/stores/file-watcher.store", () => ({
   },
 }));
 vi.mock("@/features/git/events/git-events", () => ({ emitGitChanged: vi.fn() }));
-vi.mock("@/features/layout/contexts/toast-context", () => ({ showToast: mocks.showToast }));
+vi.mock("@/utils/toast", () => ({ showToast: mocks.showToast }));
 vi.mock("@/ui/dialog", () => ({ showConfirmDialog: mocks.showConfirmDialog }));
 
 const CHAT = "chat-1";

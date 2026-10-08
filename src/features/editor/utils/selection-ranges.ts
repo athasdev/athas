@@ -12,7 +12,7 @@ type TextareaSelectionState = Pick<
   "selectionStart" | "selectionEnd" | "selectionDirection"
 >;
 
-export interface SmartSelectionOptions {
+interface SmartSelectionOptions {
   content: string;
   cursorOffset: number;
   selectionStart?: number;

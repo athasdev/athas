@@ -8,14 +8,14 @@ import { DockerCapabilityNotice } from "./docker-sidebar-states";
 
 export type DockerImageDialogMode = "build" | "run";
 
-export interface DockerBuildDraft {
+interface DockerBuildDraft {
   contextPath: string;
   dockerfilePath: string;
   tag: string;
   buildArgs: string;
 }
 
-export interface DockerRunDraft {
+interface DockerRunDraft {
   image: string;
   name: string;
   ports: string;

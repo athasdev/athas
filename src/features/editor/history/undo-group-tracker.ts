@@ -13,7 +13,11 @@ import type {
   Range,
 } from "../types/editor.types";
 import { createHistoryPatchBatch } from "./history-patches";
-import { editorTextChangesAreNoop } from "../utils/editor-text-changes";
+import {
+  editorTextChangesAreNoop,
+  textSliceToString,
+  type TextSlice,
+} from "../utils/editor-text-changes";
 
 interface PendingUndoGroup {
   baseEntry: HistoryEntry;
@@ -28,7 +32,7 @@ interface PendingPatchUndoGroup {
   lastEditDelta: UndoEditDelta;
 }
 
-export interface UndoTrackOptions {
+interface UndoTrackOptions {
   previousCursorPosition?: Position;
   previousSelection?: Range;
   contentChange?: EditorTextChange;
@@ -125,15 +129,20 @@ export class EditorUndoGroupTracker {
 
   trackChanges(
     bufferId: string,
-    previousContent: string,
-    nextContent: string,
+    previousContent: TextSlice,
+    nextContent: TextSlice,
     changes: readonly EditorModelTextChange[],
     options: Omit<UndoTrackOptions, "contentChange"> = {},
   ): StoredHistoryEntry[] {
     if (changes.length === 0 || editorTextChangesAreNoop(previousContent, changes)) return [];
     const patch = createHistoryPatchBatch(previousContent, changes);
     if (!patch || patch.afterLength !== nextContent.length) {
-      return this.track(bufferId, previousContent, nextContent, options);
+      return this.track(
+        bufferId,
+        textSliceToString(previousContent),
+        textSliceToString(nextContent),
+        options,
+      );
     }
 
     const entries: StoredHistoryEntry[] = [];

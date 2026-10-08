@@ -33,8 +33,8 @@ const settings = vi.hoisted(() => ({
 vi.mock("@/extensions/registry/extension-registry", () => ({
   extensionRegistry: { isLspSupported: () => true, getLanguageId: () => null },
 }));
-vi.mock("../lsp/lsp-client", () => ({ LspClient: { getInstance: () => lsp } }));
-vi.mock("../lsp/location-navigation", () => ({ navigateToLspLocation }));
+vi.mock("../lsp/services/lsp-client", () => ({ LspClient: { getInstance: () => lsp } }));
+vi.mock("../lsp/services/location-navigation", () => ({ navigateToLspLocation }));
 vi.mock("../lsp/stores/lsp.store", () => {
   const state = {
     lspStatus: { status: "connected", activeWorkspaces: ["/repo"], documentRevision: 1 },
@@ -48,10 +48,10 @@ vi.mock("@/features/diagnostics/stores/diagnostics.store", () => {
   const state = { diagnosticsByFile: new Map() };
   return { useDiagnosticsStore: (selector: (value: unknown) => unknown) => selector(state) };
 });
-vi.mock("@/features/file-system/stores/file-system.store", () => ({
-  useFileSystemStore: { getState: () => ({ rootFolderPath: "/repo" }) },
+vi.mock("@/features/workspace/stores/project.store", () => ({
+  useProjectStore: { getState: () => ({ rootFolderPath: "/repo" }) },
 }));
-vi.mock("@/features/file-system/controllers/file-operations", () => ({
+vi.mock("@/features/file-system/api/file-operations", () => ({
   readFileContent: vi.fn(() => Promise.resolve("export const other = value;\n")),
 }));
 vi.mock("../stores/buffer.store", () => ({
@@ -61,18 +61,14 @@ vi.mock("../stores/buffer.store", () => ({
     }),
   },
 }));
-vi.mock("../extensions/api", () => ({ editorAPI }));
-vi.mock("@/features/keymaps/hooks/use-command-shortcut", () => ({
-  useCommandShortcut: () => undefined,
-}));
+vi.mock("../services/editor-api", () => ({ editorAPI }));
 vi.mock("sonner", () => ({ toast: { info: vi.fn(), error: vi.fn(), warning: vi.fn() } }));
 vi.mock("@/utils/platform", () => ({ isMac: () => true, IS_MAC: true, IS_WINDOWS: false }));
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const { CodeMirrorLspNavigation } = await import("../engines/codemirror/features/lsp-navigation");
-const { getActiveCodeMirrorNavigation } =
-  await import("../engines/codemirror/navigation/active-navigation");
+const { getActiveCodeMirrorNavigation } = await import("../services/active-editor-navigation");
 
 const DOC = "const value = compute(1);\nfunction compute(n) {\n  return n;\n}\n";
 const location = (line: number, character: number, uri = "file:///repo/a.ts") => ({
@@ -231,6 +227,34 @@ describe("CodeMirror LSP navigation", () => {
       from: line.to,
       to: view.state.doc.line(3).to,
     });
+  });
+
+  it("asks for inlay hints, code lenses and LSP folds again once edits pause", async () => {
+    await render();
+    await settle();
+    const requests = () => [
+      lsp.getInlayHints.mock.calls.length,
+      lsp.getCodeLens.mock.calls.length,
+      lsp.getFoldingRanges.mock.calls.length,
+    ];
+    expect(requests()).toEqual([1, 1, 1]);
+
+    lsp.getInlayHints.mockResolvedValue([
+      { line: 1, character: 22, label: "edited:", paddingLeft: false, paddingRight: true },
+    ]);
+    act(() => view.dispatch({ changes: { from: 0, insert: "// note\n" } }));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(200);
+    });
+    act(() => view.dispatch({ changes: { from: 0, insert: "/" } }));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(200);
+    });
+    expect(requests()).toEqual([1, 1, 1]);
+
+    await settle();
+    expect(requests()).toEqual([2, 2, 2]);
+    expect(view.contentDOM.querySelector(".cm-athas-inlay-hint")?.textContent).toBe("edited:");
   });
 
   it("opens the references peek from a lens and opens the chosen reference", async () => {

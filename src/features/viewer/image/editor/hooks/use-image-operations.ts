@@ -8,7 +8,7 @@ import type {
 import { ImageEditSession } from "../services/image-edit-session";
 import { convertImageFormat } from "../utils/image-conversion";
 import { flipImage, resizeImage, rotateImage } from "../utils/image-transforms";
-export interface UseImageOperationsOptions {
+interface UseImageOperationsOptions {
   initialSrc: string;
   sourceKey?: unknown;
   session?: ImageEditSession;

@@ -14,6 +14,17 @@ pub(super) fn is_unsupported_method(error: &anyhow::Error, method: &str) -> bool
       || message.contains(&format!("Unhandled method {}", method))
 }
 
+/// Whether a request failed because it was canceled or the document changed under it, which a
+/// retry with different parameters would not fix.
+pub(super) fn is_canceled_request(error: &anyhow::Error) -> bool {
+   let message = error.to_string().to_lowercase();
+   message.contains("-32800")
+      || message.contains("-32801")
+      || message.contains("content modified")
+      || message.contains("request cancelled")
+      || message.contains("request canceled")
+}
+
 pub(super) fn execute_command_params(
    command: String,
    arguments: Vec<serde_json::Value>,

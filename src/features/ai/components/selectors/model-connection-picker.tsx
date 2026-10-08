@@ -23,10 +23,9 @@ import {
   ModelResultsProvider,
   ModelSection,
   ProviderModels,
-  useConnectedModelProviders,
-  useModelName,
   useModelSearchResults,
 } from "./model-connection-menu";
+import { useConnectedModelProviders, useModelName } from "@/features/ai/hooks/use-model-providers";
 
 const INHERIT_VALUE = "inherit";
 
@@ -44,6 +43,8 @@ interface ModelConnectionPickerProps {
   purpose?: "chat" | "completion";
   /** `full` fills the parent, such as a settings row's shared dropdown width. */
   width?: "content" | "full";
+  /** `subtle` drops the field chrome so the picker reads as secondary text inside another surface. */
+  appearance?: "field" | "subtle";
   "aria-label": string;
 }
 
@@ -66,6 +67,7 @@ export function ModelConnectionPicker({
   disabled,
   purpose = "chat",
   width = "content",
+  appearance = "field",
   "aria-label": ariaLabel,
 }: ModelConnectionPickerProps) {
   const [isContentMounted, setIsContentMounted] = useState(false);
@@ -100,9 +102,10 @@ export function ModelConnectionPicker({
           render={
             <Button
               type="button"
-              variant="outline"
+              variant={appearance === "subtle" ? "ghost" : "outline"}
+              size={appearance === "subtle" ? "sm" : undefined}
               width={width}
-              align="between"
+              align={appearance === "subtle" ? "start" : "between"}
               aria-label={`${ariaLabel}: ${label}`}
               title={title}
             />

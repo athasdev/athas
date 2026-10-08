@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vite-plus/test";
-import { getLineSlice } from "../utils/large-file";
+import { getLineSlice } from "../services/large-file";
 import {
   calculateCursorPositionFromContent,
   calculateCursorPositionFromLineOffsets,
   calculateOffsetFromContentPosition,
   getLineTextFromContent,
-} from "../utils/position";
+} from "../services/position";
 
 describe("large file editor mode", () => {
   it("calculates cursor position from large content without a line array", () => {

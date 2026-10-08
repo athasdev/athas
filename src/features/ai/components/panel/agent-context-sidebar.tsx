@@ -6,15 +6,15 @@ import {
   SparkleIcon,
   TerminalIcon,
 } from "@/ui/icons";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openExternalUrl } from "@/utils/external-url";
 import { DiffStats } from "@/features/ai/components/diff-stats";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GenerativeUIRenderer } from "@/extensions/ui/components/generative-ui-renderer";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { getBufferById } from "@/features/editor/utils/buffer-index";
+import { getBufferById } from "@/features/editor/stores/buffer-index";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { Button } from "@/ui/button";
 import { EmptyState } from "@/ui/empty";
 import {
@@ -37,6 +37,8 @@ import {
   openAgentSessionReview,
 } from "../../lib/agent-session-context";
 import { useAIChatStore } from "../../stores/ai-chat.store";
+import { useSettledChatMessages } from "../../hooks/use-settled-chat-messages";
+import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 type SectionId = "changes" | "files" | "commands" | "resources" | "views";
 
@@ -46,8 +48,9 @@ type SectionId = "changes" | "files" | "commands" | "resources" | "views";
  * panel on that session), else the store's current chat.
  */
 function useActiveAgentSessionId(): string | null {
+  const activeBufferId = useActiveBufferId();
   const activeAgentSessionId = useBufferStore((state) => {
-    const buffer = getBufferById(state.buffers, state.activeBufferId);
+    const buffer = getBufferById(state.buffers, activeBufferId);
     return buffer?.type === "agent" ? buffer.sessionId : null;
   });
   const currentChatId = useAIChatStore((state) => state.currentChatId);
@@ -78,7 +81,9 @@ export function AgentContextSidebar() {
   const openContent = useBufferStore((state) => state.actions.openContent);
   const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath || null);
-  const messages = chat?.messages;
+  // Settled rather than selected: a streaming reply changes the messages every frame.
+  const settledMessages = useSettledChatMessages(chat ? sessionId : null);
+  const messages = chat ? settledMessages : undefined;
   const context = useMemo(
     () => buildAgentSessionContext(messages ? { messages } : null, rootFolderPath),
     [messages, rootFolderPath],
@@ -127,7 +132,7 @@ export function AgentContextSidebar() {
         });
         return;
       }
-      void openUrl(resource.url);
+      void openExternalUrl(resource.url);
     },
     [openContent, rootFolderPath],
   );

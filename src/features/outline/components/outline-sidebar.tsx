@@ -27,8 +27,8 @@ import {
   DropdownMenuTrigger,
 } from "@/ui/dropdown";
 import { writeClipboardText } from "@/utils/clipboard";
-import { readFileContent } from "@/features/file-system/controllers/file-operations";
-import { openFile } from "@/features/file-system/controllers/platform";
+import { readFileContent } from "@/features/file-system/api/file-operations";
+import { openFile } from "@/features/file-system/api/file-system-api";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { EmptyState } from "@/ui/empty";
 import { SidebarHeader, SidebarIconButton, SidebarFilterBar, SidebarPanel } from "@/ui/sidebar";
@@ -36,7 +36,7 @@ import { ScrollArea } from "@/ui/scroll-area";
 import { Spinner } from "@/ui/spinner";
 import { useDocumentOutline } from "../hooks/use-document-outline";
 import { getOutlineRevealScrollTop } from "../utils/outline-scroll";
-import { getVisibleOutlineSymbols, openOutlineSymbol } from "../utils/outline-symbols";
+import { getVisibleOutlineSymbols, openOutlineSymbol } from "../services/outline-symbols";
 import { OutlineSymbolRow } from "./outline-symbol-row";
 
 type OutlineFilter = "types" | "functions" | "properties" | "variables" | "other";

@@ -169,7 +169,7 @@ function argumentsStayInWorkspace(words: string[]) {
 }
 
 /** Splits a simple command into words; null when it uses shell syntax or unbalanced quotes. */
-export function splitSimpleCommand(command: string): string[] | null {
+function splitSimpleCommand(command: string): string[] | null {
   const trimmed = command.trim();
   if (!trimmed || SHELL_SYNTAX.test(trimmed)) return null;
   const words: string[] = [];

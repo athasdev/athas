@@ -7,10 +7,10 @@ import {
   resetSkillLocalOverride,
   resolveMarketplaceSkill,
   updateSkillFromMarketplace,
-} from "@/features/ai/lib/skill-library";
+} from "@/features/ai/services/skill-library";
 import type { AgentConfig } from "@/features/ai/types/acp.types";
 import type { AIChatSkill } from "@/features/ai/types/skills.types";
-import { useToast } from "@/features/layout/contexts/toast-context";
+import { useToast } from "@/utils/toast";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import type {
   ExtensionCatalogActions,

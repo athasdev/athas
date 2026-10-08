@@ -2,12 +2,10 @@ import { Fragment, type ReactNode, useCallback, useEffect, useMemo, useRef, useS
 import { PaneResizeHandle } from "@/features/panes/components/pane-resize-handle";
 import { SplitDropOverlay } from "@/features/panes/components/split-drop-overlay";
 import type { PaneNode, PaneSplit } from "@/features/panes/types/pane.types";
-import { flattenPaneSplit } from "@/features/panes/utils/pane-tree";
-import type { PaneDropZone } from "@/features/panes/utils/pane-drop-zones";
-import {
-  getTerminalPaneDropHover,
-  TERMINAL_PANE_DROP_HOVER_EVENT,
-} from "@/features/terminal/utils/terminal-pane-drop";
+import { flattenPaneSplit } from "@/features/panes/services/pane-tree";
+import type { PaneDropZone } from "@/features/panes/services/pane-drop-zones";
+import { getTerminalPaneDropHover } from "@/features/terminal/utils/terminal-pane-drop";
+import { onAppEvent } from "@/utils/app-events";
 import { cn } from "@/utils/cn";
 
 interface TerminalSplitViewProps {
@@ -80,8 +78,7 @@ function TerminalSplitLeaf({ terminalId, isActive, onActivate, children }: Termi
       setDropZone(hover?.terminalId === terminalId ? hover.zone : null);
     };
     syncHover();
-    window.addEventListener(TERMINAL_PANE_DROP_HOVER_EVENT, syncHover);
-    return () => window.removeEventListener(TERMINAL_PANE_DROP_HOVER_EVENT, syncHover);
+    return onAppEvent("terminal:pane-drop-hover", syncHover);
   }, [terminalId]);
 
   return (

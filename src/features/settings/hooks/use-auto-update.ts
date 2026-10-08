@@ -1,9 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import {
-  shouldSuppressUpdate,
-  UPDATE_DISMISSED_EVENT,
-  UPDATE_PREFERENCES_CHANGED_EVENT,
-} from "../lib/update-preferences";
+import { onAppEvent } from "@/utils/app-events";
+import { shouldSuppressUpdate } from "../lib/update-preferences";
 import { useUpdater } from "./use-updater";
 
 const UPDATE_CHECK_DELAY = 5000; // 5 seconds after app start
@@ -66,12 +63,12 @@ export const useAutoUpdate = () => {
       hideUpdate();
     };
 
-    window.addEventListener(UPDATE_DISMISSED_EVENT, hideUpdate);
-    window.addEventListener(UPDATE_PREFERENCES_CHANGED_EVENT, syncUpdatePreferences);
+    const unsubscribeDismissed = onAppEvent("updater:dismissed", hideUpdate);
+    const unsubscribePreferences = onAppEvent("updater:preferences-changed", syncUpdatePreferences);
 
     return () => {
-      window.removeEventListener(UPDATE_DISMISSED_EVENT, hideUpdate);
-      window.removeEventListener(UPDATE_PREFERENCES_CHANGED_EVENT, syncUpdatePreferences);
+      unsubscribeDismissed();
+      unsubscribePreferences();
     };
   }, [dismissUpdate, updateInfo]);
 

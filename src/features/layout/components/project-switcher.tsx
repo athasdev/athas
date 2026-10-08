@@ -5,13 +5,16 @@ import PasswordPromptDialog from "@/features/remote/components/password-prompt-d
 import {
   connectRemoteConnection,
   loadRemoteConnections,
-} from "@/features/remote/services/remote-connection-actions";
+} from "@/features/workspace/services/remote-connection-actions";
 import { connectionStore } from "@/features/remote/stores/remote-connection.store";
 import type { RemoteConnection } from "@/features/remote/types/remote.types";
-import { getFriendlyRemoteError, isRemoteAuthFailure } from "@/features/remote/utils/remote-errors";
-import ProjectIconPicker from "@/features/window/components/project-icon-picker";
-import type { ProjectTab } from "@/features/window/stores/workspace-tabs.store";
-import { findBestProjectIcon } from "@/features/window/utils/project-icons";
+import {
+  getFriendlyRemoteError,
+  isRemoteAuthFailure,
+} from "@/features/remote/services/remote-errors";
+import ProjectIconPicker from "@/features/workspace/project-icons/components/project-icon-picker";
+import type { ProjectTab } from "@/features/workspace/stores/workspace-tabs.store";
+import { findBestProjectIcon } from "@/features/workspace/project-icons/services/project-icons";
 import { Button } from "@/ui/button";
 import {
   DropdownMenu,
@@ -43,7 +46,12 @@ import {
   getClosedRemoteConnections,
   getProjectRemoteConnectionId,
 } from "@/features/layout/utils/project-switcher-items";
-import { getProjectNameFromPath, isRemoteProjectPath, ProjectGlyph } from "./sidebar/project-glyph";
+import { ProjectGlyph } from "./sidebar/project-glyph";
+import {
+  getProjectNameFromPath,
+  isRemoteProjectPath,
+} from "@/features/workspace/services/project-tab-path";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 /** Icons found in each project folder, so switching projects doesn't rescan and blank the icon. */
 const detectedProjectIcons = new Map<string, string | undefined>();
@@ -61,7 +69,7 @@ export function ProjectSwitcher({
   onSelectProject: (projectId: string) => void;
   onAddRemote: () => void;
 }) {
-  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
   const closeProject = useFileSystemStore((state) => state.closeProject);
   const removeFromRecents = useRecentFoldersStore((state) => state.actions.removeFromRecents);

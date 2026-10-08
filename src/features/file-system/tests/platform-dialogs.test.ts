@@ -24,7 +24,7 @@ vi.mock("@/features/file-system/stores/linux-folder-picker.store", () => ({
   },
 }));
 
-vi.mock("@/features/wsl/utils/wsl-path", () => ({ parseWslPath: vi.fn(() => null) }));
+vi.mock("@/features/wsl/services/wsl-path", () => ({ parseWslPath: vi.fn(() => null) }));
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 vi.mock("@tauri-apps/api/path", () => ({ homeDir: mocks.homeDir }));
 vi.mock("@tauri-apps/plugin-dialog", () => ({ open: mocks.openDialog }));
@@ -37,7 +37,7 @@ vi.mock("@tauri-apps/plugin-fs", () => ({
   writeTextFile: vi.fn(),
 }));
 
-import { openFile, openFiles, openFolder } from "../controllers/platform";
+import { openFile, openFiles, openFolder } from "../api/file-system-api";
 
 describe("platform dialogs", () => {
   beforeEach(() => {

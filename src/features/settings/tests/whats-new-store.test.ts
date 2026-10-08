@@ -21,7 +21,7 @@ vi.mock("@/features/editor/stores/buffer.store", () => ({
   },
 }));
 
-vi.mock("../lib/whats-new", () => ({
+vi.mock("../services/whats-new", () => ({
   hydrateWhatsNew: () => ({ version: "1.2.0", previousVersion: "1.1.0" }),
   isWhatsNewUnread: mocks.isWhatsNewUnread,
   markWhatsNewRead: mocks.markWhatsNewRead,

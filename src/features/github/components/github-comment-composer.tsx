@@ -1,5 +1,5 @@
 import { type RefObject, useId, useLayoutEffect, useRef, useState } from "react";
-import Keybinding from "@/features/keymaps/components/keybinding";
+import Keybinding from "@/ui/keybinding";
 import { Button } from "@/ui/button";
 import { Composer } from "@/ui/composer";
 import { Spinner } from "@/ui/spinner";

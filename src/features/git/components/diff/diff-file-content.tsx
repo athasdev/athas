@@ -1,22 +1,17 @@
 import { lazy, memo, Suspense, useCallback, useMemo, type ComponentProps } from "react";
-import { ViewerLoadingState } from "@/features/viewer/components/viewer-state";
+import { ViewerLoadingState } from "@/ui/viewer-state";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
-import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
-import { calculateLineHeight, splitLines } from "@/features/editor/utils/lines";
-import {
-  buildSearchRegex,
-  findAllMatches,
-  type SearchOptions,
-} from "@/features/editor/utils/search";
+import { calculateLineHeight, splitLines } from "@/features/editor/services/lines";
+import { buildSearchRegex, findAllMatches, type SearchOptions } from "@/utils/text-search";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import { useZoomStore } from "@/features/window/stores/zoom.store";
+import { useZoomStore } from "@/features/layout/stores/zoom.store";
 import { useDiffEditorBuffer } from "../../hooks/use-diff-editor-buffer";
 import type { GitDiff } from "../../types/git.types";
 import {
   serializeGitDiffForEditor,
   serializeGitDiffSourceForEditor,
   serializeGitDiffSourceForSplitEditor,
-} from "../../utils/diff-editor-content";
+} from "../../services/diff-editor-content";
 import {
   DIFF_INLINE_RENDER_LINE_THRESHOLD,
   shouldUseScrollableDiffEditor,
@@ -26,6 +21,8 @@ import DiffLineBackgroundLayer from "./diff-line-background-layer";
 import { BinaryDiffViewer } from "./git-diff-binary";
 import ImageDiffViewer from "./git-diff-image";
 import TextDiffViewer from "./git-diff-text";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 const CodeEditor = lazy(() => import("@/features/editor/components/code-editor"));
 
@@ -113,10 +110,10 @@ function EmbeddedDiffSectionEditor({
   searchMatches: MultiDiffSearchMatch[];
   currentSearchMatch: MultiDiffSearchMatch | null;
 }) {
-  const fontSize = useEditorSettingsStore.use.fontSize();
-  const editorLineHeight = useEditorSettingsStore.use.lineHeight();
+  const fontSize = useSettingsStore((state) => state.settings.fontSize);
+  const editorLineHeight = useSettingsStore((state) => state.settings.editorLineHeight);
   const zoomLevel = useZoomStore.use.editorZoomLevel();
-  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const sourcePath = diff.new_path || diff.old_path || diff.file_path;
   const unifiedContent = useMemo(() => serializeGitDiffSourceForEditor(diff), [diff]);
   const splitContent = useMemo(() => serializeGitDiffSourceForSplitEditor(diff), [diff]);

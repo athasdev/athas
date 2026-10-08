@@ -33,6 +33,17 @@ export function highlightMarkdownPreviewMatches(html: string, query: string) {
   return { html: container.innerHTML, matchCount };
 }
 
+export function highlightMarkdownPreviewBlockMatches(blocks: readonly string[], query: string) {
+  if (!query) return { blocks, matchCount: 0 };
+  let matchCount = 0;
+  const highlighted = blocks.map((block) => {
+    const result = highlightMarkdownPreviewMatches(block, query);
+    matchCount += result.matchCount;
+    return result.html;
+  });
+  return { blocks: highlighted, matchCount };
+}
+
 export function isEntireMarkdownPreviewSelected(
   content: HTMLElement,
   selection: Selection,

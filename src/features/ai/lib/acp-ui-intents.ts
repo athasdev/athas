@@ -1,4 +1,4 @@
-export interface DirectAcpUiAction {
+interface DirectAcpUiAction {
   kind: "open_terminal";
   command?: string;
 }

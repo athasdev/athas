@@ -1,13 +1,13 @@
-import { highlightCode, highlightCodeIfReady } from "@/features/editor/syntax/syntax-highlight";
-import { getLanguageIdFromPath } from "@/features/editor/utils/language-id";
-import type { Token } from "@/features/editor/utils/html";
+import { highlightCode, highlightCodeIfReady } from "@/features/editor/services/syntax-highlight";
+import { getLanguageIdFromPath } from "@/features/editor/services/language-id";
+import type { Token } from "@/features/editor/types/editor.types";
 
 const MAX_TOKEN_CACHE_ENTRIES = 200;
 const EMPTY_TOKENS: Token[] = [];
 const tokenCache = new Map<string, Token[]>();
 const pendingTokenizations = new Map<string, Promise<Token[]>>();
 
-export interface SearchExcerptTokenSnapshot {
+interface SearchExcerptTokenSnapshot {
   key: string;
   tokens: Token[];
   complete: boolean;

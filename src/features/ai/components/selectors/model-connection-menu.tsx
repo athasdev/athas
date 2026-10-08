@@ -1,9 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { useAIModelOptions } from "@/features/ai/hooks/use-ai-model-options";
-import { useAvailableProviders } from "@/features/ai/hooks/use-available-providers";
 import { formatTokenCount } from "@/features/ai/lib/acp-usage";
-import { getHostedModelPriceHint } from "@/features/ai/lib/hosted-usage";
+import { getHostedModelPriceHint } from "@/features/ai/services/hosted-usage";
 import {
   getModelIconId,
   getModelVendorName,
@@ -43,34 +42,7 @@ export function useModelSearchResults() {
 
 export const ModelResultsProvider = ModelResultsContext;
 
-/**
- * The providers a model menu offers besides Athas: every one the user connected, plus the one
- * currently selected so an existing choice never disappears from its own menu.
- */
-export function useConnectedModelProviders(selectedProviderIds: string[] = []) {
-  const providers = useAvailableProviders();
-  const providerKeys = useAIChatStore((state) => state.providerApiKeys);
-  return providers.filter(
-    (provider) =>
-      provider.id !== "athas" &&
-      (selectedProviderIds.includes(provider.id) || providerKeys.get(provider.id)),
-  );
-}
-
-/** A model's display name, from the fetched catalog first and the static list second. */
-export function useModelName(providerId: string, modelId: string) {
-  const providers = useAvailableProviders();
-  const dynamicModels = useAIChatStore((state) => state.dynamicModels);
-  return (
-    dynamicModels[providerId]?.find((model) => model.id === modelId)?.name ??
-    providers
-      .find((provider) => provider.id === providerId)
-      ?.models.find((model) => model.id === modelId)?.name ??
-    null
-  );
-}
-
-export interface ModelOption {
+interface ModelOption {
   id: string;
   name: string;
   keywords?: string[];

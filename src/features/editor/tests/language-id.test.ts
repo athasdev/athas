@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
-import { detectLanguageFromFileName } from "../utils/language-detection";
-import { getLanguageDisplayName, getLanguageIdFromPath } from "../utils/language-id";
-import { isMarkdownFile as isEditorMarkdownFile } from "../utils/lines";
+import { detectLanguageFromFileName } from "../services/language-detection";
+import { getLanguageDisplayName, getLanguageIdFromPath } from "../services/language-id";
+import { isMarkdownFile as isEditorMarkdownFile } from "../services/lines";
 import { hasCodeMirrorLanguage } from "../engines/codemirror/languages";
 
 describe("getLanguageIdFromPath", () => {

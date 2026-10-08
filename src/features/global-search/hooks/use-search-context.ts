@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
+import { readBufferText } from "@/features/editor/services/buffer-text";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getWorkspaceResourceProvider } from "@/features/file-system/services/workspace-resource-provider";
-import type { FileSearchResult, SearchMatch } from "@/features/file-search/lib/file-search-api";
+import type { FileSearchResult, SearchMatch } from "@/features/file-search/api/file-search-api";
 import type { EditorContent, PaneContent } from "@/features/panes/types/pane-content.types";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 
 const EXPANDED_CONTEXT_LINES = 7;
 const emptyBuffers: PaneContent[] = [];
+const emptyPaths: string[] = [];
 const subscribeToNothing = () => () => {};
 interface ContextSource {
   content: string;
@@ -38,10 +40,6 @@ export function useSearchContext(view: ContextView) {
   const store = workspaceRuntimeRegistry.hasWorkspace(view.workspaceId)
     ? useBufferStore.getStore(view.workspaceId)
     : null;
-  const buffers = useSyncExternalStore(
-    store?.subscribe ?? subscribeToNothing,
-    () => store?.getState().buffers ?? emptyBuffers,
-  );
   const session = useMemo(
     () => ({
       store,
@@ -61,6 +59,29 @@ export function useSearchContext(view: ContextView) {
     contents: {} as Record<string, ContextSource>,
     pending: new Set<string>(),
   });
+  const expandedPaths = useMemo(
+    () => (state.session === session ? Object.keys(state.contents) : emptyPaths),
+    [state, session],
+  );
+  const getExpandedSources = useMemo(() => {
+    let lastSources: Array<EditorContent | undefined> = [];
+    return () => {
+      const buffers = store?.getState().buffers ?? emptyBuffers;
+      const nextSources = expandedPaths.map((path) => findSource(buffers, path));
+      if (
+        nextSources.length === lastSources.length &&
+        nextSources.every((source, index) => source === lastSources[index])
+      ) {
+        return lastSources;
+      }
+      lastSources = nextSources;
+      return lastSources;
+    };
+  }, [store, expandedPaths]);
+  const expandedSources = useSyncExternalStore(
+    store?.subscribe ?? subscribeToNothing,
+    getExpandedSources,
+  );
   const isCurrent = useCallback(
     () =>
       session.live &&
@@ -93,7 +114,7 @@ export function useSearchContext(view: ContextView) {
         pending: new Set([...(previous.session === session ? previous.pending : []), filePath]),
       }));
       const original = findSource(session.store.getState().buffers, filePath);
-      let read = original ? Promise.resolve(original.content) : session.reads.get(filePath);
+      let read = original ? Promise.resolve(readBufferText(original)) : session.reads.get(filePath);
       if (!read) {
         read = Promise.resolve().then(() => {
           if (!isCurrent() || !session.requests.has(filePath))
@@ -110,7 +131,7 @@ export function useSearchContext(view: ContextView) {
             throw new Error(
               "The file was closed while loading context. Expand it again to read the saved file.",
             );
-          const source = current?.content ?? content;
+          const source = current ? readBufferText(current) : content;
           if (!matchesSource(source, matches))
             throw new Error(
               "The file changed since this search. Refresh search before expanding context.",
@@ -167,15 +188,16 @@ export function useSearchContext(view: ContextView) {
   const sourceContentByPath = useMemo(() => {
     if (state.session !== session || !isCurrent()) return {};
     const contents: Record<string, string> = {};
-    for (const [path, saved] of Object.entries(state.contents)) {
-      const current = findSource(buffers, path);
+    for (const [index, path] of expandedPaths.entries()) {
+      const saved = state.contents[path];
+      const current = expandedSources[index];
       if (saved.bufferId && current?.id !== saved.bufferId) continue;
-      const source = current?.content ?? saved.content;
+      const source = current ? readBufferText(current) : saved.content;
       const matches = view.results.find((result) => result.file_path === path)?.matches ?? [];
       if (matchesSource(source, matches)) contents[path] = source;
     }
     return contents;
-  }, [state, session, isCurrent, buffers, view.results]);
+  }, [state, session, isCurrent, expandedPaths, expandedSources, view.results]);
   const contextLinesByFile = useMemo(
     () =>
       Object.fromEntries(

@@ -1,8 +1,10 @@
 import { type DragEndEvent, type DragMoveEvent, type DragStartEvent } from "@dnd-kit/core";
 import { restrictToHorizontalAxis } from "@dnd-kit/modifiers";
 import { SortableContext, horizontalListSortingStrategy } from "@dnd-kit/sortable";
-import { save } from "@tauri-apps/plugin-dialog";
-import { writeTextFile } from "@tauri-apps/plugin-fs";
+import {
+  clearTerminal,
+  exportTerminalOutput,
+} from "@/features/terminal/services/terminal-tab-actions";
 import {
   ArrowDownIcon,
   ArrowUpIcon,
@@ -15,13 +17,13 @@ import {
 import type React from "react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useShallow } from "zustand/react/shallow";
 import { useTerminalProfilesStore } from "@/features/terminal/stores/profiles.store";
 import { useTerminalShellsStore } from "@/features/terminal/stores/shells.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { BOTTOM_PANE_ID } from "@/features/panes/constants/pane";
-import { getChromeNavigationIndex } from "@/features/layout/utils/chrome-keyboard";
-import { activateBufferInPaneAndSync } from "@/features/panes/utils/pane-activation";
-import { getOrCreatePaneDropTarget } from "@/features/panes/utils/pane-drop-actions";
+import { getChromeNavigationIndex } from "@/features/layout/services/chrome-keyboard";
+import { getOrCreatePaneDropTarget } from "@/features/panes/services/pane-drop-actions";
 import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
 import type { PaneNode, SplitPlacement } from "@/features/panes/types/pane.types";
 import type { Terminal, TerminalSplitDirection } from "@/features/terminal/types/terminal.types";
@@ -31,7 +33,7 @@ import {
   resolveTerminalPaneDropTarget,
   setTerminalPaneDropHover,
 } from "@/features/terminal/utils/terminal-pane-drop";
-import { getAllTerminalProfiles } from "@/features/terminal/utils/terminal-profiles";
+import { getAllTerminalProfiles } from "@/features/terminal/services/terminal-profiles";
 import { getTerminalDisplayName as getTerminalDisplayNameForSession } from "@/features/terminal/utils/terminal-display-name";
 import {
   DropdownMenu,
@@ -55,10 +57,12 @@ import {
   setInternalTabDragHover,
   setInternalTabDragHoverTarget,
   setInternalTabDragData,
-} from "@/features/tabs/utils/internal-tab-drag";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+} from "@/features/tabs/services/internal-tab-drag";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import TerminalTabBarItem from "./terminal-tab-bar-item";
 import TerminalTabContextMenu from "./terminal-tab-context-menu";
+import { emitAppEvent } from "@/utils/app-events";
+import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 
 interface ToolbarContextMenuProps {
   isOpen: boolean;
@@ -212,7 +216,36 @@ const TerminalTabBar = ({
     position: { x: number; y: number };
   }>({ isOpen: false, position: { x: 0, y: 0 } });
 
-  const sessions = useTerminalStore((state) => state.sessions);
+  const displayNames = useTerminalStore(
+    useShallow(
+      (state) =>
+        new Map(
+          terminals.map((terminal) => [
+            terminal.id,
+            getTerminalDisplayNameForSession(terminal, state.sessions.get(terminal.id)),
+          ]),
+        ),
+    ),
+  );
+  const progressByTerminal = useTerminalStore(
+    useShallow(
+      (state) =>
+        new Map(
+          terminals.map((terminal) => [terminal.id, state.sessions.get(terminal.id)?.progress]),
+        ),
+    ),
+  );
+  const lastCommandByTerminal = useTerminalStore(
+    useShallow(
+      (state) =>
+        new Map(
+          terminals.map((terminal) => [terminal.id, state.sessions.get(terminal.id)?.lastCommand]),
+        ),
+    ),
+  );
+  const findShortcut = useCommandShortcut("terminal.find");
+  const newTerminalShortcut = useCommandShortcut("terminal.new");
+  const fullScreenShortcut = useCommandShortcut("workbench.toggleActivePaneFullscreen");
   const customProfiles = useTerminalProfilesStore.use.profiles();
   const availableShells = useTerminalShellsStore.use.shells();
   const { openTerminalBuffer } = useBufferStore.use.actions();
@@ -374,7 +407,7 @@ const TerminalTabBar = ({
           iconOnly
           size="sm"
           tooltip="Find in Terminal"
-          commandId="terminal.find"
+          shortcut={findShortcut}
           aria-label="Find in terminal"
         >
           <SearchIcon />
@@ -390,7 +423,7 @@ const TerminalTabBar = ({
                 iconOnly
                 size="sm"
                 tooltip="New Terminal"
-                commandId="terminal.new"
+                shortcut={newTerminalShortcut}
                 aria-label="New terminal"
               />
             }
@@ -413,7 +446,7 @@ const TerminalTabBar = ({
           iconOnly
           size="sm"
           tooltip={isFullScreen ? "Exit Full Screen" : "Full Screen Terminal"}
-          commandId="workbench.toggleActivePaneFullscreen"
+          shortcut={fullScreenShortcut}
           aria-label={isFullScreen ? "Exit full screen terminal" : "Full screen terminal"}
         >
           {isFullScreen ? <ArrowsInIcon /> : <ArrowsOutIcon />}
@@ -424,7 +457,7 @@ const TerminalTabBar = ({
   const pinnedTerminals = sortedTerminals.filter((terminal) => terminal.isPinned);
   const regularTerminals = sortedTerminals.filter((terminal) => !terminal.isPinned);
   const getTerminalDisplayName = (terminal: Terminal) =>
-    getTerminalDisplayNameForSession(terminal, sessions.get(terminal.id));
+    displayNames.get(terminal.id) ?? getTerminalDisplayNameForSession(terminal);
   const getClientPoint = (event: Event) => {
     const candidate = event as Partial<MouseEvent>;
     if (typeof candidate.clientX === "number" && typeof candidate.clientY === "number") {
@@ -530,20 +563,18 @@ const TerminalTabBar = ({
         return;
       }
 
-      const bufferId = openTerminalBuffer({
-        sessionId: terminal.id,
-        name: terminal.name,
-        shell: terminal.shell,
-        command: terminal.initialCommand,
-        workingDirectory: terminal.currentDirectory,
-        remoteConnectionId: terminal.remoteConnectionId,
-      });
-      activateBufferInPaneAndSync(destinationPaneId, bufferId);
-      window.dispatchEvent(
-        new CustomEvent("terminal-detach-to-buffer", {
-          detail: { terminalId: terminal.id },
-        }),
+      openTerminalBuffer(
+        {
+          sessionId: terminal.id,
+          name: terminal.name,
+          shell: terminal.shell,
+          command: terminal.initialCommand,
+          workingDirectory: terminal.currentDirectory,
+          remoteConnectionId: terminal.remoteConnectionId,
+        },
+        { paneId: destinationPaneId },
       );
+      emitAppEvent("terminal:detach-to-buffer", { terminalId: terminal.id });
       if (destinationPaneId === BOTTOM_PANE_ID) {
         useUIState.getState().setBottomPaneActiveTab("buffers");
         useUIState.getState().setIsBottomPaneVisible(true);
@@ -628,8 +659,8 @@ const TerminalTabBar = ({
                         {({ isDragging }) => (
                           <TerminalTabBarItem
                             terminal={terminal}
-                            progress={sessions.get(terminal.id)?.progress}
-                            lastCommand={sessions.get(terminal.id)?.lastCommand}
+                            progress={progressByTerminal.get(terminal.id)}
+                            lastCommand={lastCommandByTerminal.get(terminal.id)}
                             isSplit={findTerminalLayout(layouts, terminal.id) !== null}
                             displayName={getTerminalDisplayName(terminal)}
                             isActive={terminal.id === activeTerminalId}
@@ -682,8 +713,8 @@ const TerminalTabBar = ({
                       {({ isDragging }) => (
                         <TerminalTabBarItem
                           terminal={terminal}
-                          progress={sessions.get(terminal.id)?.progress}
-                          lastCommand={sessions.get(terminal.id)?.lastCommand}
+                          progress={progressByTerminal.get(terminal.id)}
+                          lastCommand={lastCommandByTerminal.get(terminal.id)}
                           isSplit={findTerminalLayout(layouts, terminal.id) !== null}
                           displayName={getTerminalDisplayName(terminal)}
                           isActive={terminal.id === activeTerminalId}
@@ -736,12 +767,7 @@ const TerminalTabBar = ({
             onCloseOthers={onCloseOtherTabs || (() => {})}
             onCloseAll={onCloseAllTabs || (() => {})}
             onCloseToRight={onCloseTabsToRight || (() => {})}
-            onClear={(terminalId) => {
-              const session = useTerminalStore.getState().actions.getSession(terminalId);
-              if (session?.ref?.current) {
-                session.ref.current.clear();
-              }
-            }}
+            onClear={clearTerminal}
             onDuplicate={(terminalId) => {
               const terminal = terminals.find((t) => t.id === terminalId);
               if (terminal) {
@@ -751,40 +777,9 @@ const TerminalTabBar = ({
             onRename={(terminalId) => {
               startRename(terminalId);
             }}
-            onExport={async (terminalId) => {
-              const session = useTerminalStore.getState().actions.getSession(terminalId);
-              const terminal = terminals.find((t) => t.id === terminalId);
-              if (session?.ref?.current && terminal) {
-                try {
-                  const content = session.ref.current.serialize();
-                  if (!content) {
-                    console.warn("No terminal content to export");
-                    return;
-                  }
-
-                  const defaultFileName = `${terminal.name.replace(/[^a-zA-Z0-9]/g, "_")}_${new Date().toISOString().split("T")[0]}.txt`;
-                  const filePath = await save({
-                    defaultPath: defaultFileName,
-                    filters: [
-                      {
-                        name: "Text Files",
-                        extensions: ["txt"],
-                      },
-                      {
-                        name: "All Files",
-                        extensions: ["*"],
-                      },
-                    ],
-                  });
-
-                  if (filePath) {
-                    await writeTextFile(filePath, content);
-                    console.log(`Terminal output exported to: ${filePath}`);
-                  }
-                } catch (error) {
-                  console.error("Failed to export terminal output:", error);
-                }
-              }
+            onExport={(terminalId) => {
+              const name = displayNames.get(terminalId);
+              if (name !== undefined) void exportTerminalOutput(terminalId, name);
             }}
           />
           <ToolbarContextMenu

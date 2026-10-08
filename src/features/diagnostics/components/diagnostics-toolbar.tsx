@@ -1,6 +1,6 @@
 import type { MouseEvent, RefObject } from "react";
 import { FilterIcon, SearchIcon, XIcon } from "@/ui/icons";
-import { PaneContentHeader } from "@/features/panes/components/pane-content-chrome";
+import { PaneContentHeader } from "@/ui/pane-content-chrome";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { CommandInput } from "@/ui/command";

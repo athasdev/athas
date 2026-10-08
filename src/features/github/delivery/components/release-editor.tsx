@@ -1,12 +1,12 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { commands } from "@/bindings/commands";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import { Checkbox } from "@/ui/checkbox";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/ui/field";
 import { Spinner } from "@/ui/spinner";
 import { GitHubMarkdownEditor } from "../../components/github-markdown-editor";
-import { ViewerErrorState } from "@/features/viewer/components/viewer-state";
+import { ViewerErrorState } from "@/ui/viewer-state";
+import { generateReleaseNotes, saveRelease } from "../api/github-delivery-api";
 import { normalizeRelease } from "../services/github-delivery-service";
 import type { Release, ReleaseInput } from "../types/github-delivery.types";
 
@@ -72,7 +72,7 @@ export function ReleaseEditor({
     setBusy("save");
     setError(null);
     try {
-      const saved = await commands.githubSaveRelease(repoPath, release?.id ?? null, {
+      const saved = await saveRelease(repoPath, release?.id ?? null, {
         ...input,
         tag_name: input.tag_name.trim(),
         target_commitish: input.target_commitish.trim(),
@@ -92,7 +92,7 @@ export function ReleaseEditor({
     setBusy("generate");
     setError(null);
     try {
-      const notes = (await commands.githubGenerateReleaseNotes(
+      const notes = (await generateReleaseNotes(
         repoPath,
         input.tag_name.trim(),
         input.target_commitish.trim(),

@@ -1,8 +1,8 @@
 import { FieldError } from "@/ui/field";
 import { useRef, useState } from "react";
-import { commands } from "@/bindings/commands";
-import { open } from "@tauri-apps/plugin-dialog";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { useQueryClient } from "@tanstack/react-query";
+import { pickFiles } from "@/utils/file-dialogs";
+import { openExternalUrl } from "@/utils/external-url";
 import { toast } from "sonner";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
@@ -30,7 +30,8 @@ import { ResourceSection } from "@/ui/resource";
 import { Spinner } from "@/ui/spinner";
 import { writeClipboardText } from "@/utils/clipboard";
 import type { Release, ReleaseAsset } from "../types/github-delivery.types";
-import { formatAssetSize, safeDeliveryUrl } from "../utils/github-delivery";
+import { formatAssetSize, safeDeliveryUrl } from "../services/github-delivery";
+import { deleteReleaseAsset, uploadReleaseAsset } from "../api/github-delivery-api";
 import { notifyDeliveryChanged } from "../services/github-delivery-service";
 
 export function ReleaseAssets({
@@ -42,6 +43,7 @@ export function ReleaseAssets({
   repoPath: string;
   onBusyChange: (busy: boolean) => void;
 }) {
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const inFlight = useRef(false);
@@ -66,23 +68,18 @@ export function ReleaseAssets({
     setBusy("Choose assets");
     let uploaded = 0;
     try {
-      const selected = await open({
-        multiple: true,
-        directory: false,
-        title: "Upload release assets",
-      });
-      if (!selected) return;
-      const files = Array.isArray(selected) ? selected : [selected];
+      const files = await pickFiles({ title: "Upload release assets" });
+      if (files.length === 0) return;
       for (const [index, filePath] of files.entries()) {
         setBusy(`Uploading ${index + 1} of ${files.length} · ${filePath.split(/[\\/]/).pop()}`);
-        await commands.githubUploadReleaseAsset(repoPath, release.id, filePath);
+        await uploadReleaseAsset(repoPath, release.id, filePath);
         uploaded++;
       }
       toast.success(`${uploaded} ${uploaded === 1 ? "asset" : "assets"} uploaded`);
     } catch (error) {
       setError(`${uploaded ? `${uploaded} uploaded before the error. ` : ""}${String(error)}`);
     } finally {
-      if (uploaded) notifyDeliveryChanged("releases", repoPath, release.id);
+      if (uploaded) notifyDeliveryChanged(queryClient, "releases", repoPath, release.id);
       end();
     }
   };
@@ -91,8 +88,8 @@ export function ReleaseAssets({
     begin();
     setBusy("Deleting asset");
     try {
-      await commands.githubDeleteReleaseAsset(repoPath, deleting.id);
-      notifyDeliveryChanged("releases", repoPath, release.id);
+      await deleteReleaseAsset(repoPath, deleting.id);
+      notifyDeliveryChanged(queryClient, "releases", repoPath, release.id);
       toast.success("Asset deleted");
       setDeleting(null);
     } catch (error) {
@@ -103,7 +100,7 @@ export function ReleaseAssets({
   };
   const browse = (value: string | null) => {
     const url = safeDeliveryUrl(value);
-    if (url) void openUrl(url).catch((error) => toast.error(String(error)));
+    if (url) void openExternalUrl(url).catch((error) => toast.error(String(error)));
   };
   return (
     <ResourceSection title={`Assets (${release.assets.length})`}>

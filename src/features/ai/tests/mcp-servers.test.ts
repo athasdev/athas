@@ -3,10 +3,10 @@ import {
   createMcpServerDraft,
   formatSkippedMcpServersNotice,
   hasMcpServerDraftErrors,
-  normalizeMcpServers,
   splitMcpServerDraft,
   validateMcpServerDraft,
-} from "@/features/ai/lib/mcp-servers";
+} from "@/features/ai/services/mcp-servers";
+import { normalizeMcpServers } from "@/features/settings/services/mcp-server-settings";
 import type { McpServerDraft, McpServerSetting } from "@/features/ai/types/mcp-server.types";
 import { normalizeSettingValue } from "@/features/settings/lib/settings-normalization";
 

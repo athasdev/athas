@@ -2,7 +2,7 @@ import type {
   CollaborationChannel,
   CollaborationNoteItem,
   CollaborationParticipant,
-} from "./collaboration-sidebar-model";
+} from "../services/collaboration-sidebar-model";
 
 export type CollaborationChannelFilter = "all" | "active" | "with-guests" | "empty";
 export type CollaborationPeopleFilter = "all" | "online" | "offline" | "sharing" | "has-file";

@@ -1,4 +1,5 @@
-import type { ToolCall } from "@/features/ai/types/ai-chat.types";
+import { nanoid } from "nanoid";
+import type { Message, ToolCall } from "@/features/ai/types/ai-chat.types";
 import type {
   AcpToolCallLocation,
   AcpToolCallStatus,
@@ -63,11 +64,8 @@ export const createToolCall = (
   output?: unknown,
   rawOutput?: unknown,
 ): ToolCall => {
-  const resolvedId =
-    providedToolId ?? `${toolName}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-
   return {
-    id: resolvedId,
+    id: providedToolId || nanoid(),
     name: toolName,
     input: toolInput,
     kind,
@@ -80,7 +78,21 @@ export const createToolCall = (
   };
 };
 
-export interface ToolCallPatch {
+/**
+ * Gives every tool call of `message` an id, which chat history uses to match it to its stored row.
+ * Returns `message` itself when every call already has one.
+ */
+export function withToolCallIds(message: Message): Message {
+  if (!message.toolCalls?.some((toolCall) => !toolCall.id)) return message;
+  return {
+    ...message,
+    toolCalls: message.toolCalls.map((toolCall) =>
+      toolCall.id ? toolCall : { ...toolCall, id: nanoid() },
+    ),
+  };
+}
+
+interface ToolCallPatch {
   id: string;
   name?: string | null;
   input?: unknown;

@@ -1,7 +1,7 @@
 import { getImageBufferSession } from "@/features/viewer/image/editor/services/image-buffer-session";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
-import { editorAPI } from "@/features/editor/extensions/api";
+import { editorAPI } from "@/features/editor/services/editor-api";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useFoldStore } from "@/features/editor/stores/fold.store";
 import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar.store";
@@ -9,26 +9,29 @@ import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import {
   readEditorClipboardText,
   writeEditorClipboardText,
-} from "@/features/editor/utils/clipboard";
-import { calculateCursorPositionFromContent } from "@/features/editor/utils/position";
+} from "@/features/editor/services/editor-clipboard";
+import { calculateCursorPositionFromContent } from "@/features/editor/services/position";
 import {
   resolveAllOccurrenceRanges,
   resolveSelectNextOccurrenceAction,
   resolveSelectPreviousOccurrenceAction,
   type OccurrenceRange,
-} from "@/features/editor/utils/select-next-occurrence";
+} from "@/features/editor/services/select-next-occurrence";
 import { showChoiceDialog } from "@/ui/dialog";
+import { emitAppEvent } from "@/utils/app-events";
 import { toast } from "sonner";
 import {
   getMarkdownPreviewKeyboardTarget,
   isEditorKeyboardTarget,
-} from "../utils/editor-keyboard-target";
+} from "../services/editor-keyboard-target";
+import { readBufferText } from "@/features/editor/services/buffer-text";
+import { resolveBufferText } from "@/features/editor/services/open-buffer-text";
+import { getActiveBufferId } from "@/features/panes/stores/pane-selectors";
 
 type EditorSelection = NonNullable<ReturnType<typeof editorAPI.getSelection>>;
 
 function getActiveEditorBuffer() {
-  const bufferStore = useBufferStore.getState();
-  const activeBuffer = bufferStore.buffers.find((b) => b.id === bufferStore.activeBufferId);
+  const activeBuffer = useBufferStore.getState().actions.getActiveBuffer();
   if (!activeBuffer || activeBuffer.type !== "editor" || activeBuffer.isVirtual) return null;
   return activeBuffer;
 }
@@ -42,24 +45,28 @@ function getNormalizedEditorSelection(): EditorSelection | null {
     : { start: selection.end, end: selection.start };
 }
 
-function shouldUseEditorModelCommand(): boolean {
+/** A text field outside the editor, which keeps the browser's own editing commands. */
+function isPlainTextFieldFocused(): boolean {
+  if (typeof document === "undefined") return false;
   const activeElement = document.activeElement as HTMLElement | null;
+  if (isEditorKeyboardTarget(activeElement)) return false;
 
-  if (isEditorKeyboardTarget(activeElement)) {
+  return (
+    activeElement instanceof HTMLInputElement ||
+    activeElement instanceof HTMLTextAreaElement ||
+    activeElement?.isContentEditable === true
+  );
+}
+
+function shouldUseEditorModelCommand(): boolean {
+  if (isEditorKeyboardTarget(document.activeElement as HTMLElement | null)) {
     return true;
   }
 
-  const isTextField =
-    activeElement instanceof HTMLInputElement ||
-    activeElement instanceof HTMLTextAreaElement ||
-    activeElement?.isContentEditable;
-
-  if (isTextField) return false;
+  if (isPlainTextFieldFocused()) return false;
 
   const bufferStore = useBufferStore.getState();
-  const activeBuffer = bufferStore.buffers.find(
-    (buffer) => buffer.id === bufferStore.activeBufferId,
-  );
+  const activeBuffer = bufferStore.actions.getActiveBuffer();
 
   return activeBuffer?.type === "editor";
 }
@@ -68,13 +75,6 @@ function getSelectedEditorText(): string | null {
   const selection = getNormalizedEditorSelection();
   if (selection) {
     return editorAPI.getContent().slice(selection.start.offset, selection.end.offset);
-  }
-
-  const textarea = editorAPI.getTextareaRef();
-  if (textarea && textarea.selectionStart !== textarea.selectionEnd) {
-    const start = Math.min(textarea.selectionStart, textarea.selectionEnd);
-    const end = Math.max(textarea.selectionStart, textarea.selectionEnd);
-    return textarea.value.slice(start, end);
   }
 
   return null;
@@ -87,32 +87,15 @@ function selectEditorOffsets(start: number, end: number): void {
 
   editorAPI.setCursorPosition(endPosition);
   editorAPI.setSelection({ start: startPosition, end: endPosition });
-
-  const textarea = editorAPI.getTextareaRef();
-  if (textarea?.value === content) {
-    textarea.focus();
-    textarea.selectionStart = start;
-    textarea.selectionEnd = end;
-  }
 }
 
 function addEditorOccurrence(direction: "next" | "previous"): void {
   const content = editorAPI.getContent();
   const editorState = useEditorStateStore.getState();
-  const textarea = editorAPI.getTextareaRef();
-  const textareaSelection =
-    textarea?.value === content && textarea.selectionStart !== textarea.selectionEnd
-      ? {
-          start: Math.min(textarea.selectionStart, textarea.selectionEnd),
-          end: Math.max(textarea.selectionStart, textarea.selectionEnd),
-        }
-      : null;
   const modelSelection = getNormalizedEditorSelection();
-  const currentSelection = textareaSelection
-    ? textareaSelection
-    : modelSelection
-      ? { start: modelSelection.start.offset, end: modelSelection.end.offset }
-      : null;
+  const currentSelection = modelSelection
+    ? { start: modelSelection.start.offset, end: modelSelection.end.offset }
+    : null;
   const selectedRanges =
     editorState.multiCursorState?.cursors.flatMap((cursor) =>
       cursor.selection
@@ -184,13 +167,6 @@ function selectAllEditorOccurrenceRanges(ranges: OccurrenceRange[]): void {
     const selection = toEditorRange(range);
     editorStateActions.addCursor(selection.end, selection);
   }
-
-  const textarea = editorAPI.getTextareaRef();
-  if (textarea?.value === content) {
-    textarea.focus();
-    textarea.selectionStart = firstRange.start;
-    textarea.selectionEnd = firstRange.end;
-  }
 }
 
 export function selectAllActiveEditor(): void {
@@ -221,22 +197,26 @@ function getActiveImageSession() {
   return buffer?.type === "image" ? getImageBufferSession({ workspaceId, store }, buffer.id) : null;
 }
 
-export function undoActiveEditor(): void {
-  const image = getActiveImageSession();
-  if (image) {
-    image.undo();
+function runActiveHistoryCommand(direction: "undo" | "redo"): void {
+  if (isPlainTextFieldFocused()) {
+    document.execCommand(direction);
     return;
   }
-  editorAPI.undo();
+
+  const image = getActiveImageSession();
+  if (image) {
+    image[direction]();
+    return;
+  }
+  editorAPI[direction]();
+}
+
+export function undoActiveEditor(): void {
+  runActiveHistoryCommand("undo");
 }
 
 export function redoActiveEditor(): void {
-  const image = getActiveImageSession();
-  if (image) {
-    image.redo();
-    return;
-  }
-  editorAPI.redo();
+  runActiveHistoryCommand("redo");
 }
 
 export async function copyActiveEditorSelection(): Promise<void> {
@@ -363,16 +343,16 @@ export function removeActiveEditorSecondaryCursors(): void {
 }
 
 export function triggerActiveEditorSuggest(): void {
-  window.dispatchEvent(new CustomEvent("editor-trigger-suggest"));
+  emitAppEvent("editor:trigger-suggest");
 }
 
 export function triggerActiveEditorParameterHints(): void {
-  window.dispatchEvent(new CustomEvent("editor-trigger-signature-help"));
+  emitAppEvent("editor:trigger-signature-help");
 }
 
 export function showInlineEditToolbar(): void {
   const editorState = useEditorStateStore.getState();
-  const activeBufferId = useBufferStore.getState().activeBufferId;
+  const activeBufferId = getActiveBufferId();
   useInlineEditToolbarStore
     .getState()
     .actions.show(editorState.activeEditorViewKey ?? activeBufferId ?? null);
@@ -399,7 +379,7 @@ export function shrinkActiveEditorSelection(): void {
 }
 
 export function triggerActiveEditorRenameSymbol(): void {
-  window.dispatchEvent(new CustomEvent("editor-rename-symbol"));
+  emitAppEvent("editor:rename-symbol");
 }
 
 export async function formatActiveEditorDocument(): Promise<void> {
@@ -412,7 +392,7 @@ export async function formatActiveEditorDocument(): Promise<void> {
   }
 
   const { formatContent, isFormattingAvailable } =
-    await import("@/features/editor/formatter/formatter-service");
+    await import("@/features/editor/services/formatter-service");
   const languageId = extensionRegistry.getLanguageId(activeBuffer.path) || activeBuffer.language;
 
   if (!isFormattingAvailable(activeBuffer.path, languageId || undefined)) {
@@ -420,9 +400,11 @@ export async function formatActiveEditorDocument(): Promise<void> {
     return;
   }
 
+  // Read after the awaits above: the object can hold text from before the latest edits.
+  const sourceText = resolveBufferText(activeBuffer);
   const result = await formatContent({
     filePath: activeBuffer.path,
-    content: activeBuffer.content,
+    content: sourceText,
     languageId: languageId || undefined,
   });
 
@@ -431,7 +413,7 @@ export async function formatActiveEditorDocument(): Promise<void> {
     return;
   }
 
-  if (result.formattedContent === activeBuffer.content) {
+  if (result.formattedContent === sourceText) {
     toast.info("Document is already formatted.");
     return;
   }
@@ -455,10 +437,11 @@ export async function formatActiveEditorSelection(): Promise<void> {
     return;
   }
 
-  const { formatRange } = await import("@/features/editor/formatter/formatter-service");
+  const { formatRange } = await import("@/features/editor/services/formatter-service");
+  const sourceText = resolveBufferText(activeBuffer);
   const result = await formatRange({
     filePath: activeBuffer.path,
-    content: activeBuffer.content,
+    content: sourceText,
     languageId:
       extensionRegistry.getLanguageId(activeBuffer.path) || activeBuffer.language || undefined,
     range: {
@@ -472,7 +455,7 @@ export async function formatActiveEditorSelection(): Promise<void> {
     return;
   }
 
-  if (result.formattedContent === activeBuffer.content) {
+  if (result.formattedContent === sourceText) {
     toast.info("Selection is already formatted.");
     return;
   }
@@ -488,7 +471,7 @@ export async function formatActiveEditorSelection(): Promise<void> {
 }
 
 export async function showHoverForActiveEditor(): Promise<void> {
-  window.dispatchEvent(new CustomEvent("editor-show-hover"));
+  emitAppEvent("editor:show-hover");
 }
 
 export async function runQuickFixForActiveEditor(): Promise<void> {
@@ -502,7 +485,7 @@ export async function runQuickFixForActiveEditor(): Promise<void> {
   const [{ useDiagnosticsStore }, { selectDiagnosticForQuickFix, selectPreferredCodeAction }] =
     await Promise.all([
       import("@/features/diagnostics/stores/diagnostics.store"),
-      import("@/features/diagnostics/utils/quick-fix"),
+      import("@/features/diagnostics/services/quick-fix"),
     ]);
   const diagnostics = useDiagnosticsStore
     .getState()
@@ -514,7 +497,7 @@ export async function runQuickFixForActiveEditor(): Promise<void> {
     return;
   }
 
-  const { LspClient } = await import("@/features/editor/lsp/lsp-client");
+  const { LspClient } = await import("@/features/editor/lsp/services/lsp-client");
   const lspClient = LspClient.getInstance();
   const codeActions = (await lspClient.getCodeActions(activeBuffer.path, diagnostic)).filter(
     (action) => !action.disabledReason,
@@ -560,7 +543,7 @@ export function foldAllActiveEditor(): void {
   }
 
   const foldActions = useFoldStore.getState().actions;
-  foldActions.computeFoldRegions(activeBuffer.path, activeBuffer.content);
+  foldActions.computeFoldRegions(activeBuffer.path, readBufferText(activeBuffer));
   foldActions.foldAll(activeBuffer.path);
 }
 
@@ -572,7 +555,7 @@ export function foldLevelActiveEditor(level: number): void {
   }
 
   const foldActions = useFoldStore.getState().actions;
-  foldActions.computeFoldRegions(activeBuffer.path, activeBuffer.content);
+  foldActions.computeFoldRegions(activeBuffer.path, readBufferText(activeBuffer));
   foldActions.foldLevel(activeBuffer.path, level);
 }
 

@@ -1,4 +1,4 @@
-import { TERMINAL_NERD_FONT_FALLBACKS } from "./terminal-fonts";
+import { TERMINAL_NERD_FONT_FALLBACKS } from "../constants/terminal-fonts";
 
 const WINDOWS_FALLBACK = "Consolas";
 const MAC_FALLBACK = "Menlo";

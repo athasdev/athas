@@ -58,8 +58,10 @@ vi.mock("@/features/ai/stores/ai-chat.store", () => ({
   },
 }));
 
-vi.mock("@/features/window/stores/project.store", () => ({
-  useProjectStore: { getState: vi.fn(() => ({ rootFolderPath: "/workspace" })) },
+vi.mock("@/features/workspace/stores/project.store", () => ({
+  useProjectStore: {
+    getState: vi.fn(() => ({ rootFolderPath: "/workspace", workspaceFolders: [] })),
+  },
 }));
 
 describe("ACP startup with MCP servers", () => {

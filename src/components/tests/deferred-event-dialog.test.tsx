@@ -1,18 +1,15 @@
 // @vitest-environment jsdom
-import { act, useEffect, useState } from "react";
+import { act, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
+import { emitAppEvent, useAppEvent } from "@/utils/app-events";
 import { DeferredEventDialog } from "../deferred-event-dialog";
 
-const EVENT = "test:open-dialog";
+const EVENT = "ai:open-agent-sessions";
 
 function FakeDialog() {
   const [detail, setDetail] = useState<string | null>(null);
-  useEffect(() => {
-    const open = (event: Event) => setDetail((event as CustomEvent<string>).detail);
-    window.addEventListener(EVENT, open);
-    return () => window.removeEventListener(EVENT, open);
-  }, []);
+  useAppEvent(EVENT, setDetail);
   return detail ? <p data-testid="dialog">{detail}</p> : null;
 }
 
@@ -39,15 +36,15 @@ describe("DeferredEventDialog", () => {
     expect(container.textContent).toBe("");
 
     await act(async () => {
-      window.dispatchEvent(new CustomEvent(EVENT, { detail: "first" }));
-      window.dispatchEvent(new CustomEvent(EVENT, { detail: "second" }));
+      emitAppEvent(EVENT, "first");
+      emitAppEvent(EVENT, "second");
     });
 
     expect(load).toHaveBeenCalledTimes(1);
     expect(container.querySelector('[data-testid="dialog"]')?.textContent).toBe("second");
 
     await act(async () => {
-      window.dispatchEvent(new CustomEvent(EVENT, { detail: "third" }));
+      emitAppEvent(EVENT, "third");
     });
     expect(container.querySelector('[data-testid="dialog"]')?.textContent).toBe("third");
   });

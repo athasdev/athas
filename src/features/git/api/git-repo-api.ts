@@ -1,5 +1,5 @@
 import { commands } from "@/bindings/commands";
-import { readDirectory } from "@/features/file-system/controllers/platform";
+import { readDirectory } from "@/features/file-system/api/file-system-api";
 
 interface RepositoryDiscoveryCacheEntry {
   discoveredAt: number;

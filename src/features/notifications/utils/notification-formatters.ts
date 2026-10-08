@@ -1,5 +1,5 @@
 import type { NotificationEntry } from "@/features/notifications/types/notifications.types";
-import { formatCalendarDateGroup, formatCompactRelativeDate } from "@/utils/date";
+import { formatCompactRelativeDate } from "@/utils/date";
 
 export function formatNotificationAge(timestamp: number) {
   return formatCompactRelativeDate(timestamp, {
@@ -16,8 +16,4 @@ export function formatNotificationText(notification: NotificationEntry) {
   ]
     .filter(Boolean)
     .join("\n\n");
-}
-
-export function formatNotificationGroupDate(timestamp: number) {
-  return formatCalendarDateGroup(timestamp);
 }

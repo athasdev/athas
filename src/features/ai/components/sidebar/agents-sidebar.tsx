@@ -1,27 +1,29 @@
 import { useMemo, useState } from "react";
 import { AgentSessionSidebarItem } from "@/features/ai/components/agent-session-sidebar-item";
 import { AgentSessionIcon } from "@/features/ai/components/icons/agent-session-icon";
-import { openAgentInNewWindow } from "@/features/ai/detached/agent-window-service";
-import { useAgentWindowStore } from "@/features/ai/detached/agent-window.store";
+import { openAgentInNewWindow } from "@/features/ai/detached/services/agent-window-service";
+import { useAgentWindowStore } from "@/features/ai/detached/stores/agent-window.store";
 import { useAgentDisplayNames } from "@/features/ai/hooks/use-agent-display-names";
 import { useChatAttention } from "@/features/ai/hooks/use-chat-attention";
 import { useNewAgentAction } from "@/features/ai/hooks/use-new-agent-action";
-import { selectAcpAgentStatus } from "@/features/ai/lib/acp-session-state";
+import { selectAcpAgentStatus } from "@/features/ai/services/acp-session-state";
 import {
   groupAgentSessionsByActivity,
   isAgentSessionWorking,
 } from "@/features/ai/lib/agent-session-groups";
-import { resolveAgentSessionIconId } from "@/features/ai/lib/agent-session-icon";
-import { selectAgentSessions } from "@/features/ai/lib/agent-session-list";
-import { openAgentHistoryChat } from "@/features/ai/lib/open-agent-history";
-import { canBrowseAgentSessions, openAgentSessions } from "@/features/ai/lib/open-agent-sessions";
+import { resolveAgentSessionIconId } from "@/features/ai/services/agent-session-icon";
+import { selectAgentSessions } from "@/features/ai/services/agent-session-list";
+import { openAgentHistoryChat } from "@/features/ai/services/open-agent-history";
+import {
+  canBrowseAgentSessions,
+  openAgentSessions,
+} from "@/features/ai/services/open-agent-sessions";
 import { isAcpAgent } from "@/features/ai/services/ai-chat-service";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
-import type { Chat } from "@/features/ai/types/ai-chat.types";
+import type { ChatSession } from "@/features/ai/types/ai-chat.types";
 import { getModelById, getProviderById } from "@/features/ai/types/providers.types";
-import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useGitStore } from "@/features/git/stores/git.store";
-import { getProjectNameFromPath } from "@/features/layout/components/sidebar/project-glyph";
+import { getProjectNameFromPath } from "@/features/workspace/services/project-tab-path";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import {
   ContextMenu,
@@ -61,6 +63,7 @@ import {
 } from "@/ui/sidebar";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { AgentsPlanFooter } from "./agents-plan-footer";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 interface AgentRowContext {
   currentChatId: string | null;
@@ -71,9 +74,10 @@ interface AgentRowContext {
   getAgentName: (agentId: string) => string;
 }
 
-function AgentRow({ chat, context }: { chat: Chat; context: AgentRowContext }) {
+function AgentRow({ chat, context }: { chat: ChatSession; context: AgentRowContext }) {
   const isInAnotherWindow = useAgentWindowStore((state) => Boolean(state.sessions[chat.id]));
   const attention = useChatAttention(chat.id);
+  const working = useAIChatStore((state) => isAgentSessionWorking(state.messagesByChat[chat.id]));
   const { deleteChat, updateChatTitle, setChatPinned, setChatArchived } = useAIChatStore(
     (state) => state.actions,
   );
@@ -121,7 +125,7 @@ function AgentRow({ chat, context }: { chat: Chat; context: AgentRowContext }) {
           }
           createdAt={chat.createdAt}
           lastActiveAt={chat.lastMessageAt}
-          working={isAgentSessionWorking(chat)}
+          working={working}
           projectName={getProjectNameFromPath(chat.workspacePath || context.workspacePath || "")}
           workspacePath={chat.workspacePath || context.workspacePath}
           branch={chat.branch || context.currentBranch}
@@ -168,7 +172,7 @@ function AgentRow({ chat, context }: { chat: Chat; context: AgentRowContext }) {
   );
 }
 
-function ArchivedAgentRow({ chat }: { chat: Chat }) {
+function ArchivedAgentRow({ chat }: { chat: ChatSession }) {
   const { deleteChat, setChatArchived } = useAIChatStore((state) => state.actions);
 
   return (
@@ -233,14 +237,10 @@ export function AgentsSidebar() {
   const browseSessionsAgentId = useAIChatStore((state) => {
     const agentId =
       state.chats.find((chat) => chat.id === state.currentChatId)?.agentId ?? state.selectedAgentId;
-    const status = selectAcpAgentStatus(
-      state,
-      agentId,
-      useFileSystemStore.getState().rootFolderPath,
-    );
+    const status = selectAcpAgentStatus(state, agentId, useProjectStore.getState().rootFolderPath);
     return isAcpAgent(agentId) && canBrowseAgentSessions(status, agentId) ? agentId : null;
   });
-  const workspacePath = useFileSystemStore.use.rootFolderPath?.() ?? null;
+  const workspacePath = useProjectStore((state) => state.rootFolderPath) ?? null;
   const aiProviderId = useSettingsStore((state) => state.settings.aiProviderId);
   const aiModelId = useSettingsStore((state) => state.settings.aiModelId);
   const currentBranch = useGitStore((state) => state.gitStatus?.branch ?? null);
@@ -259,7 +259,7 @@ export function AgentsSidebar() {
   };
 
   const { pinned, recentGroups, archived } = useMemo(() => {
-    const matches = (chat: Chat) =>
+    const matches = (chat: ChatSession) =>
       matchesSearchQuery(query, [
         chat.title,
         chat.agentId === "custom" ? null : getAgentName(chat.agentId),

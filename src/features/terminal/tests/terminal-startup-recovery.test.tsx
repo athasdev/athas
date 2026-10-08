@@ -3,10 +3,11 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { defaultSettings } from "@/features/settings/config/default-settings";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 import { WorkspaceStoreScopeContext } from "@/features/workspace/stores/create-workspace-scoped-store";
 import { useTerminalStore } from "../stores/terminal.store";
 import { TerminalEmulator } from "../components/terminal";
+import { getTerminalEmulator } from "../services/terminal-emulator-registry";
 
 const mocks = vi.hoisted(() => ({
   invoke: vi.fn(),
@@ -31,10 +32,10 @@ vi.mock("@/features/settings/stores/settings.store", () => ({
     { getState: () => ({ settings: defaultSettings, actions: { updateSetting: vi.fn() } }) },
   ),
 }));
-vi.mock("@/features/window/stores/zoom.store", () => ({
+vi.mock("@/features/layout/stores/zoom.store", () => ({
   useZoomStore: { use: { terminalZoomLevel: () => 1 } },
 }));
-vi.mock("@/features/window/stores/project.store", () => ({
+vi.mock("@/features/workspace/stores/project.store", () => ({
   useProjectStore: (selector: (state: unknown) => unknown) =>
     selector({ rootFolderPath: "/project" }),
 }));
@@ -42,7 +43,7 @@ vi.mock("@/features/file-system/stores/file-system.store", () => ({
   useFileSystemStore: { getState: () => ({ handleFileSelect: vi.fn() }) },
 }));
 vi.mock("@/utils/frontend-trace", () => ({ frontendTrace: vi.fn() }));
-vi.mock("../utils/frontend-terminal-session", () => ({
+vi.mock("../services/frontend-terminal-session", () => ({
   getFrontendTerminalSessionArgs: () => ({ windowLabel: "main", frontendSessionId: "frontend" }),
 }));
 vi.mock("../utils/resolve-font", () => ({ resolveTerminalFont: mocks.font }));
@@ -159,6 +160,16 @@ async function renderTerminal() {
 }
 
 describe("terminal startup recovery", () => {
+  it("registers the live emulator by session id until the view unmounts", async () => {
+    await renderTerminal();
+    await act(async () => {});
+    expect(mocks.ready).toHaveBeenCalledTimes(1);
+    const handle = getTerminalEmulator("session");
+    expect(handle?.terminal).toBeDefined();
+    await act(async () => root.render(null));
+    expect(getTerminalEmulator("session")).toBeUndefined();
+  });
+
   it("skips process creation when the view closes while font setup is pending", async () => {
     let finishFont: (value: unknown) => void = () => {};
     mocks.font.mockImplementationOnce(

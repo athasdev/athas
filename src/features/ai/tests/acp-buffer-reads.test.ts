@@ -26,7 +26,7 @@ vi.mock("@/features/editor/stores/buffer.store", () => ({
   },
 }));
 
-vi.mock("@/features/workspace/runtime/workspace-runtime-registry", () => ({
+vi.mock("@/features/workspace/services/workspace-runtime-registry", () => ({
   workspaceRuntimeRegistry: {
     getExistingStores: () => [{ getState: () => ({ buffers: mocks.backgroundBuffers }) }],
   },

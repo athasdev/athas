@@ -180,7 +180,7 @@ describe("settings UI contract", () => {
       "utf8",
     );
     const modalSliceSource = readFileSync(
-      fileURLToPath(new URL("../../window/stores/ui-state/modal-slice.ts", import.meta.url)),
+      fileURLToPath(new URL("../../layout/stores/ui-state/modal-slice.ts", import.meta.url)),
       "utf8",
     );
 

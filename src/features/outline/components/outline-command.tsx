@@ -10,7 +10,7 @@ import {
 } from "@/ui/command";
 import { getBaseName } from "@/utils/path-helpers";
 import { useDocumentOutline } from "../hooks/use-document-outline";
-import { getVisibleOutlineSymbols, openOutlineSymbol } from "../utils/outline-symbols";
+import { getVisibleOutlineSymbols, openOutlineSymbol } from "../services/outline-symbols";
 import { OutlineSymbolRow } from "./outline-symbol-row";
 
 interface OutlineCommandContentProps {

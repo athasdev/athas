@@ -1,4 +1,4 @@
-import { logger } from "@/features/editor/utils/logger";
+import { logger } from "@/utils/logger";
 import { initializeExtensionStore, useExtensionStore } from "../registry/extension-store";
 import { extensionRegistry } from "../registry/extension-registry";
 import { initializeGeneratedUIExtensions } from "../ui/services/generated/generated-ui-extension-installer";

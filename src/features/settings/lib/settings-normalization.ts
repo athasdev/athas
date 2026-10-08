@@ -1,9 +1,9 @@
 import { getProviderById } from "@/features/ai/types/providers.types";
-import { normalizeOllamaBaseUrl } from "@/features/ai/lib/ollama-endpoint";
-import { normalizeMcpServers } from "@/features/ai/lib/mcp-servers";
-import { normalizeIntelligenceAgentSteps } from "@/features/ai/intelligence/lib/intelligence-agent-steps";
+import { normalizeOllamaBaseUrl } from "@/features/settings/services/ollama-endpoint";
+import { normalizeMcpServers } from "@/features/settings/services/mcp-server-settings";
+import { normalizeIntelligenceAgentSteps } from "@/features/settings/services/ai-agent-steps";
 import { normalizeLegacyV0DesignSystems } from "@/features/settings/lib/legacy-v0-settings";
-import { isKeybindingPreset } from "@/features/keymaps/defaults/keybinding-presets";
+import { isKeybindingPreset } from "@/features/keymaps/constants/keybinding-presets";
 import {
   DEFAULT_AI_AUTOCOMPLETE_MODEL_ID,
   DEFAULT_AI_MODEL_ID,
@@ -14,15 +14,15 @@ import {
   DEFAULT_MONO_FONT_FAMILY,
   DEFAULT_UI_FONT_FAMILY,
 } from "@/features/settings/config/typography-defaults";
-import { normalizeConfiguredFontFamily } from "@/features/settings/lib/font-family-resolution";
+import { normalizeConfiguredFontFamily } from "@/features/settings/services/font-family-resolution";
 import {
   GIT_SIDEBAR_ITEM_IDS,
   GIT_SIDEBAR_TAB_IDS,
   SIDEBAR_ACTIVITY_ITEM_IDS,
   normalizeItemOrder,
 } from "@/features/layout/config/item-order";
-import { normalizeUiFontSize } from "@/features/settings/lib/ui-font-size";
-import { normalizeUiDensity } from "@/features/settings/lib/ui-preferences";
+import { normalizeUiFontSize } from "@/features/settings/services/ui-font-size";
+import { normalizeUiDensity } from "@/features/settings/services/ui-preferences";
 import type { GitSidebarItemId } from "@/features/layout/config/item-order";
 import type { Settings, SettingsSection } from "@/features/settings/types/settings.types";
 

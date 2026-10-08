@@ -120,6 +120,16 @@ impl DocumentSessions {
       );
    }
 
+   /// The open session's epoch; every open of a document starts a new one.
+   pub fn epoch(&self, file_path: &str) -> Option<u64> {
+      self
+         .inner
+         .lock()
+         .unwrap()
+         .get(file_path)
+         .map(|session| session.epoch)
+   }
+
    pub fn close(&self, file_path: &str) {
       self.inner.lock().unwrap().remove(file_path);
    }

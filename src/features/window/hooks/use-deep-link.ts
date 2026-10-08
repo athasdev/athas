@@ -4,12 +4,12 @@ import { commands } from "@/bindings/commands";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
 import { toast } from "sonner";
 import type { Settings } from "@/features/settings/types/settings.types";
-import type { SettingsTab } from "@/features/window/stores/ui-state/types/ui-state.types";
+import type { SettingsTab } from "@/features/layout/stores/ui-state/types/ui-state.types";
 import {
   enqueueWindowOpenRequest,
   parseWindowOpenUrl,
   type WindowOpenRequest,
-} from "../utils/window-open-request";
+} from "../services/window-open-request";
 import { createPendingQueueDrain } from "../utils/pending-queue-drain";
 import { disposeListener } from "@/utils/tauri-drag-drop";
 
@@ -193,7 +193,7 @@ async function openSettingsFromDeepLink(
   tab: SettingsTab,
   _extensionsCategory?: Settings["extensionsActiveTab"],
 ) {
-  const { useUIState } = await import("@/features/window/stores/ui-state.store");
+  const { useUIState } = await import("@/features/layout/stores/ui-state.store");
   useUIState.getState().openSettings(tab);
 }
 

@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { LspClient } from "@/features/editor/lsp/lsp-client";
+import { LspClient } from "@/features/editor/lsp/services/lsp-client";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { getBufferById } from "@/features/editor/utils/buffer-index";
-import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import { useUIState } from "@/features/window/stores/ui-state.store";
-import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
+import { getBufferById } from "@/features/editor/stores/buffer-index";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
+import { useWorkspaceTabsStore } from "@/features/workspace/stores/workspace-tabs.store";
 import { Button } from "@/ui/button";
 import { showConfirmDialog } from "@/ui/dialog";
 import { PlayIcon } from "@/ui/icons";
@@ -12,9 +11,12 @@ import { DropdownMenu, DropdownMenuTrigger } from "@/ui/dropdown";
 import { useRunActionDiscovery } from "../hooks/use-run-action-discovery";
 import { useRunActionsStore } from "../stores/run-actions.store";
 import type { CustomRunAction, RunActionDraft, RunActionItem } from "../types/run-action.types";
-import { resolveRunWorkingDirectory } from "../utils/run-action-discovery";
+import { resolveRunWorkingDirectory } from "../services/run-action-discovery";
 import RunActionDialog from "./run-action-dialog";
 import RunActionsMenu from "./run-actions-menu";
+import { emitAppEvent } from "@/utils/app-events";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
+import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 const EMPTY_DRAFT: RunActionDraft = {
   name: "",
@@ -30,11 +32,12 @@ function getWorkspaceLabel(workspacePath?: string, fallbackName?: string) {
 }
 
 export default function RunActionsButton() {
-  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const projectTabs = useWorkspaceTabsStore.use.projectTabs();
   const allCustomActions = useRunActionsStore.use.runActions();
+  const activeBufferId = useActiveBufferId();
   const activeFilePath = useBufferStore((state) => {
-    const activeBuffer = getBufferById(state.buffers, state.activeBufferId);
+    const activeBuffer = getBufferById(state.buffers, activeBufferId);
     return activeBuffer?.type === "editor" && !activeBuffer.isVirtual
       ? activeBuffer.path
       : undefined;
@@ -105,15 +108,11 @@ export default function RunActionsButton() {
     }
 
     if (!action.command) return;
-    window.dispatchEvent(
-      new CustomEvent("create-terminal-with-command", {
-        detail: {
-          command: action.command,
-          name: action.name,
-          workingDirectory: resolveRunWorkingDirectory(workspacePath, action.workingDirectory),
-        },
-      }),
-    );
+    emitAppEvent("terminal:create-with-command", {
+      command: action.command,
+      name: action.name,
+      workingDirectory: resolveRunWorkingDirectory(workspacePath, action.workingDirectory),
+    });
     closeMenu();
   };
 

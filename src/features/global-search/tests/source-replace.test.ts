@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import type { EditorContent } from "@/features/panes/types/pane-content.types";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useHistoryStore } from "@/features/editor/stores/history.store";
 import {
@@ -9,6 +9,7 @@ import {
   replaceNextInSource,
   SourceReplaceFailure,
 } from "../services/source-replace-service";
+import { seedActiveBuffer } from "@/features/panes/tests/helpers/seed-pane-tabs";
 vi.mock("../services/search-worker-client", async () => {
   const { executeSearchTask } = await import("../workers/search-worker-execution");
   return {
@@ -37,11 +38,7 @@ function editor(filePath = path, content = "foobar foobar"): EditorContent {
     savedContent: "disk baseline",
     isDirty: true,
     isVirtual: false,
-    isPreview: false,
-    isPinned: false,
-    isActive: true,
     language: "typescript",
-    tokens: [],
   };
 }
 const owner = () => useBufferStore.getStore("owner");
@@ -63,7 +60,8 @@ function deferred<T>() {
 beforeEach(() => {
   workspaceRuntimeRegistry.resetForTests();
   workspaceRuntimeRegistry.activateWorkspace({ id: "owner", name: "Owner" });
-  owner().setState({ buffers: [editor()], activeBufferId: "same-id" });
+  owner().setState({ buffers: [editor()] });
+  seedActiveBuffer("same-id", "owner");
   io.read.mockReset().mockResolvedValue("foobar");
   io.write.mockReset().mockResolvedValue(undefined);
   io.git.mockClear();

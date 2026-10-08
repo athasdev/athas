@@ -22,6 +22,7 @@ describe("buildAgentSessionContext", () => {
           assistant("m1", 1, {
             toolCalls: [
               {
+                id: "call-24",
                 name: "read_file",
                 kind: "read",
                 status: "completed",
@@ -30,6 +31,7 @@ describe("buildAgentSessionContext", () => {
                 timestamp: at(1),
               },
               {
+                id: "call-32",
                 name: "read_file",
                 kind: "read",
                 status: "completed",
@@ -42,6 +44,7 @@ describe("buildAgentSessionContext", () => {
           assistant("m2", 3, {
             toolCalls: [
               {
+                id: "call-44",
                 name: "edit_file",
                 kind: "edit",
                 status: "completed",
@@ -52,6 +55,7 @@ describe("buildAgentSessionContext", () => {
                 timestamp: at(3),
               },
               {
+                id: "call-54",
                 name: "edit_file",
                 kind: "edit",
                 status: "completed",
@@ -67,6 +71,7 @@ describe("buildAgentSessionContext", () => {
                 timestamp: at(4),
               },
               {
+                id: "call-69",
                 name: "run_command",
                 kind: "execute",
                 status: "failed",
@@ -128,6 +133,7 @@ describe("buildAgentSessionContext", () => {
           assistant("m1", 1, {
             toolCalls: [
               {
+                id: "call-130",
                 name: "show_view",
                 kind: "other",
                 status: "completed",

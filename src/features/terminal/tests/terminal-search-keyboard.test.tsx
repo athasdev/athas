@@ -4,9 +4,6 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { TerminalSearch } from "../components/terminal-search";
 
-vi.mock("@/features/keymaps/hooks/use-command-shortcut", () => ({
-  useCommandShortcut: () => undefined,
-}));
 const onSearch = vi.fn();
 const onNext = vi.fn();
 const onPrevious = vi.fn();

@@ -4,10 +4,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { getProvider } from "@/features/ai/services/providers/ai-provider-registry";
-import {
-  type AIProviderSettingsAction,
-  useAIProviderSettingsActions,
-} from "@/features/ai/services/providers/ai-provider-settings-registry";
+import { useAIProviderSettingsActions } from "@/features/ai/services/providers/ai-provider-settings-registry";
 import type { ExtensionManifest } from "../types/extension-manifest";
 import { uiExtensionHost } from "../ui/services/ui-extension-host";
 import type {
@@ -133,6 +130,8 @@ function emitAndSettle(worker: FakeWorker, message: ExtensionWorkerMessage) {
   worker.emit(message);
   return new Promise((resolve) => setTimeout(resolve, 0));
 }
+
+type AIProviderSettingsAction = ReturnType<typeof useAIProviderSettingsActions>[number];
 
 function readSettingsActions(providerId: string): AIProviderSettingsAction[] {
   let actions: AIProviderSettingsAction[] = [];

@@ -6,7 +6,7 @@ import { type Tag, tags as t } from "@lezer/highlight";
  * Token names the Athas tokenizers emit beyond the plain highlight tag names (`keyword`, `string`,
  * `typeName`...). `simpleMode` turns dots into spaces, so modified tags need a single-word name.
  */
-export const athasTokenTable: Record<string, Tag> = {
+const athasTokenTable: Record<string, Tag> = {
   fn: t.function(t.variableName),
   constant: t.constant(t.variableName),
   builtinFn: t.function(t.standard(t.variableName)),

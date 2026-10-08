@@ -8,7 +8,7 @@ import {
   findDirtyEditorBuffer,
   getDirtyEditorBuffers,
   getDirtyWritableEditorBuffers,
-} from "../utils/editor-buffer-selectors";
+} from "../stores/editor-buffer-selectors";
 
 function createEditorBuffer(overrides: Partial<EditorContent>): EditorContent {
   return {
@@ -16,14 +16,10 @@ function createEditorBuffer(overrides: Partial<EditorContent>): EditorContent {
     type: "editor",
     path: "/workspace/app.ts",
     name: "app.ts",
-    isPinned: false,
-    isPreview: false,
-    isActive: true,
     content: "changed",
     savedContent: "saved",
     isDirty: false,
     isVirtual: false,
-    tokens: [],
     ...overrides,
   };
 }
@@ -34,9 +30,6 @@ function createTerminalBuffer(): TerminalContent {
     type: "terminal",
     path: "terminal://terminal",
     name: "Terminal",
-    isPinned: false,
-    isPreview: false,
-    isActive: false,
     sessionId: "terminal",
   };
 }

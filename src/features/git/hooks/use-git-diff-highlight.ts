@@ -5,8 +5,8 @@ import {
   type SyntaxLineToken,
   type SyntaxSegment,
   toLineTokens,
-} from "@/features/editor/syntax/syntax-highlight";
-import { getLanguageIdFromPath } from "@/features/editor/utils/language-id";
+} from "@/features/editor/services/syntax-highlight";
+import { getLanguageIdFromPath } from "@/features/editor/services/language-id";
 import type { GitDiffLine } from "../types/git.types";
 
 interface ReconstructedContent {

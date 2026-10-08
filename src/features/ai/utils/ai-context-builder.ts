@@ -3,6 +3,7 @@ import type { ContextInfo } from "@/features/ai/types/ai-context.types";
 import { hasTextContent, type PaneContent } from "@/features/panes/types/pane-content.types";
 import { CODEX_INTEGRATION_ID } from "@/features/ai/integrations/integration-registry";
 import { getFollowUpActionsInstruction } from "@/features/ai/lib/follow-up-actions";
+import { resolveBufferText } from "@/features/editor/services/open-buffer-text";
 
 function formatContextPath(path: string, projectRoot?: string) {
   return projectRoot && path.startsWith(projectRoot) ? path.slice(projectRoot.length + 1) : path;
@@ -29,10 +30,11 @@ function formatOpenContextSummary(buffer: PaneContent, projectRoot?: string) {
 function getTextContextPreview(buffer: PaneContent) {
   if (!hasTextContent(buffer)) return null;
 
-  const lines = buffer.content.split("\n");
+  const content = resolveBufferText(buffer);
+  const lines = content.split("\n");
   const preview =
     lines.length <= 80
-      ? buffer.content
+      ? content
       : [...lines.slice(0, 50), "... (content truncated) ...", ...lines.slice(-20)].join("\n");
 
   return `\n\`\`\`text\n${preview}\n\`\`\``;
@@ -131,7 +133,7 @@ export const buildContextPrompt = (
         ab.type === "csvPreview" ||
         ab.type === "svgPreview";
       if (hasContent) {
-        const textContent = (ab as { content: string }).content;
+        const textContent = resolveBufferText(ab);
         const lines = textContent.split("\n");
         if (lines.length <= 100) {
           // Include the whole file if it's small

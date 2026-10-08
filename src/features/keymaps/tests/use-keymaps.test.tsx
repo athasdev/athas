@@ -16,7 +16,7 @@ vi.mock("@tauri-apps/plugin-os", () => ({
 vi.mock("@/features/settings/stores/settings.store", () => ({
   useSettingsStore: { getState: () => ({ settings: mocks.settings }) },
 }));
-vi.mock("@/features/window/stores/ui-state.store", () => ({
+vi.mock("@/features/layout/stores/ui-state.store", () => ({
   useUIState: {
     getState: () => ({ hasOpenModal: mocks.hasOpenModal, closeTopModal: mocks.closeTopModal }),
   },
@@ -24,7 +24,7 @@ vi.mock("@/features/window/stores/ui-state.store", () => ({
 
 const { useKeymaps } = await import("../hooks/use-keymaps");
 const { useKeymapStore } = await import("../stores/keymaps.store");
-const { keymapRegistry } = await import("../utils/registry");
+const { keymapRegistry } = await import("../services/keymap-registry");
 
 const executed: Array<{ command: string; args: unknown }> = [];
 let container: HTMLDivElement;

@@ -1,22 +1,27 @@
 import "./styles.css";
-import { exists } from "@tauri-apps/plugin-fs";
-import { openExternalBrowserUrl } from "@/features/window/utils/external-navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { pathExists } from "@/utils/local-files";
+import { openExternalBrowserUrl } from "@/utils/external-navigation";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { editorAPI } from "@/features/editor/extensions/api";
+import { editorAPI } from "@/features/editor/services/editor-api";
+import { useBufferText } from "@/features/editor/hooks/use-buffer-text";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
-import { getBufferById, getBufferByPath } from "@/features/editor/utils/buffer-index";
+import { getBufferById, getBufferByPath } from "@/features/editor/stores/buffer-index";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { hasTextContent } from "@/features/panes/types/pane-content.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { SearchPopover } from "@/ui/search";
-import { logger } from "../utils/logger";
+import { logger } from "@/utils/logger";
+import { renderMarkdownBlocks } from "./markdown-block-dom";
 import {
-  highlightMarkdownPreviewMatches,
+  highlightMarkdownPreviewBlockMatches,
   isEntireMarkdownPreviewSelected,
 } from "./markdown-preview-search";
-import { useHighlightedMarkdown } from "./use-highlighted-markdown";
+import { useHighlightedMarkdown } from "./hooks/use-highlighted-markdown";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
+import { useBufferIdOrActive } from "@/features/panes/hooks/use-pane-buffer-state";
+
+const MARKDOWN_PREVIEW_PARSE_DELAY_MS = 150;
 
 export function MarkdownPreview({
   bufferId,
@@ -25,35 +30,47 @@ export function MarkdownPreview({
   bufferId?: string;
   isActiveSurface?: boolean;
 }) {
-  const { sourceBufferPath, sourceContent } = useBufferStore(
+  const targetBufferId = useBufferIdOrActive(bufferId);
+  const { sourceBufferId, sourceBufferPath } = useBufferStore(
     useShallow((state) => {
-      const activeBuffer = getBufferById(state.buffers, bufferId ?? state.activeBufferId);
+      const activeBuffer = getBufferById(state.buffers, targetBufferId);
       const sourceBuffer =
         activeBuffer?.type === "markdownPreview"
           ? (getBufferByPath(state.buffers, activeBuffer.sourceFilePath) ?? activeBuffer)
           : activeBuffer;
 
       return {
+        sourceBufferId: sourceBuffer && hasTextContent(sourceBuffer) ? sourceBuffer.id : null,
         sourceBufferPath: sourceBuffer?.path,
-        sourceContent: sourceBuffer && hasTextContent(sourceBuffer) ? sourceBuffer.content : "",
       };
     }),
   );
-  const fontSize = useEditorSettingsStore.use.fontSize();
+  const sourceContent = useBufferText(sourceBufferId, {
+    debounceMs: MARKDOWN_PREVIEW_PARSE_DELAY_MS,
+  });
+  const fontSize = useSettingsStore((state) => state.settings.fontSize);
   const uiFontFamily = useSettingsStore((state) => state.settings.uiFontFamily);
   const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
-  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath) || "";
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath) || "";
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
-  const html = useHighlightedMarkdown(sourceContent, { frontMatter: "render" });
-  const { html: renderedHtml, matchCount } = useMemo(
-    () => highlightMarkdownPreviewMatches(html, isSearchOpen ? searchQuery : ""),
-    [html, isSearchOpen, searchQuery],
+  const blocks = useHighlightedMarkdown(sourceContent, {
+    frontMatter: "render",
+    debounceMs: MARKDOWN_PREVIEW_PARSE_DELAY_MS,
+    sourceKey: sourceBufferPath,
+  });
+  const { blocks: renderedBlocks, matchCount } = useMemo(
+    () => highlightMarkdownPreviewBlockMatches(blocks, isSearchOpen ? searchQuery : ""),
+    [blocks, isSearchOpen, searchQuery],
   );
+
+  useLayoutEffect(() => {
+    if (contentRef.current) renderMarkdownBlocks(contentRef.current, renderedBlocks);
+  }, [renderedBlocks]);
 
   useEffect(() => {
     if (isActiveSurface) containerRef.current?.focus({ preventScroll: true });
@@ -106,7 +123,7 @@ export function MarkdownPreview({
       match.toggleAttribute("data-current", index === currentMatchIndex);
     });
     matches[currentMatchIndex]?.scrollIntoView({ block: "center", inline: "nearest" });
-  }, [currentMatchIndex, renderedHtml]);
+  }, [currentMatchIndex, renderedBlocks]);
 
   const navigateSearch = (direction: number) => {
     if (matchCount === 0) return;
@@ -195,13 +212,13 @@ export function MarkdownPreview({
       const targetPath = resolvePath(href, sourceBufferPath);
 
       try {
-        const fileExists = await exists(targetPath);
+        const fileExists = await pathExists(targetPath);
 
         if (fileExists) {
           await handleFileSelect(targetPath, false);
         } else {
           const withMd = targetPath.endsWith(".md") ? targetPath : `${targetPath}.md`;
-          const mdExists = await exists(withMd);
+          const mdExists = await pathExists(withMd);
 
           if (mdExists) {
             await handleFileSelect(withMd, false);
@@ -282,7 +299,6 @@ export function MarkdownPreview({
         <div
           ref={contentRef}
           className="markdown-content typeset typeset-preview w-full max-w-3xl pb-safe-16"
-          dangerouslySetInnerHTML={{ __html: renderedHtml }}
         />
       </div>
     </div>

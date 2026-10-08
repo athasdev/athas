@@ -10,7 +10,8 @@ pub use acp::{
    RegistryAgentInfo, SessionConfigValue,
 };
 pub use chat_history::{
-   ChatData, ChatHistoryRepository, ChatStats, ChatWithMessages, MessageData, ToolCallData,
+   ChatData, ChatHistoryRepository, ChatSaveScope, ChatStats, ChatWithMessages, MessageData,
+   ToolCallData,
 };
 pub use codex::{
    CodexAppServer, CodexIntegrationStatus, CodexProtocolEvent, CodexRequestDecision,

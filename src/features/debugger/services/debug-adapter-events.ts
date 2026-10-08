@@ -5,6 +5,7 @@ import {
 } from "@/features/debugger/services/debug-adapter-service";
 import { useDebuggerStore } from "@/features/debugger/stores/debugger.store";
 import { buildDebugTerminalCommand } from "@/features/debugger/utils/debugger-command";
+import { emitAppEvent } from "@/utils/app-events";
 import type {
   DebugProtocolMessage,
   DebugScope,
@@ -104,16 +105,12 @@ async function handleDebugRequest(sessionId: string, message: Record<string, unk
         ),
       )
     : undefined;
-  window.dispatchEvent(
-    new CustomEvent("create-terminal-with-command", {
-      detail: {
-        command: terminalCommand,
-        name: typeof request?.title === "string" ? request.title : "Debug Console",
-        workingDirectory: typeof request?.cwd === "string" ? request.cwd : undefined,
-        environment,
-      },
-    }),
-  );
+  emitAppEvent("terminal:create-with-command", {
+    command: terminalCommand,
+    name: typeof request?.title === "string" ? request.title : "Debug Console",
+    workingDirectory: typeof request?.cwd === "string" ? request.cwd : undefined,
+    environment,
+  });
   await sendDebugAdapterResponse(sessionId, requestSeq, command, true, {});
 }
 

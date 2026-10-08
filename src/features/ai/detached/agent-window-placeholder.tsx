@@ -10,8 +10,8 @@ import {
   EmptyTitle,
 } from "@/ui/empty";
 import { ArrowCounterClockwiseIcon, WindowExpandIcon } from "@/ui/icons";
-import { focusAgentWindow, recallAgentWindow } from "./agent-window-service";
-import { useAgentWindowStore } from "./agent-window.store";
+import { focusAgentWindow, recallAgentWindow } from "./services/agent-window-service";
+import { useAgentWindowStore } from "./stores/agent-window.store";
 
 /**
  * Stands in for a session that is being edited in its own window. The tab stays

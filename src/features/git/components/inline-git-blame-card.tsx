@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { useAuthStore } from "@/features/window/stores/auth.store";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { Avatar } from "@/ui/avatar";
 import { Button } from "@/ui/button";
 import { CheckIcon, CopyIcon } from "@/ui/icons";
 import { Popover, PopoverContent } from "@/ui/popover";
 import { writeClipboardText } from "@/utils/clipboard";
 import { getGitAuthorAvatarUrl } from "../utils/git-author-avatar";
-import type { InlineGitBlamePresentation } from "../utils/git-blame-decoration";
+import type { InlineGitBlamePresentation } from "../services/git-blame-decoration";
 
 interface InlineGitBlameCardProps {
   anchor: HTMLElement;

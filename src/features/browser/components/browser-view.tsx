@@ -2,11 +2,11 @@ import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useKeymapStore } from "@/features/keymaps/stores/keymaps.store";
-import { activateBufferInPaneAndSync } from "@/features/panes/utils/pane-activation";
-import { PaneContentHeader } from "@/features/panes/components/pane-content-chrome";
+import { activateBufferInPaneAndSync } from "@/features/panes/services/pane-activation";
+import { PaneContentHeader } from "@/ui/pane-content-chrome";
 import type { BrowserContent } from "@/features/panes/types/pane-content.types";
-import { ViewerErrorState } from "@/features/viewer/components/viewer-state";
-import { openExternalBrowserUrl } from "@/features/window/utils/external-navigation";
+import { ViewerErrorState } from "@/ui/viewer-state";
+import { openExternalBrowserUrl } from "@/utils/external-navigation";
 import { useWorkspaceStoreScopeId } from "@/features/workspace/stores/create-workspace-scoped-store";
 import { Button } from "@/ui/button";
 import {
@@ -39,8 +39,9 @@ import {
   isBlankPage,
   isSecureAddress,
   resolveBrowserAddress,
-} from "../utils/browser-address";
-import { BROWSER_FOCUS_ADDRESS_BAR_EVENT } from "../utils/browser-events";
+} from "../services/browser-address";
+import { onAppEvent } from "@/utils/app-events";
+import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 
 interface BrowserViewProps {
   buffer: BrowserContent;
@@ -52,6 +53,9 @@ export function BrowserView({ buffer, paneId, isActive }: BrowserViewProps) {
   const workspaceId = useWorkspaceStoreScopeId();
   const { setContext } = useKeymapStore.use.actions();
   const { isLoading, canGoBack, canGoForward, error, snapshotUrl } = useBrowserTabState(buffer.id);
+  const backShortcut = useCommandShortcut("browser.back");
+  const forwardShortcut = useCommandShortcut("browser.forward");
+  const reloadShortcut = useCommandShortcut(isLoading ? undefined : "browser.reload");
   const slotRef = useRef<HTMLDivElement>(null);
   const addressRef = useRef<HTMLInputElement>(null);
   const [draft, setDraft] = useState<string | null>(null);
@@ -89,13 +93,11 @@ export function BrowserView({ buffer, paneId, isActive }: BrowserViewProps) {
   }, [isActive, setContext]);
 
   useEffect(() => {
-    const focusAddressBar = (event: Event) => {
-      if ((event as CustomEvent<string>).detail !== buffer.id) return;
+    return onAppEvent("browser:focus-address-bar", (bufferId) => {
+      if (bufferId !== buffer.id) return;
       addressRef.current?.focus();
       addressRef.current?.select();
-    };
-    window.addEventListener(BROWSER_FOCUS_ADDRESS_BAR_EVENT, focusAddressBar);
-    return () => window.removeEventListener(BROWSER_FOCUS_ADDRESS_BAR_EVENT, focusAddressBar);
+    });
   }, [buffer.id]);
 
   const submitAddress = (inNewTab: boolean) => {
@@ -142,7 +144,7 @@ export function BrowserView({ buffer, paneId, isActive }: BrowserViewProps) {
               variant="ghost"
               iconOnly
               tooltip="Back"
-              commandId="browser.back"
+              shortcut={backShortcut}
               disabled={isBlank || canGoBack === false}
               onClick={() => browserTabManager.perform(buffer.id, "back")}
             >
@@ -152,7 +154,7 @@ export function BrowserView({ buffer, paneId, isActive }: BrowserViewProps) {
               variant="ghost"
               iconOnly
               tooltip="Forward"
-              commandId="browser.forward"
+              shortcut={forwardShortcut}
               disabled={isBlank || canGoForward === false}
               onClick={() => browserTabManager.perform(buffer.id, "forward")}
             >
@@ -162,7 +164,7 @@ export function BrowserView({ buffer, paneId, isActive }: BrowserViewProps) {
               variant="ghost"
               iconOnly
               tooltip={isLoading ? "Stop" : "Reload"}
-              commandId={isLoading ? undefined : "browser.reload"}
+              shortcut={reloadShortcut}
               disabled={isBlank}
               onClick={() => browserTabManager.perform(buffer.id, isLoading ? "stop" : "reload")}
             >

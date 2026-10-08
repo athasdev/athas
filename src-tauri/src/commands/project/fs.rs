@@ -1,5 +1,6 @@
 use super::path_guard::{require_path_under_home, require_symlink_container_under_home};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use std::{fs, path::Path, time::Instant};
 #[cfg(target_os = "macos")]
 use tauri::Manager;
@@ -120,20 +121,57 @@ pub async fn write_local_file(path: String, content: String) -> Result<(), Strin
    .map_err(|error| format!("File write failed: {error}"))?
 }
 
+/// The text a checked write expects on disk, sent as its UTF-8 length and SHA-256 instead of a
+/// second full copy of the file.
+#[derive(Debug, Clone, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct ExpectedFileDigest {
+   pub byte_length: u32,
+   pub sha256: String,
+}
+
+fn text_matches_digest(text: &str, expected: &ExpectedFileDigest) -> bool {
+   text.len() == expected.byte_length as usize
+      && format!("{:x}", Sha256::digest(text.as_bytes())) == expected.sha256
+}
+
+/// Mirrors `matches_expected`: a file that only adds a UTF-8 BOM still matches.
+fn matches_expected_digest(current: Option<&str>, expected: Option<&ExpectedFileDigest>) -> bool {
+   match (current, expected) {
+      (Some(current), Some(expected)) => {
+         text_matches_digest(current, expected)
+            || current
+               .strip_prefix('\u{feff}')
+               .is_some_and(|text| text_matches_digest(text, expected))
+      }
+      (None, None) => true,
+      _ => false,
+   }
+}
+
 #[command]
 #[specta::specta]
 pub async fn write_local_file_checked(
    path: String,
-   expected_content: Option<String>,
+   expected: Option<ExpectedFileDigest>,
    content: String,
 ) -> Result<(), String> {
    tauri::async_runtime::spawn_blocking(move || {
       let resolved = require_path_under_home(&path)?;
-      athas_project::file_mutations::replace_text_if_unchanged(
+      let expected_length = expected
+         .as_ref()
+         .map_or(0, |digest| digest.byte_length as u64);
+      athas_project::file_mutations::mutate_text(
          &resolved,
-         expected_content.as_deref(),
-         &content,
+         Some(expected_length.max(content.len() as u64) + 3),
+         |current| {
+            if !matches_expected_digest(current, expected.as_ref()) {
+               return Err(athas_project::file_mutations::FILE_CHANGED.into());
+            }
+            Ok(Some(content))
+         },
       )
+      .map(|_| ())
    })
    .await
    .map_err(|error| format!("Checked file write failed: {error}"))?
@@ -252,14 +290,20 @@ pub struct SymlinkInfo {
 
 #[command]
 #[specta::specta]
-pub fn get_symlink_info(
+pub async fn get_symlink_info(
    path: String,
    workspace_root: Option<String>,
 ) -> Result<SymlinkInfo, String> {
+   tauri::async_runtime::spawn_blocking(move || symlink_info(&path, workspace_root))
+      .await
+      .map_err(|error| format!("Symlink info task failed: {error}"))?
+}
+
+fn symlink_info(path: &str, workspace_root: Option<String>) -> Result<SymlinkInfo, String> {
    // Require the symlink container itself to live under $HOME. We intentionally
    // inspect symlink_metadata of the raw path (not the canonical target) so the
    // caller can still discover symlinks that point outside the scope.
-   let file_path_buf = require_symlink_container_under_home(&path)?;
+   let file_path_buf = require_symlink_container_under_home(path)?;
    let file_path = file_path_buf.as_path();
 
    // Use symlink_metadata to get info without following the symlink
@@ -523,5 +567,43 @@ mod directory_size_tests {
          calculate_directory_size(&file),
          Err("Path is not a directory".to_string())
       );
+   }
+}
+
+#[cfg(test)]
+mod checked_write_tests {
+   use super::*;
+
+   fn digest(text: &str) -> ExpectedFileDigest {
+      ExpectedFileDigest {
+         byte_length: text.len() as u32,
+         sha256: format!("{:x}", Sha256::digest(text.as_bytes())),
+      }
+   }
+
+   #[test]
+   fn digest_is_standard_sha256() {
+      assert_eq!(
+         digest("abc").sha256,
+         "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+      );
+      assert_eq!(
+         digest(&"a".repeat(1_000_000)).sha256,
+         "cdc76e5c9914fb9281a1c7e284d73e67f1809a48a497200e046d39ccc7112cd0"
+      );
+   }
+
+   #[test]
+   fn digest_matches_the_same_text_with_or_without_a_bom() {
+      let expected = digest("before\r\n");
+      assert!(matches_expected_digest(Some("before\r\n"), Some(&expected)));
+      assert!(matches_expected_digest(
+         Some("\u{feff}before\r\n"),
+         Some(&expected)
+      ));
+      assert!(!matches_expected_digest(Some("before\n"), Some(&expected)));
+      assert!(!matches_expected_digest(None, Some(&expected)));
+      assert!(matches_expected_digest(None, None));
+      assert!(!matches_expected_digest(Some(""), None));
    }
 }

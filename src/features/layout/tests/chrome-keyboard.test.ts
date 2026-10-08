@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { getChromeNavigationIndex } from "@/features/layout/utils/chrome-keyboard";
+import { getChromeNavigationIndex } from "@/features/layout/services/chrome-keyboard";
 
 describe("chrome keyboard navigation", () => {
   it("moves horizontally and keeps focus inside the strip", () => {

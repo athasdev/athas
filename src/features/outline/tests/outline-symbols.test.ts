@@ -4,7 +4,7 @@ import {
   getOutlineSymbolNavigationDetail,
   getVisibleOutlineSymbols,
   normalizeOutlineSymbols,
-} from "../utils/outline-symbols";
+} from "../services/outline-symbols";
 
 describe("outline symbols", () => {
   it("keeps document order and derives nesting from ranges", () => {

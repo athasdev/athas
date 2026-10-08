@@ -2,18 +2,19 @@ import { lineNumbers } from "@codemirror/view";
 import { Compartment, EditorState, StateEffect, StateField } from "@codemirror/state";
 import { Decoration, EditorView } from "@codemirror/view";
 import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
-import { readFileContent } from "@/features/file-system/controllers/file-operations";
+import { readFileContent } from "@/features/file-system/api/file-operations";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
 import { FileCodeIcon, XIcon } from "@/ui/icons";
 import { SidebarListItem } from "@/ui/sidebar";
 import { useBufferStore } from "../../../stores/buffer.store";
-import { getLanguageIdFromPath } from "../../../utils/language-id";
+import { getLanguageIdFromPath } from "../../../services/language-id";
 import { loadCodeMirrorLanguage } from "../languages";
 import type { LspLocation } from "../navigation/code-lens";
 import { fromLspPosition } from "../navigation/lsp-document";
 import { groupReferenceLocations, type ReferenceEntry } from "../navigation/reference-groups";
 import { athasEditorTheme, athasSyntaxHighlighting } from "../theme";
+import { readBufferText } from "../../../services/buffer-text";
 
 interface ReferencesPeekViewProps {
   locations: readonly LspLocation[];
@@ -28,7 +29,8 @@ async function readPeekFile(filePath: string): Promise<string> {
   const buffer = useBufferStore
     .getState()
     .buffers.find((candidate) => candidate.type === "editor" && candidate.path === filePath);
-  if (buffer && "content" in buffer && typeof buffer.content === "string") return buffer.content;
+  if (buffer && "content" in buffer && typeof buffer.content === "string")
+    return readBufferText(buffer);
   return readFileContent(filePath);
 }
 

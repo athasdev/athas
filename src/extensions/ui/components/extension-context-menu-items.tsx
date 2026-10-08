@@ -7,7 +7,7 @@ import {
   XCircleIcon,
 } from "@/ui/icons";
 import type { MenuItem } from "@/ui/dropdown";
-import { hasSkillLocalOverride } from "@/features/ai/lib/skill-library";
+import { hasSkillLocalOverride } from "@/features/ai/services/skill-library";
 import type {
   AppearanceSelection,
   ExtensionCatalogActions,

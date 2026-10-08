@@ -42,7 +42,7 @@ export function registerAthasVimCommands(): Promise<void> {
     Vim.defineEx("redo", "red", (cm) => runHistory(cm, "redo"));
   }
 
-  exCommandsRegistration ??= import("@/features/vim/stores/vim-commands").then(
+  exCommandsRegistration ??= import("@/features/vim/services/vim-commands").then(
     ({ parseAndExecuteVimCommand, vimCommands }) => {
       for (const command of vimCommands) {
         for (const name of [command.name, ...(command.aliases ?? [])]) {

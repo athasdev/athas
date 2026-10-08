@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vite-plus/test";
 import { registerCommands } from "../commands/command-registry";
 import { defaultKeymaps } from "../defaults/default-keymaps";
-import { keymapRegistry } from "../utils/registry";
+import { keymapRegistry } from "../services/keymap-registry";
 
 function expectKeybinding(command: string, key: string, when?: string) {
   expect(defaultKeymaps).toContainEqual(
@@ -156,6 +156,16 @@ describe("default keymaps", () => {
     expectKeybinding("terminal.selectAll", "cmd+shift+a", "terminalFocus");
     expectKeybinding("terminal.copyLastCommandOutput", "cmd+shift+c", "terminalFocus");
     expectKeybinding("workbench.toggleActivePaneFullscreen", "cmd+k z");
+  });
+
+  it("binds Cmd+O to the folder dialog the File menu shows for it", () => {
+    expectKeybinding("file.openFolder", "cmd+o");
+    expect(defaultKeymaps.filter((keybinding) => keybinding.key === "cmd+o")).toHaveLength(1);
+  });
+
+  it("binds Open Project to a shortcut no other default or native accelerator uses", () => {
+    expectKeybinding("file.open", "cmd+alt+o");
+    expect(defaultKeymaps.filter((keybinding) => keybinding.key === "cmd+alt+o")).toHaveLength(1);
   });
 
   it("keeps Ctrl+Tab navigation in the frontend keymap", () => {

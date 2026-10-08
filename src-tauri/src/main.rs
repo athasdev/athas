@@ -211,6 +211,7 @@ pub(crate) fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
          git_stage_hunk,
          git_unstage_hunk,
          git_blame_file,
+         git_prewarm_blame,
          // GitHub commands
          store_github_token,
          github_token_status,

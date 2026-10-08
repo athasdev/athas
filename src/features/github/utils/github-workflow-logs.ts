@@ -34,7 +34,7 @@ export interface WorkflowLogLine {
   segments: WorkflowLogSegment[];
 }
 
-export interface WorkflowLogStepRange {
+interface WorkflowLogStepRange {
   start: number;
   end: number;
 }
@@ -65,7 +65,7 @@ const ANSI_COLORS: Record<number, WorkflowLogColor> = {
   97: null,
 };
 
-export function stripAnsi(value: string) {
+function stripAnsi(value: string) {
   if (!value.includes(ESCAPE)) return value;
   return value.replace(ANSI_SGR_PATTERN, "").replace(ANSI_OTHER_PATTERN, "");
 }

@@ -31,7 +31,7 @@ export interface EditorContextMenuHandlers {
   onToggleCase?: () => void;
 }
 
-export interface EditorContextMenuItemOptions extends EditorContextMenuHandlers {
+interface EditorContextMenuItemOptions extends EditorContextMenuHandlers {
   hasSelection: boolean;
 }
 

@@ -6,8 +6,8 @@ import { ROOT_PANE_ID } from "@/features/panes/constants/pane";
 import { usePaneStore } from "@/features/panes/stores/pane.store";
 import type { EditorContent } from "@/features/panes/types/pane-content.types";
 import { useTerminalTabsStore } from "@/features/terminal/stores/terminal-tabs.store";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 describe("workspace-scoped stores", () => {
   beforeEach(() => {
@@ -73,10 +73,6 @@ describe("workspace-scoped stores", () => {
       savedContent: "",
       isDirty: false,
       isVirtual: false,
-      isPinned: false,
-      isPreview: true,
-      isActive: true,
-      tokens: [],
     };
 
     workspaceRuntimeRegistry.activateWorkspace({ id: "workspace-a", name: "A", path: "/a" });
@@ -85,7 +81,6 @@ describe("workspace-scoped stores", () => {
     workspaceABuffers.setState((state) => ({
       ...state,
       buffers: [buffer],
-      activeBufferId: buffer.id,
     }));
     workspaceAPanes.getState().actions.addBufferToPane(ROOT_PANE_ID, buffer.id);
 

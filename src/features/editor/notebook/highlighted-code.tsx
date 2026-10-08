@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import {
   getCodeHighlightSegments,
   renderHighlightedCodeHtml,
-} from "@/features/editor/markdown/code-highlight";
+} from "@/features/editor/markdown/services/code-highlight";
 
 interface HighlightedCodeProps {
   code: string;

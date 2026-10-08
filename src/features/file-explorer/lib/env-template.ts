@@ -1,4 +1,4 @@
-export interface EnvTemplateTarget {
+interface EnvTemplateTarget {
   id: string;
   label: string;
   fileName: string;

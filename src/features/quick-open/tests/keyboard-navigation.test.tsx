@@ -6,10 +6,6 @@ import { useKeyboardNavigation } from "../hooks/use-keyboard-navigation";
 import { QuickOpenItemRow } from "../components/quick-open-item-row";
 import type { QuickOpenItem } from "../types/quick-open.types";
 
-vi.mock("@/features/keymaps/hooks/use-command-shortcut", () => ({
-  useCommandShortcut: () => undefined,
-}));
-
 const onSelect = vi.fn();
 const onClose = vi.fn();
 const onCycleSection = vi.fn();

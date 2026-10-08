@@ -9,7 +9,7 @@ import {
   getPrimaryFontFamily,
   normalizeConfiguredFontFamily,
   resolveAvailableFontFamily,
-} from "../lib/font-family-resolution";
+} from "../services/font-family-resolution";
 
 describe("font family resolution", () => {
   it("extracts the primary font family from a stack", () => {

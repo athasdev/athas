@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { importAgentSession } from "@/features/ai/lib/import-agent-session";
-import { openAgentHistoryChat } from "@/features/ai/lib/open-agent-history";
+import { openAgentHistoryChat } from "@/features/ai/services/open-agent-history";
 import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
 import type { Message } from "@/features/ai/types/ai-chat.types";
 
@@ -21,7 +21,7 @@ vi.mock("@/features/ai/stores/ai-chat.store", () => ({
   useAIChatStore: { getState: () => store },
 }));
 
-vi.mock("@/features/ai/lib/open-agent-history", () => ({
+vi.mock("@/features/ai/services/open-agent-history", () => ({
   openAgentHistoryChat: vi.fn(),
 }));
 

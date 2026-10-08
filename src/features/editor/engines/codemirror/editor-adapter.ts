@@ -2,7 +2,7 @@ import { addCursorAbove, addCursorBelow, selectAll, simplifySelection } from "@c
 import { selectNextOccurrence, selectSelectionMatches } from "@codemirror/search";
 import { EditorSelection, type SelectionRange } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
-import type { ActiveEditorAdapter, ActiveFindAdapter } from "../../extensions/api";
+import type { ActiveEditorAdapter, ActiveFindAdapter } from "../../services/editor-api";
 import { createCodeMirrorLineCommands } from "./editor-commands";
 import { fromEditorPosition, fromEditorRange } from "./position";
 import { openCodeMirrorSearch } from "./search";

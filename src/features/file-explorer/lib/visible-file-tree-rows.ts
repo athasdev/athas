@@ -10,7 +10,7 @@ export interface VisibleFileTreeRow {
   guideAncestors?: Array<VisibleFileTreeRow | null>;
 }
 
-export interface BuildVisibleFileTreeRowsOptions {
+interface BuildVisibleFileTreeRowsOptions {
   compactFolders?: boolean;
   hiddenRootPath?: string;
   sortOrder?: FileTreeSortOrder;
@@ -24,15 +24,15 @@ export interface FilterFileTreeForSearchResult {
   matchCount: number;
 }
 
-export interface FileTreeSearchHit {
+interface FileTreeSearchHit {
   path: string;
 }
 
-export interface FilterFileTreeForFffHitsOptions {
+interface FilterFileTreeForFffHitsOptions {
   rootPath?: string | null;
 }
 
-export interface FilterFileTreeEntriesOptions {
+interface FilterFileTreeEntriesOptions {
   isAlwaysHidden: (name: string) => boolean;
   isGitIgnored: (path: string, isDir: boolean) => boolean;
   isHiddenName: (name: string) => boolean;
@@ -178,15 +178,66 @@ function sortFileTreeEntriesForDisplay(
   return sorted;
 }
 
+/**
+ * The rows of one children array: each entry's row, the expanded state of every folder that
+ * decided it, and the nested segment of each expanded folder. Entries are immutable and tree
+ * updates copy only the changed path, so a segment stays valid while its children array is the
+ * same and the folders it consulted keep their expanded state.
+ */
+interface VisibleRowsSegment {
+  depth: number;
+  preserveOrder: boolean;
+  rows: VisibleFileTreeRow[];
+  /** Nested segment rendered after `rows[index]`, or null. */
+  nested: Array<VisibleRowsSegment | null>;
+  consultedPaths: string[];
+  consultedExpanded: boolean[];
+}
+
+/** Per-tree memo of visible row segments; one per mounted tree. */
+interface VisibleFileTreeRowsCache {
+  compactFolders: boolean;
+  sortOrder: FileTreeSortOrder;
+  segments: WeakMap<readonly FileEntry[], VisibleRowsSegment>;
+}
+
+export function createVisibleFileTreeRowsCache(): VisibleFileTreeRowsCache {
+  return { compactFolders: false, sortOrder: "folders-first", segments: new WeakMap() };
+}
+
+function isSegmentValid(segment: VisibleRowsSegment, expandedPaths: ReadonlySet<string>): boolean {
+  const { consultedPaths, consultedExpanded } = segment;
+  for (let index = 0; index < consultedPaths.length; index++) {
+    if (expandedPaths.has(consultedPaths[index]) !== consultedExpanded[index]) return false;
+  }
+  for (const nested of segment.nested) {
+    if (nested && !isSegmentValid(nested, expandedPaths)) return false;
+  }
+  return true;
+}
+
+function appendSegmentRows(segment: VisibleRowsSegment, rows: VisibleFileTreeRow[]) {
+  for (let index = 0; index < segment.rows.length; index++) {
+    rows.push(segment.rows[index]);
+    const nested = segment.nested[index];
+    if (nested) appendSegmentRows(nested, rows);
+  }
+}
+
 export function buildVisibleFileTreeRows(
   files: FileEntry[],
   expandedPaths: ReadonlySet<string>,
   options: BuildVisibleFileTreeRowsOptions = {},
+  cache: VisibleFileTreeRowsCache = createVisibleFileTreeRowsCache(),
 ): VisibleFileTreeRow[] {
-  const rows: VisibleFileTreeRow[] = [];
   const compactFolders = options.compactFolders === true;
   const hiddenRootPath = options.hiddenRootPath;
   const sortOrder = options.sortOrder ?? "folders-first";
+  if (cache.compactFolders !== compactFolders || cache.sortOrder !== sortOrder) {
+    cache.compactFolders = compactFolders;
+    cache.sortOrder = sortOrder;
+    cache.segments = new WeakMap();
+  }
   const rootItems =
     hiddenRootPath && files.length === 1 && files[0]?.path === hiddenRootPath && files[0]?.isDir
       ? (files[0].children ?? [])
@@ -194,47 +245,73 @@ export function buildVisibleFileTreeRows(
   const preserveWorkspaceRootOrder =
     rootItems === files && files.length > 1 && files.every((item) => item.isDir);
 
-  const walk = (
+  const buildSegment = (
     items: FileEntry[],
     depth: number,
-    guideAncestors: Array<VisibleFileTreeRow | null>,
-  ) => {
-    const displayItems =
-      depth === 0 && preserveWorkspaceRootOrder
-        ? items
-        : sortFileTreeEntriesForDisplay(items, sortOrder);
+    preserveOrder: boolean,
+  ): VisibleRowsSegment => {
+    const cached = cache.segments.get(items);
+    if (
+      cached &&
+      cached.depth === depth &&
+      cached.preserveOrder === preserveOrder &&
+      isSegmentValid(cached, expandedPaths)
+    ) {
+      return cached;
+    }
+
+    const displayItems = preserveOrder ? items : sortFileTreeEntriesForDisplay(items, sortOrder);
+    const segment: VisibleRowsSegment = {
+      depth,
+      preserveOrder,
+      rows: [],
+      nested: [],
+      consultedPaths: [],
+      consultedExpanded: [],
+    };
+    const isExpandedPath = (path: string) => {
+      const expanded = expandedPaths.has(path);
+      segment.consultedPaths.push(path);
+      segment.consultedExpanded.push(expanded);
+      return expanded;
+    };
 
     for (const item of displayItems) {
       let rowFile = item;
       const displayNameParts = [item.name];
+      let rowExpanded: boolean | null = null;
 
       if (compactFolders) {
-        while (expandedPaths.has(rowFile.path)) {
+        while ((rowExpanded = isExpandedPath(rowFile.path))) {
           const child = getCompactFolderChild(rowFile);
           if (!child) break;
 
           rowFile = child;
           displayNameParts.push(child.name);
+          rowExpanded = null;
         }
       }
 
-      const isExpanded = rowFile.isDir && expandedPaths.has(rowFile.path);
-      const row: VisibleFileTreeRow = {
+      const isExpanded = rowFile.isDir && (rowExpanded ?? isExpandedPath(rowFile.path));
+      segment.rows.push({
         file: rowFile,
         depth,
         isExpanded,
         displayName: displayNameParts.length > 1 ? displayNameParts.join("/") : undefined,
-        guideAncestors,
-      };
-      rows.push(row);
+      });
 
-      if (rowFile.isDir && isExpanded && rowFile.children) {
-        walk(rowFile.children, depth + 1, [...guideAncestors, row]);
-      }
+      const nested =
+        isExpanded && rowFile.children ? buildSegment(rowFile.children, depth + 1, false) : null;
+      segment.nested.push(nested);
     }
+
+    cache.segments.set(items, segment);
+    return segment;
   };
 
-  walk(rootItems, 0, []);
+  const root = buildSegment(rootItems, 0, preserveWorkspaceRootOrder);
+  const rows: VisibleFileTreeRow[] = [];
+  appendSegmentRows(root, rows);
   return rows;
 }
 
@@ -413,6 +490,53 @@ export function filterFileTreeForFffHits(
   };
 }
 
+interface VisibleFileTreeRowIndex {
+  get: (path: string) => number | undefined;
+}
+
+const rowIndexByPathCache = new WeakMap<readonly VisibleFileTreeRow[], Map<string, number>>();
+
+/**
+ * Looks rows up by path. The path map is built on the first lookup into a rows array and shared
+ * by every lookup into it, so building the rows does not pay for a map nobody reads.
+ */
+export function createVisibleFileTreeRowIndex(
+  rows: readonly VisibleFileTreeRow[],
+): VisibleFileTreeRowIndex {
+  return {
+    get: (path) => {
+      let indexByPath = rowIndexByPathCache.get(rows);
+      if (!indexByPath) {
+        indexByPath = new Map();
+        for (let index = 0; index < rows.length; index++) {
+          indexByPath.set(rows[index].file.path, index);
+        }
+        rowIndexByPathCache.set(rows, indexByPath);
+      }
+      return indexByPath.get(path);
+    },
+  };
+}
+
+const parentRowIndexesCache = new WeakMap<readonly VisibleFileTreeRow[], Int32Array>();
+
+/** For each row, the index of the nearest earlier row with a smaller depth, or -1. */
+function getParentRowIndexes(rows: readonly VisibleFileTreeRow[]): Int32Array {
+  const cached = parentRowIndexesCache.get(rows);
+  if (cached) return cached;
+
+  const parents = new Int32Array(rows.length);
+  const stack: number[] = [];
+  for (let index = 0; index < rows.length; index++) {
+    const depth = rows[index].depth;
+    while (stack.length > 0 && rows[stack[stack.length - 1]].depth >= depth) stack.pop();
+    parents[index] = stack.length > 0 ? stack[stack.length - 1] : -1;
+    stack.push(index);
+  }
+  parentRowIndexesCache.set(rows, parents);
+  return parents;
+}
+
 export function getGuideAncestorRows(
   rows: readonly VisibleFileTreeRow[],
   rowIndex: number,
@@ -427,14 +551,10 @@ export function getGuideAncestorRows(
   }
 
   const ancestors: Array<VisibleFileTreeRow | null> = Array.from({ length: row.depth }, () => null);
-  let remaining = row.depth;
-
-  for (let index = rowIndex - 1; index >= 0 && remaining > 0; index--) {
+  const parents = getParentRowIndexes(rows);
+  for (let index = parents[rowIndex]; index >= 0; index = parents[index]) {
     const candidate = rows[index];
-    if (candidate.depth < row.depth && ancestors[candidate.depth] === null) {
-      ancestors[candidate.depth] = candidate;
-      remaining--;
-    }
+    if (candidate.depth < row.depth) ancestors[candidate.depth] = candidate;
   }
 
   return ancestors;

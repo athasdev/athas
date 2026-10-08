@@ -21,10 +21,11 @@ vi.mock("@/features/file-system/stores/file-system.store", () => ({
   useFileSystemStore: (select: (state: unknown) => unknown) =>
     select({ ...mocks, filesVersion: 0 }),
 }));
-vi.mock("@tauri-apps/plugin-dialog", () => ({ open: mocks.open }));
-vi.mock("@/features/keymaps/hooks/use-command-shortcut", () => ({
-  useCommandShortcut: () => undefined,
+vi.mock("@/features/workspace/stores/project.store", () => ({
+  useProjectStore: (select: (state: unknown) => unknown) =>
+    select({ rootFolderPath: mocks.rootFolderPath ?? undefined }),
 }));
+vi.mock("@tauri-apps/plugin-dialog", () => ({ open: mocks.open }));
 
 const saved: SavedConnection = {
   id: "local",

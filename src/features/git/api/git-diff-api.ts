@@ -2,7 +2,7 @@ import { commands } from "@/bindings/commands";
 import type { GitDiff, GitDiffStat } from "../types/git.types";
 import { registerGitCacheInvalidator } from "../runtime/git-cache-registry";
 import { runGitRead } from "../runtime/git-read-coordinator";
-import { gitDiffCache } from "../utils/git-diff-cache";
+import { gitDiffCache } from "../services/git-diff-cache";
 import {
   isNotGitRepositoryError,
   resolveRepositoryForFile,
@@ -115,7 +115,7 @@ export function invalidateGitDiffData(repoPath?: string, filePath?: string): voi
   }
 }
 
-registerGitCacheInvalidator(({ repoPath, filePath }) => {
+registerGitCacheInvalidator("git-diff", ({ repoPath, filePath }) => {
   invalidateGitDiffData(repoPath, filePath);
 });
 

@@ -1,10 +1,10 @@
 import { useEffect, useMemo } from "react";
-import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
+import { useWorkspaceTabsStore } from "@/features/workspace/stores/workspace-tabs.store";
 import { useWorkspaceManagementStore } from "../stores/workspace-management.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 export function useWorkspaceSelection() {
-  const activeRoot = useFileSystemStore((state) => state.rootFolderPath);
+  const activeRoot = useProjectStore((state) => state.rootFolderPath);
   const tabs = useWorkspaceTabsStore.use.projectTabs();
   const roots = useWorkspaceManagementStore.use.roots();
   const selectedRoot = useWorkspaceManagementStore.use.selectedRoot();

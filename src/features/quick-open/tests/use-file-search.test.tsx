@@ -2,7 +2,7 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import type { FffSearchHit } from "@/features/file-search/lib/file-search-api";
+import type { FffSearchHit } from "@/features/file-search/api/file-search-api";
 import type { CategorizedFiles, FileItem } from "@/features/file-search/types/file-search.types";
 import type { RecentFile } from "@/features/file-system/types/recent-files.types";
 
@@ -20,6 +20,9 @@ const state = vi.hoisted(() => ({
 
 vi.mock("@/features/editor/stores/buffer.store", () => ({
   useBufferStore: (selector: (value: typeof state) => unknown) => selector(state),
+}));
+vi.mock("@/features/panes/hooks/use-pane-buffer-state", () => ({
+  useActiveBufferId: () => state.activeBufferId,
 }));
 vi.mock("@/features/file-system/stores/recent-files.store", () => {
   const actions = { getRecentFilesOrderedByFrecency: () => state.recentFiles };

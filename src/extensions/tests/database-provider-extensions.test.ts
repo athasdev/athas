@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { PROVIDER_REGISTRY } from "@/features/database/providers/provider-registry";
+import { PROVIDER_REGISTRY } from "@/features/database/services/provider-registry";
 import type { DatabaseProviderId } from "../types/extension-manifest";
 import { getDatabaseProviderContribution } from "@/extensions/database/database-provider-extensions";
 

@@ -12,15 +12,12 @@ vi.mock("../services/share-api", () => ({
   updateShare: vi.fn(),
 }));
 vi.mock("@/utils/clipboard", () => ({ writeClipboardText: api.copy }));
-vi.mock("@/features/layout/contexts/toast-context", () => ({
+vi.mock("@/utils/toast", () => ({
   useToast: () => ({ showToast: api.toast }),
 }));
 vi.mock("@tauri-apps/plugin-opener", () => ({ openUrl: vi.fn() }));
 vi.mock("@/config/services", () => ({
   getServiceUrls: () => ({ websiteBaseUrl: "https://athas.dev" }),
-}));
-vi.mock("@/features/keymaps/hooks/use-command-shortcut", () => ({
-  useCommandShortcut: () => undefined,
 }));
 vi.mock("../components/share-access-dialog", () => ({ ShareAccessDialog: () => null }));
 const options = {

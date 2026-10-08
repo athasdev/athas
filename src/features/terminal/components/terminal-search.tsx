@@ -1,4 +1,4 @@
-import { isComposingKeyboardEvent } from "@/features/keymaps/utils/is-composing-keyboard-event";
+import { isComposingKeyboardEvent } from "@/utils/keyboard/is-composing-keyboard-event";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { SEARCH_TOGGLE_ICONS, SearchPopover } from "@/ui/search";

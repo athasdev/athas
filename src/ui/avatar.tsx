@@ -29,7 +29,7 @@ interface AvatarProps extends VariantProps<typeof avatarVariants> {
   style?: never;
 }
 
-export function getAvatarInitials(name: string, letters: 1 | 2 = 2) {
+function getAvatarInitials(name: string, letters: 1 | 2 = 2) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return "?";
 

@@ -1,11 +1,12 @@
-import { writeSidebarResourceDragData } from "@/features/sidebar/utils/sidebar-resource-drag";
+import { writeSidebarResourceDragData } from "@/features/sidebar/services/sidebar-resource-drag";
 import { useDeferredValue, useMemo } from "react";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { useQueryClient } from "@tanstack/react-query";
+import { openExternalUrl } from "@/utils/external-url";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { GitHubSidebarRow } from "../../components/github-sidebar-row";
 import { openGitHubContentInNewWindow } from "../../utils/open-in-new-window";
 import { useGitHubStore } from "../../stores/github.store";
-import { getSidebarTime } from "../../utils/github-viewer-utils";
+import { getSidebarTime } from "../../services/github-viewer-utils";
 import {
   StreamEmpty,
   StreamGroup,
@@ -18,7 +19,7 @@ import { ContextMenuPopup, createContextMenuGroups } from "@/ui/context-menu";
 import { useDropdownMenu, type MenuItem } from "@/ui/dropdown";
 import { writeClipboardText } from "@/utils/clipboard";
 import { useDeliveryList } from "../hooks/use-delivery-list";
-import { loadDeliveryDetail } from "../services/github-delivery-service";
+import { deliveryDetailQuery } from "../services/github-delivery-service";
 import type { DeliveryKind, DeliveryResource } from "../types/github-delivery.types";
 import {
   deploymentState,
@@ -27,31 +28,31 @@ import {
   matchesDelivery,
   releaseTitle,
   safeDeliveryUrl,
-} from "../utils/github-delivery";
+} from "../services/github-delivery";
+import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 export default function GitHubDeliveryList({
   kind,
   repoPath,
   filter,
   searchQuery,
-  refreshNonce,
 }: {
   kind: DeliveryKind;
   repoPath: string;
   filter: string;
   searchQuery: string;
-  refreshNonce: number;
 }) {
   const authenticated = useGitHubStore.use.isAuthenticated();
+  const queryClient = useQueryClient();
   const { items, loading, error, hasMore, refresh, loadMore } = useDeliveryList(
     kind,
     repoPath,
     authenticated,
-    refreshNonce,
   );
   const openContent = useBufferStore.use.actions().openContent;
+  const activeBufferId = useActiveBufferId();
   const activeId = useBufferStore((state) => {
-    const buffer = state.buffers.find((item) => item.id === state.activeBufferId);
+    const buffer = state.buffers.find((item) => item.id === activeBufferId);
     return buffer?.type === "githubDelivery" && buffer.kind === kind && buffer.repoPath === repoPath
       ? buffer.resourceId
       : undefined;
@@ -99,7 +100,7 @@ export default function GitHubDeliveryList({
                 label: isRelease(selected) ? "Open on GitHub" : "Open Environment",
                 icon: <OpenExternalIcon />,
                 onClick: () => {
-                  void openUrl(selectedUrl);
+                  void openExternalUrl(selectedUrl);
                 },
               },
             ]
@@ -179,7 +180,9 @@ export default function GitHubDeliveryList({
                     menu.open(event, item);
                   }}
                   onPrefetch={() => {
-                    void loadDeliveryDetail(kind, repoPath, item.id).catch(() => undefined);
+                    void queryClient
+                      .query(deliveryDetailQuery(kind, repoPath, item.id))
+                      .catch(() => undefined);
                   }}
                   leading={release ? <TagIcon /> : <RocketIcon />}
                   trailing={getSidebarTime(

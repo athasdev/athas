@@ -2,7 +2,7 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { useDetachedWindow } from "../detached/use-detached-window";
+import { useDetachedWindow } from "../detached/hooks/use-detached-window";
 
 const mocks = vi.hoisted(() => ({
   close: vi.fn(),
@@ -25,14 +25,14 @@ vi.mock("@/features/settings/stores/settings.store", () => ({
 vi.mock("@/extensions/themes/theme-initializer", () => ({
   initializeThemeSystem: mocks.initialize,
 }));
-vi.mock("@/features/window/stores/auth.store", () => ({
+vi.mock("@/features/auth/stores/auth.store", () => ({
   useAuthStore: { getState: () => ({ actions: { initialize: mocks.initialize } }) },
 }));
-vi.mock("@/features/window/stores/ui-state.store", () => ({
+vi.mock("@/features/layout/stores/ui-state.store", () => ({
   useUIState: { getState: () => ({}), setState: vi.fn() },
 }));
-vi.mock("@/features/window/utils/create-app-window", () => ({ createAppWindow: vi.fn() }));
-vi.mock("@/features/terminal/utils/frontend-terminal-session", () => ({
+vi.mock("@/features/window/services/create-app-window", () => ({ createAppWindow: vi.fn() }));
+vi.mock("@/features/terminal/services/frontend-terminal-session", () => ({
   initializeFrontendTerminalSession: mocks.initialize,
 }));
 vi.mock("@/utils/frontend-trace", () => ({ frontendTrace: vi.fn() }));

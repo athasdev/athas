@@ -9,36 +9,42 @@ const mocks = vi.hoisted(() => ({
   setActiveFindAdapter: vi.fn(),
   clearActiveFindAdapter: vi.fn(),
 }));
+const preview = vi.hoisted(() => ({ blocks: ["<ul><li><strong>Item</strong></li></ul>"] }));
 
-vi.mock("@/features/editor/extensions/api", () => ({ editorAPI: mocks }));
-vi.mock("@/features/editor/stores/buffer.store", () => ({
-  useBufferStore: (selector: (state: unknown) => unknown) =>
-    selector({
-      activeBufferId: "markdown-buffer",
-      buffers: [
-        {
-          id: "markdown-buffer",
-          type: "editor",
-          path: "/workspace/AGENTS.md",
-          name: "AGENTS.md",
-          content: "- **Item**",
-        },
-      ],
+vi.mock("@/features/editor/services/editor-api", () => ({ editorAPI: mocks }));
+vi.mock("@/features/editor/stores/buffer.store", () => {
+  const state = {
+    activeBufferId: "markdown-buffer",
+    buffers: [
+      {
+        id: "markdown-buffer",
+        type: "editor",
+        path: "/workspace/AGENTS.md",
+        name: "AGENTS.md",
+        content: "- **Item**",
+      },
+    ],
+  };
+  return {
+    useBufferStore: Object.assign((selector: (value: unknown) => unknown) => selector(state), {
+      getState: () => state,
     }),
-}));
-vi.mock("@/features/editor/stores/settings.store", () => ({
-  useEditorSettingsStore: { use: { fontSize: () => 14 } },
-}));
+  };
+});
 vi.mock("@/features/settings/stores/settings.store", () => ({
   useSettingsStore: (selector: (state: unknown) => unknown) =>
-    selector({ settings: { uiFontFamily: "sans-serif" } }),
+    selector({ settings: { fontSize: 14, uiFontFamily: "sans-serif" } }),
 }));
 vi.mock("@/features/file-system/stores/file-system.store", () => ({
   useFileSystemStore: (selector: (state: unknown) => unknown) =>
-    selector({ rootFolderPath: "/workspace", handleFileSelect: vi.fn() }),
+    selector({ handleFileSelect: vi.fn() }),
 }));
-vi.mock("../markdown/use-highlighted-markdown", () => ({
-  useHighlightedMarkdown: () => "<ul><li><strong>Item</strong></li></ul>",
+vi.mock("@/features/workspace/stores/project.store", () => ({
+  useProjectStore: (selector: (state: unknown) => unknown) =>
+    selector({ rootFolderPath: "/workspace" }),
+}));
+vi.mock("../markdown/hooks/use-highlighted-markdown", () => ({
+  useHighlightedMarkdown: () => preview.blocks,
 }));
 
 let host: HTMLDivElement;
@@ -49,6 +55,7 @@ beforeEach(() => {
   Element.prototype.scrollIntoView = vi.fn();
   mocks.setActiveFindAdapter.mockClear();
   mocks.clearActiveFindAdapter.mockClear();
+  preview.blocks = ["<ul><li><strong>Item</strong></li></ul>"];
   host = document.createElement("div");
   document.body.append(host);
   root = createRoot(host);
@@ -122,5 +129,31 @@ describe("Markdown preview interactions", () => {
 
     expect(host.querySelectorAll("[data-markdown-search-match]")).toHaveLength(1);
     expect(host.textContent).toContain("1 of 1");
+  });
+
+  it("updates only the changed blocks and finds matches across all of them", async () => {
+    preview.blocks = ["<p>Item one</p>", "\n<p>two</p>"];
+    await act(async () => root.render(<MarkdownPreview bufferId="markdown-buffer" />));
+    const first = host.querySelector(".markdown-content p");
+
+    preview.blocks = ["<p>Item one</p>", "\n<p>Item two</p>"];
+    await act(async () => root.render(<MarkdownPreview bufferId="markdown-buffer" />));
+    const paragraphs = host.querySelectorAll(".markdown-content p");
+    expect(paragraphs[0]).toBe(first);
+    expect(paragraphs[1].textContent).toBe("Item two");
+
+    const adapter = mocks.setActiveFindAdapter.mock.lastCall?.[0];
+    await act(async () => adapter.openFind(false));
+    const input = host.querySelector<HTMLInputElement>(
+      'input[placeholder="Find in Markdown preview"]',
+    )!;
+    await act(async () => {
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
+      setter.call(input, "Item");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+
+    expect(host.querySelectorAll("[data-markdown-search-match]")).toHaveLength(2);
+    expect(host.textContent).toContain("1 of 2");
   });
 });

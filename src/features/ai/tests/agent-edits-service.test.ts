@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { computeAgentHunks } from "@/features/ai/lib/agent-edit-hunks";
+import { emitAppEvent } from "@/utils/app-events";
 import {
   keepAgentHunk,
   keepAllAgentEdits,
@@ -46,7 +47,7 @@ vi.mock("@/features/editor/stores/buffer.store", () => ({
     }),
   },
 }));
-vi.mock("@/features/editor/utils/buffer-index", () => ({
+vi.mock("@/features/editor/stores/buffer-index", () => ({
   getBufferByPath: (buffers: Array<{ path: string }>, path: string) =>
     buffers.find((buffer) => buffer.path === path) ?? null,
 }));
@@ -70,7 +71,7 @@ vi.mock("@/features/file-system/stores/file-watcher.store", () => ({
   },
 }));
 vi.mock("@/features/git/events/git-events", () => ({ emitGitChanged: vi.fn() }));
-vi.mock("@/features/layout/contexts/toast-context", () => ({ showToast: mocks.showToast }));
+vi.mock("@/utils/toast", () => ({ showToast: mocks.showToast }));
 vi.mock("@/ui/dialog", () => ({ showConfirmDialog: mocks.showConfirmDialog }));
 
 const CHAT = "chat-1";
@@ -85,7 +86,7 @@ function agentWrites(previousContent: string | null, content: string, path = PAT
 
 /** The file watcher's event for a change an agent write made. */
 function fileChanged(agentWriteId: number, path = PATH) {
-  window.dispatchEvent(new CustomEvent("file-external-change", { detail: { path, agentWriteId } }));
+  emitAppEvent("file:external-change", { path, agentWriteId });
 }
 
 function entry(path = PATH, chat = CHAT) {
@@ -426,7 +427,7 @@ describe("agent edits service", () => {
     vi.useFakeTimers();
     agentWrites(lines("a", "b", "c"), lines("A", "b", "c"));
     mocks.disk.set(PATH, lines("A", "b", "c", "saved"));
-    window.dispatchEvent(new CustomEvent("file-external-change", { detail: { path: PATH } }));
+    emitAppEvent("file:external-change", { path: PATH });
     await vi.runAllTimersAsync();
 
     expect(entry()?.baseline).toBe(lines("a", "b", "c", "saved"));
@@ -457,7 +458,7 @@ describe("agent edits service", () => {
     // The agent writes where it edited before, and the watcher reports it before the chat hears.
     mocks.disk.set(PATH, lines("AA", "b"));
     fileChanged(102);
-    window.dispatchEvent(new CustomEvent("file-external-change", { detail: { path: PATH } }));
+    emitAppEvent("file:external-change", { path: PATH });
     await vi.advanceTimersByTimeAsync(500);
     expect(entry()?.current).toBe(lines("A", "b"));
 

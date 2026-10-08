@@ -1,5 +1,5 @@
 import { openSearchPanel, type SearchQuery } from "@codemirror/search";
-import { type EditorState, StateEffect, StateField } from "@codemirror/state";
+import { type ChangeDesc, type EditorState, StateEffect, StateField } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
 
 export const setSearchReplaceOpen = StateEffect.define<boolean>();
@@ -19,7 +19,7 @@ export function isSearchReplaceOpen(state: EditorState): boolean {
   return !state.readOnly && (state.field(searchReplaceOpenField, false) ?? false);
 }
 
-export const SEARCH_REPLACE_FIELD_SELECTOR = ".cm-search input[name=replace]";
+const SEARCH_REPLACE_FIELD_SELECTOR = ".cm-search input[name=replace]";
 
 /**
  * Opens the search panel, with the replace row shown and focused when `replace` is set and the
@@ -49,25 +49,78 @@ export interface SearchMatchSummary {
   capped: boolean;
 }
 
-export const SEARCH_MATCH_LIMIT = 9999;
+const SEARCH_MATCH_LIMIT = 9999;
+
+/** Every match of a query, in document order, so the current one can be found without a rescan. */
+export interface SearchMatchList {
+  starts: number[];
+  ends: number[];
+  capped: boolean;
+}
+
+const NO_MATCHES: SearchMatchList = { starts: [], ends: [], capped: false };
+
+export function collectSearchMatches(
+  state: EditorState,
+  query: SearchQuery,
+  limit = SEARCH_MATCH_LIMIT,
+): SearchMatchList {
+  if (!query.search || !query.valid) return NO_MATCHES;
+
+  const starts: number[] = [];
+  const ends: number[] = [];
+  const cursor = query.getCursor(state);
+  for (let next = cursor.next(); !next.done; next = cursor.next()) {
+    starts.push(next.value.from);
+    ends.push(next.value.to);
+    if (starts.length >= limit) return { starts, ends, capped: !cursor.next().done };
+  }
+  return { starts, ends, capped: false };
+}
+
+/** Moves the matches through an edit, until they can be counted again. */
+export function mapSearchMatches(matches: SearchMatchList, changes: ChangeDesc): SearchMatchList {
+  if (matches.starts.length === 0) return matches;
+  const starts: number[] = [];
+  const ends: number[] = [];
+  for (let index = 0; index < matches.starts.length; index++) {
+    const from = changes.mapPos(matches.starts[index], 1);
+    const to = changes.mapPos(matches.ends[index], -1);
+    if (to < from) continue;
+    starts.push(from);
+    ends.push(to);
+  }
+  return { starts, ends, capped: matches.capped };
+}
+
+export function summarizeMatchList(
+  matches: SearchMatchList,
+  selection: { from: number; to: number },
+): SearchMatchSummary {
+  const { starts, ends } = matches;
+  let low = 0;
+  let high = starts.length;
+  while (low < high) {
+    const middle = (low + high) >>> 1;
+    if (starts[middle] < selection.from) low = middle + 1;
+    else high = middle;
+  }
+  let current = 0;
+  for (let index = low; index < starts.length && starts[index] === selection.from; index++) {
+    if (ends[index] === selection.to) {
+      current = index + 1;
+      break;
+    }
+  }
+  return { current, total: starts.length, capped: matches.capped };
+}
 
 export function summarizeSearchMatches(
   state: EditorState,
   query: SearchQuery,
   limit = SEARCH_MATCH_LIMIT,
 ): SearchMatchSummary {
-  if (!query.search || !query.valid) return { current: 0, total: 0, capped: false };
-
-  const { from, to } = state.selection.main;
-  const cursor = query.getCursor(state);
-  let total = 0;
-  let current = 0;
-  for (let next = cursor.next(); !next.done; next = cursor.next()) {
-    total++;
-    if (next.value.from === from && next.value.to === to) current = total;
-    if (total >= limit) return { current, total, capped: !cursor.next().done };
-  }
-  return { current, total, capped: false };
+  return summarizeMatchList(collectSearchMatches(state, query, limit), state.selection.main);
 }
 
 export function formatSearchMatchLabel(summary: SearchMatchSummary): string {

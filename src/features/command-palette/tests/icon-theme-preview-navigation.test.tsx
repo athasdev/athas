@@ -4,9 +4,6 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { IconThemeSelectorContent } from "../components/icon-theme-selector";
 
-vi.mock("@/features/keymaps/hooks/use-command-shortcut", () => ({
-  useCommandShortcut: () => undefined,
-}));
 vi.mock("@/extensions/appearance/appearance-preview", () => ({
   getIconThemeAppearancePreview: () => undefined,
 }));

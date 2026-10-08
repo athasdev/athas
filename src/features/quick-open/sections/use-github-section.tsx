@@ -1,76 +1,54 @@
-import { useEffect, useMemo, useState } from "react";
-import { commands } from "@/bindings/commands";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo } from "react";
 import { SearchMatchHighlight } from "@/components/search-match-highlight";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
 import { useGitHubStore } from "@/features/github/stores/github.store";
-import type { IssueListItem } from "@/features/github/types/github.types";
-import { getGitHubAvatarUrl } from "@/features/github/utils/github-avatar-url";
-import {
-  GITHUB_ISSUE_LIST_TTL_MS,
-  githubIssueListCache,
-} from "@/features/github/utils/github-data-cache";
+import type { IssueFilter } from "@/features/github/types/github.types";
+import { getGitHubAvatarUrl } from "@/features/github/services/github-avatar-url";
+import { issueListQuery, pullRequestListQuery } from "@/features/github/services/github-queries";
 import { CommandEmpty, CommandItemBadge } from "@/ui/command";
 import { CircleDotIcon, GitPullRequestIcon } from "@/ui/icons";
 import { matchesSearchQuery } from "@/utils/search-match";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import type {
   QuickOpenItem,
   QuickOpenSectionInput,
   QuickOpenSectionResult,
 } from "../types/quick-open.types";
 
-const ISSUE_FILTER = "open";
+const ISSUE_FILTER: IssueFilter = "open";
 
-/** Open pull requests and issues of the repository, from the same caches as the GitHub views. */
+/** Open pull requests and issues of the repository, from the same queries as the GitHub views. */
 export function useGitHubSection({
   query,
   isActive,
   close,
 }: QuickOpenSectionInput): QuickOpenSectionResult {
   const activeRepoPath = useRepositoryStore.use.activeRepoPath();
-  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const repoPath = activeRepoPath ?? rootFolderPath ?? null;
   const isAuthenticated = useGitHubStore.use.isAuthenticated();
   const isCheckingAuth = useGitHubStore.use.isCheckingAuth();
-  const prs = useGitHubStore.use.prs();
-  const prRepoPath = useGitHubStore.use.activeRepoPath();
-  const isLoadingPRs = useGitHubStore.use.isLoading();
-  const issueKey = repoPath ? `${repoPath}::${ISSUE_FILTER}` : null;
-  const [issues, setIssues] = useState<{ key: string | null; items: IssueListItem[] }>({
-    key: null,
-    items: [],
+  const currentFilter = useGitHubStore.use.currentFilter();
+  const { markAuthFailed } = useGitHubStore.use.actions();
+  const isEnabled = isActive && isAuthenticated && !!repoPath;
+  const pullRequestsQuery = useQuery({
+    ...pullRequestListQuery(repoPath, currentFilter, markAuthFailed),
+    enabled: isEnabled,
   });
+  const issuesQuery = useQuery({ ...issueListQuery(repoPath, ISSUE_FILTER), enabled: isEnabled });
+  const prs = pullRequestsQuery.data;
+  const issues = issuesQuery.data;
 
   useEffect(() => {
     if (!isActive) return;
     void useGitHubStore.getState().actions.checkAuth();
   }, [isActive]);
 
-  useEffect(() => {
-    if (!isActive || !isAuthenticated || !repoPath || !issueKey) return;
-    let cancelled = false;
-    void useGitHubStore.getState().actions.fetchPRs(repoPath);
-    const cached = githubIssueListCache.getSnapshot(issueKey)?.value;
-    if (cached) setIssues({ key: issueKey, items: cached });
-    void githubIssueListCache
-      .load(issueKey, () => commands.githubListIssues(repoPath, ISSUE_FILTER), {
-        ttlMs: GITHUB_ISSUE_LIST_TTL_MS,
-      })
-      .then((items) => {
-        if (!cancelled) setIssues({ key: issueKey, items });
-      })
-      .catch(() => {
-        if (!cancelled) setIssues({ key: issueKey, items: [] });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [isActive, isAuthenticated, issueKey, repoPath]);
-
   const items = useMemo((): QuickOpenItem[] => {
     if (!repoPath) return [];
-    const pullRequests = (prRepoPath === repoPath ? prs : [])
+    const pullRequests = (prs ?? [])
       .filter((pr) =>
         matchesSearchQuery(query, [pr.title, `#${pr.number}`, pr.author.login, pr.headRef]),
       )
@@ -97,7 +75,7 @@ export function useGitHubSection({
           });
         },
       }));
-    const issueItems = (issues.key === issueKey ? issues.items : [])
+    const issueItems = (issues ?? [])
       .filter((issue) =>
         matchesSearchQuery(query, [
           issue.title,
@@ -125,10 +103,11 @@ export function useGitHubSection({
         },
       }));
     return [...pullRequests, ...issueItems];
-  }, [close, issueKey, issues, prRepoPath, prs, query, repoPath]);
+  }, [close, issues, prs, query, repoPath]);
 
   const isLoading =
-    isActive && (isCheckingAuth || (isAuthenticated && (isLoadingPRs || issues.key !== issueKey)));
+    isActive &&
+    (isCheckingAuth || (isEnabled && (pullRequestsQuery.isPending || issuesQuery.isPending)));
 
   return {
     items,

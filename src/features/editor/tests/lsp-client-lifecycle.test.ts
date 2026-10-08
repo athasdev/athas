@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { commands } from "@/bindings/commands";
-import { LspClient } from "../lsp/lsp-client";
+import { LspClient } from "../lsp/services/lsp-client";
 import { useLspStore } from "../lsp/stores/lsp.store";
 
 const registry = vi.hoisted(() => ({

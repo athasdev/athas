@@ -1,6 +1,5 @@
 import { useRender } from "@base-ui/react/use-render";
 import { cva, type VariantProps } from "class-variance-authority";
-import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 import { useControlSize } from "@/ui/control-size";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
@@ -15,7 +14,7 @@ export const buttonVariants = cva(
         default: "bg-accent text-foreground hover:bg-selected data-[active=true]:bg-selected",
         /** Solid primary button: the one call to action on a surface. */
         accent:
-          "bg-primary text-primary-foreground hover:bg-primary-hover data-[active=true]:bg-primary-hover",
+          "bg-primary text-primary-foreground hover:bg-primary-hover data-[active=true]:bg-primary-hover **:data-[slot=kbd]:bg-primary-foreground/20 **:data-[slot=kbd]:text-primary-foreground",
         /** A field-shaped trigger: selects and pickers that sit among inputs. */
         outline:
           "border border-border bg-surface text-foreground hover:border-border-strong data-[active=true]:border-primary data-popup-open:border-primary",
@@ -96,7 +95,6 @@ export type ButtonProps = Omit<
     iconOnly?: boolean;
     tooltip?: string;
     shortcut?: string;
-    commandId?: string;
   };
 
 export function Button({
@@ -113,12 +111,9 @@ export function Button({
   ref,
   tooltip,
   shortcut,
-  commandId,
   "aria-label": ariaLabel,
   ...props
 }: ButtonProps) {
-  const commandShortcut = useCommandShortcut(commandId);
-  const effectiveShortcut = commandId ? commandShortcut : shortcut;
   const contextSize = useControlSize();
   const size = sizeProp ?? contextSize ?? "md";
 
@@ -145,7 +140,7 @@ export function Button({
   }
 
   return (
-    <Tooltip content={tooltip} shortcut={effectiveShortcut} width={width}>
+    <Tooltip content={tooltip} shortcut={shortcut} width={width}>
       {element}
     </Tooltip>
   );

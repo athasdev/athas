@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { openDeploymentLog } from "../services/open-deployment-log";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openExternalUrl } from "@/utils/external-url";
 import { toast } from "sonner";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
@@ -8,9 +8,13 @@ import { GitBranchIcon, GitCommitIcon, RocketIcon, OpenExternalIcon } from "@/ui
 import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemTitle } from "@/ui/item";
 import { ResourceSection, ResourceSidebarLayout, ResourceSummary } from "@/ui/resource";
 import { GitHubMetaChip, GitHubUserChip } from "../../components/github-chips";
-import { getTimeAgo } from "../../utils/github-viewer-utils";
+import { getTimeAgo } from "../../services/github-viewer-utils";
 import type { Deployment } from "../types/github-delivery.types";
-import { deploymentState, deploymentStatusState, safeDeliveryUrl } from "../utils/github-delivery";
+import {
+  deploymentState,
+  deploymentStatusState,
+  safeDeliveryUrl,
+} from "../services/github-delivery";
 
 export function DeploymentSummary({
   deployment,
@@ -61,7 +65,7 @@ export function DeploymentDetails({ deployment }: { deployment: Deployment }) {
   const latest = deployment.statuses[0];
   const environmentUrl = safeDeliveryUrl(latest?.environment_url);
   const open = (url: string) => {
-    void openUrl(url).catch((error) => toast.error(String(error)));
+    void openExternalUrl(url).catch((error) => toast.error(String(error)));
   };
   return (
     <ResourceSidebarLayout

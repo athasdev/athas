@@ -24,7 +24,7 @@ vi.mock("@/features/settings/stores/settings.store", () => {
     ),
   };
 });
-vi.mock("@/features/vim/stores/vim-commands", () => ({
+vi.mock("@/features/vim/services/vim-commands", () => ({
   parseAndExecuteVimCommand: mocks.parseAndExecuteVimCommand,
   vimCommands: [
     { name: "write", aliases: ["w"], description: "", execute: vi.fn() },

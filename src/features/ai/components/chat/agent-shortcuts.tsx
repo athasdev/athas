@@ -9,10 +9,11 @@ import {
   WarningIcon,
 } from "@/ui/icons";
 import { useMemo } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { buildAgentSuggestions } from "@/features/ai/lib/agent-suggestions";
-import { selectAgentSessions } from "@/features/ai/lib/agent-session-list";
-import { openAgentHistoryChat } from "@/features/ai/lib/open-agent-history";
-import { dispatchAIChatSkillInsert } from "@/features/ai/lib/skill-events";
+import { selectAgentSessions } from "@/features/ai/services/agent-session-list";
+import { openAgentHistoryChat } from "@/features/ai/services/open-agent-history";
+import { dispatchAIChatSkillInsert } from "@/features/ai/services/skill-events";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { AgentSuggestion } from "@/features/ai/types/agent-suggestion.types";
 import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics.store";
@@ -20,10 +21,11 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useGitStore } from "@/features/git/stores/git.store";
 import { usePaneStore } from "@/features/panes/stores/pane.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import { getRelativePath } from "@/utils/path-helpers";
+import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 const RECENT_CHAT_LIMIT = 3;
 const promptIcons = [SparkleIcon, SearchIcon, TerminalWindowIcon, BookOpenIcon];
@@ -39,14 +41,14 @@ function SuggestionIcon({ suggestion, index }: { suggestion: AgentSuggestion; in
 
 /** The editor file the user is looking at, even while an agent tab has focus. */
 function useFocusedEditorFile() {
-  const paneActiveIds = usePaneStore((state) =>
-    state.actions
-      .getAllPaneGroups()
-      .map((pane) => pane.activeBufferId ?? "")
-      .join("\n"),
+  const paneActiveIds = usePaneStore(
+    useShallow((state) =>
+      state.actions.getAllPaneGroups().map((pane) => pane.activeBufferId ?? null),
+    ),
   );
+  const activeBufferId = useActiveBufferId();
   return useBufferStore((state) => {
-    const candidates = [state.activeBufferId, ...paneActiveIds.split("\n")];
+    const candidates = [activeBufferId, ...paneActiveIds];
     for (const id of candidates) {
       const buffer = id ? state.buffers.find((candidate) => candidate.id === id) : undefined;
       if (buffer?.type === "editor" && !buffer.isVirtual) return buffer.path;
@@ -65,13 +67,9 @@ export function AgentShortcuts({
   const skills = useSettingsStore((state) => state.settings.aiSkills);
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const changedFileCount = useGitStore((state) => state.workspaceGitStatus?.files.length ?? 0);
-  const problemCount = useDiagnosticsStore((state) => {
-    let count = 0;
-    for (const diagnostics of state.diagnosticsByFile.values()) {
-      for (const diagnostic of diagnostics) if (diagnostic.severity !== "info") count++;
-    }
-    return count;
-  });
+  const problemCount = useDiagnosticsStore(
+    (state) => state.diagnosticCounts.error + state.diagnosticCounts.warning,
+  );
   const activeFilePath = useFocusedEditorFile();
   const chats = useAIChatStore((state) => state.chats);
   const recentChats = useMemo(

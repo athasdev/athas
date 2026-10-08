@@ -1,8 +1,6 @@
 import type { GitHubNotification } from "../types/github.types";
 
-export type GitHubNotificationFilter = "all" | "pulls-and-issues" | "workflows";
-
-export const GITHUB_NOTIFICATION_PAGE_SIZE = 12;
+type GitHubNotificationFilter = "all" | "pulls-and-issues" | "workflows";
 
 export function filterGitHubNotifications(
   notifications: GitHubNotification[],

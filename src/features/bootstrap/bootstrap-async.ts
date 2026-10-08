@@ -1,13 +1,7 @@
 import { reportBootstrapResults } from "./bootstrap-errors";
+import { useBootstrapPhaseStore } from "./stores/bootstrap-phase.store";
 
 const foundationalBootstrapSteps = [
-  {
-    name: "settings store",
-    run: async () => {
-      const { initializeSettingsStore } = await import("@/features/settings/stores/settings.store");
-      await initializeSettingsStore();
-    },
-  },
   {
     name: "theme system",
     run: async () => {
@@ -34,14 +28,19 @@ const extensionBootstrapSteps = [
   },
 ] as const;
 
-export async function runAsyncBootstrapSteps(): Promise<void> {
-  const foundationalResults = await Promise.allSettled(
-    foundationalBootstrapSteps.map((step) => step.run()),
-  );
-  reportBootstrapResults(foundationalBootstrapSteps, foundationalResults);
+/** `settingsLoaded` is the settings load `main.tsx` already started. */
+export async function runAsyncBootstrapSteps(settingsLoaded: Promise<void>): Promise<void> {
+  const steps = [{ name: "settings store" }, ...foundationalBootstrapSteps];
+  const foundationalResults = await Promise.allSettled([
+    settingsLoaded,
+    ...foundationalBootstrapSteps.map((step) => step.run()),
+  ]);
+  reportBootstrapResults(steps, foundationalResults);
+  useBootstrapPhaseStore.getState().actions.reachPhase("workbench-ready");
 
   const extensionResults = await Promise.allSettled(
     extensionBootstrapSteps.map((step) => step.run()),
   );
   reportBootstrapResults(extensionBootstrapSteps, extensionResults);
+  useBootstrapPhaseStore.getState().actions.reachPhase("extensions-ready");
 }

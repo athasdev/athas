@@ -1,7 +1,7 @@
 import { ArrowLeftIcon } from "@/ui/icons";
 import { memo, useMemo } from "react";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
-import { useAuthStore } from "@/features/window/stores/auth.store";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { Avatar } from "@/ui/avatar";
 import { Button } from "@/ui/button";
 import { EmptyState } from "@/ui/empty";
@@ -17,7 +17,7 @@ import { formatRelativeDate } from "@/utils/date";
 import { getBaseName, getDirName } from "@/utils/path-helpers";
 import type { GitCommit, GitDiff } from "../types/git.types";
 import { getGitAuthorAvatarUrl } from "../utils/git-author-avatar";
-import { getFileStatus } from "../utils/git-diff-helpers";
+import { getFileStatus } from "../services/git-diff-helpers";
 
 interface GitCommitFilesPanelProps {
   commit: GitCommit;

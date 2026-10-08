@@ -6,13 +6,14 @@ import { useFffSearch } from "@/features/file-search/hooks/use-fff-search";
 import {
   canUseNativeFileSearch,
   getNativeWorkspaceRootPaths,
-} from "@/features/file-search/utils/file-search-paths";
+} from "@/features/file-search/services/file-search-paths";
 import type { FileCategory, FileItem } from "@/features/file-search/types/file-search.types";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useRecentFilesStore } from "@/features/file-system/stores/recent-files.store";
 import { CommandItemBadge } from "@/ui/command";
 import { ClockIcon } from "@/ui/icons";
 import { getBaseName, getDirectoryPath } from "@/utils/path-helpers";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { EmptyState } from "../components/empty-state";
 import { SEARCH_DEBOUNCE_DELAY } from "../constants/limits";
 import { useFileLoader } from "../hooks/use-file-loader";
@@ -30,8 +31,8 @@ export function useFilesSection({
   close,
 }: QuickOpenSectionInput & { isVisible: boolean }): QuickOpenSectionResult {
   const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
-  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
-  const workspaceFolders = useFileSystemStore((state) => state.workspaceFolders);
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
+  const workspaceFolders = useProjectStore((state) => state.workspaceFolders);
   const addOrUpdateRecentFile = useRecentFilesStore((state) => state.actions.addOrUpdateRecentFile);
   const nativeRootPaths = useMemo(
     () => getNativeWorkspaceRootPaths(rootFolderPath, workspaceFolders),

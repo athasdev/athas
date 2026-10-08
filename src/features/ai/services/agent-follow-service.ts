@@ -1,4 +1,4 @@
-import { agentIsDetached } from "@/features/ai/detached/agent-window.store";
+import { agentIsDetached } from "@/features/ai/detached/stores/agent-window.store";
 import {
   AGENT_FOLLOW_INTERVAL_MS,
   type AgentFollowTarget,
@@ -15,17 +15,17 @@ import { isFollowingAgent, useAgentFollowStore } from "@/features/ai/stores/agen
 import type { AcpToolCallLocation } from "@/features/ai/types/acp.types";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
-import { readFileContent } from "@/features/file-system/controllers/file-operations";
+import { readFileContent } from "@/features/file-system/api/file-operations";
 import {
   getDatabaseTypeFromPath,
   isBinaryFile,
   isImageFile,
   isPdfFile,
-} from "@/features/file-system/controllers/file-utils";
+} from "@/features/file-system/services/file-utils";
 import { usePaneStore } from "@/features/panes/stores/pane.store";
-import { ensureBufferInPane } from "@/features/panes/utils/pane-buffer-actions";
-import { getPaneScopeForPaneId } from "@/features/panes/utils/pane-routing";
-import { createPaneBeside } from "@/features/panes/utils/pane-split-actions";
+import { ensureBufferInPane } from "@/features/panes/services/pane-buffer-actions";
+import { getPaneScopeForPaneId } from "@/features/panes/services/pane-routing";
+import { createPaneBeside } from "@/features/panes/services/pane-split-actions";
 import { getBaseName } from "@/utils/path-helpers";
 
 interface ChatFollower {

@@ -10,7 +10,7 @@ import {
 } from "@codemirror/view";
 
 /** Renders the peek's content into its element and returns how to tear it down again. */
-export type MountReferencesPeek = (element: HTMLElement, view: EditorView) => () => void;
+type MountReferencesPeek = (element: HTMLElement, view: EditorView) => () => void;
 
 interface ReferencesPeek {
   id: number;

@@ -9,9 +9,9 @@ import type {
 import { getRelativePath, joinPath, normalizePath, pathStartsWithRoot } from "@/utils/path-helpers";
 
 /** The most tokens all rules together may add to the system prompt. */
-export const PROJECT_RULES_MAX_TOKENS = 12_000;
+const PROJECT_RULES_MAX_TOKENS = 12_000;
 /** The most tokens one rule file may add before it is truncated. */
-export const PROJECT_RULE_MAX_TOKENS = 6_000;
+const PROJECT_RULE_MAX_TOKENS = 6_000;
 /** Directories above the attached files that are checked for nested AGENTS.md files. */
 const MAX_NESTED_RULE_DIRECTORIES = 24;
 
@@ -222,7 +222,7 @@ function describeRule(rule: ProjectRule) {
 }
 
 /** Renders loaded rules as a prompt section, cutting rules that do not fit the budget. */
-export function formatProjectRules(
+function formatProjectRules(
   rules: ProjectRule[],
   available: ProjectRule[],
   maxTokens: number = PROJECT_RULES_MAX_TOKENS,
@@ -272,7 +272,7 @@ export function formatProjectRules(
   };
 }
 
-export interface LoadProjectRulesOptions {
+interface LoadProjectRulesOptions {
   projectRoot: string;
   /** Absolute paths of the files the request is about. */
   contextPaths?: string[];

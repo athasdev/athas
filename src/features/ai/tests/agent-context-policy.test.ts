@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { filterAgentContext, loadAgentContextPolicy } from "../lib/agent-context-policy";
+import { filterAgentContext, loadAgentContextPolicy } from "../services/agent-context-policy";
 import type { ProjectRuleReader } from "../types/project-rules.types";
 
 function reader(files: Record<string, string>): ProjectRuleReader {

@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test"
 import {
   clearQueuedWorkspaceSessionSave,
   saveSessionToStore,
-} from "../stores/buffer-session-persistence";
-import { useSessionStore } from "@/features/window/stores/session.store";
+} from "../services/buffer-session-persistence";
+import { useSessionStore } from "@/features/workspace/stores/session.store";
 
 describe("buffer session persistence", () => {
   beforeEach(() => {
@@ -18,8 +18,8 @@ describe("buffer session persistence", () => {
   });
 
   it("persists against the workspace captured by the caller", () => {
-    saveSessionToStore("/workspace-a", [], null);
-    saveSessionToStore("/workspace-b", [], null);
+    saveSessionToStore("/workspace-a", { buffers: [], activeBufferId: null });
+    saveSessionToStore("/workspace-b", { buffers: [], activeBufferId: null });
 
     vi.advanceTimersByTime(300);
 

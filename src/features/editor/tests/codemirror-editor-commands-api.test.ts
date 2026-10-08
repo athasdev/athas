@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vite-plus/test";
-import { editorAPI, type ActiveEditorAdapter } from "../extensions/api";
+import { editorAPI, type ActiveEditorAdapter } from "../services/editor-api";
 
 describe("editor API line commands", () => {
   it("are carried out by the active editor adapter when it provides them", () => {

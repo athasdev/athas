@@ -6,7 +6,24 @@ import type {
   Position,
   Range,
 } from "./editor.types";
-import type { EditorModelPositionResolver } from "../view-model/view-layout";
+import type { LiveDocumentEdit } from "../services/live-document-registry";
+
+/** DOM handles the code editor exposes through its ref. */
+export interface CodeEditorRef {
+  editor: HTMLDivElement | null;
+  textarea: HTMLDivElement | null;
+}
+
+interface EditorResolvedPosition {
+  top: number;
+  left: number;
+}
+
+/** Where a model position sits inside the editor content, for overlays drawn on top of it. */
+export type EditorModelPositionResolver = (
+  line: number,
+  column: number,
+) => EditorResolvedPosition | null;
 
 /** What the workbench passes to the text editor, whichever engine draws it. */
 export interface CodeEditorViewProps {
@@ -33,6 +50,7 @@ export interface CodeEditorViewProps {
     batch: EditorDocumentChangeBatch,
     previousCursorPosition?: Position,
     previousSelection?: Range,
+    liveEdit?: LiveDocumentEdit,
   ) => EditorDocumentChangeResult;
   onScrollOffsetChange?: (scrollTop: number, scrollLeft: number) => void;
   onModelPositionResolverChange?: (resolver: EditorModelPositionResolver | null) => void;

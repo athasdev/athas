@@ -3,7 +3,7 @@ import {
   getUiRootAttributes,
   normalizeUiDensity,
   shouldShowTabCloseButton,
-} from "../lib/ui-preferences";
+} from "../services/ui-preferences";
 
 describe("UI preferences", () => {
   it("maps UI settings to stable root attributes", () => {

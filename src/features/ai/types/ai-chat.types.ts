@@ -10,7 +10,7 @@ import type {
 } from "@/features/ai/types/acp.types";
 import type { ChatFollowUpAction } from "@/features/ai/lib/follow-up-actions";
 import type { FileEntry } from "@/features/file-system/types/app.types";
-import type { EditorSelectionContext } from "@/features/ai/types/ai-context.types";
+import type { EditorSelectionContext } from "@/features/editor/types/editor-selection.types";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import type { GenerativeUIView } from "@/extensions/ui/types/generative-ui";
 import type { ChatMessageError } from "@/features/ai/types/chat-error.types";
@@ -37,7 +37,7 @@ export interface AgentMessageSubmitResult {
 export type ToolCallStatus = AcpToolCallStatus | "cancelled";
 
 export interface ToolCall {
-  id?: string;
+  id: string;
   name: string;
   input: any;
   /** What the transcript shows: ACP content, or raw output when there is none. */
@@ -117,10 +117,15 @@ export interface MessageUsage {
 // Agent types for AI chat
 export type AgentType = string;
 
-export interface Chat {
+/**
+ * A chat without its messages: what lists, headers and pickers show. The chat store keeps these
+ * apart from the messages so a streamed token leaves every session row as it was.
+ */
+export interface ChatSession {
   id: string;
   title: string;
-  messages: Message[];
+  /** How many messages the chat holds in memory; history rows that were not loaded say 0. */
+  messageCount?: number;
   createdAt: Date;
   lastMessageAt: Date;
   agentId: AgentType; // Which agent this chat uses
@@ -133,6 +138,10 @@ export interface Chat {
   archivedAt?: Date | null;
   /** The agent session options the user picked, applied again when the session reattaches. */
   sessionSettings?: ChatSessionSettings | null;
+}
+
+export interface Chat extends ChatSession {
+  messages: Message[];
 }
 
 /** A chat's picks among what its agent session offers. */

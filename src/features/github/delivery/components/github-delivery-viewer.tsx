@@ -1,16 +1,17 @@
+import { deactivateDeployment, deleteRelease, publishRelease } from "../api/github-delivery-api";
 import { openDeploymentLog } from "../services/open-deployment-log";
 import { Checkbox } from "@/ui/checkbox";
 import { Field, FieldLabel } from "@/ui/field";
 import { FieldError } from "@/ui/field";
 import { useEffect, useId, useRef, useState } from "react";
-import { commands } from "@/bindings/commands";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { useQueryClient } from "@tanstack/react-query";
+import { openExternalUrl } from "@/utils/external-url";
 import { toast } from "sonner";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import type { GitHubDeliveryContent } from "@/features/panes/types/pane-content.types";
-import { openCommitDiffBuffer } from "@/features/git/utils/open-commit-diff-buffer";
-import { resolveProjectGitHubRepository } from "@/features/views/lib/view-github";
-import { ViewerErrorState, ViewerLoadingState } from "@/features/viewer/components/viewer-state";
+import { openCommitDiffBuffer } from "@/features/git/services/open-commit-diff-buffer";
+import { resolveProjectGitHubRepository } from "@/features/views/services/view-github";
+import { ViewerErrorState, ViewerLoadingState } from "@/ui/viewer-state";
 import { Button } from "@/ui/button";
 import { ArrowClockwiseIcon, CopyIcon, OpenExternalIcon, TagIcon } from "@/ui/icons";
 import { ResourceActionsMenu, ResourceDocument, ResourceSummary } from "@/ui/resource";
@@ -28,18 +29,14 @@ import {
 import { Spinner } from "@/ui/spinner";
 import { writeClipboardText } from "@/utils/clipboard";
 import { useDeliveryDetail } from "../hooks/use-delivery-detail";
-import { deliveryDetailCache, notifyDeliveryChanged } from "../services/github-delivery-service";
-import {
-  deliveryBufferPath,
-  deliveryKey,
-  isRelease,
-  releaseTitle,
-  safeDeliveryUrl,
-} from "../utils/github-delivery";
+import { deliveryKeys, notifyDeliveryChanged } from "../services/github-delivery-service";
+import { deliveryBufferPath } from "@/features/editor/services/virtual-buffer-paths";
+import { isRelease, releaseTitle, safeDeliveryUrl } from "../services/github-delivery";
 import type { Release } from "../types/github-delivery.types";
 import { ReleaseDetails, ReleaseSummary } from "./release-details";
 import { DeploymentDetails, DeploymentSummary } from "./deployment-details";
 import { ReleaseEditor } from "./release-editor";
+import { useIsBufferActive } from "@/features/panes/hooks/use-pane-buffer-state";
 
 type Confirmation = "publish" | "delete" | "deactivate";
 const confirmationText = {
@@ -64,9 +61,10 @@ const confirmationText = {
 
 export default function GitHubDeliveryViewer({ buffer }: { buffer: GitHubDeliveryContent }) {
   const { kind, repoPath, resourceId } = buffer;
-  const active = useBufferStore((state) => state.activeBufferId === buffer.id);
+  const active = useIsBufferActive(buffer.id);
   const { updateBuffer, closeBuffer } = useBufferStore.use.actions();
   const { data, loading, error, refresh } = useDeliveryDetail(kind, repoPath, resourceId, active);
+  const queryClient = useQueryClient();
   const [editing, setEditing] = useState(resourceId === undefined && kind === "releases");
   const [confirm, setConfirm] = useState<Confirmation | null>(null);
   const latestId = useId();
@@ -102,11 +100,11 @@ export default function GitHubDeliveryViewer({ buffer }: { buffer: GitHubDeliver
   }, [buffer, data, updateBuffer]);
   const open = (value?: string | null) => {
     const url = safeDeliveryUrl(value);
-    if (url) void openUrl(url).catch((error) => toast.error(String(error)));
+    if (url) void openExternalUrl(url).catch((error) => toast.error(String(error)));
   };
   const onSaved = (release: Release) => {
-    notifyDeliveryChanged("releases", repoPath, release.id);
-    deliveryDetailCache.set(deliveryKey("releases", repoPath, release.id), release);
+    queryClient.setQueryData(deliveryKeys.item("releases", repoPath, release.id), release);
+    notifyDeliveryChanged(queryClient, "releases", repoPath, release.id);
     updateBuffer({
       ...buffer,
       resourceId: release.id,
@@ -114,7 +112,6 @@ export default function GitHubDeliveryViewer({ buffer }: { buffer: GitHubDeliver
       name: releaseTitle(release),
     });
     setEditing(false);
-    refresh();
     toast.success(release.draft ? "Release draft saved" : "Release updated");
   };
   const mutate = async () => {
@@ -124,17 +121,13 @@ export default function GitHubDeliveryViewer({ buffer }: { buffer: GitHubDeliver
     setActionError(null);
     try {
       if (confirm === "publish") {
-        await commands.githubPublishRelease(
-          repoPath,
-          data.id,
-          makeLatest && isRelease(data) && !data.prerelease,
-        );
+        await publishRelease(repoPath, data.id, makeLatest && isRelease(data) && !data.prerelease);
       } else if (confirm === "delete") {
-        await commands.githubDeleteRelease(repoPath, data.id);
+        await deleteRelease(repoPath, data.id);
       } else {
-        await commands.githubDeactivateDeployment(repoPath, data.id);
+        await deactivateDeployment(repoPath, data.id);
       }
-      notifyDeliveryChanged(kind, repoPath, data.id);
+      notifyDeliveryChanged(queryClient, kind, repoPath, data.id);
       if (confirm === "delete") closeBuffer(buffer.id);
       toast.success(
         confirm === "publish"

@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/ui/dropdown";
 import { LightbulbIcon } from "@/ui/icons";
-import { LspClient } from "../../../lsp/lsp-client";
+import { LspClient } from "../../../lsp/services/lsp-client";
 import { type CodeMirrorHost, useCodeMirrorExtension } from "../host";
 import { groupCodeActions } from "../navigation/code-action-groups";
 import { toLspPosition } from "../navigation/lsp-document";

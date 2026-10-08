@@ -64,7 +64,7 @@ export function removeAllowedCommandPrefix(root: string, prefix: string) {
 }
 
 /** The command prefixes the user chose to always allow in this workspace. */
-export function getAllowedCommandPrefixes(root: string): string[] {
+function getAllowedCommandPrefixes(root: string): string[] {
   return readAllowlist()[workspaceKey(root)] ?? [];
 }
 

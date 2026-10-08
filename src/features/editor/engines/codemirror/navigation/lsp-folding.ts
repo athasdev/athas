@@ -2,7 +2,7 @@ import { foldService } from "@codemirror/language";
 import { StateEffect, StateField, type Text } from "@codemirror/state";
 import type { ViewUpdate } from "@codemirror/view";
 
-export interface LspFoldingRange {
+interface LspFoldingRange {
   startLine: number;
   endLine: number;
 }
@@ -33,7 +33,7 @@ export function lspFoldRegions(doc: Text, ranges: readonly LspFoldingRange[]): F
   return regions.sort((a, b) => a.from - b.from || b.to - a.to);
 }
 
-export const lspFoldingField = StateField.define<FoldRegion[]>({
+const lspFoldingField = StateField.define<FoldRegion[]>({
   create: () => [],
   update(regions, tr) {
     for (const effect of tr.effects) if (effect.is(setLspFoldingRanges)) return effect.value;
@@ -48,7 +48,7 @@ export const lspFoldingField = StateField.define<FoldRegion[]>({
  * LSP folding ranges, asked before syntax folding: a line the server gives a range for folds the
  * way the server says, any other line falls back to the language's syntax tree.
  */
-export const lspFoldService = foldService.of((state, lineStart, lineEnd) => {
+const lspFoldService = foldService.of((state, lineStart, lineEnd) => {
   const regions = state.field(lspFoldingField, false);
   if (!regions?.length) return null;
   let best: FoldRegion | null = null;

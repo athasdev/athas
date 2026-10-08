@@ -1,5 +1,5 @@
-import { openCommitDiffBuffer } from "@/features/git/utils/open-commit-diff-buffer";
-import { ViewerErrorState, ViewerLoadingState } from "@/features/viewer/components/viewer-state";
+import { openCommitDiffBuffer } from "@/features/git/services/open-commit-diff-buffer";
+import { ViewerErrorState, ViewerLoadingState } from "@/ui/viewer-state";
 import {
   ChatBubbleTextIcon,
   CheckCircleIcon,
@@ -18,7 +18,7 @@ import type {
   PullRequestDetails,
   PullRequestReview,
 } from "../types/github.types";
-import { getTimeAgo } from "../utils/github-viewer-utils";
+import { getTimeAgo } from "../services/github-viewer-utils";
 import { CommentItem } from "./comment-item";
 import { GitHubUserChip } from "./github-chips";
 import { GitHubInlineMarkdown } from "./github-inline-editors";

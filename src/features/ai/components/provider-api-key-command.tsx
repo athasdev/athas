@@ -6,6 +6,7 @@ import {
   useProviderById,
 } from "@/features/ai/hooks/use-available-providers";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
+import { getProviderApiKeyUrl } from "@/features/ai/services/providers/provider-api-key-url";
 import type { ModelProvider } from "@/features/ai/types/providers.types";
 import { Button } from "@/ui/button";
 import Command, {
@@ -23,16 +24,6 @@ interface ProviderApiKeyCommandProps {
   initialProviderId?: string | null;
 }
 
-const DASHBOARD_LINKS: Partial<Record<string, string>> = {
-  vercel: "https://vercel.com/dashboard/ai-gateway",
-  openrouter: "https://openrouter.ai/keys",
-  grok: "https://console.x.ai",
-  openai: "https://platform.openai.com/api-keys",
-  anthropic: "https://console.anthropic.com/settings/keys",
-  gemini: "https://aistudio.google.com/app/apikey",
-  mistral: "https://console.mistral.ai/api-keys",
-};
-
 const PLACEHOLDERS: Partial<Record<string, string>> = {
   openrouter: "sk-or-v1-xxxxxxxxxxxxxxxxxxxx",
   grok: "xai-xxxxxxxxxxxxxxxxxxxx",
@@ -41,11 +32,6 @@ const PLACEHOLDERS: Partial<Record<string, string>> = {
 };
 
 const MASKED_API_KEY = "••••••••••••••••••••";
-
-/** Where to create a key for a provider, from its own metadata or the built-in list. */
-export function getProviderApiKeyUrl(provider: Pick<ModelProvider, "id" | "apiKeyUrl">) {
-  return provider.apiKeyUrl || DASHBOARD_LINKS[provider.id];
-}
 
 function getProviderApiKeyPlaceholder(provider: Pick<ModelProvider, "id" | "apiKeyPlaceholder">) {
   return provider.apiKeyPlaceholder || PLACEHOLDERS[provider.id] || "API key";

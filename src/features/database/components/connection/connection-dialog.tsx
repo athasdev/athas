@@ -1,9 +1,7 @@
-import { open } from "@tauri-apps/plugin-dialog";
 import { FolderOpenIcon, PlugsConnectedIcon } from "@/ui/icons";
 import { useEffect, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
-import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { DatabaseBrandMark } from "@/ui/brand-marks";
 import { Button } from "@/ui/button";
 import { Checkbox } from "@/ui/checkbox";
@@ -16,13 +14,15 @@ import Select from "@/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/ui/tabs";
 import { normalizeDatabaseError } from "../../lib/database-errors";
 import type { DatabaseType } from "../../types/provider.types";
-import { PROVIDER_REGISTRY } from "../../providers/provider-registry";
+import { PROVIDER_REGISTRY } from "../../services/provider-registry";
+import { pickDatabaseFile } from "../../services/database-file-picker";
 import { useConnectionStore } from "../../stores/connection.store";
 import { buildSavedConnectionConfig } from "../../utils/connection-config";
 import {
   getInstalledDatabaseTypes,
   validateConnectionInput,
 } from "../../utils/connection-validation";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 interface ConnectionDialogProps {
   isOpen: boolean;
@@ -31,7 +31,7 @@ interface ConnectionDialogProps {
 
 export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
   const actions = useConnectionStore.use.actions();
-  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const availableExtensions = useExtensionStore.use.availableExtensions();
   const [mode, setMode] = useState<"form" | "string">("form");
   const [dbType, setDbType] = useState<DatabaseType>("sqlite");
@@ -117,18 +117,9 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
     });
 
   const handleBrowseDatabaseFile = async () => {
-    const selected = await open({
-      multiple: false,
-      directory: false,
-      filters: [
-        {
-          name: provider.label,
-          extensions: (provider.fileExtensions ?? []).map((ext) => ext.replace(/^\./, "")),
-        },
-      ],
-    });
+    const selected = await pickDatabaseFile(provider);
 
-    if (selected && typeof selected === "string") {
+    if (selected) {
       setFilePath(selected);
       if (!name.trim()) {
         const fileName = selected.split("/").pop() ?? selected;

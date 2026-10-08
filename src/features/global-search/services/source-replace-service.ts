@@ -1,13 +1,15 @@
-import type { SearchMatch } from "@/features/file-search/lib/file-search-api";
+import type { SearchMatch } from "@/features/file-search/api/file-search-api";
 import {
   captureBufferStoreOwner,
   isBufferStoreOwnerLive,
   type BufferStoreOwner,
 } from "@/features/editor/services/buffer-store-owner";
 import type { EditorContent } from "@/features/panes/types/pane-content.types";
-import { trackImmediateBufferHistoryChange } from "@/features/editor/stores/buffer-history-tracking";
+import { readBufferRevision, readBufferText } from "@/features/editor/services/buffer-text";
+import { flushAllLiveDocuments } from "@/features/editor/services/live-document-registry";
+import { trackImmediateBufferHistoryChange } from "@/features/editor/services/buffer-history-tracking";
 import { emitGitChanged } from "@/features/git/events/git-events";
-import { buildSearchRegex } from "@/features/editor/utils/search";
+import { buildSearchRegex } from "@/utils/text-search";
 import { getWorkspaceResourceProvider } from "@/features/file-system/services/workspace-resource-provider";
 import { createSearchWorkerSession } from "./search-worker-client";
 import type { ContentSearchOptions } from "../types/global-search.types";
@@ -22,8 +24,9 @@ interface ReplaceTarget {
 interface SourceContent {
   buffer?: EditorContent;
   content: string;
+  revision?: number;
 }
-export interface SourceReplaceContext extends BufferStoreOwner {
+interface SourceReplaceContext extends BufferStoreOwner {
   sources: Map<string, EditorContent>;
   expectedMatches?: Map<string, SearchMatch[]>;
   signal?: AbortSignal;
@@ -31,6 +34,7 @@ export interface SourceReplaceContext extends BufferStoreOwner {
 }
 export function captureSourceReplaceContext(workspaceId?: string): SourceReplaceContext {
   const owner = captureBufferStoreOwner(workspaceId);
+  flushAllLiveDocuments();
   const sources = new Map<string, EditorContent>();
   for (const buffer of owner.store.getState().buffers)
     if (buffer.type === "editor") sources.set(buffer.path, buffer);
@@ -97,9 +101,9 @@ function validateSource(context: SourceReplaceContext, filePath: string, source:
       ? !current ||
         current.id !== source.buffer.id ||
         current.path !== source.buffer.path ||
-        current.content !== source.content ||
-        (current.contentRevision ?? 0) !== (source.buffer.contentRevision ?? 0)
-      : current && (current.isDirty || current.content !== source.content)
+        readBufferRevision(current) !== source.revision ||
+        readBufferText(current) !== source.content
+      : current && (current.isDirty || readBufferText(current) !== source.content)
   )
     throw new Error(
       `${filePath} changed while preparing the replacement. Search again before replacing.`,
@@ -109,7 +113,7 @@ async function readSource(filePath: string, context: SourceReplaceContext): Prom
   assertOwner(context);
   const buffer = context.sources.get(filePath);
   const source = buffer
-    ? { buffer, content: buffer.content }
+    ? { buffer, content: readBufferText(buffer), revision: readBufferRevision(buffer) }
     : { content: await getWorkspaceResourceProvider(filePath).readText(filePath) };
   validateSource(context, filePath, source);
   return source;
@@ -125,7 +129,7 @@ async function writeSource(
   if (current) {
     trackImmediateBufferHistoryChange({
       bufferId: current.id,
-      currentContent: current.content,
+      currentContent: readBufferText(current),
       nextContent: content,
       workspaceId: context.workspaceId,
     });
@@ -139,7 +143,7 @@ async function writeSource(
     !opened.isVirtual &&
     (opened.savedContent === source.content || opened.savedContent === content)
   ) {
-    if (!opened.readOnly && !opened.isDirty && opened.content === source.content)
+    if (!opened.readOnly && !opened.isDirty && readBufferText(opened) === source.content)
       context.store.getState().actions.updateBufferContent(opened.id, content, false);
     context.store.getState().actions.markBufferSaved(opened.id, content);
   }

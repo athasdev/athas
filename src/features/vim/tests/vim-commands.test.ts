@@ -2,7 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test"
 import type { EditorContent } from "@/features/panes/types/pane-content.types";
 import { useBufferStore } from "../../editor/stores/buffer.store";
 import { useEditorAppStore } from "../../editor/stores/editor-app.store";
-import { parseAndExecuteVimCommand } from "../stores/vim-commands";
+import { parseAndExecuteVimCommand } from "../services/vim-commands";
+import { onAppEvent } from "@/utils/app-events";
+import { seedActiveBuffer } from "@/features/panes/tests/helpers/seed-pane-tabs";
+import { getActiveBufferId } from "@/features/panes/stores/pane-selectors";
 
 const mocks = vi.hoisted(() => ({
   notifyDocumentSave: vi.fn(),
@@ -11,7 +14,7 @@ const mocks = vi.hoisted(() => ({
   writeFile: vi.fn(),
 }));
 
-vi.mock("@/features/editor/lsp/lsp-client", () => ({
+vi.mock("@/features/editor/lsp/services/lsp-client", () => ({
   LspClient: {
     getInstance: () => ({
       notifyDocumentSave: mocks.notifyDocumentSave,
@@ -24,9 +27,9 @@ vi.mock("@/features/file-system/services/workspace-resource-provider", () => ({
   getWorkspaceResourceProvider: () => ({ writeText: mocks.writeFile }),
 }));
 
-vi.mock("@/features/file-system/controllers/platform", async (importOriginal) => {
+vi.mock("@/features/file-system/api/file-system-api", async (importOriginal) => {
   const original =
-    await importOriginal<typeof import("@/features/file-system/controllers/platform")>();
+    await importOriginal<typeof import("@/features/file-system/api/file-system-api")>();
   return {
     ...original,
     writeFile: mocks.writeFile,
@@ -77,25 +80,16 @@ function makeEditorBuffer(
     savedContent: isDirty ? "" : content,
     isDirty,
     isVirtual: false,
-    isPinned: false,
-    isPreview: false,
-    isActive: false,
     language: "typescript",
-    tokens: [],
   };
 }
 
 describe("vim ex commands", () => {
-  let dispatchedEvents: CustomEvent[];
-
   const activeBuffer = () =>
-    useBufferStore
-      .getState()
-      .buffers.find((b) => b.id === useBufferStore.getState().activeBufferId);
+    useBufferStore.getState().buffers.find((b) => b.id === getActiveBufferId());
 
   beforeEach(() => {
     vi.stubGlobal("localStorage", createMockStorage());
-    dispatchedEvents = [];
     vi.stubGlobal("window", {
       __TAURI_INTERNALS__: {
         invoke: vi.fn().mockResolvedValue([]),
@@ -106,10 +100,7 @@ describe("vim ex commands", () => {
       },
       addEventListener: vi.fn(),
       removeEventListener: vi.fn(),
-      dispatchEvent: (event: CustomEvent) => {
-        dispatchedEvents.push(event);
-        return true;
-      },
+      dispatchEvent: vi.fn(() => true),
     });
     mocks.writeFile.mockResolvedValue(undefined);
     mocks.recordLocalHistoryFile.mockResolvedValue(undefined);
@@ -117,16 +108,15 @@ describe("vim ex commands", () => {
     mocks.saveDialog.mockResolvedValue(null);
 
     useBufferStore.setState({
-      activeBufferId: "a",
       buffers: [makeEditorBuffer("a", "/workspace/a.ts", "changed", true)],
       pendingClose: null,
       closedBuffersHistory: [],
     });
+    seedActiveBuffer("a");
   });
 
   afterEach(() => {
     useBufferStore.setState({
-      activeBufferId: null,
       buffers: [],
       pendingClose: null,
       closedBuffersHistory: [],
@@ -167,9 +157,9 @@ describe("vim ex commands", () => {
 
   it(":wq keeps an untitled buffer open when saving is canceled", async () => {
     useBufferStore.setState({
-      activeBufferId: "a",
       buffers: [makeEditorBuffer("a", "untitled:a.ts", "changed", true)],
     });
+    seedActiveBuffer("a");
 
     const handled = await parseAndExecuteVimCommand("wq");
 
@@ -183,9 +173,9 @@ describe("vim ex commands", () => {
   it(":wq closes the saved buffer when the active buffer changes", async () => {
     const secondBuffer = makeEditorBuffer("b", "/workspace/b.ts", "unchanged", false);
     useBufferStore.setState({
-      activeBufferId: "a",
       buffers: [makeEditorBuffer("a", "/workspace/a.ts", "changed", true), secondBuffer],
     });
+    seedActiveBuffer("a");
 
     let finishSave: (saved: boolean) => void = () => {};
     const savePromise = new Promise<boolean>((resolve) => {
@@ -197,14 +187,14 @@ describe("vim ex commands", () => {
 
     const handledPromise = parseAndExecuteVimCommand("wq");
     expect(handleSave).toHaveBeenCalledTimes(1);
-    useBufferStore.setState({ activeBufferId: "b" });
+    seedActiveBuffer("b");
     useBufferStore.getState().actions.markBufferDirty("a", false);
     finishSave(true);
 
     expect(await handledPromise).toBe(true);
     expect(useBufferStore.getState().buffers.some((buffer) => buffer.id === "a")).toBe(false);
     expect(useBufferStore.getState().buffers.some((buffer) => buffer.id === "b")).toBe(true);
-    expect(useBufferStore.getState().activeBufferId).toBe("b");
+    expect(getActiveBufferId()).toBe("b");
   });
 
   it(":q on a dirty buffer asks for confirmation instead of closing", async () => {
@@ -228,11 +218,15 @@ describe("vim ex commands", () => {
   });
 
   it(":{line} requests a cursor jump through the app go-to-line event", async () => {
-    const handled = await parseAndExecuteVimCommand("42");
+    const goToLine = vi.fn();
+    const unsubscribe = onAppEvent("editor:go-to-line", goToLine);
+    try {
+      const handled = await parseAndExecuteVimCommand("42");
 
-    expect(handled).toBe(true);
-    const goToLineEvent = dispatchedEvents.find((event) => event.type === "menu-go-to-line");
-    expect(goToLineEvent).toBeDefined();
-    expect(goToLineEvent?.detail).toMatchObject({ line: 42 });
+      expect(handled).toBe(true);
+      expect(goToLine).toHaveBeenCalledWith({ line: 42, focus: true });
+    } finally {
+      unsubscribe();
+    }
   });
 });

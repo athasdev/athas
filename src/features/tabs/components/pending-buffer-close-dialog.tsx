@@ -1,8 +1,8 @@
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { savePendingPaneClose } from "@/features/panes/services/pane-content-save-service";
-import UnsavedChangesDialog from "@/features/window/components/unsaved-changes-dialog";
+import UnsavedChangesDialog from "@/features/tabs/components/unsaved-changes-dialog";
 import { useActiveWorkspaceId } from "@/features/workspace/stores/create-workspace-scoped-store";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 import { useMemo } from "react";
 
 export function PendingBufferCloseDialog() {

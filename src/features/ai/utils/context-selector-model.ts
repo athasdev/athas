@@ -8,15 +8,15 @@ const GITHUB_CONTEXT_TYPES = new Set<PaneContent["type"]>([
   "githubDelivery",
 ]);
 
-export interface GitContextFile extends GitFile {
+interface GitContextFile extends GitFile {
   absolutePath: string;
 }
 
-export function isGitHubContextBuffer(buffer: PaneContent) {
+function isGitHubContextBuffer(buffer: PaneContent) {
   return GITHUB_CONTEXT_TYPES.has(buffer.type);
 }
 
-export function getSelectableContextBuffers(buffers: PaneContent[]) {
+function getSelectableContextBuffers(buffers: PaneContent[]) {
   return buffers.filter((buffer) => buffer.type !== "agent" && buffer.type !== "newTab");
 }
 
@@ -29,7 +29,7 @@ export function groupContextBuffers(buffers: PaneContent[]) {
   };
 }
 
-export function resolveGitContextPath(repoPath: string, filePath: string) {
+function resolveGitContextPath(repoPath: string, filePath: string) {
   if (filePath.startsWith("/") || /^[A-Za-z]:[\\/]/.test(filePath)) return filePath;
 
   const root = repoPath.replace(/[/\\]+$/, "");

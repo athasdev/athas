@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vite-plus/test";
 import { ROOT_PANE_ID } from "../constants/pane";
 import type { PaneGroup, PaneNode } from "../types/pane.types";
-import { createPaneGroup, createPaneSplit } from "../utils/pane-tree";
-import { getPaneScopeForPaneId, resolveWritablePaneForBuffer } from "../utils/pane-routing";
+import { createPaneGroup, createPaneSplit } from "../services/pane-tree";
+import { getPaneScopeForPaneId, resolveWritablePaneForBuffer } from "../services/pane-routing";
 
 const createRootPane = (overrides: Partial<PaneGroup> = {}): PaneGroup => ({
   id: ROOT_PANE_ID,

@@ -1,6 +1,6 @@
 import type { AcpAgentStatus } from "@/features/ai/types/acp.types";
 import type { Chat } from "@/features/ai/types/ai-chat.types";
-import { getChatAcpSessionToClose } from "./acp-session-state";
+import { getChatAcpSessionToClose } from "../services/acp-session-state";
 
 function advertises(status: AcpAgentStatus, capability: "close" | "resume"): boolean {
   const session = status.agentCapabilities?.sessionCapabilities;
@@ -15,7 +15,7 @@ function advertises(status: AcpAgentStatus, capability: "close" | "resume"): boo
  * Whether closing a session loses nothing: the agent closes it on request (`session/close`) and
  * can bring it back later with `session/load` or `session/resume`.
  */
-export function canCloseAndReattachSessions(status: AcpAgentStatus): boolean {
+function canCloseAndReattachSessions(status: AcpAgentStatus): boolean {
   return (
     advertises(status, "close") &&
     (Boolean(status.agentCapabilities?.loadSession) || advertises(status, "resume"))

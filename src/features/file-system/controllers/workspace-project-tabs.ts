@@ -2,7 +2,7 @@ export interface WorkspaceProjectTabCandidate {
   id: string;
 }
 
-export interface WorkspaceProjectSwitchActions {
+interface WorkspaceProjectSwitchActions {
   getProjectTabs: () => WorkspaceProjectTabCandidate[];
   setActiveProjectTab: (projectId: string) => void;
   removeProjectTab: (projectId: string) => void;

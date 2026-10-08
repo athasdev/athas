@@ -11,10 +11,6 @@ const editorBuffer = (overrides: Partial<EditorContent> = {}): EditorContent => 
   savedContent: "",
   isDirty: false,
   isVirtual: false,
-  isPinned: false,
-  isPreview: false,
-  isActive: true,
-  tokens: [],
   ...overrides,
 });
 
@@ -53,9 +49,6 @@ describe("getWindowDocumentState", () => {
       type: "newTab",
       path: "new-tab",
       name: "New Tab",
-      isPinned: false,
-      isPreview: false,
-      isActive: true,
     };
 
     expect(

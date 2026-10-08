@@ -2,7 +2,7 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import type { CodeHighlightSegment } from "@/features/editor/markdown/code-highlight";
+import type { CodeHighlightSegment } from "@/features/editor/markdown/services/code-highlight";
 import { useCodeHighlightSegments } from "@/features/editor/markdown/highlighted-code";
 
 const highlight = vi.hoisted(() =>
@@ -10,7 +10,7 @@ const highlight = vi.hoisted(() =>
     { start: 0, end: code.length, className: `token-${code.length}` },
   ]),
 );
-vi.mock("@/features/editor/markdown/code-highlight", () => ({
+vi.mock("@/features/editor/markdown/services/code-highlight", () => ({
   getCodeHighlightSegments: highlight,
 }));
 

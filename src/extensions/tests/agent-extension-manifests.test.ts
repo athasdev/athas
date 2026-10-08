@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vite-plus/test";
 import { ATHAS_ROOT } from "../../../extensions/tooling/extension-workspace";
 import type { ExtensionManifest } from "@/extensions/types/extension-manifest";
-import { migrateLegacyAgentId } from "@/features/ai/lib/agent-clis";
+import { migrateLegacyAgentId } from "@/features/ai/services/agent-clis";
 
 async function readOfficialManifest(folder: string): Promise<ExtensionManifest> {
   return JSON.parse(

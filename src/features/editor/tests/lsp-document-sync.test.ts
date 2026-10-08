@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
-import { LspClient } from "../lsp/lsp-client";
+import { LspClient } from "../lsp/services/lsp-client";
 import { useBufferStore } from "../stores/buffer.store";
 import { publishEditorDocumentChange } from "../services/editor-document-events";
 import type { EditorDocumentChangeEvent } from "../types/editor.types";
@@ -89,11 +89,7 @@ describe("LSP incremental document synchronization", () => {
           savedContent: "",
           isDirty: true,
           isVirtual: false,
-          isPreview: false,
-          isPinned: false,
-          isActive: true,
           language: "typescript",
-          tokens: [],
         },
       ],
     });

@@ -1,9 +1,10 @@
 import { homeDir } from "@tauri-apps/api/path";
 import { toast } from "sonner";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { readFileContent } from "@/features/file-system/controllers/file-operations";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { readFileContent } from "@/features/file-system/api/file-operations";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { getBaseName, joinPath } from "@/utils/path-helpers";
+import { emitAppEvent } from "@/utils/app-events";
 
 const HOME_RELATIVE_PATH_RE = /^~(?:[\\/]|$)/;
 
@@ -38,7 +39,7 @@ export async function resolveToolPath(path: string): Promise<string> {
   return resolveWorkspacePath(path, home);
 }
 
-export function showToolPathError(path: string, error: unknown) {
+function showToolPathError(path: string, error: unknown) {
   toast.error(`Could not open ${getBaseName(path) || path}`, {
     description: error instanceof Error ? error.message : String(error),
   });
@@ -61,8 +62,6 @@ export async function openToolPath(path: string, line?: number | null) {
   if (!line) return;
   // The editor mounts for the new buffer first; it retries once more if its text is not in yet.
   setTimeout(() => {
-    window.dispatchEvent(
-      new CustomEvent("menu-go-to-line", { detail: { line, path: resolvedPath } }),
-    );
+    emitAppEvent("editor:go-to-line", { line, path: resolvedPath });
   }, 100);
 }

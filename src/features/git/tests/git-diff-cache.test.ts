@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vite-plus/test";
 import type { GitDiff } from "../types/git.types";
-import { gitDiffCache } from "../utils/git-diff-cache";
+import { gitDiffCache } from "../services/git-diff-cache";
 
 const diff: GitDiff = {
   file_path: "src/app.ts",

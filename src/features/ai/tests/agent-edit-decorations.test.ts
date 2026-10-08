@@ -2,8 +2,8 @@ import { describe, expect, it } from "vite-plus/test";
 import {
   agentEditDecorations,
   agentEditLensAtLine,
-} from "@/features/ai/lib/agent-edit-decorations";
-import { agentEditLenses } from "@/features/ai/lib/agent-edit-lenses";
+} from "@/features/ai/services/agent-edit-decorations";
+import { agentEditLenses } from "@/features/ai/services/agent-edit-lenses";
 
 const baseline = ["a", "b", "c", "d", "e", "f", "g"].join("\n");
 // Line 2 replaced, line 4 removed, a line added after the last one.

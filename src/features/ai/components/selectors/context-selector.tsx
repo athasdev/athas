@@ -1,14 +1,14 @@
 import { TagIcon, RocketIcon } from "@/ui/icons";
 import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
-import { openFiles } from "@/features/file-system/controllers/platform";
+import { openFiles } from "@/features/file-system/api/file-system-api";
 import { useGitStore } from "@/features/git/stores/git.store";
 import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { formatContextReference, listProjectFolders } from "@/features/ai/lib/context-references";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { Button } from "@/ui/button";
 import {
   DropdownMenu,
@@ -96,11 +96,10 @@ export function ContextSelector({
   const chatSearch = useMenuSearch();
   const [projectFolders, setProjectFolders] = useState<ReturnType<typeof listProjectFolders>>([]);
   const getAllProjectFiles = useFileSystemStore((state) => state.getAllProjectFiles);
-  const problemCount = useDiagnosticsStore((state) => {
-    let count = 0;
-    for (const diagnostics of state.diagnosticsByFile.values()) count += diagnostics.length;
-    return count;
-  });
+  const problemCount = useDiagnosticsStore(
+    ({ diagnosticCounts }) =>
+      diagnosticCounts.error + diagnosticCounts.warning + diagnosticCounts.info,
+  );
   const chats = useAIChatStore((state) => state.chats);
   const [fileQuery, setFileQuery] = useState("");
   const [selectedFileIndex, setSelectedFileIndex] = useState(0);

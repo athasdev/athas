@@ -1,18 +1,20 @@
 import type { SplitPlacement } from "@/features/panes/types/pane.types";
-import { getPaneDropZoneFromRect, type PaneDropZone } from "@/features/panes/utils/pane-drop-zones";
+import {
+  getPaneDropZoneFromRect,
+  type PaneDropZone,
+} from "@/features/panes/services/pane-drop-zones";
 import type { TerminalSplitDirection } from "@/features/terminal/types/terminal.types";
+import { emitAppEvent } from "@/utils/app-events";
 
-export interface TerminalPaneDropTarget {
+interface TerminalPaneDropTarget {
   terminalId: string;
   zone: PaneDropZone;
 }
 
-export interface TerminalSplitDropOptions {
+interface TerminalSplitDropOptions {
   direction: TerminalSplitDirection;
   placement: SplitPlacement;
 }
-
-export const TERMINAL_PANE_DROP_HOVER_EVENT = "athas-terminal-pane-drop-hover";
 
 declare global {
   interface Window {
@@ -53,7 +55,7 @@ export function setTerminalPaneDropHover(next: TerminalPaneDropTarget | null) {
   const previous = window.__athasTerminalPaneDropHover ?? null;
   if (previous?.terminalId === next?.terminalId && previous?.zone === next?.zone) return;
   window.__athasTerminalPaneDropHover = next;
-  window.dispatchEvent(new CustomEvent(TERMINAL_PANE_DROP_HOVER_EVENT));
+  emitAppEvent("terminal:pane-drop-hover");
 }
 
 export function getTerminalPaneDropHover(): TerminalPaneDropTarget | null {

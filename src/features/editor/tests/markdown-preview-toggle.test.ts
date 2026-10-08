@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { usePaneStore } from "@/features/panes/stores/pane.store";
+import { getActiveBufferId } from "@/features/panes/stores/pane-selectors";
 
 beforeEach(() => {
   vi.stubGlobal("localStorage", {
@@ -25,14 +26,14 @@ beforeEach(() => {
 afterEach(async () => {
   usePaneStore.getState().actions.reset();
   const { useBufferStore } = await import("../stores/buffer.store");
-  useBufferStore.setState({ buffers: [], activeBufferId: null });
+  useBufferStore.setState({ buffers: [] });
   vi.unstubAllGlobals();
 });
 
 describe("Markdown preview toggle", () => {
   it("keeps the source file in the same tab and preserves unsaved content", async () => {
     const { useBufferStore } = await import("../stores/buffer.store");
-    const { toggleMarkdownPreview } = await import("../markdown/toggle-markdown-preview");
+    const { toggleMarkdownPreview } = await import("../markdown/services/toggle-markdown-preview");
     const actions = useBufferStore.getState().actions;
     const bufferId = actions.openContent({
       type: "editor",
@@ -45,7 +46,7 @@ describe("Markdown preview toggle", () => {
     toggleMarkdownPreview(bufferId);
 
     expect(useBufferStore.getState().buffers).toHaveLength(1);
-    expect(useBufferStore.getState().activeBufferId).toBe(bufferId);
+    expect(getActiveBufferId()).toBe(bufferId);
     expect(useBufferStore.getState().buffers[0]).toMatchObject({
       id: bufferId,
       type: "editor",
@@ -66,7 +67,7 @@ describe("Markdown preview toggle", () => {
 
   it("ignores non-Markdown files", async () => {
     const { useBufferStore } = await import("../stores/buffer.store");
-    const { toggleMarkdownPreview } = await import("../markdown/toggle-markdown-preview");
+    const { toggleMarkdownPreview } = await import("../markdown/services/toggle-markdown-preview");
     const actions = useBufferStore.getState().actions;
     const bufferId = actions.openContent({
       type: "editor",

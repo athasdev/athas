@@ -4,7 +4,7 @@ import { EditorView, ViewPlugin, type ViewUpdate } from "@codemirror/view";
 import { highlightTree } from "@lezer/highlight";
 import { enclosingScopes, type StickyScope } from "./sticky-scopes";
 
-export interface StickyScrollOptions {
+interface StickyScrollOptions {
   /** The most header lines pinned at once. */
   maxLines?: number;
 }

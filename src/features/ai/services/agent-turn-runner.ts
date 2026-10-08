@@ -12,7 +12,10 @@ import { withExitedAcpTerminalSnapshots } from "@/features/ai/lib/acp-terminal-o
 import type { ChatAcpEventInput } from "@/features/ai/lib/acp-event-timeline";
 import { startAssistantResponseContinuation } from "@/features/ai/lib/assistant-response";
 import { buildConversationHistory } from "@/features/ai/lib/conversation-history";
-import { filterAgentContext, loadAgentContextPolicy } from "@/features/ai/lib/agent-context-policy";
+import {
+  filterAgentContext,
+  loadAgentContextPolicy,
+} from "@/features/ai/services/agent-context-policy";
 import {
   discardToolEditSnapshot,
   resolveToolEditDiff,
@@ -50,7 +53,7 @@ import { getProviderAccessFromMap } from "@/features/ai/stores/ai-chat/provider-
 import { useAcpTerminalsStore } from "@/features/ai/stores/acp-terminals.store";
 import { useAgentPermissionsStore } from "@/features/ai/stores/agent-permissions.store";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
-import { agentIsDetached } from "@/features/ai/detached/agent-window.store";
+import { agentIsDetached } from "@/features/ai/detached/stores/agent-window.store";
 import type { AcpEvent } from "@/features/ai/types/acp.types";
 import type { AgentCompletionResult } from "@/features/ai/types/agent-completion.types";
 import type {
@@ -64,9 +67,9 @@ import type { ContextInfo } from "@/features/ai/types/ai-context.types";
 import type { FileEntry } from "@/features/file-system/types/app.types";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import type { AiFailurePhase, AiRunKind } from "@/features/telemetry/lib/ai-signals";
+import type { AiFailurePhase, AiRunKind } from "@/features/telemetry/services/ai-signals";
 import { recordAiFailure } from "@/features/telemetry/services/telemetry";
-import { useAuthStore } from "@/features/window/stores/auth.store";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
 
 export interface AgentTurnRequest {
   content: string;
@@ -124,7 +127,7 @@ function runKind(agentId: string): AiRunKind {
 type BuiltInCompletion = AgentCompletionResult & { steps?: number; costUsd?: number };
 
 /** Per-turn usage for the message footer, when the run reported any. */
-export function toMessageUsage(completion?: BuiltInCompletion): MessageUsage | undefined {
+function toMessageUsage(completion?: BuiltInCompletion): MessageUsage | undefined {
   if (!completion) return undefined;
   const usage: MessageUsage = {};
   if (completion.usage?.inputTokens !== undefined) usage.inputTokens = completion.usage.inputTokens;
@@ -384,15 +387,23 @@ class AgentTurnStream {
     });
   }
 
-  /** Where streamed text lands; queued so a burst of tokens reaches the store once per frame. */
+  /**
+   * Where streamed text lands; queued so a burst of tokens reaches the store once per frame. The
+   * follow-up block is split off when the frame lands rather than per token, which rescanned the
+   * whole reply for every chunk.
+   */
   onChunk = (chunk: string) => {
     this.rawContent += chunk;
+    chatActions().queueMessageUpdate(this.chatId, this.messageId, this.resolveStreamedContent);
+  };
+
+  private resolveStreamedContent = (): Partial<Message> => {
     const extracted = extractFollowUpActions(this.rawContent);
-    chatActions().queueMessageUpdate(this.chatId, this.messageId, {
+    return {
       content: extracted.content,
       followUpActions: extracted.actions,
       responsePhase: undefined,
-    });
+    };
   };
 
   onComplete = (completion?: BuiltInCompletion) => {

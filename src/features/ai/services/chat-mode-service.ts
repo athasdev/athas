@@ -2,7 +2,10 @@ import {
   getCodexSettings,
   saveCodexSettings,
 } from "@/features/ai/integrations/codex/codex-integration-service";
-import { selectChatAcpSession, selectChatAcpSessionId } from "@/features/ai/lib/acp-session-state";
+import {
+  selectChatAcpSession,
+  selectChatAcpSessionId,
+} from "@/features/ai/services/acp-session-state";
 import {
   findModeForIntent,
   getChatModeSource,

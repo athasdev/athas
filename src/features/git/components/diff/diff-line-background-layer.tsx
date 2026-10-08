@@ -1,7 +1,7 @@
 import { memo } from "react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { getDiffLineVisualState } from "../../utils/diff-viewer-visuals";
-import type { DiffEditorLineKind } from "../../utils/diff-editor-content";
+import type { DiffEditorLineKind } from "../../services/diff-editor-content";
 
 interface DiffLineBackgroundLayerProps {
   lineKinds: DiffEditorLineKind[];

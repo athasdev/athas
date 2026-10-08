@@ -1,4 +1,4 @@
-import type { SubscriptionInfo } from "@/features/window/services/auth-api";
+import type { SubscriptionInfo } from "@/features/auth/services/auth-api";
 
 type CollaborationSnapshot = NonNullable<SubscriptionInfo["collaboration"]>;
 
@@ -12,7 +12,7 @@ interface CollaborationDocumentStreamSummary {
   updatesReceived: number;
 }
 
-export interface CollaborationFooterStatus {
+interface CollaborationFooterStatus {
   label: string;
   countLabel: string | null;
   tooltip: string;

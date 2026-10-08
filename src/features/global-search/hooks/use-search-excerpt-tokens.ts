@@ -1,5 +1,5 @@
 import { startTransition, useEffect, useMemo, useState } from "react";
-import type { Token } from "@/features/editor/utils/html";
+import type { Token } from "@/features/editor/types/editor.types";
 import {
   getSearchExcerptTokenSnapshot,
   loadSearchExcerptTokens,

@@ -1,4 +1,4 @@
-import { commands } from "@/bindings/commands";
+import { setNativeMenuBarEnabled } from "@/features/window/services/native-window-api";
 import { FilePlusIcon, TrashIcon, UploadIcon } from "@/ui/icons";
 import { iconThemeRegistry } from "@/extensions/icon-themes/icon-theme-registry";
 import { useRegisteredIconThemes } from "@/extensions/icon-themes/use-registered-icon-themes";
@@ -13,9 +13,9 @@ import {
   UI_FONT_SIZE_MAX,
   UI_FONT_SIZE_MIN,
   UI_FONT_SIZE_STEP,
-} from "@/features/settings/lib/ui-font-size";
+} from "@/features/settings/services/ui-font-size";
 import { getDefaultSetting } from "@/features/settings/config/default-settings";
-import { normalizeUiDensity } from "@/features/settings/lib/ui-preferences";
+import { normalizeUiDensity } from "@/features/settings/services/ui-preferences";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import type { TabCloseButtonVisibility } from "@/features/settings/types/settings.types";
 import { Button } from "@/ui/button";
@@ -31,7 +31,7 @@ import {
   chooseThemeFile,
   deleteCustomTheme,
   uploadTheme,
-} from "@/features/settings/utils/theme-upload";
+} from "@/features/settings/services/theme-upload";
 
 export const AppearanceSettings = () => {
   const settings = useSettingsStore(
@@ -422,7 +422,7 @@ export const AppearanceSettings = () => {
               checked={settings.nativeMenuBar}
               onChange={(checked) => {
                 updateSetting("nativeMenuBar", checked);
-                commands.toggleMenuBar(checked);
+                void setNativeMenuBarEnabled(checked);
               }}
             />
           </SettingRow>

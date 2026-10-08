@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getBrowserTabName, resolveBrowserAddress } from "../utils/browser-address";
+import { getBrowserTabName, resolveBrowserAddress } from "../services/browser-address";
 
 describe("resolveBrowserAddress", () => {
   it("keeps full web addresses as typed", () => {

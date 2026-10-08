@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from "react";
-import { buildAgentOptions } from "@/features/ai/lib/agent-options";
+import { buildAgentOptions } from "@/features/ai/services/agent-options";
 import { useAgentCatalogStore } from "@/features/ai/stores/agent-catalog.store";
 import type { AgentType } from "@/features/ai/types/ai-chat.types";
 

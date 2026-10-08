@@ -1,11 +1,11 @@
 import { cancelIntelligenceAgent } from "@/features/ai/intelligence/services/intelligence-agent-session";
-import { getLocalChatConnection } from "@/features/ai/lib/local-ai-connection";
+import { getLocalChatConnection } from "@/features/ai/services/local-ai-connection";
 import { getProviderAccessFromMap } from "@/features/ai/stores/ai-chat/provider-actions";
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { appendChatAcpEvent, type ChatAcpEventInput } from "@/features/ai/lib/acp-event-timeline";
 import { acpNoticeToChatEvent } from "@/features/ai/lib/acp-notices";
 import { partitionContextSelections } from "@/features/ai/lib/context-references";
-import { openAgentHistoryChat } from "@/features/ai/lib/open-agent-history";
+import { openAgentHistoryChat } from "@/features/ai/services/open-agent-history";
 import { getAgentMessageAccess } from "@/features/ai/lib/agent-message-access";
 import {
   beginQueuedSendNow,
@@ -13,7 +13,7 @@ import {
   settleQueuedSendNow,
 } from "@/features/ai/lib/agent-queue-controls";
 import { isBrowserOffline } from "@/features/ai/lib/agent-turn-error";
-import { requestInlineEdit } from "@/features/editor/services/editor-inline-edit-service";
+import { requestInlineEdit } from "@/features/ai/intelligence/services/intelligence-text-service";
 import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
 import {
   type AgentTurnRequest,
@@ -31,7 +31,7 @@ import type {
 import { type AgentRunEnding, continuesAgentQueue } from "@/features/ai/lib/agent-message-queue";
 import { useAcpNoticesStore } from "@/features/ai/stores/acp-notices.store";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
-import { agentIsDetached } from "@/features/ai/detached/agent-window.store";
+import { agentIsDetached } from "@/features/ai/detached/stores/agent-window.store";
 import { peekAgentDraft } from "@/features/ai/detached/agent-window-drafts";
 import { useComposerContextSelection } from "@/features/ai/hooks/use-composer-context-selection";
 import { useOnlineStatus } from "@/features/ai/hooks/use-online-status";
@@ -43,12 +43,12 @@ import {
   normalizeAgentSessionTitle,
 } from "@/features/ai/utils/chat-session-title";
 import { getMessageSearchMatches } from "@/features/ai/utils/message-search";
-import { useToast } from "@/features/layout/contexts/toast-context";
+import { useToast } from "@/utils/toast";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { recordFrictionSignal } from "@/features/telemetry/services/telemetry";
-import { claimContextualTip } from "@/features/onboarding/lib/contextual-teaching";
-import { useAuthStore } from "@/features/window/stores/auth.store";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { claimContextualTip } from "@/features/onboarding/services/contextual-teaching";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { Button } from "@/ui/button";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
 import {
@@ -59,7 +59,8 @@ import {
 } from "@/ui/message-scroller";
 import { cn } from "@/utils/cn";
 import { AgentStartView } from "../agent-start-view";
-import { useChatActions, useChatState } from "../../hooks/use-chat-store";
+import { useChatSession } from "../../hooks/use-chat-store";
+import { EMPTY_CHAT_MESSAGES } from "@/features/ai/services/chat-normalization";
 import AIChatInputBar from "../input/chat-input-bar";
 import {
   selectSessionQuestions,
@@ -76,6 +77,8 @@ import { AcpQuestionPrompt } from "./acp-question-prompt";
 import { AcpUrlQuestionPrompt } from "./acp-url-question-prompt";
 import { ChatHeader } from "./chat-header";
 import { ChatMessages } from "./chat-messages";
+
+const EMPTY_QUEUE: QueuedAgentMessage[] = [];
 
 const AIChat = memo(function AIChat({
   className,
@@ -95,8 +98,11 @@ const AIChat = memo(function AIChat({
     enterprisePolicy?.managedMode && !enterprisePolicy.aiChatEnabled,
   );
 
-  const chatState = useChatState();
-  const chatActions = useChatActions();
+  const chatActions = useAIChatStore((state) => state.actions);
+  const currentChatId = useAIChatStore((state) => state.currentChatId);
+  const selectedAgentId = useAIChatStore((state) => state.selectedAgentId);
+  const outputStyle = useAIChatStore((state) => state.outputStyle);
+  const pendingAgentLaunchRequest = useAIChatStore((state) => state.pendingAgentLaunchRequest);
   const { showToast } = useToast();
 
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -114,17 +120,14 @@ const AIChat = memo(function AIChat({
   const composerContext = useComposerContextSelection(peekAgentDraft(surfaceId));
   const { selectedBufferIds, selectedEditorContexts, selectedFilesPaths } =
     composerContext.inputProps;
-  const effectiveChatId = chatId ?? chatState.currentChatId;
+  const effectiveChatId = chatId ?? currentChatId;
   const previousChatId = useRef(effectiveChatId);
   useEffect(() => {
     if (!effectiveChatId) return;
     return markAgentChatVisible(effectiveChatId);
   }, [effectiveChatId]);
-  const currentChat = useMemo(
-    () => chatState.chats.find((chat) => chat.id === effectiveChatId),
-    [chatState.chats, effectiveChatId],
-  );
-  const currentAgentId = currentChat?.agentId ?? chatState.selectedAgentId;
+  const currentChat = useChatSession(effectiveChatId);
+  const currentAgentId = currentChat?.agentId ?? selectedAgentId;
   const chatSessionId = currentChat?.acpSessionId ?? null;
   const sessionNotices = useAcpNoticesStore((state) =>
     chatSessionId ? state.notices[chatSessionId] : undefined,
@@ -145,19 +148,37 @@ const AIChat = memo(function AIChat({
     currentAgentId === "custom"
       ? (currentChat?.modelId ?? currentChat?.providerId ?? aiProviderId)
       : currentAgentId;
-  const activeRun = effectiveChatId ? chatState.agentRuns[effectiveChatId] : undefined;
+  const activeRun = useAIChatStore((state) =>
+    effectiveChatId ? state.agentRuns[effectiveChatId] : undefined,
+  );
   const isSurfaceTyping = Boolean(activeRun);
   const surfaceStreamingMessageId = activeRun?.assistantMessageId ?? null;
-  const queuedMessages = effectiveChatId
-    ? (chatState.agentMessageQueues[effectiveChatId] ?? [])
-    : [];
-  const chatMessageLoadState = effectiveChatId
-    ? chatState.chatMessageLoadStates[effectiveChatId]
-    : "loaded";
+  const queuedMessages = useAIChatStore(
+    (state) =>
+      (effectiveChatId ? state.agentMessageQueues[effectiveChatId] : undefined) ?? EMPTY_QUEUE,
+  );
+  const chatMessageLoadState = useAIChatStore((state) =>
+    effectiveChatId ? state.chatMessageLoadStates[effectiveChatId] : "loaded",
+  );
   const isChatMessagesLoaded = !effectiveChatId || chatMessageLoadState === "loaded";
+  // The messages change with every streamed frame; only a search needs them here.
+  const hasMessageSearchQuery = messageSearchQuery.trim().length > 0;
+  const searchedMessages = useAIChatStore((state) =>
+    hasMessageSearchQuery && effectiveChatId
+      ? (state.messagesByChat[effectiveChatId] ?? EMPTY_CHAT_MESSAGES)
+      : EMPTY_CHAT_MESSAGES,
+  );
+  const messageCount = useAIChatStore((state) =>
+    effectiveChatId ? (state.messagesByChat[effectiveChatId]?.length ?? 0) : 0,
+  );
+  const lastMessageError = useAIChatStore((state) => {
+    const messages = effectiveChatId ? state.messagesByChat[effectiveChatId] : undefined;
+    const lastMessage = messages?.[messages.length - 1];
+    return lastMessage?.role === "assistant" ? lastMessage.error : undefined;
+  });
   const messageSearchMatches = useMemo(
-    () => getMessageSearchMatches(currentChat?.messages ?? [], messageSearchQuery),
-    [currentChat?.messages, messageSearchQuery],
+    () => getMessageSearchMatches(searchedMessages, messageSearchQuery),
+    [searchedMessages, messageSearchQuery],
   );
   const activeMessageSearchMatch = messageSearchMatches[activeMessageSearchIndex] ?? null;
 
@@ -394,7 +415,7 @@ const AIChat = memo(function AIChat({
         surfaceChatId: effectiveChatId,
         isBoundToChat: Boolean(chatId),
         fallbackProviderId: aiProviderId,
-        outputStyle: chatState.outputStyle,
+        outputStyle,
         allProjectFiles,
         selectedFilesPaths,
         abortControllerRef,
@@ -601,7 +622,7 @@ const AIChat = memo(function AIChat({
   );
 
   useEffect(() => {
-    const pendingLaunch = chatState.pendingAgentLaunchRequest;
+    const pendingLaunch = pendingAgentLaunchRequest;
     if (!pendingLaunch) return;
     if (pendingLaunch.chatId !== effectiveChatId) return;
     if (activeBuffer?.type !== "agent") return;
@@ -642,7 +663,7 @@ const AIChat = memo(function AIChat({
     sessionProviderId,
     currentAgentId,
     isSurfaceTyping,
-    chatState.pendingAgentLaunchRequest,
+    pendingAgentLaunchRequest,
     surfaceStreamingMessageId,
     activeBuffer,
     composerContext.append,
@@ -660,14 +681,10 @@ const AIChat = memo(function AIChat({
     [acpEvents, sessionNotices],
   );
   const currentPermission = permissionQueue[0];
-  const isNewSession =
-    isChatMessagesLoaded && (currentChat?.messages.length ?? 0) === 0 && acpEvents.length === 0;
+  const isNewSession = isChatMessagesLoaded && messageCount === 0 && acpEvents.length === 0;
   const currentQuestion = currentPermission ? undefined : agentQuestions[0];
   const useInitialComposer = isNewSession && !currentPermission && !currentQuestion;
-  const lastMessage = currentChat?.messages[currentChat.messages.length - 1];
-  const lastTurnFailed = lastMessage?.role === "assistant" && Boolean(lastMessage.error);
-  const lastTurnFailedOffline =
-    isOnline && lastTurnFailed && lastMessage?.error?.code === "offline";
+  const lastTurnFailedOffline = isOnline && lastMessageError?.code === "offline";
   const handleQuestionAnswer = async (response: AcpElicitationResponse) => {
     if (!currentQuestion) return;
     const isLink = currentQuestion.request.mode === "url";

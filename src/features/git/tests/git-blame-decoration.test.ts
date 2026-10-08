@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import type { GitBlameLine } from "../types/git.types";
-import { getInlineGitBlamePresentation } from "../utils/git-blame-decoration";
+import { getInlineGitBlamePresentation } from "../services/git-blame-decoration";
 
 function createBlameLine(overrides: Partial<GitBlameLine> = {}): GitBlameLine {
   return {

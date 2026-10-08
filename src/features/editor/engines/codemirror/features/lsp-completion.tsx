@@ -11,7 +11,7 @@ import { Prec, type Extension } from "@codemirror/state";
 import { type EditorView, keymap } from "@codemirror/view";
 import { useEffect, useMemo } from "react";
 import type { CompletionItem } from "vscode-languageserver-protocol";
-import { LspClient } from "@/features/editor/lsp/lsp-client";
+import { LspClient } from "@/features/editor/lsp/services/lsp-client";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { type CodeMirrorHost, useCodeMirrorExtension } from "../host";
 import {
@@ -29,6 +29,7 @@ import {
 import { isLspFile, toLspPosition } from "../lsp/lsp-positions";
 import type { SnippetVariableResolver } from "../lsp/lsp-snippet";
 import { createDocumentationElement } from "../lsp/markdown-content";
+import { emitAppEvent, onAppEvent } from "@/utils/app-events";
 
 function pathParts(filePath: string) {
   const separator = Math.max(filePath.lastIndexOf("/"), filePath.lastIndexOf("\\"));
@@ -42,7 +43,7 @@ function pathParts(filePath: string) {
 }
 
 /** Values for the LSP snippet variables a server may use, read when the snippet is inserted. */
-export function snippetVariables(view: EditorView, filePath: string): SnippetVariableResolver {
+function snippetVariables(view: EditorView, filePath: string): SnippetVariableResolver {
   const { state } = view;
   const main = state.selection.main;
   const line = state.doc.lineAt(main.head);
@@ -133,7 +134,7 @@ function runCompletionCommand(
   if (command.command === "editor.action.triggerSuggest") {
     startCompletion(view);
   } else if (command.command === "editor.action.triggerParameterHints") {
-    window.dispatchEvent(new CustomEvent("editor-trigger-signature-help"));
+    emitAppEvent("editor:trigger-signature-help");
   } else {
     void client.executeCommand(filePath, command.command, command.arguments ?? []).catch(() => {});
   }
@@ -231,7 +232,7 @@ function lspCompletionExtension(filePath: string, activateOnTyping: boolean): Ex
   ];
 }
 
-/** The completion popup, fed by the language server, plus the `editor-trigger-suggest` command. */
+/** The completion popup, fed by the language server, plus the `editor:trigger-suggest` command. */
 export function LspCompletion({ host }: { host: CodeMirrorHost }) {
   const { view, filePath, isActiveSurface, isReadOnly } = host;
   const autoCompletion = useSettingsStore((state) => state.settings.autoCompletion);
@@ -247,8 +248,7 @@ export function LspCompletion({ host }: { host: CodeMirrorHost }) {
       view.focus();
       startCompletion(view);
     };
-    window.addEventListener("editor-trigger-suggest", handleTriggerSuggest);
-    return () => window.removeEventListener("editor-trigger-suggest", handleTriggerSuggest);
+    return onAppEvent("editor:trigger-suggest", handleTriggerSuggest);
   }, [isActiveSurface, isReadOnly, view]);
 
   return null;

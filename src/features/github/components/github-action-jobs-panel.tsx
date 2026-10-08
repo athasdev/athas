@@ -1,5 +1,5 @@
 import { ChevronDownIcon, ChevronRightIcon, CopyIcon, OpenExternalIcon } from "@/ui/icons";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openExternalUrl } from "@/utils/external-url";
 import { useState } from "react";
 import { ContextMenuPopup, createContextMenuGroups } from "@/ui/context-menu";
 import { EmptyState } from "@/ui/empty";
@@ -12,7 +12,7 @@ import {
   getWorkflowRunState,
   getWorkflowStepTiming,
 } from "../utils/github-workflow-status";
-import { copyToClipboard } from "../utils/github-viewer-utils";
+import { copyToClipboard } from "../services/github-viewer-utils";
 import { WORKFLOW_TONE_TEXT_CLASS, WorkflowStatusIcon } from "./github-workflow-status-icon";
 
 interface JobsContextMenuState {
@@ -85,7 +85,7 @@ export function GitHubActionJobsPanel({
                 id: "open-job",
                 label: "Open job on GitHub",
                 icon: <OpenExternalIcon />,
-                onClick: () => void openUrl(contextMenu.job.url ?? ""),
+                onClick: () => void openExternalUrl(contextMenu.job.url ?? ""),
               },
               {
                 id: "copy-job-link",

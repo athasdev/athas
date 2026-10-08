@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { isEditorContent } from "@/features/panes/types/pane-content.types";
 import { createSelectors } from "@/utils/zustand-selectors";
+import { readBufferText } from "../services/buffer-text";
 import { useBufferStore } from "./buffer.store";
 
 interface EditorViewState {
@@ -20,7 +21,7 @@ let cachedLines: { content: string; lines: string[] } | null = null;
 
 function getActiveContent(): string {
   const activeBuffer = useBufferStore.getState().actions.getActiveBuffer();
-  return activeBuffer && isEditorContent(activeBuffer) ? activeBuffer.content : "";
+  return activeBuffer && isEditorContent(activeBuffer) ? readBufferText(activeBuffer) : "";
 }
 
 function getLinesOf(content: string): string[] {

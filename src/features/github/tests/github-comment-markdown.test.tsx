@@ -7,7 +7,7 @@ import GitHubMarkdown from "../components/github-markdown";
 vi.mock("@/features/editor/stores/buffer.store", () => ({
   useBufferStore: { use: { actions: () => ({}) } },
 }));
-vi.mock("@/features/editor/markdown/code-highlight", () => ({
+vi.mock("@/features/editor/markdown/services/code-highlight", () => ({
   highlightMarkdownCodeBlocks: async (html: string) => html,
 }));
 vi.mock("@tauri-apps/plugin-opener", () => ({ openUrl: vi.fn() }));

@@ -55,14 +55,12 @@ export interface EditorAPI {
   // Settings
   getSettings: () => EditorSettings;
   updateSettings: (settings: Partial<EditorSettings>) => void;
+  clearSettingOverrides: () => void;
 
   // Events - Type-safe event subscription
   on: <E extends EditorEvent>(event: E, handler: EventHandler<E>) => () => void;
   off: <E extends EditorEvent>(event: E, handler: EventHandler<E>) => void;
   emitEvent: <E extends EditorEvent>(event: E, data: EditorEventPayload[E]) => void;
-
-  // Internal - set textarea ref for cursor sync
-  setTextareaRef?: (ref: HTMLTextAreaElement | null) => void;
 }
 
 export interface EditorSettings {

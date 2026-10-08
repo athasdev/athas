@@ -4,7 +4,6 @@ import { FitAddon } from "@xterm/addon-fit";
 import { ImageAddon } from "@xterm/addon-image";
 import { ProgressAddon } from "@xterm/addon-progress";
 import { SearchAddon } from "@xterm/addon-search";
-import { SerializeAddon } from "@xterm/addon-serialize";
 import { UnicodeGraphemesAddon } from "@xterm/addon-unicode-graphemes";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { WebglAddon } from "@xterm/addon-webgl";
@@ -26,7 +25,6 @@ import { frontendTrace } from "@/utils/frontend-trace";
 export interface TerminalAddons {
   fitAddon: FitAddon;
   searchAddon: SearchAddon;
-  serializeAddon: SerializeAddon;
   progressAddon: ProgressAddon;
   imageAddon: ImageAddon | null;
   webglAddon: WebglAddon | null;
@@ -34,7 +32,7 @@ export interface TerminalAddons {
 
 export const TERMINAL_UNICODE_VERSION = "15-graphemes";
 
-export interface CreateTerminalAddonsOptions {
+interface CreateTerminalAddonsOptions {
   onRendererFallback?: () => void;
 }
 
@@ -44,7 +42,6 @@ export function createTerminalAddons(
 ): TerminalAddons {
   const fitAddon = new FitAddon();
   const searchAddon = new SearchAddon();
-  const serializeAddon = new SerializeAddon();
   const unicodeAddon = new UnicodeGraphemesAddon();
   const progressAddon = new ProgressAddon();
   const clipboardAddon = new ClipboardAddon(undefined, {
@@ -56,7 +53,6 @@ export function createTerminalAddons(
 
   terminal.loadAddon(fitAddon);
   terminal.loadAddon(searchAddon);
-  terminal.loadAddon(serializeAddon);
   terminal.loadAddon(unicodeAddon);
   terminal.loadAddon(clipboardAddon);
   terminal.loadAddon(progressAddon);
@@ -65,7 +61,7 @@ export function createTerminalAddons(
   const imageAddon = loadImageAddon(terminal);
   const webglAddon = loadWebglRenderer(terminal, options.onRendererFallback);
 
-  return { fitAddon, searchAddon, serializeAddon, progressAddon, imageAddon, webglAddon };
+  return { fitAddon, searchAddon, progressAddon, imageAddon, webglAddon };
 }
 
 function loadImageAddon(terminal: Terminal): ImageAddon | null {
@@ -112,7 +108,7 @@ function reportRendererFallback(reason: "unavailable" | "context-loss", error?: 
   void recordFrictionSignal({ area: "terminal", signal: "renderer_fallback" });
 }
 
-export function openExternalTerminalLink(uri: string): void {
+function openExternalTerminalLink(uri: string): void {
   const target = resolveExternalLinkTarget(uri);
   if (!target) return;
   openUrl(target).catch((error) => console.error("Failed to open link:", error));

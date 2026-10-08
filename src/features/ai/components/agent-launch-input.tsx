@@ -2,12 +2,13 @@ import { useCallback } from "react";
 import AIChatInputBar from "@/features/ai/components/input/chat-input-bar";
 import { useComposerContextSelection } from "@/features/ai/hooks/use-composer-context-selection";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
+import { useOpenBuffersIgnoringText } from "@/features/editor/hooks/use-buffer-text";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import type { FileEntry } from "@/features/file-system/types/app.types";
 import type { ImageContent } from "@/features/ai/types/ai-chat.types";
 import { getAgentMessageAccess } from "@/features/ai/lib/agent-message-access";
-import { useToast } from "@/features/layout/contexts/toast-context";
+import { useToast } from "@/utils/toast";
 
 const EMPTY_PROJECT_FILES: FileEntry[] = [];
 
@@ -20,7 +21,7 @@ export function AgentLaunchInput({
   autoFocus = false,
   surfaceId = "agent-launch-input",
 }: AgentLaunchInputProps) {
-  const buffers = useBufferStore((state) => state.buffers);
+  const buffers = useOpenBuffersIgnoringText();
   const openAgentBuffer = useBufferStore.use.actions().openAgentBuffer;
   const allProjectFiles = useFileSystemStore(
     (state) => state.projectFilesCache?.files ?? EMPTY_PROJECT_FILES,

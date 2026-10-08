@@ -13,7 +13,8 @@ import Breadcrumb from "@/features/editor/components/toolbar/breadcrumb";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { cn } from "@/utils/cn";
 import type { DiffHeaderProps } from "../../types/git-diff.types";
-import { getFileStatus } from "../../utils/git-diff-helpers";
+import { getFileStatus } from "../../services/git-diff-helpers";
+import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 const DiffHeader = memo(
   ({
@@ -31,7 +32,7 @@ const DiffHeader = memo(
     showDisplayControls = true,
   }: DiffHeaderProps) => {
     const { closeBuffer } = useBufferStore.use.actions();
-    const activeBufferId = useBufferStore.use.activeBufferId();
+    const activeBufferId = useActiveBufferId();
 
     const handleClose = () => {
       if (onClose) {

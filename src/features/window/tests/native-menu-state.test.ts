@@ -11,10 +11,6 @@ const editorBuffer = (overrides: Partial<EditorContent> = {}): EditorContent => 
   savedContent: "",
   isDirty: false,
   isVirtual: false,
-  isPinned: false,
-  isPreview: false,
-  isActive: true,
-  tokens: [],
   ...overrides,
 });
 
@@ -48,9 +44,6 @@ describe("getNativeMenuState", () => {
       path: "terminal:1",
       name: "Terminal",
       sessionId: "session",
-      isPinned: false,
-      isPreview: false,
-      isActive: true,
     };
 
     expect(getNativeMenuState({ ...defaults, activeBuffer: terminal })).toMatchObject({

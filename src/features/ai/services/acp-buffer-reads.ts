@@ -1,9 +1,10 @@
 import { commands } from "@/bindings/commands";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { getSourceEditorBufferByPath } from "@/features/editor/utils/buffer-index";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { getSourceEditorBufferByPath } from "@/features/editor/stores/buffer-index";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 import type { AcpBufferReadRequest } from "@/features/ai/types/acp.types";
+import { readBufferText } from "@/features/editor/services/buffer-text";
 
 const ACP_BUFFER_READ_EVENT = "acp-buffer-read";
 
@@ -22,7 +23,7 @@ export function getOpenBufferContent(path: string): string | null {
   ];
   for (const state of bufferStates) {
     const buffer = getSourceEditorBufferByPath(state.buffers, path);
-    if (buffer) return buffer.content;
+    if (buffer) return readBufferText(buffer);
   }
   return null;
 }

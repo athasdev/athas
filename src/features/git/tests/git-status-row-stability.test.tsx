@@ -17,9 +17,6 @@ vi.mock("@/extensions/icon-themes/components/themed-file-icon", () => ({
     return null;
   },
 }));
-vi.mock("@/features/keymaps/hooks/use-command-shortcut", () => ({
-  useCommandShortcut: () => undefined,
-}));
 let container: HTMLDivElement;
 let root: Root;
 beforeEach(() => {

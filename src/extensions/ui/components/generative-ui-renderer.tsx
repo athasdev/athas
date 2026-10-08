@@ -1,6 +1,6 @@
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openExternalUrl } from "@/utils/external-url";
 import { useCallback, useMemo, useState } from "react";
-import { ProGate } from "@/features/window/components/pro-gate";
+import { ProGate } from "@/features/auth/components/pro-gate";
 import { Alert, AlertDescription, AlertTitle } from "@/ui/alert";
 import {
   normalizeGenerativeUIView,
@@ -43,7 +43,7 @@ export function GenerativeUIRenderer({ component }: GenerativeUIRendererProps) {
     const args = [...(action.args ?? []), ...extraArgs];
     try {
       if (action.command === OPEN_EXTERNAL_VIEW_COMMAND) {
-        await openUrl(resolveExternalUrl(args[0]));
+        await openExternalUrl(resolveExternalUrl(args[0]));
         return;
       }
 

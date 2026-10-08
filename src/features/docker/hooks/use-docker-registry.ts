@@ -1,4 +1,4 @@
-import { useCallback, useReducer } from "react";
+import { useCallback, useReducer, useRef } from "react";
 import {
   loginDockerRegistry,
   pullDockerRegistryImage,
@@ -26,7 +26,7 @@ export interface DockerRegistryState {
   draft: DockerRegistryDraft;
 }
 
-export type DockerRegistryAction =
+type DockerRegistryAction =
   | { type: "set-query"; query: string }
   | { type: "set-draft-field"; field: keyof DockerRegistryDraft; value: string }
   | { type: "search-started" }
@@ -95,6 +95,7 @@ export function useDockerRegistry({
   onInventoryChanged,
 }: UseDockerRegistryOptions) {
   const [state, dispatch] = useReducer(dockerRegistryReducer, initialDockerRegistryState);
+  const latestSearchId = useRef(0);
 
   const handleFailure = useCallback(
     (failure: unknown, operation: "search" | "operation") => {
@@ -109,13 +110,16 @@ export function useDockerRegistry({
     const query = state.query.trim();
     if (!query) return;
 
+    // Only the latest search may report back; an older one can finish after it.
+    const searchId = ++latestSearchId.current;
     dispatch({ type: "search-started" });
     try {
-      dispatch({ type: "search-succeeded", results: await searchDockerRegistry(query, 25) });
+      const results = await searchDockerRegistry(query, 25);
+      if (searchId === latestSearchId.current) dispatch({ type: "search-succeeded", results });
     } catch (error) {
-      handleFailure(error, "search");
+      if (searchId === latestSearchId.current) handleFailure(error, "search");
     } finally {
-      dispatch({ type: "busy-finished" });
+      if (searchId === latestSearchId.current) dispatch({ type: "busy-finished" });
     }
   }, [handleFailure, state.query]);
 

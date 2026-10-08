@@ -17,7 +17,7 @@ import Input from "@/ui/input";
 import { Toggle } from "@/ui/toggle";
 import { cn } from "@/utils/cn";
 
-export interface SearchToggleOption {
+interface SearchToggleOption {
   id: string;
   label: string;
   icon: ReactNode;

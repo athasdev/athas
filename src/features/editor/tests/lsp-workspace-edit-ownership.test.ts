@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { invoke } from "@tauri-apps/api/core";
 import type { EditorContent } from "@/features/panes/types/pane-content.types";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
-import { LspClient } from "../lsp/lsp-client";
-import type { WorkspaceEditContext } from "../lsp/workspace-edit";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
+import { LspClient } from "../lsp/services/lsp-client";
+import type { WorkspaceEditContext } from "../lsp/services/workspace-edit";
 import { useBufferStore } from "../stores/buffer.store";
+import { seedActiveBuffer } from "@/features/panes/tests/helpers/seed-pane-tabs";
 const io = vi.hoisted(() => ({ read: vi.fn(), write: vi.fn() }));
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 vi.mock("@tauri-apps/api/event", () => ({ listen: vi.fn().mockResolvedValue(() => {}) }));
@@ -23,11 +24,7 @@ function buffer(): EditorContent {
     savedContent: "alpha",
     isDirty: false,
     isVirtual: false,
-    isPreview: false,
-    isPinned: false,
-    isActive: true,
     language: "typescript",
-    tokens: [],
   };
 }
 const replacement = {
@@ -84,7 +81,8 @@ async function action(payload: unknown) {
 beforeEach(() => {
   workspaceRuntimeRegistry.resetForTests();
   workspaceRuntimeRegistry.activateWorkspace({ id: "owner", name: "Owner" });
-  owner().setState({ buffers: [buffer()], activeBufferId: "a" });
+  owner().setState({ buffers: [buffer()] });
+  seedActiveBuffer("a", "owner");
   io.read.mockReset().mockResolvedValue("alpha");
   io.write.mockReset().mockResolvedValue(undefined);
   vi.mocked(invoke)

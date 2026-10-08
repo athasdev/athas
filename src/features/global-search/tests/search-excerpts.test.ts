@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import type { FileSearchResult } from "@/features/file-search/lib/file-search-api";
+import type { FileSearchResult } from "@/features/file-search/api/file-search-api";
 import { buildSearchExcerpts } from "../utils/search-excerpts";
 
 const result: FileSearchResult = {

@@ -10,7 +10,7 @@ vi.mock("../../api/git-remotes-api", () => ({ pushChanges: vi.fn(), pullChanges:
 vi.mock("../../stores/git-blame.store", () => ({
   useGitBlameStore: { getState: () => ({ actions: { clearAllBlame: vi.fn() } }) },
 }));
-vi.mock("@/features/editor/services/editor-inline-edit-service", () => ({
+vi.mock("@/features/ai/intelligence/services/intelligence-text-service", () => ({
   requestInlineEdit: vi.fn(),
   InlineEditError: class extends Error {},
 }));
@@ -21,11 +21,8 @@ vi.mock("../utils/commit-message-context", () => ({
 vi.mock("@/features/settings/stores/settings.store", () => ({
   useSettingsStore: (select: (state: unknown) => unknown) => select({ settings: {} }),
 }));
-vi.mock("@/features/window/stores/auth.store", () => ({
+vi.mock("@/features/auth/stores/auth.store", () => ({
   useAuthStore: (select: (state: unknown) => unknown) => select({ isAuthenticated: false }),
-}));
-vi.mock("@/features/keymaps/hooks/use-command-shortcut", () => ({
-  useCommandShortcut: () => undefined,
 }));
 let container: HTMLDivElement;
 let root: Root;

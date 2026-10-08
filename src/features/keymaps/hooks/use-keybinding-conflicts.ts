@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useKeymapStore } from "../stores/keymaps.store";
 import type { Command } from "../types/keymaps.types";
-import { keymapRegistry } from "../utils/registry";
+import { keymapRegistry } from "../services/keymap-registry";
 
 interface ConflictInfo {
   hasConflict: boolean;

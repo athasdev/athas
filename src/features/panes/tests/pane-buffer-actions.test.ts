@@ -34,7 +34,7 @@ describe("pane buffer actions", () => {
   });
 
   it("adds missing buffers to an existing pane", async () => {
-    const { ensureBufferInPane } = await import("../utils/pane-buffer-actions");
+    const { ensureBufferInPane } = await import("../services/pane-buffer-actions");
 
     expect(ensureBufferInPane(ROOT_PANE_ID, "buffer-a")).toBe(ROOT_PANE_ID);
     expect(usePaneStore.getState().actions.getPaneById(ROOT_PANE_ID)?.bufferIds).toEqual([
@@ -44,7 +44,7 @@ describe("pane buffer actions", () => {
   });
 
   it("activates existing buffers without duplicating them", async () => {
-    const { ensureBufferInPane } = await import("../utils/pane-buffer-actions");
+    const { ensureBufferInPane } = await import("../services/pane-buffer-actions");
     const paneActions = usePaneStore.getState().actions;
 
     paneActions.addBufferToPane(ROOT_PANE_ID, "buffer-a");
@@ -56,7 +56,7 @@ describe("pane buffer actions", () => {
   });
 
   it("returns null for missing panes", async () => {
-    const { ensureBufferInPane } = await import("../utils/pane-buffer-actions");
+    const { ensureBufferInPane } = await import("../services/pane-buffer-actions");
 
     expect(ensureBufferInPane("missing-pane", "buffer-a")).toBeNull();
   });

@@ -8,11 +8,11 @@ import {
   parseApiError,
   readErrorBody,
 } from "@/features/ai/lib/api-error";
-import { formatUsdCents } from "@/features/ai/lib/hosted-usage";
+import { formatUsdCents } from "@/features/ai/services/hosted-usage";
 import type { ChatMessageError } from "@/features/ai/types/chat-error.types";
 
 /** How a failed agent turn is shown: a legacy error block for the transcript plus its structure. */
-export interface AgentTurnFailure {
+interface AgentTurnFailure {
   title: string;
   /** The code the legacy error block carries: an HTTP status or a client code like `OFFLINE`. */
   blockCode: string;
@@ -25,7 +25,7 @@ export interface AgentTurnFailure {
 const NETWORK_ERROR_PATTERN =
   /error sending request|failed to fetch|networkerror|load failed|dns error|connection refused|connection reset|tcp connect error|network is unreachable|could not reach|no internet/i;
 
-export function isNetworkErrorMessage(message: string): boolean {
+function isNetworkErrorMessage(message: string): boolean {
   return NETWORK_ERROR_PATTERN.test(message);
 }
 

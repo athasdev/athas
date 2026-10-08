@@ -1,4 +1,4 @@
-export interface GitCacheInvalidation {
+interface GitCacheInvalidation {
   repoPath?: string;
   filePath?: string;
   scopes?: string[];
@@ -6,15 +6,21 @@ export interface GitCacheInvalidation {
 
 type GitCacheInvalidator = (invalidation: GitCacheInvalidation) => void;
 
-const invalidators = new Set<GitCacheInvalidator>();
+/** Keyed by a stable id, so a module that runs again (hot reload) replaces its invalidator. */
+const invalidators = new Map<string, GitCacheInvalidator>();
 
-export function registerGitCacheInvalidator(invalidator: GitCacheInvalidator): () => void {
-  invalidators.add(invalidator);
-  return () => invalidators.delete(invalidator);
+export function registerGitCacheInvalidator(
+  id: string,
+  invalidator: GitCacheInvalidator,
+): () => void {
+  invalidators.set(id, invalidator);
+  return () => {
+    if (invalidators.get(id) === invalidator) invalidators.delete(id);
+  };
 }
 
 export function invalidateGitCaches(invalidation: GitCacheInvalidation = {}): void {
-  for (const invalidator of invalidators) {
+  for (const invalidator of invalidators.values()) {
     invalidator(invalidation);
   }
 }

@@ -11,7 +11,7 @@ export interface DockerContainerFilesState {
   error: string | null;
 }
 
-export type DockerContainerFilesAction =
+type DockerContainerFilesAction =
   | { type: "container-changed"; containerId: string | null }
   | { type: "path-changed"; path: string }
   | { type: "load-started" }

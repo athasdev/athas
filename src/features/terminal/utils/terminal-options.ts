@@ -4,7 +4,7 @@ import { currentPlatform } from "@/utils/platform";
 
 type TerminalPlatform = "linux" | "macos" | "windows";
 
-export interface TerminalCompatibilityContext {
+interface TerminalCompatibilityContext {
   isRemote?: boolean;
   osVersion?: string;
   platform?: TerminalPlatform;

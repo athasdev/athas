@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { authenticatedFetch } from "@/features/window/services/auth-api";
+import { authenticatedFetch } from "@/features/auth/services/auth-api";
 import { runHostedBrowserTool } from "../services/browser-tool";
-vi.mock("@/features/window/services/auth-api", () => ({ authenticatedFetch: vi.fn() }));
+vi.mock("@/features/auth/services/auth-api", () => ({ authenticatedFetch: vi.fn() }));
 beforeEach(() => vi.clearAllMocks());
 describe("hosted browser tool", () => {
   it("uses the same request ID when a tool call is delivered twice", async () => {

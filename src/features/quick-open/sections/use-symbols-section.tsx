@@ -1,12 +1,12 @@
 import { useCallback, useMemo } from "react";
 import { SearchMatchHighlight } from "@/components/search-match-highlight";
-import { editorAPI } from "@/features/editor/extensions/api";
-import { useCenterCursor } from "@/features/editor/hooks/use-center-cursor";
+import { editorAPI } from "@/features/editor/services/editor-api";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useJumpListStore } from "@/features/editor/stores/jump-list.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
-import { calculateOffsetFromContentPosition } from "@/features/editor/utils/position";
+import { calculateOffsetFromContentPosition } from "@/features/editor/services/position";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { getActiveBufferId } from "@/features/panes/stores/pane-selectors";
 import { CommandEmpty, CommandItemBadge } from "@/ui/command";
 import { getBaseName } from "@/utils/path-helpers";
 import { getSymbolIcon } from "../components/symbol-icon";
@@ -60,23 +60,31 @@ export function useSymbolsSection({
   const hasQuery = query.trim().length > 0;
   const fileSymbols = useSymbolSearch(`@${query}`, isActive);
   const projectSymbols = useWorkspaceSymbolSearch(`#${query}`, isActive && hasQuery);
-  const { centerCursorInViewport } = useCenterCursor();
 
   const goToFileSymbol = useCallback(
     (symbol: SymbolItem) => {
       close();
-      // The editor takes focus back as the dialog closes; move the cursor once it has.
+      // Waits for the dialog to close, so the editor takes focus after it.
       setTimeout(() => {
-        const offset = calculateOffsetFromContentPosition(
-          editorAPI.getContent(),
-          symbol.line,
-          symbol.character,
-        );
-        editorAPI.setCursorPosition({ line: symbol.line, column: symbol.character, offset });
-        requestAnimationFrame(() => centerCursorInViewport(symbol.line));
+        const bufferId = getActiveBufferId();
+        if (!bufferId) return;
+        const position = {
+          line: symbol.line,
+          column: symbol.character,
+          offset: calculateOffsetFromContentPosition(
+            editorAPI.getContent(),
+            symbol.line,
+            symbol.character,
+          ),
+        };
+        // The same path as go-to-definition: moves the cursor, centers it and focuses the editor.
+        useEditorStateStore.getState().actions.requestNavigation({
+          bufferId,
+          range: { start: position, end: position },
+        });
       }, 50);
     },
-    [centerCursorInViewport, close],
+    [close],
   );
 
   // Project symbols usually point at files that are not open, so the current position goes on
@@ -84,8 +92,7 @@ export function useSymbolsSection({
   const goToProjectSymbol = useCallback(
     (symbol: WorkspaceSymbolItem) => {
       close();
-      const bufferStore = useBufferStore.getState();
-      const activeBuffer = bufferStore.buffers.find((b) => b.id === bufferStore.activeBufferId);
+      const activeBuffer = useBufferStore.getState().actions.getActiveBuffer();
       if (activeBuffer?.type === "editor" && activeBuffer.path) {
         const editorState = useEditorStateStore.getState();
         useJumpListStore.getState().actions.pushEntry({
@@ -94,8 +101,7 @@ export function useSymbolsSection({
           line: editorState.cursorPosition.line,
           column: editorState.cursorPosition.column,
           offset: editorState.cursorPosition.offset,
-          scrollTop: editorState.scrollTop,
-          scrollLeft: editorState.scrollLeft,
+          ...editorState.actions.getScroll(),
         });
       }
       // handleFileSelect takes 1-indexed positions; language server positions are 0-indexed.

@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { ModelConnectionPicker } from "@/features/ai/components/selectors/model-connection-picker";
-import { useAIModelSettings } from "@/features/settings/hooks/use-ai-model-settings";
+import { useAIModelSettings } from "@/features/ai/hooks/use-ai-model-settings";
 import { useSettingsSectionTarget } from "@/features/settings/hooks/use-settings-section-target";
 import {
   AI_FEATURE_MODEL_OVERRIDES,
   countTaskOverrides,
   withTaskConnection,
-} from "@/features/settings/lib/ai-model-preferences";
+} from "@/features/ai/services/ai-model-preferences";
 import { Button } from "@/ui/button";
 import { ChevronDownIcon, ChevronRightIcon } from "@/ui/icons";
 import Section, { SettingRow } from "../settings-section";

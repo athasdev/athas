@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
-import { LspClient } from "@/features/editor/lsp/lsp-client";
+import { LspClient } from "@/features/editor/lsp/services/lsp-client";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { getBufferById } from "@/features/editor/utils/buffer-index";
+import { getBufferById } from "@/features/editor/stores/buffer-index";
 import { hasTextContent } from "@/features/panes/types/pane-content.types";
-import { normalizeOutlineSymbols } from "../utils/outline-symbols";
+import { normalizeOutlineSymbols } from "../services/outline-symbols";
+import { subscribeLiveDocument } from "@/features/editor/services/live-document-registry";
+import { useBufferIdOrActive } from "@/features/panes/hooks/use-pane-buffer-state";
 
 const OUTLINE_REFRESH_DELAY_MS = 250;
 
@@ -18,9 +20,9 @@ export function useDocumentOutline({
 }: { isActive?: boolean; bufferId?: string } = {}) {
   // Metadata only: selecting the content re-rendered every outline consumer on each keystroke.
   // Content changes are followed through a store subscription below instead.
+  const targetBufferId = useBufferIdOrActive(bufferId);
   const activeBuffer = useBufferStore(
     useShallow((state) => {
-      const targetBufferId = bufferId ?? state.activeBufferId;
       const buffer = targetBufferId ? getBufferById(state.buffers, targetBufferId) : undefined;
       if (!buffer) return null;
       return {
@@ -76,17 +78,29 @@ export function useDocumentOutline({
     };
     // Load straight away when nothing is cached; after that, refresh once typing pauses.
     schedule(filePath && outlineSymbolCache.has(filePath) ? OUTLINE_REFRESH_DELAY_MS : 0);
+    // Typing reaches the editor's live text first; the store only catches up later, and that
+    // write carries no edit the outline has not already been scheduled for.
+    let lastLiveRevision = 0;
+    const unsubscribeLive = activeBufferId
+      ? subscribeLiveDocument(activeBufferId, (change) => {
+          lastLiveRevision = change.revision;
+          schedule(OUTLINE_REFRESH_DELAY_MS);
+        })
+      : () => {};
     const unsubscribe = useBufferStore.subscribe((state, previous) => {
       if (!activeBufferId) return;
       const next = getBufferById(state.buffers, activeBufferId);
       const before = getBufferById(previous.buffers, activeBufferId);
       if (!next || !before || !hasTextContent(next) || !hasTextContent(before)) return;
-      if (next.content !== before.content) schedule(OUTLINE_REFRESH_DELAY_MS);
+      if (next.content === before.content) return;
+      if (next.type === "editor" && (next.contentRevision ?? 0) <= lastLiveRevision) return;
+      schedule(OUTLINE_REFRESH_DELAY_MS);
     });
 
     return () => {
       window.clearTimeout(timeout);
       unsubscribe();
+      unsubscribeLive();
     };
   }, [activeBufferId, filePath, isActive, refresh]);
 

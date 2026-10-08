@@ -1,6 +1,6 @@
 import type { DiagnosticCodeAction } from "@/features/diagnostics/types/diagnostics.types";
 
-export interface CodeActionGroup {
+interface CodeActionGroup {
   id: string;
   label: string;
   actions: DiagnosticCodeAction[];

@@ -1,4 +1,4 @@
-import { getDirtyEditorBuffers } from "@/features/editor/utils/editor-buffer-selectors";
+import { getDirtyEditorBuffers } from "@/features/editor/stores/editor-buffer-selectors";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 
 interface WorkspaceCloseGuardOptions {

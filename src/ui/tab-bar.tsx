@@ -42,10 +42,7 @@ const tabCollisionDetection: CollisionDetection = (args) => {
   return onTabRow ? closestCenter(args) : [];
 };
 
-export type TabDndContextProps = Omit<
-  DndContextProps,
-  "collisionDetection" | "measuring" | "sensors"
->;
+type TabDndContextProps = Omit<DndContextProps, "collisionDetection" | "measuring" | "sensors">;
 
 export function TabDndContext(props: TabDndContextProps) {
   const sensors = useSensors(
@@ -60,7 +57,9 @@ export function TabDndContext(props: TabDndContextProps) {
     <DndContext
       sensors={sensors}
       collisionDetection={tabCollisionDetection}
-      measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
+      // Tabs are measured once a drag starts. Measuring them always re-measured every tab with a
+      // forced layout on each render that added or removed one, such as opening a file.
+      measuring={{ droppable: { strategy: MeasuringStrategy.WhileDragging } }}
       {...props}
     />
   );
@@ -71,7 +70,7 @@ interface SortableTabRenderState {
   dragDistance: number;
 }
 
-export interface SortableTabProps extends Pick<
+interface SortableTabProps extends Pick<
   HTMLAttributes<HTMLDivElement>,
   "className" | "style" | "onClickCapture"
 > {
@@ -218,7 +217,7 @@ export function useTabDragClickGuard() {
   return { getClickCapture, releaseClickSuppression, suppressNextClick };
 }
 
-export interface TabItemProps extends HTMLAttributes<HTMLDivElement> {
+interface TabItemProps extends HTMLAttributes<HTMLDivElement> {
   isActive: boolean;
   isDragged?: boolean;
   action?: ReactNode;

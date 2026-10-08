@@ -1,5 +1,5 @@
 import { getWorkspaceResourceProvider } from "@/features/file-system/services/workspace-resource-provider";
-import type { AgentContextPathPolicy } from "./agent-context-policy";
+import type { AgentContextPathPolicy } from "../services/agent-context-policy";
 import type { FileEntry } from "@/features/file-system/types/app.types";
 import { DEFAULT_ATTACHMENT_BUDGET, truncateTextToTokens } from "@/features/ai/lib/context-budget";
 
@@ -58,7 +58,7 @@ export async function loadFilesByPaths(
   ).filter((file): file is MentionedFile => file !== null);
 }
 
-export interface MentionToken {
+interface MentionToken {
   /** Offset of the leading `@` in the message. */
   start: number;
   /** Offset just past the token. */

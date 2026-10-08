@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import {
   resolveProjectGitHubRepository,
   type GitHubRepository,
-} from "@/features/views/lib/view-github";
+} from "@/features/views/services/view-github";
 import {
   generateCustomView,
   createKnownGitHubView,

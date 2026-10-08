@@ -5,7 +5,7 @@ import { Alert, AlertDescription } from "@/ui/alert";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { TableCell, TableRow } from "@/ui/table";
-import KeybindingDisplay from "./keybinding";
+import KeybindingDisplay from "@/ui/keybinding";
 import { cn } from "@/utils/cn";
 import { useKeybindingConflicts } from "../hooks/use-keybinding-conflicts";
 import { useKeymapStore } from "../stores/keymaps.store";
@@ -97,9 +97,7 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
           )}
         </TableCell>
 
-        <TableCell className="truncate text-subtle-foreground">
-          {keybinding?.when || command.keybinding ? keybinding?.when || "-" : "-"}
-        </TableCell>
+        <TableCell className="truncate text-subtle-foreground">{keybinding?.when || "-"}</TableCell>
 
         <TableCell>
           <Badge tone={isUserOverride ? "accent" : "neutral"}>{sourceLabel}</Badge>

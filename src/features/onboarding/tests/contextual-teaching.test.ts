@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { claimContextualTip } from "../lib/contextual-teaching";
+import { claimContextualTip } from "../services/contextual-teaching";
 
 function createStorage() {
   const values = new Map<string, string>();

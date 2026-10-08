@@ -12,11 +12,7 @@ function makeEditorBuffer(id: string, path: string, isVirtual = false): EditorCo
     savedContent: "",
     isDirty: false,
     isVirtual,
-    isPinned: false,
-    isPreview: false,
-    isActive: false,
     language: "typescript",
-    tokens: [],
   };
 }
 

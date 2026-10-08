@@ -5,19 +5,19 @@ export interface GridCellPosition {
   col: number;
 }
 
-export interface GridSelectionRange {
+interface GridSelectionRange {
   startRow: number;
   endRow: number;
   startCol: number;
   endCol: number;
 }
 
-export interface GridMoveBounds {
+interface GridMoveBounds {
   rowCount: number;
   columnCount: number;
 }
 
-export interface GridSelectionFormatOptions {
+interface GridSelectionFormatOptions {
   columns?: string[];
   includeHeaders?: boolean;
 }

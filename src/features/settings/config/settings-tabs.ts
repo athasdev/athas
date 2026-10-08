@@ -19,6 +19,7 @@ import {
   UserCircleIcon,
   UsersIcon,
 } from "@/ui/icons";
+import type { SettingsTab } from "@/features/layout/stores/ui-state/types/ui-state.types";
 import type { SettingsSection } from "@/features/settings/types/settings.types";
 
 export interface SettingsTabItem {
@@ -122,3 +123,26 @@ export const SETTINGS_TAB_ITEMS: SettingsTabItem[] = [
     icon: GearIcon,
   },
 ];
+
+/** The name each settings tab goes by in command titles and command palette results. */
+export const settingsTabLabels: Record<SettingsTab, string> = {
+  account: "Account",
+  sharing: "Cloud",
+  notifications: "Notifications",
+  general: "General",
+  editor: "Editor",
+  git: "Git",
+  appearance: "Appearance",
+  ai: "AI",
+  "ai-models": "AI Models & Keys",
+  "ai-completion": "Tab Completion",
+  "ai-agents": "AI Agents",
+  "ai-mcp": "MCP Servers",
+  keyboard: "Keybindings",
+  language: "Editor",
+  collaboration: "Collaboration",
+  enterprise: "Enterprise",
+  advanced: "Advanced",
+  terminal: "Terminal",
+  "file-explorer": "Files",
+};

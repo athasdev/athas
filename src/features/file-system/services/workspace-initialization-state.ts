@@ -10,7 +10,7 @@ interface WorkspaceInitializationStateActions {
   addProjectTab: (path: string, name: string) => void;
   getActiveProjectTabId: () => string | undefined;
   expandRoot: (path: string) => void;
-  setProjectMetadata: (path: string, name: string, activeProjectId: string | undefined) => void;
+  setProjectMetadata: (path: string, name: string) => void;
   restoreUiState: (path: string) => void;
   commitFileSystemState: (workspace: InitializedWorkspaceState) => void;
 }
@@ -23,7 +23,7 @@ export function applyWorkspaceInitializationState(
   const activeProjectId = actions.getActiveProjectTabId();
 
   actions.expandRoot(workspace.path);
-  actions.setProjectMetadata(workspace.path, workspace.name, activeProjectId);
+  actions.setProjectMetadata(workspace.path, workspace.name);
   actions.restoreUiState(workspace.path);
   actions.commitFileSystemState(workspace);
 

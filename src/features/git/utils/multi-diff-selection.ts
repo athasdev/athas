@@ -2,7 +2,7 @@ import type { MultiFileDiff } from "../types/git-diff.types";
 import type { GitDiff } from "../types/git.types";
 import { getMultiDiffSectionKey } from "./multi-diff-search";
 
-export interface MultiDiffSelection {
+interface MultiDiffSelection {
   diff: GitDiff;
   index: number;
   key: string;

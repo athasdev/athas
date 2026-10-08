@@ -6,9 +6,6 @@ import type {
   UnifiedExtension,
 } from "../ui/components/extension-catalog-types";
 
-vi.mock("@/features/keymaps/hooks/use-command-shortcut", () => ({
-  useCommandShortcut: () => undefined,
-}));
 vi.mock("@/features/ai/components/messages/markdown-renderer", () => ({
   default: () => null,
 }));

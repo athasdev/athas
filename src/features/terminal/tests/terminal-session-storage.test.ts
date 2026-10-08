@@ -5,7 +5,7 @@ import {
   getTerminalSessionStorageKey,
   loadWorkspaceTerminalsFromStorage,
   saveWorkspaceTerminalsToStorage,
-} from "../lib/terminal-session-storage";
+} from "../services/terminal-session-storage";
 
 const WORKSPACE_A = "/workspace-a";
 const WORKSPACE_B = "/workspace-b";
@@ -53,10 +53,8 @@ describe("terminal session storage", () => {
         id: "terminal-a",
         name: "A",
         currentDirectory: WORKSPACE_A,
-        isActive: true,
         isPinned: false,
         createdAt: new Date(),
-        lastActivity: new Date(),
       },
     ]);
 
@@ -65,10 +63,8 @@ describe("terminal session storage", () => {
         id: "terminal-b",
         name: "B",
         currentDirectory: WORKSPACE_B,
-        isActive: true,
         isPinned: false,
         createdAt: new Date(),
-        lastActivity: new Date(),
       },
     ]);
 

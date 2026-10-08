@@ -1,13 +1,13 @@
 import { useEffect, useState, type KeyboardEvent } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
-import { CUSTOM_CHAT_PROVIDER_ID } from "@/features/ai/lib/custom-provider-config";
+import { CUSTOM_CHAT_PROVIDER_ID } from "@/features/ai/services/custom-provider-config";
 import {
   getProviderApiToken,
   removeProviderApiToken,
   storeProviderApiToken,
 } from "@/features/ai/services/ai-token-service";
 import { setCustomProviderBaseUrl } from "@/features/ai/services/providers/ai-provider-registry";
-import { useToast } from "@/features/layout/contexts/toast-context";
+import { useToast } from "@/utils/toast";
 import { getDefaultSetting } from "@/features/settings/config/default-settings";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";

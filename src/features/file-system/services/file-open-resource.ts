@@ -1,20 +1,20 @@
-import { isBinaryContent, isKnownTextFile } from "@/features/file-system/controllers/file-utils";
+import { isBinaryContent, isKnownTextFile } from "@/features/file-system/services/file-utils";
 import {
   getWorkspaceResourceProvider,
   type WorkspaceResourceProvider,
 } from "@/features/file-system/services/workspace-resource-provider";
-import { parseRemotePath } from "@/features/remote/utils/remote-path";
-import { parseWslPath } from "@/features/wsl/utils/wsl-path";
+import { parseRemotePath } from "@/features/remote/services/remote-path";
+import { parseWslPath } from "@/features/wsl/services/wsl-path";
 
 type ResolveWorkspaceResourceProvider = (path: string) => WorkspaceResourceProvider;
 
-export interface FileOpenResource {
+interface FileOpenResource {
   provider: WorkspaceResourceProvider;
   providerPath: string;
   shouldInspectBytes: boolean;
 }
 
-export interface FileOpenInspection {
+interface FileOpenInspection {
   isBinary: boolean;
   preloadedText: string | null;
 }

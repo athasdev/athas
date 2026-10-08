@@ -1,13 +1,13 @@
 import { describe, expect, test } from "vite-plus/test";
 import type { MultiFileDiff } from "../types/git-diff.types";
 import type { GitDiff } from "../types/git.types";
-import { isDiffFile, parseGitPatchLines, parseRawDiffContent } from "../utils/git-diff-parser";
+import { isDiffFile, parseGitPatchLines, parseRawDiffContent } from "../services/git-diff-parser";
 import { getDiffLineVisualState } from "@/features/git/utils/diff-viewer-visuals";
 import {
   getImageMimeType,
   getImgSrc,
   getSkippedUnchangedLineCount,
-} from "../utils/git-diff-helpers";
+} from "../services/git-diff-helpers";
 
 function isMultiFileDiff(value: GitDiff | MultiFileDiff): value is MultiFileDiff {
   return "files" in value;

@@ -24,7 +24,7 @@ import type {
 } from "../../../types/common.types";
 import type { DatabaseType } from "../../../types/provider.types";
 
-export interface SqlDatabaseState {
+interface SqlDatabaseState {
   databasePath: string | null;
   connectionId: string | null;
   fileName: string;
@@ -57,7 +57,7 @@ export interface SqlDatabaseState {
   columnWidths: Record<string, Record<string, number>>;
 }
 
-export interface SqlDatabaseActions {
+interface SqlDatabaseActions {
   init: (pathOrConnectionId: string) => Promise<void>;
   reset: () => void;
   selectTable: (tableName: string) => Promise<void>;
@@ -106,6 +106,8 @@ export interface SqlDatabaseActions {
 }
 
 type ConnectionMode = "file" | "connection";
+
+export type SqlDatabaseStore = ReturnType<typeof createSqlStore>;
 
 interface CommandMap {
   getTables: string;

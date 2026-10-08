@@ -46,7 +46,7 @@ import {
 } from "../api/git-tags-api";
 import { addWorktree, removeWorktree } from "../api/git-worktrees-api";
 import type { GitRemote, GitTag, GitWorktree } from "../types/git.types";
-import { isOpenableGitWorktree, openGitWorktreeWorkspace } from "../utils/git-worktree-open";
+import { isOpenableGitWorktree, openGitWorktreeWorkspace } from "../services/git-worktree-open";
 import type { SourceControlModel } from "./use-source-control-model";
 
 function filterBy<T>(items: T[], query: string, fields: (item: T) => string[]) {

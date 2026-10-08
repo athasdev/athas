@@ -1,8 +1,8 @@
 import { Compartment, StateEffect } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import type { CodeMirrorHost } from "../../host";
+import { type CodeMirrorHost, flushCodeMirrorExtensionBatch } from "../../host";
 import { minimap } from "./minimap";
 
 type WindowListener = Parameters<typeof window.addEventListener>;
@@ -53,8 +53,9 @@ export function CodeMirrorMinimap({ host }: { host: CodeMirrorHost }) {
   const enabled = useSettingsStore((state) => state.settings.showMinimap);
   const { view } = host;
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!enabled) return;
+    flushCodeMirrorExtensionBatch(view);
     return installMinimap(view);
   }, [enabled, view]);
 

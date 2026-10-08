@@ -1,20 +1,11 @@
-import { useEffect, useState, type FormEvent } from "react";
-import { getVersion } from "@tauri-apps/api/app";
-import { platform, version as osVersion } from "@tauri-apps/plugin-os";
-import { openUrl } from "@tauri-apps/plugin-opener";
-import {
-  aggregateFrictionSignals,
-  buildFeedbackIssueUrl,
-  type FeedbackDraft,
-  type FeedbackEnvironment,
-} from "@/features/feedback/lib/feedback-draft";
-import { OPEN_PRODUCT_FEEDBACK_EVENT } from "@/features/feedback/services/product-feedback";
-import {
-  getTelemetryLogEntries,
-  recordFrictionSignal,
-} from "@/features/telemetry/services/telemetry";
+import { useState, type FormEvent } from "react";
+import { openExternalUrl } from "@/utils/external-url";
+import { buildFeedbackIssueUrl, type FeedbackDraft } from "@/features/feedback/lib/feedback-draft";
+import { getFeedbackEnvironment } from "@/features/feedback/services/feedback-environment";
+import { recordFrictionSignal } from "@/features/telemetry/services/telemetry";
 import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
+import { useAppEvent } from "@/utils/app-events";
 import {
   Field,
   FieldContent,
@@ -29,27 +20,6 @@ import Textarea from "@/ui/textarea";
 
 const emptyDraft: FeedbackDraft = { intent: "", actual: "", expected: "" };
 
-async function getFeedbackEnvironment(): Promise<FeedbackEnvironment> {
-  const [appVersionResult, entriesResult] = await Promise.allSettled([
-    getVersion(),
-    getTelemetryLogEntries(),
-  ]);
-  let os: string;
-  try {
-    os = `${platform()} ${osVersion()}`;
-  } catch {
-    os = navigator.userAgent;
-  }
-
-  return {
-    appVersion: appVersionResult.status === "fulfilled" ? appVersionResult.value : "unknown",
-    os,
-    frictionSignals: aggregateFrictionSignals(
-      entriesResult.status === "fulfilled" ? entriesResult.value : [],
-    ),
-  };
-}
-
 export function ProductFeedbackDialog() {
   const [isOpen, setIsOpen] = useState(false);
   const [draft, setDraft] = useState<FeedbackDraft>(emptyDraft);
@@ -57,14 +27,10 @@ export function ProductFeedbackDialog() {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    const handleOpen = () => {
-      setIsOpen(true);
-      void recordFrictionSignal({ area: "feedback", signal: "opened" });
-    };
-    window.addEventListener(OPEN_PRODUCT_FEEDBACK_EVENT, handleOpen);
-    return () => window.removeEventListener(OPEN_PRODUCT_FEEDBACK_EVENT, handleOpen);
-  }, []);
+  useAppEvent("feedback:open", () => {
+    setIsOpen(true);
+    void recordFrictionSignal({ area: "feedback", signal: "opened" });
+  });
 
   const close = () => {
     setIsOpen(false);
@@ -88,7 +54,7 @@ export function ProductFeedbackDialog() {
     setError("");
     try {
       const environment = includeEnvironment ? await getFeedbackEnvironment() : undefined;
-      await openUrl(buildFeedbackIssueUrl(draft, environment));
+      await openExternalUrl(buildFeedbackIssueUrl(draft, environment));
       void recordFrictionSignal({ area: "feedback", signal: "submitted" });
       close();
     } catch (submissionError) {

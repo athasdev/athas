@@ -7,10 +7,14 @@ import {
 import {
   resolveEffectiveTheme,
   subscribeSystemThemePreference,
-} from "@/features/settings/lib/theme-resolution";
+} from "@/features/settings/services/theme-resolution";
 import { commands } from "@/bindings/commands";
 import type { Settings, Theme } from "@/features/settings/types/settings.types";
-import { getUiRootAttributes } from "@/features/settings/lib/ui-preferences";
+import { getUiRootAttributes } from "@/features/settings/services/ui-preferences";
+import {
+  runSettingEffect,
+  runSettingsEffects,
+} from "@/features/settings/services/settings-effect-registry";
 
 const ALL_THEME_CLASSES = [
   "force-athas-light",
@@ -166,48 +170,12 @@ function cacheFontSettings(settings: Pick<Settings, "fontFamily" | "uiFontFamily
   cacheFontsForBootstrap(settings.fontFamily, settings.uiFontFamily, settings.uiFontSize);
 }
 
-function syncOllamaBaseUrl(baseUrl: string) {
-  if (!baseUrl) {
-    return;
-  }
-
-  void import("@/features/ai/services/providers/ai-provider-registry").then(
-    ({ setOllamaBaseUrl }) => {
-      setOllamaBaseUrl(baseUrl);
-    },
-  );
-}
-
-function syncCustomProviderBaseUrl(baseUrl: string) {
-  void import("@/features/ai/services/providers/ai-provider-registry").then(
-    ({ setCustomProviderBaseUrl }) => {
-      setCustomProviderBaseUrl(baseUrl);
-    },
-  );
-}
-
-/**
- * Pushes the Ollama API key (stored in Tauri's secure storage) into the
- * singleton provider instance so `getModels`, connection checks, and other
- * non-streaming calls can authenticate with Ollama Cloud.
- */
-async function syncOllamaApiKey() {
-  const [{ setOllamaApiKey }, { getProviderApiToken }] = await Promise.all([
-    import("@/features/ai/services/providers/ai-provider-registry"),
-    import("@/features/ai/services/ai-token-service"),
-  ]);
-  const token = await getProviderApiToken("ollama");
-  setOllamaApiKey(token);
-}
-
 export function applySettingsSideEffects(settings: Settings) {
   cacheFontSettings(settings);
   applyWindowTransparency(settings.windowTransparency);
   applyUiPreferences(settings);
   applyThemeSettings(settings);
-  syncOllamaBaseUrl(settings.ollamaBaseUrl);
-  syncCustomProviderBaseUrl(settings.aiCustomBaseUrl);
-  void syncOllamaApiKey();
+  runSettingsEffects(settings);
 }
 
 function applyThemeSettings(settings: Settings) {
@@ -232,14 +200,6 @@ export function applySettingSideEffect<K extends keyof Settings>(
     applyThemeSettings(getSettings());
   }
 
-  if (key === "ollamaBaseUrl") {
-    syncOllamaBaseUrl(value as string);
-  }
-
-  if (key === "aiCustomBaseUrl") {
-    syncCustomProviderBaseUrl(value as string);
-  }
-
   if (key === "fontFamily" || key === "uiFontFamily" || key === "uiFontSize") {
     cacheFontSettings(getSettings());
   }
@@ -251,4 +211,6 @@ export function applySettingSideEffect<K extends keyof Settings>(
   if (key === "reduceMotion" || key === "uiDensity") {
     applyUiPreferences(getSettings());
   }
+
+  runSettingEffect(key, value);
 }

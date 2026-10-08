@@ -1,11 +1,14 @@
 import type { Message } from "@/features/ai/types/ai-chat.types";
 import type { ChatAcpEvent } from "@/features/ai/types/chat-ui.types";
 
-export type ChatTimelineItem =
-  | { id: string; type: "message"; message: Message; messageIndex: number }
+/** What the timeline needs of a message: its id and when it was sent. */
+type ChatTimelineEntry = Pick<Message, "id"> & { timestamp: Date | string | number };
+
+type ChatTimelineItem<T extends ChatTimelineEntry = Message> =
+  | { id: string; type: "message"; message: T; messageIndex: number }
   | { id: string; type: "acp"; event: ChatAcpEvent };
 
-const toMs = (value: Date | string): number => {
+export const toMs = (value: Date | string | number): number => {
   const timestamp = (value instanceof Date ? value : new Date(value)).getTime();
   return Number.isFinite(timestamp) ? timestamp : 0;
 };
@@ -15,10 +18,10 @@ const toMs = (value: Date | string): number => {
  * edited prompt is re-stamped but must stay above its answer); agent events
  * slot in between them by time.
  */
-export function buildChatTimeline(
-  messages: Message[],
+export function buildChatTimeline<T extends ChatTimelineEntry>(
+  messages: T[],
   acpEvents: ChatAcpEvent[] = [],
-): ChatTimelineItem[] {
+): ChatTimelineItem<T>[] {
   let floor = 0;
   const entries = messages.map((message, messageIndex) => {
     floor = Math.max(floor, toMs(message.timestamp));

@@ -12,8 +12,8 @@ import {
   StackIcon,
   TrashIcon,
 } from "@/ui/icons";
-import { openUrl } from "@tauri-apps/plugin-opener";
-import { useCallback, useEffect, useState } from "react";
+import { openExternalUrl } from "@/utils/external-url";
+import { useCallback, useState } from "react";
 import type { ReactNode } from "react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/ui/accordion";
 import { Button } from "@/ui/button";
@@ -36,8 +36,8 @@ import {
   type DockerActivitySection,
   useSidebarStore,
 } from "@/features/layout/stores/sidebar.store";
-import { useProjectStore } from "@/features/window/stores/project.store";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { showPromptDialog } from "@/ui/dialog";
 import {
   SidebarTabBar,
@@ -51,8 +51,6 @@ import {
   copyFromDockerContainer,
   copyToDockerContainer,
   deleteDockerEnvFile,
-  getDockerComposeProject,
-  getDockerProjectConfig,
   openDockerEnvFile,
   openDockerDevContainer,
   pruneDockerResources,
@@ -66,7 +64,6 @@ import type {
   DockerBuildPreset,
   DockerComposeAction,
   DockerComposePreset,
-  DockerComposeProject,
   DockerComposeService,
   DockerContainer,
   DockerContainerAction,
@@ -107,9 +104,11 @@ import {
   VolumeRow,
 } from "./docker-resource-rows";
 import { useDockerInventory } from "../hooks/use-docker-inventory";
+import { useDockerWorkspaceProject } from "../hooks/use-docker-workspace-project";
 import { useDockerContainerLogs } from "../hooks/use-docker-container-logs";
 import { useDockerContainerFiles } from "../hooks/use-docker-container-files";
 import { useDockerRegistry } from "../hooks/use-docker-registry";
+import { emitAppEvent } from "@/utils/app-events";
 
 type DockerSection =
   | "containers"
@@ -128,21 +127,6 @@ const dockerSectionGroups: Record<DockerActivitySection, DockerSection[]> = {
   project: ["project"],
   registry: ["registry"],
 };
-const emptyComposeProject: DockerComposeProject = {
-  workspacePath: null,
-  files: [],
-  services: [],
-};
-const emptyProjectConfig: DockerProjectConfig = {
-  workspacePath: null,
-  buildPresets: [],
-  runPresets: [],
-  composePresets: [],
-  debugPresets: [],
-  workspaceDebugPresets: [],
-  envFiles: [],
-  devContainers: [],
-};
 
 function openDebuggerPane() {
   const state = useUIState.getState();
@@ -158,6 +142,7 @@ export function DockerSidebar() {
     selectedContainerId,
     selectedContainer,
     isLoading,
+    isRefreshing,
     connectionError,
     error,
     loadInventory,
@@ -207,22 +192,31 @@ export function DockerSidebar() {
     onDockerUnavailable: markDockerUnavailable,
     onInventoryChanged: loadInventory,
   });
-  const [composeProject, setComposeProject] = useState<DockerComposeProject>(emptyComposeProject);
-  const [projectConfig, setProjectConfig] = useState<DockerProjectConfig>(emptyProjectConfig);
+  const {
+    composeProject,
+    projectConfig,
+    isComposeLoading,
+    isComposeRefreshing,
+    isProjectConfigLoading,
+    isProjectConfigRefreshing,
+    composeError,
+    projectConfigError,
+    loadComposeProject,
+    loadProjectConfig,
+    storeProjectConfig,
+    setComposeError,
+    setProjectConfigError,
+  } = useDockerWorkspaceProject(rootFolderPath ?? null);
   const [query, setQuery] = useState("");
   const activeSection = useSidebarStore.use.dockerSection();
   const setActiveSection = useSidebarStore.use.actions().setDockerSection;
   const [containerFilter, setContainerFilter] = useState<DockerContainerFilter>("all");
   const [collapsedSections, setCollapsedSections] = useState<Set<DockerSection>>(() => new Set());
-  const [isComposeLoading, setIsComposeLoading] = useState(false);
-  const [isProjectConfigLoading, setIsProjectConfigLoading] = useState(false);
   const [busyContainerId, setBusyContainerId] = useState<string | null>(null);
   const [busyComposeService, setBusyComposeService] = useState<string | null>(null);
   const [busyDevContainerPath, setBusyDevContainerPath] = useState<string | null>(null);
   const [busyImageId, setBusyImageId] = useState<string | null>(null);
   const [busyPruneTarget, setBusyPruneTarget] = useState<DockerPruneTarget | null>(null);
-  const [composeError, setComposeError] = useState<string | null>(null);
-  const [projectConfigError, setProjectConfigError] = useState<string | null>(null);
   const [composeOutput, setComposeOutput] = useState<string | null>(null);
   const [dockerOutput, setDockerOutput] = useState<string | null>(null);
   const [dialogMode, setDialogMode] = useState<DockerImageDialogMode | null>(null);
@@ -241,42 +235,6 @@ export function DockerSidebar() {
     envFiles: "",
     command: "",
   });
-  const loadComposeProject = useCallback(async () => {
-    setIsComposeLoading(true);
-    setComposeError(null);
-    try {
-      const nextProject = await getDockerComposeProject(rootFolderPath);
-      setComposeProject(nextProject);
-    } catch (loadError) {
-      setComposeError(loadError instanceof Error ? loadError.message : String(loadError));
-      setComposeProject(emptyComposeProject);
-    } finally {
-      setIsComposeLoading(false);
-    }
-  }, [rootFolderPath]);
-
-  useEffect(() => {
-    void loadComposeProject();
-  }, [loadComposeProject]);
-
-  const loadProjectConfig = useCallback(async () => {
-    setIsProjectConfigLoading(true);
-    setProjectConfigError(null);
-    try {
-      const nextConfig = await getDockerProjectConfig(rootFolderPath);
-      setProjectConfig(nextConfig);
-    } catch (loadError) {
-      setProjectConfigError(loadError instanceof Error ? loadError.message : String(loadError));
-      setProjectConfig(emptyProjectConfig);
-    } finally {
-      setIsProjectConfigLoading(false);
-    }
-  }, [rootFolderPath]);
-
-  useEffect(() => {
-    void loadProjectConfig();
-  }, [loadProjectConfig]);
-
   const refreshDocker = useCallback(() => {
     if (activeSection === "resources" || activeSection === "registry") {
       void loadInventory();
@@ -489,7 +447,7 @@ export function DockerSidebar() {
     if (!rootFolderPath) return;
     setProjectConfigError(null);
     const savedConfig = await saveDockerProjectConfig(rootFolderPath, nextConfig);
-    setProjectConfig(savedConfig);
+    storeProjectConfig(rootFolderPath, savedConfig);
   };
 
   const handleSaveBuildPreset = async () => {
@@ -666,14 +624,10 @@ export function DockerSidebar() {
     setDockerOutput(null);
     try {
       const result = await openDockerDevContainer(rootFolderPath, devContainer.configPath);
-      window.dispatchEvent(
-        new CustomEvent("create-terminal-with-command", {
-          detail: {
-            command: result.command,
-            name: result.name,
-          },
-        }),
-      );
+      emitAppEvent("terminal:create-with-command", {
+        command: result.command,
+        name: result.name,
+      });
       setDockerOutput(result.output.trim() || `Opened ${devContainer.name}.`);
       await loadInventory();
       await loadComposeProject();
@@ -726,14 +680,10 @@ export function DockerSidebar() {
   };
 
   const openContainerTerminal = (container: DockerContainer) => {
-    window.dispatchEvent(
-      new CustomEvent("create-terminal-with-command", {
-        detail: {
-          command: dockerExecCommand(container.id),
-          name: `Docker: ${container.name}`,
-        },
-      }),
-    );
+    emitAppEvent("terminal:create-with-command", {
+      command: dockerExecCommand(container.id),
+      name: `Docker: ${container.name}`,
+    });
   };
 
   const startDockerDebugSession = ({
@@ -750,14 +700,10 @@ export function DockerSidebar() {
     configId: string;
   }) => {
     const debugCommand = dockerDebugCommand(containerId, command, workdir);
-    window.dispatchEvent(
-      new CustomEvent("create-terminal-with-command", {
-        detail: {
-          command: debugCommand,
-          name: `Debug: ${containerName}`,
-        },
-      }),
-    );
+    emitAppEvent("terminal:create-with-command", {
+      command: debugCommand,
+      name: `Debug: ${containerName}`,
+    });
     useDebuggerStore.getState().actions.startSession({
       id: `docker_debug_${Date.now()}`,
       name: `Debug: ${containerName}`,
@@ -887,7 +833,7 @@ export function DockerSidebar() {
   };
 
   const openServiceUrl = (url: string) => {
-    void openUrl(url);
+    void openExternalUrl(url);
   };
 
   const handleCopyFromContainer = async (entry: DockerContainerFileEntry) => {
@@ -950,10 +896,10 @@ export function DockerSidebar() {
   const isDockerDaemonReady = !isLoading && connectionError === null;
   const isActiveSectionLoading =
     activeSection === "resources" || activeSection === "registry"
-      ? isLoading
+      ? isRefreshing
       : activeSection === "compose"
-        ? isComposeLoading
-        : isProjectConfigLoading;
+        ? isComposeRefreshing
+        : isProjectConfigRefreshing;
 
   const renderSection = (section: DockerSection, rows: ReactNode) => {
     const title = section === "cleanup" ? "Cleanup" : section[0].toUpperCase() + section.slice(1);
@@ -1037,7 +983,7 @@ export function DockerSidebar() {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem disabled={isActiveSectionLoading} onClick={refreshDocker}>
                   {isActiveSectionLoading ? <Spinner compact /> : <ArrowClockwiseIcon />}
-                  ArrowClockwiseIcon
+                  Refresh
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -1083,7 +1029,7 @@ export function DockerSidebar() {
         {activeSection === "resources" && connectionError ? (
           <DockerUnavailableState
             error={connectionError}
-            isRetrying={isLoading}
+            isRetrying={isRefreshing}
             onRetry={() => void loadInventory()}
           />
         ) : activeSection === "resources" && isLoading ? (
@@ -1102,7 +1048,7 @@ export function DockerSidebar() {
                 ? undefined
                 : "Athas couldn't load Compose services for this project."
             }
-            isRetrying={isComposeLoading}
+            isRetrying={isComposeRefreshing}
             onRetry={() => void loadComposeProject()}
           />
         ) : activeSection === "compose" && isComposeLoading ? (

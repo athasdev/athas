@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vite-plus/test";
-import type { ToastInput } from "@/features/notifications/types/notifications.types";
+import type { ToastInput } from "@/utils/toast";
 import {
   createTerminalCommandNotifier,
   describeTerminalCommandCompletion,

@@ -10,8 +10,8 @@ import type { AgentType } from "@/features/ai/types/ai-chat.types";
 import type { AIChatSkill } from "@/features/ai/types/skills.types";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { useProjectStore } from "@/features/window/stores/project.store";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { Button } from "@/ui/button";
 import {
   DropdownMenu,
@@ -35,8 +35,8 @@ import { ArrowClockwiseIcon, SignOutIcon, SlidersIcon, WarningIcon } from "@/ui/
 import { Spinner } from "@/ui/spinner";
 import { getChatPreferencesModel } from "@/features/ai/utils/chat-preferences-model";
 import { classifySessionConfigOption } from "@/features/ai/lib/session-config-option-classifier";
-import { canLogOutOfAcpAgent, logOutOfAcpAgent } from "@/features/ai/lib/acp-logout";
-import { selectAcpAgentStatus } from "@/features/ai/lib/acp-session-state";
+import { canLogOutOfAcpAgent, logOutOfAcpAgent } from "@/features/ai/services/acp-logout";
+import { selectAcpAgentStatus } from "@/features/ai/services/acp-session-state";
 
 type CodexCatalogStatus = "idle" | "loading" | "loading-more" | "loaded" | "error";
 

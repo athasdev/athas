@@ -1,4 +1,4 @@
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openExternalUrl } from "@/utils/external-url";
 import { getServiceUrls } from "@/config/services";
 import {
   formatResetDate,
@@ -6,10 +6,10 @@ import {
   getHostedUsageHeadline,
   getHostedUsageState,
   getHostedUsageTone,
-} from "@/features/ai/lib/hosted-usage";
-import { useProFeature } from "@/features/window/hooks/use-pro-feature";
-import { useSubscriptionRefresh } from "@/features/window/hooks/use-subscription-refresh";
-import { useAuthStore } from "@/features/window/stores/auth.store";
+} from "@/features/ai/services/hosted-usage";
+import { useProFeature } from "@/features/auth/hooks/use-pro-feature";
+import { useSubscriptionRefresh } from "@/features/auth/hooks/use-subscription-refresh";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { Button } from "@/ui/button";
 import { SparkleIcon } from "@/ui/icons";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
@@ -37,7 +37,7 @@ export function AgentsPlanFooter() {
           size="sm"
           width="full"
           align="start"
-          onClick={() => void openUrl(services.pricingUrl)}
+          onClick={() => void openExternalUrl(services.pricingUrl)}
         >
           <SparkleIcon />
           <span>Upgrade to Pro</span>
@@ -52,7 +52,7 @@ export function AgentsPlanFooter() {
         <SidebarIconButton
           tooltip="Athas AI usage"
           aria-label="Open Athas AI usage"
-          onClick={() => void openUrl(services.dashboardBillingUrl)}
+          onClick={() => void openExternalUrl(services.dashboardBillingUrl)}
         >
           <SparkleIcon />
         </SidebarIconButton>
@@ -97,7 +97,10 @@ export function AgentsPlanFooter() {
             ) : null}
           </div>
           <div>
-            <Button variant="link" onClick={() => void openUrl(services.dashboardBillingUrl)}>
+            <Button
+              variant="link"
+              onClick={() => void openExternalUrl(services.dashboardBillingUrl)}
+            >
               {usage.level === "ok" || usage.walletBalanceCents === null
                 ? "Manage billing"
                 : "Add credit"}

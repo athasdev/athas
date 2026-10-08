@@ -123,7 +123,9 @@ export default function DataGrid({
     column: string;
     startX: number;
     startWidth: number;
+    width: number;
   } | null>(null);
+  const [resizeDraft, setResizeDraft] = useState<{ column: string; width: number } | null>(null);
   const { cellMenu, handleCellContextMenu, copyValue, copyValueWithHeaders, closeCellMenu } =
     useCellCopy();
   const rowVirtualizer = useVirtualizer({
@@ -141,10 +143,11 @@ export default function DataGrid({
 
   const getColumnWidth = useCallback(
     (column: string): number => {
+      if (resizeDraft?.column === column) return resizeDraft.width;
       if (!tableName) return DEFAULT_COLUMN_WIDTH;
       return columnWidths[tableName]?.[column] ?? DEFAULT_COLUMN_WIDTH;
     },
-    [columnWidths, tableName],
+    [columnWidths, resizeDraft, tableName],
   );
 
   const handleResizeStart = useCallback(
@@ -152,10 +155,12 @@ export default function DataGrid({
       event.preventDefault();
       event.stopPropagation();
 
+      const startWidth = getColumnWidth(column);
       resizeRef.current = {
         column,
         startX: event.clientX,
-        startWidth: getColumnWidth(column),
+        startWidth,
+        width: startWidth,
       };
       event.currentTarget.setPointerCapture(event.pointerId);
     },
@@ -167,15 +172,21 @@ export default function DataGrid({
       if (!resizeRef.current || !tableName || !onColumnWidthChange) return;
 
       const { column, startX, startWidth } = resizeRef.current;
-      const delta = event.clientX - startX;
-      onColumnWidthChange(tableName, column, Math.max(MIN_COLUMN_WIDTH, startWidth + delta));
+      const width = Math.max(MIN_COLUMN_WIDTH, startWidth + event.clientX - startX);
+      if (width === resizeRef.current.width) return;
+      resizeRef.current.width = width;
+      setResizeDraft({ column, width });
     },
     [onColumnWidthChange, tableName],
   );
 
   const handleResizeEnd = useCallback(() => {
+    const resize = resizeRef.current;
     resizeRef.current = null;
-  }, []);
+    setResizeDraft(null);
+    if (!resize || !tableName || resize.width === resize.startWidth) return;
+    onColumnWidthChange?.(tableName, resize.column, resize.width);
+  }, [onColumnWidthChange, tableName]);
 
   const navigateToReference = useCallback(
     (columnName: string, value: unknown) => {
@@ -494,6 +505,8 @@ export default function DataGrid({
                       onPointerDown={(e) => handleResizeStart(e, col)}
                       onPointerMove={handleResizeMove}
                       onPointerUp={handleResizeEnd}
+                      onPointerCancel={handleResizeEnd}
+                      onLostPointerCapture={handleResizeEnd}
                       onClick={(e) => e.stopPropagation()}
                     />
                   </th>

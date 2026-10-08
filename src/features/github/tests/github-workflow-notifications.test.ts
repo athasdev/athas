@@ -4,7 +4,7 @@ import {
   describeWorkflowRunChange,
 } from "../services/github-workflow-notifications";
 import type { WorkflowRunListItem } from "../types/github.types";
-import type { ToastInput } from "@/features/notifications/types/notifications.types";
+import type { ToastInput } from "@/utils/toast";
 
 const run = (overrides: Partial<WorkflowRunListItem>): WorkflowRunListItem => ({
   databaseId: 128,

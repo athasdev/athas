@@ -10,11 +10,11 @@ import {
   encodeWorkspaceBuffer,
   getEditorWorkspaceScope,
   isLocalFileInWorkspace,
-} from "@/features/workspace/persistence/workspace-session-codec";
+} from "@/features/workspace/persistence/services/workspace-session-codec";
 
 const buildPersistedEditorViewState = vi.hoisted(() => vi.fn());
 
-vi.mock("@/features/editor/stores/editor-session-state", () => ({
+vi.mock("@/features/editor/services/editor-session-state", () => ({
   buildPersistedEditorViewState,
 }));
 
@@ -23,14 +23,10 @@ const createEditorBuffer = (overrides: Partial<EditorContent> = {}): EditorConte
   type: "editor",
   path: "/workspace/src/app.ts",
   name: "app.ts",
-  isPinned: true,
-  isPreview: false,
-  isActive: true,
   content: "const value = 1;",
   savedContent: "const value = 1;",
   isDirty: false,
   isVirtual: false,
-  tokens: [],
   ...overrides,
 });
 
@@ -39,9 +35,6 @@ const createTerminalBuffer = (): TerminalContent => ({
   type: "terminal",
   path: "terminal://terminal-1",
   name: "Terminal",
-  isPinned: false,
-  isPreview: false,
-  isActive: true,
   sessionId: "terminal-session-1",
   shell: "zsh",
   initialCommand: "bun dev",
@@ -61,6 +54,7 @@ describe("workspace session codec", () => {
     expect(
       encodeWorkspaceBuffer(buffer, {
         workspaceRootPath: "/workspace",
+        pinnedBufferIds: new Set([buffer.id]),
       }),
     ).toEqual({
       type: "editor",
@@ -111,15 +105,17 @@ describe("workspace session codec", () => {
       type: "browser",
       path: "browser://tab-1",
       name: "Athas Docs",
-      isPinned: true,
-      isPreview: false,
-      isActive: true,
       url: "https://athas.dev/docs",
       favicon: "https://athas.dev/favicon.ico",
       zoom: 1.25,
     };
 
-    expect(encodeWorkspaceBuffer(browser, { workspaceRootPath: "/workspace" })).toEqual({
+    expect(
+      encodeWorkspaceBuffer(browser, {
+        workspaceRootPath: "/workspace",
+        pinnedBufferIds: new Set([browser.id]),
+      }),
+    ).toEqual({
       type: "browser",
       path: "browser://tab-1",
       name: "Athas Docs",
@@ -142,9 +138,6 @@ describe("workspace session codec", () => {
       type: "newTab",
       path: "new-tab://new-tab-1",
       name: "New Tab",
-      isPinned: false,
-      isPreview: false,
-      isActive: true,
     };
 
     expect(
@@ -195,9 +188,6 @@ describe("workspace session codec", () => {
       type: "newTab",
       path: "new-tab://new-tab-1",
       name: "New Tab",
-      isPinned: false,
-      isPreview: false,
-      isActive: true,
     };
 
     expect(

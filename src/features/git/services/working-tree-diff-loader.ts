@@ -1,14 +1,14 @@
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { getBufferById } from "@/features/editor/utils/buffer-index";
+import { getBufferById } from "@/features/editor/stores/buffer-index";
 import { getFileDiff } from "../api/git-diff-api";
 import type { MultiFileDiff } from "../types/git-diff.types";
 import type { GitDiff, GitFile } from "../types/git.types";
-import { countDiffStats, hasGitDiffChanges } from "../utils/git-diff-helpers";
+import { countDiffStats, hasGitDiffChanges } from "./git-diff-helpers";
 import { yieldToMain } from "@/utils/yield-to-main";
 
 export type WorkingTreeDiffScope = "all" | "unstaged" | "staged";
 export type WorkingTreeDiffEntry = readonly [fileKey: string, file: GitFile];
-export type LoadedWorkingTreeDiff = { fileKey: string; diff: GitDiff };
+type LoadedWorkingTreeDiff = { fileKey: string; diff: GitDiff };
 
 const WORKING_TREE_DIFF_BATCH_SIZE = 8;
 const WORKING_TREE_DIFF_FILE_LIMIT = 1_000;

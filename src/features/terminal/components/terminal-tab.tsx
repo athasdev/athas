@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { activateBufferInPaneAndSync } from "@/features/panes/utils/pane-activation";
+import { activateBufferInPaneAndSync } from "@/features/panes/services/pane-activation";
 import { TerminalSlot } from "./terminal-slot";
 
 interface TerminalTabProps {

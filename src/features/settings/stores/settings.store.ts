@@ -7,19 +7,17 @@ import {
   applySettingsSideEffects,
 } from "@/features/settings/lib/settings-effects";
 import { getAIModelSelectionPatch } from "@/features/settings/lib/ai-model-selection";
-import { getSystemSyncThemePreferencePatch } from "@/features/settings/lib/theme-resolution";
+import { getSystemSyncThemePreferencePatch } from "@/features/settings/services/theme-resolution";
 import { initializeSettingsState } from "@/features/settings/lib/settings-bootstrap";
 import { normalizeSettingValue } from "@/features/settings/lib/settings-normalization";
 import {
   debouncedSaveSettingsToStore,
   saveSettingsToStore,
-} from "@/features/settings/lib/settings-persistence";
+} from "@/features/settings/services/settings-persistence";
 import { parseSettingsImportJson } from "@/features/settings/lib/settings-import-export";
-import { scoreSettingSearchRecord } from "@/features/settings/lib/settings-search";
-import { settingsSearchIndex } from "../config/search-index";
-import type { SearchResult, SearchState } from "../types/search.types";
 import type { Settings } from "../types/settings.types";
-import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
+import { useWorkspaceTabsStore } from "@/features/workspace/stores/workspace-tabs.store";
+import { useEditorSettingOverridesStore } from "@/features/editor/stores/editor-setting-overrides.store";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { readAppearanceBootstrapCache } from "@/features/settings/lib/appearance-bootstrap";
 
@@ -54,12 +52,6 @@ const useSettingsStoreBase = create(
         settings: getStartupSettingsSnapshot(),
         /** Whether the saved settings have replaced the startup snapshot. */
         isLoaded: false,
-        search: {
-          query: "",
-          results: [] as SearchResult[],
-          isSearching: false,
-          selectedResultId: null,
-        } as SearchState,
       },
       (set) => ({
         actions: {
@@ -119,6 +111,9 @@ const useSettingsStoreBase = create(
               Object.assign(savePatch, aiModelPatch);
             });
 
+            // A setting the user just chose must not stay hidden behind an extension override.
+            useEditorSettingOverridesStore.getState().actions.clearOverrideForSetting(key);
+
             applySettingSideEffect(
               key,
               normalizedValue,
@@ -135,57 +130,6 @@ const useSettingsStoreBase = create(
             }
 
             debouncedSaveSettingsToStore(savePatch);
-          },
-
-          setSearchQuery: (query: string) => {
-            set((state) => {
-              state.search.query = query;
-              state.search.selectedResultId = null;
-            });
-            useSettingsStore.getState().actions.runSearch();
-          },
-
-          runSearch: () => {
-            const query = useSettingsStore.getState().search.query.trim().toLowerCase();
-
-            if (!query) {
-              set((state) => {
-                state.search.results = [];
-                state.search.isSearching = false;
-              });
-              return;
-            }
-
-            set((state) => {
-              state.search.isSearching = true;
-            });
-
-            const results: SearchResult[] = settingsSearchIndex
-              .map((record) => {
-                return { ...record, score: scoreSettingSearchRecord(query, record) };
-              })
-              .filter((result) => result.score > 0)
-              .sort((a, b) => b.score - a.score || a.label.localeCompare(b.label));
-
-            set((state) => {
-              state.search.results = results;
-              state.search.isSearching = false;
-            });
-          },
-
-          clearSearch: () => {
-            set((state) => {
-              state.search.query = "";
-              state.search.results = [];
-              state.search.isSearching = false;
-              state.search.selectedResultId = null;
-            });
-          },
-
-          selectSearchResult: (resultId: string) => {
-            set((state) => {
-              state.search.selectedResultId = resultId;
-            });
           },
         },
       }),

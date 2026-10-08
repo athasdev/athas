@@ -17,7 +17,7 @@ import {
   athasEditorTheme,
   athasSyntaxHighlighting,
 } from "../engines/codemirror/theme";
-import { editorAPI } from "../extensions/api";
+import { editorAPI } from "../services/editor-api";
 import { useEditorViewSettings } from "../hooks/use-editor-view-settings";
 
 export type ReadonlyEditorView = EditorView;

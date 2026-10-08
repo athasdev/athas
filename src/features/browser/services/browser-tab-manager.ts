@@ -2,24 +2,25 @@ import { Channel } from "@tauri-apps/api/core";
 import { toast } from "sonner";
 import { type BrowserBounds, type BrowserEvent, commands } from "@/bindings/commands";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { keymapRegistry } from "@/features/keymaps/utils/registry";
+import { keymapRegistry } from "@/features/keymaps/services/keymap-registry";
 import type { BrowserContent } from "@/features/panes/types/pane-content.types";
-import { getInternalTabDragData } from "@/features/tabs/utils/internal-tab-drag";
+import { getInternalTabDragData } from "@/features/tabs/services/internal-tab-drag";
 import { useBrowserTabStore } from "../stores/browser-tab.store";
-import { getBrowserTabName, isBlankPage } from "../utils/browser-address";
+import { getBrowserTabName, isBlankPage } from "./browser-address";
 import { getBrowserKeyBindings, isPageCommand } from "../utils/browser-key-bindings";
 import {
   type BrowserSlotGeometry,
   getVisibleSlotGeometry,
   isSlotOccluded,
 } from "../utils/browser-occlusion";
+import { onAppEvent } from "@/utils/app-events";
 
 const ZOOM_LEVELS = [0.5, 0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3];
 /** Popups animate in after the input that opens them, so the layout is checked again after it. */
 const SETTLE_DELAY_MS = 180;
 const HIDDEN = "hidden";
 
-export interface BrowserSlot {
+interface BrowserSlot {
   element: HTMLElement;
   /** Called when the page takes keyboard focus, so the pane holding the slot becomes active. */
   onFocus: () => void;
@@ -502,7 +503,6 @@ class BrowserTabManager {
       [window, "contextmenu", this.scheduleSettledSync, true],
       [window, "transitionend", this.scheduleSync, true],
       [window, "animationend", this.scheduleSync, true],
-      [window, "athas-internal-tab-drag-hover", this.scheduleSync, false],
       [window, "pointermove", onPointerMove, true],
       [window, "dragstart", onDragStart, true],
       [window, "dragend", onDragEnd, true],
@@ -512,9 +512,11 @@ class BrowserTabManager {
     for (const [target, type, listener, capture] of listeners) {
       target.addEventListener(type, listener, capture);
     }
+    const stopTabDragHover = onAppEvent("tabs:internal-drag-hover", this.scheduleSync);
 
     this.stopMonitoring = () => {
       mutationObserver.disconnect();
+      stopTabDragHover();
       for (const [target, type, listener, capture] of listeners) {
         target.removeEventListener(type, listener, capture);
       }

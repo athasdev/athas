@@ -4,7 +4,7 @@
  * Note: Language extensions are NOT bundled - they are fetched from the extensions server
  */
 
-import { logger } from "@/features/editor/utils/logger";
+import { logger } from "@/utils/logger";
 import { NODE_PLATFORM } from "@/utils/platform";
 import { bundledExtensionManifests } from "../bundled/bundled-extension-manifests";
 

@@ -1,8 +1,7 @@
 import { usePerformanceExperiments } from "../../stores/performance-experiments.store";
 import { useEffect, useState } from "react";
-import { save } from "@tauri-apps/plugin-dialog";
-import { writeTextFile } from "@tauri-apps/plugin-fs";
-import { useToast } from "@/features/layout/contexts/toast-context";
+import { saveTextFileWithDialog } from "@/utils/file-dialogs";
+import { useToast } from "@/utils/toast";
 import { TypedConfirmAction } from "@/features/settings/components/typed-confirm-action";
 import { createSettingsExportPayload } from "@/features/settings/lib/settings-import-export";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
@@ -57,20 +56,26 @@ export const AdvancedSettings = () => {
 
   const handleExportSettings = async () => {
     try {
-      const targetPath = await save({
-        defaultPath: "athas-settings.json",
-        filters: [
-          { name: "JSON", extensions: ["json"] },
-          { name: "All Files", extensions: ["*"] },
-        ],
-      });
+      const targetPath = await saveTextFileWithDialog(
+        {
+          defaultPath: "athas-settings.json",
+          filters: [
+            { name: "JSON", extensions: ["json"] },
+            { name: "All Files", extensions: ["*"] },
+          ],
+        },
+        () =>
+          JSON.stringify(
+            createSettingsExportPayload(useSettingsStore.getState().settings),
+            null,
+            2,
+          ),
+      );
 
       if (!targetPath) {
         return;
       }
 
-      const payload = createSettingsExportPayload(useSettingsStore.getState().settings);
-      await writeTextFile(targetPath, JSON.stringify(payload, null, 2));
       showToast({ message: "Settings exported", type: "success" });
     } catch (error) {
       console.error("Failed to export settings:", error);

@@ -9,8 +9,7 @@ import {
   UserIcon,
   WarningCircleIcon,
 } from "@/ui/icons";
-import { save } from "@tauri-apps/plugin-dialog";
-import { writeTextFile } from "@tauri-apps/plugin-fs";
+import { saveTextFileWithDialog } from "@/utils/file-dialogs";
 import { useMemo, useState } from "react";
 import {
   KeybindingRow,
@@ -21,19 +20,19 @@ import {
   getKeybindingPresetCoverageReport,
   getKeybindingPresetDiffReport,
   keybindingPresetOptions,
-} from "@/features/keymaps/defaults/keybinding-presets";
+} from "@/features/keymaps/constants/keybinding-presets";
 import { useKeymapStore } from "@/features/keymaps/stores/keymaps.store";
 import type { Keybinding } from "@/features/keymaps/types/keymaps.types";
-import { getEffectiveKeybindingForCommand } from "@/features/keymaps/utils/effective-keymaps";
+import { getEffectiveKeybindingForCommand } from "@/features/keymaps/services/effective-keymaps";
 import {
   createKeybindingsExportPayload,
   getExportableUserKeybindings,
   parseKeybindingsImportJson,
-} from "@/features/keymaps/utils/keybinding-import-export";
+} from "@/features/keymaps/services/keybinding-import-export";
 import { getDefaultSetting } from "@/features/settings/config/default-settings";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { keymapRegistry } from "@/features/keymaps/utils/registry";
-import { useToast } from "@/features/layout/contexts/toast-context";
+import { keymapRegistry } from "@/features/keymaps/services/keymap-registry";
+import { useToast } from "@/utils/toast";
 import { Button } from "@/ui/button";
 import { Alert, AlertDescription } from "@/ui/alert";
 import { Empty, EmptyDescription } from "@/ui/empty";
@@ -172,24 +171,26 @@ export const KeyboardSettings = () => {
     const userBindings = getExportableUserKeybindings(useKeymapStore.getState().keybindings);
 
     try {
-      const targetPath = await save({
-        defaultPath: "keybindings.json",
-        filters: [
-          { name: "JSON", extensions: ["json"] },
-          { name: "All Files", extensions: ["*"] },
-        ],
-      });
+      const targetPath = await saveTextFileWithDialog(
+        {
+          defaultPath: "keybindings.json",
+          filters: [
+            { name: "JSON", extensions: ["json"] },
+            { name: "All Files", extensions: ["*"] },
+          ],
+        },
+        () =>
+          JSON.stringify(
+            createKeybindingsExportPayload({ keybindingPreset, keybindings: userBindings }),
+            null,
+            2,
+          ),
+      );
 
       if (!targetPath) {
         return;
       }
 
-      const payload = createKeybindingsExportPayload({
-        keybindingPreset,
-        keybindings: userBindings,
-      });
-
-      await writeTextFile(targetPath, JSON.stringify(payload, null, 2));
       showToast({ message: "Keybindings exported", type: "success" });
     } catch (error) {
       console.error("Failed to export keybindings:", error);

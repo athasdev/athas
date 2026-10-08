@@ -5,12 +5,12 @@ import {
   type WorkspaceFileChanges,
 } from "@/bindings/commands";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { getBufferByPath } from "@/features/editor/utils/buffer-index";
+import { getBufferByPath } from "@/features/editor/stores/buffer-index";
 import { emitGitChanged } from "@/features/git/events/git-events";
-import { invalidateFileTreeGitIgnoreCache } from "@/features/file-explorer/lib/file-tree-gitignore";
-import { showToast } from "@/features/layout/contexts/toast-context";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
-import { readFileContent } from "../controllers/file-operations";
+import { invalidateFileTreeGitIgnoreCache } from "@/features/file-explorer/services/file-tree-gitignore";
+import { showToast } from "@/utils/toast";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
+import { readFileContent } from "../api/file-operations";
 import { useFileSystemStore } from "../stores/file-system.store";
 import { useFileWatcherStore } from "../stores/file-watcher.store";
 import {
@@ -18,9 +18,11 @@ import {
   scheduleFileWatcherRefresh,
 } from "./file-watcher-refresh-scheduler";
 import { getDirName } from "@/utils/path-helpers";
+import { readBufferText } from "@/features/editor/services/buffer-text";
+import { emitAppEvent } from "@/utils/app-events";
 
 /** The `file-changed` payload, from the project file watcher and from agent writes alike. */
-export interface FileChangeEvent {
+interface FileChangeEvent {
   path: string;
   event_type: "opened" | "reloaded" | "deleted";
   /** Set when an agent write made the change: the id of its `agent_file_write` event. */
@@ -46,7 +48,7 @@ function findWorkspaceForRoot(root: string) {
   for (const {
     workspaceId,
     store,
-  } of workspaceRuntimeRegistry.getExistingStoreEntries<WorkspaceRoots>("file-system")) {
+  } of workspaceRuntimeRegistry.getExistingStoreEntries<WorkspaceRoots>("project")) {
     const { rootFolderPath, workspaceFolders } = store.getState();
     if (rootFolderPath === root || workspaceFolders?.some((folder) => folder.path === root)) {
       return workspaceId;
@@ -99,7 +101,7 @@ async function syncOpenBuffer(
     await bufferState.actions.reloadBufferFromDisk(current.id);
     return "synced";
   }
-  if (current.content === diskContent) {
+  if (readBufferText(current) === diskContent) {
     bufferState.actions.markBufferDirty(current.id, false);
     return "synced";
   }
@@ -116,10 +118,7 @@ async function syncOpenBuffer(
         void useBufferStore
           .getStore(workspaceId)
           .getState()
-          .actions.reloadBufferFromDisk(current.id)
-          .then(() => {
-            window.dispatchEvent(new CustomEvent("file-reloaded", { detail: { path } }));
-          });
+          .actions.reloadBufferFromDisk(current.id);
       },
     },
   });
@@ -132,11 +131,7 @@ export async function handleFileChange(
 ) {
   invalidateFileTreeGitIgnoreCache(path);
 
-  window.dispatchEvent(
-    new CustomEvent("file-external-change", {
-      detail: { path, event_type, agentWriteId: agent_write_id },
-    }),
-  );
+  emitAppEvent("file:external-change", { path, agentWriteId: agent_write_id });
 
   if (event_type === "deleted" || event_type === "opened") {
     // Computed here rather than over IPC: bursts of watcher events each paid a round trip.
@@ -154,9 +149,6 @@ export async function handleFileChange(
     return;
   }
 
-  if (outcome === "synced") {
-    window.dispatchEvent(new CustomEvent("file-reloaded", { detail: { path } }));
-  }
   emitGitChanged({
     filePath: path,
     scopes: ["working-tree"],

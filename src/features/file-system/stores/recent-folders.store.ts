@@ -2,8 +2,6 @@ import { commands } from "@/bindings/commands";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
-import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { createAppWindow } from "@/features/window/utils/create-app-window";
 import { IS_MAC } from "@/utils/platform";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { createSafeJSONStorage } from "@/utils/zustand-storage";
@@ -16,7 +14,7 @@ import {
   upsertRecentFolder,
 } from "../utils/recent-folders";
 
-export interface RecentFolderImport {
+interface RecentFolderImport {
   path: string;
   sourceId?: string;
   sourceName?: string;
@@ -29,7 +27,6 @@ interface RecentFoldersState {
 interface RecentFoldersActions {
   addToRecents: (folderPath: string, metadata?: RecentFolderMetadata) => void;
   importRecentFolders: (folders: RecentFolderImport[]) => number;
-  openRecentFolder: (folderPath: string) => Promise<void>;
   removeFromRecents: (folderPath: string) => void;
   removeMissingFromRecents: () => void;
   clearRecents: () => void;
@@ -86,55 +83,6 @@ const useRecentFoldersStoreBase = create<RecentFoldersStore>()(
             });
 
             return importedFolders.length;
-          },
-
-          openRecentFolder: async (folderPath: string) => {
-            try {
-              const { getSymlinkInfo } = await import("../controllers/platform");
-              const { useFileSystemStore } = await import("../stores/file-system.store");
-              const { handleOpenFolderByPath, rootFolderPath } = useFileSystemStore.getState();
-              const { settings } = useSettingsStore.getState();
-              const hasOpenWorkspace =
-                !!rootFolderPath || useFileSystemStore.getState().files.length > 0;
-
-              try {
-                const pathInfo = await getSymlinkInfo(folderPath);
-                if (!pathInfo.is_dir) {
-                  get().actions.updateRecentFolder(folderPath, { missing: true });
-                  const { toast } = await import("sonner");
-                  toast.error(`Recent project is not a folder: ${folderPath}`);
-                  return;
-                }
-              } catch (error) {
-                get().actions.updateRecentFolder(folderPath, { missing: true });
-                console.error("Recent folder is no longer available:", folderPath, error);
-                const { toast } = await import("sonner");
-                toast.error(`Recent project is unavailable: ${folderPath}`);
-                return;
-              }
-
-              if (settings.openFoldersInNewWindow && hasOpenWorkspace) {
-                await createAppWindow({
-                  path: folderPath,
-                  isDirectory: true,
-                });
-                get().actions.addToRecents(folderPath, {
-                  missing: false,
-                  openInNewWindow: true,
-                });
-                return;
-              }
-
-              const opened = await handleOpenFolderByPath(folderPath);
-              if (opened) {
-                get().actions.addToRecents(folderPath, {
-                  missing: false,
-                  openInNewWindow: false,
-                });
-              }
-            } catch (error) {
-              console.error("Error opening recent folder:", error);
-            }
           },
 
           removeFromRecents: (folderPath: string) => {

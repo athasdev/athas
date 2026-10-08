@@ -14,7 +14,7 @@ import type React from "react";
 import { useLayoutEffect, useRef } from "react";
 import { flushSync } from "react-dom";
 import { createRoot, type Root } from "react-dom/client";
-import { isComposingKeyboardEvent } from "@/features/keymaps/utils/is-composing-keyboard-event";
+import { isComposingKeyboardEvent } from "@/utils/keyboard/is-composing-keyboard-event";
 import {
   SEARCH_TOGGLE_ICONS,
   SearchPopover,
@@ -23,12 +23,15 @@ import {
 } from "@/ui/search";
 import { type CodeMirrorHost, useCodeMirrorExtension } from "../host";
 import {
+  collectSearchMatches,
   formatSearchMatchLabel,
   isSearchReplaceOpen,
+  mapSearchMatches,
+  type SearchMatchList,
   type SearchMatchSummary,
   searchReplaceOpenField,
   setSearchReplaceOpen,
-  summarizeSearchMatches,
+  summarizeMatchList,
 } from "../search";
 import "./codemirror-search.css";
 
@@ -50,14 +53,13 @@ interface SearchPanelState {
   readOnly: boolean;
 }
 
-function readPanelState(view: EditorView): SearchPanelState {
-  const query = getSearchQuery(view.state);
-  return {
-    query,
-    matches: summarizeSearchMatches(view.state, query),
-    replaceOpen: isSearchReplaceOpen(view.state),
-    readOnly: view.state.readOnly,
-  };
+/** How long the document must stay still before matches are counted again. */
+export const SEARCH_RECOUNT_DELAY_MS = 150;
+
+function sameSummary(left: SearchMatchSummary, right: SearchMatchSummary): boolean {
+  return (
+    left.current === right.current && left.total === right.total && left.capped === right.capped
+  );
 }
 
 class AthasSearchPanel implements Panel {
@@ -65,11 +67,20 @@ class AthasSearchPanel implements Panel {
   readonly top = true;
   private readonly root: Root;
   private state: SearchPanelState;
+  private matchList: SearchMatchList;
+  private recountTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(private readonly view: EditorView) {
     this.dom.className = "cm-search cm-athas-search";
     this.root = createRoot(this.dom);
-    this.state = readPanelState(view);
+    const query = getSearchQuery(view.state);
+    this.matchList = collectSearchMatches(view.state, query);
+    this.state = {
+      query,
+      matches: summarizeMatchList(this.matchList, view.state.selection.main),
+      replaceOpen: isSearchReplaceOpen(view.state),
+      readOnly: view.state.readOnly,
+    };
     flushSync(() => this.render());
   }
 
@@ -94,15 +105,73 @@ class AthasSearchPanel implements Panel {
     ) {
       return;
     }
-    this.state = readPanelState(this.view);
-    // The replace field must exist as soon as the row opens, for whoever focuses it next.
-    if (replaceToggled) flushSync(() => this.render());
-    else this.render();
+
+    const query = getSearchQuery(update.state);
+    // Replacing from the panel should show the new count at once; typing in the text can wait.
+    const replaced = update.transactions.some((transaction) =>
+      transaction.isUserEvent("input.replace"),
+    );
+    if (queryChanged || query !== this.state.query || replaced) {
+      this.recount();
+    } else if (update.docChanged) {
+      this.matchList = mapSearchMatches(this.matchList, update.changes);
+      this.scheduleRecount();
+    }
+
+    this.setState(
+      {
+        query,
+        matches: summarizeMatchList(this.matchList, update.state.selection.main),
+        replaceOpen,
+        readOnly: update.state.readOnly,
+      },
+      replaceToggled,
+    );
   }
 
   destroy() {
+    this.cancelRecount();
     const { root } = this;
     queueMicrotask(() => root.unmount());
+  }
+
+  private recount() {
+    this.cancelRecount();
+    this.matchList = collectSearchMatches(this.view.state, getSearchQuery(this.view.state));
+  }
+
+  private scheduleRecount() {
+    this.cancelRecount();
+    this.recountTimer = setTimeout(() => {
+      this.recountTimer = null;
+      this.recount();
+      this.setState({
+        ...this.state,
+        matches: summarizeMatchList(this.matchList, this.view.state.selection.main),
+      });
+    }, SEARCH_RECOUNT_DELAY_MS);
+  }
+
+  private cancelRecount() {
+    if (this.recountTimer === null) return;
+    clearTimeout(this.recountTimer);
+    this.recountTimer = null;
+  }
+
+  private setState(next: SearchPanelState, sync = false) {
+    const current = this.state;
+    if (
+      next.query === current.query &&
+      next.replaceOpen === current.replaceOpen &&
+      next.readOnly === current.readOnly &&
+      sameSummary(next.matches, current.matches)
+    ) {
+      return;
+    }
+    this.state = next;
+    // The replace field must exist as soon as the row opens, for whoever focuses it next.
+    if (sync) flushSync(() => this.render());
+    else this.render();
   }
 
   private render() {

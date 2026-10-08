@@ -5,12 +5,14 @@ import { loadContextProjectRules } from "@/features/ai/lib/project-rules";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { getProviderById } from "@/features/ai/types/providers.types";
-import type { EditorSelectionContext } from "@/features/ai/types/ai-context.types";
-import type { Message } from "@/features/ai/types/ai-chat.types";
+import type { EditorSelectionContext } from "@/features/editor/types/editor-selection.types";
 import type { ContextBudget } from "@/features/ai/types/context-budget.types";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
+import { useBuffersTextRevision } from "@/features/editor/hooks/use-buffer-text";
+import { useSettledChatMessages } from "./use-settled-chat-messages";
 
-const EMPTY_MESSAGES: Message[] = [];
+const NO_BUFFERS: ReadonlySet<string> = new Set();
+const ATTACHED_TEXT_SETTLE_MS = 300;
 
 /** The built-in agent's context budget for the composer's meter; null for other agents. */
 export function useComposerContextBudget({
@@ -36,9 +38,7 @@ export function useComposerContextBudget({
 }): ContextBudget | null {
   const userRules = useSettingsStore((state) => state.settings.aiUserRules);
   const mode = useAIChatStore((state) => selectChatMode(state, chatId));
-  const messages = useAIChatStore(
-    (state) => state.chats.find((chat) => chat.id === chatId)?.messages ?? EMPTY_MESSAGES,
-  );
+  const messages = useSettledChatMessages(enabled ? chatId : null);
   const dynamicModels = useAIChatStore((state) => state.dynamicModels[providerId]);
   const modelContextWindow = (
     dynamicModels?.find((model) => model.id === modelId) ??
@@ -46,6 +46,11 @@ export function useComposerContextBudget({
   )?.contextWindow;
 
   const [rules, setRules] = useState<{ text: string; truncated: boolean } | null>(null);
+  // Attached files count with their current text, re-read once edits to them pause.
+  const attachedTextRevision = useBuffersTextRevision(
+    enabled ? selectedBufferIds : NO_BUFFERS,
+    ATTACHED_TEXT_SETTLE_MS,
+  );
   const rulePaths = [
     ...selectedFilesPaths,
     ...buffers.filter((buffer) => selectedBufferIds.has(buffer.id)).map((buffer) => buffer.path),
@@ -88,7 +93,10 @@ export function useComposerContextBudget({
             rules,
           })
         : null,
+    // The attached text is read inside; its settled revision says when it changed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [
+      attachedTextRevision,
       buffers,
       editorContexts,
       enabled,

@@ -28,9 +28,6 @@ vi.mock("../editor/utils/canvas-utils", () => ({
 }));
 vi.mock("../editor/utils/image-transforms", () => ({
   rotateImage: mocks.rotateImage,
-  rotate90CW: (src: string) => mocks.rotateImage(src, 90),
-  rotate90CCW: (src: string) => mocks.rotateImage(src, 270),
-  rotate180: (src: string) => mocks.rotateImage(src, 180),
   flipImage: mocks.flipImage,
   resizeImage: mocks.resizeImage,
 }));

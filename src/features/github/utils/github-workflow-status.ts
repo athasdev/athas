@@ -14,7 +14,7 @@ export type WorkflowRunPhase =
   | "waiting"
   | "unknown";
 
-export interface WorkflowRunState {
+interface WorkflowRunState {
   phase: WorkflowRunPhase;
   label: string;
   tone: WorkflowRunTone;
@@ -141,7 +141,7 @@ export function formatWorkflowDuration(durationMs: number | null) {
   return `${seconds}s`;
 }
 
-export interface WorkflowTiming {
+interface WorkflowTiming {
   startedAt: number | null;
   endedAt: number | null;
   durationMs: number | null;
@@ -197,7 +197,7 @@ export function getWorkflowStepTiming(
   return getTiming(step.startedAt, step.completedAt, state.isActive, now);
 }
 
-export interface WorkflowJobSummary {
+interface WorkflowJobSummary {
   total: number;
   succeeded: number;
   failed: number;

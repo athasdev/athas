@@ -6,7 +6,7 @@ import type {
 } from "../types/github.types";
 import { formatCalendarDateGroup } from "@/utils/date";
 
-export interface GitHubSidebarGroup<T> {
+interface GitHubSidebarGroup<T> {
   id: string;
   title: string;
   items: T[];

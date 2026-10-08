@@ -2,27 +2,28 @@ import { isDirtyContent } from "@/features/panes/types/pane-content.types";
 import { type DragEndEvent, type DragMoveEvent, type DragStartEvent } from "@dnd-kit/core";
 import { SortableContext, horizontalListSortingStrategy } from "@dnd-kit/sortable";
 import { ArrowsInIcon, ArrowsOutIcon, SidebarIcon } from "@/ui/icons";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { getBufferById } from "@/features/editor/utils/buffer-index";
+import { getBufferById } from "@/features/editor/stores/buffer-index";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import { formatDiffBufferLabel } from "@/features/git/utils/diff-buffer-label";
+import { formatDiffBufferLabel } from "@/features/git/services/diff-buffer-label";
 import { writeClipboardText } from "@/utils/clipboard";
 import { BOTTOM_PANE_ID } from "@/features/panes/constants/pane";
 import { usePaneStore } from "@/features/panes/stores/pane.store";
-import { activateBufferInPaneAndSync } from "@/features/panes/utils/pane-activation";
-import { splitEditorGroup } from "@/features/panes/utils/pane-command-actions";
-import { moveBufferToPaneDropTarget } from "@/features/panes/utils/pane-drop-actions";
-import { findPaneGroup } from "@/features/panes/utils/pane-tree";
+import { activateBufferInPaneAndSync } from "@/features/panes/services/pane-activation";
+import { splitEditorGroup } from "@/features/panes/services/pane-command-actions";
+import { moveBufferToPaneDropTarget } from "@/features/panes/services/pane-drop-actions";
+import { findPaneGroup } from "@/features/panes/services/pane-tree";
+import { reloadPaneView } from "@/features/panes/services/pane-view-registry";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import type { EditorContent, PaneContent } from "@/features/panes/types/pane-content.types";
-import { getChromeNavigationIndex } from "@/features/layout/utils/chrome-keyboard";
+import type { PaneContent } from "@/features/panes/types/pane-content.types";
+import { getChromeNavigationIndex } from "@/features/layout/services/chrome-keyboard";
 import { useSidebarStore } from "@/features/layout/stores/sidebar.store";
 import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
 import type { Terminal } from "@/features/terminal/types/terminal.types";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { Button } from "@/ui/button";
 import { ContextMenu, ContextMenuTrigger } from "@/ui/context-menu";
 import {
@@ -34,23 +35,28 @@ import {
   TabStrip,
   useTabDragClickGuard,
 } from "@/ui/tab-bar";
+import { runAfterNextPaint } from "@/utils/after-paint";
 import { getRelativePath } from "@/utils/path-helpers";
 import { calculateDisplayNames } from "../utils/path-shortener";
 import {
   clearInternalTabDragData,
-  getGlobalTabMove,
   resolveDropTarget,
   resolveTabInsertBefore,
   setInternalTabDragData,
   setInternalTabDragHover,
   setInternalTabDragHoverTarget,
-} from "../utils/internal-tab-drag";
+} from "../services/internal-tab-drag";
 import TabBarItem from "./tab-bar-item";
 import { TabHistoryNavigation } from "./tab-history-navigation";
 import { NewTabMenu } from "./new-tab-menu";
 import TabContextMenu from "./tab-context-menu";
+import { getBufferText } from "@/features/editor/services/open-buffer-text";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
+import {
+  selectActiveBufferId,
+  selectPaneBufferFlags,
+} from "@/features/panes/stores/pane-selectors";
 
-const EMPTY_TOKENS: EditorContent["tokens"] = [];
 const tabShellCache = new WeakMap<PaneContent, PaneContent>();
 const tabShellById = new Map<string, PaneContent>();
 
@@ -65,7 +71,7 @@ function toTabShell(buffer: PaneContent): PaneContent {
   if (cached) return cached;
   const next: PaneContent =
     buffer.type === "editor"
-      ? { ...buffer, content: "", savedContent: "", contentRevision: 0, tokens: EMPTY_TOKENS }
+      ? { ...buffer, content: "", savedContent: "", contentRevision: 0 }
       : { ...buffer, content: "", savedContent: "" };
   // Every keystroke replaces the buffer object; keep the previous shell while nothing a tab
   // shows has changed, so the bar's selection stays equal.
@@ -108,33 +114,39 @@ const TabBar = ({
       : findPaneGroup(state.root, paneId);
   });
   const isInSplit = usePaneStore((state) => state.root.type === "split");
-  const paneBufferIdSet = useMemo(() => {
-    return pane ? new Set(pane.bufferIds) : null;
-  }, [pane?.bufferIds]);
+  const paneBufferIds = pane?.bufferIds ?? null;
+  // In the pane's tab order; buffers no pane shows only appear in the pane-less bar.
   const buffers = useBufferStore(
-    useShallow((state) =>
-      (paneBufferIdSet
-        ? state.buffers.filter((buffer) => paneBufferIdSet.has(buffer.id))
-        : state.buffers
-      ).map(toTabShell),
-    ),
+    useShallow((state) => {
+      if (!paneBufferIds) return state.buffers.map(toTabShell);
+      const paneBuffers: PaneContent[] = [];
+      for (const bufferId of paneBufferIds) {
+        const buffer = getBufferById(state.buffers, bufferId);
+        if (buffer) paneBuffers.push(toTabShell(buffer));
+      }
+      return paneBuffers;
+    }),
   );
-  const globalActiveBufferId = useBufferStore((state) => (pane ? null : state.activeBufferId));
+  const globalActiveBufferId = usePaneStore((state) => (pane ? null : selectActiveBufferId(state)));
+  const globalBufferFlags = usePaneStore((state) => (pane ? null : selectPaneBufferFlags(state)));
   const activeBufferCandidate = pane ? pane.activeBufferId : globalActiveBufferId;
-  const {
-    handleTabClick,
-    handleTabClose,
-    handleTabPin,
-    handleCloseOtherTabs,
-    handleCloseAllTabs,
-    handleCloseTabsToRight,
-    reorderBuffers,
-    convertPreviewToDefinite,
-  } = useBufferStore.use.actions();
+  const pinnedBufferIds = useMemo(
+    () => globalBufferFlags?.pinnedBufferIds ?? new Set(pane?.pinnedBufferIds ?? []),
+    [globalBufferFlags, pane?.pinnedBufferIds],
+  );
+  const previewBufferIds = useMemo(
+    () =>
+      globalBufferFlags?.previewBufferIds ??
+      new Set(pane?.previewBufferId ? [pane.previewBufferId] : []),
+    [globalBufferFlags, pane?.previewBufferId],
+  );
+  const { handleTabClick, handleTabClose, handleTabPin, convertPreviewToDefinite } =
+    useBufferStore.use.actions();
+  const activateTab = externalTabClick ?? handleTabClick;
   const horizontalTabScroll = useSettingsStore((state) => state.settings.horizontalTabScroll);
   const maxOpenTabs = useSettingsStore((state) => state.settings.maxOpenTabs);
   const updateActivePath = useSidebarStore.use.actions().updateActivePath;
-  const rootFolderPath = useFileSystemStore.use.rootFolderPath?.() || undefined;
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath) || undefined;
   const bufferById = useMemo(() => {
     const nextBufferById = new Map<string, PaneContent>();
     for (const buffer of buffers) {
@@ -160,10 +172,10 @@ const TabBar = ({
   const dragPointRef = useRef<{ x: number; y: number } | null>(null);
   const pointerPointRef = useRef<{ x: number; y: number } | null>(null);
   const { getClickCapture, releaseClickSuppression, suppressNextClick } = useTabDragClickGuard();
-  const handleRevealInFolder = useFileSystemStore.use.handleRevealInFolder?.();
+  const handleRevealInFolder = useFileSystemStore((state) => state.handleRevealInFolder);
   const { clearPositionCache } = useEditorStateStore.getState().actions;
   // Only the label fields of this bar's terminals, flattened so a shallow compare holds: the
-  // sessions Map changes on every terminal selection and would re-render the bar while dragging.
+  // sessions Map changes on every title, progress or directory update of any terminal.
   const terminalSessionFields = useTerminalStore(
     useShallow((state) => {
       const fields: string[] = [];
@@ -278,7 +290,7 @@ const TabBar = ({
     const unpinnedBuffers: PaneContent[] = [];
 
     for (const buffer of buffers) {
-      if (buffer.isPinned) {
+      if (pinnedBufferIds.has(buffer.id)) {
         pinnedBuffers.push(buffer);
       } else {
         unpinnedBuffers.push(buffer);
@@ -288,7 +300,7 @@ const TabBar = ({
     if (pinnedBuffers.length === 0) return unpinnedBuffers;
     if (unpinnedBuffers.length === 0) return pinnedBuffers;
     return [...pinnedBuffers, ...unpinnedBuffers];
-  }, [buffers]);
+  }, [buffers, pinnedBufferIds]);
   const { sortedBufferIds, sortedBufferIndexById } = useMemo(() => {
     const ids: string[] = [];
     const indexById = new Map<string, number>();
@@ -335,7 +347,9 @@ const TabBar = ({
 
   useEffect(() => {
     if (maxOpenTabs > 0 && buffers.length > maxOpenTabs && handleTabClose) {
-      const closableBuffers = buffers.filter((b) => !b.isPinned && b.id !== activeBufferId);
+      const closableBuffers = buffers.filter(
+        (b) => !pinnedBufferIds.has(b.id) && b.id !== activeBufferId,
+      );
 
       let tabsToClose = buffers.length - maxOpenTabs;
       for (let i = 0; i < closableBuffers.length && tabsToClose > 0; i++) {
@@ -343,16 +357,20 @@ const TabBar = ({
         tabsToClose--;
       }
     }
-  }, [buffers, maxOpenTabs, activeBufferId, handleTabClose]);
+  }, [buffers, maxOpenTabs, activeBufferId, handleTabClose, pinnedBufferIds]);
 
   // Bring the active tab into view whenever it changes or a tab opens, measured against the
-  // scrolling strip rather than the whole bar, whose trailing actions can cover a tab.
-  useLayoutEffect(() => {
+  // scrolling strip rather than the whole bar, whose trailing actions can cover a tab. Measured
+  // after the frame showing the tab has painted: the scroll is animated anyway, and measuring
+  // earlier forces a layout of the window while the new tab's content is still being built.
+  useEffect(() => {
     const activeIndex = activeBufferId ? (sortedBufferIndexById.get(activeBufferId) ?? -1) : -1;
     if (activeIndex === -1) return;
-    const activeTab = tabRefs.current[activeIndex];
-    const strip = tabStripRef.current;
-    if (activeTab && strip) scrollTabIntoStrip(strip, activeTab);
+    return runAfterNextPaint(() => {
+      const activeTab = tabRefs.current[activeIndex];
+      const strip = tabStripRef.current;
+      if (activeTab && strip) scrollTabIntoStrip(strip, activeTab);
+    });
   }, [activeBufferId, sortedBufferIndexById]);
 
   const handleDoubleClick = useCallback(
@@ -361,11 +379,11 @@ const TabBar = ({
       e.stopPropagation();
       const buffer = sortedBuffers[index];
       // Convert preview tab to definite on double-click
-      if (buffer.isPreview) {
+      if (previewBufferIds.has(buffer.id)) {
         convertPreviewToDefinite(buffer.id);
       }
     },
-    [sortedBuffers, convertPreviewToDefinite],
+    [sortedBuffers, convertPreviewToDefinite, previewBufferIds],
   );
 
   const handleCopyPath = useCallback(async (path: string) => {
@@ -419,17 +437,13 @@ const TabBar = ({
 
   const handleTabSelect = useCallback(
     (buffer: PaneContent) => {
-      if (externalTabClick) {
-        externalTabClick(buffer.id);
-      } else {
-        handleTabClick(buffer.id);
-      }
+      activateTab(buffer.id);
       updateActivePath(buffer.path);
       setSrAnnouncement(
         `Switched to ${buffer.name}${isDirtyContent(buffer) ? ", unsaved changes" : ""}`,
       );
     },
-    [externalTabClick, handleTabClick, updateActivePath],
+    [activateTab, updateActivePath],
   );
 
   const startRename = useCallback(
@@ -562,13 +576,9 @@ const TabBar = ({
               ? findPaneGroup(usePaneStore.getState().bottomRoot, BOTTOM_PANE_ID)
               : findPaneGroup(usePaneStore.getState().root, destinationPaneId);
           if (beforeId !== undefined && destinationPane) {
-            const move = getGlobalTabMove(
-              useBufferStore.getState().buffers.map((buffer) => buffer.id),
-              dragged.id,
-              beforeId,
-              destinationPane.bufferIds,
-            );
-            if (move) reorderBuffers(...move);
+            usePaneStore
+              .getState()
+              .actions.moveBufferInPane(destinationPane.id, dragged.id, beforeId);
           }
         }
         activateBufferInPaneAndSync(destinationPaneId, dragged.id);
@@ -576,27 +586,20 @@ const TabBar = ({
           useUIState.getState().setBottomPaneActiveTab("buffers");
           useUIState.getState().setIsBottomPaneVisible(true);
         }
-      } else if (event.over && reorderBuffers) {
-        // Indices here are pane-local, but reorderBuffers works on the global buffer list, so
-        // translate the drop into "before the tab that now sits at the new index".
+      } else if (event.over && paneId) {
+        // Drop "before the tab that now sits at the new index" in the pane's own tab order.
         const oldIndex = sortedBufferIndexById.get(activeId) ?? -1;
         const newIndex = sortedBufferIndexById.get(String(event.over.id)) ?? -1;
         if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
           const reordered = sortedBufferIds.filter((id) => id !== activeId);
           const beforeId = reordered[newIndex] ?? null;
-          const move = getGlobalTabMove(
-            useBufferStore.getState().buffers.map((buffer) => buffer.id),
-            activeId,
-            beforeId,
-            sortedBufferIds,
-          );
-          if (move) reorderBuffers(...move);
+          usePaneStore.getState().actions.moveBufferInPane(paneId, activeId, beforeId);
         }
       }
 
       resetDrag();
     },
-    [bufferById, paneId, reorderBuffers, resetDrag, sortedBufferIds, sortedBufferIndexById],
+    [bufferById, paneId, resetDrag, sortedBufferIds, sortedBufferIndexById],
   );
 
   useEffect(() => {
@@ -612,7 +615,7 @@ const TabBar = ({
         e.preventDefault();
         const nextBuffer = sortedBuffers[nextIndex];
         if (nextBuffer && nextIndex !== index) {
-          handleTabClick(nextBuffer.id);
+          activateTab(nextBuffer.id);
           updateActivePath(nextBuffer.path);
           setSrAnnouncement(
             `Switched to ${nextBuffer.name}${isDirtyContent(nextBuffer) ? ", unsaved changes" : ""}`,
@@ -625,7 +628,7 @@ const TabBar = ({
       switch (e.key) {
         case "Delete":
         case "Backspace":
-          if (!buffer.isPinned) {
+          if (!pinnedBufferIds.has(buffer.id)) {
             e.preventDefault();
             setSrAnnouncement(`Closed ${buffer.name}`);
             closeTab(buffer.id);
@@ -637,7 +640,7 @@ const TabBar = ({
         case "Enter":
         case " ":
           e.preventDefault();
-          handleTabClick(buffer.id);
+          activateTab(buffer.id);
           updateActivePath(buffer.path);
           setSrAnnouncement(
             `Activated ${buffer.name}${isDirtyContent(buffer) ? ", unsaved changes" : ""}`,
@@ -645,7 +648,7 @@ const TabBar = ({
           break;
       }
     },
-    [sortedBuffers, handleTabClick, updateActivePath, closeTab],
+    [sortedBuffers, activateTab, updateActivePath, closeTab, pinnedBufferIds],
   );
 
   const draggedBuffer = draggedBufferId ? bufferById.get(draggedBufferId) : undefined;
@@ -689,6 +692,8 @@ const TabBar = ({
                           displayName={getBufferDisplayName(buffer)}
                           index={index}
                           isActive={buffer.id === activeBufferId}
+                          isPinned={pinnedBufferIds.has(buffer.id)}
+                          isPreview={previewBufferIds.has(buffer.id)}
                           isDraggedTab={isDragging}
                           onClick={() => handleTabSelect(buffer)}
                           onDoubleClick={(e) => handleDoubleClick(e, index)}
@@ -704,6 +709,7 @@ const TabBar = ({
                       </ContextMenuTrigger>
                       <TabContextMenu
                         buffer={buffer}
+                        isPinned={pinnedBufferIds.has(buffer.id)}
                         paneId={paneId}
                         onPin={handleTabPin}
                         onRename={startRename}
@@ -715,9 +721,6 @@ const TabBar = ({
                           );
                           if (targetBuffer) closeTab(bufferId);
                         }}
-                        onCloseOthers={handleCloseOtherTabs}
-                        onCloseAll={handleCloseAllTabs}
-                        onCloseToRight={handleCloseTabsToRight}
                         isPaneLocked={isPaneLocked}
                         onTogglePaneLocked={
                           paneId && !disablePaneActions && !isBottomPane
@@ -728,22 +731,17 @@ const TabBar = ({
                         onCopyRelativePath={handleCopyRelativePath}
                         onReload={(bufferId) => {
                           const targetBuffer = bufferById.get(bufferId);
-                          if (targetBuffer?.type === "browser") {
-                            void import("@/features/browser/services/browser-tab-manager").then(
-                              ({ browserTabManager }) =>
-                                browserTabManager.perform(bufferId, "reload"),
-                            );
-                            return;
-                          }
+                          if (targetBuffer && reloadPaneView(targetBuffer)) return;
                           if (targetBuffer && targetBuffer.type !== "extension") {
                             const { closeBuffer, openBuffer } = useBufferStore.getState().actions;
+                            // Tabs hold shells without text; read it from the live buffer.
+                            const content =
+                              targetBuffer.type === "editor" || targetBuffer.type === "diff"
+                                ? (getBufferText(bufferId) ?? "")
+                                : "";
                             closeBuffer(bufferId);
                             setTimeout(async () => {
                               try {
-                                const content =
-                                  targetBuffer.type === "editor" || targetBuffer.type === "diff"
-                                    ? targetBuffer.content
-                                    : "";
                                 openBuffer(
                                   targetBuffer.path,
                                   targetBuffer.name,
@@ -819,6 +817,8 @@ const TabBar = ({
               displayName={getBufferDisplayName(draggedBuffer)}
               index={0}
               isActive
+              isPinned={pinnedBufferIds.has(draggedBuffer.id)}
+              isPreview={previewBufferIds.has(draggedBuffer.id)}
               isDraggedTab
               onClick={() => {}}
               onDoubleClick={() => {}}

@@ -1,29 +1,31 @@
 import { useMemo } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { getOpenBufferSearchSnapshot } from "@/features/editor/utils/open-buffer-search-snapshot";
+import { getOpenBufferSearchSnapshot } from "@/features/editor/services/open-buffer-search-snapshot";
 import { useRecentFilesStore } from "@/features/file-system/stores/recent-files.store";
 import {
   MAX_FILE_SEARCH_RESULTS as MAX_RESULTS,
   MAX_OPEN_BUFFERS_SHOWN,
   MAX_RECENT_FILES_NO_QUERY,
 } from "@/features/file-search/constants/file-search-limits";
-import type { FffSearchHit } from "@/features/file-search/lib/file-search-api";
+import type { FffSearchHit } from "@/features/file-search/api/file-search-api";
 import type { CategorizedFiles, FileItem } from "@/features/file-search/types/file-search.types";
 import {
   categorizeFileSearchHits,
   categorizeFuzzyFileSearch,
   indexRecentSearchFiles,
-} from "@/features/file-search/utils/categorize-file-search-results";
-import { insertSortedLimited } from "@/features/file-search/utils/sorted-search-results";
-import { fuzzyScore } from "../utils/fuzzy-search";
+} from "@/features/file-search/services/categorize-file-search-results";
+import { insertSortedLimited } from "@/features/file-search/services/sorted-search-results";
+import { subsequenceFuzzyScore } from "../services/subsequence-fuzzy-score";
+import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 export const useFileSearch = (
   files: FileItem[],
   debouncedQuery: string,
   fffHits: FffSearchHit[] | null = null,
 ) => {
+  const activeBufferId = useActiveBufferId();
   const bufferSearchSnapshot = useBufferStore((state) =>
-    getOpenBufferSearchSnapshot(state.buffers, state.activeBufferId),
+    getOpenBufferSearchSnapshot(state.buffers, activeBufferId),
   );
   const getRecentFilesOrderedByFrecency = useRecentFilesStore(
     (state) => state.actions.getRecentFilesOrderedByFrecency,
@@ -100,7 +102,7 @@ export const useFileSearch = (
       return categorizeFileSearchHits(fffHits, rankingContext);
     }
 
-    return categorizeFuzzyFileSearch(files, debouncedQuery, fuzzyScore, rankingContext);
+    return categorizeFuzzyFileSearch(files, debouncedQuery, subsequenceFuzzyScore, rankingContext);
   }, [files, debouncedQuery, bufferSearchSnapshot, getRecentFilesOrderedByFrecency, fffHits]);
 
   return categorizedFiles;

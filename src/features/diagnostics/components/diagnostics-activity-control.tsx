@@ -2,25 +2,23 @@ import { useMemo } from "react";
 import { buildDiagnosticsActivityStatus } from "@/features/diagnostics/lib/diagnostics-activity-status";
 import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { getBufferById } from "@/features/editor/utils/buffer-index";
+import { getBufferById } from "@/features/editor/stores/buffer-index";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { WarningIcon } from "@/ui/icons";
 import { SidebarIconButton } from "@/ui/sidebar";
 import Tooltip from "@/ui/tooltip";
+import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 export function DiagnosticsActivityControl() {
   const diagnosticsEnabled = useSettingsStore((state) => state.settings.coreFeatures.diagnostics);
-  const diagnosticsByFile = useDiagnosticsStore.use.diagnosticsByFile();
-  const diagnostics = useMemo(
-    () => Array.from(diagnosticsByFile.values()).flat(),
-    [diagnosticsByFile],
-  );
+  const diagnosticCounts = useDiagnosticsStore.use.diagnosticCounts();
   const status = useMemo(
-    () => buildDiagnosticsActivityStatus(diagnosticsEnabled, diagnostics),
-    [diagnostics, diagnosticsEnabled],
+    () => buildDiagnosticsActivityStatus(diagnosticsEnabled, diagnosticCounts),
+    [diagnosticCounts, diagnosticsEnabled],
   );
+  const activeBufferId = useActiveBufferId();
   const isActive = useBufferStore(
-    (state) => getBufferById(state.buffers, state.activeBufferId)?.type === "diagnostics",
+    (state) => getBufferById(state.buffers, activeBufferId)?.type === "diagnostics",
   );
   const openDiagnosticsBuffer = useBufferStore.use.actions().openDiagnosticsBuffer;
 

@@ -1,16 +1,21 @@
 import { useIntelligenceSettingsStore } from "@/features/ai/intelligence/stores/intelligence-settings.store";
 import { holdsQueueForEdit } from "@/features/ai/lib/agent-queue-controls";
-import { isLocalAiProvider } from "@/features/ai/lib/local-ai-connection";
-import { resolveIntelligenceConnection } from "@/features/ai/intelligence/lib/resolve-intelligence-connection";
-import { useAuthStore } from "@/features/window/stores/auth.store";
-import { hasProductCapability } from "@/features/window/lib/product-capabilities";
-import type { AgentType, Chat, Message } from "@/features/ai/types/ai-chat.types";
-import { hasAgentSessionActivity, selectAgentSessions } from "@/features/ai/lib/agent-session-list";
+import { isLocalAiProvider } from "@/features/ai/services/local-ai-connection";
+import { resolveIntelligenceConnection } from "@/features/ai/intelligence/services/resolve-intelligence-connection";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
+import { hasProductCapability } from "@/features/auth/services/product-capabilities";
+import type { AgentType, ChatSession, Message } from "@/features/ai/types/ai-chat.types";
+import {
+  hasAgentSessionActivity,
+  selectAgentSessions,
+} from "@/features/ai/services/agent-session-list";
 import { isChatInWorkspace } from "@/features/ai/lib/ai-workspace-scope";
 import { coalesceAssistantResponses } from "@/features/ai/lib/assistant-response";
 import { normalizeMessageFollowUpActions } from "@/features/ai/lib/follow-up-actions";
+import { withToolCallIds } from "@/features/ai/lib/tool-call-state";
 import {
   deleteChatFromDb,
+  forgetSavedChatMessages,
   initChatDatabase,
   loadAllChatsFromDb,
   loadChatFromDb,
@@ -20,10 +25,15 @@ import {
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useGitStore } from "@/features/git/stores/git.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { useProjectStore } from "@/features/window/stores/project.store";
-import { getChatAcpSessionToClose } from "@/features/ai/lib/acp-session-state";
-import type { AIChatActions } from "./ai-chat-store.types";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
+import { getChatAcpSessionToClose } from "@/features/ai/services/acp-session-state";
+import type { AIChatActions, AIChatStore } from "./ai-chat-store.types";
 import type { GetAIChatStore, SetAIChatStore } from "./ai-chat-store-context";
+import {
+  composeChat,
+  EMPTY_CHAT_MESSAGES,
+  toChatSession,
+} from "@/features/ai/services/chat-normalization";
 import type { Draft } from "immer";
 
 type ChatActions = Omit<
@@ -72,7 +82,7 @@ function getNewChatMetadata(agentId: AgentType) {
   };
 }
 
-function createChat(agentId: AgentType, id: string = createId()): Chat {
+function createChat(agentId: AgentType, id: string = createId()): ChatSession {
   // One clock read for both, so "never received a message" stays detectable as
   // lastMessageAt === createdAt.
   const now = new Date();
@@ -80,7 +90,7 @@ function createChat(agentId: AgentType, id: string = createId()): Chat {
   return {
     id,
     title: "New Session",
-    messages: [],
+    messageCount: 0,
     createdAt: now,
     lastMessageAt: new Date(now),
     agentId,
@@ -93,11 +103,17 @@ function createChat(agentId: AgentType, id: string = createId()): Chat {
 async function syncChatToDatabase(get: GetAIChatStore, chatId: string) {
   try {
     const state = get();
-    if (state.chatMessageLoadStates[chatId] === "loading") return;
+    const loadState = state.chatMessageLoadStates[chatId];
+    if (loadState === "loading") return;
     const chat = state.chats.find((candidate) => candidate.id === chatId);
-    if (chat) {
-      await saveChatToDb(chat);
+    if (!chat) return;
+    // A history row whose messages were never read (or failed to) only has its row to write: a
+    // whole save without its messages would delete them.
+    if (loadState !== "loaded") {
+      await saveChatMetadataToDb(chat);
+      return;
     }
+    await saveChatToDb(composeChat(chat, state.messagesByChat[chatId]));
   } catch (error) {
     console.error(`Failed to sync chat ${chatId} to database:`, error);
   }
@@ -109,7 +125,8 @@ const scheduledChatSyncs = new Map<string, ReturnType<typeof setTimeout>>();
 /**
  * Saves a chat once message updates pause. A streamed reply updates its message for every chunk,
  * and saving each one re-serialized the whole chat and rewrote it in the database tens of times a
- * second; the last update always lands within the delay.
+ * second; the last update always lands within the delay, and the save itself only writes the
+ * messages that changed (see `saveChatToDb`).
  */
 function scheduleChatSync(get: GetAIChatStore, chatId: string) {
   if (scheduledChatSyncs.has(chatId)) return;
@@ -135,28 +152,33 @@ function loadChatMessages(set: SetAIChatStore, get: GetAIChatStore, chatId: stri
 }
 
 async function readChatMessages(set: SetAIChatStore, get: GetAIChatStore, chatId: string) {
-  const before = get().actions.getChatById(chatId);
+  const before = get().actions.getMessagesForChat(chatId);
   set((state) => {
     state.chatMessageLoadStates[chatId] = "loading";
   });
   try {
     const fullChat = await loadChatFromDb(chatId);
-    const current = get().actions.getChatById(chatId);
-    const changedMessages = current?.messages !== before?.messages;
+    const changedMessages = get().actions.getMessagesForChat(chatId) !== before;
     set((state) => {
       const chatIndex = state.chats.findIndex((candidate) => candidate.id === chatId);
       if (chatIndex !== -1) {
         const chat = state.chats[chatIndex];
-        const liveMessages = new Map(chat.messages.map((message) => [message.id, message]));
+        const live = state.messagesByChat[chatId] ?? [];
+        const liveMessages = new Map(live.map((message) => [message.id, message]));
         const persistedIds = new Set(fullChat.messages.map((message) => message.id));
         const messages =
-          before?.messages?.length && changedMessages
-            ? chat.messages
+          before.length && changedMessages
+            ? live
             : [
                 ...fullChat.messages.map((message) => liveMessages.get(message.id) ?? message),
-                ...chat.messages.filter((message) => !persistedIds.has(message.id)),
+                ...live.filter((message) => !persistedIds.has(message.id)),
               ];
-        state.chats[chatIndex] = { ...fullChat, ...chat, messages };
+        state.chats[chatIndex] = {
+          ...toChatSession(fullChat),
+          ...chat,
+          messageCount: messages.length,
+        };
+        state.messagesByChat[chatId] = messages;
         state.chatMessageLoadStates[chatId] = "loaded";
       } else {
         // The chat left the list mid-fetch; don't leave a stuck "loading" behind.
@@ -166,15 +188,18 @@ async function readChatMessages(set: SetAIChatStore, get: GetAIChatStore, chatId
     if (changedMessages) await syncChatToDatabase(get, chatId);
   } catch (error) {
     if (String(error).includes("Query returned no rows")) {
-      if (get().actions.getChatById(chatId)?.messages.length) {
+      if (get().actions.getMessagesForChat(chatId).length) {
         set((state) => {
           state.chatMessageLoadStates[chatId] = "loaded";
         });
+        // The chat has no stored rows, whatever an earlier save of it wrote.
+        forgetSavedChatMessages(chatId);
         await syncChatToDatabase(get, chatId);
         return;
       }
       set((state) => {
         state.chats = state.chats.filter((chat) => chat.id !== chatId);
+        delete state.messagesByChat[chatId];
         if (state.currentChatId === chatId) {
           state.currentChatId = null;
         }
@@ -204,20 +229,36 @@ function ensureChatMessagesLoaded(set: SetAIChatStore, get: GetAIChatStore, chat
 /** Streamed changes to one message that have not reached the store yet. */
 interface PendingMessageUpdate {
   updates: Partial<Message>;
-  /** Text appended after `updates.content` (or the stored content when there is none). */
+  /** Computes more updates when the batch lands, applied over `updates`. */
+  resolveUpdates?: () => Partial<Message>;
+  /** Updates queued after `resolveUpdates`, applied over what it returns. */
+  laterUpdates: Partial<Message>;
+  /** Text appended after the content set above (or the stored content when there is none). */
   appended: string;
 }
 
 type PendingChatUpdates = Map<string, PendingMessageUpdate>;
 
-function applyPendingUpdates(chat: Draft<Chat>, pending: PendingChatUpdates) {
-  for (const [messageId, { updates, appended }] of pending) {
-    const message = chat.messages.find((candidate) => candidate.id === messageId);
+/** What every message written to the store goes through. */
+function normalizeMessage(message: Message): Message {
+  return withToolCallIds(normalizeMessageFollowUpActions(message));
+}
+
+function applyPendingUpdates(messages: Draft<Message[]>, pending: PendingChatUpdates) {
+  for (const [messageId, { updates, resolveUpdates, laterUpdates, appended }] of pending) {
+    const message = messages.find((candidate) => candidate.id === messageId);
     if (!message) continue;
-    const next = { ...message, ...updates } as Message;
+    const next = { ...message, ...updates, ...resolveUpdates?.(), ...laterUpdates } as Message;
     if (appended) next.content = `${next.content ?? ""}${appended}`;
-    Object.assign(message, normalizeMessageFollowUpActions(next));
+    Object.assign(message, normalizeMessage(next));
   }
+}
+
+/** Replaces a chat's messages and keeps its session's message count in step. */
+function writeChatMessages(state: Draft<AIChatStore>, chatId: string, messages: Message[]) {
+  state.messagesByChat[chatId] = messages;
+  const chat = state.chats.find((candidate) => candidate.id === chatId);
+  if (chat) chat.messageCount = messages.length;
 }
 
 function scheduleFrame(callback: () => void): () => void {
@@ -233,7 +274,8 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
   /**
    * A streamed reply used to write the store for every token: each write copied the chat list,
    * re-rendered everything subscribed to it and re-sorted the session sidebar. Stream updates now
-   * collect here and land together once per animation frame.
+   * collect here and land together once per animation frame, and they only touch
+   * `messagesByChat`: the session list keeps its identity while a reply streams.
    */
   const pendingUpdates = new Map<string, PendingChatUpdates>();
   let cancelFrame: (() => void) | null = null;
@@ -259,8 +301,8 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
 
     set((state) => {
       for (const [id, pending] of batches) {
-        const chat = state.chats.find((candidate) => candidate.id === id);
-        if (chat) applyPendingUpdates(chat, pending);
+        const messages = state.messagesByChat[id];
+        if (messages) applyPendingUpdates(messages, pending);
       }
     });
     for (const [id] of batches) scheduleChatSync(get, id);
@@ -274,7 +316,7 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
     }
     let pending = chatPending.get(messageId);
     if (!pending) {
-      pending = { updates: {}, appended: "" };
+      pending = { updates: {}, laterUpdates: {}, appended: "" };
       chatPending.set(messageId, pending);
     }
     cancelFrame ??= scheduleFrame(() => {
@@ -438,7 +480,7 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
       // identical untouched sessions. Hand back the one that is already waiting.
       if (options.reuseEmpty) {
         const workspacePath = getCurrentWorkspacePath();
-        const isReusable = (chat: Chat) =>
+        const isReusable = (chat: ChatSession) =>
           chat.agentId === nextAgentId &&
           !chat.archivedAt &&
           isChatInWorkspace(chat, workspacePath) &&
@@ -466,6 +508,7 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
 
       set((draft) => {
         draft.chats.unshift(newChat);
+        draft.messagesByChat[newChat.id] = [];
         draft.chatMessageLoadStates[newChat.id] = "loaded";
         if (activate) {
           draft.currentChatId = newChat.id;
@@ -473,7 +516,7 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
         }
       });
 
-      void saveChatToDb(newChat).catch((error) =>
+      void saveChatToDb(composeChat(newChat, [])).catch((error) =>
         console.error("Failed to save new chat to database:", error),
       );
       return newChat.id;
@@ -488,13 +531,14 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
       const newChat = createChat(agentId || state.selectedAgentId, chatId);
       set((draft) => {
         draft.chats.unshift(newChat);
+        draft.messagesByChat[newChat.id] = [];
         draft.chatMessageLoadStates[newChat.id] = "loaded";
         if (options.activate ?? true) {
           draft.currentChatId = newChat.id;
         }
       });
 
-      void saveChatToDb(newChat).catch((error) =>
+      void saveChatToDb(composeChat(newChat, [])).catch((error) =>
         console.error("Failed to save new agent chat to database:", error),
       );
       return newChat.id;
@@ -549,6 +593,7 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
         if (chatIndex !== -1) {
           state.chats.splice(chatIndex, 1);
         }
+        delete state.messagesByChat[chatId];
 
         if (chatId === state.currentChatId) {
           const [mostRecentChat] = selectAgentSessions(state.chats, {
@@ -677,8 +722,10 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
       set((state) => {
         const chat = state.chats.find((candidate) => candidate.id === chatId);
         if (chat) {
-          if (pending) applyPendingUpdates(chat, pending);
-          chat.messages.push(normalizeMessageFollowUpActions(message));
+          const messages = (state.messagesByChat[chatId] ??= []);
+          if (pending) applyPendingUpdates(messages, pending);
+          messages.push(normalizeMessage(message));
+          chat.messageCount = messages.length;
           chat.lastMessageAt = new Date();
         }
       });
@@ -689,11 +736,12 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
       const pending = takePending(chatId);
       set((state) => {
         const chat = state.chats.find((candidate) => candidate.id === chatId);
-        if (!chat) return;
-        if (pending) applyPendingUpdates(chat, pending);
-        const message = chat.messages.find((candidate) => candidate.id === messageId);
+        const messages = state.messagesByChat[chatId];
+        if (!chat || !messages) return;
+        if (pending) applyPendingUpdates(messages, pending);
+        const message = messages.find((candidate) => candidate.id === messageId);
         if (!message) return;
-        Object.assign(message, normalizeMessageFollowUpActions({ ...message, ...updates }));
+        Object.assign(message, normalizeMessage({ ...message, ...updates }));
         // A turn moves its session up the list when it starts and when it ends, not per token.
         if (!message.isStreaming) chat.lastMessageAt = new Date();
       });
@@ -701,8 +749,15 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
     },
     queueMessageUpdate: (chatId, messageId, updates) => {
       const pending = queuePending(chatId, messageId);
+      if (typeof updates === "function") {
+        Object.assign(pending.updates, pending.laterUpdates);
+        pending.laterUpdates = {};
+        pending.resolveUpdates = updates;
+        pending.appended = "";
+        return;
+      }
       if ("content" in updates) pending.appended = "";
-      Object.assign(pending.updates, updates);
+      Object.assign(pending.resolveUpdates ? pending.laterUpdates : pending.updates, updates);
     },
     appendMessageContent: (chatId, messageId, chunk) => {
       if (!chunk) return;
@@ -715,8 +770,9 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
         const chat = state.chats.find((candidate) => candidate.id === chatId);
         if (!chat) return;
 
-        chat.messages = coalesceAssistantResponses(messages.map(normalizeMessageFollowUpActions));
-        chat.lastMessageAt = chat.messages[chat.messages.length - 1]?.timestamp ?? chat.createdAt;
+        const next = coalesceAssistantResponses(messages.map(normalizeMessage));
+        writeChatMessages(state, chatId, next);
+        chat.lastMessageAt = next[next.length - 1]?.timestamp ?? chat.createdAt;
       });
       void syncChatToDatabase(get, chatId);
     },
@@ -732,15 +788,17 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
       let didReplace = false;
       set((state) => {
         const chat = state.chats.find((candidate) => candidate.id === chatId);
-        if (!chat) return;
+        const messages = state.messagesByChat[chatId];
+        if (!chat || !messages) return;
 
-        const messageIndex = chat.messages.findIndex((message) => message.id === messageId);
-        const message = chat.messages[messageIndex];
+        const messageIndex = messages.findIndex((message) => message.id === messageId);
+        const message = messages[messageIndex];
         if (!message || message.role !== "user") return;
 
         message.content = nextContent;
         message.timestamp = new Date();
-        chat.messages.splice(messageIndex + 1);
+        messages.splice(messageIndex + 1);
+        chat.messageCount = messages.length;
         chat.lastMessageAt = new Date();
         didReplace = true;
       });
@@ -764,12 +822,19 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
           const persistedIds = new Set(chats.map((chat) => chat.id));
           const inMemoryChats = new Map(state.chats.map((chat) => [chat.id, chat]));
           state.chats = [
-            ...chats.map((chat) =>
-              state.chatMessageLoadStates[chat.id] === "loaded" ||
-              state.chatMessageLoadStates[chat.id] === "loading"
-                ? (inMemoryChats.get(chat.id) ?? { ...chat, messages: [] })
-                : { ...chat, messages: [] },
-            ),
+            ...chats.map((chat) => {
+              const loadState = state.chatMessageLoadStates[chat.id];
+              if (loadState === "loaded" || loadState === "loading") {
+                return (
+                  inMemoryChats.get(chat.id) ?? {
+                    ...chat,
+                    messageCount: state.messagesByChat[chat.id]?.length ?? 0,
+                  }
+                );
+              }
+              delete state.messagesByChat[chat.id];
+              return { ...chat, messageCount: 0 };
+            }),
             ...state.chats.filter((chat) => !persistedIds.has(chat.id)),
           ];
           // Unloaded history has no load state; "loading" is reserved for a
@@ -788,6 +853,7 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
         cancelFrame = null;
         set((state) => {
           state.chats = [];
+          state.messagesByChat = {};
           state.currentChatId = null;
           state.agentRuns = {};
           state.agentMessageQueues = {};
@@ -818,16 +884,17 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
     // Readers act on what the stream has produced so far, including the current frame.
     getCurrentChat: () => {
       const currentChatId = get().currentChatId;
-      if (currentChatId) flushPending(currentChatId);
-      return get().chats.find((chat) => chat.id === currentChatId);
+      return currentChatId ? get().actions.getChatById(currentChatId) : undefined;
     },
     getChatById: (chatId) => {
       flushPending(chatId);
-      return get().chats.find((chat) => chat.id === chatId);
+      const state = get();
+      const chat = state.chats.find((candidate) => candidate.id === chatId);
+      return chat ? composeChat(chat, state.messagesByChat[chatId]) : undefined;
     },
     getMessagesForChat: (chatId) => {
       flushPending(chatId);
-      return get().chats.find((chat) => chat.id === chatId)?.messages || [];
+      return get().messagesByChat[chatId] ?? EMPTY_CHAT_MESSAGES;
     },
   };
 }

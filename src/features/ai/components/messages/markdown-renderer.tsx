@@ -17,11 +17,13 @@ import {
   HighlightedCode,
   useCodeHighlightSegments,
 } from "@/features/editor/markdown/highlighted-code";
-import { normalizeCodeFenceLanguage } from "@/features/editor/markdown/language-map";
+import { normalizeCodeFenceLanguage } from "@/features/editor/markdown/services/language-map";
+import { openExternalUrl } from "@/utils/external-url";
 import { Button } from "@/ui/button";
 import { TextLink } from "@/ui/text-link";
 import { writeClipboardText } from "@/utils/clipboard";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 function inferCodeLanguage(code: string): string {
   const trimmed = code.trim();
@@ -54,14 +56,18 @@ async function copyTextToClipboard(text: string) {
 
 async function openMarkdownLink(href: string, label: string) {
   if (isExternalMarkdownLink(href)) {
-    const { openUrl } = await import("@tauri-apps/plugin-opener");
-    await openUrl(href);
+    await openExternalUrl(href);
     return;
   }
 
   const fileSystem = useFileSystemStore.getState();
   const files = await fileSystem.getAllProjectFiles();
-  const target = resolveWorkspaceFileLink(href, label, files, fileSystem.rootFolderPath);
+  const target = resolveWorkspaceFileLink(
+    href,
+    label,
+    files,
+    useProjectStore.getState().rootFolderPath,
+  );
 
   if (target) {
     await fileSystem.handleFileSelect(
@@ -75,8 +81,7 @@ async function openMarkdownLink(href: string, label: string) {
     return;
   }
 
-  const { openUrl } = await import("@tauri-apps/plugin-opener");
-  await openUrl(href);
+  await openExternalUrl(href);
 }
 
 function CodeBlock({ code, languageHint }: { code: string; languageHint: string }) {
@@ -336,7 +341,7 @@ function renderInlineFormatting(text: string): React.ReactNode {
           href={url}
           onClick={(e) => {
             e.preventDefault();
-            import("@tauri-apps/plugin-opener").then(({ openUrl }) => openUrl(url));
+            void openExternalUrl(url);
           }}
         >
           {url.length > 60 ? `${url.slice(0, 60)}...` : url}

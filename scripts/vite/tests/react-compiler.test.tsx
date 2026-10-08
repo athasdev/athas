@@ -16,7 +16,7 @@ const entry = "/virtual-compiler-regression.js";
 const selectorEntry = "/virtual-generated-selectors.js";
 const storeModule = "@/features/editor/stores/editor-app.store";
 const platformModule = "@/utils/platform";
-const platformHook = path.resolve("src/features/window/hooks/use-platform-setup.ts");
+const platformHook = path.resolve("src/features/bootstrap/hooks/use-platform-setup.ts");
 
 let container: HTMLDivElement;
 let root: Root;

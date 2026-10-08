@@ -17,7 +17,7 @@ const mocks = vi.hoisted(() => ({
   menuProps: null as MenuProps | null,
 }));
 
-vi.mock("@/features/keymaps/utils/registry", () => ({
+vi.mock("@/features/keymaps/services/keymap-registry", () => ({
   keymapRegistry: { executeCommand: mocks.executeCommand },
 }));
 vi.mock("@/features/editor/context-menu/context-menu", () => ({

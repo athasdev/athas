@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { invoke } from "@tauri-apps/api/core";
 import { getCodexModelPatch } from "../integrations/codex/codex-model-settings";
+import { signOutOfCodex } from "../integrations/codex/codex-account-api";
 import {
   CODEX_COMPOSER_THREAD_PAGE_SIZE,
   listCodexComposerSkills,
@@ -12,11 +13,15 @@ import {
   listCodexComposerModels,
   normalizeCodexModels,
 } from "@/features/ai/integrations/codex/codex-composer-catalog";
+import { queryClient } from "@/utils/query-client";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 
 afterEach(() => vi.useRealTimers());
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  queryClient.clear();
+});
 
 describe("Codex composer catalog", () => {
   it("keeps supported effort and replaces an incompatible effort when changing models", () => {
@@ -93,6 +98,28 @@ describe("Codex composer catalog", () => {
     expect(
       vi.mocked(invoke).mock.calls.filter(([command]) => command === "list_codex_models"),
     ).toHaveLength(2);
+  });
+
+  it("does not return a request that started before a forced refresh", async () => {
+    let finishStale!: (value: unknown) => void;
+    vi.mocked(invoke).mockImplementation((command) => {
+      if (command !== "list_codex_models") return Promise.resolve({});
+      if (!finishStale) {
+        return new Promise((resolve) => {
+          finishStale = resolve;
+        });
+      }
+      return Promise.resolve({ data: [{ model: "fresh" }] });
+    });
+
+    const stale = listCodexComposerModels("/force-test").catch(() => null);
+    await vi.waitFor(() => expect(finishStale).toBeDefined());
+    const forced = listCodexComposerModels("/force-test", true);
+    finishStale({ data: [{ model: "stale" }] });
+
+    expect((await forced)[0].id).toBe("fresh");
+    await stale;
+    expect((await listCodexComposerModels("/force-test"))[0].id).toBe("fresh");
   });
 
   it("allows retry after a failed model load", async () => {
@@ -213,5 +240,20 @@ describe("Codex composer catalog", () => {
       limit: CODEX_COMPOSER_THREAD_PAGE_SIZE,
     });
     expect(invoke).toHaveBeenCalledWith("list_codex_skills", { cwd: "/workspace" });
+  });
+
+  it("forgets the catalog when the account signs out", async () => {
+    vi.mocked(invoke).mockResolvedValue({ data: [{ model: "account-model" }] });
+    await listCodexComposerModels("/sign-out-test");
+    expect(queryClient.getQueryCache().findAll({ queryKey: ["codex"] })).not.toHaveLength(0);
+
+    await signOutOfCodex();
+
+    expect(invoke).toHaveBeenCalledWith("logout_codex_account");
+    expect(queryClient.getQueryCache().findAll({ queryKey: ["codex"] })).toHaveLength(0);
+    await listCodexComposerModels("/sign-out-test");
+    expect(
+      vi.mocked(invoke).mock.calls.filter(([command]) => command === "list_codex_models"),
+    ).toHaveLength(2);
   });
 });

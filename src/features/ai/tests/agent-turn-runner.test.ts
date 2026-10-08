@@ -34,7 +34,11 @@ vi.mock("@/features/ai/services/agent-native-notifications", () => ({
 vi.mock("@/features/telemetry/services/telemetry", () => ({
   recordAiFailure: mocks.recordAiFailure,
 }));
-vi.mock("@/features/window/stores/auth.store", () => ({
+vi.mock("@/features/ai/lib/follow-up-actions", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/features/ai/lib/follow-up-actions")>();
+  return { ...actual, extractFollowUpActions: vi.fn(actual.extractFollowUpActions) };
+});
+vi.mock("@/features/auth/stores/auth.store", () => ({
   useAuthStore: {
     getState: () => ({
       actions: {
@@ -45,6 +49,7 @@ vi.mock("@/features/window/stores/auth.store", () => ({
   },
 }));
 
+import { extractFollowUpActions } from "@/features/ai/lib/follow-up-actions";
 import { runAgentTurn, type AgentTurnHost } from "../services/agent-turn-runner";
 import { useAIChatStore } from "../stores/ai-chat.store";
 import type { Message } from "../types/ai-chat.types";
@@ -79,7 +84,8 @@ function hostedChat(messages: Message[] = []) {
     const chat = state.chats.find((candidate) => candidate.id === chatId)!;
     chat.providerId = "athas";
     chat.modelId = "auto";
-    chat.messages = messages;
+    chat.messageCount = messages.length;
+    state.messagesByChat[chatId] = messages;
   });
   useAIChatStore.setState({
     providerApiKeys: new Map(useAIChatStore.getState().providerApiKeys).set("athas", true),
@@ -122,6 +128,30 @@ describe("agent turn runner", () => {
     expect(host.finishRun).toHaveBeenCalledWith(chatId, expect.any(String), "completed");
     expect(mocks.scheduleSubscriptionRefresh).toHaveBeenCalledOnce();
     expect(host.onFirstExchange).toHaveBeenCalledWith(chatId, "Say hello");
+  });
+
+  it("hides the follow-up block while streaming and splits it off once per batch", async () => {
+    const chatId = hostedChat();
+    const visibleWhileStreaming: string[] = [];
+    mocks.stream.mockImplementation(async (...args: StreamArgs) => {
+      for (const chunk of ["Do", "ne.", "\n[FOLLOW_UP_", "ACTIONS]\n[", '{"label":"Run tests",']) {
+        args[5](chunk);
+      }
+      useAIChatStore.getState().actions.flushMessageUpdates(chatId);
+      visibleWhileStreaming.push(assistant(chatId)!.content);
+      args[5]('"prompt":"Run the tests.","icon":"ShieldCheck"}]\n[/FOLLOW_UP_ACTIONS]\n');
+      args[6]({ outcome: "completed" } as never);
+    });
+
+    await runAgentTurn({ content: "Fix it" }, createHost(chatId));
+
+    expect(visibleWhileStreaming).toEqual(["Done."]);
+    expect(assistant(chatId)).toMatchObject({
+      content: "Done.",
+      isStreaming: false,
+      followUpActions: [{ label: "Run tests", prompt: "Run the tests.", icon: "ShieldCheck" }],
+    });
+    expect(extractFollowUpActions).toHaveBeenCalledTimes(2);
   });
 
   it("runs a turn in the mode of its own chat, not the one the user switched to last", async () => {

@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { getLocalDirectorySize } from "@/features/file-system/controllers/platform";
+import { getLocalDirectorySize } from "@/features/file-system/api/file-system-api";
 import type { FileEntry } from "@/features/file-system/types/app.types";
-import { isRemotePath } from "@/features/remote/utils/remote-path";
-import { isWslPath } from "@/features/wsl/utils/wsl-path";
+import { isRemotePath } from "@/features/remote/services/remote-path";
+import { isWslPath } from "@/features/wsl/services/wsl-path";
 
 const MAX_CONCURRENT_DIRECTORY_SCANS = 2;
 const DIRECTORY_SIZE_CACHE_DURATION = 5 * 60_000;

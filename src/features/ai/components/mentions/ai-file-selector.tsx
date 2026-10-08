@@ -13,8 +13,8 @@ import { useFffSearch } from "@/features/file-search/hooks/use-fff-search";
 import {
   canUseNativeFileSearch,
   getNativeWorkspaceRootPaths,
-} from "@/features/file-search/utils/file-search-paths";
-import { shouldIgnoreSearchFile } from "@/features/file-search/utils/file-search-filtering";
+} from "@/features/file-search/services/file-search-paths";
+import { shouldIgnoreSearchFile } from "@/features/file-search/services/file-search-filtering";
 import { useFileSearch } from "@/features/global-search/hooks/use-file-search";
 import type { FileCategory, FileItem } from "@/features/file-search/types/file-search.types";
 import type { FileEntry } from "@/features/file-system/types/app.types";
@@ -24,6 +24,7 @@ import { Combobox, ComboboxEmpty, ComboboxInput, ComboboxItem, ComboboxList } fr
 import { CommandItemBadge } from "@/ui/command";
 import { cn } from "@/utils/cn";
 import { getDirectoryPath } from "@/utils/path-helpers";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 interface AIFileSelectorProps {
   files?: FileEntry[];
@@ -90,7 +91,7 @@ export function AIFileSelector({
 }: AIFileSelectorProps) {
   const lastEmittedResultsSignatureRef = useRef<string | null>(null);
   const [debouncedQuery] = useDebounce(query, 50);
-  const workspaceFolders = useFileSystemStore((state) => state.workspaceFolders);
+  const workspaceFolders = useProjectStore((state) => state.workspaceFolders);
   const getAllProjectFiles = useFileSystemStore((state) => state.getAllProjectFiles);
   const workspaceKey = JSON.stringify([
     rootFolderPath,

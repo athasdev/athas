@@ -2,7 +2,7 @@ import { create } from "zustand";
 import type {
   CollaborationDocumentSnapshot,
   CollaborationDocumentUpdate,
-} from "@/features/window/services/auth-api";
+} from "@/features/collaboration/services/collaboration-api";
 import { createSelectors } from "@/utils/zustand-selectors";
 
 type CollaborationStreamStatus = "idle" | "connecting" | "live" | "reconnecting" | "error";

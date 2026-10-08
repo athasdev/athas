@@ -4,7 +4,7 @@ import { FontStyleInjector } from "@/features/settings/components/font-style-inj
 import { useSystemAccessibility } from "@/features/settings/hooks/use-system-accessibility";
 import TitleBar from "@/features/window/components/title-bar/title-bar";
 import { WindowResizeBorder } from "@/features/window/components/window-resize-border";
-import { useFontLoading } from "@/features/window/hooks/use-font-loading";
+import { useFontLoading } from "@/features/settings/hooks/use-font-loading";
 import { DialogServiceProvider } from "@/ui/dialog";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
 import { Toaster } from "@/ui/sonner";

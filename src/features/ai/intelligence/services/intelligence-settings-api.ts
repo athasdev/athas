@@ -1,6 +1,6 @@
 import { tauriFetch } from "@/utils/tauri-fetch";
-import { getAuthToken } from "@/features/window/services/auth-api";
-import { useAuthStore } from "@/features/window/stores/auth.store";
+import { getAuthToken } from "@/features/auth/services/auth-api";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { getApiBase } from "@/utils/api-base";
 import { parseIntelligencePreferences } from "../lib/intelligence-preferences";
 import type { IntelligencePreferences, IntelligenceSnapshot } from "../types/intelligence.types";

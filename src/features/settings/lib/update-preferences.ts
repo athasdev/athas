@@ -1,9 +1,8 @@
+import { emitAppEvent } from "@/utils/app-events";
+
 const STORAGE_KEY = "athas-update-preferences";
 
 const DEFAULT_REMIND_LATER_MS = 24 * 60 * 60 * 1000;
-
-export const UPDATE_DISMISSED_EVENT = "athas:update-dismissed";
-export const UPDATE_PREFERENCES_CHANGED_EVENT = "athas:update-preferences-changed";
 
 interface StorageLike {
   getItem(key: string): string | null;
@@ -11,11 +10,11 @@ interface StorageLike {
   removeItem(key: string): void;
 }
 
-export interface UpdatePreferenceTarget {
+interface UpdatePreferenceTarget {
   version: string;
 }
 
-export interface UpdatePreferences {
+interface UpdatePreferences {
   skippedVersion?: string;
   remindVersion?: string;
   remindAfter?: number;
@@ -27,14 +26,6 @@ function getStorage(): StorageLike | null {
   }
 
   return window.localStorage;
-}
-
-function dispatchUpdateEvent(eventName: string) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.dispatchEvent(new Event(eventName));
 }
 
 export function readUpdatePreferences(
@@ -72,19 +63,19 @@ export function writeUpdatePreferences(
 
     if (!hasPreferences) {
       storage.removeItem(STORAGE_KEY);
-      dispatchUpdateEvent(UPDATE_PREFERENCES_CHANGED_EVENT);
+      emitAppEvent("updater:preferences-changed");
       return;
     }
 
     storage.setItem(STORAGE_KEY, JSON.stringify(preferences));
-    dispatchUpdateEvent(UPDATE_PREFERENCES_CHANGED_EVENT);
+    emitAppEvent("updater:preferences-changed");
   } catch {
     // Ignore localStorage failures.
   }
 }
 
 export function notifyUpdateDismissed() {
-  dispatchUpdateEvent(UPDATE_DISMISSED_EVENT);
+  emitAppEvent("updater:dismissed");
 }
 
 export function shouldSuppressUpdate(

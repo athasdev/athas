@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { flattenPaneSplit } from "@/features/panes/utils/pane-tree";
+import { flattenPaneSplit } from "@/features/panes/services/pane-tree";
 import {
   distributeTerminalLayout,
   findTerminalLayout,

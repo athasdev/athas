@@ -33,7 +33,7 @@ export function isSameAgentFollowTarget(
   return Boolean(left && right && left.path === right.path && left.line === right.line);
 }
 
-export interface AgentFollowEligibility {
+interface AgentFollowEligibility {
   /** The chat's follow toggle. */
   following: boolean;
   /** The chat has a turn running. */
@@ -54,7 +54,7 @@ export function canFollowAgent({
   return following && running && visible && !detached;
 }
 
-export interface AgentFollowInterruption {
+interface AgentFollowInterruption {
   following: boolean;
   running: boolean;
   /** The event came from the user, not from a script. */

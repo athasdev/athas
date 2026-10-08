@@ -1,11 +1,11 @@
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
 import {
   cleanupBufferHistoryTracking,
   flushPendingBufferHistory,
   trackBufferHistoryChange,
   trackImmediateBufferHistoryChange,
-} from "@/features/editor/stores/buffer-history-tracking";
+} from "@/features/editor/services/buffer-history-tracking";
 import { useHistoryStore } from "@/features/editor/stores/history.store";
 
 const BUFFER_ID = "buffer-history-tracking-test";

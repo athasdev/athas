@@ -5,7 +5,7 @@ import {
   getChatAcpSessionToClose,
   selectAcpAgentStatus,
   selectChatAcpSession,
-} from "@/features/ai/lib/acp-session-state";
+} from "@/features/ai/services/acp-session-state";
 import type { AcpSessionState } from "@/features/ai/types/acp.types";
 import type { Chat } from "@/features/ai/types/ai-chat.types";
 

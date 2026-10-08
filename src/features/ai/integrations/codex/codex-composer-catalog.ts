@@ -5,13 +5,43 @@ import type {
   CodexThreadSummary,
   CodexModelOption,
 } from "./codex-types";
-import { createTimedResourceCache } from "@/utils/timed-resource-cache";
+import type { QueryKey } from "@tanstack/react-query";
+import { queryClient } from "@/utils/query-client";
 
-const startupCache = createTimedResourceCache<void>();
-const modelsCache = createTimedResourceCache<CodexModelOption[]>();
-const threadsCache = createTimedResourceCache<CodexThreadPage>();
-const skillsCache = createTimedResourceCache<ReturnType<typeof normalizeCodexSkills>>();
-const ttlMs = 30_000;
+const CATALOG_STALE_MS = 30_000;
+const STARTUP_STALE_MS = 5_000;
+
+const codexCatalogKeys = {
+  all: ["codex"] as const,
+  startup: (cwd: string) => ["codex", cwd, "startup"] as const,
+  models: (cwd: string) => ["codex", cwd, "models"] as const,
+  threads: (cwd: string, cursor: string | null) => ["codex", cwd, "threads", cursor] as const,
+  skills: (cwd: string) => ["codex", cwd, "skills"] as const,
+};
+
+/** Drops every cached catalog read, so a signed-out account's models and threads are not shown. */
+export function clearCodexCatalog() {
+  void queryClient.cancelQueries({ queryKey: codexCatalogKeys.all });
+  queryClient.removeQueries({ queryKey: codexCatalogKeys.all });
+}
+
+/**
+ * Concurrent reads share one request and fresh results are reused. A forced read cancels a request
+ * already in flight instead of joining it, so it never returns a response that started earlier.
+ */
+async function loadCatalogEntry<T>(
+  queryKey: QueryKey,
+  queryFn: () => Promise<T>,
+  options: { staleTime: number; force?: boolean },
+): Promise<T> {
+  if (options.force) await queryClient.cancelQueries({ queryKey, exact: true });
+  return queryClient.query({
+    queryKey,
+    queryFn,
+    staleTime: options.force ? 0 : options.staleTime,
+    retry: false,
+  });
+}
 
 async function withCatalogTimeout<T>(request: Promise<T>): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -64,17 +94,19 @@ export function normalizeCodexModels(value: unknown): CodexModelOption[] {
  * the models it already has instead of flashing a loading row on every open.
  */
 export function getCachedCodexModels(cwd: string): CodexModelOption[] | null {
-  return modelsCache.getFreshValue(cwd, ttlMs);
+  const state = queryClient.getQueryState<CodexModelOption[]>(codexCatalogKeys.models(cwd));
+  if (!state?.data || Date.now() - state.dataUpdatedAt >= CATALOG_STALE_MS) return null;
+  return state.data;
 }
 
 export function listCodexComposerModels(cwd: string, force = false) {
-  return modelsCache.load(
-    cwd,
+  return loadCatalogEntry(
+    codexCatalogKeys.models(cwd),
     async () => {
       await startCodexComposer(cwd);
       return normalizeCodexModels(await withCatalogTimeout(commands.listCodexModels()));
     },
-    { ttlMs, force },
+    { staleTime: CATALOG_STALE_MS, force },
   );
 }
 
@@ -162,12 +194,13 @@ export function normalizeCodexSkills(value: unknown) {
 }
 
 export async function startCodexComposer(cwd: string): Promise<void> {
-  return startupCache.load(
-    cwd,
+  await loadCatalogEntry(
+    codexCatalogKeys.startup(cwd),
     async () => {
       await withCatalogTimeout(commands.startCodexIntegration({ cwd }));
+      return true;
     },
-    { ttlMs: 5_000 },
+    { staleTime: STARTUP_STALE_MS },
   );
 }
 
@@ -176,8 +209,8 @@ export async function listCodexComposerThreads(
   cursor: string | null = null,
   force = false,
 ): Promise<CodexThreadPage> {
-  return threadsCache.load(
-    JSON.stringify([cwd, cursor]),
+  return loadCatalogEntry(
+    codexCatalogKeys.threads(cwd, cursor),
     async () => {
       await startCodexComposer(cwd);
       const result = await withCatalogTimeout(
@@ -186,17 +219,17 @@ export async function listCodexComposerThreads(
 
       return normalizeCodexThreadPage(result);
     },
-    { ttlMs, force },
+    { staleTime: CATALOG_STALE_MS, force },
   );
 }
 
 export async function listCodexComposerSkills(cwd: string, force = false) {
-  return skillsCache.load(
-    cwd,
+  return loadCatalogEntry(
+    codexCatalogKeys.skills(cwd),
     async () => {
       await startCodexComposer(cwd);
       return normalizeCodexSkills(await withCatalogTimeout(commands.listCodexSkills(cwd)));
     },
-    { ttlMs, force },
+    { staleTime: CATALOG_STALE_MS, force },
   );
 }

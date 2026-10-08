@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { createWorkspaceSessionSaveQueue } from "../persistence/workspace-session-save-queue";
+import { createWorkspaceSessionSaveQueue } from "../persistence/services/workspace-session-save-queue";
 
 describe("createWorkspaceSessionSaveQueue", () => {
   it("leaves writes scheduled during an all-workspace flush for the next flush", () => {

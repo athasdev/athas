@@ -1,11 +1,10 @@
-import { isComposingKeyboardEvent } from "@/features/keymaps/utils/is-composing-keyboard-event";
+import { isComposingKeyboardEvent } from "@/utils/keyboard/is-composing-keyboard-event";
 import { Dialog as DialogPrimitive } from "@base-ui/react";
 import { cva } from "class-variance-authority";
 import { ArrowClockwiseIcon, DotsIcon, XIcon } from "@/ui/icons";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import type React from "react";
-import { useActionsStore } from "@/features/command-palette/stores/action-history.store";
 import Badge from "@/ui/badge";
 import { Button, buttonVariants, type ButtonProps } from "@/ui/button";
 import { ScrollArea } from "@/ui/scroll-area";
@@ -91,13 +90,7 @@ export const CommandItemAction = ({ tone = "neutral", ...props }: CommandItemAct
 
 CommandItemAction.displayName = "CommandItemAction";
 
-export const CommandItemMenu = ({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) => (
+const CommandItemMenu = ({ label, children }: { label: string; children: React.ReactNode }) => (
   <DropdownMenu>
     <DropdownMenuTrigger
       render={
@@ -175,18 +168,11 @@ Command.displayName = "Command";
 interface CommandHeaderProps {
   children: React.ReactNode;
   onClose: () => void;
-  showClearButton?: boolean;
+  onClear?: () => void;
   className?: string;
 }
 
-export const CommandHeader = ({
-  children,
-  onClose,
-  showClearButton = false,
-  className,
-}: CommandHeaderProps) => {
-  const clearActionsStack = useActionsStore.use.actions().clearStack;
-
+export const CommandHeader = ({ children, onClose, onClear, className }: CommandHeaderProps) => {
   return (
     <div
       data-command-header
@@ -194,8 +180,8 @@ export const CommandHeader = ({
     >
       <div className={commandHeaderContentClassName}>
         {children}
-        {showClearButton && (
-          <CommandHeaderAction aria-label="Clear persisted actions" onClick={clearActionsStack}>
+        {onClear && (
+          <CommandHeaderAction aria-label="Clear persisted actions" onClick={onClear}>
             <ArrowClockwiseIcon />
           </CommandHeaderAction>
         )}
@@ -244,7 +230,7 @@ interface CommandFormProps {
   onCancel?: () => void;
 }
 
-export const CommandForm = ({
+const CommandForm = ({
   title,
   icon,
   children,
@@ -294,12 +280,7 @@ interface CommandFormFieldProps {
   children: React.ReactNode;
 }
 
-export const CommandFormField = ({
-  label,
-  htmlFor,
-  span = "single",
-  children,
-}: CommandFormFieldProps) => (
+const CommandFormField = ({ label, htmlFor, span = "single", children }: CommandFormFieldProps) => (
   <div className={cn("min-w-0 space-y-1", span === "full" && "col-span-full")}>
     {label ? (
       <label htmlFor={htmlFor} className="block truncate text-muted-foreground ui-text-sm">
@@ -363,7 +344,7 @@ export const CommandInput = ({
 
 CommandInput.displayName = "CommandInput";
 
-export interface CommandItemProps {
+interface CommandItemProps {
   children: React.ReactNode;
   isSelected?: boolean;
   as?: "button" | "div";
@@ -375,7 +356,7 @@ export interface CommandItemProps {
   type?: React.ComponentProps<"button">["type"];
 }
 
-export const CommandItem = ({
+const CommandItem = ({
   children,
   isSelected = false,
   as = "button",
@@ -490,13 +471,13 @@ export const CommandTabs = ({ items, ariaLabel, className }: CommandTabsProps) =
 
 CommandTabs.displayName = "CommandTabs";
 
-export const CommandItemTitle = ({ className, ...props }: React.ComponentProps<"span">) => (
+const CommandItemTitle = ({ className, ...props }: React.ComponentProps<"span">) => (
   <span className={cn("min-w-0 truncate text-foreground", className)} {...props} />
 );
 
 CommandItemTitle.displayName = "CommandItemTitle";
 
-export const CommandItemContent = ({ className, ...props }: React.ComponentProps<"div">) => (
+const CommandItemContent = ({ className, ...props }: React.ComponentProps<"div">) => (
   <div className={cn("min-w-0 flex-1 text-left", className)} {...props} />
 );
 
@@ -508,7 +489,7 @@ export const CommandItemMeta = ({ className, ...props }: React.ComponentProps<"s
 
 CommandItemMeta.displayName = "CommandItemMeta";
 
-export const CommandItemDescription = ({ className, ...props }: React.ComponentProps<"span">) => (
+const CommandItemDescription = ({ className, ...props }: React.ComponentProps<"span">) => (
   <span
     className={cn(
       "mt-0.5 block min-w-0 truncate text-muted-foreground [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
@@ -522,7 +503,7 @@ CommandItemDescription.displayName = "CommandItemDescription";
 
 type CommandItemIconProps = React.ComponentProps<"span">;
 
-export const CommandItemIcon = ({ className, ...props }: CommandItemIconProps) => (
+const CommandItemIcon = ({ className, ...props }: CommandItemIconProps) => (
   <span
     className={cn(
       "inline-flex size-6 shrink-0 items-center justify-center text-muted-foreground [&_svg:not([class*='size-'])]:size-4",
@@ -540,7 +521,7 @@ export const CommandItemBadge = (props: React.ComponentProps<typeof Badge>) => (
 
 CommandItemBadge.displayName = "CommandItemBadge";
 
-export const CommandItemTrailing = ({ className, ...props }: React.ComponentProps<"span">) => (
+const CommandItemTrailing = ({ className, ...props }: React.ComponentProps<"span">) => (
   <span
     className={cn(
       "flex shrink-0 items-center gap-1.5 [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
@@ -609,11 +590,11 @@ export const CommandItemRow = ({
 
 CommandItemRow.displayName = "CommandItemRow";
 
-export function clampCommandListIndex(index: number, itemCount: number): number {
+function clampCommandListIndex(index: number, itemCount: number): number {
   return Math.min(Math.max(index, 0), Math.max(itemCount - 1, 0));
 }
 
-export function moveCommandListIndex(
+function moveCommandListIndex(
   index: number,
   itemCount: number,
   direction: "next" | "previous",

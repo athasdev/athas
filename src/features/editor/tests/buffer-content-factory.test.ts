@@ -37,7 +37,6 @@ describe("createPaneContent integration surfaces", () => {
       type: "extensions",
       name: "Integrations",
       path: "extensions://marketplace",
-      isPreview: false,
     });
   });
 
@@ -53,7 +52,6 @@ describe("createPaneContent integration surfaces", () => {
       extensionId: "athas.typescript",
       name: "TypeScript",
       path: "extension://athas.typescript",
-      isPreview: false,
     });
   });
 });
@@ -66,7 +64,6 @@ describe("createPaneContent continuous agent surfaces", () => {
       type: "continuousAgents",
       name: "Continuous Agents",
       path: "continuous-agents://workspace",
-      isPreview: false,
     });
   });
 });
@@ -84,7 +81,6 @@ describe("createPaneContent custom view surfaces", () => {
       path: "view://create/%2Fprojects%2Fathas",
       projectPath: "/projects/athas",
       viewId: undefined,
-      isPreview: false,
     });
   });
 
@@ -102,7 +98,6 @@ describe("createPaneContent custom view surfaces", () => {
       path: "view://%2Fprojects%2Fathas/release-downloads",
       projectPath: "/projects/athas",
       viewId: "release-downloads",
-      isPreview: false,
     });
   });
 });
@@ -122,7 +117,6 @@ describe("createPaneContent SVG preview surfaces", () => {
       path: "/workspace/icon.svg:preview",
       sourceFilePath: "/workspace/icon.svg",
       content: "<svg />",
-      isPreview: false,
     });
   });
 });

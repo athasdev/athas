@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vite-plus/test";
 import { BOTTOM_PANE_ID, ROOT_PANE_ID } from "../constants/pane";
 import { usePaneStore } from "../stores/pane.store";
-import { getAllPaneGroups } from "../utils/pane-tree";
+import { getAllPaneGroups } from "../services/pane-tree";
 
 describe("pane.store bottom pane integration", () => {
   afterEach(() => {
@@ -31,6 +31,27 @@ describe("pane.store bottom pane integration", () => {
     expect(state.root.bufferIds).toEqual(["buffer-a"]);
     expect(state.root.activeBufferId).toBe("buffer-a");
     expect(getAllPaneGroups(state.bottomRoot).flatMap((pane) => pane.bufferIds)).toEqual([]);
+  });
+
+  it("keeps the pane tree and history references when an update changes nothing", () => {
+    const { actions } = usePaneStore.getState();
+
+    actions.addBufferToPane(ROOT_PANE_ID, "buffer-a");
+    actions.addBufferToPane(ROOT_PANE_ID, "buffer-b");
+    actions.activatePaneBuffer(ROOT_PANE_ID, "buffer-b");
+    const before = usePaneStore.getState();
+
+    actions.activatePaneBuffer(ROOT_PANE_ID, "buffer-b");
+    actions.addBufferToPane(ROOT_PANE_ID, "buffer-b");
+    actions.setActivePane(ROOT_PANE_ID);
+
+    const after = usePaneStore.getState();
+    expect(after.root).toBe(before.root);
+    expect(after.bottomRoot).toBe(before.bottomRoot);
+    expect(after.mostRecentActivePaneIds).toBe(before.mostRecentActivePaneIds);
+
+    actions.activatePaneBuffer(ROOT_PANE_ID, "buffer-a");
+    expect(usePaneStore.getState().root).not.toBe(before.root);
   });
 
   it("can split the bottom root like any other pane tree", () => {

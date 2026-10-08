@@ -1,6 +1,6 @@
 import type { Diagnostic } from "@/features/diagnostics/types/diagnostics.types";
 
-export interface DiagnosticDecoration {
+interface DiagnosticDecoration {
   diagnostic: Diagnostic;
   line: number;
   startColumn: number;

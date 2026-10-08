@@ -28,7 +28,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { commands } from "@/bindings/commands";
+import { runPythonCell } from "@/features/editor/services/notebook-cell-runner";
 import type {
   NotebookRunResult as CommandNotebookRunResult,
   PythonDisplayData,
@@ -36,10 +36,10 @@ import type {
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
-import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
+import { useBufferText } from "@/features/editor/hooks/use-buffer-text";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { getBufferById } from "@/features/editor/utils/buffer-index";
-import { useHighlightedMarkdown } from "@/features/editor/markdown/use-highlighted-markdown";
+import { getBufferById } from "@/features/editor/stores/buffer-index";
+import { useHighlightedMarkdown } from "@/features/editor/markdown/hooks/use-highlighted-markdown";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
 import { Empty, EmptyDescription, EmptyMedia } from "@/ui/empty";
@@ -64,6 +64,7 @@ import {
   type NotebookMimeValue,
   type NotebookOutput,
 } from "./notebook-model";
+import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 interface NotebookRunResult extends Omit<CommandNotebookRunResult, "displayData"> {
   displayData: Array<Omit<PythonDisplayData, "data"> & { data: Record<string, NotebookMimeValue> }>;
@@ -542,17 +543,18 @@ function NotebookCellView({
 
 export function NotebookEditor() {
   const cellRefs = useRef<Array<HTMLElement | null>>([]);
-  const { bufferId, content, path } = useBufferStore(
+  const activeBufferId = useActiveBufferId();
+  const { bufferId, path } = useBufferStore(
     useShallow((state) => {
-      const buffer = getBufferById(state.buffers, state.activeBufferId);
+      const buffer = getBufferById(state.buffers, activeBufferId);
       return {
         bufferId: buffer?.id ?? null,
-        content: buffer?.type === "editor" ? buffer.content : "",
         path: buffer?.type === "editor" ? buffer.path : "",
       };
     }),
   );
-  const fontSize = useEditorSettingsStore.use.fontSize();
+  const content = useBufferText(path ? bufferId : null);
+  const fontSize = useSettingsStore((state) => state.settings.fontSize);
   const uiFontFamily = useSettingsStore((state) => state.settings.uiFontFamily);
   const { handleContentChange } = useEditorAppStore.use.actions();
   const [editingCells, setEditingCells] = useState<Set<number>>(new Set());
@@ -623,7 +625,7 @@ export function NotebookEditor() {
 
     setRunningCell(cellIndex);
     try {
-      const result = (await commands.notebookRunPythonCell(
+      const result = (await runPythonCell(
         notebookCellSource(cell),
         notebookWorkingDirectory(path),
         "",

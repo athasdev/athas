@@ -2,17 +2,17 @@ import { useEffect, useMemo } from "react";
 import { SearchMatchHighlight } from "@/components/search-match-highlight";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { useAgentDisplayNames } from "@/features/ai/hooks/use-agent-display-names";
-import { resolveAgentSessionIconId } from "@/features/ai/lib/agent-session-icon";
-import { selectAgentSessions } from "@/features/ai/lib/agent-session-list";
-import { openAgentHistoryChat } from "@/features/ai/lib/open-agent-history";
-import { openNewAgentChat } from "@/features/ai/lib/open-new-agent-chat";
+import { resolveAgentSessionIconId } from "@/features/ai/services/agent-session-icon";
+import { selectAgentSessions } from "@/features/ai/services/agent-session-list";
+import { openAgentHistoryChat } from "@/features/ai/services/open-agent-history";
+import { openNewAgentChat } from "@/features/ai/services/open-new-agent-chat";
 import { useAgentCatalogStore } from "@/features/ai/stores/agent-catalog.store";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
-import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { CommandEmpty, CommandItemBadge } from "@/ui/command";
 import { PinIcon } from "@/ui/icons";
 import { formatCompactRelativeDate } from "@/utils/date";
 import { matchesSearchQuery } from "@/utils/search-match";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import type {
   QuickOpenItem,
   QuickOpenSectionInput,
@@ -27,7 +27,7 @@ export function useAgentsSection({
   isActive,
   close,
 }: QuickOpenSectionInput): QuickOpenSectionResult {
-  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const chats = useAIChatStore((state) => (isActive ? state.chats : null));
   const { options: agentOptions, getName, getIcon } = useAgentDisplayNames();
 

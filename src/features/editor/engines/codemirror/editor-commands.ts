@@ -8,10 +8,10 @@ import {
 } from "@codemirror/commands";
 import { EditorState, type Extension, Prec } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
-import type { ActiveEditorAdapter } from "../../extensions/api";
+import type { ActiveEditorAdapter } from "../../services/editor-api";
 import { getLineCommentTokenForLanguage } from "../../utils/comment-toggle";
 
-export type CodeMirrorLineCommands = Required<
+type CodeMirrorLineCommands = Required<
   Pick<
     ActiveEditorAdapter,
     | "toggleComment"

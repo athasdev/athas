@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import type { EditorSelectionContext } from "@/features/ai/types/ai-context.types";
+import type { EditorSelectionContext } from "@/features/editor/types/editor-selection.types";
 
 const mocks = vi.hoisted(() => ({
   currentChatId: "chat-1" as string | null,
@@ -22,27 +22,26 @@ vi.mock("@/features/ai/stores/ai-chat.store", () => ({
 vi.mock("@/features/editor/stores/buffer.store", () => ({
   useBufferStore: {
     getState: () => ({
-      activeBufferId: "buffer-1",
-      buffers: [
-        {
+      actions: {
+        openAgentBuffer: mocks.openAgentBuffer,
+        getActiveBuffer: () => ({
           id: "buffer-1",
           type: "editor",
           path: "/project/src/app.ts",
           name: "app.ts",
           content: "const a = 1;\nconst b = 2;\n",
-        },
-      ],
-      actions: { openAgentBuffer: mocks.openAgentBuffer },
+        }),
+      },
     }),
   },
 }));
 vi.mock("@/features/editor/stores/state.store", () => ({
   useEditorStateStore: { getState: () => ({ selection: mocks.selection }) },
 }));
-vi.mock("@/features/ai/detached/agent-window-service", () => ({
+vi.mock("@/features/ai/detached/services/agent-window-service", () => ({
   openAgentWindowSession: () => null,
 }));
-vi.mock("@/features/ai/lib/open-new-agent-chat", () => ({
+vi.mock("@/features/ai/services/open-new-agent-chat", () => ({
   openNewAgentChat: mocks.openNewAgentChat,
 }));
 
@@ -50,7 +49,7 @@ import {
   addActiveSelectionToAgentChat,
   addActiveSelectionToNewAgentChat,
   addEditorSelectionsToAgentChat,
-} from "@/features/ai/lib/add-selection-to-agent-chat";
+} from "@/features/ai/services/add-selection-to-agent-chat";
 
 const context = { id: "editor-selection:buffer-1:0:5" } as EditorSelectionContext;
 

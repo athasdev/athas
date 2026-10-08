@@ -2,19 +2,15 @@ import { createStore } from "zustand/vanilla";
 import type { Terminal } from "@/features/terminal/types/terminal.types";
 import { createWorkspaceScopedStore } from "@/features/workspace/stores/create-workspace-scoped-store";
 
-export type TerminalWidthMode = "full" | "editor";
-
 export interface TerminalStore {
   workspaceId: string;
   sessions: Map<string, Partial<Terminal>>;
-  widthMode: TerminalWidthMode;
   actions: {
     registerSession: (sessionId: string, initial?: Partial<Terminal>) => AbortSignal;
     getSessionSignal: (sessionId: string) => AbortSignal | undefined;
     updateSession: (sessionId: string, updates: Partial<Terminal>) => void;
     getSession: (sessionId: string) => Partial<Terminal> | undefined;
     removeSession: (sessionId: string) => void;
-    setWidthMode: (mode: TerminalWidthMode) => void;
   };
 }
 
@@ -23,7 +19,6 @@ const createTerminalStore = (workspaceId: string) => {
   return createStore<TerminalStore>()((set, get) => ({
     workspaceId,
     sessions: new Map(),
-    widthMode: "editor",
 
     actions: {
       registerSession: (sessionId, initial = {}) => {
@@ -43,7 +38,7 @@ const createTerminalStore = (workspaceId: string) => {
       getSessionSignal: (sessionId) => lifetimes.get(sessionId)?.signal,
 
       updateSession: (sessionId: string, updates: Partial<Terminal>) => {
-        // Titles, directories and selections repeat often; an unchanged session keeps the same Map
+        // Titles and directories repeat often; an unchanged session keeps the same Map
         // so tab bars and other subscribers don't re-render.
         const currentSession = get().sessions.get(sessionId);
         if (!currentSession) return;
@@ -82,10 +77,6 @@ const createTerminalStore = (workspaceId: string) => {
           return { sessions: newSessions };
         });
         lifetime?.abort();
-      },
-
-      setWidthMode: (mode: TerminalWidthMode) => {
-        set((state) => (state.widthMode === mode ? state : { widthMode: mode }));
       },
     },
   }));

@@ -12,12 +12,12 @@ const renameFile = vi.hoisted(() => vi.fn());
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke }));
 vi.mock("@tauri-apps/api/path", () => ({ dirname, join }));
-vi.mock("../controllers/file-operations", () => ({
+vi.mock("../api/file-operations", () => ({
   createNewDirectory,
   createNewFile,
   deleteFileOrDirectory,
 }));
-vi.mock("../controllers/platform", () => ({ moveFile, renameFile }));
+vi.mock("../api/file-system-api", () => ({ moveFile, renameFile }));
 
 describe("workspace entry mutation provider", () => {
   beforeEach(() => {

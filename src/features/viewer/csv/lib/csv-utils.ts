@@ -1,4 +1,4 @@
-export interface ParsedCsv {
+interface ParsedCsv {
   headers: string[];
   rows: (string | number | boolean | null)[][];
 }

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { ROOT_PANE_ID } from "../constants/pane";
 import { usePaneStore } from "../stores/pane.store";
-import { getAllPaneGroups } from "../utils/pane-tree";
+import { getAllPaneGroups } from "../services/pane-tree";
 
 const createMockStorage = () => {
   const storage = new Map<string, string>();
@@ -35,7 +35,7 @@ describe("pane split actions", () => {
   });
 
   it("creates an adjacent pane and activates it", async () => {
-    const { createPaneBeside } = await import("../utils/pane-split-actions");
+    const { createPaneBeside } = await import("../services/pane-split-actions");
 
     const paneId = createPaneBeside(ROOT_PANE_ID, "horizontal");
 
@@ -45,7 +45,7 @@ describe("pane split actions", () => {
   });
 
   it("can seed the adjacent pane with a shared buffer", async () => {
-    const { createPaneBeside } = await import("../utils/pane-split-actions");
+    const { createPaneBeside } = await import("../services/pane-split-actions");
     const paneActions = usePaneStore.getState().actions;
 
     paneActions.addBufferToPane(ROOT_PANE_ID, "buffer-a");

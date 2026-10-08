@@ -7,8 +7,8 @@
  */
 
 import { useKeymapStore } from "../stores/keymaps.store";
-import { getEffectiveKeybindingForCommand } from "../utils/effective-keymaps";
-import { keymapRegistry } from "../utils/registry";
+import { getEffectiveKeybindingForCommand } from "../services/effective-keymaps";
+import { keymapRegistry } from "../services/keymap-registry";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 
 export function useCommandShortcut(commandId?: string): string | undefined {

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { parseHostTrustChallenge, withRemoteHostTrust } from "../services/remote-host-trust";
-import { getFriendlyRemoteError, isRemoteAuthFailure } from "../utils/remote-errors";
+import { getFriendlyRemoteError, isRemoteAuthFailure } from "../services/remote-errors";
 
 const mocks = vi.hoisted(() => ({ invoke: vi.fn(), confirm: vi.fn() }));
 vi.mock("@tauri-apps/api/core", () => ({ invoke: mocks.invoke }));

@@ -2,7 +2,7 @@ import type { ToolCall } from "@/features/ai/types/ai-chat.types";
 import { buildAssistantTimeline } from "./assistant-timeline";
 import { hasPlanBlock, parsePlan, type ParsedPlan } from "./plan-parser";
 
-export interface AssistantSegment {
+interface AssistantSegment {
   text: string;
   /** The plan the text holds, when it holds a complete one with steps. */
   plan: ParsedPlan | null;

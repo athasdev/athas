@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { useAgentWindowStore } from "@/features/ai/detached/agent-window.store";
+import { useAgentWindowStore } from "@/features/ai/detached/stores/agent-window.store";
 import { restoreAgentDrafts } from "@/features/ai/detached/agent-window-drafts";
 
 const mocks = vi.hoisted(() => ({
@@ -13,9 +13,10 @@ const mocks = vi.hoisted(() => ({
   settings: vi.fn(),
   state: {
     chats: [
-      { id: "chat", title: "Agent", messages: [] },
-      { id: "other", title: "Other agent", messages: [] },
+      { id: "chat", title: "Agent" },
+      { id: "other", title: "Other agent" },
     ],
+    messagesByChat: {},
     currentChatId: null,
     selectedAgentId: "custom",
     chatMessageLoadStates: {},
@@ -31,8 +32,8 @@ vi.mock("@tauri-apps/api/window", () => ({
     destroy = mocks.destroy;
   },
 }));
-vi.mock("@/features/window/utils/create-app-window", () => ({ createAppWindow: mocks.create }));
-vi.mock("@/features/window/stores/ui-state.store", () => ({
+vi.mock("@/features/window/services/create-app-window", () => ({ createAppWindow: mocks.create }));
+vi.mock("@/features/layout/stores/ui-state.store", () => ({
   useUIState: { getState: () => ({ openSettings: mocks.settings }) },
 }));
 vi.mock("sonner", () => ({ toast: { info: mocks.info, error: mocks.error } }));
@@ -53,7 +54,7 @@ vi.mock("@/features/editor/stores/buffer.store", () => ({
     }),
   },
 }));
-vi.mock("@/features/window/stores/project.store", () => ({
+vi.mock("@/features/workspace/stores/project.store", () => ({
   useProjectStore: { getState: () => ({ rootFolderPath: "/workspace" }) },
 }));
 
@@ -61,7 +62,7 @@ import {
   openAgentInNewWindow,
   captureAgentWindowSnapshot,
   type AgentWindowMessage,
-} from "@/features/ai/detached/agent-window-service";
+} from "@/features/ai/detached/services/agent-window-service";
 
 class TestChannel {
   static current: TestChannel;
@@ -90,9 +91,10 @@ beforeEach(() => {
   });
   mocks.state = {
     chats: [
-      { id: "chat", title: "Agent", messages: [] },
-      { id: "other", title: "Other agent", messages: [] },
+      { id: "chat", title: "Agent" },
+      { id: "other", title: "Other agent" },
     ],
+    messagesByChat: {},
     currentChatId: null,
     selectedAgentId: "custom",
     chatMessageLoadStates: {},
@@ -194,9 +196,9 @@ describe("Agent session window ownership", () => {
     const snapshot = captureAgentWindowSnapshot("chat");
     snapshot.chat.chats[0].title = "Updated in child";
     mocks.state.chats = [
-      { id: "chat", title: "Agent", messages: [] },
-      { id: "other", title: "Updated in parent", messages: [] },
-      { id: "new", title: "Created in parent", messages: [] },
+      { id: "chat", title: "Agent" },
+      { id: "other", title: "Updated in parent" },
+      { id: "new", title: "Created in parent" },
     ];
     mocks.state.currentChatId = "new";
     TestChannel.current.receive({ type: "return", snapshot });

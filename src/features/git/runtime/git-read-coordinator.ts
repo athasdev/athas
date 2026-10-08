@@ -11,7 +11,7 @@ const getGeneration = (repoPath: string) => {
   return generation;
 };
 
-registerGitCacheInvalidator(({ repoPath, scopes }) => {
+registerGitCacheInvalidator("git-reads", ({ repoPath, scopes }) => {
   if (scopes?.length === 1 && scopes[0] === "working-tree") {
     return;
   }

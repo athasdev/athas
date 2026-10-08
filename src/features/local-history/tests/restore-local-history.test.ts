@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 import type { EditorContent } from "@/features/panes/types/pane-content.types";
 import { restoreLocalHistorySnapshot } from "../services/restore-local-history";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
@@ -45,11 +45,7 @@ function editor(content = "disk", savedContent = "disk", id = "file"): EditorCon
     savedContent,
     isDirty: content !== savedContent,
     isVirtual: false,
-    isPinned: false,
-    isPreview: false,
-    isActive: false,
     language: "typescript",
-    tokens: [],
   };
 }
 const options = { path: "/workspace/file.ts", entryId: "snapshot", workspaceId: "owner" };

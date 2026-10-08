@@ -1,8 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 import { launchTerminalSession } from "../services/terminal-session-launch";
 import { useTerminalStore } from "../stores/terminal.store";
-import { releaseTerminalEventChannel, subscribeToTerminalEvents } from "../utils/terminal-protocol";
+import {
+  releaseTerminalEventChannel,
+  subscribeToTerminalEvents,
+} from "../services/terminal-protocol";
 
 const invoke = vi.hoisted(() => vi.fn());
 vi.mock("@tauri-apps/api/core", () => ({

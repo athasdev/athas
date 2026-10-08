@@ -1,10 +1,11 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { createJSONStorage, persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import { createSelectors } from "@/utils/zustand-selectors";
-import { migrateLegacyAgentId } from "@/features/ai/lib/agent-clis";
+import { migrateLegacyAgentId } from "@/features/ai/services/agent-clis";
 import { createAcpActions } from "./ai-chat/acp-actions";
 import { createChatActions } from "./ai-chat/chat-actions";
+import { skipUnchangedPersistWrites } from "./ai-chat/ai-chat-persist-storage";
 import { createInitialAIChatState } from "./ai-chat/ai-chat-state";
 import type { AIChatState, AIChatStore } from "./ai-chat/ai-chat-store.types";
 import { createProviderActions } from "./ai-chat/provider-actions";
@@ -22,6 +23,7 @@ const useAIChatStoreBase = create<AIChatStore>()(
     {
       name: "athas-ai-chat-settings-v7",
       version: 3,
+      storage: skipUnchangedPersistWrites(createJSONStorage(() => localStorage)),
       partialize: (state) => ({
         mode: state.mode,
         outputStyle: state.outputStyle,

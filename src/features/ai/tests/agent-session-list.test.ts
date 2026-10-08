@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vite-plus/test";
-import { hasAgentSessionActivity, selectAgentSessions } from "@/features/ai/lib/agent-session-list";
+import {
+  hasAgentSessionActivity,
+  selectAgentSessions,
+} from "@/features/ai/services/agent-session-list";
 import type { Chat } from "@/features/ai/types/ai-chat.types";
 
 function chat(overrides: Partial<Chat> & Pick<Chat, "id">): Chat {

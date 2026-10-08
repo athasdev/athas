@@ -5,14 +5,14 @@ const mocks = vi.hoisted(() => ({
   head: vi.fn<(repo: string, commit: string, path: string) => Promise<string>>(),
 }));
 
-vi.mock("@/features/file-system/controllers/file-operations", () => ({
+vi.mock("@/features/file-system/api/file-operations", () => ({
   readFileContent: (path: string) => {
     const content = mocks.files.get(path);
     return content === undefined ? Promise.reject(new Error("missing")) : Promise.resolve(content);
   },
 }));
 vi.mock("@/features/git/api/git-diff-api", () => ({ getCommitFileContent: mocks.head }));
-vi.mock("@/features/window/stores/project.store", () => ({
+vi.mock("@/features/workspace/stores/project.store", () => ({
   useProjectStore: { getState: () => ({ rootFolderPath: "/repo" }) },
 }));
 

@@ -11,7 +11,7 @@ import {
   getExportableUserKeybindings,
   mergeImportedUserKeybindings,
   normalizeUserKeybinding,
-} from "../utils/keybinding-import-export";
+} from "../services/keybinding-import-export";
 
 interface KeymapState extends KeymapStore {
   recordingCommandId: string | null;

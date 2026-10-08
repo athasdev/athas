@@ -2,14 +2,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import type { CallHierarchyItem, TypeHierarchyItem } from "vscode-languageserver-protocol";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { getActiveBufferId } from "@/features/panes/stores/pane-selectors";
+import { seedActiveBuffer } from "@/features/panes/tests/helpers/seed-pane-tabs";
 import { useJumpListStore } from "@/features/editor/stores/jump-list.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
-import { calculateCursorPositionFromContent } from "@/features/editor/utils/position";
+import { calculateCursorPositionFromContent } from "@/features/editor/services/position";
 import type { EditorContent, PaneContent } from "@/features/panes/types/pane-content.types";
 import { useReferencesStore } from "@/features/references/stores/references.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { useUIState } from "@/features/window/stores/ui-state.store";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 import {
   goBack,
   goForward,
@@ -57,24 +59,24 @@ vi.mock("sonner", () => ({ toast: mocks.toast }));
 
 vi.mock("@/ui/dialog", () => ({ showChoiceDialog: mocks.showChoiceDialog }));
 
-vi.mock("@/features/editor/lsp/lsp-client", () => ({
+vi.mock("@/features/editor/lsp/services/lsp-client", () => ({
   LspClient: { getInstance: () => mocks.lsp },
 }));
 
-vi.mock("@/features/editor/lsp/location-navigation", () => ({
+vi.mock("@/features/editor/lsp/services/location-navigation", () => ({
   navigateToLspLocation: mocks.navigateToLspLocation,
 }));
 
-vi.mock("@/features/editor/utils/jump-navigation", () => ({
+vi.mock("@/features/editor/services/jump-navigation", () => ({
   navigateToJumpEntry: mocks.navigateToJumpEntry,
 }));
 
-vi.mock("@/features/file-system/controllers/file-operations", () => ({
+vi.mock("@/features/file-system/api/file-operations", () => ({
   readFileContent: mocks.readFileContent,
 }));
 
-vi.mock("@/features/settings/lib/settings-persistence", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/features/settings/lib/settings-persistence")>()),
+vi.mock("@/features/settings/services/settings-persistence", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/features/settings/services/settings-persistence")>()),
   saveSettingsToStore: vi.fn(),
   debouncedSaveSettingsToStore: vi.fn(),
 }));
@@ -96,43 +98,36 @@ function editorBuffer(
     savedContent: content,
     isDirty: false,
     isVirtual: false,
-    isPinned: false,
-    isPreview: false,
-    isActive: false,
     language: "typescript",
-    tokens: [],
     ...overrides,
   };
 }
 
 function openEditor(content: string, cursorOffset: number, extraBuffers: PaneContent[] = []) {
   useBufferStore.setState({
-    activeBufferId: "app",
-    buffers: [editorBuffer("app", FILE_PATH, content, { isActive: true }), ...extraBuffers],
+    buffers: [editorBuffer("app", FILE_PATH, content), ...extraBuffers],
   });
+  seedActiveBuffer("app");
   useEditorStateStore.setState({
     cursorPosition: calculateCursorPositionFromContent(cursorOffset, content),
     selection: undefined,
-    scrollTop: 40,
-    scrollLeft: 4,
+    activeEditorViewKey: null,
   });
+  useEditorStateStore.getState().actions.setScrollForBuffer("app", 40, 4);
 }
 
 function openNonEditor() {
   useBufferStore.setState({
-    activeBufferId: "new-tab",
     buffers: [
       {
         id: "new-tab",
         type: "newTab",
         path: "newtab://1",
         name: "New Tab",
-        isPinned: false,
-        isPreview: false,
-        isActive: true,
       },
     ],
   });
+  seedActiveBuffer("new-tab");
 }
 
 function lspRange(line: number, character: number, endCharacter = character + 3) {
@@ -170,11 +165,11 @@ beforeEach(() => {
 
 afterEach(() => {
   useBufferStore.setState({
-    activeBufferId: null,
     buffers: [],
     pendingClose: null,
     closedBuffersHistory: [],
   });
+  seedActiveBuffer(null);
   vi.clearAllMocks();
 });
 
@@ -267,7 +262,7 @@ describe("go to references", () => {
     await vi.waitFor(() => expect(mocks.lsp.getReferences).toHaveBeenCalled());
 
     const bufferState = useBufferStore.getState();
-    const activeBuffer = bufferState.buffers.find((b) => b.id === bufferState.activeBufferId);
+    const activeBuffer = bufferState.buffers.find((b) => b.id === getActiveBufferId());
     expect(activeBuffer?.type).toBe("references");
     expect(useReferencesStore.getState().isLoading).toBe(true);
 
@@ -374,7 +369,8 @@ describe("go to references", () => {
   });
 
   it("does nothing when the active buffer has no file path", async () => {
-    useBufferStore.setState({ activeBufferId: null, buffers: [] });
+    useBufferStore.setState({ buffers: [] });
+    seedActiveBuffer(null);
 
     await goToReferences();
 
@@ -570,7 +566,8 @@ describe("jump list navigation", () => {
   });
 
   it("does not record a position when no file is active", async () => {
-    useBufferStore.setState({ activeBufferId: null, buffers: [] });
+    useBufferStore.setState({ buffers: [] });
+    seedActiveBuffer(null);
     useJumpListStore.getState().actions.pushEntry(jumpEntry("a", "/workspace/a.ts", 1));
     useJumpListStore.getState().actions.pushEntry(jumpEntry("b", "/workspace/b.ts", 30));
 

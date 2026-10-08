@@ -1,12 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
-import * as appWindow from "@/features/window/utils/create-app-window";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { useWorkspaceTabsStore } from "@/features/workspace/stores/workspace-tabs.store";
+import * as appWindow from "@/features/window/services/create-app-window";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 import * as workspaceLifecycle from "@/features/workspace/services/workspace-lifecycle";
-import * as platform from "../controllers/platform";
+import * as platform from "../api/file-system-api";
 import { useFileSystemStore } from "../stores/file-system.store";
 import { useRecentFoldersStore } from "../stores/recent-folders.store";
+import { openRecentFolder } from "../services/open-recent-folder";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 const currentPath = "/workspace/current";
 const selectedPath = "/workspace/next";
@@ -16,7 +18,8 @@ describe("folder window routing", () => {
   beforeEach(() => {
     workspaceRuntimeRegistry.resetForTests();
     useWorkspaceTabsStore.setState({ projectTabs: [] });
-    useFileSystemStore.setState({ rootFolderPath: currentPath, files: [] });
+    useFileSystemStore.setState({ files: [] });
+    useProjectStore.getState().actions.setRootFolderPath(currentPath);
     useRecentFoldersStore.setState({ recentFolders: [] });
     useSettingsStore.setState({
       settings: { ...initialSettings, openFoldersInNewWindow: true },
@@ -40,7 +43,7 @@ describe("folder window routing", () => {
     const openSelectedFolder = () =>
       source === "picker"
         ? useFileSystemStore.getState().handleOpenFolder()
-        : useRecentFoldersStore.getState().actions.openRecentFolder(selectedPath);
+        : openRecentFolder(selectedPath);
 
     it(`${source}: opens a separate window when the setting is enabled`, async () => {
       await openSelectedFolder();
@@ -50,7 +53,7 @@ describe("folder window routing", () => {
         isDirectory: true,
       });
       expect(workspaceLifecycle.openWorkspaceRuntime).not.toHaveBeenCalled();
-      expect(useFileSystemStore.getState().rootFolderPath).toBe(currentPath);
+      expect(useProjectStore.getState().rootFolderPath).toBe(currentPath);
     });
 
     it(`${source}: uses the current window when the setting is disabled`, async () => {
@@ -67,7 +70,7 @@ describe("folder window routing", () => {
     });
 
     it(`${source}: opens the first folder in the empty window even when enabled`, async () => {
-      useFileSystemStore.setState({ rootFolderPath: undefined });
+      useProjectStore.getState().actions.setRootFolderPath(undefined);
 
       await openSelectedFolder();
 
@@ -92,6 +95,6 @@ describe("folder window routing", () => {
     await expect(useFileSystemStore.getState().handleOpenFolder()).rejects.toBe(error);
 
     expect(workspaceLifecycle.openWorkspaceRuntime).not.toHaveBeenCalled();
-    expect(useFileSystemStore.getState().rootFolderPath).toBe(currentPath);
+    expect(useProjectStore.getState().rootFolderPath).toBe(currentPath);
   });
 });

@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { describeAcpTerminalAuthFailure, runAcpTerminalAuth } from "../lib/acp-terminal-auth";
+import { describeAcpTerminalAuthFailure, runAcpTerminalAuth } from "../services/acp-terminal-auth";
 import { AcpStreamHandler } from "../services/acp-stream-handler";
 import type { AcpAuthMethod } from "../types/acp.types";
 import { createSelectors } from "@/utils/zustand-selectors";

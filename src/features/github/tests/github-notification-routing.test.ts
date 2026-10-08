@@ -3,7 +3,7 @@ import {
   buildGitHubRepositoryRef,
   getGitHubNotificationFallbackUrl,
   getGitHubNotificationTarget,
-} from "../utils/github-notification-routing";
+} from "../services/github-notification-routing";
 
 const workflowNotification = {
   id: "notification-1",

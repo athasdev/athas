@@ -27,7 +27,7 @@ export interface ContextMenuGroupData {
   items: ContextMenuAction[];
 }
 
-export type ContextMenuEntry = ContextMenuAction | { id: string; separator: true };
+type ContextMenuEntry = ContextMenuAction | { id: string; separator: true };
 
 export function createContextMenuGroups(
   entries: readonly ContextMenuEntry[],

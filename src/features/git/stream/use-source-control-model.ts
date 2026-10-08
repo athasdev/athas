@@ -1,10 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import {
-  InlineEditError,
-  requestInlineEdit,
-} from "@/features/editor/services/editor-inline-edit-service";
 import { showConfirmDialog, showPromptDialog } from "@/ui/dialog";
 import {
   checkoutBranch,
@@ -18,9 +14,9 @@ import { fetchChanges, pullChanges, pushChanges } from "../api/git-remotes-api";
 import { applyStash, createStash, dropStash, popStash } from "../api/git-stash-api";
 import { discardFileChanges, setFilesStaged } from "../api/git-status-api";
 import {
-  buildCommitMessageContext,
-  normalizeGeneratedCommitMessage,
-} from "../commit-composer/utils/commit-message-context";
+  generateCommitMessage,
+  getCommitMessageGenerationError,
+} from "../commit-composer/services/commit-message-generation";
 import { useGitDataController } from "../hooks/use-git-data-controller";
 import { useGitDiffActions } from "../hooks/use-git-diff-actions";
 import type {
@@ -253,28 +249,17 @@ export function useSourceControlModel({
       if (!activeRepoPath || staged.length === 0 || isGenerating) return null;
       setIsGenerating(true);
       try {
-        const selectedText = await buildCommitMessageContext({
+        const message = await generateCommitMessage({
+          model: aiModelId,
           repoPath: activeRepoPath,
           currentBranch: gitStatus?.branch,
           stagedFiles: staged,
-          existingDraftHint: draft.trim(),
+          draft,
+          mode: "title",
         });
-        const { editedText } = await requestInlineEdit({
-          model: aiModelId,
-          feature: "commit-message",
-          beforeSelection: "",
-          selectedText,
-          afterSelection: "",
-          instruction:
-            "Generate a concise Git commit subject from the staged changes. Return exactly one subject line and nothing else. Keep it under 72 characters when possible. Infer and match the repository's style from recent commit subjects.",
-          filePath: activeRepoPath.split("/").pop() || "repository",
-          languageId: "git-commit",
-        });
-        return normalizeGeneratedCommitMessage(editedText, "title") || null;
+        return message || null;
       } catch (error) {
-        toast.error(
-          error instanceof InlineEditError ? error.message : "Failed to generate message",
-        );
+        toast.error(getCommitMessageGenerationError(error, "Failed to generate message"));
         return null;
       } finally {
         setIsGenerating(false);

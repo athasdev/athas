@@ -1,23 +1,25 @@
 import { isDirtyContent } from "@/features/panes/types/pane-content.types";
-import { AgentAttentionDot } from "@/features/ai/components/agent-attention-dot";
-import { useChatAttention } from "@/features/ai/hooks/use-chat-attention";
+import { getTabDecoration } from "../services/tab-decoration-registry";
 import { PinIcon, XIcon } from "@/ui/icons";
 import { memo, useCallback } from "react";
 import type { RefCallback } from "react";
 import { BufferTypeIcon } from "./buffer-type-icon";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
-import { shouldShowTabCloseButton } from "@/features/settings/lib/ui-preferences";
+import { shouldShowTabCloseButton } from "@/features/settings/services/ui-preferences";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
 import { InlineRenameInput } from "@/ui/input";
 import { TabItem } from "@/ui/tab-bar";
 import { cn } from "@/utils/cn";
+import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 
 interface TabBarItemProps {
   buffer: PaneContent;
   displayName: string;
   index: number;
   isActive: boolean;
+  isPinned?: boolean;
+  isPreview?: boolean;
   isDraggedTab: boolean;
   showDropIndicatorBefore?: boolean;
   tabRef?: RefCallback<HTMLDivElement>;
@@ -39,6 +41,8 @@ const TabBarItem = memo(function TabBarItem({
   buffer,
   displayName,
   isActive,
+  isPinned = false,
+  isPreview = false,
   isDraggedTab,
   showDropIndicatorBefore = false,
   tabRef,
@@ -55,16 +59,13 @@ const TabBarItem = memo(function TabBarItem({
   onRenameSubmit,
   onRenameCancel,
 }: TabBarItemProps) {
-  const agentAttention = useChatAttention(buffer.type === "agent" ? buffer.sessionId : null);
+  const TabIndicator = getTabDecoration(buffer.type)?.indicator;
+  const closeShortcut = useCommandShortcut(isPinned ? undefined : "file.close");
   const showTabIcons = useSettingsStore((state) => state.settings.showTabIcons);
   const tabCloseButtonVisibility = useSettingsStore(
     (state) => state.settings.tabCloseButtonVisibility,
   );
-  const showCloseButton = shouldShowTabCloseButton(
-    tabCloseButtonVisibility,
-    isActive,
-    buffer.isPinned,
-  );
+  const showCloseButton = shouldShowTabCloseButton(tabCloseButtonVisibility, isActive, isPinned);
   const handleAuxClick = useCallback(
     (e: React.MouseEvent) => {
       // Only handle middle click here
@@ -83,7 +84,7 @@ const TabBarItem = memo(function TabBarItem({
       <TabItem
         role="tab"
         aria-selected={isActive}
-        aria-label={`${buffer.name}${isDirtyContent(buffer) ? " (unsaved)" : ""}${buffer.isPinned ? " (pinned)" : ""}${buffer.isPreview ? " (preview)" : ""}`}
+        aria-label={`${buffer.name}${isDirtyContent(buffer) ? " (unsaved)" : ""}${isPinned ? " (pinned)" : ""}${isPreview ? " (preview)" : ""}`}
         tabIndex={isActive ? 0 : -1}
         isActive={isActive}
         isDragged={isDraggedTab}
@@ -108,18 +109,18 @@ const TabBarItem = memo(function TabBarItem({
                 variant="ghost"
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (buffer.isPinned) {
+                  if (isPinned) {
                     handleTabPin(buffer.id);
                   } else {
                     handleTabClose(buffer.id);
                   }
                 }}
-                tooltip={buffer.isPinned ? "Unpin tab" : "Close"}
-                commandId={buffer.isPinned ? undefined : "file.close"}
+                tooltip={isPinned ? "Unpin tab" : "Close"}
+                shortcut={closeShortcut}
                 tabIndex={-1}
                 draggable={false}
               >
-                {buffer.isPinned ? (
+                {isPinned ? (
                   <PinIcon className="pointer-events-none select-none fill-current text-primary" />
                 ) : (
                   <XIcon className="pointer-events-none select-none" />
@@ -155,7 +156,7 @@ const TabBarItem = memo(function TabBarItem({
             className={cn(
               "font-sans ui-text-chrome min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap",
               isActive ? "text-foreground" : "text-subtle-foreground",
-              buffer.isPreview && "italic",
+              isPreview && "italic",
             )}
             title={buffer.path}
           >
@@ -170,7 +171,7 @@ const TabBarItem = memo(function TabBarItem({
             aria-label="Unsaved changes"
           />
         )}
-        {agentAttention ? <AgentAttentionDot attention={agentAttention} /> : null}
+        {TabIndicator ? <TabIndicator buffer={buffer} /> : null}
       </TabItem>
     </div>
   );

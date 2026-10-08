@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { isBinaryContent, isImageFile, isKnownTextFile } from "../controllers/file-utils";
+import { isBinaryContent, isImageFile, isKnownTextFile } from "../services/file-utils";
 
 describe("file utils", () => {
   it("treats recognized editor languages as text files", () => {

@@ -1,6 +1,6 @@
 import { useMemo, type ReactNode } from "react";
 import { normalizeItemOrder } from "@/features/layout/config/item-order";
-import type { SidebarView } from "@/features/layout/utils/sidebar-pane-utils";
+import type { SidebarView } from "@/features/layout/types/sidebar.types";
 import type { CoreFeaturesState } from "@/features/settings/types/feature.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { DynamicIcon } from "@/extensions/ui/components/dynamic-icon";

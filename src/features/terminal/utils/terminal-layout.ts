@@ -8,10 +8,10 @@ import {
   getAllPaneGroups,
   resizeFlattenedPaneSplit,
   splitPane,
-} from "@/features/panes/utils/pane-tree";
+} from "@/features/panes/services/pane-tree";
 import type { TerminalSplitDirection } from "@/features/terminal/types/terminal.types";
 
-export type TerminalLayout = PaneNode;
+type TerminalLayout = PaneNode;
 
 export function findTerminalLayout(
   layouts: TerminalLayout[],

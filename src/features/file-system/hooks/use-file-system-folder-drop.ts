@@ -2,20 +2,21 @@ import { useEffect, useEffectEvent, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { BOTTOM_PANE_ID } from "@/features/panes/constants/pane";
 import { usePaneStore } from "@/features/panes/stores/pane.store";
-import { activateBufferInPaneAndSync } from "@/features/panes/utils/pane-activation";
+import { activateBufferInPaneAndSync } from "@/features/panes/services/pane-activation";
 import {
   clearInternalTabDragData,
   getInternalTabDragData,
-} from "@/features/tabs/utils/internal-tab-drag";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+} from "@/features/tabs/services/internal-tab-drag";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import {
   dispatchDroppedPathsToTerminal,
   handleExternalFileDropPayload,
   getExternalFileDropRoute,
   isExternalFileDragTypeList,
   resolveDropClientPoint,
-} from "../utils/file-system-drop-controller";
+} from "../services/file-system-drop-controller";
 import { listenToNativeDragDrop, type NativeDragDropPayload } from "@/utils/tauri-drag-drop";
+import { emitAppEvent } from "@/utils/app-events";
 
 function resolveClientPoint(position: { x: number; y: number }) {
   return resolveDropClientPoint(position, window.devicePixelRatio, (x, y) =>
@@ -46,19 +47,17 @@ function routeInternalTabDrop(position: { x: number; y: number }) {
   if (!targetPaneId) return false;
 
   if (tabData.source === "terminal-panel" && tabData.terminalId) {
-    const bufferId = bufferActions.openTerminalBuffer({
-      sessionId: tabData.terminalId,
-      name: tabData.name,
-      command: tabData.initialCommand,
-      workingDirectory: tabData.currentDirectory,
-      remoteConnectionId: tabData.remoteConnectionId,
-    });
-    activateBufferInPaneAndSync(targetPaneId, bufferId);
-    window.dispatchEvent(
-      new CustomEvent("terminal-detach-to-buffer", {
-        detail: { terminalId: tabData.terminalId },
-      }),
+    bufferActions.openTerminalBuffer(
+      {
+        sessionId: tabData.terminalId,
+        name: tabData.name,
+        command: tabData.initialCommand,
+        workingDirectory: tabData.currentDirectory,
+        remoteConnectionId: tabData.remoteConnectionId,
+      },
+      { paneId: targetPaneId },
     );
+    emitAppEvent("terminal:detach-to-buffer", { terminalId: tabData.terminalId });
   } else if (tabData.bufferId && tabData.paneId && tabData.paneId !== targetPaneId) {
     paneActions.moveBufferToPane(tabData.bufferId, tabData.paneId, targetPaneId);
     activateBufferInPaneAndSync(targetPaneId, tabData.bufferId);

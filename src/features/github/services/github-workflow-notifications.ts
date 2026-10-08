@@ -1,12 +1,9 @@
 import { isPermissionGranted, sendNotification } from "@tauri-apps/plugin-notification";
-import { isAnyAthasWindowFocused } from "@/features/ai/services/agent-native-notifications";
+import { isAnyAthasWindowFocused } from "@/features/window/services/native-window-api";
 import { useNotificationsStore } from "@/features/notifications/stores/notifications.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import type {
-  NotificationType,
-  ToastInput,
-} from "@/features/notifications/types/notifications.types";
-import { showToast } from "@/features/layout/contexts/toast-context";
+import type { NotificationType } from "@/features/notifications/types/notifications.types";
+import { showToast, type ToastInput } from "@/utils/toast";
 import type { WorkflowRunListItem } from "../types/github.types";
 import type { WorkflowRunChange } from "../utils/github-workflow-run-changes";
 import {
@@ -19,7 +16,7 @@ import {
 
 const MAX_INDIVIDUAL_NOTIFICATIONS = 3;
 
-export interface WorkflowRunNotification {
+interface WorkflowRunNotification {
   id: string;
   message: string;
   description: string;

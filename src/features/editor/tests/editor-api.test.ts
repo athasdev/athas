@@ -1,11 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { editorAPI } from "../extensions/api";
+import { editorAPI } from "../services/editor-api";
 import { useBufferStore } from "../stores/buffer.store";
 import { useEditorStateStore } from "../stores/state.store";
 import { useHistoryStore } from "../stores/history.store";
-import { useEditorSettingsStore } from "../stores/settings.store";
-import { calculateCursorPositionFromContent } from "../utils/position";
+import { useEditorSettingOverridesStore } from "../stores/editor-setting-overrides.store";
+import { calculateCursorPositionFromContent } from "../services/position";
 import type { EditorContent } from "@/features/panes/types/pane-content.types";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { seedActiveBuffer } from "@/features/panes/tests/helpers/seed-pane-tabs";
 
 const createMockStorage = () => {
   const storage = new Map<string, string>();
@@ -37,11 +39,7 @@ const makeBuffer = (content: string, language = "typescript"): EditorContent => 
   savedContent: content,
   isDirty: false,
   isVirtual: false,
-  isPinned: false,
-  isPreview: false,
-  isActive: true,
   language,
-  tokens: [],
 });
 
 describe("editor API model operations", () => {
@@ -76,15 +74,14 @@ describe("editor API model operations", () => {
     vi.stubGlobal("document", documentStub);
 
     onChange.mockReset();
-    editorAPI.setTextareaRef?.(null);
     editorAPI.setActiveEditorAdapter(null);
     editorAPI.setActiveFindAdapter(null);
     editorAPI.updateCursorAndSelection({ line: 0, column: 0, offset: 0 }, null);
 
     useBufferStore.setState({
-      activeBufferId: "buffer_editor_api_test",
       buffers: [makeBuffer("alpha\nbeta")],
     });
+    seedActiveBuffer("buffer_editor_api_test");
     useEditorStateStore.setState({
       cursorPosition: { line: 1, column: 2, offset: "alpha\nbe".length },
       selection: undefined,
@@ -94,7 +91,6 @@ describe("editor API model operations", () => {
 
   afterEach(() => {
     useBufferStore?.setState({
-      activeBufferId: null,
       buffers: [],
       pendingClose: null,
       closedBuffersHistory: [],
@@ -106,7 +102,6 @@ describe("editor API model operations", () => {
       onChange: () => {},
     });
     useHistoryStore?.getState().actions.clearAllHistories();
-    useEditorSettingsStore?.setState({ theme: "athas-dark" });
     editorAPI?.setActiveEditorAdapter(null);
     editorAPI?.setActiveFindAdapter(null);
     vi.unstubAllGlobals();
@@ -290,9 +285,9 @@ describe("editor API model operations", () => {
   it("jumps between brackets through the model cursor", () => {
     const content = "fn call(value)";
     useBufferStore.setState({
-      activeBufferId: "buffer_editor_api_test",
       buffers: [makeBuffer(content)],
     });
+    seedActiveBuffer("buffer_editor_api_test");
     useEditorStateStore.setState({
       cursorPosition: calculateCursorPositionFromContent("fn call(".length, content),
       selection: {
@@ -318,9 +313,9 @@ describe("editor API model operations", () => {
   it("selects to the nearest bracket pair through the model cursor", () => {
     const content = "fn call(value)";
     useBufferStore.setState({
-      activeBufferId: "buffer_editor_api_test",
       buffers: [makeBuffer(content)],
     });
+    seedActiveBuffer("buffer_editor_api_test");
     useEditorStateStore.setState({
       cursorPosition: calculateCursorPositionFromContent("fn call(va".length, content),
       selection: undefined,
@@ -342,9 +337,9 @@ describe("editor API model operations", () => {
     const nextContent = "var x = (3 + 5-7);";
     const cursor = calculateCursorPositionFromContent("var x = (3 + (5".length, content);
     useBufferStore.setState({
-      activeBufferId: "buffer_editor_api_test",
       buffers: [makeBuffer(content)],
     });
+    seedActiveBuffer("buffer_editor_api_test");
     useEditorStateStore.setState({
       cursorPosition: cursor,
       selection: undefined,
@@ -364,9 +359,9 @@ describe("editor API model operations", () => {
   it("expands and shrinks smart selection ranges through the model cursor", () => {
     const content = "const value = call(alpha);\nnext();";
     useBufferStore.setState({
-      activeBufferId: "buffer_editor_api_test",
       buffers: [makeBuffer(content)],
     });
+    seedActiveBuffer("buffer_editor_api_test");
     useEditorStateStore.setState({
       cursorPosition: calculateCursorPositionFromContent("const value = call(al".length, content),
       selection: undefined,
@@ -397,9 +392,9 @@ describe("editor API model operations", () => {
   it("adds vertical cursors through the model API without stealing the primary cursor", () => {
     const content = "one\nlonger\nx";
     useBufferStore.setState({
-      activeBufferId: "buffer_editor_api_test",
       buffers: [makeBuffer(content)],
     });
+    seedActiveBuffer("buffer_editor_api_test");
     useEditorStateStore.setState({
       cursorPosition: calculateCursorPositionFromContent("one\nlong".length, content),
       selection: undefined,
@@ -429,9 +424,9 @@ describe("editor API model operations", () => {
   it("adds cursors to selected line ends through the model API", () => {
     const content = "one\ntwo\nthree";
     useBufferStore.setState({
-      activeBufferId: "buffer_editor_api_test",
       buffers: [makeBuffer(content)],
     });
+    seedActiveBuffer("buffer_editor_api_test");
     useEditorStateStore.setState({
       cursorPosition: calculateCursorPositionFromContent("one\ntwo\nth".length, content),
       selection: {
@@ -474,9 +469,9 @@ describe("editor API model operations", () => {
   it("reads individual lines from large documents", () => {
     const largeContent = Array.from({ length: 50_001 }, (_, index) => `line-${index}`).join("\n");
     useBufferStore.setState({
-      activeBufferId: "buffer_editor_api_test",
       buffers: [makeBuffer(largeContent, "txt")],
     });
+    seedActiveBuffer("buffer_editor_api_test");
 
     expect(editorAPI.getLineCount()).toBe(50_001);
     expect(editorAPI.getLines()).toHaveLength(50_001);
@@ -484,44 +479,56 @@ describe("editor API model operations", () => {
     expect(editorAPI.getLine(50_001)).toBeUndefined();
   });
 
-  it("reports the active editor theme from editor settings", () => {
-    useEditorSettingsStore.setState({ theme: "one-dark" });
+  it("reports the active editor theme from settings", () => {
+    const previousSettings = useSettingsStore.getState().settings;
+    useSettingsStore.setState({
+      settings: { ...previousSettings, theme: "one-dark", syncSystemTheme: false },
+    });
 
-    expect(editorAPI.getSettings().theme).toBe("one-dark");
+    try {
+      expect(editorAPI.getSettings().theme).toBe("one-dark");
+    } finally {
+      useSettingsStore.setState({ settings: previousSettings });
+    }
   });
 
-  it("does not sync cursor offsets into a textarea that does not own the full content", () => {
-    const textarea = {
-      value: "",
-      selectionStart: 0,
-      selectionEnd: 0,
-      dispatchEvent: vi.fn(),
-      select: vi.fn(),
-    } as unknown as HTMLTextAreaElement;
+  it("applies extension setting changes for the session without saving them", () => {
+    const previousSettings = useSettingsStore.getState().settings;
+    const updateSetting = vi.spyOn(useSettingsStore.getState().actions, "updateSetting");
+    const onSettingsChange = vi.fn();
+    const unsubscribe = editorAPI.on("settingsChange", onSettingsChange);
+    useSettingsStore.setState({
+      settings: { ...previousSettings, fontSize: 14, wordWrap: false, horizontalTabScroll: true },
+    });
 
-    editorAPI.setTextareaRef?.(textarea);
-    editorAPI.setCursorPosition({ line: 1, column: 4, offset: "alpha\nbeta".length });
+    try {
+      editorAPI.updateSettings({ fontSize: 20, wordWrap: false });
 
-    expect(textarea.selectionStart).toBe(0);
-    expect(textarea.selectionEnd).toBe(0);
+      expect(updateSetting).not.toHaveBeenCalled();
+      expect(useSettingsStore.getState().settings.fontSize).toBe(14);
+      expect(editorAPI.getSettings()).toMatchObject({ fontSize: 20, wordWrap: false });
+      expect(onSettingsChange).toHaveBeenCalledWith({ fontSize: 20, wordWrap: false });
 
-    textarea.value = "alpha\nbeta";
-    editorAPI.setCursorPosition({ line: 0, column: 2, offset: 2 });
+      useSettingsStore.setState({
+        settings: { ...useSettingsStore.getState().settings, showMinimap: false },
+      });
+      expect(editorAPI.getSettings()).toMatchObject({ fontSize: 20, wordWrap: false });
 
-    expect(textarea.selectionStart).toBe(2);
-    expect(textarea.selectionEnd).toBe(2);
+      editorAPI.clearSettingOverrides();
+      expect(useEditorSettingOverridesStore.getState().overrides).toEqual({});
+      expect(editorAPI.getSettings()).toMatchObject({ fontSize: 14, wordWrap: true });
+      expect(onSettingsChange).toHaveBeenLastCalledWith(
+        expect.objectContaining({ fontSize: 14, wordWrap: true }),
+      );
+    } finally {
+      unsubscribe();
+      updateSetting.mockRestore();
+      useEditorSettingOverridesStore.getState().actions.clearOverrides();
+      useSettingsStore.setState({ settings: previousSettings });
+    }
   });
 
-  it("does not write undo content into a textarea that does not own the full content", () => {
-    const textarea = {
-      value: "",
-      selectionStart: 0,
-      selectionEnd: 0,
-      dispatchEvent: vi.fn(),
-      select: vi.fn(),
-    } as unknown as HTMLTextAreaElement;
-
-    editorAPI.setTextareaRef?.(textarea);
+  it("restores the previous content on undo", () => {
     useHistoryStore.getState().actions.pushHistory("buffer_editor_api_test", {
       content: "alpha",
       cursorPosition: { line: 0, column: 5, offset: 5 },
@@ -533,6 +540,5 @@ describe("editor API model operations", () => {
     expect(useBufferStore.getState().actions.getActiveBuffer()).toMatchObject({
       content: "alpha",
     });
-    expect(textarea.value).toBe("");
   });
 });

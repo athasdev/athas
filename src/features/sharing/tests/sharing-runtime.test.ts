@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import type { Chat } from "@/features/ai/types/ai-chat.types";
+import { onAppEvent } from "@/utils/app-events";
 
 const state = vi.hoisted(() => ({
   effect: undefined as (() => (() => void) | undefined) | undefined,
@@ -16,14 +17,19 @@ vi.mock("react", () => ({
     state.effect = effect;
   },
 }));
-vi.mock("@/features/window/services/auth-api", () => ({ getAuthToken: async () => "token" }));
-vi.mock("@/features/window/stores/auth.store", () => ({
+vi.mock("@/features/auth/services/auth-api", () => ({ getAuthToken: async () => "token" }));
+vi.mock("@/features/auth/stores/auth.store", () => ({
   useAuthStore: Object.assign(() => state.userId, {
     getState: () => ({ user: { id: state.userId } }),
   }),
 }));
 vi.mock("@/features/ai/stores/ai-chat.store", () => ({
-  useAIChatStore: { getState: () => ({ chats: state.chats }) },
+  useAIChatStore: {
+    getState: () => ({
+      chats: state.chats,
+      messagesByChat: Object.fromEntries(state.chats.map((chat) => [chat.id, chat.messages])),
+    }),
+  },
 }));
 vi.mock("@/features/editor/stores/buffer.store", () => ({
   useBufferStore: { getState: () => ({ buffers: [] }) },
@@ -55,6 +61,7 @@ vi.mock("../services/share-device", () => ({ getShareDeviceId: () => "device" })
 import { SharingRuntime } from "../components/sharing-runtime";
 
 let cleanup: (() => void) | undefined;
+let unsubscribeStatus: (() => void) | undefined;
 const chat = (id: string, time: number): Chat => ({
   id,
   title: id,
@@ -67,7 +74,8 @@ const chat = (id: string, time: number): Chat => ({
 });
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.stubGlobal("window", { dispatchEvent: state.dispatch });
+  vi.stubGlobal("window", {});
+  unsubscribeStatus = onAppEvent("sharing:status", state.dispatch);
   state.chats = [];
   state.userId = 1;
   state.options.mockResolvedValue({ sessionsEnabled: true, items: [], excludedSources: [] });
@@ -75,6 +83,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   cleanup?.();
+  unsubscribeStatus?.();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
@@ -111,7 +120,7 @@ describe("private session sync", () => {
     state.request.mockRejectedValueOnce(new Error("Failed upload"));
     await sync();
     expect(state.request).toHaveBeenCalledTimes(2);
-    expect(state.dispatch.mock.calls[0][0].detail.error).toBe("Failed upload");
+    expect(state.dispatch.mock.calls[0][0].error).toBe("Failed upload");
   });
   it("sends a trimmed title and a fallback when the session has none", async () => {
     state.chats = [
@@ -135,7 +144,7 @@ describe("private session sync", () => {
     state.request.mockRejectedValueOnce(new ShareRequestError("Invalid session", 400));
     await sync();
     expect(state.request).toHaveBeenCalledTimes(1);
-    expect(state.dispatch.mock.calls[0][0].detail.error).toBe("Invalid session");
+    expect(state.dispatch.mock.calls[0][0].error).toBe("Invalid session");
 
     scheduled?.();
     await vi.waitFor(() => expect(state.dispatch).toHaveBeenCalledTimes(2));

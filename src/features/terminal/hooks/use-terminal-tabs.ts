@@ -1,13 +1,13 @@
 import { useCallback, useEffect } from "react";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import type { SplitPlacement } from "@/features/panes/types/pane.types";
-import type { Terminal, TerminalSplitDirection } from "@/features/terminal/types/terminal.types";
-import { parseRemotePath } from "@/features/remote/utils/remote-path";
+import type { TerminalSplitDirection } from "@/features/terminal/types/terminal.types";
+import { parseRemotePath } from "@/features/remote/services/remote-path";
 import {
   generateTerminalId,
   useTerminalTabsStore,
 } from "@/features/terminal/stores/terminal-tabs.store";
-import { workspaceSessionRepository } from "@/features/workspace/persistence/workspace-session-repository";
+import { workspaceSessionRepository } from "@/features/workspace/persistence/services/workspace-session-repository";
 
 export const useTerminalTabs = () => {
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
@@ -23,19 +23,6 @@ export const useTerminalTabs = () => {
       workspaceSessionRepository.saveTerminals(rootFolderPath, terminals, layouts);
     }
   }, [rootFolderPath, hasHydrated, terminals, layouts]);
-
-  // Listen for global workspace reset event
-  useEffect(() => {
-    const handleResetWorkspace = () => {
-      dispatch({ type: "RESET_TERMINALS", payload: {} });
-    };
-
-    window.addEventListener("reset-workspace", handleResetWorkspace);
-
-    return () => {
-      window.removeEventListener("reset-workspace", handleResetWorkspace);
-    };
-  }, [dispatch]);
 
   const createTerminal = useCallback(
     ({
@@ -98,20 +85,6 @@ export const useTerminalTabs = () => {
     [dispatch],
   );
 
-  const updateTerminalDirectory = useCallback(
-    (id: string, currentDirectory: string) => {
-      dispatch({ type: "UPDATE_TERMINAL_DIRECTORY", payload: { id, currentDirectory } });
-    },
-    [dispatch],
-  );
-
-  const updateTerminalActivity = useCallback(
-    (id: string) => {
-      dispatch({ type: "UPDATE_TERMINAL_ACTIVITY", payload: { id } });
-    },
-    [dispatch],
-  );
-
   const pinTerminal = useCallback(
     (id: string, isPinned: boolean) => {
       dispatch({ type: "PIN_TERMINAL", payload: { id, isPinned } });
@@ -125,10 +98,6 @@ export const useTerminalTabs = () => {
     },
     [dispatch],
   );
-
-  const getActiveTerminal = useCallback((): Terminal | null => {
-    return terminals.find((terminal) => terminal.id === activeTerminalId) || null;
-  }, [terminals, activeTerminalId]);
 
   const switchToNextTerminal = useCallback(() => {
     if (terminals.length <= 1) return;
@@ -198,11 +167,8 @@ export const useTerminalTabs = () => {
     closeTerminal,
     setActiveTerminal,
     updateTerminalName,
-    updateTerminalDirectory,
-    updateTerminalActivity,
     pinTerminal,
     reorderTerminals,
-    getActiveTerminal,
     switchToNextTerminal,
     switchToPrevTerminal,
     splitTerminal,

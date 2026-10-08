@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { buildAgentOptions, type AgentOption } from "@/features/ai/lib/agent-options";
+import { buildAgentOptions, type AgentOption } from "@/features/ai/services/agent-options";
 import { useAgentCatalogStore } from "@/features/ai/stores/agent-catalog.store";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 

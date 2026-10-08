@@ -8,7 +8,7 @@ import {
   normalizeWslLinuxPath,
   parseWslPath,
   resolveWslTargetPath,
-} from "../utils/wsl-path";
+} from "../services/wsl-path";
 
 describe("wsl path utils", () => {
   it("parses WSL roots and nested paths", () => {

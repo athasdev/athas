@@ -1,3 +1,5 @@
+import type { TextSlice } from "../utils/editor-text-changes";
+
 export type UndoEditOperation =
   | "typing.other"
   | "typing.first-space"
@@ -78,7 +80,7 @@ export interface UndoEditDelta extends ContentDelta {
   endOffset: number;
 }
 
-export interface UndoTextChange {
+interface UndoTextChange {
   rangeOffset: number;
   rangeLength: number;
   text: string;
@@ -129,7 +131,7 @@ export function getUndoEditDelta(
 }
 
 export function getUndoEditDeltaFromChange(
-  previousContent: string,
+  previousContent: TextSlice,
   change: UndoTextChange,
   previousOperation: UndoEditOperation = "other",
 ): UndoEditDelta {

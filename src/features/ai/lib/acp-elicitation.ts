@@ -376,7 +376,7 @@ export function toElicitationContent(
   return content;
 }
 
-export type ElicitationLink =
+type ElicitationLink =
   | {
       openable: true;
       href: string;

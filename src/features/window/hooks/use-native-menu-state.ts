@@ -1,11 +1,13 @@
 import { useEffect } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { commands } from "@/bindings/commands";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { getBufferById } from "@/features/editor/utils/buffer-index";
+import { getBufferById } from "@/features/editor/stores/buffer-index";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { useProjectStore } from "@/features/window/stores/project.store";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { getNativeMenuState } from "@/features/window/utils/native-menu-state";
+import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 export function useNativeMenuState() {
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
@@ -18,17 +20,20 @@ export function useNativeMenuState() {
   const bottomPaneActiveTab = useUIState((state) => state.bottomPaneActiveTab);
   // Derived inside the selector: selecting the active buffer itself re-rendered the app root on
   // every keystroke, since its content changes; the menu state only changes with dirty or type.
-  const menuState = useBufferStore((state) =>
-    getNativeMenuState({
-      activeBuffer: getBufferById(state.buffers, state.activeBufferId) ?? null,
-      hasOpenFolder: Boolean(rootFolderPath),
-      sidebarVisible,
-      terminalVisible: bottomPaneVisible && bottomPaneActiveTab === "terminal",
-      minimapVisible,
-      wordWrap,
-      lineNumbers,
-      renderWhitespace,
-    }),
+  const activeBufferId = useActiveBufferId();
+  const menuState = useBufferStore(
+    useShallow((state) =>
+      getNativeMenuState({
+        activeBuffer: getBufferById(state.buffers, activeBufferId) ?? null,
+        hasOpenFolder: Boolean(rootFolderPath),
+        sidebarVisible,
+        terminalVisible: bottomPaneVisible && bottomPaneActiveTab === "terminal",
+        minimapVisible,
+        wordWrap,
+        lineNumbers,
+        renderWhitespace,
+      }),
+    ),
   );
 
   useEffect(() => {

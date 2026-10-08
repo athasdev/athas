@@ -8,17 +8,19 @@ const io = vi.hoisted(() => ({
   listFiles: vi.fn(async () => [{ name: "a.ts", path: "/repo/a.ts" }]),
 }));
 
-vi.mock("@/features/file-search/lib/file-search-api", () => ({
+vi.mock("@/features/file-search/api/file-search-api", () => ({
   fffScanStatus: async () => ({ ...io.status }),
   fffListFiles: io.listFiles,
 }));
 vi.mock("@/features/file-system/stores/file-system.store", () => {
   const state = {
-    rootFolderPath: "/repo",
-    workspaceFolders: [],
     getAllProjectFiles: async () => [],
   };
   return { useFileSystemStore: (selector: (value: typeof state) => unknown) => selector(state) };
+});
+vi.mock("@/features/workspace/stores/project.store", () => {
+  const state = { rootFolderPath: "/repo", workspaceFolders: [] };
+  return { useProjectStore: (selector: (value: typeof state) => unknown) => selector(state) };
 });
 
 const { useFileLoader } = await import("../hooks/use-file-loader");

@@ -1,10 +1,10 @@
-import { LspClient } from "@/features/editor/lsp/lsp-client";
+import { LspClient } from "@/features/editor/lsp/services/lsp-client";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import {
   applyWorkspaceEdit,
   fileUriFromPath,
   isWorkspaceEdit,
-} from "@/features/editor/lsp/workspace-edit";
+} from "@/features/editor/lsp/services/workspace-edit";
 import { toast } from "sonner";
 
 function getActiveLspClient() {
@@ -12,8 +12,7 @@ function getActiveLspClient() {
 }
 
 function getActiveJavaFilePath(): string | null {
-  const state = useBufferStore.getState();
-  const activeBuffer = state.buffers.find((buffer) => buffer.id === state.activeBufferId);
+  const activeBuffer = useBufferStore.getState().actions.getActiveBuffer();
   if (activeBuffer?.type === "editor" && activeBuffer.path.endsWith(".java")) {
     return activeBuffer.path;
   }

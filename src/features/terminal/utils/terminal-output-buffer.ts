@@ -8,7 +8,7 @@ interface TerminalOutputBufferOptions {
   write: (data: Uint8Array, callback: () => void) => void;
 }
 
-export interface TerminalOutputBuffer {
+interface TerminalOutputBuffer {
   enqueue: (data: Uint8Array) => void;
   flush: () => void;
   queuedBytes: () => number;

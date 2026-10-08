@@ -1,4 +1,4 @@
-export interface MarkdownBlock {
+interface MarkdownBlock {
   /** Line the block starts on in the whole text; stable while text is appended after it. */
   startLine: number;
   text: string;

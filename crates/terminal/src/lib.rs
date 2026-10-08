@@ -2,6 +2,7 @@ pub mod config;
 pub mod connection;
 mod flatpak;
 pub mod manager;
+mod output_coalescer;
 pub mod protocol;
 pub mod shell;
 pub mod shell_integration;

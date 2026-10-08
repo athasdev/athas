@@ -1,6 +1,7 @@
-import type { SettingsTab } from "@/features/window/stores/ui-state/types/ui-state.types";
+import type { SettingsTab } from "@/features/layout/stores/ui-state/types/ui-state.types";
 import { compactSearchText, normalizeSearchText } from "@/utils/search-match";
-import type { SettingSearchRecord } from "../types/search.types";
+import { settingsSearchIndex } from "../config/search-index";
+import type { SearchResult, SettingSearchRecord } from "../types/search.types";
 
 export const SETTINGS_SEARCH_TAB_LABELS: Record<SettingsTab, string> = {
   general: "General",
@@ -63,7 +64,7 @@ function scoreField(value: string, query: string, tokens: string[], weight: numb
   return score;
 }
 
-export function scoreSettingSearchRecord(query: string, record: SettingSearchRecord) {
+function scoreSettingSearchRecord(query: string, record: SettingSearchRecord) {
   const normalizedQuery = normalizeSearchText(query);
   if (!normalizedQuery) return 0;
 
@@ -90,4 +91,14 @@ export function scoreSettingSearchRecord(query: string, record: SettingSearchRec
     (total, field) => total + scoreField(field.value, normalizedQuery, tokens, field.weight),
     0,
   );
+}
+
+export function searchSettings(query: string): SearchResult[] {
+  const normalizedQuery = query.trim().toLowerCase();
+  if (!normalizedQuery) return [];
+
+  return settingsSearchIndex
+    .map((record) => ({ ...record, score: scoreSettingSearchRecord(normalizedQuery, record) }))
+    .filter((result) => result.score > 0)
+    .sort((a, b) => b.score - a.score || a.label.localeCompare(b.label));
 }

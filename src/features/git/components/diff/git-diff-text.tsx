@@ -1,8 +1,7 @@
-import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
 import { useSelectionScope } from "@/features/editor/hooks/use-selection-scope";
-import { calculateLineHeight } from "@/features/editor/utils/lines";
+import { calculateLineHeight } from "@/features/editor/services/lines";
 import { memo, useCallback, useMemo, useRef, useState } from "react";
-import { useZoomStore } from "@/features/window/stores/zoom.store";
+import { useZoomStore } from "@/features/layout/stores/zoom.store";
 import { Empty, EmptyDescription } from "@/ui/empty";
 import { useDiffHighlighting } from "../../hooks/use-git-diff-highlight";
 import type {
@@ -11,7 +10,7 @@ import type {
   TextDiffViewerProps,
 } from "../../types/git-diff.types";
 import { DIFF_HIGHLIGHT_LINE_THRESHOLD } from "../../utils/diff-viewer-scale";
-import { getSkippedUnchangedLineCount, groupLinesIntoHunks } from "../../utils/git-diff-helpers";
+import { getSkippedUnchangedLineCount, groupLinesIntoHunks } from "../../services/git-diff-helpers";
 import DiffHunkHeader from "./git-diff-hunk-header";
 import DiffLine, {
   getContentColor,
@@ -22,6 +21,8 @@ import DiffLine, {
   getSplitLineMeta,
   renderDiffLineContent,
 } from "./git-diff-line";
+import { isEditorWordWrapEnabled } from "@/features/settings/services/editor-word-wrap";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 
 function SplitDiffCodePanel({
   side,
@@ -116,11 +117,11 @@ const TextDiffViewer = memo(
     searchHighlights,
   }: TextDiffViewerProps) => {
     const selectionScopeRef = useRef<HTMLDivElement>(null);
-    const editorFontSize = useEditorSettingsStore.use.fontSize();
-    const editorFontFamily = useEditorSettingsStore.use.fontFamily();
-    const editorLineHeight = useEditorSettingsStore.use.lineHeight();
-    const editorTabSize = useEditorSettingsStore.use.tabSize();
-    const wordWrap = useEditorSettingsStore.use.wordWrap();
+    const editorFontSize = useSettingsStore((state) => state.settings.fontSize);
+    const editorFontFamily = useSettingsStore((state) => state.settings.fontFamily);
+    const editorLineHeight = useSettingsStore((state) => state.settings.editorLineHeight);
+    const editorTabSize = useSettingsStore((state) => state.settings.tabSize);
+    const wordWrap = useSettingsStore((state) => isEditorWordWrapEnabled(state.settings));
     const zoomLevel = useZoomStore.use.editorZoomLevel();
     const fontSize = editorFontSize * zoomLevel;
     const lineHeight = calculateLineHeight(fontSize, editorLineHeight);

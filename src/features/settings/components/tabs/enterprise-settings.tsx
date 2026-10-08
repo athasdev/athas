@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useAuthStore } from "@/features/window/stores/auth.store";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { toast } from "sonner";
 import { Button } from "@/ui/button";
 import { EmptyState } from "@/ui/empty";
@@ -7,7 +7,7 @@ import { Field, FieldDescription, FieldLabel } from "@/ui/field";
 import Section, { SettingBlock, SettingsView, SettingRow } from "../settings-section";
 import Switch from "@/ui/switch";
 import Textarea from "@/ui/textarea";
-import { updateEnterprisePolicy } from "@/features/window/services/auth-api";
+import { updateEnterprisePolicy } from "@/features/auth/services/auth-api";
 
 const parseAllowlistInput = (value: string): string[] =>
   Array.from(

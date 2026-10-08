@@ -25,19 +25,15 @@ import { Composer } from "@/ui/composer";
 import { Spinner } from "@/ui/spinner";
 import Textarea from "@/ui/textarea";
 import { toast } from "sonner";
-import {
-  InlineEditError,
-  requestInlineEdit,
-} from "@/features/editor/services/editor-inline-edit-service";
 import { commitChanges } from "../../api/git-commits-api";
 import { pullChanges, pushChanges, type GitRemoteActionResult } from "../../api/git-remotes-api";
 import { useGitBlameStore } from "../../stores/git-blame.store";
 import type { GitFile } from "../../types/git.types";
+import type { CommitMessageMode } from "../utils/commit-message-context";
 import {
-  buildCommitMessageContext,
-  normalizeGeneratedCommitMessage,
-  type CommitMessageMode,
-} from "../utils/commit-message-context";
+  generateCommitMessage,
+  getCommitMessageGenerationError,
+} from "../services/commit-message-generation";
 
 interface GitCommitPanelProps {
   stagedFilesCount: number;
@@ -51,11 +47,6 @@ interface GitCommitPanelProps {
 
 const COMMIT_TEXTAREA_MIN_HEIGHT = 32;
 const COMMIT_TEXTAREA_MAX_HEIGHT = 128;
-
-const getRepoLabel = (repoPath: string): string => {
-  const normalized = repoPath.replace(/\\/g, "/").replace(/\/$/, "");
-  return normalized.split("/").pop() || "repository";
-};
 
 const GitCommitPanel = ({
   stagedFilesCount,
@@ -105,31 +96,16 @@ const GitCommitPanel = ({
     if (!repoPath || stagedFilesCount === 0 || isGenerating || isCommitting) return;
     setError(null);
 
-    const existingDraftHint = commitMessage.trim();
-
     setIsGenerating(true);
     try {
-      const selectedText = await buildCommitMessageContext({
+      const message = await generateCommitMessage({
+        model: aiAutocompleteModelId,
         repoPath,
         currentBranch,
         stagedFiles,
-        existingDraftHint,
+        draft: commitMessage,
+        mode: commitMessageMode,
       });
-      const { editedText } = await requestInlineEdit({
-        model: aiAutocompleteModelId,
-        feature: "commit-message",
-        beforeSelection: "",
-        selectedText,
-        afterSelection: "",
-        instruction:
-          commitMessageMode === "title"
-            ? "Generate a concise Git commit subject from the staged changes. Return exactly one subject line and nothing else. Keep it under 72 characters when possible. Infer and match the repository's style from recent commit subjects. Do not force conventional commit format unless the recent commits clearly use it."
-            : "Generate a Git commit message from the staged changes. Return a subject line and a short body only when the body adds useful context. Keep the subject under 72 characters when possible. Infer and match the repository's style from recent commit subjects. Do not force conventional commit format unless the recent commits clearly use it.",
-        filePath: getRepoLabel(repoPath),
-        languageId: "git-commit",
-      });
-
-      const message = normalizeGeneratedCommitMessage(editedText, commitMessageMode);
       if (!message) {
         setError("AI returned an empty commit message.");
         return;
@@ -137,11 +113,9 @@ const GitCommitPanel = ({
 
       setCommitMessage(message);
     } catch (generationError) {
-      if (generationError instanceof InlineEditError) {
-        setError(generationError.message);
-      } else {
-        setError("Failed to generate commit message.");
-      }
+      setError(
+        getCommitMessageGenerationError(generationError, "Failed to generate commit message."),
+      );
     } finally {
       setIsGenerating(false);
     }

@@ -6,9 +6,10 @@ import {
   getSettingSearchTargetKey,
   SETTINGS_SEARCH_TAB_LABELS,
 } from "@/features/settings/lib/settings-search";
+import { useSettingsSearchStore } from "@/features/settings/stores/settings-search.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import type { SettingsSection } from "@/features/settings/types/settings.types";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { Empty, EmptyDescription } from "@/ui/empty";
 import { SearchField } from "@/ui/search";
 import { SidebarListItem } from "@/ui/sidebar";
@@ -84,7 +85,7 @@ const SettingsWorkbenchView = () => {
   const settingsNavigationRequestId = useUIState((state) => state.settingsNavigationRequestId);
   const lastSettingsTab = useSettingsStore((state) => state.settings.lastSettingsTab);
   const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
-  const clearSearch = useSettingsStore((state) => state.actions.clearSearch);
+  const clearSearch = useSettingsSearchStore((state) => state.actions.clear);
   const {
     activeTab,
     visibleTabs,

@@ -1,22 +1,22 @@
 import { ColumnsIcon, GitBranchIcon, GitCommitIcon, RowsIcon, SearchIcon } from "@/ui/icons";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openExternalUrl } from "@/utils/external-url";
 import {
   getMultibufferSectionSelector,
   type MultibufferSection,
   MultibufferWorkspace,
   type MultibufferWorkspaceHandle,
 } from "@/features/editor/components/multibuffer/multibuffer-workspace";
-import { getBufferById } from "@/features/editor/utils/buffer-index";
+import { getBufferById } from "@/features/editor/stores/buffer-index";
 import {
   type FileNavigatorTone,
   type FileNavigatorViewMode,
 } from "@/features/file-explorer/components/file-navigator-sidebar";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { useUIState } from "@/features/window/stores/ui-state.store";
-import { useAuthStore } from "@/features/window/stores/auth.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import { buildSearchRegex, type SearchOptions } from "@/features/editor/utils/search";
+import { buildSearchRegex, type SearchOptions } from "@/utils/text-search";
 import { Avatar } from "@/ui/avatar";
 import { Button } from "@/ui/button";
 import { showAlertDialog } from "@/ui/dialog";
@@ -30,8 +30,8 @@ import { getRemotes } from "../../api/git-remotes-api";
 import { isGitChangeRelevant, subscribeToGitChanges } from "../../events/git-events";
 import type { MultiFileDiff } from "../../types/git-diff.types";
 import type { GitDiff } from "../../types/git.types";
-import { gitDiffCache } from "../../utils/git-diff-cache";
-import { getFileStatus } from "../../utils/git-diff-helpers";
+import { gitDiffCache } from "../../services/git-diff-cache";
+import { getFileStatus } from "../../services/git-diff-helpers";
 import { getGitAuthorAvatarUrl } from "../../utils/git-author-avatar";
 import { openCommitFileBuffer } from "../../utils/open-commit-file-buffer";
 import { findMultiDiffMatches, getMultiDiffSectionKey } from "../../utils/multi-diff-search";
@@ -40,8 +40,10 @@ import {
   resolveMultiDiffSelection,
   selectMultiDiffFile,
 } from "../../utils/multi-diff-selection";
-import { createSingleFileWorkingTreeDiff } from "../../utils/working-tree-multi-diff";
+import { createSingleFileWorkingTreeDiff } from "../../services/working-tree-multi-diff";
 import { DiffFileContent } from "./diff-file-content";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
+import { useIsBufferActive } from "@/features/panes/hooks/use-pane-buffer-state";
 
 function countStats(diff: GitDiff) {
   if (typeof diff.additions === "number" || typeof diff.deletions === "number") {
@@ -120,10 +122,10 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
   const diffBuffer = useBufferStore((state) => {
     return getBufferById(state.buffers, bufferId);
   });
-  const isActiveBuffer = useBufferStore((state) => state.activeBufferId === bufferId);
+  const isActiveBuffer = useIsBufferActive(bufferId);
   const updateBufferContent = useBufferStore.use.actions().updateBufferContent;
   const closeBuffer = useBufferStore.use.actions().closeBuffer;
-  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
   const account = useAuthStore((state) => state.user);
   const isFindVisible = useUIState((state) => state.isFindVisible);
@@ -581,7 +583,7 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
                   </DropdownMenuItem>
                 ) : null}
                 {githubCommitUrl ? (
-                  <DropdownMenuItem onClick={() => void openUrl(githubCommitUrl)}>
+                  <DropdownMenuItem onClick={() => void openExternalUrl(githubCommitUrl)}>
                     View on GitHub
                   </DropdownMenuItem>
                 ) : null}

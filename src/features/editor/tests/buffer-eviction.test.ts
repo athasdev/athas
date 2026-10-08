@@ -12,14 +12,10 @@ const buffer = (
     type,
     path: id,
     name: id,
-    isPinned: false,
-    isPreview: false,
-    isActive: false,
     content: "",
     savedContent: "",
     isDirty: false,
     isVirtual: false,
-    tokens: [],
     ...overrides,
   }) as PaneContent;
 
@@ -61,11 +57,10 @@ describe("buffer auto eviction", () => {
   });
 
   it("can ignore preview buffers for editor-file opens", () => {
-    const result = evictLeastRecentAutoClosableBuffer(
-      [buffer("preview", "editor", { isPreview: true }), buffer("regular")],
-      1,
-      { includePreviews: false },
-    );
+    const result = evictLeastRecentAutoClosableBuffer([buffer("preview"), buffer("regular")], 1, {
+      includePreviews: false,
+      previewBufferIds: new Set(["preview"]),
+    });
 
     expect(result.evictedBuffer?.id).toBe("regular");
     expect(result.buffers.map((item) => item.id)).toEqual(["preview"]);

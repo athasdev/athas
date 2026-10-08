@@ -1,6 +1,6 @@
 import { commands } from "@/bindings/commands";
 import { tauriFetch } from "@/utils/tauri-fetch";
-import { getAuthToken } from "@/features/window/services/auth-api";
+import { getAuthToken } from "@/features/auth/services/auth-api";
 import { getServiceUrls } from "@/config/services";
 
 export const GITHUB_ACCOUNT_API_BASE = getServiceUrls().apiBaseUrl;
@@ -8,7 +8,7 @@ export const GITHUB_CONNECTION_URL = getServiceUrls().dashboardIntegrationsUrl;
 
 export type GitHubTokenSyncStatus = "synced" | "notSignedIn" | "notConnected";
 
-export interface GitHubTokenSyncResult {
+interface GitHubTokenSyncResult {
   status: GitHubTokenSyncStatus;
   accountLogin?: string | null;
   scopes?: string | null;

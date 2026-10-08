@@ -5,7 +5,7 @@ import {
   createSingleFileWorkingTreeDiff,
   getDiffableWorkingTreeFiles,
   reconcileWorkingTreeFiles,
-} from "../utils/working-tree-multi-diff";
+} from "../services/working-tree-multi-diff";
 
 const createFile = (
   path: string,

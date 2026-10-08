@@ -1,4 +1,4 @@
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { Button } from "@/ui/button";
 import { Field, FieldDescription, FieldLabel } from "@/ui/field";
 import { Item, ItemActions, ItemContent, ItemDescription, ItemTitle } from "@/ui/item";

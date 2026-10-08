@@ -12,7 +12,7 @@ import type { Settings } from "@/features/settings/types/settings.types";
 
 const SETTINGS_EXPORT_FORMAT = "athas.settings";
 
-export interface SettingsExportPayload {
+interface SettingsExportPayload {
   format: typeof SETTINGS_EXPORT_FORMAT;
   version: typeof SETTINGS_SCHEMA_VERSION;
   exportedAt: string;

@@ -1,6 +1,5 @@
+import { emitAppEvent, onAppEvent } from "@/utils/app-events";
 import { invalidateGitCaches } from "../runtime/git-cache-registry";
-
-const GIT_CHANGED_EVENT = "athas:git-changed";
 
 export type GitChangeScope =
   | "working-tree"
@@ -21,23 +20,11 @@ const PASSIVE_GIT_CHANGE_SOURCES = new Set(["save", "auto-save", "external-file-
 
 export function emitGitChanged(change: GitChange = {}): void {
   invalidateGitCaches(change);
-
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(new CustomEvent<GitChange>(GIT_CHANGED_EVENT, { detail: change }));
-  }
+  emitAppEvent("git:changed", change);
 }
 
 export function subscribeToGitChanges(listener: (change: GitChange) => void): () => void {
-  if (typeof window === "undefined") {
-    return () => {};
-  }
-
-  const handleChange = (event: Event) => {
-    listener((event as CustomEvent<GitChange>).detail ?? {});
-  };
-
-  window.addEventListener(GIT_CHANGED_EVENT, handleChange);
-  return () => window.removeEventListener(GIT_CHANGED_EVENT, handleChange);
+  return onAppEvent("git:changed", listener);
 }
 
 export function isPassiveGitChange(change: GitChange): boolean {

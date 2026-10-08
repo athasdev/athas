@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
-import { AgentSessionIcon } from "@/features/ai/components/icons/agent-session-icon";
-import { BrowserTabIcon } from "@/features/browser/components/browser-tab-icon";
+import { BrowserTabIcon } from "./browser-tab-icon";
+import { getTabDecoration } from "../services/tab-decoration-registry";
 import type { MultiFileDiff } from "@/features/git/types/git-diff.types";
 import type { GitDiff } from "@/features/git/types/git.types";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
@@ -47,7 +47,7 @@ interface BufferTypeIconProps {
   buffer: PaneContent;
   /** The name shown for the buffer, used for diffs that have no single file. */
   displayName?: string;
-  /** Pixel size for icons that take one (agent sessions, avatars). */
+  /** Pixel size for icons that take one (contributed icons such as agent sessions, avatars). */
   size?: number;
 }
 
@@ -79,6 +79,9 @@ export function BufferTypeIcon({
       />
     ) : null;
 
+  const ContributedIcon = getTabDecoration(buffer.type)?.icon;
+  if (ContributedIcon) return <ContributedIcon buffer={buffer} size={size} />;
+
   switch (buffer.type) {
     case "extension":
       return <PackageIcon className="text-subtle-foreground" />;
@@ -86,14 +89,6 @@ export function BufferTypeIcon({
       return <TerminalWindowIcon className="text-subtle-foreground" />;
     case "browser":
       return <BrowserTabIcon favicon={buffer.favicon} />;
-    case "agent":
-      return (
-        <AgentSessionIcon
-          sessionId={buffer.sessionId}
-          size={size}
-          className="text-subtle-foreground"
-        />
-      );
     case "database":
       return <DatabaseIcon className="text-subtle-foreground" />;
     case "pullRequest":

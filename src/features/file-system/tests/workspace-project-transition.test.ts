@@ -4,22 +4,18 @@ import type {
   PaneContent,
   TerminalContent,
 } from "@/features/panes/types/pane-content.types";
-import { getDirtyEditorBuffers } from "@/features/editor/utils/editor-buffer-selectors";
-import { getUnsavedProjectTransitionMessage } from "../controllers/workspace-project-transition";
+import { getDirtyEditorBuffers } from "@/features/editor/stores/editor-buffer-selectors";
+import { getUnsavedProjectTransitionMessage } from "../services/workspace-project-transition";
 
 const createEditorBuffer = (overrides: Partial<EditorContent>): EditorContent => ({
   id: "editor-1",
   type: "editor",
   path: "/workspace/src/app.ts",
   name: "app.ts",
-  isPinned: false,
-  isPreview: false,
-  isActive: true,
   content: "changed",
   savedContent: "saved",
   isDirty: false,
   isVirtual: false,
-  tokens: [],
   ...overrides,
 });
 
@@ -28,9 +24,6 @@ const createTerminalBuffer = (overrides: Partial<TerminalContent>): TerminalCont
   type: "terminal",
   path: "terminal://terminal-1",
   name: "Terminal",
-  isPinned: false,
-  isPreview: false,
-  isActive: false,
   sessionId: "terminal-1",
   ...overrides,
 });

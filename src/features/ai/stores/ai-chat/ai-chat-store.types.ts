@@ -12,18 +12,18 @@ import type {
   ApiModelSelection,
   Chat,
   ChatMode,
+  ChatSession,
   Message,
   OutputStyle,
   ImageContent,
   QueuedAgentMessage,
 } from "@/features/ai/types/ai-chat.types";
 import type { ProviderModel } from "@/features/ai/services/providers/ai-provider-interface";
-import type { EditorSelectionContext } from "@/features/ai/types/ai-context.types";
+import type { EditorSelectionContext } from "@/features/editor/types/editor-selection.types";
 
-export interface AIWorkspaceSessionSnapshot {
-  currentChatId: string | null;
-  selectedAgentId: AgentType;
-}
+import type { AIWorkspaceSessionSnapshot } from "@/features/workspace/types/workspace-session.types";
+
+export type { AIWorkspaceSessionSnapshot };
 
 interface PendingAgentLaunchRequest {
   chatId: string;
@@ -37,7 +37,7 @@ interface PendingAgentLaunchRequest {
   mode?: "replace" | "append";
 }
 
-export type AgentRunPhase = "starting" | "waiting" | "thinking" | "tool" | "approval";
+type AgentRunPhase = "starting" | "waiting" | "thinking" | "tool" | "approval";
 
 export interface AgentRunState {
   runId: string;
@@ -49,7 +49,16 @@ export interface AgentRunState {
 export type ChatMessageLoadState = "loading" | "loaded" | "error";
 
 export interface AIChatState {
-  chats: Chat[];
+  /**
+   * Every chat's metadata, without messages. A streamed token never touches this list, so the
+   * session sidebar, history and headers can subscribe to it whole.
+   */
+  chats: ChatSession[];
+  /**
+   * Each chat's messages in order, by chat id. A streamed token replaces only the message it
+   * lands in (and this chat's array); every other message keeps its identity.
+   */
+  messagesByChat: Record<string, Message[]>;
   currentChatId: string | null;
   selectedAgentId: AgentType;
   pendingAgentLaunchRequest: PendingAgentLaunchRequest | null;
@@ -116,8 +125,16 @@ export interface AIChatActions {
    * Stream-friendly `updateMessage`: merges `updates` into the message on the next animation
    * frame together with every other queued change, without touching the session's
    * `lastMessageAt`. Use it for per-chunk updates.
+   *
+   * Pass a function to compute the updates once, when the batch lands, instead of on every
+   * chunk. It replaces a function queued earlier for the message and, like a `content` update,
+   * drops text appended before it.
    */
-  queueMessageUpdate: (chatId: string, messageId: string, updates: Partial<Message>) => void;
+  queueMessageUpdate: (
+    chatId: string,
+    messageId: string,
+    updates: Partial<Message> | (() => Partial<Message>),
+  ) => void;
   /** Appends streamed text to a message on the next animation frame, like `queueMessageUpdate`. */
   appendMessageContent: (chatId: string, messageId: string, chunk: string) => void;
   /** Writes queued stream updates now, for one chat or all of them. */
@@ -165,7 +182,9 @@ export interface AIChatActions {
 
   getWorkspaceSessionSnapshot: () => AIWorkspaceSessionSnapshot;
   restoreWorkspaceSession: (snapshot: AIWorkspaceSessionSnapshot | null | undefined) => void;
+  /** The current chat with its messages, composed for callers outside React. */
   getCurrentChat: () => Chat | undefined;
+  /** A chat with its messages, composed for callers outside React. */
   getChatById: (chatId: string) => Chat | undefined;
   getMessagesForChat: (chatId: string) => Message[];
 }

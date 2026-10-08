@@ -1,35 +1,32 @@
 import type React from "react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import DebuggerView from "@/features/debugger/components/debugger-view";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { BOTTOM_PANE_ID } from "@/features/panes/constants/pane";
 import { usePaneStore } from "@/features/panes/stores/pane.store";
-import { activateBufferInPaneAndSync } from "@/features/panes/utils/pane-activation";
-import { getAllPaneGroups } from "@/features/panes/utils/pane-tree";
+import { activateBufferInPaneAndSync } from "@/features/panes/services/pane-activation";
+import { getAllPaneGroups } from "@/features/panes/services/pane-tree";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import {
   clearInternalTabDragData,
   getInternalTabDragData,
   getInternalTabDragHover,
-} from "@/features/tabs/utils/internal-tab-drag";
+} from "@/features/tabs/services/internal-tab-drag";
 import TerminalContainer from "@/features/terminal/components/terminal-container";
 import { cn } from "@/utils/cn";
-import { useProjectStore } from "@/features/window/stores/project.store";
-import { useUIState } from "@/features/window/stores/ui-state.store";
-import { WorkbenchFullscreenSurface } from "@/features/window/components/workbench-fullscreen-surface";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
+import { WorkbenchFullscreenSurface } from "@/ui/workbench-fullscreen-surface";
+import { emitAppEvent, onAppEvent } from "@/utils/app-events";
 import { BottomBufferPane } from "./bottom-buffer-pane";
 
+const DebuggerView = lazy(() => import("@/features/debugger/components/debugger-view"));
+
 interface BottomPaneProps {
-  embedded?: boolean;
   roundLeftEdge?: boolean;
   roundRightEdge?: boolean;
 }
 
-const BottomPane = ({
-  embedded = false,
-  roundLeftEdge = true,
-  roundRightEdge = true,
-}: BottomPaneProps) => {
+const BottomPane = ({ roundLeftEdge = true, roundRightEdge = true }: BottomPaneProps) => {
   const isBottomPaneVisible = useUIState((state) => state.isBottomPaneVisible);
   const bottomPaneActiveTab = useUIState((state) => state.bottomPaneActiveTab);
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
@@ -62,8 +59,7 @@ const BottomPane = ({
       setIsInternalHoverTarget(getInternalTabDragHover().paneId === BOTTOM_PANE_ID);
     };
 
-    window.addEventListener("athas-internal-tab-drag-hover", syncHover);
-    return () => window.removeEventListener("athas-internal-tab-drag-hover", syncHover);
+    return onAppEvent("tabs:internal-drag-hover", syncHover);
   }, []);
 
   useEffect(() => {
@@ -179,20 +175,18 @@ const BottomPane = ({
         if (!tabData) return;
 
         if (tabData.source === "terminal-panel" && tabData.terminalId) {
-          const bufferId = openTerminalBuffer({
-            sessionId: tabData.terminalId,
-            name: tabData.name,
-            shell: tabData.shell,
-            command: tabData.initialCommand,
-            workingDirectory: tabData.currentDirectory,
-            remoteConnectionId: tabData.remoteConnectionId,
-          });
-          activateBufferInPaneAndSync(BOTTOM_PANE_ID, bufferId);
-          window.dispatchEvent(
-            new CustomEvent("terminal-detach-to-buffer", {
-              detail: { terminalId: tabData.terminalId },
-            }),
+          openTerminalBuffer(
+            {
+              sessionId: tabData.terminalId,
+              name: tabData.name,
+              shell: tabData.shell,
+              command: tabData.initialCommand,
+              workingDirectory: tabData.currentDirectory,
+              remoteConnectionId: tabData.remoteConnectionId,
+            },
+            { paneId: BOTTOM_PANE_ID },
           );
+          emitAppEvent("terminal:detach-to-buffer", { terminalId: tabData.terminalId });
         } else if (tabData.bufferId && tabData.paneId && tabData.paneId !== BOTTOM_PANE_ID) {
           moveBufferToPane(tabData.bufferId, tabData.paneId, BOTTOM_PANE_ID);
           activateBufferInPaneAndSync(BOTTOM_PANE_ID, tabData.bufferId);
@@ -217,8 +211,8 @@ const BottomPane = ({
       className={cn(
         "group relative z-20 flex h-workbench w-full shrink-0 cursor-ns-resize",
         "transition-colors duration-fast ease-smooth hover:bg-primary-soft",
-        embedded && "border-border border-r bg-background",
-        embedded && roundLeftEdge && "border-l",
+        "border-border border-r bg-background",
+        roundLeftEdge && "border-l",
         isResizing && "bg-primary-soft",
       )}
       role="separator"
@@ -240,9 +234,9 @@ const BottomPane = ({
       data-bottom-pane-drop-target
       className={cn(
         "athas-glass-island relative flex min-h-0 flex-col overflow-hidden bg-background",
-        embedded ? "border-border border-r border-b" : "rounded-xl border border-border",
-        embedded && roundLeftEdge && "rounded-bl-xl border-l",
-        embedded && roundRightEdge && "rounded-br-xl",
+        "border-border border-r border-b",
+        roundLeftEdge && "rounded-bl-xl border-l",
+        roundRightEdge && "rounded-br-xl",
         isInternalHoverTarget && "ring-2 ring-primary ring-inset",
         isFullScreen && "size-full rounded-none border-0 shadow-none ring-0",
         !isFullScreen && "flex-1",
@@ -263,11 +257,13 @@ const BottomPane = ({
 
         {debuggerEnabled && bottomPaneActiveTab === "debugger" && (
           <div className="h-full">
-            <DebuggerView
-              isFullScreen={isFullScreen}
-              onFullScreen={() => setIsFullScreen(!isFullScreen)}
-              onClose={closeBottomPane}
-            />
+            <Suspense fallback={null}>
+              <DebuggerView
+                isFullScreen={isFullScreen}
+                onFullScreen={() => setIsFullScreen(!isFullScreen)}
+                onClose={closeBottomPane}
+              />
+            </Suspense>
           </div>
         )}
 

@@ -1,5 +1,5 @@
 import { memo, useMemo } from "react";
-import type { SyntaxLineToken } from "@/features/editor/syntax/syntax-highlight";
+import type { SyntaxLineToken } from "@/features/editor/services/syntax-highlight";
 import { cn } from "@/utils/cn";
 import type { DiffLineProps, DiffSearchHighlight } from "../../types/git-diff.types";
 import {

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 vi.mock("@/features/ai/services/ai-chat-history-service", () => ({
   deleteChatFromDb: vi.fn(),
+  forgetSavedChatMessages: vi.fn(),
   initChatDatabase: vi.fn(),
   loadAllChatsFromDb: vi.fn(),
   loadChatFromDb: vi.fn(),
@@ -9,16 +10,19 @@ vi.mock("@/features/ai/services/ai-chat-history-service", () => ({
   saveChatToDb: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("@/features/window/stores/project.store", () => ({
+vi.mock("@/features/workspace/stores/project.store", () => ({
   useProjectStore: {
-    getState: () => ({ rootFolderPath: "/workspace" }),
+    getState: () => ({ rootFolderPath: "/workspace", workspaceFolders: [] }),
   },
 }));
 
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
+import { normalizeChats } from "@/features/ai/services/chat-normalization";
 import {
+  forgetSavedChatMessages,
   loadAllChatsFromDb,
   loadChatFromDb,
+  saveChatMetadataToDb,
   saveChatToDb,
 } from "@/features/ai/services/ai-chat-history-service";
 import type { Chat } from "../types/ai-chat.types";
@@ -57,6 +61,7 @@ describe("AI chat surface sessions", () => {
   beforeEach(() => {
     useAIChatStore.setState({
       chats: [],
+      messagesByChat: {},
       currentChatId: null,
       pendingAgentLaunchRequest: null,
       agentRuns: {},
@@ -169,6 +174,7 @@ describe("AI chat history loading", () => {
     vi.clearAllMocks();
     useAIChatStore.setState({
       chats: [],
+      messagesByChat: {},
       currentChatId: null,
       pendingAgentLaunchRequest: null,
       agentRuns: {},
@@ -203,6 +209,21 @@ describe("AI chat history loading", () => {
     expect(useAIChatStore.getState().chatMessageLoadStates.old).toBeUndefined();
   });
 
+  it("renames an unopened history row without rewriting its messages", async () => {
+    vi.mocked(loadAllChatsFromDb).mockResolvedValue([historyRow("unopened")]);
+    await useAIChatStore.getState().actions.loadChatsFromDatabase();
+    const actions = useAIChatStore.getState().actions;
+
+    actions.updateChatTitle("unopened", "Renamed");
+    actions.setChatAcpSessionId("unopened", "session-1");
+    await Promise.resolve();
+
+    expect(saveChatToDb).not.toHaveBeenCalled();
+    expect(saveChatMetadataToDb).toHaveBeenLastCalledWith(
+      expect.objectContaining({ id: "unopened", title: "Renamed", acpSessionId: "session-1" }),
+    );
+  });
+
   it("loads a persisted empty session when New Agent reuses it", async () => {
     vi.mocked(loadAllChatsFromDb).mockResolvedValue([historyRow("old")]);
     vi.mocked(loadChatFromDb).mockResolvedValue({ ...historyRow("old"), messages: [] });
@@ -234,7 +255,7 @@ describe("AI chat history loading", () => {
 
   it("does not start a second fetch while one is in flight", () => {
     useAIChatStore.setState({
-      chats: [{ ...historyRow("old"), messages: [] }],
+      chats: [historyRow("old")],
       chatMessageLoadStates: { old: "loading" },
     });
 
@@ -251,7 +272,7 @@ describe("AI chat history loading", () => {
           resolve = done;
         }),
     );
-    useAIChatStore.setState({ chats: [{ ...historyRow("shared-load"), messages: [] }] });
+    useAIChatStore.setState({ chats: [historyRow("shared-load")] });
     const actions = useAIChatStore.getState().actions;
     const first = actions.loadChatMessages("shared-load");
     const second = actions.loadChatMessages("shared-load");
@@ -270,7 +291,7 @@ describe("AI chat history loading", () => {
         }),
     );
     const row = historyRow("live-load");
-    useAIChatStore.setState({ chats: [{ ...row, messages: [] }] });
+    useAIChatStore.setState({ chats: [row] });
     const actions = useAIChatStore.getState().actions;
     const loading = actions.loadChatMessages(row.id);
     actions.setChatPinned(row.id, true);
@@ -315,7 +336,7 @@ describe("AI chat history loading", () => {
         { id: "reply", role: "assistant", content: "Old reply", timestamp: new Date() },
       ],
     };
-    useAIChatStore.setState({ chats: [chat] });
+    useAIChatStore.setState(normalizeChats([chat]));
     const actions = useAIChatStore.getState().actions;
     const loading = actions.loadChatMessages(chat.id);
     actions.replaceUserMessage(chat.id, "user", "Changed");
@@ -335,7 +356,7 @@ describe("AI chat history loading", () => {
         }),
     );
     const row = historyRow("missing-live");
-    useAIChatStore.setState({ chats: [{ ...row, messages: [] }] });
+    useAIChatStore.setState({ chats: [row] });
     const actions = useAIChatStore.getState().actions;
     const loading = actions.loadChatMessages(row.id);
     actions.addMessage(row.id, {
@@ -346,6 +367,7 @@ describe("AI chat history loading", () => {
     });
     reject(new Error("Query returned no rows"));
     await loading;
+    expect(forgetSavedChatMessages).toHaveBeenCalledWith(row.id);
     expect(actions.getChatById(row.id)?.messages[0].content).toBe("Live");
     expect(useAIChatStore.getState().chatMessageLoadStates[row.id]).toBe("loaded");
   });
@@ -359,7 +381,7 @@ describe("AI chat history loading", () => {
         }),
     );
     const row = historyRow("removed-load");
-    useAIChatStore.setState({ chats: [{ ...row, messages: [] }] });
+    useAIChatStore.setState({ chats: [row] });
     const loading = useAIChatStore.getState().actions.loadChatMessages(row.id);
     useAIChatStore.setState({ chats: [], chatMessageLoadStates: {} });
     resolve({ ...row, messages: [] });

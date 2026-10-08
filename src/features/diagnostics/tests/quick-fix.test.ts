@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import type { Diagnostic, DiagnosticCodeAction } from "../types/diagnostics.types";
-import { selectDiagnosticForQuickFix, selectPreferredCodeAction } from "../utils/quick-fix";
+import { selectDiagnosticForQuickFix, selectPreferredCodeAction } from "../services/quick-fix";
 
 function diagnostic(overrides: Partial<Diagnostic>): Diagnostic {
   return {

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useCollaborationRuntimeStore } from "@/features/collaboration/stores/collaboration-runtime.store";
+import { subscribeToEditorScroll } from "@/features/editor/services/editor-scroll-events";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import {
@@ -9,8 +10,9 @@ import {
   registerCollaborationDocument,
   streamCollaborationDocumentUpdates,
   updateCollaborationPresence,
-} from "@/features/window/services/auth-api";
-import { useAuthStore } from "@/features/window/stores/auth.store";
+} from "@/features/collaboration/services/collaboration-api";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
+import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 const PRESENCE_HEARTBEAT_MS = 60_000;
 const DOCUMENT_STREAM_RECONNECT_MS = 2_000;
@@ -47,9 +49,10 @@ export function useCollaborationPresence() {
   const activeDocumentStream = useCollaborationRuntimeStore((state) => state.activeDocumentStream);
   const mediaState = useCollaborationRuntimeStore((state) => state.mediaState);
   const collaborationRuntimeActions = useCollaborationRuntimeStore((state) => state.actions);
+  const activeBufferId = useActiveBufferId();
   const activeFilePath = useBufferStore((state) => {
-    const buffer = state.activeBufferId
-      ? state.buffers.find((entry) => entry.id === state.activeBufferId)
+    const buffer = activeBufferId
+      ? state.buffers.find((entry) => entry.id === activeBufferId)
       : null;
     if (!buffer || !("path" in buffer)) return null;
     if (buffer.path.startsWith("untitled:") || buffer.path.includes("://")) return null;
@@ -314,7 +317,8 @@ export function useCollaborationPresence() {
     let pendingViewportKey: string | null = null;
 
     const scheduleViewportUpdate = () => {
-      const { scrollTop, scrollLeft, viewportHeight } = useEditorStateStore.getState();
+      const { viewportHeight, actions } = useEditorStateStore.getState();
+      const { scrollTop, scrollLeft } = actions.getScroll();
       const viewportKey = JSON.stringify({
         path: activeFilePath,
         documentId,
@@ -364,19 +368,14 @@ export function useCollaborationPresence() {
     };
 
     scheduleViewportUpdate();
-    const unsubscribe = useEditorStateStore.subscribe((state, previousState) => {
-      if (
-        state.scrollTop === previousState.scrollTop &&
-        state.scrollLeft === previousState.scrollLeft &&
-        state.viewportHeight === previousState.viewportHeight
-      ) {
-        return;
-      }
-      scheduleViewportUpdate();
+    const unsubscribeScroll = subscribeToEditorScroll(scheduleViewportUpdate);
+    const unsubscribeViewport = useEditorStateStore.subscribe((state, previousState) => {
+      if (state.viewportHeight !== previousState.viewportHeight) scheduleViewportUpdate();
     });
 
     return () => {
-      unsubscribe();
+      unsubscribeScroll();
+      unsubscribeViewport();
       if (timer !== null) window.clearTimeout(timer);
     };
   }, [

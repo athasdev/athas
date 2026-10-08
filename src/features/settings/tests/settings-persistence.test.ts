@@ -26,7 +26,8 @@ describe("settings persistence", () => {
   });
 
   it("loads an initialized settings store with one entries call and no writes", async () => {
-    const { loadSettingsFromStore } = await import("@/features/settings/lib/settings-persistence");
+    const { loadSettingsFromStore } =
+      await import("@/features/settings/services/settings-persistence");
     const settings = getDefaultSettingsSnapshot();
     const store = {
       entries: storeMocks.entries,
@@ -46,7 +47,8 @@ describe("settings persistence", () => {
   });
 
   it("migrates the legacy shared sidebar width to the right sidebar", async () => {
-    const { loadSettingsFromStore } = await import("@/features/settings/lib/settings-persistence");
+    const { loadSettingsFromStore } =
+      await import("@/features/settings/services/settings-persistence");
     const settings = getDefaultSettingsSnapshot();
     const legacyEntries = Object.entries(settings).filter(([key]) => key !== "rightSidebarWidth");
     const sidebarWidth = 340;
@@ -69,7 +71,8 @@ describe("settings persistence", () => {
   });
 
   it("initializes the persisted Outline preference for existing settings", async () => {
-    const { loadSettingsFromStore } = await import("@/features/settings/lib/settings-persistence");
+    const { loadSettingsFromStore } =
+      await import("@/features/settings/services/settings-persistence");
     const settings = getDefaultSettingsSnapshot();
     const legacyEntries = Object.entries(settings).filter(([key]) => key !== "showOutline");
     const store = {
@@ -88,7 +91,8 @@ describe("settings persistence", () => {
   });
 
   it("enables Debugger when migrating existing settings", async () => {
-    const { loadSettingsFromStore } = await import("@/features/settings/lib/settings-persistence");
+    const { loadSettingsFromStore } =
+      await import("@/features/settings/services/settings-persistence");
     const settings = getDefaultSettingsSnapshot();
     settings.coreFeatures.debugger = false;
     const store = {
@@ -113,7 +117,8 @@ describe("settings persistence", () => {
   });
 
   it("preserves Debugger preferences after the settings migration", async () => {
-    const { loadSettingsFromStore } = await import("@/features/settings/lib/settings-persistence");
+    const { loadSettingsFromStore } =
+      await import("@/features/settings/services/settings-persistence");
     const settings = getDefaultSettingsSnapshot();
     settings.coreFeatures.debugger = false;
     const store = {
@@ -135,7 +140,8 @@ describe("settings persistence", () => {
   });
 
   it("disables compact folders when migrating existing settings", async () => {
-    const { loadSettingsFromStore } = await import("@/features/settings/lib/settings-persistence");
+    const { loadSettingsFromStore } =
+      await import("@/features/settings/services/settings-persistence");
     const settings = getDefaultSettingsSnapshot();
     settings.compactFoldersInFileTree = true;
     const store = {
@@ -160,7 +166,8 @@ describe("settings persistence", () => {
   });
 
   it("preserves a compact folders opt-in after the settings migration", async () => {
-    const { loadSettingsFromStore } = await import("@/features/settings/lib/settings-persistence");
+    const { loadSettingsFromStore } =
+      await import("@/features/settings/services/settings-persistence");
     const settings = getDefaultSettingsSnapshot();
     settings.compactFoldersInFileTree = true;
     const store = {

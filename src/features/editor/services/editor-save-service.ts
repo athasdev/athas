@@ -4,17 +4,21 @@ import {
   type BufferStoreOwner,
 } from "./buffer-store-owner";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
-import { parseCollaborationNoteBufferPath } from "@/features/collaboration/lib/collaboration-sidebar-model";
+import { parseCollaborationNoteBufferPath } from "./virtual-buffer-paths";
 import { getWorkspaceResourceProvider } from "@/features/file-system/services/workspace-resource-provider";
-import { showToast } from "@/features/layout/contexts/toast-context";
-import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { showToast } from "@/utils/toast";
 import { useFileWatcherStore } from "@/features/file-system/stores/file-watcher.store";
 import { emitGitChanged } from "@/features/git/events/git-events";
 import { recordLocalHistoryFile } from "@/features/local-history/api/local-history-api";
 import { isEditorContent } from "@/features/panes/types/pane-content.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { writeFile } from "@/features/file-system/controllers/platform";
-import { getBufferById } from "../utils/buffer-index";
+import { writeFile } from "@/features/file-system/api/file-system-api";
+import { getBufferById } from "../stores/buffer-index";
+import { readBufferRevision, readBufferText } from "./buffer-text";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
+
+/** Typing pauses this long before an auto-save writes the file. */
+export const AUTO_SAVE_DELAY_MS = 1000;
 
 async function recordLocalHistoryBeforeWrite(
   path: string,
@@ -100,7 +104,8 @@ async function performEditorSaveAs(owner: BufferStoreOwner, bufferId: string): P
     });
     return false;
   }
-  const content = current.content;
+  const content = readBufferText(current);
+  const contentRevision = readBufferRevision(current);
   const findDestination = () =>
     owner.store
       .getState()
@@ -119,8 +124,8 @@ async function performEditorSaveAs(owner: BufferStoreOwner, bufferId: string): P
       !isEditorContent(beforeWrite) ||
       beforeWrite.readOnly ||
       beforeWrite.path !== original.path ||
-      beforeWrite.content !== content ||
-      (beforeWrite.contentRevision ?? 0) !== (current.contentRevision ?? 0)
+      readBufferRevision(beforeWrite) !== contentRevision ||
+      readBufferText(beforeWrite) !== content
     )
       return false;
     if (findDestination()) {
@@ -185,7 +190,7 @@ export function scheduleEditorAutoSave(bufferId: string) {
     pending.delete(bufferId);
     if (pending.size === 0) autoSaveTimers.delete(owner.store);
     void saveEditorBufferById(owner, bufferId, "auto-save");
-  }, 150);
+  }, AUTO_SAVE_DELAY_MS);
   pending.set(bufferId, timer);
 }
 
@@ -210,7 +215,7 @@ async function performEditorSave(
   const activeBuffer = getBufferById(buffers, bufferId);
   if (!activeBuffer || !isEditorContent(activeBuffer)) return false;
   if (activeBuffer.readOnly) return false;
-  const rootFolderPath = useFileSystemStore.getStore(owner.workspaceId).getState().rootFolderPath;
+  const rootFolderPath = useProjectStore.getStore(owner.workspaceId).getState().rootFolderPath;
   if (
     reason === "auto-save" &&
     (!useSettingsStore.getState().settings.autoSave ||
@@ -220,6 +225,8 @@ async function performEditorSave(
   )
     return false;
 
+  const snapshotContent = readBufferText(activeBuffer);
+  const snapshotRevision = readBufferRevision(activeBuffer);
   const matchesSnapshot = () => {
     const current = getBufferById(owner.store.getState().buffers, bufferId);
     return (
@@ -229,8 +236,8 @@ async function performEditorSave(
       !current.readOnly &&
       current.path === activeBuffer.path &&
       current.savedContent === activeBuffer.savedContent &&
-      current.content === activeBuffer.content &&
-      (current.contentRevision ?? 0) === (activeBuffer.contentRevision ?? 0)
+      readBufferRevision(current) === snapshotRevision &&
+      readBufferText(current) === snapshotContent
     );
   };
   const acknowledgeSave = (content: string) => {
@@ -252,9 +259,9 @@ async function performEditorSave(
   if (collaborationNoteTarget) {
     const [{ updateCollaborationChannelNote }, { useAuthStore }, { updateCollaborationNoteFile }] =
       await Promise.all([
-        import("@/features/window/services/auth-api"),
-        import("@/features/window/stores/auth.store"),
-        import("@/features/collaboration/lib/collaboration-sidebar-model"),
+        import("@/features/collaboration/services/collaboration-api"),
+        import("@/features/auth/stores/auth.store"),
+        import("@/features/collaboration/services/collaboration-sidebar-model"),
       ]);
     const { subscription, actions } = useAuthStore.getState();
     const collaboration = subscription?.collaboration;
@@ -272,17 +279,17 @@ async function performEditorSave(
       contentMarkdown: updateCollaborationNoteFile({
         contentMarkdown: channelNote.contentMarkdown,
         path: collaborationNoteTarget.notePath,
-        fileContent: activeBuffer.content,
+        fileContent: snapshotContent,
       }),
     });
     actions.setCollaborationSnapshot(nextCollaboration);
-    acknowledgeSave(activeBuffer.content);
+    acknowledgeSave(snapshotContent);
     return true;
   }
 
   if (activeBuffer.isVirtual) {
     if (activeBuffer.path === "settings://user-settings.json") {
-      const success = updateSettingsFromJSON(activeBuffer.content);
+      const success = updateSettingsFromJSON(snapshotContent);
       markBufferDirty(activeBuffer.id, !success);
       return success;
     }
@@ -293,14 +300,14 @@ async function performEditorSave(
 
   const isRemoteFile = activeBuffer.path.startsWith("remote://");
   const { settings } = useSettingsStore.getState();
-  let contentToSave = activeBuffer.content;
+  let contentToSave = snapshotContent;
   try {
     if (reason === "save" && !isRemoteFile && settings.formatOnSave) {
-      const { formatContent } = await import("@/features/editor/formatter/formatter-service");
+      const { formatContent } = await import("@/features/editor/services/formatter-service");
       const languageId = extensionRegistry.getLanguageId(activeBuffer.path);
       const formatResult = await formatContent({
         filePath: activeBuffer.path,
-        content: activeBuffer.content,
+        content: snapshotContent,
         languageId: languageId || undefined,
       });
       if (formatResult.success && formatResult.formattedContent !== undefined) {
@@ -322,7 +329,7 @@ async function performEditorSave(
     return false;
   }
 
-  if (matchesSnapshot() && contentToSave !== activeBuffer.content)
+  if (matchesSnapshot() && contentToSave !== snapshotContent)
     updateBufferContent(bufferId, contentToSave, true);
   acknowledgeSave(contentToSave);
   if (rootFolderPath) {
@@ -335,10 +342,10 @@ async function performEditorSave(
   }
   if (!isRemoteFile && reason === "save") {
     try {
-      const { LspClient } = await import("@/features/editor/lsp/lsp-client");
+      const { LspClient } = await import("@/features/editor/lsp/services/lsp-client");
       await LspClient.getInstance().notifyDocumentSave(activeBuffer.path);
       if (settings.lintOnSave) {
-        const { lintContent } = await import("@/features/editor/linter/linter-service");
+        const { lintContent } = await import("@/features/editor/services/linter-service");
         const { convertLintDiagnostic, useDiagnosticsStore } =
           await import("@/features/diagnostics/stores/diagnostics.store");
         const languageId = extensionRegistry.getLanguageId(activeBuffer.path);
@@ -353,7 +360,7 @@ async function performEditorSave(
           current &&
           isEditorContent(current) &&
           current.path === activeBuffer.path &&
-          current.content === contentToSave &&
+          readBufferText(current) === contentToSave &&
           lintResult.success &&
           lintResult.diagnostics
         ) {

@@ -66,7 +66,7 @@ export function ImageContextMenu({
     isOpen: boolean;
     format: ImageFormat | null;
   }>({ isOpen: false, format: null });
-  const handleRevealInFolder = useFileSystemStore.use.handleRevealInFolder?.();
+  const handleRevealInFolder = useFileSystemStore((state) => state.handleRevealInFolder);
 
   const handleFormatSelect = (format: ImageFormat) => {
     setFormatDialogState({ isOpen: true, format });

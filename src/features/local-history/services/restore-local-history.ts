@@ -1,12 +1,13 @@
-import { trackImmediateBufferHistoryChange } from "@/features/editor/stores/buffer-history-tracking";
+import { trackImmediateBufferHistoryChange } from "@/features/editor/services/buffer-history-tracking";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { getSourceEditorBufferByPath } from "@/features/editor/utils/buffer-index";
+import { getSourceEditorBufferByPath } from "@/features/editor/stores/buffer-index";
 import { getWorkspaceResourceProvider } from "@/features/file-system/services/workspace-resource-provider";
 import { useFileWatcherStore } from "@/features/file-system/stores/file-watcher.store";
 import { emitGitChanged } from "@/features/git/events/git-events";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 import { showConfirmDialog } from "@/ui/dialog";
 import { readLocalHistoryEntry, recordLocalHistoryFile } from "../api/local-history-api";
+import { readBufferRevision, readBufferText } from "@/features/editor/services/buffer-text";
 
 const restores = new WeakMap<
   ReturnType<typeof useBufferStore.getStore>,
@@ -36,6 +37,8 @@ export function restoreLocalHistorySnapshot({
   if (existing) return existing;
   const tasks = pending;
   const original = getSourceEditorBufferByPath(owner.getState().buffers, path);
+  const originalText = original ? readBufferText(original) : undefined;
+  const originalRevision = original ? readBufferRevision(original) : 0;
   const isOwnerLive = () =>
     workspaceRuntimeRegistry.getWorkspace(workspaceId)?.stores.get("editor-buffer") === owner;
   const isLive = () => !signal?.aborted && isOwnerLive();
@@ -45,9 +48,9 @@ export function restoreLocalHistorySnapshot({
     return original
       ? current?.id === original.id &&
           !current.readOnly &&
-          current.content === original.content &&
-          current.savedContent === original.savedContent &&
-          (current.contentRevision ?? 0) === (original.contentRevision ?? 0)
+          readBufferRevision(current) === originalRevision &&
+          readBufferText(current) === originalText &&
+          current.savedContent === original.savedContent
       : !current;
   };
   const task = Promise.resolve()
@@ -93,17 +96,17 @@ export function restoreLocalHistorySnapshot({
         const unchanged =
           original &&
           current.id === original.id &&
-          current.content === original.content &&
-          (current.contentRevision ?? 0) === (original.contentRevision ?? 0);
+          readBufferRevision(current) === originalRevision &&
+          readBufferText(current) === originalText;
         if (
           !signal?.aborted &&
           !current.readOnly &&
-          (unchanged || (!original && !current.isDirty && current.content === diskContent))
+          (unchanged || (!original && !current.isDirty && readBufferText(current) === diskContent))
         ) {
           trackImmediateBufferHistoryChange({
             workspaceId: workspaceId,
             bufferId: current.id,
-            currentContent: current.content,
+            currentContent: readBufferText(current),
             nextContent: content,
           });
           owner.getState().actions.updateBufferContent(current.id, content, false);

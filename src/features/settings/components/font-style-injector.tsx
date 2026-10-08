@@ -1,6 +1,5 @@
 import { useEffect } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
 import {
   DEFAULT_MONO_FONT_FAMILY,
   DEFAULT_UI_FONT_FAMILY,
@@ -8,8 +7,8 @@ import {
 } from "@/features/settings/config/typography-defaults";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { currentPlatform, IS_WINDOWS } from "@/utils/platform";
-import { buildFontFamilyStack } from "../lib/font-family-resolution";
-import { getUiFontScale, normalizeUiFontSize } from "../lib/ui-font-size";
+import { buildFontFamilyStack } from "../services/font-family-resolution";
+import { getUiFontScale, normalizeUiFontSize } from "../services/ui-font-size";
 
 function setRootStyleProperty(name: string, value: string) {
   const rootStyle = document.documentElement.style;
@@ -21,7 +20,6 @@ export const FontStyleInjector = () => {
   // The startup appearance cache already set the saved fonts; writing the default snapshot over
   // them would flash default fonts and reflow the app until the saved settings load.
   const isLoaded = useSettingsStore((state) => state.isLoaded);
-  const codeEditorFontFamily = useEditorSettingsStore((state) => state.fontFamily);
   const { fontFamily, uiFontFamily, uiFontSize } = useSettingsStore(
     useShallow((state) => ({
       fontFamily: state.settings.fontFamily,
@@ -34,7 +32,7 @@ export const FontStyleInjector = () => {
     document.documentElement.setAttribute("data-platform", currentPlatform);
     if (!isLoaded) return;
 
-    const requestedEditorFont = fontFamily || codeEditorFontFamily || DEFAULT_MONO_FONT_FAMILY;
+    const requestedEditorFont = fontFamily || DEFAULT_MONO_FONT_FAMILY;
     const requestedUiFont = uiFontFamily || DEFAULT_UI_FONT_FAMILY;
     const { mono, sans } = getTypographyFontFallbacks(IS_WINDOWS);
 
@@ -44,7 +42,7 @@ export const FontStyleInjector = () => {
     const normalizedUiFontSize = normalizeUiFontSize(uiFontSize);
     setRootStyleProperty("--app-ui-font-size", `${normalizedUiFontSize}px`);
     setRootStyleProperty("--app-ui-scale", `${getUiFontScale(normalizedUiFontSize)}`);
-  }, [isLoaded, fontFamily, uiFontFamily, uiFontSize, codeEditorFontFamily]);
+  }, [isLoaded, fontFamily, uiFontFamily, uiFontSize]);
 
   return null;
 };

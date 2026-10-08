@@ -1,4 +1,4 @@
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openExternalUrl } from "@/utils/external-url";
 import { useMemo, useState } from "react";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
@@ -39,7 +39,7 @@ export function AcpUrlQuestionPrompt({
   const open = async () => {
     if (!link.openable) return;
     try {
-      await openUrl(link.href);
+      await openExternalUrl(link.href);
       setOpenError(null);
       if (!waiting) onAnswer({ action: "accept" });
     } catch (error) {

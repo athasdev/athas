@@ -16,11 +16,12 @@ import {
 } from "@/ui/icons";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useShallow } from "zustand/react/shallow";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
-import { readFileContent } from "@/features/file-system/controllers/file-operations";
+import { readFileContent } from "@/features/file-system/api/file-operations";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { Alert, AlertDescription } from "@/ui/alert";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
@@ -65,6 +66,9 @@ import {
 } from "./debugger-panels";
 import { DebugWatchPanel } from "./debugger-watch-panel";
 import { DebugVariablesPanel } from "./debugger-variables-panel";
+import { emitAppEvent, onAppEvent } from "@/utils/app-events";
+import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
+import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 
 type DebuggerPanel = "stack" | "variables" | "watch" | "console" | "breakpoints";
 
@@ -73,9 +77,12 @@ interface DebuggerViewProps {
   onClose: () => void;
   onFullScreen: () => void;
 }
-const getActiveDebuggableFile = (state: ReturnType<typeof useBufferStore.getState>) => {
-  const activeBuffer = state.activeBufferId
-    ? state.buffers.find((buffer) => buffer.id === state.activeBufferId)
+const getActiveDebuggableFile = (
+  state: ReturnType<typeof useBufferStore.getState>,
+  activeBufferId: string | null,
+) => {
+  const activeBuffer = activeBufferId
+    ? state.buffers.find((buffer) => buffer.id === activeBufferId)
     : null;
   if (!activeBuffer || activeBuffer.type !== "editor" || activeBuffer.isVirtual) return null;
 
@@ -99,8 +106,11 @@ function DebugStatusBadge({ status }: { status: "idle" | "running" | "paused" })
 
 export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: DebuggerViewProps) {
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
-  const activeFile = useBufferStore(getActiveDebuggableFile);
-  const handleFileOpen = useFileSystemStore.use.handleFileOpen?.();
+  const activeBufferId = useActiveBufferId();
+  const activeFile = useBufferStore(
+    useShallow((state) => getActiveDebuggableFile(state, activeBufferId)),
+  );
+  const handleFileOpen = useFileSystemStore((state) => state.handleFileOpen);
   const breakpoints = useDebuggerStore.use.breakpoints();
   const watchExpressions = useDebuggerStore.use.watchExpressions();
   const workspaceConfigs = useDebuggerStore.use.workspaceConfigs();
@@ -122,6 +132,11 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
   const [startError, setStartError] = useState<string | null>(null);
   const [enabledExceptionFilters, setEnabledExceptionFilters] = useState<Set<string>>(new Set());
   const [activePanel, setActivePanel] = useState<DebuggerPanel>("stack");
+  const toggleBreakpointShortcut = useCommandShortcut("debug.toggleBreakpoint");
+  const fullScreenShortcut = useCommandShortcut("workbench.toggleActivePaneFullscreen");
+  const startShortcut = useCommandShortcut("debug.start");
+  const stopShortcut = useCommandShortcut("debug.stop");
+  const restartShortcut = useCommandShortcut("debug.restart");
   const syncedBreakpointFilesRef = useRef<Set<string>>(new Set());
 
   const generatedConfig = useMemo(
@@ -324,15 +339,11 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
     if (!command) return;
 
     const cwd = resolvedSelectedConfig.cwd || rootFolderPath || undefined;
-    window.dispatchEvent(
-      new CustomEvent("create-terminal-with-command", {
-        detail: {
-          name: resolvedSelectedConfig.name,
-          command,
-          workingDirectory: cwd,
-        },
-      }),
-    );
+    emitAppEvent("terminal:create-with-command", {
+      name: resolvedSelectedConfig.name,
+      command,
+      workingDirectory: cwd,
+    });
 
     debuggerActions.startSession({
       id: `debug_${Date.now()}`,
@@ -352,7 +363,7 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
     ) {
       await disconnectDebugAdapterSession(activeSession.id).catch(() => {});
     } else {
-      window.dispatchEvent(new CustomEvent("close-active-terminal"));
+      emitAppEvent("terminal:close-active");
     }
     debuggerActions.stopSession();
   };
@@ -451,11 +462,7 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
 
     if (sourcePath && line && line > 0) {
       await handleFileOpen?.(sourcePath, false);
-      window.dispatchEvent(
-        new CustomEvent("menu-go-to-line", {
-          detail: { path: sourcePath, line },
-        }),
-      );
+      emitAppEvent("editor:go-to-line", { path: sourcePath, line });
     }
   };
 
@@ -463,13 +470,13 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
     const start = () => void startDebugging();
     const stop = () => void stopDebugging();
     const restart = () => void restartDebugging();
-    window.addEventListener("debugger-start", start);
-    window.addEventListener("debugger-stop", stop);
-    window.addEventListener("debugger-restart", restart);
+    const unsubscribers = [
+      onAppEvent("debugger:start", start),
+      onAppEvent("debugger:stop", stop),
+      onAppEvent("debugger:restart", restart),
+    ];
     return () => {
-      window.removeEventListener("debugger-start", start);
-      window.removeEventListener("debugger-stop", stop);
-      window.removeEventListener("debugger-restart", restart);
+      for (const unsubscribe of unsubscribers) unsubscribe();
     };
   });
 
@@ -532,7 +539,7 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
           <Button
             variant="ghost"
             tooltip="Toggle breakpoint at cursor"
-            commandId="debug.toggleBreakpoint"
+            shortcut={toggleBreakpointShortcut}
             onClick={toggleCurrentLineBreakpoint}
             disabled={!activeFile}
             iconOnly
@@ -542,7 +549,7 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
           <Button
             variant="ghost"
             tooltip={isFullScreen ? "Exit full screen Run and Debug" : "Full screen Run and Debug"}
-            commandId="workbench.toggleActivePaneFullscreen"
+            shortcut={fullScreenShortcut}
             onClick={onFullScreen}
             aria-label={
               isFullScreen ? "Exit full screen Run and Debug" : "Full screen Run and Debug"
@@ -637,7 +644,7 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
                 tooltip="Start debugging"
                 onClick={startDebugging}
                 disabled={!canStartDebugging || isActiveSession}
-                commandId="debug.start"
+                shortcut={startShortcut}
                 iconOnly
               >
                 <PlayIcon />
@@ -658,7 +665,7 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
                 tooltip="Stop debugging"
                 disabled={!isActiveSession}
                 onClick={() => void stopDebugging()}
-                commandId="debug.stop"
+                shortcut={stopShortcut}
                 iconOnly
               >
                 <SquareIcon />
@@ -695,7 +702,7 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
                 tooltip="Restart debugging"
                 disabled={!canStartDebugging}
                 onClick={() => void restartDebugging()}
-                commandId="debug.restart"
+                shortcut={restartShortcut}
                 iconOnly
               >
                 <ArrowsClockwiseIcon />
@@ -812,11 +819,10 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
                 breakpoints={sortedBreakpoints}
                 onOpen={async (breakpoint) => {
                   await handleFileOpen?.(breakpoint.filePath, false);
-                  window.dispatchEvent(
-                    new CustomEvent("menu-go-to-line", {
-                      detail: { path: breakpoint.filePath, line: breakpoint.line + 1 },
-                    }),
-                  );
+                  emitAppEvent("editor:go-to-line", {
+                    path: breakpoint.filePath,
+                    line: breakpoint.line + 1,
+                  });
                 }}
                 onToggle={(breakpoint) =>
                   debuggerActions.setBreakpointEnabled(breakpoint.id, !breakpoint.enabled)

@@ -2,7 +2,7 @@ import { EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { useMemo } from "react";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { LspClient } from "../../../lsp/lsp-client";
+import { LspClient } from "../../../lsp/services/lsp-client";
 import { type CodeMirrorHost, useCodeMirrorExtension } from "../host";
 import { lspTextEditsToChanges, toLspPosition } from "../navigation/lsp-document";
 import { onTypeFormattingTrigger } from "../navigation/on-type-formatting";

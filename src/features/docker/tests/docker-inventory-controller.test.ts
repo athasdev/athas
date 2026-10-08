@@ -2,9 +2,10 @@ import { describe, expect, it } from "vite-plus/test";
 import {
   dockerInventoryReducer,
   initialDockerInventoryState,
+  resolveSelectedContainerId,
   type DockerInventoryState,
 } from "../hooks/use-docker-inventory";
-import type { DockerContainer, DockerInventory } from "../types/docker.types";
+import type { DockerContainer } from "../types/docker.types";
 
 const container = (id: string): DockerContainer => ({
   id,
@@ -19,80 +20,19 @@ const container = (id: string): DockerContainer => ({
   size: "1 MB",
 });
 
-const inventory = (...containers: DockerContainer[]): DockerInventory => ({
-  containers,
-  images: [],
-  volumes: [],
-  networks: [],
-});
-
 const state = (overrides: Partial<DockerInventoryState> = {}): DockerInventoryState => ({
   ...initialDockerInventoryState,
   ...overrides,
 });
 
 describe("Docker inventory controller", () => {
-  it("starts refreshes without discarding the current inventory or selection", () => {
-    const currentInventory = inventory(container("container-a"));
-
-    expect(
-      dockerInventoryReducer(
-        state({
-          inventory: currentInventory,
-          selectedContainerId: "container-a",
-          isLoading: false,
-          error: "Previous action failed",
-        }),
-        { type: "load-started" },
-      ),
-    ).toEqual(
-      state({
-        inventory: currentInventory,
-        selectedContainerId: "container-a",
-        isLoading: true,
-        error: null,
-      }),
-    );
-  });
-
   it("preserves a valid selection and falls back to the first available container", () => {
-    const nextInventory = inventory(container("container-a"), container("container-b"));
-    const preserved = dockerInventoryReducer(
-      state({ selectedContainerId: "container-b", connectionError: "offline" }),
-      { type: "load-succeeded", inventory: nextInventory },
-    );
-    const replaced = dockerInventoryReducer(state({ selectedContainerId: "missing" }), {
-      type: "load-succeeded",
-      inventory: nextInventory,
-    });
+    const containers = [container("container-a"), container("container-b")];
 
-    expect(preserved).toMatchObject({
-      inventory: nextInventory,
-      selectedContainerId: "container-b",
-      isLoading: false,
-      connectionError: null,
-    });
-    expect(replaced.selectedContainerId).toBe("container-a");
-  });
-
-  it("clears stale resources and selection when an inventory load fails", () => {
-    expect(
-      dockerInventoryReducer(
-        state({
-          inventory: inventory(container("container-a")),
-          selectedContainerId: "container-a",
-          isLoading: true,
-        }),
-        { type: "load-failed", message: "Docker daemon is unavailable" },
-      ),
-    ).toEqual(
-      state({
-        inventory: inventory(),
-        selectedContainerId: null,
-        isLoading: false,
-        connectionError: "Docker daemon is unavailable",
-      }),
-    );
+    expect(resolveSelectedContainerId("container-b", containers)).toBe("container-b");
+    expect(resolveSelectedContainerId("missing", containers)).toBe("container-a");
+    expect(resolveSelectedContainerId(null, containers)).toBe("container-a");
+    expect(resolveSelectedContainerId("container-a", [])).toBeNull();
   });
 
   it("separates ordinary action errors from daemon availability failures", () => {
@@ -100,16 +40,15 @@ describe("Docker inventory controller", () => {
       type: "action-failed",
       message: "Container is already stopped",
     });
-    const unavailable = dockerInventoryReducer(
-      { ...actionFailure, inventory: inventory(container("container-a")) },
-      { type: "mark-unavailable", message: "Cannot connect to Docker" },
-    );
+    const unavailable = dockerInventoryReducer(actionFailure, {
+      type: "mark-unavailable",
+      message: "Cannot connect to Docker",
+      at: 42,
+    });
 
     expect(actionFailure.error).toBe("Container is already stopped");
     expect(unavailable).toMatchObject({
-      inventory: inventory(),
-      selectedContainerId: null,
-      connectionError: "Cannot connect to Docker",
+      unavailable: { message: "Cannot connect to Docker", at: 42 },
       error: null,
     });
   });

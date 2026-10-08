@@ -1,3 +1,4 @@
+import { nanoid } from "nanoid";
 import type { Chat } from "@/features/ai/types/ai-chat.types";
 import { saveChatToDb } from "@/features/ai/services/ai-chat-history-service";
 
@@ -53,6 +54,7 @@ function getLegacyChats(): Chat[] {
         timestamp: new Date(msg.timestamp),
         toolCalls: msg.toolCalls?.map((tc: any) => ({
           ...tc,
+          id: tc.id || nanoid(),
           timestamp: new Date(tc.timestamp),
         })),
       })),

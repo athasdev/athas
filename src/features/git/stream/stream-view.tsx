@@ -1,12 +1,15 @@
-import { open as openDialog } from "@tauri-apps/plugin-dialog";
+import { pickDirectory } from "@/utils/file-dialogs";
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import type { GitSidebarItemId } from "@/features/layout/config/item-order";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { useAuthStore } from "@/features/window/stores/auth.store";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { getBufferById } from "@/features/editor/utils/buffer-index";
-import { writeSidebarResourceDragData } from "@/features/sidebar/utils/sidebar-resource-drag";
+import { getBufferById } from "@/features/editor/stores/buffer-index";
+import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
+import { onAppEvent } from "@/utils/app-events";
+import { writeSidebarResourceDragData } from "@/features/sidebar/services/sidebar-resource-drag";
 import { CommandEmpty, CommandItemBadge, CommandItemRow, CommandList } from "@/ui/command";
 import { ContextMenuPopup, createContextMenuGroups } from "@/ui/context-menu";
 import { showAlertDialog } from "@/ui/dialog";
@@ -49,7 +52,7 @@ import { useGitStore } from "../stores/git.store";
 import type { GitCommit, GitWorktree } from "../types/git.types";
 import { getGitAuthorAvatarUrl } from "../utils/git-author-avatar";
 import { getStashDisplayTitle } from "../utils/git-stash-format";
-import { openGitWorktreeWorkspace } from "../utils/git-worktree-open";
+import { openGitWorktreeWorkspace } from "../services/git-worktree-open";
 import {
   StreamEmpty,
   StreamIconButton,
@@ -77,22 +80,10 @@ import {
   type SourceControlModelProps,
 } from "./use-source-control-model";
 
-const BRANCH_MANAGER_EVENT = "athas:open-git-view-branch-manager";
 const SECTIONS_STORAGE_KEY = "athas:git-stream-sections";
 
 type SectionId = "staged" | "changes" | "stashes" | "history";
 type PanelId = "branches" | "worktrees" | "remotes" | "tags" | "repositories";
-type PaletteAction =
-  | { type: "select-repository" }
-  | { type: "show-tab"; tab: string }
-  | { type: "manage-branches"; tab?: "branches" | "worktrees" | "repositories" }
-  | { type: "show-branch-diff" }
-  | { type: "manage-remotes" }
-  | { type: "manage-tags" }
-  | { type: "view-stashes" }
-  | { type: "initialize-repository" }
-  | { type: "refresh" };
-
 function readSections(): Record<SectionId, boolean> {
   const fallback = { staged: true, changes: true, stashes: false, history: true };
   try {
@@ -108,7 +99,7 @@ function StreamView(props: SourceControlModelProps) {
   const { activeRepoPath } = model;
   const actions = useGitStore((state) => state.actions);
   const availableRepoPaths = useRepositoryStore.use.availableRepoPaths();
-  const workspaceRootPath = useRepositoryStore.use.workspaceRootPath();
+  const workspaceRootPath = useProjectStore((state) => state.rootFolderPath) ?? null;
   const { syncWorkspaceRepositories, setManualRepository, selectRepository } =
     useRepositoryStore.use.actions();
   const hiddenItems = useSettingsStore((state) => state.settings.hiddenGitSidebarItems);
@@ -196,8 +187,8 @@ function StreamView(props: SourceControlModelProps) {
     setIsSelectingRepo(true);
     setRepoError(null);
     try {
-      const selected = await openDialog({ directory: true, multiple: false });
-      if (!selected || Array.isArray(selected)) return;
+      const selected = await pickDirectory();
+      if (!selected) return;
       const resolved = await resolveRepositoryPath(selected);
       if (!resolved) {
         const message = "Selected folder is not inside a Git repository.";
@@ -265,9 +256,7 @@ function StreamView(props: SourceControlModelProps) {
   );
 
   useEffect(() => {
-    const handlePalette = (event: Event) => {
-      const detail = (event as CustomEvent<PaletteAction>).detail;
-      if (!detail) return;
+    return onAppEvent("git:palette-action", (detail) => {
       if (detail.type === "select-repository") void handleSelectRepository();
       else if (detail.type === "initialize-repository") void handleInitializeRepository();
       else if (detail.type === "refresh") void model.refresh();
@@ -276,22 +265,8 @@ function StreamView(props: SourceControlModelProps) {
       else if (detail.type === "manage-remotes") openPanel("remotes");
       else if (detail.type === "manage-tags") openPanel("tags");
       else if (detail.type === "view-stashes") revealSection("stashes");
-      else if (detail.type === "show-tab") {
-        if (detail.tab === "remotes" || detail.tab === "tags") openPanel(detail.tab);
-        else if (detail.tab === "stashes" || detail.tab === "history") revealSection(detail.tab);
-        else revealSection("changes");
-      }
-    };
-    const handleBranchManager = (event: Event) => {
-      const tab = (event as CustomEvent<{ tab?: PanelId }>).detail?.tab;
-      openPanel(tab ?? "branches");
-    };
-    window.addEventListener("athas:git-palette-action", handlePalette);
-    window.addEventListener(BRANCH_MANAGER_EVENT, handleBranchManager);
-    return () => {
-      window.removeEventListener("athas:git-palette-action", handlePalette);
-      window.removeEventListener(BRANCH_MANAGER_EVENT, handleBranchManager);
-    };
+      else if (detail.type === "show-tab") revealSection(detail.tab);
+    });
   }, [
     handleInitializeRepository,
     handleSelectRepository,
@@ -589,8 +564,9 @@ function StreamList({
   const [filter, setFilter] = useState("");
   const [historyQuery, setHistoryQuery] = useState("");
   const account = useAuthStore((state) => state.user);
+  const activeBufferId = useActiveBufferId();
   const activeCommitDiff = useBufferStore((state) => {
-    const buffer = getBufferById(state.buffers, state.activeBufferId);
+    const buffer = getBufferById(state.buffers, activeBufferId);
     return buffer?.type === "diff" && buffer.diffData && "files" in buffer.diffData
       ? buffer.diffData
       : null;

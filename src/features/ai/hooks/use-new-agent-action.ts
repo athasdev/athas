@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { openNewAgentChat } from "@/features/ai/lib/open-new-agent-chat";
+import { openNewAgentChat } from "@/features/ai/services/open-new-agent-chat";
 import type { AgentType } from "@/features/ai/types/ai-chat.types";
 
 interface NewAgentActionOptions {

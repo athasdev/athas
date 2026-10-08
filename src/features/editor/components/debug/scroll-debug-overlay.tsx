@@ -4,9 +4,10 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import { useEditorSettingsStore } from "../../stores/settings.store";
+import { subscribeToEditorScroll } from "../../services/editor-scroll-events";
 import { useEditorStateStore } from "../../stores/state.store";
-import { getLineHeight } from "../../utils/position";
+import { getLineHeight } from "../../services/position";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 
 interface ScrollMetrics {
   scrollTop: number;
@@ -29,11 +30,8 @@ export function ScrollDebugOverlay() {
     fps: 0,
   });
 
-  const scrollTop = useEditorStateStore((state) => (enabled ? state.scrollTop : 0));
-  const scrollLeft = useEditorStateStore((state) => (enabled ? state.scrollLeft : 0));
-  const viewportHeight = useEditorStateStore((state) => (enabled ? state.viewportHeight : 0));
-  const fontSize = useEditorSettingsStore.use.fontSize();
-  const editorLineHeight = useEditorSettingsStore.use.lineHeight();
+  const fontSize = useSettingsStore((state) => state.settings.fontSize);
+  const editorLineHeight = useSettingsStore((state) => state.settings.editorLineHeight);
 
   useEffect(() => {
     const checkDebugMode = () => {
@@ -57,20 +55,38 @@ export function ScrollDebugOverlay() {
     if (!enabled) return;
 
     const lineHeight = getLineHeight(fontSize, editorLineHeight);
-    const now = Date.now();
-    const timeDelta = now - lastUpdateRef.current;
-    const fps = timeDelta > 0 ? Math.round(1000 / timeDelta) : 0;
-    lastUpdateRef.current = now;
+    const measure = () => {
+      const { viewportHeight, actions } = useEditorStateStore.getState();
+      const { scrollTop, scrollLeft } = actions.getScroll();
+      const now = Date.now();
+      const timeDelta = now - lastUpdateRef.current;
+      const fps = timeDelta > 0 ? Math.round(1000 / timeDelta) : 0;
+      lastUpdateRef.current = now;
 
-    setMetrics({
-      scrollTop,
-      scrollLeft,
-      viewportHeight,
-      visibleStartLine: Math.floor(scrollTop / lineHeight),
-      visibleEndLine: Math.floor((scrollTop + viewportHeight) / lineHeight),
-      fps,
+      setMetrics({
+        scrollTop,
+        scrollLeft,
+        viewportHeight,
+        visibleStartLine: Math.floor(scrollTop / lineHeight),
+        visibleEndLine: Math.floor((scrollTop + viewportHeight) / lineHeight),
+        fps,
+      });
+    };
+
+    let frame: number | null = null;
+    measure();
+    const unsubscribe = subscribeToEditorScroll(() => {
+      if (frame !== null) return;
+      frame = requestAnimationFrame(() => {
+        frame = null;
+        measure();
+      });
     });
-  }, [enabled, scrollTop, scrollLeft, viewportHeight, fontSize, editorLineHeight]);
+    return () => {
+      unsubscribe();
+      if (frame !== null) cancelAnimationFrame(frame);
+    };
+  }, [enabled, fontSize, editorLineHeight]);
 
   if (!enabled) return null;
 

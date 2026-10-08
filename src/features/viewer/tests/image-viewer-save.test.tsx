@@ -44,7 +44,7 @@ vi.mock("../image/editor/utils/image-file-utils", () => ({
 vi.mock("@/features/editor/components/toolbar/file-path-breadcrumb", () => ({
   FilePathBreadcrumb: () => null,
 }));
-vi.mock("@/features/panes/components/pane-content-chrome", () => ({
+vi.mock("@/ui/pane-content-chrome", () => ({
   PaneContentHeader: ({ actions }: { actions: ReactNode }) => <header>{actions}</header>,
   PaneContentStatusBar: ({ children }: { children: ReactNode }) => <footer>{children}</footer>,
 }));
@@ -54,7 +54,7 @@ vi.mock("@/features/panes/hooks/use-resize-observer", () => ({
 vi.mock("../components/viewer-layout", () => ({
   ViewerLayout: ({ children }: { children: ReactNode }) => <main>{children}</main>,
 }));
-vi.mock("../components/viewer-state", () => ({
+vi.mock("@/ui/viewer-state", () => ({
   ViewerLoadingState: () => <div>Loading image</div>,
   ViewerErrorState: ({ message, onAction }: { message: string; onAction: () => void }) => (
     <div role="alert">
@@ -105,7 +105,7 @@ vi.mock("@/ui/alert", () => ({
   AlertDescription: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 }));
 vi.mock("@/ui/chrome", () => ({ ChromeSeparator: () => null }));
-vi.mock("@/features/window/components/unsaved-changes-dialog", () => ({
+vi.mock("@/features/tabs/components/unsaved-changes-dialog", () => ({
   default: ({
     onSave,
     onDiscard,

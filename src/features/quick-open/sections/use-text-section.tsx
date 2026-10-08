@@ -5,15 +5,16 @@ import { SearchMatchHighlight } from "@/components/search-match-highlight";
 import {
   type FileSearchResult,
   searchFilesContent,
-} from "@/features/file-search/lib/file-search-api";
+} from "@/features/file-search/api/file-search-api";
 import {
   canUseNativeFileSearch,
   getNativeWorkspaceRootPaths,
-} from "@/features/file-search/utils/file-search-paths";
+} from "@/features/file-search/services/file-search-paths";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { CommandEmpty, CommandItemBadge } from "@/ui/command";
 import { Spinner } from "@/ui/spinner";
 import { getBaseName, getDirectoryPath } from "@/utils/path-helpers";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import type {
   QuickOpenItem,
   QuickOpenSectionInput,
@@ -61,8 +62,8 @@ export function useTextSection({
   close,
 }: QuickOpenSectionInput): QuickOpenSectionResult {
   const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
-  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
-  const workspaceFolders = useFileSystemStore((state) => state.workspaceFolders);
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
+  const workspaceFolders = useProjectStore((state) => state.workspaceFolders);
   const rootPaths = useMemo(
     () => getNativeWorkspaceRootPaths(rootFolderPath, workspaceFolders),
     [rootFolderPath, workspaceFolders],

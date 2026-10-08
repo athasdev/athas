@@ -2,10 +2,12 @@ import { useFileSystemStore } from "@/features/file-system/stores/file-system.st
 import GitBranchManager from "@/features/git/components/git-branch-manager";
 import { useGitStore } from "@/features/git/stores/git.store";
 import { ProjectSwitcher } from "@/features/layout/components/project-switcher";
-import { useUIState } from "@/features/window/stores/ui-state.store";
-import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
+import { useWorkspaceTabsStore } from "@/features/workspace/stores/workspace-tabs.store";
 import { SidebarIcon } from "@/ui/icons";
 import { Toggle } from "@/ui/toggle";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
+import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 
 /**
  * The leading end of the title bar, next to the window controls: the sidebar toggle, then the
@@ -14,12 +16,13 @@ import { Toggle } from "@/ui/toggle";
 export function TitleLeading() {
   const isSidebarVisible = useUIState((state) => state.isSidebarVisible);
   const setIsSidebarVisible = useUIState((state) => state.setIsSidebarVisible);
+  const toggleSidebarShortcut = useCommandShortcut("workbench.toggleSidebar");
   const openProjectPicker = useUIState((state) => state.openProjectPicker);
   const projectTabs = useWorkspaceTabsStore.use.projectTabs();
   const activeProject = projectTabs.find((project) => project.isActive);
   const switchToProject = useFileSystemStore((state) => state.switchToProject);
   const isSwitchingProject = useFileSystemStore((state) => state.isSwitchingProject);
-  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const currentBranch = useGitStore((state) => state.workspaceGitStatus?.branch);
   const refreshWorkspaceGitStatus = useGitStore((state) => state.actions.refreshWorkspaceGitStatus);
 
@@ -34,7 +37,7 @@ export function TitleLeading() {
         pressed={isSidebarVisible}
         onPressedChange={setIsSidebarVisible}
         tooltip={isSidebarVisible ? "Hide Sidebar" : "Show Sidebar"}
-        commandId="workbench.toggleSidebar"
+        shortcut={toggleSidebarShortcut}
         aria-label={isSidebarVisible ? "Hide sidebar" : "Show sidebar"}
       >
         <SidebarIcon />

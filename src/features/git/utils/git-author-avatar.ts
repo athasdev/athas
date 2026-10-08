@@ -1,4 +1,4 @@
-import type { AuthUser } from "@/features/window/services/auth-api";
+import type { AuthUser } from "@/features/auth/services/auth-api";
 
 type GitAuthorAccount = Pick<AuthUser, "email" | "avatar_url" | "github_username">;
 type GitAuthorIdentity = { email?: string };

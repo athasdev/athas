@@ -4,7 +4,7 @@ import {
   useTerminalTabsStore,
 } from "@/features/terminal/stores/terminal-tabs.store";
 import { getLayoutTerminalIds } from "@/features/terminal/utils/terminal-layout";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 
 function createTerminal(id: string) {
   useTerminalTabsStore.getState().actions.dispatch({
@@ -84,19 +84,6 @@ describe("terminal splits", () => {
     const state = useTerminalTabsStore.getState();
     expect(state.layouts).toEqual([]);
     expect(state.terminals).toHaveLength(2);
-  });
-
-  it("drops layouts when terminals are reset", () => {
-    const { dispatch } = useTerminalTabsStore.getState().actions;
-    createTerminal("primary");
-    createTerminal("companion");
-    dispatch({
-      type: "SPLIT_TERMINAL",
-      payload: { terminalId: "primary", newTerminalId: "companion", direction: "right" },
-    });
-
-    dispatch({ type: "RESET_TERMINALS", payload: {} });
-    expect(useTerminalTabsStore.getState().layouts).toEqual([]);
   });
 
   it("restores persisted layouts for the terminals that came back", () => {

@@ -44,7 +44,6 @@ describe("editor view store", () => {
     const { useBufferStore } = await import("../stores/buffer.store");
     useBufferStore.setState({
       buffers: [],
-      activeBufferId: null,
       pendingClose: null,
       closedBuffersHistory: [],
     });

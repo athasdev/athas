@@ -4,8 +4,10 @@ import {
   createToolCall,
   markToolCallComplete,
   updateToolCall,
+  withToolCallIds,
 } from "@/features/ai/lib/tool-call-state";
 import { getToolCallPhase } from "@/features/ai/lib/tool-call-summary";
+import type { ToolCall } from "@/features/ai/types/ai-chat.types";
 
 describe("tool call state", () => {
   it("adds a call whose first event is an update instead of dropping it", () => {
@@ -159,5 +161,34 @@ describe("tool call state", () => {
     const replayed = { ...createToolCall("Read", {}, "read"), timestamp: new Date(0) };
     const [finished] = updateToolCall([replayed], { id: "read", status: "completed" });
     expect(finished?.durationMs).toBeUndefined();
+  });
+
+  it("creates every call with an id, even when the agent sends none", () => {
+    const first = createToolCall("terminal", {});
+    const second = createToolCall("terminal", {}, "");
+    expect(first.id).toEqual(expect.any(String));
+    expect(second.id).toEqual(expect.any(String));
+    expect(first.id).not.toBe(second.id);
+    expect(createToolCall("Read", {}, "toolu_1").id).toBe("toolu_1");
+  });
+
+  it("fills in missing tool call ids and keeps a message whose calls all have one", () => {
+    const timestamp = new Date(0);
+    const complete = {
+      id: "m",
+      role: "assistant" as const,
+      content: "",
+      timestamp,
+      toolCalls: [{ id: "a", name: "Read", input: {}, timestamp }],
+    };
+    expect(withToolCallIds(complete)).toBe(complete);
+
+    const partial = {
+      ...complete,
+      toolCalls: [...complete.toolCalls, { name: "terminal", input: {}, timestamp } as ToolCall],
+    };
+    const fixed = withToolCallIds(partial);
+    expect(fixed.toolCalls![0]).toBe(partial.toolCalls[0]);
+    expect(fixed.toolCalls![1]!.id).toEqual(expect.any(String));
   });
 });

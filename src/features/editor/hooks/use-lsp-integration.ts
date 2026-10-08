@@ -2,11 +2,11 @@ import { useEffect, useMemo, useRef } from "react";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
 import { deferUntilAfterNextPaint } from "@/features/editor/lsp/deferred-lsp-work";
-import { LspClient } from "@/features/editor/lsp/lsp-client";
+import { LspClient } from "@/features/editor/lsp/services/lsp-client";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { getSourceEditorBufferByPath } from "@/features/editor/utils/buffer-index";
-import { logger } from "@/features/editor/utils/logger";
-import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { getSourceEditorBufferByPath } from "@/features/editor/stores/buffer-index";
+import { logger } from "@/utils/logger";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 interface UseLspIntegrationOptions {
   enabled?: boolean;
@@ -21,7 +21,7 @@ export const useLspIntegration = ({
   getValue,
 }: UseLspIntegrationOptions) => {
   const lspClient = useMemo(() => LspClient.getInstance(), []);
-  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const installedExtensions = useExtensionStore.use.installedExtensions();
   const activeFilePath = enabled ? filePath : undefined;
   const isLspSupported = useMemo(

@@ -36,7 +36,6 @@ describe("git repository discovery races", () => {
     first.resolve(["/workspace/one"]);
     await firstRequest;
 
-    expect(store.getState().workspaceRootPath).toBe("/workspace/two");
     expect(store.getState().workspaceRepoPaths).toEqual(["/workspace/two"]);
     expect(store.getState().activeRepoPath).toBe("/workspace/two");
   });
@@ -50,5 +49,23 @@ describe("git repository discovery races", () => {
 
     expect(mockDiscoverWorkspaceRepositories).toHaveBeenCalledTimes(1);
     expect(store.getState().hasDiscoveredWorkspace).toBe(true);
+  });
+
+  it("rescans the root it was last synced for without keeping its own copy of the root", async () => {
+    mockDiscoverWorkspaceRepositories.mockResolvedValue(["/workspace"]);
+    const store = createGitRepositoryStore();
+
+    await store.getState().actions.syncWorkspaceRepositories("/workspace/");
+    await store.getState().actions.refreshWorkspaceRepositories();
+
+    expect(store.getState()).not.toHaveProperty("workspaceRootPath");
+    expect(mockDiscoverWorkspaceRepositories).toHaveBeenCalledTimes(2);
+    expect(mockDiscoverWorkspaceRepositories).toHaveBeenLastCalledWith("/workspace", {
+      force: true,
+    });
+
+    await store.getState().actions.syncWorkspaceRepositories(null);
+    await store.getState().actions.refreshWorkspaceRepositories();
+    expect(mockDiscoverWorkspaceRepositories).toHaveBeenCalledTimes(2);
   });
 });

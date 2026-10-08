@@ -1,5 +1,5 @@
-import { parseRemotePath } from "@/features/remote/utils/remote-path";
-import { parseWslPath } from "@/features/wsl/utils/wsl-path";
+import { parseRemotePath } from "@/features/remote/services/remote-path";
+import { parseWslPath } from "@/features/wsl/services/wsl-path";
 
 export interface WorkspaceInitializationHandlers {
   initializeLocal(path: string): Promise<boolean>;

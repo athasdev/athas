@@ -1,11 +1,11 @@
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { useAuthStore } from "@/features/window/stores/auth.store";
-import { hasProductCapability } from "@/features/window/lib/product-capabilities";
-import { isLocalAiProvider } from "@/features/ai/lib/local-ai-connection";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
+import { hasProductCapability } from "@/features/auth/services/product-capabilities";
+import { isLocalAiProvider } from "@/features/ai/services/local-ai-connection";
 import {
   resolveAutocompleteConnection,
   resolveIntelligenceConnection,
-} from "../lib/resolve-intelligence-connection";
+} from "./resolve-intelligence-connection";
 import { useIntelligenceSettingsStore } from "../stores/intelligence-settings.store";
 import type { IntelligenceTask } from "../types/intelligence.types";
 

@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { language } from "@codemirror/language";
 import { EditorView } from "@codemirror/view";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -11,9 +12,11 @@ const state = vi.hoisted(() => ({
     type: "editor",
     path: "/repo/a.ts",
     content: "const a = 1;\n",
+    savedContent: "const a = 1;\n",
     contentRevision: 1,
   } as Record<string, unknown>,
   setCursorAndSelection: vi.fn(),
+  setViewportHeightForView: vi.fn(),
   applyBufferHistory: vi.fn(),
   requestNavigation: vi.fn(),
   requestReveal: vi.fn(),
@@ -23,11 +26,13 @@ const state = vi.hoisted(() => ({
 }));
 
 vi.mock("../stores/buffer.store", () => {
-  const store = (selector: (value: unknown) => unknown) =>
-    selector({ activeBufferId: "buffer-1", buffers: [state.buffer] });
+  const store = (selector: (value: unknown) => unknown) => selector({ buffers: [state.buffer] });
   return { useBufferStore: store };
 });
-vi.mock("../utils/buffer-index", () => ({
+vi.mock("@/features/panes/hooks/use-pane-buffer-state", () => ({
+  useBufferIdOrActive: (bufferId: string | null | undefined) => bufferId ?? "buffer-1",
+}));
+vi.mock("../stores/buffer-index", () => ({
   getBufferById: (buffers: Array<{ id: string }>, id: string) =>
     buffers.find((buffer) => buffer.id === id),
 }));
@@ -55,18 +60,18 @@ vi.mock("../stores/state.store", () => {
         actions: () => ({
           setCursorAndSelection: state.setCursorAndSelection,
           setScrollForBuffer: vi.fn(),
+          setViewportHeightForView: state.setViewportHeightForView,
         }),
       },
     }),
   };
 });
-vi.mock("../extensions/api", () => {
+vi.mock("../services/editor-api", () => {
   type Adapter = { ownerId: string } & Record<string, (...args: unknown[]) => void>;
   const handlers = new Map<string, Set<(payload: unknown) => void>>();
   let editorAdapter: Adapter | null = null;
   return {
     editorAPI: {
-      setTextareaRef: vi.fn(),
       setViewportRef: vi.fn(),
       getViewportRef: () => null,
       setActiveFindAdapter: vi.fn(),
@@ -141,7 +146,7 @@ Range.prototype.getClientRects = emptyRects;
 Range.prototype.getBoundingClientRect = () => new DOMRect();
 
 const { CodeMirrorEditor } = await import("../components/codemirror-editor");
-const { editorAPI } = await import("../extensions/api");
+const { editorAPI } = await import("../services/editor-api");
 
 let container: HTMLDivElement;
 let root: Root;
@@ -162,6 +167,7 @@ describe("CodeMirror editor", () => {
       type: "editor",
       path: "/repo/a.ts",
       content: "const a = 1;\n",
+      savedContent: "const a = 1;\n",
       contentRevision: 1,
     };
     state.setCursorAndSelection.mockClear();
@@ -179,6 +185,27 @@ describe("CodeMirror editor", () => {
   afterEach(() => {
     act(() => root.unmount());
     container.remove();
+  });
+
+  it("starts with the file's language when it has already loaded", async () => {
+    const { loadCodeMirrorLanguage } = await import("../engines/codemirror/languages");
+    await loadCodeMirrorLanguage("typescript");
+
+    act(() => root.render(<CodeMirrorEditor bufferId="buffer-1" />));
+
+    expect(view().state.facet(language)?.name).toBe("typescript");
+  });
+
+  it("opens a file without transactions on the editor it was just created for", async () => {
+    const { loadCodeMirrorLanguage } = await import("../engines/codemirror/languages");
+    await loadCodeMirrorLanguage("typescript");
+    const dispatch = vi.spyOn(EditorView.prototype, "dispatch");
+
+    await act(async () => root.render(<CodeMirrorEditor bufferId="buffer-1" />));
+
+    expect(view().state.doc.toString()).toBe("const a = 1;\n");
+    expect(dispatch).not.toHaveBeenCalled();
+    dispatch.mockRestore();
   });
 
   it("sends typed edits to the buffer as a delta batch", async () => {
@@ -289,6 +316,53 @@ describe("CodeMirror editor", () => {
     expect(state.requestNavigation).toHaveBeenCalledWith(null);
   });
 
+  it("focuses the editor for navigation unless the request opts out", async () => {
+    const focus = vi.spyOn(EditorView.prototype, "focus");
+    try {
+      const range = {
+        start: { line: 0, column: 6, offset: 6 },
+        end: { line: 0, column: 6, offset: 6 },
+      };
+      await act(async () => root.render(<CodeMirrorEditor bufferId="buffer-1" />));
+      focus.mockClear();
+
+      state.pendingNavigation = { bufferId: "buffer-1", range, focus: false };
+      await act(async () => root.render(<CodeMirrorEditor bufferId="buffer-1" />));
+      expect(view().state.selection.main.head).toBe(6);
+      expect(focus).not.toHaveBeenCalled();
+
+      state.pendingNavigation = { bufferId: "buffer-1", range: { ...range } };
+      await act(async () => root.render(<CodeMirrorEditor bufferId="buffer-1" />));
+      expect(focus).toHaveBeenCalled();
+    } finally {
+      focus.mockRestore();
+    }
+  });
+
+  it("centers explicit navigation but only scrolls programmatic cursor moves when needed", async () => {
+    const scrollIntoView = vi.spyOn(EditorView, "scrollIntoView");
+    try {
+      state.pendingNavigation = {
+        bufferId: "buffer-1",
+        range: {
+          start: { line: 0, column: 6, offset: 6 },
+          end: { line: 0, column: 6, offset: 6 },
+        },
+      };
+      await act(async () => root.render(<CodeMirrorEditor bufferId="buffer-1" />));
+      expect(scrollIntoView).toHaveBeenLastCalledWith(
+        expect.anything(),
+        expect.objectContaining({ y: "center" }),
+      );
+
+      act(() => editorAPI.setCursorPosition({ line: 0, column: 3, offset: 3 }));
+      expect(view().state.selection.main.head).toBe(3);
+      expect(scrollIntoView).toHaveBeenLastCalledWith(3, expect.objectContaining({ y: "nearest" }));
+    } finally {
+      scrollIntoView.mockRestore();
+    }
+  });
+
   it("clears a reveal request once it has scrolled", async () => {
     state.pendingReveal = { bufferId: "buffer-1", line: 1 };
     await act(async () => root.render(<CodeMirrorEditor bufferId="buffer-1" />));
@@ -377,5 +451,23 @@ describe("CodeMirror editor", () => {
       container.firstElementChild?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
     expect(onReadonlySurfaceClick).toHaveBeenCalledWith({ line: 0, column: 6 });
+  });
+
+  it("reports its viewport height when it becomes the active view", async () => {
+    const nextFrame = () => new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+    await act(async () =>
+      root.render(
+        <CodeMirrorEditor bufferId="buffer-1" viewStateKey="bottom" isActiveSurface={false} />,
+      ),
+    );
+    await act(nextFrame);
+    state.setViewportHeightForView.mockClear();
+
+    await act(async () =>
+      root.render(<CodeMirrorEditor bufferId="buffer-1" viewStateKey="bottom" isActiveSurface />),
+    );
+    await act(nextFrame);
+
+    expect(state.setViewportHeightForView).toHaveBeenCalledWith("bottom", expect.any(Number));
   });
 });

@@ -1,3 +1,10 @@
+/** A highlighted span of a document, as produced by the syntax tokenizers. */
+export interface Token {
+  start: number;
+  end: number;
+  class_name: string;
+}
+
 export interface Position {
   line: number;
   column: number;
@@ -5,12 +12,6 @@ export interface Position {
 }
 
 // https://docs.rs/lsp-positions/latest/lsp_positions/struct.Position.html
-export interface LSPPosition {
-  line: number;
-  character: number;
-  offset: number;
-}
-
 export interface Range {
   start: Position;
   end: Position;

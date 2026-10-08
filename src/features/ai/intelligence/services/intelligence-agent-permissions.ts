@@ -1,7 +1,7 @@
 import type { AcpEvent, AcpPermissionPreview } from "@/features/ai/types/acp.types";
 
 /** How the user answered: `always` is set when they chose the remembered option. */
-export interface IntelligencePermissionDecision {
+interface IntelligencePermissionDecision {
   approved: boolean;
   always: boolean;
 }

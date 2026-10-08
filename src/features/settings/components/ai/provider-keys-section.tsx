@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
-import { getProviderApiKeyUrl } from "@/features/ai/components/provider-api-key-command";
+import { getProviderApiKeyUrl } from "@/features/ai/services/providers/provider-api-key-url";
 import { useAvailableProviders } from "@/features/ai/hooks/use-available-providers";
 import { useAIProviderSettingsActions } from "@/features/ai/services/providers/ai-provider-settings-registry";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { ModelProvider } from "@/features/ai/types/providers.types";
-import { useToast } from "@/features/layout/contexts/toast-context";
-import { useAuthStore } from "@/features/window/stores/auth.store";
+import { useToast } from "@/utils/toast";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { Button } from "@/ui/button";
 import { showConfirmDialog } from "@/ui/dialog";
 import { PaletteIcon, SparkleIcon } from "@/ui/icons";

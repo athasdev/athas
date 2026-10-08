@@ -1,9 +1,10 @@
 import GitHubDeliveryList from "../delivery/components/github-delivery-list";
-import { RELEASE_FILTERS, DEPLOYMENT_FILTERS } from "../delivery/utils/github-delivery";
+import { RELEASE_FILTERS, DEPLOYMENT_FILTERS } from "../delivery/services/github-delivery";
 import type { ReleaseFilter, DeploymentFilter } from "../delivery/types/github-delivery.types";
 import { TagIcon, RocketIcon } from "@/ui/icons";
-import { commands } from "@/bindings/commands";
-import { open } from "@tauri-apps/plugin-dialog";
+import { pickDirectory } from "@/utils/file-dialogs";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { getQueryErrorMessage } from "@/utils/query-client";
 import { GitHubAuthStatusMessage } from "./github-auth-status";
 import {
   ArrowClockwiseIcon,
@@ -29,17 +30,13 @@ import {
   useState,
 } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { getGitStatus } from "@/features/git/api/git-status-api";
 import { isNotGitRepositoryError, resolveRepositoryPath } from "@/features/git/api/git-repo-api";
 import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
-import {
-  type GitHubActivitySection,
-  useSidebarStore,
-} from "@/features/layout/stores/sidebar.store";
-import { writeSidebarResourceDragData } from "@/features/sidebar/utils/sidebar-resource-drag";
+import { useSidebarStore } from "@/features/layout/stores/sidebar.store";
+import { writeSidebarResourceDragData } from "@/features/sidebar/services/sidebar-resource-drag";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { ContextMenuPopup, createContextMenuGroups } from "@/ui/context-menu";
 import {
   DropdownMenu,
@@ -62,17 +59,39 @@ import {
 import { StreamTabs } from "@/features/sidebar/components/stream/stream-tabs";
 import { writeClipboardText } from "@/utils/clipboard";
 import { useGitHubStore } from "../stores/github.store";
-import { getTimeAgo, getSidebarTime } from "../utils/github-viewer-utils";
-import { getGitHubAvatarUrl } from "../utils/github-avatar-url";
+import { getTimeAgo, getSidebarTime } from "../services/github-viewer-utils";
+import { getGitHubAvatarUrl } from "../services/github-avatar-url";
 import { openGitHubContentInNewWindow } from "../utils/open-in-new-window";
 import { groupPullRequests } from "../utils/github-sidebar-groups";
-import type { IssueFilter, PRFilter, PullRequest, WorkflowRunFilter } from "../types/github.types";
-import { useGitHubActionsStore } from "../stores/github-actions.store";
+import type {
+  GitHubSidebarAction,
+  GitHubSidebarSection,
+  IssueFilter,
+  PRFilter,
+  PullRequest,
+  WorkflowRunFilter,
+} from "../types/github.types";
+import {
+  githubKeys,
+  issueListQuery,
+  pullRequestDetailsQuery,
+  pullRequestListQuery,
+  workflowRunsQuery,
+} from "../services/github-queries";
+import {
+  checkoutPullRequest,
+  openPullRequestInBrowser,
+} from "../services/github-pull-request-actions";
+import { deliveryKeys } from "../delivery/services/github-delivery-service";
 import GitHubActionsView from "./github-actions-view";
 import { GitHubAvatar } from "./github-avatar";
 import GitHubIssuesView from "./github-issues-view";
 import { GitHubSidebarRow, type GitHubSidebarPreviewBadge } from "./github-sidebar-row";
-import { GITHUB_ISSUE_LIST_TTL_MS, githubIssueListCache } from "../utils/github-data-cache";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
+import { onAppEvent } from "@/utils/app-events";
+import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
+
+const EMPTY_PULL_REQUESTS: PullRequest[] = [];
 
 const filterLabels: Record<PRFilter, string> = {
   all: "Open PRs",
@@ -92,11 +111,6 @@ const actionFilterLabels: Record<WorkflowRunFilter, string> = {
   successful: "Successful",
   failed: "Failed",
 };
-
-type GitHubSidebarSection = GitHubActivitySection;
-type GitHubPaletteAction =
-  | { type: "show-section"; section: GitHubSidebarSection }
-  | { type: "refresh" };
 
 interface PRListItemProps {
   pr: PullRequest;
@@ -190,21 +204,11 @@ const PRListItem = memo(
 PRListItem.displayName = "PRListItem";
 
 const GitHubPRsView = memo(() => {
-  const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
-  const prs = useGitHubStore.use.prs();
-  const isLoading = useGitHubStore.use.isLoading();
-  const error = useGitHubStore.use.error();
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const currentFilter = useGitHubStore.use.currentFilter();
   const isAuthenticated = useGitHubStore.use.isAuthenticated();
-  const {
-    fetchPRs,
-    setFilter,
-    checkAuth,
-    setActiveRepoPath,
-    openPRInBrowser,
-    checkoutPR,
-    prefetchPR,
-  } = useGitHubStore.use.actions();
+  const { setFilter, checkAuth, markAuthFailed } = useGitHubStore.use.actions();
+  const queryClient = useQueryClient();
   const activeRepoPath = useRepositoryStore.use.activeRepoPath();
   const availableRepoPaths = useRepositoryStore.use.availableRepoPaths();
   const { syncWorkspaceRepositories, setManualRepository, selectRepository } =
@@ -220,12 +224,18 @@ const GitHubPRsView = memo(() => {
   );
   const isGitHubPRsViewActive = useUIState((state) => state.isGitHubPRsViewActive);
   const effectiveRepoPath = activeRepoPath ?? rootFolderPath ?? null;
+  const pullRequestsQuery = useQuery({
+    ...pullRequestListQuery(effectiveRepoPath, currentFilter, markAuthFailed),
+    enabled: isGitHubPRsViewActive && isAuthenticated,
+  });
+  const prs = pullRequestsQuery.data ?? EMPTY_PULL_REQUESTS;
+  const isLoading = pullRequestsQuery.isFetching;
+  const error = getQueryErrorMessage(pullRequestsQuery.error);
 
   const [isSelectingRepo, setIsSelectingRepo] = useState(false);
   const [repoSelectionError, setRepoSelectionError] = useState<string | null>(null);
   const activeSection = useSidebarStore.use.githubSection();
   const setActiveSection = useSidebarStore.use.actions().setGitHubSection;
-  const [sectionRefreshNonce, setSectionRefreshNonce] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [issueFilter, setIssueFilter] = useState<IssueFilter>("open");
   const [actionFilter, setActionFilter] = useState<WorkflowRunFilter>("all");
@@ -236,9 +246,10 @@ const GitHubPRsView = memo(() => {
   const sectionContextMenu = useDropdownMenu<null>();
 
   const isRepoError = !!error && isNotGitRepositoryError(error);
+  const activeBufferId = useActiveBufferId();
   const activePRNumber = useBufferStore((state) => {
-    const activeBuffer = state.activeBufferId
-      ? state.buffers.find((buffer) => buffer.id === state.activeBufferId)
+    const activeBuffer = activeBufferId
+      ? state.buffers.find((buffer) => buffer.id === activeBufferId)
       : null;
     return activeBuffer?.type === "pullRequest" ? activeBuffer.prNumber : null;
   });
@@ -284,10 +295,6 @@ const GitHubPRsView = memo(() => {
   }, [rootFolderPath]);
 
   useEffect(() => {
-    setActiveRepoPath(activeRepoPath);
-  }, [activeRepoPath, setActiveRepoPath]);
-
-  useEffect(() => {
     if (rootFolderPath) {
       void syncWorkspaceRepositories(rootFolderPath);
     }
@@ -314,24 +321,6 @@ const GitHubPRsView = memo(() => {
   useEffect(() => {
     if (!isGitHubPRsViewActive || !effectiveRepoPath || !isAuthenticated) return;
 
-    let timeoutId: number | null = null;
-    const frameId = window.requestAnimationFrame(() => {
-      timeoutId = window.setTimeout(() => {
-        void fetchPRs(effectiveRepoPath);
-      }, 0);
-    });
-
-    return () => {
-      window.cancelAnimationFrame(frameId);
-      if (timeoutId !== null) {
-        window.clearTimeout(timeoutId);
-      }
-    };
-  }, [effectiveRepoPath, fetchPRs, isAuthenticated, isGitHubPRsViewActive, currentFilter]);
-
-  useEffect(() => {
-    if (!isGitHubPRsViewActive || !effectiveRepoPath || !isAuthenticated) return;
-
     let cancelled = false;
     const idleApi = window as Window & {
       requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
@@ -342,16 +331,13 @@ const GitHubPRsView = memo(() => {
       if (cancelled) return;
 
       if (showGitHubIssues) {
-        const issueCacheKey = `${effectiveRepoPath}::${issueFilter}`;
-        void githubIssueListCache
-          .load(issueCacheKey, () => commands.githubListIssues(effectiveRepoPath, issueFilter), {
-            ttlMs: GITHUB_ISSUE_LIST_TTL_MS,
-          })
+        void queryClient
+          .query(issueListQuery(effectiveRepoPath, issueFilter))
           .catch(() => undefined);
       }
 
       if (showGitHubActions) {
-        void useGitHubActionsStore.getState().actions.loadRuns(effectiveRepoPath, { quiet: true });
+        void queryClient.query(workflowRunsQuery(effectiveRepoPath)).catch(() => undefined);
       }
     };
 
@@ -377,42 +363,32 @@ const GitHubPRsView = memo(() => {
     isAuthenticated,
     isGitHubPRsViewActive,
     issueFilter,
+    queryClient,
     showGitHubActions,
     showGitHubIssues,
   ]);
 
+  const refetchPullRequests = pullRequestsQuery.refetch;
   const handleRefresh = useCallback(() => {
-    if (effectiveRepoPath) {
-      void fetchPRs(effectiveRepoPath, { force: true });
-    }
-  }, [effectiveRepoPath, fetchPRs]);
+    void refetchPullRequests();
+  }, [refetchPullRequests]);
 
   const handleRefreshActiveSection = useCallback(() => {
     if (!effectiveRepoPath) return;
 
-    if (activeSection === "issues") {
-      githubIssueListCache.clear(`${effectiveRepoPath}::${issueFilter}`);
-      setSectionRefreshNonce((value) => value + 1);
-      return;
-    }
-
-    if (
-      activeSection === "actions" ||
-      activeSection === "releases" ||
-      activeSection === "deployments"
-    ) {
-      setSectionRefreshNonce((value) => value + 1);
-      return;
-    }
-
-    void fetchPRs(effectiveRepoPath, { force: true });
-  }, [activeSection, effectiveRepoPath, fetchPRs, issueFilter]);
+    const queryKey =
+      activeSection === "issues"
+        ? githubKeys.issueList(effectiveRepoPath, issueFilter)
+        : activeSection === "actions"
+          ? githubKeys.workflowRuns(effectiveRepoPath)
+          : activeSection === "releases" || activeSection === "deployments"
+            ? deliveryKeys.list(activeSection, effectiveRepoPath)
+            : githubKeys.pullRequestList(effectiveRepoPath, currentFilter);
+    void queryClient.invalidateQueries({ queryKey });
+  }, [activeSection, currentFilter, effectiveRepoPath, issueFilter, queryClient]);
 
   useEffect(() => {
-    const handlePaletteAction = (event: Event) => {
-      if (!(event instanceof CustomEvent)) return;
-
-      const detail = event.detail as GitHubPaletteAction;
+    const handlePaletteAction = (detail: GitHubSidebarAction) => {
       if (!detail) return;
 
       if (detail.type === "show-section") {
@@ -425,16 +401,15 @@ const GitHubPRsView = memo(() => {
       }
     };
 
-    window.addEventListener("athas:github-palette-action", handlePaletteAction);
-    return () => window.removeEventListener("athas:github-palette-action", handlePaletteAction);
+    return onAppEvent("github:palette-action", handlePaletteAction);
   }, [handleRefreshActiveSection]);
 
   const handleSelectRepository = useCallback(async () => {
     setIsSelectingRepo(true);
     setRepoSelectionError(null);
     try {
-      const selected = await open({ directory: true, multiple: false });
-      if (!selected || Array.isArray(selected)) return;
+      const selected = await pickDirectory();
+      if (!selected) return;
 
       const resolvedRepoPath = await resolveRepositoryPath(selected);
       if (!resolvedRepoPath) {
@@ -504,9 +479,11 @@ const GitHubPRsView = memo(() => {
   const handlePrefetchPR = useCallback(
     (pr: PullRequest) => {
       if (!effectiveRepoPath) return;
-      void prefetchPR(effectiveRepoPath, pr.number);
+      void queryClient
+        .query(pullRequestDetailsQuery(effectiveRepoPath, pr.number))
+        .catch(() => undefined);
     },
-    [effectiveRepoPath, prefetchPR],
+    [effectiveRepoPath, queryClient],
   );
 
   const handlePRContextMenu = useCallback(
@@ -543,7 +520,7 @@ const GitHubPRsView = memo(() => {
           icon: <GithubMark />,
           onClick: () => {
             if (effectiveRepoPath) {
-              void openPRInBrowser(effectiveRepoPath, selectedPR.number);
+              void openPullRequestInBrowser(effectiveRepoPath, selectedPR.number);
             }
           },
         },
@@ -553,7 +530,9 @@ const GitHubPRsView = memo(() => {
           icon: <GitBranchIcon />,
           onClick: () => {
             if (effectiveRepoPath) {
-              void checkoutPR(effectiveRepoPath, selectedPR.number);
+              void checkoutPullRequest(effectiveRepoPath, selectedPR.number).catch((error) =>
+                console.error("Failed to checkout PR:", error),
+              );
             }
           },
         },
@@ -686,7 +665,9 @@ const GitHubPRsView = memo(() => {
     const prefetchVisiblePRs = () => {
       if (cancelled) return;
       filteredPrs.slice(0, 4).forEach((pr) => {
-        void prefetchPR(effectiveRepoPath, pr.number);
+        void queryClient
+          .query(pullRequestDetailsQuery(effectiveRepoPath, pr.number))
+          .catch(() => undefined);
       });
     };
     const usesIdleCallback = typeof idleApi.requestIdleCallback === "function";
@@ -702,7 +683,7 @@ const GitHubPRsView = memo(() => {
         window.clearTimeout(idleId);
       }
     };
-  }, [activeSection, effectiveRepoPath, filteredPrs, isGitHubPRsViewActive, prefetchPR]);
+  }, [activeSection, effectiveRepoPath, filteredPrs, isGitHubPRsViewActive, queryClient]);
 
   const sectionLabels: Record<GitHubSidebarSection, string> = {
     "pull-requests": "Pull Requests",
@@ -730,7 +711,10 @@ const GitHubPRsView = memo(() => {
       id: path,
       label: path.split("/").filter(Boolean).pop() ?? path,
       checked: path === effectiveRepoPath,
-      onClick: () => selectRepository(path),
+      onClick: () => {
+        setRepoSelectionError(null);
+        selectRepository(path);
+      },
     })),
     ...(availableRepoPaths.length > 0 ? [{ id: "sep", separator: true as const }] : []),
     {
@@ -931,18 +915,13 @@ const GitHubPRsView = memo(() => {
                 )}
               </StreamScroll>
             ) : activeSection === "issues" ? (
-              <GitHubIssuesView
-                refreshNonce={sectionRefreshNonce}
-                searchQuery={searchQuery}
-                filter={issueFilter}
-              />
+              <GitHubIssuesView searchQuery={searchQuery} filter={issueFilter} />
             ) : activeSection === "releases" || activeSection === "deployments" ? (
               effectiveRepoPath ? (
                 <GitHubDeliveryList
                   key={`${effectiveRepoPath}:${activeSection}`}
                   kind={activeSection}
                   repoPath={effectiveRepoPath}
-                  refreshNonce={sectionRefreshNonce}
                   searchQuery={searchQuery}
                   filter={activeSection === "releases" ? releaseFilter : deploymentFilter}
                 />
@@ -950,11 +929,7 @@ const GitHubPRsView = memo(() => {
                 <StreamEmpty title="No repository selected" />
               )
             ) : (
-              <GitHubActionsView
-                refreshNonce={sectionRefreshNonce}
-                searchQuery={searchQuery}
-                filter={actionFilter}
-              />
+              <GitHubActionsView searchQuery={searchQuery} filter={actionFilter} />
             )}
           </div>
         </>

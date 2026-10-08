@@ -1,5 +1,7 @@
 import type { ChangeSet, Text } from "@codemirror/state";
 import type { ModelContentChangeEvent } from "../../services/document-change-batch";
+import type { TextSlice } from "../../utils/editor-text-changes";
+import { fromBufferOffset } from "./position";
 
 export type LineSeparator = "\n" | "\r\n";
 
@@ -12,6 +14,22 @@ export function detectLineSeparator(content: string): LineSeparator {
 /** The document as the buffer holds it, with the file's own line separator. */
 export function toBufferText(doc: Text, separator: LineSeparator) {
   return doc.sliceString(0, doc.length, separator);
+}
+
+/**
+ * The document read by offsets in the buffer's text, without copying it into a string. Offsets
+ * count each CRLF as two characters, like the buffer.
+ */
+export function toBufferTextSlice(doc: Text, separator: LineSeparator): TextSlice {
+  return {
+    length: doc.length + (doc.lines - 1) * (separator.length - 1),
+    slice: (start, end) =>
+      doc.sliceString(
+        fromBufferOffset(doc, start, separator),
+        fromBufferOffset(doc, end, separator),
+        separator,
+      ),
+  };
 }
 
 /**

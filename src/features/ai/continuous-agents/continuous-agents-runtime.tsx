@@ -1,30 +1,37 @@
-import { commands } from "@/bindings/commands";
 import { useCallback, useEffect, useRef } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { toast } from "sonner";
+import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
 import { CodexIntegrationService } from "@/features/ai/integrations/codex/codex-integration-service";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { AgentConfig } from "@/features/ai/types/acp.types";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import {
   buildContinuousAgentPrompt,
   checkContinuousAgentReadiness,
   runNextDueContinuousAgent,
 } from "./continuous-agent-runner";
-import { selectNextDueContinuousAgent, useContinuousAgentsStore } from "./continuous-agents.store";
+import {
+  CONTINUOUS_AGENTS_STORAGE_KEY,
+  selectNextDueContinuousAgent,
+  syncContinuousAgentsFromStorage,
+  useContinuousAgentsStore,
+} from "./continuous-agents.store";
 
 const CONTINUOUS_AGENT_CHECK_INTERVAL_MS = 30_000;
 const CONTINUOUS_AGENT_SCHEDULER_LOCK = "athas-continuous-agent-scheduler";
 
 export function ContinuousAgentsRuntime() {
   const workspacePath = useProjectStore((state) => state.rootFolderPath ?? null);
-  // Only what decides when a run is due. Each check rehydrates the store, which replaces the task
-  // array even when nothing changed; depending on the array itself re-ran the check every 100 ms.
-  const scheduleSignature = useContinuousAgentsStore((state) =>
-    state.tasks
-      .filter((task) => task.enabled && task.workspacePath === workspacePath)
-      .map((task) => `${task.id}:${task.nextRunAt}`)
-      .join("|"),
+  // Only what decides when a run is due. Syncing from another window replaces the task array even
+  // when nothing changed; depending on the array itself re-ran the check every 100 ms.
+  const schedule = useContinuousAgentsStore(
+    useShallow((state) =>
+      state.tasks
+        .filter((task) => task.enabled && task.workspacePath === workspacePath)
+        .flatMap((task) => [task.id, task.nextRunAt]),
+    ),
   );
   const runningRef = useRef(false);
 
@@ -33,7 +40,7 @@ export function ContinuousAgentsRuntime() {
     runningRef.current = true;
     try {
       const run = async () => {
-        await useContinuousAgentsStore.persist.rehydrate();
+        await syncContinuousAgentsFromStorage();
         return runNextDueContinuousAgent({
           getWorkspacePath: () => useProjectStore.getState().rootFolderPath ?? null,
           isAgentBusy: () => {
@@ -50,7 +57,7 @@ export function ContinuousAgentsRuntime() {
             ),
           checkReadiness: (task) =>
             checkContinuousAgentReadiness(task, {
-              loadAcpAgents: () => commands.getAvailableAgents() as Promise<AgentConfig[]>,
+              loadAcpAgents: () => AcpStreamHandler.getAvailableAgents() as Promise<AgentConfig[]>,
               loadCodexStatus: () => CodexIntegrationService.status(),
             }),
           claimTask: (currentWorkspacePath, now, taskId) =>
@@ -111,10 +118,20 @@ export function ContinuousAgentsRuntime() {
   }, []);
 
   useEffect(() => {
-    if (!scheduleSignature) return;
+    if (schedule.length === 0) return;
     const timeout = window.setTimeout(() => void runNextDueTask(), 100);
     return () => window.clearTimeout(timeout);
-  }, [runNextDueTask, scheduleSignature]);
+  }, [runNextDueTask, schedule]);
+
+  useEffect(() => {
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === null || event.key === CONTINUOUS_AGENTS_STORAGE_KEY) {
+        void syncContinuousAgentsFromStorage();
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
 
   useEffect(() => {
     const interval = window.setInterval(

@@ -1,8 +1,9 @@
 import type { Window as TauriWindow } from "@tauri-apps/api/window";
 import { ArrowsInIcon, ArrowsOutIcon, MinusIcon, XIcon } from "@/ui/icons";
-import { requestWindowClose } from "@/features/window/utils/request-window-close";
+import { requestWindowClose } from "@/features/window/services/request-window-close";
 import { Button } from "@/ui/button";
 import { ChromeGroup } from "@/ui/chrome";
+import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 
 interface WindowControlsProps {
   currentWindow: TauriWindow | null;
@@ -15,6 +16,9 @@ export function WindowControls({
   isMaximized,
   onMaximizedChange,
 }: WindowControlsProps) {
+  const minimizeShortcut = useCommandShortcut("window.minimize.alt");
+  const maximizeShortcut = useCommandShortcut("window.maximize");
+  const closeWindowShortcut = useCommandShortcut("workbench.closeWindow");
   const handleMinimize = async () => {
     try {
       await currentWindow?.minimize();
@@ -48,7 +52,7 @@ export function WindowControls({
           iconOnly
           size="sm"
           tooltip="Minimize"
-          commandId="window.minimize.alt"
+          shortcut={minimizeShortcut}
           aria-label="Minimize"
         >
           <MinusIcon optical="md" />
@@ -61,7 +65,7 @@ export function WindowControls({
           iconOnly
           size="sm"
           tooltip={isMaximized ? "Restore" : "Maximize"}
-          commandId="window.maximize"
+          shortcut={maximizeShortcut}
           aria-label={isMaximized ? "Restore" : "Maximize"}
         >
           {isMaximized ? <ArrowsInIcon /> : <ArrowsOutIcon />}
@@ -75,7 +79,7 @@ export function WindowControls({
           iconOnly
           size="sm"
           tooltip="Close"
-          commandId="workbench.closeWindow"
+          shortcut={closeWindowShortcut}
           aria-label="Close"
         >
           <XIcon optical="md" />

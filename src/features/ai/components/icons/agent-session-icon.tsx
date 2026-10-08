@@ -1,5 +1,5 @@
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
-import { resolveAgentSessionIconId } from "@/features/ai/lib/agent-session-icon";
+import { resolveAgentSessionIconId } from "@/features/ai/services/agent-session-icon";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { Chat } from "@/features/ai/types/ai-chat.types";
 

@@ -2,13 +2,15 @@ import { useCallback } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import { useJumpListStore } from "@/features/editor/stores/jump-list.store";
-import { getBufferById } from "@/features/editor/utils/buffer-index";
-import { navigateToJumpEntry } from "@/features/editor/utils/jump-navigation";
+import { navigateToJumpEntry } from "@/features/editor/services/jump-navigation";
 import { Button } from "@/ui/button";
 import { ArrowLeftIcon, ArrowRightIcon } from "@/ui/icons";
+import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 
 /** Back and forward through the jump list, leading the tab bar. */
 export function TabHistoryNavigation() {
+  const goBackShortcut = useCommandShortcut("navigation.goBack");
+  const goForwardShortcut = useCommandShortcut("navigation.goForward");
   const entries = useJumpListStore.use.entries();
   const currentIndex = useJumpListStore.use.currentIndex();
   const { goBack, goForward } = useJumpListStore.use.actions();
@@ -16,10 +18,9 @@ export function TabHistoryNavigation() {
   const canGoForward = currentIndex >= 0 && currentIndex < entries.length - 1;
 
   const handleGoBack = useCallback(async () => {
-    const bufferStore = useBufferStore.getState();
     const editorState = useEditorStateStore.getState();
-    const activeBufferId = bufferStore.activeBufferId;
-    const activeBuffer = getBufferById(bufferStore.buffers, activeBufferId);
+    const activeBuffer = useBufferStore.getState().actions.getActiveBuffer();
+    const activeBufferId = activeBuffer?.id ?? null;
     const currentPosition =
       activeBufferId && activeBuffer?.path
         ? {
@@ -28,8 +29,7 @@ export function TabHistoryNavigation() {
             line: editorState.cursorPosition.line,
             column: editorState.cursorPosition.column,
             offset: editorState.cursorPosition.offset,
-            scrollTop: editorState.scrollTop,
-            scrollLeft: editorState.scrollLeft,
+            ...editorState.actions.getScroll(),
           }
         : undefined;
     const entry = goBack(currentPosition);
@@ -49,7 +49,7 @@ export function TabHistoryNavigation() {
         disabled={!canGoBack}
         variant="ghost"
         tooltip="Go Back"
-        commandId="navigation.goBack"
+        shortcut={goBackShortcut}
         aria-label="Go back to previous location"
         iconOnly
         size="sm"
@@ -62,7 +62,7 @@ export function TabHistoryNavigation() {
         disabled={!canGoForward}
         variant="ghost"
         tooltip="Go Forward"
-        commandId="navigation.goForward"
+        shortcut={goForwardShortcut}
         aria-label="Go forward to next location"
         iconOnly
         size="sm"

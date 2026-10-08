@@ -68,7 +68,7 @@ vi.mock("../intelligence/services/intelligence-sdk-model", () => ({
   getIntelligenceSdkModel: async () => mocks.model,
 }));
 vi.mock("@tauri-apps/api/core", () => ({ invoke: mocks.invoke }));
-vi.mock("@/features/workspace/runtime/workspace-runtime-registry", () => ({
+vi.mock("@/features/workspace/services/workspace-runtime-registry", () => ({
   workspaceRuntimeRegistry: {
     getExistingStores: () =>
       mocks.backgroundDirty
@@ -89,7 +89,7 @@ vi.mock("@/features/editor/stores/buffer.store", () => ({
     }),
   },
 }));
-vi.mock("@/features/window/stores/auth.store", () => ({
+vi.mock("@/features/auth/stores/auth.store", () => ({
   useAuthStore: { subscribe: () => () => {} },
 }));
 vi.mock("../intelligence/stores/intelligence-settings.store", () => ({

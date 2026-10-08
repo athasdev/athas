@@ -9,14 +9,14 @@ import { useGitBlameStore } from "@/features/git/stores/git-blame.store";
 import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
 import { useGitStore } from "@/features/git/stores/git.store";
 import type { GitCommit, GitFile } from "@/features/git/types/git.types";
-import { openCommitDiffBuffer } from "@/features/git/utils/open-commit-diff-buffer";
-import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import { showToast } from "@/features/layout/contexts/toast-context";
-import { openSidebarResourceBuffer } from "@/features/sidebar/utils/open-sidebar-resource";
+import { openCommitDiffBuffer } from "@/features/git/services/open-commit-diff-buffer";
+import { showToast } from "@/utils/toast";
+import { openSidebarResourceBuffer } from "@/features/sidebar/services/open-sidebar-resource";
 import { CommandEmpty, CommandItemBadge } from "@/ui/command";
 import { CheckIcon, GitBranchIcon, GitCommitIcon } from "@/ui/icons";
 import { getBaseName, getDirName } from "@/utils/path-helpers";
 import { matchesSearchQuery } from "@/utils/search-match";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import type {
   QuickOpenItem,
   QuickOpenSectionInput,
@@ -80,7 +80,7 @@ export function useGitSection({
   close,
 }: QuickOpenSectionInput): QuickOpenSectionResult {
   const activeRepoPath = useRepositoryStore.use.activeRepoPath();
-  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const repoPath = activeRepoPath ?? rootFolderPath ?? null;
   // The workspace status is kept current for the title bar, so changes there show live.
   const workspaceGitStatus = useGitStore((state) => state.workspaceGitStatus);

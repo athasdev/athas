@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import { isAcpAgent } from "@/features/ai/services/ai-chat-service";
-import { getAgentCli, migrateLegacyAgentId } from "@/features/ai/lib/agent-clis";
+import { getAgentCli, migrateLegacyAgentId } from "@/features/ai/services/agent-clis";
 
 describe("agent terminal CLIs", () => {
   it("moves the former terminal-only agents to their ACP agents", () => {

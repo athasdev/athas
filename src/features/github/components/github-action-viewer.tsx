@@ -1,7 +1,4 @@
-import { commands } from "@/bindings/commands";
-import { save } from "@tauri-apps/plugin-dialog";
-import { writeTextFile } from "@tauri-apps/plugin-fs";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openExternalUrl } from "@/utils/external-url";
 import {
   ArrowClockwiseIcon,
   ArrowCounterClockwiseIcon,
@@ -11,10 +8,11 @@ import {
   StopIcon,
 } from "@/ui/icons";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { openCommitDiffBuffer } from "@/features/git/utils/open-commit-diff-buffer";
-import { ViewerErrorState, ViewerLoadingState } from "@/features/viewer/components/viewer-state";
+import { openCommitDiffBuffer } from "@/features/git/services/open-commit-diff-buffer";
+import { ViewerErrorState, ViewerLoadingState } from "@/ui/viewer-state";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import {
@@ -27,19 +25,24 @@ import { Progress } from "@/ui/progress";
 import { ResourceActionsMenu, ResourceSummary, ResourceWorkspace } from "@/ui/resource";
 import { Spinner } from "@/ui/spinner";
 import { cn } from "@/utils/cn";
+import { saveTextFileWithDialog } from "@/utils/file-dialogs";
+import { fetchWorkflowJobLogs, resolveNotificationWorkflowRun } from "../api/github-actions-api";
 import { useNow } from "../hooks/use-now";
-import { getWorkflowRunsEntry, useGitHubActionsStore } from "../stores/github-actions.store";
+import { useWorkflowRunActions } from "../hooks/use-workflow-run-actions";
+import { useGitHubActionsStore } from "../stores/github-actions.store";
 import type {
   GitHubActionNotificationTarget,
   WorkflowRunDetails,
   WorkflowRunJob,
+  WorkflowRunListItem,
 } from "../types/github.types";
-import { GITHUB_ACTION_DETAILS_TTL_MS, githubActionDetailsCache } from "../utils/github-data-cache";
+import { githubKeys, workflowRunDetailsQuery, workflowRunsQuery } from "../services/github-queries";
+import { getQueryErrorMessage } from "@/utils/query-client";
 import {
   getGitHubWorkflowRunsUrl,
   getRepositoryUrlFromEntityUrl,
 } from "../utils/github-link-utils";
-import { copyToClipboard, getTimeAgo } from "../utils/github-viewer-utils";
+import { copyToClipboard, getTimeAgo } from "../services/github-viewer-utils";
 import {
   filterWorkflowLog,
   findFirstProblemLine,
@@ -85,6 +88,13 @@ const ACTIVE_LOG_POLL_INTERVAL_MS = 15_000;
 
 const describeError = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
+function getRunDetailsPollInterval(details: WorkflowRunDetails | undefined) {
+  if (!details) return false;
+  return getWorkflowRunState(details.status, details.conclusion).isActive
+    ? ACTIVE_RUN_POLL_INTERVAL_MS
+    : false;
+}
+
 const areJobLogsAvailable = (job: WorkflowRunJob | null) => {
   if (!job) return false;
   const state = getWorkflowRunState(job.status, job.conclusion);
@@ -95,20 +105,41 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
   const { runId, notification, repoPath, bufferId } = props;
   const updateBuffer = useBufferStore.use.actions().updateBuffer;
   const buffer = useBufferStore((state) => state.buffers.find((item) => item.id === bufferId));
-  const { rerunRun, cancelRun } = useGitHubActionsStore.use.actions();
+  const { rerunRun, cancelRun } = useWorkflowRunActions();
   const pendingActions = useGitHubActionsStore.use.pendingActions();
+  const queryClient = useQueryClient();
   const [resolvedRunId, setResolvedRunId] = useState<number | null>(runId ?? null);
-  const listedRun = useGitHubActionsStore((state) =>
-    resolvedRunId === null
-      ? null
-      : (getWorkflowRunsEntry(state.entries, repoPath ?? null).runs.find(
-          (run) => run.databaseId === resolvedRunId,
-        ) ?? null),
+  const selectListedRun = useCallback(
+    (runs: WorkflowRunListItem[]) =>
+      resolvedRunId === null
+        ? null
+        : (runs.find((run) => run.databaseId === resolvedRunId) ?? null),
+    [resolvedRunId],
   );
-  const [details, setDetails] = useState<WorkflowRunDetails | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const listedRun =
+    useQuery({
+      ...workflowRunsQuery(repoPath ?? null),
+      enabled: false,
+      select: selectListedRun,
+    }).data ?? null;
+  const detailsQuery = useQuery({
+    ...workflowRunDetailsQuery(repoPath ?? null, resolvedRunId),
+    refetchInterval: (query) => getRunDetailsPollInterval(query.state.data),
+  });
+  const details = detailsQuery.data ?? null;
+  const [isResolving, setIsResolving] = useState(false);
+  const [resolveError, setResolveError] = useState<string | null>(null);
+  const isLoading = isResolving || (detailsQuery.isFetching && !details);
+  const isRefreshing = detailsQuery.isFetching && Boolean(details);
+  // Background refreshes keep showing the last run they loaded; only a run that never loaded
+  // shows its error.
+  const error =
+    resolveError ??
+    (resolvedRunId !== null && !repoPath
+      ? "No repository selected."
+      : details
+        ? null
+        : getQueryErrorMessage(detailsQuery.error));
   const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
   const [selectedStepIndex, setSelectedStepIndex] = useState<number | null>(null);
   const [jobLogs, setJobLogs] = useState<Record<number, JobLogState>>({});
@@ -146,17 +177,17 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
   const resolveNotification = useCallback(async () => {
     if (!notification || !repoPath) return;
 
-    setIsLoading(true);
-    setError(null);
+    setIsResolving(true);
+    setResolveError(null);
     try {
-      const run = await commands.githubResolveNotificationWorkflowRun(
+      const run = await resolveNotificationWorkflowRun(
         notification.repositoryFullName,
         notification.checkSuiteId,
         notification.title,
         notification.updatedAt,
       );
       if (!run) {
-        setError("Could not match this notification to a GitHub Actions run.");
+        setResolveError("Could not match this notification to a GitHub Actions run.");
         return;
       }
 
@@ -170,9 +201,9 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
         });
       }
     } catch (nextError) {
-      setError(describeError(nextError));
+      setResolveError(describeError(nextError));
     } finally {
-      setIsLoading(false);
+      setIsResolving(false);
     }
   }, [buffer, notification, repoPath, updateBuffer]);
 
@@ -181,71 +212,21 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
     void resolveNotification();
   }, [notification, resolveNotification, resolvedRunId]);
 
-  const fetchWorkflowRun = useCallback(
-    async (options: { force?: boolean; quiet?: boolean } = {}) => {
-      if (resolvedRunId === null) return;
-      if (!repoPath) {
-        setError("No repository selected.");
-        setIsLoading(false);
-        return;
-      }
-
-      const cacheKey = `${repoPath}::${resolvedRunId}`;
-      const cached = githubActionDetailsCache.getFreshValue(cacheKey, GITHUB_ACTION_DETAILS_TTL_MS);
-      if (cached && !options.force) {
-        setDetails(cached);
-        setError(null);
-        setIsLoading(false);
-        if (!getWorkflowRunState(cached.status, cached.conclusion).isActive) return;
-      }
-
-      const stale = githubActionDetailsCache.getSnapshot(cacheKey)?.value;
-      if (stale && !options.force) setDetails(stale);
-
-      if (options.quiet) setIsRefreshing(true);
-      else setIsLoading(true);
-      setError(null);
-
-      try {
-        const nextDetails = await githubActionDetailsCache.load(
-          cacheKey,
-          () => commands.githubGetWorkflowRunDetails(repoPath, resolvedRunId),
-          { force: true, ttlMs: GITHUB_ACTION_DETAILS_TTL_MS },
-        );
-        setDetails(nextDetails);
-        setError(null);
-      } catch (nextError) {
-        if (!options.quiet) setError(describeError(nextError));
-      } finally {
-        setIsLoading(false);
-        setIsRefreshing(false);
-      }
-    },
-    [repoPath, resolvedRunId],
-  );
-
-  useEffect(() => {
-    void fetchWorkflowRun();
-  }, [fetchWorkflowRun]);
-
-  useEffect(() => {
-    if (!runState.isActive || !details) return;
-    const intervalId = window.setInterval(() => {
-      if (document.visibilityState === "visible") {
-        void fetchWorkflowRun({ force: true, quiet: true });
-      }
-    }, ACTIVE_RUN_POLL_INTERVAL_MS);
-    return () => window.clearInterval(intervalId);
-  }, [details, fetchWorkflowRun, runState.isActive]);
+  const refreshWorkflowRun = useCallback(() => {
+    if (!repoPath || resolvedRunId === null) return;
+    void queryClient.invalidateQueries({
+      queryKey: githubKeys.workflowRun(repoPath, resolvedRunId),
+    });
+  }, [queryClient, repoPath, resolvedRunId]);
 
   useEffect(() => {
     if (!details || !listedRun) return;
     const listedState = getWorkflowRunState(listedRun.status, listedRun.conclusion);
     const detailState = getWorkflowRunState(details.status, details.conclusion);
     if (listedState.phase !== detailState.phase || listedRun.runAttempt !== details.runAttempt) {
-      void fetchWorkflowRun({ force: true, quiet: true });
+      refreshWorkflowRun();
     }
-  }, [details, fetchWorkflowRun, listedRun]);
+  }, [details, listedRun, refreshWorkflowRun]);
 
   useEffect(() => {
     if (!details || !buffer || buffer.type !== "githubAction") return;
@@ -289,7 +270,7 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
       });
 
       try {
-        const raw = await commands.githubGetWorkflowJobLogs(repoPath, jobId);
+        const raw = await fetchWorkflowJobLogs(repoPath, jobId);
         setJobLogs((current) => ({
           ...current,
           [jobId]: { lines: parseWorkflowLog(raw), fetchedAt: Date.now() },
@@ -385,7 +366,7 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
       toast.error("Run link is not available.");
       return;
     }
-    void openUrl(details.url);
+    void openExternalUrl(details.url);
   }, [details?.url]);
 
   const handleCopyRunLink = useCallback(() => {
@@ -414,12 +395,14 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
       "_",
     );
     try {
-      const filePath = await save({
-        defaultPath: `run-${details?.runNumber ?? resolvedRunId ?? "log"}-${subjectName}.log`,
-        filters: [{ name: "Log", extensions: ["log", "txt"] }],
-      });
+      const filePath = await saveTextFileWithDialog(
+        {
+          defaultPath: `run-${details?.runNumber ?? resolvedRunId ?? "log"}-${subjectName}.log`,
+          filters: [{ name: "Log", extensions: ["log", "txt"] }],
+        },
+        () => formatWorkflowLogText(visibleLines, showTimestamps),
+      );
       if (!filePath) return;
-      await writeTextFile(filePath, formatWorkflowLogText(visibleLines, showTimestamps));
       toast.success("Log exported");
     } catch (exportError) {
       toast.error(describeError(exportError));
@@ -438,9 +421,9 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
       void resolveNotification();
       return;
     }
-    void fetchWorkflowRun({ force: true, quiet: Boolean(details) });
+    refreshWorkflowRun();
     if (selectedJobId !== null) void loadJobLogs(selectedJobId, true);
-  }, [details, fetchWorkflowRun, loadJobLogs, resolveNotification, resolvedRunId, selectedJobId]);
+  }, [loadJobLogs, refreshWorkflowRun, resolveNotification, resolvedRunId, selectedJobId]);
 
   const repositoryUrl = getRepositoryUrlFromEntityUrl(details?.url);
   const handleOpenCommit = useCallback(async () => {
@@ -455,7 +438,7 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
       });
       if (bufferId) return;
     }
-    if (repositoryUrl) void openUrl(`${repositoryUrl}/commit/${details.headSha}`);
+    if (repositoryUrl) void openExternalUrl(`${repositoryUrl}/commit/${details.headSha}`);
     else toast.error("Commit is not available.");
   }, [details, repoPath, repositoryUrl]);
 
@@ -734,7 +717,9 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
             onRefresh={() => selectedJobId !== null && void loadJobLogs(selectedJobId, true)}
             onCopy={handleCopyLogs}
             onExport={() => void handleExportLogs()}
-            onOpenOnGitHub={selectedJob?.url ? () => void openUrl(selectedJob.url ?? "") : null}
+            onOpenOnGitHub={
+              selectedJob?.url ? () => void openExternalUrl(selectedJob.url ?? "") : null
+            }
           />
         </div>
       ) : (

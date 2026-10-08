@@ -1,12 +1,11 @@
 import { commands } from "@/bindings/commands";
-import { writeFile } from "@/features/file-system/controllers/platform";
+import { writeFile } from "@/features/file-system/api/file-system-api";
 import { getWorkspaceResourceProvider } from "@/features/file-system/services/workspace-resource-provider";
-import { parseRemotePath } from "@/features/remote/utils/remote-path";
+import { parseRemotePath } from "@/features/remote/services/remote-path";
 import { joinPath } from "@/utils/path-helpers";
+import { emitAppEvent } from "@/utils/app-events";
 import type { TeamWorkspace } from "../types/team-workspace";
-import { parseTeamWorkspace, TEAM_WORKSPACE_FILE } from "../utils/team-workspace-config";
-
-export const TEAM_WORKSPACE_CHANGED_EVENT = "team-workspace-changed";
+import { parseTeamWorkspace, TEAM_WORKSPACE_FILE } from "./team-workspace-config";
 
 export async function readTeamWorkspaceContent(workspacePath: string): Promise<string | null> {
   const provider = getWorkspaceResourceProvider(workspacePath);
@@ -38,5 +37,5 @@ export async function saveTeamWorkspace(
   } else {
     await writeFile(path, content);
   }
-  window.dispatchEvent(new CustomEvent(TEAM_WORKSPACE_CHANGED_EVENT, { detail: workspacePath }));
+  emitAppEvent("team:workspace-changed", workspacePath);
 }

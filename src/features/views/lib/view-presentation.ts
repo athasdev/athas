@@ -11,7 +11,7 @@ export interface ViewDisplayRow {
   cells: ViewTable["rows"][number];
 }
 
-export interface ViewRowGroup {
+interface ViewRowGroup {
   key: string;
   label: string;
   rows: ViewDisplayRow[];

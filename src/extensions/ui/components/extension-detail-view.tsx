@@ -1,4 +1,4 @@
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openExternalUrl } from "@/utils/external-url";
 import type { ReactNode } from "react";
 import {
   ArrowClockwiseIcon,
@@ -21,7 +21,7 @@ import { WorkbenchContent } from "@/ui/workbench";
 import { GroupedSection } from "@/ui/grouped-section";
 import { Item, ItemActions, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@/ui/item";
 import MarkdownRenderer from "@/features/ai/components/messages/markdown-renderer";
-import { hasSkillLocalOverride } from "@/features/ai/lib/skill-library";
+import { hasSkillLocalOverride } from "@/features/ai/services/skill-library";
 import { AppearancePreviewGraphic } from "@/extensions/appearance/components/appearance-preview";
 import { ExtensionIcon } from "./extension-catalog-icon";
 import type {
@@ -79,7 +79,7 @@ export function ExtensionDetailView({
       {extension.sourceUrl ? (
         <Button
           variant="ghost"
-          onClick={() => extension.sourceUrl && void openUrl(extension.sourceUrl)}
+          onClick={() => extension.sourceUrl && void openExternalUrl(extension.sourceUrl)}
         >
           <OpenExternalIcon />
           Source

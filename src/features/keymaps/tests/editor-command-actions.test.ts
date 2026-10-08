@@ -1,15 +1,17 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import type { DiagnosticCodeAction } from "@/features/diagnostics/types/diagnostics.types";
-import { editorAPI, type ActiveEditorAdapter } from "@/features/editor/extensions/api";
+import { editorAPI, type ActiveEditorAdapter } from "@/features/editor/services/editor-api";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { seedActiveBuffer } from "@/features/panes/tests/helpers/seed-pane-tabs";
+import { onAppEvent } from "@/utils/app-events";
 import { useFoldStore } from "@/features/editor/stores/fold.store";
 import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import type { Range } from "@/features/editor/types/editor.types";
-import { calculateCursorPositionFromContent } from "@/features/editor/utils/position";
+import { calculateCursorPositionFromContent } from "@/features/editor/services/position";
 import type { EditorContent, PaneContent } from "@/features/panes/types/pane-content.types";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 import {
   copyActiveEditorLineDown,
   copyActiveEditorLineUp,
@@ -76,7 +78,7 @@ const mocks = vi.hoisted(() => {
   };
 });
 
-vi.mock("@/features/editor/utils/clipboard", () => ({
+vi.mock("@/features/editor/services/editor-clipboard", () => ({
   readEditorClipboardText: async () => mocks.clipboard.text,
   writeEditorClipboardText: async (text: string) => {
     mocks.clipboard.text = text;
@@ -87,13 +89,13 @@ vi.mock("sonner", () => ({ toast: mocks.toast }));
 
 vi.mock("@/ui/dialog", () => ({ showChoiceDialog: mocks.showChoiceDialog }));
 
-vi.mock("@/features/editor/formatter/formatter-service", () => ({
+vi.mock("@/features/editor/services/formatter-service", () => ({
   formatContent: mocks.formatContent,
   formatRange: mocks.formatRange,
   isFormattingAvailable: mocks.isFormattingAvailable,
 }));
 
-vi.mock("@/features/editor/lsp/lsp-client", () => ({
+vi.mock("@/features/editor/lsp/services/lsp-client", () => ({
   LspClient: {
     getInstance: () => ({
       getCodeActions: mocks.getCodeActions,
@@ -120,20 +122,14 @@ function makeEditorBuffer(content: string, overrides: Partial<EditorContent> = {
     savedContent: content,
     isDirty: false,
     isVirtual: false,
-    isPinned: false,
-    isPreview: false,
-    isActive: true,
     language: "typescript",
-    tokens: [],
     ...overrides,
   };
 }
 
 function openDocument(content: string, cursorOffset = 0, overrides: Partial<EditorContent> = {}) {
-  useBufferStore.setState({
-    activeBufferId: BUFFER_ID,
-    buffers: [makeEditorBuffer(content, overrides)],
-  });
+  useBufferStore.setState({ buffers: [makeEditorBuffer(content, overrides)] });
+  seedActiveBuffer(BUFFER_ID);
   useEditorStateStore.setState({
     cursorPosition: calculateCursorPositionFromContent(cursorOffset, content),
     selection: undefined,
@@ -142,7 +138,8 @@ function openDocument(content: string, cursorOffset = 0, overrides: Partial<Edit
 }
 
 function openBuffers(buffers: PaneContent[], activeBufferId: string | null) {
-  useBufferStore.setState({ activeBufferId, buffers });
+  useBufferStore.setState({ buffers });
+  seedActiveBuffer(activeBufferId);
 }
 
 function getDocument(): string {
@@ -180,16 +177,6 @@ function cursorSelections() {
           : [cursor.position.offset],
       ) ?? []
   );
-}
-
-function mountTextarea(value: string, selectionStart: number, selectionEnd: number) {
-  const textarea = document.createElement("textarea");
-  textarea.value = value;
-  document.body.appendChild(textarea);
-  textarea.selectionStart = selectionStart;
-  textarea.selectionEnd = selectionEnd;
-  editorAPI.setTextareaRef(textarea);
-  return textarea;
 }
 
 function focusTextInput() {
@@ -234,7 +221,6 @@ beforeEach(async () => {
     configurable: true,
     value: execCommand,
   });
-  editorAPI.setTextareaRef(null);
   editorAPI.setActiveEditorAdapter(null);
   useEditorStateStore.setState({
     cursorPosition: { line: 0, column: 0, offset: 0 },
@@ -258,14 +244,13 @@ beforeEach(async () => {
 afterEach(() => {
   window.getSelection()?.removeAllRanges();
   document.body.innerHTML = "";
-  editorAPI.setTextareaRef(null);
   editorAPI.setActiveEditorAdapter(null);
   useBufferStore.setState({
-    activeBufferId: null,
     buffers: [],
     pendingClose: null,
     closedBuffersHistory: [],
   });
+  seedActiveBuffer(null);
   vi.clearAllMocks();
 });
 
@@ -333,9 +318,6 @@ describe("undo and redo", () => {
           type: "image",
           path: "/workspace/logo.png",
           name: "logo.png",
-          isPinned: false,
-          isPreview: false,
-          isActive: true,
         },
       ],
       "image-1",
@@ -372,15 +354,6 @@ describe("clipboard commands", () => {
 
     expect(mocks.clipboard.text).toBe("world");
     expect(getDocument()).toBe("hello world");
-  });
-
-  it("copies the textarea selection when the model has no selection", async () => {
-    openDocument("hello world", 0);
-    mountTextarea("hello world", 0, 5);
-
-    await copyActiveEditorSelection();
-
-    expect(mocks.clipboard.text).toBe("hello");
   });
 
   it("leaves the clipboard alone when nothing is selected", async () => {
@@ -445,7 +418,6 @@ describe("clipboard commands", () => {
 
   it("does not cut without a model selection", async () => {
     openDocument("keep", 0);
-    mountTextarea("keep", 0, 2);
 
     await cutActiveEditorSelection();
 
@@ -532,18 +504,6 @@ describe("occurrence selection", () => {
     expect(useEditorStateStore.getState().multiCursorState).toBeNull();
   });
 
-  it("syncs the textarea selection when it owns the document", () => {
-    openDocument("foo bar foo", 5);
-    const textarea = mountTextarea("foo bar foo", 5, 5);
-
-    selectNextEditorOccurrence();
-
-    expect(selectedOffsets()).toEqual({ start: 4, end: 7 });
-    expect(textarea.selectionStart).toBe(4);
-    expect(textarea.selectionEnd).toBe(7);
-    expect(document.activeElement).toBe(textarea);
-  });
-
   it("adds a cursor at the next occurrence of the selection", () => {
     openDocument("foo bar foo baz foo", 0);
     selectOffsets(0, 3);
@@ -561,19 +521,6 @@ describe("occurrence selection", () => {
       [0, 3],
       [8, 11],
       [16, 19],
-    ]);
-  });
-
-  it("uses the textarea selection when the model has none", () => {
-    openDocument("ab ab ab", 0);
-    mountTextarea("ab ab ab", 3, 5);
-
-    selectNextEditorOccurrence();
-
-    expect(selectedOffsets()).toEqual({ start: 3, end: 5 });
-    expect(cursorSelections()).toEqual([
-      [3, 5],
-      [6, 8],
     ]);
   });
 
@@ -601,7 +548,6 @@ describe("occurrence selection", () => {
 
   it("selects every occurrence of the word under the cursor", () => {
     openDocument("id = id + id", 6);
-    const textarea = mountTextarea("id = id + id", 6, 6);
 
     selectAllEditorOccurrences();
 
@@ -611,8 +557,6 @@ describe("occurrence selection", () => {
       [5, 7],
       [10, 12],
     ]);
-    expect(textarea.selectionStart).toBe(0);
-    expect(textarea.selectionEnd).toBe(2);
   });
 
   it("replaces existing cursors with the occurrences of the selection", () => {
@@ -755,17 +699,17 @@ describe("bracket and selection commands", () => {
 
 describe("editor events", () => {
   it.each([
-    ["editor-trigger-suggest", triggerActiveEditorSuggest],
-    ["editor-trigger-signature-help", triggerActiveEditorParameterHints],
-    ["editor-rename-symbol", triggerActiveEditorRenameSymbol],
-    ["editor-show-hover", showHoverForActiveEditor],
-  ])("broadcasts %s to the mounted editor", async (eventName, command) => {
+    ["editor:trigger-suggest", triggerActiveEditorSuggest],
+    ["editor:trigger-signature-help", triggerActiveEditorParameterHints],
+    ["editor:rename-symbol", triggerActiveEditorRenameSymbol],
+    ["editor:show-hover", showHoverForActiveEditor],
+  ] as const)("broadcasts %s to the mounted editor", async (eventName, command) => {
     const listener = vi.fn();
-    window.addEventListener(eventName, listener);
+    const stopListening = onAppEvent(eventName, listener);
 
     await command();
 
-    window.removeEventListener(eventName, listener);
+    stopListening();
     expect(listener).toHaveBeenCalledOnce();
   });
 });

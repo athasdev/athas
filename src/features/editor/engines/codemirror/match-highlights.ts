@@ -3,7 +3,7 @@ import { Decoration, type DecorationSet, EditorView } from "@codemirror/view";
 import type { LineSeparator } from "./document-change";
 import { fromBufferOffset } from "./position";
 
-export interface MatchHighlights {
+interface MatchHighlights {
   /** Ranges as offsets in the buffer's text. */
   matches: ReadonlyArray<{ start: number; end: number }>;
   current?: number;

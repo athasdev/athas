@@ -1,22 +1,18 @@
-import { commands } from "@/bindings/commands";
-import { readFile } from "@tauri-apps/plugin-fs";
+import { openFileInDefaultApp, readFileBytes } from "@/utils/local-files";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 
-import { openUrl } from "@tauri-apps/plugin-opener"; // Keep for external links
+import { openExternalUrl } from "@/utils/external-url";
 import { OpenExternalIcon } from "@/ui/icons";
 // Configure PDF.js worker
 import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { FilePathBreadcrumb } from "@/features/editor/components/toolbar/file-path-breadcrumb";
-import {
-  PaneContentHeader,
-  PaneContentStatusBar,
-} from "@/features/panes/components/pane-content-chrome";
+import { PaneContentHeader, PaneContentStatusBar } from "@/ui/pane-content-chrome";
 import { useResizeObserver } from "@/features/panes/hooks/use-resize-observer";
 import { ViewerLayout } from "@/features/viewer/components/viewer-layout";
-import { ViewerErrorState, ViewerLoadingState } from "@/features/viewer/components/viewer-state";
+import { ViewerErrorState, ViewerLoadingState } from "@/ui/viewer-state";
 import { ViewerZoomControls } from "@/features/viewer/components/viewer-zoom-controls";
 import { useViewerZoom } from "@/features/viewer/hooks/use-viewer-zoom";
 import { Button } from "@/ui/button";
@@ -64,7 +60,7 @@ export function PdfViewer({ filePath }: PdfViewerProps) {
       try {
         setFileData(null);
         setError(null);
-        const data = await readFile(filePath);
+        const data = await readFileBytes(filePath);
         if (cancelled) return;
         setFileData(data);
       } catch (err) {
@@ -145,7 +141,7 @@ export function PdfViewer({ filePath }: PdfViewerProps) {
           { title: "External Link", confirmLabel: "Open" },
         );
         if (confirmed) {
-          await openUrl(anchor.href);
+          await openExternalUrl(anchor.href);
         }
       }
     }
@@ -153,7 +149,7 @@ export function PdfViewer({ filePath }: PdfViewerProps) {
 
   const handleOpenExternal = async () => {
     try {
-      await commands.openFileExternal(filePath);
+      await openFileInDefaultApp(filePath);
     } catch (err) {
       console.error("Failed to open the PDF in the system viewer:", err);
     }

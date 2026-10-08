@@ -1,5 +1,5 @@
 import { ComposerNotice } from "./composer-notice";
-import { isComposingKeyboardEvent } from "@/features/keymaps/utils/is-composing-keyboard-event";
+import { isComposingKeyboardEvent } from "@/utils/keyboard/is-composing-keyboard-event";
 import { getProviderAccessFromMap } from "@/features/ai/stores/ai-chat/provider-actions";
 import {
   ArrowUpIcon,
@@ -26,18 +26,15 @@ import { getComposerTerminalCommand } from "@/features/ai/utils/composer-termina
 import { ChromeBar, ChromeGroup, ChromeLabel } from "@/ui/chrome";
 import { Kbd } from "@/ui/kbd";
 import { useAgentDraft } from "@/features/ai/hooks/use-agent-draft";
-import { shouldIgnoreSearchFile } from "@/features/file-search/utils/file-search-filtering";
-import {
-  AI_CHAT_INSERT_SKILL_EVENT,
-  type AIChatSkillInsertDetail,
-} from "@/features/ai/lib/skill-events";
+import { shouldIgnoreSearchFile } from "@/features/file-search/services/file-search-filtering";
+import type { AIChatSkillInsertDetail } from "@/features/ai/services/skill-events";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
-import { selectChatAcpSession } from "@/features/ai/lib/acp-session-state";
+import { selectChatAcpSession } from "@/features/ai/services/acp-session-state";
 import { useVoiceInput } from "@/features/ai/hooks/use-voice-input";
 import { useComposerFileDrop } from "@/features/ai/hooks/use-composer-file-drop";
 import { getImageMimeType } from "@/utils/image-file-types";
 import { parsePastedImages, restorePastedImages } from "@/features/ai/lib/image-attachments";
-import { useToast } from "@/features/layout/contexts/toast-context";
+import { useToast } from "@/utils/toast";
 import { isAcpAgent } from "@/features/ai/services/ai-chat-service";
 import { useFollowAgentInterrupt } from "./follow-agent-toggle";
 import {
@@ -55,20 +52,20 @@ import type {
   RestoredComposerPrompt,
 } from "@/features/ai/types/ai-chat.types";
 import type { FileEntry } from "@/features/file-system/types/app.types";
-import { openSidebarResourceBuffer } from "@/features/sidebar/utils/open-sidebar-resource";
+import { openSidebarResourceBuffer } from "@/features/sidebar/services/open-sidebar-resource";
 import {
   hasSidebarResourceDragData,
   readSidebarResourceDragData,
-  SIDEBAR_RESOURCE_DROP_ON_AI_EVENT,
   type SidebarDragResource,
-} from "@/features/sidebar/utils/sidebar-resource-drag";
+} from "@/features/sidebar/services/sidebar-resource-drag";
+import { onAppEvent } from "@/utils/app-events";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { ComposerAttachments } from "./composer-attachments";
 import Badge, { badgeVariants } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import { Composer, ComposerDropHint, ComposerEditable, ComposerToolbar } from "@/ui/composer";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { chatContentWidth } from "../chat/chat-content-width";
 import { ComposerAgentSelector } from "./composer-agent-selector";
 import { ChatPreferencesMenu } from "./chat-preferences-menu";
@@ -87,7 +84,7 @@ import type {
 import { clearChat, compactChat } from "@/features/ai/services/chat-compaction-service";
 import { openAgentEditsReview } from "@/features/ai/services/agent-edits-service";
 import { pickAgentEditsChatId } from "@/features/ai/stores/agent-edits.store";
-import { openNewAgentChat } from "@/features/ai/lib/open-new-agent-chat";
+import { openNewAgentChat } from "@/features/ai/services/open-new-agent-chat";
 import { AcpContextMeter } from "./acp-context-meter";
 import { ComposerContextMeter } from "./composer-context-meter";
 import { useComposerContextBudget } from "@/features/ai/hooks/use-composer-context-budget";
@@ -391,16 +388,11 @@ const AIChatInputBar = memo(function AIChatInputBar({
   );
 
   useEffect(() => {
-    const handleSidebarResourceDropOnAI = (event: Event) => {
+    return onAppEvent("sidebar:resource-drop-on-ai", ({ resource }) => {
       if (!isActiveSurface || surfaceId !== "activity-sidebar") return;
-      const resource = (event as CustomEvent<{ resource?: SidebarDragResource }>).detail?.resource;
       if (!resource) return;
       void addSidebarResourceToContext(resource);
-    };
-
-    window.addEventListener(SIDEBAR_RESOURCE_DROP_ON_AI_EVENT, handleSidebarResourceDropOnAI);
-    return () =>
-      window.removeEventListener(SIDEBAR_RESOURCE_DROP_ON_AI_EVENT, handleSidebarResourceDropOnAI);
+    });
   }, [addSidebarResourceToContext, isActiveSurface, surfaceId]);
 
   const handleContextDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
@@ -879,14 +871,12 @@ const AIChatInputBar = memo(function AIChatInputBar({
   );
 
   useEffect(() => {
-    const handleInsertSkill = (event: Event) => {
-      const detail = (event as CustomEvent<AIChatSkillInsertDetail>).detail;
-      if (!isActiveSurface || detail?.surfaceId !== surfaceId) return;
+    const handleInsertSkill = (detail: AIChatSkillInsertDetail) => {
+      if (!isActiveSurface || detail.surfaceId !== surfaceId) return;
       insertSkillAtCursor(detail.skill);
     };
 
-    window.addEventListener(AI_CHAT_INSERT_SKILL_EVENT, handleInsertSkill);
-    return () => window.removeEventListener(AI_CHAT_INSERT_SKILL_EVENT, handleInsertSkill);
+    return onAppEvent("ai:insert-skill", handleInsertSkill);
   }, [insertSkillAtCursor, isActiveSurface]);
 
   // Handle paste - strip HTML formatting, keep only plain text. Images are added to preview.

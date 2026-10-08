@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vite-plus/test";
-import { parseMarkdown } from "../markdown/parser";
+import { parseMarkdown } from "../markdown/services/parser";
+import { renderMarkdown } from "../markdown/render-markdown";
 
 vi.mock("dompurify", () => ({
   default: {
@@ -116,5 +117,26 @@ Body text`,
     expect(html).toContain(
       "<blockquote>\n<p>outer</p>\n<blockquote>\n<p>inner</p>\n</blockquote>\n</blockquote>",
     );
+  });
+
+  it("splits the document into balanced top-level blocks for the worker", () => {
+    expect(renderMarkdown("intro\n\n- a\n- b\n\n> outer\n> > inner\n\nafter")).toEqual({
+      blocks: [
+        ["<p>intro</p>"],
+        ["\n", "<ul>", "\n", "<li>a</li>", "\n", "<li>b</li>", "\n", "</ul>"],
+        [
+          "\n",
+          "<blockquote>\n",
+          {
+            blocks: [
+              ["<p>outer</p>"],
+              ["\n", "<blockquote>\n", { blocks: [["<p>inner</p>"]] }, "\n</blockquote>"],
+            ],
+          },
+          "\n</blockquote>",
+        ],
+        ["\n", "<p>after</p>"],
+      ],
+    });
   });
 });

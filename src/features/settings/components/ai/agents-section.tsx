@@ -1,5 +1,5 @@
 import { useAgentOptions } from "@/features/ai/hooks/use-agent-options";
-import type { AgentOption } from "@/features/ai/lib/agent-options";
+import type { AgentOption } from "@/features/ai/services/agent-options";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { ArrowClockwiseIcon } from "@/ui/icons";

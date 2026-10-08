@@ -1,10 +1,10 @@
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openExternalUrl } from "@/utils/external-url";
 import { useState } from "react";
 import { getServiceUrls } from "@/config/services";
 import { ProviderApiKeyCommand } from "@/features/ai/components/provider-api-key-command";
 import { useOnlineStatus } from "@/features/ai/hooks/use-online-status";
 import { resolveComposerNotice } from "@/features/ai/lib/composer-notice";
-import { getHostedUsageState } from "@/features/ai/lib/hosted-usage";
+import { getHostedUsageState } from "@/features/ai/services/hosted-usage";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type {
   ComposerNoticeAction,
@@ -12,10 +12,10 @@ import type {
   ComposerNoticeIcon,
 } from "@/features/ai/types/composer-notice.types";
 import { getProviderById } from "@/features/ai/types/providers.types";
-import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
-import { useSubscriptionRefresh } from "@/features/window/hooks/use-subscription-refresh";
-import { useAuthStore } from "@/features/window/stores/auth.store";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useDesktopSignIn } from "@/features/auth/hooks/use-desktop-sign-in";
+import { useSubscriptionRefresh } from "@/features/auth/hooks/use-subscription-refresh";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { Alert, AlertActions, AlertDescription, AlertTitle } from "@/ui/alert";
 import { Button } from "@/ui/button";
 import {
@@ -125,7 +125,7 @@ export function ComposerNotice({
         useUIState.getState().openSettings("ai");
         return;
       case "open-billing":
-        await openUrl(getServiceUrls().dashboardBillingUrl).catch((error: unknown) =>
+        await openExternalUrl(getServiceUrls().dashboardBillingUrl).catch((error: unknown) =>
           console.error("Failed to open billing:", error),
         );
         return;

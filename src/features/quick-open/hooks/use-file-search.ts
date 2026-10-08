@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { getOpenBufferSearchSnapshot } from "@/features/editor/utils/open-buffer-search-snapshot";
+import { getOpenBufferSearchSnapshot } from "@/features/editor/services/open-buffer-search-snapshot";
 import { useRecentFilesStore } from "@/features/file-system/stores/recent-files.store";
 import type { RecentFile } from "@/features/file-system/types/recent-files.types";
 import {
@@ -8,16 +8,17 @@ import {
   MAX_OPEN_BUFFERS_SHOWN,
   MAX_RECENT_FILES_NO_QUERY,
 } from "@/features/file-search/constants/file-search-limits";
-import type { FffSearchHit } from "@/features/file-search/lib/file-search-api";
+import type { FffSearchHit } from "@/features/file-search/api/file-search-api";
 import type { CategorizedFiles, FileItem } from "@/features/file-search/types/file-search.types";
 import {
   categorizeFileSearchHits,
   categorizeFuzzyFileSearch,
   indexRecentSearchFiles,
-} from "@/features/file-search/utils/categorize-file-search-results";
-import { insertSortedLimited } from "@/features/file-search/utils/sorted-search-results";
+} from "@/features/file-search/services/categorize-file-search-results";
+import { insertSortedLimited } from "@/features/file-search/services/sorted-search-results";
 import { filterQuickOpenRecentFiles } from "../utils/file-filtering";
-import { fuzzyScore } from "../utils/fuzzy-search";
+import { fuzzyScore } from "@/utils/fuzzy-search";
+import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 interface FileSearchOptions {
   hasLoadedFiles?: boolean;
@@ -39,8 +40,9 @@ export const useFileSearch = (
   fffHits: FffSearchHit[] | null = null,
   options: FileSearchOptions = {},
 ) => {
+  const activeBufferId = useActiveBufferId();
   const bufferSearchSnapshot = useBufferStore((state) =>
-    getOpenBufferSearchSnapshot(state.buffers, state.activeBufferId),
+    getOpenBufferSearchSnapshot(state.buffers, activeBufferId),
   );
   const getRecentFilesOrderedByFrecency = useRecentFilesStore(
     (state) => state.actions.getRecentFilesOrderedByFrecency,

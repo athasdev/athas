@@ -5,12 +5,12 @@ import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useFontStore } from "@/features/settings/stores/font.store";
 import { useTerminalProfilesStore } from "@/features/terminal/stores/profiles.store";
 import { useTerminalShellsStore } from "@/features/terminal/stores/shells.store";
-import { COMMON_TERMINAL_NERD_FONTS } from "@/features/terminal/utils/terminal-fonts";
+import { COMMON_TERMINAL_NERD_FONTS } from "@/features/terminal/constants/terminal-fonts";
 import {
   DEFAULT_SHELL_OPTION_VALUE,
   SYSTEM_DEFAULT_PROFILE_ID,
   getAllTerminalProfiles,
-} from "@/features/terminal/utils/terminal-profiles";
+} from "@/features/terminal/services/terminal-profiles";
 import { Button } from "@/ui/button";
 import { EmptyState } from "@/ui/empty";
 import { Field, FieldLabel } from "@/ui/field";

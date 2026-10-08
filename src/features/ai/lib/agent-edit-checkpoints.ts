@@ -6,9 +6,9 @@ import type {
 } from "@/features/ai/types/agent-checkpoints.types";
 
 /** At most this many turns are kept per chat; older ones are dropped first. */
-export const MAX_CHECKPOINTS_PER_CHAT = 50;
+const MAX_CHECKPOINTS_PER_CHAT = 50;
 /** At most this many characters of file snapshots are kept per chat. */
-export const MAX_CHECKPOINT_CHARS_PER_CHAT = 4_000_000;
+const MAX_CHECKPOINT_CHARS_PER_CHAT = 4_000_000;
 
 export const EMPTY_CHAT_CHECKPOINTS: ChatCheckpoints = { checkpoints: [], truncatedAt: null };
 

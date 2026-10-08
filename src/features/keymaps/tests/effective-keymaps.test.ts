@@ -4,7 +4,7 @@ import {
   getEffectiveKeybindingForCommand,
   getEffectiveKeybindings,
   getEffectiveShortcutsByCommand,
-} from "../utils/effective-keymaps";
+} from "../services/effective-keymaps";
 
 const registryKeybindings: Keybinding[] = [
   { key: "cmd+shift+p", command: "workbench.commandPalette", source: "default" },

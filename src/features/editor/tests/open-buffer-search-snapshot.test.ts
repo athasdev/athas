@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
-import { getOpenBufferSearchSnapshot } from "../utils/open-buffer-search-snapshot";
+import { getOpenBufferSearchSnapshot } from "../services/open-buffer-search-snapshot";
 
 const buffer = (id: string, overrides: Partial<PaneContent> = {}): PaneContent =>
   ({
@@ -8,14 +8,10 @@ const buffer = (id: string, overrides: Partial<PaneContent> = {}): PaneContent =
     type: "editor",
     path: `/workspace/${id}.ts`,
     name: `${id}.ts`,
-    isPinned: false,
-    isPreview: false,
-    isActive: false,
     content: "",
     savedContent: "",
     isDirty: false,
     isVirtual: false,
-    tokens: [],
     ...overrides,
   }) as PaneContent;
 

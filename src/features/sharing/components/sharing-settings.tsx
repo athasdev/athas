@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { useToast } from "@/features/layout/contexts/toast-context";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { useToast } from "@/utils/toast";
+import { openExternalUrl } from "@/utils/external-url";
 import { getServiceUrls } from "@/config/services";
 import { Alert, AlertDescription } from "@/ui/alert";
 import { Button } from "@/ui/button";
@@ -11,6 +11,7 @@ import { writeClipboardText } from "@/utils/clipboard";
 import { fetchShareOptions, revokeShare, setSessionSync, updateShare } from "../services/share-api";
 import { ShareAccessDialog } from "./share-access-dialog";
 import type { SharedItem, ShareOptions } from "../types/share.types";
+import { onAppEvent } from "@/utils/app-events";
 
 function sharingErrorMessage(reason: unknown, fallback: string) {
   return reason instanceof Error ? reason.message : fallback;
@@ -56,11 +57,12 @@ export function SharingSettings() {
         if (!cancelled) setError(sharingErrorMessage(reason, "Could not load sharing settings"));
       },
     );
-    const status = (event: Event) => setSyncError((event as CustomEvent).detail.error || "");
-    window.addEventListener("athas:sharing-status", status);
+    const unsubscribeStatus = onAppEvent("sharing:status", (status) =>
+      setSyncError(status.error || ""),
+    );
     return () => {
       cancelled = true;
-      window.removeEventListener("athas:sharing-status", status);
+      unsubscribeStatus();
     };
   }, [loadAttempt]);
   const copyLink = async (id: string) => {
@@ -97,7 +99,7 @@ export function SharingSettings() {
         <SettingRow label="Web Library">
           <Button
             variant="outline"
-            onClick={() => void openUrl(`${base}/dashboard/settings/sharing`)}
+            onClick={() => void openExternalUrl(`${base}/dashboard/settings/sharing`)}
           >
             Open on web
           </Button>
@@ -145,7 +147,10 @@ export function SharingSettings() {
                 <Button variant="outline" disabled={busy} onClick={() => setEditing(item)}>
                   Access
                 </Button>
-                <Button variant="outline" onClick={() => void openUrl(`${base}/s/${item.id}`)}>
+                <Button
+                  variant="outline"
+                  onClick={() => void openExternalUrl(`${base}/s/${item.id}`)}
+                >
                   Open
                 </Button>
                 <Button

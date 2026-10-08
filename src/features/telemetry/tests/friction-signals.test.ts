@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bucketFrictionDuration, createFrictionPayload } from "../lib/friction-signals";
+import { bucketFrictionDuration, createFrictionPayload } from "../services/friction-signals";
 
 describe("friction signals", () => {
   it("uses coarse duration buckets", () => {

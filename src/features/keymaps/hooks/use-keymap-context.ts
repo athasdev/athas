@@ -7,7 +7,7 @@ import { useEffect } from "react";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useVimStore } from "@/features/vim/stores/vim.store";
 import { useKeymapStore } from "../stores/keymaps.store";
-import { isEditorKeyboardTarget } from "../utils/editor-keyboard-target";
+import { isEditorKeyboardTarget } from "../services/editor-keyboard-target";
 
 export function useKeymapContext() {
   const { setContext, setContexts } = useKeymapStore.use.actions();

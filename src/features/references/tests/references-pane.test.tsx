@@ -7,7 +7,8 @@ import { useReferencesStore } from "../stores/references.store";
 
 const openFile = vi.hoisted(() => vi.fn());
 vi.mock("@/features/file-system/stores/file-system.store", () => ({
-  useFileSystemStore: { use: { handleFileSelect: () => openFile } },
+  useFileSystemStore: (select: (state: { handleFileSelect: typeof openFile }) => unknown) =>
+    select({ handleFileSelect: openFile }),
 }));
 vi.mock("@/features/keymaps/hooks/use-command-shortcut", () => ({
   useCommandShortcut: () => undefined,

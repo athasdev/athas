@@ -1,7 +1,9 @@
 import { useMemo } from "react";
 import { SearchMatchHighlight } from "@/components/search-match-highlight";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
+import { selectPaneBufferFlags } from "@/features/panes/stores/pane-selectors";
+import { usePaneStore } from "@/features/panes/stores/pane.store";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import { isDirtyContent, isVirtualContent } from "@/features/panes/types/pane-content.types";
 import { BufferTypeIcon } from "@/features/tabs/components/buffer-type-icon";
@@ -9,6 +11,7 @@ import { CommandEmpty, CommandItemBadge } from "@/ui/command";
 import { PinIcon } from "@/ui/icons";
 import { matchesSearchQuery, scoreSearchQuery } from "@/utils/search-match";
 import { getDirectoryPath } from "@/utils/path-helpers";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import type {
   QuickOpenItem,
   QuickOpenSectionInput,
@@ -42,8 +45,11 @@ export function useTabsSection({
   close,
 }: QuickOpenSectionInput): QuickOpenSectionResult {
   const buffers = useBufferStore((state) => (isActive ? state.buffers : null));
-  const activeBufferId = useBufferStore((state) => state.activeBufferId);
-  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+  const activeBufferId = useActiveBufferId();
+  const pinnedBufferIds = usePaneStore((state) =>
+    isActive ? selectPaneBufferFlags(state).pinnedBufferIds : null,
+  );
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
 
   const items = useMemo(() => {
     if (!buffers) return [];
@@ -76,7 +82,7 @@ export function useTabsSection({
           {isDirtyContent(buffer) ? (
             <span className="size-2 rounded-full bg-primary" aria-label="Unsaved changes" />
           ) : null}
-          {buffer.isPinned ? <PinIcon className="text-muted-foreground" /> : null}
+          {pinnedBufferIds?.has(buffer.id) ? <PinIcon className="text-muted-foreground" /> : null}
           {buffer.id === activeBufferId ? <CommandItemBadge>Active</CommandItemBadge> : null}
         </>
       ),
@@ -85,7 +91,7 @@ export function useTabsSection({
         useBufferStore.getState().actions.setActiveBuffer(buffer.id);
       },
     }));
-  }, [activeBufferId, buffers, close, query, rootFolderPath]);
+  }, [activeBufferId, buffers, close, pinnedBufferIds, query, rootFolderPath]);
 
   return {
     items,

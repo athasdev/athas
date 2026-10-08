@@ -2,7 +2,7 @@
  * Register default keybindings
  */
 
-import { keymapRegistry } from "../utils/registry";
+import { keymapRegistry } from "../services/keymap-registry";
 import { defaultKeymaps } from "./default-keymaps";
 
 export function registerDefaultKeymaps(): void {

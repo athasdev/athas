@@ -98,4 +98,25 @@ describe("native menu accelerators", () => {
       expect(isNativeMenuAccelerator(keyboardEvent(accelerator))).toBe(true);
     }
   });
+
+  it("leaves window shortcuts to the native window menu", () => {
+    const windowAccelerators: Array<Partial<KeyboardEvent>> = [
+      primaryModifierEvent({ code: "KeyM", key: "m" }),
+      { code: "F9", key: "F9", altKey: true },
+      { code: "F10", key: "F10", altKey: true },
+      { code: "F11", key: "F11" },
+    ];
+
+    for (const accelerator of windowAccelerators) {
+      expect(isNativeMenuAccelerator(keyboardEvent(accelerator))).toBe(true);
+    }
+  });
+
+  it("leaves the Open Project shortcut to the frontend keymap", () => {
+    expect(
+      isNativeMenuAccelerator(
+        keyboardEvent(primaryModifierEvent({ altKey: true, code: "KeyO", key: "o" })),
+      ),
+    ).toBe(false);
+  });
 });

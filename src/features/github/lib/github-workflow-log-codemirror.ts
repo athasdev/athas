@@ -26,7 +26,7 @@ import {
 const VIEWPORT_MARGIN_LINES = 60;
 const FILE_LINK_CLASS = "gha-log-file-link";
 
-export interface WorkflowLogViewState {
+interface WorkflowLogViewState {
   model: WorkflowLogModel;
   showTimestamps: boolean;
   highlightLine: number | null;
@@ -50,7 +50,7 @@ export function updateWorkflowLog(view: EditorView, state: WorkflowLogViewState)
   view.dispatch({ effects: setWorkflowLogState.of(state) });
 }
 
-export function getWorkflowLogState(state: EditorState): WorkflowLogViewState | null {
+function getWorkflowLogState(state: EditorState): WorkflowLogViewState | null {
   return state.field(workflowLogField, false) ?? null;
 }
 
@@ -94,7 +94,7 @@ function fileReferencesByLine(model: WorkflowLogModel, showTimestamps: boolean) 
   return byLine;
 }
 
-export function resolveWorkflowLogFilePath(root: string | null, path: string): string {
+function resolveWorkflowLogFilePath(root: string | null, path: string): string {
   if (/^([A-Za-z]:[\\/]|\/)/.test(path)) return path;
   const normalized = path.replace(/^\.\//, "");
   return root ? `${root.replace(/[\\/]+$/, "")}/${normalized}` : normalized;
@@ -106,7 +106,7 @@ const linkTitle = `${IS_MAC ? "Cmd" : "Ctrl"}+click to open in editor`;
  * Builds decorations for the lines around the viewport only, so a hundred-thousand-line log never
  * gets a hundred thousand decorations.
  */
-export function buildWorkflowLogDecorations(view: EditorView): DecorationSet {
+function buildWorkflowLogDecorations(view: EditorView): DecorationSet {
   const entry = getWorkflowLogState(view.state);
   const { doc } = view.state;
   if (!entry || view.visibleRanges.length === 0) return Decoration.none;

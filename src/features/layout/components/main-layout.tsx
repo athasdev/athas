@@ -4,35 +4,37 @@ import { useChatInitialization } from "@/features/ai/hooks/use-chat-initializati
 import { useCollaborationPresence } from "@/features/collaboration/hooks/use-collaboration-presence";
 import { initializeDebuggerEventBridge } from "@/features/debugger/services/debug-adapter-events";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { getSymlinkInfo } from "@/features/file-system/controllers/platform";
+import { getSymlinkInfo } from "@/features/file-system/api/file-system-api";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useFileSystemFolderDrop } from "@/features/file-system/hooks/use-file-system-folder-drop";
-import { openDroppedWorkspacePaths } from "@/features/file-system/utils/open-dropped-workspace-paths";
+import { openDroppedWorkspacePaths } from "@/features/file-system/services/open-dropped-workspace-paths";
 import { useGitStore } from "@/features/git/stores/git.store";
 import { isGitChangeRelevant, subscribeToGitChanges } from "@/features/git/events/git-events";
+import { createGitStatusRefreshScheduler } from "@/features/git/services/git-status-refresh-scheduler";
 import { useOnboardingStore } from "@/features/onboarding/stores/onboarding.store";
 import { CachedWorkspaceSplitViews } from "@/features/panes/components/split-view-root";
 import { usePaneKeyboard } from "@/features/panes/hooks/use-pane-keyboard";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useVimStore } from "@/features/vim/stores/vim.store";
-import { isWslPath } from "@/features/wsl/utils/wsl-path";
-import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
+import { isWslPath } from "@/features/wsl/services/wsl-path";
 import { useMenuEventsWrapper } from "@/features/window/hooks/use-menu-events-wrapper";
-import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useWorkspaceTabsStore } from "@/features/workspace/stores/workspace-tabs.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { toast } from "sonner";
 import { cn } from "@/utils/cn";
 import { frontendTrace } from "@/utils/frontend-trace";
-import { recordStartupMilestone } from "@/features/bootstrap/startup-performance";
-import { getInternalTabDragData } from "@/features/tabs/utils/internal-tab-drag";
+import { recordStartupMilestone } from "@/features/bootstrap/services/startup-performance";
+import { useBootstrapPhaseReached } from "@/features/bootstrap/stores/bootstrap-phase.store";
+import { getInternalTabDragData } from "@/features/tabs/services/internal-tab-drag";
 import { getCollapsedActivityBarWidth } from "@/features/layout/utils/activity-bar-layout";
-import { WorkbenchFullscreenRootContext } from "@/features/window/components/workbench-fullscreen-surface";
+import { WorkbenchFullscreenRootContext } from "@/ui/workbench-fullscreen-surface";
 import TitleBarWithSettings from "../../window/components/title-bar/title-bar";
 import { TitleLeading } from "../../window/components/title-bar/title-leading";
 import { ResizablePane } from "./resizable-pane";
 import { ActivityBar } from "./sidebar/activity-bar";
 import { SidebarPane } from "./sidebar/sidebar-pane";
 import { useResponsiveWorkbenchLayout } from "../hooks/use-responsive-workbench-layout";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 const CommandPalette = lazy(() => import("@/features/command-palette/components/command-palette"));
 const ConnectionDialog = lazy(() =>
@@ -105,11 +107,11 @@ export function MainLayout() {
   const vimRelativeLineNumbers = useSettingsStore((state) => state.settings.vimRelativeLineNumbers);
   const relativeLineNumbers = useVimStore.use.relativeLineNumbers();
   const { setRelativeLineNumbers } = useVimStore.use.actions();
-  const handleOpenFolderByPath = useFileSystemStore.use.handleOpenFolderByPath?.();
-  const handleFileOpen = useFileSystemStore.use.handleFileOpen?.();
-  const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
-  const switchToProject = useFileSystemStore.use.switchToProject?.();
-  const setIsSwitchingProject = useFileSystemStore.use.setIsSwitchingProject?.();
+  const handleOpenFolderByPath = useFileSystemStore((state) => state.handleOpenFolderByPath);
+  const handleFileOpen = useFileSystemStore((state) => state.handleFileOpen);
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
+  const switchToProject = useFileSystemStore((state) => state.switchToProject);
+  const setIsSwitchingProject = useFileSystemStore((state) => state.setIsSwitchingProject);
   const refreshWorkspaceGitStatus = useGitStore((state) => state.actions.refreshWorkspaceGitStatus);
   const setWorkspaceGitStatus = useGitStore((state) => state.actions.setWorkspaceGitStatus);
   const onboardingOpen = useOnboardingStore((state) => state.isOpen);
@@ -119,6 +121,7 @@ export function MainLayout() {
   );
   const openOnboardingBuffer = useBufferStore.use.actions().openOnboardingBuffer;
   const hasRestoredWorkspace = useRef(false);
+  const settingsReady = useBootstrapPhaseReached("settings-ready");
   const { isDraggingOver } = useFileSystemFolderDrop(async (paths) => {
     if (!paths || paths.length === 0) return;
 
@@ -141,9 +144,7 @@ export function MainLayout() {
     }
   }, !rootFolderPath);
 
-  const terminalWidthMode = useTerminalStore((state) => state.widthMode);
-  const isEditorBottomPaneVisible =
-    terminalWidthMode === "editor" && deferredSurfacesReady && isBottomPaneVisible;
+  const isEditorBottomPaneVisible = deferredSurfacesReady && isBottomPaneVisible;
   const roundMainContentLeftEdge = !renderedSidebarVisible;
   const roundMainContentRightEdge = !renderedRightSidebarVisible;
 
@@ -177,9 +178,9 @@ export function MainLayout() {
   // Initialize event listeners
   useMenuEventsWrapper();
 
-  // Restore workspace on app startup
+  // Restore workspace on app startup. Switching to a project reads settings such as the theme.
   useEffect(() => {
-    if (hasRestoredWorkspace.current) return;
+    if (!settingsReady || hasRestoredWorkspace.current) return;
 
     const resolveRestorableActiveTab = async () => {
       while (true) {
@@ -242,7 +243,7 @@ export function MainLayout() {
     };
 
     restoreWorkspace();
-  }, [switchToProject, setIsSwitchingProject]);
+  }, [settingsReady, switchToProject, setIsSwitchingProject]);
 
   useEffect(() => {
     if (!rootFolderPath) {
@@ -250,20 +251,17 @@ export function MainLayout() {
       return;
     }
 
-    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    const scheduler = createGitStatusRefreshScheduler(() => {
+      void refreshWorkspaceGitStatus(rootFolderPath);
+    });
 
     const unsubscribe = subscribeToGitChanges((change) => {
-      if (!isGitChangeRelevant(change, rootFolderPath)) return;
-
-      if (timeoutId) clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
-        void refreshWorkspaceGitStatus(rootFolderPath);
-      }, 300);
+      if (isGitChangeRelevant(change, rootFolderPath)) scheduler.schedule(change);
     });
 
     return () => {
       unsubscribe();
-      if (timeoutId) clearTimeout(timeoutId);
+      scheduler.dispose();
     };
   }, [rootFolderPath, refreshWorkspaceGitStatus, setWorkspaceGitStatus]);
 
@@ -323,10 +321,9 @@ export function MainLayout() {
               >
                 <CachedWorkspaceSplitViews />
               </div>
-              {terminalWidthMode === "editor" && deferredSurfacesReady && (
+              {deferredSurfacesReady && (
                 <Suspense fallback={null}>
                   <BottomPane
-                    embedded
                     roundLeftEdge={roundMainContentLeftEdge}
                     roundRightEdge={roundMainContentRightEdge}
                   />
@@ -349,14 +346,6 @@ export function MainLayout() {
               />
             </ResizablePane>
           </div>
-
-          {terminalWidthMode === "full" && deferredSurfacesReady && (
-            <div className="px-workbench">
-              <Suspense fallback={null}>
-                <BottomPane />
-              </Suspense>
-            </div>
-          )}
         </div>
 
         <TitleBarWithSettings showMinimal overlay />

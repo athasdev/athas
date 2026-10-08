@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it } from "vite-plus/test";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import ContinuousAgentsResource from "../continuous-agents/resource";
 import { useContinuousAgentsStore } from "../continuous-agents/continuous-agents.store";
 

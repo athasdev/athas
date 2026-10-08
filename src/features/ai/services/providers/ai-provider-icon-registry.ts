@@ -1,6 +1,6 @@
 import { createElement, useSyncExternalStore, type ComponentType, type SVGProps } from "react";
 
-export type AIProviderIconComponent = ComponentType<
+type AIProviderIconComponent = ComponentType<
   Pick<SVGProps<SVGSVGElement>, "className"> & { size?: number }
 >;
 
@@ -19,7 +19,7 @@ function subscribeToAIProviderIcons(listener: () => void): () => void {
   return () => listeners.delete(listener);
 }
 
-export function registerAIProviderIcon(params: {
+function registerAIProviderIcon(params: {
   extensionId: string;
   providerId: string;
   icon: AIProviderIconComponent;

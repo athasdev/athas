@@ -8,7 +8,7 @@ import {
 } from "@/bindings/commands";
 import { createSelectors } from "@/utils/zustand-selectors";
 
-export type { ClipboardEntry, FileClipboardState };
+export type { FileClipboardState };
 
 interface FileClipboardStore {
   clipboard: FileClipboardState | null;

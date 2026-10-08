@@ -1,4 +1,4 @@
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openExternalUrl } from "@/utils/external-url";
 import { memo, useState } from "react";
 import { Button } from "@/ui/button";
 import { Card } from "@/ui/card";
@@ -12,7 +12,7 @@ import {
 import { DotsIcon } from "@/ui/icons";
 import { Spinner } from "@/ui/spinner";
 import { writeClipboardText } from "@/utils/clipboard";
-import { getTimeAgo } from "../utils/github-viewer-utils";
+import { getTimeAgo } from "../services/github-viewer-utils";
 import { GitHubMetaChip, GitHubUserChip } from "./github-chips";
 import GitHubMarkdown from "./github-markdown";
 import { GitHubMarkdownEditor } from "./github-markdown-editor";
@@ -108,7 +108,7 @@ export const CommentItem = memo(
                 {canEdit ? <DropdownMenuItem onClick={startEditing}>Edit</DropdownMenuItem> : null}
                 {comment.url ? (
                   <>
-                    <DropdownMenuItem onClick={() => void openUrl(comment.url ?? "")}>
+                    <DropdownMenuItem onClick={() => void openExternalUrl(comment.url ?? "")}>
                       Open on GitHub
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => void writeClipboardText(comment.url ?? "")}>

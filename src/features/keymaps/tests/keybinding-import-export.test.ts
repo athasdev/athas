@@ -4,11 +4,11 @@ import {
   getExportableUserKeybindings,
   mergeImportedUserKeybindings,
   parseKeybindingsImportJson,
-} from "../utils/keybinding-import-export";
+} from "../services/keybinding-import-export";
 import {
   getEffectiveKeybindingForCommand,
   getEffectiveKeybindings,
-} from "../utils/effective-keymaps";
+} from "../services/effective-keymaps";
 
 vi.mock("@/utils/platform", () => import("./macos-platform-mock"));
 
@@ -141,6 +141,7 @@ describe("keybinding import/export", () => {
       ["workbench.action.findInFiles", "workbench.showGlobalSearch"],
       ["workbench.view.explorer", "workbench.showFileExplorer"],
       ["workbench.action.openSettings", "workbench.openSettings"],
+      ["workbench.action.openRecent", "file.open"],
     ];
     const imported = parseKeybindingsImportJson(
       JSON.stringify(

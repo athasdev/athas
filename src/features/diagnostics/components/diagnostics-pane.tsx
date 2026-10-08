@@ -8,7 +8,7 @@ import {
   WarningIcon,
 } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { LspClient } from "@/features/editor/lsp/lsp-client";
+import { LspClient } from "@/features/editor/lsp/services/lsp-client";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import {
   type MultibufferSection,
@@ -18,9 +18,9 @@ import {
   type FileNavigatorItem,
   type FileNavigatorViewMode,
 } from "@/features/file-explorer/components/file-navigator-sidebar";
-import { useToast } from "@/features/layout/contexts/toast-context";
+import { useToast } from "@/utils/toast";
 import { writeClipboardText } from "@/utils/clipboard";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/ui/accordion";
 import Badge from "@/ui/badge";
 import { ContextMenuPopup, createContextMenuGroups } from "@/ui/context-menu";
@@ -46,6 +46,7 @@ import { cn } from "@/utils/cn";
 import { getBaseName, getRelativePath, normalizePath } from "@/utils/path-helpers";
 import type { Diagnostic, DiagnosticCodeAction } from "../types/diagnostics.types";
 import { DiagnosticsToolbar } from "./diagnostics-toolbar";
+import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 interface DiagnosticsPaneProps {
   diagnostics: Diagnostic[];
@@ -202,9 +203,10 @@ const DiagnosticsPane = ({ diagnostics, onDiagnosticClick }: DiagnosticsPaneProp
   const diagnosticContextMenu = useDropdownMenu<Diagnostic>();
   const filterContextMenu = useDropdownMenu<FilterMenuType>();
 
+  const activeBufferId = useActiveBufferId();
   const activeFilePath = useBufferStore((state) => {
-    const activeBuffer = state.activeBufferId
-      ? state.buffers.find((buffer) => buffer.id === state.activeBufferId)
+    const activeBuffer = activeBufferId
+      ? state.buffers.find((buffer) => buffer.id === activeBufferId)
       : null;
     if (!activeBuffer) return null;
 

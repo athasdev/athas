@@ -1,0 +1,16 @@
+{
+  "privateImports": [],
+  "cycleEdges": [],
+  "upwardImports": {
+    "editor -> collaboration": 2,
+    "editor -> onboarding": 1,
+    "file-system -> ai": 1,
+    "git -> ai": 1,
+    "notifications -> github": 3,
+    "settings -> ai": 1,
+    "telemetry -> settings": 1,
+    "terminal -> ai": 1,
+    "window -> bootstrap": 1,
+    "workspace -> run-actions": 1
+  }
+}

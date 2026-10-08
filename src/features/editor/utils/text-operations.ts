@@ -1,4 +1,4 @@
-export interface TextOperationResult {
+interface TextOperationResult {
   content: string;
   selectionStart: number;
   selectionEnd: number;

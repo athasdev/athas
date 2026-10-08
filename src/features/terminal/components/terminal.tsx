@@ -1,36 +1,29 @@
 import { EmptyState } from "@/ui/empty";
-import { getFriendlyRemoteError } from "@/features/remote/utils/remote-errors";
+import { getFriendlyRemoteError } from "@/features/remote/services/remote-errors";
 import { launchTerminalSession } from "../services/terminal-session-launch";
 import {
   useActiveWorkspaceId,
   useWorkspaceStoreScopeId,
 } from "@/features/workspace/stores/create-workspace-scoped-store";
 import { withRemoteHostTrust } from "@/features/remote/services/remote-host-trust";
-import { commands } from "@/bindings/commands";
+import { spawnLocalTerminal, spawnRemoteTerminal } from "../services/terminal-pty-api";
 import type { ISearchOptions } from "@xterm/addon-search";
 import { Terminal } from "@xterm/xterm";
-import {
-  useCallback,
-  useEffect,
-  useImperativeHandle,
-  useRef,
-  useState,
-  type DragEvent,
-} from "react";
+import { useCallback, useEffect, useRef, useState, type DragEvent } from "react";
 import { connectionStore } from "@/features/remote/stores/remote-connection.store";
-import { parseRemotePath } from "@/features/remote/utils/remote-path";
-import { getWslShellId, parseWslPath } from "@/features/wsl/utils/wsl-path";
+import { parseRemotePath } from "@/features/remote/services/remote-path";
+import { getWslShellId, parseWslPath } from "@/features/wsl/services/wsl-path";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { useZoomStore } from "@/features/window/stores/zoom.store";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useZoomStore } from "@/features/layout/stores/zoom.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import { extractDroppedFilePaths } from "@/features/file-system/utils/file-system-dropped-paths";
+import { extractDroppedFilePaths } from "@/features/file-system/services/file-system-dropped-paths";
 import {
   TERMINAL_FILE_DROP_EVENT,
   type TerminalFileDropDetail,
-} from "@/features/file-system/utils/file-system-drop-controller";
+} from "@/features/file-system/services/file-system-drop-controller";
 import { showConfirmDialog } from "@/ui/dialog";
-import { showToast } from "@/features/layout/contexts/toast-context";
+import { showToast } from "@/utils/toast";
 import { readClipboardText, writeClipboardText } from "@/utils/clipboard";
 import { frontendTrace } from "@/utils/frontend-trace";
 import { currentPlatform } from "@/utils/platform";
@@ -46,6 +39,7 @@ import { TerminalLinkTooltip } from "../lib/terminal-link-tooltip";
 import { TerminalShellIntegration } from "../lib/terminal-shell-integration";
 import { useTerminalTheme, type TerminalTheme } from "../hooks/use-terminal-theme";
 import { useTerminalStore } from "../stores/terminal.store";
+import { registerTerminalEmulator } from "../services/terminal-emulator-registry";
 import type {
   TerminalCommandNavigationDirection,
   TerminalCommandSummary,
@@ -53,11 +47,12 @@ import type {
 } from "../types/terminal.types";
 import { formatDroppedPathsForTerminal, getTerminalQuoteStyle } from "../utils/terminal-file-drop";
 import { resolveTerminalFont } from "../utils/resolve-font";
-import { getTerminalKeyAction } from "../utils/terminal-keyboard";
+import { getTerminalKeyAction } from "../services/terminal-keyboard";
 import { getTerminalCompatibilityOptions } from "../utils/terminal-options";
-import { getTerminalSize } from "../utils/terminal-protocol";
-import { getFrontendTerminalSessionArgs } from "../utils/frontend-terminal-session";
+import { getTerminalSize } from "../services/terminal-protocol";
+import { getFrontendTerminalSessionArgs } from "../services/frontend-terminal-session";
 import { TerminalSearch, type TerminalSearchOptions } from "./terminal-search";
+import { emitAppEvent, onAppEvent } from "@/utils/app-events";
 import "@xterm/xterm/css/xterm.css";
 import "../styles/terminal.css";
 import { getRequiredAthasDefaultColor } from "@/extensions/themes/default-theme";
@@ -114,9 +109,8 @@ export const TerminalEmulator = ({
 
   const updateSession = useTerminalStore((state) => state.actions.updateSession);
   const getSession = useTerminalStore((state) => state.actions.getSession);
-  const session = useTerminalStore((state) => state.sessions.get(sessionId));
-  const connectionId = session?.connectionId;
-  const hadExistingConnectionOnMountRef = useRef(Boolean(session?.connectionId));
+  const connectionId = useTerminalStore((state) => state.sessions.get(sessionId)?.connectionId);
+  const hadExistingConnectionOnMountRef = useRef(Boolean(connectionId));
   const terminalInputCleanupRef = useRef<() => void>(() => {});
 
   const terminalThemeId = useSettingsStore((state) => state.settings.theme);
@@ -153,11 +147,15 @@ export const TerminalEmulator = ({
   const effectiveTerminalFontSize = Math.round(terminalFontSize * zoomLevel * 10) / 10;
   const effectiveTerminalLetterSpacing = terminalLetterSpacing * zoomLevel;
   const effectiveTerminalCursorWidth = Math.max(1, Math.round(terminalCursorWidth * zoomLevel));
-  const effectiveRemoteConnectionId =
-    remoteConnectionId ??
-    session?.remoteConnectionId ??
-    parseRemotePath(workingDirectory || session?.currentDirectory || rootFolderPath || "")
-      ?.connectionId;
+  const effectiveRemoteConnectionId = useTerminalStore((state) => {
+    if (remoteConnectionId != null) return remoteConnectionId;
+    const session = state.sessions.get(sessionId);
+    return (
+      session?.remoteConnectionId ??
+      parseRemotePath(workingDirectory || session?.currentDirectory || rootFolderPath || "")
+        ?.connectionId
+    );
+  });
   const terminalIsRemote = Boolean(effectiveRemoteConnectionId);
 
   useEffect(() => {
@@ -418,11 +416,7 @@ export const TerminalEmulator = ({
         const action = getTerminalKeyAction(event, currentPlatform);
         if (action.type === "switchTab") {
           event.preventDefault();
-          window.dispatchEvent(
-            new CustomEvent("terminal-switch-tab", {
-              detail: action.direction,
-            }),
-          );
+          emitAppEvent("terminal:switch-tab", action.direction);
           return false;
         }
 
@@ -499,11 +493,10 @@ export const TerminalEmulator = ({
                 durationMs: command.finishedAt - command.startedAt,
                 finishedAt: command.finishedAt,
               };
-              window.dispatchEvent(
-                new CustomEvent("terminal-command-finished", {
-                  detail: { terminalId: sessionId, command: summary },
-                }),
-              );
+              emitAppEvent("terminal:command-finished", {
+                terminalId: sessionId,
+                command: summary,
+              });
             },
           })
         : null;
@@ -541,7 +534,7 @@ export const TerminalEmulator = ({
         activeRemoteConnectionId = activeRemoteConnectionId || remoteInfo?.connectionId;
         const size = getTerminalSize(terminal);
         const launch = existingSession?.launch;
-        const { windowLabel, frontendSessionId } = getFrontendTerminalSessionArgs();
+        const { windowLabel, frontendSessionId } = await getFrontendTerminalSessionArgs();
 
         const createdConnectionId = await launchTerminalSession({
           owner: terminalOwner,
@@ -563,7 +556,7 @@ export const TerminalEmulator = ({
                     connection,
                     () => {
                       signal.throwIfAborted();
-                      return commands.createRemoteTerminal(
+                      return spawnRemoteTerminal(
                         {
                           host: connection.host,
                           port: connection.port,
@@ -581,7 +574,7 @@ export const TerminalEmulator = ({
                     { signal },
                   );
                 })()
-              : await commands.createTerminal(
+              : await spawnLocalTerminal(
                   {
                     workingDirectory: targetDirectory || null,
                     shell:
@@ -622,15 +615,11 @@ export const TerminalEmulator = ({
       // Re-fit after connection is established so onResize can notify the PTY
       fitTerminal();
 
-      window.dispatchEvent(
-        new CustomEvent("terminal-ready", {
-          detail: {
-            terminalId: sessionId,
-            connectionId: activeConnectionId,
-            remoteConnectionId: activeRemoteConnectionId,
-          },
-        }),
-      );
+      emitAppEvent("terminal:ready", {
+        terminalId: sessionId,
+        connectionId: activeConnectionId,
+        remoteConnectionId: activeRemoteConnectionId,
+      });
 
       terminalRefCallbackRef.current?.(createSessionHandle(terminal));
       readyCallbackRef.current?.();
@@ -782,17 +771,20 @@ export const TerminalEmulator = ({
     onTerminalRef(createSessionHandle(terminal));
   }, [createSessionHandle, isInitialized, onTerminalRef]);
 
+  useEffect(() => {
+    const terminal = terminalRef.current;
+    if (!isInitialized || !terminal) return;
+    return registerTerminalEmulator(sessionId, createSessionHandle(terminal));
+  }, [createSessionHandle, isInitialized, sessionId]);
+
   // Listen for portal-target changes from TerminalHost; force a fit + repaint
   // so PTY/frontend dims match the new slot before any TUI relies on them.
   useEffect(() => {
     if (!isInitialized) return;
-    const handler = (event: Event) => {
-      const detail = (event as CustomEvent<{ sessionId: string }>).detail;
-      if (!detail || detail.sessionId !== sessionId) return;
+    return onAppEvent("terminal:refit", (detail) => {
+      if (detail.sessionId !== sessionId) return;
       fitTerminal();
-    };
-    window.addEventListener("athas-terminal-refit", handler);
-    return () => window.removeEventListener("athas-terminal-refit", handler);
+    });
   }, [fitTerminal, isInitialized, sessionId]);
 
   useEffect(() => {
@@ -1009,32 +1001,6 @@ export const TerminalEmulator = ({
     clearSearch();
     terminalRef.current?.focus();
   }, [clearSearch]);
-
-  useImperativeHandle(
-    getSession(sessionId)?.ref,
-    () => ({
-      terminal: terminalRef.current,
-      searchAddon: addonsRef.current?.searchAddon,
-      focus: () => terminalRef.current?.focus(),
-      showSearch: () => setIsSearchVisible(true),
-      blur: () => terminalRef.current?.blur(),
-      clear: () => terminalRef.current?.clear(),
-      selectAll: () => terminalRef.current?.selectAll(),
-      clearSelection: () => terminalRef.current?.clearSelection(),
-      getSelection: () => terminalRef.current?.getSelection() || "",
-      paste: (text: string) => terminalRef.current?.paste(text),
-      scrollToTop: () => terminalRef.current?.scrollToTop(),
-      scrollToBottom: () => terminalRef.current?.scrollToBottom(),
-      findNext: (term: string) => addonsRef.current?.searchAddon.findNext(term),
-      findPrevious: (term: string) => addonsRef.current?.searchAddon.findPrevious(term),
-      scrollToPreviousCommand: () =>
-        shellIntegrationRef.current?.scrollToPreviousCommand() ?? false,
-      scrollToNextCommand: () => shellIntegrationRef.current?.scrollToNextCommand() ?? false,
-      serialize: () => (terminalRef.current ? addonsRef.current?.serializeAddon.serialize() : ""),
-      resize: () => fitTerminal(),
-    }),
-    [fitTerminal],
-  );
 
   return (
     <div className="relative flex size-full min-w-0 flex-col overflow-hidden bg-background">

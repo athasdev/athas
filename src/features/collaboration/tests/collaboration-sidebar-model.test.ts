@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import type { SubscriptionInfo } from "@/features/window/services/auth-api";
+import type { SubscriptionInfo } from "@/features/auth/services/auth-api";
 import {
   appendCollaborationChatMessage,
   appendCollaborationSharedDocuments,
@@ -10,7 +10,7 @@ import {
   renameCollaborationNoteItem,
   updateCollaborationNoteFile,
   updateCollaborationNotesMarkdown,
-} from "../lib/collaboration-sidebar-model";
+} from "../services/collaboration-sidebar-model";
 
 function collaborationSnapshot(
   overrides: Partial<NonNullable<SubscriptionInfo["collaboration"]>> = {},

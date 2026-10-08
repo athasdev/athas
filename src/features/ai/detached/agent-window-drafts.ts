@@ -1,5 +1,5 @@
 import type { PastedImage } from "@/features/ai/types/chat-composer.types";
-import type { EditorSelectionContext } from "@/features/ai/types/ai-context.types";
+import type { EditorSelectionContext } from "@/features/editor/types/editor-selection.types";
 
 export interface AgentWindowDraft {
   text: string;

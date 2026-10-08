@@ -1,12 +1,12 @@
-import { highlightMarkdownCodeBlocks } from "@/features/editor/markdown/code-highlight";
-import { parseMarkdown } from "@/features/editor/markdown/parser";
+import { highlightMarkdownCodeBlocks } from "@/features/editor/markdown/services/code-highlight";
+import { parseMarkdown } from "@/features/editor/markdown/services/parser";
 
 /**
  * Fills an element with rendered markdown from a language server (hover text, completion docs,
  * signature docs). Code blocks show plain first and are highlighted once their tokens arrive, as
  * long as the element still shows the same text.
  */
-export function renderMarkdownContent(element: HTMLElement, markdown: string) {
+function renderMarkdownContent(element: HTMLElement, markdown: string) {
   const html = parseMarkdown(markdown);
   element.innerHTML = html;
   element.dataset.markdown = markdown;

@@ -2,10 +2,11 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import type { EditorContent } from "@/features/panes/types/pane-content.types";
 import { PendingBufferCloseDialog } from "../components/pending-buffer-close-dialog";
+import { seedActiveBuffer } from "@/features/panes/tests/helpers/seed-pane-tabs";
 const mocks = vi.hoisted(() => ({
   save: vi.fn(),
   props: [] as Array<{ onDiscard: () => void; onSave: () => Promise<unknown> }>,
@@ -16,7 +17,7 @@ vi.mock("@/features/panes/services/pane-content-save-service", () => ({
 vi.mock("@tauri-apps/api/webviewWindow", () => ({
   getCurrentWebviewWindow: () => ({ label: "main" }),
 }));
-vi.mock("@/features/window/components/unsaved-changes-dialog", () => ({
+vi.mock("@/features/tabs/components/unsaved-changes-dialog", () => ({
   default: (props: {
     fileName: string;
     onSave: () => Promise<unknown>;
@@ -42,11 +43,7 @@ function editor(id: string): EditorContent {
     savedContent: "disk",
     isDirty: true,
     isVirtual: false,
-    isPinned: false,
-    isPreview: false,
-    isActive: false,
     language: "typescript",
-    tokens: [],
   };
 }
 let root: Root;
@@ -57,9 +54,9 @@ beforeEach(() => {
   workspaceRuntimeRegistry.activateWorkspace({ id: "owner", name: "Owner" });
   useBufferStore.setState({
     buffers: [editor("a"), editor("b")],
-    activeBufferId: "b",
     pendingClose: { bufferId: "a", type: "all" },
   });
+  seedActiveBuffer("b");
   mocks.props.length = 0;
   mocks.save.mockReset();
   container = document.createElement("div");

@@ -16,6 +16,7 @@ describe("conversation Markdown", () => {
         timestamp: new Date(),
         toolCalls: [
           {
+            id: "call-18",
             name: "read_file",
             input: { path: "app.ts" },
             output: "export const x = 1",
@@ -46,7 +47,13 @@ describe("conversation Markdown", () => {
         content: "",
         timestamp: new Date(),
         toolCalls: [
-          { name: "terminal", input: {}, output: "`````\noutput", timestamp: new Date() },
+          {
+            id: "call-49",
+            name: "terminal",
+            input: {},
+            output: "`````\noutput",
+            timestamp: new Date(),
+          },
         ],
       },
     ]);
@@ -88,7 +95,7 @@ describe("conversation Markdown", () => {
           role: "assistant",
           content: "",
           timestamp: new Date(),
-          toolCalls: [{ name: "tool", input: output, timestamp: new Date() }],
+          toolCalls: [{ id: "call-91", name: "tool", input: output, timestamp: new Date() }],
         },
       ]),
     ).toContain("could not be serialized");

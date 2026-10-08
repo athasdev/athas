@@ -17,8 +17,14 @@ export const commands = {
    */
   selfUpdateSupported: () => __TAURI_INVOKE<boolean>("self_update_supported"),
   readLocalFile: (path: string) => __TAURI_INVOKE<ArrayBuffer>("read_local_file", { path }),
-  writeLocalFileChecked: (path: string, expectedContent: string | null, content: string) =>
-    __TAURI_INVOKE<null>("write_local_file_checked", { path, expectedContent, content }),
+  writeLocalFileChecked: (
+    path: string,
+    expected: {
+      byteLength: number;
+      sha256: string;
+    } | null,
+    content: string,
+  ) => __TAURI_INVOKE<null>("write_local_file_checked", { path, expected, content }),
   writeLocalFile: (path: string, content: string) =>
     __TAURI_INVOKE<null>("write_local_file", { path, content }),
   deleteLocalFileChecked: (path: string, expectedContent: string) =>
@@ -167,6 +173,12 @@ export const commands = {
     __TAURI_INVOKE<null>("git_unstage_hunk", { repoPath, hunk }),
   gitBlameFile: (rootPath: string, filePath: string, content: string) =>
     __TAURI_INVOKE<GitBlame>("git_blame_file", { rootPath, filePath, content }),
+  /**
+   *  Warms the committed-blame cache for files likely to be blamed next, after HEAD moved. Returns
+   *  at once; the work runs on the backend's own prewarm thread.
+   */
+  gitPrewarmBlame: (rootPath: string, filePaths: string[]) =>
+    __TAURI_INVOKE<void>("git_prewarm_blame", { rootPath, filePaths }),
   storeGithubToken: (token: string) => __TAURI_INVOKE<null>("store_github_token", { token }),
   githubTokenStatus: () => __TAURI_INVOKE<GitHubTokenStatus>("github_token_status"),
   storeGithubPersonalAccessToken: (token: string) =>
@@ -507,8 +519,12 @@ export const commands = {
   /**  Remove the auth token */
   removeAuthToken: () => __TAURI_INVOKE<null>("remove_auth_token"),
   initChatDatabase: () => __TAURI_INVOKE<null>("init_chat_database"),
-  saveChat: (chat: ChatData, messages: MessageData[], toolCalls: ToolCallData[]) =>
-    __TAURI_INVOKE<null>("save_chat", { chat, messages, toolCalls }),
+  saveChat: (
+    chat: ChatData,
+    messages: MessageData[],
+    toolCalls: ToolCallData[],
+    scope: ChatSaveScope,
+  ) => __TAURI_INVOKE<null>("save_chat", { chat, messages, toolCalls, scope }),
   updateChatMetadata: (chat: ChatData) => __TAURI_INVOKE<null>("update_chat_metadata", { chat }),
   loadAllChats: () => __TAURI_INVOKE<ChatData[]>("load_all_chats"),
   loadChat: (chatId: string) => __TAURI_INVOKE<ChatWithMessages>("load_chat", { chatId }),
@@ -4580,6 +4596,13 @@ export type ChatData = {
   session_settings?: string | null;
 };
 
+/**  How much of a chat a save carries. */
+export type ChatSaveScope =
+  /**  Every message of the chat: stored messages missing from the save are deleted. */
+  | "allMessages"
+  /**  Only the messages that changed: the chat's other stored messages stay as they are. */
+  | "changedMessages";
+
 export type ChatWithMessages = {
   chat: ChatData;
   messages: MessageData[];
@@ -5004,6 +5027,15 @@ export type DocumentChangeBatch = {
   fullContent: string | null;
 };
 
+/**
+ *  The text a checked write expects on disk, sent as its UTF-8 length and SHA-256 instead of a
+ *  second full copy of the file.
+ */
+export type ExpectedFileDigest = {
+  byteLength: number;
+  sha256: string;
+};
+
 export type ExtensionMetadata = {
   id: string;
   name: string;
@@ -5138,20 +5170,27 @@ export type GhCliAvailability = {
   hasToken: boolean;
 };
 
+/**  Blame for a buffer: each commit is listed once, and hunks point into `commits`. */
 export type GitBlame = {
   file_path: string;
-  lines: GitBlameLine[];
+  commits: GitBlameCommit[];
+  hunks: GitBlameHunk[];
 };
 
-export type GitBlameLine = {
-  line_number: number;
-  total_lines: number;
-  commit_hash: string;
-  is_uncommitted: boolean;
+export type GitBlameCommit = {
+  hash: string;
   author: string;
   email: string;
   time: number;
-  commit: string;
+  message: string;
+};
+
+export type GitBlameHunk = {
+  /**  First line of the hunk, counting from 1. */
+  line_number: number;
+  total_lines: number;
+  /**  Index into `GitBlame::commits`; `None` for lines that are not committed. */
+  commit_index: number | null;
 };
 
 export type GitCommit = {
@@ -6241,13 +6280,18 @@ export type TomlTheme = {
 
 export type ToolCallData = {
   message_id: string;
+  /**  The call's id, unique within its message. Saves match stored rows by it. */
+  call_id: string;
   name: string;
   input: string | null;
   output: string | null;
   error: string | null;
   timestamp: number;
   is_complete: boolean;
-  /**  Presentation details (id, kind, status, locations, content offset) as JSON. */
+  /**
+   *  Presentation details (kind, status, locations, content offset) as JSON. It also repeats the
+   *  call's id for older builds, which read it from here; `call_id` is the one this build uses.
+   */
   meta?: string | null;
 };
 

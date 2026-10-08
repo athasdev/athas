@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import type { AIChatInputBarProps } from "@/features/ai/types/ai-chat.types";
-import type { EditorSelectionContext } from "@/features/ai/types/ai-context.types";
+import type { EditorSelectionContext } from "@/features/editor/types/editor-selection.types";
 
 type ComposerContextInputProps = Pick<
   AIChatInputBarProps,

@@ -43,9 +43,6 @@ vi.mock("../stores/ai-chat.store", () => ({
   useAIChatStore: (select: (value: unknown) => unknown) =>
     select({ providerApiKeys: state.keys, dynamicModels: {} }),
 }));
-vi.mock("@/features/keymaps/hooks/use-command-shortcut", () => ({
-  useCommandShortcut: () => undefined,
-}));
 
 let root: Root;
 let container: HTMLDivElement;

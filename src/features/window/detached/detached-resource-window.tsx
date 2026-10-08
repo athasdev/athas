@@ -1,23 +1,25 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Suspense, useEffect, useMemo, useRef } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import {
-  isResourceBuffer,
-  ResourceBufferBadge,
-  ResourceBufferIcon,
-  ResourceBufferView,
-} from "@/features/panes/components/resource-buffer-view";
-import { ViewerLoadingState } from "@/features/viewer/components/viewer-state";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { isResourceBuffer } from "@/features/panes/services/pane-view-registry";
+import { registerAiEditorFeatures } from "@/features/ai/services/ai-editor-features";
+import { registerGitHubResourceViews } from "@/features/github/services/github-resource-views";
+import { DetachedBufferView, ResourceBufferBadge, ResourceBufferIcon } from "./resource-view";
+import { ViewerLoadingState } from "@/ui/viewer-state";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { Avatar } from "@/ui/avatar";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
 import {
   parseResourceWindowPayload,
   type ResourceWindowMessage,
-} from "./detached-resource-service";
+} from "./services/detached-resource-service";
+import { AppQueryProvider } from "@/components/app-query-provider";
 import { DetachedWindowShell } from "./detached-window-shell";
-import { useDetachedWindow } from "./use-detached-window";
+import { useDetachedWindow } from "./hooks/use-detached-window";
+import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
+
+registerGitHubResourceViews();
+registerAiEditorFeatures();
 
 function closeWindow() {
   void getCurrentWindow().destroy().catch(console.error);
@@ -29,8 +31,9 @@ function closeWindow() {
  * window is only asked to open links that belong in the workbench.
  */
 export default function DetachedResourceWindow() {
+  const activeBufferId = useActiveBufferId();
   const buffer = useBufferStore(
-    (state) => state.buffers.find((item) => item.id === state.activeBufferId) ?? null,
+    (state) => state.buffers.find((item) => item.id === activeBufferId) ?? null,
   );
   const { error, openLocally, payload } = useDetachedWindow<ResourceWindowMessage>({
     kind: "resource",
@@ -44,7 +47,6 @@ export default function DetachedResourceWindow() {
     if (!request || opened.current) return;
     opened.current = true;
     useProjectStore.getState().actions.setRootFolderPath(request.workspacePath);
-    useFileSystemStore.setState({ rootFolderPath: request.workspacePath });
     openLocally(request.content);
   }, [openLocally, request]);
 
@@ -55,36 +57,38 @@ export default function DetachedResourceWindow() {
       : undefined;
 
   return (
-    <DetachedWindowShell
-      title={resource?.name ?? "Athas"}
-      icon={
-        resource ? (
-          avatarUrl ? (
-            <Avatar name={resource.name} src={avatarUrl} size="sm" />
-          ) : (
-            <ResourceBufferIcon buffer={resource} />
-          )
-        ) : null
-      }
-      actions={resource ? <ResourceBufferBadge buffer={resource} /> : null}
-      error={error ?? (payload && !request ? "This window has no content to show." : null)}
-    >
-      {resource ? (
-        <main className="min-h-0 min-w-0 flex-1">
-          <Suspense fallback={<ViewerLoadingState label="Loading" layout="fill" />}>
-            <ResourceBufferView buffer={resource} />
-          </Suspense>
-        </main>
-      ) : request ? (
-        <ViewerLoadingState label="Opening" layout="fill" />
-      ) : (
-        <Empty>
-          <EmptyHeader>
-            <EmptyTitle>Nothing to show</EmptyTitle>
-            <EmptyDescription>This content cannot open in its own window.</EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      )}
-    </DetachedWindowShell>
+    <AppQueryProvider>
+      <DetachedWindowShell
+        title={resource?.name ?? "Athas"}
+        icon={
+          resource ? (
+            avatarUrl ? (
+              <Avatar name={resource.name} src={avatarUrl} size="sm" />
+            ) : (
+              <ResourceBufferIcon buffer={resource} />
+            )
+          ) : null
+        }
+        actions={resource ? <ResourceBufferBadge buffer={resource} /> : null}
+        error={error ?? (payload && !request ? "This window has no content to show." : null)}
+      >
+        {resource ? (
+          <main className="min-h-0 min-w-0 flex-1">
+            <Suspense fallback={<ViewerLoadingState label="Loading" layout="fill" />}>
+              <DetachedBufferView buffer={resource} />
+            </Suspense>
+          </main>
+        ) : request ? (
+          <ViewerLoadingState label="Opening" layout="fill" />
+        ) : (
+          <Empty>
+            <EmptyHeader>
+              <EmptyTitle>Nothing to show</EmptyTitle>
+              <EmptyDescription>This content cannot open in its own window.</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        )}
+      </DetachedWindowShell>
+    </AppQueryProvider>
   );
 }

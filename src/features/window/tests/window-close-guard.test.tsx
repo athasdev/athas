@@ -2,12 +2,12 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import type { EditorContent } from "@/features/panes/types/pane-content.types";
 import { WindowCloseGuard } from "../components/window-close-guard";
-import { REQUEST_WINDOW_CLOSE_EVENT } from "../utils/request-window-close";
+import { requestWindowClose } from "../services/request-window-close";
 
 const mocks = vi.hoisted(() => ({
   close: vi.fn(),
@@ -32,9 +32,11 @@ vi.mock("@tauri-apps/api/webviewWindow", () => ({
 vi.mock("@/features/editor/services/editor-save-service", () => ({
   saveEditorBufferById: mocks.save,
 }));
-vi.mock("@/features/ai/detached/agent-window.store", () => ({ agentsAreDetached: () => false }));
+vi.mock("@/features/ai/detached/stores/agent-window.store", () => ({
+  agentsAreDetached: () => false,
+}));
 vi.mock("sonner", () => ({ toast: { error: mocks.error, info: vi.fn() } }));
-vi.mock("../components/unsaved-changes-dialog", () => ({
+vi.mock("@/features/tabs/components/unsaved-changes-dialog", () => ({
   default: ({
     fileName,
     onSave,
@@ -65,11 +67,7 @@ function draft(id: string, dirty = true): EditorContent {
     savedContent: dirty ? "disk" : `${id} draft`,
     isDirty: dirty,
     isVirtual: false,
-    isPinned: false,
-    isPreview: false,
-    isActive: false,
     language: "typescript",
-    tokens: [],
   };
 }
 function setupWorkspace(id: string, dirty = true) {
@@ -199,7 +197,7 @@ describe("window close guard", () => {
     const close = deferred<void>();
     mocks.close.mockReturnValue(close.promise);
     await render();
-    await act(async () => window.dispatchEvent(new Event(REQUEST_WINDOW_CLOSE_EVENT)));
+    await act(async () => requestWindowClose());
     expect(mocks.close).toHaveBeenCalledOnce();
     await act(async () =>
       a.store.getState().actions.updateBufferContent("same-id", "new draft", true),
@@ -231,7 +229,7 @@ describe("window close guard", () => {
       expect.stringContaining("Could not save the window session"),
     );
     expect(mocks.close).not.toHaveBeenCalled();
-    await act(async () => window.dispatchEvent(new Event(REQUEST_WINDOW_CLOSE_EVENT)));
+    await act(async () => requestWindowClose());
     expect(mocks.close).toHaveBeenCalledOnce();
   });
 
@@ -240,11 +238,11 @@ describe("window close guard", () => {
     workspaceRuntimeRegistry.activateWorkspace({ id: "a", name: "A" });
     mocks.close.mockRejectedValueOnce(new Error("Close unavailable"));
     await render();
-    await act(async () => window.dispatchEvent(new Event(REQUEST_WINDOW_CLOSE_EVENT)));
+    await act(async () => requestWindowClose());
     expect(mocks.error).toHaveBeenCalledWith(
       expect.stringContaining("Could not close this window"),
     );
-    await act(async () => window.dispatchEvent(new Event(REQUEST_WINDOW_CLOSE_EVENT)));
+    await act(async () => requestWindowClose());
     expect(mocks.close).toHaveBeenCalledTimes(2);
   });
 });

@@ -1,4 +1,4 @@
-import type { SearchMatch } from "@/features/file-search/lib/file-search-api";
+import type { SearchMatch } from "@/features/file-search/api/file-search-api";
 import { buildFileSearchResult } from "../utils/content-search-results";
 import type { SearchTask, SearchTaskResult } from "./search-worker-protocol";
 import { filterProviderSearchEntries } from "./provider-ignore-matching";

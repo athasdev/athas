@@ -1,9 +1,9 @@
 import type { BufferSession } from "@/features/workspace/types/workspace-session.types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { saveWorkspaceTerminalsToStorage } from "@/features/terminal/lib/terminal-session-storage";
+import { saveWorkspaceTerminalsToStorage } from "@/features/terminal/services/terminal-session-storage";
 import type { Terminal } from "@/features/terminal/types/terminal.types";
-import { workspaceSessionRepository } from "@/features/workspace/persistence/workspace-session-repository";
-import { useSessionStore } from "@/features/window/stores/session.store";
+import { workspaceSessionRepository } from "@/features/workspace/persistence/services/workspace-session-repository";
+import { useSessionStore } from "@/features/workspace/stores/session.store";
 
 const storage = vi.hoisted(() => {
   const values = new Map<string, string>();
@@ -28,7 +28,6 @@ const terminal = (id: string): Terminal => ({
   id,
   name: id,
   currentDirectory: "/workspace",
-  isActive: true,
   createdAt: new Date(0),
 });
 
@@ -110,5 +109,45 @@ describe("workspace session repository", () => {
     expect(workspaceSessionRepository.load("/workspace").terminals.map(({ id }) => id)).toEqual([
       "canonical-terminal",
     ]);
+  });
+
+  it("finds a session saved under a non-normalized root and moves it to the normalized key", () => {
+    const buffers: BufferSession[] = [
+      { type: "editor", path: "/workspace/a.ts", name: "a.ts", isPinned: false },
+    ];
+    workspaceSessionRepository.save({
+      projectPath: "/workspace/",
+      buffers,
+      activeBufferPath: "/workspace/a.ts",
+    });
+
+    const loaded = workspaceSessionRepository.load("/workspace").session;
+
+    expect(loaded?.projectPath).toBe("/workspace");
+    expect(loaded?.buffers).toEqual(buffers);
+    expect(Object.keys(useSessionStore.getState().sessions)).toEqual(["/workspace"]);
+  });
+
+  it("prefers a session already saved under the normalized key", () => {
+    const session = (activeBufferPath: string) => ({
+      projectPath: "/workspace",
+      activeBufferPath,
+      buffers: [],
+      terminals: [],
+      aiSession: null,
+      uiState: null,
+      lastSaved: 0,
+    });
+    useSessionStore.setState({
+      sessions: {
+        "/workspace/": session("/workspace/legacy.ts"),
+        "/workspace": session("/workspace/current.ts"),
+      },
+    });
+
+    expect(workspaceSessionRepository.load("/workspace").session?.activeBufferPath).toBe(
+      "/workspace/current.ts",
+    );
+    expect(Object.keys(useSessionStore.getState().sessions)).toHaveLength(2);
   });
 });

@@ -14,7 +14,6 @@ describe("Markdown document buffers", () => {
       path: "markdown-document://test-document",
       name: "Untitled Document",
       content: "# Draft",
-      isPreview: false,
     });
   });
 });

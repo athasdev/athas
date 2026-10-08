@@ -2,7 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 import {
   canBrowseAgentSessions,
   canDeleteAgentSessions,
-} from "@/features/ai/lib/open-agent-sessions";
+} from "@/features/ai/services/open-agent-sessions";
 import type { AcpAgentStatus } from "@/features/ai/types/acp.types";
 
 function status(sessionCapabilities: unknown, running = true): AcpAgentStatus {

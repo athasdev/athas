@@ -4,13 +4,16 @@ import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { commands } from "@/bindings/commands";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { getBufferByPath } from "@/features/editor/utils/buffer-index";
+import { getBufferByPath } from "@/features/editor/stores/buffer-index";
 import { useFileTreeStore } from "@/features/file-explorer/stores/file-explorer-tree.store";
-import { gitDiffCache } from "@/features/git/utils/git-diff-cache";
+import { gitDiffCache } from "@/features/git/services/git-diff-cache";
 import { useSidebarStore } from "@/features/layout/stores/sidebar.store";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { getActiveBufferId, isBufferPreview } from "@/features/panes/stores/pane-selectors";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
+import { onAppEvent } from "@/utils/app-events";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 import type { FileEntry } from "../types/app.types";
-import { findFileInTree } from "../controllers/file-tree-utils";
+import { findFileInTree } from "../services/file-tree-utils";
 import { useFileSystemStore } from "../stores/file-system.store";
 
 vi.hoisted(() => {
@@ -83,8 +86,8 @@ vi.mock("../services/file-open-resource", () => ({
   inspectFileOpenResource: vi.fn(),
   readFileOpenText: mocks.readFileOpenText,
 }));
-vi.mock("@/features/file-search/lib/file-search-api", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/features/file-search/lib/file-search-api")>()),
+vi.mock("@/features/file-search/api/file-search-api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/features/file-search/api/file-search-api")>()),
   fffListFiles: mocks.fffListFiles,
   fffTrackAccess: vi.fn().mockResolvedValue(undefined),
 }));
@@ -114,10 +117,12 @@ const tree = () => useFileTreeStore.getState().actions;
 const buffers = () => useBufferStore.getState();
 const entry = (path: string) => findFileInTree(fs().files, path) ?? undefined;
 
+const setRoot = (path: string | undefined) =>
+  useProjectStore.getState().actions.setRootFolderPath(path);
+
 const setWorkspace = (children: FileEntry[]) => {
+  setRoot(root);
   useFileSystemStore.setState({
-    rootFolderPath: root,
-    workspaceFolders: [],
     files: [dir(root, children)],
     filesVersion: 0,
     projectFilesCache: undefined,
@@ -268,7 +273,8 @@ describe("preloadSubtree", () => {
 
 describe("creating entries", () => {
   it("opens numbered untitled buffers when no folder is open", async () => {
-    useFileSystemStore.setState({ rootFolderPath: undefined, files: [] });
+    setRoot(undefined);
+    useFileSystemStore.setState({ files: [] });
 
     await fs().handleCreateNewFile();
     await fs().handleCreateNewFile();
@@ -290,7 +296,8 @@ describe("creating entries", () => {
   });
 
   it("asks for a folder before creating a new folder placeholder", async () => {
-    useFileSystemStore.setState({ rootFolderPath: undefined, files: [] });
+    setRoot(undefined);
+    useFileSystemStore.setState({ files: [] });
 
     await fs().handleCreateNewFolder();
 
@@ -469,8 +476,8 @@ describe("handleDuplicatePath", () => {
 
   it("copies a remote file over SSH", async () => {
     const remoteRoot = "remote://conn";
+    setRoot(remoteRoot);
     useFileSystemStore.setState({
-      rootFolderPath: remoteRoot,
       files: [dir(remoteRoot, [dir(`${remoteRoot}/src`, [file(`${remoteRoot}/src/a.ts`)])])],
     });
     const sshCopyPath = vi.spyOn(commands, "sshCopyPath").mockResolvedValue(undefined as never);
@@ -483,8 +490,8 @@ describe("handleDuplicatePath", () => {
 
   it("copies a WSL file inside the distribution", async () => {
     const wslRoot = "wsl://Ubuntu/home/me";
+    setRoot(wslRoot);
     useFileSystemStore.setState({
-      rootFolderPath: wslRoot,
       files: [dir(wslRoot, [file(`${wslRoot}/a.ts`)])],
     });
     const wslCopyPath = vi.spyOn(commands, "wslCopyPath").mockResolvedValue(undefined as never);
@@ -560,7 +567,10 @@ describe("workspace folders", () => {
     await expect(fs().addFolderToWorkspace("/repo/other")).resolves.toBe(true);
 
     expect(fs().files.map((rootEntry) => rootEntry.path)).toEqual([root, "/repo/other"]);
-    expect(fs().workspaceFolders.map((folder) => folder.path)).toEqual([root, "/repo/other"]);
+    expect(useProjectStore.getState().workspaceFolders.map((folder) => folder.path)).toEqual([
+      root,
+      "/repo/other",
+    ]);
     expect(tree().isExpanded("/repo/other")).toBe(true);
     expect(mocks.ensureWorkspaceFileSearch).toHaveBeenCalledWith([root, "/repo/other"]);
   });
@@ -602,13 +612,15 @@ describe("workspace folders", () => {
 
     await expect(fs().removeFolderFromWorkspace("/repo/other")).resolves.toBe(true);
     expect(fs().files.map((rootEntry) => rootEntry.path)).toEqual([root]);
-    expect(fs().workspaceFolders.map((folder) => folder.path)).toEqual([root]);
+    expect(useProjectStore.getState().workspaceFolders.map((folder) => folder.path)).toEqual([
+      root,
+    ]);
   });
 });
 
 describe("getAllProjectFiles", () => {
   it("returns nothing without an open folder", async () => {
-    useFileSystemStore.setState({ rootFolderPath: undefined });
+    setRoot(undefined);
 
     await expect(fs().getAllProjectFiles()).resolves.toEqual([]);
   });
@@ -625,9 +637,8 @@ describe("getAllProjectFiles", () => {
 
   it("serves a fresh cache for non-native workspaces", async () => {
     const cached = [file("remote://conn/a.ts")];
+    setRoot("remote://conn");
     useFileSystemStore.setState({
-      rootFolderPath: "remote://conn",
-      workspaceFolders: [],
       projectFilesCache: { path: "remote://conn", files: cached, timestamp: Date.now() },
     });
 
@@ -659,20 +670,20 @@ describe("handleFileSelect", () => {
       name: "a.ts",
       content: "export const a = 1;",
     });
-    expect(buffers().activeBufferId).toBe(openBuffer(`${root}/a.ts`)?.id);
+    expect(getActiveBufferId()).toBe(openBuffer(`${root}/a.ts`)?.id);
   });
 
   it("reuses an open buffer and promotes a preview to a definite tab", async () => {
     setWorkspace([file(`${root}/a.ts`)]);
     await fs().handleFileSelect(`${root}/a.ts`, false, undefined, undefined, undefined, true);
-    expect(openBuffer(`${root}/a.ts`)?.isPreview).toBe(true);
+    expect(isBufferPreview(openBuffer(`${root}/a.ts`)?.id ?? "")).toBe(true);
     mocks.readFileOpenText.mockClear();
 
     await fs().handleFileOpen(`${root}/a.ts`, false);
 
     expect(mocks.readFileOpenText).not.toHaveBeenCalled();
     expect(buffers().buffers).toHaveLength(1);
-    expect(openBuffer(`${root}/a.ts`)?.isPreview).toBe(false);
+    expect(isBufferPreview(openBuffer(`${root}/a.ts`)?.id ?? "")).toBe(false);
   });
 
   it.each([
@@ -736,18 +747,18 @@ describe("handleFileSelect", () => {
     try {
       setWorkspace([file(`${root}/a.ts`)]);
       const goToLine = vi.fn();
-      window.addEventListener("menu-go-to-line", goToLine);
+      const stopListening = onAppEvent("editor:go-to-line", goToLine);
 
       await fs().handleFileSelect(`${root}/a.ts`, false, 12, 4);
       await vi.advanceTimersByTimeAsync(100);
 
       expect(goToLine).toHaveBeenCalledOnce();
-      expect((goToLine.mock.calls[0][0] as CustomEvent).detail).toEqual({
+      expect(goToLine.mock.calls[0][0]).toEqual({
         line: 12,
         column: 4,
         path: `${root}/a.ts`,
       });
-      window.removeEventListener("menu-go-to-line", goToLine);
+      stopListening();
     } finally {
       vi.useRealTimers();
     }
@@ -762,11 +773,10 @@ describe("resetWorkspace", () => {
 
     await fs().resetWorkspace();
 
-    expect(fs()).toMatchObject({
-      files: [],
+    expect(fs()).toMatchObject({ files: [], projectFilesCache: undefined });
+    expect(useProjectStore.getState()).toMatchObject({
       rootFolderPath: undefined,
       workspaceFolders: [],
-      projectFilesCache: undefined,
     });
     expect(buffers().buffers).toHaveLength(0);
     expect(tree().getExpandedPaths().size).toBe(0);

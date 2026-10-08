@@ -1,0 +1,63 @@
+import { BUNDLED_FONTS } from "@/features/settings/config/bundled-fonts";
+import { useEffect } from "react";
+import {
+  DEFAULT_MONO_FONT_FAMILY,
+  DEFAULT_UI_FONT_FAMILY,
+} from "@/features/settings/config/typography-defaults";
+import { resolveAvailableFontFamily } from "@/features/settings/services/font-family-resolution";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useFontStore } from "@/features/settings/stores/font.store";
+
+export function useFontLoading() {
+  const { loadAvailableFonts } = useFontStore.use.actions();
+
+  useEffect(() => {
+    void (async () => {
+      await loadAvailableFonts();
+
+      const availableFonts = useFontStore
+        .getState()
+        .availableFonts.map((font) => font.family.toLowerCase());
+
+      const settingsStore = useSettingsStore.getState();
+      // Without the saved settings, the fallback would overwrite the saved fonts with defaults.
+      if (!settingsStore.isLoaded) return;
+      const { settings } = settingsStore;
+      const updates: Array<Promise<void>> = [];
+
+      const nextEditorFontFamily = resolveAvailableFontFamily(
+        settings.fontFamily,
+        DEFAULT_MONO_FONT_FAMILY,
+        availableFonts,
+        BUNDLED_FONTS.map((font) => font.family),
+      );
+      if (nextEditorFontFamily !== settings.fontFamily) {
+        updates.push(settingsStore.actions.updateSetting("fontFamily", nextEditorFontFamily));
+      }
+
+      const nextTerminalFontFamily = resolveAvailableFontFamily(
+        settings.terminalFontFamily,
+        DEFAULT_MONO_FONT_FAMILY,
+        availableFonts,
+        BUNDLED_FONTS.map((font) => font.family),
+      );
+      if (nextTerminalFontFamily !== settings.terminalFontFamily) {
+        updates.push(
+          settingsStore.actions.updateSetting("terminalFontFamily", nextTerminalFontFamily),
+        );
+      }
+
+      const nextUiFontFamily = resolveAvailableFontFamily(
+        settings.uiFontFamily,
+        DEFAULT_UI_FONT_FAMILY,
+        availableFonts,
+        BUNDLED_FONTS.map((font) => font.family),
+      );
+      if (nextUiFontFamily !== settings.uiFontFamily) {
+        updates.push(settingsStore.actions.updateSetting("uiFontFamily", nextUiFontFamily));
+      }
+
+      await Promise.all(updates);
+    })();
+  }, [loadAvailableFonts]);
+}

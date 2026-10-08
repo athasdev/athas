@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import { createStore } from "zustand/vanilla";
-import { createModalSlice, type ModalSlice } from "@/features/window/stores/ui-state/modal-slice";
+import { createModalSlice, type ModalSlice } from "@/features/layout/stores/ui-state/modal-slice";
 
 describe("settings dialog navigation", () => {
   it("opens Settings as a modal and records where to navigate", () => {

@@ -1,4 +1,4 @@
-import { authenticatedFetch } from "@/features/window/services/auth-api";
+import { authenticatedFetch } from "@/features/auth/services/auth-api";
 
 export const ATHAS_BROWSER_TOOL = "athas_browser";
 

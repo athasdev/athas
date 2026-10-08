@@ -11,7 +11,7 @@ import {
   resolveWhatsNewInfo,
   storeCurrentWhatsNew,
   type WhatsNewInfo,
-} from "../lib/whats-new";
+} from "../services/whats-new";
 
 interface WhatsNewState {
   initialized: boolean;

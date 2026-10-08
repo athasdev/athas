@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openExternalUrl } from "@/utils/external-url";
 import { toast } from "sonner";
 import { ProviderApiKeyCommand } from "../provider-api-key-command";
 import { HOSTED_BILLING_CODES, resolveBillingUrl } from "@/features/ai/lib/api-error";
-import { openNewAgentChat } from "@/features/ai/lib/open-new-agent-chat";
-import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { openNewAgentChat } from "@/features/ai/services/open-new-agent-chat";
+import { useDesktopSignIn } from "@/features/auth/hooks/use-desktop-sign-in";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { Button } from "@/ui/button";
 
 export function ApiErrorActions({
@@ -46,7 +46,7 @@ export function ApiErrorActions({
       openNewAgentChat();
       return;
     }
-    if (hosted && payment) return openUrl(resolveBillingUrl(billingUrl));
+    if (hosted && payment) return openExternalUrl(resolveBillingUrl(billingUrl));
     if (hosted && authentication) return signIn();
     if (configure && !hosted) {
       setKeyManagerOpen(true);

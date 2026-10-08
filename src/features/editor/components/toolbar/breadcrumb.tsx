@@ -3,17 +3,19 @@ import { EyeIcon, PenIcon, SearchIcon } from "@/ui/icons";
 import { useShallow } from "zustand/react/shallow";
 import { EditorStatusActions } from "@/features/editor/components/toolbar/editor-status-actions";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { toggleMarkdownPreview } from "@/features/editor/markdown/toggle-markdown-preview";
+import { toggleMarkdownPreview } from "@/features/editor/markdown/services/toggle-markdown-preview";
 import { isMarkdownPreviewableFile } from "@/features/editor/markdown/previewable";
-import { getBufferById } from "@/features/editor/utils/buffer-index";
-import { keymapRegistry } from "@/features/keymaps/utils/registry";
+import { getBufferById } from "@/features/editor/stores/buffer-index";
+import { keymapRegistry } from "@/features/keymaps/services/keymap-registry";
 import { useExtensionActions } from "@/extensions/ui/hooks/use-extension-actions";
 import { ExtensionToolbarAction } from "@/extensions/ui/components/extension-toolbar-action";
-import { PaneContentHeader } from "@/features/panes/components/pane-content-chrome";
+import { PaneContentHeader } from "@/ui/pane-content-chrome";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
 import { FilePathBreadcrumb } from "./file-path-breadcrumb";
 import { SymbolBreadcrumb } from "./symbol-breadcrumb";
+import { useBufferIdOrActive } from "@/features/panes/hooks/use-pane-buffer-state";
+import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 
 export interface BreadcrumbProps {
   bufferId?: string;
@@ -38,7 +40,7 @@ export default function Breadcrumb({
   interactive = true,
   showPath = true,
 }: BreadcrumbProps = {}) {
-  const resolvedBufferId = useBufferStore((state) => bufferId ?? state.activeBufferId);
+  const resolvedBufferId = useBufferIdOrActive(bufferId);
   const activeBuffer = useBufferStore(
     useShallow((state) => {
       const buffer = getBufferById(state.buffers, resolvedBufferId);
@@ -53,6 +55,7 @@ export default function Breadcrumb({
     }),
   );
   const showBreadcrumbPath = useSettingsStore((state) => state.settings.coreFeatures.breadcrumbs);
+  const findShortcut = useCommandShortcut("workbench.showFind");
   const extensionActions = useExtensionActions();
 
   const handleSearchClick = () => {
@@ -85,7 +88,7 @@ export default function Breadcrumb({
             variant="ghost"
             iconOnly
             onClick={handleSearchClick}
-            commandId="workbench.showFind"
+            shortcut={findShortcut}
             tooltip="Find in file"
           >
             <SearchIcon />

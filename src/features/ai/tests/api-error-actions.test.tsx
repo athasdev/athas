@@ -22,11 +22,11 @@ vi.mock("@/config/services", () => ({
     dashboardBillingUrl: "https://website.test/dashboard/settings/billing",
   }),
 }));
-vi.mock("@/features/ai/lib/open-new-agent-chat", () => ({ openNewAgentChat: state.newChat }));
-vi.mock("@/features/window/hooks/use-desktop-sign-in", () => ({
+vi.mock("@/features/ai/services/open-new-agent-chat", () => ({ openNewAgentChat: state.newChat }));
+vi.mock("@/features/auth/hooks/use-desktop-sign-in", () => ({
   useDesktopSignIn: () => ({ signIn: state.signIn, isSigningIn: false }),
 }));
-vi.mock("@/features/window/stores/ui-state.store", () => ({
+vi.mock("@/features/layout/stores/ui-state.store", () => ({
   useUIState: { getState: () => ({ openSettings: state.settings }) },
 }));
 vi.mock("../components/provider-api-key-command", () => ({
@@ -143,7 +143,3 @@ describe("API error recovery", () => {
     expect(getApiErrorCode("Network unavailable")).toBe("");
   });
 });
-
-vi.mock("@/features/keymaps/hooks/use-command-shortcut", () => ({
-  useCommandShortcut: () => undefined,
-}));

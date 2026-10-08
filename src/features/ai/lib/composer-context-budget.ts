@@ -7,7 +7,7 @@ import {
   getProviderRequestLimits,
 } from "@/features/ai/lib/conversation-history";
 import type { ChatMode, Message } from "@/features/ai/types/ai-chat.types";
-import type { EditorSelectionContext } from "@/features/ai/types/ai-context.types";
+import type { EditorSelectionContext } from "@/features/editor/types/editor-selection.types";
 import type { ContextBudget } from "@/features/ai/types/context-budget.types";
 import type {
   ComposerBudgetGroup,
@@ -15,6 +15,7 @@ import type {
 } from "@/features/ai/types/composer-context-budget.types";
 import { hasTextContent, type PaneContent } from "@/features/panes/types/pane-content.types";
 import { buildSystemPrompt } from "@/features/ai/utils/ai-context-builder";
+import { resolveBufferText } from "@/features/editor/services/open-buffer-text";
 
 /** Context use at or above this share of the limit is shown as a warning. */
 const WARNING_RATIO = 0.8;
@@ -44,7 +45,7 @@ export function resolveComposerContextWindow(
   return modelContextWindow ? { contextWindowTokens: modelContextWindow } : {};
 }
 
-export interface ComposerContextBudgetInput {
+interface ComposerContextBudgetInput {
   providerId: string;
   modelContextWindow?: number;
   mode: ChatMode;
@@ -60,7 +61,11 @@ export function getComposerContextBudget(input: ComposerContextBudgetInput): Con
   const attachments = input.buffers
     .filter((buffer) => input.selectedBufferIds.has(buffer.id))
     .filter(hasTextContent)
-    .map((buffer) => ({ name: buffer.name, path: buffer.path, content: buffer.content }));
+    .map((buffer) => ({
+      name: buffer.name,
+      path: buffer.path,
+      content: resolveBufferText(buffer),
+    }));
 
   return buildContextBudget({
     ...resolveComposerContextWindow(input.providerId, input.modelContextWindow),

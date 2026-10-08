@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef } from "react";
 import type { MentionState } from "@/features/ai/types/chat-composer.types";
 import type { FileEntry } from "@/features/file-system/types/app.types";
 import type { FileItem } from "@/features/file-search/types/file-search.types";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { ComposerAttachedPanel } from "../input/composer-attached-panel";
 import { AIFileSelector } from "./ai-file-selector";
 

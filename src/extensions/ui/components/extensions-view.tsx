@@ -4,12 +4,17 @@ import { useShallow } from "zustand/react/shallow";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
 import { SkillsCommand } from "@/features/ai/components/skills/skills-command";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { loadMarketplaceSkills, resolveMarketplaceSkill } from "@/features/ai/lib/skill-library";
+import {
+  loadMarketplaceSkills,
+  resolveMarketplaceSkill,
+} from "@/features/ai/services/skill-library";
 import type { MarketplaceSkill } from "@/features/ai/types/skills.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useDropdownMenu } from "@/ui/dropdown";
 import { ContextMenuPopup, createContextMenuGroups } from "@/ui/context-menu";
 import { EmptyState } from "@/ui/empty";
+import { Alert, AlertActions, AlertDescription, AlertTitle } from "@/ui/alert";
+import { Button } from "@/ui/button";
 import { GroupedSection } from "@/ui/grouped-section";
 import { SearchInput } from "@/ui/search";
 import { Spinner } from "@/ui/spinner";
@@ -71,6 +76,9 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
   const extensionContextMenu = useDropdownMenu<UnifiedExtension>();
 
   const availableExtensions = useExtensionStore.use.availableExtensions();
+  const registryError = useExtensionStore.use.registryError();
+  const isLoadingRegistry = useExtensionStore.use.isLoadingRegistry();
+  const loadAvailableExtensions = useExtensionStore.use.actions().loadAvailableExtensions;
   const selectedExtensionEnabled = useExtensionStore((state) =>
     extensionId ? state.availableExtensions.get(extensionId)?.isEnabled : undefined,
   );
@@ -294,6 +302,24 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
             </span>
           }
         >
+          {registryError ? (
+            <Alert tone="error" className="mb-3">
+              <AlertTitle>Marketplace integrations could not load</AlertTitle>
+              <AlertDescription>{registryError}</AlertDescription>
+              <AlertActions>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  disabled={isLoadingRegistry}
+                  onClick={() => void loadAvailableExtensions()}
+                >
+                  {isLoadingRegistry ? <Spinner compact /> : null}
+                  Retry
+                </Button>
+              </AlertActions>
+            </Alert>
+          ) : null}
           <Tabs
             value={activeFilter}
             onValueChange={(value) => {

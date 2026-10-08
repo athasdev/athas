@@ -7,17 +7,14 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import type { CodeMirrorHost } from "../engines/codemirror/host";
 
-vi.mock("@/features/keymaps/hooks/use-command-shortcut", () => ({
-  useCommandShortcut: () => undefined,
-}));
-
 const emptyRects = () => Object.assign([], { item: () => null }) as unknown as DOMRectList;
 Range.prototype.getClientRects = emptyRects;
 Range.prototype.getBoundingClientRect = () => new DOMRect();
 
 const { formatSearchMatchLabel, openCodeMirrorSearch, summarizeSearchMatches } =
   await import("../engines/codemirror/search");
-const { CodeMirrorSearch } = await import("../engines/codemirror/features/codemirror-search");
+const { CodeMirrorSearch, SEARCH_RECOUNT_DELAY_MS } =
+  await import("../engines/codemirror/features/codemirror-search");
 
 describe("search match summary", () => {
   const state = EditorState.create({
@@ -167,5 +164,82 @@ describe("CodeMirrorSearch", () => {
 
     expect(searchPanelOpen(view.state)).toBe(false);
     expect(view.hasFocus || document.activeElement === view.contentDOM).toBe(true);
+  });
+
+  it("counts matches again only when the query or the text changes", () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const getCursor = vi.spyOn(SearchQuery.prototype, "getCursor");
+    try {
+      render();
+      act(() => openCodeMirrorSearch(view));
+      const field = findField();
+      if (!field) throw new Error("No find field");
+      type(field, "alpha");
+      expect(panel()?.textContent).toContain("? of 2");
+
+      getCursor.mockClear();
+      act(() => view.dispatch({ selection: { anchor: 11, head: 16 } }));
+      expect(panel()?.textContent).toContain("2 of 2");
+      act(() => view.dispatch({ selection: { anchor: 3 } }));
+      expect(panel()?.textContent).toContain("? of 2");
+      expect(getCursor).not.toHaveBeenCalled();
+
+      act(() => view.dispatch({ changes: { from: 0, insert: "alpha " } }));
+      act(() => view.dispatch({ changes: { from: 0, insert: "x" } }));
+      expect(getCursor).not.toHaveBeenCalled();
+      expect(panel()?.textContent).toContain("? of 2");
+
+      act(() => vi.advanceTimersByTime(SEARCH_RECOUNT_DELAY_MS));
+      expect(getCursor).toHaveBeenCalledTimes(1);
+      expect(panel()?.textContent).toContain("? of 3");
+
+      getCursor.mockClear();
+      type(field, "beta");
+      expect(getCursor).toHaveBeenCalledTimes(1);
+      expect(panel()?.textContent).toContain("? of 1");
+    } finally {
+      getCursor.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps the current match while edits wait to be counted", () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      render();
+      act(() => openCodeMirrorSearch(view));
+      const field = findField();
+      if (!field) throw new Error("No find field");
+      type(field, "alpha");
+      act(() => view.dispatch({ selection: { anchor: 11, head: 16 } }));
+      expect(panel()?.textContent).toContain("2 of 2");
+
+      act(() =>
+        view.dispatch({ changes: { from: 0, insert: "zz " }, selection: { anchor: 14, head: 19 } }),
+      );
+      expect(panel()?.textContent).toContain("2 of 2");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("shows the new count right after replacing from the panel", () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      render();
+      act(() => openCodeMirrorSearch(view, { replace: true }));
+      const replace = replaceField();
+      const field = findField();
+      if (!replace || !field) throw new Error("No replace field");
+      type(field, "alpha");
+      type(replace, "gamma");
+      press(field, "Enter");
+      press(replace, "Enter");
+
+      expect(view.state.doc.toString()).toBe("gamma beta alpha");
+      expect(panel()?.textContent).toContain("1 of 1");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

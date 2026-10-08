@@ -49,7 +49,7 @@ interface NotebookParseFailure {
   message: string;
 }
 
-export type NotebookParseResult = ParsedNotebook | NotebookParseFailure;
+type NotebookParseResult = ParsedNotebook | NotebookParseFailure;
 
 export function createNotebookCell(cellType: NotebookCellType, source = ""): NotebookCell {
   const cell: NotebookCell = {

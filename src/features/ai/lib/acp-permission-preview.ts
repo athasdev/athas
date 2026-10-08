@@ -99,7 +99,7 @@ function getContentText(content: unknown): string | null {
 }
 
 /** Reduces an ACP permission request's tool call to what the permission prompt shows. */
-export function buildAcpToolCallPreview(
+function buildAcpToolCallPreview(
   toolCall: AcpPermissionToolCall,
 ): AcpPermissionPreview | undefined {
   const kind = toolCall.kind ?? null;

@@ -2,7 +2,7 @@ import { getVersion } from "@tauri-apps/api/app";
 import { tauriFetch } from "@/utils/tauri-fetch";
 import { arch, platform } from "@tauri-apps/plugin-os";
 import { load, type Store } from "@tauri-apps/plugin-store";
-import { getSettingsStore } from "@/features/settings/lib/settings-persistence";
+import { getSettingsStore } from "@/features/settings/services/settings-persistence";
 import {
   crashReportBuild,
   isBenignWindowError,
@@ -12,13 +12,11 @@ import { redactCrashText } from "@/features/telemetry/lib/crash-report-redaction
 import {
   createFrictionPayload,
   type FrictionSignalInput,
-} from "@/features/telemetry/lib/friction-signals";
+} from "@/features/telemetry/services/friction-signals";
 import {
-  createAiEditOutcomePayload,
   createAiFailurePayload,
-  type AiEditOutcomeInput,
   type AiFailureInput,
-} from "@/features/telemetry/lib/ai-signals";
+} from "@/features/telemetry/services/ai-signals";
 import { getApiBase } from "@/utils/api-base";
 
 const API_BASE = getApiBase();
@@ -57,7 +55,6 @@ type TelemetryEventType =
   | "extension_update"
   | "friction"
   | "ai_failure"
-  | "ai_edit_outcome"
   | "crash_report";
 
 type TelemetryLogStatus = "local" | "queued" | "sent" | "failed" | "dropped" | "cleared";
@@ -662,16 +659,6 @@ export async function recordAiFailure(input: AiFailureInput) {
     mode: "optional",
     logEventType: `ai_failure:${input.kind}:${input.phase}`,
     logSummary: "Queued anonymous AI failure signal",
-  });
-}
-
-/** Whether an inline edit or Tab suggestion was accepted, rejected or failed. */
-export async function recordAiEditOutcome(input: AiEditOutcomeInput) {
-  const payload = createAiEditOutcomePayload(input);
-  return enqueueTelemetryEvent("ai_edit_outcome", payload, {
-    mode: "optional",
-    logEventType: `ai_edit_outcome:${input.surface}:${input.outcome}`,
-    logSummary: "Queued anonymous AI edit outcome",
   });
 }
 

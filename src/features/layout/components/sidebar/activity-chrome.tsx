@@ -1,18 +1,18 @@
 import { useCallback, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { openFolder } from "@/features/file-system/controllers/platform";
+import { openFolder } from "@/features/file-system/api/file-system-api";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { AppUpdateControl } from "@/features/layout/components/app-update-control";
 import { NotificationsTrigger } from "@/features/notifications/components/notifications-trigger";
 import RunActionsButton from "@/features/run-actions/components/run-actions-button";
-import { toggleTerminalPane } from "@/features/keymaps/commands/view-command-actions";
+import { keymapRegistry } from "@/features/keymaps/services/keymap-registry";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { AccountMenu } from "@/features/window/components/account-menu";
-import ProjectPicker from "@/features/window/components/project-picker";
+import { AccountMenu } from "@/features/auth/components/account-menu";
+import ProjectPicker from "@/features/workspace/project-picker/components/project-picker";
 import WindowMenuBar from "@/features/window/components/window-menu-bar";
-import { useUIState } from "@/features/window/stores/ui-state.store";
-import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
-import { createAppWindow } from "@/features/window/utils/create-app-window";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
+import { useWorkspaceTabsStore } from "@/features/workspace/stores/workspace-tabs.store";
+import { createAppWindow } from "@/features/window/services/create-app-window";
 import { Button } from "@/ui/button";
 import {
   ContextMenu,
@@ -32,6 +32,8 @@ import {
 import { SidebarIconButton } from "@/ui/sidebar";
 import Tooltip from "@/ui/tooltip";
 import { IS_MAC } from "@/utils/platform";
+import { selectIsTerminalPaneVisible } from "@/features/layout/stores/ui-state-selectors";
+import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 
 export function ActivityChrome() {
   const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
@@ -154,16 +156,15 @@ export function ActivityChrome() {
 }
 
 function TerminalToggle() {
-  const isTerminalOpen = useUIState(
-    (state) => state.isBottomPaneVisible && state.bottomPaneActiveTab === "terminal",
-  );
+  const toggleTerminalShortcut = useCommandShortcut("workbench.toggleTerminal");
+  const isTerminalOpen = useUIState(selectIsTerminalPaneVisible);
   return (
     <SidebarIconButton
       size="lg"
       active={isTerminalOpen}
-      onClick={toggleTerminalPane}
+      onClick={() => void keymapRegistry.executeCommand("workbench.toggleTerminal")}
       tooltip={isTerminalOpen ? "Hide Terminal" : "Show Terminal"}
-      commandId="workbench.toggleTerminal"
+      shortcut={toggleTerminalShortcut}
       aria-label={isTerminalOpen ? "Hide terminal" : "Show terminal"}
       aria-pressed={isTerminalOpen}
     >

@@ -13,17 +13,16 @@ const mocks = vi.hoisted(() => ({
   setActiveBuffer: vi.fn(),
   convertPreviewToDefinite: vi.fn(),
 }));
-vi.mock("@/features/file-system/controllers/file-operations", () => ({
+vi.mock("@/features/file-system/api/file-operations", () => ({
   readFileContent: mocks.read,
 }));
-vi.mock("../lsp/lsp-client", () => ({
+vi.mock("../lsp/services/lsp-client", () => ({
   LspClient: { getInstance: () => ({ getJavaClassFileContents: mocks.readJava }) },
 }));
 vi.mock("../stores/buffer.store", () => ({
   useBufferStore: {
     getState: () => ({
       buffers: mocks.buffers,
-      activeBufferId: mocks.activeBufferId,
       actions: {
         openBuffer: mocks.openBuffer,
         openContent: mocks.openContent,
@@ -33,13 +32,17 @@ vi.mock("../stores/buffer.store", () => ({
     }),
   },
 }));
+vi.mock("@/features/panes/stores/pane-selectors", () => ({
+  getActiveBufferId: () => mocks.activeBufferId,
+}));
 vi.mock("../stores/state.store", () => ({
   useEditorStateStore: {
     getState: () => ({
       cursorPosition: { line: 2, column: 3, offset: 20 },
-      scrollTop: 90,
-      scrollLeft: 0,
-      actions: { requestNavigation: mocks.requestNavigation },
+      actions: {
+        requestNavigation: mocks.requestNavigation,
+        getScroll: () => ({ scrollTop: 90, scrollLeft: 0 }),
+      },
     }),
   },
 }));
@@ -47,10 +50,10 @@ vi.mock("../stores/jump-list.store", () => ({
   useJumpListStore: { getState: () => ({ actions: { pushEntry: mocks.pushEntry } }) },
 }));
 
-import { navigateToLspLocation } from "../lsp/location-navigation";
+import { navigateToLspLocation } from "../lsp/services/location-navigation";
 
 function buffer(id: string, path: string, content = "first\nconst target = 1;") {
-  return { id, type: "editor", path, content, isPreview: false } as EditorContent;
+  return { id, type: "editor", path, content } as EditorContent;
 }
 const target = {
   uri: "file:///project/target.ts",
@@ -102,7 +105,6 @@ describe("editor location navigation", () => {
   it("reuses dirty buffers and promotes previews without rereading disk", async () => {
     mocks.buffers.push({
       ...buffer("target", "/project/target.ts", "unsaved\nconst target = 2;"),
-      isPreview: true,
     });
     await navigateToLspLocation(target);
     expect(mocks.read).not.toHaveBeenCalled();

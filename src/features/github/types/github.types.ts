@@ -115,13 +115,7 @@ export interface GitHubNotification {
   subjectUrl: string;
 }
 
-export interface GitHubActionNotificationTarget {
-  id: string;
-  repositoryFullName: string;
-  checkSuiteId: number | null;
-  title: string;
-  updatedAt: string;
-}
+export type { GitHubActionNotificationTarget } from "@/features/panes/types/pane-content.types";
 
 export interface IssueComment {
   id: number;
@@ -227,3 +221,16 @@ export interface WorkflowListItem {
 export type PRFilter = "all" | "my-prs" | "review-requests";
 export type IssueFilter = "open" | "closed" | "all";
 export type WorkflowRunFilter = "all" | "in-progress" | "successful" | "failed";
+
+/** A section of the GitHub sidebar. */
+export type GitHubSidebarSection =
+  | "pull-requests"
+  | "issues"
+  | "actions"
+  | "releases"
+  | "deployments";
+
+/** What a command asks the GitHub sidebar to do, sent as the `github:palette-action` app event. */
+export type GitHubSidebarAction =
+  | { type: "show-section"; section: GitHubSidebarSection }
+  | { type: "refresh" };

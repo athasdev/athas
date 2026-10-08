@@ -15,7 +15,7 @@ import {
   useWorkspaceStoreScopeId,
 } from "@/features/workspace/stores/create-workspace-scoped-store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { readFile } from "@/features/file-system/controllers/platform";
+import { readFile } from "@/features/file-system/api/file-system-api";
 import {
   deleteLocalHistoryEntry,
   listLocalHistoryFile,
@@ -41,6 +41,7 @@ import { cn } from "@/utils/cn";
 import { formatRelativeDate, formatShortDateTime } from "@/utils/date";
 import { getBaseName } from "@/utils/path-helpers";
 import { matchesSearchQuery } from "@/utils/search-match";
+import { readBufferText } from "@/features/editor/services/buffer-text";
 
 interface LocalHistoryCommandContentProps {
   isActive: boolean;
@@ -203,7 +204,7 @@ export function LocalHistoryCommandContent({
     const buffer = useBufferStore
       .getState()
       .buffers.find((candidate) => candidate.type === "editor" && candidate.path === targetPath);
-    if (buffer?.type === "editor") return buffer.content;
+    if (buffer?.type === "editor") return readBufferText(buffer);
 
     return readFile(targetPath);
   }, [targetPath]);

@@ -1,11 +1,11 @@
 import type { BrowserKeyBinding } from "@/bindings/commands";
 import { useKeymapStore } from "@/features/keymaps/stores/keymaps.store";
 import type { Keybinding } from "@/features/keymaps/types/keymaps.types";
-import { evaluateWhenClause } from "@/features/keymaps/utils/context";
-import { getEffectiveKeybindings } from "@/features/keymaps/utils/effective-keymaps";
-import { parseKeybinding } from "@/features/keymaps/utils/parser";
-import { keymapRegistry } from "@/features/keymaps/utils/registry";
-import { WORKBENCH_NAVIGATION_COMMANDS } from "@/features/keymaps/utils/workbench-navigation-commands";
+import { evaluateWhenClause } from "@/features/keymaps/services/when-clause";
+import { getEffectiveKeybindings } from "@/features/keymaps/services/effective-keymaps";
+import { parseKeybinding } from "@/utils/keyboard/keybinding-parser";
+import { keymapRegistry } from "@/features/keymaps/services/keymap-registry";
+import { WORKBENCH_NAVIGATION_COMMANDS } from "@/features/keymaps/services/workbench-navigation-commands";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 
 /** Keys a page reports by physical position, because Shift or the layout changes their character. */

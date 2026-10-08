@@ -6,6 +6,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vite-plus/test";
 import type { CodeMirrorHost } from "../engines/codemirror/host";
+import { emitAppEvent } from "@/utils/app-events";
 
 const mocks = vi.hoisted(() => ({
   settings: {
@@ -32,7 +33,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/extensions/registry/extension-registry", () => ({
   extensionRegistry: { isLspSupported: () => true },
 }));
-vi.mock("@/features/editor/lsp/lsp-client", () => ({
+vi.mock("@/features/editor/lsp/services/lsp-client", () => ({
   LspClient: { getInstance: () => mocks.client },
 }));
 vi.mock("@/features/settings/stores/settings.store", () => ({
@@ -68,7 +69,7 @@ vi.mock("@/features/diagnostics/stores/diagnostics.store", () => {
 vi.mock("@/features/editor/lsp/stores/lsp.store", () => ({
   useLspStore: { subscribe: () => () => {} },
 }));
-vi.mock("@/features/editor/intelligence-completion/intelligence-completion-service", () => ({
+vi.mock("@/features/ai/intelligence/services/intelligence-completion-service", () => ({
   canRequestIntelligenceCompletion: () => false,
   registerIntelligenceCompletionResume: vi.fn(),
   requestIntelligenceCompletion: vi.fn(async () => null),
@@ -76,7 +77,7 @@ vi.mock("@/features/editor/intelligence-completion/intelligence-completion-servi
   INTELLIGENCE_COMPLETION_PREFIX_CHARS: 12000,
   INTELLIGENCE_COMPLETION_SUFFIX_CHARS: 4000,
 }));
-vi.mock("@/features/editor/markdown/code-highlight", () => ({
+vi.mock("@/features/editor/markdown/services/code-highlight", () => ({
   highlightMarkdownCodeBlocks: async (html: string) => html,
 }));
 
@@ -118,7 +119,7 @@ function mount(isReadOnly = false) {
     applyHistory: () => false,
   };
   root = createRoot(document.createElement("div"));
-  act(() => root!.render(<CodeMirrorLspFeatures host={host} />));
+  act(() => root!.render(<CodeMirrorLspFeatures host={host} completion={[]} />));
   return view;
 }
 
@@ -130,7 +131,7 @@ describe("CodeMirror LSP features", () => {
 
   it("opens the completion popup from the trigger suggest command", async () => {
     const editor = mount();
-    act(() => window.dispatchEvent(new CustomEvent("editor-trigger-suggest")));
+    act(() => emitAppEvent("editor:trigger-suggest"));
     await vi.waitFor(() => expect(completionStatus(editor.state)).toBe("active"));
     expect(currentCompletions(editor.state).map((completion) => completion.label)).toEqual([
       "console",
@@ -140,7 +141,7 @@ describe("CodeMirror LSP features", () => {
 
   it("shows the hover at the cursor from the show hover command", async () => {
     const editor = mount();
-    act(() => window.dispatchEvent(new CustomEvent("editor-show-hover")));
+    act(() => emitAppEvent("editor:show-hover"));
     await vi.waitFor(() =>
       expect(editor.dom.querySelector(".cm-athas-hover")?.textContent).toBe("hover text"),
     );
@@ -148,7 +149,7 @@ describe("CodeMirror LSP features", () => {
 
   it("leaves completion off in read-only editors", async () => {
     const editor = mount(true);
-    act(() => window.dispatchEvent(new CustomEvent("editor-trigger-suggest")));
+    act(() => emitAppEvent("editor:trigger-suggest"));
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(completionStatus(editor.state)).toBeNull();
   });

@@ -11,7 +11,7 @@ const mocks = vi.hoisted(() => ({
   bundled: [] as BundledExtension[],
 }));
 
-vi.mock("@/features/window/stores/auth.store", () => ({
+vi.mock("@/features/auth/stores/auth.store", () => ({
   useAuthStore: { getState: () => ({ subscription: mocks.subscription }) },
 }));
 vi.mock("@/extensions/registry/extension-registry", () => ({

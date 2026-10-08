@@ -29,7 +29,7 @@ import { Spinner } from "@/ui/spinner";
 import { cn } from "@/utils/cn";
 import { formatCompactRelativeDate } from "@/utils/date";
 
-export interface AgentSessionSidebarItemProps {
+interface AgentSessionSidebarItemProps {
   title: string;
   providerIconId: string;
   createdAt: Date;

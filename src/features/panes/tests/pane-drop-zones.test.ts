@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { getPaneDropZoneFromRect, getPaneSplitDropOptions } from "../utils/pane-drop-zones";
+import { getPaneDropZoneFromRect, getPaneSplitDropOptions } from "../services/pane-drop-zones";
 
 const rect = {
   left: 100,

@@ -1,0 +1,244 @@
+import type { StateCreator } from "zustand";
+import type {
+  CommandPaletteViewId,
+  ProjectPickerInitialStep,
+  SettingsTab,
+} from "./types/ui-state.types";
+
+interface ModalState {
+  isQuickOpenVisible: boolean;
+  isCommandPaletteVisible: boolean;
+  commandPaletteInitialView: CommandPaletteViewId;
+  isGlobalSearchVisible: boolean;
+  isBranchManagerVisible: boolean;
+  isProjectPickerVisible: boolean;
+  projectPickerInitialStep: ProjectPickerInitialStep;
+  isDatabaseConnectionVisible: boolean;
+  settingsInitialTab: SettingsTab | null;
+  settingsInitialSection: string | null;
+  settingsNavigationRequestId: number;
+  isSettingsVisible: boolean;
+}
+
+interface ModalActions {
+  setIsQuickOpenVisible: (v: boolean) => void;
+  setIsCommandPaletteVisible: (v: boolean) => void;
+  openCommandPaletteView: (view: CommandPaletteViewId) => void;
+  setIsGlobalSearchVisible: (v: boolean) => void;
+  setIsBranchManagerVisible: (v: boolean) => void;
+  setIsProjectPickerVisible: (v: boolean) => void;
+  openProjectPicker: (initialStep?: ProjectPickerInitialStep) => void;
+  setIsDatabaseConnectionVisible: (v: boolean) => void;
+  setSettingsInitialTab: (tab: SettingsTab) => void;
+  setSettingsInitialSection: (section: string | null) => void;
+  /** Opens the Settings dialog on `tab`, scrolled to `section` when given. */
+  openSettings: (tab?: SettingsTab, section?: string) => void;
+  /** Closes the Settings dialog. */
+  closeSettings: () => void;
+  hasOpenModal: () => boolean;
+  closeTopModal: () => boolean;
+}
+
+export type ModalSlice = ModalState & ModalActions;
+
+export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (set, get) => ({
+  // State
+  isQuickOpenVisible: false,
+  isCommandPaletteVisible: false,
+  commandPaletteInitialView: "root",
+  isGlobalSearchVisible: false,
+  isBranchManagerVisible: false,
+  isProjectPickerVisible: false,
+  projectPickerInitialStep: "picker",
+  isDatabaseConnectionVisible: false,
+  settingsInitialTab: null,
+  settingsInitialSection: null,
+  settingsNavigationRequestId: 0,
+  isSettingsVisible: false,
+
+  // Actions
+  hasOpenModal: () => {
+    const state = get();
+    return (
+      state.isQuickOpenVisible ||
+      state.isCommandPaletteVisible ||
+      state.isGlobalSearchVisible ||
+      state.isBranchManagerVisible ||
+      state.isProjectPickerVisible ||
+      state.isDatabaseConnectionVisible ||
+      state.isSettingsVisible
+    );
+  },
+
+  closeTopModal: () => {
+    const state = get();
+    // Priority order: most recently opened first
+    if (state.isCommandPaletteVisible) {
+      set({ isCommandPaletteVisible: false });
+      return true;
+    }
+    if (state.isGlobalSearchVisible) {
+      set({ isGlobalSearchVisible: false });
+      return true;
+    }
+    if (state.isQuickOpenVisible) {
+      set({ isQuickOpenVisible: false });
+      return true;
+    }
+    if (state.isProjectPickerVisible) {
+      set({ isProjectPickerVisible: false });
+      return true;
+    }
+    if (state.isBranchManagerVisible) {
+      set({ isBranchManagerVisible: false });
+      return true;
+    }
+    if (state.isDatabaseConnectionVisible) {
+      set({ isDatabaseConnectionVisible: false });
+      return true;
+    }
+    // Settings stays under the overlays it can open, such as the theme picker.
+    if (state.isSettingsVisible) {
+      set({ isSettingsVisible: false });
+      return true;
+    }
+    return false;
+  },
+
+  setIsQuickOpenVisible: (v: boolean) => {
+    if (v) {
+      set({
+        isQuickOpenVisible: true,
+        isCommandPaletteVisible: false,
+        isGlobalSearchVisible: false,
+        isBranchManagerVisible: false,
+        isProjectPickerVisible: false,
+        isDatabaseConnectionVisible: false,
+      });
+    } else {
+      set({ isQuickOpenVisible: v });
+    }
+  },
+
+  setIsCommandPaletteVisible: (v: boolean) => {
+    if (v) {
+      set({
+        isCommandPaletteVisible: true,
+        commandPaletteInitialView: "root",
+        isQuickOpenVisible: false,
+        isGlobalSearchVisible: false,
+        isBranchManagerVisible: false,
+        isProjectPickerVisible: false,
+        isDatabaseConnectionVisible: false,
+      });
+    } else {
+      set({ isCommandPaletteVisible: v });
+    }
+  },
+
+  openCommandPaletteView: (view: CommandPaletteViewId) => {
+    set({
+      isCommandPaletteVisible: true,
+      commandPaletteInitialView: view,
+      isQuickOpenVisible: false,
+      isGlobalSearchVisible: false,
+      isBranchManagerVisible: false,
+      isProjectPickerVisible: false,
+      isDatabaseConnectionVisible: false,
+    });
+  },
+
+  setIsGlobalSearchVisible: (v: boolean) => {
+    if (v) {
+      set({
+        isGlobalSearchVisible: true,
+        isQuickOpenVisible: false,
+        isCommandPaletteVisible: false,
+        isBranchManagerVisible: false,
+        isProjectPickerVisible: false,
+        isDatabaseConnectionVisible: false,
+      });
+    } else {
+      set({ isGlobalSearchVisible: v });
+    }
+  },
+
+  setIsBranchManagerVisible: (v: boolean) => {
+    if (v) {
+      set({
+        isBranchManagerVisible: true,
+        isQuickOpenVisible: false,
+        isCommandPaletteVisible: false,
+        isGlobalSearchVisible: false,
+        isProjectPickerVisible: false,
+        isDatabaseConnectionVisible: false,
+      });
+    } else {
+      set({ isBranchManagerVisible: v });
+    }
+  },
+
+  setIsProjectPickerVisible: (v: boolean) => {
+    if (v) {
+      get().openProjectPicker();
+    } else {
+      set({ isProjectPickerVisible: v });
+    }
+  },
+
+  openProjectPicker: (initialStep = "picker") => {
+    set({
+      isProjectPickerVisible: true,
+      projectPickerInitialStep: initialStep,
+      isQuickOpenVisible: false,
+      isCommandPaletteVisible: false,
+      isGlobalSearchVisible: false,
+      isBranchManagerVisible: false,
+      isDatabaseConnectionVisible: false,
+    });
+  },
+
+  setIsDatabaseConnectionVisible: (v: boolean) => {
+    if (v) {
+      set({
+        isDatabaseConnectionVisible: true,
+        isQuickOpenVisible: false,
+        isCommandPaletteVisible: false,
+        isGlobalSearchVisible: false,
+        isBranchManagerVisible: false,
+        isProjectPickerVisible: false,
+      });
+    } else {
+      set({ isDatabaseConnectionVisible: v });
+    }
+  },
+
+  setSettingsInitialTab: (tab: SettingsTab) =>
+    set((state) => ({
+      settingsInitialTab: tab,
+      settingsInitialSection: null,
+      settingsNavigationRequestId: state.settingsNavigationRequestId + 1,
+    })),
+  setSettingsInitialSection: (section: string | null) =>
+    set((state) => ({
+      settingsInitialSection: section,
+      settingsNavigationRequestId: state.settingsNavigationRequestId + 1,
+    })),
+
+  openSettings: (tab?: SettingsTab, section?: string) => {
+    set({
+      isQuickOpenVisible: false,
+      isCommandPaletteVisible: false,
+      isGlobalSearchVisible: false,
+      isBranchManagerVisible: false,
+      isProjectPickerVisible: false,
+      isDatabaseConnectionVisible: false,
+      settingsInitialTab: tab ?? null,
+      settingsInitialSection: section ?? null,
+      settingsNavigationRequestId: get().settingsNavigationRequestId + 1,
+      isSettingsVisible: true,
+    });
+  },
+
+  closeSettings: () => set({ isSettingsVisible: false }),
+});

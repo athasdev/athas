@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import { resolveComposerNotice } from "@/features/ai/lib/composer-notice";
-import { getHostedUsageState } from "@/features/ai/lib/hosted-usage";
+import { getHostedUsageState } from "@/features/ai/services/hosted-usage";
 import type { ComposerNoticeInput } from "@/features/ai/types/composer-notice.types";
 
 function input(overrides: Partial<ComposerNoticeInput> = {}): ComposerNoticeInput {

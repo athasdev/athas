@@ -1,6 +1,6 @@
-import { getSymlinkInfo } from "@/features/file-system/controllers/platform";
+import { getSymlinkInfo } from "@/features/file-system/api/file-system-api";
 import type { FileEntry } from "@/features/file-system/types/app.types";
-import { resolveWslTargetPath } from "@/features/wsl/utils/wsl-path";
+import { resolveWslTargetPath } from "@/features/wsl/services/wsl-path";
 
 type ReadSymlinkInfo = typeof getSymlinkInfo;
 

@@ -4,11 +4,7 @@ import {
   MultibufferWorkspace,
 } from "@/features/editor/components/multibuffer/multibuffer-workspace";
 import type { FileNavigatorViewMode } from "@/features/file-explorer/components/file-navigator-sidebar";
-import {
-  ViewerErrorState,
-  ViewerLoadingState,
-  ViewerState,
-} from "@/features/viewer/components/viewer-state";
+import { ViewerErrorState, ViewerLoadingState, ViewerState } from "@/ui/viewer-state";
 import { FileDiffView } from "./file-diff-view";
 
 interface DiffFileItem {

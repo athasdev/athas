@@ -1,4 +1,4 @@
-import { open } from "@tauri-apps/plugin-dialog";
+import { pickDirectory } from "@/utils/file-dialogs";
 import {
   ArrowClockwiseIcon,
   ChevronDownIcon,
@@ -9,8 +9,9 @@ import {
   UploadIcon,
 } from "@/ui/icons";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { getBufferById } from "@/features/editor/utils/buffer-index";
+import { getBufferById } from "@/features/editor/stores/buffer-index";
 import type { GitSidebarItemId } from "@/features/layout/config/item-order";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { type GitActivitySection, useSidebarStore } from "@/features/layout/stores/sidebar.store";
@@ -46,7 +47,7 @@ import {
   type WorkingTreeDiffScope,
 } from "../services/working-tree-diff-loader";
 import { getStashDisplayTitle, getStashPositionLabel } from "../utils/git-stash-format";
-import { openGitWorktreeWorkspace } from "../utils/git-worktree-open";
+import { openGitWorktreeWorkspace } from "../services/git-worktree-open";
 import {
   resolveMultiDiffSelection,
   selectMultiDiffFileByPath,
@@ -65,6 +66,8 @@ import { GitStashManager } from "./git-stash-manager";
 import GitTagManager from "./git-tag-manager";
 import GitStatusPanel from "./status/git-status-panel";
 import { SourceControlNavigation } from "./source-control-navigation";
+import { emitAppEvent, onAppEvent } from "@/utils/app-events";
+import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 interface GitViewProps {
   repoPath?: string;
@@ -77,7 +80,6 @@ interface GitFileDiffStats {
   deletions: number;
 }
 
-const GIT_VIEW_BRANCH_MANAGER_EVENT = "athas:open-git-view-branch-manager";
 type GitRemoteAction = "push" | "pull" | "fetch";
 
 const REMOTE_ACTION_LABELS: Record<GitRemoteAction, { present: string; past: string }> = {
@@ -98,8 +100,15 @@ type GitPaletteAction =
   | { type: "refresh" };
 
 const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
-  const activeBuffer = useBufferStore((state) =>
-    getBufferById(state.buffers, state.activeBufferId),
+  const activeBufferId = useActiveBufferId();
+  const activeCommitDiff = useBufferStore(
+    useShallow((state) => {
+      const buffer = getBufferById(state.buffers, activeBufferId);
+      if (buffer?.type !== "diff" || !buffer.diffData || !("files" in buffer.diffData)) {
+        return null;
+      }
+      return { id: buffer.id, content: buffer.content, diffData: buffer.diffData };
+    }),
   );
   const updateBufferContent = useBufferStore.use.actions().updateBufferContent;
   const gitStatus = useGitStore((state) => state.gitStatus);
@@ -280,49 +289,39 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       if (!selectedHistoryCommit) return;
       setSelectedHistoryFilePath(filePath);
 
-      if (
-        activeBuffer?.type === "diff" &&
-        activeBuffer.diffData &&
-        "files" in activeBuffer.diffData &&
-        activeBuffer.diffData.commitHash === selectedHistoryCommit.hash
-      ) {
-        const nextMultiDiff = selectMultiDiffFileByPath(activeBuffer.diffData, filePath);
-        if (nextMultiDiff !== activeBuffer.diffData) {
-          updateBufferContent(activeBuffer.id, activeBuffer.content, false, nextMultiDiff);
+      if (activeCommitDiff?.diffData.commitHash === selectedHistoryCommit.hash) {
+        const nextMultiDiff = selectMultiDiffFileByPath(activeCommitDiff.diffData, filePath);
+        if (nextMultiDiff !== activeCommitDiff.diffData) {
+          updateBufferContent(activeCommitDiff.id, activeCommitDiff.content, false, nextMultiDiff);
         }
         return;
       }
 
       void handleViewCommitDiff(selectedHistoryCommit.hash, filePath);
     },
-    [activeBuffer, handleViewCommitDiff, selectedHistoryCommit, updateBufferContent],
+    [activeCommitDiff, handleViewCommitDiff, selectedHistoryCommit, updateBufferContent],
   );
 
   useEffect(() => {
     if (
       !selectedHistoryCommit ||
-      activeBuffer?.type !== "diff" ||
-      !activeBuffer.diffData ||
-      !("files" in activeBuffer.diffData) ||
-      activeBuffer.diffData.commitHash !== selectedHistoryCommit.hash
+      !activeCommitDiff ||
+      activeCommitDiff.diffData.commitHash !== selectedHistoryCommit.hash
     ) {
       return;
     }
 
-    const selection = resolveMultiDiffSelection(activeBuffer.diffData);
+    const selection = resolveMultiDiffSelection(activeCommitDiff.diffData);
     setSelectedHistoryFilePath(selection?.path ?? null);
-  }, [activeBuffer, selectedHistoryCommit]);
+  }, [activeCommitDiff, selectedHistoryCommit]);
 
   const handleSelectRepository = useCallback(async () => {
     setIsSelectingRepo(true);
     setRepoSelectionError(null);
     try {
-      const selected = await open({
-        directory: true,
-        multiple: false,
-      });
+      const selected = await pickDirectory();
 
-      if (!selected || Array.isArray(selected)) {
+      if (!selected) {
         return;
       }
 
@@ -479,7 +478,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
 
   const handleOpenBranchManager = useCallback(
     (tab: "branches" | "worktrees" | "repositories" = "branches") => {
-      window.dispatchEvent(new CustomEvent(GIT_VIEW_BRANCH_MANAGER_EVENT, { detail: { tab } }));
+      emitAppEvent("git:open-branch-manager", { tab });
     },
     [],
   );
@@ -503,10 +502,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   }, []);
 
   useEffect(() => {
-    const handlePaletteAction = (event: Event) => {
-      if (!(event instanceof CustomEvent)) return;
-
-      const detail = event.detail as GitPaletteAction;
+    const handlePaletteAction = (detail: GitPaletteAction) => {
       if (!detail) return;
 
       if (detail.type === "select-repository") {
@@ -554,8 +550,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       }
     };
 
-    window.addEventListener("athas:git-palette-action", handlePaletteAction);
-    return () => window.removeEventListener("athas:git-palette-action", handlePaletteAction);
+    return onAppEvent("git:palette-action", handlePaletteAction);
   }, [
     handleInitializeRepository,
     handleSelectGitSection,
@@ -823,7 +818,6 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
             currentBranch={gitStatus.branch}
             repoPath={activeRepoPath}
             paletteTarget
-            openEventName={GIT_VIEW_BRANCH_MANAGER_EVENT}
             onBranchChange={() => void handleManualRefresh()}
             onWorktreeChange={(worktreePath) => void handleGitViewWorktreeChange(worktreePath)}
             onRepositoryChange={() => setRepoSelectionError(null)}

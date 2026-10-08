@@ -1,7 +1,7 @@
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import { isVirtualContent } from "@/features/panes/types/pane-content.types";
 
-export interface WindowDocumentState {
+interface WindowDocumentState {
   title: string;
   representedPath?: string;
   isEdited: boolean;

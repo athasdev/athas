@@ -1,13 +1,13 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import UnsavedChangesDialog from "@/features/window/components/unsaved-changes-dialog";
+import type { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import UnsavedChangesDialog from "@/features/tabs/components/unsaved-changes-dialog";
 import { WindowCloseSession, type PendingWindowClose } from "../services/window-close-session";
-import { REQUEST_WINDOW_CLOSE_EVENT } from "@/features/window/utils/request-window-close";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
-import { agentsAreDetached } from "@/features/ai/detached/agent-window.store";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
+import { agentsAreDetached } from "@/features/ai/detached/stores/agent-window.store";
 import { toast } from "sonner";
-import { listenToMenuActions } from "../lib/menu-actions";
+import { onAppEvent } from "@/utils/app-events";
+import { listenToMenuActions } from "../services/menu-actions";
 
 type CloseRequestedHandler = Parameters<ReturnType<typeof getCurrentWindow>["onCloseRequested"]>[0];
 
@@ -111,14 +111,14 @@ export function WindowCloseGuard() {
           toast.error(`Could not protect unsaved changes while closing: ${String(error)}`);
       });
     window.addEventListener("beforeunload", persistSessionSnapshot);
-    window.addEventListener(REQUEST_WINDOW_CLOSE_EVENT, continueCloseOrPrompt);
+    const unsubscribeCloseRequest = onAppEvent("window:request-close", continueCloseOrPrompt);
     return () => {
       disposed = true;
       session.reset();
       pendingCloseRef.current = null;
       unlistenCloseGuard?.();
       window.removeEventListener("beforeunload", persistSessionSnapshot);
-      window.removeEventListener(REQUEST_WINDOW_CLOSE_EVENT, continueCloseOrPrompt);
+      unsubscribeCloseRequest();
     };
   }, [continueCloseOrPrompt, handleCloseRequested, persistSessionSnapshot, session]);
 

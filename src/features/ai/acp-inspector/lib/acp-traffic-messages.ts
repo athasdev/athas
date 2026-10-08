@@ -8,7 +8,7 @@ import type {
 } from "../types/acp-traffic.types";
 
 /** How many entries the inspector keeps per process, matching the Rust ring buffer. */
-export const ACP_TRAFFIC_MAX_ENTRIES = 2000;
+const ACP_TRAFFIC_MAX_ENTRIES = 2000;
 
 type JsonObject = Record<string, unknown>;
 
@@ -120,7 +120,7 @@ export function parseTrafficEntry(entry: AcpTrafficEntry): AcpTrafficMessage[] {
  * request and carries the same id. The response takes the request's method and session, and
  * both learn the latency. Requests without a response keep `partnerKey` null.
  */
-export function pairTrafficMessages(messages: AcpTrafficMessage[]): AcpTrafficMessage[] {
+function pairTrafficMessages(messages: AcpTrafficMessage[]): AcpTrafficMessage[] {
   const pending = new Map<string, number>();
   const paired = messages.map((message) => ({ ...message }));
   paired.forEach((message, index) => {

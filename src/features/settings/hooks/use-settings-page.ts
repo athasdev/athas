@@ -5,11 +5,12 @@ import {
   resolveVisibleSettingsSection,
 } from "@/features/settings/lib/settings-access";
 import { filterVisibleSettingsTabs } from "@/features/settings/lib/settings-tab-visibility";
+import { useSettingsSearchStore } from "@/features/settings/stores/settings-search.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import type { SearchResult } from "@/features/settings/types/search.types";
-import { useAuthStore } from "@/features/window/stores/auth.store";
-import type { SettingsTab } from "@/features/window/stores/ui-state/types/ui-state.types";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
+import type { SettingsTab } from "@/features/layout/stores/ui-state/types/ui-state.types";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 
 /**
  * The Settings page state shared by its sidebar navigation and the page in the main view: which
@@ -25,11 +26,11 @@ export function useSettingsPage() {
   const settingsAccess = resolveSettingsAccess(subscription);
   const { canShowCollaborationSettings, canShowEnterpriseSettings } = settingsAccess;
 
-  const searchQuery = useSettingsStore((state) => state.search.query);
-  const searchResults = useSettingsStore((state) => state.search.results);
-  const selectedResultId = useSettingsStore((state) => state.search.selectedResultId);
-  const setSearchQuery = useSettingsStore((state) => state.actions.setSearchQuery);
-  const selectSearchResult = useSettingsStore((state) => state.actions.selectSearchResult);
+  const searchQuery = useSettingsSearchStore((state) => state.query);
+  const searchResults = useSettingsSearchStore((state) => state.results);
+  const selectedResultId = useSettingsSearchStore((state) => state.selectedResultId);
+  const setSearchQuery = useSettingsSearchStore((state) => state.actions.setQuery);
+  const selectSearchResult = useSettingsSearchStore((state) => state.actions.selectResult);
 
   const resolveVisibleTab = useCallback(
     (tab: SettingsTab) =>

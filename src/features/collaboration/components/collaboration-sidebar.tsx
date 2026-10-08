@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { open } from "@tauri-apps/plugin-dialog";
+import { pickFiles } from "@/utils/file-dialogs";
 import {
   ChatBubbleTextIcon,
   ChevronLeftIcon,
@@ -17,11 +17,11 @@ import {
   addCollaborationNoteFolder,
   appendCollaborationChatMessage,
   appendCollaborationSharedDocuments,
-  buildCollaborationNoteBufferPath,
   buildCollaborationSidebarModel,
   deleteCollaborationNoteItem,
   renameCollaborationNoteItem,
-} from "@/features/collaboration/lib/collaboration-sidebar-model";
+} from "@/features/collaboration/services/collaboration-sidebar-model";
+import { buildCollaborationNoteBufferPath } from "@/features/editor/services/virtual-buffer-paths";
 import {
   CHANNEL_FILTER_OPTIONS,
   type CollaborationChannelFilter,
@@ -36,7 +36,7 @@ import {
 } from "@/features/collaboration/lib/collaboration-sidebar-filters";
 import { useCollaborationRuntimeStore } from "@/features/collaboration/stores/collaboration-runtime.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { readFileContent } from "@/features/file-system/controllers/file-operations";
+import { readFileContent } from "@/features/file-system/api/file-operations";
 import {
   appendCollaborationPrivateChatMessage,
   createCollaborationChannel,
@@ -45,8 +45,8 @@ import {
   postCollaborationMediaSignal,
   updateCollaborationChannelNote,
   type CollaborationMediaSignal,
-} from "@/features/window/services/auth-api";
-import { useAuthStore } from "@/features/window/stores/auth.store";
+} from "@/features/collaboration/services/collaboration-api";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/ui/accordion";
 import { Button } from "@/ui/button";
 import { Card, CardContent } from "@/ui/card";
@@ -650,12 +650,7 @@ export function CollaborationSidebarView() {
   const shareDocuments = async () => {
     if (!selectedChannel || !model.canEditNotes) return;
 
-    const selected = await open({
-      multiple: true,
-      directory: false,
-      title: "Share Documents",
-    });
-    const paths = Array.isArray(selected) ? selected : selected ? [selected] : [];
+    const paths = await pickFiles({ title: "Share Documents" });
     if (paths.length === 0) return;
 
     const names = paths.map((path) => getBaseName(path, path));

@@ -1,7 +1,7 @@
 import { createContext, useContext, useMemo, useSyncExternalStore } from "react";
 import type { StoreApi, UseBoundStore } from "zustand";
 import { useStoreWithEqualityFn } from "zustand/traditional";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 import { createSelectors, type WithSelectors } from "@/utils/zustand-selectors";
 
 type WorkspaceStoreHook<T> = UseBoundStore<StoreApi<T>> & {

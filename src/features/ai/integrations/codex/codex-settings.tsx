@@ -1,4 +1,11 @@
-import { commands } from "@/bindings/commands";
+import {
+  listCodexMcpServers,
+  listCodexSkills,
+  listCodexThreads,
+  signInToCodex,
+  signOutOfCodex,
+  startCodexIntegration,
+} from "./codex-account-api";
 import { useCallback, useEffect, useState } from "react";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
@@ -10,7 +17,7 @@ import { CodexIntegrationService } from "./codex-integration-service";
 import type { CodexIntegrationStatus } from "./codex-types";
 import { useCodexSettings } from "./use-codex-settings";
 import { useCodexModels } from "./use-codex-models";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { normalizeCodexSkills, normalizeCodexThreads } from "./codex-composer-catalog";
 import { getCodexModelPatch } from "./codex-model-settings";
 
@@ -47,12 +54,12 @@ export function CodexSettings() {
     setBusy(true);
     setCatalogError(null);
     try {
-      setStatus(await commands.startCodexIntegration({ cwd }));
+      setStatus(await startCodexIntegration(cwd));
       refreshModels();
       const [skillsResult, mcpResult, threadResult] = await Promise.all([
-        commands.listCodexSkills(cwd),
-        commands.listCodexMcpServers() as Promise<{ data?: unknown[]; servers?: unknown[] }>,
-        commands.listCodexThreads(cwd, null, null),
+        listCodexSkills(cwd),
+        listCodexMcpServers(),
+        listCodexThreads(cwd),
       ]);
       setDetails({
         skills: normalizeCodexSkills(skillsResult).skills.length,
@@ -152,10 +159,10 @@ export function CodexSettings() {
       </SettingRow>
       <SettingRow label="Account">
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => void commands.startCodexLogin("chatgpt")}>
+          <Button variant="outline" onClick={() => void signInToCodex()}>
             Sign in
           </Button>
-          <Button variant="outline" onClick={() => void commands.logoutCodexAccount()}>
+          <Button variant="outline" onClick={() => void signOutOfCodex()}>
             Sign out
           </Button>
         </div>

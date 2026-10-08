@@ -5,7 +5,7 @@ import {
   getHostedUsageHeadline,
   getHostedUsageState,
   getHostedUsageTone,
-} from "../lib/hosted-usage";
+} from "../services/hosted-usage";
 
 const credits = {
   periodStart: "2026-09-01T00:00:00.000Z",

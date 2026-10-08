@@ -1,7 +1,7 @@
 import { commands } from "@/bindings/commands";
 import { useCallback, useEffect, useRef } from "react";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
-import { TERMINAL_PROCESS_EXIT_EVENT } from "../constants/terminal-events";
+import { emitAppEvent } from "@/utils/app-events";
 import { closeTerminalConnection } from "../services/terminal-connection-lifecycle";
 import type { IDisposable, Terminal } from "@xterm/xterm";
 import type { TerminalInput, TerminalSize } from "../types/terminal.types";
@@ -15,7 +15,7 @@ import {
   releaseTerminalEventChannel,
   subscribeToTerminalEvents,
   terminalSizesEqual,
-} from "../utils/terminal-protocol";
+} from "../services/terminal-protocol";
 import { useTerminalWriteBuffer } from "./use-terminal-write-buffer";
 
 interface UseTerminalConnectionOptions {
@@ -34,7 +34,6 @@ interface UseTerminalConnectionOptions {
     sessionId: string,
     updates: {
       currentDirectory?: string;
-      selection?: string;
       title?: string;
     },
   ) => void;
@@ -181,12 +180,6 @@ export function useTerminalConnection({
         return true;
       }),
     );
-    disposables.push(
-      terminal.onSelectionChange(() => {
-        const selection = terminal.getSelection();
-        if (selection && isCurrent()) updateSession(sessionId, { selection });
-      }),
-    );
     const unlistenThemeChange = themeRegistry.onThemeChange(() => {
       applyTerminalTheme(getTerminalTheme());
     });
@@ -230,15 +223,11 @@ export function useTerminalConnection({
         void closeTerminalConnection({ connectionId, remoteConnectionId }).catch(() => {});
         releaseTerminalEventChannel(connectionId);
         if (outputBuffer.isDisposed() || !isCurrent()) return;
-        window.dispatchEvent(
-          new CustomEvent(TERMINAL_PROCESS_EXIT_EVENT, {
-            detail: {
-              sessionId,
-              exitCode: hadError ? null : (exitInfo?.exitCode ?? null),
-              signal: exitInfo?.signal ?? null,
-            },
-          }),
-        );
+        emitAppEvent("terminal:process-exit", {
+          sessionId,
+          exitCode: hadError ? null : (exitInfo?.exitCode ?? null),
+          signal: exitInfo?.signal ?? null,
+        });
 
         const exitCode = exitInfo?.exitCode;
         const signal = exitInfo?.signal;

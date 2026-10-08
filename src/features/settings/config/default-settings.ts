@@ -1,5 +1,8 @@
-import { DEFAULT_INTELLIGENCE_AGENT_STEPS } from "@/features/ai/intelligence/lib/intelligence-agent-steps";
-import { normalizeUiFontSize, UI_FONT_SIZE_DEFAULT } from "@/features/settings/lib/ui-font-size";
+import { DEFAULT_INTELLIGENCE_AGENT_STEPS } from "@/features/settings/services/ai-agent-steps";
+import {
+  normalizeUiFontSize,
+  UI_FONT_SIZE_DEFAULT,
+} from "@/features/settings/services/ui-font-size";
 import {
   DEFAULT_CODE_FONT_SIZE,
   DEFAULT_MONO_FONT_FAMILY,

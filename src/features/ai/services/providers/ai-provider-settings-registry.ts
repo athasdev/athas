@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-export interface AIProviderSettingsAction {
+interface AIProviderSettingsAction {
   id: string;
   extensionId: string;
   providerId: string;

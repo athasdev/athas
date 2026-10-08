@@ -1,4 +1,4 @@
-import type { SyntaxLineToken } from "@/features/editor/syntax/syntax-highlight";
+import type { SyntaxLineToken } from "@/features/editor/services/syntax-highlight";
 import type { GitDiff, GitDiffLine, GitHunk } from "./git.types";
 
 export interface DiffViewerProps {

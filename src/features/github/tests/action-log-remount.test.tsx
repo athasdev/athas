@@ -41,9 +41,6 @@ vi.mock("../lib/github-workflow-log-codemirror", () => ({
   workflowLogExtension: [],
   updateWorkflowLog: mocks.update,
 }));
-vi.mock("@/features/keymaps/hooks/use-command-shortcut", () => ({
-  useCommandShortcut: () => undefined,
-}));
 function revealedTargets() {
   return mocks.dispatch.mock.calls.map(([spec]) => {
     const target = spec.effects.value as { range: { head: number }; y: string };

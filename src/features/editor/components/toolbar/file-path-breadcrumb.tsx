@@ -1,13 +1,13 @@
 import type React from "react";
 import { ChevronLeftIcon } from "@/ui/icons";
 import { useRef, useState } from "react";
-import { logger } from "@/features/editor/utils/logger";
+import { logger } from "@/utils/logger";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
-import { readDirectory } from "@/features/file-system/controllers/platform";
+import { readDirectory } from "@/features/file-system/api/file-system-api";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import type { FileEntry } from "@/features/file-system/types/app.types";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,7 +18,8 @@ import {
   usePointAnchor,
 } from "@/ui/dropdown";
 import { getBaseName, getRelativePath, joinPath, normalizePath } from "@/utils/path-helpers";
-import { PathBreadcrumb } from "./path-breadcrumb";
+import { PathBreadcrumb } from "@/ui/path-breadcrumb";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 interface DirectoryEntry {
   name: string;
@@ -37,7 +38,7 @@ export function FilePathBreadcrumb({
   interactive = true,
   className,
 }: FilePathBreadcrumbProps) {
-  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
   const openCommandPaletteView = useUIState((state) => state.openCommandPaletteView);
   const [dropdown, setDropdown] = useState<{

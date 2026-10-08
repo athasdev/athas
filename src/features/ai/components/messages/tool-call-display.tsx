@@ -53,7 +53,7 @@ import { useElapsedSeconds } from "@/features/ai/hooks/use-elapsed-seconds";
 import { openToolPath } from "@/features/ai/lib/open-tool-location";
 import { DiffStats } from "../diff-stats";
 import { ToolLocations } from "./tool-locations";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { Button } from "@/ui/button";
 import { CodeOutput } from "@/ui/code-output";
 import { ICON_CONCEPTS } from "@/ui/icon-concepts";

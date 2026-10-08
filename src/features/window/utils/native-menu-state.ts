@@ -1,6 +1,6 @@
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 
-export interface NativeMenuState {
+interface NativeMenuState {
   closeFolderEnabled: boolean;
   saveEnabled: boolean;
   saveAsEnabled: boolean;

@@ -1,19 +1,23 @@
-import { editorAPI } from "@/features/editor/extensions/api";
+import { editorAPI } from "@/features/editor/services/editor-api";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import {
   navigateToLspLocation,
   type LspNavigationLocation,
-} from "@/features/editor/lsp/location-navigation";
+} from "@/features/editor/lsp/services/location-navigation";
 import { useJumpListStore } from "@/features/editor/stores/jump-list.store";
-import { setOutlineVisibilityPreference } from "@/features/outline/actions/outline-visibility";
-import { navigateToJumpEntry } from "@/features/editor/utils/jump-navigation";
-import { getLineTextFromContent, getLineTextsFromContent } from "@/features/editor/utils/position";
+import { setOutlineVisibilityPreference } from "@/features/outline/services/outline-visibility";
+import { navigateToJumpEntry } from "@/features/editor/services/jump-navigation";
+import {
+  getLineTextFromContent,
+  getLineTextsFromContent,
+} from "@/features/editor/services/position";
 import { useReferencesStore } from "@/features/references/stores/references.store";
 import { showChoiceDialog } from "@/ui/dialog";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { toast } from "sonner";
 import type { CallHierarchyItem, TypeHierarchyItem } from "vscode-languageserver-protocol";
+import { readBufferText } from "@/features/editor/services/buffer-text";
 
 type LspNavigationClient = {
   getDefinition: (
@@ -35,7 +39,7 @@ type LspNavigationClient = {
 
 function getActiveEditorContext() {
   const bufferStore = useBufferStore.getState();
-  const activeBuffer = bufferStore.buffers.find((b) => b.id === bufferStore.activeBufferId);
+  const activeBuffer = bufferStore.actions.getActiveBuffer();
 
   if (!activeBuffer || activeBuffer.type !== "editor" || !activeBuffer.path) return null;
 
@@ -55,7 +59,7 @@ async function goToActiveLspLocation(
     character: number,
   ) => Promise<LspNavigationLocation[] | null>,
 ): Promise<void> {
-  const { LspClient } = await import("@/features/editor/lsp/lsp-client");
+  const { LspClient } = await import("@/features/editor/lsp/services/lsp-client");
 
   const lspClient = LspClient.getInstance();
   const context = getActiveEditorContext();
@@ -136,14 +140,14 @@ export async function goToTypeDefinition(): Promise<void> {
 
 export async function goToReferences(): Promise<void> {
   const [{ LspClient }, { readFileContent }, { filePathFromUri }] = await Promise.all([
-    import("@/features/editor/lsp/lsp-client"),
-    import("@/features/file-system/controllers/file-operations"),
-    import("@/features/editor/lsp/workspace-edit"),
+    import("@/features/editor/lsp/services/lsp-client"),
+    import("@/features/file-system/api/file-operations"),
+    import("@/features/editor/lsp/services/workspace-edit"),
   ]);
 
   const lspClient = LspClient.getInstance();
   const bufferStore = useBufferStore.getState();
-  const activeBuffer = bufferStore.buffers.find((b) => b.id === bufferStore.activeBufferId);
+  const activeBuffer = bufferStore.actions.getActiveBuffer();
   const cursorPosition = useEditorStateStore.getState().cursorPosition;
 
   if (!activeBuffer?.path) return;
@@ -191,7 +195,7 @@ export async function goToReferences(): Promise<void> {
       const buffer = bufferStore.buffers.find((b) => b.path === filePath);
 
       if (buffer && "content" in buffer && typeof buffer.content === "string") {
-        content = buffer.content;
+        content = readBufferText(buffer);
       } else {
         try {
           content = await readFileContent(filePath);
@@ -228,7 +232,7 @@ export async function showCallHierarchy(): Promise<void> {
   const context = getActiveEditorContext();
   if (!context) return;
 
-  const { LspClient } = await import("@/features/editor/lsp/lsp-client");
+  const { LspClient } = await import("@/features/editor/lsp/services/lsp-client");
   const { activeBuffer, editorState } = context;
   const cursorPosition = editorState.cursorPosition;
   const lspClient = LspClient.getInstance();
@@ -261,7 +265,7 @@ export async function showTypeHierarchy(): Promise<void> {
   const context = getActiveEditorContext();
   if (!context) return;
 
-  const { LspClient } = await import("@/features/editor/lsp/lsp-client");
+  const { LspClient } = await import("@/features/editor/lsp/services/lsp-client");
   const { activeBuffer, editorState } = context;
   const cursorPosition = editorState.cursorPosition;
   const lspClient = LspClient.getInstance();
@@ -293,8 +297,8 @@ export async function showTypeHierarchy(): Promise<void> {
 export async function goBack(): Promise<void> {
   const bufferStore = useBufferStore.getState();
   const editorState = useEditorStateStore.getState();
-  const activeBufferId = bufferStore.activeBufferId;
-  const activeBuffer = bufferStore.buffers.find((b) => b.id === activeBufferId);
+  const activeBuffer = bufferStore.actions.getActiveBuffer();
+  const activeBufferId = activeBuffer?.id ?? null;
 
   const currentPosition =
     activeBufferId && activeBuffer?.path
@@ -304,8 +308,7 @@ export async function goBack(): Promise<void> {
           line: editorState.cursorPosition.line,
           column: editorState.cursorPosition.column,
           offset: editorState.cursorPosition.offset,
-          scrollTop: editorState.scrollTop,
-          scrollLeft: editorState.scrollLeft,
+          ...editorState.actions.getScroll(),
         }
       : undefined;
 

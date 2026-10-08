@@ -1,5 +1,5 @@
 /** Local models known to call tools well enough to drive the agent. */
-export const OLLAMA_TOOL_MODEL_SUGGESTIONS = [
+const OLLAMA_TOOL_MODEL_SUGGESTIONS = [
   "qwen3-coder",
   "gpt-oss",
   "llama3.1",

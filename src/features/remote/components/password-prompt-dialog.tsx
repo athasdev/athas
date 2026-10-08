@@ -4,7 +4,7 @@ import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
 import { Field, FieldError, FieldLabel } from "@/ui/field";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/ui/input-group";
-import { getFriendlyRemoteError } from "../utils/remote-errors";
+import { getFriendlyRemoteError } from "../services/remote-errors";
 import type { RemoteConnection } from "../types/remote.types";
 
 interface PasswordPromptDialogProps {

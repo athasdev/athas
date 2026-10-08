@@ -15,8 +15,8 @@ import {
   isMarketplaceSkillInstalled,
   loadMarketplaceSkills,
   resolveMarketplaceSkill,
-} from "@/features/ai/lib/skill-library";
-import { fuzzyScore } from "@/features/global-search/utils/fuzzy-search";
+} from "@/features/ai/services/skill-library";
+import { subsequenceFuzzyScore } from "@/features/global-search/services/subsequence-fuzzy-score";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useSettingsSyncStore } from "@/features/settings/stores/settings-sync.store";
 import type { AIChatSkill, MarketplaceSkill } from "@/features/ai/types/skills.types";
@@ -32,7 +32,7 @@ import Command, {
   CommandItemRow,
   CommandList,
 } from "@/ui/command";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import Input from "@/ui/input";
 import { ScrollArea } from "@/ui/scroll-area";
 import Textarea from "@/ui/textarea";
@@ -104,7 +104,8 @@ export function SkillsCommand({
       .map((skill) => ({
         skill,
         score:
-          fuzzyScore(skill.title, normalizedQuery) * 2 + fuzzyScore(skill.content, normalizedQuery),
+          subsequenceFuzzyScore(skill.title, normalizedQuery) * 2 +
+          subsequenceFuzzyScore(skill.content, normalizedQuery),
       }))
       .filter((result) => result.score > 0)
       .sort((a, b) => b.score - a.score)
@@ -123,9 +124,9 @@ export function SkillsCommand({
       .map((skill) => ({
         skill,
         score:
-          fuzzyScore(skill.title, normalizedQuery) * 2 +
-          fuzzyScore(skill.description, normalizedQuery) +
-          fuzzyScore(skill.tags.join(" "), normalizedQuery),
+          subsequenceFuzzyScore(skill.title, normalizedQuery) * 2 +
+          subsequenceFuzzyScore(skill.description, normalizedQuery) +
+          subsequenceFuzzyScore(skill.tags.join(" "), normalizedQuery),
       }))
       .filter((result) => result.score > 0)
       .sort((a, b) => b.score - a.score)

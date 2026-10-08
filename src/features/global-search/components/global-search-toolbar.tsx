@@ -1,7 +1,7 @@
 import { memo, type KeyboardEventHandler, type ReactNode, type RefObject } from "react";
 import { SearchIcon, XIcon } from "@/ui/icons";
 import { MultibufferNavigatorToggle } from "@/features/editor/components/multibuffer/multibuffer-navigator-toggle";
-import { PaneContentHeader } from "@/features/panes/components/pane-content-chrome";
+import { PaneContentHeader } from "@/ui/pane-content-chrome";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { ChromeLabel } from "@/ui/chrome";

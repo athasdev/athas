@@ -28,7 +28,7 @@ export interface SelectOption {
   keywords?: string[];
 }
 
-export interface SelectProps {
+interface SelectProps {
   value: string;
   options: SelectOption[];
   onChange: (value: string) => void;

@@ -1,6 +1,6 @@
 import type { EditorModelTextChange } from "../types/editor.types";
 import type { HistoryPatchBatch, HistoryPatchChange } from "../types/history.types";
-import { applyEditorTextChanges } from "../utils/editor-text-changes";
+import { applyEditorTextChanges, type TextSlice } from "../utils/editor-text-changes";
 
 function applyPatchChanges(
   content: string,
@@ -26,7 +26,7 @@ function applyPatchChanges(
 }
 
 export function createHistoryPatchBatch(
-  previousContent: string,
+  previousContent: TextSlice,
   changes: readonly EditorModelTextChange[],
 ): HistoryPatchBatch | null {
   const orderedChanges = [...changes].sort((left, right) => left.rangeOffset - right.rangeOffset);
@@ -65,7 +65,7 @@ export function createHistoryPatchBatch(
   };
 }
 
-export function applyHistoryPatchBatch(
+function applyHistoryPatchBatch(
   content: string,
   batch: HistoryPatchBatch,
   direction: "forward" | "reverse",

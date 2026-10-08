@@ -1,21 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
+import { onAppEvent } from "@/utils/app-events";
 const mocks = vi.hoisted(() => ({
   readDirectory: vi.fn(),
   readText: vi.fn(),
   writeFile: vi.fn(),
   invoke: vi.fn(),
-  dispatchEvent: vi.fn(),
+  workspaceChanged: vi.fn(),
 }));
 vi.mock("@/features/file-system/services/workspace-resource-provider", () => ({
   getWorkspaceResourceProvider: () => mocks,
 }));
-vi.mock("@/features/file-system/controllers/platform", () => ({ writeFile: mocks.writeFile }));
+vi.mock("@/features/file-system/api/file-system-api", () => ({ writeFile: mocks.writeFile }));
 vi.mock("@tauri-apps/api/core", () => ({ invoke: mocks.invoke }));
 import { loadTeamWorkspace, saveTeamWorkspace } from "../team/services/team-workspace-service";
+onAppEvent("team:workspace-changed", mocks.workspaceChanged);
 const config = { version: 1 as const, name: "Team", instructions: "Use Bun", commands: [] };
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.stubGlobal("window", { dispatchEvent: mocks.dispatchEvent });
+  vi.stubGlobal("window", {});
   mocks.readDirectory.mockResolvedValue([]);
   mocks.writeFile.mockResolvedValue(undefined);
 });
@@ -31,7 +33,8 @@ describe("team workspace persistence", () => {
       "/repo/athas.workspace.json",
       expect.stringContaining('"Use Bun"'),
     );
-    expect(mocks.dispatchEvent).toHaveBeenCalledOnce();
+    expect(mocks.workspaceChanged).toHaveBeenCalledOnce();
+    expect(mocks.workspaceChanged).toHaveBeenCalledWith("/repo");
   });
   it("refuses to overwrite a profile changed outside the dialog", async () => {
     mocks.readDirectory.mockResolvedValue([{ name: "athas.workspace.json" }]);

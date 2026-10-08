@@ -1,5 +1,6 @@
 import { memo, useCallback, useEffect, useMemo } from "react";
-import { buildChatTimeline } from "@/features/ai/lib/chat-timeline";
+import { useShallow } from "zustand/react/shallow";
+import { buildChatTimeline, toMs } from "@/features/ai/lib/chat-timeline";
 import { getFollowUpActionsForMessage } from "@/features/ai/lib/follow-up-actions";
 import { hasPlanBlock } from "@/features/ai/lib/plan-parser";
 import type { Message } from "@/features/ai/types/ai-chat.types";
@@ -11,6 +12,7 @@ import {
 } from "@/ui/message-scroller";
 import { cn } from "@/utils/cn";
 import { chatContentWidth } from "./chat-content-width";
+import { useChatMessageIds } from "../../hooks/use-chat-store";
 import { useAIChatStore } from "../../stores/ai-chat.store";
 import { AcpInlineEvent } from "./acp-inline-event";
 import { AgentShortcuts } from "./agent-shortcuts";
@@ -33,21 +35,29 @@ interface ChatMessagesProps {
   surfaceId: string;
 }
 
-const EMPTY_MESSAGES: Message[] = [];
+const EMPTY_TIMESTAMPS: number[] = [];
 
-function isToolOnlyMessage(message: Message | null) {
+function isToolOnlyMessage(message: Message | null | undefined) {
   return Boolean(
     message?.role === "assistant" && message.toolCalls?.length && !message.content?.trim(),
   );
 }
 
+/** The message at `index` when it is still there, else wherever it moved. */
+function findMessage(messages: Message[] | undefined, index: number, messageId: string) {
+  const atIndex = messages?.[index];
+  return atIndex?.id === messageId
+    ? atIndex
+    : messages?.find((candidate) => candidate.id === messageId);
+}
+
 interface ChatTimelineMessageProps {
-  message: Message;
-  previousMessage: Message | null;
+  chatId: string;
+  messageId: string;
+  messageIndex: number;
   isLastMessage: boolean;
   searchQuery: string;
   isActiveSearchMatch: boolean;
-  chatId: string | null;
   canEditUserMessages: boolean;
   onSendFollowUp?: (message: string) => void | Promise<void>;
   onEditUserMessage?: (messageId: string, content: string) => void | Promise<void>;
@@ -56,24 +66,32 @@ interface ChatTimelineMessageProps {
 }
 
 /**
- * One message row. Memoised on its own message (and the one before it, which sets its spacing),
- * so a streamed token re-renders only the message it lands in.
+ * One message row. It reads its own message from the store (and whether the one before it is
+ * tool-only, which sets its spacing), so a streamed token re-renders only the row it lands in.
  */
 const ChatTimelineMessage = memo(function ChatTimelineMessage({
-  message,
-  previousMessage,
+  chatId,
+  messageId,
+  messageIndex,
   isLastMessage,
   searchQuery,
   isActiveSearchMatch,
-  chatId,
   canEditUserMessages,
   onSendFollowUp,
   onEditUserMessage,
   onRetryBefore,
   onRetryStalled,
 }: ChatTimelineMessageProps) {
+  const message = useAIChatStore((state) =>
+    findMessage(state.messagesByChat[chatId], messageIndex, messageId),
+  );
+  const followsToolOnlyMessage = useAIChatStore((state) =>
+    isToolOnlyMessage(state.messagesByChat[chatId]?.[messageIndex - 1]),
+  );
   const canRetry = isLastMessage && canEditUserMessages && Boolean(onEditUserMessage);
-  const retry = useCallback(() => onRetryBefore(message.id), [onRetryBefore, message.id]);
+  const retry = useCallback(() => onRetryBefore(messageId), [onRetryBefore, messageId]);
+
+  if (!message) return null;
 
   if (isChatTerminalCommand(message)) {
     return (
@@ -103,11 +121,11 @@ const ChatTimelineMessage = memo(function ChatTimelineMessage({
         // and tool-only messages of one turn run together. Message footers sit inside the
         // message's own box, so a deferred item's content-visibility never clips them.
         message.role === "user"
-          ? previousMessage
+          ? messageIndex > 0
             ? "mt-3"
             : undefined
           : isToolOnly
-            ? isToolOnlyMessage(previousMessage)
+            ? followsToolOnlyMessage
               ? "my-0.5"
               : "my-1"
             : "my-1",
@@ -154,15 +172,31 @@ export const ChatMessages = memo(function ChatMessages({
 }: ChatMessagesProps) {
   const { scrollToMessage } = useMessageScroller();
   const resolvedChatId = useAIChatStore((state) => chatId ?? state.currentChatId);
-  // The message list keeps its identity while other chats change, so this only re-renders for
-  // this chat's own updates.
-  const messages = useAIChatStore(
-    (state) => state.chats.find((chat) => chat.id === resolvedChatId)?.messages ?? EMPTY_MESSAGES,
+  // The list itself only follows which messages there are and when they were sent: a streamed
+  // token changes neither, so it re-renders the streaming row alone, not the list.
+  const messageIds = useChatMessageIds(resolvedChatId);
+  const messageTimestamps = useAIChatStore(
+    useShallow(
+      (state) =>
+        (resolvedChatId ? state.messagesByChat[resolvedChatId] : undefined)?.map((message) =>
+          toMs(message.timestamp),
+        ) ?? EMPTY_TIMESTAMPS,
+    ),
+  );
+  const isStreaming = useAIChatStore((state) =>
+    Boolean(
+      resolvedChatId &&
+      state.messagesByChat[resolvedChatId]?.some((message) => message.isStreaming),
+    ),
   );
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
   const timelineItems = useMemo(
-    () => buildChatTimeline(messages, acpEvents),
-    [messages, acpEvents],
+    () =>
+      buildChatTimeline(
+        messageIds.map((id, index) => ({ id, timestamp: messageTimestamps[index] ?? 0 })),
+        acpEvents,
+      ),
+    [messageIds, messageTimestamps, acpEvents],
   );
   const retryBefore = useCallback(
     (messageId: string) => {
@@ -186,7 +220,7 @@ export const ChatMessages = memo(function ChatMessages({
     });
   }, [activeSearchMessageId, activeSearchIndex, scrollToMessage]);
 
-  if (messages.length === 0) {
+  if (!resolvedChatId || messageIds.length === 0) {
     return (
       <MessageScrollerContent className={cn(chatContentWidth(), "justify-end py-4")}>
         <AgentShortcuts className="mx-auto max-w-sm" surfaceId={surfaceId} />
@@ -195,10 +229,7 @@ export const ChatMessages = memo(function ChatMessages({
   }
 
   return (
-    <MessageScrollerContent
-      className={cn(chatContentWidth(), "py-4")}
-      aria-busy={messages.some((message) => message.isStreaming)}
-    >
+    <MessageScrollerContent className={cn(chatContentWidth(), "py-4")} aria-busy={isStreaming}>
       {timelineItems.map((item) => {
         if (item.type === "acp") {
           return (
@@ -219,20 +250,21 @@ export const ChatMessages = memo(function ChatMessages({
         }
 
         const index = item.messageIndex;
+        const isLastMessage = index === messageIds.length - 1;
         return (
           <ChatTimelineMessage
             key={item.id}
-            message={item.message}
-            previousMessage={index > 0 ? (messages[index - 1] ?? null) : null}
-            isLastMessage={index === messages.length - 1}
+            chatId={resolvedChatId}
+            messageId={item.message.id}
+            messageIndex={index}
+            isLastMessage={isLastMessage}
             searchQuery={searchQuery}
             isActiveSearchMatch={item.message.id === activeSearchMessageId}
-            chatId={resolvedChatId}
             canEditUserMessages={canEditUserMessages}
             onSendFollowUp={onSendFollowUp}
             onEditUserMessage={onEditUserMessage}
             onRetryBefore={retryBefore}
-            onRetryStalled={index === messages.length - 1 ? onRetryStalledResponse : undefined}
+            onRetryStalled={isLastMessage ? onRetryStalledResponse : undefined}
           />
         );
       })}

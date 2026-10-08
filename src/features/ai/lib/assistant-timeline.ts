@@ -1,6 +1,6 @@
 import type { ToolCall } from "@/features/ai/types/ai-chat.types";
 
-export interface AssistantTimelineSegment {
+interface AssistantTimelineSegment {
   text: string;
   toolCalls: ToolCall[];
 }

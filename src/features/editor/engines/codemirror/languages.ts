@@ -1,6 +1,6 @@
 import { LanguageSupport, StreamLanguage, type StreamParser } from "@codemirror/language";
 
-export type LanguageLoader = () => Promise<LanguageSupport>;
+type LanguageLoader = () => Promise<LanguageSupport>;
 
 const legacy =
   <T>(load: () => Promise<StreamParser<T>>): LanguageLoader =>

@@ -1,11 +1,11 @@
 import { useCallback } from "react";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import {
   getSidebarPaneLevel,
   resolveSidebarPaneClick,
   type SidebarPaneLevel,
-  type SidebarView,
 } from "@/features/layout/utils/sidebar-pane-utils";
+import type { SidebarView } from "@/features/layout/types/sidebar.types";
 
 interface OpenSidebarViewOptions {
   paneLevel?: SidebarPaneLevel;

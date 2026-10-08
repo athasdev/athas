@@ -3,7 +3,7 @@ import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import {
   getAncestorDirectoryPaths,
   getExplorerTargetPath,
-} from "../utils/file-explorer-tree-utils";
+} from "../services/file-explorer-tree-utils";
 
 describe("getAncestorDirectoryPaths", () => {
   it("returns parent directories from root to leaf parent", () => {
@@ -38,9 +38,6 @@ describe("getExplorerTargetPath", () => {
       type: "markdownPreview",
       path: "/workspace/README.md:preview",
       name: "README.md (Preview)",
-      isPinned: false,
-      isPreview: false,
-      isActive: true,
       content: "# Test",
       sourceFilePath: "/workspace/README.md",
     } satisfies PaneContent;
@@ -54,9 +51,6 @@ describe("getExplorerTargetPath", () => {
       type: "svgPreview",
       path: "/workspace/icon.svg:preview",
       name: "icon.svg (Preview)",
-      isPinned: false,
-      isPreview: false,
-      isActive: true,
       content: "<svg />",
       sourceFilePath: "/workspace/icon.svg",
     };
@@ -70,9 +64,6 @@ describe("getExplorerTargetPath", () => {
       type: "newTab",
       path: "https://example.com",
       name: "Example",
-      isPinned: false,
-      isPreview: false,
-      isActive: true,
     } satisfies PaneContent;
 
     expect(getExplorerTargetPath(buffer)).toBeUndefined();

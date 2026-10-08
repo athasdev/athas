@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import { yieldToMain } from "@/utils/yield-to-main";
-import { highlightMarkdownCodeBlocks } from "../markdown/code-highlight";
+import { highlightMarkdownCodeBlocks } from "../markdown/services/code-highlight";
 
 vi.mock("@/utils/yield-to-main", () => ({ yieldToMain: vi.fn(async () => {}) }));
 

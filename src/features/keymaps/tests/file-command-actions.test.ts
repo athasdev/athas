@@ -2,16 +2,24 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test"
 import type { EditorContent, PaneContent } from "@/features/panes/types/pane-content.types";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { usePaneStore } from "@/features/panes/stores/pane.store";
+import type { PaneGroup } from "@/features/panes/types/pane.types";
 import {
+  closeActiveTab,
   closeAllTabs,
   closeOtherTabs,
   closeSavedTabs,
   closeTabsToLeft,
   closeTabsToRight,
+  createNewFile,
+  openFolderDialog,
   saveActiveFileAs,
   showNewTab,
 } from "../commands/file-command-actions";
+import { onAppEvent } from "@/utils/app-events";
 import { useKeymapStore } from "../stores/keymaps.store";
+import { seedActiveBuffer } from "@/features/panes/tests/helpers/seed-pane-tabs";
 
 const createMockStorage = () => {
   const storage = new Map<string, string>();
@@ -34,22 +42,22 @@ const createMockStorage = () => {
   };
 };
 
-function makeTab(id: string, isPinned = false): PaneContent {
+function makeTab(id: string): PaneContent {
   return {
     id,
     type: "newTab",
     path: `newtab://${id}`,
     name: id,
-    isPinned,
-    isPreview: false,
-    isActive: id === "b",
   };
 }
 
-function makeEditorTab(
-  id: string,
-  options: { isDirty?: boolean; isPinned?: boolean } = {},
-): EditorContent {
+function pinTabs(...bufferIds: string[]) {
+  for (const bufferId of bufferIds) {
+    usePaneStore.getState().actions.setBufferPinnedEverywhere(bufferId, true);
+  }
+}
+
+function makeEditorTab(id: string, options: { isDirty?: boolean } = {}): EditorContent {
   const content = options.isDirty ? "dirty" : "saved";
 
   return {
@@ -57,20 +65,24 @@ function makeEditorTab(
     type: "editor",
     path: `/tmp/${id}.txt`,
     name: `${id}.txt`,
-    isPinned: options.isPinned ?? false,
-    isPreview: false,
-    isActive: id === "b",
     content,
     savedContent: options.isDirty ? "saved" : content,
     isDirty: options.isDirty ?? false,
     isVirtual: false,
     language: "text",
-    tokens: [],
   };
 }
 
 describe("file command actions", () => {
+  const newTerminal = vi.fn();
+  const closeActiveTerminal = vi.fn();
+  let unsubscribers: Array<() => void> = [];
+
   beforeEach(() => {
+    unsubscribers = [
+      onAppEvent("terminal:new", newTerminal),
+      onAppEvent("terminal:close-active", closeActiveTerminal),
+    ];
     const testStorage = createMockStorage();
     vi.stubGlobal("localStorage", testStorage);
     vi.stubGlobal("window", {
@@ -90,7 +102,6 @@ describe("file command actions", () => {
 
   afterEach(() => {
     useBufferStore.setState({
-      activeBufferId: null,
       buffers: [],
       pendingClose: null,
       closedBuffersHistory: [],
@@ -98,6 +109,7 @@ describe("file command actions", () => {
     useKeymapStore.setState((state) => ({
       contexts: { ...state.contexts, terminalFocus: false },
     }));
+    for (const unsubscribe of unsubscribers) unsubscribe();
     vi.unstubAllGlobals();
     vi.clearAllMocks();
   });
@@ -109,31 +121,108 @@ describe("file command actions", () => {
 
     showNewTab();
 
-    expect(window.dispatchEvent).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "terminal-new" }),
-    );
+    expect(newTerminal).toHaveBeenCalledOnce();
+  });
+
+  it("closes the active terminal and creates a terminal while the terminal has focus", () => {
+    const createFile = vi.spyOn(useFileSystemStore.getState(), "handleCreateNewFile");
+    useKeymapStore.setState((state) => ({
+      contexts: { ...state.contexts, terminalFocus: true },
+    }));
+    useBufferStore.setState({
+      buffers: [makeTab("a"), makeTab("b")],
+      pendingClose: null,
+      closedBuffersHistory: [],
+    });
+    seedActiveBuffer("b");
+
+    closeActiveTab();
+    createNewFile();
+
+    expect(closeActiveTerminal).toHaveBeenCalledOnce();
+    expect(newTerminal).toHaveBeenCalledOnce();
+    expect(createFile).not.toHaveBeenCalled();
+    expect(useBufferStore.getState().buffers.map((buffer) => buffer.id)).toEqual(["a", "b"]);
+    createFile.mockRestore();
+  });
+
+  it("opens the system folder dialog for Open Folder", async () => {
+    const handleOpenFolder = vi.fn().mockResolvedValue(true);
+    const original = useFileSystemStore.getState().handleOpenFolder;
+    useFileSystemStore.setState({ handleOpenFolder });
+
+    try {
+      await openFolderDialog();
+      expect(handleOpenFolder).toHaveBeenCalledOnce();
+    } finally {
+      useFileSystemStore.setState({ handleOpenFolder: original });
+    }
+  });
+
+  it("closes the tab of the focused pane", () => {
+    const group = (id: string, bufferId: string): PaneGroup => ({
+      id,
+      type: "group",
+      bufferIds: [bufferId],
+      activeBufferId: bufferId,
+    });
+    usePaneStore.setState({
+      root: {
+        id: "split",
+        type: "split",
+        direction: "horizontal",
+        children: [group("left", "b"), group("right", "a")],
+        sizes: [50, 50],
+      },
+      activePaneId: "right",
+    });
+    useBufferStore.setState({
+      buffers: [makeTab("a"), makeTab("b")],
+      pendingClose: null,
+      closedBuffersHistory: [],
+    });
+
+    closeActiveTab();
+
+    expect(useBufferStore.getState().buffers.map((buffer) => buffer.id)).toEqual(["b"]);
+    usePaneStore.getState().actions.reset();
   });
 
   it("closes every unpinned tab except the active tab", () => {
     useBufferStore.setState({
-      activeBufferId: "b",
-      buffers: [makeTab("a"), makeTab("b"), makeTab("c"), makeTab("pinned", true)],
+      buffers: [makeTab("a"), makeTab("b"), makeTab("c"), makeTab("pinned")],
       pendingClose: null,
       closedBuffersHistory: [],
     });
+    seedActiveBuffer("b");
+    pinTabs("pinned");
 
     closeOtherTabs();
 
     expect(useBufferStore.getState().buffers.map((buffer) => buffer.id)).toEqual(["b", "pinned"]);
   });
 
+  it("closes around the tab a context menu names instead of the active tab", () => {
+    useBufferStore.setState({
+      buffers: [makeTab("a"), makeTab("b"), makeTab("c"), makeTab("pinned")],
+      pendingClose: null,
+      closedBuffersHistory: [],
+    });
+    seedActiveBuffer("b");
+    pinTabs("pinned");
+
+    closeOtherTabs({ bufferId: "c" });
+
+    expect(useBufferStore.getState().buffers.map((buffer) => buffer.id)).toEqual(["c", "pinned"]);
+  });
+
   it("routes close all through the dirty close guard", () => {
     useBufferStore.setState({
-      activeBufferId: "b",
       buffers: [makeEditorTab("a"), makeEditorTab("b", { isDirty: true }), makeEditorTab("c")],
       pendingClose: null,
       closedBuffersHistory: [],
     });
+    seedActiveBuffer("b");
 
     closeAllTabs();
 
@@ -146,16 +235,17 @@ describe("file command actions", () => {
 
   it("closes saved unpinned tabs while keeping dirty and pinned tabs", () => {
     useBufferStore.setState({
-      activeBufferId: "b",
       buffers: [
         makeEditorTab("a"),
         makeEditorTab("b", { isDirty: true }),
-        makeEditorTab("c", { isPinned: true }),
+        makeEditorTab("c"),
         makeEditorTab("d"),
       ],
       pendingClose: null,
       closedBuffersHistory: [],
     });
+    seedActiveBuffer("b");
+    pinTabs("c");
 
     closeSavedTabs();
 
@@ -164,11 +254,12 @@ describe("file command actions", () => {
 
   it("closes unpinned tabs to the left of the active tab", () => {
     useBufferStore.setState({
-      activeBufferId: "b",
-      buffers: [makeTab("a"), makeTab("pinned", true), makeTab("b"), makeTab("c")],
+      buffers: [makeTab("a"), makeTab("pinned"), makeTab("b"), makeTab("c")],
       pendingClose: null,
       closedBuffersHistory: [],
     });
+    seedActiveBuffer("b");
+    pinTabs("pinned");
 
     closeTabsToLeft();
 
@@ -181,11 +272,11 @@ describe("file command actions", () => {
 
   it("keeps the close-left anchor while prompting for a dirty tab", () => {
     useBufferStore.setState({
-      activeBufferId: "b",
       buffers: [makeEditorTab("a", { isDirty: true }), makeTab("b"), makeTab("c")],
       pendingClose: null,
       closedBuffersHistory: [],
     });
+    seedActiveBuffer("b");
 
     closeTabsToLeft();
 
@@ -202,11 +293,12 @@ describe("file command actions", () => {
 
   it("closes unpinned tabs to the right of the active tab", () => {
     useBufferStore.setState({
-      activeBufferId: "b",
-      buffers: [makeTab("a"), makeTab("b"), makeTab("c"), makeTab("pinned", true), makeTab("d")],
+      buffers: [makeTab("a"), makeTab("b"), makeTab("c"), makeTab("pinned"), makeTab("d")],
       pendingClose: null,
       closedBuffersHistory: [],
     });
+    seedActiveBuffer("b");
+    pinTabs("pinned");
 
     closeTabsToRight();
 
@@ -219,11 +311,11 @@ describe("file command actions", () => {
 
   it("keeps the close-right anchor while prompting for a dirty tab", () => {
     useBufferStore.setState({
-      activeBufferId: "b",
       buffers: [makeTab("a"), makeTab("b"), makeEditorTab("c", { isDirty: true }), makeTab("d")],
       pendingClose: null,
       closedBuffersHistory: [],
     });
+    seedActiveBuffer("b");
 
     closeTabsToRight();
 

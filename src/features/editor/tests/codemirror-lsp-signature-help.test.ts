@@ -2,16 +2,19 @@
 import { EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
+import { emitAppEvent } from "@/utils/app-events";
 
 vi.mock("@/extensions/registry/extension-registry", () => ({
   extensionRegistry: { isLspSupported: () => true },
 }));
-vi.mock("@/features/editor/lsp/lsp-client", () => ({ LspClient: { getInstance: () => ({}) } }));
+vi.mock("@/features/editor/lsp/services/lsp-client", () => ({
+  LspClient: { getInstance: () => ({}) },
+}));
 vi.mock("@/features/settings/stores/settings.store", () => ({
   useSettingsStore: (selector: (state: unknown) => unknown) =>
     selector({ settings: { parameterHints: true } }),
 }));
-vi.mock("@/features/editor/markdown/code-highlight", () => ({
+vi.mock("@/features/editor/markdown/services/code-highlight", () => ({
   highlightMarkdownCodeBlocks: async (html: string) => html,
 }));
 
@@ -139,7 +142,7 @@ describe("CodeMirror signature help", () => {
       }),
       parent: document.body,
     });
-    window.dispatchEvent(new CustomEvent("editor-trigger-signature-help"));
+    emitAppEvent("editor:trigger-signature-help");
     await vi.waitFor(() =>
       expect(view!.dom.querySelector(".cm-athas-signatureHelp")).not.toBeNull(),
     );

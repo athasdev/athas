@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { ReleaseAssets } from "./release-assets";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openExternalUrl } from "@/utils/external-url";
 import { toast } from "sonner";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
@@ -8,13 +8,13 @@ import { TagIcon } from "@/ui/icons";
 import { ResourceSection, ResourceSidebarLayout, ResourceSummary } from "@/ui/resource";
 import GitHubMarkdown from "../../components/github-markdown";
 import { GitHubMetaChip, GitHubUserChip } from "../../components/github-chips";
-import { getTimeAgo } from "../../utils/github-viewer-utils";
+import { getTimeAgo } from "../../services/github-viewer-utils";
 import type { Release } from "../types/github-delivery.types";
-import { releaseTitle, safeDeliveryUrl } from "../utils/github-delivery";
+import { releaseTitle, safeDeliveryUrl } from "../services/github-delivery";
 
 function openInBrowser(value: string | null) {
   const url = safeDeliveryUrl(value);
-  if (url) void openUrl(url).catch((error) => toast.error(String(error)));
+  if (url) void openExternalUrl(url).catch((error) => toast.error(String(error)));
 }
 
 function repositoryUrlOf(release: Release) {

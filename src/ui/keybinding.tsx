@@ -1,0 +1,31 @@
+import { Fragment } from "react";
+import { Kbd, KbdGroup } from "@/ui/kbd";
+import { keybindingToDisplayParts, keysToDisplayParts } from "@/utils/keyboard/keybinding-display";
+
+interface KeybindingProps {
+  keys?: string[];
+  binding?: string;
+  className?: string;
+}
+
+export default function Keybinding({ keys, binding, className }: KeybindingProps) {
+  const displayParts = binding ? keybindingToDisplayParts(binding) : keysToDisplayParts(keys ?? []);
+  const chords = displayParts.filter((part) => part.length > 0);
+
+  if (chords.length === 0) {
+    return null;
+  }
+
+  return (
+    <KbdGroup className={className}>
+      {chords.map((chord, chordIndex) => (
+        <Fragment key={`${chord.join("-")}-${chordIndex}`}>
+          {chordIndex > 0 ? <span className="text-subtle-foreground">then</span> : null}
+          {chord.map((key, keyIndex) => (
+            <Kbd key={`${key}-${keyIndex}`}>{key}</Kbd>
+          ))}
+        </Fragment>
+      ))}
+    </KbdGroup>
+  );
+}

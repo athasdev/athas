@@ -69,7 +69,7 @@ function failedReply(message: McpJsonRpcMessage, reason: string): McpJsonRpcMess
 }
 
 /** MCP's Streamable HTTP transport: every message is a POST answered with JSON or a stream. */
-export function createHttpMcpTransport(server: McpServerSetting): McpTransport {
+function createHttpMcpTransport(server: McpServerSetting): McpTransport {
   const controller = new AbortController();
   let headers: Record<string, string> = {};
   let sessionId: string | null = null;
@@ -127,7 +127,7 @@ export function createHttpMcpTransport(server: McpServerSetting): McpTransport {
 }
 
 /** The older HTTP+SSE transport: one event stream for replies, POSTs to the endpoint it names. */
-export function createSseMcpTransport(server: McpServerSetting): McpTransport {
+function createSseMcpTransport(server: McpServerSetting): McpTransport {
   const controller = new AbortController();
   let headers: Record<string, string> = {};
   let endpoint: string | null = null;

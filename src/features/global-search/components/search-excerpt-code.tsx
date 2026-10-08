@@ -1,7 +1,7 @@
 import { memo, type MouseEvent, useCallback, useMemo } from "react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
-import { calculateTotalGutterWidth } from "@/features/editor/utils/gutter";
-import { measureTextWidth } from "@/features/editor/utils/position";
+import { calculateTotalGutterWidth } from "@/features/editor/services/gutter";
+import { measureTextWidth } from "@/features/editor/services/position";
 import { cn } from "@/utils/cn";
 import { useSearchExcerptTokens } from "../hooks/use-search-excerpt-tokens";
 import {

@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useState } from "react";
-import { type CodeHighlightSegment, getCodeHighlightSegments } from "./code-highlight";
+import { type CodeHighlightSegment, getCodeHighlightSegments } from "./services/code-highlight";
 
 const NO_SEGMENTS: CodeHighlightSegment[] = [];
 /** How long code must stop changing before its unfinished last line is highlighted too. */

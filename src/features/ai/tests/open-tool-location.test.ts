@@ -10,7 +10,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@tauri-apps/api/path", () => ({ homeDir: mocks.homeDir }));
 vi.mock("sonner", () => ({ toast: { error: mocks.toastError } }));
-vi.mock("@/features/file-system/controllers/file-operations", () => ({
+vi.mock("@/features/file-system/api/file-operations", () => ({
   readFileContent: mocks.readFileContent,
 }));
 vi.mock("@/features/editor/stores/buffer.store", () => ({
@@ -20,7 +20,7 @@ vi.mock("@/features/editor/stores/buffer.store", () => ({
     }),
   },
 }));
-vi.mock("@/features/window/stores/project.store", () => ({
+vi.mock("@/features/workspace/stores/project.store", () => ({
   useProjectStore: { getState: () => ({ rootFolderPath: "/work/project" }) },
 }));
 

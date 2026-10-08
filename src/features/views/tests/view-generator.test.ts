@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@/features/editor/services/editor-inline-edit-service", () => ({
+vi.mock("@/features/ai/intelligence/services/intelligence-text-service", () => ({
   requestInlineEdit: vi.fn(),
 }));
 

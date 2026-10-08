@@ -4,7 +4,7 @@ import type {
   AgentFileWrite,
   LineEdit,
 } from "@/features/ai/types/agent-edits.types";
-import { diffTextLines } from "@/features/git/utils/line-diff";
+import { diffTextLines } from "@/features/git/services/line-diff";
 
 /** Split the way `diffTextLines` does, so hunk line indexes line up with its output. */
 function splitLines(text: string): string[] {
@@ -142,7 +142,7 @@ export function rebaseOnDisk(entry: AgentEditEntry, disk: string): AgentEditEntr
   return { ...entry, baseline, current: disk, revision: entry.revision + 1 };
 }
 
-export interface RecordedWrite {
+interface RecordedWrite {
   /** The entry after the write; null when nothing is left to review. */
   entry: AgentEditEntry | null;
   /** Earlier unreviewed changes could not be carried over and now count as kept. */
@@ -187,10 +187,6 @@ export function recordAgentWrite(
 }
 
 /** Whether an entry has nothing left to review. */
-export function isResolved(entry: AgentEditEntry): boolean {
-  return entry.baseline === entry.current;
-}
-
 export function countChangedLines(hunks: AgentEditHunk[]): { added: number; removed: number } {
   let added = 0;
   let removed = 0;
@@ -201,7 +197,7 @@ export function countChangedLines(hunks: AgentEditHunk[]): { added: number; remo
   return { added, removed };
 }
 
-export interface AgentHunkPreviewLine {
+interface AgentHunkPreviewLine {
   type: "context" | "added" | "removed";
   content: string;
   /** 1-based line in the baseline; absent on added lines. */

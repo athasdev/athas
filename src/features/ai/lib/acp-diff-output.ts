@@ -3,13 +3,13 @@ import { EXTENSION_VIEW_LIMITS } from "@/extensions/ui/services/extension-view-s
 import type { ExtensionViewNode } from "@/extensions/ui/types/extension-view";
 import type { MultiFileDiff } from "@/features/git/types/git-diff.types";
 import type { GitDiff } from "@/features/git/types/git.types";
-import { countDiffStats } from "@/features/git/utils/git-diff-helpers";
+import { countDiffStats } from "@/features/git/services/git-diff-helpers";
 import {
   buildGitDiffLines,
   buildLineDiffHunks,
   diffTextLines,
-} from "@/features/git/utils/line-diff";
-import { useProjectStore } from "@/features/window/stores/project.store";
+} from "@/features/git/services/line-diff";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 export interface AcpDiffOutput {
   path: string;

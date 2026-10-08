@@ -31,7 +31,7 @@ vi.mock("@/features/git/api/git-remotes-api", () => ({ getRemotes: vi.fn() }));
 vi.mock("@/features/git/stores/git-repository.store", () => ({
   useRepositoryStore: { getState: () => ({ activeRepoPath: null }) },
 }));
-vi.mock("@/features/window/stores/project.store", () => ({
+vi.mock("@/features/workspace/stores/project.store", () => ({
   useProjectStore: { getState: () => ({ rootFolderPath: null }) },
 }));
 vi.mock("@/features/settings/stores/settings.store", () => ({

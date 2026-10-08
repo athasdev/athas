@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { getBufferById } from "@/features/editor/utils/buffer-index";
-import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { getBufferById } from "@/features/editor/stores/buffer-index";
 import { getFileDiff } from "../api/git-diff-api";
 import { isGitChangeRelevant, subscribeToGitChanges } from "../events/git-events";
 import type { MultiFileDiff } from "../types/git-diff.types";
 import type { GitDiff } from "../types/git.types";
 import { getDiffBufferFilePath } from "../utils/diff-buffer-path";
-import { hasGitDiffChanges } from "../utils/git-diff-helpers";
+import { hasGitDiffChanges } from "../services/git-diff-helpers";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 interface UseDiffDataReturn {
   diff: GitDiff | null;
@@ -25,7 +25,7 @@ export const useDiffData = (bufferId: string): UseDiffDataReturn => {
     return getBufferById(state.buffers, bufferId);
   });
   const { updateBufferContent, closeBuffer } = useBufferStore.use.actions();
-  const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

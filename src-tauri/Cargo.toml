@@ -44,7 +44,6 @@ mimalloc = { version = "0.1", default-features = false }
 log = "0.4.27"
 percent-encoding = "2"
 lsp-types = { version = "0.95", features = ["proposed"] }
-portable-pty = "0.9"
 regex = "1.10"
 reqwest = { workspace = true, features = ["json"] }
 rustls = { version = "0.23", default-features = false, features = ["ring", "std"] }
@@ -100,6 +99,11 @@ tauri = { version = "2.12", features = ["test"] }
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-window-state = "2.5"
+
+# Hardware SHA-256 on ARM for checked saves and local history. `sha2-asm` does not build with
+# MSVC, so Windows and every other target keep the portable implementation.
+[target.'cfg(all(target_arch = "aarch64", not(target_env = "msvc")))'.dependencies]
+sha2 = { version = "0.10", features = ["asm"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 webkit2gtk-sys = "2"

@@ -1,4 +1,3 @@
-import { commands } from "@/bindings/commands";
 import {
   ActivityIcon,
   ChatBubbleTextIcon,
@@ -8,14 +7,15 @@ import {
   SparkleIcon,
 } from "@/ui/icons";
 import { useEffect, useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import type { GitHubFormContent } from "@/features/panes/types/pane-content.types";
 import { getBranches } from "@/features/git/api/git-branches-api";
 import { getRefDiff } from "@/features/git/api/git-diff-api";
 import { getGitStatus } from "@/features/git/api/git-status-api";
-import { requestInlineEdit } from "@/features/editor/services/editor-inline-edit-service";
+import { requestInlineEdit } from "@/features/ai/intelligence/services/intelligence-text-service";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { useAuthStore } from "@/features/window/stores/auth.store";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { Button } from "@/ui/button";
 import { Checkbox } from "@/ui/checkbox";
 import Input from "@/ui/input";
@@ -31,14 +31,21 @@ import type {
   PullRequest,
   WorkflowListItem,
 } from "../types/github.types";
-import { useGitHubStore } from "../stores/github.store";
-import { githubIssueListCache } from "../utils/github-data-cache";
-import { useGitHubActionsStore } from "../stores/github-actions.store";
-import { getGitHubAvatarUrl } from "../utils/github-avatar-url";
-import { getRepositoryDisplayName } from "../utils/github-viewer-utils";
+import { dispatchWorkflow, listWorkflows } from "../api/github-actions-api";
+import { createIssue } from "../api/github-issues-api";
+import { createPullRequest } from "../api/github-pull-requests-api";
+import { githubKeys, repositoryMetadataQuery } from "../services/github-queries";
+import { getQueryErrorMessage } from "@/utils/query-client";
+import { getGitHubAvatarUrl } from "../services/github-avatar-url";
+import { getRepositoryDisplayName } from "../services/github-viewer-utils";
 import { GitHubMarkdownEditor } from "./github-markdown-editor";
 import { GitHubAssigneePicker, GitHubLabelPicker } from "./github-metadata-pickers";
 import { LabelBadges } from "./pr-status";
+import { GitHubMetadataError } from "./github-metadata-error";
+
+const EMPTY_LABELS: Label[] = [];
+const EMPTY_MILESTONES: IssueMilestone[] = [];
+const EMPTY_ISSUE_TYPES: IssueType[] = [];
 
 export type GitHubCreateKind = "pull-request" | "issue" | "action";
 
@@ -86,7 +93,7 @@ export function GitHubCreateView({ buffer }: { buffer: GitHubFormContent }) {
   const closeBuffer = useBufferStore.use.actions().closeBufferForce;
   const openIssue = useBufferStore.use.actions().openGitHubIssueBuffer;
   const openPullRequest = useBufferStore.use.actions().openPRBuffer;
-  const fetchPRs = useGitHubStore((state) => state.actions.fetchPRs);
+  const queryClient = useQueryClient();
   const close = () => closeBuffer(buffer.id);
 
   return (
@@ -97,7 +104,7 @@ export function GitHubCreateView({ buffer }: { buffer: GitHubFormContent }) {
       defaultHead={buffer.defaultHead}
       onClose={close}
       onIssueCreated={(issue) => {
-        githubIssueListCache.clear();
+        void queryClient.invalidateQueries({ queryKey: githubKeys.issues(buffer.repoPath) });
         close();
         openIssue({
           issueNumber: issue.number,
@@ -108,7 +115,7 @@ export function GitHubCreateView({ buffer }: { buffer: GitHubFormContent }) {
         });
       }}
       onPullRequestCreated={(pullRequest) => {
-        void fetchPRs(buffer.repoPath, { force: true });
+        void queryClient.invalidateQueries({ queryKey: githubKeys.pullRequests(buffer.repoPath) });
         close();
         openPullRequest(pullRequest.number, {
           title: pullRequest.title,
@@ -117,9 +124,7 @@ export function GitHubCreateView({ buffer }: { buffer: GitHubFormContent }) {
         });
       }}
       onWorkflowDispatched={() => {
-        void useGitHubActionsStore
-          .getState()
-          .actions.loadRuns(buffer.repoPath, { force: true, quiet: true });
+        void queryClient.invalidateQueries({ queryKey: githubKeys.workflowRuns(buffer.repoPath) });
         close();
       }}
     />
@@ -151,17 +156,21 @@ function GitHubCreateViewContent({
   const [base, setBase] = useState("master");
   const [draft, setDraft] = useState(false);
   const [assignees, setAssignees] = useState<string[]>([]);
-  const [labels, setLabels] = useState<Label[]>([]);
   const [selectedLabels, setSelectedLabels] = useState<Set<string>>(new Set());
-  const [milestones, setMilestones] = useState<IssueMilestone[]>([]);
-  const [issueTypes, setIssueTypes] = useState<IssueType[]>([]);
   const [milestone, setMilestone] = useState("none");
   const [issueType, setIssueType] = useState("none");
   const [branches, setBranches] = useState<string[]>([]);
   const [workflows, setWorkflows] = useState<WorkflowListItem[]>([]);
   const [workflowId, setWorkflowId] = useState("");
   const [workflowRef, setWorkflowRef] = useState(defaultHead || "master");
-  const [isLoadingMetadata, setIsLoadingMetadata] = useState(true);
+  const [isLoadingBranches, setIsLoadingBranches] = useState(true);
+  const usesMetadata = kind !== "action";
+  const metadataQuery = useQuery({ ...repositoryMetadataQuery(repoPath), enabled: usesMetadata });
+  const labels = metadataQuery.data?.labels ?? EMPTY_LABELS;
+  const milestones = metadataQuery.data?.milestones ?? EMPTY_MILESTONES;
+  const issueTypes = metadataQuery.data?.issueTypes ?? EMPTY_ISSUE_TYPES;
+  const metadataError = getQueryErrorMessage(metadataQuery.error);
+  const isLoadingMetadata = isLoadingBranches || (usesMetadata && metadataQuery.isPending);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -173,24 +182,12 @@ function GitHubCreateViewContent({
 
     Promise.all([
       getBranches(repoPath),
-      commands.githubListLabels(repoPath).catch((): Label[] => []),
-      kind === "issue"
-        ? commands.githubListMilestones(repoPath).catch((): IssueMilestone[] => [])
-        : Promise.resolve([]),
-      kind === "issue"
-        ? commands.githubListIssueTypes(repoPath).catch((): IssueType[] => [])
-        : Promise.resolve([]),
-      kind === "action"
-        ? commands.githubListWorkflows(repoPath)
-        : Promise.resolve<WorkflowListItem[]>([]),
+      kind === "action" ? listWorkflows(repoPath) : Promise.resolve<WorkflowListItem[]>([]),
     ])
-      .then(([nextBranches, nextLabels, nextMilestones, nextIssueTypes, nextWorkflows]) => {
+      .then(([nextBranches, nextWorkflows]) => {
         if (cancelled) return;
         const cleanBranches = nextBranches.filter(Boolean);
         setBranches(cleanBranches);
-        setLabels(nextLabels);
-        setMilestones(nextMilestones);
-        setIssueTypes(nextIssueTypes);
         const activeWorkflows = nextWorkflows.filter((workflow) => workflow.state !== "deleted");
         setWorkflows(activeWorkflows);
         setWorkflowId((current) => current || activeWorkflows[0]?.id.toString() || "");
@@ -211,7 +208,7 @@ function GitHubCreateViewContent({
       })
       .finally(() => {
         if (!cancelled) {
-          setIsLoadingMetadata(false);
+          setIsLoadingBranches(false);
         }
       });
 
@@ -251,7 +248,7 @@ function GitHubCreateViewContent({
 
     try {
       if (kind === "issue") {
-        const issue = await commands.githubCreateIssue(
+        const issue = await createIssue(
           repoPath,
           title,
           body,
@@ -267,7 +264,7 @@ function GitHubCreateViewContent({
       }
 
       if (kind === "pull-request") {
-        const pullRequest = await commands.githubCreatePullRequest(
+        const pullRequest = await createPullRequest(
           repoPath,
           title,
           body,
@@ -285,7 +282,7 @@ function GitHubCreateViewContent({
         return;
       }
 
-      await commands.githubDispatchWorkflow(repoPath, Number(workflowId), workflowRef);
+      await dispatchWorkflow(repoPath, Number(workflowId), workflowRef);
       onWorkflowDispatched();
       toast.success("Workflow queued");
       onClose();
@@ -451,6 +448,15 @@ ${statusSummary}`;
                 />
               </div>
             </div>
+
+            {metadataError && usesMetadata ? (
+              <div className="mt-3">
+                <GitHubMetadataError
+                  message={metadataError}
+                  onRetry={() => void metadataQuery.refetch()}
+                />
+              </div>
+            ) : null}
 
             {error ? (
               <div className="mt-3 rounded-lg bg-destructive-soft px-3 py-2 ui-text-sm text-destructive">

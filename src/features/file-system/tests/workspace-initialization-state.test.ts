@@ -30,8 +30,8 @@ function createActions(activeProjectId: string | undefined) {
       expandRoot: vi.fn((path: string) => {
         events.push(`expand:${path}`);
       }),
-      setProjectMetadata: vi.fn((path: string, name: string, projectId: string | undefined) => {
-        events.push(`metadata:${path}:${name}:${projectId ?? "none"}`);
+      setProjectMetadata: vi.fn((path: string, name: string) => {
+        events.push(`metadata:${path}:${name}`);
       }),
       restoreUiState: vi.fn((path: string) => {
         events.push(`restore-ui:${path}`);
@@ -53,7 +53,7 @@ describe("workspace initialization state", () => {
       "add-tab:remote://connection-1/:Production",
       "read-active-tab",
       "expand:remote://connection-1/",
-      "metadata:remote://connection-1/:Production:workspace:remote",
+      "metadata:remote://connection-1/:Production",
       "restore-ui:remote://connection-1/",
       "commit-file-system",
     ]);
@@ -63,11 +63,7 @@ describe("workspace initialization state", () => {
     const harness = createActions(undefined);
 
     expect(applyWorkspaceInitializationState(workspace, harness.actions)).toBeUndefined();
-    expect(harness.actions.setProjectMetadata).toHaveBeenCalledWith(
-      workspace.path,
-      workspace.name,
-      undefined,
-    );
+    expect(harness.actions.setProjectMetadata).toHaveBeenCalledWith(workspace.path, workspace.name);
     expect(harness.actions.commitFileSystemState).toHaveBeenCalledWith(workspace);
   });
 });

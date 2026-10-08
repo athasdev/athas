@@ -1,6 +1,6 @@
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openExternalUrl } from "@/utils/external-url";
 import { getServiceUrls } from "@/config/services";
-import { useToast } from "@/features/layout/contexts/toast-context";
+import { useToast } from "@/utils/toast";
 import {
   disableSettingsSync,
   enableSettingsSync,
@@ -8,10 +8,10 @@ import {
   syncSettingsNow,
 } from "@/features/settings/lib/settings-sync";
 import { useSettingsSyncStore } from "@/features/settings/stores/settings-sync.store";
-import { useProFeature } from "@/features/window/hooks/use-pro-feature";
-import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
-import { getAccountPlanLabel } from "@/features/window/lib/account-usage";
-import { useAuthStore } from "@/features/window/stores/auth.store";
+import { useProFeature } from "@/features/auth/hooks/use-pro-feature";
+import { useDesktopSignIn } from "@/features/auth/hooks/use-desktop-sign-in";
+import { getAccountPlanLabel } from "@/features/auth/services/account-usage";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import Switch from "@/ui/switch";
@@ -40,11 +40,11 @@ export const AccountSettings = () => {
   const planLabel = getAccountPlanLabel(subscription, isAuthenticated);
 
   const handleManageAccount = async () => {
-    await openUrl(services.dashboardUrl);
+    await openExternalUrl(services.dashboardUrl);
   };
 
   const handleManagePlan = async () => {
-    await openUrl(isPaidPlan ? services.dashboardBillingUrl : services.pricingUrl);
+    await openExternalUrl(isPaidPlan ? services.dashboardBillingUrl : services.pricingUrl);
   };
 
   const handleToggleSettingsSync = async (checked: boolean) => {

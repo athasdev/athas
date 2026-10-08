@@ -127,24 +127,3 @@ export async function resizeImage(
     },
   };
 }
-
-/**
- * Rotate image 90 degrees clockwise
- */
-export async function rotate90CW(imageSrc: string): Promise<ImageOperationResult> {
-  return rotateImage(imageSrc, 90);
-}
-
-/**
- * Rotate image 90 degrees counter-clockwise
- */
-export async function rotate90CCW(imageSrc: string): Promise<ImageOperationResult> {
-  return rotateImage(imageSrc, 270);
-}
-
-/**
- * Rotate image 180 degrees
- */
-export async function rotate180(imageSrc: string): Promise<ImageOperationResult> {
-  return rotateImage(imageSrc, 180);
-}

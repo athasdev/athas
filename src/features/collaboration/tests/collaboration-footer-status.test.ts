@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import type { SubscriptionInfo } from "@/features/window/services/auth-api";
+import type { SubscriptionInfo } from "@/features/auth/services/auth-api";
 import { buildCollaborationFooterStatus } from "../lib/collaboration-footer-status";
 
 function collaborationSnapshot(

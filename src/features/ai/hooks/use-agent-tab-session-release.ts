@@ -1,6 +1,6 @@
 import { commands } from "@/bindings/commands";
 import { useEffect } from "react";
-import { agentIsDetached } from "@/features/ai/detached/agent-window.store";
+import { agentIsDetached } from "@/features/ai/detached/stores/agent-window.store";
 import { getSessionToCloseWithTab } from "@/features/ai/lib/agent-tab-session-release";
 import { useAcpQuestionsStore } from "@/features/ai/stores/acp-questions.store";
 import { useAgentPermissionsStore } from "@/features/ai/stores/agent-permissions.store";
