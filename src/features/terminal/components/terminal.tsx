@@ -6,7 +6,7 @@ import {
   useWorkspaceStoreScopeId,
 } from "@/features/workspace/stores/create-workspace-scoped-store";
 import { withRemoteHostTrust } from "@/features/remote/services/remote-host-trust";
-import { commands } from "@/bindings/commands";
+import { spawnLocalTerminal, spawnRemoteTerminal } from "../services/terminal-pty-api";
 import type { ISearchOptions } from "@xterm/addon-search";
 import { Terminal } from "@xterm/xterm";
 import {
@@ -58,6 +58,7 @@ import { getTerminalCompatibilityOptions } from "../utils/terminal-options";
 import { getTerminalSize } from "../utils/terminal-protocol";
 import { getFrontendTerminalSessionArgs } from "../utils/frontend-terminal-session";
 import { TerminalSearch, type TerminalSearchOptions } from "./terminal-search";
+import { emitAppEvent, onAppEvent } from "@/utils/app-events";
 import "@xterm/xterm/css/xterm.css";
 import "../styles/terminal.css";
 import { getRequiredAthasDefaultColor } from "@/extensions/themes/default-theme";
@@ -421,11 +422,7 @@ export const TerminalEmulator = ({
         const action = getTerminalKeyAction(event, currentPlatform);
         if (action.type === "switchTab") {
           event.preventDefault();
-          window.dispatchEvent(
-            new CustomEvent("terminal-switch-tab", {
-              detail: action.direction,
-            }),
-          );
+          emitAppEvent("terminal-switch-tab", action.direction);
           return false;
         }
 
@@ -502,11 +499,10 @@ export const TerminalEmulator = ({
                 durationMs: command.finishedAt - command.startedAt,
                 finishedAt: command.finishedAt,
               };
-              window.dispatchEvent(
-                new CustomEvent("terminal-command-finished", {
-                  detail: { terminalId: sessionId, command: summary },
-                }),
-              );
+              emitAppEvent("terminal-command-finished", {
+                terminalId: sessionId,
+                command: summary,
+              });
             },
           })
         : null;
@@ -566,7 +562,7 @@ export const TerminalEmulator = ({
                     connection,
                     () => {
                       signal.throwIfAborted();
-                      return commands.createRemoteTerminal(
+                      return spawnRemoteTerminal(
                         {
                           host: connection.host,
                           port: connection.port,
@@ -584,7 +580,7 @@ export const TerminalEmulator = ({
                     { signal },
                   );
                 })()
-              : await commands.createTerminal(
+              : await spawnLocalTerminal(
                   {
                     workingDirectory: targetDirectory || null,
                     shell:
@@ -625,15 +621,11 @@ export const TerminalEmulator = ({
       // Re-fit after connection is established so onResize can notify the PTY
       fitTerminal();
 
-      window.dispatchEvent(
-        new CustomEvent("terminal-ready", {
-          detail: {
-            terminalId: sessionId,
-            connectionId: activeConnectionId,
-            remoteConnectionId: activeRemoteConnectionId,
-          },
-        }),
-      );
+      emitAppEvent("terminal-ready", {
+        terminalId: sessionId,
+        connectionId: activeConnectionId,
+        remoteConnectionId: activeRemoteConnectionId,
+      });
 
       terminalRefCallbackRef.current?.(createSessionHandle(terminal));
       readyCallbackRef.current?.();
@@ -789,13 +781,10 @@ export const TerminalEmulator = ({
   // so PTY/frontend dims match the new slot before any TUI relies on them.
   useEffect(() => {
     if (!isInitialized) return;
-    const handler = (event: Event) => {
-      const detail = (event as CustomEvent<{ sessionId: string }>).detail;
-      if (!detail || detail.sessionId !== sessionId) return;
+    return onAppEvent("athas-terminal-refit", (detail) => {
+      if (detail.sessionId !== sessionId) return;
       fitTerminal();
-    };
-    window.addEventListener("athas-terminal-refit", handler);
-    return () => window.removeEventListener("athas-terminal-refit", handler);
+    });
   }, [fitTerminal, isInitialized, sessionId]);
 
   useEffect(() => {

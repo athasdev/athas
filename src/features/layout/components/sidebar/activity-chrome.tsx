@@ -32,6 +32,7 @@ import {
 import { SidebarIconButton } from "@/ui/sidebar";
 import Tooltip from "@/ui/tooltip";
 import { IS_MAC } from "@/utils/platform";
+import { selectIsTerminalPaneVisible } from "@/features/window/stores/ui-state/terminal-slice";
 
 export function ActivityChrome() {
   const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
@@ -154,9 +155,7 @@ export function ActivityChrome() {
 }
 
 function TerminalToggle() {
-  const isTerminalOpen = useUIState(
-    (state) => state.isBottomPaneVisible && state.bottomPaneActiveTab === "terminal",
-  );
+  const isTerminalOpen = useUIState(selectIsTerminalPaneVisible);
   return (
     <SidebarIconButton
       size="lg"

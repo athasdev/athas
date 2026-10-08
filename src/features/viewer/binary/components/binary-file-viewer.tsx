@@ -1,4 +1,4 @@
-import { readFile } from "@tauri-apps/plugin-fs";
+import { readFileBytes } from "@/utils/local-files";
 import { useEffect, useState } from "react";
 import { FilePathBreadcrumb } from "@/features/editor/components/toolbar/file-path-breadcrumb";
 import { PaneContentHeader } from "@/features/panes/components/pane-content-chrome";
@@ -32,7 +32,7 @@ export function BinaryFileViewer({ filePath, fileName, rootFolderPath }: BinaryF
       setLoading(true);
       setError(null);
       try {
-        const data = await readFile(filePath);
+        const data = await readFileBytes(filePath);
         if (cancelled) return;
         setMetadata(getBinaryMetadata(data, filePath));
       } catch (err) {

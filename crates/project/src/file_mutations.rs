@@ -147,24 +147,6 @@ pub fn matches_expected(current: Option<&str>, expected: Option<&str>) -> bool {
    }
 }
 
-pub fn replace_text_if_unchanged(
-   path: &Path,
-   expected: Option<&str>,
-   content: &str,
-) -> Result<(), String> {
-   mutate_text(
-      path,
-      Some(expected.map_or(0, str::len).max(content.len()) as u64 + 3),
-      |current| {
-         if !matches_expected(current, expected) {
-            return Err(FILE_CHANGED.into());
-         }
-         Ok(Some(content.to_string()))
-      },
-   )
-   .map(|_| ())
-}
-
 pub fn delete_text_if_unchanged(path: &Path, expected: &str) -> Result<(), String> {
    mutate_text(path, Some(expected.len() as u64 + 3), |current| {
       if !matches_expected(current, Some(expected)) {
@@ -178,6 +160,25 @@ pub fn delete_text_if_unchanged(path: &Path, expected: &str) -> Result<(), Strin
 #[cfg(test)]
 mod tests {
    use super::*;
+
+   /// A checked whole-file replacement, the shape most writers build on `mutate_text`.
+   fn replace_text_if_unchanged(
+      path: &Path,
+      expected: Option<&str>,
+      content: &str,
+   ) -> Result<(), String> {
+      mutate_text(
+         path,
+         Some(expected.map_or(0, str::len).max(content.len()) as u64 + 3),
+         |current| {
+            if !matches_expected(current, expected) {
+               return Err(FILE_CHANGED.into());
+            }
+            Ok(Some(content.to_string()))
+         },
+      )
+      .map(|_| ())
+   }
 
    #[test]
    fn stale_writes_and_deletions_preserve_the_newer_file() {

@@ -1,7 +1,6 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Suspense, useEffect, useMemo, useRef } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import {
   isResourceBuffer,
   ResourceBufferBadge,
@@ -18,6 +17,7 @@ import {
 } from "./detached-resource-service";
 import { DetachedWindowShell } from "./detached-window-shell";
 import { useDetachedWindow } from "./use-detached-window";
+import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 function closeWindow() {
   void getCurrentWindow().destroy().catch(console.error);
@@ -29,8 +29,9 @@ function closeWindow() {
  * window is only asked to open links that belong in the workbench.
  */
 export default function DetachedResourceWindow() {
+  const activeBufferId = useActiveBufferId();
   const buffer = useBufferStore(
-    (state) => state.buffers.find((item) => item.id === state.activeBufferId) ?? null,
+    (state) => state.buffers.find((item) => item.id === activeBufferId) ?? null,
   );
   const { error, openLocally, payload } = useDetachedWindow<ResourceWindowMessage>({
     kind: "resource",
@@ -44,7 +45,6 @@ export default function DetachedResourceWindow() {
     if (!request || opened.current) return;
     opened.current = true;
     useProjectStore.getState().actions.setRootFolderPath(request.workspacePath);
-    useFileSystemStore.setState({ rootFolderPath: request.workspacePath });
     openLocally(request.content);
   }, [openLocally, request]);
 

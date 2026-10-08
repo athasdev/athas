@@ -1,6 +1,10 @@
-import { getVersion } from "@tauri-apps/api/app";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { commands } from "@/bindings/commands";
+import {
+  getCliInstallCommand,
+  installCli,
+  isCliInstalled,
+  uninstallCli,
+} from "@/features/settings/services/cli-install-service";
 import { IdeSettingsImportDialog } from "@/features/file-system/components/ide-settings-import-dialog";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { TypedConfirmAction } from "@/features/settings/components/typed-confirm-action";
@@ -15,7 +19,9 @@ import Command, {
   CommandList,
 } from "@/ui/command";
 import { Progress } from "@/ui/progress";
+import { describeOperatingSystem, getAppVersion } from "@/utils/app-environment";
 import { writeClipboardText } from "@/utils/clipboard";
+import { openExternalUrl } from "@/utils/external-url";
 import { matchesSearchQuery } from "@/utils/search-match";
 import Section, { SettingBlock, SettingsView, SettingRow } from "../settings-section";
 
@@ -72,7 +78,7 @@ export const GeneralSettings = () => {
   useEffect(() => {
     const checkCliStatus = async () => {
       try {
-        const installed = await commands.checkCliInstalled();
+        const installed = await isCliInstalled();
         setCliInstalled(installed);
       } catch (error) {
         console.error("Failed to check CLI status:", error);
@@ -85,13 +91,13 @@ export const GeneralSettings = () => {
   }, []);
 
   useEffect(() => {
-    getVersion().then(setAppVersion);
+    getAppVersion().then(setAppVersion);
   }, []);
 
   const handleInstallCli = async () => {
     setCliInstalling(true);
     try {
-      const result = await commands.installCliCommand();
+      const result = await installCli();
       showToast({ message: result, type: "success" });
       setCliInstalled(true);
     } catch (error) {
@@ -107,7 +113,7 @@ export const GeneralSettings = () => {
   const handleUninstallCli = async () => {
     setCliInstalling(true);
     try {
-      const result = await commands.uninstallCliCommand();
+      const result = await uninstallCli();
       showToast({ message: result, type: "success" });
       setCliInstalled(false);
     } catch (error) {
@@ -119,7 +125,7 @@ export const GeneralSettings = () => {
 
   const handleCopyInstallCommand = async () => {
     try {
-      const command = await commands.getCliInstallCommand();
+      const command = await getCliInstallCommand();
       await writeClipboardText(command);
       showToast({ message: "Install command copied to clipboard", type: "success" });
     } catch (error) {
@@ -135,25 +141,22 @@ export const GeneralSettings = () => {
   };
 
   const buildBugReport = async () => {
-    const [version, os] = await Promise.all([getVersion(), import("@tauri-apps/plugin-os")]);
-    const plat = os.platform();
-    const ver = os.version();
+    const [version, os] = await Promise.all([getAppVersion(), describeOperatingSystem()]);
 
-    return `Environment\n\n- App: Athas ${version}\n- OS: ${plat} ${ver}\n\nProblem\n\nDescribe the issue here. Steps to reproduce, expected vs actual.\n`;
+    return `Environment\n\n- App: Athas ${version}\n- OS: ${os}\n\nProblem\n\nDescribe the issue here. Steps to reproduce, expected vs actual.\n`;
   };
 
   const handleReportBug = async (channel: ReportBugChannel) => {
     try {
-      const { openUrl } = await import("@tauri-apps/plugin-opener");
       const report = await buildBugReport();
 
       if (channel.id === "email") {
-        await openUrl(
+        await openExternalUrl(
           `${channel.url}?subject=${encodeURIComponent("Athas bug report")}&body=${encodeURIComponent(report)}`,
         );
       } else {
         await writeClipboardText(report);
-        await openUrl(channel.url);
+        await openExternalUrl(channel.url);
         showToast({ message: "Report template copied", type: "success" });
       }
 

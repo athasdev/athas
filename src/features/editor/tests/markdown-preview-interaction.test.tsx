@@ -36,7 +36,11 @@ vi.mock("@/features/settings/stores/settings.store", () => ({
 }));
 vi.mock("@/features/file-system/stores/file-system.store", () => ({
   useFileSystemStore: (selector: (state: unknown) => unknown) =>
-    selector({ rootFolderPath: "/workspace", handleFileSelect: vi.fn() }),
+    selector({ handleFileSelect: vi.fn() }),
+}));
+vi.mock("@/features/window/stores/project.store", () => ({
+  useProjectStore: (selector: (state: unknown) => unknown) =>
+    selector({ rootFolderPath: "/workspace" }),
 }));
 vi.mock("../markdown/use-highlighted-markdown", () => ({
   useHighlightedMarkdown: () => "<ul><li><strong>Item</strong></li></ul>",

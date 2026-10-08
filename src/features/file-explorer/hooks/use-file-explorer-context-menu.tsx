@@ -22,7 +22,7 @@ import {
   WarningIcon,
   XIcon,
 } from "@/ui/icons";
-import { commands } from "@/bindings/commands";
+import { showSystemSharePicker, toggleQuickLookPreview } from "@/utils/local-files";
 import { useCallback, useMemo, useState } from "react";
 import { writeClipboardText } from "@/utils/clipboard";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
@@ -426,7 +426,7 @@ export function useFileExplorerContextMenu({
             label: "Quick Look",
             icon: <EyeIcon />,
             onClick: () => {
-              void commands.toggleQuickLook(contextMenu.path).catch((error) => {
+              void toggleQuickLookPreview(contextMenu.path).catch((error) => {
                 toast.error(`Unable to preview file: ${String(error)}`);
               });
             },
@@ -436,7 +436,7 @@ export function useFileExplorerContextMenu({
             label: "Share…",
             icon: <SquareArrowUpIcon />,
             onClick: () => {
-              void commands.showSharePicker(contextMenu.path).catch((error) => {
+              void showSystemSharePicker(contextMenu.path).catch((error) => {
                 toast.error(`Unable to share file: ${String(error)}`);
               });
             },

@@ -49,9 +49,6 @@ interface PaneContentBase {
   type: PaneContentType;
   path: string;
   name: string;
-  isPinned: boolean;
-  isPreview: boolean;
-  isActive: boolean;
 }
 
 // ── Per-type content definitions ────────────────────────────────────

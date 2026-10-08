@@ -14,7 +14,6 @@ import { isAcpAgent } from "@/features/ai/services/ai-chat-service";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { ChatSession } from "@/features/ai/types/ai-chat.types";
 import { getModelById, getProviderById } from "@/features/ai/types/providers.types";
-import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useGitStore } from "@/features/git/stores/git.store";
 import { getProjectNameFromPath } from "@/features/layout/components/sidebar/project-glyph";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
@@ -56,6 +55,7 @@ import {
 } from "@/ui/sidebar";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { AgentsPlanFooter } from "./agents-plan-footer";
+import { useProjectStore } from "@/features/window/stores/project.store";
 
 interface AgentRowContext {
   currentChatId: string | null;
@@ -225,14 +225,10 @@ export function AgentsSidebar() {
   const browseSessionsAgentId = useAIChatStore((state) => {
     const agentId =
       state.chats.find((chat) => chat.id === state.currentChatId)?.agentId ?? state.selectedAgentId;
-    const status = selectAcpAgentStatus(
-      state,
-      agentId,
-      useFileSystemStore.getState().rootFolderPath,
-    );
+    const status = selectAcpAgentStatus(state, agentId, useProjectStore.getState().rootFolderPath);
     return isAcpAgent(agentId) && canBrowseAgentSessions(status, agentId) ? agentId : null;
   });
-  const workspacePath = useFileSystemStore((state) => state.rootFolderPath) ?? null;
+  const workspacePath = useProjectStore((state) => state.rootFolderPath) ?? null;
   const aiProviderId = useSettingsStore((state) => state.settings.aiProviderId);
   const aiModelId = useSettingsStore((state) => state.settings.aiModelId);
   const currentBranch = useGitStore((state) => state.gitStatus?.branch ?? null);

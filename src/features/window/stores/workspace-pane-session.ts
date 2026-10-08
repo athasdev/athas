@@ -3,10 +3,20 @@ import type { PaneLayoutSnapshot } from "@/features/panes/stores/pane.store";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import type { PaneGroup, PaneNode, PaneSplit } from "@/features/panes/types/pane.types";
 import { findPaneGroup, getAllPaneGroups } from "@/features/panes/utils/pane-tree";
-import type {
-  ProjectPaneSession,
-  ProjectPaneSessionNode,
+import {
+  PROJECT_PANE_SESSION_VERSION,
+  type ProjectPaneSession,
+  type ProjectPaneSessionNode,
 } from "@/features/window/stores/session.store";
+
+/** Tab state the restored buffers already carry, merged into the saved layout. */
+export interface PaneLayoutRestoreOptions {
+  activeBufferId?: string | null;
+  pinnedBufferIds?: ReadonlySet<string>;
+  previewBufferIds?: ReadonlySet<string>;
+  /** Saved buffer paths in their old global tab order, for sessions older than version 2. */
+  legacyTabOrder?: readonly string[];
+}
 
 const createEmptyPaneNode = (id: string): PaneGroup => ({
   id,
@@ -174,6 +184,7 @@ const addBuffersToPaneNode = (
 const attachMissingBuffersToLayout = (
   layout: PaneLayoutSnapshot,
   buffers: PaneContent[],
+  activeBufferId: string | null | undefined,
 ): PaneLayoutSnapshot => {
   const persistableBufferIds = buffers.filter(isPersistablePaneBuffer).map((buffer) => buffer.id);
   if (persistableBufferIds.length === 0) {
@@ -190,7 +201,6 @@ const attachMissingBuffersToLayout = (
     return layout;
   }
 
-  const activeBufferId = buffers.find((buffer) => buffer.isActive)?.id;
   const missingBufferIdSet = new Set(missingBufferIds);
   const orderedMissingBufferIds =
     activeBufferId && missingBufferIdSet.has(activeBufferId)
@@ -215,6 +225,7 @@ export const buildCurrentProjectPaneSession = (
   );
 
   return {
+    version: PROJECT_PANE_SESSION_VERSION,
     root: serializePaneNode(layout.root, bufferPathById),
     bottomRoot: serializePaneNode(layout.bottomRoot, bufferPathById),
     activePaneId: layout.activePaneId,
@@ -223,20 +234,85 @@ export const buildCurrentProjectPaneSession = (
   };
 };
 
+/**
+ * Folds in tab state the restored buffers carry: pins (sessions before version 2 could hold a pin
+ * only on the buffer), the old global tab order and previews for those older sessions.
+ */
+const applyRestoredTabState = (
+  node: PaneNode,
+  options: PaneLayoutRestoreOptions,
+  isLegacySession: boolean,
+  bufferPathById: Map<string, string>,
+): PaneNode => {
+  if (node.type === "split") {
+    return {
+      ...node,
+      children: [
+        applyRestoredTabState(node.children[0], options, isLegacySession, bufferPathById),
+        applyRestoredTabState(node.children[1], options, isLegacySession, bufferPathById),
+      ],
+    };
+  }
+
+  let bufferIds = node.bufferIds;
+  if (isLegacySession && options.legacyTabOrder) {
+    const rankByPath = new Map(options.legacyTabOrder.map((path, index) => [path, index] as const));
+    const rank = (bufferId: string) =>
+      rankByPath.get(bufferPathById.get(bufferId) ?? "") ?? Number.MAX_SAFE_INTEGER;
+    bufferIds = [...bufferIds].sort((left, right) => rank(left) - rank(right));
+  }
+
+  const pinnedBufferIds = unique([
+    ...(node.pinnedBufferIds ?? []),
+    ...bufferIds.filter((bufferId) => options.pinnedBufferIds?.has(bufferId)),
+  ]);
+  let previewBufferId = node.previewBufferId ?? null;
+  if (!previewBufferId && isLegacySession) {
+    previewBufferId = bufferIds.find((bufferId) => options.previewBufferIds?.has(bufferId)) ?? null;
+  }
+  if (previewBufferId && pinnedBufferIds.includes(previewBufferId)) {
+    previewBufferId = null;
+  }
+
+  return { ...node, bufferIds, pinnedBufferIds, previewBufferId };
+};
+
+const applyRestoredTabStateToLayout = (
+  layout: PaneLayoutSnapshot,
+  buffers: PaneContent[],
+  options: PaneLayoutRestoreOptions,
+  isLegacySession: boolean,
+): PaneLayoutSnapshot => {
+  const bufferPathById = new Map(buffers.map((buffer) => [buffer.id, buffer.path] as const));
+  return {
+    ...layout,
+    root: applyRestoredTabState(layout.root, options, isLegacySession, bufferPathById),
+    bottomRoot: applyRestoredTabState(layout.bottomRoot, options, isLegacySession, bufferPathById),
+  };
+};
+
 export const buildPaneLayoutFromSession = (
   paneState: ProjectPaneSession | null | undefined,
   buffers: PaneContent[],
+  options: PaneLayoutRestoreOptions = {},
 ): PaneLayoutSnapshot => {
+  const isLegacySession = (paneState?.version ?? 1) < PROJECT_PANE_SESSION_VERSION;
   if (!paneState) {
-    return attachMissingBuffersToLayout(
-      {
-        root: createEmptyPaneNode(ROOT_PANE_ID),
-        bottomRoot: createEmptyPaneNode(BOTTOM_PANE_ID),
-        activePaneId: ROOT_PANE_ID,
-        mostRecentActivePaneIds: [ROOT_PANE_ID],
-        fullscreenPaneId: null,
-      },
+    return applyRestoredTabStateToLayout(
+      attachMissingBuffersToLayout(
+        {
+          root: createEmptyPaneNode(ROOT_PANE_ID),
+          bottomRoot: createEmptyPaneNode(BOTTOM_PANE_ID),
+          activePaneId: ROOT_PANE_ID,
+          mostRecentActivePaneIds: [ROOT_PANE_ID],
+          fullscreenPaneId: null,
+        },
+        buffers,
+        options.activeBufferId,
+      ),
       buffers,
+      options,
+      isLegacySession,
     );
   }
 
@@ -244,14 +320,20 @@ export const buildPaneLayoutFromSession = (
     buffers.filter(isPersistablePaneBuffer).map((buffer) => [buffer.path, buffer.id] as const),
   );
 
-  return attachMissingBuffersToLayout(
-    {
-      root: hydratePaneNode(paneState.root, bufferIdByPath),
-      bottomRoot: hydratePaneNode(paneState.bottomRoot, bufferIdByPath),
-      activePaneId: paneState.activePaneId,
-      mostRecentActivePaneIds: paneState.mostRecentActivePaneIds,
-      fullscreenPaneId: paneState.fullscreenPaneId,
-    },
+  return applyRestoredTabStateToLayout(
+    attachMissingBuffersToLayout(
+      {
+        root: hydratePaneNode(paneState.root, bufferIdByPath),
+        bottomRoot: hydratePaneNode(paneState.bottomRoot, bufferIdByPath),
+        activePaneId: paneState.activePaneId,
+        mostRecentActivePaneIds: paneState.mostRecentActivePaneIds,
+        fullscreenPaneId: paneState.fullscreenPaneId,
+      },
+      buffers,
+      options.activeBufferId,
+    ),
     buffers,
+    options,
+    isLegacySession,
   );
 };

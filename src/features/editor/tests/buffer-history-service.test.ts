@@ -10,6 +10,7 @@ import {
   trackImmediateBufferHistoryChange,
 } from "../stores/buffer-history-tracking";
 import { useHistoryStore } from "../stores/history.store";
+import { seedActiveBuffer } from "@/features/panes/tests/helpers/seed-pane-tabs";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn().mockResolvedValue(null) }));
 vi.mock("@tauri-apps/api/event", () => ({ listen: vi.fn().mockResolvedValue(() => {}) }));
@@ -25,9 +26,6 @@ function buffer(content = "foo"): EditorContent {
     contentRevision: 0,
     isDirty: false,
     isVirtual: false,
-    isPreview: true,
-    isPinned: false,
-    isActive: true,
   };
 }
 const owner = () => captureBufferStoreOwner("owner");
@@ -67,7 +65,8 @@ function type(text: string) {
 beforeEach(() => {
   workspaceRuntimeRegistry.resetForTests();
   workspaceRuntimeRegistry.activateWorkspace({ id: "owner", name: "Owner" });
-  owner().store.setState({ buffers: [buffer()], activeBufferId: "same-id" });
+  owner().store.setState({ buffers: [buffer()] });
+  seedActiveBuffer("same-id", "owner");
 });
 afterEach(() => workspaceRuntimeRegistry.resetForTests());
 
@@ -81,7 +80,6 @@ describe("editor history across native editor lifetimes", () => {
       content: "bar",
       savedContent: "foo",
       isDirty: true,
-      isPreview: false,
     });
   });
   it("keeps the disk baseline when undoing an edit made before a save", () => {
@@ -135,7 +133,8 @@ describe("editor history across native editor lifetimes", () => {
   it("keeps duplicate buffer IDs in separate workspaces independent", () => {
     replace("bar");
     workspaceRuntimeRegistry.activateWorkspace({ id: "other", name: "Other" });
-    useBufferStore.setState({ buffers: [buffer("other")], activeBufferId: "same-id" });
+    useBufferStore.setState({ buffers: [buffer("other")] });
+    seedActiveBuffer("same-id");
     expect(applyBufferHistory(owner(), "same-id", "undo")?.content).toBe("foo");
     expect((useBufferStore.getState().buffers[0] as EditorContent).content).toBe("other");
     expect(useHistoryStore.getState().actions.canRedo("same-id")).toBe(false);

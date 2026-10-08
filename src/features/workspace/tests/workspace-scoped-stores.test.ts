@@ -73,9 +73,6 @@ describe("workspace-scoped stores", () => {
       savedContent: "",
       isDirty: false,
       isVirtual: false,
-      isPinned: false,
-      isPreview: true,
-      isActive: true,
     };
 
     workspaceRuntimeRegistry.activateWorkspace({ id: "workspace-a", name: "A", path: "/a" });
@@ -84,7 +81,6 @@ describe("workspace-scoped stores", () => {
     workspaceABuffers.setState((state) => ({
       ...state,
       buffers: [buffer],
-      activeBufferId: buffer.id,
     }));
     workspaceAPanes.getState().actions.addBufferToPane(ROOT_PANE_ID, buffer.id);
 

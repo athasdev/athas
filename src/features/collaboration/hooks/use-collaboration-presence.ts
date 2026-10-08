@@ -12,6 +12,7 @@ import {
   updateCollaborationPresence,
 } from "@/features/window/services/auth-api";
 import { useAuthStore } from "@/features/window/stores/auth.store";
+import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 const PRESENCE_HEARTBEAT_MS = 60_000;
 const DOCUMENT_STREAM_RECONNECT_MS = 2_000;
@@ -48,9 +49,10 @@ export function useCollaborationPresence() {
   const activeDocumentStream = useCollaborationRuntimeStore((state) => state.activeDocumentStream);
   const mediaState = useCollaborationRuntimeStore((state) => state.mediaState);
   const collaborationRuntimeActions = useCollaborationRuntimeStore((state) => state.actions);
+  const activeBufferId = useActiveBufferId();
   const activeFilePath = useBufferStore((state) => {
-    const buffer = state.activeBufferId
-      ? state.buffers.find((entry) => entry.id === state.activeBufferId)
+    const buffer = activeBufferId
+      ? state.buffers.find((entry) => entry.id === activeBufferId)
       : null;
     if (!buffer || !("path" in buffer)) return null;
     if (buffer.path.startsWith("untitled:") || buffer.path.includes("://")) return null;

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
+import { type AppEventMap, onAppEvent } from "@/utils/app-events";
 import {
-  DELIVERY_CHANGED,
   DELIVERY_TTL,
   deliveryDetailCache,
   loadDeliveryDetail,
@@ -49,19 +49,18 @@ export function useDeliveryDetail(
     };
   }, [id, key, kind, nonce, repoPath]);
   useEffect(() => {
-    const changed = (event: Event) => {
-      const detail = (event as CustomEvent).detail;
-      if (detail?.kind === kind && detail?.repoPath === repoPath && detail?.id === id) refresh();
+    const changed = (detail: AppEventMap["athas:github-delivery-changed"]) => {
+      if (detail.kind === kind && detail.repoPath === repoPath && detail.id === id) refresh();
     };
     const poll = () => {
       if (active && document.visibilityState === "visible") refresh();
     };
     const interval = kind === "deployments" ? window.setInterval(poll, DELIVERY_TTL) : null;
-    window.addEventListener(DELIVERY_CHANGED, changed);
+    const unsubscribeChanged = onAppEvent("athas:github-delivery-changed", changed);
     window.addEventListener("focus", poll);
     return () => {
       if (interval !== null) window.clearInterval(interval);
-      window.removeEventListener(DELIVERY_CHANGED, changed);
+      unsubscribeChanged();
       window.removeEventListener("focus", poll);
     };
   }, [active, id, kind, refresh, repoPath]);

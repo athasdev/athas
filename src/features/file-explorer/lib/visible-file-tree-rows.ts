@@ -490,6 +490,34 @@ export function filterFileTreeForFffHits(
   };
 }
 
+export interface VisibleFileTreeRowIndex {
+  get: (path: string) => number | undefined;
+}
+
+const rowIndexByPathCache = new WeakMap<readonly VisibleFileTreeRow[], Map<string, number>>();
+
+/**
+ * Looks rows up by path. The path map is built on the first lookup into a rows array and shared
+ * by every lookup into it, so building the rows does not pay for a map nobody reads.
+ */
+export function createVisibleFileTreeRowIndex(
+  rows: readonly VisibleFileTreeRow[],
+): VisibleFileTreeRowIndex {
+  return {
+    get: (path) => {
+      let indexByPath = rowIndexByPathCache.get(rows);
+      if (!indexByPath) {
+        indexByPath = new Map();
+        for (let index = 0; index < rows.length; index++) {
+          indexByPath.set(rows[index].file.path, index);
+        }
+        rowIndexByPathCache.set(rows, indexByPath);
+      }
+      return indexByPath.get(path);
+    },
+  };
+}
+
 const parentRowIndexesCache = new WeakMap<readonly VisibleFileTreeRow[], Int32Array>();
 
 /** For each row, the index of the nearest earlier row with a smaller depth, or -1. */

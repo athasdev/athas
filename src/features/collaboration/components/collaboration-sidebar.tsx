@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { open } from "@tauri-apps/plugin-dialog";
+import { pickFiles } from "@/utils/file-dialogs";
 import {
   ChatBubbleTextIcon,
   ChevronLeftIcon,
@@ -650,12 +650,7 @@ export function CollaborationSidebarView() {
   const shareDocuments = async () => {
     if (!selectedChannel || !model.canEditNotes) return;
 
-    const selected = await open({
-      multiple: true,
-      directory: false,
-      title: "Share Documents",
-    });
-    const paths = Array.isArray(selected) ? selected : selected ? [selected] : [];
+    const paths = await pickFiles({ title: "Share Documents" });
     if (paths.length === 0) return;
 
     const names = paths.map((path) => getBaseName(path, path));

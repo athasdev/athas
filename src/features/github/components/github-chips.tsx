@@ -1,5 +1,5 @@
 import type { AvatarSize } from "@/ui/avatar";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openExternalUrl } from "@/utils/external-url";
 import { GitBranchIcon, GitCommitIcon } from "@/ui/icons";
 import type { ReactNode } from "react";
 import Tooltip from "@/ui/tooltip";
@@ -56,7 +56,7 @@ export function GitHubMetaChip({
       aria-label={title}
       onClick={() => {
         if (onClick) onClick();
-        else if (href) void openUrl(href);
+        else if (href) void openExternalUrl(href);
       }}
       className={cn(
         baseClassName,

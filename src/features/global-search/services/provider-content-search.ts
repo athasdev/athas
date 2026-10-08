@@ -6,7 +6,7 @@ import {
 } from "@/features/file-system/controllers/file-utils";
 import { buildSearchRegex } from "@/features/editor/utils/search";
 import { getWorkspaceResourceProvider } from "@/features/file-system/services/workspace-resource-provider";
-import type { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import type { useProjectStore } from "@/features/window/stores/project.store";
 import type { FileEntry } from "@/features/file-system/types/app.types";
 import type {
   FileSearchResult,
@@ -112,7 +112,7 @@ async function readRepositoryExcludes(
   ];
 }
 export async function loadProviderSearchFiles(
-  store: ReturnType<typeof useFileSystemStore.getStore>,
+  store: ReturnType<typeof useProjectStore.getStore>,
   { isCancelled = () => false }: { isCancelled?: () => boolean } = {},
 ): Promise<FileEntry[] | null> {
   const snapshot = store.getState();

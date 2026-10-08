@@ -1,4 +1,4 @@
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openExternalUrl } from "@/utils/external-url";
 import type { ReactNode } from "react";
 import {
   ArrowClockwiseIcon,
@@ -79,7 +79,7 @@ export function ExtensionDetailView({
       {extension.sourceUrl ? (
         <Button
           variant="ghost"
-          onClick={() => extension.sourceUrl && void openUrl(extension.sourceUrl)}
+          onClick={() => extension.sourceUrl && void openExternalUrl(extension.sourceUrl)}
         >
           <OpenExternalIcon />
           Source

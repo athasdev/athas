@@ -1,6 +1,6 @@
 import { WarningIcon } from "@/ui/icons";
 import { useEffect, useRef, useState } from "react";
-import { commands } from "@/bindings/commands";
+import { showNativeChoiceSheet } from "@/features/window/services/native-window-api";
 import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
 import { IS_MAC } from "@/utils/platform";
@@ -21,7 +21,7 @@ function requestNativeChoice(options: NativeChoiceOptions, isCurrent: () => bool
     .then(() => {
       if (!isCurrent())
         throw new DOMException("This close decision is no longer active", "AbortError");
-      return commands.showNativeChoiceSheet(
+      return showNativeChoiceSheet(
         options.message,
         options.informativeText,
         options.primaryLabel,

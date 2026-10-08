@@ -6,6 +6,7 @@ import { useUIState } from "@/features/window/stores/ui-state.store";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
 import { SidebarIcon } from "@/ui/icons";
 import { Toggle } from "@/ui/toggle";
+import { useProjectStore } from "@/features/window/stores/project.store";
 
 /**
  * The leading end of the title bar, next to the window controls: the sidebar toggle, then the
@@ -19,7 +20,7 @@ export function TitleLeading() {
   const activeProject = projectTabs.find((project) => project.isActive);
   const switchToProject = useFileSystemStore((state) => state.switchToProject);
   const isSwitchingProject = useFileSystemStore((state) => state.isSwitchingProject);
-  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const currentBranch = useGitStore((state) => state.workspaceGitStatus?.branch);
   const refreshWorkspaceGitStatus = useGitStore((state) => state.actions.refreshWorkspaceGitStatus);
 

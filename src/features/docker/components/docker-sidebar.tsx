@@ -12,7 +12,7 @@ import {
   StackIcon,
   TrashIcon,
 } from "@/ui/icons";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openExternalUrl } from "@/utils/external-url";
 import { useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/ui/accordion";
@@ -110,6 +110,7 @@ import { useDockerInventory } from "../hooks/use-docker-inventory";
 import { useDockerContainerLogs } from "../hooks/use-docker-container-logs";
 import { useDockerContainerFiles } from "../hooks/use-docker-container-files";
 import { useDockerRegistry } from "../hooks/use-docker-registry";
+import { emitAppEvent } from "@/utils/app-events";
 
 type DockerSection =
   | "containers"
@@ -666,14 +667,10 @@ export function DockerSidebar() {
     setDockerOutput(null);
     try {
       const result = await openDockerDevContainer(rootFolderPath, devContainer.configPath);
-      window.dispatchEvent(
-        new CustomEvent("create-terminal-with-command", {
-          detail: {
-            command: result.command,
-            name: result.name,
-          },
-        }),
-      );
+      emitAppEvent("create-terminal-with-command", {
+        command: result.command,
+        name: result.name,
+      });
       setDockerOutput(result.output.trim() || `Opened ${devContainer.name}.`);
       await loadInventory();
       await loadComposeProject();
@@ -726,14 +723,10 @@ export function DockerSidebar() {
   };
 
   const openContainerTerminal = (container: DockerContainer) => {
-    window.dispatchEvent(
-      new CustomEvent("create-terminal-with-command", {
-        detail: {
-          command: dockerExecCommand(container.id),
-          name: `Docker: ${container.name}`,
-        },
-      }),
-    );
+    emitAppEvent("create-terminal-with-command", {
+      command: dockerExecCommand(container.id),
+      name: `Docker: ${container.name}`,
+    });
   };
 
   const startDockerDebugSession = ({
@@ -750,14 +743,10 @@ export function DockerSidebar() {
     configId: string;
   }) => {
     const debugCommand = dockerDebugCommand(containerId, command, workdir);
-    window.dispatchEvent(
-      new CustomEvent("create-terminal-with-command", {
-        detail: {
-          command: debugCommand,
-          name: `Debug: ${containerName}`,
-        },
-      }),
-    );
+    emitAppEvent("create-terminal-with-command", {
+      command: debugCommand,
+      name: `Debug: ${containerName}`,
+    });
     useDebuggerStore.getState().actions.startSession({
       id: `docker_debug_${Date.now()}`,
       name: `Debug: ${containerName}`,
@@ -887,7 +876,7 @@ export function DockerSidebar() {
   };
 
   const openServiceUrl = (url: string) => {
-    void openUrl(url);
+    void openExternalUrl(url);
   };
 
   const handleCopyFromContainer = async (entry: DockerContainerFileEntry) => {

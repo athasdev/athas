@@ -1,4 +1,4 @@
-import { open } from "@tauri-apps/plugin-dialog";
+import { pickDirectory } from "@/utils/file-dialogs";
 import {
   ArrowClockwiseIcon,
   CheckIcon,
@@ -49,11 +49,13 @@ import { checkoutBranch, createBranch, deleteBranch, getBranches } from "../api/
 import { resolveRepositoryPath } from "../api/git-repo-api";
 import { createStash } from "../api/git-stash-api";
 import { addWorktree, getWorktrees } from "../api/git-worktrees-api";
+import { useProjectStore } from "@/features/window/stores/project.store";
 import { useRepositoryStore } from "../stores/git-repository.store";
 import { useGitBlameStore } from "../stores/git-blame.store";
 import type { GitWorktree } from "../types/git.types";
 import { isOpenableGitWorktree } from "../utils/git-worktree-open";
 import GitCommandSurface from "./git-command-surface";
+import { onAppEvent } from "@/utils/app-events";
 
 interface GitBranchManagerProps {
   currentBranch?: string;
@@ -62,7 +64,6 @@ interface GitBranchManagerProps {
   onWorktreeChange?: (repoPath: string) => void;
   onRepositoryChange?: (repoPath: string | null) => void;
   paletteTarget?: boolean;
-  openEventName?: string;
   triggerMode?: "repository" | "branch";
 }
 
@@ -149,7 +150,6 @@ const GitBranchManager = ({
   onWorktreeChange,
   onRepositoryChange,
   paletteTarget = false,
-  openEventName = "athas:open-branch-manager",
   triggerMode = "repository",
 }: GitBranchManagerProps) => {
   const [branches, setBranches] = useState<string[]>([]);
@@ -165,7 +165,7 @@ const GitBranchManager = ({
   const branchLoadRequestIdRef = useRef(0);
   const worktreeLoadRequestIdRef = useRef(0);
   const activeRepoPath = useRepositoryStore.use.activeRepoPath();
-  const workspaceRootPath = useRepositoryStore.use.workspaceRootPath();
+  const workspaceRootPath = useProjectStore((state) => state.rootFolderPath) ?? null;
   const availableRepoPaths = useRepositoryStore.use.availableRepoPaths();
   const manualRepoPaths = useRepositoryStore.use.manualRepoPaths();
   const isDiscoveringRepos = useRepositoryStore.use.isDiscovering();
@@ -257,16 +257,13 @@ const GitBranchManager = ({
   }, [repoPath, isDropdownOpen, loadBranches, loadWorktrees, triggerMode]);
 
   useEffect(() => {
-    const handleOpenFromPalette = (event: Event) => {
-      if (!paletteTarget || !repoPath) return;
-      const requestedTab = (event as CustomEvent<{ tab?: GitBranchManagerTab }>).detail?.tab;
-      setActiveTab(requestedTab ?? "branches");
+    if (!paletteTarget) return;
+    return onAppEvent("athas:open-git-view-branch-manager", ({ tab }) => {
+      if (!repoPath) return;
+      setActiveTab(tab);
       setIsDropdownOpen(true);
-    };
-
-    window.addEventListener(openEventName, handleOpenFromPalette);
-    return () => window.removeEventListener(openEventName, handleOpenFromPalette);
-  }, [openEventName, paletteTarget, repoPath]);
+    });
+  }, [paletteTarget, repoPath]);
 
   useEffect(() => {
     if (!isDropdownOpen) {
@@ -430,8 +427,8 @@ const GitBranchManager = ({
     setSelectionError(null);
 
     try {
-      const selected = await open({ directory: true, multiple: false });
-      if (!selected || Array.isArray(selected)) return;
+      const selected = await pickDirectory();
+      if (!selected) return;
 
       const resolvedRepoPath = await resolveRepositoryPath(selected);
       if (!resolvedRepoPath) {

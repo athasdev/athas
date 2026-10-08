@@ -3,7 +3,6 @@ import { useShallow } from "zustand/react/shallow";
 import { useBufferText } from "@/features/editor/hooks/use-buffer-text";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getBufferById, getBufferByPath } from "@/features/editor/utils/buffer-index";
-import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { hasTextContent } from "@/features/panes/types/pane-content.types";
 import { Empty, EmptyDescription } from "@/ui/empty";
 import {
@@ -11,13 +10,16 @@ import {
   getHtmlPreviewAssetDirectories,
 } from "@/features/editor/utils/html-preview-document";
 import { ensureAssetAccess } from "@/utils/asset-access";
+import { useProjectStore } from "@/features/window/stores/project.store";
+import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 const PREVIEW_UPDATE_DELAY_MS = 150;
 
 export function HtmlPreview() {
+  const activeBufferId = useActiveBufferId();
   const { hasSourceBuffer, sourceBufferId, sourcePath } = useBufferStore(
     useShallow((state) => {
-      const activeBuffer = getBufferById(state.buffers, state.activeBufferId);
+      const activeBuffer = getBufferById(state.buffers, activeBufferId);
       const sourceBuffer =
         activeBuffer?.type === "htmlPreview"
           ? (getBufferByPath(state.buffers, activeBuffer.sourceFilePath) ?? activeBuffer)
@@ -31,7 +33,7 @@ export function HtmlPreview() {
     }),
   );
   const sourceContent = useBufferText(sourceBufferId, { debounceMs: PREVIEW_UPDATE_DELAY_MS });
-  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
 
   const [iframeContent, setIframeContent] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);

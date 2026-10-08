@@ -1,13 +1,14 @@
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { openNewAgentChat } from "@/features/ai/lib/open-new-agent-chat";
 import { editorAPI } from "@/features/editor/extensions/api";
-import { OPEN_NOTIFICATIONS_COMMAND_EVENT } from "@/features/notifications/constants/notifications-events";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useWhatsNewStore } from "@/features/settings/stores/whats-new.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { useZoomStore } from "@/features/window/stores/zoom.store";
+import { emitAppEvent } from "@/utils/app-events";
 import { useKeymapStore } from "../stores/keymaps.store";
 import { zoomActiveBrowserTab } from "./browser-command-actions";
+import { selectIsTerminalPaneVisible } from "@/features/window/stores/ui-state/terminal-slice";
 
 function getZoomTarget(): "editor" | "terminal" {
   const terminalContainer = document.querySelector('[data-terminal-container="active"]');
@@ -23,12 +24,12 @@ export function toggleSidebar(): void {
 
 export function toggleTerminalPane(): void {
   const state = useUIState.getState();
-  if (state.isBottomPaneVisible && state.bottomPaneActiveTab === "terminal") {
+  if (selectIsTerminalPaneVisible(state)) {
     state.setIsBottomPaneVisible(false);
   } else {
     state.setBottomPaneActiveTab("terminal");
     state.setIsBottomPaneVisible(true);
-    window.dispatchEvent(new CustomEvent("terminal-ensure-session"));
+    emitAppEvent("terminal-ensure-session");
     setTimeout(() => state.requestTerminalFocus(), 100);
   }
 }
@@ -42,7 +43,7 @@ export function openCommandPalette(): void {
 }
 
 export function showNotifications(): void {
-  window.dispatchEvent(new CustomEvent(OPEN_NOTIFICATIONS_COMMAND_EVENT));
+  emitAppEvent("athas:notifications:show");
 }
 
 export function openNewAgentSession(): void {
@@ -52,12 +53,12 @@ export function openNewAgentSession(): void {
 export function showFind(): void {
   const activeElement = document.activeElement as HTMLElement | null;
   if (activeElement?.closest(".file-tree-container")) {
-    window.dispatchEvent(new CustomEvent("file-tree-open-search"));
+    emitAppEvent("file-tree-open-search");
     return;
   }
 
   if (useKeymapStore.getState().contexts.terminalFocus) {
-    window.dispatchEvent(new CustomEvent("terminal-open-search"));
+    emitAppEvent("terminal-open-search");
     return;
   }
 

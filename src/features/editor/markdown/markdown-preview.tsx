@@ -1,5 +1,5 @@
 import "./styles.css";
-import { exists } from "@tauri-apps/plugin-fs";
+import { pathExists } from "@/utils/local-files";
 import { openExternalBrowserUrl } from "@/features/window/utils/external-navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
@@ -17,6 +17,8 @@ import {
   isEntireMarkdownPreviewSelected,
 } from "./markdown-preview-search";
 import { useHighlightedMarkdown } from "./use-highlighted-markdown";
+import { useProjectStore } from "@/features/window/stores/project.store";
+import { useBufferIdOrActive } from "@/features/panes/hooks/use-pane-buffer-state";
 
 const MARKDOWN_PREVIEW_PARSE_DELAY_MS = 150;
 
@@ -27,9 +29,10 @@ export function MarkdownPreview({
   bufferId?: string;
   isActiveSurface?: boolean;
 }) {
+  const targetBufferId = useBufferIdOrActive(bufferId);
   const { sourceBufferId, sourceBufferPath } = useBufferStore(
     useShallow((state) => {
-      const activeBuffer = getBufferById(state.buffers, bufferId ?? state.activeBufferId);
+      const activeBuffer = getBufferById(state.buffers, targetBufferId);
       const sourceBuffer =
         activeBuffer?.type === "markdownPreview"
           ? (getBufferByPath(state.buffers, activeBuffer.sourceFilePath) ?? activeBuffer)
@@ -47,7 +50,7 @@ export function MarkdownPreview({
   const fontSize = useSettingsStore((state) => state.settings.fontSize);
   const uiFontFamily = useSettingsStore((state) => state.settings.uiFontFamily);
   const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
-  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath) || "";
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath) || "";
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -204,13 +207,13 @@ export function MarkdownPreview({
       const targetPath = resolvePath(href, sourceBufferPath);
 
       try {
-        const fileExists = await exists(targetPath);
+        const fileExists = await pathExists(targetPath);
 
         if (fileExists) {
           await handleFileSelect(targetPath, false);
         } else {
           const withMd = targetPath.endsWith(".md") ? targetPath : `${targetPath}.md`;
-          const mdExists = await exists(withMd);
+          const mdExists = await pathExists(withMd);
 
           if (mdExists) {
             await handleFileSelect(withMd, false);

@@ -13,11 +13,12 @@ import {
   ZoomInIcon,
   ZoomOutIcon,
 } from "@/ui/icons";
-import { commands } from "@/bindings/commands";
+import { setNativeMenuBarEnabled } from "@/features/window/services/native-window-api";
 import { usePerformanceExperiments } from "@/features/settings/stores/performance-experiments.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { IS_LINUX, IS_MAC, IS_WINDOWS } from "@/utils/platform";
+import { emitAppEvent } from "@/utils/app-events";
 import type { Command } from "../types/keymaps.types";
 import {
   restartDebugSession,
@@ -52,6 +53,7 @@ import {
   zoomIn,
   zoomOut,
 } from "./view-command-actions";
+import { selectIsTerminalPaneVisible } from "@/features/window/stores/ui-state/terminal-slice";
 
 export const viewCommands: Command[] = [
   {
@@ -348,20 +350,17 @@ export const viewCommands: Command[] = [
     description: "Toggle integrated terminal panel",
     icon: <TerminalWindowIcon />,
     palette: ({ ui }) => ({
-      label:
-        ui.isBottomPaneVisible && ui.bottomPaneActiveTab === "terminal"
-          ? "View: Hide Terminal"
-          : "View: Show Terminal",
+      label: selectIsTerminalPaneVisible(ui) ? "View: Hide Terminal" : "View: Show Terminal",
       keybindingCommandId: "workbench.toggleTerminalAlt",
     }),
     execute: () => {
       const state = useUIState.getState();
-      if (state.isBottomPaneVisible && state.bottomPaneActiveTab === "terminal") {
+      if (selectIsTerminalPaneVisible(state)) {
         state.setIsBottomPaneVisible(false);
       } else {
         state.setBottomPaneActiveTab("terminal");
         state.setIsBottomPaneVisible(true);
-        window.dispatchEvent(new CustomEvent("terminal-ensure-session"));
+        emitAppEvent("terminal-ensure-session");
       }
     },
   },
@@ -387,7 +386,7 @@ export const viewCommands: Command[] = [
       const { settings, actions } = useSettingsStore.getState();
       const newValue = !settings.nativeMenuBar;
       void actions.updateSetting("nativeMenuBar", newValue);
-      await commands.toggleMenuBar(newValue);
+      await setNativeMenuBarEnabled(newValue);
     },
   },
   {

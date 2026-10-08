@@ -8,6 +8,8 @@ import { captureWorkspaceEditContext } from "../lsp/workspace-edit";
 import { useRename } from "../lsp/use-rename";
 import { useBufferStore } from "../stores/buffer.store";
 import { useEditorStateStore } from "../stores/state.store";
+import { emitAppEvent } from "@/utils/app-events";
+import { seedActiveBuffer } from "@/features/panes/tests/helpers/seed-pane-tabs";
 const mocks = vi.hoisted(() => ({
   prepare: vi.fn(),
   rename: vi.fn(),
@@ -47,9 +49,6 @@ function buffer(id = "a", filePath = path): EditorContent {
     savedContent: "alpha",
     isDirty: false,
     isVirtual: false,
-    isPreview: false,
-    isPinned: false,
-    isActive: true,
     language: "typescript",
   };
 }
@@ -59,7 +58,7 @@ function Harness({ filePath = path }: { filePath?: string }) {
 }
 async function start() {
   await act(async () => {
-    window.dispatchEvent(new Event("editor-rename-symbol"));
+    emitAppEvent("editor-rename-symbol");
   });
 }
 function deferred<T>() {
@@ -80,7 +79,8 @@ beforeEach(async () => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   workspaceRuntimeRegistry.resetForTests();
   workspaceRuntimeRegistry.activateWorkspace({ id: "owner", name: "Owner" });
-  owner().setState({ buffers: [buffer()], activeBufferId: "a" });
+  owner().setState({ buffers: [buffer()] });
+  seedActiveBuffer("a", "owner");
   useEditorStateStore.setState({ cursorPosition: { line: 0, column: 2, offset: 2 } });
   mocks.prepare.mockReset().mockResolvedValue(null);
   mocks.rename.mockReset().mockResolvedValue(edit);
@@ -149,9 +149,10 @@ describe("rename request lifecycle", () => {
     await act(async () => {
       running = rename.executeRename("beta");
     });
-    await act(async () =>
-      owner().setState({ buffers: [buffer(), buffer("b", "/p/b.ts")], activeBufferId: "b" }),
-    );
+    await act(async () => {
+      owner().setState({ buffers: [buffer(), buffer("b", "/p/b.ts")] });
+      seedActiveBuffer("b", "owner");
+    });
     await act(async () => {
       pending.resolve(edit);
       await running;

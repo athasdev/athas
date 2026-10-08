@@ -26,6 +26,7 @@ import { BinaryDiffViewer } from "./git-diff-binary";
 import ImageDiffViewer from "./git-diff-image";
 import TextDiffViewer from "./git-diff-text";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useProjectStore } from "@/features/window/stores/project.store";
 
 const CodeEditor = lazy(() => import("@/features/editor/components/code-editor"));
 
@@ -116,7 +117,7 @@ function EmbeddedDiffSectionEditor({
   const fontSize = useSettingsStore((state) => state.settings.fontSize);
   const editorLineHeight = useSettingsStore((state) => state.settings.editorLineHeight);
   const zoomLevel = useZoomStore.use.editorZoomLevel();
-  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const sourcePath = diff.new_path || diff.old_path || diff.file_path;
   const unifiedContent = useMemo(() => serializeGitDiffSourceForEditor(diff), [diff]);
   const splitContent = useMemo(() => serializeGitDiffSourceForSplitEditor(diff), [diff]);

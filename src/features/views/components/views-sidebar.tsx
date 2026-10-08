@@ -12,6 +12,7 @@ import {
   SidebarScrollArea,
   SidebarWorkspace,
 } from "@/ui/sidebar";
+import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 interface ViewsSidebarProps {
   projectPath: string | null;
@@ -26,9 +27,10 @@ export function ViewsSidebar({ projectPath }: ViewsSidebarProps) {
     projectPath ? state.loadedProjectPaths.includes(projectPath) : false,
   );
   const viewActions = useViewsStore.use.actions();
+  const activeBufferId = useActiveBufferId();
   const activeViewId = useBufferStore((state) => {
-    const buffer = state.activeBufferId
-      ? state.buffers.find((candidate) => candidate.id === state.activeBufferId)
+    const buffer = activeBufferId
+      ? state.buffers.find((candidate) => candidate.id === activeBufferId)
       : undefined;
     return buffer?.type === "customView" && buffer.projectPath === projectPath
       ? (buffer.viewId ?? null)

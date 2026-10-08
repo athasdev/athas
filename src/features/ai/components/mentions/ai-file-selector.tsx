@@ -24,6 +24,7 @@ import { Combobox, ComboboxEmpty, ComboboxInput, ComboboxItem, ComboboxList } fr
 import { CommandItemBadge } from "@/ui/command";
 import { cn } from "@/utils/cn";
 import { getDirectoryPath } from "@/utils/path-helpers";
+import { useProjectStore } from "@/features/window/stores/project.store";
 
 interface AIFileSelectorProps {
   files?: FileEntry[];
@@ -90,7 +91,7 @@ export function AIFileSelector({
 }: AIFileSelectorProps) {
   const lastEmittedResultsSignatureRef = useRef<string | null>(null);
   const [debouncedQuery] = useDebounce(query, 50);
-  const workspaceFolders = useFileSystemStore((state) => state.workspaceFolders);
+  const workspaceFolders = useProjectStore((state) => state.workspaceFolders);
   const getAllProjectFiles = useFileSystemStore((state) => state.getAllProjectFiles);
   const workspaceKey = JSON.stringify([
     rootFolderPath,

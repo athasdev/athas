@@ -27,8 +27,7 @@ async function refreshSyntaxHighlightingForActiveBuffer(extension: AvailableExte
     return;
   }
 
-  const bufferState = useBufferStore.getState();
-  const activeBuffer = bufferState.buffers.find((buffer) => buffer.isActive);
+  const activeBuffer = useBufferStore.getState().actions.getActiveBuffer();
 
   if (!activeBuffer) {
     return;

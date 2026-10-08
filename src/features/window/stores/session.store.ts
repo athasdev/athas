@@ -54,7 +54,14 @@ interface ProjectPaneSplitSession {
 
 export type ProjectPaneSessionNode = ProjectPaneGroupSession | ProjectPaneSplitSession;
 
+/**
+ * 2: each group's `bufferPaths` is its tab order and its pinned/preview paths are the only record
+ * of those flags. Sessions without a version kept tab order in the saved buffer list instead.
+ */
+export const PROJECT_PANE_SESSION_VERSION = 2;
+
 export interface ProjectPaneSession {
+  version?: number;
   root: ProjectPaneSessionNode;
   bottomRoot: ProjectPaneSessionNode;
   activePaneId: string;

@@ -11,10 +11,11 @@ import {
   unstageAllFiles,
 } from "@/features/git/api/git-status-api";
 import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
-import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { showToast } from "@/features/layout/contexts/toast-context";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { showConfirmDialog, showPromptDialog } from "@/ui/dialog";
+import { emitAppEvent } from "@/utils/app-events";
+import { useProjectStore } from "@/features/window/stores/project.store";
 
 export type GitSidebarAction =
   | { type: "manage-branches"; tab: "branches" | "worktrees" }
@@ -27,8 +28,8 @@ export type GitSidebarAction =
   | { type: "view-stashes" }
   | { type: "refresh" };
 
-function dispatchGitSidebarAction(detail: GitSidebarAction): void {
-  window.dispatchEvent(new CustomEvent("athas:git-palette-action", { detail }));
+function dispatchGitSidebarAction(action: GitSidebarAction): void {
+  emitAppEvent("athas:git-palette-action", action);
 }
 
 /** Shows the Git sidebar, then hands the action to it once it has mounted. */
@@ -47,7 +48,7 @@ export function refreshGitStatus(): void {
 function getRepoPath(): string | null {
   return (
     useRepositoryStore.getState().activeRepoPath ??
-    useFileSystemStore.getState().rootFolderPath ??
+    useProjectStore.getState().rootFolderPath ??
     null
   );
 }

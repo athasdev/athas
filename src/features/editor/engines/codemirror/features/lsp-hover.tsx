@@ -14,6 +14,7 @@ import { LspClient } from "@/features/editor/lsp/lsp-client";
 import { type CodeMirrorHost, useCodeMirrorExtension } from "../host";
 import { fromLspRange, isLspFile, toLspPosition } from "../lsp/lsp-positions";
 import { createMarkdownElement } from "../lsp/markdown-content";
+import { onAppEvent } from "@/utils/app-events";
 
 const HOVER_MIN_WIDTH = 120;
 const HOVER_MAX_WIDTH = 500;
@@ -101,8 +102,7 @@ export function LspHover({ host }: { host: CodeMirrorHost }) {
         until: (tr) => tr.docChanged || tr.selection !== undefined,
       });
     };
-    window.addEventListener("editor-show-hover", handleShowHover);
-    return () => window.removeEventListener("editor-show-hover", handleShowHover);
+    return onAppEvent("editor-show-hover", handleShowHover);
   }, [isActiveSurface, view]);
 
   return null;

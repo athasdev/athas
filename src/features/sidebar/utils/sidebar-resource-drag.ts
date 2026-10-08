@@ -1,7 +1,7 @@
 import type { GitFile } from "@/features/git/types/git.types";
+import { emitAppEvent } from "@/utils/app-events";
 
 const SIDEBAR_RESOURCE_MIME = "application/x-athas-sidebar-resource";
-export const SIDEBAR_RESOURCE_DROP_ON_AI_EVENT = "athas-sidebar-resource-drop-on-ai";
 
 export type SidebarDragResource =
   | {
@@ -114,9 +114,5 @@ export const hasSidebarResourceDragData = (dataTransfer: DataTransfer): boolean 
   dataTransfer.types.includes(SIDEBAR_RESOURCE_MIME);
 
 export const dispatchSidebarResourceDropOnAI = (resource: SidebarDragResource): void => {
-  window.dispatchEvent(
-    new CustomEvent(SIDEBAR_RESOURCE_DROP_ON_AI_EVENT, {
-      detail: { resource },
-    }),
-  );
+  emitAppEvent("athas-sidebar-resource-drop-on-ai", { resource });
 };

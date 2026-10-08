@@ -1,4 +1,4 @@
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openExternalUrl } from "@/utils/external-url";
 import { getServiceUrls } from "@/config/services";
 import { UsersIcon } from "@/ui/icons";
 import { useCollaborationRuntimeStore } from "@/features/collaboration/stores/collaboration-runtime.store";
@@ -33,7 +33,7 @@ export const CollaborationSettings = () => {
   );
 
   const openDashboardCollaboration = () => {
-    void openUrl(getServiceUrls().dashboardCollaborationUrl);
+    void openExternalUrl(getServiceUrls().dashboardCollaborationUrl);
   };
 
   return (

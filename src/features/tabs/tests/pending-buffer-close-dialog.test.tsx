@@ -6,6 +6,7 @@ import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import type { EditorContent } from "@/features/panes/types/pane-content.types";
 import { PendingBufferCloseDialog } from "../components/pending-buffer-close-dialog";
+import { seedActiveBuffer } from "@/features/panes/tests/helpers/seed-pane-tabs";
 const mocks = vi.hoisted(() => ({
   save: vi.fn(),
   props: [] as Array<{ onDiscard: () => void; onSave: () => Promise<unknown> }>,
@@ -42,9 +43,6 @@ function editor(id: string): EditorContent {
     savedContent: "disk",
     isDirty: true,
     isVirtual: false,
-    isPinned: false,
-    isPreview: false,
-    isActive: false,
     language: "typescript",
   };
 }
@@ -56,9 +54,9 @@ beforeEach(() => {
   workspaceRuntimeRegistry.activateWorkspace({ id: "owner", name: "Owner" });
   useBufferStore.setState({
     buffers: [editor("a"), editor("b")],
-    activeBufferId: "b",
     pendingClose: { bufferId: "a", type: "all" },
   });
+  seedActiveBuffer("b");
   mocks.props.length = 0;
   mocks.save.mockReset();
   container = document.createElement("div");

@@ -1,3 +1,4 @@
+import { emitAppEvent } from "@/utils/app-events";
 import type { OutlineSymbol } from "../types/outline-symbol.types";
 
 export interface RawOutlineSymbol {
@@ -189,11 +190,5 @@ export function getOutlineSymbolNavigationDetail(
 }
 
 export function openOutlineSymbol(symbol: Pick<OutlineSymbol, "filePath" | "line" | "character">) {
-  if (typeof window === "undefined") return;
-
-  window.dispatchEvent(
-    new CustomEvent("menu-go-to-line", {
-      detail: getOutlineSymbolNavigationDetail(symbol),
-    }),
-  );
+  emitAppEvent("menu-go-to-line", getOutlineSymbolNavigationDetail(symbol));
 }

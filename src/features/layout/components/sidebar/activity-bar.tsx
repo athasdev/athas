@@ -21,6 +21,8 @@ import { ContextMenu, ContextMenuTrigger } from "@/ui/context-menu";
 import { SearchIcon } from "@/ui/icons";
 import { OverlaySideProvider } from "@/ui/overlay-side";
 import { cn } from "@/utils/cn";
+import { emitAppEvent } from "@/utils/app-events";
+import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 export const ActivityBar = memo(() => {
   const { openSidebarView } = useSidebarPaneController();
@@ -44,8 +46,9 @@ export const ActivityBar = memo(() => {
     }
   }, [openGlobalSearchBuffer, showToast]);
   const openExtensionsBuffer = useBufferStore.use.actions().openExtensionsBuffer;
+  const activeBufferId = useActiveBufferId();
   const isExtensionsBufferActive = useBufferStore((state) => {
-    const activeBuffer = state.buffers.find((buffer) => buffer.id === state.activeBufferId);
+    const activeBuffer = state.buffers.find((buffer) => buffer.id === activeBufferId);
     return activeBuffer?.type === "extensions" || activeBuffer?.type === "extension";
   });
   const handleNewAgent = useNewAgentAction();
@@ -53,16 +56,12 @@ export const ActivityBar = memo(() => {
     const uiState = useUIState.getState();
     uiState.setBottomPaneActiveTab("terminal");
     uiState.setIsBottomPaneVisible(true);
-    window.dispatchEvent(new CustomEvent("terminal-new"));
+    emitAppEvent("terminal-new");
   }, []);
   const handleNewWorktree = useCallback(() => {
     openSidebarView("git");
     window.setTimeout(() => {
-      window.dispatchEvent(
-        new CustomEvent("athas:git-palette-action", {
-          detail: { type: "manage-branches", tab: "worktrees" },
-        }),
-      );
+      emitAppEvent("athas:git-palette-action", { type: "manage-branches", tab: "worktrees" });
     }, 0);
   }, [openSidebarView]);
   const handleDebuggerToggle = useCallback(() => {

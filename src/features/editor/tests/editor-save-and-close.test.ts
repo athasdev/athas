@@ -3,6 +3,7 @@ import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace
 import type { EditorContent } from "@/features/panes/types/pane-content.types";
 import type { useBufferStore as BufferHook } from "../stores/buffer.store";
 import { savePendingPaneClose } from "@/features/panes/services/pane-content-save-service";
+import { seedActiveBuffer } from "@/features/panes/tests/helpers/seed-pane-tabs";
 
 const mocks = vi.hoisted(() => ({ write: vi.fn(), saveDialog: vi.fn() }));
 vi.mock("@/features/file-system/services/workspace-resource-provider", () => ({
@@ -28,9 +29,6 @@ function editor(id: string, dirty = true): EditorContent {
     savedContent: dirty ? "" : `${id} draft`,
     isDirty: dirty,
     isVirtual: false,
-    isPinned: false,
-    isPreview: false,
-    isActive: false,
     language: "typescript",
   };
 }
@@ -59,9 +57,9 @@ beforeEach(async () => {
   }));
   useBufferStore.setState({
     buffers: [editor("a"), editor("b")],
-    activeBufferId: "b",
     pendingClose: { bufferId: "a", type: "single" },
   });
+  seedActiveBuffer("b");
   mocks.write.mockReset().mockResolvedValue(undefined);
   mocks.saveDialog.mockReset().mockResolvedValue(null);
 });

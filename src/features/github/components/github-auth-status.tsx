@@ -1,4 +1,4 @@
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openExternalUrl } from "@/utils/external-url";
 import { useEffect, useState } from "react";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
@@ -44,7 +44,7 @@ export function GitHubAuthStatusMessage({
   });
 
   const retry = () => void checkAuth({ force: true });
-  const openGitHubConnection = () => void openUrl(GITHUB_CONNECTION_URL);
+  const openGitHubConnection = () => void openExternalUrl(GITHUB_CONNECTION_URL);
 
   const useGhCli = async () => {
     await updateSetting("githubTokenSource", "gh");

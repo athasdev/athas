@@ -12,8 +12,6 @@ interface TerminalSessionProps {
   terminal: TerminalType;
   isActive: boolean;
   isVisible?: boolean;
-  onDirectoryChange?: (terminalId: string, directory: string) => void;
-  onActivity?: (terminalId: string) => void;
   onRegisterRef?: (terminalId: string, ref: TerminalSessionHandle | null) => void;
   onTerminalExit?: (terminalId: string) => void;
 }
@@ -22,7 +20,6 @@ const TerminalSession = ({
   terminal,
   isActive,
   isVisible = true,
-  onActivity,
   onRegisterRef,
   onTerminalExit,
 }: TerminalSessionProps) => {
@@ -111,12 +108,6 @@ const TerminalSession = ({
     selectAll,
     copyLastCommandOutput,
   ]);
-
-  useEffect(() => {
-    if (isActive && onActivity) {
-      onActivity(terminal.id);
-    }
-  }, [isActive, terminal.id, onActivity]);
 
   return (
     <div className="flex h-full min-h-0 flex-col" data-terminal-id={terminal.id}>

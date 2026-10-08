@@ -4,6 +4,7 @@ import { useBufferText } from "@/features/editor/hooks/use-buffer-text";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getBufferById, getBufferByPath } from "@/features/editor/utils/buffer-index";
 import { hasTextContent } from "@/features/panes/types/pane-content.types";
+import { useBufferIdOrActive } from "@/features/panes/hooks/use-pane-buffer-state";
 
 const PREVIEW_UPDATE_DELAY_MS = 150;
 
@@ -12,9 +13,10 @@ interface SvgPreviewProps {
 }
 
 export function SvgPreview({ bufferId }: SvgPreviewProps) {
+  const targetBufferId = useBufferIdOrActive(bufferId);
   const { fileName, sourceBufferId } = useBufferStore(
     useShallow((state) => {
-      const previewBuffer = getBufferById(state.buffers, bufferId ?? state.activeBufferId);
+      const previewBuffer = getBufferById(state.buffers, targetBufferId);
       const sourceBuffer =
         previewBuffer?.type === "svgPreview"
           ? (getBufferByPath(state.buffers, previewBuffer.sourceFilePath) ?? previewBuffer)

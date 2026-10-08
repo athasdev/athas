@@ -18,6 +18,7 @@ import {
 import { insertSortedLimited } from "@/features/file-search/utils/sorted-search-results";
 import { filterQuickOpenRecentFiles } from "../utils/file-filtering";
 import { fuzzyScore } from "../utils/fuzzy-search";
+import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 interface FileSearchOptions {
   hasLoadedFiles?: boolean;
@@ -39,8 +40,9 @@ export const useFileSearch = (
   fffHits: FffSearchHit[] | null = null,
   options: FileSearchOptions = {},
 ) => {
+  const activeBufferId = useActiveBufferId();
   const bufferSearchSnapshot = useBufferStore((state) =>
-    getOpenBufferSearchSnapshot(state.buffers, state.activeBufferId),
+    getOpenBufferSearchSnapshot(state.buffers, activeBufferId),
   );
   const getRecentFilesOrderedByFrecency = useRecentFilesStore(
     (state) => state.actions.getRecentFilesOrderedByFrecency,

@@ -14,11 +14,13 @@ vi.mock("@/features/file-search/lib/file-search-api", () => ({
 }));
 vi.mock("@/features/file-system/stores/file-system.store", () => {
   const state = {
-    rootFolderPath: "/repo",
-    workspaceFolders: [],
     getAllProjectFiles: async () => [],
   };
   return { useFileSystemStore: (selector: (value: typeof state) => unknown) => selector(state) };
+});
+vi.mock("@/features/window/stores/project.store", () => {
+  const state = { rootFolderPath: "/repo", workspaceFolders: [] };
+  return { useProjectStore: (selector: (value: typeof state) => unknown) => selector(state) };
 });
 
 const { useFileLoader } = await import("../hooks/use-file-loader");

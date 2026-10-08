@@ -158,6 +158,11 @@ describe("default keymaps", () => {
     expectKeybinding("workbench.toggleActivePaneFullscreen", "cmd+k z");
   });
 
+  it("binds Cmd+O to the folder dialog the File menu shows for it", () => {
+    expectKeybinding("file.openFolder", "cmd+o");
+    expect(defaultKeymaps.filter((keybinding) => keybinding.key === "cmd+o")).toHaveLength(1);
+  });
+
   it("keeps Ctrl+Tab navigation in the frontend keymap", () => {
     expectKeybinding("workbench.nextTabCtrlTab", "ctrl+tab");
     expectKeybinding("workbench.previousTabCtrlTab", "ctrl+shift+tab");

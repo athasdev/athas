@@ -1,7 +1,7 @@
 import type { AcpTerminalAuthLaunch } from "@/features/ai/types/acp.types";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { TERMINAL_PROCESS_EXIT_EVENT } from "@/features/terminal/constants/terminal-events";
 import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
+import { type AppEventMap, onAppEvent } from "@/utils/app-events";
 
 export interface AcpTerminalAuthExit {
   exitCode: number | null;
@@ -24,15 +24,15 @@ export function runAcpTerminalAuth(
   return new Promise((resolve) => {
     let tabOpened = false;
     let stopWatchingTab = () => {};
+    let stopWatchingExit = () => {};
     const finish = (result: AcpTerminalAuthExit | null) => {
       stopWatchingTab();
-      window.removeEventListener(TERMINAL_PROCESS_EXIT_EVENT, handleExit);
+      stopWatchingExit();
       options.signal?.removeEventListener("abort", handleAbort);
       resolve(result);
     };
-    const handleExit = (event: Event) => {
-      const detail = (event as CustomEvent<{ sessionId: string } & AcpTerminalAuthExit>).detail;
-      if (detail?.sessionId !== sessionId) return;
+    const handleExit = (detail: AppEventMap["terminal-process-exit"]) => {
+      if (detail.sessionId !== sessionId) return;
       finish({ exitCode: detail.exitCode, signal: detail.signal });
     };
     const handleAbort = () => finish(null);
@@ -41,7 +41,7 @@ export function runAcpTerminalAuth(
       resolve(null);
       return;
     }
-    window.addEventListener(TERMINAL_PROCESS_EXIT_EVENT, handleExit);
+    stopWatchingExit = onAppEvent("terminal-process-exit", handleExit);
     options.signal?.addEventListener("abort", handleAbort);
 
     useTerminalStore.getState().actions.registerSession(sessionId, {

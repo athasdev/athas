@@ -1,5 +1,4 @@
-import { save } from "@tauri-apps/plugin-dialog";
-import { writeTextFile } from "@tauri-apps/plugin-fs";
+import { saveTextFileWithDialog } from "@/utils/file-dialogs";
 import { useMemo, useState } from "react";
 import {
   createThemeFileFromBase,
@@ -110,16 +109,18 @@ export function CustomThemeCreatorDialog({
 
     setIsSaving(true);
     try {
-      const targetPath = await save({
-        defaultPath: `${themeFile.themes[0]?.id || "athas-theme"}.json`,
-        filters: [
-          { name: "Athas theme", extensions: ["json"] },
-          { name: "All files", extensions: ["*"] },
-        ],
-      });
+      const targetPath = await saveTextFileWithDialog(
+        {
+          defaultPath: `${themeFile.themes[0]?.id || "athas-theme"}.json`,
+          filters: [
+            { name: "Athas theme", extensions: ["json"] },
+            { name: "All files", extensions: ["*"] },
+          ],
+        },
+        () => formatThemeFile(themeFile),
+      );
       if (!targetPath) return;
 
-      await writeTextFile(targetPath, formatThemeFile(themeFile));
       toast.success("Theme JSON saved");
     } catch (error) {
       toast.error("Failed to save theme JSON", { description: formatIssues(error)[0] });

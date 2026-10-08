@@ -1,5 +1,5 @@
 import { ArrowClockwiseIcon, SquareIcon, TerminalWindowIcon } from "@/ui/icons";
-import { commands } from "@/bindings/commands";
+import { installCli } from "@/features/settings/services/cli-install-service";
 import { useLspStore } from "@/features/editor/lsp/stores/lsp.store";
 import { showToast } from "@/features/layout/contexts/toast-context";
 import type { Command } from "../types/keymaps.types";
@@ -92,7 +92,7 @@ export const developerCommands: Command[] = [
     execute: async () => {
       try {
         showToast({ message: "Installing CLI command...", type: "info" });
-        const result = await commands.installCliCommand();
+        const result = await installCli();
         showToast({ message: result, type: "success" });
       } catch (error) {
         showToast({

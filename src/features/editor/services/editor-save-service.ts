@@ -7,7 +7,6 @@ import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { parseCollaborationNoteBufferPath } from "@/features/collaboration/lib/collaboration-sidebar-model";
 import { getWorkspaceResourceProvider } from "@/features/file-system/services/workspace-resource-provider";
 import { showToast } from "@/features/layout/contexts/toast-context";
-import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useFileWatcherStore } from "@/features/file-system/stores/file-watcher.store";
 import { emitGitChanged } from "@/features/git/events/git-events";
 import { recordLocalHistoryFile } from "@/features/local-history/api/local-history-api";
@@ -16,6 +15,7 @@ import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { writeFile } from "@/features/file-system/controllers/platform";
 import { getBufferById } from "../utils/buffer-index";
 import { readBufferRevision, readBufferText } from "./buffer-text";
+import { useProjectStore } from "@/features/window/stores/project.store";
 
 /** Typing pauses this long before an auto-save writes the file. */
 export const AUTO_SAVE_DELAY_MS = 1000;
@@ -215,7 +215,7 @@ async function performEditorSave(
   const activeBuffer = getBufferById(buffers, bufferId);
   if (!activeBuffer || !isEditorContent(activeBuffer)) return false;
   if (activeBuffer.readOnly) return false;
-  const rootFolderPath = useFileSystemStore.getStore(owner.workspaceId).getState().rootFolderPath;
+  const rootFolderPath = useProjectStore.getStore(owner.workspaceId).getState().rootFolderPath;
   if (
     reason === "auto-save" &&
     (!useSettingsStore.getState().settings.autoSave ||

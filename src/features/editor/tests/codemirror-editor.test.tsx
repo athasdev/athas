@@ -25,10 +25,12 @@ const state = vi.hoisted(() => ({
 }));
 
 vi.mock("../stores/buffer.store", () => {
-  const store = (selector: (value: unknown) => unknown) =>
-    selector({ activeBufferId: "buffer-1", buffers: [state.buffer] });
+  const store = (selector: (value: unknown) => unknown) => selector({ buffers: [state.buffer] });
   return { useBufferStore: store };
 });
+vi.mock("@/features/panes/hooks/use-pane-buffer-state", () => ({
+  useBufferIdOrActive: (bufferId: string | null | undefined) => bufferId ?? "buffer-1",
+}));
 vi.mock("../utils/buffer-index", () => ({
   getBufferById: (buffers: Array<{ id: string }>, id: string) =>
     buffers.find((buffer) => buffer.id === id),
@@ -290,6 +292,30 @@ describe("CodeMirror editor", () => {
     const { main } = view().state.selection;
     expect([main.from, main.to]).toEqual([6, 7]);
     expect(state.requestNavigation).toHaveBeenCalledWith(null);
+  });
+
+  it("centers explicit navigation but only scrolls programmatic cursor moves when needed", async () => {
+    const scrollIntoView = vi.spyOn(EditorView, "scrollIntoView");
+    try {
+      state.pendingNavigation = {
+        bufferId: "buffer-1",
+        range: {
+          start: { line: 0, column: 6, offset: 6 },
+          end: { line: 0, column: 6, offset: 6 },
+        },
+      };
+      await act(async () => root.render(<CodeMirrorEditor bufferId="buffer-1" />));
+      expect(scrollIntoView).toHaveBeenLastCalledWith(
+        expect.anything(),
+        expect.objectContaining({ y: "center" }),
+      );
+
+      act(() => editorAPI.setCursorPosition({ line: 0, column: 3, offset: 3 }));
+      expect(view().state.selection.main.head).toBe(3);
+      expect(scrollIntoView).toHaveBeenLastCalledWith(3, expect.objectContaining({ y: "nearest" }));
+    } finally {
+      scrollIntoView.mockRestore();
+    }
   });
 
   it("clears a reveal request once it has scrolled", async () => {

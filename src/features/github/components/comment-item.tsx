@@ -1,4 +1,4 @@
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openExternalUrl } from "@/utils/external-url";
 import { memo, useState } from "react";
 import { Button } from "@/ui/button";
 import { Card } from "@/ui/card";
@@ -108,7 +108,7 @@ export const CommentItem = memo(
                 {canEdit ? <DropdownMenuItem onClick={startEditing}>Edit</DropdownMenuItem> : null}
                 {comment.url ? (
                   <>
-                    <DropdownMenuItem onClick={() => void openUrl(comment.url ?? "")}>
+                    <DropdownMenuItem onClick={() => void openExternalUrl(comment.url ?? "")}>
                       Open on GitHub
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => void writeClipboardText(comment.url ?? "")}>

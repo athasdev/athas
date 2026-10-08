@@ -1,7 +1,7 @@
 import { disposeListener } from "@/utils/tauri-drag-drop";
 import { ProjectCustomIcon } from "./project-custom-icon";
-import { listen } from "@tauri-apps/api/event";
-import { open } from "@tauri-apps/plugin-dialog";
+import { listenForSshConnectionStatus } from "@/features/remote/services/remote-connection-events";
+import { pickFile } from "@/utils/file-dialogs";
 import {
   ArrowLeftIcon,
   FolderIcon,
@@ -18,6 +18,7 @@ import type { ProjectPickerInitialStep } from "@/features/window/stores/ui-state
 import { memo, type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRecentFoldersStore } from "@/features/file-system/stores/recent-folders.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { openRecentFolder } from "@/features/file-system/services/open-recent-folder";
 import type { RecentFolder } from "@/features/file-system/types/recent-folders.types";
 import { showPromptDialog } from "@/ui/dialog";
 import ConnectionForm, {
@@ -35,7 +36,10 @@ import type {
   RemoteConnection,
   RemoteConnectionFormData,
 } from "@/features/remote/types/remote.types";
-import { commands } from "@/bindings/commands";
+import {
+  getWslHomeDirectory,
+  listWslDistributions,
+} from "@/features/wsl/controllers/wsl-distributions";
 import type { WslDistribution } from "@/features/wsl/controllers/wsl-workspace";
 import { getFriendlyRemoteError, isRemoteAuthFailure } from "@/features/remote/utils/remote-errors";
 import Command, {
@@ -103,7 +107,6 @@ const ProjectPicker = memo(({ isOpen, initialStep = "picker", onClose }: Project
   const [statusMap, setStatusMap] = useState<Record<string, "idle" | "error">>({});
 
   const recentFolders = useRecentFoldersStore((state) => state.recentFolders);
-  const openRecentFolder = useRecentFoldersStore((state) => state.actions.openRecentFolder);
   const removeFromRecents = useRecentFoldersStore((state) => state.actions.removeFromRecents);
   const removeMissingFromRecents = useRecentFoldersStore(
     (state) => state.actions.removeMissingFromRecents,
@@ -123,7 +126,7 @@ const ProjectPicker = memo(({ isOpen, initialStep = "picker", onClose }: Project
 
   const loadWslDistributions = useCallback(async () => {
     try {
-      setWslDistributions(await commands.wslListDistributions());
+      setWslDistributions(await listWslDistributions());
     } catch {
       setWslDistributions([]);
     }
@@ -161,16 +164,10 @@ const ProjectPicker = memo(({ isOpen, initialStep = "picker", onClose }: Project
 
   // Listen for connection status changes
   useEffect(() => {
-    const unsubscribe = listen<{ connectionId: string; connected: boolean }>(
-      "ssh_connection_status",
-      async (event) => {
-        await connectionStore.updateConnectionStatus(
-          event.payload.connectionId,
-          event.payload.connected,
-        );
-        await loadConnections();
-      },
-    );
+    const unsubscribe = listenForSshConnectionStatus(async ({ connectionId, connected }) => {
+      await connectionStore.updateConnectionStatus(connectionId, connected);
+      await loadConnections();
+    });
 
     return () => {
       disposeListener(unsubscribe);
@@ -262,7 +259,7 @@ const ProjectPicker = memo(({ isOpen, initialStep = "picker", onClose }: Project
   const handleOpenWslDistribution = useCallback(
     async (distribution: WslDistribution) => {
       try {
-        const home = await commands.wslGetHomeDir(distribution.name).catch(() => "/");
+        const home = await getWslHomeDirectory(distribution.name).catch(() => "/");
         const selectedPath = await showPromptDialog("Linux project path", {
           title: `Open ${distribution.name}`,
           defaultValue: home,
@@ -290,13 +287,9 @@ const ProjectPicker = memo(({ isOpen, initialStep = "picker", onClose }: Project
   };
 
   const handleChooseRemoteKey = async () => {
-    const selectedPath = await open({
-      title: "Choose a private key",
-      multiple: false,
-      directory: false,
-    });
+    const selectedPath = await pickFile({ title: "Choose a private key" });
 
-    if (typeof selectedPath === "string") {
+    if (selectedPath) {
       updateRemoteFormData({ keyPath: selectedPath });
     }
   };

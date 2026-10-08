@@ -2,19 +2,14 @@ import {
   useActiveWorkspaceId,
   useWorkspaceStoreScopeId,
 } from "@/features/workspace/stores/create-workspace-scoped-store";
-import { commands } from "@/bindings/commands";
+import { writeLocalTerminalInput, writeRemoteTerminalInput } from "../services/terminal-pty-api";
 import type React from "react";
 import type {
   TerminalCommandNavigationDirection,
   TerminalSessionHandle,
 } from "../types/terminal.types";
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import {
-  CLOSE_TERMINAL_EVENT,
-  RENAME_TERMINAL_EVENT,
-} from "@/features/terminal/constants/terminal-events";
 import { useTerminalTabs } from "@/features/terminal/hooks/use-terminal-tabs";
 import { useTerminalProfilesStore } from "@/features/terminal/stores/profiles.store";
 import { notifyTerminalCommandFinished } from "@/features/terminal/services/terminal-command-notifications";
@@ -40,9 +35,11 @@ import {
 } from "@/features/terminal/utils/terminal-profiles";
 import { shouldCloseTerminalPane } from "@/features/terminal/utils/terminal-pane-lifecycle";
 import { useUIState } from "@/features/window/stores/ui-state.store";
+import { onAppEvent } from "@/utils/app-events";
 import TerminalSession from "./terminal-session";
 import { TerminalSplitView } from "./terminal-split-view";
 import TerminalTabBar from "./terminal-tab-bar";
+import { selectIsTerminalPaneVisible } from "@/features/window/stores/ui-state/terminal-slice";
 
 interface TerminalContainerProps {
   currentDirectory?: string;
@@ -94,8 +91,6 @@ const TerminalContainer = ({
     closeTerminal: originalCloseTerminal,
     setActiveTerminal,
     updateTerminalName,
-    updateTerminalDirectory,
-    updateTerminalActivity,
     pinTerminal,
     reorderTerminals,
     switchToNextTerminal,
@@ -155,9 +150,7 @@ const TerminalContainer = ({
   const clearTerminalFocus = useUIState((state) => state.clearTerminalFocus);
   const setIsBottomPaneVisible = useUIState((state) => state.setIsBottomPaneVisible);
   const setBottomPaneActiveTab = useUIState((state) => state.setBottomPaneActiveTab);
-  const isBottomPaneVisible = useUIState((state) => state.isBottomPaneVisible);
-  const bottomPaneActiveTab = useUIState((state) => state.bottomPaneActiveTab);
-  const isTerminalPaneVisible = isBottomPaneVisible && bottomPaneActiveTab === "terminal";
+  const isTerminalPaneVisible = useUIState(selectIsTerminalPaneVisible);
 
   useEffect(() => {
     void useTerminalShellsStore.getState().actions.loadShells();
@@ -297,17 +290,8 @@ const TerminalContainer = ({
       if (!trimmedName) return;
 
       updateTerminalName(terminalId, trimmedName);
-      terminalStoreApi.getState().actions.updateSession(terminalId, {
-        name: trimmedName,
-        customName: true,
-      });
-
-      const { buffers, actions } = useBufferStore.getState();
-      buffers
-        .filter((buffer) => buffer.type === "terminal" && buffer.sessionId === terminalId)
-        .forEach((buffer) => actions.updateBuffer({ ...buffer, name: trimmedName }));
     },
-    [updateTerminalName, terminalStoreApi],
+    [updateTerminalName],
   );
 
   const handleCloseOtherTabs = useCallback(
@@ -390,20 +374,6 @@ const TerminalContainer = ({
     terminalSessionRefs.current.get(activeTerminalId)?.showSearch();
   }, [activeTerminalId]);
 
-  const handleDirectoryChange = useCallback(
-    (terminalId: string, directory: string) => {
-      updateTerminalDirectory(terminalId, directory);
-    },
-    [updateTerminalDirectory],
-  );
-
-  const handleActivity = useCallback(
-    (terminalId: string) => {
-      updateTerminalActivity(terminalId);
-    },
-    [updateTerminalActivity],
-  );
-
   // Focus the active terminal
   const focusActiveTerminal = useCallback(() => {
     if (activeTerminalId) {
@@ -443,30 +413,8 @@ const TerminalContainer = ({
       focusStoreActiveTerminal();
     };
 
-    window.addEventListener("close-active-terminal", handleCloseActiveTerminal);
-    return () => window.removeEventListener("close-active-terminal", handleCloseActiveTerminal);
+    return onAppEvent("close-active-terminal", handleCloseActiveTerminal);
   }, [activeTerminalId, closeTerminal, focusStoreActiveTerminal]);
-
-  useEffect(() => {
-    const handleCloseTerminal = (event: Event) => {
-      const terminalId = (event as CustomEvent<{ terminalId?: string }>).detail?.terminalId;
-      if (terminalId) handleTabClose(terminalId);
-    };
-
-    window.addEventListener(CLOSE_TERMINAL_EVENT, handleCloseTerminal);
-    return () => window.removeEventListener(CLOSE_TERMINAL_EVENT, handleCloseTerminal);
-  }, [handleTabClose]);
-
-  useEffect(() => {
-    const handleRenameTerminal = (event: Event) => {
-      const { terminalId, name } = (event as CustomEvent<{ terminalId?: string; name?: string }>)
-        .detail;
-      if (terminalId && name) handleTabRename(terminalId, name);
-    };
-
-    window.addEventListener(RENAME_TERMINAL_EVENT, handleRenameTerminal);
-    return () => window.removeEventListener(RENAME_TERMINAL_EVENT, handleRenameTerminal);
-  }, [handleTabRename]);
 
   // Store pending commands for terminals that are initializing
   const pendingCommandsRef = useRef<Map<string, string>>(new Map());
@@ -474,14 +422,8 @@ const TerminalContainer = ({
   // Listen for create-terminal-with-command event (used by agent install buttons)
   useEffect(() => {
     const focusTimers = createTimeoutRegistry();
-    const handleCreateTerminalWithCommand = (event: Event) => {
-      const customEvent = event as CustomEvent<{
-        command: string;
-        name?: string;
-        workingDirectory?: string;
-        environment?: Record<string, string>;
-      }>;
-      const { command, name, workingDirectory, environment } = customEvent.detail;
+    const unsubscribe = onAppEvent("create-terminal-with-command", (request) => {
+      const { command, name, workingDirectory, environment } = request;
       const terminalDirectory = workingDirectory || currentDirectory;
 
       // Show bottom pane and switch to terminal tab
@@ -509,12 +451,11 @@ const TerminalContainer = ({
           }
         }, 150);
       }
-    };
+    });
 
-    window.addEventListener("create-terminal-with-command", handleCreateTerminalWithCommand);
     return () => {
       focusTimers.clear();
-      window.removeEventListener("create-terminal-with-command", handleCreateTerminalWithCommand);
+      unsubscribe();
     };
   }, [
     createTerminal,
@@ -527,13 +468,8 @@ const TerminalContainer = ({
   // Listen for terminal-ready events to execute pending commands
   useEffect(() => {
     const commandTimers = createTimeoutRegistry();
-    const handleTerminalReady = (event: Event) => {
-      const customEvent = event as CustomEvent<{
-        terminalId: string;
-        connectionId: string;
-        remoteConnectionId?: string;
-      }>;
-      const { terminalId, connectionId, remoteConnectionId } = customEvent.detail;
+    const unsubscribe = onAppEvent("terminal-ready", (session) => {
+      const { terminalId, connectionId, remoteConnectionId } = session;
 
       const pendingCommand = pendingCommandsRef.current.get(terminalId);
       if (pendingCommand && connectionId) {
@@ -541,18 +477,17 @@ const TerminalContainer = ({
         commandTimers.schedule(() => {
           const input = { kind: "text", data: pendingCommand } as const;
           const request = remoteConnectionId
-            ? commands.remoteTerminalWrite(connectionId, input)
-            : commands.terminalWrite(connectionId, input);
+            ? writeRemoteTerminalInput(connectionId, input)
+            : writeLocalTerminalInput(connectionId, input);
           request.catch(() => {});
           pendingCommandsRef.current.delete(terminalId);
         }, 300);
       }
-    };
+    });
 
-    window.addEventListener("terminal-ready", handleTerminalReady);
     return () => {
       commandTimers.clear();
-      window.removeEventListener("terminal-ready", handleTerminalReady);
+      unsubscribe();
     };
   }, []);
 
@@ -562,19 +497,16 @@ const TerminalContainer = ({
       terminalSessionRefs.current.get(activeTerminalId)?.showSearch();
     };
 
-    window.addEventListener("terminal-open-search", handleTerminalOpenSearch);
-    return () => window.removeEventListener("terminal-open-search", handleTerminalOpenSearch);
+    return onAppEvent("terminal-open-search", handleTerminalOpenSearch);
   }, [activeTerminalId]);
 
   useEffect(() => {
-    const handleNavigateCommand = (event: Event) => {
+    const handleNavigateCommand = (direction: TerminalCommandNavigationDirection) => {
       if (!activeTerminalId) return;
-      const direction = (event as CustomEvent<TerminalCommandNavigationDirection>).detail;
       terminalSessionRefs.current.get(activeTerminalId)?.navigateCommand(direction);
     };
 
-    window.addEventListener("terminal-navigate-command", handleNavigateCommand);
-    return () => window.removeEventListener("terminal-navigate-command", handleNavigateCommand);
+    return onAppEvent("terminal-navigate-command", handleNavigateCommand);
   }, [activeTerminalId]);
 
   useEffect(() => {
@@ -596,9 +528,10 @@ const TerminalContainer = ({
       requestAnimationFrame(() => terminalSessionRefs.current.get(terminalId)?.focus());
     };
 
-    const handleCommandFinished = (event: Event) => {
-      const detail = (event as CustomEvent<{ terminalId: string; command: TerminalCommandSummary }>)
-        .detail;
+    const handleCommandFinished = (detail: {
+      terminalId: string;
+      command: TerminalCommandSummary;
+    }) => {
       const terminal = terminals.find((candidate) => candidate.id === detail.terminalId);
       if (!terminal) return;
 
@@ -628,17 +561,7 @@ const TerminalContainer = ({
       );
     };
 
-    const handleActivateTerminal = (event: Event) => {
-      const terminalId = (event as CustomEvent<{ terminalId?: string }>).detail?.terminalId;
-      if (terminalId) activateTerminal(terminalId);
-    };
-
-    window.addEventListener("terminal-command-finished", handleCommandFinished);
-    window.addEventListener("terminal-activate", handleActivateTerminal);
-    return () => {
-      window.removeEventListener("terminal-command-finished", handleCommandFinished);
-      window.removeEventListener("terminal-activate", handleActivateTerminal);
-    };
+    return onAppEvent("terminal-command-finished", handleCommandFinished);
   }, [
     activeTerminalId,
     isTerminalPaneVisible,
@@ -652,9 +575,8 @@ const TerminalContainer = ({
   ]);
 
   useEffect(() => {
-    const handleFocusPane = (event: Event) => {
+    const handleFocusPane = (direction: "next" | "previous") => {
       if (!activeTerminalId) return;
-      const direction = (event as CustomEvent<"next" | "previous">).detail;
       const target = getAdjacentLayoutTerminalId(
         layouts,
         activeTerminalId,
@@ -669,11 +591,11 @@ const TerminalContainer = ({
       if (activeTerminalId) handleUnsplit(activeTerminalId);
     };
 
-    window.addEventListener("terminal-focus-pane", handleFocusPane);
-    window.addEventListener("terminal-unsplit", handleUnsplitEvent);
+    const unsubscribeFocusPane = onAppEvent("terminal-focus-pane", handleFocusPane);
+    const unsubscribeUnsplit = onAppEvent("terminal-unsplit", handleUnsplitEvent);
     return () => {
-      window.removeEventListener("terminal-focus-pane", handleFocusPane);
-      window.removeEventListener("terminal-unsplit", handleUnsplitEvent);
+      unsubscribeFocusPane();
+      unsubscribeUnsplit();
     };
   }, [activeTerminalId, focusNewTerminal, handleUnsplit, layouts, setActiveTerminal]);
 
@@ -691,20 +613,19 @@ const TerminalContainer = ({
       terminalSessionRefs.current.get(activeTerminalId)?.copyLastCommandOutput();
     };
 
-    window.addEventListener("terminal-clear", handleClear);
-    window.addEventListener("terminal-select-all", handleSelectAll);
-    window.addEventListener("terminal-copy-last-command-output", handleCopyLastCommandOutput);
+    const unsubscribers = [
+      onAppEvent("terminal-clear", handleClear),
+      onAppEvent("terminal-select-all", handleSelectAll),
+      onAppEvent("terminal-copy-last-command-output", handleCopyLastCommandOutput),
+    ];
     return () => {
-      window.removeEventListener("terminal-clear", handleClear);
-      window.removeEventListener("terminal-select-all", handleSelectAll);
-      window.removeEventListener("terminal-copy-last-command-output", handleCopyLastCommandOutput);
+      for (const unsubscribe of unsubscribers) unsubscribe();
     };
   }, [activeTerminalId]);
 
   // Listen for terminal tab switch events from the keymaps system
   useEffect(() => {
-    const handleTerminalSwitchTab = (e: Event) => {
-      const direction = (e as CustomEvent).detail;
+    const handleTerminalSwitchTab = (direction: "next" | "prev") => {
       if (direction === "next") {
         switchToNextTerminal();
       } else {
@@ -712,8 +633,7 @@ const TerminalContainer = ({
       }
     };
 
-    window.addEventListener("terminal-switch-tab", handleTerminalSwitchTab);
-    return () => window.removeEventListener("terminal-switch-tab", handleTerminalSwitchTab);
+    return onAppEvent("terminal-switch-tab", handleTerminalSwitchTab);
   }, [switchToNextTerminal, switchToPrevTerminal]);
 
   useEffect(() => {
@@ -721,9 +641,16 @@ const TerminalContainer = ({
       handleNewTerminal();
     };
 
-    const handleDetachTerminalToBuffer = (event: Event) => {
-      const terminalId = (event as CustomEvent<{ terminalId?: string }>).detail?.terminalId;
+    const handleDetachTerminalToBuffer = ({ terminalId }: { terminalId: string }) => {
       if (!terminalId) return;
+      // The pane list owns the name until here; from now on the editor tab reads it from the
+      // session, so a name the user gave the terminal goes with it.
+      const terminal = terminals.find((candidate) => candidate.id === terminalId);
+      if (terminal?.customName) {
+        terminalStoreApi
+          .getState()
+          .actions.updateSession(terminalId, { name: terminal.name, customName: true });
+      }
       requestAnimationFrame(() => {
         closeTerminal(terminalId, { preserveSession: true });
       });
@@ -738,29 +665,25 @@ const TerminalContainer = ({
       focusActiveTerminal();
     };
 
-    const handleSplitTerminalEvent = (event: Event) => {
-      const direction = (event as CustomEvent<TerminalSplitDirection>).detail ?? "right";
+    const handleSplitTerminalEvent = (direction: TerminalSplitDirection = "right") => {
       handleSplitView(direction);
     };
 
-    const handleActivateTerminalTab = (event: Event) => {
-      const tabIndex = (event as CustomEvent<number>).detail;
+    const handleActivateTerminalTab = (tabIndex: number) => {
       if (typeof tabIndex !== "number" || tabIndex < 0 || tabIndex >= terminals.length) return;
       setActiveTerminal(terminals[tabIndex].id);
     };
 
-    window.addEventListener("terminal-new", handleNewTerminalEvent);
-    window.addEventListener("terminal-detach-to-buffer", handleDetachTerminalToBuffer);
-    window.addEventListener("terminal-ensure-session", handleEnsureTerminalSession);
-    window.addEventListener("terminal-split", handleSplitTerminalEvent);
-    window.addEventListener("terminal-activate-tab", handleActivateTerminalTab);
+    const unsubscribers = [
+      onAppEvent("terminal-new", handleNewTerminalEvent),
+      onAppEvent("terminal-detach-to-buffer", handleDetachTerminalToBuffer),
+      onAppEvent("terminal-ensure-session", handleEnsureTerminalSession),
+      onAppEvent("terminal-split", handleSplitTerminalEvent),
+      onAppEvent("terminal-activate-tab", handleActivateTerminalTab),
+    ];
 
     return () => {
-      window.removeEventListener("terminal-new", handleNewTerminalEvent);
-      window.removeEventListener("terminal-detach-to-buffer", handleDetachTerminalToBuffer);
-      window.removeEventListener("terminal-ensure-session", handleEnsureTerminalSession);
-      window.removeEventListener("terminal-split", handleSplitTerminalEvent);
-      window.removeEventListener("terminal-activate-tab", handleActivateTerminalTab);
+      for (const unsubscribe of unsubscribers) unsubscribe();
     };
   }, [
     terminals,
@@ -769,19 +692,19 @@ const TerminalContainer = ({
     setActiveTerminal,
     handleSplitView,
     closeTerminal,
+    terminalStoreApi,
   ]);
 
   // Create terminal when pane becomes visible with no terminals
   useEffect(() => {
-    const isTerminalVisible = isBottomPaneVisible && bottomPaneActiveTab === "terminal";
-    const justBecameVisible = isTerminalVisible && !wasVisibleRef.current;
+    const justBecameVisible = isTerminalPaneVisible && !wasVisibleRef.current;
 
     if (justBecameVisible && terminals.length === 0) {
       handleNewTerminal();
     }
 
-    wasVisibleRef.current = isTerminalVisible;
-  }, [isBottomPaneVisible, bottomPaneActiveTab, terminals.length, handleNewTerminal]);
+    wasVisibleRef.current = isTerminalPaneVisible;
+  }, [isTerminalPaneVisible, terminals.length, handleNewTerminal]);
 
   const terminalTabBarProps = {
     terminals,
@@ -823,8 +746,6 @@ const TerminalContainer = ({
       terminal={terminal}
       isActive={terminal.id === activeTerminalId}
       isVisible={isTerminalPaneVisible}
-      onDirectoryChange={handleDirectoryChange}
-      onActivity={handleActivity}
       onRegisterRef={registerTerminalRef}
       onTerminalExit={closeTerminal}
     />

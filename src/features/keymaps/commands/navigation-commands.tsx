@@ -1,4 +1,6 @@
 import {
+  ArrowLeftIcon,
+  ArrowRightIcon,
   BugIcon,
   FolderOpenIcon,
   GitBranchIcon,
@@ -12,6 +14,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import type { SidebarView } from "@/features/layout/utils/sidebar-pane-utils";
 import { setOutlineVisibilityPreference } from "@/features/outline/actions/outline-visibility";
 import { useUIState } from "@/features/window/stores/ui-state.store";
+import { emitAppEvent } from "@/utils/app-events";
 import { useKeymapStore } from "../stores/keymaps.store";
 import type { Command } from "../types/keymaps.types";
 import {
@@ -39,7 +42,7 @@ const isTerminalFocused = () => useKeymapStore.getState().contexts.terminalFocus
 
 const switchNextTab = () => {
   if (isTerminalFocused()) {
-    window.dispatchEvent(new CustomEvent("terminal-switch-tab", { detail: "next" }));
+    emitAppEvent("terminal-switch-tab", "next");
   } else {
     useBufferStore.getState().actions.switchToNextBuffer();
   }
@@ -47,7 +50,7 @@ const switchNextTab = () => {
 
 const switchPrevTab = () => {
   if (isTerminalFocused()) {
-    window.dispatchEvent(new CustomEvent("terminal-switch-tab", { detail: "prev" }));
+    emitAppEvent("terminal-switch-tab", "prev");
   } else {
     useBufferStore.getState().actions.switchToPreviousBuffer();
   }
@@ -76,6 +79,9 @@ export const navigationCommands: Command[] = [
     id: "workbench.nextTab",
     title: "Next Tab",
     category: "Navigation",
+    description: "Switch to the next open tab",
+    icon: <ArrowRightIcon />,
+    palette: { label: "Tab: Next Tab", category: "File" },
     execute: switchNextTab,
   },
   {
@@ -88,6 +94,9 @@ export const navigationCommands: Command[] = [
     id: "workbench.previousTab",
     title: "Previous Tab",
     category: "Navigation",
+    description: "Switch to the previous open tab",
+    icon: <ArrowLeftIcon />,
+    palette: { label: "Tab: Previous Tab", category: "File" },
     execute: switchPrevTab,
   },
   {
@@ -114,7 +123,7 @@ export const navigationCommands: Command[] = [
     category: "Navigation",
     execute: () => {
       if (isTerminalFocused()) {
-        window.dispatchEvent(new CustomEvent("terminal-activate-tab", { detail: i }));
+        emitAppEvent("terminal-activate-tab", i);
         return;
       }
       const bufferStore = useBufferStore.getState();

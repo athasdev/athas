@@ -1,15 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 import { NotificationsCommand } from "@/features/notifications/components/notifications-command";
-import {
-  OPEN_NOTIFICATIONS_COMMAND_EVENT,
-  type OpenNotificationsCommandDetail,
-} from "@/features/notifications/constants/notifications-events";
 import { useGitHubNotifications } from "@/features/notifications/hooks/use-github-notifications";
 import { useNotificationsStore } from "@/features/notifications/stores/notifications.store";
 import type { NotificationCategoryFilter } from "@/features/notifications/types/notifications.types";
 import { Button } from "@/ui/button";
 import { BellIcon } from "@/ui/icons";
+import { onAppEvent } from "@/utils/app-events";
 
 export const NotificationsTrigger = () => {
   const notifications = useNotificationsStore.use.notifications();
@@ -25,16 +22,10 @@ export const NotificationsTrigger = () => {
   );
 
   useEffect(() => {
-    const handleShowNotifications = (event: Event) => {
-      const detail = (event as CustomEvent<OpenNotificationsCommandDetail>).detail;
+    return onAppEvent("athas:notifications:show", (detail) => {
       setInitialCategory(detail?.category ?? "all");
       setIsCommandVisible(true);
-    };
-
-    window.addEventListener(OPEN_NOTIFICATIONS_COMMAND_EVENT, handleShowNotifications);
-    return () => {
-      window.removeEventListener(OPEN_NOTIFICATIONS_COMMAND_EVENT, handleShowNotifications);
-    };
+    });
   }, []);
 
   const tooltip = unreadCount > 0 ? `Notifications (${unreadCount})` : "Notifications";

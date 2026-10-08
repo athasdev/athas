@@ -1,4 +1,3 @@
-import type { RefObject } from "react";
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
@@ -11,7 +10,7 @@ import type {
 } from "@/features/editor/types/editor.types";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { publishEditorScroll } from "../services/editor-scroll-events";
-import { useBufferStore } from "./buffer.store";
+import { getActiveBufferId } from "@/features/panes/stores/pane-selectors";
 
 // Types for editor state caching
 export interface EditorViewState {
@@ -163,9 +162,7 @@ export interface EditorScrollOffset {
 }
 
 function getActiveViewKey(): string | null {
-  return (
-    useEditorStateStore.getState().activeEditorViewKey ?? useBufferStore.getState().activeBufferId
-  );
+  return useEditorStateStore.getState().activeEditorViewKey ?? getActiveBufferId();
 }
 
 function positionsEqual(left: Position, right: Position): boolean {
@@ -176,6 +173,19 @@ function rangesEqual(left?: Range, right?: Range): boolean {
   if (left === right) return true;
   if (!left || !right) return false;
   return positionsEqual(left.start, right.start) && positionsEqual(left.end, right.end);
+}
+
+type EditorChangeHandler = (
+  value: string,
+  previousValue?: string,
+  previousCursorPosition?: Position,
+  previousSelection?: Range,
+  options?: EditorContentChangeOptions,
+) => void;
+
+/** Whether `viewKey` (a buffer id, or `paneId:bufferId`) shows `bufferId`. */
+export function isEditorViewOfBuffer(viewKey: string | null, bufferId: string): boolean {
+  return viewKey === bufferId || (!!viewKey && viewKey.endsWith(`:${bufferId}`));
 }
 
 // State Interface
@@ -192,19 +202,9 @@ interface EditorState {
   // Layout state. Scroll offsets live in the view state cache; read them with `getScroll`.
   viewportHeight: number;
 
-  // Instance state
-  value: string;
-  onChange: (
-    value: string,
-    previousValue?: string,
-    previousCursorPosition?: Position,
-    previousSelection?: Range,
-    options?: EditorContentChangeOptions,
-  ) => void;
-  filePath: string;
-  editorRef: RefObject<HTMLDivElement | null> | null;
-  placeholder?: string;
-  disabled: boolean;
+  // Instance state. The text and path of what the editor shows belong to the active buffer; read
+  // them from the buffer store (`readBufferText`), not from here.
+  onChange: EditorChangeHandler;
   activeEditorViewKey: string | null;
   pendingNavigation: EditorNavigationTarget | null;
   pendingReveal: EditorRevealTarget | null;
@@ -244,20 +244,7 @@ interface EditorStateActions {
   setViewportHeightForView: (viewKey: string | null, height: number) => void;
 
   // Instance actions
-  setRefs: (refs: { editorRef: RefObject<HTMLDivElement | null> }) => void;
-  setContent: (
-    value: string,
-    onChange: (
-      value: string,
-      previousValue?: string,
-      previousCursorPosition?: Position,
-      previousSelection?: Range,
-      options?: EditorContentChangeOptions,
-    ) => void,
-  ) => void;
-  setFileInfo: (filePath: string) => void;
-  setPlaceholder: (placeholder?: string) => void;
-  setDisabled: (disabled: boolean) => void;
+  setChangeHandler: (onChange: EditorChangeHandler) => void;
   setActiveEditorViewKey: (viewKey: string | null) => void;
 }
 
@@ -277,12 +264,7 @@ export const useEditorStateStore = createSelectors(
       viewportHeight: EDITOR_CONSTANTS.DEFAULT_VIEWPORT_HEIGHT,
 
       // Instance state
-      value: "",
       onChange: () => {},
-      filePath: "",
-      editorRef: null,
-      placeholder: undefined,
-      disabled: false,
       activeEditorViewKey: null,
       pendingNavigation: null,
       pendingReveal: null,
@@ -294,7 +276,7 @@ export const useEditorStateStore = createSelectors(
         // Cursor actions
         setCursorPosition: (position) => {
           const currentState = useEditorStateStore.getState();
-          const { activeBufferId } = useBufferStore.getState();
+          const activeBufferId = getActiveBufferId();
           const activeEditorViewKey = currentState.activeEditorViewKey;
           const viewKey = activeEditorViewKey ?? activeBufferId;
           if (viewKey) {
@@ -306,7 +288,7 @@ export const useEditorStateStore = createSelectors(
         },
         setSelection: (selection) => {
           const currentState = useEditorStateStore.getState();
-          const { activeBufferId } = useBufferStore.getState();
+          const activeBufferId = getActiveBufferId();
           const activeEditorViewKey = currentState.activeEditorViewKey;
           const viewKey = activeEditorViewKey ?? activeBufferId;
           if (viewKey) {
@@ -318,7 +300,7 @@ export const useEditorStateStore = createSelectors(
         },
         setCursorAndSelection: (position, selection) => {
           const currentState = useEditorStateStore.getState();
-          const { activeBufferId } = useBufferStore.getState();
+          const activeBufferId = getActiveBufferId();
           const viewKey = currentState.activeEditorViewKey ?? activeBufferId;
           if (viewKey) {
             viewStateCache.setCursor(viewKey, position);
@@ -482,49 +464,22 @@ export const useEditorStateStore = createSelectors(
         // subscriber. Readers that follow it subscribe to the scroll events instead.
         setScrollForBuffer: (bufferId, scrollTop, scrollLeft) => {
           if (!bufferId || !viewStateCache.setScroll(bufferId, scrollTop, scrollLeft)) return;
-          if (
-            bufferId === getActiveViewKey() ||
-            bufferId === useBufferStore.getState().activeBufferId
-          ) {
+          if (bufferId === getActiveViewKey() || bufferId === getActiveBufferId()) {
             publishEditorScroll();
           }
         },
         setViewportHeightForView: (viewKey, height) => {
           if (!viewKey || height <= 0) return;
-          const isActiveView =
-            viewKey === getActiveViewKey() || viewKey === useBufferStore.getState().activeBufferId;
+          const isActiveView = viewKey === getActiveViewKey() || viewKey === getActiveBufferId();
           if (isActiveView && useEditorStateStore.getState().viewportHeight !== height) {
             set({ viewportHeight: height });
           }
         },
 
         // Instance actions
-        setRefs: (refs) => {
-          if (useEditorStateStore.getState().editorRef !== refs.editorRef) {
-            set(refs);
-          }
-        },
-        setContent: (value, onChange) =>
-          set((state) => {
-            const nextValue = state.value === "" ? value : state.value;
-            if (state.value === nextValue && state.onChange === onChange) {
-              return state;
-            }
-            return { value: nextValue, onChange };
-          }),
-        setFileInfo: (filePath) => {
-          if (useEditorStateStore.getState().filePath !== filePath) {
-            set({ filePath });
-          }
-        },
-        setPlaceholder: (placeholder) => {
-          if (useEditorStateStore.getState().placeholder !== placeholder) {
-            set({ placeholder });
-          }
-        },
-        setDisabled: (disabled) => {
-          if (useEditorStateStore.getState().disabled !== disabled) {
-            set({ disabled });
+        setChangeHandler: (onChange) => {
+          if (useEditorStateStore.getState().onChange !== onChange) {
+            set({ onChange });
           }
         },
         setActiveEditorViewKey: (activeEditorViewKey) => {

@@ -1,4 +1,4 @@
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openExternalUrl } from "@/utils/external-url";
 import { memo, useEffect, useState } from "react";
 import { getServiceUrls } from "@/config/services";
 import { useGitHubStore } from "@/features/github/stores/github.store";
@@ -82,23 +82,23 @@ export const AccountMenu = memo(function AccountMenu() {
   };
 
   const handleManageAccount = async () => {
-    await openUrl(services.dashboardUrl);
+    await openExternalUrl(services.dashboardUrl);
   };
 
   const handleOpenBillingDashboard = async () => {
-    await openUrl(services.dashboardBillingUrl);
+    await openExternalUrl(services.dashboardBillingUrl);
   };
 
   const handleOpenDocs = async () => {
-    await openUrl(services.docsUrl);
+    await openExternalUrl(services.docsUrl);
   };
 
   const handleOpenChangelog = async () => {
-    await openUrl(services.githubReleasesBaseUrl);
+    await openExternalUrl(services.githubReleasesBaseUrl);
   };
 
   const handleOpenCommunity = async () => {
-    await openUrl(COMMUNITY_URL);
+    await openExternalUrl(COMMUNITY_URL);
   };
 
   const handleOpenWhatsNew = async () => {
@@ -167,7 +167,7 @@ export const AccountMenu = memo(function AccountMenu() {
             label: "GitHub Profile",
             icon: <GithubMark />,
             trailing: { type: "text" as const, label: "Connected" },
-            onClick: () => openUrl(`https://github.com/${encodeURIComponent(githubLogin)}`),
+            onClick: () => openExternalUrl(`https://github.com/${encodeURIComponent(githubLogin)}`),
           },
         ]
       : [
@@ -175,7 +175,7 @@ export const AccountMenu = memo(function AccountMenu() {
             id: "github-connect",
             label: "Connect GitHub",
             icon: <GithubMark />,
-            onClick: () => openUrl(services.dashboardIntegrationsUrl),
+            onClick: () => openExternalUrl(services.dashboardIntegrationsUrl),
           },
         ]),
     ...(isTeams

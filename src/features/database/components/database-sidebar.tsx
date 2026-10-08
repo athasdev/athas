@@ -7,7 +7,6 @@ import {
   TrashIcon,
   XIcon,
 } from "@/ui/icons";
-import { open } from "@tauri-apps/plugin-dialog";
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
@@ -32,6 +31,7 @@ import { Spinner } from "@/ui/spinner";
 import { normalizeDatabaseError } from "../lib/database-errors";
 import type { DatabaseType } from "../types/provider.types";
 import { PROVIDER_REGISTRY } from "../providers/provider-registry";
+import { pickDatabaseFile } from "../services/database-file-picker";
 import { type SavedConnection, useConnectionStore } from "../stores/connection.store";
 import { getDatabaseTypeForFilePath } from "../utils/database-file-drop";
 import {
@@ -42,6 +42,8 @@ import {
 } from "../utils/workspace-database-files";
 import { buildSavedConnectionConfig } from "../utils/connection-config";
 import { getInstalledDatabaseTypes, validateConnectionInput } from "../utils/connection-validation";
+import { useProjectStore } from "@/features/window/stores/project.store";
+import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 function getBaseName(path: string) {
   return path.split(/[\\/]/).filter(Boolean).pop() ?? path;
@@ -60,7 +62,7 @@ function getConnectionSubtitle(connection: SavedConnection) {
 }
 
 export function DatabaseSidebar() {
-  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const filesVersion = useFileSystemStore((state) => state.filesVersion);
   const getAllProjectFiles = useFileSystemStore((state) => state.getAllProjectFiles);
   const savedConnections = useConnectionStore.use.savedConnections();
@@ -75,8 +77,9 @@ export function DatabaseSidebar() {
     storeCredential,
   } = useConnectionStore.use.actions();
   const openDatabaseBuffer = useBufferStore.use.actions().openDatabaseBuffer;
+  const activeBufferId = useActiveBufferId();
   const activeDatabasePath = useBufferStore((state) => {
-    const buffer = state.buffers.find((item) => item.id === state.activeBufferId);
+    const buffer = state.buffers.find((item) => item.id === activeBufferId);
     return buffer?.type === "database" ? buffer.path : undefined;
   });
   const [query, setQuery] = useState("");
@@ -238,20 +241,9 @@ export function DatabaseSidebar() {
 
   const chooseDatabaseFile = async (dbType: DatabaseType) => {
     const provider = PROVIDER_REGISTRY[dbType];
-    const selected = await open({
-      multiple: false,
-      directory: false,
-      filters: [
-        {
-          name: provider.label,
-          extensions: (provider.fileExtensions ?? []).map((extension) =>
-            extension.replace(/^\./, ""),
-          ),
-        },
-      ],
-    });
+    const selected = await pickDatabaseFile(provider);
 
-    if (selected && typeof selected === "string") {
+    if (selected) {
       await saveFileConnection(selected, dbType);
     }
   };

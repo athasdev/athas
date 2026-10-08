@@ -1,10 +1,10 @@
 import { useEffect, useRef } from "react";
-import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { recordFrictionSignal } from "@/features/telemetry/services/telemetry";
+import { emitAppEvent, onAppEvent } from "@/utils/app-events";
 import { useExtensionStore } from "../registry/extension-store";
 
-interface ExtensionInstallNeededEvent {
+export interface ExtensionInstallRequest {
   extensionId: string;
   extensionName: string;
   filePath: string;
@@ -19,9 +19,8 @@ export const useExtensionInstallPrompt = () => {
   const dismissedExtensions = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    const handleInstallNeeded = (event: Event) => {
-      const customEvent = event as CustomEvent<ExtensionInstallNeededEvent>;
-      const { extensionId, extensionName, filePath } = customEvent.detail;
+    const handleInstallNeeded = (request: ExtensionInstallRequest) => {
+      const { extensionId, extensionName } = request;
 
       // Check if already installed in store (synchronous check to handle timing issues)
       const { installedExtensions } = useExtensionStore.getState();
@@ -64,18 +63,6 @@ export const useExtensionInstallPrompt = () => {
                 type: "success",
               });
 
-              // Re-trigger tokenization for the current file
-              const { activeBufferId, buffers } = useBufferStore.getState();
-              const activeBuffer = buffers.find((b) => b.id === activeBufferId);
-              if (activeBuffer && activeBuffer.path === filePath) {
-                // Dispatch event to re-tokenize the file
-                window.dispatchEvent(
-                  new CustomEvent("extension-installed", {
-                    detail: { extensionId, filePath },
-                  }),
-                );
-              }
-
               // Auto-dismiss success message after 3 seconds
               setTimeout(() => {
                 dismissToast(toastId);
@@ -95,11 +82,7 @@ export const useExtensionInstallPrompt = () => {
                     // Retry installation
                     activePrompts.delete(extensionId);
                     dismissToast(toastId);
-                    window.dispatchEvent(
-                      new CustomEvent("extension-install-needed", {
-                        detail: customEvent.detail,
-                      }),
-                    );
+                    emitAppEvent("extension-install-needed", request);
                   },
                 },
               });
@@ -111,10 +94,7 @@ export const useExtensionInstallPrompt = () => {
       activePrompts.set(extensionId, toastId);
     };
 
-    const handleToastDismiss = (event: Event) => {
-      const customEvent = event as CustomEvent<{ toastId: string }>;
-      const { toastId } = customEvent.detail;
-
+    const handleToastDismiss = ({ toastId }: { toastId: string }) => {
       // Find and remove the extension from activePrompts if its toast was dismissed
       for (const [extId, tId] of activePrompts.entries()) {
         if (tId === toastId) {
@@ -127,12 +107,12 @@ export const useExtensionInstallPrompt = () => {
       }
     };
 
-    window.addEventListener("extension-install-needed", handleInstallNeeded);
-    window.addEventListener("toast-dismissed", handleToastDismiss);
+    const unsubscribeInstallNeeded = onAppEvent("extension-install-needed", handleInstallNeeded);
+    const unsubscribeToastDismissed = onAppEvent("toast-dismissed", handleToastDismiss);
 
     return () => {
-      window.removeEventListener("extension-install-needed", handleInstallNeeded);
-      window.removeEventListener("toast-dismissed", handleToastDismiss);
+      unsubscribeInstallNeeded();
+      unsubscribeToastDismissed();
     };
   }, [showToast, dismissToast, updateToast, installExtension, hasToast]);
 };

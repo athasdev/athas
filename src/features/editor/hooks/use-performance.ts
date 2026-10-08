@@ -46,16 +46,6 @@ export function usePerformanceMonitor(componentName: string) {
               durationMs: Math.round(lastEntry.duration * 100) / 100,
             },
           );
-          window.dispatchEvent(
-            new CustomEvent("performance-metric", {
-              detail: {
-                component: componentName,
-                metric: metricName,
-                duration: lastEntry.duration,
-                timestamp: Date.now(),
-              },
-            }),
-          );
           return lastEntry.duration;
         }
       } catch (e) {

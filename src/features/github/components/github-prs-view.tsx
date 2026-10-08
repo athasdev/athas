@@ -2,8 +2,8 @@ import GitHubDeliveryList from "../delivery/components/github-delivery-list";
 import { RELEASE_FILTERS, DEPLOYMENT_FILTERS } from "../delivery/utils/github-delivery";
 import type { ReleaseFilter, DeploymentFilter } from "../delivery/types/github-delivery.types";
 import { TagIcon, RocketIcon } from "@/ui/icons";
-import { commands } from "@/bindings/commands";
-import { open } from "@tauri-apps/plugin-dialog";
+import { pickDirectory } from "@/utils/file-dialogs";
+import { listIssues } from "../api/github-issues-api";
 import { GitHubAuthStatusMessage } from "./github-auth-status";
 import {
   ArrowClockwiseIcon,
@@ -27,7 +27,6 @@ import {
   useState,
 } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { getGitStatus } from "@/features/git/api/git-status-api";
 import { isNotGitRepositoryError, resolveRepositoryPath } from "@/features/git/api/git-repo-api";
 import GitProjectSelector from "@/features/git/components/git-project-selector";
@@ -72,6 +71,9 @@ import { GitHubAvatar } from "./github-avatar";
 import GitHubIssuesView from "./github-issues-view";
 import { GitHubSidebarRow, type GitHubSidebarPreviewBadge } from "./github-sidebar-row";
 import { GITHUB_ISSUE_LIST_TTL_MS, githubIssueListCache } from "../utils/github-data-cache";
+import { useProjectStore } from "@/features/window/stores/project.store";
+import { onAppEvent } from "@/utils/app-events";
+import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 const filterLabels: Record<PRFilter, string> = {
   all: "Open PRs",
@@ -189,7 +191,7 @@ const PRListItem = memo(
 PRListItem.displayName = "PRListItem";
 
 const GitHubPRsView = memo(() => {
-  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const prs = useGitHubStore.use.prs();
   const isLoading = useGitHubStore.use.isLoading();
   const error = useGitHubStore.use.error();
@@ -233,9 +235,10 @@ const GitHubPRsView = memo(() => {
   const sectionContextMenu = useDropdownMenu<null>();
 
   const isRepoError = !!error && isNotGitRepositoryError(error);
+  const activeBufferId = useActiveBufferId();
   const activePRNumber = useBufferStore((state) => {
-    const activeBuffer = state.activeBufferId
-      ? state.buffers.find((buffer) => buffer.id === state.activeBufferId)
+    const activeBuffer = activeBufferId
+      ? state.buffers.find((buffer) => buffer.id === activeBufferId)
       : null;
     return activeBuffer?.type === "pullRequest" ? activeBuffer.prNumber : null;
   });
@@ -341,7 +344,7 @@ const GitHubPRsView = memo(() => {
       if (showGitHubIssues) {
         const issueCacheKey = `${effectiveRepoPath}::${issueFilter}`;
         void githubIssueListCache
-          .load(issueCacheKey, () => commands.githubListIssues(effectiveRepoPath, issueFilter), {
+          .load(issueCacheKey, () => listIssues(effectiveRepoPath, issueFilter), {
             ttlMs: GITHUB_ISSUE_LIST_TTL_MS,
           })
           .catch(() => undefined);
@@ -406,10 +409,7 @@ const GitHubPRsView = memo(() => {
   }, [activeSection, effectiveRepoPath, fetchPRs, issueFilter]);
 
   useEffect(() => {
-    const handlePaletteAction = (event: Event) => {
-      if (!(event instanceof CustomEvent)) return;
-
-      const detail = event.detail as GitHubPaletteAction;
+    const handlePaletteAction = (detail: GitHubPaletteAction) => {
       if (!detail) return;
 
       if (detail.type === "show-section") {
@@ -422,16 +422,15 @@ const GitHubPRsView = memo(() => {
       }
     };
 
-    window.addEventListener("athas:github-palette-action", handlePaletteAction);
-    return () => window.removeEventListener("athas:github-palette-action", handlePaletteAction);
+    return onAppEvent("athas:github-palette-action", handlePaletteAction);
   }, [handleRefreshActiveSection]);
 
   const handleSelectRepository = useCallback(async () => {
     setIsSelectingRepo(true);
     setRepoSelectionError(null);
     try {
-      const selected = await open({ directory: true, multiple: false });
-      if (!selected || Array.isArray(selected)) return;
+      const selected = await pickDirectory();
+      if (!selected) return;
 
       const resolvedRepoPath = await resolveRepositoryPath(selected);
       if (!resolvedRepoPath) {

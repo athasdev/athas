@@ -43,7 +43,7 @@ const VSCODE_COMMANDS: Record<string, string> = {
   "workbench.action.closeEditorsToTheLeft": "file.closeTabsToLeft",
   "workbench.action.closeEditorsToTheRight": "file.closeTabsToRight",
   "workbench.action.reopenClosedEditor": "file.reopenClosed",
-  "workbench.action.files.openFolder": "file.open",
+  "workbench.action.files.openFolder": "file.openFolder",
   "workbench.action.quickOpen": "file.quickOpen",
   "editor.action.selectAll": "editor.selectAll",
   selectAll: "editor.selectAll",

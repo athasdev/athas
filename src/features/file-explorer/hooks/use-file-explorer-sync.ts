@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getExplorerTargetPath } from "@/features/file-explorer/utils/file-explorer-tree-utils";
+import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 interface UseFileExplorerSyncOptions {
   activePath?: string;
@@ -22,9 +23,10 @@ export function useFileExplorerSync({
 }: UseFileExplorerSyncOptions) {
   const revealRequestIdRef = useRef(0);
   const [revealRequest, setRevealRequest] = useState<FileExplorerRevealRequest | null>(null);
+  const activeBufferId = useActiveBufferId();
   const explorerTargetPath = useBufferStore((state) => {
-    const activeBuffer = state.activeBufferId
-      ? state.buffers.find((buffer) => buffer.id === state.activeBufferId)
+    const activeBuffer = activeBufferId
+      ? state.buffers.find((buffer) => buffer.id === activeBufferId)
       : null;
 
     return getExplorerTargetPath(activeBuffer ?? null);

@@ -29,6 +29,7 @@ import {
 import { isLspFile, toLspPosition } from "../lsp/lsp-positions";
 import type { SnippetVariableResolver } from "../lsp/lsp-snippet";
 import { createDocumentationElement } from "../lsp/markdown-content";
+import { emitAppEvent, onAppEvent } from "@/utils/app-events";
 
 function pathParts(filePath: string) {
   const separator = Math.max(filePath.lastIndexOf("/"), filePath.lastIndexOf("\\"));
@@ -133,7 +134,7 @@ function runCompletionCommand(
   if (command.command === "editor.action.triggerSuggest") {
     startCompletion(view);
   } else if (command.command === "editor.action.triggerParameterHints") {
-    window.dispatchEvent(new CustomEvent("editor-trigger-signature-help"));
+    emitAppEvent("editor-trigger-signature-help");
   } else {
     void client.executeCommand(filePath, command.command, command.arguments ?? []).catch(() => {});
   }
@@ -247,8 +248,7 @@ export function LspCompletion({ host }: { host: CodeMirrorHost }) {
       view.focus();
       startCompletion(view);
     };
-    window.addEventListener("editor-trigger-suggest", handleTriggerSuggest);
-    return () => window.removeEventListener("editor-trigger-suggest", handleTriggerSuggest);
+    return onAppEvent("editor-trigger-suggest", handleTriggerSuggest);
   }, [isActiveSurface, isReadOnly, view]);
 
   return null;

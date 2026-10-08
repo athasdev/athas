@@ -27,10 +27,7 @@ import { ChromeBar, ChromeGroup, ChromeLabel } from "@/ui/chrome";
 import { Kbd } from "@/ui/kbd";
 import { useAgentDraft } from "@/features/ai/hooks/use-agent-draft";
 import { shouldIgnoreSearchFile } from "@/features/file-search/utils/file-search-filtering";
-import {
-  AI_CHAT_INSERT_SKILL_EVENT,
-  type AIChatSkillInsertDetail,
-} from "@/features/ai/lib/skill-events";
+import type { AIChatSkillInsertDetail } from "@/features/ai/lib/skill-events";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { selectChatAcpSession } from "@/features/ai/lib/acp-session-state";
 import { useVoiceInput } from "@/features/ai/hooks/use-voice-input";
@@ -59,9 +56,9 @@ import { openSidebarResourceBuffer } from "@/features/sidebar/utils/open-sidebar
 import {
   hasSidebarResourceDragData,
   readSidebarResourceDragData,
-  SIDEBAR_RESOURCE_DROP_ON_AI_EVENT,
   type SidebarDragResource,
 } from "@/features/sidebar/utils/sidebar-resource-drag";
+import { onAppEvent } from "@/utils/app-events";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { ComposerAttachments } from "./composer-attachments";
 import Badge, { badgeVariants } from "@/ui/badge";
@@ -391,16 +388,11 @@ const AIChatInputBar = memo(function AIChatInputBar({
   );
 
   useEffect(() => {
-    const handleSidebarResourceDropOnAI = (event: Event) => {
+    return onAppEvent("athas-sidebar-resource-drop-on-ai", ({ resource }) => {
       if (!isActiveSurface || surfaceId !== "activity-sidebar") return;
-      const resource = (event as CustomEvent<{ resource?: SidebarDragResource }>).detail?.resource;
       if (!resource) return;
       void addSidebarResourceToContext(resource);
-    };
-
-    window.addEventListener(SIDEBAR_RESOURCE_DROP_ON_AI_EVENT, handleSidebarResourceDropOnAI);
-    return () =>
-      window.removeEventListener(SIDEBAR_RESOURCE_DROP_ON_AI_EVENT, handleSidebarResourceDropOnAI);
+    });
   }, [addSidebarResourceToContext, isActiveSurface, surfaceId]);
 
   const handleContextDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
@@ -879,14 +871,12 @@ const AIChatInputBar = memo(function AIChatInputBar({
   );
 
   useEffect(() => {
-    const handleInsertSkill = (event: Event) => {
-      const detail = (event as CustomEvent<AIChatSkillInsertDetail>).detail;
-      if (!isActiveSurface || detail?.surfaceId !== surfaceId) return;
+    const handleInsertSkill = (detail: AIChatSkillInsertDetail) => {
+      if (!isActiveSurface || detail.surfaceId !== surfaceId) return;
       insertSkillAtCursor(detail.skill);
     };
 
-    window.addEventListener(AI_CHAT_INSERT_SKILL_EVENT, handleInsertSkill);
-    return () => window.removeEventListener(AI_CHAT_INSERT_SKILL_EVENT, handleInsertSkill);
+    return onAppEvent("athas-ai-insert-skill", handleInsertSkill);
   }, [insertSkillAtCursor, isActiveSurface]);
 
   // Handle paste - strip HTML formatting, keep only plain text. Images are added to preview.

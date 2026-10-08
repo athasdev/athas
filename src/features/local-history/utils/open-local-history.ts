@@ -15,9 +15,7 @@ export function openLocalHistoryForPath(path: string | null | undefined): void {
 
 export function openLocalHistoryForActiveFile(): void {
   const bufferStore = useBufferStore.getState();
-  const activeBuffer = bufferStore.buffers.find(
-    (buffer) => buffer.id === bufferStore.activeBufferId,
-  );
+  const activeBuffer = bufferStore.actions.getActiveBuffer();
 
   if (!activeBuffer || activeBuffer.type !== "editor" || activeBuffer.isVirtual) {
     toast.warning("Open a local file first.");

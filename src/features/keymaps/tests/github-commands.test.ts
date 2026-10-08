@@ -25,7 +25,7 @@ vi.mock("@/features/git/stores/git-repository.store", () => ({
   useRepositoryStore: { getState: () => mocks.repo },
 }));
 vi.mock("@/features/file-system/stores/file-system.store", () => ({
-  useFileSystemStore: { getState: () => ({ rootFolderPath: null }) },
+  useFileSystemStore: { getState: () => ({}) },
 }));
 vi.mock("@/features/layout/contexts/toast-context", () => ({ showToast: mocks.showToast }));
 vi.mock("@/features/settings/stores/settings.store", () => ({

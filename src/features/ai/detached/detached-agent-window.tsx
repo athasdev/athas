@@ -7,7 +7,6 @@ import { AgentSessionIcon } from "@/features/ai/components/icons/agent-session-i
 import { useAcpEventSync } from "@/features/ai/hooks/use-acp-event-sync";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { ShareDialog } from "@/features/sharing/components/share-dialog";
 import { SharingRuntime } from "@/features/sharing/components/sharing-runtime";
 import { DetachedWindowShell } from "@/features/window/detached/detached-window-shell";
@@ -22,6 +21,8 @@ import {
   setAgentWindowSessionOpener,
 } from "./agent-window-service";
 import { getAgentWindowTransferBlocker } from "./agent-window-state";
+import { getActiveBufferId } from "@/features/panes/stores/pane-selectors";
+import { usePaneStore } from "@/features/panes/stores/pane.store";
 
 enableMapSet();
 
@@ -55,7 +56,6 @@ export default function DetachedAgentWindow() {
         }
         restoreAgentWindowSnapshot(data.snapshot);
         useProjectStore.getState().actions.setRootFolderPath(data.snapshot.workspacePath);
-        useFileSystemStore.setState({ rootFolderPath: data.snapshot.workspacePath });
         const existing = data.snapshot.buffers.find(
           (item) => item.type === "agent" && item.sessionId === chatId,
         );
@@ -65,14 +65,11 @@ export default function DetachedAgentWindow() {
           sessionId: chatId,
           path: `agent://${chatId}`,
           name: data.snapshot.chat.chats[0]?.title ?? "Agent",
-          isActive: true,
-          isPinned: false,
-          isPreview: false,
         };
         useBufferStore.setState({
           buffers: [...data.snapshot.buffers.filter((item) => item.type === "editor"), agentBuffer],
-          activeBufferId: agentBuffer.id,
         });
+        usePaneStore.getState().actions.placeBuffer(agentBuffer.id);
         sessionId.current = chatId;
         useAIChatStore.getState().actions.switchToChat(chatId);
         setReady(true);
@@ -126,7 +123,7 @@ export default function DetachedAgentWindow() {
       }, 150);
     };
     setAgentWindowSessionOpener((chatId) => {
-      if (chatId === sessionId.current) return useBufferStore.getState().activeBufferId ?? "";
+      if (chatId === sessionId.current) return getActiveBufferId() ?? "";
       return useBufferStore.getState().actions.openContent({ type: "agent", sessionId: chatId });
     });
     const unsubscribeChat = useAIChatStore.subscribe(publish);

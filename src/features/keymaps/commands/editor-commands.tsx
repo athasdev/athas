@@ -1,6 +1,5 @@
 import { EyeIcon, PenIcon, SparkleIcon } from "@/ui/icons";
 import { toggleMarkdownPreview } from "@/features/editor/markdown/toggle-markdown-preview";
-import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { isMarkdownFile } from "@/features/editor/utils/lines";
 import type { Command } from "../types/keymaps.types";
 import {
@@ -35,6 +34,7 @@ import {
   unfoldAllActiveEditor,
   undoActiveEditor,
 } from "./editor-command-actions";
+import { getActiveBufferId } from "@/features/panes/stores/pane-selectors";
 
 const addSelectionToAgentChat = () => import("@/features/ai/lib/add-selection-to-agent-chat");
 
@@ -270,7 +270,7 @@ export const markdownCommands: Command[] = [
         ? { label: "Markdown: Show Source", icon: <PenIcon /> }
         : { label: "Markdown: Preview Markdown", icon: <EyeIcon /> },
     execute: () => {
-      const { activeBufferId } = useBufferStore.getState();
+      const activeBufferId = getActiveBufferId();
       if (activeBufferId) toggleMarkdownPreview(activeBufferId);
     },
   },

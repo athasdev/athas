@@ -1,6 +1,6 @@
 import "@/features/editor/markdown/styles.css";
 import "../styles/github-markdown.css";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openExternalUrl } from "@/utils/external-url";
 import { memo, startTransition, useCallback, useEffect, useMemo, useState } from "react";
 import { highlightMarkdownCodeBlocks } from "@/features/editor/markdown/code-highlight";
 import { parseMarkdown } from "@/features/editor/markdown/parser";
@@ -145,14 +145,14 @@ const GitHubMarkdown = memo(
             return;
           }
 
-          void openUrl(entityLink.url);
+          void openExternalUrl(entityLink.url);
           return;
         }
 
         const externalUrl = new URL(href);
         if (externalUrl.protocol === "http:" || externalUrl.protocol === "https:") {
           event.preventDefault();
-          void openUrl(externalUrl.toString());
+          void openExternalUrl(externalUrl.toString());
         }
       },
       [openGitHubActionBuffer, openGitHubIssueBuffer, openPRBuffer, repoPath, repositoryUrl],

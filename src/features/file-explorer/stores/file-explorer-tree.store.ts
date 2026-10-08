@@ -1,6 +1,7 @@
 import { combine } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import { createStore } from "zustand/vanilla";
+import { relocatePath } from "@/features/file-system/controllers/file-tree-utils";
 import type { FileEntry } from "@/features/file-system/types/app.types";
 import { createWorkspaceScopedStore } from "@/features/workspace/stores/create-workspace-scoped-store";
 
@@ -115,6 +116,33 @@ const createFileTreeStore = () =>
                   state.expandedPaths.add(currentPath);
                 }
               });
+            },
+
+            /** Follows a renamed or moved entry: state kept for it and anything under it. */
+            relocatePath: (oldPath: string, newPath: string) => {
+              const relocate = (paths: Set<string>) => {
+                const moved = new Map<string, string>();
+                for (const path of paths) {
+                  const next = relocatePath(path, oldPath, newPath);
+                  if (next !== null && next !== path) moved.set(path, next);
+                }
+                if (moved.size === 0) return paths;
+                const next = new Set<string>();
+                for (const path of paths) next.add(moved.get(path) ?? path);
+                return next;
+              };
+              const state = get();
+              const expandedFolders = relocate(state.expandedFolders);
+              const expandedPaths = relocate(state.expandedPaths);
+              const selectedFiles = relocate(state.selectedFiles);
+              if (
+                expandedFolders === state.expandedFolders &&
+                expandedPaths === state.expandedPaths &&
+                selectedFiles === state.selectedFiles
+              ) {
+                return;
+              }
+              set({ expandedFolders, expandedPaths, selectedFiles });
             },
 
             collapseAll: () => {

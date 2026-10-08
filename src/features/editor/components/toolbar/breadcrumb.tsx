@@ -14,6 +14,7 @@ import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
 import { FilePathBreadcrumb } from "./file-path-breadcrumb";
 import { SymbolBreadcrumb } from "./symbol-breadcrumb";
+import { useBufferIdOrActive } from "@/features/panes/hooks/use-pane-buffer-state";
 
 export interface BreadcrumbProps {
   bufferId?: string;
@@ -38,7 +39,7 @@ export default function Breadcrumb({
   interactive = true,
   showPath = true,
 }: BreadcrumbProps = {}) {
-  const resolvedBufferId = useBufferStore((state) => bufferId ?? state.activeBufferId);
+  const resolvedBufferId = useBufferIdOrActive(bufferId);
   const activeBuffer = useBufferStore(
     useShallow((state) => {
       const buffer = getBufferById(state.buffers, resolvedBufferId);

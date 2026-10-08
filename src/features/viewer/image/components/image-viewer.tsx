@@ -34,6 +34,7 @@ import UnsavedChangesDialog from "@/features/window/components/unsaved-changes-d
 import { cn } from "@/utils/cn";
 import { formatFileSize } from "@/utils/format-file-size";
 import { getImageMimeType } from "@/utils/image-file-types";
+import { readFileBytes } from "@/utils/local-files";
 import { ImageContextMenu } from "./image-context-menu";
 import { resolveAssetUrl } from "@/utils/asset-access";
 
@@ -102,8 +103,7 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
       };
 
       try {
-        const { readFile } = await import("@tauri-apps/plugin-fs");
-        const contents = await readFile(filePath);
+        const contents = await readFileBytes(filePath);
         fileSize = contents.byteLength;
         const mimeType = getImageMimeType(filePath);
 

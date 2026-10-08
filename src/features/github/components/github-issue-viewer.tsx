@@ -1,5 +1,3 @@
-import { commands } from "@/bindings/commands";
-import { openUrl } from "@tauri-apps/plugin-opener";
 import {
   CheckCircleIcon,
   CircleDotIcon,
@@ -27,6 +25,20 @@ import {
 import { Spinner } from "@/ui/spinner";
 import { toast } from "sonner";
 import Select from "@/ui/select";
+import { openExternalUrl } from "@/utils/external-url";
+import {
+  addIssueComment,
+  deleteIssueComment,
+  editIssue,
+  fetchIssueDetails,
+  listRepositoryIssueTypes,
+  listRepositoryLabels,
+  listRepositoryMilestones,
+  lockIssue,
+  setIssueState,
+  unlockIssue,
+  updateIssueComment,
+} from "../api/github-issues-api";
 import { useGitHubStore } from "../stores/github.store";
 import type { IssueDetails, IssueMilestone, IssueType, Label } from "../types/github.types";
 import {
@@ -105,7 +117,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
       try {
         const nextDetails = await githubIssueDetailsCache.load(
           cacheKey,
-          () => commands.githubGetIssueDetails(repoPath, issueNumber),
+          () => fetchIssueDetails(repoPath, issueNumber),
           { force, ttlMs: GITHUB_ISSUE_DETAILS_TTL_MS },
         );
         setDetails(nextDetails);
@@ -128,9 +140,9 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
     let cancelled = false;
 
     void Promise.all([
-      commands.githubListLabels(repoPath).catch((): Label[] => []),
-      commands.githubListMilestones(repoPath).catch((): IssueMilestone[] => []),
-      commands.githubListIssueTypes(repoPath).catch((): IssueType[] => []),
+      listRepositoryLabels(repoPath).catch((): Label[] => []),
+      listRepositoryMilestones(repoPath).catch((): IssueMilestone[] => []),
+      listRepositoryIssueTypes(repoPath).catch((): IssueType[] => []),
     ]).then(([nextLabels, nextMilestones, nextIssueTypes]) => {
       if (cancelled) return;
       setLabels(nextLabels);
@@ -204,7 +216,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
       toast.error("Issue link is not available.");
       return;
     }
-    void openUrl(details.url);
+    void openExternalUrl(details.url);
   }, [details?.url]);
 
   const handleCopyIssueLink = useCallback(() => {
@@ -248,7 +260,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
       if (!repoPath) return;
       await runMutation(
         "state",
-        () => commands.githubUpdateIssueState(repoPath, issueNumber, state, stateReason),
+        () => setIssueState(repoPath, issueNumber, state, stateReason),
         (nextDetails) => {
           applyIssueDetails(nextDetails);
           toast.success(state === "open" ? "Issue reopened" : "Issue closed");
@@ -270,7 +282,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
       return runMutation(
         "edit",
         () =>
-          commands.githubUpdateIssue(
+          editIssue(
             repoPath,
             issueNumber,
             next.title,
@@ -297,8 +309,8 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
         "lock",
         () =>
           shouldUnlock
-            ? commands.githubUnlockIssue(repoPath, issueNumber)
-            : commands.githubLockIssue(repoPath, issueNumber, lockReason ?? null),
+            ? unlockIssue(repoPath, issueNumber)
+            : lockIssue(repoPath, issueNumber, lockReason ?? null),
         () => {
           githubIssueDetailsCache.clear(`${repoPath}::${issueNumber}`);
           void fetchIssue(true);
@@ -313,7 +325,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
     if (!repoPath || !commentBody.trim() || details?.locked) return false;
     return runMutation(
       "new-comment",
-      () => commands.githubAddIssueComment(repoPath, issueNumber, commentBody),
+      () => addIssueComment(repoPath, issueNumber, commentBody),
       (comment) => {
         if (details) applyIssueDetails({ ...details, comments: [...details.comments, comment] });
         setCommentBody("");
@@ -328,7 +340,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
       if (!repoPath) return Promise.resolve(false);
       return runMutation(
         `comment-${commentId}`,
-        () => commands.githubUpdateIssueComment(repoPath, commentId, body),
+        () => updateIssueComment(repoPath, commentId, body),
         (comment) => {
           if (details) {
             applyIssueDetails({
@@ -348,7 +360,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
       if (!repoPath) return;
       await runMutation(
         `comment-${commentId}`,
-        () => commands.githubDeleteIssueComment(repoPath, commentId),
+        () => deleteIssueComment(repoPath, commentId),
         () => {
           if (details) {
             applyIssueDetails({
@@ -571,7 +583,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                       iconOnly
                       tooltip="Open milestone on GitHub"
                       onClick={() =>
-                        void openUrl(
+                        void openExternalUrl(
                           getGitHubMilestoneUrl(repositoryUrl, details.milestone?.number ?? 0),
                         )
                       }

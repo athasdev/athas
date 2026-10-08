@@ -22,17 +22,16 @@ vi.mock("@/features/ai/stores/ai-chat.store", () => ({
 vi.mock("@/features/editor/stores/buffer.store", () => ({
   useBufferStore: {
     getState: () => ({
-      activeBufferId: "buffer-1",
-      buffers: [
-        {
+      actions: {
+        openAgentBuffer: mocks.openAgentBuffer,
+        getActiveBuffer: () => ({
           id: "buffer-1",
           type: "editor",
           path: "/project/src/app.ts",
           name: "app.ts",
           content: "const a = 1;\nconst b = 2;\n",
-        },
-      ],
-      actions: { openAgentBuffer: mocks.openAgentBuffer },
+        }),
+      },
     }),
   },
 }));

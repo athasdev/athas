@@ -38,7 +38,6 @@ import { getRelativePath } from "@/utils/path-helpers";
 import { calculateDisplayNames } from "../utils/path-shortener";
 import {
   clearInternalTabDragData,
-  getGlobalTabMove,
   resolveDropTarget,
   resolveTabInsertBefore,
   setInternalTabDragData,
@@ -50,6 +49,11 @@ import { TabHistoryNavigation } from "./tab-history-navigation";
 import { NewTabMenu } from "./new-tab-menu";
 import TabContextMenu from "./tab-context-menu";
 import { getBufferText } from "@/features/editor/services/open-buffer-text";
+import { useProjectStore } from "@/features/window/stores/project.store";
+import {
+  selectActiveBufferId,
+  selectPaneBufferFlags,
+} from "@/features/panes/stores/pane-selectors";
 
 const tabShellCache = new WeakMap<PaneContent, PaneContent>();
 const tabShellById = new Map<string, PaneContent>();
@@ -108,25 +112,39 @@ const TabBar = ({
       : findPaneGroup(state.root, paneId);
   });
   const isInSplit = usePaneStore((state) => state.root.type === "split");
-  const paneBufferIdSet = useMemo(() => {
-    return pane ? new Set(pane.bufferIds) : null;
-  }, [pane?.bufferIds]);
+  const paneBufferIds = pane?.bufferIds ?? null;
+  // In the pane's tab order; buffers no pane shows only appear in the pane-less bar.
   const buffers = useBufferStore(
-    useShallow((state) =>
-      (paneBufferIdSet
-        ? state.buffers.filter((buffer) => paneBufferIdSet.has(buffer.id))
-        : state.buffers
-      ).map(toTabShell),
-    ),
+    useShallow((state) => {
+      if (!paneBufferIds) return state.buffers.map(toTabShell);
+      const paneBuffers: PaneContent[] = [];
+      for (const bufferId of paneBufferIds) {
+        const buffer = getBufferById(state.buffers, bufferId);
+        if (buffer) paneBuffers.push(toTabShell(buffer));
+      }
+      return paneBuffers;
+    }),
   );
-  const globalActiveBufferId = useBufferStore((state) => (pane ? null : state.activeBufferId));
+  const globalActiveBufferId = usePaneStore((state) => (pane ? null : selectActiveBufferId(state)));
+  const globalBufferFlags = usePaneStore((state) => (pane ? null : selectPaneBufferFlags(state)));
   const activeBufferCandidate = pane ? pane.activeBufferId : globalActiveBufferId;
-  const { handleTabClick, handleTabClose, handleTabPin, reorderBuffers, convertPreviewToDefinite } =
+  const pinnedBufferIds = useMemo(
+    () => globalBufferFlags?.pinnedBufferIds ?? new Set(pane?.pinnedBufferIds ?? []),
+    [globalBufferFlags, pane?.pinnedBufferIds],
+  );
+  const previewBufferIds = useMemo(
+    () =>
+      globalBufferFlags?.previewBufferIds ??
+      new Set(pane?.previewBufferId ? [pane.previewBufferId] : []),
+    [globalBufferFlags, pane?.previewBufferId],
+  );
+  const { handleTabClick, handleTabClose, handleTabPin, convertPreviewToDefinite } =
     useBufferStore.use.actions();
+  const activateTab = externalTabClick ?? handleTabClick;
   const horizontalTabScroll = useSettingsStore((state) => state.settings.horizontalTabScroll);
   const maxOpenTabs = useSettingsStore((state) => state.settings.maxOpenTabs);
   const updateActivePath = useSidebarStore.use.actions().updateActivePath;
-  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath) || undefined;
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath) || undefined;
   const bufferById = useMemo(() => {
     const nextBufferById = new Map<string, PaneContent>();
     for (const buffer of buffers) {
@@ -270,7 +288,7 @@ const TabBar = ({
     const unpinnedBuffers: PaneContent[] = [];
 
     for (const buffer of buffers) {
-      if (buffer.isPinned) {
+      if (pinnedBufferIds.has(buffer.id)) {
         pinnedBuffers.push(buffer);
       } else {
         unpinnedBuffers.push(buffer);
@@ -280,7 +298,7 @@ const TabBar = ({
     if (pinnedBuffers.length === 0) return unpinnedBuffers;
     if (unpinnedBuffers.length === 0) return pinnedBuffers;
     return [...pinnedBuffers, ...unpinnedBuffers];
-  }, [buffers]);
+  }, [buffers, pinnedBufferIds]);
   const { sortedBufferIds, sortedBufferIndexById } = useMemo(() => {
     const ids: string[] = [];
     const indexById = new Map<string, number>();
@@ -327,7 +345,9 @@ const TabBar = ({
 
   useEffect(() => {
     if (maxOpenTabs > 0 && buffers.length > maxOpenTabs && handleTabClose) {
-      const closableBuffers = buffers.filter((b) => !b.isPinned && b.id !== activeBufferId);
+      const closableBuffers = buffers.filter(
+        (b) => !pinnedBufferIds.has(b.id) && b.id !== activeBufferId,
+      );
 
       let tabsToClose = buffers.length - maxOpenTabs;
       for (let i = 0; i < closableBuffers.length && tabsToClose > 0; i++) {
@@ -335,7 +355,7 @@ const TabBar = ({
         tabsToClose--;
       }
     }
-  }, [buffers, maxOpenTabs, activeBufferId, handleTabClose]);
+  }, [buffers, maxOpenTabs, activeBufferId, handleTabClose, pinnedBufferIds]);
 
   // Bring the active tab into view whenever it changes or a tab opens, measured against the
   // scrolling strip rather than the whole bar, whose trailing actions can cover a tab.
@@ -353,11 +373,11 @@ const TabBar = ({
       e.stopPropagation();
       const buffer = sortedBuffers[index];
       // Convert preview tab to definite on double-click
-      if (buffer.isPreview) {
+      if (previewBufferIds.has(buffer.id)) {
         convertPreviewToDefinite(buffer.id);
       }
     },
-    [sortedBuffers, convertPreviewToDefinite],
+    [sortedBuffers, convertPreviewToDefinite, previewBufferIds],
   );
 
   const handleCopyPath = useCallback(async (path: string) => {
@@ -411,17 +431,13 @@ const TabBar = ({
 
   const handleTabSelect = useCallback(
     (buffer: PaneContent) => {
-      if (externalTabClick) {
-        externalTabClick(buffer.id);
-      } else {
-        handleTabClick(buffer.id);
-      }
+      activateTab(buffer.id);
       updateActivePath(buffer.path);
       setSrAnnouncement(
         `Switched to ${buffer.name}${isDirtyContent(buffer) ? ", unsaved changes" : ""}`,
       );
     },
-    [externalTabClick, handleTabClick, updateActivePath],
+    [activateTab, updateActivePath],
   );
 
   const startRename = useCallback(
@@ -554,13 +570,9 @@ const TabBar = ({
               ? findPaneGroup(usePaneStore.getState().bottomRoot, BOTTOM_PANE_ID)
               : findPaneGroup(usePaneStore.getState().root, destinationPaneId);
           if (beforeId !== undefined && destinationPane) {
-            const move = getGlobalTabMove(
-              useBufferStore.getState().buffers.map((buffer) => buffer.id),
-              dragged.id,
-              beforeId,
-              destinationPane.bufferIds,
-            );
-            if (move) reorderBuffers(...move);
+            usePaneStore
+              .getState()
+              .actions.moveBufferInPane(destinationPane.id, dragged.id, beforeId);
           }
         }
         activateBufferInPaneAndSync(destinationPaneId, dragged.id);
@@ -568,27 +580,20 @@ const TabBar = ({
           useUIState.getState().setBottomPaneActiveTab("buffers");
           useUIState.getState().setIsBottomPaneVisible(true);
         }
-      } else if (event.over && reorderBuffers) {
-        // Indices here are pane-local, but reorderBuffers works on the global buffer list, so
-        // translate the drop into "before the tab that now sits at the new index".
+      } else if (event.over && paneId) {
+        // Drop "before the tab that now sits at the new index" in the pane's own tab order.
         const oldIndex = sortedBufferIndexById.get(activeId) ?? -1;
         const newIndex = sortedBufferIndexById.get(String(event.over.id)) ?? -1;
         if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
           const reordered = sortedBufferIds.filter((id) => id !== activeId);
           const beforeId = reordered[newIndex] ?? null;
-          const move = getGlobalTabMove(
-            useBufferStore.getState().buffers.map((buffer) => buffer.id),
-            activeId,
-            beforeId,
-            sortedBufferIds,
-          );
-          if (move) reorderBuffers(...move);
+          usePaneStore.getState().actions.moveBufferInPane(paneId, activeId, beforeId);
         }
       }
 
       resetDrag();
     },
-    [bufferById, paneId, reorderBuffers, resetDrag, sortedBufferIds, sortedBufferIndexById],
+    [bufferById, paneId, resetDrag, sortedBufferIds, sortedBufferIndexById],
   );
 
   useEffect(() => {
@@ -604,7 +609,7 @@ const TabBar = ({
         e.preventDefault();
         const nextBuffer = sortedBuffers[nextIndex];
         if (nextBuffer && nextIndex !== index) {
-          handleTabClick(nextBuffer.id);
+          activateTab(nextBuffer.id);
           updateActivePath(nextBuffer.path);
           setSrAnnouncement(
             `Switched to ${nextBuffer.name}${isDirtyContent(nextBuffer) ? ", unsaved changes" : ""}`,
@@ -617,7 +622,7 @@ const TabBar = ({
       switch (e.key) {
         case "Delete":
         case "Backspace":
-          if (!buffer.isPinned) {
+          if (!pinnedBufferIds.has(buffer.id)) {
             e.preventDefault();
             setSrAnnouncement(`Closed ${buffer.name}`);
             closeTab(buffer.id);
@@ -629,7 +634,7 @@ const TabBar = ({
         case "Enter":
         case " ":
           e.preventDefault();
-          handleTabClick(buffer.id);
+          activateTab(buffer.id);
           updateActivePath(buffer.path);
           setSrAnnouncement(
             `Activated ${buffer.name}${isDirtyContent(buffer) ? ", unsaved changes" : ""}`,
@@ -637,7 +642,7 @@ const TabBar = ({
           break;
       }
     },
-    [sortedBuffers, handleTabClick, updateActivePath, closeTab],
+    [sortedBuffers, activateTab, updateActivePath, closeTab, pinnedBufferIds],
   );
 
   const draggedBuffer = draggedBufferId ? bufferById.get(draggedBufferId) : undefined;
@@ -681,6 +686,8 @@ const TabBar = ({
                           displayName={getBufferDisplayName(buffer)}
                           index={index}
                           isActive={buffer.id === activeBufferId}
+                          isPinned={pinnedBufferIds.has(buffer.id)}
+                          isPreview={previewBufferIds.has(buffer.id)}
                           isDraggedTab={isDragging}
                           onClick={() => handleTabSelect(buffer)}
                           onDoubleClick={(e) => handleDoubleClick(e, index)}
@@ -696,6 +703,7 @@ const TabBar = ({
                       </ContextMenuTrigger>
                       <TabContextMenu
                         buffer={buffer}
+                        isPinned={pinnedBufferIds.has(buffer.id)}
                         paneId={paneId}
                         onPin={handleTabPin}
                         onRename={startRename}
@@ -817,6 +825,8 @@ const TabBar = ({
               displayName={getBufferDisplayName(draggedBuffer)}
               index={0}
               isActive
+              isPinned={pinnedBufferIds.has(draggedBuffer.id)}
+              isPreview={previewBufferIds.has(draggedBuffer.id)}
               isDraggedTab
               onClick={() => {}}
               onDoubleClick={() => {}}

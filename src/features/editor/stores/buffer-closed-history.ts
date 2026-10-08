@@ -56,7 +56,10 @@ const isReopenableBuffer = (
 
 export const getClosedBufferHistoryKey = (buffer: ClosedBuffer) => `${buffer.type}:${buffer.path}`;
 
-export const buildClosedBufferHistoryEntry = (buffer: PaneContent): ClosedBuffer | null => {
+export const buildClosedBufferHistoryEntry = (
+  buffer: PaneContent,
+  isPinned: boolean,
+): ClosedBuffer | null => {
   if (!isReopenableBuffer(buffer) || !buffer.path) return null;
 
   switch (buffer.type) {
@@ -68,14 +71,14 @@ export const buildClosedBufferHistoryEntry = (buffer: PaneContent): ClosedBuffer
         type: buffer.type,
         path: buffer.path,
         name: buffer.name,
-        isPinned: buffer.isPinned,
+        isPinned,
       };
     case "diff":
       return {
         type: "diff",
         path: buffer.path,
         name: buffer.name,
-        isPinned: buffer.isPinned,
+        isPinned,
         content: buffer.content,
         diffData: buffer.diffData,
       };
@@ -87,7 +90,7 @@ export const buildClosedBufferHistoryEntry = (buffer: PaneContent): ClosedBuffer
         type: buffer.type,
         path: buffer.path,
         name: buffer.name,
-        isPinned: buffer.isPinned,
+        isPinned,
         content: buffer.content,
         sourceFilePath: buffer.sourceFilePath,
       };

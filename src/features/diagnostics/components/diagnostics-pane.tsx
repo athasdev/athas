@@ -46,6 +46,7 @@ import { cn } from "@/utils/cn";
 import { getBaseName, getRelativePath, normalizePath } from "@/utils/path-helpers";
 import type { Diagnostic, DiagnosticCodeAction } from "../types/diagnostics.types";
 import { DiagnosticsToolbar } from "./diagnostics-toolbar";
+import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 interface DiagnosticsPaneProps {
   diagnostics: Diagnostic[];
@@ -202,9 +203,10 @@ const DiagnosticsPane = ({ diagnostics, onDiagnosticClick }: DiagnosticsPaneProp
   const diagnosticContextMenu = useDropdownMenu<Diagnostic>();
   const filterContextMenu = useDropdownMenu<FilterMenuType>();
 
+  const activeBufferId = useActiveBufferId();
   const activeFilePath = useBufferStore((state) => {
-    const activeBuffer = state.activeBufferId
-      ? state.buffers.find((buffer) => buffer.id === state.activeBufferId)
+    const activeBuffer = activeBufferId
+      ? state.buffers.find((buffer) => buffer.id === activeBufferId)
       : null;
     if (!activeBuffer) return null;
 

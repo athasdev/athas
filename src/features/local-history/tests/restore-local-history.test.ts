@@ -45,9 +45,6 @@ function editor(content = "disk", savedContent = "disk", id = "file"): EditorCon
     savedContent,
     isDirty: content !== savedContent,
     isVirtual: false,
-    isPinned: false,
-    isPreview: false,
-    isActive: false,
     language: "typescript",
   };
 }

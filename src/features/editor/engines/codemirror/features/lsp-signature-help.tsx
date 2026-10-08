@@ -13,6 +13,7 @@ import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { type CodeMirrorHost, useCodeMirrorExtension } from "../host";
 import { isLspFile, toLspPosition } from "../lsp/lsp-positions";
 import { createDocumentationElement } from "../lsp/markdown-content";
+import { onAppEvent } from "@/utils/app-events";
 
 export type SignatureHelp = NonNullable<Awaited<ReturnType<LspClient["getSignatureHelp"]>>>;
 
@@ -155,6 +156,7 @@ export function signatureHelpExtension(
       private requestId = 0;
       private triggerCharacters = new Set(DEFAULT_TRIGGER_CHARACTERS);
       private destroyed = false;
+      private readonly unsubscribeTrigger: () => void;
 
       constructor(private readonly view: EditorView) {
         void client
@@ -163,7 +165,7 @@ export function signatureHelpExtension(
             if (characters.length > 0) this.triggerCharacters = new Set(characters);
           })
           .catch(() => {});
-        window.addEventListener("editor-trigger-signature-help", this.handleTrigger);
+        this.unsubscribeTrigger = onAppEvent("editor-trigger-signature-help", this.handleTrigger);
       }
 
       private readonly handleTrigger = () => {
@@ -231,7 +233,7 @@ export function signatureHelpExtension(
       destroy() {
         this.destroyed = true;
         this.cancel();
-        window.removeEventListener("editor-trigger-signature-help", this.handleTrigger);
+        this.unsubscribeTrigger();
       }
     },
   );

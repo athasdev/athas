@@ -6,6 +6,7 @@ import { useShallow } from "zustand/react/shallow";
 import { useTerminalSlotsStore } from "../stores/terminal-slots.store";
 import { type TerminalStore, useTerminalStore } from "../stores/terminal.store";
 import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { emitAppEvent } from "@/utils/app-events";
 import { TerminalEmulator } from "./terminal";
 
 // Renders all live terminal frontends at app root. Each session owns a stable
@@ -104,7 +105,7 @@ function TerminalPortal({ sessionId, workspaceId }: { sessionId: string; workspa
   useEffect(() => {
     if (!slotEl) return;
     const id = requestAnimationFrame(() => {
-      window.dispatchEvent(new CustomEvent("athas-terminal-refit", { detail: { sessionId } }));
+      emitAppEvent("athas-terminal-refit", { sessionId });
     });
     return () => cancelAnimationFrame(id);
   }, [slotEl, sessionId]);

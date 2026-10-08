@@ -11,8 +11,8 @@ import type {
   Release,
 } from "../types/github-delivery.types";
 import { deliveryKey } from "../utils/github-delivery";
+import { emitAppEvent } from "@/utils/app-events";
 
-export const DELIVERY_CHANGED = "athas:github-delivery-changed";
 export const DELIVERY_TTL = 30_000;
 export const DELIVERY_LIST_TTL = 60_000;
 export const DELIVERY_PAGE_SIZE = 20;
@@ -70,5 +70,5 @@ export function loadDeliveryDetail(
 export function notifyDeliveryChanged(kind: DeliveryKind, repoPath: string, id: number) {
   deliveryListCache.clear();
   deliveryDetailCache.clear(deliveryKey(kind, repoPath, id));
-  window.dispatchEvent(new CustomEvent(DELIVERY_CHANGED, { detail: { kind, repoPath, id } }));
+  emitAppEvent("athas:github-delivery-changed", { kind, repoPath, id });
 }

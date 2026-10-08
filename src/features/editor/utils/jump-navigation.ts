@@ -1,4 +1,3 @@
-import { editorAPI } from "@/features/editor/extensions/api";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import type { JumpListEntry } from "@/features/editor/stores/jump-list.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
@@ -16,33 +15,31 @@ export async function navigateToJumpEntry(entry: JumpListEntry): Promise<boolean
     targetBuffer = getBufferByPath(bufferStore.buffers, entry.filePath);
   }
 
+  let bufferId: string;
   if (!targetBuffer) {
     // Buffer is closed, try to reopen the file
     try {
       const content = await readFileContent(entry.filePath);
       const fileName = entry.filePath.split("/").pop() || "untitled";
-      const bufferId = bufferStore.actions.openBuffer(entry.filePath, fileName, content);
+      bufferId = bufferStore.actions.openBuffer(entry.filePath, fileName, content);
       bufferStore.actions.setActiveBuffer(bufferId);
     } catch (error) {
       logger.error("JumpList", "Failed to reopen file:", entry.filePath, error);
       return false;
     }
   } else {
-    bufferStore.actions.setActiveBuffer(targetBuffer.id);
+    bufferId = targetBuffer.id;
+    bufferStore.actions.setActiveBuffer(bufferId);
   }
 
-  // Set cursor position and scroll after buffer is ready
-  setTimeout(() => {
-    editorAPI.setCursorPosition({
-      line: entry.line,
-      column: entry.column,
-      offset: entry.offset,
-    });
-
-    useEditorStateStore.getState().actions.setScroll(entry.scrollTop, entry.scrollLeft);
-
-    logger.info("JumpList", `Jumped to ${entry.filePath}:${entry.line}:${entry.column}`);
-  }, 100);
+  // The same path as go-to-definition: the editor showing the buffer moves the cursor, centers it
+  // and takes focus once it is ready.
+  const position = { line: entry.line, column: entry.column, offset: entry.offset };
+  useEditorStateStore.getState().actions.requestNavigation({
+    bufferId,
+    range: { start: position, end: position },
+  });
+  logger.info("JumpList", `Jumped to ${entry.filePath}:${entry.line}:${entry.column}`);
 
   return true;
 }

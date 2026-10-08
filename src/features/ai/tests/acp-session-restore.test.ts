@@ -26,7 +26,9 @@ vi.mock("@/features/settings/stores/settings.store", () => ({
 }));
 
 vi.mock("@/features/window/stores/project.store", () => ({
-  useProjectStore: { getState: vi.fn(() => ({ rootFolderPath: "/workspace" })) },
+  useProjectStore: {
+    getState: vi.fn(() => ({ rootFolderPath: "/workspace", workspaceFolders: [] })),
+  },
 }));
 
 function answerOpen(opened: { sessionId: string; contextLost?: boolean }) {

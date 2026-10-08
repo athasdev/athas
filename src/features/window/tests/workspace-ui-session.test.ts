@@ -2,18 +2,18 @@ import { afterEach, describe, expect, it } from "vite-plus/test";
 import { BOTTOM_PANE_ID, ROOT_PANE_ID } from "@/features/panes/constants/pane";
 import { usePaneStore } from "@/features/panes/stores/pane.store";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
+import { PROJECT_PANE_SESSION_VERSION } from "@/features/window/stores/session.store";
 import {
   buildCurrentProjectPaneSession,
   buildPaneLayoutFromSession,
 } from "../stores/workspace-pane-session";
 
-const editorBuffer = (id: string, path: string, isActive = false) =>
+const editorBuffer = (id: string, path: string) =>
   ({
     id,
     path,
     type: "editor",
     isVirtual: false,
-    isActive,
   }) as PaneContent;
 
 describe("workspace UI pane session helpers", () => {
@@ -190,10 +190,11 @@ describe("workspace UI pane session helpers", () => {
   });
 
   it("keeps restored buffers visible when a legacy session has no pane state", () => {
-    const layout = buildPaneLayoutFromSession(null, [
-      editorBuffer("buffer-a", "/workspace/a.ts"),
-      editorBuffer("buffer-b", "/workspace/b.ts", true),
-    ]);
+    const layout = buildPaneLayoutFromSession(
+      null,
+      [editorBuffer("buffer-a", "/workspace/a.ts"), editorBuffer("buffer-b", "/workspace/b.ts")],
+      { activeBufferId: "buffer-b" },
+    );
 
     expect(layout.root).toMatchObject({
       id: ROOT_PANE_ID,
@@ -229,6 +230,85 @@ describe("workspace UI pane session helpers", () => {
       type: "group",
       bufferIds: ["buffer-a", "buffer-b"],
       activeBufferId: "buffer-a",
+    });
+  });
+
+  it("marks saved pane state with the version that owns tab order", () => {
+    const paneState = buildCurrentProjectPaneSession(usePaneStore.getState(), []);
+    expect(paneState.version).toBe(PROJECT_PANE_SESSION_VERSION);
+  });
+
+  it("migrates a version 1 session: global tab order, buffer pins and previews", () => {
+    const buffers = [
+      editorBuffer("buffer-a", "/workspace/a.ts"),
+      editorBuffer("buffer-b", "/workspace/b.ts"),
+      editorBuffer("buffer-c", "/workspace/c.ts"),
+    ];
+    const layout = buildPaneLayoutFromSession(
+      {
+        root: {
+          id: ROOT_PANE_ID,
+          type: "group",
+          // Pane order lagged behind the strip; the strip drew the saved buffer order.
+          bufferPaths: ["/workspace/a.ts", "/workspace/b.ts", "/workspace/c.ts"],
+          activeBufferPath: "/workspace/b.ts",
+          pinnedBufferPaths: [],
+        },
+        bottomRoot: {
+          id: BOTTOM_PANE_ID,
+          type: "group",
+          bufferPaths: [],
+          activeBufferPath: null,
+        },
+        activePaneId: ROOT_PANE_ID,
+        fullscreenPaneId: null,
+      },
+      buffers,
+      {
+        pinnedBufferIds: new Set(["buffer-c"]),
+        previewBufferIds: new Set(["buffer-a"]),
+        legacyTabOrder: ["/workspace/c.ts", "/workspace/a.ts", "/workspace/b.ts"],
+      },
+    );
+
+    expect(layout.root).toMatchObject({
+      bufferIds: ["buffer-c", "buffer-a", "buffer-b"],
+      activeBufferId: "buffer-b",
+      pinnedBufferIds: ["buffer-c"],
+      previewBufferId: "buffer-a",
+    });
+  });
+
+  it("keeps a version 2 session's own tab order and preview", () => {
+    const layout = buildPaneLayoutFromSession(
+      {
+        version: PROJECT_PANE_SESSION_VERSION,
+        root: {
+          id: ROOT_PANE_ID,
+          type: "group",
+          bufferPaths: ["/workspace/b.ts", "/workspace/a.ts"],
+          activeBufferPath: "/workspace/b.ts",
+          previewBufferPath: null,
+        },
+        bottomRoot: {
+          id: BOTTOM_PANE_ID,
+          type: "group",
+          bufferPaths: [],
+          activeBufferPath: null,
+        },
+        activePaneId: ROOT_PANE_ID,
+        fullscreenPaneId: null,
+      },
+      [editorBuffer("buffer-a", "/workspace/a.ts"), editorBuffer("buffer-b", "/workspace/b.ts")],
+      {
+        previewBufferIds: new Set(["buffer-a"]),
+        legacyTabOrder: ["/workspace/a.ts", "/workspace/b.ts"],
+      },
+    );
+
+    expect(layout.root).toMatchObject({
+      bufferIds: ["buffer-b", "buffer-a"],
+      previewBufferId: null,
     });
   });
 });

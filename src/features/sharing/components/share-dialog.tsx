@@ -1,6 +1,6 @@
 import Switch from "@/ui/switch";
 import { useEffect, useRef, useState } from "react";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openExternalUrl } from "@/utils/external-url";
 import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
 import Input from "@/ui/input";
@@ -8,7 +8,7 @@ import Select from "@/ui/select";
 import { SharePreview } from "./share-preview";
 import { Field, FieldDescription, FieldLabel } from "@/ui/field";
 import { writeClipboardText } from "@/utils/clipboard";
-import { OPEN_SHARE_EVENT } from "../services/open-share";
+import { useAppEvent } from "@/utils/app-events";
 import { createShare, fetchShareOptions, revokeShare } from "../services/share-api";
 import type { ShareDraft, ShareInput, ShareOptions } from "../types/share.types";
 
@@ -105,7 +105,7 @@ function ShareSnapshotDialog({ draft, onClose }: { draft: ShareDraft; onClose: (
             <Button variant="ghost" disabled={busy} onClick={() => void revoke()}>
               Revoke link
             </Button>
-            <Button onClick={() => void openUrl(result.url)}>Open in browser</Button>
+            <Button onClick={() => void openExternalUrl(result.url)}>Open in browser</Button>
             <Button onClick={() => void copy(result.url)}>{copied ? "Copied" : "Copy link"}</Button>
           </>
         ) : (
@@ -174,7 +174,7 @@ function ShareSnapshotDialog({ draft, onClose }: { draft: ShareDraft; onClose: (
                 <FieldDescription>
                   Email and organization restrictions require Athas Pro.
                 </FieldDescription>
-                <Button onClick={() => void openUrl("https://athas.dev/pricing")}>
+                <Button onClick={() => void openExternalUrl("https://athas.dev/pricing")}>
                   View Pro plan
                 </Button>
               </Field>
@@ -248,10 +248,6 @@ function ShareSnapshotDialog({ draft, onClose }: { draft: ShareDraft; onClose: (
 
 export function ShareDialog() {
   const [draft, setDraft] = useState<ShareDraft | null>(null);
-  useEffect(() => {
-    const open = (event: Event) => setDraft((event as CustomEvent<ShareDraft>).detail);
-    window.addEventListener(OPEN_SHARE_EVENT, open);
-    return () => window.removeEventListener(OPEN_SHARE_EVENT, open);
-  }, []);
+  useAppEvent("athas:open-share", setDraft);
   return draft ? <ShareSnapshotDialog draft={draft} onClose={() => setDraft(null)} /> : null;
 }

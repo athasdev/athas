@@ -41,9 +41,6 @@ export function useDiffEditorBuffer({
       savedContent: content,
       isDirty: false,
       isVirtual: true,
-      isPreview: false,
-      isPinned: false,
-      isActive: false,
       language: detectLanguageFromPath(bufferPath),
       languageOverride,
     };

@@ -25,6 +25,7 @@ import { useProjectStore } from "@/features/window/stores/project.store";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import { getRelativePath } from "@/utils/path-helpers";
+import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 const RECENT_CHAT_LIMIT = 3;
 const promptIcons = [SparkleIcon, SearchIcon, TerminalWindowIcon, BookOpenIcon];
@@ -45,8 +46,9 @@ function useFocusedEditorFile() {
       state.actions.getAllPaneGroups().map((pane) => pane.activeBufferId ?? null),
     ),
   );
+  const activeBufferId = useActiveBufferId();
   return useBufferStore((state) => {
-    const candidates = [state.activeBufferId, ...paneActiveIds];
+    const candidates = [activeBufferId, ...paneActiveIds];
     for (const id of candidates) {
       const buffer = id ? state.buffers.find((candidate) => candidate.id === id) : undefined;
       if (buffer?.type === "editor" && !buffer.isVirtual) return buffer.path;

@@ -12,17 +12,16 @@ import { cycleChatMode, readChatModeSource } from "@/features/ai/services/chat-m
 import { pickAgentEditsChatId } from "@/features/ai/stores/agent-edits.store";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { showToast } from "@/features/layout/contexts/toast-context";
 import {
   selectBrowseSessionsAgentId,
   selectCurrentAgentId,
   selectLogOutAgentId,
 } from "./agent-command-context";
+import { useProjectStore } from "@/features/window/stores/project.store";
 
 function getActiveBuffer() {
-  const state = useBufferStore.getState();
-  return state.buffers.find((item) => item.id === state.activeBufferId);
+  return useBufferStore.getState().actions.getActiveBuffer() ?? undefined;
 }
 
 /** The agent tab in front, or the chat the agent panel shows. */
@@ -32,7 +31,7 @@ function getActiveChatId(): string | null {
 }
 
 function getWorkspacePath() {
-  return useFileSystemStore.getState().rootFolderPath;
+  return useProjectStore.getState().rootFolderPath;
 }
 
 export async function openActiveAgentInNewWindow(): Promise<void> {

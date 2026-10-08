@@ -10,7 +10,7 @@ import {
   WarningCircleIcon,
   XCircleIcon,
 } from "@/ui/icons";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openExternalUrl } from "@/utils/external-url";
 import { memo, useMemo, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import Badge, { type BadgeTone } from "@/ui/badge";
@@ -76,7 +76,7 @@ export const CIStatusIndicator = memo(({ checks, repoPath, repositoryUrl }: CISt
       });
       return;
     }
-    void openUrl(check.detailsUrl);
+    void openExternalUrl(check.detailsUrl);
   };
 
   const summary = useMemo(() => {
@@ -264,7 +264,7 @@ export const LinkedIssuesList = memo(({ issues, repoPath, repositoryUrl }: Linke
       });
       return;
     }
-    void openUrl(issue.url);
+    void openExternalUrl(issue.url);
   };
 
   return (
@@ -317,7 +317,7 @@ export const LabelBadges = memo(({ labels, repositoryUrl, kind = "issues" }: Lab
             key={idx}
             type="button"
             title={`Open ${kind === "pulls" ? "pull requests" : "issues"} labelled ${label.name} on GitHub`}
-            onClick={() => void openUrl(getGitHubLabelUrl(repositoryUrl, label.name, kind))}
+            onClick={() => void openExternalUrl(getGitHubLabelUrl(repositoryUrl, label.name, kind))}
             className="rounded-full outline-none transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:ring-focus"
           >
             <Badge labelColor={label.color}>{label.name}</Badge>

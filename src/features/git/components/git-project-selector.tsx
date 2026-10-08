@@ -1,4 +1,4 @@
-import { open } from "@tauri-apps/plugin-dialog";
+import { pickDirectory } from "@/utils/file-dialogs";
 import { ArrowClockwiseIcon, ChevronDownIcon, FolderOpenIcon, PlusIcon } from "@/ui/icons";
 import { useCallback, useMemo, useState } from "react";
 import {
@@ -19,6 +19,7 @@ import { Spinner } from "@/ui/spinner";
 import { cn } from "@/utils/cn";
 import { getFolderName, getRelativePath } from "@/utils/path-helpers";
 import { resolveRepositoryPath } from "../api/git-repo-api";
+import { useProjectStore } from "@/features/window/stores/project.store";
 import { useRepositoryStore } from "../stores/git-repository.store";
 
 interface GitProjectSelectorProps {
@@ -37,7 +38,7 @@ function getSortedRepositoryPaths(repoPaths: string[], activeRepoPath: string | 
 
 const GitProjectSelector = ({ className, onRepositoryChange }: GitProjectSelectorProps) => {
   const activeRepoPath = useRepositoryStore.use.activeRepoPath();
-  const workspaceRootPath = useRepositoryStore.use.workspaceRootPath();
+  const workspaceRootPath = useProjectStore((state) => state.rootFolderPath) ?? null;
   const availableRepoPaths = useRepositoryStore.use.availableRepoPaths();
   const manualRepoPaths = useRepositoryStore.use.manualRepoPaths();
   const isDiscovering = useRepositoryStore.use.isDiscovering();
@@ -75,8 +76,8 @@ const GitProjectSelector = ({ className, onRepositoryChange }: GitProjectSelecto
     setSelectionError(null);
 
     try {
-      const selected = await open({ directory: true, multiple: false });
-      if (!selected || Array.isArray(selected)) return;
+      const selected = await pickDirectory();
+      if (!selected) return;
 
       const resolvedRepoPath = await resolveRepositoryPath(selected);
       if (!resolvedRepoPath) {

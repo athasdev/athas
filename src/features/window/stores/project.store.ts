@@ -1,47 +1,48 @@
 import { combine } from "zustand/middleware";
 import { createStore } from "zustand/vanilla";
-import { connectionStore } from "@/features/remote/stores/remote-connection.store";
-import { parseRemotePath } from "@/features/remote/utils/remote-path";
 import { createWorkspaceScopedStore } from "@/features/workspace/stores/create-workspace-scoped-store";
+import type { WorkspaceFolderSession } from "@/features/workspace/types/workspace-session.types";
 import { getFolderName } from "@/utils/path-helpers";
-import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
+import { normalizeWorkspaceRootPath } from "@/features/window/utils/project-tab-path";
 
+export type WorkspaceFolder = WorkspaceFolderSession;
+
+/**
+ * The one owner of a workspace's root: its primary folder, every folder added to it, and the
+ * name shown for it. The store is workspace scoped, so each open project tab has its own copy;
+ * the file tree, git, terminals, and agents read the root from here instead of keeping theirs.
+ */
 const createProjectStore = () =>
   createStore(
     combine(
       {
         projectName: "Files",
         rootFolderPath: undefined as string | undefined,
-        activeProjectId: undefined as string | undefined,
+        workspaceFolders: [] as WorkspaceFolder[],
       },
-      (set, get) => ({
+      (set) => ({
         actions: {
           setProjectName: (name: string) => set({ projectName: name }),
-          setRootFolderPath: (path: string | undefined) => set({ rootFolderPath: path }),
-          setActiveProjectId: (id: string | undefined) => set({ activeProjectId: id }),
-
-          getProjectName: async () => {
-            // Try to get from workspace tabs first
-            const activeTab = useWorkspaceTabsStore.getState().actions.getActiveProjectTab();
-            if (activeTab) {
-              const remoteInfo = parseRemotePath(activeTab.path);
-              if (remoteInfo) {
-                try {
-                  const connection = await connectionStore.getConnection(remoteInfo.connectionId);
-                  return connection ? `Remote: ${connection.name}` : activeTab.name;
-                } catch {
-                  return activeTab.name;
-                }
-              }
-
-              return activeTab.name;
-            }
-
-            const { rootFolderPath } = get();
-            if (!rootFolderPath) return "Files";
-
-            return getFolderName(rootFolderPath);
+          /**
+           * Opens `path` as the root (normalized, see `normalizeWorkspaceRootPath`), with it as
+           * the only workspace folder. `undefined` or an empty path closes the root.
+           */
+          setRootFolderPath: (path: string | undefined, folderName?: string) => {
+            const rootFolderPath = path ? normalizeWorkspaceRootPath(path) : undefined;
+            set({
+              rootFolderPath,
+              workspaceFolders: rootFolderPath
+                ? [
+                    {
+                      path: rootFolderPath,
+                      name: folderName ?? getFolderName(rootFolderPath),
+                      isPrimary: true,
+                    },
+                  ]
+                : [],
+            });
           },
+          setWorkspaceFolders: (workspaceFolders: WorkspaceFolder[]) => set({ workspaceFolders }),
         },
       }),
     ),

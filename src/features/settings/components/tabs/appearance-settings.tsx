@@ -1,4 +1,4 @@
-import { commands } from "@/bindings/commands";
+import { setNativeMenuBarEnabled } from "@/features/window/services/native-window-api";
 import { FilePlusIcon, TrashIcon, UploadIcon } from "@/ui/icons";
 import { iconThemeRegistry } from "@/extensions/icon-themes/icon-theme-registry";
 import { useRegisteredIconThemes } from "@/extensions/icon-themes/use-registered-icon-themes";
@@ -422,7 +422,7 @@ export const AppearanceSettings = () => {
               checked={settings.nativeMenuBar}
               onChange={(checked) => {
                 updateSetting("nativeMenuBar", checked);
-                commands.toggleMenuBar(checked);
+                void setNativeMenuBarEnabled(checked);
               }}
             />
           </SettingRow>

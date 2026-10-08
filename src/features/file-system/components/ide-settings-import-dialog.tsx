@@ -1,4 +1,5 @@
-import { commands, type IdeRecentProject } from "@/bindings/commands";
+import type { IdeRecentProject } from "@/bindings/commands";
+import { listImportableIdeProjects } from "@/features/file-system/services/ide-project-import";
 import { ArrowLeftIcon, CheckIcon } from "@/ui/icons";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -141,7 +142,7 @@ function IdeSettingsImportContent({ onClose, onBack }: IdeSettingsImportContentP
     setError(null);
 
     try {
-      const nextProjects = await commands.getImportableIdeProjects();
+      const nextProjects = await listImportableIdeProjects();
       setProjects(nextProjects);
     } catch (error) {
       console.error("Failed to load editor import data:", error);

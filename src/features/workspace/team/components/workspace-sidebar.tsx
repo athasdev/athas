@@ -18,15 +18,16 @@ import { getBaseName } from "@/utils/path-helpers";
 import { WORKSPACE_SECTIONS } from "../config/workspace-sections";
 import { useWorkspaceSelection } from "../hooks/use-workspace-selection";
 import { useWorkspaceManagementStore } from "../stores/workspace-management.store";
+import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 export function WorkspaceSidebar() {
   const { root, paths, drafts } = useWorkspaceSelection();
   const section = useWorkspaceManagementStore.use.section();
   const { register, select, setSection } = useWorkspaceManagementStore.use.actions();
   const enterprise = useAuthStore((state) => state.subscription?.enterprise?.has_access);
+  const activeBufferId = useActiveBufferId();
   const isManagementActive = useBufferStore(
-    (state) =>
-      state.buffers.find((buffer) => buffer.id === state.activeBufferId)?.type === "workspaces",
+    (state) => state.buffers.find((buffer) => buffer.id === activeBufferId)?.type === "workspaces",
   );
   const [actionError, setActionError] = useState<string | null>(null);
   const openDetails = () => useBufferStore.getState().actions.openContent({ type: "workspaces" });

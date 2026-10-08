@@ -5,14 +5,16 @@ import type { PaneContent } from "@/features/panes/types/pane-content.types";
 
 const SAVE_SESSION_DEBOUNCE_MS = 300;
 
-const saveSessionToStoreImmediate = (
-  projectPath: string,
-  buffers: PaneContent[],
-  activeBufferId: string | null,
-) => {
+export interface BufferSessionPayload {
+  buffers: PaneContent[];
+  activeBufferId: string | null;
+  pinnedBufferIds?: ReadonlySet<string>;
+  previewBufferIds?: ReadonlySet<string>;
+}
+
+const saveSessionToStoreImmediate = (projectPath: string, payload: BufferSessionPayload) => {
   const snapshot = buildWorkspaceBufferSnapshot({
-    buffers,
-    activeBufferId,
+    ...payload,
     workspaceRootPath: projectPath,
   });
 
@@ -23,23 +25,17 @@ const saveSessionToStoreImmediate = (
 };
 
 const sessionSaveQueue = createWorkspaceSessionSaveQueue(
-  (projectPath: string, payload: { buffers: PaneContent[]; activeBufferId: string | null }) => {
-    saveSessionToStoreImmediate(projectPath, payload.buffers, payload.activeBufferId);
-  },
+  saveSessionToStoreImmediate,
   SAVE_SESSION_DEBOUNCE_MS,
 );
 
 export const saveSessionToStore = (
   projectPath: string | undefined,
-  buffers: PaneContent[],
-  activeBufferId: string | null,
+  payload: BufferSessionPayload,
 ) => {
   if (!projectPath) return;
 
-  sessionSaveQueue.schedule(projectPath, {
-    buffers,
-    activeBufferId,
-  });
+  sessionSaveQueue.schedule(projectPath, payload);
 };
 
 export const clearQueuedWorkspaceSessionSave = (projectPath: string) => {

@@ -1,26 +1,19 @@
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { usePaneStore } from "../stores/pane.store";
-import { ensureBufferInPane } from "./pane-buffer-actions";
 
+/** Focuses a pane; its active tab becomes the workbench's active buffer. */
 export function activatePaneAndSyncBuffer(paneId: string) {
-  const paneStore = usePaneStore.getState();
-  paneStore.actions.setActivePane(paneId);
-
-  const activePane = paneStore.actions.getPaneById(paneId);
-  if (!activePane?.activeBufferId) {
+  const paneActions = usePaneStore.getState().actions;
+  const activeBufferId = paneActions.getPaneById(paneId)?.activeBufferId;
+  if (activeBufferId) {
+    useBufferStore.getState().actions.setActiveBuffer(activeBufferId, paneId);
     return;
   }
 
-  const bufferStore = useBufferStore.getState();
-  if (bufferStore.activeBufferId !== activePane.activeBufferId) {
-    bufferStore.actions.setActiveBuffer(activePane.activeBufferId);
-  }
+  paneActions.setActivePane(paneId);
 }
 
+/** Shows a buffer in a pane (adding it when the pane lacks it), activates it and focuses the pane. */
 export function activateBufferInPaneAndSync(paneId: string, bufferId: string) {
-  ensureBufferInPane(paneId, bufferId, true);
-  const bufferStore = useBufferStore.getState();
-  if (bufferStore.activeBufferId !== bufferId) {
-    bufferStore.actions.setActiveBuffer(bufferId);
-  }
+  useBufferStore.getState().actions.setActiveBuffer(bufferId, paneId);
 }

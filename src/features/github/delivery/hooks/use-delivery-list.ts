@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { type AppEventMap, onAppEvent } from "@/utils/app-events";
 import {
-  DELIVERY_CHANGED,
   DELIVERY_PAGE_SIZE,
   DELIVERY_LIST_TTL,
   loadDeliveryPage,
@@ -62,9 +62,8 @@ export function useDeliveryList(
     };
   }, [load, refreshNonce]);
   useEffect(() => {
-    const changed = (event: Event) => {
-      const detail = (event as CustomEvent).detail;
-      if (detail?.kind === kind && detail?.repoPath === repoPath) {
+    const changed = (detail: AppEventMap["athas:github-delivery-changed"]) => {
+      if (detail.kind === kind && detail.repoPath === repoPath) {
         generation.current++;
         busy.current = false;
         void load(false, true);
@@ -74,11 +73,11 @@ export function useDeliveryList(
       if (document.visibilityState === "visible" && page.current <= 1) void load(false, true);
     };
     const interval = window.setInterval(poll, DELIVERY_LIST_TTL);
-    window.addEventListener(DELIVERY_CHANGED, changed);
+    const unsubscribeChanged = onAppEvent("athas:github-delivery-changed", changed);
     window.addEventListener("focus", poll);
     return () => {
       window.clearInterval(interval);
-      window.removeEventListener(DELIVERY_CHANGED, changed);
+      unsubscribeChanged();
       window.removeEventListener("focus", poll);
     };
   }, [kind, load, repoPath]);

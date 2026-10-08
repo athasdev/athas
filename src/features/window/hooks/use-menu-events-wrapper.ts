@@ -1,10 +1,10 @@
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { executeCommandWithFeedback } from "@/features/keymaps/utils/execute-command-with-feedback";
-import { OPEN_NOTIFICATIONS_COMMAND_EVENT } from "@/features/notifications/constants/notifications-events";
 import { useUpdater } from "@/features/settings/hooks/use-updater";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { writeClipboardText } from "@/utils/clipboard";
+import { emitAppEvent } from "@/utils/app-events";
 import { getServiceUrls } from "@/config/services";
 import { useMenuEvents } from "./use-menu-events";
 
@@ -14,7 +14,6 @@ const runCommand = (commandId: string) => () => {
 };
 
 export function useMenuEventsWrapper() {
-  const handleOpenFolder = useFileSystemStore.use.handleOpenFolder();
   const closeFolder = useFileSystemStore.use.closeFolder();
   const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
   const { checkForUpdates } = useUpdater(false);
@@ -23,7 +22,7 @@ export function useMenuEventsWrapper() {
   useMenuEvents({
     onNewWindow: runCommand("workbench.newWindow"),
     onNewFile: runCommand("file.new"),
-    onOpenFolder: handleOpenFolder,
+    onOpenFolder: runCommand("file.openFolder"),
     onCloseFolder: closeFolder,
     onSave: runCommand("file.save"),
     onSaveAs: runCommand("file.saveAs"),
@@ -97,11 +96,7 @@ export function useMenuEventsWrapper() {
       }
     },
     onOpenGitHubNotifications: () => {
-      window.dispatchEvent(
-        new CustomEvent(OPEN_NOTIFICATIONS_COMMAND_EVENT, {
-          detail: { category: "github" },
-        }),
-      );
+      emitAppEvent("athas:notifications:show", { category: "github" });
     },
     onOpenSettings: runCommand("workbench.openSettings"),
     onOpenExtensions: runCommand("view.showIntegrations"),

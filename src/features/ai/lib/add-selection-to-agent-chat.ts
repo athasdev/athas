@@ -40,10 +40,7 @@ export function addEditorSelectionsToAgentChat(
 
 /** The active editor's selection as agent context, or null when nothing is selected. */
 export function getActiveEditorSelectionContext(): EditorSelectionContext | null {
-  const bufferStore = useBufferStore.getState();
-  const buffer = bufferStore.buffers.find(
-    (candidate) => candidate.id === bufferStore.activeBufferId,
-  );
+  const buffer = useBufferStore.getState().actions.getActiveBuffer();
   const selection = useEditorStateStore.getState().selection;
   if (!buffer || !isEditorContent(buffer) || !selection) return null;
   const languageId =

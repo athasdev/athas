@@ -1,6 +1,6 @@
 import { writeSidebarResourceDragData } from "@/features/sidebar/utils/sidebar-resource-drag";
 import { useDeferredValue, useMemo } from "react";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openExternalUrl } from "@/utils/external-url";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { GitHubSidebarRow } from "../../components/github-sidebar-row";
 import { openGitHubContentInNewWindow } from "../../utils/open-in-new-window";
@@ -25,6 +25,7 @@ import {
   releaseTitle,
   safeDeliveryUrl,
 } from "../utils/github-delivery";
+import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 export default function GitHubDeliveryList({
   kind,
@@ -47,8 +48,9 @@ export default function GitHubDeliveryList({
     refreshNonce,
   );
   const openContent = useBufferStore.use.actions().openContent;
+  const activeBufferId = useActiveBufferId();
   const activeId = useBufferStore((state) => {
-    const buffer = state.buffers.find((item) => item.id === state.activeBufferId);
+    const buffer = state.buffers.find((item) => item.id === activeBufferId);
     return buffer?.type === "githubDelivery" && buffer.kind === kind && buffer.repoPath === repoPath
       ? buffer.resourceId
       : undefined;
@@ -96,7 +98,7 @@ export default function GitHubDeliveryList({
                 label: isRelease(selected) ? "Open on GitHub" : "Open Environment",
                 icon: <OpenExternalIcon />,
                 onClick: () => {
-                  void openUrl(selectedUrl);
+                  void openExternalUrl(selectedUrl);
                 },
               },
             ]

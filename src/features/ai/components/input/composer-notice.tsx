@@ -1,4 +1,4 @@
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openExternalUrl } from "@/utils/external-url";
 import { useState } from "react";
 import { getServiceUrls } from "@/config/services";
 import { ProviderApiKeyCommand } from "@/features/ai/components/provider-api-key-command";
@@ -125,7 +125,7 @@ export function ComposerNotice({
         useUIState.getState().openSettings("ai");
         return;
       case "open-billing":
-        await openUrl(getServiceUrls().dashboardBillingUrl).catch((error: unknown) =>
+        await openExternalUrl(getServiceUrls().dashboardBillingUrl).catch((error: unknown) =>
           console.error("Failed to open billing:", error),
         );
         return;

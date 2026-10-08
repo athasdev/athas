@@ -15,9 +15,6 @@ function draft(content = "draft"): EditorContent {
     savedContent: "disk",
     isDirty: true,
     isVirtual: false,
-    isPinned: false,
-    isPreview: false,
-    isActive: false,
     language: "typescript",
   };
 }

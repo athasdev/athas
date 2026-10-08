@@ -4,6 +4,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { OutlineSidebar } from "../components/outline-sidebar";
 import { normalizeOutlineSymbols } from "../utils/outline-symbols";
+import { onAppEvent } from "@/utils/app-events";
 
 const state = vi.hoisted(() => ({
   symbols: [] as unknown[],
@@ -120,7 +121,7 @@ describe("outline sidebar", () => {
 
   it("collapses branches without navigating and opens the selected symbol", async () => {
     const navigate = vi.fn();
-    window.addEventListener("menu-go-to-line", navigate);
+    const unsubscribe = onAppEvent("menu-go-to-line", navigate);
     try {
       await render();
       expect(rows()[0]?.getAttribute("aria-expanded")).toBe("true");
@@ -132,13 +133,13 @@ describe("outline sidebar", () => {
       expect(navigate).not.toHaveBeenCalled();
       await act(async () => rows()[1]!.click());
       expect(navigate).toHaveBeenCalledOnce();
-      expect((navigate.mock.calls[0]![0] as CustomEvent).detail).toEqual({
+      expect(navigate.mock.calls[0]![0]).toEqual({
         path: "/workspace/widget.ts",
         line: 16,
         column: 1,
       });
     } finally {
-      window.removeEventListener("menu-go-to-line", navigate);
+      unsubscribe();
     }
   });
 

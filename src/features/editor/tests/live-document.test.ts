@@ -105,7 +105,7 @@ describe("live editor documents", () => {
     const { useBufferStore } = await import("../stores/buffer.store");
     const { resetLiveDocumentRegistry } = await import("../services/live-document-registry");
     resetLiveDocumentRegistry();
-    useBufferStore.setState({ buffers: [], activeBufferId: null });
+    useBufferStore.setState({ buffers: [] });
     storage.clear();
     vi.useRealTimers();
     vi.unstubAllGlobals();

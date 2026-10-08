@@ -38,6 +38,7 @@ const { useMenuEventsWrapper } = await import("../hooks/use-menu-events-wrapper"
 const MENU_COMMANDS: Record<string, string> = {
   new_window: "workbench.newWindow",
   new_file: "file.new",
+  open_folder: "file.openFolder",
   save: "file.save",
   save_as: "file.saveAs",
   close_tab: "file.close",

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { createTimedResourceCache } from "@/utils/timed-resource-cache";
@@ -12,13 +11,14 @@ import type { PullRequestDetails, WorkflowRunListItem } from "../types/github.ty
 import { filterRelevantWorkflowChanges } from "../utils/github-workflow-relevance";
 import { diffWorkflowRuns } from "../utils/github-workflow-run-changes";
 import { getWorkflowRunTitle, isWorkflowRunActive } from "../utils/github-workflow-status";
+import { useProjectStore } from "@/features/window/stores/project.store";
 
 const ACTIVE_POLL_INTERVAL_MS = 15_000;
 const IDLE_POLL_INTERVAL_MS = 60_000;
 const HIDDEN_POLL_INTERVAL_MS = 90_000;
 
 export function useWorkflowRunWatcher() {
-  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const activeRepoPath = useRepositoryStore.use.activeRepoPath();
   const repoPath = activeRepoPath ?? rootFolderPath ?? null;
   const isAuthenticated = useGitHubStore.use.isAuthenticated();

@@ -1,5 +1,5 @@
 import ignore from "ignore";
-import { commands } from "@/bindings/commands";
+import { toggleQuickLookPreview } from "@/utils/local-files";
 import {
   ClickIcon,
   EyeIcon,
@@ -89,6 +89,8 @@ import { getFileTreeSubtreeEnds } from "@/features/file-explorer/lib/file-tree-v
 import { FileExplorerViewport, type FileExplorerViewportHandle } from "./file-explorer-viewport";
 import { FileExplorerTreeItem } from "./file-explorer-tree-item";
 import type { FileTreeGuideTarget } from "./file-explorer-tree-item";
+import { useProjectStore } from "@/features/window/stores/project.store";
+import { onAppEvent } from "@/utils/app-events";
 
 const ALWAYS_HIDDEN_FILE_NAMES = new Set([".ds_store"]);
 const OPEN_ALL_FILES_LIMIT = 1_000;
@@ -248,7 +250,7 @@ function FileExplorerTreeComponent({
   const addFolderToWorkspace = useFileSystemStore((state) => state.addFolderToWorkspace);
   const removeFolderFromWorkspace = useFileSystemStore((state) => state.removeFolderFromWorkspace);
   const revealPathInTree = useFileSystemStore((state) => state.revealPathInTree);
-  const workspaceFolders = useFileSystemStore((state) => state.workspaceFolders);
+  const workspaceFolders = useProjectStore((state) => state.workspaceFolders);
   const nativeRootPaths = useMemo(
     () => getNativeWorkspaceRootPaths(rootFolderPath, workspaceFolders),
     [rootFolderPath, workspaceFolders],
@@ -663,8 +665,7 @@ function FileExplorerTreeComponent({
       setTreeSearchOpen(true);
     };
 
-    window.addEventListener("file-tree-open-search", handleFileTreeOpenSearch);
-    return () => window.removeEventListener("file-tree-open-search", handleFileTreeOpenSearch);
+    return onAppEvent("file-tree-open-search", handleFileTreeOpenSearch);
   }, []);
 
   const startInlineEditing = (parentPath: string, isFolder: boolean) => {
@@ -985,11 +986,15 @@ function FileExplorerTreeComponent({
   useEventListener("dragover", (e: DragEvent) => e.preventDefault(), documentRef);
 
   // Fast path->file lookup for delegation
-  const pathToFile = useMemo(() => {
-    const m = new Map<string, FileEntry>();
-    for (const r of visibleRows) m.set(r.file.path, r.file);
-    return m;
-  }, [visibleRows]);
+  const pathToFile = useMemo(
+    () => ({
+      get: (path: string): FileEntry | undefined => {
+        const index = visibleRowIndexByPath.get(path);
+        return index === undefined ? undefined : visibleRows[index]?.file;
+      },
+    }),
+    [visibleRowIndexByPath, visibleRows],
+  );
 
   const getTargetItem = (target: EventTarget | null) => {
     const el = (target as HTMLElement | null)?.closest("[data-file-path]") as
@@ -1285,7 +1290,7 @@ function FileExplorerTreeComponent({
             if (!IS_MAC || !current || isDir || mod || e.altKey || e.shiftKey) break;
             e.preventDefault();
             e.stopPropagation();
-            void commands.toggleQuickLook(current.path).catch((error) => {
+            void toggleQuickLookPreview(current.path).catch((error) => {
               console.error("Failed to toggle Quick Look:", error);
             });
             break;

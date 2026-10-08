@@ -35,14 +35,7 @@ const terminalReducer = (state: TerminalState, action: TerminalAction): Terminal
         customName,
       } = action.payload;
       if (id && state.terminals.some((terminal) => terminal.id === id)) {
-        return {
-          ...state,
-          terminals: state.terminals.map((terminal) => ({
-            ...terminal,
-            isActive: terminal.id === id,
-          })),
-          activeTerminalId: id,
-        };
+        return state.activeTerminalId === id ? state : { ...state, activeTerminalId: id };
       }
 
       // Generate a unique name if needed
@@ -58,7 +51,6 @@ const terminalReducer = (state: TerminalState, action: TerminalAction): Terminal
         id: id || generateTerminalId(terminalName),
         name: terminalName,
         currentDirectory,
-        isActive: true,
         isPinned: false,
         shell,
         profileId,
@@ -67,14 +59,11 @@ const terminalReducer = (state: TerminalState, action: TerminalAction): Terminal
         remoteConnectionId,
         customName: customName ?? false,
         createdAt: new Date(),
-        lastActivity: new Date(),
       };
 
       return {
         ...state,
-        terminals: state.terminals
-          .map((terminal) => ({ ...terminal, isActive: false }))
-          .concat(newTerminal),
+        terminals: [...state.terminals, newTerminal],
         activeTerminalId: newTerminal.id,
       };
     }
@@ -108,10 +97,7 @@ const terminalReducer = (state: TerminalState, action: TerminalAction): Terminal
 
       return {
         ...state,
-        terminals: newTerminals.map((terminal) => ({
-          ...terminal,
-          isActive: terminal.id === newActiveTerminalId,
-        })),
+        terminals: newTerminals,
         activeTerminalId: newActiveTerminalId,
         layouts,
       };
@@ -119,14 +105,7 @@ const terminalReducer = (state: TerminalState, action: TerminalAction): Terminal
 
     case "SET_ACTIVE_TERMINAL": {
       const { id } = action.payload;
-      return {
-        ...state,
-        activeTerminalId: id,
-        terminals: state.terminals.map((terminal) => ({
-          ...terminal,
-          isActive: terminal.id === id,
-        })),
-      };
+      return state.activeTerminalId === id ? state : { ...state, activeTerminalId: id };
     }
 
     case "UPDATE_TERMINAL_NAME": {
@@ -135,28 +114,6 @@ const terminalReducer = (state: TerminalState, action: TerminalAction): Terminal
         ...state,
         terminals: state.terminals.map((terminal) =>
           terminal.id === id ? { ...terminal, name, customName: true } : terminal,
-        ),
-      };
-    }
-
-    case "UPDATE_TERMINAL_DIRECTORY": {
-      const { id, currentDirectory } = action.payload;
-      return {
-        ...state,
-        terminals: state.terminals.map((terminal) =>
-          terminal.id === id
-            ? { ...terminal, currentDirectory, lastActivity: new Date() }
-            : terminal,
-        ),
-      };
-    }
-
-    case "UPDATE_TERMINAL_ACTIVITY": {
-      const { id } = action.payload;
-      return {
-        ...state,
-        terminals: state.terminals.map((terminal) =>
-          terminal.id === id ? { ...terminal, lastActivity: new Date() } : terminal,
         ),
       };
     }
@@ -198,10 +155,6 @@ const terminalReducer = (state: TerminalState, action: TerminalAction): Terminal
           placement,
         ),
         activeTerminalId: newTerminalId,
-        terminals: state.terminals.map((terminal) => ({
-          ...terminal,
-          isActive: terminal.id === newTerminalId,
-        })),
       };
     }
 
@@ -235,19 +188,13 @@ const terminalReducer = (state: TerminalState, action: TerminalAction): Terminal
         id: pt.id,
         name: pt.name,
         currentDirectory: pt.currentDirectory,
-        isActive: false,
         isPinned: pt.isPinned,
         shell: pt.shell,
         profileId: pt.profileId,
         customName: pt.customName ?? false,
         remoteConnectionId: pt.remoteConnectionId,
         createdAt: new Date(),
-        lastActivity: new Date(),
       }));
-
-      if (newTerminals.length > 0) {
-        newTerminals[0].isActive = true;
-      }
 
       return {
         terminals: newTerminals,
@@ -264,6 +211,12 @@ const terminalReducer = (state: TerminalState, action: TerminalAction): Terminal
   }
 };
 
+/**
+ * The terminals shown in the bottom pane: their order, which one is active (`activeTerminalId`
+ * only; terminals carry no active flag of their own), names as the tab shows them, and split
+ * layouts. Live per-session facts such as the shell title, the current directory reported by the
+ * shell, and progress live in `useTerminalStore` sessions instead.
+ */
 interface TerminalTabsStore extends TerminalState {
   hasHydrated: boolean;
   actions: {

@@ -36,7 +36,7 @@ type LspNavigationClient = {
 
 function getActiveEditorContext() {
   const bufferStore = useBufferStore.getState();
-  const activeBuffer = bufferStore.buffers.find((b) => b.id === bufferStore.activeBufferId);
+  const activeBuffer = bufferStore.actions.getActiveBuffer();
 
   if (!activeBuffer || activeBuffer.type !== "editor" || !activeBuffer.path) return null;
 
@@ -144,7 +144,7 @@ export async function goToReferences(): Promise<void> {
 
   const lspClient = LspClient.getInstance();
   const bufferStore = useBufferStore.getState();
-  const activeBuffer = bufferStore.buffers.find((b) => b.id === bufferStore.activeBufferId);
+  const activeBuffer = bufferStore.actions.getActiveBuffer();
   const cursorPosition = useEditorStateStore.getState().cursorPosition;
 
   if (!activeBuffer?.path) return;
@@ -294,8 +294,8 @@ export async function showTypeHierarchy(): Promise<void> {
 export async function goBack(): Promise<void> {
   const bufferStore = useBufferStore.getState();
   const editorState = useEditorStateStore.getState();
-  const activeBufferId = bufferStore.activeBufferId;
-  const activeBuffer = bufferStore.buffers.find((b) => b.id === activeBufferId);
+  const activeBuffer = bufferStore.actions.getActiveBuffer();
+  const activeBufferId = activeBuffer?.id ?? null;
 
   const currentPosition =
     activeBufferId && activeBuffer?.path

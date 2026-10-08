@@ -53,10 +53,8 @@ describe("terminal session storage", () => {
         id: "terminal-a",
         name: "A",
         currentDirectory: WORKSPACE_A,
-        isActive: true,
         isPinned: false,
         createdAt: new Date(),
-        lastActivity: new Date(),
       },
     ]);
 
@@ -65,10 +63,8 @@ describe("terminal session storage", () => {
         id: "terminal-b",
         name: "B",
         currentDirectory: WORKSPACE_B,
-        isActive: true,
         isPinned: false,
         createdAt: new Date(),
-        lastActivity: new Date(),
       },
     ]);
 

@@ -44,6 +44,7 @@ import {
   getProjectRemoteConnectionId,
 } from "@/features/layout/utils/project-switcher-items";
 import { getProjectNameFromPath, isRemoteProjectPath, ProjectGlyph } from "./sidebar/project-glyph";
+import { useProjectStore } from "@/features/window/stores/project.store";
 
 /** Icons found in each project folder, so switching projects doesn't rescan and blank the icon. */
 const detectedProjectIcons = new Map<string, string | undefined>();
@@ -61,7 +62,7 @@ export function ProjectSwitcher({
   onSelectProject: (projectId: string) => void;
   onAddRemote: () => void;
 }) {
-  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
   const closeProject = useFileSystemStore((state) => state.closeProject);
   const removeFromRecents = useRecentFoldersStore((state) => state.actions.removeFromRecents);

@@ -22,6 +22,7 @@ import {
   useWorkspaceStoreScopeId,
 } from "@/features/workspace/stores/create-workspace-scoped-store";
 import { useGlobalSearchSessionStore } from "../stores/global-search-session.store";
+import { useProjectStore } from "@/features/window/stores/project.store";
 
 export type ContentSearchAvailability = "ready" | "no-workspace" | "unsupported";
 
@@ -84,8 +85,9 @@ export const useContentSearch = () => {
   const activeWorkspaceId = useActiveWorkspaceId();
   const workspaceId = scopedWorkspaceId ?? activeWorkspaceId;
   const fileSystemStore = useFileSystemStore.getStore(workspaceId);
-  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
-  const workspaceFolders = useFileSystemStore((state) => state.workspaceFolders);
+  const projectStore = useProjectStore.getStore(workspaceId);
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
+  const workspaceFolders = useProjectStore((state) => state.workspaceFolders);
   const nativeRootPaths = useMemo(
     () => getNativeWorkspaceRootPaths(rootFolderPath, workspaceFolders),
     [rootFolderPath, workspaceFolders],
@@ -192,9 +194,9 @@ export const useContentSearch = () => {
       lifetimeRef.current === lifetime &&
       workspaceRuntimeRegistry.getWorkspace(workspaceId)?.stores.get("file-system") ===
         fileSystemStore &&
-      fileSystemStore.getState().rootFolderPath === rootFolderPath &&
-      fileSystemStore.getState().workspaceFolders === workspaceFolders,
-    [lifetime, workspaceId, fileSystemStore, rootFolderPath, workspaceFolders],
+      projectStore.getState().rootFolderPath === rootFolderPath &&
+      projectStore.getState().workspaceFolders === workspaceFolders,
+    [lifetime, workspaceId, fileSystemStore, projectStore, rootFolderPath, workspaceFolders],
   );
   const isRequestCurrent = useCallback(
     (requestId: number) => isViewCurrent() && requestId === requestIdRef.current,
@@ -221,7 +223,7 @@ export const useContentSearch = () => {
       const currentSession = providerSearchSessionRef.current;
       if (fileOffset > 0 && currentSession?.requestId === currentRequestId)
         return currentSession.promise;
-      const promise = loadProviderSearchFiles(fileSystemStore, {
+      const promise = loadProviderSearchFiles(projectStore, {
         isCancelled: () => !isRequestCurrent(currentRequestId),
       });
       providerSearchSessionRef.current = { requestId: currentRequestId, promise };
@@ -231,7 +233,7 @@ export const useContentSearch = () => {
       });
       return promise;
     },
-    [fileSystemStore, isRequestCurrent],
+    [projectStore, isRequestCurrent],
   );
 
   const requestSearchPage = useCallback(

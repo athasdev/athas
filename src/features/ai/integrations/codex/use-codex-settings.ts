@@ -1,7 +1,7 @@
 import { useMemo, useSyncExternalStore } from "react";
+import { onAppEvent } from "@/utils/app-events";
 import {
   codexSettingsKey,
-  codexSettingsChanged,
   defaultCodexSettings,
   saveCodexSettings,
   getCodexSettings,
@@ -13,10 +13,10 @@ function subscribe(listener: () => void) {
     if (event.key === codexSettingsKey || event.key === null) listener();
   };
   window.addEventListener("storage", onStorage);
-  window.addEventListener(codexSettingsChanged, listener);
+  const unsubscribeChanged = onAppEvent("athas-codex-settings-changed", listener);
   return () => {
     window.removeEventListener("storage", onStorage);
-    window.removeEventListener(codexSettingsChanged, listener);
+    unsubscribeChanged();
   };
 }
 

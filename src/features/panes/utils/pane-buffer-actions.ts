@@ -1,5 +1,6 @@
 import { usePaneStore } from "../stores/pane.store";
 
+/** Puts a buffer in a pane, by default activating it and focusing the pane in the same update. */
 export function ensureBufferInPane(
   paneId: string,
   bufferId: string,
@@ -14,13 +15,10 @@ export function ensureBufferInPane(
     return null;
   }
 
-  if (!pane.bufferIds.includes(bufferId)) {
-    paneActions.addBufferToPane(paneId, bufferId, setActive);
-    if (setActive) {
-      paneActions.activatePaneBuffer(paneId, bufferId);
-    }
-  } else if (setActive) {
-    paneActions.activatePaneBuffer(paneId, bufferId);
+  if (setActive) {
+    paneActions.placeBuffer(bufferId, { paneId });
+  } else if (!pane.bufferIds.includes(bufferId)) {
+    paneActions.addBufferToPane(paneId, bufferId, false);
   }
 
   return paneId;

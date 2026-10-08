@@ -8,6 +8,7 @@ import type { FileItem } from "@/features/file-search/types/file-search.types";
 import { shouldIgnoreSearchFile } from "@/features/file-search/utils/file-search-filtering";
 import { getNativeWorkspaceRootPaths } from "@/features/file-search/utils/file-search-paths";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { useProjectStore } from "@/features/window/stores/project.store";
 
 const toQuickOpenFiles = (files: readonly Pick<FffIndexedFile, "name" | "path">[]): FileItem[] =>
   files
@@ -28,8 +29,8 @@ function startPolling(callback: () => void, interval: number) {
 
 export const useFileLoader = (isVisible: boolean) => {
   const getAllProjectFiles = useFileSystemStore((state) => state.getAllProjectFiles);
-  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
-  const workspaceFolders = useFileSystemStore((state) => state.workspaceFolders);
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
+  const workspaceFolders = useProjectStore((state) => state.workspaceFolders);
   const nativeRootPaths = useMemo(
     () => getNativeWorkspaceRootPaths(rootFolderPath, workspaceFolders),
     [rootFolderPath, workspaceFolders],

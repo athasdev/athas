@@ -19,6 +19,7 @@ import {
 } from "@/ui/dropdown";
 import { getBaseName, getRelativePath, joinPath, normalizePath } from "@/utils/path-helpers";
 import { PathBreadcrumb } from "./path-breadcrumb";
+import { useProjectStore } from "@/features/window/stores/project.store";
 
 interface DirectoryEntry {
   name: string;
@@ -37,7 +38,7 @@ export function FilePathBreadcrumb({
   interactive = true,
   className,
 }: FilePathBreadcrumbProps) {
-  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
   const openCommandPaletteView = useUIState((state) => state.openCommandPaletteView);
   const [dropdown, setDropdown] = useState<{

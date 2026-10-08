@@ -5,6 +5,8 @@ import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { AUTO_SAVE_DELAY_MS } from "../services/editor-save-service";
 import { useBufferStore } from "../stores/buffer.store";
 import { useEditorAppStore } from "../stores/editor-app.store";
+import { seedActiveBuffer } from "@/features/panes/tests/helpers/seed-pane-tabs";
+import { getActiveBufferId } from "@/features/panes/stores/pane-selectors";
 
 const mocks = vi.hoisted(() => ({
   notifyDocumentSave: vi.fn(),
@@ -82,9 +84,6 @@ function makeEditorBuffer(
     savedContent: isDirty ? "" : content,
     isDirty,
     isVirtual: false,
-    isPinned: false,
-    isPreview: false,
-    isActive: false,
     language: "typescript",
   };
 }
@@ -115,7 +114,6 @@ describe("editor saves", () => {
     mocks.notifyDocumentSave.mockResolvedValue(undefined);
 
     useBufferStore.setState({
-      activeBufferId: "a",
       buffers: [
         makeEditorBuffer("a", "/workspace/a.ts", "a next", true),
         makeEditorBuffer("b", "/workspace/b.ts", "b next", true),
@@ -124,13 +122,13 @@ describe("editor saves", () => {
       pendingClose: null,
       closedBuffersHistory: [],
     });
+    seedActiveBuffer("a");
   });
 
   afterEach(() => {
     useEditorAppStore.getState().actions.cleanup();
     vi.useRealTimers();
     useBufferStore.setState({
-      activeBufferId: null,
       buffers: [],
       pendingClose: null,
       closedBuffersHistory: [],
@@ -143,7 +141,7 @@ describe("editor saves", () => {
     const savedCount = await useEditorAppStore.getState().actions.handleSaveAll();
 
     expect(savedCount).toBe(2);
-    expect(useBufferStore.getState().activeBufferId).toBe("a");
+    expect(getActiveBufferId()).toBe("a");
     expect(mocks.writeFile).toHaveBeenCalledWith("/workspace/a.ts", "a next", "");
     expect(mocks.writeFile).toHaveBeenCalledWith("/workspace/b.ts", "b next", "");
     expect(mocks.writeFile).not.toHaveBeenCalledWith("/workspace/c.ts", "c clean");
@@ -286,8 +284,8 @@ describe("editor saves", () => {
   it("marks remote edits dirty without replacing their saved baseline", async () => {
     useBufferStore.setState({
       buffers: [makeEditorBuffer("a", "remote://connection/repo/a.ts", "before", false)],
-      activeBufferId: "a",
     });
+    seedActiveBuffer("a");
     await useEditorAppStore.getState().actions.handleContentChange("remote draft");
     expect(useBufferStore.getState().buffers[0]).toMatchObject({
       content: "remote draft",
@@ -310,7 +308,7 @@ describe("editor saves", () => {
     useSettingsStore.setState((state) => ({ settings: { ...state.settings, autoSave: true } }));
     vi.useFakeTimers();
     await useEditorAppStore.getState().actions.handleContentChange("a autosave");
-    useBufferStore.setState({ activeBufferId: "b" });
+    seedActiveBuffer("b");
     await useEditorAppStore.getState().actions.handleContentChange("b autosave");
     await vi.advanceTimersByTimeAsync(AUTO_SAVE_DELAY_MS + 50);
     expect(mocks.writeFile).toHaveBeenCalledWith("/workspace/a.ts", "a autosave", "");
@@ -363,9 +361,9 @@ describe("editor saves", () => {
 
   it("preserves newer text typed during an untitled document's first write", async () => {
     useBufferStore.setState({
-      activeBufferId: "a",
       buffers: [makeEditorBuffer("a", "untitled:new.ts", "first save", true)],
     });
+    seedActiveBuffer("a");
     mocks.saveDialog.mockResolvedValue("/workspace/new.ts");
     let finishWrite: () => void = () => {};
     mocks.writeFile.mockImplementationOnce(
@@ -427,7 +425,7 @@ describe("editor saves", () => {
     );
     const save = useEditorAppStore.getState().actions.handleSaveAs();
     await vi.waitFor(() => expect(mocks.saveDialog).toHaveBeenCalledOnce());
-    useBufferStore.setState({ buffers: [], activeBufferId: null });
+    useBufferStore.setState({ buffers: [] });
     choosePath("/workspace/copy.ts");
     await expect(save).resolves.toBe(false);
     expect(mocks.writeFile).not.toHaveBeenCalled();
@@ -490,9 +488,9 @@ describe("editor saves", () => {
     await vi.waitFor(() => expect(mocks.writeFile).toHaveBeenCalledOnce());
     workspaceRuntimeRegistry.activateWorkspace({ id: "other", name: "Other" });
     useBufferStore.setState({
-      activeBufferId: "a",
       buffers: [makeEditorBuffer("a", "/other/a.ts", "other draft", true)],
     });
+    seedActiveBuffer("a");
     const second = useEditorAppStore.getState().actions.handleSave();
     await vi.waitFor(() => expect(mocks.writeFile).toHaveBeenCalledTimes(2));
     await expect(second).resolves.toBe(true);
@@ -523,9 +521,9 @@ describe("editor saves", () => {
     await useEditorAppStore.getState().actions.handleContentChange("original autosave");
     workspaceRuntimeRegistry.activateWorkspace({ id: "other", name: "Other" });
     useBufferStore.setState({
-      activeBufferId: "a",
       buffers: [makeEditorBuffer("a", "/other/a.ts", "other draft", true)],
     });
+    seedActiveBuffer("a");
     await useEditorAppStore.getState().actions.handleContentChange("other autosave");
     await vi.advanceTimersByTimeAsync(AUTO_SAVE_DELAY_MS + 50);
     expect(mocks.writeFile).toHaveBeenCalledWith("/workspace/a.ts", "original autosave", "");
@@ -535,9 +533,9 @@ describe("editor saves", () => {
   it("refuses a removed and reopened owner while history recording is pending", async () => {
     workspaceRuntimeRegistry.activateWorkspace({ id: "original", name: "Original" });
     useBufferStore.setState({
-      activeBufferId: "a",
       buffers: [makeEditorBuffer("a", "/workspace/a.ts", "original draft", true)],
     });
+    seedActiveBuffer("a");
     let finish: () => void = () => {};
     mocks.recordLocalHistoryFile.mockImplementationOnce(
       () =>
@@ -549,9 +547,9 @@ describe("editor saves", () => {
     await vi.waitFor(() => expect(mocks.recordLocalHistoryFile).toHaveBeenCalled());
     workspaceRuntimeRegistry.removeWorkspace("original");
     useBufferStore.setState({
-      activeBufferId: "a",
       buffers: [makeEditorBuffer("a", "/workspace/a.ts", "original draft", true)],
     });
+    seedActiveBuffer("a");
     finish();
     await expect(save).resolves.toBe(false);
     expect(mocks.writeFile).not.toHaveBeenCalled();

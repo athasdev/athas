@@ -41,6 +41,8 @@ interface TabBarItemProps {
   displayName: string;
   index: number;
   isActive: boolean;
+  isPinned?: boolean;
+  isPreview?: boolean;
   isDraggedTab: boolean;
   showDropIndicatorBefore?: boolean;
   tabRef?: RefCallback<HTMLDivElement>;
@@ -62,6 +64,8 @@ const TabBarItem = memo(function TabBarItem({
   buffer,
   displayName,
   isActive,
+  isPinned = false,
+  isPreview = false,
   isDraggedTab,
   showDropIndicatorBefore = false,
   tabRef,
@@ -84,11 +88,7 @@ const TabBarItem = memo(function TabBarItem({
   const tabCloseButtonVisibility = useSettingsStore(
     (state) => state.settings.tabCloseButtonVisibility,
   );
-  const showCloseButton = shouldShowTabCloseButton(
-    tabCloseButtonVisibility,
-    isActive,
-    buffer.isPinned,
-  );
+  const showCloseButton = shouldShowTabCloseButton(tabCloseButtonVisibility, isActive, isPinned);
   const authorAvatarUrl =
     buffer.type === "pullRequest" || buffer.type === "githubIssue"
       ? buffer.authorAvatarUrl
@@ -128,7 +128,7 @@ const TabBarItem = memo(function TabBarItem({
       <TabItem
         role="tab"
         aria-selected={isActive}
-        aria-label={`${buffer.name}${isDirtyContent(buffer) ? " (unsaved)" : ""}${buffer.isPinned ? " (pinned)" : ""}${buffer.isPreview ? " (preview)" : ""}`}
+        aria-label={`${buffer.name}${isDirtyContent(buffer) ? " (unsaved)" : ""}${isPinned ? " (pinned)" : ""}${isPreview ? " (preview)" : ""}`}
         tabIndex={isActive ? 0 : -1}
         isActive={isActive}
         isDragged={isDraggedTab}
@@ -153,18 +153,18 @@ const TabBarItem = memo(function TabBarItem({
                 variant="ghost"
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (buffer.isPinned) {
+                  if (isPinned) {
                     handleTabPin(buffer.id);
                   } else {
                     handleTabClose(buffer.id);
                   }
                 }}
-                tooltip={buffer.isPinned ? "Unpin tab" : "Close"}
-                commandId={buffer.isPinned ? undefined : "file.close"}
+                tooltip={isPinned ? "Unpin tab" : "Close"}
+                commandId={isPinned ? undefined : "file.close"}
                 tabIndex={-1}
                 draggable={false}
               >
-                {buffer.isPinned ? (
+                {isPinned ? (
                   <PinIcon className="pointer-events-none select-none fill-current text-primary" />
                 ) : (
                   <XIcon className="pointer-events-none select-none" />
@@ -280,7 +280,7 @@ const TabBarItem = memo(function TabBarItem({
             className={cn(
               "font-sans ui-text-chrome min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap",
               isActive ? "text-foreground" : "text-subtle-foreground",
-              buffer.isPreview && "italic",
+              isPreview && "italic",
             )}
             title={buffer.path}
           >

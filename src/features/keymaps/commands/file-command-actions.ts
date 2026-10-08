@@ -1,10 +1,11 @@
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import { usePaneStore } from "@/features/panes/stores/pane.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { requestWindowClose } from "@/features/window/utils/request-window-close";
+import { emitAppEvent } from "@/utils/app-events";
 import { useKeymapStore } from "../stores/keymaps.store";
+import { getActiveBufferId } from "@/features/panes/stores/pane-selectors";
 
 function isTerminalFocused(): boolean {
   return useKeymapStore.getState().contexts.terminalFocus === true;
@@ -12,7 +13,7 @@ function isTerminalFocused(): boolean {
 
 export function showNewTab(): void {
   if (isTerminalFocused()) {
-    window.dispatchEvent(new CustomEvent("terminal-new"));
+    emitAppEvent("terminal-new");
     return;
   }
   useBufferStore.getState().actions.showNewTabView();
@@ -32,7 +33,7 @@ export async function saveAllFiles(): Promise<void> {
 
 export async function revertActiveFile(): Promise<void> {
   const bufferStore = useBufferStore.getState();
-  const activeBuffer = bufferStore.buffers.find((b) => b.id === bufferStore.activeBufferId);
+  const activeBuffer = bufferStore.actions.getActiveBuffer();
   if (
     !activeBuffer ||
     activeBuffer.type !== "editor" ||
@@ -47,18 +48,12 @@ export async function revertActiveFile(): Promise<void> {
 
 /** The tab shown in the focused pane, falling back to the last active tab. */
 function getActivePaneBufferId(): string | null {
-  const { buffers, activeBufferId } = useBufferStore.getState();
-  const paneBufferId = usePaneStore.getState().actions.getActivePane()?.activeBufferId;
-  return (
-    [paneBufferId, activeBufferId].find(
-      (bufferId) => bufferId && buffers.some((buffer) => buffer.id === bufferId),
-    ) ?? null
-  );
+  return useBufferStore.getState().actions.getActiveBuffer()?.id ?? null;
 }
 
 export function closeActiveTab(): void {
   if (isTerminalFocused()) {
-    window.dispatchEvent(new CustomEvent("close-active-terminal"));
+    emitAppEvent("close-active-terminal");
     return;
   }
 
@@ -90,7 +85,7 @@ function getTargetBufferId(args: unknown): string | null {
     return args.bufferId;
   }
 
-  return useBufferStore.getState().activeBufferId;
+  return getActiveBufferId();
 }
 
 export function closeOtherTabs(args?: unknown): void {
@@ -124,11 +119,16 @@ export async function reopenClosedTab(): Promise<void> {
 
 export function createNewFile(): void {
   if (isTerminalFocused()) {
-    window.dispatchEvent(new CustomEvent("terminal-new"));
+    emitAppEvent("terminal-new");
     return;
   }
 
   useFileSystemStore.getState().handleCreateNewFile();
+}
+
+/** The native folder dialog the File menu's "Open Folder" item shows. */
+export async function openFolderDialog(): Promise<void> {
+  await useFileSystemStore.getState().handleOpenFolder();
 }
 
 export function openProjectPicker(): void {

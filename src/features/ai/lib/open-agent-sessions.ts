@@ -1,6 +1,5 @@
 import type { AcpAgentStatus } from "@/features/ai/types/acp.types";
-
-export const OPEN_AGENT_SESSIONS_EVENT = "athas:open-agent-sessions";
+import { emitAppEvent } from "@/utils/app-events";
 
 function advertisesSessionCapability(
   status: AcpAgentStatus | null | undefined,
@@ -35,5 +34,5 @@ export function canDeleteAgentSessions(status: AcpAgentStatus | null | undefined
 
 /** Opens the list of `agentId`'s sessions in the current workspace. */
 export function openAgentSessions(agentId: string) {
-  window.dispatchEvent(new CustomEvent<string>(OPEN_AGENT_SESSIONS_EVENT, { detail: agentId }));
+  emitAppEvent("athas:open-agent-sessions", agentId);
 }

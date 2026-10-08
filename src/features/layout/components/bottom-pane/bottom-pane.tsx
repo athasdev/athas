@@ -16,6 +16,7 @@ import { cn } from "@/utils/cn";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { WorkbenchFullscreenSurface } from "@/features/window/components/workbench-fullscreen-surface";
+import { emitAppEvent, onAppEvent } from "@/utils/app-events";
 import { BottomBufferPane } from "./bottom-buffer-pane";
 
 const DebuggerView = lazy(() => import("@/features/debugger/components/debugger-view"));
@@ -63,8 +64,7 @@ const BottomPane = ({
       setIsInternalHoverTarget(getInternalTabDragHover().paneId === BOTTOM_PANE_ID);
     };
 
-    window.addEventListener("athas-internal-tab-drag-hover", syncHover);
-    return () => window.removeEventListener("athas-internal-tab-drag-hover", syncHover);
+    return onAppEvent("athas-internal-tab-drag-hover", syncHover);
   }, []);
 
   useEffect(() => {
@@ -189,11 +189,7 @@ const BottomPane = ({
             remoteConnectionId: tabData.remoteConnectionId,
           });
           activateBufferInPaneAndSync(BOTTOM_PANE_ID, bufferId);
-          window.dispatchEvent(
-            new CustomEvent("terminal-detach-to-buffer", {
-              detail: { terminalId: tabData.terminalId },
-            }),
-          );
+          emitAppEvent("terminal-detach-to-buffer", { terminalId: tabData.terminalId });
         } else if (tabData.bufferId && tabData.paneId && tabData.paneId !== BOTTOM_PANE_ID) {
           moveBufferToPane(tabData.bufferId, tabData.paneId, BOTTOM_PANE_ID);
           activateBufferInPaneAndSync(BOTTOM_PANE_ID, tabData.bufferId);

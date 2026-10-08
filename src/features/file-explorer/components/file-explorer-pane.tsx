@@ -5,6 +5,7 @@ import { EmptyState } from "@/ui/empty";
 import { SidebarPanel } from "@/ui/sidebar";
 import { Spinner } from "@/ui/spinner";
 import { FileExplorerTree } from "./file-explorer-tree";
+import { useProjectStore } from "@/features/window/stores/project.store";
 
 function FileExplorerPaneComponent() {
   const setFiles = useFileSystemStore((state) => state.setFiles);
@@ -23,7 +24,7 @@ function FileExplorerPaneComponent() {
   const handleDuplicatePath = useFileSystemStore((state) => state.handleDuplicatePath);
   const handleRenamePath = useFileSystemStore((state) => state.handleRenamePath);
 
-  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const files = useFileSystemStore.use.files();
   const isFileTreeLoading = useFileSystemStore.use.isFileTreeLoading();
   const isSwitchingProject = useFileSystemStore.use.isSwitchingProject();

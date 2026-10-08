@@ -21,6 +21,9 @@ const state = vi.hoisted(() => ({
 vi.mock("@/features/editor/stores/buffer.store", () => ({
   useBufferStore: (selector: (value: typeof state) => unknown) => selector(state),
 }));
+vi.mock("@/features/panes/hooks/use-pane-buffer-state", () => ({
+  useActiveBufferId: () => state.activeBufferId,
+}));
 vi.mock("@/features/file-system/stores/recent-files.store", () => {
   const actions = { getRecentFilesOrderedByFrecency: () => state.recentFiles };
   return {

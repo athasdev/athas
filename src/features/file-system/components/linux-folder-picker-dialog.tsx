@@ -1,5 +1,4 @@
-import { homeDir } from "@tauri-apps/api/path";
-import { readDir } from "@tauri-apps/plugin-fs";
+import { getHomeDirectory, listDirectoryEntries } from "@/utils/local-files";
 import { ArrowUpIcon, FolderIcon, HouseIcon, WarningIcon } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLinuxFolderPickerStore } from "@/features/file-system/stores/linux-folder-picker.store";
@@ -65,7 +64,7 @@ export default function LinuxFolderPickerDialog() {
     setError(null);
 
     try {
-      const directoryEntries = await readDir(path);
+      const directoryEntries = await listDirectoryEntries(path);
       const folders = directoryEntries
         .filter((entry) => entry.isDirectory && entry.name)
         .map((entry) => ({
@@ -100,7 +99,7 @@ export default function LinuxFolderPickerDialog() {
     let cancelled = false;
 
     const initialize = async () => {
-      const detectedHome = await homeDir().catch(() => "/");
+      const detectedHome = await getHomeDirectory().catch(() => "/");
       if (cancelled) return;
 
       const nextHomePath = detectedHome || "/";

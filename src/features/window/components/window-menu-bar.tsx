@@ -1,7 +1,6 @@
 import { toast } from "sonner";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { commands } from "@/bindings/commands";
-import { exit } from "@tauri-apps/plugin-process";
+import { quitApp, reopenWebviewDevtools } from "@/features/window/services/native-window-api";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useRegisteredThemes } from "@/extensions/themes/use-registered-themes";
@@ -106,7 +105,7 @@ const WindowMenuBar = ({
   );
 
   const handleOpenWebInspector = useCallback(() => {
-    commands.reopenCurrentWebviewDevtools().catch((error) => {
+    reopenWebviewDevtools().catch((error) => {
       toast.error(error instanceof Error ? error.message : String(error));
     });
     closeMenu();
@@ -180,7 +179,7 @@ const WindowMenuBar = ({
             Reopen Closed Tab
           </MenubarItem>
           <MenubarSeparator />
-          <MenubarItem shortcut="mod+q" onClick={async () => await exit(0)}>
+          <MenubarItem shortcut="mod+q" onClick={async () => await quitApp()}>
             Quit
           </MenubarItem>
         </MenubarContent>

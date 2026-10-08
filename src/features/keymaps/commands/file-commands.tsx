@@ -1,7 +1,5 @@
 import {
   ArrowCounterClockwiseIcon,
-  ArrowLeftIcon,
-  ArrowRightIcon,
   FilePlusIcon,
   FileTextIcon,
   FolderOpenIcon,
@@ -22,6 +20,7 @@ import {
   closeTabsToLeft,
   closeTabsToRight,
   createNewFile,
+  openFolderDialog,
   openProjectPicker,
   openQuickOpen,
   reopenClosedTab,
@@ -169,6 +168,15 @@ export const fileCommands: Command[] = [
     execute: openProjectPicker,
   },
   {
+    id: "file.openFolder",
+    title: "Open Folder",
+    category: "File",
+    description: "Choose a folder to open with the system dialog",
+    icon: <FolderOpenIcon />,
+    palette: { label: "File: Open Folder" },
+    execute: openFolderDialog,
+  },
+  {
     id: "file.quickOpen",
     title: "Quick Open",
     category: "File",
@@ -231,23 +239,5 @@ export const fileCommands: Command[] = [
     execute: async () => {
       await (await openShare()).shareAgent();
     },
-  },
-  {
-    id: "tab.next",
-    title: "Tab: Next Tab",
-    category: "File",
-    description: "Switch to the next open tab",
-    icon: <ArrowRightIcon />,
-    palette: { keybindingCommandId: "workbench.nextTab" },
-    execute: () => useBufferStore.getState().actions.switchToNextBuffer(),
-  },
-  {
-    id: "tab.previous",
-    title: "Tab: Previous Tab",
-    category: "File",
-    description: "Switch to the previous open tab",
-    icon: <ArrowLeftIcon />,
-    palette: { keybindingCommandId: "workbench.previousTab" },
-    execute: () => useBufferStore.getState().actions.switchToPreviousBuffer(),
   },
 ];

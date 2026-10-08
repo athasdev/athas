@@ -1,5 +1,5 @@
-import { TEAM_WORKSPACE_CHANGED_EVENT } from "@/features/workspace/team/services/team-workspace-service";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { onAppEvent } from "@/utils/app-events";
 import { useCodeLens } from "@/features/editor/lsp/use-code-lens";
 import type { RunActionItem } from "../types/run-action.types";
 import { codeLensesToRunActions, discoverProjectRunActions } from "../utils/run-action-discovery";
@@ -17,9 +17,7 @@ export function useRunActionDiscovery(
   const [discoveryError, setDiscoveryError] = useState<string | null>(null);
   const [revision, setRevision] = useState(0);
   useEffect(() => {
-    const changed = () => setRevision((current) => current + 1);
-    window.addEventListener(TEAM_WORKSPACE_CHANGED_EVENT, changed);
-    return () => window.removeEventListener(TEAM_WORKSPACE_CHANGED_EVENT, changed);
+    return onAppEvent("team-workspace-changed", () => setRevision((current) => current + 1));
   }, []);
   const codeLenses = useCodeLens(activeFilePath, includeCodeLenses);
 

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { ReleaseAssets } from "./release-assets";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openExternalUrl } from "@/utils/external-url";
 import { toast } from "sonner";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
@@ -14,7 +14,7 @@ import { releaseTitle, safeDeliveryUrl } from "../utils/github-delivery";
 
 function openInBrowser(value: string | null) {
   const url = safeDeliveryUrl(value);
-  if (url) void openUrl(url).catch((error) => toast.error(String(error)));
+  if (url) void openExternalUrl(url).catch((error) => toast.error(String(error)));
 }
 
 function repositoryUrlOf(release: Release) {

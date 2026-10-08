@@ -15,7 +15,6 @@ import type {
 import type { ContextInfo } from "@/features/ai/types/ai-context.types";
 import type { AgentCompletionResult } from "@/features/ai/types/agent-completion.types";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { getAcpAdditionalDirectories } from "@/features/ai/lib/acp-additional-directories";
 import { buildAcpPrompt } from "@/features/ai/lib/acp-prompt";
@@ -324,7 +323,7 @@ export class AcpStreamHandler {
   private static additionalDirectories(workspacePath: string | null) {
     const additionalDirectories = getAcpAdditionalDirectories(
       workspacePath,
-      useFileSystemStore.getState().workspaceFolders,
+      useProjectStore.getState().workspaceFolders,
     );
     return additionalDirectories.length > 0 ? additionalDirectories : null;
   }

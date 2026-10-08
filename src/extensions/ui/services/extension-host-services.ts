@@ -55,8 +55,7 @@ export function clearExtensionHostServiceState(extensionId: string): void {
 }
 
 function activeFilePath(): string | null {
-  const state = useBufferStore.getState();
-  return state.buffers.find((buffer) => buffer.id === state.activeBufferId)?.path ?? null;
+  return useBufferStore.getState().actions.getActiveBuffer()?.path ?? null;
 }
 
 async function readLimitedResponseBody(response: Response): Promise<string> {

@@ -1,6 +1,6 @@
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { usePaneStore } from "@/features/panes/stores/pane.store";
-import type { ProjectUiSession } from "@/features/window/stores/session.store";
+import { type ProjectUiSession, useSessionStore } from "@/features/window/stores/session.store";
 import { workspaceSessionRepository } from "@/features/workspace/persistence/workspace-session-repository";
 import {
   buildCurrentProjectPaneSession,
@@ -8,6 +8,10 @@ import {
 } from "@/features/window/stores/workspace-pane-session";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { DEFAULT_PROJECT_UI_STATE } from "@/features/window/stores/workspace-ui-defaults";
+import {
+  selectActiveBufferId,
+  selectPaneBufferFlags,
+} from "@/features/panes/stores/pane-selectors";
 
 export const getCurrentProjectUiState = (workspaceId?: string): ProjectUiSession => {
   const uiState = workspaceId ? useUIState.getStore(workspaceId).getState() : useUIState.getState();
@@ -63,7 +67,18 @@ export const restoreProjectPaneState = (projectPath: string | undefined, workspa
   const buffers = workspaceId
     ? useBufferStore.getStore(workspaceId).getState().buffers
     : useBufferStore.getState().buffers;
-  const paneLayout = buildPaneLayoutFromSession(uiState?.paneState, buffers);
   const paneStore = workspaceId ? usePaneStore.getStore(workspaceId) : usePaneStore;
+  // The buffers were reopened into the live layout first; keep the tab state that gave them.
+  const restoredLayout = paneStore.getState();
+  const paneLayout = buildPaneLayoutFromSession(uiState?.paneState, buffers, {
+    activeBufferId: selectActiveBufferId(restoredLayout),
+    ...selectPaneBufferFlags(restoredLayout),
+    legacyTabOrder: projectPath
+      ? useSessionStore
+          .getState()
+          .actions.getSession(projectPath)
+          ?.buffers.map((buffer) => buffer.path)
+      : undefined,
+  });
   paneStore.getState().actions.restoreLayout(paneLayout);
 };

@@ -9,8 +9,7 @@ import {
   UserIcon,
   WarningCircleIcon,
 } from "@/ui/icons";
-import { save } from "@tauri-apps/plugin-dialog";
-import { writeTextFile } from "@tauri-apps/plugin-fs";
+import { saveTextFileWithDialog } from "@/utils/file-dialogs";
 import { useMemo, useState } from "react";
 import {
   KeybindingRow,
@@ -172,24 +171,26 @@ export const KeyboardSettings = () => {
     const userBindings = getExportableUserKeybindings(useKeymapStore.getState().keybindings);
 
     try {
-      const targetPath = await save({
-        defaultPath: "keybindings.json",
-        filters: [
-          { name: "JSON", extensions: ["json"] },
-          { name: "All Files", extensions: ["*"] },
-        ],
-      });
+      const targetPath = await saveTextFileWithDialog(
+        {
+          defaultPath: "keybindings.json",
+          filters: [
+            { name: "JSON", extensions: ["json"] },
+            { name: "All Files", extensions: ["*"] },
+          ],
+        },
+        () =>
+          JSON.stringify(
+            createKeybindingsExportPayload({ keybindingPreset, keybindings: userBindings }),
+            null,
+            2,
+          ),
+      );
 
       if (!targetPath) {
         return;
       }
 
-      const payload = createKeybindingsExportPayload({
-        keybindingPreset,
-        keybindings: userBindings,
-      });
-
-      await writeTextFile(targetPath, JSON.stringify(payload, null, 2));
       showToast({ message: "Keybindings exported", type: "success" });
     } catch (error) {
       console.error("Failed to export keybindings:", error);

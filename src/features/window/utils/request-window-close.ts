@@ -1,5 +1,5 @@
-export const REQUEST_WINDOW_CLOSE_EVENT = "athas:request-window-close";
+import { emitAppEvent } from "@/utils/app-events";
 
 export function requestWindowClose() {
-  window.dispatchEvent(new CustomEvent(REQUEST_WINDOW_CLOSE_EVENT));
+  emitAppEvent("athas:request-window-close");
 }

@@ -5,7 +5,7 @@ import {
   describeAcpTerminalAuthFailure,
   runAcpTerminalAuth,
 } from "@/features/ai/lib/acp-terminal-auth";
-import { TERMINAL_PROCESS_EXIT_EVENT } from "@/features/terminal/constants/terminal-events";
+import { emitAppEvent } from "@/utils/app-events";
 
 interface FakeBuffer {
   type: "terminal";
@@ -51,11 +51,7 @@ describe("runAcpTerminalAuth", () => {
   it("resolves with the command's exit", async () => {
     const result = runAcpTerminalAuth(launch);
     const { sessionId } = buffers.store.getState().buffers[0];
-    window.dispatchEvent(
-      new CustomEvent(TERMINAL_PROCESS_EXIT_EVENT, {
-        detail: { sessionId, exitCode: 0, signal: null },
-      }),
-    );
+    emitAppEvent("terminal-process-exit", { sessionId, exitCode: 0, signal: null });
     await expect(result).resolves.toEqual({ exitCode: 0, signal: null });
   });
 

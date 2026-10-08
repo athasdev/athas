@@ -12,6 +12,7 @@ import { useProjectStore } from "@/features/window/stores/project.store";
 import { captureAgentDrafts, restoreAgentDrafts } from "./agent-window-drafts";
 import { type AgentWindowSnapshot, getAgentWindowTransferBlocker } from "./agent-window-state";
 import { useAgentWindowStore } from "./agent-window.store";
+import { getActiveBufferId } from "@/features/panes/stores/pane-selectors";
 
 export type AgentWindowMessage =
   | DetachedWindowBaseMessage
@@ -58,7 +59,7 @@ export function captureAgentWindowSnapshot(chatId?: string): AgentWindowSnapshot
         (buffer.type === "agent" && (!chatId || buffer.sessionId === chatId)) ||
         buffer.type === "editor",
     ),
-    activeBufferId: buffers.activeBufferId,
+    activeBufferId: getActiveBufferId(),
     drafts: chatId
       ? Object.fromEntries(
           Object.entries(captureAgentDrafts()).filter(([id]) => id === `agent-session:${chatId}`),

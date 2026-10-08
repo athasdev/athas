@@ -1,7 +1,4 @@
-import { commands } from "@/bindings/commands";
-import { save } from "@tauri-apps/plugin-dialog";
-import { writeTextFile } from "@tauri-apps/plugin-fs";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openExternalUrl } from "@/utils/external-url";
 import {
   ArrowClockwiseIcon,
   ArrowCounterClockwiseIcon,
@@ -27,6 +24,12 @@ import { Progress } from "@/ui/progress";
 import { ResourceActionsMenu, ResourceSummary, ResourceWorkspace } from "@/ui/resource";
 import { Spinner } from "@/ui/spinner";
 import { cn } from "@/utils/cn";
+import { saveTextFileWithDialog } from "@/utils/file-dialogs";
+import {
+  fetchWorkflowJobLogs,
+  fetchWorkflowRunDetails,
+  resolveNotificationWorkflowRun,
+} from "../api/github-actions-api";
 import { useNow } from "../hooks/use-now";
 import { getWorkflowRunsEntry, useGitHubActionsStore } from "../stores/github-actions.store";
 import type {
@@ -149,7 +152,7 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
     setIsLoading(true);
     setError(null);
     try {
-      const run = await commands.githubResolveNotificationWorkflowRun(
+      const run = await resolveNotificationWorkflowRun(
         notification.repositoryFullName,
         notification.checkSuiteId,
         notification.title,
@@ -209,7 +212,7 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
       try {
         const nextDetails = await githubActionDetailsCache.load(
           cacheKey,
-          () => commands.githubGetWorkflowRunDetails(repoPath, resolvedRunId),
+          () => fetchWorkflowRunDetails(repoPath, resolvedRunId),
           { force: true, ttlMs: GITHUB_ACTION_DETAILS_TTL_MS },
         );
         setDetails(nextDetails);
@@ -289,7 +292,7 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
       });
 
       try {
-        const raw = await commands.githubGetWorkflowJobLogs(repoPath, jobId);
+        const raw = await fetchWorkflowJobLogs(repoPath, jobId);
         setJobLogs((current) => ({
           ...current,
           [jobId]: { lines: parseWorkflowLog(raw), fetchedAt: Date.now() },
@@ -385,7 +388,7 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
       toast.error("Run link is not available.");
       return;
     }
-    void openUrl(details.url);
+    void openExternalUrl(details.url);
   }, [details?.url]);
 
   const handleCopyRunLink = useCallback(() => {
@@ -414,12 +417,14 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
       "_",
     );
     try {
-      const filePath = await save({
-        defaultPath: `run-${details?.runNumber ?? resolvedRunId ?? "log"}-${subjectName}.log`,
-        filters: [{ name: "Log", extensions: ["log", "txt"] }],
-      });
+      const filePath = await saveTextFileWithDialog(
+        {
+          defaultPath: `run-${details?.runNumber ?? resolvedRunId ?? "log"}-${subjectName}.log`,
+          filters: [{ name: "Log", extensions: ["log", "txt"] }],
+        },
+        () => formatWorkflowLogText(visibleLines, showTimestamps),
+      );
       if (!filePath) return;
-      await writeTextFile(filePath, formatWorkflowLogText(visibleLines, showTimestamps));
       toast.success("Log exported");
     } catch (exportError) {
       toast.error(describeError(exportError));
@@ -455,7 +460,7 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
       });
       if (bufferId) return;
     }
-    if (repositoryUrl) void openUrl(`${repositoryUrl}/commit/${details.headSha}`);
+    if (repositoryUrl) void openExternalUrl(`${repositoryUrl}/commit/${details.headSha}`);
     else toast.error("Commit is not available.");
   }, [details, repoPath, repositoryUrl]);
 
@@ -734,7 +739,9 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
             onRefresh={() => selectedJobId !== null && void loadJobLogs(selectedJobId, true)}
             onCopy={handleCopyLogs}
             onExport={() => void handleExportLogs()}
-            onOpenOnGitHub={selectedJob?.url ? () => void openUrl(selectedJob.url ?? "") : null}
+            onOpenOnGitHub={
+              selectedJob?.url ? () => void openExternalUrl(selectedJob.url ?? "") : null
+            }
           />
         </div>
       ) : (

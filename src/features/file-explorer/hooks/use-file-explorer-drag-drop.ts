@@ -9,6 +9,7 @@ import {
 } from "@/features/tabs/utils/internal-tab-drag";
 import { getDirName, getPathSeparator, joinPath } from "@/utils/path-helpers";
 import { IS_MAC } from "@/utils/platform";
+import { emitAppEvent } from "@/utils/app-events";
 
 interface DragState {
   isDragging: boolean;
@@ -210,17 +211,13 @@ export function useFileExplorerDragDrop(
 
       // If dropping on a pane (not in file tree), dispatch event for pane to handle
       if (isOverPane && !isOverFileTree && dragState.draggedItem && !dragState.draggedItem.isDir) {
-        window.dispatchEvent(
-          new CustomEvent("file-tree-drop-on-pane", {
-            detail: {
-              path: dragState.draggedItem.path,
-              name: dragState.draggedItem.name,
-              isDir: dragState.draggedItem.isDir,
-              x: e.clientX,
-              y: e.clientY,
-            },
-          }),
-        );
+        emitAppEvent("file-tree-drop-on-pane", {
+          path: dragState.draggedItem.path,
+          name: dragState.draggedItem.name,
+          isDir: dragState.draggedItem.isDir,
+          x: e.clientX,
+          y: e.clientY,
+        });
         setDragState(initialDragState);
         clearAutoExpand();
         clearEditorDropHover();

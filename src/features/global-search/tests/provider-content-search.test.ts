@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { useProjectStore } from "@/features/window/stores/project.store";
 import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
 import type { FileEntry } from "@/features/file-system/types/app.types";
 import {
@@ -23,6 +24,7 @@ vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn().mockResolvedValue([]) }
 vi.mock("@tauri-apps/api/event", () => ({ listen: vi.fn().mockResolvedValue(() => {}) }));
 const root = "remote://connection/w";
 const store = () => useFileSystemStore.getStore("owner");
+const projectStore = () => useProjectStore.getStore("owner");
 function file(name: string, path = `${root}/${name}`, isDir = false): FileEntry {
   return { name, path, isDir };
 }
@@ -54,9 +56,8 @@ function deferred<T>() {
 beforeEach(() => {
   workspaceRuntimeRegistry.resetForTests();
   workspaceRuntimeRegistry.activateWorkspace({ id: "owner", name: "Owner" });
+  projectStore().setState({ rootFolderPath: root, workspaceFolders: [] });
   store().setState({
-    rootFolderPath: root,
-    workspaceFolders: [],
     projectFilesCache: { path: root, files: [file("stale.ts")], timestamp: Date.now() },
   });
   io.directory.mockReset().mockResolvedValue([]);
@@ -67,7 +68,7 @@ describe("provider search enumeration", () => {
     io.directory.mockImplementation(async (path) =>
       path === root ? [file("src", `${root}/src`, true)] : [file("new.ts", `${root}/src/new.ts`)],
     );
-    expect((await loadProviderSearchFiles(store()))?.map((entry) => entry.path)).toEqual([
+    expect((await loadProviderSearchFiles(projectStore()))?.map((entry) => entry.path)).toEqual([
       `${root}/src/new.ts`,
     ]);
     expect(io.directory).toHaveBeenCalledWith(root, root);
@@ -76,7 +77,7 @@ describe("provider search enumeration", () => {
   it("enumerates every captured workspace root and deduplicates overlapping roots", async () => {
     const second = "wsl://d/work";
     const third = "/local";
-    store().setState({
+    projectStore().setState({
       workspaceFolders: [
         { name: "nested", path: `${root}/src` },
         { name: "second", path: second },
@@ -88,7 +89,7 @@ describe("provider search enumeration", () => {
         ? [file("src", `${root}/src`, true), file("a.ts")]
         : [file("b.ts", `${path}/b.ts`)],
     );
-    const files = await loadProviderSearchFiles(store());
+    const files = await loadProviderSearchFiles(projectStore());
     expect(files?.map((entry) => entry.path)).toEqual([
       `${root}/a.ts`,
       `${second}/b.ts`,
@@ -106,7 +107,9 @@ describe("provider search enumeration", () => {
         { ...file("linked", `${root}/linked`, true), isSymlink: true },
       ].map((entry) => (entry.name === "ignored.ts" ? { ...entry, ignored: true } : entry)),
     );
-    expect((await loadProviderSearchFiles(store()))?.map((entry) => entry.name)).toEqual([".env"]);
+    expect((await loadProviderSearchFiles(projectStore()))?.map((entry) => entry.name)).toEqual([
+      ".env",
+    ]);
     expect(io.directory).toHaveBeenCalledTimes(1);
   });
   it("reports failed nested directories instead of declaring a partial scan complete", async () => {
@@ -114,7 +117,7 @@ describe("provider search enumeration", () => {
       if (path === root) return [file("unreadable", `${root}/unreadable`, true), file("a.ts")];
       throw new Error("permission denied");
     });
-    await expect(loadProviderSearchFiles(store())).rejects.toThrow(
+    await expect(loadProviderSearchFiles(projectStore())).rejects.toThrow(
       `${root}/unreadable: permission denied`,
     );
   });
@@ -122,12 +125,14 @@ describe("provider search enumeration", () => {
     "refuses a returned path outside the root: %s",
     async (path) => {
       io.directory.mockResolvedValue([file("secret", path)]);
-      await expect(loadProviderSearchFiles(store())).rejects.toThrow("outside its search root");
+      await expect(loadProviderSearchFiles(projectStore())).rejects.toThrow(
+        "outside its search root",
+      );
     },
   );
   it("retains literal backslashes in POSIX filenames", async () => {
     io.directory.mockResolvedValue([file("a\\b.ts")]);
-    expect((await loadProviderSearchFiles(store()))?.[0]?.path).toBe(`${root}/a\\b.ts`);
+    expect((await loadProviderSearchFiles(projectStore()))?.[0]?.path).toBe(`${root}/a\\b.ts`);
   });
   it("bounds directory read concurrency", async () => {
     let active = 0;
@@ -141,17 +146,19 @@ describe("provider search enumeration", () => {
         ? [...Array(24).keys()].map((index) => file(`dir${index}`, `${root}/dir${index}`, true))
         : [];
     });
-    await loadProviderSearchFiles(store());
+    await loadProviderSearchFiles(projectStore());
     expect(peak).toBe(8);
     expect(io.directory).toHaveBeenCalledTimes(25);
   });
   it("cancels before I/O and before starting discovered directories", async () => {
-    await expect(loadProviderSearchFiles(store(), { isCancelled: () => true })).resolves.toBeNull();
+    await expect(
+      loadProviderSearchFiles(projectStore(), { isCancelled: () => true }),
+    ).resolves.toBeNull();
     expect(io.directory).not.toHaveBeenCalled();
     const read = deferred<FileEntry[]>();
     let cancelled = false;
     io.directory.mockReturnValueOnce(read.promise);
-    const pending = loadProviderSearchFiles(store(), { isCancelled: () => cancelled });
+    const pending = loadProviderSearchFiles(projectStore(), { isCancelled: () => cancelled });
     cancelled = true;
     read.resolve([file("src", `${root}/src`, true)]);
     await expect(pending).resolves.toBeNull();
@@ -249,7 +256,7 @@ describe("provider search content and pagination", () => {
       `${root}/custom.unknown`,
     ]);
     io.directory.mockResolvedValue(files);
-    expect((await loadProviderSearchFiles(store()))?.map((entry) => entry.name)).toEqual([
+    expect((await loadProviderSearchFiles(projectStore()))?.map((entry) => entry.name)).toEqual([
       "vector.svg",
       "custom.unknown",
     ]);

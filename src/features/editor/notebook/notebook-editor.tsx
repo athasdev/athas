@@ -28,7 +28,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { commands } from "@/bindings/commands";
+import { runPythonCell } from "@/features/editor/services/notebook-cell-runner";
 import type {
   NotebookRunResult as CommandNotebookRunResult,
   PythonDisplayData,
@@ -64,6 +64,7 @@ import {
   type NotebookMimeValue,
   type NotebookOutput,
 } from "./notebook-model";
+import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 interface NotebookRunResult extends Omit<CommandNotebookRunResult, "displayData"> {
   displayData: Array<Omit<PythonDisplayData, "data"> & { data: Record<string, NotebookMimeValue> }>;
@@ -542,9 +543,10 @@ function NotebookCellView({
 
 export function NotebookEditor() {
   const cellRefs = useRef<Array<HTMLElement | null>>([]);
+  const activeBufferId = useActiveBufferId();
   const { bufferId, path } = useBufferStore(
     useShallow((state) => {
-      const buffer = getBufferById(state.buffers, state.activeBufferId);
+      const buffer = getBufferById(state.buffers, activeBufferId);
       return {
         bufferId: buffer?.id ?? null,
         path: buffer?.type === "editor" ? buffer.path : "",
@@ -623,7 +625,7 @@ export function NotebookEditor() {
 
     setRunningCell(cellIndex);
     try {
-      const result = (await commands.notebookRunPythonCell(
+      const result = (await runPythonCell(
         notebookCellSource(cell),
         notebookWorkingDirectory(path),
         "",

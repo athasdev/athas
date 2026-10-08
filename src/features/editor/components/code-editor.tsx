@@ -1,5 +1,5 @@
 import type React from "react";
-import { commands } from "@/bindings/commands";
+import { runPythonCell, runRCell } from "@/features/editor/services/notebook-cell-runner";
 import {
   useCallback,
   useEffect,
@@ -26,7 +26,6 @@ import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { toast } from "sonner";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
 import { useZoomStore } from "@/features/window/stores/zoom.store";
-import { editorAPI } from "../extensions/api";
 import { readBufferText } from "../services/buffer-text";
 import type { LiveDocumentEdit } from "../services/live-document-registry";
 import CodeLensOverlay from "../lsp/code-lens-overlay";
@@ -59,6 +58,11 @@ import { SvgPreview } from "./svg/svg-preview";
 import { EditorStylesheet } from "./stylesheet";
 import Breadcrumb, { type BreadcrumbProps } from "./toolbar/breadcrumb";
 import { OutlineSidebar } from "@/features/outline/components/outline-sidebar";
+import { type AppEventMap, onAppEvent } from "@/utils/app-events";
+import {
+  useBufferIdOrActive,
+  useIsBufferPreview,
+} from "@/features/panes/hooks/use-pane-buffer-state";
 
 interface CodeEditorProps {
   onKeyDown?: (e: React.KeyboardEvent<HTMLDivElement>) => void;
@@ -93,12 +97,6 @@ interface CodeEditorProps {
 export interface CodeEditorRef {
   editor: HTMLDivElement | null;
   textarea: HTMLDivElement | null;
-}
-
-interface GoToLineEventDetail {
-  line?: number;
-  column?: number;
-  path?: string;
 }
 
 const PYTHON_SCRIPT_CELL_COMMAND = "athas.runPythonScriptCell";
@@ -154,10 +152,9 @@ const CodeEditor = ({
   const [codeLensViewportHeight, setCodeLensViewportHeight] = useState(600);
   const [codeLensScrollTop, setCodeLensScrollTop] = useState(0);
   const showInlineCodeLensesRef = useRef(false);
-  const { setRefs, setContent, setFileInfo, setActiveEditorViewKey } =
-    useEditorStateStore.use.actions();
+  const { setChangeHandler, setActiveEditorViewKey } = useEditorStateStore.use.actions();
 
-  const activeBufferId = useBufferStore((state) => propBufferId ?? state.activeBufferId);
+  const activeBufferId = useBufferIdOrActive(propBufferId);
   const zoomLevel = useZoomStore.use.editorZoomLevel();
   // Only what the wrapper needs: the text changes on every keystroke, and re-rendering here
   // re-renders the whole editor surface with it.
@@ -171,7 +168,6 @@ const CodeEditor = ({
             id: buffer.id,
             type: buffer.type,
             path: buffer.path,
-            isPreview: buffer.isPreview,
             isMarkdownPreview: buffer.type === "editor" && buffer.isMarkdownPreview === true,
           };
         },
@@ -214,7 +210,7 @@ const CodeEditor = ({
             liveEdit,
           )
       : undefined;
-  const isPreviewBuffer = activeBuffer?.isPreview ?? false;
+  const isPreviewBuffer = useIsBufferPreview(activeBuffer?.id);
   const showMarkdownPreview =
     activeBuffer?.type === "markdownPreview" || activeBuffer?.isMarkdownPreview === true;
   const showNotebookEditor =
@@ -227,14 +223,6 @@ const CodeEditor = ({
   const showHtmlPreview = activeBuffer?.type === "htmlPreview";
   const showCsvPreview = activeBuffer?.type === "csvPreview";
   const showSvgPreview = activeBuffer?.type === "svgPreview";
-
-  // Initialize refs in store
-  useEffect(() => {
-    if (!isActiveSurface) return;
-    setRefs({
-      editorRef,
-    });
-  }, [isActiveSurface, setRefs]);
 
   useEffect(() => {
     if (!isActiveSurface) return;
@@ -261,18 +249,10 @@ const CodeEditor = ({
     return () => clearTimeout(focusTimer);
   }, [activeBufferId, enableInteractiveServices]);
 
-  // Sync content and file info with editor instance store
   useEffect(() => {
     if (!isActiveSurface) return;
-    setContent("", onChange);
-  }, [isActiveSurface, onChange, setContent]);
-
-  useEffect(() => {
-    if (!isActiveSurface) return;
-    setFileInfo(filePath);
-  }, [filePath, isActiveSurface, setFileInfo]);
-
-  // Editor view store automatically syncs with active buffer
+    setChangeHandler(onChange);
+  }, [isActiveSurface, onChange, setChangeHandler]);
 
   const resolveModelPosition = useCallback<EditorModelPositionResolver>(
     (line, column) => editorModelPositionResolverRef.current?.(line, column) ?? null,
@@ -401,8 +381,7 @@ const CodeEditor = ({
         const cell = getPythonScriptCells(getValue())[cellIndex];
         if (!cell) return;
 
-        void commands
-          .notebookRunPythonCell(cell.code, editorWorkingDirectory(filePath), cell.setupCode)
+        void runPythonCell(cell.code, editorWorkingDirectory(filePath), cell.setupCode)
           .then((result) => {
             if (result.timedOut) {
               toast.error("Python cell timed out.");
@@ -442,8 +421,7 @@ const CodeEditor = ({
           return;
         }
 
-        void commands
-          .notebookRunRCell(chunk.code, editorWorkingDirectory(filePath), chunk.setupCode)
+        void runRCell(chunk.code, editorWorkingDirectory(filePath), chunk.setupCode)
           .then((result) => {
             const currentValue = getValue();
             const currentChunk = getRMarkdownChunks(currentValue)[chunkIndex] ?? chunk;
@@ -527,20 +505,21 @@ const CodeEditor = ({
         lineCount: useEditorViewStore.getState().actions.getLineCount(),
       });
 
-      editorAPI.setSelection(undefined);
-      editorAPI.setCursorPosition({
-        line: target.line,
-        column: target.column,
-        offset: target.offset,
+      if (!activeBufferId) return false;
+      const position = { line: target.line, column: target.column, offset: target.offset };
+      // Explicit navigation: moves the cursor, centers it and focuses the editor.
+      useEditorStateStore.getState().actions.requestNavigation({
+        bufferId: activeBufferId,
+        range: { start: position, end: position },
       });
 
       return true;
     };
 
-    const handleGoToLine = (event: CustomEvent<GoToLineEventDetail>) => {
-      const lineNumber = event.detail?.line;
-      const columnNumber = event.detail?.column;
-      const targetPath = event.detail?.path;
+    const handleGoToLine = (request: AppEventMap["menu-go-to-line"]) => {
+      const lineNumber = request.line;
+      const columnNumber = request.column;
+      const targetPath = request.path;
       if (targetPath && targetPath !== filePath) return;
       if (!lineNumber) return;
 
@@ -551,12 +530,12 @@ const CodeEditor = ({
       }
     };
 
-    window.addEventListener("menu-go-to-line", handleGoToLine as EventListener);
+    const unsubscribe = onAppEvent("menu-go-to-line", handleGoToLine);
     return () => {
       if (retryTimer) clearTimeout(retryTimer);
-      window.removeEventListener("menu-go-to-line", handleGoToLine as EventListener);
+      unsubscribe();
     };
-  }, [filePath, isActiveSurface]);
+  }, [activeBufferId, filePath, isActiveSurface]);
 
   if (!activeBuffer) {
     return <div className="flex flex-1 items-center justify-center text-foreground"></div>;

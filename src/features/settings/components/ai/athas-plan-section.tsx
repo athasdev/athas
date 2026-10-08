@@ -1,4 +1,4 @@
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openExternalUrl } from "@/utils/external-url";
 import { getServiceUrls } from "@/config/services";
 import {
   formatUsdCents,
@@ -18,7 +18,7 @@ import Section, { SettingRow } from "../settings-section";
 import { describeIncludedCredit } from "../../lib/athas-credit";
 
 function openBilling() {
-  void openUrl(getServiceUrls().dashboardBillingUrl).catch((error: unknown) =>
+  void openExternalUrl(getServiceUrls().dashboardBillingUrl).catch((error: unknown) =>
     console.error("Failed to open billing:", error),
   );
 }
@@ -78,7 +78,10 @@ export function AthasPlanSection() {
               </Button>
             </div>
           ) : (
-            <Button variant="accent" onClick={() => void openUrl(getServiceUrls().pricingUrl)}>
+            <Button
+              variant="accent"
+              onClick={() => void openExternalUrl(getServiceUrls().pricingUrl)}
+            >
               Upgrade
             </Button>
           )}

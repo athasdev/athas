@@ -4,6 +4,7 @@ import { createWorkspaceScopedStore } from "@/features/workspace/stores/create-w
 import { createSelectors } from "@/utils/zustand-selectors";
 import { BOTTOM_PANE_ID, ROOT_PANE_ID } from "../constants/pane";
 import type { PaneGroup, PaneNode, SplitDirection, SplitPlacement } from "../types/pane.types";
+import { resolveWritablePaneForBuffer } from "../utils/pane-routing";
 import {
   addBufferToPane,
   closePane,
@@ -15,7 +16,9 @@ import {
   getAdjacentPane,
   getAllPaneGroups,
   getFirstPaneGroup,
+  isBufferPinnedInTree,
   moveBufferBetweenPanes,
+  moveBufferWithinPane,
   normalizePaneTree,
   removeBufferFromPane,
   resizeFlattenedPaneSplit,
@@ -38,7 +41,40 @@ interface PaneState {
   actions: PaneActions;
 }
 
+export interface PlaceBufferOptions {
+  /** Pane to show the buffer in. Falls back to normal routing when it no longer exists. */
+  paneId?: string;
+  /** Focus the pane that already holds the buffer instead of adding it to the writable pane. */
+  reveal?: boolean;
+  /**
+   * `true` makes the buffer the target pane's preview tab (ignored for pinned buffers),
+   * `false` promotes it everywhere, `undefined` leaves its preview state alone.
+   */
+  preview?: boolean;
+  /** Tab position for a buffer the target pane does not hold yet; the end by default. */
+  index?: number;
+  /** Buffers taken out of every pane first, keeping panes they empty (replaced preview, new tab). */
+  replaceBufferIds?: readonly string[];
+  /** Buffers taken out of every pane first, closing panes they empty (auto eviction). */
+  closeBufferIds?: readonly string[];
+}
+
+export interface RemoveBuffersOptions {
+  preserveEmptyPanes?: boolean;
+  /** Buffer to activate and focus afterwards, in its pane or the writable pane. */
+  revealBufferId?: string | null;
+}
+
 interface PaneActions {
+  /**
+   * Shows a buffer in a pane, activates it and focuses that pane, all in one update. Returns the
+   * pane id, or null when no pane could take it.
+   */
+  placeBuffer: (bufferId: string, options?: PlaceBufferOptions) => string | null;
+  /** Takes buffers out of every pane in one update and optionally reveals a replacement. */
+  removeBuffers: (bufferIds: readonly string[], options?: RemoveBuffersOptions) => void;
+  /** Moves a tab before `beforeBufferId` (or to the end) within its pane. */
+  moveBufferInPane: (paneId: string, bufferId: string, beforeBufferId: string | null) => void;
   splitPane: (
     paneId: string,
     direction: SplitDirection,
@@ -243,32 +279,186 @@ function getFallbackPaneIdInTree(tree: PaneNode, history: string[], closingPaneI
   );
 }
 
+type LayoutState = Pick<
+  PaneState,
+  "root" | "bottomRoot" | "activePaneId" | "mostRecentActivePaneIds" | "fullscreenPaneId"
+>;
+
+function updateTreeOfPane(
+  state: LayoutState,
+  paneId: string,
+  update: (tree: PaneNode) => PaneNode,
+) {
+  if (getTreeForPane(state, paneId) === "root") {
+    state.root = update(state.root);
+  } else {
+    state.bottomRoot = update(state.bottomRoot);
+  }
+}
+
+function findPaneInState(state: LayoutState, paneId: string): PaneGroup | null {
+  return findPaneGroup(state.root, paneId) ?? findPaneGroup(state.bottomRoot, paneId);
+}
+
+function isBufferPinnedInState(state: LayoutState, bufferId: string) {
+  return (
+    isBufferPinnedInTree(state.root, bufferId) || isBufferPinnedInTree(state.bottomRoot, bufferId)
+  );
+}
+
+function focusPaneInState(state: PaneState, paneId: string) {
+  state.activePaneId = paneId;
+  setMostRecentActivePane(state, paneId);
+}
+
+function removeBufferEverywhereInState(state: PaneState, bufferId: string, preserveEmpty: boolean) {
+  for (const which of ["root", "bottom"] as const) {
+    const fallbackId = which === "root" ? ROOT_PANE_ID : BOTTOM_PANE_ID;
+    let tree = which === "root" ? state.root : state.bottomRoot;
+    for (const pane of getAllPaneGroups(tree)) {
+      if (!pane.bufferIds.includes(bufferId)) continue;
+      tree = removeBufferFromPane(tree, pane.id, bufferId);
+      if (!preserveEmpty) tree = collapseEmptyPaneInTree(tree, pane.id, fallbackId);
+    }
+    if (which === "root") state.root = tree;
+    else state.bottomRoot = tree;
+  }
+  if (!findPaneInState(state, state.activePaneId)) {
+    state.activePaneId = getFallbackActivePaneId(state);
+  }
+}
+
+/** The pane that already shows the buffer, preferring the focused one. */
+function findRevealPaneId(state: LayoutState, bufferId: string): string | null {
+  const activePane = findPaneInState(state, state.activePaneId);
+  if (activePane?.bufferIds.includes(bufferId)) return activePane.id;
+  return (
+    findPaneGroupByBufferId(state.root, bufferId)?.id ??
+    findPaneGroupByBufferId(state.bottomRoot, bufferId)?.id ??
+    null
+  );
+}
+
+function splitPaneInState(
+  state: PaneState,
+  paneId: string,
+  direction: SplitDirection,
+  bufferId: string | undefined,
+  placement: SplitPlacement,
+): string | null {
+  const targetTree = getTreeForPane(state, paneId);
+  const currentTree = targetTree === "root" ? state.root : state.bottomRoot;
+  const existingPaneIds = new Set<string>();
+  addPaneIds(currentTree, existingPaneIds);
+  let nextTree = splitPane(currentTree, paneId, direction, bufferId, placement);
+  if (nextTree === currentTree) return null;
+
+  const newPane = findPaneNotInSet(nextTree, existingPaneIds);
+  if (newPane && bufferId) {
+    // A split copy is a definite tab and keeps the buffer's pin.
+    if (isBufferPinnedInState(state, bufferId)) {
+      nextTree = setPaneBufferPinned(nextTree, newPane.id, bufferId, true);
+    }
+  }
+  if (targetTree === "root") {
+    state.root = nextTree;
+  } else {
+    state.bottomRoot = nextTree;
+  }
+  if (bufferId) {
+    state.root = clearPanePreviewBufferEverywhere(state.root, bufferId);
+    state.bottomRoot = clearPanePreviewBufferEverywhere(state.bottomRoot, bufferId);
+  }
+  if (!newPane) return null;
+  focusPaneInState(state, newPane.id);
+  return newPane.id;
+}
+
+/** The pane new buffers go to: the focused pane unless it is locked, else a new split beside it. */
+function resolveWritablePaneIdInState(state: PaneState, bufferId?: string): string | null {
+  const activePane = findPaneInState(state, state.activePaneId);
+  if (!activePane) return null;
+  const writablePane = resolveWritablePaneForBuffer({
+    activePane,
+    bottomRoot: state.bottomRoot,
+    bufferId,
+    mostRecentActivePaneIds: state.mostRecentActivePaneIds,
+    root: state.root,
+  });
+  if (writablePane) return writablePane.id;
+  return splitPaneInState(state, activePane.id, "horizontal", undefined, "after") ?? activePane.id;
+}
+
+function showBufferInState(
+  state: PaneState,
+  bufferId: string,
+  options: Pick<PlaceBufferOptions, "paneId" | "reveal" | "preview" | "index">,
+): string | null {
+  let targetPaneId =
+    options.paneId && findPaneInState(state, options.paneId) ? options.paneId : null;
+  if (!targetPaneId && options.reveal) targetPaneId = findRevealPaneId(state, bufferId);
+  if (!targetPaneId) targetPaneId = resolveWritablePaneIdInState(state, bufferId);
+  if (!targetPaneId) return null;
+
+  const paneId = targetPaneId;
+  const pinned = isBufferPinnedInState(state, bufferId);
+  updateTreeOfPane(state, paneId, (tree) => {
+    let next = addBufferToPane(tree, paneId, bufferId, true, options.index);
+    if (pinned) next = setPaneBufferPinned(next, paneId, bufferId, true);
+    if (options.preview === true && !pinned) next = setPanePreviewBuffer(next, paneId, bufferId);
+    return next;
+  });
+  if (options.preview === false) {
+    state.root = clearPanePreviewBufferEverywhere(state.root, bufferId);
+    state.bottomRoot = clearPanePreviewBufferEverywhere(state.bottomRoot, bufferId);
+  }
+  focusPaneInState(state, paneId);
+  return paneId;
+}
+
 const createPaneStore = () =>
   createStore<PaneState>()(
     immer((set, get) => ({
       ...initialState,
       actions: {
+        placeBuffer: (bufferId, options = {}) => {
+          let placedPaneId: string | null = null;
+          set((state) => {
+            for (const id of options.replaceBufferIds ?? []) {
+              if (id !== bufferId) removeBufferEverywhereInState(state, id, true);
+            }
+            for (const id of options.closeBufferIds ?? []) {
+              if (id !== bufferId) removeBufferEverywhereInState(state, id, false);
+            }
+            placedPaneId = showBufferInState(state, bufferId, options);
+          });
+          return placedPaneId;
+        },
+
+        removeBuffers: (bufferIds, options = {}) => {
+          set((state) => {
+            for (const bufferId of bufferIds) {
+              removeBufferEverywhereInState(state, bufferId, options.preserveEmptyPanes ?? false);
+            }
+            if (options.revealBufferId) {
+              showBufferInState(state, options.revealBufferId, { reveal: true });
+            }
+            setMostRecentActivePane(state, state.activePaneId);
+          });
+        },
+
+        moveBufferInPane: (paneId, bufferId, beforeBufferId) => {
+          set((state) => {
+            updateTreeOfPane(state, paneId, (tree) =>
+              moveBufferWithinPane(tree, paneId, bufferId, beforeBufferId),
+            );
+          });
+        },
+
         splitPane: (paneId, direction, bufferId, placement = "after") => {
           let newPaneId: string | null = null;
           set((state) => {
-            const targetTree = getTreeForPane(state, paneId);
-            const currentTree = targetTree === "root" ? state.root : state.bottomRoot;
-            const existingPaneIds = new Set<string>();
-            addPaneIds(currentTree, existingPaneIds);
-            const nextTree = splitPane(currentTree, paneId, direction, bufferId, placement);
-            if (nextTree !== currentTree) {
-              if (targetTree === "root") {
-                state.root = nextTree;
-              } else {
-                state.bottomRoot = nextTree;
-              }
-              const newPane = findPaneNotInSet(nextTree, existingPaneIds);
-              if (newPane) {
-                newPaneId = newPane.id;
-                state.activePaneId = newPane.id;
-                setMostRecentActivePane(state, newPane.id);
-              }
-            }
+            newPaneId = splitPaneInState(state, paneId, direction, bufferId, placement);
           });
           return newPaneId;
         },
@@ -290,6 +480,9 @@ const createPaneStore = () =>
               if (closingPane) {
                 for (const bufferId of closingPane.bufferIds) {
                   mergedTree = addBufferToPane(mergedTree, fallbackPaneId, bufferId, false);
+                  if (closingPane.pinnedBufferIds?.includes(bufferId)) {
+                    mergedTree = setPaneBufferPinned(mergedTree, fallbackPaneId, bufferId, true);
+                  }
                 }
                 if (state.activePaneId === paneId && closingPane.activeBufferId) {
                   mergedTree = setActivePaneBuffer(
@@ -416,6 +609,7 @@ const createPaneStore = () =>
                 }
               }
             } else {
+              const wasPinned = isBufferPinnedInState(state, bufferId);
               if (fromTree === "root") {
                 state.root = removeBufferFromPane(state.root, fromPaneId, bufferId);
                 if (!preserveEmptySource) {
@@ -432,6 +626,11 @@ const createPaneStore = () =>
                   );
                 }
                 state.root = addBufferToPane(state.root, toPaneId, bufferId, true);
+              }
+              if (wasPinned) {
+                updateTreeOfPane(state, toPaneId, (tree) =>
+                  setPaneBufferPinned(tree, toPaneId, bufferId, true),
+                );
               }
             }
 
@@ -477,6 +676,10 @@ const createPaneStore = () =>
           set((state) => {
             state.root = setPaneBufferPinnedEverywhere(state.root, bufferId, pinned);
             state.bottomRoot = setPaneBufferPinnedEverywhere(state.bottomRoot, bufferId, pinned);
+            if (pinned) {
+              state.root = clearPanePreviewBufferEverywhere(state.root, bufferId);
+              state.bottomRoot = clearPanePreviewBufferEverywhere(state.bottomRoot, bufferId);
+            }
           });
         },
 

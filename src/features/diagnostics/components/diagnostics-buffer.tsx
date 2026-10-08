@@ -2,6 +2,7 @@ import { useCallback, useMemo } from "react";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useDiagnosticsStore } from "../stores/diagnostics.store";
 import type { Diagnostic } from "../types/diagnostics.types";
+import { emitAppEvent } from "@/utils/app-events";
 import DiagnosticsPane from "./diagnostics-pane";
 
 const DiagnosticsBuffer = () => {
@@ -30,11 +31,7 @@ const DiagnosticsBuffer = () => {
         return;
       }
 
-      window.dispatchEvent(
-        new CustomEvent("menu-go-to-line", {
-          detail: { line: diagnostic.line + 1 },
-        }),
-      );
+      emitAppEvent("menu-go-to-line", { line: diagnostic.line + 1 });
     },
     [handleFileSelect],
   );

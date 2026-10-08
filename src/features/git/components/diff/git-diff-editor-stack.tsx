@@ -1,6 +1,6 @@
 import { ColumnsIcon, GitBranchIcon, GitCommitIcon, RowsIcon, SearchIcon } from "@/ui/icons";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openExternalUrl } from "@/utils/external-url";
 import {
   getMultibufferSectionSelector,
   type MultibufferSection,
@@ -42,6 +42,8 @@ import {
 } from "../../utils/multi-diff-selection";
 import { createSingleFileWorkingTreeDiff } from "../../utils/working-tree-multi-diff";
 import { DiffFileContent } from "./diff-file-content";
+import { useProjectStore } from "@/features/window/stores/project.store";
+import { useIsBufferActive } from "@/features/panes/hooks/use-pane-buffer-state";
 
 function countStats(diff: GitDiff) {
   if (typeof diff.additions === "number" || typeof diff.deletions === "number") {
@@ -120,10 +122,10 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
   const diffBuffer = useBufferStore((state) => {
     return getBufferById(state.buffers, bufferId);
   });
-  const isActiveBuffer = useBufferStore((state) => state.activeBufferId === bufferId);
+  const isActiveBuffer = useIsBufferActive(bufferId);
   const updateBufferContent = useBufferStore.use.actions().updateBufferContent;
   const closeBuffer = useBufferStore.use.actions().closeBuffer;
-  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
   const account = useAuthStore((state) => state.user);
   const isFindVisible = useUIState((state) => state.isFindVisible);
@@ -581,7 +583,7 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
                   </DropdownMenuItem>
                 ) : null}
                 {githubCommitUrl ? (
-                  <DropdownMenuItem onClick={() => void openUrl(githubCommitUrl)}>
+                  <DropdownMenuItem onClick={() => void openExternalUrl(githubCommitUrl)}>
                     View on GitHub
                   </DropdownMenuItem>
                 ) : null}

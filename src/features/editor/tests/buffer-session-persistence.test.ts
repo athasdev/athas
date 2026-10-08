@@ -18,8 +18,8 @@ describe("buffer session persistence", () => {
   });
 
   it("persists against the workspace captured by the caller", () => {
-    saveSessionToStore("/workspace-a", [], null);
-    saveSessionToStore("/workspace-b", [], null);
+    saveSessionToStore("/workspace-a", { buffers: [], activeBufferId: null });
+    saveSessionToStore("/workspace-b", { buffers: [], activeBufferId: null });
 
     vi.advanceTimersByTime(300);
 

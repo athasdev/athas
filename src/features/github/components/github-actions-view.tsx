@@ -1,5 +1,4 @@
-import { commands } from "@/bindings/commands";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openExternalUrl } from "@/utils/external-url";
 import {
   ArrowClockwiseIcon,
   ArrowCounterClockwiseIcon,
@@ -19,7 +18,6 @@ import {
 } from "react";
 import { toast } from "sonner";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
 import { writeSidebarResourceDragData } from "@/features/sidebar/utils/sidebar-resource-drag";
 import { GithubMark } from "@/ui/brand-marks";
@@ -30,6 +28,7 @@ import { SidebarScrollArea, SidebarSection } from "@/ui/sidebar";
 import { Spinner } from "@/ui/spinner";
 import { cn } from "@/utils/cn";
 import { writeClipboardText } from "@/utils/clipboard";
+import { fetchWorkflowRunDetails } from "../api/github-actions-api";
 import { useNow } from "../hooks/use-now";
 import { getWorkflowRunsEntry, useGitHubActionsStore } from "../stores/github-actions.store";
 import { useGitHubStore } from "../stores/github.store";
@@ -57,6 +56,8 @@ import { GitHubAuthStatusMessage } from "./github-auth-status";
 import { GitHubSidebarRow, type GitHubSidebarPreviewBadge } from "./github-sidebar-row";
 import { openGitHubContentInNewWindow } from "../utils/open-in-new-window";
 import { WORKFLOW_TONE_BADGE_TONE, WorkflowStatusIcon } from "./github-workflow-status-icon";
+import { useProjectStore } from "@/features/window/stores/project.store";
+import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 interface WorkflowRunRowProps {
   run: WorkflowRunListItem;
@@ -159,7 +160,9 @@ const WorkflowRunRow = memo(
               onClick:
                 repositoryUrl && run.workflowName
                   ? () =>
-                      void openUrl(getGitHubWorkflowRunsUrl(repositoryUrl, run.workflowName ?? ""))
+                      void openExternalUrl(
+                        getGitHubWorkflowRunsUrl(repositoryUrl, run.workflowName ?? ""),
+                      )
                   : undefined,
               actionLabel: "Open workflow runs on GitHub",
             },
@@ -167,7 +170,7 @@ const WorkflowRunRow = memo(
               label: "Run",
               value: getWorkflowRunLabel(run),
               mono: true,
-              onClick: run.url ? () => void openUrl(run.url) : undefined,
+              onClick: run.url ? () => void openExternalUrl(run.url) : undefined,
               actionLabel: "Open run on GitHub",
             },
             {
@@ -176,7 +179,8 @@ const WorkflowRunRow = memo(
               mono: true,
               onClick:
                 repositoryUrl && run.headBranch
-                  ? () => void openUrl(getGitHubBranchUrl(repositoryUrl, run.headBranch ?? ""))
+                  ? () =>
+                      void openExternalUrl(getGitHubBranchUrl(repositoryUrl, run.headBranch ?? ""))
                   : undefined,
               actionLabel: "Open branch on GitHub",
             },
@@ -186,7 +190,7 @@ const WorkflowRunRow = memo(
               mono: true,
               onClick:
                 repositoryUrl && run.headSha
-                  ? () => void openUrl(getGitHubCommitUrl(repositoryUrl, run.headSha ?? ""))
+                  ? () => void openExternalUrl(getGitHubCommitUrl(repositoryUrl, run.headSha ?? ""))
                   : undefined,
               actionLabel: "Open commit on GitHub",
             },
@@ -194,7 +198,7 @@ const WorkflowRunRow = memo(
               label: "Actor",
               value: run.actor?.login,
               onClick: run.actor
-                ? () => void openUrl(getGitHubUserUrl(run.actor?.login ?? ""))
+                ? () => void openExternalUrl(getGitHubUserUrl(run.actor?.login ?? ""))
                 : undefined,
               actionLabel: "Open profile on GitHub",
             },
@@ -245,7 +249,7 @@ interface GitHubActionsViewProps {
 
 const GitHubActionsView = memo(
   ({ refreshNonce = 0, searchQuery = "", filter = "all" }: GitHubActionsViewProps) => {
-    const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+    const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
     const activeRepoPath = useRepositoryStore.use.activeRepoPath();
     const repoPath = activeRepoPath ?? rootFolderPath ?? null;
     const isAuthenticated = useGitHubStore.use.isAuthenticated();
@@ -256,9 +260,10 @@ const GitHubActionsView = memo(
     const { loadRuns, rerunRun, cancelRun } = useGitHubActionsStore.use.actions();
     const contextMenu = useDropdownMenu<WorkflowRunListItem>();
     const previousRefreshNonce = useRef(refreshNonce);
+    const activeBufferId = useActiveBufferId();
     const activeRunId = useBufferStore((state) => {
-      const activeBuffer = state.activeBufferId
-        ? state.buffers.find((buffer) => buffer.id === state.activeBufferId)
+      const activeBuffer = activeBufferId
+        ? state.buffers.find((buffer) => buffer.id === activeBufferId)
         : null;
       return activeBuffer?.type === "githubAction" ? activeBuffer.runId : null;
     });
@@ -285,7 +290,7 @@ const GitHubActionsView = memo(
         void githubActionDetailsCache
           .load(
             `${repoPath}::${run.databaseId}`,
-            () => commands.githubGetWorkflowRunDetails(repoPath, run.databaseId),
+            () => fetchWorkflowRunDetails(repoPath, run.databaseId),
             { ttlMs: GITHUB_ACTION_DETAILS_TTL_MS },
           )
           .catch(() => undefined);
@@ -389,7 +394,7 @@ const GitHubActionsView = memo(
               id: "open-on-github",
               label: "Open on GitHub",
               icon: <GithubMark />,
-              onClick: () => void openUrl(selectedRun.url),
+              onClick: () => void openExternalUrl(selectedRun.url),
             },
             {
               id: "copy-link",

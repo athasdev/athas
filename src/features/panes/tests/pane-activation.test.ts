@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { ROOT_PANE_ID } from "../constants/pane";
 import { usePaneStore } from "../stores/pane.store";
+import { getActiveBufferId } from "@/features/panes/stores/pane-selectors";
 
 const createMockStorage = () => {
   const storage = new Map<string, string>();
@@ -45,7 +46,6 @@ describe("pane activation", () => {
     const { useBufferStore } = await import("@/features/editor/stores/buffer.store");
     useBufferStore.setState({
       buffers: [],
-      activeBufferId: null,
       pendingClose: null,
       closedBuffersHistory: [],
     });
@@ -65,16 +65,12 @@ describe("pane activation", () => {
           type: "editor",
           path: "/workspace/a.ts",
           name: "a.ts",
-          isPinned: false,
-          isPreview: false,
-          isActive: false,
           content: "",
           savedContent: "",
           isDirty: false,
           isVirtual: false,
         },
       ],
-      activeBufferId: null,
     }));
     paneActions.addBufferToPane(ROOT_PANE_ID, "buffer-a", false);
 
@@ -82,6 +78,6 @@ describe("pane activation", () => {
 
     expect(paneActions.getPaneById(ROOT_PANE_ID)?.activeBufferId).toBe("buffer-a");
     expect(usePaneStore.getState().activePaneId).toBe(ROOT_PANE_ID);
-    expect(useBufferStore.getState().activeBufferId).toBe("buffer-a");
+    expect(getActiveBufferId()).toBe("buffer-a");
   });
 });

@@ -1,7 +1,6 @@
-import { homeDir } from "@tauri-apps/api/path";
-import { exists } from "@tauri-apps/plugin-fs";
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import { commands } from "@/bindings/commands";
+import { cloneRepository } from "@/features/git/api/git-clone-api";
+import { getHomeDirectory, pathExists } from "@/utils/local-files";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { createNewDirectory } from "@/features/file-system/controllers/file-operations";
 import { openFolder } from "@/features/file-system/controllers/platform";
@@ -120,7 +119,7 @@ export default function NewProjectContent({ onBack, onClose }: NewProjectContent
   const handleOpenFolderByPath = useFileSystemStore((state) => state.handleOpenFolderByPath);
 
   useEffect(() => {
-    void homeDir()
+    void getHomeDirectory()
       .then(setLocationPath)
       .catch(() => setLocationPath(""));
   }, []);
@@ -232,12 +231,12 @@ export default function NewProjectContent({ onBack, onClose }: NewProjectContent
     setErrorMessage("");
 
     try {
-      if (await exists(destinationPath)) {
+      if (await pathExists(destinationPath)) {
         throw new Error(`A file or folder already exists at ${destinationPath}.`);
       }
 
       if (source === "clone") {
-        await commands.gitClone(repositoryUrl.trim(), destinationPath);
+        await cloneRepository(repositoryUrl.trim(), destinationPath);
       } else {
         await createNewDirectory(locationPath.trim(), projectName.trim());
       }

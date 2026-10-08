@@ -11,9 +11,6 @@ const buffer: EditorContent = {
   savedContent: "first line\nsecond line\n",
   isDirty: false,
   isVirtual: false,
-  isPinned: false,
-  isPreview: false,
-  isActive: true,
 };
 
 describe("editor agent context", () => {

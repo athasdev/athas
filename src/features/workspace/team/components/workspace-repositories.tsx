@@ -1,4 +1,4 @@
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openExternalUrl } from "@/utils/external-url";
 import { openFolder } from "@/features/file-system/controllers/platform";
 import { Button } from "@/ui/button";
 import { Field, FieldLabel, FieldDescription } from "@/ui/field";
@@ -105,7 +105,7 @@ export function WorkspaceRepositories({
                     try {
                       const validated = parseTeamWorkspace(JSON.stringify(config));
                       const url = validated.repositories?.[index]?.url;
-                      if (url) void openUrl(url).catch(reportError);
+                      if (url) void openExternalUrl(url).catch(reportError);
                     } catch (error) {
                       reportError(error);
                     }

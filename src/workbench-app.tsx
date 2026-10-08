@@ -1,6 +1,5 @@
 import { SharingRuntime } from "@/features/sharing/components/sharing-runtime";
 import { GitHubActionsWatcher } from "@/features/github/components/github-actions-watcher";
-import { OPEN_SHARE_EVENT } from "@/features/sharing/services/open-share";
 import { useEffect } from "react";
 import { MotionConfig } from "motion/react";
 import { FontStyleInjector } from "@/features/settings/components/font-style-injector";
@@ -28,8 +27,6 @@ import { TooltipProvider } from "./ui/tooltip";
 import { WindowResizeBorder } from "./features/window/components/window-resize-border";
 import { DialogServiceProvider } from "@/ui/dialog";
 import { ContinuousAgentsRuntime } from "@/features/ai/continuous-agents/continuous-agents-runtime";
-import { OPEN_AGENT_SESSIONS_EVENT } from "@/features/ai/lib/open-agent-sessions";
-import { OPEN_PRODUCT_FEEDBACK_EVENT } from "@/features/feedback/services/product-feedback";
 import { DeferredEventDialog } from "@/components/deferred-event-dialog";
 import { bucketFrictionDuration } from "@/features/telemetry/lib/friction-signals";
 import { recordFrictionSignal } from "@/features/telemetry/services/telemetry";
@@ -121,12 +118,12 @@ function WorkbenchApp() {
             <Toaster />
             <NotificationRecorder />
             <ContinuousAgentsRuntime />
-            <DeferredEventDialog event={OPEN_AGENT_SESSIONS_EVENT} load={loadAgentSessionsDialog} />
+            <DeferredEventDialog event="athas:open-agent-sessions" load={loadAgentSessionsDialog} />
             <DeferredEventDialog
-              event={OPEN_PRODUCT_FEEDBACK_EVENT}
+              event="athas:open-product-feedback"
               load={loadProductFeedbackDialog}
             />
-            <DeferredEventDialog event={OPEN_SHARE_EVENT} load={loadShareDialog} />
+            <DeferredEventDialog event="athas:open-share" load={loadShareDialog} />
             <SharingRuntime />
             <GitHubActionsWatcher />
           </div>

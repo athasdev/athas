@@ -1,16 +1,8 @@
 import type { CodeEditorRef } from "@/features/editor/components/code-editor";
 import type { FileEntry } from "./app.types";
 
-interface WorkspaceFolder {
-  path: string;
-  name: string;
-  isPrimary?: boolean;
-}
-
 export interface FsState {
   files: FileEntry[];
-  rootFolderPath?: string;
-  workspaceFolders: WorkspaceFolder[];
   filesVersion: number;
   isFileTreeLoading: boolean;
   isSwitchingProject: boolean;

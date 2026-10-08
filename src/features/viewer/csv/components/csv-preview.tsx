@@ -7,13 +7,15 @@ import { Button } from "@/ui/button";
 import Select from "@/ui/select";
 import { type CsvDelimiter, detectCsvDelimiter, formatCsv, parseCsv } from "../lib/csv-utils";
 import { CsvTableView } from "./csv-table-view";
+import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 const CSV_PREVIEW_UPDATE_DELAY_MS = 150;
 
 export function CsvPreview() {
+  const activeBufferId = useActiveBufferId();
   const sourceBufferId = useBufferStore((state) => {
-    const activeBuffer = state.activeBufferId
-      ? state.buffers.find((buffer) => buffer.id === state.activeBufferId)
+    const activeBuffer = activeBufferId
+      ? state.buffers.find((buffer) => buffer.id === activeBufferId)
       : null;
     const sourceFilePath =
       activeBuffer?.type === "csvPreview" ? activeBuffer.sourceFilePath : undefined;

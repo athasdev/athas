@@ -16,6 +16,7 @@ import {
   resolveDropClientPoint,
 } from "../utils/file-system-drop-controller";
 import { listenToNativeDragDrop, type NativeDragDropPayload } from "@/utils/tauri-drag-drop";
+import { emitAppEvent } from "@/utils/app-events";
 
 function resolveClientPoint(position: { x: number; y: number }) {
   return resolveDropClientPoint(position, window.devicePixelRatio, (x, y) =>
@@ -54,11 +55,7 @@ function routeInternalTabDrop(position: { x: number; y: number }) {
       remoteConnectionId: tabData.remoteConnectionId,
     });
     activateBufferInPaneAndSync(targetPaneId, bufferId);
-    window.dispatchEvent(
-      new CustomEvent("terminal-detach-to-buffer", {
-        detail: { terminalId: tabData.terminalId },
-      }),
-    );
+    emitAppEvent("terminal-detach-to-buffer", { terminalId: tabData.terminalId });
   } else if (tabData.bufferId && tabData.paneId && tabData.paneId !== targetPaneId) {
     paneActions.moveBufferToPane(tabData.bufferId, tabData.paneId, targetPaneId);
     activateBufferInPaneAndSync(targetPaneId, tabData.bufferId);

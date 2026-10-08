@@ -21,7 +21,6 @@ describe("GitHub form buffers", () => {
     expect(buffer).toMatchObject({
       type: "githubForm",
       name: "New Pull Request",
-      isPreview: false,
       repoPath: "/workspace/athas",
       defaultHead: "feature/forms",
     });

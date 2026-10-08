@@ -1,12 +1,13 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
 import { GITHUB_CONNECTION_URL } from "@/features/github/services/github-token-service";
 import { useGitHubStore } from "@/features/github/stores/github.store";
 import { showToast } from "@/features/layout/contexts/toast-context";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
+import { emitAppEvent } from "@/utils/app-events";
+import { useProjectStore } from "@/features/window/stores/project.store";
 
 export type GitHubSidebarSection =
   | "pull-requests"
@@ -14,6 +15,10 @@ export type GitHubSidebarSection =
   | "actions"
   | "releases"
   | "deployments";
+
+export type GitHubSidebarAction =
+  | { type: "show-section"; section: GitHubSidebarSection }
+  | { type: "refresh" };
 
 const settingBySection = {
   "pull-requests": "showGitHubPullRequests",
@@ -26,7 +31,7 @@ const settingBySection = {
 function getRepoPath(): string | null {
   return (
     useRepositoryStore.getState().activeRepoPath ??
-    useFileSystemStore.getState().rootFolderPath ??
+    useProjectStore.getState().rootFolderPath ??
     null
   );
 }
@@ -37,9 +42,9 @@ function showGitHubSidebar(): void {
   state.setActiveView("github-prs");
 }
 
-function dispatchGitHubSidebarAction(detail: unknown): void {
+function dispatchGitHubSidebarAction(action: GitHubSidebarAction): void {
   window.setTimeout(() => {
-    window.dispatchEvent(new CustomEvent("athas:github-palette-action", { detail }));
+    emitAppEvent("athas:github-palette-action", action);
   }, 0);
 }
 

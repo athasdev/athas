@@ -28,7 +28,6 @@ const terminal = (id: string): Terminal => ({
   id,
   name: id,
   currentDirectory: "/workspace",
-  isActive: true,
   createdAt: new Date(0),
 });
 

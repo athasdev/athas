@@ -7,7 +7,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import type { EditorContent } from "@/features/panes/types/pane-content.types";
 import { WindowCloseGuard } from "../components/window-close-guard";
-import { REQUEST_WINDOW_CLOSE_EVENT } from "../utils/request-window-close";
+import { requestWindowClose } from "../utils/request-window-close";
 
 const mocks = vi.hoisted(() => ({
   close: vi.fn(),
@@ -65,9 +65,6 @@ function draft(id: string, dirty = true): EditorContent {
     savedContent: dirty ? "disk" : `${id} draft`,
     isDirty: dirty,
     isVirtual: false,
-    isPinned: false,
-    isPreview: false,
-    isActive: false,
     language: "typescript",
   };
 }
@@ -198,7 +195,7 @@ describe("window close guard", () => {
     const close = deferred<void>();
     mocks.close.mockReturnValue(close.promise);
     await render();
-    await act(async () => window.dispatchEvent(new Event(REQUEST_WINDOW_CLOSE_EVENT)));
+    await act(async () => requestWindowClose());
     expect(mocks.close).toHaveBeenCalledOnce();
     await act(async () =>
       a.store.getState().actions.updateBufferContent("same-id", "new draft", true),
@@ -230,7 +227,7 @@ describe("window close guard", () => {
       expect.stringContaining("Could not save the window session"),
     );
     expect(mocks.close).not.toHaveBeenCalled();
-    await act(async () => window.dispatchEvent(new Event(REQUEST_WINDOW_CLOSE_EVENT)));
+    await act(async () => requestWindowClose());
     expect(mocks.close).toHaveBeenCalledOnce();
   });
 
@@ -239,11 +236,11 @@ describe("window close guard", () => {
     workspaceRuntimeRegistry.activateWorkspace({ id: "a", name: "A" });
     mocks.close.mockRejectedValueOnce(new Error("Close unavailable"));
     await render();
-    await act(async () => window.dispatchEvent(new Event(REQUEST_WINDOW_CLOSE_EVENT)));
+    await act(async () => requestWindowClose());
     expect(mocks.error).toHaveBeenCalledWith(
       expect.stringContaining("Could not close this window"),
     );
-    await act(async () => window.dispatchEvent(new Event(REQUEST_WINDOW_CLOSE_EVENT)));
+    await act(async () => requestWindowClose());
     expect(mocks.close).toHaveBeenCalledTimes(2);
   });
 });

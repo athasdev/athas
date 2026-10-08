@@ -20,8 +20,8 @@ vi.mock("@/features/editor/stores/buffer.store", () => ({
     getState: () => ({ actions: { openContent: mocks.openContent } }),
   }),
 }));
-vi.mock("@/features/file-system/stores/file-system.store", () => ({
-  useFileSystemStore: Object.assign(
+vi.mock("@/features/window/stores/project.store", () => ({
+  useProjectStore: Object.assign(
     (select: (state: { rootFolderPath: string }) => unknown) =>
       select({ rootFolderPath: "/active" }),
     { getState: () => ({ rootFolderPath: "/active" }) },

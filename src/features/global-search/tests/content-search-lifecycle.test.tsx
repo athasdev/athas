@@ -4,7 +4,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
 import { WorkspaceStoreScopeContext } from "@/features/workspace/stores/create-workspace-scoped-store";
-import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { useProjectStore } from "@/features/window/stores/project.store";
 import { useGlobalSearchSessionStore } from "../stores/global-search-session.store";
 import { useContentSearch } from "../hooks/use-content-search";
 import type { SearchFilesResponse } from "@/features/file-search/lib/file-search-api";
@@ -74,7 +74,7 @@ function response(path = "/w/a.ts", more = false): SearchFilesResponse {
 }
 function setupWorkspace(id: string, path = "/w") {
   workspaceRuntimeRegistry.ensureWorkspace({ id, name: id });
-  useFileSystemStore.getStore(id).setState({ rootFolderPath: path, workspaceFolders: [] });
+  useProjectStore.getStore(id).setState({ rootFolderPath: path, workspaceFolders: [] });
   useGlobalSearchSessionStore.getStore(id).getState().actions.setQuery("foo");
 }
 async function mount(id = "owner") {
@@ -111,12 +111,12 @@ describe("content search ownership and requests", () => {
     expect(search.results[0]?.file_path).toBe("/w/a.ts");
   });
   it("enumerates provider files from the parked owner", async () => {
-    useFileSystemStore.getStore("owner").setState({ rootFolderPath: "wsl://d/w" });
+    useProjectStore.getStore("owner").setState({ rootFolderPath: "wsl://d/w" });
     setupWorkspace("other", "wsl://d/other");
     workspaceRuntimeRegistry.activateWorkspace({ id: "other", name: "Other" });
     await mount();
     expect(io.files).toHaveBeenCalledWith(
-      useFileSystemStore.getStore("owner"),
+      useProjectStore.getStore("owner"),
       expect.objectContaining({ isCancelled: expect.any(Function) }),
     );
     expect(io.providerSearch).toHaveBeenCalledWith(
@@ -164,7 +164,7 @@ describe("content search ownership and requests", () => {
     expect(io.search).toHaveBeenCalledTimes(1);
   });
   it("stops provider reading after enumeration completes on a disposed view", async () => {
-    useFileSystemStore.getStore("owner").setState({ rootFolderPath: "wsl://d/w" });
+    useProjectStore.getStore("owner").setState({ rootFolderPath: "wsl://d/w" });
     const files = deferred<[]>();
     io.files.mockReturnValueOnce(files.promise);
     await mount();
@@ -204,7 +204,7 @@ describe("content search ownership and requests", () => {
     expect(search.results.map((result) => result.file_path)).toEqual(["/w/a.ts", "/w/b.ts"]);
   });
   it("retries a failed provider enumeration instead of keeping the rejected cache", async () => {
-    useFileSystemStore.getStore("owner").setState({ rootFolderPath: "wsl://d/w" });
+    useProjectStore.getStore("owner").setState({ rootFolderPath: "wsl://d/w" });
     io.files.mockRejectedValueOnce(new Error("offline"));
     const log = vi.spyOn(console, "error").mockImplementation(() => {});
     await mount();
@@ -216,13 +216,13 @@ describe("content search ownership and requests", () => {
     log.mockRestore();
   });
   it("does not reuse provider file lists when owners share the same root", async () => {
-    useFileSystemStore.getStore("owner").setState({ rootFolderPath: "wsl://d/w" });
+    useProjectStore.getStore("owner").setState({ rootFolderPath: "wsl://d/w" });
     await mount();
     setupWorkspace("other", "wsl://d/w");
     await mount("other");
     expect(io.files).toHaveBeenCalledTimes(2);
     expect(io.files).toHaveBeenLastCalledWith(
-      useFileSystemStore.getStore("other"),
+      useProjectStore.getStore("other"),
       expect.objectContaining({ isCancelled: expect.any(Function) }),
     );
   });
@@ -250,7 +250,7 @@ describe("content search ownership and requests", () => {
     expect(search.results[0]?.file_path).toBe("/other/new.ts");
   });
   it("searches SSH workspaces through the provider", async () => {
-    useFileSystemStore.getStore("owner").setState({ rootFolderPath: "remote://connection/work" });
+    useProjectStore.getStore("owner").setState({ rootFolderPath: "remote://connection/work" });
     await mount();
     expect(search.availability).toBe("ready");
     expect(io.search).not.toHaveBeenCalled();
@@ -259,7 +259,7 @@ describe("content search ownership and requests", () => {
     );
   });
   it("routes mixed local and provider roots through one owned search session", async () => {
-    useFileSystemStore
+    useProjectStore
       .getStore("owner")
       .setState({ workspaceFolders: [{ name: "remote", path: "remote://connection/work" }] });
     await mount();
@@ -267,7 +267,7 @@ describe("content search ownership and requests", () => {
     expect(io.providerSearch).toHaveBeenCalledTimes(1);
     expect(io.search).not.toHaveBeenCalled();
     await act(async () =>
-      useFileSystemStore
+      useProjectStore
         .getStore("owner")
         .setState({ workspaceFolders: [{ name: "remote", path: "remote://connection/another" }] }),
     );
@@ -275,13 +275,13 @@ describe("content search ownership and requests", () => {
     expect(io.files).toHaveBeenCalledTimes(2);
   });
   it("enumerates fresh provider files on each explicit refresh", async () => {
-    useFileSystemStore.getStore("owner").setState({ rootFolderPath: "wsl://d/w" });
+    useProjectStore.getStore("owner").setState({ rootFolderPath: "wsl://d/w" });
     await mount();
     await act(async () => search.refreshSearch());
     expect(io.files).toHaveBeenCalledTimes(2);
   });
   it("retains one provider enumeration across pages in the same search", async () => {
-    useFileSystemStore.getStore("owner").setState({ rootFolderPath: "remote://connection/w" });
+    useProjectStore.getStore("owner").setState({ rootFolderPath: "remote://connection/w" });
     io.providerSearch.mockResolvedValueOnce(response("remote://connection/w/a.ts", true));
     await mount();
     io.providerSearch.mockResolvedValueOnce(response("remote://connection/w/b.ts"));
@@ -293,7 +293,7 @@ describe("content search ownership and requests", () => {
     ]);
   });
   it("cancels provider enumeration as soon as its query changes", async () => {
-    useFileSystemStore.getStore("owner").setState({ rootFolderPath: "remote://connection/w" });
+    useProjectStore.getStore("owner").setState({ rootFolderPath: "remote://connection/w" });
     const files = deferred<[]>();
     io.files.mockReturnValueOnce(files.promise);
     await mount();

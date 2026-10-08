@@ -72,6 +72,7 @@ import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import type { CodeEditorViewProps } from "../types/code-editor-view.types";
 import { getBufferById } from "../utils/buffer-index";
 import { getLanguageIdFromPath } from "../utils/language-id";
+import { useBufferIdOrActive } from "@/features/panes/hooks/use-pane-buffer-state";
 
 let nextEditorSourceId = 1;
 const VIEWPORT_HEIGHT_MEASURE_KEY = {};
@@ -127,7 +128,7 @@ export function CodeMirrorEditor({
   const [view, setView] = useState<EditorView | null>(null);
   const sessionRef = useRef<EditorSession | null>(null);
   const sourceIdRef = useRef(`codemirror-editor-${nextEditorSourceId++}`);
-  const activeBufferId = useBufferStore((state) => propBufferId ?? state.activeBufferId);
+  const activeBufferId = useBufferIdOrActive(propBufferId);
   const activeWorkspaceId = useActiveWorkspaceId();
   const scopedWorkspaceId = useWorkspaceStoreScopeId();
   const workspaceId = scopedWorkspaceId ?? activeWorkspaceId;
@@ -622,7 +623,7 @@ export function CodeMirrorEditor({
       const head = fromEditorPosition(view.state.doc, position);
       view.dispatch({
         selection: EditorSelection.cursor(head),
-        effects: EditorView.scrollIntoView(head, { y: "center" }),
+        effects: EditorView.scrollIntoView(head, { y: "nearest" }),
       });
     });
     const unsubscribeSelection = editorAPI.on("selectionChange", (selection) => {

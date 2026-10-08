@@ -2,6 +2,7 @@
 import { EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
+import { emitAppEvent } from "@/utils/app-events";
 
 vi.mock("@/extensions/registry/extension-registry", () => ({
   extensionRegistry: { isLspSupported: () => true },
@@ -139,7 +140,7 @@ describe("CodeMirror signature help", () => {
       }),
       parent: document.body,
     });
-    window.dispatchEvent(new CustomEvent("editor-trigger-signature-help"));
+    emitAppEvent("editor-trigger-signature-help");
     await vi.waitFor(() =>
       expect(view!.dom.querySelector(".cm-athas-signatureHelp")).not.toBeNull(),
     );

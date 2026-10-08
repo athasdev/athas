@@ -2,7 +2,6 @@ import { useCallback, useEffect } from "react";
 import { subscribeToEditorDocumentChanges } from "@/features/editor/services/editor-document-events";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getBufferById } from "@/features/editor/utils/buffer-index";
-import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useWorkspaceStoreScopeId } from "@/features/workspace/stores/create-workspace-scoped-store";
 import {
   type GitChange,
@@ -14,6 +13,7 @@ import { getGitBlameCacheKey, useGitBlameStore } from "../stores/git-blame.store
 import type { GitBlameLine } from "../types/git.types";
 import { findGitBlameLine } from "../utils/git-blame-lines";
 import { readBufferText } from "@/features/editor/services/buffer-text";
+import { useProjectStore } from "@/features/window/stores/project.store";
 
 const BLAME_REFRESH_DELAY_MS = 500;
 
@@ -37,7 +37,7 @@ function readEditorContent(workspaceId: string | null, bufferId: string): string
  */
 export function useGitBlame(filePath: string | undefined, bufferId: string) {
   const workspaceId = useWorkspaceStoreScopeId();
-  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const loadBlameForFile = useGitBlameStore((state) => state.actions.loadBlameForFile);
   const invalidateBlameForFile = useGitBlameStore((state) => state.actions.invalidateBlameForFile);
   const blameRevision = useGitBlameStore((state) => state.revision);

@@ -1,4 +1,3 @@
-import { commands } from "@/bindings/commands";
 import { ClipboardAddon, type ClipboardSelectionType } from "@xterm/addon-clipboard";
 import { FitAddon } from "@xterm/addon-fit";
 import { UnicodeGraphemesAddon } from "@xterm/addon-unicode-graphemes";
@@ -22,6 +21,11 @@ import { getTerminalCompatibilityOptions } from "@/features/terminal/utils/termi
 import { TERMINAL_UNICODE_VERSION } from "@/features/terminal/hooks/use-terminal-addons";
 import { normalizeTerminalTitle } from "@/features/terminal/utils/terminal-title";
 import {
+  resizeLocalTerminal,
+  setLocalTerminalOutputPaused,
+  writeLocalTerminalInput,
+} from "@/features/terminal/services/terminal-pty-api";
+import {
   getTerminalOutputFlowAction,
   getTerminalSize,
   releaseTerminalEventChannel,
@@ -32,6 +36,7 @@ import { useProjectStore } from "@/features/window/stores/project.store";
 import { readClipboardText, writeClipboardText } from "@/utils/clipboard";
 import { cn } from "@/utils/cn";
 import { currentPlatform } from "@/utils/platform";
+import { emitAppEvent } from "@/utils/app-events";
 import "@xterm/xterm/css/xterm.css";
 import "@/features/terminal/styles/terminal.css";
 
@@ -69,7 +74,7 @@ export const ExternalEditorTerminal = ({
   const { write, writeBinary, flush } = useTerminalWriteBuffer({
     getConnectionId: () => terminalConnectionId,
     writeChunk: async (connectionId, input) => {
-      await commands.terminalWrite(connectionId, input);
+      await writeLocalTerminalInput(connectionId, input);
     },
   });
 
@@ -90,7 +95,7 @@ export const ExternalEditorTerminal = ({
       const size = getTerminalSize(terminal);
       if (terminalSizesEqual(lastSizeRef.current, size)) return;
       lastSizeRef.current = size;
-      void commands.terminalResize(terminalConnectionId, size).catch((error) => {
+      void resizeLocalTerminal(terminalConnectionId, size).catch((error) => {
         lastSizeRef.current = null;
         console.error("Failed to resize terminal:", error);
       });
@@ -211,7 +216,7 @@ export const ExternalEditorTerminal = ({
       }
       if (action.type === "switchTab") {
         event.preventDefault();
-        window.dispatchEvent(new CustomEvent("terminal-switch-tab", { detail: action.direction }));
+        emitAppEvent("terminal-switch-tab", action.direction);
         return false;
       }
       if (action.type === "copy") {
@@ -237,7 +242,7 @@ export const ExternalEditorTerminal = ({
     const setOutputPaused = (paused: boolean) => {
       if (outputPausedRef.current === paused) return;
       outputPausedRef.current = paused;
-      void commands.terminalSetPaused(terminalConnectionId, paused).catch(() => {
+      void setLocalTerminalOutputPaused(terminalConnectionId, paused).catch(() => {
         outputPausedRef.current = !paused;
       });
     };

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { usePaneStore } from "@/features/panes/stores/pane.store";
+import { getActiveBufferId } from "@/features/panes/stores/pane-selectors";
 
 const createMockStorage = () => {
   const storage = new Map<string, string>();
@@ -44,7 +45,6 @@ describe("buffer open lifecycle", () => {
     const { useBufferStore } = await import("../stores/buffer.store");
     useBufferStore.setState({
       buffers: [],
-      activeBufferId: null,
       pendingClose: null,
       closedBuffersHistory: [],
     });
@@ -69,10 +69,7 @@ describe("buffer open lifecycle", () => {
       useBufferStore.getState().buffers.filter((buffer) => buffer.type === "githubDelivery"),
     ).toHaveLength(4);
     expect(openContent(release)).toBe(first);
-    expect(useBufferStore.getState().activeBufferId).toBe(first);
-    expect(useBufferStore.getState().buffers.find((buffer) => buffer.id === first)?.isActive).toBe(
-      true,
-    );
+    expect(getActiveBufferId()).toBe(first);
   });
 
   it("reuses pull request buffers and refreshes navigation metadata", async () => {
@@ -92,7 +89,7 @@ describe("buffer open lifecycle", () => {
     });
 
     expect(reopenedId).toBe(firstId);
-    expect(useBufferStore.getState().activeBufferId).toBe(firstId);
+    expect(getActiveBufferId()).toBe(firstId);
     expect(useBufferStore.getState().buffers).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -102,11 +99,9 @@ describe("buffer open lifecycle", () => {
           name: "Updated title",
           repoPath: "/workspace",
           authorAvatarUrl: "https://example.com/avatar.png",
-          isActive: true,
         }),
         expect.objectContaining({
           type: "extension",
-          isActive: false,
         }),
       ]),
     );
@@ -164,7 +159,6 @@ describe("buffer open lifecycle", () => {
           name: "New issue",
           path: "https://github.com/athasdev/athas/issues/7",
           url: "https://github.com/athasdev/athas/issues/7",
-          isActive: false,
         }),
         expect.objectContaining({
           id: actionId,
@@ -172,7 +166,6 @@ describe("buffer open lifecycle", () => {
           name: "New run",
           path: "https://github.com/athasdev/athas/actions/runs/99",
           url: "https://github.com/athasdev/athas/actions/runs/99",
-          isActive: true,
         }),
       ]),
     );
@@ -202,7 +195,6 @@ describe("buffer open lifecycle", () => {
         name: "app.ts (updated)",
         content: "new diff",
         savedContent: "new diff",
-        isActive: true,
       }),
     ]);
   });

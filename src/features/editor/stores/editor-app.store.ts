@@ -19,6 +19,7 @@ import type { LiveDocumentEdit } from "../services/live-document-registry";
 import { getBufferById } from "../utils/buffer-index";
 import { trackBufferHistoryChange } from "./buffer-history-tracking";
 import { useBufferStore } from "./buffer.store";
+import { getActiveBufferId } from "@/features/panes/stores/pane-selectors";
 
 interface AppState {
   actions: AppActions;
@@ -135,7 +136,8 @@ export const useEditorAppStore = createSelectors(
           previousSelection?: Range,
           options?: EditorContentChangeOptions,
         ) => {
-          const { activeBufferId, buffers } = useBufferStore.getState();
+          const { buffers } = useBufferStore.getState();
+          const activeBufferId = getActiveBufferId();
           const { updateBufferContent, markBufferDirty } = useBufferStore.getState().actions;
           const { settings } = useSettingsStore.getState();
           const contentAlreadyApplied = options?.contentAlreadyApplied === true;
@@ -180,8 +182,7 @@ export const useEditorAppStore = createSelectors(
         },
 
         handleSave: async () => {
-          const { activeBufferId, buffers } = useBufferStore.getState();
-          const activeBuffer = getBufferById(buffers, activeBufferId);
+          const activeBuffer = useBufferStore.getState().actions.getActiveBuffer();
           if (
             !activeBuffer ||
             (activeBuffer.type !== "image" &&
@@ -193,7 +194,7 @@ export const useEditorAppStore = createSelectors(
         },
 
         handleSaveAs: async () => {
-          const { activeBufferId } = useBufferStore.getState();
+          const activeBufferId = getActiveBufferId();
           if (!activeBufferId) return false;
           return savePaneContent(captureBufferStoreOwner(), activeBufferId, true);
         },

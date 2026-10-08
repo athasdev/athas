@@ -13,6 +13,7 @@ import {
   getImageBufferSession,
   saveImageBufferById,
 } from "../image/editor/services/image-buffer-session";
+import { seedActiveBuffer } from "@/features/panes/tests/helpers/seed-pane-tabs";
 const mocks = vi.hoisted(() => ({ save: vi.fn(), dataURL: vi.fn(), toast: vi.fn() }));
 vi.mock("@tauri-apps/api/webviewWindow", () => ({
   getCurrentWebviewWindow: () => ({ label: "main" }),
@@ -26,14 +27,12 @@ function image(id = "image"): ImageContent {
     type: "image",
     path: `/${id}.png`,
     name: `${id}.png`,
-    isPinned: false,
-    isActive: false,
-    isPreview: false,
   };
 }
 function owner(workspaceId = "owner", images = [image()]) {
   const store = useBufferStore.getStore(workspaceId);
-  store.setState({ buffers: images, activeBufferId: images[0]?.id, pendingClose: null });
+  store.setState({ buffers: images, pendingClose: null });
+  seedActiveBuffer(images[0]?.id, workspaceId);
   return { workspaceId, store };
 }
 function deferred<T>() {

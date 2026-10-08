@@ -161,7 +161,7 @@ describe("CodeMirror live documents", () => {
     act(() => root.unmount());
     container.remove();
     resetLiveDocumentRegistry();
-    useBufferStore.setState({ buffers: [], activeBufferId: null });
+    useBufferStore.setState({ buffers: [] });
   });
 
   it("keeps typed text in the editor and writes it to the store when the editor closes", async () => {

@@ -6,6 +6,9 @@ interface EncodeWorkspaceBufferOptions {
   workspaceRootPath: string | undefined;
   workspaceFolderPaths?: string[];
   includeEditorId?: boolean;
+  /** Pane-owned tab state, saved with each buffer so older builds can still read the session. */
+  pinnedBufferIds?: ReadonlySet<string>;
+  previewBufferIds?: ReadonlySet<string>;
 }
 
 interface BuildWorkspaceBufferSnapshotOptions extends EncodeWorkspaceBufferOptions {
@@ -77,16 +80,19 @@ export function encodeWorkspaceBuffer(
     workspaceRootPath,
     workspaceFolderPaths = [],
     includeEditorId = false,
+    pinnedBufferIds,
+    previewBufferIds,
   }: EncodeWorkspaceBufferOptions,
 ): BufferSession | null {
+  const isPinned = pinnedBufferIds?.has(buffer.id) ?? false;
   if (buffer.type === "editor" && !buffer.isVirtual) {
     return {
       type: "editor",
       ...(includeEditorId ? { id: buffer.id } : {}),
       name: buffer.name,
       path: buffer.path,
-      isPinned: buffer.isPinned,
-      isPreview: buffer.isPreview,
+      isPinned,
+      isPreview: previewBufferIds?.has(buffer.id) ?? false,
       workspaceScope: getEditorWorkspaceScope(buffer.path, workspaceRootPath, workspaceFolderPaths),
       editorState: buildPersistedEditorViewState(buffer),
     };
@@ -97,7 +103,7 @@ export function encodeWorkspaceBuffer(
       type: "terminal",
       path: buffer.path,
       name: buffer.name,
-      isPinned: buffer.isPinned,
+      isPinned,
       sessionId: buffer.sessionId,
       shell: buffer.shell,
       initialCommand: buffer.initialCommand,
@@ -111,7 +117,7 @@ export function encodeWorkspaceBuffer(
       type: "browser",
       path: buffer.path,
       name: buffer.name,
-      isPinned: buffer.isPinned,
+      isPinned,
       url: buffer.url,
       zoom: buffer.zoom,
     };

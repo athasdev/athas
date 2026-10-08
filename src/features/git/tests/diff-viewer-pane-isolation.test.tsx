@@ -8,6 +8,9 @@ import DiffViewer from "../components/diff/git-diff-viewer";
 import { getFileDiff } from "../api/git-diff-api";
 import type { GitDiff } from "../types/git.types";
 import type { MultiFileDiff } from "../types/git-diff.types";
+import { emitAppEvent } from "@/utils/app-events";
+import { seedActiveBuffer } from "@/features/panes/tests/helpers/seed-pane-tabs";
+import { getActiveBufferId } from "@/features/panes/stores/pane-selectors";
 
 vi.hoisted(() => {
   Object.assign(window, {
@@ -24,7 +27,12 @@ vi.hoisted(() => {
 vi.mock("../api/git-diff-api", () => ({ getFileDiff: vi.fn() }));
 vi.mock("../api/git-remotes-api", () => ({ getRemotes: async () => [] }));
 vi.mock("@/features/file-system/stores/file-system.store", () => ({
-  useFileSystemStore: Object.assign(
+  useFileSystemStore: Object.assign((select: (state: unknown) => unknown) => select({}), {
+    use: {},
+  }),
+}));
+vi.mock("@/features/window/stores/project.store", () => ({
+  useProjectStore: Object.assign(
     (select: (state: { rootFolderPath: string }) => unknown) => select({ rootFolderPath: "/repo" }),
     { use: { rootFolderPath: () => "/repo" } },
   ),
@@ -65,9 +73,6 @@ function diffBuffer(id: string, path: string, diffData: GitDiff | MultiFileDiff)
     content: "",
     savedContent: "",
     diffData,
-    isPinned: false,
-    isPreview: false,
-    isActive: false,
   };
 }
 
@@ -86,9 +91,6 @@ const otherTab: NewTabContent = {
   path: "new-tab://other",
   name: "Other tab",
   type: "newTab",
-  isPinned: false,
-  isPreview: false,
-  isActive: false,
 };
 let container: HTMLDivElement;
 let root: Root;
@@ -113,13 +115,13 @@ beforeEach(() => {
 afterEach(async () => {
   await act(async () => root.unmount());
   container.remove();
-  useBufferStore.setState({ buffers: [], activeBufferId: null });
+  useBufferStore.setState({ buffers: [] });
   vi.unstubAllGlobals();
   vi.useRealTimers();
 });
 
 async function focusTab(id: string | null) {
-  await act(async () => useBufferStore.setState({ activeBufferId: id }));
+  await act(async () => seedActiveBuffer(id));
 }
 
 describe("Diff pane isolation", () => {
@@ -134,7 +136,8 @@ describe("Diff pane isolation", () => {
       "diff://unstaged/app.ts",
       fileDiff("app.ts", "unstaged content"),
     );
-    useBufferStore.setState({ buffers: [staged, unstaged, otherTab], activeBufferId: staged.id });
+    useBufferStore.setState({ buffers: [staged, unstaged, otherTab] });
+    seedActiveBuffer(staged.id);
     await act(async () =>
       root.render(
         <>
@@ -161,21 +164,20 @@ describe("Diff pane isolation", () => {
     vi.mocked(getFileDiff).mockResolvedValue(fileDiff("app.ts", "refreshed staged content"));
     await focusTab(otherTab.id);
     await act(async () => {
-      window.dispatchEvent(
-        new CustomEvent("athas:git-changed", { detail: { repoPath: "/repo", filePath: "app.ts" } }),
-      );
+      emitAppEvent("athas:git-changed", { repoPath: "/repo", filePath: "app.ts" });
       await vi.advanceTimersByTimeAsync(50);
     });
     expect(container.querySelector('[aria-label="Staged"]')?.textContent).toContain(
       "refreshed staged content",
     );
-    expect(useBufferStore.getState().activeBufferId).toBe(otherTab.id);
+    expect(getActiveBufferId()).toBe(otherTab.id);
   });
 
   it("keeps commit contents scoped to each visible diff tab", async () => {
     const first = commitBuffer("aaaaaaa");
     const second = commitBuffer("bbbbbbb");
-    useBufferStore.setState({ buffers: [first, second, otherTab], activeBufferId: first.id });
+    useBufferStore.setState({ buffers: [first, second, otherTab] });
+    seedActiveBuffer(first.id);
     await act(async () =>
       root.render(
         <>

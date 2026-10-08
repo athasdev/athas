@@ -23,7 +23,7 @@ describe("editor document changes", () => {
 
   afterEach(async () => {
     const { useBufferStore } = await import("../stores/buffer.store");
-    useBufferStore.setState({ buffers: [], activeBufferId: null });
+    useBufferStore.setState({ buffers: [] });
     storage.clear();
     vi.unstubAllGlobals();
   });

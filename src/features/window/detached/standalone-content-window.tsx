@@ -1,7 +1,6 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { lazy, Suspense, useEffect, useMemo, useRef } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import {
   isResourceBuffer,
   ResourceBufferView,
@@ -13,6 +12,7 @@ import { ViewerLoadingState } from "@/features/viewer/components/viewer-state";
 import { parseResourceWindowPayload } from "./detached-resource-service";
 import { DetachedWindowShell } from "./detached-window-shell";
 import { useDetachedWindow } from "./use-detached-window";
+import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 const SettingsView = lazy(() => import("@/features/settings/components/settings-workbench-view"));
 const ExtensionsView = lazy(() =>
@@ -39,15 +39,15 @@ export default function StandaloneContentWindow() {
   });
   const request = useMemo(() => parseResourceWindowPayload(payload), [payload]);
   const opened = useRef(false);
+  const activeBufferId = useActiveBufferId();
   const buffer = useBufferStore((state) =>
-    state.buffers.find((item) => item.id === state.activeBufferId),
+    state.buffers.find((item) => item.id === activeBufferId),
   );
 
   useEffect(() => {
     if (!ready || !request || opened.current) return;
     opened.current = true;
     useProjectStore.getState().actions.setRootFolderPath(request.workspacePath);
-    useFileSystemStore.setState({ rootFolderPath: request.workspacePath });
     openLocally(request.content);
   }, [ready, request, openLocally]);
 

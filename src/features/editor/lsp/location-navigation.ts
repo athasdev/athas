@@ -7,6 +7,7 @@ import { readFileContent } from "@/features/file-system/controllers/file-operati
 import { isJavaClassFileUri, getJavaClassFileName } from "./java-class-file";
 import { filePathFromUri } from "./workspace-edit";
 import { readBufferText } from "../services/buffer-text";
+import { getActiveBufferId } from "@/features/panes/stores/pane-selectors";
 
 export interface LspNavigationLocation {
   uri: string;
@@ -22,7 +23,7 @@ export async function navigateToLspLocation(
   const request = ++latestNavigationRequest;
   const bufferStore = useBufferStore.getState();
   const sourceBuffer = bufferStore.buffers.find(
-    (buffer) => buffer.id === (origin?.bufferId ?? bufferStore.activeBufferId),
+    (buffer) => buffer.id === (origin?.bufferId ?? getActiveBufferId()),
   );
   if (!sourceBuffer || sourceBuffer.type !== "editor") return;
 
@@ -47,11 +48,7 @@ export async function navigateToLspLocation(
           await import("./lsp-client")
         ).LspClient.getInstance().getJavaClassFileContents(sourceBuffer.path, target.uri)
       : await readFileContent(filePath);
-    if (
-      request !== latestNavigationRequest ||
-      useBufferStore.getState().activeBufferId !== sourceBuffer.id
-    )
-      return;
+    if (request !== latestNavigationRequest || getActiveBufferId() !== sourceBuffer.id) return;
 
     const actions = useBufferStore.getState().actions;
     const bufferId = isJavaClassFile
@@ -72,7 +69,7 @@ export async function navigateToLspLocation(
   useJumpListStore.getState().actions.pushEntry(source);
   const { actions } = useBufferStore.getState();
   actions.setActiveBuffer(targetBuffer.id);
-  if (targetBuffer.isPreview) actions.convertPreviewToDefinite(targetBuffer.id);
+  actions.convertPreviewToDefinite(targetBuffer.id);
 
   const content = readBufferText(targetBuffer);
   const position = (point: Range["start"]) => ({

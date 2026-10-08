@@ -38,9 +38,8 @@ vi.mock("@/features/editor/utils/buffer-index", () => ({
   getBufferById: (buffers: Array<{ id: string }>, id: string) =>
     buffers.find((buffer) => buffer.id === id),
 }));
-vi.mock("@/features/file-system/stores/file-system.store", () => ({
-  useFileSystemStore: (selector: (state: unknown) => unknown) =>
-    selector({ rootFolderPath: "/repo" }),
+vi.mock("@/features/window/stores/project.store", () => ({
+  useProjectStore: (selector: (state: unknown) => unknown) => selector({ rootFolderPath: "/repo" }),
 }));
 vi.mock("../api/git-blame-api", () => ({ getResolvedGitBlame: mocks.resolve }));
 vi.mock("../stores/git-blame.store", async () => {

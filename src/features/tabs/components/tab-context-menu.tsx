@@ -12,7 +12,6 @@ import {
   SquareArrowUpIcon,
   TerminalWindowIcon,
 } from "@/ui/icons";
-import { commands } from "@/bindings/commands";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
@@ -23,9 +22,11 @@ import { writeClipboardText } from "@/utils/clipboard";
 import { getBaseName, getDirName } from "@/utils/path-helpers";
 import { IS_MAC } from "@/utils/platform";
 import { toast } from "sonner";
+import { showSystemSharePicker } from "@/utils/local-files";
 
 interface TabContextMenuProps {
   buffer: PaneContent;
+  isPinned?: boolean;
   paneId?: string;
   onPin: (bufferId: string) => void;
   onRename?: (bufferId: string) => void;
@@ -42,6 +43,7 @@ interface TabContextMenuProps {
 
 const TabContextMenu = ({
   buffer,
+  isPinned = false,
   paneId,
   onPin,
   onRename,
@@ -58,8 +60,8 @@ const TabContextMenu = ({
   const tabItems: MenuActionItem[] = [
     {
       id: "pin",
-      label: buffer.isPinned ? "Unpin Tab" : "Pin Tab",
-      icon: buffer.isPinned ? <PinSlashIcon /> : <PinIcon />,
+      label: isPinned ? "Unpin Tab" : "Pin Tab",
+      icon: isPinned ? <PinSlashIcon /> : <PinIcon />,
       onClick: () => onPin(buffer.id),
     },
     ...(buffer.type === "terminal"
@@ -162,7 +164,7 @@ const TabContextMenu = ({
                   label: "Share…",
                   icon: <SquareArrowUpIcon />,
                   onClick: () => {
-                    void commands.showSharePicker(buffer.path).catch((error) => {
+                    void showSystemSharePicker(buffer.path).catch((error) => {
                       toast.error(`Unable to share file: ${String(error)}`);
                     });
                   },

@@ -1,8 +1,7 @@
 import { type DragEndEvent, type DragMoveEvent, type DragStartEvent } from "@dnd-kit/core";
 import { restrictToHorizontalAxis } from "@dnd-kit/modifiers";
 import { SortableContext, horizontalListSortingStrategy } from "@dnd-kit/sortable";
-import { save } from "@tauri-apps/plugin-dialog";
-import { writeTextFile } from "@tauri-apps/plugin-fs";
+import { saveTextFileWithDialog } from "@/utils/file-dialogs";
 import {
   ArrowDownIcon,
   ArrowUpIcon,
@@ -60,6 +59,7 @@ import {
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import TerminalTabBarItem from "./terminal-tab-bar-item";
 import TerminalTabContextMenu from "./terminal-tab-context-menu";
+import { emitAppEvent } from "@/utils/app-events";
 
 interface ToolbarContextMenuProps {
   isOpen: boolean;
@@ -566,11 +566,7 @@ const TerminalTabBar = ({
         remoteConnectionId: terminal.remoteConnectionId,
       });
       activateBufferInPaneAndSync(destinationPaneId, bufferId);
-      window.dispatchEvent(
-        new CustomEvent("terminal-detach-to-buffer", {
-          detail: { terminalId: terminal.id },
-        }),
-      );
+      emitAppEvent("terminal-detach-to-buffer", { terminalId: terminal.id });
       if (destinationPaneId === BOTTOM_PANE_ID) {
         useUIState.getState().setBottomPaneActiveTab("buffers");
         useUIState.getState().setIsBottomPaneVisible(true);
@@ -790,22 +786,24 @@ const TerminalTabBar = ({
                   }
 
                   const defaultFileName = `${terminal.name.replace(/[^a-zA-Z0-9]/g, "_")}_${new Date().toISOString().split("T")[0]}.txt`;
-                  const filePath = await save({
-                    defaultPath: defaultFileName,
-                    filters: [
-                      {
-                        name: "Text Files",
-                        extensions: ["txt"],
-                      },
-                      {
-                        name: "All Files",
-                        extensions: ["*"],
-                      },
-                    ],
-                  });
+                  const filePath = await saveTextFileWithDialog(
+                    {
+                      defaultPath: defaultFileName,
+                      filters: [
+                        {
+                          name: "Text Files",
+                          extensions: ["txt"],
+                        },
+                        {
+                          name: "All Files",
+                          extensions: ["*"],
+                        },
+                      ],
+                    },
+                    () => content,
+                  );
 
                   if (filePath) {
-                    await writeTextFile(filePath, content);
                     console.log(`Terminal output exported to: ${filePath}`);
                   }
                 } catch (error) {

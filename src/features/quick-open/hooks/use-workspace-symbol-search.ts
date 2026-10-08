@@ -3,9 +3,9 @@ import { useDebounce } from "use-debounce";
 import { LspClient } from "@/features/editor/lsp/lsp-client";
 import { useLspStore } from "@/features/editor/lsp/stores/lsp.store";
 import { normalizeWorkspaceFolders } from "@/features/file-system/controllers/workspace-session";
-import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { pathStartsWithRoot } from "@/utils/path-helpers";
 import { SEARCH_DEBOUNCE_DELAY } from "../constants/limits";
+import { useProjectStore } from "@/features/window/stores/project.store";
 
 export interface WorkspaceSymbolItem {
   name: string;
@@ -47,8 +47,8 @@ export function mergeWorkspaceSymbolResults(
 }
 
 export const useWorkspaceSymbolSearch = (query: string, isActive: boolean) => {
-  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
-  const workspaceFolders = useFileSystemStore((state) => state.workspaceFolders);
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
+  const workspaceFolders = useProjectStore((state) => state.workspaceFolders);
   const activeWorkspaces = useLspStore((state) => state.lspStatus.activeWorkspaces);
   const [debouncedQuery] = useDebounce(query, SEARCH_DEBOUNCE_DELAY);
   const trimmedQuery = debouncedQuery.slice(1).trim();

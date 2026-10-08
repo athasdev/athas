@@ -2,7 +2,6 @@ import { useCallback } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import { useJumpListStore } from "@/features/editor/stores/jump-list.store";
-import { getBufferById } from "@/features/editor/utils/buffer-index";
 import { navigateToJumpEntry } from "@/features/editor/utils/jump-navigation";
 import { Button } from "@/ui/button";
 import { ArrowLeftIcon, ArrowRightIcon } from "@/ui/icons";
@@ -16,10 +15,9 @@ export function TabHistoryNavigation() {
   const canGoForward = currentIndex >= 0 && currentIndex < entries.length - 1;
 
   const handleGoBack = useCallback(async () => {
-    const bufferStore = useBufferStore.getState();
     const editorState = useEditorStateStore.getState();
-    const activeBufferId = bufferStore.activeBufferId;
-    const activeBuffer = getBufferById(bufferStore.buffers, activeBufferId);
+    const activeBuffer = useBufferStore.getState().actions.getActiveBuffer();
+    const activeBufferId = activeBuffer?.id ?? null;
     const currentPosition =
       activeBufferId && activeBuffer?.path
         ? {

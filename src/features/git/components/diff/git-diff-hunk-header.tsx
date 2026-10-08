@@ -1,13 +1,13 @@
 import { ChevronDownIcon, ChevronRightIcon, MinusIcon, PlusIcon } from "@/ui/icons";
 import { memo, useCallback, useMemo } from "react";
 import { calculateLineHeight } from "@/features/editor/utils/lines";
-import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useZoomStore } from "@/features/window/stores/zoom.store";
 import { Button } from "@/ui/button";
 import { stageHunk, unstageHunk } from "../../api/git-status-api";
 import type { DiffHunkHeaderProps } from "../../types/git-diff.types";
 import { createGitHunk, parseDiffHunkRange } from "../../utils/git-diff-helpers";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useProjectStore } from "@/features/window/stores/project.store";
 
 const DiffHunkHeader = memo(
   ({
@@ -21,7 +21,7 @@ const DiffHunkHeader = memo(
     onUnstageHunk,
     canStageHunks = false,
   }: DiffHunkHeaderProps) => {
-    const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+    const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
     const editorFontSize = useSettingsStore((state) => state.settings.fontSize);
     const editorFontFamily = useSettingsStore((state) => state.settings.fontFamily);
     const editorLineHeight = useSettingsStore((state) => state.settings.editorLineHeight);

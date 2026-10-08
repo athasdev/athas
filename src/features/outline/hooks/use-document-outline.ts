@@ -7,6 +7,7 @@ import { getBufferById } from "@/features/editor/utils/buffer-index";
 import { hasTextContent } from "@/features/panes/types/pane-content.types";
 import { normalizeOutlineSymbols } from "../utils/outline-symbols";
 import { subscribeLiveDocument } from "@/features/editor/services/live-document-registry";
+import { useBufferIdOrActive } from "@/features/panes/hooks/use-pane-buffer-state";
 
 const OUTLINE_REFRESH_DELAY_MS = 250;
 
@@ -19,9 +20,9 @@ export function useDocumentOutline({
 }: { isActive?: boolean; bufferId?: string } = {}) {
   // Metadata only: selecting the content re-rendered every outline consumer on each keystroke.
   // Content changes are followed through a store subscription below instead.
+  const targetBufferId = useBufferIdOrActive(bufferId);
   const activeBuffer = useBufferStore(
     useShallow((state) => {
-      const targetBufferId = bufferId ?? state.activeBufferId;
       const buffer = targetBufferId ? getBufferById(state.buffers, targetBufferId) : undefined;
       if (!buffer) return null;
       return {

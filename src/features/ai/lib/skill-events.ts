@@ -1,6 +1,5 @@
 import type { AIChatSkill } from "@/features/ai/types/skills.types";
-
-export const AI_CHAT_INSERT_SKILL_EVENT = "athas-ai-insert-skill";
+import { emitAppEvent } from "@/utils/app-events";
 
 export interface AIChatSkillInsertDetail {
   skill: AIChatSkill;
@@ -8,9 +7,5 @@ export interface AIChatSkillInsertDetail {
 }
 
 export function dispatchAIChatSkillInsert(skill: AIChatSkill, surfaceId: string) {
-  window.dispatchEvent(
-    new CustomEvent<AIChatSkillInsertDetail>(AI_CHAT_INSERT_SKILL_EVENT, {
-      detail: { skill, surfaceId },
-    }),
-  );
+  emitAppEvent("athas-ai-insert-skill", { skill, surfaceId });
 }

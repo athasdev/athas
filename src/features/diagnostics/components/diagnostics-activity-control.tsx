@@ -7,6 +7,7 @@ import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { WarningIcon } from "@/ui/icons";
 import { SidebarIconButton } from "@/ui/sidebar";
 import Tooltip from "@/ui/tooltip";
+import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 export function DiagnosticsActivityControl() {
   const diagnosticsEnabled = useSettingsStore((state) => state.settings.coreFeatures.diagnostics);
@@ -15,8 +16,9 @@ export function DiagnosticsActivityControl() {
     () => buildDiagnosticsActivityStatus(diagnosticsEnabled, diagnosticCounts),
     [diagnosticCounts, diagnosticsEnabled],
   );
+  const activeBufferId = useActiveBufferId();
   const isActive = useBufferStore(
-    (state) => getBufferById(state.buffers, state.activeBufferId)?.type === "diagnostics",
+    (state) => getBufferById(state.buffers, activeBufferId)?.type === "diagnostics",
   );
   const openDiagnosticsBuffer = useBufferStore.use.actions().openDiagnosticsBuffer;
 

@@ -10,6 +10,7 @@ import { useFileSystemFolderDrop } from "@/features/file-system/hooks/use-file-s
 import { openDroppedWorkspacePaths } from "@/features/file-system/utils/open-dropped-workspace-paths";
 import { useGitStore } from "@/features/git/stores/git.store";
 import { isGitChangeRelevant, subscribeToGitChanges } from "@/features/git/events/git-events";
+import { createGitStatusRefreshScheduler } from "@/features/git/utils/git-status-refresh-scheduler";
 import { useOnboardingStore } from "@/features/onboarding/stores/onboarding.store";
 import { CachedWorkspaceSplitViews } from "@/features/panes/components/split-view-root";
 import { usePaneKeyboard } from "@/features/panes/hooks/use-pane-keyboard";
@@ -34,6 +35,7 @@ import { ResizablePane } from "./resizable-pane";
 import { ActivityBar } from "./sidebar/activity-bar";
 import { SidebarPane } from "./sidebar/sidebar-pane";
 import { useResponsiveWorkbenchLayout } from "../hooks/use-responsive-workbench-layout";
+import { useProjectStore } from "@/features/window/stores/project.store";
 
 const CommandPalette = lazy(() => import("@/features/command-palette/components/command-palette"));
 const ConnectionDialog = lazy(() =>
@@ -108,7 +110,7 @@ export function MainLayout() {
   const { setRelativeLineNumbers } = useVimStore.use.actions();
   const handleOpenFolderByPath = useFileSystemStore((state) => state.handleOpenFolderByPath);
   const handleFileOpen = useFileSystemStore((state) => state.handleFileOpen);
-  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const switchToProject = useFileSystemStore((state) => state.switchToProject);
   const setIsSwitchingProject = useFileSystemStore((state) => state.setIsSwitchingProject);
   const refreshWorkspaceGitStatus = useGitStore((state) => state.actions.refreshWorkspaceGitStatus);
@@ -252,20 +254,17 @@ export function MainLayout() {
       return;
     }
 
-    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    const scheduler = createGitStatusRefreshScheduler(() => {
+      void refreshWorkspaceGitStatus(rootFolderPath);
+    });
 
     const unsubscribe = subscribeToGitChanges((change) => {
-      if (!isGitChangeRelevant(change, rootFolderPath)) return;
-
-      if (timeoutId) clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
-        void refreshWorkspaceGitStatus(rootFolderPath);
-      }, 300);
+      if (isGitChangeRelevant(change, rootFolderPath)) scheduler.schedule(change);
     });
 
     return () => {
       unsubscribe();
-      if (timeoutId) clearTimeout(timeoutId);
+      scheduler.dispose();
     };
   }, [rootFolderPath, refreshWorkspaceGitStatus, setWorkspaceGitStatus]);
 

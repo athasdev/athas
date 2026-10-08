@@ -48,8 +48,8 @@ vi.mock("@/features/diagnostics/stores/diagnostics.store", () => {
   const state = { diagnosticsByFile: new Map() };
   return { useDiagnosticsStore: (selector: (value: unknown) => unknown) => selector(state) };
 });
-vi.mock("@/features/file-system/stores/file-system.store", () => ({
-  useFileSystemStore: { getState: () => ({ rootFolderPath: "/repo" }) },
+vi.mock("@/features/window/stores/project.store", () => ({
+  useProjectStore: { getState: () => ({ rootFolderPath: "/repo" }) },
 }));
 vi.mock("@/features/file-system/controllers/file-operations", () => ({
   readFileContent: vi.fn(() => Promise.resolve("export const other = value;\n")),

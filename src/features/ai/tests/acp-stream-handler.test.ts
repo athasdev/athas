@@ -48,6 +48,7 @@ vi.mock("@/features/window/stores/project.store", () => ({
   useProjectStore: {
     getState: vi.fn(() => ({
       rootFolderPath: "/workspace",
+      workspaceFolders: [],
     })),
   },
 }));

@@ -2,6 +2,7 @@ import { useDebuggerStore } from "@/features/debugger/stores/debugger.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
+import { emitAppEvent } from "@/utils/app-events";
 
 function openDebuggerPane() {
   const state = useUIState.getState();
@@ -11,9 +12,7 @@ function openDebuggerPane() {
 
 function getActiveDebugFile() {
   const bufferStore = useBufferStore.getState();
-  const activeBuffer = bufferStore.buffers.find(
-    (buffer) => buffer.id === bufferStore.activeBufferId,
-  );
+  const activeBuffer = bufferStore.actions.getActiveBuffer();
   if (!activeBuffer || activeBuffer.type !== "editor" || activeBuffer.isVirtual) return null;
 
   return {
@@ -41,18 +40,16 @@ export function toggleActiveBreakpoint() {
 }
 
 export function startGeneratedDebugSession() {
-  dispatchDebuggerAction("debugger-start");
+  openDebuggerPane();
+  requestAnimationFrame(() => emitAppEvent("debugger-start"));
 }
 
 export function stopDebugSession() {
-  dispatchDebuggerAction("debugger-stop");
+  openDebuggerPane();
+  requestAnimationFrame(() => emitAppEvent("debugger-stop"));
 }
 
 export function restartDebugSession() {
-  dispatchDebuggerAction("debugger-restart");
-}
-
-function dispatchDebuggerAction(action: "debugger-start" | "debugger-stop" | "debugger-restart") {
   openDebuggerPane();
-  requestAnimationFrame(() => window.dispatchEvent(new CustomEvent(action)));
+  requestAnimationFrame(() => emitAppEvent("debugger-restart"));
 }

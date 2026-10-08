@@ -6,6 +6,7 @@ import { useHistoryStore } from "../stores/history.store";
 import { calculateCursorPositionFromContent } from "../utils/position";
 import type { EditorContent } from "@/features/panes/types/pane-content.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { seedActiveBuffer } from "@/features/panes/tests/helpers/seed-pane-tabs";
 
 const createMockStorage = () => {
   const storage = new Map<string, string>();
@@ -37,9 +38,6 @@ const makeBuffer = (content: string, language = "typescript"): EditorContent => 
   savedContent: content,
   isDirty: false,
   isVirtual: false,
-  isPinned: false,
-  isPreview: false,
-  isActive: true,
   language,
 });
 
@@ -80,9 +78,9 @@ describe("editor API model operations", () => {
     editorAPI.updateCursorAndSelection({ line: 0, column: 0, offset: 0 }, null);
 
     useBufferStore.setState({
-      activeBufferId: "buffer_editor_api_test",
       buffers: [makeBuffer("alpha\nbeta")],
     });
+    seedActiveBuffer("buffer_editor_api_test");
     useEditorStateStore.setState({
       cursorPosition: { line: 1, column: 2, offset: "alpha\nbe".length },
       selection: undefined,
@@ -92,7 +90,6 @@ describe("editor API model operations", () => {
 
   afterEach(() => {
     useBufferStore?.setState({
-      activeBufferId: null,
       buffers: [],
       pendingClose: null,
       closedBuffersHistory: [],
@@ -287,9 +284,9 @@ describe("editor API model operations", () => {
   it("jumps between brackets through the model cursor", () => {
     const content = "fn call(value)";
     useBufferStore.setState({
-      activeBufferId: "buffer_editor_api_test",
       buffers: [makeBuffer(content)],
     });
+    seedActiveBuffer("buffer_editor_api_test");
     useEditorStateStore.setState({
       cursorPosition: calculateCursorPositionFromContent("fn call(".length, content),
       selection: {
@@ -315,9 +312,9 @@ describe("editor API model operations", () => {
   it("selects to the nearest bracket pair through the model cursor", () => {
     const content = "fn call(value)";
     useBufferStore.setState({
-      activeBufferId: "buffer_editor_api_test",
       buffers: [makeBuffer(content)],
     });
+    seedActiveBuffer("buffer_editor_api_test");
     useEditorStateStore.setState({
       cursorPosition: calculateCursorPositionFromContent("fn call(va".length, content),
       selection: undefined,
@@ -339,9 +336,9 @@ describe("editor API model operations", () => {
     const nextContent = "var x = (3 + 5-7);";
     const cursor = calculateCursorPositionFromContent("var x = (3 + (5".length, content);
     useBufferStore.setState({
-      activeBufferId: "buffer_editor_api_test",
       buffers: [makeBuffer(content)],
     });
+    seedActiveBuffer("buffer_editor_api_test");
     useEditorStateStore.setState({
       cursorPosition: cursor,
       selection: undefined,
@@ -361,9 +358,9 @@ describe("editor API model operations", () => {
   it("expands and shrinks smart selection ranges through the model cursor", () => {
     const content = "const value = call(alpha);\nnext();";
     useBufferStore.setState({
-      activeBufferId: "buffer_editor_api_test",
       buffers: [makeBuffer(content)],
     });
+    seedActiveBuffer("buffer_editor_api_test");
     useEditorStateStore.setState({
       cursorPosition: calculateCursorPositionFromContent("const value = call(al".length, content),
       selection: undefined,
@@ -394,9 +391,9 @@ describe("editor API model operations", () => {
   it("adds vertical cursors through the model API without stealing the primary cursor", () => {
     const content = "one\nlonger\nx";
     useBufferStore.setState({
-      activeBufferId: "buffer_editor_api_test",
       buffers: [makeBuffer(content)],
     });
+    seedActiveBuffer("buffer_editor_api_test");
     useEditorStateStore.setState({
       cursorPosition: calculateCursorPositionFromContent("one\nlong".length, content),
       selection: undefined,
@@ -426,9 +423,9 @@ describe("editor API model operations", () => {
   it("adds cursors to selected line ends through the model API", () => {
     const content = "one\ntwo\nthree";
     useBufferStore.setState({
-      activeBufferId: "buffer_editor_api_test",
       buffers: [makeBuffer(content)],
     });
+    seedActiveBuffer("buffer_editor_api_test");
     useEditorStateStore.setState({
       cursorPosition: calculateCursorPositionFromContent("one\ntwo\nth".length, content),
       selection: {
@@ -471,9 +468,9 @@ describe("editor API model operations", () => {
   it("reads individual lines from large documents", () => {
     const largeContent = Array.from({ length: 50_001 }, (_, index) => `line-${index}`).join("\n");
     useBufferStore.setState({
-      activeBufferId: "buffer_editor_api_test",
       buffers: [makeBuffer(largeContent, "txt")],
     });
+    seedActiveBuffer("buffer_editor_api_test");
 
     expect(editorAPI.getLineCount()).toBe(50_001);
     expect(editorAPI.getLines()).toHaveLength(50_001);

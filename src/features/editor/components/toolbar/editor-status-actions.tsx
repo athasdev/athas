@@ -3,7 +3,6 @@ import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-
 import { BoltIcon, BoltSlashIcon, SlidersIcon, SquareIcon } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 import { setSyntaxHighlightingFilePath } from "@/features/editor/extensions/builtin/syntax-highlighting";
 import { LspClient } from "@/features/editor/lsp/lsp-client";
@@ -34,6 +33,8 @@ import VimStatusIndicator from "@/features/vim/components/vim-status-indicator";
 import { IntelligenceCompletionStatus } from "./intelligence-completion-status";
 import { getFilenameFromPath } from "@/features/file-system/controllers/file-utils";
 import { readBufferText } from "@/features/editor/services/buffer-text";
+import { useProjectStore } from "@/features/window/stores/project.store";
+import { useBufferIdOrActive } from "@/features/panes/hooks/use-pane-buffer-state";
 
 const editorMenuRowClass =
   "group flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-accent";
@@ -55,8 +56,8 @@ interface EditorStatusActionsProps {
 }
 
 export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {}) {
-  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
-  const resolvedBufferId = useBufferStore((state) => bufferId ?? state.activeBufferId);
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
+  const resolvedBufferId = useBufferIdOrActive(bufferId);
   const breadcrumbsEnabled = useSettingsStore((state) => state.settings.coreFeatures.breadcrumbs);
   const showMinimap = useSettingsStore((state) => state.settings.showMinimap);
   const showOutline = useSettingsStore((state) => state.settings.showOutline);

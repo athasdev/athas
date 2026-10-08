@@ -1,4 +1,4 @@
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openExternalUrl } from "@/utils/external-url";
 import { getServiceUrls } from "@/config/services";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import {
@@ -40,11 +40,11 @@ export const AccountSettings = () => {
   const planLabel = getAccountPlanLabel(subscription, isAuthenticated);
 
   const handleManageAccount = async () => {
-    await openUrl(services.dashboardUrl);
+    await openExternalUrl(services.dashboardUrl);
   };
 
   const handleManagePlan = async () => {
-    await openUrl(isPaidPlan ? services.dashboardBillingUrl : services.pricingUrl);
+    await openExternalUrl(isPaidPlan ? services.dashboardBillingUrl : services.pricingUrl);
   };
 
   const handleToggleSettingsSync = async (checked: boolean) => {

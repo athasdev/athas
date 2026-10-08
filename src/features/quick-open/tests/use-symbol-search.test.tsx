@@ -12,14 +12,11 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/features/editor/stores/buffer.store", () => ({
   useBufferStore: {
     getState: () => ({
-      activeBufferId: "active",
-      buffers: mocks.activePath ? [{ id: "active", path: mocks.activePath }] : [],
+      actions: {
+        getActiveBuffer: () => (mocks.activePath ? { id: "active", path: mocks.activePath } : null),
+      },
     }),
   },
-}));
-vi.mock("@/features/editor/utils/buffer-index", () => ({
-  getBufferById: (buffers: Array<{ id: string }>, id: string) =>
-    buffers.find((buffer) => buffer.id === id),
 }));
 vi.mock("@/extensions/registry/extension-registry", () => ({
   extensionRegistry: { isLspSupported: () => mocks.lspSupported },

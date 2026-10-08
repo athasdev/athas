@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test"
 import type { EditorContent } from "@/features/panes/types/pane-content.types";
 import { revertActiveFile } from "@/features/keymaps/commands/file-command-actions";
 import { useBufferStore } from "../stores/buffer.store";
+import { seedActiveBuffer } from "@/features/panes/tests/helpers/seed-pane-tabs";
 
 const mocks = vi.hoisted(() => ({
   readFileContent: vi.fn(),
@@ -47,9 +48,6 @@ function makeDirtyEditorBuffer(): EditorContent {
     savedContent: "saved",
     isDirty: true,
     isVirtual: false,
-    isPinned: false,
-    isPreview: false,
-    isActive: true,
     language: "typescript",
   };
 }
@@ -73,16 +71,15 @@ describe("editor revert file command", () => {
     mocks.readFileContent.mockResolvedValue("disk");
 
     useBufferStore.setState({
-      activeBufferId: "revert-buffer",
       buffers: [makeDirtyEditorBuffer()],
       pendingClose: null,
       closedBuffersHistory: [],
     });
+    seedActiveBuffer("revert-buffer");
   });
 
   afterEach(() => {
     useBufferStore.setState({
-      activeBufferId: null,
       buffers: [],
       pendingClose: null,
       closedBuffersHistory: [],

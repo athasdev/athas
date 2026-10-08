@@ -48,9 +48,6 @@ function editor(content = "draft before\nfoo\ndraft after"): EditorContent {
     savedContent: disk,
     isDirty: true,
     isVirtual: false,
-    isPreview: false,
-    isPinned: false,
-    isActive: true,
     language: "typescript",
   };
 }

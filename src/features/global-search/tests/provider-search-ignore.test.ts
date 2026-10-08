@@ -3,7 +3,7 @@ import { mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSyn
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { useProjectStore } from "@/features/window/stores/project.store";
 import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
 import type { FileEntry } from "@/features/file-system/types/app.types";
 import { loadProviderSearchFiles } from "../services/provider-content-search";
@@ -27,7 +27,7 @@ const root = "remote://connection/w";
 const directories = new Map<string, FileEntry[]>();
 const contents = new Map<string, string>();
 const temporary: string[] = [];
-const store = () => useFileSystemStore.getStore("owner");
+const store = () => useProjectStore.getStore("owner");
 function listing(relative: string, names: string[]) {
   const path = relative ? `${root}/${relative}` : root;
   directories.set(

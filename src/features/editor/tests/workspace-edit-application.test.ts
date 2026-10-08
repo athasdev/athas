@@ -9,6 +9,7 @@ import {
   WorkspaceEditFailure,
   type WorkspaceEdit,
 } from "../lsp/workspace-edit";
+import { seedActiveBuffer } from "@/features/panes/tests/helpers/seed-pane-tabs";
 
 const io = vi.hoisted(() => ({ read: vi.fn(), write: vi.fn(), git: vi.fn() }));
 vi.mock("@/features/file-system/services/workspace-resource-provider", () => ({
@@ -29,9 +30,6 @@ function editor(path = "/p/a.ts", content = "alpha"): EditorContent {
     contentRevision: 0,
     isDirty: false,
     isVirtual: false,
-    isPreview: false,
-    isPinned: false,
-    isActive: true,
     language: "typescript",
   };
 }
@@ -52,7 +50,8 @@ const versioned = (version: number | null = 1): WorkspaceEdit => ({
 beforeEach(() => {
   workspaceRuntimeRegistry.resetForTests();
   workspaceRuntimeRegistry.activateWorkspace({ id: "owner", name: "Owner" });
-  owner().setState({ buffers: [editor()], activeBufferId: "same-id" });
+  owner().setState({ buffers: [editor()] });
+  seedActiveBuffer("same-id", "owner");
   io.read.mockReset().mockResolvedValue("alpha");
   io.write.mockReset().mockResolvedValue(undefined);
   io.git.mockClear();

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { readBufferRevision, readBufferText } from "@/features/editor/services/buffer-text";
-import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import { getLineTextFromContent } from "@/features/editor/utils/position";
 import { useActiveWorkspaceId } from "@/features/workspace/stores/create-workspace-scoped-store";
@@ -16,6 +15,9 @@ import {
   type WorkspaceEditContext,
 } from "./workspace-edit";
 import { logger } from "../utils/logger";
+import { onAppEvent } from "@/utils/app-events";
+import { getActiveBufferId } from "@/features/panes/stores/pane-selectors";
+import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 interface RenameState {
   isVisible: boolean;
@@ -41,7 +43,7 @@ function getTextForRange(
 }
 export const useRename = (filePath: string | undefined) => {
   const workspaceId = useActiveWorkspaceId();
-  const activeBufferId = useBufferStore.use.activeBufferId();
+  const activeBufferId = useActiveBufferId();
   const [renameState, setRenameState] = useState<RenameState | null>(null);
   const stateRef = useRef(renameState);
   stateRef.current = renameState;
@@ -73,7 +75,7 @@ export const useRename = (filePath: string | undefined) => {
       !source ||
       source.readOnly ||
       source.isVirtual ||
-      context.store.getState().activeBufferId !== source.id
+      getActiveBufferId(workspaceId) !== source.id
     )
       return;
     cancelRename();
@@ -89,7 +91,7 @@ export const useRename = (filePath: string | undefined) => {
         !controller.signal.aborted &&
         pending.current === controller &&
         workspaceRuntimeRegistry.getActiveWorkspaceId() === workspaceId &&
-        context.store.getState().activeBufferId === source.id &&
+        getActiveBufferId(workspaceId) === source.id &&
         current?.type === "editor" &&
         current.path === filePath &&
         !current.readOnly &&
@@ -176,9 +178,7 @@ export const useRename = (filePath: string | undefined) => {
     [filePath, cancelRename],
   );
   useEffect(() => {
-    const handler = () => void startRename();
-    window.addEventListener("editor-rename-symbol", handler);
-    return () => window.removeEventListener("editor-rename-symbol", handler);
+    return onAppEvent("editor-rename-symbol", () => void startRename());
   }, [startRename]);
   return { renameState, inputRef, cancelRename, executeRename };
 };

@@ -412,6 +412,8 @@ export function addBufferToPane(
   paneId: string,
   bufferId: string,
   setActive: boolean = true,
+  /** Where a buffer the pane does not hold yet lands in its tab order; the end by default. */
+  index?: number,
 ): PaneNode {
   return updatePaneNode(root, paneId, (node) => {
     if (node.type !== "group") {
@@ -428,15 +430,56 @@ export function addBufferToPane(
           : node.mruBufferIds,
       });
     }
+    const bufferIds = [...node.bufferIds];
+    const insertAt =
+      index === undefined ? bufferIds.length : Math.max(0, Math.min(index, bufferIds.length));
+    bufferIds.splice(insertAt, 0, bufferId);
     return normalizeGroup({
       ...node,
-      bufferIds: [...node.bufferIds, bufferId],
+      bufferIds,
       activeBufferId: nextActiveBufferId,
       mruBufferIds: setActive
         ? [bufferId, ...(node.mruBufferIds ?? node.bufferIds)]
         : node.mruBufferIds,
     });
   });
+}
+
+/** Moves `bufferId` before `beforeBufferId` in the pane's tab order, or to the end when null. */
+export function moveBufferWithinPane(
+  root: PaneNode,
+  paneId: string,
+  bufferId: string,
+  beforeBufferId: string | null,
+): PaneNode {
+  return updatePaneNode(root, paneId, (node) => {
+    if (node.type !== "group" || !node.bufferIds.includes(bufferId)) return node;
+    if (beforeBufferId === bufferId) return node;
+    if (beforeBufferId !== null && !node.bufferIds.includes(beforeBufferId)) return node;
+
+    const bufferIds = node.bufferIds.filter((id) => id !== bufferId);
+    const insertAt = beforeBufferId === null ? bufferIds.length : bufferIds.indexOf(beforeBufferId);
+    bufferIds.splice(insertAt, 0, bufferId);
+    return { ...node, bufferIds };
+  });
+}
+
+/** Whether any pane in the tree holds `bufferId` as pinned. */
+export function isBufferPinnedInTree(root: PaneNode, bufferId: string): boolean {
+  if (root.type === "group") return root.pinnedBufferIds?.includes(bufferId) ?? false;
+  return (
+    isBufferPinnedInTree(root.children[0], bufferId) ||
+    isBufferPinnedInTree(root.children[1], bufferId)
+  );
+}
+
+/** Whether any pane in the tree shows `bufferId` as its preview tab. */
+export function isBufferPreviewInTree(root: PaneNode, bufferId: string): boolean {
+  if (root.type === "group") return root.previewBufferId === bufferId;
+  return (
+    isBufferPreviewInTree(root.children[0], bufferId) ||
+    isBufferPreviewInTree(root.children[1], bufferId)
+  );
 }
 
 export function removeBufferFromPane(root: PaneNode, paneId: string, bufferId: string): PaneNode {
@@ -475,8 +518,12 @@ export function moveBufferBetweenPanes(
   fromPaneId: string,
   toPaneId: string,
 ): PaneNode {
+  const wasPinned = isBufferPinnedInTree(root, bufferId);
   let result = removeBufferFromPane(root, fromPaneId, bufferId);
   result = addBufferToPane(result, toPaneId, bufferId, true);
+  if (wasPinned) {
+    result = setPaneBufferPinned(result, toPaneId, bufferId, true);
+  }
   return result;
 }
 

@@ -12,8 +12,7 @@ function getActiveLspClient() {
 }
 
 function getActiveJavaFilePath(): string | null {
-  const state = useBufferStore.getState();
-  const activeBuffer = state.buffers.find((buffer) => buffer.id === state.activeBufferId);
+  const activeBuffer = useBufferStore.getState().actions.getActiveBuffer();
   if (activeBuffer?.type === "editor" && activeBuffer.path.endsWith(".java")) {
     return activeBuffer.path;
   }

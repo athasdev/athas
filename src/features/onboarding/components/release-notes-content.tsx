@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import "@/features/editor/markdown/styles.css";
 import { useHighlightedMarkdown } from "@/features/editor/markdown/use-highlighted-markdown";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openExternalUrl } from "@/utils/external-url";
 import { buildReleaseNotesMarkdown, type WhatsNewInfo } from "@/features/settings/lib/whats-new";
 import { Spinner } from "@/ui/spinner";
 
@@ -20,7 +20,7 @@ export function ReleaseNotesContent({ info, loading = false }: ReleaseNotesConte
     if (href.startsWith("https://") || href.startsWith("http://")) {
       event.preventDefault();
       event.stopPropagation();
-      void openUrl(href).catch(console.error);
+      void openExternalUrl(href).catch(console.error);
     }
   }, []);
 

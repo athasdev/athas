@@ -3,11 +3,9 @@ const mocks = vi.hoisted(() => ({
   request: vi.fn(),
   dispatch: vi.fn(),
   updateSession: vi.fn(),
-  updateBuffer: vi.fn(),
   terminal: {
     id: "one",
     name: "Shell",
-    title: "vite",
     currentDirectory: "/project/app",
     customName: false,
     environment: { SECRET: "do-not-send" },
@@ -28,18 +26,17 @@ vi.mock("../stores/terminal-tabs.store", () => ({
   },
 }));
 vi.mock("../stores/terminal.store", () => ({
-  useTerminalStore: { getState: () => ({ actions: { updateSession: mocks.updateSession } }) },
+  useTerminalStore: {
+    getState: () => ({
+      actions: {
+        updateSession: mocks.updateSession,
+        getSession: () => ({ title: "vite", currentDirectory: "/project/app/server" }),
+      },
+    }),
+  },
 }));
 vi.mock("@/features/window/stores/project.store", () => ({
   useProjectStore: { getState: () => ({ rootFolderPath: mocks.workspace }) },
-}));
-vi.mock("@/features/editor/stores/buffer.store", () => ({
-  useBufferStore: {
-    getState: () => ({
-      buffers: [{ id: "buffer", type: "terminal", sessionId: "one" }],
-      actions: { updateBuffer: mocks.updateBuffer },
-    }),
-  },
 }));
 import { renameTerminalWithIntelligence } from "../services/intelligence-terminal-title";
 
@@ -49,15 +46,18 @@ beforeEach(() => {
   mocks.workspace = "/project";
 });
 describe("Intelligence terminal names", () => {
-  it("uses only terminal title metadata and updates the tab and editor buffer", async () => {
+  it("uses only terminal title metadata and renames the pane tab", async () => {
     mocks.request.mockResolvedValue({ editedText: "Dev Server" });
     await renameTerminalWithIntelligence();
     expect(mocks.request.mock.calls[0][0].feature).toBe("terminal-title");
     expect(mocks.request.mock.calls[0][0].selectedText).not.toContain("do-not-send");
     expect(mocks.request.mock.calls[0][0].selectedText).not.toContain("private output");
-    expect(mocks.updateBuffer).toHaveBeenCalledWith(
-      expect.objectContaining({ name: "Dev Server" }),
-    );
+    expect(JSON.parse(mocks.request.mock.calls[0][0].selectedText)).toEqual({
+      title: "vite",
+      name: "Shell",
+      directory: "server",
+    });
+    expect(mocks.updateSession).not.toHaveBeenCalled();
     expect(mocks.dispatch).toHaveBeenCalledWith({
       type: "UPDATE_TERMINAL_NAME",
       payload: { id: "one", name: "Dev Server" },

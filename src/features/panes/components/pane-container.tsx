@@ -44,13 +44,12 @@ import { BOTTOM_PANE_ID } from "../constants/pane";
 import { usePaneStore } from "../stores/pane.store";
 import type { PaneGroup } from "../types/pane.types";
 import type { EditorContent, PullRequestContent } from "../types/pane-content.types";
-import {
-  ensureBufferInPaneDropTarget,
-  getOrCreatePaneDropTarget,
-  moveBufferToPaneDropTarget,
-} from "../utils/pane-drop-actions";
+import { getOrCreatePaneDropTarget, moveBufferToPaneDropTarget } from "../utils/pane-drop-actions";
 import { PaneSurfaceLayer } from "./pane-surface-layer";
 import { type DropZone, SplitDropOverlay } from "./split-drop-overlay";
+import { useProjectStore } from "@/features/window/stores/project.store";
+import { emitAppEvent, onAppEvent } from "@/utils/app-events";
+import { getActiveBufferId } from "../stores/pane-selectors";
 
 const AgentTab = lazy(() =>
   import("@/features/ai/components/agent-tab").then((m) => ({
@@ -337,7 +336,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
   const activePaneId = usePaneStore.use.activePaneId();
   const { reorderPaneBuffers } = usePaneStore.use.actions();
   const { closeBufferForce, openTerminalBuffer } = useBufferStore.use.actions();
-  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const handleFileOpen = useFileSystemStore((state) => state.handleFileOpen);
   const horizontalBufferCarousel = useSettingsStore((state) => state.settings.horizontalTabScroll);
 
@@ -427,9 +426,8 @@ export function PaneContainer({ pane }: PaneContainerProps) {
 
       try {
         await handleFileOpen(fileDragData.path, false);
-        const openedBufferId = useBufferStore.getState().activeBufferId;
+        const openedBufferId = getActiveBufferId();
         if (openedBufferId) {
-          ensureBufferInPaneDropTarget(openedBufferId, { paneId: targetPaneId, zone: "center" });
           activateBufferInPaneAndSync(targetPaneId, openedBufferId);
         }
       } catch (error) {
@@ -460,7 +458,6 @@ export function PaneContainer({ pane }: PaneContainerProps) {
         const bufferId = await openSidebarResourceBuffer(resource);
         if (!bufferId) return;
 
-        ensureBufferInPaneDropTarget(bufferId, { paneId: targetPaneId, zone: "center" });
         activateBufferInPaneAndSync(targetPaneId, bufferId);
       } catch (error) {
         console.error("Failed to open sidebar resource from drop:", error);
@@ -599,8 +596,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       setInternalHoverZone(hover.paneId === pane.id ? hover.zone : null);
     };
 
-    window.addEventListener("athas-internal-tab-drag-hover", syncHover);
-    return () => window.removeEventListener("athas-internal-tab-drag-hover", syncHover);
+    return onAppEvent("athas-internal-tab-drag-hover", syncHover);
   }, [isWorkspaceSurfaceActive, pane.id]);
 
   useEffect(() => {
@@ -608,23 +604,12 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       return;
     }
 
-    const handleFileTreeDrop = async (e: CustomEvent) => {
+    return onAppEvent("file-tree-drop-on-pane", (drop) => {
       const fileDragData = window.__fileDragData;
       if (!fileDragData) return;
 
-      await openFileTreeDropInPane(fileDragData, { x: e.detail.x, y: e.detail.y });
-    };
-
-    window.addEventListener(
-      "file-tree-drop-on-pane",
-      handleFileTreeDrop as unknown as EventListener,
-    );
-    return () => {
-      window.removeEventListener(
-        "file-tree-drop-on-pane",
-        handleFileTreeDrop as unknown as EventListener,
-      );
-    };
+      void openFileTreeDropInPane(fileDragData, { x: drop.x, y: drop.y });
+    });
   }, [isWorkspaceSurfaceActive, openFileTreeDropInPane]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -711,16 +696,11 @@ export function PaneContainer({ pane }: PaneContainerProps) {
             remoteConnectionId,
           });
           activateBufferInPaneAndSync(pane.id, newBufferId);
-          window.dispatchEvent(
-            new CustomEvent("terminal-detach-to-buffer", {
-              detail: { terminalId },
-            }),
-          );
+          emitAppEvent("terminal-detach-to-buffer", { terminalId });
         } else if (sourcePaneId && sourcePaneId !== pane.id && bufferId) {
           moveBufferToPaneDropTarget(bufferId, sourcePaneId, { paneId: pane.id, zone: "center" });
           activateBufferInPaneAndSync(pane.id, bufferId);
         } else if (!sourcePaneId && bufferId) {
-          ensureBufferInPaneDropTarget(bufferId, { paneId: pane.id, zone: "center" });
           activateBufferInPaneAndSync(pane.id, bufferId);
         }
         return;
@@ -740,11 +720,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
           remoteConnectionId,
         });
         activateBufferInPaneAndSync(newPaneId, newBufferId);
-        window.dispatchEvent(
-          new CustomEvent("terminal-detach-to-buffer", {
-            detail: { terminalId },
-          }),
-        );
+        emitAppEvent("terminal-detach-to-buffer", { terminalId });
       } else if (sourcePaneId && sourcePaneId !== pane.id && bufferId) {
         moveBufferToPaneDropTarget(bufferId, sourcePaneId, { paneId: newPaneId, zone: "center" });
         activateBufferInPaneAndSync(newPaneId, bufferId);

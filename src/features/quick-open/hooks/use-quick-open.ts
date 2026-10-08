@@ -24,13 +24,15 @@ import {
   type WorkspaceSymbolItem,
   useWorkspaceSymbolSearch,
 } from "./use-workspace-symbol-search";
+import { useProjectStore } from "@/features/window/stores/project.store";
+import { getActiveBufferId } from "@/features/panes/stores/pane-selectors";
 
 export const useQuickOpen = () => {
   const isQuickOpenVisible = useUIState((state) => state.isQuickOpenVisible);
   const setIsQuickOpenVisible = useUIState((state) => state.setIsQuickOpenVisible);
   const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
-  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
-  const workspaceFolders = useFileSystemStore((state) => state.workspaceFolders);
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
+  const workspaceFolders = useProjectStore((state) => state.workspaceFolders);
   const nativeRootPaths = useMemo(
     () => getNativeWorkspaceRootPaths(rootFolderPath, workspaceFolders),
     [rootFolderPath, workspaceFolders],
@@ -91,7 +93,7 @@ export const useQuickOpen = () => {
 
       // Waits for the palette to close, so the editor takes focus after it.
       setTimeout(() => {
-        const bufferId = useBufferStore.getState().activeBufferId;
+        const bufferId = getActiveBufferId();
         if (!bufferId) return;
         const position = {
           line: symbol.line,
@@ -119,8 +121,7 @@ export const useQuickOpen = () => {
     (symbol: WorkspaceSymbolItem) => {
       onClose();
 
-      const bufferStore = useBufferStore.getState();
-      const activeBuffer = bufferStore.buffers.find((b) => b.id === bufferStore.activeBufferId);
+      const activeBuffer = useBufferStore.getState().actions.getActiveBuffer();
       if (activeBuffer?.type === "editor" && activeBuffer.path) {
         const editorState = useEditorStateStore.getState();
         useJumpListStore.getState().actions.pushEntry({

@@ -1,4 +1,3 @@
-import { commands } from "@/bindings/commands";
 import {
   ActivityIcon,
   ChatBubbleTextIcon,
@@ -31,6 +30,14 @@ import type {
   PullRequest,
   WorkflowListItem,
 } from "../types/github.types";
+import { dispatchWorkflow, listWorkflows } from "../api/github-actions-api";
+import {
+  createIssue,
+  listRepositoryIssueTypes,
+  listRepositoryLabels,
+  listRepositoryMilestones,
+} from "../api/github-issues-api";
+import { createPullRequest } from "../api/github-pull-requests-api";
 import { useGitHubStore } from "../stores/github.store";
 import { githubIssueListCache } from "../utils/github-data-cache";
 import { useGitHubActionsStore } from "../stores/github-actions.store";
@@ -173,16 +180,14 @@ function GitHubCreateViewContent({
 
     Promise.all([
       getBranches(repoPath),
-      commands.githubListLabels(repoPath).catch((): Label[] => []),
+      listRepositoryLabels(repoPath).catch((): Label[] => []),
       kind === "issue"
-        ? commands.githubListMilestones(repoPath).catch((): IssueMilestone[] => [])
+        ? listRepositoryMilestones(repoPath).catch((): IssueMilestone[] => [])
         : Promise.resolve([]),
       kind === "issue"
-        ? commands.githubListIssueTypes(repoPath).catch((): IssueType[] => [])
+        ? listRepositoryIssueTypes(repoPath).catch((): IssueType[] => [])
         : Promise.resolve([]),
-      kind === "action"
-        ? commands.githubListWorkflows(repoPath)
-        : Promise.resolve<WorkflowListItem[]>([]),
+      kind === "action" ? listWorkflows(repoPath) : Promise.resolve<WorkflowListItem[]>([]),
     ])
       .then(([nextBranches, nextLabels, nextMilestones, nextIssueTypes, nextWorkflows]) => {
         if (cancelled) return;
@@ -251,7 +256,7 @@ function GitHubCreateViewContent({
 
     try {
       if (kind === "issue") {
-        const issue = await commands.githubCreateIssue(
+        const issue = await createIssue(
           repoPath,
           title,
           body,
@@ -267,7 +272,7 @@ function GitHubCreateViewContent({
       }
 
       if (kind === "pull-request") {
-        const pullRequest = await commands.githubCreatePullRequest(
+        const pullRequest = await createPullRequest(
           repoPath,
           title,
           body,
@@ -285,7 +290,7 @@ function GitHubCreateViewContent({
         return;
       }
 
-      await commands.githubDispatchWorkflow(repoPath, Number(workflowId), workflowRef);
+      await dispatchWorkflow(repoPath, Number(workflowId), workflowRef);
       onWorkflowDispatched();
       toast.success("Workflow queued");
       onClose();

@@ -1,7 +1,7 @@
-import { commands } from "@/bindings/commands";
 import { useCallback, useEffect, useRef } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { toast } from "sonner";
+import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
 import { CodexIntegrationService } from "@/features/ai/integrations/codex/codex-integration-service";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { AgentConfig } from "@/features/ai/types/acp.types";
@@ -57,7 +57,7 @@ export function ContinuousAgentsRuntime() {
             ),
           checkReadiness: (task) =>
             checkContinuousAgentReadiness(task, {
-              loadAcpAgents: () => commands.getAvailableAgents() as Promise<AgentConfig[]>,
+              loadAcpAgents: () => AcpStreamHandler.getAvailableAgents() as Promise<AgentConfig[]>,
               loadCodexStatus: () => CodexIntegrationService.status(),
             }),
           claimTask: (currentWorkspacePath, now, taskId) =>

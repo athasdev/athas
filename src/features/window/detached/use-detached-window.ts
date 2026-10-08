@@ -6,11 +6,11 @@ import { initializeSettingsStore } from "@/features/settings/stores/settings.sto
 import { initializeThemeSystem } from "@/extensions/themes/theme-initializer";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
-import { REQUEST_WINDOW_CLOSE_EVENT } from "@/features/window/utils/request-window-close";
 import { createAppWindow } from "@/features/window/utils/create-app-window";
 import { initializeFrontendTerminalSession } from "@/features/terminal/utils/frontend-terminal-session";
 import { frontendTrace } from "@/utils/frontend-trace";
 import { applyPlatformClass } from "@/utils/platform";
+import { onAppEvent } from "@/utils/app-events";
 import { listenToMenuActions } from "../lib/menu-actions";
 import {
   type DetachedWindowBaseMessage,
@@ -191,7 +191,7 @@ export function useDetachedWindow<Message extends { type: string }>({
         requestClose();
       }
     };
-    window.addEventListener(REQUEST_WINDOW_CLOSE_EVENT, requestClose);
+    const unsubscribeCloseRequest = onAppEvent("athas:request-window-close", requestClose);
     window.addEventListener("keydown", onKeyDown);
 
     void useAuthStore.getState().actions.initialize().catch(console.error);
@@ -221,7 +221,7 @@ export function useDetachedWindow<Message extends { type: string }>({
       channelRef.current = null;
       useBufferStore.setState({ actions: bufferActions });
       stopListeners();
-      window.removeEventListener(REQUEST_WINDOW_CLOSE_EVENT, requestClose);
+      unsubscribeCloseRequest();
       window.removeEventListener("keydown", onKeyDown);
       channel.close();
     };

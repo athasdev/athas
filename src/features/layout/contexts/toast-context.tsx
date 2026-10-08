@@ -1,6 +1,7 @@
 import { useCallback } from "react";
 import { toast as sonnerToast } from "sonner";
 import type { ToastInput } from "@/features/notifications/types/notifications.types";
+import { emitAppEvent } from "@/utils/app-events";
 
 interface ToastContextType {
   showToast: (value: ToastInput) => string;
@@ -13,7 +14,7 @@ const activeToasts = new Map<string, ToastInput>();
 
 function clearActiveToast(id: string) {
   if (!activeToasts.delete(id)) return;
-  window.dispatchEvent(new CustomEvent("toast-dismissed", { detail: { toastId: id } }));
+  emitAppEvent("toast-dismissed", { toastId: id });
 }
 
 export function showToast(value: ToastInput, forcedId?: string) {

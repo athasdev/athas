@@ -47,7 +47,7 @@ import type {
   EditorSettings,
   EventHandler,
 } from "../types/editor-extension.types";
-import { calculateLineHeight } from "../utils/lines";
+import { getActiveBufferId } from "@/features/panes/stores/pane-selectors";
 
 export interface ActiveEditorAdapter {
   ownerId: string;
@@ -125,7 +125,7 @@ class EditorAPIImpl implements EditorAPI {
 
   setContent(content: string): void {
     const bufferStore = useBufferStore.getState();
-    const activeBufferId = bufferStore.activeBufferId;
+    const activeBufferId = getActiveBufferId();
     if (activeBufferId) {
       bufferStore.actions.updateBufferContent(activeBufferId, content);
     }
@@ -205,25 +205,8 @@ class EditorAPIImpl implements EditorAPI {
     this.cursorPosition = position;
     this.emit("cursorChange", position);
 
-    // Update cursor store to trigger UI updates
+    // The active editor scrolls the cursor into view when it handles `cursorChange`.
     useEditorStateStore.getState().actions.setCursorPosition(position);
-
-    // Direct viewport scrolling for immediate response
-    if (this.viewportRef) {
-      const { fontSize, lineHeight: editorLineHeight } = this.getSettings();
-      const lineHeight = calculateLineHeight(fontSize, editorLineHeight);
-      const targetLineTop = position.line * lineHeight;
-      const targetLineBottom = targetLineTop + lineHeight;
-      const currentScrollTop = this.viewportRef.scrollTop;
-      const viewportHeight = this.viewportRef.clientHeight;
-
-      // Scroll if cursor is out of view
-      if (targetLineTop < currentScrollTop) {
-        this.viewportRef.scrollTop = targetLineTop;
-      } else if (targetLineBottom > currentScrollTop + viewportHeight) {
-        this.viewportRef.scrollTop = targetLineBottom - viewportHeight;
-      }
-    }
   }
 
   selectAll(): void {
@@ -596,7 +579,7 @@ class EditorAPIImpl implements EditorAPI {
     }
 
     const bufferStore = useBufferStore.getState();
-    const activeBufferId = bufferStore.activeBufferId;
+    const activeBufferId = getActiveBufferId();
 
     if (!activeBufferId) {
       logger.warn("Editor", "No active buffer for undo");
@@ -638,7 +621,7 @@ class EditorAPIImpl implements EditorAPI {
     }
 
     const bufferStore = useBufferStore.getState();
-    const activeBufferId = bufferStore.activeBufferId;
+    const activeBufferId = getActiveBufferId();
 
     if (!activeBufferId) {
       logger.warn("Editor", "No active buffer for redo");
@@ -674,7 +657,7 @@ class EditorAPIImpl implements EditorAPI {
   }
 
   canUndo(): boolean {
-    const activeBufferId = useBufferStore.getState().activeBufferId;
+    const activeBufferId = getActiveBufferId();
     if (!activeBufferId) return false;
 
     const buffer = getBufferById(useBufferStore.getState().buffers, activeBufferId);
@@ -686,7 +669,7 @@ class EditorAPIImpl implements EditorAPI {
   }
 
   canRedo(): boolean {
-    const activeBufferId = useBufferStore.getState().activeBufferId;
+    const activeBufferId = getActiveBufferId();
     if (!activeBufferId) return false;
 
     const buffer = getBufferById(useBufferStore.getState().buffers, activeBufferId);
@@ -802,8 +785,7 @@ class EditorAPIImpl implements EditorAPI {
   }
 
   private getActiveLineCommentToken(): string {
-    const { activeBufferId, buffers } = useBufferStore.getState();
-    const activeBuffer = getBufferById(buffers, activeBufferId);
+    const activeBuffer = useBufferStore.getState().actions.getActiveBuffer();
     const languageId =
       activeBuffer && "language" in activeBuffer && typeof activeBuffer.language === "string"
         ? activeBuffer.language

@@ -75,7 +75,8 @@ export const defaultKeymaps: Keybinding[] = [
     source: "default",
     when: "terminalFocus",
   },
-  { key: "cmd+o", command: "file.open", source: "default" },
+  // Matches the File menu's "Open Folder" accelerator on every platform.
+  { key: "cmd+o", command: "file.openFolder", source: "default" },
   // Note: cmd+p is handled by the global keyboard shortcuts to avoid race conditions with command context
 
   // Edit Operations

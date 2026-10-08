@@ -1,7 +1,7 @@
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { resolveBrowserAddress } from "@/features/browser/utils/browser-address";
-import { BROWSER_FOCUS_ADDRESS_BAR_EVENT } from "@/features/browser/utils/browser-events";
 import { showPromptDialog } from "@/ui/dialog";
+import { emitAppEvent } from "@/utils/app-events";
 
 const loadBrowserTabManager = () =>
   import("@/features/browser/services/browser-tab-manager").then(
@@ -10,8 +10,7 @@ const loadBrowserTabManager = () =>
 
 /** The browser tab shown in the active pane, if the active buffer is one. */
 export function getActiveBrowserBufferId(): string | null {
-  const { buffers, activeBufferId } = useBufferStore.getState();
-  const buffer = buffers.find((candidate) => candidate.id === activeBufferId);
+  const buffer = useBufferStore.getState().actions.getActiveBuffer();
   return buffer?.type === "browser" ? buffer.id : null;
 }
 
@@ -33,7 +32,7 @@ export async function focusBrowserAddressBar(): Promise<void> {
   const bufferId = getActiveBrowserBufferId();
   if (!bufferId) return;
   await (await loadBrowserTabManager()).focusWorkbench();
-  window.dispatchEvent(new CustomEvent(BROWSER_FOCUS_ADDRESS_BAR_EVENT, { detail: bufferId }));
+  emitAppEvent("athas-browser-focus-address-bar", bufferId);
 }
 
 export async function runActiveBrowserAction(

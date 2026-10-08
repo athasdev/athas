@@ -28,6 +28,7 @@ import type {
   SearchWorkerRequest,
   SearchWorkerResponse,
 } from "../workers/search-worker-protocol";
+import { seedActiveBuffer } from "@/features/panes/tests/helpers/seed-pane-tabs";
 
 const io = vi.hoisted(() => ({ read: vi.fn(), write: vi.fn() }));
 vi.mock("@/features/file-system/services/workspace-resource-provider", () => ({
@@ -268,14 +269,11 @@ describe("actual search worker thread", () => {
           savedContent: "foo foo",
           isDirty: false,
           isVirtual: false,
-          isPreview: false,
-          isPinned: false,
-          isActive: true,
           language: "typescript",
         },
       ],
-      activeBufferId: "draft",
     });
+    seedActiveBuffer("draft", "owner");
     const context = captureSourceReplaceContext("owner");
     BrowserWorkerThread.beforeReply = () => {
       owner().getState().actions.updateBufferContent("draft", "user edit", true);

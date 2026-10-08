@@ -1,9 +1,8 @@
+import { fetchIssueDetails, listIssues } from "../api/github-issues-api";
 import { useGitHubList } from "../hooks/use-github-list";
-import { commands } from "@/bindings/commands";
 import { GitHubAuthStatusMessage } from "./github-auth-status";
 import { memo, startTransition, useCallback, useDeferredValue, useEffect, useMemo } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
 import { writeSidebarResourceDragData } from "@/features/sidebar/utils/sidebar-resource-drag";
 import { useGitHubStore } from "../stores/github.store";
@@ -23,6 +22,8 @@ import {
 } from "../utils/github-data-cache";
 import { Spinner } from "@/ui/spinner";
 import { EmptyState } from "@/ui/empty";
+import { useProjectStore } from "@/features/window/stores/project.store";
+import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 interface IssueListItemProps {
   issue: IssueListItem;
@@ -105,23 +106,21 @@ interface GitHubIssuesViewProps {
 
 const GitHubIssuesView = memo(
   ({ refreshNonce = 0, searchQuery = "", filter = "open" }: GitHubIssuesViewProps) => {
-    const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+    const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
     const activeRepoPath = useRepositoryStore.use.activeRepoPath();
     const repoPath = activeRepoPath ?? rootFolderPath ?? null;
     const isAuthenticated = useGitHubStore.use.isAuthenticated();
     const { checkAuth } = useGitHubStore.use.actions();
     const { openGitHubIssueBuffer } = useBufferStore.use.actions();
+    const activeBufferId = useActiveBufferId();
     const activeIssueNumber = useBufferStore((state) => {
-      const activeBuffer = state.activeBufferId
-        ? state.buffers.find((buffer) => buffer.id === state.activeBufferId)
+      const activeBuffer = activeBufferId
+        ? state.buffers.find((buffer) => buffer.id === activeBufferId)
         : null;
       return activeBuffer?.type === "githubIssue" ? activeBuffer.issueNumber : null;
     });
     const load = useCallback(
-      () =>
-        repoPath
-          ? commands.githubListIssues(repoPath, filter)
-          : Promise.resolve<IssueListItem[]>([]),
+      () => (repoPath ? listIssues(repoPath, filter) : Promise.resolve<IssueListItem[]>([])),
       [filter, repoPath],
     );
     const {
@@ -145,7 +144,7 @@ const GitHubIssuesView = memo(
 
         const cacheKey = `${repoPath}::${issue.number}`;
         void githubIssueDetailsCache
-          .load(cacheKey, () => commands.githubGetIssueDetails(repoPath, issue.number), {
+          .load(cacheKey, () => fetchIssueDetails(repoPath, issue.number), {
             ttlMs: GITHUB_ISSUE_DETAILS_TTL_MS,
           })
           .catch(() => undefined);

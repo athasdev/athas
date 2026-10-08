@@ -19,6 +19,7 @@ import {
 import { getShareDeviceId } from "../services/share-device";
 import type { ShareDraft } from "../types/share.types";
 import { readBufferText } from "@/features/editor/services/buffer-text";
+import { emitAppEvent } from "@/utils/app-events";
 
 const maxTitleLength = 200;
 
@@ -195,18 +196,12 @@ export function SharingRuntime() {
         }
         if (syncError) throw syncError;
         if (!current()) return;
-        window.dispatchEvent(
-          new CustomEvent("athas:sharing-status", {
-            detail: { error: null, syncedAt: Date.now() },
-          }),
-        );
+        emitAppEvent("athas:sharing-status", { error: null, syncedAt: Date.now() });
       } catch (error) {
         if (current())
-          window.dispatchEvent(
-            new CustomEvent("athas:sharing-status", {
-              detail: { error: error instanceof Error ? error.message : "Could not sync sessions" },
-            }),
-          );
+          emitAppEvent("athas:sharing-status", {
+            error: error instanceof Error ? error.message : "Could not sync sessions",
+          });
       } finally {
         isSyncing = false;
         if (current()) timer = setTimeout(() => void sync(), 3000);

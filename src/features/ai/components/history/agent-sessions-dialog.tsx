@@ -4,12 +4,10 @@ import { toast } from "sonner";
 import { getRelativeTime } from "@/features/ai/lib/formatting";
 import { selectAcpAgentStatus } from "@/features/ai/lib/acp-session-state";
 import { importAgentSession } from "@/features/ai/lib/import-agent-session";
-import {
-  OPEN_AGENT_SESSIONS_EVENT,
-  canDeleteAgentSessions,
-} from "@/features/ai/lib/open-agent-sessions";
+import { canDeleteAgentSessions } from "@/features/ai/lib/open-agent-sessions";
 import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
+import { useAppEvent } from "@/utils/app-events";
 import type { AcpSessionInfo } from "@/features/ai/types/acp.types";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { Button } from "@/ui/button";
@@ -175,11 +173,7 @@ function AgentSessionsBrowser({ agentId, onClose }: { agentId: string; onClose: 
 /** Lists the running agent's own sessions for the workspace, to import or delete them. */
 export function AgentSessionsDialog() {
   const [agentId, setAgentId] = useState<string | null>(null);
-  useEffect(() => {
-    const open = (event: Event) => setAgentId((event as CustomEvent<string>).detail);
-    window.addEventListener(OPEN_AGENT_SESSIONS_EVENT, open);
-    return () => window.removeEventListener(OPEN_AGENT_SESSIONS_EVENT, open);
-  }, []);
+  useAppEvent("athas:open-agent-sessions", setAgentId);
   return agentId ? (
     <AgentSessionsBrowser key={agentId} agentId={agentId} onClose={() => setAgentId(null)} />
   ) : null;

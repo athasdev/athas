@@ -10,14 +10,17 @@ const AUTO_EVICTION_PROTECTED_TYPES = new Set<PaneContent["type"]>([
 
 export interface AutoEvictionOptions {
   includePreviews?: boolean;
+  /** Pane-owned tab state; pinned buffers are never evicted, previews only when allowed. */
+  pinnedBufferIds?: ReadonlySet<string>;
+  previewBufferIds?: ReadonlySet<string>;
 }
 
 function canAutoEvictBuffer(
   buffer: PaneContent,
-  { includePreviews = true }: AutoEvictionOptions = {},
+  { includePreviews = true, pinnedBufferIds, previewBufferIds }: AutoEvictionOptions = {},
 ): boolean {
-  if (buffer.isPinned || isDirtyContent(buffer)) return false;
-  if (!includePreviews && buffer.isPreview) return false;
+  if (pinnedBufferIds?.has(buffer.id) || isDirtyContent(buffer)) return false;
+  if (!includePreviews && previewBufferIds?.has(buffer.id)) return false;
   if (isSingletonToolBuffer(buffer)) return false;
   return !AUTO_EVICTION_PROTECTED_TYPES.has(buffer.type);
 }

@@ -1,7 +1,7 @@
 import { commands, type Diagnostic as BackendDiagnostic } from "@/bindings/commands";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { logger } from "@/features/editor/utils/logger";
-import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { useProjectStore } from "@/features/window/stores/project.store";
 
 export interface LintOptions {
   filePath: string;
@@ -131,7 +131,7 @@ function toLintDiagnostic(diagnostic: BackendDiagnostic): Diagnostic {
  * Get workspace folder from file path
  */
 function getWorkspaceFolder(filePath: string): string | undefined {
-  const rootFolderPath = useFileSystemStore.getState().rootFolderPath;
+  const rootFolderPath = useProjectStore.getState().rootFolderPath;
   if (rootFolderPath) return rootFolderPath;
 
   // Fallback to file's directory if no project is open

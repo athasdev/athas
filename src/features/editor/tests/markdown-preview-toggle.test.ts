@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { usePaneStore } from "@/features/panes/stores/pane.store";
+import { getActiveBufferId } from "@/features/panes/stores/pane-selectors";
 
 beforeEach(() => {
   vi.stubGlobal("localStorage", {
@@ -25,7 +26,7 @@ beforeEach(() => {
 afterEach(async () => {
   usePaneStore.getState().actions.reset();
   const { useBufferStore } = await import("../stores/buffer.store");
-  useBufferStore.setState({ buffers: [], activeBufferId: null });
+  useBufferStore.setState({ buffers: [] });
   vi.unstubAllGlobals();
 });
 
@@ -45,7 +46,7 @@ describe("Markdown preview toggle", () => {
     toggleMarkdownPreview(bufferId);
 
     expect(useBufferStore.getState().buffers).toHaveLength(1);
-    expect(useBufferStore.getState().activeBufferId).toBe(bufferId);
+    expect(getActiveBufferId()).toBe(bufferId);
     expect(useBufferStore.getState().buffers[0]).toMatchObject({
       id: bufferId,
       type: "editor",

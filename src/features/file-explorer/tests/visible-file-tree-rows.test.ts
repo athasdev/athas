@@ -4,6 +4,7 @@ import type { FileEntry } from "@/features/file-system/types/app.types";
 import {
   buildVisibleFileTreeRows,
   collectFileTreeSearchHits,
+  createVisibleFileTreeRowIndex,
   createVisibleFileTreeRowsCache,
   filterFileTreeEntries,
   filterFileTreeForFffHits,
@@ -315,6 +316,27 @@ describe("buildVisibleFileTreeRows with a segment cache", () => {
       "/root/c",
       "/root/c/nested",
     ]);
+  });
+});
+
+describe("createVisibleFileTreeRowIndex", () => {
+  test("finds rows by path in the rows array it was made for", () => {
+    const expanded = new Set(["/root", "/root/src"]);
+    const rows = buildVisibleFileTreeRows(tree, expanded);
+    const index = createVisibleFileTreeRowIndex(rows);
+
+    expect(index.get("/root")).toBe(0);
+    expect(index.get("/root/src/features")).toBe(2);
+    expect(index.get("/root/src/features/file-explorer")).toBeUndefined();
+
+    const expandedRows = buildVisibleFileTreeRows(
+      tree,
+      new Set([...expanded, "/root/src/features"]),
+    );
+    expect(
+      createVisibleFileTreeRowIndex(expandedRows).get("/root/src/features/file-explorer"),
+    ).toBe(3);
+    expect(index.get("/root/src/features/file-explorer")).toBeUndefined();
   });
 });
 

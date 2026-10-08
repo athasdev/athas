@@ -6,7 +6,7 @@ import { LspClient } from "@/features/editor/lsp/lsp-client";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getSourceEditorBufferByPath } from "@/features/editor/utils/buffer-index";
 import { logger } from "@/features/editor/utils/logger";
-import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { useProjectStore } from "@/features/window/stores/project.store";
 
 interface UseLspIntegrationOptions {
   enabled?: boolean;
@@ -21,7 +21,7 @@ export const useLspIntegration = ({
   getValue,
 }: UseLspIntegrationOptions) => {
   const lspClient = useMemo(() => LspClient.getInstance(), []);
-  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const installedExtensions = useExtensionStore.use.installedExtensions();
   const activeFilePath = enabled ? filePath : undefined;
   const isLspSupported = useMemo(

@@ -6,6 +6,7 @@ import { openCommitDiffBuffer } from "@/features/git/utils/open-commit-diff-buff
 import { createSingleFileWorkingTreeDiff } from "@/features/git/utils/working-tree-multi-diff";
 import { getFolderName } from "@/utils/path-helpers";
 import type { SidebarDragResource } from "./sidebar-resource-drag";
+import { getActiveBufferId } from "@/features/panes/stores/pane-selectors";
 
 const normalizeGitFilePath = (filePath: string, staged: boolean): string => {
   let actualFilePath = filePath;
@@ -31,7 +32,7 @@ const openWorkingTreeDiffBuffer = async (
     await useFileSystemStore
       .getState()
       .handleFileOpen(`${resource.repoPath}/${actualFilePath}`, false);
-    return useBufferStore.getState().activeBufferId;
+    return getActiveBufferId();
   }
 
   const diff = await getFileDiff(resource.repoPath, actualFilePath, resource.staged);
@@ -39,7 +40,7 @@ const openWorkingTreeDiffBuffer = async (
     await useFileSystemStore
       .getState()
       .handleFileOpen(`${resource.repoPath}/${actualFilePath}`, false);
-    return useBufferStore.getState().activeBufferId;
+    return getActiveBufferId();
   }
 
   const fileKey = `${resource.staged ? "staged" : "unstaged"}:${actualFilePath}`;
@@ -81,7 +82,7 @@ export const openSidebarResourceBuffer = async (
         return null;
       }
       await useFileSystemStore.getState().handleFileOpen(resource.path, false);
-      return useBufferStore.getState().activeBufferId;
+      return getActiveBufferId();
 
     case "git-file-diff":
       return openWorkingTreeDiffBuffer(resource);

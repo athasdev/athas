@@ -1,6 +1,5 @@
 import { useMemo, useRef } from "react";
 import { toast } from "sonner";
-import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { isMac } from "@/utils/platform";
 import { LspClient } from "../../../lsp/lsp-client";
 import { navigateToLspLocation } from "../../../lsp/location-navigation";
@@ -10,6 +9,7 @@ import { definitionLink } from "../navigation/definition-link";
 import { type DocumentLink, findDocumentLinkAt } from "../navigation/document-links";
 import { toLspPosition } from "../navigation/lsp-document";
 import { jumpOrigin } from "./lsp-feature-utils";
+import { useProjectStore } from "@/features/window/stores/project.store";
 
 async function openDocumentLink(link: DocumentLink, follow: (uri: string) => Promise<void>) {
   try {
@@ -49,7 +49,7 @@ export function useDefinitionLinks(host: CodeMirrorHost, lspEnabled: boolean) {
             view.state,
             position,
             withFiles ? filePath : "",
-            useFileSystemStore.getState().rootFolderPath,
+            useProjectStore.getState().rootFolderPath,
           ),
         openDefinition: (view, position, locations) => {
           const [first] = locations;

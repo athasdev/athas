@@ -1,6 +1,5 @@
 import { areProjectTabPathsEqual } from "@/features/window/utils/project-tab-path";
 import { useState } from "react";
-import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { resolveRunWorkingDirectory } from "@/features/run-actions/utils/run-action-discovery";
 import { Button } from "@/ui/button";
 import { Card, CardContent } from "@/ui/card";
@@ -9,9 +8,11 @@ import Input from "@/ui/input";
 import Textarea from "@/ui/textarea";
 import { parseTeamWorkspace } from "../utils/team-workspace-config";
 import type { WorkspaceSectionProps } from "./workspace-section-props";
+import { emitAppEvent } from "@/utils/app-events";
+import { useProjectStore } from "@/features/window/stores/project.store";
 
 export function WorkspaceTasks({ root, config, onChange, reportError }: WorkspaceSectionProps) {
-  const activeRoot = useFileSystemStore((state) => state.rootFolderPath);
+  const activeRoot = useProjectStore((state) => state.rootFolderPath);
   const isActive = !!activeRoot && areProjectTabPathsEqual(activeRoot, root);
   const [lastStarted, setLastStarted] = useState<string | null>(null);
   const update = (index: number, patch: Partial<(typeof config.commands)[number]>) =>
@@ -23,19 +24,15 @@ export function WorkspaceTasks({ root, config, onChange, reportError }: Workspac
     });
   const run = (index: number) => {
     try {
-      if (!areProjectTabPathsEqual(useFileSystemStore.getState().rootFolderPath ?? "", root))
+      if (!areProjectTabPathsEqual(useProjectStore.getState().rootFolderPath ?? "", root))
         throw new Error("Open this workspace before running its tasks.");
       const task = parseTeamWorkspace(JSON.stringify(config)).commands[index];
       if (!task) return;
-      window.dispatchEvent(
-        new CustomEvent("create-terminal-with-command", {
-          detail: {
-            name: task.name,
-            command: task.command,
-            workingDirectory: resolveRunWorkingDirectory(root, task.workingDirectory),
-          },
-        }),
-      );
+      emitAppEvent("create-terminal-with-command", {
+        name: task.name,
+        command: task.command,
+        workingDirectory: resolveRunWorkingDirectory(root, task.workingDirectory),
+      });
       setLastStarted(task.name);
     } catch (error) {
       reportError(error);

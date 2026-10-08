@@ -3,7 +3,10 @@ import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import { useEditorViewStore } from "@/features/editor/stores/view.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
+import { emitAppEvent } from "@/utils/app-events";
 import { useVimStore } from "./vim.store";
+import { getActiveBufferId } from "@/features/panes/stores/pane-selectors";
+import { selectIsTerminalPaneVisible } from "@/features/window/stores/ui-state/terminal-slice";
 
 export interface VimCommand {
   name: string;
@@ -28,7 +31,7 @@ const writeQuitCommand: VimCommand = {
   aliases: ["x"],
   description: "Save and close the current file",
   execute: async () => {
-    const bufferId = useBufferStore.getState().activeBufferId;
+    const bufferId = getActiveBufferId();
     if (!bufferId) return;
 
     const saved = await useEditorAppStore.getState().actions.handleSave();
@@ -44,7 +47,8 @@ const quitCommand: VimCommand = {
   aliases: ["q"],
   description: "Close the current file",
   execute: async () => {
-    const { activeBufferId, actions } = useBufferStore.getState();
+    const { actions } = useBufferStore.getState();
+    const activeBufferId = getActiveBufferId();
     if (activeBufferId) {
       actions.closeBuffer(activeBufferId);
     }
@@ -57,7 +61,8 @@ const forceQuitCommand: VimCommand = {
   aliases: ["q!"],
   description: "Force close the current file without saving",
   execute: async () => {
-    const { activeBufferId, actions } = useBufferStore.getState();
+    const { actions } = useBufferStore.getState();
+    const activeBufferId = getActiveBufferId();
     if (activeBufferId) {
       actions.closeBufferForce(activeBufferId);
     }
@@ -95,11 +100,7 @@ const gotoCommand: VimCommand = {
     if (args && args.length > 0) {
       const lineNumber = parseInt(args[0]);
       if (!Number.isNaN(lineNumber)) {
-        window.dispatchEvent(
-          new CustomEvent("menu-go-to-line", {
-            detail: { line: lineNumber },
-          }),
-        );
+        emitAppEvent("menu-go-to-line", { line: lineNumber });
       }
     }
   },
@@ -149,14 +150,10 @@ const terminalCommand: VimCommand = {
   aliases: ["term"],
   description: "Toggle terminal",
   execute: async () => {
-    const {
-      setIsBottomPaneVisible,
-      setBottomPaneActiveTab,
-      isBottomPaneVisible,
-      bottomPaneActiveTab,
-    } = useUIState.getState();
+    const uiState = useUIState.getState();
+    const { setIsBottomPaneVisible, setBottomPaneActiveTab } = uiState;
 
-    if (isBottomPaneVisible && bottomPaneActiveTab === "terminal") {
+    if (selectIsTerminalPaneVisible(uiState)) {
       setIsBottomPaneVisible(false);
     } else {
       setBottomPaneActiveTab("terminal");
@@ -208,7 +205,7 @@ export const parseAndExecuteVimCommand = async (commandInput: string): Promise<b
     const lines = useEditorViewStore.getState().actions.getLines();
     const cursorState = useEditorStateStore.getState();
     const bufferState = useBufferStore.getState();
-    const { activeBufferId } = bufferState;
+    const activeBufferId = getActiveBufferId();
 
     if (!activeBufferId || lines.length === 0) {
       return false;

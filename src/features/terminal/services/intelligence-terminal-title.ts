@@ -1,5 +1,4 @@
 import { requestInlineEdit } from "@/features/ai/intelligence/services/intelligence-text-service";
-import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { useTerminalTabsStore } from "../stores/terminal-tabs.store";
 import { useTerminalStore } from "../stores/terminal.store";
@@ -11,15 +10,16 @@ export async function renameTerminalWithIntelligence(terminalId?: string) {
   const terminal = state.terminals.find((item) => item.id === id);
   if (!terminal) throw new Error("Select a terminal first.");
   const workspace = useProjectStore.getState().rootFolderPath;
+  const session = useTerminalStore.getState().actions.getSession(terminal.id);
   const { editedText } = await requestInlineEdit(
     {
       feature: "terminal-title",
       model: "",
       beforeSelection: "",
       selectedText: JSON.stringify({
-        title: terminal.title?.slice(0, 512),
+        title: session?.title?.slice(0, 512),
         name: terminal.name.slice(0, 100),
-        directory: terminal.currentDirectory
+        directory: (session?.currentDirectory || terminal.currentDirectory)
           .replace(/[/\\]+$/, "")
           .split(/[/\\]/)
           .pop(),
@@ -43,11 +43,5 @@ export async function renameTerminalWithIntelligence(terminalId?: string) {
   useTerminalTabsStore
     .getState()
     .actions.dispatch({ type: "UPDATE_TERMINAL_NAME", payload: { id: terminal.id, name } });
-  useTerminalStore.getState().actions.updateSession(terminal.id, { name, customName: true });
-  const { buffers, actions } = useBufferStore.getState();
-  for (const buffer of buffers) {
-    if (buffer.type === "terminal" && buffer.sessionId === terminal.id)
-      actions.updateBuffer({ ...buffer, name });
-  }
   return true;
 }

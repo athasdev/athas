@@ -23,7 +23,6 @@ vi.mock("../stores/buffer.store", () => ({
   useBufferStore: {
     getState: () => ({
       buffers: mocks.buffers,
-      activeBufferId: mocks.activeBufferId,
       actions: {
         openBuffer: mocks.openBuffer,
         openContent: mocks.openContent,
@@ -32,6 +31,9 @@ vi.mock("../stores/buffer.store", () => ({
       },
     }),
   },
+}));
+vi.mock("@/features/panes/stores/pane-selectors", () => ({
+  getActiveBufferId: () => mocks.activeBufferId,
 }));
 vi.mock("../stores/state.store", () => ({
   useEditorStateStore: {
@@ -51,7 +53,7 @@ vi.mock("../stores/jump-list.store", () => ({
 import { navigateToLspLocation } from "../lsp/location-navigation";
 
 function buffer(id: string, path: string, content = "first\nconst target = 1;") {
-  return { id, type: "editor", path, content, isPreview: false } as EditorContent;
+  return { id, type: "editor", path, content } as EditorContent;
 }
 const target = {
   uri: "file:///project/target.ts",
@@ -103,7 +105,6 @@ describe("editor location navigation", () => {
   it("reuses dirty buffers and promotes previews without rereading disk", async () => {
     mocks.buffers.push({
       ...buffer("target", "/project/target.ts", "unsaved\nconst target = 2;"),
-      isPreview: true,
     });
     await navigateToLspLocation(target);
     expect(mocks.read).not.toHaveBeenCalled();

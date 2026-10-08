@@ -28,6 +28,12 @@ export function isPathInsideTreeEntry(targetPath: string, dirPath: string): bool
   return next === SLASH || next === BACKSLASH;
 }
 
+/** `path` after `oldPath` moved to `newPath`, when it is that entry or under it; else null. */
+export function relocatePath(path: string, oldPath: string, newPath: string): string | null {
+  if (path === oldPath) return newPath;
+  return isPathInsideTreeEntry(path, oldPath) ? newPath + path.slice(oldPath.length) : null;
+}
+
 /**
  * The entry moved to `newPath`, with every loaded descendant's path rewritten under it. Tree
  * walks prune by path prefix, so descendants left with the old prefix would become unreachable

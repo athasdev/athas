@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test"
 import { BOTTOM_PANE_ID, ROOT_PANE_ID } from "../constants/pane";
 import { usePaneStore } from "../stores/pane.store";
 import { getAllPaneGroups } from "../utils/pane-tree";
+import { seedActiveBuffer } from "@/features/panes/tests/helpers/seed-pane-tabs";
 
 const createMockStorage = () => {
   const storage = new Map<string, string>();
@@ -46,7 +47,6 @@ describe("pane command actions", () => {
     const { useBufferStore } = await import("@/features/editor/stores/buffer.store");
     useBufferStore.setState({
       buffers: [],
-      activeBufferId: null,
       pendingClose: null,
       closedBuffersHistory: [],
     });
@@ -66,17 +66,14 @@ describe("pane command actions", () => {
           type: "editor",
           path: "/workspace/a.ts",
           name: "a.ts",
-          isPinned: false,
-          isPreview: false,
-          isActive: true,
           content: "",
           savedContent: "",
           isDirty: false,
           isVirtual: false,
         },
       ],
-      activeBufferId: "buffer-a",
     }));
+    seedActiveBuffer("buffer-a");
     paneActions.addBufferToPane(ROOT_PANE_ID, "buffer-a");
 
     expect(splitActiveEditorGroup("horizontal")).toBe(true);
@@ -99,14 +96,11 @@ describe("pane command actions", () => {
           type: "terminal",
           path: "terminal://terminal-a",
           name: "Terminal",
-          isPinned: false,
-          isPreview: false,
-          isActive: true,
           sessionId: "terminal-a",
         },
       ],
-      activeBufferId: "terminal-a",
     }));
+    seedActiveBuffer("terminal-a");
     paneActions.addBufferToPane(ROOT_PANE_ID, "terminal-a");
 
     expect(splitActiveEditorGroup("horizontal")).toBe(true);

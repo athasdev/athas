@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { openDeploymentLog } from "../services/open-deployment-log";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openExternalUrl } from "@/utils/external-url";
 import { toast } from "sonner";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
@@ -61,7 +61,7 @@ export function DeploymentDetails({ deployment }: { deployment: Deployment }) {
   const latest = deployment.statuses[0];
   const environmentUrl = safeDeliveryUrl(latest?.environment_url);
   const open = (url: string) => {
-    void openUrl(url).catch((error) => toast.error(String(error)));
+    void openExternalUrl(url).catch((error) => toast.error(String(error)));
   };
   return (
     <ResourceSidebarLayout

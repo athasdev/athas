@@ -39,7 +39,7 @@ import {
   isSecureAddress,
   resolveBrowserAddress,
 } from "../utils/browser-address";
-import { BROWSER_FOCUS_ADDRESS_BAR_EVENT } from "../utils/browser-events";
+import { onAppEvent } from "@/utils/app-events";
 
 interface BrowserViewProps {
   buffer: BrowserContent;
@@ -87,13 +87,11 @@ export function BrowserView({ buffer, paneId, isActive }: BrowserViewProps) {
   }, [isActive, setContext]);
 
   useEffect(() => {
-    const focusAddressBar = (event: Event) => {
-      if ((event as CustomEvent<string>).detail !== buffer.id) return;
+    return onAppEvent("athas-browser-focus-address-bar", (bufferId) => {
+      if (bufferId !== buffer.id) return;
       addressRef.current?.focus();
       addressRef.current?.select();
-    };
-    window.addEventListener(BROWSER_FOCUS_ADDRESS_BAR_EVENT, focusAddressBar);
-    return () => window.removeEventListener(BROWSER_FOCUS_ADDRESS_BAR_EVENT, focusAddressBar);
+    });
   }, [buffer.id]);
 
   const submitAddress = () => {

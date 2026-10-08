@@ -12,7 +12,7 @@ vi.mock("@/features/ai/services/ai-chat-history-service", () => ({
 
 vi.mock("@/features/window/stores/project.store", () => ({
   useProjectStore: {
-    getState: () => ({ rootFolderPath: "/workspace" }),
+    getState: () => ({ rootFolderPath: "/workspace", workspaceFolders: [] }),
   },
 }));
 

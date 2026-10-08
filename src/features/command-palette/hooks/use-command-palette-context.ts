@@ -5,7 +5,6 @@ import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useLspStore } from "@/features/editor/lsp/stores/lsp.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getBufferById } from "@/features/editor/utils/buffer-index";
-import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import {
   selectBrowseSessionsAgentId,
   selectCurrentAgentId,
@@ -14,6 +13,8 @@ import {
 import type { CommandContext } from "@/features/keymaps/types/keymaps.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useProjectStore } from "@/features/window/stores/project.store";
+import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 /** The command context, kept current while the palette is open. */
 export function useCommandPaletteContext(): CommandContext {
@@ -21,7 +22,7 @@ export function useCommandPaletteContext(): CommandContext {
   const isSidebarVisible = useUIState((state) => state.isSidebarVisible);
   const isBottomPaneVisible = useUIState((state) => state.isBottomPaneVisible);
   const bottomPaneActiveTab = useUIState((state) => state.bottomPaneActiveTab);
-  const activeBufferId = useBufferStore.use.activeBufferId();
+  const activeBufferId = useActiveBufferId();
   const activeBuffer = useBufferStore(
     useShallow((state) => {
       const buffer = activeBufferId ? getBufferById(state.buffers, activeBufferId) : undefined;
@@ -36,7 +37,7 @@ export function useCommandPaletteContext(): CommandContext {
     }),
   );
   const lspStatus = useLspStore.use.lspStatus();
-  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const currentAgentId = useAIChatStore(selectCurrentAgentId);
   const logOutAgentId = useAIChatStore((state) => selectLogOutAgentId(state, rootFolderPath));
   const browseSessionsAgentId = useAIChatStore((state) =>

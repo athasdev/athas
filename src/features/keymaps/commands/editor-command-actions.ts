@@ -18,6 +18,7 @@ import {
   type OccurrenceRange,
 } from "@/features/editor/utils/select-next-occurrence";
 import { showChoiceDialog } from "@/ui/dialog";
+import { emitAppEvent } from "@/utils/app-events";
 import { toast } from "sonner";
 import {
   getMarkdownPreviewKeyboardTarget,
@@ -25,12 +26,12 @@ import {
 } from "../utils/editor-keyboard-target";
 import { readBufferText } from "@/features/editor/services/buffer-text";
 import { resolveBufferText } from "@/features/editor/services/open-buffer-text";
+import { getActiveBufferId } from "@/features/panes/stores/pane-selectors";
 
 type EditorSelection = NonNullable<ReturnType<typeof editorAPI.getSelection>>;
 
 function getActiveEditorBuffer() {
-  const bufferStore = useBufferStore.getState();
-  const activeBuffer = bufferStore.buffers.find((b) => b.id === bufferStore.activeBufferId);
+  const activeBuffer = useBufferStore.getState().actions.getActiveBuffer();
   if (!activeBuffer || activeBuffer.type !== "editor" || activeBuffer.isVirtual) return null;
   return activeBuffer;
 }
@@ -65,9 +66,7 @@ function shouldUseEditorModelCommand(): boolean {
   if (isPlainTextFieldFocused()) return false;
 
   const bufferStore = useBufferStore.getState();
-  const activeBuffer = bufferStore.buffers.find(
-    (buffer) => buffer.id === bufferStore.activeBufferId,
-  );
+  const activeBuffer = bufferStore.actions.getActiveBuffer();
 
   return activeBuffer?.type === "editor";
 }
@@ -344,16 +343,16 @@ export function removeActiveEditorSecondaryCursors(): void {
 }
 
 export function triggerActiveEditorSuggest(): void {
-  window.dispatchEvent(new CustomEvent("editor-trigger-suggest"));
+  emitAppEvent("editor-trigger-suggest");
 }
 
 export function triggerActiveEditorParameterHints(): void {
-  window.dispatchEvent(new CustomEvent("editor-trigger-signature-help"));
+  emitAppEvent("editor-trigger-signature-help");
 }
 
 export function showInlineEditToolbar(): void {
   const editorState = useEditorStateStore.getState();
-  const activeBufferId = useBufferStore.getState().activeBufferId;
+  const activeBufferId = getActiveBufferId();
   useInlineEditToolbarStore
     .getState()
     .actions.show(editorState.activeEditorViewKey ?? activeBufferId ?? null);
@@ -380,7 +379,7 @@ export function shrinkActiveEditorSelection(): void {
 }
 
 export function triggerActiveEditorRenameSymbol(): void {
-  window.dispatchEvent(new CustomEvent("editor-rename-symbol"));
+  emitAppEvent("editor-rename-symbol");
 }
 
 export async function formatActiveEditorDocument(): Promise<void> {
@@ -472,7 +471,7 @@ export async function formatActiveEditorSelection(): Promise<void> {
 }
 
 export async function showHoverForActiveEditor(): Promise<void> {
-  window.dispatchEvent(new CustomEvent("editor-show-hover"));
+  emitAppEvent("editor-show-hover");
 }
 
 export async function runQuickFixForActiveEditor(): Promise<void> {

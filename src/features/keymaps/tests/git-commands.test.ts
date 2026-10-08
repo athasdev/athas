@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
+import { onAppEvent } from "@/utils/app-events";
 
 const mocks = vi.hoisted(() => ({
   setIsSidebarVisible: vi.fn(),
@@ -21,7 +22,7 @@ vi.mock("@/features/git/stores/git-repository.store", () => ({
   useRepositoryStore: { getState: () => mocks.repo },
 }));
 vi.mock("@/features/file-system/stores/file-system.store", () => ({
-  useFileSystemStore: { getState: () => ({ rootFolderPath: null }) },
+  useFileSystemStore: { getState: () => ({}) },
 }));
 vi.mock("@/features/git/api/git-status-api", () => ({
   stageAllFiles: mocks.stageAllFiles,
@@ -37,7 +38,7 @@ vi.mock("@/features/git/api/git-remotes-api", () => ({
 
 vi.mock("@/ui/dialog", () => ({ showConfirmDialog: vi.fn(), showPromptDialog: vi.fn() }));
 
-// Load the lazily imported actions before `window` is stubbed for the sidebar events.
+// Load the lazily imported actions before `window` is stubbed for the sidebar timers.
 await import("../commands/git-command-actions");
 const { gitCommands } = await import("../commands/git-commands");
 
@@ -48,14 +49,14 @@ function command(id: string) {
 }
 
 describe("git commands", () => {
-  const dispatchEvent = vi.fn();
+  const gitSidebarAction = vi.fn();
+  let unsubscribe = () => {};
 
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.repo.activeRepoPath = "/repo";
+    unsubscribe = onAppEvent("athas:git-palette-action", gitSidebarAction);
     vi.stubGlobal("window", {
-      CustomEvent,
-      dispatchEvent,
       setTimeout: (callback: () => void) => {
         callback();
         return 0;
@@ -64,6 +65,7 @@ describe("git commands", () => {
   });
 
   afterEach(() => {
+    unsubscribe();
     vi.unstubAllGlobals();
   });
 
@@ -98,7 +100,7 @@ describe("git commands", () => {
 
     expect(mocks.setIsSidebarVisible).toHaveBeenCalledWith(true);
     expect(mocks.setActiveView).toHaveBeenCalledWith("git");
-    expect(dispatchEvent).toHaveBeenCalledWith(expect.objectContaining({ detail }));
+    expect(gitSidebarAction).toHaveBeenCalledWith(detail);
   });
 
   it("stages every change in the active repository", async () => {

@@ -5,11 +5,7 @@ import { SINGLETON_TOOL_BUFFER_METADATA } from "@/features/panes/constants/tool-
 import type { OpenContentSpec, PaneContent } from "@/features/panes/types/pane-content.types";
 
 export const createPaneContent = (id: string, spec: OpenContentSpec): PaneContent => {
-  const base = {
-    id,
-    isPinned: false,
-    isActive: true,
-  };
+  const base = { id };
 
   switch (spec.type) {
     case "editor":
@@ -23,7 +19,6 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         savedContent: spec.content,
         isDirty: false,
         isVirtual: spec.isVirtual ?? false,
-        isPreview: spec.isPreview ?? false,
         readOnly: spec.readOnly,
         language: spec.language ?? detectLanguageFromFileName(spec.name),
       };
@@ -34,7 +29,6 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         type: "terminal",
         path: spec.path ?? `terminal://${sessionId}`,
         name: spec.name ?? "Terminal",
-        isPreview: false,
         sessionId,
         shell: spec.shell,
         initialCommand: spec.command,
@@ -48,7 +42,6 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         type: "browser",
         path: spec.path ?? `browser://${id}`,
         name: spec.name ?? "New Tab",
-        isPreview: false,
         url: spec.url ?? "about:blank",
         zoom: spec.zoom,
       };
@@ -58,7 +51,6 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         type: "agent",
         path: `agent://${spec.sessionId ?? id}`,
         name: "Agent",
-        isPreview: false,
         sessionId: spec.sessionId ?? id.replace("buffer_", ""),
       };
     case "newTab":
@@ -67,7 +59,6 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         type: "newTab",
         path: `newtab://${id}`,
         name: "New Tab",
-        isPreview: false,
       };
     case "diff":
       return {
@@ -75,7 +66,6 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         type: "diff",
         path: spec.path,
         name: spec.name,
-        isPreview: false,
         content: spec.content,
         savedContent: spec.content,
         diffData: spec.diffData,
@@ -86,7 +76,6 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         type: "image",
         path: spec.path,
         name: spec.name,
-        isPreview: false,
       };
     case "pdf":
       return {
@@ -94,7 +83,6 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         type: "pdf",
         path: spec.path,
         name: spec.name,
-        isPreview: false,
       };
     case "binary":
       return {
@@ -102,7 +90,6 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         type: "binary",
         path: spec.path,
         name: spec.name,
-        isPreview: false,
       };
     case "database":
       return {
@@ -110,7 +97,6 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         type: "database",
         path: spec.path,
         name: spec.name,
-        isPreview: false,
         databaseType: spec.databaseType,
         connectionId: spec.connectionId,
       };
@@ -124,7 +110,6 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
             ? `pr://${spec.prNumber}?view=files`
             : `pr://${spec.prNumber}`,
         name: spec.name ?? "Pull Request",
-        isPreview: false,
         repoPath: spec.repoPath,
         prNumber: spec.prNumber,
         authorAvatarUrl: spec.authorAvatarUrl,
@@ -135,7 +120,6 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         type: "githubIssue",
         path: spec.url ?? `github-issue://${spec.issueNumber}`,
         name: spec.name ?? "Issue",
-        isPreview: false,
         repoPath: spec.repoPath,
         issueNumber: spec.issueNumber,
         authorAvatarUrl: spec.authorAvatarUrl,
@@ -150,7 +134,6 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         resourceId: spec.resourceId,
         name: spec.name ?? (spec.kind === "releases" ? "New Release" : "Deployment"),
         path: deliveryBufferPath(spec.kind, spec.repoPath, spec.resourceId ?? "new"),
-        isPreview: false,
       };
     case "githubAction":
       return {
@@ -161,7 +144,6 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
             ? (spec.url ?? `github-action://${spec.runId}`)
             : `github-action-notification://${spec.notification?.id ?? id}`,
         name: spec.name ?? "Action",
-        isPreview: false,
         repoPath: spec.repoPath,
         runId: spec.runId,
         notification: spec.notification,
@@ -179,7 +161,6 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         type: "githubForm",
         path: `github-form://create/${spec.formKind}/${encodeURIComponent(spec.repoPath)}`,
         name: spec.formKind === "action" ? "Run Workflow" : `New ${resourceLabel}`,
-        isPreview: false,
         repoPath: spec.repoPath,
         formKind: spec.formKind,
         operation: "create",
@@ -192,7 +173,6 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         type: "customView",
         path: getViewBufferPath(spec.projectPath, spec.viewId),
         name: spec.name ?? (spec.viewId ? "Custom View" : "New Custom View"),
-        isPreview: false,
         projectPath: spec.projectPath,
         viewId: spec.viewId,
       };
@@ -202,7 +182,6 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         type: "markdownDocument",
         path: `markdown-document://${spec.documentId}`,
         name: "Untitled Document",
-        isPreview: false,
         content: spec.content ?? "",
       };
     case "markdownPreview":
@@ -211,7 +190,6 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         type: "markdownPreview",
         path: spec.path,
         name: spec.name,
-        isPreview: false,
         content: spec.content,
         sourceFilePath: spec.sourceFilePath,
       };
@@ -221,7 +199,6 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         type: "htmlPreview",
         path: spec.path,
         name: spec.name,
-        isPreview: false,
         content: spec.content,
         sourceFilePath: spec.sourceFilePath,
       };
@@ -231,7 +208,6 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         type: "csvPreview",
         path: spec.path,
         name: spec.name,
-        isPreview: false,
         content: spec.content,
         sourceFilePath: spec.sourceFilePath,
       };
@@ -241,7 +217,6 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         type: "svgPreview",
         path: spec.path,
         name: spec.name,
-        isPreview: false,
         content: spec.content,
         sourceFilePath: spec.sourceFilePath,
       };
@@ -251,7 +226,6 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         type: "externalEditor",
         path: spec.path,
         name: spec.name,
-        isPreview: false,
         terminalConnectionId: spec.terminalConnectionId,
       };
     case "globalSearch":
@@ -269,7 +243,6 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         type: spec.type,
         path: metadata.path,
         name: metadata.name,
-        isPreview: false,
       };
     }
     case "extension":
@@ -278,7 +251,6 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         type: "extension",
         path: `extension://${encodeURIComponent(spec.extensionId)}`,
         name: spec.name,
-        isPreview: false,
         extensionId: spec.extensionId,
       };
     case "onboarding":
@@ -287,7 +259,6 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         type: "onboarding",
         path: `onboarding://${spec.context.mode}/${spec.context.currentVersion}`,
         name: spec.context.mode === "release-notes" ? "What's New" : "Welcome",
-        isPreview: false,
         mode: spec.context.mode,
         currentVersion: spec.context.currentVersion,
         previousVersion: spec.context.previousVersion,
