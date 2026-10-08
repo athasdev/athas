@@ -39,7 +39,7 @@ const notifiedPauseReasons = new Set<IntelligenceCompletionPauseReason>();
 
 const PAUSE_NOTICES: Record<IntelligenceCompletionPauseReason, string> = {
   credits:
-    "Tab autocomplete is paused: there is no Athas AI credit left. Pro includes $10 of Athas AI every month, then pay as you go at list price +10%.",
+    "Tab autocomplete is paused: there is no Athas AI credit left. Pro includes Athas credit every month, then pay as you go at list price +10%.",
   "sign-in": "Tab autocomplete is paused. Sign in to use Athas AI.",
   "api-key": "Tab autocomplete is paused because the selected provider needs an API key.",
   policy: "Tab autocomplete is disabled by your organization.",

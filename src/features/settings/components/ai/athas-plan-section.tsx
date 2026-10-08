@@ -59,7 +59,7 @@ export function AthasPlanSection() {
               ? usage
                 ? describeIncludedCredit(usage)
                 : undefined
-              : "Pro includes $10 of Athas AI every month"
+              : "Pro includes Athas credit every month"
           }
           activateOnClick={false}
         >

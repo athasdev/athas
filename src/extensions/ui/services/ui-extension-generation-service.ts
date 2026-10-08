@@ -90,7 +90,7 @@ function describeGenerationFailure(status: number, body: unknown): string {
   if (status === 402) {
     // A Pro account that gets 402 has used its included credit and balance; it is not missing Pro.
     if (useAuthStore.getState().subscription?.status === "pro") {
-      return "Your included Athas AI credit is used up and your pay-as-you-go balance is empty. Add balance in billing or wait for next month's included $10.";
+      return "Your included Athas AI credit is used up and your pay-as-you-go balance is empty. Add balance in billing or wait for next month's included credit.";
     }
     return serverMessage ?? "Generating integrations is included with Athas Pro.";
   }

@@ -27,6 +27,11 @@ import type { GitSidebarItemId } from "@/features/layout/config/item-order";
 import type { Settings, SettingsSection } from "@/features/settings/types/settings.types";
 
 const AI_MODEL_MIGRATIONS: Record<string, Record<string, string>> = {
+  athas: {
+    "google/gemini-3.1-pro-preview": "google/gemini-3.1-pro",
+    "minimax/minimax-m3": "minimax/m3",
+    "openai/gpt-5.3-codex": "openai/gpt-5.4",
+  },
   anthropic: {
     "claude-fable-5": "claude-fable-5-1",
     "claude-opus-4-8": "claude-opus-5",
