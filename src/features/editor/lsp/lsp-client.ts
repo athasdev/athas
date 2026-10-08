@@ -25,6 +25,7 @@ import type {
 } from "@/features/diagnostics/types/diagnostics.types";
 import type { BackendLanguageToolConfigSet } from "@/extensions/runtime/language-tool-config";
 import { hasTextContent } from "@/features/panes/types/pane-content.types";
+import { pathStartsWithRoot } from "@/utils/path-helpers";
 import { subscribeToEditorDocumentChanges } from "../services/editor-document-events";
 import { useBufferStore } from "../stores/buffer.store";
 import type { EditorDocumentChangeEvent } from "../types/editor.types";
@@ -904,7 +905,7 @@ export class LspClient {
       logger.debug("LSPClient", "Stopping LSP for workspace:", workspacePath);
       await commands.lspStop(workspacePath);
       for (const filePath of Array.from(this.openDocuments)) {
-        if (filePath.startsWith(workspacePath)) this.forgetDocument(filePath);
+        if (pathStartsWithRoot(filePath, workspacePath)) this.forgetDocument(filePath);
       }
 
       // Remove all language servers for this workspace
