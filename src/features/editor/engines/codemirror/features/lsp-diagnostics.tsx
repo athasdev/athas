@@ -1,5 +1,6 @@
 import {
   type Diagnostic as LintDiagnostic,
+  diagnosticCount,
   linter,
   setDiagnostics,
   setDiagnosticsEffect,
@@ -70,6 +71,8 @@ export function LspDiagnostics({ host }: { host: CodeMirrorHost }) {
   useCodeMirrorExtension(view, diagnosticsDisplay);
 
   useEffect(() => {
+    // Nothing to show or clear, as for most files when they open.
+    if (diagnostics.length === 0 && diagnosticCount(view.state) === 0) return;
     view.dispatch(setDiagnostics(view.state, toLintDiagnostics(view.state.doc, diagnostics)));
     return () => {
       // The effect alone, so a lint extension that is already gone is not installed again.

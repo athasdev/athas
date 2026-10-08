@@ -1,10 +1,15 @@
-import { memo, Suspense, useEffect } from "react";
+import type { EditorView } from "@codemirror/view";
+import { memo, Suspense, useEffect, useLayoutEffect } from "react";
 import { fileOpenBenchmark } from "@/features/editor/services/file-open-benchmark";
 import {
   getCodeMirrorFeatures,
   useEditorFeatures,
 } from "@/features/editor/services/editor-feature-registry";
-import type { CodeMirrorHost } from "../host";
+import {
+  beginCodeMirrorExtensionBatch,
+  type CodeMirrorHost,
+  endCodeMirrorExtensionBatch,
+} from "../host";
 import { CodeMirrorBreakpoints } from "./codemirror-breakpoints";
 import { CodeMirrorContextMenu } from "./codemirror-context-menu";
 import { CodeMirrorEditorCommands } from "./codemirror-editor-commands";
@@ -45,6 +50,7 @@ function CodeMirrorFeatureList({ host }: { host: CodeMirrorHost }) {
   const completion = getCodeMirrorFeatures(contributions, "completion");
   return (
     <>
+      <ExtensionBatchStart view={host.view} />
       <CodeMirrorVim host={host} />
       <CodeMirrorSearch host={host} />
       <CodeMirrorContextMenu host={host} />
@@ -59,6 +65,21 @@ function CodeMirrorFeatureList({ host }: { host: CodeMirrorHost }) {
       <CodeMirrorStickyScroll host={host} />
       <CodeMirrorLspNavigation host={host} />
       <CodeMirrorLspFeatures host={host} completion={completion} />
+      <ExtensionBatchEnd view={host.view} />
     </>
   );
+}
+
+/**
+ * Brackets the features: React runs layout effects in render order, so the features mounting for
+ * a view install their extensions between these two, and the view is reconfigured once.
+ */
+function ExtensionBatchStart({ view }: { view: EditorView }) {
+  useLayoutEffect(() => beginCodeMirrorExtensionBatch(view), [view]);
+  return null;
+}
+
+function ExtensionBatchEnd({ view }: { view: EditorView }) {
+  useLayoutEffect(() => endCodeMirrorExtensionBatch(view), [view]);
+  return null;
 }

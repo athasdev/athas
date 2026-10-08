@@ -8,6 +8,7 @@ import {
   highlightWhitespace,
   scrollPastEnd,
   ViewPlugin,
+  type ViewUpdate,
 } from "@codemirror/view";
 import { indentationMarkers } from "@replit/codemirror-indentation-markers";
 import { getEditorBottomScrollPadding } from "../../utils/scroll-padding";
@@ -90,21 +91,37 @@ function whitespaceExtension(mode: RenderWhitespace): Extension {
   }
 }
 
-/** Room below the last line so it does not sit against the bottom edge, as in Monaco. */
+/**
+ * Room below the last line so it does not sit against the bottom edge, as in Monaco. Kept in step
+ * with the editor's height in CodeMirror's measure cycle; reading the height on every update
+ * instead forced a layout of the whole window per transaction. Until the first measure, which
+ * runs before the editor first paints, the padding is what an editor as tall as the window needs,
+ * so a scroll position restored before then is never cut short.
+ */
 const bottomScrollPadding = ViewPlugin.fromClass(
   class {
     private padding = -1;
 
     constructor(private readonly view: EditorView) {
-      this.sync();
+      this.apply(
+        getEditorBottomScrollPadding(view.dom.ownerDocument.defaultView?.innerHeight ?? 0),
+      );
+      this.measure(view);
     }
 
-    update() {
-      this.sync();
+    update(update: ViewUpdate) {
+      if (update.geometryChanged) this.measure(update.view);
     }
 
-    private sync() {
-      const padding = getEditorBottomScrollPadding(this.view.scrollDOM.clientHeight);
+    private measure(view: EditorView) {
+      view.requestMeasure({
+        key: this,
+        read: (measured) => getEditorBottomScrollPadding(measured.scrollDOM.clientHeight),
+        write: (padding) => this.apply(padding),
+      });
+    }
+
+    private apply(padding: number) {
       if (padding === this.padding) return;
       this.padding = padding;
       this.view.contentDOM.style.paddingBottom = `${padding}px`;

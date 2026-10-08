@@ -57,7 +57,9 @@ export function TabDndContext(props: TabDndContextProps) {
     <DndContext
       sensors={sensors}
       collisionDetection={tabCollisionDetection}
-      measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
+      // Tabs are measured once a drag starts. Measuring them always re-measured every tab with a
+      // forced layout on each render that added or removed one, such as opening a file.
+      measuring={{ droppable: { strategy: MeasuringStrategy.WhileDragging } }}
       {...props}
     />
   );

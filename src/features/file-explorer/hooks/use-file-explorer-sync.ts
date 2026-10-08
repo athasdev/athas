@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getExplorerTargetPath } from "@/features/file-explorer/services/file-explorer-tree-utils";
 import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
+import { runAfterNextPaint } from "@/utils/after-paint";
 
 interface UseFileExplorerSyncOptions {
   activePath?: string;
@@ -32,16 +33,27 @@ export function useFileExplorerSync({
     return getExplorerTargetPath(activeBuffer ?? null);
   });
 
+  // A newly opened file is highlighted and revealed after the editor showing it has painted, so
+  // re-rendering the tree does not hold up the file.
+  const syncedTargetPathRef = useRef(explorerTargetPath);
   useEffect(() => {
-    if (!explorerTargetPath) {
-      if (activePath) {
-        updateActivePath?.("");
+    const syncActivePath = () => {
+      if (!explorerTargetPath) {
+        if (activePath) {
+          updateActivePath?.("");
+        }
+        return;
       }
+
+      if (explorerTargetPath === activePath) return;
+      updateActivePath?.(explorerTargetPath);
+    };
+    if (syncedTargetPathRef.current === explorerTargetPath) {
+      syncActivePath();
       return;
     }
-
-    if (explorerTargetPath === activePath) return;
-    updateActivePath?.(explorerTargetPath);
+    syncedTargetPathRef.current = explorerTargetPath;
+    return runAfterNextPaint(syncActivePath);
   }, [activePath, explorerTargetPath, updateActivePath]);
 
   useEffect(() => {
@@ -53,15 +65,18 @@ export function useFileExplorerSync({
 
     setRevealRequest(null);
     let active = true;
-    void revealPathInTree(explorerTargetPath)
-      .then(() => {
-        if (!active || requestId !== revealRequestIdRef.current) return;
-        setRevealRequest({ id: requestId, path: explorerTargetPath });
-      })
-      .catch(() => {});
+    const cancelReveal = runAfterNextPaint(() => {
+      void revealPathInTree(explorerTargetPath)
+        .then(() => {
+          if (!active || requestId !== revealRequestIdRef.current) return;
+          setRevealRequest({ id: requestId, path: explorerTargetPath });
+        })
+        .catch(() => {});
+    });
 
     return () => {
       active = false;
+      cancelReveal();
     };
   }, [autoRevealActiveFile, explorerTargetPath, revealPathInTree]);
 

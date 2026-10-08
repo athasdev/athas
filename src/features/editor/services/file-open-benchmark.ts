@@ -1,4 +1,5 @@
 import { logger } from "@/utils/logger";
+import { runAfterNextPaint } from "@/utils/after-paint";
 import { frontendTrace } from "@/utils/frontend-trace";
 
 interface FileOpenBenchmarkSession {
@@ -186,10 +187,7 @@ export const fileOpenBenchmark = {
     pushMark(session, label, detail);
   },
 
-  /**
-   * Finishes the session once the frame showing the current DOM has painted: the next animation
-   * frame runs before that paint, and a task queued from it runs after.
-   */
+  /** Finishes the session once the frame showing the current DOM has painted. */
   finishAfterPaint(
     path: string,
     label: string,
@@ -200,17 +198,10 @@ export const fileOpenBenchmark = {
     const session = sessions.get(path);
     if (!session) return;
 
-    let timeout: ReturnType<typeof setTimeout> | undefined;
-    const frame = requestAnimationFrame(() => {
-      timeout = setTimeout(() => {
-        if (sessions.get(path) !== session) return;
-        this.finish(path, label, undefined, getMeta?.());
-      }, 0);
+    return runAfterNextPaint(() => {
+      if (sessions.get(path) !== session) return;
+      this.finish(path, label, undefined, getMeta?.());
     });
-    return () => {
-      cancelAnimationFrame(frame);
-      if (timeout !== undefined) clearTimeout(timeout);
-    };
   },
 
   cancel(path: string, reason = "cancelled"): void {

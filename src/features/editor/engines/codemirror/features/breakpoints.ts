@@ -1,4 +1,11 @@
-import { type Extension, Prec, RangeSet, StateEffect, StateField } from "@codemirror/state";
+import {
+  type EditorState,
+  type Extension,
+  Prec,
+  RangeSet,
+  StateEffect,
+  StateField,
+} from "@codemirror/state";
 import { EditorView, GutterMarker, gutter } from "@codemirror/view";
 import type { DebugBreakpoint } from "@/features/debugger/types/debugger.types";
 
@@ -54,6 +61,11 @@ const breakpointMarkersField = StateField.define<RangeSet<BreakpointMarker>>({
     return next;
   },
 });
+
+/** Whether the gutter shows any breakpoint in `state`. */
+export function hasBreakpointMarkers(state: EditorState): boolean {
+  return (state.field(breakpointMarkersField, false)?.size ?? 0) > 0;
+}
 
 const hoveredLineField = StateField.define<number | null>({
   create: () => null,

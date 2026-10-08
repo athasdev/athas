@@ -36,7 +36,10 @@ import {
 } from "../engines/codemirror/editor-adapter";
 import { CodeMirrorFeatures } from "../engines/codemirror/features/codemirror-features";
 import type { CodeMirrorHost } from "../engines/codemirror/host";
-import { loadCodeMirrorLanguage } from "../engines/codemirror/languages";
+import {
+  getLoadedCodeMirrorLanguage,
+  loadCodeMirrorLanguage,
+} from "../engines/codemirror/languages";
 import { lspFoldingChanged } from "../engines/codemirror/navigation/lsp-folding";
 import { matchHighlightsField, setMatchHighlights } from "../engines/codemirror/match-highlights";
 import {
@@ -71,11 +74,13 @@ import { useEditorStateStore } from "../stores/state.store";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import type { CodeEditorViewProps } from "../types/code-editor-view.types";
 import { getBufferById } from "../stores/buffer-index";
+import { runAfterNextPaint } from "@/utils/after-paint";
 import { fileOpenBenchmark } from "../services/file-open-benchmark";
 import { getLanguageIdFromPath } from "../services/language-id";
 import { useBufferIdOrActive } from "@/features/panes/hooks/use-pane-buffer-state";
 
 let nextEditorSourceId = 1;
+const NO_LANGUAGE: Extension = [];
 const VIEWPORT_HEIGHT_MEASURE_KEY = {};
 
 interface EditorSession {
@@ -99,6 +104,13 @@ interface EditorSession {
    * new revision is recorded; the buffer subscription skips those echoes.
    */
   deliveringOwnChange: boolean;
+  /**
+   * The stored buffer the editor was created from, until the buffer subscription has seen it, so
+   * a fresh editor is not compared against the text it was just created with.
+   */
+  createdFrom: PaneContent | null;
+  /** The read-only state and view options the editor was last configured with. */
+  viewConfig: { isReadOnly: boolean; viewOptions: CodeMirrorViewOptions };
 }
 
 export function CodeMirrorEditor({
@@ -307,6 +319,7 @@ export function CodeMirrorEditor({
     const content = initial?.type === "editor" ? readBufferText(initial) : "";
     const contentRevision = initial?.type === "editor" ? readBufferRevision(initial) : 0;
     const separator = detectLineSeparator(content);
+    const initialLanguage = getLoadedCodeMirrorLanguage(languageId) ?? NO_LANGUAGE;
     const session: EditorSession = {
       view: null as unknown as EditorView,
       separator,
@@ -317,6 +330,8 @@ export function CodeMirrorEditor({
       appliedContentRevision: contentRevision,
       applyingExternalUpdate: false,
       deliveringOwnChange: false,
+      createdFrom: initial ?? null,
+      viewConfig: { isReadOnly, viewOptions },
     };
 
     const historyKeymap = keymap.of([
@@ -397,8 +412,9 @@ export function CodeMirrorEditor({
       }
     });
 
+    // Built detached and attached once complete: a view built inside the window makes the browser
+    // restyle and lay out the whole window while it sets itself up, before the file can paint.
     const view = new EditorView({
-      parent: container,
       state: EditorState.create({
         doc: content,
         extensions: [
@@ -424,7 +440,7 @@ export function CodeMirrorEditor({
             indentWithTab,
           ]),
           athasEditorTheme,
-          compartments.language.of([]),
+          compartments.language.of(initialLanguage),
           compartments.readOnly.of(readOnlyExtension(isReadOnly)),
           compartments.view.of(codeMirrorViewExtensions(viewOptions)),
           matchHighlightsField,
@@ -440,9 +456,13 @@ export function CodeMirrorEditor({
         ],
       }),
     });
+    container.appendChild(view.dom);
     session.view = view;
     sessionRef.current = session;
     fileOpenBenchmark.mark(buffer.path, "view-created", `${view.state.doc.lines} lines`);
+    if (initialLanguage !== NO_LANGUAGE) {
+      fileOpenBenchmark.markOnce(buffer.path, "language-applied", "initial");
+    }
     matchSessionToBufferText(session, content);
     const liveView: LiveDocumentView = {
       sourceId: sourceIdRef.current,
@@ -477,7 +497,11 @@ export function CodeMirrorEditor({
     let cancelled = false;
     void loadCodeMirrorLanguage(languageId).then((language) => {
       if (cancelled || sessionRef.current !== session) return;
-      session.view.dispatch({ effects: compartments.language.reconfigure(language ?? []) });
+      const next = language ?? NO_LANGUAGE;
+      // Created with the language when it had already loaded.
+      if (compartments.language.get(session.view.state) !== next) {
+        session.view.dispatch({ effects: compartments.language.reconfigure(next) });
+      }
       fileOpenBenchmark.markOnce(filePath, "language-applied", languageId ?? "plain");
     });
     return () => {
@@ -487,7 +511,17 @@ export function CodeMirrorEditor({
   }, [buffer?.id, compartments, languageId]);
 
   useEffect(() => {
-    sessionRef.current?.view.dispatch({
+    const session = sessionRef.current;
+    if (!session) return;
+    // Created with these; reconfiguring would rebuild the editor's themes and plugins for nothing.
+    if (
+      session.viewConfig.isReadOnly === isReadOnly &&
+      session.viewConfig.viewOptions === viewOptions
+    ) {
+      return;
+    }
+    session.viewConfig = { isReadOnly, viewOptions };
+    session.view.dispatch({
       effects: [
         compartments.readOnly.reconfigure(readOnlyExtension(isReadOnly)),
         compartments.view.reconfigure(codeMirrorViewExtensions(viewOptions)),
@@ -498,6 +532,9 @@ export function CodeMirrorEditor({
   useEffect(() => {
     const session = sessionRef.current;
     if (!session) return;
+    if (!highlightMatches?.length && session.view.state.field(matchHighlightsField).size === 0) {
+      return;
+    }
     session.view.dispatch({
       effects: setMatchHighlights.of({
         matches: highlightMatches ?? [],
@@ -523,6 +560,12 @@ export function CodeMirrorEditor({
     if (!bufferId) return;
     let lastSeen: unknown = null;
     let lastSeenContent: string | undefined;
+    const createdFrom = sessionRef.current?.createdFrom;
+    if (sessionRef.current && createdFrom?.type === "editor") {
+      lastSeen = createdFrom;
+      lastSeenContent = createdFrom.content;
+      sessionRef.current.createdFrom = null;
+    }
     const sync = (buffers: PaneContent[]) => {
       const session = sessionRef.current;
       const current = getBufferById(buffers, bufferId);
@@ -692,8 +735,10 @@ export function CodeMirrorEditor({
     }
   }, [buffer?.id, pendingReveal]);
 
+  // Focusing lays out the window, so it waits until the editor has painted.
   useEffect(() => {
-    if (isActiveSurface && !isReadOnly) sessionRef.current?.view.focus();
+    if (!isActiveSurface || isReadOnly) return;
+    return runAfterNextPaint(() => sessionRef.current?.view.focus());
   }, [isActiveSurface, isReadOnly, buffer?.id]);
 
   useLayoutEffect(() => {

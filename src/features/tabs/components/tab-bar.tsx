@@ -2,7 +2,7 @@ import { isDirtyContent } from "@/features/panes/types/pane-content.types";
 import { type DragEndEvent, type DragMoveEvent, type DragStartEvent } from "@dnd-kit/core";
 import { SortableContext, horizontalListSortingStrategy } from "@dnd-kit/sortable";
 import { ArrowsInIcon, ArrowsOutIcon, SidebarIcon } from "@/ui/icons";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getBufferById } from "@/features/editor/stores/buffer-index";
@@ -35,6 +35,7 @@ import {
   TabStrip,
   useTabDragClickGuard,
 } from "@/ui/tab-bar";
+import { runAfterNextPaint } from "@/utils/after-paint";
 import { getRelativePath } from "@/utils/path-helpers";
 import { calculateDisplayNames } from "../utils/path-shortener";
 import {
@@ -359,13 +360,17 @@ const TabBar = ({
   }, [buffers, maxOpenTabs, activeBufferId, handleTabClose, pinnedBufferIds]);
 
   // Bring the active tab into view whenever it changes or a tab opens, measured against the
-  // scrolling strip rather than the whole bar, whose trailing actions can cover a tab.
-  useLayoutEffect(() => {
+  // scrolling strip rather than the whole bar, whose trailing actions can cover a tab. Measured
+  // after the frame showing the tab has painted: the scroll is animated anyway, and measuring
+  // earlier forces a layout of the window while the new tab's content is still being built.
+  useEffect(() => {
     const activeIndex = activeBufferId ? (sortedBufferIndexById.get(activeBufferId) ?? -1) : -1;
     if (activeIndex === -1) return;
-    const activeTab = tabRefs.current[activeIndex];
-    const strip = tabStripRef.current;
-    if (activeTab && strip) scrollTabIntoStrip(strip, activeTab);
+    return runAfterNextPaint(() => {
+      const activeTab = tabRefs.current[activeIndex];
+      const strip = tabStripRef.current;
+      if (activeTab && strip) scrollTabIntoStrip(strip, activeTab);
+    });
   }, [activeBufferId, sortedBufferIndexById]);
 
   const handleDoubleClick = useCallback(

@@ -1,14 +1,6 @@
 import type React from "react";
 import { runPythonCell, runRCell } from "@/features/editor/services/notebook-cell-runner";
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { CsvPreview } from "@/features/viewer/csv/components/csv-preview";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { useLspIntegration } from "@/features/editor/hooks/use-lsp-integration";
@@ -56,9 +48,10 @@ import { ScrollDebugOverlay } from "./debug/scroll-debug-overlay";
 import { HtmlPreview } from "./html/html-preview";
 import { CodeMirrorEditor } from "./codemirror-editor";
 import { SvgPreview } from "./svg/svg-preview";
-import { EditorStylesheet } from "./stylesheet";
+import "./code-editor.css";
 import Breadcrumb, { type BreadcrumbProps } from "./toolbar/breadcrumb";
 import { OutlineSidebar } from "@/features/outline/components/outline-sidebar";
+import { runAfterNextPaint } from "@/utils/after-paint";
 import { type AppEventMap, onAppEvent } from "@/utils/app-events";
 import {
   useBufferIdOrActive,
@@ -247,12 +240,8 @@ const CodeEditor = ({
 
     if (!focusTarget) return;
 
-    // Small delay to ensure the editor surface is mounted.
-    const focusTimer = setTimeout(() => {
-      focusTarget.focus();
-    }, 0);
-
-    return () => clearTimeout(focusTimer);
+    // After the editor has painted: focusing lays out the window.
+    return runAfterNextPaint(() => focusTarget.focus());
   }, [activeBufferId, enableInteractiveServices]);
 
   useEffect(() => {
@@ -310,11 +299,13 @@ const CodeEditor = ({
     setCodeLensContentLeft(EDITOR_CONSTANTS.EDITOR_PADDING_LEFT);
   }, []);
 
-  useLayoutEffect(() => {
+  // Measured from the next frame on: code lenses only show once the language server or the
+  // script cells have produced some, and measuring here would force a layout and a second render
+  // before the editor's first paint.
+  useEffect(() => {
     const container = editorRef.current;
     if (!container) return;
 
-    measureCodeLensLayout();
     const animationFrame = requestAnimationFrame(measureCodeLensLayout);
     const resizeObserver = new ResizeObserver(measureCodeLensLayout);
     resizeObserver.observe(container);
@@ -551,7 +542,6 @@ const CodeEditor = ({
 
   return (
     <>
-      <EditorStylesheet />
       <div className="absolute inset-0 flex flex-col overflow-hidden">
         {/* Breadcrumbs */}
         {showToolbar && (

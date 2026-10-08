@@ -1,7 +1,8 @@
 import {
-  lazy,
+  type ComponentProps,
   type ReactNode,
   Suspense,
+  use,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -15,6 +16,7 @@ import type { Buffer } from "@/features/editor/stores/buffer.store";
 import { getBufferById } from "@/features/editor/stores/buffer-index";
 import { isEditorKeyboardTarget } from "@/features/keymaps/services/editor-keyboard-target";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { useRecentFilesStore } from "@/features/file-system/stores/recent-files.store";
 import { formatDiffBufferLabel } from "@/features/git/services/diff-buffer-label";
 import { openSidebarResourceBuffer } from "@/features/sidebar/services/open-sidebar-resource";
 import {
@@ -51,9 +53,40 @@ import {
 } from "../services/pane-drop-actions";
 import { PaneSurfaceLayer } from "./pane-surface-layer";
 import { type DropZone, SplitDropOverlay } from "./split-drop-overlay";
+import { runAfterNextPaint } from "@/utils/after-paint";
 import { emitAppEvent, onAppEvent } from "@/utils/app-events";
 
-const CodeEditor = lazy(() => import("@/features/editor/components/code-editor"));
+type CodeEditorModule = typeof import("@/features/editor/components/code-editor");
+
+let codeEditorLoad: Promise<CodeEditorModule> | null = null;
+
+/**
+ * Loads the code editor's chunk once. A settled load is marked the way React's `use` reads a
+ * promise, so rendering the editor afterwards does not suspend.
+ */
+function loadCodeEditor(): Promise<CodeEditorModule> {
+  if (!codeEditorLoad) {
+    const load = import("@/features/editor/components/code-editor");
+    load.then(
+      (module) => Object.assign(load, { status: "fulfilled", value: module }),
+      () => {
+        if (codeEditorLoad === load) codeEditorLoad = null;
+      },
+    );
+    codeEditorLoad = load;
+  }
+  return codeEditorLoad;
+}
+
+/**
+ * The code editor, loaded on first use. Unlike `lazy`, which suspends on its promise even after
+ * the chunk has loaded and leaves the pane blank for a turn on the first file opened, it renders
+ * in the same pass once the chunk is in.
+ */
+function CodeEditor(props: ComponentProps<CodeEditorModule["default"]>) {
+  const { default: Editor } = use(loadCodeEditor());
+  return <Editor {...props} />;
+}
 
 interface PaneContainerProps {
   pane: PaneGroup;
@@ -68,23 +101,40 @@ const DEFAULT_CAROUSEL_CARD_WIDTH = 640;
 const MAX_WARM_EDITOR_BUFFERS = 3;
 
 let hasPrefetchedPaneSurfaces = false;
+/** Languages loaded ahead of time, from the files opened most recently. */
+const MAX_PREFETCHED_LANGUAGES = 3;
 
 /**
- * Loads the code for the surfaces users open most once the app is idle, so the first editor,
- * terminal, diff or search tab after startup doesn't wait on a network-style chunk fetch.
+ * Loads the code editor right after the workbench first paints, then, once the app is idle, the
+ * other surfaces users open most and the languages of recently opened files. The first file
+ * opened after startup then waits on neither the editor's chunk nor its language's.
  */
 function prefetchPaneSurfaces() {
   if (hasPrefetchedPaneSurfaces || typeof window === "undefined") return;
   hasPrefetchedPaneSurfaces = true;
-  const load = () => {
-    void import("@/features/editor/components/code-editor");
+  const loadWhenIdle = () => {
     prefetchPaneViews();
+    void import("@/features/editor/services/editor-language-preload")
+      .then(({ preloadEditorLanguagesForPaths }) =>
+        preloadEditorLanguagesForPaths(
+          useRecentFilesStore
+            .getState()
+            .actions.getRecentFilesOrderedByFrecency()
+            .map((file) => file.path),
+          MAX_PREFETCHED_LANGUAGES,
+        ),
+      )
+      .catch(() => {});
   };
-  if ("requestIdleCallback" in window) {
-    window.requestIdleCallback(load, { timeout: 3000 });
-  } else {
-    setTimeout(load, 1500);
-  }
+  const scheduleIdleLoads = () => {
+    if ("requestIdleCallback" in window) {
+      window.requestIdleCallback(loadWhenIdle, { timeout: 3000 });
+    } else {
+      setTimeout(loadWhenIdle, 1500);
+    }
+  };
+  // A failed load is retried, and reported, by the first editor that renders.
+  runAfterNextPaint(() => loadCodeEditor().then(scheduleIdleLoads, scheduleIdleLoads));
 }
 const MIN_CAROUSEL_CARD_WIDTH = 320;
 const CAROUSEL_OUTER_GAP_PX = 160;
@@ -714,21 +764,20 @@ export function PaneContainer({ pane }: PaneContainerProps) {
     isWorkspaceSurfaceActive && horizontalBufferCarousel && paneBuffers.length > 1;
   const activeEditorBufferId =
     activeBuffer && isStandardEditorBuffer(activeBuffer) ? activeBuffer.id : null;
-  const [warmEditorBufferIds, setWarmEditorBufferIds] = useState<string[]>([]);
+  // The most recently active editors, as of the last commit. Kept in a ref: storing them in state
+  // would make every tab switch render the pane twice before it commits.
+  const warmEditorBufferIdsRef = useRef<string[]>([]);
   const nextWarmEditorBufferIds = [
     ...(activeEditorBufferId ? [activeEditorBufferId] : []),
-    ...warmEditorBufferIds.filter(
+    ...warmEditorBufferIdsRef.current.filter(
       (bufferId) =>
         bufferId !== activeEditorBufferId &&
         paneBuffers.some((buffer) => buffer.id === bufferId && isStandardEditorBuffer(buffer)),
     ),
   ].slice(0, MAX_WARM_EDITOR_BUFFERS);
-  if (
-    nextWarmEditorBufferIds.length !== warmEditorBufferIds.length ||
-    nextWarmEditorBufferIds.some((bufferId, index) => bufferId !== warmEditorBufferIds[index])
-  ) {
-    setWarmEditorBufferIds(nextWarmEditorBufferIds);
-  }
+  useLayoutEffect(() => {
+    warmEditorBufferIdsRef.current = nextWarmEditorBufferIds;
+  });
   const mountedEditorBuffers = paneBuffers.filter(
     (buffer): buffer is EditorBufferShell =>
       isWorkspaceSurfaceActive &&

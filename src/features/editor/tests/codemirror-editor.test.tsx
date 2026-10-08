@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { language } from "@codemirror/language";
 import { EditorView } from "@codemirror/view";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -184,6 +185,27 @@ describe("CodeMirror editor", () => {
   afterEach(() => {
     act(() => root.unmount());
     container.remove();
+  });
+
+  it("starts with the file's language when it has already loaded", async () => {
+    const { loadCodeMirrorLanguage } = await import("../engines/codemirror/languages");
+    await loadCodeMirrorLanguage("typescript");
+
+    act(() => root.render(<CodeMirrorEditor bufferId="buffer-1" />));
+
+    expect(view().state.facet(language)?.name).toBe("typescript");
+  });
+
+  it("opens a file without transactions on the editor it was just created for", async () => {
+    const { loadCodeMirrorLanguage } = await import("../engines/codemirror/languages");
+    await loadCodeMirrorLanguage("typescript");
+    const dispatch = vi.spyOn(EditorView.prototype, "dispatch");
+
+    await act(async () => root.render(<CodeMirrorEditor bufferId="buffer-1" />));
+
+    expect(view().state.doc.toString()).toBe("const a = 1;\n");
+    expect(dispatch).not.toHaveBeenCalled();
+    dispatch.mockRestore();
   });
 
   it("sends typed edits to the buffer as a delta batch", async () => {

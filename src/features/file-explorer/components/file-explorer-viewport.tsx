@@ -287,20 +287,26 @@ function FileTreeStickyHeaders({
   const layerRef = useRef<HTMLDivElement>(null);
   const [bounds, setBounds] = useState<StickyBounds>({ left: 0, width: 0 });
 
-  const subscribe = useCallback(
-    (onChange: () => void) => {
-      const element = scrollRef.current;
-      if (!element) return () => {};
-      element.addEventListener("scroll", onChange, { passive: true });
-      return () => element.removeEventListener("scroll", onChange);
-    },
-    [scrollRef],
-  );
-  const scrollTop = useSyncExternalStore(
-    subscribe,
-    () => scrollRef.current?.scrollTop ?? 0,
-    () => 0,
-  );
+  // The offset is kept from scroll events: reading it from the scroller on every render forces a
+  // layout whenever the tree renders while anything else in the window is mid-update.
+  const scrollOffset = useMemo(() => {
+    let offset = 0;
+    return {
+      subscribe: (onChange: () => void) => {
+        const element = scrollRef.current;
+        if (!element) return () => {};
+        offset = element.scrollTop;
+        const handleScroll = () => {
+          offset = element.scrollTop;
+          onChange();
+        };
+        element.addEventListener("scroll", handleScroll, { passive: true });
+        return () => element.removeEventListener("scroll", handleScroll);
+      },
+      getSnapshot: () => offset,
+    };
+  }, [scrollRef]);
+  const scrollTop = useSyncExternalStore(scrollOffset.subscribe, scrollOffset.getSnapshot, () => 0);
 
   // Match the rows' horizontal box, which the scrollbar gutters inset on both sides.
   useLayoutEffect(() => {
