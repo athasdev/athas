@@ -255,6 +255,10 @@
     --athas-title-bar-leading-inset: 4.75rem;
   }
 
+  html.platform-macos[data-fullscreen] {
+    --athas-title-bar-leading-inset: var(--athas-chrome-padding-inline);
+  }
+
   :root[data-increase-contrast="true"] {
     --app-muted-foreground: color-mix(in srgb, var(--muted-foreground) 70%, var(--foreground) 30%);
     --app-subtle-foreground: color-mix(

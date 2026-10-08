@@ -41,17 +41,25 @@ export default function TitleBar({
     setCurrentWindow(window);
     let disposed = false;
     let unlistenResize: (() => void) | undefined;
-    const syncMaximized = () => {
+    const syncWindowState = () => {
       void window
         .isMaximized()
         .then((maximized) => {
           if (!disposed) setIsMaximized(maximized);
         })
         .catch(console.error);
+      if (!IS_MAC) return;
+      // Full screen hides the traffic lights, so the title bar drops their inset.
+      void window
+        .isFullscreen()
+        .then((fullscreen) => {
+          if (!disposed) document.documentElement.toggleAttribute("data-fullscreen", fullscreen);
+        })
+        .catch(console.error);
     };
-    syncMaximized();
+    syncWindowState();
     void window
-      .onResized(syncMaximized)
+      .onResized(syncWindowState)
       .then((unlisten) => {
         if (disposed) unlisten();
         else unlistenResize = unlisten;
