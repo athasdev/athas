@@ -2,10 +2,9 @@ use serde_json::{Map, Value};
 use std::{
    collections::HashMap,
    fs,
-   fs::OpenOptions,
    io::{ErrorKind, Write},
    path::{Path, PathBuf},
-   sync::{LazyLock, Mutex},
+   sync::{LazyLock, Mutex, MutexGuard},
 };
 use tauri::{AppHandle, Manager};
 
@@ -13,6 +12,15 @@ const SECURE_STORE_FILE: &str = "secure.json";
 type SecretCache = HashMap<(String, String), String>;
 
 static SECRET_CACHE: LazyLock<Mutex<SecretCache>> = LazyLock::new(|| Mutex::new(HashMap::new()));
+// Every window reads and rewrites secure.json from its own command thread, so each
+// read-modify-write runs under this lock or concurrent saves interleave into invalid JSON.
+static SECURE_STORE_LOCK: Mutex<()> = Mutex::new(());
+
+fn lock_secure_store() -> MutexGuard<'static, ()> {
+   SECURE_STORE_LOCK
+      .lock()
+      .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
 
 fn keychain_service(app: &AppHandle) -> &str {
    app.config().identifier.as_str()
@@ -98,7 +106,17 @@ fn load_store_from_path(path: &Path) -> Result<Map<String, Value>, String> {
          }
 
          serde_json::from_str::<Map<String, Value>>(&contents)
-            .map_err(|e| format!("Failed to parse secure store '{}': {}", path.display(), e))
+            .or_else(|error| {
+               let recovered = recover_leading_store(&contents).ok_or(error)?;
+               log::warn!(
+                  "Recovered secure store '{}' from a partially overwritten file",
+                  path.display()
+               );
+               Ok(recovered)
+            })
+            .map_err(|e: serde_json::Error| {
+               format!("Failed to parse secure store '{}': {}", path.display(), e)
+            })
       }
       Err(error) if error.kind() == ErrorKind::NotFound => Ok(Map::new()),
       Err(error) => Err(format!(
@@ -107,6 +125,15 @@ fn load_store_from_path(path: &Path) -> Result<Map<String, Value>, String> {
          error
       )),
    }
+}
+
+/// A save interrupted by another one leaves a complete object followed by the tail of the longer
+/// write. The leading object is the last full save, so it is kept and the next save rewrites it.
+fn recover_leading_store(contents: &str) -> Option<Map<String, Value>> {
+   serde_json::Deserializer::from_str(contents)
+      .into_iter::<Map<String, Value>>()
+      .next()?
+      .ok()
 }
 
 fn save_store_to_path(path: &Path, store: &Map<String, Value>) -> Result<(), String> {
@@ -139,31 +166,40 @@ fn save_store_to_path(path: &Path, store: &Map<String, Value>) -> Result<(), Str
       .map_err(|e| format!("Failed to save secure store '{}': {}", path.display(), e))
 }
 
-fn load_store(app: &AppHandle) -> Result<Map<String, Value>, String> {
-   load_store_from_path(&secure_store_path(app)?)
-}
-
-fn save_store(app: &AppHandle, store: &Map<String, Value>) -> Result<(), String> {
-   save_store_to_path(&secure_store_path(app)?, store)
-}
-
-fn store_set(app: &AppHandle, key: &str, value: &str) -> Result<(), String> {
-   let mut store = load_store(app)?;
+fn set_in_store(path: &Path, key: &str, value: &str) -> Result<(), String> {
+   let _guard = lock_secure_store();
+   let mut store = load_store_from_path(path)?;
    store.insert(key.to_string(), Value::String(value.to_string()));
-   save_store(app, &store)
+   save_store_to_path(path, &store)
 }
 
-fn store_get(app: &AppHandle, key: &str) -> Result<Option<String>, String> {
-   let store = load_store(app)?;
+fn get_from_store(path: &Path, key: &str) -> Result<Option<String>, String> {
+   let _guard = lock_secure_store();
+   let store = load_store_from_path(path)?;
    Ok(store
       .get(key)
       .and_then(|value| value.as_str().map(|s| s.to_string())))
 }
 
+fn delete_from_store(path: &Path, key: &str) -> Result<(), String> {
+   let _guard = lock_secure_store();
+   let mut store = load_store_from_path(path)?;
+   if store.remove(key).is_none() {
+      return Ok(());
+   }
+   save_store_to_path(path, &store)
+}
+
+fn store_set(app: &AppHandle, key: &str, value: &str) -> Result<(), String> {
+   set_in_store(&secure_store_path(app)?, key, value)
+}
+
+fn store_get(app: &AppHandle, key: &str) -> Result<Option<String>, String> {
+   get_from_store(&secure_store_path(app)?, key)
+}
+
 fn store_delete(app: &AppHandle, key: &str) -> Result<(), String> {
-   let mut store = load_store(app)?;
-   store.remove(key);
-   save_store(app, &store)
+   delete_from_store(&secure_store_path(app)?, key)
 }
 
 fn store_secret_with_operations<SetKeychain, GetKeychain, DeleteFallback, SetFallback>(
@@ -315,44 +351,43 @@ fn harden_secure_dir(_path: &Path) -> std::io::Result<()> {
    Ok(())
 }
 
-#[cfg(unix)]
+/// Writes a sibling temp file and renames it over the store, so readers and crashes never see a
+/// partially written file.
 fn write_secure_store_file(path: &Path, contents: &[u8]) -> std::io::Result<()> {
-   use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
-
    match fs::symlink_metadata(path) {
-      Ok(metadata) => {
-         if metadata.file_type().is_symlink() {
-            return Err(std::io::Error::new(
-               ErrorKind::InvalidInput,
-               "secure store path must not be a symlink",
-            ));
-         }
-         fs::set_permissions(path, fs::Permissions::from_mode(0o600))?;
+      Ok(metadata) if metadata.file_type().is_symlink() => {
+         return Err(std::io::Error::new(
+            ErrorKind::InvalidInput,
+            "secure store path must not be a symlink",
+         ));
       }
+      Ok(_) => {}
       Err(error) if error.kind() == ErrorKind::NotFound => {}
       Err(error) => return Err(error),
    }
 
-   let mut file = OpenOptions::new()
-      .write(true)
-      .create(true)
-      .truncate(true)
-      .mode(0o600)
-      .open(path)?;
+   let directory = path.parent().unwrap_or_else(|| Path::new("."));
+   let mut file = tempfile::Builder::new()
+      .prefix(".secure-")
+      .suffix(".tmp")
+      .tempfile_in(directory)?;
+   restrict_secure_file(file.as_file())?;
    file.write_all(contents)?;
-   file.flush()?;
+   file.as_file().sync_all()?;
+   file.persist(path).map_err(|error| error.error)?;
+   Ok(())
+}
+
+#[cfg(unix)]
+fn restrict_secure_file(file: &fs::File) -> std::io::Result<()> {
+   use std::os::unix::fs::PermissionsExt;
+
    file.set_permissions(fs::Permissions::from_mode(0o600))
 }
 
 #[cfg(not(unix))]
-fn write_secure_store_file(path: &Path, contents: &[u8]) -> std::io::Result<()> {
-   let mut file = OpenOptions::new()
-      .write(true)
-      .create(true)
-      .truncate(true)
-      .open(path)?;
-   file.write_all(contents)?;
-   file.flush()
+fn restrict_secure_file(_file: &fs::File) -> std::io::Result<()> {
+   Ok(())
 }
 
 #[cfg(test)]
@@ -609,5 +644,108 @@ mod tests {
          load_store_from_path(&path).expect("load fallback")["github_token"],
          Value::String("secret".to_string())
       );
+   }
+
+   #[test]
+   fn concurrent_updates_keep_every_key_and_valid_json() {
+      let temp_dir = tempfile::tempdir().expect("temp dir");
+      let path = temp_dir.path().join(SECURE_STORE_FILE);
+
+      std::thread::scope(|scope| {
+         for index in 0..16 {
+            let path = &path;
+            scope.spawn(move || {
+               for round in 0..10 {
+                  let key = format!("key_{index}");
+                  set_in_store(path, &key, &format!("value_{index}_{round}")).expect("set");
+                  delete_from_store(path, "missing").expect("delete missing");
+               }
+            });
+         }
+      });
+
+      let store = load_store_from_path(&path).expect("store stays valid");
+      assert_eq!(store.len(), 16);
+      assert_eq!(store["key_3"], Value::String("value_3_9".to_string()));
+   }
+
+   #[test]
+   fn load_recovers_the_complete_store_before_an_overwritten_tail() {
+      let temp_dir = tempfile::tempdir().expect("temp dir");
+      let path = temp_dir.path().join(SECURE_STORE_FILE);
+      fs::write(&path, "{\n  \"athas_auth_token\": \"token\"\n}en\"\n}").expect("write torn file");
+
+      let store = load_store_from_path(&path).expect("recover leading store");
+
+      assert_eq!(store.len(), 1);
+      assert_eq!(
+         store["athas_auth_token"],
+         Value::String("token".to_string())
+      );
+   }
+
+   #[test]
+   fn load_still_rejects_a_store_that_is_not_json() {
+      let temp_dir = tempfile::tempdir().expect("temp dir");
+      let path = temp_dir.path().join(SECURE_STORE_FILE);
+      fs::write(&path, "not json").expect("write invalid file");
+
+      assert!(load_store_from_path(&path).is_err());
+   }
+
+   #[test]
+   fn set_repairs_a_torn_store() {
+      let temp_dir = tempfile::tempdir().expect("temp dir");
+      let path = temp_dir.path().join(SECURE_STORE_FILE);
+      fs::write(&path, "{\"github_token\":\"old\"}ken\"}").expect("write torn file");
+
+      set_in_store(&path, "athas_auth_token", "new").expect("set after recovery");
+
+      let contents = fs::read_to_string(&path).expect("read store");
+      let store: Map<String, Value> = serde_json::from_str(&contents).expect("clean json");
+      assert_eq!(store["github_token"], Value::String("old".to_string()));
+      assert_eq!(store["athas_auth_token"], Value::String("new".to_string()));
+   }
+
+   #[test]
+   fn deleting_a_missing_key_leaves_the_file_untouched() {
+      let temp_dir = tempfile::tempdir().expect("temp dir");
+      let path = temp_dir.path().join(SECURE_STORE_FILE);
+      fs::write(&path, r#"{"github_token":"secret"}"#).expect("write fallback");
+
+      delete_from_store(&path, "athas_auth_token").expect("delete missing key");
+
+      assert_eq!(
+         fs::read_to_string(&path).expect("read store"),
+         r#"{"github_token":"secret"}"#
+      );
+   }
+
+   #[test]
+   fn save_leaves_no_temporary_files_behind() {
+      let temp_dir = tempfile::tempdir().expect("temp dir");
+      let path = temp_dir.path().join(SECURE_STORE_FILE);
+
+      set_in_store(&path, "github_token", "secret").expect("set");
+      set_in_store(&path, "github_token", "rotated").expect("overwrite");
+
+      let names: Vec<_> = fs::read_dir(temp_dir.path())
+         .expect("read dir")
+         .map(|entry| entry.expect("entry").file_name())
+         .collect();
+      assert_eq!(names, vec![std::ffi::OsString::from(SECURE_STORE_FILE)]);
+   }
+
+   #[cfg(unix)]
+   #[test]
+   fn save_refuses_to_replace_a_symlinked_store() {
+      let temp_dir = tempfile::tempdir().expect("temp dir");
+      let target = temp_dir.path().join("elsewhere.json");
+      let path = temp_dir.path().join(SECURE_STORE_FILE);
+      fs::write(&target, "{}").expect("write target");
+      std::os::unix::fs::symlink(&target, &path).expect("symlink store");
+
+      assert!(set_in_store(&path, "github_token", "secret").is_err());
+      assert_eq!(fs::read_to_string(&target).expect("read target"), "{}");
    }
 }
