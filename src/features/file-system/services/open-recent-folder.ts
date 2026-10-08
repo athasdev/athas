@@ -1,6 +1,6 @@
 import { toast } from "sonner";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { createAppWindow } from "@/features/window/utils/create-app-window";
 import { getSymlinkInfo } from "../controllers/platform";
 import { useFileSystemStore } from "../stores/file-system.store";

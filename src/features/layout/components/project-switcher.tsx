@@ -9,9 +9,9 @@ import {
 import { connectionStore } from "@/features/remote/stores/remote-connection.store";
 import type { RemoteConnection } from "@/features/remote/types/remote.types";
 import { getFriendlyRemoteError, isRemoteAuthFailure } from "@/features/remote/utils/remote-errors";
-import ProjectIconPicker from "@/features/window/components/project-icon-picker";
-import type { ProjectTab } from "@/features/window/stores/workspace-tabs.store";
-import { findBestProjectIcon } from "@/features/window/utils/project-icons";
+import ProjectIconPicker from "@/features/workspace/project-icons/components/project-icon-picker";
+import type { ProjectTab } from "@/features/workspace/stores/workspace-tabs.store";
+import { findBestProjectIcon } from "@/features/workspace/project-icons/utils/project-icons";
 import { Button } from "@/ui/button";
 import {
   DropdownMenu,
@@ -44,7 +44,7 @@ import {
   getProjectRemoteConnectionId,
 } from "@/features/layout/utils/project-switcher-items";
 import { getProjectNameFromPath, isRemoteProjectPath, ProjectGlyph } from "./sidebar/project-glyph";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 /** Icons found in each project folder, so switching projects doesn't rescan and blank the icon. */
 const detectedProjectIcons = new Map<string, string | undefined>();

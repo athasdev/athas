@@ -20,7 +20,7 @@ import {
 } from "../../lib/query-result-export";
 import { paginateQueryResult } from "../../lib/query-result-pagination";
 import { writeDatabaseClipboardText } from "../../utils/clipboard";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { Alert, AlertDescription } from "@/ui/alert";
 import { Spinner } from "@/ui/spinner";
 import { Empty, EmptyDescription } from "@/ui/empty";

@@ -1,4 +1,4 @@
-import { areProjectTabPathsEqual } from "@/features/window/utils/project-tab-path";
+import { areProjectTabPathsEqual } from "@/features/workspace/utils/project-tab-path";
 import { useState } from "react";
 import { resolveRunWorkingDirectory } from "@/features/run-actions/utils/run-action-discovery";
 import { Button } from "@/ui/button";
@@ -9,7 +9,7 @@ import Textarea from "@/ui/textarea";
 import { parseTeamWorkspace } from "../utils/team-workspace-config";
 import type { WorkspaceSectionProps } from "./workspace-section-props";
 import { emitAppEvent } from "@/utils/app-events";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 export function WorkspaceTasks({ root, config, onChange, reportError }: WorkspaceSectionProps) {
   const activeRoot = useProjectStore((state) => state.rootFolderPath);

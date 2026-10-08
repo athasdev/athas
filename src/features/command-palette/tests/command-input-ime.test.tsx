@@ -28,7 +28,7 @@ vi.mock("@/features/file-system/stores/file-system.store", () => ({
   useFileSystemStore: { getState: () => ({}) },
 }));
 vi.mock("@/features/layout/contexts/toast-context", () => ({ showToast: vi.fn() }));
-vi.mock("@/features/window/stores/ui-state.store", () => ({ useUIState: { getState: vi.fn() } }));
+vi.mock("@/features/layout/stores/ui-state.store", () => ({ useUIState: { getState: vi.fn() } }));
 
 let root: Root;
 let container: HTMLDivElement;

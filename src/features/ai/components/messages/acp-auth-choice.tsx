@@ -1,6 +1,6 @@
 import { toast } from "sonner";
 import { type AcpAuthRequest, useAcpAuthStore } from "@/features/ai/stores/acp-auth.store";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { Button } from "@/ui/button";
 import { KeyIcon, TerminalWindowIcon } from "@/ui/icons";
 

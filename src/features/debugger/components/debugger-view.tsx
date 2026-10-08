@@ -21,7 +21,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { Alert, AlertDescription } from "@/ui/alert";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";

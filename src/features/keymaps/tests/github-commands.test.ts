@@ -31,7 +31,7 @@ vi.mock("@/features/layout/contexts/toast-context", () => ({ showToast: mocks.sh
 vi.mock("@/features/settings/stores/settings.store", () => ({
   useSettingsStore: { getState: () => ({ settings: {}, actions: { updateSetting: vi.fn() } }) },
 }));
-vi.mock("@/features/window/stores/ui-state.store", () => ({
+vi.mock("@/features/layout/stores/ui-state.store", () => ({
   useUIState: { getState: () => ({ setIsSidebarVisible: vi.fn(), setActiveView: vi.fn() }) },
 }));
 

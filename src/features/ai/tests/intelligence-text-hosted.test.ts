@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 const mocks = vi.hoisted(() => ({ fetch: vi.fn() }));
 vi.mock("@/utils/tauri-fetch", () => ({ tauriFetch: mocks.fetch }));
-vi.mock("@/features/window/services/auth-api", () => ({ getAuthToken: async () => "token" }));
+vi.mock("@/features/auth/services/auth-api", () => ({ getAuthToken: async () => "token" }));
 vi.mock("../intelligence/services/intelligence-connection", () => ({
   getIntelligenceConnection: async () => ({
     providerId: "athas",
@@ -12,7 +12,7 @@ vi.mock("../intelligence/services/intelligence-connection", () => ({
   }),
   assertIntelligenceConnectionAllowed: () => {},
 }));
-vi.mock("@/features/window/stores/auth.store", () => ({
+vi.mock("@/features/auth/stores/auth.store", () => ({
   useAuthStore: { getState: () => ({ user: null }) },
 }));
 vi.mock("../intelligence/stores/intelligence-settings.store", () => ({

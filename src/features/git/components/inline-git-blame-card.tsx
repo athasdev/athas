@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { useAuthStore } from "@/features/window/stores/auth.store";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { Avatar } from "@/ui/avatar";
 import { Button } from "@/ui/button";
 import { CheckIcon, CopyIcon } from "@/ui/icons";

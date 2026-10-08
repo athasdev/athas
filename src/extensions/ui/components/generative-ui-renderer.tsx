@@ -1,6 +1,6 @@
 import { openExternalUrl } from "@/utils/external-url";
 import { useCallback, useMemo, useState } from "react";
-import { ProGate } from "@/features/window/components/pro-gate";
+import { ProGate } from "@/features/auth/components/pro-gate";
 import { Alert, AlertDescription, AlertTitle } from "@/ui/alert";
 import {
   normalizeGenerativeUIView,

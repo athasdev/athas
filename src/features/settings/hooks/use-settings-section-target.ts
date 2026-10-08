@@ -1,6 +1,6 @@
 import { getSettingSearchTargetKey } from "@/features/settings/lib/settings-search";
 import { useSettingsSearchStore } from "@/features/settings/stores/settings-search.store";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 
 /**
  * Whether Settings was just asked to show `section`, by a deep link or a search result, so a

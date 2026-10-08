@@ -8,9 +8,9 @@ import { filterVisibleSettingsTabs } from "@/features/settings/lib/settings-tab-
 import { useSettingsSearchStore } from "@/features/settings/stores/settings-search.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import type { SearchResult } from "@/features/settings/types/search.types";
-import { useAuthStore } from "@/features/window/stores/auth.store";
-import type { SettingsTab } from "@/features/window/stores/ui-state/types/ui-state.types";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
+import type { SettingsTab } from "@/features/layout/stores/ui-state/types/ui-state.types";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 
 /**
  * The Settings page state shared by its sidebar navigation and the page in the main view: which

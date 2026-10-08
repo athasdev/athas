@@ -21,7 +21,7 @@ vi.mock("../utils/commit-message-context", () => ({
 vi.mock("@/features/settings/stores/settings.store", () => ({
   useSettingsStore: (select: (state: unknown) => unknown) => select({ settings: {} }),
 }));
-vi.mock("@/features/window/stores/auth.store", () => ({
+vi.mock("@/features/auth/stores/auth.store", () => ({
   useAuthStore: (select: (state: unknown) => unknown) => select({ isAuthenticated: false }),
 }));
 vi.mock("@/features/keymaps/hooks/use-command-shortcut", () => ({

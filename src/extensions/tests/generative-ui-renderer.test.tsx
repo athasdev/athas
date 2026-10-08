@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vite-plus/test";
 import { GenerativeUIRenderer } from "../ui/components/generative-ui-renderer";
 
 vi.mock("@tauri-apps/plugin-opener", () => ({ openUrl: vi.fn() }));
-vi.mock("@/features/window/hooks/use-pro-feature", () => ({
+vi.mock("@/features/auth/hooks/use-pro-feature", () => ({
   useProFeature: () => ({ hasIntelligence: true }),
 }));
 

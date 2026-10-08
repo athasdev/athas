@@ -40,11 +40,11 @@ describe("persisted Zustand actions", () => {
   });
 
   it("keeps session actions after hydration", async () => {
-    const firstModule = await import("@/features/window/stores/session.store");
+    const firstModule = await import("@/features/workspace/stores/session.store");
     firstModule.useSessionStore.getState().actions.saveSession("/workspace", [], null);
 
     vi.resetModules();
-    const secondModule = await import("@/features/window/stores/session.store");
+    const secondModule = await import("@/features/workspace/stores/session.store");
     const state = secondModule.useSessionStore.getState();
 
     expect(state.actions.getSession("/workspace")?.projectPath).toBe("/workspace");

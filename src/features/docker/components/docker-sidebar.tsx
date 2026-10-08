@@ -36,8 +36,8 @@ import {
   type DockerActivitySection,
   useSidebarStore,
 } from "@/features/layout/stores/sidebar.store";
-import { useProjectStore } from "@/features/window/stores/project.store";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { showPromptDialog } from "@/ui/dialog";
 import {
   SidebarTabBar,

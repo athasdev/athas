@@ -47,8 +47,8 @@ import { useToast } from "@/features/layout/contexts/toast-context";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { recordFrictionSignal } from "@/features/telemetry/services/telemetry";
 import { claimContextualTip } from "@/features/onboarding/lib/contextual-teaching";
-import { useAuthStore } from "@/features/window/stores/auth.store";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { Button } from "@/ui/button";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
 import {

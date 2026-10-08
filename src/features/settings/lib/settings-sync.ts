@@ -5,12 +5,12 @@ import {
   useSettingsSyncStore,
   type SettingsSyncSource,
 } from "@/features/settings/stores/settings-sync.store";
+import { isAuthInvalidError } from "@/features/auth/services/auth-api";
 import {
   fetchSettingsSyncSnapshot,
-  isAuthInvalidError,
   pushSettingsSyncSnapshot,
   type CloudSettingsSyncSnapshot,
-} from "@/features/window/services/auth-api";
+} from "@/features/settings/services/settings-sync-api";
 
 const SETTINGS_SYNC_META_KEY = "athas.settingsSync.meta";
 const SETTINGS_SYNC_PUSH_DEBOUNCE_MS = 1500;

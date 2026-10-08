@@ -1,5 +1,5 @@
 import { useCallback, useEffect } from "react";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import type { SplitPlacement } from "@/features/panes/types/pane.types";
 import type { TerminalSplitDirection } from "@/features/terminal/types/terminal.types";
 import { parseRemotePath } from "@/features/remote/utils/remote-path";

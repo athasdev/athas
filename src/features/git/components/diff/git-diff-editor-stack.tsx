@@ -13,8 +13,8 @@ import {
   type FileNavigatorViewMode,
 } from "@/features/file-explorer/components/file-navigator-sidebar";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { useUIState } from "@/features/window/stores/ui-state.store";
-import { useAuthStore } from "@/features/window/stores/auth.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { buildSearchRegex, type SearchOptions } from "@/features/editor/utils/search";
 import { Avatar } from "@/ui/avatar";
@@ -42,7 +42,7 @@ import {
 } from "../../utils/multi-diff-selection";
 import { createSingleFileWorkingTreeDiff } from "../../utils/working-tree-multi-diff";
 import { DiffFileContent } from "./diff-file-content";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { useIsBufferActive } from "@/features/panes/hooks/use-pane-buffer-state";
 
 function countStats(diff: GitDiff) {

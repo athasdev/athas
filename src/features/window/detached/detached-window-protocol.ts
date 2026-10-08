@@ -1,5 +1,5 @@
 import type { OpenContentSpec } from "@/features/panes/types/pane-content.types";
-import type { SettingsTab } from "@/features/window/stores/ui-state/types/ui-state.types";
+import type { SettingsTab } from "@/features/layout/stores/ui-state/types/ui-state.types";
 
 /**
  * What a detached window hosts. Each kind has its own owner-side service and

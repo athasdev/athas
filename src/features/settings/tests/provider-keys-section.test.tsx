@@ -33,7 +33,7 @@ vi.mock("@/features/ai/services/providers/ai-provider-settings-registry", () => 
   useAIProviderSettingsActions: () => [],
 }));
 
-vi.mock("@/features/window/stores/auth.store", () => ({
+vi.mock("@/features/auth/stores/auth.store", () => ({
   useAuthStore: (select: (state: unknown) => unknown) => select({ subscription: null }),
 }));
 

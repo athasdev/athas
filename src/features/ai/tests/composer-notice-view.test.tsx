@@ -11,7 +11,7 @@ const state = vi.hoisted(() => ({
   refreshSubscription: vi.fn(async () => true),
   check: vi.fn(async () => {}),
 }));
-vi.mock("@/features/window/stores/auth.store", () => {
+vi.mock("@/features/auth/stores/auth.store", () => {
   const read = () => ({
     ...state.auth,
     actions: {
@@ -25,14 +25,14 @@ vi.mock("@/features/window/stores/auth.store", () => {
     }),
   };
 });
-vi.mock("@/features/window/hooks/use-subscription-refresh", () => ({
+vi.mock("@/features/auth/hooks/use-subscription-refresh", () => ({
   useSubscriptionRefresh: () => {},
 }));
 vi.mock("@/features/ai/stores/ai-chat.store", () => ({
   useAIChatStore: (select: (value: unknown) => unknown) =>
     select({ actions: { checkApiKey: state.check } }),
 }));
-vi.mock("@/features/window/hooks/use-desktop-sign-in", () => ({
+vi.mock("@/features/auth/hooks/use-desktop-sign-in", () => ({
   useDesktopSignIn: () => ({
     signIn: state.signIn,
     isSigningIn: false,
@@ -41,7 +41,7 @@ vi.mock("@/features/window/hooks/use-desktop-sign-in", () => ({
     reopen: vi.fn(async () => {}),
   }),
 }));
-vi.mock("@/features/window/stores/ui-state.store", () => ({
+vi.mock("@/features/layout/stores/ui-state.store", () => ({
   useUIState: { getState: () => ({ openSettings: vi.fn() }) },
 }));
 vi.mock("@tauri-apps/plugin-opener", () => ({ openUrl: vi.fn(async () => {}) }));

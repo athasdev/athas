@@ -5,7 +5,7 @@
 import type { ReactNode } from "react";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import type { Settings } from "@/features/settings/types/settings.types";
-import type { BottomPaneTab } from "@/features/window/stores/ui-state/types/ui-state.types";
+import type { BottomPaneTab } from "@/features/layout/stores/ui-state/types/ui-state.types";
 
 export interface Keybinding {
   key: string;

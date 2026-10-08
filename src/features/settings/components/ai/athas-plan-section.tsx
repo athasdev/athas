@@ -5,11 +5,11 @@ import {
   getHostedUsageState,
   getHostedUsageTone,
 } from "@/features/ai/lib/hosted-usage";
-import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
-import { useProFeature } from "@/features/window/hooks/use-pro-feature";
-import { useSubscriptionRefresh } from "@/features/window/hooks/use-subscription-refresh";
-import { getAccountPlanLabel } from "@/features/window/lib/account-usage";
-import { useAuthStore } from "@/features/window/stores/auth.store";
+import { useDesktopSignIn } from "@/features/auth/hooks/use-desktop-sign-in";
+import { useProFeature } from "@/features/auth/hooks/use-pro-feature";
+import { useSubscriptionRefresh } from "@/features/auth/hooks/use-subscription-refresh";
+import { getAccountPlanLabel } from "@/features/auth/utils/account-usage";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Progress } from "@/ui/progress";

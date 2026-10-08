@@ -3,7 +3,7 @@ import {
   canUseIntelligenceProvider,
   canUseProviderWithoutApiKey,
 } from "@/features/ai/lib/provider-access";
-import type { SubscriptionInfo } from "@/features/window/services/auth-api";
+import type { SubscriptionInfo } from "@/features/auth/services/auth-api";
 
 const subscription: SubscriptionInfo = {
   status: "pro",

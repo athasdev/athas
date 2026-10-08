@@ -16,7 +16,7 @@ import {
 import { setNativeMenuBarEnabled } from "@/features/window/services/native-window-api";
 import { usePerformanceExperiments } from "@/features/settings/stores/performance-experiments.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { IS_LINUX, IS_MAC, IS_WINDOWS } from "@/utils/platform";
 import { emitAppEvent } from "@/utils/app-events";
 import type { Command } from "../types/keymaps.types";
@@ -53,7 +53,7 @@ import {
   zoomIn,
   zoomOut,
 } from "./view-command-actions";
-import { selectIsTerminalPaneVisible } from "@/features/window/stores/ui-state/terminal-slice";
+import { selectIsTerminalPaneVisible } from "@/features/layout/stores/ui-state/terminal-slice";
 
 export const viewCommands: Command[] = [
   {

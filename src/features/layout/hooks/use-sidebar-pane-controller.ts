@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import {
   getSidebarPaneLevel,
   resolveSidebarPaneClick,

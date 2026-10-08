@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { saveWorkspaceTerminalsToStorage } from "@/features/terminal/lib/terminal-session-storage";
 import type { Terminal } from "@/features/terminal/types/terminal.types";
 import { workspaceSessionRepository } from "@/features/workspace/persistence/workspace-session-repository";
-import { useSessionStore } from "@/features/window/stores/session.store";
+import { useSessionStore } from "@/features/workspace/stores/session.store";
 
 const storage = vi.hoisted(() => {
   const values = new Map<string, string>();

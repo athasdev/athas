@@ -31,10 +31,10 @@ vi.mock("@/features/settings/stores/settings.store", () => ({
     { getState: () => ({ settings: defaultSettings, actions: { updateSetting: vi.fn() } }) },
   ),
 }));
-vi.mock("@/features/window/stores/zoom.store", () => ({
+vi.mock("@/features/layout/stores/zoom.store", () => ({
   useZoomStore: { use: { terminalZoomLevel: () => 1 } },
 }));
-vi.mock("@/features/window/stores/project.store", () => ({
+vi.mock("@/features/workspace/stores/project.store", () => ({
   useProjectStore: (selector: (state: unknown) => unknown) =>
     selector({ rootFolderPath: "/project" }),
 }));

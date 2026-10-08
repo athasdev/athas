@@ -17,8 +17,8 @@ vi.mock("react", () => ({
     state.effect = effect;
   },
 }));
-vi.mock("@/features/window/services/auth-api", () => ({ getAuthToken: async () => "token" }));
-vi.mock("@/features/window/stores/auth.store", () => ({
+vi.mock("@/features/auth/services/auth-api", () => ({ getAuthToken: async () => "token" }));
+vi.mock("@/features/auth/stores/auth.store", () => ({
   useAuthStore: Object.assign(() => state.userId, {
     getState: () => ({ user: { id: state.userId } }),
   }),

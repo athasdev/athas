@@ -10,8 +10,8 @@ import {
   registerCollaborationDocument,
   streamCollaborationDocumentUpdates,
   updateCollaborationPresence,
-} from "@/features/window/services/auth-api";
-import { useAuthStore } from "@/features/window/stores/auth.store";
+} from "@/features/collaboration/services/collaboration-api";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 const PRESENCE_HEARTBEAT_MS = 60_000;

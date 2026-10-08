@@ -1,4 +1,4 @@
-import { authenticatedFetch } from "@/features/window/services/auth-api";
+import { authenticatedFetch } from "@/features/auth/services/auth-api";
 import type { ShareInput, ShareOptions } from "../types/share.types";
 
 export class ShareRequestError extends Error {

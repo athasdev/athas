@@ -37,7 +37,7 @@ import {
 } from "@/features/layout/stores/sidebar.store";
 import { writeSidebarResourceDragData } from "@/features/sidebar/utils/sidebar-resource-drag";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { ContextMenuPopup, createContextMenuGroups } from "@/ui/context-menu";
 import {
   DropdownMenu,
@@ -71,7 +71,7 @@ import { GitHubAvatar } from "./github-avatar";
 import GitHubIssuesView from "./github-issues-view";
 import { GitHubSidebarRow, type GitHubSidebarPreviewBadge } from "./github-sidebar-row";
 import { GITHUB_ISSUE_LIST_TTL_MS, githubIssueListCache } from "../utils/github-data-cache";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { onAppEvent } from "@/utils/app-events";
 import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 

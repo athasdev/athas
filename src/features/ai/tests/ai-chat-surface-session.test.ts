@@ -10,7 +10,7 @@ vi.mock("@/features/ai/services/ai-chat-history-service", () => ({
   saveChatToDb: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("@/features/window/stores/project.store", () => ({
+vi.mock("@/features/workspace/stores/project.store", () => ({
   useProjectStore: {
     getState: () => ({ rootFolderPath: "/workspace", workspaceFolders: [] }),
   },

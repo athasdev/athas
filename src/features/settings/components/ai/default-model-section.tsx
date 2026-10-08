@@ -8,7 +8,7 @@ import {
   withDefaultConnection,
 } from "@/features/settings/lib/ai-model-preferences";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { Button } from "@/ui/button";
 import Select from "@/ui/select";
 import Section, { SettingRow, SettingStatus } from "../settings-section";

@@ -12,7 +12,7 @@ import {
   type FileNavigatorItem,
   type FileNavigatorViewMode,
 } from "@/features/file-explorer/components/file-navigator-sidebar";
-import { useZoomStore } from "@/features/window/stores/zoom.store";
+import { useZoomStore } from "@/features/layout/stores/zoom.store";
 import { Spinner } from "@/ui/spinner";
 import { Button } from "@/ui/button";
 import type { SearchExcerpt } from "../utils/search-excerpts";

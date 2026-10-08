@@ -7,7 +7,7 @@ import {
 } from "@/features/panes/components/resource-buffer-view";
 import { TerminalHost } from "@/features/terminal/components/terminal-host";
 import { TerminalTab } from "@/features/terminal/components/terminal-tab";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { ViewerLoadingState } from "@/features/viewer/components/viewer-state";
 import { parseResourceWindowPayload } from "./detached-resource-service";
 import { DetachedWindowShell } from "./detached-window-shell";

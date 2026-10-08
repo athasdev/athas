@@ -15,7 +15,7 @@ import type {
 import type { ContextInfo } from "@/features/ai/types/ai-context.types";
 import type { AgentCompletionResult } from "@/features/ai/types/agent-completion.types";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { getAcpAdditionalDirectories } from "@/features/ai/lib/acp-additional-directories";
 import { buildAcpPrompt } from "@/features/ai/lib/acp-prompt";
 import {

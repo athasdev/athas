@@ -24,8 +24,8 @@ import { useFileSystemStore } from "@/features/file-system/stores/file-system.st
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import type { CoreFeaturesState } from "@/features/settings/types/feature.types";
 import type { Settings } from "@/features/settings/types/settings.types";
-import { useUIState } from "@/features/window/stores/ui-state.store";
-import type { SettingsTab } from "@/features/window/stores/ui-state/types/ui-state.types";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
+import type { SettingsTab } from "@/features/layout/stores/ui-state/types/ui-state.types";
 import type { Command } from "../types/keymaps.types";
 
 export const settingsTabLabels: Record<SettingsTab, string> = {

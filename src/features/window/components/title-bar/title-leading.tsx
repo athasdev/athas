@@ -2,11 +2,11 @@ import { useFileSystemStore } from "@/features/file-system/stores/file-system.st
 import GitBranchManager from "@/features/git/components/git-branch-manager";
 import { useGitStore } from "@/features/git/stores/git.store";
 import { ProjectSwitcher } from "@/features/layout/components/project-switcher";
-import { useUIState } from "@/features/window/stores/ui-state.store";
-import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
+import { useWorkspaceTabsStore } from "@/features/workspace/stores/workspace-tabs.store";
 import { SidebarIcon } from "@/ui/icons";
 import { Toggle } from "@/ui/toggle";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 /**
  * The leading end of the title bar, next to the window controls: the sidebar toggle, then the

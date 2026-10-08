@@ -19,7 +19,7 @@ const titleLeadingSource = readFileSync(
   "utf8",
 );
 const accountMenuSource = readFileSync(
-  fileURLToPath(new URL("../components/account-menu.tsx", import.meta.url)),
+  fileURLToPath(new URL("../../auth/components/account-menu.tsx", import.meta.url)),
   "utf8",
 );
 const activityBarSource = readFileSync(

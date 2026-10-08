@@ -28,7 +28,7 @@ import {
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
 import { isMac, isWindows } from "@/utils/platform";
-import { useAuthStore } from "@/features/window/stores/auth.store";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { useIntelligenceSettingsStore } from "../stores/intelligence-settings.store";
 import { getIntelligenceSdkModel } from "./intelligence-sdk-model";
 import { toIntelligenceSdkPrompt } from "../lib/intelligence-sdk-prompt";

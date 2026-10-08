@@ -7,7 +7,7 @@ import { LocalHistoryCommandContent } from "@/features/local-history/components/
 import { OutlineCommandContent } from "@/features/outline/components/outline-command";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { vimCommands } from "@/features/vim/stores/vim-commands";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { useKeymapStore } from "@/features/keymaps/stores/keymaps.store";
 import { getEffectiveShortcutsByCommand } from "@/features/keymaps/utils/effective-keymaps";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";

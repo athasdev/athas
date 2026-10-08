@@ -1,5 +1,5 @@
-import type { SubscriptionInfo } from "@/features/window/services/auth-api";
-import { hasProductCapability } from "@/features/window/lib/product-capabilities";
+import type { SubscriptionInfo } from "@/features/auth/services/auth-api";
+import { hasProductCapability } from "@/features/auth/utils/product-capabilities";
 
 export function canUseIntelligenceProvider(
   providerId: string,

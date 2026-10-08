@@ -11,7 +11,7 @@ import type { PullRequestDetails, WorkflowRunListItem } from "../types/github.ty
 import { filterRelevantWorkflowChanges } from "../utils/github-workflow-relevance";
 import { diffWorkflowRuns } from "../utils/github-workflow-run-changes";
 import { getWorkflowRunTitle, isWorkflowRunActive } from "../utils/github-workflow-status";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 const ACTIVE_POLL_INTERVAL_MS = 15_000;
 const IDLE_POLL_INTERVAL_MS = 60_000;

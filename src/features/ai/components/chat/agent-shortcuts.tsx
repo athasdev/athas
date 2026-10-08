@@ -21,7 +21,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useGitStore } from "@/features/git/stores/git.store";
 import { usePaneStore } from "@/features/panes/stores/pane.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import { getRelativePath } from "@/utils/path-helpers";

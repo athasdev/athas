@@ -1,5 +1,5 @@
 import { FieldDescription } from "@/ui/field";
-import { areProjectTabPathsEqual } from "@/features/window/utils/project-tab-path";
+import { areProjectTabPathsEqual } from "@/features/workspace/utils/project-tab-path";
 import { useCallback, useEffect, useState } from "react";
 import { openFolder } from "@/features/file-system/controllers/platform";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";

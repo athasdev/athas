@@ -32,7 +32,7 @@ import {
   subscribeToTerminalEvents,
   terminalSizesEqual,
 } from "@/features/terminal/utils/terminal-protocol";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { readClipboardText, writeClipboardText } from "@/utils/clipboard";
 import { cn } from "@/utils/cn";
 import { currentPlatform } from "@/utils/platform";

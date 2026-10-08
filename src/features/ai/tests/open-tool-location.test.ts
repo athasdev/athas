@@ -20,7 +20,7 @@ vi.mock("@/features/editor/stores/buffer.store", () => ({
     }),
   },
 }));
-vi.mock("@/features/window/stores/project.store", () => ({
+vi.mock("@/features/workspace/stores/project.store", () => ({
   useProjectStore: { getState: () => ({ rootFolderPath: "/work/project" }) },
 }));
 

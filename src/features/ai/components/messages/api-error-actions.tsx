@@ -4,8 +4,8 @@ import { toast } from "sonner";
 import { ProviderApiKeyCommand } from "../provider-api-key-command";
 import { HOSTED_BILLING_CODES, resolveBillingUrl } from "@/features/ai/lib/api-error";
 import { openNewAgentChat } from "@/features/ai/lib/open-new-agent-chat";
-import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useDesktopSignIn } from "@/features/auth/hooks/use-desktop-sign-in";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { Button } from "@/ui/button";
 
 export function ApiErrorActions({

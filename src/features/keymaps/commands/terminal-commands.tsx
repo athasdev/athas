@@ -16,7 +16,7 @@ import {
   ZoomInIcon,
   ZoomOutIcon,
 } from "@/ui/icons";
-import { useZoomStore } from "@/features/window/stores/zoom.store";
+import { useZoomStore } from "@/features/layout/stores/zoom.store";
 import { emitAppEvent } from "@/utils/app-events";
 import type { Command } from "../types/keymaps.types";
 

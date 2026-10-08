@@ -9,7 +9,7 @@ import type { GitCommit } from "../types/git.types";
 vi.mock("@/features/keymaps/hooks/use-command-shortcut", () => ({
   useCommandShortcut: () => undefined,
 }));
-vi.mock("@/features/window/stores/auth.store", () => ({
+vi.mock("@/features/auth/stores/auth.store", () => ({
   useAuthStore: (select: (state: { user: null }) => unknown) => select({ user: null }),
 }));
 

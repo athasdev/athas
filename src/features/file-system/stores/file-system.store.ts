@@ -26,16 +26,16 @@ import { buildRemoteRootPath, parseRemotePath } from "@/features/remote/utils/re
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { recordFrictionSignal } from "@/features/telemetry/services/telemetry";
 import { useSidebarStore } from "@/features/layout/stores/sidebar.store";
-import { useProjectStore } from "@/features/window/stores/project.store";
-import { normalizeWorkspaceRootPath } from "@/features/window/utils/project-tab-path";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
+import { normalizeWorkspaceRootPath } from "@/features/workspace/utils/project-tab-path";
 import type { BufferSession } from "@/features/workspace/types/workspace-session.types";
 import {
   getCurrentProjectUiState,
   persistCurrentProjectUiState,
   restoreProjectPaneState,
   restoreProjectUiState,
-} from "@/features/window/stores/workspace-ui-session";
-import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
+} from "@/features/workspace/persistence/workspace-ui-session";
+import { useWorkspaceTabsStore } from "@/features/workspace/stores/workspace-tabs.store";
 import { createAppWindow } from "@/features/window/utils/create-app-window";
 import { serializeTerminals } from "@/features/terminal/lib/terminal-session-storage";
 import { useTerminalTabsStore } from "@/features/terminal/stores/terminal-tabs.store";

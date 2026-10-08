@@ -65,7 +65,7 @@ import Badge, { badgeVariants } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import { Composer, ComposerDropHint, ComposerEditable, ComposerToolbar } from "@/ui/composer";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { chatContentWidth } from "../chat/chat-content-width";
 import { ComposerAgentSelector } from "./composer-agent-selector";
 import { ChatPreferencesMenu } from "./chat-preferences-menu";

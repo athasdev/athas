@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { openFolder } from "@/features/file-system/controllers/platform";
-import { useAuthStore } from "@/features/window/stores/auth.store";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { Button } from "@/ui/button";
 import { PlusIcon } from "@/ui/icons";
 import Select from "@/ui/select";

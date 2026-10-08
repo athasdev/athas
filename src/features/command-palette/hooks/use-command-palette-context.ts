@@ -12,8 +12,8 @@ import {
 } from "@/features/keymaps/commands/agent-command-context";
 import type { CommandContext } from "@/features/keymaps/types/keymaps.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { useUIState } from "@/features/window/stores/ui-state.store";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 /** The command context, kept current while the palette is open. */

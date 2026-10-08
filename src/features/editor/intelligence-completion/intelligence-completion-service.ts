@@ -16,8 +16,8 @@ import {
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getLanguageIdFromPath } from "@/features/editor/utils/language-id";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { useAuthStore } from "@/features/window/stores/auth.store";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import {
   clearRecentEdits,
   getNearbyDiagnostics,

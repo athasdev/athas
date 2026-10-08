@@ -1,5 +1,5 @@
 import { ArrowsInIcon, ArrowsOutIcon, SettingsIcon } from "@/ui/icons";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import type { Command } from "../types/keymaps.types";
 import {
   maximizeWindow,

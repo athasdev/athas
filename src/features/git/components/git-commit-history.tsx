@@ -18,8 +18,8 @@ import {
   SidebarSearchPopover,
   SidebarSection,
 } from "@/ui/sidebar";
-import { useAuthStore } from "@/features/window/stores/auth.store";
-import type { AuthUser } from "@/features/window/services/auth-api";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
+import type { AuthUser } from "@/features/auth/services/auth-api";
 import { formatRelativeDate } from "@/utils/date";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { cn } from "@/utils/cn";

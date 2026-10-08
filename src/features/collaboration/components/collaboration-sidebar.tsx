@@ -45,8 +45,8 @@ import {
   postCollaborationMediaSignal,
   updateCollaborationChannelNote,
   type CollaborationMediaSignal,
-} from "@/features/window/services/auth-api";
-import { useAuthStore } from "@/features/window/stores/auth.store";
+} from "@/features/collaboration/services/collaboration-api";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/ui/accordion";
 import { Button } from "@/ui/button";
 import { Card, CardContent } from "@/ui/card";

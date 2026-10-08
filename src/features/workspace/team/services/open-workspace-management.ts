@@ -1,7 +1,7 @@
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useWorkspaceManagementStore } from "../stores/workspace-management.store";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 export function openWorkspaceManagement() {
   const root = useProjectStore.getState().rootFolderPath;

@@ -7,11 +7,11 @@ import {
   type SidebarView,
 } from "@/features/layout/utils/sidebar-pane-utils";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { useAuthStore } from "@/features/window/stores/auth.store";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { ExtensionErrorBoundary } from "@/extensions/ui/components/extension-error-boundary";
 import { useExtensionViews } from "@/extensions/ui/hooks/use-extension-views";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 // Every view except the file tree loads on demand, so startup only parses the default one.
 const GitView = lazy(() => import("@/features/git/components/git-view"));

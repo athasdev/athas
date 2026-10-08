@@ -19,8 +19,8 @@ import { useVimStore } from "@/features/vim/stores/vim.store";
 import { isWslPath } from "@/features/wsl/utils/wsl-path";
 import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
 import { useMenuEventsWrapper } from "@/features/window/hooks/use-menu-events-wrapper";
-import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useWorkspaceTabsStore } from "@/features/workspace/stores/workspace-tabs.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { toast } from "sonner";
 import { cn } from "@/utils/cn";
 import { frontendTrace } from "@/utils/frontend-trace";
@@ -28,14 +28,14 @@ import { recordStartupMilestone } from "@/features/bootstrap/startup-performance
 import { useBootstrapPhaseReached } from "@/features/bootstrap/stores/bootstrap-phase.store";
 import { getInternalTabDragData } from "@/features/tabs/utils/internal-tab-drag";
 import { getCollapsedActivityBarWidth } from "@/features/layout/utils/activity-bar-layout";
-import { WorkbenchFullscreenRootContext } from "@/features/window/components/workbench-fullscreen-surface";
+import { WorkbenchFullscreenRootContext } from "@/features/layout/components/workbench-fullscreen-surface";
 import TitleBarWithSettings from "../../window/components/title-bar/title-bar";
 import { TitleLeading } from "../../window/components/title-bar/title-leading";
 import { ResizablePane } from "./resizable-pane";
 import { ActivityBar } from "./sidebar/activity-bar";
 import { SidebarPane } from "./sidebar/sidebar-pane";
 import { useResponsiveWorkbenchLayout } from "../hooks/use-responsive-workbench-layout";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 const CommandPalette = lazy(() => import("@/features/command-palette/components/command-palette"));
 const ConnectionDialog = lazy(() =>

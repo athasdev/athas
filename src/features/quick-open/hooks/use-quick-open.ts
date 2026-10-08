@@ -11,7 +11,7 @@ import {
   canUseNativeFileSearch,
   getNativeWorkspaceRootPaths,
 } from "@/features/file-search/utils/file-search-paths";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { calculateOffsetFromContentPosition } from "@/features/editor/utils/position";
 import { getBaseName } from "@/utils/path-helpers";
 import { SEARCH_DEBOUNCE_DELAY } from "../constants/limits";
@@ -24,7 +24,7 @@ import {
   type WorkspaceSymbolItem,
   useWorkspaceSymbolSearch,
 } from "./use-workspace-symbol-search";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { getActiveBufferId } from "@/features/panes/stores/pane-selectors";
 
 export const useQuickOpen = () => {

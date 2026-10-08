@@ -14,7 +14,7 @@ import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getBufferById } from "@/features/editor/utils/buffer-index";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { Button } from "@/ui/button";
 import { EmptyState } from "@/ui/empty";
 import {

@@ -15,7 +15,7 @@ vi.mock("../intelligence/services/intelligence-connection", () => ({
   }),
   assertIntelligenceConnectionAllowed: () => {},
 }));
-vi.mock("@/features/window/stores/auth.store", () => ({
+vi.mock("@/features/auth/stores/auth.store", () => ({
   useAuthStore: { getState: () => ({ user: null }) },
 }));
 vi.mock("../intelligence/stores/intelligence-settings.store", () => ({

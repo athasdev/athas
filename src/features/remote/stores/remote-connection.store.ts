@@ -53,7 +53,7 @@ class ConnectionStore {
   private async syncWorkspaceTabName(connectionId: string, connectionName: string) {
     try {
       const { useWorkspaceTabsStore } =
-        await import("@/features/window/stores/workspace-tabs.store");
+        await import("@/features/workspace/stores/workspace-tabs.store");
       useWorkspaceTabsStore
         .getState()
         .actions.renameRemoteProjectTabs(connectionId, connectionName);

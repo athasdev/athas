@@ -21,8 +21,8 @@ import {
 } from "@/ui/icons";
 import { useEffect, useMemo, useRef } from "react";
 import { selectAgentSessions } from "@/features/ai/lib/agent-session-list";
-import { useProjectStore } from "@/features/window/stores/project.store";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { useSidebarPaneController } from "@/features/layout/hooks/use-sidebar-pane-controller";
 import { PaneContentHeader } from "@/features/panes/components/pane-content-chrome";
 import { Button } from "@/ui/button";

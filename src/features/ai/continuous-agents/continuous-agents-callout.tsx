@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import Badge from "@/ui/badge";
 import { ArrowRightIcon, ArrowsClockwiseIcon } from "@/ui/icons";
 import { Item, ItemActions, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@/ui/item";

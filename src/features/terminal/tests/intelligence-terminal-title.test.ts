@@ -35,7 +35,7 @@ vi.mock("../stores/terminal.store", () => ({
     }),
   },
 }));
-vi.mock("@/features/window/stores/project.store", () => ({
+vi.mock("@/features/workspace/stores/project.store", () => ({
   useProjectStore: { getState: () => ({ rootFolderPath: mocks.workspace }) },
 }));
 import { renameTerminalWithIntelligence } from "../services/intelligence-terminal-title";

@@ -55,7 +55,7 @@ import {
   setInternalTabDragHoverTarget,
   setInternalTabDragData,
 } from "@/features/tabs/utils/internal-tab-drag";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import TerminalTabBarItem from "./terminal-tab-bar-item";
 import TerminalTabContextMenu from "./terminal-tab-context-menu";
 import { emitAppEvent } from "@/utils/app-events";

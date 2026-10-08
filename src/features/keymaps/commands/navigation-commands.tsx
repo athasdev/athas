@@ -13,7 +13,7 @@ import { getActiveCodeMirrorNavigation } from "@/features/editor/engines/codemir
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import type { SidebarView } from "@/features/layout/utils/sidebar-pane-utils";
 import { setOutlineVisibilityPreference } from "@/features/outline/actions/outline-visibility";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { emitAppEvent } from "@/utils/app-events";
 import { useKeymapStore } from "../stores/keymaps.store";
 import type { Command } from "../types/keymaps.types";

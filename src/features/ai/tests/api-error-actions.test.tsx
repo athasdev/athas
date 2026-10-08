@@ -23,10 +23,10 @@ vi.mock("@/config/services", () => ({
   }),
 }));
 vi.mock("@/features/ai/lib/open-new-agent-chat", () => ({ openNewAgentChat: state.newChat }));
-vi.mock("@/features/window/hooks/use-desktop-sign-in", () => ({
+vi.mock("@/features/auth/hooks/use-desktop-sign-in", () => ({
   useDesktopSignIn: () => ({ signIn: state.signIn, isSigningIn: false }),
 }));
-vi.mock("@/features/window/stores/ui-state.store", () => ({
+vi.mock("@/features/layout/stores/ui-state.store", () => ({
   useUIState: { getState: () => ({ openSettings: state.settings }) },
 }));
 vi.mock("../components/provider-api-key-command", () => ({

@@ -21,7 +21,7 @@ vi.mock("@/features/file-system/stores/file-system.store", () => ({
   useFileSystemStore: (select: (state: unknown) => unknown) =>
     select({ ...mocks, filesVersion: 0 }),
 }));
-vi.mock("@/features/window/stores/project.store", () => ({
+vi.mock("@/features/workspace/stores/project.store", () => ({
   useProjectStore: (select: (state: unknown) => unknown) =>
     select({ rootFolderPath: mocks.rootFolderPath ?? undefined }),
 }));

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
+import { useWorkspaceTabsStore } from "@/features/workspace/stores/workspace-tabs.store";
 import * as appWindow from "@/features/window/utils/create-app-window";
 import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
 import * as workspaceLifecycle from "@/features/workspace/services/workspace-lifecycle";
@@ -8,7 +8,7 @@ import * as platform from "../controllers/platform";
 import { useFileSystemStore } from "../stores/file-system.store";
 import { useRecentFoldersStore } from "../stores/recent-folders.store";
 import { openRecentFolder } from "../services/open-recent-folder";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 const currentPath = "/workspace/current";
 const selectedPath = "/workspace/next";

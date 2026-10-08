@@ -1,7 +1,7 @@
 import { useIntelligenceSettingsStore } from "@/features/ai/intelligence/stores/intelligence-settings.store";
-import { useAuthStore } from "@/features/window/stores/auth.store";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { getApiBase } from "@/utils/api-base";
-import { getAuthToken } from "@/features/window/services/auth-api";
+import { getAuthToken } from "@/features/auth/services/auth-api";
 import { tauriFetch } from "@/utils/tauri-fetch";
 import {
   AIProvider,

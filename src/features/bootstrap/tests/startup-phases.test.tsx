@@ -61,10 +61,10 @@ vi.mock("@/extensions/runtime/extension-runtime", () => ({
     mocks.state.events.push("extensions");
   },
 }));
-vi.mock("@/features/window/hooks/use-settings-sync", () => ({
+vi.mock("@/features/settings/hooks/use-settings-sync", () => ({
   useSettingsSync: mocks.useSettingsSync,
 }));
-vi.mock("@/features/window/hooks/use-font-loading", () => ({
+vi.mock("@/features/settings/hooks/use-font-loading", () => ({
   useFontLoading: mocks.useFontLoading,
 }));
 vi.mock("@/features/window/hooks/use-native-menu-state", () => ({

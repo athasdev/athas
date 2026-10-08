@@ -20,19 +20,19 @@ vi.mock("@/features/editor/stores/buffer.store", () => ({
     getState: () => ({ actions: { openContent: mocks.openContent } }),
   }),
 }));
-vi.mock("@/features/window/stores/project.store", () => ({
+vi.mock("@/features/workspace/stores/project.store", () => ({
   useProjectStore: Object.assign(
     (select: (state: { rootFolderPath: string }) => unknown) =>
       select({ rootFolderPath: "/active" }),
     { getState: () => ({ rootFolderPath: "/active" }) },
   ),
 }));
-vi.mock("@/features/window/stores/workspace-tabs.store", () => ({
+vi.mock("@/features/workspace/stores/workspace-tabs.store", () => ({
   useWorkspaceTabsStore: { use: { projectTabs: () => [] } },
 }));
 vi.mock("@/features/file-system/controllers/platform", () => ({ openFolder: mocks.openFolder }));
-vi.mock("@/features/window/stores/auth.store", () => ({ useAuthStore: () => false }));
-vi.mock("@/features/window/stores/ui-state.store", () => ({
+vi.mock("@/features/auth/stores/auth.store", () => ({ useAuthStore: () => false }));
+vi.mock("@/features/layout/stores/ui-state.store", () => ({
   useUIState: { getState: () => mocks },
 }));
 vi.mock("../team/services/team-workspace-service", () => ({

@@ -1,7 +1,7 @@
 import { useSystemAccessibility } from "@/features/settings/hooks/use-system-accessibility";
-import { useFontLoading } from "@/features/window/hooks/use-font-loading";
+import { useFontLoading } from "@/features/settings/hooks/use-font-loading";
 import { useNativeMenuState } from "@/features/window/hooks/use-native-menu-state";
-import { useSettingsSync } from "@/features/window/hooks/use-settings-sync";
+import { useSettingsSync } from "@/features/settings/hooks/use-settings-sync";
 import { useBootstrapPhaseReached } from "../stores/bootstrap-phase.store";
 
 function SettingsDependentBootstrap() {

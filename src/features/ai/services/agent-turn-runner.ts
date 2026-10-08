@@ -66,7 +66,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import type { AiFailurePhase, AiRunKind } from "@/features/telemetry/lib/ai-signals";
 import { recordAiFailure } from "@/features/telemetry/services/telemetry";
-import { useAuthStore } from "@/features/window/stores/auth.store";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
 
 export interface AgentTurnRequest {
   content: string;

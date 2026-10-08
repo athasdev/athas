@@ -8,7 +8,7 @@ import {
   ResourceBufferView,
 } from "@/features/panes/components/resource-buffer-view";
 import { ViewerLoadingState } from "@/features/viewer/components/viewer-state";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { Avatar } from "@/ui/avatar";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
 import {

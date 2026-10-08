@@ -18,7 +18,7 @@ import { getModelIconId } from "@/features/ai/lib/model-vendor";
 import { classifySessionConfigOption } from "@/features/ai/lib/session-config-option-classifier";
 import type { SessionConfigOption, SessionConfigValue } from "@/features/ai/types/acp.types";
 import type { AgentType } from "@/features/ai/types/ai-chat.types";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { Button } from "@/ui/button";
 import {
   DropdownMenu,

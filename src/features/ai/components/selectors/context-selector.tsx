@@ -8,7 +8,7 @@ import { useFileSystemStore } from "@/features/file-system/stores/file-system.st
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { formatContextReference, listProjectFolders } from "@/features/ai/lib/context-references";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { Button } from "@/ui/button";
 import {
   DropdownMenu,

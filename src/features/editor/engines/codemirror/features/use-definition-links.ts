@@ -9,7 +9,7 @@ import { definitionLink } from "../navigation/definition-link";
 import { type DocumentLink, findDocumentLinkAt } from "../navigation/document-links";
 import { toLspPosition } from "../navigation/lsp-document";
 import { jumpOrigin } from "./lsp-feature-utils";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 async function openDocumentLink(link: DocumentLink, follow: (uri: string) => Promise<void>) {
   try {

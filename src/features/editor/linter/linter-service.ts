@@ -1,7 +1,7 @@
 import { commands, type Diagnostic as BackendDiagnostic } from "@/bindings/commands";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { logger } from "@/features/editor/utils/logger";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 export interface LintOptions {
   filePath: string;

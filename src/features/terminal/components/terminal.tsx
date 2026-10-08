@@ -21,8 +21,8 @@ import { connectionStore } from "@/features/remote/stores/remote-connection.stor
 import { parseRemotePath } from "@/features/remote/utils/remote-path";
 import { getWslShellId, parseWslPath } from "@/features/wsl/utils/wsl-path";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { useZoomStore } from "@/features/window/stores/zoom.store";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useZoomStore } from "@/features/layout/stores/zoom.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { extractDroppedFilePaths } from "@/features/file-system/utils/file-system-dropped-paths";
 import {

@@ -3,7 +3,7 @@ import { useEffectiveTheme } from "@/features/settings/hooks/use-effective-theme
 import { isEditorWordWrapEnabled } from "@/features/settings/lib/editor-word-wrap";
 import { buildFontFamilyStack } from "@/features/settings/lib/font-family-resolution";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { useZoomStore } from "@/features/window/stores/zoom.store";
+import { useZoomStore } from "@/features/layout/stores/zoom.store";
 import { IS_WINDOWS } from "@/utils/platform";
 import { useShallow } from "zustand/react/shallow";
 import { calculateLineHeight } from "../utils/lines";

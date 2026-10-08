@@ -9,7 +9,7 @@ import {
   buildLineDiffHunks,
   diffTextLines,
 } from "@/features/git/utils/line-diff";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 export interface AcpDiffOutput {
   path: string;

@@ -1,4 +1,4 @@
-import type { IntelligenceCredits } from "@/features/window/services/auth-api";
+import type { IntelligenceCredits } from "@/features/auth/services/auth-api";
 
 /**
  * Where a Pro account stands against this period's included Athas credit: `included_exhausted`

@@ -13,9 +13,9 @@ import {
 } from "@/features/tabs/utils/internal-tab-drag";
 import TerminalContainer from "@/features/terminal/components/terminal-container";
 import { cn } from "@/utils/cn";
-import { useProjectStore } from "@/features/window/stores/project.store";
-import { useUIState } from "@/features/window/stores/ui-state.store";
-import { WorkbenchFullscreenSurface } from "@/features/window/components/workbench-fullscreen-surface";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
+import { WorkbenchFullscreenSurface } from "@/features/layout/components/workbench-fullscreen-surface";
 import { emitAppEvent, onAppEvent } from "@/utils/app-events";
 import { BottomBufferPane } from "./bottom-buffer-pane";
 

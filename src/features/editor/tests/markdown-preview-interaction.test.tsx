@@ -38,7 +38,7 @@ vi.mock("@/features/file-system/stores/file-system.store", () => ({
   useFileSystemStore: (selector: (state: unknown) => unknown) =>
     selector({ handleFileSelect: vi.fn() }),
 }));
-vi.mock("@/features/window/stores/project.store", () => ({
+vi.mock("@/features/workspace/stores/project.store", () => ({
   useProjectStore: (selector: (state: unknown) => unknown) =>
     selector({ rootFolderPath: "/workspace" }),
 }));

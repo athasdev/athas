@@ -5,9 +5,9 @@ import { GITHUB_CONNECTION_URL } from "@/features/github/services/github-token-s
 import { useGitHubStore } from "@/features/github/stores/github.store";
 import { showToast } from "@/features/layout/contexts/toast-context";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { emitAppEvent } from "@/utils/app-events";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 export type GitHubSidebarSection =
   | "pull-requests"

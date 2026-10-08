@@ -1,9 +1,9 @@
 import { openExternalUrl } from "@/utils/external-url";
 import { useEffect, useState } from "react";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
-import { useAuthStore } from "@/features/window/stores/auth.store";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useDesktopSignIn } from "@/features/auth/hooks/use-desktop-sign-in";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { EmptyState } from "@/ui/empty";
 import { Spinner } from "@/ui/spinner";
 import { getGhCliAvailability } from "../services/github-credential-service";

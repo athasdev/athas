@@ -3,12 +3,12 @@ import { openNewAgentChat } from "@/features/ai/lib/open-new-agent-chat";
 import { editorAPI } from "@/features/editor/extensions/api";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useWhatsNewStore } from "@/features/settings/stores/whats-new.store";
-import { useUIState } from "@/features/window/stores/ui-state.store";
-import { useZoomStore } from "@/features/window/stores/zoom.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
+import { useZoomStore } from "@/features/layout/stores/zoom.store";
 import { emitAppEvent } from "@/utils/app-events";
 import { useKeymapStore } from "../stores/keymaps.store";
 import { zoomActiveBrowserTab } from "./browser-command-actions";
-import { selectIsTerminalPaneVisible } from "@/features/window/stores/ui-state/terminal-slice";
+import { selectIsTerminalPaneVisible } from "@/features/layout/stores/ui-state/terminal-slice";
 
 function getZoomTarget(): "editor" | "terminal" {
   const terminalContainer = document.querySelector('[data-terminal-container="active"]');

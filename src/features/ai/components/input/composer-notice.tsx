@@ -12,10 +12,10 @@ import type {
   ComposerNoticeIcon,
 } from "@/features/ai/types/composer-notice.types";
 import { getProviderById } from "@/features/ai/types/providers.types";
-import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
-import { useSubscriptionRefresh } from "@/features/window/hooks/use-subscription-refresh";
-import { useAuthStore } from "@/features/window/stores/auth.store";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useDesktopSignIn } from "@/features/auth/hooks/use-desktop-sign-in";
+import { useSubscriptionRefresh } from "@/features/auth/hooks/use-subscription-refresh";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { Alert, AlertActions, AlertDescription, AlertTitle } from "@/ui/alert";
 import { Button } from "@/ui/button";
 import {

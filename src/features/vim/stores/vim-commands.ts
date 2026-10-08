@@ -2,11 +2,11 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import { useEditorViewStore } from "@/features/editor/stores/view.store";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { emitAppEvent } from "@/utils/app-events";
 import { useVimStore } from "./vim.store";
 import { getActiveBufferId } from "@/features/panes/stores/pane-selectors";
-import { selectIsTerminalPaneVisible } from "@/features/window/stores/ui-state/terminal-slice";
+import { selectIsTerminalPaneVisible } from "@/features/layout/stores/ui-state/terminal-slice";
 
 export interface VimCommand {
   name: string;

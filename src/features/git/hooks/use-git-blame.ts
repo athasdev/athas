@@ -13,7 +13,7 @@ import { getGitBlameCacheKey, useGitBlameStore } from "../stores/git-blame.store
 import type { GitBlameLine } from "../types/git.types";
 import { findGitBlameLine } from "../utils/git-blame-lines";
 import { readBufferText } from "@/features/editor/services/buffer-text";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 const BLAME_REFRESH_DELAY_MS = 500;
 

@@ -2,7 +2,7 @@ import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace
 import {
   useWorkspaceTabsStore,
   type ProjectTab,
-} from "@/features/window/stores/workspace-tabs.store";
+} from "@/features/workspace/stores/workspace-tabs.store";
 import { prepareWorkspaceRuntime } from "@/features/workspace/services/workspace-lifecycle";
 
 interface ScheduleWorkspacePrewarmOptions {

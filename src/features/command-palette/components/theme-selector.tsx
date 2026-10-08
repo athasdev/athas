@@ -6,7 +6,7 @@ import { AppearancePreviewGraphic } from "@/extensions/appearance/components/app
 import { themeRegistry } from "@/extensions/themes/theme-registry";
 import { useRegisteredThemes } from "@/extensions/themes/use-registered-themes";
 import { chooseThemeFile, uploadTheme } from "@/features/settings/utils/theme-upload";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import {
   CommandEmpty,
   CommandHeader,

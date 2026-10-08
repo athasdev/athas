@@ -16,7 +16,7 @@ import { useToast } from "@/features/layout/contexts/toast-context";
 import { getCollapsedActivityBarWidth } from "@/features/layout/utils/activity-bar-layout";
 import { claimContextualTip } from "@/features/onboarding/lib/contextual-teaching";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { ContextMenu, ContextMenuTrigger } from "@/ui/context-menu";
 import { SearchIcon } from "@/ui/icons";
 import { OverlaySideProvider } from "@/ui/overlay-side";

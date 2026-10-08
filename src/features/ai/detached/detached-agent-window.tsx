@@ -11,7 +11,7 @@ import { ShareDialog } from "@/features/sharing/components/share-dialog";
 import { SharingRuntime } from "@/features/sharing/components/sharing-runtime";
 import { DetachedWindowShell } from "@/features/window/detached/detached-window-shell";
 import { useDetachedWindow } from "@/features/window/detached/use-detached-window";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { Button } from "@/ui/button";
 import { ArrowCounterClockwiseIcon } from "@/ui/icons";
 import {

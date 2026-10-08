@@ -15,8 +15,8 @@ import {
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { getProviderById } from "@/features/ai/types/providers.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { useAuthStore } from "@/features/window/stores/auth.store";
-import { hasProductCapability } from "@/features/window/lib/product-capabilities";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
+import { hasProductCapability } from "@/features/auth/utils/product-capabilities";
 import { useIntelligenceSettingsStore } from "@/features/ai/intelligence/stores/intelligence-settings.store";
 import { resolveIntelligenceConnection } from "@/features/ai/intelligence/lib/resolve-intelligence-connection";
 import type { IntelligenceConnection } from "@/features/ai/intelligence/types/intelligence.types";

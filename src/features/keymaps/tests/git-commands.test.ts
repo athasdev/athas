@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
   repo: { activeRepoPath: "/repo" as string | null },
 }));
 
-vi.mock("@/features/window/stores/ui-state.store", () => ({
+vi.mock("@/features/layout/stores/ui-state.store", () => ({
   useUIState: {
     getState: () => ({
       setIsSidebarVisible: mocks.setIsSidebarVisible,

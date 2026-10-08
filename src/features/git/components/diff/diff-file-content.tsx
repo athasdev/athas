@@ -8,7 +8,7 @@ import {
   type SearchOptions,
 } from "@/features/editor/utils/search";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import { useZoomStore } from "@/features/window/stores/zoom.store";
+import { useZoomStore } from "@/features/layout/stores/zoom.store";
 import { useDiffEditorBuffer } from "../../hooks/use-diff-editor-buffer";
 import type { GitDiff } from "../../types/git.types";
 import {
@@ -26,7 +26,7 @@ import { BinaryDiffViewer } from "./git-diff-binary";
 import ImageDiffViewer from "./git-diff-image";
 import TextDiffViewer from "./git-diff-text";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 const CodeEditor = lazy(() => import("@/features/editor/components/code-editor"));
 

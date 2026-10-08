@@ -1,5 +1,5 @@
 import { PenIcon, PlusIcon, TrashIcon } from "@/ui/icons";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { ContextMenuPopup, createContextMenuGroups } from "@/ui/context-menu";
 import { menuSeparator, type MenuItem } from "@/ui/dropdown";
 import type { DatabaseRow } from "../types/common.types";

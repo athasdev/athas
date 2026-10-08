@@ -6,9 +6,9 @@ import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { AIMessage } from "@/features/ai/types/messages.types";
 import { getModelById, getProviderById } from "@/features/ai/types/providers.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { useAuthStore } from "@/features/window/stores/auth.store";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { useIntelligenceSettingsStore } from "../stores/intelligence-settings.store";
-import { getAuthToken } from "@/features/window/services/auth-api";
+import { getAuthToken } from "@/features/auth/services/auth-api";
 import { getApiBase } from "@/utils/api-base";
 import { processStreamingResponse } from "@/utils/stream-utils";
 import {

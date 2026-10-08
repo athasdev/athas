@@ -7,9 +7,9 @@ import {
   getHostedUsageState,
   getHostedUsageTone,
 } from "@/features/ai/lib/hosted-usage";
-import { useProFeature } from "@/features/window/hooks/use-pro-feature";
-import { useSubscriptionRefresh } from "@/features/window/hooks/use-subscription-refresh";
-import { useAuthStore } from "@/features/window/stores/auth.store";
+import { useProFeature } from "@/features/auth/hooks/use-pro-feature";
+import { useSubscriptionRefresh } from "@/features/auth/hooks/use-subscription-refresh";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { Button } from "@/ui/button";
 import { SparkleIcon } from "@/ui/icons";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";

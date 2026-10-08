@@ -89,7 +89,7 @@ import { getFileTreeSubtreeEnds } from "@/features/file-explorer/lib/file-tree-v
 import { FileExplorerViewport, type FileExplorerViewportHandle } from "./file-explorer-viewport";
 import { FileExplorerTreeItem } from "./file-explorer-tree-item";
 import type { FileTreeGuideTarget } from "./file-explorer-tree-item";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { onAppEvent } from "@/utils/app-events";
 
 const ALWAYS_HIDDEN_FILE_NAMES = new Set([".ds_store"]);

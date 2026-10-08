@@ -4,7 +4,7 @@ import {
   connectRemoteConnection,
 } from "@/features/remote/services/remote-connection-actions";
 import type { RemoteConnection } from "@/features/remote/types/remote.types";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { Button } from "@/ui/button";
 import { FieldDescription } from "@/ui/field";
 import { Item, ItemActions, ItemContent, ItemDescription, ItemTitle } from "@/ui/item";

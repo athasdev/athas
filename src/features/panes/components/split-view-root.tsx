@@ -1,8 +1,8 @@
 import { memo, useEffect, useMemo, useState } from "react";
-import { WorkbenchFullscreenSurface } from "@/features/window/components/workbench-fullscreen-surface";
+import { WorkbenchFullscreenSurface } from "@/features/layout/components/workbench-fullscreen-surface";
 import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
 import { WorkspaceStoreScopeContext } from "@/features/workspace/stores/create-workspace-scoped-store";
-import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
+import { useWorkspaceTabsStore } from "@/features/workspace/stores/workspace-tabs.store";
 import { cn } from "@/utils/cn";
 import { usePaneStore } from "../stores/pane.store";
 import { findPaneGroup } from "../utils/pane-tree";

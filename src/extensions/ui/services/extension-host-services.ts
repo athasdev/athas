@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getRemotes } from "@/features/git/api/git-remotes-api";
 import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import type { Settings } from "@/features/settings/types/settings.types";
 import type { ExtensionManifest } from "@/extensions/types/extension-manifest";

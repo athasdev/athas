@@ -28,7 +28,7 @@ vi.mock("@/features/settings/stores/settings.store", () => {
   };
   return { useSettingsStore: (selector: (value: typeof state) => unknown) => selector(state) };
 });
-vi.mock("@/features/window/stores/auth.store", () => {
+vi.mock("@/features/auth/stores/auth.store", () => {
   const state = { isAuthenticated: false, subscription: null };
   return { useAuthStore: (selector: (value: typeof state) => unknown) => selector(state) };
 });

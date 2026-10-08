@@ -3,7 +3,7 @@ import {
   clearQueuedWorkspaceSessionSave,
   saveSessionToStore,
 } from "../stores/buffer-session-persistence";
-import { useSessionStore } from "@/features/window/stores/session.store";
+import { useSessionStore } from "@/features/workspace/stores/session.store";
 
 describe("buffer session persistence", () => {
   beforeEach(() => {

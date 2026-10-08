@@ -1,4 +1,4 @@
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import type { CommandPaletteViewId } from "../types/view.types";
 
 interface CommandPaletteSession {

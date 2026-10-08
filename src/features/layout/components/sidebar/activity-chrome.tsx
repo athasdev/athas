@@ -7,11 +7,11 @@ import { NotificationsTrigger } from "@/features/notifications/components/notifi
 import RunActionsButton from "@/features/run-actions/components/run-actions-button";
 import { toggleTerminalPane } from "@/features/keymaps/commands/view-command-actions";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { AccountMenu } from "@/features/window/components/account-menu";
-import ProjectPicker from "@/features/window/components/project-picker";
+import { AccountMenu } from "@/features/auth/components/account-menu";
+import ProjectPicker from "@/features/workspace/project-picker/components/project-picker";
 import WindowMenuBar from "@/features/window/components/window-menu-bar";
-import { useUIState } from "@/features/window/stores/ui-state.store";
-import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
+import { useWorkspaceTabsStore } from "@/features/workspace/stores/workspace-tabs.store";
 import { createAppWindow } from "@/features/window/utils/create-app-window";
 import { Button } from "@/ui/button";
 import {
@@ -32,7 +32,7 @@ import {
 import { SidebarIconButton } from "@/ui/sidebar";
 import Tooltip from "@/ui/tooltip";
 import { IS_MAC } from "@/utils/platform";
-import { selectIsTerminalPaneVisible } from "@/features/window/stores/ui-state/terminal-slice";
+import { selectIsTerminalPaneVisible } from "@/features/layout/stores/ui-state/terminal-slice";
 
 export function ActivityChrome() {
   const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);

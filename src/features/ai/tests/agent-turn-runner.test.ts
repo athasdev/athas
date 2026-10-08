@@ -38,7 +38,7 @@ vi.mock("@/features/ai/lib/follow-up-actions", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/features/ai/lib/follow-up-actions")>();
   return { ...actual, extractFollowUpActions: vi.fn(actual.extractFollowUpActions) };
 });
-vi.mock("@/features/window/stores/auth.store", () => ({
+vi.mock("@/features/auth/stores/auth.store", () => ({
   useAuthStore: {
     getState: () => ({
       actions: {

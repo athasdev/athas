@@ -12,10 +12,10 @@ import {
 } from "@/features/git/api/git-status-api";
 import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
 import { showToast } from "@/features/layout/contexts/toast-context";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { showConfirmDialog, showPromptDialog } from "@/ui/dialog";
 import { emitAppEvent } from "@/utils/app-events";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 export type GitSidebarAction =
   | { type: "manage-branches"; tab: "branches" | "worktrees" }

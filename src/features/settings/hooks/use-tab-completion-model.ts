@@ -5,7 +5,7 @@ import type { IntelligenceConnection } from "@/features/ai/intelligence/types/in
 import { useAIModelSettings } from "@/features/settings/hooks/use-ai-model-settings";
 import { withTaskConnection } from "@/features/settings/lib/ai-model-preferences";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { useAuthStore } from "@/features/window/stores/auth.store";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
 
 export const ATHAS_TAB_MODEL_NAME = "Athas Tab";
 

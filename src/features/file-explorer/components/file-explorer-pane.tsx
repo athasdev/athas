@@ -5,7 +5,7 @@ import { EmptyState } from "@/ui/empty";
 import { SidebarPanel } from "@/ui/sidebar";
 import { Spinner } from "@/ui/spinner";
 import { FileExplorerTree } from "./file-explorer-tree";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 function FileExplorerPaneComponent() {
   const setFiles = useFileSystemStore((state) => state.setFiles);

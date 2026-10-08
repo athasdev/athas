@@ -1,0 +1,294 @@
+import { openExternalUrl } from "@/utils/external-url";
+import { memo, useEffect, useState } from "react";
+import { getServiceUrls } from "@/config/services";
+import { useGitHubStore } from "@/features/github/stores/github.store";
+import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
+import { useWhatsNewStore } from "@/features/settings/stores/whats-new.store";
+import { useDesktopSignIn } from "@/features/auth/hooks/use-desktop-sign-in";
+import { getAccountIdentity } from "@/features/auth/utils/account-identity";
+import { getAccountPlanLabel } from "@/features/auth/utils/account-usage";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
+import { Avatar } from "@/ui/avatar";
+import Badge from "@/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItems,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  type DropdownSection,
+  type MenuItem,
+} from "@/ui/dropdown";
+import {
+  BookOpenIcon,
+  ChatBubbleTextIcon,
+  CreditCardIcon,
+  HistoryIcon,
+  MegaphoneIcon,
+  SettingsIcon,
+  SignInIcon,
+  SignOutIcon,
+  UserIcon,
+  UsersIcon,
+  XIcon,
+} from "@/ui/icons";
+import { GithubMark } from "@/ui/brand-marks";
+import { SidebarIconButton } from "@/ui/sidebar";
+
+const COMMUNITY_URL = "https://discord.gg/DD8F38wFMv";
+
+function isBlockingModalOpen() {
+  const state = useUIState.getState();
+  return (
+    state.isQuickOpenVisible ||
+    state.isCommandPaletteVisible ||
+    state.isGlobalSearchVisible ||
+    state.isProjectPickerVisible ||
+    state.isDatabaseConnectionVisible
+  );
+}
+
+export const AccountMenu = memo(function AccountMenu() {
+  const services = getServiceUrls();
+  const user = useAuthStore((s) => s.user);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const subscription = useAuthStore((s) => s.subscription);
+  const logout = useAuthStore((s) => s.actions.logout);
+  const githubAccountStatus = useGitHubStore((state) => state.githubAccountStatus);
+  const githubCurrentUser = useGitHubStore((state) => state.currentUser);
+  const checkGitHubAuth = useGitHubStore((state) => state.actions.checkAuth);
+  const openWhatsNew = useWhatsNewStore((state) => state.actions.open);
+  const openSettings = useUIState((state) => state.openSettings);
+
+  const [isOpen, setIsOpen] = useState(false);
+  const { signIn, isSigningIn, cancel, reopen } = useDesktopSignIn({
+    onSuccess: () => setIsOpen(false),
+  });
+  const settingsShortcut = useCommandShortcut("workbench.openSettings");
+
+  const handleSignIn = async () => {
+    if (import.meta.env.DEV) {
+      console.log("[Auth] Starting desktop sign-in flow from account menu");
+    }
+    // useDesktopSignIn already shows the failure; its rejection only signals it.
+    await signIn().catch(() => undefined);
+  };
+
+  const handleSignOut = async () => {
+    await logout();
+  };
+
+  const handleManageAccount = async () => {
+    await openExternalUrl(services.dashboardUrl);
+  };
+
+  const handleOpenBillingDashboard = async () => {
+    await openExternalUrl(services.dashboardBillingUrl);
+  };
+
+  const handleOpenDocs = async () => {
+    await openExternalUrl(services.docsUrl);
+  };
+
+  const handleOpenChangelog = async () => {
+    await openExternalUrl(services.githubReleasesBaseUrl);
+  };
+
+  const handleOpenCommunity = async () => {
+    await openExternalUrl(COMMUNITY_URL);
+  };
+
+  const handleOpenWhatsNew = async () => {
+    await openWhatsNew();
+  };
+
+  const handleOpenSettings = () => {
+    openSettings();
+  };
+
+  const handleOpenCollaboration = () => {
+    openSettings("collaboration");
+  };
+
+  const isTeams = Boolean(subscription?.collaboration?.enabled);
+  const planLabel = getAccountPlanLabel(subscription, isAuthenticated);
+  const connectedGitHubLogin =
+    githubAccountStatus === "connected" ? githubCurrentUser || user?.github_username : null;
+  const {
+    name: accountName,
+    detail: accountDetail,
+    githubLogin,
+    avatarUrl: accountAvatarUrl,
+  } = getAccountIdentity(user, connectedGitHubLogin);
+
+  const signedOutAccountItems: MenuItem[] = [
+    {
+      id: "settings",
+      label: "Settings",
+      icon: <SettingsIcon />,
+      shortcut: settingsShortcut,
+      onClick: handleOpenSettings,
+    },
+  ];
+
+  const sessionItems: MenuItem[] = [
+    {
+      id: isAuthenticated ? "sign-out" : "sign-in",
+      label: isAuthenticated ? "Sign Out" : isSigningIn ? "Open sign-in page" : "Sign In",
+      icon: isAuthenticated ? <SignOutIcon /> : <SignInIcon />,
+      onClick: isAuthenticated ? handleSignOut : isSigningIn ? reopen : handleSignIn,
+    },
+    ...(!isAuthenticated && isSigningIn
+      ? [{ id: "cancel-sign-in", label: "Cancel sign-in", icon: <XIcon />, onClick: cancel }]
+      : []),
+  ];
+
+  const signedInAccountItems: MenuItem[] = [
+    {
+      id: "profile",
+      label: "Profile",
+      icon: <UserIcon />,
+      onClick: handleManageAccount,
+    },
+    {
+      id: "subscription",
+      label: "Plan & Billing",
+      icon: <CreditCardIcon />,
+      trailing: { type: "text", label: planLabel },
+      onClick: handleOpenBillingDashboard,
+    },
+    ...(githubLogin
+      ? [
+          {
+            id: "github-profile",
+            label: "GitHub Profile",
+            icon: <GithubMark />,
+            trailing: { type: "text" as const, label: "Connected" },
+            onClick: () => openExternalUrl(`https://github.com/${encodeURIComponent(githubLogin)}`),
+          },
+        ]
+      : [
+          {
+            id: "github-connect",
+            label: "Connect GitHub",
+            icon: <GithubMark />,
+            onClick: () => openExternalUrl(services.dashboardIntegrationsUrl),
+          },
+        ]),
+    ...(isTeams
+      ? [
+          {
+            id: "collaboration",
+            label: "Collaboration",
+            icon: <UsersIcon />,
+            onClick: handleOpenCollaboration,
+          },
+        ]
+      : []),
+    {
+      id: "settings",
+      label: "Settings",
+      icon: <SettingsIcon />,
+      shortcut: settingsShortcut,
+      onClick: handleOpenSettings,
+    },
+  ];
+
+  const resourceItems: MenuItem[] = [
+    {
+      id: "whats-new",
+      label: "What's New",
+      icon: <MegaphoneIcon />,
+      onClick: handleOpenWhatsNew,
+    },
+    {
+      id: "changelog",
+      label: "Changelog",
+      icon: <HistoryIcon />,
+      onClick: handleOpenChangelog,
+    },
+    {
+      id: "docs",
+      label: "Documentation",
+      icon: <BookOpenIcon />,
+      onClick: handleOpenDocs,
+    },
+    {
+      id: "community",
+      label: "Community",
+      icon: <ChatBubbleTextIcon />,
+      onClick: handleOpenCommunity,
+    },
+  ];
+
+  const sections: DropdownSection[] = [
+    {
+      id: "account",
+      label: isAuthenticated ? undefined : "Account",
+      items: isAuthenticated ? signedInAccountItems : signedOutAccountItems,
+    },
+    {
+      id: "resources",
+      label: "Resources",
+      items: resourceItems,
+    },
+    {
+      id: "session",
+      items: sessionItems,
+    },
+  ];
+
+  const tooltipLabel = isAuthenticated ? accountName : "Account";
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const closeForBlockingModal = () => {
+      if (isBlockingModalOpen()) setIsOpen(false);
+    };
+
+    closeForBlockingModal();
+    return useUIState.subscribe(closeForBlockingModal);
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    void checkGitHubAuth();
+  }, [checkGitHubAuth, isOpen]);
+
+  return (
+    <>
+      <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+        <DropdownMenuTrigger
+          render={<SidebarIconButton size="lg" tooltip={tooltipLabel} aria-label="Account" />}
+        >
+          <Avatar name={accountName} src={accountAvatarUrl} size="md" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent size="wide">
+          {isAuthenticated ? (
+            <div role="presentation" className="flex min-w-0 items-center gap-2.5 px-2.5 py-2">
+              <Avatar name={accountName} src={accountAvatarUrl} size="lg" />
+              <div className="min-w-0 flex-1">
+                <div className="truncate font-medium text-foreground">{accountName}</div>
+                {accountDetail ? (
+                  <div className="truncate text-subtle-foreground">{accountDetail}</div>
+                ) : null}
+              </div>
+              <Badge>{planLabel}</Badge>
+            </div>
+          ) : null}
+          {sections.map((section, index) => (
+            <DropdownMenuGroup key={section.id}>
+              {index > 0 ? <DropdownMenuSeparator /> : null}
+              {section.label ? <DropdownMenuLabel>{section.label}</DropdownMenuLabel> : null}
+              <DropdownMenuItems items={section.items} />
+            </DropdownMenuGroup>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </>
+  );
+});

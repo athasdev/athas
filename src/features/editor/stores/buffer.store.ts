@@ -27,7 +27,7 @@ import {
   selectPaneBufferFlags,
 } from "@/features/panes/stores/pane-selectors";
 import { resolveWritablePaneForBuffer } from "@/features/panes/utils/pane-routing";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { SINGLETON_TOOL_BUFFER_METADATA } from "@/features/panes/constants/tool-buffers";
 import { defaultSettings } from "@/features/settings/config/default-settings";
 import { closeTerminalConnection } from "@/features/terminal/services/terminal-connection-lifecycle";

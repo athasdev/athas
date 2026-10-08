@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/features/ai/lib/agent-context-policy", () => ({ loadAgentContextPolicy: mocks.policy }));
-vi.mock("@/features/window/stores/project.store", () => ({
+vi.mock("@/features/workspace/stores/project.store", () => ({
   useProjectStore: { getState: () => ({ rootFolderPath: mocks.root }), subscribe: () => () => {} },
 }));
 vi.mock("@/features/ai/intelligence/services/intelligence-text-service", () => {
@@ -41,7 +41,7 @@ vi.mock("@/features/diagnostics/stores/diagnostics.store", () => ({
 }));
 vi.mock("@/features/ai/services/ai-token-service", () => ({ onProviderApiTokenChange: vi.fn() }));
 vi.mock("@/features/ai/stores/ai-chat.store", () => ({ useAIChatStore: { subscribe: vi.fn() } }));
-vi.mock("@/features/window/stores/auth.store", () => ({
+vi.mock("@/features/auth/stores/auth.store", () => ({
   useAuthStore: { getState: () => ({ isAuthenticated: true }), subscribe: () => () => {} },
 }));
 vi.mock("@/features/ai/intelligence/stores/intelligence-settings.store", () => ({

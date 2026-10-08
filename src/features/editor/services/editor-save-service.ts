@@ -15,7 +15,7 @@ import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { writeFile } from "@/features/file-system/controllers/platform";
 import { getBufferById } from "../utils/buffer-index";
 import { readBufferRevision, readBufferText } from "./buffer-text";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 /** Typing pauses this long before an auto-save writes the file. */
 export const AUTO_SAVE_DELAY_MS = 1000;
@@ -259,8 +259,8 @@ async function performEditorSave(
   if (collaborationNoteTarget) {
     const [{ updateCollaborationChannelNote }, { useAuthStore }, { updateCollaborationNoteFile }] =
       await Promise.all([
-        import("@/features/window/services/auth-api"),
-        import("@/features/window/stores/auth.store"),
+        import("@/features/collaboration/services/collaboration-api"),
+        import("@/features/auth/stores/auth.store"),
         import("@/features/collaboration/lib/collaboration-sidebar-model"),
       ]);
     const { subscription, actions } = useAuthStore.getState();

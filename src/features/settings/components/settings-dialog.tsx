@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import AppDialog from "@/ui/dialog";
 
 const SettingsWorkbenchView = lazy(() => import("./settings-workbench-view"));

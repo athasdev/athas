@@ -4,8 +4,8 @@ import { commands } from "@/bindings/commands";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getBufferById } from "@/features/editor/utils/buffer-index";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { useProjectStore } from "@/features/window/stores/project.store";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { getNativeMenuState } from "@/features/window/utils/native-menu-state";
 import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 

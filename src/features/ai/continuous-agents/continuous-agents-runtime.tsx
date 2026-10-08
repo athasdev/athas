@@ -6,7 +6,7 @@ import { CodexIntegrationService } from "@/features/ai/integrations/codex/codex-
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { AgentConfig } from "@/features/ai/types/acp.types";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import {
   buildContinuousAgentPrompt,
   checkContinuousAgentReadiness,

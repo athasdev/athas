@@ -6,7 +6,7 @@ import { useAIProviderSettingsActions } from "@/features/ai/services/providers/a
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { ModelProvider } from "@/features/ai/types/providers.types";
 import { useToast } from "@/features/layout/contexts/toast-context";
-import { useAuthStore } from "@/features/window/stores/auth.store";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { Button } from "@/ui/button";
 import { showConfirmDialog } from "@/ui/dialog";
 import { PaletteIcon, SparkleIcon } from "@/ui/icons";

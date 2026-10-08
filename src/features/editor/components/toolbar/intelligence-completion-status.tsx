@@ -4,7 +4,7 @@ import { useTabCompletionModel } from "@/features/settings/hooks/use-tab-complet
 import { useIntelligenceCompletionStore } from "@/features/editor/stores/intelligence-completion.store";
 import type { IntelligenceCompletionStatus as CompletionStatus } from "@/features/editor/stores/intelligence-completion.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { Button, type ButtonProps } from "@/ui/button";
 import {
   DropdownMenu,

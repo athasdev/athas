@@ -17,7 +17,7 @@ import { CodexIntegrationService } from "./codex-integration-service";
 import type { CodexIntegrationStatus } from "./codex-types";
 import { useCodexSettings } from "./use-codex-settings";
 import { useCodexModels } from "./use-codex-models";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { normalizeCodexSkills, normalizeCodexThreads } from "./codex-composer-catalog";
 import { getCodexModelPatch } from "./codex-model-settings";
 

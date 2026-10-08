@@ -1,7 +1,7 @@
 import { useSelectionScope } from "@/features/editor/hooks/use-selection-scope";
 import { calculateLineHeight } from "@/features/editor/utils/lines";
 import { memo, useCallback, useMemo, useRef, useState } from "react";
-import { useZoomStore } from "@/features/window/stores/zoom.store";
+import { useZoomStore } from "@/features/layout/stores/zoom.store";
 import { Empty, EmptyDescription } from "@/ui/empty";
 import { useDiffHighlighting } from "../../hooks/use-git-diff-highlight";
 import type {

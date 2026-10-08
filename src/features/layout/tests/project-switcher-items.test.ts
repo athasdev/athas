@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { RemoteConnection } from "@/features/remote/types/remote.types";
-import type { ProjectTab } from "@/features/window/stores/workspace-tabs.store";
+import type { ProjectTab } from "@/features/workspace/stores/workspace-tabs.store";
 import {
   getClosedRemoteConnections,
   getProjectRemoteConnectionId,

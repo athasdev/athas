@@ -22,7 +22,7 @@ import {
   useWorkspaceStoreScopeId,
 } from "@/features/workspace/stores/create-workspace-scoped-store";
 import { useGlobalSearchSessionStore } from "../stores/global-search-session.store";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 export type ContentSearchAvailability = "ready" | "no-workspace" | "unsupported";
 

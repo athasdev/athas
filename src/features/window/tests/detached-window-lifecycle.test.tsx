@@ -25,10 +25,10 @@ vi.mock("@/features/settings/stores/settings.store", () => ({
 vi.mock("@/extensions/themes/theme-initializer", () => ({
   initializeThemeSystem: mocks.initialize,
 }));
-vi.mock("@/features/window/stores/auth.store", () => ({
+vi.mock("@/features/auth/stores/auth.store", () => ({
   useAuthStore: { getState: () => ({ actions: { initialize: mocks.initialize } }) },
 }));
-vi.mock("@/features/window/stores/ui-state.store", () => ({
+vi.mock("@/features/layout/stores/ui-state.store", () => ({
   useUIState: { getState: () => ({}), setState: vi.fn() },
 }));
 vi.mock("@/features/window/utils/create-app-window", () => ({ createAppWindow: vi.fn() }));

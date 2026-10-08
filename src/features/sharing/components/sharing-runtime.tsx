@@ -1,6 +1,6 @@
-import { getAuthToken } from "@/features/window/services/auth-api";
+import { getAuthToken } from "@/features/auth/services/auth-api";
 import { useEffect } from "react";
-import { useAuthStore } from "@/features/window/stores/auth.store";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { composeChat } from "@/features/ai/stores/ai-chat/chat-normalization";
 import {

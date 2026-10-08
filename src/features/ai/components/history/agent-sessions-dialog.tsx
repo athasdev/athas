@@ -9,7 +9,7 @@ import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useAppEvent } from "@/utils/app-events";
 import type { AcpSessionInfo } from "@/features/ai/types/acp.types";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { Button } from "@/ui/button";
 import Dialog, { showConfirmDialog } from "@/ui/dialog";
 import { EmptyState } from "@/ui/empty";

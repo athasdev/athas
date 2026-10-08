@@ -33,7 +33,7 @@ import VimStatusIndicator from "@/features/vim/components/vim-status-indicator";
 import { IntelligenceCompletionStatus } from "./intelligence-completion-status";
 import { getFilenameFromPath } from "@/features/file-system/controllers/file-utils";
 import { readBufferText } from "@/features/editor/services/buffer-text";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { useBufferIdOrActive } from "@/features/panes/hooks/use-pane-buffer-state";
 
 const editorMenuRowClass =

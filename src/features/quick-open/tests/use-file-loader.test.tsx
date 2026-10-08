@@ -18,7 +18,7 @@ vi.mock("@/features/file-system/stores/file-system.store", () => {
   };
   return { useFileSystemStore: (selector: (value: typeof state) => unknown) => selector(state) };
 });
-vi.mock("@/features/window/stores/project.store", () => {
+vi.mock("@/features/workspace/stores/project.store", () => {
   const state = { rootFolderPath: "/repo", workspaceFolders: [] };
   return { useProjectStore: (selector: (value: typeof state) => unknown) => selector(state) };
 });

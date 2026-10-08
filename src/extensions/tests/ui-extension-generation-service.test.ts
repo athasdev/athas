@@ -6,9 +6,9 @@ const state = vi.hoisted(() => ({
   plan: "pro" as "pro" | "free",
 }));
 vi.mock("@/utils/tauri-fetch", () => ({ tauriFetch: state.fetch }));
-vi.mock("@/features/window/services/auth-api", () => ({ getAuthToken: async () => "token" }));
+vi.mock("@/features/auth/services/auth-api", () => ({ getAuthToken: async () => "token" }));
 vi.mock("@/utils/api-base", () => ({ getApiBase: () => "https://api.test" }));
-vi.mock("@/features/window/stores/auth.store", () => ({
+vi.mock("@/features/auth/stores/auth.store", () => ({
   useAuthStore: { getState: () => ({ subscription: { status: state.plan } }) },
 }));
 

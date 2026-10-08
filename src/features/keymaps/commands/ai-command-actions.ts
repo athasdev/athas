@@ -18,7 +18,7 @@ import {
   selectCurrentAgentId,
   selectLogOutAgentId,
 } from "./agent-command-context";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 function getActiveBuffer() {
   return useBufferStore.getState().actions.getActiveBuffer() ?? undefined;

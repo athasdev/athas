@@ -25,7 +25,7 @@ import { useShallow } from "zustand/react/shallow";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { toast } from "sonner";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
-import { useZoomStore } from "@/features/window/stores/zoom.store";
+import { useZoomStore } from "@/features/layout/stores/zoom.store";
 import { readBufferText } from "../services/buffer-text";
 import type { LiveDocumentEdit } from "../services/live-document-registry";
 import CodeLensOverlay from "../lsp/code-lens-overlay";

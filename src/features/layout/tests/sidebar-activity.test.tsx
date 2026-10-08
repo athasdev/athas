@@ -56,11 +56,11 @@ vi.mock("@/features/file-system/stores/file-system.store", () => ({
   useFileSystemStore: (select: (state: unknown) => unknown) =>
     select({ handleFileSelect: vi.fn() }),
 }));
-vi.mock("@/features/window/stores/project.store", () => ({
+vi.mock("@/features/workspace/stores/project.store", () => ({
   useProjectStore: (select: (state: unknown) => unknown) =>
     select({ rootFolderPath: "/workspace" }),
 }));
-vi.mock("@/features/window/stores/ui-state.store", () => ({
+vi.mock("@/features/layout/stores/ui-state.store", () => ({
   useUIState: (select: (value: typeof state) => unknown) => select(state),
 }));
 vi.mock("@/features/settings/stores/settings.store", () => ({
@@ -71,7 +71,7 @@ vi.mock("@/features/settings/stores/settings.store", () => ({
       },
     }),
 }));
-vi.mock("@/features/window/stores/auth.store", () => ({ useAuthStore: () => true }));
+vi.mock("@/features/auth/stores/auth.store", () => ({ useAuthStore: () => true }));
 vi.mock("@/extensions/ui/hooks/use-extension-views", () => ({
   useExtensionViews: () => new Map(),
 }));

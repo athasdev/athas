@@ -8,7 +8,7 @@ import { getProvider } from "@/features/ai/services/providers/ai-provider-regist
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { getProviderById } from "@/features/ai/types/providers.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { useAuthStore } from "@/features/window/stores/auth.store";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
 
 export function useAIModelOptions(
   providerId: string,

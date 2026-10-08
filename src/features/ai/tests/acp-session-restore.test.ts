@@ -25,7 +25,7 @@ vi.mock("@/features/settings/stores/settings.store", () => ({
   useSettingsStore: { getState: () => ({ settings: { mcpServers: [] } }) },
 }));
 
-vi.mock("@/features/window/stores/project.store", () => ({
+vi.mock("@/features/workspace/stores/project.store", () => ({
   useProjectStore: {
     getState: vi.fn(() => ({ rootFolderPath: "/workspace", workspaceFolders: [] })),
   },

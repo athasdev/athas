@@ -1,7 +1,7 @@
 import { useDebuggerStore } from "@/features/debugger/stores/debugger.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { emitAppEvent } from "@/utils/app-events";
 
 function openDebuggerPane() {

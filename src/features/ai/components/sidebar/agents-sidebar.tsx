@@ -55,7 +55,7 @@ import {
 } from "@/ui/sidebar";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { AgentsPlanFooter } from "./agents-plan-footer";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 interface AgentRowContext {
   currentChatId: string | null;

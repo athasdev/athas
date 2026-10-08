@@ -32,7 +32,7 @@ import Command, {
   CommandItemRow,
   CommandList,
 } from "@/ui/command";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import Input from "@/ui/input";
 import { ScrollArea } from "@/ui/scroll-area";
 import Textarea from "@/ui/textarea";

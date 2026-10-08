@@ -56,7 +56,7 @@ import { GitHubAuthStatusMessage } from "./github-auth-status";
 import { GitHubSidebarRow, type GitHubSidebarPreviewBadge } from "./github-sidebar-row";
 import { openGitHubContentInNewWindow } from "../utils/open-in-new-window";
 import { WORKFLOW_TONE_BADGE_TONE, WorkflowStatusIcon } from "./github-workflow-status-icon";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 interface WorkflowRunRowProps {

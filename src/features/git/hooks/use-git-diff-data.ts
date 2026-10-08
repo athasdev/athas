@@ -7,7 +7,7 @@ import type { MultiFileDiff } from "../types/git-diff.types";
 import type { GitDiff } from "../types/git.types";
 import { getDiffBufferFilePath } from "../utils/diff-buffer-path";
 import { hasGitDiffChanges } from "../utils/git-diff-helpers";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 interface UseDiffDataReturn {
   diff: GitDiff | null;

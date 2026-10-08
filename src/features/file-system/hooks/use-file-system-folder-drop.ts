@@ -7,7 +7,7 @@ import {
   clearInternalTabDragData,
   getInternalTabDragData,
 } from "@/features/tabs/utils/internal-tab-drag";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import {
   dispatchDroppedPathsToTerminal,
   handleExternalFileDropPayload,

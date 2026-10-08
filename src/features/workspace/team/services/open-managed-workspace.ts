@@ -1,6 +1,6 @@
-import { areProjectTabPathsEqual } from "@/features/window/utils/project-tab-path";
+import { areProjectTabPathsEqual } from "@/features/workspace/utils/project-tab-path";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
+import { useWorkspaceTabsStore } from "@/features/workspace/stores/workspace-tabs.store";
 import { parseRemotePath } from "@/features/remote/utils/remote-path";
 import { connectionStore } from "@/features/remote/stores/remote-connection.store";
 import { connectRemoteConnection } from "@/features/remote/services/remote-connection-actions";

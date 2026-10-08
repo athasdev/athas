@@ -66,7 +66,7 @@ import {
   type GitHubPRMergeMethod,
 } from "./github-pr-inline-action";
 import { GitHubBranchChip, GitHubMetaChip, GitHubUserChip } from "./github-chips";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 interface GitHubPRViewerProps {
   prNumber: number;

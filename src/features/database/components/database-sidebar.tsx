@@ -42,7 +42,7 @@ import {
 } from "../utils/workspace-database-files";
 import { buildSavedConnectionConfig } from "../utils/connection-config";
 import { getInstalledDatabaseTypes, validateConnectionInput } from "../utils/connection-validation";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 function getBaseName(path: string) {

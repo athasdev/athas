@@ -89,7 +89,7 @@ vi.mock("@/features/editor/stores/buffer.store", () => ({
     }),
   },
 }));
-vi.mock("@/features/window/stores/auth.store", () => ({
+vi.mock("@/features/auth/stores/auth.store", () => ({
   useAuthStore: { subscribe: () => () => {} },
 }));
 vi.mock("../intelligence/stores/intelligence-settings.store", () => ({

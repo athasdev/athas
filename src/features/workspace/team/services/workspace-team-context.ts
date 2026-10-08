@@ -1,4 +1,4 @@
-import { areProjectTabPathsEqual } from "@/features/window/utils/project-tab-path";
+import { areProjectTabPathsEqual } from "@/features/workspace/utils/project-tab-path";
 import { useWorkspaceManagementStore } from "../stores/workspace-management.store";
 import { loadTeamWorkspace } from "./team-workspace-service";
 import type { TeamWorkspace } from "../types/team-workspace";

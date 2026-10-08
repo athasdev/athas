@@ -6,7 +6,7 @@ import {
 } from "@/features/file-system/controllers/file-utils";
 import { buildSearchRegex } from "@/features/editor/utils/search";
 import { getWorkspaceResourceProvider } from "@/features/file-system/services/workspace-resource-provider";
-import type { useProjectStore } from "@/features/window/stores/project.store";
+import type { useProjectStore } from "@/features/workspace/stores/project.store";
 import type { FileEntry } from "@/features/file-system/types/app.types";
 import type {
   FileSearchResult,

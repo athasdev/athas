@@ -12,7 +12,7 @@ vi.mock("@/features/file-system/controllers/file-operations", () => ({
   },
 }));
 vi.mock("@/features/git/api/git-diff-api", () => ({ getCommitFileContent: mocks.head }));
-vi.mock("@/features/window/stores/project.store", () => ({
+vi.mock("@/features/workspace/stores/project.store", () => ({
   useProjectStore: { getState: () => ({ rootFolderPath: "/repo" }) },
 }));
 

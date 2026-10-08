@@ -21,7 +21,7 @@ import { useAcpEventSync } from "@/features/ai/hooks/use-acp-event-sync";
 import { useAgentTabSessionRelease } from "@/features/ai/hooks/use-agent-tab-session-release";
 
 import { MainLayout } from "./features/layout/components/main-layout";
-import { ZoomIndicator } from "./features/window/components/zoom-indicator";
+import { ZoomIndicator } from "./features/layout/components/zoom-indicator";
 import { Toaster } from "./ui/sonner";
 import { TooltipProvider } from "./ui/tooltip";
 import { WindowResizeBorder } from "./features/window/components/window-resize-border";

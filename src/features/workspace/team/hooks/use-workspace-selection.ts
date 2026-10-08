@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from "react";
-import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
+import { useWorkspaceTabsStore } from "@/features/workspace/stores/workspace-tabs.store";
 import { useWorkspaceManagementStore } from "../stores/workspace-management.store";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 export function useWorkspaceSelection() {
   const activeRoot = useProjectStore((state) => state.rootFolderPath);

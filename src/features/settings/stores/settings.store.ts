@@ -16,7 +16,7 @@ import {
 } from "@/features/settings/lib/settings-persistence";
 import { parseSettingsImportJson } from "@/features/settings/lib/settings-import-export";
 import type { Settings } from "../types/settings.types";
-import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
+import { useWorkspaceTabsStore } from "@/features/workspace/stores/workspace-tabs.store";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { readAppearanceBootstrapCache } from "@/features/settings/lib/appearance-bootstrap";
 

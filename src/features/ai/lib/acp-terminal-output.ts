@@ -2,7 +2,7 @@ import type { AcpTerminalExit, AcpTerminalSnapshot } from "@/features/ai/types/a
 import type { Message, ToolCall } from "@/features/ai/types/ai-chat.types";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 export interface AcpTerminalOutput {
   terminalId: string;

@@ -23,7 +23,7 @@ import { Button } from "@/ui/button";
 import { TextLink } from "@/ui/text-link";
 import { writeClipboardText } from "@/utils/clipboard";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 function inferCodeLanguage(code: string): string {
   const trimmed = code.trim();

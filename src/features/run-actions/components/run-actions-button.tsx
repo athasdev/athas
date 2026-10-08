@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { LspClient } from "@/features/editor/lsp/lsp-client";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getBufferById } from "@/features/editor/utils/buffer-index";
-import { useUIState } from "@/features/window/stores/ui-state.store";
-import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
+import { useWorkspaceTabsStore } from "@/features/workspace/stores/workspace-tabs.store";
 import { Button } from "@/ui/button";
 import { showConfirmDialog } from "@/ui/dialog";
 import { PlayIcon } from "@/ui/icons";
@@ -15,7 +15,7 @@ import { resolveRunWorkingDirectory } from "../utils/run-action-discovery";
 import RunActionDialog from "./run-action-dialog";
 import RunActionsMenu from "./run-actions-menu";
 import { emitAppEvent } from "@/utils/app-events";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 const EMPTY_DRAFT: RunActionDraft = {

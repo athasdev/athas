@@ -13,7 +13,7 @@ import {
   XIcon,
 } from "@/ui/icons";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import type { Command } from "../types/keymaps.types";
 
 /** Loaded on use, so the keymap layer does not pull in the agent edit review up front. */

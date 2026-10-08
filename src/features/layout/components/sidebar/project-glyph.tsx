@@ -1,4 +1,4 @@
-import { ProjectCustomIcon } from "@/features/window/components/project-custom-icon";
+import { ProjectCustomIcon } from "@/features/workspace/project-icons/components/project-custom-icon";
 import { FolderIcon, PlusIcon, RemoteIcon } from "@/ui/icons";
 import { cn } from "@/utils/cn";
 

@@ -2,7 +2,7 @@ import { openExternalUrl } from "@/utils/external-url";
 import { getServiceUrls } from "@/config/services";
 import { UsersIcon } from "@/ui/icons";
 import { useCollaborationRuntimeStore } from "@/features/collaboration/stores/collaboration-runtime.store";
-import { useAuthStore } from "@/features/window/stores/auth.store";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import Section, { SettingsView, SettingRow } from "../settings-section";

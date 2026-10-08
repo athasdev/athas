@@ -22,7 +22,7 @@ import { getChromeNavigationIndex } from "@/features/layout/utils/chrome-keyboar
 import { useSidebarStore } from "@/features/layout/stores/sidebar.store";
 import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
 import type { Terminal } from "@/features/terminal/types/terminal.types";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { Button } from "@/ui/button";
 import { ContextMenu, ContextMenuTrigger } from "@/ui/context-menu";
 import {
@@ -49,7 +49,7 @@ import { TabHistoryNavigation } from "./tab-history-navigation";
 import { NewTabMenu } from "./new-tab-menu";
 import TabContextMenu from "./tab-context-menu";
 import { getBufferText } from "@/features/editor/services/open-buffer-text";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import {
   selectActiveBufferId,
   selectPaneBufferFlags,

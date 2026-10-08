@@ -7,7 +7,7 @@ import {
 } from "@/features/terminal/lib/terminal-session-storage";
 import type { PaneNode } from "@/features/panes/types/pane.types";
 import type { PersistedTerminal, Terminal } from "@/features/terminal/types/terminal.types";
-import { type ProjectUiSession, useSessionStore } from "@/features/window/stores/session.store";
+import { type ProjectUiSession, useSessionStore } from "@/features/workspace/stores/session.store";
 import type {
   BufferSession,
   WorkspaceFolderSession,

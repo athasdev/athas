@@ -2,8 +2,8 @@ import { useIntelligenceSettingsStore } from "@/features/ai/intelligence/stores/
 import { holdsQueueForEdit } from "@/features/ai/lib/agent-queue-controls";
 import { isLocalAiProvider } from "@/features/ai/lib/local-ai-connection";
 import { resolveIntelligenceConnection } from "@/features/ai/intelligence/lib/resolve-intelligence-connection";
-import { useAuthStore } from "@/features/window/stores/auth.store";
-import { hasProductCapability } from "@/features/window/lib/product-capabilities";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
+import { hasProductCapability } from "@/features/auth/utils/product-capabilities";
 import type { AgentType, ChatSession, Message } from "@/features/ai/types/ai-chat.types";
 import { hasAgentSessionActivity, selectAgentSessions } from "@/features/ai/lib/agent-session-list";
 import { isChatInWorkspace } from "@/features/ai/lib/ai-workspace-scope";
@@ -21,7 +21,7 @@ import {
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useGitStore } from "@/features/git/stores/git.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { getChatAcpSessionToClose } from "@/features/ai/lib/acp-session-state";
 import type { AIChatActions, AIChatStore } from "./ai-chat-store.types";
 import type { GetAIChatStore, SetAIChatStore } from "./ai-chat-store-context";

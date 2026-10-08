@@ -10,7 +10,7 @@ import type { AcpPermissionOption, AcpPermissionPreview } from "@/features/ai/ty
 import type { AgentPermissionRequest } from "@/features/ai/types/agent-permission.types";
 import { createAcpDiffViewNode, toRelativeDisplayPath } from "@/features/ai/lib/acp-diff-output";
 import { ToolLocations } from "@/features/ai/components/messages/tool-locations";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { ExtensionViewRenderer } from "@/extensions/ui/components/extension-view-renderer";
 import Badge from "@/ui/badge";
 import { CodeOutput } from "@/ui/code-output";

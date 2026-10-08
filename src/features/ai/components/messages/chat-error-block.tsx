@@ -13,7 +13,7 @@ import { selectAgentAuthRequest, useAcpAuthStore } from "@/features/ai/stores/ac
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { ChatMessageError } from "@/features/ai/types/chat-error.types";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { Alert, AlertDescription, AlertTitle } from "@/ui/alert";
 import { Button } from "@/ui/button";
 import { CodeOutput } from "@/ui/code-output";

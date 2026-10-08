@@ -10,7 +10,7 @@ import {
   getHtmlPreviewAssetDirectories,
 } from "@/features/editor/utils/html-preview-document";
 import { ensureAssetAccess } from "@/utils/asset-access";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 const PREVIEW_UPDATE_DELAY_MS = 150;

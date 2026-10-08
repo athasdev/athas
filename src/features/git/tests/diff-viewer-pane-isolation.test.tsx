@@ -31,13 +31,13 @@ vi.mock("@/features/file-system/stores/file-system.store", () => ({
     use: {},
   }),
 }));
-vi.mock("@/features/window/stores/project.store", () => ({
+vi.mock("@/features/workspace/stores/project.store", () => ({
   useProjectStore: Object.assign(
     (select: (state: { rootFolderPath: string }) => unknown) => select({ rootFolderPath: "/repo" }),
     { use: { rootFolderPath: () => "/repo" } },
   ),
 }));
-vi.mock("@/features/window/stores/auth.store", () => ({
+vi.mock("@/features/auth/stores/auth.store", () => ({
   useAuthStore: (select: (state: { user: null }) => unknown) => select({ user: null }),
 }));
 vi.mock("@/features/keymaps/hooks/use-command-shortcut", () => ({

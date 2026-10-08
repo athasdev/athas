@@ -16,7 +16,7 @@ vi.mock("@tauri-apps/plugin-os", () => ({
 vi.mock("@/features/settings/stores/settings.store", () => ({
   useSettingsStore: { getState: () => ({ settings: mocks.settings }) },
 }));
-vi.mock("@/features/window/stores/ui-state.store", () => ({
+vi.mock("@/features/layout/stores/ui-state.store", () => ({
   useUIState: {
     getState: () => ({ hasOpenModal: mocks.hasOpenModal, closeTopModal: mocks.closeTopModal }),
   },

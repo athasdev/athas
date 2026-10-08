@@ -5,7 +5,7 @@ import { useLspStore } from "@/features/editor/lsp/stores/lsp.store";
 import { normalizeWorkspaceFolders } from "@/features/file-system/controllers/workspace-session";
 import { pathStartsWithRoot } from "@/utils/path-helpers";
 import { SEARCH_DEBOUNCE_DELAY } from "../constants/limits";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 export interface WorkspaceSymbolItem {
   name: string;

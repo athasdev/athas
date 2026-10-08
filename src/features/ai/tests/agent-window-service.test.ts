@@ -33,7 +33,7 @@ vi.mock("@tauri-apps/api/window", () => ({
   },
 }));
 vi.mock("@/features/window/utils/create-app-window", () => ({ createAppWindow: mocks.create }));
-vi.mock("@/features/window/stores/ui-state.store", () => ({
+vi.mock("@/features/layout/stores/ui-state.store", () => ({
   useUIState: { getState: () => ({ openSettings: mocks.settings }) },
 }));
 vi.mock("sonner", () => ({ toast: { info: mocks.info, error: mocks.error } }));
@@ -54,7 +54,7 @@ vi.mock("@/features/editor/stores/buffer.store", () => ({
     }),
   },
 }));
-vi.mock("@/features/window/stores/project.store", () => ({
+vi.mock("@/features/workspace/stores/project.store", () => ({
   useProjectStore: { getState: () => ({ rootFolderPath: "/workspace" }) },
 }));
 

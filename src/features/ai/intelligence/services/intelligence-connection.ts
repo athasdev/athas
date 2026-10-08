@@ -1,6 +1,6 @@
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { useAuthStore } from "@/features/window/stores/auth.store";
-import { hasProductCapability } from "@/features/window/lib/product-capabilities";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
+import { hasProductCapability } from "@/features/auth/utils/product-capabilities";
 import { isLocalAiProvider } from "@/features/ai/lib/local-ai-connection";
 import {
   resolveAutocompleteConnection,

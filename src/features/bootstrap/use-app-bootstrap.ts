@@ -24,7 +24,7 @@ import { useDeepLink } from "@/features/window/hooks/use-deep-link";
 import { useExternalNavigationGuard } from "@/features/window/hooks/use-external-navigation-guard";
 import { usePlatformSetup } from "@/features/window/hooks/use-platform-setup";
 import { useWindowDocumentState } from "@/features/window/hooks/use-window-document-state";
-import { useAuthStore } from "@/features/window/stores/auth.store";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
 import {
   enqueueWindowOpenRequest,
   parseWindowOpenUrl,

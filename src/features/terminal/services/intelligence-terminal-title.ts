@@ -1,5 +1,5 @@
 import { requestInlineEdit } from "@/features/ai/intelligence/services/intelligence-text-service";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { useTerminalTabsStore } from "../stores/terminal-tabs.store";
 import { useTerminalStore } from "../stores/terminal.store";
 import { normalizeTerminalTitle } from "../utils/terminal-title";

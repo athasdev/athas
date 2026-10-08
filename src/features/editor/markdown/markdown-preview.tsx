@@ -17,7 +17,7 @@ import {
   isEntireMarkdownPreviewSelected,
 } from "./markdown-preview-search";
 import { useHighlightedMarkdown } from "./use-highlighted-markdown";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { useBufferIdOrActive } from "@/features/panes/hooks/use-pane-buffer-state";
 
 const MARKDOWN_PREVIEW_PARSE_DELAY_MS = 150;

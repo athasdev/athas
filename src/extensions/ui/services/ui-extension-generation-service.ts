@@ -1,7 +1,7 @@
 import { tauriFetch } from "@/utils/tauri-fetch";
-import { getAuthToken } from "@/features/window/services/auth-api";
+import { getAuthToken } from "@/features/auth/services/auth-api";
 import { getApiBase } from "@/utils/api-base";
-import { useAuthStore } from "@/features/window/stores/auth.store";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
 import {
   parseUIExtensionGenerationResult,
   type UIExtensionContributionType,

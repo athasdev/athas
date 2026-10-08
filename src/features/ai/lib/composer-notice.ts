@@ -3,7 +3,7 @@ import type {
   ComposerNotice,
   ComposerNoticeInput,
 } from "@/features/ai/types/composer-notice.types";
-import type { SessionCheckState } from "@/features/window/stores/auth.store";
+import type { SessionCheckState } from "@/features/auth/stores/auth.store";
 
 const SESSION_CHECK_TITLES: Record<SessionCheckState["reason"], string> = {
   local_server_down: "Local Athas server is not running",

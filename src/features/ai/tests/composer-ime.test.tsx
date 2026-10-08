@@ -7,7 +7,7 @@ import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import AIChatInputBar from "../components/input/chat-input-bar";
 import type { AIChatInputBarProps } from "../types/ai-chat.types";
 import * as terminalCommands from "../services/chat-terminal-command";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 vi.mock("@tauri-apps/api/webviewWindow", () => ({
   getCurrentWebviewWindow: () => ({ label: "main" }),

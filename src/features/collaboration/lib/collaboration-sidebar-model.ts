@@ -1,4 +1,4 @@
-import type { SubscriptionInfo } from "@/features/window/services/auth-api";
+import type { SubscriptionInfo } from "@/features/auth/services/auth-api";
 
 type CollaborationSnapshot = NonNullable<SubscriptionInfo["collaboration"]>;
 export type CollaborationChannel = CollaborationSnapshot["channels"][number];

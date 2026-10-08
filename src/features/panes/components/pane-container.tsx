@@ -47,7 +47,7 @@ import type { EditorContent, PullRequestContent } from "../types/pane-content.ty
 import { getOrCreatePaneDropTarget, moveBufferToPaneDropTarget } from "../utils/pane-drop-actions";
 import { PaneSurfaceLayer } from "./pane-surface-layer";
 import { type DropZone, SplitDropOverlay } from "./split-drop-overlay";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { emitAppEvent, onAppEvent } from "@/utils/app-events";
 
 const AgentTab = lazy(() =>

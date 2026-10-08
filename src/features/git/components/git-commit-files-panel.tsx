@@ -1,7 +1,7 @@
 import { ArrowLeftIcon } from "@/ui/icons";
 import { memo, useMemo } from "react";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
-import { useAuthStore } from "@/features/window/stores/auth.store";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { Avatar } from "@/ui/avatar";
 import { Button } from "@/ui/button";
 import { EmptyState } from "@/ui/empty";

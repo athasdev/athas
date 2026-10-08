@@ -9,7 +9,7 @@ import {
 import { useSettingsSearchStore } from "@/features/settings/stores/settings-search.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import type { SettingsSection } from "@/features/settings/types/settings.types";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { Empty, EmptyDescription } from "@/ui/empty";
 import { SearchField } from "@/ui/search";
 import { SidebarListItem } from "@/ui/sidebar";

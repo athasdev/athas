@@ -22,7 +22,7 @@ import {
   getInstalledDatabaseTypes,
   validateConnectionInput,
 } from "../../utils/connection-validation";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 interface ConnectionDialogProps {
   isOpen: boolean;

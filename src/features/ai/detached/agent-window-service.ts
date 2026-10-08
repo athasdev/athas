@@ -8,7 +8,7 @@ import {
   openDetachedWindow,
 } from "@/features/window/detached/detached-window-owner";
 import type { DetachedWindowBaseMessage } from "@/features/window/detached/detached-window-protocol";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { captureAgentDrafts, restoreAgentDrafts } from "./agent-window-drafts";
 import { type AgentWindowSnapshot, getAgentWindowTransferBlocker } from "./agent-window-state";
 import { useAgentWindowStore } from "./agent-window.store";

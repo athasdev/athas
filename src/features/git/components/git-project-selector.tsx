@@ -19,7 +19,7 @@ import { Spinner } from "@/ui/spinner";
 import { cn } from "@/utils/cn";
 import { getFolderName, getRelativePath } from "@/utils/path-helpers";
 import { resolveRepositoryPath } from "../api/git-repo-api";
-import { useProjectStore } from "@/features/window/stores/project.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { useRepositoryStore } from "../stores/git-repository.store";
 
 interface GitProjectSelectorProps {
