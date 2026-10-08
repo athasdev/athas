@@ -8,7 +8,11 @@ import { getInternalTabDragData } from "@/features/tabs/utils/internal-tab-drag"
 import { useBrowserTabStore } from "../stores/browser-tab.store";
 import { getBrowserTabName, isBlankPage } from "../utils/browser-address";
 import { getBrowserKeyBindings, isPageCommand } from "../utils/browser-key-bindings";
-import { getVisibleSlotGeometry, isSlotOccluded } from "../utils/browser-occlusion";
+import {
+  type BrowserSlotGeometry,
+  getVisibleSlotGeometry,
+  isSlotOccluded,
+} from "../utils/browser-occlusion";
 
 const ZOOM_LEVELS = [0.5, 0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3];
 /** Popups animate in after the input that opens them, so the layout is checked again after it. */
@@ -31,6 +35,12 @@ interface BrowserTab {
   pendingUrl: string | null;
   slot: BrowserSlot | null;
   appliedBounds: string;
+  /**
+   * The picture that stands in for the page while workbench UI covers it. The native page hides
+   * only once the picture is on screen, so the tab never flashes empty.
+   */
+  snapshot: "none" | "capturing" | "shown";
+  snapshotUrl: string | null;
 }
 
 function getBufferStore(workspaceId: string | null) {
@@ -39,6 +49,20 @@ function getBufferStore(workspaceId: string | null) {
 
 function boundsKey(bounds: BrowserBounds | null) {
   return bounds ? `${bounds.x}:${bounds.y}:${bounds.width}:${bounds.height}` : HIDDEN;
+}
+
+function containsPoint(bounds: BrowserSlotGeometry, point: { x: number; y: number }) {
+  return (
+    point.x >= bounds.x &&
+    point.x <= bounds.x + bounds.width &&
+    point.y >= bounds.y &&
+    point.y <= bounds.y + bounds.height
+  );
+}
+
+function getCornerRadius(element: HTMLElement) {
+  const radius = Number.parseFloat(getComputedStyle(element).borderTopLeftRadius);
+  return Number.isFinite(radius) && radius > 0 ? radius : null;
 }
 
 function fileNameOf(path: string) {
@@ -62,6 +86,7 @@ class BrowserTabManager {
   private settleTimer: ReturnType<typeof setTimeout> | null = null;
   private stopMonitoring: (() => void) | null = null;
   private dragging = false;
+  private pointer: { x: number; y: number } | null = null;
 
   /** Closes webviews a previous load of this window left behind, such as after a reload. */
   cleanupStaleTabs(): Promise<void> {
@@ -162,6 +187,7 @@ class BrowserTabManager {
     tab.closed = true;
     if (tab.slot) this.resizeObserver?.unobserve(tab.slot.element);
     this.tabs.delete(bufferId);
+    this.clearSnapshot(tab);
     if (tab.label) void commands.browserClose(tab.label).catch(() => {});
     if (useBrowserTabStore.getState().focusedBufferId === bufferId) void this.focusWorkbench();
     useBrowserTabStore.getState().actions.removeTab(bufferId);
@@ -180,6 +206,7 @@ class BrowserTabManager {
     this.resizeObserver?.unobserve(slot.element);
     tab.slot = null;
     this.applyBounds(tab, null);
+    this.clearSnapshot(tab);
     if (useBrowserTabStore.getState().focusedBufferId === bufferId) void this.focusWorkbench();
     this.updateMonitoring();
   }
@@ -196,6 +223,8 @@ class BrowserTabManager {
         pendingUrl: null,
         slot: null,
         appliedBounds: HIDDEN,
+        snapshot: "none",
+        snapshotUrl: null,
       };
       this.tabs.set(bufferId, tab);
     }
@@ -242,20 +271,77 @@ class BrowserTabManager {
 
   private sync() {
     const viewport = { width: window.innerWidth, height: window.innerHeight };
-    const hideAll = this.dragging || getInternalTabDragData() !== null;
+    // A tab dragged over a page shows the pane's drop zones there, so only that page steps aside.
+    const dragPoint = getInternalTabDragData() ? this.pointer : null;
 
     for (const tab of this.tabs.values()) {
-      let bounds: BrowserBounds | null = null;
-      if (tab.slot && !hideAll) {
-        const geometry = getVisibleSlotGeometry(tab.slot.element.getBoundingClientRect(), viewport);
-        if (geometry && !isSlotOccluded(tab.slot.element, geometry)) bounds = geometry;
-      }
+      const geometry = tab.slot
+        ? getVisibleSlotGeometry(tab.slot.element.getBoundingClientRect(), viewport)
+        : null;
+      const covered =
+        geometry !== null &&
+        (this.dragging ||
+          (dragPoint !== null && containsPoint(geometry, dragPoint)) ||
+          (tab.slot !== null && isSlotOccluded(tab.slot.element, geometry)));
 
-      if (tab.label) {
-        this.applyBounds(tab, bounds);
-      } else if (bounds && tab.pendingUrl && !tab.creating) {
-        void this.create(tab, bounds);
+      if (!tab.label) {
+        if (geometry && !covered && tab.pendingUrl && !tab.creating)
+          void this.create(tab, geometry);
+      } else if (!geometry) {
+        this.applyBounds(tab, null);
+        this.clearSnapshot(tab);
+      } else if (covered) {
+        if (tab.snapshot === "shown") {
+          this.applyBounds(tab, null);
+        } else if (tab.snapshot === "none" && tab.appliedBounds !== HIDDEN) {
+          void this.captureSnapshot(tab);
+        }
+      } else {
+        this.applyBounds(tab, geometry);
+        // The page draws over the picture once shown, so the picture goes a frame later.
+        if (tab.snapshot === "shown") {
+          requestAnimationFrame(() => {
+            if (tab.appliedBounds !== HIDDEN) this.clearSnapshot(tab);
+          });
+        }
       }
+    }
+  }
+
+  /** Puts a picture of the page in its slot, then lets {@link sync} hide the page behind it. */
+  private async captureSnapshot(tab: BrowserTab) {
+    if (!tab.label) return;
+    tab.snapshot = "capturing";
+    let url: string | null = null;
+    try {
+      const bytes = await commands.browserSnapshot(tab.label);
+      url = URL.createObjectURL(new Blob([bytes], { type: "image/jpeg" }));
+      const image = new Image();
+      image.src = url;
+      await image.decode();
+    } catch {
+      if (url) URL.revokeObjectURL(url);
+      url = null;
+    }
+    if (tab.closed || tab.snapshot !== "capturing") {
+      if (url) URL.revokeObjectURL(url);
+      return;
+    }
+    tab.snapshotUrl = url;
+    useBrowserTabStore.getState().actions.patchTab(tab.bufferId, { snapshotUrl: url });
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    if (tab.snapshot !== "capturing") return;
+    tab.snapshot = "shown";
+    this.sync();
+  }
+
+  private clearSnapshot(tab: BrowserTab) {
+    if (tab.snapshot === "none") return;
+    tab.snapshot = "none";
+    if (tab.snapshotUrl) URL.revokeObjectURL(tab.snapshotUrl);
+    tab.snapshotUrl = null;
+    if (!tab.closed) {
+      useBrowserTabStore.getState().actions.patchTab(tab.bufferId, { snapshotUrl: null });
     }
   }
 
@@ -284,6 +370,7 @@ class BrowserTabManager {
           url,
           bounds,
           zoom: this.getBuffer(tab)?.zoom ?? null,
+          cornerRadius: tab.slot ? getCornerRadius(tab.slot.element) : null,
           keyBindings: getBrowserKeyBindings(),
         },
         events,
@@ -384,8 +471,26 @@ class BrowserTabManager {
       this.scheduleSettledSync();
     };
     const onWindowFocus = () => useBrowserTabStore.getState().actions.setFocusedBufferId(null);
-    const mutationObserver = new MutationObserver(this.scheduleSettledSync);
-    mutationObserver.observe(document.body, { childList: true });
+    const onPointerMove = (event: Event) => {
+      if (!getInternalTabDragData()) return;
+      const { clientX, clientY } = event as PointerEvent;
+      this.pointer = { x: clientX, y: clientY };
+      this.scheduleSync();
+    };
+    // Popups mount and open inside portals next to the app root; changes inside the app itself,
+    // such as typing in an editor, can't open one and are ignored.
+    const appRoot = document.getElementById("root");
+    const mutationObserver = new MutationObserver((records) => {
+      if (records.some((record) => !appRoot?.contains(record.target))) {
+        this.scheduleSettledSync();
+      }
+    });
+    mutationObserver.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["data-open", "hidden"],
+    });
 
     const listeners: [EventTarget, string, EventListener, boolean][] = [
       [window, "resize", this.scheduleSync, false],
@@ -398,6 +503,7 @@ class BrowserTabManager {
       [window, "transitionend", this.scheduleSync, true],
       [window, "animationend", this.scheduleSync, true],
       [window, "athas-internal-tab-drag-hover", this.scheduleSync, false],
+      [window, "pointermove", onPointerMove, true],
       [window, "dragstart", onDragStart, true],
       [window, "dragend", onDragEnd, true],
       [window, "drop", onDragEnd, true],

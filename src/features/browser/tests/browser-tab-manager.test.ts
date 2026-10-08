@@ -2,6 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { commands } from "@/bindings/commands";
 import { browserTabManager } from "../services/browser-tab-manager";
+import { useBrowserTabStore } from "../stores/browser-tab.store";
 
 const buffers = vi.hoisted(() => [] as { id: string; type: string; url: string }[]);
 
@@ -18,6 +19,7 @@ vi.mock("@/bindings/commands", () => ({
     browserNavigate: vi.fn(async () => null),
     browserClose: vi.fn(async () => null),
     browserFocusWorkbench: vi.fn(async () => null),
+    browserSnapshot: vi.fn(async () => new ArrayBuffer(8)),
   },
 }));
 vi.mock("@/features/editor/stores/buffer.store", () => {
@@ -34,7 +36,7 @@ let coveringElement: Element | null = null;
 
 function createSlot(rect = { left: 10, top: 40, width: 600, height: 400 }) {
   const element = document.createElement("div");
-  document.body.append(element);
+  document.getElementById("root")?.append(element);
   element.getBoundingClientRect = () =>
     ({
       ...rect,
@@ -45,15 +47,25 @@ function createSlot(rect = { left: 10, top: 40, width: 600, height: 400 }) {
 }
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
+const nextFrame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+const settle = async () => {
+  for (let frame = 0; frame < 4; frame += 1) {
+    await nextFrame();
+    await flush();
+  }
+};
 
 describe("browser tab manager", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     coveringElement = null;
     buffers.length = 0;
-    document.body.innerHTML = "";
+    document.body.innerHTML = '<div id="root"></div>';
     Object.assign(window, { innerWidth: 1200, innerHeight: 800 });
     document.elementFromPoint = (() => coveringElement) as typeof document.elementFromPoint;
+    URL.createObjectURL = vi.fn(() => "blob:snapshot");
+    URL.revokeObjectURL = vi.fn();
+    HTMLImageElement.prototype.decode = () => Promise.resolve();
   });
 
   it("creates no webview for a blank tab", async () => {
@@ -108,6 +120,52 @@ describe("browser tab manager", () => {
     detachAgain();
     browserTabManager.close("app");
     expect(commands.browserClose).toHaveBeenCalledWith("browser-7");
+  });
+
+  it("shows a picture of the page under a menu that opens over part of it", async () => {
+    vi.mocked(commands.browserCreate).mockResolvedValueOnce("browser-3");
+    const detach = browserTabManager.attach("menu", null, createSlot(), "https://athas.dev");
+    await flush();
+
+    const menu = document.createElement("div");
+    menu.getBoundingClientRect = () =>
+      ({ left: 560, top: 44, right: 606, bottom: 120, width: 46, height: 76 }) as DOMRect;
+    document.body.append(menu);
+    await settle();
+
+    expect(commands.browserSnapshot).toHaveBeenCalledWith("browser-3");
+    expect(useBrowserTabStore.getState().tabs.menu?.snapshotUrl).toBe("blob:snapshot");
+    expect(commands.browserSetBounds).toHaveBeenLastCalledWith("browser-3", null);
+
+    menu.remove();
+    await settle();
+
+    expect(commands.browserSetBounds).toHaveBeenLastCalledWith("browser-3", {
+      x: 10,
+      y: 40,
+      width: 600,
+      height: 400,
+    });
+    expect(useBrowserTabStore.getState().tabs.menu?.snapshotUrl).toBeNull();
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:snapshot");
+    detach();
+    browserTabManager.close("menu");
+  });
+
+  it("still hides the page when it can't take a picture of it", async () => {
+    vi.mocked(commands.browserCreate).mockResolvedValueOnce("browser-4");
+    vi.mocked(commands.browserSnapshot).mockRejectedValueOnce("unsupported");
+    const detach = browserTabManager.attach("plain", null, createSlot(), "https://athas.dev");
+    await flush();
+
+    document.body.append(document.createElement("div"));
+    coveringElement = document.createElement("div");
+    await settle();
+
+    expect(commands.browserSetBounds).toHaveBeenLastCalledWith("browser-4", null);
+    expect(useBrowserTabStore.getState().tabs.plain?.snapshotUrl ?? null).toBeNull();
+    detach();
+    browserTabManager.close("plain");
   });
 
   it("waits to create the page while workbench UI covers its slot", async () => {

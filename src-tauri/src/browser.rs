@@ -189,6 +189,9 @@ pub struct BrowserCreateRequest {
    pub url: String,
    pub bounds: BrowserBounds,
    pub zoom: Option<f64>,
+   /// Radius of the slot's corners in CSS pixels, so the page follows its
+   /// rounded frame. Applied on macOS; other webviews stay square.
+   pub corner_radius: Option<f64>,
    /// Workbench shortcuts the page hands back to Athas while it has focus.
    pub key_bindings: Vec<BrowserKeyBinding>,
 }
@@ -200,6 +203,72 @@ pub enum BrowserNavigationAction {
    Forward,
    Reload,
    Stop,
+}
+
+/// Rounds the corners of a page so it sits inside the slot's rounded frame.
+#[cfg(target_os = "macos")]
+#[allow(unexpected_cfgs)]
+fn round_corners(webview: &WebView, radius: f64) {
+   use objc::{msg_send, runtime::Object, sel, sel_impl};
+   use wry::WebViewExtMacOS;
+
+   let view = webview.webview();
+   let view = &*view as *const wry::WryWebView as *mut Object;
+   // SAFETY: `view` is the live WKWebView that `webview` owns, and this runs on
+   // the main thread.
+   unsafe {
+      let _: () = msg_send![view, setWantsLayer: true];
+      let layer: *mut Object = msg_send![view, layer];
+      if layer.is_null() {
+         return;
+      }
+      let _: () = msg_send![layer, setCornerRadius: radius];
+      let _: () = msg_send![layer, setMasksToBounds: true];
+   }
+}
+
+/// Captures what a page shows right now as a JPEG and hands it to `done`, or
+/// `None` when the capture fails.
+#[cfg(target_os = "macos")]
+fn capture_snapshot(webview: &WebView, done: impl FnOnce(Option<Vec<u8>>) + 'static) {
+   use block2::RcBlock;
+   use objc2_app_kit::{
+      NSBitmapImageFileType, NSBitmapImageRep, NSBitmapImageRepPropertyKey, NSImage,
+   };
+   use objc2_foundation::{NSDictionary, NSError};
+   use objc2_web_kit::WKSnapshotConfiguration;
+   use wry::WebViewExtMacOS;
+
+   let done = RefCell::new(Some(done));
+   let handler = RcBlock::new(move |image: *mut NSImage, _error: *mut NSError| {
+      // SAFETY: WebKit passes a valid image or null.
+      let bytes = unsafe { image.as_ref() }.and_then(|image| {
+         let tiff = image.TIFFRepresentation()?;
+         let bitmap = NSBitmapImageRep::imageRepWithData(&tiff)?;
+         let properties =
+            NSDictionary::<NSBitmapImageRepPropertyKey, objc2::runtime::AnyObject>::new();
+         // SAFETY: an empty property dictionary is valid for every file type.
+         let jpeg = unsafe {
+            bitmap.representationUsingType_properties(NSBitmapImageFileType::JPEG, &properties)
+         }?;
+         Some(jpeg.to_vec())
+      });
+      if let Some(done) = done.borrow_mut().take() {
+         done(bytes);
+      }
+   });
+
+   let Some(main_thread) = objc2::MainThreadMarker::new() else {
+      return;
+   };
+   let view = webview.webview();
+   // SAFETY: this runs on the main thread with the live WKWebView `webview`
+   // owns. Capturing the last rendered frame avoids waiting for a new one.
+   unsafe {
+      let configuration = WKSnapshotConfiguration::new(main_thread);
+      configuration.setAfterScreenUpdates(false);
+      view.takeSnapshotWithConfiguration_completionHandler(Some(&configuration), &handler);
+   }
 }
 
 fn build_webview(
@@ -364,6 +433,10 @@ fn build_webview(
    });
 
    let webview = webview?;
+   #[cfg(target_os = "macos")]
+   if let Some(radius) = request.corner_radius.filter(|radius| *radius > 0.0) {
+      round_corners(&webview, radius);
+   }
    if let Some(zoom) = request.zoom
       && (zoom - 1.0).abs() > f64::EPSILON
    {
@@ -490,6 +563,40 @@ pub async fn browser_focus(app: AppHandle, label: String) -> Result<(), String> 
          .map_err(|error| format!("Failed to focus page: {error}"))
    })
    .await
+}
+
+/// A JPEG of what the page shows right now. The workbench shows it in place of
+/// the page while a menu or dialog opens over the tab, since the native page
+/// would otherwise cover it.
+#[command]
+#[specta::specta]
+pub async fn browser_snapshot(
+   app: AppHandle,
+   label: String,
+) -> Result<crate::commands::FileBytes, String> {
+   #[cfg(target_os = "macos")]
+   {
+      let (sender, receiver) = tokio::sync::oneshot::channel();
+      app.run_on_main_thread(move || {
+         let _ = with_tab(&label, |tab| {
+            capture_snapshot(&tab.webview, move |bytes| {
+               let _ = sender.send(bytes);
+            });
+         });
+      })
+      .map_err(|error| format!("Failed to reach the main thread: {error}"))?;
+      receiver
+         .await
+         .ok()
+         .flatten()
+         .map(crate::commands::FileBytes)
+         .ok_or_else(|| "Failed to capture the page".to_string())
+   }
+   #[cfg(not(target_os = "macos"))]
+   {
+      let _ = (app, label);
+      Err("Page snapshots are not available on this platform".to_string())
+   }
 }
 
 /// Gives keyboard focus back to the workbench webview that calls this, for

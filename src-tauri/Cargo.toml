@@ -106,3 +106,25 @@ webkit2gtk-sys = "2"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc = "0.2"
+# Page snapshots for browser tabs; the same versions wry uses.
+block2 = "0.6"
+objc2 = "0.6"
+objc2-app-kit = { version = "0.3", default-features = false, features = [
+  "std",
+  "NSBitmapImageRep",
+  "NSImage",
+  "NSImageRep",
+] }
+objc2-foundation = { version = "0.3", default-features = false, features = [
+  "std",
+  "NSData",
+  "NSDictionary",
+  "NSError",
+] }
+objc2-web-kit = { version = "0.3", default-features = false, features = [
+  "std",
+  "block2",
+  "objc2-app-kit",
+  "WKSnapshotConfiguration",
+  "WKWebView",
+] }

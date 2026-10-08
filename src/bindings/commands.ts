@@ -584,6 +584,12 @@ export const commands = {
     __TAURI_INVOKE<null>("browser_perform", { label, action }),
   browserSetZoom: (label: string, zoom: number | null) =>
     __TAURI_INVOKE<null>("browser_set_zoom", { label, zoom }),
+  /**
+   *  A JPEG of what the page shows right now. The workbench shows it in place of
+   *  the page while a menu or dialog opens over the tab, since the native page
+   *  would otherwise cover it.
+   */
+  browserSnapshot: (label: string) => __TAURI_INVOKE<ArrayBuffer>("browser_snapshot", { label }),
   browserFocus: (label: string) => __TAURI_INVOKE<null>("browser_focus", { label }),
   /**
    *  Gives keyboard focus back to the workbench webview that calls this, for
@@ -4504,6 +4510,11 @@ export type BrowserCreateRequest = {
   url: string;
   bounds: BrowserBounds;
   zoom: number | null;
+  /**
+   *  Radius of the slot's corners in CSS pixels, so the page follows its
+   *  rounded frame. Applied on macOS; other webviews stay square.
+   */
+  cornerRadius: number | null;
   /**  Workbench shortcuts the page hands back to Athas while it has focus. */
   keyBindings: BrowserKeyBinding[];
 };

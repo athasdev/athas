@@ -8,6 +8,8 @@ export interface BrowserTabState {
   canGoBack: boolean | null;
   canGoForward: boolean | null;
   error: string | null;
+  /** A picture of the page shown while workbench UI covers it. */
+  snapshotUrl: string | null;
 }
 
 const EMPTY_TAB_STATE: BrowserTabState = {
@@ -15,6 +17,7 @@ const EMPTY_TAB_STATE: BrowserTabState = {
   canGoBack: null,
   canGoForward: null,
   error: null,
+  snapshotUrl: null,
 };
 
 interface BrowserTabStoreState {

@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useKeymapStore } from "@/features/keymaps/stores/keymaps.store";
 import { activateBufferInPaneAndSync } from "@/features/panes/utils/pane-activation";
 import { PaneContentHeader } from "@/features/panes/components/pane-content-chrome";
@@ -50,10 +51,11 @@ interface BrowserViewProps {
 export function BrowserView({ buffer, paneId, isActive }: BrowserViewProps) {
   const workspaceId = useWorkspaceStoreScopeId();
   const { setContext } = useKeymapStore.use.actions();
-  const { isLoading, canGoBack, canGoForward, error } = useBrowserTabState(buffer.id);
+  const { isLoading, canGoBack, canGoForward, error, snapshotUrl } = useBrowserTabState(buffer.id);
   const slotRef = useRef<HTMLDivElement>(null);
   const addressRef = useRef<HTMLInputElement>(null);
   const [draft, setDraft] = useState<string | null>(null);
+  const selectOnMouseUpRef = useRef(false);
   const isBlank = isBlankPage(buffer.url);
 
   const urlRef = useRef(buffer.url);
@@ -96,12 +98,32 @@ export function BrowserView({ buffer, paneId, isActive }: BrowserViewProps) {
     return () => window.removeEventListener(BROWSER_FOCUS_ADDRESS_BAR_EVENT, focusAddressBar);
   }, [buffer.id]);
 
-  const submitAddress = () => {
+  const submitAddress = (inNewTab: boolean) => {
     const url = resolveBrowserAddress(draft ?? "");
     if (!url) return;
     setDraft(null);
+    if (inNewTab) {
+      useBufferStore.getState().actions.openBrowserBuffer(url);
+      return;
+    }
     browserTabManager.navigate(buffer.id, url);
     if (!isBlankPage(url)) browserTabManager.focusPage(buffer.id);
+  };
+
+  const handleAddressKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      submitAddress(event.metaKey || event.ctrlKey || event.altKey);
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      if (draft !== null) {
+        const input = event.currentTarget;
+        setDraft(null);
+        requestAnimationFrame(() => input.select());
+      } else if (!isBlank) {
+        browserTabManager.focusPage(buffer.id);
+      }
+    }
   };
 
   const copyAddress = async () => {
@@ -112,6 +134,8 @@ export function BrowserView({ buffer, paneId, isActive }: BrowserViewProps) {
   return (
     <div className="flex size-full min-h-0 flex-col bg-background">
       <PaneContentHeader
+        separated={false}
+        data-workbench-navigation-scope
         leading={
           <>
             <Button
@@ -147,13 +171,7 @@ export function BrowserView({ buffer, paneId, isActive }: BrowserViewProps) {
           </>
         }
         context={
-          <form
-            className="flex min-w-0 flex-1"
-            onSubmit={(event) => {
-              event.preventDefault();
-              submitAddress();
-            }}
-          >
+          <div className="flex min-w-0 flex-1">
             <Input
               ref={addressRef}
               size="sm"
@@ -163,16 +181,20 @@ export function BrowserView({ buffer, paneId, isActive }: BrowserViewProps) {
               placeholder="Search or enter address"
               value={draft ?? formatBrowserAddress(buffer.url)}
               onChange={(event) => setDraft(event.target.value)}
+              onMouseDown={(event) => {
+                selectOnMouseUpRef.current = document.activeElement !== event.currentTarget;
+              }}
+              onMouseUp={(event) => {
+                if (!selectOnMouseUpRef.current) return;
+                selectOnMouseUpRef.current = false;
+                event.preventDefault();
+                event.currentTarget.select();
+              }}
               onFocus={(event) => event.target.select()}
               onBlur={() => setDraft(null)}
-              onKeyDown={(event) => {
-                if (event.key !== "Escape") return;
-                event.preventDefault();
-                setDraft(null);
-                if (!isBlank) browserTabManager.focusPage(buffer.id);
-              }}
+              onKeyDown={handleAddressKeyDown}
             />
-          </form>
+          </div>
         }
         actions={
           <>
@@ -224,26 +246,35 @@ export function BrowserView({ buffer, paneId, isActive }: BrowserViewProps) {
           </>
         }
       />
-      <div ref={slotRef} data-browser-slot className="relative min-h-0 flex-1">
-        {error ? (
-          <ViewerErrorState
-            message={error}
-            actionLabel="Try Again"
-            onAction={() => browserTabManager.navigate(buffer.id, buffer.url)}
-          />
-        ) : isBlank ? (
-          <Empty className="size-full">
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <GlobeIcon />
-              </EmptyMedia>
-              <EmptyTitle>Browse the web</EmptyTitle>
-              <EmptyDescription>
-                Search or enter an address, such as localhost:5173 or athas.dev
-              </EmptyDescription>
-            </EmptyHeader>
-          </Empty>
-        ) : null}
+      <div className="flex min-h-0 flex-1 px-1.5 pb-1.5">
+        <div
+          ref={slotRef}
+          data-browser-slot
+          className="relative min-h-0 flex-1 overflow-hidden rounded-lg bg-surface shadow-(--shadow-card)"
+        >
+          {snapshotUrl ? (
+            <img src={snapshotUrl} alt="" className="absolute inset-0 size-full" />
+          ) : null}
+          {error ? (
+            <ViewerErrorState
+              message={error}
+              actionLabel="Try Again"
+              onAction={() => browserTabManager.navigate(buffer.id, buffer.url)}
+            />
+          ) : isBlank ? (
+            <Empty className="size-full">
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <GlobeIcon />
+                </EmptyMedia>
+                <EmptyTitle>Browse the web</EmptyTitle>
+                <EmptyDescription>
+                  Search or enter an address, such as localhost:5173 or athas.dev
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          ) : null}
+        </div>
       </div>
     </div>
   );
