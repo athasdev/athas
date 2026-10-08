@@ -5,38 +5,8 @@ import { evaluateWhenClause } from "@/features/keymaps/utils/context";
 import { getEffectiveKeybindings } from "@/features/keymaps/utils/effective-keymaps";
 import { parseKeybinding } from "@/features/keymaps/utils/parser";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
+import { WORKBENCH_NAVIGATION_COMMANDS } from "@/features/keymaps/utils/workbench-navigation-commands";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-
-/**
- * Workbench commands a focused page hands back to Athas. Pages receive every other key, so web
- * apps keep their own shortcuts; these are the ones that move between tabs and panes, open the
- * workbench's pickers, or drive the browser tab itself.
- */
-const PAGE_FORWARDED_COMMANDS = new Set([
-  "workbench.commandPalette",
-  "file.quickOpen",
-  "workbench.newTab",
-  "workbench.newWindow",
-  "workbench.closeWindow",
-  "file.close",
-  "file.reopenClosed",
-  "workbench.nextTab",
-  "workbench.previousTab",
-  "workbench.nextTabCtrlTab",
-  "workbench.previousTabCtrlTab",
-  ...Array.from({ length: 9 }, (_, index) => `workbench.switchToTab${index + 1}`),
-  "workbench.toggleSidebar",
-  "workbench.toggleTerminal",
-  "workbench.showGlobalSearch",
-  "workbench.zoomIn",
-  "workbench.zoomOut",
-  "workbench.zoomReset",
-  "browser.focusAddressBar",
-  "browser.reload",
-  "browser.back",
-  "browser.forward",
-  "browser.openDevTools",
-]);
 
 /** Keys a page reports by physical position, because Shift or the layout changes their character. */
 const KEY_TO_CODE: Record<string, string> = {
@@ -82,7 +52,7 @@ export function getBrowserKeyBindings(): BrowserKeyBinding[] {
   const contexts = { browserFocus: true };
 
   return keybindings.flatMap((binding) => {
-    if (!PAGE_FORWARDED_COMMANDS.has(binding.command)) return [];
+    if (!WORKBENCH_NAVIGATION_COMMANDS.has(binding.command)) return [];
     if (binding.enabled === false) return [];
     if (binding.when && !evaluateWhenClause(binding.when, contexts)) return [];
     const browserBinding = toBrowserKeyBinding(binding);

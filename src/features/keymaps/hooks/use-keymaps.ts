@@ -26,6 +26,10 @@ import { parseKeybinding } from "../utils/parser";
 import type { ParsedKey } from "../utils/parser";
 import { keymapRegistry } from "../utils/registry";
 import { isVimOwnedShortcut } from "../utils/vim-shortcuts";
+import {
+  isInWorkbenchNavigationScope,
+  WORKBENCH_NAVIGATION_COMMANDS,
+} from "../utils/workbench-navigation-commands";
 
 const CHORD_TIMEOUT = 1000; // 1 second to complete chord
 const closeTabShortcut = parseKeybinding("cmd+w").parts[0];
@@ -163,8 +167,11 @@ export function useKeymaps() {
 
       const isNativeTextInput = isNativeTextInputTarget(e.target, document.activeElement);
       if (isNativeTextInput && !isEditorTextarea && !isTerminalTextarea) {
+        const allowedCommands = isInWorkbenchNavigationScope(e.target)
+          ? WORKBENCH_NAVIGATION_COMMANDS
+          : INPUT_ALLOWED_COMMANDS;
         for (const keybinding of allKeybindings) {
-          if (!INPUT_ALLOWED_COMMANDS.has(keybinding.command)) continue;
+          if (!allowedCommands.has(keybinding.command)) continue;
           if (!keybinding.enabled && keybinding.enabled !== undefined) continue;
           if (keybinding.when && !evaluateWhenClause(keybinding.when, effectiveContexts)) continue;
 
