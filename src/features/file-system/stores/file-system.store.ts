@@ -284,23 +284,39 @@ const recordLocalFileAccess = (
     return;
   }
 
-  const idleScheduler = window as Window & {
-    requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
-  };
-  const recordAccess = () => {
+  runWhenIdle(() => {
     useRecentFilesStore.getState().actions.addOrUpdateRecentFile(path, name, {
       workspacePath: workspaceRootPath ?? null,
       external: !isLocalFileInWorkspace(path, workspaceRootPath, workspaceFolderPaths),
     });
-  };
+  }, 500);
+};
 
+/**
+ * Records an open in the search index's frecency once the open has rendered. The write commits
+ * to disk, and the file the user asked for should not wait behind it.
+ */
+const trackFileAccessWhenIdle = (path: string) => {
+  runWhenIdle(() => {
+    fffTrackAccess(path)
+      .then(() => fileOpenBenchmark.mark(path, "track-access-done"))
+      .catch((error) => {
+        console.error("[fff] track_access failed:", error);
+      });
+  }, 1000);
+};
+
+function runWhenIdle(callback: () => void, timeout: number) {
+  const idleScheduler = window as Window & {
+    requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
+  };
   if (idleScheduler.requestIdleCallback) {
-    idleScheduler.requestIdleCallback(recordAccess, { timeout: 500 });
+    idleScheduler.requestIdleCallback(callback, { timeout });
     return;
   }
 
-  window.setTimeout(recordAccess, 50);
-};
+  window.setTimeout(callback, 50);
+}
 
 const restoreEditorSessionStateForPath = (
   bufferSession: BufferSession | WorkspaceSessionBuffer,
@@ -1251,11 +1267,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
 
         if (!isPreview && !selectedWslInfo) {
           fileOpenBenchmark.mark(path, "track-access");
-          fffTrackAccess(path)
-            .then(() => fileOpenBenchmark.mark(path, "track-access-done"))
-            .catch((error) => {
-              console.error("[fff] track_access failed:", error);
-            });
+          trackFileAccessWhenIdle(path);
         }
 
         const {

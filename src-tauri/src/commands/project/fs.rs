@@ -290,14 +290,20 @@ pub struct SymlinkInfo {
 
 #[command]
 #[specta::specta]
-pub fn get_symlink_info(
+pub async fn get_symlink_info(
    path: String,
    workspace_root: Option<String>,
 ) -> Result<SymlinkInfo, String> {
+   tauri::async_runtime::spawn_blocking(move || symlink_info(&path, workspace_root))
+      .await
+      .map_err(|error| format!("Symlink info task failed: {error}"))?
+}
+
+fn symlink_info(path: &str, workspace_root: Option<String>) -> Result<SymlinkInfo, String> {
    // Require the symlink container itself to live under $HOME. We intentionally
    // inspect symlink_metadata of the raw path (not the canonical target) so the
    // caller can still discover symlinks that point outside the scope.
-   let file_path_buf = require_symlink_container_under_home(&path)?;
+   let file_path_buf = require_symlink_container_under_home(path)?;
    let file_path = file_path_buf.as_path();
 
    // Use symlink_metadata to get info without following the symlink

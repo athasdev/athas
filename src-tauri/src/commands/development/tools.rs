@@ -10,7 +10,9 @@ use std::{
 };
 use tauri::AppHandle;
 
-#[tauri::command]
+// Runs off the main thread: the benchmark log is appended to a file, and a synchronous command
+// would hold up every other IPC reply, such as the file read of the next open, while it writes.
+#[tauri::command(async)]
 #[specta::specta]
 pub fn frontend_trace(level: String, scope: String, message: String, payload: Option<Value>) {
    #[cfg(debug_assertions)]

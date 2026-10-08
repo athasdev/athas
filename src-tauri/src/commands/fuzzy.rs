@@ -4,7 +4,7 @@ use std::{
    path::PathBuf,
    sync::{Arc, Mutex, OnceLock},
 };
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, Manager};
 
 pub struct FffSearchState {
    fff: OnceLock<FffSearch>,
@@ -104,25 +104,38 @@ pub(crate) fn local_workspace_paths(paths: Vec<String>) -> Vec<PathBuf> {
       .collect()
 }
 
-#[tauri::command]
-#[specta::specta]
-pub fn fff_ensure_workspaces(
+/// Runs index work on a blocking worker. Synchronous commands run on the main thread, where an
+/// index scan or a frecency write (an LMDB commit with fsync) would stall every other IPC reply,
+/// including the file read of the open that tracked the access.
+async fn with_fff<T: Send + 'static>(
    app: AppHandle,
-   state: State<'_, FffSearchState>,
-   root_paths: Vec<String>,
-) -> Result<(), String> {
-   let root_paths = local_workspace_paths(root_paths);
-   if root_paths.is_empty() {
-      return Ok(());
-   }
-   state.ensure_workspaces(&app, &root_paths)
+   work: impl FnOnce(&AppHandle, &FffSearchState) -> Result<T, String> + Send + 'static,
+) -> Result<T, String> {
+   tauri::async_runtime::spawn_blocking(move || {
+      let state = app.state::<FffSearchState>();
+      work(&app, &state)
+   })
+   .await
+   .map_err(|error| format!("fff task failed: {error}"))?
 }
 
 #[tauri::command]
 #[specta::specta]
-pub fn fff_search_files(
+pub async fn fff_ensure_workspaces(app: AppHandle, root_paths: Vec<String>) -> Result<(), String> {
+   let root_paths = local_workspace_paths(root_paths);
+   if root_paths.is_empty() {
+      return Ok(());
+   }
+   with_fff(app, move |app, state| {
+      state.ensure_workspaces(app, &root_paths)
+   })
+   .await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn fff_search_files(
    app: AppHandle,
-   state: State<'_, FffSearchState>,
    query: String,
    limit: Option<usize>,
    root_paths: Vec<String>,
@@ -135,60 +148,64 @@ pub fn fff_search_files(
    if root_paths.is_empty() {
       return Ok(Vec::new());
    }
-   state.ensure_workspaces(&app, &root_paths)?;
-   let fff = state.get_or_init(&app)?;
-   fff.search(
-      root_paths.iter().map(PathBuf::as_path),
-      &query,
-      limit.unwrap_or(100),
-   )
-   .map_err(|e| format!("fff search: {e}"))
+   with_fff(app, move |app, state| {
+      state.ensure_workspaces(app, &root_paths)?;
+      let fff = state.get_or_init(app)?;
+      fff.search(
+         root_paths.iter().map(PathBuf::as_path),
+         &query,
+         limit.unwrap_or(100),
+      )
+      .map_err(|e| format!("fff search: {e}"))
+   })
+   .await
 }
 
 #[tauri::command]
 #[specta::specta]
-pub fn fff_scan_status(
+pub async fn fff_scan_status(
    app: AppHandle,
-   state: State<'_, FffSearchState>,
    root_paths: Vec<String>,
 ) -> Result<FffScanStatus, String> {
    let root_paths = local_workspace_paths(root_paths);
    if root_paths.is_empty() {
       return Ok(FffScanStatus::default());
    }
-   state.scan_status(&app, &root_paths)
+   with_fff(app, move |app, state| state.scan_status(app, &root_paths)).await
 }
 
 #[tauri::command]
 #[specta::specta]
-pub fn fff_list_files(
+pub async fn fff_list_files(
    app: AppHandle,
-   state: State<'_, FffSearchState>,
    root_paths: Vec<String>,
 ) -> Result<Vec<FffIndexedFile>, String> {
    let root_paths = local_workspace_paths(root_paths);
    if root_paths.is_empty() {
       return Ok(Vec::new());
    }
-   state.ensure_workspaces(&app, &root_paths)?;
-   state
-      .get_or_init(&app)?
-      .list_files(root_paths.iter().map(PathBuf::as_path))
-      .map_err(|e| format!("fff list_files: {e}"))
+   with_fff(app, move |app, state| {
+      state.ensure_workspaces(app, &root_paths)?;
+      state
+         .get_or_init(app)?
+         .list_files(root_paths.iter().map(PathBuf::as_path))
+         .map_err(|e| format!("fff list_files: {e}"))
+   })
+   .await
 }
 
 #[tauri::command]
 #[specta::specta]
-pub fn fff_track_access(
-   app: AppHandle,
-   state: State<'_, FffSearchState>,
-   path: String,
-) -> Result<(), String> {
+pub async fn fff_track_access(app: AppHandle, path: String) -> Result<(), String> {
    if should_skip_fff_path(&path) {
       return Ok(());
    }
 
-   let fff = state.get_or_init(&app)?;
-   fff.track_access(std::path::Path::new(&path))
-      .map_err(|e| format!("fff track_access: {e}"))
+   with_fff(app, move |app, state| {
+      state
+         .get_or_init(app)?
+         .track_access(std::path::Path::new(&path))
+         .map_err(|e| format!("fff track_access: {e}"))
+   })
+   .await
 }
