@@ -77,7 +77,7 @@ describe("MarkdownRenderClient", () => {
     const [request] = worker.posted;
 
     worker.onmessage?.({
-      data: { id: request.id + 100, ok: true, markdown: { parts: ["<p>other</p>"] } },
+      data: { id: request.id + 100, ok: true, markdown: { blocks: [["<p>other</p>"]] } },
     } as MessageEvent<MarkdownRenderResponse>);
     await flush();
     expect(first.done).toBe(false);

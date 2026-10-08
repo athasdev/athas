@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   setActiveFindAdapter: vi.fn(),
   clearActiveFindAdapter: vi.fn(),
 }));
+const preview = vi.hoisted(() => ({ blocks: ["<ul><li><strong>Item</strong></li></ul>"] }));
 
 vi.mock("@/features/editor/extensions/api", () => ({ editorAPI: mocks }));
 vi.mock("@/features/editor/stores/buffer.store", () => {
@@ -43,7 +44,7 @@ vi.mock("@/features/workspace/stores/project.store", () => ({
     selector({ rootFolderPath: "/workspace" }),
 }));
 vi.mock("../markdown/use-highlighted-markdown", () => ({
-  useHighlightedMarkdown: () => "<ul><li><strong>Item</strong></li></ul>",
+  useHighlightedMarkdown: () => preview.blocks,
 }));
 
 let host: HTMLDivElement;
@@ -54,6 +55,7 @@ beforeEach(() => {
   Element.prototype.scrollIntoView = vi.fn();
   mocks.setActiveFindAdapter.mockClear();
   mocks.clearActiveFindAdapter.mockClear();
+  preview.blocks = ["<ul><li><strong>Item</strong></li></ul>"];
   host = document.createElement("div");
   document.body.append(host);
   root = createRoot(host);
@@ -127,5 +129,31 @@ describe("Markdown preview interactions", () => {
 
     expect(host.querySelectorAll("[data-markdown-search-match]")).toHaveLength(1);
     expect(host.textContent).toContain("1 of 1");
+  });
+
+  it("updates only the changed blocks and finds matches across all of them", async () => {
+    preview.blocks = ["<p>Item one</p>", "\n<p>two</p>"];
+    await act(async () => root.render(<MarkdownPreview bufferId="markdown-buffer" />));
+    const first = host.querySelector(".markdown-content p");
+
+    preview.blocks = ["<p>Item one</p>", "\n<p>Item two</p>"];
+    await act(async () => root.render(<MarkdownPreview bufferId="markdown-buffer" />));
+    const paragraphs = host.querySelectorAll(".markdown-content p");
+    expect(paragraphs[0]).toBe(first);
+    expect(paragraphs[1].textContent).toBe("Item two");
+
+    const adapter = mocks.setActiveFindAdapter.mock.lastCall?.[0];
+    await act(async () => adapter.openFind(false));
+    const input = host.querySelector<HTMLInputElement>(
+      'input[placeholder="Find in Markdown preview"]',
+    )!;
+    await act(async () => {
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
+      setter.call(input, "Item");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+
+    expect(host.querySelectorAll("[data-markdown-search-match]")).toHaveLength(2);
+    expect(host.textContent).toContain("1 of 2");
   });
 });

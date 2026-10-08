@@ -1,7 +1,7 @@
 import "./styles.css";
 import { pathExists } from "@/utils/local-files";
 import { openExternalBrowserUrl } from "@/utils/external-navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { editorAPI } from "@/features/editor/extensions/api";
 import { useBufferText } from "@/features/editor/hooks/use-buffer-text";
@@ -12,8 +12,9 @@ import { hasTextContent } from "@/features/panes/types/pane-content.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { SearchPopover } from "@/ui/search";
 import { logger } from "@/utils/logger";
+import { renderMarkdownBlocks } from "./markdown-block-dom";
 import {
-  highlightMarkdownPreviewMatches,
+  highlightMarkdownPreviewBlockMatches,
   isEntireMarkdownPreviewSelected,
 } from "./markdown-preview-search";
 import { useHighlightedMarkdown } from "./use-highlighted-markdown";
@@ -57,15 +58,19 @@ export function MarkdownPreview({
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
-  const html = useHighlightedMarkdown(sourceContent, {
+  const blocks = useHighlightedMarkdown(sourceContent, {
     frontMatter: "render",
     debounceMs: MARKDOWN_PREVIEW_PARSE_DELAY_MS,
     sourceKey: sourceBufferPath,
   });
-  const { html: renderedHtml, matchCount } = useMemo(
-    () => highlightMarkdownPreviewMatches(html, isSearchOpen ? searchQuery : ""),
-    [html, isSearchOpen, searchQuery],
+  const { blocks: renderedBlocks, matchCount } = useMemo(
+    () => highlightMarkdownPreviewBlockMatches(blocks, isSearchOpen ? searchQuery : ""),
+    [blocks, isSearchOpen, searchQuery],
   );
+
+  useLayoutEffect(() => {
+    if (contentRef.current) renderMarkdownBlocks(contentRef.current, renderedBlocks);
+  }, [renderedBlocks]);
 
   useEffect(() => {
     if (isActiveSurface) containerRef.current?.focus({ preventScroll: true });
@@ -118,7 +123,7 @@ export function MarkdownPreview({
       match.toggleAttribute("data-current", index === currentMatchIndex);
     });
     matches[currentMatchIndex]?.scrollIntoView({ block: "center", inline: "nearest" });
-  }, [currentMatchIndex, renderedHtml]);
+  }, [currentMatchIndex, renderedBlocks]);
 
   const navigateSearch = (direction: number) => {
     if (matchCount === 0) return;
@@ -294,7 +299,6 @@ export function MarkdownPreview({
         <div
           ref={contentRef}
           className="markdown-content typeset typeset-preview w-full max-w-3xl pb-safe-16"
-          dangerouslySetInnerHTML={{ __html: renderedHtml }}
         />
       </div>
     </div>

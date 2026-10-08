@@ -5,15 +5,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test"
 
 interface WorkerRender {
   content: string;
-  resolve: (markdown: { parts: string[] }) => void;
+  resolve: (markdown: { blocks: string[][] }) => void;
   reject: (error: unknown) => void;
 }
 
 const mocks = vi.hoisted(() => {
   class MarkdownRenderSupersededError extends Error {}
   return {
-    parseMarkdown: vi.fn((content: string) => `<p>${content}</p>`),
-    sanitizeMarkdown: vi.fn((markdown: { parts: string[] }) => markdown.parts.join("")),
+    parseMarkdown: vi.fn<(content: string, options?: unknown) => string>(
+      (content) => `<p>${content}</p>`,
+    ),
+    sanitizeMarkdownBlocks: vi.fn((markdown: { blocks: string[][] }) =>
+      markdown.blocks.map((block) => block.join("")),
+    ),
     highlightMarkdownCodeBlocks: vi.fn(async (html: string) =>
       html.replace("plain", "highlighted"),
     ),
@@ -24,8 +28,10 @@ const mocks = vi.hoisted(() => {
 });
 
 vi.mock("../markdown/parser", () => ({
-  parseMarkdown: mocks.parseMarkdown,
-  sanitizeMarkdown: mocks.sanitizeMarkdown,
+  MarkdownSanitizeCache: class {},
+  parseMarkdownBlocks: (content: string, options: unknown) =>
+    mocks.parseMarkdown(content, options).split("|"),
+  sanitizeMarkdownBlocks: mocks.sanitizeMarkdownBlocks,
 }));
 vi.mock("../markdown/code-highlight", () => ({
   highlightMarkdownCodeBlocks: mocks.highlightMarkdownCodeBlocks,
@@ -48,7 +54,7 @@ let root: Root;
 let latestHtml = "";
 
 function Preview({ content, sourceKey }: { content: string; sourceKey: string }) {
-  latestHtml = useHighlightedMarkdown(content, { debounceMs: DELAY, sourceKey });
+  latestHtml = useHighlightedMarkdown(content, { debounceMs: DELAY, sourceKey }).join("");
   return null;
 }
 
@@ -62,6 +68,7 @@ beforeEach(() => {
   mocks.parseMarkdown.mockClear();
   mocks.parseMarkdown.mockImplementation((content: string) => `<p>${content}</p>`);
   mocks.highlightMarkdownCodeBlocks.mockClear();
+  mocks.sanitizeMarkdownBlocks.mockClear();
   mocks.offThread = false;
   mocks.workerRenders = [];
   host = document.createElement("div");
@@ -118,6 +125,29 @@ describe("useHighlightedMarkdown", () => {
     expect(latestHtml).toBe('<pre><code class="language-ts">highlighted ab</code></pre>');
   });
 
+  it("highlights only the code blocks an edit changed", async () => {
+    mocks.parseMarkdown.mockImplementation((content: string) =>
+      content
+        .split(",")
+        .map((code) => block(code))
+        .join("|"),
+    );
+    render("a,b");
+    await act(async () => {});
+    expect(latestHtml).toBe(block("a", "highlighted") + block("b", "highlighted"));
+    expect(mocks.highlightMarkdownCodeBlocks).toHaveBeenCalledTimes(2);
+
+    render("a,c");
+    act(() => vi.advanceTimersByTime(DELAY));
+    await act(async () => {});
+    expect(latestHtml).toBe(block("a", "highlighted") + block("c", "highlighted"));
+    expect(mocks.highlightMarkdownCodeBlocks).toHaveBeenCalledTimes(3);
+    expect(mocks.highlightMarkdownCodeBlocks).toHaveBeenLastCalledWith(
+      block("c"),
+      expect.any(String),
+    );
+  });
+
   it("shows another source's code at once while it is highlighted", async () => {
     mocks.parseMarkdown.mockImplementation((content: string) => block(content));
     render("a", "/a.md");
@@ -157,9 +187,9 @@ describe("useHighlightedMarkdown with a render worker", () => {
     expect(mocks.workerRenders.map((request) => request.content)).toEqual(["one two"]);
     expect(latestHtml).toBe("<p>one</p>");
 
-    await act(async () => mocks.workerRenders[0].resolve({ parts: ["<p>one two</p>"] }));
+    await act(async () => mocks.workerRenders[0].resolve({ blocks: [["<p>one two</p>"]] }));
     expect(latestHtml).toBe("<p>one two</p>");
-    expect(mocks.sanitizeMarkdown).toHaveBeenCalledWith({ parts: ["<p>one two</p>"] });
+    expect(mocks.sanitizeMarkdownBlocks.mock.calls[0][0]).toEqual({ blocks: [["<p>one two</p>"]] });
   });
 
   it("ignores a worker result that a newer edit has replaced", async () => {
@@ -170,8 +200,8 @@ describe("useHighlightedMarkdown with a render worker", () => {
     act(() => vi.advanceTimersByTime(DELAY));
     expect(mocks.workerRenders.map((request) => request.content)).toEqual(["ab", "abc"]);
 
-    await act(async () => mocks.workerRenders[1].resolve({ parts: ["<p>abc</p>"] }));
-    await act(async () => mocks.workerRenders[0].resolve({ parts: ["<p>ab</p>"] }));
+    await act(async () => mocks.workerRenders[1].resolve({ blocks: [["<p>abc</p>"]] }));
+    await act(async () => mocks.workerRenders[0].resolve({ blocks: [["<p>ab</p>"]] }));
     expect(latestHtml).toBe("<p>abc</p>");
   });
 
@@ -203,6 +233,6 @@ function block(code: string, state = "plain") {
 }
 
 function Undebounced({ content }: { content: string }) {
-  latestHtml = useHighlightedMarkdown(content);
+  latestHtml = useHighlightedMarkdown(content).join("");
   return null;
 }

@@ -15,13 +15,17 @@ export interface ParseMarkdownOptions {
 }
 
 /**
- * Rendered HTML that has not been sanitized yet. Nested units (blockquote bodies) are sanitized on
- * their own before the HTML around them, the order the parser has always sanitized in. It holds
- * only plain data, so it can cross a worker boundary.
+ * Rendered HTML that has not been sanitized yet, one entry per top-level block. Joining the blocks
+ * gives the document's HTML; every block after the first starts with the newline that separates
+ * it from the one before. Nested units (blockquote bodies) are sanitized on their own before the
+ * HTML around them, the order the parser has always sanitized in. It holds only plain data, so it
+ * can cross a worker boundary.
  */
 export interface UnsanitizedMarkdown {
-  parts: MarkdownPart[];
+  blocks: MarkdownBlock[];
 }
+
+export type MarkdownBlock = MarkdownPart[];
 
 type MarkdownPart = string | UnsanitizedMarkdown;
 
@@ -284,7 +288,7 @@ export function renderMarkdown(
       ? { frontMatter: [], body: content }
       : extractYamlFrontMatter(content);
   const { lines, links } = extractLinkDefinitions(body.split("\n"));
-  const processedLines: Array<string | MarkdownPart[]> = [];
+  const processedLines = new BlockCollector();
   const footnotes: Footnote[] = [];
   let inUnorderedList = false;
   let inOrderedList = false;
@@ -306,15 +310,15 @@ export function renderMarkdown(
         inUnorderedList &&
         (trimmedLine === "" || !isUnorderedListLine(line) || isTaskListLine(line))
       ) {
-        processedLines.push("</ul>");
+        processedLines.close("</ul>");
         inUnorderedList = false;
       }
       if (inTaskList && (trimmedLine === "" || !isTaskListLine(line))) {
-        processedLines.push("</ul>");
+        processedLines.close("</ul>");
         inTaskList = false;
       }
       if (inOrderedList && (trimmedLine === "" || !isOrderedListLine(line))) {
-        processedLines.push("</ol>");
+        processedLines.close("</ol>");
         inOrderedList = false;
       }
     }
@@ -323,7 +327,7 @@ export function renderMarkdown(
       if (inCodeBlock) {
         const lang = normalizeCodeFenceLanguage(codeBlockLanguage || "plaintext");
         const escaped = escapeHtml(codeBlockContent.trim());
-        processedLines.push(`<pre><code class="language-${lang}">${escaped}</code></pre>`);
+        processedLines.add(`<pre><code class="language-${lang}">${escaped}</code></pre>`);
         codeBlockContent = "";
         codeBlockLanguage = "";
         inCodeBlock = false;
@@ -341,32 +345,30 @@ export function renderMarkdown(
 
     // Preserve raw HTML blocks (e.g., <details>, <summary>, <table>) as-is
     if (trimmedLine.startsWith("<") && trimmedLine.endsWith(">")) {
-      processedLines.push(trimmedLine);
+      processedLines.add(trimmedLine);
       continue;
     }
 
     if (line.match(/^######\s/)) {
-      processedLines.push(
+      processedLines.add(
         `<h6>${processInline(line.replace(/^######\s/, ""), footnotes, links)}</h6>`,
       );
     } else if (line.match(/^#####\s/)) {
-      processedLines.push(
+      processedLines.add(
         `<h5>${processInline(line.replace(/^#####\s/, ""), footnotes, links)}</h5>`,
       );
     } else if (line.match(/^####\s/)) {
-      processedLines.push(
+      processedLines.add(
         `<h4>${processInline(line.replace(/^####\s/, ""), footnotes, links)}</h4>`,
       );
     } else if (line.match(/^###\s/)) {
-      processedLines.push(
-        `<h3>${processInline(line.replace(/^###\s/, ""), footnotes, links)}</h3>`,
-      );
+      processedLines.add(`<h3>${processInline(line.replace(/^###\s/, ""), footnotes, links)}</h3>`);
     } else if (line.match(/^##\s/)) {
-      processedLines.push(`<h2>${processInline(line.replace(/^##\s/, ""), footnotes, links)}</h2>`);
+      processedLines.add(`<h2>${processInline(line.replace(/^##\s/, ""), footnotes, links)}</h2>`);
     } else if (line.match(/^#\s/)) {
-      processedLines.push(`<h1>${processInline(line.replace(/^#\s/, ""), footnotes, links)}</h1>`);
+      processedLines.add(`<h1>${processInline(line.replace(/^#\s/, ""), footnotes, links)}</h1>`);
     } else if (line.match(/^(---+|___+|\*\*\*+)$/)) {
-      processedLines.push("<hr />");
+      processedLines.add("<hr />");
     } else if (isBlockquoteLine(line)) {
       const quotedLines: string[] = [];
       let j = i;
@@ -374,35 +376,35 @@ export function renderMarkdown(
         quotedLines.push(lines[j].replace(/^>\s?/, ""));
         j++;
       }
-      processedLines.push(renderBlockquote(quotedLines));
+      processedLines.add(renderBlockquote(quotedLines));
       i = j - 1;
     } else if (isTaskListLine(line)) {
       if (!inTaskList) {
-        processedLines.push('<ul class="task-list">');
+        processedLines.open('<ul class="task-list">');
         inTaskList = true;
       }
       const match = line.match(/^\s*[-*+]\s\[([ xX])\]\s(.*)$/);
       if (match) {
         const checked = match[1].toLowerCase() === "x";
         const taskContent = match[2];
-        processedLines.push(
+        processedLines.add(
           `<li class="task-list-item"><input type="checkbox" ${checked ? "checked" : ""} disabled /> ${processInline(taskContent, footnotes, links)}</li>`,
         );
       }
     } else if (isUnorderedListLine(line)) {
       if (!inUnorderedList) {
-        processedLines.push("<ul>");
+        processedLines.open("<ul>");
         inUnorderedList = true;
       }
-      processedLines.push(
+      processedLines.add(
         `<li>${processInline(line.replace(/^\s*[-*+]\s/, ""), footnotes, links)}</li>`,
       );
     } else if (isOrderedListLine(line)) {
       if (!inOrderedList) {
-        processedLines.push("<ol>");
+        processedLines.open("<ol>");
         inOrderedList = true;
       }
-      processedLines.push(
+      processedLines.add(
         `<li>${processInline(line.replace(/^\s*\d+\.\s/, ""), footnotes, links)}</li>`,
       );
     } else if (line.match(/^\[\^([^\]]+)\]:\s(.+)$/)) {
@@ -417,67 +419,87 @@ export function renderMarkdown(
         tableLines.push(lines[j]);
         j++;
       }
-      processedLines.push(processTable(tableLines, footnotes, links));
+      processedLines.add(processTable(tableLines, footnotes, links));
       i = j - 1;
     } else if (trimmedLine === "") {
       continue;
     } else {
-      processedLines.push(`<p>${processInline(line, footnotes, links)}</p>`);
+      processedLines.add(`<p>${processInline(line, footnotes, links)}</p>`);
     }
   }
 
-  if (inUnorderedList) processedLines.push("</ul>");
-  if (inTaskList) processedLines.push("</ul>");
-  if (inOrderedList) processedLines.push("</ol>");
+  if (inUnorderedList) processedLines.close("</ul>");
+  if (inTaskList) processedLines.close("</ul>");
+  if (inOrderedList) processedLines.close("</ol>");
   if (inCodeBlock) {
     const lang = normalizeCodeFenceLanguage(codeBlockLanguage || "plaintext");
     const escaped = escapeHtml(codeBlockContent.trim());
-    processedLines.push(`<pre><code class="language-${lang}">${escaped}</code></pre>`);
+    processedLines.add(`<pre><code class="language-${lang}">${escaped}</code></pre>`);
   }
 
   if (footnotes.length > 0) {
-    processedLines.push('<div class="footnotes">');
-    processedLines.push("<hr />");
-    processedLines.push("<ol>");
+    processedLines.open('<div class="footnotes">');
+    processedLines.add("<hr />");
+    processedLines.add("<ol>");
     for (const footnote of footnotes) {
-      processedLines.push(
+      processedLines.add(
         `<li id="fn-${footnote.id}"><span>${processInline(footnote.text, footnotes, links)}</span> <a href="#fnref-${footnote.id}" class="footnote-backref">↩</a></li>`,
       );
     }
-    processedLines.push("</ol>");
-    processedLines.push("</div>");
+    processedLines.add("</ol>");
+    processedLines.close("</div>");
   }
 
   if (frontMatterMode === "render") {
     const frontMatterHtml = renderFrontMatter(frontMatter);
     if (frontMatterHtml) {
-      processedLines.unshift(frontMatterHtml);
+      processedLines.prepend(frontMatterHtml);
     }
   }
 
-  return joinLines(processedLines);
+  return processedLines.toMarkdown();
 }
 
-function joinLines(lines: Array<string | MarkdownPart[]>): UnsanitizedMarkdown {
-  const parts: MarkdownPart[] = [];
-  let text = "";
-  for (let index = 0; index < lines.length; index++) {
-    if (index > 0) text += "\n";
-    const line = lines[index];
-    if (typeof line === "string") {
-      text += line;
-      continue;
-    }
-    for (const part of line) {
-      if (typeof part === "string") {
-        text += part;
-        continue;
-      }
-      if (text) parts.push(text);
-      parts.push(part);
-      text = "";
-    }
+type BlockLine = string | MarkdownPart[];
+
+/**
+ * Groups output lines into top-level blocks. A list or the footnotes section is one block from its
+ * opening line to its closing line, so each block is balanced HTML on its own.
+ */
+class BlockCollector {
+  private readonly blocks: BlockLine[][] = [];
+  private group: BlockLine[] | null = null;
+
+  add(line: BlockLine) {
+    if (this.group) this.group.push(line);
+    else this.blocks.push([line]);
   }
-  if (text || parts.length === 0) parts.push(text);
-  return { parts };
+
+  open(line: string) {
+    this.group = [line];
+    this.blocks.push(this.group);
+  }
+
+  close(line: string) {
+    this.add(line);
+    this.group = null;
+  }
+
+  prepend(line: string) {
+    this.blocks.unshift([line]);
+  }
+
+  toMarkdown(): UnsanitizedMarkdown {
+    return {
+      blocks: this.blocks.map((lines, index) => {
+        const block: MarkdownPart[] = index === 0 ? [] : ["\n"];
+        lines.forEach((line, lineIndex) => {
+          if (lineIndex > 0) block.push("\n");
+          if (typeof line === "string") block.push(line);
+          else block.push(...line);
+        });
+        return block;
+      }),
+    };
+  }
 }
