@@ -65,6 +65,7 @@ import {
   useIsBufferPreview,
 } from "@/features/panes/hooks/use-pane-buffer-state";
 import { loadEditorFeatures } from "../services/editor-feature-registry";
+import { fileOpenBenchmark } from "../services/file-open-benchmark";
 
 // Contributed editor features load with the editor, so the first editor rarely waits on them.
 void loadEditorFeatures();
@@ -195,6 +196,7 @@ const CodeEditor = ({
   const zoomedLineHeight = calculateLineHeight(zoomedFontSize, editorLineHeight);
 
   const filePath = activeBuffer?.path || "";
+  fileOpenBenchmark.markOnce(filePath, "editor-chunk-ready");
   const onChange = activeBuffer
     ? (onContentChange ?? (isActiveSurface ? handleContentChange : () => {}))
     : () => {};

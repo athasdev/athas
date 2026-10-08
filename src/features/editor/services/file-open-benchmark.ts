@@ -25,6 +25,13 @@ const sessions = new Map<string, FileOpenBenchmarkSession>();
 const DEV_ENABLED = import.meta.env.DEV;
 const BUILD_ENABLED = import.meta.env.VITE_FILE_OPEN_BENCHMARK === "1";
 const STORAGE_KEY = "athas:file-open-benchmark";
+/**
+ * An open that never reached the editor (cancelled without a mark, or a surface that does not
+ * report paint) must not swallow the next open of the same path.
+ */
+const STALE_SESSION_MS = 5000;
+/** Marks only the handler of an open sets once; seeing one again means a new open started. */
+const OPEN_HANDLER_MARK = "file-select-handler";
 
 function now(): number {
   return performance.now();
@@ -96,11 +103,21 @@ function getBenchmarkLevel(total: number): "info" | "warn" | "error" {
   return "info";
 }
 
+function isReusableSession(session: FileOpenBenchmarkSession): boolean {
+  if (now() - session.startedAt > STALE_SESSION_MS) return false;
+  return !session.marks.some((mark) => mark.label === OPEN_HANDLER_MARK);
+}
+
 export const fileOpenBenchmark = {
+  /**
+   * Starts a session for an open of `path`, or keeps the one a caller further up the same open
+   * (an explorer click) just started. A session left over from an earlier open is replaced.
+   */
   ensureStarted(path: string, detail?: string): void {
     if (!isEnabled()) return;
 
-    if (sessions.has(path)) return;
+    const existing = sessions.get(path);
+    if (existing && isReusableSession(existing)) return;
 
     sessions.set(path, {
       path,
@@ -157,6 +174,43 @@ export const fileOpenBenchmark = {
       })),
     });
     sessions.delete(path);
+  },
+
+  /** Adds `label` once per session; later calls for the same label are ignored. */
+  markOnce(path: string, label: string, detail?: string): void {
+    if (!isEnabled()) return;
+
+    const session = sessions.get(path);
+    if (!session || session.marks.some((mark) => mark.label === label)) return;
+
+    pushMark(session, label, detail);
+  },
+
+  /**
+   * Finishes the session once the frame showing the current DOM has painted: the next animation
+   * frame runs before that paint, and a task queued from it runs after.
+   */
+  finishAfterPaint(
+    path: string,
+    label: string,
+    getMeta?: () => FileOpenBenchmarkMeta,
+  ): (() => void) | undefined {
+    if (!isEnabled()) return;
+
+    const session = sessions.get(path);
+    if (!session) return;
+
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    const frame = requestAnimationFrame(() => {
+      timeout = setTimeout(() => {
+        if (sessions.get(path) !== session) return;
+        this.finish(path, label, undefined, getMeta?.());
+      }, 0);
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+      if (timeout !== undefined) clearTimeout(timeout);
+    };
   },
 
   cancel(path: string, reason = "cancelled"): void {

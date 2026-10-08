@@ -1,4 +1,14 @@
-import { lazy, type ReactNode, Suspense, useCallback, useEffect, useRef, useState } from "react";
+import {
+  lazy,
+  type ReactNode,
+  Suspense,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
+import { fileOpenBenchmark } from "@/features/editor/services/file-open-benchmark";
 import { useShallow } from "zustand/react/shallow";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import type { Buffer } from "@/features/editor/stores/buffer.store";
@@ -235,6 +245,11 @@ export function PaneContainer({ pane }: PaneContainerProps) {
     }),
   );
   const activeBuffer = paneBuffers.find((buffer) => buffer.id === pane.activeBufferId) ?? null;
+  const activeBufferPath = activeBuffer?.path;
+
+  useLayoutEffect(() => {
+    if (activeBufferPath) fileOpenBenchmark.markOnce(activeBufferPath, "pane-rendered");
+  }, [activeBufferPath]);
 
   const handlePaneClick = useCallback(() => {
     if (!isActivePane) {

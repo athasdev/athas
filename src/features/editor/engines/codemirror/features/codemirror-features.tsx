@@ -1,4 +1,5 @@
-import { memo, Suspense } from "react";
+import { memo, Suspense, useEffect } from "react";
+import { fileOpenBenchmark } from "@/features/editor/services/file-open-benchmark";
 import {
   getCodeMirrorFeatures,
   useEditorFeatures,
@@ -36,6 +37,10 @@ export const CodeMirrorFeatures = memo(function CodeMirrorFeatures({
 
 function CodeMirrorFeatureList({ host }: { host: CodeMirrorHost }) {
   const contributions = useEditorFeatures();
+  const { filePath } = host;
+  useEffect(() => {
+    fileOpenBenchmark.markOnce(filePath, "features-mounted");
+  }, [filePath]);
   const overlays = getCodeMirrorFeatures(contributions, "overlays");
   const completion = getCodeMirrorFeatures(contributions, "completion");
   return (

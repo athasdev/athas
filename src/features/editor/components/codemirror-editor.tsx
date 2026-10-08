@@ -71,6 +71,7 @@ import { useEditorStateStore } from "../stores/state.store";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import type { CodeEditorViewProps } from "../types/code-editor-view.types";
 import { getBufferById } from "../stores/buffer-index";
+import { fileOpenBenchmark } from "../services/file-open-benchmark";
 import { getLanguageIdFromPath } from "../services/language-id";
 import { useBufferIdOrActive } from "@/features/panes/hooks/use-pane-buffer-state";
 
@@ -441,6 +442,7 @@ export function CodeMirrorEditor({
     });
     session.view = view;
     sessionRef.current = session;
+    fileOpenBenchmark.mark(buffer.path, "view-created", `${view.state.doc.lines} lines`);
     matchSessionToBufferText(session, content);
     const liveView: LiveDocumentView = {
       sourceId: sourceIdRef.current,
@@ -476,10 +478,12 @@ export function CodeMirrorEditor({
     void loadCodeMirrorLanguage(languageId).then((language) => {
       if (cancelled || sessionRef.current !== session) return;
       session.view.dispatch({ effects: compartments.language.reconfigure(language ?? []) });
+      fileOpenBenchmark.markOnce(filePath, "language-applied", languageId ?? "plain");
     });
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [buffer?.id, compartments, languageId]);
 
   useEffect(() => {
@@ -691,6 +695,19 @@ export function CodeMirrorEditor({
   useEffect(() => {
     if (isActiveSurface && !isReadOnly) sessionRef.current?.view.focus();
   }, [isActiveSurface, isReadOnly, buffer?.id]);
+
+  useLayoutEffect(() => {
+    if (!isActiveSurface || !filePath) return;
+    return fileOpenBenchmark.finishAfterPaint(filePath, "editor-painted", () => {
+      const doc = sessionRef.current?.view.state.doc;
+      return {
+        lineCount: doc?.lines,
+        contentLength: doc?.length,
+        languageId: languageId ?? undefined,
+      };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [buffer?.id, filePath, isActiveSurface]);
 
   const bufferId = buffer?.id ?? null;
   const isVirtual = Boolean(buffer?.isVirtual);

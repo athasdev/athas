@@ -1246,14 +1246,17 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
 
         const selectedWslInfo = parseWslPath(path);
 
-        if (!isPreview && !selectedWslInfo) {
-          fffTrackAccess(path).catch((error) => {
-            console.error("[fff] track_access failed:", error);
-          });
-        }
-
         fileOpenBenchmark.ensureStarted(path, isPreview ? "preview" : "definite");
         fileOpenBenchmark.mark(path, "file-select-handler");
+
+        if (!isPreview && !selectedWslInfo) {
+          fileOpenBenchmark.mark(path, "track-access");
+          fffTrackAccess(path)
+            .then(() => fileOpenBenchmark.mark(path, "track-access-done"))
+            .catch((error) => {
+              console.error("[fff] track_access failed:", error);
+            });
+        }
 
         const {
           buffers,
@@ -1465,6 +1468,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
           }
 
           let content: string;
+          fileOpenBenchmark.mark(path, "read-start");
           try {
             content = await readFileOpenText(fileOpenResource, preloadedText);
           } catch (error) {
@@ -1478,7 +1482,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
             });
             return;
           }
-          fileOpenBenchmark.mark(path, "file-read", `${content.length} chars`);
+          fileOpenBenchmark.mark(path, "read-end", `${content.length} chars`);
 
           if (isStaleRequest()) return;
 
