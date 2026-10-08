@@ -21,7 +21,7 @@ const toBindingHunk = (hunk: GitHunk): BindingGitHunk => ({
   })),
 });
 
-registerGitCacheInvalidator(({ repoPath }) => {
+registerGitCacheInvalidator("git-status", ({ repoPath }) => {
   if (!repoPath) {
     for (const [cachedRepoPath, generation] of gitStatusGenerations) {
       gitStatusGenerations.set(cachedRepoPath, generation + 1);

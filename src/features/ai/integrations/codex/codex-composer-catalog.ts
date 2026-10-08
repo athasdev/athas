@@ -12,11 +12,18 @@ const CATALOG_STALE_MS = 30_000;
 const STARTUP_STALE_MS = 5_000;
 
 const codexCatalogKeys = {
+  all: ["codex"] as const,
   startup: (cwd: string) => ["codex", cwd, "startup"] as const,
   models: (cwd: string) => ["codex", cwd, "models"] as const,
   threads: (cwd: string, cursor: string | null) => ["codex", cwd, "threads", cursor] as const,
   skills: (cwd: string) => ["codex", cwd, "skills"] as const,
 };
+
+/** Drops every cached catalog read, so a signed-out account's models and threads are not shown. */
+export function clearCodexCatalog() {
+  void queryClient.cancelQueries({ queryKey: codexCatalogKeys.all });
+  queryClient.removeQueries({ queryKey: codexCatalogKeys.all });
+}
 
 /**
  * Concurrent reads share one request and fresh results are reused. A forced read cancels a request

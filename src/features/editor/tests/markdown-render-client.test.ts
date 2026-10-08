@@ -1,7 +1,8 @@
-import { describe, expect, it } from "vite-plus/test";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import {
   MarkdownRenderClient,
   MarkdownRenderSupersededError,
+  MarkdownRenderTimeoutError,
   type MarkdownRenderRequest,
   type MarkdownRenderResponse,
 } from "../markdown/markdown-render-client";
@@ -117,5 +118,53 @@ describe("MarkdownRenderClient", () => {
     expect(first.error).toBeInstanceOf(MarkdownRenderSupersededError);
     expect(latest.value).toEqual(renderMarkdown("latest"));
     expect(client.canRenderOffThread()).toBe(false);
+  });
+
+  describe("when a render hangs", () => {
+    afterEach(() => {
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+    });
+
+    it("rejects it, replaces the worker and reruns the other renders", async () => {
+      vi.useFakeTimers();
+      vi.stubGlobal("Worker", FakeWorker);
+      const workers: FakeWorker[] = [];
+      const client = new MarkdownRenderClient(() => {
+        const worker = new FakeWorker();
+        workers.push(worker);
+        return worker as unknown as Worker;
+      }, 1_000);
+      const stuck = settle(client.render("left", "stuck"));
+      const other = settle(client.render("right", "other"));
+      const next = settle(client.render("left", "next"));
+
+      vi.advanceTimersByTime(1_000);
+      await Promise.resolve();
+
+      expect(stuck.error).toBeInstanceOf(MarkdownRenderTimeoutError);
+      expect(workers[0].terminated).toBe(true);
+      expect(workers[1].posted.map((request) => request.content)).toEqual(["other", "next"]);
+      expect(client.canRenderOffThread()).toBe(true);
+
+      for (const request of workers[1].posted) workers[1].respond(request);
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(other.value).toEqual(renderMarkdown("other"));
+      expect(next.value).toEqual(renderMarkdown("next"));
+    });
+
+    it("does not time out a render that returned", async () => {
+      vi.useFakeTimers();
+      const worker = new FakeWorker();
+      const client = new MarkdownRenderClient(() => worker as unknown as Worker, 1_000);
+      const done = settle(client.render("preview", "fast"));
+      worker.respond(worker.posted[0]);
+      vi.advanceTimersByTime(5_000);
+      await Promise.resolve();
+
+      expect(done.value).toEqual(renderMarkdown("fast"));
+      expect(worker.terminated).toBe(false);
+    });
   });
 });

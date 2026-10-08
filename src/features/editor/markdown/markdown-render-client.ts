@@ -27,6 +27,19 @@ export class MarkdownRenderSupersededError extends Error {
   }
 }
 
+/**
+ * A render that runs this long is treated as hung. Parsing it on the main thread could hang the
+ * window the same way, so it is dropped instead and the worker is replaced.
+ */
+export class MarkdownRenderTimeoutError extends Error {
+  constructor() {
+    super("Markdown render took too long");
+    this.name = "MarkdownRenderTimeoutError";
+  }
+}
+
+const RENDER_TIMEOUT_MS = 5_000;
+
 function createMarkdownRenderWorker(): Worker | null {
   if (typeof Worker === "undefined") return null;
   return new Worker(new URL("./markdown-render-worker.ts", import.meta.url), { type: "module" });
@@ -36,6 +49,8 @@ function createMarkdownRenderWorker(): Worker | null {
  * Renders markdown in a worker. Each key keeps at most one render running and one waiting; a newer
  * request replaces the waiting one, and a response for anything but the key's latest request is
  * dropped. Without a worker (tests, or after the worker fails) it renders on the calling thread.
+ * A render that does not return in time is rejected and the worker replaced, so one stuck
+ * document cannot hold every later preview back.
  */
 export class MarkdownRenderClient {
   private worker: Worker | null = null;
@@ -45,8 +60,12 @@ export class MarkdownRenderClient {
   private readonly running = new Map<number, PendingRender>();
   private readonly runningKeys = new Set<string>();
   private readonly waiting = new Map<string, PendingRender>();
+  private readonly deadlines = new Map<number, ReturnType<typeof setTimeout>>();
 
-  constructor(private readonly createWorker: () => Worker | null = createMarkdownRenderWorker) {}
+  constructor(
+    private readonly createWorker: () => Worker | null = createMarkdownRenderWorker,
+    private readonly timeoutMs = RENDER_TIMEOUT_MS,
+  ) {}
 
   render(key: string, content: string, options: ParseMarkdownOptions = {}) {
     return new Promise<UnsanitizedMarkdown>((resolve, reject) => {
@@ -78,6 +97,10 @@ export class MarkdownRenderClient {
     }
     this.running.set(request.id, request);
     this.runningKeys.add(request.key);
+    this.deadlines.set(
+      request.id,
+      setTimeout(() => this.handleTimeout(request), this.timeoutMs),
+    );
     const message: MarkdownRenderRequest = {
       id: request.id,
       content: request.content,
@@ -110,6 +133,7 @@ export class MarkdownRenderClient {
   private handleResponse(response: MarkdownRenderResponse) {
     const request = this.running.get(response.id);
     if (!request) return;
+    this.clearDeadline(response.id);
     this.running.delete(response.id);
     this.runningKeys.delete(request.key);
 
@@ -127,17 +151,41 @@ export class MarkdownRenderClient {
     this.dispatch(next);
   }
 
-  private handleWorkerFailure() {
-    this.workerFailed = true;
+  private clearDeadline(id: number) {
+    clearTimeout(this.deadlines.get(id));
+    this.deadlines.delete(id);
+  }
+
+  /** Stops the worker and hands back everything it still owed, running or waiting. */
+  private takePending() {
     this.worker?.terminate();
     this.worker = null;
+    for (const id of this.deadlines.keys()) this.clearDeadline(id);
     const pending = [...this.running.values(), ...this.waiting.values()];
     this.running.clear();
     this.runningKeys.clear();
     this.waiting.clear();
-    for (const request of pending) {
+    return pending;
+  }
+
+  private handleWorkerFailure() {
+    this.workerFailed = true;
+    for (const request of this.takePending()) {
       if (this.latestIds.get(request.key) === request.id) this.renderHere(request);
       else request.reject(new MarkdownRenderSupersededError());
+    }
+  }
+
+  private handleTimeout(stuck: PendingRender) {
+    for (const request of this.takePending()) {
+      if (request === stuck) {
+        if (this.latestIds.get(request.key) === request.id) this.latestIds.delete(request.key);
+        request.reject(new MarkdownRenderTimeoutError());
+      } else if (this.latestIds.get(request.key) === request.id) {
+        this.dispatch(request);
+      } else {
+        request.reject(new MarkdownRenderSupersededError());
+      }
     }
   }
 

@@ -1,4 +1,5 @@
 import { commands } from "@/bindings/commands";
+import { clearCodexCatalog } from "./codex-composer-catalog";
 
 export const startCodexIntegration = (cwd: string) => commands.startCodexIntegration({ cwd });
 
@@ -11,4 +12,10 @@ export const listCodexThreads = (cwd: string) => commands.listCodexThreads(cwd, 
 
 export const signInToCodex = () => commands.startCodexLogin("chatgpt");
 
-export const signOutOfCodex = () => commands.logoutCodexAccount();
+export async function signOutOfCodex() {
+  try {
+    return await commands.logoutCodexAccount();
+  } finally {
+    clearCodexCatalog();
+  }
+}

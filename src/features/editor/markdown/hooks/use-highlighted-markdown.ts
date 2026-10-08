@@ -1,8 +1,13 @@
 import { useEffect, useId, useState } from "react";
 import { highlightMarkdownCodeBlocks } from "../services/code-highlight";
-import { MarkdownRenderSupersededError, markdownRenderClient } from "../markdown-render-client";
 import {
-  MarkdownSanitizeCache,
+  MarkdownRenderSupersededError,
+  MarkdownRenderTimeoutError,
+  markdownRenderClient,
+} from "../markdown-render-client";
+import {
+  type MarkdownSanitizeCache,
+  SourceSanitizeCache,
   parseMarkdownBlocks,
   sanitizeMarkdownBlocks,
   type ParseMarkdownOptions,
@@ -65,7 +70,7 @@ export function useHighlightedMarkdown(
   const debounceMs = options?.debounceMs ?? 0;
   const sourceKey = options?.sourceKey;
   const requestKey = `markdown-preview:${useId()}`;
-  const [sanitizeCache] = useState(() => new MarkdownSanitizeCache());
+  const [sanitizeCaches] = useState(() => new SourceSanitizeCache());
   const [highlightCache] = useState(() => new Map<string, string>());
   const [settled, setSettled] = useState({ content, sourceKey });
   const parseNow = debounceMs <= 0 || !settled.content || settled.sourceKey !== sourceKey;
@@ -84,7 +89,7 @@ export function useHighlightedMarkdown(
   // the same source renders in a worker and keeps the last HTML until it is ready; only
   // sanitizing the changed blocks, which needs the DOM, stays on this thread.
   const [parsed, setParsed] = useState<ParsedMarkdown>(() =>
-    parseHere(parseInput, frontMatter, sourceKey, sanitizeCache),
+    parseHere(parseInput, frontMatter, sourceKey, sanitizeCaches.forSource(sourceKey)),
   );
   const parsedIsCurrent =
     parsed.input === parseInput &&
@@ -98,7 +103,7 @@ export function useHighlightedMarkdown(
     parsed.sourceKey === sourceKey &&
     markdownRenderClient.canRenderOffThread();
   if (!parsedIsCurrent && !parseOffThread) {
-    setParsed(parseHere(parseInput, frontMatter, sourceKey, sanitizeCache));
+    setParsed(parseHere(parseInput, frontMatter, sourceKey, sanitizeCaches.forSource(sourceKey)));
   }
 
   useEffect(() => {
@@ -111,19 +116,27 @@ export function useHighlightedMarkdown(
           input: parseInput,
           frontMatter,
           sourceKey,
-          blocks: sanitizeMarkdownBlocks(markdown, sanitizeCache),
+          blocks: sanitizeMarkdownBlocks(markdown, sanitizeCaches.forSource(sourceKey)),
         });
       },
       (error: unknown) => {
-        if (!cancelled && !(error instanceof MarkdownRenderSupersededError)) {
-          setParsed(parseHere(parseInput, frontMatter, sourceKey, sanitizeCache));
+        // A render that hung the worker would hang this thread too; the preview keeps its last
+        // content until the next edit.
+        if (
+          !cancelled &&
+          !(error instanceof MarkdownRenderSupersededError) &&
+          !(error instanceof MarkdownRenderTimeoutError)
+        ) {
+          setParsed(
+            parseHere(parseInput, frontMatter, sourceKey, sanitizeCaches.forSource(sourceKey)),
+          );
         }
       },
     );
     return () => {
       cancelled = true;
     };
-  }, [frontMatter, parseInput, parseOffThread, requestKey, sanitizeCache, sourceKey]);
+  }, [frontMatter, parseInput, parseOffThread, requestKey, sanitizeCaches, sourceKey]);
 
   useEffect(() => () => markdownRenderClient.cancel(requestKey), [requestKey]);
 

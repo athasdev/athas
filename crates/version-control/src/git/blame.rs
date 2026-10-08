@@ -285,6 +285,16 @@ impl PrewarmQueue {
       !std::mem::replace(&mut state.running, true)
    }
 
+   /// Runs jobs until the queue is empty. A job that panics is skipped, so the queue still ends
+   /// idle and later requests start a new thread.
+   fn drain(&self, mut run: impl FnMut(&PrewarmJob)) {
+      while let Some(job) = self.next() {
+         if std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| run(&job))).is_err() {
+            log::warn!("Blame prewarm for '{}' panicked", job.root_path);
+         }
+      }
+   }
+
    /// The next job, or None after marking the queue idle.
    fn next(&self) -> Option<PrewarmJob> {
       let mut state = self.state.lock().unwrap_or_else(|e| e.into_inner());
@@ -311,9 +321,7 @@ pub fn git_prewarm_blame(root_path: String, file_paths: Vec<String>) {
    let spawned = std::thread::Builder::new()
       .name("git-blame-prewarm".to_string())
       .spawn(|| {
-         while let Some(job) = PREWARM_QUEUE.next() {
-            prewarm_blame(&BLAME_CACHE, &job.root_path, &job.file_paths);
-         }
+         PREWARM_QUEUE.drain(|job| prewarm_blame(&BLAME_CACHE, &job.root_path, &job.file_paths))
       });
    if let Err(error) = spawned {
       log::warn!("Failed to start blame prewarm: {}", error);
@@ -772,6 +780,31 @@ mod tests {
       assert!(blames.iter().all(|blame| Arc::ptr_eq(blame, &blames[0])));
       assert_eq!(cache.len(), 1);
       assert!(cache.computing.lock().unwrap().is_empty());
+   }
+
+   #[test]
+   fn prewarm_queue_survives_a_panicking_job() {
+      let queue = PrewarmQueue::new();
+      let job = |root: &str| PrewarmJob {
+         root_path: root.to_string(),
+         file_paths: vec!["file".to_string()],
+      };
+      assert!(queue.push(job("/panics")));
+      assert!(!queue.push(job("/after")));
+
+      let mut ran = Vec::new();
+      queue.drain(|job| {
+         ran.push(job.root_path.clone());
+         if job.root_path == "/panics" {
+            panic!("prewarm failed");
+         }
+      });
+
+      assert_eq!(ran, ["/panics", "/after"]);
+      assert!(
+         queue.push(job("/next")),
+         "an idle queue asks for a new thread"
+      );
    }
 
    #[test]

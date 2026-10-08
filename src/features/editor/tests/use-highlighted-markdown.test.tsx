@@ -11,6 +11,7 @@ interface WorkerRender {
 
 const mocks = vi.hoisted(() => {
   class MarkdownRenderSupersededError extends Error {}
+  class MarkdownRenderTimeoutError extends Error {}
   return {
     parseMarkdown: vi.fn<(content: string, options?: unknown) => string>(
       (content) => `<p>${content}</p>`,
@@ -22,13 +23,18 @@ const mocks = vi.hoisted(() => {
       html.replace("plain", "highlighted"),
     ),
     MarkdownRenderSupersededError,
+    MarkdownRenderTimeoutError,
     offThread: false,
     workerRenders: [] as WorkerRender[],
   };
 });
 
 vi.mock("../markdown/services/parser", () => ({
-  MarkdownSanitizeCache: class {},
+  SourceSanitizeCache: class {
+    forSource() {
+      return {};
+    }
+  },
   parseMarkdownBlocks: (content: string, options: unknown) =>
     mocks.parseMarkdown(content, options).split("|"),
   sanitizeMarkdownBlocks: mocks.sanitizeMarkdownBlocks,
@@ -38,6 +44,7 @@ vi.mock("../markdown/services/code-highlight", () => ({
 }));
 vi.mock("../markdown/markdown-render-client", () => ({
   MarkdownRenderSupersededError: mocks.MarkdownRenderSupersededError,
+  MarkdownRenderTimeoutError: mocks.MarkdownRenderTimeoutError,
   markdownRenderClient: {
     canRenderOffThread: () => mocks.offThread,
     cancel: vi.fn(),
@@ -218,6 +225,16 @@ describe("useHighlightedMarkdown with a render worker", () => {
     await act(async () => mocks.workerRenders[1].reject(new Error("worker crashed")));
     expect(latestHtml).toBe("<p>abc</p>");
     expect(mocks.parseMarkdown).toHaveBeenLastCalledWith("abc", { frontMatter: undefined });
+  });
+
+  it("keeps the last preview when a worker render times out", async () => {
+    render("a");
+    render("ab");
+    act(() => vi.advanceTimersByTime(DELAY));
+    await act(async () => mocks.workerRenders[0].reject(new mocks.MarkdownRenderTimeoutError()));
+
+    expect(latestHtml).toBe("<p>a</p>");
+    expect(mocks.parseMarkdown).toHaveBeenCalledTimes(1);
   });
 
   it("parses another source here instead of waiting for the worker", () => {

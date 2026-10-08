@@ -2,6 +2,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { openNewAgentChat } from "@/features/ai/services/open-new-agent-chat";
 import { editorAPI } from "@/features/editor/services/editor-api";
 import { useEditorSettingOverridesStore } from "@/features/editor/stores/editor-setting-overrides.store";
+import { toggleShownWordWrap } from "@/features/editor/services/word-wrap-toggle";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useWhatsNewStore } from "@/features/settings/stores/whats-new.store";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
@@ -155,15 +156,13 @@ function getShownEditorSettings() {
   const { settings } = useSettingsStore.getState();
   const { overrides } = useEditorSettingOverridesStore.getState();
   return {
-    wordWrap: overrides.wordWrap ?? settings.wordWrap,
     lineNumbers: overrides.lineNumbers ?? settings.lineNumbers,
     renderWhitespace: overrides.renderWhitespace ?? settings.renderWhitespace,
   };
 }
 
 export function toggleWordWrap(): void {
-  const { updateSetting } = useSettingsStore.getState().actions;
-  updateSetting("wordWrap", !getShownEditorSettings().wordWrap);
+  toggleShownWordWrap();
 }
 
 export function toggleLineNumbers(): void {

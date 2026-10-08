@@ -115,7 +115,7 @@ export function invalidateGitDiffData(repoPath?: string, filePath?: string): voi
   }
 }
 
-registerGitCacheInvalidator(({ repoPath, filePath }) => {
+registerGitCacheInvalidator("git-diff", ({ repoPath, filePath }) => {
   invalidateGitDiffData(repoPath, filePath);
 });
 

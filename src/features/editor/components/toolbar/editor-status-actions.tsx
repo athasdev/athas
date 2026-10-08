@@ -18,6 +18,7 @@ import {
 import { hasTextContent } from "@/features/panes/types/pane-content.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useEditorSettingOverridesStore } from "@/features/editor/stores/editor-setting-overrides.store";
+import { isWordWrapShown, toggleShownWordWrap } from "@/features/editor/services/word-wrap-toggle";
 import { Button, type ButtonProps } from "@/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
 import {
@@ -78,7 +79,11 @@ export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {})
   const vimRelativeLineNumbers = useSettingsStore((state) => state.settings.vimRelativeLineNumbers);
   const wordWrapOverride = useEditorSettingOverridesStore((state) => state.overrides.wordWrap);
   const wordWrapSetting = useSettingsStore((state) => state.settings.wordWrap);
-  const wordWrap = wordWrapOverride ?? wordWrapSetting;
+  const horizontalTabScroll = useSettingsStore((state) => state.settings.horizontalTabScroll);
+  const wordWrap = isWordWrapShown(
+    { wordWrap: wordWrapSetting, horizontalTabScroll },
+    wordWrapOverride,
+  );
   const parameterHints = useSettingsStore((state) => state.settings.parameterHints);
   const autoCompletion = useSettingsStore((state) => state.settings.autoCompletion);
   const inlayHints = useSettingsStore((state) => state.settings.inlayHints);
@@ -342,7 +347,7 @@ export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {})
       label: "Word Wrap",
       checked: wordWrap,
       shortcut: null,
-      onToggle: () => updateSetting("wordWrap", !wordWrap),
+      onToggle: toggleShownWordWrap,
       disabled: false,
     },
     {

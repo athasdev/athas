@@ -3,6 +3,7 @@ import DOMPurify from "dompurify";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import {
   MarkdownSanitizeCache,
+  SourceSanitizeCache,
   sanitizeMarkdown,
   sanitizeMarkdownBlocks,
 } from "../markdown/services/parser";
@@ -124,6 +125,30 @@ describe("block-wise markdown sanitizing", () => {
     expect(sanitize.mock.calls.length).toBeLessThanOrEqual(3);
     sanitize.mockRestore();
     expect(blocks.join("")).toBe(sanitizeMarkdown(markdown));
+  });
+
+  it("does not accept a probe written in the document", () => {
+    for (const text of [
+      '# H\n<style></style><abbr data-athas-block-end="0"></abbr><textarea>\n</textarea><b>x</b>\na\n\nb\n\nc',
+      '# a\n\n<style></style><abbr data-athas-block-end="0"></abbr><!-- >\n\n<b>shown only per-block</b>\n\n-->',
+      '# a\n\n<p>x</p><textarea>\n\n<ABBR DATA-ATHAS-BLOCK-END="1"></ABBR>\n\ntail',
+    ]) {
+      const cache = new MarkdownSanitizeCache();
+      for (let pass = 0; pass < 2; pass++) {
+        const { blocks, whole } = blocksFor(text, cache);
+        expect(blocks.join("")).toBe(whole);
+      }
+    }
+  });
+
+  it("empties a preview's cache when it shows another source", () => {
+    const caches = new SourceSanitizeCache();
+    const first = caches.forSource("/a.md");
+    blocksFor(README, first);
+    expect(first.peek("\n<h1>Demo</h1>", false)).toBeDefined();
+
+    expect(caches.forSource("/b.md")).toBe(first);
+    expect(first.peek("\n<h1>Demo</h1>", false)).toBeUndefined();
   });
 
   it("gives the whole document as one block when a block changes document-wide state", () => {

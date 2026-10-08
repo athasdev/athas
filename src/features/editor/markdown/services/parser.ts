@@ -50,6 +50,8 @@ export function parseMarkdown(content: string, options: ParseMarkdownOptions = {
 const BLOCK_PREFIX = "<remove></remove>";
 const BLOCK_PROBE_ATTRIBUTE = "data-athas-block-end";
 const DOCUMENT_STATE_PATTERN = /<(?:!doctype|\/?(?:body|form|frameset|html)(?=[\s/>]|$))/i;
+/** Markup that names the probe attribute could pose as a probe, so its block is refused. */
+const PROBE_ATTRIBUTE_PATTERN = /data-athas-block-end/i;
 /** Most blocks sanitized together (an HTML element spanning several) before giving up. */
 const BLOCK_GROUP_LIMIT = 256;
 /** Failed tries for one group before the document is sanitized whole, so damage stays linear. */
@@ -83,13 +85,20 @@ const MIN_CACHE_ENTRIES = 256;
  * stays inside open SVG or MathML, so the pair only comes back intact in body. `<abbr>` is a
  * plain element that breaks out of nothing, so anything left open wraps it.
  */
-const blockProbe = (id: number) => `<style></style><abbr ${BLOCK_PROBE_ATTRIBUTE}="${id}"></abbr>`;
+const blockProbe = (id: string) => `<style></style><abbr ${BLOCK_PROBE_ATTRIBUTE}="${id}"></abbr>`;
+
+/** A value no document can guess, so only this call's probes are matched. */
+function createProbeNonce() {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
 
 let blocksSupported: boolean | undefined;
 
 /** Without a surviving <style> the probe cannot tell head from body, so blocks are not used. */
 function supportsBlocks() {
-  blocksSupported ??= DOMPurify.sanitize(BLOCK_PREFIX + blockProbe(0)) === blockProbe(0);
+  blocksSupported ??= DOMPurify.sanitize(BLOCK_PREFIX + blockProbe("0")) === blockProbe("0");
   return blocksSupported;
 }
 
@@ -106,10 +115,14 @@ interface ProbePlacement {
  */
 function sanitizeBlockBatch(raws: string[], atDocumentStart: boolean): Array<string | null> {
   if (!supportsBlocks()) return [null];
-  const refused = raws.findIndex((raw) => DOCUMENT_STATE_PATTERN.test(raw));
+  const refused = raws.findIndex(
+    (raw) => DOCUMENT_STATE_PATTERN.test(raw) || PROBE_ATTRIBUTE_PATTERN.test(raw),
+  );
   const batch = refused === -1 ? raws : raws.slice(0, refused);
   if (batch.length === 0) return [null];
 
+  const nonce = createProbeNonce();
+  const probeId = (index: number) => `${nonce}-${index}`;
   const probes = new Map<string, ProbePlacement>();
   const placement = (id: string | null) => {
     const key = id ?? "";
@@ -136,7 +149,7 @@ function sanitizeBlockBatch(raws: string[], atDocumentStart: boolean): Array<str
 
   let dirty = atDocumentStart ? "" : BLOCK_PREFIX;
   batch.forEach((raw, index) => {
-    dirty += raw + blockProbe(index);
+    dirty += raw + blockProbe(probeId(index));
   });
   DOMPurify.addHook("uponSanitizeElement", recordProbes);
   let html: string;
@@ -149,9 +162,9 @@ function sanitizeBlockBatch(raws: string[], atDocumentStart: boolean): Array<str
   const results: Array<string | null> = [];
   let cursor = 0;
   for (let index = 0; index < batch.length; index++) {
-    const probe = blockProbe(index);
+    const probe = blockProbe(probeId(index));
     const at = html.indexOf(probe, cursor);
-    const entry = probes.get(String(index));
+    const entry = probes.get(probeId(index));
     const isLast = index === batch.length - 1;
     if (
       at === -1 ||
@@ -231,6 +244,20 @@ export class MarkdownSanitizeCache {
     this.entries.clear();
     this.documentStartEntries.clear();
     this.used = 0;
+  }
+}
+
+/** One preview's sanitize cache, emptied whenever the preview shows another source. */
+export class SourceSanitizeCache {
+  private readonly cache = new MarkdownSanitizeCache();
+  private sourceKey: string | undefined;
+
+  forSource(sourceKey: string | undefined) {
+    if (sourceKey !== this.sourceKey) {
+      this.cache.clear();
+      this.sourceKey = sourceKey;
+    }
+    return this.cache;
   }
 }
 

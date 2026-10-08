@@ -5,5 +5,5 @@ const loadAiEditorContribution = () =>
 
 /** Registers the AI editor features; every window that shows code editors runs this. */
 export function registerAiEditorFeatures() {
-  registerEditorFeatures(loadAiEditorContribution);
+  registerEditorFeatures("ai", loadAiEditorContribution);
 }

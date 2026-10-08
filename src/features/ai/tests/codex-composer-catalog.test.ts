@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { invoke } from "@tauri-apps/api/core";
 import { getCodexModelPatch } from "../integrations/codex/codex-model-settings";
+import { signOutOfCodex } from "../integrations/codex/codex-account-api";
 import {
   CODEX_COMPOSER_THREAD_PAGE_SIZE,
   listCodexComposerSkills,
@@ -239,5 +240,20 @@ describe("Codex composer catalog", () => {
       limit: CODEX_COMPOSER_THREAD_PAGE_SIZE,
     });
     expect(invoke).toHaveBeenCalledWith("list_codex_skills", { cwd: "/workspace" });
+  });
+
+  it("forgets the catalog when the account signs out", async () => {
+    vi.mocked(invoke).mockResolvedValue({ data: [{ model: "account-model" }] });
+    await listCodexComposerModels("/sign-out-test");
+    expect(queryClient.getQueryCache().findAll({ queryKey: ["codex"] })).not.toHaveLength(0);
+
+    await signOutOfCodex();
+
+    expect(invoke).toHaveBeenCalledWith("logout_codex_account");
+    expect(queryClient.getQueryCache().findAll({ queryKey: ["codex"] })).toHaveLength(0);
+    await listCodexComposerModels("/sign-out-test");
+    expect(
+      vi.mocked(invoke).mock.calls.filter(([command]) => command === "list_codex_models"),
+    ).toHaveLength(2);
   });
 });

@@ -176,13 +176,15 @@ const useGitHubStoreBase = create(
 );
 
 /**
- * Notifications belong to the signed-in account. When it signs out or changes, drop them and cancel
- * a request still in flight so it cannot fill the list for the next account.
+ * Everything fetched from GitHub was fetched as the signed-in account: notifications, and pull
+ * requests, issues, runs, metadata and deliveries of private repositories. When the account signs
+ * out or changes, drop all of it and cancel requests still in flight so they cannot fill the
+ * cache for the next account.
  */
 useGitHubStoreBase.subscribe((state, previous) => {
   if (!previous.currentUser || state.currentUser === previous.currentUser) return;
-  void queryClient.cancelQueries({ queryKey: githubKeys.notificationsRoot });
-  queryClient.removeQueries({ queryKey: githubKeys.notificationsRoot });
+  void queryClient.cancelQueries({ queryKey: githubKeys.all });
+  queryClient.removeQueries({ queryKey: githubKeys.all });
 });
 
 export const useGitHubStore = createSelectors(useGitHubStoreBase);

@@ -5,7 +5,8 @@ import type { CodeMirrorHost } from "../engines/codemirror/host";
  * What other features contribute to the code editor. A feature registers a loader once from its
  * registration module, run by each window that shows editors before it renders; the loader
  * imports the contribution on demand, so its code stays out of the startup bundle and loads with
- * the first editor (`code-editor.tsx` starts the load when its chunk is evaluated).
+ * the first editor (`code-editor.tsx` starts the load when its chunk is evaluated). Loaders are
+ * keyed by a stable id, so a module that runs again (hot reload) replaces its loader.
  *
  * CodeMirror features install their extensions in the order they render, and that order is their
  * precedence. Every feature, built in or contributed, mounts in one commit once the contributions
@@ -29,13 +30,13 @@ export interface EditorFeatureContribution {
 type EditorFeatureLoader = () => Promise<EditorFeatureContribution>;
 
 const NO_CONTRIBUTIONS: EditorFeatureContribution[] = [];
-const loaders: EditorFeatureLoader[] = [];
+const loaders = new Map<string, EditorFeatureLoader>();
 let loadedContributions: EditorFeatureContribution[] | null = null;
 let loadingContributions: Promise<EditorFeatureContribution[]> | null = null;
 
-export function registerEditorFeatures(load: EditorFeatureLoader) {
-  if (loaders.includes(load)) return;
-  loaders.push(load);
+export function registerEditorFeatures(id: string, load: EditorFeatureLoader) {
+  if (loaders.get(id) === load) return;
+  loaders.set(id, load);
   loadedContributions = null;
   loadingContributions = null;
 }
@@ -44,7 +45,7 @@ export function registerEditorFeatures(load: EditorFeatureLoader) {
 export function loadEditorFeatures(): Promise<EditorFeatureContribution[]> {
   if (loadingContributions) return loadingContributions;
   const loading = Promise.all(
-    loaders.map((load) =>
+    [...loaders.values()].map((load) =>
       load().catch((error: unknown) => {
         console.error("Failed to load an editor feature contribution:", error);
         return {};
@@ -60,7 +61,7 @@ export function loadEditorFeatures(): Promise<EditorFeatureContribution[]> {
 
 /** The loaded contributions; suspends until they have loaded. */
 export function useEditorFeatures(): EditorFeatureContribution[] {
-  if (loaders.length === 0) return NO_CONTRIBUTIONS;
+  if (loaders.size === 0) return NO_CONTRIBUTIONS;
   return loadedContributions ?? use(loadEditorFeatures());
 }
 

@@ -1,3 +1,5 @@
+import { useEditorSettingOverridesStore } from "@/features/editor/stores/editor-setting-overrides.store";
+import { isWordWrapShown } from "@/features/editor/services/word-wrap-toggle";
 import {
   ArrowCounterClockwiseIcon,
   CodeIcon,
@@ -258,7 +260,7 @@ export const viewCommands: Command[] = [
     category: "View",
     icon: <TextAlignJustifyIcon />,
     palette: ({ settings }) =>
-      settings.wordWrap
+      isWordWrapShown(settings, useEditorSettingOverridesStore.getState().overrides.wordWrap)
         ? {
             label: "Editor: Disable Word Wrap",
             description: "Disable line wrapping in editor",

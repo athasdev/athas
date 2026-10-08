@@ -5,6 +5,7 @@ import { describe, expect, it } from "vite-plus/test";
 import type { CodeMirrorHost } from "../engines/codemirror/host";
 import {
   getCodeMirrorFeatures,
+  loadEditorFeatures,
   registerEditorFeatures,
   useEditorFeatures,
 } from "../services/editor-feature-registry";
@@ -21,7 +22,7 @@ describe("editor feature registry", () => {
     const loaded = new Promise<void>((done) => {
       resolve = done;
     });
-    registerEditorFeatures(async () => {
+    registerEditorFeatures("test", async () => {
       await loaded;
       return { codeMirror: { overlays: [feature("first"), feature("second")] } };
     });
@@ -57,5 +58,14 @@ describe("editor feature registry", () => {
     });
     expect(mounted).toEqual(["built-in", "first", "second"]);
     await act(async () => root.unmount());
+  });
+
+  it("replaces a loader registered again under the same id", async () => {
+    const statusAction = () => null;
+    registerEditorFeatures("reloaded", async () => ({ statusActions: [statusAction] }));
+    registerEditorFeatures("reloaded", async () => ({ statusActions: [statusAction] }));
+
+    const contributions = await loadEditorFeatures();
+    expect(contributions.filter((contribution) => contribution.statusActions)).toHaveLength(1);
   });
 });

@@ -47,5 +47,5 @@ const aiProviderSettingsEffect = {
 
 /** Keeps the AI providers on the endpoints in the settings; every window registers this. */
 export function registerAiSettingsEffects() {
-  registerSettingsEffect(aiProviderSettingsEffect);
+  registerSettingsEffect("ai-providers", aiProviderSettingsEffect);
 }
