@@ -37,6 +37,7 @@ import {
   openAgentSessionReview,
 } from "../../lib/agent-session-context";
 import { useAIChatStore } from "../../stores/ai-chat.store";
+import { EMPTY_CHAT_MESSAGES } from "../../stores/ai-chat/chat-normalization";
 
 type SectionId = "changes" | "files" | "commands" | "resources" | "views";
 
@@ -71,6 +72,9 @@ export function AgentContextSidebar() {
   const chat = useAIChatStore((state) =>
     sessionId ? (state.chats.find((candidate) => candidate.id === sessionId) ?? null) : null,
   );
+  const storedMessages = useAIChatStore((state) =>
+    sessionId ? state.messagesByChat[sessionId] : undefined,
+  );
   const loadState = useAIChatStore((state) =>
     sessionId ? state.chatMessageLoadStates[sessionId] : undefined,
   );
@@ -78,7 +82,7 @@ export function AgentContextSidebar() {
   const openContent = useBufferStore((state) => state.actions.openContent);
   const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath || null);
-  const messages = chat?.messages;
+  const messages = chat ? (storedMessages ?? EMPTY_CHAT_MESSAGES) : undefined;
   const context = useMemo(
     () => buildAgentSessionContext(messages ? { messages } : null, rootFolderPath),
     [messages, rootFolderPath],

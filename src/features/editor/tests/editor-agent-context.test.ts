@@ -14,7 +14,6 @@ const buffer: EditorContent = {
   isPinned: false,
   isPreview: false,
   isActive: true,
-  tokens: [],
 };
 
 describe("editor agent context", () => {

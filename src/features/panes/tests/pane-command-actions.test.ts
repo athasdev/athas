@@ -73,7 +73,6 @@ describe("pane command actions", () => {
           savedContent: "",
           isDirty: false,
           isVirtual: false,
-          tokens: [],
         },
       ],
       activeBufferId: "buffer-a",

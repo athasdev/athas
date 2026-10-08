@@ -6,6 +6,7 @@ import { calculateOffsetFromContentPosition } from "../utils/position";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { isJavaClassFileUri, getJavaClassFileName } from "./java-class-file";
 import { filePathFromUri } from "./workspace-edit";
+import { readBufferText } from "../services/buffer-text";
 
 export interface LspNavigationLocation {
   uri: string;
@@ -73,7 +74,7 @@ export async function navigateToLspLocation(
   actions.setActiveBuffer(targetBuffer.id);
   if (targetBuffer.isPreview) actions.convertPreviewToDefinite(targetBuffer.id);
 
-  const content = targetBuffer.content;
+  const content = readBufferText(targetBuffer);
   const position = (point: Range["start"]) => ({
     line: point.line,
     column: point.character,

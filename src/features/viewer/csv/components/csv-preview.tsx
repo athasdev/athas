@@ -1,5 +1,6 @@
 import { DownloadIcon, FileCodeIcon, RowsIcon } from "@/ui/icons";
 import { useMemo, useState } from "react";
+import { useBufferText } from "@/features/editor/hooks/use-buffer-text";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { hasTextContent } from "@/features/panes/types/pane-content.types";
 import { Button } from "@/ui/button";
@@ -7,8 +8,10 @@ import Select from "@/ui/select";
 import { type CsvDelimiter, detectCsvDelimiter, formatCsv, parseCsv } from "../lib/csv-utils";
 import { CsvTableView } from "./csv-table-view";
 
+const CSV_PREVIEW_UPDATE_DELAY_MS = 150;
+
 export function CsvPreview() {
-  const sourceContent = useBufferStore((state) => {
+  const sourceBufferId = useBufferStore((state) => {
     const activeBuffer = state.activeBufferId
       ? state.buffers.find((buffer) => buffer.id === state.activeBufferId)
       : null;
@@ -17,8 +20,9 @@ export function CsvPreview() {
     const sourceBuffer = sourceFilePath
       ? state.buffers.find((buffer) => buffer.path === sourceFilePath)
       : activeBuffer;
-    return sourceBuffer && hasTextContent(sourceBuffer) ? sourceBuffer.content : "";
+    return sourceBuffer && hasTextContent(sourceBuffer) ? sourceBuffer.id : null;
   });
+  const sourceContent = useBufferText(sourceBufferId, { debounceMs: CSV_PREVIEW_UPDATE_DELAY_MS });
   const [delimiter, setDelimiter] = useState<CsvDelimiter | "auto">("auto");
   const [hasHeader, setHasHeader] = useState(true);
 

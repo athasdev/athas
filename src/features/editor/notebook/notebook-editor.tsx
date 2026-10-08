@@ -36,6 +36,7 @@ import type {
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
+import { useBufferText } from "@/features/editor/hooks/use-buffer-text";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getBufferById } from "@/features/editor/utils/buffer-index";
 import { useHighlightedMarkdown } from "@/features/editor/markdown/use-highlighted-markdown";
@@ -541,16 +542,16 @@ function NotebookCellView({
 
 export function NotebookEditor() {
   const cellRefs = useRef<Array<HTMLElement | null>>([]);
-  const { bufferId, content, path } = useBufferStore(
+  const { bufferId, path } = useBufferStore(
     useShallow((state) => {
       const buffer = getBufferById(state.buffers, state.activeBufferId);
       return {
         bufferId: buffer?.id ?? null,
-        content: buffer?.type === "editor" ? buffer.content : "",
         path: buffer?.type === "editor" ? buffer.path : "",
       };
     }),
   );
+  const content = useBufferText(path ? bufferId : null);
   const fontSize = useSettingsStore((state) => state.settings.fontSize);
   const uiFontFamily = useSettingsStore((state) => state.settings.uiFontFamily);
   const { handleContentChange } = useEditorAppStore.use.actions();

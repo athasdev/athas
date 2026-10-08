@@ -16,6 +16,18 @@ export interface WorkspaceResourceProvider {
   readBytes(path: string): Promise<Uint8Array | null>;
 }
 
+/**
+ * What a checked local write expects on disk: the text's UTF-8 length and SHA-256, so the write
+ * does not carry a second copy of the file over IPC.
+ */
+export async function digestText(text: string): Promise<{ byteLength: number; sha256: string }> {
+  const bytes = new TextEncoder().encode(text);
+  const hash = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
+  let sha256 = "";
+  for (const byte of hash) sha256 += byte.toString(16).padStart(2, "0");
+  return { byteLength: bytes.byteLength, sha256 };
+}
+
 const localWorkspaceResourceProvider: WorkspaceResourceProvider = {
   kind: "local",
   async readDirectory(path, workspaceRoot) {
@@ -24,7 +36,11 @@ const localWorkspaceResourceProvider: WorkspaceResourceProvider = {
   readText: readFileContent,
   async writeText(path, content, expectedContent) {
     if (expectedContent !== undefined) {
-      await commands.writeLocalFileChecked(path, expectedContent, content);
+      await commands.writeLocalFileChecked(
+        path,
+        expectedContent === null ? null : await digestText(expectedContent),
+        content,
+      );
       invalidateFileTreeGitIgnoreCache(path);
       return;
     }

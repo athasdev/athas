@@ -2,6 +2,7 @@ import { getAuthToken } from "@/features/window/services/auth-api";
 import { useEffect } from "react";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
+import { composeChat } from "@/features/ai/stores/ai-chat/chat-normalization";
 import {
   initChatDatabase,
   loadAllChatsFromDb,
@@ -17,6 +18,7 @@ import {
 } from "../services/share-api";
 import { getShareDeviceId } from "../services/share-device";
 import type { ShareDraft } from "../types/share.types";
+import { readBufferText } from "@/features/editor/services/buffer-text";
 
 const maxTitleLength = 200;
 
@@ -62,7 +64,10 @@ export function SharingRuntime() {
         const options = await fetchShareOptions(token);
         if (!current()) return;
         const drafts = new Map<string, ShareDraft>();
-        const summaries = new Map(useAIChatStore.getState().chats.map((chat) => [chat.id, chat]));
+        const { chats, messagesByChat } = useAIChatStore.getState();
+        const summaries = new Map(
+          chats.map((chat) => [chat.id, composeChat(chat, messagesByChat[chat.id])]),
+        );
         if (options.sessionsEnabled) {
           if (!isChatDatabaseReady) {
             await initChatDatabase();
@@ -88,7 +93,10 @@ export function SharingRuntime() {
               ? summary
               : await loadChat(summary.id, summary.lastMessageAt.getTime());
             if (!current()) return;
-            const latest = useAIChatStore.getState().chats.find((entry) => entry.id === summary.id);
+            const latestState = useAIChatStore.getState();
+            const latestSession = latestState.chats.find((entry) => entry.id === summary.id);
+            const latest =
+              latestSession && composeChat(latestSession, latestState.messagesByChat[summary.id]);
             const messages = latest?.messages.length ? latest.messages : chat.messages;
             const content = conversationContent(messages);
             if (!content || content.length > 500_000) continue;
@@ -110,11 +118,12 @@ export function SharingRuntime() {
           }
         }
         for (const buffer of useBufferStore.getState().buffers) {
-          if (buffer.type === "editor" && buffer.content.length <= 500_000)
+          const bufferText = buffer.type === "editor" ? readBufferText(buffer) : "";
+          if (buffer.type === "editor" && bufferText.length <= 500_000)
             drafts.set(buffer.id, {
               kind: "buffer",
               title: buffer.name,
-              content: buffer.content,
+              content: bufferText,
               language: buffer.languageOverride || buffer.language || "text",
               sourceId: buffer.id,
               deviceId,

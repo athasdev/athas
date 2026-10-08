@@ -20,6 +20,8 @@ export function useFontLoading() {
         .availableFonts.map((font) => font.family.toLowerCase());
 
       const settingsStore = useSettingsStore.getState();
+      // Without the saved settings, the fallback would overwrite the saved fonts with defaults.
+      if (!settingsStore.isLoaded) return;
       const { settings } = settingsStore;
       const updates: Array<Promise<void>> = [];
 

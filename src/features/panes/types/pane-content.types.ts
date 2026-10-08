@@ -5,15 +5,6 @@ import type { GitDiff } from "@/features/git/types/git.types";
 import type { OnboardingMode } from "@/features/onboarding/lib/onboarding-state";
 import type { GitHubActionNotificationTarget } from "@/features/github/types/github.types";
 
-// ── Token entry for syntax highlighting cache ───────────────────────
-
-export interface TokenEntry {
-  start: number;
-  end: number;
-  token_type: string;
-  class_name: string;
-}
-
 // ── Content type discriminant ───────────────────────────────────────
 
 export type PaneContentType =
@@ -76,7 +67,6 @@ export interface EditorContent extends PaneContentBase {
   readOnly?: boolean;
   language?: string;
   languageOverride?: string;
-  tokens: TokenEntry[];
 }
 
 export interface TerminalContent extends PaneContentBase {

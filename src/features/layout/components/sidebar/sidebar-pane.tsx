@@ -86,8 +86,8 @@ export const SidebarPane = memo(
     const isGitHubPRsViewActive = isGitHubPRsActive ?? uiGitHubPRsViewActive;
     const activeSidebarView = activeView ?? uiActiveSidebarView;
     const extensionViews = useExtensionViews();
-    const handleFileSelect = useFileSystemStore.use.handleFileSelect?.();
-    const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
+    const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
+    const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
     const coreFeatures = useSettingsStore((state) => state.settings.coreFeatures);
     const hasTeamsCollaborationAccess = useAuthStore(
       (state) => state.subscription?.collaboration?.enabled === true,

@@ -12,12 +12,50 @@ export function sortFileEntries(entries: FileEntry[]): FileEntry[] {
   });
 }
 
+const SLASH = 47;
+const BACKSLASH = 92;
+
+/**
+ * Whether `targetPath` lies below the directory at `dirPath`. Every entry's path extends its
+ * parent's, so tree walks only descend into the one branch that can hold the target and stay
+ * O(depth x siblings) instead of visiting every loaded entry.
+ */
+export function isPathInsideTreeEntry(targetPath: string, dirPath: string): boolean {
+  if (targetPath.length <= dirPath.length || !targetPath.startsWith(dirPath)) return false;
+  const last = dirPath.charCodeAt(dirPath.length - 1);
+  if (last === SLASH || last === BACKSLASH) return true;
+  const next = targetPath.charCodeAt(dirPath.length);
+  return next === SLASH || next === BACKSLASH;
+}
+
+/**
+ * The entry moved to `newPath`, with every loaded descendant's path rewritten under it. Tree
+ * walks prune by path prefix, so descendants left with the old prefix would become unreachable
+ * for later refreshes and deletes.
+ */
+export function relocateFileEntry(entry: FileEntry, newPath: string, newName: string): FileEntry {
+  const oldPath = entry.path;
+  const rewrite = (item: FileEntry, path: string): FileEntry => {
+    const next: FileEntry = { ...item, path };
+    if (item.children) {
+      next.children = item.children.map((child) =>
+        rewrite(
+          child,
+          child.path.startsWith(oldPath) ? newPath + child.path.slice(oldPath.length) : child.path,
+        ),
+      );
+    }
+    return next;
+  };
+  return { ...rewrite(entry, newPath), name: newName };
+}
+
 export function findFileInTree(files: FileEntry[], targetPath: string): FileEntry | null {
   for (const file of files) {
     if (file.path === targetPath) {
       return file;
     }
-    if (file.children) {
+    if (isPathInsideTreeEntry(targetPath, file.path) && file.children) {
       const found = findFileInTree(file.children, targetPath);
       if (found) return found;
     }
@@ -30,26 +68,24 @@ export function updateFileInTree(
   targetPath: string,
   updater: (file: FileEntry) => FileEntry,
 ): FileEntry[] {
-  let changed = false;
-  const updatedFiles = files.map((file) => {
+  let updatedFiles: FileEntry[] | null = null;
+  for (let index = 0; index < files.length; index++) {
+    const file = files[index];
+    let updatedFile = file;
     if (file.path === targetPath) {
-      const updatedFile = updater(file);
-      if (updatedFile !== file) changed = true;
-      return updatedFile;
-    }
-    if (file.children) {
+      updatedFile = updater(file);
+    } else if (isPathInsideTreeEntry(targetPath, file.path) && file.children) {
       const updatedChildren = updateFileInTree(file.children, targetPath, updater);
       if (updatedChildren !== file.children) {
-        changed = true;
-        return {
-          ...file,
-          children: updatedChildren,
-        };
+        updatedFile = { ...file, children: updatedChildren };
       }
     }
-    return file;
-  });
-  return changed ? updatedFiles : files;
+    if (updatedFile !== file) {
+      updatedFiles ??= files.slice();
+      updatedFiles[index] = updatedFile;
+    }
+  }
+  return updatedFiles ?? files;
 }
 
 export function removeFileFromTree(files: FileEntry[], targetPath: string): FileEntry[] {
@@ -62,7 +98,7 @@ export function removeFileFromTree(files: FileEntry[], targetPath: string): File
       continue;
     }
 
-    if (file.children) {
+    if (isPathInsideTreeEntry(targetPath, file.path) && file.children) {
       const updatedChildren = removeFileFromTree(file.children, targetPath);
       if (updatedChildren !== file.children) {
         changed = true;
@@ -105,24 +141,22 @@ export function addFileToTree(
     return appendSortedFile(files, newFile);
   }
 
-  let changed = false;
-  const result = files.map((file) => {
+  let result: FileEntry[] | null = null;
+  for (let index = 0; index < files.length; index++) {
+    const file = files[index];
+    let updatedFile = file;
     if (file.path === parentPath && file.isDir) {
-      changed = true;
-      const children = appendSortedFile(file.children || [], newFile);
-      return { ...file, children };
-    }
-    if (file.children) {
+      updatedFile = { ...file, children: appendSortedFile(file.children || [], newFile) };
+    } else if (isPathInsideTreeEntry(parentPath, file.path) && file.children) {
       const updatedChildren = addFileToTree(file.children, parentPath, newFile);
       if (updatedChildren !== file.children) {
-        changed = true;
-        return {
-          ...file,
-          children: updatedChildren,
-        };
+        updatedFile = { ...file, children: updatedChildren };
       }
     }
-    return file;
-  });
-  return changed ? result : files;
+    if (updatedFile !== file) {
+      result ??= files.slice();
+      result[index] = updatedFile;
+    }
+  }
+  return result ?? files;
 }

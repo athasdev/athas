@@ -14,6 +14,7 @@ import type { LspLocation } from "../navigation/code-lens";
 import { fromLspPosition } from "../navigation/lsp-document";
 import { groupReferenceLocations, type ReferenceEntry } from "../navigation/reference-groups";
 import { athasEditorTheme, athasSyntaxHighlighting } from "../theme";
+import { readBufferText } from "../../../services/buffer-text";
 
 interface ReferencesPeekViewProps {
   locations: readonly LspLocation[];
@@ -28,7 +29,8 @@ async function readPeekFile(filePath: string): Promise<string> {
   const buffer = useBufferStore
     .getState()
     .buffers.find((candidate) => candidate.type === "editor" && candidate.path === filePath);
-  if (buffer && "content" in buffer && typeof buffer.content === "string") return buffer.content;
+  if (buffer && "content" in buffer && typeof buffer.content === "string")
+    return readBufferText(buffer);
   return readFileContent(filePath);
 }
 

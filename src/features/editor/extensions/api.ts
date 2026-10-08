@@ -39,6 +39,7 @@ import {
 } from "../utils/line-operations";
 import { resolveCursorPositionsAtLineEndsForSelection } from "../utils/multi-cursor";
 import { getBufferById } from "../utils/buffer-index";
+import { readBufferText } from "../services/buffer-text";
 import type {
   EditorAPI,
   EditorEvent,
@@ -609,7 +610,7 @@ class EditorAPIImpl implements EditorAPI {
       captureBufferStoreOwner(),
       activeBufferId,
       "undo",
-      this.getCurrentHistoryEntry(activeBuffer.content),
+      this.getCurrentHistoryEntry(readBufferText(activeBuffer)),
     );
 
     if (entry) {
@@ -651,7 +652,7 @@ class EditorAPIImpl implements EditorAPI {
       captureBufferStoreOwner(),
       activeBufferId,
       "redo",
-      this.getCurrentHistoryEntry(activeBuffer.content),
+      this.getCurrentHistoryEntry(readBufferText(activeBuffer)),
     );
 
     if (entry) {

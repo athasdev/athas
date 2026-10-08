@@ -69,7 +69,6 @@ function draft(id: string, dirty = true): EditorContent {
     isPreview: false,
     isActive: false,
     language: "typescript",
-    tokens: [],
   };
 }
 function setupWorkspace(id: string, dirty = true) {

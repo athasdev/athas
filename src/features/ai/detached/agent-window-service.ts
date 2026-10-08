@@ -1,5 +1,6 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { toast } from "sonner";
+import { forgetSavedChatMessages } from "@/features/ai/services/ai-chat-history-service";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import {
@@ -38,6 +39,9 @@ export function captureAgentWindowSnapshot(chatId?: string): AgentWindowSnapshot
   return {
     chat: {
       chats: chatId ? state.chats.filter((chat) => chat.id === chatId) : state.chats,
+      messagesByChat: chatId
+        ? Object.fromEntries(Object.entries(state.messagesByChat).filter(([id]) => id === chatId))
+        : state.messagesByChat,
       currentChatId: chatId ?? state.currentChatId,
       selectedAgentId: state.selectedAgentId,
       chatMessageLoadStates: chatId
@@ -65,6 +69,10 @@ export function captureAgentWindowSnapshot(chatId?: string): AgentWindowSnapshot
 
 export function restoreAgentWindowSnapshot(snapshot: AgentWindowSnapshot, chatId?: string) {
   restoreAgentDrafts(snapshot.drafts, Boolean(chatId));
+  // The other window saved these chats itself; this window's next save writes them whole.
+  for (const chat of snapshot.chat.chats) {
+    if (!chatId || chat.id === chatId) forgetSavedChatMessages(chat.id);
+  }
   if (!chatId) {
     useAIChatStore.setState(snapshot.chat);
     return;
@@ -75,6 +83,12 @@ export function restoreAgentWindowSnapshot(snapshot: AgentWindowSnapshot, chatId
       ...state.chats.filter((chat) => chat.id !== chatId),
       ...snapshot.chat.chats.filter((chat) => chat.id === chatId),
     ],
+    messagesByChat: {
+      ...Object.fromEntries(Object.entries(state.messagesByChat).filter(([id]) => id !== chatId)),
+      ...Object.fromEntries(
+        Object.entries(snapshot.chat.messagesByChat).filter(([id]) => id === chatId),
+      ),
+    },
     chatMessageLoadStates: {
       ...state.chatMessageLoadStates,
       ...snapshot.chat.chatMessageLoadStates,

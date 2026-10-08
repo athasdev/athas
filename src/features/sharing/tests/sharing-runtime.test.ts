@@ -23,7 +23,12 @@ vi.mock("@/features/window/stores/auth.store", () => ({
   }),
 }));
 vi.mock("@/features/ai/stores/ai-chat.store", () => ({
-  useAIChatStore: { getState: () => ({ chats: state.chats }) },
+  useAIChatStore: {
+    getState: () => ({
+      chats: state.chats,
+      messagesByChat: Object.fromEntries(state.chats.map((chat) => [chat.id, chat.messages])),
+    }),
+  },
 }));
 vi.mock("@/features/editor/stores/buffer.store", () => ({
   useBufferStore: { getState: () => ({ buffers: [] }) },

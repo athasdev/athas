@@ -3,6 +3,7 @@ import type { AIChatState } from "./ai-chat-store.types";
 export function createInitialAIChatState(): AIChatState {
   return {
     chats: [],
+    messagesByChat: {},
     currentChatId: null,
     selectedAgentId: "custom",
     pendingAgentLaunchRequest: null,

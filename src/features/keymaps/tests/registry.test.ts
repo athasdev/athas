@@ -39,6 +39,24 @@ describe("keymap registry", () => {
     await expect(keymapRegistry.executeCommand("test.missing")).resolves.toBeUndefined();
   });
 
+  it("passes failures from missing or throwing commands to onError", async () => {
+    const error = new Error("boom");
+    keymapRegistry.registerCommand({
+      id: "test.fail",
+      title: "Fail",
+      execute: async () => {
+        throw error;
+      },
+    });
+    const onError = vi.fn();
+
+    await keymapRegistry.executeCommand("test.fail", undefined, { onError });
+    await keymapRegistry.executeCommand("test.missing", undefined, { onError });
+
+    expect(onError).toHaveBeenNthCalledWith(1, error);
+    expect(onError).toHaveBeenNthCalledWith(2, new Error("Command not found: test.missing"));
+  });
+
   it("ignores duplicate keybindings from the same source but keeps other sources", () => {
     const binding = { key: "cmd+s", command: "file.save", source: "default" as const };
 

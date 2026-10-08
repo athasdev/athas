@@ -67,11 +67,17 @@ class KeymapRegistry {
     return [...this.keybindings];
   }
 
-  async executeCommand(commandId: string, args?: unknown): Promise<void> {
+  /** Runs a command. Failures are logged and passed to `onError`; the returned promise never rejects. */
+  async executeCommand(
+    commandId: string,
+    args?: unknown,
+    options?: { onError?: (error: unknown) => void },
+  ): Promise<void> {
     const command = this.commands.get(commandId);
 
     if (!command) {
       logger.error("Keymaps", `Command not found: ${commandId}`);
+      options?.onError?.(new Error(`Command not found: ${commandId}`));
       return;
     }
 
@@ -80,6 +86,7 @@ class KeymapRegistry {
       await command.execute(args);
     } catch (error) {
       logger.error("Keymaps", `Error executing command ${commandId}:`, error);
+      options?.onError?.(error);
     }
   }
 

@@ -89,18 +89,23 @@ export const useQuickOpen = () => {
     (symbol: SymbolItem) => {
       onClose();
 
-      // Navigate to symbol position
+      // Waits for the palette to close, so the editor takes focus after it.
       setTimeout(() => {
-        const offset = calculateOffsetFromContentPosition(
-          editorAPI.getContent(),
-          symbol.line,
-          symbol.character,
-        );
-
-        editorAPI.setCursorPosition({
+        const bufferId = useBufferStore.getState().activeBufferId;
+        if (!bufferId) return;
+        const position = {
           line: symbol.line,
           column: symbol.character,
-          offset,
+          offset: calculateOffsetFromContentPosition(
+            editorAPI.getContent(),
+            symbol.line,
+            symbol.character,
+          ),
+        };
+        // The same path as go-to-definition: moves the cursor, centers it and focuses the editor.
+        useEditorStateStore.getState().actions.requestNavigation({
+          bufferId,
+          range: { start: position, end: position },
         });
       }, 50);
     },

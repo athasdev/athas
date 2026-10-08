@@ -1,4 +1,4 @@
-import type { Action } from "../types/action.types";
+import type { CommandPaletteItem } from "../types/command-palette-item.types";
 import { matchesSearchQuery } from "@/utils/search-match";
 
 export const commandPaletteFilters = [
@@ -42,10 +42,12 @@ const categoryFilters: Record<string, Exclude<CommandPaletteFilter, "all">> = {
 export interface CommandPaletteSection {
   id: string;
   label: string;
-  actions: Action[];
+  actions: CommandPaletteItem[];
 }
 
-export function getCommandPaletteFilter(action: Action): Exclude<CommandPaletteFilter, "all"> {
+export function getCommandPaletteFilter(
+  action: CommandPaletteItem,
+): Exclude<CommandPaletteFilter, "all"> {
   return categoryFilters[action.category] ?? "extensions";
 }
 
@@ -56,7 +58,7 @@ export function getCommandPaletteSections({
   recentActionIds,
   showRecent,
 }: {
-  actions: Action[];
+  actions: CommandPaletteItem[];
   filter: CommandPaletteFilter;
   query: string;
   recentActionIds: string[];
@@ -72,7 +74,7 @@ export function getCommandPaletteSections({
   const recentActions = showRecent
     ? recentActionIds
         .map((id) => actionsById.get(id))
-        .filter((action): action is Action => Boolean(action))
+        .filter((action): action is CommandPaletteItem => Boolean(action))
     : [];
   const recentIds = new Set(recentActions.map((action) => action.id));
   const remainingActions = filteredActions.filter((action) => !recentIds.has(action.id));
@@ -103,6 +105,8 @@ export function getCommandPaletteSections({
   ];
 }
 
-export function flattenCommandPaletteSections(sections: CommandPaletteSection[]): Action[] {
+export function flattenCommandPaletteSections(
+  sections: CommandPaletteSection[],
+): CommandPaletteItem[] {
   return sections.flatMap((section) => section.actions);
 }

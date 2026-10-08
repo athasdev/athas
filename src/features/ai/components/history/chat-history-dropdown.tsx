@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { getRelativeTime } from "@/features/ai/lib/formatting";
-import type { Chat } from "@/features/ai/types/ai-chat.types";
+import type { ChatSession } from "@/features/ai/types/ai-chat.types";
 import { Button } from "@/ui/button";
 import {
   DropdownMenu,
@@ -31,8 +31,8 @@ import { AgentSessionIcon } from "../icons/agent-session-icon";
 
 interface ChatHistoryDropdownProps {
   /** Active sessions, already scoped and ordered by `selectAgentSessions`. */
-  chats: Chat[];
-  archivedChats: Chat[];
+  chats: ChatSession[];
+  archivedChats: ChatSession[];
   currentChatId: string | null;
   onSwitchToChat: (chatId: string) => void;
   onSetChatArchived: (chatId: string, archived: boolean) => void;
@@ -48,7 +48,7 @@ function SessionRow({
   onSetChatArchived,
   onDeleteChat,
 }: {
-  chat: Chat;
+  chat: ChatSession;
   isCurrent: boolean;
 } & Pick<ChatHistoryDropdownProps, "onSwitchToChat" | "onSetChatArchived" | "onDeleteChat">) {
   return (
@@ -107,7 +107,7 @@ export default function ChatHistoryDropdown({
   onBrowseAgentSessions,
 }: ChatHistoryDropdownProps) {
   const search = useMenuSearch();
-  const matches = (chat: Chat) => [chat.title, chat.agentId || "custom"];
+  const matches = (chat: ChatSession) => [chat.title, chat.agentId || "custom"];
   const filteredChats = search.filter(chats, matches);
   const filteredArchived = search.filter(archivedChats, matches);
   const rowProps = { onSwitchToChat, onSetChatArchived, onDeleteChat };

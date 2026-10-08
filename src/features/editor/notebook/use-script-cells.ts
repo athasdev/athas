@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
 import { subscribeToEditorDocumentChanges } from "../services/editor-document-events";
-import { useBufferStore } from "../stores/buffer.store";
-import { getBufferById } from "../utils/buffer-index";
-import { hasTextContent } from "@/features/panes/types/pane-content.types";
+import { getBufferText } from "../services/open-buffer-text";
 import { getPythonScriptCells, type PythonScriptCell } from "./python-script-cells";
 import { getRMarkdownChunks, type RMarkdownChunk } from "./rmarkdown-chunks";
 
@@ -22,16 +20,14 @@ interface ScriptCellsState extends ScriptCells {
 /** How long edits must pause before the run-cell markers are parsed again. */
 export const SCRIPT_CELL_REFRESH_DELAY_MS = 200;
 
-function readBufferText(bufferId: string | null): string {
-  if (!bufferId) return "";
-  const buffer = getBufferById(useBufferStore.getState().buffers, bufferId);
-  return buffer && hasTextContent(buffer) ? buffer.content : "";
+function readScriptText(bufferId: string | null): string {
+  return bufferId ? (getBufferText(bufferId) ?? "") : "";
 }
 
 function parseScriptCells(
   bufferId: string | null,
   kind: ScriptCellKind | null,
-  content = kind ? readBufferText(bufferId) : "",
+  content = kind ? readScriptText(bufferId) : "",
 ): ScriptCellsState {
   return {
     bufferId,
@@ -58,7 +54,7 @@ export function useScriptCells(bufferId: string | null, kind: ScriptCellKind | n
     if (!bufferId || !kind) return;
     const refresh = () =>
       setCells((previous) => {
-        const content = readBufferText(bufferId);
+        const content = readScriptText(bufferId);
         return previous.bufferId === bufferId &&
           previous.kind === kind &&
           previous.content === content

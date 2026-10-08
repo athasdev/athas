@@ -72,7 +72,6 @@ describe("pane activation", () => {
           savedContent: "",
           isDirty: false,
           isVirtual: false,
-          tokens: [],
         },
       ],
       activeBufferId: null,

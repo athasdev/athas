@@ -6,6 +6,7 @@ import { useHistoryStore } from "../stores/history.store";
 import type { HistoryEntry } from "../types/history.types";
 import { getBufferById } from "../utils/buffer-index";
 import { isBufferStoreOwnerLive, type BufferStoreOwner } from "./buffer-store-owner";
+import { readBufferText } from "./buffer-text";
 
 export function applyBufferHistory(
   owner: BufferStoreOwner,
@@ -17,12 +18,13 @@ export function applyBufferHistory(
   const buffer = getBufferById(owner.store.getState().buffers, bufferId);
   if (!buffer || buffer.type !== "editor" || buffer.readOnly || buffer.isVirtual) return null;
 
-  flushPendingBufferHistory(bufferId, buffer.content, owner.workspaceId);
+  const content = readBufferText(buffer);
+  flushPendingBufferHistory(bufferId, content, owner.workspaceId);
   const entry = useHistoryStore
     .getStore(owner.workspaceId)
     .getState()
     .actions[direction](bufferId, {
-      content: buffer.content,
+      content,
       ...view,
       timestamp: Date.now(),
     });

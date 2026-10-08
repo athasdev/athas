@@ -76,7 +76,6 @@ describe("workspace-scoped stores", () => {
       isPinned: false,
       isPreview: true,
       isActive: true,
-      tokens: [],
     };
 
     workspaceRuntimeRegistry.activateWorkspace({ id: "workspace-a", name: "A", path: "/a" });

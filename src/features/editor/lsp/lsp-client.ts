@@ -25,6 +25,7 @@ import type {
 } from "@/features/diagnostics/types/diagnostics.types";
 import type { BackendLanguageToolConfigSet } from "@/extensions/runtime/language-tool-config";
 import { hasTextContent } from "@/features/panes/types/pane-content.types";
+import { readBufferRevision, readBufferText } from "../services/buffer-text";
 import { subscribeToEditorDocumentChanges } from "../services/editor-document-events";
 import { useBufferStore } from "../stores/buffer.store";
 import type { EditorDocumentChangeEvent } from "../types/editor.types";
@@ -214,8 +215,8 @@ export class LspClient {
         expected !== undefined &&
         current?.type === "editor" &&
         current.path === expected.path &&
-        current.content === expected.content &&
-        (current.contentRevision ?? 0) === (expected.contentRevision ?? 0) &&
+        readBufferRevision(current) === (expected.contentRevision ?? 0) &&
+        readBufferText(current) === expected.content &&
         !current.readOnly
       );
     };
@@ -307,7 +308,7 @@ export class LspClient {
   /** The editor's current text for a document, which every published change is already part of. */
   private getCurrentDocumentContent(filePath: string): string | null {
     const buffer = getSourceEditorBufferByPath(useBufferStore.getState().buffers, filePath);
-    return buffer && hasTextContent(buffer) ? buffer.content : null;
+    return buffer && hasTextContent(buffer) ? readBufferText(buffer) : null;
   }
 
   private flushDocumentChanges(filePath: string): Promise<void> {
@@ -1181,7 +1182,7 @@ export class LspClient {
     }
 
     const buffer = useBufferStore.getState().buffers.find((entry) => entry.path === filePath);
-    const content = buffer && hasTextContent(buffer) ? buffer.content : "";
+    const content = buffer && hasTextContent(buffer) ? readBufferText(buffer) : "";
     await this.restartForFile(filePath, this.parseServerKey(serverKey).workspacePath, content);
   }
 

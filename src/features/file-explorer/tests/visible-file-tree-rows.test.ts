@@ -1,7 +1,10 @@
 import { describe, expect, test } from "vite-plus/test";
+import { updateFileInTree } from "@/features/file-system/controllers/file-tree-utils";
+import type { FileEntry } from "@/features/file-system/types/app.types";
 import {
   buildVisibleFileTreeRows,
   collectFileTreeSearchHits,
+  createVisibleFileTreeRowsCache,
   filterFileTreeEntries,
   filterFileTreeForFffHits,
   getGuideAncestorRows,
@@ -208,6 +211,110 @@ describe("buildVisibleFileTreeRows", () => {
       "/root/src/features/file-explorer",
     ]);
     expect(getStickyAncestorRows(rows, 0)).toEqual([]);
+  });
+});
+
+describe("buildVisibleFileTreeRows with a segment cache", () => {
+  const createWideTree = (): FileEntry[] => [
+    {
+      name: "root",
+      path: "/root",
+      isDir: true,
+      children: ["a", "b", "c"].map((folder) => ({
+        name: folder,
+        path: `/root/${folder}`,
+        isDir: true,
+        children: [
+          {
+            name: "nested",
+            path: `/root/${folder}/nested`,
+            isDir: true,
+            children: [1, 2, 3].map((index) => ({
+              name: `${folder}${index}.ts`,
+              path: `/root/${folder}/nested/${folder}${index}.ts`,
+              isDir: false,
+            })),
+          },
+          { name: "index.ts", path: `/root/${folder}/index.ts`, isDir: false },
+        ],
+      })),
+    },
+  ];
+  const allExpanded = new Set([
+    "/root",
+    ...["a", "b", "c"].flatMap((folder) => [`/root/${folder}`, `/root/${folder}/nested`]),
+  ]);
+  const rowsByPath = (rows: ReturnType<typeof buildVisibleFileTreeRows>) =>
+    new Map(rows.map((row) => [row.file.path, row]));
+
+  test("reuses the rows of untouched folders after an update elsewhere", () => {
+    const cache = createVisibleFileTreeRowsCache();
+    const files = createWideTree();
+    const before = rowsByPath(buildVisibleFileTreeRows(files, allExpanded, {}, cache));
+
+    const updated = updateFileInTree(files, "/root/b/nested/b2.ts", (file) => ({
+      ...file,
+      name: "renamed.ts",
+    }));
+    const rows = buildVisibleFileTreeRows(updated, allExpanded, {}, cache);
+    const after = rowsByPath(rows);
+
+    expect(rows).toEqual(buildVisibleFileTreeRows(updated, allExpanded));
+    expect(after.get("/root/a/nested/a1.ts")).toBe(before.get("/root/a/nested/a1.ts"));
+    expect(after.get("/root/c/nested")).toBe(before.get("/root/c/nested"));
+    expect(after.get("/root/b/nested/b1.ts")).not.toBe(before.get("/root/b/nested/b1.ts"));
+    expect(after.get("/root/b/nested/b2.ts")?.file.name).toBe("renamed.ts");
+  });
+
+  test("rebuilds only the folder whose expanded state changed", () => {
+    const cache = createVisibleFileTreeRowsCache();
+    const files = createWideTree();
+    const before = rowsByPath(buildVisibleFileTreeRows(files, allExpanded, {}, cache));
+
+    const collapsed = new Set(allExpanded);
+    collapsed.delete("/root/b/nested");
+    const rows = buildVisibleFileTreeRows(files, collapsed, {}, cache);
+
+    expect(rows).toEqual(buildVisibleFileTreeRows(files, collapsed));
+    expect(rows.some((row) => row.file.path === "/root/b/nested/b1.ts")).toBe(false);
+    expect(rowsByPath(rows).get("/root/a/nested/a1.ts")).toBe(before.get("/root/a/nested/a1.ts"));
+
+    const reopened = buildVisibleFileTreeRows(files, allExpanded, {}, cache);
+    expect(reopened).toEqual(buildVisibleFileTreeRows(files, allExpanded));
+  });
+
+  test("matches an uncached build across options, hidden roots and compact folders", () => {
+    const cache = createVisibleFileTreeRowsCache();
+    let files = createWideTree();
+    const scenarios = [
+      { expanded: allExpanded, options: {} },
+      { expanded: allExpanded, options: { compactFolders: true } },
+      { expanded: new Set(["/root", "/root/a"]), options: { compactFolders: true } },
+      { expanded: allExpanded, options: { hiddenRootPath: "/root" } },
+      { expanded: allExpanded, options: { sortOrder: "name" as const } },
+      { expanded: allExpanded, options: {} },
+    ];
+    for (const [index, scenario] of scenarios.entries()) {
+      files = updateFileInTree(files, `/root/${"abc"[index % 3]}/index.ts`, (file) => ({
+        ...file,
+        name: `index-${index}.ts`,
+      }));
+      expect(buildVisibleFileTreeRows(files, scenario.expanded, scenario.options, cache)).toEqual(
+        buildVisibleFileTreeRows(files, scenario.expanded, scenario.options),
+      );
+    }
+  });
+
+  test("derives guide ancestors from the assembled rows", () => {
+    const cache = createVisibleFileTreeRowsCache();
+    const rows = buildVisibleFileTreeRows(createWideTree(), allExpanded, {}, cache);
+    const index = rows.findIndex((row) => row.file.path === "/root/c/nested/c3.ts");
+
+    expect(getGuideAncestorRows(rows, index).map((row) => row?.file.path)).toEqual([
+      "/root",
+      "/root/c",
+      "/root/c/nested",
+    ]);
   });
 });
 

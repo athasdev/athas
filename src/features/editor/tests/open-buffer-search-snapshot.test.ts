@@ -15,7 +15,6 @@ const buffer = (id: string, overrides: Partial<PaneContent> = {}): PaneContent =
     savedContent: "",
     isDirty: false,
     isVirtual: false,
-    tokens: [],
     ...overrides,
   }) as PaneContent;
 

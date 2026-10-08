@@ -22,10 +22,7 @@ import { useCliOpen } from "@/features/window/hooks/use-cli-open";
 import { useContextMenuPrevention } from "@/features/window/hooks/use-context-menu-prevention";
 import { useDeepLink } from "@/features/window/hooks/use-deep-link";
 import { useExternalNavigationGuard } from "@/features/window/hooks/use-external-navigation-guard";
-import { useFontLoading } from "@/features/window/hooks/use-font-loading";
 import { usePlatformSetup } from "@/features/window/hooks/use-platform-setup";
-import { useSettingsSync } from "@/features/window/hooks/use-settings-sync";
-import { useNativeMenuState } from "@/features/window/hooks/use-native-menu-state";
 import { useWindowDocumentState } from "@/features/window/hooks/use-window-document-state";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import {
@@ -38,10 +35,7 @@ export function useAppBootstrap() {
   const initializeOnboarding = useOnboardingStore((state) => state.actions.initialize);
 
   usePlatformSetup();
-  useSettingsSync();
-  useNativeMenuState();
   useWindowDocumentState();
-  useFontLoading();
   useDeepLink();
   useCliOpen();
   useExternalNavigationGuard();

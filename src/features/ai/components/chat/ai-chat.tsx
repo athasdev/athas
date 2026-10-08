@@ -59,7 +59,8 @@ import {
 } from "@/ui/message-scroller";
 import { cn } from "@/utils/cn";
 import { AgentStartView } from "../agent-start-view";
-import { useChatActions, useChatState } from "../../hooks/use-chat-store";
+import { useChatSession } from "../../hooks/use-chat-store";
+import { EMPTY_CHAT_MESSAGES } from "../../stores/ai-chat/chat-normalization";
 import AIChatInputBar from "../input/chat-input-bar";
 import {
   selectSessionQuestions,
@@ -76,6 +77,8 @@ import { AcpQuestionPrompt } from "./acp-question-prompt";
 import { AcpUrlQuestionPrompt } from "./acp-url-question-prompt";
 import { ChatHeader } from "./chat-header";
 import { ChatMessages } from "./chat-messages";
+
+const EMPTY_QUEUE: QueuedAgentMessage[] = [];
 
 const AIChat = memo(function AIChat({
   className,
@@ -95,8 +98,11 @@ const AIChat = memo(function AIChat({
     enterprisePolicy?.managedMode && !enterprisePolicy.aiChatEnabled,
   );
 
-  const chatState = useChatState();
-  const chatActions = useChatActions();
+  const chatActions = useAIChatStore((state) => state.actions);
+  const currentChatId = useAIChatStore((state) => state.currentChatId);
+  const selectedAgentId = useAIChatStore((state) => state.selectedAgentId);
+  const outputStyle = useAIChatStore((state) => state.outputStyle);
+  const pendingAgentLaunchRequest = useAIChatStore((state) => state.pendingAgentLaunchRequest);
   const { showToast } = useToast();
 
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -114,17 +120,14 @@ const AIChat = memo(function AIChat({
   const composerContext = useComposerContextSelection(peekAgentDraft(surfaceId));
   const { selectedBufferIds, selectedEditorContexts, selectedFilesPaths } =
     composerContext.inputProps;
-  const effectiveChatId = chatId ?? chatState.currentChatId;
+  const effectiveChatId = chatId ?? currentChatId;
   const previousChatId = useRef(effectiveChatId);
   useEffect(() => {
     if (!effectiveChatId) return;
     return markAgentChatVisible(effectiveChatId);
   }, [effectiveChatId]);
-  const currentChat = useMemo(
-    () => chatState.chats.find((chat) => chat.id === effectiveChatId),
-    [chatState.chats, effectiveChatId],
-  );
-  const currentAgentId = currentChat?.agentId ?? chatState.selectedAgentId;
+  const currentChat = useChatSession(effectiveChatId);
+  const currentAgentId = currentChat?.agentId ?? selectedAgentId;
   const chatSessionId = currentChat?.acpSessionId ?? null;
   const sessionNotices = useAcpNoticesStore((state) =>
     chatSessionId ? state.notices[chatSessionId] : undefined,
@@ -145,19 +148,37 @@ const AIChat = memo(function AIChat({
     currentAgentId === "custom"
       ? (currentChat?.modelId ?? currentChat?.providerId ?? aiProviderId)
       : currentAgentId;
-  const activeRun = effectiveChatId ? chatState.agentRuns[effectiveChatId] : undefined;
+  const activeRun = useAIChatStore((state) =>
+    effectiveChatId ? state.agentRuns[effectiveChatId] : undefined,
+  );
   const isSurfaceTyping = Boolean(activeRun);
   const surfaceStreamingMessageId = activeRun?.assistantMessageId ?? null;
-  const queuedMessages = effectiveChatId
-    ? (chatState.agentMessageQueues[effectiveChatId] ?? [])
-    : [];
-  const chatMessageLoadState = effectiveChatId
-    ? chatState.chatMessageLoadStates[effectiveChatId]
-    : "loaded";
+  const queuedMessages = useAIChatStore(
+    (state) =>
+      (effectiveChatId ? state.agentMessageQueues[effectiveChatId] : undefined) ?? EMPTY_QUEUE,
+  );
+  const chatMessageLoadState = useAIChatStore((state) =>
+    effectiveChatId ? state.chatMessageLoadStates[effectiveChatId] : "loaded",
+  );
   const isChatMessagesLoaded = !effectiveChatId || chatMessageLoadState === "loaded";
+  // The messages change with every streamed frame; only a search needs them here.
+  const hasMessageSearchQuery = messageSearchQuery.trim().length > 0;
+  const searchedMessages = useAIChatStore((state) =>
+    hasMessageSearchQuery && effectiveChatId
+      ? (state.messagesByChat[effectiveChatId] ?? EMPTY_CHAT_MESSAGES)
+      : EMPTY_CHAT_MESSAGES,
+  );
+  const messageCount = useAIChatStore((state) =>
+    effectiveChatId ? (state.messagesByChat[effectiveChatId]?.length ?? 0) : 0,
+  );
+  const lastMessageError = useAIChatStore((state) => {
+    const messages = effectiveChatId ? state.messagesByChat[effectiveChatId] : undefined;
+    const lastMessage = messages?.[messages.length - 1];
+    return lastMessage?.role === "assistant" ? lastMessage.error : undefined;
+  });
   const messageSearchMatches = useMemo(
-    () => getMessageSearchMatches(currentChat?.messages ?? [], messageSearchQuery),
-    [currentChat?.messages, messageSearchQuery],
+    () => getMessageSearchMatches(searchedMessages, messageSearchQuery),
+    [searchedMessages, messageSearchQuery],
   );
   const activeMessageSearchMatch = messageSearchMatches[activeMessageSearchIndex] ?? null;
 
@@ -394,7 +415,7 @@ const AIChat = memo(function AIChat({
         surfaceChatId: effectiveChatId,
         isBoundToChat: Boolean(chatId),
         fallbackProviderId: aiProviderId,
-        outputStyle: chatState.outputStyle,
+        outputStyle,
         allProjectFiles,
         selectedFilesPaths,
         abortControllerRef,
@@ -601,7 +622,7 @@ const AIChat = memo(function AIChat({
   );
 
   useEffect(() => {
-    const pendingLaunch = chatState.pendingAgentLaunchRequest;
+    const pendingLaunch = pendingAgentLaunchRequest;
     if (!pendingLaunch) return;
     if (pendingLaunch.chatId !== effectiveChatId) return;
     if (activeBuffer?.type !== "agent") return;
@@ -642,7 +663,7 @@ const AIChat = memo(function AIChat({
     sessionProviderId,
     currentAgentId,
     isSurfaceTyping,
-    chatState.pendingAgentLaunchRequest,
+    pendingAgentLaunchRequest,
     surfaceStreamingMessageId,
     activeBuffer,
     composerContext.append,
@@ -660,14 +681,10 @@ const AIChat = memo(function AIChat({
     [acpEvents, sessionNotices],
   );
   const currentPermission = permissionQueue[0];
-  const isNewSession =
-    isChatMessagesLoaded && (currentChat?.messages.length ?? 0) === 0 && acpEvents.length === 0;
+  const isNewSession = isChatMessagesLoaded && messageCount === 0 && acpEvents.length === 0;
   const currentQuestion = currentPermission ? undefined : agentQuestions[0];
   const useInitialComposer = isNewSession && !currentPermission && !currentQuestion;
-  const lastMessage = currentChat?.messages[currentChat.messages.length - 1];
-  const lastTurnFailed = lastMessage?.role === "assistant" && Boolean(lastMessage.error);
-  const lastTurnFailedOffline =
-    isOnline && lastTurnFailed && lastMessage?.error?.code === "offline";
+  const lastTurnFailedOffline = isOnline && lastMessageError?.code === "offline";
   const handleQuestionAnswer = async (response: AcpElicitationResponse) => {
     if (!currentQuestion) return;
     const isLink = currentQuestion.request.mode === "url";

@@ -12,6 +12,7 @@ import type {
   ApiModelSelection,
   Chat,
   ChatMode,
+  ChatSession,
   Message,
   OutputStyle,
   ImageContent,
@@ -49,7 +50,16 @@ export interface AgentRunState {
 export type ChatMessageLoadState = "loading" | "loaded" | "error";
 
 export interface AIChatState {
-  chats: Chat[];
+  /**
+   * Every chat's metadata, without messages. A streamed token never touches this list, so the
+   * session sidebar, history and headers can subscribe to it whole.
+   */
+  chats: ChatSession[];
+  /**
+   * Each chat's messages in order, by chat id. A streamed token replaces only the message it
+   * lands in (and this chat's array); every other message keeps its identity.
+   */
+  messagesByChat: Record<string, Message[]>;
   currentChatId: string | null;
   selectedAgentId: AgentType;
   pendingAgentLaunchRequest: PendingAgentLaunchRequest | null;
@@ -173,7 +183,9 @@ export interface AIChatActions {
 
   getWorkspaceSessionSnapshot: () => AIWorkspaceSessionSnapshot;
   restoreWorkspaceSession: (snapshot: AIWorkspaceSessionSnapshot | null | undefined) => void;
+  /** The current chat with its messages, composed for callers outside React. */
   getCurrentChat: () => Chat | undefined;
+  /** A chat with its messages, composed for callers outside React. */
   getChatById: (chatId: string) => Chat | undefined;
   getMessagesForChat: (chatId: string) => Message[];
 }

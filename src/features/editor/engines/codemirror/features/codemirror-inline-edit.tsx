@@ -3,6 +3,7 @@ import { useOnClickOutside } from "usehooks-ts";
 import { InlineEditPopover } from "../../../inline-edit/inline-edit-popover";
 import type { InlineEditPreview } from "../../../inline-edit/inline-edit-preview";
 import { useInlineEdit } from "../../../inline-edit/use-inline-edit";
+import { useBufferText } from "../../../hooks/use-buffer-text";
 import { useEditorViewSettings } from "../../../hooks/use-editor-view-settings";
 import { useShallow } from "zustand/react/shallow";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
@@ -38,16 +39,13 @@ export function CodeMirrorInlineEdit({ host }: { host: CodeMirrorHost }) {
         (state: { buffers: PaneContent[] }) => {
           const found = getBufferById(state.buffers, bufferId);
           if (found?.type !== "editor") return null;
-          return {
-            id: found.id,
-            path: found.path,
-            content: inlineEditRequested ? found.content : "",
-          };
+          return { id: found.id, path: found.path };
         },
-        [bufferId, inlineEditRequested],
+        [bufferId],
       ),
     ),
   );
+  const inlineEditContent = useBufferText(inlineEditRequested ? bufferId : null);
   const selection = useEditorStateStore((state) =>
     host.isActiveSurface && inlineEditRequested ? state.selection : undefined,
   );
@@ -116,7 +114,7 @@ export function CodeMirrorInlineEdit({ host }: { host: CodeMirrorHost }) {
     buffer: buffer
       ? {
           id: buffer.id,
-          content: buffer.content,
+          content: inlineEditContent,
           path: buffer.path,
           language: host.languageId ?? "",
         }

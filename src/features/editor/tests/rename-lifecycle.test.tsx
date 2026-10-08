@@ -51,7 +51,6 @@ function buffer(id = "a", filePath = path): EditorContent {
     isPinned: false,
     isActive: true,
     language: "typescript",
-    tokens: [],
   };
 }
 function Harness({ filePath = path }: { filePath?: string }) {

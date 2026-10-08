@@ -16,7 +16,6 @@ function makeEditorBuffer(id: string, path: string, isVirtual = false): EditorCo
     isPreview: false,
     isActive: false,
     language: "typescript",
-    tokens: [],
   };
 }
 

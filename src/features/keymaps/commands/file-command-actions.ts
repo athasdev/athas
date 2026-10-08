@@ -1,6 +1,7 @@
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { usePaneStore } from "@/features/panes/stores/pane.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { requestWindowClose } from "@/features/window/utils/request-window-close";
 import { useKeymapStore } from "../stores/keymaps.store";
@@ -44,13 +45,26 @@ export async function revertActiveFile(): Promise<void> {
   await bufferStore.actions.reloadBufferFromDisk(activeBuffer.id);
 }
 
-export function closeActiveTab(): void {
-  if (isTerminalFocused()) return;
+/** The tab shown in the focused pane, falling back to the last active tab. */
+function getActivePaneBufferId(): string | null {
+  const { buffers, activeBufferId } = useBufferStore.getState();
+  const paneBufferId = usePaneStore.getState().actions.getActivePane()?.activeBufferId;
+  return (
+    [paneBufferId, activeBufferId].find(
+      (bufferId) => bufferId && buffers.some((buffer) => buffer.id === bufferId),
+    ) ?? null
+  );
+}
 
-  const bufferStore = useBufferStore.getState();
-  const activeBuffer = bufferStore.buffers.find((b) => b.id === bufferStore.activeBufferId);
-  if (activeBuffer) {
-    bufferStore.actions.closeBuffer(activeBuffer.id);
+export function closeActiveTab(): void {
+  if (isTerminalFocused()) {
+    window.dispatchEvent(new CustomEvent("close-active-terminal"));
+    return;
+  }
+
+  const bufferId = getActivePaneBufferId();
+  if (bufferId) {
+    useBufferStore.getState().actions.closeBuffer(bufferId);
     return;
   }
 
@@ -65,29 +79,43 @@ export function closeAllTabs(): void {
   useBufferStore.getState().actions.handleCloseAllTabs();
 }
 
-export function closeOtherTabs(): void {
-  const bufferStore = useBufferStore.getState();
-  if (!bufferStore.activeBufferId) return;
+/** Tab commands act on the active tab, or on the tab named by `{ bufferId }` (tab context menu). */
+function getTargetBufferId(args: unknown): string | null {
+  if (
+    typeof args === "object" &&
+    args !== null &&
+    "bufferId" in args &&
+    typeof args.bufferId === "string"
+  ) {
+    return args.bufferId;
+  }
 
-  bufferStore.actions.handleCloseOtherTabs(bufferStore.activeBufferId);
+  return useBufferStore.getState().activeBufferId;
+}
+
+export function closeOtherTabs(args?: unknown): void {
+  const bufferId = getTargetBufferId(args);
+  if (!bufferId) return;
+
+  useBufferStore.getState().actions.handleCloseOtherTabs(bufferId);
 }
 
 export function closeSavedTabs(): void {
   useBufferStore.getState().actions.handleCloseSavedTabs();
 }
 
-export function closeTabsToLeft(): void {
-  const bufferStore = useBufferStore.getState();
-  if (!bufferStore.activeBufferId) return;
+export function closeTabsToLeft(args?: unknown): void {
+  const bufferId = getTargetBufferId(args);
+  if (!bufferId) return;
 
-  bufferStore.actions.handleCloseTabsToLeft(bufferStore.activeBufferId);
+  useBufferStore.getState().actions.handleCloseTabsToLeft(bufferId);
 }
 
-export function closeTabsToRight(): void {
-  const bufferStore = useBufferStore.getState();
-  if (!bufferStore.activeBufferId) return;
+export function closeTabsToRight(args?: unknown): void {
+  const bufferId = getTargetBufferId(args);
+  if (!bufferId) return;
 
-  bufferStore.actions.handleCloseTabsToRight(bufferStore.activeBufferId);
+  useBufferStore.getState().actions.handleCloseTabsToRight(bufferId);
 }
 
 export async function reopenClosedTab(): Promise<void> {
@@ -95,7 +123,10 @@ export async function reopenClosedTab(): Promise<void> {
 }
 
 export function createNewFile(): void {
-  if (isTerminalFocused()) return;
+  if (isTerminalFocused()) {
+    window.dispatchEvent(new CustomEvent("terminal-new"));
+    return;
+  }
 
   useFileSystemStore.getState().handleCreateNewFile();
 }

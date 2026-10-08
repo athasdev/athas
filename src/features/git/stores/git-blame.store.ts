@@ -1,8 +1,7 @@
 import { createStore } from "zustand/vanilla";
 import { createWorkspaceScopedStore } from "@/features/workspace/stores/create-workspace-scoped-store";
 import { getResolvedGitBlame } from "../api/git-blame-api";
-import type { GitBlame, GitBlameLine } from "../types/git.types";
-import { findGitBlameLine } from "../utils/git-blame-lines";
+import type { GitBlame } from "../types/git.types";
 
 interface GitBlameState {
   blameData: Map<string, GitBlame>;
@@ -15,15 +14,12 @@ interface GitBlameState {
   revision: number;
   isLoading: Map<string, boolean>;
   errors: Map<string, string>;
-  fileToRepo: Map<string, string>;
 
   actions: {
     loadBlameForFile: (repoPath: string, filePath: string, content: string) => Promise<void>;
     /** Marks loaded blame as outdated; it stays visible until the next load replaces it. */
     invalidateBlameForFile: (repoPath: string, filePath: string) => void;
     clearAllBlame: () => void;
-    getBlameForLine: (filePath: string, lineNumber: number) => GitBlameLine | null;
-    getRepoPath: (filePath: string) => string | null;
   };
 }
 
@@ -41,7 +37,6 @@ export const createGitBlameStore = () =>
     revision: 0,
     isLoading: new Map(),
     errors: new Map(),
-    fileToRepo: new Map(),
 
     actions: {
       loadBlameForFile: async (repoPath, filePath, content) => {
@@ -81,7 +76,6 @@ export const createGitBlameStore = () =>
           set({
             blameData: new Map(get().blameData).set(cacheKey, result.blame),
             blameContent: new Map(get().blameContent).set(cacheKey, content),
-            fileToRepo: new Map(get().fileToRepo).set(filePath, result.repoPath),
             isLoading: new Map(get().isLoading).set(cacheKey, false),
           });
         } else {
@@ -114,29 +108,7 @@ export const createGitBlameStore = () =>
           revision: get().revision + 1,
           isLoading: new Map(),
           errors: new Map(),
-          fileToRepo: new Map(),
         });
-      },
-
-      getBlameForLine: (filePath: string, lineNumber: number) => {
-        const suffix = `\0${filePath}`;
-        const cacheKeys = Array.from(get().blameData.keys());
-        let cacheKey: string | undefined;
-        for (let index = cacheKeys.length - 1; index >= 0; index--) {
-          if (cacheKeys[index].endsWith(suffix)) {
-            cacheKey = cacheKeys[index];
-            break;
-          }
-        }
-        const blame = cacheKey ? get().blameData.get(cacheKey) : undefined;
-
-        if (!blame) return null;
-
-        return findGitBlameLine(blame.lines, lineNumber);
-      },
-
-      getRepoPath: (filePath: string) => {
-        return get().fileToRepo.get(filePath) ?? null;
       },
     },
   }));

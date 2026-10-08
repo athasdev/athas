@@ -33,6 +33,7 @@ import { toast } from "sonner";
 import VimStatusIndicator from "@/features/vim/components/vim-status-indicator";
 import { IntelligenceCompletionStatus } from "./intelligence-completion-status";
 import { getFilenameFromPath } from "@/features/file-system/controllers/file-utils";
+import { readBufferText } from "@/features/editor/services/buffer-text";
 
 const editorMenuRowClass =
   "group flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-accent";
@@ -214,7 +215,9 @@ export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {})
         ? useBufferStore.getState().buffers.find((buffer) => buffer.id === resolvedBufferId)
         : null;
       const bufferContent =
-        fullActiveBuffer && hasTextContent(fullActiveBuffer) ? fullActiveBuffer.content : "";
+        fullActiveBuffer && hasTextContent(fullActiveBuffer)
+          ? readBufferText(fullActiveBuffer)
+          : "";
       await lspClient.notifyDocumentOpen(activeBuffer.path, bufferContent);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to start language server");
@@ -262,7 +265,9 @@ export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {})
             .getState()
             .buffers.find((buffer) => buffer.id === resolvedBufferId);
           const bufferContent =
-            fullActiveBuffer && hasTextContent(fullActiveBuffer) ? fullActiveBuffer.content : "";
+            fullActiveBuffer && hasTextContent(fullActiveBuffer)
+              ? readBufferText(fullActiveBuffer)
+              : "";
           await lspClient.notifyDocumentOpen(activeBuffer.path, bufferContent);
         } catch {
           // LSP restart is best-effort

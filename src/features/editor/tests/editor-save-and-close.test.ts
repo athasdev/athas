@@ -32,7 +32,6 @@ function editor(id: string, dirty = true): EditorContent {
     isPreview: false,
     isActive: false,
     language: "typescript",
-    tokens: [],
   };
 }
 

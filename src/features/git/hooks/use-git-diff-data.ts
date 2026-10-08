@@ -25,7 +25,7 @@ export const useDiffData = (bufferId: string): UseDiffDataReturn => {
     return getBufferById(state.buffers, bufferId);
   });
   const { updateBufferContent, closeBuffer } = useBufferStore.use.actions();
-  const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
+  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

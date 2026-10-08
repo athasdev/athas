@@ -337,8 +337,8 @@ export function PaneContainer({ pane }: PaneContainerProps) {
   const activePaneId = usePaneStore.use.activePaneId();
   const { reorderPaneBuffers } = usePaneStore.use.actions();
   const { closeBufferForce, openTerminalBuffer } = useBufferStore.use.actions();
-  const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
-  const handleFileOpen = useFileSystemStore.use.handleFileOpen?.();
+  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+  const handleFileOpen = useFileSystemStore((state) => state.handleFileOpen);
   const horizontalBufferCarousel = useSettingsStore((state) => state.settings.horizontalTabScroll);
 
   useEffect(prefetchPaneSurfaces, []);

@@ -76,7 +76,6 @@ const makeFileBuffer = (
       savedContent: "content",
       isDirty: false,
       isVirtual: false,
-      tokens: [],
     };
   }
 

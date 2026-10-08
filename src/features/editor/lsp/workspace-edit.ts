@@ -1,4 +1,6 @@
 import { captureBufferStoreOwner, isBufferStoreOwnerLive } from "../services/buffer-store-owner";
+import { readBufferRevision, readBufferText } from "../services/buffer-text";
+import { flushAllLiveDocuments } from "../services/live-document-registry";
 import { useBufferStore } from "../stores/buffer.store";
 import { getWorkspaceResourceProvider } from "@/features/file-system/services/workspace-resource-provider";
 import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
@@ -249,6 +251,9 @@ export function captureWorkspaceEditContext(
   workspaceId = workspaceRuntimeRegistry.getActiveWorkspaceId(),
 ): WorkspaceEditContext {
   const { store } = captureBufferStoreOwner(workspaceId);
+  // The snapshot below must hold the text as the user sees it, including edits an editor view
+  // has not written to the store yet.
+  flushAllLiveDocuments();
   const sources = new Map<string, EditorContent>();
   for (const buffer of store.getState().buffers)
     if (buffer.type === "editor") sources.set(normalizeWorkspaceEditPath(buffer.path), buffer);
@@ -276,8 +281,8 @@ function sameSource(current: EditorContent | undefined, source: EditorContent) {
     current &&
     current.id === source.id &&
     current.path === source.path &&
-    current.content === source.content &&
-    (current.contentRevision ?? 0) === (source.contentRevision ?? 0) &&
+    readBufferRevision(current) === (source.contentRevision ?? 0) &&
+    readBufferText(current) === source.content &&
     !current.readOnly &&
     !current.isVirtual
   );
@@ -391,7 +396,7 @@ function validatePrepared(context: WorkspaceEditContext, entry: PreparedEdit) {
         (current.readOnly ||
           current.isVirtual ||
           current.isDirty ||
-          current.content !== entry.content)
+          readBufferText(current) !== entry.content)
   )
     throw new Error(`The document changed before the edit: ${entry.path}`);
 }
@@ -437,12 +442,13 @@ export function applyWorkspaceEdit(
             if (!historyTracked.has(buffer.id)) {
               trackImmediateBufferHistoryChange({
                 bufferId: buffer.id,
-                currentContent: buffer.content,
+                currentContent: readBufferText(buffer),
                 nextContent: entry.nextContent,
                 workspaceId: context.workspaceId,
               });
               historyTracked.add(buffer.id);
             } else syncBufferHistoryContent(buffer.id, entry.nextContent, context.workspaceId);
+            const expectedRevision = readBufferRevision(buffer) + 1;
             context.store
               .getState()
               .actions.updateBufferContent(buffer.id, entry.nextContent, true);
@@ -452,7 +458,7 @@ export function applyWorkspaceEdit(
               !applied ||
               applied.id !== buffer.id ||
               applied.content !== entry.nextContent ||
-              (applied.contentRevision ?? 0) !== (buffer.contentRevision ?? 0) + 1
+              (applied.contentRevision ?? 0) !== expectedRevision
             )
               throw new Error(`The document changed while applying the edit: ${entry.path}`);
             appliedSources.set(entry.path, applied);
@@ -474,7 +480,7 @@ export function applyWorkspaceEdit(
               !opened.isVirtual &&
               (opened.savedContent === entry.content || opened.savedContent === entry.nextContent)
             ) {
-              if (!opened.readOnly && !opened.isDirty && opened.content === entry.content)
+              if (!opened.readOnly && !opened.isDirty && readBufferText(opened) === entry.content)
                 context.store
                   .getState()
                   .actions.updateBufferContent(opened.id, entry.nextContent, false);

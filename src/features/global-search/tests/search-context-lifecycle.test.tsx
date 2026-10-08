@@ -52,7 +52,6 @@ function editor(content = "draft before\nfoo\ndraft after"): EditorContent {
     isPinned: false,
     isActive: true,
     language: "typescript",
-    tokens: [],
   };
 }
 const owner = () => useBufferStore.getStore("owner");

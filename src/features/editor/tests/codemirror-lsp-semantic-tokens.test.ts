@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { EditorState, Text } from "@codemirror/state";
-import { EditorView } from "@codemirror/view";
+import { EditorState, type Extension, Text } from "@codemirror/state";
+import { type DecorationSet, EditorView, type ViewPlugin } from "@codemirror/view";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
 const mocks = vi.hoisted(() => ({
@@ -24,8 +24,12 @@ vi.mock("@/features/editor/lsp/stores/lsp.store", () => ({
   },
 }));
 
-const { semanticTokenRanges, toStandardSemanticTokenType } =
-  await import("../engines/codemirror/lsp/semantic-token-styles");
+const {
+  decodeSemanticTokens,
+  forEachSemanticTokenRange,
+  semanticTokenRanges,
+  toStandardSemanticTokenType,
+} = await import("../engines/codemirror/lsp/semantic-token-styles");
 const { semanticTokensExtension } =
   await import("../engines/codemirror/features/lsp-semantic-tokens");
 
@@ -97,6 +101,102 @@ describe("CodeMirror semantic tokens", () => {
     await vi.waitFor(() =>
       expect(view!.dom.querySelector(".cm-athas-semantic-function")?.textContent).toBe("  ma"),
     );
+  });
+
+  it("builds ranges for a slice of lines exactly as the full pass does", () => {
+    const lines = Array.from({ length: 50 }, (_, index) => `let v${index} = f(v${index});`);
+    const doc = Text.of(lines);
+    const data: number[] = [];
+    for (let line = 0; line < lines.length; line += 1) {
+      data.push(line === 0 ? 0 : 1, 4, 3, 0, line % 3 === 0 ? 2 : 0);
+      data.push(0, 2, 4, 1, line % 5 === 0 ? 4 : 0);
+      data.push(0, 1, 2, 1, 0);
+    }
+    const response = { ...legend, data: Uint32Array.from(data) };
+    const full = semanticTokenRanges(response, doc);
+    const decoded = decodeSemanticTokens(response);
+    const slice: { from: number; to: number; className: string }[] = [];
+    forEachSemanticTokenRange(decoded, doc, 10, 19, (from, to, className) =>
+      slice.push({ from, to, className }),
+    );
+    const sliceFrom = doc.line(11).from;
+    const sliceTo = doc.line(20).to;
+    expect(slice).toEqual(full.filter((range) => range.from >= sliceFrom && range.to <= sliceTo));
+    expect(slice.length).toBe(20);
+  });
+
+  it("decorates only around the visible ranges and rebuilds through pending edits", async () => {
+    const lineCount = 5000;
+    const data: number[] = [];
+    for (let line = 0; line < lineCount; line += 1) data.push(line === 0 ? 0 : 1, 0, 4, 1, 0);
+    const client = {
+      getActiveServerEntryForFile: () => ({}),
+      isDocumentOpen: () => true,
+      getSemanticTokens: vi.fn(async () => ({ ...legend, data: Uint32Array.from(data) })),
+    };
+    const extension = semanticTokensExtension("/repo/a.ts", client, 10_000) as Extension[];
+    view = new EditorView({
+      state: EditorState.create({
+        doc: Array.from({ length: lineCount }, () => "make()").join("\n"),
+        extensions: extension,
+      }),
+      parent: document.body,
+    });
+    const plugin = extension[0] as ViewPlugin<{ decorations: DecorationSet }>;
+    const decorationsOf = () => {
+      const ranges: { from: number; to: number }[] = [];
+      view!.plugin(plugin)!.decorations.between(0, view!.state.doc.length, (from, to) => {
+        ranges.push({ from, to });
+      });
+      return ranges;
+    };
+    await vi.waitFor(() => expect(decorationsOf().length).toBeGreaterThan(0));
+    expect(decorationsOf().length).toBeLessThan(lineCount / 2);
+
+    const doc = view.state.doc;
+    const lastLine = doc.line(lineCount);
+    Object.defineProperty(view, "visibleRanges", {
+      configurable: true,
+      get: () => [{ from: doc.line(lineCount - 10).from, to: view!.state.doc.length }],
+    });
+    view.dispatch({ changes: { from: lastLine.from, insert: "  " } });
+
+    const ranges = decorationsOf();
+    expect(ranges[ranges.length - 1]).toEqual({ from: lastLine.from + 2, to: lastLine.from + 6 });
+    expect(ranges.some((range) => range.from < doc.line(100).from)).toBe(false);
+  });
+
+  it("keeps the built window when typing at the end of the document", async () => {
+    const client = {
+      getActiveServerEntryForFile: () => ({}),
+      isDocumentOpen: () => true,
+      getSemanticTokens: vi.fn(async () => ({
+        ...legend,
+        data: Uint32Array.from([0, 0, 4, 1, 0]),
+      })),
+    };
+    const extension = semanticTokensExtension("/repo/a.ts", client, 10_000) as Extension[];
+    view = new EditorView({
+      state: EditorState.create({ doc: "make()", extensions: extension }),
+      parent: document.body,
+    });
+    const plugin = extension[0] as ViewPlugin<{ decorations: DecorationSet }>;
+    await vi.waitFor(() => expect(view!.plugin(plugin)!.decorations.size).toBe(1));
+
+    let visibleRangeReads = 0;
+    Object.defineProperty(view, "visibleRanges", {
+      configurable: true,
+      get: () => {
+        visibleRangeReads += 1;
+        return [{ from: 0, to: view!.state.doc.length }];
+      },
+    });
+    for (const character of "abc") {
+      view.dispatch({ changes: { from: view.state.doc.length, insert: character } });
+    }
+
+    expect(visibleRangeReads).toBe(3);
+    expect(view.dom.querySelector(".cm-athas-semantic-function")?.textContent).toBe("make");
   });
 
   it("waits before retrying a failed request for the same text", async () => {

@@ -1,6 +1,7 @@
 import type { EditorSelectionContext } from "@/features/ai/types/ai-context.types";
 import type { EditorContent } from "@/features/panes/types/pane-content.types";
 import type { Range } from "@/features/editor/types/editor.types";
+import { readBufferText } from "../services/buffer-text";
 
 export function createEditorSelectionContext(
   buffer: EditorContent,
@@ -14,7 +15,7 @@ export function createEditorSelectionContext(
   return createEditorSelectionContextFromText(
     buffer,
     { start, end },
-    buffer.content.slice(start.offset, end.offset),
+    readBufferText(buffer).slice(start.offset, end.offset),
     languageId,
   );
 }

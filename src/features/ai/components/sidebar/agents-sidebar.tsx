@@ -12,7 +12,7 @@ import { openAgentHistoryChat } from "@/features/ai/lib/open-agent-history";
 import { canBrowseAgentSessions, openAgentSessions } from "@/features/ai/lib/open-agent-sessions";
 import { isAcpAgent } from "@/features/ai/services/ai-chat-service";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
-import type { Chat } from "@/features/ai/types/ai-chat.types";
+import type { ChatSession } from "@/features/ai/types/ai-chat.types";
 import { getModelById, getProviderById } from "@/features/ai/types/providers.types";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useGitStore } from "@/features/git/stores/git.store";
@@ -65,7 +65,7 @@ interface AgentRowContext {
   workspacePath: string | null;
 }
 
-function AgentRow({ chat, context }: { chat: Chat; context: AgentRowContext }) {
+function AgentRow({ chat, context }: { chat: ChatSession; context: AgentRowContext }) {
   const isInAnotherWindow = useAgentWindowStore((state) => Boolean(state.sessions[chat.id]));
   const attention = useChatAttention(chat.id);
   const { deleteChat, updateChatTitle, setChatPinned, setChatArchived } = useAIChatStore(
@@ -160,7 +160,7 @@ function AgentRow({ chat, context }: { chat: Chat; context: AgentRowContext }) {
   );
 }
 
-function ArchivedAgentRow({ chat }: { chat: Chat }) {
+function ArchivedAgentRow({ chat }: { chat: ChatSession }) {
   const { deleteChat, setChatArchived } = useAIChatStore((state) => state.actions);
 
   return (
@@ -232,7 +232,7 @@ export function AgentsSidebar() {
     );
     return isAcpAgent(agentId) && canBrowseAgentSessions(status, agentId) ? agentId : null;
   });
-  const workspacePath = useFileSystemStore.use.rootFolderPath?.() ?? null;
+  const workspacePath = useFileSystemStore((state) => state.rootFolderPath) ?? null;
   const aiProviderId = useSettingsStore((state) => state.settings.aiProviderId);
   const aiModelId = useSettingsStore((state) => state.settings.aiModelId);
   const currentBranch = useGitStore((state) => state.gitStatus?.branch ?? null);
@@ -249,7 +249,7 @@ export function AgentsSidebar() {
   };
 
   const { pinned, recent, archived } = useMemo(() => {
-    const matches = (chat: Chat) => matchesSearchQuery(query, [chat.title]);
+    const matches = (chat: ChatSession) => matchesSearchQuery(query, [chat.title]);
     const active = selectAgentSessions(chats, {
       workspacePath,
       keepIds: [currentChatId],

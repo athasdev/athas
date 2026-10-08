@@ -3,7 +3,10 @@ import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import type { AgentWindowDraft } from "./agent-window-drafts";
 
 export interface AgentWindowSnapshot {
-  chat: Pick<AIChatState, "chats" | "currentChatId" | "selectedAgentId" | "chatMessageLoadStates">;
+  chat: Pick<
+    AIChatState,
+    "chats" | "messagesByChat" | "currentChatId" | "selectedAgentId" | "chatMessageLoadStates"
+  >;
   workspacePath: string | undefined;
   buffers: PaneContent[];
   activeBufferId: string | null;

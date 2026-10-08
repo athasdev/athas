@@ -94,13 +94,27 @@ function tokenClassName(tokenType: string, readonly: boolean, deprecated: boolea
 }
 
 /**
- * Translates the server's relative token stream into document ranges in one pass, clamping
- * tokens to their line and dropping unknown, empty, out-of-range, and overlapping tokens.
+ * A server token stream resolved to absolute positions, keeping only tokens with a length and a
+ * colored type. Positions are still line/character pairs so ranges can be built for any slice of
+ * lines without walking the whole stream again.
  */
-export function semanticTokenRanges(
-  response: LspSemanticTokensResponse,
-  doc: Text,
-): SemanticTokenRange[] {
+export interface DecodedSemanticTokens {
+  count: number;
+  /** Zero-based line of each token, ascending. */
+  lines: Uint32Array;
+  chars: Uint32Array;
+  lengths: Uint32Array;
+  /** Index into `classNames`. */
+  styles: Uint32Array;
+  classNames: readonly string[];
+}
+
+const STYLE_READONLY = 1;
+const STYLE_DEPRECATED = 2;
+const STYLE_VARIANTS = 4;
+
+/** One integer pass over the server's relative encoding; no document access and no strings. */
+export function decodeSemanticTokens(response: LspSemanticTokensResponse): DecodedSemanticTokens {
   const { data } = response;
   const tokenTypes = response.tokenTypes.map(toStandardSemanticTokenType);
   const modifierNames = response.tokenModifiers.map(normalizedTokenName);
@@ -110,18 +124,32 @@ export function semanticTokenRanges(
   };
   const readonlyBit = modifierBit("readonly");
   const deprecatedBit = modifierBit("deprecated");
-  const integerCount = data.length - (data.length % 5);
-  const ranges: SemanticTokenRange[] = [];
 
+  const classNames: string[] = [];
+  for (const tokenType of tokenTypes) {
+    for (let variant = 0; variant < STYLE_VARIANTS; variant += 1) {
+      classNames.push(
+        tokenType === undefined
+          ? ""
+          : tokenClassName(
+              tokenType,
+              (variant & STYLE_READONLY) !== 0,
+              (variant & STYLE_DEPRECATED) !== 0,
+            ),
+      );
+    }
+  }
+
+  const capacity = Math.floor(data.length / 5);
+  const lines = new Uint32Array(capacity);
+  const chars = new Uint32Array(capacity);
+  const lengths = new Uint32Array(capacity);
+  const styles = new Uint32Array(capacity);
+  let count = 0;
   let line = 0;
   let startChar = 0;
-  let previousLine = -1;
-  let previousEnd = 0;
-  let lineFrom = 0;
-  let lineLength = 0;
-  let measuredLine = -1;
 
-  for (let index = 0; index < integerCount; index += 5) {
+  for (let index = 0; index + 4 < data.length; index += 5) {
     const deltaLine = data[index];
     if (deltaLine > 0) {
       line += deltaLine;
@@ -129,11 +157,60 @@ export function semanticTokenRanges(
     } else {
       startChar += data[index + 1];
     }
-    if (line >= doc.lines) break;
 
     const length = data[index + 2];
-    const tokenType = tokenTypes[data[index + 3]];
-    if (length === 0 || tokenType === undefined) continue;
+    const typeIndex = data[index + 3];
+    if (length === 0 || tokenTypes[typeIndex] === undefined) continue;
+
+    const modifiers = data[index + 4];
+    let variant = 0;
+    if (readonlyBit >= 0 && ((modifiers >>> readonlyBit) & 1) === 1) variant |= STYLE_READONLY;
+    if (deprecatedBit >= 0 && ((modifiers >>> deprecatedBit) & 1) === 1)
+      variant |= STYLE_DEPRECATED;
+
+    lines[count] = line;
+    chars[count] = startChar;
+    lengths[count] = length;
+    styles[count] = typeIndex * STYLE_VARIANTS + variant;
+    count += 1;
+  }
+
+  return { count, lines, chars, lengths, styles, classNames };
+}
+
+/** Index of the first decoded token on or after `line`. */
+function firstTokenAtLine(tokens: DecodedSemanticTokens, line: number): number {
+  let low = 0;
+  let high = tokens.count;
+  while (low < high) {
+    const middle = (low + high) >>> 1;
+    if (tokens.lines[middle] < line) low = middle + 1;
+    else high = middle;
+  }
+  return low;
+}
+
+/**
+ * Calls `add` for every token on zero-based lines `fromLine..toLine` (inclusive) in document
+ * order, clamping tokens to their line and dropping out-of-range and overlapping tokens.
+ */
+export function forEachSemanticTokenRange(
+  tokens: DecodedSemanticTokens,
+  doc: Text,
+  fromLine: number,
+  toLine: number,
+  add: (from: number, to: number, className: string) => void,
+) {
+  const lastLine = Math.min(toLine, doc.lines - 1);
+  let previousLine = -1;
+  let previousEnd = 0;
+  let lineFrom = 0;
+  let lineLength = 0;
+  let measuredLine = -1;
+
+  for (let index = firstTokenAtLine(tokens, fromLine); index < tokens.count; index += 1) {
+    const line = tokens.lines[index];
+    if (line > lastLine) break;
 
     if (line !== measuredLine) {
       measuredLine = line;
@@ -141,23 +218,34 @@ export function semanticTokenRanges(
       lineFrom = lineInfo.from;
       lineLength = lineInfo.length;
     }
+    const startChar = tokens.chars[index];
     if (startChar >= lineLength) continue;
     if (line === previousLine && startChar < previousEnd) continue;
 
-    const end = Math.min(startChar + length, lineLength);
-    const modifiers = data[index + 4];
-    ranges.push({
-      from: lineFrom + startChar,
-      to: lineFrom + end,
-      className: tokenClassName(
-        tokenType,
-        readonlyBit >= 0 && ((modifiers >>> readonlyBit) & 1) === 1,
-        deprecatedBit >= 0 && ((modifiers >>> deprecatedBit) & 1) === 1,
-      ),
-    });
+    const end = Math.min(startChar + tokens.lengths[index], lineLength);
+    add(lineFrom + startChar, lineFrom + end, tokens.classNames[tokens.styles[index]]);
     previousLine = line;
     previousEnd = end;
   }
+}
 
+/**
+ * Translates the server's relative token stream into document ranges, clamping tokens to their
+ * line and dropping unknown, empty, out-of-range, and overlapping tokens.
+ */
+export function semanticTokenRanges(
+  response: LspSemanticTokensResponse,
+  doc: Text,
+): SemanticTokenRange[] {
+  const ranges: SemanticTokenRange[] = [];
+  forEachSemanticTokenRange(
+    decodeSemanticTokens(response),
+    doc,
+    0,
+    doc.lines - 1,
+    (from, to, className) => {
+      ranges.push({ from, to, className });
+    },
+  );
   return ranges;
 }

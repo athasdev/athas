@@ -2,7 +2,7 @@ import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
 import { defaultKeymap, indentWithTab } from "@codemirror/commands";
 import { bracketMatching, foldGutter, foldKeymap, indentOnInput } from "@codemirror/language";
 import { search, searchKeymap } from "@codemirror/search";
-import { Compartment, EditorSelection, EditorState, type Extension } from "@codemirror/state";
+import { Compartment, EditorSelection, EditorState, type Extension, Text } from "@codemirror/state";
 import {
   crosshairCursor,
   dropCursor,
@@ -26,6 +26,7 @@ import {
   detectLineSeparator,
   minimalReplacement,
   toBufferText,
+  toBufferTextSlice,
   toModelContentChangeEvent,
   type LineSeparator,
 } from "../engines/codemirror/document-change";
@@ -53,7 +54,18 @@ import {
 } from "../engines/codemirror/view-options";
 import { applyBufferHistory } from "../services/buffer-history-service";
 import { captureBufferStoreOwner } from "../services/buffer-store-owner";
+import { readBufferRevision, readBufferText } from "../services/buffer-text";
 import { deliverModelContentChange } from "../services/document-change-batch";
+import {
+  getBufferTextLength,
+  getLiveDocumentRevision,
+  getLiveDocumentText,
+  type LiveDocumentView,
+  registerLiveDocumentView,
+  rememberSavedDocument,
+  subscribeLiveDocument,
+  textRoundTrips,
+} from "../services/live-document-registry";
 import { useBufferStore } from "../stores/buffer.store";
 import { useEditorStateStore } from "../stores/state.store";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
@@ -62,13 +74,21 @@ import { getBufferById } from "../utils/buffer-index";
 import { getLanguageIdFromPath } from "../utils/language-id";
 
 let nextEditorSourceId = 1;
+const VIEWPORT_HEIGHT_MEASURE_KEY = {};
 
 interface EditorSession {
   view: EditorView;
   separator: LineSeparator;
   modelSessionId: string;
   versionId: number;
+  /** Whether offsets in the editor's text land at the same places in the stored text. */
   bufferMatchesModel: boolean;
+  /**
+   * Whether the editor reproduces the stored text exactly, so the editor can keep the text and
+   * the store be skipped while typing. Text with stray CRs takes edits as deltas on the stored
+   * string instead, which keeps those CRs.
+   */
+  liveText: boolean;
   appliedContentRevision: number;
   /** Set while the editor applies a buffer update, so it is not sent back as an edit. */
   applyingExternalUpdate: boolean;
@@ -137,7 +157,8 @@ export function CodeMirrorEditor({
   const relativeLineNumbers = useSettingsStore(
     (state) => state.settings.vimMode && state.settings.vimRelativeLineNumbers,
   );
-  const { setCursorAndSelection, setScrollForBuffer } = useEditorStateStore.use.actions();
+  const { setCursorAndSelection, setScrollForBuffer, setViewportHeightForView } =
+    useEditorStateStore.use.actions();
   const isReadOnly = readOnly || isPreviewMode;
   const viewOptions = useMemo<CodeMirrorViewOptions>(
     () => ({
@@ -215,6 +236,22 @@ export function CodeMirrorEditor({
     [],
   );
 
+  // Measured in CodeMirror's next measure pass, by which time this view is recorded as the active
+  // one when it just became so; reports from other views are dropped by the store.
+  const reportViewportHeight = useCallback(
+    (editorView: EditorView) => {
+      editorView.requestMeasure({
+        key: VIEWPORT_HEIGHT_MEASURE_KEY,
+        read: (measuredView) => measuredView.scrollDOM.clientHeight,
+        write: (height) => {
+          const viewKey = latest.current.viewStateKey ?? latest.current.activeBufferId ?? null;
+          setViewportHeightForView(viewKey, height);
+        },
+      });
+    },
+    [setViewportHeightForView],
+  );
+
   const syncCursorAndSelection = useCallback(
     (session: EditorSession) => {
       const { state } = session.view;
@@ -253,8 +290,7 @@ export function CodeMirrorEditor({
           : EditorSelection.cursor(cursor),
         scrollIntoView: true,
       });
-      session.bufferMatchesModel =
-        toBufferText(session.view.state.doc, session.separator) === entry.content;
+      matchSessionToBufferText(session, entry.content);
       syncCursorAndSelection(session);
       return true;
     },
@@ -266,8 +302,8 @@ export function CodeMirrorEditor({
     if (!container || !buffer) return;
 
     const initial = getBufferById(historyOwner.store.getState().buffers, buffer.id);
-    const content = initial?.type === "editor" ? initial.content : "";
-    const contentRevision = initial?.type === "editor" ? (initial.contentRevision ?? 0) : 0;
+    const content = initial?.type === "editor" ? readBufferText(initial) : "";
+    const contentRevision = initial?.type === "editor" ? readBufferRevision(initial) : 0;
     const separator = detectLineSeparator(content);
     const session: EditorSession = {
       view: null as unknown as EditorView,
@@ -275,6 +311,7 @@ export function CodeMirrorEditor({
       modelSessionId: `${sourceIdRef.current}:${buffer.id}`,
       versionId: 1,
       bufferMatchesModel: true,
+      liveText: true,
       appliedContentRevision: contentRevision,
       applyingExternalUpdate: false,
       deliveringOwnChange: false,
@@ -300,6 +337,7 @@ export function CodeMirrorEditor({
               session.versionId,
               session.separator,
             );
+            let sentWholeText = false;
             const { result, bufferMatchesModel } = deliverModelContentChange({
               event,
               model: {
@@ -311,10 +349,28 @@ export function CodeMirrorEditor({
               sourceId: sourceIdRef.current,
               modelSessionId: session.modelSessionId,
               bufferMatchesModel: session.bufferMatchesModel,
-              apply: (batch) =>
-                handleDocumentChange(batch, editorState.cursorPosition, editorState.selection),
+              apply: (batch) => {
+                if (batch.isFlush) sentWholeText = true;
+                return handleDocumentChange(
+                  batch,
+                  editorState.cursorPosition,
+                  editorState.selection,
+                  batch.isFlush || !session.liveText
+                    ? undefined
+                    : {
+                        view: liveView,
+                        startDoc: update.startState.doc,
+                        doc: update.state.doc,
+                        changes: update.changes,
+                        previousText: toBufferTextSlice(update.startState.doc, session.separator),
+                        nextText: toBufferTextSlice(update.state.doc, session.separator),
+                      },
+                );
+              },
             });
             session.bufferMatchesModel = bufferMatchesModel;
+            // The store now holds the editor's own text, which always round-trips.
+            if (sentWholeText && bufferMatchesModel) session.liveText = true;
             if (result.synchronized) {
               session.appliedContentRevision = Math.max(
                 session.appliedContentRevision,
@@ -334,6 +390,9 @@ export function CodeMirrorEditor({
         }
       }
       if (update.docChanged || update.selectionSet) syncCursorAndSelection(session);
+      if (update.geometryChanged || (update.focusChanged && update.view.hasFocus)) {
+        reportViewportHeight(update.view);
+      }
     });
 
     const view = new EditorView({
@@ -381,10 +440,26 @@ export function CodeMirrorEditor({
     });
     session.view = view;
     sessionRef.current = session;
+    matchSessionToBufferText(session, content);
+    const liveView: LiveDocumentView = {
+      sourceId: sourceIdRef.current,
+      getDoc: () => view.state.doc,
+      getSeparator: () => session.separator,
+    };
+    const unregisterLiveView = registerLiveDocumentView(buffer.id, liveView);
+    if (initial?.type === "editor" && session.liveText) {
+      rememberSavedDocument(
+        buffer.id,
+        initial.savedContent,
+        savedDocumentFrom(view.state.doc, separator, content, initial.savedContent),
+        separator,
+      );
+    }
     syncCursorAndSelection(session);
     setView(view);
 
     return () => {
+      unregisterLiveView();
       sessionRef.current = null;
       setView(null);
       view.destroy();
@@ -430,10 +505,7 @@ export function CodeMirrorEditor({
   useEffect(() => {
     if (!onModelPositionResolverChange) return;
     onModelPositionResolverChange(
-      createCodeMirrorPositionResolver(
-        () => sessionRef.current?.view ?? null,
-        () => sessionRef.current?.separator ?? "\n",
-      ),
+      createCodeMirrorPositionResolver(() => sessionRef.current?.view ?? null),
     );
     return () => onModelPositionResolverChange(null);
   }, [buffer?.id, onModelPositionResolverChange]);
@@ -445,21 +517,64 @@ export function CodeMirrorEditor({
     const bufferId = buffer?.id;
     if (!bufferId) return;
     let lastSeen: unknown = null;
+    let lastSeenContent: string | undefined;
     const sync = (buffers: PaneContent[]) => {
       const session = sessionRef.current;
       const current = getBufferById(buffers, bufferId);
       if (!session || session.deliveringOwnChange) return;
       if (current?.type !== "editor" || current === lastSeen) return;
       lastSeen = current;
+      const contentChanged = current.content !== lastSeenContent;
+      lastSeenContent = current.content;
       const contentRevision = current.contentRevision ?? 0;
-      if (contentRevision > 0 && contentRevision <= session.appliedContentRevision) return;
+      // Text an editor holds beyond the store is newer than anything the store says; a write that
+      // only touched the dirty flag, pinning or a save must not roll the editor back to it.
+      const liveRevision = getLiveDocumentRevision(bufferId);
+      if (liveRevision !== undefined && liveRevision >= contentRevision) return;
+      // Only text that changed is applied: a newer revision, or new text on a buffer whose writer
+      // keeps no revisions.
+      const newerRevision = contentRevision > session.appliedContentRevision;
+      if (!newerRevision && (contentRevision > 0 || !contentChanged)) return;
       session.appliedContentRevision = Math.max(session.appliedContentRevision, contentRevision);
       replaceWithBufferText(session, current.content);
-      session.bufferMatchesModel =
-        toBufferText(session.view.state.doc, session.separator) === current.content;
+      matchSessionToBufferText(session, current.content);
+      if (session.liveText && !current.isDirty && current.content === current.savedContent) {
+        rememberSavedDocument(
+          bufferId,
+          current.savedContent,
+          session.view.state.doc,
+          session.separator,
+        );
+      }
     };
     sync(historyOwner.store.getState().buffers);
-    return historyOwner.store.subscribe((state) => sync(state.buffers));
+    const unsubscribeStore = historyOwner.store.subscribe((state) => sync(state.buffers));
+    // Another view of this buffer typed: apply its change set, or its whole text when this view
+    // missed an earlier edit.
+    const unsubscribeLive = subscribeLiveDocument(bufferId, (change) => {
+      const session = sessionRef.current;
+      if (!session || change.sourceId === sourceIdRef.current) return;
+      if (change.revision <= session.appliedContentRevision) return;
+      if (
+        session.appliedContentRevision === change.revision - 1 &&
+        session.view.state.doc.length === change.startDoc.length
+      ) {
+        session.applyingExternalUpdate = true;
+        try {
+          session.view.dispatch({ changes: change.changes });
+        } finally {
+          session.applyingExternalUpdate = false;
+        }
+      } else {
+        const text = getLiveDocumentText(bufferId);
+        if (text !== undefined) replaceWithBufferText(session, text);
+      }
+      session.appliedContentRevision = change.revision;
+    });
+    return () => {
+      unsubscribeStore();
+      unsubscribeLive();
+    };
   }, [buffer?.id, historyOwner]);
 
   // Before paint, so a freshly created editor never shows line 1 and then jumps.
@@ -486,6 +601,10 @@ export function CodeMirrorEditor({
     const ownerId = viewStateKey ?? activeBufferId ?? buffer.id;
     const container = containerRef.current;
     const getView = () => sessionRef.current?.view ?? null;
+    // Becoming the active view changes neither geometry nor, necessarily, focus, so the height
+    // the store holds would otherwise stay the previous view's.
+    const activeView = getView();
+    if (activeView) reportViewportHeight(activeView);
     if (container) editorAPI.setViewportRef(container);
     editorAPI.setActiveFindAdapter(createCodeMirrorFindAdapter(ownerId, getView));
     if (!isReadOnly) {
@@ -523,7 +642,15 @@ export function CodeMirrorEditor({
       if (!isReadOnly) editorAPI.clearActiveEditorAdapter(ownerId);
       if (container && editorAPI.getViewportRef() === container) editorAPI.setViewportRef(null);
     };
-  }, [activeBufferId, applyHistory, buffer?.id, isActiveSurface, isReadOnly, viewStateKey]);
+  }, [
+    activeBufferId,
+    applyHistory,
+    buffer?.id,
+    isActiveSurface,
+    isReadOnly,
+    reportViewportHeight,
+    viewStateKey,
+  ]);
 
   const pendingNavigation = useEditorStateStore((state) =>
     state.pendingNavigation?.bufferId === activeBufferId ? state.pendingNavigation : null,
@@ -627,6 +754,45 @@ export function CodeMirrorEditor({
       <div ref={containerRef} className="absolute inset-0" />
       {host ? <CodeMirrorFeatures host={host} /> : null}
     </div>
+  );
+}
+
+/**
+ * Records how the editor's text relates to `content`, the stored text it was just set from.
+ * Offsets agree when every line break is one the editor counts the same way; the editor holds the
+ * text exactly only when every break is the file's separator.
+ */
+function matchSessionToBufferText(session: EditorSession, content: string) {
+  const { view, separator } = session;
+  session.bufferMatchesModel = getBufferTextLength(view.state.doc, separator) === content.length;
+  session.liveText = session.bufferMatchesModel && textRoundTrips(content, separator);
+}
+
+/**
+ * The saved text as a document sharing every unchanged part with `doc`, so the dirty check after
+ * each edit only looks at what differs. Built once when the editor opens.
+ */
+function savedDocumentFrom(
+  doc: Text,
+  separator: LineSeparator,
+  content: string,
+  savedContent: string,
+): Text {
+  const replacement = minimalReplacement(content, savedContent);
+  if (!replacement) return doc;
+  const splitsLineBreak = (text: string, offset: number) =>
+    text[offset - 1] === "\r" && text[offset] === "\n";
+  if (
+    splitsLineBreak(content, replacement.from) ||
+    splitsLineBreak(content, replacement.to) ||
+    splitsLineBreak(savedContent, replacement.from)
+  ) {
+    return Text.of(savedContent.split(/\r\n|\r|\n/));
+  }
+  return doc.replace(
+    fromBufferOffset(doc, replacement.from, separator),
+    fromBufferOffset(doc, replacement.to, separator),
+    Text.of(replacement.insert.split(/\r\n|\r|\n/)),
   );
 }
 

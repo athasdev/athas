@@ -15,6 +15,10 @@ import { isEditorContent } from "@/features/panes/types/pane-content.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { writeFile } from "@/features/file-system/controllers/platform";
 import { getBufferById } from "../utils/buffer-index";
+import { readBufferRevision, readBufferText } from "./buffer-text";
+
+/** Typing pauses this long before an auto-save writes the file. */
+export const AUTO_SAVE_DELAY_MS = 1000;
 
 async function recordLocalHistoryBeforeWrite(
   path: string,
@@ -100,7 +104,8 @@ async function performEditorSaveAs(owner: BufferStoreOwner, bufferId: string): P
     });
     return false;
   }
-  const content = current.content;
+  const content = readBufferText(current);
+  const contentRevision = readBufferRevision(current);
   const findDestination = () =>
     owner.store
       .getState()
@@ -119,8 +124,8 @@ async function performEditorSaveAs(owner: BufferStoreOwner, bufferId: string): P
       !isEditorContent(beforeWrite) ||
       beforeWrite.readOnly ||
       beforeWrite.path !== original.path ||
-      beforeWrite.content !== content ||
-      (beforeWrite.contentRevision ?? 0) !== (current.contentRevision ?? 0)
+      readBufferRevision(beforeWrite) !== contentRevision ||
+      readBufferText(beforeWrite) !== content
     )
       return false;
     if (findDestination()) {
@@ -185,7 +190,7 @@ export function scheduleEditorAutoSave(bufferId: string) {
     pending.delete(bufferId);
     if (pending.size === 0) autoSaveTimers.delete(owner.store);
     void saveEditorBufferById(owner, bufferId, "auto-save");
-  }, 150);
+  }, AUTO_SAVE_DELAY_MS);
   pending.set(bufferId, timer);
 }
 
@@ -220,6 +225,8 @@ async function performEditorSave(
   )
     return false;
 
+  const snapshotContent = readBufferText(activeBuffer);
+  const snapshotRevision = readBufferRevision(activeBuffer);
   const matchesSnapshot = () => {
     const current = getBufferById(owner.store.getState().buffers, bufferId);
     return (
@@ -229,8 +236,8 @@ async function performEditorSave(
       !current.readOnly &&
       current.path === activeBuffer.path &&
       current.savedContent === activeBuffer.savedContent &&
-      current.content === activeBuffer.content &&
-      (current.contentRevision ?? 0) === (activeBuffer.contentRevision ?? 0)
+      readBufferRevision(current) === snapshotRevision &&
+      readBufferText(current) === snapshotContent
     );
   };
   const acknowledgeSave = (content: string) => {
@@ -272,17 +279,17 @@ async function performEditorSave(
       contentMarkdown: updateCollaborationNoteFile({
         contentMarkdown: channelNote.contentMarkdown,
         path: collaborationNoteTarget.notePath,
-        fileContent: activeBuffer.content,
+        fileContent: snapshotContent,
       }),
     });
     actions.setCollaborationSnapshot(nextCollaboration);
-    acknowledgeSave(activeBuffer.content);
+    acknowledgeSave(snapshotContent);
     return true;
   }
 
   if (activeBuffer.isVirtual) {
     if (activeBuffer.path === "settings://user-settings.json") {
-      const success = updateSettingsFromJSON(activeBuffer.content);
+      const success = updateSettingsFromJSON(snapshotContent);
       markBufferDirty(activeBuffer.id, !success);
       return success;
     }
@@ -293,14 +300,14 @@ async function performEditorSave(
 
   const isRemoteFile = activeBuffer.path.startsWith("remote://");
   const { settings } = useSettingsStore.getState();
-  let contentToSave = activeBuffer.content;
+  let contentToSave = snapshotContent;
   try {
     if (reason === "save" && !isRemoteFile && settings.formatOnSave) {
       const { formatContent } = await import("@/features/editor/formatter/formatter-service");
       const languageId = extensionRegistry.getLanguageId(activeBuffer.path);
       const formatResult = await formatContent({
         filePath: activeBuffer.path,
-        content: activeBuffer.content,
+        content: snapshotContent,
         languageId: languageId || undefined,
       });
       if (formatResult.success && formatResult.formattedContent !== undefined) {
@@ -322,7 +329,7 @@ async function performEditorSave(
     return false;
   }
 
-  if (matchesSnapshot() && contentToSave !== activeBuffer.content)
+  if (matchesSnapshot() && contentToSave !== snapshotContent)
     updateBufferContent(bufferId, contentToSave, true);
   acknowledgeSave(contentToSave);
   if (rootFolderPath) {
@@ -353,7 +360,7 @@ async function performEditorSave(
           current &&
           isEditorContent(current) &&
           current.path === activeBuffer.path &&
-          current.content === contentToSave &&
+          readBufferText(current) === contentToSave &&
           lintResult.success &&
           lintResult.diagnostics
         ) {

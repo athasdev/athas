@@ -1,5 +1,6 @@
 use athas_ai::{
-   ChatData, ChatHistoryRepository, ChatStats, ChatWithMessages, MessageData, ToolCallData,
+   ChatData, ChatHistoryRepository, ChatSaveScope, ChatStats, ChatWithMessages, MessageData,
+   ToolCallData,
 };
 use std::path::PathBuf;
 use tauri::{Manager, command};
@@ -29,8 +30,13 @@ pub async fn save_chat(
    chat: ChatData,
    messages: Vec<MessageData>,
    tool_calls: Vec<ToolCallData>,
+   scope: ChatSaveScope,
 ) -> Result<(), String> {
-   repository(&app)?.save_chat(chat, messages, tool_calls)
+   let repository = repository(&app)?;
+   match scope {
+      ChatSaveScope::AllMessages => repository.save_chat(chat, messages, tool_calls),
+      ChatSaveScope::ChangedMessages => repository.save_chat_messages(chat, messages, tool_calls),
+   }
 }
 
 #[command]

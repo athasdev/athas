@@ -84,7 +84,8 @@ function hostedChat(messages: Message[] = []) {
     const chat = state.chats.find((candidate) => candidate.id === chatId)!;
     chat.providerId = "athas";
     chat.modelId = "auto";
-    chat.messages = messages;
+    chat.messageCount = messages.length;
+    state.messagesByChat[chatId] = messages;
   });
   useAIChatStore.setState({
     providerApiKeys: new Map(useAIChatStore.getState().providerApiKeys).set("athas", true),

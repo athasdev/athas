@@ -1,5 +1,5 @@
 import type { FileEntry } from "../types/app.types";
-import { sortFileEntries } from "./file-tree-utils";
+import { isPathInsideTreeEntry, sortFileEntries } from "./file-tree-utils";
 
 const OS_GENERATED_FILE_PATTERNS: string[] = [
   ".DS_Store",
@@ -270,7 +270,7 @@ export function updateDirectoryContents(
     }
 
     // Recursively search in children
-    if (item.children) {
+    if (isPathInsideTreeEntry(dirPath, item.path) && item.children) {
       const result = updateDirectoryContents(item.children, dirPath, newEntries, preserveStates);
       if (result !== "missing") return result;
     }

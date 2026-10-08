@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { readBufferRevision, readBufferText } from "@/features/editor/services/buffer-text";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import { getLineTextFromContent } from "@/features/editor/utils/position";
@@ -92,8 +93,8 @@ export const useRename = (filePath: string | undefined) => {
         current?.type === "editor" &&
         current.path === filePath &&
         !current.readOnly &&
-        current.content === expectedSource.content &&
-        (current.contentRevision ?? 0) === (expectedSource.contentRevision ?? 0)
+        readBufferRevision(current) === (expectedSource.contentRevision ?? 0) &&
+        readBufferText(current) === expectedSource.content
       );
     };
     const cursorPosition = useEditorStateStore.getState().cursorPosition;

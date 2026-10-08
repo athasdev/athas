@@ -37,7 +37,13 @@ vi.mock("@tauri-apps/api/core", () => ({
   },
 }));
 vi.mock("@/features/ai/stores/ai-chat.store", () => ({
-  useAIChatStore: { getState: () => ({ chats: mocks.chats, agentRuns: mocks.agentRuns }) },
+  useAIChatStore: {
+    getState: () => ({
+      chats: mocks.chats,
+      messagesByChat: Object.fromEntries(mocks.chats.map((chat) => [chat.id, chat.messages])),
+      agentRuns: mocks.agentRuns,
+    }),
+  },
 }));
 vi.mock("@/features/editor/stores/buffer.store", () => ({
   useBufferStore: {

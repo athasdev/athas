@@ -14,6 +14,8 @@ import type {
   Position,
   Range,
 } from "../types/editor.types";
+import { readBufferText } from "../services/buffer-text";
+import type { LiveDocumentEdit } from "../services/live-document-registry";
 import { getBufferById } from "../utils/buffer-index";
 import { trackBufferHistoryChange } from "./buffer-history-tracking";
 import { useBufferStore } from "./buffer.store";
@@ -28,6 +30,7 @@ interface AppActions {
     batch: EditorDocumentChangeBatch,
     previousCursorPosition?: Position,
     previousSelection?: Range,
+    liveEdit?: LiveDocumentEdit,
   ) => EditorDocumentChangeResult;
   handleContentChange: (
     content: string,
@@ -46,35 +49,70 @@ export const useEditorAppStore = createSelectors(
   create<AppState>()(
     immer(() => ({
       actions: {
-        handleDocumentChange: (bufferId, batch, previousCursorPosition, previousSelection) => {
+        handleDocumentChange: (
+          bufferId,
+          batch,
+          previousCursorPosition,
+          previousSelection,
+          liveEdit,
+        ) => {
           const { buffers } = useBufferStore.getState();
-          const { applyBufferContentChanges, markBufferDirty } = useBufferStore.getState().actions;
+          const { applyBufferContentChanges, applyLiveDocumentChange, markBufferDirty } =
+            useBufferStore.getState().actions;
           const activeBuffer = getBufferById(buffers, bufferId);
           if (!activeBuffer || !isEditorContent(activeBuffer)) {
             return { accepted: false, synchronized: false, contentRevision: 0 };
           }
 
-          const previousContent = activeBuffer.content;
           const collaborationNoteTarget = parseCollaborationNoteBufferPath(activeBuffer.path);
           const isRemoteFile = activeBuffer.path.startsWith("remote://");
-          const result = applyBufferContentChanges(bufferId, batch, true);
-          if (!result.accepted) return result;
+          const isLive =
+            liveEdit !== undefined &&
+            !batch.isFlush &&
+            !batch.isEolChange &&
+            batch.fullContent === undefined;
 
-          const updatedBuffer = getBufferById(useBufferStore.getState().buffers, bufferId);
-          if (!updatedBuffer || !isEditorContent(updatedBuffer)) return result;
+          let result: EditorDocumentChangeResult;
+          if (isLive) {
+            // The view keeps the text: history and the dirty flag work from the change itself, so
+            // a keystroke never copies the document.
+            result = applyLiveDocumentChange(
+              bufferId,
+              batch,
+              liveEdit,
+              collaborationNoteTarget !== null,
+            );
+            if (!result.accepted) return result;
+            trackBufferHistoryChange({
+              bufferId,
+              currentContent: liveEdit.previousText,
+              nextContent: liveEdit.nextText,
+              previousContent: liveEdit.previousText,
+              previousCursorPosition,
+              previousSelection,
+              contentChanges: batch.changes,
+            });
+          } else {
+            const previousContent = readBufferText(activeBuffer);
+            result = applyBufferContentChanges(bufferId, batch, true);
+            if (!result.accepted) return result;
 
-          trackBufferHistoryChange({
-            bufferId,
-            currentContent: previousContent,
-            nextContent: updatedBuffer.content,
-            previousContent,
-            previousCursorPosition,
-            previousSelection,
-            contentChanges: batch.changes,
-          });
+            const updatedBuffer = getBufferById(useBufferStore.getState().buffers, bufferId);
+            if (!updatedBuffer || !isEditorContent(updatedBuffer)) return result;
 
-          if (collaborationNoteTarget) {
-            markBufferDirty(bufferId, updatedBuffer.content !== updatedBuffer.savedContent);
+            trackBufferHistoryChange({
+              bufferId,
+              currentContent: previousContent,
+              nextContent: updatedBuffer.content,
+              previousContent,
+              previousCursorPosition,
+              previousSelection,
+              contentChanges: batch.changes,
+            });
+
+            if (collaborationNoteTarget) {
+              markBufferDirty(bufferId, updatedBuffer.content !== updatedBuffer.savedContent);
+            }
           }
 
           const { settings } = useSettingsStore.getState();
@@ -109,7 +147,7 @@ export const useEditorAppStore = createSelectors(
           if (activeBufferId) {
             trackBufferHistoryChange({
               bufferId: activeBufferId,
-              currentContent: activeBuffer.content,
+              currentContent: readBufferText(activeBuffer),
               nextContent: content,
               previousContent,
               previousCursorPosition,

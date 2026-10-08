@@ -13,7 +13,6 @@ const createEditorBuffer = (overrides: Partial<EditorContent> = {}): EditorConte
   savedContent: "const value = 1;\nconsole.log(value);\n",
   isDirty: false,
   isVirtual: false,
-  tokens: [],
   ...overrides,
 });
 

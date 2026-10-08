@@ -30,7 +30,6 @@ const createEditorBuffer = (overrides: Partial<EditorContent> = {}): EditorConte
   savedContent: "const value = 1;",
   isDirty: false,
   isVirtual: false,
-  tokens: [],
   ...overrides,
 });
 

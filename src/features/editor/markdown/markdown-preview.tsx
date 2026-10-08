@@ -4,6 +4,7 @@ import { openExternalBrowserUrl } from "@/features/window/utils/external-navigat
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { editorAPI } from "@/features/editor/extensions/api";
+import { useBufferText } from "@/features/editor/hooks/use-buffer-text";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getBufferById, getBufferByPath } from "@/features/editor/utils/buffer-index";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
@@ -26,7 +27,7 @@ export function MarkdownPreview({
   bufferId?: string;
   isActiveSurface?: boolean;
 }) {
-  const { sourceBufferPath, sourceContent } = useBufferStore(
+  const { sourceBufferId, sourceBufferPath } = useBufferStore(
     useShallow((state) => {
       const activeBuffer = getBufferById(state.buffers, bufferId ?? state.activeBufferId);
       const sourceBuffer =
@@ -35,11 +36,14 @@ export function MarkdownPreview({
           : activeBuffer;
 
       return {
+        sourceBufferId: sourceBuffer && hasTextContent(sourceBuffer) ? sourceBuffer.id : null,
         sourceBufferPath: sourceBuffer?.path,
-        sourceContent: sourceBuffer && hasTextContent(sourceBuffer) ? sourceBuffer.content : "",
       };
     }),
   );
+  const sourceContent = useBufferText(sourceBufferId, {
+    debounceMs: MARKDOWN_PREVIEW_PARSE_DELAY_MS,
+  });
   const fontSize = useSettingsStore((state) => state.settings.fontSize);
   const uiFontFamily = useSettingsStore((state) => state.settings.uiFontFamily);
   const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);

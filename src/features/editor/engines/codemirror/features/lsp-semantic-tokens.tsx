@@ -1,4 +1,10 @@
-import { type Extension, RangeSetBuilder, StateEffect, type Text } from "@codemirror/state";
+import {
+  type ChangeSet,
+  type Extension,
+  RangeSetBuilder,
+  StateEffect,
+  type Text,
+} from "@codemirror/state";
 import {
   Decoration,
   type DecorationSet,
@@ -12,12 +18,18 @@ import { useLspStore } from "@/features/editor/lsp/stores/lsp.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { type CodeMirrorHost, useCodeMirrorExtension } from "../host";
 import { isLspFile } from "../lsp/lsp-positions";
-import { semanticTokenRanges } from "../lsp/semantic-token-styles";
+import {
+  type DecodedSemanticTokens,
+  decodeSemanticTokens,
+  forEachSemanticTokenRange,
+} from "../lsp/semantic-token-styles";
 
 /** How long typing has to pause before semantic tokens are requested again. */
 const SEMANTIC_TOKEN_DEBOUNCE_MS = 300;
 /** How long a failed request is not repeated for the same text. */
 const SEMANTIC_TOKEN_RETRY_DELAY_MS = 15_000;
+/** Lines decorated beyond each visible range, so ordinary scrolling reuses the built set. */
+const SEMANTIC_TOKEN_MARGIN_LINES = 200;
 
 const SYNTAX_NAMES = [
   "type",
@@ -83,6 +95,13 @@ export function semanticTokensExtension(
       private failed: { doc: Text; retryAfter: number } | null = null;
       private destroyed = false;
       private readonly unsubscribe: () => void;
+      /** Decoded tokens of the last response and the text they describe. */
+      private tokens: DecodedSemanticTokens | null = null;
+      private tokenDoc: Text | null = null;
+      /** Edits made since `tokenDoc`, so freshly built ranges land where mapped ones do. */
+      private pendingChanges: ChangeSet | null = null;
+      /** Current-document ranges the decoration set covers. */
+      private covered: { from: number; to: number }[] = [];
 
       constructor(private readonly view: EditorView) {
         this.schedule(0);
@@ -97,9 +116,70 @@ export function semanticTokensExtension(
       }
 
       update(update: ViewUpdate) {
-        if (!update.docChanged) return;
-        this.decorations = this.decorations.map(update.changes);
-        this.schedule(debounceMs);
+        if (update.docChanged) {
+          this.decorations = this.decorations.map(update.changes);
+          if (this.tokens) {
+            this.pendingChanges = this.pendingChanges
+              ? this.pendingChanges.compose(update.changes)
+              : update.changes;
+          }
+          // Text typed at a covered edge has no tokens yet, so the coverage grows over it rather
+          // than forcing a rebuild on every keystroke at the end of the window or document.
+          this.covered = this.covered.map(({ from, to }) => ({
+            from: update.changes.mapPos(from, -1),
+            to: update.changes.mapPos(to, 1),
+          }));
+          this.schedule(debounceMs);
+        }
+        if ((update.docChanged || update.viewportChanged) && !this.coversVisibleRanges()) {
+          this.buildVisible();
+        }
+      }
+
+      private coversVisibleRanges() {
+        if (!this.tokens) return true;
+        return this.view.visibleRanges.every(({ from, to }) =>
+          this.covered.some((range) => range.from <= from && range.to >= to),
+        );
+      }
+
+      /** Rebuilds decorations for the visible ranges plus a margin from the cached tokens. */
+      private buildVisible() {
+        const { tokens, tokenDoc } = this;
+        if (!tokens || !tokenDoc) return;
+        const doc = this.view.state.doc;
+        const toTokenDoc = this.pendingChanges?.invertedDesc;
+
+        const windows: { from: number; to: number }[] = [];
+        for (const range of this.view.visibleRanges) {
+          const fromLine = Math.max(1, doc.lineAt(range.from).number - SEMANTIC_TOKEN_MARGIN_LINES);
+          const toLine = Math.min(
+            doc.lines,
+            doc.lineAt(range.to).number + SEMANTIC_TOKEN_MARGIN_LINES,
+          );
+          const from = doc.line(fromLine).from;
+          const to = doc.line(toLine).to;
+          const last = windows[windows.length - 1];
+          if (last && from <= last.to + 1) last.to = Math.max(last.to, to);
+          else windows.push({ from, to });
+        }
+
+        const builder = new RangeSetBuilder<Decoration>();
+        let previousLine = -1;
+        for (const window of windows) {
+          const tokenFrom = toTokenDoc ? toTokenDoc.mapPos(window.from, -1) : window.from;
+          const tokenTo = toTokenDoc ? toTokenDoc.mapPos(window.to, 1) : window.to;
+          const fromLine = Math.max(previousLine + 1, tokenDoc.lineAt(tokenFrom).number - 1);
+          const toLine = tokenDoc.lineAt(tokenTo).number - 1;
+          if (fromLine > toLine) continue;
+          forEachSemanticTokenRange(tokens, tokenDoc, fromLine, toLine, (from, to, className) =>
+            builder.add(from, to, mark(className)),
+          );
+          previousLine = toLine;
+        }
+        const built = builder.finish();
+        this.decorations = this.pendingChanges ? built.map(this.pendingChanges) : built;
+        this.covered = windows;
       }
 
       private schedule(delay: number) {
@@ -132,13 +212,10 @@ export function semanticTokensExtension(
         }
         this.failed = null;
 
-        const builder = new RangeSetBuilder<Decoration>();
-        if (response.tokenTypes.length > 0) {
-          for (const range of semanticTokenRanges(response, doc)) {
-            builder.add(range.from, range.to, mark(range.className));
-          }
-        }
-        this.decorations = builder.finish();
+        this.tokens = decodeSemanticTokens(response);
+        this.tokenDoc = doc;
+        this.pendingChanges = null;
+        this.buildVisible();
         view.dispatch({ effects: semanticTokensUpdated.of(null) });
       }
 

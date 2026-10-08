@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test"
 import type { EditorContent } from "@/features/panes/types/pane-content.types";
 import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { AUTO_SAVE_DELAY_MS } from "../services/editor-save-service";
 import { useBufferStore } from "../stores/buffer.store";
 import { useEditorAppStore } from "../stores/editor-app.store";
 
@@ -85,7 +86,6 @@ function makeEditorBuffer(
     isPreview: false,
     isActive: false,
     language: "typescript",
-    tokens: [],
   };
 }
 
@@ -312,7 +312,7 @@ describe("editor saves", () => {
     await useEditorAppStore.getState().actions.handleContentChange("a autosave");
     useBufferStore.setState({ activeBufferId: "b" });
     await useEditorAppStore.getState().actions.handleContentChange("b autosave");
-    await vi.advanceTimersByTimeAsync(200);
+    await vi.advanceTimersByTimeAsync(AUTO_SAVE_DELAY_MS + 50);
     expect(mocks.writeFile).toHaveBeenCalledWith("/workspace/a.ts", "a autosave", "");
     expect(mocks.writeFile).toHaveBeenCalledWith("/workspace/b.ts", "b autosave", "");
   });
@@ -322,7 +322,7 @@ describe("editor saves", () => {
     vi.useFakeTimers();
     await useEditorAppStore.getState().actions.handleContentChange("pending draft");
     useSettingsStore.setState((state) => ({ settings: { ...state.settings, autoSave: false } }));
-    await vi.advanceTimersByTimeAsync(200);
+    await vi.advanceTimersByTimeAsync(AUTO_SAVE_DELAY_MS + 50);
     expect(mocks.writeFile).not.toHaveBeenCalled();
     expect(useBufferStore.getState().buffers.find((buffer) => buffer.id === "a")).toMatchObject({
       content: "pending draft",
@@ -527,7 +527,7 @@ describe("editor saves", () => {
       buffers: [makeEditorBuffer("a", "/other/a.ts", "other draft", true)],
     });
     await useEditorAppStore.getState().actions.handleContentChange("other autosave");
-    await vi.advanceTimersByTimeAsync(200);
+    await vi.advanceTimersByTimeAsync(AUTO_SAVE_DELAY_MS + 50);
     expect(mocks.writeFile).toHaveBeenCalledWith("/workspace/a.ts", "original autosave", "");
     expect(mocks.writeFile).toHaveBeenCalledWith("/other/a.ts", "other autosave", "");
   });

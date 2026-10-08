@@ -33,7 +33,6 @@ function editor(path = "/p/a.ts", content = "alpha"): EditorContent {
     isPinned: false,
     isActive: true,
     language: "typescript",
-    tokens: [],
   };
 }
 const replace = (newText = "beta", start = 0, end = 5) => ({

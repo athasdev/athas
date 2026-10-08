@@ -17,8 +17,14 @@ export const commands = {
    */
   selfUpdateSupported: () => __TAURI_INVOKE<boolean>("self_update_supported"),
   readLocalFile: (path: string) => __TAURI_INVOKE<ArrayBuffer>("read_local_file", { path }),
-  writeLocalFileChecked: (path: string, expectedContent: string | null, content: string) =>
-    __TAURI_INVOKE<null>("write_local_file_checked", { path, expectedContent, content }),
+  writeLocalFileChecked: (
+    path: string,
+    expected: {
+      byteLength: number;
+      sha256: string;
+    } | null,
+    content: string,
+  ) => __TAURI_INVOKE<null>("write_local_file_checked", { path, expected, content }),
   writeLocalFile: (path: string, content: string) =>
     __TAURI_INVOKE<null>("write_local_file", { path, content }),
   deleteLocalFileChecked: (path: string, expectedContent: string) =>
@@ -507,8 +513,12 @@ export const commands = {
   /**  Remove the auth token */
   removeAuthToken: () => __TAURI_INVOKE<null>("remove_auth_token"),
   initChatDatabase: () => __TAURI_INVOKE<null>("init_chat_database"),
-  saveChat: (chat: ChatData, messages: MessageData[], toolCalls: ToolCallData[]) =>
-    __TAURI_INVOKE<null>("save_chat", { chat, messages, toolCalls }),
+  saveChat: (
+    chat: ChatData,
+    messages: MessageData[],
+    toolCalls: ToolCallData[],
+    scope: ChatSaveScope,
+  ) => __TAURI_INVOKE<null>("save_chat", { chat, messages, toolCalls, scope }),
   updateChatMetadata: (chat: ChatData) => __TAURI_INVOKE<null>("update_chat_metadata", { chat }),
   loadAllChats: () => __TAURI_INVOKE<ChatData[]>("load_all_chats"),
   loadChat: (chatId: string) => __TAURI_INVOKE<ChatWithMessages>("load_chat", { chatId }),
@@ -4569,6 +4579,13 @@ export type ChatData = {
   session_settings?: string | null;
 };
 
+/**  How much of a chat a save carries. */
+export type ChatSaveScope =
+  /**  Every message of the chat: stored messages missing from the save are deleted. */
+  | "allMessages"
+  /**  Only the messages that changed: the chat's other stored messages stay as they are. */
+  | "changedMessages";
+
 export type ChatWithMessages = {
   chat: ChatData;
   messages: MessageData[];
@@ -4991,6 +5008,15 @@ export type DocumentChangeBatch = {
   isEolChange?: boolean;
   isFlush?: boolean;
   fullContent: string | null;
+};
+
+/**
+ *  The text a checked write expects on disk, sent as its UTF-8 length and SHA-256 instead of a
+ *  second full copy of the file.
+ */
+export type ExpectedFileDigest = {
+  byteLength: number;
+  sha256: string;
 };
 
 export type ExtensionMetadata = {

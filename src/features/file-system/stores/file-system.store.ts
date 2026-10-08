@@ -69,6 +69,8 @@ import { readDirectoryContents } from "../controllers/file-operations";
 import {
   addFileToTree,
   findFileInTree,
+  isPathInsideTreeEntry,
+  relocateFileEntry,
   removeFileFromTree,
   sortFileEntries,
   updateFileInTree,
@@ -188,25 +190,35 @@ const wrapWithRootFolder = (
 const updateDirectoryChildrenBatch = (
   files: FileEntry[],
   childrenByPath: ReadonlyMap<string, FileEntry[]>,
+  targetPaths: readonly string[] = [...childrenByPath.keys()],
 ): FileEntry[] => {
-  let changed = false;
-  const updatedFiles = files.map((file) => {
+  let updatedFiles: FileEntry[] | null = null;
+  for (let index = 0; index < files.length; index++) {
+    const file = files[index];
+    let updatedFile = file;
     const children = childrenByPath.get(file.path);
     if (children && file.isDir && (!file.children || file.children.length === 0)) {
-      changed = true;
-      return { ...file, children };
+      updatedFile = { ...file, children };
+    } else {
+      const nestedPaths = targetPaths.filter((path) => isPathInsideTreeEntry(path, file.path));
+      if (nestedPaths.length > 0 && file.children) {
+        const updatedChildren = updateDirectoryChildrenBatch(
+          file.children,
+          childrenByPath,
+          nestedPaths,
+        );
+        if (updatedChildren !== file.children) {
+          updatedFile = { ...file, children: updatedChildren };
+        }
+      }
     }
+    if (updatedFile !== file) {
+      updatedFiles ??= files.slice();
+      updatedFiles[index] = updatedFile;
+    }
+  }
 
-    if (!file.children) return file;
-
-    const updatedChildren = updateDirectoryChildrenBatch(file.children, childrenByPath);
-    if (updatedChildren === file.children) return file;
-
-    changed = true;
-    return { ...file, children: updatedChildren };
-  });
-
-  return changed ? updatedFiles : files;
+  return updatedFiles ?? files;
 };
 
 const getWorkspaceFolderPaths = (get: FileSystemGet) =>
@@ -1440,9 +1452,10 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
             if (isStaleRequest()) return;
             try {
               const { rootFolderPath } = get();
-              const events = createTerminalEventChannel();
               // Create terminal connection for external editor
-              const { windowLabel, frontendSessionId } = getFrontendTerminalSessionArgs();
+              const { windowLabel, frontendSessionId } = await getFrontendTerminalSessionArgs();
+              if (isStaleRequest()) return;
+              const events = createTerminalEventChannel();
               const connectionId = await commands.createTerminal(
                 {
                   workingDirectory: rootFolderPath || null,
@@ -1458,9 +1471,14 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
                 windowLabel,
                 frontendSessionId,
               );
+              if (isStaleRequest()) {
+                events.dispose();
+                void commands.closeTerminal(connectionId).catch((error) => {
+                  console.error("Failed to close stale external editor terminal:", error);
+                });
+                return;
+              }
               events.bind(connectionId);
-
-              if (isStaleRequest()) return;
 
               // Open external editor buffer
               openExternalEditorBuffer(resolvedPath, fileName, connectionId);
@@ -1975,11 +1993,11 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
         let updatedFiles = removeFileFromTree(get().files, oldPath);
 
         // Update the file's path and name
-        const updatedMovedFile = {
-          ...movedFile,
-          path: newPath,
-          name: getBaseName(newPath, movedFile.name),
-        };
+        const updatedMovedFile = relocateFileEntry(
+          movedFile,
+          newPath,
+          getBaseName(newPath, movedFile.name),
+        );
 
         // Determine target directory from the new path
         const targetDir = getDirName(newPath) || get().rootFolderPath || "/";
@@ -2399,9 +2417,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
 
             set((state) => {
               state.files = updateFileInTree(state.files, path, (item) => ({
-                ...item,
-                name: newName,
-                path: targetPath,
+                ...relocateFileEntry(item, targetPath, newName),
                 isRenaming: false,
               }));
               state.filesVersion++;

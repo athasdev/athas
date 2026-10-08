@@ -11,9 +11,11 @@ const state = vi.hoisted(() => ({
     type: "editor",
     path: "/repo/a.ts",
     content: "const a = 1;\n",
+    savedContent: "const a = 1;\n",
     contentRevision: 1,
   } as Record<string, unknown>,
   setCursorAndSelection: vi.fn(),
+  setViewportHeightForView: vi.fn(),
   applyBufferHistory: vi.fn(),
   requestNavigation: vi.fn(),
   requestReveal: vi.fn(),
@@ -55,6 +57,7 @@ vi.mock("../stores/state.store", () => {
         actions: () => ({
           setCursorAndSelection: state.setCursorAndSelection,
           setScrollForBuffer: vi.fn(),
+          setViewportHeightForView: state.setViewportHeightForView,
         }),
       },
     }),
@@ -161,6 +164,7 @@ describe("CodeMirror editor", () => {
       type: "editor",
       path: "/repo/a.ts",
       content: "const a = 1;\n",
+      savedContent: "const a = 1;\n",
       contentRevision: 1,
     };
     state.setCursorAndSelection.mockClear();
@@ -376,5 +380,23 @@ describe("CodeMirror editor", () => {
       container.firstElementChild?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
     expect(onReadonlySurfaceClick).toHaveBeenCalledWith({ line: 0, column: 6 });
+  });
+
+  it("reports its viewport height when it becomes the active view", async () => {
+    const nextFrame = () => new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+    await act(async () =>
+      root.render(
+        <CodeMirrorEditor bufferId="buffer-1" viewStateKey="bottom" isActiveSurface={false} />,
+      ),
+    );
+    await act(nextFrame);
+    state.setViewportHeightForView.mockClear();
+
+    await act(async () =>
+      root.render(<CodeMirrorEditor bufferId="buffer-1" viewStateKey="bottom" isActiveSurface />),
+    );
+    await act(nextFrame);
+
+    expect(state.setViewportHeightForView).toHaveBeenCalledWith("bottom", expect.any(Number));
   });
 });

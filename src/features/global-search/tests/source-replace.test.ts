@@ -41,7 +41,6 @@ function editor(filePath = path, content = "foobar foobar"): EditorContent {
     isPinned: false,
     isActive: true,
     language: "typescript",
-    tokens: [],
   };
 }
 const owner = () => useBufferStore.getStore("owner");

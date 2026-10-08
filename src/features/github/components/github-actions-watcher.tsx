@@ -18,7 +18,7 @@ const IDLE_POLL_INTERVAL_MS = 60_000;
 const HIDDEN_POLL_INTERVAL_MS = 90_000;
 
 export function useWorkflowRunWatcher() {
-  const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
+  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
   const activeRepoPath = useRepositoryStore.use.activeRepoPath();
   const repoPath = activeRepoPath ?? rootFolderPath ?? null;
   const isAuthenticated = useGitHubStore.use.isAuthenticated();

@@ -105,7 +105,7 @@ interface GitHubIssuesViewProps {
 
 const GitHubIssuesView = memo(
   ({ refreshNonce = 0, searchQuery = "", filter = "open" }: GitHubIssuesViewProps) => {
-    const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
+    const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
     const activeRepoPath = useRepositoryStore.use.activeRepoPath();
     const repoPath = activeRepoPath ?? rootFolderPath ?? null;
     const isAuthenticated = useGitHubStore.use.isAuthenticated();

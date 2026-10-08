@@ -189,7 +189,7 @@ const PRListItem = memo(
 PRListItem.displayName = "PRListItem";
 
 const GitHubPRsView = memo(() => {
-  const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
+  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
   const prs = useGitHubStore.use.prs();
   const isLoading = useGitHubStore.use.isLoading();
   const error = useGitHubStore.use.error();

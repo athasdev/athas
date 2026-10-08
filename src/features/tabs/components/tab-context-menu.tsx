@@ -14,6 +14,7 @@ import {
 } from "@/ui/icons";
 import { commands } from "@/bindings/commands";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import { isVirtualContent } from "@/features/panes/types/pane-content.types";
 import { ContextMenuContent, ContextMenuItem, ContextMenuSeparator } from "@/ui/context-menu";
@@ -29,9 +30,6 @@ interface TabContextMenuProps {
   onPin: (bufferId: string) => void;
   onRename?: (bufferId: string) => void;
   onCloseTab: (bufferId: string) => void;
-  onCloseOthers: (bufferId: string) => void;
-  onCloseAll: () => void;
-  onCloseToRight: (bufferId: string) => void;
   onCopyPath?: (path: string) => void;
   onCopyRelativePath?: (path: string) => void;
   onReload?: (bufferId: string) => void;
@@ -48,9 +46,6 @@ const TabContextMenu = ({
   onPin,
   onRename,
   onCloseTab,
-  onCloseOthers,
-  onCloseAll,
-  onCloseToRight,
   onCopyPath,
   onCopyRelativePath,
   onReload,
@@ -210,17 +205,19 @@ const TabContextMenu = ({
     {
       id: "close-others",
       label: "Close Others",
-      onClick: () => onCloseOthers(buffer.id),
+      onClick: () =>
+        void keymapRegistry.executeCommand("file.closeOthers", { bufferId: buffer.id }),
     },
     {
       id: "close-right",
       label: "Close to Right",
-      onClick: () => onCloseToRight(buffer.id),
+      onClick: () =>
+        void keymapRegistry.executeCommand("file.closeTabsToRight", { bufferId: buffer.id }),
     },
     {
       id: "close-all",
       label: "Close All",
-      onClick: onCloseAll,
+      onClick: () => void keymapRegistry.executeCommand("file.closeAll"),
     },
   ];
   const groups = [tabItems, fileItems, closeItems].filter((group) => group.length > 0);

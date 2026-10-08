@@ -1,8 +1,10 @@
 import { useEffect, useMemo } from "react";
+import { useShallow } from "zustand/react/shallow";
 import {
-  ensureCheckpointsLoaded,
-  planChatRestore,
-} from "@/features/ai/services/agent-checkpoints-service";
+  isCheckpointAvailable,
+  planCheckpointRestore,
+} from "@/features/ai/lib/agent-edit-checkpoints";
+import { ensureCheckpointsLoaded } from "@/features/ai/services/agent-checkpoints-service";
 import { useAgentCheckpointsStore } from "@/features/ai/stores/agent-checkpoints.store";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { CheckpointRestorePlan } from "@/features/ai/types/agent-checkpoints.types";
@@ -19,8 +21,17 @@ export function useCheckpointRestorePlan(
   const checkpoints = useAgentCheckpointsStore((state) =>
     chatId ? state.byChat[chatId] : undefined,
   );
-  const messages = useAIChatStore((state) =>
-    chatId ? state.chats.find((chat) => chat.id === chatId)?.messages : undefined,
+  // Only the message order and this message's time matter, so a streamed token re-renders nothing.
+  const messageIds = useAIChatStore(
+    useShallow((state) =>
+      chatId ? state.messagesByChat[chatId]?.map((message) => message.id) : undefined,
+    ),
+  );
+  const timestamp = useAIChatStore((state) =>
+    chatId
+      ? (state.messagesByChat[chatId]?.find((message) => message.id === messageId)?.timestamp ??
+        null)
+      : null,
   );
 
   useEffect(() => {
@@ -28,8 +39,9 @@ export function useCheckpointRestorePlan(
   }, [chatId]);
 
   return useMemo(() => {
-    if (!checkpoints || !messages) return null;
-    const plan = planChatRestore(checkpoints, messageId, messages);
-    return plan === "unavailable" ? null : plan;
-  }, [checkpoints, messageId, messages]);
+    if (!checkpoints || !messageIds) return null;
+    const plan = planCheckpointRestore(checkpoints, messageId, messageIds);
+    if (!plan) return null;
+    return isCheckpointAvailable(checkpoints, timestamp?.getTime() ?? null) ? plan : null;
+  }, [checkpoints, messageId, messageIds, timestamp]);
 }

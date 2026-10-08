@@ -41,7 +41,6 @@ const makeBuffer = (content: string, language = "typescript"): EditorContent => 
   isPreview: false,
   isActive: true,
   language,
-  tokens: [],
 });
 
 describe("editor API model operations", () => {

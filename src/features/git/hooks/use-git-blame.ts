@@ -13,6 +13,7 @@ import {
 import { getGitBlameCacheKey, useGitBlameStore } from "../stores/git-blame.store";
 import type { GitBlameLine } from "../types/git.types";
 import { findGitBlameLine } from "../utils/git-blame-lines";
+import { readBufferText } from "@/features/editor/services/buffer-text";
 
 const BLAME_REFRESH_DELAY_MS = 500;
 
@@ -27,7 +28,7 @@ export function canGitChangeAffectBlame(change: GitChange): boolean {
 function readEditorContent(workspaceId: string | null, bufferId: string): string | null {
   const store = workspaceId ? useBufferStore.getStore(workspaceId) : useBufferStore;
   const buffer = getBufferById(store.getState().buffers, bufferId);
-  return buffer?.type === "editor" ? buffer.content : null;
+  return buffer?.type === "editor" ? readBufferText(buffer) : null;
 }
 
 /**

@@ -1,3 +1,4 @@
+use crate::semantic_tokens::RawSemanticTokensDeltaResult;
 use anyhow::{Context, Result, bail};
 use athas_runtime::{NodeRuntime, process::configure_background_command};
 use crossbeam_channel::{Sender, bounded};
@@ -494,7 +495,7 @@ impl LspClient {
          semantic_tokens: Some(SemanticTokensClientCapabilities {
             dynamic_registration: Some(true),
             requests: SemanticTokensClientCapabilitiesRequests {
-               full: Some(SemanticTokensFullOptions::Bool(true)),
+               full: Some(SemanticTokensFullOptions::Delta { delta: Some(true) }),
                range: Some(true),
             },
             token_types: vec![
@@ -1080,6 +1081,39 @@ impl LspClient {
       self
          .request::<request::SemanticTokensFullRequest>(params)
          .await
+   }
+
+   pub(crate) async fn text_document_semantic_tokens_full_delta(
+      &self,
+      params: SemanticTokensDeltaParams,
+   ) -> Result<Option<RawSemanticTokensDeltaResult>> {
+      let response = self
+         .request_value(
+            <request::SemanticTokensFullDeltaRequest as request::Request>::METHOD,
+            serde_json::to_value(params)?,
+         )
+         .await?;
+      serde_json::from_value(response).context("Failed to deserialize semantic token delta")
+   }
+
+   pub fn supports_semantic_tokens_delta(&self) -> bool {
+      let capabilities = self.capabilities.lock().unwrap();
+      let full = match capabilities
+         .as_ref()
+         .and_then(|capabilities| capabilities.semantic_tokens_provider.as_ref())
+      {
+         Some(SemanticTokensServerCapabilities::SemanticTokensOptions(options)) => {
+            options.full.as_ref()
+         }
+         Some(SemanticTokensServerCapabilities::SemanticTokensRegistrationOptions(options)) => {
+            options.semantic_tokens_options.full.as_ref()
+         }
+         None => None,
+      };
+      matches!(
+         full,
+         Some(SemanticTokensFullOptions::Delta { delta: Some(true) })
+      )
    }
 
    pub fn semantic_token_legend(&self) -> (Vec<String>, Vec<String>) {

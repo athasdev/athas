@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { toast } from "sonner";
 import { getRelativeTime } from "@/features/ai/lib/formatting";
 import { selectAcpAgentStatus } from "@/features/ai/lib/acp-session-state";
@@ -32,11 +33,12 @@ function AgentSessionsBrowser({ agentId, onClose }: { agentId: string; onClose: 
   const canDelete = useAIChatStore((state) =>
     canDeleteAgentSessions(selectAcpAgentStatus(state, agentId, workspacePath)),
   );
-  const heldSessionIds = useAIChatStore((state) =>
-    state.chats
-      .filter((chat) => chat.agentId === agentId && chat.acpSessionId)
-      .map((chat) => chat.acpSessionId)
-      .join("\n"),
+  const heldSessionIds = useAIChatStore(
+    useShallow((state) =>
+      state.chats
+        .filter((chat) => chat.agentId === agentId && chat.acpSessionId)
+        .map((chat) => chat.acpSessionId),
+    ),
   );
   const [sessions, setSessions] = useState<AcpSessionInfo[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -101,7 +103,7 @@ function AgentSessionsBrowser({ agentId, onClose }: { agentId: string; onClose: 
     }
   };
 
-  const held = new Set(heldSessionIds.split("\n"));
+  const held = new Set(heldSessionIds);
 
   return (
     <Dialog

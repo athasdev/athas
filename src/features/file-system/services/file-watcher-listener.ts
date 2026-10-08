@@ -18,6 +18,7 @@ import {
   scheduleFileWatcherRefresh,
 } from "./file-watcher-refresh-scheduler";
 import { getDirName } from "@/utils/path-helpers";
+import { readBufferText } from "@/features/editor/services/buffer-text";
 
 /** The `file-changed` payload, from the project file watcher and from agent writes alike. */
 export interface FileChangeEvent {
@@ -99,7 +100,7 @@ async function syncOpenBuffer(
     await bufferState.actions.reloadBufferFromDisk(current.id);
     return "synced";
   }
-  if (current.content === diskContent) {
+  if (readBufferText(current) === diskContent) {
     bufferState.actions.markBufferDirty(current.id, false);
     return "synced";
   }

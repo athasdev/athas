@@ -1,5 +1,5 @@
 import { filterChatsByWorkspace } from "@/features/ai/lib/ai-workspace-scope";
-import type { Chat } from "@/features/ai/types/ai-chat.types";
+import type { Chat, ChatSession } from "@/features/ai/types/ai-chat.types";
 
 /**
  * `createChat` stamps `createdAt` and `lastMessageAt` from two separate clock
@@ -7,7 +7,8 @@ import type { Chat } from "@/features/ai/types/ai-chat.types";
  */
 const CREATION_SKEW_MS = 1000;
 
-type SessionSummary = Pick<Chat, "createdAt" | "lastMessageAt"> & Partial<Pick<Chat, "messages">>;
+type SessionSummary = Pick<ChatSession, "createdAt" | "lastMessageAt" | "messageCount"> &
+  Partial<Pick<Chat, "messages">>;
 
 /**
  * Whether a session has ever carried a message.
@@ -17,7 +18,7 @@ type SessionSummary = Pick<Chat, "createdAt" | "lastMessageAt"> & Partial<Pick<C
  * by message mutations, which makes it the reliable signal here.
  */
 export function hasAgentSessionActivity(chat: SessionSummary): boolean {
-  if ((chat.messages?.length ?? 0) > 0) return true;
+  if ((chat.messages?.length ?? chat.messageCount ?? 0) > 0) return true;
 
   return chat.lastMessageAt.getTime() - chat.createdAt.getTime() > CREATION_SKEW_MS;
 }
@@ -43,8 +44,8 @@ export interface AgentSessionListOptions {
  * Sessions that never received a message are hidden: they are created eagerly
  * by "New Agent" and would otherwise pile up as identical "New Session" rows.
  */
-export function selectAgentSessions(
-  chats: Chat[],
+export function selectAgentSessions<T extends ChatSession>(
+  chats: T[],
   {
     workspacePath,
     keepIds,
@@ -52,7 +53,7 @@ export function selectAgentSessions(
     includePinned = true,
     includeEmpty = false,
   }: AgentSessionListOptions = {},
-): Chat[] {
+): T[] {
   const kept = new Set<string>();
   for (const id of keepIds ?? []) {
     if (id) kept.add(id);

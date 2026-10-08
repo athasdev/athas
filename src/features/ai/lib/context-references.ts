@@ -313,9 +313,9 @@ async function getDefaultSources(projectRoot: string): Promise<ContextReferenceS
     getFileDiff,
     getDiagnostics: () => useDiagnosticsStore.getState().actions.getAllDiagnostics(),
     async loadChatHistory(chatId) {
-      const loaded = useAIChatStore.getState().chats.find((chat) => chat.id === chatId);
-      const messages = loaded?.messages.length
-        ? loaded.messages
+      const loaded = useAIChatStore.getState().messagesByChat[chatId];
+      const messages = loaded?.length
+        ? loaded
         : (await loadChatFromDb(chatId).catch(() => null))?.messages;
       return messages ? buildConversationHistory(messages) : null;
     },

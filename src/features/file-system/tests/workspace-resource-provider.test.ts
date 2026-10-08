@@ -158,13 +158,16 @@ describe("workspace resource provider", () => {
       filePath: "/home/me/readme.md",
     });
   });
-  it("sends expected local content to the native checked-write command", async () => {
+  it("sends a digest of the expected local content to the native checked-write command", async () => {
     const provider = getWorkspaceResourceProvider("/workspace/a.ts");
     await provider.writeText("/workspace/a.ts", "after", "before");
     expect(invoke).toHaveBeenCalledExactlyOnceWith("write_local_file_checked", {
       path: "/workspace/a.ts",
       content: "after",
-      expectedContent: "before",
+      expected: {
+        byteLength: 6,
+        sha256: "6db7d803e74f1ffa7d8f5adc0bf95b3e15bf4c8373fffadf546227cc6c6742cb",
+      },
     });
     await provider.deleteText("/workspace/a.ts", "after");
     expect(invoke).toHaveBeenLastCalledWith("delete_local_file_checked", {

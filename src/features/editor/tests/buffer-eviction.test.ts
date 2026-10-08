@@ -19,7 +19,6 @@ const buffer = (
     savedContent: "",
     isDirty: false,
     isVirtual: false,
-    tokens: [],
     ...overrides,
   }) as PaneContent;
 

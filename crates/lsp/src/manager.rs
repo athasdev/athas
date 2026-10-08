@@ -3,7 +3,12 @@ use super::{
    config::{LspRegistry, LspSettings},
    document_sync::{DocumentChangeBatch, DocumentSessions, PendingDocumentChanges, SyncMode},
    manager_state::{LspInstance, WorkspaceClients},
-   manager_support, utils,
+   manager_support,
+   semantic_tokens::{
+      SemanticTokenCache, flatten_semantic_tokens, group_semantic_tokens,
+      resolve_semantic_tokens_delta,
+   },
+   utils,
 };
 use anyhow::{Context, Result, bail};
 use lsp_types::*;
@@ -22,6 +27,7 @@ pub struct LspManager {
    app_handle: AppHandle,
    settings: LspSettings,
    document_sessions: DocumentSessions,
+   semantic_tokens: SemanticTokenCache,
 }
 
 fn send_document_changes(
@@ -47,6 +53,7 @@ impl LspManager {
          app_handle,
          settings: LspSettings::default(),
          document_sessions: DocumentSessions::default(),
+         semantic_tokens: SemanticTokenCache::default(),
       }
    }
 
@@ -362,7 +369,9 @@ impl LspManager {
    /// This will decrement the reference count and shutdown the server if it reaches 0
    pub fn stop_lsp_for_file(&self, file_path: &PathBuf) -> Result<()> {
       log::info!("Stopping LSP for file: {:?}", file_path);
-      self.document_sessions.close(&file_path.to_string_lossy());
+      let file_path_text = file_path.to_string_lossy();
+      self.document_sessions.close(&file_path_text);
+      self.semantic_tokens.remove(&file_path_text);
       self.workspace_clients.stop_file(file_path);
       Ok(())
    }
@@ -600,6 +609,9 @@ impl LspManager {
       }
    }
 
+   /// The document's full semantic token set. When the server supports deltas and an earlier
+   /// result is cached, only the edits since that result are requested and applied here, so the
+   /// caller always receives complete tokens.
    pub async fn get_semantic_tokens(
       &self,
       file_path: &str,
@@ -611,6 +623,53 @@ impl LspManager {
       let text_document = TextDocumentIdentifier {
          uri: manager_support::text_document_identifier(file_path)?.uri,
       };
+      let epoch = client
+         .supports_semantic_tokens_delta()
+         .then(|| self.document_sessions.epoch(file_path))
+         .flatten();
+
+      if let Some(epoch) = epoch
+         && let Some(previous) = self.semantic_tokens.get(file_path, client.id(), epoch)
+      {
+         let params = SemanticTokensDeltaParams {
+            text_document: text_document.clone(),
+            previous_result_id: previous.result_id,
+            work_done_progress_params: Default::default(),
+            partial_result_params: Default::default(),
+         };
+         match client
+            .text_document_semantic_tokens_full_delta(params)
+            .await
+         {
+            Ok(Some(response)) => {
+               if let Some((result_id, data)) =
+                  resolve_semantic_tokens_delta(&previous.data, response)
+               {
+                  let tokens = group_semantic_tokens(&data);
+                  self.store_semantic_tokens(
+                     file_path,
+                     client.id(),
+                     epoch,
+                     result_id.clone(),
+                     data,
+                  );
+                  return Ok(Some(SemanticTokensResult::Tokens(SemanticTokens {
+                     result_id,
+                     data: tokens,
+                  })));
+               }
+               log::debug!("Semantic token delta could not be applied; requesting full tokens");
+            }
+            Ok(None) => {}
+            Err(error) => {
+               if manager_support::is_canceled_request(&error) {
+                  return Err(error);
+               }
+               log::debug!("Semantic token delta request failed, requesting full tokens: {error}");
+            }
+         }
+         self.semantic_tokens.remove(file_path);
+      }
 
       let params = SemanticTokensParams {
          text_document,
@@ -619,7 +678,21 @@ impl LspManager {
       };
 
       match client.text_document_semantic_tokens_full(params).await {
-         Ok(value) => Ok(value),
+         Ok(value) => {
+            if let Some(epoch) = epoch {
+               match &value {
+                  Some(SemanticTokensResult::Tokens(tokens)) => self.store_semantic_tokens(
+                     file_path,
+                     client.id(),
+                     epoch,
+                     tokens.result_id.clone(),
+                     flatten_semantic_tokens(&tokens.data),
+                  ),
+                  _ => self.semantic_tokens.remove(file_path),
+               }
+            }
+            Ok(value)
+         }
          Err(error) => {
             if manager_support::is_unsupported_method(&error, "textDocument/semanticTokens") {
                log::debug!("SemanticTokens method is not supported by this language server");
@@ -627,6 +700,25 @@ impl LspManager {
             }
             Err(error)
          }
+      }
+   }
+
+   /// Caches a result only while the document session that requested it is still open, so a
+   /// response arriving after close or reopen cannot seed the next session's deltas.
+   fn store_semantic_tokens(
+      &self,
+      file_path: &str,
+      client_id: &str,
+      epoch: u64,
+      result_id: Option<String>,
+      data: Vec<u32>,
+   ) {
+      if self.document_sessions.epoch(file_path) == Some(epoch) {
+         self
+            .semantic_tokens
+            .store(file_path, client_id, epoch, result_id, data);
+      } else {
+         self.semantic_tokens.remove(file_path);
       }
    }
 
@@ -1519,6 +1611,7 @@ impl LspManager {
    }
 
    pub fn notify_document_close(&self, file_path: &str) -> Result<()> {
+      self.semantic_tokens.remove(file_path);
       let client = self
          .raw_client_for_file(file_path)
          .context("No LSP client for this file")?;
@@ -1534,10 +1627,12 @@ impl LspManager {
    }
 
    pub fn shutdown(&self) {
+      self.semantic_tokens.clear();
       self.workspace_clients.shutdown_all();
    }
 
    pub fn shutdown_workspace(&self, workspace_path: &Path) -> Result<()> {
+      self.semantic_tokens.clear();
       Ok(self.workspace_clients.shutdown_workspace(workspace_path)?)
    }
 

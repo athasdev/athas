@@ -544,7 +544,7 @@ export const TerminalEmulator = ({
         activeRemoteConnectionId = activeRemoteConnectionId || remoteInfo?.connectionId;
         const size = getTerminalSize(terminal);
         const launch = existingSession?.launch;
-        const { windowLabel, frontendSessionId } = getFrontendTerminalSessionArgs();
+        const { windowLabel, frontendSessionId } = await getFrontendTerminalSessionArgs();
 
         const createdConnectionId = await launchTerminalSession({
           owner: terminalOwner,

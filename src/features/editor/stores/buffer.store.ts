@@ -52,6 +52,16 @@ import type {
 } from "@/features/editor/types/editor.types";
 import { publishEditorDocumentChange } from "@/features/editor/services/editor-document-events";
 import { applyEditorTextChanges } from "@/features/editor/utils/editor-text-changes";
+import { readBufferRevision, readBufferText } from "@/features/editor/services/buffer-text";
+import {
+  discardLiveDocumentChanges,
+  flushLiveDocument,
+  forgetLiveDocument,
+  liveDocumentMatchesSaved,
+  type LiveDocumentEdit,
+  markLiveDocumentChanged,
+  rememberSavedText,
+} from "@/features/editor/services/live-document-registry";
 import { SavedContentTracker } from "@/features/editor/utils/saved-content-tracker";
 import { createWorkspaceScopedStore } from "@/features/workspace/stores/create-workspace-scoped-store";
 import {
@@ -201,6 +211,17 @@ interface BufferActions {
     batch: EditorDocumentChangeBatch,
     markDirty?: boolean,
   ) => EditorDocumentChangeResult;
+  /**
+   * Takes an edit from an editor view that keeps the text itself. The store's `content` is left
+   * as it is until the view's text is flushed; only the dirty flag changes when it flips.
+   */
+  applyLiveDocumentChange: (
+    bufferId: string,
+    batch: EditorDocumentChangeBatch,
+    edit: LiveDocumentEdit,
+    /** Track the dirty flag even though the buffer is virtual (collaboration notes save remotely). */
+    trackVirtualDirty?: boolean,
+  ) => EditorDocumentChangeResult;
   updateBufferLanguage: (bufferId: string, language: string) => void;
   markBufferDirty: (bufferId: string, isDirty: boolean) => void;
   updateImageDraft: (bufferId: string, draft: ImageDraftState) => void;
@@ -260,6 +281,7 @@ const applyWorkspaceAutoEviction = (
 
   if (evictedBuffer) {
     cleanupBufferHistoryTracking(evictedBuffer.id, workspaceId);
+    forgetLiveDocument(evictedBuffer.id);
     removeBufferFromWorkspacePanes(evictedBuffer.id, false, workspaceId);
   }
 
@@ -1145,6 +1167,7 @@ const createBufferStore = (workspaceId: string) => {
         },
 
         closeBufferForce: (bufferId: string) => {
+          flushLiveDocument(bufferId);
           const { buffers, activeBufferId, closedBuffersHistory } = get();
           const bufferIndex = getBufferIndexById(buffers, bufferId);
 
@@ -1152,6 +1175,7 @@ const createBufferStore = (workspaceId: string) => {
 
           cleanupBufferHistoryTracking(bufferId, workspaceId);
           savedContentTracker.forget(bufferId);
+          forgetLiveDocument(bufferId);
 
           const replacementBufferId =
             activeBufferId === bufferId ? getPaneReplacementBufferId([bufferId], buffers) : null;
@@ -1258,6 +1282,7 @@ const createBufferStore = (workspaceId: string) => {
         closeBuffersBatch: (bufferIds: string[], skipSessionSave = false) => {
           if (bufferIds.length === 0) return;
 
+          for (const id of bufferIds) forgetLiveDocument(id);
           const { buffers, activeBufferId } = get();
           const closingBufferIds = new Set(bufferIds);
           const replacementBufferId =
@@ -1325,10 +1350,11 @@ const createBufferStore = (workspaceId: string) => {
           // Only content types with text content can be updated
           if (!isEditableContent(buffer)) return;
 
-          if (buffer.content === content && !diffData) return;
+          if (readBufferText(buffer) === content && !diffData) return;
 
           let promotedPreviewBufferId: string | null = null;
-          const contentRevision = buffer.type === "editor" ? (buffer.contentRevision ?? 0) + 1 : 0;
+          const contentRevision = buffer.type === "editor" ? readBufferRevision(buffer) + 1 : 0;
+          if (buffer.type === "editor") discardLiveDocumentChanges(bufferId);
           set((state) => {
             const buf = state.buffers.find((b) => b.id === bufferId);
             if (!buf || !isEditableContent(buf)) return;
@@ -1398,11 +1424,12 @@ const createBufferStore = (workspaceId: string) => {
 
           // A delta that does not land cleanly is refused rather than guessed at; the editor then
           // resends the model's full text.
+          const currentContent = readBufferText(buffer);
           const nextContent =
             batch.fullContent ??
             (batch.isFlush || batch.isEolChange
               ? null
-              : applyEditorTextChanges(buffer.content, batch.changes));
+              : applyEditorTextChanges(currentContent, batch.changes));
           if (
             nextContent === null ||
             (batch.fullContent === undefined &&
@@ -1416,13 +1443,14 @@ const createBufferStore = (workspaceId: string) => {
             };
           }
 
-          const contentRevision = (buffer.contentRevision ?? 0) + 1;
+          const contentRevision = readBufferRevision(buffer) + 1;
+          discardLiveDocumentChanges(bufferId);
           let isDirty = false;
           if (!buffer.isVirtual) {
             if (markDirty) {
               isDirty = savedContentTracker.isDirtyAfterChanges(
                 bufferId,
-                buffer.content,
+                currentContent,
                 nextContent,
                 buffer.savedContent,
                 batch.fullContent === undefined ? batch.changes : [],
@@ -1466,12 +1494,75 @@ const createBufferStore = (workspaceId: string) => {
           return { accepted: true, synchronized: true, contentRevision };
         },
 
+        applyLiveDocumentChange: (bufferId, batch, edit, trackVirtualDirty = false) => {
+          const buffer = getBufferById(get().buffers, bufferId);
+          if (!buffer || !isEditorContent(buffer)) {
+            return { accepted: false, synchronized: false, contentRevision: 0 };
+          }
+
+          const lastAppliedVersion = lastAppliedModelVersionByBuffer.get(bufferId);
+          if (
+            lastAppliedVersion?.modelSessionId === batch.modelSessionId &&
+            batch.modelVersionId <= lastAppliedVersion.modelVersionId
+          ) {
+            return {
+              accepted: false,
+              synchronized: true,
+              contentRevision: readBufferRevision(buffer),
+            };
+          }
+
+          const contentRevision = readBufferRevision(buffer) + 1;
+          markLiveDocumentChanged(bufferId, edit, contentRevision, (text, revision) => {
+            const current = getBufferById(get().buffers, bufferId);
+            if (!current || !isEditorContent(current)) return;
+            if ((current.contentRevision ?? 0) >= revision) return;
+            set((state) => {
+              const target = getBufferById(state.buffers, bufferId);
+              if (!target || !isEditorContent(target)) return;
+              target.content = text;
+              target.contentRevision = revision;
+            });
+          });
+          lastAppliedModelVersionByBuffer.set(bufferId, {
+            modelSessionId: batch.modelSessionId,
+            modelVersionId: batch.modelVersionId,
+          });
+
+          if (!buffer.isVirtual || trackVirtualDirty) {
+            const isDirty = !liveDocumentMatchesSaved(
+              bufferId,
+              edit.doc,
+              buffer.savedContent,
+              edit.view.getSeparator(),
+            );
+            const promotePreview = isDirty && buffer.isPreview && !buffer.isVirtual;
+            if (isDirty !== buffer.isDirty || promotePreview) {
+              set((state) => {
+                const current = getBufferById(state.buffers, bufferId);
+                if (!current || !isEditorContent(current)) return;
+                current.isDirty = isDirty;
+                if (promotePreview) current.isPreview = false;
+              });
+            }
+            if (promotePreview) {
+              paneStore.getState().actions.clearPreviewBufferEverywhere(bufferId);
+            }
+          }
+
+          publishEditorDocumentChange({
+            ...batch,
+            bufferId,
+            filePath: buffer.path,
+          });
+          return { accepted: true, synchronized: true, contentRevision };
+        },
+
         updateBufferLanguage: (bufferId: string, language: string) => {
           set((state) => {
             const buffer = state.buffers.find((b) => b.id === bufferId);
             if (buffer && isEditorContent(buffer)) {
               buffer.languageOverride = language;
-              buffer.tokens = [];
             }
           });
         },
@@ -1486,24 +1577,33 @@ const createBufferStore = (workspaceId: string) => {
         },
 
         markBufferDirty: (bufferId: string, isDirty: boolean) => {
+          const original = getBufferById(get().buffers, bufferId);
+          const currentText = !isDirty && original ? readBufferText(original) : null;
           set((state) => {
             const buffer = state.buffers.find((b) => b.id === bufferId);
             if (buffer && isEditorContent(buffer)) {
               buffer.isDirty = isDirty;
-              if (!isDirty) {
-                buffer.savedContent = buffer.content;
+              if (currentText !== null) {
+                buffer.savedContent = currentText;
               }
             }
           });
+          if (currentText !== null) rememberSavedText(bufferId, currentText);
         },
 
         markBufferSaved: (bufferId: string, content: string, path?: string) => {
+          const original = getBufferById(get().buffers, bufferId);
+          if (!original || !isEditorContent(original)) return;
+          const isDirty = readBufferText(original) !== content;
+          if (!isDirty) {
+            savedContentTracker.markSaved(bufferId, content);
+            rememberSavedText(bufferId, content);
+          }
           set((state) => {
             const buffer = state.buffers.find((item) => item.id === bufferId);
             if (!buffer || !isEditorContent(buffer)) return;
             buffer.savedContent = content;
-            buffer.isDirty = buffer.content !== content;
-            if (!buffer.isDirty) savedContentTracker.markSaved(bufferId, content);
+            buffer.isDirty = isDirty;
             if (path !== undefined) {
               buffer.path = path;
               buffer.name = getBaseName(path);
@@ -1515,13 +1615,15 @@ const createBufferStore = (workspaceId: string) => {
 
         updateBufferPath: (bufferId: string, newPath: string) => {
           const newName = newPath.split("/").pop() || newPath;
+          const original = getBufferById(get().buffers, bufferId);
+          const currentText = original ? readBufferText(original) : "";
           set((state) => {
             const buffer = state.buffers.find((b) => b.id === bufferId);
             if (buffer && isEditorContent(buffer)) {
               buffer.path = newPath;
               buffer.name = newName;
               buffer.isVirtual = false;
-              buffer.savedContent = buffer.content;
+              buffer.savedContent = currentText;
               buffer.language = detectLanguageFromFileName(newName);
             }
           });
@@ -1555,10 +1657,11 @@ const createBufferStore = (workspaceId: string) => {
               ? {
                   ...updatedBuffer,
                   contentRevision: contentChanged
-                    ? (currentBuffer.contentRevision ?? 0) + 1
+                    ? readBufferRevision(currentBuffer) + 1
                     : (currentBuffer.contentRevision ?? updatedBuffer.contentRevision ?? 0),
                 }
               : updatedBuffer;
+          if (contentChanged) discardLiveDocumentChanges(updatedBuffer.id);
           set((state) => {
             const index = state.buffers.findIndex((b) => b.id === updatedBuffer.id);
             if (index !== -1) {

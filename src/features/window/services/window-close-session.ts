@@ -11,6 +11,11 @@ import {
   type ImageContent,
 } from "@/features/panes/types/pane-content.types";
 import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { readBufferRevision, readBufferText } from "@/features/editor/services/buffer-text";
+import {
+  flushAllLiveDocuments,
+  flushLiveDocument,
+} from "@/features/editor/services/live-document-registry";
 
 export interface PendingWindowClose {
   owner: BufferStoreOwner;
@@ -26,8 +31,8 @@ function sameDraft(current: EditorContent | ImageContent, original: EditorConten
     return false;
   if (current.type === "editor" && original.type === "editor")
     return (
-      current.content === original.content &&
-      (current.contentRevision ?? 0) === (original.contentRevision ?? 0)
+      readBufferRevision(current) === (original.contentRevision ?? 0) &&
+      readBufferText(current) === original.content
     );
   if (current.type === "image" && original.type === "image")
     return (
@@ -52,6 +57,8 @@ export class WindowCloseSession {
   }
 
   findBlockingDraft(): PendingWindowClose | null {
+    // Drafts are compared by their stored text, so it must include what editors still hold.
+    flushAllLiveDocuments();
     const activeId = workspaceRuntimeRegistry.getActiveWorkspaceId();
     const entries =
       workspaceRuntimeRegistry.getExistingStoreEntries<ReturnType<typeof useBufferStore.getState>>(
@@ -78,6 +85,7 @@ export class WindowCloseSession {
 
   discard(request: PendingWindowClose): boolean {
     if (!isBufferStoreOwnerLive(request.owner)) return false;
+    flushLiveDocument(request.buffer.id);
     const current = getBufferById(request.owner.store.getState().buffers, request.buffer.id);
     if (
       !current ||

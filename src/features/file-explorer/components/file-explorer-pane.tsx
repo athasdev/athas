@@ -7,25 +7,28 @@ import { Spinner } from "@/ui/spinner";
 import { FileExplorerTree } from "./file-explorer-tree";
 
 function FileExplorerPaneComponent() {
-  const setFiles = useFileSystemStore.use.setFiles?.();
-  const handleCreateNewFolderInDirectory =
-    useFileSystemStore.use.handleCreateNewFolderInDirectory?.();
-  const handleFileSelect = useFileSystemStore.use.handleFileSelect?.();
-  const handleFileOpen = useFileSystemStore.use.handleFileOpen?.();
-  const handleCreateNewFileInDirectory = useFileSystemStore.use.handleCreateNewFileInDirectory?.();
-  const handleDeletePath = useFileSystemStore.use.handleDeletePath?.();
-  const refreshDirectory = useFileSystemStore.use.refreshDirectory?.();
-  const handleFileMove = useFileSystemStore.use.handleFileMove?.();
-  const handleRevealInFolder = useFileSystemStore.use.handleRevealInFolder?.();
-  const handleDuplicatePath = useFileSystemStore.use.handleDuplicatePath?.();
-  const handleRenamePath = useFileSystemStore.use.handleRenamePath?.();
+  const setFiles = useFileSystemStore((state) => state.setFiles);
+  const handleCreateNewFolderInDirectory = useFileSystemStore(
+    (state) => state.handleCreateNewFolderInDirectory,
+  );
+  const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
+  const handleFileOpen = useFileSystemStore((state) => state.handleFileOpen);
+  const handleCreateNewFileInDirectory = useFileSystemStore(
+    (state) => state.handleCreateNewFileInDirectory,
+  );
+  const handleDeletePath = useFileSystemStore((state) => state.handleDeletePath);
+  const refreshDirectory = useFileSystemStore((state) => state.refreshDirectory);
+  const handleFileMove = useFileSystemStore((state) => state.handleFileMove);
+  const handleRevealInFolder = useFileSystemStore((state) => state.handleRevealInFolder);
+  const handleDuplicatePath = useFileSystemStore((state) => state.handleDuplicatePath);
+  const handleRenamePath = useFileSystemStore((state) => state.handleRenamePath);
 
-  const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
+  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
   const files = useFileSystemStore.use.files();
   const isFileTreeLoading = useFileSystemStore.use.isFileTreeLoading();
   const isSwitchingProject = useFileSystemStore.use.isSwitchingProject();
 
-  const activePath = useSidebarStore.use.activePath?.();
+  const activePath = useSidebarStore((state) => state.activePath);
   const updateActivePath = useSidebarStore.use.actions().updateActivePath;
 
   return (

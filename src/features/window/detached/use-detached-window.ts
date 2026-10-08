@@ -18,6 +18,7 @@ import {
   getDetachedWindowChannelName,
   parseDetachedWindowUrl,
 } from "./detached-window-protocol";
+import { readBufferText } from "@/features/editor/services/buffer-text";
 
 export interface DetachedWindowConnection<Message> {
   post: (message: Message) => void;
@@ -104,7 +105,7 @@ export function useDetachedWindow<Message extends { type: string }>({
                 type: "editor",
                 path: item.path,
                 name: item.name,
-                content: item.content,
+                content: readBufferText(item),
               });
             }
           },

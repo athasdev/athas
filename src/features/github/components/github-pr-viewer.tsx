@@ -62,7 +62,7 @@ interface GitHubPRViewerProps {
 }
 
 const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
-  const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
+  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
   const selectedRepoPath = useRepositoryStore.use.activeRepoPath();
   const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
   const prBuffer = useBufferStore((state) => {

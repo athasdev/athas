@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
+import { normalizeChats } from "@/features/ai/stores/ai-chat/chat-normalization";
 import type { Chat } from "@/features/ai/types/ai-chat.types";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
@@ -35,13 +36,12 @@ function chat(id: string): Chat {
 }
 
 const actions = () => useAIChatStore.getState().actions;
-const reply = (chatId = "a") =>
-  useAIChatStore.getState().chats.find((candidate) => candidate.id === chatId)!.messages[1]!;
+const reply = (chatId = "a") => useAIChatStore.getState().messagesByChat[chatId]![1]!;
 
 describe("streamed message updates", () => {
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "requestAnimationFrame"] });
-    useAIChatStore.setState({ chats: [chat("a"), chat("b")] });
+    useAIChatStore.setState(normalizeChats([chat("a"), chat("b")]));
   });
   afterEach(() => {
     actions().flushMessageUpdates();
@@ -124,5 +124,33 @@ describe("streamed message updates", () => {
     actions().appendMessageContent("a", "reply", "token");
     vi.advanceTimersToNextFrame();
     expect(useAIChatStore.getState().chats[1]).toBe(before);
+  });
+
+  it("changes only the streamed message, leaving the session list and other messages alone", () => {
+    const before = useAIChatStore.getState();
+    actions().appendMessageContent("a", "reply", "token");
+    vi.advanceTimersToNextFrame();
+    const after = useAIChatStore.getState();
+
+    expect(after.messagesByChat.a![1]!.content).toBe("token");
+    expect(after.messagesByChat.a![1]).not.toBe(before.messagesByChat.a![1]);
+    expect(after.chats).toBe(before.chats);
+    expect(after.chats[0]).toBe(before.chats[0]);
+    expect(after.messagesByChat.a![0]).toBe(before.messagesByChat.a![0]);
+    expect(after.messagesByChat.b).toBe(before.messagesByChat.b);
+  });
+
+  it("updates the session list when a message is added, not per token", () => {
+    const before = useAIChatStore.getState().chats;
+    actions().addMessage("a", {
+      id: "next",
+      role: "user",
+      content: "More",
+      timestamp: new Date(),
+    });
+    const after = useAIChatStore.getState().chats;
+    expect(after).not.toBe(before);
+    expect(after[0]).toMatchObject({ messageCount: 3 });
+    expect(after[1]).toBe(before[1]);
   });
 });

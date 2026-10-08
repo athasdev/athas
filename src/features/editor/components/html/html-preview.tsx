@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
+import { useBufferText } from "@/features/editor/hooks/use-buffer-text";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getBufferById, getBufferByPath } from "@/features/editor/utils/buffer-index";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
@@ -11,8 +12,10 @@ import {
 } from "@/features/editor/utils/html-preview-document";
 import { ensureAssetAccess } from "@/utils/asset-access";
 
+const PREVIEW_UPDATE_DELAY_MS = 150;
+
 export function HtmlPreview() {
-  const { hasSourceBuffer, sourceContent, sourcePath } = useBufferStore(
+  const { hasSourceBuffer, sourceBufferId, sourcePath } = useBufferStore(
     useShallow((state) => {
       const activeBuffer = getBufferById(state.buffers, state.activeBufferId);
       const sourceBuffer =
@@ -22,12 +25,13 @@ export function HtmlPreview() {
 
       return {
         hasSourceBuffer: Boolean(sourceBuffer),
-        sourceContent: sourceBuffer && hasTextContent(sourceBuffer) ? sourceBuffer.content : "",
+        sourceBufferId: sourceBuffer && hasTextContent(sourceBuffer) ? sourceBuffer.id : null,
         sourcePath: sourceBuffer?.path,
       };
     }),
   );
-  const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
+  const sourceContent = useBufferText(sourceBufferId, { debounceMs: PREVIEW_UPDATE_DELAY_MS });
+  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
 
   const [iframeContent, setIframeContent] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);

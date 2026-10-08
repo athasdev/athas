@@ -49,7 +49,6 @@ function editor(content = "disk", savedContent = "disk", id = "file"): EditorCon
     isPreview: false,
     isActive: false,
     language: "typescript",
-    tokens: [],
   };
 }
 const options = { path: "/workspace/file.ts", entryId: "snapshot", workspaceId: "owner" };

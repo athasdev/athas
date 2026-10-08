@@ -26,6 +26,7 @@ import {
   type RelatedFileCandidate,
   SENSITIVE_FILE_PATTERN,
 } from "./intelligence-completion-context";
+import { readBufferText } from "../services/buffer-text";
 
 /** How long typing has to pause before Tab autocomplete asks for a completion. */
 export const INTELLIGENCE_COMPLETION_DEBOUNCE_MS = 350;
@@ -236,7 +237,7 @@ function getOpenFileCandidates(): RelatedFileCandidate[] {
       ? [
           {
             path: buffer.path,
-            content: buffer.content,
+            content: readBufferText(buffer),
             languageId: buffer.languageOverride ?? getLanguageIdFromPath(buffer.path),
           },
         ]

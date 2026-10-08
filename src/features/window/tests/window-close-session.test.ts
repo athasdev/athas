@@ -19,7 +19,6 @@ function draft(content = "draft"): EditorContent {
     isPreview: false,
     isActive: false,
     language: "typescript",
-    tokens: [],
   };
 }
 function owner(id: string) {

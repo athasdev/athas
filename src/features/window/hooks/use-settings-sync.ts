@@ -6,6 +6,7 @@ import {
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { hasProductCapability } from "@/features/window/lib/product-capabilities";
 import { useIntelligenceSettingsStore } from "@/features/ai/intelligence/stores/intelligence-settings.store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 
 export function useSettingsSync() {
   const userId = useAuthStore((state) => state.user?.id ?? null);
@@ -13,6 +14,8 @@ export function useSettingsSync() {
   const subscription = useAuthStore((state) => state.subscription);
   const hasHydrated = useRef(false);
   const hasSettingsSync = hasProductCapability(subscription, "settingsSync");
+  // Without the saved settings, a sync would push the defaults over the cloud copy.
+  const settingsLoaded = useSettingsStore((state) => state.isLoaded);
 
   useEffect(() => {
     void useIntelligenceSettingsStore.getState().actions.setUser(userId);
@@ -35,7 +38,7 @@ export function useSettingsSync() {
   }, []);
 
   useEffect(() => {
-    if (!hasHydrated.current) {
+    if (!hasHydrated.current || !settingsLoaded) {
       return;
     }
 
@@ -43,5 +46,5 @@ export function useSettingsSync() {
       isAuthenticated,
       isPro: hasSettingsSync,
     });
-  }, [hasSettingsSync, isAuthenticated]);
+  }, [hasSettingsSync, isAuthenticated, settingsLoaded]);
 }

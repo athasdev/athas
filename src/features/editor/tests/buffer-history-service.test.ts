@@ -28,7 +28,6 @@ function buffer(content = "foo"): EditorContent {
     isPreview: true,
     isPinned: false,
     isActive: true,
-    tokens: [],
   };
 }
 const owner = () => captureBufferStoreOwner("owner");

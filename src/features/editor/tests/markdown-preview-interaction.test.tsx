@@ -11,21 +11,25 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/features/editor/extensions/api", () => ({ editorAPI: mocks }));
-vi.mock("@/features/editor/stores/buffer.store", () => ({
-  useBufferStore: (selector: (state: unknown) => unknown) =>
-    selector({
-      activeBufferId: "markdown-buffer",
-      buffers: [
-        {
-          id: "markdown-buffer",
-          type: "editor",
-          path: "/workspace/AGENTS.md",
-          name: "AGENTS.md",
-          content: "- **Item**",
-        },
-      ],
+vi.mock("@/features/editor/stores/buffer.store", () => {
+  const state = {
+    activeBufferId: "markdown-buffer",
+    buffers: [
+      {
+        id: "markdown-buffer",
+        type: "editor",
+        path: "/workspace/AGENTS.md",
+        name: "AGENTS.md",
+        content: "- **Item**",
+      },
+    ],
+  };
+  return {
+    useBufferStore: Object.assign((selector: (value: unknown) => unknown) => selector(state), {
+      getState: () => state,
     }),
-}));
+  };
+});
 vi.mock("@/features/settings/stores/settings.store", () => ({
   useSettingsStore: (selector: (state: unknown) => unknown) =>
     selector({ settings: { fontSize: 14, uiFontFamily: "sans-serif" } }),

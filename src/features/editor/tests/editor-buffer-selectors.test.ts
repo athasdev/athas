@@ -23,7 +23,6 @@ function createEditorBuffer(overrides: Partial<EditorContent>): EditorContent {
     savedContent: "saved",
     isDirty: false,
     isVirtual: false,
-    tokens: [],
     ...overrides,
   };
 }

@@ -68,6 +68,16 @@ pub struct ChatWithMessages {
    pub tool_calls: Vec<ToolCallData>,
 }
 
+/// How much of a chat a save carries.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub enum ChatSaveScope {
+   /// Every message of the chat: stored messages missing from the save are deleted.
+   AllMessages,
+   /// Only the messages that changed: the chat's other stored messages stay as they are.
+   ChangedMessages,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ChatStats {
    pub total_chats: i64,
@@ -260,6 +270,28 @@ impl ChatHistoryRepository {
       messages: Vec<MessageData>,
       tool_calls: Vec<ToolCallData>,
    ) -> Result<(), String> {
+      self.write_chat(chat, messages, tool_calls, ChatSaveScope::AllMessages)
+   }
+
+   /// Stores the chat row and the given messages with their tool calls, leaving the chat's other
+   /// stored messages alone. A streamed reply changes one message at a time, so its saves send
+   /// only that message instead of the whole chat.
+   pub fn save_chat_messages(
+      &self,
+      chat: ChatData,
+      messages: Vec<MessageData>,
+      tool_calls: Vec<ToolCallData>,
+   ) -> Result<(), String> {
+      self.write_chat(chat, messages, tool_calls, ChatSaveScope::ChangedMessages)
+   }
+
+   fn write_chat(
+      &self,
+      chat: ChatData,
+      messages: Vec<MessageData>,
+      tool_calls: Vec<ToolCallData>,
+      scope: ChatSaveScope,
+   ) -> Result<(), String> {
       if messages.iter().any(|message| message.chat_id != chat.id) {
          return Err("A message belongs to a different chat".to_string());
       }
@@ -306,15 +338,19 @@ impl ChatHistoryRepository {
          )
          .map_err(|e| format!("Failed to save chat: {}", e))?;
 
-      let stored_message_ids = {
-         let mut stmt = transaction
-            .prepare_cached("SELECT id FROM messages WHERE chat_id = ?1")
-            .map_err(|e| format!("Failed to read stored messages: {}", e))?;
-         stmt
-            .query_map(params![chat.id], |row| row.get::<_, String>(0))
-            .map_err(|e| format!("Failed to read stored messages: {}", e))?
-            .collect::<SqliteResult<HashSet<_>>>()
-            .map_err(|e| format!("Failed to read stored messages: {}", e))?
+      // A partial save checks ownership per message instead of reading every stored id.
+      let stored_message_ids = match scope {
+         ChatSaveScope::AllMessages => {
+            let mut stmt = transaction
+               .prepare_cached("SELECT id FROM messages WHERE chat_id = ?1")
+               .map_err(|e| format!("Failed to read stored messages: {}", e))?;
+            stmt
+               .query_map(params![chat.id], |row| row.get::<_, String>(0))
+               .map_err(|e| format!("Failed to read stored messages: {}", e))?
+               .collect::<SqliteResult<HashSet<_>>>()
+               .map_err(|e| format!("Failed to read stored messages: {}", e))?
+         }
+         ChatSaveScope::ChangedMessages => HashSet::new(),
       };
 
       for removed in stored_message_ids
@@ -373,7 +409,15 @@ impl ChatHistoryRepository {
                ])
                .map_err(|e| format!("Failed to save message: {}", e))?;
             // A new id that changed nothing collided with another chat's message.
-            if changed == 0 && !stored_message_ids.contains(&message.id) {
+            if changed == 0
+               && !Self::owns_message(
+                  &transaction,
+                  scope,
+                  &stored_message_ids,
+                  &chat.id,
+                  &message.id,
+               )?
+            {
                return Err(format!(
                   "Failed to save message: {} belongs to another chat",
                   message.id
@@ -382,7 +426,7 @@ impl ChatHistoryRepository {
          }
       }
 
-      Self::save_tool_calls(&transaction, &chat.id, &tool_calls)?;
+      Self::save_tool_calls(&transaction, &message_ids, &tool_calls)?;
 
       transaction
          .commit()
@@ -391,31 +435,45 @@ impl ChatHistoryRepository {
       Ok(())
    }
 
-   /// Matches each message's tool calls to its stored rows by position (rows keep their insertion
-   /// order): changed rows are updated in place, extra calls appended, and leftover rows deleted.
+   fn owns_message(
+      conn: &Connection,
+      scope: ChatSaveScope,
+      stored_message_ids: &HashSet<String>,
+      chat_id: &str,
+      message_id: &str,
+   ) -> Result<bool, String> {
+      match scope {
+         ChatSaveScope::AllMessages => Ok(stored_message_ids.contains(message_id)),
+         ChatSaveScope::ChangedMessages => conn
+            .prepare_cached("SELECT EXISTS(SELECT 1 FROM messages WHERE id = ?1 AND chat_id = ?2)")
+            .and_then(|mut stmt| stmt.query_row(params![message_id, chat_id], |row| row.get(0)))
+            .map_err(|e| format!("Failed to read stored messages: {}", e)),
+      }
+   }
+
+   /// Matches the saved messages' tool calls to their stored rows by position (rows keep their
+   /// insertion order): changed rows are updated in place, extra calls appended, and leftover rows
+   /// deleted. Tool calls have no id that is always present, so position is the stable key.
+   /// Messages outside `message_ids` keep their rows.
    fn save_tool_calls(
       conn: &Connection,
-      chat_id: &str,
+      message_ids: &HashSet<&str>,
       tool_calls: &[ToolCallData],
    ) -> Result<(), String> {
-      let mut stored_rows: HashMap<String, Vec<i64>> = HashMap::new();
+      let mut stored_rows: HashMap<&str, Vec<i64>> = HashMap::new();
       {
          let mut stmt = conn
-            .prepare_cached(
-               "SELECT tool_calls.id, tool_calls.message_id FROM tool_calls JOIN messages ON \
-                messages.id = tool_calls.message_id WHERE messages.chat_id = ?1 ORDER BY \
-                tool_calls.id",
-            )
+            .prepare_cached("SELECT id FROM tool_calls WHERE message_id = ?1 ORDER BY id")
             .map_err(|e| format!("Failed to read stored tool calls: {}", e))?;
-         let rows = stmt
-            .query_map(params![chat_id], |row| {
-               Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?))
-            })
-            .map_err(|e| format!("Failed to read stored tool calls: {}", e))?;
-         for row in rows {
-            let (row_id, message_id) =
-               row.map_err(|e| format!("Failed to read stored tool calls: {}", e))?;
-            stored_rows.entry(message_id).or_default().push(row_id);
+         for message_id in message_ids {
+            let rows = stmt
+               .query_map(params![message_id], |row| row.get::<_, i64>(0))
+               .map_err(|e| format!("Failed to read stored tool calls: {}", e))?
+               .collect::<SqliteResult<Vec<_>>>()
+               .map_err(|e| format!("Failed to read stored tool calls: {}", e))?;
+            if !rows.is_empty() {
+               stored_rows.insert(message_id, rows);
+            }
          }
       }
 
@@ -443,7 +501,7 @@ impl ChatHistoryRepository {
             .entry(tool_call.message_id.as_str())
             .or_default();
          let stored = stored_rows
-            .get(&tool_call.message_id)
+            .get(tool_call.message_id.as_str())
             .and_then(|rows| rows.get(*position));
          *position += 1;
          match stored {
@@ -472,7 +530,7 @@ impl ChatHistoryRepository {
       }
 
       for (message_id, rows) in &stored_rows {
-         let kept = next_position.get(message_id.as_str()).copied().unwrap_or(0);
+         let kept = next_position.get(message_id).copied().unwrap_or(0);
          for row_id in rows.iter().skip(kept) {
             delete
                .execute(params![row_id])
@@ -1168,6 +1226,97 @@ mod tests {
       assert_eq!(repository.load_chat("one").unwrap().messages[0].id, "one");
       assert_eq!(repository.load_chat("two").unwrap().messages[0].id, "two");
       assert_eq!(repository.get_stats().unwrap().total_tool_calls, 0);
+   }
+
+   #[test]
+   fn a_partial_save_upserts_its_messages_and_keeps_the_others() {
+      let directory = tempfile::tempdir().unwrap();
+      let repository = ChatHistoryRepository::new(directory.path().join("history.db"));
+      repository.initialize().unwrap();
+      let mut prompt = sample_message("chat", "prompt");
+      prompt.role = "user".to_string();
+      prompt.timestamp = 1;
+      repository
+         .save_chat(
+            sample_chat("chat"),
+            vec![prompt.clone(), sample_message("chat", "reply")],
+            vec![sample_tool_call("prompt"), sample_tool_call("reply")],
+         )
+         .unwrap();
+      let prompt_row = tool_call_rows(&repository)[0].0;
+
+      let mut reply = sample_message("chat", "reply");
+      reply.content = "Reply, continued".to_string();
+      let mut next = sample_message("chat", "next");
+      next.timestamp = 3;
+      let mut renamed = sample_chat("chat");
+      renamed.title = "Renamed".to_string();
+      repository
+         .save_chat_messages(renamed, vec![reply, next], vec![sample_tool_call("next")])
+         .unwrap();
+
+      let loaded = repository.load_chat("chat").unwrap();
+      assert_eq!(loaded.chat.title, "Renamed");
+      assert_eq!(
+         loaded
+            .messages
+            .iter()
+            .map(|message| (message.id.as_str(), message.content.as_str()))
+            .collect::<Vec<_>>(),
+         vec![
+            ("prompt", "Reply"),
+            ("reply", "Reply, continued"),
+            ("next", "Reply")
+         ]
+      );
+      let rows = tool_call_rows(&repository);
+      assert_eq!(
+         rows
+            .iter()
+            .map(|(_, message_id, _)| message_id.as_str())
+            .collect::<Vec<_>>(),
+         vec!["prompt", "next"]
+      );
+      assert_eq!(rows[0].0, prompt_row);
+
+      repository
+         .save_chat_messages(sample_chat("chat"), vec![], vec![])
+         .unwrap();
+      assert_eq!(repository.load_chat("chat").unwrap().messages.len(), 3);
+   }
+
+   #[test]
+   fn a_partial_save_rejects_another_chats_message() {
+      let directory = tempfile::tempdir().unwrap();
+      let repository = ChatHistoryRepository::new(directory.path().join("history.db"));
+      repository.initialize().unwrap();
+      for id in ["one", "two"] {
+         repository
+            .save_chat(sample_chat(id), vec![sample_message(id, id)], vec![])
+            .unwrap();
+      }
+      assert!(
+         repository
+            .save_chat_messages(
+               sample_chat("two"),
+               vec![sample_message("two", "one")],
+               vec![]
+            )
+            .is_err()
+      );
+      assert!(
+         repository
+            .save_chat_messages(
+               sample_chat("two"),
+               vec![sample_message("two", "two")],
+               vec![]
+            )
+            .is_ok()
+      );
+      assert_eq!(
+         repository.load_chat("one").unwrap().messages[0].chat_id,
+         "one"
+      );
    }
 
    #[test]

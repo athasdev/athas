@@ -13,9 +13,10 @@ const mocks = vi.hoisted(() => ({
   settings: vi.fn(),
   state: {
     chats: [
-      { id: "chat", title: "Agent", messages: [] },
-      { id: "other", title: "Other agent", messages: [] },
+      { id: "chat", title: "Agent" },
+      { id: "other", title: "Other agent" },
     ],
+    messagesByChat: {},
     currentChatId: null,
     selectedAgentId: "custom",
     chatMessageLoadStates: {},
@@ -90,9 +91,10 @@ beforeEach(() => {
   });
   mocks.state = {
     chats: [
-      { id: "chat", title: "Agent", messages: [] },
-      { id: "other", title: "Other agent", messages: [] },
+      { id: "chat", title: "Agent" },
+      { id: "other", title: "Other agent" },
     ],
+    messagesByChat: {},
     currentChatId: null,
     selectedAgentId: "custom",
     chatMessageLoadStates: {},
@@ -194,9 +196,9 @@ describe("Agent session window ownership", () => {
     const snapshot = captureAgentWindowSnapshot("chat");
     snapshot.chat.chats[0].title = "Updated in child";
     mocks.state.chats = [
-      { id: "chat", title: "Agent", messages: [] },
-      { id: "other", title: "Updated in parent", messages: [] },
-      { id: "new", title: "Created in parent", messages: [] },
+      { id: "chat", title: "Agent" },
+      { id: "other", title: "Updated in parent" },
+      { id: "new", title: "Created in parent" },
     ];
     mocks.state.currentChatId = "new";
     TestChannel.current.receive({ type: "return", snapshot });

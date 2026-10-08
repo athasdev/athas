@@ -117,10 +117,15 @@ export interface MessageUsage {
 // Agent types for AI chat
 export type AgentType = string;
 
-export interface Chat {
+/**
+ * A chat without its messages: what lists, headers and pickers show. The chat store keeps these
+ * apart from the messages so a streamed token leaves every session row as it was.
+ */
+export interface ChatSession {
   id: string;
   title: string;
-  messages: Message[];
+  /** How many messages the chat holds in memory; history rows that were not loaded say 0. */
+  messageCount?: number;
   createdAt: Date;
   lastMessageAt: Date;
   agentId: AgentType; // Which agent this chat uses
@@ -133,6 +138,10 @@ export interface Chat {
   archivedAt?: Date | null;
   /** The agent session options the user picked, applied again when the session reattaches. */
   sessionSettings?: ChatSessionSettings | null;
+}
+
+export interface Chat extends ChatSession {
+  messages: Message[];
 }
 
 /** A chat's picks among what its agent session offers. */

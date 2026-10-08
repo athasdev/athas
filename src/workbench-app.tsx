@@ -4,12 +4,12 @@ import { OPEN_SHARE_EVENT } from "@/features/sharing/services/open-share";
 import { useEffect } from "react";
 import { MotionConfig } from "motion/react";
 import { FontStyleInjector } from "@/features/settings/components/font-style-injector";
-import { useSystemAccessibility } from "@/features/settings/hooks/use-system-accessibility";
 import { initializeAppBootstrap } from "@/features/bootstrap/initialize-app-bootstrap";
 import {
   recordStartupMilestone,
   recordStartupMilestoneAfterFrame,
 } from "@/features/bootstrap/startup-performance";
+import { SettingsReadyBootstrap } from "@/features/bootstrap/components/settings-ready-bootstrap";
 import { useAppBootstrap } from "@/features/bootstrap/use-app-bootstrap";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import {
@@ -48,7 +48,6 @@ const loadShareDialog = () =>
 
 function WorkbenchApp() {
   useAppBootstrap();
-  useSystemAccessibility();
   useNativeNotificationIntegration();
   useAcpEventSync();
   useAgentTabSessionRelease();
@@ -110,6 +109,7 @@ function WorkbenchApp() {
     <MotionConfig reducedMotion={reduceMotion ? "always" : "user"}>
       <DialogServiceProvider>
         <TooltipProvider>
+          <SettingsReadyBootstrap />
           <WindowResizeBorder />
 
           <div className="h-dvh w-dvw overflow-hidden">

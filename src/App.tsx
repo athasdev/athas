@@ -1,4 +1,4 @@
-import { lazy, Suspense, use, useEffect, useMemo } from "react";
+import { lazy, Suspense, useEffect, useMemo } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { parseDetachedWindowUrl } from "@/features/window/detached/detached-window-protocol";
 import { recordStartupMilestoneAfterFrame } from "@/features/bootstrap/startup-performance";
@@ -45,12 +45,9 @@ function InitialWindowShell() {
 
 interface WorkbenchBoundaryProps {
   blankWindowOpen: boolean;
-  terminalSessionReady: Promise<void>;
 }
 
-function WorkbenchBoundary({ blankWindowOpen, terminalSessionReady }: WorkbenchBoundaryProps) {
-  use(terminalSessionReady);
-
+function WorkbenchBoundary({ blankWindowOpen }: WorkbenchBoundaryProps) {
   useEffect(() => {
     const readyAt = performance.now();
     traceWindowOpen("app:workbenchReady", { blankWindowOpen });
@@ -64,11 +61,7 @@ function WorkbenchBoundary({ blankWindowOpen, terminalSessionReady }: WorkbenchB
   return <WorkbenchApp />;
 }
 
-interface AppProps {
-  terminalSessionReady: Promise<void>;
-}
-
-function App({ terminalSessionReady }: AppProps) {
+function App() {
   const detachedWindow = useMemo(() => parseDetachedWindowUrl(new URL(window.location.href)), []);
   const blankWindowOpen = useMemo(() => isBlankWindowOpen(), []);
 
@@ -97,10 +90,7 @@ function App({ terminalSessionReady }: AppProps) {
       ) : detachedWindow?.kind === "resource" ? (
         <DetachedResourceWindow />
       ) : (
-        <WorkbenchBoundary
-          blankWindowOpen={blankWindowOpen}
-          terminalSessionReady={terminalSessionReady}
-        />
+        <WorkbenchBoundary blankWindowOpen={blankWindowOpen} />
       )}
     </Suspense>
   );

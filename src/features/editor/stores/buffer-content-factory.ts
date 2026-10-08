@@ -26,7 +26,6 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         isPreview: spec.isPreview ?? false,
         readOnly: spec.readOnly,
         language: spec.language ?? detectLanguageFromFileName(spec.name),
-        tokens: [],
       };
     case "terminal": {
       const sessionId = spec.sessionId ?? id.replace("buffer_", "");

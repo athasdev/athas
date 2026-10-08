@@ -81,7 +81,6 @@ function makeEditorBuffer(
     isPreview: false,
     isActive: false,
     language: "typescript",
-    tokens: [],
   };
 }
 

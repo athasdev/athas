@@ -1,5 +1,5 @@
 import type { AcpAgentStatus, AcpSessionState } from "@/features/ai/types/acp.types";
-import type { Chat } from "@/features/ai/types/ai-chat.types";
+import type { ChatSession } from "@/features/ai/types/ai-chat.types";
 import { CODEX_INTEGRATION_ID } from "@/features/ai/integrations/integration-registry";
 import { normalizeAcpWorkspacePath } from "./acp-workspace-path";
 
@@ -20,7 +20,7 @@ export function getAcpAgentKey(agentId: string, workspacePath: string | null | u
 }
 
 interface AcpStateSlice {
-  chats: Chat[];
+  chats: ChatSession[];
   acpAgents: Record<string, AcpAgentStatus>;
   acpSessions: Record<string, AcpSessionState>;
 }
@@ -58,7 +58,7 @@ export function selectChatAcpSession(
  * field, and API-model chats have no ACP session.
  */
 export function getChatAcpSessionToClose(
-  chat: Pick<Chat, "agentId" | "acpSessionId"> | null | undefined,
+  chat: Pick<ChatSession, "agentId" | "acpSessionId"> | null | undefined,
 ): string | null {
   if (!chat?.acpSessionId) return null;
   const isAcpAgent = chat.agentId !== "custom" && chat.agentId !== CODEX_INTEGRATION_ID;

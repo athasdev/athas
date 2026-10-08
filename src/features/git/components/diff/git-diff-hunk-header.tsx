@@ -21,7 +21,7 @@ const DiffHunkHeader = memo(
     onUnstageHunk,
     canStageHunks = false,
   }: DiffHunkHeaderProps) => {
-    const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
+    const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
     const editorFontSize = useSettingsStore((state) => state.settings.fontSize);
     const editorFontFamily = useSettingsStore((state) => state.settings.fontFamily);
     const editorLineHeight = useSettingsStore((state) => state.settings.editorLineHeight);

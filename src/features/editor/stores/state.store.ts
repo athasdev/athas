@@ -226,7 +226,6 @@ interface EditorStateActions {
   getCachedViewState: (bufferId: string) => EditorViewState | null;
   cacheViewStateForBuffer: (bufferId: string, state: EditorViewState) => void;
   clearPositionCache: (bufferId?: string) => void;
-  restorePositionForFile: (bufferId: string) => EditorViewState;
   resetOnBufferSwitch: () => void;
 
   // Multi-cursor actions
@@ -241,7 +240,8 @@ interface EditorStateActions {
   getScroll: () => EditorScrollOffset;
   setScroll: (scrollTop: number, scrollLeft: number) => void;
   setScrollForBuffer: (bufferId: string | null, scrollTop: number, scrollLeft: number) => void;
-  setViewportHeight: (height: number) => void;
+  /** Records the visible height of the editor showing `viewKey`, when it is the active one. */
+  setViewportHeightForView: (viewKey: string | null, height: number) => void;
 
   // Instance actions
   setRefs: (refs: { editorRef: RefObject<HTMLDivElement | null> }) => void;
@@ -348,22 +348,6 @@ export const useEditorStateStore = createSelectors(
           viewStateCache.set(bufferId, state);
         },
         clearPositionCache: (bufferId) => viewStateCache.clear(bufferId),
-        restorePositionForFile: (bufferId) => {
-          const cachedState = viewStateCache.get(bufferId);
-          const restoredState = cachedState ?? {
-            cursor: { line: 0, column: 0, offset: 0 },
-            scrollTop: 0,
-            scrollLeft: 0,
-          };
-
-          set({
-            cursorPosition: restoredState.cursor,
-            selection: restoredState.selection,
-          });
-          publishEditorScroll();
-
-          return restoredState;
-        },
         resetOnBufferSwitch: () => {
           set({
             multiCursorState: null,
@@ -505,8 +489,11 @@ export const useEditorStateStore = createSelectors(
             publishEditorScroll();
           }
         },
-        setViewportHeight: (height) => {
-          if (useEditorStateStore.getState().viewportHeight !== height) {
+        setViewportHeightForView: (viewKey, height) => {
+          if (!viewKey || height <= 0) return;
+          const isActiveView =
+            viewKey === getActiveViewKey() || viewKey === useBufferStore.getState().activeBufferId;
+          if (isActiveView && useEditorStateStore.getState().viewportHeight !== height) {
             set({ viewportHeight: height });
           }
         },

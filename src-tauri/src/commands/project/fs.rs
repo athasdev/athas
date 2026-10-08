@@ -1,5 +1,6 @@
 use super::path_guard::{require_path_under_home, require_symlink_container_under_home};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use std::{fs, path::Path, time::Instant};
 #[cfg(target_os = "macos")]
 use tauri::Manager;
@@ -120,20 +121,55 @@ pub async fn write_local_file(path: String, content: String) -> Result<(), Strin
    .map_err(|error| format!("File write failed: {error}"))?
 }
 
+/// The text a checked write expects on disk, sent as its UTF-8 length and SHA-256 instead of a
+/// second full copy of the file.
+#[derive(Debug, Clone, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct ExpectedFileDigest {
+   pub byte_length: u32,
+   pub sha256: String,
+}
+
+fn text_matches_digest(text: &str, expected: &ExpectedFileDigest) -> bool {
+   text.len() == expected.byte_length as usize
+      && format!("{:x}", Sha256::digest(text.as_bytes())) == expected.sha256
+}
+
+/// Mirrors `matches_expected`: a file that only adds a UTF-8 BOM still matches.
+fn matches_expected_digest(current: Option<&str>, expected: Option<&ExpectedFileDigest>) -> bool {
+   match (current, expected) {
+      (Some(current), Some(expected)) => {
+         text_matches_digest(current, expected)
+            || current
+               .strip_prefix('\u{feff}')
+               .is_some_and(|text| text_matches_digest(text, expected))
+      }
+      (None, None) => true,
+      _ => false,
+   }
+}
+
 #[command]
 #[specta::specta]
 pub async fn write_local_file_checked(
    path: String,
-   expected_content: Option<String>,
+   expected: Option<ExpectedFileDigest>,
    content: String,
 ) -> Result<(), String> {
    tauri::async_runtime::spawn_blocking(move || {
       let resolved = require_path_under_home(&path)?;
-      athas_project::file_mutations::replace_text_if_unchanged(
+      let expected_length = expected.as_ref().map_or(0, |digest| digest.byte_length as u64);
+      athas_project::file_mutations::mutate_text(
          &resolved,
-         expected_content.as_deref(),
-         &content,
+         Some(expected_length.max(content.len() as u64) + 3),
+         |current| {
+            if !matches_expected_digest(current, expected.as_ref()) {
+               return Err(athas_project::file_mutations::FILE_CHANGED.into());
+            }
+            Ok(Some(content))
+         },
       )
+      .map(|_| ())
    })
    .await
    .map_err(|error| format!("Checked file write failed: {error}"))?
@@ -523,5 +559,28 @@ mod directory_size_tests {
          calculate_directory_size(&file),
          Err("Path is not a directory".to_string())
       );
+   }
+}
+
+#[cfg(test)]
+mod checked_write_tests {
+   use super::*;
+
+   fn digest(text: &str) -> ExpectedFileDigest {
+      ExpectedFileDigest {
+         byte_length: text.len() as u32,
+         sha256: format!("{:x}", Sha256::digest(text.as_bytes())),
+      }
+   }
+
+   #[test]
+   fn digest_matches_the_same_text_with_or_without_a_bom() {
+      let expected = digest("before\r\n");
+      assert!(matches_expected_digest(Some("before\r\n"), Some(&expected)));
+      assert!(matches_expected_digest(Some("\u{feff}before\r\n"), Some(&expected)));
+      assert!(!matches_expected_digest(Some("before\n"), Some(&expected)));
+      assert!(!matches_expected_digest(None, Some(&expected)));
+      assert!(matches_expected_digest(None, None));
+      assert!(!matches_expected_digest(Some(""), None));
    }
 }

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
+import { readBufferText } from "@/features/editor/services/buffer-text";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getWorkspaceResourceProvider } from "@/features/file-system/services/workspace-resource-provider";
 import type { FileSearchResult, SearchMatch } from "@/features/file-search/lib/file-search-api";
@@ -113,7 +114,7 @@ export function useSearchContext(view: ContextView) {
         pending: new Set([...(previous.session === session ? previous.pending : []), filePath]),
       }));
       const original = findSource(session.store.getState().buffers, filePath);
-      let read = original ? Promise.resolve(original.content) : session.reads.get(filePath);
+      let read = original ? Promise.resolve(readBufferText(original)) : session.reads.get(filePath);
       if (!read) {
         read = Promise.resolve().then(() => {
           if (!isCurrent() || !session.requests.has(filePath))
@@ -130,7 +131,7 @@ export function useSearchContext(view: ContextView) {
             throw new Error(
               "The file was closed while loading context. Expand it again to read the saved file.",
             );
-          const source = current?.content ?? content;
+          const source = current ? readBufferText(current) : content;
           if (!matchesSource(source, matches))
             throw new Error(
               "The file changed since this search. Refresh search before expanding context.",
@@ -191,7 +192,7 @@ export function useSearchContext(view: ContextView) {
       const saved = state.contents[path];
       const current = expandedSources[index];
       if (saved.bufferId && current?.id !== saved.bufferId) continue;
-      const source = current?.content ?? saved.content;
+      const source = current ? readBufferText(current) : saved.content;
       const matches = view.results.find((result) => result.file_path === path)?.matches ?? [];
       if (matchesSource(source, matches)) contents[path] = source;
     }

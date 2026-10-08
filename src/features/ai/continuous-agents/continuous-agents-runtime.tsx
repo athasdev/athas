@@ -1,5 +1,6 @@
 import { commands } from "@/bindings/commands";
 import { useCallback, useEffect, useRef } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { toast } from "sonner";
 import { CodexIntegrationService } from "@/features/ai/integrations/codex/codex-integration-service";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
@@ -25,11 +26,12 @@ export function ContinuousAgentsRuntime() {
   const workspacePath = useProjectStore((state) => state.rootFolderPath ?? null);
   // Only what decides when a run is due. Syncing from another window replaces the task array even
   // when nothing changed; depending on the array itself re-ran the check every 100 ms.
-  const scheduleSignature = useContinuousAgentsStore((state) =>
-    state.tasks
-      .filter((task) => task.enabled && task.workspacePath === workspacePath)
-      .map((task) => `${task.id}:${task.nextRunAt}`)
-      .join("|"),
+  const schedule = useContinuousAgentsStore(
+    useShallow((state) =>
+      state.tasks
+        .filter((task) => task.enabled && task.workspacePath === workspacePath)
+        .flatMap((task) => [task.id, task.nextRunAt]),
+    ),
   );
   const runningRef = useRef(false);
 
@@ -116,10 +118,10 @@ export function ContinuousAgentsRuntime() {
   }, []);
 
   useEffect(() => {
-    if (!scheduleSignature) return;
+    if (schedule.length === 0) return;
     const timeout = window.setTimeout(() => void runNextDueTask(), 100);
     return () => window.clearTimeout(timeout);
-  }, [runNextDueTask, scheduleSignature]);
+  }, [runNextDueTask, schedule]);
 
   useEffect(() => {
     const handleStorage = (event: StorageEvent) => {

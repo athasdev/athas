@@ -27,7 +27,6 @@ function buffer(): EditorContent {
     isPinned: false,
     isActive: true,
     language: "typescript",
-    tokens: [],
   };
 }
 const replacement = {

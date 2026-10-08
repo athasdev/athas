@@ -53,9 +53,8 @@ vi.mock("@/features/workspace/team/components/workspace-sidebar", () => ({
   WorkspaceSidebar: () => <Panel />,
 }));
 vi.mock("@/features/file-system/stores/file-system.store", () => ({
-  useFileSystemStore: {
-    use: { handleFileSelect: () => vi.fn(), rootFolderPath: () => "/workspace" },
-  },
+  useFileSystemStore: (select: (state: unknown) => unknown) =>
+    select({ handleFileSelect: vi.fn(), rootFolderPath: "/workspace" }),
 }));
 vi.mock("@/features/window/stores/ui-state.store", () => ({
   useUIState: (select: (value: typeof state) => unknown) => select(state),

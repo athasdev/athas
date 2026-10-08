@@ -6,23 +6,11 @@ import type {
   Position,
   Range,
 } from "./editor.types";
+import type { LiveDocumentEdit } from "../services/live-document-registry";
 
 interface EditorResolvedPosition {
-  line: number;
-  column: number;
-  viewLine: number;
-  modelLine: number;
   top: number;
   left: number;
-  height: number;
-  segment: {
-    viewLine: number;
-    modelLine: number;
-    startColumn: number;
-    endColumn: number;
-    top: number;
-    height: number;
-  };
 }
 
 /** Where a model position sits inside the editor content, for overlays drawn on top of it. */
@@ -56,6 +44,7 @@ export interface CodeEditorViewProps {
     batch: EditorDocumentChangeBatch,
     previousCursorPosition?: Position,
     previousSelection?: Range,
+    liveEdit?: LiveDocumentEdit,
   ) => EditorDocumentChangeResult;
   onScrollOffsetChange?: (scrollTop: number, scrollLeft: number) => void;
   onModelPositionResolverChange?: (resolver: EditorModelPositionResolver | null) => void;

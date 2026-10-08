@@ -23,6 +23,8 @@ import {
   getMarkdownPreviewKeyboardTarget,
   isEditorKeyboardTarget,
 } from "../utils/editor-keyboard-target";
+import { readBufferText } from "@/features/editor/services/buffer-text";
+import { resolveBufferText } from "@/features/editor/services/open-buffer-text";
 
 type EditorSelection = NonNullable<ReturnType<typeof editorAPI.getSelection>>;
 
@@ -42,19 +44,25 @@ function getNormalizedEditorSelection(): EditorSelection | null {
     : { start: selection.end, end: selection.start };
 }
 
-function shouldUseEditorModelCommand(): boolean {
+/** A text field outside the editor, which keeps the browser's own editing commands. */
+function isPlainTextFieldFocused(): boolean {
+  if (typeof document === "undefined") return false;
   const activeElement = document.activeElement as HTMLElement | null;
+  if (isEditorKeyboardTarget(activeElement)) return false;
 
-  if (isEditorKeyboardTarget(activeElement)) {
+  return (
+    activeElement instanceof HTMLInputElement ||
+    activeElement instanceof HTMLTextAreaElement ||
+    activeElement?.isContentEditable === true
+  );
+}
+
+function shouldUseEditorModelCommand(): boolean {
+  if (isEditorKeyboardTarget(document.activeElement as HTMLElement | null)) {
     return true;
   }
 
-  const isTextField =
-    activeElement instanceof HTMLInputElement ||
-    activeElement instanceof HTMLTextAreaElement ||
-    activeElement?.isContentEditable;
-
-  if (isTextField) return false;
+  if (isPlainTextFieldFocused()) return false;
 
   const bufferStore = useBufferStore.getState();
   const activeBuffer = bufferStore.buffers.find(
@@ -190,22 +198,26 @@ function getActiveImageSession() {
   return buffer?.type === "image" ? getImageBufferSession({ workspaceId, store }, buffer.id) : null;
 }
 
-export function undoActiveEditor(): void {
-  const image = getActiveImageSession();
-  if (image) {
-    image.undo();
+function runActiveHistoryCommand(direction: "undo" | "redo"): void {
+  if (isPlainTextFieldFocused()) {
+    document.execCommand(direction);
     return;
   }
-  editorAPI.undo();
+
+  const image = getActiveImageSession();
+  if (image) {
+    image[direction]();
+    return;
+  }
+  editorAPI[direction]();
+}
+
+export function undoActiveEditor(): void {
+  runActiveHistoryCommand("undo");
 }
 
 export function redoActiveEditor(): void {
-  const image = getActiveImageSession();
-  if (image) {
-    image.redo();
-    return;
-  }
-  editorAPI.redo();
+  runActiveHistoryCommand("redo");
 }
 
 export async function copyActiveEditorSelection(): Promise<void> {
@@ -389,9 +401,11 @@ export async function formatActiveEditorDocument(): Promise<void> {
     return;
   }
 
+  // Read after the awaits above: the object can hold text from before the latest edits.
+  const sourceText = resolveBufferText(activeBuffer);
   const result = await formatContent({
     filePath: activeBuffer.path,
-    content: activeBuffer.content,
+    content: sourceText,
     languageId: languageId || undefined,
   });
 
@@ -400,7 +414,7 @@ export async function formatActiveEditorDocument(): Promise<void> {
     return;
   }
 
-  if (result.formattedContent === activeBuffer.content) {
+  if (result.formattedContent === sourceText) {
     toast.info("Document is already formatted.");
     return;
   }
@@ -425,9 +439,10 @@ export async function formatActiveEditorSelection(): Promise<void> {
   }
 
   const { formatRange } = await import("@/features/editor/formatter/formatter-service");
+  const sourceText = resolveBufferText(activeBuffer);
   const result = await formatRange({
     filePath: activeBuffer.path,
-    content: activeBuffer.content,
+    content: sourceText,
     languageId:
       extensionRegistry.getLanguageId(activeBuffer.path) || activeBuffer.language || undefined,
     range: {
@@ -441,7 +456,7 @@ export async function formatActiveEditorSelection(): Promise<void> {
     return;
   }
 
-  if (result.formattedContent === activeBuffer.content) {
+  if (result.formattedContent === sourceText) {
     toast.info("Selection is already formatted.");
     return;
   }
@@ -529,7 +544,7 @@ export function foldAllActiveEditor(): void {
   }
 
   const foldActions = useFoldStore.getState().actions;
-  foldActions.computeFoldRegions(activeBuffer.path, activeBuffer.content);
+  foldActions.computeFoldRegions(activeBuffer.path, readBufferText(activeBuffer));
   foldActions.foldAll(activeBuffer.path);
 }
 
@@ -541,7 +556,7 @@ export function foldLevelActiveEditor(level: number): void {
   }
 
   const foldActions = useFoldStore.getState().actions;
-  foldActions.computeFoldRegions(activeBuffer.path, activeBuffer.content);
+  foldActions.computeFoldRegions(activeBuffer.path, readBufferText(activeBuffer));
   foldActions.foldLevel(activeBuffer.path, level);
 }
 

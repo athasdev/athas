@@ -20,13 +20,15 @@ import { getBufferById } from "@/features/editor/utils/buffer-index";
 import { calculateLineHeight } from "@/features/editor/utils/lines";
 import { resolveGoToLineTarget } from "@/features/editor/utils/go-to-line";
 import type { EditorModelPositionResolver } from "@/features/editor/types/code-editor-view.types";
-import { hasTextContent, type PaneContent } from "@/features/panes/types/pane-content.types";
+import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import { useShallow } from "zustand/react/shallow";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { toast } from "sonner";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
 import { useZoomStore } from "@/features/window/stores/zoom.store";
 import { editorAPI } from "../extensions/api";
+import { readBufferText } from "../services/buffer-text";
+import type { LiveDocumentEdit } from "../services/live-document-registry";
 import CodeLensOverlay from "../lsp/code-lens-overlay";
 import RenameInput from "../lsp/rename-input";
 import type { CodeLensItem } from "../lsp/use-code-lens";
@@ -179,7 +181,7 @@ const CodeEditor = ({
   );
   const getValue = useCallback(() => {
     const buffer = getBufferById(useBufferStore.getState().buffers, activeBufferId);
-    return buffer && hasTextContent(buffer) ? buffer.content : "";
+    return buffer ? readBufferText(buffer) : "";
   }, [activeBufferId]);
   const editorViewKey = paneId && activeBufferId ? `${paneId}:${activeBufferId}` : activeBufferId;
   const { handleContentChange, handleDocumentChange } = useEditorAppStore.use.actions();
@@ -202,7 +204,15 @@ const CodeEditor = ({
           batch: EditorDocumentChangeBatch,
           previousCursorPosition?: Position,
           previousSelection?: Range,
-        ) => handleDocumentChange(activeBuffer.id, batch, previousCursorPosition, previousSelection)
+          liveEdit?: LiveDocumentEdit,
+        ) =>
+          handleDocumentChange(
+            activeBuffer.id,
+            batch,
+            previousCursorPosition,
+            previousSelection,
+            liveEdit,
+          )
       : undefined;
   const isPreviewBuffer = activeBuffer?.isPreview ?? false;
   const showMarkdownPreview =

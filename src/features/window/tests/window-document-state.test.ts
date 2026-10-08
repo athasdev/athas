@@ -14,7 +14,6 @@ const editorBuffer = (overrides: Partial<EditorContent> = {}): EditorContent => 
   isPinned: false,
   isPreview: false,
   isActive: true,
-  tokens: [],
   ...overrides,
 });
 

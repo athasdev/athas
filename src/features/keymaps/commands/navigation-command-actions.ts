@@ -14,6 +14,7 @@ import { showChoiceDialog } from "@/ui/dialog";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { toast } from "sonner";
 import type { CallHierarchyItem, TypeHierarchyItem } from "vscode-languageserver-protocol";
+import { readBufferText } from "@/features/editor/services/buffer-text";
 
 type LspNavigationClient = {
   getDefinition: (
@@ -191,7 +192,7 @@ export async function goToReferences(): Promise<void> {
       const buffer = bufferStore.buffers.find((b) => b.path === filePath);
 
       if (buffer && "content" in buffer && typeof buffer.content === "string") {
-        content = buffer.content;
+        content = readBufferText(buffer);
       } else {
         try {
           content = await readFileContent(filePath);

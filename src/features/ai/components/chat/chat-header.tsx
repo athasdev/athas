@@ -77,6 +77,9 @@ export function ChatHeader({
     (state) => state.isRightSidebarVisible && state.activeRightSidebarView === "agent",
   );
   const currentChat = chats.find((chat) => chat.id === effectiveChatId);
+  const hasMessages = useAIChatStore((state) =>
+    effectiveChatId ? (state.messagesByChat[effectiveChatId]?.length ?? 0) > 0 : false,
+  );
   const currentAgentId = currentChat?.agentId ?? selectedAgentId;
   const handleNewAgent = useNewAgentAction({ agentId: currentAgentId });
   const canBrowseSessions = useAIChatStore((state) =>
@@ -261,7 +264,7 @@ export function ChatHeader({
                     Open conversation as Markdown
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    disabled={!currentChat?.messages.length}
+                    disabled={!hasMessages}
                     onClick={() => shareAgent(effectiveChatId ?? undefined)}
                   >
                     <UploadIcon />

@@ -24,6 +24,7 @@ import { emitGitChanged } from "@/features/git/events/git-events";
 import { showToast } from "@/features/layout/contexts/toast-context";
 import { showConfirmDialog } from "@/ui/dialog";
 import { getBaseName } from "@/utils/path-helpers";
+import { readBufferText } from "@/features/editor/services/buffer-text";
 
 /** Gathers the file watcher's burst of events for one change into one disk check. */
 const RECONCILE_DELAY_MS = 150;
@@ -274,8 +275,8 @@ async function rejectHunks(chatId: string, entry: AgentEditEntry, hunks: AgentEd
   if (reverted === null) return;
 
   const buffer = findEditorBuffer(entry.path);
-  const originalBufferContent = buffer?.content;
-  const unsaved = buffer?.isDirty ? buffer.content : null;
+  const originalBufferContent = buffer ? readBufferText(buffer) : undefined;
+  const unsaved = buffer?.isDirty ? (originalBufferContent ?? null) : null;
   const removesFile = entry.created && reverted === "";
   if (removesFile && unsaved !== null) {
     const confirmed = await showConfirmDialog(
@@ -306,7 +307,7 @@ async function rejectHunks(chatId: string, entry: AgentEditEntry, hunks: AgentEd
       if (
         buffer &&
         latestBuffer?.id === buffer.id &&
-        latestBuffer.content === originalBufferContent
+        readBufferText(latestBuffer) === originalBufferContent
       )
         useBufferStore.getState().actions.closeBufferForce(buffer.id);
       rebaseOtherChats(entry.path, chatId, null);
@@ -327,7 +328,7 @@ async function rejectHunks(chatId: string, entry: AgentEditEntry, hunks: AgentEd
   const latestBuffer = findEditorBuffer(entry.path);
   if (!latestBuffer || latestBuffer.readOnly) return;
   const latestText = latestBuffer.isDirty
-    ? transferLineEdits(entry.current, latestBuffer.content, edits)
+    ? transferLineEdits(entry.current, readBufferText(latestBuffer), edits)
     : reverted;
   if (latestText === null) {
     showToast({

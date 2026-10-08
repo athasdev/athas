@@ -1,19 +1,23 @@
 import { describe, expect, it } from "vite-plus/test";
-import type { Action } from "../types/action.types";
+import type { CommandPaletteItem } from "../types/command-palette-item.types";
 import {
   flattenCommandPaletteSections,
   getCommandPaletteFilter,
   getCommandPaletteSections,
 } from "../utils/command-palette-results";
 
-function action(id: string, category: string, description = `${id} description`): Action {
+function action(
+  id: string,
+  category: string,
+  description = `${id} description`,
+): CommandPaletteItem {
   return {
     id,
     label: id,
     description,
     category,
     icon: null,
-    action: () => undefined,
+    run: () => undefined,
   };
 }
 

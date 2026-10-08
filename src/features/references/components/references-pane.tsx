@@ -31,7 +31,7 @@ const ReferencesPane = ({ onFullScreen, isFullScreen = false }: ReferencesPanePr
   const references = useReferencesStore.use.references();
   const query = useReferencesStore.use.query();
   const isLoading = useReferencesStore.use.isLoading();
-  const handleFileSelect = useFileSystemStore.use.handleFileSelect?.();
+  const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
 
   const grouped = useMemo<ReferenceGroup[]>(() => {

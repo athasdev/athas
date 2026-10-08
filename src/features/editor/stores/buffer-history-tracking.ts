@@ -7,7 +7,11 @@ import type {
   Range,
 } from "@/features/editor/types/editor.types";
 import { useHistoryStore } from "@/features/editor/stores/history.store";
-import { editorTextChangesAreNoop } from "@/features/editor/utils/editor-text-changes";
+import {
+  editorTextChangesAreNoop,
+  textSliceToString,
+  type TextSlice,
+} from "@/features/editor/utils/editor-text-changes";
 
 const trackers = new WeakMap<ReturnType<typeof useHistoryStore.getStore>, EditorUndoGroupTracker>();
 function getHistoryOwner(workspaceId?: string) {
@@ -97,9 +101,9 @@ export function trackBufferHistoryChange({
   workspaceId,
 }: {
   bufferId: string;
-  currentContent: string;
-  nextContent: string;
-  previousContent?: string;
+  currentContent: TextSlice;
+  nextContent: TextSlice;
+  previousContent?: TextSlice;
   previousCursorPosition?: Position;
   previousSelection?: Range;
   skipUndoGrouping?: boolean;
@@ -111,8 +115,8 @@ export function trackBufferHistoryChange({
   if (skipUndoGrouping) {
     trackImmediateBufferHistoryChange({
       bufferId,
-      currentContent: previousContent ?? currentContent,
-      nextContent,
+      currentContent: textSliceToString(previousContent ?? currentContent),
+      nextContent: textSliceToString(nextContent),
       previousCursorPosition,
       previousSelection,
       workspaceId,
@@ -120,29 +124,33 @@ export function trackBufferHistoryChange({
     return;
   }
 
-  const lastTrackedContent = tracker.getTrackedContent(bufferId);
-  const contentBeforeChange = contentChanges?.length
-    ? (previousContent ?? currentContent)
-    : (lastTrackedContent ?? previousContent ?? currentContent);
-  const contentChanged = contentChanges?.length
-    ? !editorTextChangesAreNoop(contentBeforeChange, contentChanges)
-    : contentBeforeChange !== nextContent;
-  if (contentChanged) store.getState().actions.discardFuture(bufferId);
-
-  if (!contentChanges?.length && lastTrackedContent === undefined) {
-    tracker.sync(bufferId, contentBeforeChange);
+  let historyEntries;
+  if (contentChanges?.length) {
+    const contentBeforeChange = previousContent ?? currentContent;
+    if (!editorTextChangesAreNoop(contentBeforeChange, contentChanges)) {
+      store.getState().actions.discardFuture(bufferId);
+    }
+    historyEntries = tracker.trackChanges(
+      bufferId,
+      contentBeforeChange,
+      nextContent,
+      contentChanges,
+      { previousCursorPosition, previousSelection },
+    );
+  } else {
+    const lastTrackedContent = tracker.getTrackedContent(bufferId);
+    const contentBeforeChange = textSliceToString(
+      lastTrackedContent ?? previousContent ?? currentContent,
+    );
+    const nextText = textSliceToString(nextContent);
+    if (contentBeforeChange !== nextText) store.getState().actions.discardFuture(bufferId);
+    if (lastTrackedContent === undefined) tracker.sync(bufferId, contentBeforeChange);
+    historyEntries = tracker.track(bufferId, contentBeforeChange, nextText, {
+      previousCursorPosition,
+      previousSelection,
+      contentChange,
+    });
   }
-
-  const historyEntries = contentChanges?.length
-    ? tracker.trackChanges(bufferId, contentBeforeChange, nextContent, contentChanges, {
-        previousCursorPosition,
-        previousSelection,
-      })
-    : tracker.track(bufferId, contentBeforeChange, nextContent, {
-        previousCursorPosition,
-        previousSelection,
-        contentChange,
-      });
   const { pushHistory } = store.getState().actions;
   for (const entry of historyEntries) {
     pushHistory(bufferId, entry);

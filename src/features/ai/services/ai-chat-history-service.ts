@@ -1,6 +1,6 @@
-import { commands } from "@/bindings/commands";
+import { type ChatSaveScope, commands } from "@/bindings/commands";
 import { parseChatSessionSettings } from "@/features/ai/lib/chat-session-settings";
-import type { Chat, ToolCall } from "@/features/ai/types/ai-chat.types";
+import type { Chat, ChatSession, Message, ToolCall } from "@/features/ai/types/ai-chat.types";
 import type { AcpTurnUsage } from "@/features/ai/types/acp.types";
 import { coalesceAssistantResponses } from "@/features/ai/lib/assistant-response";
 import { normalizeMessageFollowUpActions } from "@/features/ai/lib/follow-up-actions";
@@ -101,10 +101,25 @@ interface ChatWithMessages {
   tool_calls: ToolCallData[];
 }
 
-type SerializedChat = ReturnType<typeof chatToData>;
-
-const pendingChatSaves = new Map<string, SerializedChat>();
+const pendingChatSaves = new Map<string, Chat>();
 const activeChatSaves = new Map<string, Promise<void>>();
+/**
+ * The message objects each chat's last successful save wrote, by message id. The chat store
+ * replaces a message object whenever it changes it and keeps the others as they are, so a message
+ * that is still the same object has nothing new to write.
+ */
+const savedChatMessages = new Map<string, Map<string, Message>>();
+/** Bumped whenever a chat's baseline is forgotten, so a save already in flight cannot restore it. */
+const savedChatGenerations = new Map<string, number>();
+
+/**
+ * Forgets what the last save of `chatId` wrote, so its next save writes it whole: for when its
+ * stored rows may have changed behind this window's back (deleted, or written by another window).
+ */
+export function forgetSavedChatMessages(chatId: string) {
+  savedChatMessages.delete(chatId);
+  savedChatGenerations.set(chatId, (savedChatGenerations.get(chatId) ?? 0) + 1);
+}
 
 /**
  * Initialize the chat history database
@@ -119,15 +134,8 @@ export const initChatDatabase = async (): Promise<void> => {
   }
 };
 
-/**
- * Convert frontend Chat to backend format
- */
-function chatToData(chat: Chat): {
-  chat: ChatData;
-  messages: MessageData[];
-  tool_calls: ToolCallData[];
-} {
-  const chatData: ChatData = {
+function chatSessionToData(chat: ChatSession): ChatData {
+  return {
     id: chat.id,
     title: chat.title,
     created_at: chat.createdAt.getTime(),
@@ -142,8 +150,20 @@ function chatToData(chat: Chat): {
     archived_at: chat.archivedAt?.getTime() ?? null,
     session_settings: chat.sessionSettings ? JSON.stringify(chat.sessionSettings) : null,
   };
+}
 
-  const messages: MessageData[] = chat.messages.map((msg) => ({
+/**
+ * Convert frontend Chat to backend format, with only `messages` of it
+ */
+function chatToData(
+  chat: Chat,
+  messages: Message[] = chat.messages,
+): {
+  chat: ChatData;
+  messages: MessageData[];
+  tool_calls: ToolCallData[];
+} {
+  const messageData: MessageData[] = messages.map((msg) => ({
     id: msg.id,
     chat_id: chat.id,
     role: msg.role,
@@ -159,7 +179,7 @@ function chatToData(chat: Chat): {
   }));
 
   const tool_calls: ToolCallData[] = [];
-  for (const msg of chat.messages) {
+  for (const msg of messages) {
     if (msg.toolCalls) {
       for (const tc of msg.toolCalls) {
         tool_calls.push({
@@ -176,7 +196,32 @@ function chatToData(chat: Chat): {
     }
   }
 
-  return { chat: chatData, messages, tool_calls };
+  return { chat: chatSessionToData(chat), messages: messageData, tool_calls };
+}
+
+/**
+ * What the next save of `chat` has to write. Streaming changes one message at a time, so a chat
+ * saved before sends only the messages that changed since; a chat not saved yet in this session
+ * (or loaded, whose stored rows may have been merged on the way in), or one that lost a message,
+ * is written whole so the database drops what is gone.
+ */
+function prepareChatSave(chat: Chat): {
+  data: ReturnType<typeof chatToData>;
+  scope: ChatSaveScope;
+  saved: Map<string, Message> | null;
+} {
+  const previous = savedChatMessages.get(chat.id);
+  // Without a baseline, an empty chat is either new or one whose messages were never loaded. A
+  // whole write would delete the latter's history, so only its row is written, and the next save
+  // still writes it whole.
+  if (!previous && chat.messages.length === 0) {
+    return { data: chatToData(chat), scope: "changedMessages", saved: null };
+  }
+  const saved = new Map(chat.messages.map((message) => [message.id, message]));
+  const lostMessage = !previous || [...previous.keys()].some((id) => !saved.has(id));
+  if (lostMessage) return { data: chatToData(chat), scope: "allMessages", saved };
+  const changed = chat.messages.filter((message) => previous.get(message.id) !== message);
+  return { data: chatToData(chat, changed), scope: "changedMessages", saved };
 }
 
 /**
@@ -242,7 +287,7 @@ function dataToChat(data: ChatWithMessages): Chat {
  * Save a chat to the database
  */
 export const saveChatToDb = async (chat: Chat): Promise<void> => {
-  pendingChatSaves.set(chat.id, chatToData(chat));
+  pendingChatSaves.set(chat.id, chat);
   const activeSave = activeChatSaves.get(chat.id);
   if (activeSave) return activeSave;
 
@@ -253,13 +298,26 @@ export const saveChatToDb = async (chat: Chat): Promise<void> => {
         pendingChatSaves.delete(chat.id);
         if (!next) continue;
 
-        await commands.saveChat(next.chat, next.messages, next.tool_calls);
+        const { data, scope, saved } = prepareChatSave(next);
+        const generation = savedChatGenerations.get(chat.id);
+        await commands.saveChat(data.chat, data.messages, data.tool_calls, scope);
+        if (saved && savedChatGenerations.get(chat.id) === generation) {
+          savedChatMessages.set(chat.id, saved);
+        }
       }
     } catch (error) {
+      // What reached the database is unknown now; the next save writes the chat whole.
+      forgetSavedChatMessages(chat.id);
       console.error("Error saving chat to database:", error);
       throw error;
     } finally {
       activeChatSaves.delete(chat.id);
+      // A state queued behind the failed save still has to be written.
+      const queued = pendingChatSaves.get(chat.id);
+      if (queued) {
+        pendingChatSaves.delete(chat.id);
+        void saveChatToDb(queued).catch(() => undefined);
+      }
     }
   })();
 
@@ -267,10 +325,9 @@ export const saveChatToDb = async (chat: Chat): Promise<void> => {
   return save;
 };
 
-export const saveChatMetadataToDb = async (chat: Chat): Promise<void> => {
+export const saveChatMetadataToDb = async (chat: ChatSession): Promise<void> => {
   try {
-    const { chat: chatData } = chatToData(chat);
-    await commands.updateChatMetadata(chatData);
+    await commands.updateChatMetadata(chatSessionToData(chat));
   } catch (error) {
     console.error(`Error updating chat metadata for ${chat.id}:`, error);
     throw error;
@@ -280,13 +337,12 @@ export const saveChatMetadataToDb = async (chat: Chat): Promise<void> => {
 /**
  * Load all chats (metadata only, no messages)
  */
-export const loadAllChatsFromDb = async (): Promise<Omit<Chat, "messages">[]> => {
+export const loadAllChatsFromDb = async (): Promise<ChatSession[]> => {
   try {
     const chats = await commands.loadAllChats();
     return chats.map((chat) => ({
       id: chat.id,
       title: chat.title,
-      messages: [], // Messages loaded separately
       createdAt: new Date(chat.created_at),
       lastMessageAt: new Date(chat.last_message_at),
       agentId: migrateLegacyAgentId(chat.agent_id || "custom"),
@@ -324,6 +380,7 @@ export const loadChatFromDb = async (chatId: string): Promise<Chat> => {
  * Delete a chat from the database
  */
 export const deleteChatFromDb = async (chatId: string): Promise<void> => {
+  forgetSavedChatMessages(chatId);
   try {
     await commands.deleteChat(chatId);
   } catch (error) {

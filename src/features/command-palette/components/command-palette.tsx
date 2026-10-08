@@ -1,35 +1,13 @@
-import { appDataDir } from "@tauri-apps/api/path";
-import { PuzzlePieceIcon, SearchIcon } from "@/ui/icons";
+import { SearchIcon } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useShallow } from "zustand/react/shallow";
 import { useUIExtensionStore } from "@/extensions/ui/stores/ui-extension-store";
 import { IconThemeSelectorContent } from "@/features/command-palette/components/icon-theme-selector";
 import { ThemeSelectorContent } from "@/features/command-palette/components/theme-selector";
-import { useLspStore } from "@/features/editor/lsp/stores/lsp.store";
-import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { getBufferById } from "@/features/editor/utils/buffer-index";
-import { isMarkdownFile } from "@/features/editor/utils/lines";
-import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { LocalHistoryCommandContent } from "@/features/local-history/components/local-history-command";
 import { OutlineCommandContent } from "@/features/outline/components/outline-command";
-import { commitChanges } from "@/features/git/api/git-commits-api";
-import { fetchChanges, pullChanges, pushChanges } from "@/features/git/api/git-remotes-api";
-import {
-  discardAllChanges,
-  stageAllFiles,
-  unstageAllFiles,
-} from "@/features/git/api/git-status-api";
-import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
-import { useGitHubStore } from "@/features/github/stores/github.store";
-import { useToast } from "@/features/layout/contexts/toast-context";
-import { useOnboardingStore } from "@/features/onboarding/stores/onboarding.store";
-import { useSettingsSearchStore } from "@/features/settings/stores/settings-search.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { useWhatsNewStore } from "@/features/settings/stores/whats-new.store";
 import { vimCommands } from "@/features/vim/stores/vim-commands";
-import { useVimStore } from "@/features/vim/stores/vim.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
-import { useZoomStore } from "@/features/window/stores/zoom.store";
 import { useKeymapStore } from "@/features/keymaps/stores/keymaps.store";
 import { getEffectiveShortcutsByCommand } from "@/features/keymaps/utils/effective-keymaps";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
@@ -46,24 +24,17 @@ import Command, {
 import { Kbd } from "@/ui/kbd";
 import { SearchMatchHighlight } from "@/components/search-match-highlight";
 import Keybinding from "@/features/keymaps/components/keybinding";
-import { canLogOutOfAcpAgent } from "@/features/ai/lib/acp-logout";
-import { isAcpAgent } from "@/features/ai/services/ai-chat-service";
-import { canBrowseAgentSessions } from "@/features/ai/lib/open-agent-sessions";
-import { selectAcpAgentStatus } from "@/features/ai/lib/acp-session-state";
-import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
-import { createAdvancedActions } from "../constants/advanced-actions";
-import { createDatabaseActions } from "../constants/database-actions";
-import { createFileActions } from "../constants/file-actions";
-import { createGitActions } from "../constants/git-actions";
-import { createGitHubActions } from "../constants/github-actions";
-import { createMarkdownActions } from "../constants/markdown-actions";
-import { createNavigationActions } from "../constants/navigation-actions";
-import { createPaneActions } from "../constants/pane-actions";
-import { createSettingsActions } from "../constants/settings-actions";
-import { createViewActions } from "../constants/view-actions";
-import { createWindowActions } from "../constants/window-actions";
-import type { Action } from "../types/action.types";
+import { commandPaletteOrder } from "../constants/command-palette-order";
+import { useCommandPaletteContext } from "../hooks/use-command-palette-context";
+import { attachCommandPaletteSession } from "../services/command-palette-session";
+import type { CommandPaletteItem } from "../types/command-palette-item.types";
 import type { CommandPaletteViewId } from "../types/view.types";
+import { buildCommandPaletteItems } from "../utils/command-palette-items";
+import {
+  createExtensionCommandItems,
+  createSettingsSearchItems,
+  createVimCommandItems,
+} from "../utils/command-palette-providers";
 import {
   commandPaletteFilters,
   flattenCommandPaletteSections,
@@ -79,19 +50,7 @@ interface CommandPaletteContentProps {
 }
 
 const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteContentProps) => {
-  // Get data from stores
   const setIsCommandPaletteVisible = useUIState((state) => state.setIsCommandPaletteVisible);
-  const isSidebarVisible = useUIState((state) => state.isSidebarVisible);
-  const setIsSidebarVisible = useUIState((state) => state.setIsSidebarVisible);
-  const isBottomPaneVisible = useUIState((state) => state.isBottomPaneVisible);
-  const setIsBottomPaneVisible = useUIState((state) => state.setIsBottomPaneVisible);
-  const bottomPaneActiveTab = useUIState((state) => state.bottomPaneActiveTab);
-  const setBottomPaneActiveTab = useUIState((state) => state.setBottomPaneActiveTab);
-  const setActiveView = useUIState((state) => state.setActiveView);
-  const setIsQuickOpenVisible = useUIState((state) => state.setIsQuickOpenVisible);
-  const openCommandPaletteView = useUIState((state) => state.openCommandPaletteView);
-  const openSettings = useUIState((state) => state.openSettings);
-  const handleFileSelect = useFileSystemStore.use.handleFileSelect?.();
   const onClose = () => {
     setIsCommandPaletteVisible(false);
     setViewStack(["root"]);
@@ -110,16 +69,18 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
     activeInitialView !== commandPaletteInitialView ? initialViewStack : viewStack;
   const currentView = renderedViewStack[renderedViewStack.length - 1] || "root";
 
-  const pushView = (view: CommandPaletteViewId) => {
+  const pushView = useCallback((view: CommandPaletteViewId) => {
     setQuery("");
     setViewStack((currentStack) => [...currentStack, view]);
-  };
+  }, []);
 
   const popView = () => {
     setViewStack((currentStack) =>
       currentStack.length > 1 ? currentStack.slice(0, -1) : currentStack,
     );
   };
+
+  useEffect(() => attachCommandPaletteSession({ pushView }), [pushView]);
 
   const handleThemeChange = useCallback((theme: string) => {
     const { settings, actions } = useSettingsStore.getState();
@@ -149,314 +110,42 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
       }),
     [keybindingPreset, userKeybindings],
   );
-  const aiCompletion = useSettingsStore((state) => state.settings.aiCompletion);
-  const autoCompletion = useSettingsStore((state) => state.settings.autoCompletion);
-  const autoDetectLanguage = useSettingsStore((state) => state.settings.autoDetectLanguage);
-  const autoSave = useSettingsStore((state) => state.settings.autoSave);
-  const compactMenuBar = useSettingsStore((state) => state.settings.compactMenuBar);
-  const codeLens = useSettingsStore((state) => state.settings.codeLens);
-  const coreFeatures = useSettingsStore((state) => state.settings.coreFeatures);
-  const formatOnSave = useSettingsStore((state) => state.settings.formatOnSave);
-  const iconTheme = useSettingsStore((state) => state.settings.iconTheme);
-  const inlayHints = useSettingsStore((state) => state.settings.inlayHints);
-  const lineNumbers = useSettingsStore((state) => state.settings.lineNumbers);
-  const nativeMenuBar = useSettingsStore((state) => state.settings.nativeMenuBar);
-  const parameterHints = useSettingsStore((state) => state.settings.parameterHints);
-  const semanticTokens = useSettingsStore((state) => state.settings.semanticTokens);
-  const showGitHubReleases = useSettingsStore((state) => state.settings.showGitHubReleases);
-  const showGitHubDeployments = useSettingsStore((state) => state.settings.showGitHubDeployments);
-  const showGitHubActions = useSettingsStore((state) => state.settings.showGitHubActions);
-  const showGitHubIssues = useSettingsStore((state) => state.settings.showGitHubIssues);
-  const showGitHubPullRequests = useSettingsStore((state) => state.settings.showGitHubPullRequests);
-  const showMinimap = useSettingsStore((state) => state.settings.showMinimap);
-  const syncSystemTheme = useSettingsStore((state) => state.settings.syncSystemTheme);
-  const telemetry = useSettingsStore((state) => state.settings.telemetry);
-  const theme = useSettingsStore((state) => state.settings.theme);
-  const vimMode = useSettingsStore((state) => state.settings.vimMode);
-  const vimRelativeLineNumbers = useSettingsStore((state) => state.settings.vimRelativeLineNumbers);
-  const wordWrap = useSettingsStore((state) => state.settings.wordWrap);
+  const commandContext = useCommandPaletteContext();
+  const { settings, activeBuffer } = commandContext;
   const effectiveTheme = useEffectiveTheme();
-  const { setMode } = useVimStore.use.actions();
-  const lspStatus = useLspStore.use.lspStatus();
-  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
-  const logOutAgentId = useAIChatStore((state) => {
-    const agentId =
-      state.chats.find((chat) => chat.id === state.currentChatId)?.agentId ?? state.selectedAgentId;
-    const status = selectAcpAgentStatus(state, agentId, rootFolderPath);
-    return canLogOutOfAcpAgent(status, agentId) ? agentId : null;
-  });
-  const currentAgentId = useAIChatStore(
-    (state) =>
-      state.chats.find((chat) => chat.id === state.currentChatId)?.agentId ?? state.selectedAgentId,
-  );
-  const browseSessionsAgentId = useAIChatStore((state) => {
-    const agentId =
-      state.chats.find((chat) => chat.id === state.currentChatId)?.agentId ?? state.selectedAgentId;
-    const status = selectAcpAgentStatus(state, agentId, rootFolderPath);
-    return isAcpAgent(agentId) && canBrowseAgentSessions(status, agentId) ? agentId : null;
-  });
-  const activeRepoPath = useRepositoryStore.use.activeRepoPath();
-  const { checkAuth: checkGitHubAuth } = useGitHubStore.use.actions();
   const extensionCommands = useUIExtensionStore.use.commands();
   const extensionViews = useCommandPaletteViews();
-  const { showToast } = useToast();
-  const openWhatsNew = useWhatsNewStore((state) => state.actions.open);
-  const openOnboarding = useOnboardingStore((state) => state.actions.openPreview);
-  const activeBufferId = useBufferStore.use.activeBufferId();
-  const activeBuffer = useBufferStore(
-    useShallow((state) => {
-      const buffer = activeBufferId ? getBufferById(state.buffers, activeBufferId) : undefined;
-      if (!buffer) return null;
-      return {
-        id: buffer.id,
-        type: buffer.type,
-        path: buffer.path,
-        isVirtual: buffer.type === "editor" && buffer.isVirtual === true,
-        isMarkdownPreview: buffer.type === "editor" && buffer.isMarkdownPreview === true,
-      };
-    }),
-  );
-  const {
-    closeBuffer,
-    switchToNextBuffer,
-    switchToPreviousBuffer,
-    reopenClosedTab,
-    openGitHubFormBuffer,
-    openContent,
-  } = useBufferStore.use.actions();
-  const { zoomIn, zoomOut, resetZoom } = useZoomStore.use.actions();
 
-  const commandSettings = useMemo(
-    () => ({
-      aiCompletion,
-      autoCompletion,
-      autoDetectLanguage,
-      autoSave,
-      compactMenuBar,
-      codeLens,
-      coreFeatures,
-      formatOnSave,
-      iconTheme,
-      inlayHints,
-      lineNumbers,
-      nativeMenuBar,
-      parameterHints,
-      semanticTokens,
-      showGitHubActions,
-      showGitHubReleases,
-      showGitHubDeployments,
-      showGitHubIssues,
-      showGitHubPullRequests,
-      showMinimap,
-      syncSystemTheme,
-      telemetry,
-      theme,
-      vimMode,
-      vimRelativeLineNumbers,
-      wordWrap,
-    }),
-    [
-      aiCompletion,
-      autoCompletion,
-      autoDetectLanguage,
-      autoSave,
-      compactMenuBar,
-      codeLens,
-      coreFeatures,
-      formatOnSave,
-      iconTheme,
-      inlayHints,
-      lineNumbers,
-      nativeMenuBar,
-      parameterHints,
-      semanticTokens,
-      showGitHubActions,
-      showGitHubReleases,
-      showGitHubDeployments,
-      showGitHubIssues,
-      showGitHubPullRequests,
-      showMinimap,
-      syncSystemTheme,
-      telemetry,
-      theme,
-      vimMode,
-      vimRelativeLineNumbers,
-      wordWrap,
-    ],
-  );
-
-  const isActiveMarkdownFile = activeBuffer ? isMarkdownFile(activeBuffer.path) : false;
-
-  // Create all actions using factory functions
-  const allActions: Action[] = [
-    ...createMarkdownActions({
-      isMarkdownFile: isActiveMarkdownFile,
-      activeBuffer,
-      onClose,
-    }),
-    ...createViewActions({
-      isSidebarVisible,
-      setIsSidebarVisible,
-      isBottomPaneVisible,
-      setIsBottomPaneVisible,
-      bottomPaneActiveTab,
-      setBottomPaneActiveTab,
-      settings: {
-        nativeMenuBar: commandSettings.nativeMenuBar,
-        compactMenuBar: commandSettings.compactMenuBar,
-      },
-      updateSetting: useSettingsStore.getState().actions.updateSetting as (
-        key: string,
-        value: any,
-      ) => void | Promise<void>,
-      zoomIn,
-      zoomOut,
-      resetZoom,
-      onClose,
-    }),
-    ...createSettingsActions({
-      query,
-      settings: commandSettings,
-      openSettings,
-      setSettingsSearchQuery: useSettingsSearchStore.getState().actions.setQuery,
-      pushPaletteView: pushView,
-      updateSetting: useSettingsStore.getState().actions.updateSetting as (
-        key: string,
-        value: any,
-      ) => void | Promise<void>,
-      handleFileSelect,
-      getAppDataDir: appDataDir,
-      openWhatsNew,
-      openOnboarding,
-      onClose,
-    }),
-    ...createNavigationActions({
-      setIsSidebarVisible,
-      setActiveView,
-      setIsBottomPaneVisible,
-      setBottomPaneActiveTab,
-      setIsQuickOpenVisible,
-      openCommandPaletteView,
-      openSettings,
-      hasActiveEditor: activeBuffer?.type === "editor",
-      onClose,
-    }),
-    ...createPaneActions({
-      onClose,
-    }),
-    ...createFileActions({
-      activeBufferId,
-      closeBuffer,
-      switchToNextBuffer,
-      switchToPreviousBuffer,
-      reopenClosedTab,
-      openMarkdownDocument: () => {
-        openContent({ type: "markdownDocument", documentId: crypto.randomUUID() });
-      },
-      onClose,
-    }),
-    ...Array.from(extensionCommands.values()).map((command): Action => ({
-      id: `extension-command:${command.id}`,
-      label: command.title,
-      description: command.category
-        ? `${command.category} integration command`
-        : "Installed integration command",
-      icon: <PuzzlePieceIcon />,
-      category: command.category ?? "Integrations",
-      action: () => {
-        onClose();
-        void Promise.resolve(command.execute()).catch((error) => {
-          showToast({
-            message: error instanceof Error ? error.message : "Integration command failed",
-            type: "error",
-          });
-        });
-      },
-    })),
-    ...createWindowActions({
-      onClose,
-    }),
-    ...createGitActions({
-      rootFolderPath,
-      activeRepoPath,
-      setIsSidebarVisible,
-      setActiveView,
-      showToast,
-      gitOperations: {
-        stageAllFiles,
-        unstageAllFiles,
-        commitChanges,
-        pushChanges,
-        pullChanges,
-        fetchChanges,
-        discardAllChanges,
-      },
-      onClose,
-    }),
-    ...createGitHubActions({
-      repoPath: activeRepoPath ?? rootFolderPath ?? null,
-      setIsSidebarVisible,
-      setActiveView,
-      settings: {
-        showGitHubPullRequests: commandSettings.showGitHubPullRequests,
-        showGitHubIssues: commandSettings.showGitHubIssues,
-        showGitHubActions: commandSettings.showGitHubActions,
-        showGitHubReleases: commandSettings.showGitHubReleases,
-        showGitHubDeployments: commandSettings.showGitHubDeployments,
-      },
-      updateSetting: useSettingsStore.getState().actions.updateSetting as (
-        key: string,
-        value: any,
-      ) => void | Promise<void>,
-      openReleaseDraft: (repoPath) => {
-        useBufferStore
-          .getState()
-          .actions.openContent({ type: "githubDelivery", kind: "releases", repoPath });
-      },
-      checkAuth: checkGitHubAuth,
-      showToast,
-      openGitHubFormBuffer,
-      onClose,
-    }),
-    ...createDatabaseActions({
-      openDatabaseSidebar: () => {
-        setActiveView("databases");
-        setIsSidebarVisible(true);
-        onClose();
-      },
-    }),
-    ...createAdvancedActions({
-      lspStatus,
-      logOutAgentId,
-      browseSessionsAgentId,
-      currentAgentId,
-      vimMode: commandSettings.vimMode,
-      vimCommands,
-      setMode,
-      showToast,
-      onClose,
-    }),
-  ];
+  const paletteItems = buildCommandPaletteItems({
+    commands: keymapRegistry.getAllCommands(),
+    context: commandContext,
+    order: commandPaletteOrder,
+    providers: {
+      "settings-search": () => createSettingsSearchItems(query),
+      "extension-commands": () => createExtensionCommandItems(extensionCommands.values()),
+      "vim-commands": () => createVimCommandItems(settings.vimMode, vimCommands),
+    },
+  });
 
   const commandSections = getCommandPaletteSections({
-    actions: allActions,
+    actions: paletteItems,
     filter: activeFilter,
     query,
     recentActionIds: lastEnteredActions,
-    showRecent: commandSettings.coreFeatures.persistentCommands,
+    showRecent: settings.coreFeatures.persistentCommands,
   });
   const paletteActions = flattenCommandPaletteSections(commandSections);
   const actionIndexes = new Map(paletteActions.map((action, index) => [action.id, index]));
 
-  const handleActionSelect = useCallback(
-    (index: number) => {
-      const action = paletteActions[index];
-      if (!action) return;
-      action.action();
-      pushAction(action.id);
-    },
-    [paletteActions, pushAction],
-  );
+  const runItem = (item: CommandPaletteItem) => {
+    void item.run(onClose);
+    pushAction(item.id);
+  };
+
+  const handleActionSelect = (index: number) => {
+    const action = paletteActions[index];
+    if (action) runItem(action);
+  };
 
   const {
     selectedIndex,
@@ -494,7 +183,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
           onBack={popView}
           onClose={onClose}
           onThemeChange={handleThemeChange}
-          currentTheme={commandSettings.syncSystemTheme ? effectiveTheme : commandSettings.theme}
+          currentTheme={settings.syncSystemTheme ? effectiveTheme : settings.theme}
         />
       ) : currentView === "icon-theme" ? (
         <IconThemeSelectorContent
@@ -502,7 +191,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
           onBack={popView}
           onClose={onClose}
           onThemeChange={handleIconThemeChange}
-          currentTheme={commandSettings.iconTheme}
+          currentTheme={settings.iconTheme}
         />
       ) : currentView === "local-history" ? (
         <LocalHistoryCommandContent
@@ -529,7 +218,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
         <>
           <CommandHeader
             onClose={onClose}
-            showClearButton={commandSettings.coreFeatures.persistentCommands}
+            showClearButton={settings.coreFeatures.persistentCommands}
           >
             <SearchIcon className="size-4 shrink-0 text-subtle-foreground" />
             <CommandInput
@@ -579,10 +268,10 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
                     const index = actionIndexes.get(action.id) ?? 0;
                     const isSelected = index === selectedIndex;
                     const isRecent =
-                      commandSettings.coreFeatures.persistentCommands &&
+                      settings.coreFeatures.persistentCommands &&
                       lastEnteredActions.includes(action.id);
-                    const binding = action.commandId
-                      ? shortcutsByCommand.get(action.commandId)
+                    const binding = action.keybindingCommandId
+                      ? shortcutsByCommand.get(action.keybindingCommandId)
                       : undefined;
 
                     return (
@@ -594,10 +283,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
                         tabIndex={-1}
                         aria-selected={isSelected}
                         data-command-item-index={index}
-                        onClick={() => {
-                          action.action();
-                          pushAction(action.id);
-                        }}
+                        onClick={() => runItem(action)}
                         onMouseMove={() => setSelectedIndex(index)}
                         isSelected={isSelected}
                         icon={action.icon}

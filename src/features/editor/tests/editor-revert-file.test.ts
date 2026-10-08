@@ -51,7 +51,6 @@ function makeDirtyEditorBuffer(): EditorContent {
     isPreview: false,
     isActive: true,
     language: "typescript",
-    tokens: [],
   };
 }
 

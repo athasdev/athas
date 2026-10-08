@@ -6,7 +6,7 @@ import DiagnosticsPane from "./diagnostics-pane";
 
 const DiagnosticsBuffer = () => {
   const diagnosticsByFile = useDiagnosticsStore.use.diagnosticsByFile();
-  const handleFileSelect = useFileSystemStore.use.handleFileSelect?.();
+  const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
 
   const diagnostics = useMemo(() => {
     const allDiagnostics: Diagnostic[] = [];

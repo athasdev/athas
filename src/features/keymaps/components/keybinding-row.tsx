@@ -97,9 +97,7 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
           )}
         </TableCell>
 
-        <TableCell className="truncate text-subtle-foreground">
-          {keybinding?.when || command.keybinding ? keybinding?.when || "-" : "-"}
-        </TableCell>
+        <TableCell className="truncate text-subtle-foreground">{keybinding?.when || "-"}</TableCell>
 
         <TableCell>
           <Badge tone={isUserOverride ? "accent" : "neutral"}>{sourceLabel}</Badge>

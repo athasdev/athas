@@ -93,7 +93,6 @@ describe("LSP incremental document synchronization", () => {
           isPinned: false,
           isActive: true,
           language: "typescript",
-          tokens: [],
         },
       ],
     });

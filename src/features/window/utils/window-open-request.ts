@@ -1,3 +1,4 @@
+import { waitForBootstrapPhase } from "@/features/bootstrap/stores/bootstrap-phase.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import type { DetachedWindowTarget } from "@/features/window/detached/detached-window-protocol";
@@ -140,6 +141,8 @@ export function parseWindowOpenUrl(url: URL): WindowOpenRequest | null {
 }
 
 async function handleWindowOpenRequest(request: WindowOpenRequest) {
+  // Opening a project or file reads settings such as the theme, so it must not run on the defaults.
+  await waitForBootstrapPhase("settings-ready");
   if (request.content) {
     if (request.source === "deepLink") return;
     useBufferStore.getState().actions.openContent(request.content);

@@ -17,7 +17,7 @@ import { splitEditorGroup } from "@/features/panes/utils/pane-command-actions";
 import { moveBufferToPaneDropTarget } from "@/features/panes/utils/pane-drop-actions";
 import { findPaneGroup } from "@/features/panes/utils/pane-tree";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import type { EditorContent, PaneContent } from "@/features/panes/types/pane-content.types";
+import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import { getChromeNavigationIndex } from "@/features/layout/utils/chrome-keyboard";
 import { useSidebarStore } from "@/features/layout/stores/sidebar.store";
 import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
@@ -49,8 +49,8 @@ import TabBarItem from "./tab-bar-item";
 import { TabHistoryNavigation } from "./tab-history-navigation";
 import { NewTabMenu } from "./new-tab-menu";
 import TabContextMenu from "./tab-context-menu";
+import { getBufferText } from "@/features/editor/services/open-buffer-text";
 
-const EMPTY_TOKENS: EditorContent["tokens"] = [];
 const tabShellCache = new WeakMap<PaneContent, PaneContent>();
 const tabShellById = new Map<string, PaneContent>();
 
@@ -65,7 +65,7 @@ function toTabShell(buffer: PaneContent): PaneContent {
   if (cached) return cached;
   const next: PaneContent =
     buffer.type === "editor"
-      ? { ...buffer, content: "", savedContent: "", contentRevision: 0, tokens: EMPTY_TOKENS }
+      ? { ...buffer, content: "", savedContent: "", contentRevision: 0 }
       : { ...buffer, content: "", savedContent: "" };
   // Every keystroke replaces the buffer object; keep the previous shell while nothing a tab
   // shows has changed, so the bar's selection stays equal.
@@ -121,20 +121,12 @@ const TabBar = ({
   );
   const globalActiveBufferId = useBufferStore((state) => (pane ? null : state.activeBufferId));
   const activeBufferCandidate = pane ? pane.activeBufferId : globalActiveBufferId;
-  const {
-    handleTabClick,
-    handleTabClose,
-    handleTabPin,
-    handleCloseOtherTabs,
-    handleCloseAllTabs,
-    handleCloseTabsToRight,
-    reorderBuffers,
-    convertPreviewToDefinite,
-  } = useBufferStore.use.actions();
+  const { handleTabClick, handleTabClose, handleTabPin, reorderBuffers, convertPreviewToDefinite } =
+    useBufferStore.use.actions();
   const horizontalTabScroll = useSettingsStore((state) => state.settings.horizontalTabScroll);
   const maxOpenTabs = useSettingsStore((state) => state.settings.maxOpenTabs);
   const updateActivePath = useSidebarStore.use.actions().updateActivePath;
-  const rootFolderPath = useFileSystemStore.use.rootFolderPath?.() || undefined;
+  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath) || undefined;
   const bufferById = useMemo(() => {
     const nextBufferById = new Map<string, PaneContent>();
     for (const buffer of buffers) {
@@ -160,7 +152,7 @@ const TabBar = ({
   const dragPointRef = useRef<{ x: number; y: number } | null>(null);
   const pointerPointRef = useRef<{ x: number; y: number } | null>(null);
   const { getClickCapture, releaseClickSuppression, suppressNextClick } = useTabDragClickGuard();
-  const handleRevealInFolder = useFileSystemStore.use.handleRevealInFolder?.();
+  const handleRevealInFolder = useFileSystemStore((state) => state.handleRevealInFolder);
   const { clearPositionCache } = useEditorStateStore.getState().actions;
   // Only the label fields of this bar's terminals, flattened so a shallow compare holds: the
   // sessions Map changes on every title, progress or directory update of any terminal.
@@ -715,9 +707,6 @@ const TabBar = ({
                           );
                           if (targetBuffer) closeTab(bufferId);
                         }}
-                        onCloseOthers={handleCloseOtherTabs}
-                        onCloseAll={handleCloseAllTabs}
-                        onCloseToRight={handleCloseTabsToRight}
                         isPaneLocked={isPaneLocked}
                         onTogglePaneLocked={
                           paneId && !disablePaneActions && !isBottomPane
@@ -737,13 +726,14 @@ const TabBar = ({
                           }
                           if (targetBuffer && targetBuffer.type !== "extension") {
                             const { closeBuffer, openBuffer } = useBufferStore.getState().actions;
+                            // Tabs hold shells without text; read it from the live buffer.
+                            const content =
+                              targetBuffer.type === "editor" || targetBuffer.type === "diff"
+                                ? (getBufferText(bufferId) ?? "")
+                                : "";
                             closeBuffer(bufferId);
                             setTimeout(async () => {
                               try {
-                                const content =
-                                  targetBuffer.type === "editor" || targetBuffer.type === "diff"
-                                    ? targetBuffer.content
-                                    : "";
                                 openBuffer(
                                   targetBuffer.path,
                                   targetBuffer.name,

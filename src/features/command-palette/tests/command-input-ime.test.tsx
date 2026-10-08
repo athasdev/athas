@@ -3,36 +3,39 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { CommandInput, useCommandListNavigation } from "@/ui/command";
-import { createGitActions } from "../constants/git-actions";
+import { stageAllChanges } from "@/features/keymaps/commands/git-command-actions";
+
+const stageAllFiles = vi.hoisted(() => vi.fn(async () => true));
 
 vi.mock("@/features/keymaps/hooks/use-command-shortcut", () => ({
   useCommandShortcut: () => undefined,
 }));
-const stageAllFiles = vi.fn();
-const actions = createGitActions({
-  rootFolderPath: "/repo",
-  activeRepoPath: null,
-  setIsSidebarVisible: vi.fn(),
-  setActiveView: vi.fn(),
-  showToast: vi.fn(),
-  onClose: vi.fn(),
-  gitOperations: {
-    stageAllFiles,
-    unstageAllFiles: vi.fn(),
-    commitChanges: vi.fn(),
-    pushChanges: vi.fn(),
-    pullChanges: vi.fn(),
-    fetchChanges: vi.fn(),
-    discardAllChanges: vi.fn(),
-  },
-});
-const stageAction = actions.find((action) => action.label === "Git: Stage All Changes")!;
+vi.mock("@/features/git/api/git-status-api", () => ({
+  stageAllFiles,
+  unstageAllFiles: vi.fn(),
+  discardAllChanges: vi.fn(),
+}));
+vi.mock("@/features/git/api/git-commits-api", () => ({ commitChanges: vi.fn() }));
+vi.mock("@/features/git/api/git-remotes-api", () => ({
+  fetchChanges: vi.fn(),
+  pullChanges: vi.fn(),
+  pushChanges: vi.fn(),
+}));
+vi.mock("@/features/git/stores/git-repository.store", () => ({
+  useRepositoryStore: { getState: () => ({ activeRepoPath: "/repo" }) },
+}));
+vi.mock("@/features/file-system/stores/file-system.store", () => ({
+  useFileSystemStore: { getState: () => ({ rootFolderPath: null }) },
+}));
+vi.mock("@/features/layout/contexts/toast-context", () => ({ showToast: vi.fn() }));
+vi.mock("@/features/window/stores/ui-state.store", () => ({ useUIState: { getState: vi.fn() } }));
+
 let root: Root;
 let container: HTMLDivElement;
 function Palette({ empty = false }: { empty?: boolean }) {
   const { onInputKeyDown } = useCommandListNavigation({
     itemCount: empty ? 0 : 1,
-    onSelect: () => stageAction.action(),
+    onSelect: () => void stageAllChanges(),
   });
   return (
     <CommandInput

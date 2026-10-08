@@ -272,7 +272,6 @@ describe("actual search worker thread", () => {
           isPinned: false,
           isActive: true,
           language: "typescript",
-          tokens: [],
         },
       ],
       activeBufferId: "draft",

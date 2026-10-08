@@ -30,6 +30,7 @@ import { emitGitChanged } from "@/features/git/events/git-events";
 import { showToast } from "@/features/layout/contexts/toast-context";
 import { showConfirmDialog } from "@/ui/dialog";
 import { getBaseName } from "@/utils/path-helpers";
+import { readBufferText } from "@/features/editor/services/buffer-text";
 
 /** Collects a turn's burst of agent writes into one save. */
 const PERSIST_DELAY_MS = 400;
@@ -56,6 +57,10 @@ function findChat(chatId: string) {
   return useAIChatStore.getState().chats.find((chat) => chat.id === chatId) ?? null;
 }
 
+function chatMessages(chatId: string) {
+  return useAIChatStore.getState().messagesByChat[chatId] ?? [];
+}
+
 function lifetimeFor(chatId: string): symbol {
   let lifetime = lifetimes.get(chatId);
   if (!lifetime) {
@@ -75,7 +80,7 @@ function isCurrentLifetime(chatId: string, lifetime: symbol): boolean {
  */
 export function currentTurnMessageId(chatId: string): string | null {
   const state = useAIChatStore.getState();
-  const messages = findChat(chatId)?.messages ?? [];
+  const messages = chatMessages(chatId);
   const run = state.agentRuns[chatId];
   let end = messages.length;
   if (run) {
@@ -265,7 +270,7 @@ function syncAgentEdits(chatId: string, path: string, content: string | null, un
 
 async function restoreFile(path: string, target: string | null, disk: string | null) {
   const buffer = findEditorBuffer(path);
-  const originalBufferContent = buffer?.content;
+  const originalBufferContent = buffer ? readBufferText(buffer) : undefined;
   const { markPendingSave } = useFileWatcherStore.getState().actions;
   if (target === null) {
     if (disk !== null) {
@@ -273,7 +278,11 @@ async function restoreFile(path: string, target: string | null, disk: string | n
       await getWorkspaceResourceProvider(path).deleteText(path, disk);
     }
     const latestBuffer = findEditorBuffer(path);
-    if (buffer && latestBuffer?.id === buffer.id && latestBuffer.content === originalBufferContent)
+    if (
+      buffer &&
+      latestBuffer?.id === buffer.id &&
+      readBufferText(latestBuffer) === originalBufferContent
+    )
       useBufferStore.getState().actions.closeBufferForce(buffer.id);
   } else {
     markPendingSave(path);
@@ -282,7 +291,7 @@ async function restoreFile(path: string, target: string | null, disk: string | n
     if (latestBuffer && !latestBuffer.readOnly) {
       if (
         !latestBuffer.isDirty ||
-        (latestBuffer.id === buffer?.id && latestBuffer.content === originalBufferContent)
+        (latestBuffer.id === buffer?.id && readBufferText(latestBuffer) === originalBufferContent)
       )
         useBufferStore.getState().actions.updateBufferContent(latestBuffer.id, target, false);
       else
@@ -319,11 +328,7 @@ export function restoreCheckpoint(
     if (!isCurrentLifetime(chatId, lifetime)) return { status: "cancelled" };
     await ensureCheckpointsLoaded(chatId);
     if (!isCurrentLifetime(chatId, lifetime)) return { status: "cancelled" };
-    const plan = planChatRestore(
-      getChatCheckpoints(chatId),
-      messageId,
-      findChat(chatId)?.messages ?? [],
-    );
+    const plan = planChatRestore(getChatCheckpoints(chatId), messageId, chatMessages(chatId));
     if (plan === "unavailable") return { status: "unavailable" };
     if (!plan) return { status: "nothing-to-restore" };
 
@@ -334,7 +339,7 @@ export function restoreCheckpoint(
       if (!isCurrentLifetime(chatId, lifetime)) return { status: "cancelled" };
       disks.set(file.path, disk);
       const buffer = findEditorBuffer(file.path);
-      const unsaved = buffer?.isDirty && buffer.content !== file.target;
+      const unsaved = buffer?.isDirty && readBufferText(buffer) !== file.target;
       if (disk !== file.expected || unsaved) changedSince.push(file.path);
     }
 

@@ -46,7 +46,6 @@ function editor(id: string): EditorContent {
     isPreview: false,
     isActive: false,
     language: "typescript",
-    tokens: [],
   };
 }
 let root: Root;

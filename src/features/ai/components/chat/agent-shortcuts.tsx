@@ -9,6 +9,7 @@ import {
   WarningIcon,
 } from "@/ui/icons";
 import { useMemo } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { buildAgentSuggestions } from "@/features/ai/lib/agent-suggestions";
 import { selectAgentSessions } from "@/features/ai/lib/agent-session-list";
 import { openAgentHistoryChat } from "@/features/ai/lib/open-agent-history";
@@ -39,14 +40,13 @@ function SuggestionIcon({ suggestion, index }: { suggestion: AgentSuggestion; in
 
 /** The editor file the user is looking at, even while an agent tab has focus. */
 function useFocusedEditorFile() {
-  const paneActiveIds = usePaneStore((state) =>
-    state.actions
-      .getAllPaneGroups()
-      .map((pane) => pane.activeBufferId ?? "")
-      .join("\n"),
+  const paneActiveIds = usePaneStore(
+    useShallow((state) =>
+      state.actions.getAllPaneGroups().map((pane) => pane.activeBufferId ?? null),
+    ),
   );
   return useBufferStore((state) => {
-    const candidates = [state.activeBufferId, ...paneActiveIds.split("\n")];
+    const candidates = [state.activeBufferId, ...paneActiveIds];
     for (const id of candidates) {
       const buffer = id ? state.buffers.find((candidate) => candidate.id === id) : undefined;
       if (buffer?.type === "editor" && !buffer.isVirtual) return buffer.path;

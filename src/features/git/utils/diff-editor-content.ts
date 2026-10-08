@@ -1,4 +1,3 @@
-import type { TokenEntry } from "@/features/panes/types/pane-content.types";
 import type { MultiFileDiff } from "../types/git-diff.types";
 import type { GitDiff, GitDiffLine } from "../types/git.types";
 import { DIFF_SERIALIZED_LINE_LIMIT } from "./diff-viewer-scale";
@@ -245,53 +244,6 @@ export function getDiffEditorPath(sourcePath: string | undefined, cacheKey: stri
   const rawFileName = sourcePath?.split("/").pop() || "diff";
   const fileName = `${rawFileName}.diff`;
   return `diff-editor://${cacheKey}/${fileName}`;
-}
-
-export function createDiffTokensForEditorContent(content: string): TokenEntry[] {
-  const tokens: TokenEntry[] = [];
-  let offset = 0;
-
-  for (const line of content.split("\n")) {
-    const lineStart = offset;
-    const lineEnd = lineStart + line.length;
-
-    const pushToken = (start: number, end: number, className: string) => {
-      if (start >= end) return;
-      tokens.push({
-        start,
-        end,
-        class_name: className,
-        token_type: className,
-      });
-    };
-
-    if (isDiffAccordionLine(line)) {
-      offset = lineEnd + 1;
-      continue;
-    }
-
-    if (
-      line.startsWith("diff --git") ||
-      line.startsWith("index ") ||
-      line.startsWith("Binary files")
-    ) {
-      pushToken(lineStart, lineEnd, "keyword");
-    } else if (line.startsWith("@@")) {
-      pushToken(lineStart, lineEnd, "attribute");
-    } else if (line.startsWith("+++ ")) {
-      pushToken(lineStart, lineEnd, "string");
-    } else if (line.startsWith("--- ")) {
-      pushToken(lineStart, lineEnd, "variable");
-    } else if (line.startsWith("+")) {
-      pushToken(lineStart, lineEnd, "string");
-    } else if (line.startsWith("-")) {
-      pushToken(lineStart, lineEnd, "variable");
-    }
-
-    offset = lineEnd + 1;
-  }
-
-  return tokens;
 }
 
 function isDiffAccordionLine(line: string): boolean {

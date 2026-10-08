@@ -101,7 +101,7 @@ function DebugStatusBadge({ status }: { status: "idle" | "running" | "paused" })
 export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: DebuggerViewProps) {
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const activeFile = useBufferStore(useShallow(getActiveDebuggableFile));
-  const handleFileOpen = useFileSystemStore.use.handleFileOpen?.();
+  const handleFileOpen = useFileSystemStore((state) => state.handleFileOpen);
   const breakpoints = useDebuggerStore.use.breakpoints();
   const watchExpressions = useDebuggerStore.use.watchExpressions();
   const workspaceConfigs = useDebuggerStore.use.workspaceConfigs();
