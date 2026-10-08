@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { createSelectors } from "@/utils/zustand-selectors";
 
 /** Live page state of a browser tab. The address, title and zoom live on its buffer. */
-export interface BrowserTabState {
+interface BrowserTabState {
   isLoading: boolean;
   /** `null` while the engine can't tell, in which case the history buttons stay enabled. */
   canGoBack: boolean | null;

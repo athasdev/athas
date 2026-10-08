@@ -20,7 +20,7 @@ export interface WorkspaceResourceProvider {
  * What a checked local write expects on disk: the text's UTF-8 length and SHA-256, so the write
  * does not carry a second copy of the file over IPC.
  */
-export async function digestText(text: string): Promise<{ byteLength: number; sha256: string }> {
+async function digestText(text: string): Promise<{ byteLength: number; sha256: string }> {
   const bytes = new TextEncoder().encode(text);
   const hash = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
   let sha256 = "";

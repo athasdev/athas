@@ -6,7 +6,7 @@ import { parseMarkdown } from "@/features/editor/markdown/parser";
  * signature docs). Code blocks show plain first and are highlighted once their tokens arrive, as
  * long as the element still shows the same text.
  */
-export function renderMarkdownContent(element: HTMLElement, markdown: string) {
+function renderMarkdownContent(element: HTMLElement, markdown: string) {
   const html = parseMarkdown(markdown);
   element.innerHTML = html;
   element.dataset.markdown = markdown;

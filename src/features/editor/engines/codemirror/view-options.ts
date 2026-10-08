@@ -136,7 +136,7 @@ const cursorStyles: Record<CursorStyle, Record<string, string>> = {
   "underline-thin": { borderLeft: "none", width: "1ch", borderBottom: `1px solid ${CURSOR_COLOR}` },
 };
 
-export function cursorExtension(style: CursorStyle, blinking: CursorBlinking): Extension {
+function cursorExtension(style: CursorStyle, blinking: CursorBlinking): Extension {
   return [
     drawSelection({ cursorBlinkRate: blinking === "solid" ? 0 : 1200 }),
     EditorView.theme({ ".cm-cursor, .cm-dropCursor": cursorStyles[style] }),

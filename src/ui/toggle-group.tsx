@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 
-export interface ToggleGroupOption<Value extends string = string> {
+interface ToggleGroupOption<Value extends string = string> {
   value: Value;
   label: string;
   icon?: ReactNode;
@@ -84,7 +84,7 @@ const toggleGroupItemVariants = cva(
   },
 );
 
-export type ToggleGroupProps<Value extends string> =
+type ToggleGroupProps<Value extends string> =
   | SingleToggleGroupProps<Value>
   | MultipleToggleGroupProps<Value>;
 

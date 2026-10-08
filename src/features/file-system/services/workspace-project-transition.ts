@@ -6,7 +6,7 @@ import { showChoiceDialog } from "@/ui/dialog";
 import { toast } from "sonner";
 import { IS_MAC } from "@/utils/platform";
 
-export type ProjectTransitionAction =
+type ProjectTransitionAction =
   | "switching projects"
   | "closing this project"
   | "restarting to update";

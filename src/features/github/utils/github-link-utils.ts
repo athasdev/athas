@@ -30,7 +30,7 @@ interface GitHubCommitLink {
   url: string;
 }
 
-export type GitHubEntityLink =
+type GitHubEntityLink =
   | GitHubPullRequestLink
   | GitHubIssueLink
   | GitHubActionRunLink
@@ -49,7 +49,7 @@ export function isGitHubEntityLinkForRepository(
   );
 }
 
-export function parseGitHubRepositoryUrl(value: string): { owner: string; repo: string } | null {
+function parseGitHubRepositoryUrl(value: string): { owner: string; repo: string } | null {
   const normalized = value.trim();
   const httpsMatch = normalized.match(
     /^https?:\/\/(?:www\.)?github\.com\/([^/]+)\/([^/]+?)(?:\.git)?\/?$/i,

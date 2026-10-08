@@ -11,9 +11,9 @@ const MAX_TOOL_INPUT_VALUE_CHARS = 300;
 const MAX_TOOL_RESULT_CHARS = 600;
 
 /** History above this size is compacted into a summary plus the most recent turns. */
-export const HISTORY_SUMMARY_THRESHOLD_TOKENS = 32_000;
+const HISTORY_SUMMARY_THRESHOLD_TOKENS = 32_000;
 /** Recent history kept verbatim when older turns are summarised. */
-export const HISTORY_RECENT_TOKENS = 12_000;
+const HISTORY_RECENT_TOKENS = 12_000;
 const MAX_SUMMARY_CHARS = 6_000;
 
 export interface ProviderRequestLimits {
@@ -43,7 +43,7 @@ const TEXT_ONLY_PROVIDERS = new Set(["deepseek"]);
  * up to 16 per request, 1.5 MB each and 2.25 MB in total. Images do not count toward
  * `maxBytes`; they have their own share of the 4 MB body.
  */
-export const HOSTED_ATHAS_IMAGE_LIMITS = {
+const HOSTED_ATHAS_IMAGE_LIMITS = {
   mediaTypes: ["image/png", "image/jpeg", "image/gif", "image/webp"],
   maxImages: 16,
   maxImageBytes: 1_500_000,
@@ -240,7 +240,7 @@ function recentStart(history: AIMessage[], keepTokens: number) {
   return start;
 }
 
-export interface CompactHistoryOptions {
+interface CompactHistoryOptions {
   thresholdTokens?: number;
   keepRecentTokens?: number;
   /** Replaces the extractive summary, for example with a model call. */

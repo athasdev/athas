@@ -45,7 +45,7 @@ export function resolveComposerContextWindow(
   return modelContextWindow ? { contextWindowTokens: modelContextWindow } : {};
 }
 
-export interface ComposerContextBudgetInput {
+interface ComposerContextBudgetInput {
   providerId: string;
   modelContextWindow?: number;
   mode: ChatMode;

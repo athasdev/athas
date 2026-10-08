@@ -78,7 +78,7 @@ export function toStandardSemanticTokenType(tokenType: string): string | undefin
   return TOKEN_TYPE_ALIASES[normalized] ?? NORMALIZED_TOKEN_TYPES.get(normalized);
 }
 
-export interface SemanticTokenRange {
+interface SemanticTokenRange {
   from: number;
   to: number;
   /** Space-separated classes: the syntax color and, when deprecated, a strike-through. */

@@ -3,7 +3,7 @@ import type { PaneDropZone } from "./pane-drop-zones";
 import { getPaneSplitDropOptions } from "./pane-drop-zones";
 import { createPaneBeside } from "./pane-split-actions";
 
-export interface PaneDropTarget {
+interface PaneDropTarget {
   paneId: string;
   zone: PaneDropZone;
 }

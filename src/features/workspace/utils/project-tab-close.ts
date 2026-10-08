@@ -1,4 +1,4 @@
-export interface ClosableProjectTab {
+interface ClosableProjectTab {
   id: string;
   isActive: boolean;
 }

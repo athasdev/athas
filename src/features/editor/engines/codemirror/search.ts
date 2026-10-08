@@ -19,7 +19,7 @@ export function isSearchReplaceOpen(state: EditorState): boolean {
   return !state.readOnly && (state.field(searchReplaceOpenField, false) ?? false);
 }
 
-export const SEARCH_REPLACE_FIELD_SELECTOR = ".cm-search input[name=replace]";
+const SEARCH_REPLACE_FIELD_SELECTOR = ".cm-search input[name=replace]";
 
 /**
  * Opens the search panel, with the replace row shown and focused when `replace` is set and the
@@ -49,7 +49,7 @@ export interface SearchMatchSummary {
   capped: boolean;
 }
 
-export const SEARCH_MATCH_LIMIT = 9999;
+const SEARCH_MATCH_LIMIT = 9999;
 
 /** Every match of a query, in document order, so the current one can be found without a rescan. */
 export interface SearchMatchList {

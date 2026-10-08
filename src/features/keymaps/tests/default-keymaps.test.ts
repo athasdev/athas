@@ -163,6 +163,11 @@ describe("default keymaps", () => {
     expect(defaultKeymaps.filter((keybinding) => keybinding.key === "cmd+o")).toHaveLength(1);
   });
 
+  it("binds Open Project to a shortcut no other default or native accelerator uses", () => {
+    expectKeybinding("file.open", "cmd+alt+o");
+    expect(defaultKeymaps.filter((keybinding) => keybinding.key === "cmd+alt+o")).toHaveLength(1);
+  });
+
   it("keeps Ctrl+Tab navigation in the frontend keymap", () => {
     expectKeybinding("workbench.nextTabCtrlTab", "ctrl+tab");
     expectKeybinding("workbench.previousTabCtrlTab", "ctrl+shift+tab");

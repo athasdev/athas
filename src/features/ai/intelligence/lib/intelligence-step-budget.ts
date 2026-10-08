@@ -4,7 +4,7 @@ import {
   type ProviderRequestLimits,
 } from "@/features/ai/lib/conversation-history";
 
-export type StepRequestLimits = Pick<ProviderRequestLimits, "maxMessages" | "maxBytes">;
+type StepRequestLimits = Pick<ProviderRequestLimits, "maxMessages" | "maxBytes">;
 
 /**
  * What one model request of the agent loop may carry. Athas's hosted endpoint rejects anything

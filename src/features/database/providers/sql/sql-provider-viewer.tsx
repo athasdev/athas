@@ -5,11 +5,11 @@ import SqlDatabaseViewer from "./sql-database-viewer";
 
 type SqlStoreFactory = () => SqlDatabaseStore;
 
-export interface FileSqlViewerProps {
+interface FileSqlViewerProps {
   databasePath: string;
 }
 
-export interface ConnectionSqlViewerProps {
+interface ConnectionSqlViewerProps {
   connectionId: string;
 }
 

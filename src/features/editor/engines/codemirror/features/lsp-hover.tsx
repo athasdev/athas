@@ -32,7 +32,7 @@ export function getHoverBounds(container: HTMLElement) {
 }
 
 /** A hover card for rendered markdown, sized to fit the editor it belongs to. */
-export function createHoverElement(markdown: string, container: HTMLElement) {
+function createHoverElement(markdown: string, container: HTMLElement) {
   const element = createMarkdownElement(markdown, "cm-athas-hover");
   const { maxWidth, maxHeight } = getHoverBounds(container);
   element.style.setProperty("--athas-hover-max-width", `${maxWidth}px`);

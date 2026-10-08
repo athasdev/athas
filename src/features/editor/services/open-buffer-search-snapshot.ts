@@ -3,7 +3,7 @@ import { isVirtualContent } from "@/features/panes/types/pane-content.types";
 
 const BUFFER_SEARCH_KEY_SEPARATOR = "\u0000";
 
-export interface OpenBufferSearchSnapshot {
+interface OpenBufferSearchSnapshot {
   activeBufferPath: string | undefined;
   openBufferPaths: ReadonlySet<string>;
   openBuffers: Array<{ name: string; path: string }>;

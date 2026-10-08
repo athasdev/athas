@@ -2,11 +2,12 @@ import { ArrowsInIcon, ArrowsOutIcon, SettingsIcon } from "@/ui/icons";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
 import type { Command } from "../types/keymaps.types";
 import {
-  maximizeWindow,
-  minimizeWindow,
+  maximizeCurrentWindow,
+  minimizeCurrentWindow,
   minimizeWindowAlt,
   minimizeWindowMac,
   quitApplication,
+  toggleCurrentWindowMaximize,
   toggleFullscreen,
   toggleFullscreenMac,
   toggleNativeMenuBar,
@@ -58,7 +59,7 @@ export const windowCommands: Command[] = [
     description: "Minimize the window",
     icon: <ArrowsInIcon />,
     palette: { label: "Window: Minimize" },
-    execute: minimizeWindow,
+    execute: minimizeCurrentWindow,
   },
   {
     id: "window.minimize.mac",
@@ -76,7 +77,7 @@ export const windowCommands: Command[] = [
     id: "window.maximize",
     title: "Maximize Window",
     category: "Window",
-    execute: maximizeWindow,
+    execute: maximizeCurrentWindow,
   },
   {
     id: "window.quit",
@@ -131,8 +132,6 @@ export const windowCommands: Command[] = [
     description: "Maximize or restore the window",
     icon: <ArrowsOutIcon />,
     palette: true,
-    execute: () => {
-      window.dispatchEvent(new CustomEvent("maximize-window"));
-    },
+    execute: toggleCurrentWindowMaximize,
   },
 ];

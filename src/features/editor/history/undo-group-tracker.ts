@@ -32,7 +32,7 @@ interface PendingPatchUndoGroup {
   lastEditDelta: UndoEditDelta;
 }
 
-export interface UndoTrackOptions {
+interface UndoTrackOptions {
   previousCursorPosition?: Position;
   previousSelection?: Range;
   contentChange?: EditorTextChange;

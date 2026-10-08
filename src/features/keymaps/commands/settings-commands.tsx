@@ -31,7 +31,7 @@ import type { Command } from "../types/keymaps.types";
 import { getSettingsTabCommandId, settingsCommandTabs } from "../constants/settings-tab-commands";
 
 /** Opens a settings tab with an optional search query, matching the Settings page search. */
-export async function openSettingsWithQuery(tab: SettingsTab | undefined, query: string) {
+async function openSettingsWithQuery(tab: SettingsTab | undefined, query: string) {
   const { useSettingsSearchStore } =
     await import("@/features/settings/stores/settings-search.store");
   useSettingsSearchStore.getState().actions.setQuery(query);

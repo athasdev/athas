@@ -14,7 +14,7 @@ export type WorkspaceSection =
   | "tasks"
   | "ai"
   | "extensions";
-export interface WorkspaceDraft {
+interface WorkspaceDraft {
   config: TeamWorkspace;
   original: string | null;
   saved: string;

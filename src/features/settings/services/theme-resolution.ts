@@ -1,7 +1,7 @@
 import { themeRegistry } from "@/extensions/themes/theme-registry";
 import type { Settings, Theme } from "@/features/settings/types/settings.types";
 
-export type SystemThemePreference = "light" | "dark";
+type SystemThemePreference = "light" | "dark";
 
 type ThemeResolutionSettings = Pick<
   Settings,

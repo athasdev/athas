@@ -1,8 +1,8 @@
 import type { IDecoration, IDisposable, IMarker, Terminal } from "@xterm/xterm";
 
-export type TerminalCommandStatus = "running" | "success" | "failure";
+type TerminalCommandStatus = "running" | "success" | "failure";
 
-export interface TerminalCommandRecord {
+interface TerminalCommandRecord {
   id: number;
   promptMarker: IMarker;
   commandMarker: IMarker | null;
@@ -12,7 +12,7 @@ export interface TerminalCommandRecord {
   status: TerminalCommandStatus;
 }
 
-export interface TerminalShellIntegrationOptions {
+interface TerminalShellIntegrationOptions {
   now?: () => number;
   onCommandFinished?: (command: TerminalCommandRecord) => void;
   onCommandStarted?: (command: TerminalCommandRecord) => void;

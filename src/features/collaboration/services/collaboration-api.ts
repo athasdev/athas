@@ -32,7 +32,7 @@ interface CollaborationDocumentUpdatePull {
 export type CollaborationDocumentSnapshot = CollaborationDocumentUpdatePull["document"];
 export type CollaborationDocumentUpdate = CollaborationDocumentUpdatePull["updates"][number];
 
-export type CollaborationDocumentStreamEvent =
+type CollaborationDocumentStreamEvent =
   | {
       type: "ready";
       document: CollaborationDocumentSnapshot;

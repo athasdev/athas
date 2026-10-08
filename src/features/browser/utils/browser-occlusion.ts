@@ -7,7 +7,7 @@ const SAMPLE_INSET_PX = 2;
  */
 const NON_OCCLUDING_SELECTOR = "[data-sonner-toaster]";
 
-export interface BrowserSlotGeometry {
+interface BrowserSlotGeometry {
   x: number;
   y: number;
   width: number;

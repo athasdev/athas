@@ -1,7 +1,7 @@
 import type { PaneGroup, PaneNode } from "../types/pane.types";
 import { getAllPaneGroups } from "./pane-tree";
 
-export interface WritablePaneRoutingInput {
+interface WritablePaneRoutingInput {
   activePane: PaneGroup | null;
   bufferId?: string;
   bottomRoot: PaneNode;

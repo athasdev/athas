@@ -32,7 +32,7 @@ function escapeMarkdownLinkLabel(value: string): string {
   return value.replace(/\[/g, "\\[").replace(/\]/g, "\\]");
 }
 
-export function normalizeReleaseNotes(body: string): string {
+function normalizeReleaseNotes(body: string): string {
   return body
     .trim()
     .split("\n")

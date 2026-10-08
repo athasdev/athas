@@ -1,8 +1,8 @@
 import type { GitDiffLine } from "../types/git.types";
 
-export type DiffLineVisualType = "added" | "removed" | "context";
+type DiffLineVisualType = "added" | "removed" | "context";
 
-export interface DiffLineVisualState {
+interface DiffLineVisualState {
   lineBackground: string;
   gutterBackground: string;
   railClassName: string;

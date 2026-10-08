@@ -42,7 +42,7 @@ export function useModelSearchResults() {
 
 export const ModelResultsProvider = ModelResultsContext;
 
-export interface ModelOption {
+interface ModelOption {
   id: string;
   name: string;
   keywords?: string[];

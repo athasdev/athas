@@ -1,42 +1,48 @@
 import { commands } from "@/bindings/commands";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { createAppWindow } from "@/features/window/services/create-app-window";
+import {
+  maximizeWindow,
+  minimizeWindow,
+  toggleWindowFullscreen,
+  toggleWindowMaximize,
+} from "@/features/window/services/native-window-api";
 import { isLinux, isMac } from "@/utils/platform";
 
+function runWindowAction(action: () => Promise<void>, label: string): void {
+  action().catch((error) => console.error(`Failed to ${label}:`, error));
+}
+
 export function toggleFullscreen(): void {
-  window.dispatchEvent(new CustomEvent("toggle-fullscreen"));
+  runWindowAction(toggleWindowFullscreen, "toggle fullscreen");
 }
 
 export function toggleFullscreenMac(): void {
-  if (isMac()) {
-    window.dispatchEvent(new CustomEvent("toggle-fullscreen"));
-  }
+  if (isMac()) toggleFullscreen();
 }
 
 export function createNewWindow(): void {
   void createAppWindow();
 }
 
-export function minimizeWindow(): void {
-  window.dispatchEvent(new CustomEvent("minimize-window"));
+export function minimizeCurrentWindow(): void {
+  runWindowAction(minimizeWindow, "minimize window");
 }
 
 export function minimizeWindowMac(): void {
-  if (isMac()) {
-    window.dispatchEvent(new CustomEvent("minimize-window"));
-  }
+  if (isMac()) minimizeCurrentWindow();
 }
 
 export function minimizeWindowAlt(): void {
-  if (!isMac()) {
-    window.dispatchEvent(new CustomEvent("minimize-window"));
-  }
+  if (!isMac()) minimizeCurrentWindow();
 }
 
-export function maximizeWindow(): void {
-  if (!isMac()) {
-    window.dispatchEvent(new CustomEvent("maximize-window"));
-  }
+export function maximizeCurrentWindow(): void {
+  if (!isMac()) runWindowAction(maximizeWindow, "maximize window");
+}
+
+export function toggleCurrentWindowMaximize(): void {
+  runWindowAction(toggleWindowMaximize, "toggle maximize");
 }
 
 export async function quitApplication(): Promise<void> {

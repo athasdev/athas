@@ -39,7 +39,7 @@ const categoryFilters: Record<string, Exclude<CommandPaletteFilter, "all">> = {
   Vim: "extensions",
 };
 
-export interface CommandPaletteSection {
+interface CommandPaletteSection {
   id: string;
   label: string;
   actions: CommandPaletteItem[];

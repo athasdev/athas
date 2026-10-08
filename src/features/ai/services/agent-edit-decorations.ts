@@ -1,7 +1,7 @@
 import type { AgentEditLens } from "@/features/ai/services/agent-edit-lenses";
 
 /** How an editor shows one unreviewed agent hunk inline. */
-export interface AgentEditDecoration {
+interface AgentEditDecoration {
   lens: AgentEditLens;
   /** The agent's lines, 1-based and inclusive; null when the hunk only removed lines. */
   addedLines: { start: number; end: number } | null;

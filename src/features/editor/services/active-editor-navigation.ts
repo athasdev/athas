@@ -3,7 +3,7 @@
  * engine-neutral fallbacks: LSP selection ranges for Expand/Shrink Selection and the inline
  * references peek. Kept free of editor imports so the keymap layer can read it up front.
  */
-export interface ActiveCodeMirrorNavigation {
+interface ActiveCodeMirrorNavigation {
   ownerId: string;
   /** Returns false when the editor cannot answer, so the caller runs its fallback. */
   expandSelection: () => boolean;

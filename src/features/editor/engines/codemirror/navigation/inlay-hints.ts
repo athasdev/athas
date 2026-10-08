@@ -2,7 +2,7 @@ import { type Range, StateEffect, StateField, type Text } from "@codemirror/stat
 import { Decoration, type DecorationSet, EditorView, WidgetType } from "@codemirror/view";
 import { fromLspPosition } from "./lsp-document";
 
-export interface LspInlayHint {
+interface LspInlayHint {
   line: number;
   character: number;
   label: string;

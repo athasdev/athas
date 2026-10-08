@@ -18,7 +18,7 @@ import { getBaseName, getRelativePath, joinPath, normalizePath } from "@/utils/p
 const PREFIX = "athas-context:";
 
 /** Token budgets per reference; one reference never crowds out the rest of the request. */
-export const CONTEXT_REFERENCE_BUDGETS = {
+const CONTEXT_REFERENCE_BUDGETS = {
   folder: 8_000,
   gitDiff: 12_000,
   problems: 4_000,
@@ -64,7 +64,7 @@ export function formatContextReference(reference: ContextReference): string {
   }
 }
 
-export function isContextReference(value: string): boolean {
+function isContextReference(value: string): boolean {
   return value.startsWith(PREFIX);
 }
 
@@ -201,7 +201,7 @@ async function resolveFolder(
   return { content: result.content, truncated: truncated || result.truncated };
 }
 
-export function formatGitDiff(diff: GitDiff): string {
+function formatGitDiff(diff: GitDiff): string {
   if (diff.raw_patch) return diff.raw_patch;
   const header = diff.is_new
     ? `new file: ${diff.file_path}`
@@ -258,7 +258,7 @@ async function resolveGitDiff(
 
 const SEVERITY_ORDER: Record<Diagnostic["severity"], number> = { error: 0, warning: 1, info: 2 };
 
-export function formatDiagnostics(diagnostics: Diagnostic[], projectRoot?: string | null) {
+function formatDiagnostics(diagnostics: Diagnostic[], projectRoot?: string | null) {
   const sorted = [...diagnostics].sort(
     (left, right) =>
       SEVERITY_ORDER[left.severity] - SEVERITY_ORDER[right.severity] ||
@@ -322,7 +322,7 @@ async function getDefaultSources(projectRoot: string): Promise<ContextReferenceS
   };
 }
 
-export interface ResolveContextReferencesOptions {
+interface ResolveContextReferencesOptions {
   projectRoot?: string | null;
   /** The Git repository for diffs; defaults to the project root. */
   repoPath?: string | null;

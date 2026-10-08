@@ -11,7 +11,7 @@ import type { EditorView } from "@codemirror/view";
 import type { ActiveEditorAdapter } from "../../extensions/api";
 import { getLineCommentTokenForLanguage } from "../../utils/comment-toggle";
 
-export type CodeMirrorLineCommands = Required<
+type CodeMirrorLineCommands = Required<
   Pick<
     ActiveEditorAdapter,
     | "toggleComment"

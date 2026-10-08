@@ -6,7 +6,7 @@ interface FileReferenceRange {
   endColumn: number;
 }
 
-export interface FileReference {
+interface FileReference {
   rawPath: string;
   lookupPath: string;
   targetPath: string;

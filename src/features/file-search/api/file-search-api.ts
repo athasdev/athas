@@ -7,7 +7,7 @@ import {
   type FffSearchHit,
 } from "@/bindings/commands";
 
-export type { FffIndexedFile, FffScanStatus, FffSearchHit };
+export type { FffIndexedFile, FffSearchHit };
 
 export interface SearchMatchRange {
   start: number;
@@ -45,7 +45,7 @@ export interface SearchFilesResponse {
   first_read_error?: string | null;
 }
 
-export interface SearchFilesRequest {
+interface SearchFilesRequest {
   root_paths: string[];
   query: string;
   case_sensitive?: boolean;
@@ -56,7 +56,7 @@ export interface SearchFilesRequest {
   context_lines?: number;
 }
 
-export interface SearchFilesStreamHandlers {
+interface SearchFilesStreamHandlers {
   /** The index is still being built; the backend starts searching once it is ready. */
   onIndexing?: (indexedFiles: number) => void;
   /** Matches found since the previous batch, as they arrive. */

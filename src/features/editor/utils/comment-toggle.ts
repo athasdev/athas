@@ -1,11 +1,11 @@
-export interface ToggleLineCommentInput {
+interface ToggleLineCommentInput {
   content: string;
   selectionStart: number;
   selectionEnd: number;
   token?: string;
 }
 
-export interface ToggleLineCommentResult {
+interface ToggleLineCommentResult {
   content: string;
   selectionStart: number;
   selectionEnd: number;

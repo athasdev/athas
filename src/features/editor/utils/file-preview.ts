@@ -1,6 +1,6 @@
 import { isMarkdownPreviewableFile } from "@/features/editor/markdown/previewable";
 
-export type FilePreviewType = "markdownPreview" | "htmlPreview" | "csvPreview" | "svgPreview";
+type FilePreviewType = "markdownPreview" | "htmlPreview" | "csvPreview" | "svgPreview";
 
 export function getFilePreviewType(path: string): FilePreviewType | null {
   if (isMarkdownPreviewableFile(path)) return "markdownPreview";

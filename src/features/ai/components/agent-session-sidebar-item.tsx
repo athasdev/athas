@@ -26,7 +26,7 @@ import {
 import { SidebarIconButton, SidebarListActionRow, SidebarListItem } from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
 
-export interface AgentSessionSidebarItemProps {
+interface AgentSessionSidebarItemProps {
   title: string;
   providerIconId: string;
   createdAt: Date;

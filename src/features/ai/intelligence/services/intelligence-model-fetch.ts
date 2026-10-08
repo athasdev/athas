@@ -10,7 +10,7 @@ const RETRYABLE_STATUSES = new Set([408, 409, 425, 429, 500, 502, 503, 504]);
 /** A server asking for a longer wait than this is surfaced instead of waited out. */
 const MAX_RETRY_AFTER_MS = 60_000;
 
-export interface IntelligenceModelFetchOptions {
+interface IntelligenceModelFetchOptions {
   fetch: typeof fetch;
   /** Headers read fresh for every attempt, such as the current bearer token. */
   headers?: () => Promise<Record<string, string>>;

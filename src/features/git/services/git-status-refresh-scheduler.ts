@@ -2,7 +2,7 @@ import type { GitChange } from "../events/git-events";
 
 const SAVE_SOURCES = new Set(["save", "auto-save"]);
 
-export interface GitStatusRefreshSchedulerOptions {
+interface GitStatusRefreshSchedulerOptions {
   /** Trailing delay for any change other than our own saves. */
   delayMs?: number;
   /** Trailing delay for our own saves: autosave can save about once a second while typing. */
@@ -11,7 +11,7 @@ export interface GitStatusRefreshSchedulerOptions {
   saveMaxWaitMs?: number;
 }
 
-export interface GitStatusRefreshScheduler {
+interface GitStatusRefreshScheduler {
   schedule: (change: GitChange) => void;
   dispose: () => void;
 }

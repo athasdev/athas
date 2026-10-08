@@ -1,6 +1,6 @@
 import SERVICE_DEFAULTS from "@/config/services.json";
 
-export const DEFAULT_API_BASE = SERVICE_DEFAULTS.apiBaseUrl;
+const DEFAULT_API_BASE = SERVICE_DEFAULTS.apiBaseUrl;
 
 export function isLocalApiBase(value: string): boolean {
   return value.includes("localhost") || value.includes("127.0.0.1");

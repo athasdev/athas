@@ -7,7 +7,7 @@ import { withTaskConnection } from "@/features/settings/services/ai-model-prefer
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useAuthStore } from "@/features/auth/stores/auth.store";
 
-export const ATHAS_TAB_MODEL_NAME = "Athas Tab";
+const ATHAS_TAB_MODEL_NAME = "Athas Tab";
 
 /**
  * The model Tab completion runs on, for every place that shows or changes it: the explicit

@@ -142,7 +142,7 @@ export function rebaseOnDisk(entry: AgentEditEntry, disk: string): AgentEditEntr
   return { ...entry, baseline, current: disk, revision: entry.revision + 1 };
 }
 
-export interface RecordedWrite {
+interface RecordedWrite {
   /** The entry after the write; null when nothing is left to review. */
   entry: AgentEditEntry | null;
   /** Earlier unreviewed changes could not be carried over and now count as kept. */
@@ -197,7 +197,7 @@ export function countChangedLines(hunks: AgentEditHunk[]): { added: number; remo
   return { added, removed };
 }
 
-export interface AgentHunkPreviewLine {
+interface AgentHunkPreviewLine {
   type: "context" | "added" | "removed";
   content: string;
   /** 1-based line in the baseline; absent on added lines. */

@@ -21,7 +21,7 @@ export interface HostedUsageState {
   periodEnd: Date | null;
 }
 
-export const LOW_USAGE_PERCENT = 80;
+const LOW_USAGE_PERCENT = 80;
 
 const usdFormatter = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 const resetFormatter = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" });

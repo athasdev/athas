@@ -10,7 +10,7 @@ export interface ParsedKey {
   key: string;
 }
 
-export interface ParsedKeybinding {
+interface ParsedKeybinding {
   parts: ParsedKey[];
   isChord: boolean;
 }

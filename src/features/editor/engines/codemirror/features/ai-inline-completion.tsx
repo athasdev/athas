@@ -29,7 +29,7 @@ import {
 import type { LineSeparator } from "../document-change";
 import { type CodeMirrorHost, useCodeMirrorExtension } from "../host";
 
-export interface InlineSuggestion {
+interface InlineSuggestion {
   pos: number;
   text: string;
 }
@@ -139,7 +139,7 @@ export function dismissInlineSuggestion(view: EditorView) {
   return true;
 }
 
-export interface InlineCompletionOptions {
+interface InlineCompletionOptions {
   filePath: string;
   languageId: string;
   getSeparator: () => LineSeparator;

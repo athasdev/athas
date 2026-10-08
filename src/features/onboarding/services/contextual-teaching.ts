@@ -1,4 +1,4 @@
-export type ContextualTipId = "agent-queue-controls" | "global-search-shortcut";
+type ContextualTipId = "agent-queue-controls" | "global-search-shortcut";
 
 const STORAGE_KEY = "athas-contextual-tips-v1";
 

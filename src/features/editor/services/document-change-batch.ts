@@ -26,7 +26,7 @@ export interface ModelContentChangeEvent {
   isRedoing: boolean;
 }
 
-export interface ModelContentSource {
+interface ModelContentSource {
   getValueLength: () => number;
   getValue: () => string;
 }

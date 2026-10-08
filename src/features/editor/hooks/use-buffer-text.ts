@@ -10,7 +10,7 @@ import { getBufferById } from "../stores/buffer-index";
  * A number that changes whenever the buffer's text does, including edits an editor view has not
  * written to the store yet. Reading it never copies the text.
  */
-export function useBufferTextRevision(bufferId: string | null | undefined): number {
+function useBufferTextRevision(bufferId: string | null | undefined): number {
   const storeRevision = useBufferStore(
     useCallback(
       (state: { buffers: PaneContent[] }) => {

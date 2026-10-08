@@ -5,7 +5,7 @@ import type { PaneContent } from "@/features/panes/types/pane-content.types";
 
 const SAVE_SESSION_DEBOUNCE_MS = 300;
 
-export interface BufferSessionPayload {
+interface BufferSessionPayload {
   buffers: PaneContent[];
   activeBufferId: string | null;
   pinnedBufferIds?: ReadonlySet<string>;

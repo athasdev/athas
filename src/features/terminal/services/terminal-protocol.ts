@@ -23,7 +23,7 @@ export interface PendingTerminalEventChannel {
   dispose: () => void;
 }
 
-export function toTerminalEvent(message: TerminalChannelMessage | Uint8Array): TerminalEvent {
+function toTerminalEvent(message: TerminalChannelMessage | Uint8Array): TerminalEvent {
   if (message instanceof ArrayBuffer) {
     return { event: "output", data: new Uint8Array(message) };
   }

@@ -1,6 +1,6 @@
 import type { ProviderModel } from "@/features/ai/services/providers/ai-provider-interface";
 
-export interface AIModelOption extends ProviderModel {
+interface AIModelOption extends ProviderModel {
   proOnly?: boolean;
 }
 

@@ -9,7 +9,7 @@ import {
 import type { LspNavigationLocation } from "../../../lsp/location-navigation";
 import type { DocumentLink } from "./document-links";
 
-export interface DefinitionLinkOptions {
+interface DefinitionLinkOptions {
   /** Whether a mouse or keyboard event holds the "follow link" modifier (Cmd on macOS, else Ctrl). */
   isModifier: (event: MouseEvent | KeyboardEvent) => boolean;
   /** Definition locations for a document position, or null when no language server answers. */
@@ -33,14 +33,14 @@ type Target =
 
 const HOVER_DELAY_MS = 60;
 
-export const setDefinitionLinkRange = StateEffect.define<LinkRange | null>({
+const setDefinitionLinkRange = StateEffect.define<LinkRange | null>({
   map: (value, mapping) =>
     value ? { from: mapping.mapPos(value.from), to: mapping.mapPos(value.to) } : null,
 });
 
 const linkMark = Decoration.mark({ class: "cm-athas-definition-link" });
 
-export const definitionLinkField = StateField.define<DecorationSet>({
+const definitionLinkField = StateField.define<DecorationSet>({
   create: () => Decoration.none,
   update(decorations, tr) {
     let next = decorations.map(tr.changes);

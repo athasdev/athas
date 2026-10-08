@@ -10,7 +10,7 @@ import { getToolCallPhase, summarizeToolCall, type ToolCallPhase } from "./tool-
  * Everything the side panel knows about one agent session, derived purely
  * from the transcript so it stays correct for hosted and ACP agents alike.
  */
-export interface AgentSessionContext {
+interface AgentSessionContext {
   /** The most recent tool call, i.e. what the agent is doing right now. */
   focus: AgentSessionFocus | null;
   /** Net change per file across every edit in the session, newest first. */
@@ -27,7 +27,7 @@ export interface AgentSessionContext {
   deletions: number;
 }
 
-export interface AgentSessionFocus {
+interface AgentSessionFocus {
   kind: AcpToolKind;
   phase: ToolCallPhase;
   label: string;
@@ -47,13 +47,13 @@ export interface AgentSessionChange {
   timestamp: number;
 }
 
-export interface AgentSessionFile {
+interface AgentSessionFile {
   path: string;
   displayPath: string;
   timestamp: number;
 }
 
-export interface AgentSessionCommand {
+interface AgentSessionCommand {
   id: string;
   command: string;
   phase: ToolCallPhase;
@@ -65,7 +65,7 @@ export type AgentSessionResource =
   | { id: string; kind: "issue"; number: number; label: string; url: string }
   | { id: string; kind: "link"; label: string; url: string };
 
-export interface AgentSessionView {
+interface AgentSessionView {
   id: string;
   view: GenerativeUIView;
   timestamp: number;

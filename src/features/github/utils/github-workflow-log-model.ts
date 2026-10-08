@@ -18,7 +18,7 @@ export interface WorkflowLogModel {
   warningCount: number;
 }
 
-export interface WorkflowLogDecoration {
+interface WorkflowLogDecoration {
   line: number;
   startColumn?: number;
   endColumn?: number;

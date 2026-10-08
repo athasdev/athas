@@ -24,7 +24,7 @@ const providerSystemPromptBuilders = new Map<
   (settings: Settings) => string | Promise<string>
 >();
 
-export interface AIProviderRuntimeContribution {
+interface AIProviderRuntimeContribution {
   extensionId: string;
   provider: ModelProvider;
   createProvider: (config: ProviderConfig) => AIProvider;

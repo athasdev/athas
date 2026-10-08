@@ -4,7 +4,7 @@ import { showToast } from "@/utils/toast";
 import { ImageEditSession } from "./image-edit-session";
 import { saveImageToFile } from "../utils/image-file-utils";
 
-export interface ImageBufferOwner {
+interface ImageBufferOwner {
   workspaceId: string;
   store: ReturnType<typeof useBufferStore.getStore>;
 }

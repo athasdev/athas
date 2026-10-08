@@ -28,7 +28,7 @@ import type { DatabaseObjectKind, ViewMode } from "../../types/common.types";
 import type { DatabaseType } from "../../types/provider.types";
 import type { SqlDatabaseStore } from "./stores/create-sql.store";
 
-export interface SqlDatabaseViewerProps {
+interface SqlDatabaseViewerProps {
   databasePath?: string;
   connectionId?: string;
   databaseType: DatabaseType;

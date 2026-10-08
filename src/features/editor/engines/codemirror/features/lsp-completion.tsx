@@ -43,7 +43,7 @@ function pathParts(filePath: string) {
 }
 
 /** Values for the LSP snippet variables a server may use, read when the snippet is inserted. */
-export function snippetVariables(view: EditorView, filePath: string): SnippetVariableResolver {
+function snippetVariables(view: EditorView, filePath: string): SnippetVariableResolver {
   const { state } = view;
   const main = state.selection.main;
   const line = state.doc.lineAt(main.head);

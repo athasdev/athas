@@ -5,7 +5,7 @@ import { enqueueWindowOpenRequest, type WindowOpenRequest } from "../services/wi
 import { createPendingQueueDrain } from "../utils/pending-queue-drain";
 import { disposeListener } from "@/utils/tauri-drag-drop";
 
-export interface CliOpenPayload {
+interface CliOpenPayload {
   kind: "path" | "web" | "terminal" | "remote" | "surface" | "empty" | "new_window";
   path?: string;
   is_directory?: boolean;

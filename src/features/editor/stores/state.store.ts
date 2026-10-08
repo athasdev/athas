@@ -20,7 +20,7 @@ export interface EditorViewState {
   scrollLeft: number;
 }
 
-export interface EditorNavigationTarget {
+interface EditorNavigationTarget {
   bufferId: string;
   range: Range;
   /** Whether the editor takes focus. Defaults to true; panels that only move the cursor pass false. */
@@ -31,7 +31,7 @@ export interface EditorNavigationTarget {
  * A line to scroll into view in whichever editor shows `bufferId`, active pane or not, without
  * moving focus or the cursor. Following an agent uses it so the chat keeps the keyboard.
  */
-export interface EditorRevealTarget {
+interface EditorRevealTarget {
   bufferId: string;
   /** 1-based. */
   line: number;
@@ -158,7 +158,7 @@ class EditorViewStateCacheManager {
 
 const viewStateCache = new EditorViewStateCacheManager();
 
-export interface EditorScrollOffset {
+interface EditorScrollOffset {
   scrollTop: number;
   scrollLeft: number;
 }

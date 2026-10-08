@@ -3,7 +3,7 @@ import { appendAcpTerminalOutput } from "@/features/ai/lib/acp-terminal-output";
 import type { AcpTerminalExit, AcpTerminalSnapshot } from "@/features/ai/types/acp.types";
 import { createSelectors } from "@/utils/zustand-selectors";
 
-export interface AcpTerminalView extends AcpTerminalSnapshot {
+interface AcpTerminalView extends AcpTerminalSnapshot {
   sessionId: string;
   cwd: string | null;
   /** The agent runs the command itself and only streams its output; Athas has no terminal. */

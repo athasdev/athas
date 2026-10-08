@@ -1,6 +1,6 @@
 import type { AcpPermissionOption } from "@/features/ai/types/acp.types";
 
-export type PermissionShortcut = "enter" | "mod+enter" | "escape";
+type PermissionShortcut = "enter" | "mod+enter" | "escape";
 
 const SHORTCUT_KINDS: Record<PermissionShortcut, AcpPermissionOption["kind"]> = {
   enter: "allow_once",

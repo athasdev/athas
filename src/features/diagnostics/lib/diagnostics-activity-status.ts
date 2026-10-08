@@ -1,8 +1,8 @@
 import type { Diagnostic } from "@/features/diagnostics/types/diagnostics.types";
 
-export type DiagnosticsActivityTone = "default" | "warning" | "error";
+type DiagnosticsActivityTone = "default" | "warning" | "error";
 
-export interface DiagnosticsActivityStatus {
+interface DiagnosticsActivityStatus {
   count: number;
   tone: DiagnosticsActivityTone;
   tooltip: string;

@@ -10,7 +10,7 @@ import {
 } from "@/features/workspace/stores/session.store";
 
 /** Tab state the restored buffers already carry, merged into the saved layout. */
-export interface PaneLayoutRestoreOptions {
+interface PaneLayoutRestoreOptions {
   activeBufferId?: string | null;
   pinnedBufferIds?: ReadonlySet<string>;
   previewBufferIds?: ReadonlySet<string>;

@@ -3,20 +3,20 @@ import { traceWindowOpen } from "@/features/window/services/window-open-diagnost
 import { createSelectors } from "@/utils/zustand-selectors";
 
 /** Startup phases in the order they are reached; see `initialize-app-bootstrap.ts`. */
-export const BOOTSTRAP_PHASES = [
+const BOOTSTRAP_PHASES = [
   "booting",
   "settings-ready",
   "workbench-ready",
   "extensions-ready",
 ] as const;
 
-export type BootstrapPhase = (typeof BOOTSTRAP_PHASES)[number];
+type BootstrapPhase = (typeof BOOTSTRAP_PHASES)[number];
 
 function getPhaseRank(phase: BootstrapPhase) {
   return BOOTSTRAP_PHASES.indexOf(phase);
 }
 
-export function isBootstrapPhaseReached(current: BootstrapPhase, phase: BootstrapPhase) {
+function isBootstrapPhaseReached(current: BootstrapPhase, phase: BootstrapPhase) {
   return getPhaseRank(current) >= getPhaseRank(phase);
 }
 

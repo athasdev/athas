@@ -1,4 +1,4 @@
-export const frictionAreas = [
+const frictionAreas = [
   "startup",
   "agent",
   "navigation",
@@ -8,7 +8,7 @@ export const frictionAreas = [
   "terminal",
 ] as const;
 
-export const frictionSignals = [
+const frictionSignals = [
   "slow_ready",
   "retry",
   "cancel",
@@ -20,7 +20,7 @@ export const frictionSignals = [
   "renderer_fallback",
 ] as const;
 
-export const frictionDurationBuckets = [
+const frictionDurationBuckets = [
   "under_1s",
   "1_to_5s",
   "5_to_30s",

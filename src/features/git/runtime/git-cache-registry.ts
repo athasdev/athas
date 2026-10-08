@@ -1,4 +1,4 @@
-export interface GitCacheInvalidation {
+interface GitCacheInvalidation {
   repoPath?: string;
   filePath?: string;
   scopes?: string[];

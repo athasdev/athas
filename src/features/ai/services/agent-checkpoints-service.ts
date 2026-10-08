@@ -203,7 +203,7 @@ export async function listCheckpoints(chatId: string): Promise<AgentCheckpointSu
  * turn order. Null while nothing at or after that message changed a file; "unavailable" once the
  * checkpoints that turn needs were dropped to stay within the storage budget.
  */
-export function planChatRestore(
+function planChatRestore(
   state: ChatCheckpoints,
   messageId: string,
   messages: readonly Message[],

@@ -9,12 +9,12 @@ export type SearchMatch = {
   end: number;
 };
 
-export type LimitedSearchMatches = {
+type LimitedSearchMatches = {
   matches: SearchMatch[];
   limited: boolean;
 };
 
-export type SearchViewportOffsetRange = {
+type SearchViewportOffsetRange = {
   startOffset: number;
   endOffset: number;
 };

@@ -1,7 +1,7 @@
 import type { Platform } from "@tauri-apps/plugin-os";
 import { parseDroppedPaths } from "@/features/file-system/services/file-system-dropped-paths";
 
-export type TerminalQuoteStyle = "posix" | "powershell" | "cmd";
+type TerminalQuoteStyle = "posix" | "powershell" | "cmd";
 
 export function getTerminalQuoteStyle(
   shellId: string | undefined,

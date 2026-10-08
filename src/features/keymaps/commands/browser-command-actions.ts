@@ -9,7 +9,7 @@ const loadBrowserTabManager = () =>
   );
 
 /** The browser tab shown in the active pane, if the active buffer is one. */
-export function getActiveBrowserBufferId(): string | null {
+function getActiveBrowserBufferId(): string | null {
   const buffer = useBufferStore.getState().actions.getActiveBuffer();
   return buffer?.type === "browser" ? buffer.id : null;
 }

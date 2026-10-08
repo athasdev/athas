@@ -1,4 +1,4 @@
-export const BLANK_PAGE_URL = "about:blank";
+const BLANK_PAGE_URL = "about:blank";
 
 const SEARCH_URL = "https://www.google.com/search?q=";
 const SCHEME_PATTERN = /^[a-z][a-z0-9+.-]*:/i;

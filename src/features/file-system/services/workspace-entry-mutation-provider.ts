@@ -6,7 +6,7 @@ import { joinPath } from "@/utils/path-helpers";
 import { createNewDirectory, createNewFile, deleteFileOrDirectory } from "../api/file-operations";
 import { moveFile, renameFile } from "../api/file-system-api";
 
-export interface WorkspaceEntryMutationProvider {
+interface WorkspaceEntryMutationProvider {
   readonly kind: "local" | "remote" | "wsl";
   createFile(directoryPath: string, fileName: string): Promise<string>;
   createDirectory(parentPath: string, folderName: string): Promise<string>;

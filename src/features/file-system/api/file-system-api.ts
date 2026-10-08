@@ -237,7 +237,7 @@ export async function renameFile(sourcePath: string, targetPath: string): Promis
   await commands.renameFile(sourcePath, targetPath);
 }
 
-export interface SymlinkInfo {
+interface SymlinkInfo {
   is_symlink: boolean;
   target?: string | null;
   is_dir: boolean;

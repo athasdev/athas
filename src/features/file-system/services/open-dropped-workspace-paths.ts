@@ -9,7 +9,7 @@ interface OpenDroppedWorkspacePathsOptions {
   onError?: (path: string, error: unknown) => void;
 }
 
-export interface OpenDroppedWorkspacePathsResult {
+interface OpenDroppedWorkspacePathsResult {
   openedFolderCount: number;
   openedFileCount: number;
   failedPathCount: number;

@@ -23,7 +23,7 @@ import {
 import { calculateEdit, isSimpleEdit } from "../utils/tree-sitter-edit";
 import { usePerformanceMonitor } from "./use-performance";
 
-export interface ViewportRange {
+interface ViewportRange {
   startLine: number;
   endLine: number;
   totalLines: number;
@@ -54,7 +54,7 @@ interface TokenState {
   tokens: Token[];
 }
 
-export interface SyntaxTokenSnapshot {
+interface SyntaxTokenSnapshot {
   bufferId: string;
   content: string;
   tokens: Token[];

@@ -14,7 +14,7 @@ const parserTokenCache = new Map<string, Token[]>();
 const fallbackTokenCache = new Map<string, Token[]>();
 const pendingTokenizations = new Map<string, Promise<Token[]>>();
 
-export interface SearchExcerptTokenSnapshot {
+interface SearchExcerptTokenSnapshot {
   key: string;
   tokens: Token[];
   complete: boolean;

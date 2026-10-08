@@ -15,7 +15,7 @@ import {
 const KEYBINDINGS_EXPORT_FORMAT = "athas.keybindings";
 const KEYBINDINGS_EXPORT_VERSION = 1;
 
-export interface KeybindingsExportPayload {
+interface KeybindingsExportPayload {
   format: typeof KEYBINDINGS_EXPORT_FORMAT;
   version: typeof KEYBINDINGS_EXPORT_VERSION;
   exportedAt: string;
@@ -23,14 +23,14 @@ export interface KeybindingsExportPayload {
   keybindings: Keybinding[];
 }
 
-export interface KeybindingsImport {
+interface KeybindingsImport {
   format: "athas" | "vscode";
   keybindingPreset?: KeybindingPreset;
   keybindings: Keybinding[];
   issues: KeybindingImportIssue[];
 }
 
-export interface KeybindingsImportOptions {
+interface KeybindingsImportOptions {
   commandIds?: Iterable<string>;
   platform?: KeybindingImportPlatform;
 }

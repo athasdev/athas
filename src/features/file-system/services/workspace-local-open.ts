@@ -1,4 +1,4 @@
-export type LocalWorkspaceOpenResult = "opened" | "cancelled" | "failed";
+type LocalWorkspaceOpenResult = "opened" | "cancelled" | "failed";
 
 export interface LocalWorkspaceOpenOptions<TWorkspace> {
   replacingCurrentWorkspace: boolean;

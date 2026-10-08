@@ -67,7 +67,7 @@ export interface ContinuousAgentRunDependencies {
   now?: () => number;
 }
 
-export type ContinuousAgentRunResult =
+type ContinuousAgentRunResult =
   | { status: "idle" | "busy" | "retry" }
   | { status: "started" | "paused"; task: ContinuousAgentTask; reason?: string };
 

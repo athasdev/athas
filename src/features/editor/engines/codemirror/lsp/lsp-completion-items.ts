@@ -57,7 +57,7 @@ const COMPLETION_KIND_TYPES: Record<number, string> = {
   25: "typeParameter",
 };
 
-export function completionKindType(kind: CompletionItem["kind"]): string {
+function completionKindType(kind: CompletionItem["kind"]): string {
   return (kind && COMPLETION_KIND_TYPES[kind]) || "text";
 }
 
@@ -129,7 +129,7 @@ function nonOverlappingEdits(
   return changes;
 }
 
-export interface ApplyLspCompletionOptions {
+interface ApplyLspCompletionOptions {
   resolveVariable?: SnippetVariableResolver;
   onCommand?: (command: NonNullable<CompletionItem["command"]>) => void;
   /** How long accepting waits in the background for resolve to add edits such as imports. */

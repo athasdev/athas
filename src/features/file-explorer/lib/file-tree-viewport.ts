@@ -3,7 +3,7 @@ export const FILE_TREE_VIEWPORT_PADDING = 4;
 
 export type FileTreeScrollAlignment = "nearest" | "start" | "center" | "end";
 
-export interface FileTreeVirtualRange {
+interface FileTreeVirtualRange {
   startIndex: number;
   endIndex: number;
 }
@@ -114,7 +114,7 @@ export function getFileTreeScrollTop({
 
 export const FILE_TREE_MAX_STICKY_ROWS = 7;
 
-export interface FileTreeStickyRow {
+interface FileTreeStickyRow {
   index: number;
   /**
    * Offset from the top of the viewport; negative while a header is being pushed out. Deeper rows
@@ -123,7 +123,7 @@ export interface FileTreeStickyRow {
   top: number;
 }
 
-export interface FileTreeStickyLayout {
+interface FileTreeStickyLayout {
   rows: FileTreeStickyRow[];
   /** Height of the visible part of the sticky stack. */
   height: number;

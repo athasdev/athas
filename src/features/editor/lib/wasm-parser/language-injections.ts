@@ -1,12 +1,12 @@
 import type { Node } from "web-tree-sitter";
 
-export interface InjectionRule {
+interface InjectionRule {
   parentType: string;
   contentType: string;
   language: string;
 }
 
-export interface InjectionNode {
+interface InjectionNode {
   rule: InjectionRule;
   node: Node;
   parentNode: Node | null;

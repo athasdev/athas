@@ -22,7 +22,7 @@ import { readBufferText } from "@/features/editor/services/buffer-text";
 import { emitAppEvent } from "@/utils/app-events";
 
 /** The `file-changed` payload, from the project file watcher and from agent writes alike. */
-export interface FileChangeEvent {
+interface FileChangeEvent {
   path: string;
   event_type: "opened" | "reloaded" | "deleted";
   /** Set when an agent write made the change: the id of its `agent_file_write` event. */

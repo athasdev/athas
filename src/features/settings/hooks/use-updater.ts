@@ -35,7 +35,7 @@ interface DownloadProgress {
   percentage: number;
 }
 
-export interface UpdateState {
+interface UpdateState {
   available: boolean;
   checking: boolean;
   downloading: boolean;

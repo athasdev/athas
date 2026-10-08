@@ -7,7 +7,7 @@ import {
 
 type InternalDropZone = PaneDropZone;
 
-export interface InternalTabDragData {
+interface InternalTabDragData {
   source?: "pane" | "terminal-panel";
   bufferId?: string;
   paneId?: string;
@@ -19,7 +19,7 @@ export interface InternalTabDragData {
   remoteConnectionId?: string;
 }
 
-export interface InternalTabDragHoverTarget {
+interface InternalTabDragHoverTarget {
   paneId: string | null;
   zone: InternalDropZone;
 }

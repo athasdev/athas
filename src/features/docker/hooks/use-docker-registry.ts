@@ -26,7 +26,7 @@ export interface DockerRegistryState {
   draft: DockerRegistryDraft;
 }
 
-export type DockerRegistryAction =
+type DockerRegistryAction =
   | { type: "set-query"; query: string }
   | { type: "set-draft-field"; field: keyof DockerRegistryDraft; value: string }
   | { type: "search-started" }

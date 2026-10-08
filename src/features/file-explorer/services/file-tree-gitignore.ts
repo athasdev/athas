@@ -13,12 +13,12 @@ const GITIGNORE_FILE_NAME = ".gitignore";
 
 type IgnoreMatcher = ReturnType<typeof ignore>;
 
-export interface GitIgnoreFileReference {
+interface GitIgnoreFileReference {
   path: string;
   directoryPath: string;
 }
 
-export interface GitIgnoreFileContent extends GitIgnoreFileReference {
+interface GitIgnoreFileContent extends GitIgnoreFileReference {
   content: string;
 }
 

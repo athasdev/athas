@@ -10,7 +10,7 @@ interface UseFileExplorerSyncOptions {
   revealPathInTree: (path: string) => Promise<void>;
 }
 
-export interface FileExplorerRevealRequest {
+interface FileExplorerRevealRequest {
   id: number;
   path: string;
 }

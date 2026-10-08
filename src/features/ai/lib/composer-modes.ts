@@ -8,7 +8,7 @@ import type { AcpSessionState } from "@/features/ai/types/acp.types";
 import { classifySessionConfigOption } from "@/features/ai/lib/session-config-option-classifier";
 import { CODEX_INTEGRATION_ID } from "@/features/ai/integrations/integration-registry";
 
-export const BUILT_IN_MODES: ComposerModeOption[] = [
+const BUILT_IN_MODES: ComposerModeOption[] = [
   { id: "chat", label: "Agent", intent: "agent" },
   { id: "ask", label: "Ask", intent: "ask" },
   { id: "plan", label: "Plan", intent: "plan" },

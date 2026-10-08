@@ -92,7 +92,7 @@ export function withToolCallIds(message: Message): Message {
   };
 }
 
-export interface ToolCallPatch {
+interface ToolCallPatch {
   id: string;
   name?: string | null;
   input?: unknown;

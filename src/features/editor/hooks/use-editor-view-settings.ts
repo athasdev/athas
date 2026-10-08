@@ -1,25 +1,43 @@
 import { getTypographyFontFallbacks } from "@/features/settings/config/typography-defaults";
 import { useEffectiveTheme } from "@/features/settings/hooks/use-effective-theme";
-import { isEditorWordWrapEnabled } from "@/features/settings/services/editor-word-wrap";
 import { buildFontFamilyStack } from "@/features/settings/services/font-family-resolution";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useZoomStore } from "@/features/layout/stores/zoom.store";
 import { IS_WINDOWS } from "@/utils/platform";
 import { useShallow } from "zustand/react/shallow";
 import { calculateLineHeight } from "../services/lines";
+import {
+  resolveEditorSettings,
+  useEditorSettingOverridesStore,
+} from "../stores/editor-setting-overrides.store";
 
 /** The editor's visual settings, resolved for whichever engine draws the text. */
 export function useEditorViewSettings() {
   const themeId = useEffectiveTheme();
-  const wordWrap = useSettingsStore((state) => isEditorWordWrapEnabled(state.settings));
+  const overrides = useEditorSettingOverridesStore.use.overrides();
+  const settingsSource = useSettingsStore(
+    useShallow((state) => ({
+      fontSize: state.settings.fontSize,
+      editorLineHeight: state.settings.editorLineHeight,
+      tabSize: state.settings.tabSize,
+      lineNumbers: state.settings.lineNumbers,
+      wordWrap: state.settings.wordWrap,
+      horizontalTabScroll: state.settings.horizontalTabScroll,
+      renderWhitespace: state.settings.renderWhitespace,
+      renderIndentGuides: state.settings.renderIndentGuides,
+    })),
+  );
   const {
     fontSize: baseFontSize,
-    fontFamily: fontFamilySetting,
-    editorLineHeight,
+    lineHeight: lineHeightSetting,
     tabSize,
     lineNumbers,
+    wordWrap,
     renderWhitespace,
     renderIndentGuides,
+  } = resolveEditorSettings(settingsSource, overrides);
+  const {
+    fontFamily: fontFamilySetting,
     highlightOccurrences,
     editorFontLigatures,
     editorItalicComments,
@@ -31,13 +49,7 @@ export function useEditorViewSettings() {
     editorCursorBlinking,
   } = useSettingsStore(
     useShallow((state) => ({
-      fontSize: state.settings.fontSize,
       fontFamily: state.settings.fontFamily,
-      editorLineHeight: state.settings.editorLineHeight,
-      tabSize: state.settings.tabSize,
-      lineNumbers: state.settings.lineNumbers,
-      renderWhitespace: state.settings.renderWhitespace,
-      renderIndentGuides: state.settings.renderIndentGuides,
       highlightOccurrences: state.settings.highlightOccurrences,
       editorFontLigatures: state.settings.editorFontLigatures,
       editorItalicComments: state.settings.editorItalicComments,
@@ -59,7 +71,7 @@ export function useEditorViewSettings() {
   return {
     fontFamily,
     fontSize,
-    lineHeight: calculateLineHeight(fontSize, editorLineHeight),
+    lineHeight: calculateLineHeight(fontSize, lineHeightSetting),
     tabSize,
     wordWrap,
     lineNumbers,

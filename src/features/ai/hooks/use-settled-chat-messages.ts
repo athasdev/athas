@@ -4,9 +4,9 @@ import { EMPTY_CHAT_MESSAGES } from "@/features/ai/services/chat-normalization";
 import type { Message } from "@/features/ai/types/ai-chat.types";
 
 /** A streaming reply changes the conversation every frame; readers follow it at this pace. */
-export const CHAT_MESSAGES_SETTLE_MS = 300;
+const CHAT_MESSAGES_SETTLE_MS = 300;
 /** Longest a continuous stream can hold the messages back. */
-export const CHAT_MESSAGES_MAX_WAIT_MS = 1000;
+const CHAT_MESSAGES_MAX_WAIT_MS = 1000;
 
 /**
  * The chat's messages, picked up once they stop changing for a moment, and at least every

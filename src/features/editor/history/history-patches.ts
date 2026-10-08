@@ -65,7 +65,7 @@ export function createHistoryPatchBatch(
   };
 }
 
-export function applyHistoryPatchBatch(
+function applyHistoryPatchBatch(
   content: string,
   batch: HistoryPatchBatch,
   direction: "forward" | "reverse",

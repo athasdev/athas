@@ -1,6 +1,6 @@
 import { listen } from "@tauri-apps/api/event";
 
-export interface SshConnectionStatusEvent {
+interface SshConnectionStatusEvent {
   connectionId: string;
   connected: boolean;
 }

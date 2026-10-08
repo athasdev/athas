@@ -16,7 +16,7 @@ export function isTerminalLinkModifierPressed(
   return isApplePlatform(platform) ? event.metaKey : event.ctrlKey;
 }
 
-export function getTerminalLinkModifierLabel(platform: TerminalLinkPlatform = currentPlatform) {
+function getTerminalLinkModifierLabel(platform: TerminalLinkPlatform = currentPlatform) {
   return isApplePlatform(platform) ? "⌘" : "Ctrl";
 }
 

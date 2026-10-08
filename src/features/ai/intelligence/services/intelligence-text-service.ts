@@ -20,7 +20,7 @@ import { toIntelligenceSdkPrompt } from "../lib/intelligence-sdk-prompt";
 
 const API_BASE = getApiBase();
 const DEFAULT_INLINE_EDIT_INSTRUCTION = "Improve this code while preserving behavior.";
-export const HOSTED_TEXT_FIELD_LIMIT = 12000;
+const HOSTED_TEXT_FIELD_LIMIT = 12000;
 const HOSTED_AUTOCOMPLETE_SUFFIX_LIMIT = 4000;
 
 type IntelligenceTextFeature = NonNullable<InlineEditRequest["feature"]>;
@@ -53,7 +53,7 @@ export interface AutocompleteDiagnostic {
   message: string;
 }
 
-export interface InlineEditRequest {
+interface InlineEditRequest {
   feature?:
     | "autocomplete"
     | "inline-edit"
@@ -89,11 +89,11 @@ export class InlineEditError extends Error {
   }
 }
 
-export function getDefaultIntelligenceTimeoutMs(feature: IntelligenceTextFeature = "inline-edit") {
+function getDefaultIntelligenceTimeoutMs(feature: IntelligenceTextFeature = "inline-edit") {
   return DEFAULT_TIMEOUT_MS[feature];
 }
 
-export interface RequestInlineEditOptions {
+interface RequestInlineEditOptions {
   useHosted?: boolean;
   useByok?: boolean;
   signal?: AbortSignal;

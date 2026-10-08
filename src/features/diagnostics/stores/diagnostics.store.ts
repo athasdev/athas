@@ -28,7 +28,7 @@ function isSameDiagnosticList(left: readonly Diagnostic[], right: readonly Diagn
   );
 }
 
-export type DiagnosticCounts = Record<Diagnostic["severity"], number>;
+type DiagnosticCounts = Record<Diagnostic["severity"], number>;
 
 const EMPTY_DIAGNOSTIC_COUNTS: DiagnosticCounts = { error: 0, warning: 0, info: 0 };
 

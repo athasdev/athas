@@ -2,7 +2,7 @@ import type { Settings } from "@/features/settings/types/settings.types";
 import { getProviderApiToken } from "@/features/ai/services/ai-token-service";
 
 export const CUSTOM_CHAT_PROVIDER_ID = "custom";
-export const CUSTOM_AUTOCOMPLETE_PROVIDER_ID = "autocomplete-custom";
+const CUSTOM_AUTOCOMPLETE_PROVIDER_ID = "autocomplete-custom";
 
 export function resolveCustomProviderBaseUrl(settings: Settings): string {
   return settings.aiCustomBaseUrl || settings.aiAutocompleteCustomBaseUrl;

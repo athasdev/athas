@@ -127,7 +127,7 @@ function runKind(agentId: string): AiRunKind {
 type BuiltInCompletion = AgentCompletionResult & { steps?: number; costUsd?: number };
 
 /** Per-turn usage for the message footer, when the run reported any. */
-export function toMessageUsage(completion?: BuiltInCompletion): MessageUsage | undefined {
+function toMessageUsage(completion?: BuiltInCompletion): MessageUsage | undefined {
   if (!completion) return undefined;
   const usage: MessageUsage = {};
   if (completion.usage?.inputTokens !== undefined) usage.inputTokens = completion.usage.inputTokens;

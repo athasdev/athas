@@ -38,7 +38,7 @@ interface PendingAgentLaunchRequest {
   mode?: "replace" | "append";
 }
 
-export type AgentRunPhase = "starting" | "waiting" | "thinking" | "tool" | "approval";
+type AgentRunPhase = "starting" | "waiting" | "thinking" | "tool" | "approval";
 
 export interface AgentRunState {
   runId: string;

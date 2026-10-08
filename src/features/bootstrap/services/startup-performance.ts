@@ -1,7 +1,7 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { commands } from "@/bindings/commands";
 
-export type StartupMilestone =
+type StartupMilestone =
   | "frontend:entry"
   | "react:scheduled"
   | "app:first-frame"

@@ -7,7 +7,7 @@ function isWordCharCode(charCode: number): boolean {
   );
 }
 
-export interface WordOffsetRange {
+interface WordOffsetRange {
   start: number;
   end: number;
 }

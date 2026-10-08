@@ -14,7 +14,7 @@ import { createViewSlice } from "./ui-state/view-slice";
 // Re-export types for convenience
 
 // Combined store type
-export type UIState = ModalSlice & PanelSlice & ViewSlice & ContextMenuSlice & TerminalSlice;
+type UIState = ModalSlice & PanelSlice & ViewSlice & ContextMenuSlice & TerminalSlice;
 
 // Create the combined store
 const createUIStateStore = () =>

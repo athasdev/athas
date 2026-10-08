@@ -10,16 +10,16 @@ import { isAgentChatVisible } from "@/features/ai/lib/visible-agent-chats";
 import { currentPlatform } from "@/utils/platform";
 
 export type AgentNativeNotificationKind = "complete" | "error" | "permission" | "question" | "auth";
-export type AgentNativeNotificationResult =
+type AgentNativeNotificationResult =
   | "sent"
   | "disabled"
   | "focused"
   | "permission-denied"
   | "duplicate"
   | "failed";
-export type AgentNativeNotificationPermissionResult = "granted" | "denied" | "unavailable";
+type AgentNativeNotificationPermissionResult = "granted" | "denied" | "unavailable";
 
-export interface AgentNativeNotificationRequest {
+interface AgentNativeNotificationRequest {
   kind: AgentNativeNotificationKind;
   dedupeId: string;
   chatId: string;
@@ -42,14 +42,14 @@ export interface AgentNotificationSettings {
   sound: boolean;
 }
 
-export interface AgentNotificationView {
+interface AgentNotificationView {
   /** The window that runs the chat has focus. */
   windowFocused: boolean;
   /** The chat is on screen in that window. */
   chatVisible: boolean;
 }
 
-export type AgentNotificationDecision = "notify" | "disabled" | "focused";
+type AgentNotificationDecision = "notify" | "disabled" | "focused";
 
 export interface AgentNativeNotificationDependencies {
   getSettings: () => AgentNotificationSettings;
@@ -69,7 +69,7 @@ export interface AgentNativeNotificationDependencies {
 const DEDUPE_WINDOW_MS = 60_000;
 
 /** Kinds where the agent is stuck until the user answers. */
-export function isBlockingAgentNotification(kind: AgentNativeNotificationKind): boolean {
+function isBlockingAgentNotification(kind: AgentNativeNotificationKind): boolean {
   return kind === "permission" || kind === "question" || kind === "auth";
 }
 

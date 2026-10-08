@@ -16,7 +16,7 @@ export interface PathTreeLeaf<T> extends PathTreeNodeBase<T> {
 
 export type PathTreeNode<T> = PathTreeBranch<T> | PathTreeLeaf<T>;
 
-export interface CompactPathTreeBranch<T> {
+interface CompactPathTreeBranch<T> {
   branch: PathTreeBranch<T>;
   label: string;
 }

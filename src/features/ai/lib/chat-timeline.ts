@@ -2,9 +2,9 @@ import type { Message } from "@/features/ai/types/ai-chat.types";
 import type { ChatAcpEvent } from "@/features/ai/types/chat-ui.types";
 
 /** What the timeline needs of a message: its id and when it was sent. */
-export type ChatTimelineEntry = Pick<Message, "id"> & { timestamp: Date | string | number };
+type ChatTimelineEntry = Pick<Message, "id"> & { timestamp: Date | string | number };
 
-export type ChatTimelineItem<T extends ChatTimelineEntry = Message> =
+type ChatTimelineItem<T extends ChatTimelineEntry = Message> =
   | { id: string; type: "message"; message: T; messageIndex: number }
   | { id: string; type: "acp"; event: ChatAcpEvent };
 

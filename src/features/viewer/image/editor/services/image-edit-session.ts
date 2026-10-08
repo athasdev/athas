@@ -10,7 +10,7 @@ export interface ImageDraftState {
   processing: number;
   error: string | null;
 }
-export interface ImageSaveSnapshot {
+interface ImageSaveSnapshot {
   source: string;
   revision: number;
   lifetime: object;

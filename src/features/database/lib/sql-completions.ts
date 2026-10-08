@@ -59,7 +59,7 @@ export interface SqlCompletionItem {
   detail: "keyword" | "function" | "table" | "column";
 }
 
-export interface SqlCompletionContext {
+interface SqlCompletionContext {
   tables: TableInfo[];
   columns: ColumnInfo[];
 }

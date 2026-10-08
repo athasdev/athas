@@ -6,7 +6,7 @@ export const SYSTEM_DEFAULT_PROFILE_ID = "system-default";
 export const DEFAULT_SHELL_OPTION_VALUE = "system";
 const DEFAULT_PROFILE_LABEL = "Default Terminal";
 
-export interface ResolvedTerminalLaunch {
+interface ResolvedTerminalLaunch {
   shell?: string;
   workingDirectory: string;
   initialCommand?: string;

@@ -9,7 +9,7 @@ const CONNECTION_DB_TYPES: DatabaseType[] = [
   "redis",
 ];
 
-export interface DatabaseExtensionAvailability {
+interface DatabaseExtensionAvailability {
   isInstalled?: boolean;
   manifest: {
     databases?: Array<{ id: string; protocolVersion?: number }>;

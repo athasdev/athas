@@ -8,7 +8,7 @@ import {
   stripTrailingPathSeparators,
 } from "@/utils/path-helpers";
 
-export interface WorkspaceFileLinkTarget {
+interface WorkspaceFileLinkTarget {
   path: string;
   line?: number;
   column?: number;

@@ -1,4 +1,4 @@
-export type CrashReportBuild = "dev" | "release";
+type CrashReportBuild = "dev" | "release";
 
 export function crashReportBuild(isDev: boolean): CrashReportBuild {
   return isDev ? "dev" : "release";

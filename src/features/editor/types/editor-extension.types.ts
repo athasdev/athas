@@ -55,6 +55,7 @@ export interface EditorAPI {
   // Settings
   getSettings: () => EditorSettings;
   updateSettings: (settings: Partial<EditorSettings>) => void;
+  clearSettingOverrides: () => void;
 
   // Events - Type-safe event subscription
   on: <E extends EditorEvent>(event: E, handler: EventHandler<E>) => () => void;

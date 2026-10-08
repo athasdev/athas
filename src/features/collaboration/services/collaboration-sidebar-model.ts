@@ -41,7 +41,7 @@ interface CollaborationNoteFolder {
 
 export type CollaborationNoteItem = CollaborationNoteFile | CollaborationNoteFolder;
 
-export interface CollaborationSidebarModel {
+interface CollaborationSidebarModel {
   workspaceName: string;
   channels: CollaborationChannel[];
   selectedChannel: CollaborationChannel | null;

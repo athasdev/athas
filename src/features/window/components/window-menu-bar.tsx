@@ -1,6 +1,12 @@
 import { toast } from "sonner";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { quitApp, reopenWebviewDevtools } from "@/features/window/services/native-window-api";
+import {
+  maximizeWindow,
+  minimizeWindow,
+  quitApp,
+  reopenWebviewDevtools,
+  toggleWindowFullscreen,
+} from "@/features/window/services/native-window-api";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useRegisteredThemes } from "@/extensions/themes/use-registered-themes";
@@ -437,7 +443,7 @@ const WindowMenuBar = ({
           <MenubarItem
             shortcut="alt+f9"
             onClick={async () => {
-              await getCurrentWindow().minimize();
+              await minimizeWindow();
               closeMenu();
             }}
           >
@@ -446,7 +452,7 @@ const WindowMenuBar = ({
           <MenubarItem
             shortcut="alt+f10"
             onClick={async () => {
-              await getCurrentWindow().maximize();
+              await maximizeWindow();
               closeMenu();
             }}
           >
@@ -464,9 +470,7 @@ const WindowMenuBar = ({
           <MenubarItem
             shortcut="f11"
             onClick={async () => {
-              const window = getCurrentWindow();
-              const isFull = await window.isFullscreen();
-              await window.setFullscreen(!isFull);
+              await toggleWindowFullscreen();
               closeMenu();
             }}
           >

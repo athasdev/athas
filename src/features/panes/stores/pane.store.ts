@@ -41,7 +41,7 @@ interface PaneState {
   actions: PaneActions;
 }
 
-export interface PlaceBufferOptions {
+interface PlaceBufferOptions {
   /** Pane to show the buffer in. Falls back to normal routing when it no longer exists. */
   paneId?: string;
   /** Focus the pane that already holds the buffer instead of adding it to the writable pane. */
@@ -59,7 +59,7 @@ export interface PlaceBufferOptions {
   closeBufferIds?: readonly string[];
 }
 
-export interface RemoveBuffersOptions {
+interface RemoveBuffersOptions {
   preserveEmptyPanes?: boolean;
   /** Buffer to activate and focus afterwards, in its pane or the writable pane. */
   revealBufferId?: string | null;

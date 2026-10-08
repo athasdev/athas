@@ -8,7 +8,7 @@ export const GITHUB_CONNECTION_URL = getServiceUrls().dashboardIntegrationsUrl;
 
 export type GitHubTokenSyncStatus = "synced" | "notSignedIn" | "notConnected";
 
-export interface GitHubTokenSyncResult {
+interface GitHubTokenSyncResult {
   status: GitHubTokenSyncStatus;
   accountLogin?: string | null;
   scopes?: string | null;

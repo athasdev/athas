@@ -1,4 +1,4 @@
-export interface BufferSwitchTransitionInput {
+interface BufferSwitchTransitionInput {
   hasInitialized: boolean;
   previousBufferId: string | null;
   previousViewKey: string | null;

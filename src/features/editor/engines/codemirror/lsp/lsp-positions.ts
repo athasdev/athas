@@ -23,7 +23,7 @@ export function toLspPosition(doc: Text, position: number): LspPosition {
 }
 
 /** The document position for an LSP position, clamped to the document. */
-export function fromLspPosition(doc: Text, position: LspPosition): number {
+function fromLspPosition(doc: Text, position: LspPosition): number {
   if (position.line >= doc.lines) return doc.length;
   const line = doc.line(Math.max(0, position.line) + 1);
   return line.from + Math.max(0, Math.min(line.length, position.character));

@@ -25,6 +25,7 @@ import { useShallow } from "zustand/react/shallow";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { toast } from "sonner";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
+import { useEditorSettingOverridesStore } from "@/features/editor/stores/editor-setting-overrides.store";
 import { useZoomStore } from "@/features/layout/stores/zoom.store";
 import { readBufferText } from "../services/buffer-text";
 import type { LiveDocumentEdit } from "../services/live-document-registry";
@@ -176,8 +177,12 @@ const CodeEditor = ({
   }, [activeBufferId]);
   const editorViewKey = paneId && activeBufferId ? `${paneId}:${activeBufferId}` : activeBufferId;
   const { handleContentChange, handleDocumentChange } = useEditorAppStore.use.actions();
-  const editorFontSize = useSettingsStore((state) => state.settings.fontSize);
-  const editorLineHeight = useSettingsStore((state) => state.settings.editorLineHeight);
+  const settingsFontSize = useSettingsStore((state) => state.settings.fontSize);
+  const settingsLineHeight = useSettingsStore((state) => state.settings.editorLineHeight);
+  const fontSizeOverride = useEditorSettingOverridesStore((state) => state.overrides.fontSize);
+  const lineHeightOverride = useEditorSettingOverridesStore((state) => state.overrides.lineHeight);
+  const editorFontSize = fontSizeOverride ?? settingsFontSize;
+  const editorLineHeight = lineHeightOverride ?? settingsLineHeight;
   const codeLensEnabled = useSettingsStore((state) => state.settings.codeLens);
   const showOutlineSetting = useSettingsStore((state) => state.settings.showOutline);
 

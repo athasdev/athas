@@ -14,7 +14,7 @@ export function migrateLegacyAgentId(agentId: AgentType): AgentType {
   return LEGACY_TERMINAL_AGENT_IDS[agentId] ?? agentId;
 }
 
-export interface AgentCli {
+interface AgentCli {
   name: string;
   command: string;
 }

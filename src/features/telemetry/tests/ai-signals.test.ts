@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { createAiEditOutcomePayload, createAiFailurePayload } from "../services/ai-signals";
+import { createAiFailurePayload } from "../services/ai-signals";
 
 describe("AI telemetry signals", () => {
   it("keeps identifiers and codes but drops anything that looks like content", () => {
@@ -45,14 +45,5 @@ describe("AI telemetry signals", () => {
         phase: "provider",
       }).model_id,
     ).toBeNull();
-  });
-
-  it("describes edit outcomes without content", () => {
-    expect(createAiEditOutcomePayload({ surface: "tab", outcome: "reject" })).toEqual({
-      surface: "tab",
-      outcome: "reject",
-      provider_id: null,
-      code: null,
-    });
   });
 });

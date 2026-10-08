@@ -67,7 +67,7 @@ export async function sendDebugAdapterResponse(
   );
 }
 
-export async function stopDebugAdapterSession(sessionId: string): Promise<void> {
+async function stopDebugAdapterSession(sessionId: string): Promise<void> {
   await commands.debugStopSession(sessionId);
 }
 

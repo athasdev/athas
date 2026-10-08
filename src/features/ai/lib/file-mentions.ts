@@ -58,7 +58,7 @@ export async function loadFilesByPaths(
   ).filter((file): file is MentionedFile => file !== null);
 }
 
-export interface MentionToken {
+interface MentionToken {
   /** Offset of the leading `@` in the message. */
   start: number;
   /** Offset just past the token. */

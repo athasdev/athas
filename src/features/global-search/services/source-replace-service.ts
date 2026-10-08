@@ -26,7 +26,7 @@ interface SourceContent {
   content: string;
   revision?: number;
 }
-export interface SourceReplaceContext extends BufferStoreOwner {
+interface SourceReplaceContext extends BufferStoreOwner {
   sources: Map<string, EditorContent>;
   expectedMatches?: Map<string, SearchMatch[]>;
   signal?: AbortSignal;

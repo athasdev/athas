@@ -5,7 +5,7 @@ import type { WorkspaceFolderSession } from "@/features/workspace/types/workspac
 import { getFolderName } from "@/utils/path-helpers";
 import { normalizeWorkspaceRootPath } from "@/features/workspace/services/project-tab-path";
 
-export type WorkspaceFolder = WorkspaceFolderSession;
+type WorkspaceFolder = WorkspaceFolderSession;
 
 /**
  * The one owner of a workspace's root: its primary folder, every folder added to it, and the

@@ -5,9 +5,9 @@ import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
  * The one event every native menu, Dock menu and in-window menu bar action arrives through,
  * sent to the window it applies to.
  */
-export const MENU_ACTION_EVENT = "menu://action";
+const MENU_ACTION_EVENT = "menu://action";
 
-export interface MenuAction {
+interface MenuAction {
   action: string;
   /** The command id or theme id for the actions that carry one. */
   value?: string | null;

@@ -42,10 +42,7 @@ const tabCollisionDetection: CollisionDetection = (args) => {
   return onTabRow ? closestCenter(args) : [];
 };
 
-export type TabDndContextProps = Omit<
-  DndContextProps,
-  "collisionDetection" | "measuring" | "sensors"
->;
+type TabDndContextProps = Omit<DndContextProps, "collisionDetection" | "measuring" | "sensors">;
 
 export function TabDndContext(props: TabDndContextProps) {
   const sensors = useSensors(
@@ -71,7 +68,7 @@ interface SortableTabRenderState {
   dragDistance: number;
 }
 
-export interface SortableTabProps extends Pick<
+interface SortableTabProps extends Pick<
   HTMLAttributes<HTMLDivElement>,
   "className" | "style" | "onClickCapture"
 > {
@@ -218,7 +215,7 @@ export function useTabDragClickGuard() {
   return { getClickCapture, releaseClickSuppression, suppressNextClick };
 }
 
-export interface TabItemProps extends HTMLAttributes<HTMLDivElement> {
+interface TabItemProps extends HTMLAttributes<HTMLDivElement> {
   isActive: boolean;
   isDragged?: boolean;
   action?: ReactNode;

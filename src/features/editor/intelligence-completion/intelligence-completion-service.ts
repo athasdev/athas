@@ -55,7 +55,7 @@ function getPauseReason(error: InlineEditError): IntelligenceCompletionPauseReas
 }
 
 /** Pauses Tab on account or billing errors so it stops retrying, and reports others once. */
-export function reportIntelligenceCompletionError(error: unknown) {
+function reportIntelligenceCompletionError(error: unknown) {
   const { actions } = useIntelligenceCompletionStore.getState();
   // Tab on Automatic with nothing to run on: the status indicator says so, without a notice.
   if (error instanceof AutocompleteModelRequiredError) {

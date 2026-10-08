@@ -9,7 +9,7 @@ export interface ResolvedGitBlame {
 }
 
 /** The command lists each commit once; every line range gets its commit's details back here. */
-export function expandGitBlame(payload: GitBlamePayload): GitBlame {
+function expandGitBlame(payload: GitBlamePayload): GitBlame {
   return {
     file_path: payload.file_path,
     lines: payload.hunks.map((hunk) => {

@@ -6,7 +6,7 @@ import { usePaneStore } from "./pane.store";
  * Selectors over the pane layout, the single source of truth for which buffers are shown where,
  * which is active, previewed or pinned. Buffers themselves carry none of these flags.
  */
-export interface PaneLayoutState {
+interface PaneLayoutState {
   root: PaneNode;
   bottomRoot: PaneNode;
   activePaneId: string;
@@ -37,7 +37,7 @@ export function selectActiveBufferId(state: PaneLayoutState): string | null {
 }
 
 /** Pins are kept per pane but toggled for every pane showing the buffer. */
-export function selectIsBufferPinned(state: PaneLayoutState, bufferId: string): boolean {
+function selectIsBufferPinned(state: PaneLayoutState, bufferId: string): boolean {
   return (
     isBufferPinnedInTree(state.root, bufferId) || isBufferPinnedInTree(state.bottomRoot, bufferId)
   );
@@ -49,7 +49,7 @@ export function selectIsBufferPreview(state: PaneLayoutState, bufferId: string):
   );
 }
 
-export interface PaneBufferFlags {
+interface PaneBufferFlags {
   pinnedBufferIds: ReadonlySet<string>;
   previewBufferIds: ReadonlySet<string>;
 }

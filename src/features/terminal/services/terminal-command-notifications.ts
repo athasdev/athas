@@ -5,9 +5,9 @@ import type { NotificationType } from "@/features/notifications/types/notificati
 import { showToast, type ToastInput } from "@/utils/toast";
 import type { TerminalCommandSummary } from "../types/terminal.types";
 
-export const TERMINAL_LONG_COMMAND_THRESHOLD_MS = 10_000;
+const TERMINAL_LONG_COMMAND_THRESHOLD_MS = 10_000;
 
-export interface TerminalCommandFinishedEvent {
+interface TerminalCommandFinishedEvent {
   terminalId: string;
   terminalName: string;
   command: TerminalCommandSummary;

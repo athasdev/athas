@@ -3,16 +3,16 @@ import { create } from "zustand";
 import { createSelectors } from "@/utils/zustand-selectors";
 import type { WorkflowRunListItem } from "../types/github.types";
 
-export const GITHUB_ACTION_RUNS_TTL_MS = 60_000;
+const GITHUB_ACTION_RUNS_TTL_MS = 60_000;
 
-export interface WorkflowRunsEntry {
+interface WorkflowRunsEntry {
   runs: WorkflowRunListItem[];
   fetchedAt: number | null;
   isLoading: boolean;
   error: string | null;
 }
 
-export type WorkflowRunPendingAction = "rerun" | "rerun-failed" | "cancel";
+type WorkflowRunPendingAction = "rerun" | "rerun-failed" | "cancel";
 
 interface GitHubActionsState {
   entries: Record<string, WorkflowRunsEntry>;

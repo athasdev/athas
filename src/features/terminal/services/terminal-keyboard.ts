@@ -5,7 +5,7 @@ type TerminalKeyboardEvent = Pick<
   getModifierState?: (keyArg: string) => boolean;
 };
 
-export type TerminalKeyAction =
+type TerminalKeyAction =
   | { type: "passthrough" }
   | { type: "block" }
   | { type: "copy" }

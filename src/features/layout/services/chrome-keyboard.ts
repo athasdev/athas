@@ -1,4 +1,4 @@
-export type ChromeNavigationOrientation = "horizontal" | "vertical";
+type ChromeNavigationOrientation = "horizontal" | "vertical";
 
 export function getChromeNavigationIndex(
   key: string,

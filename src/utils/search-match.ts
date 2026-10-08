@@ -11,7 +11,7 @@ export function compactSearchText(value: string) {
   return normalizeSearchText(value).replace(/\s+/g, "");
 }
 
-export interface SearchCandidateField {
+interface SearchCandidateField {
   value: string;
   weight?: number;
 }

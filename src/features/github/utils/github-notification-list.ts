@@ -1,6 +1,6 @@
 import type { GitHubNotification } from "../types/github.types";
 
-export type GitHubNotificationFilter = "all" | "pulls-and-issues" | "workflows";
+type GitHubNotificationFilter = "all" | "pulls-and-issues" | "workflows";
 
 export function filterGitHubNotifications(
   notifications: GitHubNotification[],

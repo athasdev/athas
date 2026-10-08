@@ -11,7 +11,7 @@ export interface LiveDocumentView {
 }
 
 /** One edit made in a live view, as other views of the same buffer receive it. */
-export interface LiveDocumentChange {
+interface LiveDocumentChange {
   bufferId: string;
   sourceId: string;
   revision: number;

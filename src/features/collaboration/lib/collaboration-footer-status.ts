@@ -12,7 +12,7 @@ interface CollaborationDocumentStreamSummary {
   updatesReceived: number;
 }
 
-export interface CollaborationFooterStatus {
+interface CollaborationFooterStatus {
   label: string;
   countLabel: string | null;
   tooltip: string;

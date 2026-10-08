@@ -25,7 +25,7 @@ import {
 
 export const APPEARANCE_BOOTSTRAP_CACHE_KEY = "athas.bootstrap.appearance.v1";
 
-export interface AppearanceBootstrapCache {
+interface AppearanceBootstrapCache {
   version: 1;
   themeId: string;
   themeType: "light" | "dark";
@@ -144,7 +144,7 @@ function writeAppearanceBootstrapCache(cache: AppearanceBootstrapCache): void {
   }
 }
 
-export function applyBootstrapAppearance(cache: AppearanceBootstrapCache): void {
+function applyBootstrapAppearance(cache: AppearanceBootstrapCache): void {
   if (typeof document === "undefined") return;
 
   const root = document.documentElement;

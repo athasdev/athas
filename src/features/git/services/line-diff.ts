@@ -11,7 +11,7 @@ export interface LineDiffOp {
   newLine?: number;
 }
 
-export interface LineDiffHunk {
+interface LineDiffHunk {
   oldStart: number;
   oldCount: number;
   newStart: number;
@@ -255,7 +255,7 @@ function formatHunkHeader(hunk: LineDiffHunk): string {
 }
 
 /** Flatten hunks into the `GitDiffLine` shape the diff viewers already render. */
-export function toGitDiffLines(hunks: LineDiffHunk[]): GitDiffLine[] {
+function toGitDiffLines(hunks: LineDiffHunk[]): GitDiffLine[] {
   const lines: GitDiffLine[] = [];
 
   for (const hunk of hunks) {

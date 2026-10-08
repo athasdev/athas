@@ -4,11 +4,11 @@ import {
   type PaneContent,
 } from "@/features/panes/types/pane-content.types";
 
-export function isDirtyEditorBuffer(buffer: PaneContent): buffer is EditorContent {
+function isDirtyEditorBuffer(buffer: PaneContent): buffer is EditorContent {
   return isEditorContent(buffer) && buffer.isDirty;
 }
 
-export function isDirtyWritableEditorBuffer(buffer: PaneContent): buffer is EditorContent {
+function isDirtyWritableEditorBuffer(buffer: PaneContent): buffer is EditorContent {
   return isDirtyEditorBuffer(buffer) && !buffer.readOnly;
 }
 

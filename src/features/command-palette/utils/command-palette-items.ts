@@ -12,7 +12,7 @@ import type {
 import type { CommandPaletteItem } from "../types/command-palette-item.types";
 
 /** The palette presentation of a command right now, or null when the palette should not offer it. */
-export function resolveCommandPaletteEntry(
+function resolveCommandPaletteEntry(
   command: Command,
   context: CommandContext,
 ): CommandPaletteEntry | null {
@@ -32,7 +32,7 @@ export async function runCommandFromPalette(
   if (closeMode === "settled") closePalette();
 }
 
-export function createCommandPaletteItem(
+function createCommandPaletteItem(
   command: Command,
   entry: CommandPaletteEntry,
 ): CommandPaletteItem {

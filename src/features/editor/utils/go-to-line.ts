@@ -1,13 +1,13 @@
 import { getLineSlice } from "../services/large-file";
 
-export interface ResolveGoToLineTargetOptions {
+interface ResolveGoToLineTargetOptions {
   content: string;
   lineNumber: number;
   columnNumber?: number;
   lineCount: number;
 }
 
-export interface GoToLineTarget {
+interface GoToLineTarget {
   line: number;
   column: number;
   offset: number;

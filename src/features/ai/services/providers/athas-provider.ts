@@ -15,7 +15,7 @@ import { toOpenAIMessage } from "@/features/ai/lib/image-attachments";
  * The server offers hosted models only to accounts with Athas Pro or a pay-as-you-go balance.
  * Carries a 402 so chat recovery offers billing instead of provider settings.
  */
-export class HostedEntitlementError extends Error {
+class HostedEntitlementError extends Error {
   readonly status = 402;
   readonly code = "entitlement_required";
 

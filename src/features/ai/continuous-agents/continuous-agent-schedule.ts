@@ -1,6 +1,6 @@
 export type ContinuousAgentCadence = "15m" | "hourly" | "4h" | "daily";
 
-export interface ContinuousAgentCadenceOption {
+interface ContinuousAgentCadenceOption {
   value: ContinuousAgentCadence;
   label: string;
   description: string;

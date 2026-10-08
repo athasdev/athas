@@ -8,7 +8,7 @@ export interface LspCodeLens {
   arguments?: unknown[];
 }
 
-export type RunCodeLens = (lens: LspCodeLens, view: EditorView) => void;
+type RunCodeLens = (lens: LspCodeLens, view: EditorView) => void;
 
 class CodeLensWidget extends WidgetType {
   constructor(

@@ -27,7 +27,7 @@ export function getGitHubNotificationFallbackUrl(
   return notification.url || repositoryUrl;
 }
 
-export type GitHubNotificationTarget =
+type GitHubNotificationTarget =
   | { type: "pullRequest"; number: number; repoPath: string }
   | { type: "issue"; number: number; repoPath: string }
   | { type: "action"; runId: number; repoPath: string }

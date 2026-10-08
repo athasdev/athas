@@ -10,7 +10,7 @@ export interface VisibleFileTreeRow {
   guideAncestors?: Array<VisibleFileTreeRow | null>;
 }
 
-export interface BuildVisibleFileTreeRowsOptions {
+interface BuildVisibleFileTreeRowsOptions {
   compactFolders?: boolean;
   hiddenRootPath?: string;
   sortOrder?: FileTreeSortOrder;
@@ -24,15 +24,15 @@ export interface FilterFileTreeForSearchResult {
   matchCount: number;
 }
 
-export interface FileTreeSearchHit {
+interface FileTreeSearchHit {
   path: string;
 }
 
-export interface FilterFileTreeForFffHitsOptions {
+interface FilterFileTreeForFffHitsOptions {
   rootPath?: string | null;
 }
 
-export interface FilterFileTreeEntriesOptions {
+interface FilterFileTreeEntriesOptions {
   isAlwaysHidden: (name: string) => boolean;
   isGitIgnored: (path: string, isDir: boolean) => boolean;
   isHiddenName: (name: string) => boolean;
@@ -195,7 +195,7 @@ interface VisibleRowsSegment {
 }
 
 /** Per-tree memo of visible row segments; one per mounted tree. */
-export interface VisibleFileTreeRowsCache {
+interface VisibleFileTreeRowsCache {
   compactFolders: boolean;
   sortOrder: FileTreeSortOrder;
   segments: WeakMap<readonly FileEntry[], VisibleRowsSegment>;
@@ -490,7 +490,7 @@ export function filterFileTreeForFffHits(
   };
 }
 
-export interface VisibleFileTreeRowIndex {
+interface VisibleFileTreeRowIndex {
   get: (path: string) => number | undefined;
 }
 

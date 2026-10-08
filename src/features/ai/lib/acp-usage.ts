@@ -5,7 +5,7 @@ const CONTEXT_WARNING_RATIO = 0.8;
 /** Context use at or above this share of the window is shown as an error. */
 const CONTEXT_ERROR_RATIO = 0.95;
 
-export type ContextUsageTone = "accent" | "warning" | "error";
+type ContextUsageTone = "accent" | "warning" | "error";
 
 /** Share of the context window in use, from 0 to 100. */
 export function getContextUsagePercent(usage: Pick<AcpUsageUpdate, "used" | "size">): number {

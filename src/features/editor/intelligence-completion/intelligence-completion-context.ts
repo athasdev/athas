@@ -26,7 +26,7 @@ interface RecentEditEntry extends AutocompleteRecentEdit {
 }
 
 /** The lines of a document, one-based, as the edit tracker reads them. */
-export interface RecentEditDocument {
+interface RecentEditDocument {
   lineCount: number;
   lineText(lineNumber: number): string;
 }

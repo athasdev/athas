@@ -5,21 +5,21 @@ export interface OccurrenceRange {
   end: number;
 }
 
-export interface ResolveNextOccurrenceOptions {
+interface ResolveNextOccurrenceOptions {
   content: string;
   cursorOffset: number;
   selectionStart?: number;
   selectionEnd?: number;
 }
 
-export interface ResolveSelectNextOccurrenceActionOptions {
+interface ResolveSelectNextOccurrenceActionOptions {
   content: string;
   cursorOffset: number;
   currentSelection?: OccurrenceRange | null;
   selectedRanges?: OccurrenceRange[];
 }
 
-export interface ResolveAllOccurrencesOptions {
+interface ResolveAllOccurrencesOptions {
   content: string;
   cursorOffset: number;
   selectionStart?: number;
@@ -27,7 +27,7 @@ export interface ResolveAllOccurrencesOptions {
   maxOccurrences?: number;
 }
 
-export type SelectNextOccurrenceAction =
+type SelectNextOccurrenceAction =
   | {
       type: "select-initial";
       range: OccurrenceRange;
@@ -38,7 +38,7 @@ export type SelectNextOccurrenceAction =
       nextRange: OccurrenceRange;
     };
 
-export type SelectOccurrenceAction = SelectNextOccurrenceAction;
+type SelectOccurrenceAction = SelectNextOccurrenceAction;
 
 function normalizeRange(start: number, end: number): OccurrenceRange | null {
   if (start === end) return null;

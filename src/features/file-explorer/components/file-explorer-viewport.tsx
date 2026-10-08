@@ -29,7 +29,7 @@ export interface FileExplorerViewportHandle {
 }
 
 /** Where a row is drawn: in the scrolling list, or as a pinned copy in the sticky header stack. */
-export type FileTreeRowPlacement = "list" | "sticky";
+type FileTreeRowPlacement = "list" | "sticky";
 
 interface FileExplorerViewportProps extends Omit<
   React.ComponentPropsWithoutRef<"div">,

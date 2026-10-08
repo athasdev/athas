@@ -32,7 +32,7 @@ import type {
 } from "../types/docker.types";
 import { getDockerImageReference, getPublishedDockerTcpUrl } from "../utils/docker-sidebar-utils";
 
-export interface DockerMenuAction {
+interface DockerMenuAction {
   label: string;
   icon?: ReactNode;
   disabled?: boolean;

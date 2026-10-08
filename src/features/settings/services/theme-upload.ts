@@ -13,7 +13,7 @@ import type { ThemeDefinition } from "@/extensions/themes/theme.types";
 
 const MAX_THEME_FILE_BYTES = 2 * 1024 * 1024;
 
-export interface ThemeUploadResult {
+interface ThemeUploadResult {
   success: boolean;
   error?: string;
   details?: string[];

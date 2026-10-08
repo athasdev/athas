@@ -4,7 +4,7 @@ import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { AgentType } from "@/features/ai/types/ai-chat.types";
 
-export interface ImportableAgentSession {
+interface ImportableAgentSession {
   sessionId: string;
   title?: string | null;
   updatedAt?: string | null;

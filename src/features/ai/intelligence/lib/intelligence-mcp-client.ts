@@ -5,7 +5,7 @@ import type {
   McpTransport,
 } from "../types/intelligence-mcp.types";
 
-export const MCP_PROTOCOL_VERSION = "2025-06-18";
+const MCP_PROTOCOL_VERSION = "2025-06-18";
 /** Characters of one tool result the model receives. */
 export const MCP_RESULT_CHARS = 20_000;
 /** Tools taken from one server; a server listing more is cut off. */

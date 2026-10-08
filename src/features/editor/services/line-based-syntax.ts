@@ -1,4 +1,4 @@
-export interface LineBasedSyntaxToken {
+interface LineBasedSyntaxToken {
   start: number;
   end: number;
   class_name: string;

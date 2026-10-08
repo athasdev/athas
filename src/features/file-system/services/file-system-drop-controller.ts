@@ -29,13 +29,13 @@ export function resolveDropClientPoint(
   };
 }
 
-export interface ExternalFileDropPayload {
+interface ExternalFileDropPayload {
   type: string;
   paths?: string[];
   position?: { x: number; y: number };
 }
 
-export interface ExternalFileDropController {
+interface ExternalFileDropController {
   onDrop: (paths: string[]) => void | Promise<void>;
   setDraggingOver: (isDraggingOver: boolean) => void;
   onError?: (error: unknown) => void;
@@ -84,7 +84,7 @@ export function isExternalFileDragTypeList(types: Iterable<string> | null | unde
   return Array.from(types).includes("Files");
 }
 
-export type ExternalFileDropRoute = "global" | "local" | "terminal";
+type ExternalFileDropRoute = "global" | "local" | "terminal";
 
 const TERMINAL_DROP_TARGET_SELECTOR = "[data-terminal-drop-target]";
 const LOCAL_DROP_TARGET_SELECTOR = [

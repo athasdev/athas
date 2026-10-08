@@ -3,14 +3,14 @@ import type { ChatMessageError } from "@/features/ai/types/chat-error.types";
 import { getApiBase } from "@/utils/api-base";
 
 /** A provider failure as it reached the client: an HTTP status, a server code and a raw body. */
-export interface ApiErrorInput {
+interface ApiErrorInput {
   status?: number;
   code?: string;
   body?: string;
   message?: string;
 }
 
-export interface ParsedApiError extends ApiErrorInput {
+interface ParsedApiError extends ApiErrorInput {
   message: string;
   /** The billing page a hosted 402 points to, as the server sent it. */
   billingUrl?: string;

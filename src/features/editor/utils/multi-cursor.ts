@@ -227,7 +227,7 @@ export function applyMultiCursorBackspace(
   return applyCursorEdits(content, edits);
 }
 
-export interface MultiCursorKeyEditResult {
+interface MultiCursorKeyEditResult {
   newContent: string;
   newCursors: Cursor[];
   primaryCursor: Cursor | null;

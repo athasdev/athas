@@ -1,6 +1,6 @@
 import type { Token } from "@/features/editor/types/editor.types";
 
-export interface SqlHighlightSegment {
+interface SqlHighlightSegment {
   text: string;
   className?: string;
 }

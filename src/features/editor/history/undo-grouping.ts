@@ -80,7 +80,7 @@ export interface UndoEditDelta extends ContentDelta {
   endOffset: number;
 }
 
-export interface UndoTextChange {
+interface UndoTextChange {
   rangeOffset: number;
   rangeLength: number;
   text: string;

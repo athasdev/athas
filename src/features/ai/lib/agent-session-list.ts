@@ -23,7 +23,7 @@ export function hasAgentSessionActivity(chat: SessionSummary): boolean {
   return chat.lastMessageAt.getTime() - chat.createdAt.getTime() > CREATION_SKEW_MS;
 }
 
-export interface AgentSessionListOptions {
+interface AgentSessionListOptions {
   workspacePath?: string | null;
   /** Sessions that stay listed even while still empty, e.g. the open one. */
   keepIds?: Iterable<string | null | undefined>;

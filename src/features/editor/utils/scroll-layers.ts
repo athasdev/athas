@@ -1,6 +1,6 @@
 import type { RefObject } from "react";
 
-export type ScrollLayerRef = RefObject<HTMLElement | null>;
+type ScrollLayerRef = RefObject<HTMLElement | null>;
 
 export function applyEditorScrollTransform(
   scrollLayerRefs: readonly ScrollLayerRef[],

@@ -21,7 +21,7 @@ export interface GitFolderTree {
   folderStateById: Map<string, GitFolderState>;
 }
 
-export interface GitStatusPresentation {
+interface GitStatusPresentation {
   stagedFiles: GitFile[];
   unstagedFiles: GitFile[];
   hasStagedDiffableFiles: boolean;

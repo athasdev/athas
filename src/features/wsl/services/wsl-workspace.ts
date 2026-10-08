@@ -8,7 +8,7 @@ export interface WslDistribution {
   is_default: boolean;
 }
 
-export interface WslDirectoryEntry {
+interface WslDirectoryEntry {
   name: string;
   path: string;
   is_dir: boolean;
@@ -17,7 +17,7 @@ export interface WslDirectoryEntry {
   target?: string | null;
 }
 
-export interface WslWorkspaceTree {
+interface WslWorkspaceTree {
   wslPath: string;
   fileTree: FileEntry[];
   wrappedFileTree: FileEntry[];

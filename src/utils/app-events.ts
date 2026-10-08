@@ -104,7 +104,7 @@ export interface AppEventMap {
 
 export type AppEventName = keyof AppEventMap;
 
-export type AppEventHandler<K extends AppEventName> = (payload: AppEventMap[K]) => void;
+type AppEventHandler<K extends AppEventName> = (payload: AppEventMap[K]) => void;
 
 type AppEventArgs<K extends AppEventName> = undefined extends AppEventMap[K]
   ? [payload?: AppEventMap[K]]

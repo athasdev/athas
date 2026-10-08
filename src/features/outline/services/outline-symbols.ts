@@ -1,7 +1,7 @@
 import { emitAppEvent } from "@/utils/app-events";
 import type { OutlineSymbol } from "../types/outline-symbol.types";
 
-export interface RawOutlineSymbol {
+interface RawOutlineSymbol {
   name: string;
   kind: string;
   detail?: string;

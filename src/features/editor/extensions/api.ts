@@ -1,5 +1,9 @@
 import { useBufferStore } from "../stores/buffer.store";
 import { useEditorDecorationsStore } from "../stores/decorations.store";
+import {
+  resolveEditorSettings,
+  useEditorSettingOverridesStore,
+} from "../stores/editor-setting-overrides.store";
 import { applyBufferHistory } from "../services/buffer-history-service";
 import { captureBufferStoreOwner } from "../services/buffer-store-owner";
 import { hasPendingBufferHistory } from "../services/buffer-history-tracking";
@@ -8,7 +12,6 @@ import { useEditorStateStore } from "../stores/state.store";
 import { useEditorViewStore } from "../stores/view.store";
 import type { HistoryEntry } from "../types/history.types";
 import { isEditorContent } from "@/features/panes/types/pane-content.types";
-import { isEditorWordWrapEnabled } from "@/features/settings/services/editor-word-wrap";
 import { resolveEffectiveTheme } from "@/features/settings/services/theme-resolution";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import type { Decoration, Position, Range } from "../types/editor.types";
@@ -681,43 +684,20 @@ class EditorAPIImpl implements EditorAPI {
   getSettings(): EditorSettings {
     const { settings } = useSettingsStore.getState();
     return {
-      fontSize: settings.fontSize,
-      lineHeight: settings.editorLineHeight,
-      tabSize: settings.tabSize,
-      lineNumbers: settings.lineNumbers,
-      wordWrap: isEditorWordWrapEnabled(settings),
-      renderWhitespace: settings.renderWhitespace,
-      renderIndentGuides: settings.renderIndentGuides,
+      ...resolveEditorSettings(settings, useEditorSettingOverridesStore.getState().overrides),
       theme: resolveEffectiveTheme(settings),
     };
   }
 
+  /** Changes editor settings for this session only; the user's saved settings stay untouched. */
   updateSettings(settings: Partial<EditorSettings>): void {
-    const { updateSetting } = useSettingsStore.getState().actions;
-
-    if (settings.fontSize !== undefined) {
-      void updateSetting("fontSize", settings.fontSize);
-    }
-    if (settings.lineHeight !== undefined) {
-      void updateSetting("editorLineHeight", settings.lineHeight);
-    }
-    if (settings.tabSize !== undefined) {
-      void updateSetting("tabSize", settings.tabSize);
-    }
-    if (settings.lineNumbers !== undefined) {
-      void updateSetting("lineNumbers", settings.lineNumbers);
-    }
-    if (settings.wordWrap !== undefined) {
-      void updateSetting("wordWrap", settings.wordWrap);
-    }
-    if (settings.renderWhitespace !== undefined) {
-      void updateSetting("renderWhitespace", settings.renderWhitespace);
-    }
-    if (settings.renderIndentGuides !== undefined) {
-      void updateSetting("renderIndentGuides", settings.renderIndentGuides);
-    }
-
+    useEditorSettingOverridesStore.getState().actions.setOverrides(settings);
     this.emit("settingsChange", settings);
+  }
+
+  clearSettingOverrides(): void {
+    useEditorSettingOverridesStore.getState().actions.clearOverrides();
+    this.emit("settingsChange", this.getSettings());
   }
 
   // Events

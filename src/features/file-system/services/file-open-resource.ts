@@ -8,13 +8,13 @@ import { parseWslPath } from "@/features/wsl/utils/wsl-path";
 
 type ResolveWorkspaceResourceProvider = (path: string) => WorkspaceResourceProvider;
 
-export interface FileOpenResource {
+interface FileOpenResource {
   provider: WorkspaceResourceProvider;
   providerPath: string;
   shouldInspectBytes: boolean;
 }
 
-export interface FileOpenInspection {
+interface FileOpenInspection {
   isBinary: boolean;
   preloadedText: string | null;
 }

@@ -4,7 +4,7 @@ import { DIFF_SERIALIZED_LINE_LIMIT } from "../utils/diff-viewer-scale";
 
 const DIFF_ACCORDION_PREFIX = "\uE000ATHAS_DIFF_FILE ";
 
-export interface DiffAccordionLineMeta {
+interface DiffAccordionLineMeta {
   name: string;
   path: string;
   status: "added" | "deleted" | "modified" | "renamed";
@@ -14,13 +14,13 @@ export interface DiffAccordionLineMeta {
 
 export type DiffEditorLineKind = "context" | "added" | "removed" | "spacer";
 
-export interface SerializedEditorDiffContent {
+interface SerializedEditorDiffContent {
   content: string;
   lineKinds: DiffEditorLineKind[];
   actualLines: Array<number | null>;
 }
 
-export interface SerializedSplitEditorDiffContent {
+interface SerializedSplitEditorDiffContent {
   left: SerializedEditorDiffContent;
   right: SerializedEditorDiffContent;
 }

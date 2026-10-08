@@ -32,7 +32,7 @@ export interface AgentOption {
   icon?: string | null;
 }
 
-export interface AgentAvailabilityResult {
+interface AgentAvailabilityResult {
   agents: AgentConfig[] | null;
   codexInstalled: boolean | null;
   errors: string[];

@@ -16,7 +16,7 @@ import {
 
 const MAX_INDIVIDUAL_NOTIFICATIONS = 3;
 
-export interface WorkflowRunNotification {
+interface WorkflowRunNotification {
   id: string;
   message: string;
   description: string;

@@ -39,7 +39,7 @@ export async function resolveToolPath(path: string): Promise<string> {
   return resolveWorkspacePath(path, home);
 }
 
-export function showToolPathError(path: string, error: unknown) {
+function showToolPathError(path: string, error: unknown) {
   toast.error(`Could not open ${getBaseName(path) || path}`, {
     description: error instanceof Error ? error.message : String(error),
   });

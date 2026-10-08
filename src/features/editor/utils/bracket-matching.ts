@@ -1,4 +1,4 @@
-export interface BracketMatchResult {
+interface BracketMatchResult {
   activeOffset: number;
   matchingOffset: number | null;
   activeBracket: string;
@@ -6,16 +6,16 @@ export interface BracketMatchResult {
   direction: "forward" | "backward";
 }
 
-export interface BracketMatchOptions {
+interface BracketMatchOptions {
   maxScanChars?: number;
 }
 
-export interface BracketJumpTarget {
+interface BracketJumpTarget {
   offset: number;
   reason: "matching" | "enclosing" | "next";
 }
 
-export interface BracketSelectionRange {
+interface BracketSelectionRange {
   startOffset: number;
   endOffset: number;
 }
@@ -25,12 +25,12 @@ interface BracketPairRange {
   closeOffset: number;
 }
 
-export interface BracketRemovalResult {
+interface BracketRemovalResult {
   content: string;
   cursorOffset: number;
 }
 
-export interface BracketSelectionOptions extends BracketMatchOptions {
+interface BracketSelectionOptions extends BracketMatchOptions {
   selectBrackets?: boolean;
 }
 

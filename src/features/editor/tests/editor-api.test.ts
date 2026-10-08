@@ -3,6 +3,7 @@ import { editorAPI } from "../extensions/api";
 import { useBufferStore } from "../stores/buffer.store";
 import { useEditorStateStore } from "../stores/state.store";
 import { useHistoryStore } from "../stores/history.store";
+import { useEditorSettingOverridesStore } from "../stores/editor-setting-overrides.store";
 import { calculateCursorPositionFromContent } from "../services/position";
 import type { EditorContent } from "@/features/panes/types/pane-content.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
@@ -487,6 +488,42 @@ describe("editor API model operations", () => {
     try {
       expect(editorAPI.getSettings().theme).toBe("one-dark");
     } finally {
+      useSettingsStore.setState({ settings: previousSettings });
+    }
+  });
+
+  it("applies extension setting changes for the session without saving them", () => {
+    const previousSettings = useSettingsStore.getState().settings;
+    const updateSetting = vi.spyOn(useSettingsStore.getState().actions, "updateSetting");
+    const onSettingsChange = vi.fn();
+    const unsubscribe = editorAPI.on("settingsChange", onSettingsChange);
+    useSettingsStore.setState({
+      settings: { ...previousSettings, fontSize: 14, wordWrap: false, horizontalTabScroll: true },
+    });
+
+    try {
+      editorAPI.updateSettings({ fontSize: 20, wordWrap: false });
+
+      expect(updateSetting).not.toHaveBeenCalled();
+      expect(useSettingsStore.getState().settings.fontSize).toBe(14);
+      expect(editorAPI.getSettings()).toMatchObject({ fontSize: 20, wordWrap: false });
+      expect(onSettingsChange).toHaveBeenCalledWith({ fontSize: 20, wordWrap: false });
+
+      useSettingsStore.setState({
+        settings: { ...useSettingsStore.getState().settings, showMinimap: false },
+      });
+      expect(editorAPI.getSettings()).toMatchObject({ fontSize: 20, wordWrap: false });
+
+      editorAPI.clearSettingOverrides();
+      expect(useEditorSettingOverridesStore.getState().overrides).toEqual({});
+      expect(editorAPI.getSettings()).toMatchObject({ fontSize: 14, wordWrap: true });
+      expect(onSettingsChange).toHaveBeenLastCalledWith(
+        expect.objectContaining({ fontSize: 14, wordWrap: true }),
+      );
+    } finally {
+      unsubscribe();
+      updateSetting.mockRestore();
+      useEditorSettingOverridesStore.getState().actions.clearOverrides();
       useSettingsStore.setState({ settings: previousSettings });
     }
   });

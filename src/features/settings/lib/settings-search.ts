@@ -64,7 +64,7 @@ function scoreField(value: string, query: string, tokens: string[], weight: numb
   return score;
 }
 
-export function scoreSettingSearchRecord(query: string, record: SettingSearchRecord) {
+function scoreSettingSearchRecord(query: string, record: SettingSearchRecord) {
   const normalizedQuery = normalizeSearchText(query);
   if (!normalizedQuery) return 0;
 

@@ -552,7 +552,7 @@ export function SidebarListActionRow({
  * the list is the whole point of the panel and filtering should be one keystroke
  * away; `SidebarSearchPopover` is for headers where search is secondary.
  */
-export const SidebarFilterField = forwardRef<
+const SidebarFilterField = forwardRef<
   HTMLInputElement,
   Omit<ComponentProps<typeof SearchField>, "variant" | "size" | "leftIcon">
 >(function SidebarFilterField({ placeholder = "Filter", ...props }, ref) {
@@ -730,7 +730,7 @@ export function SidebarListItem({
   });
 }
 
-export function SidebarMenuContent({
+function SidebarMenuContent({
   className,
   ...props
 }: Omit<ComponentProps<typeof DropdownMenuContent>, "align" | "side">) {

@@ -180,14 +180,14 @@ export const CIStatusIndicator = memo(({ checks, repoPath, repositoryUrl }: CISt
 CIStatusIndicator.displayName = "CIStatusIndicator";
 
 // Merge Status Badge
-export interface MergeStatusProps {
+interface MergeStatusProps {
   status: PullRequestStatus;
   mergeStateStatus: string | null;
   mergeable: string | null;
   reviewDecision: string | null;
 }
 
-export interface MergeStatusInfo {
+interface MergeStatusInfo {
   text: string;
   variant: BadgeTone;
   icon: typeof WarningCircleIcon;
@@ -335,7 +335,7 @@ interface AssigneesProps {
   assignees: { login: string }[];
 }
 
-export const AssigneesList = memo(({ assignees }: AssigneesProps) => {
+const AssigneesList = memo(({ assignees }: AssigneesProps) => {
   if (assignees.length === 0) return null;
 
   return (

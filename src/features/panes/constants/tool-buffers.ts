@@ -1,6 +1,6 @@
 import type { PaneContent, PaneContentType } from "@/features/panes/types/pane-content.types";
 
-export type SingletonToolBufferType = Extract<
+type SingletonToolBufferType = Extract<
   PaneContentType,
   | "globalSearch"
   | "diagnostics"

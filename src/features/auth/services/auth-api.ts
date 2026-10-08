@@ -216,7 +216,7 @@ export interface IntelligenceCredits {
   walletBalanceCents?: number | null;
 }
 
-export interface EnterprisePolicy {
+interface EnterprisePolicy {
   managedMode: boolean;
   requireExtensionAllowlist: boolean;
   allowedExtensionIds: string[];
@@ -381,7 +381,7 @@ function parseCollaborationSnapshot(payload: unknown): SubscriptionInfo["collabo
   };
 }
 
-export class DesktopAuthError extends Error {
+class DesktopAuthError extends Error {
   code: "endpoint_unavailable" | "expired" | "timeout" | "failed";
 
   constructor(code: DesktopAuthError["code"], message: string) {
@@ -545,7 +545,7 @@ export const removeAuthToken = async (): Promise<void> => {
 
 const DEFAULT_AUTHENTICATED_FETCH_TIMEOUT_MS = 10_000;
 
-export interface AuthenticatedFetchOptions extends RequestInit {
+interface AuthenticatedFetchOptions extends RequestInit {
   /**
    * How long the request may take. Defaults to 10 seconds when no `signal` is given; a
    * caller's `signal` and timeout both apply when both are set. `null` disables the timeout.

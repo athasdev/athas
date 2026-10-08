@@ -87,7 +87,7 @@ interface WorkspaceSessionSnapshot {
   buffers: WorkspaceSessionBuffer[];
 }
 
-export interface WorkspaceRestorePlan {
+interface WorkspaceRestorePlan {
   activeBufferPath: string | null;
   initialBuffer: BufferSession | null;
   remainingBuffers: BufferSession[];

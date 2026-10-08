@@ -32,13 +32,9 @@ export interface WorkspaceBackgroundInitializationOptions<TGitStatus> {
   getWallTime?: () => number;
 }
 
-export type WorkspaceBackgroundInitializationResult =
-  | "completed"
-  | "cancelled"
-  | "cached"
-  | "failed";
+type WorkspaceBackgroundInitializationResult = "completed" | "cancelled" | "cached" | "failed";
 
-export interface WorkspaceBackgroundInitializer {
+interface WorkspaceBackgroundInitializer {
   invalidate: () => void;
   start: <TGitStatus>(
     options: WorkspaceBackgroundInitializationOptions<TGitStatus>,

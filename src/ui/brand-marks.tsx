@@ -20,7 +20,7 @@ import type { SVGProps } from "react";
  * fill, opt out of the `src/ui/icons` stroke system, and must not be redrawn to
  * match the icon grid. Product concepts belong in `src/ui/icons` instead.
  */
-export type BrandMarkProps = SVGProps<SVGSVGElement> & {
+type BrandMarkProps = SVGProps<SVGSVGElement> & {
   size?: number | string;
 };
 

@@ -10,7 +10,7 @@ export interface OnboardingContext {
   previousVersion?: string;
 }
 
-export interface PersistedOnboardingState {
+interface PersistedOnboardingState {
   lastSeenVersion?: string;
   completedVersion?: string;
 }

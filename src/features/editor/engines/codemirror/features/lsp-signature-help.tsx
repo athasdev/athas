@@ -15,7 +15,7 @@ import { isLspFile, toLspPosition } from "../lsp/lsp-positions";
 import { createDocumentationElement } from "../lsp/markdown-content";
 import { onAppEvent } from "@/utils/app-events";
 
-export type SignatureHelp = NonNullable<Awaited<ReturnType<LspClient["getSignatureHelp"]>>>;
+type SignatureHelp = NonNullable<Awaited<ReturnType<LspClient["getSignatureHelp"]>>>;
 
 interface SignatureHelpState {
   pos: number;

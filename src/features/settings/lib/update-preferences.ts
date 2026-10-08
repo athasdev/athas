@@ -10,11 +10,11 @@ interface StorageLike {
   removeItem(key: string): void;
 }
 
-export interface UpdatePreferenceTarget {
+interface UpdatePreferenceTarget {
   version: string;
 }
 
-export interface UpdatePreferences {
+interface UpdatePreferences {
   skippedVersion?: string;
   remindVersion?: string;
   remindAfter?: number;

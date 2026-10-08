@@ -32,7 +32,7 @@ export interface TerminalAddons {
 
 export const TERMINAL_UNICODE_VERSION = "15-graphemes";
 
-export interface CreateTerminalAddonsOptions {
+interface CreateTerminalAddonsOptions {
   onRendererFallback?: () => void;
 }
 
@@ -108,7 +108,7 @@ function reportRendererFallback(reason: "unavailable" | "context-loss", error?: 
   void recordFrictionSignal({ area: "terminal", signal: "renderer_fallback" });
 }
 
-export function openExternalTerminalLink(uri: string): void {
+function openExternalTerminalLink(uri: string): void {
   const target = resolveExternalLinkTarget(uri);
   if (!target) return;
   openUrl(target).catch((error) => console.error("Failed to open link:", error));

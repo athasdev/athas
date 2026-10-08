@@ -14,7 +14,7 @@ import {
   upsertRecentFolder,
 } from "../utils/recent-folders";
 
-export interface RecentFolderImport {
+interface RecentFolderImport {
   path: string;
   sourceId?: string;
   sourceName?: string;

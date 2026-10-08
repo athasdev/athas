@@ -15,7 +15,7 @@ import { getApiBase } from "@/utils/api-base";
 import { commands } from "@/bindings/commands";
 import { createIntelligenceModelFetch } from "./intelligence-model-fetch";
 
-export interface IntelligenceSdkModelOptions {
+interface IntelligenceSdkModelOptions {
   /** Called with the cost, in US dollars, of each model response that reports one. */
   onCost?: (usd: number) => void;
 }

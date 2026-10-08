@@ -6,12 +6,12 @@ import {
 import type { TerminalSplitDirection } from "@/features/terminal/types/terminal.types";
 import { emitAppEvent } from "@/utils/app-events";
 
-export interface TerminalPaneDropTarget {
+interface TerminalPaneDropTarget {
   terminalId: string;
   zone: PaneDropZone;
 }
 
-export interface TerminalSplitDropOptions {
+interface TerminalSplitDropOptions {
   direction: TerminalSplitDirection;
   placement: SplitPlacement;
 }

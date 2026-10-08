@@ -90,7 +90,7 @@ export function normalizePullRequest(pr: PullRequest): PullRequest {
   };
 }
 
-export function normalizePullRequestDetails(details: PullRequestDetails): PullRequestDetails {
+function normalizePullRequestDetails(details: PullRequestDetails): PullRequestDetails {
   const record = details as PullRequestDetails & Record<string, unknown>;
   const statusChecks =
     details.statusChecks ??

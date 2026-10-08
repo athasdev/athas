@@ -18,7 +18,7 @@ export interface DockerContainerLogsState {
   error: string | null;
 }
 
-export type DockerContainerLogsAction =
+type DockerContainerLogsAction =
   | { type: "container-changed" }
   | { type: "stream-started"; streamId: string }
   | { type: "line-received"; line: DockerLogLine }

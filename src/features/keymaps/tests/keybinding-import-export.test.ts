@@ -141,6 +141,7 @@ describe("keybinding import/export", () => {
       ["workbench.action.findInFiles", "workbench.showGlobalSearch"],
       ["workbench.view.explorer", "workbench.showFileExplorer"],
       ["workbench.action.openSettings", "workbench.openSettings"],
+      ["workbench.action.openRecent", "file.open"],
     ];
     const imported = parseKeybindingsImportJson(
       JSON.stringify(

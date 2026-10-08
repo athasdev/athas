@@ -8,7 +8,7 @@ const AUTO_EVICTION_PROTECTED_TYPES = new Set<PaneContent["type"]>([
   "terminal",
 ]);
 
-export interface AutoEvictionOptions {
+interface AutoEvictionOptions {
   includePreviews?: boolean;
   /** Pane-owned tab state; pinned buffers are never evicted, previews only when allowed. */
   pinnedBufferIds?: ReadonlySet<string>;

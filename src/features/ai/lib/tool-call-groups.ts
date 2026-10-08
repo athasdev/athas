@@ -17,7 +17,7 @@ export type ToolActivityItem =
   /** Two or more steps fold into one summary row. */
   | { type: "group"; key: string; toolCalls: ToolCall[]; summary: ToolActivitySummary };
 
-export interface ToolActivityStep {
+interface ToolActivityStep {
   kind: AcpToolKind;
   /** Distinct files for file kinds, calls for everything else. */
   count: number;
@@ -47,7 +47,7 @@ export function isThought(toolCall: ToolCall): boolean {
   return kindOf(toolCall) === "think";
 }
 
-export function toolCallKey(toolCall: ToolCall, index: number): string {
+function toolCallKey(toolCall: ToolCall, index: number): string {
   return toolCall.id || `${toolCall.name}-${index}`;
 }
 

@@ -23,7 +23,7 @@ import { defaultEmojiPickerOptions, emojiLabels } from "@/utils/emoji-catalog";
 
 export type ProjectIconCategory = "files" | "emojis" | "icons";
 
-export interface ProjectSymbol {
+interface ProjectSymbol {
   value: string;
   name: string;
   keywords: string[];

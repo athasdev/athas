@@ -14,9 +14,7 @@ import {
   type FrictionSignalInput,
 } from "@/features/telemetry/services/friction-signals";
 import {
-  createAiEditOutcomePayload,
   createAiFailurePayload,
-  type AiEditOutcomeInput,
   type AiFailureInput,
 } from "@/features/telemetry/services/ai-signals";
 import { getApiBase } from "@/utils/api-base";
@@ -57,7 +55,6 @@ type TelemetryEventType =
   | "extension_update"
   | "friction"
   | "ai_failure"
-  | "ai_edit_outcome"
   | "crash_report";
 
 type TelemetryLogStatus = "local" | "queued" | "sent" | "failed" | "dropped" | "cleared";
@@ -662,16 +659,6 @@ export async function recordAiFailure(input: AiFailureInput) {
     mode: "optional",
     logEventType: `ai_failure:${input.kind}:${input.phase}`,
     logSummary: "Queued anonymous AI failure signal",
-  });
-}
-
-/** Whether an inline edit or Tab suggestion was accepted, rejected or failed. */
-export async function recordAiEditOutcome(input: AiEditOutcomeInput) {
-  const payload = createAiEditOutcomePayload(input);
-  return enqueueTelemetryEvent("ai_edit_outcome", payload, {
-    mode: "optional",
-    logEventType: `ai_edit_outcome:${input.surface}:${input.outcome}`,
-    logSummary: "Queued anonymous AI edit outcome",
   });
 }
 

@@ -1,6 +1,6 @@
 import type { OnboardingContext } from "../services/onboarding-state";
 
-export interface OnboardingViewModel {
+interface OnboardingViewModel {
   title: string;
   description: string;
   showSettings: boolean;
