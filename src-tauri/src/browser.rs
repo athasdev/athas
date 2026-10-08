@@ -191,6 +191,7 @@ pub struct BrowserCreateRequest {
    pub zoom: Option<f64>,
    /// Radius of the slot's corners in CSS pixels, so the page follows its
    /// rounded frame. Applied on macOS; other webviews stay square.
+   #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
    pub corner_radius: Option<f64>,
    /// Workbench shortcuts the page hands back to Athas while it has focus.
    pub key_bindings: Vec<BrowserKeyBinding>,

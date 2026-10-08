@@ -324,6 +324,10 @@ describe("CodeMirror editor", () => {
         end: { line: 0, column: 6, offset: 6 },
       };
       await act(async () => root.render(<CodeMirrorEditor bufferId="buffer-1" />));
+      // Mounting focuses the editor after the next paint; let that land before counting.
+      await act(
+        () => new Promise<void>((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0))),
+      );
       focus.mockClear();
 
       state.pendingNavigation = { bufferId: "buffer-1", range, focus: false };
