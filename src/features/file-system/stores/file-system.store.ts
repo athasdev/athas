@@ -22,7 +22,7 @@ import { useGitBlameStore } from "@/features/git/stores/git-blame.store";
 import { useGitStore } from "@/features/git/stores/git.store";
 import { gitDiffCache } from "@/features/git/services/git-diff-cache";
 import { ensureRemoteConnectionConnected } from "@/features/remote/services/remote-connection-client";
-import { buildRemoteRootPath, parseRemotePath } from "@/features/remote/utils/remote-path";
+import { buildRemoteRootPath, parseRemotePath } from "@/features/remote/services/remote-path";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { recordFrictionSignal } from "@/features/telemetry/services/telemetry";
 import { useSidebarStore } from "@/features/layout/stores/sidebar.store";
@@ -34,7 +34,7 @@ import {
   persistCurrentProjectUiState,
   restoreProjectPaneState,
   restoreProjectUiState,
-} from "@/features/workspace/persistence/workspace-ui-session";
+} from "@/features/workspace/persistence/services/workspace-ui-session";
 import { useWorkspaceTabsStore } from "@/features/workspace/stores/workspace-tabs.store";
 import { createAppWindow } from "@/features/window/services/create-app-window";
 import { serializeTerminals } from "@/features/terminal/services/terminal-session-storage";
@@ -43,13 +43,13 @@ import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
 import { createTerminalEventChannel } from "@/features/terminal/services/terminal-protocol";
 import { getFrontendTerminalSessionArgs } from "@/features/terminal/services/frontend-terminal-session";
 import { showAlertDialog, showPromptDialog } from "@/ui/dialog";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
-import { workspaceSessionRepository } from "@/features/workspace/persistence/workspace-session-repository";
-import { createWorkspaceSessionSaveQueue } from "@/features/workspace/persistence/workspace-session-save-queue";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
+import { workspaceSessionRepository } from "@/features/workspace/persistence/services/workspace-session-repository";
+import { createWorkspaceSessionSaveQueue } from "@/features/workspace/persistence/services/workspace-session-save-queue";
 import {
   buildWorkspaceBufferSnapshot,
   isLocalFileInWorkspace,
-} from "@/features/workspace/persistence/workspace-session-codec";
+} from "@/features/workspace/persistence/services/workspace-session-codec";
 import { switchWorkspaceRuntime } from "@/features/workspace/services/workspace-lifecycle";
 import { scheduleWorkspacePrewarm } from "@/features/workspace/services/workspace-prewarm";
 import {
@@ -122,8 +122,11 @@ import { getSymlinkInfo, openFolder, readDirectory } from "../api/file-system-ap
 import { useRecentFoldersStore } from "../stores/recent-folders.store";
 import { useRecentFilesStore } from "../stores/recent-files.store";
 import { buildRemoteWorkspaceTree } from "../controllers/remote-workspace";
-import { buildWslWorkspaceTree, getWslProjectName } from "@/features/wsl/services/wsl-workspace";
-import { buildWslPath, parseWslPath } from "@/features/wsl/utils/wsl-path";
+import {
+  buildWslWorkspaceTree,
+  getWslProjectName,
+} from "@/features/file-system/services/wsl-workspace";
+import { buildWslPath, parseWslPath } from "@/features/wsl/services/wsl-path";
 import { shouldIgnore, updateDirectoryContents } from "../controllers/directory-contents";
 import { prepareProjectTransitionWithUnsavedBuffers } from "../services/workspace-project-transition";
 import {

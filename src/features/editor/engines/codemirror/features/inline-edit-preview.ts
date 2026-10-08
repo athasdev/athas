@@ -15,7 +15,7 @@ import {
   WidgetType,
 } from "@codemirror/view";
 import { highlightCode, type Highlighter } from "@lezer/highlight";
-import type { InlineEditPreview } from "../../../inline-edit/inline-edit-preview";
+import type { InlineEditPreview } from "../../../types/inline-edit-preview.types";
 import type { Range } from "../../../types/editor.types";
 import type { LineSeparator } from "../document-change";
 import { fromBufferOffset } from "../position";

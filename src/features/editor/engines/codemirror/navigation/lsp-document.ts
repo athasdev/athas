@@ -1,6 +1,6 @@
 import type { ChangeSpec, Text } from "@codemirror/state";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
-import type { LspPosition, LspTextEdit } from "../../../lsp/workspace-edit";
+import type { LspPosition, LspTextEdit } from "../../../lsp/services/workspace-edit";
 import type { CodeMirrorHost } from "../host";
 
 /** Whether the host's buffer is a file a language server can answer for. */

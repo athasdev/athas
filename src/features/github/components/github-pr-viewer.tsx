@@ -2,7 +2,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { ViewerErrorState } from "@/features/viewer/components/viewer-state";
+import { ViewerErrorState } from "@/ui/viewer-state";
 import { Button } from "@/ui/button";
 import { showConfirmDialog } from "@/ui/dialog";
 import { DropdownMenuItem } from "@/ui/dropdown";

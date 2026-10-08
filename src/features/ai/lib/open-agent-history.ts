@@ -1,10 +1,10 @@
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { agentIsDetached } from "@/features/ai/detached/agent-window.store";
+import { agentIsDetached } from "@/features/ai/detached/stores/agent-window.store";
 import {
   focusAgentWindow,
   openAgentWindowSession,
-} from "@/features/ai/detached/agent-window-service";
+} from "@/features/ai/detached/services/agent-window-service";
 
 export function openAgentHistoryChat(chatId: string): string {
   if (agentIsDetached(chatId)) {

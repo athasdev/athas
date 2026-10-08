@@ -1,7 +1,7 @@
 import { EditorView } from "@codemirror/view";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { addEditorSelectionsToAgentChat } from "@/features/ai/services/add-selection-to-agent-chat";
-import type { EditorSelectionContext } from "@/features/ai/types/ai-context.types";
+import type { EditorSelectionContext } from "@/features/editor/types/editor-selection.types";
 import { EditorSelectionAgentAction } from "../../../components/selection/editor-selection-agent-action";
 import { useBufferStore } from "../../../stores/buffer.store";
 import { useInlineEditToolbarStore } from "../../../stores/inline-edit-toolbar.store";

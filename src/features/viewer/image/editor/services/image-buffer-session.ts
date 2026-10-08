@@ -1,5 +1,5 @@
 import type { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 import { showToast } from "@/utils/toast";
 import { ImageEditSession } from "./image-edit-session";
 import { saveImageToFile } from "../utils/image-file-utils";

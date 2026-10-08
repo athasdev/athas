@@ -10,7 +10,9 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/extensions/registry/extension-registry", () => ({
   extensionRegistry: { isLspSupported: () => true },
 }));
-vi.mock("@/features/editor/lsp/lsp-client", () => ({ LspClient: { getInstance: () => ({}) } }));
+vi.mock("@/features/editor/lsp/services/lsp-client", () => ({
+  LspClient: { getInstance: () => ({}) },
+}));
 vi.mock("@/features/settings/stores/settings.store", () => ({
   useSettingsStore: (selector: (state: unknown) => unknown) =>
     selector({ settings: { semanticTokens: true } }),

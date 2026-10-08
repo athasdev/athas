@@ -11,7 +11,7 @@ import {
   TrashIcon,
 } from "@/ui/icons";
 import { PathBreadcrumb } from "@/ui/path-breadcrumb";
-import { PaneContentHeader } from "@/features/panes/components/pane-content-chrome";
+import { PaneContentHeader } from "@/ui/pane-content-chrome";
 import { Button } from "@/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/ui/tabs";
 import { databaseChipClassName } from "../utils/database-surface";

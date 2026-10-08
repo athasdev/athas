@@ -68,7 +68,7 @@ vi.mock("../intelligence/services/intelligence-sdk-model", () => ({
   getIntelligenceSdkModel: async () => mocks.model,
 }));
 vi.mock("@tauri-apps/api/core", () => ({ invoke: mocks.invoke }));
-vi.mock("@/features/workspace/runtime/workspace-runtime-registry", () => ({
+vi.mock("@/features/workspace/services/workspace-runtime-registry", () => ({
   workspaceRuntimeRegistry: {
     getExistingStores: () =>
       mocks.backgroundDirty

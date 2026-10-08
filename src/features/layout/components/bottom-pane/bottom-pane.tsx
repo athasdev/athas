@@ -15,7 +15,7 @@ import TerminalContainer from "@/features/terminal/components/terminal-container
 import { cn } from "@/utils/cn";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
-import { WorkbenchFullscreenSurface } from "@/features/layout/components/workbench-fullscreen-surface";
+import { WorkbenchFullscreenSurface } from "@/ui/workbench-fullscreen-surface";
 import { emitAppEvent, onAppEvent } from "@/utils/app-events";
 import { BottomBufferPane } from "./bottom-buffer-pane";
 

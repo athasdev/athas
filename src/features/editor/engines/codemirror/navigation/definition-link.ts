@@ -6,7 +6,7 @@ import {
   ViewPlugin,
   type ViewUpdate,
 } from "@codemirror/view";
-import type { LspNavigationLocation } from "../../../lsp/location-navigation";
+import type { LspNavigationLocation } from "../../../lsp/services/location-navigation";
 import type { DocumentLink } from "./document-links";
 
 interface DefinitionLinkOptions {

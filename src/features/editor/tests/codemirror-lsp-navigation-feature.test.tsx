@@ -33,8 +33,8 @@ const settings = vi.hoisted(() => ({
 vi.mock("@/extensions/registry/extension-registry", () => ({
   extensionRegistry: { isLspSupported: () => true, getLanguageId: () => null },
 }));
-vi.mock("../lsp/lsp-client", () => ({ LspClient: { getInstance: () => lsp } }));
-vi.mock("../lsp/location-navigation", () => ({ navigateToLspLocation }));
+vi.mock("../lsp/services/lsp-client", () => ({ LspClient: { getInstance: () => lsp } }));
+vi.mock("../lsp/services/location-navigation", () => ({ navigateToLspLocation }));
 vi.mock("../lsp/stores/lsp.store", () => {
   const state = {
     lspStatus: { status: "connected", activeWorkspaces: ["/repo"], documentRevision: 1 },
@@ -61,7 +61,7 @@ vi.mock("../stores/buffer.store", () => ({
     }),
   },
 }));
-vi.mock("../extensions/api", () => ({ editorAPI }));
+vi.mock("../services/editor-api", () => ({ editorAPI }));
 vi.mock("sonner", () => ({ toast: { info: vi.fn(), error: vi.fn(), warning: vi.fn() } }));
 vi.mock("@/utils/platform", () => ({ isMac: () => true, IS_MAC: true, IS_WINDOWS: false }));
 

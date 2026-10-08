@@ -1,5 +1,5 @@
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
-import type { EditorSelectionContext } from "../types/ai-context.types";
+import type { EditorSelectionContext } from "@/features/editor/types/editor-selection.types";
 import type { PastedImage } from "../types/chat-composer.types";
 import { getBaseName } from "@/utils/path-helpers";
 import { describeContextReference, parseContextReference } from "../lib/context-references";

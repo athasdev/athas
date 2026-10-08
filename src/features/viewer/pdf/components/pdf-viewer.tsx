@@ -9,13 +9,10 @@ import { OpenExternalIcon } from "@/ui/icons";
 // Configure PDF.js worker
 import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { FilePathBreadcrumb } from "@/features/editor/components/toolbar/file-path-breadcrumb";
-import {
-  PaneContentHeader,
-  PaneContentStatusBar,
-} from "@/features/panes/components/pane-content-chrome";
+import { PaneContentHeader, PaneContentStatusBar } from "@/ui/pane-content-chrome";
 import { useResizeObserver } from "@/features/panes/hooks/use-resize-observer";
 import { ViewerLayout } from "@/features/viewer/components/viewer-layout";
-import { ViewerErrorState, ViewerLoadingState } from "@/features/viewer/components/viewer-state";
+import { ViewerErrorState, ViewerLoadingState } from "@/ui/viewer-state";
 import { ViewerZoomControls } from "@/features/viewer/components/viewer-zoom-controls";
 import { useViewerZoom } from "@/features/viewer/hooks/use-viewer-zoom";
 import { Button } from "@/ui/button";

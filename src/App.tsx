@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { parseDetachedWindowUrl } from "@/features/window/detached/detached-window-protocol";
+import { parseDetachedWindowUrl } from "@/features/window/detached/services/detached-window-protocol";
 import { recordStartupMilestoneAfterFrame } from "@/features/bootstrap/services/startup-performance";
 import {
   getWindowOpenDiagnostics,

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { useAgentWindowStore } from "@/features/ai/detached/agent-window.store";
+import { useAgentWindowStore } from "@/features/ai/detached/stores/agent-window.store";
 import { restoreAgentDrafts } from "@/features/ai/detached/agent-window-drafts";
 
 const mocks = vi.hoisted(() => ({
@@ -62,7 +62,7 @@ import {
   openAgentInNewWindow,
   captureAgentWindowSnapshot,
   type AgentWindowMessage,
-} from "@/features/ai/detached/agent-window-service";
+} from "@/features/ai/detached/services/agent-window-service";
 
 class TestChannel {
   static current: TestChannel;

@@ -12,7 +12,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { openCommitDiffBuffer } from "@/features/git/services/open-commit-diff-buffer";
-import { ViewerErrorState, ViewerLoadingState } from "@/features/viewer/components/viewer-state";
+import { ViewerErrorState, ViewerLoadingState } from "@/ui/viewer-state";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import {

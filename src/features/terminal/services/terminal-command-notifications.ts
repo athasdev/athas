@@ -1,5 +1,5 @@
 import { isPermissionGranted, sendNotification } from "@tauri-apps/plugin-notification";
-import { isAnyAthasWindowFocused } from "@/features/ai/services/agent-native-notifications";
+import { isAnyAthasWindowFocused } from "@/features/window/services/native-window-api";
 import { useNotificationsStore } from "@/features/notifications/stores/notifications.store";
 import type { NotificationType } from "@/features/notifications/types/notifications.types";
 import { showToast, type ToastInput } from "@/utils/toast";

@@ -1,5 +1,5 @@
 import { openCommitDiffBuffer } from "@/features/git/services/open-commit-diff-buffer";
-import { ViewerErrorState, ViewerLoadingState } from "@/features/viewer/components/viewer-state";
+import { ViewerErrorState, ViewerLoadingState } from "@/ui/viewer-state";
 import {
   ChatBubbleTextIcon,
   CheckCircleIcon,

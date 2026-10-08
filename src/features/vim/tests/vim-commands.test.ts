@@ -14,7 +14,7 @@ const mocks = vi.hoisted(() => ({
   writeFile: vi.fn(),
 }));
 
-vi.mock("@/features/editor/lsp/lsp-client", () => ({
+vi.mock("@/features/editor/lsp/services/lsp-client", () => ({
   LspClient: {
     getInstance: () => ({
       notifyDocumentSave: mocks.notifyDocumentSave,

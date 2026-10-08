@@ -4,7 +4,7 @@ import {
   useTerminalTabsStore,
 } from "@/features/terminal/stores/terminal-tabs.store";
 import { getLayoutTerminalIds } from "@/features/terminal/utils/terminal-layout";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 
 function createTerminal(id: string) {
   useTerminalTabsStore.getState().actions.dispatch({

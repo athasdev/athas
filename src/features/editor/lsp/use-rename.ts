@@ -3,9 +3,9 @@ import { readBufferRevision, readBufferText } from "@/features/editor/services/b
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import { getLineTextFromContent } from "@/features/editor/services/position";
 import { useActiveWorkspaceId } from "@/features/workspace/stores/create-workspace-scoped-store";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 import { showToast } from "@/utils/toast";
-import { LspClient } from "./lsp-client";
+import { LspClient } from "./services/lsp-client";
 import {
   applyWorkspaceEdit,
   isWorkspaceEdit,
@@ -13,7 +13,7 @@ import {
   offsetFromPosition,
   normalizeWorkspaceEditPath,
   type WorkspaceEditContext,
-} from "./workspace-edit";
+} from "./services/workspace-edit";
 import { logger } from "@/utils/logger";
 import { onAppEvent } from "@/utils/app-events";
 import { getActiveBufferId } from "@/features/panes/stores/pane-selectors";

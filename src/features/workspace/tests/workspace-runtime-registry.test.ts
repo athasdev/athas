@@ -1,6 +1,6 @@
 import { createStore } from "zustand/vanilla";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { WorkspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { WorkspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 
 describe("WorkspaceRuntimeRegistry", () => {
   let registry: WorkspaceRuntimeRegistry;

@@ -26,7 +26,7 @@ import {
   recordAgentFileWrite,
 } from "@/features/ai/services/agent-edits-service";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 import { isMac, isWindows } from "@/utils/platform";
 import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { useIntelligenceSettingsStore } from "../stores/intelligence-settings.store";

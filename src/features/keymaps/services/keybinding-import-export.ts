@@ -1,7 +1,7 @@
 import {
   isKeybindingPreset,
   type KeybindingPreset,
-} from "@/features/keymaps/defaults/keybinding-presets";
+} from "@/features/keymaps/constants/keybinding-presets";
 import type { Keybinding } from "@/features/keymaps/types/keymaps.types";
 import { currentPlatform } from "@/utils/platform";
 import { parse, printParseErrorCode, type ParseError } from "jsonc-parser";

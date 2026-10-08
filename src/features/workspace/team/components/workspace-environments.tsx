@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import {
   loadRemoteConnections,
   connectRemoteConnection,
-} from "@/features/remote/services/remote-connection-actions";
+} from "@/features/workspace/services/remote-connection-actions";
 import type { RemoteConnection } from "@/features/remote/types/remote.types";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { Button } from "@/ui/button";

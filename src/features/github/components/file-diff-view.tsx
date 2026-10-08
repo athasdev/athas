@@ -1,10 +1,6 @@
 import { ChevronDownIcon, ChevronRightIcon } from "@/ui/icons";
 import { memo, useMemo } from "react";
-import {
-  ViewerErrorState,
-  ViewerLoadingState,
-  ViewerState,
-} from "@/features/viewer/components/viewer-state";
+import { ViewerErrorState, ViewerLoadingState, ViewerState } from "@/ui/viewer-state";
 import { DiffFileContent } from "@/features/git/components/diff/diff-file-content";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";

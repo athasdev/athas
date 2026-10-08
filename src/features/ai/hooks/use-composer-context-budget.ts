@@ -5,7 +5,7 @@ import { loadContextProjectRules } from "@/features/ai/lib/project-rules";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { getProviderById } from "@/features/ai/types/providers.types";
-import type { EditorSelectionContext } from "@/features/ai/types/ai-context.types";
+import type { EditorSelectionContext } from "@/features/editor/types/editor-selection.types";
 import type { ContextBudget } from "@/features/ai/types/context-budget.types";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import { useBuffersTextRevision } from "@/features/editor/hooks/use-buffer-text";

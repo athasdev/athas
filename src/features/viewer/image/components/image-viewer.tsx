@@ -7,13 +7,10 @@ import {
   saveImageBufferById,
 } from "../editor/services/image-buffer-session";
 import { FilePathBreadcrumb } from "@/features/editor/components/toolbar/file-path-breadcrumb";
-import {
-  PaneContentHeader,
-  PaneContentStatusBar,
-} from "@/features/panes/components/pane-content-chrome";
+import { PaneContentHeader, PaneContentStatusBar } from "@/ui/pane-content-chrome";
 import { useResizeObserver } from "@/features/panes/hooks/use-resize-observer";
 import { ViewerLayout } from "@/features/viewer/components/viewer-layout";
-import { ViewerErrorState, ViewerLoadingState } from "@/features/viewer/components/viewer-state";
+import { ViewerErrorState, ViewerLoadingState } from "@/ui/viewer-state";
 import { ImageEditorToolbar } from "@/features/viewer/image/editor/components/image-editor-toolbar";
 import { ImageResizeDialog } from "@/features/viewer/image/editor/components/image-resize-dialog";
 import { useImageOperations } from "@/features/viewer/image/editor/hooks/use-image-operations";

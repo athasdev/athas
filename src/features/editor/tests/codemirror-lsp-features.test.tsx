@@ -33,7 +33,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/extensions/registry/extension-registry", () => ({
   extensionRegistry: { isLspSupported: () => true },
 }));
-vi.mock("@/features/editor/lsp/lsp-client", () => ({
+vi.mock("@/features/editor/lsp/services/lsp-client", () => ({
   LspClient: { getInstance: () => mocks.client },
 }));
 vi.mock("@/features/settings/stores/settings.store", () => ({
@@ -69,7 +69,7 @@ vi.mock("@/features/diagnostics/stores/diagnostics.store", () => {
 vi.mock("@/features/editor/lsp/stores/lsp.store", () => ({
   useLspStore: { subscribe: () => () => {} },
 }));
-vi.mock("@/features/editor/intelligence-completion/intelligence-completion-service", () => ({
+vi.mock("@/features/ai/intelligence/services/intelligence-completion-service", () => ({
   canRequestIntelligenceCompletion: () => false,
   registerIntelligenceCompletionResume: vi.fn(),
   requestIntelligenceCompletion: vi.fn(async () => null),
@@ -77,7 +77,7 @@ vi.mock("@/features/editor/intelligence-completion/intelligence-completion-servi
   INTELLIGENCE_COMPLETION_PREFIX_CHARS: 12000,
   INTELLIGENCE_COMPLETION_SUFFIX_CHARS: 4000,
 }));
-vi.mock("@/features/editor/markdown/code-highlight", () => ({
+vi.mock("@/features/editor/markdown/services/code-highlight", () => ({
   highlightMarkdownCodeBlocks: async (html: string) => html,
 }));
 

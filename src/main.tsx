@@ -1,7 +1,7 @@
 import { createRoot } from "react-dom/client";
 import "./styles.css";
 import App from "./App.tsx";
-import { parseDetachedWindowUrl } from "./features/window/detached/detached-window-protocol";
+import { parseDetachedWindowUrl } from "./features/window/detached/services/detached-window-protocol";
 import { useBootstrapPhaseStore } from "./features/bootstrap/stores/bootstrap-phase.store.ts";
 import { installDevelopmentPerformanceMeasureCleanup } from "@/features/bootstrap/services/performance-measure-retention.ts";
 import { recordStartupMilestone } from "@/features/bootstrap/services/startup-performance.ts";

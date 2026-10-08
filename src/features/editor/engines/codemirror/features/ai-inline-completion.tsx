@@ -16,7 +16,7 @@ import {
   WidgetType,
 } from "@codemirror/view";
 import { useEffect, useMemo, useRef } from "react";
-import { recordRecentEdit } from "@/features/editor/intelligence-completion/intelligence-completion-context";
+import { recordRecentEdit } from "@/features/ai/intelligence/services/intelligence-completion-context";
 import {
   canRequestIntelligenceCompletion,
   INTELLIGENCE_COMPLETION_DEBOUNCE_MS,
@@ -25,7 +25,7 @@ import {
   type IntelligenceCompletionRequest,
   registerIntelligenceCompletionResume,
   requestIntelligenceCompletion,
-} from "@/features/editor/intelligence-completion/intelligence-completion-service";
+} from "@/features/ai/intelligence/services/intelligence-completion-service";
 import type { LineSeparator } from "../document-change";
 import { type CodeMirrorHost, useCodeMirrorExtension } from "../host";
 

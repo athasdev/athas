@@ -10,7 +10,7 @@ vi.mock("../../api/git-remotes-api", () => ({ pushChanges: vi.fn(), pullChanges:
 vi.mock("../../stores/git-blame.store", () => ({
   useGitBlameStore: { getState: () => ({ actions: { clearAllBlame: vi.fn() } }) },
 }));
-vi.mock("@/features/editor/services/editor-inline-edit-service", () => ({
+vi.mock("@/features/ai/intelligence/services/intelligence-text-service", () => ({
   requestInlineEdit: vi.fn(),
   InlineEditError: class extends Error {},
 }));

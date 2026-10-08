@@ -5,7 +5,7 @@ import {
   MarkdownSanitizeCache,
   sanitizeMarkdown,
   sanitizeMarkdownBlocks,
-} from "../markdown/parser";
+} from "../markdown/services/parser";
 import { renderMarkdown } from "../markdown/render-markdown";
 
 const README = `---

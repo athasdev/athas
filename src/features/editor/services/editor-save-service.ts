@@ -4,7 +4,7 @@ import {
   type BufferStoreOwner,
 } from "./buffer-store-owner";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
-import { parseCollaborationNoteBufferPath } from "@/features/collaboration/services/collaboration-sidebar-model";
+import { parseCollaborationNoteBufferPath } from "./virtual-buffer-paths";
 import { getWorkspaceResourceProvider } from "@/features/file-system/services/workspace-resource-provider";
 import { showToast } from "@/utils/toast";
 import { useFileWatcherStore } from "@/features/file-system/stores/file-watcher.store";
@@ -303,7 +303,7 @@ async function performEditorSave(
   let contentToSave = snapshotContent;
   try {
     if (reason === "save" && !isRemoteFile && settings.formatOnSave) {
-      const { formatContent } = await import("@/features/editor/formatter/formatter-service");
+      const { formatContent } = await import("@/features/editor/services/formatter-service");
       const languageId = extensionRegistry.getLanguageId(activeBuffer.path);
       const formatResult = await formatContent({
         filePath: activeBuffer.path,
@@ -342,10 +342,10 @@ async function performEditorSave(
   }
   if (!isRemoteFile && reason === "save") {
     try {
-      const { LspClient } = await import("@/features/editor/lsp/lsp-client");
+      const { LspClient } = await import("@/features/editor/lsp/services/lsp-client");
       await LspClient.getInstance().notifyDocumentSave(activeBuffer.path);
       if (settings.lintOnSave) {
-        const { lintContent } = await import("@/features/editor/linter/linter-service");
+        const { lintContent } = await import("@/features/editor/services/linter-service");
         const { convertLintDiagnostic, useDiagnosticsStore } =
           await import("@/features/diagnostics/stores/diagnostics.store");
         const languageId = extensionRegistry.getLanguageId(activeBuffer.path);

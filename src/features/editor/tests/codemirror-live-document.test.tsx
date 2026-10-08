@@ -43,7 +43,7 @@ vi.mock("../stores/state.store", () => {
     }),
   };
 });
-vi.mock("../extensions/api", () => ({
+vi.mock("../services/editor-api", () => ({
   editorAPI: {
     setViewportRef: vi.fn(),
     getViewportRef: () => null,

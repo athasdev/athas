@@ -11,7 +11,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import type { GitHubDeliveryContent } from "@/features/panes/types/pane-content.types";
 import { openCommitDiffBuffer } from "@/features/git/services/open-commit-diff-buffer";
 import { resolveProjectGitHubRepository } from "@/features/views/services/view-github";
-import { ViewerErrorState, ViewerLoadingState } from "@/features/viewer/components/viewer-state";
+import { ViewerErrorState, ViewerLoadingState } from "@/ui/viewer-state";
 import { Button } from "@/ui/button";
 import { ArrowClockwiseIcon, CopyIcon, OpenExternalIcon, TagIcon } from "@/ui/icons";
 import { ResourceActionsMenu, ResourceDocument, ResourceSummary } from "@/ui/resource";
@@ -30,12 +30,8 @@ import { Spinner } from "@/ui/spinner";
 import { writeClipboardText } from "@/utils/clipboard";
 import { useDeliveryDetail } from "../hooks/use-delivery-detail";
 import { deliveryKeys, notifyDeliveryChanged } from "../services/github-delivery-service";
-import {
-  deliveryBufferPath,
-  isRelease,
-  releaseTitle,
-  safeDeliveryUrl,
-} from "../services/github-delivery";
+import { deliveryBufferPath } from "@/features/editor/services/virtual-buffer-paths";
+import { isRelease, releaseTitle, safeDeliveryUrl } from "../services/github-delivery";
 import type { Release } from "../types/github-delivery.types";
 import { ReleaseDetails, ReleaseSummary } from "./release-details";
 import { DeploymentDetails, DeploymentSummary } from "./deployment-details";

@@ -28,7 +28,7 @@ import { toast } from "sonner";
 import {
   InlineEditError,
   requestInlineEdit,
-} from "@/features/editor/services/editor-inline-edit-service";
+} from "@/features/ai/intelligence/services/intelligence-text-service";
 import { commitChanges } from "../../api/git-commits-api";
 import { pullChanges, pushChanges, type GitRemoteActionResult } from "../../api/git-remotes-api";
 import { useGitBlameStore } from "../../stores/git-blame.store";

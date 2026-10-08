@@ -2,7 +2,7 @@
 import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import type { EditorContent } from "@/features/panes/types/pane-content.types";
 import { GlobalSearchResults } from "../components/global-search-results";

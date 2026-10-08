@@ -25,7 +25,7 @@ vi.mock("@/features/file-system/stores/file-system.store", () => {
   };
 });
 
-vi.mock("@/features/editor/lsp/lsp-client", () => ({
+vi.mock("@/features/editor/lsp/services/lsp-client", () => ({
   LspClient: {
     getInstance: () => ({
       stopForFile: mocks.stopForFile,

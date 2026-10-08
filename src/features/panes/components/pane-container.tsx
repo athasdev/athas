@@ -7,7 +7,7 @@ import type { DatabaseType } from "@/features/database/types/provider.types";
 import {
   PROVIDER_REGISTRY,
   type DatabaseViewerProps,
-} from "@/features/database/providers/provider-registry";
+} from "@/features/database/services/provider-registry";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import type { Buffer } from "@/features/editor/stores/buffer.store";
 import { getBufferById } from "@/features/editor/stores/buffer-index";

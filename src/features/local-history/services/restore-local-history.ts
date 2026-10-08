@@ -4,7 +4,7 @@ import { getSourceEditorBufferByPath } from "@/features/editor/stores/buffer-ind
 import { getWorkspaceResourceProvider } from "@/features/file-system/services/workspace-resource-provider";
 import { useFileWatcherStore } from "@/features/file-system/stores/file-watcher.store";
 import { emitGitChanged } from "@/features/git/events/git-events";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 import { showConfirmDialog } from "@/ui/dialog";
 import { readLocalHistoryEntry, recordLocalHistoryFile } from "../api/local-history-api";
 import { readBufferRevision, readBufferText } from "@/features/editor/services/buffer-text";

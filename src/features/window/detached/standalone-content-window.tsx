@@ -8,11 +8,11 @@ import {
 import { TerminalHost } from "@/features/terminal/components/terminal-host";
 import { TerminalTab } from "@/features/terminal/components/terminal-tab";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
-import { ViewerLoadingState } from "@/features/viewer/components/viewer-state";
-import { parseResourceWindowPayload } from "./detached-resource-service";
+import { ViewerLoadingState } from "@/ui/viewer-state";
+import { parseResourceWindowPayload } from "./services/detached-resource-service";
 import { AppQueryProvider } from "@/components/app-query-provider";
 import { DetachedWindowShell } from "./detached-window-shell";
-import { useDetachedWindow } from "./use-detached-window";
+import { useDetachedWindow } from "./hooks/use-detached-window";
 import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 const SettingsView = lazy(() => import("@/features/settings/components/settings-workbench-view"));

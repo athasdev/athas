@@ -1,6 +1,6 @@
-import { openTerminalWindow } from "@/features/window/detached/standalone-content-service";
-import { useNewAgentAction } from "@/features/ai/hooks/use-new-agent-action";
+import { openTerminalWindow } from "@/features/window/detached/services/standalone-content-service";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { keymapRegistry } from "@/features/keymaps/services/keymap-registry";
 import { usePaneStore } from "@/features/panes/stores/pane.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
@@ -16,7 +16,6 @@ export function NewTabMenu({ paneId }: { paneId: string }) {
   const { setActivePane } = usePaneStore.use.actions();
   const { openBuffer, openBrowserBuffer, openTerminalBuffer } = useBufferStore.use.actions();
   const terminalEnabled = useSettingsStore((state) => state.settings.coreFeatures.terminal);
-  const openAgent = useNewAgentAction();
 
   const createInPane = (action: () => void) => {
     setActivePane(paneId);
@@ -67,7 +66,11 @@ export function NewTabMenu({ paneId }: { paneId: string }) {
             New Terminal Window
           </DropdownMenuItem>
         )}
-        <DropdownMenuItem onClick={() => createInPane(openAgent)}>
+        <DropdownMenuItem
+          onClick={() =>
+            createInPane(() => void keymapRegistry.executeCommand("workbench.agentLauncher"))
+          }
+        >
           <SparkleIcon />
           New Agent
         </DropdownMenuItem>

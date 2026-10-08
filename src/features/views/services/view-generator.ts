@@ -1,4 +1,4 @@
-import { requestInlineEdit } from "@/features/editor/services/editor-inline-edit-service";
+import { requestInlineEdit } from "@/features/ai/intelligence/services/intelligence-text-service";
 import type { GitHubRepository } from "@/features/views/services/view-github";
 import type { CustomViewDefinition } from "@/features/views/types/view.types";
 

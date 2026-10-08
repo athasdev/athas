@@ -1,5 +1,5 @@
 import { EyeIcon, PenIcon, SparkleIcon } from "@/ui/icons";
-import { toggleMarkdownPreview } from "@/features/editor/markdown/toggle-markdown-preview";
+import { toggleMarkdownPreview } from "@/features/editor/markdown/services/toggle-markdown-preview";
 import { isMarkdownFile } from "@/features/editor/services/lines";
 import type { Command } from "../types/keymaps.types";
 import {

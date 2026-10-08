@@ -1,4 +1,5 @@
-import { getAllWindows, getCurrentWindow, UserAttentionType } from "@tauri-apps/api/window";
+import { getCurrentWindow, UserAttentionType } from "@tauri-apps/api/window";
+import { isAnyAthasWindowFocused } from "@/features/window/services/native-window-api";
 import {
   isPermissionGranted,
   requestPermission,
@@ -208,17 +209,6 @@ export function createAgentNativeNotificationService(
       pendingNotifications.delete(key);
     }
   };
-}
-
-export async function isAnyAthasWindowFocused(): Promise<boolean> {
-  try {
-    const windows = await getAllWindows();
-    const focusStates = await Promise.all(windows.map((window) => window.isFocused()));
-    return focusStates.some(Boolean);
-  } catch {
-    if (typeof document === "undefined") return true;
-    return document.visibilityState === "visible" && document.hasFocus();
-  }
 }
 
 async function isThisWindowFocused(): Promise<boolean> {

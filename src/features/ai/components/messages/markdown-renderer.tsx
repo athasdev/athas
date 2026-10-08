@@ -17,7 +17,7 @@ import {
   HighlightedCode,
   useCodeHighlightSegments,
 } from "@/features/editor/markdown/highlighted-code";
-import { normalizeCodeFenceLanguage } from "@/features/editor/markdown/language-map";
+import { normalizeCodeFenceLanguage } from "@/features/editor/markdown/services/language-map";
 import { openExternalUrl } from "@/utils/external-url";
 import { Button } from "@/ui/button";
 import { TextLink } from "@/ui/text-link";

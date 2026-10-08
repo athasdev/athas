@@ -5,7 +5,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getWorkspaceResourceProvider } from "@/features/file-system/services/workspace-resource-provider";
 import type { FileSearchResult, SearchMatch } from "@/features/file-search/api/file-search-api";
 import type { EditorContent, PaneContent } from "@/features/panes/types/pane-content.types";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 
 const EXPANDED_CONTEXT_LINES = 7;
 const emptyBuffers: PaneContent[] = [];

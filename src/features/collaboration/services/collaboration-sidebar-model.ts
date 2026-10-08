@@ -63,7 +63,6 @@ const NOTES_START_MARKER = "<!-- athas:notes -->";
 const NOTES_END_MARKER = "<!-- /athas:notes -->";
 const NOTES_WORKSPACE_START_MARKER = "<!-- athas:notes-workspace";
 const NOTES_WORKSPACE_END_MARKER = "/athas:notes-workspace -->";
-const COLLABORATION_NOTE_BUFFER_PREFIX = "athas-collaboration://channel/";
 
 function getMarkedSection(contentMarkdown: string, startMarker: string, endMarker: string) {
   const start = contentMarkdown.indexOf(startMarker);
@@ -507,29 +506,4 @@ export function deleteCollaborationNoteItem({
     threadsMarkdown,
     notesMarkdown: buildNotesWorkspace(nextItems),
   });
-}
-
-export function buildCollaborationNoteBufferPath(channelId: number, notePath: string) {
-  return `${COLLABORATION_NOTE_BUFFER_PREFIX}${channelId}/notes/${encodeURIComponent(notePath)}`;
-}
-
-export function parseCollaborationNoteBufferPath(path: string): {
-  channelId: number;
-  notePath: string;
-} | null {
-  if (!path.startsWith(COLLABORATION_NOTE_BUFFER_PREFIX)) return null;
-
-  const rest = path.slice(COLLABORATION_NOTE_BUFFER_PREFIX.length);
-  const [channelIdText, marker, encodedNotePath] = rest.split("/");
-  const channelId = Number(channelIdText);
-  if (!Number.isInteger(channelId) || marker !== "notes" || !encodedNotePath) return null;
-
-  try {
-    return {
-      channelId,
-      notePath: decodeURIComponent(encodedNotePath),
-    };
-  } catch {
-    return null;
-  }
 }

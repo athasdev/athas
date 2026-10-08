@@ -1,6 +1,6 @@
 import { ModelConnectionPicker } from "@/features/ai/components/selectors/model-connection-picker";
 import { getDefaultSetting } from "@/features/settings/config/default-settings";
-import { useTabCompletionModel } from "@/features/settings/hooks/use-tab-completion-model";
+import { useTabCompletionModel } from "@/features/ai/hooks/use-tab-completion-model";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import Badge from "@/ui/badge";
 import Switch from "@/ui/switch";

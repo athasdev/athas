@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 import type { EditorContent } from "@/features/panes/types/pane-content.types";
 import { restoreLocalHistorySnapshot } from "../services/restore-local-history";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";

@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import { AgentSessionSidebarItem } from "@/features/ai/components/agent-session-sidebar-item";
 import { AgentSessionIcon } from "@/features/ai/components/icons/agent-session-icon";
-import { openAgentInNewWindow } from "@/features/ai/detached/agent-window-service";
-import { useAgentWindowStore } from "@/features/ai/detached/agent-window.store";
+import { openAgentInNewWindow } from "@/features/ai/detached/services/agent-window-service";
+import { useAgentWindowStore } from "@/features/ai/detached/stores/agent-window.store";
 import { useChatAttention } from "@/features/ai/hooks/use-chat-attention";
 import { useNewAgentAction } from "@/features/ai/hooks/use-new-agent-action";
 import { selectAcpAgentStatus } from "@/features/ai/services/acp-session-state";

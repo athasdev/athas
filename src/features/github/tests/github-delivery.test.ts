@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
+import { deliveryBufferPath } from "@/features/editor/services/virtual-buffer-paths";
 import {
-  deliveryBufferPath,
   deploymentState,
   groupDelivery,
   matchesDelivery,

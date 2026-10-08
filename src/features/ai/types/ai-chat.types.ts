@@ -10,7 +10,7 @@ import type {
 } from "@/features/ai/types/acp.types";
 import type { ChatFollowUpAction } from "@/features/ai/lib/follow-up-actions";
 import type { FileEntry } from "@/features/file-system/types/app.types";
-import type { EditorSelectionContext } from "@/features/ai/types/ai-context.types";
+import type { EditorSelectionContext } from "@/features/editor/types/editor-selection.types";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import type { GenerativeUIView } from "@/extensions/ui/types/generative-ui";
 import type { ChatMessageError } from "@/features/ai/types/chat-error.types";

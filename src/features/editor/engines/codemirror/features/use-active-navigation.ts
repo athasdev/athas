@@ -1,7 +1,7 @@
 import { EditorSelection, type Text } from "@codemirror/state";
 import { useEffect, useRef } from "react";
-import { editorAPI } from "../../../extensions/api";
-import { LspClient } from "../../../lsp/lsp-client";
+import { editorAPI } from "../../../services/editor-api";
+import { LspClient } from "../../../lsp/services/lsp-client";
 import type { CodeMirrorHost } from "../host";
 import {
   clearActiveCodeMirrorNavigation,

@@ -1,5 +1,5 @@
-import { parseRemotePath } from "@/features/remote/utils/remote-path";
-import { buildWslPath, parseWslPath } from "@/features/wsl/utils/wsl-path";
+import { parseRemotePath } from "@/features/remote/services/remote-path";
+import { buildWslPath, parseWslPath } from "@/features/wsl/services/wsl-path";
 import { joinPath } from "@/utils/path-helpers";
 
 export interface TerminalFileLink {

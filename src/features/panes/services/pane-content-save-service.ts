@@ -5,7 +5,7 @@ import {
   saveEditorBufferAsById,
 } from "@/features/editor/services/editor-save-service";
 import { saveImageBufferById } from "@/features/viewer/image/editor/services/image-buffer-session";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 export function savePaneContent(
   owner: ReturnType<typeof captureBufferStoreOwner>,
   bufferId: string,

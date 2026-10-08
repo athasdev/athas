@@ -1,6 +1,6 @@
 import { enableMapSet } from "immer";
 import { beforeEach, describe, expect, it } from "vite-plus/test";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 import { useFileTreeStore } from "../stores/file-explorer-tree.store";
 
 enableMapSet();

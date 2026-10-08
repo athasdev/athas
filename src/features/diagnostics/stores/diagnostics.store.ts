@@ -1,6 +1,6 @@
 import type { Diagnostic as LSPDiagnostic } from "vscode-languageserver-protocol";
 import { create } from "zustand";
-import type { Diagnostic as LintDiagnostic } from "@/features/editor/linter/linter-service";
+import type { Diagnostic as LintDiagnostic } from "@/features/editor/services/linter-service";
 import { createSelectors } from "@/utils/zustand-selectors";
 import type { Diagnostic } from "../types/diagnostics.types";
 

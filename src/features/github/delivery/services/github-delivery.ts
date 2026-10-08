@@ -1,6 +1,5 @@
 import { groupByDate } from "../../utils/github-sidebar-groups";
 import type {
-  DeliveryKind,
   DeliveryResource,
   Deployment,
   DeploymentFilter,
@@ -105,10 +104,6 @@ export function groupDelivery(items: DeliveryResource[]) {
   return groupByDate(items, (item) =>
     isRelease(item) ? (item.published_at ?? item.created_at) : item.created_at,
   );
-}
-
-export function deliveryBufferPath(kind: DeliveryKind, repoPath: string, id: number | "new") {
-  return `github-${kind}://${encodeURIComponent(repoPath)}/${id}`;
 }
 
 export function safeDeliveryUrl(value?: string | null): string | null {

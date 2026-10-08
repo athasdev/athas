@@ -1,5 +1,5 @@
 import { isDirtyContent } from "@/features/panes/types/pane-content.types";
-import { BrowserTabIcon } from "@/features/browser/components/browser-tab-icon";
+import { BrowserTabIcon } from "./browser-tab-icon";
 import { TagIcon, RocketIcon } from "@/ui/icons";
 import { AgentSessionIcon } from "@/features/ai/components/icons/agent-session-icon";
 import { AgentAttentionDot } from "@/features/ai/components/agent-attention-dot";

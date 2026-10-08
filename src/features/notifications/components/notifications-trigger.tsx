@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 import { NotificationsCommand } from "@/features/notifications/components/notifications-command";
-import { useGitHubNotifications } from "@/features/notifications/hooks/use-github-notifications";
+import { useGitHubNotifications } from "@/features/github/hooks/use-github-notifications";
 import { useNotificationsStore } from "@/features/notifications/stores/notifications.store";
 import type { NotificationCategoryFilter } from "@/features/notifications/types/notifications.types";
 import { Button } from "@/ui/button";

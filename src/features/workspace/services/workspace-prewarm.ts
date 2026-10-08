@@ -1,4 +1,4 @@
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 import {
   useWorkspaceTabsStore,
   type ProjectTab,

@@ -4,7 +4,7 @@
  */
 
 import { useEffect } from "react";
-import { LspClient } from "@/features/editor/lsp/lsp-client";
+import { LspClient } from "@/features/editor/lsp/services/lsp-client";
 
 /**
  * Initialize the LSP client singleton to set up diagnostics listener.

@@ -7,7 +7,7 @@ import {
   getProviderRequestLimits,
 } from "@/features/ai/lib/conversation-history";
 import type { ChatMode, Message } from "@/features/ai/types/ai-chat.types";
-import type { EditorSelectionContext } from "@/features/ai/types/ai-context.types";
+import type { EditorSelectionContext } from "@/features/editor/types/editor-selection.types";
 import type { ContextBudget } from "@/features/ai/types/context-budget.types";
 import type {
   ComposerBudgetGroup,

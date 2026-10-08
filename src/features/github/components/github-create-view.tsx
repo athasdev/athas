@@ -13,7 +13,7 @@ import type { GitHubFormContent } from "@/features/panes/types/pane-content.type
 import { getBranches } from "@/features/git/api/git-branches-api";
 import { getRefDiff } from "@/features/git/api/git-diff-api";
 import { getGitStatus } from "@/features/git/api/git-status-api";
-import { requestInlineEdit } from "@/features/editor/services/editor-inline-edit-service";
+import { requestInlineEdit } from "@/features/ai/intelligence/services/intelligence-text-service";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { Button } from "@/ui/button";

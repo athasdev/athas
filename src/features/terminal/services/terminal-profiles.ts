@@ -1,5 +1,5 @@
 import type { Settings } from "@/features/settings/types/settings.types";
-import { getWslShellId, parseWslPath } from "@/features/wsl/utils/wsl-path";
+import { getWslShellId, parseWslPath } from "@/features/wsl/services/wsl-path";
 import type { Shell, TerminalProfile } from "../types/terminal.types";
 
 export const SYSTEM_DEFAULT_PROFILE_ID = "system-default";

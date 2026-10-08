@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { subscribeToEditorDocumentChanges } from "../../services/editor-document-events";
-import { LspClient } from "../lsp-client";
+import { LspClient } from "../services/lsp-client";
 import { useLspStore } from "../stores/lsp.store";
 
 export interface CodeLensItem {

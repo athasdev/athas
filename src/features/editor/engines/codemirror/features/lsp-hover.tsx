@@ -10,7 +10,7 @@ import {
 import { useEffect, useMemo } from "react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { formatHoverContents } from "@/features/editor/lsp/hover-content";
-import { LspClient } from "@/features/editor/lsp/lsp-client";
+import { LspClient } from "@/features/editor/lsp/services/lsp-client";
 import { type CodeMirrorHost, useCodeMirrorExtension } from "../host";
 import { fromLspRange, isLspFile, toLspPosition } from "../lsp/lsp-positions";
 import { createMarkdownElement } from "../lsp/markdown-content";

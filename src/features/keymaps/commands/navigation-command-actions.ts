@@ -1,10 +1,10 @@
-import { editorAPI } from "@/features/editor/extensions/api";
+import { editorAPI } from "@/features/editor/services/editor-api";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import {
   navigateToLspLocation,
   type LspNavigationLocation,
-} from "@/features/editor/lsp/location-navigation";
+} from "@/features/editor/lsp/services/location-navigation";
 import { useJumpListStore } from "@/features/editor/stores/jump-list.store";
 import { setOutlineVisibilityPreference } from "@/features/outline/services/outline-visibility";
 import { navigateToJumpEntry } from "@/features/editor/services/jump-navigation";
@@ -59,7 +59,7 @@ async function goToActiveLspLocation(
     character: number,
   ) => Promise<LspNavigationLocation[] | null>,
 ): Promise<void> {
-  const { LspClient } = await import("@/features/editor/lsp/lsp-client");
+  const { LspClient } = await import("@/features/editor/lsp/services/lsp-client");
 
   const lspClient = LspClient.getInstance();
   const context = getActiveEditorContext();
@@ -140,9 +140,9 @@ export async function goToTypeDefinition(): Promise<void> {
 
 export async function goToReferences(): Promise<void> {
   const [{ LspClient }, { readFileContent }, { filePathFromUri }] = await Promise.all([
-    import("@/features/editor/lsp/lsp-client"),
+    import("@/features/editor/lsp/services/lsp-client"),
     import("@/features/file-system/api/file-operations"),
-    import("@/features/editor/lsp/workspace-edit"),
+    import("@/features/editor/lsp/services/workspace-edit"),
   ]);
 
   const lspClient = LspClient.getInstance();
@@ -232,7 +232,7 @@ export async function showCallHierarchy(): Promise<void> {
   const context = getActiveEditorContext();
   if (!context) return;
 
-  const { LspClient } = await import("@/features/editor/lsp/lsp-client");
+  const { LspClient } = await import("@/features/editor/lsp/services/lsp-client");
   const { activeBuffer, editorState } = context;
   const cursorPosition = editorState.cursorPosition;
   const lspClient = LspClient.getInstance();
@@ -265,7 +265,7 @@ export async function showTypeHierarchy(): Promise<void> {
   const context = getActiveEditorContext();
   if (!context) return;
 
-  const { LspClient } = await import("@/features/editor/lsp/lsp-client");
+  const { LspClient } = await import("@/features/editor/lsp/services/lsp-client");
   const { activeBuffer, editorState } = context;
   const cursorPosition = editorState.cursorPosition;
   const lspClient = LspClient.getInstance();

@@ -1,6 +1,6 @@
 import { BOTTOM_PANE_ID, ROOT_PANE_ID } from "@/features/panes/constants/pane";
 import { usePaneStore } from "@/features/panes/stores/pane.store";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 
 /**
  * Shows `bufferIds` as the root pane's tabs with `activeBufferId` active and focused, the state the

@@ -5,7 +5,7 @@ import {
   type WorkspaceCommandOutput,
 } from "@/bindings/commands";
 import { nanoid } from "nanoid";
-import { isRemotePath } from "@/features/remote/utils/remote-path";
+import { isRemotePath } from "@/features/remote/services/remote-path";
 import { useAIChatStore } from "../stores/ai-chat.store";
 import type { Message, ToolCall } from "../types/ai-chat.types";
 

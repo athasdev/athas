@@ -8,7 +8,7 @@ import {
   type ViewUpdate,
 } from "@codemirror/view";
 import { useMemo } from "react";
-import { LspClient } from "@/features/editor/lsp/lsp-client";
+import { LspClient } from "@/features/editor/lsp/services/lsp-client";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { type CodeMirrorHost, useCodeMirrorExtension } from "../host";
 import { isLspFile, toLspPosition } from "../lsp/lsp-positions";

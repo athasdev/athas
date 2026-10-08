@@ -1,9 +1,9 @@
 import { areProjectTabPathsEqual } from "@/features/workspace/services/project-tab-path";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useWorkspaceTabsStore } from "@/features/workspace/stores/workspace-tabs.store";
-import { parseRemotePath } from "@/features/remote/utils/remote-path";
+import { parseRemotePath } from "@/features/remote/services/remote-path";
 import { connectionStore } from "@/features/remote/stores/remote-connection.store";
-import { connectRemoteConnection } from "@/features/remote/services/remote-connection-actions";
+import { connectRemoteConnection } from "@/features/workspace/services/remote-connection-actions";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 
 export async function openManagedWorkspace(path: string, showManagement = false): Promise<void> {

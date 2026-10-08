@@ -1,5 +1,5 @@
-import { highlightMarkdownCodeBlocks } from "@/features/editor/markdown/code-highlight";
-import { parseMarkdown } from "@/features/editor/markdown/parser";
+import { highlightMarkdownCodeBlocks } from "@/features/editor/markdown/services/code-highlight";
+import { parseMarkdown } from "@/features/editor/markdown/services/parser";
 
 /**
  * Fills an element with rendered markdown from a language server (hover text, completion docs,

@@ -17,25 +17,57 @@
  * Layer folders are matched anywhere below the feature, so a subfeature such as
  * `editor/lsp/hooks/` follows the same rule. Test files are exempt as importers.
  *
- * `scripts/check/tests/feature-boundaries.test.ts` enforces two rules with a ratchet baseline in
+ * Features are also layered. Every feature sits in one tier of `layers.tiers`, lowest first:
+ *
+ * - `foundation`: platform helpers with no product feature underneath them (file search, remote
+ *   and WSL path formats and connections, telemetry). They are meant to import no other feature.
+ * - `core`: the workbench and the editing model (settings, keymaps, workspace, file system,
+ *   layout and window state, editor, panes, tabs, terminal, git, viewers, sidebar trees, search,
+ *   diagnostics and the other editor capabilities). Core features use each other freely.
+ * - `features`: product features built on the core (AI, GitHub, databases, Docker,
+ *   collaboration, sharing, custom views, onboarding, run actions, the browser, feedback).
+ * - `shell`: the parts that wire everything together (bootstrap, command palette, quick open).
+ *
+ * A file may import its own tier or a lower one. `layers.tierOverrides` moves a folder or file
+ * into another tier when it is a host for the tiers above it: command definitions in
+ * `keymaps/commands/`, the workbench chrome in `layout/components/` and `window/components/`, the
+ * pane container that renders every buffer type, and the settings pages. Overrides carry a reason
+ * like `publicFiles` entries and should stay rare; prefer moving the code.
+ *
+ * The tiers were derived from the import graph: a feature that most of the app imports and that
+ * imports few features back sits low, and the remaining upward imports are the debt the baseline
+ * tracks. To place a new feature, pick the lowest tier whose features it does not need to import
+ * from above, and add it to `layers.tiers` (the test fails while a feature has no tier).
+ *
+ * `scripts/check/tests/feature-boundaries.test.ts` enforces three rules with a ratchet baseline in
  * `feature-boundaries.baseline.json`:
  *
  * 1. `privateImports`: an import from one feature into a private file of another feature.
  * 2. `cycleEdges`: a cross-feature edge inside a module-level static import cycle (Tarjan SCC over
  *    value imports; `import type` and dynamic `import()` do not count).
+ * 3. `upwardImports`: imports from a lower tier into a higher one, counted per
+ *    `importer module -> imported module` pair (a module is a feature or a tier override) as
+ *    distinct importer/imported file pairs. Value, type-only and dynamic imports all count; test
+ *    files and `vi.mock` do not.
  *
- * The test fails on any violation missing from the baseline, and on any baseline entry that no
- * longer occurs, so the baseline only shrinks. To fix a new violation, import the owning feature's
- * public module instead, move the shared code into a public folder (or `src/utils`, `src/ui` when it
- * is app-wide), or break the cycle with `import type`, a callback, or `src/utils/app-events.ts`.
- * Only if the import is intended, list the file in `publicFiles` below with its reason.
+ * The test fails on any violation missing from the baseline (or an upward pair whose count grew),
+ * and on any baseline entry that no longer occurs (or whose count shrank), so the baseline only
+ * shrinks. To fix a new violation, import the owning feature's public module instead, move the
+ * shared code into a public folder (or `src/utils`, `src/ui` when it is app-wide), or break the
+ * cycle with `import type`, a callback, or `src/utils/app-events.ts`. For an upward import, move
+ * the shared type or helper down to the lower feature, run the higher feature's action through
+ * its command (`keymapRegistry.executeCommand`), notify through `src/utils/app-events.ts`, or move
+ * the code that needs the higher feature into it. Only if the import is intended, list the file
+ * in `publicFiles` below with its reason.
  *
  * After removing violations, shrink the baseline with:
  *
  *   bun scripts/check/feature-boundaries.ts --update
  *
- * `bun scripts/check/feature-boundaries.ts` (no flag) prints the difference against the baseline.
- * Never add entries to the baseline by hand to get a new violation through.
+ * `bun scripts/check/feature-boundaries.ts` (no flag) prints the difference against the baseline
+ * and the feature graph's bidirectional pairs and largest cycle; `--upward` lists every upward
+ * import and `--graph` every bidirectional pair. Never add entries to the baseline by hand, or
+ * raise a count, to get a new violation through.
  */
 
 export type FeatureBoundaryConfig = {
@@ -55,11 +87,28 @@ export type FeatureBoundaryConfig = {
    * `dir/**` (whole subtree). Every entry must match an existing file.
    */
   publicFiles: Record<string, Record<string, string>>;
+  layers: FeatureLayers;
+};
+
+export type FeatureTier = "foundation" | "core" | "features" | "shell";
+
+export type FeatureLayers = {
+  /** Tiers from lowest to highest. A file may import its own tier or a lower one. */
+  order: FeatureTier[];
+  /** Every feature folder, in exactly one tier. */
+  tiers: Record<FeatureTier, string[]>;
+  /**
+   * Parts of a feature that sit in a different tier than the feature, relative to the features
+   * root: an exact file or `dir/**`. The most specific match wins. Each one gives its reason.
+   */
+  tierOverrides: Record<string, { tier: FeatureTier; reason: string }>;
 };
 
 export type FeatureBoundaryBaseline = {
   privateImports: string[];
   cycleEdges: string[];
+  /** Upward imports per `importer module -> imported module`, counted as distinct file pairs. */
+  upwardImports: Record<string, number>;
 };
 
 const APP_SHELL = "Mounted by the app shell (src/App.tsx, src/main.tsx, src/workbench-app.tsx).";
@@ -113,15 +162,15 @@ export const featureBoundaries: FeatureBoundaryConfig = {
       "components/permissions/agent-allowed-actions-settings.tsx": SETTINGS_SECTION,
       "integrations/codex/codex-settings.tsx": SETTINGS_SECTION,
       "components/icons/provider-icons.tsx":
-        "Provider brand icons, shown wherever a provider is named.",
+        "Provider brand icons for the AI provider settings pages.",
       "components/selectors/model-connection-picker.tsx":
-        "The model picker; settings, inline edit and completion status choose models with it.",
+        "The model picker; AI settings and the completion status choose models with it.",
       "components/chat/chat-message.tsx": "Chat message rendering reused by shared-chat previews.",
       "components/messages/markdown-renderer.tsx":
         "Assistant markdown renderer reused for extension and skill descriptions.",
       "components/skills/skills-command.tsx": "Skills browser embedded in the extensions view.",
-      "detached/agent-window-service.ts": "Opens an agent in its own window (command entry point).",
-      "detached/agent-window.store.ts": "Whether agents are detached, read by the close guard.",
+      "inline-edit/components/inline-edit-popover.tsx":
+        "Inline edit prompt the code editor shows over the edited range.",
     },
     auth: {
       "components/account-menu.tsx": ACTIVITY_CHROME,
@@ -132,7 +181,6 @@ export const featureBoundaries: FeatureBoundaryConfig = {
     },
     browser: {
       "components/browser-view.tsx": PANE_VIEW,
-      "components/browser-tab-icon.tsx": TAB_DECORATION,
     },
     collaboration: {
       "components/collaboration-sidebar.tsx": SIDEBAR_VIEW,
@@ -143,8 +191,6 @@ export const featureBoundaries: FeatureBoundaryConfig = {
     database: {
       "components/database-sidebar.tsx": SIDEBAR_VIEW,
       "components/connection/connection-dialog.tsx": MAIN_LAYOUT,
-      "providers/provider-registry.ts":
-        "Database viewers by provider; the pane container picks one.",
     },
     debugger: {
       "components/debugger-view.tsx": "Debugger panel mounted in the bottom pane.",
@@ -159,39 +205,24 @@ export const featureBoundaries: FeatureBoundaryConfig = {
     editor: {
       "stores/buffer-index.ts":
         "Cached id/path lookups over the buffer list, used next to the buffer store.",
-      "lsp/lsp-client.ts":
-        "The app's LSP client; other features request hovers, symbols and edits through it.",
-      "lsp/workspace-edit.ts":
-        "Applies LSP workspace edits and builds file URIs for LSP and DAP callers.",
-      "lsp/location-navigation.ts": "Opens LSP locations; navigation commands go through it.",
-      "extensions/api.ts": "`editorAPI`, the imperative API to the active editor used by commands.",
-      "formatter/formatter-service.ts": "Format document and range entry points for commands.",
-      "linter/linter-service.ts":
-        "Lint entry point and the diagnostic shape the diagnostics store keeps.",
-      "agent-edits/agent-hunk-actions.ts": "Accept and reject agent hunks; AI commands call it.",
       "lib/wasm-parser/cache-indexeddb.ts":
-        "Tree-sitter parser cache shared with the extension installer.",
+        "Tree-sitter parser cache shared with the extension installer and diff highlighting.",
       "lib/wasm-parser/converter.ts":
         "Tree-sitter runtime used by language extension installation.",
       "lib/wasm-parser/extension-assets.ts":
-        "Tree-sitter asset lookup shared with language packaging.",
+        "Tree-sitter asset lookup shared with language packaging and diff and search highlighting.",
       "lib/wasm-parser/loader.ts": "Tree-sitter runtime used by the extension store lifecycle.",
       "lib/wasm-parser/tokenizer.ts":
         "Tree-sitter runtime used by language extension installation.",
       "lib/wasm-parser/tokenizer-worker-client.ts":
         "Off-thread tokenizer that diff and search excerpts highlight with.",
-      "markdown/code-highlight.ts":
-        "Markdown rendering shared with GitHub, AI chat and onboarding.",
       "markdown/highlighted-code.tsx":
-        "Markdown rendering shared with GitHub, AI chat and extensions.",
-      "markdown/language-map.ts": "Markdown fence language mapping shared with AI chat.",
-      "markdown/parser.ts": "Markdown rendering shared with GitHub, AI chat and onboarding.",
-      "markdown/styles.css": "Markdown rendering shared with GitHub, AI chat and onboarding.",
-      "markdown/use-highlighted-markdown.ts": "Markdown rendering shared with onboarding.",
-      "markdown/toggle-markdown-preview.ts": "Markdown preview toggle, an editor command.",
+        "Highlighted code block shared with AI chat and extension diff previews.",
+      "markdown/styles.css": "Markdown styles for GitHub and onboarding markdown.",
       "markdown/markdown-document-view.tsx": PANE_VIEW,
       "components/code-editor.tsx": "The text editor; panes and diff views render it.",
-      "components/codemirror-readonly-view.tsx": "Read-only code view for logs and generated text.",
+      "components/codemirror-readonly-view.tsx":
+        "Read-only code view; GitHub Actions logs render with it.",
       "components/multibuffer/multibuffer-workspace.tsx":
         "Multibuffer surface that search, diagnostics and diff views are built on.",
       "components/multibuffer/multibuffer-navigator-toggle.tsx":
@@ -241,14 +272,11 @@ export const featureBoundaries: FeatureBoundaryConfig = {
     },
     keymaps: {
       "components/keybinding-row.tsx": "Keybinding table row the keyboard settings page renders.",
-      "defaults/keybinding-presets.ts": "Keybinding presets offered by settings and onboarding.",
     },
     layout: {
       "components/main-layout.tsx": APP_SHELL,
       "components/zoom-indicator.tsx": APP_SHELL,
       "components/project-switcher.tsx": ACTIVITY_CHROME,
-      "components/workbench-fullscreen-surface.tsx":
-        "Fullscreen surface the split view renders panes into.",
     },
     "local-history": {
       "components/local-history-command.tsx": COMMAND_VIEW,
@@ -265,8 +293,6 @@ export const featureBoundaries: FeatureBoundaryConfig = {
       "components/outline-sidebar.tsx": "Outline panel the code editor shows beside the text.",
     },
     panes: {
-      "components/pane-content-chrome.tsx":
-        "Header and status bar chrome for views that other features render inside a pane.",
       "components/split-view-root.tsx": MAIN_LAYOUT,
       "components/pane-node-renderer.tsx": "Renders a pane tree; the bottom pane hosts one.",
       "components/resource-buffer-view.tsx": "Resource buffer host, reused by detached windows.",
@@ -280,8 +306,6 @@ export const featureBoundaries: FeatureBoundaryConfig = {
       "components/references-buffer.tsx": PANE_VIEW,
     },
     remote: {
-      "utils/remote-path.ts":
-        "The `remote://` path format is the remote feature's contract with the app.",
       "components/connection-form.tsx": "Remote connection form embedded in the project picker.",
       "components/password-prompt-dialog.tsx":
         "Remote password prompt used when connecting projects.",
@@ -319,7 +343,6 @@ export const featureBoundaries: FeatureBoundaryConfig = {
       "components/terminal-container.tsx": "Terminal panel mounted in the bottom pane.",
     },
     viewer: {
-      "components/viewer-state.tsx": "Shared loading, empty and error states for file viewers.",
       "binary/components/binary-file-viewer.tsx": PANE_VIEW,
       "image/components/image-viewer.tsx": PANE_VIEW,
       "pdf/components/pdf-viewer.tsx": PANE_VIEW,
@@ -338,40 +361,113 @@ export const featureBoundaries: FeatureBoundaryConfig = {
       "components/window-close-guard.tsx": MAIN_LAYOUT,
       "components/window-menu-bar.tsx": ACTIVITY_CHROME,
       "components/window-resize-border.tsx": APP_SHELL,
-      "detached/detached-window-protocol.ts": "Detached window URL and message protocol.",
-      "detached/detached-window-owner.ts":
-        "Opens and tracks detached windows for features that detach views.",
       "detached/detached-window-shell.tsx": "Window chrome for detached feature windows.",
-      "detached/use-detached-window.ts":
-        "Detached window lifecycle hook for detached feature windows.",
-      "detached/detached-resource-service.ts": "Opens a resource buffer in its own window.",
-      "detached/standalone-content-service.ts": "Opens terminals and settings in their own window.",
       "detached/detached-resource-window.tsx": APP_SHELL,
       "detached/standalone-content-window.tsx": APP_SHELL,
     },
     workspace: {
       "stores/create-workspace-scoped-store.ts":
         "Infrastructure for per-workspace stores used by most features.",
-      "runtime/workspace-runtime-registry.ts":
-        "Infrastructure for per-workspace stores used by most features.",
-      "persistence/workspace-session-repository.ts":
-        "Workspace session persistence; stores that own a session slice save and restore through it.",
-      "persistence/workspace-session-codec.ts": "Workspace session snapshot format.",
-      "persistence/workspace-session-save-queue.ts": "Debounced workspace session saves.",
-      "persistence/workspace-ui-defaults.ts": "Default per-project UI state for the layout store.",
-      "persistence/workspace-ui-session.ts":
-        "Saves and restores per-project UI state on project switches.",
       "project-picker/components/project-picker.tsx": ACTIVITY_CHROME,
       "project-icons/components/project-custom-icon.tsx":
-        "Project icon shown wherever a project is named.",
+        "Project icon the project switcher shows.",
       "project-icons/components/project-icon-picker.tsx":
         "Project icon picker opened from the project switcher.",
       "team/components/workspace-sidebar.tsx": SIDEBAR_VIEW,
       "team/components/workspace-management-view.tsx": PANE_VIEW,
     },
-    wsl: {
-      "utils/wsl-path.ts":
-        "The WSL path format is the wsl feature's contract with the rest of the app.",
+  },
+  layers: {
+    order: ["foundation", "core", "features", "shell"],
+    tiers: {
+      foundation: ["file-search", "remote", "telemetry", "wsl"],
+      core: [
+        "auth",
+        "debugger",
+        "diagnostics",
+        "editor",
+        "file-explorer",
+        "file-system",
+        "git",
+        "global-search",
+        "keymaps",
+        "layout",
+        "local-history",
+        "notifications",
+        "outline",
+        "panes",
+        "references",
+        "settings",
+        "sidebar",
+        "tabs",
+        "terminal",
+        "viewer",
+        "vim",
+        "window",
+        "workspace",
+      ],
+      features: [
+        "ai",
+        "browser",
+        "browser-use",
+        "collaboration",
+        "database",
+        "docker",
+        "feedback",
+        "github",
+        "onboarding",
+        "run-actions",
+        "sharing",
+        "views",
+      ],
+      shell: ["bootstrap", "command-palette", "quick-open"],
+    },
+    tierOverrides: {
+      "keymaps/commands/**": {
+        tier: "shell",
+        reason: "Command definitions and their actions; they call into every feature.",
+      },
+      "layout/components/**": {
+        tier: "shell",
+        reason:
+          "Workbench chrome (main layout, sidebar, bottom pane, activity bar) that mounts feature views.",
+      },
+      "window/components/**": {
+        tier: "shell",
+        reason: "Window chrome (title bar, menu bar, close guard) that mounts feature controls.",
+      },
+      "window/detached/detached-resource-window.tsx": {
+        tier: "shell",
+        reason: "Root view of a detached resource window, mounted by src/App.tsx.",
+      },
+      "window/detached/standalone-content-window.tsx": {
+        tier: "shell",
+        reason: "Root view of a standalone terminal or settings window, mounted by src/App.tsx.",
+      },
+      "panes/components/pane-container.tsx": {
+        tier: "shell",
+        reason: "Renders each buffer type with the view of the feature that owns it.",
+      },
+      "panes/components/resource-buffer-view.tsx": {
+        tier: "shell",
+        reason: "Renders each resource buffer with the view of the feature that owns it.",
+      },
+      "settings/components/settings-dialog.tsx": {
+        tier: "shell",
+        reason: "Settings host; its pages render the settings of every feature.",
+      },
+      "settings/components/settings-workbench-view.tsx": {
+        tier: "shell",
+        reason: "Settings host; its pages render the settings of every feature.",
+      },
+      "settings/components/tabs/**": {
+        tier: "shell",
+        reason: "Settings pages; each renders the settings sections of the features on that page.",
+      },
+      "settings/components/ai/**": {
+        tier: "shell",
+        reason: "Settings pages; each renders the settings sections of the features on that page.",
+      },
     },
   },
 };

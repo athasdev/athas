@@ -5,7 +5,7 @@ import type { AgentContent } from "@/features/panes/types/pane-content.types";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import AIChat from "./chat/ai-chat";
 import { AgentWindowPlaceholder } from "@/features/ai/detached/agent-window-placeholder";
-import { useAgentWindowStore } from "@/features/ai/detached/agent-window.store";
+import { useAgentWindowStore } from "@/features/ai/detached/stores/agent-window.store";
 
 interface AgentTabProps {
   buffer: AgentContent;

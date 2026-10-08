@@ -1,8 +1,10 @@
-import { deliveryBufferPath } from "@/features/github/delivery/services/github-delivery";
 import { immer } from "zustand/middleware/immer";
 import { createStore } from "zustand/vanilla";
 import type { DatabaseType } from "@/features/database/types/provider.types";
-import { getViewBufferPath } from "@/features/views/services/view-buffer";
+import {
+  deliveryBufferPath,
+  getViewBufferPath,
+} from "@/features/editor/services/virtual-buffer-paths";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import {
   buildClosedBufferHistoryEntry,
@@ -641,7 +643,7 @@ const createBufferStore = (workspaceId: string) => {
 
         // Stop LSP for this file (only for real editor files)
         if (shouldStartLsp(closedBuffer)) {
-          import("@/features/editor/lsp/lsp-client")
+          import("@/features/editor/lsp/services/lsp-client")
             .then(({ LspClient }) => {
               const lspClient = LspClient.getInstance();
               logger.info("BufferStore", `Stopping LSP for ${closedBuffer.path}`);

@@ -4,7 +4,7 @@ import { BoltIcon, BoltSlashIcon, SlidersIcon, SquareIcon } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
-import { LspClient } from "@/features/editor/lsp/lsp-client";
+import { LspClient } from "@/features/editor/lsp/services/lsp-client";
 import { type LspStatus, useLspStore } from "@/features/editor/lsp/stores/lsp.store";
 import { getBufferById } from "@/features/editor/stores/buffer-index";
 import { setOutlineVisibilityPreference } from "@/features/outline/services/outline-visibility";

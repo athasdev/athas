@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import type { EditorSelectionContext } from "@/features/ai/types/ai-context.types";
+import type { EditorSelectionContext } from "@/features/editor/types/editor-selection.types";
 
 const mocks = vi.hoisted(() => ({
   currentChatId: "chat-1" as string | null,
@@ -38,7 +38,7 @@ vi.mock("@/features/editor/stores/buffer.store", () => ({
 vi.mock("@/features/editor/stores/state.store", () => ({
   useEditorStateStore: { getState: () => ({ selection: mocks.selection }) },
 }));
-vi.mock("@/features/ai/detached/agent-window-service", () => ({
+vi.mock("@/features/ai/detached/services/agent-window-service", () => ({
   openAgentWindowSession: () => null,
 }));
 vi.mock("@/features/ai/services/open-new-agent-chat", () => ({

@@ -13,7 +13,7 @@ import {
   type ViewUpdate,
 } from "@codemirror/view";
 import { useMemo } from "react";
-import { LspClient } from "@/features/editor/lsp/lsp-client";
+import { LspClient } from "@/features/editor/lsp/services/lsp-client";
 import { useLspStore } from "@/features/editor/lsp/stores/lsp.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { type CodeMirrorHost, useCodeMirrorExtension } from "../host";

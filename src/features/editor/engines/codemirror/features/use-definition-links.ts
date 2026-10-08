@@ -1,9 +1,9 @@
 import { useMemo, useRef } from "react";
 import { toast } from "sonner";
 import { isMac } from "@/utils/platform";
-import { LspClient } from "../../../lsp/lsp-client";
-import { navigateToLspLocation } from "../../../lsp/location-navigation";
-import { fileUriFromPath } from "../../../lsp/workspace-edit";
+import { LspClient } from "../../../lsp/services/lsp-client";
+import { navigateToLspLocation } from "../../../lsp/services/location-navigation";
+import { fileUriFromPath } from "../../../lsp/services/workspace-edit";
 import { type CodeMirrorHost, useCodeMirrorExtension } from "../host";
 import { definitionLink } from "../navigation/definition-link";
 import { type DocumentLink, findDocumentLinkAt } from "../navigation/document-links";

@@ -6,7 +6,7 @@ import {
   getProjectCarouselWindow,
 } from "@/features/layout/utils/project-carousel";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 import { useWorkspaceTabsStore } from "@/features/workspace/stores/workspace-tabs.store";
 
 const PROJECT_SCROLL_SETTLE_DELAY_MS = 120;

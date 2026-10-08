@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
 import { deferUntilAfterNextPaint } from "@/features/editor/lsp/deferred-lsp-work";
-import { LspClient } from "@/features/editor/lsp/lsp-client";
+import { LspClient } from "@/features/editor/lsp/services/lsp-client";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getSourceEditorBufferByPath } from "@/features/editor/stores/buffer-index";
 import { logger } from "@/utils/logger";

@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { useShallow } from "zustand/react/shallow";
 import { useTerminalSlotsStore } from "../stores/terminal-slots.store";
 import { type TerminalStore, useTerminalStore } from "../stores/terminal.store";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 import { emitAppEvent } from "@/utils/app-events";
 import { TerminalEmulator } from "./terminal";
 

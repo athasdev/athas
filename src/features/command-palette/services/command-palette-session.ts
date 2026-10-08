@@ -1,5 +1,5 @@
 import { useUIState } from "@/features/layout/stores/ui-state.store";
-import type { CommandPaletteViewId } from "../types/view.types";
+import type { CommandPaletteViewId } from "@/features/layout/stores/ui-state/types/ui-state.types";
 
 interface CommandPaletteSession {
   pushView: (view: CommandPaletteViewId) => void;

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { editorAPI } from "../extensions/api";
+import { editorAPI } from "../services/editor-api";
 import { useBufferStore } from "../stores/buffer.store";
 import { useEditorStateStore } from "../stores/state.store";
 import { useHistoryStore } from "../stores/history.store";

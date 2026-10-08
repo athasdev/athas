@@ -7,17 +7,17 @@ import {
   ResourceBufferIcon,
   ResourceBufferView,
 } from "@/features/panes/components/resource-buffer-view";
-import { ViewerLoadingState } from "@/features/viewer/components/viewer-state";
+import { ViewerLoadingState } from "@/ui/viewer-state";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { Avatar } from "@/ui/avatar";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
 import {
   parseResourceWindowPayload,
   type ResourceWindowMessage,
-} from "./detached-resource-service";
+} from "./services/detached-resource-service";
 import { AppQueryProvider } from "@/components/app-query-provider";
 import { DetachedWindowShell } from "./detached-window-shell";
-import { useDetachedWindow } from "./use-detached-window";
+import { useDetachedWindow } from "./hooks/use-detached-window";
 import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 function closeWindow() {

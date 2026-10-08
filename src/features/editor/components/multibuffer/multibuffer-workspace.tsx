@@ -16,7 +16,7 @@ import {
   type FileNavigatorTone,
   type FileNavigatorViewMode,
 } from "@/features/file-explorer/components/file-navigator-sidebar";
-import { PaneContentHeader } from "@/features/panes/components/pane-content-chrome";
+import { PaneContentHeader } from "@/ui/pane-content-chrome";
 import { ScrollArea } from "@/ui/scroll-area";
 import { cn } from "@/utils/cn";
 import { getBaseName, getDirName } from "@/utils/path-helpers";

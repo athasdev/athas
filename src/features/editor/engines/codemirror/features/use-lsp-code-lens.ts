@@ -3,7 +3,7 @@ import type { EditorView } from "@codemirror/view";
 import { useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { LspClient } from "../../../lsp/lsp-client";
+import { LspClient } from "../../../lsp/services/lsp-client";
 import { type CodeMirrorHost, useCodeMirrorExtension } from "../host";
 import {
   codeLensDecorations,

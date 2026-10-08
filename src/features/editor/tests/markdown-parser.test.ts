@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vite-plus/test";
-import { parseMarkdown } from "../markdown/parser";
+import { parseMarkdown } from "../markdown/services/parser";
 import { renderMarkdown } from "../markdown/render-markdown";
 
 vi.mock("dompurify", () => ({

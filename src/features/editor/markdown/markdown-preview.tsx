@@ -3,7 +3,7 @@ import { pathExists } from "@/utils/local-files";
 import { openExternalBrowserUrl } from "@/utils/external-navigation";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { editorAPI } from "@/features/editor/extensions/api";
+import { editorAPI } from "@/features/editor/services/editor-api";
 import { useBufferText } from "@/features/editor/hooks/use-buffer-text";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getBufferById, getBufferByPath } from "@/features/editor/stores/buffer-index";
@@ -17,7 +17,7 @@ import {
   highlightMarkdownPreviewBlockMatches,
   isEntireMarkdownPreviewSelected,
 } from "./markdown-preview-search";
-import { useHighlightedMarkdown } from "./use-highlighted-markdown";
+import { useHighlightedMarkdown } from "./hooks/use-highlighted-markdown";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { useBufferIdOrActive } from "@/features/panes/hooks/use-pane-buffer-state";
 

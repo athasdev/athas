@@ -28,7 +28,7 @@ import { commandPaletteOrder } from "../constants/command-palette-order";
 import { useCommandPaletteContext } from "../hooks/use-command-palette-context";
 import { attachCommandPaletteSession } from "../services/command-palette-session";
 import type { CommandPaletteItem } from "../types/command-palette-item.types";
-import type { CommandPaletteViewId } from "../types/view.types";
+import type { CommandPaletteViewId } from "@/features/layout/stores/ui-state/types/ui-state.types";
 import { buildCommandPaletteItems } from "../utils/command-palette-items";
 import {
   createExtensionCommandItems,

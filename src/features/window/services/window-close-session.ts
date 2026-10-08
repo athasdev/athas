@@ -10,7 +10,7 @@ import {
   type EditorContent,
   type ImageContent,
 } from "@/features/panes/types/pane-content.types";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 import { readBufferRevision, readBufferText } from "@/features/editor/services/buffer-text";
 import {
   flushAllLiveDocuments,

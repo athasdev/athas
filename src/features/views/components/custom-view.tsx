@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { getViewBufferPath } from "@/features/views/services/view-buffer";
+import { getViewBufferPath } from "@/features/editor/services/virtual-buffer-paths";
 import { resolveViewPresentation } from "@/features/views/lib/view-presentation";
 import { loadViewTable } from "@/features/views/services/view-data-service";
 import { useViewsStore } from "@/features/views/stores/views.store";
@@ -11,7 +11,7 @@ import type {
 } from "@/features/views/types/view.types";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { PathBreadcrumb } from "@/ui/path-breadcrumb";
-import { PaneContentHeader } from "@/features/panes/components/pane-content-chrome";
+import { PaneContentHeader } from "@/ui/pane-content-chrome";
 import type { CustomViewContent } from "@/features/panes/types/pane-content.types";
 import { Button } from "@/ui/button";
 import { EmptyState } from "@/ui/empty";

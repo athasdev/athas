@@ -24,7 +24,7 @@ import { selectAgentSessions } from "@/features/ai/lib/agent-session-list";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { useSidebarPaneController } from "@/features/layout/hooks/use-sidebar-pane-controller";
-import { PaneContentHeader } from "@/features/panes/components/pane-content-chrome";
+import { PaneContentHeader } from "@/ui/pane-content-chrome";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import { useAIChatStore } from "../../stores/ai-chat.store";
@@ -35,7 +35,10 @@ import {
   openAgentSessions,
 } from "@/features/ai/services/open-agent-sessions";
 import { useNewAgentAction } from "../../hooks/use-new-agent-action";
-import { isAgentWindow, openAgentInNewWindow } from "@/features/ai/detached/agent-window-service";
+import {
+  isAgentWindow,
+  openAgentInNewWindow,
+} from "@/features/ai/detached/services/agent-window-service";
 import { requestWindowClose } from "@/features/window/services/request-window-close";
 import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 

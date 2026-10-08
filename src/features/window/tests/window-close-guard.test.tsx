@@ -2,7 +2,7 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import type { EditorContent } from "@/features/panes/types/pane-content.types";
@@ -32,7 +32,9 @@ vi.mock("@tauri-apps/api/webviewWindow", () => ({
 vi.mock("@/features/editor/services/editor-save-service", () => ({
   saveEditorBufferById: mocks.save,
 }));
-vi.mock("@/features/ai/detached/agent-window.store", () => ({ agentsAreDetached: () => false }));
+vi.mock("@/features/ai/detached/stores/agent-window.store", () => ({
+  agentsAreDetached: () => false,
+}));
 vi.mock("sonner", () => ({ toast: { error: mocks.error, info: vi.fn() } }));
 vi.mock("@/features/tabs/components/unsaved-changes-dialog", () => ({
   default: ({

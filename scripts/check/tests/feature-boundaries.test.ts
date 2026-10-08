@@ -7,8 +7,11 @@ import {
   classifyTarget,
   compareWithBaseline,
   findCycleEdges,
+  findInvalidLayers,
   findInvalidPublicFiles,
   findPrivateImports,
+  findUpwardImports,
+  layerOf,
   parseImports,
   stronglyConnectedComponents,
   type ImportGraph,
@@ -28,6 +31,7 @@ const result = compareWithBaseline(
   {
     privateImports: findPrivateImports(graph),
     cycleEdges: findCycleEdges(graph),
+    upwardImports: findUpwardImports(graph),
   },
   baseline,
 );
@@ -51,13 +55,22 @@ describe("feature boundaries", () => {
     expect(result.newCycleEdges, HOW_TO_FIX).toEqual([]);
   });
 
+  it("adds no imports from a lower feature tier into a higher one", () => {
+    expect(result.newUpwardImports, HOW_TO_FIX).toEqual([]);
+  });
+
   it("lists only existing public files, each with a reason", () => {
     expect(findInvalidPublicFiles(repoRoot, graph.files)).toEqual([]);
+  });
+
+  it("puts every feature in one tier and gives every tier override a reason", () => {
+    expect(findInvalidLayers(graph.files)).toEqual([]);
   });
 
   it("keeps the baseline in sync so it only shrinks", () => {
     expect(result.stalePrivateImports, HOW_TO_SHRINK).toEqual([]);
     expect(result.staleCycleEdges, HOW_TO_SHRINK).toEqual([]);
+    expect(result.staleUpwardImports, HOW_TO_SHRINK).toEqual([]);
   });
 });
 
@@ -207,5 +220,111 @@ describe("feature boundary analysis", () => {
       "src/features/a/one.ts -> src/features/b/two.ts",
       "src/features/b/three.ts -> src/features/a/one.ts",
     ]);
+  });
+
+  const layered: FeatureBoundaryConfig = {
+    ...featureBoundaries,
+    layers: {
+      order: ["foundation", "core", "features", "shell"],
+      tiers: { foundation: ["base"], core: ["core"], features: ["extra"], shell: ["app"] },
+      tierOverrides: {
+        "core/commands/**": { tier: "shell", reason: "Command wiring." },
+        "core/commands/core-command.ts": { tier: "core", reason: "Plain core command." },
+      },
+    },
+  };
+
+  it("places files by feature tier and the most specific tier override", () => {
+    const position = (file: string) => layerOf(`src/features/${file}`, layered);
+
+    expect(position("base/services/a.ts")).toEqual({ tier: "foundation", rank: 0, module: "base" });
+    expect(position("extra/components/view.tsx")).toMatchObject({ tier: "features", rank: 2 });
+    expect(position("core/commands/run.ts")).toEqual({
+      tier: "shell",
+      rank: 3,
+      module: "core/commands",
+    });
+    expect(position("core/commands/core-command.ts")).toEqual({
+      tier: "core",
+      rank: 1,
+      module: "core/commands/core-command.ts",
+    });
+    expect(layerOf("src/utils/cn.ts", layered)).toBeNull();
+  });
+
+  it("counts upward imports per module pair as distinct file pairs", () => {
+    const fixture: ImportGraph = {
+      files: [],
+      edges: [
+        { from: "src/features/base/a.ts", to: "src/features/core/b.ts", kind: "static" },
+        { from: "src/features/base/a.ts", to: "src/features/core/b.ts", kind: "dynamic" },
+        { from: "src/features/base/a.ts", to: "src/features/core/c.ts", kind: "type" },
+        { from: "src/features/core/b.ts", to: "src/features/extra/x.ts", kind: "dynamic" },
+        { from: "src/features/core/b.ts", to: "src/features/core/commands/run.ts", kind: "static" },
+        {
+          from: "src/features/extra/x.ts",
+          to: "src/features/core/commands/run.ts",
+          kind: "static",
+        },
+        { from: "src/features/app/shell.ts", to: "src/features/extra/x.ts", kind: "static" },
+        { from: "src/features/extra/x.ts", to: "src/features/base/a.ts", kind: "static" },
+        {
+          from: "src/features/base/tests/a.test.ts",
+          to: "src/features/app/shell.ts",
+          kind: "static",
+        },
+        { from: "src/features/base/a.ts", to: "src/features/app/shell.ts", kind: "mock" },
+        { from: "src/utils/shared.ts", to: "src/features/app/shell.ts", kind: "static" },
+      ],
+    };
+
+    expect(findUpwardImports(fixture, layered)).toEqual({
+      "base -> core": 2,
+      "core -> extra": 1,
+      "extra -> core/commands": 1,
+    });
+  });
+
+  it("reports features without a tier and overrides that match nothing", () => {
+    const config: FeatureBoundaryConfig = {
+      ...layered,
+      layers: {
+        ...layered.layers,
+        tiers: { ...layered.layers.tiers, shell: ["app", "base"] },
+        tierOverrides: { "core/gone/**": { tier: "shell", reason: " " } },
+      },
+    };
+    const files = [
+      "src/features/base/a.ts",
+      "src/features/core/b.ts",
+      "src/features/extra/x.ts",
+      "src/features/new/y.ts",
+    ];
+
+    expect(findInvalidLayers(files, config)).toEqual([
+      "new: has no tier",
+      "base: is listed in foundation, shell",
+      "app: is not a feature",
+      "core/gone/**: tier override matches no file",
+      "core/gone/**: tier override has no reason",
+    ]);
+  });
+
+  it("ratchets upward import counts in both directions", () => {
+    const current: FeatureBoundaryBaseline = {
+      privateImports: [],
+      cycleEdges: [],
+      upwardImports: { "a -> b": 3, "a -> c": 1, "d -> e": 2 },
+    };
+    const baseline: FeatureBoundaryBaseline = {
+      privateImports: [],
+      cycleEdges: [],
+      upwardImports: { "a -> b": 2, "d -> e": 4, "f -> g": 1 },
+    };
+
+    expect(compareWithBaseline(current, baseline)).toMatchObject({
+      newUpwardImports: ["a -> b: 3 (baseline 2)", "a -> c: 1 (baseline 0)"],
+      staleUpwardImports: ["d -> e: 2 (baseline 4)", "f -> g: 0 (baseline 1)"],
+    });
   });
 });

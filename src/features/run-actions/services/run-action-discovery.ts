@@ -4,7 +4,7 @@ import {
 } from "@/features/workspace/team/services/team-workspace-config";
 import { commands } from "@/bindings/commands";
 import { readFileContent } from "@/features/file-system/api/file-operations";
-import { parseRemotePath } from "@/features/remote/utils/remote-path";
+import { parseRemotePath } from "@/features/remote/services/remote-path";
 import { joinPath } from "@/utils/path-helpers";
 import type { CodeLensItem } from "@/features/editor/lsp/hooks/use-code-lens";
 import type { RunActionItem, RunActionSource } from "../types/run-action.types";

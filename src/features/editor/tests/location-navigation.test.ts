@@ -16,7 +16,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/features/file-system/api/file-operations", () => ({
   readFileContent: mocks.read,
 }));
-vi.mock("../lsp/lsp-client", () => ({
+vi.mock("../lsp/services/lsp-client", () => ({
   LspClient: { getInstance: () => ({ getJavaClassFileContents: mocks.readJava }) },
 }));
 vi.mock("../stores/buffer.store", () => ({
@@ -50,7 +50,7 @@ vi.mock("../stores/jump-list.store", () => ({
   useJumpListStore: { getState: () => ({ actions: { pushEntry: mocks.pushEntry } }) },
 }));
 
-import { navigateToLspLocation } from "../lsp/location-navigation";
+import { navigateToLspLocation } from "../lsp/services/location-navigation";
 
 function buffer(id: string, path: string, content = "first\nconst target = 1;") {
   return { id, type: "editor", path, content } as EditorContent;

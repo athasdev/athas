@@ -1,7 +1,7 @@
 import { dirname, join } from "@tauri-apps/api/path";
 import { commands } from "@/bindings/commands";
-import { parseRemotePath } from "@/features/remote/utils/remote-path";
-import { buildWslPath, parseWslPath } from "@/features/wsl/utils/wsl-path";
+import { parseRemotePath } from "@/features/remote/services/remote-path";
+import { buildWslPath, parseWslPath } from "@/features/wsl/services/wsl-path";
 import { joinPath } from "@/utils/path-helpers";
 import { createNewDirectory, createNewFile, deleteFileOrDirectory } from "../api/file-operations";
 import { moveFile, renameFile } from "../api/file-system-api";

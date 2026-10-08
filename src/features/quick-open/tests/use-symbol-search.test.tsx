@@ -21,7 +21,7 @@ vi.mock("@/features/editor/stores/buffer.store", () => ({
 vi.mock("@/extensions/registry/extension-registry", () => ({
   extensionRegistry: { isLspSupported: () => mocks.lspSupported },
 }));
-vi.mock("@/features/editor/lsp/lsp-client", () => ({
+vi.mock("@/features/editor/lsp/services/lsp-client", () => ({
   LspClient: { getInstance: () => ({ getDocumentSymbols: mocks.getDocumentSymbols }) },
 }));
 

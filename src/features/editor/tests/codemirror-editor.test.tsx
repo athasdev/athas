@@ -65,7 +65,7 @@ vi.mock("../stores/state.store", () => {
     }),
   };
 });
-vi.mock("../extensions/api", () => {
+vi.mock("../services/editor-api", () => {
   type Adapter = { ownerId: string } & Record<string, (...args: unknown[]) => void>;
   const handlers = new Map<string, Set<(payload: unknown) => void>>();
   let editorAdapter: Adapter | null = null;
@@ -145,7 +145,7 @@ Range.prototype.getClientRects = emptyRects;
 Range.prototype.getBoundingClientRect = () => new DOMRect();
 
 const { CodeMirrorEditor } = await import("../components/codemirror-editor");
-const { editorAPI } = await import("../extensions/api");
+const { editorAPI } = await import("../services/editor-api");
 
 let container: HTMLDivElement;
 let root: Root;

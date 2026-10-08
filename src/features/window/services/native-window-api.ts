@@ -1,4 +1,4 @@
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { getAllWindows, getCurrentWindow } from "@tauri-apps/api/window";
 import { exit } from "@tauri-apps/plugin-process";
 import { commands } from "@/bindings/commands";
 
@@ -40,4 +40,16 @@ export async function maximizeWindow(): Promise<void> {
 
 export async function toggleWindowMaximize(): Promise<void> {
   await getCurrentWindow().toggleMaximize();
+}
+
+/** Whether any Athas window has focus, for deciding whether a native notification is needed. */
+export async function isAnyAthasWindowFocused(): Promise<boolean> {
+  try {
+    const windows = await getAllWindows();
+    const focusStates = await Promise.all(windows.map((window) => window.isFocused()));
+    return focusStates.some(Boolean);
+  } catch {
+    if (typeof document === "undefined") return true;
+    return document.visibilityState === "visible" && document.hasFocus();
+  }
 }

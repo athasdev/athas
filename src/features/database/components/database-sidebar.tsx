@@ -30,7 +30,7 @@ import Input from "@/ui/input";
 import { Spinner } from "@/ui/spinner";
 import { normalizeDatabaseError } from "../lib/database-errors";
 import type { DatabaseType } from "../types/provider.types";
-import { PROVIDER_REGISTRY } from "../providers/provider-registry";
+import { PROVIDER_REGISTRY } from "../services/provider-registry";
 import { pickDatabaseFile } from "../services/database-file-picker";
 import { type SavedConnection, useConnectionStore } from "../stores/connection.store";
 import { getDatabaseTypeForFilePath } from "../utils/database-file-drop";

@@ -1,7 +1,7 @@
 import { commands } from "@/bindings/commands";
 import { writeFile } from "@/features/file-system/api/file-system-api";
 import { getWorkspaceResourceProvider } from "@/features/file-system/services/workspace-resource-provider";
-import { parseRemotePath } from "@/features/remote/utils/remote-path";
+import { parseRemotePath } from "@/features/remote/services/remote-path";
 import { joinPath } from "@/utils/path-helpers";
 import { emitAppEvent } from "@/utils/app-events";
 import type { TeamWorkspace } from "../types/team-workspace";

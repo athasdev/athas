@@ -1,6 +1,6 @@
 import { memo, useEffect, useMemo, useState } from "react";
-import { WorkbenchFullscreenSurface } from "@/features/layout/components/workbench-fullscreen-surface";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { WorkbenchFullscreenSurface } from "@/ui/workbench-fullscreen-surface";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 import { WorkspaceStoreScopeContext } from "@/features/workspace/stores/create-workspace-scoped-store";
 import { useWorkspaceTabsStore } from "@/features/workspace/stores/workspace-tabs.store";
 import { cn } from "@/utils/cn";

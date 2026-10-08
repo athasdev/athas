@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 import type { EditorContent } from "@/features/panes/types/pane-content.types";
 import type { useBufferStore as BufferHook } from "../stores/buffer.store";
 import { savePendingPaneClose } from "@/features/panes/services/pane-content-save-service";
@@ -15,7 +15,7 @@ vi.mock("@/features/local-history/api/local-history-api", () => ({
 }));
 vi.mock("@/utils/toast", () => ({ showToast: vi.fn() }));
 vi.mock("@tauri-apps/plugin-dialog", () => ({ save: mocks.saveDialog }));
-vi.mock("@/features/editor/lsp/lsp-client", () => ({
+vi.mock("@/features/editor/lsp/services/lsp-client", () => ({
   LspClient: { getInstance: () => ({ notifyDocumentSave: vi.fn() }) },
 }));
 

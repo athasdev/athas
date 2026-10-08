@@ -1,4 +1,4 @@
-import { agentIsDetached } from "@/features/ai/detached/agent-window.store";
+import { agentIsDetached } from "@/features/ai/detached/stores/agent-window.store";
 import {
   AGENT_FOLLOW_INTERVAL_MS,
   type AgentFollowTarget,

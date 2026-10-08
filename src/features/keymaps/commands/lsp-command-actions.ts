@@ -1,10 +1,10 @@
-import { LspClient } from "@/features/editor/lsp/lsp-client";
+import { LspClient } from "@/features/editor/lsp/services/lsp-client";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import {
   applyWorkspaceEdit,
   fileUriFromPath,
   isWorkspaceEdit,
-} from "@/features/editor/lsp/workspace-edit";
+} from "@/features/editor/lsp/services/workspace-edit";
 import { toast } from "sonner";
 
 function getActiveLspClient() {

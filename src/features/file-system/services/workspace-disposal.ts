@@ -1,6 +1,6 @@
 import { commands } from "@/bindings/commands";
 import { connectionStore } from "@/features/remote/stores/remote-connection.store";
-import { parseRemotePath } from "@/features/remote/utils/remote-path";
+import { parseRemotePath } from "@/features/remote/services/remote-path";
 import { closeTerminalConnection } from "@/features/terminal/services/terminal-connection-lifecycle";
 import type { Terminal } from "@/features/terminal/types/terminal.types";
 import { cancelFileWatcherRefreshes } from "./file-watcher-refresh-scheduler";

@@ -1,4 +1,4 @@
-import { parseRemotePath } from "@/features/remote/utils/remote-path";
+import { parseRemotePath } from "@/features/remote/services/remote-path";
 import type { ProjectTab } from "../stores/workspace-tabs.store";
 
 export function renameRemoteProjectTabs(

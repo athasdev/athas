@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test"
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useWorkspaceTabsStore } from "@/features/workspace/stores/workspace-tabs.store";
 import * as appWindow from "@/features/window/services/create-app-window";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 import * as workspaceLifecycle from "@/features/workspace/services/workspace-lifecycle";
 import * as platform from "../api/file-system-api";
 import { useFileSystemStore } from "../stores/file-system.store";

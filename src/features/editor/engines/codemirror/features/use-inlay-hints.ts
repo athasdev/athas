@@ -1,7 +1,7 @@
 import { EditorView } from "@codemirror/view";
 import { useMemo, useRef, useState } from "react";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { LspClient } from "../../../lsp/lsp-client";
+import { LspClient } from "../../../lsp/services/lsp-client";
 import { type CodeMirrorHost, useCodeMirrorExtension } from "../host";
 import { inlayHintDecorations, inlayHintsField, setInlayHints } from "../navigation/inlay-hints";
 import { useDebouncedLspRefresh, useLspRevision } from "./lsp-feature-utils";

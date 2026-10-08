@@ -11,7 +11,7 @@ import { Prec, type Extension } from "@codemirror/state";
 import { type EditorView, keymap } from "@codemirror/view";
 import { useEffect, useMemo } from "react";
 import type { CompletionItem } from "vscode-languageserver-protocol";
-import { LspClient } from "@/features/editor/lsp/lsp-client";
+import { LspClient } from "@/features/editor/lsp/services/lsp-client";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { type CodeMirrorHost, useCodeMirrorExtension } from "../host";
 import {

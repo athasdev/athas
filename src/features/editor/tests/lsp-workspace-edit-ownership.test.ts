@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { invoke } from "@tauri-apps/api/core";
 import type { EditorContent } from "@/features/panes/types/pane-content.types";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
-import { LspClient } from "../lsp/lsp-client";
-import type { WorkspaceEditContext } from "../lsp/workspace-edit";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
+import { LspClient } from "../lsp/services/lsp-client";
+import type { WorkspaceEditContext } from "../lsp/services/workspace-edit";
 import { useBufferStore } from "../stores/buffer.store";
 import { seedActiveBuffer } from "@/features/panes/tests/helpers/seed-pane-tabs";
 const io = vi.hoisted(() => ({ read: vi.fn(), write: vi.fn() }));

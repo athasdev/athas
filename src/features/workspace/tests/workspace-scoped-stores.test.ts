@@ -6,7 +6,7 @@ import { ROOT_PANE_ID } from "@/features/panes/constants/pane";
 import { usePaneStore } from "@/features/panes/stores/pane.store";
 import type { EditorContent } from "@/features/panes/types/pane-content.types";
 import { useTerminalTabsStore } from "@/features/terminal/stores/terminal-tabs.store";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 describe("workspace-scoped stores", () => {

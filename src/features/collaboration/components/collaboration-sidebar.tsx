@@ -17,11 +17,11 @@ import {
   addCollaborationNoteFolder,
   appendCollaborationChatMessage,
   appendCollaborationSharedDocuments,
-  buildCollaborationNoteBufferPath,
   buildCollaborationSidebarModel,
   deleteCollaborationNoteItem,
   renameCollaborationNoteItem,
 } from "@/features/collaboration/services/collaboration-sidebar-model";
+import { buildCollaborationNoteBufferPath } from "@/features/editor/services/virtual-buffer-paths";
 import {
   CHANNEL_FILTER_OPTIONS,
   type CollaborationChannelFilter,

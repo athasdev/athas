@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import type { EditorContent } from "@/features/panes/types/pane-content.types";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 import { useBufferStore } from "../stores/buffer.store";
 import { useHistoryStore } from "../stores/history.store";
 import {
@@ -8,7 +8,7 @@ import {
   captureWorkspaceEditContext,
   WorkspaceEditFailure,
   type WorkspaceEdit,
-} from "../lsp/workspace-edit";
+} from "../lsp/services/workspace-edit";
 import { seedActiveBuffer } from "@/features/panes/tests/helpers/seed-pane-tabs";
 
 const io = vi.hoisted(() => ({ read: vi.fn(), write: vi.fn(), git: vi.fn() }));

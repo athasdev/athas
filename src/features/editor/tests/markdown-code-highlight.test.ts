@@ -28,7 +28,7 @@ vi.mock("@/features/editor/lib/wasm-parser/tokenizer-worker-client", () => ({
   tokenizerWorkerClient: { tokenize },
 }));
 
-import { highlightMarkdownCodeBlocks } from "../markdown/code-highlight";
+import { highlightMarkdownCodeBlocks } from "../markdown/services/code-highlight";
 
 describe("highlightMarkdownCodeBlocks", () => {
   it("processes code blocks in order and yields when the frame budget is spent", async () => {

@@ -14,7 +14,7 @@ import {
   it,
   vi,
 } from "vite-plus/test";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { createSearchWorkerSession } from "../services/search-worker-client";
 import {

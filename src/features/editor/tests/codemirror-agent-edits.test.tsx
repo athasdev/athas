@@ -34,7 +34,7 @@ const { useAgentEditsStore } = await import("@/features/ai/stores/agent-edits.st
 const { CodeMirrorAgentEdits } =
   await import("../engines/codemirror/features/codemirror-agent-edits");
 const { keepAgentHunkAtCursor, rejectAgentHunkAtCursor } =
-  await import("../agent-edits/agent-hunk-actions");
+  await import("@/features/ai/services/agent-hunk-actions");
 
 const PATH = "/repo/a.ts";
 let view: EditorView;

@@ -1,6 +1,6 @@
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { GitHubAuthStatusMessage } from "@/features/github/components/github-auth-status";
-import type { useGitHubNotifications } from "@/features/notifications/hooks/use-github-notifications";
+import type { useGitHubNotifications } from "@/features/github/hooks/use-github-notifications";
 import { NotificationIcon } from "@/features/notifications/components/notification-icon";
 import { useNotificationsStore } from "@/features/notifications/stores/notifications.store";
 import type {
@@ -12,7 +12,6 @@ import {
   formatNotificationAge,
   formatNotificationText,
 } from "@/features/notifications/utils/notification-formatters";
-import { getTimeAgo } from "@/features/github/services/github-viewer-utils";
 import { Button } from "@/ui/button";
 import Command, {
   CommandEmpty,
@@ -37,6 +36,7 @@ import {
 } from "@/ui/icons";
 import { GithubMark } from "@/ui/brand-marks";
 import { writeClipboardText } from "@/utils/clipboard";
+import { formatCompactRelativeDate } from "@/utils/date";
 import { matchesSearchQuery } from "@/utils/search-match";
 
 type GitHubNotificationsModel = ReturnType<typeof useGitHubNotifications>;
@@ -282,7 +282,7 @@ export function NotificationsCommand({
                       key={notification.id}
                       icon={<GitHubNotificationIcon subjectType={notification.subjectType} />}
                       title={notification.title}
-                      description={`${notification.repositoryFullName} · ${notificationReasonLabel(notification.reason)} · ${getTimeAgo(notification.updatedAt, { includeAgo: false })}`}
+                      description={`${notification.repositoryFullName} · ${notificationReasonLabel(notification.reason)} · ${formatCompactRelativeDate(notification.updatedAt, { afterWeek: "weeks", includeAgo: false })}`}
                       contentLayout="stacked"
                       onClick={() => {
                         onClose();

@@ -11,10 +11,10 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/extensions/registry/extension-registry", () => ({
   extensionRegistry: { isLspSupported: () => mocks.lspSupported },
 }));
-vi.mock("@/features/editor/lsp/lsp-client", () => ({
+vi.mock("@/features/editor/lsp/services/lsp-client", () => ({
   LspClient: { getInstance: () => mocks },
 }));
-vi.mock("@/features/editor/markdown/code-highlight", () => ({
+vi.mock("@/features/editor/markdown/services/code-highlight", () => ({
   highlightMarkdownCodeBlocks: async (html: string) =>
     html.replace(
       '<code class="language-typescript">',

@@ -2,7 +2,7 @@ import type { FileSearchResult } from "@/features/file-search/api/file-search-ap
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { isBufferStoreOwnerLive } from "@/features/editor/services/buffer-store-owner";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 import {
   captureSourceReplaceContext,
   replaceAllInSources,

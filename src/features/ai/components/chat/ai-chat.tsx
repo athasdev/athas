@@ -13,7 +13,7 @@ import {
   settleQueuedSendNow,
 } from "@/features/ai/lib/agent-queue-controls";
 import { isBrowserOffline } from "@/features/ai/lib/agent-turn-error";
-import { requestInlineEdit } from "@/features/editor/services/editor-inline-edit-service";
+import { requestInlineEdit } from "@/features/ai/intelligence/services/intelligence-text-service";
 import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
 import {
   type AgentTurnRequest,
@@ -31,7 +31,7 @@ import type {
 import { type AgentRunEnding, continuesAgentQueue } from "@/features/ai/lib/agent-message-queue";
 import { useAcpNoticesStore } from "@/features/ai/stores/acp-notices.store";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
-import { agentIsDetached } from "@/features/ai/detached/agent-window.store";
+import { agentIsDetached } from "@/features/ai/detached/stores/agent-window.store";
 import { peekAgentDraft } from "@/features/ai/detached/agent-window-drafts";
 import { useComposerContextSelection } from "@/features/ai/hooks/use-composer-context-selection";
 import { useOnlineStatus } from "@/features/ai/hooks/use-online-status";

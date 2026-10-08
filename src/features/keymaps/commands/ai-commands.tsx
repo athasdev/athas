@@ -18,7 +18,7 @@ import type { Command } from "../types/keymaps.types";
 
 /** Loaded on use, so the keymap layer does not pull in the agent edit review up front. */
 async function agentHunkActions() {
-  return import("@/features/editor/agent-edits/agent-hunk-actions");
+  return import("@/features/ai/services/agent-hunk-actions");
 }
 
 const aiActions = () => import("./ai-command-actions");

@@ -1,4 +1,4 @@
-import { normalizeLanguage } from "@/features/editor/markdown/language-map";
+import { normalizeLanguage } from "@/features/editor/markdown/services/language-map";
 
 const CODE_LINE_PATTERN =
   /[{}()[\];]|=>|::|->|:=|==|!=|<=|>=|&&|\|\||^\s{2,}\S|^(let|const|var|fn|def|class|import|export|if|for|while|match|return|use|pub|impl|SELECT|FROM|INSERT|UPDATE|DELETE)\b/i;

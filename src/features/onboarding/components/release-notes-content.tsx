@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import "@/features/editor/markdown/styles.css";
-import { useHighlightedMarkdown } from "@/features/editor/markdown/use-highlighted-markdown";
+import { useHighlightedMarkdown } from "@/features/editor/markdown/hooks/use-highlighted-markdown";
 import { openExternalUrl } from "@/utils/external-url";
 import {
   buildReleaseNotesMarkdown,

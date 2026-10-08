@@ -5,7 +5,7 @@ import PasswordPromptDialog from "@/features/remote/components/password-prompt-d
 import {
   connectRemoteConnection,
   loadRemoteConnections,
-} from "@/features/remote/services/remote-connection-actions";
+} from "@/features/workspace/services/remote-connection-actions";
 import { connectionStore } from "@/features/remote/stores/remote-connection.store";
 import type { RemoteConnection } from "@/features/remote/types/remote.types";
 import {

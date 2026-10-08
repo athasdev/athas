@@ -20,7 +20,7 @@ import {
   getKeybindingPresetCoverageReport,
   getKeybindingPresetDiffReport,
   keybindingPresetOptions,
-} from "@/features/keymaps/defaults/keybinding-presets";
+} from "@/features/keymaps/constants/keybinding-presets";
 import { useKeymapStore } from "@/features/keymaps/stores/keymaps.store";
 import type { Keybinding } from "@/features/keymaps/types/keymaps.types";
 import { getEffectiveKeybindingForCommand } from "@/features/keymaps/services/effective-keymaps";

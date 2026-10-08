@@ -27,13 +27,13 @@ const mocks = vi.hoisted(() => {
   };
 });
 
-vi.mock("../markdown/parser", () => ({
+vi.mock("../markdown/services/parser", () => ({
   MarkdownSanitizeCache: class {},
   parseMarkdownBlocks: (content: string, options: unknown) =>
     mocks.parseMarkdown(content, options).split("|"),
   sanitizeMarkdownBlocks: mocks.sanitizeMarkdownBlocks,
 }));
-vi.mock("../markdown/code-highlight", () => ({
+vi.mock("../markdown/services/code-highlight", () => ({
   highlightMarkdownCodeBlocks: mocks.highlightMarkdownCodeBlocks,
 }));
 vi.mock("../markdown/markdown-render-client", () => ({
@@ -46,7 +46,7 @@ vi.mock("../markdown/markdown-render-client", () => ({
   },
 }));
 
-const { useHighlightedMarkdown } = await import("../markdown/use-highlighted-markdown");
+const { useHighlightedMarkdown } = await import("../markdown/hooks/use-highlighted-markdown");
 
 const DELAY = 150;
 let host: HTMLDivElement;

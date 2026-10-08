@@ -10,7 +10,7 @@ import {
   focusAgentHunkEditor,
   removeAgentHunkEditor,
   setAgentHunkCount,
-} from "../../../agent-edits/agent-hunk-actions";
+} from "@/features/ai/services/agent-hunk-actions";
 import { toBufferText } from "../document-change";
 import { type CodeMirrorHost, useCodeMirrorExtension } from "../host";
 import {

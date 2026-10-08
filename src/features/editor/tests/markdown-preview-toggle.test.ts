@@ -33,7 +33,7 @@ afterEach(async () => {
 describe("Markdown preview toggle", () => {
   it("keeps the source file in the same tab and preserves unsaved content", async () => {
     const { useBufferStore } = await import("../stores/buffer.store");
-    const { toggleMarkdownPreview } = await import("../markdown/toggle-markdown-preview");
+    const { toggleMarkdownPreview } = await import("../markdown/services/toggle-markdown-preview");
     const actions = useBufferStore.getState().actions;
     const bufferId = actions.openContent({
       type: "editor",
@@ -67,7 +67,7 @@ describe("Markdown preview toggle", () => {
 
   it("ignores non-Markdown files", async () => {
     const { useBufferStore } = await import("../stores/buffer.store");
-    const { toggleMarkdownPreview } = await import("../markdown/toggle-markdown-preview");
+    const { toggleMarkdownPreview } = await import("../markdown/services/toggle-markdown-preview");
     const actions = useBufferStore.getState().actions;
     const bufferId = actions.openContent({
       type: "editor",

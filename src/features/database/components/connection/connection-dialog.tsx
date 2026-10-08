@@ -14,7 +14,7 @@ import Select from "@/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/ui/tabs";
 import { normalizeDatabaseError } from "../../lib/database-errors";
 import type { DatabaseType } from "../../types/provider.types";
-import { PROVIDER_REGISTRY } from "../../providers/provider-registry";
+import { PROVIDER_REGISTRY } from "../../services/provider-registry";
 import { pickDatabaseFile } from "../../services/database-file-picker";
 import { useConnectionStore } from "../../stores/connection.store";
 import { buildSavedConnectionConfig } from "../../utils/connection-config";

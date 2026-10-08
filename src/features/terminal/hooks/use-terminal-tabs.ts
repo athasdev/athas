@@ -2,12 +2,12 @@ import { useCallback, useEffect } from "react";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 import type { SplitPlacement } from "@/features/panes/types/pane.types";
 import type { TerminalSplitDirection } from "@/features/terminal/types/terminal.types";
-import { parseRemotePath } from "@/features/remote/utils/remote-path";
+import { parseRemotePath } from "@/features/remote/services/remote-path";
 import {
   generateTerminalId,
   useTerminalTabsStore,
 } from "@/features/terminal/stores/terminal-tabs.store";
-import { workspaceSessionRepository } from "@/features/workspace/persistence/workspace-session-repository";
+import { workspaceSessionRepository } from "@/features/workspace/persistence/services/workspace-session-repository";
 
 export const useTerminalTabs = () => {
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);

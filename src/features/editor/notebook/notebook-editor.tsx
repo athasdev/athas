@@ -39,7 +39,7 @@ import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
 import { useBufferText } from "@/features/editor/hooks/use-buffer-text";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getBufferById } from "@/features/editor/stores/buffer-index";
-import { useHighlightedMarkdown } from "@/features/editor/markdown/use-highlighted-markdown";
+import { useHighlightedMarkdown } from "@/features/editor/markdown/hooks/use-highlighted-markdown";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
 import { Empty, EmptyDescription, EmptyMedia } from "@/ui/empty";

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useDebounce } from "use-debounce";
-import { LspClient } from "@/features/editor/lsp/lsp-client";
+import { LspClient } from "@/features/editor/lsp/services/lsp-client";
 import { useLspStore } from "@/features/editor/lsp/stores/lsp.store";
 import { normalizeWorkspaceFolders } from "@/features/file-system/services/workspace-session";
 import { pathStartsWithRoot } from "@/utils/path-helpers";

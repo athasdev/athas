@@ -10,7 +10,7 @@ import {
   encodeWorkspaceBuffer,
   getEditorWorkspaceScope,
   isLocalFileInWorkspace,
-} from "@/features/workspace/persistence/workspace-session-codec";
+} from "@/features/workspace/persistence/services/workspace-session-codec";
 
 const buildPersistedEditorViewState = vi.hoisted(() => vi.fn());
 

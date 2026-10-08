@@ -12,7 +12,7 @@ import {
 import { useEffect, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { PathBreadcrumb } from "@/ui/path-breadcrumb";
-import { PaneContentHeader } from "@/features/panes/components/pane-content-chrome";
+import { PaneContentHeader } from "@/ui/pane-content-chrome";
 import { Alert, AlertDescription } from "@/ui/alert";
 import { Button } from "@/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";

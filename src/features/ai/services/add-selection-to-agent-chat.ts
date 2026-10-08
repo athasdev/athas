@@ -1,6 +1,6 @@
-import type { EditorSelectionContext } from "@/features/ai/types/ai-context.types";
+import type { EditorSelectionContext } from "@/features/editor/types/editor-selection.types";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
-import { openAgentWindowSession } from "@/features/ai/detached/agent-window-service";
+import { openAgentWindowSession } from "@/features/ai/detached/services/agent-window-service";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import { createEditorSelectionContext } from "@/features/editor/services/editor-agent-context";

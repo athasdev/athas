@@ -2,7 +2,7 @@ import type { BufferSession } from "@/features/workspace/types/workspace-session
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { saveWorkspaceTerminalsToStorage } from "@/features/terminal/services/terminal-session-storage";
 import type { Terminal } from "@/features/terminal/types/terminal.types";
-import { workspaceSessionRepository } from "@/features/workspace/persistence/workspace-session-repository";
+import { workspaceSessionRepository } from "@/features/workspace/persistence/services/workspace-session-repository";
 import { useSessionStore } from "@/features/workspace/stores/session.store";
 
 const storage = vi.hoisted(() => {

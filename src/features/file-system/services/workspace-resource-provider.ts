@@ -1,8 +1,8 @@
 import { readFile as readLocalFileBytes } from "@tauri-apps/plugin-fs";
 import { commands } from "@/bindings/commands";
 import { invalidateFileTreeGitIgnoreCache } from "@/features/file-explorer/services/file-tree-gitignore";
-import { parseRemotePath } from "@/features/remote/utils/remote-path";
-import { parseWslPath } from "@/features/wsl/utils/wsl-path";
+import { parseRemotePath } from "@/features/remote/services/remote-path";
+import { parseWslPath } from "@/features/wsl/services/wsl-path";
 import { readDirectoryContents, readFileContent } from "../api/file-operations";
 import { sortFileEntries } from "./file-tree-utils";
 import type { FileEntry } from "../types/app.types";

@@ -11,7 +11,7 @@ const mocks = vi.hoisted(() => ({
 }));
 const preview = vi.hoisted(() => ({ blocks: ["<ul><li><strong>Item</strong></li></ul>"] }));
 
-vi.mock("@/features/editor/extensions/api", () => ({ editorAPI: mocks }));
+vi.mock("@/features/editor/services/editor-api", () => ({ editorAPI: mocks }));
 vi.mock("@/features/editor/stores/buffer.store", () => {
   const state = {
     activeBufferId: "markdown-buffer",
@@ -43,7 +43,7 @@ vi.mock("@/features/workspace/stores/project.store", () => ({
   useProjectStore: (selector: (state: unknown) => unknown) =>
     selector({ rootFolderPath: "/workspace" }),
 }));
-vi.mock("../markdown/use-highlighted-markdown", () => ({
+vi.mock("../markdown/hooks/use-highlighted-markdown", () => ({
   useHighlightedMarkdown: () => preview.blocks,
 }));
 

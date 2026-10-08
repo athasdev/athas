@@ -21,4 +21,11 @@ export type SettingsTab =
 
 export type BottomPaneTab = "terminal" | "debugger" | "diagnostics" | "references" | "buffers";
 
+export type CommandPaletteViewId =
+  | "root"
+  | "color-theme"
+  | "icon-theme"
+  | "local-history"
+  | "outline";
+
 export type ProjectPickerInitialStep = "picker" | "addRemote";

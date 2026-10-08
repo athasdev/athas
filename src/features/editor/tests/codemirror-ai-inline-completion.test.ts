@@ -2,11 +2,11 @@
 import { EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import type { IntelligenceCompletionRequest } from "../intelligence-completion/intelligence-completion-service";
+import type { IntelligenceCompletionRequest } from "@/features/ai/intelligence/services/intelligence-completion-service";
 
 const mocks = vi.hoisted(() => ({ canRequest: true }));
 
-vi.mock("../intelligence-completion/intelligence-completion-service", () => ({
+vi.mock("@/features/ai/intelligence/services/intelligence-completion-service", () => ({
   canRequestIntelligenceCompletion: () => mocks.canRequest,
   registerIntelligenceCompletionResume: vi.fn(),
   requestIntelligenceCompletion: vi.fn(async () => null),

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ModelConnectionMenuList } from "@/features/ai/components/selectors/model-connection-picker";
-import { useTabCompletionModel } from "@/features/settings/hooks/use-tab-completion-model";
+import { useTabCompletionModel } from "@/features/ai/hooks/use-tab-completion-model";
 import { useIntelligenceCompletionStore } from "@/features/editor/stores/intelligence-completion.store";
 import type { IntelligenceCompletionStatus as CompletionStatus } from "@/features/editor/stores/intelligence-completion.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";

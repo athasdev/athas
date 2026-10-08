@@ -9,7 +9,7 @@ import type {
   BufferSession,
   WorkspaceFolderSession,
 } from "@/features/workspace/types/workspace-session.types";
-import { isRestorableBufferSession } from "@/features/workspace/persistence/workspace-session-codec";
+import { isRestorableBufferSession } from "@/features/workspace/persistence/services/workspace-session-codec";
 import { normalizeWorkspaceRootPath } from "@/features/workspace/services/project-tab-path";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { createSafeJSONStorage } from "@/utils/zustand-storage";

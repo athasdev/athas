@@ -1,4 +1,4 @@
-import { normalizeCodeFenceLanguage } from "./language-map";
+import { normalizeCodeFenceLanguage } from "./services/language-map";
 
 interface Footnote {
   id: string;

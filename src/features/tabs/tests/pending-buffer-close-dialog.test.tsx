@@ -2,7 +2,7 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import type { EditorContent } from "@/features/panes/types/pane-content.types";
 import { PendingBufferCloseDialog } from "../components/pending-buffer-close-dialog";

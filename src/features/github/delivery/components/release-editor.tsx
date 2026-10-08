@@ -5,7 +5,7 @@ import { Checkbox } from "@/ui/checkbox";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/ui/field";
 import { Spinner } from "@/ui/spinner";
 import { GitHubMarkdownEditor } from "../../components/github-markdown-editor";
-import { ViewerErrorState } from "@/features/viewer/components/viewer-state";
+import { ViewerErrorState } from "@/ui/viewer-state";
 import { generateReleaseNotes, saveRelease } from "../api/github-delivery-api";
 import { normalizeRelease } from "../services/github-delivery-service";
 import type { Release, ReleaseInput } from "../types/github-delivery.types";

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import type { DatabaseType } from "../types/provider.types";
-import { PROVIDER_REGISTRY } from "@/features/database/providers/provider-registry";
+import { PROVIDER_REGISTRY } from "@/features/database/services/provider-registry";
 
 const DATABASE_TYPES: DatabaseType[] = [
   "sqlite",

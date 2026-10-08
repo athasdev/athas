@@ -11,7 +11,7 @@ import { ShareDialog } from "@/features/sharing/components/share-dialog";
 import { SharingRuntime } from "@/features/sharing/components/sharing-runtime";
 import { AppQueryProvider } from "@/components/app-query-provider";
 import { DetachedWindowShell } from "@/features/window/detached/detached-window-shell";
-import { useDetachedWindow } from "@/features/window/detached/use-detached-window";
+import { useDetachedWindow } from "@/features/window/detached/hooks/use-detached-window";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { Button } from "@/ui/button";
 import { ArrowCounterClockwiseIcon } from "@/ui/icons";
@@ -20,7 +20,7 @@ import {
   captureAgentWindowSnapshot,
   restoreAgentWindowSnapshot,
   setAgentWindowSessionOpener,
-} from "./agent-window-service";
+} from "./services/agent-window-service";
 import { getAgentWindowTransferBlocker } from "./agent-window-state";
 import { getActiveBufferId } from "@/features/panes/stores/pane-selectors";
 import { usePaneStore } from "@/features/panes/stores/pane.store";

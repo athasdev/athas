@@ -9,6 +9,8 @@
  * baseline:
  *
  *   bun scripts/check/feature-boundaries.ts             # summary of current violations
+ *   bun scripts/check/feature-boundaries.ts --upward    # also list every upward import
+ *   bun scripts/check/feature-boundaries.ts --graph     # also list bidirectional feature pairs
  *   bun scripts/check/feature-boundaries.ts --update    # rewrite the baseline from the tree
  */
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
@@ -17,6 +19,7 @@ import {
   featureBoundaries,
   type FeatureBoundaryConfig,
   type FeatureBoundaryBaseline,
+  type FeatureTier,
 } from "./feature-boundaries.config";
 
 export type ImportKind = "static" | "type" | "dynamic" | "mock";
@@ -389,15 +392,172 @@ export function findPrivateImports(
   return [...violations].sort();
 }
 
-export function computeViolations(
-  repoRoot: string,
+export type LayerPosition = { tier: FeatureTier; rank: number; module: string };
+
+function tierOverrideMatches(featureRelative: string, pattern: string): boolean {
+  return pattern.endsWith("/**")
+    ? featureRelative.startsWith(pattern.slice(0, -2))
+    : featureRelative === pattern;
+}
+
+/**
+ * The tier of a feature file: the most specific `tierOverrides` pattern that matches it, otherwise
+ * its feature's tier. `module` names the unit the upward import baseline counts by: the feature,
+ * or the override pattern without its trailing `/**`.
+ */
+export function layerOf(
+  file: string,
   config: FeatureBoundaryConfig = featureBoundaries,
-): FeatureBoundaryBaseline {
-  const graph = buildImportGraph(repoRoot, config.sourceRoot);
+): LayerPosition | null {
+  const feature = featureOf(file, config);
+  if (!feature) return null;
+  const featureRelative = file.slice(`${config.featuresRoot}/`.length);
+  const override = Object.entries(config.layers.tierOverrides)
+    .filter(([pattern]) => tierOverrideMatches(featureRelative, pattern))
+    .sort(([left], [right]) => right.length - left.length)[0];
+  const tier =
+    override?.[1].tier ??
+    config.layers.order.find((candidate) => config.layers.tiers[candidate].includes(feature));
+  if (!tier) return null;
   return {
-    privateImports: findPrivateImports(graph, config),
-    cycleEdges: findCycleEdges(graph, config),
+    tier,
+    rank: config.layers.order.indexOf(tier),
+    module: override ? override[0].replace(/\/\*\*$/, "") : feature,
   };
+}
+
+/**
+ * Imports from a feature into a feature of a higher tier, counted per module pair as distinct
+ * importer/imported file pairs. Value, type-only and dynamic imports all count; test files and
+ * `vi.mock` do not. Features without a tier are reported by `findInvalidLayers` instead.
+ */
+export function findUpwardImports(
+  graph: ImportGraph,
+  config: FeatureBoundaryConfig = featureBoundaries,
+): Record<string, number> {
+  const pairs = new Set<string>();
+  const counts = new Map<string, number>();
+  for (const edge of graph.edges) {
+    if (edge.kind === "mock" || isTestFile(edge.from)) continue;
+    const sourceFeature = featureOf(edge.from, config);
+    const targetFeature = featureOf(edge.to, config);
+    if (!sourceFeature || !targetFeature || sourceFeature === targetFeature) continue;
+    const pair = `${edge.from} -> ${edge.to}`;
+    if (pairs.has(pair)) continue;
+    pairs.add(pair);
+    const source = layerOf(edge.from, config);
+    const target = layerOf(edge.to, config);
+    if (!source || !target || target.rank <= source.rank) continue;
+    const key = `${source.module} -> ${target.module}`;
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return Object.fromEntries([...counts].sort(([left], [right]) => left.localeCompare(right)));
+}
+
+/** The individual imports behind `findUpwardImports`, for the report. */
+export function listUpwardImports(
+  graph: ImportGraph,
+  config: FeatureBoundaryConfig = featureBoundaries,
+): string[] {
+  const lines = new Set<string>();
+  for (const edge of graph.edges) {
+    if (edge.kind === "mock" || isTestFile(edge.from)) continue;
+    if (featureOf(edge.from, config) === featureOf(edge.to, config)) continue;
+    const source = layerOf(edge.from, config);
+    const target = layerOf(edge.to, config);
+    if (!source || !target || target.rank <= source.rank) continue;
+    lines.add(`${source.module} -> ${target.module}: ${edge.from} -> ${edge.to}`);
+  }
+  return [...lines].sort();
+}
+
+/** Features with no tier or several tiers, and tier overrides that match nothing or lack a reason. */
+export function findInvalidLayers(
+  files: string[],
+  config: FeatureBoundaryConfig = featureBoundaries,
+): string[] {
+  const invalid: string[] = [];
+  const features = new Set(
+    files.map((file) => featureOf(file, config)).filter((feature) => feature !== null),
+  );
+  const assigned = new Map<string, FeatureTier[]>();
+  for (const tier of config.layers.order) {
+    for (const feature of config.layers.tiers[tier]) {
+      assigned.set(feature, [...(assigned.get(feature) ?? []), tier]);
+    }
+  }
+  for (const feature of [...features].sort()) {
+    if (!assigned.has(feature)) invalid.push(`${feature}: has no tier`);
+  }
+  for (const [feature, tiers] of assigned) {
+    if (!features.has(feature)) invalid.push(`${feature}: is not a feature`);
+    if (tiers.length > 1) invalid.push(`${feature}: is listed in ${tiers.join(", ")}`);
+  }
+  for (const [pattern, { tier, reason }] of Object.entries(config.layers.tierOverrides)) {
+    const prefix = `${config.featuresRoot}/`;
+    const matched = files.some(
+      (file) => file.startsWith(prefix) && tierOverrideMatches(file.slice(prefix.length), pattern),
+    );
+    if (!matched) invalid.push(`${pattern}: tier override matches no file`);
+    if (!config.layers.order.includes(tier)) invalid.push(`${pattern}: unknown tier ${tier}`);
+    if (!reason.trim()) invalid.push(`${pattern}: tier override has no reason`);
+  }
+  return invalid;
+}
+
+/**
+ * Feature-level coupling for the report: feature pairs that import each other (any import kind,
+ * tests excluded) and the strongly connected components of the feature graph.
+ */
+export function featureGraphStats(
+  graph: ImportGraph,
+  config: FeatureBoundaryConfig = featureBoundaries,
+) {
+  const adjacency = new Map<string, Set<string>>();
+  const features = new Set<string>();
+  for (const edge of graph.edges) {
+    if (edge.kind === "mock" || isTestFile(edge.from)) continue;
+    const source = featureOf(edge.from, config);
+    const target = featureOf(edge.to, config);
+    if (source) features.add(source);
+    if (target) features.add(target);
+    if (!source || !target || source === target) continue;
+    if (!adjacency.has(source)) adjacency.set(source, new Set());
+    adjacency.get(source)!.add(target);
+  }
+  const bidirectionalPairs: string[] = [];
+  for (const [source, targets] of adjacency) {
+    for (const target of targets) {
+      if (source < target && adjacency.get(target)?.has(source)) {
+        bidirectionalPairs.push(`${source} <-> ${target}`);
+      }
+    }
+  }
+  const components = stronglyConnectedComponents(
+    [...features].sort(),
+    new Map([...adjacency].map(([node, targets]) => [node, [...targets].sort()])),
+  );
+  return {
+    featureCount: features.size,
+    bidirectionalPairs: bidirectionalPairs.sort(),
+    components: components.sort((left, right) => right.length - left.length),
+  };
+}
+
+/** Module pairs whose upward import count is above the other side's, as `edge: current (baseline)`. */
+function diffCounts(
+  current: Record<string, number>,
+  baseline: Record<string, number>,
+  direction: "above" | "below",
+) {
+  const edges = new Set([...Object.keys(current), ...Object.keys(baseline)]);
+  return [...edges]
+    .sort()
+    .filter((edge) => {
+      const delta = (current[edge] ?? 0) - (baseline[edge] ?? 0);
+      return direction === "above" ? delta > 0 : delta < 0;
+    })
+    .map((edge) => `${edge}: ${current[edge] ?? 0} (baseline ${baseline[edge] ?? 0})`);
 }
 
 export function compareWithBaseline(
@@ -413,20 +573,32 @@ export function compareWithBaseline(
     stalePrivateImports: diff(baseline.privateImports, current.privateImports),
     newCycleEdges: diff(current.cycleEdges, baseline.cycleEdges),
     staleCycleEdges: diff(baseline.cycleEdges, current.cycleEdges),
+    newUpwardImports: diffCounts(current.upwardImports, baseline.upwardImports, "above"),
+    staleUpwardImports: diffCounts(current.upwardImports, baseline.upwardImports, "below"),
   };
 }
 
 export const BASELINE_PATH = "scripts/check/feature-boundaries.baseline.json";
 
+const sumCounts = (counts: Record<string, number>) =>
+  Object.values(counts).reduce((total, count) => total + count, 0);
+
 if (import.meta.main) {
   const repoRoot = path.resolve(import.meta.dir, "../..");
-  const current = computeViolations(repoRoot);
+  const graph = buildImportGraph(repoRoot, featureBoundaries.sourceRoot);
+  const current: FeatureBoundaryBaseline = {
+    privateImports: findPrivateImports(graph),
+    cycleEdges: findCycleEdges(graph),
+    upwardImports: findUpwardImports(graph),
+  };
+  const upwardSummary = (counts: Record<string, number>) =>
+    `${Object.keys(counts).length} module pairs, ${sumCounts(counts)} imports`;
 
   if (process.argv.includes("--update")) {
     writeFileSync(path.join(repoRoot, BASELINE_PATH), `${JSON.stringify(current, null, 2)}\n`);
     console.log(
       `Wrote ${BASELINE_PATH}: ${current.privateImports.length} private imports, ` +
-        `${current.cycleEdges.length} cycle edges.`,
+        `${current.cycleEdges.length} cycle edges, upward imports ${upwardSummary(current.upwardImports)}.`,
     );
   } else {
     const baseline = JSON.parse(
@@ -439,12 +611,30 @@ if (import.meta.main) {
     console.log(
       `Cycle edges: ${current.cycleEdges.length} (baseline ${baseline.cycleEdges.length})`,
     );
-    const invalidPublicFiles = findInvalidPublicFiles(
-      repoRoot,
-      collectSourceFiles(repoRoot, featureBoundaries.sourceRoot),
+    console.log(
+      `Upward imports: ${upwardSummary(current.upwardImports)} ` +
+        `(baseline ${upwardSummary(baseline.upwardImports)})`,
     );
-    for (const [name, entries] of Object.entries({ ...result, invalidPublicFiles })) {
+    const stats = featureGraphStats(graph);
+    console.log(
+      `Feature graph: ${stats.featureCount} features, ${stats.bidirectionalPairs.length} ` +
+        `bidirectional pairs, largest cycle ${stats.components[0]?.length ?? 0} features`,
+    );
+    const invalidPublicFiles = findInvalidPublicFiles(repoRoot, graph.files);
+    const invalidLayers = findInvalidLayers(graph.files);
+    for (const [name, entries] of Object.entries({
+      ...result,
+      invalidPublicFiles,
+      invalidLayers,
+    })) {
       if (entries.length > 0) console.log(`\n${name}:\n  ${entries.join("\n  ")}`);
+    }
+    if (process.argv.includes("--upward")) {
+      console.log(`\nupwardImports:\n  ${listUpwardImports(graph).join("\n  ")}`);
+    }
+    if (process.argv.includes("--graph")) {
+      console.log(`\nbidirectionalPairs:\n  ${stats.bidirectionalPairs.join("\n  ")}`);
+      console.log(`\ncycles:\n  ${stats.components.map((c) => c.join(" ")).join("\n  ")}`);
     }
   }
 }

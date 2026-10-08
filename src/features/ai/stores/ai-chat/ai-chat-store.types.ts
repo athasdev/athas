@@ -19,7 +19,7 @@ import type {
   QueuedAgentMessage,
 } from "@/features/ai/types/ai-chat.types";
 import type { ProviderModel } from "@/features/ai/services/providers/ai-provider-interface";
-import type { EditorSelectionContext } from "@/features/ai/types/ai-context.types";
+import type { EditorSelectionContext } from "@/features/editor/types/editor-selection.types";
 
 export interface AIWorkspaceSessionSnapshot {
   currentChatId: string | null;

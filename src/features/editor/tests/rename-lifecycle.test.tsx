@@ -2,9 +2,9 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 import type { EditorContent } from "@/features/panes/types/pane-content.types";
-import { captureWorkspaceEditContext } from "../lsp/workspace-edit";
+import { captureWorkspaceEditContext } from "../lsp/services/workspace-edit";
 import { useRename } from "../lsp/use-rename";
 import { useBufferStore } from "../stores/buffer.store";
 import { useEditorStateStore } from "../stores/state.store";
@@ -16,7 +16,7 @@ const mocks = vi.hoisted(() => ({
   toast: vi.fn(),
   write: vi.fn(),
 }));
-vi.mock("../lsp/lsp-client", () => ({
+vi.mock("../lsp/services/lsp-client", () => ({
   LspClient: {
     getInstance: () => ({
       createWorkspaceEditContext: captureWorkspaceEditContext,

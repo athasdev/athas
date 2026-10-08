@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vite-plus/test";
 import { useTerminalTabsStore } from "@/features/terminal/stores/terminal-tabs.store";
 import { selectIsTerminalPaneVisible } from "@/features/layout/stores/ui-state-selectors";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 
 const dispatch = (...args: Parameters<ReturnType<typeof getState>["actions"]["dispatch"]>) =>
   getState().actions.dispatch(...args);

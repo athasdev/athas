@@ -2,7 +2,7 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { useDetachedWindow } from "../detached/use-detached-window";
+import { useDetachedWindow } from "../detached/hooks/use-detached-window";
 
 const mocks = vi.hoisted(() => ({
   close: vi.fn(),

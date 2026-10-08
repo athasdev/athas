@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 import type { FileEntry } from "@/features/file-system/types/app.types";
 import { loadProviderSearchFiles } from "../services/provider-content-search";
 

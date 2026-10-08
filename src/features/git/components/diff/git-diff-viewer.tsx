@@ -1,10 +1,6 @@
 import { memo, useMemo } from "react";
 import { useDiffData } from "../../hooks/use-git-diff-data";
-import {
-  ViewerErrorState,
-  ViewerLoadingState,
-  ViewerState,
-} from "@/features/viewer/components/viewer-state";
+import { ViewerErrorState, ViewerLoadingState, ViewerState } from "@/ui/viewer-state";
 import type { DiffViewerProps, MultiFileDiff } from "../../types/git-diff.types";
 import GitDiffEditorStack from "./git-diff-editor-stack";
 import GitDiffEditorSurface from "./git-diff-editor-surface";

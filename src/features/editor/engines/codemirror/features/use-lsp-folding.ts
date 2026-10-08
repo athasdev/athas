@@ -1,4 +1,4 @@
-import { LspClient } from "../../../lsp/lsp-client";
+import { LspClient } from "../../../lsp/services/lsp-client";
 import { type CodeMirrorHost, useCodeMirrorExtension } from "../host";
 import { lspFoldRegions, lspFolding, setLspFoldingRanges } from "../navigation/lsp-folding";
 import { useDebouncedLspRefresh, useLspRevision } from "./lsp-feature-utils";

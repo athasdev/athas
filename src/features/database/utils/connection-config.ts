@@ -1,4 +1,4 @@
-import { PROVIDER_REGISTRY } from "../providers/provider-registry";
+import { PROVIDER_REGISTRY } from "../services/provider-registry";
 import type { SavedConnection } from "../stores/connection.store";
 import type { ConnectionValidationInput } from "./connection-validation";
 

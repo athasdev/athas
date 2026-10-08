@@ -31,13 +31,13 @@ import {
   loadRemoteConnections,
   saveAndConnectRemoteConnection,
   testRemoteConnection,
-} from "@/features/remote/services/remote-connection-actions";
+} from "@/features/workspace/services/remote-connection-actions";
 import type {
   RemoteConnection,
   RemoteConnectionFormData,
 } from "@/features/remote/types/remote.types";
 import { getWslHomeDirectory, listWslDistributions } from "@/features/wsl/api/wsl-distributions";
-import type { WslDistribution } from "@/features/wsl/services/wsl-workspace";
+import type { WslDistribution } from "@/features/wsl/types/wsl.types";
 import {
   getFriendlyRemoteError,
   isRemoteAuthFailure,

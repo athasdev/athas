@@ -16,7 +16,7 @@ import { CachedWorkspaceSplitViews } from "@/features/panes/components/split-vie
 import { usePaneKeyboard } from "@/features/panes/hooks/use-pane-keyboard";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useVimStore } from "@/features/vim/stores/vim.store";
-import { isWslPath } from "@/features/wsl/utils/wsl-path";
+import { isWslPath } from "@/features/wsl/services/wsl-path";
 import { useMenuEventsWrapper } from "@/features/window/hooks/use-menu-events-wrapper";
 import { useWorkspaceTabsStore } from "@/features/workspace/stores/workspace-tabs.store";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
@@ -27,7 +27,7 @@ import { recordStartupMilestone } from "@/features/bootstrap/services/startup-pe
 import { useBootstrapPhaseReached } from "@/features/bootstrap/stores/bootstrap-phase.store";
 import { getInternalTabDragData } from "@/features/tabs/services/internal-tab-drag";
 import { getCollapsedActivityBarWidth } from "@/features/layout/utils/activity-bar-layout";
-import { WorkbenchFullscreenRootContext } from "@/features/layout/components/workbench-fullscreen-surface";
+import { WorkbenchFullscreenRootContext } from "@/ui/workbench-fullscreen-surface";
 import TitleBarWithSettings from "../../window/components/title-bar/title-bar";
 import { TitleLeading } from "../../window/components/title-bar/title-leading";
 import { ResizablePane } from "./resizable-pane";

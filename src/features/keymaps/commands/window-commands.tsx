@@ -13,7 +13,8 @@ import {
   toggleNativeMenuBar,
 } from "./window-command-actions";
 
-const standaloneContent = () => import("@/features/window/detached/standalone-content-service");
+const standaloneContent = () =>
+  import("@/features/window/detached/services/standalone-content-service");
 
 export const windowCommands: Command[] = [
   {

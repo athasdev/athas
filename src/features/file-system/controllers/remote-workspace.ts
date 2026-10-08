@@ -1,4 +1,4 @@
-import { buildRemoteRootPath } from "@/features/remote/utils/remote-path";
+import { buildRemoteRootPath } from "@/features/remote/services/remote-path";
 import type { FileEntry } from "../types/app.types";
 
 interface RemoteDirectoryEntry {

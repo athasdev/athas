@@ -1,9 +1,9 @@
 import { readFileBytes } from "@/utils/local-files";
 import { useEffect, useState } from "react";
 import { FilePathBreadcrumb } from "@/features/editor/components/toolbar/file-path-breadcrumb";
-import { PaneContentHeader } from "@/features/panes/components/pane-content-chrome";
+import { PaneContentHeader } from "@/ui/pane-content-chrome";
 import { ViewerLayout } from "@/features/viewer/components/viewer-layout";
-import { ViewerErrorState, ViewerLoadingState } from "@/features/viewer/components/viewer-state";
+import { ViewerErrorState, ViewerLoadingState } from "@/ui/viewer-state";
 import { ScrollArea } from "@/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/ui/table";
 import { formatFileSize } from "@/utils/format-file-size";

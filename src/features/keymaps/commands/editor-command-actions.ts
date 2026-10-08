@@ -1,7 +1,7 @@
 import { getImageBufferSession } from "@/features/viewer/image/editor/services/image-buffer-session";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
-import { editorAPI } from "@/features/editor/extensions/api";
+import { editorAPI } from "@/features/editor/services/editor-api";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useFoldStore } from "@/features/editor/stores/fold.store";
 import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar.store";
@@ -392,7 +392,7 @@ export async function formatActiveEditorDocument(): Promise<void> {
   }
 
   const { formatContent, isFormattingAvailable } =
-    await import("@/features/editor/formatter/formatter-service");
+    await import("@/features/editor/services/formatter-service");
   const languageId = extensionRegistry.getLanguageId(activeBuffer.path) || activeBuffer.language;
 
   if (!isFormattingAvailable(activeBuffer.path, languageId || undefined)) {
@@ -437,7 +437,7 @@ export async function formatActiveEditorSelection(): Promise<void> {
     return;
   }
 
-  const { formatRange } = await import("@/features/editor/formatter/formatter-service");
+  const { formatRange } = await import("@/features/editor/services/formatter-service");
   const sourceText = resolveBufferText(activeBuffer);
   const result = await formatRange({
     filePath: activeBuffer.path,
@@ -497,7 +497,7 @@ export async function runQuickFixForActiveEditor(): Promise<void> {
     return;
   }
 
-  const { LspClient } = await import("@/features/editor/lsp/lsp-client");
+  const { LspClient } = await import("@/features/editor/lsp/services/lsp-client");
   const lspClient = LspClient.getInstance();
   const codeActions = (await lspClient.getCodeActions(activeBuffer.path, diagnostic)).filter(
     (action) => !action.disabledReason,

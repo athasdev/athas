@@ -1,5 +1,5 @@
 import type { DatabaseType } from "../types/provider.types";
-import { PROVIDER_REGISTRY } from "../providers/provider-registry";
+import { PROVIDER_REGISTRY } from "../services/provider-registry";
 
 const FILE_DATABASE_TYPES: DatabaseType[] = ["sqlite", "duckdb"];
 

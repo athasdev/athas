@@ -8,7 +8,7 @@ import {
   WarningIcon,
 } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { LspClient } from "@/features/editor/lsp/lsp-client";
+import { LspClient } from "@/features/editor/lsp/services/lsp-client";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import {
   type MultibufferSection,

@@ -3,7 +3,7 @@ import { normalizeOllamaBaseUrl } from "@/features/ai/services/ollama-endpoint";
 import { normalizeMcpServers } from "@/features/ai/services/mcp-servers";
 import { normalizeIntelligenceAgentSteps } from "@/features/ai/intelligence/services/intelligence-agent-steps";
 import { normalizeLegacyV0DesignSystems } from "@/features/settings/lib/legacy-v0-settings";
-import { isKeybindingPreset } from "@/features/keymaps/defaults/keybinding-presets";
+import { isKeybindingPreset } from "@/features/keymaps/constants/keybinding-presets";
 import {
   DEFAULT_AI_AUTOCOMPLETE_MODEL_ID,
   DEFAULT_AI_MODEL_ID,

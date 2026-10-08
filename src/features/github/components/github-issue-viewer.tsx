@@ -8,11 +8,7 @@ import {
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import {
-  ViewerErrorState,
-  ViewerLoadingState,
-  ViewerState,
-} from "@/features/viewer/components/viewer-state";
+import { ViewerErrorState, ViewerLoadingState, ViewerState } from "@/ui/viewer-state";
 import { Button } from "@/ui/button";
 import { DropdownMenuItem } from "@/ui/dropdown";
 import Badge from "@/ui/badge";

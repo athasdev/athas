@@ -1,5 +1,5 @@
 import { lazy, memo, Suspense, useCallback, useMemo, type ComponentProps } from "react";
-import { ViewerLoadingState } from "@/features/viewer/components/viewer-state";
+import { ViewerLoadingState } from "@/ui/viewer-state";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { calculateLineHeight, splitLines } from "@/features/editor/services/lines";
 import { buildSearchRegex, findAllMatches, type SearchOptions } from "@/utils/text-search";

@@ -2,7 +2,7 @@ import { captureBufferStoreOwner } from "@/features/editor/services/buffer-store
 import { savePaneContent } from "@/features/panes/services/pane-content-save-service";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import { parseCollaborationNoteBufferPath } from "@/features/collaboration/services/collaboration-sidebar-model";
+import { parseCollaborationNoteBufferPath } from "@/features/editor/services/virtual-buffer-paths";
 import { isDirtyContent, isEditorContent } from "@/features/panes/types/pane-content.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { cleanupEditorAutoSave, scheduleEditorAutoSave } from "../services/editor-save-service";

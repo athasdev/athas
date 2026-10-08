@@ -8,7 +8,7 @@ import { immer } from "zustand/middleware/immer";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { formatDatabaseError, normalizeDatabaseError } from "../lib/database-errors";
 import type { DatabaseType } from "../types/provider.types";
-import { PROVIDER_REGISTRY } from "../providers/provider-registry";
+import { PROVIDER_REGISTRY } from "../services/provider-registry";
 
 export interface SavedConnection {
   id: string;

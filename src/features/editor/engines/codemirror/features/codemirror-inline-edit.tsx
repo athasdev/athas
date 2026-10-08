@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useReducer, useRef, type RefObject } from "react";
 import { useOnClickOutside } from "usehooks-ts";
-import { InlineEditPopover } from "../../../inline-edit/inline-edit-popover";
-import type { InlineEditPreview } from "../../../inline-edit/inline-edit-preview";
-import { useInlineEdit } from "../../../inline-edit/use-inline-edit";
+import { InlineEditPopover } from "@/features/ai/inline-edit/components/inline-edit-popover";
+import type { InlineEditPreview } from "../../../types/inline-edit-preview.types";
+import { useInlineEdit } from "@/features/ai/inline-edit/hooks/use-inline-edit";
 import { useBufferText } from "../../../hooks/use-buffer-text";
 import { useEditorViewSettings } from "../../../hooks/use-editor-view-settings";
 import { useShallow } from "zustand/react/shallow";

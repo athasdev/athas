@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import type { EditorContent } from "@/features/panes/types/pane-content.types";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { AUTO_SAVE_DELAY_MS } from "../services/editor-save-service";
 import { useBufferStore } from "../stores/buffer.store";
@@ -20,14 +20,14 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/features/file-system/services/workspace-resource-provider", () => ({
   getWorkspaceResourceProvider: () => ({ writeText: mocks.writeFile }),
 }));
-vi.mock("@/features/editor/formatter/formatter-service", () => ({
+vi.mock("@/features/editor/services/formatter-service", () => ({
   formatContent: mocks.formatContent,
 }));
 vi.mock("@/utils/toast", () => ({ showToast: mocks.showToast }));
 
 vi.mock("@tauri-apps/plugin-dialog", () => ({ save: mocks.saveDialog }));
 
-vi.mock("@/features/editor/lsp/lsp-client", () => ({
+vi.mock("@/features/editor/lsp/services/lsp-client", () => ({
   LspClient: {
     getInstance: () => ({
       notifyDocumentSave: mocks.notifyDocumentSave,

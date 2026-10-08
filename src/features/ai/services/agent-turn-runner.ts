@@ -53,7 +53,7 @@ import { getProviderAccessFromMap } from "@/features/ai/stores/ai-chat/provider-
 import { useAcpTerminalsStore } from "@/features/ai/stores/acp-terminals.store";
 import { useAgentPermissionsStore } from "@/features/ai/stores/agent-permissions.store";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
-import { agentIsDetached } from "@/features/ai/detached/agent-window.store";
+import { agentIsDetached } from "@/features/ai/detached/stores/agent-window.store";
 import type { AcpEvent } from "@/features/ai/types/acp.types";
 import type { AgentCompletionResult } from "@/features/ai/types/agent-completion.types";
 import type {

@@ -11,8 +11,8 @@ import type {
   DebugVariable,
 } from "@/features/debugger/types/debugger.types";
 import { commands } from "@/bindings/commands";
-import { LspClient } from "@/features/editor/lsp/lsp-client";
-import { fileUriFromPath } from "@/features/editor/lsp/workspace-edit";
+import { LspClient } from "@/features/editor/lsp/services/lsp-client";
+import { fileUriFromPath } from "@/features/editor/lsp/services/workspace-edit";
 import { useDebuggerStore } from "@/features/debugger/stores/debugger.store";
 
 interface DebuggerEventHandlers {

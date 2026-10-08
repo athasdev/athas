@@ -8,7 +8,7 @@ import {
   type KeybindingPreset,
   keybindingPresetDefinitions,
   keybindingPresetOptions,
-} from "@/features/keymaps/defaults/keybinding-presets";
+} from "@/features/keymaps/constants/keybinding-presets";
 import { markOnboardingCompleted } from "@/features/onboarding/services/onboarding-state";
 import type { OnboardingContext } from "@/features/onboarding/services/onboarding-state";
 import { buildOnboardingViewModel } from "@/features/onboarding/lib/onboarding-view-model";

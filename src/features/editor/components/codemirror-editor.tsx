@@ -20,7 +20,7 @@ import {
   useWorkspaceStoreScopeId,
 } from "@/features/workspace/stores/create-workspace-scoped-store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { editorAPI } from "../extensions/api";
+import { editorAPI } from "../services/editor-api";
 import { useEditorViewSettings } from "../hooks/use-editor-view-settings";
 import {
   detectLineSeparator,
