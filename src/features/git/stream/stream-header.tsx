@@ -48,7 +48,7 @@ export function StreamIdentity({
         ) : (
           <GitBranchIcon className="size-3.5 shrink-0 text-subtle-foreground" />
         )}
-        <span className="min-w-0 truncate text-[12px]">
+        <span className="min-w-0 truncate ui-text-sm">
           <span className="text-subtle-foreground @max-[240px]/identity:hidden">
             {model.repoName} /{" "}
           </span>
@@ -102,7 +102,7 @@ function SyncButton({ model }: { model: SourceControlModel }) {
     <div
       ref={anchorRef}
       className={cn(
-        "flex h-6 shrink-0 items-stretch overflow-hidden rounded-md text-[11px] font-medium",
+        "flex h-6 shrink-0 items-stretch overflow-hidden rounded-md ui-text-sm font-medium",
         tone === "warn" && "bg-warning/12 text-warning",
         tone === "primary" && "bg-primary/12 text-primary",
         tone === "quiet" && "text-muted-foreground",
@@ -213,7 +213,7 @@ export function StreamComposer({ model }: { model: SourceControlModel }) {
           }}
           placeholder="Commit message"
           aria-label="Commit message"
-          className="block w-full resize-none bg-transparent px-2.5 py-2 text-[12px] leading-4 text-foreground outline-none placeholder:text-subtle-foreground"
+          className="block w-full resize-none bg-transparent px-2.5 py-2 ui-text-sm leading-4 text-foreground outline-none placeholder:text-subtle-foreground"
         />
         <div className="flex items-center gap-1 px-1 pb-1">
           <StreamIconButton
@@ -226,7 +226,7 @@ export function StreamComposer({ model }: { model: SourceControlModel }) {
           >
             <SparkleIcon className={cn("size-3", model.isGenerating && "animate-pulse")} />
           </StreamIconButton>
-          <span className="flex min-w-0 flex-1 items-center gap-1.5 text-[10.5px] text-subtle-foreground">
+          <span className="flex min-w-0 flex-1 items-center gap-1.5 ui-text-caption text-subtle-foreground">
             <span className="min-w-0 truncate">{scopeLabel}</span>
             <span className="@max-[230px]/composer:hidden">
               <DiffNumbers additions={additions} deletions={deletions} />
@@ -238,7 +238,7 @@ export function StreamComposer({ model }: { model: SourceControlModel }) {
               disabled={!canCommit}
               onClick={() => void submit()}
               title="Commit (⌘↵)"
-              className="bg-primary px-2.5 text-[11px] font-medium whitespace-nowrap text-primary-foreground transition-opacity hover:bg-primary-hover disabled:opacity-40"
+              className="bg-primary px-2.5 ui-text-sm font-medium whitespace-nowrap text-primary-foreground transition-opacity hover:bg-primary-hover disabled:opacity-40"
             >
               {model.isCommitting ? "Committing…" : "Commit"}
             </button>

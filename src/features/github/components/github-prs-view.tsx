@@ -774,7 +774,9 @@ const GitHubPRsView = memo(() => {
   if (!isAuthenticated) {
     return (
       <div className="flex h-full min-h-0 flex-col bg-background font-sans text-foreground">
-        <div className="flex h-11 shrink-0 items-center px-3 text-[13px] font-semibold">GitHub</div>
+        <div className="flex h-11 shrink-0 items-center px-3 ui-text-base font-semibold">
+          GitHub
+        </div>
         <GitHubAuthStatusMessage layout="sidebar" />
       </div>
     );
@@ -819,7 +821,7 @@ const GitHubPRsView = memo(() => {
                 }
               >
                 <GithubMark className="size-3.5 shrink-0 text-subtle-foreground" />
-                <span className="min-w-0 truncate text-[12px]">
+                <span className="min-w-0 truncate ui-text-sm">
                   <span className="font-medium text-foreground">{repoName}</span>
                   {currentBranch ? (
                     <span className="text-subtle-foreground"> / {currentBranch}</span>

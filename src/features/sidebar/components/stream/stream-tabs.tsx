@@ -34,7 +34,7 @@ export function StreamTabs({ tabs, label }: { tabs: StreamTab[]; label: string }
               {tab.count ? (
                 <span
                   className={cn(
-                    "absolute -top-1.5 left-3 flex h-3.5 min-w-3.5 items-center justify-center rounded-full px-0.5 text-[8.5px] font-semibold tabular-nums",
+                    "absolute -top-1.5 left-3 flex h-3.5 min-w-3.5 items-center justify-center rounded-full px-0.5 ui-text-caption font-semibold tabular-nums",
                     tab.active
                       ? "bg-primary text-primary-foreground"
                       : "bg-foreground/15 text-foreground",
@@ -44,7 +44,7 @@ export function StreamTabs({ tabs, label }: { tabs: StreamTab[]; label: string }
                 </span>
               ) : null}
             </span>
-            <span className="max-w-full truncate px-0.5 text-[10px] leading-3 @max-[240px]/tabs:hidden">
+            <span className="max-w-full truncate px-0.5 ui-text-caption leading-3 @max-[240px]/tabs:hidden">
               {tab.label}
             </span>
           </button>

@@ -21,7 +21,7 @@ export function StatusLetter({ status }: { status: GitFile["status"] }) {
     <span
       title={meta.label}
       className={cn(
-        "inline-flex size-4 shrink-0 items-center justify-center rounded-md font-mono text-[9.5px] font-semibold",
+        "inline-flex size-4 shrink-0 items-center justify-center rounded-md font-mono ui-text-caption font-semibold",
         meta.className,
       )}
     >
@@ -43,7 +43,7 @@ export function FileGlyph({ name }: { name: string }) {
 export function DiffNumbers({ additions, deletions }: { additions: number; deletions: number }) {
   if (additions === 0 && deletions === 0) return null;
   return (
-    <span className="flex shrink-0 gap-1 font-mono text-[10.5px] tabular-nums">
+    <span className="flex shrink-0 gap-1 font-mono ui-text-caption tabular-nums">
       {additions > 0 ? <span className="text-git-added">+{additions}</span> : null}
       {deletions > 0 ? <span className="text-git-deleted">−{deletions}</span> : null}
     </span>

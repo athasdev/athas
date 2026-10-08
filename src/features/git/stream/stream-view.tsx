@@ -10,14 +10,7 @@ import { writeSidebarResourceDragData } from "@/features/sidebar/utils/sidebar-r
 import { CommandEmpty, CommandItemBadge, CommandItemRow, CommandList } from "@/ui/command";
 import { ContextMenuPopup, createContextMenuGroups } from "@/ui/context-menu";
 import { showAlertDialog } from "@/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItems,
-  DropdownMenuTrigger,
-  useDropdownMenu,
-  type MenuItem,
-} from "@/ui/dropdown";
+import { useDropdownMenu, type MenuItem } from "@/ui/dropdown";
 import { Avatar } from "@/ui/avatar";
 import { EmptyState } from "@/ui/empty";
 import {
@@ -331,7 +324,7 @@ function StreamView(props: SourceControlModelProps) {
     return (
       <div className="flex h-full min-h-0 flex-col bg-background text-foreground">
         <div className="flex h-11 items-center justify-between px-3">
-          <span className="text-[13px] font-semibold">Source Control</span>
+          <span className="ui-text-base font-semibold">Source Control</span>
           {actionsMenu(false)}
         </div>
         <EmptyState
@@ -823,10 +816,10 @@ function StreamList({
                       />
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="line-clamp-2 text-[12px] leading-4 text-foreground">
+                      <span className="line-clamp-2 ui-text-sm leading-4 text-foreground">
                         {commit.message}
                       </span>
-                      <span className="mt-0.5 flex items-center gap-1.5 text-[10.5px] text-subtle-foreground">
+                      <span className="mt-0.5 flex items-center gap-1.5 ui-text-caption text-subtle-foreground">
                         <Avatar
                           name={commit.author}
                           src={getGitAuthorAvatarUrl(commit, account)}
@@ -836,7 +829,7 @@ function StreamList({
                         <span>·</span>
                         <span className="shrink-0">{formatRelativeDate(commit.date)}</span>
                         {unpushed ? (
-                          <span className="rounded-full bg-primary/15 px-1.5 text-[9.5px] font-medium text-primary">
+                          <span className="rounded-full bg-primary/15 px-1.5 ui-text-caption font-medium text-primary">
                             unpushed
                           </span>
                         ) : null}
@@ -849,11 +842,11 @@ function StreamList({
                       {selected && activeCommitDiff ? (
                         <span className="mt-2 block">
                           {commit.description?.trim() ? (
-                            <span className="mb-2 line-clamp-6 block text-[11px] leading-4 whitespace-pre-wrap text-muted-foreground">
+                            <span className="mb-2 line-clamp-6 block ui-text-sm leading-4 whitespace-pre-wrap text-muted-foreground">
                               {commit.description.trim()}
                             </span>
                           ) : null}
-                          <span className="flex items-center gap-1.5 text-[10.5px] text-subtle-foreground">
+                          <span className="flex items-center gap-1.5 ui-text-caption text-subtle-foreground">
                             <span className="shrink-0">
                               {activeCommitDiff.totalFiles} file
                               {activeCommitDiff.totalFiles === 1 ? "" : "s"}
@@ -886,7 +879,7 @@ function StreamList({
               })}
             </ol>
             {commits.length === 0 ? (
-              <div className="px-4 py-4 text-center text-[11.5px] text-subtle-foreground">
+              <div className="px-4 py-4 text-center ui-text-sm text-subtle-foreground">
                 {historyQuery ? "No matching commits" : "No commits yet"}
               </div>
             ) : null}
@@ -894,7 +887,7 @@ function StreamList({
               <button
                 type="button"
                 onClick={() => model.loadMoreCommits()}
-                className="mt-1 w-full rounded-md py-1.5 text-[11px] text-subtle-foreground hover:bg-foreground/5 hover:text-foreground"
+                className="mt-1 w-full rounded-md py-1.5 ui-text-sm text-subtle-foreground hover:bg-foreground/5 hover:text-foreground"
               >
                 Load older commits
               </button>

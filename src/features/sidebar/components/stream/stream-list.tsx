@@ -114,7 +114,7 @@ export function StreamSearchField({
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={(event) => event.key === "Escape" && onChange("")}
         placeholder={placeholder}
-        className="min-w-0 flex-1 bg-transparent text-[12px] text-foreground outline-none placeholder:text-subtle-foreground"
+        className="min-w-0 flex-1 bg-transparent ui-text-sm text-foreground outline-none placeholder:text-subtle-foreground"
       />
       {value ? (
         <button type="button" aria-label="Clear search" onClick={() => onChange("")}>
@@ -197,11 +197,11 @@ export function StreamSection({
               open && "rotate-90",
             )}
           />
-          <span className="min-w-0 truncate text-[12px] font-medium text-muted-foreground">
+          <span className="min-w-0 truncate ui-text-sm font-medium text-muted-foreground">
             {title}
           </span>
           {count !== undefined ? (
-            <span className="shrink-0 rounded-full bg-foreground/8 px-1.5 text-[10px] leading-4 text-subtle-foreground tabular-nums">
+            <span className="shrink-0 rounded-full bg-foreground/8 px-1.5 ui-text-caption leading-4 text-subtle-foreground tabular-nums">
               {count}
             </span>
           ) : null}
@@ -280,20 +280,20 @@ export function StreamRow({
       <span className={cn("flex shrink-0 items-center", selected && "text-primary")}>{icon}</span>
       <span
         className={cn(
-          "min-w-0 truncate text-[12px]",
+          "min-w-0 truncate ui-text-sm",
           selected && "font-medium",
           struck && "text-muted-foreground line-through",
         )}
       >
         {title}
       </span>
-      <span className="min-w-0 flex-1 basis-0 truncate text-[10.5px] text-subtle-foreground">
+      <span className="min-w-0 flex-1 basis-0 truncate ui-text-caption text-subtle-foreground">
         {secondary}
       </span>
       {meta ? (
         <span
           className={cn(
-            "flex shrink-0 items-center gap-1.5 text-[10.5px] text-subtle-foreground",
+            "flex shrink-0 items-center gap-1.5 ui-text-caption text-subtle-foreground",
             actions && "group-hover:hidden",
           )}
         >
@@ -317,7 +317,7 @@ export function StreamBadge({
   return (
     <span
       className={cn(
-        "rounded-full px-1.5 text-[10px] leading-4 font-medium",
+        "rounded-full px-1.5 ui-text-caption leading-4 font-medium",
         tone === "neutral" && "bg-foreground/8 text-subtle-foreground",
         tone === "primary" && "bg-primary/14 text-primary",
         tone === "success" && "bg-success/14 text-success",
@@ -341,8 +341,8 @@ export function StreamEmpty({
 }) {
   return (
     <div className="mx-1 my-2 rounded-xl border border-dashed border-border px-3 py-5 text-center">
-      <div className="text-[12px] text-muted-foreground">{title}</div>
-      {hint ? <div className="mt-0.5 text-[11px] text-subtle-foreground">{hint}</div> : null}
+      <div className="ui-text-sm text-muted-foreground">{title}</div>
+      {hint ? <div className="mt-0.5 ui-text-sm text-subtle-foreground">{hint}</div> : null}
       {action ? <div className="mt-2.5 flex justify-center">{action}</div> : null}
     </div>
   );
@@ -362,7 +362,7 @@ export function StreamTextButton({
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className="h-6 rounded-md bg-foreground/8 px-2.5 text-[11px] font-medium text-foreground hover:bg-foreground/12 disabled:opacity-40"
+      className="h-6 rounded-md bg-foreground/8 px-2.5 ui-text-sm font-medium text-foreground hover:bg-foreground/12 disabled:opacity-40"
     >
       {children}
     </button>
