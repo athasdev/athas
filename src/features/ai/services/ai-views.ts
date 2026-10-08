@@ -8,6 +8,7 @@ import { NewTabView } from "../components/new-tab-view";
 const loadAgentTab = () => import("../components/agent-tab");
 const AgentTab = lazy(() => loadAgentTab().then((module) => ({ default: module.AgentTab })));
 const ContinuousAgentsResource = lazy(() => import("../continuous-agents/resource"));
+const CloudAgentsResource = lazy(() => import("../cloud-agents/resource"));
 const AcpInspectorView = lazy(() => import("../acp-inspector/components/acp-inspector-view"));
 const AgentEditsReviewView = lazy(() => import("../components/chat/agent-edits-review"));
 // Loaded on demand so the layout does not pull the AI stores into its import graph.
@@ -37,6 +38,7 @@ export function registerAiViews() {
     component: ContinuousAgentsResource,
     getProps: () => ({}),
   });
+  registerPaneView("cloudAgents", { component: CloudAgentsResource, getProps: () => ({}) });
   registerPaneView("acpInspector", { component: AcpInspectorView, getProps: () => ({}) });
   registerPaneView("agentChanges", { component: AgentEditsReviewView, getProps: () => ({}) });
 

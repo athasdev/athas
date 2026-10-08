@@ -36,6 +36,7 @@ describe("Pro feature access", () => {
           hostedAi: false,
           settingsSync: true,
           cloudWorkspaces: false,
+          cloudAgents: false,
           collaboration: false,
           enterprisePolicy: false,
         },

@@ -21,6 +21,7 @@ describe("product capabilities", () => {
         hostedAi: false,
         settingsSync: true,
         cloudWorkspaces: true,
+        cloudAgents: false,
         collaboration: false,
         enterprisePolicy: true,
       },

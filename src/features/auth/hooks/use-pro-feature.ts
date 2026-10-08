@@ -13,11 +13,13 @@ export function resolveProFeatureAccess(
   const hasSettingsSync = hasProUserSnapshot || hasProductCapability(subscription, "settingsSync");
   const hasCloudWorkspaces =
     hasProUserSnapshot || hasProductCapability(subscription, "cloudWorkspaces");
+  const hasCloudAgents = hasProductCapability(subscription, "cloudAgents");
 
   return {
     hasIntelligence,
     hasSettingsSync,
     hasCloudWorkspaces,
+    hasCloudAgents,
   };
 }
 
@@ -26,10 +28,8 @@ export function useProFeature() {
   const subscription = useAuthStore((state) => state.subscription);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
-  const { hasIntelligence, hasSettingsSync, hasCloudWorkspaces } = resolveProFeatureAccess(
-    user,
-    subscription,
-  );
+  const { hasIntelligence, hasSettingsSync, hasCloudWorkspaces, hasCloudAgents } =
+    resolveProFeatureAccess(user, subscription);
   const isPro =
     user?.subscription_status === "pro" ||
     user?.subscriptionStatus === "pro" ||
@@ -42,6 +42,7 @@ export function useProFeature() {
     hasHostedAi: hasIntelligence,
     hasSettingsSync,
     hasCloudWorkspaces,
+    hasCloudAgents,
     isAuthenticated,
     subscriptionStatus:
       subscription?.status ?? user?.subscription_status ?? user?.subscriptionStatus ?? "free",

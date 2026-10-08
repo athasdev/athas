@@ -123,6 +123,7 @@ describe("auth-api desktop auth parsers", () => {
         hostedAi: false,
         settingsSync: true,
         cloudWorkspaces: true,
+        cloudAgents: true,
         collaboration: false,
         enterprisePolicy: true,
       },
@@ -135,9 +136,20 @@ describe("auth-api desktop auth parsers", () => {
       hostedAi: false,
       settingsSync: true,
       cloudWorkspaces: true,
+      cloudAgents: true,
       collaboration: false,
       enterprisePolicy: true,
     });
+  });
+
+  it("does not offer cloud agents when the server does not list them", () => {
+    const parsed = __test__.parseSubscriptionInfoResponse({
+      status: "pro",
+      capabilities: { intelligence: true },
+      enterprise: { has_access: false, is_admin: false, policy: null },
+      collaboration: null,
+    });
+    expect(parsed?.capabilities?.cloudAgents).toBe(false);
   });
 
   it("rejects malformed subscription payloads before storing them", () => {

@@ -31,6 +31,7 @@ export type ProductCapability =
   | "hostedAi"
   | "settingsSync"
   | "cloudWorkspaces"
+  | "cloudAgents"
   | "collaboration"
   | "enterprisePolicy";
 
@@ -283,6 +284,8 @@ function parseSubscriptionInfoResponse(payload: unknown): SubscriptionInfo | nul
         typeof capabilities.cloudWorkspaces === "boolean"
           ? capabilities.cloudWorkspaces
           : payload.status === "pro",
+      // Servers from before cloud agents do not offer them.
+      cloudAgents: capabilities.cloudAgents === true,
       collaboration:
         typeof capabilities.collaboration === "boolean"
           ? capabilities.collaboration

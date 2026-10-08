@@ -1,5 +1,6 @@
 import {
   ArrowsClockwiseIcon,
+  CloudIcon,
   ArrowsLeftRightIcon,
   ChatBubbleTextIcon,
   CheckIcon,
@@ -140,6 +141,17 @@ export const aiCommands: Command[] = [
     palette: true,
     execute: () => {
       useBufferStore.getState().actions.openContinuousAgentsBuffer();
+    },
+  },
+  {
+    id: "ai.openCloudAgents",
+    title: "AI: Cloud Agents",
+    category: "AI",
+    description: "Run Claude Code or Codex in the cloud and get a pull request",
+    icon: <CloudIcon />,
+    palette: true,
+    execute: () => {
+      useBufferStore.getState().actions.openCloudAgentsBuffer();
     },
   },
   {
