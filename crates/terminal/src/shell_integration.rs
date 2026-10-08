@@ -177,7 +177,13 @@ mod tests {
 
    #[test]
    fn installs_every_script_once_and_refreshes_changed_copies() {
-      let dir = install_dir();
+      // Other tests share install_dir() and rewrite its scripts in parallel, so the
+      // stale copy written here gets its own directory.
+      let base = std::env::temp_dir().join(format!(
+         "athas-shell-integration-refresh-test-{}",
+         std::process::id()
+      ));
+      let dir = ensure_shell_integration_dir(&base).unwrap();
       let zshrc = dir.join("zsh").join(".zshrc");
       assert!(zshrc.is_file());
       assert!(
