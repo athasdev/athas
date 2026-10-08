@@ -5,7 +5,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { editorAPI } from "@/features/editor/extensions/api";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
 import { getBufferById, getBufferByPath } from "@/features/editor/utils/buffer-index";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { hasTextContent } from "@/features/panes/types/pane-content.types";
@@ -17,6 +16,8 @@ import {
   isEntireMarkdownPreviewSelected,
 } from "./markdown-preview-search";
 import { useHighlightedMarkdown } from "./use-highlighted-markdown";
+
+const MARKDOWN_PREVIEW_PARSE_DELAY_MS = 150;
 
 export function MarkdownPreview({
   bufferId,
@@ -39,7 +40,7 @@ export function MarkdownPreview({
       };
     }),
   );
-  const fontSize = useEditorSettingsStore.use.fontSize();
+  const fontSize = useSettingsStore((state) => state.settings.fontSize);
   const uiFontFamily = useSettingsStore((state) => state.settings.uiFontFamily);
   const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath) || "";
@@ -49,7 +50,11 @@ export function MarkdownPreview({
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
-  const html = useHighlightedMarkdown(sourceContent, { frontMatter: "render" });
+  const html = useHighlightedMarkdown(sourceContent, {
+    frontMatter: "render",
+    debounceMs: MARKDOWN_PREVIEW_PARSE_DELAY_MS,
+    sourceKey: sourceBufferPath,
+  });
   const { html: renderedHtml, matchCount } = useMemo(
     () => highlightMarkdownPreviewMatches(html, isSearchOpen ? searchQuery : ""),
     [html, isSearchOpen, searchQuery],

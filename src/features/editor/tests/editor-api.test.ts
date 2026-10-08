@@ -3,9 +3,9 @@ import { editorAPI } from "../extensions/api";
 import { useBufferStore } from "../stores/buffer.store";
 import { useEditorStateStore } from "../stores/state.store";
 import { useHistoryStore } from "../stores/history.store";
-import { useEditorSettingsStore } from "../stores/settings.store";
 import { calculateCursorPositionFromContent } from "../utils/position";
 import type { EditorContent } from "@/features/panes/types/pane-content.types";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 
 const createMockStorage = () => {
   const storage = new Map<string, string>();
@@ -76,7 +76,6 @@ describe("editor API model operations", () => {
     vi.stubGlobal("document", documentStub);
 
     onChange.mockReset();
-    editorAPI.setTextareaRef?.(null);
     editorAPI.setActiveEditorAdapter(null);
     editorAPI.setActiveFindAdapter(null);
     editorAPI.updateCursorAndSelection({ line: 0, column: 0, offset: 0 }, null);
@@ -106,7 +105,6 @@ describe("editor API model operations", () => {
       onChange: () => {},
     });
     useHistoryStore?.getState().actions.clearAllHistories();
-    useEditorSettingsStore?.setState({ theme: "athas-dark" });
     editorAPI?.setActiveEditorAdapter(null);
     editorAPI?.setActiveFindAdapter(null);
     vi.unstubAllGlobals();
@@ -484,44 +482,20 @@ describe("editor API model operations", () => {
     expect(editorAPI.getLine(50_001)).toBeUndefined();
   });
 
-  it("reports the active editor theme from editor settings", () => {
-    useEditorSettingsStore.setState({ theme: "one-dark" });
+  it("reports the active editor theme from settings", () => {
+    const previousSettings = useSettingsStore.getState().settings;
+    useSettingsStore.setState({
+      settings: { ...previousSettings, theme: "one-dark", syncSystemTheme: false },
+    });
 
-    expect(editorAPI.getSettings().theme).toBe("one-dark");
+    try {
+      expect(editorAPI.getSettings().theme).toBe("one-dark");
+    } finally {
+      useSettingsStore.setState({ settings: previousSettings });
+    }
   });
 
-  it("does not sync cursor offsets into a textarea that does not own the full content", () => {
-    const textarea = {
-      value: "",
-      selectionStart: 0,
-      selectionEnd: 0,
-      dispatchEvent: vi.fn(),
-      select: vi.fn(),
-    } as unknown as HTMLTextAreaElement;
-
-    editorAPI.setTextareaRef?.(textarea);
-    editorAPI.setCursorPosition({ line: 1, column: 4, offset: "alpha\nbeta".length });
-
-    expect(textarea.selectionStart).toBe(0);
-    expect(textarea.selectionEnd).toBe(0);
-
-    textarea.value = "alpha\nbeta";
-    editorAPI.setCursorPosition({ line: 0, column: 2, offset: 2 });
-
-    expect(textarea.selectionStart).toBe(2);
-    expect(textarea.selectionEnd).toBe(2);
-  });
-
-  it("does not write undo content into a textarea that does not own the full content", () => {
-    const textarea = {
-      value: "",
-      selectionStart: 0,
-      selectionEnd: 0,
-      dispatchEvent: vi.fn(),
-      select: vi.fn(),
-    } as unknown as HTMLTextAreaElement;
-
-    editorAPI.setTextareaRef?.(textarea);
+  it("restores the previous content on undo", () => {
     useHistoryStore.getState().actions.pushHistory("buffer_editor_api_test", {
       content: "alpha",
       cursorPosition: { line: 0, column: 5, offset: 5 },
@@ -533,6 +507,5 @@ describe("editor API model operations", () => {
     expect(useBufferStore.getState().actions.getActiveBuffer()).toMatchObject({
       content: "alpha",
     });
-    expect(textarea.value).toBe("");
   });
 });

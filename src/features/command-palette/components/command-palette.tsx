@@ -1,12 +1,13 @@
 import { appDataDir } from "@tauri-apps/api/path";
 import { PuzzlePieceIcon, SearchIcon } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { useUIExtensionStore } from "@/extensions/ui/stores/ui-extension-store";
 import { IconThemeSelectorContent } from "@/features/command-palette/components/icon-theme-selector";
 import { ThemeSelectorContent } from "@/features/command-palette/components/theme-selector";
-import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
 import { useLspStore } from "@/features/editor/lsp/stores/lsp.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { getBufferById } from "@/features/editor/utils/buffer-index";
 import { isMarkdownFile } from "@/features/editor/utils/lines";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { LocalHistoryCommandContent } from "@/features/local-history/components/local-history-command";
@@ -22,11 +23,11 @@ import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
 import { useGitHubStore } from "@/features/github/stores/github.store";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { useOnboardingStore } from "@/features/onboarding/stores/onboarding.store";
+import { useSettingsSearchStore } from "@/features/settings/stores/settings-search.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useWhatsNewStore } from "@/features/settings/stores/whats-new.store";
 import { vimCommands } from "@/features/vim/stores/vim-commands";
 import { useVimStore } from "@/features/vim/stores/vim.store";
-import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { useZoomStore } from "@/features/window/stores/zoom.store";
 import { useKeymapStore } from "@/features/keymaps/stores/keymaps.store";
@@ -71,6 +72,7 @@ import {
 } from "../utils/command-palette-results";
 import { useActionsStore } from "../stores/action-history.store";
 import { useCommandPaletteViews } from "../services/command-palette-view-registry";
+import { useEffectiveTheme } from "@/features/settings/hooks/use-effective-theme";
 
 interface CommandPaletteContentProps {
   commandPaletteInitialView: CommandPaletteViewId;
@@ -89,7 +91,6 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
   const setIsQuickOpenVisible = useUIState((state) => state.setIsQuickOpenVisible);
   const openCommandPaletteView = useUIState((state) => state.openCommandPaletteView);
   const openSettings = useUIState((state) => state.openSettings);
-  const { openQuickEdit } = useEditorAppStore.use.actions();
   const handleFileSelect = useFileSystemStore.use.handleFileSelect?.();
   const onClose = () => {
     setIsCommandPaletteVisible(false);
@@ -174,7 +175,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
   const vimMode = useSettingsStore((state) => state.settings.vimMode);
   const vimRelativeLineNumbers = useSettingsStore((state) => state.settings.vimRelativeLineNumbers);
   const wordWrap = useSettingsStore((state) => state.settings.wordWrap);
-  const effectiveTheme = useEditorSettingsStore.use.theme();
+  const effectiveTheme = useEffectiveTheme();
   const { setMode } = useVimStore.use.actions();
   const lspStatus = useLspStore.use.lspStatus();
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
@@ -202,8 +203,18 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
   const openWhatsNew = useWhatsNewStore((state) => state.actions.open);
   const openOnboarding = useOnboardingStore((state) => state.actions.openPreview);
   const activeBufferId = useBufferStore.use.activeBufferId();
-  const activeBuffer = useBufferStore((state) =>
-    activeBufferId ? (state.buffers.find((buffer) => buffer.id === activeBufferId) ?? null) : null,
+  const activeBuffer = useBufferStore(
+    useShallow((state) => {
+      const buffer = activeBufferId ? getBufferById(state.buffers, activeBufferId) : undefined;
+      if (!buffer) return null;
+      return {
+        id: buffer.id,
+        type: buffer.type,
+        path: buffer.path,
+        isVirtual: buffer.type === "editor" && buffer.isVirtual === true,
+        isMarkdownPreview: buffer.type === "editor" && buffer.isMarkdownPreview === true,
+      };
+    }),
   );
   const {
     closeBuffer,
@@ -307,7 +318,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
       query,
       settings: commandSettings,
       openSettings,
-      setSettingsSearchQuery: useSettingsStore.getState().actions.setSearchQuery,
+      setSettingsSearchQuery: useSettingsSearchStore.getState().actions.setQuery,
       pushPaletteView: pushView,
       updateSetting: useSettingsStore.getState().actions.updateSetting as (
         key: string,
@@ -422,7 +433,6 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
       vimMode: commandSettings.vimMode,
       vimCommands,
       setMode,
-      openQuickEdit,
       showToast,
       onClose,
     }),

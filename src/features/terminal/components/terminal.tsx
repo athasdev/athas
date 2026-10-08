@@ -114,9 +114,8 @@ export const TerminalEmulator = ({
 
   const updateSession = useTerminalStore((state) => state.actions.updateSession);
   const getSession = useTerminalStore((state) => state.actions.getSession);
-  const session = useTerminalStore((state) => state.sessions.get(sessionId));
-  const connectionId = session?.connectionId;
-  const hadExistingConnectionOnMountRef = useRef(Boolean(session?.connectionId));
+  const connectionId = useTerminalStore((state) => state.sessions.get(sessionId)?.connectionId);
+  const hadExistingConnectionOnMountRef = useRef(Boolean(connectionId));
   const terminalInputCleanupRef = useRef<() => void>(() => {});
 
   const terminalThemeId = useSettingsStore((state) => state.settings.theme);
@@ -153,11 +152,15 @@ export const TerminalEmulator = ({
   const effectiveTerminalFontSize = Math.round(terminalFontSize * zoomLevel * 10) / 10;
   const effectiveTerminalLetterSpacing = terminalLetterSpacing * zoomLevel;
   const effectiveTerminalCursorWidth = Math.max(1, Math.round(terminalCursorWidth * zoomLevel));
-  const effectiveRemoteConnectionId =
-    remoteConnectionId ??
-    session?.remoteConnectionId ??
-    parseRemotePath(workingDirectory || session?.currentDirectory || rootFolderPath || "")
-      ?.connectionId;
+  const effectiveRemoteConnectionId = useTerminalStore((state) => {
+    if (remoteConnectionId != null) return remoteConnectionId;
+    const session = state.sessions.get(sessionId);
+    return (
+      session?.remoteConnectionId ??
+      parseRemotePath(workingDirectory || session?.currentDirectory || rootFolderPath || "")
+        ?.connectionId
+    );
+  });
   const terminalIsRemote = Boolean(effectiveRemoteConnectionId);
 
   useEffect(() => {

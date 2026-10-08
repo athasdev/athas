@@ -304,8 +304,7 @@ export async function goBack(): Promise<void> {
           line: editorState.cursorPosition.line,
           column: editorState.cursorPosition.column,
           offset: editorState.cursorPosition.offset,
-          scrollTop: editorState.scrollTop,
-          scrollLeft: editorState.scrollLeft,
+          ...editorState.actions.getScroll(),
         }
       : undefined;
 

@@ -140,4 +140,56 @@ describe("convertLintDiagnostic", () => {
 
     expect(actions.getDiagnosticsForFile("/tmp/app.ts")).toBe(appDiagnostics);
   });
+
+  it("keeps severity counts in step with every file and owner change", () => {
+    const { actions } = useDiagnosticsStore.getState();
+    actions.clearAllDiagnostics();
+    const make = (severity: "error" | "warning" | "info", line: number) => ({
+      severity,
+      filePath: "",
+      line,
+      column: 0,
+      endLine: line,
+      endColumn: 1,
+      message: `${severity} ${line}`,
+    });
+    const counts = () => useDiagnosticsStore.getState().diagnosticCounts;
+
+    actions.setDiagnostics("/tmp/a.ts", [make("error", 0), make("warning", 1)], "lsp");
+    actions.setDiagnostics("/tmp/a.ts", [make("info", 2)], "linter");
+    actions.setDiagnostics("/tmp/b.ts", [make("error", 0)], "lsp");
+    expect(counts()).toEqual({ error: 2, warning: 1, info: 1 });
+
+    actions.setDiagnostics("/tmp/a.ts", [make("warning", 1)], "lsp");
+    expect(counts()).toEqual({ error: 1, warning: 1, info: 1 });
+
+    actions.clearDiagnosticsForOwner("/tmp/a.ts", "linter");
+    expect(counts()).toEqual({ error: 1, warning: 1, info: 0 });
+
+    actions.clearDiagnostics("/tmp/b.ts");
+    expect(counts()).toEqual({ error: 0, warning: 1, info: 0 });
+
+    actions.clearAllDiagnostics();
+    expect(counts()).toEqual({ error: 0, warning: 0, info: 0 });
+  });
+
+  it("keeps the counts object when a change leaves the totals the same", () => {
+    const { actions } = useDiagnosticsStore.getState();
+    actions.clearAllDiagnostics();
+    const diagnostic = (message: string) => ({
+      severity: "error" as const,
+      filePath: "/tmp/app.ts",
+      line: 0,
+      column: 0,
+      endLine: 0,
+      endColumn: 1,
+      message,
+    });
+
+    actions.setDiagnostics("/tmp/app.ts", [diagnostic("first")], "lsp");
+    const before = useDiagnosticsStore.getState().diagnosticCounts;
+    actions.setDiagnostics("/tmp/app.ts", [diagnostic("second")], "lsp");
+
+    expect(useDiagnosticsStore.getState().diagnosticCounts).toBe(before);
+  });
 });

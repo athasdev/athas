@@ -28,10 +28,34 @@ function isSameDiagnosticList(left: readonly Diagnostic[], right: readonly Diagn
   );
 }
 
+export type DiagnosticCounts = Record<Diagnostic["severity"], number>;
+
+const EMPTY_DIAGNOSTIC_COUNTS: DiagnosticCounts = { error: 0, warning: 0, info: 0 };
+
+/**
+ * Totals kept in step with `diagnosticsByFile` by swapping out the counts of the one file that
+ * changed, so always-mounted badges can select plain numbers instead of walking every file.
+ */
+function replaceFileCounts(
+  counts: DiagnosticCounts,
+  previous: readonly Diagnostic[] | undefined,
+  next: readonly Diagnostic[] | undefined,
+): DiagnosticCounts {
+  const result = { ...counts };
+  for (const diagnostic of previous ?? []) result[diagnostic.severity] -= 1;
+  for (const diagnostic of next ?? []) result[diagnostic.severity] += 1;
+  return result.error === counts.error &&
+    result.warning === counts.warning &&
+    result.info === counts.info
+    ? counts
+    : result;
+}
+
 interface DiagnosticsState {
   // Map of file path to diagnostics
   diagnosticsByFile: Map<string, Diagnostic[]>;
   diagnosticsByOwner: Map<string, Map<string, Diagnostic[]>>;
+  diagnosticCounts: DiagnosticCounts;
   // Actions
   actions: {
     setDiagnostics: (filePath: string, diagnostics: Diagnostic[], owner?: string) => void;
@@ -101,6 +125,7 @@ export const useDiagnosticsStore = createSelectors(
   create<DiagnosticsState>()((set, get) => ({
     diagnosticsByFile: new Map(),
     diagnosticsByOwner: new Map(),
+    diagnosticCounts: EMPTY_DIAGNOSTIC_COUNTS,
 
     actions: {
       setDiagnostics: (filePath: string, diagnostics: Diagnostic[], owner = "default") => {
@@ -122,10 +147,16 @@ export const useDiagnosticsStore = createSelectors(
           nextDiagnosticsByOwner.set(filePath, fileOwners);
 
           const newMap = new Map(state.diagnosticsByFile);
-          newMap.set(filePath, Array.from(fileOwners.values()).flat());
+          const fileDiagnostics = Array.from(fileOwners.values()).flat();
+          newMap.set(filePath, fileDiagnostics);
           return {
             diagnosticsByFile: newMap,
             diagnosticsByOwner: nextDiagnosticsByOwner,
+            diagnosticCounts: replaceFileCounts(
+              state.diagnosticCounts,
+              state.diagnosticsByFile.get(filePath),
+              fileDiagnostics,
+            ),
           };
         });
       },
@@ -139,6 +170,11 @@ export const useDiagnosticsStore = createSelectors(
           return {
             diagnosticsByFile: newMap,
             diagnosticsByOwner: nextDiagnosticsByOwner,
+            diagnosticCounts: replaceFileCounts(
+              state.diagnosticCounts,
+              state.diagnosticsByFile.get(filePath),
+              undefined,
+            ),
           };
         });
       },
@@ -161,12 +197,21 @@ export const useDiagnosticsStore = createSelectors(
           return {
             diagnosticsByFile: nextDiagnosticsByFile,
             diagnosticsByOwner: nextDiagnosticsByOwner,
+            diagnosticCounts: replaceFileCounts(
+              state.diagnosticCounts,
+              state.diagnosticsByFile.get(filePath),
+              nextDiagnosticsByFile.get(filePath),
+            ),
           };
         });
       },
 
       clearAllDiagnostics: () => {
-        set({ diagnosticsByFile: new Map(), diagnosticsByOwner: new Map() });
+        set({
+          diagnosticsByFile: new Map(),
+          diagnosticsByOwner: new Map(),
+          diagnosticCounts: EMPTY_DIAGNOSTIC_COUNTS,
+        });
       },
 
       getDiagnosticsForFile: (filePath: string) => {

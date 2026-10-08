@@ -11,7 +11,8 @@ export const SqlTableMenu = ({
   onCreateRow: (tableName: string) => void;
   onDeleteTable: (tableName: string) => void;
 }) => {
-  const { databaseTableMenu, setDatabaseTableMenu } = useUIState();
+  const databaseTableMenu = useUIState((state) => state.databaseTableMenu);
+  const setDatabaseTableMenu = useUIState((state) => state.setDatabaseTableMenu);
 
   const onCloseMenu = () => setDatabaseTableMenu(null);
   const objectKind = databaseTableMenu?.objectKind ?? "table";
@@ -66,7 +67,8 @@ export const SqlRowMenu = ({
   onEditRow: (tableName: string, rowData: DatabaseRow) => void;
   onDeleteRow: (tableName: string, rowData: DatabaseRow) => void;
 }) => {
-  const { databaseRowMenu, setDatabaseRowMenu } = useUIState();
+  const databaseRowMenu = useUIState((state) => state.databaseRowMenu);
+  const setDatabaseRowMenu = useUIState((state) => state.setDatabaseRowMenu);
 
   const onCloseMenu = () => setDatabaseRowMenu(null);
   const items: MenuItem[] = databaseRowMenu

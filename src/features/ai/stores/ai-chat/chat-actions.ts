@@ -204,17 +204,21 @@ function ensureChatMessagesLoaded(set: SetAIChatStore, get: GetAIChatStore, chat
 /** Streamed changes to one message that have not reached the store yet. */
 interface PendingMessageUpdate {
   updates: Partial<Message>;
-  /** Text appended after `updates.content` (or the stored content when there is none). */
+  /** Computes more updates when the batch lands, applied over `updates`. */
+  resolveUpdates?: () => Partial<Message>;
+  /** Updates queued after `resolveUpdates`, applied over what it returns. */
+  laterUpdates: Partial<Message>;
+  /** Text appended after the content set above (or the stored content when there is none). */
   appended: string;
 }
 
 type PendingChatUpdates = Map<string, PendingMessageUpdate>;
 
 function applyPendingUpdates(chat: Draft<Chat>, pending: PendingChatUpdates) {
-  for (const [messageId, { updates, appended }] of pending) {
+  for (const [messageId, { updates, resolveUpdates, laterUpdates, appended }] of pending) {
     const message = chat.messages.find((candidate) => candidate.id === messageId);
     if (!message) continue;
-    const next = { ...message, ...updates } as Message;
+    const next = { ...message, ...updates, ...resolveUpdates?.(), ...laterUpdates } as Message;
     if (appended) next.content = `${next.content ?? ""}${appended}`;
     Object.assign(message, normalizeMessageFollowUpActions(next));
   }
@@ -274,7 +278,7 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
     }
     let pending = chatPending.get(messageId);
     if (!pending) {
-      pending = { updates: {}, appended: "" };
+      pending = { updates: {}, laterUpdates: {}, appended: "" };
       chatPending.set(messageId, pending);
     }
     cancelFrame ??= scheduleFrame(() => {
@@ -701,8 +705,15 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
     },
     queueMessageUpdate: (chatId, messageId, updates) => {
       const pending = queuePending(chatId, messageId);
+      if (typeof updates === "function") {
+        Object.assign(pending.updates, pending.laterUpdates);
+        pending.laterUpdates = {};
+        pending.resolveUpdates = updates;
+        pending.appended = "";
+        return;
+      }
       if ("content" in updates) pending.appended = "";
-      Object.assign(pending.updates, updates);
+      Object.assign(pending.resolveUpdates ? pending.laterUpdates : pending.updates, updates);
     },
     appendMessageContent: (chatId, messageId, chunk) => {
       if (!chunk) return;

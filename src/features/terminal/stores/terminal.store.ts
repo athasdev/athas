@@ -43,7 +43,7 @@ const createTerminalStore = (workspaceId: string) => {
       getSessionSignal: (sessionId) => lifetimes.get(sessionId)?.signal,
 
       updateSession: (sessionId: string, updates: Partial<Terminal>) => {
-        // Titles, directories and selections repeat often; an unchanged session keeps the same Map
+        // Titles and directories repeat often; an unchanged session keeps the same Map
         // so tab bars and other subscribers don't re-render.
         const currentSession = get().sessions.get(sessionId);
         if (!currentSession) return;

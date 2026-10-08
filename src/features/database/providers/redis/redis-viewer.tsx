@@ -7,6 +7,7 @@ import {
   TrashIcon,
 } from "@/ui/icons";
 import { useEffect, useRef, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { PathBreadcrumb } from "@/features/editor/components/toolbar/path-breadcrumb";
 import { PaneContentHeader } from "@/features/panes/components/pane-content-chrome";
 import { Alert, AlertDescription } from "@/ui/alert";
@@ -26,8 +27,22 @@ interface RedisViewerProps {
 
 export default function RedisViewer({ connectionId }: RedisViewerProps) {
   const [useStore] = useState(() => createRedisStore());
-  const store = useStore();
-  const { actions } = store;
+  const store = useStore(
+    useShallow((state) => ({
+      fileName: state.fileName,
+      keys: state.keys,
+      selectedKey: state.selectedKey,
+      selectedKeyType: state.selectedKeyType,
+      keyValue: state.keyValue,
+      serverInfo: state.serverInfo,
+      error: state.error,
+      isLoading: state.isLoading,
+      isScanningKeys: state.isScanningKeys,
+      scanPattern: state.scanPattern,
+      hasMore: state.hasMore,
+    })),
+  );
+  const actions = useStore((state) => state.actions);
   const [patternInput, setPatternInput] = useState("*");
   const [showInfo, setShowInfo] = useState(false);
   const keyListRef = useRef<HTMLDivElement | null>(null);

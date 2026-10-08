@@ -1,4 +1,4 @@
-import { commands } from "@/bindings/commands";
+import { commands, type GitBlame as GitBlamePayload } from "@/bindings/commands";
 import type { GitBlame } from "../types/git.types";
 import { isNotGitRepositoryError, resolveRepositoryForFile } from "./git-repo-api";
 
@@ -6,6 +6,26 @@ export interface ResolvedGitBlame {
   blame: GitBlame;
   repoPath: string;
   filePath: string;
+}
+
+/** The command lists each commit once; every line range gets its commit's details back here. */
+export function expandGitBlame(payload: GitBlamePayload): GitBlame {
+  return {
+    file_path: payload.file_path,
+    lines: payload.hunks.map((hunk) => {
+      const commit = hunk.commit_index === null ? undefined : payload.commits[hunk.commit_index];
+      return {
+        line_number: hunk.line_number,
+        total_lines: hunk.total_lines,
+        commit_hash: commit?.hash ?? "",
+        is_uncommitted: !commit,
+        author: commit?.author ?? "",
+        email: commit?.email ?? "",
+        time: commit?.time ?? 0,
+        commit: commit?.message ?? "",
+      };
+    }),
+  };
 }
 
 export const getResolvedGitBlame = async (
@@ -19,9 +39,9 @@ export const getResolvedGitBlame = async (
       return null;
     }
 
-    const blame = await commands.gitBlameFile(resolved.repoPath, resolved.filePath, content);
+    const payload = await commands.gitBlameFile(resolved.repoPath, resolved.filePath, content);
     return {
-      blame,
+      blame: expandGitBlame(payload),
       repoPath: resolved.repoPath,
       filePath: resolved.filePath,
     };

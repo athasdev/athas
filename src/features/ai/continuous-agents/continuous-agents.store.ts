@@ -138,6 +138,8 @@ export function selectNextDueContinuousAgent(
   );
 }
 
+export const CONTINUOUS_AGENTS_STORAGE_KEY = "athas-continuous-agents-v1";
+
 const useContinuousAgentsStoreBase = create<ContinuousAgentsState>()(
   persist(
     (set) => ({
@@ -243,7 +245,7 @@ const useContinuousAgentsStoreBase = create<ContinuousAgentsState>()(
       },
     }),
     {
-      name: "athas-continuous-agents-v1",
+      name: CONTINUOUS_AGENTS_STORAGE_KEY,
       version: 2,
       storage: createSafeJSONStorage<PersistedContinuousAgentsState>(),
       partialize: (state) => ({ tasks: state.tasks }),
@@ -263,3 +265,24 @@ const useContinuousAgentsStoreBase = create<ContinuousAgentsState>()(
 );
 
 export const useContinuousAgentsStore = createSelectors(useContinuousAgentsStoreBase);
+
+let hydratedSnapshot: string | null | undefined;
+
+function readPersistedSnapshot(): string | null {
+  try {
+    return globalThis.localStorage?.getItem(CONTINUOUS_AGENTS_STORAGE_KEY) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Pulls tasks another window saved. Rehydrating replaces the task array even when nothing changed,
+ * so the stored string is compared first and the store is only touched when it differs.
+ */
+export async function syncContinuousAgentsFromStorage() {
+  const snapshot = readPersistedSnapshot();
+  if (snapshot === hydratedSnapshot) return;
+  hydratedSnapshot = snapshot;
+  await useContinuousAgentsStore.persist.rehydrate();
+}

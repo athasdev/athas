@@ -74,7 +74,6 @@ beforeEach(() => {
       title = callback;
       return disposable;
     },
-    onSelectionChange: () => disposable,
     parser: { registerOscHandler: () => disposable },
     write: (bytes: Uint8Array, callback: () => void) => {
       writtenBytes.push(bytes);

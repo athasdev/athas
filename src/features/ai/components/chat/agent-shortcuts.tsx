@@ -65,13 +65,9 @@ export function AgentShortcuts({
   const skills = useSettingsStore((state) => state.settings.aiSkills);
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const changedFileCount = useGitStore((state) => state.workspaceGitStatus?.files.length ?? 0);
-  const problemCount = useDiagnosticsStore((state) => {
-    let count = 0;
-    for (const diagnostics of state.diagnosticsByFile.values()) {
-      for (const diagnostic of diagnostics) if (diagnostic.severity !== "info") count++;
-    }
-    return count;
-  });
+  const problemCount = useDiagnosticsStore(
+    (state) => state.diagnosticCounts.error + state.diagnosticCounts.warning,
+  );
   const activeFilePath = useFocusedEditorFile();
   const chats = useAIChatStore((state) => state.chats);
   const recentChats = useMemo(

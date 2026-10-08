@@ -1,6 +1,6 @@
 import { type ForwardedRef, forwardRef, useCallback, useEffect, useMemo, useState } from "react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
-import type { EditorModelPositionResolver } from "../view-model/view-layout";
+import type { EditorModelPositionResolver } from "../types/code-editor-view.types";
 import type { CodeLensItem } from "./use-code-lens";
 
 interface CodeLensOverlayProps {

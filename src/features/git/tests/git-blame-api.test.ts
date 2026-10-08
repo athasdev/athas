@@ -16,16 +16,54 @@ describe("git blame api", () => {
   });
 
   it("blames the current editor content against the resolved repository file", async () => {
-    const blame = { file_path: "src/app.ts", lines: [] };
+    const commit = {
+      hash: "abc123",
+      author: "Ada",
+      email: "ada@example.com",
+      time: 1_700_000_000,
+      message: "Add app",
+    };
+    const payload = {
+      file_path: "src/app.ts",
+      commits: [commit],
+      hunks: [
+        { line_number: 1, total_lines: 1, commit_index: null },
+        { line_number: 2, total_lines: 3, commit_index: 0 },
+      ],
+    };
     mockInvoke.mockImplementation((command) => {
       if (command === "git_discover_repo") return Promise.resolve("/workspace");
-      if (command === "git_blame_file") return Promise.resolve(blame);
+      if (command === "git_blame_file") return Promise.resolve(payload);
       return Promise.resolve(null);
     });
 
     await expect(
       getGitBlame("/workspace", "/workspace/src/app.ts", "const changed = true;\n"),
-    ).resolves.toEqual(blame);
+    ).resolves.toEqual({
+      file_path: "src/app.ts",
+      lines: [
+        {
+          line_number: 1,
+          total_lines: 1,
+          commit_hash: "",
+          is_uncommitted: true,
+          author: "",
+          email: "",
+          time: 0,
+          commit: "",
+        },
+        {
+          line_number: 2,
+          total_lines: 3,
+          commit_hash: "abc123",
+          is_uncommitted: false,
+          author: "Ada",
+          email: "ada@example.com",
+          time: 1_700_000_000,
+          commit: "Add app",
+        },
+      ],
+    });
     expect(mockInvoke).toHaveBeenCalledWith("git_blame_file", {
       rootPath: "/workspace",
       filePath: "src/app.ts",

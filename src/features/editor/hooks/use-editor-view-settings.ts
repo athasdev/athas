@@ -1,25 +1,26 @@
 import { getTypographyFontFallbacks } from "@/features/settings/config/typography-defaults";
+import { useEffectiveTheme } from "@/features/settings/hooks/use-effective-theme";
+import { isEditorWordWrapEnabled } from "@/features/settings/lib/editor-word-wrap";
 import { buildFontFamilyStack } from "@/features/settings/lib/font-family-resolution";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useZoomStore } from "@/features/window/stores/zoom.store";
 import { IS_WINDOWS } from "@/utils/platform";
 import { useShallow } from "zustand/react/shallow";
-import { useEditorSettingsStore } from "../stores/settings.store";
 import { calculateLineHeight } from "../utils/lines";
 
 /** The editor's visual settings, resolved for whichever engine draws the text. */
 export function useEditorViewSettings() {
-  const baseFontSize = useEditorSettingsStore.use.fontSize();
-  const fontFamilySetting = useEditorSettingsStore.use.fontFamily();
-  const editorLineHeight = useEditorSettingsStore.use.lineHeight();
-  const tabSize = useEditorSettingsStore.use.tabSize();
-  const wordWrap = useEditorSettingsStore.use.wordWrap();
-  const lineNumbers = useEditorSettingsStore.use.lineNumbers();
-  const renderWhitespace = useEditorSettingsStore.use.renderWhitespace();
-  const renderIndentGuides = useEditorSettingsStore.use.renderIndentGuides();
-  const highlightOccurrences = useEditorSettingsStore.use.highlightOccurrences();
-  const themeId = useEditorSettingsStore.use.theme();
+  const themeId = useEffectiveTheme();
+  const wordWrap = useSettingsStore((state) => isEditorWordWrapEnabled(state.settings));
   const {
+    fontSize: baseFontSize,
+    fontFamily: fontFamilySetting,
+    editorLineHeight,
+    tabSize,
+    lineNumbers,
+    renderWhitespace,
+    renderIndentGuides,
+    highlightOccurrences,
     editorFontLigatures,
     editorItalicComments,
     editorStickyScroll,
@@ -30,6 +31,14 @@ export function useEditorViewSettings() {
     editorCursorBlinking,
   } = useSettingsStore(
     useShallow((state) => ({
+      fontSize: state.settings.fontSize,
+      fontFamily: state.settings.fontFamily,
+      editorLineHeight: state.settings.editorLineHeight,
+      tabSize: state.settings.tabSize,
+      lineNumbers: state.settings.lineNumbers,
+      renderWhitespace: state.settings.renderWhitespace,
+      renderIndentGuides: state.settings.renderIndentGuides,
+      highlightOccurrences: state.settings.highlightOccurrences,
       editorFontLigatures: state.settings.editorFontLigatures,
       editorItalicComments: state.settings.editorItalicComments,
       editorStickyScroll: state.settings.editorStickyScroll,

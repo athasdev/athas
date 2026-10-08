@@ -1,10 +1,12 @@
 import { useEffect } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import type { AgentContent } from "@/features/panes/types/pane-content.types";
+import type { AgentContent, PaneContent } from "@/features/panes/types/pane-content.types";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import AIChat from "./chat/ai-chat";
 import { AgentWindowPlaceholder } from "@/features/ai/detached/agent-window-placeholder";
 import { useAgentWindowStore } from "@/features/ai/detached/agent-window.store";
+
+const EMPTY_CONTEXT_BUFFERS: PaneContent[] = [];
 
 interface AgentTabProps {
   buffer: AgentContent;
@@ -13,7 +15,9 @@ interface AgentTabProps {
 
 export function AgentTab({ buffer, isActive = true }: AgentTabProps) {
   const windowStatus = useAgentWindowStore((state) => state.sessions[buffer.sessionId]);
-  const contextBuffers = useBufferStore((state) => (isActive ? state.buffers : []));
+  const contextBuffers = useBufferStore((state) =>
+    isActive ? state.buffers : EMPTY_CONTEXT_BUFFERS,
+  );
   const activeBuffer = useBufferStore(
     (state) => state.buffers.find((candidate) => candidate.id === buffer.id) ?? buffer,
   );

@@ -1,7 +1,6 @@
 import { lazy, memo, Suspense, useCallback, useMemo, type ComponentProps } from "react";
 import { ViewerLoadingState } from "@/features/viewer/components/viewer-state";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
-import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
 import { calculateLineHeight, splitLines } from "@/features/editor/utils/lines";
 import {
   buildSearchRegex,
@@ -26,6 +25,7 @@ import DiffLineBackgroundLayer from "./diff-line-background-layer";
 import { BinaryDiffViewer } from "./git-diff-binary";
 import ImageDiffViewer from "./git-diff-image";
 import TextDiffViewer from "./git-diff-text";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 
 const CodeEditor = lazy(() => import("@/features/editor/components/code-editor"));
 
@@ -113,8 +113,8 @@ function EmbeddedDiffSectionEditor({
   searchMatches: MultiDiffSearchMatch[];
   currentSearchMatch: MultiDiffSearchMatch | null;
 }) {
-  const fontSize = useEditorSettingsStore.use.fontSize();
-  const editorLineHeight = useEditorSettingsStore.use.lineHeight();
+  const fontSize = useSettingsStore((state) => state.settings.fontSize);
+  const editorLineHeight = useSettingsStore((state) => state.settings.editorLineHeight);
   const zoomLevel = useZoomStore.use.editorZoomLevel();
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
   const sourcePath = diff.new_path || diff.old_path || diff.file_path;

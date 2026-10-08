@@ -76,6 +76,41 @@ describe("git blame store", () => {
     ).toBe("Current");
   });
 
+  it("reloads identical content once invalidated, keeping the loaded blame meanwhile", async () => {
+    const reload = deferredBlame();
+    mockGetGitBlame
+      .mockResolvedValueOnce({
+        blame: createBlame("Before commit"),
+        repoPath: "/workspace",
+        filePath: "src/app.ts",
+      })
+      .mockReturnValueOnce(reload.promise);
+    const store = createGitBlameStore();
+    const cacheKey = getGitBlameCacheKey("/workspace", "src/app.ts");
+    const { invalidateBlameForFile, loadBlameForFile } = store.getState().actions;
+
+    await loadBlameForFile("/workspace", "src/app.ts", "current");
+    invalidateBlameForFile("/workspace", "src/app.ts");
+    expect(store.getState().blameData.get(cacheKey)?.lines[0]?.author).toBe("Before commit");
+    expect(store.getState().blameContent.get(cacheKey)).toBe("current");
+
+    const reloading = loadBlameForFile("/workspace", "src/app.ts", "current");
+    await loadBlameForFile("/workspace", "src/app.ts", "current");
+    expect(mockGetGitBlame).toHaveBeenCalledTimes(2);
+    expect(store.getState().blameData.get(cacheKey)?.lines[0]?.author).toBe("Before commit");
+
+    reload.resolve({
+      blame: createBlame("After commit"),
+      repoPath: "/workspace",
+      filePath: "src/app.ts",
+    });
+    await reloading;
+
+    expect(store.getState().blameData.get(cacheKey)?.lines[0]?.author).toBe("After commit");
+    await loadBlameForFile("/workspace", "src/app.ts", "current");
+    expect(mockGetGitBlame).toHaveBeenCalledTimes(2);
+  });
+
   it("does not let an older request replace blame for newer content", async () => {
     const older = deferredBlame();
     const newer = deferredBlame();

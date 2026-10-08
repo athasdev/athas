@@ -1,6 +1,5 @@
 import type React from "react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import DebuggerView from "@/features/debugger/components/debugger-view";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { BOTTOM_PANE_ID } from "@/features/panes/constants/pane";
 import { usePaneStore } from "@/features/panes/stores/pane.store";
@@ -18,6 +17,8 @@ import { useProjectStore } from "@/features/window/stores/project.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { WorkbenchFullscreenSurface } from "@/features/window/components/workbench-fullscreen-surface";
 import { BottomBufferPane } from "./bottom-buffer-pane";
+
+const DebuggerView = lazy(() => import("@/features/debugger/components/debugger-view"));
 
 interface BottomPaneProps {
   embedded?: boolean;
@@ -263,11 +264,13 @@ const BottomPane = ({
 
         {debuggerEnabled && bottomPaneActiveTab === "debugger" && (
           <div className="h-full">
-            <DebuggerView
-              isFullScreen={isFullScreen}
-              onFullScreen={() => setIsFullScreen(!isFullScreen)}
-              onClose={closeBottomPane}
-            />
+            <Suspense fallback={null}>
+              <DebuggerView
+                isFullScreen={isFullScreen}
+                onFullScreen={() => setIsFullScreen(!isFullScreen)}
+                onClose={closeBottomPane}
+              />
+            </Suspense>
           </div>
         )}
 

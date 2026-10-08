@@ -11,7 +11,18 @@ import { useProFeature } from "@/features/window/hooks/use-pro-feature";
  * default model resolves to on this device.
  */
 export function useAIModelSettings() {
-  const store = useIntelligenceSettingsStore();
+  const store = useIntelligenceSettingsStore(
+    useShallow((state) => ({
+      userId: state.userId,
+      scope: state.scope,
+      scopes: state.scopes,
+      preferences: state.preferences,
+      dirty: state.dirty,
+      loading: state.loading,
+      error: state.error,
+      actions: state.actions,
+    })),
+  );
   const { hasIntelligence, isAuthenticated } = useProFeature();
   const settings = useSettingsStore(
     useShallow((state) => ({

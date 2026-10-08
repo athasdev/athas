@@ -6,7 +6,30 @@ import type {
   Position,
   Range,
 } from "./editor.types";
-import type { EditorModelPositionResolver } from "../view-model/view-layout";
+
+interface EditorResolvedPosition {
+  line: number;
+  column: number;
+  viewLine: number;
+  modelLine: number;
+  top: number;
+  left: number;
+  height: number;
+  segment: {
+    viewLine: number;
+    modelLine: number;
+    startColumn: number;
+    endColumn: number;
+    top: number;
+    height: number;
+  };
+}
+
+/** Where a model position sits inside the editor content, for overlays drawn on top of it. */
+export type EditorModelPositionResolver = (
+  line: number,
+  column: number,
+) => EditorResolvedPosition | null;
 
 /** What the workbench passes to the text editor, whichever engine draws it. */
 export interface CodeEditorViewProps {

@@ -1,4 +1,3 @@
-import isEqual from "fast-deep-equal";
 import { immer } from "zustand/middleware/immer";
 import { createStore } from "zustand/vanilla";
 import { createWorkspaceScopedStore } from "@/features/workspace/stores/create-workspace-scoped-store";
@@ -214,6 +213,14 @@ function setMostRecentActivePane(state: PaneState, paneId: string) {
       nextPaneIds.push(id);
       nextPaneIdSet.add(id);
     }
+  }
+
+  const previousPaneIds = state.mostRecentActivePaneIds;
+  if (
+    previousPaneIds.length === nextPaneIds.length &&
+    previousPaneIds.every((id, index) => id === nextPaneIds[index])
+  ) {
+    return;
   }
 
   state.mostRecentActivePaneIds = nextPaneIds;
@@ -644,6 +651,4 @@ const createPaneStore = () =>
     })),
   );
 
-export const usePaneStore = createSelectors(
-  createWorkspaceScopedStore("pane", createPaneStore, isEqual),
-);
+export const usePaneStore = createSelectors(createWorkspaceScopedStore("pane", createPaneStore));

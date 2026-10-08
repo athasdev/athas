@@ -37,9 +37,10 @@ vi.mock("../stores/state.store", () => ({
   useEditorStateStore: {
     getState: () => ({
       cursorPosition: { line: 2, column: 3, offset: 20 },
-      scrollTop: 90,
-      scrollLeft: 0,
-      actions: { requestNavigation: mocks.requestNavigation },
+      actions: {
+        requestNavigation: mocks.requestNavigation,
+        getScroll: () => ({ scrollTop: 90, scrollLeft: 0 }),
+      },
     }),
   },
 }));

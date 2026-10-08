@@ -1,5 +1,4 @@
 import { deliveryBufferPath } from "@/features/github/delivery/utils/github-delivery";
-import isEqual from "fast-deep-equal";
 import { immer } from "zustand/middleware/immer";
 import { createStore } from "zustand/vanilla";
 import type { DatabaseType } from "@/features/database/types/provider.types";
@@ -46,7 +45,6 @@ import type {
   PaneContent,
   BrowserContent,
   TerminalContent,
-  TokenEntry,
 } from "@/features/panes/types/pane-content.types";
 import type {
   EditorDocumentChangeBatch,
@@ -203,7 +201,6 @@ interface BufferActions {
     batch: EditorDocumentChangeBatch,
     markDirty?: boolean,
   ) => EditorDocumentChangeResult;
-  updateBufferTokens: (bufferId: string, tokens: TokenEntry[]) => void;
   updateBufferLanguage: (bufferId: string, language: string) => void;
   markBufferDirty: (bufferId: string, isDirty: boolean) => void;
   updateImageDraft: (bufferId: string, draft: ImageDraftState) => void;
@@ -1469,15 +1466,6 @@ const createBufferStore = (workspaceId: string) => {
           return { accepted: true, synchronized: true, contentRevision };
         },
 
-        updateBufferTokens: (bufferId: string, tokens: TokenEntry[]) => {
-          set((state) => {
-            const buffer = state.buffers.find((b) => b.id === bufferId);
-            if (buffer && isEditorContent(buffer)) {
-              buffer.tokens = tokens;
-            }
-          });
-        },
-
         updateBufferLanguage: (bufferId: string, language: string) => {
           set((state) => {
             const buffer = state.buffers.find((b) => b.id === bufferId);
@@ -1946,5 +1934,5 @@ const createBufferStore = (workspaceId: string) => {
 };
 
 export const useBufferStore = createSelectors(
-  createWorkspaceScopedStore("editor-buffer", createBufferStore, isEqual),
+  createWorkspaceScopedStore("editor-buffer", createBufferStore),
 );

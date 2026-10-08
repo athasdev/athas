@@ -15,9 +15,6 @@ import {
   saveSettingsToStore,
 } from "@/features/settings/lib/settings-persistence";
 import { parseSettingsImportJson } from "@/features/settings/lib/settings-import-export";
-import { scoreSettingSearchRecord } from "@/features/settings/lib/settings-search";
-import { settingsSearchIndex } from "../config/search-index";
-import type { SearchResult, SearchState } from "../types/search.types";
 import type { Settings } from "../types/settings.types";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
 import { createSelectors } from "@/utils/zustand-selectors";
@@ -54,12 +51,6 @@ const useSettingsStoreBase = create(
         settings: getStartupSettingsSnapshot(),
         /** Whether the saved settings have replaced the startup snapshot. */
         isLoaded: false,
-        search: {
-          query: "",
-          results: [] as SearchResult[],
-          isSearching: false,
-          selectedResultId: null,
-        } as SearchState,
       },
       (set) => ({
         actions: {
@@ -135,57 +126,6 @@ const useSettingsStoreBase = create(
             }
 
             debouncedSaveSettingsToStore(savePatch);
-          },
-
-          setSearchQuery: (query: string) => {
-            set((state) => {
-              state.search.query = query;
-              state.search.selectedResultId = null;
-            });
-            useSettingsStore.getState().actions.runSearch();
-          },
-
-          runSearch: () => {
-            const query = useSettingsStore.getState().search.query.trim().toLowerCase();
-
-            if (!query) {
-              set((state) => {
-                state.search.results = [];
-                state.search.isSearching = false;
-              });
-              return;
-            }
-
-            set((state) => {
-              state.search.isSearching = true;
-            });
-
-            const results: SearchResult[] = settingsSearchIndex
-              .map((record) => {
-                return { ...record, score: scoreSettingSearchRecord(query, record) };
-              })
-              .filter((result) => result.score > 0)
-              .sort((a, b) => b.score - a.score || a.label.localeCompare(b.label));
-
-            set((state) => {
-              state.search.results = results;
-              state.search.isSearching = false;
-            });
-          },
-
-          clearSearch: () => {
-            set((state) => {
-              state.search.query = "";
-              state.search.results = [];
-              state.search.isSearching = false;
-              state.search.selectedResultId = null;
-            });
-          },
-
-          selectSearchResult: (resultId: string) => {
-            set((state) => {
-              state.search.selectedResultId = resultId;
-            });
           },
         },
       }),

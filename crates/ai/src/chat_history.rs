@@ -1,6 +1,9 @@
 use rusqlite::{Connection, Result as SqliteResult, ToSql, params};
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::{
+   collections::{HashMap, HashSet},
+   path::PathBuf,
+};
 
 #[derive(Debug, Serialize, Deserialize, Clone, specta::Type)]
 pub struct ChatData {
@@ -248,6 +251,9 @@ impl ChatHistoryRepository {
       }
    }
 
+   /// Stores a chat snapshot. A streamed reply saves its chat several times a second, so this
+   /// writes only what changed: rows are upserted (and left untouched when equal), and only the
+   /// messages and tool calls missing from the snapshot are deleted, all in one transaction.
    pub fn save_chat(
       &self,
       chat: ChatData,
@@ -257,95 +263,201 @@ impl ChatHistoryRepository {
       if messages.iter().any(|message| message.chat_id != chat.id) {
          return Err("A message belongs to a different chat".to_string());
       }
-      let message_ids: std::collections::HashSet<&str> =
-         messages.iter().map(|message| message.id.as_str()).collect();
+      let message_ids: HashSet<&str> = messages.iter().map(|message| message.id.as_str()).collect();
       if tool_calls
          .iter()
          .any(|call| !message_ids.contains(call.message_id.as_str()))
       {
          return Err("A tool call belongs to a message outside this chat snapshot".to_string());
       }
-      let conn = self.open_connection()?;
-
-      conn
-         .execute("BEGIN TRANSACTION", [])
+      let mut conn = self.open_connection()?;
+      let transaction = conn
+         .transaction()
          .map_err(|e| format!("Failed to begin transaction: {}", e))?;
 
-      match conn.execute(
-         "INSERT INTO chats (id, title, created_at, last_message_at, agent_id, acp_session_id, \
-          workspace_path, provider_id, model_id, branch, is_pinned, archived_at, \
-          session_settings) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)
-          ON CONFLICT(id) DO UPDATE SET title = excluded.title, created_at = excluded.created_at,
-          last_message_at = excluded.last_message_at, agent_id = excluded.agent_id,
-          acp_session_id = excluded.acp_session_id, workspace_path = excluded.workspace_path,
-          provider_id = excluded.provider_id, model_id = excluded.model_id, branch = \
-          excluded.branch,
-          is_pinned = excluded.is_pinned, archived_at = excluded.archived_at,
-          session_settings = excluded.session_settings",
-         params![
-            chat.id,
-            chat.title,
-            chat.created_at,
-            chat.last_message_at,
-            chat.agent_id.unwrap_or_else(|| "custom".to_string()),
-            chat.acp_session_id,
-            chat.workspace_path,
-            chat.provider_id,
-            chat.model_id,
-            chat.branch,
-            chat.is_pinned,
-            chat.archived_at,
-            chat.session_settings
-         ],
-      ) {
-         Ok(_) => {}
-         Err(e) => {
-            conn.execute("ROLLBACK", []).ok();
-            return Err(format!("Failed to save chat: {}", e));
-         }
-      }
-
-      match conn.execute("DELETE FROM messages WHERE chat_id = ?1", params![chat.id]) {
-         Ok(_) => {}
-         Err(e) => {
-            conn.execute("ROLLBACK", []).ok();
-            return Err(format!("Failed to delete old messages: {}", e));
-         }
-      }
-
-      for message in messages {
-         match conn.execute(
-            "INSERT INTO messages (id, chat_id, role, content, timestamp, is_streaming, \
-             is_tool_use, tool_name, images, plan, stop_notice, turn_usage) VALUES (?1, ?2, ?3, \
-             ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
+      transaction
+         .execute(
+            "INSERT INTO chats (id, title, created_at, last_message_at, agent_id, acp_session_id, \
+             workspace_path, provider_id, model_id, branch, is_pinned, archived_at, \
+             session_settings) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)
+             ON CONFLICT(id) DO UPDATE SET title = excluded.title, created_at = \
+             excluded.created_at,
+             last_message_at = excluded.last_message_at, agent_id = excluded.agent_id,
+             acp_session_id = excluded.acp_session_id, workspace_path = excluded.workspace_path,
+             provider_id = excluded.provider_id, model_id = excluded.model_id, branch = \
+             excluded.branch,
+             is_pinned = excluded.is_pinned, archived_at = excluded.archived_at,
+             session_settings = excluded.session_settings",
             params![
-               message.id,
-               message.chat_id,
-               message.role,
-               message.content,
-               message.timestamp,
-               message.is_streaming,
-               message.is_tool_use,
-               message.tool_name,
-               message.images,
-               message.plan,
-               message.stop_notice,
-               message.turn_usage
+               chat.id,
+               chat.title,
+               chat.created_at,
+               chat.last_message_at,
+               chat.agent_id.unwrap_or_else(|| "custom".to_string()),
+               chat.acp_session_id,
+               chat.workspace_path,
+               chat.provider_id,
+               chat.model_id,
+               chat.branch,
+               chat.is_pinned,
+               chat.archived_at,
+               chat.session_settings
             ],
-         ) {
-            Ok(_) => {}
-            Err(e) => {
-               conn.execute("ROLLBACK", []).ok();
-               return Err(format!("Failed to save message: {}", e));
+         )
+         .map_err(|e| format!("Failed to save chat: {}", e))?;
+
+      let stored_message_ids = {
+         let mut stmt = transaction
+            .prepare_cached("SELECT id FROM messages WHERE chat_id = ?1")
+            .map_err(|e| format!("Failed to read stored messages: {}", e))?;
+         stmt
+            .query_map(params![chat.id], |row| row.get::<_, String>(0))
+            .map_err(|e| format!("Failed to read stored messages: {}", e))?
+            .collect::<SqliteResult<HashSet<_>>>()
+            .map_err(|e| format!("Failed to read stored messages: {}", e))?
+      };
+
+      for removed in stored_message_ids
+         .iter()
+         .filter(|id| !message_ids.contains(id.as_str()))
+      {
+         transaction
+            .execute(
+               "DELETE FROM tool_calls WHERE message_id = ?1",
+               params![removed],
+            )
+            .map_err(|e| format!("Failed to delete old tool calls: {}", e))?;
+         transaction
+            .execute("DELETE FROM messages WHERE id = ?1", params![removed])
+            .map_err(|e| format!("Failed to delete old messages: {}", e))?;
+      }
+
+      {
+         let mut stmt = transaction
+            .prepare_cached(
+               "INSERT INTO messages (id, chat_id, role, content, timestamp, is_streaming, \
+                is_tool_use, tool_name, images, plan, stop_notice, turn_usage) VALUES (?1, ?2, \
+                ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)
+                ON CONFLICT(id) DO UPDATE SET role = excluded.role, content = excluded.content,
+                timestamp = excluded.timestamp, is_streaming = excluded.is_streaming,
+                is_tool_use = excluded.is_tool_use, tool_name = excluded.tool_name,
+                images = excluded.images, plan = excluded.plan, stop_notice = excluded.stop_notice,
+                turn_usage = excluded.turn_usage
+                WHERE messages.chat_id = excluded.chat_id AND (messages.role IS NOT excluded.role
+                OR messages.content IS NOT excluded.content
+                OR messages.timestamp IS NOT excluded.timestamp
+                OR messages.is_streaming IS NOT excluded.is_streaming
+                OR messages.is_tool_use IS NOT excluded.is_tool_use
+                OR messages.tool_name IS NOT excluded.tool_name
+                OR messages.images IS NOT excluded.images
+                OR messages.plan IS NOT excluded.plan
+                OR messages.stop_notice IS NOT excluded.stop_notice
+                OR messages.turn_usage IS NOT excluded.turn_usage)",
+            )
+            .map_err(|e| format!("Failed to save message: {}", e))?;
+         for message in &messages {
+            let changed = stmt
+               .execute(params![
+                  message.id,
+                  message.chat_id,
+                  message.role,
+                  message.content,
+                  message.timestamp,
+                  message.is_streaming,
+                  message.is_tool_use,
+                  message.tool_name,
+                  message.images,
+                  message.plan,
+                  message.stop_notice,
+                  message.turn_usage
+               ])
+               .map_err(|e| format!("Failed to save message: {}", e))?;
+            // A new id that changed nothing collided with another chat's message.
+            if changed == 0 && !stored_message_ids.contains(&message.id) {
+               return Err(format!(
+                  "Failed to save message: {} belongs to another chat",
+                  message.id
+               ));
             }
          }
       }
 
-      for tool_call in tool_calls {
-         match conn.execute(
+      Self::save_tool_calls(&transaction, &chat.id, &tool_calls)?;
+
+      transaction
+         .commit()
+         .map_err(|e| format!("Failed to commit transaction: {}", e))?;
+
+      Ok(())
+   }
+
+   /// Matches each message's tool calls to its stored rows by position (rows keep their insertion
+   /// order): changed rows are updated in place, extra calls appended, and leftover rows deleted.
+   fn save_tool_calls(
+      conn: &Connection,
+      chat_id: &str,
+      tool_calls: &[ToolCallData],
+   ) -> Result<(), String> {
+      let mut stored_rows: HashMap<String, Vec<i64>> = HashMap::new();
+      {
+         let mut stmt = conn
+            .prepare_cached(
+               "SELECT tool_calls.id, tool_calls.message_id FROM tool_calls JOIN messages ON \
+                messages.id = tool_calls.message_id WHERE messages.chat_id = ?1 ORDER BY \
+                tool_calls.id",
+            )
+            .map_err(|e| format!("Failed to read stored tool calls: {}", e))?;
+         let rows = stmt
+            .query_map(params![chat_id], |row| {
+               Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?))
+            })
+            .map_err(|e| format!("Failed to read stored tool calls: {}", e))?;
+         for row in rows {
+            let (row_id, message_id) =
+               row.map_err(|e| format!("Failed to read stored tool calls: {}", e))?;
+            stored_rows.entry(message_id).or_default().push(row_id);
+         }
+      }
+
+      let mut update = conn
+         .prepare_cached(
+            "UPDATE tool_calls SET name = ?2, input = ?3, output = ?4, error = ?5, timestamp = \
+             ?6, is_complete = ?7, meta = ?8 WHERE id = ?1 AND (name IS NOT ?2 OR input IS NOT ?3 \
+             OR output IS NOT ?4 OR error IS NOT ?5 OR timestamp IS NOT ?6 OR is_complete IS NOT \
+             ?7 OR meta IS NOT ?8)",
+         )
+         .map_err(|e| format!("Failed to save tool call: {}", e))?;
+      let mut insert = conn
+         .prepare_cached(
             "INSERT INTO tool_calls (message_id, name, input, output, error, timestamp, \
              is_complete, meta) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
-            params![
+         )
+         .map_err(|e| format!("Failed to save tool call: {}", e))?;
+      let mut delete = conn
+         .prepare_cached("DELETE FROM tool_calls WHERE id = ?1")
+         .map_err(|e| format!("Failed to delete old tool calls: {}", e))?;
+
+      let mut next_position: HashMap<&str, usize> = HashMap::new();
+      for tool_call in tool_calls {
+         let position = next_position
+            .entry(tool_call.message_id.as_str())
+            .or_default();
+         let stored = stored_rows
+            .get(&tool_call.message_id)
+            .and_then(|rows| rows.get(*position));
+         *position += 1;
+         match stored {
+            Some(row_id) => update.execute(params![
+               row_id,
+               tool_call.name,
+               tool_call.input,
+               tool_call.output,
+               tool_call.error,
+               tool_call.timestamp,
+               tool_call.is_complete,
+               tool_call.meta
+            ]),
+            None => insert.execute(params![
                tool_call.message_id,
                tool_call.name,
                tool_call.input,
@@ -354,19 +466,19 @@ impl ChatHistoryRepository {
                tool_call.timestamp,
                tool_call.is_complete,
                tool_call.meta
-            ],
-         ) {
-            Ok(_) => {}
-            Err(e) => {
-               conn.execute("ROLLBACK", []).ok();
-               return Err(format!("Failed to save tool call: {}", e));
-            }
+            ]),
          }
+         .map_err(|e| format!("Failed to save tool call: {}", e))?;
       }
 
-      conn
-         .execute("COMMIT", [])
-         .map_err(|e| format!("Failed to commit transaction: {}", e))?;
+      for (message_id, rows) in &stored_rows {
+         let kept = next_position.get(message_id.as_str()).copied().unwrap_or(0);
+         for row_id in rows.iter().skip(kept) {
+            delete
+               .execute(params![row_id])
+               .map_err(|e| format!("Failed to delete old tool calls: {}", e))?;
+         }
+      }
 
       Ok(())
    }
@@ -863,6 +975,166 @@ mod tests {
       assert_eq!(stats.total_tool_calls, 1);
       assert_eq!(repository.load_chat("two").unwrap().messages.len(), 1);
       assert_eq!(repository.load_checkpoints("one").unwrap(), None);
+   }
+
+   fn tool_call_rows(repository: &ChatHistoryRepository) -> Vec<(i64, String, Option<String>)> {
+      let conn = repository.open_connection().unwrap();
+      let mut stmt = conn
+         .prepare("SELECT id, message_id, output FROM tool_calls ORDER BY id")
+         .unwrap();
+      stmt
+         .query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))
+         .unwrap()
+         .collect::<SqliteResult<Vec<_>>>()
+         .unwrap()
+   }
+
+   #[test]
+   fn resaves_a_chat_by_updating_changed_rows_in_place() {
+      let directory = tempfile::tempdir().unwrap();
+      let repository = ChatHistoryRepository::new(directory.path().join("history.db"));
+      repository.initialize().unwrap();
+      let mut prompt = sample_message("chat", "prompt");
+      prompt.role = "user".to_string();
+      prompt.timestamp = 1;
+      let mut reply = sample_message("chat", "reply");
+      reply.is_streaming = true;
+      let mut running = sample_tool_call("reply");
+      running.is_complete = false;
+      repository
+         .save_chat(
+            sample_chat("chat"),
+            vec![prompt.clone(), reply.clone()],
+            vec![sample_tool_call("reply"), running.clone()],
+         )
+         .unwrap();
+      let first_rows = tool_call_rows(&repository);
+      assert_eq!(first_rows.len(), 2);
+
+      reply.content = "Reply, continued".to_string();
+      reply.is_streaming = false;
+      running.is_complete = true;
+      running.output = Some("done".to_string());
+      let mut title = sample_chat("chat");
+      title.title = "Renamed".to_string();
+      repository
+         .save_chat(
+            title,
+            vec![prompt.clone(), reply.clone()],
+            vec![
+               sample_tool_call("reply"),
+               running.clone(),
+               sample_tool_call("reply"),
+            ],
+         )
+         .unwrap();
+
+      let loaded = repository.load_chat("chat").unwrap();
+      assert_eq!(loaded.chat.title, "Renamed");
+      assert_eq!(
+         loaded
+            .messages
+            .iter()
+            .map(|message| (message.id.as_str(), message.content.as_str()))
+            .collect::<Vec<_>>(),
+         vec![("prompt", "Reply"), ("reply", "Reply, continued")]
+      );
+      assert!(!loaded.messages[1].is_streaming);
+      assert_eq!(loaded.tool_calls.len(), 3);
+      assert!(loaded.tool_calls[1].is_complete);
+      assert_eq!(loaded.tool_calls[1].output.as_deref(), Some("done"));
+      let rows = tool_call_rows(&repository);
+      assert_eq!(rows[0].0, first_rows[0].0);
+      assert_eq!(rows[1].0, first_rows[1].0);
+      assert!(rows[2].0 > rows[1].0);
+
+      repository
+         .save_chat(
+            sample_chat("chat"),
+            vec![prompt.clone(), reply.clone()],
+            vec![sample_tool_call("reply")],
+         )
+         .unwrap();
+      let rows = tool_call_rows(&repository);
+      assert_eq!(rows.len(), 1);
+      assert_eq!(rows[0].0, first_rows[0].0);
+   }
+
+   #[test]
+   fn resaving_without_a_message_deletes_it_and_its_tool_calls() {
+      let directory = tempfile::tempdir().unwrap();
+      let repository = ChatHistoryRepository::new(directory.path().join("history.db"));
+      repository.initialize().unwrap();
+      let mut prompt = sample_message("chat", "prompt");
+      prompt.timestamp = 1;
+      repository
+         .save_chat(
+            sample_chat("chat"),
+            vec![prompt.clone(), sample_message("chat", "reply")],
+            vec![sample_tool_call("prompt"), sample_tool_call("reply")],
+         )
+         .unwrap();
+      let kept_row = tool_call_rows(&repository)[0].0;
+
+      repository
+         .save_chat(
+            sample_chat("chat"),
+            vec![prompt],
+            vec![sample_tool_call("prompt")],
+         )
+         .unwrap();
+
+      let loaded = repository.load_chat("chat").unwrap();
+      assert_eq!(loaded.messages.len(), 1);
+      assert_eq!(loaded.messages[0].id, "prompt");
+      assert_eq!(loaded.tool_calls.len(), 1);
+      assert_eq!(loaded.tool_calls[0].message_id, "prompt");
+      assert_eq!(tool_call_rows(&repository)[0].0, kept_row);
+      let stats = repository.get_stats().unwrap();
+      assert_eq!(stats.total_messages, 1);
+      assert_eq!(stats.total_tool_calls, 1);
+
+      repository
+         .save_chat(sample_chat("chat"), vec![], vec![])
+         .unwrap();
+      let stats = repository.get_stats().unwrap();
+      assert_eq!(stats.total_chats, 1);
+      assert_eq!(stats.total_messages, 0);
+      assert_eq!(stats.total_tool_calls, 0);
+   }
+
+   #[test]
+   fn rejects_a_message_id_owned_by_another_chat_and_keeps_both_chats() {
+      let directory = tempfile::tempdir().unwrap();
+      let repository = ChatHistoryRepository::new(directory.path().join("history.db"));
+      repository.initialize().unwrap();
+      repository
+         .save_chat(
+            sample_chat("one"),
+            vec![sample_message("one", "shared")],
+            vec![sample_tool_call("shared")],
+         )
+         .unwrap();
+      repository
+         .save_chat(
+            sample_chat("two"),
+            vec![sample_message("two", "own")],
+            vec![],
+         )
+         .unwrap();
+
+      let mut renamed = sample_chat("two");
+      renamed.title = "Renamed".to_string();
+      let mut stolen = sample_message("two", "shared");
+      stolen.content = "Overwritten".to_string();
+      assert!(repository.save_chat(renamed, vec![stolen], vec![]).is_err());
+
+      let one = repository.load_chat("one").unwrap();
+      assert_eq!(one.messages[0].content, "Reply");
+      assert_eq!(one.tool_calls.len(), 1);
+      let two = repository.load_chat("two").unwrap();
+      assert_eq!(two.chat.title, "Chat");
+      assert_eq!(two.messages[0].id, "own");
    }
 
    #[test]

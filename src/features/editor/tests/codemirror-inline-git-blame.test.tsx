@@ -16,17 +16,9 @@ vi.mock("@/features/settings/stores/settings.store", () => ({
   useSettingsStore: (selector: (state: unknown) => unknown) =>
     selector({ settings: { enableInlineGitBlame: mocks.enabled } }),
 }));
-vi.mock("../stores/buffer.store", () => ({
-  useBufferStore: (selector: (state: unknown) => unknown) =>
-    selector({ buffers: [{ id: "buffer-1", type: "editor", content: "one\ntwo\nthree" }] }),
-}));
-vi.mock("../utils/buffer-index", () => ({
-  getBufferById: (buffers: Array<{ id: string }>, id: string) =>
-    buffers.find((buffer) => buffer.id === id),
-}));
 vi.mock("@/features/git/hooks/use-git-blame", () => ({
-  useGitBlame: (filePath: string | undefined) => {
-    mocks.useGitBlame(filePath);
+  useGitBlame: (filePath: string | undefined, bufferId: string) => {
+    mocks.useGitBlame(filePath, bufferId);
     return {
       getBlameForLine: (line: number) =>
         filePath && mocks.blamedLines.has(line)
@@ -135,7 +127,7 @@ describe("CodeMirror inline git blame", () => {
     mount();
     act(() => vi.advanceTimersByTime(450));
     expect(blame()).toBeNull();
-    expect(mocks.useGitBlame).toHaveBeenLastCalledWith(undefined);
+    expect(mocks.useGitBlame).toHaveBeenLastCalledWith(undefined, "buffer-1");
   });
 
   it("opens the commit card when the pointer rests on the blame and closes it after leaving", () => {

@@ -6,8 +6,6 @@ import type { ModalSlice } from "./ui-state/modal-slice";
 import { createModalSlice } from "./ui-state/modal-slice";
 import type { PanelSlice } from "./ui-state/panel-slice";
 import { createPanelSlice } from "./ui-state/panel-slice";
-import type { QuickEditSlice } from "./ui-state/quick-edit-slice";
-import { createQuickEditSlice } from "./ui-state/quick-edit-slice";
 import type { TerminalSlice } from "./ui-state/terminal-slice";
 import { createTerminalSlice } from "./ui-state/terminal-slice";
 import type { ViewSlice } from "./ui-state/view-slice";
@@ -16,12 +14,7 @@ import { createViewSlice } from "./ui-state/view-slice";
 // Re-export types for convenience
 
 // Combined store type
-export type UIState = ModalSlice &
-  PanelSlice &
-  ViewSlice &
-  ContextMenuSlice &
-  TerminalSlice &
-  QuickEditSlice;
+export type UIState = ModalSlice & PanelSlice & ViewSlice & ContextMenuSlice & TerminalSlice;
 
 // Create the combined store
 const createUIStateStore = () =>
@@ -31,7 +24,6 @@ const createUIStateStore = () =>
     ...createViewSlice(...a),
     ...createContextMenuSlice(...a),
     ...createTerminalSlice(...a),
-    ...createQuickEditSlice(...a),
   }));
 
 export const useUIState = createWorkspaceScopedStore("window-ui", createUIStateStore);

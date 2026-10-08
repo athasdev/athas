@@ -16,6 +16,5 @@ export interface SearchResult extends SettingSearchRecord {
 export interface SearchState {
   query: string;
   results: SearchResult[];
-  isSearching: boolean;
   selectedResultId: string | null;
 }

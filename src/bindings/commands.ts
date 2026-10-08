@@ -5127,20 +5127,27 @@ export type GhCliAvailability = {
   hasToken: boolean;
 };
 
+/**  Blame for a buffer: each commit is listed once, and hunks point into `commits`. */
 export type GitBlame = {
   file_path: string;
-  lines: GitBlameLine[];
+  commits: GitBlameCommit[];
+  hunks: GitBlameHunk[];
 };
 
-export type GitBlameLine = {
-  line_number: number;
-  total_lines: number;
-  commit_hash: string;
-  is_uncommitted: boolean;
+export type GitBlameCommit = {
+  hash: string;
   author: string;
   email: string;
   time: number;
-  commit: string;
+  message: string;
+};
+
+export type GitBlameHunk = {
+  /**  First line of the hunk, counting from 1. */
+  line_number: number;
+  total_lines: number;
+  /**  Index into `GitBlame::commits`; `None` for lines that are not committed. */
+  commit_index: number | null;
 };
 
 export type GitCommit = {

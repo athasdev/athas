@@ -3,9 +3,15 @@ import { toggleMarkdownPreview } from "@/features/editor/markdown/toggle-markdow
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import type { Action } from "../types/action.types";
 
+interface MarkdownActionsBuffer {
+  id: string;
+  type: PaneContent["type"];
+  isMarkdownPreview: boolean;
+}
+
 interface MarkdownActionsParams {
   isMarkdownFile: boolean;
-  activeBuffer: PaneContent | null;
+  activeBuffer: MarkdownActionsBuffer | null;
   onClose: () => void;
 }
 

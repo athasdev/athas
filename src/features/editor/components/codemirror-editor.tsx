@@ -486,7 +486,6 @@ export function CodeMirrorEditor({
     const ownerId = viewStateKey ?? activeBufferId ?? buffer.id;
     const container = containerRef.current;
     const getView = () => sessionRef.current?.view ?? null;
-    editorAPI.setTextareaRef(null);
     if (container) editorAPI.setViewportRef(container);
     editorAPI.setActiveFindAdapter(createCodeMirrorFindAdapter(ownerId, getView));
     if (!isReadOnly) {

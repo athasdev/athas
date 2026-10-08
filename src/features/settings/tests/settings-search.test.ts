@@ -1,13 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import { settingsSearchIndex } from "../config/search-index";
-import { getSettingSearchTargetKey, scoreSettingSearchRecord } from "../lib/settings-search";
-
-function searchSettings(query: string) {
-  return settingsSearchIndex
-    .map((record) => ({ ...record, score: scoreSettingSearchRecord(query, record) }))
-    .filter((result) => result.score > 0)
-    .sort((a, b) => b.score - a.score || a.label.localeCompare(b.label));
-}
+import { getSettingSearchTargetKey, searchSettings } from "../lib/settings-search";
 
 describe("settings search", () => {
   it("prioritizes exact setting labels", () => {

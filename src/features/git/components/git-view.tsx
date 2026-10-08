@@ -9,6 +9,7 @@ import {
   UploadIcon,
 } from "@/ui/icons";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getBufferById } from "@/features/editor/utils/buffer-index";
 import type { GitSidebarItemId } from "@/features/layout/config/item-order";
@@ -98,8 +99,14 @@ type GitPaletteAction =
   | { type: "refresh" };
 
 const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
-  const activeBuffer = useBufferStore((state) =>
-    getBufferById(state.buffers, state.activeBufferId),
+  const activeCommitDiff = useBufferStore(
+    useShallow((state) => {
+      const buffer = getBufferById(state.buffers, state.activeBufferId);
+      if (buffer?.type !== "diff" || !buffer.diffData || !("files" in buffer.diffData)) {
+        return null;
+      }
+      return { id: buffer.id, content: buffer.content, diffData: buffer.diffData };
+    }),
   );
   const updateBufferContent = useBufferStore.use.actions().updateBufferContent;
   const gitStatus = useGitStore((state) => state.gitStatus);
@@ -280,38 +287,31 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       if (!selectedHistoryCommit) return;
       setSelectedHistoryFilePath(filePath);
 
-      if (
-        activeBuffer?.type === "diff" &&
-        activeBuffer.diffData &&
-        "files" in activeBuffer.diffData &&
-        activeBuffer.diffData.commitHash === selectedHistoryCommit.hash
-      ) {
-        const nextMultiDiff = selectMultiDiffFileByPath(activeBuffer.diffData, filePath);
-        if (nextMultiDiff !== activeBuffer.diffData) {
-          updateBufferContent(activeBuffer.id, activeBuffer.content, false, nextMultiDiff);
+      if (activeCommitDiff?.diffData.commitHash === selectedHistoryCommit.hash) {
+        const nextMultiDiff = selectMultiDiffFileByPath(activeCommitDiff.diffData, filePath);
+        if (nextMultiDiff !== activeCommitDiff.diffData) {
+          updateBufferContent(activeCommitDiff.id, activeCommitDiff.content, false, nextMultiDiff);
         }
         return;
       }
 
       void handleViewCommitDiff(selectedHistoryCommit.hash, filePath);
     },
-    [activeBuffer, handleViewCommitDiff, selectedHistoryCommit, updateBufferContent],
+    [activeCommitDiff, handleViewCommitDiff, selectedHistoryCommit, updateBufferContent],
   );
 
   useEffect(() => {
     if (
       !selectedHistoryCommit ||
-      activeBuffer?.type !== "diff" ||
-      !activeBuffer.diffData ||
-      !("files" in activeBuffer.diffData) ||
-      activeBuffer.diffData.commitHash !== selectedHistoryCommit.hash
+      !activeCommitDiff ||
+      activeCommitDiff.diffData.commitHash !== selectedHistoryCommit.hash
     ) {
       return;
     }
 
-    const selection = resolveMultiDiffSelection(activeBuffer.diffData);
+    const selection = resolveMultiDiffSelection(activeCommitDiff.diffData);
     setSelectedHistoryFilePath(selection?.path ?? null);
-  }, [activeBuffer, selectedHistoryCommit]);
+  }, [activeCommitDiff, selectedHistoryCommit]);
 
   const handleSelectRepository = useCallback(async () => {
     setIsSelectingRepo(true);

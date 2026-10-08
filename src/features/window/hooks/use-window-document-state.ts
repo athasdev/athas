@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { commands } from "@/bindings/commands";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getBufferById } from "@/features/editor/utils/buffer-index";
@@ -9,12 +10,14 @@ export function useWindowDocumentState() {
   const projectName = useProjectStore((state) => state.projectName);
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   // Derived inside the selector so typing in the active buffer doesn't re-render the app root.
-  const documentState = useBufferStore((state) =>
-    getWindowDocumentState({
-      activeBuffer: getBufferById(state.buffers, state.activeBufferId) ?? null,
-      projectName,
-      rootFolderPath,
-    }),
+  const documentState = useBufferStore(
+    useShallow((state) =>
+      getWindowDocumentState({
+        activeBuffer: getBufferById(state.buffers, state.activeBufferId) ?? null,
+        projectName,
+        rootFolderPath,
+      }),
+    ),
   );
 
   useEffect(() => {

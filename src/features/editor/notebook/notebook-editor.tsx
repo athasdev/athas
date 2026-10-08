@@ -36,7 +36,6 @@ import type {
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
-import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getBufferById } from "@/features/editor/utils/buffer-index";
 import { useHighlightedMarkdown } from "@/features/editor/markdown/use-highlighted-markdown";
@@ -552,7 +551,7 @@ export function NotebookEditor() {
       };
     }),
   );
-  const fontSize = useEditorSettingsStore.use.fontSize();
+  const fontSize = useSettingsStore((state) => state.settings.fontSize);
   const uiFontFamily = useSettingsStore((state) => state.settings.uiFontFamily);
   const { handleContentChange } = useEditorAppStore.use.actions();
   const [editingCells, setEditingCells] = useState<Set<number>>(new Set());

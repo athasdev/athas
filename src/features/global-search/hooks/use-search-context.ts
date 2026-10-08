@@ -8,6 +8,7 @@ import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace
 
 const EXPANDED_CONTEXT_LINES = 7;
 const emptyBuffers: PaneContent[] = [];
+const emptyPaths: string[] = [];
 const subscribeToNothing = () => () => {};
 interface ContextSource {
   content: string;
@@ -38,10 +39,6 @@ export function useSearchContext(view: ContextView) {
   const store = workspaceRuntimeRegistry.hasWorkspace(view.workspaceId)
     ? useBufferStore.getStore(view.workspaceId)
     : null;
-  const buffers = useSyncExternalStore(
-    store?.subscribe ?? subscribeToNothing,
-    () => store?.getState().buffers ?? emptyBuffers,
-  );
   const session = useMemo(
     () => ({
       store,
@@ -61,6 +58,29 @@ export function useSearchContext(view: ContextView) {
     contents: {} as Record<string, ContextSource>,
     pending: new Set<string>(),
   });
+  const expandedPaths = useMemo(
+    () => (state.session === session ? Object.keys(state.contents) : emptyPaths),
+    [state, session],
+  );
+  const getExpandedSources = useMemo(() => {
+    let lastSources: Array<EditorContent | undefined> = [];
+    return () => {
+      const buffers = store?.getState().buffers ?? emptyBuffers;
+      const nextSources = expandedPaths.map((path) => findSource(buffers, path));
+      if (
+        nextSources.length === lastSources.length &&
+        nextSources.every((source, index) => source === lastSources[index])
+      ) {
+        return lastSources;
+      }
+      lastSources = nextSources;
+      return lastSources;
+    };
+  }, [store, expandedPaths]);
+  const expandedSources = useSyncExternalStore(
+    store?.subscribe ?? subscribeToNothing,
+    getExpandedSources,
+  );
   const isCurrent = useCallback(
     () =>
       session.live &&
@@ -167,15 +187,16 @@ export function useSearchContext(view: ContextView) {
   const sourceContentByPath = useMemo(() => {
     if (state.session !== session || !isCurrent()) return {};
     const contents: Record<string, string> = {};
-    for (const [path, saved] of Object.entries(state.contents)) {
-      const current = findSource(buffers, path);
+    for (const [index, path] of expandedPaths.entries()) {
+      const saved = state.contents[path];
+      const current = expandedSources[index];
       if (saved.bufferId && current?.id !== saved.bufferId) continue;
       const source = current?.content ?? saved.content;
       const matches = view.results.find((result) => result.file_path === path)?.matches ?? [];
       if (matchesSource(source, matches)) contents[path] = source;
     }
     return contents;
-  }, [state, session, isCurrent, buffers, view.results]);
+  }, [state, session, isCurrent, expandedPaths, expandedSources, view.results]);
   const contextLinesByFile = useMemo(
     () =>
       Object.fromEntries(

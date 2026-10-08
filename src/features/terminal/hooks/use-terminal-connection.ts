@@ -34,7 +34,6 @@ interface UseTerminalConnectionOptions {
     sessionId: string,
     updates: {
       currentDirectory?: string;
-      selection?: string;
       title?: string;
     },
   ) => void;
@@ -179,12 +178,6 @@ export function useTerminalConnection({
         const currentDirectory = parseOsc7Directory(payload);
         if (currentDirectory && isCurrent()) updateSession(sessionId, { currentDirectory });
         return true;
-      }),
-    );
-    disposables.push(
-      terminal.onSelectionChange(() => {
-        const selection = terminal.getSelection();
-        if (selection && isCurrent()) updateSession(sessionId, { selection });
       }),
     );
     const unlistenThemeChange = themeRegistry.onThemeChange(() => {

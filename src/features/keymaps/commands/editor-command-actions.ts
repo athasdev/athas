@@ -70,13 +70,6 @@ function getSelectedEditorText(): string | null {
     return editorAPI.getContent().slice(selection.start.offset, selection.end.offset);
   }
 
-  const textarea = editorAPI.getTextareaRef();
-  if (textarea && textarea.selectionStart !== textarea.selectionEnd) {
-    const start = Math.min(textarea.selectionStart, textarea.selectionEnd);
-    const end = Math.max(textarea.selectionStart, textarea.selectionEnd);
-    return textarea.value.slice(start, end);
-  }
-
   return null;
 }
 
@@ -87,32 +80,15 @@ function selectEditorOffsets(start: number, end: number): void {
 
   editorAPI.setCursorPosition(endPosition);
   editorAPI.setSelection({ start: startPosition, end: endPosition });
-
-  const textarea = editorAPI.getTextareaRef();
-  if (textarea?.value === content) {
-    textarea.focus();
-    textarea.selectionStart = start;
-    textarea.selectionEnd = end;
-  }
 }
 
 function addEditorOccurrence(direction: "next" | "previous"): void {
   const content = editorAPI.getContent();
   const editorState = useEditorStateStore.getState();
-  const textarea = editorAPI.getTextareaRef();
-  const textareaSelection =
-    textarea?.value === content && textarea.selectionStart !== textarea.selectionEnd
-      ? {
-          start: Math.min(textarea.selectionStart, textarea.selectionEnd),
-          end: Math.max(textarea.selectionStart, textarea.selectionEnd),
-        }
-      : null;
   const modelSelection = getNormalizedEditorSelection();
-  const currentSelection = textareaSelection
-    ? textareaSelection
-    : modelSelection
-      ? { start: modelSelection.start.offset, end: modelSelection.end.offset }
-      : null;
+  const currentSelection = modelSelection
+    ? { start: modelSelection.start.offset, end: modelSelection.end.offset }
+    : null;
   const selectedRanges =
     editorState.multiCursorState?.cursors.flatMap((cursor) =>
       cursor.selection
@@ -183,13 +159,6 @@ function selectAllEditorOccurrenceRanges(ranges: OccurrenceRange[]): void {
   for (const range of ranges.slice(1)) {
     const selection = toEditorRange(range);
     editorStateActions.addCursor(selection.end, selection);
-  }
-
-  const textarea = editorAPI.getTextareaRef();
-  if (textarea?.value === content) {
-    textarea.focus();
-    textarea.selectionStart = firstRange.start;
-    textarea.selectionEnd = firstRange.end;
   }
 }
 

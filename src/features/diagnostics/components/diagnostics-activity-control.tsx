@@ -10,14 +10,10 @@ import Tooltip from "@/ui/tooltip";
 
 export function DiagnosticsActivityControl() {
   const diagnosticsEnabled = useSettingsStore((state) => state.settings.coreFeatures.diagnostics);
-  const diagnosticsByFile = useDiagnosticsStore.use.diagnosticsByFile();
-  const diagnostics = useMemo(
-    () => Array.from(diagnosticsByFile.values()).flat(),
-    [diagnosticsByFile],
-  );
+  const diagnosticCounts = useDiagnosticsStore.use.diagnosticCounts();
   const status = useMemo(
-    () => buildDiagnosticsActivityStatus(diagnosticsEnabled, diagnostics),
-    [diagnostics, diagnosticsEnabled],
+    () => buildDiagnosticsActivityStatus(diagnosticsEnabled, diagnosticCounts),
+    [diagnosticCounts, diagnosticsEnabled],
   );
   const isActive = useBufferStore(
     (state) => getBufferById(state.buffers, state.activeBufferId)?.type === "diagnostics",

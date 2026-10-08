@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
+import { subscribeToEditorDocumentChanges } from "../services/editor-document-events";
 import { LspClient } from "./lsp-client";
 import { useLspStore } from "./stores/lsp.store";
 
@@ -11,11 +12,13 @@ export interface CodeLensItem {
 }
 
 const NO_LENSES: CodeLensItem[] = [];
+/** How long edits to the file must pause before its lenses are asked for again. */
+const EDIT_REFRESH_DELAY_MS = 400;
 
 export const useCodeLens = (filePath: string | undefined, enabled: boolean) => {
   const [lenses, setLensesState] = useState<CodeLensItem[]>(NO_LENSES);
   const requestIdRef = useRef(0);
-  // Disabled callers don't follow the document revision, which changes on every keystroke.
+  // Disabled callers don't follow server or document state at all.
   const lspStatusRevision = useLspStore((state) => {
     if (!enabled || !filePath) return "";
     const { status, activeWorkspaces, supportedLanguages, documentRevision } = state.lspStatus;
@@ -49,6 +52,24 @@ export const useCodeLens = (filePath: string | undefined, enabled: boolean) => {
   useEffect(() => {
     void fetchLenses();
   }, [fetchLenses, lspStatusRevision]);
+
+  // The status revision only moves when documents open or close, so edits refresh lenses here.
+  useEffect(() => {
+    if (!enabled || !filePath) return;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const unsubscribe = subscribeToEditorDocumentChanges((event) => {
+      if (event.filePath !== filePath) return;
+      if (timer !== null) clearTimeout(timer);
+      timer = setTimeout(() => {
+        timer = null;
+        void fetchLenses();
+      }, EDIT_REFRESH_DELAY_MS);
+    });
+    return () => {
+      unsubscribe();
+      if (timer !== null) clearTimeout(timer);
+    };
+  }, [enabled, fetchLenses, filePath]);
 
   return lenses;
 };

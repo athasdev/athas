@@ -37,7 +37,6 @@ export interface Terminal {
   createdAt: Date;
   lastActivity?: Date;
   connectionId?: string;
-  selection?: string;
   title?: string;
   progress?: TerminalProgress;
   lastCommand?: TerminalCommandSummary;

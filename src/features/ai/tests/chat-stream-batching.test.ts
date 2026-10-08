@@ -72,6 +72,33 @@ describe("streamed message updates", () => {
     expect(reply().content).toBe("Final!");
   });
 
+  it("computes a function update once, when the frame lands, from the latest state", () => {
+    let text = "";
+    const resolve = vi.fn(() => ({ content: text }));
+    for (const chunk of ["Hel", "lo", " there"]) {
+      text += chunk;
+      actions().queueMessageUpdate("a", "reply", resolve);
+    }
+    expect(resolve).not.toHaveBeenCalled();
+
+    vi.advanceTimersToNextFrame();
+    expect(resolve).toHaveBeenCalledOnce();
+    expect(reply().content).toBe("Hello there");
+  });
+
+  it("orders plain updates and appends around a function update", () => {
+    actions().appendMessageContent("a", "reply", "dropped");
+    actions().queueMessageUpdate("a", "reply", { responsePhase: "thinking" });
+    actions().queueMessageUpdate("a", "reply", () => ({
+      content: "Streamed",
+      responsePhase: undefined,
+    }));
+    actions().queueMessageUpdate("a", "reply", { responsePhase: "waiting" });
+    actions().appendMessageContent("a", "reply", "!");
+    vi.advanceTimersToNextFrame();
+    expect(reply()).toMatchObject({ content: "Streamed!", responsePhase: "waiting" });
+  });
+
   it("keeps the session order still until the turn ends", () => {
     actions().queueMessageUpdate("a", "reply", { content: "Working" });
     vi.advanceTimersToNextFrame();

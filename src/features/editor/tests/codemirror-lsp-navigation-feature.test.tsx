@@ -233,6 +233,34 @@ describe("CodeMirror LSP navigation", () => {
     });
   });
 
+  it("asks for inlay hints, code lenses and LSP folds again once edits pause", async () => {
+    await render();
+    await settle();
+    const requests = () => [
+      lsp.getInlayHints.mock.calls.length,
+      lsp.getCodeLens.mock.calls.length,
+      lsp.getFoldingRanges.mock.calls.length,
+    ];
+    expect(requests()).toEqual([1, 1, 1]);
+
+    lsp.getInlayHints.mockResolvedValue([
+      { line: 1, character: 22, label: "edited:", paddingLeft: false, paddingRight: true },
+    ]);
+    act(() => view.dispatch({ changes: { from: 0, insert: "// note\n" } }));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(200);
+    });
+    act(() => view.dispatch({ changes: { from: 0, insert: "/" } }));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(200);
+    });
+    expect(requests()).toEqual([1, 1, 1]);
+
+    await settle();
+    expect(requests()).toEqual([2, 2, 2]);
+    expect(view.contentDOM.querySelector(".cm-athas-inlay-hint")?.textContent).toBe("edited:");
+  });
+
   it("opens the references peek from a lens and opens the chosen reference", async () => {
     await render();
     await settle();

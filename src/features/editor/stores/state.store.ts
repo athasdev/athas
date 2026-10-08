@@ -10,6 +10,7 @@ import type {
   Range,
 } from "@/features/editor/types/editor.types";
 import { createSelectors } from "@/utils/zustand-selectors";
+import { publishEditorScroll } from "../services/editor-scroll-events";
 import { useBufferStore } from "./buffer.store";
 
 // Types for editor state caching
@@ -69,10 +70,10 @@ class EditorViewStateCacheManager {
     });
   }
 
-  setScroll(bufferId: string, scrollTop: number, scrollLeft: number): void {
+  setScroll(bufferId: string, scrollTop: number, scrollLeft: number): boolean {
     const existing = this.cache.get(bufferId);
     if (existing && existing.scrollTop === scrollTop && existing.scrollLeft === scrollLeft) {
-      return;
+      return false;
     }
 
     this.ensureCacheSize(bufferId);
@@ -83,6 +84,7 @@ class EditorViewStateCacheManager {
       scrollTop,
       scrollLeft,
     });
+    return true;
   }
 
   set(bufferId: string, state: EditorViewState): void {
@@ -155,6 +157,17 @@ class EditorViewStateCacheManager {
 
 const viewStateCache = new EditorViewStateCacheManager();
 
+export interface EditorScrollOffset {
+  scrollTop: number;
+  scrollLeft: number;
+}
+
+function getActiveViewKey(): string | null {
+  return (
+    useEditorStateStore.getState().activeEditorViewKey ?? useBufferStore.getState().activeBufferId
+  );
+}
+
 function positionsEqual(left: Position, right: Position): boolean {
   return left.line === right.line && left.column === right.column && left.offset === right.offset;
 }
@@ -176,9 +189,7 @@ interface EditorState {
   // Multi-cursor state
   multiCursorState: MultiCursorState | null;
 
-  // Layout state
-  scrollTop: number;
-  scrollLeft: number;
+  // Layout state. Scroll offsets live in the view state cache; read them with `getScroll`.
   viewportHeight: number;
 
   // Instance state
@@ -227,6 +238,7 @@ interface EditorStateActions {
   clearSecondaryCursors: () => void;
 
   // Layout actions
+  getScroll: () => EditorScrollOffset;
   setScroll: (scrollTop: number, scrollLeft: number) => void;
   setScrollForBuffer: (bufferId: string | null, scrollTop: number, scrollLeft: number) => void;
   setViewportHeight: (height: number) => void;
@@ -262,8 +274,6 @@ export const useEditorStateStore = createSelectors(
       multiCursorState: null,
 
       // Layout state
-      scrollTop: 0,
-      scrollLeft: 0,
       viewportHeight: EDITOR_CONSTANTS.DEFAULT_VIEWPORT_HEIGHT,
 
       // Instance state
@@ -349,9 +359,8 @@ export const useEditorStateStore = createSelectors(
           set({
             cursorPosition: restoredState.cursor,
             selection: restoredState.selection,
-            scrollTop: restoredState.scrollTop,
-            scrollLeft: restoredState.scrollLeft,
           });
+          publishEditorScroll();
 
           return restoredState;
         },
@@ -474,30 +483,26 @@ export const useEditorStateStore = createSelectors(
           }),
 
         // Layout actions
+        getScroll: () => {
+          const viewKey = getActiveViewKey();
+          const cached = viewKey ? viewStateCache.get(viewKey) : null;
+          return { scrollTop: cached?.scrollTop ?? 0, scrollLeft: cached?.scrollLeft ?? 0 };
+        },
         setScroll: (scrollTop, scrollLeft) => {
-          const currentState = useEditorStateStore.getState();
-          const { activeBufferId } = useBufferStore.getState();
-          const activeEditorViewKey = currentState.activeEditorViewKey;
-          const viewKey = activeEditorViewKey ?? activeBufferId;
-          if (viewKey) {
-            viewStateCache.setScroll(viewKey, scrollTop, scrollLeft);
-          }
-          if (currentState.scrollTop !== scrollTop || currentState.scrollLeft !== scrollLeft) {
-            set({ scrollTop, scrollLeft });
+          const viewKey = getActiveViewKey();
+          if (viewKey && viewStateCache.setScroll(viewKey, scrollTop, scrollLeft)) {
+            publishEditorScroll();
           }
         },
+        // Scroll is cached, not stored: a store update on every scroll event would wake every
+        // subscriber. Readers that follow it subscribe to the scroll events instead.
         setScrollForBuffer: (bufferId, scrollTop, scrollLeft) => {
-          // Cache scroll for the specified buffer (avoids race condition when buffer switches)
-          if (bufferId) {
-            viewStateCache.setScroll(bufferId, scrollTop, scrollLeft);
-          }
-          // Only update global state if this is still the active buffer
-          const activeBufferId = useBufferStore.getState().activeBufferId;
-          if (bufferId === activeBufferId) {
-            const currentState = useEditorStateStore.getState();
-            if (currentState.scrollTop !== scrollTop || currentState.scrollLeft !== scrollLeft) {
-              set({ scrollTop, scrollLeft });
-            }
+          if (!bufferId || !viewStateCache.setScroll(bufferId, scrollTop, scrollLeft)) return;
+          if (
+            bufferId === getActiveViewKey() ||
+            bufferId === useBufferStore.getState().activeBufferId
+          ) {
+            publishEditorScroll();
           }
         },
         setViewportHeight: (height) => {

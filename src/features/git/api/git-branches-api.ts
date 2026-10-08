@@ -58,9 +58,10 @@ export const createBranch = async (
   try {
     const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
     await commands.gitCreateBranch(resolvedRepoPath, branchName, fromBranch ?? null);
+    // Creating a branch also checks it out, so HEAD and the working tree move with it.
     emitGitChanged({
       repoPath: resolvedRepoPath,
-      scopes: ["refs"],
+      scopes: ["working-tree", "history", "refs"],
       source: "create-branch",
     });
     return true;

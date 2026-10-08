@@ -604,7 +604,6 @@ dependencies = [
  "mimalloc",
  "objc",
  "percent-encoding",
- "portable-pty",
  "regex",
  "reqwest 0.12.28",
  "roxmltree",

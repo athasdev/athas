@@ -71,13 +71,33 @@ function normalizeSplitSizes(sizes: [number, number]): [number, number] {
   return normalized;
 }
 
+function isSamePaneNode(previous: PaneNode, next: PaneNode) {
+  if (previous === next) return true;
+  const previousRecord = previous as unknown as Record<string, unknown>;
+  const nextRecord = next as unknown as Record<string, unknown>;
+  const keys = Object.keys(previousRecord);
+  if (keys.length !== Object.keys(nextRecord).length) return false;
+  return keys.every((key) => {
+    const previousValue = previousRecord[key];
+    const nextValue = nextRecord[key];
+    if (Array.isArray(previousValue) && Array.isArray(nextValue)) {
+      return (
+        previousValue.length === nextValue.length &&
+        previousValue.every((value, index) => Object.is(value, nextValue[index]))
+      );
+    }
+    return Object.is(previousValue, nextValue);
+  });
+}
+
 function updatePaneNode(
   root: PaneNode,
   nodeId: string,
   update: (node: PaneNode) => PaneNode,
 ): PaneNode {
   if (root.id === nodeId) {
-    return update(root);
+    const next = update(root);
+    return isSamePaneNode(root, next) ? root : next;
   }
 
   if (root.type !== "split") {

@@ -1,10 +1,10 @@
 import { EditorView } from "@codemirror/view";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { LspClient } from "../../../lsp/lsp-client";
 import { type CodeMirrorHost, useCodeMirrorExtension } from "../host";
 import { inlayHintDecorations, inlayHintsField, setInlayHints } from "../navigation/inlay-hints";
-import { useLspRevision } from "./lsp-feature-utils";
+import { useDebouncedLspRefresh, useLspRevision } from "./lsp-feature-utils";
 
 const REFRESH_DELAY_MS = 250;
 /** Lines past the viewport that are asked for too, so scrolling a little shows hints at once. */
@@ -55,23 +55,21 @@ export function useInlayHints(host: CodeMirrorHost, lspEnabled: boolean) {
   );
   useCodeMirrorExtension(view, extension);
 
-  useEffect(() => {
-    if (!enabled) return;
-    let cancelled = false;
-    const timer = setTimeout(() => {
+  useDebouncedLspRefresh(
+    view,
+    enabled,
+    `${filePath}:${revision}:${scrollRevision}`,
+    REFRESH_DELAY_MS,
+    (isCurrent) => {
       const client = LspClient.getInstance();
       if (!client.isDocumentOpen(filePath)) return;
       const doc = view.state.doc;
       const lines = visibleLineSpan(view, LINE_MARGIN);
       fetched.current = lines;
       void client.getInlayHints(filePath, lines.start, lines.end + 1).then((hints) => {
-        if (cancelled || view.state.doc !== doc) return;
+        if (!isCurrent() || view.state.doc !== doc) return;
         view.dispatch({ effects: setInlayHints.of(inlayHintDecorations(doc, hints)) });
       });
-    }, REFRESH_DELAY_MS);
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [enabled, filePath, revision, scrollRevision, view]);
+    },
+  );
 }

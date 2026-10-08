@@ -96,11 +96,10 @@ export function ContextSelector({
   const chatSearch = useMenuSearch();
   const [projectFolders, setProjectFolders] = useState<ReturnType<typeof listProjectFolders>>([]);
   const getAllProjectFiles = useFileSystemStore((state) => state.getAllProjectFiles);
-  const problemCount = useDiagnosticsStore((state) => {
-    let count = 0;
-    for (const diagnostics of state.diagnosticsByFile.values()) count += diagnostics.length;
-    return count;
-  });
+  const problemCount = useDiagnosticsStore(
+    ({ diagnosticCounts }) =>
+      diagnosticCounts.error + diagnosticCounts.warning + diagnosticCounts.info,
+  );
   const chats = useAIChatStore((state) => state.chats);
   const [fileQuery, setFileQuery] = useState("");
   const [selectedFileIndex, setSelectedFileIndex] = useState(0);

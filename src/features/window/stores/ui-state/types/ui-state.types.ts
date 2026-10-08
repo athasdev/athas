@@ -20,10 +20,3 @@ export type SettingsTab =
   | "file-explorer";
 
 export type BottomPaneTab = "terminal" | "debugger" | "diagnostics" | "references" | "buffers";
-
-export interface QuickEditSelection {
-  text: string;
-  start: number;
-  end: number;
-  cursorPosition: { x: number; y: number };
-}

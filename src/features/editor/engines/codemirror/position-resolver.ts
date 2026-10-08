@@ -1,5 +1,5 @@
 import type { EditorView } from "@codemirror/view";
-import type { EditorModelPositionResolver } from "../../view-model/view-layout";
+import type { EditorModelPositionResolver } from "../../types/code-editor-view.types";
 import type { LineSeparator } from "./document-change";
 import { fromEditorPosition, toEditorPosition } from "./position";
 

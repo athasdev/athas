@@ -60,11 +60,6 @@ interface AdvancedActionsParams {
   vimMode: boolean;
   vimCommands: Array<{ name: string; description: string; execute: () => void }>;
   setMode: (mode: "normal" | "insert" | "visual") => void;
-  openQuickEdit: (params: {
-    text: string;
-    cursorPosition: { x: number; y: number };
-    selectionRange: { start: number; end: number };
-  }) => void;
   showToast: (params: { message: string; type: "success" | "error" | "info" }) => void;
   onClose: () => void;
 }
@@ -78,7 +73,6 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
     vimMode,
     vimCommands,
     setMode,
-    openQuickEdit,
     showToast,
     onClose,
   } = params;
@@ -322,24 +316,6 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
           },
         ]
       : []),
-    {
-      id: "ai-quick-edit",
-      label: "AI: Quick Edit Selection",
-      description: "Edit selected text using AI inline",
-      icon: <SparkleIcon />,
-      category: "AI",
-      action: () => {
-        const selection = window.getSelection();
-        if (selection?.toString()) {
-          openQuickEdit({
-            text: selection.toString(),
-            cursorPosition: { x: 0, y: 0 },
-            selectionRange: { start: 0, end: selection.toString().length },
-          });
-        }
-        onClose();
-      },
-    },
     {
       id: "lsp-status",
       label: "LSP: Show Status",

@@ -1,6 +1,7 @@
 use crate::{
    config::TerminalConfig,
    flatpak,
+   output_coalescer::{CoalesceConfig, forward_coalesced},
    protocol::{TerminalEvent, TerminalEventHandler, TerminalReaderControl, TerminalSize},
    shell::get_shell_by_id,
 };
@@ -12,9 +13,12 @@ use std::{
    collections::HashMap,
    io::{Read, Write},
    path::Path,
-   sync::{Arc, Mutex},
+   sync::{Arc, Mutex, mpsc},
    thread,
 };
+
+/// PTY reads that may wait for the output thread before the reader blocks.
+const READER_QUEUE_CAPACITY: usize = 4;
 
 #[cfg(not(target_os = "windows"))]
 static USER_ENVIRONMENT_CACHE: OnceLock<HashMap<String, String>> = OnceLock::new();
@@ -546,6 +550,21 @@ impl TerminalConnection {
          .try_clone_reader()
          .expect("Failed to clone reader");
 
+      // The reader only reads; a second thread merges back-to-back reads into fewer channel
+      // messages. Both honour pause: the reader stops reading and the forwarder stops sending,
+      // and the small bounded queue keeps buffered output close to the PTY.
+      let (sender, receiver) = mpsc::sync_channel::<TerminalEvent>(READER_QUEUE_CAPACITY);
+
+      let forwarder_control = reader_control.clone();
+      thread::spawn(move || {
+         forward_coalesced(
+            &receiver,
+            &forwarder_control,
+            CoalesceConfig::default(),
+            |event| event_handler(&id, event),
+         );
+      });
+
       thread::spawn(move || {
          let mut buffer = vec![0u8; 65536]; // 64KB buffer for better performance
          loop {
@@ -556,17 +575,17 @@ impl TerminalConnection {
             match reader.read(&mut buffer) {
                Ok(0) => {
                   let (exit_code, signal) = Self::child_exit_status(&child, true);
-                  event_handler(&id, TerminalEvent::Exit { exit_code, signal });
-                  event_handler(&id, TerminalEvent::Closed);
+                  let _ = sender.send(TerminalEvent::Exit { exit_code, signal });
+                  let _ = sender.send(TerminalEvent::Closed);
                   break;
                }
                Ok(n) => {
-                  if !event_handler(
-                     &id,
-                     TerminalEvent::Output {
+                  if sender
+                     .send(TerminalEvent::Output {
                         data: buffer[..n].to_vec(),
-                     },
-                  ) {
+                     })
+                     .is_err()
+                  {
                      break;
                   }
                }
@@ -578,17 +597,14 @@ impl TerminalConnection {
                      );
                   let (exit_code, signal) = Self::child_exit_status(&child, should_wait_for_status);
                   if exit_code.is_some() || signal.is_some() {
-                     event_handler(&id, TerminalEvent::Exit { exit_code, signal });
+                     let _ = sender.send(TerminalEvent::Exit { exit_code, signal });
                   } else {
                      eprintln!("Error reading from PTY: {}", e);
-                     event_handler(
-                        &id,
-                        TerminalEvent::Error {
-                           message: e.to_string(),
-                        },
-                     );
+                     let _ = sender.send(TerminalEvent::Error {
+                        message: e.to_string(),
+                     });
                   }
-                  event_handler(&id, TerminalEvent::Closed);
+                  let _ = sender.send(TerminalEvent::Closed);
                   break;
                }
             }

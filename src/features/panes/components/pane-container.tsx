@@ -179,10 +179,6 @@ const MIN_CAROUSEL_CARD_WIDTH = 320;
 const CAROUSEL_OUTER_GAP_PX = 160;
 type EditorBufferShell = Pick<EditorContent, "id" | "path" | "name" | "type" | "readOnly">;
 type PaneRenderBuffer = Exclude<Buffer, EditorContent> | EditorBufferShell;
-type PaneRenderState = {
-  activeBuffer: PaneRenderBuffer | null;
-  paneBuffers: PaneRenderBuffer[];
-};
 
 const editorBufferShellCache = new Map<string, EditorBufferShell>();
 
@@ -214,10 +210,7 @@ function toPaneRenderBuffer(buffer: Buffer | undefined): PaneRenderBuffer | unde
   return buffer;
 }
 
-const EMPTY_PANE_RENDER_STATE: PaneRenderState = {
-  activeBuffer: null,
-  paneBuffers: [],
-};
+const EMPTY_PANE_BUFFERS: PaneRenderBuffer[] = [];
 
 function BufferPreviewCard({ buffer }: { buffer: PaneRenderBuffer }) {
   const previewText =
@@ -366,31 +359,21 @@ export function PaneContainer({ pane }: PaneContainerProps) {
   const isWorkspaceSurfaceActive = !workspaceScopeId || workspaceScopeId === activeWorkspaceId;
   const isActivePane = pane.id === activePaneId && isWorkspaceSurfaceActive;
 
-  const { activeBuffer, paneBuffers } = useBufferStore(
+  const paneBuffers = useBufferStore(
     useShallow((state) => {
       if (pane.bufferIds.length === 0) {
-        return EMPTY_PANE_RENDER_STATE;
+        return EMPTY_PANE_BUFFERS;
       }
 
       const nextPaneBuffers: PaneRenderBuffer[] = [];
-      let nextActiveBuffer: PaneRenderBuffer | null = null;
-
       for (const bufferId of pane.bufferIds) {
         const buffer = toPaneRenderBuffer(getBufferById(state.buffers, bufferId) ?? undefined);
-        if (!buffer) continue;
-
-        nextPaneBuffers.push(buffer);
-        if (buffer.id === pane.activeBufferId) {
-          nextActiveBuffer = buffer;
-        }
+        if (buffer) nextPaneBuffers.push(buffer);
       }
-
-      return {
-        activeBuffer: nextActiveBuffer,
-        paneBuffers: nextPaneBuffers,
-      };
+      return nextPaneBuffers;
     }),
   );
+  const activeBuffer = paneBuffers.find((buffer) => buffer.id === pane.activeBufferId) ?? null;
 
   const handlePaneClick = useCallback(() => {
     if (!isActivePane) {

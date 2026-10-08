@@ -1,10 +1,9 @@
 import { useState } from "react";
 import type { DatabaseType } from "../../types/provider.types";
-import type { SqlDatabaseActions, SqlDatabaseState } from "./stores/create-sql.store";
+import type { SqlDatabaseStore } from "./stores/create-sql.store";
 import SqlDatabaseViewer from "./sql-database-viewer";
 
-type SqlStoreHook = () => SqlDatabaseState & { actions: SqlDatabaseActions };
-type SqlStoreFactory = () => SqlStoreHook;
+type SqlStoreFactory = () => SqlDatabaseStore;
 
 export interface FileSqlViewerProps {
   databasePath: string;

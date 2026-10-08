@@ -26,11 +26,14 @@ export function ViewsSidebar({ projectPath }: ViewsSidebarProps) {
     projectPath ? state.loadedProjectPaths.includes(projectPath) : false,
   );
   const viewActions = useViewsStore.use.actions();
-  const activeBuffer = useBufferStore((state) =>
-    state.activeBufferId
-      ? state.buffers.find((buffer) => buffer.id === state.activeBufferId)
-      : undefined,
-  );
+  const activeViewId = useBufferStore((state) => {
+    const buffer = state.activeBufferId
+      ? state.buffers.find((candidate) => candidate.id === state.activeBufferId)
+      : undefined;
+    return buffer?.type === "customView" && buffer.projectPath === projectPath
+      ? (buffer.viewId ?? null)
+      : null;
+  });
 
   useEffect(() => {
     if (projectPath) viewActions.loadProject(projectPath);
@@ -103,11 +106,7 @@ export function ViewsSidebar({ projectPath }: ViewsSidebarProps) {
                 <SidebarListItem
                   leading={<StackIcon />}
                   description={view.kind === "github" ? "GitHub view" : "JSON view"}
-                  active={
-                    activeBuffer?.type === "customView" &&
-                    activeBuffer.projectPath === projectPath &&
-                    activeBuffer.viewId === view.id
-                  }
+                  active={activeViewId === view.id}
                   onClick={() => openView(view)}
                 >
                   {view.name}

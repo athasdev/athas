@@ -16,6 +16,7 @@ import {
 } from "@/ui/icons";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useShallow } from "zustand/react/shallow";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
@@ -99,7 +100,7 @@ function DebugStatusBadge({ status }: { status: "idle" | "running" | "paused" })
 
 export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: DebuggerViewProps) {
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
-  const activeFile = useBufferStore(getActiveDebuggableFile);
+  const activeFile = useBufferStore(useShallow(getActiveDebuggableFile));
   const handleFileOpen = useFileSystemStore.use.handleFileOpen?.();
   const breakpoints = useDebuggerStore.use.breakpoints();
   const watchExpressions = useDebuggerStore.use.watchExpressions();

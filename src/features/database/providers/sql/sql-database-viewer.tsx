@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import CreateSubscriptionDialog from "../postgres/components/create-subscription-dialog";
 import PostgresSubscriptionSchemaView from "../postgres/components/postgres-subscription-schema-view";
 import ColumnFilters from "../../components/column-filters";
@@ -25,13 +26,13 @@ import { Spinner } from "@/ui/spinner";
 import { Empty, EmptyDescription } from "@/ui/empty";
 import type { DatabaseObjectKind, ViewMode } from "../../types/common.types";
 import type { DatabaseType } from "../../types/provider.types";
-import type { SqlDatabaseActions, SqlDatabaseState } from "./stores/create-sql.store";
+import type { SqlDatabaseStore } from "./stores/create-sql.store";
 
 export interface SqlDatabaseViewerProps {
   databasePath?: string;
   connectionId?: string;
   databaseType: DatabaseType;
-  useStore: () => SqlDatabaseState & { actions: SqlDatabaseActions };
+  useStore: SqlDatabaseStore;
 }
 
 export default function SqlDatabaseViewer({
@@ -40,9 +41,37 @@ export default function SqlDatabaseViewer({
   databaseType,
   useStore,
 }: SqlDatabaseViewerProps) {
-  const store = useStore();
-  const { actions } = store;
-  const { setDatabaseTableMenu, setDatabaseRowMenu } = useUIState();
+  const store = useStore(
+    useShallow((state) => ({
+      fileName: state.fileName,
+      tables: state.tables,
+      selectedTable: state.selectedTable,
+      selectedObjectKind: state.selectedObjectKind,
+      queryResult: state.queryResult,
+      tableMeta: state.tableMeta,
+      foreignKeys: state.foreignKeys,
+      subscriptionInfo: state.subscriptionInfo,
+      dbInfo: state.dbInfo,
+      error: state.error,
+      isLoading: state.isLoading,
+      isCustomQueryLoading: state.isCustomQueryLoading,
+      currentPage: state.currentPage,
+      pageSize: state.pageSize,
+      totalPages: state.totalPages,
+      searchTerm: state.searchTerm,
+      columnFilters: state.columnFilters,
+      sortColumn: state.sortColumn,
+      sortDirection: state.sortDirection,
+      customQuery: state.customQuery,
+      isCustomQuery: state.isCustomQuery,
+      lastQueryExecutionMs: state.lastQueryExecutionMs,
+      sqlHistory: state.sqlHistory,
+      columnWidths: state.columnWidths,
+    })),
+  );
+  const actions = useStore((state) => state.actions);
+  const setDatabaseTableMenu = useUIState((state) => state.setDatabaseTableMenu);
+  const setDatabaseRowMenu = useUIState((state) => state.setDatabaseRowMenu);
 
   const [viewMode, setViewMode] = useState<ViewMode>("data");
   const [showColumnTypes, setShowColumnTypes] = useState(true);

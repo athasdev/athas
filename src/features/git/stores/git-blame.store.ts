@@ -9,6 +9,8 @@ interface GitBlameState {
   blameContent: Map<string, string>;
   requestedContent: Map<string, string>;
   requestIds: Map<string, number>;
+  /** Keys whose committed blame may have moved; their next load always reaches the backend. */
+  staleKeys: Set<string>;
   nextRequestId: number;
   revision: number;
   isLoading: Map<string, boolean>;
@@ -17,7 +19,8 @@ interface GitBlameState {
 
   actions: {
     loadBlameForFile: (repoPath: string, filePath: string, content: string) => Promise<void>;
-    clearBlameForFile: (filePath: string) => void;
+    /** Marks loaded blame as outdated; it stays visible until the next load replaces it. */
+    invalidateBlameForFile: (repoPath: string, filePath: string) => void;
     clearAllBlame: () => void;
     getBlameForLine: (filePath: string, lineNumber: number) => GitBlameLine | null;
     getRepoPath: (filePath: string) => string | null;
@@ -33,6 +36,7 @@ export const createGitBlameStore = () =>
     blameContent: new Map(),
     requestedContent: new Map(),
     requestIds: new Map(),
+    staleKeys: new Set(),
     nextRequestId: 0,
     revision: 0,
     isLoading: new Map(),
@@ -40,22 +44,27 @@ export const createGitBlameStore = () =>
     fileToRepo: new Map(),
 
     actions: {
-      loadBlameForFile: async (repoPath: string, filePath: string, content: string) => {
+      loadBlameForFile: async (repoPath, filePath, content) => {
         const state = get();
         const cacheKey = getGitBlameCacheKey(repoPath, filePath);
         const contentIsCurrent = state.requestedContent.get(cacheKey) === content;
         const contentIsLoaded =
           state.blameContent.get(cacheKey) === content && state.blameData.has(cacheKey);
 
-        if (contentIsCurrent && (state.isLoading.get(cacheKey) || contentIsLoaded)) {
+        const isStale = state.staleKeys.has(cacheKey);
+
+        if (!isStale && contentIsCurrent && (state.isLoading.get(cacheKey) || contentIsLoaded)) {
           return;
         }
 
         const requestId = state.nextRequestId + 1;
         const errors = new Map(state.errors);
         errors.delete(cacheKey);
+        const staleKeys = new Set(state.staleKeys);
+        staleKeys.delete(cacheKey);
 
         set({
+          staleKeys,
           requestedContent: new Map(state.requestedContent).set(cacheKey, content),
           requestIds: new Map(state.requestIds).set(cacheKey, requestId),
           nextRequestId: requestId,
@@ -89,45 +98,10 @@ export const createGitBlameStore = () =>
         }
       },
 
-      clearBlameForFile: (filePath: string) => {
-        const state = get();
-        const blameData = new Map(state.blameData);
-        const blameContent = new Map(state.blameContent);
-        const requestedContent = new Map(state.requestedContent);
-        const requestIds = new Map(state.requestIds);
-        const isLoading = new Map(state.isLoading);
-        const errors = new Map(state.errors);
-        const fileToRepo = new Map(state.fileToRepo);
-
-        const suffix = `\0${filePath}`;
-        for (const key of new Set([
-          ...blameData.keys(),
-          ...blameContent.keys(),
-          ...requestedContent.keys(),
-          ...requestIds.keys(),
-          ...isLoading.keys(),
-          ...errors.keys(),
-        ])) {
-          if (!key.endsWith(suffix)) continue;
-          blameData.delete(key);
-          blameContent.delete(key);
-          requestedContent.delete(key);
-          requestIds.delete(key);
-          isLoading.delete(key);
-          errors.delete(key);
-        }
-        fileToRepo.delete(filePath);
-
-        set({
-          blameData,
-          blameContent,
-          requestedContent,
-          requestIds,
-          revision: state.revision + 1,
-          isLoading,
-          errors,
-          fileToRepo,
-        });
+      invalidateBlameForFile: (repoPath, filePath) => {
+        const cacheKey = getGitBlameCacheKey(repoPath, filePath);
+        if (get().staleKeys.has(cacheKey)) return;
+        set({ staleKeys: new Set(get().staleKeys).add(cacheKey) });
       },
 
       clearAllBlame: () => {
@@ -136,6 +110,7 @@ export const createGitBlameStore = () =>
           blameContent: new Map(),
           requestedContent: new Map(),
           requestIds: new Map(),
+          staleKeys: new Set(),
           revision: get().revision + 1,
           isLoading: new Map(),
           errors: new Map(),

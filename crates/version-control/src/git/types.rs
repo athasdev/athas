@@ -83,22 +83,30 @@ pub struct GitDiffStat {
    pub deletions: usize,
 }
 
+/// Blame for a buffer: each commit is listed once, and hunks point into `commits`.
 #[derive(Serialize, specta::Type)]
 pub struct GitBlame {
    pub file_path: String,
-   pub lines: Vec<GitBlameLine>,
+   pub commits: Vec<GitBlameCommit>,
+   pub hunks: Vec<GitBlameHunk>,
 }
 
-#[derive(Serialize, specta::Type)]
-pub struct GitBlameLine {
-   pub line_number: usize,
-   pub total_lines: usize,
-   pub commit_hash: String,
-   pub is_uncommitted: bool,
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, specta::Type)]
+pub struct GitBlameCommit {
+   pub hash: String,
    pub author: String,
    pub email: String,
    pub time: i64,
-   pub commit: String,
+   pub message: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, specta::Type)]
+pub struct GitBlameHunk {
+   /// First line of the hunk, counting from 1.
+   pub line_number: usize,
+   pub total_lines: usize,
+   /// Index into `GitBlame::commits`; `None` for lines that are not committed.
+   pub commit_index: Option<usize>,
 }
 
 #[derive(Serialize, specta::Type)]

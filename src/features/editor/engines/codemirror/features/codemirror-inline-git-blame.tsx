@@ -6,8 +6,6 @@ import {
   type InlineGitBlamePresentation,
 } from "@/features/git/utils/git-blame-decoration";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { useBufferStore } from "../../../stores/buffer.store";
-import { getBufferById } from "../../../utils/buffer-index";
 import { type CodeMirrorHost, useCodeMirrorExtension } from "../host";
 import {
   hasInlineGitBlame,
@@ -28,18 +26,7 @@ export function CodeMirrorInlineGitBlame({ host }: { host: CodeMirrorHost }) {
   const { view, container, filePath, bufferId, isActiveSurface } = host;
   const enabled = useSettingsStore((state) => state.settings.enableInlineGitBlame);
   const blameActive = Boolean(isActiveSurface && enabled && filePath);
-  // Blame follows unsaved text, but only while it is shown here.
-  const content = useBufferStore(
-    useCallback(
-      (state) => {
-        if (!blameActive) return "";
-        const found = getBufferById(state.buffers, bufferId);
-        return found?.type === "editor" ? found.content : "";
-      },
-      [blameActive, bufferId],
-    ),
-  );
-  const { getBlameForLine } = useGitBlame(blameActive ? filePath : undefined, content);
+  const { getBlameForLine } = useGitBlame(blameActive ? filePath : undefined, bufferId);
 
   const renderTimerRef = useRef<number | null>(null);
   const renderedKeyRef = useRef<string | null>(null);

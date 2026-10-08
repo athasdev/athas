@@ -19,12 +19,6 @@ import { trackBufferHistoryChange } from "./buffer-history-tracking";
 import { useBufferStore } from "./buffer.store";
 
 interface AppState {
-  quickEditState: {
-    isOpen: boolean;
-    selectedText: string;
-    cursorPosition: { x: number; y: number };
-    selectionRange: { start: number; end: number };
-  };
   actions: AppActions;
 }
 
@@ -45,23 +39,12 @@ interface AppActions {
   handleSave: () => Promise<boolean>;
   handleSaveAs: () => Promise<boolean>;
   handleSaveAll: () => Promise<number>;
-  openQuickEdit: (params: {
-    text: string;
-    cursorPosition: { x: number; y: number };
-    selectionRange: { start: number; end: number };
-  }) => void;
   cleanup: () => void;
 }
 
 export const useEditorAppStore = createSelectors(
   create<AppState>()(
-    immer((set) => ({
-      quickEditState: {
-        isOpen: false,
-        selectedText: "",
-        cursorPosition: { x: 0, y: 0 },
-        selectionRange: { start: 0, end: 0 },
-      },
+    immer(() => ({
       actions: {
         handleDocumentChange: (bufferId, batch, previousCursorPosition, previousSelection) => {
           const { buffers } = useBufferStore.getState();
@@ -194,17 +177,6 @@ export const useEditorAppStore = createSelectors(
           );
 
           return saveResults.filter(Boolean).length;
-        },
-
-        openQuickEdit: (params) => {
-          set((state) => {
-            state.quickEditState = {
-              isOpen: true,
-              selectedText: params.text,
-              cursorPosition: params.cursorPosition,
-              selectionRange: params.selectionRange,
-            };
-          });
         },
 
         cleanup: () => {

@@ -4,11 +4,13 @@ import { applyBufferHistory } from "../services/buffer-history-service";
 import { captureBufferStoreOwner } from "../services/buffer-store-owner";
 import { hasPendingBufferHistory } from "../stores/buffer-history-tracking";
 import { useHistoryStore } from "../stores/history.store";
-import { useEditorSettingsStore } from "../stores/settings.store";
 import { useEditorStateStore } from "../stores/state.store";
 import { useEditorViewStore } from "../stores/view.store";
 import type { HistoryEntry } from "../types/history.types";
 import { isEditorContent } from "@/features/panes/types/pane-content.types";
+import { isEditorWordWrapEnabled } from "@/features/settings/lib/editor-word-wrap";
+import { resolveEffectiveTheme } from "@/features/settings/lib/theme-resolution";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import type { Decoration, Position, Range } from "../types/editor.types";
 import {
   findBracketJumpTarget,
@@ -94,7 +96,6 @@ class EditorAPIImpl implements EditorAPI {
   private eventHandlers: Map<EditorEvent, Set<EventHandler<EditorEvent>>> = new Map();
   private cursorPosition: Position = { line: 0, column: 0, offset: 0 };
   private selection: Range | null = null;
-  private textareaRef: HTMLTextAreaElement | null = null;
   private viewportRef: HTMLDivElement | null = null;
   private activeEditorAdapter: ActiveEditorAdapter | null = null;
   private activeFindAdapter: ActiveFindAdapter | null = null;
@@ -138,12 +139,7 @@ class EditorAPIImpl implements EditorAPI {
 
     const content = this.getContent();
     const editorState = useEditorStateStore.getState();
-    const textareaOwnsFullContent = this.textareaRef?.value === content;
-    const pos =
-      position ||
-      (textareaOwnsFullContent && this.textareaRef
-        ? calculateCursorPositionFromContent(this.textareaRef.selectionStart, content)
-        : editorState.cursorPosition);
+    const pos = position || editorState.cursorPosition;
     const before = content.substring(0, pos.offset);
     const after = content.substring(pos.offset);
     const newContent = before + text + after;
@@ -211,13 +207,6 @@ class EditorAPIImpl implements EditorAPI {
     // Update cursor store to trigger UI updates
     useEditorStateStore.getState().actions.setCursorPosition(position);
 
-    // Sync only when the textarea owns the full document. Large-file and folded
-    // views use model state plus a small/virtual input surface.
-    const textarea = this.getTextareaOwningContent(this.getContent());
-    if (textarea) {
-      textarea.selectionStart = textarea.selectionEnd = position.offset;
-    }
-
     // Direct viewport scrolling for immediate response
     if (this.viewportRef) {
       const { fontSize, lineHeight: editorLineHeight } = this.getSettings();
@@ -243,12 +232,6 @@ class EditorAPIImpl implements EditorAPI {
     }
 
     const content = this.getContent();
-    const textareaOwnsFullContent = this.textareaRef?.value === content;
-
-    if (textareaOwnsFullContent && this.textareaRef) {
-      this.textareaRef.select();
-    }
-
     this.syncSelectionFromOffsets(content, 0, content.length);
   }
 
@@ -370,15 +353,8 @@ class EditorAPIImpl implements EditorAPI {
 
     const content = this.getContent();
     const editorState = useEditorStateStore.getState();
-    const textareaOwnsFullContent = this.textareaRef?.value === content;
-    const selectionStart =
-      textareaOwnsFullContent && this.textareaRef
-        ? this.textareaRef.selectionStart
-        : (editorState.selection?.start.offset ?? editorState.cursorPosition.offset);
-    const selectionEnd =
-      textareaOwnsFullContent && this.textareaRef
-        ? this.textareaRef.selectionEnd
-        : (editorState.selection?.end.offset ?? editorState.cursorPosition.offset);
+    const selectionStart = editorState.selection?.start.offset ?? editorState.cursorPosition.offset;
+    const selectionEnd = editorState.selection?.end.offset ?? editorState.cursorPosition.offset;
 
     const result = toggleLineComment({
       content,
@@ -530,12 +506,6 @@ class EditorAPIImpl implements EditorAPI {
     for (const position of positions.slice(1)) {
       actions.addCursor(position);
     }
-
-    if (this.textareaRef?.value === content) {
-      this.textareaRef.focus();
-      this.textareaRef.selectionStart = firstPosition.offset;
-      this.textareaRef.selectionEnd = firstPosition.offset;
-    }
   }
 
   removeSecondaryCursors(): void {
@@ -604,7 +574,6 @@ class EditorAPIImpl implements EditorAPI {
     }
 
     actions.addCursor(position);
-    this.textareaRef?.focus();
   }
 
   // History operations
@@ -635,7 +604,6 @@ class EditorAPIImpl implements EditorAPI {
 
     const activeBuffer = getBufferById(bufferStore.buffers, activeBufferId);
     if (!activeBuffer || !isEditorContent(activeBuffer)) return;
-    const textareaOwningPreviousContent = this.getTextareaOwningContent(activeBuffer.content);
 
     const entry = applyBufferHistory(
       captureBufferStoreOwner(),
@@ -645,16 +613,9 @@ class EditorAPIImpl implements EditorAPI {
     );
 
     if (entry) {
-      if (textareaOwningPreviousContent) {
-        textareaOwningPreviousContent.value = entry.content;
-      }
-
       // Restore cursor position if available
       if (entry.cursorPosition) {
         this.setCursorPosition(entry.cursorPosition);
-      } else if (textareaOwningPreviousContent) {
-        textareaOwningPreviousContent.selectionStart =
-          textareaOwningPreviousContent.selectionEnd = 0;
       }
 
       // Restore selection if it existed
@@ -685,7 +646,6 @@ class EditorAPIImpl implements EditorAPI {
 
     const activeBuffer = getBufferById(bufferStore.buffers, activeBufferId);
     if (!activeBuffer || !isEditorContent(activeBuffer)) return;
-    const textareaOwningPreviousContent = this.getTextareaOwningContent(activeBuffer.content);
 
     const entry = applyBufferHistory(
       captureBufferStoreOwner(),
@@ -695,16 +655,9 @@ class EditorAPIImpl implements EditorAPI {
     );
 
     if (entry) {
-      if (textareaOwningPreviousContent) {
-        textareaOwningPreviousContent.value = entry.content;
-      }
-
       // Restore cursor position if available
       if (entry.cursorPosition) {
         this.setCursorPosition(entry.cursorPosition);
-      } else if (textareaOwningPreviousContent) {
-        textareaOwningPreviousContent.selectionStart =
-          textareaOwningPreviousContent.selectionEnd = 0;
       }
 
       // Restore selection if it existed
@@ -742,51 +695,42 @@ class EditorAPIImpl implements EditorAPI {
 
   // Settings
   getSettings(): EditorSettings {
-    const {
-      fontSize,
-      lineHeight,
-      tabSize,
-      lineNumbers,
-      wordWrap,
-      renderWhitespace,
-      renderIndentGuides,
-      theme,
-    } = useEditorSettingsStore.getState();
+    const { settings } = useSettingsStore.getState();
     return {
-      fontSize,
-      lineHeight,
-      tabSize,
-      lineNumbers,
-      wordWrap,
-      renderWhitespace,
-      renderIndentGuides,
-      theme,
+      fontSize: settings.fontSize,
+      lineHeight: settings.editorLineHeight,
+      tabSize: settings.tabSize,
+      lineNumbers: settings.lineNumbers,
+      wordWrap: isEditorWordWrapEnabled(settings),
+      renderWhitespace: settings.renderWhitespace,
+      renderIndentGuides: settings.renderIndentGuides,
+      theme: resolveEffectiveTheme(settings),
     };
   }
 
   updateSettings(settings: Partial<EditorSettings>): void {
-    const store = useEditorSettingsStore.getState();
+    const { updateSetting } = useSettingsStore.getState().actions;
 
     if (settings.fontSize !== undefined) {
-      store.actions.setFontSize(settings.fontSize);
+      void updateSetting("fontSize", settings.fontSize);
     }
     if (settings.lineHeight !== undefined) {
-      store.actions.setLineHeight(settings.lineHeight);
+      void updateSetting("editorLineHeight", settings.lineHeight);
     }
     if (settings.tabSize !== undefined) {
-      store.actions.setTabSize(settings.tabSize);
+      void updateSetting("tabSize", settings.tabSize);
     }
     if (settings.lineNumbers !== undefined) {
-      store.actions.setLineNumbers(settings.lineNumbers);
+      void updateSetting("lineNumbers", settings.lineNumbers);
     }
     if (settings.wordWrap !== undefined) {
-      store.actions.setWordWrap(settings.wordWrap);
+      void updateSetting("wordWrap", settings.wordWrap);
     }
     if (settings.renderWhitespace !== undefined) {
-      store.actions.setRenderWhitespace(settings.renderWhitespace);
+      void updateSetting("renderWhitespace", settings.renderWhitespace);
     }
     if (settings.renderIndentGuides !== undefined) {
-      store.actions.setRenderIndentGuides(settings.renderIndentGuides);
+      void updateSetting("renderIndentGuides", settings.renderIndentGuides);
     }
 
     this.emit("settingsChange", settings);
@@ -820,15 +764,6 @@ class EditorAPIImpl implements EditorAPI {
   // Public method to safely emit events (for extensions)
   emitEvent<E extends EditorEvent>(event: E, data: EditorEventPayload[E]): void {
     this.emit(event, data);
-  }
-
-  // Set the textarea ref for syncing cursor position
-  setTextareaRef(ref: HTMLTextAreaElement | null): void {
-    this.textareaRef = ref;
-  }
-
-  getTextareaRef(): HTMLTextAreaElement | null {
-    return this.textareaRef;
   }
 
   // Set the viewport ref for direct scroll manipulation
@@ -909,28 +844,6 @@ class EditorAPIImpl implements EditorAPI {
 
     this.smartSelectionHistory = [];
 
-    const textarea = this.getTextareaOwningContent(previousContent);
-    if (textarea) {
-      textarea.value = nextContent;
-      textarea.selectionStart = selectionStart;
-      textarea.selectionEnd = selectionEnd;
-
-      if (options.skipUndoGrouping) {
-        void editorState.onChange(
-          nextContent,
-          previousContent,
-          editorState.cursorPosition,
-          editorState.selection,
-          { skipUndoGrouping: true },
-        );
-      } else {
-        const inputEvent = new Event("input", { bubbles: true });
-        textarea.dispatchEvent(inputEvent);
-      }
-      this.syncSelectionFromOffsets(nextContent, selectionStart, selectionEnd);
-      return;
-    }
-
     void editorState.onChange(
       nextContent,
       previousContent,
@@ -947,15 +860,10 @@ class EditorAPIImpl implements EditorAPI {
     const content = this.getContent();
     const editorState = useEditorStateStore.getState();
     const selection = editorState.selection;
-    const textarea = this.getTextareaOwningContent(content);
 
     if (selection && selection.start.offset !== selection.end.offset) return;
-    if (textarea && textarea.selectionStart !== textarea.selectionEnd) {
-      return;
-    }
 
-    const sourceOffset = textarea ? textarea.selectionStart : editorState.cursorPosition.offset;
-    const result = operation(content, sourceOffset);
+    const result = operation(content, editorState.cursorPosition.offset);
     if (!result || result.content === content) return;
 
     this.applyContentEdit(
@@ -966,10 +874,6 @@ class EditorAPIImpl implements EditorAPI {
       editorState,
       { skipUndoGrouping: true },
     );
-  }
-
-  private getTextareaOwningContent(content: string): HTMLTextAreaElement | null {
-    return this.textareaRef?.value === content ? this.textareaRef : null;
   }
 }
 

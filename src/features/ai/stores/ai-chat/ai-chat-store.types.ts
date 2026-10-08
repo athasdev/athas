@@ -116,8 +116,16 @@ export interface AIChatActions {
    * Stream-friendly `updateMessage`: merges `updates` into the message on the next animation
    * frame together with every other queued change, without touching the session's
    * `lastMessageAt`. Use it for per-chunk updates.
+   *
+   * Pass a function to compute the updates once, when the batch lands, instead of on every
+   * chunk. It replaces a function queued earlier for the message and, like a `content` update,
+   * drops text appended before it.
    */
-  queueMessageUpdate: (chatId: string, messageId: string, updates: Partial<Message>) => void;
+  queueMessageUpdate: (
+    chatId: string,
+    messageId: string,
+    updates: Partial<Message> | (() => Partial<Message>),
+  ) => void;
   /** Appends streamed text to a message on the next animation frame, like `queueMessageUpdate`. */
   appendMessageContent: (chatId: string, messageId: string, chunk: string) => void;
   /** Writes queued stream updates now, for one chat or all of them. */

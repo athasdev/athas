@@ -26,12 +26,9 @@ vi.mock("@/features/editor/stores/buffer.store", () => ({
       ],
     }),
 }));
-vi.mock("@/features/editor/stores/settings.store", () => ({
-  useEditorSettingsStore: { use: { fontSize: () => 14 } },
-}));
 vi.mock("@/features/settings/stores/settings.store", () => ({
   useSettingsStore: (selector: (state: unknown) => unknown) =>
-    selector({ settings: { uiFontFamily: "sans-serif" } }),
+    selector({ settings: { fontSize: 14, uiFontFamily: "sans-serif" } }),
 }));
 vi.mock("@/features/file-system/stores/file-system.store", () => ({
   useFileSystemStore: (selector: (state: unknown) => unknown) =>

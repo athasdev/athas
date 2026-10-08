@@ -30,8 +30,7 @@ export async function navigateToLspLocation(
     bufferId: sourceBuffer.id,
     filePath: sourceBuffer.path,
     ...editorState.cursorPosition,
-    scrollTop: editorState.scrollTop,
-    scrollLeft: editorState.scrollLeft,
+    ...editorState.actions.getScroll(),
   };
   editorState.actions.requestNavigation(null);
 

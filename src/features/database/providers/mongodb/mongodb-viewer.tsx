@@ -10,6 +10,7 @@ import {
   TrashIcon,
 } from "@/ui/icons";
 import { useEffect, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { PathBreadcrumb } from "@/features/editor/components/toolbar/path-breadcrumb";
 import { PaneContentHeader } from "@/features/panes/components/pane-content-chrome";
 import { Alert, AlertDescription } from "@/ui/alert";
@@ -34,8 +35,25 @@ interface MongoDBViewerProps {
 
 export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
   const [useStore] = useState(() => createMongoDbStore());
-  const store = useStore();
-  const { actions } = store;
+  const store = useStore(
+    useShallow((state) => ({
+      fileName: state.fileName,
+      databases: state.databases,
+      selectedDatabase: state.selectedDatabase,
+      collections: state.collections,
+      selectedCollection: state.selectedCollection,
+      documents: state.documents,
+      totalCount: state.totalCount,
+      error: state.error,
+      isLoading: state.isLoading,
+      currentPage: state.currentPage,
+      pageSize: state.pageSize,
+      totalPages: state.totalPages,
+      filterJson: state.filterJson,
+      sortJson: state.sortJson,
+    })),
+  );
+  const actions = useStore((state) => state.actions);
   const [filterInput, setFilterInput] = useState("{}");
   const [sortInput, setSortInput] = useState("{}");
 

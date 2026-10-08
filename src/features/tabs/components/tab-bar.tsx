@@ -163,7 +163,7 @@ const TabBar = ({
   const handleRevealInFolder = useFileSystemStore.use.handleRevealInFolder?.();
   const { clearPositionCache } = useEditorStateStore.getState().actions;
   // Only the label fields of this bar's terminals, flattened so a shallow compare holds: the
-  // sessions Map changes on every terminal selection and would re-render the bar while dragging.
+  // sessions Map changes on every title, progress or directory update of any terminal.
   const terminalSessionFields = useTerminalStore(
     useShallow((state) => {
       const fields: string[] = [];

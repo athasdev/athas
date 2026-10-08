@@ -1,4 +1,3 @@
-import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
 import { useSelectionScope } from "@/features/editor/hooks/use-selection-scope";
 import { calculateLineHeight } from "@/features/editor/utils/lines";
 import { memo, useCallback, useMemo, useRef, useState } from "react";
@@ -22,6 +21,8 @@ import DiffLine, {
   getSplitLineMeta,
   renderDiffLineContent,
 } from "./git-diff-line";
+import { isEditorWordWrapEnabled } from "@/features/settings/lib/editor-word-wrap";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 
 function SplitDiffCodePanel({
   side,
@@ -116,11 +117,11 @@ const TextDiffViewer = memo(
     searchHighlights,
   }: TextDiffViewerProps) => {
     const selectionScopeRef = useRef<HTMLDivElement>(null);
-    const editorFontSize = useEditorSettingsStore.use.fontSize();
-    const editorFontFamily = useEditorSettingsStore.use.fontFamily();
-    const editorLineHeight = useEditorSettingsStore.use.lineHeight();
-    const editorTabSize = useEditorSettingsStore.use.tabSize();
-    const wordWrap = useEditorSettingsStore.use.wordWrap();
+    const editorFontSize = useSettingsStore((state) => state.settings.fontSize);
+    const editorFontFamily = useSettingsStore((state) => state.settings.fontFamily);
+    const editorLineHeight = useSettingsStore((state) => state.settings.editorLineHeight);
+    const editorTabSize = useSettingsStore((state) => state.settings.tabSize);
+    const wordWrap = useSettingsStore((state) => isEditorWordWrapEnabled(state.settings));
     const zoomLevel = useZoomStore.use.editorZoomLevel();
     const fontSize = editorFontSize * zoomLevel;
     const lineHeight = calculateLineHeight(fontSize, editorLineHeight);

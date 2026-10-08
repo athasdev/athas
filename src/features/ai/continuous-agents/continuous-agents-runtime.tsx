@@ -11,15 +11,20 @@ import {
   checkContinuousAgentReadiness,
   runNextDueContinuousAgent,
 } from "./continuous-agent-runner";
-import { selectNextDueContinuousAgent, useContinuousAgentsStore } from "./continuous-agents.store";
+import {
+  CONTINUOUS_AGENTS_STORAGE_KEY,
+  selectNextDueContinuousAgent,
+  syncContinuousAgentsFromStorage,
+  useContinuousAgentsStore,
+} from "./continuous-agents.store";
 
 const CONTINUOUS_AGENT_CHECK_INTERVAL_MS = 30_000;
 const CONTINUOUS_AGENT_SCHEDULER_LOCK = "athas-continuous-agent-scheduler";
 
 export function ContinuousAgentsRuntime() {
   const workspacePath = useProjectStore((state) => state.rootFolderPath ?? null);
-  // Only what decides when a run is due. Each check rehydrates the store, which replaces the task
-  // array even when nothing changed; depending on the array itself re-ran the check every 100 ms.
+  // Only what decides when a run is due. Syncing from another window replaces the task array even
+  // when nothing changed; depending on the array itself re-ran the check every 100 ms.
   const scheduleSignature = useContinuousAgentsStore((state) =>
     state.tasks
       .filter((task) => task.enabled && task.workspacePath === workspacePath)
@@ -33,7 +38,7 @@ export function ContinuousAgentsRuntime() {
     runningRef.current = true;
     try {
       const run = async () => {
-        await useContinuousAgentsStore.persist.rehydrate();
+        await syncContinuousAgentsFromStorage();
         return runNextDueContinuousAgent({
           getWorkspacePath: () => useProjectStore.getState().rootFolderPath ?? null,
           isAgentBusy: () => {
@@ -115,6 +120,16 @@ export function ContinuousAgentsRuntime() {
     const timeout = window.setTimeout(() => void runNextDueTask(), 100);
     return () => window.clearTimeout(timeout);
   }, [runNextDueTask, scheduleSignature]);
+
+  useEffect(() => {
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === null || event.key === CONTINUOUS_AGENTS_STORAGE_KEY) {
+        void syncContinuousAgentsFromStorage();
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
 
   useEffect(() => {
     const interval = window.setInterval(

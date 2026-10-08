@@ -384,15 +384,23 @@ class AgentTurnStream {
     });
   }
 
-  /** Where streamed text lands; queued so a burst of tokens reaches the store once per frame. */
+  /**
+   * Where streamed text lands; queued so a burst of tokens reaches the store once per frame. The
+   * follow-up block is split off when the frame lands rather than per token, which rescanned the
+   * whole reply for every chunk.
+   */
   onChunk = (chunk: string) => {
     this.rawContent += chunk;
+    chatActions().queueMessageUpdate(this.chatId, this.messageId, this.resolveStreamedContent);
+  };
+
+  private resolveStreamedContent = (): Partial<Message> => {
     const extracted = extractFollowUpActions(this.rawContent);
-    chatActions().queueMessageUpdate(this.chatId, this.messageId, {
+    return {
       content: extracted.content,
       followUpActions: extracted.actions,
       responsePhase: undefined,
-    });
+    };
   };
 
   onComplete = (completion?: BuiltInCompletion) => {

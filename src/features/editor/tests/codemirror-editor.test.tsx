@@ -66,7 +66,6 @@ vi.mock("../extensions/api", () => {
   let editorAdapter: Adapter | null = null;
   return {
     editorAPI: {
-      setTextareaRef: vi.fn(),
       setViewportRef: vi.fn(),
       getViewportRef: () => null,
       setActiveFindAdapter: vi.fn(),

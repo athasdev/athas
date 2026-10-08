@@ -107,6 +107,8 @@ export interface SqlDatabaseActions {
 
 type ConnectionMode = "file" | "connection";
 
+export type SqlDatabaseStore = ReturnType<typeof createSqlStore>;
+
 interface CommandMap {
   getTables: string;
   query: string;

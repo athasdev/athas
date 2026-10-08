@@ -6,8 +6,8 @@ import {
   MultibufferWorkspace,
   type MultibufferWorkspaceHandle,
 } from "@/features/editor/components/multibuffer/multibuffer-workspace";
-import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
 import { calculateLineHeight } from "@/features/editor/utils/lines";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import {
   type FileNavigatorItem,
   type FileNavigatorViewMode,
@@ -109,13 +109,13 @@ export function GlobalSearchResults({
   totalMatches,
   hasMoreResults,
 }: GlobalSearchResultsProps) {
-  const editorSettings = useEditorSettingsStore(
+  const editorSettings = useSettingsStore(
     useShallow((state) => ({
-      fontSize: state.fontSize,
-      fontFamily: state.fontFamily,
-      lineHeight: state.lineHeight,
-      tabSize: state.tabSize,
-      lineNumbers: state.lineNumbers,
+      fontSize: state.settings.fontSize,
+      fontFamily: state.settings.fontFamily,
+      lineHeight: state.settings.editorLineHeight,
+      tabSize: state.settings.tabSize,
+      lineNumbers: state.settings.lineNumbers,
     })),
   );
   const zoomLevel = useZoomStore.use.editorZoomLevel();

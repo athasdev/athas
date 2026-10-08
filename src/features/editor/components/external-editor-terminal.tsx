@@ -4,7 +4,6 @@ import { FitAddon } from "@xterm/addon-fit";
 import { UnicodeGraphemesAddon } from "@xterm/addon-unicode-graphemes";
 import { Terminal } from "@xterm/xterm";
 import { useCallback, useEffect, useRef } from "react";
-import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useTerminalTheme } from "@/features/terminal/hooks/use-terminal-theme";
@@ -60,8 +59,8 @@ export const ExternalEditorTerminal = ({
   const queuedOutputBytesRef = useRef(0);
   const outputPausedRef = useRef(false);
 
-  const editorFontSize = useEditorSettingsStore.use.fontSize();
-  const editorFontFamily = useEditorSettingsStore.use.fontFamily();
+  const editorFontSize = useSettingsStore((state) => state.settings.fontSize);
+  const editorFontFamily = useSettingsStore((state) => state.settings.fontFamily);
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const externalEditor = useSettingsStore((state) => state.settings.externalEditor);
   const customEditorCommand = useSettingsStore((state) => state.settings.customEditorCommand);

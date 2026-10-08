@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { commands } from "@/bindings/commands";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getBufferById } from "@/features/editor/utils/buffer-index";
@@ -18,17 +19,19 @@ export function useNativeMenuState() {
   const bottomPaneActiveTab = useUIState((state) => state.bottomPaneActiveTab);
   // Derived inside the selector: selecting the active buffer itself re-rendered the app root on
   // every keystroke, since its content changes; the menu state only changes with dirty or type.
-  const menuState = useBufferStore((state) =>
-    getNativeMenuState({
-      activeBuffer: getBufferById(state.buffers, state.activeBufferId) ?? null,
-      hasOpenFolder: Boolean(rootFolderPath),
-      sidebarVisible,
-      terminalVisible: bottomPaneVisible && bottomPaneActiveTab === "terminal",
-      minimapVisible,
-      wordWrap,
-      lineNumbers,
-      renderWhitespace,
-    }),
+  const menuState = useBufferStore(
+    useShallow((state) =>
+      getNativeMenuState({
+        activeBuffer: getBufferById(state.buffers, state.activeBufferId) ?? null,
+        hasOpenFolder: Boolean(rootFolderPath),
+        sidebarVisible,
+        terminalVisible: bottomPaneVisible && bottomPaneActiveTab === "terminal",
+        minimapVisible,
+        wordWrap,
+        lineNumbers,
+        renderWhitespace,
+      }),
+    ),
   );
 
   useEffect(() => {

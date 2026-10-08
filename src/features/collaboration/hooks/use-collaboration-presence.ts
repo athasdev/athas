@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useCollaborationRuntimeStore } from "@/features/collaboration/stores/collaboration-runtime.store";
+import { subscribeToEditorScroll } from "@/features/editor/services/editor-scroll-events";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import {
@@ -314,7 +315,8 @@ export function useCollaborationPresence() {
     let pendingViewportKey: string | null = null;
 
     const scheduleViewportUpdate = () => {
-      const { scrollTop, scrollLeft, viewportHeight } = useEditorStateStore.getState();
+      const { viewportHeight, actions } = useEditorStateStore.getState();
+      const { scrollTop, scrollLeft } = actions.getScroll();
       const viewportKey = JSON.stringify({
         path: activeFilePath,
         documentId,
@@ -364,19 +366,14 @@ export function useCollaborationPresence() {
     };
 
     scheduleViewportUpdate();
-    const unsubscribe = useEditorStateStore.subscribe((state, previousState) => {
-      if (
-        state.scrollTop === previousState.scrollTop &&
-        state.scrollLeft === previousState.scrollLeft &&
-        state.viewportHeight === previousState.viewportHeight
-      ) {
-        return;
-      }
-      scheduleViewportUpdate();
+    const unsubscribeScroll = subscribeToEditorScroll(scheduleViewportUpdate);
+    const unsubscribeViewport = useEditorStateStore.subscribe((state, previousState) => {
+      if (state.viewportHeight !== previousState.viewportHeight) scheduleViewportUpdate();
     });
 
     return () => {
-      unsubscribe();
+      unsubscribeScroll();
+      unsubscribeViewport();
       if (timer !== null) window.clearTimeout(timer);
     };
   }, [

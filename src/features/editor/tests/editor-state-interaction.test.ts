@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, test } from "vite-plus/test";
+import { subscribeToEditorScroll } from "../services/editor-scroll-events";
 import { useEditorStateStore } from "../stores/state.store";
 import type { Position, Range } from "../types/editor.types";
 
@@ -46,5 +47,33 @@ describe("editor interaction state", () => {
     unsubscribe();
 
     expect(updateCount).toBe(0);
+  });
+
+  test("keeps scroll out of store updates and reports it to scroll listeners", () => {
+    useEditorStateStore.setState({ activeEditorViewKey: "pane-1:scroll-buffer" });
+    let storeUpdates = 0;
+    let scrollEvents = 0;
+    const unsubscribeStore = useEditorStateStore.subscribe(() => {
+      storeUpdates += 1;
+    });
+    const unsubscribeScroll = subscribeToEditorScroll(() => {
+      scrollEvents += 1;
+    });
+    const { actions } = useEditorStateStore.getState();
+
+    actions.setScrollForBuffer("pane-1:scroll-buffer", 120, 4);
+    actions.setScrollForBuffer("pane-1:scroll-buffer", 120, 4);
+    actions.setScrollForBuffer("pane-2:other-buffer", 40, 0);
+    unsubscribeStore();
+    unsubscribeScroll();
+
+    expect(storeUpdates).toBe(0);
+    expect(scrollEvents).toBe(1);
+    expect(actions.getScroll()).toEqual({ scrollTop: 120, scrollLeft: 4 });
+    expect(actions.getCachedViewState("pane-1:scroll-buffer")).toMatchObject({
+      scrollTop: 120,
+      scrollLeft: 4,
+    });
+    expect(actions.getCachedViewState("pane-2:other-buffer")).toMatchObject({ scrollTop: 40 });
   });
 });

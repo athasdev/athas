@@ -12,7 +12,6 @@ import {
   getNativeWorkspaceRootPaths,
 } from "@/features/file-search/utils/file-search-paths";
 import { useUIState } from "@/features/window/stores/ui-state.store";
-import { useCenterCursor } from "@/features/editor/hooks/use-center-cursor";
 import { calculateOffsetFromContentPosition } from "@/features/editor/utils/position";
 import { getBaseName } from "@/utils/path-helpers";
 import { SEARCH_DEBOUNCE_DELAY } from "../constants/limits";
@@ -40,7 +39,6 @@ export const useQuickOpen = () => {
   const [query, setQuery] = useState("");
   const [debouncedQuery] = useDebounce(query, SEARCH_DEBOUNCE_DELAY);
   const inputRef = useRef<HTMLInputElement>(null);
-  const { centerCursorInViewport } = useCenterCursor();
 
   // Detect symbol mode (query starts with @) and workspace-symbol mode (query starts with #)
   const isSymbolMode = query.startsWith("@");
@@ -104,13 +102,9 @@ export const useQuickOpen = () => {
           column: symbol.character,
           offset,
         });
-
-        requestAnimationFrame(() => {
-          centerCursorInViewport(symbol.line);
-        });
       }, 50);
     },
-    [onClose, centerCursorInViewport],
+    [onClose],
   );
 
   // Workspace-symbol results routinely point at files that are not open yet, so unlike
@@ -130,8 +124,7 @@ export const useQuickOpen = () => {
           line: editorState.cursorPosition.line,
           column: editorState.cursorPosition.column,
           offset: editorState.cursorPosition.offset,
-          scrollTop: editorState.scrollTop,
-          scrollLeft: editorState.scrollLeft,
+          ...editorState.actions.getScroll(),
         });
       }
 
