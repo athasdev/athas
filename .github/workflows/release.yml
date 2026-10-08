@@ -232,7 +232,7 @@ jobs:
           flatpak install --user -y --noninteractive flathub org.flatpak.Builder
 
       - name: Install frontend dependencies
-        run: vp install --ignore-scripts && bun scripts/postinstall.ts
+        run: vp install --ignore-scripts
 
       - name: Import Apple Certificate (macOS only)
         if: matrix.os == 'macos'

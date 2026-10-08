@@ -85,7 +85,7 @@ jobs:
           "TAURI_NATIVE_DRIVER=$env:RUNNER_TEMP\msedgedriver\msedgedriver.exe" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Install frontend dependencies
-        run: vp install --ignore-scripts && bun scripts/postinstall.ts
+        run: vp install --ignore-scripts
 
       - name: Build the e2e app (Linux)
         if: runner.os == 'Linux'

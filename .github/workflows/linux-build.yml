@@ -67,7 +67,7 @@ jobs:
           flatpak install --user -y --noninteractive flathub org.flatpak.Builder
 
       - name: Install frontend dependencies
-        run: vp install --ignore-scripts && bun scripts/postinstall.ts
+        run: vp install --ignore-scripts
 
       - name: Build Linux packages
         run: bun tauri build --bundles deb,rpm,appimage --no-sign

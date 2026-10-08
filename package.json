@@ -190,6 +190,7 @@
     "next": "15.5.19",
     "picomatch": "^4.0.7",
     "postcss": "^8.5.28",
+    "source-map-js": "^1.2.2",
     "vite": "npm:@voidzero-dev/vite-plus-core@0.3.3",
     "vitest": "4.1.11",
     "ws": "^8.21.3"
