@@ -180,15 +180,17 @@ const BottomPane = ({
         if (!tabData) return;
 
         if (tabData.source === "terminal-panel" && tabData.terminalId) {
-          const bufferId = openTerminalBuffer({
-            sessionId: tabData.terminalId,
-            name: tabData.name,
-            shell: tabData.shell,
-            command: tabData.initialCommand,
-            workingDirectory: tabData.currentDirectory,
-            remoteConnectionId: tabData.remoteConnectionId,
-          });
-          activateBufferInPaneAndSync(BOTTOM_PANE_ID, bufferId);
+          openTerminalBuffer(
+            {
+              sessionId: tabData.terminalId,
+              name: tabData.name,
+              shell: tabData.shell,
+              command: tabData.initialCommand,
+              workingDirectory: tabData.currentDirectory,
+              remoteConnectionId: tabData.remoteConnectionId,
+            },
+            { paneId: BOTTOM_PANE_ID },
+          );
           emitAppEvent("terminal-detach-to-buffer", { terminalId: tabData.terminalId });
         } else if (tabData.bufferId && tabData.paneId && tabData.paneId !== BOTTOM_PANE_ID) {
           moveBufferToPane(tabData.bufferId, tabData.paneId, BOTTOM_PANE_ID);

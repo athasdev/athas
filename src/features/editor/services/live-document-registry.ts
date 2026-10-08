@@ -1,4 +1,4 @@
-import { type ChangeSet, Text } from "@codemirror/state";
+import type { ChangeSet, Text } from "@codemirror/state";
 import type { TextSlice } from "../utils/editor-text-changes";
 
 export type LiveLineSeparator = "\n" | "\r\n";
@@ -203,6 +203,15 @@ export function textRoundTrips(text: string, separator: LiveLineSeparator): bool
   return true;
 }
 
+/**
+ * `Text.of`, reached through a document that already exists so this module, which the buffer
+ * store loads at startup, does not pull CodeMirror into the startup bundle. Every document
+ * class extends `Text`, so its constructor inherits the static.
+ */
+function textOf(doc: Text, lines: string[]): Text {
+  return (doc.constructor as unknown as typeof Text).of(lines);
+}
+
 function savedDocumentFor(
   content: string,
   separator: LiveLineSeparator,
@@ -226,7 +235,7 @@ export function liveDocumentMatchesSaved(
   let saved = savedDocuments.get(bufferId);
   if (!saved || saved.content !== savedContent || saved.separator !== separator) {
     saved = savedDocumentFor(savedContent, separator, () =>
-      Text.of(savedContent.split(/\r\n|\r|\n/)),
+      textOf(doc, savedContent.split(/\r\n|\r|\n/)),
     );
     savedDocuments.set(bufferId, saved);
   }

@@ -492,7 +492,7 @@ const CodeEditor = ({
   useEffect(() => {
     if (!isActiveSurface) return;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
-    const goToLine = (lineNumber: number, columnNumber?: number) => {
+    const goToLine = (lineNumber: number, columnNumber: number | undefined, focus: boolean) => {
       if (!editorRef.current) return false;
 
       const currentContent = getValue();
@@ -507,10 +507,11 @@ const CodeEditor = ({
 
       if (!activeBufferId) return false;
       const position = { line: target.line, column: target.column, offset: target.offset };
-      // Explicit navigation: moves the cursor, centers it and focuses the editor.
+      // Moves the cursor and centers it; only a go-to-line typed in the editor takes focus.
       useEditorStateStore.getState().actions.requestNavigation({
         bufferId: activeBufferId,
         range: { start: position, end: position },
+        focus,
       });
 
       return true;
@@ -520,13 +521,14 @@ const CodeEditor = ({
       const lineNumber = request.line;
       const columnNumber = request.column;
       const targetPath = request.path;
+      const focus = request.focus ?? false;
       if (targetPath && targetPath !== filePath) return;
       if (!lineNumber) return;
 
       // Try immediately, then retry if content not ready yet
-      if (!goToLine(lineNumber, columnNumber)) {
+      if (!goToLine(lineNumber, columnNumber, focus)) {
         if (retryTimer) clearTimeout(retryTimer);
-        retryTimer = setTimeout(() => goToLine(lineNumber, columnNumber), 150);
+        retryTimer = setTimeout(() => goToLine(lineNumber, columnNumber, focus), 150);
       }
     };
 

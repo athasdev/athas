@@ -1,4 +1,4 @@
-import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { type OpenContentOptions, useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getCommitDiff } from "@/features/git/api/git-diff-api";
 import type { MultiFileDiff } from "@/features/git/types/git-diff.types";
 import { countDiffStats } from "@/features/git/utils/git-diff-helpers";
@@ -13,15 +13,10 @@ interface OpenCommitDiffBufferOptions {
   date?: string;
 }
 
-export const openCommitDiffBuffer = async ({
-  repoPath,
-  commitHash,
-  message,
-  description,
-  author,
-  email,
-  date,
-}: OpenCommitDiffBufferOptions): Promise<string | null> => {
+export const openCommitDiffBuffer = async (
+  { repoPath, commitHash, message, description, author, email, date }: OpenCommitDiffBufferOptions,
+  openOptions?: OpenContentOptions,
+): Promise<string | null> => {
   const diffs = await getCommitDiff(repoPath, commitHash);
   if (!diffs || diffs.length === 0) {
     return null;
@@ -49,5 +44,8 @@ export const openCommitDiffBuffer = async ({
 
   return useBufferStore
     .getState()
-    .actions.openBuffer(virtualPath, displayName, "", false, undefined, true, true, multiDiff);
+    .actions.openContent(
+      { type: "diff", path: virtualPath, name: displayName, content: "", diffData: multiDiff },
+      openOptions,
+    );
 };

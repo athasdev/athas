@@ -224,7 +224,7 @@ describe("vim ex commands", () => {
       const handled = await parseAndExecuteVimCommand("42");
 
       expect(handled).toBe(true);
-      expect(goToLine).toHaveBeenCalledWith({ line: 42 });
+      expect(goToLine).toHaveBeenCalledWith({ line: 42, focus: true });
     } finally {
       unsubscribe();
     }

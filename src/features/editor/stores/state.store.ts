@@ -23,6 +23,8 @@ export interface EditorViewState {
 export interface EditorNavigationTarget {
   bufferId: string;
   range: Range;
+  /** Whether the editor takes focus. Defaults to true; panels that only move the cursor pass false. */
+  focus?: boolean;
 }
 
 /**

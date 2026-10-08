@@ -5,15 +5,19 @@ import type { Message } from "@/features/ai/types/ai-chat.types";
 
 /** A streaming reply changes the conversation every frame; readers follow it at this pace. */
 export const CHAT_MESSAGES_SETTLE_MS = 300;
+/** Longest a continuous stream can hold the messages back. */
+export const CHAT_MESSAGES_MAX_WAIT_MS = 1000;
 
 /**
- * The chat's messages, picked up once they stop changing for a moment. Read from the store
- * instead of selected from it, so a streaming reply does not re-render the reader each frame.
- * Messages that appear where there were none (a chat that just loaded) are picked up at once.
+ * The chat's messages, picked up once they stop changing for a moment, and at least every
+ * `maxWaitMs` while they keep changing. Read from the store instead of selected from it, so a
+ * streaming reply does not re-render the reader each frame. Messages that appear where there
+ * were none (a chat that just loaded) are picked up at once.
  */
 export function useSettledChatMessages(
   chatId: string | null,
   settleMs = CHAT_MESSAGES_SETTLE_MS,
+  maxWaitMs = CHAT_MESSAGES_MAX_WAIT_MS,
 ): Message[] {
   const read = useCallback(
     () =>
@@ -30,6 +34,7 @@ export function useSettledChatMessages(
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined;
+    let burstStartedAt = 0;
     const settle = () =>
       setSettled((previous) => {
         const messages = read();
@@ -38,11 +43,16 @@ export function useSettledChatMessages(
           : { read, messages };
       });
     const schedule = () => {
-      if (timer !== undefined) clearTimeout(timer);
-      timer = setTimeout(() => {
-        timer = undefined;
-        settle();
-      }, settleMs);
+      const now = Date.now();
+      if (timer === undefined) burstStartedAt = now;
+      else clearTimeout(timer);
+      timer = setTimeout(
+        () => {
+          timer = undefined;
+          settle();
+        },
+        Math.max(0, Math.min(settleMs, burstStartedAt + maxWaitMs - now)),
+      );
     };
     let lastSeen = read();
     // Catches a change between the render and this subscription.
@@ -64,7 +74,7 @@ export function useSettledChatMessages(
       unsubscribe();
       if (timer !== undefined) clearTimeout(timer);
     };
-  }, [read, settleMs]);
+  }, [read, settleMs, maxWaitMs]);
 
   return current.messages;
 }

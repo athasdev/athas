@@ -81,4 +81,32 @@ describe("useSettledChatMessages", () => {
     expect(latest).toBe(final);
     expect(renders).toBe(rendersBefore + 1);
   });
+
+  it("still picks up a continuous stream at least once a second", () => {
+    store.current.setState({ messagesByChat: { chat: [message("a", "")] } });
+    act(() => root.render(<Reader chatId="chat" />));
+    const rendersBefore = renders;
+
+    let frame = 0;
+    const streamFor = (ms: number) => {
+      for (let elapsed = 0; elapsed < ms; elapsed += 50) {
+        frame++;
+        const next = [message("a", "x".repeat(frame))];
+        act(() => {
+          store.current.setState({ messagesByChat: { chat: next } });
+          vi.advanceTimersByTime(50);
+        });
+      }
+    };
+
+    streamFor(950);
+    expect(renders).toBe(rendersBefore);
+
+    streamFor(100);
+    expect(renders).toBe(rendersBefore + 1);
+    expect(latest[0]?.content.length).toBeGreaterThan(15);
+
+    streamFor(1000);
+    expect(renders).toBe(rendersBefore + 2);
+  });
 });

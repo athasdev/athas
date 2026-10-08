@@ -49,7 +49,6 @@ import { PaneSurfaceLayer } from "./pane-surface-layer";
 import { type DropZone, SplitDropOverlay } from "./split-drop-overlay";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { emitAppEvent, onAppEvent } from "@/utils/app-events";
-import { getActiveBufferId } from "../stores/pane-selectors";
 
 const AgentTab = lazy(() =>
   import("@/features/ai/components/agent-tab").then((m) => ({
@@ -425,11 +424,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       activatePaneAndSyncBuffer(targetPaneId);
 
       try {
-        await handleFileOpen(fileDragData.path, false);
-        const openedBufferId = getActiveBufferId();
-        if (openedBufferId) {
-          activateBufferInPaneAndSync(targetPaneId, openedBufferId);
-        }
+        await handleFileOpen(fileDragData.path, false, { paneId: targetPaneId });
       } catch (error) {
         console.error("Failed to open file from file tree drop:", error);
       } finally {
@@ -455,10 +450,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       activatePaneAndSyncBuffer(targetPaneId);
 
       try {
-        const bufferId = await openSidebarResourceBuffer(resource);
-        if (!bufferId) return;
-
-        activateBufferInPaneAndSync(targetPaneId, bufferId);
+        await openSidebarResourceBuffer(resource, { paneId: targetPaneId });
       } catch (error) {
         console.error("Failed to open sidebar resource from drop:", error);
       }
@@ -687,15 +679,17 @@ export function PaneContainer({ pane }: PaneContainerProps) {
 
       if (zone === "center") {
         if (source === "terminal-panel" && terminalId) {
-          const newBufferId = openTerminalBuffer({
-            sessionId: terminalId,
-            name: terminalName,
-            shell,
-            command: initialCommand,
-            workingDirectory: currentDirectory,
-            remoteConnectionId,
-          });
-          activateBufferInPaneAndSync(pane.id, newBufferId);
+          openTerminalBuffer(
+            {
+              sessionId: terminalId,
+              name: terminalName,
+              shell,
+              command: initialCommand,
+              workingDirectory: currentDirectory,
+              remoteConnectionId,
+            },
+            { paneId: pane.id },
+          );
           emitAppEvent("terminal-detach-to-buffer", { terminalId });
         } else if (sourcePaneId && sourcePaneId !== pane.id && bufferId) {
           moveBufferToPaneDropTarget(bufferId, sourcePaneId, { paneId: pane.id, zone: "center" });
@@ -711,15 +705,17 @@ export function PaneContainer({ pane }: PaneContainerProps) {
 
       // Move the dragged buffer into the newly created pane.
       if (source === "terminal-panel" && terminalId) {
-        const newBufferId = openTerminalBuffer({
-          sessionId: terminalId,
-          name: terminalName,
-          shell,
-          command: initialCommand,
-          workingDirectory: currentDirectory,
-          remoteConnectionId,
-        });
-        activateBufferInPaneAndSync(newPaneId, newBufferId);
+        openTerminalBuffer(
+          {
+            sessionId: terminalId,
+            name: terminalName,
+            shell,
+            command: initialCommand,
+            workingDirectory: currentDirectory,
+            remoteConnectionId,
+          },
+          { paneId: newPaneId },
+        );
         emitAppEvent("terminal-detach-to-buffer", { terminalId });
       } else if (sourcePaneId && sourcePaneId !== pane.id && bufferId) {
         moveBufferToPaneDropTarget(bufferId, sourcePaneId, { paneId: newPaneId, zone: "center" });
@@ -767,7 +763,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       const droppedPaths = extractDroppedFilePaths(e.dataTransfer);
       if (droppedPaths.length > 0 && handleFileOpen) {
         for (const droppedPath of droppedPaths) {
-          await handleFileOpen(droppedPath, false);
+          await handleFileOpen(droppedPath, false, { paneId: pane.id });
         }
         return;
       }

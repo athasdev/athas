@@ -32,12 +32,13 @@ export async function navigateToJumpEntry(entry: JumpListEntry): Promise<boolean
     bufferStore.actions.setActiveBuffer(bufferId);
   }
 
-  // The same path as go-to-definition: the editor showing the buffer moves the cursor, centers it
-  // and takes focus once it is ready.
+  // The editor showing the buffer moves the cursor and centers it once it is ready. Focus stays
+  // where it is, as it did when the jump list set the cursor directly.
   const position = { line: entry.line, column: entry.column, offset: entry.offset };
   useEditorStateStore.getState().actions.requestNavigation({
     bufferId,
     range: { start: position, end: position },
+    focus: false,
   });
   logger.info("JumpList", `Jumped to ${entry.filePath}:${entry.line}:${entry.column}`);
 

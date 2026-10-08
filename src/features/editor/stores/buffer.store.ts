@@ -109,6 +109,11 @@ interface PendingClose {
  * that change both update the entity first when adding and last when removing, so a pane never
  * points at a buffer that does not exist.
  */
+export interface OpenContentOptions {
+  /** Pane to show the buffer in instead of the focused pane. */
+  paneId?: string;
+}
+
 interface BufferState {
   buffers: PaneContent[];
   maxOpenTabs: number;
@@ -119,7 +124,7 @@ interface BufferState {
 
 interface BufferActions {
   confirmCloseAfterSaving: (request: PendingClose) => boolean;
-  openContent: (spec: OpenContentSpec) => string;
+  openContent: (spec: OpenContentSpec, options?: OpenContentOptions) => string;
   openBuffer: (
     path: string,
     name: string,
@@ -145,7 +150,12 @@ interface BufferActions {
     connectionId?: string,
   ) => string;
   convertPreviewToDefinite: (bufferId: string) => void;
-  openExternalEditorBuffer: (path: string, name: string, terminalConnectionId: string) => string;
+  openExternalEditorBuffer: (
+    path: string,
+    name: string,
+    terminalConnectionId: string,
+    openOptions?: OpenContentOptions,
+  ) => string;
   openPRBuffer: (
     prNumber: number,
     metadata?: {
@@ -155,34 +165,42 @@ interface BufferActions {
       selectedFilePath?: string;
       initialView?: "activity" | "files";
     },
+    openOptions?: OpenContentOptions,
   ) => string;
-  openGitHubIssueBuffer: (options: {
-    issueNumber: number;
-    repoPath?: string;
-    title?: string;
-    authorAvatarUrl?: string;
-    url?: string;
-  }) => string;
+  openGitHubIssueBuffer: (
+    options: {
+      issueNumber: number;
+      repoPath?: string;
+      title?: string;
+      authorAvatarUrl?: string;
+      url?: string;
+    },
+    openOptions?: OpenContentOptions,
+  ) => string;
   openGitHubActionBuffer: (
     options: GitHubActionOpenTarget & {
       repoPath?: string;
       title?: string;
       url?: string;
     },
+    openOptions?: OpenContentOptions,
   ) => string;
   openGitHubFormBuffer: (options: {
     repoPath: string;
     formKind: "pull-request" | "issue" | "action";
     defaultHead?: string;
   }) => string;
-  openTerminalBuffer: (options?: {
-    name?: string;
-    shell?: string;
-    command?: string;
-    workingDirectory?: string;
-    remoteConnectionId?: string;
-    sessionId?: string;
-  }) => string;
+  openTerminalBuffer: (
+    options?: {
+      name?: string;
+      shell?: string;
+      command?: string;
+      workingDirectory?: string;
+      remoteConnectionId?: string;
+      sessionId?: string;
+    },
+    openOptions?: OpenContentOptions,
+  ) => string;
   openAgentBuffer: (sessionId?: string) => string;
   openBrowserBuffer: (url?: string) => string;
   openGlobalSearchBuffer: () => string;
@@ -255,11 +273,15 @@ interface BufferActions {
 interface ShowExistingBufferOptions {
   /** Focus the pane already showing it instead of adding it to the writable pane. */
   reveal?: boolean;
+  /** Pane to show it in; wins over `reveal`. */
+  paneId?: string;
   preview?: boolean;
   update?: (buffer: PaneContent | undefined) => void;
 }
 
 interface AddBufferOptions {
+  /** Pane to show the buffer in instead of the focused pane. */
+  paneId?: string;
   preview?: boolean;
   /** Buffers the new one takes the place of; their panes stay even when emptied. */
   replaceBufferIds?: string[];
@@ -315,12 +337,8 @@ const getWorkspacePaneReplacementBufferId = (
     }
   }
 
-  for (const buffer of buffers) {
-    if (openBufferIds.has(buffer.id)) {
-      return buffer.id;
-    }
-  }
-
+  // The source pane is left empty: focus falls back to the most recent pane, whose own active
+  // tab stays as it is.
   return null;
 };
 
@@ -421,16 +439,22 @@ const createBufferStore = (workspaceId: string) => {
   const getPaneReplacementBufferId = (closingBufferIds: string[], buffers: PaneContent[]) =>
     getWorkspacePaneReplacementBufferId(closingBufferIds, buffers, workspaceId);
 
-  /** The new-tab page the focused pane shows, which the next opened buffer takes over. */
-  const getActiveNewTabBufferId = (buffers: PaneContent[]): string | null => {
-    const activePaneBufferId = selectActivePane(paneStore.getState())?.activeBufferId;
-    const buffer = getBufferById(buffers, activePaneBufferId);
+  const getTargetPane = (paneId: string | undefined) => {
+    const paneState = paneStore.getState();
+    return (paneId ? paneState.actions.getPaneById(paneId) : null) ?? selectActivePane(paneState);
+  };
+
+  /** The new-tab page the target pane shows, which the next opened buffer takes over. */
+  const getActiveNewTabBufferId = (buffers: PaneContent[], paneId?: string): string | null => {
+    const buffer = getBufferById(buffers, getTargetPane(paneId)?.activeBufferId);
     return buffer?.type === "newTab" ? buffer.id : null;
   };
 
   /** The preview tab of the pane a new buffer would open in, if it has one. */
-  const getWritablePanePreviewBufferId = (): string | null => {
+  const getWritablePanePreviewBufferId = (paneId?: string): string | null => {
     const paneState = paneStore.getState();
+    const targetPane = paneId ? paneState.actions.getPaneById(paneId) : null;
+    if (targetPane) return targetPane.previewBufferId ?? null;
     const writablePane = resolveWritablePaneForBuffer({
       activePane: selectActivePane(paneState),
       bottomRoot: paneState.bottomRoot,
@@ -464,6 +488,7 @@ const createBufferStore = (workspaceId: string) => {
       const addAndShowBuffer = (
         newBuffer: PaneContent,
         {
+          paneId,
           preview,
           replaceBufferIds = [],
           closeBufferIds = [],
@@ -474,7 +499,7 @@ const createBufferStore = (workspaceId: string) => {
       ): string => {
         const { buffers, maxOpenTabs } = get();
         const replaced = [...replaceBufferIds];
-        const newTabBufferId = consumeNewTab ? getActiveNewTabBufferId(buffers) : null;
+        const newTabBufferId = consumeNewTab ? getActiveNewTabBufferId(buffers, paneId) : null;
         if (newTabBufferId && !replaced.includes(newTabBufferId)) replaced.push(newTabBufferId);
 
         const closed = [...closeBufferIds];
@@ -497,6 +522,7 @@ const createBufferStore = (workspaceId: string) => {
           state.buffers.push(newBuffer);
         });
         paneActions().placeBuffer(newBuffer.id, {
+          paneId,
           preview,
           replaceBufferIds: replaced,
           closeBufferIds: closed,
@@ -514,14 +540,14 @@ const createBufferStore = (workspaceId: string) => {
 
       const showExistingBuffer = (
         bufferId: string,
-        { reveal = false, preview, update }: ShowExistingBufferOptions = {},
+        { reveal = false, paneId, preview, update }: ShowExistingBufferOptions = {},
       ): string => {
         if (update) {
           set((state) => {
             update(state.buffers.find((buffer) => buffer.id === bufferId));
           });
         }
-        paneActions().placeBuffer(bufferId, { reveal, preview });
+        paneActions().placeBuffer(bufferId, { paneId, reveal, preview });
         return bufferId;
       };
 
@@ -678,12 +704,17 @@ const createBufferStore = (workspaceId: string) => {
         pendingClose: null,
         closedBuffersHistory: [],
         actions: {
-          openContent: (spec: OpenContentSpec): string => {
+          openContent: (spec: OpenContentSpec, options: OpenContentOptions = {}): string => {
             const { buffers } = get();
+            const targetPaneId = options.paneId;
+            const addAndShow = (buffer: PaneContent, addOptions: AddBufferOptions = {}) =>
+              addAndShowBuffer(buffer, { ...addOptions, paneId: targetPaneId });
+            const showExisting = (bufferId: string, showOptions: ShowExistingBufferOptions = {}) =>
+              showExistingBuffer(bufferId, { ...showOptions, paneId: targetPaneId });
 
             const openNewContent = (path: string, options: OpenNewContentOptions = {}) => {
               const newBuffer = createPaneContent(generateBufferId(path), spec);
-              addAndShowBuffer(newBuffer, {
+              addAndShow(newBuffer, {
                 includePreviewsInEviction: options.includePreviewsInEviction,
               });
               if (options.saveSession) {
@@ -698,17 +729,19 @@ const createBufferStore = (workspaceId: string) => {
 
                 const existing = getBufferByPath(buffers, spec.path);
                 if (existing) {
-                  return showExistingBuffer(existing.id, {
+                  return showExisting(existing.id, {
                     preview: shouldBePreview ? undefined : false,
                   });
                 }
 
-                const replacedPreviewId = shouldBePreview ? getWritablePanePreviewBufferId() : null;
+                const replacedPreviewId = shouldBePreview
+                  ? getWritablePanePreviewBufferId(targetPaneId)
+                  : null;
                 const newBuffer = createPaneContent(
                   generateBufferId(spec.path),
                   spec,
                 ) as EditorContent;
-                addAndShowBuffer(newBuffer, {
+                addAndShow(newBuffer, {
                   preview: shouldBePreview || undefined,
                   replaceBufferIds:
                     replacedPreviewId && getBufferById(buffers, replacedPreviewId)
@@ -737,7 +770,7 @@ const createBufferStore = (workspaceId: string) => {
                   (b) => b.type === "terminal" && b.sessionId === sessionId,
                 );
                 if (existing) {
-                  return showExistingBuffer(existing.id);
+                  return showExisting(existing.id);
                 }
 
                 const newBuffer = createPaneContent(generateBufferId(path), {
@@ -749,7 +782,7 @@ const createBufferStore = (workspaceId: string) => {
                 newBuffer.path = path;
                 newBuffer.name = displayName;
 
-                addAndShowBuffer(newBuffer);
+                addAndShow(newBuffer);
                 saveWorkspaceSession();
                 return newBuffer.id;
               }
@@ -760,13 +793,13 @@ const createBufferStore = (workspaceId: string) => {
                     (b) => b.type === "browser" && b.path === spec.path,
                   );
                   if (existing) {
-                    return showExistingBuffer(existing.id);
+                    return showExisting(existing.id);
                   }
                 }
 
                 const path = spec.path ?? `browser://${crypto.randomUUID()}`;
                 const newBuffer = createPaneContent(generateBufferId(path), { ...spec, path });
-                addAndShowBuffer(newBuffer);
+                addAndShow(newBuffer);
                 saveWorkspaceSession();
                 return newBuffer.id;
               }
@@ -780,7 +813,7 @@ const createBufferStore = (workspaceId: string) => {
                     (b) => b.type === "agent" && b.sessionId === spec.sessionId,
                   );
                   if (existing) {
-                    return showExistingBuffer(existing.id, { reveal: true });
+                    return showExisting(existing.id, { reveal: true });
                   }
                 }
 
@@ -796,7 +829,7 @@ const createBufferStore = (workspaceId: string) => {
                 newBuffer.path = path;
                 newBuffer.name = displayName;
 
-                addAndShowBuffer(newBuffer);
+                addAndShow(newBuffer);
                 saveWorkspaceSession();
                 return newBuffer.id;
               }
@@ -806,7 +839,7 @@ const createBufferStore = (workspaceId: string) => {
                   generateBufferId(`newtab://${newTabSequence++}`),
                   spec,
                 );
-                addAndShowBuffer(newBuffer, { consumeNewTab: false });
+                addAndShow(newBuffer, { consumeNewTab: false });
                 saveWorkspaceSession();
                 return newBuffer.id;
               }
@@ -829,7 +862,7 @@ const createBufferStore = (workspaceId: string) => {
                     (!spec.repoPath || !b.repoPath || b.repoPath === spec.repoPath),
                 );
                 if (existing) {
-                  return showExistingBuffer(existing.id, {
+                  return showExisting(existing.id, {
                     update: (buffer) => {
                       if (buffer?.type !== "pullRequest") return;
                       buffer.path = path;
@@ -852,7 +885,7 @@ const createBufferStore = (workspaceId: string) => {
                     (!spec.repoPath || !b.repoPath || b.repoPath === spec.repoPath),
                 );
                 if (existing) {
-                  return showExistingBuffer(existing.id, {
+                  return showExisting(existing.id, {
                     update: (buffer) => {
                       if (buffer?.type !== "githubIssue") return;
                       buffer.path = path;
@@ -872,7 +905,7 @@ const createBufferStore = (workspaceId: string) => {
                 const existing = buffers.find(
                   (buffer) => buffer.type === "githubDelivery" && buffer.path === path,
                 );
-                if (existing) return showExistingBuffer(existing.id);
+                if (existing) return showExisting(existing.id);
                 return openNewContent(path);
               }
 
@@ -889,7 +922,7 @@ const createBufferStore = (workspaceId: string) => {
                     (!spec.repoPath || !b.repoPath || b.repoPath === spec.repoPath),
                 );
                 if (existing) {
-                  return showExistingBuffer(existing.id, {
+                  return showExisting(existing.id, {
                     update: (buffer) => {
                       if (buffer?.type !== "githubAction") return;
                       buffer.path = path;
@@ -911,7 +944,7 @@ const createBufferStore = (workspaceId: string) => {
                   (buffer) => buffer.type === "githubForm" && buffer.path === path,
                 );
                 if (existing) {
-                  return showExistingBuffer(existing.id);
+                  return showExisting(existing.id);
                 }
 
                 return openNewContent(path);
@@ -921,7 +954,7 @@ const createBufferStore = (workspaceId: string) => {
                 const path = getViewBufferPath(spec.projectPath, spec.viewId);
                 const existing = getBufferByPath(buffers, path);
                 if (existing) {
-                  return showExistingBuffer(existing.id);
+                  return showExisting(existing.id);
                 }
 
                 return openNewContent(path);
@@ -934,7 +967,7 @@ const createBufferStore = (workspaceId: string) => {
                     buffer.type === "extension" && buffer.extensionId === spec.extensionId,
                 );
                 if (existing) {
-                  return showExistingBuffer(existing.id, {
+                  return showExisting(existing.id, {
                     update: (buffer) => {
                       if (buffer?.type === "extension") {
                         buffer.name = spec.name;
@@ -949,7 +982,7 @@ const createBufferStore = (workspaceId: string) => {
               case "externalEditor": {
                 const existing = getBufferByPath(buffers, spec.path);
                 if (existing) {
-                  return showExistingBuffer(existing.id);
+                  return showExisting(existing.id);
                 }
 
                 const existingExternalEditor = buffers.find((b) => b.type === "externalEditor");
@@ -962,7 +995,7 @@ const createBufferStore = (workspaceId: string) => {
                 }
 
                 const newBuffer = createPaneContent(generateBufferId(spec.path), spec);
-                addAndShowBuffer(newBuffer, {
+                addAndShow(newBuffer, {
                   closeBufferIds: existingExternalEditor ? [existingExternalEditor.id] : [],
                   evict: false,
                 });
@@ -981,7 +1014,7 @@ const createBufferStore = (workspaceId: string) => {
               case "extensions": {
                 const existing = buffers.find((b) => b.type === spec.type);
                 if (existing) {
-                  return showExistingBuffer(existing.id, { reveal: true });
+                  return showExisting(existing.id, { reveal: true });
                 }
 
                 return openNewContent(SINGLETON_TOOL_BUFFER_METADATA[spec.type].path);
@@ -991,7 +1024,7 @@ const createBufferStore = (workspaceId: string) => {
                 const path = `onboarding://${spec.context.mode}/${spec.context.currentVersion}`;
                 const existing = getBufferByPath(buffers, path);
                 if (existing) {
-                  return showExistingBuffer(existing.id, { reveal: true });
+                  return showExisting(existing.id, { reveal: true });
                 }
 
                 return openNewContent(path);
@@ -1009,7 +1042,7 @@ const createBufferStore = (workspaceId: string) => {
                 const path = spec.path;
                 const existing = getBufferByPath(buffers, path);
                 if (existing) {
-                  return showExistingBuffer(existing.id, {
+                  return showExisting(existing.id, {
                     update: (buffer) => {
                       if (spec.type === "diff" && buffer?.type === "diff") {
                         buffer.name = spec.name;
@@ -1122,13 +1155,17 @@ const createBufferStore = (workspaceId: string) => {
             path: string,
             name: string,
             terminalConnectionId: string,
+            openOptions?: OpenContentOptions,
           ): string => {
-            return get().actions.openContent({
-              type: "externalEditor",
-              path,
-              name,
-              terminalConnectionId,
-            });
+            return get().actions.openContent(
+              {
+                type: "externalEditor",
+                path,
+                name,
+                terminalConnectionId,
+              },
+              openOptions,
+            );
           },
 
           openPRBuffer: (
@@ -1140,36 +1177,40 @@ const createBufferStore = (workspaceId: string) => {
               selectedFilePath?: string;
               initialView?: "activity" | "files";
             },
+            openOptions?: OpenContentOptions,
           ): string => {
-            return get().actions.openContent({
-              type: "pullRequest",
-              prNumber,
-              name: metadata?.title,
-              repoPath: metadata?.repoPath,
-              authorAvatarUrl: metadata?.authorAvatarUrl,
-              selectedFilePath: metadata?.selectedFilePath,
-              initialView: metadata?.initialView,
-            });
+            return get().actions.openContent(
+              {
+                type: "pullRequest",
+                prNumber,
+                name: metadata?.title,
+                repoPath: metadata?.repoPath,
+                authorAvatarUrl: metadata?.authorAvatarUrl,
+                selectedFilePath: metadata?.selectedFilePath,
+                initialView: metadata?.initialView,
+              },
+              openOptions,
+            );
           },
 
-          openGitHubIssueBuffer: ({
-            issueNumber,
-            repoPath,
-            title,
-            authorAvatarUrl,
-            url,
-          }): string => {
-            return get().actions.openContent({
-              type: "githubIssue",
-              issueNumber,
-              repoPath,
-              name: title,
-              authorAvatarUrl,
-              url,
-            });
+          openGitHubIssueBuffer: (
+            { issueNumber, repoPath, title, authorAvatarUrl, url },
+            openOptions,
+          ): string => {
+            return get().actions.openContent(
+              {
+                type: "githubIssue",
+                issueNumber,
+                repoPath,
+                name: title,
+                authorAvatarUrl,
+                url,
+              },
+              openOptions,
+            );
           },
 
-          openGitHubActionBuffer: (options): string => {
+          openGitHubActionBuffer: (options, openOptions): string => {
             const common = {
               type: "githubAction" as const,
               repoPath: options.repoPath,
@@ -1178,10 +1219,13 @@ const createBufferStore = (workspaceId: string) => {
             };
 
             if (options.runId !== undefined) {
-              return get().actions.openContent({ ...common, runId: options.runId });
+              return get().actions.openContent({ ...common, runId: options.runId }, openOptions);
             }
 
-            return get().actions.openContent({ ...common, notification: options.notification });
+            return get().actions.openContent(
+              { ...common, notification: options.notification },
+              openOptions,
+            );
           },
 
           openGitHubFormBuffer: ({ repoPath, formKind, defaultHead }): string => {
@@ -1194,23 +1238,19 @@ const createBufferStore = (workspaceId: string) => {
             });
           },
 
-          openTerminalBuffer: (options?: {
-            name?: string;
-            shell?: string;
-            command?: string;
-            workingDirectory?: string;
-            remoteConnectionId?: string;
-            sessionId?: string;
-          }): string => {
-            return get().actions.openContent({
-              type: "terminal",
-              name: options?.name,
-              shell: options?.shell,
-              command: options?.command,
-              workingDirectory: options?.workingDirectory,
-              remoteConnectionId: options?.remoteConnectionId,
-              sessionId: options?.sessionId,
-            });
+          openTerminalBuffer: (options, openOptions): string => {
+            return get().actions.openContent(
+              {
+                type: "terminal",
+                name: options?.name,
+                shell: options?.shell,
+                command: options?.command,
+                workingDirectory: options?.workingDirectory,
+                remoteConnectionId: options?.remoteConnectionId,
+                sessionId: options?.sessionId,
+              },
+              openOptions,
+            );
           },
 
           openAgentBuffer: (sessionId?: string): string => {

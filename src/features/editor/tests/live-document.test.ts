@@ -224,4 +224,15 @@ describe("live editor documents", () => {
     expect(liveDocumentMatchesSaved("saved-cr", doc, "a\r\nb", "\r\n")).toBe(true);
     expect(liveDocumentMatchesSaved("saved-cr", doc, "a\r\nb", "\n")).toBe(false);
   });
+
+  it("compares large documents (tree nodes) against saved text", async () => {
+    const { Text } = await import("@codemirror/state");
+    const { liveDocumentMatchesSaved } = await import("../services/live-document-registry");
+    const lines = Array.from({ length: 5000 }, (_, index) => `line ${index}`);
+    const doc = Text.of(lines);
+    expect(doc.children).not.toBeNull();
+
+    expect(liveDocumentMatchesSaved("saved-large", doc, lines.join("\n"), "\n")).toBe(true);
+    expect(liveDocumentMatchesSaved("saved-large", doc, `${lines.join("\n")}!`, "\n")).toBe(false);
+  });
 });

@@ -110,4 +110,44 @@ describe("workspace session repository", () => {
       "canonical-terminal",
     ]);
   });
+
+  it("finds a session saved under a non-normalized root and moves it to the normalized key", () => {
+    const buffers: BufferSession[] = [
+      { type: "editor", path: "/workspace/a.ts", name: "a.ts", isPinned: false },
+    ];
+    workspaceSessionRepository.save({
+      projectPath: "/workspace/",
+      buffers,
+      activeBufferPath: "/workspace/a.ts",
+    });
+
+    const loaded = workspaceSessionRepository.load("/workspace").session;
+
+    expect(loaded?.projectPath).toBe("/workspace");
+    expect(loaded?.buffers).toEqual(buffers);
+    expect(Object.keys(useSessionStore.getState().sessions)).toEqual(["/workspace"]);
+  });
+
+  it("prefers a session already saved under the normalized key", () => {
+    const session = (activeBufferPath: string) => ({
+      projectPath: "/workspace",
+      activeBufferPath,
+      buffers: [],
+      terminals: [],
+      aiSession: null,
+      uiState: null,
+      lastSaved: 0,
+    });
+    useSessionStore.setState({
+      sessions: {
+        "/workspace/": session("/workspace/legacy.ts"),
+        "/workspace": session("/workspace/current.ts"),
+      },
+    });
+
+    expect(workspaceSessionRepository.load("/workspace").session?.activeBufferPath).toBe(
+      "/workspace/current.ts",
+    );
+    expect(Object.keys(useSessionStore.getState().sessions)).toHaveLength(2);
+  });
 });

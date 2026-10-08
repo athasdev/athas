@@ -10,6 +10,7 @@ import type {
   WorkspaceFolderSession,
 } from "@/features/workspace/types/workspace-session.types";
 import { isRestorableBufferSession } from "@/features/workspace/persistence/workspace-session-codec";
+import { normalizeWorkspaceRootPath } from "@/features/window/utils/project-tab-path";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { createSafeJSONStorage } from "@/utils/zustand-storage";
 
@@ -160,85 +161,116 @@ export function buildSavedProjectUiSession({
   };
 }
 
+/**
+ * Sessions saved before workspace roots were normalized sit under the path as it was opened
+ * (`/a/b/`, `/a//b`). Finds such a session for a root that has none under its own key.
+ */
+function findLegacySessionKey(
+  sessions: Record<string, ProjectSession>,
+  projectPath: string,
+): string | null {
+  if (!projectPath || sessions[projectPath]) return null;
+  const normalizedPath = normalizeWorkspaceRootPath(projectPath);
+  for (const key of Object.keys(sessions)) {
+    if (key !== projectPath && normalizeWorkspaceRootPath(key) === normalizedPath) return key;
+  }
+  return null;
+}
+
 const useSessionStoreBase = create<SessionState>()(
   persist(
-    (set, get) => ({
-      sessions: {},
+    (set, get) => {
+      /** Moves a session found under a legacy key to `projectPath`, once. */
+      const adoptLegacySession = (projectPath: string) => {
+        const { sessions } = get();
+        const legacyKey = findLegacySessionKey(sessions, projectPath);
+        if (!legacyKey) return;
+        const { [legacyKey]: legacySession, ...rest } = sessions;
+        set({ sessions: { ...rest, [projectPath]: { ...legacySession, projectPath } } });
+      };
 
-      actions: {
-        saveSession: (
-          projectPath,
-          buffers,
-          activeBufferPath,
-          terminals,
-          aiSession,
-          workspaceFolders,
-          uiState,
-          terminalLayouts,
-        ) => {
-          set((state) => ({
-            sessions: {
-              ...state.sessions,
-              [projectPath]: buildSavedProjectSession({
-                previousSession: state.sessions[projectPath],
-                projectPath,
-                buffers,
-                activeBufferPath,
-                terminals,
-                aiSession,
-                workspaceFolders,
-                uiState,
-                terminalLayouts,
-                now: Date.now(),
-              }),
-            },
-          }));
-        },
+      return {
+        sessions: {},
 
-        getSession: (projectPath) => {
-          const session = get().sessions[projectPath];
-          if (!session) return null;
-          const buffers = session.buffers.filter(isRestorableBufferSession);
-          if (buffers.length === session.buffers.length) return session;
-          return {
-            ...session,
+        actions: {
+          saveSession: (
+            projectPath,
             buffers,
-            activeBufferPath: buffers.some((buffer) => buffer.path === session.activeBufferPath)
-              ? session.activeBufferPath
-              : (buffers[0]?.path ?? null),
-          };
-        },
+            activeBufferPath,
+            terminals,
+            aiSession,
+            workspaceFolders,
+            uiState,
+            terminalLayouts,
+          ) => {
+            adoptLegacySession(projectPath);
+            set((state) => ({
+              sessions: {
+                ...state.sessions,
+                [projectPath]: buildSavedProjectSession({
+                  previousSession: state.sessions[projectPath],
+                  projectPath,
+                  buffers,
+                  activeBufferPath,
+                  terminals,
+                  aiSession,
+                  workspaceFolders,
+                  uiState,
+                  terminalLayouts,
+                  now: Date.now(),
+                }),
+              },
+            }));
+          },
 
-        saveUiState: (projectPath, uiState) => {
-          set((state) => ({
-            sessions: {
-              ...state.sessions,
-              [projectPath]: buildSavedProjectUiSession({
-                previousSession: state.sessions[projectPath],
-                projectPath,
-                uiState,
-                now: Date.now(),
-              }),
-            },
-          }));
-        },
+          getSession: (projectPath) => {
+            adoptLegacySession(projectPath);
+            const session = get().sessions[projectPath];
+            if (!session) return null;
+            const buffers = session.buffers.filter(isRestorableBufferSession);
+            if (buffers.length === session.buffers.length) return session;
+            return {
+              ...session,
+              buffers,
+              activeBufferPath: buffers.some((buffer) => buffer.path === session.activeBufferPath)
+                ? session.activeBufferPath
+                : (buffers[0]?.path ?? null),
+            };
+          },
 
-        getUiState: (projectPath) => {
-          return get().sessions[projectPath]?.uiState ?? null;
-        },
+          saveUiState: (projectPath, uiState) => {
+            adoptLegacySession(projectPath);
+            set((state) => ({
+              sessions: {
+                ...state.sessions,
+                [projectPath]: buildSavedProjectUiSession({
+                  previousSession: state.sessions[projectPath],
+                  projectPath,
+                  uiState,
+                  now: Date.now(),
+                }),
+              },
+            }));
+          },
 
-        clearSession: (projectPath) => {
-          set((state) => {
-            const { [projectPath]: _, ...rest } = state.sessions;
-            return { sessions: rest };
-          });
-        },
+          getUiState: (projectPath) => {
+            adoptLegacySession(projectPath);
+            return get().sessions[projectPath]?.uiState ?? null;
+          },
 
-        clearAllSessions: () => {
-          set({ sessions: {} });
+          clearSession: (projectPath) => {
+            set((state) => {
+              const { [projectPath]: _, ...rest } = state.sessions;
+              return { sessions: rest };
+            });
+          },
+
+          clearAllSessions: () => {
+            set({ sessions: {} });
+          },
         },
-      },
-    }),
+      };
+    },
     {
       name: "athas-tab-sessions",
       version: 1,

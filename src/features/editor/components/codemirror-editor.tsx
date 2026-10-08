@@ -665,7 +665,7 @@ export function CodeMirrorEditor({
       selection: EditorSelection.create([range]),
       effects: EditorView.scrollIntoView(range, { y: "center" }),
     });
-    view.focus();
+    if (pendingNavigation.focus !== false) view.focus();
     if (useEditorStateStore.getState().pendingNavigation === pendingNavigation) {
       useEditorStateStore.getState().actions.requestNavigation(null);
     }

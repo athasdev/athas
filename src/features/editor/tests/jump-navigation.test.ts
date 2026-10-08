@@ -55,6 +55,7 @@ describe("navigateToJumpEntry", () => {
     expect(mocks.requestNavigation).toHaveBeenCalledWith({
       bufferId: "open",
       range: { start: position, end: position },
+      focus: false,
     });
   });
 
@@ -68,6 +69,7 @@ describe("navigateToJumpEntry", () => {
     expect(mocks.requestNavigation).toHaveBeenCalledWith({
       bufferId: "reopened",
       range: { start: position, end: position },
+      focus: false,
     });
   });
 

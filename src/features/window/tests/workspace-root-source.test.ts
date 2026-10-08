@@ -21,12 +21,17 @@ vi.mock("@tauri-apps/api/webviewWindow", () => ({
 describe("workspace root path normalization", () => {
   it.each([
     ["/Users/me//project/", "/Users/me/project"],
-    ["//Users/me/project", "/Users/me/project"],
+    ["///Users/me/project", "/Users/me/project"],
     ["  /a/b///  ", "/a/b"],
     ["/", "/"],
     ["C:\\Users\\me\\\\project\\", "C:\\Users\\me\\project"],
     ["C:\\", "C:\\"],
     ["\\\\server\\share\\\\dir\\", "\\\\server\\share\\dir"],
+    ["\\\\server\\share\\", "\\\\server\\share"],
+    ["//server/share", "//server/share"],
+    ["//server//share/dir/", "//server/share/dir"],
+    ["\\\\wsl$\\Ubuntu\\home\\", "\\\\wsl$\\Ubuntu\\home"],
+    ["//", "/"],
     ["remote://connection-1/", "remote://connection-1/"],
     ["remote://connection-1//home//me/", "remote://connection-1/home/me"],
     ["wsl://Ubuntu//home/me/", "wsl://Ubuntu/home/me"],

@@ -1,4 +1,5 @@
 import type { CodeEditorRef } from "@/features/editor/components/code-editor";
+import type { OpenContentOptions } from "@/features/editor/stores/buffer.store";
 import type { FileEntry } from "./app.types";
 
 export interface FsState {
@@ -35,8 +36,9 @@ export interface FsActions {
     column?: number,
     codeEditorRef?: React.RefObject<CodeEditorRef | null>,
     isPreview?: boolean,
+    openOptions?: OpenContentOptions,
   ) => Promise<void>;
-  handleFileOpen: (path: string, isDir: boolean) => Promise<void>;
+  handleFileOpen: (path: string, isDir: boolean, openOptions?: OpenContentOptions) => Promise<void>;
   toggleFolder: (path: string) => Promise<void>;
   revealPathInTree: (targetPath: string) => Promise<void>;
   handleCreateNewFile: () => Promise<void>;

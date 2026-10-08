@@ -158,7 +158,9 @@ pub async fn write_local_file_checked(
 ) -> Result<(), String> {
    tauri::async_runtime::spawn_blocking(move || {
       let resolved = require_path_under_home(&path)?;
-      let expected_length = expected.as_ref().map_or(0, |digest| digest.byte_length as u64);
+      let expected_length = expected
+         .as_ref()
+         .map_or(0, |digest| digest.byte_length as u64);
       athas_project::file_mutations::mutate_text(
          &resolved,
          Some(expected_length.max(content.len() as u64) + 3),
@@ -574,10 +576,25 @@ mod checked_write_tests {
    }
 
    #[test]
+   fn digest_is_standard_sha256() {
+      assert_eq!(
+         digest("abc").sha256,
+         "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+      );
+      assert_eq!(
+         digest(&"a".repeat(1_000_000)).sha256,
+         "cdc76e5c9914fb9281a1c7e284d73e67f1809a48a497200e046d39ccc7112cd0"
+      );
+   }
+
+   #[test]
    fn digest_matches_the_same_text_with_or_without_a_bom() {
       let expected = digest("before\r\n");
       assert!(matches_expected_digest(Some("before\r\n"), Some(&expected)));
-      assert!(matches_expected_digest(Some("\u{feff}before\r\n"), Some(&expected)));
+      assert!(matches_expected_digest(
+         Some("\u{feff}before\r\n"),
+         Some(&expected)
+      ));
       assert!(!matches_expected_digest(Some("before\n"), Some(&expected)));
       assert!(!matches_expected_digest(None, Some(&expected)));
       assert!(matches_expected_digest(None, None));

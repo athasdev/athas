@@ -294,6 +294,29 @@ describe("CodeMirror editor", () => {
     expect(state.requestNavigation).toHaveBeenCalledWith(null);
   });
 
+  it("focuses the editor for navigation unless the request opts out", async () => {
+    const focus = vi.spyOn(EditorView.prototype, "focus");
+    try {
+      const range = {
+        start: { line: 0, column: 6, offset: 6 },
+        end: { line: 0, column: 6, offset: 6 },
+      };
+      await act(async () => root.render(<CodeMirrorEditor bufferId="buffer-1" />));
+      focus.mockClear();
+
+      state.pendingNavigation = { bufferId: "buffer-1", range, focus: false };
+      await act(async () => root.render(<CodeMirrorEditor bufferId="buffer-1" />));
+      expect(view().state.selection.main.head).toBe(6);
+      expect(focus).not.toHaveBeenCalled();
+
+      state.pendingNavigation = { bufferId: "buffer-1", range: { ...range } };
+      await act(async () => root.render(<CodeMirrorEditor bufferId="buffer-1" />));
+      expect(focus).toHaveBeenCalled();
+    } finally {
+      focus.mockRestore();
+    }
+  });
+
   it("centers explicit navigation but only scrolls programmatic cursor moves when needed", async () => {
     const scrollIntoView = vi.spyOn(EditorView, "scrollIntoView");
     try {

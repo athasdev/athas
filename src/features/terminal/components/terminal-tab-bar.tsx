@@ -20,7 +20,6 @@ import { useTerminalShellsStore } from "@/features/terminal/stores/shells.store"
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { BOTTOM_PANE_ID } from "@/features/panes/constants/pane";
 import { getChromeNavigationIndex } from "@/features/layout/utils/chrome-keyboard";
-import { activateBufferInPaneAndSync } from "@/features/panes/utils/pane-activation";
 import { getOrCreatePaneDropTarget } from "@/features/panes/utils/pane-drop-actions";
 import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
 import type { PaneNode, SplitPlacement } from "@/features/panes/types/pane.types";
@@ -557,15 +556,17 @@ const TerminalTabBar = ({
         return;
       }
 
-      const bufferId = openTerminalBuffer({
-        sessionId: terminal.id,
-        name: terminal.name,
-        shell: terminal.shell,
-        command: terminal.initialCommand,
-        workingDirectory: terminal.currentDirectory,
-        remoteConnectionId: terminal.remoteConnectionId,
-      });
-      activateBufferInPaneAndSync(destinationPaneId, bufferId);
+      openTerminalBuffer(
+        {
+          sessionId: terminal.id,
+          name: terminal.name,
+          shell: terminal.shell,
+          command: terminal.initialCommand,
+          workingDirectory: terminal.currentDirectory,
+          remoteConnectionId: terminal.remoteConnectionId,
+        },
+        { paneId: destinationPaneId },
+      );
       emitAppEvent("terminal-detach-to-buffer", { terminalId: terminal.id });
       if (destinationPaneId === BOTTOM_PANE_ID) {
         useUIState.getState().setBottomPaneActiveTab("buffers");

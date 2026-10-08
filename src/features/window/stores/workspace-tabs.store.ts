@@ -12,6 +12,7 @@ import {
   createProjectTabId,
   normalizeProjectTabPath,
 } from "../utils/project-tab-path";
+import { normalizePersistedProjectTabs } from "../utils/persisted-project-tabs";
 import {
   getWorkspaceTabsStorageKey,
   removeStaleWorkspaceTabsStorageKeys,
@@ -59,34 +60,6 @@ if (currentWebviewWindow) {
     }
   })();
 }
-
-/**
- * Tabs saved before root paths were normalized may carry a repeated separator. Their path and the
- * id derived from it are brought to the current form so opening the same folder finds the tab.
- */
-const normalizePersistedProjectTabs = (tabs: ProjectTab[]): ProjectTab[] => {
-  const seenIds = new Set<string>();
-  const normalizedTabs: ProjectTab[] = [];
-  for (const tab of tabs) {
-    const path = normalizeProjectTabPath(tab.path);
-    if (path === tab.path) {
-      if (seenIds.has(tab.id)) continue;
-      seenIds.add(tab.id);
-      normalizedTabs.push(tab);
-      continue;
-    }
-
-    const id = createProjectTabId(path);
-    const existing = normalizedTabs.find((candidate) => candidate.id === id);
-    if (existing) {
-      existing.isActive ||= tab.isActive;
-      continue;
-    }
-    seenIds.add(id);
-    normalizedTabs.push({ ...tab, id, path });
-  }
-  return normalizedTabs;
-};
 
 interface WorkspaceTabsStore extends WorkspaceTabsState {
   actions: WorkspaceTabsActions;

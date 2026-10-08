@@ -7,7 +7,7 @@ const collapseRepeatedSlashes = (path: string) => path.replace(/\/{2,}/g, "/");
 /**
  * The form a workspace root is stored in. Tree walks compare entry paths by prefix, so a root
  * with a repeated or trailing separator would never match its own children. Local paths lose
- * repeated and trailing separators (a leading UNC `\\` stays). URIs such as
+ * repeated and trailing separators (a leading UNC `\\` or `//` stays). URIs such as
  * `remote://id/` and `wsl://distro/` keep their scheme and authority; only repeated slashes in
  * their path part collapse, and a bare root keeps its slash.
  */
@@ -21,7 +21,7 @@ export const normalizeWorkspaceRootPath = (path: string): string => {
     return `${authority}${collapsedPath === "/" ? "/" : collapsedPath.replace(/\/+$/, "")}`;
   }
 
-  const uncPrefix = /^\\\\(?=[^\\/])/.exec(trimmed)?.[0] ?? "";
+  const uncPrefix = /^[\\/]{2}(?=[^\\/])/.exec(trimmed)?.[0] ?? "";
   const rest = trimmed.slice(uncPrefix.length).replace(/([\\/])[\\/]+/g, "$1");
   return stripTrailingPathSeparators(`${uncPrefix}${rest}`);
 };

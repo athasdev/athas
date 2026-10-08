@@ -32,7 +32,7 @@ import type {
  */
 export interface AppEventMap {
   // Editor
-  "menu-go-to-line": { line: number; column?: number; path?: string };
+  "menu-go-to-line": { line: number; column?: number; path?: string; focus?: boolean };
   "editor-trigger-suggest": undefined;
   "editor-trigger-signature-help": undefined;
   "editor-show-hover": undefined;

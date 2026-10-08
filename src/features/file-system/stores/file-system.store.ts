@@ -9,7 +9,8 @@ import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { CodeEditorRef } from "@/features/editor/components/code-editor";
 import { restorePersistedEditorViewState } from "@/features/editor/stores/editor-session-state";
 import { clearQueuedWorkspaceSessionSave } from "@/features/editor/stores/buffer-session-persistence";
-import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { type OpenContentOptions, useBufferStore } from "@/features/editor/stores/buffer.store";
+import { detectLanguageFromFileName } from "@/features/editor/utils/language-detection";
 import { getBufferByPath } from "@/features/editor/utils/buffer-index";
 import { fileOpenBenchmark } from "@/features/editor/utils/file-open-benchmark";
 import { getLineSlice } from "@/features/editor/utils/large-file";
@@ -1233,6 +1234,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
         column?: number,
         codeEditorRef?: React.RefObject<CodeEditorRef | null>,
         isPreview = false,
+        openOptions?: OpenContentOptions,
       ) => {
         if (isDir) {
           await get().toggleFolder(path);
@@ -1260,7 +1262,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
         const existingBuffer = getBufferByPath(buffers, path);
         if (existingBuffer) {
           const wasAlreadyActive = existingBuffer.id === activeBufferId;
-          setActiveBuffer(existingBuffer.id);
+          setActiveBuffer(existingBuffer.id, openOptions?.paneId);
           recordLocalFileAccess(
             path,
             fileName,
@@ -1326,7 +1328,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
         fileOpenBenchmark.mark(path, shouldResolveSymlink ? "symlink-resolved" : "symlink-skipped");
 
         if (isStaleRequest()) return;
-        const { openBuffer } = useBufferStore.getStore(workspaceId).getState().actions;
+        const { openContent } = useBufferStore.getStore(workspaceId).getState().actions;
 
         // Handle virtual diff files
         if (path.startsWith("diff://")) {
@@ -1341,19 +1343,15 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
           }
 
           const diffContent = localStorage.getItem(`diff-content-${path}`);
-          if (diffContent) {
-            openBuffer(path, displayName, diffContent, false, undefined, true, true);
-          } else {
-            openBuffer(
+          openContent(
+            {
+              type: "diff",
               path,
-              displayName,
-              "No diff content available",
-              false,
-              undefined,
-              true,
-              true,
-            );
-          }
+              name: displayName,
+              content: diffContent || "No diff content available",
+            },
+            openOptions,
+          );
           fileOpenBenchmark.finish(path, "diff-buffer-opened");
           return;
         }
@@ -1362,50 +1360,22 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
         const dbType = getDatabaseTypeFromPath(resolvedPath);
         if (dbType) {
           if (isStaleRequest()) return;
-          openBuffer(path, fileName, "", false, dbType, false, false);
+          openContent(
+            { type: "database", path, name: fileName, databaseType: dbType },
+            openOptions,
+          );
           fileOpenBenchmark.finish(path, "database-buffer-opened");
         } else if (isImageFile(resolvedPath)) {
           if (isStaleRequest()) return;
-          openBuffer(path, fileName, "", true, undefined, false, false);
+          openContent({ type: "image", path, name: fileName }, openOptions);
           fileOpenBenchmark.finish(path, "image-buffer-opened");
         } else if (isPdfFile(resolvedPath)) {
           if (isStaleRequest()) return;
-          openBuffer(
-            path,
-            fileName,
-            "",
-            false,
-            undefined,
-            false,
-            false,
-            undefined,
-            false,
-            false,
-            false,
-            undefined,
-            isPreview,
-            true,
-          );
+          openContent({ type: "pdf", path, name: fileName }, openOptions);
           fileOpenBenchmark.finish(path, "pdf-buffer-opened");
         } else if (isBinaryFile(resolvedPath)) {
           if (isStaleRequest()) return;
-          openBuffer(
-            path,
-            fileName,
-            "",
-            false,
-            undefined,
-            false,
-            false,
-            undefined,
-            false,
-            false,
-            false,
-            undefined,
-            false,
-            false,
-            true,
-          );
+          openContent({ type: "binary", path, name: fileName }, openOptions);
           fileOpenBenchmark.finish(path, "binary-buffer-opened");
         } else {
           let preloadedText: string | null = null;
@@ -1419,23 +1389,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
               if (isStaleRequest()) return;
 
               if (inspection.isBinary) {
-                openBuffer(
-                  path,
-                  fileName,
-                  "",
-                  false,
-                  undefined,
-                  false,
-                  false,
-                  undefined,
-                  false,
-                  false,
-                  false,
-                  undefined,
-                  false,
-                  false,
-                  true,
-                );
+                openContent({ type: "binary", path, name: fileName }, openOptions);
                 recordLocalFileAccess(
                   path,
                   fileName,
@@ -1498,7 +1452,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
               events.bind(connectionId);
 
               // Open external editor buffer
-              openExternalEditorBuffer(resolvedPath, fileName, connectionId);
+              openExternalEditorBuffer(resolvedPath, fileName, connectionId, openOptions);
               recordLocalFileAccess(
                 path,
                 fileName,
@@ -1530,20 +1484,16 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
 
           if (isStaleRequest()) return;
 
-          openBuffer(
-            path,
-            fileName,
-            content,
-            false,
-            undefined,
-            false,
-            false,
-            undefined,
-            undefined,
-            false,
-            false,
-            undefined,
-            isPreview,
+          openContent(
+            {
+              type: "editor",
+              path,
+              name: fileName,
+              content,
+              isPreview,
+              language: detectLanguageFromFileName(fileName),
+            },
+            openOptions,
           );
           fileOpenBenchmark.mark(path, "buffer-opened");
 
@@ -1595,8 +1545,16 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
       },
 
       // Open file in definite mode (not preview) - for double-click
-      handleFileOpen: async (path: string, isDir: boolean) => {
-        await get().handleFileSelect(path, isDir, undefined, undefined, undefined, false);
+      handleFileOpen: async (path: string, isDir: boolean, openOptions?: OpenContentOptions) => {
+        await get().handleFileSelect(
+          path,
+          isDir,
+          undefined,
+          undefined,
+          undefined,
+          false,
+          openOptions,
+        );
       },
 
       toggleFolder: async (path: string) => {
