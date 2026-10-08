@@ -449,6 +449,195 @@ mod tests {
       );
    }
 
+   struct RegisteredConnection(String);
+
+   impl RegisteredConnection {
+      fn unconnected() -> Self {
+         let id = format!("unconnected-{}", uuid::Uuid::new_v4());
+         let session = ssh2::Session::new().expect("ssh session");
+         CONNECTIONS
+            .lock()
+            .expect("connections")
+            .insert(id.clone(), (session, None));
+         Self(id)
+      }
+   }
+
+   impl Drop for RegisteredConnection {
+      fn drop(&mut self) {
+         if let Ok(mut connections) = CONNECTIONS.lock() {
+            connections.remove(&self.0);
+         }
+      }
+   }
+
+   fn block_on<T>(future: impl std::future::Future<Output = T>) -> T {
+      tauri::async_runtime::block_on(future)
+   }
+
+   #[test]
+   fn operations_on_unknown_connections_report_connection_not_found() {
+      let id = format!("missing-{}", uuid::Uuid::new_v4());
+
+      let results = [
+         block_on(read_directory(id.clone(), "/srv".into())).map(|_| ()),
+         block_on(read_file(id.clone(), "/srv/a.txt".into())).map(|_| ()),
+         block_on(write_file(id.clone(), "/srv/a.txt".into(), "text".into())),
+         block_on(mutate_file(id, "/srv/a.txt".into(), Some(None), None)),
+      ];
+
+      for result in results {
+         assert_eq!(result, Err("Connection not found".to_string()));
+      }
+   }
+
+   #[test]
+   fn mutations_reject_paths_that_are_not_absolute_before_using_the_connection() {
+      let id = format!("missing-{}", uuid::Uuid::new_v4());
+      let expected =
+         Err("Remote file paths must be absolute and contain no NUL bytes.".to_string());
+
+      assert_eq!(
+         block_on(write_file(id.clone(), "relative.txt".into(), "x".into())),
+         expected
+      );
+      assert_eq!(
+         block_on(mutate_file(
+            id,
+            "/srv/nul\0byte.txt".into(),
+            Some(Some("old".into())),
+            Some("new".into()),
+         )),
+         expected
+      );
+   }
+
+   #[test]
+   fn shell_fallback_surfaces_channel_errors_from_the_session() {
+      let connection = RegisteredConnection::unconnected();
+
+      let listing = block_on(read_directory(connection.0.clone(), String::new()))
+         .expect_err("listing without a live session");
+      assert!(listing.starts_with("Failed to create channel"), "{listing}");
+
+      let read = block_on(read_file(connection.0.clone(), "/srv/a.txt".into()))
+         .expect_err("read without a live session");
+      assert!(read.starts_with("Failed to create channel"), "{read}");
+
+      let write = block_on(mutate_file(
+         connection.0.clone(),
+         "/srv/a.txt".into(),
+         Some(Some("old".into())),
+         Some("new".into()),
+      ))
+      .expect_err("write without a live session");
+      assert!(!write.is_empty());
+   }
+
+   #[test]
+   fn shell_listing_parses_padded_sizes_symlink_targets_and_empty_output() {
+      assert!(
+         parse_directory_entries("")
+            .expect("empty listing")
+            .is_empty()
+      );
+
+      let output =
+         "app\0/srv/app\0d\x000\0false\0\0log\0/srv/log\0f\0     42\0true\0/var/log/app.log\0";
+      let entries = parse_directory_entries(output).expect("listing");
+
+      assert_eq!(entries.len(), 2);
+      assert_eq!(entries[0].name, "app");
+      assert!(entries[0].is_dir && !entries[0].is_symlink);
+      assert_eq!(entries[0].target, None);
+      assert_eq!(entries[1].path, "/srv/log");
+      assert_eq!(entries[1].size, 42);
+      assert!(!entries[1].is_dir && entries[1].is_symlink);
+      assert_eq!(entries[1].target.as_deref(), Some("/var/log/app.log"));
+   }
+
+   #[cfg(unix)]
+   fn run_listing_script(directory: &Path) -> std::process::Output {
+      std::process::Command::new("sh")
+         .args(["-c", DIRECTORY_LIST_SCRIPT, "athas-list-dir"])
+         .arg(directory)
+         .output()
+         .expect("run listing script")
+   }
+
+   #[cfg(unix)]
+   #[test]
+   fn shell_listing_of_an_empty_directory_is_empty() {
+      let dir = tempfile::tempdir().expect("temp dir");
+
+      let output = run_listing_script(dir.path());
+
+      assert!(output.status.success());
+      assert!(output.stdout.is_empty());
+      assert!(
+         parse_directory_entries(&String::from_utf8(output.stdout).expect("utf8"))
+            .expect("listing")
+            .is_empty()
+      );
+   }
+
+   #[cfg(unix)]
+   #[test]
+   fn shell_listing_rejects_missing_directories() {
+      let dir = tempfile::tempdir().expect("temp dir");
+
+      let output = run_listing_script(&dir.path().join("missing"));
+
+      assert!(!output.status.success());
+      assert_eq!(
+         String::from_utf8_lossy(&output.stderr),
+         "Directory is not readable.\n"
+      );
+   }
+
+   #[cfg(unix)]
+   #[test]
+   fn shell_listing_includes_dot_dot_names_and_dangling_symlinks() {
+      use std::{fs, os::unix::fs::symlink};
+      let dir = tempfile::tempdir().expect("temp dir");
+      fs::write(dir.path().join("..double"), "12345").expect("write file");
+      symlink(dir.path().join("nowhere"), dir.path().join("dangling")).expect("symlink");
+
+      let output = run_listing_script(dir.path());
+      assert!(output.status.success());
+      let mut entries = parse_directory_entries(&String::from_utf8(output.stdout).expect("utf8"))
+         .expect("listing");
+      sort_entries(&mut entries);
+
+      assert_eq!(
+         entries
+            .iter()
+            .map(|entry| entry.name.as_str())
+            .collect::<Vec<_>>(),
+         vec!["..double", "dangling"]
+      );
+      assert_eq!(entries[0].size, 5);
+      let dangling = &entries[1];
+      assert!(dangling.is_symlink && !dangling.is_dir);
+      assert_eq!(dangling.size, 0);
+      assert_eq!(
+         dangling.target.as_deref(),
+         Some(dir.path().join("nowhere").to_str().expect("utf8 path"))
+      );
+   }
+
+   #[test]
+   fn permission_stat_only_sets_the_mode() {
+      let stat = permission_stat(Some(0o644));
+
+      assert_eq!(stat.perm, Some(0o644));
+      assert_eq!(
+         (stat.size, stat.uid, stat.gid, stat.atime, stat.mtime),
+         (None, None, None, None, None)
+      );
+      assert_eq!(permission_stat(None).perm, None);
+   }
+
    #[test]
    fn invalid_directory_frames_fail_instead_of_hiding_entries() {
       assert!(parse_directory_entries("truncated\0file").is_err());
