@@ -368,10 +368,12 @@ pub fn git_status_diff_stats(repo_path: String) -> Result<Vec<GitDiffStat>, Stri
       .diff_index_to_workdir(Some(&index), Some(&mut unstaged_options))
       .map_err(|e| format!("Failed to create unstaged diff: {e}"))?;
 
-   let mut stats = collect_diff_stats(&mut staged_diff, true)?;
-   stats.extend(collect_diff_stats(&mut unstaged_diff, false)?);
+   let mut stats: Vec<GitDiffStat> = collect_diff_stats(&mut staged_diff, true)?
+      .into_values()
+      .collect();
+   stats.extend(collect_diff_stats(&mut unstaged_diff, false)?.into_values());
 
-   Ok(stats.into_values().collect())
+   Ok(stats)
 }
 
 pub fn git_diff_file(
@@ -505,7 +507,9 @@ pub fn git_diff_file(
                   } else {
                      new_path.as_deref().unwrap_or(&file_path)
                   };
-                  single_file_opts.pathspec(target_path);
+                  single_file_opts
+                     .pathspec(target_path)
+                     .disable_pathspec_match(true);
 
                   let single_diff_result = if staged {
                      let index = repo
@@ -1040,8 +1044,1010 @@ fn git_diff_between_trees(
 #[cfg(test)]
 mod tests {
    use super::*;
-   use git2::IndexAddOption;
+   use git2::{IndexAddOption, Signature};
    use std::fs;
+   use tempfile::TempDir;
+
+   const PNG_V1: &[u8] = b"\x89PNG\r\n\x1a\n\0\0\0\rIHDRv1";
+   const PNG_V2: &[u8] = b"\x89PNG\r\n\x1a\n\0\0\0\rIHDRv2-changed";
+
+   struct Fixture {
+      dir: TempDir,
+      repo: Repository,
+   }
+
+   impl Fixture {
+      fn new() -> Self {
+         let dir = tempfile::tempdir().expect("temp dir");
+         let repo = Repository::init(dir.path()).expect("repo init");
+         {
+            let mut config = repo.config().expect("config");
+            config.set_bool("core.autocrlf", false).expect("autocrlf");
+         }
+         Self { dir, repo }
+      }
+
+      fn path(&self) -> String {
+         self.dir.path().to_string_lossy().into_owned()
+      }
+
+      fn write(&self, name: &str, contents: impl AsRef<[u8]>) {
+         let path = self.dir.path().join(name);
+         if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent).expect("create parent");
+         }
+         fs::write(path, contents).expect("write file");
+      }
+
+      fn remove(&self, name: &str) {
+         fs::remove_file(self.dir.path().join(name)).expect("remove file");
+      }
+
+      fn stage(&self, name: &str) {
+         let mut index = self.repo.index().expect("index");
+         index.add_path(Path::new(name)).expect("stage path");
+         index.write().expect("write index");
+      }
+
+      fn stage_removal(&self, name: &str) {
+         let mut index = self.repo.index().expect("index");
+         index.remove_path(Path::new(name)).expect("unstage path");
+         index.write().expect("write index");
+      }
+
+      fn commit_all(&self, message: &str) -> Oid {
+         let mut index = self.repo.index().expect("index");
+         index
+            .add_all(["*"], IndexAddOption::DEFAULT, None)
+            .expect("stage all");
+         index.update_all(["*"], None).expect("update all");
+         index.write().expect("write index");
+         let tree = self
+            .repo
+            .find_tree(index.write_tree().expect("write tree"))
+            .expect("find tree");
+         let signature = Signature::now("Athas", "athas@example.com").expect("signature");
+         let parent = self
+            .repo
+            .head()
+            .ok()
+            .and_then(|head| head.peel_to_commit().ok());
+         let parents: Vec<&git2::Commit<'_>> = parent.iter().collect();
+         self
+            .repo
+            .commit(
+               Some("HEAD"),
+               &signature,
+               &signature,
+               message,
+               &tree,
+               &parents,
+            )
+            .expect("commit")
+      }
+
+      fn diff(&self, file_path: &str, staged: bool) -> GitDiff {
+         git_diff_file(self.path(), file_path.to_string(), staged).expect("file diff")
+      }
+
+      fn content_diff(&self, file_path: &str, content: &str, base: &str) -> GitDiff {
+         git_diff_file_with_content(
+            self.path(),
+            file_path.to_string(),
+            content.to_string(),
+            base.to_string(),
+         )
+         .expect("content diff")
+      }
+   }
+
+   fn encode(bytes: &[u8]) -> String {
+      general_purpose::STANDARD.encode(bytes)
+   }
+
+   fn numbered_lines(count: usize) -> String {
+      (0..count).map(|index| format!("line {index}\n")).collect()
+   }
+
+   fn find_line<'a>(lines: &'a [GitDiffLine], kind: &str, content: &str) -> &'a GitDiffLine {
+      lines
+         .iter()
+         .find(|line| {
+            let matches_kind = match line.line_type {
+               DiffLineType::Added => kind == "+",
+               DiffLineType::Removed => kind == "-",
+               DiffLineType::Context => kind == " ",
+               DiffLineType::Header => kind == "h",
+            };
+            matches_kind && line.content == content
+         })
+         .unwrap_or_else(|| panic!("missing {kind:?} line {content:?}"))
+   }
+
+   fn hunk_headers(lines: &[GitDiffLine]) -> Vec<&str> {
+      lines
+         .iter()
+         .filter(|line| {
+            matches!(line.line_type, DiffLineType::Header) && line.content.starts_with("@@")
+         })
+         .map(|line| line.content.trim_end())
+         .collect()
+   }
+
+   fn find_diff<'a>(diffs: &'a [GitDiff], file_path: &str) -> &'a GitDiff {
+      diffs
+         .iter()
+         .find(|diff| diff.file_path == file_path)
+         .unwrap_or_else(|| panic!("missing diff for {file_path}"))
+   }
+
+   #[test]
+   fn unstaged_modification_reports_lines_with_numbers_and_stats() {
+      let fixture = Fixture::new();
+      fixture.write("notes.txt", "one\ntwo\nthree\n");
+      fixture.commit_all("initial");
+      fixture.write("notes.txt", "one\nTWO\nthree\nfour\n");
+
+      let diff = fixture.diff("notes.txt", false);
+
+      assert_eq!(diff.file_path, "notes.txt");
+      assert_eq!(diff.old_path.as_deref(), Some("notes.txt"));
+      assert_eq!(diff.new_path.as_deref(), Some("notes.txt"));
+      assert!(!diff.is_new && !diff.is_deleted && !diff.is_renamed);
+      assert!(!diff.is_binary && !diff.is_image);
+      assert!(diff.old_blob_base64.is_none() && diff.new_blob_base64.is_none());
+      assert_eq!(diff.raw_patch, None);
+      assert_eq!(diff.is_truncated, None);
+      assert_eq!(diff.additions, Some(2));
+      assert_eq!(diff.deletions, Some(1));
+      assert!(
+         diff.lines[0]
+            .content
+            .starts_with("diff --git a/notes.txt b/notes.txt"),
+         "first line should be the file header"
+      );
+      assert_eq!(hunk_headers(&diff.lines), vec!["@@ -1,3 +1,4 @@"]);
+
+      let context = find_line(&diff.lines, " ", "one");
+      assert_eq!(
+         (context.old_line_number, context.new_line_number),
+         (Some(1), Some(1))
+      );
+      let removed = find_line(&diff.lines, "-", "two");
+      assert_eq!(
+         (removed.old_line_number, removed.new_line_number),
+         (Some(2), None)
+      );
+      let added = find_line(&diff.lines, "+", "TWO");
+      assert_eq!(
+         (added.old_line_number, added.new_line_number),
+         (None, Some(2))
+      );
+      assert_eq!(find_line(&diff.lines, "+", "four").new_line_number, Some(4));
+   }
+
+   #[test]
+   fn unstaged_deletion_is_reported_as_deleted_with_removed_lines() {
+      let fixture = Fixture::new();
+      fixture.write("gone.txt", "a\nb\n");
+      fixture.commit_all("initial");
+      fixture.remove("gone.txt");
+
+      let diff = fixture.diff("gone.txt", false);
+
+      assert!(diff.is_deleted);
+      assert!(!diff.is_new);
+      assert_eq!(diff.additions, Some(0));
+      assert_eq!(diff.deletions, Some(2));
+      assert_eq!(find_line(&diff.lines, "-", "b").old_line_number, Some(2));
+   }
+
+   #[test]
+   fn staged_deletion_is_reported_as_deleted() {
+      let fixture = Fixture::new();
+      fixture.write("gone.txt", "a\nb\nc\n");
+      fixture.commit_all("initial");
+      fixture.remove("gone.txt");
+      fixture.stage_removal("gone.txt");
+
+      let diff = fixture.diff("gone.txt", true);
+
+      assert!(diff.is_deleted);
+      assert_eq!(diff.deletions, Some(3));
+      assert_eq!(diff.new_path.as_deref(), Some("gone.txt"));
+   }
+
+   #[test]
+   fn staged_and_unstaged_diffs_show_their_own_side_of_a_partially_staged_file() {
+      let fixture = Fixture::new();
+      fixture.write("partial.txt", "base\n");
+      fixture.commit_all("initial");
+      fixture.write("partial.txt", "staged\n");
+      fixture.stage("partial.txt");
+      fixture.write("partial.txt", "unstaged\n");
+
+      let staged = fixture.diff("partial.txt", true);
+      find_line(&staged.lines, "-", "base");
+      find_line(&staged.lines, "+", "staged");
+      assert!(!staged.lines.iter().any(|line| line.content == "unstaged"));
+
+      let unstaged = fixture.diff("partial.txt", false);
+      find_line(&unstaged.lines, "-", "staged");
+      find_line(&unstaged.lines, "+", "unstaged");
+      assert!(!unstaged.lines.iter().any(|line| line.content == "base"));
+   }
+
+   #[test]
+   fn unchanged_file_returns_no_changes_error() {
+      let fixture = Fixture::new();
+      fixture.write("same.txt", "same\n");
+      fixture.commit_all("initial");
+
+      let staged = git_diff_file(fixture.path(), "same.txt".to_string(), true);
+      let unstaged = git_diff_file(fixture.path(), "same.txt".to_string(), false);
+
+      for result in [staged, unstaged] {
+         let error = result.err().expect("expected an error");
+         assert!(
+            error.starts_with("No changes found for file: same.txt"),
+            "{error}"
+         );
+      }
+   }
+
+   #[test]
+   fn diff_functions_report_unopenable_repositories() {
+      let dir = tempfile::tempdir().expect("temp dir");
+      let path = dir.path().join("missing").to_string_lossy().into_owned();
+
+      let errors = [
+         git_diff_file(path.clone(), "a.txt".to_string(), false).err(),
+         git_diff_file_with_content(
+            path.clone(),
+            "a.txt".to_string(),
+            String::new(),
+            "head".to_string(),
+         )
+         .err(),
+         git_status_diff_stats(path.clone()).err(),
+         git_commit_diff(path.clone(), "0".repeat(40), None).err(),
+         git_file_at_commit(path.clone(), "HEAD".to_string(), "a.txt".to_string()).err(),
+         git_ref_diff(path, "HEAD".to_string(), "HEAD".to_string()).err(),
+      ];
+
+      for error in errors {
+         let error = error.expect("expected an error");
+         assert!(error.starts_with("Failed to open repository"), "{error}");
+      }
+   }
+
+   #[test]
+   fn missing_trailing_newline_markers_are_not_rendered_as_content() {
+      let fixture = Fixture::new();
+      fixture.write("eof.txt", "keep\nold");
+      fixture.commit_all("initial");
+      fixture.write("eof.txt", "keep\nnew");
+
+      let diff = fixture.diff("eof.txt", false);
+
+      assert_eq!(diff.additions, Some(1));
+      assert_eq!(diff.deletions, Some(1));
+      find_line(&diff.lines, "-", "old");
+      find_line(&diff.lines, "+", "new");
+      assert!(
+         !diff
+            .lines
+            .iter()
+            .any(|line| line.content.contains("No newline at end of file"))
+      );
+   }
+
+   #[test]
+   fn unicode_content_is_preserved() {
+      let fixture = Fixture::new();
+      fixture.write("unicode.txt", "héllo\nwörld\n");
+      fixture.commit_all("initial");
+      fixture.write("unicode.txt", "héllo\nwörld 🌍\n日本語\n");
+
+      let diff = fixture.diff("unicode.txt", false);
+
+      find_line(&diff.lines, " ", "héllo");
+      find_line(&diff.lines, "-", "wörld");
+      find_line(&diff.lines, "+", "wörld 🌍");
+      assert_eq!(
+         find_line(&diff.lines, "+", "日本語").new_line_number,
+         Some(3)
+      );
+   }
+
+   #[test]
+   fn distant_changes_produce_separate_hunks() {
+      let fixture = Fixture::new();
+      let original = numbered_lines(40);
+      fixture.write("hunks.txt", &original);
+      fixture.commit_all("initial");
+      fixture.write(
+         "hunks.txt",
+         original
+            .replace("line 2\n", "line two\n")
+            .replace("line 35\n", "line thirty-five\n"),
+      );
+
+      let diff = fixture.diff("hunks.txt", false);
+
+      assert_eq!(
+         hunk_headers(&diff.lines),
+         vec!["@@ -1,6 +1,6 @@", "@@ -33,7 +33,7 @@ line 31"]
+      );
+      assert_eq!(
+         find_line(&diff.lines, "+", "line thirty-five").new_line_number,
+         Some(36)
+      );
+   }
+
+   #[test]
+   fn unstaged_text_file_overwritten_with_binary_is_reported_as_binary() {
+      let fixture = Fixture::new();
+      fixture.write("data.dat", "plain text\n");
+      fixture.commit_all("initial");
+      fixture.write("data.dat", [1_u8, 0, 2, 0, 3]);
+
+      let diff = fixture.diff("data.dat", false);
+
+      assert!(diff.is_binary);
+      assert!(!diff.is_image);
+      assert!(diff.lines.is_empty());
+      assert_eq!(diff.additions, Some(0));
+   }
+
+   #[test]
+   fn staged_diff_is_truncated_after_the_line_threshold() {
+      let fixture = Fixture::new();
+      fixture.write("huge.txt", numbered_lines(LARGE_DIFF_LINE_THRESHOLD + 50));
+      fixture.stage("huge.txt");
+
+      let diff = fixture.diff("huge.txt", true);
+
+      assert_eq!(diff.is_truncated, Some(true));
+      assert_eq!(diff.lines.len(), LARGE_DIFF_LINE_THRESHOLD + 1);
+      let marker = diff.lines.last().expect("truncation marker");
+      assert!(matches!(marker.line_type, DiffLineType::Header));
+      assert!(marker.content.contains("truncated"));
+      assert!(diff.additions.expect("additions") < LARGE_DIFF_LINE_THRESHOLD);
+   }
+
+   #[test]
+   fn unstaged_image_modification_returns_both_versions() {
+      let fixture = Fixture::new();
+      fixture.write("logo.png", PNG_V1);
+      fixture.commit_all("initial");
+      fixture.write("logo.png", PNG_V2);
+
+      let diff = fixture.diff("logo.png", false);
+
+      assert!(diff.is_image && diff.is_binary);
+      assert!(diff.lines.is_empty());
+      assert_eq!(diff.old_blob_base64, Some(encode(PNG_V1)));
+      assert_eq!(diff.new_blob_base64, Some(encode(PNG_V2)));
+   }
+
+   #[test]
+   fn staged_image_modification_reads_both_versions_from_the_object_store() {
+      let fixture = Fixture::new();
+      fixture.write("logo.png", PNG_V1);
+      fixture.commit_all("initial");
+      fixture.write("logo.png", PNG_V2);
+      fixture.stage("logo.png");
+      fixture.write("logo.png", b"unstaged bytes on disk");
+
+      let diff = fixture.diff("logo.png", true);
+
+      assert_eq!(diff.old_blob_base64, Some(encode(PNG_V1)));
+      assert_eq!(diff.new_blob_base64, Some(encode(PNG_V2)));
+   }
+
+   #[test]
+   fn staged_new_image_has_only_a_new_version() {
+      let fixture = Fixture::new();
+      fixture.write("icon.PNG", PNG_V1);
+      fixture.stage("icon.PNG");
+
+      let diff = fixture.diff("icon.PNG", true);
+
+      assert!(diff.is_new && diff.is_image);
+      assert_eq!(diff.old_blob_base64, None);
+      assert_eq!(diff.new_blob_base64, Some(encode(PNG_V1)));
+   }
+
+   #[test]
+   fn deleted_image_has_only_an_old_version() {
+      let fixture = Fixture::new();
+      fixture.write("old.jpg", PNG_V1);
+      fixture.commit_all("initial");
+      fixture.remove("old.jpg");
+
+      let unstaged = fixture.diff("old.jpg", false);
+      assert!(unstaged.is_deleted && unstaged.is_image);
+      assert_eq!(unstaged.old_blob_base64, Some(encode(PNG_V1)));
+      assert_eq!(unstaged.new_blob_base64, None);
+
+      fixture.stage_removal("old.jpg");
+      let staged = fixture.diff("old.jpg", true);
+      assert!(staged.is_deleted);
+      assert_eq!(staged.old_blob_base64, Some(encode(PNG_V1)));
+      assert_eq!(staged.new_blob_base64, None);
+   }
+
+   #[test]
+   fn status_diff_stats_count_staged_and_unstaged_changes() {
+      let fixture = Fixture::new();
+      fixture.write("edited.txt", "a\nb\nc\n");
+      fixture.write("removed.txt", "x\ny\n");
+      fixture.commit_all("initial");
+      fixture.write("edited.txt", "a\nB\nc\nd\n");
+      fixture.write("removed.txt", "");
+      fixture.remove("removed.txt");
+      fixture.stage_removal("removed.txt");
+      fixture.write("added.txt", "1\n2\n3\n");
+      fixture.stage("added.txt");
+
+      let mut stats = git_status_diff_stats(fixture.path()).expect("stats");
+      stats.sort_by(|a, b| a.file_path.cmp(&b.file_path));
+      let summary: Vec<_> = stats
+         .iter()
+         .map(|stat| {
+            (
+               stat.file_path.as_str(),
+               stat.staged,
+               stat.additions,
+               stat.deletions,
+            )
+         })
+         .collect();
+
+      assert_eq!(
+         summary,
+         vec![
+            ("added.txt", true, 3, 0),
+            ("edited.txt", false, 2, 1),
+            ("removed.txt", true, 0, 2),
+         ]
+      );
+   }
+
+   #[test]
+   fn status_diff_stats_keep_both_sides_of_a_partially_staged_file() {
+      let fixture = Fixture::new();
+      fixture.write("partial.txt", "one\ntwo\n");
+      fixture.commit_all("initial");
+      fixture.write("partial.txt", "one\ntwo\nthree\n");
+      fixture.stage("partial.txt");
+      fixture.write("partial.txt", "two\nthree\n");
+
+      let mut stats = git_status_diff_stats(fixture.path()).expect("stats");
+      stats.sort_by_key(|stat| !stat.staged);
+      let summary: Vec<_> = stats
+         .iter()
+         .map(|stat| {
+            (
+               stat.file_path.as_str(),
+               stat.staged,
+               stat.additions,
+               stat.deletions,
+            )
+         })
+         .collect();
+
+      assert_eq!(
+         summary,
+         vec![("partial.txt", true, 1, 0), ("partial.txt", false, 0, 1)]
+      );
+   }
+
+   #[test]
+   fn status_diff_stats_work_without_a_head_commit() {
+      let fixture = Fixture::new();
+      fixture.write("first.txt", "a\nb\n");
+      fixture.stage("first.txt");
+
+      let stats = git_status_diff_stats(fixture.path()).expect("stats");
+
+      assert_eq!(stats.len(), 1);
+      assert_eq!(stats[0].file_path, "first.txt");
+      assert!(stats[0].staged);
+      assert_eq!((stats[0].additions, stats[0].deletions), (2, 0));
+   }
+
+   #[test]
+   fn content_diff_against_head_reports_hunks_and_line_numbers() {
+      let fixture = Fixture::new();
+      fixture.write("src.rs", "fn a() {}\nfn b() {}\nfn c() {}\n");
+      fixture.commit_all("initial");
+
+      let diff = fixture.content_diff("src.rs", "fn a() {}\nfn B() {}\nfn c() {}\n", "head");
+
+      assert!(!diff.is_new && !diff.is_deleted && !diff.is_renamed && !diff.is_binary);
+      assert_eq!(diff.old_path.as_deref(), Some("src.rs"));
+      assert_eq!(diff.new_path.as_deref(), Some("src.rs"));
+      assert_eq!(hunk_headers(&diff.lines), vec!["@@ -1,3 +1,3 @@"]);
+      assert_eq!(diff.lines[0].content, "@@ -1,3 +1,3 @@");
+      assert_eq!(
+         find_line(&diff.lines, "-", "fn b() {}").old_line_number,
+         Some(2)
+      );
+      assert_eq!(
+         find_line(&diff.lines, "+", "fn B() {}").new_line_number,
+         Some(2)
+      );
+      let context = find_line(&diff.lines, " ", "fn c() {}");
+      assert_eq!(
+         (context.old_line_number, context.new_line_number),
+         (Some(3), Some(3))
+      );
+      assert_eq!((diff.additions, diff.deletions), (Some(1), Some(1)));
+      assert_eq!(diff.is_truncated, None);
+   }
+
+   #[test]
+   fn content_diff_uses_the_requested_base() {
+      let fixture = Fixture::new();
+      fixture.write("file.txt", "committed\n");
+      fixture.commit_all("initial");
+      fixture.write("file.txt", "staged\n");
+      fixture.stage("file.txt");
+
+      let against_index = fixture.content_diff("file.txt", "staged\n", "index");
+      assert!(against_index.lines.is_empty());
+      assert_eq!(
+         (against_index.additions, against_index.deletions),
+         (Some(0), Some(0))
+      );
+
+      let against_head = fixture.content_diff("file.txt", "staged\n", "head");
+      find_line(&against_head.lines, "-", "committed");
+      find_line(&against_head.lines, "+", "staged");
+   }
+
+   #[test]
+   fn content_diff_treats_files_missing_from_the_base_as_new() {
+      let fixture = Fixture::new();
+      fixture.write("tracked.txt", "x\n");
+      fixture.commit_all("initial");
+
+      let diff = fixture.content_diff("untracked.txt", "a\nb\n", "index");
+
+      assert!(diff.is_new);
+      assert!(!diff.is_deleted);
+      assert_eq!(diff.additions, Some(2));
+      assert_eq!(hunk_headers(&diff.lines), vec!["@@ -0,0 +1,2 @@"]);
+   }
+
+   #[test]
+   fn empty_content_for_a_tracked_file_is_reported_as_deleted() {
+      let fixture = Fixture::new();
+      fixture.write("file.txt", "a\nb\nc\n");
+      fixture.commit_all("initial");
+
+      let diff = fixture.content_diff("file.txt", "", "head");
+
+      assert!(diff.is_deleted);
+      assert!(!diff.is_new);
+      assert_eq!((diff.additions, diff.deletions), (Some(0), Some(3)));
+   }
+
+   #[test]
+   fn content_diff_against_a_binary_base_returns_encoded_versions() {
+      let fixture = Fixture::new();
+      fixture.write("blob.bin", [0_u8, 1, 2, 3]);
+      fixture.commit_all("initial");
+
+      let diff = fixture.content_diff("blob.bin", "text", "head");
+
+      assert!(diff.is_binary);
+      assert!(!diff.is_image);
+      assert!(diff.lines.is_empty());
+      assert_eq!(diff.old_blob_base64, Some(encode(&[0, 1, 2, 3])));
+      assert_eq!(diff.new_blob_base64, Some(encode(b"text")));
+   }
+
+   #[test]
+   fn content_diff_for_images_skips_line_parsing() {
+      let fixture = Fixture::new();
+      fixture.write("pic.svg", "<svg></svg>\n");
+      fixture.commit_all("initial");
+
+      let deleted = fixture.content_diff("pic.svg", "", "head");
+      assert!(deleted.is_image && deleted.is_binary && deleted.is_deleted);
+      assert!(deleted.lines.is_empty());
+      assert_eq!(deleted.old_blob_base64, Some(encode(b"<svg></svg>\n")));
+      assert_eq!(deleted.new_blob_base64, None);
+
+      let new_image = fixture.content_diff("new.svg", "<svg/>", "head");
+      assert!(new_image.is_new && new_image.is_image);
+      assert_eq!(new_image.old_blob_base64, None);
+      assert_eq!(new_image.new_blob_base64, Some(encode(b"<svg/>")));
+   }
+
+   #[test]
+   fn content_diff_against_identical_blob_has_no_lines() {
+      let fixture = Fixture::new();
+      fixture.write("same.txt", "same\n");
+      fixture.commit_all("initial");
+
+      let diff = fixture.content_diff("same.txt", "same\n", "head");
+
+      assert!(diff.lines.is_empty());
+      assert!(!diff.is_deleted);
+   }
+
+   #[test]
+   fn content_diff_is_truncated_after_the_line_threshold() {
+      let content = numbered_lines(LARGE_DIFF_LINE_THRESHOLD + 10);
+
+      let parsed = diff_blob_against_content(None, Path::new("big.txt"), content.as_bytes())
+         .expect("content diff");
+
+      assert!(parsed.is_truncated);
+      assert_eq!(parsed.lines.len(), LARGE_DIFF_LINE_THRESHOLD + 1);
+      let marker = parsed.lines.last().expect("marker");
+      assert!(matches!(marker.line_type, DiffLineType::Header));
+      assert!(marker.content.contains("truncated"));
+   }
+
+   #[test]
+   fn commit_diff_of_root_commit_lists_every_file_as_new() {
+      let fixture = Fixture::new();
+      fixture.write("a.txt", "a1\na2\n");
+      fixture.write("dir/b.txt", "b1\n");
+      let commit = fixture.commit_all("initial");
+
+      let diffs = git_commit_diff(fixture.path(), commit.to_string(), None).expect("commit diff");
+
+      assert_eq!(diffs.len(), 2);
+      let a = find_diff(&diffs, "a.txt");
+      assert!(a.is_new);
+      assert_eq!(a.old_path.as_deref(), Some("a.txt"));
+      assert_eq!((a.additions, a.deletions), (Some(2), Some(0)));
+      assert_eq!(find_line(&a.lines, "+", "a2").new_line_number, Some(2));
+      assert!(a.lines[0].content.starts_with("diff --git a/a.txt b/a.txt"));
+      let b = find_diff(&diffs, "dir/b.txt");
+      assert!(b.is_new);
+      assert_eq!(b.additions, Some(1));
+   }
+
+   #[test]
+   fn commit_diff_reports_added_modified_and_deleted_files() {
+      let fixture = Fixture::new();
+      fixture.write("keep.txt", "one\ntwo\n");
+      fixture.write("drop.txt", "bye\n");
+      fixture.commit_all("initial");
+      fixture.write("keep.txt", "one\n2\n");
+      fixture.remove("drop.txt");
+      fixture.write("new.txt", "hi\n");
+      let commit = fixture.commit_all("second");
+
+      let diffs = git_commit_diff(fixture.path(), commit.to_string(), None).expect("commit diff");
+
+      assert_eq!(diffs.len(), 3);
+      let modified = find_diff(&diffs, "keep.txt");
+      assert!(!modified.is_new && !modified.is_deleted);
+      assert_eq!((modified.additions, modified.deletions), (Some(1), Some(1)));
+      assert_eq!(
+         find_line(&modified.lines, "-", "two").old_line_number,
+         Some(2)
+      );
+      assert_eq!(
+         find_line(&modified.lines, "+", "2").new_line_number,
+         Some(2)
+      );
+      assert_eq!(modified.raw_patch, None);
+
+      let deleted = find_diff(&diffs, "drop.txt");
+      assert!(deleted.is_deleted);
+      assert_eq!((deleted.additions, deleted.deletions), (Some(0), Some(1)));
+      find_line(&deleted.lines, "-", "bye");
+
+      let added = find_diff(&diffs, "new.txt");
+      assert!(added.is_new);
+      assert_eq!(added.additions, Some(1));
+   }
+
+   #[test]
+   fn commit_diff_can_be_limited_to_one_file() {
+      let fixture = Fixture::new();
+      fixture.write("a.txt", "a\n");
+      fixture.write("b.txt", "b\n");
+      let commit = fixture.commit_all("initial");
+
+      let diffs = git_commit_diff(
+         fixture.path(),
+         commit.to_string(),
+         Some("b.txt".to_string()),
+      )
+      .expect("commit diff");
+
+      assert_eq!(diffs.len(), 1);
+      assert_eq!(diffs[0].file_path, "b.txt");
+   }
+
+   #[test]
+   fn commit_diff_rejects_bad_hashes() {
+      let fixture = Fixture::new();
+      fixture.write("a.txt", "a\n");
+      fixture.commit_all("initial");
+
+      let invalid = git_commit_diff(fixture.path(), "not-a-hash".to_string(), None)
+         .err()
+         .expect("invalid hash error");
+      assert!(invalid.starts_with("Invalid commit hash"), "{invalid}");
+
+      let missing = git_commit_diff(fixture.path(), "1".repeat(40), None)
+         .err()
+         .expect("missing commit error");
+      assert!(missing.starts_with("Commit not found"), "{missing}");
+   }
+
+   #[test]
+   fn commit_diff_reports_binary_and_image_files_without_lines() {
+      let fixture = Fixture::new();
+      fixture.write("modified.png", PNG_V1);
+      fixture.write("deleted.gif", PNG_V1);
+      fixture.write("payload.bin", [0_u8, 1, 2]);
+      fixture.commit_all("initial");
+      fixture.write("modified.png", PNG_V2);
+      fixture.remove("deleted.gif");
+      fixture.write("added.webp", PNG_V2);
+      fixture.write("payload.bin", [0_u8, 9, 9, 9]);
+      let commit = fixture.commit_all("images");
+
+      let diffs = git_commit_diff(fixture.path(), commit.to_string(), None).expect("commit diff");
+
+      assert_eq!(diffs.len(), 4);
+      for diff in &diffs {
+         assert!(diff.is_binary, "{} should be binary", diff.file_path);
+         assert!(diff.lines.is_empty());
+         assert_eq!(diff.additions, Some(0));
+      }
+
+      let modified = find_diff(&diffs, "modified.png");
+      assert!(modified.is_image);
+      assert_eq!(modified.old_blob_base64, Some(encode(PNG_V1)));
+      assert_eq!(modified.new_blob_base64, Some(encode(PNG_V2)));
+
+      let deleted = find_diff(&diffs, "deleted.gif");
+      assert!(deleted.is_deleted);
+      assert_eq!(deleted.old_blob_base64, Some(encode(PNG_V1)));
+      assert_eq!(deleted.new_blob_base64, None);
+
+      let added = find_diff(&diffs, "added.webp");
+      assert!(added.is_new);
+      assert_eq!(added.old_blob_base64, None);
+      assert_eq!(added.new_blob_base64, Some(encode(PNG_V2)));
+
+      let binary = find_diff(&diffs, "payload.bin");
+      assert!(!binary.is_image);
+      assert!(binary.old_blob_base64.is_none() && binary.new_blob_base64.is_none());
+   }
+
+   #[test]
+   fn commit_diff_switches_large_files_to_a_raw_patch() {
+      let fixture = Fixture::new();
+      let line_count = LARGE_DIFF_LINE_THRESHOLD + 50;
+      fixture.write("huge.txt", "kept\nremoved\n");
+      fixture.commit_all("initial");
+      fixture.write("huge.txt", format!("kept\n{}", numbered_lines(line_count)));
+      fixture.write("small.txt", "small\n");
+      let commit = fixture.commit_all("huge");
+
+      let diffs = git_commit_diff(fixture.path(), commit.to_string(), None).expect("commit diff");
+
+      let huge = find_diff(&diffs, "huge.txt");
+      assert!(huge.lines.is_empty());
+      assert_eq!(huge.is_truncated, Some(true));
+      assert_eq!(huge.additions, Some(line_count));
+      assert_eq!(huge.deletions, Some(1));
+      let raw_patch = huge.raw_patch.as_deref().expect("raw patch");
+      assert!(raw_patch.starts_with("diff --git a/huge.txt b/huge.txt"));
+      assert!(raw_patch.contains("\n kept\n-removed\n+line 0\n"));
+      assert!(raw_patch.ends_with(&format!("+line {}\n", line_count - 1)));
+      assert!(!raw_patch.contains("Athas truncated"));
+
+      let small = find_diff(&diffs, "small.txt");
+      assert_eq!(small.raw_patch, None);
+      assert_eq!(small.is_truncated, None);
+      assert_eq!(small.lines.len(), 3);
+   }
+
+   #[test]
+   fn raw_patch_is_capped_at_the_byte_limit_on_a_char_boundary() {
+      let mut file = ParsedDiffFile {
+         raw_patch: Some("x".repeat(MAX_RAW_PATCH_BYTES - 4)),
+         ..ParsedDiffFile::default()
+      };
+      let line = || GitDiffLine {
+         line_type: DiffLineType::Added,
+         content: String::new(),
+         old_line_number: None,
+         new_line_number: None,
+      };
+
+      file.push_line('+', line(), "ééé\n".as_bytes());
+
+      let raw_patch = file.raw_patch.clone().expect("raw patch");
+      assert!(file.is_truncated);
+      assert!(
+         raw_patch.ends_with("+é\n# Athas truncated this diff to keep the editor responsive.\n")
+      );
+      assert_eq!(file.additions, 1);
+
+      file.push_line('-', line(), b"ignored\n");
+      assert_eq!(file.raw_patch.as_deref(), Some(raw_patch.as_str()));
+      assert_eq!(file.deletions, 1);
+      assert_eq!(file.line_count, 2);
+   }
+
+   #[test]
+   fn ref_diff_compares_two_revisions() {
+      let fixture = Fixture::new();
+      fixture.write("file.txt", "v1\n");
+      fixture.commit_all("first");
+      fixture.write("file.txt", "v2\n");
+      fixture.write("other.txt", "other\n");
+      fixture.commit_all("second");
+
+      let diffs =
+         git_ref_diff(fixture.path(), "HEAD~1".to_string(), "HEAD".to_string()).expect("ref diff");
+
+      assert_eq!(diffs.len(), 2);
+      let file = find_diff(&diffs, "file.txt");
+      find_line(&file.lines, "-", "v1");
+      find_line(&file.lines, "+", "v2");
+      assert!(find_diff(&diffs, "other.txt").is_new);
+
+      let reversed = git_ref_diff(fixture.path(), "HEAD".to_string(), "HEAD~1".to_string())
+         .expect("reversed ref diff");
+      assert!(find_diff(&reversed, "other.txt").is_deleted);
+   }
+
+   #[test]
+   fn ref_diff_reports_unknown_refs() {
+      let fixture = Fixture::new();
+      fixture.write("file.txt", "v1\n");
+      fixture.commit_all("first");
+
+      let base = git_ref_diff(fixture.path(), "nope".to_string(), "HEAD".to_string())
+         .err()
+         .expect("base error");
+      assert!(base.starts_with("Failed to find base ref 'nope'"), "{base}");
+
+      let target = git_ref_diff(fixture.path(), "HEAD".to_string(), "nope".to_string())
+         .err()
+         .expect("target error");
+      assert!(
+         target.starts_with("Failed to find target ref 'nope'"),
+         "{target}"
+      );
+   }
+
+   #[test]
+   fn file_at_commit_reports_missing_files_bad_refs_and_non_utf8_content() {
+      let fixture = Fixture::new();
+      fixture.write("text.txt", "hello\n");
+      fixture.write("latin1.txt", [0x63_u8, 0x61, 0x66, 0xe9]);
+      fixture.commit_all("initial");
+
+      assert_eq!(
+         git_file_at_commit(fixture.path(), "HEAD".to_string(), "text.txt".to_string()),
+         Ok("hello\n".to_string())
+      );
+
+      let missing = git_file_at_commit(fixture.path(), "HEAD".to_string(), "nope.txt".to_string())
+         .expect_err("missing file");
+      assert!(missing.starts_with("File not found at HEAD"), "{missing}");
+
+      let bad_ref = git_file_at_commit(fixture.path(), "nope".to_string(), "text.txt".to_string())
+         .expect_err("bad ref");
+      assert!(bad_ref.starts_with("Commit not found"), "{bad_ref}");
+
+      let non_utf8 =
+         git_file_at_commit(fixture.path(), "HEAD".to_string(), "latin1.txt".to_string())
+            .expect_err("non utf8");
+      assert_eq!(non_utf8, "File is not valid UTF-8 at HEAD: latin1.txt");
+   }
+
+   #[cfg(unix)]
+   #[test]
+   fn unstaged_diff_for_a_path_that_is_not_a_literal_pathspec_still_has_lines() {
+      let fixture = Fixture::new();
+      fixture.write("back\\slash.txt", "a\nb\n");
+      fixture.commit_all("initial");
+      fixture.write("back\\slash.txt", "a\nc\n");
+
+      let diff = fixture.diff("back\\slash.txt", false);
+
+      assert_eq!(diff.file_path, "back\\slash.txt");
+      assert!(!diff.is_new && !diff.is_deleted);
+      assert_eq!((diff.additions, diff.deletions), (Some(1), Some(1)));
+      find_line(&diff.lines, "-", "b");
+      find_line(&diff.lines, "+", "c");
+   }
+
+   #[cfg(unix)]
+   #[test]
+   fn staged_diff_for_a_path_that_is_not_a_literal_pathspec_still_has_lines() {
+      let fixture = Fixture::new();
+      fixture.write("back\\slash.txt", "a\nb\n");
+      fixture.commit_all("initial");
+      fixture.remove("back\\slash.txt");
+      fixture.stage_removal("back\\slash.txt");
+
+      let diff = fixture.diff("back\\slash.txt", true);
+
+      assert!(diff.is_deleted);
+      assert_eq!((diff.additions, diff.deletions), (Some(0), Some(2)));
+      find_line(&diff.lines, "-", "b");
+   }
+
+   #[cfg(unix)]
+   #[test]
+   fn image_diffs_for_paths_that_are_not_literal_pathspecs_return_blobs() {
+      let fixture = Fixture::new();
+      fixture.write("edited\\pic.png", PNG_V1);
+      fixture.write("removed\\pic.png", PNG_V1);
+      fixture.commit_all("initial");
+      fixture.write("edited\\pic.png", PNG_V2);
+      fixture.remove("removed\\pic.png");
+
+      let unstaged = fixture.diff("edited\\pic.png", false);
+      assert!(unstaged.is_image && unstaged.lines.is_empty());
+      assert_eq!(unstaged.old_blob_base64, Some(encode(PNG_V1)));
+      assert_eq!(unstaged.new_blob_base64, Some(encode(PNG_V2)));
+
+      fixture.stage("edited\\pic.png");
+      fixture.stage_removal("removed\\pic.png");
+      let staged = fixture.diff("edited\\pic.png", true);
+      assert_eq!(staged.old_blob_base64, Some(encode(PNG_V1)));
+      assert_eq!(staged.new_blob_base64, Some(encode(PNG_V2)));
+
+      let deleted = fixture.diff("removed\\pic.png", true);
+      assert!(deleted.is_deleted);
+      assert_eq!(deleted.old_blob_base64, Some(encode(PNG_V1)));
+      assert_eq!(deleted.new_blob_base64, None);
+   }
+
+   #[test]
+   fn untracked_files_are_not_diffed_or_counted() {
+      let fixture = Fixture::new();
+      fixture.write("tracked.txt", "t\n");
+      fixture.commit_all("initial");
+      fixture.write("untracked.txt", "u\n");
+
+      let error = git_diff_file(fixture.path(), "untracked.txt".to_string(), false)
+         .err()
+         .expect("untracked file has no index diff");
+      assert!(
+         error.starts_with("No changes found for file: untracked.txt"),
+         "{error}"
+      );
+      assert!(
+         git_status_diff_stats(fixture.path())
+            .expect("stats")
+            .is_empty()
+      );
+   }
+
+   #[test]
+   fn binary_sniffing_handles_missing_and_text_files() {
+      let dir = tempfile::tempdir().expect("temp dir");
+      let text = dir.path().join("text.txt");
+      let binary = dir.path().join("binary.dat");
+      fs::write(&text, "no nulls here").expect("write text");
+      fs::write(&binary, b"abc\0def").expect("write binary");
+
+      assert!(!path_looks_binary(dir.path().join("missing")));
+      assert!(!path_looks_binary(text));
+      assert!(path_looks_binary(binary));
+   }
 
    #[test]
    fn content_diff_handles_large_similar_buffers_without_quadratic_table() {
