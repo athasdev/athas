@@ -1,9 +1,10 @@
 import { isComposingKeyboardEvent } from "@/utils/keyboard/is-composing-keyboard-event";
-import { ArrowCornerDownLeftIcon, CheckIcon, XIcon } from "@/ui/icons";
-import { type KeyboardEvent, useRef } from "react";
+import { CheckIcon, MagicWandIcon, XIcon } from "@/ui/icons";
+import { type CSSProperties, type KeyboardEvent, useRef } from "react";
 import { Alert, AlertDescription } from "@/ui/alert";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
+import Keybinding from "@/ui/keybinding";
 import { Popover, PopoverListContent } from "@/ui/popover";
 import { Spinner } from "@/ui/spinner";
 import type { Range } from "@/features/editor/types/editor.types";
@@ -53,12 +54,14 @@ export function InlineEditPopover({ state, selection }: InlineEditPopoverProps) 
       <span
         ref={anchorRef}
         aria-hidden
-        className="pointer-events-none absolute w-px opacity-0"
-        style={{
-          top: state.popoverAnchor.top,
-          left: state.popoverAnchor.left,
-          height: state.popoverAnchor.height,
-        }}
+        className="pointer-events-none absolute top-(--inline-edit-anchor-top) left-(--inline-edit-anchor-left) h-(--inline-edit-anchor-height) w-px opacity-0"
+        style={
+          {
+            "--inline-edit-anchor-top": `${state.popoverAnchor.top}px`,
+            "--inline-edit-anchor-left": `${state.popoverAnchor.left}px`,
+            "--inline-edit-anchor-height": `${state.popoverAnchor.height}px`,
+          } as CSSProperties
+        }
       />
       <Popover open modal={false}>
         <PopoverListContent
@@ -81,7 +84,7 @@ export function InlineEditPopover({ state, selection }: InlineEditPopoverProps) 
                 : "Describe the code change, then press Enter to preview it or Escape to close."}
             </div>
           </div>
-          <div className="flex items-center gap-1.5 px-2 py-1.5">
+          <div className="flex items-center gap-1.5 px-2 pt-1.5">
             <Input
               grow
               ref={state.inlineEditInstructionRef}
@@ -131,8 +134,29 @@ export function InlineEditPopover({ state, selection }: InlineEditPopoverProps) 
                     : "Edit current line..."
               }
             />
-            <div className="min-w-0 max-w-40">
+            <Button
+              type="button"
+              variant="ghost"
+              iconOnly
+              onClick={() =>
+                running ? state.handleEscapeInlineEdit() : state.handleRejectInlineEdit()
+              }
+              tooltip={
+                running
+                  ? "Stop inline edit"
+                  : proposal
+                    ? "Reject proposed edit"
+                    : "Close inline edit"
+              }
+              shortcut="escape"
+            >
+              <XIcon />
+            </Button>
+          </div>
+          <div className="flex items-center justify-between gap-1.5 px-2 pb-1.5">
+            <div className="min-w-0">
               <ModelConnectionPicker
+                appearance="subtle"
                 aria-label="Inline edit model"
                 value={
                   state.aiProviderId
@@ -143,78 +167,54 @@ export function InlineEditPopover({ state, selection }: InlineEditPopoverProps) 
                 disabled={running}
               />
             </div>
-            {running ? (
-              <Button
-                type="button"
-                variant="ghost"
-                iconOnly
-                onClick={() => state.handleEscapeInlineEdit()}
-                tooltip="Stop inline edit"
-                shortcut="escape"
-              >
-                <Spinner label="Generating edit" compact />
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                variant="ghost"
-                iconOnly
-                onClick={() => void state.handleSubmitInlineEdit()}
-                disabled={Boolean(proposal) && !state.inlineEditInstruction.trim()}
-                tone="accent"
-                tooltip={proposal ? "Refine proposed edit" : "Preview inline edit"}
-                shortcut="enter"
-              >
-                <ArrowCornerDownLeftIcon />
-              </Button>
-            )}
-            {proposal ? null : (
-              <Button
-                type="button"
-                variant="ghost"
-                iconOnly
-                onClick={() => state.handleRejectInlineEdit()}
-                tooltip="Close inline edit"
-                shortcut="escape"
-              >
-                <XIcon />
-              </Button>
-            )}
-          </div>
-          {proposal ? (
-            <div className="flex items-center justify-end gap-1.5 px-2 pb-1.5">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => state.handleRejectInlineEdit()}
-                tooltip="Reject proposed edit"
-                shortcut="escape"
-              >
-                <XIcon />
-                Reject
-              </Button>
-              <Button
-                type="button"
-                variant="accent"
-                size="sm"
-                onClick={() => state.handleAcceptInlineEdit()}
-                disabled={!canAccept}
-                tooltip="Accept proposed edit"
-                shortcut="mod+enter"
-              >
-                <CheckIcon />
-                Accept
-              </Button>
+            <div className="flex shrink-0 items-center gap-1">
+              {running ? (
+                <span className="flex h-chrome-control items-center gap-1.5 px-2 ui-text-chrome text-muted-foreground">
+                  <Spinner label="Generating edit" compact />
+                  Generating
+                </span>
+              ) : proposal ? (
+                <>
+                  {state.inlineEditInstruction.trim() ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => void state.handleSubmitInlineEdit()}
+                    >
+                      Refine
+                      <Keybinding binding="enter" />
+                    </Button>
+                  ) : null}
+                  <Button
+                    type="button"
+                    variant="accent"
+                    size="sm"
+                    onClick={() => state.handleAcceptInlineEdit()}
+                    disabled={!canAccept}
+                  >
+                    <CheckIcon />
+                    Accept
+                    <Keybinding binding="mod+enter" />
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => void state.handleSubmitInlineEdit()}
+                  disabled={!state.inlineEditInstruction.trim()}
+                >
+                  <MagicWandIcon />
+                  Preview edit
+                  <Keybinding binding="enter" />
+                </Button>
+              )}
             </div>
-          ) : null}
+          </div>
           {state.inlineEditError && (
-            <Alert
-              id="inline-edit-error"
-              aria-live="assertive"
-              tone="error"
-              className="rounded-none border-x-0 border-b-0 py-1"
-            >
+            <Alert id="inline-edit-error" aria-live="assertive" tone="error" variant="banner">
               <AlertDescription>{state.inlineEditError}</AlertDescription>
             </Alert>
           )}

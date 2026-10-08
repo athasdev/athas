@@ -14,7 +14,7 @@ export const buttonVariants = cva(
         default: "bg-accent text-foreground hover:bg-selected data-[active=true]:bg-selected",
         /** Solid primary button: the one call to action on a surface. */
         accent:
-          "bg-primary text-primary-foreground hover:bg-primary-hover data-[active=true]:bg-primary-hover",
+          "bg-primary text-primary-foreground hover:bg-primary-hover data-[active=true]:bg-primary-hover **:data-[slot=kbd]:bg-primary-foreground/20 **:data-[slot=kbd]:text-primary-foreground",
         /** A field-shaped trigger: selects and pickers that sit among inputs. */
         outline:
           "border border-border bg-surface text-foreground hover:border-border-strong data-[active=true]:border-primary data-popup-open:border-primary",
