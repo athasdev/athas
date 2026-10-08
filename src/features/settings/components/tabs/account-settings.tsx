@@ -1,6 +1,6 @@
 import { openExternalUrl } from "@/utils/external-url";
 import { getServiceUrls } from "@/config/services";
-import { useToast } from "@/features/layout/contexts/toast-context";
+import { useToast } from "@/utils/toast";
 import {
   disableSettingsSync,
   enableSettingsSync,

@@ -17,7 +17,7 @@ import { logger } from "@/utils/logger";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import type { MultiFileDiff } from "@/features/git/types/git-diff.types";
 import type { GitDiff } from "@/features/git/types/git.types";
-import { getBufferById, getBufferByPath } from "@/features/editor/utils/buffer-index";
+import { getBufferById, getBufferByPath } from "@/features/editor/stores/buffer-index";
 import type { ImageDraftState } from "@/features/viewer/image/editor/services/image-edit-session";
 import { usePaneStore } from "@/features/panes/stores/pane.store";
 import {

@@ -34,7 +34,7 @@ vi.mock("@/features/editor/stores/buffer.store", () => {
     },
   };
 });
-vi.mock("@/features/editor/utils/buffer-index", () => ({
+vi.mock("@/features/editor/stores/buffer-index", () => ({
   getBufferById: (buffers: Array<{ id: string }>, id: string) =>
     buffers.find((buffer) => buffer.id === id),
 }));

@@ -6,7 +6,7 @@ import {
   uninstallCli,
 } from "@/features/settings/services/cli-install-service";
 import { IdeSettingsImportDialog } from "@/features/file-system/components/ide-settings-import-dialog";
-import { useToast } from "@/features/layout/contexts/toast-context";
+import { useToast } from "@/utils/toast";
 import { TypedConfirmAction } from "@/features/settings/components/typed-confirm-action";
 import { useUpdater } from "@/features/settings/hooks/use-updater";
 import { Alert, AlertDescription } from "@/ui/alert";

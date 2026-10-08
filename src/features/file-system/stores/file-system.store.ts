@@ -11,7 +11,7 @@ import { restorePersistedEditorViewState } from "@/features/editor/stores/editor
 import { clearQueuedWorkspaceSessionSave } from "@/features/editor/stores/buffer-session-persistence";
 import { type OpenContentOptions, useBufferStore } from "@/features/editor/stores/buffer.store";
 import { detectLanguageFromFileName } from "@/features/editor/utils/language-detection";
-import { getBufferByPath } from "@/features/editor/utils/buffer-index";
+import { getBufferByPath } from "@/features/editor/stores/buffer-index";
 import { fileOpenBenchmark } from "@/features/editor/utils/file-open-benchmark";
 import { getLineSlice } from "@/features/editor/utils/large-file";
 import { invalidateFileTreeGitIgnoreCache } from "@/features/file-explorer/lib/file-tree-gitignore";
@@ -87,7 +87,7 @@ import {
 } from "../controllers/file-utils";
 import { resolveFileOpenPath, shouldResolveFileOpenSymlink } from "../controllers/file-open-path";
 import { useFileWatcherStore } from "../stores/file-watcher.store";
-import { fffListFiles, fffTrackAccess } from "@/features/file-search/lib/file-search-api";
+import { fffListFiles, fffTrackAccess } from "@/features/file-search/api/file-search-api";
 import { canUseNativeFileSearch } from "@/features/file-search/utils/file-search-paths";
 import { ensureWorkspaceFileSearch } from "@/features/file-search/services/workspace-file-search";
 import {

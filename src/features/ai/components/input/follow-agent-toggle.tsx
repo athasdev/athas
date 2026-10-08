@@ -4,7 +4,7 @@ import { stopFollowingAgent, toggleFollowAgent } from "@/features/ai/services/ag
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useIsFollowingAgent } from "@/features/ai/stores/agent-follow.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { useToast } from "@/features/layout/contexts/toast-context";
+import { useToast } from "@/utils/toast";
 import { usePaneStore } from "@/features/panes/stores/pane.store";
 import { DropdownMenuCheckboxItem } from "@/ui/dropdown";
 import { CrosshairIcon } from "@/ui/icons";

@@ -20,7 +20,7 @@ vi.mock("@tauri-apps/api/webviewWindow", () => ({
 }));
 vi.mock("../image/editor/utils/image-file-utils", () => ({ saveImageToFile: mocks.save }));
 vi.mock("../image/editor/utils/canvas-utils", () => ({ blobToDataURL: mocks.dataURL }));
-vi.mock("@/features/layout/contexts/toast-context", () => ({ showToast: mocks.toast }));
+vi.mock("@/utils/toast", () => ({ showToast: mocks.toast }));
 function image(id = "image"): ImageContent {
   return {
     id,

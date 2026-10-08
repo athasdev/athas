@@ -4,7 +4,7 @@ import {
   type BufferStoreOwner,
 } from "@/features/editor/services/buffer-store-owner";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { getBufferById } from "@/features/editor/utils/buffer-index";
+import { getBufferById } from "@/features/editor/stores/buffer-index";
 import {
   isDirtyContent,
   type EditorContent,

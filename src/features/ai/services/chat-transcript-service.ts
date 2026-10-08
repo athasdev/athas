@@ -1,7 +1,7 @@
 import { formatChatTranscript } from "../lib/chat-transcript";
 import { useAIChatStore } from "../stores/ai-chat.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { showToast } from "@/features/layout/contexts/toast-context";
+import { showToast } from "@/utils/toast";
 
 export async function openChatTranscript(chatId: string): Promise<string | null> {
   let state = useAIChatStore.getState();

@@ -5,7 +5,7 @@ import type { EditorSelectionContext } from "@/features/ai/types/ai-context.type
 import { EditorSelectionAgentAction } from "../../../components/selection/editor-selection-agent-action";
 import { useBufferStore } from "../../../stores/buffer.store";
 import { useInlineEditToolbarStore } from "../../../stores/inline-edit-toolbar.store";
-import { getBufferById } from "../../../utils/buffer-index";
+import { getBufferById } from "../../../stores/buffer-index";
 import { createEditorSelectionContextFromText } from "../../../utils/editor-agent-context";
 import { type CodeMirrorHost, useCodeMirrorExtension } from "../host";
 import { toEditorRange } from "../position";

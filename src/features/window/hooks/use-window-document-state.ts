@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { commands } from "@/bindings/commands";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { getBufferById } from "@/features/editor/utils/buffer-index";
+import { getBufferById } from "@/features/editor/stores/buffer-index";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { getWindowDocumentState } from "@/features/window/utils/window-document-state";
 import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";

@@ -3,7 +3,7 @@ import {
   type FffIndexedFile,
   fffListFiles,
   fffScanStatus,
-} from "@/features/file-search/lib/file-search-api";
+} from "@/features/file-search/api/file-search-api";
 import type { FileItem } from "@/features/file-search/types/file-search.types";
 import { shouldIgnoreSearchFile } from "@/features/file-search/utils/file-search-filtering";
 import { getNativeWorkspaceRootPaths } from "@/features/file-search/utils/file-search-paths";

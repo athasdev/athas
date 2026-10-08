@@ -1,7 +1,7 @@
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import type { JumpListEntry } from "@/features/editor/stores/jump-list.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
-import { getBufferById, getBufferByPath } from "@/features/editor/utils/buffer-index";
+import { getBufferById, getBufferByPath } from "@/features/editor/stores/buffer-index";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { logger } from "@/utils/logger";
 

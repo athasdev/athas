@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useToast } from "@/features/layout/contexts/toast-context";
+import { useToast } from "@/utils/toast";
 import { openExternalUrl } from "@/utils/external-url";
 import { getServiceUrls } from "@/config/services";
 import { Alert, AlertDescription } from "@/ui/alert";

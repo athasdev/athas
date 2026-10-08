@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { resolveExternalBrowserUrl } from "../utils/external-navigation";
+import { resolveExternalBrowserUrl } from "../external-navigation";
 
 describe("resolveExternalBrowserUrl", () => {
   it("accepts http and https links", () => {

@@ -5,7 +5,7 @@ import { EditorStatusActions } from "@/features/editor/components/toolbar/editor
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { toggleMarkdownPreview } from "@/features/editor/markdown/toggle-markdown-preview";
 import { isMarkdownPreviewableFile } from "@/features/editor/markdown/previewable";
-import { getBufferById } from "@/features/editor/utils/buffer-index";
+import { getBufferById } from "@/features/editor/stores/buffer-index";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import { useExtensionActions } from "@/extensions/ui/hooks/use-extension-actions";
 import { ExtensionToolbarAction } from "@/extensions/ui/components/extension-toolbar-action";

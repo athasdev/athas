@@ -1,4 +1,4 @@
-import { showToast } from "@/features/layout/contexts/toast-context";
+import { showToast } from "@/utils/toast";
 import { keymapRegistry } from "./registry";
 
 /**

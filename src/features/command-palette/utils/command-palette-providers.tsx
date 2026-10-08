@@ -1,7 +1,7 @@
 import { PuzzlePieceIcon, SettingsIcon } from "@/ui/icons";
 import type { RegisteredCommand } from "@/extensions/ui/types/ui-extension";
 import { settingsTabLabels } from "@/features/keymaps/commands/settings-commands";
-import { showToast } from "@/features/layout/contexts/toast-context";
+import { showToast } from "@/utils/toast";
 import { settingsSearchIndex } from "@/features/settings/config/search-index";
 import { useSettingsSearchStore } from "@/features/settings/stores/settings-search.store";
 import type { VimCommand } from "@/features/vim/stores/vim-commands";

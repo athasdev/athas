@@ -1,7 +1,7 @@
 import { ArrowClockwiseIcon, SquareIcon, TerminalWindowIcon } from "@/ui/icons";
 import { installCli } from "@/features/settings/services/cli-install-service";
 import { useLspStore } from "@/features/editor/lsp/stores/lsp.store";
-import { showToast } from "@/features/layout/contexts/toast-context";
+import { showToast } from "@/utils/toast";
 import type { Command } from "../types/keymaps.types";
 import {
   organizeJavaImports,

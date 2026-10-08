@@ -5,8 +5,8 @@ import type { FileEntry } from "@/features/file-system/types/app.types";
 import type {
   FileSearchResult,
   SearchFilesResponse,
-} from "@/features/file-search/lib/file-search-api";
-import { searchFilesContent } from "@/features/file-search/lib/file-search-api";
+} from "@/features/file-search/api/file-search-api";
+import { searchFilesContent } from "@/features/file-search/api/file-search-api";
 import { getNativeWorkspaceRootPaths } from "@/features/file-search/utils/file-search-paths";
 import {
   loadProviderSearchFiles,

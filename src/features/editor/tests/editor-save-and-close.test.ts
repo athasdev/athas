@@ -13,7 +13,7 @@ vi.mock("@/features/file-system/controllers/platform", () => ({ writeFile: mocks
 vi.mock("@/features/local-history/api/local-history-api", () => ({
   recordLocalHistoryFile: vi.fn(),
 }));
-vi.mock("@/features/layout/contexts/toast-context", () => ({ showToast: vi.fn() }));
+vi.mock("@/utils/toast", () => ({ showToast: vi.fn() }));
 vi.mock("@tauri-apps/plugin-dialog", () => ({ save: mocks.saveDialog }));
 vi.mock("@/features/editor/lsp/lsp-client", () => ({
   LspClient: { getInstance: () => ({ notifyDocumentSave: vi.fn() }) },

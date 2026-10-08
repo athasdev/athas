@@ -38,7 +38,7 @@ import {
   moveLineUp as moveLineUpOperation,
 } from "../utils/line-operations";
 import { resolveCursorPositionsAtLineEndsForSelection } from "../utils/multi-cursor";
-import { getBufferById } from "../utils/buffer-index";
+import { getBufferById } from "../stores/buffer-index";
 import { readBufferText } from "../services/buffer-text";
 import type {
   EditorAPI,

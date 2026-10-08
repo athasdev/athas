@@ -12,7 +12,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GenerativeUIRenderer } from "@/extensions/ui/components/generative-ui-renderer";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { getBufferById } from "@/features/editor/utils/buffer-index";
+import { getBufferById } from "@/features/editor/stores/buffer-index";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { Button } from "@/ui/button";

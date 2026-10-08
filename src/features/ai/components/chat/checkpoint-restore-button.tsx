@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useCheckpointRestorePlan } from "@/features/ai/hooks/use-checkpoint-restore-plan";
 import { restoreCheckpoint } from "@/features/ai/services/agent-checkpoints-service";
-import { showToast } from "@/features/layout/contexts/toast-context";
+import { showToast } from "@/utils/toast";
 import { showConfirmDialog } from "@/ui/dialog";
 import { HistoryIcon } from "@/ui/icons";
 import { MessageAction } from "@/ui/message";

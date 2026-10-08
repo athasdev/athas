@@ -43,7 +43,7 @@ import {
   normalizeAgentSessionTitle,
 } from "@/features/ai/utils/chat-session-title";
 import { getMessageSearchMatches } from "@/features/ai/utils/message-search";
-import { useToast } from "@/features/layout/contexts/toast-context";
+import { useToast } from "@/utils/toast";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { recordFrictionSignal } from "@/features/telemetry/services/telemetry";
 import { claimContextualTip } from "@/features/onboarding/lib/contextual-teaching";

@@ -1,8 +1,5 @@
 import { useEffect } from "react";
-import {
-  openExternalBrowserUrl,
-  resolveExternalBrowserUrl,
-} from "@/features/window/utils/external-navigation";
+import { openExternalBrowserUrl, resolveExternalBrowserUrl } from "@/utils/external-navigation";
 
 function getAnchorTarget(target: EventTarget | null): HTMLAnchorElement | null {
   if (!(target instanceof Element)) return null;

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useBufferText } from "@/features/editor/hooks/use-buffer-text";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { getBufferById, getBufferByPath } from "@/features/editor/utils/buffer-index";
+import { getBufferById, getBufferByPath } from "@/features/editor/stores/buffer-index";
 import { hasTextContent } from "@/features/panes/types/pane-content.types";
 import { Empty, EmptyDescription } from "@/ui/empty";
 import {

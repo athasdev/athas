@@ -1,11 +1,8 @@
 import { isPermissionGranted, sendNotification } from "@tauri-apps/plugin-notification";
 import { isAnyAthasWindowFocused } from "@/features/ai/services/agent-native-notifications";
 import { useNotificationsStore } from "@/features/notifications/stores/notifications.store";
-import type {
-  NotificationType,
-  ToastInput,
-} from "@/features/notifications/types/notifications.types";
-import { showToast } from "@/features/layout/contexts/toast-context";
+import type { NotificationType } from "@/features/notifications/types/notifications.types";
+import { showToast, type ToastInput } from "@/utils/toast";
 import type { TerminalCommandSummary } from "../types/terminal.types";
 
 export const TERMINAL_LONG_COMMAND_THRESHOLD_MS = 10_000;

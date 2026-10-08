@@ -4,7 +4,7 @@ import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import { getLineTextFromContent } from "@/features/editor/utils/position";
 import { useActiveWorkspaceId } from "@/features/workspace/stores/create-workspace-scoped-store";
 import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
-import { showToast } from "@/features/layout/contexts/toast-context";
+import { showToast } from "@/utils/toast";
 import { LspClient } from "./lsp-client";
 import {
   applyWorkspaceEdit,

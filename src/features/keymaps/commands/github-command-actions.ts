@@ -3,7 +3,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
 import { GITHUB_CONNECTION_URL } from "@/features/github/services/github-token-service";
 import { useGitHubStore } from "@/features/github/stores/github.store";
-import { showToast } from "@/features/layout/contexts/toast-context";
+import { showToast } from "@/utils/toast";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { emitAppEvent } from "@/utils/app-events";

@@ -8,7 +8,7 @@ import { useFileSystemStore } from "@/features/file-system/stores/file-system.st
 import type { FileEntry } from "@/features/file-system/types/app.types";
 import type { ImageContent } from "@/features/ai/types/ai-chat.types";
 import { getAgentMessageAccess } from "@/features/ai/lib/agent-message-access";
-import { useToast } from "@/features/layout/contexts/toast-context";
+import { useToast } from "@/utils/toast";
 
 const EMPTY_PROJECT_FILES: FileEntry[] = [];
 

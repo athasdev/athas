@@ -12,7 +12,7 @@ vi.mock("../services/share-api", () => ({
   updateShare: vi.fn(),
 }));
 vi.mock("@/utils/clipboard", () => ({ writeClipboardText: api.copy }));
-vi.mock("@/features/layout/contexts/toast-context", () => ({
+vi.mock("@/utils/toast", () => ({
   useToast: () => ({ showToast: api.toast }),
 }));
 vi.mock("@tauri-apps/plugin-opener", () => ({ openUrl: vi.fn() }));

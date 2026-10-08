@@ -31,7 +31,7 @@ vi.mock("../stores/buffer.store", () => {
 vi.mock("@/features/panes/hooks/use-pane-buffer-state", () => ({
   useBufferIdOrActive: (bufferId: string | null | undefined) => bufferId ?? "buffer-1",
 }));
-vi.mock("../utils/buffer-index", () => ({
+vi.mock("../stores/buffer-index", () => ({
   getBufferById: (buffers: Array<{ id: string }>, id: string) =>
     buffers.find((buffer) => buffer.id === id),
 }));

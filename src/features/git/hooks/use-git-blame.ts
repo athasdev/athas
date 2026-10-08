@@ -1,7 +1,7 @@
 import { useCallback, useEffect } from "react";
 import { subscribeToEditorDocumentChanges } from "@/features/editor/services/editor-document-events";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { getBufferById } from "@/features/editor/utils/buffer-index";
+import { getBufferById } from "@/features/editor/stores/buffer-index";
 import { useWorkspaceStoreScopeId } from "@/features/workspace/stores/create-workspace-scoped-store";
 import {
   type GitChange,

@@ -11,7 +11,7 @@ import { useBufferStore } from "../../../stores/buffer.store";
 import { useInlineEditToolbarStore } from "../../../stores/inline-edit-toolbar.store";
 import { useEditorStateStore } from "../../../stores/state.store";
 import type { Range } from "../../../types/editor.types";
-import { getBufferById } from "../../../utils/buffer-index";
+import { getBufferById } from "../../../stores/buffer-index";
 import { type CodeMirrorHost, useCodeMirrorExtension } from "../host";
 import { fromEditorPosition, toEditorPosition } from "../position";
 import {

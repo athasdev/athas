@@ -23,11 +23,11 @@ import type {
   CheckpointRestoreResult,
 } from "@/features/ai/types/agent-checkpoints.types";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { getBufferByPath } from "@/features/editor/utils/buffer-index";
+import { getBufferByPath } from "@/features/editor/stores/buffer-index";
 import { getWorkspaceResourceProvider } from "@/features/file-system/services/workspace-resource-provider";
 import { useFileWatcherStore } from "@/features/file-system/stores/file-watcher.store";
 import { emitGitChanged } from "@/features/git/events/git-events";
-import { showToast } from "@/features/layout/contexts/toast-context";
+import { showToast } from "@/utils/toast";
 import { showConfirmDialog } from "@/ui/dialog";
 import { getBaseName } from "@/utils/path-helpers";
 import { readBufferText } from "@/features/editor/services/buffer-text";

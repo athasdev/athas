@@ -8,7 +8,7 @@ const io = vi.hoisted(() => ({
   listFiles: vi.fn(async () => [{ name: "a.ts", path: "/repo/a.ts" }]),
 }));
 
-vi.mock("@/features/file-search/lib/file-search-api", () => ({
+vi.mock("@/features/file-search/api/file-search-api", () => ({
   fffScanStatus: async () => ({ ...io.status }),
   fffListFiles: io.listFiles,
 }));

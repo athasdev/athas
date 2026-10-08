@@ -11,7 +11,7 @@ import type { FileEntry } from "@/features/file-system/types/app.types";
 import type {
   FileSearchResult,
   SearchFilesResponse,
-} from "@/features/file-search/lib/file-search-api";
+} from "@/features/file-search/api/file-search-api";
 import { shouldIgnoreSearchEntry } from "@/features/file-search/utils/file-search-filtering";
 import type { ContentSearchOptions } from "../types/global-search.types";
 import type { ProviderIgnoreRule } from "../workers/search-worker-protocol";

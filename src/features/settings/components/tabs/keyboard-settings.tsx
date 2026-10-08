@@ -32,7 +32,7 @@ import {
 import { getDefaultSetting } from "@/features/settings/config/default-settings";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
-import { useToast } from "@/features/layout/contexts/toast-context";
+import { useToast } from "@/utils/toast";
 import { Button } from "@/ui/button";
 import { Alert, AlertDescription } from "@/ui/alert";
 import { Empty, EmptyDescription } from "@/ui/empty";

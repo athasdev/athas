@@ -1,4 +1,4 @@
-import type { FileSearchResult, SearchMatch } from "@/features/file-search/lib/file-search-api";
+import type { FileSearchResult, SearchMatch } from "@/features/file-search/api/file-search-api";
 
 interface SourceTask {
   filePath: string;

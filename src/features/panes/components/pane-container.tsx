@@ -10,7 +10,7 @@ import {
 } from "@/features/database/providers/provider-registry";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import type { Buffer } from "@/features/editor/stores/buffer.store";
-import { getBufferById } from "@/features/editor/utils/buffer-index";
+import { getBufferById } from "@/features/editor/stores/buffer-index";
 import { isEditorKeyboardTarget } from "@/features/keymaps/utils/editor-keyboard-target";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { stageHunk, unstageHunk } from "@/features/git/api/git-status-api";

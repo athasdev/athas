@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { useToast } from "@/features/layout/contexts/toast-context";
+import { useToast } from "@/utils/toast";
 import { recordFrictionSignal } from "@/features/telemetry/services/telemetry";
 import { emitAppEvent, onAppEvent } from "@/utils/app-events";
 import { useExtensionStore } from "../registry/extension-store";

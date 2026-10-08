@@ -12,7 +12,7 @@ import {
   storeMcpServerSecrets,
 } from "@/features/ai/services/mcp-server-secrets";
 import type { McpServerDraft, McpServerSetting } from "@/features/ai/types/mcp-server.types";
-import { useToast } from "@/features/layout/contexts/toast-context";
+import { useToast } from "@/utils/toast";
 import Section, { SettingRow } from "@/features/settings/components/settings-section";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";

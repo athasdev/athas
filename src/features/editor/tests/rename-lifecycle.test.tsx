@@ -25,7 +25,7 @@ vi.mock("../lsp/lsp-client", () => ({
     }),
   },
 }));
-vi.mock("@/features/layout/contexts/toast-context", () => ({ showToast: mocks.toast }));
+vi.mock("@/utils/toast", () => ({ showToast: mocks.toast }));
 vi.mock("@/features/file-system/services/workspace-resource-provider", () => ({
   getWorkspaceResourceProvider: () => ({ readText: async () => "alpha", writeText: mocks.write }),
 }));

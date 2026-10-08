@@ -5,7 +5,7 @@ import { activateBufferInPaneAndSync } from "@/features/panes/utils/pane-activat
 import { PaneContentHeader } from "@/features/panes/components/pane-content-chrome";
 import type { BrowserContent } from "@/features/panes/types/pane-content.types";
 import { ViewerErrorState } from "@/features/viewer/components/viewer-state";
-import { openExternalBrowserUrl } from "@/features/window/utils/external-navigation";
+import { openExternalBrowserUrl } from "@/utils/external-navigation";
 import { useWorkspaceStoreScopeId } from "@/features/workspace/stores/create-workspace-scoped-store";
 import { Button } from "@/ui/button";
 import {

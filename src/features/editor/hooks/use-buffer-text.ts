@@ -4,7 +4,7 @@ import { hasTextContent, type PaneContent } from "@/features/panes/types/pane-co
 import { getBufferText } from "../services/open-buffer-text";
 import { getLiveDocumentRevision, subscribeLiveDocument } from "../services/live-document-registry";
 import { useBufferStore } from "../stores/buffer.store";
-import { getBufferById } from "../utils/buffer-index";
+import { getBufferById } from "../stores/buffer-index";
 
 /**
  * A number that changes whenever the buffer's text does, including edits an editor view has not

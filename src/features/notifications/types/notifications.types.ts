@@ -1,6 +1,6 @@
-import type { ReactNode } from "react";
+import type { ToastType } from "@/utils/toast";
 
-export type NotificationType = "info" | "success" | "warning" | "error";
+export type NotificationType = ToastType;
 export type NotificationCategory = "athas" | "agent" | "github";
 export type NotificationCategoryFilter = "all" | NotificationCategory;
 
@@ -13,17 +13,4 @@ export interface NotificationEntry {
   createdAt: number;
   updatedAt: number;
   read: boolean;
-}
-
-export interface ToastInput {
-  key?: string;
-  message: string;
-  description?: string;
-  type: NotificationType;
-  duration?: number;
-  icon?: ReactNode;
-  action?: {
-    label: string;
-    onClick: () => void;
-  };
 }

@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { buildDiagnosticsActivityStatus } from "@/features/diagnostics/lib/diagnostics-activity-status";
 import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { getBufferById } from "@/features/editor/utils/buffer-index";
+import { getBufferById } from "@/features/editor/stores/buffer-index";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { WarningIcon } from "@/ui/icons";
 import { SidebarIconButton } from "@/ui/sidebar";

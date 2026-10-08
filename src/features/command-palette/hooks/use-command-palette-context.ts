@@ -4,7 +4,7 @@ import { getAgentCli } from "@/features/ai/lib/agent-clis";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useLspStore } from "@/features/editor/lsp/stores/lsp.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { getBufferById } from "@/features/editor/utils/buffer-index";
+import { getBufferById } from "@/features/editor/stores/buffer-index";
 import {
   selectBrowseSessionsAgentId,
   selectCurrentAgentId,

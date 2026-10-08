@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 const toast = vi.hoisted(() => ({ showToast: vi.fn() }));
-vi.mock("@/features/layout/contexts/toast-context", () => toast);
+vi.mock("@/utils/toast", () => toast);
 
 import { registerCommands } from "@/features/keymaps/commands/command-registry";
 import { defaultKeymaps } from "@/features/keymaps/defaults/default-keymaps";

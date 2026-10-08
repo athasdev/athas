@@ -1,7 +1,7 @@
 import { usePerformanceExperiments } from "../../stores/performance-experiments.store";
 import { useEffect, useState } from "react";
 import { saveTextFileWithDialog } from "@/utils/file-dialogs";
-import { useToast } from "@/features/layout/contexts/toast-context";
+import { useToast } from "@/utils/toast";
 import { TypedConfirmAction } from "@/features/settings/components/typed-confirm-action";
 import { createSettingsExportPayload } from "@/features/settings/lib/settings-import-export";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";

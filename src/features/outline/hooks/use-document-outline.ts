@@ -3,7 +3,7 @@ import { useShallow } from "zustand/react/shallow";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { LspClient } from "@/features/editor/lsp/lsp-client";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { getBufferById } from "@/features/editor/utils/buffer-index";
+import { getBufferById } from "@/features/editor/stores/buffer-index";
 import { hasTextContent } from "@/features/panes/types/pane-content.types";
 import { normalizeOutlineSymbols } from "../utils/outline-symbols";
 import { subscribeLiveDocument } from "@/features/editor/services/live-document-registry";

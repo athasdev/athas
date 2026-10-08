@@ -1,5 +1,5 @@
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { getBufferById } from "@/features/editor/utils/buffer-index";
+import { getBufferById } from "@/features/editor/stores/buffer-index";
 import { BOTTOM_PANE_ID } from "../constants/pane";
 import { usePaneStore } from "../stores/pane.store";
 import type { PaneNode } from "../types/pane.types";

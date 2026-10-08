@@ -7,7 +7,7 @@ import {
   MultibufferWorkspace,
   type MultibufferWorkspaceHandle,
 } from "@/features/editor/components/multibuffer/multibuffer-workspace";
-import { getBufferById } from "@/features/editor/utils/buffer-index";
+import { getBufferById } from "@/features/editor/stores/buffer-index";
 import {
   type FileNavigatorTone,
   type FileNavigatorViewMode,

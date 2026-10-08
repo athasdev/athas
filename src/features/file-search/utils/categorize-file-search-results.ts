@@ -2,7 +2,7 @@ import {
   MAX_FILE_SEARCH_RESULTS,
   MAX_OTHER_FILES_SHOWN,
 } from "@/features/file-search/constants/file-search-limits";
-import type { FffSearchHit } from "@/features/file-search/lib/file-search-api";
+import type { FffSearchHit } from "@/features/file-search/api/file-search-api";
 import type {
   CategorizedFiles,
   FileItem,

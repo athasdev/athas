@@ -4,7 +4,7 @@ import { useExtensionStore } from "@/extensions/registry/extension-store";
 import { deferUntilAfterNextPaint } from "@/features/editor/lsp/deferred-lsp-work";
 import { LspClient } from "@/features/editor/lsp/lsp-client";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { getSourceEditorBufferByPath } from "@/features/editor/utils/buffer-index";
+import { getSourceEditorBufferByPath } from "@/features/editor/stores/buffer-index";
 import { logger } from "@/utils/logger";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 

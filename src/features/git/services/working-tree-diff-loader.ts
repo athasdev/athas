@@ -1,5 +1,5 @@
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { getBufferById } from "@/features/editor/utils/buffer-index";
+import { getBufferById } from "@/features/editor/stores/buffer-index";
 import { getFileDiff } from "../api/git-diff-api";
 import type { MultiFileDiff } from "../types/git-diff.types";
 import type { GitDiff, GitFile } from "../types/git.types";

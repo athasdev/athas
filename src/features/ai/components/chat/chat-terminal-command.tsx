@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/ui/button";
 import { CopyIcon, StopIcon, TerminalIcon } from "@/ui/icons";
 import { writeClipboardText } from "@/utils/clipboard";
-import { useToast } from "@/features/layout/contexts/toast-context";
+import { useToast } from "@/utils/toast";
 import {
   isChatTerminalRunning,
   stopChatTerminalCommand,

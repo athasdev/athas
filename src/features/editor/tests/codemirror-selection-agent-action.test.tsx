@@ -23,7 +23,7 @@ vi.mock("../stores/buffer.store", () => ({
   useBufferStore: (selector: (state: unknown) => unknown) =>
     selector({ buffers: [{ id: "buffer-1", type: "editor", path: "/repo/a.ts", name: "a.ts" }] }),
 }));
-vi.mock("../utils/buffer-index", () => ({
+vi.mock("../stores/buffer-index", () => ({
   getBufferById: (buffers: Array<{ id: string }>, id: string) =>
     buffers.find((buffer) => buffer.id === id),
 }));

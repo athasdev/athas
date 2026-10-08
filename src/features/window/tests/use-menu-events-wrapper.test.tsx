@@ -23,7 +23,7 @@ vi.mock("../lib/menu-actions", () => ({
     return () => {};
   },
 }));
-vi.mock("@/features/layout/contexts/toast-context", () => ({
+vi.mock("@/utils/toast", () => ({
   showToast: io.showToast,
   useToast: () => ({ showToast: vi.fn() }),
 }));

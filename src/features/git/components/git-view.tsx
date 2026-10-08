@@ -11,7 +11,7 @@ import {
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { getBufferById } from "@/features/editor/utils/buffer-index";
+import { getBufferById } from "@/features/editor/stores/buffer-index";
 import type { GitSidebarItemId } from "@/features/layout/config/item-order";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { type GitActivitySection, useSidebarStore } from "@/features/layout/stores/sidebar.store";

@@ -16,7 +16,7 @@ import type {
 } from "../types/editor.types";
 import { readBufferText } from "../services/buffer-text";
 import type { LiveDocumentEdit } from "../services/live-document-registry";
-import { getBufferById } from "../utils/buffer-index";
+import { getBufferById } from "./buffer-index";
 import { trackBufferHistoryChange } from "./buffer-history-tracking";
 import { useBufferStore } from "./buffer.store";
 import { getActiveBufferId } from "@/features/panes/stores/pane-selectors";

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { LspClient } from "@/features/editor/lsp/lsp-client";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { getBufferById } from "@/features/editor/utils/buffer-index";
+import { getBufferById } from "@/features/editor/stores/buffer-index";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { useWorkspaceTabsStore } from "@/features/workspace/stores/workspace-tabs.store";
 import { Button } from "@/ui/button";

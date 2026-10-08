@@ -18,7 +18,7 @@ import {
   type FileNavigatorItem,
   type FileNavigatorViewMode,
 } from "@/features/file-explorer/components/file-navigator-sidebar";
-import { useToast } from "@/features/layout/contexts/toast-context";
+import { useToast } from "@/utils/toast";
 import { writeClipboardText } from "@/utils/clipboard";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/ui/accordion";

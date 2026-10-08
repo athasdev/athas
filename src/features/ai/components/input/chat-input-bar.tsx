@@ -34,7 +34,7 @@ import { useVoiceInput } from "@/features/ai/hooks/use-voice-input";
 import { useComposerFileDrop } from "@/features/ai/hooks/use-composer-file-drop";
 import { getImageMimeType } from "@/utils/image-file-types";
 import { parsePastedImages, restorePastedImages } from "@/features/ai/lib/image-attachments";
-import { useToast } from "@/features/layout/contexts/toast-context";
+import { useToast } from "@/utils/toast";
 import { isAcpAgent } from "@/features/ai/services/ai-chat-service";
 import { useFollowAgentInterrupt } from "./follow-agent-toggle";
 import {

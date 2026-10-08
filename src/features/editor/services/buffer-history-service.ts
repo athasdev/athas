@@ -4,7 +4,7 @@ import {
 } from "../stores/buffer-history-tracking";
 import { useHistoryStore } from "../stores/history.store";
 import type { HistoryEntry } from "../types/history.types";
-import { getBufferById } from "../utils/buffer-index";
+import { getBufferById } from "../stores/buffer-index";
 import { isBufferStoreOwnerLive, type BufferStoreOwner } from "./buffer-store-owner";
 import { readBufferText } from "./buffer-text";
 

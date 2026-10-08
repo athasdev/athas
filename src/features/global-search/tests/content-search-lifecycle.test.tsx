@@ -7,14 +7,14 @@ import { WorkspaceStoreScopeContext } from "@/features/workspace/stores/create-w
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { useGlobalSearchSessionStore } from "../stores/global-search-session.store";
 import { useContentSearch } from "../hooks/use-content-search";
-import type { SearchFilesResponse } from "@/features/file-search/lib/file-search-api";
+import type { SearchFilesResponse } from "@/features/file-search/api/file-search-api";
 const io = vi.hoisted(() => ({
   search: vi.fn(),
   scan: vi.fn(),
   files: vi.fn(),
   providerSearch: vi.fn(),
 }));
-vi.mock("@/features/file-search/lib/file-search-api", () => ({
+vi.mock("@/features/file-search/api/file-search-api", () => ({
   searchFilesContent: io.search,
   fffScanStatus: io.scan,
   fffListFiles: vi.fn(),

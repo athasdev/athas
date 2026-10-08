@@ -12,7 +12,7 @@ import { useActivityBarVisibility } from "@/features/layout/hooks/use-activity-b
 import { useActivityNavigationItems } from "@/features/layout/hooks/use-activity-navigation-items";
 import { useActivityProjectCarousel } from "@/features/layout/hooks/use-activity-project-carousel";
 import { useSidebarPaneController } from "@/features/layout/hooks/use-sidebar-pane-controller";
-import { useToast } from "@/features/layout/contexts/toast-context";
+import { useToast } from "@/utils/toast";
 import { getCollapsedActivityBarWidth } from "@/features/layout/utils/activity-bar-layout";
 import { claimContextualTip } from "@/features/onboarding/lib/contextual-teaching";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";

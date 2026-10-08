@@ -7,7 +7,7 @@ import {
   MAX_OPEN_BUFFERS_SHOWN,
   MAX_RECENT_FILES_NO_QUERY,
 } from "@/features/file-search/constants/file-search-limits";
-import type { FffSearchHit } from "@/features/file-search/lib/file-search-api";
+import type { FffSearchHit } from "@/features/file-search/api/file-search-api";
 import type { CategorizedFiles, FileItem } from "@/features/file-search/types/file-search.types";
 import {
   categorizeFileSearchHits,

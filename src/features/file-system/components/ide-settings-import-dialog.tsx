@@ -4,7 +4,7 @@ import { ArrowLeftIcon, CheckIcon } from "@/ui/icons";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRecentFoldersStore } from "@/features/file-system/stores/recent-folders.store";
-import { useToast } from "@/features/layout/contexts/toast-context";
+import { useToast } from "@/utils/toast";
 import { Button } from "@/ui/button";
 import Command, {
   CommandEmpty,

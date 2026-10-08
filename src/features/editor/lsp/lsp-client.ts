@@ -29,7 +29,7 @@ import { readBufferRevision, readBufferText } from "../services/buffer-text";
 import { subscribeToEditorDocumentChanges } from "../services/editor-document-events";
 import { useBufferStore } from "../stores/buffer.store";
 import type { EditorDocumentChangeEvent } from "../types/editor.types";
-import { getSourceEditorBufferByPath } from "../utils/buffer-index";
+import { getSourceEditorBufferByPath } from "../stores/buffer-index";
 import { logger } from "@/utils/logger";
 import {
   decodeSemanticTokensPayload,

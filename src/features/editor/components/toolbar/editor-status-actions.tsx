@@ -7,7 +7,7 @@ import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcu
 import { setSyntaxHighlightingFilePath } from "@/features/editor/extensions/builtin/syntax-highlighting";
 import { LspClient } from "@/features/editor/lsp/lsp-client";
 import { type LspStatus, useLspStore } from "@/features/editor/lsp/stores/lsp.store";
-import { getBufferById } from "@/features/editor/utils/buffer-index";
+import { getBufferById } from "@/features/editor/stores/buffer-index";
 import { setOutlineVisibilityPreference } from "@/features/outline/actions/outline-visibility";
 import { Spinner } from "@/ui/spinner";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";

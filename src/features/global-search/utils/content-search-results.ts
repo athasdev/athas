@@ -2,7 +2,7 @@ import type {
   FileSearchResult,
   SearchMatch,
   SearchMatchRange,
-} from "@/features/file-search/lib/file-search-api";
+} from "@/features/file-search/api/file-search-api";
 
 function findLineMatchRanges(line: string, regex: RegExp): SearchMatchRange[] {
   const ranges: SearchMatchRange[] = [];

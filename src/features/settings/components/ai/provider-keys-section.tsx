@@ -5,7 +5,7 @@ import { useAvailableProviders } from "@/features/ai/hooks/use-available-provide
 import { useAIProviderSettingsActions } from "@/features/ai/services/providers/ai-provider-settings-registry";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { ModelProvider } from "@/features/ai/types/providers.types";
-import { useToast } from "@/features/layout/contexts/toast-context";
+import { useToast } from "@/utils/toast";
 import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { Button } from "@/ui/button";
 import { showConfirmDialog } from "@/ui/dialog";

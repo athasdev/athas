@@ -24,7 +24,7 @@ vi.mock("@/features/ai/stores/ai-chat.store", () => ({
 vi.mock("@/features/keymaps/stores/keymaps.store", () => ({
   useKeymapStore: { getState: () => ({ actions: { setContext: mocks.setContext } }) },
 }));
-vi.mock("@/features/layout/contexts/toast-context", () => ({ showToast: mocks.showToast }));
+vi.mock("@/utils/toast", () => ({ showToast: mocks.showToast }));
 
 const emptyRects = () => Object.assign([], { item: () => null }) as unknown as DOMRectList;
 Range.prototype.getClientRects = emptyRects;

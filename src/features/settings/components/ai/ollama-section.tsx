@@ -17,7 +17,7 @@ import {
 } from "@/features/ai/services/providers/ai-provider-registry";
 import { isLocalEndpointUrl } from "@/features/ai/lib/local-ai-connection";
 import { checkOllamaConnection } from "@/features/ai/services/providers/ollama-provider";
-import { useToast } from "@/features/layout/contexts/toast-context";
+import { useToast } from "@/utils/toast";
 import { getDefaultSetting } from "@/features/settings/config/default-settings";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";

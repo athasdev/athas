@@ -33,7 +33,7 @@ vi.mock("@/features/editor/stores/buffer.store", () => ({
   },
 }));
 vi.mock("@/features/git/events/git-events", () => ({ emitGitChanged: mocks.emitGitChanged }));
-vi.mock("@/features/layout/contexts/toast-context", () => ({ showToast: mocks.showToast }));
+vi.mock("@/utils/toast", () => ({ showToast: mocks.showToast }));
 vi.mock("@/features/workspace/runtime/workspace-runtime-registry", () => ({
   workspaceRuntimeRegistry: {
     getActiveWorkspaceId: () => "ws",

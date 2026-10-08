@@ -8,7 +8,7 @@ import {
   MIN_INTELLIGENCE_AGENT_STEPS,
 } from "@/features/ai/intelligence/lib/intelligence-agent-steps";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
-import { useToast } from "@/features/layout/contexts/toast-context";
+import { useToast } from "@/utils/toast";
 import { TypedConfirmAction } from "@/features/settings/components/typed-confirm-action";
 import { getDefaultSetting } from "@/features/settings/config/default-settings";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";

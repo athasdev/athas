@@ -1,4 +1,4 @@
-import { getBufferById } from "@/features/editor/utils/buffer-index";
+import { getBufferById } from "@/features/editor/stores/buffer-index";
 import { commands } from "@/bindings/commands";
 import { getDirtyEditorBuffers } from "@/features/editor/utils/editor-buffer-selectors";
 import { isEditorContent, type PaneContent } from "@/features/panes/types/pane-content.types";

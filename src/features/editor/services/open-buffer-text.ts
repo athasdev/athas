@@ -1,6 +1,6 @@
 import { hasTextContent, type PaneContent } from "@/features/panes/types/pane-content.types";
 import { useBufferStore } from "../stores/buffer.store";
-import { getBufferById } from "../utils/buffer-index";
+import { getBufferById } from "../stores/buffer-index";
 import { readBufferText } from "./buffer-text";
 
 function storeFor(workspaceId?: string | null) {

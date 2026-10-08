@@ -12,7 +12,7 @@ vi.mock("../stores/ai-chat.store", () => ({ useAIChatStore: { getState: () => mo
 vi.mock("@/features/editor/stores/buffer.store", () => ({
   useBufferStore: { getState: () => ({ actions: { openContent: mocks.open } }) },
 }));
-vi.mock("@/features/layout/contexts/toast-context", () => ({ showToast: mocks.toast }));
+vi.mock("@/utils/toast", () => ({ showToast: mocks.toast }));
 import { openChatTranscript } from "../services/chat-transcript-service";
 
 beforeEach(() => {

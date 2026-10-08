@@ -22,7 +22,7 @@ vi.mock("@/bindings/commands", () => ({
   },
 }));
 
-import { searchFilesContent } from "../lib/file-search-api";
+import { searchFilesContent } from "../api/file-search-api";
 
 const match = (file_path: string) => ({ file_path, matches: [], total_matches: 1 });
 const summary = {

@@ -1,6 +1,6 @@
 import { trackImmediateBufferHistoryChange } from "@/features/editor/stores/buffer-history-tracking";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { getSourceEditorBufferByPath } from "@/features/editor/utils/buffer-index";
+import { getSourceEditorBufferByPath } from "@/features/editor/stores/buffer-index";
 import { getWorkspaceResourceProvider } from "@/features/file-system/services/workspace-resource-provider";
 import { useFileWatcherStore } from "@/features/file-system/stores/file-watcher.store";
 import { emitGitChanged } from "@/features/git/events/git-events";

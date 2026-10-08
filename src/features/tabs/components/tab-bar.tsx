@@ -5,7 +5,7 @@ import { ArrowsInIcon, ArrowsOutIcon, SidebarIcon } from "@/ui/icons";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { getBufferById } from "@/features/editor/utils/buffer-index";
+import { getBufferById } from "@/features/editor/stores/buffer-index";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { formatDiffBufferLabel } from "@/features/git/utils/diff-buffer-label";

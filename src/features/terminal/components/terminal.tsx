@@ -30,7 +30,7 @@ import {
   type TerminalFileDropDetail,
 } from "@/features/file-system/utils/file-system-drop-controller";
 import { showConfirmDialog } from "@/ui/dialog";
-import { showToast } from "@/features/layout/contexts/toast-context";
+import { showToast } from "@/utils/toast";
 import { readClipboardText, writeClipboardText } from "@/utils/clipboard";
 import { frontendTrace } from "@/utils/frontend-trace";
 import { currentPlatform } from "@/utils/platform";

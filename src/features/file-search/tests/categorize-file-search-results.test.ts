@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import type { FffSearchHit } from "../lib/file-search-api";
+import type { FffSearchHit } from "../api/file-search-api";
 import {
   categorizeFileSearchHits,
   categorizeFuzzyFileSearch,

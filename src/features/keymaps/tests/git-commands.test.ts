@@ -17,7 +17,7 @@ vi.mock("@/features/layout/stores/ui-state.store", () => ({
     }),
   },
 }));
-vi.mock("@/features/layout/contexts/toast-context", () => ({ showToast: mocks.showToast }));
+vi.mock("@/utils/toast", () => ({ showToast: mocks.showToast }));
 vi.mock("@/features/git/stores/git-repository.store", () => ({
   useRepositoryStore: { getState: () => mocks.repo },
 }));

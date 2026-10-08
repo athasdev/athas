@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { commands } from "@/bindings/commands";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { getBufferById } from "@/features/editor/utils/buffer-index";
+import { getBufferById } from "@/features/editor/stores/buffer-index";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { useUIState } from "@/features/layout/stores/ui-state.store";

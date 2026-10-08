@@ -11,7 +11,7 @@ import {
   unstageAllFiles,
 } from "@/features/git/api/git-status-api";
 import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
-import { showToast } from "@/features/layout/contexts/toast-context";
+import { showToast } from "@/utils/toast";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { showConfirmDialog, showPromptDialog } from "@/ui/dialog";
 import { emitAppEvent } from "@/utils/app-events";

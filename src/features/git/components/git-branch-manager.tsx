@@ -12,7 +12,7 @@ import {
   TrashIcon,
 } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useToast } from "@/features/layout/contexts/toast-context";
+import { useToast } from "@/utils/toast";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { Button } from "@/ui/button";
 import {

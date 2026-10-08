@@ -4,7 +4,7 @@ import { keepAgentHunk, rejectAgentHunk } from "@/features/ai/services/agent-edi
 import { useAgentEditsStore } from "@/features/ai/stores/agent-edits.store";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useKeymapStore } from "@/features/keymaps/stores/keymaps.store";
-import { showToast } from "@/features/layout/contexts/toast-context";
+import { showToast } from "@/utils/toast";
 
 /** Keymap context: the focused editor shows unreviewed agent hunks. */
 export const AGENT_EDIT_HUNKS_CONTEXT = "agentEditHunks";

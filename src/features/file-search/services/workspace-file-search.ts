@@ -1,4 +1,4 @@
-import { fffEnsureWorkspaces } from "../lib/file-search-api";
+import { fffEnsureWorkspaces } from "../api/file-search-api";
 import { canUseNativeFileSearch } from "../utils/file-search-paths";
 
 export const ensureWorkspaceFileSearch = async (

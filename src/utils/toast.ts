@@ -1,7 +1,21 @@
-import { useCallback } from "react";
+import { type ReactNode, useCallback } from "react";
 import { toast as sonnerToast } from "sonner";
-import type { ToastInput } from "@/features/notifications/types/notifications.types";
 import { emitAppEvent } from "@/utils/app-events";
+
+export type ToastType = "info" | "success" | "warning" | "error";
+
+export interface ToastInput {
+  key?: string;
+  message: string;
+  description?: string;
+  type: ToastType;
+  duration?: number;
+  icon?: ReactNode;
+  action?: {
+    label: string;
+    onClick: () => void;
+  };
+}
 
 interface ToastContextType {
   showToast: (value: ToastInput) => string;

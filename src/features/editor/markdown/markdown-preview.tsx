@@ -1,12 +1,12 @@
 import "./styles.css";
 import { pathExists } from "@/utils/local-files";
-import { openExternalBrowserUrl } from "@/features/window/utils/external-navigation";
+import { openExternalBrowserUrl } from "@/utils/external-navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { editorAPI } from "@/features/editor/extensions/api";
 import { useBufferText } from "@/features/editor/hooks/use-buffer-text";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { getBufferById, getBufferByPath } from "@/features/editor/utils/buffer-index";
+import { getBufferById, getBufferByPath } from "@/features/editor/stores/buffer-index";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { hasTextContent } from "@/features/panes/types/pane-content.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";

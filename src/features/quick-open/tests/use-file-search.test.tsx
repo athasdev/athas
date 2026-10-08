@@ -2,7 +2,7 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import type { FffSearchHit } from "@/features/file-search/lib/file-search-api";
+import type { FffSearchHit } from "@/features/file-search/api/file-search-api";
 import type { CategorizedFiles, FileItem } from "@/features/file-search/types/file-search.types";
 import type { RecentFile } from "@/features/file-system/types/recent-files.types";
 

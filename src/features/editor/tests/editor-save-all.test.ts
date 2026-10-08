@@ -23,7 +23,7 @@ vi.mock("@/features/file-system/services/workspace-resource-provider", () => ({
 vi.mock("@/features/editor/formatter/formatter-service", () => ({
   formatContent: mocks.formatContent,
 }));
-vi.mock("@/features/layout/contexts/toast-context", () => ({ showToast: mocks.showToast }));
+vi.mock("@/utils/toast", () => ({ showToast: mocks.showToast }));
 
 vi.mock("@tauri-apps/plugin-dialog", () => ({ save: mocks.saveDialog }));
 

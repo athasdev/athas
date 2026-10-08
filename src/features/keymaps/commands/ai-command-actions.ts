@@ -12,7 +12,7 @@ import { cycleChatMode, readChatModeSource } from "@/features/ai/services/chat-m
 import { pickAgentEditsChatId } from "@/features/ai/stores/agent-edits.store";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { showToast } from "@/features/layout/contexts/toast-context";
+import { showToast } from "@/utils/toast";
 import {
   selectBrowseSessionsAgentId,
   selectCurrentAgentId,

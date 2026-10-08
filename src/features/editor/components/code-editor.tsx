@@ -16,7 +16,7 @@ import { useEditorScroll } from "@/features/editor/hooks/use-scroll";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import { useEditorViewStore } from "@/features/editor/stores/view.store";
-import { getBufferById } from "@/features/editor/utils/buffer-index";
+import { getBufferById } from "@/features/editor/stores/buffer-index";
 import { calculateLineHeight } from "@/features/editor/utils/lines";
 import { resolveGoToLineTarget } from "@/features/editor/utils/go-to-line";
 import type { EditorModelPositionResolver } from "@/features/editor/types/code-editor-view.types";
