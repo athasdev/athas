@@ -12,7 +12,7 @@ const mocks = vi.hoisted(() => ({
   candidates: [] as Array<{ manifest: { id: string; displayName: string }; path?: string }>,
 }));
 
-vi.mock("@/features/editor/utils/logger", () => ({
+vi.mock("@/utils/logger", () => ({
   logger: { error: mocks.loggerError, warn: vi.fn(), debug: vi.fn(), info: vi.fn() },
 }));
 vi.mock("@/extensions/registry/extension-store", () => ({

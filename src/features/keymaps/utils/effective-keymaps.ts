@@ -1,7 +1,7 @@
 import { getKeybindingPresetDefinition } from "@/features/keymaps/defaults/keybinding-presets";
 import type { Keybinding } from "@/features/keymaps/types/keymaps.types";
 import type { Settings } from "@/features/settings/types/settings.types";
-import { parseKeybinding } from "./parser";
+import { parseKeybinding } from "@/utils/keyboard/keybinding-parser";
 
 interface EffectiveKeybindingsInput {
   preset: Settings["keybindingPreset"];

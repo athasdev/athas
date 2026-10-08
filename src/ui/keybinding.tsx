@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { Kbd, KbdGroup } from "@/ui/kbd";
-import { keybindingToDisplayParts, keysToDisplayParts } from "../utils/keybinding-display";
+import { keybindingToDisplayParts, keysToDisplayParts } from "@/utils/keyboard/keybinding-display";
 
 interface KeybindingProps {
   keys?: string[];

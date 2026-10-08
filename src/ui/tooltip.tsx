@@ -1,6 +1,6 @@
 import { Tooltip as TooltipPrimitive } from "@base-ui/react";
 import type React from "react";
-import Keybinding from "@/features/keymaps/components/keybinding";
+import Keybinding from "@/ui/keybinding";
 import { useOverlayPlacement } from "@/ui/overlay-side";
 import { cn } from "@/utils/cn";
 

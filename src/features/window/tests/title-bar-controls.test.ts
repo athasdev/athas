@@ -60,7 +60,7 @@ describe("title bar controls", () => {
     expect(toggleIndex).toBeGreaterThan(-1);
     expect(projectIndex).toBeGreaterThan(toggleIndex);
     expect(branchIndex).toBeGreaterThan(projectIndex);
-    expect(titleLeadingSource).toContain('commandId="workbench.toggleSidebar"');
+    expect(titleLeadingSource).toContain('useCommandShortcut("workbench.toggleSidebar")');
     expect(titleLeadingSource).toContain('triggerMode="branch"');
     expect(activityChromeSource).not.toContain("<ProjectSwitcher");
     expect(activityChromeSource).not.toContain("<GitBranchManager");

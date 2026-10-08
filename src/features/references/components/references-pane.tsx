@@ -10,6 +10,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { SidebarListItem } from "@/ui/sidebar";
 import { useReferencesStore } from "../stores/references.store";
 import type { Reference } from "../types/reference.types";
+import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 
 interface ReferencesPaneProps {
   onFullScreen?: () => void;
@@ -28,6 +29,7 @@ const getFileName = (filePath: string) => {
 };
 
 const ReferencesPane = ({ onFullScreen, isFullScreen = false }: ReferencesPaneProps) => {
+  const fullScreenShortcut = useCommandShortcut("workbench.toggleActivePaneFullscreen");
   const references = useReferencesStore.use.references();
   const query = useReferencesStore.use.query();
   const isLoading = useReferencesStore.use.isLoading();
@@ -68,7 +70,7 @@ const ReferencesPane = ({ onFullScreen, isFullScreen = false }: ReferencesPanePr
               <Button
                 onClick={onFullScreen}
                 tooltip={isFullScreen ? "Exit fullscreen" : "Fullscreen"}
-                commandId="workbench.toggleActivePaneFullscreen"
+                shortcut={fullScreenShortcut}
                 variant="ghost"
                 iconOnly
               >

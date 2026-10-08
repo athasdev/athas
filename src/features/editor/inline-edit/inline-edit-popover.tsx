@@ -1,4 +1,4 @@
-import { isComposingKeyboardEvent } from "@/features/keymaps/utils/is-composing-keyboard-event";
+import { isComposingKeyboardEvent } from "@/utils/keyboard/is-composing-keyboard-event";
 import { ArrowCornerDownLeftIcon, CheckIcon, XIcon } from "@/ui/icons";
 import { type KeyboardEvent, useRef } from "react";
 import { Alert, AlertDescription } from "@/ui/alert";

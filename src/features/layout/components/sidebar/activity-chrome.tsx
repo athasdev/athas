@@ -33,6 +33,7 @@ import { SidebarIconButton } from "@/ui/sidebar";
 import Tooltip from "@/ui/tooltip";
 import { IS_MAC } from "@/utils/platform";
 import { selectIsTerminalPaneVisible } from "@/features/layout/stores/ui-state/terminal-slice";
+import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 
 export function ActivityChrome() {
   const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
@@ -155,6 +156,7 @@ export function ActivityChrome() {
 }
 
 function TerminalToggle() {
+  const toggleTerminalShortcut = useCommandShortcut("workbench.toggleTerminal");
   const isTerminalOpen = useUIState(selectIsTerminalPaneVisible);
   return (
     <SidebarIconButton
@@ -162,7 +164,7 @@ function TerminalToggle() {
       active={isTerminalOpen}
       onClick={toggleTerminalPane}
       tooltip={isTerminalOpen ? "Hide Terminal" : "Show Terminal"}
-      commandId="workbench.toggleTerminal"
+      shortcut={toggleTerminalShortcut}
       aria-label={isTerminalOpen ? "Hide terminal" : "Show terminal"}
       aria-pressed={isTerminalOpen}
     >

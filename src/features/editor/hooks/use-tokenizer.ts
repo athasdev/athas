@@ -5,7 +5,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
-import { logger } from "@/features/editor/utils/logger";
+import { logger } from "@/utils/logger";
 import { getLanguageAssetConfig } from "../lib/wasm-parser/extension-assets";
 import {
   TokenizerRequestSupersededError,

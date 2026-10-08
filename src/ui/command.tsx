@@ -1,11 +1,10 @@
-import { isComposingKeyboardEvent } from "@/features/keymaps/utils/is-composing-keyboard-event";
+import { isComposingKeyboardEvent } from "@/utils/keyboard/is-composing-keyboard-event";
 import { Dialog as DialogPrimitive } from "@base-ui/react";
 import { cva } from "class-variance-authority";
 import { ArrowClockwiseIcon, DotsIcon, XIcon } from "@/ui/icons";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import type React from "react";
-import { useActionsStore } from "@/features/command-palette/stores/action-history.store";
 import Badge from "@/ui/badge";
 import { Button, buttonVariants, type ButtonProps } from "@/ui/button";
 import { ScrollArea } from "@/ui/scroll-area";
@@ -175,18 +174,11 @@ Command.displayName = "Command";
 interface CommandHeaderProps {
   children: React.ReactNode;
   onClose: () => void;
-  showClearButton?: boolean;
+  onClear?: () => void;
   className?: string;
 }
 
-export const CommandHeader = ({
-  children,
-  onClose,
-  showClearButton = false,
-  className,
-}: CommandHeaderProps) => {
-  const clearActionsStack = useActionsStore.use.actions().clearStack;
-
+export const CommandHeader = ({ children, onClose, onClear, className }: CommandHeaderProps) => {
   return (
     <div
       data-command-header
@@ -194,8 +186,8 @@ export const CommandHeader = ({
     >
       <div className={commandHeaderContentClassName}>
         {children}
-        {showClearButton && (
-          <CommandHeaderAction aria-label="Clear persisted actions" onClick={clearActionsStack}>
+        {onClear && (
+          <CommandHeaderAction aria-label="Clear persisted actions" onClick={onClear}>
             <ArrowClockwiseIcon />
           </CommandHeaderAction>
         )}

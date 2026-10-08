@@ -1,4 +1,4 @@
-import { logger } from "./logger";
+import { logger } from "@/utils/logger";
 import { frontendTrace } from "@/utils/frontend-trace";
 
 interface FileOpenBenchmarkSession {

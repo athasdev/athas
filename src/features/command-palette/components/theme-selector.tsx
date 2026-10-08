@@ -1,4 +1,4 @@
-import { isComposingKeyboardEvent } from "@/features/keymaps/utils/is-composing-keyboard-event";
+import { isComposingKeyboardEvent } from "@/utils/keyboard/is-composing-keyboard-event";
 import { ChevronLeftIcon, SettingsIcon, UploadIcon } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getThemeAppearancePreview } from "@/extensions/appearance/appearance-preview";

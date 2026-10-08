@@ -68,6 +68,7 @@ import { DebugWatchPanel } from "./debugger-watch-panel";
 import { DebugVariablesPanel } from "./debugger-variables-panel";
 import { emitAppEvent, onAppEvent } from "@/utils/app-events";
 import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
+import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 
 type DebuggerPanel = "stack" | "variables" | "watch" | "console" | "breakpoints";
 
@@ -131,6 +132,11 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
   const [startError, setStartError] = useState<string | null>(null);
   const [enabledExceptionFilters, setEnabledExceptionFilters] = useState<Set<string>>(new Set());
   const [activePanel, setActivePanel] = useState<DebuggerPanel>("stack");
+  const toggleBreakpointShortcut = useCommandShortcut("debug.toggleBreakpoint");
+  const fullScreenShortcut = useCommandShortcut("workbench.toggleActivePaneFullscreen");
+  const startShortcut = useCommandShortcut("debug.start");
+  const stopShortcut = useCommandShortcut("debug.stop");
+  const restartShortcut = useCommandShortcut("debug.restart");
   const syncedBreakpointFilesRef = useRef<Set<string>>(new Set());
 
   const generatedConfig = useMemo(
@@ -533,7 +539,7 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
           <Button
             variant="ghost"
             tooltip="Toggle breakpoint at cursor"
-            commandId="debug.toggleBreakpoint"
+            shortcut={toggleBreakpointShortcut}
             onClick={toggleCurrentLineBreakpoint}
             disabled={!activeFile}
             iconOnly
@@ -543,7 +549,7 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
           <Button
             variant="ghost"
             tooltip={isFullScreen ? "Exit full screen Run and Debug" : "Full screen Run and Debug"}
-            commandId="workbench.toggleActivePaneFullscreen"
+            shortcut={fullScreenShortcut}
             onClick={onFullScreen}
             aria-label={
               isFullScreen ? "Exit full screen Run and Debug" : "Full screen Run and Debug"
@@ -638,7 +644,7 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
                 tooltip="Start debugging"
                 onClick={startDebugging}
                 disabled={!canStartDebugging || isActiveSession}
-                commandId="debug.start"
+                shortcut={startShortcut}
                 iconOnly
               >
                 <PlayIcon />
@@ -659,7 +665,7 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
                 tooltip="Stop debugging"
                 disabled={!isActiveSession}
                 onClick={() => void stopDebugging()}
-                commandId="debug.stop"
+                shortcut={stopShortcut}
                 iconOnly
               >
                 <SquareIcon />
@@ -696,7 +702,7 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
                 tooltip="Restart debugging"
                 disabled={!canStartDebugging}
                 onClick={() => void restartDebugging()}
-                commandId="debug.restart"
+                shortcut={restartShortcut}
                 iconOnly
               >
                 <ArrowsClockwiseIcon />

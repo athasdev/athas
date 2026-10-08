@@ -5,7 +5,7 @@
 
 import { Language, Parser, Query } from "web-tree-sitter";
 import treeSitterRuntimeWasmUrl from "web-tree-sitter/web-tree-sitter.wasm?url";
-import { logger } from "../../utils/logger";
+import { logger } from "@/utils/logger";
 import { indexedDBParserCache, type ParserCacheEntry } from "./cache-indexeddb";
 import { computeWasmChecksum, isWasmChecksumValid } from "./checksum";
 import { fetchHighlightQuery } from "./extension-assets";

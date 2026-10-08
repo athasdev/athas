@@ -1,7 +1,7 @@
 /// <reference lib="webworker" />
 
 import type { QueryCapture, Tree } from "web-tree-sitter";
-import { logger } from "../../utils/logger";
+import { logger } from "@/utils/logger";
 import { getLanguageAssetConfig } from "./extension-assets";
 import { getLanguageOverlayTokens } from "./language-overlays";
 import { wasmParserLoader } from "./loader";

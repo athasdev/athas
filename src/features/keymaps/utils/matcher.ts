@@ -3,8 +3,8 @@
  * Matches KeyboardEvent against parsed keybindings
  */
 
-import type { ParsedKey } from "./parser";
-import { parseKeybinding } from "./parser";
+import type { ParsedKey } from "@/utils/keyboard/keybinding-parser";
+import { parseKeybinding } from "@/utils/keyboard/keybinding-parser";
 
 /**
  * Map of event.code to logical key name for special keys

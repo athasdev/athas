@@ -3,7 +3,7 @@
  * Central system for registering and executing commands
  */
 
-import { logger } from "@/features/editor/utils/logger";
+import { logger } from "@/utils/logger";
 import type { Command, Keybinding } from "../types/keymaps.types";
 
 class KeymapRegistry {

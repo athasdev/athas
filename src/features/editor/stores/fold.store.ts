@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { logger } from "@/features/editor/utils/logger";
+import { logger } from "@/utils/logger";
 import { createSelectors } from "@/utils/zustand-selectors";
 
 export interface FoldRegion {

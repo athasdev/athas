@@ -19,6 +19,7 @@ import { ProgressCircle } from "@/ui/progress";
 import { Spinner } from "@/ui/spinner";
 import { TabItem } from "@/ui/tab-bar";
 import { cn } from "@/utils/cn";
+import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 
 interface TerminalTabBarItemProps {
   terminal: Terminal;
@@ -98,6 +99,7 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
   onRenameSubmit,
   onRenameCancel,
 }: TerminalTabBarItemProps) {
+  const closeShortcut = useCommandShortcut(terminal.isPinned ? undefined : "terminal.close");
   const showTabIcons = useSettingsStore((state) => state.settings.showTabIcons);
   const handleAuxClick = useCallback(
     (e: React.MouseEvent) => {
@@ -161,7 +163,7 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
                   }
                 }}
                 tooltip={terminal.isPinned ? "Unpin terminal" : `Close ${terminal.name}`}
-                commandId={terminal.isPinned ? undefined : "terminal.close"}
+                shortcut={closeShortcut}
                 tabIndex={-1}
                 draggable={false}
               >

@@ -1,4 +1,4 @@
-import { isComposingKeyboardEvent } from "@/features/keymaps/utils/is-composing-keyboard-event";
+import { isComposingKeyboardEvent } from "@/utils/keyboard/is-composing-keyboard-event";
 import { ChevronLeftIcon } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {

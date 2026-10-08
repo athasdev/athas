@@ -1,5 +1,5 @@
 import { indexedDBParserCache } from "@/features/editor/lib/wasm-parser/cache-indexeddb";
-import { logger } from "@/features/editor/utils/logger";
+import { logger } from "@/utils/logger";
 
 export interface InstalledLanguage {
   languageId: string;

@@ -1,5 +1,5 @@
 /**
- * Editor logging utility
+ * App logging utility
  * Provides structured logging with levels and can be disabled in production
  */
 
@@ -18,7 +18,7 @@ const LOG_LEVELS: Record<LogLevel, number> = {
   error: 3,
 };
 
-class EditorLogger {
+class AppLogger {
   private config: LoggerConfig = {
     enabled: import.meta.env.DEV, // Only enabled in development
     minLevel: "warn",
@@ -63,4 +63,4 @@ class EditorLogger {
   }
 }
 
-export const logger = new EditorLogger();
+export const logger = new AppLogger();

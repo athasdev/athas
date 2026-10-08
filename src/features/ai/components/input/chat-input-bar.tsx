@@ -1,5 +1,5 @@
 import { ComposerNotice } from "./composer-notice";
-import { isComposingKeyboardEvent } from "@/features/keymaps/utils/is-composing-keyboard-event";
+import { isComposingKeyboardEvent } from "@/utils/keyboard/is-composing-keyboard-event";
 import { getProviderAccessFromMap } from "@/features/ai/stores/ai-chat/provider-actions";
 import {
   ArrowUpIcon,

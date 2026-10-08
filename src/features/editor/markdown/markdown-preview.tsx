@@ -11,7 +11,7 @@ import { useFileSystemStore } from "@/features/file-system/stores/file-system.st
 import { hasTextContent } from "@/features/panes/types/pane-content.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { SearchPopover } from "@/ui/search";
-import { logger } from "../utils/logger";
+import { logger } from "@/utils/logger";
 import {
   highlightMarkdownPreviewMatches,
   isEntireMarkdownPreviewSelected,

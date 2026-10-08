@@ -1,7 +1,7 @@
 import type React from "react";
 import { ChevronLeftIcon } from "@/ui/icons";
 import { useRef, useState } from "react";
-import { logger } from "@/features/editor/utils/logger";
+import { logger } from "@/utils/logger";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
 import { readDirectory } from "@/features/file-system/controllers/platform";

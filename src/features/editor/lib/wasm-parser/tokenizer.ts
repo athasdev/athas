@@ -4,7 +4,7 @@
  */
 
 import type { Tree } from "web-tree-sitter";
-import { logger } from "../../utils/logger";
+import { logger } from "@/utils/logger";
 import { getLanguageAssetConfig } from "./extension-assets";
 import { wasmParserLoader } from "./loader";
 import { getLanguageOverlayTokens } from "./language-overlays";

@@ -14,7 +14,7 @@ import type React from "react";
 import { useLayoutEffect, useRef } from "react";
 import { flushSync } from "react-dom";
 import { createRoot, type Root } from "react-dom/client";
-import { isComposingKeyboardEvent } from "@/features/keymaps/utils/is-composing-keyboard-event";
+import { isComposingKeyboardEvent } from "@/utils/keyboard/is-composing-keyboard-event";
 import {
   SEARCH_TOGGLE_ICONS,
   SearchPopover,

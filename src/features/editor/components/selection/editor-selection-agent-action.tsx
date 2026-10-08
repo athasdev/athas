@@ -2,6 +2,7 @@ import { useId } from "react";
 import { Button } from "@/ui/button";
 import { ChatBubbleTextIcon, SparkleIcon } from "@/ui/icons";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
+import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 
 interface EditorSelectionAgentActionProps {
   anchorRect: { x: number; y: number; width: number; height: number };
@@ -19,6 +20,7 @@ export function EditorSelectionAgentAction({
   onEdit,
   onAddToChat,
 }: EditorSelectionAgentActionProps) {
+  const inlineEditShortcut = useCommandShortcut("editor.inlineEdit");
   const triggerId = useId();
   const anchorX = anchorRect.x + anchorRect.width / 2;
 
@@ -58,7 +60,7 @@ export function EditorSelectionAgentAction({
             type="button"
             variant="ghost"
             tooltip="Edit selection inline"
-            commandId="editor.inlineEdit"
+            shortcut={inlineEditShortcut}
             onMouseDown={(event) => event.preventDefault()}
             onClick={onEdit}
           >

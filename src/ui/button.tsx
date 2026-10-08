@@ -1,6 +1,5 @@
 import { useRender } from "@base-ui/react/use-render";
 import { cva, type VariantProps } from "class-variance-authority";
-import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 import { useControlSize } from "@/ui/control-size";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
@@ -96,7 +95,6 @@ export type ButtonProps = Omit<
     iconOnly?: boolean;
     tooltip?: string;
     shortcut?: string;
-    commandId?: string;
   };
 
 export function Button({
@@ -113,12 +111,9 @@ export function Button({
   ref,
   tooltip,
   shortcut,
-  commandId,
   "aria-label": ariaLabel,
   ...props
 }: ButtonProps) {
-  const commandShortcut = useCommandShortcut(commandId);
-  const effectiveShortcut = commandId ? commandShortcut : shortcut;
   const contextSize = useControlSize();
   const size = sizeProp ?? contextSize ?? "md";
 
@@ -145,7 +140,7 @@ export function Button({
   }
 
   return (
-    <Tooltip content={tooltip} shortcut={effectiveShortcut} width={width}>
+    <Tooltip content={tooltip} shortcut={shortcut} width={width}>
       {element}
     </Tooltip>
   );

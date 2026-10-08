@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { KeyIcon } from "@/ui/icons";
-import Keybinding from "@/features/keymaps/components/keybinding";
+import Keybinding from "@/ui/keybinding";
 import {
   findPermissionOptionForShortcut,
   getPermissionOptionShortcut,

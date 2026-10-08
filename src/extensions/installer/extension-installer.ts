@@ -7,7 +7,7 @@ import {
   indexedDBParserCache,
   type ParserCacheEntry,
 } from "@/features/editor/lib/wasm-parser/cache-indexeddb";
-import { logger } from "@/features/editor/utils/logger";
+import { logger } from "@/utils/logger";
 import { type InstalledLanguage, installedLanguages } from "./installed-languages";
 import { retryWithBackoff, runAbortable } from "./retry-with-backoff";
 

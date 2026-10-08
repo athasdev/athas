@@ -59,6 +59,7 @@ import { useUIState } from "@/features/layout/stores/ui-state.store";
 import TerminalTabBarItem from "./terminal-tab-bar-item";
 import TerminalTabContextMenu from "./terminal-tab-context-menu";
 import { emitAppEvent } from "@/utils/app-events";
+import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 
 interface ToolbarContextMenuProps {
   isOpen: boolean;
@@ -239,6 +240,9 @@ const TerminalTabBar = ({
         ),
     ),
   );
+  const findShortcut = useCommandShortcut("terminal.find");
+  const newTerminalShortcut = useCommandShortcut("terminal.new");
+  const fullScreenShortcut = useCommandShortcut("workbench.toggleActivePaneFullscreen");
   const customProfiles = useTerminalProfilesStore.use.profiles();
   const availableShells = useTerminalShellsStore.use.shells();
   const { openTerminalBuffer } = useBufferStore.use.actions();
@@ -400,7 +404,7 @@ const TerminalTabBar = ({
           iconOnly
           size="sm"
           tooltip="Find in Terminal"
-          commandId="terminal.find"
+          shortcut={findShortcut}
           aria-label="Find in terminal"
         >
           <SearchIcon />
@@ -416,7 +420,7 @@ const TerminalTabBar = ({
                 iconOnly
                 size="sm"
                 tooltip="New Terminal"
-                commandId="terminal.new"
+                shortcut={newTerminalShortcut}
                 aria-label="New terminal"
               />
             }
@@ -439,7 +443,7 @@ const TerminalTabBar = ({
           iconOnly
           size="sm"
           tooltip={isFullScreen ? "Exit Full Screen" : "Full Screen Terminal"}
-          commandId="workbench.toggleActivePaneFullscreen"
+          shortcut={fullScreenShortcut}
           aria-label={isFullScreen ? "Exit full screen terminal" : "Full screen terminal"}
         >
           {isFullScreen ? <ArrowsInIcon /> : <ArrowsOutIcon />}

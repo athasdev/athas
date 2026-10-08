@@ -6,7 +6,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { logger } from "@/features/editor/utils/logger";
+import { logger } from "@/utils/logger";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { resolveEscapeGuard } from "@/utils/keyboard/escape-guard";
 import { isNativeTextInputTarget } from "@/utils/keyboard/text-input-target";
@@ -22,8 +22,8 @@ import { resolveEffectiveKeymapContexts } from "../utils/effective-contexts";
 import { evaluateWhenClause } from "../utils/context";
 import { eventToKey, keysMatch, matchKeybinding } from "../utils/matcher";
 import { isNativeMenuAccelerator } from "../utils/native-menu-accelerators";
-import { parseKeybinding } from "../utils/parser";
-import type { ParsedKey } from "../utils/parser";
+import { parseKeybinding } from "@/utils/keyboard/keybinding-parser";
+import type { ParsedKey } from "@/utils/keyboard/keybinding-parser";
 import { keymapRegistry } from "../utils/registry";
 import { isVimOwnedShortcut } from "../utils/vim-shortcuts";
 

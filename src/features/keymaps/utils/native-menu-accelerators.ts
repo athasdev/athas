@@ -1,5 +1,5 @@
 import { eventToKey, keysMatch } from "./matcher";
-import { parseKeybinding } from "./parser";
+import { parseKeybinding } from "@/utils/keyboard/keybinding-parser";
 
 const NATIVE_MENU_ACCELERATORS = [
   "cmd+n",

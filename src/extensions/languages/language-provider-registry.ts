@@ -1,4 +1,4 @@
-import { logger } from "@/features/editor/utils/logger";
+import { logger } from "@/utils/logger";
 
 export interface LanguageToken {
   start: number;

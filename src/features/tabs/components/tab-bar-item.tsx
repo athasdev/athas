@@ -35,6 +35,7 @@ import { getBaseName } from "@/utils/path-helpers";
 import { cn } from "@/utils/cn";
 import type { MultiFileDiff } from "@/features/git/types/git-diff.types";
 import type { GitDiff } from "@/features/git/types/git.types";
+import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 
 interface TabBarItemProps {
   buffer: PaneContent;
@@ -84,6 +85,7 @@ const TabBarItem = memo(function TabBarItem({
 }: TabBarItemProps) {
   const [avatarError, setAvatarError] = useState(false);
   const agentAttention = useChatAttention(buffer.type === "agent" ? buffer.sessionId : null);
+  const closeShortcut = useCommandShortcut(isPinned ? undefined : "file.close");
   const showTabIcons = useSettingsStore((state) => state.settings.showTabIcons);
   const tabCloseButtonVisibility = useSettingsStore(
     (state) => state.settings.tabCloseButtonVisibility,
@@ -160,7 +162,7 @@ const TabBarItem = memo(function TabBarItem({
                   }
                 }}
                 tooltip={isPinned ? "Unpin tab" : "Close"}
-                commandId={isPinned ? undefined : "file.close"}
+                shortcut={closeShortcut}
                 tabIndex={-1}
                 draggable={false}
               >

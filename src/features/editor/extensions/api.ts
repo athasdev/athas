@@ -18,7 +18,7 @@ import {
   removeBracketPairAtCursor,
 } from "../utils/bracket-matching";
 import { toggleLineComment, getLineCommentTokenForLanguage } from "../utils/comment-toggle";
-import { logger } from "../utils/logger";
+import { logger } from "@/utils/logger";
 import {
   calculateCursorPositionFromContent,
   calculateOffsetFromContentPosition,

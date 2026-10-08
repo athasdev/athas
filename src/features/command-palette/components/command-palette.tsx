@@ -23,7 +23,7 @@ import Command, {
 } from "@/ui/command";
 import { Kbd } from "@/ui/kbd";
 import { SearchMatchHighlight } from "@/components/search-match-highlight";
-import Keybinding from "@/features/keymaps/components/keybinding";
+import Keybinding from "@/ui/keybinding";
 import { commandPaletteOrder } from "../constants/command-palette-order";
 import { useCommandPaletteContext } from "../hooks/use-command-palette-context";
 import { attachCommandPaletteSession } from "../services/command-palette-session";
@@ -98,7 +98,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
   }, []);
 
   const lastEnteredActions = useActionsStore.use.lastEnteredActionsStack();
-  const pushAction = useActionsStore.use.actions().pushAction;
+  const { pushAction, clearStack } = useActionsStore.use.actions();
   const userKeybindings = useKeymapStore.use.keybindings();
   const keybindingPreset = useSettingsStore((state) => state.settings.keybindingPreset);
   const shortcutsByCommand = useMemo(
@@ -218,7 +218,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
         <>
           <CommandHeader
             onClose={onClose}
-            showClearButton={settings.coreFeatures.persistentCommands}
+            onClear={settings.coreFeatures.persistentCommands ? clearStack : undefined}
           >
             <SearchIcon className="size-4 shrink-0 text-subtle-foreground" />
             <CommandInput

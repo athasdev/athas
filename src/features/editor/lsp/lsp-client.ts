@@ -30,7 +30,7 @@ import { subscribeToEditorDocumentChanges } from "../services/editor-document-ev
 import { useBufferStore } from "../stores/buffer.store";
 import type { EditorDocumentChangeEvent } from "../types/editor.types";
 import { getSourceEditorBufferByPath } from "../utils/buffer-index";
-import { logger } from "../utils/logger";
+import { logger } from "@/utils/logger";
 import {
   decodeSemanticTokensPayload,
   type LspSemanticTokensResponse,

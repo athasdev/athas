@@ -40,6 +40,7 @@ import {
   resolveBrowserAddress,
 } from "../utils/browser-address";
 import { onAppEvent } from "@/utils/app-events";
+import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 
 interface BrowserViewProps {
   buffer: BrowserContent;
@@ -51,6 +52,9 @@ export function BrowserView({ buffer, paneId, isActive }: BrowserViewProps) {
   const workspaceId = useWorkspaceStoreScopeId();
   const { setContext } = useKeymapStore.use.actions();
   const { isLoading, canGoBack, canGoForward, error } = useBrowserTabState(buffer.id);
+  const backShortcut = useCommandShortcut("browser.back");
+  const forwardShortcut = useCommandShortcut("browser.forward");
+  const reloadShortcut = useCommandShortcut(isLoading ? undefined : "browser.reload");
   const slotRef = useRef<HTMLDivElement>(null);
   const addressRef = useRef<HTMLInputElement>(null);
   const [draft, setDraft] = useState<string | null>(null);
@@ -116,7 +120,7 @@ export function BrowserView({ buffer, paneId, isActive }: BrowserViewProps) {
               variant="ghost"
               iconOnly
               tooltip="Back"
-              commandId="browser.back"
+              shortcut={backShortcut}
               disabled={isBlank || canGoBack === false}
               onClick={() => browserTabManager.perform(buffer.id, "back")}
             >
@@ -126,7 +130,7 @@ export function BrowserView({ buffer, paneId, isActive }: BrowserViewProps) {
               variant="ghost"
               iconOnly
               tooltip="Forward"
-              commandId="browser.forward"
+              shortcut={forwardShortcut}
               disabled={isBlank || canGoForward === false}
               onClick={() => browserTabManager.perform(buffer.id, "forward")}
             >
@@ -136,7 +140,7 @@ export function BrowserView({ buffer, paneId, isActive }: BrowserViewProps) {
               variant="ghost"
               iconOnly
               tooltip={isLoading ? "Stop" : "Reload"}
-              commandId={isLoading ? undefined : "browser.reload"}
+              shortcut={reloadShortcut}
               disabled={isBlank}
               onClick={() => browserTabManager.perform(buffer.id, isLoading ? "stop" : "reload")}
             >

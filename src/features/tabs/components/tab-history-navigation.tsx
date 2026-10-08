@@ -5,9 +5,12 @@ import { useJumpListStore } from "@/features/editor/stores/jump-list.store";
 import { navigateToJumpEntry } from "@/features/editor/utils/jump-navigation";
 import { Button } from "@/ui/button";
 import { ArrowLeftIcon, ArrowRightIcon } from "@/ui/icons";
+import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 
 /** Back and forward through the jump list, leading the tab bar. */
 export function TabHistoryNavigation() {
+  const goBackShortcut = useCommandShortcut("navigation.goBack");
+  const goForwardShortcut = useCommandShortcut("navigation.goForward");
   const entries = useJumpListStore.use.entries();
   const currentIndex = useJumpListStore.use.currentIndex();
   const { goBack, goForward } = useJumpListStore.use.actions();
@@ -46,7 +49,7 @@ export function TabHistoryNavigation() {
         disabled={!canGoBack}
         variant="ghost"
         tooltip="Go Back"
-        commandId="navigation.goBack"
+        shortcut={goBackShortcut}
         aria-label="Go back to previous location"
         iconOnly
         size="sm"
@@ -59,7 +62,7 @@ export function TabHistoryNavigation() {
         disabled={!canGoForward}
         variant="ghost"
         tooltip="Go Forward"
-        commandId="navigation.goForward"
+        shortcut={goForwardShortcut}
         aria-label="Go forward to next location"
         iconOnly
         size="sm"

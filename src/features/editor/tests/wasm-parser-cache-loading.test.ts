@@ -17,7 +17,7 @@ vi.mock("@/extensions/languages/language-packager", () => ({
 vi.mock("../lib/wasm-parser/extension-assets", () => ({
   fetchHighlightQuery: async () => ({ query: null }),
 }));
-vi.mock("../utils/logger", () => ({
+vi.mock("@/utils/logger", () => ({
   logger: { debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
 vi.mock("web-tree-sitter", () => ({

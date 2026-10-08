@@ -7,6 +7,7 @@ import { useWorkspaceTabsStore } from "@/features/workspace/stores/workspace-tab
 import { SidebarIcon } from "@/ui/icons";
 import { Toggle } from "@/ui/toggle";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
+import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 
 /**
  * The leading end of the title bar, next to the window controls: the sidebar toggle, then the
@@ -15,6 +16,7 @@ import { useProjectStore } from "@/features/workspace/stores/project.store";
 export function TitleLeading() {
   const isSidebarVisible = useUIState((state) => state.isSidebarVisible);
   const setIsSidebarVisible = useUIState((state) => state.setIsSidebarVisible);
+  const toggleSidebarShortcut = useCommandShortcut("workbench.toggleSidebar");
   const openProjectPicker = useUIState((state) => state.openProjectPicker);
   const projectTabs = useWorkspaceTabsStore.use.projectTabs();
   const activeProject = projectTabs.find((project) => project.isActive);
@@ -35,7 +37,7 @@ export function TitleLeading() {
         pressed={isSidebarVisible}
         onPressedChange={setIsSidebarVisible}
         tooltip={isSidebarVisible ? "Hide Sidebar" : "Show Sidebar"}
-        commandId="workbench.toggleSidebar"
+        shortcut={toggleSidebarShortcut}
         aria-label={isSidebarVisible ? "Hide sidebar" : "Show sidebar"}
       >
         <SidebarIcon />

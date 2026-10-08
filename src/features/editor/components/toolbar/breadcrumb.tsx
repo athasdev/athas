@@ -15,6 +15,7 @@ import { Button } from "@/ui/button";
 import { FilePathBreadcrumb } from "./file-path-breadcrumb";
 import { SymbolBreadcrumb } from "./symbol-breadcrumb";
 import { useBufferIdOrActive } from "@/features/panes/hooks/use-pane-buffer-state";
+import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 
 export interface BreadcrumbProps {
   bufferId?: string;
@@ -54,6 +55,7 @@ export default function Breadcrumb({
     }),
   );
   const showBreadcrumbPath = useSettingsStore((state) => state.settings.coreFeatures.breadcrumbs);
+  const findShortcut = useCommandShortcut("workbench.showFind");
   const extensionActions = useExtensionActions();
 
   const handleSearchClick = () => {
@@ -86,7 +88,7 @@ export default function Breadcrumb({
             variant="ghost"
             iconOnly
             onClick={handleSearchClick}
-            commandId="workbench.showFind"
+            shortcut={findShortcut}
             tooltip="Find in file"
           >
             <SearchIcon />

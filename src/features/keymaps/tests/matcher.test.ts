@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 import { eventToKey, matchKeybinding } from "../utils/matcher";
-import { parseKeybinding } from "../utils/parser";
+import { parseKeybinding } from "@/utils/keyboard/keybinding-parser";
 
 vi.mock("@/utils/platform", () => import("./macos-platform-mock"));
 

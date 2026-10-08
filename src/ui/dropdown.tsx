@@ -18,7 +18,7 @@ import {
 import { ScrollArea } from "@/ui/scroll-area";
 import { cn } from "@/utils/cn";
 import { CheckIcon, ChevronRightIcon, SearchIcon } from "@/ui/icons";
-import Keybinding from "@/features/keymaps/components/keybinding";
+import Keybinding from "@/ui/keybinding";
 import { useOverlayPlacement } from "@/ui/overlay-side";
 import { OverlayRoot } from "@/ui/overlay-root";
 

@@ -13,7 +13,7 @@ import { evictLeastRecentAutoClosableBuffer } from "@/features/editor/stores/buf
 import { createPaneContent } from "@/features/editor/stores/buffer-content-factory";
 import { saveSessionToStore } from "@/features/editor/stores/buffer-session-persistence";
 import { detectLanguageFromFileName } from "@/features/editor/utils/language-detection";
-import { logger } from "@/features/editor/utils/logger";
+import { logger } from "@/utils/logger";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import type { MultiFileDiff } from "@/features/git/types/git-diff.types";
 import type { GitDiff } from "@/features/git/types/git.types";

@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { createSelectors } from "@/utils/zustand-selectors";
 import type { Decoration, Position, Range } from "../types/editor.types";
-import { logger } from "../utils/logger";
+import { logger } from "@/utils/logger";
 
 interface DecorationWithId extends Decoration {
   id: string;

@@ -30,7 +30,7 @@ vi.mock("@/features/editor/lib/wasm-parser/cache-indexeddb", () => ({
   },
 }));
 
-vi.mock("@/features/editor/utils/logger", () => ({
+vi.mock("@/utils/logger", () => ({
   logger: {
     debug: mocks.loggerDebug,
     error: mocks.loggerError,

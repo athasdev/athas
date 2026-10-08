@@ -20,7 +20,7 @@ import { useElapsedSeconds } from "@/features/ai/hooks/use-elapsed-seconds";
 import { writeClipboardText } from "@/utils/clipboard";
 import { cn } from "@/utils/cn";
 import { badgeVariants } from "@/ui/badge";
-import { isComposingKeyboardEvent } from "@/features/keymaps/utils/is-composing-keyboard-event";
+import { isComposingKeyboardEvent } from "@/utils/keyboard/is-composing-keyboard-event";
 import { Button } from "@/ui/button";
 import { GenerativeUIRenderer } from "@/extensions/ui/components/generative-ui-renderer";
 import {

@@ -34,6 +34,7 @@ import { canBrowseAgentSessions, openAgentSessions } from "@/features/ai/lib/ope
 import { useNewAgentAction } from "../../hooks/use-new-agent-action";
 import { isAgentWindow, openAgentInNewWindow } from "@/features/ai/detached/agent-window-service";
 import { requestWindowClose } from "@/features/window/utils/request-window-close";
+import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 
 interface ChatHeaderProps {
   chatId?: string | null;
@@ -88,6 +89,7 @@ export function ChatHeader({
       currentAgentId,
     ),
   );
+  const newAgentShortcut = useCommandShortcut("workbench.agentLauncher");
   const messageSearchInputRef = useRef<HTMLInputElement>(null);
   const workspaceChats = useMemo(
     () => selectAgentSessions(chats, { workspacePath, keepIds: [effectiveChatId] }),
@@ -235,7 +237,7 @@ export function ChatHeader({
                   iconOnly
                   onClick={handleNewAgent}
                   tooltip="New Agent"
-                  commandId="workbench.agentLauncher"
+                  shortcut={newAgentShortcut}
                   aria-label="New Agent"
                 >
                   <PlusIcon />

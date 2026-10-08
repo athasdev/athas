@@ -3,7 +3,7 @@
  * Provides persistent storage for downloaded language parsers
  */
 
-import { logger } from "@/features/editor/utils/logger";
+import { logger } from "@/utils/logger";
 
 const DB_NAME = "athas-parser-cache";
 const DB_VERSION = 1;

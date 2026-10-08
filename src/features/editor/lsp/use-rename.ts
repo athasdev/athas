@@ -14,7 +14,7 @@ import {
   normalizeWorkspaceEditPath,
   type WorkspaceEditContext,
 } from "./workspace-edit";
-import { logger } from "../utils/logger";
+import { logger } from "@/utils/logger";
 import { onAppEvent } from "@/utils/app-events";
 import { getActiveBufferId } from "@/features/panes/stores/pane-selectors";
 import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";

@@ -11,7 +11,7 @@ async function loadParser(platform: string) {
   os.platform = platform;
   vi.resetModules();
   vi.stubGlobal("window", {});
-  const { parseKeybinding } = await import("../utils/parser");
+  const { parseKeybinding } = await import("@/utils/keyboard/keybinding-parser");
   return parseKeybinding;
 }
 

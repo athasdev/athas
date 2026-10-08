@@ -3,7 +3,7 @@ import { useKeymapStore } from "@/features/keymaps/stores/keymaps.store";
 import type { Keybinding } from "@/features/keymaps/types/keymaps.types";
 import { evaluateWhenClause } from "@/features/keymaps/utils/context";
 import { getEffectiveKeybindings } from "@/features/keymaps/utils/effective-keymaps";
-import { parseKeybinding } from "@/features/keymaps/utils/parser";
+import { parseKeybinding } from "@/utils/keyboard/keybinding-parser";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 
