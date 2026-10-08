@@ -149,10 +149,7 @@ describe("useHighlightedMarkdown", () => {
     await act(async () => {});
     expect(latestHtml).toBe(block("a", "highlighted") + block("c", "highlighted"));
     expect(mocks.highlightMarkdownCodeBlocks).toHaveBeenCalledTimes(3);
-    expect(mocks.highlightMarkdownCodeBlocks).toHaveBeenLastCalledWith(
-      block("c"),
-      expect.any(String),
-    );
+    expect(mocks.highlightMarkdownCodeBlocks).toHaveBeenLastCalledWith(block("c"));
   });
 
   it("shows another source's code at once while it is highlighted", async () => {

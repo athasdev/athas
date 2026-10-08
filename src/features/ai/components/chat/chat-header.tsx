@@ -20,7 +20,7 @@ import {
   FileIcon,
 } from "@/ui/icons";
 import { useEffect, useMemo, useRef } from "react";
-import { selectAgentSessions } from "@/features/ai/lib/agent-session-list";
+import { selectAgentSessions } from "@/features/ai/services/agent-session-list";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { useSidebarPaneController } from "@/features/layout/hooks/use-sidebar-pane-controller";

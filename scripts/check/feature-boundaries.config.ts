@@ -183,17 +183,6 @@ export const featureBoundaries: FeatureBoundaryConfig = {
     editor: {
       "stores/buffer-index.ts":
         "Cached id/path lookups over the buffer list, used next to the buffer store.",
-      "lib/wasm-parser/cache-indexeddb.ts":
-        "Tree-sitter parser cache shared with the extension installer and diff highlighting.",
-      "lib/wasm-parser/converter.ts":
-        "Tree-sitter runtime used by language extension installation.",
-      "lib/wasm-parser/extension-assets.ts":
-        "Tree-sitter asset lookup shared with language packaging and diff and search highlighting.",
-      "lib/wasm-parser/loader.ts": "Tree-sitter runtime used by the extension store lifecycle.",
-      "lib/wasm-parser/tokenizer.ts":
-        "Tree-sitter runtime used by language extension installation.",
-      "lib/wasm-parser/tokenizer-worker-client.ts":
-        "Off-thread tokenizer that diff and search excerpts highlight with.",
       "markdown/highlighted-code.tsx":
         "Highlighted code block shared with AI chat and extension diff previews.",
       "markdown/styles.css": "Markdown styles for GitHub and onboarding markdown.",
@@ -292,6 +281,8 @@ export const featureBoundaries: FeatureBoundaryConfig = {
       "components/unsaved-changes-dialog.tsx":
         "Save/discard prompt for closing dirty buffers, tabs and the window.",
       "components/tab-bar.tsx": "The editor tab bar each pane renders.",
+      "components/buffer-type-icon.tsx":
+        "The icon of a tab's content, shared with quick open's list of open tabs.",
       "components/pending-buffer-close-dialog.tsx": MAIN_LAYOUT,
     },
     terminal: {

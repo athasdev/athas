@@ -1,20 +1,9 @@
-import { describe, expect, test, vi } from "vite-plus/test";
-
-const { tokenize } = vi.hoisted(() => ({ tokenize: vi.fn() }));
-
-vi.mock("@/features/editor/lib/wasm-parser/tokenizer-worker-client", () => ({
-  tokenizerWorkerClient: { tokenize },
-}));
-import {
-  createDiffHighlightKey,
-  createDiffHighlightInput,
-  createLineBasedDiffTokenMap,
-  tokenizeDiffContents,
-} from "../hooks/use-git-diff-highlight";
+import { describe, expect, test } from "vite-plus/test";
+import { createDiffHighlightKey, highlightDiffLines } from "../hooks/use-git-diff-highlight";
 import type { GitDiffLine } from "../types/git.types";
 
 describe("git diff highlighting", () => {
-  test("creates line-based fallback tokens for TypeScript diff lines", () => {
+  test("highlights both sides of a TypeScript diff and maps tokens to diff lines", async () => {
     const lines: GitDiffLine[] = [
       {
         line_type: "context",
@@ -22,32 +11,39 @@ describe("git diff highlighting", () => {
         old_line_number: 1,
         new_line_number: 1,
       },
-      {
-        line_type: "removed",
-        content: "return value;",
-        old_line_number: 2,
-      },
-      {
-        line_type: "added",
-        content: "return value + 1;",
-        new_line_number: 2,
-      },
+      { line_type: "removed", content: "return value;", old_line_number: 2 },
+      { line_type: "added", content: "return value + 1;", new_line_number: 2 },
     ];
 
-    const tokenMap = createLineBasedDiffTokenMap(lines, "src/example.ts");
+    const tokenMap = await highlightDiffLines(lines, "src/example.ts");
 
     expect(tokenMap.get(0)).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ type: "token-keyword" }),
-        expect.objectContaining({ type: "token-string" }),
+        expect.objectContaining({ className: "token-keyword", startColumn: 0, endColumn: 6 }),
+        expect.objectContaining({ className: "token-string" }),
       ]),
     );
     expect(tokenMap.get(1)).toEqual(
-      expect.arrayContaining([expect.objectContaining({ type: "token-keyword" })]),
+      expect.arrayContaining([expect.objectContaining({ className: "token-keyword" })]),
     );
     expect(tokenMap.get(2)).toEqual(
-      expect.arrayContaining([expect.objectContaining({ type: "token-number" })]),
+      expect.arrayContaining([
+        expect.objectContaining({ className: "token-number", startColumn: 15, endColumn: 16 }),
+      ]),
     );
+  });
+
+  test("colors a block comment that spans several diff lines", async () => {
+    const lines: GitDiffLine[] = [
+      { line_type: "added", content: "/* first", new_line_number: 1 },
+      { line_type: "added", content: "   second */", new_line_number: 2 },
+    ];
+
+    const tokenMap = await highlightDiffLines(lines, "src/example.ts");
+
+    expect(tokenMap.get(1)).toEqual([
+      expect.objectContaining({ className: "token-comment", startColumn: 0, endColumn: 12 }),
+    ]);
   });
 
   test("keeps equivalent diff inputs stable and detects middle-line changes", () => {
@@ -66,56 +62,6 @@ describe("git diff highlighting", () => {
     );
     expect(createDiffHighlightKey(changedLines, "src/example.ts")).not.toBe(
       createDiffHighlightKey(lines, "src/example.ts"),
-    );
-  });
-
-  test("tokenizes both reconstructed versions in the worker and maps their lines", async () => {
-    const lines: GitDiffLine[] = [
-      { line_type: "context", content: "const value = 1;", old_line_number: 1, new_line_number: 1 },
-      { line_type: "removed", content: "return value;", old_line_number: 2 },
-      { line_type: "added", content: "return value + 1;", new_line_number: 2 },
-    ];
-    tokenize
-      .mockResolvedValueOnce({
-        normalizedText: "",
-        tokens: [
-          {
-            type: "token-old",
-            startIndex: 17,
-            endIndex: 23,
-            startPosition: { row: 1, column: 0 },
-            endPosition: { row: 1, column: 6 },
-          },
-        ],
-      })
-      .mockResolvedValueOnce({
-        normalizedText: "",
-        tokens: [
-          {
-            type: "token-new",
-            startIndex: 17,
-            endIndex: 23,
-            startPosition: { row: 1, column: 0 },
-            endPosition: { row: 1, column: 6 },
-          },
-        ],
-      });
-
-    const tokenMap = await tokenizeDiffContents({
-      input: createDiffHighlightInput(lines, "src/example.ts"),
-      wasmPath: "/typescript.wasm",
-      highlightQuery: "(identifier) @variable",
-    });
-
-    expect(tokenMap.get(1)?.[0]?.type).toBe("token-old");
-    expect(tokenMap.get(2)?.[0]?.type).toBe("token-new");
-    expect(tokenize).toHaveBeenCalledTimes(2);
-    expect(tokenize).toHaveBeenCalledWith(
-      expect.objectContaining({
-        bufferId: "git-diff:src/example.ts:old",
-        latestKey: "git-diff:src/example.ts:old",
-        mode: "full",
-      }),
     );
   });
 });

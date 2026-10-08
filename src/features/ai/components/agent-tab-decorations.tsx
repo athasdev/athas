@@ -6,9 +6,9 @@ import { useChatAttention } from "../hooks/use-chat-attention";
 type AgentBuffer = Extract<PaneContent, { type: "agent" }>;
 
 /** The tab icon of an agent chat: the mark of its agent. */
-export function AgentTabIcon({ buffer }: { buffer: AgentBuffer }) {
+export function AgentTabIcon({ buffer, size = 12 }: { buffer: AgentBuffer; size?: number }) {
   return (
-    <AgentSessionIcon sessionId={buffer.sessionId} size={12} className="text-subtle-foreground" />
+    <AgentSessionIcon sessionId={buffer.sessionId} size={size} className="text-subtle-foreground" />
   );
 }
 

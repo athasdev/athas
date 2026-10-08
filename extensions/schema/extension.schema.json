@@ -136,9 +136,6 @@
     "lsp": {
       "type": "object"
     },
-    "grammar": {
-      "type": "object"
-    },
     "formatter": {
       "type": "object"
     },
@@ -234,9 +231,6 @@
         "icons": {
           "type": "array"
         },
-        "grammars": {
-          "type": "array"
-        },
         "snippets": {
           "type": "array"
         },
@@ -271,9 +265,6 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "grammar": {
-          "type": "object"
-        },
         "lsp": {
           "$ref": "#/$defs/tool"
         },

@@ -73,9 +73,6 @@ export interface ExtensionManifest {
   // LSP configuration
   lsp?: LspConfiguration;
 
-  // Tree-sitter grammar
-  grammar?: GrammarConfiguration;
-
   // Formatter configuration
   formatter?: FormatterConfiguration;
 
@@ -111,7 +108,7 @@ export interface ExtensionManifest {
   permissions?: ExtensionPermissions;
 
   // Runtime capability metadata used by Athas extension packages before they
-  // are normalized into concrete LSP/formatter/linter/grammar fields.
+  // are normalized into concrete LSP/formatter/linter fields.
   capabilities?: Record<string, unknown>;
 
   // Extension icon
@@ -311,17 +308,6 @@ export interface PlatformExecutable {
   win32?: string; // Windows
 }
 
-interface GrammarConfiguration {
-  // Path to tree-sitter grammar WASM
-  wasmPath: string;
-
-  // Scope name (e.g., "source.rust")
-  scopeName: string;
-
-  // Language ID
-  languageId: string;
-}
-
 export interface CommandContribution {
   command: string; // Command ID
   title: string; // Display title
@@ -495,7 +481,6 @@ export interface UIContributions {
   aiProviders?: AIProviderContribution[];
   integrations?: IntegrationContribution[];
   skills?: SkillContribution[];
-  grammars?: GrammarConfiguration[];
   snippets?: SnippetContribution[];
   themes?: ThemeContribution[];
   icons?: IconThemeContribution[];

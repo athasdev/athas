@@ -3,12 +3,17 @@ import { AgentSessionSidebarItem } from "@/features/ai/components/agent-session-
 import { AgentSessionIcon } from "@/features/ai/components/icons/agent-session-icon";
 import { openAgentInNewWindow } from "@/features/ai/detached/services/agent-window-service";
 import { useAgentWindowStore } from "@/features/ai/detached/stores/agent-window.store";
+import { useAgentDisplayNames } from "@/features/ai/hooks/use-agent-display-names";
 import { useChatAttention } from "@/features/ai/hooks/use-chat-attention";
 import { useNewAgentAction } from "@/features/ai/hooks/use-new-agent-action";
 import { selectAcpAgentStatus } from "@/features/ai/services/acp-session-state";
-import { resolveAgentSessionIconId } from "@/features/ai/lib/agent-session-icon";
-import { selectAgentSessions } from "@/features/ai/lib/agent-session-list";
-import { openAgentHistoryChat } from "@/features/ai/lib/open-agent-history";
+import {
+  groupAgentSessionsByActivity,
+  isAgentSessionWorking,
+} from "@/features/ai/lib/agent-session-groups";
+import { resolveAgentSessionIconId } from "@/features/ai/services/agent-session-icon";
+import { selectAgentSessions } from "@/features/ai/services/agent-session-list";
+import { openAgentHistoryChat } from "@/features/ai/services/open-agent-history";
 import {
   canBrowseAgentSessions,
   openAgentSessions,
@@ -26,7 +31,7 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from "@/ui/context-menu";
-import { Empty, EmptyDescription } from "@/ui/empty";
+import { EmptyState } from "@/ui/empty";
 import {
   ArchiveIcon,
   ChevronDownIcon,
@@ -66,11 +71,13 @@ interface AgentRowContext {
   aiModelId: string;
   currentBranch: string | null;
   workspacePath: string | null;
+  getAgentName: (agentId: string) => string;
 }
 
 function AgentRow({ chat, context }: { chat: ChatSession; context: AgentRowContext }) {
   const isInAnotherWindow = useAgentWindowStore((state) => Boolean(state.sessions[chat.id]));
   const attention = useChatAttention(chat.id);
+  const working = useAIChatStore((state) => isAgentSessionWorking(state.messagesByChat[chat.id]));
   const { deleteChat, updateChatTitle, setChatPinned, setChatArchived } = useAIChatStore(
     (state) => state.actions,
   );
@@ -107,7 +114,7 @@ function AgentRow({ chat, context }: { chat: ChatSession; context: AgentRowConte
           agentLabel={
             chat.agentId === "custom"
               ? getProviderById(providerId)?.name || providerId
-              : chat.agentId.replace(/[-_]/g, " ")
+              : context.getAgentName(chat.agentId)
           }
           modelLabel={
             chat.agentId === "custom"
@@ -117,6 +124,8 @@ function AgentRow({ chat, context }: { chat: ChatSession; context: AgentRowConte
               : chat.modelId || "Agent default"
           }
           createdAt={chat.createdAt}
+          lastActiveAt={chat.lastMessageAt}
+          working={working}
           projectName={getProjectNameFromPath(chat.workspacePath || context.workspacePath || "")}
           workspacePath={chat.workspacePath || context.workspacePath}
           branch={chat.branch || context.currentBranch}
@@ -236,6 +245,7 @@ export function AgentsSidebar() {
   const aiModelId = useSettingsStore((state) => state.settings.aiModelId);
   const currentBranch = useGitStore((state) => state.gitStatus?.branch ?? null);
   const handleNewAgent = useNewAgentAction();
+  const { getName: getAgentName } = useAgentDisplayNames();
   const [query, setQuery] = useState("");
   const [showArchived, setShowArchived] = useState(false);
 
@@ -245,24 +255,30 @@ export function AgentsSidebar() {
     aiModelId,
     currentBranch,
     workspacePath,
+    getAgentName,
   };
 
-  const { pinned, recent, archived } = useMemo(() => {
-    const matches = (chat: ChatSession) => matchesSearchQuery(query, [chat.title]);
+  const { pinned, recentGroups, archived } = useMemo(() => {
+    const matches = (chat: ChatSession) =>
+      matchesSearchQuery(query, [
+        chat.title,
+        chat.agentId === "custom" ? null : getAgentName(chat.agentId),
+        chat.branch,
+      ]);
     const active = selectAgentSessions(chats, {
       workspacePath,
       keepIds: [currentChatId],
     }).filter(matches);
     return {
       pinned: active.filter((chat) => chat.isPinned),
-      recent: active.filter((chat) => !chat.isPinned),
+      recentGroups: groupAgentSessionsByActivity(active.filter((chat) => !chat.isPinned)),
       archived: selectAgentSessions(chats, { workspacePath, includeArchived: "only" }).filter(
         matches,
       ),
     };
-  }, [chats, currentChatId, query, workspacePath]);
+  }, [chats, currentChatId, getAgentName, query, workspacePath]);
 
-  const isEmpty = pinned.length === 0 && recent.length === 0 && archived.length === 0;
+  const isEmpty = pinned.length === 0 && recentGroups.length === 0 && archived.length === 0;
 
   return (
     <SidebarPanel data-slot="agents-sidebar">
@@ -291,11 +307,20 @@ export function AgentsSidebar() {
       />
       <SidebarScrollArea>
         {isEmpty ? (
-          <Empty variant="inline" className="px-2 py-1.5">
-            <EmptyDescription>
-              {query.trim() ? "No matching agents" : "No agents in this workspace yet"}
-            </EmptyDescription>
-          </Empty>
+          <EmptyState
+            layout="sidebar"
+            title={query.trim() ? undefined : "No agents yet"}
+            message={
+              query.trim()
+                ? "No matching agents"
+                : "Start an agent to work on this workspace with you."
+            }
+            action={
+              query.trim()
+                ? undefined
+                : { label: "New Agent", icon: <PlusIcon />, onClick: handleNewAgent }
+            }
+          />
         ) : (
           <div className="flex flex-col gap-3">
             {pinned.length > 0 ? (
@@ -306,14 +331,14 @@ export function AgentsSidebar() {
                 ))}
               </section>
             ) : null}
-            {recent.length > 0 ? (
-              <section className="flex flex-col gap-0.5" aria-label="Recent agents">
-                {pinned.length > 0 ? <SidebarSectionLabel>Recent</SidebarSectionLabel> : null}
-                {recent.map((chat) => (
+            {recentGroups.map((group) => (
+              <section key={group.id} className="flex flex-col gap-0.5" aria-label={group.label}>
+                <SidebarSectionLabel>{group.label}</SidebarSectionLabel>
+                {group.chats.map((chat) => (
                   <AgentRow key={chat.id} chat={chat} context={context} />
                 ))}
               </section>
-            ) : null}
+            ))}
             {archived.length > 0 ? (
               <section className="flex flex-col gap-0.5" aria-label="Archived agents">
                 <SidebarListItem

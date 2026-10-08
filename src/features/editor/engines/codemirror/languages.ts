@@ -133,6 +133,21 @@ export const LANGUAGE_LOADERS: Record<string, LanguageLoader> = {
  * so a language override or an extension's id still finds its highlighting.
  */
 const LANGUAGE_ALIASES: Record<string, string> = {
+  js: "javascript",
+  jsx: "javascriptreact",
+  ts: "typescript",
+  tsx: "typescriptreact",
+  py: "python",
+  rb: "ruby",
+  rs: "rust",
+  golang: "go",
+  kt: "kotlin",
+  cs: "csharp",
+  "c++": "cpp",
+  md: "markdown",
+  shell: "bash",
+  console: "bash",
+  markup: "html",
   c_sharp: "csharp",
   "objective-c": "objc",
   objectivec: "objc",
@@ -171,6 +186,7 @@ export function resolveCodeMirrorLanguageId(languageId: string | null | undefine
 }
 
 const loaded = new Map<string, Promise<LanguageSupport | null>>();
+const settled = new Map<string, LanguageSupport | null>();
 
 /** Whether CodeMirror has highlighting for an Athas language id. */
 export function hasCodeMirrorLanguage(languageId: string | null | undefined) {
@@ -188,14 +204,32 @@ export function loadCodeMirrorLanguage(
   if (!id) return Promise.resolve(null);
   let promise = loaded.get(id);
   if (!promise) {
-    promise = LANGUAGE_LOADERS[id]().catch((error: unknown) => {
-      loaded.delete(id);
-      console.error(`Failed to load the ${id} language:`, error);
-      return null;
-    });
+    promise = LANGUAGE_LOADERS[id]().then(
+      (language) => {
+        settled.set(id, language);
+        return language;
+      },
+      (error: unknown) => {
+        loaded.delete(id);
+        console.error(`Failed to load the ${id} language:`, error);
+        return null;
+      },
+    );
     loaded.set(id, promise);
   }
   return promise;
+}
+
+/**
+ * The CodeMirror language for an Athas language id if it has already loaded, so callers can
+ * highlight synchronously; undefined while it still has to load, null when there is none.
+ */
+export function getLoadedCodeMirrorLanguage(
+  languageId: string | null | undefined,
+): LanguageSupport | null | undefined {
+  const id = resolveCodeMirrorLanguageId(languageId);
+  if (!id) return null;
+  return settled.get(id);
 }
 
 export type { LanguageSupport };

@@ -1,6 +1,9 @@
 import { SearchIcon, XIcon } from "@/ui/icons";
 import { type KeyboardEvent, type RefObject, useEffect, useMemo, useRef, useState } from "react";
-import { useTokenizer } from "@/features/editor/hooks/use-tokenizer";
+import {
+  highlightCodeIfReady,
+  loadHighlightLanguage,
+} from "@/features/editor/services/syntax-highlight";
 import { Button } from "@/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/ui/input-group";
 import Textarea from "@/ui/textarea";
@@ -54,20 +57,31 @@ function SqlEditor({
 }: SqlEditorProps) {
   const highlightRef = useRef<HTMLPreElement | null>(null);
   const [completionState, setCompletionState] = useState<SqlCompletionState | null>(null);
-  const { tokens, tokenize, resetForBufferSwitch } = useTokenizer({
-    filePath: "query.sql",
-    bufferId: "database-query-editor",
-    languageIdOverride: "sql",
-    incremental: false,
-  });
-
+  const [isSqlLoaded, setIsSqlLoaded] = useState(
+    () => highlightCodeIfReady("", "sql") !== undefined,
+  );
   useEffect(() => {
-    void tokenize(value);
-  }, [tokenize, value]);
+    if (isSqlLoaded) return;
+    let cancelled = false;
+    void loadHighlightLanguage("sql").then(() => {
+      if (!cancelled) setIsSqlLoaded(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isSqlLoaded]);
 
-  useEffect(() => resetForBufferSwitch, [resetForBufferSwitch]);
-
-  const highlightedSql = useMemo(() => buildSqlHighlightSegments(value, tokens), [tokens, value]);
+  const highlightedSql = useMemo(() => {
+    const segments = isSqlLoaded ? (highlightCodeIfReady(value, "sql") ?? []) : [];
+    return buildSqlHighlightSegments(
+      value,
+      segments.map((segment) => ({
+        start: segment.start,
+        end: segment.end,
+        class_name: segment.className,
+      })),
+    );
+  }, [isSqlLoaded, value]);
   const updateCompletions = (cursor: number, nextValue = value) => {
     const nextState = getSqlCompletions(nextValue, cursor, { tables, columns: tableMeta });
     setCompletionState(nextState.items.length > 0 ? nextState : null);

@@ -5,7 +5,7 @@ import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useStat
 import { appendChatAcpEvent, type ChatAcpEventInput } from "@/features/ai/lib/acp-event-timeline";
 import { acpNoticeToChatEvent } from "@/features/ai/lib/acp-notices";
 import { partitionContextSelections } from "@/features/ai/lib/context-references";
-import { openAgentHistoryChat } from "@/features/ai/lib/open-agent-history";
+import { openAgentHistoryChat } from "@/features/ai/services/open-agent-history";
 import { getAgentMessageAccess } from "@/features/ai/lib/agent-message-access";
 import {
   beginQueuedSendNow,

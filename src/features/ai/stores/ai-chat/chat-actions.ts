@@ -5,7 +5,10 @@ import { resolveIntelligenceConnection } from "@/features/ai/intelligence/servic
 import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { hasProductCapability } from "@/features/auth/services/product-capabilities";
 import type { AgentType, ChatSession, Message } from "@/features/ai/types/ai-chat.types";
-import { hasAgentSessionActivity, selectAgentSessions } from "@/features/ai/lib/agent-session-list";
+import {
+  hasAgentSessionActivity,
+  selectAgentSessions,
+} from "@/features/ai/services/agent-session-list";
 import { isChatInWorkspace } from "@/features/ai/lib/ai-workspace-scope";
 import { coalesceAssistantResponses } from "@/features/ai/lib/assistant-response";
 import { normalizeMessageFollowUpActions } from "@/features/ai/lib/follow-up-actions";

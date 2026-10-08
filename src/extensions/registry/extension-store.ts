@@ -158,11 +158,11 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
 
         try {
           const availableExtensions = get().availableExtensions;
-          const { backendInstalled, indexedDBInstalled, runtimeIssues } =
+          const { backendInstalled, installedLanguageEntries, runtimeIssues } =
             await loadInstalledExtensionsSnapshot(availableExtensions);
           const installedExtensions = buildInstalledExtensionsMap({
             backendInstalled,
-            indexedDBInstalled,
+            installedLanguageEntries,
             availableExtensions,
           });
 

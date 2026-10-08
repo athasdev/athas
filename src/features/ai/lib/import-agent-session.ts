@@ -1,5 +1,5 @@
 import { acpHistoryToMessages } from "./acp-session-history";
-import { openAgentHistoryChat } from "./open-agent-history";
+import { openAgentHistoryChat } from "@/features/ai/services/open-agent-history";
 import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { AgentType } from "@/features/ai/types/ai-chat.types";

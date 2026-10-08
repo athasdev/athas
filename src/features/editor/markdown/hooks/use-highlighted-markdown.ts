@@ -179,11 +179,8 @@ export function useHighlightedMarkdown(
     );
     let cancelled = false;
     void (async () => {
-      for (const [index, block] of pending.entries()) {
-        const highlighted = await highlightMarkdownCodeBlocks(
-          block,
-          `${requestKey}:${index}`,
-        ).catch(() => block);
+      for (const block of pending) {
+        const highlighted = await highlightMarkdownCodeBlocks(block).catch(() => block);
         if (cancelled) return;
         highlightCache.set(block, highlighted);
       }
@@ -194,7 +191,7 @@ export function useHighlightedMarkdown(
     return () => {
       cancelled = true;
     };
-  }, [debounceMs, highlightCache, parsedBlocks, requestKey, sourceKey]);
+  }, [debounceMs, highlightCache, parsedBlocks, sourceKey]);
 
   return rendered.blocks;
 }

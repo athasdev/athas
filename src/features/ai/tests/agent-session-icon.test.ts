@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { resolveAgentSessionIconId } from "@/features/ai/lib/agent-session-icon";
+import { resolveAgentSessionIconId } from "@/features/ai/services/agent-session-icon";
 
 describe("agent session icon", () => {
   it("uses the agent's own mark for agent-backed sessions", () => {

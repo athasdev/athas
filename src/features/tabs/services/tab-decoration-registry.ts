@@ -10,8 +10,8 @@ import type { PaneContent, PaneContentType } from "@/features/panes/types/pane-c
 type TabBuffer<T extends PaneContentType> = Extract<PaneContent, { type: T }>;
 
 export interface TabDecoration<T extends PaneContentType> {
-  /** Replaces the default icon of the tab. */
-  icon?: ComponentType<{ buffer: TabBuffer<T> }>;
+  /** Replaces the default icon of the tab, and of every list of open tabs. */
+  icon?: ComponentType<{ buffer: TabBuffer<T>; size?: number }>;
   /** Shown after the tab's label and its unsaved-changes dot, for state that needs the user. */
   indicator?: ComponentType<{ buffer: TabBuffer<T> }>;
 }

@@ -1,28 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
-import { indexedDBParserCache } from "@/features/editor/lib/wasm-parser/cache-indexeddb";
 import {
-  fetchHighlightQuery,
-  getDefaultParserWasmUrl,
-} from "@/features/editor/lib/wasm-parser/extension-assets";
-import { tokenizerWorkerClient } from "@/features/editor/lib/wasm-parser/tokenizer-worker-client";
-import type { HighlightToken } from "@/features/editor/types/wasm-parser/wasm-parser.types";
-import { buildLineOffsetMap } from "@/features/editor/services/line-offset-map";
+  highlightCode,
+  highlightCodeIfReady,
+  type SyntaxLineToken,
+  type SyntaxSegment,
+  toLineTokens,
+} from "@/features/editor/services/syntax-highlight";
 import { getLanguageIdFromPath } from "@/features/editor/services/language-id";
-import {
-  hasLineBasedSyntaxFallback,
-  tokenizeLineBasedSyntax,
-} from "@/features/editor/services/line-based-syntax";
 import type { GitDiffLine } from "../types/git.types";
-
-function getLanguageId(filePath: string): string | null {
-  return getLanguageIdFromPath(filePath);
-}
 
 interface ReconstructedContent {
   content: string;
   lineMapping: Map<number, number>;
 }
 
+/** The old or new side of the hunk as text, with each text line's index in the diff. */
 function reconstructContent(lines: GitDiffLine[], version: "old" | "new"): ReconstructedContent {
   const contentLines: string[] = [];
   const lineMapping = new Map<number, number>();
@@ -39,142 +31,21 @@ function reconstructContent(lines: GitDiffLine[], version: "old" | "new"): Recon
     }
   });
 
-  return {
-    content: contentLines.join("\n"),
-    lineMapping,
-  };
+  return { content: contentLines.join("\n"), lineMapping };
 }
 
-function mapTokensToDiffLines(
-  tokensByLine: Map<number, HighlightToken[]>,
-  lineMapping: Map<number, number>,
-): Map<number, HighlightToken[]> {
-  const result = new Map<number, HighlightToken[]>();
-
-  for (const [reconstructedLine, tokens] of tokensByLine) {
-    const diffIndex = lineMapping.get(reconstructedLine);
-    if (diffIndex !== undefined) {
-      const adjustedTokens = tokens.map((token) => ({
-        ...token,
-        startPosition: {
-          row: 0,
-          column: token.startPosition.column,
-        },
-        endPosition: {
-          row: token.endPosition.row - token.startPosition.row,
-          column: token.endPosition.column,
-        },
-      }));
-      result.set(diffIndex, adjustedTokens);
-    }
-  }
-
-  return result;
-}
-
-function groupTokensByLine(tokens: HighlightToken[]): Map<number, HighlightToken[]> {
-  const result = new Map<number, HighlightToken[]>();
-  for (const token of tokens) {
-    const line = token.startPosition.row;
-    const lineTokens = result.get(line) ?? [];
+function addSideTokens(
+  target: Map<number, SyntaxLineToken[]>,
+  side: ReconstructedContent,
+  segments: readonly SyntaxSegment[],
+) {
+  for (const token of toLineTokens(side.content, segments)) {
+    const diffIndex = side.lineMapping.get(token.line);
+    if (diffIndex === undefined) continue;
+    const lineTokens = target.get(diffIndex) ?? [];
     lineTokens.push(token);
-    result.set(line, lineTokens);
+    target.set(diffIndex, lineTokens);
   }
-  return result;
-}
-
-function findLineIndexForOffset(lineOffsets: number[], offset: number): number {
-  let low = 0;
-  let high = Math.max(0, lineOffsets.length - 1);
-  let line = 0;
-
-  while (low <= high) {
-    const mid = Math.floor((low + high) / 2);
-    const lineOffset = lineOffsets[mid] ?? 0;
-
-    if (lineOffset <= offset) {
-      line = mid;
-      low = mid + 1;
-    } else {
-      high = mid - 1;
-    }
-  }
-
-  return line;
-}
-
-function tokenizeLineBasedContentByLine(
-  content: string,
-  languageId: string,
-): Map<number, HighlightToken[]> {
-  const tokens = tokenizeLineBasedSyntax(content, languageId);
-  if (tokens.length === 0) return new Map();
-
-  const lineOffsets = buildLineOffsetMap(content);
-  const tokensByLine = new Map<number, HighlightToken[]>();
-
-  for (const token of tokens) {
-    const line = findLineIndexForOffset(lineOffsets, token.start);
-    const lineStart = lineOffsets[line] ?? 0;
-    const nextLineStart = lineOffsets[line + 1];
-    const lineEnd =
-      nextLineStart === undefined ? content.length : Math.max(lineStart, nextLineStart - 1);
-    const startColumn = Math.max(0, token.start - lineStart);
-    const endColumn = Math.min(lineEnd - lineStart, token.end - lineStart);
-
-    if (endColumn <= startColumn) continue;
-
-    const lineTokens = tokensByLine.get(line) ?? [];
-    lineTokens.push({
-      type: token.class_name,
-      startIndex: token.start,
-      endIndex: token.end,
-      startPosition: { row: line, column: startColumn },
-      endPosition: { row: line, column: endColumn },
-    });
-    tokensByLine.set(line, lineTokens);
-  }
-
-  return tokensByLine;
-}
-
-export function createLineBasedDiffTokenMap(
-  lines: GitDiffLine[],
-  filePath: string,
-): Map<number, HighlightToken[]> {
-  const languageId = getLanguageId(filePath);
-  if (!languageId || !hasLineBasedSyntaxFallback(languageId)) return new Map();
-
-  const oldContent = reconstructContent(lines, "old");
-  const newContent = reconstructContent(lines, "new");
-  const oldTokensByLine = tokenizeLineBasedContentByLine(oldContent.content, languageId);
-  const newTokensByLine = tokenizeLineBasedContentByLine(newContent.content, languageId);
-  const oldTokenMap = mapTokensToDiffLines(oldTokensByLine, oldContent.lineMapping);
-  const newTokenMap = mapTokensToDiffLines(newTokensByLine, newContent.lineMapping);
-  const merged = new Map<number, HighlightToken[]>();
-
-  for (const [index, tokens] of oldTokenMap) {
-    merged.set(index, tokens);
-  }
-  for (const [index, tokens] of newTokenMap) {
-    merged.set(index, tokens);
-  }
-
-  return merged;
-}
-
-interface DiffTokenState {
-  key: string;
-  tokenMap: Map<number, HighlightToken[]>;
-}
-
-interface DiffHighlightInput {
-  key: string;
-  filePath: string;
-  languageId: string | null;
-  oldContent: ReconstructedContent;
-  newContent: ReconstructedContent;
-  fallbackTokenMap: Map<number, HighlightToken[]>;
 }
 
 function appendHighlightHash(hash: number, value: string) {
@@ -198,126 +69,68 @@ export function createDiffHighlightKey(lines: GitDiffLine[], filePath: string) {
   return `${filePath}:${lines.length}:${hash.toString(16)}`;
 }
 
-export function createDiffHighlightInput(
+/**
+ * Tokens per diff line. Each side is highlighted as one piece of code, so constructs that span
+ * lines (block comments, template strings) color correctly, then mapped back to diff lines.
+ */
+export async function highlightDiffLines(
   lines: GitDiffLine[],
   filePath: string,
-): DiffHighlightInput {
-  return {
-    key: createDiffHighlightKey(lines, filePath),
-    filePath,
-    languageId: getLanguageId(filePath),
-    oldContent: reconstructContent(lines, "old"),
-    newContent: reconstructContent(lines, "new"),
-    fallbackTokenMap: createLineBasedDiffTokenMap(lines, filePath),
-  };
+): Promise<Map<number, SyntaxLineToken[]>> {
+  const languageId = getLanguageIdFromPath(filePath);
+  const tokenMap = new Map<number, SyntaxLineToken[]>();
+  if (!languageId) return tokenMap;
+
+  for (const version of ["old", "new"] as const) {
+    const side = reconstructContent(lines, version);
+    if (side.content) addSideTokens(tokenMap, side, await highlightCode(side.content, languageId));
+  }
+  return tokenMap;
 }
 
-export async function tokenizeDiffContents({
-  input,
-  wasmPath,
-  highlightQuery,
-}: {
-  input: DiffHighlightInput;
-  wasmPath: string;
-  highlightQuery?: string;
-}): Promise<Map<number, HighlightToken[]>> {
-  const { filePath, languageId, oldContent, newContent, fallbackTokenMap } = input;
-  if (!languageId) return fallbackTokenMap;
+/** Like `highlightDiffLines`, but only when the file's language has already loaded. */
+function highlightDiffLinesIfReady(
+  lines: GitDiffLine[],
+  filePath: string,
+): Map<number, SyntaxLineToken[]> | undefined {
+  const languageId = getLanguageIdFromPath(filePath);
+  const tokenMap = new Map<number, SyntaxLineToken[]>();
+  if (!languageId) return tokenMap;
 
-  const tokenizeVersion = async (version: "old" | "new", content: ReconstructedContent) => {
-    if (!content.content) return new Map<number, HighlightToken[]>();
-    const result = await tokenizerWorkerClient.tokenize({
-      bufferId: `git-diff:${filePath}:${version}`,
-      latestKey: `git-diff:${filePath}:${version}`,
-      content: content.content,
-      languageId,
-      wasmPath,
-      highlightQuery,
-      mode: "full",
-    });
-    return groupTokensByLine(result.tokens);
-  };
-
-  const [oldTokensByLine, newTokensByLine] = await Promise.all([
-    tokenizeVersion("old", oldContent),
-    tokenizeVersion("new", newContent),
-  ]);
-  const merged = new Map<number, HighlightToken[]>();
-  for (const [index, tokens] of mapTokensToDiffLines(oldTokensByLine, oldContent.lineMapping)) {
-    merged.set(index, tokens);
+  for (const version of ["old", "new"] as const) {
+    const side = reconstructContent(lines, version);
+    if (!side.content) continue;
+    const segments = highlightCodeIfReady(side.content, languageId);
+    if (!segments) return undefined;
+    addSideTokens(tokenMap, side, segments);
   }
-  for (const [index, tokens] of mapTokensToDiffLines(newTokensByLine, newContent.lineMapping)) {
-    merged.set(index, tokens);
-  }
-
-  return merged.size > 0 ? merged : fallbackTokenMap;
+  return tokenMap;
 }
+
+const NO_TOKENS = new Map<number, SyntaxLineToken[]>();
 
 export function useDiffHighlighting(
   lines: GitDiffLine[],
   filePath: string,
-): Map<number, HighlightToken[]> {
-  const input = useMemo(() => createDiffHighlightInput(lines, filePath), [filePath, lines]);
-  const [tokenState, setTokenState] = useState<DiffTokenState>({
+): Map<number, SyntaxLineToken[]> {
+  const key = useMemo(() => createDiffHighlightKey(lines, filePath), [filePath, lines]);
+  const ready = useMemo(() => highlightDiffLinesIfReady(lines, filePath), [filePath, lines]);
+  const [loaded, setLoaded] = useState<{ key: string; tokenMap: Map<number, SyntaxLineToken[]> }>({
     key: "",
-    tokenMap: new Map(),
+    tokenMap: NO_TOKENS,
   });
 
   useEffect(() => {
-    const { key, languageId, fallbackTokenMap } = input;
-    if (!languageId) {
-      setTokenState({ key, tokenMap: new Map() });
-      return;
-    }
-
-    const lang = languageId;
+    if (ready) return;
     let cancelled = false;
-    setTokenState({ key, tokenMap: fallbackTokenMap });
-
-    async function tokenize() {
-      try {
-        const cached = await indexedDBParserCache.get(lang);
-
-        let wasmPath = getDefaultParserWasmUrl(lang);
-        let highlightQuery: string | undefined;
-
-        if (cached) {
-          wasmPath = cached.sourceUrl || wasmPath;
-          highlightQuery = cached.highlightQuery;
-        }
-
-        if (!highlightQuery || highlightQuery.trim().length === 0) {
-          try {
-            const { query } = await fetchHighlightQuery(lang, {
-              wasmUrl: wasmPath,
-              cacheMode: "no-store",
-            });
-            highlightQuery = query || highlightQuery;
-          } catch {
-            // Ignore fetch errors
-          }
-        }
-
-        const tokenMap = await tokenizeDiffContents({ input, wasmPath, highlightQuery });
-
-        if (cancelled) return;
-
-        setTokenState({
-          key,
-          tokenMap,
-        });
-      } catch {
-        if (cancelled) return;
-        setTokenState({ key, tokenMap: fallbackTokenMap });
-      }
-    }
-
-    tokenize();
-
+    void highlightDiffLines(lines, filePath).then((tokenMap) => {
+      if (!cancelled) setLoaded({ key, tokenMap });
+    });
     return () => {
       cancelled = true;
     };
-  }, [input]);
+  }, [filePath, key, lines, ready]);
 
-  return tokenState.key === input.key ? tokenState.tokenMap : input.fallbackTokenMap;
+  if (ready) return ready;
+  return loaded.key === key ? loaded.tokenMap : NO_TOKENS;
 }

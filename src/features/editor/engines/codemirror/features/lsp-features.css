@@ -1,11 +1,15 @@
-/* Shared card for the completion popup, its details, hover, and parameter hints. */
+/*
+ * Shared card for the completion popup, its details, hover, and parameter hints. These float over
+ * the code, so they take the overlay plane: with window transparency on, the surface token turns
+ * see-through inside the shell and the code would show through the card.
+ */
 .cm-editor .cm-tooltip.cm-tooltip-autocomplete,
 .cm-editor .cm-tooltip.cm-completionInfo,
 .cm-editor .cm-tooltip.cm-tooltip-hover,
 .cm-editor .cm-tooltip:has(> .cm-athas-signatureHelp) {
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  background: var(--surface);
+  background: var(--overlay);
   color: var(--foreground);
   box-shadow: var(--shadow-popover);
   font-family: var(--app-font-family);

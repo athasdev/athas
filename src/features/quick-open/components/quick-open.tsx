@@ -1,66 +1,42 @@
 import Command, {
-  CommandEmpty,
+  CommandFooter,
   CommandHeader,
   CommandHeaderBadge,
   CommandInput,
   CommandList,
+  CommandTabs,
 } from "@/ui/command";
+import { Kbd, KbdGroup } from "@/ui/kbd";
+import { Fragment } from "react";
+import { QUICK_OPEN_SECTIONS } from "../constants/quick-open-sections";
 import { useQuickOpen } from "../hooks/use-quick-open";
-import { getWorkspaceSymbolKey } from "../hooks/use-workspace-symbol-search";
-import { EmptyState } from "./empty-state";
-import { FileCountBadge } from "./file-count-badge";
-import { FileListItem } from "./file-list-item";
-import { SymbolListItem } from "./symbol-list-item";
+import { QuickOpenItemRow } from "./quick-open-item-row";
+
+const PREFIX_HINTS = QUICK_OPEN_SECTIONS.flatMap((section) =>
+  (section.prefixes ?? [])
+    .slice(0, 1)
+    .map((prefix) => ({ id: section.id, prefix, label: section.label })),
+);
 
 const QuickOpen = () => {
   const {
     isVisible,
+    section,
+    changeSection,
     query,
-    setQuery,
-    debouncedQuery,
+    changeQuery,
     inputRef,
-    handleInputKeyDown,
+    handleKeyDown,
     scrollContainerRef,
     onClose,
-    files,
-    isLoadingFiles,
-    isIndexing,
-    openBufferFiles,
-    recentFilesInResults,
-    otherFiles,
+    result,
     selectedIndex,
-    handleItemSelect,
-    handleItemHover,
     setSelectedIndex,
-    rootFolderPath,
-    isSymbolMode,
-    symbols,
-    isLoadingSymbols,
-    handleSymbolSelect,
-    isWorkspaceSymbolMode,
-    workspaceSymbols,
-    isLoadingWorkspaceSymbols,
-    handleWorkspaceSymbolSelect,
   } = useQuickOpen();
 
   if (!isVisible) {
     return null;
   }
-
-  const hasResults =
-    openBufferFiles.length > 0 || recentFilesInResults.length > 0 || otherFiles.length > 0;
-  const totalResults = openBufferFiles.length + recentFilesInResults.length + otherFiles.length;
-  const resultCount = isSymbolMode
-    ? symbols.length
-    : isWorkspaceSymbolMode
-      ? workspaceSymbols.length
-      : totalResults;
-  const isLoading = isSymbolMode
-    ? isLoadingSymbols
-    : isWorkspaceSymbolMode
-      ? isLoadingWorkspaceSymbols
-      : isLoadingFiles;
-  const symbolSearchQuery = isSymbolMode || isWorkspaceSymbolMode ? query.slice(1).trim() : query;
 
   return (
     <Command isVisible={isVisible} onClose={onClose} title="Quick Open">
@@ -68,159 +44,88 @@ const QuickOpen = () => {
         <CommandInput
           ref={inputRef}
           value={query}
-          onChange={setQuery}
-          onKeyDown={handleInputKeyDown}
-          aria-label="Search files and symbols"
+          onChange={changeQuery}
+          onKeyDown={handleKeyDown}
+          aria-label={`Search ${section.label.toLowerCase()}`}
           role="combobox"
           aria-autocomplete="list"
           aria-expanded="true"
           aria-controls="quick-open-results"
           aria-activedescendant={
-            selectedIndex < resultCount ? `quick-open-option-${selectedIndex}` : undefined
+            selectedIndex < result.items.length ? `quick-open-option-${selectedIndex}` : undefined
           }
-          placeholder={
-            isSymbolMode
-              ? "Type to filter symbols..."
-              : isWorkspaceSymbolMode
-                ? "Type to search symbols across the project..."
-                : "Type to search files..."
-          }
+          placeholder={section.placeholder}
         />
-        {isSymbolMode ? (
-          <CommandHeaderBadge>
-            {isLoadingSymbols ? "..." : `${symbols.length} symbols`}
-          </CommandHeaderBadge>
-        ) : isWorkspaceSymbolMode ? (
-          <CommandHeaderBadge>
-            {isLoadingWorkspaceSymbols ? "..." : `${workspaceSymbols.length} symbols`}
-          </CommandHeaderBadge>
-        ) : (
-          <FileCountBadge
-            totalFiles={files.length}
-            resultCount={totalResults}
-            hasQuery={!!debouncedQuery}
-            isLoading={isLoadingFiles}
-          />
-        )}
+        {result.isLoading ? (
+          <CommandHeaderBadge>...</CommandHeaderBadge>
+        ) : result.summary ? (
+          <CommandHeaderBadge>{result.summary}</CommandHeaderBadge>
+        ) : null}
       </CommandHeader>
+
+      <CommandTabs
+        ariaLabel="Search in"
+        className="pb-1"
+        items={QUICK_OPEN_SECTIONS.map((candidate) => ({
+          id: candidate.id,
+          label: candidate.label,
+          icon: candidate.icon,
+          isActive: candidate.id === section.id,
+          onSelect: () => changeSection(candidate.id),
+        }))}
+      />
 
       <CommandList
         ref={scrollContainerRef}
         id="quick-open-results"
         role="listbox"
-        aria-label={isSymbolMode || isWorkspaceSymbolMode ? "Symbol results" : "File results"}
-        aria-busy={isLoading}
+        aria-label={`${section.label} results`}
+        aria-busy={result.isLoading}
       >
-        {isSymbolMode ? (
-          symbols.length === 0 ? (
-            <CommandEmpty>
-              {isLoadingSymbols ? "Loading symbols..." : "No symbols found"}
-            </CommandEmpty>
-          ) : (
-            symbols.map((symbol, index) => (
-              <SymbolListItem
-                key={`${symbol.name}:${symbol.line}`}
-                symbol={symbol}
-                index={index}
-                isSelected={index === selectedIndex}
-                onClick={handleSymbolSelect}
-                onMouseMove={(idx) => setSelectedIndex(idx)}
-                searchQuery={symbolSearchQuery}
-              />
-            ))
-          )
-        ) : isWorkspaceSymbolMode ? (
-          workspaceSymbols.length === 0 ? (
-            <CommandEmpty>
-              {isLoadingWorkspaceSymbols ? "Loading symbols..." : "No symbols found"}
-            </CommandEmpty>
-          ) : (
-            workspaceSymbols.map((symbol, index) => (
-              <SymbolListItem
-                key={getWorkspaceSymbolKey(symbol)}
-                symbol={symbol}
-                index={index}
-                isSelected={index === selectedIndex}
-                onClick={handleWorkspaceSymbolSelect}
-                onMouseMove={(idx) => setSelectedIndex(idx)}
-                searchQuery={symbolSearchQuery}
-                showFilePath
-              />
-            ))
-          )
-        ) : !hasResults ? (
-          <EmptyState
-            isLoadingFiles={isLoadingFiles}
-            isIndexing={isIndexing}
-            debouncedQuery={debouncedQuery}
-            query={query}
-            filesLength={files.length}
-            hasRootFolder={!!rootFolderPath}
-          />
-        ) : (
-          <>
-            {openBufferFiles.length > 0 && (
-              <div className="p-0">
-                {openBufferFiles.map((file, index) => (
-                  <FileListItem
-                    key={`open-${file.path}`}
-                    file={file}
-                    category="open"
-                    index={index}
-                    isSelected={index === selectedIndex}
-                    onClick={handleItemSelect}
-                    onMouseMove={handleItemHover}
-                    rootFolderPath={rootFolderPath}
-                    searchQuery={debouncedQuery}
-                  />
-                ))}
-              </div>
-            )}
-
-            {recentFilesInResults.length > 0 && (
-              <div className="p-0">
-                {recentFilesInResults.map((file, index) => {
-                  const globalIndex = openBufferFiles.length + index;
-                  return (
-                    <FileListItem
-                      key={`recent-${file.path}`}
-                      file={file}
-                      category="recent"
-                      index={globalIndex}
-                      isSelected={globalIndex === selectedIndex}
-                      onClick={handleItemSelect}
-                      onMouseMove={handleItemHover}
-                      rootFolderPath={rootFolderPath}
-                      searchQuery={debouncedQuery}
-                    />
-                  );
-                })}
-              </div>
-            )}
-
-            {otherFiles.length > 0 && (
-              <div className="p-0">
-                {otherFiles.map((file, index) => {
-                  const globalIndex = openBufferFiles.length + recentFilesInResults.length + index;
-                  return (
-                    <FileListItem
-                      key={`other-${file.path}`}
-                      file={file}
-                      category="other"
-                      index={globalIndex}
-                      isSelected={globalIndex === selectedIndex}
-                      onClick={handleItemSelect}
-                      onMouseMove={handleItemHover}
-                      rootFolderPath={rootFolderPath}
-                      searchQuery={debouncedQuery}
-                    />
-                  );
-                })}
-              </div>
-            )}
-          </>
-        )}
+        {result.items.length === 0
+          ? result.empty
+          : result.items.map((item, index) => (
+              <Fragment key={item.key}>
+                {item.group && item.group !== result.items[index - 1]?.group ? (
+                  <div className="ui-text-chrome px-2.5 pt-2 pb-1 font-medium text-subtle-foreground">
+                    {item.group}
+                  </div>
+                ) : null}
+                <QuickOpenItemRow
+                  item={item}
+                  index={index}
+                  isSelected={index === selectedIndex}
+                  onHover={setSelectedIndex}
+                />
+              </Fragment>
+            ))}
       </CommandList>
+
+      <CommandFooter>
+        <div className="ui-text-caption flex w-full items-center gap-3 px-1 text-subtle-foreground">
+          <KbdGroup>
+            <Kbd>↑</Kbd>
+            <Kbd>↓</Kbd>
+            <span>Navigate</span>
+          </KbdGroup>
+          <KbdGroup>
+            <Kbd>↵</Kbd>
+            <span>Open</span>
+          </KbdGroup>
+          <KbdGroup>
+            <Kbd>Tab</Kbd>
+            <span>Switch section</span>
+          </KbdGroup>
+          <KbdGroup className="ml-auto">
+            {PREFIX_HINTS.map((hint) => (
+              <span key={hint.id} className="inline-flex items-center gap-1">
+                <Kbd>{hint.prefix}</Kbd>
+                <span>{hint.label}</span>
+              </span>
+            ))}
+          </KbdGroup>
+        </div>
+      </CommandFooter>
     </Command>
   );
 };

@@ -1,6 +1,6 @@
 import { commands } from "@/bindings/commands";
 import { listen } from "@tauri-apps/api/event";
-import { installedLanguages } from "../installer/installed-languages";
+import { type InstalledLanguage, installedLanguages } from "../installer/installed-languages";
 import {
   markBundledContributionExtensionUninstalled,
   readInstalledBundledContributionExtensionIds,
@@ -22,12 +22,6 @@ import type {
 } from "./extension-store-types";
 import { PLATFORM_ARCH } from "@/utils/platform";
 import type { ExtensionManifest, PlatformPackage } from "../types/extension-manifest";
-
-interface IndexedDbInstalledExtension {
-  languageId: string;
-  extensionId?: string;
-  version: string;
-}
 
 function bundledMigrationPackage(manifest: ExtensionManifest): PlatformPackage | undefined {
   const installation = manifest.installation;
@@ -92,7 +86,7 @@ export async function loadInstalledExtensionsSnapshot(
   availableExtensions: Map<string, AvailableExtension>,
 ): Promise<{
   backendInstalled: ExtensionInstallationMetadata[];
-  indexedDBInstalled: IndexedDbInstalledExtension[];
+  installedLanguageEntries: InstalledLanguage[];
   runtimeIssues: Map<string, ExtensionRuntimeIssue[]>;
 }> {
   let backendInstalled: ExtensionInstallationMetadata[] = [];
@@ -108,11 +102,11 @@ export async function loadInstalledExtensionsSnapshot(
     availableExtensions,
     backendInstalled,
   );
-  const indexedDBInstalled = await installedLanguages.list();
+  const installedLanguageEntries = await installedLanguages.list();
   const disabledExtensionIds = readDisabledExtensionIds();
 
   await Promise.all(
-    indexedDBInstalled.map(async (installed) => {
+    installedLanguageEntries.map(async (installed) => {
       const languageId = installed.languageId;
       const extensionId = resolveInstalledExtensionId(installed, availableExtensions);
       const extension = getExtensionManifestForLanguage(
@@ -160,17 +154,17 @@ export async function loadInstalledExtensionsSnapshot(
 
   return {
     backendInstalled,
-    indexedDBInstalled,
+    installedLanguageEntries,
     runtimeIssues,
   };
 }
 
 export function buildInstalledExtensionsMap(params: {
   backendInstalled: ExtensionInstallationMetadata[];
-  indexedDBInstalled: IndexedDbInstalledExtension[];
+  installedLanguageEntries: InstalledLanguage[];
   availableExtensions: Map<string, AvailableExtension>;
 }): Map<string, ExtensionInstallationMetadata> {
-  const { backendInstalled, indexedDBInstalled, availableExtensions } = params;
+  const { backendInstalled, installedLanguageEntries, availableExtensions } = params;
   const disabledExtensionIds = readDisabledExtensionIds();
   const installedExtensions = new Map(
     backendInstalled
@@ -184,7 +178,7 @@ export function buildInstalledExtensionsMap(params: {
       ]),
   );
 
-  for (const installed of indexedDBInstalled) {
+  for (const installed of installedLanguageEntries) {
     const extensionId = resolveInstalledExtensionId(installed, availableExtensions);
     if (isRetiredExtensionId(extensionId)) {
       continue;

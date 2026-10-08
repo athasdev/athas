@@ -1,5 +1,4 @@
 import { commands } from "@/bindings/commands";
-import { wasmParserLoader } from "@/features/editor/lib/wasm-parser/loader";
 import { PLATFORM_ARCH } from "@/utils/platform";
 import { getServiceUrls } from "@/config/services";
 import { installedLanguages } from "../installer/installed-languages";
@@ -29,12 +28,7 @@ async function unloadLanguageProviders(extensionId: string, languageIds: string[
 }
 
 async function uninstallLanguageArtifacts(languageIds: string[]) {
-  await Promise.all(
-    languageIds.map(async (languageId) => {
-      wasmParserLoader.unloadParser(languageId);
-      await installedLanguages.uninstall(languageId);
-    }),
-  );
+  await Promise.all(languageIds.map((languageId) => installedLanguages.uninstall(languageId)));
 }
 
 function withCdnCacheBuster(url: string): string {
@@ -156,7 +150,6 @@ export async function installExtensionLifecycle(params: {
         }),
       ),
     );
-
     return;
   }
 
@@ -244,7 +237,6 @@ export async function enableExtensionLifecycle(params: {
         }),
       ),
     );
-
     return;
   }
 
