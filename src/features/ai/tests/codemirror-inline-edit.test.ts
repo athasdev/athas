@@ -6,8 +6,8 @@ import {
   applyCodeMirrorInlineEdit,
   inlineEditPreviewExtension,
   showCodeMirrorInlineEditPreview,
-} from "../engines/codemirror/features/inline-edit-preview";
-import { buildLineOffsets } from "../services/line-offsets";
+} from "../editor/inline-edit-preview";
+import { buildLineOffsets } from "@/features/editor/services/line-offsets";
 
 const emptyRects = () => Object.assign([], { item: () => null }) as unknown as DOMRectList;
 Range.prototype.getClientRects = emptyRects;

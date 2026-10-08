@@ -76,6 +76,27 @@ vi.mock("@/extensions/ui/hooks/use-extension-views", () => ({
   useExtensionViews: () => new Map(),
 }));
 
+const { registerCollaborationViews } =
+  await import("@/features/collaboration/services/collaboration-views");
+const { registerDatabaseViews } = await import("@/features/database/services/database-views");
+const { registerDockerViews } = await import("@/features/docker/services/docker-views");
+const { registerFileExplorerViews } =
+  await import("@/features/file-explorer/services/file-explorer-views");
+const { registerGitViews } = await import("@/features/git/services/git-views");
+const { registerGitHubViews } = await import("@/features/github/services/github-views");
+const { registerCustomViews } = await import("@/features/views/services/views-views");
+const { registerWorkspaceViews } =
+  await import("@/features/workspace/team/services/workspace-views");
+
+registerGitViews();
+registerGitHubViews();
+registerCustomViews();
+registerDockerViews();
+registerWorkspaceViews();
+registerDatabaseViews();
+registerFileExplorerViews();
+registerCollaborationViews();
+
 let root: Root;
 let container: HTMLDivElement;
 

@@ -1,19 +1,25 @@
 import { useCallback, useEffect, useLayoutEffect, useReducer, useRef, type RefObject } from "react";
 import { useOnClickOutside } from "usehooks-ts";
 import { InlineEditPopover } from "@/features/ai/inline-edit/components/inline-edit-popover";
-import type { InlineEditPreview } from "../../../types/inline-edit-preview.types";
+import type { InlineEditPreview } from "@/features/editor/types/inline-edit-preview.types";
 import { useInlineEdit } from "@/features/ai/inline-edit/hooks/use-inline-edit";
-import { useBufferText } from "../../../hooks/use-buffer-text";
-import { useEditorViewSettings } from "../../../hooks/use-editor-view-settings";
+import { useBufferText } from "@/features/editor/hooks/use-buffer-text";
+import { useEditorViewSettings } from "@/features/editor/hooks/use-editor-view-settings";
 import { useShallow } from "zustand/react/shallow";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
-import { useBufferStore } from "../../../stores/buffer.store";
-import { useInlineEditToolbarStore } from "../../../stores/inline-edit-toolbar.store";
-import { useEditorStateStore } from "../../../stores/state.store";
-import type { Range } from "../../../types/editor.types";
-import { getBufferById } from "../../../stores/buffer-index";
-import { type CodeMirrorHost, useCodeMirrorExtension } from "../host";
-import { fromEditorPosition, toEditorPosition } from "../position";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar.store";
+import { useEditorStateStore } from "@/features/editor/stores/state.store";
+import type { Range } from "@/features/editor/types/editor.types";
+import { getBufferById } from "@/features/editor/stores/buffer-index";
+import {
+  type CodeMirrorHost,
+  useCodeMirrorExtension,
+} from "@/features/editor/engines/codemirror/host";
+import {
+  fromEditorPosition,
+  toEditorPosition,
+} from "@/features/editor/engines/codemirror/position";
 import {
   applyCodeMirrorInlineEdit,
   inlineEditPreviewExtension,

@@ -31,6 +31,9 @@ import { DeferredEventDialog } from "@/components/deferred-event-dialog";
 import { AppQueryProvider } from "@/components/app-query-provider";
 import { bucketFrictionDuration } from "@/features/telemetry/services/friction-signals";
 import { recordFrictionSignal } from "@/features/telemetry/services/telemetry";
+import { registerWorkbenchContributions } from "@/features/bootstrap/services/register-workbench-contributions";
+
+registerWorkbenchContributions();
 
 // Dialogs that open on a window event load the first time they are asked for.
 const loadAgentSessionsDialog = () =>

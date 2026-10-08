@@ -1,4 +1,4 @@
-import type { DatabaseType } from "@/features/database/types/provider.types";
+import type { DatabaseType } from "@/features/panes/types/pane-content.types";
 import { getLanguageIdFromPath } from "@/features/editor/services/language-id";
 import { isSupportedImageFile } from "@/utils/image-file-types";
 import { getBaseName } from "@/utils/path-helpers";

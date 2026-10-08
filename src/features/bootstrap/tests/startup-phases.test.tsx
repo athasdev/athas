@@ -61,6 +61,9 @@ vi.mock("@/extensions/runtime/extension-runtime", () => ({
     mocks.state.events.push("extensions");
   },
 }));
+vi.mock("@/features/ai/intelligence/hooks/use-intelligence-settings-sync", () => ({
+  useIntelligenceSettingsSync: () => undefined,
+}));
 vi.mock("@/features/settings/hooks/use-settings-sync", () => ({
   useSettingsSync: mocks.useSettingsSync,
 }));

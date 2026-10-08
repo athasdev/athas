@@ -3,8 +3,8 @@ import { EditorState } from "@codemirror/state";
 import { EditorView, lineNumbers } from "@codemirror/view";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import type { DebugBreakpoint } from "@/features/debugger/types/debugger.types";
+import { BREAKPOINT_GUTTER_CLASS } from "../config/constants";
 import {
-  BREAKPOINT_GUTTER_CLASS,
   breakpointGutter,
   hasBreakpointMarker,
   setBreakpoints,

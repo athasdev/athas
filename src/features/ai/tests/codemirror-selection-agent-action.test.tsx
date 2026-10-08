@@ -4,7 +4,7 @@ import { EditorView } from "@codemirror/view";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import type { CodeMirrorHost } from "../engines/codemirror/host";
+import type { CodeMirrorHost } from "@/features/editor/engines/codemirror/host";
 
 const mocks = vi.hoisted(() => ({
   inlineEditVisible: false,
@@ -13,24 +13,24 @@ const mocks = vi.hoisted(() => ({
   anchorRects: [] as Array<{ x: number; y: number; width: number; height: number }>,
 }));
 
-vi.mock("../stores/inline-edit-toolbar.store", () => ({
+vi.mock("@/features/editor/stores/inline-edit-toolbar.store", () => ({
   useInlineEditToolbarStore: {
     use: { isVisible: () => mocks.inlineEditVisible },
     getState: () => ({ actions: { show: mocks.showInlineEdit } }),
   },
 }));
-vi.mock("../stores/buffer.store", () => ({
+vi.mock("@/features/editor/stores/buffer.store", () => ({
   useBufferStore: (selector: (state: unknown) => unknown) =>
     selector({ buffers: [{ id: "buffer-1", type: "editor", path: "/repo/a.ts", name: "a.ts" }] }),
 }));
-vi.mock("../stores/buffer-index", () => ({
+vi.mock("@/features/editor/stores/buffer-index", () => ({
   getBufferById: (buffers: Array<{ id: string }>, id: string) =>
     buffers.find((buffer) => buffer.id === id),
 }));
 vi.mock("@/features/ai/services/add-selection-to-agent-chat", () => ({
   addEditorSelectionsToAgentChat: mocks.addEditorSelectionsToAgentChat,
 }));
-vi.mock("../components/selection/editor-selection-agent-action", () => ({
+vi.mock("../editor/editor-selection-agent-action", () => ({
   EditorSelectionAgentAction: ({
     anchorRect,
     onEdit,
@@ -59,7 +59,7 @@ Range.prototype.getClientRects = emptyRects;
 Range.prototype.getBoundingClientRect = () => new DOMRect();
 
 const { CodeMirrorSelectionAgentAction } =
-  await import("../engines/codemirror/features/codemirror-selection-agent-action");
+  await import("../editor/codemirror-selection-agent-action");
 
 let view: EditorView;
 let root: Root;

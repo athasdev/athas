@@ -5,7 +5,7 @@ import {
   OLLAMA_CLOUD_BASE_URL,
   isOllamaCloudUrl,
   normalizeOllamaBaseUrl,
-} from "@/features/ai/services/ollama-endpoint";
+} from "@/features/settings/services/ollama-endpoint";
 import type { ProviderModel } from "./ai-provider-interface";
 import { AIProvider, type ProviderHeaders, type StreamRequest } from "./ai-provider-interface";
 

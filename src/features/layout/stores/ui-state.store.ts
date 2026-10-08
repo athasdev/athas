@@ -1,7 +1,5 @@
 import { createStore } from "zustand/vanilla";
 import { createWorkspaceScopedStore } from "@/features/workspace/stores/create-workspace-scoped-store";
-import type { ContextMenuSlice } from "./ui-state/context-menu-slice";
-import { createContextMenuSlice } from "./ui-state/context-menu-slice";
 import type { ModalSlice } from "./ui-state/modal-slice";
 import { createModalSlice } from "./ui-state/modal-slice";
 import type { PanelSlice } from "./ui-state/panel-slice";
@@ -14,7 +12,7 @@ import { createViewSlice } from "./ui-state/view-slice";
 // Re-export types for convenience
 
 // Combined store type
-type UIState = ModalSlice & PanelSlice & ViewSlice & ContextMenuSlice & TerminalSlice;
+type UIState = ModalSlice & PanelSlice & ViewSlice & TerminalSlice;
 
 // Create the combined store
 const createUIStateStore = () =>
@@ -22,7 +20,6 @@ const createUIStateStore = () =>
     ...createModalSlice(...a),
     ...createPanelSlice(...a),
     ...createViewSlice(...a),
-    ...createContextMenuSlice(...a),
     ...createTerminalSlice(...a),
   }));
 

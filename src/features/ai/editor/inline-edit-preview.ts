@@ -15,11 +15,11 @@ import {
   WidgetType,
 } from "@codemirror/view";
 import { highlightCode, type Highlighter } from "@lezer/highlight";
-import type { InlineEditPreview } from "../../../types/inline-edit-preview.types";
-import type { Range } from "../../../types/editor.types";
-import type { LineSeparator } from "../document-change";
-import { fromBufferOffset } from "../position";
-import { revealRangeInCenterIfOutside } from "./reveal";
+import type { InlineEditPreview } from "@/features/editor/types/inline-edit-preview.types";
+import type { Range } from "@/features/editor/types/editor.types";
+import type { LineSeparator } from "@/features/editor/engines/codemirror/document-change";
+import { fromBufferOffset } from "@/features/editor/engines/codemirror/position";
+import { revealRangeInCenterIfOutside } from "@/features/editor/engines/codemirror/features/reveal";
 
 interface PreviewState {
   /** Which preview this is, so a stale cleanup does not clear a newer one; 0 for none. */

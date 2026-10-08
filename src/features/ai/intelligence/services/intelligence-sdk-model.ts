@@ -10,7 +10,7 @@ import {
   resolveCustomProviderBaseUrl,
 } from "@/features/ai/services/custom-provider-config";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { normalizeOllamaBaseUrl } from "@/features/ai/services/ollama-endpoint";
+import { normalizeOllamaBaseUrl } from "@/features/settings/services/ollama-endpoint";
 import { getApiBase } from "@/utils/api-base";
 import { commands } from "@/bindings/commands";
 import { createIntelligenceModelFetch } from "./intelligence-model-fetch";

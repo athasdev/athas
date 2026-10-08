@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { SidebarView } from "@/features/layout/types/sidebar.types";
-import type { AIWorkspaceSessionSnapshot } from "@/features/ai/stores/ai-chat/ai-chat-store.types";
+import type { AIWorkspaceSessionSnapshot } from "@/features/workspace/types/workspace-session.types";
 import type { PaneNode } from "@/features/panes/types/pane.types";
 import type { PersistedTerminal } from "@/features/terminal/types/terminal.types";
 import type { BottomPaneTab } from "@/features/layout/stores/ui-state/types/ui-state.types";

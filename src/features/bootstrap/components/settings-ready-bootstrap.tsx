@@ -2,9 +2,11 @@ import { useSystemAccessibility } from "@/features/settings/hooks/use-system-acc
 import { useFontLoading } from "@/features/settings/hooks/use-font-loading";
 import { useNativeMenuState } from "@/features/window/hooks/use-native-menu-state";
 import { useSettingsSync } from "@/features/settings/hooks/use-settings-sync";
+import { useIntelligenceSettingsSync } from "@/features/ai/intelligence/hooks/use-intelligence-settings-sync";
 import { useBootstrapPhaseReached } from "../stores/bootstrap-phase.store";
 
 function SettingsDependentBootstrap() {
+  useIntelligenceSettingsSync();
   useSettingsSync();
   useFontLoading();
   useNativeMenuState();

@@ -1,32 +1,29 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { lazy, Suspense, useEffect, useMemo, useRef } from "react";
+import { Suspense, useEffect, useMemo, useRef } from "react";
+import { registerExtensionPaneViews } from "@/extensions/ui/services/extension-pane-views";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import {
-  isResourceBuffer,
-  ResourceBufferView,
-} from "@/features/panes/components/resource-buffer-view";
+import { registerAiEditorFeatures } from "@/features/ai/services/ai-editor-features";
+import { registerGitHubResourceViews } from "@/features/github/services/github-resource-views";
+import { getPaneView, isResourceBuffer } from "@/features/panes/services/pane-view-registry";
+import { registerSettingsViews } from "@/features/settings/services/settings-views";
 import { TerminalHost } from "@/features/terminal/components/terminal-host";
-import { TerminalTab } from "@/features/terminal/components/terminal-tab";
+import { registerStandaloneTerminalView } from "@/features/terminal/services/standalone-terminal-view";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { ViewerLoadingState } from "@/ui/viewer-state";
 import { parseResourceWindowPayload } from "./services/detached-resource-service";
 import { AppQueryProvider } from "@/components/app-query-provider";
 import { DetachedWindowShell } from "./detached-window-shell";
+import { DetachedBufferView } from "./resource-view";
 import { useDetachedWindow } from "./hooks/use-detached-window";
 import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
-const SettingsView = lazy(() => import("@/features/settings/components/settings-workbench-view"));
-const ExtensionsView = lazy(() =>
-  import("@/extensions/ui/components/extensions-view").then((module) => ({
-    default: module.ExtensionsView,
-  })),
-);
+registerStandaloneTerminalView();
+registerSettingsViews();
+registerExtensionPaneViews();
+registerGitHubResourceViews();
+registerAiEditorFeatures();
 
-const ExtensionDetails = lazy(() =>
-  import("@/extensions/ui/components/extensions-view").then((module) => ({
-    default: module.ExtensionDetails,
-  })),
-);
+const STANDALONE_TYPES = new Set(["terminal", "settings", "extensions", "extension"]);
 
 function closeWindow() {
   void getCurrentWindow().destroy().catch(console.error);
@@ -48,6 +45,7 @@ export default function StandaloneContentWindow() {
   useEffect(() => {
     if (!ready || !request || opened.current) return;
     opened.current = true;
+    void getPaneView(request.content.type)?.prefetch?.();
     useProjectStore.getState().actions.setRootFolderPath(request.workspacePath);
     openLocally(request.content);
   }, [ready, request, openLocally]);
@@ -65,23 +63,8 @@ export default function StandaloneContentWindow() {
       >
         <main className="min-h-0 min-w-0 flex-1 overflow-hidden">
           <Suspense fallback={<ViewerLoadingState label="Opening" layout="fill" />}>
-            {buffer?.type === "terminal" ? (
-              <TerminalTab
-                bufferId={buffer.id}
-                sessionId={buffer.sessionId}
-                shell={buffer.shell}
-                initialCommand={buffer.initialCommand}
-                workingDirectory={buffer.workingDirectory}
-                remoteConnectionId={buffer.remoteConnectionId}
-              />
-            ) : buffer?.type === "settings" ? (
-              <SettingsView />
-            ) : buffer?.type === "extensions" ? (
-              <ExtensionsView />
-            ) : buffer?.type === "extension" ? (
-              <ExtensionDetails extensionId={buffer.extensionId} />
-            ) : buffer && isResourceBuffer(buffer) ? (
-              <ResourceBufferView buffer={buffer} />
+            {buffer && (STANDALONE_TYPES.has(buffer.type) || isResourceBuffer(buffer)) ? (
+              <DetachedBufferView buffer={buffer} />
             ) : (
               <ViewerLoadingState label="Opening" layout="fill" />
             )}

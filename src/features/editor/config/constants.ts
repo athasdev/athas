@@ -80,3 +80,6 @@ export const EDITOR_CONSTANTS = {
   // Precision
   WIDTH_PRECISION_MULTIPLIER: 1000, // For rounding width calculations
 } as const;
+
+/** The CodeMirror gutter that holds breakpoints; clicks in it are not text selections. */
+export const BREAKPOINT_GUTTER_CLASS = "cm-athas-breakpoint-gutter";

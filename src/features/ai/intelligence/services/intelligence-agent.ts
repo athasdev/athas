@@ -48,7 +48,7 @@ import {
   isOllamaNoToolsError,
 } from "@/features/ai/lib/ollama-tool-support";
 import { resolveOllamaToolSupport } from "./intelligence-ollama-tools";
-import { normalizeIntelligenceAgentSteps } from "./intelligence-agent-steps";
+import { normalizeIntelligenceAgentSteps } from "@/features/settings/services/ai-agent-steps";
 import {
   fitStepMessages,
   getStepRequestLimits,

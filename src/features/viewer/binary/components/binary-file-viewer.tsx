@@ -9,16 +9,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { formatFileSize } from "@/utils/format-file-size";
 import { cn } from "@/utils/cn";
 import { getRelativePath } from "@/utils/path-helpers";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import type { BinaryMetadata } from "../lib/binary-metadata";
 import { getBinaryMetadata } from "../lib/binary-metadata";
 
 interface BinaryFileViewerProps {
   filePath: string;
   fileName: string;
-  rootFolderPath?: string;
 }
 
-export function BinaryFileViewer({ filePath, fileName, rootFolderPath }: BinaryFileViewerProps) {
+export function BinaryFileViewer({ filePath, fileName }: BinaryFileViewerProps) {
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const [metadata, setMetadata] = useState<BinaryMetadata | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

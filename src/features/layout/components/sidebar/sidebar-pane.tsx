@@ -1,60 +1,17 @@
-import { Activity, lazy, memo, type ReactNode, Suspense, useState } from "react";
-import { FileExplorerPane } from "@/features/file-explorer/components/file-explorer-pane";
+import { Activity, memo, type ReactNode, Suspense, useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import {
   getActiveSidebarView,
   getSidebarPaneLevel,
 } from "@/features/layout/utils/sidebar-pane-utils";
 import type { SidebarView } from "@/features/layout/types/sidebar.types";
+import { getSidebarViews } from "@/features/layout/services/sidebar-view-registry";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { ExtensionErrorBoundary } from "@/extensions/ui/components/extension-error-boundary";
 import { useExtensionViews } from "@/extensions/ui/hooks/use-extension-views";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
-
-// Every view except the file tree loads on demand, so startup only parses the default one.
-const GitView = lazy(() => import("@/features/git/components/git-view"));
-const GitHubPRsView = lazy(() => import("@/features/github/components/github-prs-view"));
-const ViewsSidebar = lazy(() =>
-  import("@/features/views/components/views-sidebar").then((module) => ({
-    default: module.ViewsSidebar,
-  })),
-);
-const DockerSidebar = lazy(() =>
-  import("@/features/docker/components/docker-sidebar").then((module) => ({
-    default: module.DockerSidebar,
-  })),
-);
-const CollaborationSidebarView = lazy(() =>
-  import("@/features/collaboration/components/collaboration-sidebar").then((module) => ({
-    default: module.CollaborationSidebarView,
-  })),
-);
-
-// Loaded on demand so the layout does not pull the AI stores into its import graph.
-const AgentContextSidebar = lazy(() =>
-  import("@/features/ai/components/panel/agent-context-sidebar").then((module) => ({
-    default: module.AgentContextSidebar,
-  })),
-);
-
-const WorkspaceSidebar = lazy(() =>
-  import("@/features/workspace/team/components/workspace-sidebar").then((module) => ({
-    default: module.WorkspaceSidebar,
-  })),
-);
-
-const AgentsSidebar = lazy(() =>
-  import("@/features/ai/components/sidebar/agents-sidebar").then((module) => ({
-    default: module.AgentsSidebar,
-  })),
-);
-const DatabaseSidebar = lazy(() =>
-  import("@/features/database/components/database-sidebar").then((module) => ({
-    default: module.DatabaseSidebar,
-  })),
-);
 
 interface SidebarPaneProps {
   visible?: boolean;
@@ -66,6 +23,7 @@ interface SidebarPaneProps {
 
 interface SidebarPaneEntry {
   id: SidebarView;
+  suspendWhenHidden: boolean;
   content: ReactNode;
 }
 
@@ -99,108 +57,35 @@ export const SidebarPane = memo(
       activeSidebarView,
     });
 
+    const availability = { coreFeatures, hasTeamsCollaborationAccess };
     const paneEntries: SidebarPaneEntry[] = [
-      ...(coreFeatures.git
-        ? [
-            {
-              id: "git" as const,
-              content: (
-                <Suspense fallback={null}>
-                  <GitView
-                    repoPath={rootFolderPath}
-                    onFileSelect={handleFileSelect}
-                    isActive={isGitViewActive}
-                  />
-                </Suspense>
-              ),
-            },
-          ]
-        : []),
-      ...(coreFeatures.github
-        ? [
-            {
-              id: "github-prs" as const,
-              content: (
-                <Suspense fallback={null}>
-                  <GitHubPRsView />
-                </Suspense>
-              ),
-            },
-          ]
-        : []),
-      {
-        id: "views",
-        content: (
-          <Suspense fallback={null}>
-            <ViewsSidebar projectPath={rootFolderPath ?? null} />
-          </Suspense>
-        ),
-      },
-      ...(coreFeatures.docker
-        ? [
-            {
-              id: "docker" as const,
-              content: (
-                <Suspense fallback={null}>
-                  <DockerSidebar />
-                </Suspense>
-              ),
-            },
-          ]
-        : []),
-      {
-        id: "workspaces",
-        content: (
-          <Suspense fallback={null}>
-            <WorkspaceSidebar />
-          </Suspense>
-        ),
-      },
-      {
-        id: "databases",
-        content: (
-          <Suspense fallback={null}>
-            <DatabaseSidebar />
-          </Suspense>
-        ),
-      },
-      { id: "files", content: <FileExplorerPane /> },
-      ...(coreFeatures.aiChat
-        ? [
-            {
-              id: "agents" as const,
-              content: (
-                <Suspense fallback={null}>
-                  <AgentsSidebar />
-                </Suspense>
-              ),
-            },
-          ]
-        : []),
-      {
-        id: "agent",
-        content: (
-          <Suspense fallback={null}>
-            <AgentContextSidebar />
-          </Suspense>
-        ),
-      },
-      ...(hasTeamsCollaborationAccess && coreFeatures.teamCollaboration
-        ? [
-            {
-              id: "collaboration" as const,
-              content: (
-                <Suspense fallback={null}>
-                  <CollaborationSidebarView />
-                </Suspense>
-              ),
-            },
-          ]
-        : []),
+      ...getSidebarViews()
+        .filter((view) => view.isAvailable?.(availability) ?? true)
+        .map((view): SidebarPaneEntry => {
+          const View = view.component;
+          const props =
+            view.getProps?.({
+              rootFolderPath,
+              onFileSelect: handleFileSelect,
+              isActive: view.id === activePaneId,
+            }) ?? {};
+          return {
+            id: view.id,
+            suspendWhenHidden: view.suspendWhenHidden === true,
+            content: view.loadsOnDemand ? (
+              <Suspense fallback={null}>
+                <View {...props} />
+              </Suspense>
+            ) : (
+              <View {...props} />
+            ),
+          };
+        }),
       ...Array.from(extensionViews).map(
         ([viewId, view]) =>
           ({
             id: viewId,
+            suspendWhenHidden: false,
             content: (
               <ExtensionErrorBoundary extensionId={view.extensionId} name={view.title}>
                 {view.render()}
@@ -210,18 +95,7 @@ export const SidebarPane = memo(
       ),
     ].filter((pane) => pane.id === activeSidebarView || getSidebarPaneLevel(pane.id) === paneLevel);
     const activePane = paneEntries.find((pane) => pane.id === activePaneId) ?? paneEntries[0];
-    const suspendWhenHidden =
-      activePane &&
-      [
-        "files",
-        "agents",
-        "docker",
-        "views",
-        "github-prs",
-        "agent",
-        "workspaces",
-        "databases",
-      ].includes(activePane.id);
+    const suspendWhenHidden = activePane?.suspendWhenHidden;
 
     // Recently shown views stay mounted but hidden, so switching back keeps their scroll, search
     // and loaded data instead of remounting into a loading state.

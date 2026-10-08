@@ -21,10 +21,9 @@ import type {
 import type { ProviderModel } from "@/features/ai/services/providers/ai-provider-interface";
 import type { EditorSelectionContext } from "@/features/editor/types/editor-selection.types";
 
-export interface AIWorkspaceSessionSnapshot {
-  currentChatId: string | null;
-  selectedAgentId: AgentType;
-}
+import type { AIWorkspaceSessionSnapshot } from "@/features/workspace/types/workspace-session.types";
+
+export type { AIWorkspaceSessionSnapshot };
 
 interface PendingAgentLaunchRequest {
   chatId: string;

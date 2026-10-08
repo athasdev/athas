@@ -2,14 +2,17 @@ import { EditorView } from "@codemirror/view";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { addEditorSelectionsToAgentChat } from "@/features/ai/services/add-selection-to-agent-chat";
 import type { EditorSelectionContext } from "@/features/editor/types/editor-selection.types";
-import { EditorSelectionAgentAction } from "../../../components/selection/editor-selection-agent-action";
-import { useBufferStore } from "../../../stores/buffer.store";
-import { useInlineEditToolbarStore } from "../../../stores/inline-edit-toolbar.store";
-import { getBufferById } from "../../../stores/buffer-index";
-import { createEditorSelectionContextFromText } from "../../../services/editor-agent-context";
-import { type CodeMirrorHost, useCodeMirrorExtension } from "../host";
-import { toEditorRange } from "../position";
-import { BREAKPOINT_GUTTER_CLASS } from "./breakpoints";
+import { EditorSelectionAgentAction } from "./editor-selection-agent-action";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar.store";
+import { getBufferById } from "@/features/editor/stores/buffer-index";
+import { createEditorSelectionContextFromText } from "@/features/editor/services/editor-agent-context";
+import {
+  type CodeMirrorHost,
+  useCodeMirrorExtension,
+} from "@/features/editor/engines/codemirror/host";
+import { toEditorRange } from "@/features/editor/engines/codemirror/position";
+import { BREAKPOINT_GUTTER_CLASS } from "@/features/editor/config/constants";
 
 interface SelectionAgentActionState {
   anchorRect: { x: number; y: number; width: number; height: number };

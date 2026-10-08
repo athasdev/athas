@@ -45,8 +45,13 @@ export function startSettingsLoad(): Promise<void> {
     console.warn(`Settings did not load within ${BOOTSTRAP_PHASE_WAIT_TIMEOUT_MS}ms; continuing.`);
     reachPhase("settings-ready");
   }, BOOTSTRAP_PHASE_WAIT_TIMEOUT_MS);
-  settingsLoadPromise = import("@/features/settings/stores/settings.store")
-    .then(async ({ initializeSettingsStore }) => {
+  // The settings effects other features contribute register before the settings apply.
+  settingsLoadPromise = Promise.all([
+    import("@/features/settings/stores/settings.store"),
+    import("@/features/ai/services/ai-settings-effects"),
+  ])
+    .then(async ([{ initializeSettingsStore }, { registerAiSettingsEffects }]) => {
+      registerAiSettingsEffects();
       await initializeSettingsStore();
     })
     .finally(() => {

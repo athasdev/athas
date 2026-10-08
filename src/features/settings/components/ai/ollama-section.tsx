@@ -5,7 +5,7 @@ import {
   OLLAMA_CLOUD_BASE_URL,
   isOllamaCloudUrl,
   resolveOllamaBaseUrl,
-} from "@/features/ai/services/ollama-endpoint";
+} from "@/features/settings/services/ollama-endpoint";
 import {
   getProviderApiToken,
   removeProviderApiToken,

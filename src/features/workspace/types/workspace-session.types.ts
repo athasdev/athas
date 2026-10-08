@@ -39,3 +39,9 @@ export interface WorkspaceFolderSession {
   name: string;
   isPrimary?: boolean;
 }
+
+/** The AI chat state a workspace session restores: the open chat and the selected agent. */
+export interface AIWorkspaceSessionSnapshot {
+  currentChatId: string | null;
+  selectedAgentId: string;
+}

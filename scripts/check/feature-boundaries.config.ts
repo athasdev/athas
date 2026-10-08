@@ -9,9 +9,11 @@
  *   store modules in `stores/` (`*.store.ts` and the other files matched by `storeFilePattern`).
  * - Public only when listed in `publicFiles`: `components/` and anything else not covered above.
  *   Every entry carries the reason it is public. Components are listed when another feature mounts
- *   them by design: entry views that a host (the app shell, main layout, sidebar pane, pane
- *   container, settings dialog, command palette) renders for the owning feature, and widgets that
- *   several features compose. Logic is not listed; it moves to a public folder instead.
+ *   them by design: entry views that a host (the app shell, main layout, settings dialog, command
+ *   palette) renders for the owning feature, and widgets that several features compose. Logic is
+ *   not listed; it moves to a public folder instead. Buffer, sidebar and editor views are not
+ *   listed either: the owning feature registers them from its `services/` (the pane view, sidebar
+ *   view, tab decoration and editor feature registries), so their hosts never import them.
  * - Always private: `lib/`, `utils/`, `controllers/`, `internal/`, `tests/`.
  *
  * Layer folders are matched anywhere below the feature, so a subfeature such as
@@ -31,8 +33,9 @@
  * A file may import its own tier or a lower one. `layers.tierOverrides` moves a folder or file
  * into another tier when it is a host for the tiers above it: command definitions in
  * `keymaps/commands/`, the workbench chrome in `layout/components/` and `window/components/`, the
- * pane container that renders every buffer type, and the settings pages. Overrides carry a reason
- * like `publicFiles` entries and should stay rare; prefer moving the code.
+ * detached window roots, and the settings pages. Overrides carry a reason like `publicFiles`
+ * entries and should stay rare; prefer moving the code, or a registry the higher feature
+ * contributes to (as buffer views, sidebar views, tab decorations and editor features do).
  *
  * The tiers were derived from the import graph: a feature that most of the app imports and that
  * imports few features back sits low, and the remaining upward imports are the debt the baseline
@@ -113,13 +116,11 @@ export type FeatureBoundaryBaseline = {
 
 const APP_SHELL = "Mounted by the app shell (src/App.tsx, src/main.tsx, src/workbench-app.tsx).";
 const MAIN_LAYOUT = "Mounted by the main layout.";
-const SIDEBAR_VIEW = "Sidebar view mounted by the layout's sidebar pane.";
 const ACTIVITY_CHROME = "Control mounted in the activity bar or title bar chrome.";
-const PANE_VIEW = "Buffer view the pane container renders for this feature's buffers.";
-const RESOURCE_VIEW = "Resource view rendered by the pane resource buffer view.";
 const SETTINGS_SECTION = "Settings section this feature contributes to the settings dialog.";
 const COMMAND_VIEW = "Command palette view this feature contributes.";
-const TAB_DECORATION = "Tab icon or badge the tab bar renders for this feature's buffers.";
+const EDITOR_FEATURE_API =
+  "CodeMirror feature API: features contributed to the editor (editor-feature-registry) build on it.";
 
 export const featureBoundaries: FeatureBoundaryConfig = {
   sourceRoot: "src",
@@ -145,32 +146,20 @@ export const featureBoundaries: FeatureBoundaryConfig = {
   storeFilePattern: /(\.store|\.types|-selectors)\.tsx?$/,
   publicFiles: {
     ai: {
-      "acp-inspector/components/acp-inspector-view.tsx": PANE_VIEW,
-      "components/agent-launch-input.tsx": PANE_VIEW,
-      "components/agent-start-view.tsx": PANE_VIEW,
-      "components/agent-tab.tsx": PANE_VIEW,
-      "components/chat/agent-edits-review.tsx": PANE_VIEW,
-      "continuous-agents/resource.tsx": PANE_VIEW,
-      "components/panel/agent-context-sidebar.tsx": SIDEBAR_VIEW,
-      "components/sidebar/agents-sidebar.tsx": SIDEBAR_VIEW,
       "components/history/agent-sessions-dialog.tsx": APP_SHELL,
       "continuous-agents/continuous-agents-runtime.tsx": APP_SHELL,
       "detached/detached-agent-window.tsx": APP_SHELL,
-      "components/agent-attention-dot.tsx": TAB_DECORATION,
-      "components/icons/agent-session-icon.tsx": TAB_DECORATION,
       "components/mcp/mcp-server-settings.tsx": SETTINGS_SECTION,
       "components/permissions/agent-allowed-actions-settings.tsx": SETTINGS_SECTION,
       "integrations/codex/codex-settings.tsx": SETTINGS_SECTION,
       "components/icons/provider-icons.tsx":
         "Provider brand icons for the AI provider settings pages.",
       "components/selectors/model-connection-picker.tsx":
-        "The model picker; AI settings and the completion status choose models with it.",
+        "The model picker; the AI settings pages choose models with it.",
       "components/chat/chat-message.tsx": "Chat message rendering reused by shared-chat previews.",
       "components/messages/markdown-renderer.tsx":
         "Assistant markdown renderer reused for extension and skill descriptions.",
       "components/skills/skills-command.tsx": "Skills browser embedded in the extensions view.",
-      "inline-edit/components/inline-edit-popover.tsx":
-        "Inline edit prompt the code editor shows over the edited range.",
     },
     auth: {
       "components/account-menu.tsx": ACTIVITY_CHROME,
@@ -179,28 +168,17 @@ export const featureBoundaries: FeatureBoundaryConfig = {
     bootstrap: {
       "components/settings-ready-bootstrap.tsx": APP_SHELL,
     },
-    browser: {
-      "components/browser-view.tsx": PANE_VIEW,
-    },
-    collaboration: {
-      "components/collaboration-sidebar.tsx": SIDEBAR_VIEW,
-    },
     "command-palette": {
       "components/command-palette.tsx": MAIN_LAYOUT,
     },
     database: {
-      "components/database-sidebar.tsx": SIDEBAR_VIEW,
       "components/connection/connection-dialog.tsx": MAIN_LAYOUT,
     },
     debugger: {
       "components/debugger-view.tsx": "Debugger panel mounted in the bottom pane.",
     },
     diagnostics: {
-      "components/diagnostics-buffer.tsx": PANE_VIEW,
       "components/diagnostics-activity-control.tsx": ACTIVITY_CHROME,
-    },
-    docker: {
-      "components/docker-sidebar.tsx": SIDEBAR_VIEW,
     },
     editor: {
       "stores/buffer-index.ts":
@@ -219,8 +197,11 @@ export const featureBoundaries: FeatureBoundaryConfig = {
       "markdown/highlighted-code.tsx":
         "Highlighted code block shared with AI chat and extension diff previews.",
       "markdown/styles.css": "Markdown styles for GitHub and onboarding markdown.",
-      "markdown/markdown-document-view.tsx": PANE_VIEW,
       "components/code-editor.tsx": "The text editor; panes and diff views render it.",
+      "engines/codemirror/host.ts": EDITOR_FEATURE_API,
+      "engines/codemirror/position.ts": EDITOR_FEATURE_API,
+      "engines/codemirror/document-change.ts": EDITOR_FEATURE_API,
+      "engines/codemirror/features/reveal.ts": EDITOR_FEATURE_API,
       "components/codemirror-readonly-view.tsx":
         "Read-only code view; GitHub Actions logs render with it.",
       "components/multibuffer/multibuffer-workspace.tsx":
@@ -236,7 +217,6 @@ export const featureBoundaries: FeatureBoundaryConfig = {
       "components/product-feedback-dialog.tsx": APP_SHELL,
     },
     "file-explorer": {
-      "components/file-explorer-pane.tsx": SIDEBAR_VIEW,
       "components/file-navigator-sidebar.tsx":
         "File list/tree navigator shared by multibuffer, search, diagnostics and diff views.",
     },
@@ -246,8 +226,6 @@ export const featureBoundaries: FeatureBoundaryConfig = {
       "components/linux-folder-picker-dialog.tsx": MAIN_LAYOUT,
     },
     git: {
-      "components/git-view.tsx": SIDEBAR_VIEW,
-      "components/diff/git-diff-viewer.tsx": PANE_VIEW,
       "components/diff/diff-file-content.tsx":
         "Single-file diff body reused by GitHub pull request files.",
       "components/git-branch-manager.tsx": ACTIVITY_CHROME,
@@ -256,19 +234,8 @@ export const featureBoundaries: FeatureBoundaryConfig = {
       "components/inline-git-blame-card.tsx": "Blame card the editor shows for inline blame.",
     },
     github: {
-      "components/github-prs-view.tsx": SIDEBAR_VIEW,
-      "components/github-action-viewer.tsx": RESOURCE_VIEW,
-      "components/github-create-view.tsx": RESOURCE_VIEW,
-      "components/github-issue-viewer.tsx": RESOURCE_VIEW,
-      "components/github-pr-viewer.tsx": RESOURCE_VIEW,
-      "delivery/components/github-delivery-viewer.tsx": RESOURCE_VIEW,
       "components/github-actions-watcher.tsx": APP_SHELL,
       "components/github-auth-status.tsx": "GitHub sign-in state message reused by notifications.",
-      "components/github-markdown-editor.tsx":
-        "Markdown editor with GitHub preview for markdown documents.",
-    },
-    "global-search": {
-      "components/global-search-buffer.tsx": PANE_VIEW,
     },
     keymaps: {
       "components/keybinding-row.tsx": "Keybinding table row the keyboard settings page renders.",
@@ -285,9 +252,6 @@ export const featureBoundaries: FeatureBoundaryConfig = {
       "components/notification-recorder.tsx": APP_SHELL,
       "components/notifications-trigger.tsx": ACTIVITY_CHROME,
     },
-    onboarding: {
-      "components/onboarding-view.tsx": PANE_VIEW,
-    },
     outline: {
       "components/outline-command.tsx": COMMAND_VIEW,
       "components/outline-sidebar.tsx": "Outline panel the code editor shows beside the text.",
@@ -295,15 +259,11 @@ export const featureBoundaries: FeatureBoundaryConfig = {
     panes: {
       "components/split-view-root.tsx": MAIN_LAYOUT,
       "components/pane-node-renderer.tsx": "Renders a pane tree; the bottom pane hosts one.",
-      "components/resource-buffer-view.tsx": "Resource buffer host, reused by detached windows.",
       "components/pane-resize-handle.tsx": "Split resize handle, reused by terminal splits.",
       "components/split-drop-overlay.tsx": "Split drop zones overlay, reused by terminal splits.",
     },
     "quick-open": {
       "components/quick-open.tsx": MAIN_LAYOUT,
-    },
-    references: {
-      "components/references-buffer.tsx": PANE_VIEW,
     },
     remote: {
       "components/connection-form.tsx": "Remote connection form embedded in the project picker.",
@@ -317,7 +277,6 @@ export const featureBoundaries: FeatureBoundaryConfig = {
       "components/settings-section.tsx":
         "Layout blocks for settings pages that other features contribute.",
       "components/settings-dialog.tsx": MAIN_LAYOUT,
-      "components/settings-workbench-view.tsx": PANE_VIEW,
       "components/font-style-injector.tsx": "Applies font settings; every window shell mounts it.",
     },
     sharing: {
@@ -338,19 +297,10 @@ export const featureBoundaries: FeatureBoundaryConfig = {
     terminal: {
       "components/terminal-host.tsx":
         "Keeps terminal sessions alive; main layout and terminal windows mount it.",
-      "components/terminal-tab.tsx": PANE_VIEW,
-      "components/external-editor-terminal.tsx": PANE_VIEW,
       "components/terminal-container.tsx": "Terminal panel mounted in the bottom pane.",
     },
     viewer: {
-      "binary/components/binary-file-viewer.tsx": PANE_VIEW,
-      "image/components/image-viewer.tsx": PANE_VIEW,
-      "pdf/components/pdf-viewer.tsx": PANE_VIEW,
       "csv/components/csv-preview.tsx": "CSV table preview the code editor shows for CSV files.",
-    },
-    views: {
-      "components/custom-view.tsx": PANE_VIEW,
-      "components/views-sidebar.tsx": SIDEBAR_VIEW,
     },
     vim: {
       "components/vim-status-indicator.tsx": "Vim mode indicator in the editor status actions.",
@@ -373,8 +323,6 @@ export const featureBoundaries: FeatureBoundaryConfig = {
         "Project icon the project switcher shows.",
       "project-icons/components/project-icon-picker.tsx":
         "Project icon picker opened from the project switcher.",
-      "team/components/workspace-sidebar.tsx": SIDEBAR_VIEW,
-      "team/components/workspace-management-view.tsx": PANE_VIEW,
     },
   },
   layers: {
@@ -443,14 +391,6 @@ export const featureBoundaries: FeatureBoundaryConfig = {
       "window/detached/standalone-content-window.tsx": {
         tier: "shell",
         reason: "Root view of a standalone terminal or settings window, mounted by src/App.tsx.",
-      },
-      "panes/components/pane-container.tsx": {
-        tier: "shell",
-        reason: "Renders each buffer type with the view of the feature that owns it.",
-      },
-      "panes/components/resource-buffer-view.tsx": {
-        tier: "shell",
-        reason: "Renders each resource buffer with the view of the feature that owns it.",
       },
       "settings/components/settings-dialog.tsx": {
         tier: "shell",

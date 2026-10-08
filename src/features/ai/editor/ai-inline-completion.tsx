@@ -26,8 +26,11 @@ import {
   registerIntelligenceCompletionResume,
   requestIntelligenceCompletion,
 } from "@/features/ai/intelligence/services/intelligence-completion-service";
-import type { LineSeparator } from "../document-change";
-import { type CodeMirrorHost, useCodeMirrorExtension } from "../host";
+import type { LineSeparator } from "@/features/editor/engines/codemirror/document-change";
+import {
+  type CodeMirrorHost,
+  useCodeMirrorExtension,
+} from "@/features/editor/engines/codemirror/host";
 
 interface InlineSuggestion {
   pos: number;

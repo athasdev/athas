@@ -1,6 +1,5 @@
 import type { CoreFeaturesState } from "./feature.types";
-import type { AIChatSkill } from "@/features/ai/types/skills.types";
-import type { McpServerSetting } from "@/features/ai/types/mcp-server.types";
+import type { AIChatSkill, McpServerSetting } from "./ai-settings.types";
 import type {
   GitSidebarItemId,
   GitSidebarTabId,

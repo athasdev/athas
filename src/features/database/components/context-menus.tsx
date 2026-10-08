@@ -1,5 +1,5 @@
 import { PenIcon, PlusIcon, TrashIcon } from "@/ui/icons";
-import { useUIState } from "@/features/layout/stores/ui-state.store";
+import { useDatabaseContextMenuStore } from "../stores/database-context-menu.store";
 import { ContextMenuPopup, createContextMenuGroups } from "@/ui/context-menu";
 import { menuSeparator, type MenuItem } from "@/ui/dropdown";
 import type { DatabaseRow } from "../types/common.types";
@@ -11,8 +11,8 @@ export const SqlTableMenu = ({
   onCreateRow: (tableName: string) => void;
   onDeleteTable: (tableName: string) => void;
 }) => {
-  const databaseTableMenu = useUIState((state) => state.databaseTableMenu);
-  const setDatabaseTableMenu = useUIState((state) => state.setDatabaseTableMenu);
+  const databaseTableMenu = useDatabaseContextMenuStore.use.tableMenu();
+  const { setTableMenu: setDatabaseTableMenu } = useDatabaseContextMenuStore.use.actions();
 
   const onCloseMenu = () => setDatabaseTableMenu(null);
   const objectKind = databaseTableMenu?.objectKind ?? "table";
@@ -67,8 +67,8 @@ export const SqlRowMenu = ({
   onEditRow: (tableName: string, rowData: DatabaseRow) => void;
   onDeleteRow: (tableName: string, rowData: DatabaseRow) => void;
 }) => {
-  const databaseRowMenu = useUIState((state) => state.databaseRowMenu);
-  const setDatabaseRowMenu = useUIState((state) => state.setDatabaseRowMenu);
+  const databaseRowMenu = useDatabaseContextMenuStore.use.rowMenu();
+  const { setRowMenu: setDatabaseRowMenu } = useDatabaseContextMenuStore.use.actions();
 
   const onCloseMenu = () => setDatabaseRowMenu(null);
   const items: MenuItem[] = databaseRowMenu

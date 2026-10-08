@@ -4,7 +4,7 @@ import { EditorView } from "@codemirror/view";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import type { CodeMirrorHost } from "../engines/codemirror/host";
+import type { CodeMirrorHost } from "@/features/editor/engines/codemirror/host";
 
 const mocks = vi.hoisted(() => ({
   keepAgentHunk: vi.fn(async () => {}),
@@ -31,8 +31,7 @@ Range.prototype.getClientRects = emptyRects;
 Range.prototype.getBoundingClientRect = () => new DOMRect();
 
 const { useAgentEditsStore } = await import("@/features/ai/stores/agent-edits.store");
-const { CodeMirrorAgentEdits } =
-  await import("../engines/codemirror/features/codemirror-agent-edits");
+const { CodeMirrorAgentEdits } = await import("../editor/codemirror-agent-edits");
 const { keepAgentHunkAtCursor, rejectAgentHunkAtCursor } =
   await import("@/features/ai/services/agent-hunk-actions");
 

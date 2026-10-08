@@ -1,4 +1,4 @@
-import type { AIWorkspaceSessionSnapshot } from "@/features/ai/stores/ai-chat/ai-chat-store.types";
+import type { AIWorkspaceSessionSnapshot } from "@/features/workspace/types/workspace-session.types";
 import {
   buildTerminalRestorePayload,
   isTerminalPersistenceEnabled,

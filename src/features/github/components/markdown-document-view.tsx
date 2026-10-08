@@ -1,7 +1,7 @@
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { FilePathBreadcrumb } from "@/features/editor/components/toolbar/file-path-breadcrumb";
 import { PaneContentHeader } from "@/ui/pane-content-chrome";
-import { GitHubMarkdownEditor } from "@/features/github/components/github-markdown-editor";
+import { GitHubMarkdownEditor } from "./github-markdown-editor";
 
 interface MarkdownDocumentViewProps {
   bufferId: string;

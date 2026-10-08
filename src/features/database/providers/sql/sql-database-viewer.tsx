@@ -20,7 +20,7 @@ import {
 } from "../../lib/query-result-export";
 import { paginateQueryResult } from "../../lib/query-result-pagination";
 import { writeDatabaseClipboardText } from "../../utils/clipboard";
-import { useUIState } from "@/features/layout/stores/ui-state.store";
+import { useDatabaseContextMenuStore } from "../../stores/database-context-menu.store";
 import { Alert, AlertDescription } from "@/ui/alert";
 import { Spinner } from "@/ui/spinner";
 import { Empty, EmptyDescription } from "@/ui/empty";
@@ -70,8 +70,8 @@ export default function SqlDatabaseViewer({
     })),
   );
   const actions = useStore((state) => state.actions);
-  const setDatabaseTableMenu = useUIState((state) => state.setDatabaseTableMenu);
-  const setDatabaseRowMenu = useUIState((state) => state.setDatabaseRowMenu);
+  const { setTableMenu: setDatabaseTableMenu, setRowMenu: setDatabaseRowMenu } =
+    useDatabaseContextMenuStore.use.actions();
 
   const [viewMode, setViewMode] = useState<ViewMode>("data");
   const [showColumnTypes, setShowColumnTypes] = useState(true);

@@ -16,6 +16,7 @@ import { activateBufferInPaneAndSync } from "@/features/panes/services/pane-acti
 import { splitEditorGroup } from "@/features/panes/services/pane-command-actions";
 import { moveBufferToPaneDropTarget } from "@/features/panes/services/pane-drop-actions";
 import { findPaneGroup } from "@/features/panes/services/pane-tree";
+import { reloadPaneView } from "@/features/panes/services/pane-view-registry";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import { getChromeNavigationIndex } from "@/features/layout/services/chrome-keyboard";
@@ -725,13 +726,7 @@ const TabBar = ({
                         onCopyRelativePath={handleCopyRelativePath}
                         onReload={(bufferId) => {
                           const targetBuffer = bufferById.get(bufferId);
-                          if (targetBuffer?.type === "browser") {
-                            void import("@/features/browser/services/browser-tab-manager").then(
-                              ({ browserTabManager }) =>
-                                browserTabManager.perform(bufferId, "reload"),
-                            );
-                            return;
-                          }
+                          if (targetBuffer && reloadPaneView(targetBuffer)) return;
                           if (targetBuffer && targetBuffer.type !== "extension") {
                             const { closeBuffer, openBuffer } = useBufferStore.getState().actions;
                             // Tabs hold shells without text; read it from the live buffer.

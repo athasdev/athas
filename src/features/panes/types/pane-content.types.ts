@@ -1,9 +1,27 @@
 import type { ImageDraftState } from "@/features/viewer/image/editor/services/image-edit-session";
-import type { DatabaseType } from "@/features/database/types/provider.types";
 import type { MultiFileDiff } from "@/features/git/types/git-diff.types";
 import type { GitDiff } from "@/features/git/types/git.types";
-import type { OnboardingMode } from "@/features/onboarding/services/onboarding-state";
-import type { GitHubActionNotificationTarget } from "@/features/github/types/github.types";
+
+/** The kinds of database a database buffer opens. */
+export type DatabaseType = "sqlite" | "postgres" | "mysql" | "duckdb" | "mongodb" | "redis";
+
+/** Why the onboarding buffer is shown. */
+export type OnboardingMode = "first-run" | "preview" | "release-notes";
+
+export interface OnboardingContext {
+  mode: OnboardingMode;
+  currentVersion: string;
+  previousVersion?: string;
+}
+
+/** The GitHub notification a workflow run buffer was opened from. */
+export interface GitHubActionNotificationTarget {
+  id: string;
+  repositoryFullName: string;
+  checkSuiteId: number | null;
+  title: string;
+  updatedAt: string;
+}
 
 // ── Content type discriminant ───────────────────────────────────────
 
@@ -523,7 +541,7 @@ export type OpenContentSpec =
     }
   | {
       type: "onboarding";
-      context: import("@/features/onboarding/services/onboarding-state").OnboardingContext;
+      context: OnboardingContext;
     };
 
 export function isDirtyContent(buffer: PaneContent): boolean {

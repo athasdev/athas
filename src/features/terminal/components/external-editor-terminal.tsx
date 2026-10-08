@@ -403,3 +403,17 @@ export const ExternalEditorTerminal = ({
     </div>
   );
 };
+
+interface ExternalEditorBufferViewProps extends Omit<ExternalEditorTerminalProps, "onEditorExit"> {
+  bufferId: string;
+}
+
+/** An external editor buffer: closes the buffer once the editor exits. */
+export function ExternalEditorBufferView({ bufferId, ...props }: ExternalEditorBufferViewProps) {
+  const { closeBufferForce } = useBufferStore.use.actions();
+  const handleEditorExit = useCallback(
+    () => closeBufferForce(bufferId),
+    [bufferId, closeBufferForce],
+  );
+  return <ExternalEditorTerminal {...props} onEditorExit={handleEditorExit} />;
+}

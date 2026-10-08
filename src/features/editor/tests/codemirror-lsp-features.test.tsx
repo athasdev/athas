@@ -119,7 +119,7 @@ function mount(isReadOnly = false) {
     applyHistory: () => false,
   };
   root = createRoot(document.createElement("div"));
-  act(() => root!.render(<CodeMirrorLspFeatures host={host} />));
+  act(() => root!.render(<CodeMirrorLspFeatures host={host} completion={[]} />));
   return view;
 }
 

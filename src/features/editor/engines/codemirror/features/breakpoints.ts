@@ -2,7 +2,7 @@ import { type Extension, Prec, RangeSet, StateEffect, StateField } from "@codemi
 import { EditorView, GutterMarker, gutter } from "@codemirror/view";
 import type { DebugBreakpoint } from "@/features/debugger/types/debugger.types";
 
-export const BREAKPOINT_GUTTER_CLASS = "cm-athas-breakpoint-gutter";
+import { BREAKPOINT_GUTTER_CLASS } from "../../../config/constants";
 
 type BreakpointKind = "set" | "disabled" | "unverified" | "preview";
 

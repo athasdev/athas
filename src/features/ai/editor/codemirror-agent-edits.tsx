@@ -11,15 +11,18 @@ import {
   removeAgentHunkEditor,
   setAgentHunkCount,
 } from "@/features/ai/services/agent-hunk-actions";
-import { toBufferText } from "../document-change";
-import { type CodeMirrorHost, useCodeMirrorExtension } from "../host";
+import { toBufferText } from "@/features/editor/engines/codemirror/document-change";
+import {
+  type CodeMirrorHost,
+  useCodeMirrorExtension,
+} from "@/features/editor/engines/codemirror/host";
 import {
   type AgentHunkActions,
   agentEditsExtension,
   agentEditsRenderKey,
   showAgentEdits,
 } from "./agent-edits";
-import { revealRangeInCenterIfOutside } from "./reveal";
+import { revealRangeInCenterIfOutside } from "@/features/editor/engines/codemirror/features/reveal";
 
 /** Lets a burst of typing or store updates redraw the hunks once. */
 const RENDER_DELAY_MS = 50;

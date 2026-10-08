@@ -1,14 +1,10 @@
 import { getVersion } from "@tauri-apps/api/app";
 import { getSettingsStore } from "@/features/settings/services/settings-persistence";
+import type { OnboardingContext, OnboardingMode } from "@/features/panes/types/pane-content.types";
 
 const ONBOARDING_STATE_KEY = "product_onboarding_state_v1";
-export type OnboardingMode = "first-run" | "preview" | "release-notes";
 
-export interface OnboardingContext {
-  mode: OnboardingMode;
-  currentVersion: string;
-  previousVersion?: string;
-}
+export type { OnboardingContext, OnboardingMode };
 
 interface PersistedOnboardingState {
   lastSeenVersion?: string;

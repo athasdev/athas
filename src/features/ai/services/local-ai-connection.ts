@@ -1,6 +1,9 @@
 import type { Settings } from "@/features/settings/types/settings.types";
 import { resolveCustomProviderBaseUrl } from "./custom-provider-config";
-import { isOllamaCloudUrl, resolveOllamaBaseUrl } from "./ollama-endpoint";
+import {
+  isOllamaCloudUrl,
+  resolveOllamaBaseUrl,
+} from "@/features/settings/services/ollama-endpoint";
 
 const LOCAL_HOST_SUFFIXES = [".localhost", ".local", ".lan", ".home.arpa", ".internal"];
 

@@ -23,7 +23,7 @@ const {
   inlineSuggestionField,
   nextSuggestionWord,
   setInlineSuggestion,
-} = await import("../engines/codemirror/features/ai-inline-completion");
+} = await import("../editor/ai-inline-completion");
 
 let view: EditorView | null = null;
 let request = vi.fn<(request: IntelligenceCompletionRequest) => Promise<string | null>>();

@@ -1,12 +1,10 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Suspense, useEffect, useMemo, useRef } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import {
-  isResourceBuffer,
-  ResourceBufferBadge,
-  ResourceBufferIcon,
-  ResourceBufferView,
-} from "@/features/panes/components/resource-buffer-view";
+import { isResourceBuffer } from "@/features/panes/services/pane-view-registry";
+import { registerAiEditorFeatures } from "@/features/ai/services/ai-editor-features";
+import { registerGitHubResourceViews } from "@/features/github/services/github-resource-views";
+import { DetachedBufferView, ResourceBufferBadge, ResourceBufferIcon } from "./resource-view";
 import { ViewerLoadingState } from "@/ui/viewer-state";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { Avatar } from "@/ui/avatar";
@@ -19,6 +17,9 @@ import { AppQueryProvider } from "@/components/app-query-provider";
 import { DetachedWindowShell } from "./detached-window-shell";
 import { useDetachedWindow } from "./hooks/use-detached-window";
 import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
+
+registerGitHubResourceViews();
+registerAiEditorFeatures();
 
 function closeWindow() {
   void getCurrentWindow().destroy().catch(console.error);
@@ -74,7 +75,7 @@ export default function DetachedResourceWindow() {
         {resource ? (
           <main className="min-h-0 min-w-0 flex-1">
             <Suspense fallback={<ViewerLoadingState label="Loading" layout="fill" />}>
-              <ResourceBufferView buffer={resource} />
+              <DetachedBufferView buffer={resource} />
             </Suspense>
           </main>
         ) : request ? (

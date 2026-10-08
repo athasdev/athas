@@ -3,6 +3,7 @@ import { enableMapSet } from "immer";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { AgentTab } from "@/features/ai/components/agent-tab";
+import { registerAiEditorFeatures } from "@/features/ai/services/ai-editor-features";
 import { AgentSessionIcon } from "@/features/ai/components/icons/agent-session-icon";
 import { useAcpEventSync } from "@/features/ai/hooks/use-acp-event-sync";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
@@ -26,6 +27,8 @@ import { getActiveBufferId } from "@/features/panes/stores/pane-selectors";
 import { usePaneStore } from "@/features/panes/stores/pane.store";
 
 enableMapSet();
+
+registerAiEditorFeatures();
 
 const RETURN_TIMEOUT_MS = 10_000;
 

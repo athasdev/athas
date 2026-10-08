@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vite-plus/test";
 import { getAccountIdentity } from "@/features/auth/utils/account-identity";
+import { getGitHubAvatarUrl } from "@/features/github/services/github-avatar-url";
+
+const getAvatarUrl = (login: string, size: number) => getGitHubAvatarUrl({ login }, size);
 
 describe("account identity", () => {
   it("uses the connected GitHub identity when the auth profile is unavailable", () => {
-    expect(getAccountIdentity(null, "mehmetozguldev")).toEqual({
+    expect(getAccountIdentity(null, "mehmetozguldev", getAvatarUrl)).toEqual({
       name: "mehmetozguldev",
       detail: "@mehmetozguldev",
       githubLogin: "mehmetozguldev",
@@ -25,6 +28,7 @@ describe("account identity", () => {
           created_at: "2026-09-03T00:00:00.000Z",
         },
         "mehmetozguldev",
+        getAvatarUrl,
       ),
     ).toMatchObject({
       name: "Mehmet",

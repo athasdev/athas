@@ -1,7 +1,7 @@
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
 import { BoltIcon, BoltSlashIcon, SlidersIcon, SquareIcon } from "@/ui/icons";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 import { LspClient } from "@/features/editor/lsp/services/lsp-client";
@@ -30,7 +30,7 @@ import {
 import Select, { type SelectOption } from "@/ui/select";
 import { toast } from "sonner";
 import VimStatusIndicator from "@/features/vim/components/vim-status-indicator";
-import { IntelligenceCompletionStatus } from "./intelligence-completion-status";
+import { useEditorFeatures } from "@/features/editor/services/editor-feature-registry";
 import { getFilenameFromPath } from "@/features/file-system/services/file-utils";
 import { readBufferText } from "@/features/editor/services/buffer-text";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
@@ -48,6 +48,15 @@ function canStartLanguageServerForPath(filePath: string, languageId: string) {
   return (
     extensionRegistry.getLanguageId(filePath) === languageId &&
     Boolean(extensionRegistry.getLspServerPath(filePath))
+  );
+}
+
+function ContributedStatusActions() {
+  const contributions = useEditorFeatures();
+  return contributions.flatMap((contribution) =>
+    (contribution.statusActions ?? []).map((StatusAction, index) => (
+      <StatusAction key={`${contributions.indexOf(contribution)}-${index}`} />
+    )),
   );
 }
 
@@ -442,7 +451,11 @@ export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {})
 
       <VimStatusIndicator />
 
-      {activeBuffer?.type === "editor" && <IntelligenceCompletionStatus />}
+      {activeBuffer?.type === "editor" && (
+        <Suspense fallback={null}>
+          <ContributedStatusActions />
+        </Suspense>
+      )}
 
       <div className="relative flex items-center self-center">
         <DropdownMenu>

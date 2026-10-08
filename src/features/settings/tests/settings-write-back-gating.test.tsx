@@ -33,11 +33,6 @@ vi.mock("@/features/auth/stores/auth.store", () => ({
 vi.mock("@/features/auth/services/product-capabilities", () => ({
   hasProductCapability: () => true,
 }));
-vi.mock("@/features/ai/intelligence/stores/intelligence-settings.store", () => ({
-  useIntelligenceSettingsStore: {
-    getState: () => ({ actions: { setUser: vi.fn(), refresh: vi.fn() } }),
-  },
-}));
 vi.mock("@/features/settings/stores/font.store", () => ({
   useFontStore: Object.assign(() => undefined, {
     use: { actions: () => ({ loadAvailableFonts: mocks.loadAvailableFonts }) },

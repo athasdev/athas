@@ -1,7 +1,7 @@
 import { getProviderById } from "@/features/ai/types/providers.types";
-import { normalizeOllamaBaseUrl } from "@/features/ai/services/ollama-endpoint";
-import { normalizeMcpServers } from "@/features/ai/services/mcp-servers";
-import { normalizeIntelligenceAgentSteps } from "@/features/ai/intelligence/services/intelligence-agent-steps";
+import { normalizeOllamaBaseUrl } from "@/features/settings/services/ollama-endpoint";
+import { normalizeMcpServers } from "@/features/settings/services/mcp-server-settings";
+import { normalizeIntelligenceAgentSteps } from "@/features/settings/services/ai-agent-steps";
 import { normalizeLegacyV0DesignSystems } from "@/features/settings/lib/legacy-v0-settings";
 import { isKeybindingPreset } from "@/features/keymaps/constants/keybinding-presets";
 import {

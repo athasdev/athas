@@ -1,9 +1,7 @@
 import { isDirtyContent } from "@/features/panes/types/pane-content.types";
 import { BrowserTabIcon } from "./browser-tab-icon";
 import { TagIcon, RocketIcon } from "@/ui/icons";
-import { AgentSessionIcon } from "@/features/ai/components/icons/agent-session-icon";
-import { AgentAttentionDot } from "@/features/ai/components/agent-attention-dot";
-import { useChatAttention } from "@/features/ai/hooks/use-chat-attention";
+import { getTabDecoration } from "../services/tab-decoration-registry";
 import {
   ActivityIcon,
   ArrowsClockwiseIcon,
@@ -84,7 +82,9 @@ const TabBarItem = memo(function TabBarItem({
   onRenameCancel,
 }: TabBarItemProps) {
   const [avatarError, setAvatarError] = useState(false);
-  const agentAttention = useChatAttention(buffer.type === "agent" ? buffer.sessionId : null);
+  const decoration = getTabDecoration(buffer.type);
+  const TabIcon = decoration?.icon;
+  const TabIndicator = decoration?.indicator;
   const closeShortcut = useCommandShortcut(isPinned ? undefined : "file.close");
   const showTabIcons = useSettingsStore((state) => state.settings.showTabIcons);
   const tabCloseButtonVisibility = useSettingsStore(
@@ -186,12 +186,8 @@ const TabBarItem = memo(function TabBarItem({
               <TerminalWindowIcon className="text-subtle-foreground" />
             ) : buffer.type === "browser" ? (
               <BrowserTabIcon favicon={buffer.favicon} />
-            ) : buffer.type === "agent" ? (
-              <AgentSessionIcon
-                sessionId={buffer.sessionId}
-                size={12}
-                className="text-subtle-foreground"
-              />
+            ) : TabIcon ? (
+              <TabIcon buffer={buffer} />
             ) : buffer.type === "database" ? (
               <DatabaseIcon className="text-subtle-foreground" />
             ) : buffer.type === "pullRequest" ? (
@@ -297,7 +293,7 @@ const TabBarItem = memo(function TabBarItem({
             aria-label="Unsaved changes"
           />
         )}
-        {agentAttention ? <AgentAttentionDot attention={agentAttention} /> : null}
+        {TabIndicator ? <TabIndicator buffer={buffer} /> : null}
       </TabItem>
     </div>
   );

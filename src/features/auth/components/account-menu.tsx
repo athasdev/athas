@@ -1,7 +1,7 @@
 import { openExternalUrl } from "@/utils/external-url";
 import { memo, useEffect, useState } from "react";
 import { getServiceUrls } from "@/config/services";
-import { useGitHubStore } from "@/features/github/stores/github.store";
+import { getLinkedAccount, useLinkedAccountState } from "@/features/auth/services/linked-accounts";
 import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 import { useWhatsNewStore } from "@/features/settings/stores/whats-new.store";
 import { useDesktopSignIn } from "@/features/auth/hooks/use-desktop-sign-in";
@@ -57,9 +57,7 @@ export const AccountMenu = memo(function AccountMenu() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const subscription = useAuthStore((s) => s.subscription);
   const logout = useAuthStore((s) => s.actions.logout);
-  const githubAccountStatus = useGitHubStore((state) => state.githubAccountStatus);
-  const githubCurrentUser = useGitHubStore((state) => state.currentUser);
-  const checkGitHubAuth = useGitHubStore((state) => state.actions.checkAuth);
+  const githubAccount = useLinkedAccountState("github");
   const openWhatsNew = useWhatsNewStore((state) => state.actions.open);
   const openSettings = useUIState((state) => state.openSettings);
 
@@ -115,14 +113,15 @@ export const AccountMenu = memo(function AccountMenu() {
 
   const isTeams = Boolean(subscription?.collaboration?.enabled);
   const planLabel = getAccountPlanLabel(subscription, isAuthenticated);
-  const connectedGitHubLogin =
-    githubAccountStatus === "connected" ? githubCurrentUser || user?.github_username : null;
+  const connectedGitHubLogin = githubAccount.connected
+    ? githubAccount.login || user?.github_username
+    : null;
   const {
     name: accountName,
     detail: accountDetail,
     githubLogin,
     avatarUrl: accountAvatarUrl,
-  } = getAccountIdentity(user, connectedGitHubLogin);
+  } = getAccountIdentity(user, connectedGitHubLogin, getLinkedAccount("github")?.getAvatarUrl);
 
   const signedOutAccountItems: MenuItem[] = [
     {
@@ -256,8 +255,8 @@ export const AccountMenu = memo(function AccountMenu() {
 
   useEffect(() => {
     if (!isOpen) return;
-    void checkGitHubAuth();
-  }, [checkGitHubAuth, isOpen]);
+    void getLinkedAccount("github")?.refresh();
+  }, [isOpen]);
 
   return (
     <>

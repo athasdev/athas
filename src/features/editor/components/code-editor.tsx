@@ -64,6 +64,10 @@ import {
   useBufferIdOrActive,
   useIsBufferPreview,
 } from "@/features/panes/hooks/use-pane-buffer-state";
+import { loadEditorFeatures } from "../services/editor-feature-registry";
+
+// Contributed editor features load with the editor, so the first editor rarely waits on them.
+void loadEditorFeatures();
 
 interface CodeEditorProps {
   onKeyDown?: (e: React.KeyboardEvent<HTMLDivElement>) => void;

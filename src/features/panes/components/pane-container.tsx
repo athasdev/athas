@@ -1,21 +1,10 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
-import { ResourceBufferView } from "./resource-buffer-view";
+import { lazy, type ReactNode, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { AgentLaunchInput } from "@/features/ai/components/agent-launch-input";
-import { AgentStartView } from "@/features/ai/components/agent-start-view";
-import type { DatabaseType } from "@/features/database/types/provider.types";
-import {
-  PROVIDER_REGISTRY,
-  type DatabaseViewerProps,
-} from "@/features/database/services/provider-registry";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import type { Buffer } from "@/features/editor/stores/buffer.store";
 import { getBufferById } from "@/features/editor/stores/buffer-index";
 import { isEditorKeyboardTarget } from "@/features/keymaps/services/editor-keyboard-target";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import { stageHunk, unstageHunk } from "@/features/git/api/git-status-api";
-import type { GitHunk } from "@/features/git/types/git.types";
-import { useCachedPullRequest } from "@/features/github/hooks/use-cached-pull-request";
 import { formatDiffBufferLabel } from "@/features/git/services/diff-buffer-label";
 import { openSidebarResourceBuffer } from "@/features/sidebar/services/open-sidebar-resource";
 import {
@@ -30,8 +19,6 @@ import {
 } from "@/features/workspace/stores/create-workspace-scoped-store";
 import TabBar from "@/features/tabs/components/tab-bar";
 import { extractDroppedFilePaths } from "@/features/file-system/services/file-system-dropped-paths";
-import Badge from "@/ui/badge";
-import { Empty, EmptyDescription } from "@/ui/empty";
 import {
   clearInternalTabDragData,
   getInternalTabDragData,
@@ -46,104 +33,18 @@ import {
 import { BOTTOM_PANE_ID } from "../constants/pane";
 import { usePaneStore } from "../stores/pane.store";
 import type { PaneGroup } from "../types/pane.types";
-import type { EditorContent, PullRequestContent } from "../types/pane-content.types";
+import type { EditorContent, TerminalContent } from "../types/pane-content.types";
+import { getPaneView, prefetchPaneViews, renderPaneView } from "../services/pane-view-registry";
 import {
   getOrCreatePaneDropTarget,
   moveBufferToPaneDropTarget,
 } from "../services/pane-drop-actions";
 import { PaneSurfaceLayer } from "./pane-surface-layer";
 import { type DropZone, SplitDropOverlay } from "./split-drop-overlay";
-import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { emitAppEvent, onAppEvent } from "@/utils/app-events";
 
-const AgentTab = lazy(() =>
-  import("@/features/ai/components/agent-tab").then((m) => ({
-    default: m.AgentTab,
-  })),
-);
 const CodeEditor = lazy(() => import("@/features/editor/components/code-editor"));
 
-const databaseViewerCache = new Map<
-  DatabaseType,
-  React.LazyExoticComponent<React.ComponentType<DatabaseViewerProps>>
->();
-function getDatabaseViewer(dbType: DatabaseType) {
-  if (!databaseViewerCache.has(dbType)) {
-    databaseViewerCache.set(dbType, lazy(PROVIDER_REGISTRY[dbType].viewerComponent));
-  }
-  return databaseViewerCache.get(dbType)!;
-}
-const ExternalEditorTerminal = lazy(() =>
-  import("@/features/terminal/components/external-editor-terminal").then((m) => ({
-    default: m.ExternalEditorTerminal,
-  })),
-);
-const DiffViewer = lazy(() => import("@/features/git/components/diff/git-diff-viewer"));
-const GlobalSearchBuffer = lazy(
-  () => import("@/features/global-search/components/global-search-buffer"),
-);
-const DiagnosticsBuffer = lazy(
-  () => import("@/features/diagnostics/components/diagnostics-buffer"),
-);
-const ReferencesBuffer = lazy(() => import("@/features/references/components/references-buffer"));
-const ContinuousAgentsResource = lazy(() => import("@/features/ai/continuous-agents/resource"));
-const AcpInspectorView = lazy(
-  () => import("@/features/ai/acp-inspector/components/acp-inspector-view"),
-);
-const AgentEditsReviewView = lazy(() => import("@/features/ai/components/chat/agent-edits-review"));
-const WorkspaceManagementView = lazy(
-  () => import("@/features/workspace/team/components/workspace-management-view"),
-);
-const SettingsWorkbenchView = lazy(
-  () => import("@/features/settings/components/settings-workbench-view"),
-);
-const ExtensionsView = lazy(() =>
-  import("@/extensions/ui/components/extensions-view").then((m) => ({
-    default: m.ExtensionsView,
-  })),
-);
-
-const ExtensionDetails = lazy(() =>
-  import("@/extensions/ui/components/extensions-view").then((m) => ({
-    default: m.ExtensionDetails,
-  })),
-);
-const OnboardingView = lazy(() => import("@/features/onboarding/components/onboarding-view"));
-const CustomView = lazy(() =>
-  import("@/features/views/components/custom-view").then((module) => ({
-    default: module.CustomView,
-  })),
-);
-const MarkdownDocumentView = lazy(() =>
-  import("@/features/editor/markdown/markdown-document-view").then((module) => ({
-    default: module.MarkdownDocumentView,
-  })),
-);
-const ImageViewer = lazy(() =>
-  import("@/features/viewer/image/components/image-viewer").then((m) => ({
-    default: m.ImageViewer,
-  })),
-);
-const PdfViewer = lazy(() =>
-  import("@/features/viewer/pdf/components/pdf-viewer").then((m) => ({
-    default: m.PdfViewer,
-  })),
-);
-const BinaryFileViewer = lazy(() =>
-  import("@/features/viewer/binary/components/binary-file-viewer").then((m) => ({
-    default: m.BinaryFileViewer,
-  })),
-);
-const BrowserView = lazy(() =>
-  import("@/features/browser/components/browser-view").then((m) => ({
-    default: m.BrowserView,
-  })),
-);
-const TerminalTab = lazy(() =>
-  import("@/features/terminal/components/terminal-tab").then((m) => ({
-    default: m.TerminalTab,
-  })),
-);
 interface PaneContainerProps {
   pane: PaneGroup;
 }
@@ -167,11 +68,7 @@ function prefetchPaneSurfaces() {
   hasPrefetchedPaneSurfaces = true;
   const load = () => {
     void import("@/features/editor/components/code-editor");
-    void import("@/features/terminal/components/terminal-tab");
-    void import("@/features/git/components/diff/git-diff-viewer");
-    void import("@/features/global-search/components/global-search-buffer");
-    void import("@/features/ai/components/agent-tab");
-    void import("@/features/settings/components/settings-workbench-view");
+    prefetchPaneViews();
   };
   if ("requestIdleCallback" in window) {
     window.requestIdleCallback(load, { timeout: 3000 });
@@ -280,55 +177,18 @@ function BufferPreviewCard({ buffer }: { buffer: PaneRenderBuffer }) {
   );
 }
 
-function PullRequestPreviewCard({ buffer }: { buffer: PullRequestContent }) {
-  const { details, comments } = useCachedPullRequest(buffer.repoPath, buffer.prNumber);
-  const fileCount = details ? details.changedFiles : null;
-  const commentCount = comments ? comments.length : null;
-  const commitCount = details ? details.commits.length : null;
-  const authorLogin = details ? details.author.login : null;
-
-  return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background">
-      <div className="shrink-0 bg-surface px-3 py-3">
-        <div className="flex min-w-0 items-start gap-2">
-          <div className="mt-0.5 size-4 shrink-0 rounded-lg bg-success-soft" />
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge>#{buffer.prNumber ?? "--"}</Badge>
-              <div className="min-w-0 truncate font-medium ui-text-sm text-foreground">
-                {buffer.name}
-              </div>
-            </div>
-            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 ui-text-sm text-subtle-foreground">
-              <span className="font-medium text-muted-foreground">
-                {authorLogin ? `@${authorLogin}` : "Pull request"}
-              </span>
-              <span>{fileCount ?? "--"} files</span>
-              <span>{commitCount ?? "--"} commits</span>
-              <span>{commentCount ?? "--"} comments</span>
-            </div>
-            <div className="mt-2 flex flex-wrap items-center gap-1.5 ui-text-sm">
-              <Badge>Description</Badge>
-              <Badge>Files</Badge>
-              <Badge>Comments</Badge>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div className="min-h-0 flex-1 bg-background px-3 py-3">
-        <div className="rounded-lg bg-surface px-3 py-2">
-          <div className="line-clamp-5 ui-text-sm leading-6 text-subtle-foreground">
-            {details?.body?.trim()
-              ? details.body
-              : "Activate this card to inspect the full pull request description, changed files, comments, review state, and checkout actions."}
-          </div>
-        </div>
-        <div className="mt-3 rounded-lg bg-surface px-3 py-2 ui-text-sm text-subtle-foreground">
-          {buffer.path}
-        </div>
-      </div>
-    </div>
-  );
+function CarouselCardContent({
+  buffer,
+  isActiveBuffer,
+  renderActiveBuffer,
+}: {
+  buffer: Exclude<PaneRenderBuffer, EditorBufferShell>;
+  isActiveBuffer: boolean;
+  renderActiveBuffer: (buffer: PaneRenderBuffer) => ReactNode;
+}) {
+  const CarouselCard = getPaneView(buffer.type)?.carouselCard;
+  if (CarouselCard) return <CarouselCard buffer={buffer} />;
+  return isActiveBuffer ? renderActiveBuffer(buffer) : <BufferPreviewCard buffer={buffer} />;
 }
 
 function isStandardEditorBuffer(buffer: PaneRenderBuffer): buffer is EditorBufferShell {
@@ -338,8 +198,7 @@ function isStandardEditorBuffer(buffer: PaneRenderBuffer): buffer is EditorBuffe
 export function PaneContainer({ pane }: PaneContainerProps) {
   const activePaneId = usePaneStore.use.activePaneId();
   const { reorderPaneBuffers } = usePaneStore.use.actions();
-  const { closeBufferForce, openTerminalBuffer } = useBufferStore.use.actions();
-  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
+  const { openTerminalBuffer } = useBufferStore.use.actions();
   const handleFileOpen = useFileSystemStore((state) => state.handleFileOpen);
   const horizontalBufferCarousel = useSettingsStore((state) => state.settings.horizontalTabScroll);
 
@@ -548,38 +407,6 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       lastCarouselBufferIdRef.current = pane.activeBufferId;
     }
   }, [pane.activeBufferId]);
-
-  const handleStageHunk = useCallback(
-    async (hunk: GitHunk) => {
-      if (!rootFolderPath) return;
-      try {
-        const success = await stageHunk(rootFolderPath, hunk);
-        if (!success) return;
-      } catch (error) {
-        console.error("Error staging hunk:", error);
-      }
-    },
-    [rootFolderPath],
-  );
-
-  const handleUnstageHunk = useCallback(
-    async (hunk: GitHunk) => {
-      if (!rootFolderPath) return;
-      try {
-        const success = await unstageHunk(rootFolderPath, hunk);
-        if (!success) return;
-      } catch (error) {
-        console.error("Error unstaging hunk:", error);
-      }
-    },
-    [rootFolderPath],
-  );
-
-  const handleExternalEditorExit = useCallback(() => {
-    if (activeBuffer?.type === "externalEditor") {
-      closeBufferForce(activeBuffer.id);
-    }
-  }, [activeBuffer, closeBufferForce]);
 
   // Listen for file tree drops on this pane
   useEffect(() => {
@@ -896,163 +723,21 @@ export function PaneContainer({ pane }: PaneContainerProps) {
 
   const renderActiveBuffer = useCallback(
     (buffer: PaneRenderBuffer) => {
-      switch (buffer.type) {
-        case "newTab":
-          return (
-            <AgentStartView showQuickActions>
-              <AgentLaunchInput autoFocus={isActivePane} surfaceId={`new-tab-${buffer.id}`} />
-            </AgentStartView>
-          );
-
-        case "terminal":
-          return (
-            <TerminalTab
-              sessionId={buffer.sessionId}
-              bufferId={buffer.id}
-              paneId={pane.id}
-              shell={buffer.shell}
-              initialCommand={buffer.initialCommand}
-              workingDirectory={buffer.workingDirectory}
-              remoteConnectionId={buffer.remoteConnectionId}
-              isActive={isActivePane}
-            />
-          );
-
-        case "agent":
-          return <AgentTab buffer={buffer} isActive={isActivePane} />;
-
-        case "browser":
-          return <BrowserView buffer={buffer} paneId={pane.id} isActive={isActivePane} />;
-
-        case "diff":
-          return (
-            <DiffViewer
-              key={buffer.id}
-              bufferId={buffer.id}
-              onStageHunk={handleStageHunk}
-              onUnstageHunk={handleUnstageHunk}
-            />
-          );
-
-        case "pullRequest":
-        case "githubIssue":
-        case "githubDelivery":
-        case "githubAction":
-        case "githubForm":
-          return <ResourceBufferView buffer={buffer} />;
-
-        case "customView":
-          return <CustomView buffer={buffer} />;
-
-        case "markdownDocument":
-          return <MarkdownDocumentView bufferId={buffer.id} />;
-
-        case "globalSearch":
-          return <GlobalSearchBuffer />;
-
-        case "diagnostics":
-          return <DiagnosticsBuffer />;
-
-        case "references":
-          return <ReferencesBuffer />;
-
-        case "continuousAgents":
-          return <ContinuousAgentsResource />;
-
-        case "acpInspector":
-          return <AcpInspectorView />;
-
-        case "agentChanges":
-          return <AgentEditsReviewView />;
-
-        case "workspaces":
-          return <WorkspaceManagementView />;
-
-        case "settings":
-          return <SettingsWorkbenchView />;
-
-        case "extensions":
-          return <ExtensionsView />;
-
-        case "extension":
-          return <ExtensionDetails extensionId={buffer.extensionId} />;
-
-        case "onboarding":
-          return (
-            <OnboardingView
-              bufferId={buffer.id}
-              context={{
-                mode: buffer.mode,
-                currentVersion: buffer.currentVersion,
-                previousVersion: buffer.previousVersion,
-              }}
-            />
-          );
-
-        case "image":
-          return <ImageViewer filePath={buffer.path} fileName={buffer.name} bufferId={buffer.id} />;
-
-        case "pdf":
-          return <PdfViewer filePath={buffer.path} fileName={buffer.name} bufferId={buffer.id} />;
-
-        case "database": {
-          const config = PROVIDER_REGISTRY[buffer.databaseType];
-          const DatabaseViewer = getDatabaseViewer(buffer.databaseType);
-          let viewerProps: DatabaseViewerProps;
-          if (config.isFileBased) {
-            viewerProps = { databasePath: buffer.path };
-          } else {
-            const connectionId = buffer.connectionId;
-            if (!connectionId) {
-              return (
-                <Empty className="h-full" tone="error" role="alert">
-                  <EmptyDescription>Missing database connection</EmptyDescription>
-                </Empty>
-              );
-            }
-            viewerProps = { connectionId };
-          }
-          return <DatabaseViewer {...viewerProps} />;
-        }
-
-        case "binary":
-          return (
-            <BinaryFileViewer
-              filePath={buffer.path}
-              fileName={buffer.name}
-              rootFolderPath={rootFolderPath}
-            />
-          );
-
-        case "externalEditor":
-          return (
-            <ExternalEditorTerminal
-              filePath={buffer.path}
-              fileName={buffer.name}
-              terminalConnectionId={buffer.terminalConnectionId}
-              onEditorExit={handleExternalEditorExit}
-            />
-          );
-
-        default:
-          return (
-            <CodeEditor
-              paneId={pane.id}
-              bufferId={buffer.id}
-              isActiveSurface={isActivePane}
-              readOnly={buffer.type === "editor" ? buffer.readOnly : undefined}
-            />
-          );
-      }
+      const view = isStandardEditorBuffer(buffer)
+        ? null
+        : renderPaneView(buffer, { paneId: pane.id, isActive: isActivePane });
+      return (
+        view ?? (
+          <CodeEditor
+            paneId={pane.id}
+            bufferId={buffer.id}
+            isActiveSurface={isActivePane}
+            readOnly={buffer.type === "editor" ? buffer.readOnly : undefined}
+          />
+        )
+      );
     },
-    [
-      handleExternalEditorExit,
-      handleStageHunk,
-      handleUnstageHunk,
-      isActivePane,
-      pane.id,
-      rootFolderPath,
-    ],
+    [isActivePane, pane.id],
   );
 
   return (
@@ -1160,24 +845,18 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                         <div
                           className={isActiveBuffer ? "size-full" : "pointer-events-none size-full"}
                         >
-                          <TerminalTab
-                            sessionId={buffer.sessionId}
-                            bufferId={buffer.id}
-                            paneId={pane.id}
-                            shell={buffer.shell}
-                            initialCommand={buffer.initialCommand}
-                            workingDirectory={buffer.workingDirectory}
-                            remoteConnectionId={buffer.remoteConnectionId}
-                            isActive={isActivePane && isActiveBuffer}
-                            isVisible={true}
-                          />
+                          {renderPaneView(buffer, {
+                            paneId: pane.id,
+                            isActive: isActivePane && isActiveBuffer,
+                            isVisible: true,
+                          })}
                         </div>
-                      ) : buffer.type === "pullRequest" ? (
-                        <PullRequestPreviewCard buffer={buffer} />
-                      ) : isActiveBuffer ? (
-                        renderActiveBuffer(buffer)
                       ) : (
-                        <BufferPreviewCard buffer={buffer} />
+                        <CarouselCardContent
+                          buffer={buffer}
+                          isActiveBuffer={isActiveBuffer}
+                          renderActiveBuffer={renderActiveBuffer}
+                        />
                       )}
                     </div>
                     <div
@@ -1196,24 +875,18 @@ export function PaneContainer({ pane }: PaneContainerProps) {
             <>
               {paneBuffers
                 .filter(
-                  (b): b is import("../types/pane-content.types").TerminalContent =>
+                  (b): b is TerminalContent =>
                     isWorkspaceSurfaceActive && b.id === activeBuffer?.id && b.type === "terminal",
                 )
                 .map((b) => {
                   return (
                     <PaneSurfaceLayer key={b.id} active>
                       <Suspense fallback={null}>
-                        <TerminalTab
-                          sessionId={b.sessionId}
-                          bufferId={b.id}
-                          paneId={pane.id}
-                          shell={b.shell}
-                          initialCommand={b.initialCommand}
-                          workingDirectory={b.workingDirectory}
-                          remoteConnectionId={b.remoteConnectionId}
-                          isActive={isActivePane}
-                          isVisible={isWorkspaceSurfaceActive}
-                        />
+                        {renderPaneView(b, {
+                          paneId: pane.id,
+                          isActive: isActivePane,
+                          isVisible: isWorkspaceSurfaceActive,
+                        })}
                       </Suspense>
                     </PaneSurfaceLayer>
                   );

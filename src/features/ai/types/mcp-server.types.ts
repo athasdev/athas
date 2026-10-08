@@ -1,22 +1,6 @@
-/** How an agent reaches an MCP server. Every ACP agent supports stdio. */
-export type McpTransport = "stdio" | "http" | "sse";
+import type { McpTransport } from "@/features/settings/types/ai-settings.types";
 
-/**
- * An MCP server as stored in settings. Secret values (environment variables and headers) are
- * kept in secure storage under the server id, never here.
- */
-export interface McpServerSetting {
-  id: string;
-  name: string;
-  enabled: boolean;
-  transport: McpTransport;
-  /** Stdio only. */
-  command: string;
-  /** Stdio only. */
-  args: string[];
-  /** HTTP and SSE only. */
-  url: string;
-}
+export type { McpServerSetting, McpTransport } from "@/features/settings/types/ai-settings.types";
 
 export interface McpNameValue {
   name: string;

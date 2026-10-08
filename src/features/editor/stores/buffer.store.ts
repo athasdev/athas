@@ -1,6 +1,6 @@
 import { immer } from "zustand/middleware/immer";
 import { createStore } from "zustand/vanilla";
-import type { DatabaseType } from "@/features/database/types/provider.types";
+import type { DatabaseType } from "@/features/panes/types/pane-content.types";
 import {
   deliveryBufferPath,
   getViewBufferPath,
@@ -29,6 +29,7 @@ import {
   selectPaneBufferFlags,
 } from "@/features/panes/stores/pane-selectors";
 import { resolveWritablePaneForBuffer } from "@/features/panes/services/pane-routing";
+import { releaseClosedPaneView } from "@/features/panes/services/pane-view-registry";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { SINGLETON_TOOL_BUFFER_METADATA } from "@/features/panes/constants/tool-buffers";
 import { defaultSettings } from "@/features/settings/config/default-settings";
@@ -213,7 +214,7 @@ interface BufferActions {
   openExtensionsBuffer: () => string;
   openExtensionBuffer: (extensionId: string, name: string) => string;
   openOnboardingBuffer: (
-    context: import("@/features/onboarding/services/onboarding-state").OnboardingContext,
+    context: import("@/features/panes/types/pane-content.types").OnboardingContext,
   ) => string;
   closeBuffer: (bufferId: string) => void;
   closeBufferForce: (bufferId: string) => void;
@@ -427,13 +428,6 @@ const scheduleExtensionSupportCheck = (path: string) => {
   globalThis.setTimeout(() => checkExtensionSupport(path), 50);
 };
 
-function closeBrowserTabs(bufferIds: string[]) {
-  if (bufferIds.length === 0) return;
-  void import("@/features/browser/services/browser-tab-manager").then(({ browserTabManager }) => {
-    for (const bufferId of bufferIds) browserTabManager.close(bufferId);
-  });
-}
-
 const createBufferStore = (workspaceId: string) => {
   const paneStore = usePaneStore.getStore(workspaceId);
   const paneActions = () => paneStore.getState().actions;
@@ -637,9 +631,7 @@ const createBufferStore = (workspaceId: string) => {
           });
         }
 
-        if (closedBuffer.type === "browser") {
-          closeBrowserTabs([closedBuffer.id]);
-        }
+        releaseClosedPaneView(closedBuffer);
 
         // Stop LSP for this file (only for real editor files)
         if (shouldStartLsp(closedBuffer)) {
@@ -1329,11 +1321,9 @@ const createBufferStore = (workspaceId: string) => {
                 ? getPaneReplacementBufferId(bufferIds, buffers)
                 : null;
 
-            closeBrowserTabs(
-              buffers
-                .filter((buffer) => buffer.type === "browser" && closingBufferIds.has(buffer.id))
-                .map((buffer) => buffer.id),
-            );
+            for (const buffer of buffers) {
+              if (closingBufferIds.has(buffer.id)) releaseClosedPaneView(buffer);
+            }
             paneActions().removeBuffers(bufferIds, { revealBufferId: replacementBufferId });
             set((state) => {
               state.buffers = state.buffers.filter((b) => !closingBufferIds.has(b.id));
