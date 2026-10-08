@@ -133,6 +133,16 @@ describe("Tauri security surface", () => {
     }
   });
 
+  it("keeps runtime style injection working in bundled builds", () => {
+    // Tauri adds a nonce to every directive it may modify, and browsers then ignore
+    // 'unsafe-inline'. CodeMirror, xterm and toasts inject <style> elements at runtime,
+    // so a nonce on style-src leaves the editor unstyled. Scripts keep their nonce.
+    const { config } = readTauriConfigs().find(({ name }) => name === "tauri.conf.json")!;
+    const security = config.app.security;
+    expect(security.csp).toMatch(/style-src [^;]*'unsafe-inline'/);
+    expect(security.dangerousDisableAssetCspModification).toEqual(["style-src"]);
+  });
+
   it("does not register the shell plugin", () => {
     const cargoToml = fs.readFileSync(path.join(tauriDir, "Cargo.toml"), "utf8");
     const mainRs = fs.readFileSync(path.join(tauriDir, "src/main.rs"), "utf8");
