@@ -661,7 +661,7 @@ const TabBar = ({
         <TabBarSurface
           ref={tabBarRef}
           data-tab-bar-pane-id={paneId ?? ""}
-          className="group/tab-bar scrollbar-none overscroll-x-none"
+          className="scrollbar-none overscroll-x-none"
           role="tablist"
           aria-label="Open files"
           onWheel={handleWheel}
@@ -781,28 +781,20 @@ const TabBar = ({
             </TabStrip>
           </SortableContext>
 
-          {/* Close split shows on hover; new tab and full screen stay visible at the end of the row
-              so they are always reachable. */}
           <div className="ml-auto flex h-full shrink-0 items-center gap-1 pl-0.5">
-            <div className="pointer-events-none flex items-center gap-1 opacity-0 group-hover/tab-bar:pointer-events-auto group-hover/tab-bar:opacity-100 group-focus-within/tab-bar:pointer-events-auto group-focus-within/tab-bar:opacity-100 has-data-popup-open:pointer-events-auto has-data-popup-open:opacity-100">
-              {paneId && !disablePaneActions && !isBottomPane && (
-                <>
-                  {isInSplit && (
-                    <Button
-                      type="button"
-                      onClick={() => closePane(paneId)}
-                      variant="ghost"
-                      iconOnly
-                      size="sm"
-                      tooltip="Close split"
-                      aria-label="Close split"
-                    >
-                      <SidebarIcon />
-                    </Button>
-                  )}
-                </>
-              )}
-            </div>
+            {paneId && !disablePaneActions && !isBottomPane && isInSplit && (
+              <Button
+                type="button"
+                onClick={() => closePane(paneId)}
+                variant="ghost"
+                iconOnly
+                size="sm"
+                tooltip="Close split"
+                aria-label="Close split"
+              >
+                <SidebarIcon />
+              </Button>
+            )}
             {paneId && !isBottomPane && <NewTabMenu paneId={paneId} />}
             {paneId && !disablePaneActions && !isBottomPane ? (
               <Button
