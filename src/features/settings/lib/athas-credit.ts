@@ -2,7 +2,7 @@ import {
   formatResetDate,
   formatUsdCents,
   type HostedUsageState,
-} from "@/features/ai/lib/hosted-usage";
+} from "@/features/ai/services/hosted-usage";
 
 /** One short line about the included credit, for the Athas row in Settings. */
 export function describeIncludedCredit(usage: HostedUsageState) {

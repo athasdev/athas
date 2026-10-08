@@ -8,7 +8,7 @@ import {
 import { DiffFileContent } from "@/features/git/components/diff/diff-file-content";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
-import { parseGitPatchLines } from "@/features/git/utils/git-diff-parser";
+import { parseGitPatchLines } from "@/features/git/services/git-diff-parser";
 import type { FileDiff } from "../types/github-pr-viewer.types";
 import { SidebarListItem } from "@/ui/sidebar";
 

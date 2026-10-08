@@ -6,7 +6,7 @@ import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcu
 import { useWhatsNewStore } from "@/features/settings/stores/whats-new.store";
 import { useDesktopSignIn } from "@/features/auth/hooks/use-desktop-sign-in";
 import { getAccountIdentity } from "@/features/auth/utils/account-identity";
-import { getAccountPlanLabel } from "@/features/auth/utils/account-usage";
+import { getAccountPlanLabel } from "@/features/auth/services/account-usage";
 import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { Avatar } from "@/ui/avatar";

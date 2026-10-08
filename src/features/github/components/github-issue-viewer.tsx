@@ -45,10 +45,10 @@ import {
   GITHUB_ISSUE_DETAILS_TTL_MS,
   githubIssueDetailsCache,
   githubIssueListCache,
-} from "../utils/github-data-cache";
+} from "../services/github-data-cache";
 import { getGitHubMilestoneUrl } from "../utils/github-link-utils";
-import { copyToClipboard, getTimeAgo } from "../utils/github-viewer-utils";
-import { getGitHubAvatarUrl } from "../utils/github-avatar-url";
+import { copyToClipboard, getTimeAgo } from "../services/github-viewer-utils";
+import { getGitHubAvatarUrl } from "../services/github-avatar-url";
 import { CommentItem } from "./comment-item";
 import { GitHubInlineMarkdown, GitHubInlineTitle } from "./github-inline-editors";
 import { GitHubMetaChip, GitHubUserChip } from "./github-chips";

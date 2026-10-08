@@ -1,5 +1,5 @@
 import type { FileEntry } from "../types/app.types";
-import { isPathInsideTreeEntry, sortFileEntries } from "./file-tree-utils";
+import { isPathInsideTreeEntry, sortFileEntries } from "../services/file-tree-utils";
 
 const OS_GENERATED_FILE_PATTERNS: string[] = [
   ".DS_Store",

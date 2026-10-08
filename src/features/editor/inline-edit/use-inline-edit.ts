@@ -7,20 +7,20 @@ import {
   useRef,
   useState,
 } from "react";
-import { isLocalAiProvider } from "@/features/ai/lib/local-ai-connection";
+import { isLocalAiProvider } from "@/features/ai/services/local-ai-connection";
 import {
   canUseIntelligenceProvider,
   canUseProviderWithoutApiKey,
-} from "@/features/ai/lib/provider-access";
+} from "@/features/ai/services/provider-access";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { getProviderById } from "@/features/ai/types/providers.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useAuthStore } from "@/features/auth/stores/auth.store";
-import { hasProductCapability } from "@/features/auth/utils/product-capabilities";
+import { hasProductCapability } from "@/features/auth/services/product-capabilities";
 import { useIntelligenceSettingsStore } from "@/features/ai/intelligence/stores/intelligence-settings.store";
-import { resolveIntelligenceConnection } from "@/features/ai/intelligence/lib/resolve-intelligence-connection";
+import { resolveIntelligenceConnection } from "@/features/ai/intelligence/services/resolve-intelligence-connection";
 import type { IntelligenceConnection } from "@/features/ai/intelligence/types/intelligence.types";
-import { withTaskConnection } from "@/features/settings/lib/ai-model-preferences";
+import { withTaskConnection } from "@/features/settings/services/ai-model-preferences";
 import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar.store";
 import { toast } from "sonner";
 import {
@@ -37,7 +37,7 @@ import {
   calculateCursorPositionFromLineOffsets,
   calculateOffsetFromPosition,
   getAccurateCursorX,
-} from "@/features/editor/utils/position";
+} from "@/features/editor/services/position";
 
 type InlineEditModelPositionResolver = (
   line: number,

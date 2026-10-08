@@ -1,7 +1,7 @@
 import { listen } from "@tauri-apps/api/event";
 import { useEffect } from "react";
 import { commands } from "@/bindings/commands";
-import { enqueueWindowOpenRequest, type WindowOpenRequest } from "../utils/window-open-request";
+import { enqueueWindowOpenRequest, type WindowOpenRequest } from "../services/window-open-request";
 import { createPendingQueueDrain } from "../utils/pending-queue-drain";
 import { disposeListener } from "@/utils/tauri-drag-drop";
 

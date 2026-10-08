@@ -7,6 +7,7 @@ import {
   classifyTarget,
   compareWithBaseline,
   findCycleEdges,
+  findInvalidPublicFiles,
   findPrivateImports,
   parseImports,
   stronglyConnectedComponents,
@@ -48,6 +49,10 @@ describe("feature boundaries", () => {
 
   it("adds no module-level import cycles across features", () => {
     expect(result.newCycleEdges, HOW_TO_FIX).toEqual([]);
+  });
+
+  it("lists only existing public files, each with a reason", () => {
+    expect(findInvalidPublicFiles(repoRoot, graph.files)).toEqual([]);
   });
 
   it("keeps the baseline in sync so it only shrinks", () => {
@@ -97,7 +102,9 @@ describe("feature boundary analysis", () => {
   it("classifies feature files by folder and listed public files", () => {
     const config: FeatureBoundaryConfig = {
       ...featureBoundaries,
-      publicFiles: { demo: ["components/shared-view.tsx", "runtime/registry.ts"] },
+      publicFiles: {
+        demo: { "components/shared-view.tsx": "Shared view.", "runtime/registry.ts": "Registry." },
+      },
     };
     const isPublic = (file: string) => classifyTarget(`src/features/${file}`, config).isPublic;
 
@@ -120,6 +127,25 @@ describe("feature boundary analysis", () => {
     expect(isPublic("demo/sub/utils/helpers.ts")).toBe(false);
     expect(isPublic("demo/sub/root-file.ts")).toBe(false);
     expect(classifyTarget("src/utils/cn.ts", config).isPublic).toBe(true);
+  });
+
+  it("reports public files that match nothing or give no reason", () => {
+    const config: FeatureBoundaryConfig = {
+      ...featureBoundaries,
+      publicFiles: {
+        demo: {
+          "components/view.tsx": "Shared view.",
+          "components/gone.tsx": "Gone.",
+          "lib/*": "",
+        },
+      },
+    };
+    const files = ["src/features/demo/components/view.tsx", "src/features/demo/lib/parser.ts"];
+
+    expect(findInvalidPublicFiles("/nonexistent", files, config)).toEqual([
+      "demo/components/gone.tsx: matches no file",
+      "demo/lib/*: has no reason",
+    ]);
   });
 
   it("reports private imports from other features only", () => {

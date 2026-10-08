@@ -7,7 +7,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import type { EditorContent } from "@/features/panes/types/pane-content.types";
 import { WindowCloseGuard } from "../components/window-close-guard";
-import { requestWindowClose } from "../utils/request-window-close";
+import { requestWindowClose } from "../services/request-window-close";
 
 const mocks = vi.hoisted(() => ({
   close: vi.fn(),

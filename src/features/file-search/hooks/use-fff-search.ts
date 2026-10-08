@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { fffSearchFiles, type FffSearchHit } from "../api/file-search-api";
-import { getNativeWorkspaceRootPaths } from "../utils/file-search-paths";
+import { getNativeWorkspaceRootPaths } from "../services/file-search-paths";
 
 function parseSearchRootPaths(searchKey: string) {
   try {

@@ -1,12 +1,12 @@
 import { getTypographyFontFallbacks } from "@/features/settings/config/typography-defaults";
 import { useEffectiveTheme } from "@/features/settings/hooks/use-effective-theme";
-import { isEditorWordWrapEnabled } from "@/features/settings/lib/editor-word-wrap";
-import { buildFontFamilyStack } from "@/features/settings/lib/font-family-resolution";
+import { isEditorWordWrapEnabled } from "@/features/settings/services/editor-word-wrap";
+import { buildFontFamilyStack } from "@/features/settings/services/font-family-resolution";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useZoomStore } from "@/features/layout/stores/zoom.store";
 import { IS_WINDOWS } from "@/utils/platform";
 import { useShallow } from "zustand/react/shallow";
-import { calculateLineHeight } from "../utils/lines";
+import { calculateLineHeight } from "../services/lines";
 
 /** The editor's visual settings, resolved for whichever engine draws the text. */
 export function useEditorViewSettings() {

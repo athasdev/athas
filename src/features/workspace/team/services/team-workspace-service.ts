@@ -1,11 +1,11 @@
 import { commands } from "@/bindings/commands";
-import { writeFile } from "@/features/file-system/controllers/platform";
+import { writeFile } from "@/features/file-system/api/file-system-api";
 import { getWorkspaceResourceProvider } from "@/features/file-system/services/workspace-resource-provider";
 import { parseRemotePath } from "@/features/remote/utils/remote-path";
 import { joinPath } from "@/utils/path-helpers";
 import { emitAppEvent } from "@/utils/app-events";
 import type { TeamWorkspace } from "../types/team-workspace";
-import { parseTeamWorkspace, TEAM_WORKSPACE_FILE } from "../utils/team-workspace-config";
+import { parseTeamWorkspace, TEAM_WORKSPACE_FILE } from "./team-workspace-config";
 
 export async function readTeamWorkspaceContent(workspacePath: string): Promise<string | null> {
   const provider = getWorkspaceResourceProvider(workspacePath);

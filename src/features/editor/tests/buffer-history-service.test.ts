@@ -8,7 +8,7 @@ import {
   hasPendingBufferHistory,
   trackBufferHistoryChange,
   trackImmediateBufferHistoryChange,
-} from "../stores/buffer-history-tracking";
+} from "../services/buffer-history-tracking";
 import { useHistoryStore } from "../stores/history.store";
 import { seedActiveBuffer } from "@/features/panes/tests/helpers/seed-pane-tabs";
 

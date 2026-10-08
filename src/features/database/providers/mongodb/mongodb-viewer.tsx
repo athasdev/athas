@@ -11,7 +11,7 @@ import {
 } from "@/ui/icons";
 import { useEffect, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { PathBreadcrumb } from "@/features/editor/components/toolbar/path-breadcrumb";
+import { PathBreadcrumb } from "@/ui/path-breadcrumb";
 import { PaneContentHeader } from "@/features/panes/components/pane-content-chrome";
 import { Alert, AlertDescription } from "@/ui/alert";
 import { Button } from "@/ui/button";

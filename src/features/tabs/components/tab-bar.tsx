@@ -8,17 +8,17 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getBufferById } from "@/features/editor/stores/buffer-index";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import { formatDiffBufferLabel } from "@/features/git/utils/diff-buffer-label";
+import { formatDiffBufferLabel } from "@/features/git/services/diff-buffer-label";
 import { writeClipboardText } from "@/utils/clipboard";
 import { BOTTOM_PANE_ID } from "@/features/panes/constants/pane";
 import { usePaneStore } from "@/features/panes/stores/pane.store";
-import { activateBufferInPaneAndSync } from "@/features/panes/utils/pane-activation";
-import { splitEditorGroup } from "@/features/panes/utils/pane-command-actions";
-import { moveBufferToPaneDropTarget } from "@/features/panes/utils/pane-drop-actions";
-import { findPaneGroup } from "@/features/panes/utils/pane-tree";
+import { activateBufferInPaneAndSync } from "@/features/panes/services/pane-activation";
+import { splitEditorGroup } from "@/features/panes/services/pane-command-actions";
+import { moveBufferToPaneDropTarget } from "@/features/panes/services/pane-drop-actions";
+import { findPaneGroup } from "@/features/panes/services/pane-tree";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
-import { getChromeNavigationIndex } from "@/features/layout/utils/chrome-keyboard";
+import { getChromeNavigationIndex } from "@/features/layout/services/chrome-keyboard";
 import { useSidebarStore } from "@/features/layout/stores/sidebar.store";
 import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
 import type { Terminal } from "@/features/terminal/types/terminal.types";
@@ -43,7 +43,7 @@ import {
   setInternalTabDragData,
   setInternalTabDragHover,
   setInternalTabDragHoverTarget,
-} from "../utils/internal-tab-drag";
+} from "../services/internal-tab-drag";
 import TabBarItem from "./tab-bar-item";
 import { TabHistoryNavigation } from "./tab-history-navigation";
 import { NewTabMenu } from "./new-tab-menu";

@@ -11,25 +11,25 @@ import {
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import type { Buffer } from "@/features/editor/stores/buffer.store";
 import { getBufferById } from "@/features/editor/stores/buffer-index";
-import { isEditorKeyboardTarget } from "@/features/keymaps/utils/editor-keyboard-target";
+import { isEditorKeyboardTarget } from "@/features/keymaps/services/editor-keyboard-target";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { stageHunk, unstageHunk } from "@/features/git/api/git-status-api";
 import type { GitHunk } from "@/features/git/types/git.types";
 import { useGitHubStore } from "@/features/github/stores/github.store";
-import { formatDiffBufferLabel } from "@/features/git/utils/diff-buffer-label";
-import { openSidebarResourceBuffer } from "@/features/sidebar/utils/open-sidebar-resource";
+import { formatDiffBufferLabel } from "@/features/git/services/diff-buffer-label";
+import { openSidebarResourceBuffer } from "@/features/sidebar/services/open-sidebar-resource";
 import {
   hasSidebarResourceDragData,
   readSidebarResourceDragData,
   type SidebarDragResource,
-} from "@/features/sidebar/utils/sidebar-resource-drag";
+} from "@/features/sidebar/services/sidebar-resource-drag";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import {
   useActiveWorkspaceId,
   useWorkspaceStoreScopeId,
 } from "@/features/workspace/stores/create-workspace-scoped-store";
 import TabBar from "@/features/tabs/components/tab-bar";
-import { extractDroppedFilePaths } from "@/features/file-system/utils/file-system-dropped-paths";
+import { extractDroppedFilePaths } from "@/features/file-system/services/file-system-dropped-paths";
 import Badge from "@/ui/badge";
 import { Empty, EmptyDescription } from "@/ui/empty";
 import {
@@ -37,14 +37,20 @@ import {
   getInternalTabDragData,
   getInternalTabDragHover,
   resolveDropTarget,
-} from "@/features/tabs/utils/internal-tab-drag";
+} from "@/features/tabs/services/internal-tab-drag";
 import { cn } from "@/utils/cn";
-import { activateBufferInPaneAndSync, activatePaneAndSyncBuffer } from "../utils/pane-activation";
+import {
+  activateBufferInPaneAndSync,
+  activatePaneAndSyncBuffer,
+} from "../services/pane-activation";
 import { BOTTOM_PANE_ID } from "../constants/pane";
 import { usePaneStore } from "../stores/pane.store";
 import type { PaneGroup } from "../types/pane.types";
 import type { EditorContent, PullRequestContent } from "../types/pane-content.types";
-import { getOrCreatePaneDropTarget, moveBufferToPaneDropTarget } from "../utils/pane-drop-actions";
+import {
+  getOrCreatePaneDropTarget,
+  moveBufferToPaneDropTarget,
+} from "../services/pane-drop-actions";
 import { PaneSurfaceLayer } from "./pane-surface-layer";
 import { type DropZone, SplitDropOverlay } from "./split-drop-overlay";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
@@ -68,7 +74,7 @@ function getDatabaseViewer(dbType: DatabaseType) {
   return databaseViewerCache.get(dbType)!;
 }
 const ExternalEditorTerminal = lazy(() =>
-  import("@/features/editor/components/external-editor-terminal").then((m) => ({
+  import("@/features/terminal/components/external-editor-terminal").then((m) => ({
     default: m.ExternalEditorTerminal,
   })),
 );

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import { normalizePersistedProjectTabs } from "../utils/persisted-project-tabs";
-import { createProjectTabId } from "../utils/project-tab-path";
+import { createProjectTabId } from "../services/project-tab-path";
 
 const tab = (path: string, isActive: boolean, id = createProjectTabId(path)) => ({
   id,

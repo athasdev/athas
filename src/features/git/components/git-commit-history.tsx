@@ -1,6 +1,6 @@
 import { FilterIcon } from "@/ui/icons";
 import { memo, useCallback, useMemo } from "react";
-import { writeSidebarResourceDragData } from "@/features/sidebar/utils/sidebar-resource-drag";
+import { writeSidebarResourceDragData } from "@/features/sidebar/services/sidebar-resource-drag";
 import {
   DropdownMenu,
   DropdownMenuContent,

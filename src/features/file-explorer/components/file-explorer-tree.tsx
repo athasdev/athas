@@ -41,14 +41,14 @@ import {
   readFileTreeGitIgnoreContents,
   subscribeToFileTreeGitIgnoreCacheInvalidation,
   type FileTreeGitIgnoreRules,
-} from "@/features/file-explorer/lib/file-tree-gitignore";
-import { fileOpenBenchmark } from "@/features/editor/utils/file-open-benchmark";
-import { findFileInTree } from "@/features/file-system/controllers/file-tree-utils";
-import { readDirectory, readFile } from "@/features/file-system/controllers/platform";
+} from "@/features/file-explorer/services/file-tree-gitignore";
+import { fileOpenBenchmark } from "@/features/editor/services/file-open-benchmark";
+import { findFileInTree } from "@/features/file-system/services/file-tree-utils";
+import { readDirectory, readFile } from "@/features/file-system/api/file-system-api";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import type { FileEntry } from "@/features/file-system/types/app.types";
 import { useFffSearch } from "@/features/file-search/hooks/use-fff-search";
-import { getNativeWorkspaceRootPaths } from "@/features/file-search/utils/file-search-paths";
+import { getNativeWorkspaceRootPaths } from "@/features/file-search/services/file-search-paths";
 import { useGitStore } from "@/features/git/stores/git.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";

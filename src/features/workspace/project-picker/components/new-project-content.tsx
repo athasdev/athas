@@ -2,8 +2,8 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react"
 import { cloneRepository } from "@/features/git/api/git-clone-api";
 import { getHomeDirectory, pathExists } from "@/utils/local-files";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { createNewDirectory } from "@/features/file-system/controllers/file-operations";
-import { openFolder } from "@/features/file-system/controllers/platform";
+import { createNewDirectory } from "@/features/file-system/api/file-operations";
+import { openFolder } from "@/features/file-system/api/file-system-api";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import {
   ArrowLeftIcon,

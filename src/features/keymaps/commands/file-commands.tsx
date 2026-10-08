@@ -9,7 +9,7 @@ import {
   XIcon,
 } from "@/ui/icons";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { openLocalHistoryForActiveFile } from "@/features/local-history/utils/open-local-history";
+import { openLocalHistoryForActiveFile } from "@/features/local-history/services/open-local-history";
 import type { Command } from "../types/keymaps.types";
 import {
   closeActiveTab,

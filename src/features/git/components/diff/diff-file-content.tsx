@@ -1,12 +1,8 @@
 import { lazy, memo, Suspense, useCallback, useMemo, type ComponentProps } from "react";
 import { ViewerLoadingState } from "@/features/viewer/components/viewer-state";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
-import { calculateLineHeight, splitLines } from "@/features/editor/utils/lines";
-import {
-  buildSearchRegex,
-  findAllMatches,
-  type SearchOptions,
-} from "@/features/editor/utils/search";
+import { calculateLineHeight, splitLines } from "@/features/editor/services/lines";
+import { buildSearchRegex, findAllMatches, type SearchOptions } from "@/utils/text-search";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useZoomStore } from "@/features/layout/stores/zoom.store";
 import { useDiffEditorBuffer } from "../../hooks/use-diff-editor-buffer";
@@ -15,7 +11,7 @@ import {
   serializeGitDiffForEditor,
   serializeGitDiffSourceForEditor,
   serializeGitDiffSourceForSplitEditor,
-} from "../../utils/diff-editor-content";
+} from "../../services/diff-editor-content";
 import {
   DIFF_INLINE_RENDER_LINE_THRESHOLD,
   shouldUseScrollableDiffEditor,

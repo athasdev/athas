@@ -8,6 +8,12 @@ import type {
 } from "./editor.types";
 import type { LiveDocumentEdit } from "../services/live-document-registry";
 
+/** DOM handles the code editor exposes through its ref. */
+export interface CodeEditorRef {
+  editor: HTMLDivElement | null;
+  textarea: HTMLDivElement | null;
+}
+
 interface EditorResolvedPosition {
   top: number;
   left: number;

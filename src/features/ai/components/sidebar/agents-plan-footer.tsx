@@ -6,7 +6,7 @@ import {
   getHostedUsageHeadline,
   getHostedUsageState,
   getHostedUsageTone,
-} from "@/features/ai/lib/hosted-usage";
+} from "@/features/ai/services/hosted-usage";
 import { useProFeature } from "@/features/auth/hooks/use-pro-feature";
 import { useSubscriptionRefresh } from "@/features/auth/hooks/use-subscription-refresh";
 import { useAuthStore } from "@/features/auth/stores/auth.store";

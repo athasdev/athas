@@ -4,7 +4,7 @@ import { Button } from "@/ui/button";
 import { Empty, EmptyDescription } from "@/ui/empty";
 import { cn } from "@/utils/cn";
 import type { ImageContainerProps, ImageDiffViewerProps } from "../../types/git-diff.types";
-import { getFileStatus, getImgSrc } from "../../utils/git-diff-helpers";
+import { getFileStatus, getImgSrc } from "../../services/git-diff-helpers";
 import DiffHeader from "./git-diff-header";
 
 const ZOOM_STEP = 0.25;

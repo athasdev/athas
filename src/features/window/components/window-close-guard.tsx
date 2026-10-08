@@ -1,6 +1,6 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import type { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import UnsavedChangesDialog from "@/features/window/components/unsaved-changes-dialog";
 import { WindowCloseSession, type PendingWindowClose } from "../services/window-close-session";
 import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";

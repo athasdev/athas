@@ -2,11 +2,11 @@ import { useEffect, useEffectEvent, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { BOTTOM_PANE_ID } from "@/features/panes/constants/pane";
 import { usePaneStore } from "@/features/panes/stores/pane.store";
-import { activateBufferInPaneAndSync } from "@/features/panes/utils/pane-activation";
+import { activateBufferInPaneAndSync } from "@/features/panes/services/pane-activation";
 import {
   clearInternalTabDragData,
   getInternalTabDragData,
-} from "@/features/tabs/utils/internal-tab-drag";
+} from "@/features/tabs/services/internal-tab-drag";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
 import {
   dispatchDroppedPathsToTerminal,
@@ -14,7 +14,7 @@ import {
   getExternalFileDropRoute,
   isExternalFileDragTypeList,
   resolveDropClientPoint,
-} from "../utils/file-system-drop-controller";
+} from "../services/file-system-drop-controller";
 import { listenToNativeDragDrop, type NativeDragDropPayload } from "@/utils/tauri-drag-drop";
 import { emitAppEvent } from "@/utils/app-events";
 

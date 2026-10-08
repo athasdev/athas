@@ -8,9 +8,13 @@ import { GitBranchIcon, GitCommitIcon, RocketIcon, OpenExternalIcon } from "@/ui
 import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemTitle } from "@/ui/item";
 import { ResourceSection, ResourceSidebarLayout, ResourceSummary } from "@/ui/resource";
 import { GitHubMetaChip, GitHubUserChip } from "../../components/github-chips";
-import { getTimeAgo } from "../../utils/github-viewer-utils";
+import { getTimeAgo } from "../../services/github-viewer-utils";
 import type { Deployment } from "../types/github-delivery.types";
-import { deploymentState, deploymentStatusState, safeDeliveryUrl } from "../utils/github-delivery";
+import {
+  deploymentState,
+  deploymentStatusState,
+  safeDeliveryUrl,
+} from "../services/github-delivery";
 
 export function DeploymentSummary({
   deployment,

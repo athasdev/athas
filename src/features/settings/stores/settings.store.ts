@@ -7,13 +7,13 @@ import {
   applySettingsSideEffects,
 } from "@/features/settings/lib/settings-effects";
 import { getAIModelSelectionPatch } from "@/features/settings/lib/ai-model-selection";
-import { getSystemSyncThemePreferencePatch } from "@/features/settings/lib/theme-resolution";
+import { getSystemSyncThemePreferencePatch } from "@/features/settings/services/theme-resolution";
 import { initializeSettingsState } from "@/features/settings/lib/settings-bootstrap";
 import { normalizeSettingValue } from "@/features/settings/lib/settings-normalization";
 import {
   debouncedSaveSettingsToStore,
   saveSettingsToStore,
-} from "@/features/settings/lib/settings-persistence";
+} from "@/features/settings/services/settings-persistence";
 import { parseSettingsImportJson } from "@/features/settings/lib/settings-import-export";
 import type { Settings } from "../types/settings.types";
 import { useWorkspaceTabsStore } from "@/features/workspace/stores/workspace-tabs.store";

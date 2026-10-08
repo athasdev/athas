@@ -20,3 +20,5 @@ export type SettingsTab =
   | "file-explorer";
 
 export type BottomPaneTab = "terminal" | "debugger" | "diagnostics" | "references" | "buffers";
+
+export type ProjectPickerInitialStep = "picker" | "addRemote";

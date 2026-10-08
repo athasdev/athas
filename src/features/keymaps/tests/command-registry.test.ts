@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
 import { builtInCommands, registerCommands } from "../commands/command-registry";
 import { defaultKeymaps } from "../defaults/default-keymaps";
-import { keymapRegistry } from "../utils/registry";
+import { keymapRegistry } from "../services/keymap-registry";
 
 describe("built-in commands", () => {
   beforeEach(() => {

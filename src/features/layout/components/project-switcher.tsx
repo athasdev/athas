@@ -8,10 +8,13 @@ import {
 } from "@/features/remote/services/remote-connection-actions";
 import { connectionStore } from "@/features/remote/stores/remote-connection.store";
 import type { RemoteConnection } from "@/features/remote/types/remote.types";
-import { getFriendlyRemoteError, isRemoteAuthFailure } from "@/features/remote/utils/remote-errors";
+import {
+  getFriendlyRemoteError,
+  isRemoteAuthFailure,
+} from "@/features/remote/services/remote-errors";
 import ProjectIconPicker from "@/features/workspace/project-icons/components/project-icon-picker";
 import type { ProjectTab } from "@/features/workspace/stores/workspace-tabs.store";
-import { findBestProjectIcon } from "@/features/workspace/project-icons/utils/project-icons";
+import { findBestProjectIcon } from "@/features/workspace/project-icons/services/project-icons";
 import { Button } from "@/ui/button";
 import {
   DropdownMenu,

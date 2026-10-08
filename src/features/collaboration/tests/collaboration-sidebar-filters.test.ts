@@ -14,7 +14,7 @@ import type {
   CollaborationChannel,
   CollaborationNoteItem,
   CollaborationParticipant,
-} from "../lib/collaboration-sidebar-model";
+} from "../services/collaboration-sidebar-model";
 
 const channels = [
   {

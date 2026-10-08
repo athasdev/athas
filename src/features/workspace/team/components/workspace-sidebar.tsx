@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { openFolder } from "@/features/file-system/controllers/platform";
+import { openFolder } from "@/features/file-system/api/file-system-api";
 import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { Button } from "@/ui/button";

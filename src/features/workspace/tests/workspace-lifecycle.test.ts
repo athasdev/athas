@@ -7,7 +7,7 @@ import {
   switchWorkspaceRuntime,
 } from "@/features/workspace/services/workspace-lifecycle";
 import { useWorkspaceTabsStore } from "@/features/workspace/stores/workspace-tabs.store";
-import { createProjectTabId } from "@/features/workspace/utils/project-tab-path";
+import { createProjectTabId } from "@/features/workspace/services/project-tab-path";
 
 const storage = vi.hoisted(() => {
   const values = new Map<string, string>();

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { shouldIgnoreSearchEntry, shouldIgnoreSearchFile } from "../utils/file-search-filtering";
+import { shouldIgnoreSearchEntry, shouldIgnoreSearchFile } from "../services/file-search-filtering";
 
 describe("file search filtering", () => {
   it("shares directory and file exclusions across search surfaces", () => {

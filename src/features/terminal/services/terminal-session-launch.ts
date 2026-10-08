@@ -2,10 +2,7 @@ import type { StoreApi } from "zustand";
 import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
 import type { TerminalStore } from "../stores/terminal.store";
 import type { Terminal } from "../types/terminal.types";
-import {
-  createTerminalEventChannel,
-  type PendingTerminalEventChannel,
-} from "../utils/terminal-protocol";
+import { createTerminalEventChannel, type PendingTerminalEventChannel } from "./terminal-protocol";
 import { closeTerminalConnection } from "./terminal-connection-lifecycle";
 
 interface PendingLaunch {

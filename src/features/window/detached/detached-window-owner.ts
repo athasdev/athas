@@ -1,7 +1,7 @@
 import { Window, getCurrentWindow } from "@tauri-apps/api/window";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
-import { createAppWindow } from "@/features/window/utils/create-app-window";
+import { createAppWindow } from "@/features/window/services/create-app-window";
 import {
   type DetachedWindowBaseMessage,
   type DetachedWindowKind,

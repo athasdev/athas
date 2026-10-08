@@ -9,21 +9,21 @@ import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import {
   readEditorClipboardText,
   writeEditorClipboardText,
-} from "@/features/editor/utils/clipboard";
-import { calculateCursorPositionFromContent } from "@/features/editor/utils/position";
+} from "@/features/editor/services/editor-clipboard";
+import { calculateCursorPositionFromContent } from "@/features/editor/services/position";
 import {
   resolveAllOccurrenceRanges,
   resolveSelectNextOccurrenceAction,
   resolveSelectPreviousOccurrenceAction,
   type OccurrenceRange,
-} from "@/features/editor/utils/select-next-occurrence";
+} from "@/features/editor/services/select-next-occurrence";
 import { showChoiceDialog } from "@/ui/dialog";
 import { emitAppEvent } from "@/utils/app-events";
 import { toast } from "sonner";
 import {
   getMarkdownPreviewKeyboardTarget,
   isEditorKeyboardTarget,
-} from "../utils/editor-keyboard-target";
+} from "../services/editor-keyboard-target";
 import { readBufferText } from "@/features/editor/services/buffer-text";
 import { resolveBufferText } from "@/features/editor/services/open-buffer-text";
 import { getActiveBufferId } from "@/features/panes/stores/pane-selectors";
@@ -485,7 +485,7 @@ export async function runQuickFixForActiveEditor(): Promise<void> {
   const [{ useDiagnosticsStore }, { selectDiagnosticForQuickFix, selectPreferredCodeAction }] =
     await Promise.all([
       import("@/features/diagnostics/stores/diagnostics.store"),
-      import("@/features/diagnostics/utils/quick-fix"),
+      import("@/features/diagnostics/services/quick-fix"),
     ]);
   const diagnostics = useDiagnosticsStore
     .getState()

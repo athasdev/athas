@@ -5,7 +5,7 @@ import {
   OLLAMA_CLOUD_BASE_URL,
   isOllamaCloudUrl,
   resolveOllamaBaseUrl,
-} from "@/features/ai/lib/ollama-endpoint";
+} from "@/features/ai/services/ollama-endpoint";
 import {
   getProviderApiToken,
   removeProviderApiToken,
@@ -15,7 +15,7 @@ import {
   setOllamaApiKey,
   setOllamaBaseUrl,
 } from "@/features/ai/services/providers/ai-provider-registry";
-import { isLocalEndpointUrl } from "@/features/ai/lib/local-ai-connection";
+import { isLocalEndpointUrl } from "@/features/ai/services/local-ai-connection";
 import { checkOllamaConnection } from "@/features/ai/services/providers/ollama-provider";
 import { useToast } from "@/utils/toast";
 import { getDefaultSetting } from "@/features/settings/config/default-settings";

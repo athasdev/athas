@@ -3,7 +3,7 @@ import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import type { WorkspaceRuntimeDescriptor } from "@/features/workspace/types/workspace-runtime.types";
 import { WELCOME_WORKSPACE_ID } from "@/features/workspace/types/workspace-runtime.types";
 import { useWorkspaceTabsStore } from "@/features/workspace/stores/workspace-tabs.store";
-import { createProjectTabId } from "@/features/workspace/utils/project-tab-path";
+import { createProjectTabId } from "@/features/workspace/services/project-tab-path";
 
 interface OpenWorkspaceRuntimeOptions {
   descriptor: Omit<WorkspaceRuntimeDescriptor, "id"> & { path: string };

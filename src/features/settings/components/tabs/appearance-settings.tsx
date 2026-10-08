@@ -13,9 +13,9 @@ import {
   UI_FONT_SIZE_MAX,
   UI_FONT_SIZE_MIN,
   UI_FONT_SIZE_STEP,
-} from "@/features/settings/lib/ui-font-size";
+} from "@/features/settings/services/ui-font-size";
 import { getDefaultSetting } from "@/features/settings/config/default-settings";
-import { normalizeUiDensity } from "@/features/settings/lib/ui-preferences";
+import { normalizeUiDensity } from "@/features/settings/services/ui-preferences";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import type { TabCloseButtonVisibility } from "@/features/settings/types/settings.types";
 import { Button } from "@/ui/button";
@@ -31,7 +31,7 @@ import {
   chooseThemeFile,
   deleteCustomTheme,
   uploadTheme,
-} from "@/features/settings/utils/theme-upload";
+} from "@/features/settings/services/theme-upload";
 
 export const AppearanceSettings = () => {
   const settings = useSettingsStore(

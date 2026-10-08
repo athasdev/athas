@@ -14,7 +14,7 @@ import {
   XIcon,
 } from "@/ui/icons";
 import { useWorkspaceTabsStore } from "@/features/workspace/stores/workspace-tabs.store";
-import type { ProjectPickerInitialStep } from "@/features/layout/stores/ui-state/modal-slice";
+import type { ProjectPickerInitialStep } from "@/features/layout/stores/ui-state/types/ui-state.types";
 import { memo, type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRecentFoldersStore } from "@/features/file-system/stores/recent-folders.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
@@ -36,12 +36,12 @@ import type {
   RemoteConnection,
   RemoteConnectionFormData,
 } from "@/features/remote/types/remote.types";
+import { getWslHomeDirectory, listWslDistributions } from "@/features/wsl/api/wsl-distributions";
+import type { WslDistribution } from "@/features/wsl/services/wsl-workspace";
 import {
-  getWslHomeDirectory,
-  listWslDistributions,
-} from "@/features/wsl/controllers/wsl-distributions";
-import type { WslDistribution } from "@/features/wsl/controllers/wsl-workspace";
-import { getFriendlyRemoteError, isRemoteAuthFailure } from "@/features/remote/utils/remote-errors";
+  getFriendlyRemoteError,
+  isRemoteAuthFailure,
+} from "@/features/remote/services/remote-errors";
 import Command, {
   CommandEmpty,
   CommandFooter,

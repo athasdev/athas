@@ -1,5 +1,5 @@
 import { openExternalUrl } from "@/utils/external-url";
-import { openFolder } from "@/features/file-system/controllers/platform";
+import { openFolder } from "@/features/file-system/api/file-system-api";
 import { Button } from "@/ui/button";
 import { Field, FieldLabel, FieldDescription } from "@/ui/field";
 import { Card, CardContent } from "@/ui/card";
@@ -8,7 +8,7 @@ import Input from "@/ui/input";
 import { getBaseName } from "@/utils/path-helpers";
 import { useWorkspaceManagementStore } from "../stores/workspace-management.store";
 import { openManagedWorkspace } from "../services/open-managed-workspace";
-import { parseTeamWorkspace } from "../utils/team-workspace-config";
+import { parseTeamWorkspace } from "../services/team-workspace-config";
 import type { WorkspaceSectionProps } from "./workspace-section-props";
 
 export function WorkspaceRepositories({

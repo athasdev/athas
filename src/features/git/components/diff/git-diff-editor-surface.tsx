@@ -4,7 +4,7 @@ import { useDiffEditorBuffer } from "../../hooks/use-diff-editor-buffer";
 import {
   serializeGitDiffForEditor,
   serializeMultiFileDiffForEditor,
-} from "../../utils/diff-editor-content";
+} from "../../services/diff-editor-content";
 import type { MultiFileDiff } from "../../types/git-diff.types";
 import type { GitDiff } from "../../types/git.types";
 

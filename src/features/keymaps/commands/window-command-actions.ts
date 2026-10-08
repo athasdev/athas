@@ -1,6 +1,6 @@
 import { commands } from "@/bindings/commands";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { createAppWindow } from "@/features/window/utils/create-app-window";
+import { createAppWindow } from "@/features/window/services/create-app-window";
 import { isLinux, isMac } from "@/utils/platform";
 
 export function toggleFullscreen(): void {

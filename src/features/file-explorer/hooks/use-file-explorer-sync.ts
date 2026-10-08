@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { getExplorerTargetPath } from "@/features/file-explorer/utils/file-explorer-tree-utils";
+import { getExplorerTargetPath } from "@/features/file-explorer/services/file-explorer-tree-utils";
 import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 interface UseFileExplorerSyncOptions {

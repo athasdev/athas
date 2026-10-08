@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
-import { normalizeOutlineSymbols } from "../utils/outline-symbols";
-import { findSymbolPathAtPosition } from "../utils/symbol-path";
+import { normalizeOutlineSymbols } from "../services/outline-symbols";
+import { findSymbolPathAtPosition } from "../services/symbol-path";
 
 describe("findSymbolPathAtPosition", () => {
   it("returns the root-to-leaf chain when the cursor is inside a nested method", () => {

@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vite-plus/test";
-import { parseDroppedPathCandidate, parseDroppedPaths } from "../utils/file-system-dropped-paths";
+import {
+  parseDroppedPathCandidate,
+  parseDroppedPaths,
+} from "../services/file-system-dropped-paths";
 
 describe("dropped-file-paths", () => {
   it("parses absolute unix and windows paths", () => {

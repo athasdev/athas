@@ -30,7 +30,7 @@ vi.mock("@/features/workspace/stores/project.store", () => ({
 vi.mock("@/features/workspace/stores/workspace-tabs.store", () => ({
   useWorkspaceTabsStore: { use: { projectTabs: () => [] } },
 }));
-vi.mock("@/features/file-system/controllers/platform", () => ({ openFolder: mocks.openFolder }));
+vi.mock("@/features/file-system/api/file-system-api", () => ({ openFolder: mocks.openFolder }));
 vi.mock("@/features/auth/stores/auth.store", () => ({ useAuthStore: () => false }));
 vi.mock("@/features/layout/stores/ui-state.store", () => ({
   useUIState: { getState: () => mocks },

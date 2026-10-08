@@ -3,18 +3,18 @@ import { GitHubActionsWatcher } from "@/features/github/components/github-action
 import { useEffect } from "react";
 import { MotionConfig } from "motion/react";
 import { FontStyleInjector } from "@/features/settings/components/font-style-injector";
-import { initializeAppBootstrap } from "@/features/bootstrap/initialize-app-bootstrap";
+import { initializeAppBootstrap } from "@/features/bootstrap/services/initialize-app-bootstrap";
 import {
   recordStartupMilestone,
   recordStartupMilestoneAfterFrame,
-} from "@/features/bootstrap/startup-performance";
+} from "@/features/bootstrap/services/startup-performance";
 import { SettingsReadyBootstrap } from "@/features/bootstrap/components/settings-ready-bootstrap";
-import { useAppBootstrap } from "@/features/bootstrap/use-app-bootstrap";
+import { useAppBootstrap } from "@/features/bootstrap/hooks/use-app-bootstrap";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import {
   traceWindowOpen,
   traceWindowOpenAfterFrame,
-} from "@/features/window/utils/window-open-diagnostics";
+} from "@/features/window/services/window-open-diagnostics";
 import { NotificationRecorder } from "@/features/notifications/components/notification-recorder";
 import { useNativeNotificationIntegration } from "@/features/notifications/hooks/use-native-notification-integration";
 import { useAcpEventSync } from "@/features/ai/hooks/use-acp-event-sync";
@@ -28,7 +28,7 @@ import { WindowResizeBorder } from "./features/window/components/window-resize-b
 import { DialogServiceProvider } from "@/ui/dialog";
 import { ContinuousAgentsRuntime } from "@/features/ai/continuous-agents/continuous-agents-runtime";
 import { DeferredEventDialog } from "@/components/deferred-event-dialog";
-import { bucketFrictionDuration } from "@/features/telemetry/lib/friction-signals";
+import { bucketFrictionDuration } from "@/features/telemetry/services/friction-signals";
 import { recordFrictionSignal } from "@/features/telemetry/services/telemetry";
 
 // Dialogs that open on a window event load the first time they are asked for.

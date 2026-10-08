@@ -1,5 +1,5 @@
 import { useSelectionScope } from "@/features/editor/hooks/use-selection-scope";
-import { calculateLineHeight } from "@/features/editor/utils/lines";
+import { calculateLineHeight } from "@/features/editor/services/lines";
 import { memo, useCallback, useMemo, useRef, useState } from "react";
 import { useZoomStore } from "@/features/layout/stores/zoom.store";
 import { Empty, EmptyDescription } from "@/ui/empty";
@@ -10,7 +10,7 @@ import type {
   TextDiffViewerProps,
 } from "../../types/git-diff.types";
 import { DIFF_HIGHLIGHT_LINE_THRESHOLD } from "../../utils/diff-viewer-scale";
-import { getSkippedUnchangedLineCount, groupLinesIntoHunks } from "../../utils/git-diff-helpers";
+import { getSkippedUnchangedLineCount, groupLinesIntoHunks } from "../../services/git-diff-helpers";
 import DiffHunkHeader from "./git-diff-hunk-header";
 import DiffLine, {
   getContentColor,
@@ -21,7 +21,7 @@ import DiffLine, {
   getSplitLineMeta,
   renderDiffLineContent,
 } from "./git-diff-line";
-import { isEditorWordWrapEnabled } from "@/features/settings/lib/editor-word-wrap";
+import { isEditorWordWrapEnabled } from "@/features/settings/services/editor-word-wrap";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 
 function SplitDiffCodePanel({

@@ -4,7 +4,7 @@ import { viewTableToCsv, jsonToViewTable } from "@/features/views/lib/view-model
 import {
   buildProjectGitHubApiUrl,
   resolveProjectGitHubRepository,
-} from "@/features/views/lib/view-github";
+} from "@/features/views/services/view-github";
 import type { CustomViewDefinition, ViewTable } from "@/features/views/types/view.types";
 
 function validateSourceUrl(value: string): URL {

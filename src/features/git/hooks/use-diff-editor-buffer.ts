@@ -1,9 +1,9 @@
 import { useEffect, useMemo } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getBufferIndexById } from "@/features/editor/stores/buffer-index";
-import { detectLanguageFromPath } from "@/features/editor/utils/language-detection";
+import { detectLanguageFromPath } from "@/features/editor/services/language-detection";
 import type { EditorContent } from "@/features/panes/types/pane-content.types";
-import { getDiffEditorPath } from "../utils/diff-editor-content";
+import { getDiffEditorPath } from "../services/diff-editor-content";
 
 interface UseDiffEditorBufferOptions {
   cacheKey: string;

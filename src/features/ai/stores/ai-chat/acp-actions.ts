@@ -1,6 +1,6 @@
 import { commands } from "@/bindings/commands";
 import type { AcpSessionState } from "@/features/ai/types/acp.types";
-import { getAcpAgentKey } from "@/features/ai/lib/acp-session-state";
+import { getAcpAgentKey } from "@/features/ai/services/acp-session-state";
 import {
   getConfigOptionsToRestore,
   getModeToRestore,

@@ -8,7 +8,7 @@ import {
   resolveCodeMirrorLanguageId,
 } from "../engines/codemirror/languages";
 import { languages as codeBlockLanguages } from "../engines/codemirror/language-data";
-import { getAllLanguages, getLanguageIdFromPath } from "../utils/language-id";
+import { getAllLanguages, getLanguageIdFromPath } from "../services/language-id";
 
 vi.mock("@/extensions/registry/extension-registry", () => ({
   extensionRegistry: { getLanguageId: () => null },

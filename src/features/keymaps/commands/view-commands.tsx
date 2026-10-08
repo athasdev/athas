@@ -53,7 +53,7 @@ import {
   zoomIn,
   zoomOut,
 } from "./view-command-actions";
-import { selectIsTerminalPaneVisible } from "@/features/layout/stores/ui-state/terminal-slice";
+import { selectIsTerminalPaneVisible } from "@/features/layout/stores/ui-state-selectors";
 
 export const viewCommands: Command[] = [
   {
@@ -111,7 +111,7 @@ export const viewCommands: Command[] = [
     title: "New Athas Agent",
     category: "Agent",
     execute: async () => {
-      const { openNewAgentChat } = await import("@/features/ai/lib/open-new-agent-chat");
+      const { openNewAgentChat } = await import("@/features/ai/services/open-new-agent-chat");
       const { useAIChatStore } = await import("@/features/ai/stores/ai-chat.store");
       await useSettingsStore.getState().actions.updateSetting("aiProviderId", "athas");
       await useSettingsStore.getState().actions.updateSetting("aiModelId", "auto");

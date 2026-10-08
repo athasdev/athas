@@ -1,5 +1,5 @@
-import { agentEditLensAtLine } from "@/features/ai/lib/agent-edit-decorations";
-import { agentEditLenses, type AgentEditLens } from "@/features/ai/lib/agent-edit-lenses";
+import { agentEditLensAtLine } from "@/features/ai/services/agent-edit-decorations";
+import { agentEditLenses, type AgentEditLens } from "@/features/ai/services/agent-edit-lenses";
 import { keepAgentHunk, rejectAgentHunk } from "@/features/ai/services/agent-edits-service";
 import { useAgentEditsStore } from "@/features/ai/stores/agent-edits.store";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";

@@ -4,7 +4,7 @@ import {
   buildLineDiffHunks,
   diffTextLines,
   type LineDiffOp,
-} from "../utils/line-diff";
+} from "../services/line-diff";
 
 function render(ops: LineDiffOp[]): string[] {
   return ops.map((op) => {

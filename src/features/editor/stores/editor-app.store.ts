@@ -2,7 +2,7 @@ import { captureBufferStoreOwner } from "@/features/editor/services/buffer-store
 import { savePaneContent } from "@/features/panes/services/pane-content-save-service";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import { parseCollaborationNoteBufferPath } from "@/features/collaboration/lib/collaboration-sidebar-model";
+import { parseCollaborationNoteBufferPath } from "@/features/collaboration/services/collaboration-sidebar-model";
 import { isDirtyContent, isEditorContent } from "@/features/panes/types/pane-content.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { cleanupEditorAutoSave, scheduleEditorAutoSave } from "../services/editor-save-service";
@@ -17,7 +17,7 @@ import type {
 import { readBufferText } from "../services/buffer-text";
 import type { LiveDocumentEdit } from "../services/live-document-registry";
 import { getBufferById } from "./buffer-index";
-import { trackBufferHistoryChange } from "./buffer-history-tracking";
+import { trackBufferHistoryChange } from "../services/buffer-history-tracking";
 import { useBufferStore } from "./buffer.store";
 import { getActiveBufferId } from "@/features/panes/stores/pane-selectors";
 

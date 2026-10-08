@@ -1,4 +1,4 @@
-import type { CodeLensItem } from "@/features/editor/lsp/use-code-lens";
+import type { CodeLensItem } from "@/features/editor/lsp/hooks/use-code-lens";
 
 export type RunActionSource =
   | "team"

@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import { useJumpListStore } from "@/features/editor/stores/jump-list.store";
-import { navigateToJumpEntry } from "@/features/editor/utils/jump-navigation";
+import { navigateToJumpEntry } from "@/features/editor/services/jump-navigation";
 import { Button } from "@/ui/button";
 import { ArrowLeftIcon, ArrowRightIcon } from "@/ui/icons";
 import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";

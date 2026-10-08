@@ -1,5 +1,5 @@
 import { ExtensionsIcon } from "@/ui/icons";
-import { PathBreadcrumb } from "@/features/editor/components/toolbar/path-breadcrumb";
+import { PathBreadcrumb } from "@/ui/path-breadcrumb";
 import { ExtensionCategoryIcon, ExtensionInlineIcon } from "./extension-catalog-icon";
 import {
   EXTENSION_CATEGORIES,

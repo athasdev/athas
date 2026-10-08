@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { writeFile } from "../controllers/platform";
+import { writeFile } from "../api/file-system-api";
 
 const mocks = vi.hoisted(() => ({ invoke: vi.fn(), invalidate: vi.fn(), writeTextFile: vi.fn() }));
 vi.mock("@tauri-apps/api/core", () => ({ invoke: mocks.invoke }));
@@ -11,7 +11,7 @@ vi.mock("@tauri-apps/plugin-fs", () => ({
   remove: vi.fn(),
   writeTextFile: mocks.writeTextFile,
 }));
-vi.mock("@/features/file-explorer/lib/file-tree-gitignore", () => ({
+vi.mock("@/features/file-explorer/services/file-tree-gitignore", () => ({
   invalidateFileTreeGitIgnoreCache: mocks.invalidate,
 }));
 

@@ -1,5 +1,5 @@
 import { useAuthStore } from "@/features/auth/stores/auth.store";
-import { hasProductCapability } from "@/features/auth/utils/product-capabilities";
+import { hasProductCapability } from "@/features/auth/services/product-capabilities";
 import type { AuthUser, SubscriptionInfo } from "@/features/auth/services/auth-api";
 
 export function resolveProFeatureAccess(

@@ -7,8 +7,8 @@ import {
 } from "@/features/settings/config/typography-defaults";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { currentPlatform, IS_WINDOWS } from "@/utils/platform";
-import { buildFontFamilyStack } from "../lib/font-family-resolution";
-import { getUiFontScale, normalizeUiFontSize } from "../lib/ui-font-size";
+import { buildFontFamilyStack } from "../services/font-family-resolution";
+import { getUiFontScale, normalizeUiFontSize } from "../services/ui-font-size";
 
 function setRootStyleProperty(name: string, value: string) {
   const rootStyle = document.documentElement.style;

@@ -1,10 +1,10 @@
 import { readFile as readLocalFileBytes } from "@tauri-apps/plugin-fs";
 import { commands } from "@/bindings/commands";
-import { invalidateFileTreeGitIgnoreCache } from "@/features/file-explorer/lib/file-tree-gitignore";
+import { invalidateFileTreeGitIgnoreCache } from "@/features/file-explorer/services/file-tree-gitignore";
 import { parseRemotePath } from "@/features/remote/utils/remote-path";
 import { parseWslPath } from "@/features/wsl/utils/wsl-path";
-import { readDirectoryContents, readFileContent } from "../controllers/file-operations";
-import { sortFileEntries } from "../controllers/file-tree-utils";
+import { readDirectoryContents, readFileContent } from "../api/file-operations";
+import { sortFileEntries } from "./file-tree-utils";
 import type { FileEntry } from "../types/app.types";
 
 export interface WorkspaceResourceProvider {
@@ -44,7 +44,7 @@ const localWorkspaceResourceProvider: WorkspaceResourceProvider = {
       invalidateFileTreeGitIgnoreCache(path);
       return;
     }
-    const { writeFile } = await import("../controllers/platform");
+    const { writeFile } = await import("../api/file-system-api");
     await writeFile(path, content);
   },
   async deleteText(path, expectedContent) {

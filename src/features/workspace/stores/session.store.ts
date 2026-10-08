@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { SidebarView } from "@/features/layout/utils/sidebar-pane-utils";
+import type { SidebarView } from "@/features/layout/types/sidebar.types";
 import type { AIWorkspaceSessionSnapshot } from "@/features/ai/stores/ai-chat/ai-chat-store.types";
 import type { PaneNode } from "@/features/panes/types/pane.types";
 import type { PersistedTerminal } from "@/features/terminal/types/terminal.types";
@@ -10,7 +10,7 @@ import type {
   WorkspaceFolderSession,
 } from "@/features/workspace/types/workspace-session.types";
 import { isRestorableBufferSession } from "@/features/workspace/persistence/workspace-session-codec";
-import { normalizeWorkspaceRootPath } from "@/features/workspace/utils/project-tab-path";
+import { normalizeWorkspaceRootPath } from "@/features/workspace/services/project-tab-path";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { createSafeJSONStorage } from "@/utils/zustand-storage";
 

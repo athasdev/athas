@@ -1,0 +1,217 @@
+import type { DatabaseType } from "@/features/database/types/provider.types";
+import { getLanguageIdFromPath } from "@/features/editor/services/language-id";
+import { isSupportedImageFile } from "@/utils/image-file-types";
+import { getBaseName } from "@/utils/path-helpers";
+
+/**
+ * Check if a file is a SQLite database based on its extension
+ */
+const isSQLiteFile = (path: string): boolean => {
+  const lowerPath = path.toLowerCase();
+  return (
+    lowerPath.endsWith(".sqlite") || lowerPath.endsWith(".db") || lowerPath.endsWith(".sqlite3")
+  );
+};
+
+/**
+ * Check if a file is a DuckDB database based on its extension
+ */
+const isDuckDBFile = (path: string): boolean => {
+  const lowerPath = path.toLowerCase();
+  return lowerPath.endsWith(".duckdb") || lowerPath.endsWith(".duck");
+};
+
+/**
+ * Get the database type from a file path, or null if not a database file
+ */
+export const getDatabaseTypeFromPath = (path: string): DatabaseType | null => {
+  if (isSQLiteFile(path)) return "sqlite";
+  if (isDuckDBFile(path)) return "duckdb";
+  return null;
+};
+
+/**
+ * Check if a file is an image based on its extension
+ */
+export const isImageFile = (path: string): boolean => {
+  return !path.toLowerCase().endsWith(".svg") && isSupportedImageFile(path);
+};
+
+/**
+ * Check if a file is a PDF based on its extension
+ */
+export const isPdfFile = (path: string): boolean => {
+  return path.toLowerCase().endsWith(".pdf");
+};
+
+/**
+ * Check if a file is a binary file that shouldn't be opened in the text editor
+ */
+export const isBinaryFile = (path: string): boolean => {
+  const lowerPath = path.toLowerCase();
+  const binarySuffixes = [
+    ".tar.gz",
+    ".tgz",
+    ".tar.bz2",
+    ".tbz2",
+    ".tar.xz",
+    ".txz",
+    ".tar.zst",
+    ".tzst",
+  ];
+  const binaryExtensions = [
+    ".wasm",
+    ".exe",
+    ".dll",
+    ".so",
+    ".dylib",
+    ".bin",
+    ".o",
+    ".obj",
+    ".a",
+    ".lib",
+    ".class",
+    ".pyc",
+    ".pyo",
+    ".woff",
+    ".woff2",
+    ".ttf",
+    ".otf",
+    ".eot",
+    ".zip",
+    ".tar",
+    ".gz",
+    ".bz2",
+    ".xz",
+    ".7z",
+    ".rar",
+    ".jar",
+    ".war",
+    ".ear",
+    ".iso",
+    ".dmg",
+    ".msi",
+    ".psd",
+    ".sketch",
+    ".mov",
+    ".mp4",
+    ".avi",
+    ".mkv",
+    ".webm",
+    ".flv",
+    ".mp3",
+    ".wav",
+    ".flac",
+    ".aac",
+    ".ogg",
+    ".m4a",
+    ".opus",
+  ];
+  if (binarySuffixes.some((suffix) => lowerPath.endsWith(suffix))) {
+    return true;
+  }
+  return binaryExtensions.some((ext) => lowerPath.endsWith(ext));
+};
+
+const TEXT_FILE_NAMES = new Set([
+  ".dockerignore",
+  ".env",
+  ".env.example",
+  ".gitignore",
+  ".npmrc",
+  "bun.lock",
+  "cargo.lock",
+  "gemfile.lock",
+  "go.mod",
+  "go.sum",
+  "package-lock.json",
+  "pnpm-lock.yaml",
+  "yarn.lock",
+]);
+
+const TEXT_EXTENSIONS = new Set([
+  ".c",
+  ".cfg",
+  ".conf",
+  ".cpp",
+  ".css",
+  ".csv",
+  ".diff",
+  ".env",
+  ".go",
+  ".h",
+  ".hpp",
+  ".html",
+  ".ini",
+  ".java",
+  ".js",
+  ".json",
+  ".jsonc",
+  ".jsx",
+  ".log",
+  ".md",
+  ".mdx",
+  ".patch",
+  ".php",
+  ".py",
+  ".rb",
+  ".rs",
+  ".scss",
+  ".sh",
+  ".sql",
+  ".svg",
+  ".toml",
+  ".ts",
+  ".tsx",
+  ".txt",
+  ".xml",
+  ".yaml",
+  ".yml",
+  ".zig",
+]);
+
+export const isKnownTextFile = (path: string): boolean => {
+  const fileName = getBaseName(path, "").toLowerCase();
+  if (TEXT_FILE_NAMES.has(fileName)) return true;
+
+  if (getLanguageIdFromPath(path)) return true;
+
+  const lowerPath = path.toLowerCase();
+  return Array.from(TEXT_EXTENSIONS).some((extension) => lowerPath.endsWith(extension));
+};
+
+/**
+ * Best-effort binary sniffing for files with unknown extensions.
+ * Treat null bytes and a high ratio of control bytes as unsupported for the text editor.
+ */
+export const isBinaryContent = (data: Uint8Array, sampleSize = 8192): boolean => {
+  const limit = Math.min(data.length, sampleSize);
+  if (limit === 0) return false;
+
+  let suspiciousBytes = 0;
+
+  for (let i = 0; i < limit; i++) {
+    const byte = data[i];
+
+    if (byte === 0) {
+      return true;
+    }
+
+    const isPrintableAscii = byte >= 0x20 && byte <= 0x7e;
+    const isCommonWhitespace = byte === 0x09 || byte === 0x0a || byte === 0x0d || byte === 0x0c;
+    const isLikelyUtf8Lead = byte >= 0xc2;
+
+    if (!isPrintableAscii && !isCommonWhitespace && !isLikelyUtf8Lead) {
+      suspiciousBytes++;
+    }
+  }
+
+  return suspiciousBytes / limit > 0.3;
+};
+
+/**
+ * Extract filename from a path
+ */
+export const getFilenameFromPath = (path: string): string => {
+  return getBaseName(path, "Untitled");
+};

@@ -19,7 +19,7 @@ import { toast } from "sonner";
 import { useShallow } from "zustand/react/shallow";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
-import { readFileContent } from "@/features/file-system/controllers/file-operations";
+import { readFileContent } from "@/features/file-system/api/file-operations";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { Alert, AlertDescription } from "@/ui/alert";

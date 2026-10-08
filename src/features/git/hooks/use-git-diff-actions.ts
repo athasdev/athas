@@ -8,8 +8,8 @@ import type {
 } from "../services/working-tree-diff-loader";
 import type { MultiFileDiff } from "../types/git-diff.types";
 import type { GitCommit, GitDiff, GitFile } from "../types/git.types";
-import { countDiffStats } from "../utils/git-diff-helpers";
-import { createSingleFileWorkingTreeDiff } from "../utils/working-tree-multi-diff";
+import { countDiffStats } from "../services/git-diff-helpers";
+import { createSingleFileWorkingTreeDiff } from "../services/working-tree-multi-diff";
 import {
   openWorkingTreeDiffBuffer,
   WORKING_TREE_EMPTY_LABELS,

@@ -2,7 +2,7 @@ import { getVersion } from "@tauri-apps/api/app";
 import { tauriFetch } from "@/utils/tauri-fetch";
 import { arch, platform } from "@tauri-apps/plugin-os";
 import { load, type Store } from "@tauri-apps/plugin-store";
-import { getSettingsStore } from "@/features/settings/lib/settings-persistence";
+import { getSettingsStore } from "@/features/settings/services/settings-persistence";
 import {
   crashReportBuild,
   isBenignWindowError,
@@ -12,13 +12,13 @@ import { redactCrashText } from "@/features/telemetry/lib/crash-report-redaction
 import {
   createFrictionPayload,
   type FrictionSignalInput,
-} from "@/features/telemetry/lib/friction-signals";
+} from "@/features/telemetry/services/friction-signals";
 import {
   createAiEditOutcomePayload,
   createAiFailurePayload,
   type AiEditOutcomeInput,
   type AiFailureInput,
-} from "@/features/telemetry/lib/ai-signals";
+} from "@/features/telemetry/services/ai-signals";
 import { getApiBase } from "@/utils/api-base";
 
 const API_BASE = getApiBase();

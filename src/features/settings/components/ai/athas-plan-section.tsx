@@ -4,11 +4,11 @@ import {
   formatUsdCents,
   getHostedUsageState,
   getHostedUsageTone,
-} from "@/features/ai/lib/hosted-usage";
+} from "@/features/ai/services/hosted-usage";
 import { useDesktopSignIn } from "@/features/auth/hooks/use-desktop-sign-in";
 import { useProFeature } from "@/features/auth/hooks/use-pro-feature";
 import { useSubscriptionRefresh } from "@/features/auth/hooks/use-subscription-refresh";
-import { getAccountPlanLabel } from "@/features/auth/utils/account-usage";
+import { getAccountPlanLabel } from "@/features/auth/services/account-usage";
 import { useAuthStore } from "@/features/auth/stores/auth.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";

@@ -7,7 +7,7 @@ import {
   UI_FONT_SIZE_DEFAULT,
   UI_FONT_SIZE_MAX,
   UI_FONT_SIZE_MIN,
-} from "../lib/ui-font-size";
+} from "../services/ui-font-size";
 import { UI_FONT_SCALE_BASE_SIZE } from "../config/typography-defaults";
 
 describe("ui-font-size helpers", () => {

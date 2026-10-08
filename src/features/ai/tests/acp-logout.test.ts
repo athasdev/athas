@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { toast } from "sonner";
-import { canLogOutOfAcpAgent, logOutOfAcpAgent } from "@/features/ai/lib/acp-logout";
+import { canLogOutOfAcpAgent, logOutOfAcpAgent } from "@/features/ai/services/acp-logout";
 import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
 import { useAcpAuthStore } from "@/features/ai/stores/acp-auth.store";
 import type { AcpAgentStatus } from "@/features/ai/types/acp.types";

@@ -4,7 +4,7 @@ import { getServiceUrls } from "@/config/services";
 import { ProviderApiKeyCommand } from "@/features/ai/components/provider-api-key-command";
 import { useOnlineStatus } from "@/features/ai/hooks/use-online-status";
 import { resolveComposerNotice } from "@/features/ai/lib/composer-notice";
-import { getHostedUsageState } from "@/features/ai/lib/hosted-usage";
+import { getHostedUsageState } from "@/features/ai/services/hosted-usage";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type {
   ComposerNoticeAction,

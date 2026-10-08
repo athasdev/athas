@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { isOpenableGitWorktree, openGitWorktreeWorkspace } from "../utils/git-worktree-open";
+import { isOpenableGitWorktree, openGitWorktreeWorkspace } from "../services/git-worktree-open";
 
 const mocks = vi.hoisted(() => ({
   createAppWindow: vi.fn(),
@@ -25,7 +25,7 @@ vi.mock("@/features/git/stores/git-repository.store", () => ({
   },
 }));
 
-vi.mock("@/features/window/utils/create-app-window", () => ({
+vi.mock("@/features/window/services/create-app-window", () => ({
   createAppWindow: mocks.createAppWindow,
 }));
 

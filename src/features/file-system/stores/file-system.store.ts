@@ -6,28 +6,28 @@ import type { StoreApi } from "zustand";
 import { createStore } from "zustand/vanilla";
 import { commands } from "@/bindings/commands";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
-import type { CodeEditorRef } from "@/features/editor/components/code-editor";
-import { restorePersistedEditorViewState } from "@/features/editor/stores/editor-session-state";
-import { clearQueuedWorkspaceSessionSave } from "@/features/editor/stores/buffer-session-persistence";
+import type { CodeEditorRef } from "@/features/editor/types/code-editor-view.types";
+import { restorePersistedEditorViewState } from "@/features/editor/services/editor-session-state";
+import { clearQueuedWorkspaceSessionSave } from "@/features/editor/services/buffer-session-persistence";
 import { type OpenContentOptions, useBufferStore } from "@/features/editor/stores/buffer.store";
-import { detectLanguageFromFileName } from "@/features/editor/utils/language-detection";
+import { detectLanguageFromFileName } from "@/features/editor/services/language-detection";
 import { getBufferByPath } from "@/features/editor/stores/buffer-index";
-import { fileOpenBenchmark } from "@/features/editor/utils/file-open-benchmark";
-import { getLineSlice } from "@/features/editor/utils/large-file";
-import { invalidateFileTreeGitIgnoreCache } from "@/features/file-explorer/lib/file-tree-gitignore";
-import { getAncestorDirectoryPaths } from "@/features/file-explorer/utils/file-explorer-tree-utils";
+import { fileOpenBenchmark } from "@/features/editor/services/file-open-benchmark";
+import { getLineSlice } from "@/features/editor/services/large-file";
+import { invalidateFileTreeGitIgnoreCache } from "@/features/file-explorer/services/file-tree-gitignore";
+import { getAncestorDirectoryPaths } from "@/features/file-explorer/services/file-explorer-tree-utils";
 import { useFileTreeStore } from "@/features/file-explorer/stores/file-explorer-tree.store";
 import { getGitStatus } from "@/features/git/api/git-status-api";
 import { useGitBlameStore } from "@/features/git/stores/git-blame.store";
 import { useGitStore } from "@/features/git/stores/git.store";
-import { gitDiffCache } from "@/features/git/utils/git-diff-cache";
+import { gitDiffCache } from "@/features/git/services/git-diff-cache";
 import { ensureRemoteConnectionConnected } from "@/features/remote/services/remote-connection-client";
 import { buildRemoteRootPath, parseRemotePath } from "@/features/remote/utils/remote-path";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { recordFrictionSignal } from "@/features/telemetry/services/telemetry";
 import { useSidebarStore } from "@/features/layout/stores/sidebar.store";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
-import { normalizeWorkspaceRootPath } from "@/features/workspace/utils/project-tab-path";
+import { normalizeWorkspaceRootPath } from "@/features/workspace/services/project-tab-path";
 import type { BufferSession } from "@/features/workspace/types/workspace-session.types";
 import {
   getCurrentProjectUiState,
@@ -36,12 +36,12 @@ import {
   restoreProjectUiState,
 } from "@/features/workspace/persistence/workspace-ui-session";
 import { useWorkspaceTabsStore } from "@/features/workspace/stores/workspace-tabs.store";
-import { createAppWindow } from "@/features/window/utils/create-app-window";
-import { serializeTerminals } from "@/features/terminal/lib/terminal-session-storage";
+import { createAppWindow } from "@/features/window/services/create-app-window";
+import { serializeTerminals } from "@/features/terminal/services/terminal-session-storage";
 import { useTerminalTabsStore } from "@/features/terminal/stores/terminal-tabs.store";
 import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
-import { createTerminalEventChannel } from "@/features/terminal/utils/terminal-protocol";
-import { getFrontendTerminalSessionArgs } from "@/features/terminal/utils/frontend-terminal-session";
+import { createTerminalEventChannel } from "@/features/terminal/services/terminal-protocol";
+import { getFrontendTerminalSessionArgs } from "@/features/terminal/services/frontend-terminal-session";
 import { showAlertDialog, showPromptDialog } from "@/ui/dialog";
 import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
 import { workspaceSessionRepository } from "@/features/workspace/persistence/workspace-session-repository";
@@ -67,7 +67,7 @@ import {
 } from "@/utils/path-helpers";
 import type { FileEntry } from "../types/app.types";
 import type { FsActions, FsState } from "../types/interface.types";
-import { readDirectoryContents } from "../controllers/file-operations";
+import { readDirectoryContents } from "../api/file-operations";
 import {
   addFileToTree,
   findFileInTree,
@@ -76,7 +76,7 @@ import {
   removeFileFromTree,
   sortFileEntries,
   updateFileInTree,
-} from "../controllers/file-tree-utils";
+} from "../services/file-tree-utils";
 import {
   getDatabaseTypeFromPath,
   getFilenameFromPath,
@@ -84,11 +84,11 @@ import {
   isKnownTextFile,
   isImageFile,
   isPdfFile,
-} from "../controllers/file-utils";
+} from "../services/file-utils";
 import { resolveFileOpenPath, shouldResolveFileOpenSymlink } from "../controllers/file-open-path";
 import { useFileWatcherStore } from "../stores/file-watcher.store";
 import { fffListFiles, fffTrackAccess } from "@/features/file-search/api/file-search-api";
-import { canUseNativeFileSearch } from "@/features/file-search/utils/file-search-paths";
+import { canUseNativeFileSearch } from "@/features/file-search/services/file-search-paths";
 import { ensureWorkspaceFileSearch } from "@/features/file-search/services/workspace-file-search";
 import {
   createFileOpenResource,
@@ -118,21 +118,21 @@ import {
   takeSubtreePreloadBatch,
   type SubtreePreloadQueueItem,
 } from "../services/subtree-preload-queue";
-import { getSymlinkInfo, openFolder, readDirectory } from "../controllers/platform";
+import { getSymlinkInfo, openFolder, readDirectory } from "../api/file-system-api";
 import { useRecentFoldersStore } from "../stores/recent-folders.store";
 import { useRecentFilesStore } from "../stores/recent-files.store";
 import { buildRemoteWorkspaceTree } from "../controllers/remote-workspace";
-import { buildWslWorkspaceTree, getWslProjectName } from "@/features/wsl/controllers/wsl-workspace";
+import { buildWslWorkspaceTree, getWslProjectName } from "@/features/wsl/services/wsl-workspace";
 import { buildWslPath, parseWslPath } from "@/features/wsl/utils/wsl-path";
 import { shouldIgnore, updateDirectoryContents } from "../controllers/utils";
-import { prepareProjectTransitionWithUnsavedBuffers } from "../controllers/workspace-project-transition";
+import { prepareProjectTransitionWithUnsavedBuffers } from "../services/workspace-project-transition";
 import {
   buildWorkspaceRestoreBatch,
   buildWorkspaceRestorePlan,
   isWorkspaceFolderPath,
   normalizeWorkspaceFolders,
-} from "../controllers/workspace-session";
-import type { WorkspaceSessionBuffer } from "../controllers/workspace-session";
+} from "../services/workspace-session";
+import type { WorkspaceSessionBuffer } from "../services/workspace-session";
 import { emitAppEvent } from "@/utils/app-events";
 import {
   getActiveBufferId,
@@ -1303,7 +1303,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
         if (isKnownTextPath) {
           void Promise.all([
             import("@/features/editor/engines/codemirror/languages"),
-            import("@/features/editor/utils/language-id"),
+            import("@/features/editor/services/language-id"),
           ])
             .then(([{ loadCodeMirrorLanguage }, { getLanguageIdFromPath }]) =>
               loadCodeMirrorLanguage(getLanguageIdFromPath(path)),

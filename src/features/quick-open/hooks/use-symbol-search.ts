@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { LspClient } from "@/features/editor/lsp/lsp-client";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
-import { fuzzyScore } from "../utils/fuzzy-search";
+import { fuzzyScore } from "@/utils/fuzzy-search";
 
 export interface SymbolItem {
   name: string;

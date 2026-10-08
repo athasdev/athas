@@ -1,6 +1,6 @@
-import { deliveryBufferPath } from "@/features/github/delivery/utils/github-delivery";
-import { detectLanguageFromFileName } from "@/features/editor/utils/language-detection";
-import { getViewBufferPath } from "@/features/views/lib/view-buffer";
+import { deliveryBufferPath } from "@/features/github/delivery/services/github-delivery";
+import { detectLanguageFromFileName } from "@/features/editor/services/language-detection";
+import { getViewBufferPath } from "@/features/views/services/view-buffer";
 import { SINGLETON_TOOL_BUFFER_METADATA } from "@/features/panes/constants/tool-buffers";
 import type { OpenContentSpec, PaneContent } from "@/features/panes/types/pane-content.types";
 

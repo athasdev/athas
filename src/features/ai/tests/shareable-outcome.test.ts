@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { redactLocalPaths } from "../lib/shareable-outcome";
+import { redactLocalPaths } from "../services/shareable-outcome";
 
 describe("redactLocalPaths", () => {
   it("redacts local absolute paths", () => {

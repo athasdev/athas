@@ -41,7 +41,7 @@ vi.mock("@/features/editor/stores/state.store", () => ({
 vi.mock("@/features/ai/detached/agent-window-service", () => ({
   openAgentWindowSession: () => null,
 }));
-vi.mock("@/features/ai/lib/open-new-agent-chat", () => ({
+vi.mock("@/features/ai/services/open-new-agent-chat", () => ({
   openNewAgentChat: mocks.openNewAgentChat,
 }));
 
@@ -49,7 +49,7 @@ import {
   addActiveSelectionToAgentChat,
   addActiveSelectionToNewAgentChat,
   addEditorSelectionsToAgentChat,
-} from "@/features/ai/lib/add-selection-to-agent-chat";
+} from "@/features/ai/services/add-selection-to-agent-chat";
 
 const context = { id: "editor-selection:buffer-1:0:5" } as EditorSelectionContext;
 

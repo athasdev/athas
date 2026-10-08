@@ -1,5 +1,5 @@
 import type { ToolCall } from "@/features/ai/types/ai-chat.types";
-import { readFileContent } from "@/features/file-system/controllers/file-operations";
+import { readFileContent } from "@/features/file-system/api/file-operations";
 import { getCommitFileContent } from "@/features/git/api/git-diff-api";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { joinPath } from "@/utils/path-helpers";

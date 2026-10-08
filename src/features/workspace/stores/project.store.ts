@@ -3,7 +3,7 @@ import { createStore } from "zustand/vanilla";
 import { createWorkspaceScopedStore } from "@/features/workspace/stores/create-workspace-scoped-store";
 import type { WorkspaceFolderSession } from "@/features/workspace/types/workspace-session.types";
 import { getFolderName } from "@/utils/path-helpers";
-import { normalizeWorkspaceRootPath } from "@/features/workspace/utils/project-tab-path";
+import { normalizeWorkspaceRootPath } from "@/features/workspace/services/project-tab-path";
 
 export type WorkspaceFolder = WorkspaceFolderSession;
 

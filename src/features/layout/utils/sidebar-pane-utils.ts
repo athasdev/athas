@@ -1,15 +1,4 @@
-export type SidebarView =
-  | "files"
-  | "agents"
-  | "git"
-  | "github-prs"
-  | "workspaces"
-  | "views"
-  | "docker"
-  | "databases"
-  | "collaboration"
-  | "agent"
-  | (string & {});
+import type { SidebarView } from "@/features/layout/types/sidebar.types";
 
 interface SidebarPaneState {
   isSidebarVisible: boolean;

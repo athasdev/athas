@@ -1,4 +1,4 @@
-import { getUiFontScale } from "@/features/settings/lib/ui-font-size";
+import { getUiFontScale } from "@/features/settings/services/ui-font-size";
 
 const COLLAPSED_ACTIVITY_BAR_INLINE_PADDING = 4;
 const COLLAPSED_ACTIVITY_BAR_CONTROL_WIDTH = 32;

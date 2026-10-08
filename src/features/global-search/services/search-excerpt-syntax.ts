@@ -1,12 +1,12 @@
 import { getLanguageAssetConfig } from "@/features/editor/lib/wasm-parser/extension-assets";
 import { tokenizerWorkerClient } from "@/features/editor/lib/wasm-parser/tokenizer-worker-client";
-import { getLanguageIdFromPath } from "@/features/editor/utils/language-id";
+import { getLanguageIdFromPath } from "@/features/editor/services/language-id";
 import {
   hasLineBasedSyntaxFallback,
   hasLineBasedSyntaxHighlighter,
   tokenizeLineBasedSyntax,
-} from "@/features/editor/utils/line-based-syntax";
-import type { Token } from "@/features/editor/utils/html";
+} from "@/features/editor/services/line-based-syntax";
+import type { Token } from "@/features/editor/types/editor.types";
 
 const MAX_TOKEN_CACHE_ENTRIES = 200;
 const EMPTY_TOKENS: Token[] = [];

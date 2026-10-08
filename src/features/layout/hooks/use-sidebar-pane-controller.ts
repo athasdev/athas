@@ -4,8 +4,8 @@ import {
   getSidebarPaneLevel,
   resolveSidebarPaneClick,
   type SidebarPaneLevel,
-  type SidebarView,
 } from "@/features/layout/utils/sidebar-pane-utils";
+import type { SidebarView } from "@/features/layout/types/sidebar.types";
 
 interface OpenSidebarViewOptions {
   paneLevel?: SidebarPaneLevel;

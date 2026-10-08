@@ -1,4 +1,4 @@
-import { buildPersistedEditorViewState } from "@/features/editor/stores/editor-session-state";
+import { buildPersistedEditorViewState } from "@/features/editor/services/editor-session-state";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import type { BufferSession } from "@/features/workspace/types/workspace-session.types";
 

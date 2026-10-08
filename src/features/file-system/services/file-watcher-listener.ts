@@ -7,10 +7,10 @@ import {
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getBufferByPath } from "@/features/editor/stores/buffer-index";
 import { emitGitChanged } from "@/features/git/events/git-events";
-import { invalidateFileTreeGitIgnoreCache } from "@/features/file-explorer/lib/file-tree-gitignore";
+import { invalidateFileTreeGitIgnoreCache } from "@/features/file-explorer/services/file-tree-gitignore";
 import { showToast } from "@/utils/toast";
 import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
-import { readFileContent } from "../controllers/file-operations";
+import { readFileContent } from "../api/file-operations";
 import { useFileSystemStore } from "../stores/file-system.store";
 import { useFileWatcherStore } from "../stores/file-watcher.store";
 import {

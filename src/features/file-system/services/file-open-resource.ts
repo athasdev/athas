@@ -1,4 +1,4 @@
-import { isBinaryContent, isKnownTextFile } from "@/features/file-system/controllers/file-utils";
+import { isBinaryContent, isKnownTextFile } from "@/features/file-system/services/file-utils";
 import {
   getWorkspaceResourceProvider,
   type WorkspaceResourceProvider,

@@ -1,7 +1,7 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { parseGitHubEntityLink } from "../../utils/github-link-utils";
-import { safeDeliveryUrl } from "../utils/github-delivery";
+import { safeDeliveryUrl } from "./github-delivery";
 
 export async function openDeploymentLog(value: string) {
   const url = safeDeliveryUrl(value);

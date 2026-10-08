@@ -4,7 +4,7 @@ import {
   DEFAULT_MONO_FONT_FAMILY,
   DEFAULT_UI_FONT_FAMILY,
 } from "@/features/settings/config/typography-defaults";
-import { resolveAvailableFontFamily } from "@/features/settings/lib/font-family-resolution";
+import { resolveAvailableFontFamily } from "@/features/settings/services/font-family-resolution";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useFontStore } from "@/features/settings/stores/font.store";
 

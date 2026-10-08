@@ -1,7 +1,7 @@
 import { toast } from "sonner";
 import type { OpenContentSpec } from "@/features/panes/types/pane-content.types";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
-import { createAppWindow } from "@/features/window/utils/create-app-window";
+import { createAppWindow } from "@/features/window/services/create-app-window";
 
 export type StandaloneContentSpec = Extract<
   OpenContentSpec,

@@ -10,7 +10,7 @@ import type {
   Deployment,
   Release,
 } from "../types/github-delivery.types";
-import { deliveryKey } from "../utils/github-delivery";
+import { deliveryKey } from "./github-delivery";
 import { emitAppEvent } from "@/utils/app-events";
 
 export const DELIVERY_TTL = 30_000;

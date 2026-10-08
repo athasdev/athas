@@ -1,5 +1,5 @@
 import { fffEnsureWorkspaces } from "../api/file-search-api";
-import { canUseNativeFileSearch } from "../utils/file-search-paths";
+import { canUseNativeFileSearch } from "./file-search-paths";
 
 export const ensureWorkspaceFileSearch = async (
   rootPaths: readonly string[],

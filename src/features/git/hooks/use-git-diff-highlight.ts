@@ -6,12 +6,12 @@ import {
 } from "@/features/editor/lib/wasm-parser/extension-assets";
 import { tokenizerWorkerClient } from "@/features/editor/lib/wasm-parser/tokenizer-worker-client";
 import type { HighlightToken } from "@/features/editor/types/wasm-parser/wasm-parser.types";
-import { buildLineOffsetMap } from "@/features/editor/utils/html";
-import { getLanguageIdFromPath } from "@/features/editor/utils/language-id";
+import { buildLineOffsetMap } from "@/features/editor/services/line-offset-map";
+import { getLanguageIdFromPath } from "@/features/editor/services/language-id";
 import {
   hasLineBasedSyntaxFallback,
   tokenizeLineBasedSyntax,
-} from "@/features/editor/utils/line-based-syntax";
+} from "@/features/editor/services/line-based-syntax";
 import type { GitDiffLine } from "../types/git.types";
 
 function getLanguageId(filePath: string): string | null {

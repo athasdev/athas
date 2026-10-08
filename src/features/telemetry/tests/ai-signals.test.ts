@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { createAiEditOutcomePayload, createAiFailurePayload } from "../lib/ai-signals";
+import { createAiEditOutcomePayload, createAiFailurePayload } from "../services/ai-signals";
 
 describe("AI telemetry signals", () => {
   it("keeps identifiers and codes but drops anything that looks like content", () => {

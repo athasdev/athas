@@ -1,7 +1,7 @@
 import type { ToolCall } from "@/features/ai/types/ai-chat.types";
 import type { AcpToolKind } from "@/features/ai/types/acp.types";
 import { getAcpDiffOutputs, toRelativeDisplayPath } from "./acp-diff-output";
-import { diffTextLines } from "@/features/git/utils/line-diff";
+import { diffTextLines } from "@/features/git/services/line-diff";
 import { parseMcpToolName } from "./mcp-tool-name";
 
 export type ToolCallPhase = "running" | "done" | "failed" | "declined" | "cancelled";

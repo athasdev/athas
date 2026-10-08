@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import { defaultIntelligencePreferences } from "@/features/ai/intelligence/lib/intelligence-preferences";
-import type { HostedUsageState } from "@/features/ai/lib/hosted-usage";
+import type { HostedUsageState } from "@/features/ai/services/hosted-usage";
 import {
   AI_FEATURE_MODEL_OVERRIDES,
   countTaskOverrides,
@@ -8,7 +8,7 @@ import {
   isConnectionAvailable,
   withDefaultConnection,
   withTaskConnection,
-} from "../lib/ai-model-preferences";
+} from "../services/ai-model-preferences";
 import { describeIncludedCredit } from "../lib/athas-credit";
 
 const openai = { providerId: "openai", modelId: "gpt-test" };

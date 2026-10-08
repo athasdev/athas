@@ -71,7 +71,7 @@ import { useEditorStateStore } from "../stores/state.store";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import type { CodeEditorViewProps } from "../types/code-editor-view.types";
 import { getBufferById } from "../stores/buffer-index";
-import { getLanguageIdFromPath } from "../utils/language-id";
+import { getLanguageIdFromPath } from "../services/language-id";
 import { useBufferIdOrActive } from "@/features/panes/hooks/use-pane-buffer-state";
 
 let nextEditorSourceId = 1;

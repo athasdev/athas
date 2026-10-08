@@ -8,9 +8,9 @@ import { getProviderApiToken } from "@/features/ai/services/ai-token-service";
 import {
   getCustomProviderApiToken,
   resolveCustomProviderBaseUrl,
-} from "@/features/ai/lib/custom-provider-config";
+} from "@/features/ai/services/custom-provider-config";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { normalizeOllamaBaseUrl } from "@/features/ai/lib/ollama-endpoint";
+import { normalizeOllamaBaseUrl } from "@/features/ai/services/ollama-endpoint";
 import { getApiBase } from "@/utils/api-base";
 import { commands } from "@/bindings/commands";
 import { createIntelligenceModelFetch } from "./intelligence-model-fetch";

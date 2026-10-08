@@ -5,7 +5,7 @@ import {
   resolvePreviousOccurrenceSelection,
   resolveSelectNextOccurrenceAction,
   resolveSelectPreviousOccurrenceAction,
-} from "../utils/select-next-occurrence";
+} from "../services/select-next-occurrence";
 
 describe("select next occurrence utility", () => {
   it("selects the word under the cursor when no selection exists", () => {

@@ -1,0 +1,115 @@
+import type { FileEntry } from "../types/app.types";
+import { joinPath } from "@/utils/path-helpers";
+import {
+  getSymlinkInfo,
+  createDirectory as platformCreateDirectory,
+  deletePath as platformDeletePath,
+  readDirectory as platformReadDirectory,
+  readFile as platformReadFile,
+  writeFile as platformWriteFile,
+} from "./file-system-api";
+import { shouldHideFromFileTree } from "../controllers/utils";
+
+export async function readFileContent(path: string): Promise<string> {
+  try {
+    const content = await platformReadFile(path);
+    return content || "";
+  } catch (error) {
+    throw new Error(`Failed to read file ${path}: ${error}`);
+  }
+}
+
+async function writeFileContent(path: string, content: string): Promise<void> {
+  try {
+    await platformWriteFile(path, content);
+  } catch (error) {
+    throw new Error(`Failed to write file ${path}: ${error}`);
+  }
+}
+
+export async function createNewFile(directoryPath: string, fileName: string): Promise<string> {
+  if (!directoryPath || directoryPath.trim() === "") {
+    throw new Error("Directory path cannot be empty");
+  }
+  if (!fileName || fileName.trim() === "") {
+    throw new Error("File name cannot be empty");
+  }
+
+  const filePath = joinPath(directoryPath, fileName);
+  await writeFileContent(filePath, "");
+  return filePath;
+}
+
+export async function createNewDirectory(parentPath: string, folderName: string): Promise<string> {
+  if (!parentPath || parentPath.trim() === "") {
+    throw new Error("Parent path cannot be empty");
+  }
+  if (!folderName || folderName.trim() === "") {
+    throw new Error("Folder name cannot be empty");
+  }
+
+  const folderPath = joinPath(parentPath, folderName);
+  await platformCreateDirectory(folderPath);
+  return folderPath;
+}
+
+export async function deleteFileOrDirectory(path: string): Promise<void> {
+  await platformDeletePath(path);
+}
+
+export async function readDirectoryContents(
+  path: string,
+  workspaceRoot = path,
+): Promise<FileEntry[]> {
+  try {
+    const entries = await platformReadDirectory(path);
+
+    const filteredEntries = (entries as any[]).filter((entry: any) => {
+      const name = entry.name || "Unknown";
+      return !shouldHideFromFileTree(name);
+    });
+
+    const entriesWithSymlinkInfo = await Promise.all(
+      filteredEntries.map(async (entry: any) => {
+        const entryPath = entry.path || joinPath(path, entry.name);
+        const isSymlink = entry.is_symlink ?? entry.isSymlink ?? false;
+
+        if (!isSymlink) {
+          return {
+            name: entry.name || "Unknown",
+            path: entryPath,
+            isDir: entry.is_dir || false,
+            children: undefined,
+          };
+        }
+
+        try {
+          const symlinkInfo = await getSymlinkInfo(entryPath, workspaceRoot);
+
+          return {
+            name: entry.name || "Unknown",
+            path: entryPath,
+            isDir: false,
+            children: undefined,
+            isSymlink: true,
+            symlinkTarget: symlinkInfo.target ?? entry.target,
+          };
+        } catch (error) {
+          console.error(`Failed to get symlink info for ${entryPath}:`, error);
+          return {
+            name: entry.name || "Unknown",
+            path: entryPath,
+            isDir: false,
+            children: undefined,
+            isSymlink: true,
+            symlinkTarget: entry.target,
+          };
+        }
+      }),
+    );
+
+    return entriesWithSymlinkInfo;
+  } catch (error) {
+    throw new Error(`Failed to read directory ${path}: ${error}`);
+  }
+}

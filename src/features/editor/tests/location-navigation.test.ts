@@ -13,7 +13,7 @@ const mocks = vi.hoisted(() => ({
   setActiveBuffer: vi.fn(),
   convertPreviewToDefinite: vi.fn(),
 }));
-vi.mock("@/features/file-system/controllers/file-operations", () => ({
+vi.mock("@/features/file-system/api/file-operations", () => ({
   readFileContent: mocks.read,
 }));
 vi.mock("../lsp/lsp-client", () => ({

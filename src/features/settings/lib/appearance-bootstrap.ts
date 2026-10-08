@@ -1,6 +1,6 @@
 import type { ThemeDefinition } from "@/extensions/themes/theme.types";
 import type { UiDensity } from "@/features/settings/types/settings.types";
-import { normalizeUiDensity } from "./ui-preferences";
+import { normalizeUiDensity } from "../services/ui-preferences";
 import {
   getAthasDefaultCssVariables,
   getAthasDefaultSyntaxTokens,
@@ -13,8 +13,15 @@ import {
   getTypographyFontFallbacks,
 } from "@/features/settings/config/typography-defaults";
 import { applyPlatformClass, IS_WINDOWS } from "@/utils/platform";
-import { buildFontFamilyStack, normalizeConfiguredFontFamily } from "./font-family-resolution";
-import { getUiFontScale, normalizeUiFontSize, UI_FONT_SIZE_DEFAULT } from "./ui-font-size";
+import {
+  buildFontFamilyStack,
+  normalizeConfiguredFontFamily,
+} from "../services/font-family-resolution";
+import {
+  getUiFontScale,
+  normalizeUiFontSize,
+  UI_FONT_SIZE_DEFAULT,
+} from "../services/ui-font-size";
 
 export const APPEARANCE_BOOTSTRAP_CACHE_KEY = "athas.bootstrap.appearance.v1";
 

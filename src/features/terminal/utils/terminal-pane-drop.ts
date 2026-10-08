@@ -1,5 +1,8 @@
 import type { SplitPlacement } from "@/features/panes/types/pane.types";
-import { getPaneDropZoneFromRect, type PaneDropZone } from "@/features/panes/utils/pane-drop-zones";
+import {
+  getPaneDropZoneFromRect,
+  type PaneDropZone,
+} from "@/features/panes/services/pane-drop-zones";
 import type { TerminalSplitDirection } from "@/features/terminal/types/terminal.types";
 import { emitAppEvent } from "@/utils/app-events";
 

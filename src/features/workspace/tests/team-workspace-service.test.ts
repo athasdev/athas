@@ -10,7 +10,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/features/file-system/services/workspace-resource-provider", () => ({
   getWorkspaceResourceProvider: () => mocks,
 }));
-vi.mock("@/features/file-system/controllers/platform", () => ({ writeFile: mocks.writeFile }));
+vi.mock("@/features/file-system/api/file-system-api", () => ({ writeFile: mocks.writeFile }));
 vi.mock("@tauri-apps/api/core", () => ({ invoke: mocks.invoke }));
 import { loadTeamWorkspace, saveTeamWorkspace } from "../team/services/team-workspace-service";
 onAppEvent("team-workspace-changed", mocks.workspaceChanged);

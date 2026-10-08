@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { isLocalAiProvider } from "@/features/ai/lib/local-ai-connection";
+import { isLocalAiProvider } from "@/features/ai/services/local-ai-connection";
 import { useIntelligenceSettingsStore } from "@/features/ai/intelligence/stores/intelligence-settings.store";
-import { getEffectiveDefaultConnection } from "@/features/settings/lib/ai-model-preferences";
+import { getEffectiveDefaultConnection } from "@/features/settings/services/ai-model-preferences";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useProFeature } from "@/features/auth/hooks/use-pro-feature";
 

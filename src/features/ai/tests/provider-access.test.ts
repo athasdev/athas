@@ -2,7 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 import {
   canUseIntelligenceProvider,
   canUseProviderWithoutApiKey,
-} from "@/features/ai/lib/provider-access";
+} from "@/features/ai/services/provider-access";
 import type { SubscriptionInfo } from "@/features/auth/services/auth-api";
 
 const subscription: SubscriptionInfo = {

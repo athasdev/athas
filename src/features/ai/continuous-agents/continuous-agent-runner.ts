@@ -1,4 +1,4 @@
-import { migrateLegacyAgentId } from "@/features/ai/lib/agent-clis";
+import { migrateLegacyAgentId } from "@/features/ai/services/agent-clis";
 import type { AgentConfig } from "@/features/ai/types/acp.types";
 import type { ContinuousAgentTask } from "./continuous-agents.store";
 

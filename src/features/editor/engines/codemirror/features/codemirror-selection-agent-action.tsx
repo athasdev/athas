@@ -1,12 +1,12 @@
 import { EditorView } from "@codemirror/view";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { addEditorSelectionsToAgentChat } from "@/features/ai/lib/add-selection-to-agent-chat";
+import { addEditorSelectionsToAgentChat } from "@/features/ai/services/add-selection-to-agent-chat";
 import type { EditorSelectionContext } from "@/features/ai/types/ai-context.types";
 import { EditorSelectionAgentAction } from "../../../components/selection/editor-selection-agent-action";
 import { useBufferStore } from "../../../stores/buffer.store";
 import { useInlineEditToolbarStore } from "../../../stores/inline-edit-toolbar.store";
 import { getBufferById } from "../../../stores/buffer-index";
-import { createEditorSelectionContextFromText } from "../../../utils/editor-agent-context";
+import { createEditorSelectionContextFromText } from "../../../services/editor-agent-context";
 import { type CodeMirrorHost, useCodeMirrorExtension } from "../host";
 import { toEditorRange } from "../position";
 import { BREAKPOINT_GUTTER_CLASS } from "./breakpoints";

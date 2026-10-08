@@ -15,7 +15,7 @@ import {
   useWorkspaceStoreScopeId,
 } from "@/features/workspace/stores/create-workspace-scoped-store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { readFile } from "@/features/file-system/controllers/platform";
+import { readFile } from "@/features/file-system/api/file-system-api";
 import {
   deleteLocalHistoryEntry,
   listLocalHistoryFile,

@@ -17,7 +17,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import { useEditorViewStore } from "@/features/editor/stores/view.store";
 import { getBufferById } from "@/features/editor/stores/buffer-index";
-import { calculateLineHeight } from "@/features/editor/utils/lines";
+import { calculateLineHeight } from "@/features/editor/services/lines";
 import { resolveGoToLineTarget } from "@/features/editor/utils/go-to-line";
 import type { EditorModelPositionResolver } from "@/features/editor/types/code-editor-view.types";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
@@ -30,7 +30,7 @@ import { readBufferText } from "../services/buffer-text";
 import type { LiveDocumentEdit } from "../services/live-document-registry";
 import CodeLensOverlay from "../lsp/code-lens-overlay";
 import RenameInput from "../lsp/rename-input";
-import type { CodeLensItem } from "../lsp/use-code-lens";
+import type { CodeLensItem } from "../lsp/hooks/use-code-lens";
 import { useRename } from "../lsp/use-rename";
 import { MarkdownPreview } from "../markdown/markdown-preview";
 import { NotebookEditor } from "../notebook/notebook-editor";
@@ -92,11 +92,6 @@ interface CodeEditorProps {
     previousSelection?: Range,
     options?: EditorContentChangeOptions,
   ) => void;
-}
-
-export interface CodeEditorRef {
-  editor: HTMLDivElement | null;
-  textarea: HTMLDivElement | null;
 }
 
 const PYTHON_SCRIPT_CELL_COMMAND = "athas.runPythonScriptCell";

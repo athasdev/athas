@@ -27,7 +27,7 @@ vi.mock("../stores/buffer-index", () => ({
   getBufferById: (buffers: Array<{ id: string }>, id: string) =>
     buffers.find((buffer) => buffer.id === id),
 }));
-vi.mock("@/features/ai/lib/add-selection-to-agent-chat", () => ({
+vi.mock("@/features/ai/services/add-selection-to-agent-chat", () => ({
   addEditorSelectionsToAgentChat: mocks.addEditorSelectionsToAgentChat,
 }));
 vi.mock("../components/selection/editor-selection-agent-action", () => ({

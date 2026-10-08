@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { __test__ } from "../utils/window-open-request";
+import { __test__ } from "../services/window-open-request";
 
 const { parseWindowOpenUrl } = __test__;
 const { resolveWindowOpenPathTarget } = __test__;

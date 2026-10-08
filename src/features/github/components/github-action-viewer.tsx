@@ -10,7 +10,7 @@ import {
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { openCommitDiffBuffer } from "@/features/git/utils/open-commit-diff-buffer";
+import { openCommitDiffBuffer } from "@/features/git/services/open-commit-diff-buffer";
 import { ViewerErrorState, ViewerLoadingState } from "@/features/viewer/components/viewer-state";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
@@ -37,12 +37,15 @@ import type {
   WorkflowRunDetails,
   WorkflowRunJob,
 } from "../types/github.types";
-import { GITHUB_ACTION_DETAILS_TTL_MS, githubActionDetailsCache } from "../utils/github-data-cache";
+import {
+  GITHUB_ACTION_DETAILS_TTL_MS,
+  githubActionDetailsCache,
+} from "../services/github-data-cache";
 import {
   getGitHubWorkflowRunsUrl,
   getRepositoryUrlFromEntityUrl,
 } from "../utils/github-link-utils";
-import { copyToClipboard, getTimeAgo } from "../utils/github-viewer-utils";
+import { copyToClipboard, getTimeAgo } from "../services/github-viewer-utils";
 import {
   filterWorkflowLog,
   findFirstProblemLine,

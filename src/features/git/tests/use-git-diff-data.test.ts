@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 import { getDiffBufferFilePath } from "../utils/diff-buffer-path";
-import { hasGitDiffChanges } from "../utils/git-diff-helpers";
+import { hasGitDiffChanges } from "../services/git-diff-helpers";
 
 describe("diff refresh content", () => {
   const empty = {

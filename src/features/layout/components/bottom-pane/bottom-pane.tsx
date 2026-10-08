@@ -3,14 +3,14 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { BOTTOM_PANE_ID } from "@/features/panes/constants/pane";
 import { usePaneStore } from "@/features/panes/stores/pane.store";
-import { activateBufferInPaneAndSync } from "@/features/panes/utils/pane-activation";
-import { getAllPaneGroups } from "@/features/panes/utils/pane-tree";
+import { activateBufferInPaneAndSync } from "@/features/panes/services/pane-activation";
+import { getAllPaneGroups } from "@/features/panes/services/pane-tree";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import {
   clearInternalTabDragData,
   getInternalTabDragData,
   getInternalTabDragHover,
-} from "@/features/tabs/utils/internal-tab-drag";
+} from "@/features/tabs/services/internal-tab-drag";
 import TerminalContainer from "@/features/terminal/components/terminal-container";
 import { cn } from "@/utils/cn";
 import { useProjectStore } from "@/features/workspace/stores/project.store";

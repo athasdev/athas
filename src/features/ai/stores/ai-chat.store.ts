@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import { createSelectors } from "@/utils/zustand-selectors";
-import { migrateLegacyAgentId } from "@/features/ai/lib/agent-clis";
+import { migrateLegacyAgentId } from "@/features/ai/services/agent-clis";
 import { createAcpActions } from "./ai-chat/acp-actions";
 import { createChatActions } from "./ai-chat/chat-actions";
 import { skipUnchangedPersistWrites } from "./ai-chat/ai-chat-persist-storage";

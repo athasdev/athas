@@ -43,7 +43,7 @@ vi.mock("@/features/file-system/stores/file-system.store", () => ({
   useFileSystemStore: { getState: () => ({ handleFileSelect: vi.fn() }) },
 }));
 vi.mock("@/utils/frontend-trace", () => ({ frontendTrace: vi.fn() }));
-vi.mock("../utils/frontend-terminal-session", () => ({
+vi.mock("../services/frontend-terminal-session", () => ({
   getFrontendTerminalSessionArgs: () => ({ windowLabel: "main", frontendSessionId: "frontend" }),
 }));
 vi.mock("../utils/resolve-font", () => ({ resolveTerminalFont: mocks.font }));

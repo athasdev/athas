@@ -53,7 +53,7 @@ import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { useRepositoryStore } from "../stores/git-repository.store";
 import { useGitBlameStore } from "../stores/git-blame.store";
 import type { GitWorktree } from "../types/git.types";
-import { isOpenableGitWorktree } from "../utils/git-worktree-open";
+import { isOpenableGitWorktree } from "../services/git-worktree-open";
 import GitCommandSurface from "./git-command-surface";
 import { onAppEvent } from "@/utils/app-events";
 

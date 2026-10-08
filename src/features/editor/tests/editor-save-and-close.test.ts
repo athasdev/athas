@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({ write: vi.fn(), saveDialog: vi.fn() }));
 vi.mock("@/features/file-system/services/workspace-resource-provider", () => ({
   getWorkspaceResourceProvider: () => ({ writeText: mocks.write }),
 }));
-vi.mock("@/features/file-system/controllers/platform", () => ({ writeFile: mocks.write }));
+vi.mock("@/features/file-system/api/file-system-api", () => ({ writeFile: mocks.write }));
 vi.mock("@/features/local-history/api/local-history-api", () => ({
   recordLocalHistoryFile: vi.fn(),
 }));

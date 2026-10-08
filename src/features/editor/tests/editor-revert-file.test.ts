@@ -8,9 +8,9 @@ const mocks = vi.hoisted(() => ({
   readFileContent: vi.fn(),
 }));
 
-vi.mock("@/features/file-system/controllers/file-operations", async (importOriginal) => {
+vi.mock("@/features/file-system/api/file-operations", async (importOriginal) => {
   const original =
-    await importOriginal<typeof import("@/features/file-system/controllers/file-operations")>();
+    await importOriginal<typeof import("@/features/file-system/api/file-operations")>();
   return {
     ...original,
     readFileContent: mocks.readFileContent,

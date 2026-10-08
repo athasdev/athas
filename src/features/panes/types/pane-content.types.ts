@@ -2,7 +2,7 @@ import type { ImageDraftState } from "@/features/viewer/image/editor/services/im
 import type { DatabaseType } from "@/features/database/types/provider.types";
 import type { MultiFileDiff } from "@/features/git/types/git-diff.types";
 import type { GitDiff } from "@/features/git/types/git.types";
-import type { OnboardingMode } from "@/features/onboarding/lib/onboarding-state";
+import type { OnboardingMode } from "@/features/onboarding/services/onboarding-state";
 import type { GitHubActionNotificationTarget } from "@/features/github/types/github.types";
 
 // ── Content type discriminant ───────────────────────────────────────
@@ -523,7 +523,7 @@ export type OpenContentSpec =
     }
   | {
       type: "onboarding";
-      context: import("@/features/onboarding/lib/onboarding-state").OnboardingContext;
+      context: import("@/features/onboarding/services/onboarding-state").OnboardingContext;
     };
 
 export function isDirtyContent(buffer: PaneContent): boolean {

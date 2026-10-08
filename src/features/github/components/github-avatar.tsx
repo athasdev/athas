@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Avatar, type AvatarSize } from "@/ui/avatar";
-import { getGitHubAvatarUrl } from "../utils/github-avatar-url";
+import { getGitHubAvatarUrl } from "../services/github-avatar-url";
 
 interface GitHubAvatarProps {
   login?: string | null;

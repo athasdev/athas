@@ -1,6 +1,6 @@
-import { canLogOutOfAcpAgent } from "@/features/ai/lib/acp-logout";
-import { selectAcpAgentStatus } from "@/features/ai/lib/acp-session-state";
-import { canBrowseAgentSessions } from "@/features/ai/lib/open-agent-sessions";
+import { canLogOutOfAcpAgent } from "@/features/ai/services/acp-logout";
+import { selectAcpAgentStatus } from "@/features/ai/services/acp-session-state";
+import { canBrowseAgentSessions } from "@/features/ai/services/open-agent-sessions";
 import { isAcpAgent } from "@/features/ai/services/ai-chat-service";
 import type { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { AgentType } from "@/features/ai/types/ai-chat.types";

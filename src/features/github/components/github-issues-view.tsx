@@ -4,12 +4,12 @@ import { GitHubAuthStatusMessage } from "./github-auth-status";
 import { memo, startTransition, useCallback, useDeferredValue, useEffect, useMemo } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
-import { writeSidebarResourceDragData } from "@/features/sidebar/utils/sidebar-resource-drag";
+import { writeSidebarResourceDragData } from "@/features/sidebar/services/sidebar-resource-drag";
 import { useGitHubStore } from "../stores/github.store";
 import type { IssueFilter, IssueListItem } from "../types/github.types";
 import { groupIssues } from "../utils/github-sidebar-groups";
-import { getTimeAgo, getSidebarTime } from "../utils/github-viewer-utils";
-import { getGitHubAvatarUrl } from "../utils/github-avatar-url";
+import { getTimeAgo, getSidebarTime } from "../services/github-viewer-utils";
+import { getGitHubAvatarUrl } from "../services/github-avatar-url";
 import { openGitHubContentInNewWindow } from "../utils/open-in-new-window";
 import { GitHubAvatar } from "./github-avatar";
 import { GitHubSidebarRow, type GitHubSidebarPreviewBadge } from "./github-sidebar-row";
@@ -19,7 +19,7 @@ import {
   GITHUB_ISSUE_LIST_TTL_MS,
   githubIssueDetailsCache,
   githubIssueListCache,
-} from "../utils/github-data-cache";
+} from "../services/github-data-cache";
 import { Spinner } from "@/ui/spinner";
 import { EmptyState } from "@/ui/empty";
 import { useProjectStore } from "@/features/workspace/stores/project.store";

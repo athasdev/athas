@@ -1,14 +1,14 @@
 import { useEffect, useRef } from "react";
 import type { ExtensionInstallRequest } from "@/extensions/hooks/use-extension-install-prompt";
-import type { AcpTerminalAuthExit } from "@/features/ai/lib/acp-terminal-auth";
-import type { AIChatSkillInsertDetail } from "@/features/ai/lib/skill-events";
+import type { AcpTerminalAuthExit } from "@/features/ai/services/acp-terminal-auth";
+import type { AIChatSkillInsertDetail } from "@/features/ai/services/skill-events";
 import type { GitChange } from "@/features/git/events/git-events";
 import type { DeliveryKind } from "@/features/github/delivery/types/github-delivery.types";
 import type { GitSidebarAction } from "@/features/keymaps/commands/git-command-actions";
 import type { GitHubSidebarAction } from "@/features/keymaps/commands/github-command-actions";
 import type { OpenNotificationsCommandDetail } from "@/features/notifications/constants/notifications-events";
 import type { ShareDraft } from "@/features/sharing/types/share.types";
-import type { SidebarDragResource } from "@/features/sidebar/utils/sidebar-resource-drag";
+import type { SidebarDragResource } from "@/features/sidebar/services/sidebar-resource-drag";
 import type {
   TerminalCommandNavigationDirection,
   TerminalCommandSummary,

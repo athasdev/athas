@@ -1,5 +1,5 @@
 import type { GenerativeUIView } from "@/extensions/ui/types/generative-ui";
-import { diffTextLines } from "@/features/git/utils/line-diff";
+import { diffTextLines } from "@/features/git/services/line-diff";
 import type { AcpToolKind } from "../types/acp.types";
 import type { Chat, Message, ToolCall } from "../types/ai-chat.types";
 import { getAcpDiffOutputs, openAcpDiffOutput, toRelativeDisplayPath } from "./acp-diff-output";

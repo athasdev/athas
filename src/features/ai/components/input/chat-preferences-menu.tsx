@@ -35,8 +35,8 @@ import { ArrowClockwiseIcon, SignOutIcon, SlidersIcon, WarningIcon } from "@/ui/
 import { Spinner } from "@/ui/spinner";
 import { getChatPreferencesModel } from "@/features/ai/utils/chat-preferences-model";
 import { classifySessionConfigOption } from "@/features/ai/lib/session-config-option-classifier";
-import { canLogOutOfAcpAgent, logOutOfAcpAgent } from "@/features/ai/lib/acp-logout";
-import { selectAcpAgentStatus } from "@/features/ai/lib/acp-session-state";
+import { canLogOutOfAcpAgent, logOutOfAcpAgent } from "@/features/ai/services/acp-logout";
+import { selectAcpAgentStatus } from "@/features/ai/services/acp-session-state";
 
 type CodexCatalogStatus = "idle" | "loading" | "loading-more" | "loaded" | "error";
 

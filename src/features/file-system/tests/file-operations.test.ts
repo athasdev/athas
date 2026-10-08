@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 const readDirectoryMock = vi.fn();
 const getSymlinkInfoMock = vi.fn();
 
-vi.mock("../controllers/platform", () => ({
+vi.mock("../api/file-system-api", () => ({
   createDirectory: vi.fn(),
   deletePath: vi.fn(),
   getSymlinkInfo: getSymlinkInfoMock,
@@ -53,7 +53,7 @@ describe("file operations", () => {
       is_dir: false,
     });
 
-    const { readDirectoryContents } = await import("../controllers/file-operations");
+    const { readDirectoryContents } = await import("../api/file-operations");
 
     const entries = await readDirectoryContents("/workspace");
 

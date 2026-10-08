@@ -16,7 +16,7 @@ import {
   createCodeMirrorLineCommands,
   fallbackCommentTokens,
 } from "../engines/codemirror/editor-commands";
-import { isEditorKeyboardTarget } from "@/features/keymaps/utils/editor-keyboard-target";
+import { isEditorKeyboardTarget } from "@/features/keymaps/services/editor-keyboard-target";
 
 const emptyRects = () => Object.assign([], { item: () => null }) as unknown as DOMRectList;
 Range.prototype.getClientRects = emptyRects;

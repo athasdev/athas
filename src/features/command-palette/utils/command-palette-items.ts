@@ -4,7 +4,7 @@ import type {
   CommandPaletteClose,
   CommandPaletteEntry,
 } from "@/features/keymaps/types/keymaps.types";
-import { executeCommandWithFeedback } from "@/features/keymaps/utils/execute-command-with-feedback";
+import { executeCommandWithFeedback } from "@/features/keymaps/services/execute-command-with-feedback";
 import type {
   CommandPaletteProviderId,
   CommandPaletteSlot,

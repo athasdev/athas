@@ -1,8 +1,6 @@
 import type { StateCreator } from "zustand";
 import type { CommandPaletteViewId } from "@/features/command-palette/types/view.types";
-import type { SettingsTab } from "./types/ui-state.types";
-
-export type ProjectPickerInitialStep = "picker" | "addRemote";
+import type { ProjectPickerInitialStep, SettingsTab } from "./types/ui-state.types";
 
 interface ModalState {
   isQuickOpenVisible: boolean;

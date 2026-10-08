@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { getGitHubAvatarUrl } from "../utils/github-avatar-url";
+import { getGitHubAvatarUrl } from "../services/github-avatar-url";
 
 describe("getGitHubAvatarUrl", () => {
   it("prefers the avatar URL returned by GitHub", () => {

@@ -5,11 +5,14 @@ import { openAgentInNewWindow } from "@/features/ai/detached/agent-window-servic
 import { useAgentWindowStore } from "@/features/ai/detached/agent-window.store";
 import { useChatAttention } from "@/features/ai/hooks/use-chat-attention";
 import { useNewAgentAction } from "@/features/ai/hooks/use-new-agent-action";
-import { selectAcpAgentStatus } from "@/features/ai/lib/acp-session-state";
+import { selectAcpAgentStatus } from "@/features/ai/services/acp-session-state";
 import { resolveAgentSessionIconId } from "@/features/ai/lib/agent-session-icon";
 import { selectAgentSessions } from "@/features/ai/lib/agent-session-list";
 import { openAgentHistoryChat } from "@/features/ai/lib/open-agent-history";
-import { canBrowseAgentSessions, openAgentSessions } from "@/features/ai/lib/open-agent-sessions";
+import {
+  canBrowseAgentSessions,
+  openAgentSessions,
+} from "@/features/ai/services/open-agent-sessions";
 import { isAcpAgent } from "@/features/ai/services/ai-chat-service";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { ChatSession } from "@/features/ai/types/ai-chat.types";

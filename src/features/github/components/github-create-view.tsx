@@ -39,10 +39,10 @@ import {
 } from "../api/github-issues-api";
 import { createPullRequest } from "../api/github-pull-requests-api";
 import { useGitHubStore } from "../stores/github.store";
-import { githubIssueListCache } from "../utils/github-data-cache";
+import { githubIssueListCache } from "../services/github-data-cache";
 import { useGitHubActionsStore } from "../stores/github-actions.store";
-import { getGitHubAvatarUrl } from "../utils/github-avatar-url";
-import { getRepositoryDisplayName } from "../utils/github-viewer-utils";
+import { getGitHubAvatarUrl } from "../services/github-avatar-url";
+import { getRepositoryDisplayName } from "../services/github-viewer-utils";
 import { GitHubMarkdownEditor } from "./github-markdown-editor";
 import { GitHubAssigneePicker, GitHubLabelPicker } from "./github-metadata-pickers";
 import { LabelBadges } from "./pr-status";

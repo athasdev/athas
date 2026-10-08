@@ -7,8 +7,8 @@ import type { GitHubNotification } from "@/features/github/types/github.types";
 import {
   GITHUB_NOTIFICATION_LIST_TTL_MS,
   githubNotificationListCache,
-} from "@/features/github/utils/github-data-cache";
-import { getGitHubNotificationTarget } from "@/features/github/utils/github-notification-routing";
+} from "@/features/github/services/github-data-cache";
+import { getGitHubNotificationTarget } from "@/features/github/services/github-notification-routing";
 
 export function useGitHubNotifications() {
   const isAuthenticated = useGitHubStore.use.isAuthenticated();

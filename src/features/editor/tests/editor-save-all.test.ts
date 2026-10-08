@@ -35,9 +35,9 @@ vi.mock("@/features/editor/lsp/lsp-client", () => ({
   },
 }));
 
-vi.mock("@/features/file-system/controllers/platform", async (importOriginal) => {
+vi.mock("@/features/file-system/api/file-system-api", async (importOriginal) => {
   const original =
-    await importOriginal<typeof import("@/features/file-system/controllers/platform")>();
+    await importOriginal<typeof import("@/features/file-system/api/file-system-api")>();
   return {
     ...original,
     writeFile: mocks.writeFile,

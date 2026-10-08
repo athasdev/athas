@@ -5,7 +5,7 @@ import { WorkspaceStoreScopeContext } from "@/features/workspace/stores/create-w
 import { useWorkspaceTabsStore } from "@/features/workspace/stores/workspace-tabs.store";
 import { cn } from "@/utils/cn";
 import { usePaneStore } from "../stores/pane.store";
-import { findPaneGroup } from "../utils/pane-tree";
+import { findPaneGroup } from "../services/pane-tree";
 import { PaneContainer } from "./pane-container";
 import { PaneNodeRenderer } from "./pane-node-renderer";
 

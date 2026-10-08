@@ -7,7 +7,7 @@ import { CheckIcon, CopyIcon } from "@/ui/icons";
 import { Popover, PopoverContent } from "@/ui/popover";
 import { writeClipboardText } from "@/utils/clipboard";
 import { getGitAuthorAvatarUrl } from "../utils/git-author-avatar";
-import type { InlineGitBlamePresentation } from "../utils/git-blame-decoration";
+import type { InlineGitBlamePresentation } from "../services/git-blame-decoration";
 
 interface InlineGitBlameCardProps {
   anchor: HTMLElement;

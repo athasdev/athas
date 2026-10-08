@@ -7,7 +7,7 @@ import type {
   SearchFilesResponse,
 } from "@/features/file-search/api/file-search-api";
 import { searchFilesContent } from "@/features/file-search/api/file-search-api";
-import { getNativeWorkspaceRootPaths } from "@/features/file-search/utils/file-search-paths";
+import { getNativeWorkspaceRootPaths } from "@/features/file-search/services/file-search-paths";
 import {
   loadProviderSearchFiles,
   searchProviderFilesContent,

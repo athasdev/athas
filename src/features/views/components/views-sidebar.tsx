@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { getViewBufferPath } from "@/features/views/lib/view-buffer";
+import { getViewBufferPath } from "@/features/views/services/view-buffer";
 import { useViewsStore } from "@/features/views/stores/views.store";
 import type { CustomViewDefinition } from "@/features/views/types/view.types";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";

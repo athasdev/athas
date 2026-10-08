@@ -21,7 +21,7 @@ import { WorkbenchContent } from "@/ui/workbench";
 import { GroupedSection } from "@/ui/grouped-section";
 import { Item, ItemActions, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@/ui/item";
 import MarkdownRenderer from "@/features/ai/components/messages/markdown-renderer";
-import { hasSkillLocalOverride } from "@/features/ai/lib/skill-library";
+import { hasSkillLocalOverride } from "@/features/ai/services/skill-library";
 import { AppearancePreviewGraphic } from "@/extensions/appearance/components/appearance-preview";
 import { ExtensionIcon } from "./extension-catalog-icon";
 import type {

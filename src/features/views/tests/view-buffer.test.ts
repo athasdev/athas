@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getViewBufferPath } from "@/features/views/lib/view-buffer";
+import { getViewBufferPath } from "@/features/views/services/view-buffer";
 
 describe("view buffer paths", () => {
   it("keeps setup tabs project-scoped", () => {

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
-import { getSidebarTime } from "../utils/github-viewer-utils";
+import { getSidebarTime } from "../services/github-viewer-utils";
 
 afterEach(() => vi.useRealTimers());
 

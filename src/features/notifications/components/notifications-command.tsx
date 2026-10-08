@@ -12,7 +12,7 @@ import {
   formatNotificationAge,
   formatNotificationText,
 } from "@/features/notifications/utils/notification-formatters";
-import { getTimeAgo } from "@/features/github/utils/github-viewer-utils";
+import { getTimeAgo } from "@/features/github/services/github-viewer-utils";
 import { Button } from "@/ui/button";
 import Command, {
   CommandEmpty,

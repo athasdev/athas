@@ -29,11 +29,14 @@ import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import { useAIChatStore } from "../../stores/ai-chat.store";
 import ChatHistoryDropdown from "../history/chat-history-dropdown";
-import { selectAcpAgentStatus } from "@/features/ai/lib/acp-session-state";
-import { canBrowseAgentSessions, openAgentSessions } from "@/features/ai/lib/open-agent-sessions";
+import { selectAcpAgentStatus } from "@/features/ai/services/acp-session-state";
+import {
+  canBrowseAgentSessions,
+  openAgentSessions,
+} from "@/features/ai/services/open-agent-sessions";
 import { useNewAgentAction } from "../../hooks/use-new-agent-action";
 import { isAgentWindow, openAgentInNewWindow } from "@/features/ai/detached/agent-window-service";
-import { requestWindowClose } from "@/features/window/utils/request-window-close";
+import { requestWindowClose } from "@/features/window/services/request-window-close";
 import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 
 interface ChatHeaderProps {

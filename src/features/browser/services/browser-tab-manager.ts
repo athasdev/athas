@@ -2,11 +2,11 @@ import { Channel } from "@tauri-apps/api/core";
 import { toast } from "sonner";
 import { type BrowserBounds, type BrowserEvent, commands } from "@/bindings/commands";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { keymapRegistry } from "@/features/keymaps/utils/registry";
+import { keymapRegistry } from "@/features/keymaps/services/keymap-registry";
 import type { BrowserContent } from "@/features/panes/types/pane-content.types";
-import { getInternalTabDragData } from "@/features/tabs/utils/internal-tab-drag";
+import { getInternalTabDragData } from "@/features/tabs/services/internal-tab-drag";
 import { useBrowserTabStore } from "../stores/browser-tab.store";
-import { getBrowserTabName, isBlankPage } from "../utils/browser-address";
+import { getBrowserTabName, isBlankPage } from "./browser-address";
 import { getBrowserKeyBindings, isPageCommand } from "../utils/browser-key-bindings";
 import { getVisibleSlotGeometry, isSlotOccluded } from "../utils/browser-occlusion";
 

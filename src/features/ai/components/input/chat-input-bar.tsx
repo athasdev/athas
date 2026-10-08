@@ -26,10 +26,10 @@ import { getComposerTerminalCommand } from "@/features/ai/utils/composer-termina
 import { ChromeBar, ChromeGroup, ChromeLabel } from "@/ui/chrome";
 import { Kbd } from "@/ui/kbd";
 import { useAgentDraft } from "@/features/ai/hooks/use-agent-draft";
-import { shouldIgnoreSearchFile } from "@/features/file-search/utils/file-search-filtering";
-import type { AIChatSkillInsertDetail } from "@/features/ai/lib/skill-events";
+import { shouldIgnoreSearchFile } from "@/features/file-search/services/file-search-filtering";
+import type { AIChatSkillInsertDetail } from "@/features/ai/services/skill-events";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
-import { selectChatAcpSession } from "@/features/ai/lib/acp-session-state";
+import { selectChatAcpSession } from "@/features/ai/services/acp-session-state";
 import { useVoiceInput } from "@/features/ai/hooks/use-voice-input";
 import { useComposerFileDrop } from "@/features/ai/hooks/use-composer-file-drop";
 import { getImageMimeType } from "@/utils/image-file-types";
@@ -52,12 +52,12 @@ import type {
   RestoredComposerPrompt,
 } from "@/features/ai/types/ai-chat.types";
 import type { FileEntry } from "@/features/file-system/types/app.types";
-import { openSidebarResourceBuffer } from "@/features/sidebar/utils/open-sidebar-resource";
+import { openSidebarResourceBuffer } from "@/features/sidebar/services/open-sidebar-resource";
 import {
   hasSidebarResourceDragData,
   readSidebarResourceDragData,
   type SidebarDragResource,
-} from "@/features/sidebar/utils/sidebar-resource-drag";
+} from "@/features/sidebar/services/sidebar-resource-drag";
 import { onAppEvent } from "@/utils/app-events";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { ComposerAttachments } from "./composer-attachments";
@@ -84,7 +84,7 @@ import type {
 import { clearChat, compactChat } from "@/features/ai/services/chat-compaction-service";
 import { openAgentEditsReview } from "@/features/ai/services/agent-edits-service";
 import { pickAgentEditsChatId } from "@/features/ai/stores/agent-edits.store";
-import { openNewAgentChat } from "@/features/ai/lib/open-new-agent-chat";
+import { openNewAgentChat } from "@/features/ai/services/open-new-agent-chat";
 import { AcpContextMeter } from "./acp-context-meter";
 import { ComposerContextMeter } from "./composer-context-meter";
 import { useComposerContextBudget } from "@/features/ai/hooks/use-composer-context-budget";

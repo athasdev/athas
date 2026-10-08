@@ -3,7 +3,7 @@ import { useFileSystemStore } from "@/features/file-system/stores/file-system.st
 import { toast } from "sonner";
 import { connectionStore } from "../stores/remote-connection.store";
 import type { RemoteConnection } from "../types/remote.types";
-import { getFriendlyRemoteError } from "../utils/remote-errors";
+import { getFriendlyRemoteError } from "./remote-errors";
 import { withRemoteHostTrust } from "./remote-host-trust";
 import { establishRemoteConnection } from "./remote-connection-client";
 

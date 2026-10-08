@@ -1,5 +1,5 @@
 import { cancelIntelligenceAgent } from "@/features/ai/intelligence/services/intelligence-agent-session";
-import { getLocalChatConnection } from "@/features/ai/lib/local-ai-connection";
+import { getLocalChatConnection } from "@/features/ai/services/local-ai-connection";
 import { getProviderAccessFromMap } from "@/features/ai/stores/ai-chat/provider-actions";
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { appendChatAcpEvent, type ChatAcpEventInput } from "@/features/ai/lib/acp-event-timeline";
@@ -46,7 +46,7 @@ import { getMessageSearchMatches } from "@/features/ai/utils/message-search";
 import { useToast } from "@/utils/toast";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { recordFrictionSignal } from "@/features/telemetry/services/telemetry";
-import { claimContextualTip } from "@/features/onboarding/lib/contextual-teaching";
+import { claimContextualTip } from "@/features/onboarding/services/contextual-teaching";
 import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { Button } from "@/ui/button";

@@ -10,7 +10,7 @@ import {
   getManifestIntegrationContributions,
   getManifestThemeContributions,
 } from "@/extensions/types/extension-contributions";
-import { isMarketplaceSkillInstalled } from "@/features/ai/lib/skill-library";
+import { isMarketplaceSkillInstalled } from "@/features/ai/services/skill-library";
 import type { AgentConfig } from "@/features/ai/types/acp.types";
 import type { AIChatSkill, MarketplaceSkill } from "@/features/ai/types/skills.types";
 import {

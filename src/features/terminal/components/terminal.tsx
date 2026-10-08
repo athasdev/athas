@@ -1,5 +1,5 @@
 import { EmptyState } from "@/ui/empty";
-import { getFriendlyRemoteError } from "@/features/remote/utils/remote-errors";
+import { getFriendlyRemoteError } from "@/features/remote/services/remote-errors";
 import { launchTerminalSession } from "../services/terminal-session-launch";
 import {
   useActiveWorkspaceId,
@@ -17,11 +17,11 @@ import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useZoomStore } from "@/features/layout/stores/zoom.store";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import { extractDroppedFilePaths } from "@/features/file-system/utils/file-system-dropped-paths";
+import { extractDroppedFilePaths } from "@/features/file-system/services/file-system-dropped-paths";
 import {
   TERMINAL_FILE_DROP_EVENT,
   type TerminalFileDropDetail,
-} from "@/features/file-system/utils/file-system-drop-controller";
+} from "@/features/file-system/services/file-system-drop-controller";
 import { showConfirmDialog } from "@/ui/dialog";
 import { showToast } from "@/utils/toast";
 import { readClipboardText, writeClipboardText } from "@/utils/clipboard";
@@ -47,10 +47,10 @@ import type {
 } from "../types/terminal.types";
 import { formatDroppedPathsForTerminal, getTerminalQuoteStyle } from "../utils/terminal-file-drop";
 import { resolveTerminalFont } from "../utils/resolve-font";
-import { getTerminalKeyAction } from "../utils/terminal-keyboard";
+import { getTerminalKeyAction } from "../services/terminal-keyboard";
 import { getTerminalCompatibilityOptions } from "../utils/terminal-options";
-import { getTerminalSize } from "../utils/terminal-protocol";
-import { getFrontendTerminalSessionArgs } from "../utils/frontend-terminal-session";
+import { getTerminalSize } from "../services/terminal-protocol";
+import { getFrontendTerminalSessionArgs } from "../services/frontend-terminal-session";
 import { TerminalSearch, type TerminalSearchOptions } from "./terminal-search";
 import { emitAppEvent, onAppEvent } from "@/utils/app-events";
 import "@xterm/xterm/css/xterm.css";

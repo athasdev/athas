@@ -4,11 +4,11 @@ import {
   getExportableUserKeybindings,
   mergeImportedUserKeybindings,
   parseKeybindingsImportJson,
-} from "../utils/keybinding-import-export";
+} from "../services/keybinding-import-export";
 import {
   getEffectiveKeybindingForCommand,
   getEffectiveKeybindings,
-} from "../utils/effective-keymaps";
+} from "../services/effective-keymaps";
 
 vi.mock("@/utils/platform", () => import("./macos-platform-mock"));
 

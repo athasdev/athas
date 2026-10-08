@@ -1,3 +1,10 @@
+/** A highlighted span of a document, as produced by the syntax tokenizers. */
+export interface Token {
+  start: number;
+  end: number;
+  class_name: string;
+}
+
 export interface Position {
   line: number;
   column: number;

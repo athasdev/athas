@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vite-plus/test";
-import { PathBreadcrumb } from "../components/toolbar/path-breadcrumb";
+import { PathBreadcrumb } from "@/ui/path-breadcrumb";
 
 describe("PathBreadcrumb", () => {
   it("renders plain segments separated by chevrons", () => {

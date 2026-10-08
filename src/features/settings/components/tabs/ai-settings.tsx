@@ -6,7 +6,7 @@ import { CodexSettings } from "@/features/ai/integrations/codex/codex-settings";
 import {
   MAX_INTELLIGENCE_AGENT_STEPS,
   MIN_INTELLIGENCE_AGENT_STEPS,
-} from "@/features/ai/intelligence/lib/intelligence-agent-steps";
+} from "@/features/ai/intelligence/services/intelligence-agent-steps";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useToast } from "@/utils/toast";
 import { TypedConfirmAction } from "@/features/settings/components/typed-confirm-action";

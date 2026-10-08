@@ -11,7 +11,7 @@ import { DropdownMenu, DropdownMenuTrigger } from "@/ui/dropdown";
 import { useRunActionDiscovery } from "../hooks/use-run-action-discovery";
 import { useRunActionsStore } from "../stores/run-actions.store";
 import type { CustomRunAction, RunActionDraft, RunActionItem } from "../types/run-action.types";
-import { resolveRunWorkingDirectory } from "../utils/run-action-discovery";
+import { resolveRunWorkingDirectory } from "../services/run-action-discovery";
 import RunActionDialog from "./run-action-dialog";
 import RunActionsMenu from "./run-actions-menu";
 import { emitAppEvent } from "@/utils/app-events";

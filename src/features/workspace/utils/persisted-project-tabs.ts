@@ -1,4 +1,4 @@
-import { createProjectTabId, normalizeProjectTabPath } from "./project-tab-path";
+import { createProjectTabId, normalizeProjectTabPath } from "../services/project-tab-path";
 
 interface PersistedProjectTab {
   id: string;

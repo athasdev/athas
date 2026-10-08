@@ -1,6 +1,6 @@
 import type { Window as TauriWindow } from "@tauri-apps/api/window";
 import { ArrowsInIcon, ArrowsOutIcon, MinusIcon, XIcon } from "@/ui/icons";
-import { requestWindowClose } from "@/features/window/utils/request-window-close";
+import { requestWindowClose } from "@/features/window/services/request-window-close";
 import { Button } from "@/ui/button";
 import { ChromeGroup } from "@/ui/chrome";
 import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";

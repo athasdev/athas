@@ -3,7 +3,7 @@ import { EditorView } from "@codemirror/view";
 import { useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import EditorContextMenu from "@/features/editor/context-menu/context-menu";
-import { keymapRegistry } from "@/features/keymaps/utils/registry";
+import { keymapRegistry } from "@/features/keymaps/services/keymap-registry";
 import { type CodeMirrorHost, useCodeMirrorExtension } from "../host";
 import { toggleSelectionCase } from "../toggle-case";
 

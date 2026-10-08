@@ -24,7 +24,7 @@ vi.mock("@/features/layout/stores/ui-state.store", () => ({
 
 const { useKeymaps } = await import("../hooks/use-keymaps");
 const { useKeymapStore } = await import("../stores/keymaps.store");
-const { keymapRegistry } = await import("../utils/registry");
+const { keymapRegistry } = await import("../services/keymap-registry");
 
 const executed: Array<{ command: string; args: unknown }> = [];
 let container: HTMLDivElement;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import type { SubscriptionInfo } from "@/features/auth/services/auth-api";
-import { hasProductCapability } from "../utils/product-capabilities";
+import { hasProductCapability } from "../services/product-capabilities";
 
 function subscription(
   value: Pick<SubscriptionInfo, "status"> & Partial<SubscriptionInfo>,

@@ -1,4 +1,4 @@
-import { getLineSlice } from "./large-file";
+import { getLineSlice } from "../services/large-file";
 
 export interface ResolveGoToLineTargetOptions {
   content: string;

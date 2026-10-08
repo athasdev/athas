@@ -8,7 +8,7 @@ import {
   parseApiError,
   readErrorBody,
 } from "@/features/ai/lib/api-error";
-import { formatUsdCents } from "@/features/ai/lib/hosted-usage";
+import { formatUsdCents } from "@/features/ai/services/hosted-usage";
 import type { ChatMessageError } from "@/features/ai/types/chat-error.types";
 
 /** How a failed agent turn is shown: a legacy error block for the transcript plus its structure. */

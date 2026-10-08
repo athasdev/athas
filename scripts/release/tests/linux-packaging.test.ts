@@ -92,12 +92,12 @@ describe("Linux release packaging", () => {
     const main = readRepoFile("src-tauri/src/main.rs");
     const capability = JSON.parse(readRepoFile("src-tauri/capabilities/main.json"));
     const mainLayout = readRepoFile("src/features/layout/components/main-layout.tsx");
-    const platformController = readRepoFile("src/features/file-system/controllers/platform.ts");
+    const fileSystemApi = readRepoFile("src/features/file-system/api/file-system-api.ts");
 
     expect(main).toContain(".plugin(tauri_plugin_dialog::init())");
     expect(capability.permissions).toContain("dialog:allow-open");
     expect(mainLayout).toContain("<LinuxFolderPickerDialog />");
-    expect(platformController).toContain("useLinuxFolderPickerStore.getState().actions.open()");
+    expect(fileSystemApi).toContain("useLinuxFolderPickerStore.getState().actions.open()");
   });
 
   it("renders the shared desktop template for the tarball and Flatpak", () => {

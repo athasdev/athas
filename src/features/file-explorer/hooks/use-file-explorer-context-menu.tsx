@@ -26,13 +26,13 @@ import { showSystemSharePicker, toggleQuickLookPreview } from "@/utils/local-fil
 import { useCallback, useMemo, useState } from "react";
 import { writeClipboardText } from "@/utils/clipboard";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { readFile as readTextFile, writeFile } from "@/features/file-system/controllers/platform";
+import { readFile as readTextFile, writeFile } from "@/features/file-system/api/file-system-api";
 import {
   buildEnvTemplateContent,
   ENV_TEMPLATE_TARGETS,
   isEnvFileName,
 } from "@/features/file-explorer/lib/env-template";
-import { openLocalHistoryForPath } from "@/features/local-history/utils/open-local-history";
+import { openLocalHistoryForPath } from "@/features/local-history/services/open-local-history";
 import { useFileClipboardStore } from "@/features/file-explorer/stores/file-explorer-clipboard.store";
 import { useFileTreeStore } from "@/features/file-explorer/stores/file-explorer-tree.store";
 import type { ContextMenuState } from "@/features/file-system/types/app.types";

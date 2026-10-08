@@ -4,7 +4,7 @@ import type { Chat, ChatSession, Message, ToolCall } from "@/features/ai/types/a
 import type { AcpTurnUsage } from "@/features/ai/types/acp.types";
 import { coalesceAssistantResponses } from "@/features/ai/lib/assistant-response";
 import { normalizeMessageFollowUpActions } from "@/features/ai/lib/follow-up-actions";
-import { migrateLegacyAgentId } from "@/features/ai/lib/agent-clis";
+import { migrateLegacyAgentId } from "@/features/ai/services/agent-clis";
 
 /**
  * Chat History Database Utilities

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { evaluateWhenClause } from "../utils/context";
+import { evaluateWhenClause } from "../services/when-clause";
 
 describe("when clause evaluation", () => {
   it("treats a missing or empty clause as always active", () => {

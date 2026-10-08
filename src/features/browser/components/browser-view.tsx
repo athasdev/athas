@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useKeymapStore } from "@/features/keymaps/stores/keymaps.store";
-import { activateBufferInPaneAndSync } from "@/features/panes/utils/pane-activation";
+import { activateBufferInPaneAndSync } from "@/features/panes/services/pane-activation";
 import { PaneContentHeader } from "@/features/panes/components/pane-content-chrome";
 import type { BrowserContent } from "@/features/panes/types/pane-content.types";
 import { ViewerErrorState } from "@/features/viewer/components/viewer-state";
@@ -38,7 +38,7 @@ import {
   isBlankPage,
   isSecureAddress,
   resolveBrowserAddress,
-} from "../utils/browser-address";
+} from "../services/browser-address";
 import { onAppEvent } from "@/utils/app-events";
 import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 

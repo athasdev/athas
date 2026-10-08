@@ -37,7 +37,7 @@ vi.mock("@tauri-apps/plugin-fs", () => ({
   writeTextFile: vi.fn(),
 }));
 
-import { openFile, openFiles, openFolder } from "../controllers/platform";
+import { openFile, openFiles, openFolder } from "../api/file-system-api";
 
 describe("platform dialogs", () => {
   beforeEach(() => {

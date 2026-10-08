@@ -1,6 +1,6 @@
 import type { AcpAgentStatus } from "@/features/ai/types/acp.types";
 import type { Chat } from "@/features/ai/types/ai-chat.types";
-import { getChatAcpSessionToClose } from "./acp-session-state";
+import { getChatAcpSessionToClose } from "../services/acp-session-state";
 
 function advertises(status: AcpAgentStatus, capability: "close" | "resume"): boolean {
   const session = status.agentCapabilities?.sessionCapabilities;

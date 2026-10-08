@@ -1,5 +1,5 @@
 import GitHubDeliveryList from "../delivery/components/github-delivery-list";
-import { RELEASE_FILTERS, DEPLOYMENT_FILTERS } from "../delivery/utils/github-delivery";
+import { RELEASE_FILTERS, DEPLOYMENT_FILTERS } from "../delivery/services/github-delivery";
 import type { ReleaseFilter, DeploymentFilter } from "../delivery/types/github-delivery.types";
 import { TagIcon, RocketIcon } from "@/ui/icons";
 import { pickDirectory } from "@/utils/file-dialogs";
@@ -35,7 +35,7 @@ import {
   type GitHubActivitySection,
   useSidebarStore,
 } from "@/features/layout/stores/sidebar.store";
-import { writeSidebarResourceDragData } from "@/features/sidebar/utils/sidebar-resource-drag";
+import { writeSidebarResourceDragData } from "@/features/sidebar/services/sidebar-resource-drag";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { ContextMenuPopup, createContextMenuGroups } from "@/ui/context-menu";
@@ -60,8 +60,8 @@ import {
 } from "@/ui/sidebar";
 import { writeClipboardText } from "@/utils/clipboard";
 import { useGitHubStore } from "../stores/github.store";
-import { getTimeAgo, getSidebarTime } from "../utils/github-viewer-utils";
-import { getGitHubAvatarUrl } from "../utils/github-avatar-url";
+import { getTimeAgo, getSidebarTime } from "../services/github-viewer-utils";
+import { getGitHubAvatarUrl } from "../services/github-avatar-url";
 import { openGitHubContentInNewWindow } from "../utils/open-in-new-window";
 import { groupPullRequests } from "../utils/github-sidebar-groups";
 import type { IssueFilter, PRFilter, PullRequest, WorkflowRunFilter } from "../types/github.types";
@@ -70,7 +70,7 @@ import GitHubActionsView from "./github-actions-view";
 import { GitHubAvatar } from "./github-avatar";
 import GitHubIssuesView from "./github-issues-view";
 import { GitHubSidebarRow, type GitHubSidebarPreviewBadge } from "./github-sidebar-row";
-import { GITHUB_ISSUE_LIST_TTL_MS, githubIssueListCache } from "../utils/github-data-cache";
+import { GITHUB_ISSUE_LIST_TTL_MS, githubIssueListCache } from "../services/github-data-cache";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { onAppEvent } from "@/utils/app-events";
 import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";

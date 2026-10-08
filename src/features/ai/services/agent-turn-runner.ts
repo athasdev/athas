@@ -12,7 +12,10 @@ import { withExitedAcpTerminalSnapshots } from "@/features/ai/lib/acp-terminal-o
 import type { ChatAcpEventInput } from "@/features/ai/lib/acp-event-timeline";
 import { startAssistantResponseContinuation } from "@/features/ai/lib/assistant-response";
 import { buildConversationHistory } from "@/features/ai/lib/conversation-history";
-import { filterAgentContext, loadAgentContextPolicy } from "@/features/ai/lib/agent-context-policy";
+import {
+  filterAgentContext,
+  loadAgentContextPolicy,
+} from "@/features/ai/services/agent-context-policy";
 import {
   discardToolEditSnapshot,
   resolveToolEditDiff,
@@ -64,7 +67,7 @@ import type { ContextInfo } from "@/features/ai/types/ai-context.types";
 import type { FileEntry } from "@/features/file-system/types/app.types";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import type { AiFailurePhase, AiRunKind } from "@/features/telemetry/lib/ai-signals";
+import type { AiFailurePhase, AiRunKind } from "@/features/telemetry/services/ai-signals";
 import { recordAiFailure } from "@/features/telemetry/services/telemetry";
 import { useAuthStore } from "@/features/auth/stores/auth.store";
 

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
+import type { ExtensionChecksumError } from "../installer/extension-installer";
 import {
-  ExtensionChecksumError,
   ExtensionDownloadError,
   ExtensionDownloadTimeoutError,
   ExtensionInstallCancelledError,

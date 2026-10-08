@@ -4,7 +4,7 @@ import {
   getPullRequestStatus,
   PR_STATUS_BADGE_TONE,
   PULL_REQUEST_STATUS_LABEL,
-} from "@/features/github/utils/github-pr-viewer-utils";
+} from "@/features/github/services/github-pr-viewer-utils";
 import Badge from "@/ui/badge";
 import type { OpenContentSpec, PaneContent } from "@/features/panes/types/pane-content.types";
 import {

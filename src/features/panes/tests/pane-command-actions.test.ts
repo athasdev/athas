@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { BOTTOM_PANE_ID, ROOT_PANE_ID } from "../constants/pane";
 import { usePaneStore } from "../stores/pane.store";
-import { getAllPaneGroups } from "../utils/pane-tree";
+import { getAllPaneGroups } from "../services/pane-tree";
 import { seedActiveBuffer } from "@/features/panes/tests/helpers/seed-pane-tabs";
 
 const createMockStorage = () => {
@@ -55,7 +55,7 @@ describe("pane command actions", () => {
 
   it("splits the active editor group with an editor buffer", async () => {
     const { useBufferStore } = await import("@/features/editor/stores/buffer.store");
-    const { splitActiveEditorGroup } = await import("../utils/pane-command-actions");
+    const { splitActiveEditorGroup } = await import("../services/pane-command-actions");
     const paneActions = usePaneStore.getState().actions;
 
     useBufferStore.setState((state) => ({
@@ -85,7 +85,7 @@ describe("pane command actions", () => {
 
   it("splits stateful buffers into an empty editor group", async () => {
     const { useBufferStore } = await import("@/features/editor/stores/buffer.store");
-    const { splitActiveEditorGroup } = await import("../utils/pane-command-actions");
+    const { splitActiveEditorGroup } = await import("../services/pane-command-actions");
     const paneActions = usePaneStore.getState().actions;
 
     useBufferStore.setState((state) => ({
@@ -112,7 +112,7 @@ describe("pane command actions", () => {
   });
 
   it("closes only when another editor group can receive the buffers", async () => {
-    const { closeActiveEditorGroup } = await import("../utils/pane-command-actions");
+    const { closeActiveEditorGroup } = await import("../services/pane-command-actions");
     const paneActions = usePaneStore.getState().actions;
 
     paneActions.addBufferToPane(ROOT_PANE_ID, "buffer-a");
@@ -129,7 +129,7 @@ describe("pane command actions", () => {
   });
 
   it("closes other editor groups into the active editor group", async () => {
-    const { closeOtherEditorGroups } = await import("../utils/pane-command-actions");
+    const { closeOtherEditorGroups } = await import("../services/pane-command-actions");
     const paneActions = usePaneStore.getState().actions;
 
     paneActions.addBufferToPane(ROOT_PANE_ID, "buffer-a");
@@ -147,7 +147,7 @@ describe("pane command actions", () => {
   });
 
   it("resets nested editor group sizes", async () => {
-    const { resetEditorGroupSizes } = await import("../utils/pane-command-actions");
+    const { resetEditorGroupSizes } = await import("../services/pane-command-actions");
     const paneActions = usePaneStore.getState().actions;
 
     const rightPaneId = paneActions.splitPane(ROOT_PANE_ID, "horizontal");
@@ -179,7 +179,7 @@ describe("pane command actions", () => {
   });
 
   it("toggles full screen for the active pane", async () => {
-    const { toggleActivePaneFullscreen } = await import("../utils/pane-command-actions");
+    const { toggleActivePaneFullscreen } = await import("../services/pane-command-actions");
     const paneActions = usePaneStore.getState().actions;
 
     paneActions.setActivePane(ROOT_PANE_ID);
@@ -192,7 +192,7 @@ describe("pane command actions", () => {
   });
 
   it("moves the active editor into the next and previous editor group", async () => {
-    const { moveActiveEditorToAdjacentGroup } = await import("../utils/pane-command-actions");
+    const { moveActiveEditorToAdjacentGroup } = await import("../services/pane-command-actions");
     const paneActions = usePaneStore.getState().actions;
 
     paneActions.addBufferToPane(ROOT_PANE_ID, "buffer-a");
@@ -221,7 +221,7 @@ describe("pane command actions", () => {
       moveActiveEditorToAdjacentGroup,
       splitActiveEditorGroup,
       toggleActiveEditorGroupLock,
-    } = await import("../utils/pane-command-actions");
+    } = await import("../services/pane-command-actions");
     const paneActions = usePaneStore.getState().actions;
 
     paneActions.addBufferToPane(BOTTOM_PANE_ID, "terminal-a");

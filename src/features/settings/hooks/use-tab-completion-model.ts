@@ -1,9 +1,9 @@
 import { useModelName } from "@/features/ai/components/selectors/model-connection-menu";
 import { useProviderById } from "@/features/ai/hooks/use-available-providers";
-import { resolveAutocompleteConnection } from "@/features/ai/intelligence/lib/resolve-intelligence-connection";
+import { resolveAutocompleteConnection } from "@/features/ai/intelligence/services/resolve-intelligence-connection";
 import type { IntelligenceConnection } from "@/features/ai/intelligence/types/intelligence.types";
 import { useAIModelSettings } from "@/features/settings/hooks/use-ai-model-settings";
-import { withTaskConnection } from "@/features/settings/lib/ai-model-preferences";
+import { withTaskConnection } from "@/features/settings/services/ai-model-preferences";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useAuthStore } from "@/features/auth/stores/auth.store";
 

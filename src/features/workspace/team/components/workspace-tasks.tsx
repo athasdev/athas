@@ -1,12 +1,12 @@
-import { areProjectTabPathsEqual } from "@/features/workspace/utils/project-tab-path";
+import { areProjectTabPathsEqual } from "@/features/workspace/services/project-tab-path";
 import { useState } from "react";
-import { resolveRunWorkingDirectory } from "@/features/run-actions/utils/run-action-discovery";
+import { resolveRunWorkingDirectory } from "@/features/run-actions/services/run-action-discovery";
 import { Button } from "@/ui/button";
 import { Card, CardContent } from "@/ui/card";
 import { Field, FieldDescription, FieldLabel } from "@/ui/field";
 import Input from "@/ui/input";
 import Textarea from "@/ui/textarea";
-import { parseTeamWorkspace } from "../utils/team-workspace-config";
+import { parseTeamWorkspace } from "../services/team-workspace-config";
 import type { WorkspaceSectionProps } from "./workspace-section-props";
 import { emitAppEvent } from "@/utils/app-events";
 import { useProjectStore } from "@/features/workspace/stores/project.store";

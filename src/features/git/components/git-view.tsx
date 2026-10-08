@@ -47,7 +47,7 @@ import {
   type WorkingTreeDiffScope,
 } from "../services/working-tree-diff-loader";
 import { getStashDisplayTitle, getStashPositionLabel } from "../utils/git-stash-format";
-import { openGitWorktreeWorkspace } from "../utils/git-worktree-open";
+import { openGitWorktreeWorkspace } from "../services/git-worktree-open";
 import {
   resolveMultiDiffSelection,
   selectMultiDiffFileByPath,

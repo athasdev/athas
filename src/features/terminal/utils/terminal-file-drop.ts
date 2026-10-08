@@ -1,5 +1,5 @@
 import type { Platform } from "@tauri-apps/plugin-os";
-import { parseDroppedPaths } from "@/features/file-system/utils/file-system-dropped-paths";
+import { parseDroppedPaths } from "@/features/file-system/services/file-system-dropped-paths";
 
 export type TerminalQuoteStyle = "posix" | "powershell" | "cmd";
 

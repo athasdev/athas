@@ -1,14 +1,14 @@
 import { captureBufferStoreOwner, isBufferStoreOwnerLive } from "../services/buffer-store-owner";
 import { readBufferRevision, readBufferText } from "../services/buffer-text";
 import { flushAllLiveDocuments } from "../services/live-document-registry";
-import { useBufferStore } from "../stores/buffer.store";
+import type { useBufferStore } from "../stores/buffer.store";
 import { getWorkspaceResourceProvider } from "@/features/file-system/services/workspace-resource-provider";
 import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
 import type { EditorContent } from "@/features/panes/types/pane-content.types";
 import {
   syncBufferHistoryContent,
   trackImmediateBufferHistoryChange,
-} from "../stores/buffer-history-tracking";
+} from "../services/buffer-history-tracking";
 import { emitGitChanged } from "@/features/git/events/git-events";
 
 export interface LspPosition {

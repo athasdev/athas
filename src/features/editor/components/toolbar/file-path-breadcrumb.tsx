@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { logger } from "@/utils/logger";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
-import { readDirectory } from "@/features/file-system/controllers/platform";
+import { readDirectory } from "@/features/file-system/api/file-system-api";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import type { FileEntry } from "@/features/file-system/types/app.types";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
@@ -18,7 +18,7 @@ import {
   usePointAnchor,
 } from "@/ui/dropdown";
 import { getBaseName, getRelativePath, joinPath, normalizePath } from "@/utils/path-helpers";
-import { PathBreadcrumb } from "./path-breadcrumb";
+import { PathBreadcrumb } from "@/ui/path-breadcrumb";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 interface DirectoryEntry {

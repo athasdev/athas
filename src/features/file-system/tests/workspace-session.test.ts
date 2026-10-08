@@ -5,7 +5,7 @@ import {
   isWorkspaceFolderPath,
   normalizeWorkspaceFolders,
   selectRestoredWorkspaceFolders,
-} from "../controllers/workspace-session";
+} from "../services/workspace-session";
 
 describe("buildWorkspaceRestorePlan", () => {
   it("prioritizes the active buffer and defers the rest in order", () => {

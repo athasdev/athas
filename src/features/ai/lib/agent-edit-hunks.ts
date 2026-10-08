@@ -4,7 +4,7 @@ import type {
   AgentFileWrite,
   LineEdit,
 } from "@/features/ai/types/agent-edits.types";
-import { diffTextLines } from "@/features/git/utils/line-diff";
+import { diffTextLines } from "@/features/git/services/line-diff";
 
 /** Split the way `diffTextLines` does, so hunk line indexes line up with its output. */
 function splitLines(text: string): string[] {

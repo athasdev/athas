@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test"
 import type { EditorContent } from "@/features/panes/types/pane-content.types";
 import { useBufferStore } from "../../editor/stores/buffer.store";
 import { useEditorAppStore } from "../../editor/stores/editor-app.store";
-import { parseAndExecuteVimCommand } from "../stores/vim-commands";
+import { parseAndExecuteVimCommand } from "../services/vim-commands";
 import { onAppEvent } from "@/utils/app-events";
 import { seedActiveBuffer } from "@/features/panes/tests/helpers/seed-pane-tabs";
 import { getActiveBufferId } from "@/features/panes/stores/pane-selectors";
@@ -27,9 +27,9 @@ vi.mock("@/features/file-system/services/workspace-resource-provider", () => ({
   getWorkspaceResourceProvider: () => ({ writeText: mocks.writeFile }),
 }));
 
-vi.mock("@/features/file-system/controllers/platform", async (importOriginal) => {
+vi.mock("@/features/file-system/api/file-system-api", async (importOriginal) => {
   const original =
-    await importOriginal<typeof import("@/features/file-system/controllers/platform")>();
+    await importOriginal<typeof import("@/features/file-system/api/file-system-api")>();
   return {
     ...original,
     writeFile: mocks.writeFile,

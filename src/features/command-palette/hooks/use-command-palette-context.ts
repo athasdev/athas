@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { getAgentCli } from "@/features/ai/lib/agent-clis";
+import { getAgentCli } from "@/features/ai/services/agent-clis";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useLspStore } from "@/features/editor/lsp/stores/lsp.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";

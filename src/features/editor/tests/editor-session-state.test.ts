@@ -55,7 +55,7 @@ describe("editor session state", () => {
   });
 
   it("builds a persisted editor view snapshot from cached view and fold state", async () => {
-    const { buildPersistedEditorViewState } = await import("../stores/editor-session-state");
+    const { buildPersistedEditorViewState } = await import("../services/editor-session-state");
     const { useFoldStore } = await import("../stores/fold.store");
     const { useEditorStateStore } = await import("../stores/state.store");
     const buffer = createEditorBuffer({ id: "editor-build", path: "/workspace/src/build.ts" });
@@ -84,7 +84,7 @@ describe("editor session state", () => {
   });
 
   it("restores persisted view state for the new buffer id used after session restore", async () => {
-    const { restorePersistedEditorViewState } = await import("../stores/editor-session-state");
+    const { restorePersistedEditorViewState } = await import("../services/editor-session-state");
     const { useFoldStore } = await import("../stores/fold.store");
     const { useEditorStateStore } = await import("../stores/state.store");
     const buffer = createEditorBuffer({ id: "editor-restore", path: "/workspace/src/restore.ts" });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { UI_FONT_SIZE_DEFAULT } from "@/features/settings/lib/ui-font-size";
+import { UI_FONT_SIZE_DEFAULT } from "@/features/settings/services/ui-font-size";
 import {
   COLLAPSED_ACTIVITY_BAR_WIDTH,
   getCollapsedActivityBarWidth,

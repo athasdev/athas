@@ -10,7 +10,7 @@ import {
 import { useSettingsSyncStore } from "@/features/settings/stores/settings-sync.store";
 import { useProFeature } from "@/features/auth/hooks/use-pro-feature";
 import { useDesktopSignIn } from "@/features/auth/hooks/use-desktop-sign-in";
-import { getAccountPlanLabel } from "@/features/auth/utils/account-usage";
+import { getAccountPlanLabel } from "@/features/auth/services/account-usage";
 import { useAuthStore } from "@/features/auth/stores/auth.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";

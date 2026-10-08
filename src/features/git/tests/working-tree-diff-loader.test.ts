@@ -9,7 +9,7 @@ vi.mock("@/features/editor/stores/buffer.store", () => ({
 vi.mock("../api/git-diff-api", () => ({ getFileDiff: mocks.getFileDiff }));
 
 import { loadWorkingTreeDiffsProgressively } from "../services/working-tree-diff-loader";
-import * as helpers from "../utils/git-diff-helpers";
+import * as helpers from "../services/git-diff-helpers";
 
 describe("progressive working tree diffs", () => {
   beforeEach(() => vi.restoreAllMocks());

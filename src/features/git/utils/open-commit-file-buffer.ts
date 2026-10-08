@@ -1,5 +1,5 @@
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { getLanguageIdFromPath } from "@/features/editor/utils/language-id";
+import { getLanguageIdFromPath } from "@/features/editor/services/language-id";
 import { getCommitFileContent } from "../api/git-diff-api";
 
 interface OpenCommitFileBufferOptions {

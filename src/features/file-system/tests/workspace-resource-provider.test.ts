@@ -11,7 +11,7 @@ const readLocalFileBytes = vi.hoisted(() => vi.fn());
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke }));
 vi.mock("@tauri-apps/plugin-fs", () => ({ readFile: readLocalFileBytes }));
-vi.mock("../controllers/file-operations", () => ({ readDirectoryContents, readFileContent }));
+vi.mock("../api/file-operations", () => ({ readDirectoryContents, readFileContent }));
 
 describe("workspace resource provider", () => {
   beforeEach(() => {

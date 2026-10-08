@@ -46,9 +46,9 @@ import {
   PULL_REQUEST_STATUS_LABEL,
   resolveSafeRepoFilePath,
   toFileDiffFromMetadata,
-} from "../utils/github-pr-viewer-utils";
-import { copyToClipboard, getTimeAgo } from "../utils/github-viewer-utils";
-import { getGitHubAvatarUrl } from "../utils/github-avatar-url";
+} from "../services/github-pr-viewer-utils";
+import { copyToClipboard, getTimeAgo } from "../services/github-viewer-utils";
+import { getGitHubAvatarUrl } from "../services/github-avatar-url";
 import { useGitHubStore } from "../stores/github.store";
 import { PRTimeline } from "./pr-timeline";
 import { PRFilesPanel } from "./pr-files-panel";

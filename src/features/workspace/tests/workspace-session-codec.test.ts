@@ -14,7 +14,7 @@ import {
 
 const buildPersistedEditorViewState = vi.hoisted(() => vi.fn());
 
-vi.mock("@/features/editor/stores/editor-session-state", () => ({
+vi.mock("@/features/editor/services/editor-session-state", () => ({
   buildPersistedEditorViewState,
 }));
 

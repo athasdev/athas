@@ -32,14 +32,14 @@ import {
 import {
   resolveTerminalLaunch,
   SYSTEM_DEFAULT_PROFILE_ID,
-} from "@/features/terminal/utils/terminal-profiles";
+} from "@/features/terminal/services/terminal-profiles";
 import { shouldCloseTerminalPane } from "@/features/terminal/utils/terminal-pane-lifecycle";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { onAppEvent } from "@/utils/app-events";
 import TerminalSession from "./terminal-session";
 import { TerminalSplitView } from "./terminal-split-view";
 import TerminalTabBar from "./terminal-tab-bar";
-import { selectIsTerminalPaneVisible } from "@/features/layout/stores/ui-state/terminal-slice";
+import { selectIsTerminalPaneVisible } from "@/features/layout/stores/ui-state-selectors";
 
 interface TerminalContainerProps {
   currentDirectory?: string;

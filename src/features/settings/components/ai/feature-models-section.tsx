@@ -6,7 +6,7 @@ import {
   AI_FEATURE_MODEL_OVERRIDES,
   countTaskOverrides,
   withTaskConnection,
-} from "@/features/settings/lib/ai-model-preferences";
+} from "@/features/settings/services/ai-model-preferences";
 import { Button } from "@/ui/button";
 import { ChevronDownIcon, ChevronRightIcon } from "@/ui/icons";
 import Section, { SettingRow } from "../settings-section";

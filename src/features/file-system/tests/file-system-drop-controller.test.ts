@@ -8,7 +8,7 @@ import {
   resolveDropClientPoint,
   TERMINAL_FILE_DROP_EVENT,
   type TerminalFileDropDetail,
-} from "../utils/file-system-drop-controller";
+} from "../services/file-system-drop-controller";
 
 describe("file system drop controller", () => {
   it("parses, dedupes, and forwards dropped external paths", async () => {

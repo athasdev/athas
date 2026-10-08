@@ -8,7 +8,9 @@ const mocks = vi.hoisted(() => ({
   diagnostics: new Map<string, unknown[]>(),
 }));
 
-vi.mock("@/features/ai/lib/agent-context-policy", () => ({ loadAgentContextPolicy: mocks.policy }));
+vi.mock("@/features/ai/services/agent-context-policy", () => ({
+  loadAgentContextPolicy: mocks.policy,
+}));
 vi.mock("@/features/workspace/stores/project.store", () => ({
   useProjectStore: { getState: () => ({ rootFolderPath: mocks.root }), subscribe: () => () => {} },
 }));

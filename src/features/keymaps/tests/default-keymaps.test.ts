@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vite-plus/test";
 import { registerCommands } from "../commands/command-registry";
 import { defaultKeymaps } from "../defaults/default-keymaps";
-import { keymapRegistry } from "../utils/registry";
+import { keymapRegistry } from "../services/keymap-registry";
 
 function expectKeybinding(command: string, key: string, when?: string) {
   expect(defaultKeymaps).toContainEqual(

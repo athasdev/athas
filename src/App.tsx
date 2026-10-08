@@ -1,12 +1,12 @@
 import { lazy, Suspense, useEffect, useMemo } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { parseDetachedWindowUrl } from "@/features/window/detached/detached-window-protocol";
-import { recordStartupMilestoneAfterFrame } from "@/features/bootstrap/startup-performance";
+import { recordStartupMilestoneAfterFrame } from "@/features/bootstrap/services/startup-performance";
 import {
   getWindowOpenDiagnostics,
   traceWindowOpen,
   traceWindowOpenAfterFrame,
-} from "@/features/window/utils/window-open-diagnostics";
+} from "@/features/window/services/window-open-diagnostics";
 
 const WorkbenchApp = lazy(() => import("./workbench-app"));
 const DetachedAgentWindow = lazy(() => import("./features/ai/detached/detached-agent-window"));

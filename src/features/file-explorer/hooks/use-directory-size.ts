@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getLocalDirectorySize } from "@/features/file-system/controllers/platform";
+import { getLocalDirectorySize } from "@/features/file-system/api/file-system-api";
 import type { FileEntry } from "@/features/file-system/types/app.types";
 import { isRemotePath } from "@/features/remote/utils/remote-path";
 import { isWslPath } from "@/features/wsl/utils/wsl-path";

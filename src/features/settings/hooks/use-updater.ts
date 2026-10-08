@@ -3,7 +3,7 @@ import { check, type Update } from "@tauri-apps/plugin-updater";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { commands } from "@/bindings/commands";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { prepareProjectTransitionWithUnsavedBuffers } from "@/features/file-system/controllers/workspace-project-transition";
+import { prepareProjectTransitionWithUnsavedBuffers } from "@/features/file-system/services/workspace-project-transition";
 import { recordUpdateCheckTelemetry } from "@/features/telemetry/services/telemetry";
 import {
   clearUpdatePreferencesForNewVersion,

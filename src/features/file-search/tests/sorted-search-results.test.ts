@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { insertSortedLimited } from "../utils/sorted-search-results";
+import { insertSortedLimited } from "../services/sorted-search-results";
 
 describe("insertSortedLimited", () => {
   it("keeps the best candidates sorted within the requested limit", () => {

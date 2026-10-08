@@ -4,7 +4,7 @@ import {
   type BufferStoreOwner,
 } from "./buffer-store-owner";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
-import { parseCollaborationNoteBufferPath } from "@/features/collaboration/lib/collaboration-sidebar-model";
+import { parseCollaborationNoteBufferPath } from "@/features/collaboration/services/collaboration-sidebar-model";
 import { getWorkspaceResourceProvider } from "@/features/file-system/services/workspace-resource-provider";
 import { showToast } from "@/utils/toast";
 import { useFileWatcherStore } from "@/features/file-system/stores/file-watcher.store";
@@ -12,7 +12,7 @@ import { emitGitChanged } from "@/features/git/events/git-events";
 import { recordLocalHistoryFile } from "@/features/local-history/api/local-history-api";
 import { isEditorContent } from "@/features/panes/types/pane-content.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { writeFile } from "@/features/file-system/controllers/platform";
+import { writeFile } from "@/features/file-system/api/file-system-api";
 import { getBufferById } from "../stores/buffer-index";
 import { readBufferRevision, readBufferText } from "./buffer-text";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
@@ -261,7 +261,7 @@ async function performEditorSave(
       await Promise.all([
         import("@/features/collaboration/services/collaboration-api"),
         import("@/features/auth/stores/auth.store"),
-        import("@/features/collaboration/lib/collaboration-sidebar-model"),
+        import("@/features/collaboration/services/collaboration-sidebar-model"),
       ]);
     const { subscription, actions } = useAuthStore.getState();
     const collaboration = subscription?.collaboration;

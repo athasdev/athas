@@ -1,7 +1,7 @@
 import { isTauri } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
-import { extractDroppedFilePaths } from "@/features/file-system/utils/file-system-dropped-paths";
-import { resolveDropClientPoint } from "@/features/file-system/utils/file-system-drop-controller";
+import { extractDroppedFilePaths } from "@/features/file-system/services/file-system-dropped-paths";
+import { resolveDropClientPoint } from "@/features/file-system/services/file-system-drop-controller";
 import { getImageMimeType } from "@/utils/image-file-types";
 import { listenToNativeDragDrop } from "@/utils/tauri-drag-drop";
 import type { PastedImage } from "../types/chat-composer.types";

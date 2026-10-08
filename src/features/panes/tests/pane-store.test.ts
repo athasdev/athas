@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vite-plus/test";
 import { BOTTOM_PANE_ID, ROOT_PANE_ID } from "../constants/pane";
 import { usePaneStore } from "../stores/pane.store";
-import { getAllPaneGroups } from "../utils/pane-tree";
+import { getAllPaneGroups } from "../services/pane-tree";
 
 describe("pane.store bottom pane integration", () => {
   afterEach(() => {

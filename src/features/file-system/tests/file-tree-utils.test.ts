@@ -7,7 +7,7 @@ import {
   relocateFileEntry,
   removeFileFromTree,
   updateFileInTree,
-} from "../controllers/file-tree-utils";
+} from "../services/file-tree-utils";
 
 const createTree = (): FileEntry[] => [
   {

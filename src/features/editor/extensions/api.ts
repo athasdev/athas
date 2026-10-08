@@ -2,14 +2,14 @@ import { useBufferStore } from "../stores/buffer.store";
 import { useEditorDecorationsStore } from "../stores/decorations.store";
 import { applyBufferHistory } from "../services/buffer-history-service";
 import { captureBufferStoreOwner } from "../services/buffer-store-owner";
-import { hasPendingBufferHistory } from "../stores/buffer-history-tracking";
+import { hasPendingBufferHistory } from "../services/buffer-history-tracking";
 import { useHistoryStore } from "../stores/history.store";
 import { useEditorStateStore } from "../stores/state.store";
 import { useEditorViewStore } from "../stores/view.store";
 import type { HistoryEntry } from "../types/history.types";
 import { isEditorContent } from "@/features/panes/types/pane-content.types";
-import { isEditorWordWrapEnabled } from "@/features/settings/lib/editor-word-wrap";
-import { resolveEffectiveTheme } from "@/features/settings/lib/theme-resolution";
+import { isEditorWordWrapEnabled } from "@/features/settings/services/editor-word-wrap";
+import { resolveEffectiveTheme } from "@/features/settings/services/theme-resolution";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import type { Decoration, Position, Range } from "../types/editor.types";
 import {
@@ -22,7 +22,7 @@ import { logger } from "@/utils/logger";
 import {
   calculateCursorPositionFromContent,
   calculateOffsetFromContentPosition,
-} from "../utils/position";
+} from "../services/position";
 import {
   resolveExpandSelection,
   resolveShrinkSelection,

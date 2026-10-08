@@ -22,7 +22,7 @@ import {
   getContextUsagePercent,
   getContextUsageTone,
 } from "@/features/ai/lib/acp-usage";
-import { selectChatAcpSession } from "@/features/ai/lib/acp-session-state";
+import { selectChatAcpSession } from "@/features/ai/services/acp-session-state";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { Chat } from "@/features/ai/types/ai-chat.types";
 

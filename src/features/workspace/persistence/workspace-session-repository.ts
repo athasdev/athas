@@ -4,7 +4,7 @@ import {
   isTerminalPersistenceEnabled,
   loadWorkspaceTerminalsFromStorage,
   serializeTerminals,
-} from "@/features/terminal/lib/terminal-session-storage";
+} from "@/features/terminal/services/terminal-session-storage";
 import type { PaneNode } from "@/features/panes/types/pane.types";
 import type { PersistedTerminal, Terminal } from "@/features/terminal/types/terminal.types";
 import { type ProjectUiSession, useSessionStore } from "@/features/workspace/stores/session.store";

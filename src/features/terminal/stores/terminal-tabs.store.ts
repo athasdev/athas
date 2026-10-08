@@ -1,5 +1,5 @@
 import { createStore } from "zustand/vanilla";
-import { dedupePersistedTerminals } from "@/features/terminal/lib/terminal-session-storage";
+import { dedupePersistedTerminals } from "@/features/terminal/services/terminal-session-storage";
 import type {
   Terminal,
   TerminalAction,

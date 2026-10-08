@@ -1,5 +1,5 @@
 import type { StateCreator } from "zustand";
-import type { SidebarView } from "@/features/layout/utils/sidebar-pane-utils";
+import type { SidebarView } from "@/features/layout/types/sidebar.types";
 import type { BottomPaneTab } from "@/features/layout/stores/ui-state/types/ui-state.types";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { workspaceSessionRepository } from "@/features/workspace/persistence/workspace-session-repository";

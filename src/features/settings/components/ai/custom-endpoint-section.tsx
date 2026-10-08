@@ -1,6 +1,6 @@
 import { useEffect, useState, type KeyboardEvent } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
-import { CUSTOM_CHAT_PROVIDER_ID } from "@/features/ai/lib/custom-provider-config";
+import { CUSTOM_CHAT_PROVIDER_ID } from "@/features/ai/services/custom-provider-config";
 import {
   getProviderApiToken,
   removeProviderApiToken,

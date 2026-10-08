@@ -3,7 +3,7 @@ import {
   areProjectTabPathsEqual,
   createProjectTabId,
   normalizeProjectTabPath,
-} from "../utils/project-tab-path";
+} from "../services/project-tab-path";
 
 describe("project tab path identity", () => {
   it("trims and strips trailing path separators", () => {

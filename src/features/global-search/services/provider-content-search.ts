@@ -3,8 +3,8 @@ import {
   isImageFile,
   isPdfFile,
   getDatabaseTypeFromPath,
-} from "@/features/file-system/controllers/file-utils";
-import { buildSearchRegex } from "@/features/editor/utils/search";
+} from "@/features/file-system/services/file-utils";
+import { buildSearchRegex } from "@/utils/text-search";
 import { getWorkspaceResourceProvider } from "@/features/file-system/services/workspace-resource-provider";
 import type { useProjectStore } from "@/features/workspace/stores/project.store";
 import type { FileEntry } from "@/features/file-system/types/app.types";
@@ -12,7 +12,7 @@ import type {
   FileSearchResult,
   SearchFilesResponse,
 } from "@/features/file-search/api/file-search-api";
-import { shouldIgnoreSearchEntry } from "@/features/file-search/utils/file-search-filtering";
+import { shouldIgnoreSearchEntry } from "@/features/file-search/services/file-search-filtering";
 import type { ContentSearchOptions } from "../types/global-search.types";
 import type { ProviderIgnoreRule } from "../workers/search-worker-protocol";
 import { createSearchWorkerSession } from "./search-worker-client";

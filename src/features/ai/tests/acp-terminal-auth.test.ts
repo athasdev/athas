@@ -4,7 +4,7 @@ import { create } from "zustand";
 import {
   describeAcpTerminalAuthFailure,
   runAcpTerminalAuth,
-} from "@/features/ai/lib/acp-terminal-auth";
+} from "@/features/ai/services/acp-terminal-auth";
 import { emitAppEvent } from "@/utils/app-events";
 
 interface FakeBuffer {

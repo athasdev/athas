@@ -1,4 +1,4 @@
-import { trackImmediateBufferHistoryChange } from "@/features/editor/stores/buffer-history-tracking";
+import { trackImmediateBufferHistoryChange } from "@/features/editor/services/buffer-history-tracking";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getSourceEditorBufferByPath } from "@/features/editor/stores/buffer-index";
 import { getWorkspaceResourceProvider } from "@/features/file-system/services/workspace-resource-provider";

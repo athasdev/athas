@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { ROOT_PANE_ID } from "../constants/pane";
 import { usePaneStore } from "../stores/pane.store";
-import { getAllPaneGroups } from "../utils/pane-tree";
+import { getAllPaneGroups } from "../services/pane-tree";
 
 const createMockStorage = () => {
   const storage = new Map<string, string>();
@@ -35,7 +35,7 @@ describe("pane drop actions", () => {
   });
 
   it("creates a split drop target from an edge zone", async () => {
-    const { getOrCreatePaneDropTarget } = await import("../utils/pane-drop-actions");
+    const { getOrCreatePaneDropTarget } = await import("../services/pane-drop-actions");
 
     const targetPaneId = getOrCreatePaneDropTarget({ paneId: ROOT_PANE_ID, zone: "right" });
 
@@ -45,7 +45,7 @@ describe("pane drop actions", () => {
   });
 
   it("moves buffers through a pane drop target", async () => {
-    const { moveBufferToPaneDropTarget } = await import("../utils/pane-drop-actions");
+    const { moveBufferToPaneDropTarget } = await import("../services/pane-drop-actions");
     const paneActions = usePaneStore.getState().actions;
 
     paneActions.addBufferToPane(ROOT_PANE_ID, "buffer-a");
@@ -64,7 +64,7 @@ describe("pane drop actions", () => {
   });
 
   it("adds buffers without duplicating existing target entries", async () => {
-    const { ensureBufferInPaneDropTarget } = await import("../utils/pane-drop-actions");
+    const { ensureBufferInPaneDropTarget } = await import("../services/pane-drop-actions");
     const paneActions = usePaneStore.getState().actions;
 
     paneActions.addBufferToPane(ROOT_PANE_ID, "buffer-a");

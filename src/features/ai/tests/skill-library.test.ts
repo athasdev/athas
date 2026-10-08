@@ -8,7 +8,7 @@ import {
   resetSkillLocalOverride,
   resolveMarketplaceSkill,
   updateSkillFromMarketplace,
-} from "@/features/ai/lib/skill-library";
+} from "@/features/ai/services/skill-library";
 
 describe("skill library", () => {
   afterEach(() => {

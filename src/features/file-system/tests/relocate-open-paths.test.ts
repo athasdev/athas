@@ -23,7 +23,7 @@ vi.mock("@/features/file-explorer/stores/file-explorer-tree.store", () => ({
   },
 }));
 
-import { relocatePath } from "../controllers/file-tree-utils";
+import { relocatePath } from "../services/file-tree-utils";
 import { relocateOpenPaths } from "../services/relocate-open-paths";
 
 function editor(id: string, path: string): PaneContent {

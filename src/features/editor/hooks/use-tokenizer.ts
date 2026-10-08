@@ -12,13 +12,14 @@ import {
   tokenizerWorkerClient,
 } from "../lib/wasm-parser/tokenizer-worker-client";
 import type { HighlightToken } from "../types/wasm-parser/wasm-parser.types";
-import { buildLineOffsetMap, normalizeLineEndings, type Token } from "../utils/html";
-import { getLanguageIdFromPath } from "../utils/language-id";
+import { buildLineOffsetMap, normalizeLineEndings } from "../services/line-offset-map";
+import type { Token } from "../types/editor.types";
+import { getLanguageIdFromPath } from "../services/language-id";
 import {
   hasLineBasedSyntaxFallback,
   hasLineBasedSyntaxHighlighter,
   tokenizeLineBasedSyntax,
-} from "../utils/line-based-syntax";
+} from "../services/line-based-syntax";
 import { calculateEdit, isSimpleEdit } from "../utils/tree-sitter-edit";
 import { usePerformanceMonitor } from "./use-performance";
 

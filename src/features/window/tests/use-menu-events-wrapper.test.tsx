@@ -32,7 +32,7 @@ vi.mock("@/features/settings/hooks/use-updater", () => ({
 }));
 
 const { builtInCommands } = await import("@/features/keymaps/commands/command-registry");
-const { keymapRegistry } = await import("@/features/keymaps/utils/registry");
+const { keymapRegistry } = await import("@/features/keymaps/services/keymap-registry");
 const { useMenuEventsWrapper } = await import("../hooks/use-menu-events-wrapper");
 
 const MENU_COMMANDS: Record<string, string> = {

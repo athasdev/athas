@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test"
 import { ROOT_PANE_ID } from "@/features/panes/constants/pane";
 import { getActiveBufferId } from "@/features/panes/stores/pane-selectors";
 import { usePaneStore } from "@/features/panes/stores/pane.store";
-import { getAllPaneGroups } from "@/features/panes/utils/pane-tree";
+import { getAllPaneGroups } from "@/features/panes/services/pane-tree";
 
 const createMockStorage = () => {
   const storage = new Map<string, string>();

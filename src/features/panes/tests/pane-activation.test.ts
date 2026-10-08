@@ -54,7 +54,7 @@ describe("pane activation", () => {
 
   it("activates pane and buffer stores together", async () => {
     const { useBufferStore } = await import("@/features/editor/stores/buffer.store");
-    const { activateBufferInPaneAndSync } = await import("../utils/pane-activation");
+    const { activateBufferInPaneAndSync } = await import("../services/pane-activation");
     const paneActions = usePaneStore.getState().actions;
 
     useBufferStore.setState((state) => ({

@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { getOpenBufferSearchSnapshot } from "@/features/editor/utils/open-buffer-search-snapshot";
+import { getOpenBufferSearchSnapshot } from "@/features/editor/services/open-buffer-search-snapshot";
 import { useRecentFilesStore } from "@/features/file-system/stores/recent-files.store";
 import type { RecentFile } from "@/features/file-system/types/recent-files.types";
 import {
@@ -14,10 +14,10 @@ import {
   categorizeFileSearchHits,
   categorizeFuzzyFileSearch,
   indexRecentSearchFiles,
-} from "@/features/file-search/utils/categorize-file-search-results";
-import { insertSortedLimited } from "@/features/file-search/utils/sorted-search-results";
+} from "@/features/file-search/services/categorize-file-search-results";
+import { insertSortedLimited } from "@/features/file-search/services/sorted-search-results";
 import { filterQuickOpenRecentFiles } from "../utils/file-filtering";
-import { fuzzyScore } from "../utils/fuzzy-search";
+import { fuzzyScore } from "@/utils/fuzzy-search";
 import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 interface FileSearchOptions {

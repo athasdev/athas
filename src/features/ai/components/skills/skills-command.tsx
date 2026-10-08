@@ -15,7 +15,7 @@ import {
   isMarketplaceSkillInstalled,
   loadMarketplaceSkills,
   resolveMarketplaceSkill,
-} from "@/features/ai/lib/skill-library";
+} from "@/features/ai/services/skill-library";
 import { fuzzyScore } from "@/features/global-search/utils/fuzzy-search";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useSettingsSyncStore } from "@/features/settings/stores/settings-sync.store";

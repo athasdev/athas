@@ -6,7 +6,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { toggleMarkdownPreview } from "@/features/editor/markdown/toggle-markdown-preview";
 import { isMarkdownPreviewableFile } from "@/features/editor/markdown/previewable";
 import { getBufferById } from "@/features/editor/stores/buffer-index";
-import { keymapRegistry } from "@/features/keymaps/utils/registry";
+import { keymapRegistry } from "@/features/keymaps/services/keymap-registry";
 import { useExtensionActions } from "@/extensions/ui/hooks/use-extension-actions";
 import { ExtensionToolbarAction } from "@/extensions/ui/components/extension-toolbar-action";
 import { PaneContentHeader } from "@/features/panes/components/pane-content-chrome";

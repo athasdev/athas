@@ -9,7 +9,7 @@ import {
   enqueueWindowOpenRequest,
   parseWindowOpenUrl,
   type WindowOpenRequest,
-} from "../utils/window-open-request";
+} from "../services/window-open-request";
 import { createPendingQueueDrain } from "../utils/pending-queue-drain";
 import { disposeListener } from "@/utils/tauri-drag-drop";
 

@@ -8,8 +8,8 @@ import { openExternalUrl } from "@/utils/external-url";
 import { toast } from "sonner";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import type { GitHubDeliveryContent } from "@/features/panes/types/pane-content.types";
-import { openCommitDiffBuffer } from "@/features/git/utils/open-commit-diff-buffer";
-import { resolveProjectGitHubRepository } from "@/features/views/lib/view-github";
+import { openCommitDiffBuffer } from "@/features/git/services/open-commit-diff-buffer";
+import { resolveProjectGitHubRepository } from "@/features/views/services/view-github";
 import { ViewerErrorState, ViewerLoadingState } from "@/features/viewer/components/viewer-state";
 import { Button } from "@/ui/button";
 import { ArrowClockwiseIcon, CopyIcon, OpenExternalIcon, TagIcon } from "@/ui/icons";
@@ -35,7 +35,7 @@ import {
   isRelease,
   releaseTitle,
   safeDeliveryUrl,
-} from "../utils/github-delivery";
+} from "../services/github-delivery";
 import type { Release } from "../types/github-delivery.types";
 import { ReleaseDetails, ReleaseSummary } from "./release-details";
 import { DeploymentDetails, DeploymentSummary } from "./deployment-details";

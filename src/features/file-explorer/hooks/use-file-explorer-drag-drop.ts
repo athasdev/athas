@@ -2,11 +2,11 @@ import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FileEntry } from "@/features/file-system/types/app.types";
 import { startNativeFileDrag } from "@/features/file-explorer/utils/start-native-file-drag";
-import { dispatchSidebarResourceDropOnAI } from "@/features/sidebar/utils/sidebar-resource-drag";
+import { dispatchSidebarResourceDropOnAI } from "@/features/sidebar/services/sidebar-resource-drag";
 import {
   setInternalTabDragHover,
   setInternalTabDragHoverTarget,
-} from "@/features/tabs/utils/internal-tab-drag";
+} from "@/features/tabs/services/internal-tab-drag";
 import { getDirName, getPathSeparator, joinPath } from "@/utils/path-helpers";
 import { IS_MAC } from "@/utils/platform";
 import { emitAppEvent } from "@/utils/app-events";

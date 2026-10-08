@@ -8,7 +8,7 @@ import {
   findDirtyEditorBuffer,
   getDirtyEditorBuffers,
   getDirtyWritableEditorBuffers,
-} from "../utils/editor-buffer-selectors";
+} from "../stores/editor-buffer-selectors";
 
 function createEditorBuffer(overrides: Partial<EditorContent>): EditorContent {
   return {

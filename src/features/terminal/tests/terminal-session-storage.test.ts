@@ -5,7 +5,7 @@ import {
   getTerminalSessionStorageKey,
   loadWorkspaceTerminalsFromStorage,
   saveWorkspaceTerminalsToStorage,
-} from "../lib/terminal-session-storage";
+} from "../services/terminal-session-storage";
 
 const WORKSPACE_A = "/workspace-a";
 const WORKSPACE_B = "/workspace-b";

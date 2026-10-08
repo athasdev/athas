@@ -14,7 +14,7 @@ import { useActivityProjectCarousel } from "@/features/layout/hooks/use-activity
 import { useSidebarPaneController } from "@/features/layout/hooks/use-sidebar-pane-controller";
 import { useToast } from "@/utils/toast";
 import { getCollapsedActivityBarWidth } from "@/features/layout/utils/activity-bar-layout";
-import { claimContextualTip } from "@/features/onboarding/lib/contextual-teaching";
+import { claimContextualTip } from "@/features/onboarding/services/contextual-teaching";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { ContextMenu, ContextMenuTrigger } from "@/ui/context-menu";

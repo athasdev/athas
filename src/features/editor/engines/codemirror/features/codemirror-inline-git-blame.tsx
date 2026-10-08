@@ -4,7 +4,7 @@ import { useGitBlame } from "@/features/git/hooks/use-git-blame";
 import {
   getInlineGitBlamePresentation,
   type InlineGitBlamePresentation,
-} from "@/features/git/utils/git-blame-decoration";
+} from "@/features/git/services/git-blame-decoration";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { type CodeMirrorHost, useCodeMirrorExtension } from "../host";
 import {

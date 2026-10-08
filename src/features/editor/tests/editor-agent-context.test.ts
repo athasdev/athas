@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { createEditorSelectionContext } from "@/features/editor/utils/editor-agent-context";
+import { createEditorSelectionContext } from "@/features/editor/services/editor-agent-context";
 import type { EditorContent } from "@/features/panes/types/pane-content.types";
 
 const buffer: EditorContent = {

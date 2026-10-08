@@ -1,7 +1,7 @@
 import { FieldDescription } from "@/ui/field";
-import { areProjectTabPathsEqual } from "@/features/workspace/utils/project-tab-path";
+import { areProjectTabPathsEqual } from "@/features/workspace/services/project-tab-path";
 import { useCallback, useEffect, useState } from "react";
-import { openFolder } from "@/features/file-system/controllers/platform";
+import { openFolder } from "@/features/file-system/api/file-system-api";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { Button } from "@/ui/button";
 import { showConfirmDialog } from "@/ui/dialog";
@@ -15,7 +15,7 @@ import {
   type WorkspaceSection,
 } from "../stores/workspace-management.store";
 import { openManagedWorkspace } from "../services/open-managed-workspace";
-import { TEAM_WORKSPACE_FILE } from "../utils/team-workspace-config";
+import { TEAM_WORKSPACE_FILE } from "../services/team-workspace-config";
 import { WorkspaceOverview } from "./workspace-overview";
 import { WorkspaceRepositories } from "./workspace-repositories";
 import { WorkspaceEnvironments } from "./workspace-environments";

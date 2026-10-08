@@ -1,7 +1,7 @@
 import { combine } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import { createStore } from "zustand/vanilla";
-import { relocatePath } from "@/features/file-system/controllers/file-tree-utils";
+import { relocatePath } from "@/features/file-system/services/file-tree-utils";
 import type { FileEntry } from "@/features/file-system/types/app.types";
 import { createWorkspaceScopedStore } from "@/features/workspace/stores/create-workspace-scoped-store";
 

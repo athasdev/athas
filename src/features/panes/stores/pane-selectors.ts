@@ -1,5 +1,5 @@
 import type { PaneGroup, PaneNode } from "../types/pane.types";
-import { findPaneGroup, isBufferPinnedInTree, isBufferPreviewInTree } from "../utils/pane-tree";
+import { findPaneGroup, isBufferPinnedInTree, isBufferPreviewInTree } from "../services/pane-tree";
 import { usePaneStore } from "./pane.store";
 
 /**

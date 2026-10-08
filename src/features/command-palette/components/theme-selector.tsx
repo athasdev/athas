@@ -5,7 +5,7 @@ import { getThemeAppearancePreview } from "@/extensions/appearance/appearance-pr
 import { AppearancePreviewGraphic } from "@/extensions/appearance/components/appearance-preview";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
 import { useRegisteredThemes } from "@/extensions/themes/use-registered-themes";
-import { chooseThemeFile, uploadTheme } from "@/features/settings/utils/theme-upload";
+import { chooseThemeFile, uploadTheme } from "@/features/settings/services/theme-upload";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
 import {
   CommandEmpty,

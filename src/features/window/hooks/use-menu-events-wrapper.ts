@@ -1,6 +1,6 @@
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useToast } from "@/utils/toast";
-import { executeCommandWithFeedback } from "@/features/keymaps/utils/execute-command-with-feedback";
+import { executeCommandWithFeedback } from "@/features/keymaps/services/execute-command-with-feedback";
 import { useUpdater } from "@/features/settings/hooks/use-updater";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { writeClipboardText } from "@/utils/clipboard";

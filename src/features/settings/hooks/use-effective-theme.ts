@@ -3,7 +3,7 @@ import {
   getSystemThemePreference,
   resolveEffectiveTheme,
   subscribeSystemThemePreference,
-} from "@/features/settings/lib/theme-resolution";
+} from "@/features/settings/services/theme-resolution";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import type { Theme } from "@/features/settings/types/settings.types";
 

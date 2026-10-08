@@ -16,7 +16,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import { buildSearchRegex, type SearchOptions } from "@/features/editor/utils/search";
+import { buildSearchRegex, type SearchOptions } from "@/utils/text-search";
 import { Avatar } from "@/ui/avatar";
 import { Button } from "@/ui/button";
 import { showAlertDialog } from "@/ui/dialog";
@@ -30,8 +30,8 @@ import { getRemotes } from "../../api/git-remotes-api";
 import { isGitChangeRelevant, subscribeToGitChanges } from "../../events/git-events";
 import type { MultiFileDiff } from "../../types/git-diff.types";
 import type { GitDiff } from "../../types/git.types";
-import { gitDiffCache } from "../../utils/git-diff-cache";
-import { getFileStatus } from "../../utils/git-diff-helpers";
+import { gitDiffCache } from "../../services/git-diff-cache";
+import { getFileStatus } from "../../services/git-diff-helpers";
 import { getGitAuthorAvatarUrl } from "../../utils/git-author-avatar";
 import { openCommitFileBuffer } from "../../utils/open-commit-file-buffer";
 import { findMultiDiffMatches, getMultiDiffSectionKey } from "../../utils/multi-diff-search";
@@ -40,7 +40,7 @@ import {
   resolveMultiDiffSelection,
   selectMultiDiffFile,
 } from "../../utils/multi-diff-selection";
-import { createSingleFileWorkingTreeDiff } from "../../utils/working-tree-multi-diff";
+import { createSingleFileWorkingTreeDiff } from "../../services/working-tree-multi-diff";
 import { DiffFileContent } from "./diff-file-content";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { useIsBufferActive } from "@/features/panes/hooks/use-pane-buffer-state";

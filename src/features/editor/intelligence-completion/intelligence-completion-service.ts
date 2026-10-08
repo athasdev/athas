@@ -5,7 +5,7 @@ import {
 } from "@/features/ai/intelligence/services/intelligence-text-service";
 import { AutocompleteModelRequiredError } from "@/features/ai/intelligence/services/intelligence-connection";
 import { useIntelligenceSettingsStore } from "@/features/ai/intelligence/stores/intelligence-settings.store";
-import { loadAgentContextPolicy } from "@/features/ai/lib/agent-context-policy";
+import { loadAgentContextPolicy } from "@/features/ai/services/agent-context-policy";
 import { onProviderApiTokenChange } from "@/features/ai/services/ai-token-service";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics.store";
@@ -14,7 +14,7 @@ import {
   useIntelligenceCompletionStore,
 } from "@/features/editor/stores/intelligence-completion.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { getLanguageIdFromPath } from "@/features/editor/utils/language-id";
+import { getLanguageIdFromPath } from "@/features/editor/services/language-id";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { useProjectStore } from "@/features/workspace/stores/project.store";

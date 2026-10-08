@@ -45,7 +45,7 @@ vi.mock("@/features/workspace/runtime/workspace-runtime-registry", () => ({
       })),
   },
 }));
-vi.mock("../controllers/file-operations", () => ({
+vi.mock("../api/file-operations", () => ({
   readFileContent: async () => mocks.diskContent,
 }));
 vi.mock("../stores/file-system.store", () => ({

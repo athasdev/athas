@@ -1,6 +1,6 @@
 import { EyeIcon, PenIcon, SparkleIcon } from "@/ui/icons";
 import { toggleMarkdownPreview } from "@/features/editor/markdown/toggle-markdown-preview";
-import { isMarkdownFile } from "@/features/editor/utils/lines";
+import { isMarkdownFile } from "@/features/editor/services/lines";
 import type { Command } from "../types/keymaps.types";
 import {
   copyActiveEditorLineDown,
@@ -36,7 +36,7 @@ import {
 } from "./editor-command-actions";
 import { getActiveBufferId } from "@/features/panes/stores/pane-selectors";
 
-const addSelectionToAgentChat = () => import("@/features/ai/lib/add-selection-to-agent-chat");
+const addSelectionToAgentChat = () => import("@/features/ai/services/add-selection-to-agent-chat");
 
 const foldLevelCommands: Command[] = Array.from({ length: 7 }, (_, index) => {
   const level = index + 1;

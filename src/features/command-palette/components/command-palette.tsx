@@ -6,11 +6,11 @@ import { ThemeSelectorContent } from "@/features/command-palette/components/them
 import { LocalHistoryCommandContent } from "@/features/local-history/components/local-history-command";
 import { OutlineCommandContent } from "@/features/outline/components/outline-command";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { vimCommands } from "@/features/vim/stores/vim-commands";
+import { vimCommands } from "@/features/vim/services/vim-commands";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { useKeymapStore } from "@/features/keymaps/stores/keymaps.store";
-import { getEffectiveShortcutsByCommand } from "@/features/keymaps/utils/effective-keymaps";
-import { keymapRegistry } from "@/features/keymaps/utils/registry";
+import { getEffectiveShortcutsByCommand } from "@/features/keymaps/services/effective-keymaps";
+import { keymapRegistry } from "@/features/keymaps/services/keymap-registry";
 import Command, {
   CommandEmpty,
   CommandHeader,

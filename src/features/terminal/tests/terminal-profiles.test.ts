@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { resolveTerminalLaunch, SYSTEM_DEFAULT_PROFILE_ID } from "../utils/terminal-profiles";
+import { resolveTerminalLaunch, SYSTEM_DEFAULT_PROFILE_ID } from "../services/terminal-profiles";
 
 describe("resolveTerminalLaunch", () => {
   it("uses the matching WSL shell for WSL workspaces", () => {

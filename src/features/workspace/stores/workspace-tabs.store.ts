@@ -11,7 +11,7 @@ import {
   areProjectTabPathsEqual,
   createProjectTabId,
   normalizeProjectTabPath,
-} from "../utils/project-tab-path";
+} from "../services/project-tab-path";
 import { normalizePersistedProjectTabs } from "../utils/persisted-project-tabs";
 import {
   getWorkspaceTabsStorageKey,

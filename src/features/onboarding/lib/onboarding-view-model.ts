@@ -1,4 +1,4 @@
-import type { OnboardingContext } from "./onboarding-state";
+import type { OnboardingContext } from "../services/onboarding-state";
 
 export interface OnboardingViewModel {
   title: string;

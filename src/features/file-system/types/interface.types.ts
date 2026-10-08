@@ -1,4 +1,4 @@
-import type { CodeEditorRef } from "@/features/editor/components/code-editor";
+import type { CodeEditorRef } from "@/features/editor/types/code-editor-view.types";
 import type { OpenContentOptions } from "@/features/editor/stores/buffer.store";
 import type { FileEntry } from "./app.types";
 

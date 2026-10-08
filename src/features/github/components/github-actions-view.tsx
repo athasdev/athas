@@ -19,7 +19,7 @@ import {
 import { toast } from "sonner";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
-import { writeSidebarResourceDragData } from "@/features/sidebar/utils/sidebar-resource-drag";
+import { writeSidebarResourceDragData } from "@/features/sidebar/services/sidebar-resource-drag";
 import { GithubMark } from "@/ui/brand-marks";
 import { ContextMenuPopup, createContextMenuGroups } from "@/ui/context-menu";
 import { type MenuItem, useDropdownMenu } from "@/ui/dropdown";
@@ -33,7 +33,10 @@ import { useNow } from "../hooks/use-now";
 import { getWorkflowRunsEntry, useGitHubActionsStore } from "../stores/github-actions.store";
 import { useGitHubStore } from "../stores/github.store";
 import type { WorkflowRunFilter, WorkflowRunListItem } from "../types/github.types";
-import { GITHUB_ACTION_DETAILS_TTL_MS, githubActionDetailsCache } from "../utils/github-data-cache";
+import {
+  GITHUB_ACTION_DETAILS_TTL_MS,
+  githubActionDetailsCache,
+} from "../services/github-data-cache";
 import { groupWorkflowRuns } from "../utils/github-sidebar-groups";
 import {
   getGitHubBranchUrl,
@@ -42,7 +45,7 @@ import {
   getGitHubWorkflowRunsUrl,
   getRepositoryUrlFromEntityUrl,
 } from "../utils/github-link-utils";
-import { getTimeAgo, getSidebarTime } from "../utils/github-viewer-utils";
+import { getTimeAgo, getSidebarTime } from "../services/github-viewer-utils";
 import {
   formatWorkflowDuration,
   getWorkflowRunLabel,

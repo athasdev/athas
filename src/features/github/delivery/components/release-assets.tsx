@@ -29,7 +29,7 @@ import { ResourceSection } from "@/ui/resource";
 import { Spinner } from "@/ui/spinner";
 import { writeClipboardText } from "@/utils/clipboard";
 import type { Release, ReleaseAsset } from "../types/github-delivery.types";
-import { formatAssetSize, safeDeliveryUrl } from "../utils/github-delivery";
+import { formatAssetSize, safeDeliveryUrl } from "../services/github-delivery";
 import { deleteReleaseAsset, uploadReleaseAsset } from "../api/github-delivery-api";
 import { notifyDeliveryChanged } from "../services/github-delivery-service";
 

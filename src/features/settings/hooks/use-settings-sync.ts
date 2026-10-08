@@ -4,7 +4,7 @@ import {
   initializeSettingsSyncPreferences,
 } from "@/features/settings/lib/settings-sync";
 import { useAuthStore } from "@/features/auth/stores/auth.store";
-import { hasProductCapability } from "@/features/auth/utils/product-capabilities";
+import { hasProductCapability } from "@/features/auth/services/product-capabilities";
 import { useIntelligenceSettingsStore } from "@/features/ai/intelligence/stores/intelligence-settings.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test"
 import {
   clearQueuedWorkspaceSessionSave,
   saveSessionToStore,
-} from "../stores/buffer-session-persistence";
+} from "../services/buffer-session-persistence";
 import { useSessionStore } from "@/features/workspace/stores/session.store";
 
 describe("buffer session persistence", () => {

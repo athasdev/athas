@@ -4,7 +4,7 @@ import {
   categorizeFileSearchHits,
   categorizeFuzzyFileSearch,
   indexRecentSearchFiles,
-} from "../utils/categorize-file-search-results";
+} from "../services/categorize-file-search-results";
 
 const context = {
   activeBufferPath: "/workspace/active.ts",

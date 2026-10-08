@@ -1,11 +1,11 @@
-import { writeSidebarResourceDragData } from "@/features/sidebar/utils/sidebar-resource-drag";
+import { writeSidebarResourceDragData } from "@/features/sidebar/services/sidebar-resource-drag";
 import { useDeferredValue, useMemo } from "react";
 import { openExternalUrl } from "@/utils/external-url";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { GitHubSidebarRow } from "../../components/github-sidebar-row";
 import { openGitHubContentInNewWindow } from "../../utils/open-in-new-window";
 import { useGitHubStore } from "../../stores/github.store";
-import { getSidebarTime } from "../../utils/github-viewer-utils";
+import { getSidebarTime } from "../../services/github-viewer-utils";
 import { SidebarScrollArea, SidebarSection } from "@/ui/sidebar";
 import { EmptyState } from "@/ui/empty";
 import { Button } from "@/ui/button";
@@ -24,7 +24,7 @@ import {
   matchesDelivery,
   releaseTitle,
   safeDeliveryUrl,
-} from "../utils/github-delivery";
+} from "../services/github-delivery";
 import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 export default function GitHubDeliveryList({

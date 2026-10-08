@@ -3,7 +3,7 @@ import { editorAPI } from "../extensions/api";
 import { useBufferStore } from "../stores/buffer.store";
 import { useEditorStateStore } from "../stores/state.store";
 import { useHistoryStore } from "../stores/history.store";
-import { calculateCursorPositionFromContent } from "../utils/position";
+import { calculateCursorPositionFromContent } from "../services/position";
 import type { EditorContent } from "@/features/panes/types/pane-content.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { seedActiveBuffer } from "@/features/panes/tests/helpers/seed-pane-tabs";

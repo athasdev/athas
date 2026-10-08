@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { resolveOnboardingContextFromState } from "../lib/onboarding-state";
+import { resolveOnboardingContextFromState } from "../services/onboarding-state";
 
 describe("resolveOnboardingContextFromState", () => {
   it("opens first-run onboarding when no version has been seen", () => {

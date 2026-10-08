@@ -27,7 +27,7 @@ vi.mock("@/features/git/hooks/use-git-blame", () => ({
     };
   },
 }));
-vi.mock("@/features/git/utils/git-blame-decoration", () => ({
+vi.mock("@/features/git/services/git-blame-decoration", () => ({
   getInlineGitBlamePresentation: (line: { author: string; commit_hash: string }) => ({
     text: `  ${line.author}, today`,
     author: line.author,

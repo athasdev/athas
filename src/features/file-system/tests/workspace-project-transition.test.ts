@@ -4,8 +4,8 @@ import type {
   PaneContent,
   TerminalContent,
 } from "@/features/panes/types/pane-content.types";
-import { getDirtyEditorBuffers } from "@/features/editor/utils/editor-buffer-selectors";
-import { getUnsavedProjectTransitionMessage } from "../controllers/workspace-project-transition";
+import { getDirtyEditorBuffers } from "@/features/editor/stores/editor-buffer-selectors";
+import { getUnsavedProjectTransitionMessage } from "../services/workspace-project-transition";
 
 const createEditorBuffer = (overrides: Partial<EditorContent>): EditorContent => ({
   id: "editor-1",

@@ -4,7 +4,7 @@ import { settingsTabLabels } from "@/features/keymaps/commands/settings-commands
 import { showToast } from "@/utils/toast";
 import { settingsSearchIndex } from "@/features/settings/config/search-index";
 import { useSettingsSearchStore } from "@/features/settings/stores/settings-search.store";
-import type { VimCommand } from "@/features/vim/stores/vim-commands";
+import type { VimCommand } from "@/features/vim/services/vim-commands";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { scoreSearchQuery } from "@/utils/search-match";
 import type { CommandPaletteItem } from "../types/command-palette-item.types";

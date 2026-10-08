@@ -13,7 +13,7 @@ import {
   TerminalWindowIcon,
 } from "@/ui/icons";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { keymapRegistry } from "@/features/keymaps/utils/registry";
+import { keymapRegistry } from "@/features/keymaps/services/keymap-registry";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import { isVirtualContent } from "@/features/panes/types/pane-content.types";
 import { ContextMenuContent, ContextMenuItem, ContextMenuSeparator } from "@/ui/context-menu";

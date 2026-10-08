@@ -5,7 +5,7 @@ import {
   groupDelivery,
   matchesDelivery,
   safeDeliveryUrl,
-} from "../delivery/utils/github-delivery";
+} from "../delivery/services/github-delivery";
 import { deploymentFixture, releaseFixture } from "./github-delivery-fixtures";
 
 describe("GitHub delivery", () => {

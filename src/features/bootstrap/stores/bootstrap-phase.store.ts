@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { traceWindowOpen } from "@/features/window/utils/window-open-diagnostics";
+import { traceWindowOpen } from "@/features/window/services/window-open-diagnostics";
 import { createSelectors } from "@/utils/zustand-selectors";
 
 /** Startup phases in the order they are reached; see `initialize-app-bootstrap.ts`. */

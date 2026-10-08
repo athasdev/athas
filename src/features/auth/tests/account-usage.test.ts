@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import type { SubscriptionInfo } from "@/features/auth/services/auth-api";
-import { getAccountPlanLabel } from "../utils/account-usage";
+import { getAccountPlanLabel } from "../services/account-usage";
 
 function subscription(status: SubscriptionInfo["status"]): SubscriptionInfo {
   return {

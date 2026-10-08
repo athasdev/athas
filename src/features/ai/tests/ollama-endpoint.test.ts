@@ -4,7 +4,7 @@ import {
   isOllamaCloudUrl,
   normalizeOllamaBaseUrl,
   resolveOllamaBaseUrl,
-} from "@/features/ai/lib/ollama-endpoint";
+} from "@/features/ai/services/ollama-endpoint";
 
 describe("Ollama endpoints", () => {
   it.each([

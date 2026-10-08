@@ -21,7 +21,7 @@ import {
   buildCollaborationSidebarModel,
   deleteCollaborationNoteItem,
   renameCollaborationNoteItem,
-} from "@/features/collaboration/lib/collaboration-sidebar-model";
+} from "@/features/collaboration/services/collaboration-sidebar-model";
 import {
   CHANNEL_FILTER_OPTIONS,
   type CollaborationChannelFilter,
@@ -36,7 +36,7 @@ import {
 } from "@/features/collaboration/lib/collaboration-sidebar-filters";
 import { useCollaborationRuntimeStore } from "@/features/collaboration/stores/collaboration-runtime.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { readFileContent } from "@/features/file-system/controllers/file-operations";
+import { readFileContent } from "@/features/file-system/api/file-operations";
 import {
   appendCollaborationPrivateChatMessage,
   createCollaborationChannel,

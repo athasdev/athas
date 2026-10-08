@@ -1,5 +1,5 @@
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { resolveBrowserAddress } from "@/features/browser/utils/browser-address";
+import { resolveBrowserAddress } from "@/features/browser/services/browser-address";
 import { showPromptDialog } from "@/ui/dialog";
 import { emitAppEvent } from "@/utils/app-events";
 

@@ -1,5 +1,5 @@
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { openNewAgentChat } from "@/features/ai/lib/open-new-agent-chat";
+import { openNewAgentChat } from "@/features/ai/services/open-new-agent-chat";
 import { editorAPI } from "@/features/editor/extensions/api";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useWhatsNewStore } from "@/features/settings/stores/whats-new.store";
@@ -8,7 +8,7 @@ import { useZoomStore } from "@/features/layout/stores/zoom.store";
 import { emitAppEvent } from "@/utils/app-events";
 import { useKeymapStore } from "../stores/keymaps.store";
 import { zoomActiveBrowserTab } from "./browser-command-actions";
-import { selectIsTerminalPaneVisible } from "@/features/layout/stores/ui-state/terminal-slice";
+import { selectIsTerminalPaneVisible } from "@/features/layout/stores/ui-state-selectors";
 
 function getZoomTarget(): "editor" | "terminal" {
   const terminalContainer = document.querySelector('[data-terminal-container="active"]');

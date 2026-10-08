@@ -23,15 +23,15 @@ import {
 } from "@/features/keymaps/defaults/keybinding-presets";
 import { useKeymapStore } from "@/features/keymaps/stores/keymaps.store";
 import type { Keybinding } from "@/features/keymaps/types/keymaps.types";
-import { getEffectiveKeybindingForCommand } from "@/features/keymaps/utils/effective-keymaps";
+import { getEffectiveKeybindingForCommand } from "@/features/keymaps/services/effective-keymaps";
 import {
   createKeybindingsExportPayload,
   getExportableUserKeybindings,
   parseKeybindingsImportJson,
-} from "@/features/keymaps/utils/keybinding-import-export";
+} from "@/features/keymaps/services/keybinding-import-export";
 import { getDefaultSetting } from "@/features/settings/config/default-settings";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { keymapRegistry } from "@/features/keymaps/utils/registry";
+import { keymapRegistry } from "@/features/keymaps/services/keymap-registry";
 import { useToast } from "@/utils/toast";
 import { Button } from "@/ui/button";
 import { Alert, AlertDescription } from "@/ui/alert";

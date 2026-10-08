@@ -7,7 +7,7 @@ import {
   invalidateFileTreeGitIgnoreCache,
   isPathGitIgnoredByFileTreeRules,
   readFileTreeGitIgnoreContents,
-} from "../lib/file-tree-gitignore";
+} from "../services/file-tree-gitignore";
 
 const dir = (name: string, path: string, children?: FileEntry[]): FileEntry => ({
   name,

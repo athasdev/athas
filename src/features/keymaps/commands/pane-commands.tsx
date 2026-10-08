@@ -15,7 +15,7 @@ import {
   splitActiveEditorGroup,
   toggleActiveEditorGroupLock,
   toggleActivePaneFullscreen,
-} from "@/features/panes/utils/pane-command-actions";
+} from "@/features/panes/services/pane-command-actions";
 import type { Command } from "../types/keymaps.types";
 
 export const paneCommands: Command[] = [

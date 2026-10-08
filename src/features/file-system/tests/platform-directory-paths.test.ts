@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { readDirectory } from "../controllers/platform";
+import { readDirectory } from "../api/file-system-api";
 const io = vi.hoisted(() => ({ readDir: vi.fn(), invoke: vi.fn() }));
 vi.mock("@tauri-apps/api/core", () => ({ invoke: io.invoke }));
 vi.mock("@tauri-apps/plugin-fs", () => ({

@@ -1,4 +1,4 @@
-import { canUseNativeFileSearch } from "@/features/file-search/utils/file-search-paths";
+import { canUseNativeFileSearch } from "@/features/file-search/services/file-search-paths";
 
 /**
  * The workspace roots besides `workspacePath` that a chat's agent session should also cover,

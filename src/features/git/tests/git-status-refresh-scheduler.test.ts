@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { createGitStatusRefreshScheduler } from "../utils/git-status-refresh-scheduler";
+import { createGitStatusRefreshScheduler } from "../services/git-status-refresh-scheduler";
 
 const save = { source: "auto-save" };
 const external = { source: "external-file-change" };

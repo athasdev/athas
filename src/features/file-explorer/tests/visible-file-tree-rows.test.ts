@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import { updateFileInTree } from "@/features/file-system/controllers/file-tree-utils";
+import { updateFileInTree } from "@/features/file-system/services/file-tree-utils";
 import type { FileEntry } from "@/features/file-system/types/app.types";
 import {
   buildVisibleFileTreeRows,

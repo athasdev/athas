@@ -1,5 +1,5 @@
 import type { Message } from "@/features/ai/types/ai-chat.types";
-import { redactLocalPaths } from "@/features/ai/lib/shareable-outcome";
+import { redactLocalPaths } from "@/features/ai/services/shareable-outcome";
 
 export function selectionContent(content: string, start: number, end: number) {
   return content.slice(Math.min(start, end), Math.max(start, end));

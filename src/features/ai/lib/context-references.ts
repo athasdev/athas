@@ -1,5 +1,5 @@
 import { estimateTokens, truncateTextToTokens } from "@/features/ai/lib/context-budget";
-import type { AgentContextPathPolicy } from "./agent-context-policy";
+import type { AgentContextPathPolicy } from "../services/agent-context-policy";
 import {
   buildConversationHistory,
   summarizeConversationExtractively,

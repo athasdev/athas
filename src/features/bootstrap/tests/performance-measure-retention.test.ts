@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vite-plus/test";
-import { clearExcessPerformanceMeasures } from "../performance-measure-retention";
+import { clearExcessPerformanceMeasures } from "../services/performance-measure-retention";
 
 function createMeasureStore(measureCount: number) {
   return {

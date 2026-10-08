@@ -10,7 +10,7 @@ import {
   renameCollaborationNoteItem,
   updateCollaborationNoteFile,
   updateCollaborationNotesMarkdown,
-} from "../lib/collaboration-sidebar-model";
+} from "../services/collaboration-sidebar-model";
 
 function collaborationSnapshot(
   overrides: Partial<NonNullable<SubscriptionInfo["collaboration"]>> = {},

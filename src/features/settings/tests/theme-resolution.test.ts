@@ -2,7 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 import {
   getSystemSyncThemePreferencePatch,
   resolveEffectiveTheme,
-} from "@/features/settings/lib/theme-resolution";
+} from "@/features/settings/services/theme-resolution";
 
 describe("theme resolution", () => {
   it("uses the manual theme when OS sync is disabled", () => {

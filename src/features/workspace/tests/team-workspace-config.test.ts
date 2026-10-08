@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
-import { parseTeamWorkspace } from "../team/utils/team-workspace-config";
-import { discoverProjectRunActions } from "@/features/run-actions/utils/run-action-discovery";
+import { parseTeamWorkspace } from "../team/services/team-workspace-config";
+import { discoverProjectRunActions } from "@/features/run-actions/services/run-action-discovery";
 import { buildContextPrompt } from "@/features/ai/utils/ai-context-builder";
 
 const config = {

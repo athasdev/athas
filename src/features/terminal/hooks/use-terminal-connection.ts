@@ -15,7 +15,7 @@ import {
   releaseTerminalEventChannel,
   subscribeToTerminalEvents,
   terminalSizesEqual,
-} from "../utils/terminal-protocol";
+} from "../services/terminal-protocol";
 import { useTerminalWriteBuffer } from "./use-terminal-write-buffer";
 
 interface UseTerminalConnectionOptions {

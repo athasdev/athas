@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { openFolder } from "@/features/file-system/controllers/platform";
+import { openFolder } from "@/features/file-system/api/file-system-api";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { AppUpdateControl } from "@/features/layout/components/app-update-control";
 import { NotificationsTrigger } from "@/features/notifications/components/notifications-trigger";
@@ -12,7 +12,7 @@ import ProjectPicker from "@/features/workspace/project-picker/components/projec
 import WindowMenuBar from "@/features/window/components/window-menu-bar";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { useWorkspaceTabsStore } from "@/features/workspace/stores/workspace-tabs.store";
-import { createAppWindow } from "@/features/window/utils/create-app-window";
+import { createAppWindow } from "@/features/window/services/create-app-window";
 import { Button } from "@/ui/button";
 import {
   ContextMenu,
@@ -32,7 +32,7 @@ import {
 import { SidebarIconButton } from "@/ui/sidebar";
 import Tooltip from "@/ui/tooltip";
 import { IS_MAC } from "@/utils/platform";
-import { selectIsTerminalPaneVisible } from "@/features/layout/stores/ui-state/terminal-slice";
+import { selectIsTerminalPaneVisible } from "@/features/layout/stores/ui-state-selectors";
 import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 
 export function ActivityChrome() {

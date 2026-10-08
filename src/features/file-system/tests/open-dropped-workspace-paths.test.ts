@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { openDroppedWorkspacePaths } from "../utils/open-dropped-workspace-paths";
+import { openDroppedWorkspacePaths } from "../services/open-dropped-workspace-paths";
 
 describe("openDroppedWorkspacePaths", () => {
   it("opens every dropped folder and continues to files", async () => {

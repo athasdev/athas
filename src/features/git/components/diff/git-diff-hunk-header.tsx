@@ -1,11 +1,11 @@
 import { ChevronDownIcon, ChevronRightIcon, MinusIcon, PlusIcon } from "@/ui/icons";
 import { memo, useCallback, useMemo } from "react";
-import { calculateLineHeight } from "@/features/editor/utils/lines";
+import { calculateLineHeight } from "@/features/editor/services/lines";
 import { useZoomStore } from "@/features/layout/stores/zoom.store";
 import { Button } from "@/ui/button";
 import { stageHunk, unstageHunk } from "../../api/git-status-api";
 import type { DiffHunkHeaderProps } from "../../types/git-diff.types";
-import { createGitHunk, parseDiffHunkRange } from "../../utils/git-diff-helpers";
+import { createGitHunk, parseDiffHunkRange } from "../../services/git-diff-helpers";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 

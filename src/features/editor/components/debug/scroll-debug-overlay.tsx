@@ -6,7 +6,7 @@
 import { useEffect, useRef, useState } from "react";
 import { subscribeToEditorScroll } from "../../services/editor-scroll-events";
 import { useEditorStateStore } from "../../stores/state.store";
-import { getLineHeight } from "../../utils/position";
+import { getLineHeight } from "../../services/position";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 
 interface ScrollMetrics {

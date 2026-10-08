@@ -30,7 +30,7 @@ vi.mock("@/features/auth/stores/auth.store", () => ({
   useAuthStore: (select: (state: unknown) => unknown) =>
     select({ user: { id: "user" }, isAuthenticated: true, subscription: null }),
 }));
-vi.mock("@/features/auth/utils/product-capabilities", () => ({
+vi.mock("@/features/auth/services/product-capabilities", () => ({
   hasProductCapability: () => true,
 }));
 vi.mock("@/features/ai/intelligence/stores/intelligence-settings.store", () => ({

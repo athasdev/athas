@@ -6,7 +6,7 @@ import {
   MultibufferWorkspace,
   type MultibufferWorkspaceHandle,
 } from "@/features/editor/components/multibuffer/multibuffer-workspace";
-import { calculateLineHeight } from "@/features/editor/utils/lines";
+import { calculateLineHeight } from "@/features/editor/services/lines";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import {
   type FileNavigatorItem,

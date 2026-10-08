@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { runAcpTerminalAuth } from "@/features/ai/lib/acp-terminal-auth";
+import { runAcpTerminalAuth } from "@/features/ai/services/acp-terminal-auth";
 import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
 import { selectAgentAuthRequest, useAcpAuthStore } from "@/features/ai/stores/acp-auth.store";
 import type { AcpAuthMethod } from "@/features/ai/types/acp.types";
@@ -11,8 +11,8 @@ vi.mock("@/features/ai/services/acp-stream-handler", () => ({
   },
 }));
 
-vi.mock("@/features/ai/lib/acp-terminal-auth", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/features/ai/lib/acp-terminal-auth")>()),
+vi.mock("@/features/ai/services/acp-terminal-auth", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/features/ai/services/acp-terminal-auth")>()),
   runAcpTerminalAuth: vi.fn(),
 }));
 

@@ -5,7 +5,7 @@ import {
   flushPendingBufferHistory,
   trackBufferHistoryChange,
   trackImmediateBufferHistoryChange,
-} from "@/features/editor/stores/buffer-history-tracking";
+} from "@/features/editor/services/buffer-history-tracking";
 import { useHistoryStore } from "@/features/editor/stores/history.store";
 
 const BUFFER_ID = "buffer-history-tracking-test";

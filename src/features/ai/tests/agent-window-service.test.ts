@@ -32,7 +32,7 @@ vi.mock("@tauri-apps/api/window", () => ({
     destroy = mocks.destroy;
   },
 }));
-vi.mock("@/features/window/utils/create-app-window", () => ({ createAppWindow: mocks.create }));
+vi.mock("@/features/window/services/create-app-window", () => ({ createAppWindow: mocks.create }));
 vi.mock("@/features/layout/stores/ui-state.store", () => ({
   useUIState: { getState: () => ({ openSettings: mocks.settings }) },
 }));

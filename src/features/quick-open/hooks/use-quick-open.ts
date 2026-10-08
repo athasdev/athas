@@ -10,9 +10,9 @@ import { useFffSearch } from "@/features/file-search/hooks/use-fff-search";
 import {
   canUseNativeFileSearch,
   getNativeWorkspaceRootPaths,
-} from "@/features/file-search/utils/file-search-paths";
+} from "@/features/file-search/services/file-search-paths";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
-import { calculateOffsetFromContentPosition } from "@/features/editor/utils/position";
+import { calculateOffsetFromContentPosition } from "@/features/editor/services/position";
 import { getBaseName } from "@/utils/path-helpers";
 import { SEARCH_DEBOUNCE_DELAY } from "../constants/limits";
 import { useFileLoader } from "./use-file-loader";

@@ -26,7 +26,7 @@ import { memo, useCallback, useEffect, useState } from "react";
 import type { RefCallback } from "react";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
-import { shouldShowTabCloseButton } from "@/features/settings/lib/ui-preferences";
+import { shouldShowTabCloseButton } from "@/features/settings/services/ui-preferences";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
 import { InlineRenameInput } from "@/ui/input";

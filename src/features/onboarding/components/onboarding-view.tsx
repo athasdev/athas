@@ -9,12 +9,12 @@ import {
   keybindingPresetDefinitions,
   keybindingPresetOptions,
 } from "@/features/keymaps/defaults/keybinding-presets";
-import { markOnboardingCompleted } from "@/features/onboarding/lib/onboarding-state";
-import type { OnboardingContext } from "@/features/onboarding/lib/onboarding-state";
+import { markOnboardingCompleted } from "@/features/onboarding/services/onboarding-state";
+import type { OnboardingContext } from "@/features/onboarding/services/onboarding-state";
 import { buildOnboardingViewModel } from "@/features/onboarding/lib/onboarding-view-model";
 import { useOnboardingStore } from "@/features/onboarding/stores/onboarding.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { formatReleaseDate } from "@/features/settings/lib/whats-new";
+import { formatReleaseDate } from "@/features/settings/services/whats-new";
 import { SettingsView, SettingRow } from "@/features/settings/components/settings-section";
 import { useWhatsNewStore } from "@/features/settings/stores/whats-new.store";
 import { Button } from "@/ui/button";

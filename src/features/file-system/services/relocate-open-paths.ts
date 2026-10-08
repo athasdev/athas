@@ -1,7 +1,7 @@
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useFileTreeStore } from "@/features/file-explorer/stores/file-explorer-tree.store";
 import { getBaseName } from "@/utils/path-helpers";
-import { relocatePath } from "../controllers/file-tree-utils";
+import { relocatePath } from "./file-tree-utils";
 
 /**
  * After an entry was renamed or moved on disk, points what is open under it at the new path:

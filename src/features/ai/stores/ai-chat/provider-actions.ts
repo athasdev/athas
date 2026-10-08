@@ -1,4 +1,4 @@
-import { canUseProviderWithoutApiKey } from "@/features/ai/lib/provider-access";
+import { canUseProviderWithoutApiKey } from "@/features/ai/services/provider-access";
 import {
   getProviderApiToken,
   removeProviderApiToken,

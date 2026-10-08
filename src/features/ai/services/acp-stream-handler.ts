@@ -23,8 +23,8 @@ import {
   isAcpAuthenticationError,
 } from "@/features/ai/lib/acp-authentication";
 import { getChatTitleFromSessionInfo } from "@/features/ai/lib/acp-session-info";
-import { getAcpAgentKey, selectAcpAgentStatus } from "@/features/ai/lib/acp-session-state";
-import { formatSkippedMcpServersNotice } from "@/features/ai/lib/mcp-servers";
+import { getAcpAgentKey, selectAcpAgentStatus } from "@/features/ai/services/acp-session-state";
+import { formatSkippedMcpServersNotice } from "@/features/ai/services/mcp-servers";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 
 interface AcpHandlers {

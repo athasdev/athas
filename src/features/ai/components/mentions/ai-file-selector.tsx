@@ -13,8 +13,8 @@ import { useFffSearch } from "@/features/file-search/hooks/use-fff-search";
 import {
   canUseNativeFileSearch,
   getNativeWorkspaceRootPaths,
-} from "@/features/file-search/utils/file-search-paths";
-import { shouldIgnoreSearchFile } from "@/features/file-search/utils/file-search-filtering";
+} from "@/features/file-search/services/file-search-paths";
+import { shouldIgnoreSearchFile } from "@/features/file-search/services/file-search-filtering";
 import { useFileSearch } from "@/features/global-search/hooks/use-file-search";
 import type { FileCategory, FileItem } from "@/features/file-search/types/file-search.types";
 import type { FileEntry } from "@/features/file-system/types/app.types";

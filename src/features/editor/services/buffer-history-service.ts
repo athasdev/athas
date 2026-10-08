@@ -1,7 +1,4 @@
-import {
-  flushPendingBufferHistory,
-  syncBufferHistoryContent,
-} from "../stores/buffer-history-tracking";
+import { flushPendingBufferHistory, syncBufferHistoryContent } from "./buffer-history-tracking";
 import { useHistoryStore } from "../stores/history.store";
 import type { HistoryEntry } from "../types/history.types";
 import { getBufferById } from "../stores/buffer-index";

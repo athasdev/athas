@@ -2,13 +2,13 @@ import { describe, expect, it } from "vite-plus/test";
 import {
   resolveAutocompleteConnection,
   resolveIntelligenceConnection,
-} from "../intelligence/lib/resolve-intelligence-connection";
+} from "../intelligence/services/resolve-intelligence-connection";
 import { defaultIntelligencePreferences } from "../intelligence/lib/intelligence-preferences";
 import {
   getLocalChatConnection,
   isLocalAiProvider,
   isLocalEndpointUrl,
-} from "../lib/local-ai-connection";
+} from "../services/local-ai-connection";
 
 const settings = {
   ollamaBaseUrl: "http://localhost:11434",

@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
   setActiveBuffer: vi.fn(),
   requestNavigation: vi.fn(),
 }));
-vi.mock("@/features/file-system/controllers/file-operations", () => ({
+vi.mock("@/features/file-system/api/file-operations", () => ({
   readFileContent: mocks.read,
 }));
 vi.mock("../stores/buffer.store", () => ({
@@ -26,7 +26,7 @@ vi.mock("../stores/state.store", () => ({
   },
 }));
 
-import { navigateToJumpEntry } from "../utils/jump-navigation";
+import { navigateToJumpEntry } from "../services/jump-navigation";
 
 const entry: JumpListEntry = {
   bufferId: "closed",

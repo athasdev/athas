@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vite-plus/test";
-import { getProjectIconOptions, type ProjectIconFile } from "../project-icons/utils/project-icons";
+import {
+  getProjectIconOptions,
+  type ProjectIconFile,
+} from "../project-icons/services/project-icons";
 
 const icons: ProjectIconFile[] = [
   { name: "icon.png", path: "/project/src-tauri/icons/icon.png", src: "asset://icon", score: 200 },

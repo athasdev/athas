@@ -1,8 +1,8 @@
 import { useCallback, type ReactNode } from "react";
 import { useNewAgentAction } from "@/features/ai/hooks/use-new-agent-action";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { readFileContent } from "@/features/file-system/controllers/file-operations";
-import { openFile } from "@/features/file-system/controllers/platform";
+import { readFileContent } from "@/features/file-system/api/file-operations";
+import { openFile } from "@/features/file-system/api/file-system-api";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { Button } from "@/ui/button";
 import {

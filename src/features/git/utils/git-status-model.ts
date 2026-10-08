@@ -1,4 +1,4 @@
-import { buildPathTree, type PathTreeNode } from "@/features/sidebar/lib/path-tree";
+import { buildPathTree, type PathTreeNode } from "@/utils/path-tree";
 import type { GitFile } from "../types/git.types";
 
 export type GitStatusGroup = "added" | "modified" | "deleted" | "renamed" | "untracked";

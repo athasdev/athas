@@ -7,9 +7,9 @@ import {
 import type { EditorContent } from "@/features/panes/types/pane-content.types";
 import { readBufferRevision, readBufferText } from "@/features/editor/services/buffer-text";
 import { flushAllLiveDocuments } from "@/features/editor/services/live-document-registry";
-import { trackImmediateBufferHistoryChange } from "@/features/editor/stores/buffer-history-tracking";
+import { trackImmediateBufferHistoryChange } from "@/features/editor/services/buffer-history-tracking";
 import { emitGitChanged } from "@/features/git/events/git-events";
-import { buildSearchRegex } from "@/features/editor/utils/search";
+import { buildSearchRegex } from "@/utils/text-search";
 import { getWorkspaceResourceProvider } from "@/features/file-system/services/workspace-resource-provider";
 import { createSearchWorkerSession } from "./search-worker-client";
 import type { ContentSearchOptions } from "../types/global-search.types";

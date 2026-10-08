@@ -4,7 +4,10 @@ import { useShallow } from "zustand/react/shallow";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
 import { SkillsCommand } from "@/features/ai/components/skills/skills-command";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { loadMarketplaceSkills, resolveMarketplaceSkill } from "@/features/ai/lib/skill-library";
+import {
+  loadMarketplaceSkills,
+  resolveMarketplaceSkill,
+} from "@/features/ai/services/skill-library";
 import type { MarketplaceSkill } from "@/features/ai/types/skills.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useDropdownMenu } from "@/ui/dropdown";

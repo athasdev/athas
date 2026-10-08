@@ -6,8 +6,8 @@ import { initializeSettingsStore } from "@/features/settings/stores/settings.sto
 import { initializeThemeSystem } from "@/extensions/themes/theme-initializer";
 import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
-import { createAppWindow } from "@/features/window/utils/create-app-window";
-import { initializeFrontendTerminalSession } from "@/features/terminal/utils/frontend-terminal-session";
+import { createAppWindow } from "@/features/window/services/create-app-window";
+import { initializeFrontendTerminalSession } from "@/features/terminal/services/frontend-terminal-session";
 import { frontendTrace } from "@/utils/frontend-trace";
 import { applyPlatformClass } from "@/utils/platform";
 import { onAppEvent } from "@/utils/app-events";

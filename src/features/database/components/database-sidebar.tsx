@@ -10,7 +10,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import { extractDroppedFilePaths } from "@/features/file-system/utils/file-system-dropped-paths";
+import { extractDroppedFilePaths } from "@/features/file-system/services/file-system-dropped-paths";
 import { DatabaseBrandMark } from "@/ui/brand-marks";
 import { Button } from "@/ui/button";
 import { Checkbox } from "@/ui/checkbox";

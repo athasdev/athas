@@ -10,7 +10,7 @@ import {
   useState,
 } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { fuzzyScore } from "@/features/quick-open/utils/fuzzy-search";
+import { fuzzyScore } from "@/utils/fuzzy-search";
 import { EmptyState } from "@/ui/empty";
 import {
   SidebarFilterBar,
@@ -19,11 +19,7 @@ import {
   SidebarSectionLabel,
 } from "@/ui/sidebar";
 import { SidebarTree, SidebarTreeRow } from "@/features/sidebar/components/sidebar-tree";
-import {
-  buildPathTree,
-  compactPathTreeBranch,
-  type PathTreeNode,
-} from "@/features/sidebar/lib/path-tree";
+import { buildPathTree, compactPathTreeBranch, type PathTreeNode } from "@/utils/path-tree";
 import { cn } from "@/utils/cn";
 import { ScrollArea } from "@/ui/scroll-area";
 import { getBaseName, getDirName, normalizePath } from "@/utils/path-helpers";

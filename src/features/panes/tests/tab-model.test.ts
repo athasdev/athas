@@ -7,7 +7,7 @@ import {
   selectPaneBufferFlags,
 } from "../stores/pane-selectors";
 import { usePaneStore } from "../stores/pane.store";
-import { getAllPaneGroups } from "../utils/pane-tree";
+import { getAllPaneGroups } from "../services/pane-tree";
 
 const createMockStorage = () => {
   const storage = new Map<string, string>();

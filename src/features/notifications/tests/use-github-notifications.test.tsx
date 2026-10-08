@@ -3,7 +3,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import type { GitHubNotification } from "@/features/github/types/github.types";
-import { githubNotificationListCache } from "@/features/github/utils/github-data-cache";
+import { githubNotificationListCache } from "@/features/github/services/github-data-cache";
 
 const mocks = vi.hoisted(() => ({
   invoke: vi.fn(),

@@ -22,7 +22,7 @@ vi.mock("@/config/services", () => ({
     dashboardBillingUrl: "https://website.test/dashboard/settings/billing",
   }),
 }));
-vi.mock("@/features/ai/lib/open-new-agent-chat", () => ({ openNewAgentChat: state.newChat }));
+vi.mock("@/features/ai/services/open-new-agent-chat", () => ({ openNewAgentChat: state.newChat }));
 vi.mock("@/features/auth/hooks/use-desktop-sign-in", () => ({
   useDesktopSignIn: () => ({ signIn: state.signIn, isSigningIn: false }),
 }));

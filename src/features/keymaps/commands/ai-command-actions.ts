@@ -1,6 +1,6 @@
-import { logOutOfAcpAgent } from "@/features/ai/lib/acp-logout";
-import { openAgentCliInTerminal } from "@/features/ai/lib/open-agent-cli-in-terminal";
-import { openAgentSessions } from "@/features/ai/lib/open-agent-sessions";
+import { logOutOfAcpAgent } from "@/features/ai/services/acp-logout";
+import { openAgentCliInTerminal } from "@/features/ai/services/open-agent-cli-in-terminal";
+import { openAgentSessions } from "@/features/ai/services/open-agent-sessions";
 import { openAgentInNewWindow } from "@/features/ai/detached/agent-window-service";
 import { toggleFollowAgent } from "@/features/ai/services/agent-follow-service";
 import {

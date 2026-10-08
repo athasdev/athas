@@ -1,6 +1,6 @@
 import { selectAll } from "@codemirror/commands";
 import { useEffect, useMemo } from "react";
-import { isEditorKeyboardTarget } from "@/features/keymaps/utils/editor-keyboard-target";
+import { isEditorKeyboardTarget } from "@/features/keymaps/services/editor-keyboard-target";
 import { isNativeTextInputTarget } from "@/utils/keyboard/text-input-target";
 import { fallbackCommentTokens } from "../editor-commands";
 import { type CodeMirrorHost, useCodeMirrorExtension } from "../host";

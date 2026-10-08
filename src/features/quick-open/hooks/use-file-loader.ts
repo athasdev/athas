@@ -5,8 +5,8 @@ import {
   fffScanStatus,
 } from "@/features/file-search/api/file-search-api";
 import type { FileItem } from "@/features/file-search/types/file-search.types";
-import { shouldIgnoreSearchFile } from "@/features/file-search/utils/file-search-filtering";
-import { getNativeWorkspaceRootPaths } from "@/features/file-search/utils/file-search-paths";
+import { shouldIgnoreSearchFile } from "@/features/file-search/services/file-search-filtering";
+import { getNativeWorkspaceRootPaths } from "@/features/file-search/services/file-search-paths";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 

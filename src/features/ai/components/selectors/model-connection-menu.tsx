@@ -3,7 +3,7 @@ import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { useAIModelOptions } from "@/features/ai/hooks/use-ai-model-options";
 import { useAvailableProviders } from "@/features/ai/hooks/use-available-providers";
 import { formatTokenCount } from "@/features/ai/lib/acp-usage";
-import { getHostedModelPriceHint } from "@/features/ai/lib/hosted-usage";
+import { getHostedModelPriceHint } from "@/features/ai/services/hosted-usage";
 import {
   getModelIconId,
   getModelVendorName,

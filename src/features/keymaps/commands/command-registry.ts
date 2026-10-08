@@ -1,5 +1,5 @@
 import type { Command } from "../types/keymaps.types";
-import { keymapRegistry } from "../utils/registry";
+import { keymapRegistry } from "../services/keymap-registry";
 import { agentEditCommands, aiCommands } from "./ai-commands";
 import { browserCommands } from "./browser-commands";
 import { editCommands, markdownCommands } from "./editor-commands";

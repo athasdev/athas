@@ -1,7 +1,7 @@
 import { homeDir } from "@tauri-apps/api/path";
 import { toast } from "sonner";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { readFileContent } from "@/features/file-system/controllers/file-operations";
+import { readFileContent } from "@/features/file-system/api/file-operations";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { getBaseName, joinPath } from "@/utils/path-helpers";
 import { emitAppEvent } from "@/utils/app-events";

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useDebounce } from "use-debounce";
 import { LspClient } from "@/features/editor/lsp/lsp-client";
 import { useLspStore } from "@/features/editor/lsp/stores/lsp.store";
-import { normalizeWorkspaceFolders } from "@/features/file-system/controllers/workspace-session";
+import { normalizeWorkspaceFolders } from "@/features/file-system/services/workspace-session";
 import { pathStartsWithRoot } from "@/utils/path-helpers";
 import { SEARCH_DEBOUNCE_DELAY } from "../constants/limits";
 import { useProjectStore } from "@/features/workspace/stores/project.store";

@@ -1,8 +1,8 @@
-import { deliveryBufferPath } from "@/features/github/delivery/utils/github-delivery";
+import { deliveryBufferPath } from "@/features/github/delivery/services/github-delivery";
 import { immer } from "zustand/middleware/immer";
 import { createStore } from "zustand/vanilla";
 import type { DatabaseType } from "@/features/database/types/provider.types";
-import { getViewBufferPath } from "@/features/views/lib/view-buffer";
+import { getViewBufferPath } from "@/features/views/services/view-buffer";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import {
   buildClosedBufferHistoryEntry,
@@ -11,10 +11,10 @@ import {
 } from "@/features/editor/stores/buffer-closed-history";
 import { evictLeastRecentAutoClosableBuffer } from "@/features/editor/stores/buffer-eviction";
 import { createPaneContent } from "@/features/editor/stores/buffer-content-factory";
-import { saveSessionToStore } from "@/features/editor/stores/buffer-session-persistence";
-import { detectLanguageFromFileName } from "@/features/editor/utils/language-detection";
+import { saveSessionToStore } from "@/features/editor/services/buffer-session-persistence";
+import { detectLanguageFromFileName } from "@/features/editor/services/language-detection";
 import { logger } from "@/utils/logger";
-import { readFileContent } from "@/features/file-system/controllers/file-operations";
+import { readFileContent } from "@/features/file-system/api/file-operations";
 import type { MultiFileDiff } from "@/features/git/types/git-diff.types";
 import type { GitDiff } from "@/features/git/types/git.types";
 import { getBufferById, getBufferByPath } from "@/features/editor/stores/buffer-index";
@@ -26,12 +26,12 @@ import {
   selectIsBufferPreview,
   selectPaneBufferFlags,
 } from "@/features/panes/stores/pane-selectors";
-import { resolveWritablePaneForBuffer } from "@/features/panes/utils/pane-routing";
+import { resolveWritablePaneForBuffer } from "@/features/panes/services/pane-routing";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { SINGLETON_TOOL_BUFFER_METADATA } from "@/features/panes/constants/tool-buffers";
 import { defaultSettings } from "@/features/settings/config/default-settings";
 import { closeTerminalConnection } from "@/features/terminal/services/terminal-connection-lifecycle";
-import { cleanupBufferHistoryTracking } from "@/features/editor/stores/buffer-history-tracking";
+import { cleanupBufferHistoryTracking } from "@/features/editor/services/buffer-history-tracking";
 import type {
   EditorContent,
   GitHubActionOpenTarget,
@@ -211,7 +211,7 @@ interface BufferActions {
   openExtensionsBuffer: () => string;
   openExtensionBuffer: (extensionId: string, name: string) => string;
   openOnboardingBuffer: (
-    context: import("@/features/onboarding/lib/onboarding-state").OnboardingContext,
+    context: import("@/features/onboarding/services/onboarding-state").OnboardingContext,
   ) => string;
   closeBuffer: (bufferId: string) => void;
   closeBufferForce: (bufferId: string) => void;

@@ -1,7 +1,7 @@
 import { TagIcon, RocketIcon } from "@/ui/icons";
 import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
-import { openFiles } from "@/features/file-system/controllers/platform";
+import { openFiles } from "@/features/file-system/api/file-system-api";
 import { useGitStore } from "@/features/git/stores/git.store";
 import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";

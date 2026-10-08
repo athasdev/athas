@@ -9,7 +9,7 @@ import {
   parsePackageRunActions,
   parsePyprojectRunActions,
   resolveRunWorkingDirectory,
-} from "../utils/run-action-discovery";
+} from "../services/run-action-discovery";
 
 describe("run action discovery", () => {
   test("discovers package scripts with the declared package manager and useful ordering", () => {

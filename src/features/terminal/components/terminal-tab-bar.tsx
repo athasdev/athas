@@ -22,8 +22,8 @@ import { useTerminalProfilesStore } from "@/features/terminal/stores/profiles.st
 import { useTerminalShellsStore } from "@/features/terminal/stores/shells.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { BOTTOM_PANE_ID } from "@/features/panes/constants/pane";
-import { getChromeNavigationIndex } from "@/features/layout/utils/chrome-keyboard";
-import { getOrCreatePaneDropTarget } from "@/features/panes/utils/pane-drop-actions";
+import { getChromeNavigationIndex } from "@/features/layout/services/chrome-keyboard";
+import { getOrCreatePaneDropTarget } from "@/features/panes/services/pane-drop-actions";
 import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
 import type { PaneNode, SplitPlacement } from "@/features/panes/types/pane.types";
 import type { Terminal, TerminalSplitDirection } from "@/features/terminal/types/terminal.types";
@@ -33,7 +33,7 @@ import {
   resolveTerminalPaneDropTarget,
   setTerminalPaneDropHover,
 } from "@/features/terminal/utils/terminal-pane-drop";
-import { getAllTerminalProfiles } from "@/features/terminal/utils/terminal-profiles";
+import { getAllTerminalProfiles } from "@/features/terminal/services/terminal-profiles";
 import { getTerminalDisplayName as getTerminalDisplayNameForSession } from "@/features/terminal/utils/terminal-display-name";
 import {
   DropdownMenu,
@@ -57,7 +57,7 @@ import {
   setInternalTabDragHover,
   setInternalTabDragHoverTarget,
   setInternalTabDragData,
-} from "@/features/tabs/utils/internal-tab-drag";
+} from "@/features/tabs/services/internal-tab-drag";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
 import TerminalTabBarItem from "./terminal-tab-bar-item";
 import TerminalTabContextMenu from "./terminal-tab-context-menu";

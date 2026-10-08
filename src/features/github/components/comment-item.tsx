@@ -12,7 +12,7 @@ import {
 import { DotsIcon } from "@/ui/icons";
 import { Spinner } from "@/ui/spinner";
 import { writeClipboardText } from "@/utils/clipboard";
-import { getTimeAgo } from "../utils/github-viewer-utils";
+import { getTimeAgo } from "../services/github-viewer-utils";
 import { GitHubMetaChip, GitHubUserChip } from "./github-chips";
 import GitHubMarkdown from "./github-markdown";
 import { GitHubMarkdownEditor } from "./github-markdown-editor";

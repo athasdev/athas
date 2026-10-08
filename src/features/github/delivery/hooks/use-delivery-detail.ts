@@ -6,7 +6,7 @@ import {
   loadDeliveryDetail,
 } from "../services/github-delivery-service";
 import type { DeliveryKind, DeliveryResource } from "../types/github-delivery.types";
-import { deliveryKey } from "../utils/github-delivery";
+import { deliveryKey } from "../services/github-delivery";
 
 export function useDeliveryDetail(
   kind: DeliveryKind,

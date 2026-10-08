@@ -19,7 +19,7 @@ import {
   releaseTerminalEventChannel,
   subscribeToTerminalEvents,
   terminalSizesEqual,
-} from "../utils/terminal-protocol";
+} from "../services/terminal-protocol";
 
 describe("terminal protocol", () => {
   it("preserves channel event order across creation and subscription", () => {

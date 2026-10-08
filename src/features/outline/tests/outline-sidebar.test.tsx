@@ -3,7 +3,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { OutlineSidebar } from "../components/outline-sidebar";
-import { normalizeOutlineSymbols } from "../utils/outline-symbols";
+import { normalizeOutlineSymbols } from "../services/outline-symbols";
 import { onAppEvent } from "@/utils/app-events";
 
 const state = vi.hoisted(() => ({
@@ -16,8 +16,8 @@ vi.mock("../hooks/use-document-outline", () => ({ useDocumentOutline: () => stat
 vi.mock("@/features/editor/stores/buffer.store", () => ({
   useBufferStore: { use: { actions: () => ({ openBuffer: vi.fn() }) } },
 }));
-vi.mock("@/features/file-system/controllers/file-operations", () => ({ readFileContent: vi.fn() }));
-vi.mock("@/features/file-system/controllers/platform", () => ({ openFile: vi.fn() }));
+vi.mock("@/features/file-system/api/file-operations", () => ({ readFileContent: vi.fn() }));
+vi.mock("@/features/file-system/api/file-system-api", () => ({ openFile: vi.fn() }));
 vi.mock("@/utils/clipboard", () => ({ writeClipboardText: vi.fn() }));
 vi.mock("@/features/keymaps/hooks/use-command-shortcut", () => ({
   useCommandShortcut: () => undefined,

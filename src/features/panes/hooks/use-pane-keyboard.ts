@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 import { IS_MAC } from "@/utils/platform";
 import { usePaneStore } from "../stores/pane.store";
-import { activatePaneAndSyncBuffer } from "../utils/pane-activation";
-import { splitActiveEditorGroup } from "../utils/pane-command-actions";
+import { activatePaneAndSyncBuffer } from "../services/pane-activation";
+import { splitActiveEditorGroup } from "../services/pane-command-actions";
 
 export function usePaneKeyboard() {
   useEffect(() => {

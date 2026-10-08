@@ -51,7 +51,7 @@ vi.mock("@/features/diagnostics/stores/diagnostics.store", () => {
 vi.mock("@/features/workspace/stores/project.store", () => ({
   useProjectStore: { getState: () => ({ rootFolderPath: "/repo" }) },
 }));
-vi.mock("@/features/file-system/controllers/file-operations", () => ({
+vi.mock("@/features/file-system/api/file-operations", () => ({
   readFileContent: vi.fn(() => Promise.resolve("export const other = value;\n")),
 }));
 vi.mock("../stores/buffer.store", () => ({

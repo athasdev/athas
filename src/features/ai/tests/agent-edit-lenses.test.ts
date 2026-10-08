@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { agentEditLenses } from "@/features/ai/lib/agent-edit-lenses";
+import { agentEditLenses } from "@/features/ai/services/agent-edit-lenses";
 import type { AgentEditEntry } from "@/features/ai/types/agent-edits.types";
 
 const PATH = "/repo/a.ts";

@@ -11,8 +11,8 @@ import {
 } from "@/ui/icons";
 import { getActiveCodeMirrorNavigation } from "@/features/editor/engines/codemirror/navigation/active-navigation";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import type { SidebarView } from "@/features/layout/utils/sidebar-pane-utils";
-import { setOutlineVisibilityPreference } from "@/features/outline/actions/outline-visibility";
+import type { SidebarView } from "@/features/layout/types/sidebar.types";
+import { setOutlineVisibilityPreference } from "@/features/outline/services/outline-visibility";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { emitAppEvent } from "@/utils/app-events";
 import { useKeymapStore } from "../stores/keymaps.store";

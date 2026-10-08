@@ -6,9 +6,12 @@ import {
   type LspNavigationLocation,
 } from "@/features/editor/lsp/location-navigation";
 import { useJumpListStore } from "@/features/editor/stores/jump-list.store";
-import { setOutlineVisibilityPreference } from "@/features/outline/actions/outline-visibility";
-import { navigateToJumpEntry } from "@/features/editor/utils/jump-navigation";
-import { getLineTextFromContent, getLineTextsFromContent } from "@/features/editor/utils/position";
+import { setOutlineVisibilityPreference } from "@/features/outline/services/outline-visibility";
+import { navigateToJumpEntry } from "@/features/editor/services/jump-navigation";
+import {
+  getLineTextFromContent,
+  getLineTextsFromContent,
+} from "@/features/editor/services/position";
 import { useReferencesStore } from "@/features/references/stores/references.store";
 import { showChoiceDialog } from "@/ui/dialog";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
@@ -138,7 +141,7 @@ export async function goToTypeDefinition(): Promise<void> {
 export async function goToReferences(): Promise<void> {
   const [{ LspClient }, { readFileContent }, { filePathFromUri }] = await Promise.all([
     import("@/features/editor/lsp/lsp-client"),
-    import("@/features/file-system/controllers/file-operations"),
+    import("@/features/file-system/api/file-operations"),
     import("@/features/editor/lsp/workspace-edit"),
   ]);
 

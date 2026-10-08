@@ -4,7 +4,7 @@ import { createWorkspaceScopedStore } from "@/features/workspace/stores/create-w
 import { createSelectors } from "@/utils/zustand-selectors";
 import { BOTTOM_PANE_ID, ROOT_PANE_ID } from "../constants/pane";
 import type { PaneGroup, PaneNode, SplitDirection, SplitPlacement } from "../types/pane.types";
-import { resolveWritablePaneForBuffer } from "../utils/pane-routing";
+import { resolveWritablePaneForBuffer } from "../services/pane-routing";
 import {
   addBufferToPane,
   closePane,
@@ -30,7 +30,7 @@ import {
   splitPane,
   reorderPaneBuffers,
   updatePaneSizes,
-} from "../utils/pane-tree";
+} from "../services/pane-tree";
 
 interface PaneState {
   root: PaneNode;

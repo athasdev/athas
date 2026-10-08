@@ -3,7 +3,7 @@ import { getDefaultSettingsSnapshot } from "@/features/settings/config/default-s
 import {
   resolveCustomProviderBaseUrl,
   resolveCustomProviderModelId,
-} from "@/features/ai/lib/custom-provider-config";
+} from "@/features/ai/services/custom-provider-config";
 
 describe("custom provider config", () => {
   it("uses chat-specific custom provider settings first", () => {

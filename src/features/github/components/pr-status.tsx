@@ -24,7 +24,7 @@ import {
   isGitHubEntityLinkForRepository,
   parseGitHubEntityLink,
 } from "../utils/github-link-utils";
-import type { PullRequestStatus } from "../utils/github-pr-viewer-utils";
+import type { PullRequestStatus } from "../services/github-pr-viewer-utils";
 
 // CI Status Indicator
 interface CIStatusProps {

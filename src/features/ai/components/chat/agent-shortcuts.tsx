@@ -13,7 +13,7 @@ import { useShallow } from "zustand/react/shallow";
 import { buildAgentSuggestions } from "@/features/ai/lib/agent-suggestions";
 import { selectAgentSessions } from "@/features/ai/lib/agent-session-list";
 import { openAgentHistoryChat } from "@/features/ai/lib/open-agent-history";
-import { dispatchAIChatSkillInsert } from "@/features/ai/lib/skill-events";
+import { dispatchAIChatSkillInsert } from "@/features/ai/services/skill-events";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { AgentSuggestion } from "@/features/ai/types/agent-suggestion.types";
 import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics.store";

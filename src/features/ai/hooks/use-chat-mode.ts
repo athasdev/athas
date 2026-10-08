@@ -1,6 +1,9 @@
 import { useMemo } from "react";
 import { useCodexSettings } from "@/features/ai/integrations/codex/use-codex-settings";
-import { selectChatAcpSession, selectChatAcpSessionId } from "@/features/ai/lib/acp-session-state";
+import {
+  selectChatAcpSession,
+  selectChatAcpSessionId,
+} from "@/features/ai/services/acp-session-state";
 import { getChatModeSource, selectChatMode } from "@/features/ai/lib/composer-modes";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { ChatModeSource } from "@/features/ai/types/composer-mode.types";

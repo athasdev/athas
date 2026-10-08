@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { readBufferRevision, readBufferText } from "@/features/editor/services/buffer-text";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
-import { getLineTextFromContent } from "@/features/editor/utils/position";
+import { getLineTextFromContent } from "@/features/editor/services/position";
 import { useActiveWorkspaceId } from "@/features/workspace/stores/create-workspace-scoped-store";
 import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
 import { showToast } from "@/utils/toast";

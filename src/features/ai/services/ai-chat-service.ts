@@ -19,14 +19,14 @@ import {
   getProvider,
   shouldUseTauriFetchForProvider,
 } from "@/features/ai/services/providers/ai-provider-registry";
-import { isOllamaCloudUrl } from "@/features/ai/lib/ollama-endpoint";
+import { isOllamaCloudUrl } from "@/features/ai/services/ollama-endpoint";
 import { processStreamingResponse } from "@/utils/stream-utils";
 import { getProviderApiToken } from "@/features/ai/services/ai-token-service";
 import { resolveChatCompletionTokenLimit } from "@/features/ai/lib/chat-completion-budget";
 import {
   getCustomProviderApiToken,
   resolveCustomProviderBaseUrl,
-} from "@/features/ai/lib/custom-provider-config";
+} from "@/features/ai/services/custom-provider-config";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { AcpStreamHandler } from "./acp-stream-handler";
 import { buildContextPrompt, buildSystemPrompt } from "../utils/ai-context-builder";

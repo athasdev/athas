@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 import { createIntelligenceSettingsStore } from "../intelligence/stores/intelligence-settings.store";
 import { defaultIntelligencePreferences } from "../intelligence/lib/intelligence-preferences";
-import { resolveIntelligenceConnection } from "../intelligence/lib/resolve-intelligence-connection";
+import { resolveIntelligenceConnection } from "../intelligence/services/resolve-intelligence-connection";
 import type { IntelligenceSnapshot } from "../intelligence/types/intelligence.types";
 
 vi.mock("../intelligence/services/intelligence-settings-api", () => ({

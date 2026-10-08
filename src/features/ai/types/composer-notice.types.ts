@@ -1,4 +1,4 @@
-import type { HostedUsageState } from "@/features/ai/lib/hosted-usage";
+import type { HostedUsageState } from "@/features/ai/services/hosted-usage";
 import type { SessionCheckState } from "@/features/auth/stores/auth.store";
 
 /**

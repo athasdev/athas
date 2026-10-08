@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { getAllLanguages } from "@/features/editor/utils/language-id";
-import { setOutlineVisibilityPreference } from "@/features/outline/actions/outline-visibility";
+import { getAllLanguages } from "@/features/editor/services/language-id";
+import { setOutlineVisibilityPreference } from "@/features/outline/services/outline-visibility";
 import { getDefaultSetting } from "@/features/settings/config/default-settings";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import NumberInput from "@/ui/number-input";

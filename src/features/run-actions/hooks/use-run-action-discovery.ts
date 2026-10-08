@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { onAppEvent } from "@/utils/app-events";
-import { useCodeLens } from "@/features/editor/lsp/use-code-lens";
+import { useCodeLens } from "@/features/editor/lsp/hooks/use-code-lens";
 import type { RunActionItem } from "../types/run-action.types";
-import { codeLensesToRunActions, discoverProjectRunActions } from "../utils/run-action-discovery";
+import {
+  codeLensesToRunActions,
+  discoverProjectRunActions,
+} from "../services/run-action-discovery";
 
 export function useRunActionDiscovery(
   workspacePath: string | undefined,

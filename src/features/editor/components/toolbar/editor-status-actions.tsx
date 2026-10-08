@@ -8,14 +8,14 @@ import { setSyntaxHighlightingFilePath } from "@/features/editor/extensions/buil
 import { LspClient } from "@/features/editor/lsp/lsp-client";
 import { type LspStatus, useLspStore } from "@/features/editor/lsp/stores/lsp.store";
 import { getBufferById } from "@/features/editor/stores/buffer-index";
-import { setOutlineVisibilityPreference } from "@/features/outline/actions/outline-visibility";
+import { setOutlineVisibilityPreference } from "@/features/outline/services/outline-visibility";
 import { Spinner } from "@/ui/spinner";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import {
   getAllLanguages,
   getLanguageDisplayName,
   getLanguageIdFromPath,
-} from "@/features/editor/utils/language-id";
+} from "@/features/editor/services/language-id";
 import { hasTextContent } from "@/features/panes/types/pane-content.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button, type ButtonProps } from "@/ui/button";
@@ -31,7 +31,7 @@ import Select, { type SelectOption } from "@/ui/select";
 import { toast } from "sonner";
 import VimStatusIndicator from "@/features/vim/components/vim-status-indicator";
 import { IntelligenceCompletionStatus } from "./intelligence-completion-status";
-import { getFilenameFromPath } from "@/features/file-system/controllers/file-utils";
+import { getFilenameFromPath } from "@/features/file-system/services/file-utils";
 import { readBufferText } from "@/features/editor/services/buffer-text";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { useBufferIdOrActive } from "@/features/panes/hooks/use-pane-buffer-state";

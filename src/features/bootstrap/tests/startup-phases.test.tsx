@@ -38,7 +38,7 @@ const mocks = vi.hoisted(() => {
   };
 });
 
-vi.mock("@/features/window/utils/window-open-diagnostics", () => ({ traceWindowOpen: vi.fn() }));
+vi.mock("@/features/window/services/window-open-diagnostics", () => ({ traceWindowOpen: vi.fn() }));
 vi.mock("@/features/settings/stores/settings.store", () => ({
   initializeSettingsStore: mocks.initializeSettingsStore,
 }));
@@ -75,7 +75,7 @@ vi.mock("@/features/settings/hooks/use-system-accessibility", () => ({
 }));
 
 async function loadStartupModules() {
-  const bootstrap = await import("../initialize-app-bootstrap");
+  const bootstrap = await import("../services/initialize-app-bootstrap");
   const phaseStore = await import("../stores/bootstrap-phase.store");
   const { SettingsReadyBootstrap } = await import("../components/settings-ready-bootstrap");
   phaseStore.useBootstrapPhaseStore.subscribe((state, previous) => {

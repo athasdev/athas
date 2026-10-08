@@ -6,7 +6,7 @@ import {
   getProjectIconOptions,
   scanProjectIconFiles,
   type ProjectIconFile,
-} from "@/features/workspace/project-icons/utils/project-icons";
+} from "@/features/workspace/project-icons/services/project-icons";
 import Command, {
   CommandEmpty,
   CommandFooter,

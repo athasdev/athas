@@ -1,8 +1,4 @@
-import {
-  buildSearchRegex,
-  findAllMatches,
-  type SearchOptions,
-} from "@/features/editor/utils/search";
+import { buildSearchRegex, findAllMatches, type SearchOptions } from "@/utils/text-search";
 import type { MultiFileDiff } from "../types/git-diff.types";
 import type { GitDiff } from "../types/git.types";
 

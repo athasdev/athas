@@ -12,7 +12,7 @@ import {
   getWorkflowRunState,
   getWorkflowStepTiming,
 } from "../utils/github-workflow-status";
-import { copyToClipboard } from "../utils/github-viewer-utils";
+import { copyToClipboard } from "../services/github-viewer-utils";
 import { WORKFLOW_TONE_TEXT_CLASS, WorkflowStatusIcon } from "./github-workflow-status-icon";
 
 interface JobsContextMenuState {

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { isPathInsideTreeEntry } from "@/features/file-system/controllers/file-tree-utils";
+import { isPathInsideTreeEntry } from "@/features/file-system/services/file-tree-utils";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { useWorkspaceTabsStore } from "@/features/workspace/stores/workspace-tabs.store";
@@ -8,7 +8,7 @@ import {
   createProjectTabId,
   normalizeProjectTabPath,
   normalizeWorkspaceRootPath,
-} from "@/features/workspace/utils/project-tab-path";
+} from "@/features/workspace/services/project-tab-path";
 import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn().mockResolvedValue([]) }));

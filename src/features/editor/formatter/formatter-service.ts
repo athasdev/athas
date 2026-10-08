@@ -1,6 +1,6 @@
 import { commands } from "@/bindings/commands";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
-import { getLanguageIdFromPath } from "@/features/editor/utils/language-id";
+import { getLanguageIdFromPath } from "@/features/editor/services/language-id";
 import { logger } from "@/utils/logger";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 

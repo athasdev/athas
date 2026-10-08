@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { openNewAgentChat } from "@/features/ai/lib/open-new-agent-chat";
+import { openNewAgentChat } from "@/features/ai/services/open-new-agent-chat";
 
 const mocks = vi.hoisted(() => ({
   currentAgentId: "custom",

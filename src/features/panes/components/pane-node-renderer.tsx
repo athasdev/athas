@@ -1,7 +1,7 @@
 import { Fragment, useCallback, useMemo } from "react";
 import { usePaneStore } from "../stores/pane.store";
 import type { PaneNode } from "../types/pane.types";
-import { flattenPaneSplit, type FlatPaneEntry } from "../utils/pane-tree";
+import { flattenPaneSplit, type FlatPaneEntry } from "../services/pane-tree";
 import { PaneContainer } from "./pane-container";
 import { PaneResizeHandle } from "./pane-resize-handle";
 

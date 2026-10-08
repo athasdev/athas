@@ -31,8 +31,8 @@ vi.mock("@/features/auth/stores/auth.store", () => ({
 vi.mock("@/features/layout/stores/ui-state.store", () => ({
   useUIState: { getState: () => ({}), setState: vi.fn() },
 }));
-vi.mock("@/features/window/utils/create-app-window", () => ({ createAppWindow: vi.fn() }));
-vi.mock("@/features/terminal/utils/frontend-terminal-session", () => ({
+vi.mock("@/features/window/services/create-app-window", () => ({ createAppWindow: vi.fn() }));
+vi.mock("@/features/terminal/services/frontend-terminal-session", () => ({
   initializeFrontendTerminalSession: mocks.initialize,
 }));
 vi.mock("@/utils/frontend-trace", () => ({ frontendTrace: vi.fn() }));

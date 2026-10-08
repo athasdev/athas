@@ -7,10 +7,10 @@ import {
 import {
   resolveEffectiveTheme,
   subscribeSystemThemePreference,
-} from "@/features/settings/lib/theme-resolution";
+} from "@/features/settings/services/theme-resolution";
 import { commands } from "@/bindings/commands";
 import type { Settings, Theme } from "@/features/settings/types/settings.types";
-import { getUiRootAttributes } from "@/features/settings/lib/ui-preferences";
+import { getUiRootAttributes } from "@/features/settings/services/ui-preferences";
 
 const ALL_THEME_CLASSES = [
   "force-athas-light",

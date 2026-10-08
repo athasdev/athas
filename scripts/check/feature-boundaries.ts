@@ -209,7 +209,7 @@ export function classifyTarget(
   const segments = featureRelative.split("/");
   const directories = segments.slice(0, -1);
   const fileName = segments[segments.length - 1];
-  const listed = (config.publicFiles[feature] ?? []).some((pattern) =>
+  const listed = Object.keys(config.publicFiles[feature] ?? {}).some((pattern) =>
     matchesPattern(featureRelative, pattern),
   );
 
@@ -237,6 +237,27 @@ function matchesPattern(featureRelative: string, pattern: string): boolean {
     );
   }
   return featureRelative === pattern || featureRelative.replace(/\.tsx?$/, "") === pattern;
+}
+
+/** `publicFiles` entries that match no file in the tree, or that give no reason. */
+export function findInvalidPublicFiles(
+  repoRoot: string,
+  files: string[],
+  config: FeatureBoundaryConfig = featureBoundaries,
+): string[] {
+  const invalid: string[] = [];
+  for (const [feature, entries] of Object.entries(config.publicFiles)) {
+    const prefix = `${config.featuresRoot}/${feature}/`;
+    const featureFiles = files.filter((file) => file.startsWith(prefix));
+    for (const [pattern, reason] of Object.entries(entries)) {
+      const matched =
+        featureFiles.some((file) => matchesPattern(file.slice(prefix.length), pattern)) ||
+        existsSync(path.join(repoRoot, prefix, pattern));
+      if (!matched) invalid.push(`${feature}/${pattern}: matches no file`);
+      if (!reason.trim()) invalid.push(`${feature}/${pattern}: has no reason`);
+    }
+  }
+  return invalid;
 }
 
 /** Iterative Tarjan strongly connected components. Returns components with more than one node. */
@@ -418,7 +439,11 @@ if (import.meta.main) {
     console.log(
       `Cycle edges: ${current.cycleEdges.length} (baseline ${baseline.cycleEdges.length})`,
     );
-    for (const [name, entries] of Object.entries(result)) {
+    const invalidPublicFiles = findInvalidPublicFiles(
+      repoRoot,
+      collectSourceFiles(repoRoot, featureBoundaries.sourceRoot),
+    );
+    for (const [name, entries] of Object.entries({ ...result, invalidPublicFiles })) {
       if (entries.length > 0) console.log(`\n${name}:\n  ${entries.join("\n  ")}`);
     }
   }

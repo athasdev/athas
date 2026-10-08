@@ -13,8 +13,8 @@ import {
   gutterLineClass,
   WidgetType,
 } from "@codemirror/view";
-import { agentEditDecorations } from "@/features/ai/lib/agent-edit-decorations";
-import type { AgentEditLens } from "@/features/ai/lib/agent-edit-lenses";
+import { agentEditDecorations } from "@/features/ai/services/agent-edit-decorations";
+import type { AgentEditLens } from "@/features/ai/services/agent-edit-lenses";
 
 /** What a hunk's Keep and Undo actions do. */
 export interface AgentHunkActions {

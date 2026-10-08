@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { buildWslWorkspaceTree, getWslProjectName } from "../controllers/wsl-workspace";
+import { buildWslWorkspaceTree, getWslProjectName } from "../services/wsl-workspace";
 
 describe("buildWslWorkspaceTree", () => {
   it("wraps WSL directory entries in a WSL workspace root", () => {

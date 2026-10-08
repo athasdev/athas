@@ -1,4 +1,4 @@
-import { getGitHubAvatarUrl } from "@/features/github/utils/github-avatar-url";
+import { getGitHubAvatarUrl } from "@/features/github/services/github-avatar-url";
 import type { AuthUser } from "@/features/auth/services/auth-api";
 
 export function getAccountIdentity(user: AuthUser | null, githubLogin?: string | null) {

@@ -1,4 +1,4 @@
-import { formatResetDate, formatUsdCents } from "@/features/ai/lib/hosted-usage";
+import { formatResetDate, formatUsdCents } from "@/features/ai/services/hosted-usage";
 import type {
   ComposerNotice,
   ComposerNoticeInput,

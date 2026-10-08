@@ -3,7 +3,7 @@ import {
   buildProjectGitHubApiUrl,
   parseGitHubRepository,
   resolveProjectGitHubRepository,
-} from "@/features/views/lib/view-github";
+} from "@/features/views/services/view-github";
 
 describe("custom view GitHub integration", () => {
   it.each([

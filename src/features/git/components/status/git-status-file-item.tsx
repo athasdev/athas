@@ -1,6 +1,6 @@
 import type { MouseEvent } from "react";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
-import { writeSidebarResourceDragData } from "@/features/sidebar/utils/sidebar-resource-drag";
+import { writeSidebarResourceDragData } from "@/features/sidebar/services/sidebar-resource-drag";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Checkbox } from "@/ui/checkbox";
 import Tooltip from "@/ui/tooltip";

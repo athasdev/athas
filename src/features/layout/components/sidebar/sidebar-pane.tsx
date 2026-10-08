@@ -4,8 +4,8 @@ import { useFileSystemStore } from "@/features/file-system/stores/file-system.st
 import {
   getActiveSidebarView,
   getSidebarPaneLevel,
-  type SidebarView,
 } from "@/features/layout/utils/sidebar-pane-utils";
+import type { SidebarView } from "@/features/layout/types/sidebar.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { useUIState } from "@/features/layout/stores/ui-state.store";

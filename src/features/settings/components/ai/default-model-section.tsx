@@ -6,7 +6,7 @@ import { useAIModelSettings } from "@/features/settings/hooks/use-ai-model-setti
 import {
   isConnectionAvailable,
   withDefaultConnection,
-} from "@/features/settings/lib/ai-model-preferences";
+} from "@/features/settings/services/ai-model-preferences";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { Button } from "@/ui/button";

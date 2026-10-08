@@ -1,4 +1,4 @@
-import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import type { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
 import { showToast } from "@/utils/toast";
 import { ImageEditSession } from "./image-edit-session";

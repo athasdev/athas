@@ -5,7 +5,7 @@ import { LspClient } from "@/features/editor/lsp/lsp-client";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getBufferById } from "@/features/editor/stores/buffer-index";
 import { hasTextContent } from "@/features/panes/types/pane-content.types";
-import { normalizeOutlineSymbols } from "../utils/outline-symbols";
+import { normalizeOutlineSymbols } from "../services/outline-symbols";
 import { subscribeLiveDocument } from "@/features/editor/services/live-document-registry";
 import { useBufferIdOrActive } from "@/features/panes/hooks/use-pane-buffer-state";
 
