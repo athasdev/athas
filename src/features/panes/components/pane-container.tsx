@@ -594,7 +594,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       setInternalHoverZone(hover.paneId === pane.id ? hover.zone : null);
     };
 
-    return onAppEvent("athas-internal-tab-drag-hover", syncHover);
+    return onAppEvent("tabs:internal-drag-hover", syncHover);
   }, [isWorkspaceSurfaceActive, pane.id]);
 
   useEffect(() => {
@@ -602,7 +602,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       return;
     }
 
-    return onAppEvent("file-tree-drop-on-pane", (drop) => {
+    return onAppEvent("file-tree:drop-on-pane", (drop) => {
       const fileDragData = window.__fileDragData;
       if (!fileDragData) return;
 
@@ -696,7 +696,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
             },
             { paneId: pane.id },
           );
-          emitAppEvent("terminal-detach-to-buffer", { terminalId });
+          emitAppEvent("terminal:detach-to-buffer", { terminalId });
         } else if (sourcePaneId && sourcePaneId !== pane.id && bufferId) {
           moveBufferToPaneDropTarget(bufferId, sourcePaneId, { paneId: pane.id, zone: "center" });
           activateBufferInPaneAndSync(pane.id, bufferId);
@@ -722,7 +722,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
           },
           { paneId: newPaneId },
         );
-        emitAppEvent("terminal-detach-to-buffer", { terminalId });
+        emitAppEvent("terminal:detach-to-buffer", { terminalId });
       } else if (sourcePaneId && sourcePaneId !== pane.id && bufferId) {
         moveBufferToPaneDropTarget(bufferId, sourcePaneId, { paneId: newPaneId, zone: "center" });
         activateBufferInPaneAndSync(newPaneId, bufferId);

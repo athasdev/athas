@@ -42,14 +42,14 @@ export function getInternalTabDragData(): InternalTabDragData | null {
 export function clearInternalTabDragData() {
   delete window.__athasInternalTabDragData;
   delete window.__athasInternalTabDragHover;
-  emitAppEvent("athas-internal-tab-drag-hover");
+  emitAppEvent("tabs:internal-drag-hover");
 }
 
 export function setInternalTabDragHoverTarget(next: InternalTabDragHoverTarget) {
   const prev = window.__athasInternalTabDragHover;
   if (prev?.paneId === next.paneId && prev?.zone === next.zone) return;
   window.__athasInternalTabDragHover = next;
-  emitAppEvent("athas-internal-tab-drag-hover");
+  emitAppEvent("tabs:internal-drag-hover");
 }
 
 export function setInternalTabDragHover(point: { x: number; y: number }) {

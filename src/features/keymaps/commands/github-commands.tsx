@@ -10,7 +10,7 @@ import {
   WarningCircleIcon,
 } from "@/ui/icons";
 import type { Command } from "../types/keymaps.types";
-import type { GitHubSidebarSection } from "./github-command-actions";
+import type { GitHubSidebarSection } from "@/features/github/types/github.types";
 
 const githubActions = () => import("./github-command-actions");
 

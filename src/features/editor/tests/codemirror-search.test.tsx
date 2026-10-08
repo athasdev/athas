@@ -7,10 +7,6 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import type { CodeMirrorHost } from "../engines/codemirror/host";
 
-vi.mock("@/features/keymaps/hooks/use-command-shortcut", () => ({
-  useCommandShortcut: () => undefined,
-}));
-
 const emptyRects = () => Object.assign([], { item: () => null }) as unknown as DOMRectList;
 Range.prototype.getClientRects = emptyRects;
 Range.prototype.getBoundingClientRect = () => new DOMRect();

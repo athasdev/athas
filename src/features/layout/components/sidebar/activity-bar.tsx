@@ -56,12 +56,12 @@ export const ActivityBar = memo(() => {
     const uiState = useUIState.getState();
     uiState.setBottomPaneActiveTab("terminal");
     uiState.setIsBottomPaneVisible(true);
-    emitAppEvent("terminal-new");
+    emitAppEvent("terminal:new");
   }, []);
   const handleNewWorktree = useCallback(() => {
     openSidebarView("git");
     window.setTimeout(() => {
-      emitAppEvent("athas:git-palette-action", { type: "manage-branches", tab: "worktrees" });
+      emitAppEvent("git:palette-action", { type: "manage-branches", tab: "worktrees" });
     }, 0);
   }, [openSidebarView]);
   const handleDebuggerToggle = useCallback(() => {

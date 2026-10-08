@@ -7,6 +7,7 @@ import {
   withToolCallIds,
 } from "@/features/ai/lib/tool-call-state";
 import { getToolCallPhase } from "@/features/ai/lib/tool-call-summary";
+import type { ToolCall } from "@/features/ai/types/ai-chat.types";
 
 describe("tool call state", () => {
   it("adds a call whose first event is an update instead of dropping it", () => {
@@ -184,7 +185,7 @@ describe("tool call state", () => {
 
     const partial = {
       ...complete,
-      toolCalls: [...complete.toolCalls, { name: "terminal", input: {}, timestamp }],
+      toolCalls: [...complete.toolCalls, { name: "terminal", input: {}, timestamp } as ToolCall],
     };
     const fixed = withToolCallIds(partial);
     expect(fixed.toolCalls![0]).toBe(partial.toolCalls[0]);

@@ -105,7 +105,7 @@ async function handleDebugRequest(sessionId: string, message: Record<string, unk
         ),
       )
     : undefined;
-  emitAppEvent("create-terminal-with-command", {
+  emitAppEvent("terminal:create-with-command", {
     command: terminalCommand,
     name: typeof request?.title === "string" ? request.title : "Debug Console",
     workingDirectory: typeof request?.cwd === "string" ? request.cwd : undefined,

@@ -75,7 +75,7 @@ const chat = (id: string, time: number): Chat => ({
 beforeEach(() => {
   vi.clearAllMocks();
   vi.stubGlobal("window", {});
-  unsubscribeStatus = onAppEvent("athas:sharing-status", state.dispatch);
+  unsubscribeStatus = onAppEvent("sharing:status", state.dispatch);
   state.chats = [];
   state.userId = 1;
   state.options.mockResolvedValue({ sessionsEnabled: true, items: [], excludedSources: [] });

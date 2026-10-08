@@ -12,7 +12,7 @@ import { readBufferText } from "@/features/editor/services/buffer-text";
 import { emitAppEvent } from "@/utils/app-events";
 
 export function openShare(draft: ShareDraft) {
-  emitAppEvent("athas:open-share", draft);
+  emitAppEvent("sharing:open", draft);
 }
 
 export function shareEditor(selectionOnly = false) {

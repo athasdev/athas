@@ -23,10 +23,9 @@ import {
   ModelResultsProvider,
   ModelSection,
   ProviderModels,
-  useConnectedModelProviders,
-  useModelName,
   useModelSearchResults,
 } from "./model-connection-menu";
+import { useConnectedModelProviders, useModelName } from "@/features/ai/hooks/use-model-providers";
 
 const INHERIT_VALUE = "inherit";
 

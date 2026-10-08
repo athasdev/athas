@@ -1,5 +1,5 @@
 import { ModelConnectionPicker } from "@/features/ai/components/selectors/model-connection-picker";
-import { useConnectedModelProviders } from "@/features/ai/components/selectors/model-connection-menu";
+import { useConnectedModelProviders } from "@/features/ai/hooks/use-model-providers";
 import { useProviderById } from "@/features/ai/hooks/use-available-providers";
 import type { IntelligenceConnection } from "@/features/ai/intelligence/types/intelligence.types";
 import { useAIModelSettings } from "@/features/settings/hooks/use-ai-model-settings";

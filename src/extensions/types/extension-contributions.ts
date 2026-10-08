@@ -1,5 +1,4 @@
 import type {
-  CommandContribution,
   DatabaseProviderContribution,
   ExtensionManifest,
   AIProviderContribution,
@@ -51,15 +50,6 @@ export function getManifestLanguageContributions(
       cloneLanguageContribution,
     ),
     (language) => language.id,
-  );
-}
-
-export function getManifestCommandContributions(
-  manifest: ExtensionManifest,
-): CommandContribution[] {
-  return uniqueBy(
-    [...(manifest.commands || []), ...(manifest.contributes?.commands || [])],
-    (command) => command.command,
   );
 }
 

@@ -62,7 +62,7 @@ export function useDeliveryList(
     };
   }, [load, refreshNonce]);
   useEffect(() => {
-    const changed = (detail: AppEventMap["athas:github-delivery-changed"]) => {
+    const changed = (detail: AppEventMap["github:delivery-changed"]) => {
       if (detail.kind === kind && detail.repoPath === repoPath) {
         generation.current++;
         busy.current = false;
@@ -73,7 +73,7 @@ export function useDeliveryList(
       if (document.visibilityState === "visible" && page.current <= 1) void load(false, true);
     };
     const interval = window.setInterval(poll, DELIVERY_LIST_TTL);
-    const unsubscribeChanged = onAppEvent("athas:github-delivery-changed", changed);
+    const unsubscribeChanged = onAppEvent("github:delivery-changed", changed);
     window.addEventListener("focus", poll);
     return () => {
       window.clearInterval(interval);

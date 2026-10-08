@@ -178,7 +178,7 @@ export const useRename = (filePath: string | undefined) => {
     [filePath, cancelRename],
   );
   useEffect(() => {
-    return onAppEvent("editor-rename-symbol", () => void startRename());
+    return onAppEvent("editor:rename-symbol", () => void startRename());
   }, [startRename]);
   return { renameState, inputRef, cancelRename, executeRename };
 };

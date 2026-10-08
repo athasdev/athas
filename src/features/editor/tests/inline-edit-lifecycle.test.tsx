@@ -48,9 +48,6 @@ vi.mock("@/features/ai/components/selectors/model-connection-picker", () => ({
     return null;
   },
 }));
-vi.mock("@/features/keymaps/hooks/use-command-shortcut", () => ({
-  useCommandShortcut: () => undefined,
-}));
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), warning: vi.fn(), success: vi.fn() } }));
 
 const applyInlineEdit = vi.fn();

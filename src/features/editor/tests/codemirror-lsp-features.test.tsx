@@ -131,7 +131,7 @@ describe("CodeMirror LSP features", () => {
 
   it("opens the completion popup from the trigger suggest command", async () => {
     const editor = mount();
-    act(() => emitAppEvent("editor-trigger-suggest"));
+    act(() => emitAppEvent("editor:trigger-suggest"));
     await vi.waitFor(() => expect(completionStatus(editor.state)).toBe("active"));
     expect(currentCompletions(editor.state).map((completion) => completion.label)).toEqual([
       "console",
@@ -141,7 +141,7 @@ describe("CodeMirror LSP features", () => {
 
   it("shows the hover at the cursor from the show hover command", async () => {
     const editor = mount();
-    act(() => emitAppEvent("editor-show-hover"));
+    act(() => emitAppEvent("editor:show-hover"));
     await vi.waitFor(() =>
       expect(editor.dom.querySelector(".cm-athas-hover")?.textContent).toBe("hover text"),
     );
@@ -149,7 +149,7 @@ describe("CodeMirror LSP features", () => {
 
   it("leaves completion off in read-only editors", async () => {
     const editor = mount(true);
-    act(() => emitAppEvent("editor-trigger-suggest"));
+    act(() => emitAppEvent("editor:trigger-suggest"));
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(completionStatus(editor.state)).toBeNull();
   });

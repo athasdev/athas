@@ -30,7 +30,7 @@ import { useViewerZoom } from "@/features/viewer/hooks/use-viewer-zoom";
 import { Button } from "@/ui/button";
 import { Alert, AlertDescription } from "@/ui/alert";
 import { ChromeSeparator } from "@/ui/chrome";
-import UnsavedChangesDialog from "@/features/window/components/unsaved-changes-dialog";
+import UnsavedChangesDialog from "@/features/tabs/components/unsaved-changes-dialog";
 import { cn } from "@/utils/cn";
 import { formatFileSize } from "@/utils/format-file-size";
 import { getImageMimeType } from "@/utils/image-file-types";

@@ -102,3 +102,15 @@ export interface GitBlameLine {
   time: number;
   commit: string;
 }
+
+/** What a command asks the Git sidebar to do, sent as the `git:palette-action` app event. */
+export type GitSidebarAction =
+  | { type: "manage-branches"; tab: "branches" | "worktrees" }
+  | { type: "show-branch-diff" }
+  | { type: "select-repository" }
+  | { type: "initialize-repository" }
+  | { type: "show-tab"; tab: "changes" | "history" }
+  | { type: "manage-remotes" }
+  | { type: "manage-tags" }
+  | { type: "view-stashes" }
+  | { type: "refresh" };

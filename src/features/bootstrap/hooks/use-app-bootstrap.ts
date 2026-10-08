@@ -19,10 +19,10 @@ import { useKeymapContext } from "@/features/keymaps/hooks/use-keymap-context";
 import { useKeymaps } from "@/features/keymaps/hooks/use-keymaps";
 import { useWhatsNewStore } from "@/features/settings/stores/whats-new.store";
 import { useCliOpen } from "@/features/window/hooks/use-cli-open";
-import { useContextMenuPrevention } from "@/features/window/hooks/use-context-menu-prevention";
+import { useContextMenuPrevention } from "@/features/bootstrap/hooks/use-context-menu-prevention";
 import { useDeepLink } from "@/features/window/hooks/use-deep-link";
 import { useExternalNavigationGuard } from "@/features/window/hooks/use-external-navigation-guard";
-import { usePlatformSetup } from "@/features/window/hooks/use-platform-setup";
+import { usePlatformSetup } from "@/features/bootstrap/hooks/use-platform-setup";
 import { useWindowDocumentState } from "@/features/window/hooks/use-window-document-state";
 import { useAuthStore } from "@/features/auth/stores/auth.store";
 import {

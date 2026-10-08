@@ -22,7 +22,7 @@ export const NotificationsTrigger = () => {
   );
 
   useEffect(() => {
-    return onAppEvent("athas:notifications:show", (detail) => {
+    return onAppEvent("notifications:show", (detail) => {
       setInitialCategory(detail?.category ?? "all");
       setIsCommandVisible(true);
     });

@@ -46,7 +46,11 @@ import {
   getClosedRemoteConnections,
   getProjectRemoteConnectionId,
 } from "@/features/layout/utils/project-switcher-items";
-import { getProjectNameFromPath, isRemoteProjectPath, ProjectGlyph } from "./sidebar/project-glyph";
+import { ProjectGlyph } from "./sidebar/project-glyph";
+import {
+  getProjectNameFromPath,
+  isRemoteProjectPath,
+} from "@/features/workspace/services/project-tab-path";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 /** Icons found in each project folder, so switching projects doesn't rescan and blank the icon. */

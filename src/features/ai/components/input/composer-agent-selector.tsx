@@ -5,10 +5,9 @@ import {
   ModelResultsProvider,
   ModelSection,
   ProviderModels,
-  useConnectedModelProviders,
-  useModelName,
   useModelSearchResults,
 } from "@/features/ai/components/selectors/model-connection-menu";
+import { useConnectedModelProviders, useModelName } from "@/features/ai/hooks/use-model-providers";
 import { useAgentOptions } from "@/features/ai/hooks/use-agent-options";
 import { getCodexModelPatch } from "@/features/ai/integrations/codex/codex-model-settings";
 import { useCodexModels } from "@/features/ai/integrations/codex/use-codex-models";

@@ -360,7 +360,7 @@ export const viewCommands: Command[] = [
       } else {
         state.setBottomPaneActiveTab("terminal");
         state.setIsBottomPaneVisible(true);
-        emitAppEvent("terminal-ensure-session");
+        emitAppEvent("terminal:ensure-session");
       }
     },
   },

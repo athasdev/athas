@@ -258,7 +258,7 @@ const GitBranchManager = ({
 
   useEffect(() => {
     if (!paletteTarget) return;
-    return onAppEvent("athas:open-git-view-branch-manager", ({ tab }) => {
+    return onAppEvent("git:open-branch-manager", ({ tab }) => {
       if (!repoPath) return;
       setActiveTab(tab);
       setIsDropdownOpen(true);

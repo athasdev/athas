@@ -187,10 +187,6 @@ export function recordAgentWrite(
 }
 
 /** Whether an entry has nothing left to review. */
-export function isResolved(entry: AgentEditEntry): boolean {
-  return entry.baseline === entry.current;
-}
-
 export function countChangedLines(hunks: AgentEditHunk[]): { added: number; removed: number } {
   let added = 0;
   let removed = 0;

@@ -28,9 +28,6 @@ vi.mock("@tauri-apps/api/core", () => ({
     constructor(public onmessage: (chunk: T) => void) {}
   },
 }));
-vi.mock("@/features/keymaps/hooks/use-command-shortcut", () => ({
-  useCommandShortcut: () => undefined,
-}));
 
 const success = { stdout: "ok", stderr: "", exitCode: 0, cancelled: false, timedOut: false };
 const options = {
@@ -128,7 +125,13 @@ it("shows unfinished historical commands as interrupted without restarting them"
     role: "system",
     timestamp: new Date(),
     toolCalls: [
-      { name: "user_terminal_command", input: {}, timestamp: new Date(), isComplete: false },
+      {
+        id: "call-128",
+        name: "user_terminal_command",
+        input: {},
+        timestamp: new Date(),
+        isComplete: false,
+      },
     ],
   };
   expect(renderToStaticMarkup(<ChatTerminalCommand message={message} />)).toContain("Interrupted");

@@ -6,7 +6,7 @@ import type { CodeMirrorHost } from "../host";
 import {
   clearActiveCodeMirrorNavigation,
   setActiveCodeMirrorNavigation,
-} from "../navigation/active-navigation";
+} from "@/features/editor/services/active-editor-navigation";
 import { toLspPosition } from "../navigation/lsp-document";
 import {
   expandSelectionTarget,

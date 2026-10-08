@@ -17,7 +17,6 @@ import { usePaneKeyboard } from "@/features/panes/hooks/use-pane-keyboard";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useVimStore } from "@/features/vim/stores/vim.store";
 import { isWslPath } from "@/features/wsl/utils/wsl-path";
-import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
 import { useMenuEventsWrapper } from "@/features/window/hooks/use-menu-events-wrapper";
 import { useWorkspaceTabsStore } from "@/features/workspace/stores/workspace-tabs.store";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
@@ -145,9 +144,7 @@ export function MainLayout() {
     }
   }, !rootFolderPath);
 
-  const terminalWidthMode = useTerminalStore((state) => state.widthMode);
-  const isEditorBottomPaneVisible =
-    terminalWidthMode === "editor" && deferredSurfacesReady && isBottomPaneVisible;
+  const isEditorBottomPaneVisible = deferredSurfacesReady && isBottomPaneVisible;
   const roundMainContentLeftEdge = !renderedSidebarVisible;
   const roundMainContentRightEdge = !renderedRightSidebarVisible;
 
@@ -324,10 +321,9 @@ export function MainLayout() {
               >
                 <CachedWorkspaceSplitViews />
               </div>
-              {terminalWidthMode === "editor" && deferredSurfacesReady && (
+              {deferredSurfacesReady && (
                 <Suspense fallback={null}>
                   <BottomPane
-                    embedded
                     roundLeftEdge={roundMainContentLeftEdge}
                     roundRightEdge={roundMainContentRightEdge}
                   />
@@ -350,14 +346,6 @@ export function MainLayout() {
               />
             </ResizablePane>
           </div>
-
-          {terminalWidthMode === "full" && deferredSurfacesReady && (
-            <div className="px-workbench">
-              <Suspense fallback={null}>
-                <BottomPane />
-              </Suspense>
-            </div>
-          )}
         </div>
 
         <TitleBarWithSettings showMinimal overlay />

@@ -26,29 +26,9 @@ import type { CoreFeaturesState } from "@/features/settings/types/feature.types"
 import type { Settings } from "@/features/settings/types/settings.types";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
 import type { SettingsTab } from "@/features/layout/stores/ui-state/types/ui-state.types";
+import { settingsTabLabels } from "@/features/settings/config/settings-tabs";
 import type { Command } from "../types/keymaps.types";
-
-export const settingsTabLabels: Record<SettingsTab, string> = {
-  account: "Account",
-  sharing: "Cloud",
-  notifications: "Notifications",
-  general: "General",
-  editor: "Editor",
-  git: "Git",
-  appearance: "Appearance",
-  ai: "AI",
-  "ai-models": "AI Models & Keys",
-  "ai-completion": "Tab Completion",
-  "ai-agents": "AI Agents",
-  "ai-mcp": "MCP Servers",
-  keyboard: "Keybindings",
-  language: "Editor",
-  collaboration: "Collaboration",
-  enterprise: "Enterprise",
-  advanced: "Advanced",
-  terminal: "Terminal",
-  "file-explorer": "Files",
-};
+import { getSettingsTabCommandId, settingsCommandTabs } from "../constants/settings-tab-commands";
 
 /** Opens a settings tab with an optional search query, matching the Settings page search. */
 export async function openSettingsWithQuery(tab: SettingsTab | undefined, query: string) {
@@ -134,23 +114,18 @@ function featureToggle(
   });
 }
 
-export const settingsTabCommandIds = (Object.keys(settingsTabLabels) as SettingsTab[])
-  .filter((tab) => tab !== "language")
-  .map((tab) => `preferences.openSettingsTab.${tab}`);
-
-const settingsTabCommands: Command[] = (
-  Object.entries(settingsTabLabels) as Array<[SettingsTab, string]>
-)
-  .filter(([tab]) => tab !== "language")
-  .map(([tab, label]) => ({
-    id: `preferences.openSettingsTab.${tab}`,
+const settingsTabCommands: Command[] = settingsCommandTabs.map((tab) => {
+  const label = settingsTabLabels[tab];
+  return {
+    id: getSettingsTabCommandId(tab),
     title: `Preferences: Open ${label} Settings`,
     category: "Settings",
     description: `Open the ${label.toLowerCase()} settings tab`,
     icon: <SettingsIcon />,
     palette: true,
     execute: () => openSettingsWithQuery(tab, ""),
-  }));
+  };
+});
 
 export const settingsCommands: Command[] = [
   {

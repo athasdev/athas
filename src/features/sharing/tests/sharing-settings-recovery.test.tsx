@@ -19,9 +19,6 @@ vi.mock("@tauri-apps/plugin-opener", () => ({ openUrl: vi.fn() }));
 vi.mock("@/config/services", () => ({
   getServiceUrls: () => ({ websiteBaseUrl: "https://athas.dev" }),
 }));
-vi.mock("@/features/keymaps/hooks/use-command-shortcut", () => ({
-  useCommandShortcut: () => undefined,
-}));
 vi.mock("../components/share-access-dialog", () => ({ ShareAccessDialog: () => null }));
 const options = {
   pro: true,

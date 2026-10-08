@@ -45,9 +45,6 @@ vi.mock("@/features/layout/stores/ui-state.store", () => ({
   useUIState: { getState: () => ({ openSettings: vi.fn() }) },
 }));
 vi.mock("@tauri-apps/plugin-opener", () => ({ openUrl: vi.fn(async () => {}) }));
-vi.mock("@/features/keymaps/hooks/use-command-shortcut", () => ({
-  useCommandShortcut: () => undefined,
-}));
 vi.mock("../components/provider-api-key-command", () => ({
   ProviderApiKeyCommand: ({ isOpen }: { isOpen: boolean }) =>
     isOpen ? <div role="dialog">Add key</div> : null,

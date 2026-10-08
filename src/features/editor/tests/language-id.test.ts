@@ -8,7 +8,7 @@ import {
   tokenizeLineBasedSyntax,
 } from "../services/line-based-syntax";
 import { hasCodeMirrorLanguage } from "../engines/codemirror/languages";
-import { getLanguageOverlayTokens } from "../lib/wasm-parser/language-overlays";
+import { getLanguageOverlayTokens } from "../lib/wasm-parser/language-overlays/language-overlay-tokens";
 
 describe("getLanguageIdFromPath", () => {
   it("detects scm files as scheme", () => {

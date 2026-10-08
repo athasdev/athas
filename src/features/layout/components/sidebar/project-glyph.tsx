@@ -1,16 +1,7 @@
 import { ProjectCustomIcon } from "@/features/workspace/project-icons/components/project-custom-icon";
 import { FolderIcon, PlusIcon, RemoteIcon } from "@/ui/icons";
 import { cn } from "@/utils/cn";
-
-export function getProjectNameFromPath(path?: string) {
-  if (!path) return "Open Project";
-  const parts = path.split(/[\\/]/).filter(Boolean);
-  return parts[parts.length - 1] || path;
-}
-
-export function isRemoteProjectPath(path?: string) {
-  return path?.startsWith("remote://") === true;
-}
+import { isRemoteProjectPath } from "@/features/workspace/services/project-tab-path";
 
 export function ProjectGlyph({
   projectPath,

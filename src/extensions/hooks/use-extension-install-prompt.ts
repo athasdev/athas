@@ -82,7 +82,7 @@ export const useExtensionInstallPrompt = () => {
                     // Retry installation
                     activePrompts.delete(extensionId);
                     dismissToast(toastId);
-                    emitAppEvent("extension-install-needed", request);
+                    emitAppEvent("extensions:install-needed", request);
                   },
                 },
               });
@@ -107,8 +107,8 @@ export const useExtensionInstallPrompt = () => {
       }
     };
 
-    const unsubscribeInstallNeeded = onAppEvent("extension-install-needed", handleInstallNeeded);
-    const unsubscribeToastDismissed = onAppEvent("toast-dismissed", handleToastDismiss);
+    const unsubscribeInstallNeeded = onAppEvent("extensions:install-needed", handleInstallNeeded);
+    const unsubscribeToastDismissed = onAppEvent("toast:dismissed", handleToastDismiss);
 
     return () => {
       unsubscribeInstallNeeded();

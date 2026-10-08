@@ -216,7 +216,7 @@ export const ExternalEditorTerminal = ({
       }
       if (action.type === "switchTab") {
         event.preventDefault();
-        emitAppEvent("terminal-switch-tab", action.direction);
+        emitAppEvent("terminal:switch-tab", action.direction);
         return false;
       }
       if (action.type === "copy") {

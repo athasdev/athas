@@ -165,7 +165,7 @@ export function signatureHelpExtension(
             if (characters.length > 0) this.triggerCharacters = new Set(characters);
           })
           .catch(() => {});
-        this.unsubscribeTrigger = onAppEvent("editor-trigger-signature-help", this.handleTrigger);
+        this.unsubscribeTrigger = onAppEvent("editor:trigger-signature-help", this.handleTrigger);
       }
 
       private readonly handleTrigger = () => {

@@ -105,7 +105,7 @@ vi.mock("@/ui/alert", () => ({
   AlertDescription: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 }));
 vi.mock("@/ui/chrome", () => ({ ChromeSeparator: () => null }));
-vi.mock("@/features/window/components/unsaved-changes-dialog", () => ({
+vi.mock("@/features/tabs/components/unsaved-changes-dialog", () => ({
   default: ({
     onSave,
     onDiscard,

@@ -20,11 +20,11 @@ const PASSIVE_GIT_CHANGE_SOURCES = new Set(["save", "auto-save", "external-file-
 
 export function emitGitChanged(change: GitChange = {}): void {
   invalidateGitCaches(change);
-  emitAppEvent("athas:git-changed", change);
+  emitAppEvent("git:changed", change);
 }
 
 export function subscribeToGitChanges(listener: (change: GitChange) => void): () => void {
-  return onAppEvent("athas:git-changed", listener);
+  return onAppEvent("git:changed", listener);
 }
 
 export function isPassiveGitChange(change: GitChange): boolean {

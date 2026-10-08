@@ -58,7 +58,7 @@ function Harness({ filePath = path }: { filePath?: string }) {
 }
 async function start() {
   await act(async () => {
-    emitAppEvent("editor-rename-symbol");
+    emitAppEvent("editor:rename-symbol");
   });
 }
 function deferred<T>() {

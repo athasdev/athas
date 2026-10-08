@@ -57,7 +57,7 @@ export function SharingSettings() {
         if (!cancelled) setError(sharingErrorMessage(reason, "Could not load sharing settings"));
       },
     );
-    const unsubscribeStatus = onAppEvent("athas:sharing-status", (status) =>
+    const unsubscribeStatus = onAppEvent("sharing:status", (status) =>
       setSyncError(status.error || ""),
     );
     return () => {

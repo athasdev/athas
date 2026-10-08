@@ -15,7 +15,7 @@ import {
   indexRecentSearchFiles,
 } from "@/features/file-search/services/categorize-file-search-results";
 import { insertSortedLimited } from "@/features/file-search/services/sorted-search-results";
-import { fuzzyScore } from "../utils/fuzzy-search";
+import { subsequenceFuzzyScore } from "../services/subsequence-fuzzy-score";
 import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 export const useFileSearch = (
@@ -102,7 +102,7 @@ export const useFileSearch = (
       return categorizeFileSearchHits(fffHits, rankingContext);
     }
 
-    return categorizeFuzzyFileSearch(files, debouncedQuery, fuzzyScore, rankingContext);
+    return categorizeFuzzyFileSearch(files, debouncedQuery, subsequenceFuzzyScore, rankingContext);
   }, [files, debouncedQuery, bufferSearchSnapshot, getRecentFilesOrderedByFrecency, fffHits]);
 
   return categorizedFiles;

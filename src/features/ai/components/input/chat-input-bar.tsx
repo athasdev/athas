@@ -388,7 +388,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
   );
 
   useEffect(() => {
-    return onAppEvent("athas-sidebar-resource-drop-on-ai", ({ resource }) => {
+    return onAppEvent("sidebar:resource-drop-on-ai", ({ resource }) => {
       if (!isActiveSurface || surfaceId !== "activity-sidebar") return;
       if (!resource) return;
       void addSidebarResourceToContext(resource);
@@ -876,7 +876,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
       insertSkillAtCursor(detail.skill);
     };
 
-    return onAppEvent("athas-ai-insert-skill", handleInsertSkill);
+    return onAppEvent("ai:insert-skill", handleInsertSkill);
   }, [insertSkillAtCursor, isActiveSurface]);
 
   // Handle paste - strip HTML formatting, keep only plain text. Images are added to preview.

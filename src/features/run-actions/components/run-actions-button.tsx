@@ -108,7 +108,7 @@ export default function RunActionsButton() {
     }
 
     if (!action.command) return;
-    emitAppEvent("create-terminal-with-command", {
+    emitAppEvent("terminal:create-with-command", {
       command: action.command,
       name: action.name,
       workingDirectory: resolveRunWorkingDirectory(workspacePath, action.workingDirectory),

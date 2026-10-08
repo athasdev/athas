@@ -31,7 +31,7 @@ export function runAcpTerminalAuth(
       options.signal?.removeEventListener("abort", handleAbort);
       resolve(result);
     };
-    const handleExit = (detail: AppEventMap["terminal-process-exit"]) => {
+    const handleExit = (detail: AppEventMap["terminal:process-exit"]) => {
       if (detail.sessionId !== sessionId) return;
       finish({ exitCode: detail.exitCode, signal: detail.signal });
     };
@@ -41,7 +41,7 @@ export function runAcpTerminalAuth(
       resolve(null);
       return;
     }
-    stopWatchingExit = onAppEvent("terminal-process-exit", handleExit);
+    stopWatchingExit = onAppEvent("terminal:process-exit", handleExit);
     options.signal?.addEventListener("abort", handleAbort);
 
     useTerminalStore.getState().actions.registerSession(sessionId, {

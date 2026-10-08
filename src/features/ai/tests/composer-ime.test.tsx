@@ -22,9 +22,6 @@ vi.mock("../hooks/use-voice-input", () => ({
     toggle: vi.fn(),
   }),
 }));
-vi.mock("@/features/keymaps/hooks/use-command-shortcut", () => ({
-  useCommandShortcut: () => undefined,
-}));
 
 vi.mock("../components/input/composer-agent-selector", () => ({
   ComposerAgentSelector: ({

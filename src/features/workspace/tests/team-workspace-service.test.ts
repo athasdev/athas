@@ -13,7 +13,7 @@ vi.mock("@/features/file-system/services/workspace-resource-provider", () => ({
 vi.mock("@/features/file-system/api/file-system-api", () => ({ writeFile: mocks.writeFile }));
 vi.mock("@tauri-apps/api/core", () => ({ invoke: mocks.invoke }));
 import { loadTeamWorkspace, saveTeamWorkspace } from "../team/services/team-workspace-service";
-onAppEvent("team-workspace-changed", mocks.workspaceChanged);
+onAppEvent("team:workspace-changed", mocks.workspaceChanged);
 const config = { version: 1 as const, name: "Team", instructions: "Use Bun", commands: [] };
 beforeEach(() => {
   vi.clearAllMocks();

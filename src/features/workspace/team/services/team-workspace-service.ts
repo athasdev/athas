@@ -37,5 +37,5 @@ export async function saveTeamWorkspace(
   } else {
     await writeFile(path, content);
   }
-  emitAppEvent("team-workspace-changed", workspacePath);
+  emitAppEvent("team:workspace-changed", workspacePath);
 }

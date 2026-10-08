@@ -339,7 +339,7 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
     if (!command) return;
 
     const cwd = resolvedSelectedConfig.cwd || rootFolderPath || undefined;
-    emitAppEvent("create-terminal-with-command", {
+    emitAppEvent("terminal:create-with-command", {
       name: resolvedSelectedConfig.name,
       command,
       workingDirectory: cwd,
@@ -363,7 +363,7 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
     ) {
       await disconnectDebugAdapterSession(activeSession.id).catch(() => {});
     } else {
-      emitAppEvent("close-active-terminal");
+      emitAppEvent("terminal:close-active");
     }
     debuggerActions.stopSession();
   };
@@ -462,7 +462,7 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
 
     if (sourcePath && line && line > 0) {
       await handleFileOpen?.(sourcePath, false);
-      emitAppEvent("menu-go-to-line", { path: sourcePath, line });
+      emitAppEvent("editor:go-to-line", { path: sourcePath, line });
     }
   };
 
@@ -471,9 +471,9 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
     const stop = () => void stopDebugging();
     const restart = () => void restartDebugging();
     const unsubscribers = [
-      onAppEvent("debugger-start", start),
-      onAppEvent("debugger-stop", stop),
-      onAppEvent("debugger-restart", restart),
+      onAppEvent("debugger:start", start),
+      onAppEvent("debugger:stop", stop),
+      onAppEvent("debugger:restart", restart),
     ];
     return () => {
       for (const unsubscribe of unsubscribers) unsubscribe();
@@ -819,7 +819,7 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
                 breakpoints={sortedBreakpoints}
                 onOpen={async (breakpoint) => {
                   await handleFileOpen?.(breakpoint.filePath, false);
-                  emitAppEvent("menu-go-to-line", {
+                  emitAppEvent("editor:go-to-line", {
                     path: breakpoint.filePath,
                     line: breakpoint.line + 1,
                   });

@@ -1,4 +1,4 @@
-import { useModelName } from "@/features/ai/components/selectors/model-connection-menu";
+import { useModelName } from "@/features/ai/hooks/use-model-providers";
 import { useProviderById } from "@/features/ai/hooks/use-available-providers";
 import { resolveAutocompleteConnection } from "@/features/ai/intelligence/services/resolve-intelligence-connection";
 import type { IntelligenceConnection } from "@/features/ai/intelligence/types/intelligence.types";

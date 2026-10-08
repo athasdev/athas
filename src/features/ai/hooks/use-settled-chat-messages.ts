@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
-import { EMPTY_CHAT_MESSAGES } from "@/features/ai/stores/ai-chat/chat-normalization";
+import { EMPTY_CHAT_MESSAGES } from "@/features/ai/services/chat-normalization";
 import type { Message } from "@/features/ai/types/ai-chat.types";
 
 /** A streaming reply changes the conversation every frame; readers follow it at this pace. */

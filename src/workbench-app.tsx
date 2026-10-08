@@ -118,12 +118,9 @@ function WorkbenchApp() {
             <Toaster />
             <NotificationRecorder />
             <ContinuousAgentsRuntime />
-            <DeferredEventDialog event="athas:open-agent-sessions" load={loadAgentSessionsDialog} />
-            <DeferredEventDialog
-              event="athas:open-product-feedback"
-              load={loadProductFeedbackDialog}
-            />
-            <DeferredEventDialog event="athas:open-share" load={loadShareDialog} />
+            <DeferredEventDialog event="ai:open-agent-sessions" load={loadAgentSessionsDialog} />
+            <DeferredEventDialog event="feedback:open" load={loadProductFeedbackDialog} />
+            <DeferredEventDialog event="sharing:open" load={loadShareDialog} />
             <SharingRuntime />
             <GitHubActionsWatcher />
           </div>

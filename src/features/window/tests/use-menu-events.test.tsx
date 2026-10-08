@@ -8,7 +8,7 @@ const io = vi.hoisted(() => ({
   unlisten: vi.fn(),
 }));
 
-vi.mock("../lib/menu-actions", () => ({
+vi.mock("../services/menu-actions", () => ({
   listenToMenuActions: async (handler: typeof io.handler) => {
     io.handler = handler;
     return io.unlisten;

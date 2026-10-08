@@ -27,7 +27,7 @@ export function ProductFeedbackDialog() {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useAppEvent("athas:open-product-feedback", () => {
+  useAppEvent("feedback:open", () => {
     setIsOpen(true);
     void recordFrictionSignal({ area: "feedback", signal: "opened" });
   });

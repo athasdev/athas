@@ -404,7 +404,7 @@ const TerminalContainer = ({
     };
   }, [registerTerminalFocus, clearTerminalFocus, focusActiveTerminal]);
 
-  // Listen for close-active-terminal event from native menu / keybinding
+  // Listen for terminal:close-active from native menu / keybinding
   useEffect(() => {
     const handleCloseActiveTerminal = () => {
       if (!activeTerminalId) return;
@@ -413,16 +413,16 @@ const TerminalContainer = ({
       focusStoreActiveTerminal();
     };
 
-    return onAppEvent("close-active-terminal", handleCloseActiveTerminal);
+    return onAppEvent("terminal:close-active", handleCloseActiveTerminal);
   }, [activeTerminalId, closeTerminal, focusStoreActiveTerminal]);
 
   // Store pending commands for terminals that are initializing
   const pendingCommandsRef = useRef<Map<string, string>>(new Map());
 
-  // Listen for create-terminal-with-command event (used by agent install buttons)
+  // Listen for terminal:create-with-command (used by agent install buttons)
   useEffect(() => {
     const focusTimers = createTimeoutRegistry();
-    const unsubscribe = onAppEvent("create-terminal-with-command", (request) => {
+    const unsubscribe = onAppEvent("terminal:create-with-command", (request) => {
       const { command, name, workingDirectory, environment } = request;
       const terminalDirectory = workingDirectory || currentDirectory;
 
@@ -465,10 +465,10 @@ const TerminalContainer = ({
     setIsBottomPaneVisible,
   ]);
 
-  // Listen for terminal-ready events to execute pending commands
+  // Listen for terminal:ready to execute pending commands
   useEffect(() => {
     const commandTimers = createTimeoutRegistry();
-    const unsubscribe = onAppEvent("terminal-ready", (session) => {
+    const unsubscribe = onAppEvent("terminal:ready", (session) => {
       const { terminalId, connectionId, remoteConnectionId } = session;
 
       const pendingCommand = pendingCommandsRef.current.get(terminalId);
@@ -497,7 +497,7 @@ const TerminalContainer = ({
       terminalSessionRefs.current.get(activeTerminalId)?.showSearch();
     };
 
-    return onAppEvent("terminal-open-search", handleTerminalOpenSearch);
+    return onAppEvent("terminal:open-search", handleTerminalOpenSearch);
   }, [activeTerminalId]);
 
   useEffect(() => {
@@ -506,7 +506,7 @@ const TerminalContainer = ({
       terminalSessionRefs.current.get(activeTerminalId)?.navigateCommand(direction);
     };
 
-    return onAppEvent("terminal-navigate-command", handleNavigateCommand);
+    return onAppEvent("terminal:navigate-command", handleNavigateCommand);
   }, [activeTerminalId]);
 
   useEffect(() => {
@@ -561,7 +561,7 @@ const TerminalContainer = ({
       );
     };
 
-    return onAppEvent("terminal-command-finished", handleCommandFinished);
+    return onAppEvent("terminal:command-finished", handleCommandFinished);
   }, [
     activeTerminalId,
     isTerminalPaneVisible,
@@ -591,8 +591,8 @@ const TerminalContainer = ({
       if (activeTerminalId) handleUnsplit(activeTerminalId);
     };
 
-    const unsubscribeFocusPane = onAppEvent("terminal-focus-pane", handleFocusPane);
-    const unsubscribeUnsplit = onAppEvent("terminal-unsplit", handleUnsplitEvent);
+    const unsubscribeFocusPane = onAppEvent("terminal:focus-pane", handleFocusPane);
+    const unsubscribeUnsplit = onAppEvent("terminal:unsplit", handleUnsplitEvent);
     return () => {
       unsubscribeFocusPane();
       unsubscribeUnsplit();
@@ -614,9 +614,9 @@ const TerminalContainer = ({
     };
 
     const unsubscribers = [
-      onAppEvent("terminal-clear", handleClear),
-      onAppEvent("terminal-select-all", handleSelectAll),
-      onAppEvent("terminal-copy-last-command-output", handleCopyLastCommandOutput),
+      onAppEvent("terminal:clear", handleClear),
+      onAppEvent("terminal:select-all", handleSelectAll),
+      onAppEvent("terminal:copy-last-command-output", handleCopyLastCommandOutput),
     ];
     return () => {
       for (const unsubscribe of unsubscribers) unsubscribe();
@@ -633,7 +633,7 @@ const TerminalContainer = ({
       }
     };
 
-    return onAppEvent("terminal-switch-tab", handleTerminalSwitchTab);
+    return onAppEvent("terminal:switch-tab", handleTerminalSwitchTab);
   }, [switchToNextTerminal, switchToPrevTerminal]);
 
   useEffect(() => {
@@ -675,11 +675,11 @@ const TerminalContainer = ({
     };
 
     const unsubscribers = [
-      onAppEvent("terminal-new", handleNewTerminalEvent),
-      onAppEvent("terminal-detach-to-buffer", handleDetachTerminalToBuffer),
-      onAppEvent("terminal-ensure-session", handleEnsureTerminalSession),
-      onAppEvent("terminal-split", handleSplitTerminalEvent),
-      onAppEvent("terminal-activate-tab", handleActivateTerminalTab),
+      onAppEvent("terminal:new", handleNewTerminalEvent),
+      onAppEvent("terminal:detach-to-buffer", handleDetachTerminalToBuffer),
+      onAppEvent("terminal:ensure-session", handleEnsureTerminalSession),
+      onAppEvent("terminal:split", handleSplitTerminalEvent),
+      onAppEvent("terminal:activate-tab", handleActivateTerminalTab),
     ];
 
     return () => {

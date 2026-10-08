@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test"
 import { emitAppEvent, useAppEvent } from "@/utils/app-events";
 import { DeferredEventDialog } from "../deferred-event-dialog";
 
-const EVENT = "athas:open-agent-sessions";
+const EVENT = "ai:open-agent-sessions";
 
 function FakeDialog() {
   const [detail, setDetail] = useState<string | null>(null);

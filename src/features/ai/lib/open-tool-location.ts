@@ -62,6 +62,6 @@ export async function openToolPath(path: string, line?: number | null) {
   if (!line) return;
   // The editor mounts for the new buffer first; it retries once more if its text is not in yet.
   setTimeout(() => {
-    emitAppEvent("menu-go-to-line", { line, path: resolvedPath });
+    emitAppEvent("editor:go-to-line", { line, path: resolvedPath });
   }, 100);
 }

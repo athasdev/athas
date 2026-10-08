@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useRegisteredThemes } from "@/extensions/themes/use-registered-themes";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { createAppWindow } from "@/features/window/services/create-app-window";
-import { emitMenuAction } from "../lib/menu-actions";
+import { emitMenuAction } from "../services/menu-actions";
 import {
   Menubar,
   MenubarContent,

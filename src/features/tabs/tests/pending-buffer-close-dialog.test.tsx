@@ -17,7 +17,7 @@ vi.mock("@/features/panes/services/pane-content-save-service", () => ({
 vi.mock("@tauri-apps/api/webviewWindow", () => ({
   getCurrentWebviewWindow: () => ({ label: "main" }),
 }));
-vi.mock("@/features/window/components/unsaved-changes-dialog", () => ({
+vi.mock("@/features/tabs/components/unsaved-changes-dialog", () => ({
   default: (props: {
     fileName: string;
     onSave: () => Promise<unknown>;

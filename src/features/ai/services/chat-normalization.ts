@@ -1,5 +1,5 @@
 import type { Chat, ChatSession, Message } from "@/features/ai/types/ai-chat.types";
-import type { AIChatState } from "./ai-chat-store.types";
+import type { AIChatState } from "@/features/ai/stores/ai-chat/ai-chat-store.types";
 
 /** What a chat without messages in memory reads as; one shared array, so selectors stay stable. */
 export const EMPTY_CHAT_MESSAGES: Message[] = Object.freeze([]) as unknown as Message[];

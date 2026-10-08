@@ -31,7 +31,7 @@ const DiagnosticsBuffer = () => {
         return;
       }
 
-      emitAppEvent("menu-go-to-line", { line: diagnostic.line + 1 });
+      emitAppEvent("editor:go-to-line", { line: diagnostic.line + 1 });
     },
     [handleFileSelect],
   );

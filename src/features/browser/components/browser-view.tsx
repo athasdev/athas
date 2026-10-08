@@ -91,7 +91,7 @@ export function BrowserView({ buffer, paneId, isActive }: BrowserViewProps) {
   }, [isActive, setContext]);
 
   useEffect(() => {
-    return onAppEvent("athas-browser-focus-address-bar", (bufferId) => {
+    return onAppEvent("browser:focus-address-bar", (bufferId) => {
       if (bufferId !== buffer.id) return;
       addressRef.current?.focus();
       addressRef.current?.select();

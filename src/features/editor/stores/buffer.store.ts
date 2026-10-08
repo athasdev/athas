@@ -397,7 +397,7 @@ const checkExtensionSupport = (path: string) => {
             `Integration ${extension.manifest.name} not installed for ${path}`,
           );
 
-          emitAppEvent("extension-install-needed", {
+          emitAppEvent("extensions:install-needed", {
             extensionId: extension.manifest.id,
             extensionName: extension.manifest.displayName,
             filePath: path,

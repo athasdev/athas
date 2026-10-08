@@ -140,7 +140,7 @@ describe("CodeMirror signature help", () => {
       }),
       parent: document.body,
     });
-    emitAppEvent("editor-trigger-signature-help");
+    emitAppEvent("editor:trigger-signature-help");
     await vi.waitFor(() =>
       expect(view!.dom.querySelector(".cm-athas-signatureHelp")).not.toBeNull(),
     );

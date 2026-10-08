@@ -478,7 +478,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
 
   const handleOpenBranchManager = useCallback(
     (tab: "branches" | "worktrees" | "repositories" = "branches") => {
-      emitAppEvent("athas:open-git-view-branch-manager", { tab });
+      emitAppEvent("git:open-branch-manager", { tab });
     },
     [],
   );
@@ -550,7 +550,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       }
     };
 
-    return onAppEvent("athas:git-palette-action", handlePaletteAction);
+    return onAppEvent("git:palette-action", handlePaletteAction);
   }, [
     handleInitializeRepository,
     handleSelectGitSection,

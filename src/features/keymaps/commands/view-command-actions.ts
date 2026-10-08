@@ -29,7 +29,7 @@ export function toggleTerminalPane(): void {
   } else {
     state.setBottomPaneActiveTab("terminal");
     state.setIsBottomPaneVisible(true);
-    emitAppEvent("terminal-ensure-session");
+    emitAppEvent("terminal:ensure-session");
     setTimeout(() => state.requestTerminalFocus(), 100);
   }
 }
@@ -43,7 +43,7 @@ export function openCommandPalette(): void {
 }
 
 export function showNotifications(): void {
-  emitAppEvent("athas:notifications:show");
+  emitAppEvent("notifications:show");
 }
 
 export function openNewAgentSession(): void {
@@ -53,12 +53,12 @@ export function openNewAgentSession(): void {
 export function showFind(): void {
   const activeElement = document.activeElement as HTMLElement | null;
   if (activeElement?.closest(".file-tree-container")) {
-    emitAppEvent("file-tree-open-search");
+    emitAppEvent("file-tree:open-search");
     return;
   }
 
   if (useKeymapStore.getState().contexts.terminalFocus) {
-    emitAppEvent("terminal-open-search");
+    emitAppEvent("terminal:open-search");
     return;
   }
 

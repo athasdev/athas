@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
-import { normalizeChats } from "@/features/ai/stores/ai-chat/chat-normalization";
-import type { Chat } from "@/features/ai/types/ai-chat.types";
+import { normalizeChats } from "@/features/ai/services/chat-normalization";
+import type { Chat, ToolCall } from "@/features/ai/types/ai-chat.types";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 vi.mock("@tauri-apps/api/event", () => ({ listen: vi.fn() }));
@@ -156,12 +156,13 @@ describe("streamed message updates", () => {
 
   it("gives every tool call written to the store an id", () => {
     const timestamp = new Date();
+    const withoutId = (name: string) => ({ name, input: {}, timestamp }) as ToolCall;
     actions().addMessage("a", {
       id: "command",
       role: "system",
       content: "$ ls",
       timestamp,
-      toolCalls: [{ name: "terminal", input: {}, timestamp }],
+      toolCalls: [withoutId("terminal")],
     });
     const command = () =>
       useAIChatStore.getState().messagesByChat.a!.find((message) => message.id === "command")!;
@@ -169,7 +170,7 @@ describe("streamed message updates", () => {
     expect(added.id).toEqual(expect.any(String));
 
     actions().updateMessage("a", "command", {
-      toolCalls: [added, { name: "terminal", input: {}, timestamp }],
+      toolCalls: [added, withoutId("terminal")],
     });
     const [kept, appended] = command().toolCalls!;
     expect(kept!.id).toBe(added.id);
@@ -177,7 +178,7 @@ describe("streamed message updates", () => {
     expect(appended!.id).not.toBe(added.id);
 
     actions().queueMessageUpdate("a", "reply", {
-      toolCalls: [{ name: "Read", input: {}, timestamp }],
+      toolCalls: [withoutId("Read")],
     });
     actions().flushMessageUpdates("a");
     expect(reply().toolCalls![0]!.id).toEqual(expect.any(String));

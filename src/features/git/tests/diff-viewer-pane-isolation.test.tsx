@@ -40,9 +40,6 @@ vi.mock("@/features/workspace/stores/project.store", () => ({
 vi.mock("@/features/auth/stores/auth.store", () => ({
   useAuthStore: (select: (state: { user: null }) => unknown) => select({ user: null }),
 }));
-vi.mock("@/features/keymaps/hooks/use-command-shortcut", () => ({
-  useCommandShortcut: () => undefined,
-}));
 vi.mock("@/features/editor/components/toolbar/breadcrumb", () => ({ default: () => null }));
 vi.mock("@/features/editor/components/code-editor", () => ({
   default: ({ bufferId }: { bufferId: string }) => {
@@ -164,7 +161,7 @@ describe("Diff pane isolation", () => {
     vi.mocked(getFileDiff).mockResolvedValue(fileDiff("app.ts", "refreshed staged content"));
     await focusTab(otherTab.id);
     await act(async () => {
-      emitAppEvent("athas:git-changed", { repoPath: "/repo", filePath: "app.ts" });
+      emitAppEvent("git:changed", { repoPath: "/repo", filePath: "app.ts" });
       await vi.advanceTimersByTimeAsync(50);
     });
     expect(container.querySelector('[aria-label="Staged"]')?.textContent).toContain(

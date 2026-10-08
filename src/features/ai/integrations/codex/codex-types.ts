@@ -17,16 +17,6 @@ export interface CodexThreadSettings {
   collaborationMode?: string;
 }
 
-export interface CodexCatalog {
-  models: any[];
-  threads: any[];
-  skills: any[];
-  mcpServers: any[];
-  permissionProfiles: any[];
-  collaborationModes: any[];
-  rateLimits: Record<string, any> | null;
-}
-
 export interface CodexModelOption {
   id: string;
   name: string;

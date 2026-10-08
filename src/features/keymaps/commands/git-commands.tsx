@@ -12,7 +12,7 @@ import {
   TagIcon,
 } from "@/ui/icons";
 import type { Command } from "../types/keymaps.types";
-import type { GitSidebarAction } from "./git-command-actions";
+import type { GitSidebarAction } from "@/features/git/types/git.types";
 
 const gitActions = () => import("./git-command-actions");
 

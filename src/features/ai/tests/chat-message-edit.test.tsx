@@ -91,9 +91,6 @@ describe("inline prompt editing", () => {
   });
 });
 
-vi.mock("@/features/keymaps/hooks/use-command-shortcut", () => ({
-  useCommandShortcut: () => undefined,
-}));
 vi.mock("../components/messages/tool-call-display", () => ({ ToolCallList: () => null }));
 vi.mock("../components/messages/plan-block-display", () => ({ PlanBlockDisplay: () => null }));
 vi.mock("@/extensions/ui/components/generative-ui-renderer", () => ({

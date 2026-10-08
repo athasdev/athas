@@ -79,13 +79,6 @@ export class ExtensionInstallCancelledError extends TaggedError("ExtensionInstal
   languageId: string;
 }> {}
 
-export type ExtensionInstallationError =
-  | ExtensionDownloadError
-  | ExtensionDownloadTimeoutError
-  | ExtensionChecksumError
-  | ExtensionStorageError
-  | ExtensionInstallCancelledError;
-
 function createDownloadTimeoutError(url: string, timeout: number) {
   return new ExtensionDownloadTimeoutError({
     message: `Download timed out after ${timeout}ms: ${url}`,

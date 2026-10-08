@@ -13,7 +13,7 @@ function subscribe(listener: () => void) {
     if (event.key === codexSettingsKey || event.key === null) listener();
   };
   window.addEventListener("storage", onStorage);
-  const unsubscribeChanged = onAppEvent("athas-codex-settings-changed", listener);
+  const unsubscribeChanged = onAppEvent("ai:codex-settings-changed", listener);
   return () => {
     window.removeEventListener("storage", onStorage);
     unsubscribeChanged();

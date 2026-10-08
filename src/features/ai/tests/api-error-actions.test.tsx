@@ -143,7 +143,3 @@ describe("API error recovery", () => {
     expect(getApiErrorCode("Network unavailable")).toBe("");
   });
 });
-
-vi.mock("@/features/keymaps/hooks/use-command-shortcut", () => ({
-  useCommandShortcut: () => undefined,
-}));

@@ -31,10 +31,7 @@ import { getGitStatus } from "@/features/git/api/git-status-api";
 import { isNotGitRepositoryError, resolveRepositoryPath } from "@/features/git/api/git-repo-api";
 import GitProjectSelector from "@/features/git/components/git-project-selector";
 import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
-import {
-  type GitHubActivitySection,
-  useSidebarStore,
-} from "@/features/layout/stores/sidebar.store";
+import { useSidebarStore } from "@/features/layout/stores/sidebar.store";
 import { writeSidebarResourceDragData } from "@/features/sidebar/services/sidebar-resource-drag";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
@@ -64,7 +61,14 @@ import { getTimeAgo, getSidebarTime } from "../services/github-viewer-utils";
 import { getGitHubAvatarUrl } from "../services/github-avatar-url";
 import { openGitHubContentInNewWindow } from "../utils/open-in-new-window";
 import { groupPullRequests } from "../utils/github-sidebar-groups";
-import type { IssueFilter, PRFilter, PullRequest, WorkflowRunFilter } from "../types/github.types";
+import type {
+  GitHubSidebarAction,
+  GitHubSidebarSection,
+  IssueFilter,
+  PRFilter,
+  PullRequest,
+  WorkflowRunFilter,
+} from "../types/github.types";
 import { useGitHubActionsStore } from "../stores/github-actions.store";
 import GitHubActionsView from "./github-actions-view";
 import { GitHubAvatar } from "./github-avatar";
@@ -93,11 +97,6 @@ const actionFilterLabels: Record<WorkflowRunFilter, string> = {
   successful: "Successful",
   failed: "Failed",
 };
-
-type GitHubSidebarSection = GitHubActivitySection;
-type GitHubPaletteAction =
-  | { type: "show-section"; section: GitHubSidebarSection }
-  | { type: "refresh" };
 
 interface PRListItemProps {
   pr: PullRequest;
@@ -409,7 +408,7 @@ const GitHubPRsView = memo(() => {
   }, [activeSection, effectiveRepoPath, fetchPRs, issueFilter]);
 
   useEffect(() => {
-    const handlePaletteAction = (detail: GitHubPaletteAction) => {
+    const handlePaletteAction = (detail: GitHubSidebarAction) => {
       if (!detail) return;
 
       if (detail.type === "show-section") {
@@ -422,7 +421,7 @@ const GitHubPRsView = memo(() => {
       }
     };
 
-    return onAppEvent("athas:github-palette-action", handlePaletteAction);
+    return onAppEvent("github:palette-action", handlePaletteAction);
   }, [handleRefreshActiveSection]);
 
   const handleSelectRepository = useCallback(async () => {

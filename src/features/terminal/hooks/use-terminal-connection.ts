@@ -223,7 +223,7 @@ export function useTerminalConnection({
         void closeTerminalConnection({ connectionId, remoteConnectionId }).catch(() => {});
         releaseTerminalEventChannel(connectionId);
         if (outputBuffer.isDisposed() || !isCurrent()) return;
-        emitAppEvent("terminal-process-exit", {
+        emitAppEvent("terminal:process-exit", {
           sessionId,
           exitCode: hadError ? null : (exitInfo?.exitCode ?? null),
           signal: exitInfo?.signal ?? null,

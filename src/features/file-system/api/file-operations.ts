@@ -8,7 +8,7 @@ import {
   readFile as platformReadFile,
   writeFile as platformWriteFile,
 } from "./file-system-api";
-import { shouldHideFromFileTree } from "../controllers/utils";
+import { shouldHideFromFileTree } from "../controllers/directory-contents";
 
 export async function readFileContent(path: string): Promise<string> {
   try {

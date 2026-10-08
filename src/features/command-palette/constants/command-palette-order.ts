@@ -1,4 +1,4 @@
-import { settingsTabCommandIds } from "@/features/keymaps/commands/settings-commands";
+import { settingsTabCommandIds } from "@/features/keymaps/constants/settings-tab-commands";
 
 /** Palette entries that are not registered commands: query results and other registries. */
 export type CommandPaletteProviderId = "settings-search" | "extension-commands" | "vim-commands";

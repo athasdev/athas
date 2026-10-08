@@ -190,5 +190,5 @@ export function getOutlineSymbolNavigationDetail(
 }
 
 export function openOutlineSymbol(symbol: Pick<OutlineSymbol, "filePath" | "line" | "character">) {
-  emitAppEvent("menu-go-to-line", getOutlineSymbolNavigationDetail(symbol));
+  emitAppEvent("editor:go-to-line", getOutlineSymbolNavigationDetail(symbol));
 }

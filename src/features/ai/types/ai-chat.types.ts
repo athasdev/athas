@@ -37,7 +37,7 @@ export interface AgentMessageSubmitResult {
 export type ToolCallStatus = AcpToolCallStatus | "cancelled";
 
 export interface ToolCall {
-  id?: string;
+  id: string;
   name: string;
   input: any;
   /** What the transcript shows: ACP content, or raw output when there is none. */

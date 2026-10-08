@@ -7,9 +7,6 @@ import { stageAllChanges } from "@/features/keymaps/commands/git-command-actions
 
 const stageAllFiles = vi.hoisted(() => vi.fn(async () => true));
 
-vi.mock("@/features/keymaps/hooks/use-command-shortcut", () => ({
-  useCommandShortcut: () => undefined,
-}));
 vi.mock("@/features/git/api/git-status-api", () => ({
   stageAllFiles,
   unstageAllFiles: vi.fn(),

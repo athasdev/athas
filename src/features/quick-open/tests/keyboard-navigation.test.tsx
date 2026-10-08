@@ -9,9 +9,6 @@ import { FileListItem } from "../components/file-list-item";
 vi.mock("@/extensions/icon-themes/components/themed-file-icon", () => ({
   ThemedFileIcon: () => null,
 }));
-vi.mock("@/features/keymaps/hooks/use-command-shortcut", () => ({
-  useCommandShortcut: () => undefined,
-}));
 
 const files: FileItem[] = ["first.ts", "second.ts", "third.ts"].map((name) => ({
   name,

@@ -165,8 +165,6 @@ export const featureBoundaries: FeatureBoundaryConfig = {
         "Applies LSP workspace edits and builds file URIs for LSP and DAP callers.",
       "lsp/location-navigation.ts": "Opens LSP locations; navigation commands go through it.",
       "extensions/api.ts": "`editorAPI`, the imperative API to the active editor used by commands.",
-      "extensions/builtin/syntax-highlighting.ts":
-        "Built-in highlighting extension the extension store re-enables after installs.",
       "formatter/formatter-service.ts": "Format document and range entry points for commands.",
       "linter/linter-service.ts":
         "Lint entry point and the diagnostic shape the diagnostics store keeps.",
@@ -308,6 +306,8 @@ export const featureBoundaries: FeatureBoundaryConfig = {
         "Tree widget (roving focus, guides) shared by every sidebar tree; owns its keyboard tests.",
     },
     tabs: {
+      "components/unsaved-changes-dialog.tsx":
+        "Save/discard prompt for closing dirty buffers, tabs and the window.",
       "components/tab-bar.tsx": "The editor tab bar each pane renders.",
       "components/pending-buffer-close-dialog.tsx": MAIN_LAYOUT,
     },
@@ -338,7 +338,6 @@ export const featureBoundaries: FeatureBoundaryConfig = {
       "components/window-close-guard.tsx": MAIN_LAYOUT,
       "components/window-menu-bar.tsx": ACTIVITY_CHROME,
       "components/window-resize-border.tsx": APP_SHELL,
-      "components/unsaved-changes-dialog.tsx": "Save/discard prompt for closing dirty buffers.",
       "detached/detached-window-protocol.ts": "Detached window URL and message protocol.",
       "detached/detached-window-owner.ts":
         "Opens and tracks detached windows for features that detach views.",

@@ -105,7 +105,7 @@ function TerminalPortal({ sessionId, workspaceId }: { sessionId: string; workspa
   useEffect(() => {
     if (!slotEl) return;
     const id = requestAnimationFrame(() => {
-      emitAppEvent("athas-terminal-refit", { sessionId });
+      emitAppEvent("terminal:refit", { sessionId });
     });
     return () => cancelAnimationFrame(id);
   }, [slotEl, sessionId]);

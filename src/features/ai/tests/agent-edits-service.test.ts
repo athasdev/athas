@@ -86,7 +86,7 @@ function agentWrites(previousContent: string | null, content: string, path = PAT
 
 /** The file watcher's event for a change an agent write made. */
 function fileChanged(agentWriteId: number, path = PATH) {
-  emitAppEvent("file-external-change", { path, agentWriteId });
+  emitAppEvent("file:external-change", { path, agentWriteId });
 }
 
 function entry(path = PATH, chat = CHAT) {
@@ -427,7 +427,7 @@ describe("agent edits service", () => {
     vi.useFakeTimers();
     agentWrites(lines("a", "b", "c"), lines("A", "b", "c"));
     mocks.disk.set(PATH, lines("A", "b", "c", "saved"));
-    emitAppEvent("file-external-change", { path: PATH });
+    emitAppEvent("file:external-change", { path: PATH });
     await vi.runAllTimersAsync();
 
     expect(entry()?.baseline).toBe(lines("a", "b", "c", "saved"));
@@ -458,7 +458,7 @@ describe("agent edits service", () => {
     // The agent writes where it edited before, and the watcher reports it before the chat hears.
     mocks.disk.set(PATH, lines("AA", "b"));
     fileChanged(102);
-    emitAppEvent("file-external-change", { path: PATH });
+    emitAppEvent("file:external-change", { path: PATH });
     await vi.advanceTimersByTimeAsync(500);
     expect(entry()?.current).toBe(lines("A", "b"));
 

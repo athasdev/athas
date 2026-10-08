@@ -49,14 +49,14 @@ export function useDeliveryDetail(
     };
   }, [id, key, kind, nonce, repoPath]);
   useEffect(() => {
-    const changed = (detail: AppEventMap["athas:github-delivery-changed"]) => {
+    const changed = (detail: AppEventMap["github:delivery-changed"]) => {
       if (detail.kind === kind && detail.repoPath === repoPath && detail.id === id) refresh();
     };
     const poll = () => {
       if (active && document.visibilityState === "visible") refresh();
     };
     const interval = kind === "deployments" ? window.setInterval(poll, DELIVERY_TTL) : null;
-    const unsubscribeChanged = onAppEvent("athas:github-delivery-changed", changed);
+    const unsubscribeChanged = onAppEvent("github:delivery-changed", changed);
     window.addEventListener("focus", poll);
     return () => {
       if (interval !== null) window.clearInterval(interval);

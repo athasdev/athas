@@ -63,19 +63,19 @@ export function writeUpdatePreferences(
 
     if (!hasPreferences) {
       storage.removeItem(STORAGE_KEY);
-      emitAppEvent("athas:update-preferences-changed");
+      emitAppEvent("updater:preferences-changed");
       return;
     }
 
     storage.setItem(STORAGE_KEY, JSON.stringify(preferences));
-    emitAppEvent("athas:update-preferences-changed");
+    emitAppEvent("updater:preferences-changed");
   } catch {
     // Ignore localStorage failures.
   }
 }
 
 export function notifyUpdateDismissed() {
-  emitAppEvent("athas:update-dismissed");
+  emitAppEvent("updater:dismissed");
 }
 
 export function shouldSuppressUpdate(

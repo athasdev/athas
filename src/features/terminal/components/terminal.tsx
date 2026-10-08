@@ -416,7 +416,7 @@ export const TerminalEmulator = ({
         const action = getTerminalKeyAction(event, currentPlatform);
         if (action.type === "switchTab") {
           event.preventDefault();
-          emitAppEvent("terminal-switch-tab", action.direction);
+          emitAppEvent("terminal:switch-tab", action.direction);
           return false;
         }
 
@@ -493,7 +493,7 @@ export const TerminalEmulator = ({
                 durationMs: command.finishedAt - command.startedAt,
                 finishedAt: command.finishedAt,
               };
-              emitAppEvent("terminal-command-finished", {
+              emitAppEvent("terminal:command-finished", {
                 terminalId: sessionId,
                 command: summary,
               });
@@ -615,7 +615,7 @@ export const TerminalEmulator = ({
       // Re-fit after connection is established so onResize can notify the PTY
       fitTerminal();
 
-      emitAppEvent("terminal-ready", {
+      emitAppEvent("terminal:ready", {
         terminalId: sessionId,
         connectionId: activeConnectionId,
         remoteConnectionId: activeRemoteConnectionId,
@@ -781,7 +781,7 @@ export const TerminalEmulator = ({
   // so PTY/frontend dims match the new slot before any TUI relies on them.
   useEffect(() => {
     if (!isInitialized) return;
-    return onAppEvent("athas-terminal-refit", (detail) => {
+    return onAppEvent("terminal:refit", (detail) => {
       if (detail.sessionId !== sessionId) return;
       fitTerminal();
     });

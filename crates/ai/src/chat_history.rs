@@ -200,12 +200,11 @@ impl ChatHistoryRepository {
          )
          .map_err(|e| format!("Failed to create chats index: {}", e))?;
 
+      // The unique (message_id, call_id) index from `migrate_tool_call_keys` covers lookups by
+      // message, so the older single-column index is redundant.
       conn
-         .execute(
-            "CREATE INDEX IF NOT EXISTS idx_tool_calls_message_id ON tool_calls(message_id)",
-            [],
-         )
-         .map_err(|e| format!("Failed to create tool_calls index: {}", e))?;
+         .execute("DROP INDEX IF EXISTS idx_tool_calls_message_id", [])
+         .map_err(|e| format!("Failed to drop tool_calls index: {}", e))?;
 
       conn
          .execute(
@@ -1608,6 +1607,47 @@ mod tests {
          [],
       );
       assert!(duplicate.is_err());
+   }
+
+   fn tool_call_index_names(repository: &ChatHistoryRepository) -> Vec<String> {
+      let conn = repository.open_connection().unwrap();
+      let mut statement = conn
+         .prepare(
+            "SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'tool_calls' AND \
+             name NOT LIKE 'sqlite_autoindex_%' ORDER BY name",
+         )
+         .unwrap();
+      statement
+         .query_map([], |row| row.get::<_, String>(0))
+         .unwrap()
+         .collect::<SqliteResult<Vec<_>>>()
+         .unwrap()
+   }
+
+   #[test]
+   fn drops_the_redundant_tool_call_message_index() {
+      let directory = tempfile::tempdir().unwrap();
+      let repository = ChatHistoryRepository::new(directory.path().join("history.db"));
+      repository.initialize().unwrap();
+      assert_eq!(
+         tool_call_index_names(&repository),
+         vec!["idx_tool_calls_message_call"]
+      );
+
+      // A database created by an older build still has the single-column index.
+      repository
+         .open_connection()
+         .unwrap()
+         .execute(
+            "CREATE INDEX idx_tool_calls_message_id ON tool_calls(message_id)",
+            [],
+         )
+         .unwrap();
+      repository.initialize().unwrap();
+      assert_eq!(
+         tool_call_index_names(&repository),
+         vec!["idx_tool_calls_message_call"]
+      );
    }
 
    #[test]

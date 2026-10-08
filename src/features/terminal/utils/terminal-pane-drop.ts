@@ -55,7 +55,7 @@ export function setTerminalPaneDropHover(next: TerminalPaneDropTarget | null) {
   const previous = window.__athasTerminalPaneDropHover ?? null;
   if (previous?.terminalId === next?.terminalId && previous?.zone === next?.zone) return;
   window.__athasTerminalPaneDropHover = next;
-  emitAppEvent("athas-terminal-pane-drop-hover");
+  emitAppEvent("terminal:pane-drop-hover");
 }
 
 export function getTerminalPaneDropHover(): TerminalPaneDropTarget | null {

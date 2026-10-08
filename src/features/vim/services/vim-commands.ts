@@ -100,7 +100,7 @@ const gotoCommand: VimCommand = {
     if (args && args.length > 0) {
       const lineNumber = parseInt(args[0]);
       if (!Number.isNaN(lineNumber)) {
-        emitAppEvent("menu-go-to-line", { line: lineNumber, focus: true });
+        emitAppEvent("editor:go-to-line", { line: lineNumber, focus: true });
       }
     }
   },

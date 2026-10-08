@@ -70,5 +70,5 @@ export function loadDeliveryDetail(
 export function notifyDeliveryChanged(kind: DeliveryKind, repoPath: string, id: number) {
   deliveryListCache.clear();
   deliveryDetailCache.clear(deliveryKey(kind, repoPath, id));
-  emitAppEvent("athas:github-delivery-changed", { kind, repoPath, id });
+  emitAppEvent("github:delivery-changed", { kind, repoPath, id });
 }

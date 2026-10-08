@@ -34,5 +34,5 @@ export function canDeleteAgentSessions(status: AcpAgentStatus | null | undefined
 
 /** Opens the list of `agentId`'s sessions in the current workspace. */
 export function openAgentSessions(agentId: string) {
-  emitAppEvent("athas:open-agent-sessions", agentId);
+  emitAppEvent("ai:open-agent-sessions", agentId);
 }

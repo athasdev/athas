@@ -9,7 +9,7 @@ import {
   PackageIcon,
   StackIcon,
 } from "@/ui/icons";
-import { getActiveCodeMirrorNavigation } from "@/features/editor/engines/codemirror/navigation/active-navigation";
+import { getActiveCodeMirrorNavigation } from "@/features/editor/services/active-editor-navigation";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import type { SidebarView } from "@/features/layout/types/sidebar.types";
 import { setOutlineVisibilityPreference } from "@/features/outline/services/outline-visibility";
@@ -42,7 +42,7 @@ const isTerminalFocused = () => useKeymapStore.getState().contexts.terminalFocus
 
 const switchNextTab = () => {
   if (isTerminalFocused()) {
-    emitAppEvent("terminal-switch-tab", "next");
+    emitAppEvent("terminal:switch-tab", "next");
   } else {
     useBufferStore.getState().actions.switchToNextBuffer();
   }
@@ -50,7 +50,7 @@ const switchNextTab = () => {
 
 const switchPrevTab = () => {
   if (isTerminalFocused()) {
-    emitAppEvent("terminal-switch-tab", "prev");
+    emitAppEvent("terminal:switch-tab", "prev");
   } else {
     useBufferStore.getState().actions.switchToPreviousBuffer();
   }
@@ -123,7 +123,7 @@ export const navigationCommands: Command[] = [
     category: "Navigation",
     execute: () => {
       if (isTerminalFocused()) {
-        emitAppEvent("terminal-activate-tab", i);
+        emitAppEvent("terminal:activate-tab", i);
         return;
       }
       const bufferStore = useBufferStore.getState();

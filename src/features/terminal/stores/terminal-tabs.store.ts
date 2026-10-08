@@ -174,14 +174,6 @@ const terminalReducer = (state: TerminalState, action: TerminalAction): Terminal
       return layouts === state.layouts ? state : { ...state, layouts };
     }
 
-    case "RESET_TERMINALS": {
-      return {
-        terminals: [],
-        activeTerminalId: null,
-        layouts: [],
-      };
-    }
-
     case "RESTORE_TERMINALS": {
       const { terminals } = action.payload;
       const newTerminals: Terminal[] = dedupePersistedTerminals(terminals).map((pt) => ({

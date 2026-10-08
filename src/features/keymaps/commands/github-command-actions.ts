@@ -8,17 +8,10 @@ import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { emitAppEvent } from "@/utils/app-events";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
-
-export type GitHubSidebarSection =
-  | "pull-requests"
-  | "issues"
-  | "actions"
-  | "releases"
-  | "deployments";
-
-export type GitHubSidebarAction =
-  | { type: "show-section"; section: GitHubSidebarSection }
-  | { type: "refresh" };
+import type {
+  GitHubSidebarAction,
+  GitHubSidebarSection,
+} from "@/features/github/types/github.types";
 
 const settingBySection = {
   "pull-requests": "showGitHubPullRequests",
@@ -44,7 +37,7 @@ function showGitHubSidebar(): void {
 
 function dispatchGitHubSidebarAction(action: GitHubSidebarAction): void {
   window.setTimeout(() => {
-    emitAppEvent("athas:github-palette-action", action);
+    emitAppEvent("github:palette-action", action);
   }, 0);
 }
 

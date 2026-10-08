@@ -1,13 +1,13 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import UnsavedChangesDialog from "@/features/window/components/unsaved-changes-dialog";
+import UnsavedChangesDialog from "@/features/tabs/components/unsaved-changes-dialog";
 import { WindowCloseSession, type PendingWindowClose } from "../services/window-close-session";
 import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
 import { agentsAreDetached } from "@/features/ai/detached/agent-window.store";
 import { toast } from "sonner";
 import { onAppEvent } from "@/utils/app-events";
-import { listenToMenuActions } from "../lib/menu-actions";
+import { listenToMenuActions } from "../services/menu-actions";
 
 type CloseRequestedHandler = Parameters<ReturnType<typeof getCurrentWindow>["onCloseRequested"]>[0];
 
@@ -111,7 +111,7 @@ export function WindowCloseGuard() {
           toast.error(`Could not protect unsaved changes while closing: ${String(error)}`);
       });
     window.addEventListener("beforeunload", persistSessionSnapshot);
-    const unsubscribeCloseRequest = onAppEvent("athas:request-window-close", continueCloseOrPrompt);
+    const unsubscribeCloseRequest = onAppEvent("window:request-close", continueCloseOrPrompt);
     return () => {
       disposed = true;
       session.reset();

@@ -512,7 +512,7 @@ const CodeEditor = ({
       return true;
     };
 
-    const handleGoToLine = (request: AppEventMap["menu-go-to-line"]) => {
+    const handleGoToLine = (request: AppEventMap["editor:go-to-line"]) => {
       const lineNumber = request.line;
       const columnNumber = request.column;
       const targetPath = request.path;
@@ -527,7 +527,7 @@ const CodeEditor = ({
       }
     };
 
-    const unsubscribe = onAppEvent("menu-go-to-line", handleGoToLine);
+    const unsubscribe = onAppEvent("editor:go-to-line", handleGoToLine);
     return () => {
       if (retryTimer) clearTimeout(retryTimer);
       unsubscribe();

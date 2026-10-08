@@ -114,5 +114,5 @@ export const hasSidebarResourceDragData = (dataTransfer: DataTransfer): boolean 
   dataTransfer.types.includes(SIDEBAR_RESOURCE_MIME);
 
 export const dispatchSidebarResourceDropOnAI = (resource: SidebarDragResource): void => {
-  emitAppEvent("athas-sidebar-resource-drop-on-ai", { resource });
+  emitAppEvent("sidebar:resource-drop-on-ai", { resource });
 };

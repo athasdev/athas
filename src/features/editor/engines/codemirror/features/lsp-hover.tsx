@@ -88,7 +88,7 @@ function lspHoverExtension(filePath: string, container: HTMLElement): Extension 
   ];
 }
 
-/** Language server hover, plus the `editor-show-hover` command showing it at the cursor. */
+/** Language server hover, plus the `editor:show-hover` command showing it at the cursor. */
 export function LspHover({ host }: { host: CodeMirrorHost }) {
   const { view, filePath, container, isActiveSurface } = host;
   const extension = useMemo(() => lspHoverExtension(filePath, container), [container, filePath]);
@@ -102,7 +102,7 @@ export function LspHover({ host }: { host: CodeMirrorHost }) {
         until: (tr) => tr.docChanged || tr.selection !== undefined,
       });
     };
-    return onAppEvent("editor-show-hover", handleShowHover);
+    return onAppEvent("editor:show-hover", handleShowHover);
   }, [isActiveSurface, view]);
 
   return null;

@@ -3,7 +3,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
-import { normalizeChats } from "@/features/ai/stores/ai-chat/chat-normalization";
+import { normalizeChats } from "@/features/ai/services/chat-normalization";
 import type { Chat, Message } from "@/features/ai/types/ai-chat.types";
 import { ChatMessages } from "@/features/ai/components/chat/chat-messages";
 

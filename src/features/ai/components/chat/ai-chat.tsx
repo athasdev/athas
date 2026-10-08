@@ -60,7 +60,7 @@ import {
 import { cn } from "@/utils/cn";
 import { AgentStartView } from "../agent-start-view";
 import { useChatSession } from "../../hooks/use-chat-store";
-import { EMPTY_CHAT_MESSAGES } from "../../stores/ai-chat/chat-normalization";
+import { EMPTY_CHAT_MESSAGES } from "@/features/ai/services/chat-normalization";
 import AIChatInputBar from "../input/chat-input-bar";
 import {
   selectSessionQuestions,

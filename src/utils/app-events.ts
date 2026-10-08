@@ -4,8 +4,8 @@ import type { AcpTerminalAuthExit } from "@/features/ai/services/acp-terminal-au
 import type { AIChatSkillInsertDetail } from "@/features/ai/services/skill-events";
 import type { GitChange } from "@/features/git/events/git-events";
 import type { DeliveryKind } from "@/features/github/delivery/types/github-delivery.types";
-import type { GitSidebarAction } from "@/features/keymaps/commands/git-command-actions";
-import type { GitHubSidebarAction } from "@/features/keymaps/commands/github-command-actions";
+import type { GitSidebarAction } from "@/features/git/types/git.types";
+import type { GitHubSidebarAction } from "@/features/github/types/github.types";
 import type { OpenNotificationsCommandDetail } from "@/features/notifications/constants/notifications-events";
 import type { ShareDraft } from "@/features/sharing/types/share.types";
 import type { SidebarDragResource } from "@/features/sidebar/services/sidebar-resource-drag";
@@ -19,86 +19,87 @@ import type {
  * In-process events between features of one window, with typed payloads.
  *
  * Each key is an event name and its value the payload type; `undefined` means the event carries
- * no payload. Every key must have at least one emitter and one listener in `src`
+ * no payload. Names are `domain:action` in kebab case, where the domain is the feature the event
+ * is about (`terminal:split`, `git:changed`). Every key must have at least one emitter and one listener in `src`
  * (`src/utils/tests/app-events-contract.test.ts` checks this).
  *
  * The bus is per JavaScript realm, exactly like the `window` CustomEvents it replaced: the main
  * window and each detached window have their own. Events that cross windows or come from Rust
  * stay on Tauri events and are not listed here: the native menu (`menu://action`,
- * `features/window/lib/menu-actions.ts`), ACP buffer reads (`acp-buffer-read`), workspace file
+ * `features/window/services/menu-actions.ts`), ACP buffer reads (`acp-buffer-read`), workspace file
  * changes and the other `listen(...)` channels. Dropped files for a terminal stay a DOM event
  * (`athas-terminal-file-drop`) because they are dispatched on the terminal element under the
  * pointer, not broadcast.
  */
 export interface AppEventMap {
   // Editor
-  "menu-go-to-line": { line: number; column?: number; path?: string; focus?: boolean };
-  "editor-trigger-suggest": undefined;
-  "editor-trigger-signature-help": undefined;
-  "editor-show-hover": undefined;
-  "editor-rename-symbol": undefined;
-  "extension-install-needed": ExtensionInstallRequest;
-  "file-external-change": { path: string; agentWriteId?: number };
+  "editor:go-to-line": { line: number; column?: number; path?: string; focus?: boolean };
+  "editor:trigger-suggest": undefined;
+  "editor:trigger-signature-help": undefined;
+  "editor:show-hover": undefined;
+  "editor:rename-symbol": undefined;
+  "extensions:install-needed": ExtensionInstallRequest;
+  "file:external-change": { path: string; agentWriteId?: number };
 
   // Terminal
-  "terminal-new": undefined;
-  "close-active-terminal": undefined;
-  "terminal-ensure-session": undefined;
-  "terminal-open-search": undefined;
-  "terminal-clear": undefined;
-  "terminal-select-all": undefined;
-  "terminal-copy-last-command-output": undefined;
-  "terminal-unsplit": undefined;
-  "terminal-split": TerminalSplitDirection;
-  "terminal-focus-pane": "next" | "previous";
-  "terminal-navigate-command": TerminalCommandNavigationDirection;
-  "terminal-switch-tab": "next" | "prev";
-  "terminal-activate-tab": number;
-  "terminal-detach-to-buffer": { terminalId: string };
-  "create-terminal-with-command": {
+  "terminal:new": undefined;
+  "terminal:close-active": undefined;
+  "terminal:ensure-session": undefined;
+  "terminal:open-search": undefined;
+  "terminal:clear": undefined;
+  "terminal:select-all": undefined;
+  "terminal:copy-last-command-output": undefined;
+  "terminal:unsplit": undefined;
+  "terminal:split": TerminalSplitDirection;
+  "terminal:focus-pane": "next" | "previous";
+  "terminal:navigate-command": TerminalCommandNavigationDirection;
+  "terminal:switch-tab": "next" | "prev";
+  "terminal:activate-tab": number;
+  "terminal:detach-to-buffer": { terminalId: string };
+  "terminal:create-with-command": {
     command: string;
     name?: string;
     workingDirectory?: string;
     environment?: Record<string, string>;
   };
-  "terminal-ready": { terminalId: string; connectionId: string; remoteConnectionId?: string };
-  "terminal-command-finished": { terminalId: string; command: TerminalCommandSummary };
-  "terminal-process-exit": { sessionId: string } & AcpTerminalAuthExit;
-  "athas-terminal-refit": { sessionId: string };
-  "athas-terminal-pane-drop-hover": undefined;
+  "terminal:ready": { terminalId: string; connectionId: string; remoteConnectionId?: string };
+  "terminal:command-finished": { terminalId: string; command: TerminalCommandSummary };
+  "terminal:process-exit": { sessionId: string } & AcpTerminalAuthExit;
+  "terminal:refit": { sessionId: string };
+  "terminal:pane-drop-hover": undefined;
 
   // Workbench, panes and drag and drop
-  "athas-internal-tab-drag-hover": undefined;
-  "file-tree-drop-on-pane": { path: string; name: string; isDir: boolean; x: number; y: number };
-  "file-tree-open-search": undefined;
-  "athas-sidebar-resource-drop-on-ai": { resource: SidebarDragResource };
-  "athas-browser-focus-address-bar": string;
-  "toast-dismissed": { toastId: string };
-  "athas:request-window-close": undefined;
-  "athas:notifications:show": OpenNotificationsCommandDetail | undefined;
-  "athas:open-product-feedback": undefined;
-  "athas:update-dismissed": undefined;
-  "athas:update-preferences-changed": undefined;
-  "team-workspace-changed": string;
+  "tabs:internal-drag-hover": undefined;
+  "file-tree:drop-on-pane": { path: string; name: string; isDir: boolean; x: number; y: number };
+  "file-tree:open-search": undefined;
+  "sidebar:resource-drop-on-ai": { resource: SidebarDragResource };
+  "browser:focus-address-bar": string;
+  "toast:dismissed": { toastId: string };
+  "window:request-close": undefined;
+  "notifications:show": OpenNotificationsCommandDetail | undefined;
+  "feedback:open": undefined;
+  "updater:dismissed": undefined;
+  "updater:preferences-changed": undefined;
+  "team:workspace-changed": string;
 
   // Debugger
-  "debugger-start": undefined;
-  "debugger-stop": undefined;
-  "debugger-restart": undefined;
+  "debugger:start": undefined;
+  "debugger:stop": undefined;
+  "debugger:restart": undefined;
 
   // Git and GitHub
-  "athas:git-changed": GitChange;
-  "athas:git-palette-action": GitSidebarAction;
-  "athas:open-git-view-branch-manager": { tab: "branches" | "worktrees" | "repositories" };
-  "athas:github-palette-action": GitHubSidebarAction;
-  "athas:github-delivery-changed": { kind: DeliveryKind; repoPath: string; id: number };
+  "git:changed": GitChange;
+  "git:palette-action": GitSidebarAction;
+  "git:open-branch-manager": { tab: "branches" | "worktrees" | "repositories" };
+  "github:palette-action": GitHubSidebarAction;
+  "github:delivery-changed": { kind: DeliveryKind; repoPath: string; id: number };
 
   // AI and sharing
-  "athas-ai-insert-skill": AIChatSkillInsertDetail;
-  "athas:open-agent-sessions": string;
-  "athas-codex-settings-changed": undefined;
-  "athas:open-share": ShareDraft;
-  "athas:sharing-status": { error: string | null; syncedAt?: number };
+  "ai:insert-skill": AIChatSkillInsertDetail;
+  "ai:open-agent-sessions": string;
+  "ai:codex-settings-changed": undefined;
+  "sharing:open": ShareDraft;
+  "sharing:status": { error: string | null; syncedAt?: number };
 }
 
 export type AppEventName = keyof AppEventMap;

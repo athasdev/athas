@@ -26,9 +26,6 @@ vi.mock("@/features/workspace/stores/project.store", () => ({
     select({ rootFolderPath: mocks.rootFolderPath ?? undefined }),
 }));
 vi.mock("@tauri-apps/plugin-dialog", () => ({ open: mocks.open }));
-vi.mock("@/features/keymaps/hooks/use-command-shortcut", () => ({
-  useCommandShortcut: () => undefined,
-}));
 
 const saved: SavedConnection = {
   id: "local",

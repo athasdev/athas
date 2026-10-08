@@ -17,7 +17,7 @@ vi.mock("@/features/workspace/stores/project.store", () => ({
 }));
 
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
-import { normalizeChats } from "@/features/ai/stores/ai-chat/chat-normalization";
+import { normalizeChats } from "@/features/ai/services/chat-normalization";
 import {
   forgetSavedChatMessages,
   loadAllChatsFromDb,

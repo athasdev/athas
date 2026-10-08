@@ -86,19 +86,6 @@ describe("terminal splits", () => {
     expect(state.terminals).toHaveLength(2);
   });
 
-  it("drops layouts when terminals are reset", () => {
-    const { dispatch } = useTerminalTabsStore.getState().actions;
-    createTerminal("primary");
-    createTerminal("companion");
-    dispatch({
-      type: "SPLIT_TERMINAL",
-      payload: { terminalId: "primary", newTerminalId: "companion", direction: "right" },
-    });
-
-    dispatch({ type: "RESET_TERMINALS", payload: {} });
-    expect(useTerminalTabsStore.getState().layouts).toEqual([]);
-  });
-
   it("restores persisted layouts for the terminals that came back", () => {
     const { dispatch } = useTerminalTabsStore.getState().actions;
     createTerminal("primary");

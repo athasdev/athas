@@ -16,20 +16,10 @@ import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { showConfirmDialog, showPromptDialog } from "@/ui/dialog";
 import { emitAppEvent } from "@/utils/app-events";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
-
-export type GitSidebarAction =
-  | { type: "manage-branches"; tab: "branches" | "worktrees" }
-  | { type: "show-branch-diff" }
-  | { type: "select-repository" }
-  | { type: "initialize-repository" }
-  | { type: "show-tab"; tab: "changes" | "history" }
-  | { type: "manage-remotes" }
-  | { type: "manage-tags" }
-  | { type: "view-stashes" }
-  | { type: "refresh" };
+import type { GitSidebarAction } from "@/features/git/types/git.types";
 
 function dispatchGitSidebarAction(action: GitSidebarAction): void {
-  emitAppEvent("athas:git-palette-action", action);
+  emitAppEvent("git:palette-action", action);
 }
 
 /** Shows the Git sidebar, then hands the action to it once it has mounted. */

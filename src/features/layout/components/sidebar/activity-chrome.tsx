@@ -5,7 +5,7 @@ import { useFileSystemStore } from "@/features/file-system/stores/file-system.st
 import { AppUpdateControl } from "@/features/layout/components/app-update-control";
 import { NotificationsTrigger } from "@/features/notifications/components/notifications-trigger";
 import RunActionsButton from "@/features/run-actions/components/run-actions-button";
-import { toggleTerminalPane } from "@/features/keymaps/commands/view-command-actions";
+import { keymapRegistry } from "@/features/keymaps/services/keymap-registry";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { AccountMenu } from "@/features/auth/components/account-menu";
 import ProjectPicker from "@/features/workspace/project-picker/components/project-picker";
@@ -162,7 +162,7 @@ function TerminalToggle() {
     <SidebarIconButton
       size="lg"
       active={isTerminalOpen}
-      onClick={toggleTerminalPane}
+      onClick={() => void keymapRegistry.executeCommand("workbench.toggleTerminal")}
       tooltip={isTerminalOpen ? "Hide Terminal" : "Show Terminal"}
       shortcut={toggleTerminalShortcut}
       aria-label={isTerminalOpen ? "Hide terminal" : "Show terminal"}

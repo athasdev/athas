@@ -17,7 +17,7 @@ import {
   selectBrowseSessionsAgentId,
   selectCurrentAgentId,
   selectLogOutAgentId,
-} from "./agent-command-context";
+} from "@/features/ai/services/agent-command-context";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 function getActiveBuffer() {

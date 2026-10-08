@@ -6,7 +6,7 @@ import { emitAppEvent, onAppEvent, useAppEvent } from "../app-events";
 
 const unsubscribers: Array<() => void> = [];
 
-function subscribe(...args: Parameters<typeof onAppEvent<"terminal-activate-tab">>) {
+function subscribe(...args: Parameters<typeof onAppEvent<"terminal:activate-tab">>) {
   unsubscribers.push(onAppEvent(...args));
 }
 
@@ -18,10 +18,10 @@ afterEach(() => {
 describe("app events", () => {
   it("delivers the payload synchronously in subscription order", () => {
     const calls: string[] = [];
-    subscribe("terminal-activate-tab", (index) => calls.push(`first:${index}`));
-    subscribe("terminal-activate-tab", (index) => calls.push(`second:${index}`));
+    subscribe("terminal:activate-tab", (index) => calls.push(`first:${index}`));
+    subscribe("terminal:activate-tab", (index) => calls.push(`second:${index}`));
 
-    emitAppEvent("terminal-activate-tab", 2);
+    emitAppEvent("terminal:activate-tab", 2);
     calls.push("after");
 
     expect(calls).toEqual(["first:2", "second:2", "after"]);
@@ -29,12 +29,12 @@ describe("app events", () => {
 
   it("stops delivering once unsubscribed and ignores duplicate subscriptions", () => {
     const handler = vi.fn();
-    const unsubscribe = onAppEvent("terminal-activate-tab", handler);
-    onAppEvent("terminal-activate-tab", handler);
+    const unsubscribe = onAppEvent("terminal:activate-tab", handler);
+    onAppEvent("terminal:activate-tab", handler);
 
-    emitAppEvent("terminal-activate-tab", 1);
+    emitAppEvent("terminal:activate-tab", 1);
     unsubscribe();
-    emitAppEvent("terminal-activate-tab", 1);
+    emitAppEvent("terminal:activate-tab", 1);
 
     expect(handler).toHaveBeenCalledOnce();
   });
@@ -43,17 +43,17 @@ describe("app events", () => {
     const late = vi.fn();
     const removed = vi.fn();
     let unsubscribeRemoved = () => {};
-    subscribe("terminal-activate-tab", () => {
+    subscribe("terminal:activate-tab", () => {
       unsubscribeRemoved();
-      subscribe("terminal-activate-tab", late);
+      subscribe("terminal:activate-tab", late);
     });
-    unsubscribeRemoved = onAppEvent("terminal-activate-tab", removed);
+    unsubscribeRemoved = onAppEvent("terminal:activate-tab", removed);
 
-    emitAppEvent("terminal-activate-tab", 0);
+    emitAppEvent("terminal:activate-tab", 0);
     expect(removed).not.toHaveBeenCalled();
     expect(late).not.toHaveBeenCalled();
 
-    emitAppEvent("terminal-activate-tab", 0);
+    emitAppEvent("terminal:activate-tab", 0);
     expect(late).toHaveBeenCalledOnce();
   });
 
@@ -62,12 +62,12 @@ describe("app events", () => {
     vi.stubGlobal("reportError", reportError);
     const failure = new Error("listener failed");
     const next = vi.fn();
-    subscribe("terminal-activate-tab", () => {
+    subscribe("terminal:activate-tab", () => {
       throw failure;
     });
-    subscribe("terminal-activate-tab", next);
+    subscribe("terminal:activate-tab", next);
 
-    expect(() => emitAppEvent("terminal-activate-tab", 3)).not.toThrow();
+    expect(() => emitAppEvent("terminal:activate-tab", 3)).not.toThrow();
     expect(reportError).toHaveBeenCalledWith(failure);
     expect(next).toHaveBeenCalledWith(3);
   });
@@ -80,18 +80,18 @@ describe("app events", () => {
     function Listener() {
       const [label, setLabel] = useState("before");
       rerender = () => setLabel("after");
-      useAppEvent("athas:open-agent-sessions", (agentId) => received.push(`${label}:${agentId}`));
+      useAppEvent("ai:open-agent-sessions", (agentId) => received.push(`${label}:${agentId}`));
       return null;
     }
 
     const container = document.createElement("div");
     const root = createRoot(container);
     await act(async () => root.render(<Listener />));
-    emitAppEvent("athas:open-agent-sessions", "a");
+    emitAppEvent("ai:open-agent-sessions", "a");
     await act(async () => rerender());
-    emitAppEvent("athas:open-agent-sessions", "b");
+    emitAppEvent("ai:open-agent-sessions", "b");
     await act(async () => root.unmount());
-    emitAppEvent("athas:open-agent-sessions", "c");
+    emitAppEvent("ai:open-agent-sessions", "c");
 
     expect(received).toEqual(["before:a", "after:b"]);
   });

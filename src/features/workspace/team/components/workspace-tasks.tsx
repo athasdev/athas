@@ -28,7 +28,7 @@ export function WorkspaceTasks({ root, config, onChange, reportError }: Workspac
         throw new Error("Open this workspace before running its tasks.");
       const task = parseTeamWorkspace(JSON.stringify(config)).commands[index];
       if (!task) return;
-      emitAppEvent("create-terminal-with-command", {
+      emitAppEvent("terminal:create-with-command", {
         name: task.name,
         command: task.command,
         workingDirectory: resolveRunWorkingDirectory(root, task.workingDirectory),

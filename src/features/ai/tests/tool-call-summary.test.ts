@@ -3,6 +3,7 @@ import { inferToolKind, summarizeToolCall } from "@/features/ai/lib/tool-call-su
 import type { ToolCall } from "@/features/ai/types/ai-chat.types";
 
 const base = (overrides: Partial<ToolCall>): ToolCall => ({
+  id: "tool",
   name: "tool",
   input: {},
   timestamp: new Date(0),

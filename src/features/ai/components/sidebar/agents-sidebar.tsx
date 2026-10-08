@@ -18,7 +18,7 @@ import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { ChatSession } from "@/features/ai/types/ai-chat.types";
 import { getModelById, getProviderById } from "@/features/ai/types/providers.types";
 import { useGitStore } from "@/features/git/stores/git.store";
-import { getProjectNameFromPath } from "@/features/layout/components/sidebar/project-glyph";
+import { getProjectNameFromPath } from "@/features/workspace/services/project-tab-path";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import {
   ContextMenu,

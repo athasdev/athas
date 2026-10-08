@@ -55,7 +55,7 @@ describe("git commands", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.repo.activeRepoPath = "/repo";
-    unsubscribe = onAppEvent("athas:git-palette-action", gitSidebarAction);
+    unsubscribe = onAppEvent("git:palette-action", gitSidebarAction);
     vi.stubGlobal("window", {
       setTimeout: (callback: () => void) => {
         callback();

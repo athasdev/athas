@@ -4,10 +4,6 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { GitHubCommentComposer } from "../components/github-comment-composer";
 
-vi.mock("@/features/keymaps/hooks/use-command-shortcut", () => ({
-  useCommandShortcut: () => undefined,
-}));
-
 vi.mock("../components/github-markdown", () => ({
   default: ({ content }: { content: string }) => <div data-preview>{content}</div>,
 }));

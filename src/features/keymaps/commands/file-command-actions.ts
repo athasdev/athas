@@ -13,7 +13,7 @@ function isTerminalFocused(): boolean {
 
 export function showNewTab(): void {
   if (isTerminalFocused()) {
-    emitAppEvent("terminal-new");
+    emitAppEvent("terminal:new");
     return;
   }
   useBufferStore.getState().actions.showNewTabView();
@@ -53,7 +53,7 @@ function getActivePaneBufferId(): string | null {
 
 export function closeActiveTab(): void {
   if (isTerminalFocused()) {
-    emitAppEvent("close-active-terminal");
+    emitAppEvent("terminal:close-active");
     return;
   }
 
@@ -119,7 +119,7 @@ export async function reopenClosedTab(): Promise<void> {
 
 export function createNewFile(): void {
   if (isTerminalFocused()) {
-    emitAppEvent("terminal-new");
+    emitAppEvent("terminal:new");
     return;
   }
 

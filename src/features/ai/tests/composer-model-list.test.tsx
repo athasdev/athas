@@ -78,9 +78,6 @@ vi.mock("../stores/ai-chat.store", () => ({
 vi.mock("@/features/layout/stores/ui-state.store", () => ({
   useUIState: { getState: () => ({ openSettings: state.configure }) },
 }));
-vi.mock("@/features/keymaps/hooks/use-command-shortcut", () => ({
-  useCommandShortcut: () => undefined,
-}));
 let root: Root;
 let container: HTMLDivElement;
 const onModelChange = vi.fn();

@@ -11,7 +11,7 @@ import { initializeFrontendTerminalSession } from "@/features/terminal/services/
 import { frontendTrace } from "@/utils/frontend-trace";
 import { applyPlatformClass } from "@/utils/platform";
 import { onAppEvent } from "@/utils/app-events";
-import { listenToMenuActions } from "../lib/menu-actions";
+import { listenToMenuActions } from "../services/menu-actions";
 import {
   type DetachedWindowBaseMessage,
   type DetachedWindowKind,
@@ -191,7 +191,7 @@ export function useDetachedWindow<Message extends { type: string }>({
         requestClose();
       }
     };
-    const unsubscribeCloseRequest = onAppEvent("athas:request-window-close", requestClose);
+    const unsubscribeCloseRequest = onAppEvent("window:request-close", requestClose);
     window.addEventListener("keydown", onKeyDown);
 
     void useAuthStore.getState().actions.initialize().catch(console.error);

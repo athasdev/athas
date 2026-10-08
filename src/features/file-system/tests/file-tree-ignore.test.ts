@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { shouldHideFromFileTree } from "../controllers/utils";
+import { shouldHideFromFileTree } from "../controllers/directory-contents";
 
 describe("file tree ignore rules", () => {
   it("keeps project files visible in the file tree", () => {

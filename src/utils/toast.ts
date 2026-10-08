@@ -28,7 +28,7 @@ const activeToasts = new Map<string, ToastInput>();
 
 function clearActiveToast(id: string) {
   if (!activeToasts.delete(id)) return;
-  emitAppEvent("toast-dismissed", { toastId: id });
+  emitAppEvent("toast:dismissed", { toastId: id });
 }
 
 export function showToast(value: ToastInput, forcedId?: string) {

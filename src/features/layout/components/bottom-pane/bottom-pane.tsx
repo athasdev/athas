@@ -22,16 +22,11 @@ import { BottomBufferPane } from "./bottom-buffer-pane";
 const DebuggerView = lazy(() => import("@/features/debugger/components/debugger-view"));
 
 interface BottomPaneProps {
-  embedded?: boolean;
   roundLeftEdge?: boolean;
   roundRightEdge?: boolean;
 }
 
-const BottomPane = ({
-  embedded = false,
-  roundLeftEdge = true,
-  roundRightEdge = true,
-}: BottomPaneProps) => {
+const BottomPane = ({ roundLeftEdge = true, roundRightEdge = true }: BottomPaneProps) => {
   const isBottomPaneVisible = useUIState((state) => state.isBottomPaneVisible);
   const bottomPaneActiveTab = useUIState((state) => state.bottomPaneActiveTab);
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
@@ -64,7 +59,7 @@ const BottomPane = ({
       setIsInternalHoverTarget(getInternalTabDragHover().paneId === BOTTOM_PANE_ID);
     };
 
-    return onAppEvent("athas-internal-tab-drag-hover", syncHover);
+    return onAppEvent("tabs:internal-drag-hover", syncHover);
   }, []);
 
   useEffect(() => {
@@ -191,7 +186,7 @@ const BottomPane = ({
             },
             { paneId: BOTTOM_PANE_ID },
           );
-          emitAppEvent("terminal-detach-to-buffer", { terminalId: tabData.terminalId });
+          emitAppEvent("terminal:detach-to-buffer", { terminalId: tabData.terminalId });
         } else if (tabData.bufferId && tabData.paneId && tabData.paneId !== BOTTOM_PANE_ID) {
           moveBufferToPane(tabData.bufferId, tabData.paneId, BOTTOM_PANE_ID);
           activateBufferInPaneAndSync(BOTTOM_PANE_ID, tabData.bufferId);
@@ -216,8 +211,8 @@ const BottomPane = ({
       className={cn(
         "group relative z-20 flex h-workbench w-full shrink-0 cursor-ns-resize",
         "transition-colors duration-fast ease-smooth hover:bg-primary-soft",
-        embedded && "border-border border-r bg-background",
-        embedded && roundLeftEdge && "border-l",
+        "border-border border-r bg-background",
+        roundLeftEdge && "border-l",
         isResizing && "bg-primary-soft",
       )}
       role="separator"
@@ -239,9 +234,9 @@ const BottomPane = ({
       data-bottom-pane-drop-target
       className={cn(
         "athas-glass-island relative flex min-h-0 flex-col overflow-hidden bg-background",
-        embedded ? "border-border border-r border-b" : "rounded-xl border border-border",
-        embedded && roundLeftEdge && "rounded-bl-xl border-l",
-        embedded && roundRightEdge && "rounded-br-xl",
+        "border-border border-r border-b",
+        roundLeftEdge && "rounded-bl-xl border-l",
+        roundRightEdge && "rounded-br-xl",
         isInternalHoverTarget && "ring-2 ring-primary ring-inset",
         isFullScreen && "size-full rounded-none border-0 shadow-none ring-0",
         !isFullScreen && "flex-1",

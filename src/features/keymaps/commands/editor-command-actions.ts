@@ -343,11 +343,11 @@ export function removeActiveEditorSecondaryCursors(): void {
 }
 
 export function triggerActiveEditorSuggest(): void {
-  emitAppEvent("editor-trigger-suggest");
+  emitAppEvent("editor:trigger-suggest");
 }
 
 export function triggerActiveEditorParameterHints(): void {
-  emitAppEvent("editor-trigger-signature-help");
+  emitAppEvent("editor:trigger-signature-help");
 }
 
 export function showInlineEditToolbar(): void {
@@ -379,7 +379,7 @@ export function shrinkActiveEditorSelection(): void {
 }
 
 export function triggerActiveEditorRenameSymbol(): void {
-  emitAppEvent("editor-rename-symbol");
+  emitAppEvent("editor:rename-symbol");
 }
 
 export async function formatActiveEditorDocument(): Promise<void> {
@@ -471,7 +471,7 @@ export async function formatActiveEditorSelection(): Promise<void> {
 }
 
 export async function showHoverForActiveEditor(): Promise<void> {
-  emitAppEvent("editor-show-hover");
+  emitAppEvent("editor:show-hover");
 }
 
 export async function runQuickFixForActiveEditor(): Promise<void> {

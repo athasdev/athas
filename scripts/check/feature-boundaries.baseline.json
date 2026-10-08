@@ -1,19 +1,4 @@
 {
-  "privateImports": [
-    "src/features/ai/components/sidebar/agents-sidebar.tsx -> src/features/layout/components/sidebar/project-glyph.tsx",
-    "src/features/ai/components/skills/skills-command.tsx -> src/features/global-search/utils/fuzzy-search.ts",
-    "src/features/command-palette/constants/command-palette-order.ts -> src/features/keymaps/commands/settings-commands.tsx",
-    "src/features/command-palette/hooks/use-command-palette-context.ts -> src/features/keymaps/commands/agent-command-context.ts",
-    "src/features/command-palette/utils/command-palette-providers.tsx -> src/features/keymaps/commands/settings-commands.tsx",
-    "src/features/file-system/stores/file-system.store.ts -> src/features/editor/engines/codemirror/languages.ts",
-    "src/features/keymaps/commands/navigation-commands.tsx -> src/features/editor/engines/codemirror/navigation/active-navigation.ts",
-    "src/features/layout/components/sidebar/activity-chrome.tsx -> src/features/keymaps/commands/view-command-actions.ts",
-    "src/features/settings/components/ai/default-model-section.tsx -> src/features/ai/components/selectors/model-connection-menu.tsx",
-    "src/features/settings/components/ai/provider-keys-section.tsx -> src/features/ai/components/provider-api-key-command.tsx",
-    "src/features/settings/hooks/use-tab-completion-model.ts -> src/features/ai/components/selectors/model-connection-menu.tsx",
-    "src/features/sharing/components/sharing-runtime.tsx -> src/features/ai/stores/ai-chat/chat-normalization.ts",
-    "src/utils/app-events.ts -> src/features/keymaps/commands/git-command-actions.ts",
-    "src/utils/app-events.ts -> src/features/keymaps/commands/github-command-actions.ts"
-  ],
+  "privateImports": [],
   "cycleEdges": []
 }

@@ -34,7 +34,7 @@ vi.mock("@/features/editor/services/editor-save-service", () => ({
 }));
 vi.mock("@/features/ai/detached/agent-window.store", () => ({ agentsAreDetached: () => false }));
 vi.mock("sonner", () => ({ toast: { error: mocks.error, info: vi.fn() } }));
-vi.mock("../components/unsaved-changes-dialog", () => ({
+vi.mock("@/features/tabs/components/unsaved-changes-dialog", () => ({
   default: ({
     fileName,
     onSave,

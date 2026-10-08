@@ -32,7 +32,7 @@ export async function focusBrowserAddressBar(): Promise<void> {
   const bufferId = getActiveBrowserBufferId();
   if (!bufferId) return;
   await (await loadBrowserTabManager()).focusWorkbench();
-  emitAppEvent("athas-browser-focus-address-bar", bufferId);
+  emitAppEvent("browser:focus-address-bar", bufferId);
 }
 
 export async function runActiveBrowserAction(

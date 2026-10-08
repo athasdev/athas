@@ -1,6 +1,6 @@
 import { PuzzlePieceIcon, SettingsIcon } from "@/ui/icons";
 import type { RegisteredCommand } from "@/extensions/ui/types/ui-extension";
-import { settingsTabLabels } from "@/features/keymaps/commands/settings-commands";
+import { settingsTabLabels } from "@/features/settings/config/settings-tabs";
 import { showToast } from "@/utils/toast";
 import { settingsSearchIndex } from "@/features/settings/config/search-index";
 import { useSettingsSearchStore } from "@/features/settings/stores/settings-search.store";

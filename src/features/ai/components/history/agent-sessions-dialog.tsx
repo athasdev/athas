@@ -173,7 +173,7 @@ function AgentSessionsBrowser({ agentId, onClose }: { agentId: string; onClose: 
 /** Lists the running agent's own sessions for the workspace, to import or delete them. */
 export function AgentSessionsDialog() {
   const [agentId, setAgentId] = useState<string | null>(null);
-  useAppEvent("athas:open-agent-sessions", setAgentId);
+  useAppEvent("ai:open-agent-sessions", setAgentId);
   return agentId ? (
     <AgentSessionsBrowser key={agentId} agentId={agentId} onClose={() => setAgentId(null)} />
   ) : null;

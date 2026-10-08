@@ -62,17 +62,13 @@ vi.mock("../stores/buffer.store", () => ({
   },
 }));
 vi.mock("../extensions/api", () => ({ editorAPI }));
-vi.mock("@/features/keymaps/hooks/use-command-shortcut", () => ({
-  useCommandShortcut: () => undefined,
-}));
 vi.mock("sonner", () => ({ toast: { info: vi.fn(), error: vi.fn(), warning: vi.fn() } }));
 vi.mock("@/utils/platform", () => ({ isMac: () => true, IS_MAC: true, IS_WINDOWS: false }));
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const { CodeMirrorLspNavigation } = await import("../engines/codemirror/features/lsp-navigation");
-const { getActiveCodeMirrorNavigation } =
-  await import("../engines/codemirror/navigation/active-navigation");
+const { getActiveCodeMirrorNavigation } = await import("../services/active-editor-navigation");
 
 const DOC = "const value = compute(1);\nfunction compute(n) {\n  return n;\n}\n";
 const location = (line: number, character: number, uri = "file:///repo/a.ts") => ({

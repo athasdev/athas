@@ -140,7 +140,7 @@ function listenForFileChanges() {
   if (listening) return;
   listening = true;
   // Fired for every change the file watcher reports, including the user's own saves.
-  onAppEvent("file-external-change", ({ path, agentWriteId }) => {
+  onAppEvent("file:external-change", ({ path, agentWriteId }) => {
     if (!path) return;
     if (agentWriteId !== undefined) {
       // The change is that agent write; a chat that recorded it already has it in its log.

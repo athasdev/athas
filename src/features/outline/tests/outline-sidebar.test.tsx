@@ -19,9 +19,6 @@ vi.mock("@/features/editor/stores/buffer.store", () => ({
 vi.mock("@/features/file-system/api/file-operations", () => ({ readFileContent: vi.fn() }));
 vi.mock("@/features/file-system/api/file-system-api", () => ({ openFile: vi.fn() }));
 vi.mock("@/utils/clipboard", () => ({ writeClipboardText: vi.fn() }));
-vi.mock("@/features/keymaps/hooks/use-command-shortcut", () => ({
-  useCommandShortcut: () => undefined,
-}));
 
 let root: Root;
 let container: HTMLDivElement;
@@ -121,7 +118,7 @@ describe("outline sidebar", () => {
 
   it("collapses branches without navigating and opens the selected symbol", async () => {
     const navigate = vi.fn();
-    const unsubscribe = onAppEvent("menu-go-to-line", navigate);
+    const unsubscribe = onAppEvent("editor:go-to-line", navigate);
     try {
       await render();
       expect(rows()[0]?.getAttribute("aria-expanded")).toBe("true");

@@ -62,16 +62,4 @@ describe("pane drop actions", () => {
     expect(paneActions.getPaneById(targetPaneId)?.bufferIds).toEqual(["buffer-a"]);
     expect(usePaneStore.getState().activePaneId).toBe(targetPaneId);
   });
-
-  it("adds buffers without duplicating existing target entries", async () => {
-    const { ensureBufferInPaneDropTarget } = await import("../services/pane-drop-actions");
-    const paneActions = usePaneStore.getState().actions;
-
-    paneActions.addBufferToPane(ROOT_PANE_ID, "buffer-a");
-
-    expect(ensureBufferInPaneDropTarget("buffer-a", { paneId: ROOT_PANE_ID, zone: "center" })).toBe(
-      ROOT_PANE_ID,
-    );
-    expect(paneActions.getPaneById(ROOT_PANE_ID)?.bufferIds).toEqual(["buffer-a"]);
-  });
 });

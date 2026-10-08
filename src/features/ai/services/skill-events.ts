@@ -7,5 +7,5 @@ export interface AIChatSkillInsertDetail {
 }
 
 export function dispatchAIChatSkillInsert(skill: AIChatSkill, surfaceId: string) {
-  emitAppEvent("athas-ai-insert-skill", { skill, surfaceId });
+  emitAppEvent("ai:insert-skill", { skill, surfaceId });
 }

@@ -2,7 +2,7 @@ import { getAuthToken } from "@/features/auth/services/auth-api";
 import { useEffect } from "react";
 import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
-import { composeChat } from "@/features/ai/stores/ai-chat/chat-normalization";
+import { composeChat } from "@/features/ai/services/chat-normalization";
 import {
   initChatDatabase,
   loadAllChatsFromDb,
@@ -196,10 +196,10 @@ export function SharingRuntime() {
         }
         if (syncError) throw syncError;
         if (!current()) return;
-        emitAppEvent("athas:sharing-status", { error: null, syncedAt: Date.now() });
+        emitAppEvent("sharing:status", { error: null, syncedAt: Date.now() });
       } catch (error) {
         if (current())
-          emitAppEvent("athas:sharing-status", {
+          emitAppEvent("sharing:status", {
             error: error instanceof Error ? error.message : "Could not sync sessions",
           });
       } finally {

@@ -9,6 +9,7 @@ import { useBrowserTabStore } from "../stores/browser-tab.store";
 import { getBrowserTabName, isBlankPage } from "./browser-address";
 import { getBrowserKeyBindings, isPageCommand } from "../utils/browser-key-bindings";
 import { getVisibleSlotGeometry, isSlotOccluded } from "../utils/browser-occlusion";
+import { onAppEvent } from "@/utils/app-events";
 
 const ZOOM_LEVELS = [0.5, 0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3];
 /** Popups animate in after the input that opens them, so the layout is checked again after it. */
@@ -397,7 +398,6 @@ class BrowserTabManager {
       [window, "contextmenu", this.scheduleSettledSync, true],
       [window, "transitionend", this.scheduleSync, true],
       [window, "animationend", this.scheduleSync, true],
-      [window, "athas-internal-tab-drag-hover", this.scheduleSync, false],
       [window, "dragstart", onDragStart, true],
       [window, "dragend", onDragEnd, true],
       [window, "drop", onDragEnd, true],
@@ -406,9 +406,11 @@ class BrowserTabManager {
     for (const [target, type, listener, capture] of listeners) {
       target.addEventListener(type, listener, capture);
     }
+    const stopTabDragHover = onAppEvent("tabs:internal-drag-hover", this.scheduleSync);
 
     this.stopMonitoring = () => {
       mutationObserver.disconnect();
+      stopTabDragHover();
       for (const [target, type, listener, capture] of listeners) {
         target.removeEventListener(type, listener, capture);
       }

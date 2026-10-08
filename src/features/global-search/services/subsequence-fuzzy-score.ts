@@ -1,10 +1,12 @@
 /**
- * Fuzzy search scoring function
- * @param text - The text to search in
- * @param query - The search query
- * @returns Score (higher is better, 0 means no match)
+ * Scores `text` against `query`: exact, prefix and substring matches first, then any in-order
+ * subsequence of the query characters. Higher is better and 0 means no match.
+ *
+ * Unlike `fuzzyScore` in `@/utils/fuzzy-search`, every subsequence counts, however short the query
+ * or scattered the matched characters, so global file search and the skills list keep loose
+ * matches that the stricter scorer drops.
  */
-export const fuzzyScore = (text: string, query: string): number => {
+export const subsequenceFuzzyScore = (text: string, query: string): number => {
   if (!query) return 0;
 
   const textLower = text.toLowerCase();

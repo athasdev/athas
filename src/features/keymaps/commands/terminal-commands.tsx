@@ -28,13 +28,13 @@ export const terminalCommands: Command[] = [
     description: "Create a new integrated terminal",
     icon: <TerminalWindowIcon />,
     palette: { label: "Terminal: New Terminal" },
-    execute: () => emitAppEvent("terminal-new"),
+    execute: () => emitAppEvent("terminal:new"),
   },
   {
     id: "terminal.close",
     title: "Close Terminal",
     category: "Terminal",
-    execute: () => emitAppEvent("close-active-terminal"),
+    execute: () => emitAppEvent("terminal:close-active"),
   },
   {
     id: "terminal.find",
@@ -43,7 +43,7 @@ export const terminalCommands: Command[] = [
     description: "Search in the active terminal",
     icon: <SearchIcon />,
     palette: { label: "Terminal: Find" },
-    execute: () => emitAppEvent("terminal-open-search"),
+    execute: () => emitAppEvent("terminal:open-search"),
   },
   {
     id: "terminal.split",
@@ -52,7 +52,7 @@ export const terminalCommands: Command[] = [
     description: "Open a terminal beside the active terminal",
     icon: <ColumnsIcon />,
     palette: { label: "Terminal: Split Right" },
-    execute: () => emitAppEvent("terminal-split", "right"),
+    execute: () => emitAppEvent("terminal:split", "right"),
   },
   {
     id: "terminal.splitDown",
@@ -61,7 +61,7 @@ export const terminalCommands: Command[] = [
     description: "Open a terminal below the active terminal",
     icon: <RowsIcon />,
     palette: { label: "Terminal: Split Down" },
-    execute: () => emitAppEvent("terminal-split", "down"),
+    execute: () => emitAppEvent("terminal:split", "down"),
   },
   {
     id: "terminal.previousCommand",
@@ -70,7 +70,7 @@ export const terminalCommands: Command[] = [
     description: "Jump to the previous prompt in the active terminal",
     icon: <ArrowUpIcon />,
     palette: { label: "Terminal: Scroll to Previous Command" },
-    execute: () => emitAppEvent("terminal-navigate-command", "previous"),
+    execute: () => emitAppEvent("terminal:navigate-command", "previous"),
   },
   {
     id: "terminal.nextCommand",
@@ -79,7 +79,7 @@ export const terminalCommands: Command[] = [
     description: "Jump to the next prompt in the active terminal",
     icon: <ArrowDownIcon />,
     palette: { label: "Terminal: Scroll to Next Command" },
-    execute: () => emitAppEvent("terminal-navigate-command", "next"),
+    execute: () => emitAppEvent("terminal:navigate-command", "next"),
   },
   {
     id: "terminal.unsplit",
@@ -88,7 +88,7 @@ export const terminalCommands: Command[] = [
     description: "Move the focused terminal pane back into its own tab",
     icon: <TerminalWindowIcon />,
     palette: { label: "Terminal: Unsplit" },
-    execute: () => emitAppEvent("terminal-unsplit"),
+    execute: () => emitAppEvent("terminal:unsplit"),
   },
   {
     id: "terminal.focusNextPane",
@@ -97,7 +97,7 @@ export const terminalCommands: Command[] = [
     description: "Move focus to the next split pane of the active terminal",
     icon: <ArrowRightIcon />,
     palette: { label: "Terminal: Focus Next Pane" },
-    execute: () => emitAppEvent("terminal-focus-pane", "next"),
+    execute: () => emitAppEvent("terminal:focus-pane", "next"),
   },
   {
     id: "terminal.focusPreviousPane",
@@ -106,7 +106,7 @@ export const terminalCommands: Command[] = [
     description: "Move focus to the previous split pane of the active terminal",
     icon: <ArrowLeftIcon />,
     palette: { label: "Terminal: Focus Previous Pane" },
-    execute: () => emitAppEvent("terminal-focus-pane", "previous"),
+    execute: () => emitAppEvent("terminal:focus-pane", "previous"),
   },
   {
     id: "terminal.clear",
@@ -115,7 +115,7 @@ export const terminalCommands: Command[] = [
     description: "Clear the scrollback of the active terminal",
     icon: <BroomIcon />,
     palette: { label: "Terminal: Clear" },
-    execute: () => emitAppEvent("terminal-clear"),
+    execute: () => emitAppEvent("terminal:clear"),
   },
   {
     id: "terminal.selectAll",
@@ -124,7 +124,7 @@ export const terminalCommands: Command[] = [
     description: "Select the whole buffer of the active terminal",
     icon: <SelectAllIcon />,
     palette: { label: "Terminal: Select All" },
-    execute: () => emitAppEvent("terminal-select-all"),
+    execute: () => emitAppEvent("terminal:select-all"),
   },
   {
     id: "terminal.copyLastCommandOutput",
@@ -133,7 +133,7 @@ export const terminalCommands: Command[] = [
     description: "Copy the output of the most recent command to the clipboard",
     icon: <CopyIcon />,
     palette: { label: "Terminal: Copy Last Command Output" },
-    execute: () => emitAppEvent("terminal-copy-last-command-output"),
+    execute: () => emitAppEvent("terminal:copy-last-command-output"),
   },
   {
     id: "terminal.generateName",

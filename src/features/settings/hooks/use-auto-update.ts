@@ -63,11 +63,8 @@ export const useAutoUpdate = () => {
       hideUpdate();
     };
 
-    const unsubscribeDismissed = onAppEvent("athas:update-dismissed", hideUpdate);
-    const unsubscribePreferences = onAppEvent(
-      "athas:update-preferences-changed",
-      syncUpdatePreferences,
-    );
+    const unsubscribeDismissed = onAppEvent("updater:dismissed", hideUpdate);
+    const unsubscribePreferences = onAppEvent("updater:preferences-changed", syncUpdatePreferences);
 
     return () => {
       unsubscribeDismissed();

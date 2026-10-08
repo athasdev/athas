@@ -22,9 +22,6 @@ vi.mock("../hooks/use-voice-input", () => ({
 vi.mock("../hooks/use-composer-context-budget", () => ({
   useComposerContextBudget: () => null,
 }));
-vi.mock("@/features/keymaps/hooks/use-command-shortcut", () => ({
-  useCommandShortcut: () => undefined,
-}));
 vi.mock("../components/input/composer-agent-selector", () => ({
   ComposerAgentSelector: () => null,
 }));

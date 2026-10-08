@@ -57,7 +57,7 @@ function routeInternalTabDrop(position: { x: number; y: number }) {
       },
       { paneId: targetPaneId },
     );
-    emitAppEvent("terminal-detach-to-buffer", { terminalId: tabData.terminalId });
+    emitAppEvent("terminal:detach-to-buffer", { terminalId: tabData.terminalId });
   } else if (tabData.bufferId && tabData.paneId && tabData.paneId !== targetPaneId) {
     paneActions.moveBufferToPane(tabData.bufferId, tabData.paneId, targetPaneId);
     activateBufferInPaneAndSync(targetPaneId, tabData.bufferId);

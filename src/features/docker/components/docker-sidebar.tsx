@@ -667,7 +667,7 @@ export function DockerSidebar() {
     setDockerOutput(null);
     try {
       const result = await openDockerDevContainer(rootFolderPath, devContainer.configPath);
-      emitAppEvent("create-terminal-with-command", {
+      emitAppEvent("terminal:create-with-command", {
         command: result.command,
         name: result.name,
       });
@@ -723,7 +723,7 @@ export function DockerSidebar() {
   };
 
   const openContainerTerminal = (container: DockerContainer) => {
-    emitAppEvent("create-terminal-with-command", {
+    emitAppEvent("terminal:create-with-command", {
       command: dockerExecCommand(container.id),
       name: `Docker: ${container.name}`,
     });
@@ -743,7 +743,7 @@ export function DockerSidebar() {
     configId: string;
   }) => {
     const debugCommand = dockerDebugCommand(containerId, command, workdir);
-    emitAppEvent("create-terminal-with-command", {
+    emitAppEvent("terminal:create-with-command", {
       command: debugCommand,
       name: `Debug: ${containerName}`,
     });

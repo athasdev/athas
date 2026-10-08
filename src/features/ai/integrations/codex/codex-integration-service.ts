@@ -60,7 +60,7 @@ function codexThreadSettingsArg(): CodexThreadSettingsArg {
 
 export function saveCodexSettings(settings: CodexThreadSettings) {
   localStorage.setItem(codexSettingsKey, JSON.stringify(settings));
-  emitAppEvent("athas-codex-settings-changed");
+  emitAppEvent("ai:codex-settings-changed");
 }
 
 function itemId(params: Record<string, any>) {

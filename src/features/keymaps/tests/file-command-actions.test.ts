@@ -80,8 +80,8 @@ describe("file command actions", () => {
 
   beforeEach(() => {
     unsubscribers = [
-      onAppEvent("terminal-new", newTerminal),
-      onAppEvent("close-active-terminal", closeActiveTerminal),
+      onAppEvent("terminal:new", newTerminal),
+      onAppEvent("terminal:close-active", closeActiveTerminal),
     ];
     const testStorage = createMockStorage();
     vi.stubGlobal("localStorage", testStorage);

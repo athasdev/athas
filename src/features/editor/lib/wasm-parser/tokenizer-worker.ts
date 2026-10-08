@@ -3,7 +3,7 @@
 import type { QueryCapture, Tree } from "web-tree-sitter";
 import { logger } from "@/utils/logger";
 import { getLanguageAssetConfig } from "./extension-assets";
-import { getLanguageOverlayTokens } from "./language-overlays";
+import { getLanguageOverlayTokens } from "./language-overlays/language-overlay-tokens";
 import { wasmParserLoader } from "./loader";
 import { dedupeHighlightTokens, isIgnoredCapture, mapCaptureToClass } from "./capture-map";
 import type {

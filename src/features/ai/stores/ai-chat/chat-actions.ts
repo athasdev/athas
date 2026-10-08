@@ -26,7 +26,11 @@ import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { getChatAcpSessionToClose } from "@/features/ai/services/acp-session-state";
 import type { AIChatActions, AIChatStore } from "./ai-chat-store.types";
 import type { GetAIChatStore, SetAIChatStore } from "./ai-chat-store-context";
-import { composeChat, EMPTY_CHAT_MESSAGES, toChatSession } from "./chat-normalization";
+import {
+  composeChat,
+  EMPTY_CHAT_MESSAGES,
+  toChatSession,
+} from "@/features/ai/services/chat-normalization";
 import type { Draft } from "immer";
 
 type ChatActions = Omit<

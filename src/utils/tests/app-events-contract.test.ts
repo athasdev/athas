@@ -37,6 +37,12 @@ describe("app event contract", () => {
     expect(new Set(eventNames).size).toBe(eventNames.length);
   });
 
+  it("names every event domain:action in kebab case", () => {
+    const misnamed = eventNames.filter((name) => !/^[a-z][a-z-]*:[a-z][a-z-]*$/.test(name));
+
+    expect(misnamed).toEqual([]);
+  });
+
   it("emits every event somewhere in the app", () => {
     const withoutEmitter = eventNames.filter((name) => !isCalledWith("emitAppEvent", name));
 

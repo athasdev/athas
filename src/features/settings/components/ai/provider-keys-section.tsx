@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
-import { getProviderApiKeyUrl } from "@/features/ai/components/provider-api-key-command";
+import { getProviderApiKeyUrl } from "@/features/ai/services/providers/provider-api-key-url";
 import { useAvailableProviders } from "@/features/ai/hooks/use-available-providers";
 import { useAIProviderSettingsActions } from "@/features/ai/services/providers/ai-provider-settings-registry";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";

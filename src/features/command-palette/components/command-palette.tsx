@@ -42,7 +42,6 @@ import {
   type CommandPaletteFilter,
 } from "../utils/command-palette-results";
 import { useActionsStore } from "../stores/action-history.store";
-import { useCommandPaletteViews } from "../services/command-palette-view-registry";
 import { useEffectiveTheme } from "@/features/settings/hooks/use-effective-theme";
 
 interface CommandPaletteContentProps {
@@ -114,7 +113,6 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
   const { settings, activeBuffer } = commandContext;
   const effectiveTheme = useEffectiveTheme();
   const extensionCommands = useUIExtensionStore.use.commands();
-  const extensionViews = useCommandPaletteViews();
 
   const paletteItems = buildCommandPaletteItems({
     commands: keymapRegistry.getAllCommands(),
@@ -173,8 +171,6 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
     selectedElement?.scrollIntoView({ block: "nearest", behavior: "instant" });
   }, [selectedIndex, paletteActions.length]);
 
-  const extensionView = extensionViews.get(currentView);
-
   return (
     <Command isVisible onClose={onClose}>
       {currentView === "color-theme" ? (
@@ -208,12 +204,6 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
           onBack={popView}
           onClose={onClose}
         />
-      ) : extensionView ? (
-        extensionView.render({
-          isActive: true,
-          onBack: popView,
-          onClose,
-        })
       ) : (
         <>
           <CommandHeader

@@ -51,7 +51,7 @@ describe("runAcpTerminalAuth", () => {
   it("resolves with the command's exit", async () => {
     const result = runAcpTerminalAuth(launch);
     const { sessionId } = buffers.store.getState().buffers[0];
-    emitAppEvent("terminal-process-exit", { sessionId, exitCode: 0, signal: null });
+    emitAppEvent("terminal:process-exit", { sessionId, exitCode: 0, signal: null });
     await expect(result).resolves.toEqual({ exitCode: 0, signal: null });
   });
 

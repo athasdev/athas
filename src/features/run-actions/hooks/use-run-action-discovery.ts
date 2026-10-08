@@ -20,7 +20,7 @@ export function useRunActionDiscovery(
   const [discoveryError, setDiscoveryError] = useState<string | null>(null);
   const [revision, setRevision] = useState(0);
   useEffect(() => {
-    return onAppEvent("team-workspace-changed", () => setRevision((current) => current + 1));
+    return onAppEvent("team:workspace-changed", () => setRevision((current) => current + 1));
   }, []);
   const codeLenses = useCodeLens(activeFilePath, includeCodeLenses);
 

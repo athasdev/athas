@@ -131,7 +131,7 @@ export async function handleFileChange(
 ) {
   invalidateFileTreeGitIgnoreCache(path);
 
-  emitAppEvent("file-external-change", { path, agentWriteId: agent_write_id });
+  emitAppEvent("file:external-change", { path, agentWriteId: agent_write_id });
 
   if (event_type === "deleted" || event_type === "opened") {
     // Computed here rather than over IPC: bursts of watcher events each paid a round trip.

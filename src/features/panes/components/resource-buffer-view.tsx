@@ -6,7 +6,7 @@ import {
   PULL_REQUEST_STATUS_LABEL,
 } from "@/features/github/services/github-pr-viewer-utils";
 import Badge from "@/ui/badge";
-import type { OpenContentSpec, PaneContent } from "@/features/panes/types/pane-content.types";
+import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import {
   BoltIcon,
   CircleDotIcon,
@@ -87,65 +87,6 @@ export function ResourceBufferIcon({ buffer }: { buffer: ResourceBuffer }) {
       return <BoltIcon />;
     case "githubForm":
       return <PlusIcon />;
-  }
-}
-
-/** The spec that reopens this buffer elsewhere, or null when it cannot be reopened. */
-export function toResourceContentSpec(buffer: ResourceBuffer): OpenContentSpec | null {
-  switch (buffer.type) {
-    case "pullRequest":
-      return {
-        type: "pullRequest",
-        prNumber: buffer.prNumber,
-        repoPath: buffer.repoPath,
-        authorAvatarUrl: buffer.authorAvatarUrl,
-        name: buffer.name,
-      };
-    case "githubIssue":
-      return {
-        type: "githubIssue",
-        issueNumber: buffer.issueNumber,
-        repoPath: buffer.repoPath,
-        authorAvatarUrl: buffer.authorAvatarUrl,
-        name: buffer.name,
-        url: buffer.url,
-      };
-    case "githubDelivery":
-      return {
-        type: "githubDelivery",
-        kind: buffer.kind,
-        repoPath: buffer.repoPath,
-        resourceId: buffer.resourceId,
-        name: buffer.name,
-      };
-    case "githubAction":
-      if (buffer.runId !== undefined) {
-        return {
-          type: "githubAction",
-          runId: buffer.runId,
-          repoPath: buffer.repoPath,
-          name: buffer.name,
-          url: buffer.url,
-        };
-      }
-      if (buffer.notification) {
-        return {
-          type: "githubAction",
-          notification: buffer.notification,
-          repoPath: buffer.repoPath,
-          name: buffer.name,
-          url: buffer.url,
-        };
-      }
-      return null;
-    case "githubForm":
-      return {
-        type: "githubForm",
-        repoPath: buffer.repoPath,
-        formKind: buffer.formKind,
-        operation: buffer.operation,
-        defaultHead: buffer.defaultHead,
-      };
   }
 }
 

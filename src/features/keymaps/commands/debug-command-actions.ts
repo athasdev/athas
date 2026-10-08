@@ -41,15 +41,15 @@ export function toggleActiveBreakpoint() {
 
 export function startGeneratedDebugSession() {
   openDebuggerPane();
-  requestAnimationFrame(() => emitAppEvent("debugger-start"));
+  requestAnimationFrame(() => emitAppEvent("debugger:start"));
 }
 
 export function stopDebugSession() {
   openDebuggerPane();
-  requestAnimationFrame(() => emitAppEvent("debugger-stop"));
+  requestAnimationFrame(() => emitAppEvent("debugger:stop"));
 }
 
 export function restartDebugSession() {
   openDebuggerPane();
-  requestAnimationFrame(() => emitAppEvent("debugger-restart"));
+  requestAnimationFrame(() => emitAppEvent("debugger:restart"));
 }

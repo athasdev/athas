@@ -124,7 +124,7 @@ import { useRecentFilesStore } from "../stores/recent-files.store";
 import { buildRemoteWorkspaceTree } from "../controllers/remote-workspace";
 import { buildWslWorkspaceTree, getWslProjectName } from "@/features/wsl/services/wsl-workspace";
 import { buildWslPath, parseWslPath } from "@/features/wsl/utils/wsl-path";
-import { shouldIgnore, updateDirectoryContents } from "../controllers/utils";
+import { shouldIgnore, updateDirectoryContents } from "../controllers/directory-contents";
 import { prepareProjectTransitionWithUnsavedBuffers } from "../services/workspace-project-transition";
 import {
   buildWorkspaceRestoreBatch,
@@ -1281,7 +1281,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
 
           if (line) {
             setTimeout(() => {
-              emitAppEvent("menu-go-to-line", { line, column, path });
+              emitAppEvent("editor:go-to-line", { line, column, path });
             }, 0);
           }
 
@@ -1301,13 +1301,8 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
 
         const isKnownTextPath = isKnownTextFile(path);
         if (isKnownTextPath) {
-          void Promise.all([
-            import("@/features/editor/engines/codemirror/languages"),
-            import("@/features/editor/services/language-id"),
-          ])
-            .then(([{ loadCodeMirrorLanguage }, { getLanguageIdFromPath }]) =>
-              loadCodeMirrorLanguage(getLanguageIdFromPath(path)),
-            )
+          void import("@/features/editor/services/editor-language-preload")
+            .then(({ preloadEditorLanguageForPath }) => preloadEditorLanguageForPath(path))
             .catch((error) => {
               console.error(`Failed to preload the editor language for ${path}:`, error);
             });
@@ -1539,7 +1534,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
         // Dispatch go-to-line event to center the line in viewport
         if (line) {
           setTimeout(() => {
-            emitAppEvent("menu-go-to-line", { line, column, path });
+            emitAppEvent("editor:go-to-line", { line, column, path });
           }, 100);
         }
       },

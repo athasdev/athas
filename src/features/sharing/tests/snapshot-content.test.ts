@@ -17,7 +17,7 @@ describe("snapshot content", () => {
           ...message,
           role: "assistant",
           content: "Done",
-          toolCalls: [{ name: "read", input: "secret", timestamp: new Date() }],
+          toolCalls: [{ id: "call-20", name: "read", input: "secret", timestamp: new Date() }],
         },
       ]),
     ).toBe("## Agent\n\nI checked the file.\n\n## You\n\nRead [local path]\n\n## Agent\n\nDone");

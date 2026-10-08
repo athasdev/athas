@@ -219,7 +219,7 @@ describe("vim ex commands", () => {
 
   it(":{line} requests a cursor jump through the app go-to-line event", async () => {
     const goToLine = vi.fn();
-    const unsubscribe = onAppEvent("menu-go-to-line", goToLine);
+    const unsubscribe = onAppEvent("editor:go-to-line", goToLine);
     try {
       const handled = await parseAndExecuteVimCommand("42");
 

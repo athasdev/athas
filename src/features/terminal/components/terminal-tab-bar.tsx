@@ -574,7 +574,7 @@ const TerminalTabBar = ({
         },
         { paneId: destinationPaneId },
       );
-      emitAppEvent("terminal-detach-to-buffer", { terminalId: terminal.id });
+      emitAppEvent("terminal:detach-to-buffer", { terminalId: terminal.id });
       if (destinationPaneId === BOTTOM_PANE_ID) {
         useUIState.getState().setBottomPaneActiveTab("buffers");
         useUIState.getState().setIsBottomPaneVisible(true);

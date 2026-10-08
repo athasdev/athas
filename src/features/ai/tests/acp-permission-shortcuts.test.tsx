@@ -10,9 +10,6 @@ vi.mock("@tauri-apps/api/webviewWindow", () => ({
   getCurrentWebviewWindow: () => ({ label: "main" }),
   getAllWebviewWindows: async () => [],
 }));
-vi.mock("@/features/keymaps/hooks/use-command-shortcut", () => ({
-  useCommandShortcut: () => undefined,
-}));
 
 const permission = {
   requestId: "request-1",

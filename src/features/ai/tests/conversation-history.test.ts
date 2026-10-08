@@ -32,13 +32,19 @@ describe("buildConversationHistory", () => {
         content: "",
         toolCalls: [
           {
+            id: "call-34",
             name: "edit_file",
             input: { path: "file.ts" },
             output: { applied: true },
             isComplete: true,
             timestamp: new Date(0),
           },
-          { name: "run_command", input: { command: "bun test" }, timestamp: new Date(0) },
+          {
+            id: "call-41",
+            name: "run_command",
+            input: { command: "bun test" },
+            timestamp: new Date(0),
+          },
         ],
       }),
     ]);
@@ -118,6 +124,7 @@ describe("buildConversationHistory", () => {
         content: "Done",
         toolCalls: [
           {
+            id: "call-120",
             name: "read_file",
             input: { path: "big.ts" },
             output: { path: "big.ts", totalLines: 900, text: "x".repeat(12_000) },
@@ -125,6 +132,7 @@ describe("buildConversationHistory", () => {
             timestamp: new Date(0),
           },
           {
+            id: "call-127",
             name: "run_command",
             input: { command: "bun test" },
             output: `${"noise ".repeat(2_000)}FAILED: 3 tests`,

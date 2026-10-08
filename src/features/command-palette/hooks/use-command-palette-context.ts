@@ -9,7 +9,7 @@ import {
   selectBrowseSessionsAgentId,
   selectCurrentAgentId,
   selectLogOutAgentId,
-} from "@/features/keymaps/commands/agent-command-context";
+} from "@/features/ai/services/agent-command-context";
 import type { CommandContext } from "@/features/keymaps/types/keymaps.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useUIState } from "@/features/layout/stores/ui-state.store";

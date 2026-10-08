@@ -7,7 +7,7 @@ import type { Tree } from "web-tree-sitter";
 import { logger } from "@/utils/logger";
 import { getLanguageAssetConfig } from "./extension-assets";
 import { wasmParserLoader } from "./loader";
-import { getLanguageOverlayTokens } from "./language-overlays";
+import { getLanguageOverlayTokens } from "./language-overlays/language-overlay-tokens";
 import { dedupeHighlightTokens, isIgnoredCapture, mapCaptureToClass } from "./capture-map";
 import {
   findInjectionNodes,
@@ -206,29 +206,4 @@ export async function tokenizeCode(
     }
   }
   return result.tokens;
-}
-
-/**
- * Tokenize code by line
- * Returns tokens grouped by line number
- */
-export async function tokenizeByLine(
-  content: string,
-  languageId: string,
-  config?: ParserConfig,
-): Promise<Map<number, HighlightToken[]>> {
-  const allTokens = await tokenizeCode(content, languageId, config);
-  const tokensByLine = new Map<number, HighlightToken[]>();
-
-  for (const token of allTokens) {
-    // A token might span multiple lines
-    for (let line = token.startPosition.row; line <= token.endPosition.row; line++) {
-      if (!tokensByLine.has(line)) {
-        tokensByLine.set(line, []);
-      }
-      tokensByLine.get(line)!.push(token);
-    }
-  }
-
-  return tokensByLine;
 }

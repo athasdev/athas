@@ -78,7 +78,7 @@ function TerminalSplitLeaf({ terminalId, isActive, onActivate, children }: Termi
       setDropZone(hover?.terminalId === terminalId ? hover.zone : null);
     };
     syncHover();
-    return onAppEvent("athas-terminal-pane-drop-hover", syncHover);
+    return onAppEvent("terminal:pane-drop-hover", syncHover);
   }, [terminalId]);
 
   return (

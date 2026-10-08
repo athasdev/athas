@@ -134,7 +134,7 @@ function runCompletionCommand(
   if (command.command === "editor.action.triggerSuggest") {
     startCompletion(view);
   } else if (command.command === "editor.action.triggerParameterHints") {
-    emitAppEvent("editor-trigger-signature-help");
+    emitAppEvent("editor:trigger-signature-help");
   } else {
     void client.executeCommand(filePath, command.command, command.arguments ?? []).catch(() => {});
   }
@@ -232,7 +232,7 @@ function lspCompletionExtension(filePath: string, activateOnTyping: boolean): Ex
   ];
 }
 
-/** The completion popup, fed by the language server, plus the `editor-trigger-suggest` command. */
+/** The completion popup, fed by the language server, plus the `editor:trigger-suggest` command. */
 export function LspCompletion({ host }: { host: CodeMirrorHost }) {
   const { view, filePath, isActiveSurface, isReadOnly } = host;
   const autoCompletion = useSettingsStore((state) => state.settings.autoCompletion);
@@ -248,7 +248,7 @@ export function LspCompletion({ host }: { host: CodeMirrorHost }) {
       view.focus();
       startCompletion(view);
     };
-    return onAppEvent("editor-trigger-suggest", handleTriggerSuggest);
+    return onAppEvent("editor:trigger-suggest", handleTriggerSuggest);
   }, [isActiveSurface, isReadOnly, view]);
 
   return null;

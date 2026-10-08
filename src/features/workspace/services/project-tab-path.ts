@@ -60,3 +60,15 @@ export const createProjectTabId = (path: string) => {
 
   return `project-${(hash >>> 0).toString(36)}`;
 };
+
+/** The folder name a project path is shown under, or "Open Project" when there is none. */
+export function getProjectNameFromPath(path?: string) {
+  if (!path) return "Open Project";
+  const parts = path.split(/[\\/]/).filter(Boolean);
+  return parts[parts.length - 1] || path;
+}
+
+/** Whether `path` is the root of a project on a remote host. */
+export function isRemoteProjectPath(path?: string) {
+  return path?.startsWith("remote://") === true;
+}

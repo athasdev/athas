@@ -665,7 +665,7 @@ function FileExplorerTreeComponent({
       setTreeSearchOpen(true);
     };
 
-    return onAppEvent("file-tree-open-search", handleFileTreeOpenSearch);
+    return onAppEvent("file-tree:open-search", handleFileTreeOpenSearch);
   }, []);
 
   const startInlineEditing = (parentPath: string, isFolder: boolean) => {

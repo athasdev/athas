@@ -211,7 +211,7 @@ export function useFileExplorerDragDrop(
 
       // If dropping on a pane (not in file tree), dispatch event for pane to handle
       if (isOverPane && !isOverFileTree && dragState.draggedItem && !dragState.draggedItem.isDir) {
-        emitAppEvent("file-tree-drop-on-pane", {
+        emitAppEvent("file-tree:drop-on-pane", {
           path: dragState.draggedItem.path,
           name: dragState.draggedItem.name,
           isDir: dragState.draggedItem.isDir,

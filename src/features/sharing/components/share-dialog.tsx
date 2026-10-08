@@ -248,6 +248,6 @@ function ShareSnapshotDialog({ draft, onClose }: { draft: ShareDraft; onClose: (
 
 export function ShareDialog() {
   const [draft, setDraft] = useState<ShareDraft | null>(null);
-  useAppEvent("athas:open-share", setDraft);
+  useAppEvent("sharing:open", setDraft);
   return draft ? <ShareSnapshotDialog draft={draft} onClose={() => setDraft(null)} /> : null;
 }

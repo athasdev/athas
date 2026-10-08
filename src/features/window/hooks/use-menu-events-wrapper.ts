@@ -96,7 +96,7 @@ export function useMenuEventsWrapper() {
       }
     },
     onOpenGitHubNotifications: () => {
-      emitAppEvent("athas:notifications:show", { category: "github" });
+      emitAppEvent("notifications:show", { category: "github" });
     },
     onOpenSettings: runCommand("workbench.openSettings"),
     onOpenExtensions: runCommand("view.showIntegrations"),
