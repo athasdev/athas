@@ -7,6 +7,7 @@ import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace
 import { WorkspaceStoreScopeContext } from "@/features/workspace/stores/create-workspace-scoped-store";
 import { useTerminalStore } from "../stores/terminal.store";
 import { TerminalEmulator } from "../components/terminal";
+import { getTerminalEmulator } from "../services/terminal-emulator-registry";
 
 const mocks = vi.hoisted(() => ({
   invoke: vi.fn(),
@@ -159,6 +160,16 @@ async function renderTerminal() {
 }
 
 describe("terminal startup recovery", () => {
+  it("registers the live emulator by session id until the view unmounts", async () => {
+    await renderTerminal();
+    await act(async () => {});
+    expect(mocks.ready).toHaveBeenCalledTimes(1);
+    const handle = getTerminalEmulator("session");
+    expect(handle?.terminal).toBeDefined();
+    await act(async () => root.render(null));
+    expect(getTerminalEmulator("session")).toBeUndefined();
+  });
+
   it("skips process creation when the view closes while font setup is pending", async () => {
     let finishFont: (value: unknown) => void = () => {};
     mocks.font.mockImplementationOnce(

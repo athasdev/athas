@@ -9,6 +9,7 @@ import { hasAgentSessionActivity, selectAgentSessions } from "@/features/ai/lib/
 import { isChatInWorkspace } from "@/features/ai/lib/ai-workspace-scope";
 import { coalesceAssistantResponses } from "@/features/ai/lib/assistant-response";
 import { normalizeMessageFollowUpActions } from "@/features/ai/lib/follow-up-actions";
+import { withToolCallIds } from "@/features/ai/lib/tool-call-state";
 import {
   deleteChatFromDb,
   forgetSavedChatMessages,
@@ -231,13 +232,18 @@ interface PendingMessageUpdate {
 
 type PendingChatUpdates = Map<string, PendingMessageUpdate>;
 
+/** What every message written to the store goes through. */
+function normalizeMessage(message: Message): Message {
+  return withToolCallIds(normalizeMessageFollowUpActions(message));
+}
+
 function applyPendingUpdates(messages: Draft<Message[]>, pending: PendingChatUpdates) {
   for (const [messageId, { updates, resolveUpdates, laterUpdates, appended }] of pending) {
     const message = messages.find((candidate) => candidate.id === messageId);
     if (!message) continue;
     const next = { ...message, ...updates, ...resolveUpdates?.(), ...laterUpdates } as Message;
     if (appended) next.content = `${next.content ?? ""}${appended}`;
-    Object.assign(message, normalizeMessageFollowUpActions(next));
+    Object.assign(message, normalizeMessage(next));
   }
 }
 
@@ -711,7 +717,7 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
         if (chat) {
           const messages = (state.messagesByChat[chatId] ??= []);
           if (pending) applyPendingUpdates(messages, pending);
-          messages.push(normalizeMessageFollowUpActions(message));
+          messages.push(normalizeMessage(message));
           chat.messageCount = messages.length;
           chat.lastMessageAt = new Date();
         }
@@ -728,7 +734,7 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
         if (pending) applyPendingUpdates(messages, pending);
         const message = messages.find((candidate) => candidate.id === messageId);
         if (!message) return;
-        Object.assign(message, normalizeMessageFollowUpActions({ ...message, ...updates }));
+        Object.assign(message, normalizeMessage({ ...message, ...updates }));
         // A turn moves its session up the list when it starts and when it ends, not per token.
         if (!message.isStreaming) chat.lastMessageAt = new Date();
       });
@@ -757,7 +763,7 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
         const chat = state.chats.find((candidate) => candidate.id === chatId);
         if (!chat) return;
 
-        const next = coalesceAssistantResponses(messages.map(normalizeMessageFollowUpActions));
+        const next = coalesceAssistantResponses(messages.map(normalizeMessage));
         writeChatMessages(state, chatId, next);
         chat.lastMessageAt = next[next.length - 1]?.timestamp ?? chat.createdAt;
       });

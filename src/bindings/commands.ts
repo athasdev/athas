@@ -6263,13 +6263,15 @@ export type TomlTheme = {
 
 export type ToolCallData = {
   message_id: string;
+  /**  The call's id, unique within its message. Saves match stored rows by it. */
+  call_id: string;
   name: string;
   input: string | null;
   output: string | null;
   error: string | null;
   timestamp: number;
   is_complete: boolean;
-  /**  Presentation details (id, kind, status, locations, content offset) as JSON. */
+  /**  Presentation details (kind, status, locations, content offset) as JSON. */
   meta?: string | null;
 };
 

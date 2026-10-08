@@ -1,7 +1,10 @@
 import { type DragEndEvent, type DragMoveEvent, type DragStartEvent } from "@dnd-kit/core";
 import { restrictToHorizontalAxis } from "@dnd-kit/modifiers";
 import { SortableContext, horizontalListSortingStrategy } from "@dnd-kit/sortable";
-import { saveTextFileWithDialog } from "@/utils/file-dialogs";
+import {
+  clearTerminal,
+  exportTerminalOutput,
+} from "@/features/terminal/services/terminal-tab-actions";
 import {
   ArrowDownIcon,
   ArrowUpIcon,
@@ -764,12 +767,7 @@ const TerminalTabBar = ({
             onCloseOthers={onCloseOtherTabs || (() => {})}
             onCloseAll={onCloseAllTabs || (() => {})}
             onCloseToRight={onCloseTabsToRight || (() => {})}
-            onClear={(terminalId) => {
-              const session = useTerminalStore.getState().actions.getSession(terminalId);
-              if (session?.ref?.current) {
-                session.ref.current.clear();
-              }
-            }}
+            onClear={clearTerminal}
             onDuplicate={(terminalId) => {
               const terminal = terminals.find((t) => t.id === terminalId);
               if (terminal) {
@@ -779,42 +777,9 @@ const TerminalTabBar = ({
             onRename={(terminalId) => {
               startRename(terminalId);
             }}
-            onExport={async (terminalId) => {
-              const session = useTerminalStore.getState().actions.getSession(terminalId);
-              const terminal = terminals.find((t) => t.id === terminalId);
-              if (session?.ref?.current && terminal) {
-                try {
-                  const content = session.ref.current.serialize();
-                  if (!content) {
-                    console.warn("No terminal content to export");
-                    return;
-                  }
-
-                  const defaultFileName = `${terminal.name.replace(/[^a-zA-Z0-9]/g, "_")}_${new Date().toISOString().split("T")[0]}.txt`;
-                  const filePath = await saveTextFileWithDialog(
-                    {
-                      defaultPath: defaultFileName,
-                      filters: [
-                        {
-                          name: "Text Files",
-                          extensions: ["txt"],
-                        },
-                        {
-                          name: "All Files",
-                          extensions: ["*"],
-                        },
-                      ],
-                    },
-                    () => content,
-                  );
-
-                  if (filePath) {
-                    console.log(`Terminal output exported to: ${filePath}`);
-                  }
-                } catch (error) {
-                  console.error("Failed to export terminal output:", error);
-                }
-              }
+            onExport={(terminalId) => {
+              const name = displayNames.get(terminalId);
+              if (name !== undefined) void exportTerminalOutput(terminalId, name);
             }}
           />
           <ToolbarContextMenu

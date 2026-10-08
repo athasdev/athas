@@ -153,4 +153,33 @@ describe("streamed message updates", () => {
     expect(after[0]).toMatchObject({ messageCount: 3 });
     expect(after[1]).toBe(before[1]);
   });
+
+  it("gives every tool call written to the store an id", () => {
+    const timestamp = new Date();
+    actions().addMessage("a", {
+      id: "command",
+      role: "system",
+      content: "$ ls",
+      timestamp,
+      toolCalls: [{ name: "terminal", input: {}, timestamp }],
+    });
+    const command = () =>
+      useAIChatStore.getState().messagesByChat.a!.find((message) => message.id === "command")!;
+    const added = command().toolCalls![0]!;
+    expect(added.id).toEqual(expect.any(String));
+
+    actions().updateMessage("a", "command", {
+      toolCalls: [added, { name: "terminal", input: {}, timestamp }],
+    });
+    const [kept, appended] = command().toolCalls!;
+    expect(kept!.id).toBe(added.id);
+    expect(appended!.id).toEqual(expect.any(String));
+    expect(appended!.id).not.toBe(added.id);
+
+    actions().queueMessageUpdate("a", "reply", {
+      toolCalls: [{ name: "Read", input: {}, timestamp }],
+    });
+    actions().flushMessageUpdates("a");
+    expect(reply().toolCalls![0]!.id).toEqual(expect.any(String));
+  });
 });

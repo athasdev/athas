@@ -45,6 +45,7 @@ interface MessageData {
 
 interface ToolCallData {
   message_id: string;
+  call_id: string;
   name: string;
   input: string | null;
   output: string | null;
@@ -56,12 +57,11 @@ interface ToolCallData {
 
 type ToolCallMeta = Pick<
   ToolCall,
-  "id" | "kind" | "status" | "locations" | "contentOffset" | "terminals" | "durationMs"
+  "kind" | "status" | "locations" | "contentOffset" | "terminals" | "durationMs"
 >;
 
 function serializeToolCallMeta(toolCall: ToolCall): string | null {
   const meta: ToolCallMeta = {};
-  if (toolCall.id) meta.id = toolCall.id;
   if (toolCall.kind) meta.kind = toolCall.kind;
   if (toolCall.status) meta.status = toolCall.status;
   if (toolCall.locations?.length) meta.locations = toolCall.locations;
@@ -184,6 +184,8 @@ function chatToData(
       for (const tc of msg.toolCalls) {
         tool_calls.push({
           message_id: msg.id,
+          // The store gives every call an id. The backend keys one built without it by position.
+          call_id: tc.id ?? "",
           name: tc.name,
           input: tc.input ? JSON.stringify(tc.input) : null,
           output: tc.output ? JSON.stringify(tc.output) : null,
@@ -237,6 +239,7 @@ function dataToChat(data: ChatWithMessages): Chat {
     }
     toolCallsMap.get(tc.message_id)!.push({
       ...parseToolCallMeta(tc.meta),
+      id: tc.call_id,
       name: tc.name,
       input: tc.input ? JSON.parse(tc.input) : undefined,
       output: tc.output ? JSON.parse(tc.output) : undefined,

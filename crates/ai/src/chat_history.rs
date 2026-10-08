@@ -1,4 +1,4 @@
-use rusqlite::{Connection, Result as SqliteResult, ToSql, params};
+use rusqlite::{Connection, Result as SqliteResult, ToSql, TransactionBehavior, params};
 use serde::{Deserialize, Serialize};
 use std::{
    collections::{HashMap, HashSet},
@@ -50,13 +50,15 @@ pub struct MessageData {
 #[derive(Debug, Serialize, Deserialize, Clone, specta::Type)]
 pub struct ToolCallData {
    pub message_id: String,
+   /// The call's id, unique within its message. Saves match stored rows by it.
+   pub call_id: String,
    pub name: String,
    pub input: Option<String>,
    pub output: Option<String>,
    pub error: Option<String>,
    pub timestamp: i64,
    pub is_complete: bool,
-   /// Presentation details (id, kind, status, locations, content offset) as JSON.
+   /// Presentation details (kind, status, locations, content offset) as JSON.
    #[serde(default)]
    pub meta: Option<String>,
 }
@@ -95,7 +97,7 @@ impl ChatHistoryRepository {
    }
 
    pub fn initialize(&self) -> Result<(), String> {
-      let conn = self.open_connection()?;
+      let mut conn = self.open_connection()?;
 
       conn
          .execute(
@@ -162,22 +164,19 @@ impl ChatHistoryRepository {
                error TEXT,
                timestamp INTEGER NOT NULL,
                is_complete BOOLEAN DEFAULT 0,
+               meta TEXT,
+               call_id TEXT,
+               position INTEGER,
                FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE
            )",
             [],
          )
          .map_err(|e| format!("Failed to create tool_calls table: {}", e))?;
       let _ = conn.execute("ALTER TABLE tool_calls ADD COLUMN meta TEXT", []);
+      migrate_tool_call_keys(&mut conn)?;
 
       for column in ["images", "plan", "stop_notice", "turn_usage"] {
-         let exists: bool = conn
-            .query_row(
-               "SELECT EXISTS(SELECT 1 FROM pragma_table_info('messages') WHERE name = ?1)",
-               [column],
-               |row| row.get(0),
-            )
-            .map_err(|e| format!("Failed to inspect message columns: {e}"))?;
-         if !exists {
+         if !table_has_column(&conn, "messages", column)? {
             conn
                .execute(
                   &format!("ALTER TABLE messages ADD COLUMN {column} TEXT"),
@@ -451,87 +450,72 @@ impl ChatHistoryRepository {
       }
    }
 
-   /// Matches the saved messages' tool calls to their stored rows by position (rows keep their
-   /// insertion order): changed rows are updated in place, extra calls appended, and leftover rows
-   /// deleted. Tool calls have no id that is always present, so position is the stable key.
-   /// Messages outside `message_ids` keep their rows.
+   /// Upserts the saved messages' tool calls by `(message_id, call_id)`, records each call's
+   /// position in its message, and deletes the stored calls those messages no longer have.
+   /// Unchanged rows are not rewritten. Messages outside `message_ids` keep their rows.
    fn save_tool_calls(
       conn: &Connection,
       message_ids: &HashSet<&str>,
       tool_calls: &[ToolCallData],
    ) -> Result<(), String> {
-      let mut stored_rows: HashMap<&str, Vec<i64>> = HashMap::new();
-      {
-         let mut stmt = conn
-            .prepare_cached("SELECT id FROM tool_calls WHERE message_id = ?1 ORDER BY id")
-            .map_err(|e| format!("Failed to read stored tool calls: {}", e))?;
-         for message_id in message_ids {
-            let rows = stmt
-               .query_map(params![message_id], |row| row.get::<_, i64>(0))
-               .map_err(|e| format!("Failed to read stored tool calls: {}", e))?
-               .collect::<SqliteResult<Vec<_>>>()
-               .map_err(|e| format!("Failed to read stored tool calls: {}", e))?;
-            if !rows.is_empty() {
-               stored_rows.insert(message_id, rows);
-            }
-         }
+      let mut upsert = conn
+         .prepare_cached(
+            "INSERT INTO tool_calls (message_id, call_id, position, name, input, output, error, \
+             timestamp, is_complete, meta) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+             ON CONFLICT(message_id, call_id) DO UPDATE SET position = excluded.position,
+             name = excluded.name, input = excluded.input, output = excluded.output,
+             error = excluded.error, timestamp = excluded.timestamp,
+             is_complete = excluded.is_complete, meta = excluded.meta
+             WHERE tool_calls.position IS NOT excluded.position
+             OR tool_calls.name IS NOT excluded.name OR tool_calls.input IS NOT excluded.input
+             OR tool_calls.output IS NOT excluded.output OR tool_calls.error IS NOT excluded.error
+             OR tool_calls.timestamp IS NOT excluded.timestamp
+             OR tool_calls.is_complete IS NOT excluded.is_complete
+             OR tool_calls.meta IS NOT excluded.meta",
+         )
+         .map_err(|e| format!("Failed to save tool call: {}", e))?;
+
+      let mut saved_ids: HashMap<&str, HashSet<String>> = HashMap::new();
+      for tool_call in tool_calls {
+         let ids = saved_ids.entry(tool_call.message_id.as_str()).or_default();
+         let position = ids.len();
+         let call_id = unique_call_id(&tool_call.call_id, &tool_call.message_id, position, ids);
+         upsert
+            .execute(params![
+               tool_call.message_id,
+               call_id,
+               position as i64,
+               tool_call.name,
+               tool_call.input,
+               tool_call.output,
+               tool_call.error,
+               tool_call.timestamp,
+               tool_call.is_complete,
+               tool_call.meta
+            ])
+            .map_err(|e| format!("Failed to save tool call: {}", e))?;
+         ids.insert(call_id);
       }
 
-      let mut update = conn
-         .prepare_cached(
-            "UPDATE tool_calls SET name = ?2, input = ?3, output = ?4, error = ?5, timestamp = \
-             ?6, is_complete = ?7, meta = ?8 WHERE id = ?1 AND (name IS NOT ?2 OR input IS NOT ?3 \
-             OR output IS NOT ?4 OR error IS NOT ?5 OR timestamp IS NOT ?6 OR is_complete IS NOT \
-             ?7 OR meta IS NOT ?8)",
-         )
-         .map_err(|e| format!("Failed to save tool call: {}", e))?;
-      let mut insert = conn
-         .prepare_cached(
-            "INSERT INTO tool_calls (message_id, name, input, output, error, timestamp, \
-             is_complete, meta) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
-         )
-         .map_err(|e| format!("Failed to save tool call: {}", e))?;
+      let mut stored = conn
+         .prepare_cached("SELECT id, call_id FROM tool_calls WHERE message_id = ?1")
+         .map_err(|e| format!("Failed to read stored tool calls: {}", e))?;
       let mut delete = conn
          .prepare_cached("DELETE FROM tool_calls WHERE id = ?1")
          .map_err(|e| format!("Failed to delete old tool calls: {}", e))?;
-
-      let mut next_position: HashMap<&str, usize> = HashMap::new();
-      for tool_call in tool_calls {
-         let position = next_position
-            .entry(tool_call.message_id.as_str())
-            .or_default();
-         let stored = stored_rows
-            .get(tool_call.message_id.as_str())
-            .and_then(|rows| rows.get(*position));
-         *position += 1;
-         match stored {
-            Some(row_id) => update.execute(params![
-               row_id,
-               tool_call.name,
-               tool_call.input,
-               tool_call.output,
-               tool_call.error,
-               tool_call.timestamp,
-               tool_call.is_complete,
-               tool_call.meta
-            ]),
-            None => insert.execute(params![
-               tool_call.message_id,
-               tool_call.name,
-               tool_call.input,
-               tool_call.output,
-               tool_call.error,
-               tool_call.timestamp,
-               tool_call.is_complete,
-               tool_call.meta
-            ]),
-         }
-         .map_err(|e| format!("Failed to save tool call: {}", e))?;
-      }
-
-      for (message_id, rows) in &stored_rows {
-         let kept = next_position.get(message_id).copied().unwrap_or(0);
-         for row_id in rows.iter().skip(kept) {
+      let no_calls = HashSet::new();
+      for message_id in message_ids {
+         let kept = saved_ids.get(message_id).unwrap_or(&no_calls);
+         let removed = stored
+            .query_map(params![message_id], |row| {
+               Ok((row.get::<_, i64>(0)?, row.get::<_, Option<String>>(1)?))
+            })
+            .map_err(|e| format!("Failed to read stored tool calls: {}", e))?
+            .collect::<SqliteResult<Vec<_>>>()
+            .map_err(|e| format!("Failed to read stored tool calls: {}", e))?
+            .into_iter()
+            .filter(|(_, call_id)| !call_id.as_ref().is_some_and(|id| kept.contains(id)));
+         for (row_id, _) in removed {
             delete
                .execute(params![row_id])
                .map_err(|e| format!("Failed to delete old tool calls: {}", e))?;
@@ -742,8 +726,9 @@ impl ChatHistoryRepository {
          .collect::<Vec<_>>()
          .join(",");
       let query = format!(
-         "SELECT message_id, name, input, output, error, timestamp, is_complete, meta
-          FROM tool_calls WHERE message_id IN ({}) ORDER BY id",
+         "SELECT message_id, COALESCE(call_id, 'row-' || id), name, input, output, error, \
+          timestamp, is_complete, meta FROM tool_calls WHERE message_id IN ({}) ORDER BY \
+          message_id, position, id",
          placeholders
       );
 
@@ -757,18 +742,160 @@ impl ChatHistoryRepository {
          .query_map(params.as_slice(), |row| {
             Ok(ToolCallData {
                message_id: row.get(0)?,
-               name: row.get(1)?,
-               input: row.get(2)?,
-               output: row.get(3)?,
-               error: row.get(4)?,
-               timestamp: row.get(5)?,
-               is_complete: row.get(6)?,
-               meta: row.get(7)?,
+               call_id: row.get(1)?,
+               name: row.get(2)?,
+               input: row.get(3)?,
+               output: row.get(4)?,
+               error: row.get(5)?,
+               timestamp: row.get(6)?,
+               is_complete: row.get(7)?,
+               meta: row.get(8)?,
             })
          })
          .map_err(|e| format!("Failed to query tool_calls: {}", e))?
          .collect::<SqliteResult<Vec<_>>>()
          .map_err(|e| format!("Failed to collect tool_calls: {}", e))
+   }
+}
+
+fn table_has_column(conn: &Connection, table: &str, column: &str) -> Result<bool, String> {
+   conn
+      .query_row(
+         "SELECT EXISTS(SELECT 1 FROM pragma_table_info(?1) WHERE name = ?2)",
+         params![table, column],
+         |row| row.get(0),
+      )
+      .map_err(|e| format!("Failed to inspect {table} columns: {e}"))
+}
+
+/// Gives every stored tool call a `call_id` unique within its message and a `position`, then
+/// adds the `(message_id, call_id)` unique index saves upsert on. Calls whose `meta` JSON has an
+/// id keep it; the others get an id derived from their message and position. Only messages with a
+/// row missing either are touched, so running it again (or after an older build added rows) is
+/// safe.
+fn migrate_tool_call_keys(conn: &mut Connection) -> Result<(), String> {
+   for (column, kind) in [("call_id", "TEXT"), ("position", "INTEGER")] {
+      if !table_has_column(conn, "tool_calls", column)? {
+         conn
+            .execute(
+               &format!("ALTER TABLE tool_calls ADD COLUMN {column} {kind}"),
+               [],
+            )
+            .map_err(|e| format!("Failed to add tool call {column}: {e}"))?;
+      }
+   }
+
+   let transaction = conn
+      .transaction_with_behavior(TransactionBehavior::Immediate)
+      .map_err(|e| format!("Failed to begin tool call migration: {e}"))?;
+   let pending_messages = transaction
+      .prepare(
+         "SELECT DISTINCT message_id FROM tool_calls WHERE call_id IS NULL OR call_id = '' OR \
+          position IS NULL",
+      )
+      .and_then(|mut stmt| {
+         stmt
+            .query_map([], |row| row.get::<_, String>(0))?
+            .collect::<SqliteResult<Vec<_>>>()
+      })
+      .map_err(|e| format!("Failed to read tool calls to migrate: {e}"))?;
+
+   {
+      let mut rows_of = transaction
+         .prepare(
+            "SELECT id, call_id, meta FROM tool_calls WHERE message_id = ?1 ORDER BY position IS \
+             NULL, position, id",
+         )
+         .map_err(|e| format!("Failed to read tool calls to migrate: {e}"))?;
+      let mut update = transaction
+         .prepare("UPDATE tool_calls SET call_id = ?2, position = ?3 WHERE id = ?1")
+         .map_err(|e| format!("Failed to migrate tool calls: {e}"))?;
+      for message_id in &pending_messages {
+         let rows = rows_of
+            .query_map(params![message_id], |row| {
+               Ok((
+                  row.get::<_, i64>(0)?,
+                  row.get::<_, Option<String>>(1)?,
+                  row.get::<_, Option<String>>(2)?,
+               ))
+            })
+            .map_err(|e| format!("Failed to read tool calls to migrate: {e}"))?
+            .collect::<SqliteResult<Vec<_>>>()
+            .map_err(|e| format!("Failed to read tool calls to migrate: {e}"))?;
+
+         // Ids already stored are claimed first so a backfilled id never takes one of them.
+         let mut used = HashSet::new();
+         let kept: Vec<bool> = rows
+            .iter()
+            .map(|(_, call_id, _)| {
+               call_id
+                  .as_ref()
+                  .is_some_and(|id| !id.is_empty() && used.insert(id.clone()))
+            })
+            .collect();
+         for (position, ((row_id, call_id, meta), keep)) in rows.iter().zip(kept).enumerate() {
+            let call_id = match call_id {
+               Some(id) if keep => id.clone(),
+               _ => {
+                  let meta_id = meta.as_deref().and_then(meta_call_id).unwrap_or_default();
+                  let id = unique_call_id(&meta_id, message_id, position, &used);
+                  used.insert(id.clone());
+                  id
+               }
+            };
+            update
+               .execute(params![row_id, call_id, position as i64])
+               .map_err(|e| format!("Failed to migrate tool calls: {e}"))?;
+         }
+      }
+   }
+
+   transaction
+      .execute(
+         "CREATE UNIQUE INDEX IF NOT EXISTS idx_tool_calls_message_call ON tool_calls(message_id, \
+          call_id)",
+         [],
+      )
+      .map_err(|e| format!("Failed to create tool call id index: {e}"))?;
+   transaction
+      .commit()
+      .map_err(|e| format!("Failed to commit tool call migration: {e}"))
+}
+
+/// The `id` an older build kept in a tool call's `meta` JSON, if it is a non-empty string.
+fn meta_call_id(meta: &str) -> Option<String> {
+   let value: serde_json::Value = serde_json::from_str(meta).ok()?;
+   value
+      .get("id")?
+      .as_str()
+      .filter(|id| !id.is_empty())
+      .map(str::to_string)
+}
+
+/// `requested` when it is a free id within its message. A call sent without an id gets one derived
+/// from its message and position, and a repeated id gets a numbered suffix, so the result is the
+/// same on every save of the same calls.
+fn unique_call_id(
+   requested: &str,
+   message_id: &str,
+   position: usize,
+   used: &HashSet<String>,
+) -> String {
+   let base = if requested.is_empty() {
+      format!("{message_id}:tool-{position}")
+   } else {
+      requested.to_string()
+   };
+   if !used.contains(&base) {
+      return base;
+   }
+   let mut occurrence = 2;
+   loop {
+      let candidate = format!("{base}#{occurrence}");
+      if !used.contains(&candidate) {
+         return candidate;
+      }
+      occurrence += 1;
    }
 }
 
@@ -924,9 +1051,10 @@ mod tests {
       .unwrap()
    }
 
-   fn sample_tool_call(message_id: &str) -> ToolCallData {
+   fn sample_tool_call(message_id: &str, call_id: &str) -> ToolCallData {
       serde_json::from_value(serde_json::json!({
-         "message_id": message_id, "name": "read_file", "timestamp": 2, "is_complete": true
+         "message_id": message_id, "call_id": call_id, "name": "read_file", "timestamp": 2,
+         "is_complete": true
       }))
       .unwrap()
    }
@@ -1004,7 +1132,7 @@ mod tests {
             .save_chat(
                sample_chat(id),
                vec![sample_message(id, id)],
-               vec![sample_tool_call(id)],
+               vec![sample_tool_call(id, "call")],
             )
             .unwrap();
       }
@@ -1017,7 +1145,7 @@ mod tests {
          .save_chat(
             sample_chat("one"),
             vec![reply],
-            vec![sample_tool_call("one")],
+            vec![sample_tool_call("one", "call")],
          )
          .unwrap();
       assert_eq!(repository.load_chat("one").unwrap().tool_calls.len(), 1);
@@ -1057,13 +1185,13 @@ mod tests {
       prompt.timestamp = 1;
       let mut reply = sample_message("chat", "reply");
       reply.is_streaming = true;
-      let mut running = sample_tool_call("reply");
+      let mut running = sample_tool_call("reply", "running");
       running.is_complete = false;
       repository
          .save_chat(
             sample_chat("chat"),
             vec![prompt.clone(), reply.clone()],
-            vec![sample_tool_call("reply"), running.clone()],
+            vec![sample_tool_call("reply", "first"), running.clone()],
          )
          .unwrap();
       let first_rows = tool_call_rows(&repository);
@@ -1080,9 +1208,9 @@ mod tests {
             title,
             vec![prompt.clone(), reply.clone()],
             vec![
-               sample_tool_call("reply"),
+               sample_tool_call("reply", "first"),
                running.clone(),
-               sample_tool_call("reply"),
+               sample_tool_call("reply", "third"),
             ],
          )
          .unwrap();
@@ -1110,7 +1238,7 @@ mod tests {
          .save_chat(
             sample_chat("chat"),
             vec![prompt.clone(), reply.clone()],
-            vec![sample_tool_call("reply")],
+            vec![sample_tool_call("reply", "first")],
          )
          .unwrap();
       let rows = tool_call_rows(&repository);
@@ -1129,7 +1257,10 @@ mod tests {
          .save_chat(
             sample_chat("chat"),
             vec![prompt.clone(), sample_message("chat", "reply")],
-            vec![sample_tool_call("prompt"), sample_tool_call("reply")],
+            vec![
+               sample_tool_call("prompt", "call"),
+               sample_tool_call("reply", "call"),
+            ],
          )
          .unwrap();
       let kept_row = tool_call_rows(&repository)[0].0;
@@ -1138,7 +1269,7 @@ mod tests {
          .save_chat(
             sample_chat("chat"),
             vec![prompt],
-            vec![sample_tool_call("prompt")],
+            vec![sample_tool_call("prompt", "call")],
          )
          .unwrap();
 
@@ -1170,7 +1301,7 @@ mod tests {
          .save_chat(
             sample_chat("one"),
             vec![sample_message("one", "shared")],
-            vec![sample_tool_call("shared")],
+            vec![sample_tool_call("shared", "call")],
          )
          .unwrap();
       repository
@@ -1219,7 +1350,7 @@ mod tests {
             .save_chat(
                sample_chat("one"),
                vec![sample_message("one", "one")],
-               vec![sample_tool_call("two")]
+               vec![sample_tool_call("two", "call")]
             )
             .is_err()
       );
@@ -1240,7 +1371,10 @@ mod tests {
          .save_chat(
             sample_chat("chat"),
             vec![prompt.clone(), sample_message("chat", "reply")],
-            vec![sample_tool_call("prompt"), sample_tool_call("reply")],
+            vec![
+               sample_tool_call("prompt", "call"),
+               sample_tool_call("reply", "call"),
+            ],
          )
          .unwrap();
       let prompt_row = tool_call_rows(&repository)[0].0;
@@ -1252,7 +1386,11 @@ mod tests {
       let mut renamed = sample_chat("chat");
       renamed.title = "Renamed".to_string();
       repository
-         .save_chat_messages(renamed, vec![reply, next], vec![sample_tool_call("next")])
+         .save_chat_messages(
+            renamed,
+            vec![reply, next],
+            vec![sample_tool_call("next", "call")],
+         )
          .unwrap();
 
       let loaded = repository.load_chat("chat").unwrap();
@@ -1328,7 +1466,7 @@ mod tests {
          .save_chat(
             sample_chat("chat"),
             vec![sample_message("chat", "reply")],
-            vec![sample_tool_call("reply")],
+            vec![sample_tool_call("reply", "call")],
          )
          .unwrap();
       repository
@@ -1349,6 +1487,257 @@ mod tests {
       assert_eq!(
          repository.load_checkpoints("chat").unwrap().as_deref(),
          Some("snapshot")
+      );
+   }
+
+   fn call_rows(repository: &ChatHistoryRepository) -> Vec<(i64, String, String, i64)> {
+      let conn = repository.open_connection().unwrap();
+      let mut stmt = conn
+         .prepare(
+            "SELECT id, message_id, call_id, position FROM tool_calls ORDER BY message_id, \
+             position",
+         )
+         .unwrap();
+      stmt
+         .query_map([], |row| {
+            Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
+         })
+         .unwrap()
+         .collect::<SqliteResult<Vec<_>>>()
+         .unwrap()
+   }
+
+   fn loaded_call_ids(repository: &ChatHistoryRepository, chat_id: &str) -> Vec<String> {
+      repository
+         .load_chat(chat_id)
+         .unwrap()
+         .tool_calls
+         .into_iter()
+         .map(|call| call.call_id)
+         .collect()
+   }
+
+   fn row_id_of(repository: &ChatHistoryRepository, call_id: &str) -> i64 {
+      call_rows(repository)
+         .into_iter()
+         .find(|(_, _, id, _)| id == call_id)
+         .map(|(row_id, ..)| row_id)
+         .unwrap()
+   }
+
+   #[test]
+   fn migrates_old_tool_call_rows_with_and_without_meta_ids() {
+      let directory = tempfile::tempdir().unwrap();
+      let path = directory.path().join("history.db");
+      let conn = Connection::open(&path).unwrap();
+      conn
+         .execute_batch(
+            "CREATE TABLE chats (id TEXT PRIMARY KEY, title TEXT NOT NULL, created_at INTEGER NOT \
+             NULL, last_message_at INTEGER NOT NULL);
+             CREATE TABLE messages (id TEXT PRIMARY KEY, chat_id TEXT NOT NULL, role TEXT NOT \
+             NULL, content TEXT NOT NULL, timestamp INTEGER NOT NULL, is_streaming BOOLEAN, \
+             is_tool_use BOOLEAN, tool_name TEXT);
+             CREATE TABLE tool_calls (id INTEGER PRIMARY KEY AUTOINCREMENT, message_id TEXT NOT \
+             NULL, name TEXT NOT NULL, input TEXT, output TEXT, error TEXT, timestamp INTEGER NOT \
+             NULL, is_complete BOOLEAN DEFAULT 0, meta TEXT);
+             INSERT INTO chats VALUES ('chat', 'Chat', 1, 2);
+             INSERT INTO messages VALUES ('one', 'chat', 'assistant', '', 1, 0, 1, NULL);
+             INSERT INTO messages VALUES ('two', 'chat', 'assistant', '', 2, 0, 1, NULL);
+             INSERT INTO tool_calls (message_id, name, timestamp, meta) VALUES
+                ('one', 'read', 1, '{\"id\":\"toolu_a\",\"kind\":\"read\"}'),
+                ('one', 'terminal', 1, NULL),
+                ('one', 'read', 1, '{\"id\":\"toolu_a\"}'),
+                ('one', 'edit', 1, '{not json'),
+                ('two', 'read', 2, '{\"kind\":\"read\"}');",
+         )
+         .unwrap();
+      drop(conn);
+
+      let repository = ChatHistoryRepository::new(path);
+      repository.initialize().unwrap();
+      let migrated = call_rows(&repository);
+      assert_eq!(
+         migrated
+            .iter()
+            .map(|(_, message_id, call_id, position)| (
+               message_id.as_str(),
+               call_id.as_str(),
+               *position
+            ))
+            .collect::<Vec<_>>(),
+         vec![
+            ("one", "toolu_a", 0),
+            ("one", "one:tool-1", 1),
+            ("one", "toolu_a#2", 2),
+            ("one", "one:tool-3", 3),
+            ("two", "two:tool-0", 0),
+         ]
+      );
+      assert_eq!(
+         loaded_call_ids(&repository, "chat"),
+         vec![
+            "toolu_a",
+            "one:tool-1",
+            "toolu_a#2",
+            "one:tool-3",
+            "two:tool-0"
+         ]
+      );
+
+      repository.initialize().unwrap();
+      assert_eq!(call_rows(&repository), migrated);
+
+      // A row written by an older build after the migration is keyed on the next start.
+      let conn = repository.open_connection().unwrap();
+      conn
+         .execute(
+            "INSERT INTO tool_calls (message_id, name, timestamp, meta) VALUES ('one', 'late', 3, \
+             '{\"id\":\"toolu_a\"}')",
+            [],
+         )
+         .unwrap();
+      drop(conn);
+      repository.initialize().unwrap();
+      let rows = call_rows(&repository);
+      assert_eq!(&rows[..4], &migrated[..4]);
+      assert_eq!((rows[4].2.as_str(), rows[4].3), ("toolu_a#3", 4));
+
+      let conn = repository.open_connection().unwrap();
+      let duplicate = conn.execute(
+         "UPDATE tool_calls SET call_id = 'toolu_a' WHERE call_id = 'one:tool-1'",
+         [],
+      );
+      assert!(duplicate.is_err());
+   }
+
+   #[test]
+   fn keeps_tool_call_rows_matched_by_id_across_reorder_insert_and_remove() {
+      let directory = tempfile::tempdir().unwrap();
+      let repository = ChatHistoryRepository::new(directory.path().join("history.db"));
+      repository.initialize().unwrap();
+      let message = sample_message("chat", "reply");
+      let call = |id: &str| sample_tool_call("reply", id);
+      repository
+         .save_chat(
+            sample_chat("chat"),
+            vec![message.clone()],
+            vec![call("a"), call("b"), call("c")],
+         )
+         .unwrap();
+      let (row_a, row_c) = (row_id_of(&repository, "a"), row_id_of(&repository, "c"));
+
+      let conn = repository.open_connection().unwrap();
+      conn
+         .execute_batch(
+            "CREATE TABLE writes (call_id TEXT);
+             CREATE TRIGGER count_tool_call_writes AFTER UPDATE ON tool_calls BEGIN
+                INSERT INTO writes VALUES (new.call_id);
+             END;",
+         )
+         .unwrap();
+
+      let mut finished = call("a");
+      finished.output = Some("done".to_string());
+      repository
+         .save_chat(
+            sample_chat("chat"),
+            vec![message.clone()],
+            vec![call("c"), call("x"), finished],
+         )
+         .unwrap();
+
+      assert_eq!(loaded_call_ids(&repository, "chat"), vec!["c", "x", "a"]);
+      assert_eq!(row_id_of(&repository, "a"), row_a);
+      assert_eq!(row_id_of(&repository, "c"), row_c);
+      let loaded = repository.load_chat("chat").unwrap();
+      assert_eq!(loaded.tool_calls[2].output.as_deref(), Some("done"));
+      assert_eq!(repository.get_stats().unwrap().total_tool_calls, 3);
+
+      conn.execute("DELETE FROM writes", []).unwrap();
+      repository
+         .save_chat(
+            sample_chat("chat"),
+            vec![message],
+            loaded.tool_calls.clone(),
+         )
+         .unwrap();
+      let writes: i64 = conn
+         .query_row("SELECT COUNT(*) FROM writes", [], |row| row.get(0))
+         .unwrap();
+      assert_eq!(writes, 0);
+   }
+
+   #[test]
+   fn keys_repeated_and_missing_call_ids_the_same_way_on_every_save() {
+      let directory = tempfile::tempdir().unwrap();
+      let repository = ChatHistoryRepository::new(directory.path().join("history.db"));
+      repository.initialize().unwrap();
+      let calls = vec![
+         sample_tool_call("reply", "dup"),
+         sample_tool_call("reply", "dup"),
+         sample_tool_call("reply", ""),
+      ];
+      for _ in 0..2 {
+         repository
+            .save_chat(
+               sample_chat("chat"),
+               vec![sample_message("chat", "reply")],
+               calls.clone(),
+            )
+            .unwrap();
+      }
+      assert_eq!(
+         loaded_call_ids(&repository, "chat"),
+         vec!["dup", "dup#2", "reply:tool-2"]
+      );
+      assert_eq!(repository.get_stats().unwrap().total_tool_calls, 3);
+   }
+
+   #[test]
+   fn a_partial_save_rekeys_only_the_saved_messages_tool_calls() {
+      let directory = tempfile::tempdir().unwrap();
+      let repository = ChatHistoryRepository::new(directory.path().join("history.db"));
+      repository.initialize().unwrap();
+      let mut prompt = sample_message("chat", "prompt");
+      prompt.timestamp = 1;
+      repository
+         .save_chat(
+            sample_chat("chat"),
+            vec![prompt, sample_message("chat", "reply")],
+            vec![
+               sample_tool_call("prompt", "p1"),
+               sample_tool_call("reply", "r1"),
+               sample_tool_call("reply", "r2"),
+            ],
+         )
+         .unwrap();
+      let (row_p1, row_r2) = (row_id_of(&repository, "p1"), row_id_of(&repository, "r2"));
+
+      repository
+         .save_chat_messages(
+            sample_chat("chat"),
+            vec![sample_message("chat", "reply")],
+            vec![
+               sample_tool_call("reply", "r2"),
+               sample_tool_call("reply", "r3"),
+            ],
+         )
+         .unwrap();
+
+      assert_eq!(loaded_call_ids(&repository, "chat"), vec!["p1", "r2", "r3"]);
+      assert_eq!(row_id_of(&repository, "p1"), row_p1);
+      assert_eq!(row_id_of(&repository, "r2"), row_r2);
+      let rows = call_rows(&repository);
+      assert_eq!(
+         rows
+            .iter()
+            .map(|(_, message_id, call_id, position)| (
+               message_id.as_str(),
+               call_id.as_str(),
+               *position
+            ))
+            .collect::<Vec<_>>(),
+         vec![("prompt", "p1", 0), ("reply", "r2", 0), ("reply", "r3", 1)]
       );
    }
 }

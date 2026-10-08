@@ -43,7 +43,6 @@ export interface Terminal {
   progress?: TerminalProgress;
   lastCommand?: TerminalCommandSummary;
   customName?: boolean;
-  ref?: any;
   remoteConnectionId?: string;
 }
 

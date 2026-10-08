@@ -92,6 +92,30 @@ describe("AI chat history service", () => {
     expect(restored.messages[0].toolCalls?.[0].terminals).toEqual(terminals);
   });
 
+  it("stores each tool call's id in its own column and restores it from there", async () => {
+    const chat = createChat("tool-id-chat", "Ran it");
+    chat.messages[0].isStreaming = false;
+    chat.messages[0].toolCalls = [
+      { id: "toolu_1", name: "Read", input: {}, kind: "read", timestamp: new Date(2) },
+    ];
+    vi.mocked(invoke).mockResolvedValue(undefined);
+    await saveChatToDb(chat);
+    const saved = vi.mocked(invoke).mock.calls[0][1] as {
+      toolCalls: Array<{ call_id: string; meta: string | null }>;
+    };
+    expect(saved.toolCalls[0]!.call_id).toBe("toolu_1");
+    expect(JSON.parse(saved.toolCalls[0]!.meta!)).toEqual({ kind: "read" });
+
+    vi.mocked(invoke).mockResolvedValue({
+      ...saved,
+      tool_calls: [
+        { ...saved.toolCalls[0], call_id: "stored-id", meta: '{"id":"old-meta-id","kind":"read"}' },
+      ],
+    });
+    const restored = await loadChatFromDb(chat.id);
+    expect(restored.messages[0].toolCalls?.[0]).toMatchObject({ id: "stored-id", kind: "read" });
+  });
+
   it("serializes and coalesces saves for the same chat", async () => {
     let resolveFirstSave: (() => void) | undefined;
     vi.mocked(invoke).mockImplementation(() => {

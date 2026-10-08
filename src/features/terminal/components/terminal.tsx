@@ -9,14 +9,7 @@ import { withRemoteHostTrust } from "@/features/remote/services/remote-host-trus
 import { spawnLocalTerminal, spawnRemoteTerminal } from "../services/terminal-pty-api";
 import type { ISearchOptions } from "@xterm/addon-search";
 import { Terminal } from "@xterm/xterm";
-import {
-  useCallback,
-  useEffect,
-  useImperativeHandle,
-  useRef,
-  useState,
-  type DragEvent,
-} from "react";
+import { useCallback, useEffect, useRef, useState, type DragEvent } from "react";
 import { connectionStore } from "@/features/remote/stores/remote-connection.store";
 import { parseRemotePath } from "@/features/remote/utils/remote-path";
 import { getWslShellId, parseWslPath } from "@/features/wsl/utils/wsl-path";
@@ -46,6 +39,7 @@ import { TerminalLinkTooltip } from "../lib/terminal-link-tooltip";
 import { TerminalShellIntegration } from "../lib/terminal-shell-integration";
 import { useTerminalTheme, type TerminalTheme } from "../hooks/use-terminal-theme";
 import { useTerminalStore } from "../stores/terminal.store";
+import { registerTerminalEmulator } from "../services/terminal-emulator-registry";
 import type {
   TerminalCommandNavigationDirection,
   TerminalCommandSummary,
@@ -777,6 +771,12 @@ export const TerminalEmulator = ({
     onTerminalRef(createSessionHandle(terminal));
   }, [createSessionHandle, isInitialized, onTerminalRef]);
 
+  useEffect(() => {
+    const terminal = terminalRef.current;
+    if (!isInitialized || !terminal) return;
+    return registerTerminalEmulator(sessionId, createSessionHandle(terminal));
+  }, [createSessionHandle, isInitialized, sessionId]);
+
   // Listen for portal-target changes from TerminalHost; force a fit + repaint
   // so PTY/frontend dims match the new slot before any TUI relies on them.
   useEffect(() => {
@@ -1001,32 +1001,6 @@ export const TerminalEmulator = ({
     clearSearch();
     terminalRef.current?.focus();
   }, [clearSearch]);
-
-  useImperativeHandle(
-    getSession(sessionId)?.ref,
-    () => ({
-      terminal: terminalRef.current,
-      searchAddon: addonsRef.current?.searchAddon,
-      focus: () => terminalRef.current?.focus(),
-      showSearch: () => setIsSearchVisible(true),
-      blur: () => terminalRef.current?.blur(),
-      clear: () => terminalRef.current?.clear(),
-      selectAll: () => terminalRef.current?.selectAll(),
-      clearSelection: () => terminalRef.current?.clearSelection(),
-      getSelection: () => terminalRef.current?.getSelection() || "",
-      paste: (text: string) => terminalRef.current?.paste(text),
-      scrollToTop: () => terminalRef.current?.scrollToTop(),
-      scrollToBottom: () => terminalRef.current?.scrollToBottom(),
-      findNext: (term: string) => addonsRef.current?.searchAddon.findNext(term),
-      findPrevious: (term: string) => addonsRef.current?.searchAddon.findPrevious(term),
-      scrollToPreviousCommand: () =>
-        shellIntegrationRef.current?.scrollToPreviousCommand() ?? false,
-      scrollToNextCommand: () => shellIntegrationRef.current?.scrollToNextCommand() ?? false,
-      serialize: () => (terminalRef.current ? addonsRef.current?.serializeAddon.serialize() : ""),
-      resize: () => fitTerminal(),
-    }),
-    [fitTerminal],
-  );
 
   return (
     <div className="relative flex size-full min-w-0 flex-col overflow-hidden bg-background">
