@@ -55,13 +55,17 @@ interface ToolCallData {
   meta?: string | null;
 }
 
-type ToolCallMeta = Pick<
-  ToolCall,
-  "kind" | "status" | "locations" | "contentOffset" | "terminals" | "durationMs"
+type ToolCallMeta = Partial<
+  Pick<
+    ToolCall,
+    "id" | "kind" | "status" | "locations" | "contentOffset" | "terminals" | "durationMs"
+  >
 >;
 
 function serializeToolCallMeta(toolCall: ToolCall): string | null {
   const meta: ToolCallMeta = {};
+  // The call_id column owns the id; it stays in meta too for older builds, which read it here.
+  if (toolCall.id) meta.id = toolCall.id;
   if (toolCall.kind) meta.kind = toolCall.kind;
   if (toolCall.status) meta.status = toolCall.status;
   if (toolCall.locations?.length) meta.locations = toolCall.locations;
@@ -184,8 +188,7 @@ function chatToData(
       for (const tc of msg.toolCalls) {
         tool_calls.push({
           message_id: msg.id,
-          // The store gives every call an id. The backend keys one built without it by position.
-          call_id: tc.id ?? "",
+          call_id: tc.id,
           name: tc.name,
           input: tc.input ? JSON.stringify(tc.input) : null,
           output: tc.output ? JSON.stringify(tc.output) : null,

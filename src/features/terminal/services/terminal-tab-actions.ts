@@ -1,6 +1,6 @@
 import { saveTextFileWithDialog } from "@/utils/file-dialogs";
 import { showToast } from "@/utils/toast";
-import { getTerminalBufferText, getTerminalExportFileName } from "../utils/terminal-buffer-text";
+import { getTerminalExportFileName, getTerminalExportText } from "../utils/terminal-buffer-text";
 import { getTerminalEmulator } from "./terminal-emulator-registry";
 
 export function clearTerminal(sessionId: string): boolean {
@@ -15,7 +15,7 @@ export async function exportTerminalOutput(
   terminalName: string,
 ): Promise<string | null> {
   const emulator = getTerminalEmulator(sessionId);
-  const content = emulator ? getTerminalBufferText(emulator.terminal.buffer.active) : "";
+  const content = emulator ? getTerminalExportText(emulator.terminal.buffer) : "";
   if (!content) {
     showToast({ key: "terminal-export", type: "info", message: "No terminal output to export" });
     return null;

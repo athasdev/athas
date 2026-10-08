@@ -14,7 +14,12 @@ import {
   registerTerminalEmulator,
 } from "../services/terminal-emulator-registry";
 import { clearTerminal, exportTerminalOutput } from "../services/terminal-tab-actions";
-import { getTerminalBufferText, getTerminalExportFileName } from "../utils/terminal-buffer-text";
+import {
+  ALTERNATE_SCREEN_SEPARATOR,
+  getTerminalBufferText,
+  getTerminalExportFileName,
+  getTerminalExportText,
+} from "../utils/terminal-buffer-text";
 
 function bufferOf(rows: Array<{ text: string; isWrapped?: boolean }>) {
   return {
@@ -30,8 +35,16 @@ function bufferOf(rows: Array<{ text: string; isWrapped?: boolean }>) {
   };
 }
 
-function createHandle(rows: Array<{ text: string; isWrapped?: boolean }> = []) {
-  const terminal = { buffer: { active: bufferOf(rows) } } as unknown as Terminal;
+type Rows = Array<{ text: string; isWrapped?: boolean }>;
+
+function buffersOf(normalRows: Rows, alternateRows?: Rows) {
+  const normal = { ...bufferOf(normalRows), type: "normal" as const };
+  const alternate = { ...bufferOf(alternateRows ?? []), type: "alternate" as const };
+  return { normal, alternate, active: alternateRows ? alternate : normal };
+}
+
+function createHandle(rows: Rows = [], alternateRows?: Rows) {
+  const terminal = { buffer: buffersOf(rows, alternateRows) } as unknown as Terminal;
   return {
     focus: vi.fn(),
     showSearch: vi.fn(),
@@ -67,6 +80,17 @@ describe("terminal buffer text", () => {
       ]),
     );
     expect(text).toBe("$ echo hello\na very long line that wrapped");
+  });
+
+  it("exports the shell scrollback, then the screen of a running full-screen program", () => {
+    expect(getTerminalExportText(buffersOf([{ text: "$ make" }, { text: "ok" }]))).toBe(
+      "$ make\nok",
+    );
+    expect(
+      getTerminalExportText(
+        buffersOf([{ text: "$ vim notes.md" }], [{ text: "# Notes" }, { text: "~" }]),
+      ),
+    ).toBe(`$ vim notes.md\n${ALTERNATE_SCREEN_SEPARATOR}\n# Notes\n~`);
   });
 
   it("names the export after the terminal and date", () => {
@@ -114,6 +138,14 @@ describe("terminal tab actions", () => {
     expect(options).toMatchObject({ defaultPath: expect.stringMatching(/^zsh_.*\.txt$/) });
     expect(getContents()).toBe("$ ls\nREADME.md");
     expect(mocks.toast).toHaveBeenCalledWith(expect.objectContaining({ type: "success" }));
+  });
+
+  it("keeps the scrollback when the clicked tab runs a full-screen program", async () => {
+    register("tui", createHandle([{ text: "$ ls" }, { text: "README.md" }], [{ text: "htop" }]));
+    mocks.save.mockResolvedValue("/tmp/out.txt");
+    await exportTerminalOutput("tui", "zsh");
+    const [, getContents] = mocks.save.mock.calls[0]!;
+    expect(getContents()).toBe(`$ ls\nREADME.md\n${ALTERNATE_SCREEN_SEPARATOR}\nhtop`);
   });
 
   it("does not open a save dialog for an empty or unknown terminal", async () => {

@@ -104,7 +104,7 @@ describe("AI chat history service", () => {
       toolCalls: Array<{ call_id: string; meta: string | null }>;
     };
     expect(saved.toolCalls[0]!.call_id).toBe("toolu_1");
-    expect(JSON.parse(saved.toolCalls[0]!.meta!)).toEqual({ kind: "read" });
+    expect(JSON.parse(saved.toolCalls[0]!.meta!)).toEqual({ id: "toolu_1", kind: "read" });
 
     vi.mocked(invoke).mockResolvedValue({
       ...saved,

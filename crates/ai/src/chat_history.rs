@@ -58,7 +58,8 @@ pub struct ToolCallData {
    pub error: Option<String>,
    pub timestamp: i64,
    pub is_complete: bool,
-   /// Presentation details (kind, status, locations, content offset) as JSON.
+   /// Presentation details (kind, status, locations, content offset) as JSON. It also repeats the
+   /// call's id for older builds, which read it from here; `call_id` is the one this build uses.
    #[serde(default)]
    pub meta: Option<String>,
 }
@@ -176,14 +177,7 @@ impl ChatHistoryRepository {
       migrate_tool_call_keys(&mut conn)?;
 
       for column in ["images", "plan", "stop_notice", "turn_usage"] {
-         if !table_has_column(&conn, "messages", column)? {
-            conn
-               .execute(
-                  &format!("ALTER TABLE messages ADD COLUMN {column} TEXT"),
-                  [],
-               )
-               .map_err(|e| format!("Failed to add message {column}: {e}"))?;
-         }
+         add_column_if_missing(&conn, "messages", column, "TEXT")?;
       }
 
       conn
@@ -767,26 +761,41 @@ fn table_has_column(conn: &Connection, table: &str, column: &str) -> Result<bool
       .map_err(|e| format!("Failed to inspect {table} columns: {e}"))
 }
 
+/// Adds `column` to `table` unless it is there. Another connection initializing the same database
+/// can add it between the check and the `ALTER`, so a duplicate column counts as success.
+fn add_column_if_missing(
+   conn: &Connection,
+   table: &str,
+   column: &str,
+   definition: &str,
+) -> Result<(), String> {
+   if table_has_column(conn, table, column)? {
+      return Ok(());
+   }
+   match conn.execute(
+      &format!("ALTER TABLE {table} ADD COLUMN {column} {definition}"),
+      [],
+   ) {
+      Ok(_) => Ok(()),
+      Err(e) if e.to_string().contains("duplicate column name") => Ok(()),
+      Err(e) => Err(format!("Failed to add {table} {column}: {e}")),
+   }
+}
+
 /// Gives every stored tool call a `call_id` unique within its message and a `position`, then
 /// adds the `(message_id, call_id)` unique index saves upsert on. Calls whose `meta` JSON has an
 /// id keep it; the others get an id derived from their message and position. Only messages with a
 /// row missing either are touched, so running it again (or after an older build added rows) is
 /// safe.
 fn migrate_tool_call_keys(conn: &mut Connection) -> Result<(), String> {
-   for (column, kind) in [("call_id", "TEXT"), ("position", "INTEGER")] {
-      if !table_has_column(conn, "tool_calls", column)? {
-         conn
-            .execute(
-               &format!("ALTER TABLE tool_calls ADD COLUMN {column} {kind}"),
-               [],
-            )
-            .map_err(|e| format!("Failed to add tool call {column}: {e}"))?;
-      }
-   }
-
+   // IMMEDIATE takes the write lock up front, so a second window initializing the same database
+   // waits here and then finds the migration done.
    let transaction = conn
       .transaction_with_behavior(TransactionBehavior::Immediate)
       .map_err(|e| format!("Failed to begin tool call migration: {e}"))?;
+   for (column, kind) in [("call_id", "TEXT"), ("position", "INTEGER")] {
+      add_column_if_missing(&transaction, "tool_calls", column, kind)?;
+   }
    let pending_messages = transaction
       .prepare(
          "SELECT DISTINCT message_id FROM tool_calls WHERE call_id IS NULL OR call_id = '' OR \
@@ -1779,5 +1788,48 @@ mod tests {
             .collect::<Vec<_>>(),
          vec![("prompt", "p1", 0), ("reply", "r2", 0), ("reply", "r3", 1)]
       );
+   }
+
+   #[test]
+   fn initializes_the_same_old_database_from_several_windows_at_once() {
+      for _ in 0..20 {
+         let directory = tempfile::tempdir().unwrap();
+         let path = directory.path().join("history.db");
+         Connection::open(&path)
+            .unwrap()
+            .execute_batch(
+               "CREATE TABLE messages (id TEXT PRIMARY KEY, chat_id TEXT NOT NULL, role TEXT NOT \
+                NULL, content TEXT NOT NULL, timestamp INTEGER NOT NULL, is_streaming BOOLEAN, \
+                is_tool_use BOOLEAN, tool_name TEXT);
+                CREATE TABLE tool_calls (id INTEGER PRIMARY KEY AUTOINCREMENT, message_id TEXT NOT \
+                NULL, name TEXT NOT NULL, input TEXT, output TEXT, error TEXT, timestamp INTEGER \
+                NOT NULL, is_complete BOOLEAN DEFAULT 0, meta TEXT);
+                INSERT INTO tool_calls (message_id, name, timestamp, meta) VALUES ('m', 'read', 1, \
+                '{\"id\":\"toolu_1\"}');",
+            )
+            .unwrap();
+         let start = std::sync::Arc::new(std::sync::Barrier::new(8));
+         let results = (0..8)
+            .map(|_| {
+               let (path, start) = (path.clone(), start.clone());
+               std::thread::spawn(move || {
+                  start.wait();
+                  ChatHistoryRepository::new(path).initialize()
+               })
+            })
+            .collect::<Vec<_>>()
+            .into_iter()
+            .map(|thread| thread.join().unwrap())
+            .collect::<Vec<_>>();
+         assert!(results.iter().all(Result::is_ok), "{results:?}");
+         let repository = ChatHistoryRepository::new(path);
+         assert_eq!(
+            call_rows(&repository)
+               .into_iter()
+               .map(|(_, _, call_id, position)| (call_id, position))
+               .collect::<Vec<_>>(),
+            vec![("toolu_1".to_string(), 0)]
+         );
+      }
    }
 }

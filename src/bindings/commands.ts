@@ -6271,7 +6271,10 @@ export type ToolCallData = {
   error: string | null;
   timestamp: number;
   is_complete: boolean;
-  /**  Presentation details (kind, status, locations, content offset) as JSON. */
+  /**
+   *  Presentation details (kind, status, locations, content offset) as JSON. It also repeats the
+   *  call's id for older builds, which read it from here; `call_id` is the one this build uses.
+   */
   meta?: string | null;
 };
 
