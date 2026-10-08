@@ -173,6 +173,12 @@ export const commands = {
     __TAURI_INVOKE<null>("git_unstage_hunk", { repoPath, hunk }),
   gitBlameFile: (rootPath: string, filePath: string, content: string) =>
     __TAURI_INVOKE<GitBlame>("git_blame_file", { rootPath, filePath, content }),
+  /**
+   *  Warms the committed-blame cache for files likely to be blamed next, after HEAD moved. Returns
+   *  at once; the work runs on the backend's own prewarm thread.
+   */
+  gitPrewarmBlame: (rootPath: string, filePaths: string[]) =>
+    __TAURI_INVOKE<void>("git_prewarm_blame", { rootPath, filePaths }),
   storeGithubToken: (token: string) => __TAURI_INVOKE<null>("store_github_token", { token }),
   githubTokenStatus: () => __TAURI_INVOKE<GitHubTokenStatus>("github_token_status"),
   storeGithubPersonalAccessToken: (token: string) =>

@@ -63,4 +63,19 @@ describe("editor setting overrides", () => {
     clearOverrides();
     expect(useEditorSettingOverridesStore.getState().overrides).toEqual({});
   });
+
+  it("drops only the override fed by a setting the user changed", () => {
+    const { setOverrides, clearOverrideForSetting } =
+      useEditorSettingOverridesStore.getState().actions;
+    setOverrides({ wordWrap: true, lineHeight: 2, tabSize: 8 });
+
+    clearOverrideForSetting("wordWrap");
+    clearOverrideForSetting("editorLineHeight");
+    expect(useEditorSettingOverridesStore.getState().overrides).toEqual({ tabSize: 8 });
+
+    const before = useEditorSettingOverridesStore.getState().overrides;
+    clearOverrideForSetting("showMinimap");
+    clearOverrideForSetting("wordWrap");
+    expect(useEditorSettingOverridesStore.getState().overrides).toBe(before);
+  });
 });

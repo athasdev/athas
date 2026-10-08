@@ -80,5 +80,3 @@ export const ICON_CONCEPTS = {
   "status.success": CheckCircleIcon,
   "status.warning": WarningIcon,
 } as const satisfies Record<string, Icon>;
-
-export type IconConcept = keyof typeof ICON_CONCEPTS;

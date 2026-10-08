@@ -9,6 +9,7 @@ import {
   isGitChangeRelevant,
   subscribeToGitChanges,
 } from "../events/git-events";
+import { prewarmGitBlame } from "../api/git-blame-api";
 import { getGitBlameCacheKey, useGitBlameStore } from "../stores/git-blame.store";
 import type { GitBlameLine } from "../types/git.types";
 import { findGitBlameLine } from "../utils/git-blame-lines";
@@ -24,11 +25,48 @@ export function canGitChangeAffectBlame(change: GitChange): boolean {
   return !change.scopes || change.scopes.some((scope) => BLAME_SCOPES.has(scope));
 }
 
+/** Most files warmed after one HEAD change; the backend applies the same cap. */
+const BLAME_PREWARM_FILE_LIMIT = 5;
+
 /** Reads from the editor's own workspace, which need not be the active one. */
+function getWorkspaceBufferStore(workspaceId: string | null) {
+  return workspaceId ? useBufferStore.getStore(workspaceId) : useBufferStore;
+}
+
 function readEditorContent(workspaceId: string | null, bufferId: string): string | null {
-  const store = workspaceId ? useBufferStore.getStore(workspaceId) : useBufferStore;
-  const buffer = getBufferById(store.getState().buffers, bufferId);
+  const buffer = getBufferById(getWorkspaceBufferStore(workspaceId).getState().buffers, bufferId);
   return buffer?.type === "editor" ? readBufferText(buffer) : null;
+}
+
+const pendingPrewarms = new Map<string, Set<string>>();
+
+/**
+ * Collects the files every shown editor reports for one git change, then warms them first and
+ * the workspace's other open files after them. Their blame request comes after the reload delay,
+ * by which time the backend has usually finished walking history.
+ */
+function scheduleBlamePrewarm(
+  workspaceId: string | null,
+  rootFolderPath: string,
+  filePath: string,
+): void {
+  const key = `${workspaceId ?? ""}\0${rootFolderPath}`;
+  const pending = pendingPrewarms.get(key);
+  if (pending) {
+    pending.add(filePath);
+    return;
+  }
+  const shownFiles = new Set([filePath]);
+  pendingPrewarms.set(key, shownFiles);
+  queueMicrotask(() => {
+    pendingPrewarms.delete(key);
+    const files = new Set(shownFiles);
+    for (const buffer of getWorkspaceBufferStore(workspaceId).getState().buffers) {
+      if (files.size >= BLAME_PREWARM_FILE_LIMIT) break;
+      if (buffer.type === "editor" && !buffer.isVirtual && buffer.path) files.add(buffer.path);
+    }
+    void prewarmGitBlame(rootFolderPath, [...files].slice(0, BLAME_PREWARM_FILE_LIMIT));
+  });
 }
 
 /**
@@ -73,6 +111,7 @@ export function useGitBlame(filePath: string | undefined, bufferId: string) {
       if (!isGitChangeRelevant(change, rootFolderPath, filePath)) return;
       // Recorded in the store at once, so the reload survives this effect being torn down.
       invalidateBlameForFile(rootFolderPath, filePath);
+      scheduleBlamePrewarm(workspaceId, rootFolderPath, filePath);
       scheduleLoad();
     });
 

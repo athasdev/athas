@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   otherWorkspaceContent: "other workspace\n",
   scopeId: null as string | null,
   resolve: vi.fn(),
+  prewarm: vi.fn(),
   blameStore: null as null | {
     getState: () => { actions: { clearAllBlame: () => void } };
   },
@@ -23,8 +24,23 @@ vi.mock("@/features/workspace/stores/create-workspace-scoped-store", () => ({
   useWorkspaceStoreScopeId: () => mocks.scopeId,
 }));
 vi.mock("@/features/editor/stores/buffer.store", () => {
+  const otherBuffers = [
+    { id: "virtual", type: "editor", path: "diff://x", isVirtual: true },
+    { id: "terminal", type: "terminal", path: "/repo/terminal" },
+    ...["a", "b", "c", "d", "e"].map((name) => ({
+      id: name,
+      type: "editor",
+      path: `/repo/src/${name}.ts`,
+      isVirtual: false,
+    })),
+  ];
   const storeWith = (content: () => string) => ({
-    getState: () => ({ buffers: [{ id: "buffer-1", type: "editor", content: content() }] }),
+    getState: () => ({
+      buffers: [
+        { id: "buffer-1", type: "editor", path: "/repo/src/app.ts", content: content() },
+        ...otherBuffers,
+      ],
+    }),
   });
   return {
     useBufferStore: {
@@ -41,7 +57,10 @@ vi.mock("@/features/editor/stores/buffer-index", () => ({
 vi.mock("@/features/workspace/stores/project.store", () => ({
   useProjectStore: (selector: (state: unknown) => unknown) => selector({ rootFolderPath: "/repo" }),
 }));
-vi.mock("../api/git-blame-api", () => ({ getResolvedGitBlame: mocks.resolve }));
+vi.mock("../api/git-blame-api", () => ({
+  getResolvedGitBlame: mocks.resolve,
+  prewarmGitBlame: mocks.prewarm,
+}));
 vi.mock("../stores/git-blame.store", async () => {
   const actual = await vi.importActual<typeof import("../stores/git-blame.store")>(
     "../stores/git-blame.store",
@@ -112,6 +131,7 @@ describe("useGitBlame", () => {
     mocks.scopeId = "editor-workspace";
     mocks.resolve.mockReset();
     mocks.resolve.mockResolvedValue(blameBy("Ada"));
+    mocks.prewarm.mockReset();
     mocks.blameStore?.getState().actions.clearAllBlame();
     renders = 0;
     root = createRoot(document.createElement("div"));
@@ -162,6 +182,25 @@ describe("useGitBlame", () => {
     await advance(1);
     expect(loadedContents()).toEqual(["one\ntwo\n", "one\ntwo\n"]);
     expect(latest.getBlameForLine(0)?.author).toBe("Grace");
+  });
+
+  it("prewarms the shown file and other open files once per history change", async () => {
+    await act(async () => {
+      emitGitChanged({ filePath: FILE, scopes: ["working-tree"], source: "save" });
+    });
+    expect(mocks.prewarm).not.toHaveBeenCalled();
+
+    await act(async () => {
+      emitGitChanged({ repoPath: "/repo", scopes: ["history"], source: "commit" });
+    });
+    expect(mocks.prewarm).toHaveBeenCalledTimes(1);
+    expect(mocks.prewarm).toHaveBeenCalledWith("/repo", [
+      FILE,
+      "/repo/src/a.ts",
+      "/repo/src/b.ts",
+      "/repo/src/c.ts",
+      "/repo/src/d.ts",
+    ]);
   });
 
   it("still reloads after a history change when the editor is hidden mid-debounce", async () => {

@@ -1,6 +1,7 @@
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { openNewAgentChat } from "@/features/ai/services/open-new-agent-chat";
 import { editorAPI } from "@/features/editor/extensions/api";
+import { useEditorSettingOverridesStore } from "@/features/editor/stores/editor-setting-overrides.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useWhatsNewStore } from "@/features/settings/stores/whats-new.store";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
@@ -149,22 +150,33 @@ export function toggleMinimap(): void {
   updateSetting("showMinimap", !settings.showMinimap);
 }
 
+/** Toggles flip what the editor shows, which is an extension's override while one is active. */
+function getShownEditorSettings() {
+  const { settings } = useSettingsStore.getState();
+  const { overrides } = useEditorSettingOverridesStore.getState();
+  return {
+    wordWrap: overrides.wordWrap ?? settings.wordWrap,
+    lineNumbers: overrides.lineNumbers ?? settings.lineNumbers,
+    renderWhitespace: overrides.renderWhitespace ?? settings.renderWhitespace,
+  };
+}
+
 export function toggleWordWrap(): void {
-  const { settings, actions } = useSettingsStore.getState();
-  const { updateSetting } = actions;
-  updateSetting("wordWrap", !settings.wordWrap);
+  const { updateSetting } = useSettingsStore.getState().actions;
+  updateSetting("wordWrap", !getShownEditorSettings().wordWrap);
 }
 
 export function toggleLineNumbers(): void {
-  const { settings, actions } = useSettingsStore.getState();
-  const { updateSetting } = actions;
-  updateSetting("lineNumbers", !settings.lineNumbers);
+  const { updateSetting } = useSettingsStore.getState().actions;
+  updateSetting("lineNumbers", !getShownEditorSettings().lineNumbers);
 }
 
 export function toggleRenderWhitespace(): void {
-  const { settings, actions } = useSettingsStore.getState();
-  const { updateSetting } = actions;
-  updateSetting("renderWhitespace", settings.renderWhitespace === "none" ? "all" : "none");
+  const { updateSetting } = useSettingsStore.getState().actions;
+  updateSetting(
+    "renderWhitespace",
+    getShownEditorSettings().renderWhitespace === "none" ? "all" : "none",
+  );
 }
 
 export function zoomIn(): void {

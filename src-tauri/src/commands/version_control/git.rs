@@ -218,6 +218,14 @@ pub async fn git_blame_file(
    .await
 }
 
+/// Warms the committed-blame cache for files likely to be blamed next, after HEAD moved. Returns
+/// at once; the work runs on the backend's own prewarm thread.
+#[tauri::command]
+#[specta::specta]
+pub fn git_prewarm_blame(root_path: String, file_paths: Vec<String>) {
+   git_backend::git_prewarm_blame(resolve_backend_path(root_path), file_paths);
+}
+
 #[tauri::command]
 #[specta::specta]
 pub fn git_branches(repo_path: String) -> Result<Vec<String>, String> {

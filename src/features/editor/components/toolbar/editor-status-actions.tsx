@@ -17,6 +17,7 @@ import {
 } from "@/features/editor/services/language-id";
 import { hasTextContent } from "@/features/panes/types/pane-content.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useEditorSettingOverridesStore } from "@/features/editor/stores/editor-setting-overrides.store";
 import { Button, type ButtonProps } from "@/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
 import {
@@ -60,9 +61,15 @@ export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {})
   const breadcrumbsEnabled = useSettingsStore((state) => state.settings.coreFeatures.breadcrumbs);
   const showMinimap = useSettingsStore((state) => state.settings.showMinimap);
   const showOutline = useSettingsStore((state) => state.settings.showOutline);
-  const lineNumbers = useSettingsStore((state) => state.settings.lineNumbers);
+  const lineNumbersOverride = useEditorSettingOverridesStore(
+    (state) => state.overrides.lineNumbers,
+  );
+  const lineNumbersSetting = useSettingsStore((state) => state.settings.lineNumbers);
+  const lineNumbers = lineNumbersOverride ?? lineNumbersSetting;
   const vimRelativeLineNumbers = useSettingsStore((state) => state.settings.vimRelativeLineNumbers);
-  const wordWrap = useSettingsStore((state) => state.settings.wordWrap);
+  const wordWrapOverride = useEditorSettingOverridesStore((state) => state.overrides.wordWrap);
+  const wordWrapSetting = useSettingsStore((state) => state.settings.wordWrap);
+  const wordWrap = wordWrapOverride ?? wordWrapSetting;
   const parameterHints = useSettingsStore((state) => state.settings.parameterHints);
   const autoCompletion = useSettingsStore((state) => state.settings.autoCompletion);
   const inlayHints = useSettingsStore((state) => state.settings.inlayHints);

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 import { parseMarkdown } from "../markdown/parser";
+import { renderMarkdown } from "../markdown/render-markdown";
 
 vi.mock("dompurify", () => ({
   default: {
@@ -116,5 +117,17 @@ Body text`,
     expect(html).toContain(
       "<blockquote>\n<p>outer</p>\n<blockquote>\n<p>inner</p>\n</blockquote>\n</blockquote>",
     );
+  });
+
+  it("keeps blockquote bodies as separately sanitized units for the worker", () => {
+    expect(renderMarkdown("intro\n\n> outer\n> > inner\n\nafter")).toEqual({
+      parts: [
+        "<p>intro</p>\n<blockquote>\n",
+        {
+          parts: ["<p>outer</p>\n<blockquote>\n", { parts: ["<p>inner</p>"] }, "\n</blockquote>"],
+        },
+        "\n</blockquote>\n<p>after</p>",
+      ],
+    });
   });
 });

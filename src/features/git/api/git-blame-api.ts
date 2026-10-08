@@ -60,3 +60,25 @@ export const getGitBlame = async (
 ): Promise<GitBlame | null> => {
   return (await getResolvedGitBlame(rootPath, filePath, content))?.blame ?? null;
 };
+
+/**
+ * Asks the backend to compute committed blame for these files in the background, so the first
+ * blame after HEAD moves is served from its cache. Files outside a repository are skipped.
+ */
+export async function prewarmGitBlame(rootPath: string, filePaths: string[]): Promise<void> {
+  const resolved = await Promise.all(
+    filePaths.map((filePath) => resolveRepositoryForFile(rootPath, filePath).catch(() => null)),
+  );
+  const filesByRepo = new Map<string, string[]>();
+  for (const file of resolved) {
+    if (!file) continue;
+    const files = filesByRepo.get(file.repoPath) ?? [];
+    if (!files.includes(file.filePath)) files.push(file.filePath);
+    filesByRepo.set(file.repoPath, files);
+  }
+  await Promise.all(
+    [...filesByRepo].map(([repoPath, files]) =>
+      commands.gitPrewarmBlame(repoPath, files).catch(() => undefined),
+    ),
+  );
+}

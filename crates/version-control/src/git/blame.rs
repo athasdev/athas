@@ -9,7 +9,14 @@ use std::{
 /// How many committed blames are kept. Each holds line ranges and commit metadata, not file text.
 const BLAME_CACHE_CAPACITY: usize = 32;
 
+/// How many files one prewarm request blames. The rest are blamed when they are first shown.
+const PREWARM_FILE_LIMIT: usize = 5;
+
+/// How many repositories can wait for a prewarm at once. Older requests are dropped beyond this.
+const PREWARM_QUEUE_LIMIT: usize = 4;
+
 static BLAME_CACHE: BlameCache = BlameCache::new(BLAME_CACHE_CAPACITY);
+static PREWARM_QUEUE: PrewarmQueue = PrewarmQueue::new();
 
 struct CommitAuthor {
    name: String,
@@ -83,6 +90,9 @@ struct BlameCacheKey {
 struct BlameCache {
    capacity: usize,
    entries: Mutex<VecDeque<(BlameCacheKey, Arc<CommittedBlame>)>>,
+   /// One lock per blame being computed, so a request that arrives during a prewarm of the same
+   /// file waits for it instead of walking history a second time.
+   computing: Mutex<Vec<(BlameCacheKey, Arc<Mutex<()>>)>>,
 }
 
 impl BlameCache {
@@ -90,7 +100,50 @@ impl BlameCache {
       Self {
          capacity,
          entries: Mutex::new(VecDeque::new()),
+         computing: Mutex::new(Vec::new()),
       }
+   }
+
+   fn computing_lock(&self, key: &BlameCacheKey) -> Arc<Mutex<()>> {
+      let mut computing = self.computing.lock().unwrap_or_else(|e| e.into_inner());
+      if let Some((_, lock)) = computing.iter().find(|(entry_key, _)| entry_key == key) {
+         return Arc::clone(lock);
+      }
+      let lock = Arc::new(Mutex::new(()));
+      computing.push((key.clone(), Arc::clone(&lock)));
+      lock
+   }
+
+   fn finish_computing(&self, key: &BlameCacheKey, lock: &Arc<Mutex<()>>) {
+      let mut computing = self.computing.lock().unwrap_or_else(|e| e.into_inner());
+      computing
+         .retain(|(entry_key, entry_lock)| entry_key != key || !Arc::ptr_eq(entry_lock, lock));
+   }
+
+   /// The cached blame for `key`, computing it with `load` when missing. Concurrent callers for
+   /// the same key share one computation.
+   fn get_or_load(
+      &self,
+      key: BlameCacheKey,
+      load: impl FnOnce() -> Result<CommittedBlame, String>,
+   ) -> Result<Arc<CommittedBlame>, String> {
+      if let Some(blame) = self.get(&key) {
+         return Ok(blame);
+      }
+      let lock = self.computing_lock(&key);
+      let result = {
+         let _computing = lock.lock().unwrap_or_else(|e| e.into_inner());
+         match self.get(&key) {
+            Some(blame) => Ok(blame),
+            None => load().map(|blame| {
+               let blame = Arc::new(blame);
+               self.insert(key.clone(), Arc::clone(&blame));
+               blame
+            }),
+         }
+      };
+      self.finish_computing(&key, &lock);
+      result
    }
 
    fn get(&self, key: &BlameCacheKey) -> Option<Arc<CommittedBlame>> {
@@ -183,16 +236,100 @@ fn committed_blame(
    };
 
    // Deepening a shallow clone changes blame without moving HEAD or the blob, so it is not cached.
-   let cacheable = !repo.is_shallow();
-   if cacheable && let Some(blame) = cache.get(&key) {
-      return Ok((blame, blob));
+   let load = || load_committed_blame(repo, file_path, head.id());
+   let blame = if repo.is_shallow() {
+      Arc::new(load()?)
+   } else {
+      cache.get_or_load(key, load)?
+   };
+   Ok((blame, blob))
+}
+
+struct PrewarmJob {
+   root_path: String,
+   file_paths: Vec<String>,
+}
+
+struct PrewarmState {
+   pending: VecDeque<PrewarmJob>,
+   running: bool,
+}
+
+/// Prewarm requests waiting for the single prewarm thread. A newer request for a repository
+/// replaces the one still waiting, so bursts of git events collapse into one pass.
+struct PrewarmQueue {
+   state: Mutex<PrewarmState>,
+}
+
+impl PrewarmQueue {
+   const fn new() -> Self {
+      Self {
+         state: Mutex::new(PrewarmState {
+            pending: VecDeque::new(),
+            running: false,
+         }),
+      }
    }
 
-   let blame = Arc::new(load_committed_blame(repo, file_path, head.id())?);
-   if cacheable {
-      cache.insert(key, Arc::clone(&blame));
+   /// Queues a job. Returns true when no thread is draining the queue and the caller must start
+   /// one.
+   fn push(&self, job: PrewarmJob) -> bool {
+      let mut state = self.state.lock().unwrap_or_else(|e| e.into_inner());
+      state
+         .pending
+         .retain(|pending| pending.root_path != job.root_path);
+      state.pending.push_back(job);
+      while state.pending.len() > PREWARM_QUEUE_LIMIT {
+         state.pending.pop_front();
+      }
+      !std::mem::replace(&mut state.running, true)
    }
-   Ok((blame, blob))
+
+   /// The next job, or None after marking the queue idle.
+   fn next(&self) -> Option<PrewarmJob> {
+      let mut state = self.state.lock().unwrap_or_else(|e| e.into_inner());
+      let job = state.pending.pop_front();
+      state.running = job.is_some();
+      job
+   }
+}
+
+/// Computes the committed blame of up to five files in the background, so the first blame after
+/// HEAD moves (commit, checkout, branch switch) is served from the cache. Returns at once; one
+/// thread does the work, and failures are ignored because the real request reports them.
+pub fn git_prewarm_blame(root_path: String, file_paths: Vec<String>) {
+   if file_paths.is_empty() {
+      return;
+   }
+   let job = PrewarmJob {
+      root_path,
+      file_paths,
+   };
+   if !PREWARM_QUEUE.push(job) {
+      return;
+   }
+   let spawned = std::thread::Builder::new()
+      .name("git-blame-prewarm".to_string())
+      .spawn(|| {
+         while let Some(job) = PREWARM_QUEUE.next() {
+            prewarm_blame(&BLAME_CACHE, &job.root_path, &job.file_paths);
+         }
+      });
+   if let Err(error) = spawned {
+      log::warn!("Failed to start blame prewarm: {}", error);
+      while PREWARM_QUEUE.next().is_some() {}
+   }
+}
+
+fn prewarm_blame(cache: &BlameCache, root_path: &str, file_paths: &[String]) {
+   let Ok(repo) = Repository::open(root_path) else {
+      return;
+   };
+   for file_path in file_paths.iter().take(PREWARM_FILE_LIMIT) {
+      if let Err(error) = committed_blame(cache, &repo, file_path) {
+         log::debug!("Skipped blame prewarm for '{}': {}", file_path, error);
+      }
+   }
 }
 
 fn load_committed_blame(
@@ -571,6 +708,104 @@ mod tests {
       let (second, _) = committed_blame(&cache, &clone, "example.txt").expect("second blame");
       assert!(!Arc::ptr_eq(&first, &second));
       assert_eq!(cache.len(), 0);
+   }
+
+   #[test]
+   fn prewarm_fills_the_cache_for_the_next_blame() {
+      let (temp_dir, repo) = init_repo();
+      let names: Vec<String> = (0..PREWARM_FILE_LIMIT + 2)
+         .map(|index| format!("file-{index}.txt"))
+         .collect();
+      for name in &names {
+         commit_file(&repo, name, "first\nsecond\n", "Add file");
+      }
+      let mut paths = vec!["missing.txt".to_string()];
+      paths.extend(names.iter().cloned());
+
+      let cache = BlameCache::new(16);
+      prewarm_blame(&cache, root(&temp_dir), &paths);
+      assert_eq!(cache.len(), PREWARM_FILE_LIMIT - 1);
+
+      let before = cache.get(&BlameCacheKey {
+         repo_dir: repo.path().to_path_buf(),
+         file_path: names[0].clone(),
+         head: repo.head().unwrap().peel_to_commit().unwrap().id(),
+         blob: repo
+            .head()
+            .unwrap()
+            .peel_to_tree()
+            .unwrap()
+            .get_path(Path::new(&names[0]))
+            .unwrap()
+            .id(),
+      });
+      let (blame, _) = committed_blame(&cache, &repo, &names[0]).expect("blame");
+      assert!(Arc::ptr_eq(&before.expect("prewarmed"), &blame));
+      assert_eq!(cache.len(), PREWARM_FILE_LIMIT - 1);
+   }
+
+   #[test]
+   fn concurrent_requests_share_one_computation() {
+      let (temp_dir, repo) = init_repo();
+      commit_file(&repo, "example.txt", "first\nsecond\n", "Initial commit");
+      let cache = BlameCache::new(4);
+      let barrier = std::sync::Barrier::new(4);
+
+      let blames: Vec<Arc<CommittedBlame>> = std::thread::scope(|scope| {
+         let handles: Vec<_> = (0..4)
+            .map(|_| {
+               scope.spawn(|| {
+                  let repo = Repository::open(root(&temp_dir)).expect("open repo");
+                  barrier.wait();
+                  committed_blame(&cache, &repo, "example.txt")
+                     .expect("blame")
+                     .0
+               })
+            })
+            .collect();
+         handles
+            .into_iter()
+            .map(|handle| handle.join().expect("thread"))
+            .collect()
+      });
+
+      assert!(blames.iter().all(|blame| Arc::ptr_eq(blame, &blames[0])));
+      assert_eq!(cache.len(), 1);
+      assert!(cache.computing.lock().unwrap().is_empty());
+   }
+
+   #[test]
+   fn prewarm_queue_keeps_the_latest_request_per_repository() {
+      let queue = PrewarmQueue::new();
+      let job = |root: &str, file: &str| PrewarmJob {
+         root_path: root.to_string(),
+         file_paths: vec![file.to_string()],
+      };
+
+      assert!(queue.push(job("/a", "old")));
+      assert!(!queue.push(job("/b", "b")));
+      assert!(!queue.push(job("/a", "new")));
+
+      let first = queue.next().expect("first job");
+      assert_eq!(
+         (first.root_path.as_str(), first.file_paths[0].as_str()),
+         ("/b", "b")
+      );
+      let second = queue.next().expect("second job");
+      assert_eq!(
+         (second.root_path.as_str(), second.file_paths[0].as_str()),
+         ("/a", "new")
+      );
+      assert!(queue.next().is_none());
+      assert!(queue.push(job("/c", "c")));
+
+      for index in 0..PREWARM_QUEUE_LIMIT + 2 {
+         queue.push(job(&format!("/repo-{index}"), "file"));
+      }
+      assert_eq!(
+         queue.state.lock().unwrap().pending.len(),
+         PREWARM_QUEUE_LIMIT
+      );
    }
 
    #[test]

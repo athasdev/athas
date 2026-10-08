@@ -17,6 +17,7 @@ import {
 import { parseSettingsImportJson } from "@/features/settings/lib/settings-import-export";
 import type { Settings } from "../types/settings.types";
 import { useWorkspaceTabsStore } from "@/features/workspace/stores/workspace-tabs.store";
+import { useEditorSettingOverridesStore } from "@/features/editor/stores/editor-setting-overrides.store";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { readAppearanceBootstrapCache } from "@/features/settings/lib/appearance-bootstrap";
 
@@ -109,6 +110,9 @@ const useSettingsStoreBase = create(
               Object.assign(state.settings, aiModelPatch);
               Object.assign(savePatch, aiModelPatch);
             });
+
+            // A setting the user just chose must not stay hidden behind an extension override.
+            useEditorSettingOverridesStore.getState().actions.clearOverrideForSetting(key);
 
             applySettingSideEffect(
               key,

@@ -17,11 +17,24 @@ const OVERRIDABLE_KEYS = [
   "renderIndentGuides",
 ] as const satisfies ReadonlyArray<keyof OverridableEditorSettings>;
 
+/** The override each user setting feeds; changing the setting drops that override. */
+const SETTING_OVERRIDE_KEYS: Partial<Record<keyof Settings, keyof OverridableEditorSettings>> = {
+  fontSize: "fontSize",
+  editorLineHeight: "lineHeight",
+  tabSize: "tabSize",
+  lineNumbers: "lineNumbers",
+  wordWrap: "wordWrap",
+  renderWhitespace: "renderWhitespace",
+  renderIndentGuides: "renderIndentGuides",
+};
+
 interface EditorSettingOverridesState {
   overrides: EditorSettingOverrides;
   actions: {
     setOverrides: (overrides: EditorSettingOverrides) => void;
     clearOverrides: () => void;
+    /** Drops the override masking `setting`, so a value the user just chose takes effect. */
+    clearOverrideForSetting: (setting: keyof Settings) => void;
   };
 }
 
@@ -48,6 +61,14 @@ export const useEditorSettingOverridesStore = createSelectors(
         }),
       clearOverrides: () =>
         set((state) => (Object.keys(state.overrides).length > 0 ? { overrides: {} } : state)),
+      clearOverrideForSetting: (setting) =>
+        set((state) => {
+          const key = SETTING_OVERRIDE_KEYS[setting];
+          if (!key || state.overrides[key] === undefined) return state;
+          const overrides = { ...state.overrides };
+          delete overrides[key];
+          return { overrides };
+        }),
     },
   })),
 );

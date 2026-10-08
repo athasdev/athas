@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { getGitBlame } from "../api/git-blame-api";
+import { getGitBlame, prewarmGitBlame } from "../api/git-blame-api";
 import { clearRepositoryDiscoveryCache } from "../api/git-repo-api";
 
 vi.mock("@tauri-apps/api/core", () => ({
@@ -69,5 +69,31 @@ describe("git blame api", () => {
       filePath: "src/app.ts",
       content: "const changed = true;\n",
     });
+  });
+
+  it("prewarms files grouped by their repository and skips files outside one", async () => {
+    mockInvoke.mockImplementation((command, args) => {
+      if (command === "git_discover_repo") {
+        const path = (args as { path: string }).path;
+        if (path.startsWith("/workspace/vendor/lib"))
+          return Promise.resolve("/workspace/vendor/lib");
+        if (path.startsWith("/workspace")) return Promise.resolve("/workspace");
+        return Promise.resolve(null);
+      }
+      return Promise.resolve(null);
+    });
+
+    await prewarmGitBlame("/workspace", [
+      "/workspace/src/app.ts",
+      "/workspace/vendor/lib/index.ts",
+      "/elsewhere/notes.md",
+      "/workspace/src/util.ts",
+    ]);
+
+    const prewarms = mockInvoke.mock.calls.filter(([command]) => command === "git_prewarm_blame");
+    expect(prewarms.map(([, args]) => args)).toEqual([
+      { rootPath: "/workspace", filePaths: ["src/app.ts", "src/util.ts"] },
+      { rootPath: "/workspace/vendor/lib", filePaths: ["index.ts"] },
+    ]);
   });
 });

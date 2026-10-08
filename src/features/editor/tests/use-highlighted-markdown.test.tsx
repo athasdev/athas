@@ -3,14 +3,41 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
-const mocks = vi.hoisted(() => ({
-  parseMarkdown: vi.fn((content: string) => `<p>${content}</p>`),
-  highlightMarkdownCodeBlocks: vi.fn(async (html: string) => html.replace("plain", "highlighted")),
-}));
+interface WorkerRender {
+  content: string;
+  resolve: (markdown: { parts: string[] }) => void;
+  reject: (error: unknown) => void;
+}
 
-vi.mock("../markdown/parser", () => ({ parseMarkdown: mocks.parseMarkdown }));
+const mocks = vi.hoisted(() => {
+  class MarkdownRenderSupersededError extends Error {}
+  return {
+    parseMarkdown: vi.fn((content: string) => `<p>${content}</p>`),
+    sanitizeMarkdown: vi.fn((markdown: { parts: string[] }) => markdown.parts.join("")),
+    highlightMarkdownCodeBlocks: vi.fn(async (html: string) =>
+      html.replace("plain", "highlighted"),
+    ),
+    MarkdownRenderSupersededError,
+    offThread: false,
+    workerRenders: [] as WorkerRender[],
+  };
+});
+
+vi.mock("../markdown/parser", () => ({
+  parseMarkdown: mocks.parseMarkdown,
+  sanitizeMarkdown: mocks.sanitizeMarkdown,
+}));
 vi.mock("../markdown/code-highlight", () => ({
   highlightMarkdownCodeBlocks: mocks.highlightMarkdownCodeBlocks,
+}));
+vi.mock("../markdown/markdown-render-client", () => ({
+  MarkdownRenderSupersededError: mocks.MarkdownRenderSupersededError,
+  markdownRenderClient: {
+    canRenderOffThread: () => mocks.offThread,
+    cancel: vi.fn(),
+    render: (_key: string, content: string) =>
+      new Promise((resolve, reject) => mocks.workerRenders.push({ content, resolve, reject })),
+  },
 }));
 
 const { useHighlightedMarkdown } = await import("../markdown/use-highlighted-markdown");
@@ -35,6 +62,8 @@ beforeEach(() => {
   mocks.parseMarkdown.mockClear();
   mocks.parseMarkdown.mockImplementation((content: string) => `<p>${content}</p>`);
   mocks.highlightMarkdownCodeBlocks.mockClear();
+  mocks.offThread = false;
+  mocks.workerRenders = [];
   host = document.createElement("div");
   document.body.append(host);
   root = createRoot(host);
@@ -109,6 +138,63 @@ describe("useHighlightedMarkdown", () => {
     mocks.highlightMarkdownCodeBlocks.mockImplementationOnce(() => new Promise<string>(() => {}));
     act(() => root.render(<Undebounced content="ab" />));
     expect(latestHtml).toBe(block("ab"));
+  });
+});
+
+describe("useHighlightedMarkdown with a render worker", () => {
+  beforeEach(() => {
+    mocks.offThread = true;
+  });
+
+  it("parses the first content here and debounced edits in the worker", async () => {
+    render("one");
+    expect(latestHtml).toBe("<p>one</p>");
+    expect(mocks.workerRenders).toHaveLength(0);
+
+    render("one two");
+    act(() => vi.advanceTimersByTime(DELAY));
+    expect(mocks.parseMarkdown).toHaveBeenCalledTimes(1);
+    expect(mocks.workerRenders.map((request) => request.content)).toEqual(["one two"]);
+    expect(latestHtml).toBe("<p>one</p>");
+
+    await act(async () => mocks.workerRenders[0].resolve({ parts: ["<p>one two</p>"] }));
+    expect(latestHtml).toBe("<p>one two</p>");
+    expect(mocks.sanitizeMarkdown).toHaveBeenCalledWith({ parts: ["<p>one two</p>"] });
+  });
+
+  it("ignores a worker result that a newer edit has replaced", async () => {
+    render("a");
+    render("ab");
+    act(() => vi.advanceTimersByTime(DELAY));
+    render("abc");
+    act(() => vi.advanceTimersByTime(DELAY));
+    expect(mocks.workerRenders.map((request) => request.content)).toEqual(["ab", "abc"]);
+
+    await act(async () => mocks.workerRenders[1].resolve({ parts: ["<p>abc</p>"] }));
+    await act(async () => mocks.workerRenders[0].resolve({ parts: ["<p>ab</p>"] }));
+    expect(latestHtml).toBe("<p>abc</p>");
+  });
+
+  it("drops superseded renders and parses here when the worker fails", async () => {
+    render("a");
+    render("ab");
+    act(() => vi.advanceTimersByTime(DELAY));
+    await act(async () => mocks.workerRenders[0].reject(new mocks.MarkdownRenderSupersededError()));
+    expect(latestHtml).toBe("<p>a</p>");
+    expect(mocks.parseMarkdown).toHaveBeenCalledTimes(1);
+
+    render("abc");
+    act(() => vi.advanceTimersByTime(DELAY));
+    await act(async () => mocks.workerRenders[1].reject(new Error("worker crashed")));
+    expect(latestHtml).toBe("<p>abc</p>");
+    expect(mocks.parseMarkdown).toHaveBeenLastCalledWith("abc", { frontMatter: undefined });
+  });
+
+  it("parses another source here instead of waiting for the worker", () => {
+    render("first", "/a.md");
+    render("second", "/b.md");
+    expect(latestHtml).toBe("<p>second</p>");
+    expect(mocks.workerRenders).toHaveLength(0);
   });
 });
 
