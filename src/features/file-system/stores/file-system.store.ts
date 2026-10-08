@@ -241,6 +241,12 @@ const workspaceSessionWriteQueue = createWorkspaceSessionSaveQueue(
   0,
 );
 
+const getDuplicateName = (name: string, attempt: number) => {
+  const extension = name.match(/(\.[^.]*)$/)?.[1] ?? "";
+  const stem = extension ? name.slice(0, -extension.length) : name;
+  return attempt === 0 ? `${stem}_copy${extension}` : `${stem}_copy_${attempt}${extension}`;
+};
+
 const getErrorMessage = (error: unknown) =>
   error instanceof Error ? error.message : String(error || "Unknown error");
 
@@ -2251,19 +2257,13 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
           const pathParts = remotePath.split("/");
           const base = pathParts.pop() || "";
           const dir = pathParts.join("/") || "/";
-          const extMatch = base.match(/(\.[^.]*)$/);
-          const ext = extMatch?.[1] ?? "";
-          const nameWithoutExt = ext ? base.slice(0, -ext.length) : base;
 
           let counter = 0;
           let finalName = "";
           let finalPath = "";
 
           do {
-            finalName =
-              counter === 0
-                ? `${nameWithoutExt}_copy${ext}`
-                : `${nameWithoutExt}_copy_${counter}${ext}`;
+            finalName = getDuplicateName(base, counter);
             finalPath = dir === "/" ? `/${finalName}` : `${dir}/${finalName}`;
             counter++;
           } while (findFileInTree(get().files, `remote://${remoteInfo.connectionId}${finalPath}`));
@@ -2301,9 +2301,6 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
           const pathParts = wslInfo.linuxPath.split("/");
           const base = pathParts.pop() || "";
           const dir = pathParts.join("/") || "/";
-          const extMatch = base.match(/(\.[^.]*)$/);
-          const ext = extMatch?.[1] ?? "";
-          const nameWithoutExt = ext ? base.slice(0, -ext.length) : base;
 
           let counter = 0;
           let finalName = "";
@@ -2311,10 +2308,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
           let finalPath = "";
 
           do {
-            finalName =
-              counter === 0
-                ? `${nameWithoutExt}_copy${ext}`
-                : `${nameWithoutExt}_copy_${counter}${ext}`;
+            finalName = getDuplicateName(base, counter);
             finalLinuxPath = dir === "/" ? `/${finalName}` : `${dir}/${finalName}`;
             finalPath = buildWslPath(wslInfo.distro, finalLinuxPath);
             counter++;
@@ -2345,25 +2339,16 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
 
         const dir = await dirname(path);
         const base = await basename(path);
-        const ext = await extname(path);
 
         const originalFile = findFileInTree(get().files, path);
         if (!originalFile) return;
 
-        const nameWithoutExt = base.slice(0, base.length - ext.length);
         let counter = 0;
         let finalName = "";
         let finalPath = "";
 
-        const generateCopyName = () => {
-          if (counter === 0) {
-            return `${nameWithoutExt}_copy.${ext}`;
-          }
-          return `${nameWithoutExt}_copy_${counter}.${ext}`;
-        };
-
         do {
-          finalName = generateCopyName();
+          finalName = getDuplicateName(base, counter);
           finalPath = joinPath(dir, finalName);
           counter++;
         } while (findFileInTree(get().files, finalPath));
