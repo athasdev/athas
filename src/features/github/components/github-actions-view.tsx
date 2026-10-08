@@ -25,8 +25,13 @@ import { writeSidebarResourceDragData } from "@/features/sidebar/utils/sidebar-r
 import { GithubMark } from "@/ui/brand-marks";
 import { ContextMenuPopup, createContextMenuGroups } from "@/ui/context-menu";
 import { type MenuItem, useDropdownMenu } from "@/ui/dropdown";
-import { EmptyState } from "@/ui/empty";
-import { SidebarScrollArea, SidebarSection } from "@/ui/sidebar";
+import {
+  StreamEmpty,
+  StreamGroup,
+  StreamLoading,
+  StreamScroll,
+  StreamTextButton,
+} from "@/features/sidebar/components/stream/stream-list";
 import { Spinner } from "@/ui/spinner";
 import { cn } from "@/utils/cn";
 import { writeClipboardText } from "@/utils/clipboard";
@@ -456,34 +461,32 @@ const GitHubActionsView = memo(
 
     return (
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden" aria-busy={entry.isLoading}>
-        <SidebarScrollArea>
+        <StreamScroll>
           {entry.error && runs.length === 0 ? (
-            <EmptyState
-              layout="sidebar"
-              message={entry.error}
-              tone="error"
-              role="alert"
-              action={{
-                label: "Retry",
-                onClick: () => repoPath && void loadRuns(repoPath, { force: true }),
-                disabled: entry.isLoading,
-              }}
+            <StreamEmpty
+              title={entry.error}
+              action={
+                <StreamTextButton
+                  onClick={() => repoPath && void loadRuns(repoPath, { force: true })}
+                  disabled={entry.isLoading}
+                >
+                  Retry
+                </StreamTextButton>
+              }
             />
           ) : isInitialLoading ? (
-            <EmptyState
-              layout="sidebar"
-              message={<Spinner label="Loading workflow runs" showLabel compact />}
-            />
+            <StreamLoading label="Loading workflow runs" />
           ) : runs.length === 0 ? (
-            <EmptyState layout="sidebar" message="No workflow runs yet" />
+            <StreamEmpty title="No workflow runs yet" />
           ) : filteredRuns.length === 0 ? (
-            <EmptyState layout="sidebar" message="No matching workflow runs" />
+            <StreamEmpty title="No matching workflow runs" />
           ) : (
             <div className="min-w-0 space-y-1">
               {groupedRuns.map((group) => (
-                <SidebarSection
-                  forceExpanded={searchQuery.trim().length > 0}
+                <StreamGroup
+                  forceOpen={searchQuery.trim().length > 0}
                   key={group.id}
+                  id={String(group.id)}
                   title={group.title}
                   count={group.items.length}
                 >
@@ -501,11 +504,11 @@ const GitHubActionsView = memo(
                       onContextMenu={handleContextMenu}
                     />
                   ))}
-                </SidebarSection>
+                </StreamGroup>
               ))}
             </div>
           )}
-        </SidebarScrollArea>
+        </StreamScroll>
         <ContextMenuPopup
           isOpen={contextMenu.isOpen}
           point={contextMenu.position}

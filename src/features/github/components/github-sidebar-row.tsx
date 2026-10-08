@@ -1,7 +1,7 @@
-import { type DragEventHandler, type MouseEventHandler, type ReactNode, useCallback } from "react";
+import { type DragEvent, type MouseEvent, type ReactNode, useCallback } from "react";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/ui/hover-card";
-import { ClockIcon } from "@/ui/icons";
-import { SidebarListItem } from "@/ui/sidebar";
+import { WindowExpandIcon } from "@/ui/icons";
+import { StreamIconButton, StreamRow } from "@/features/sidebar/components/stream/stream-list";
 import Badge, { type BadgeTone } from "@/ui/badge";
 import { cn } from "@/utils/cn";
 
@@ -38,8 +38,8 @@ interface GitHubSidebarRowProps {
   draggable?: boolean;
   onClick: () => void;
   onOpenInNewWindow?: () => void;
-  onContextMenu?: MouseEventHandler<HTMLElement>;
-  onDragStart?: DragEventHandler<HTMLElement>;
+  onContextMenu?: (event: MouseEvent) => void;
+  onDragStart?: (event: DragEvent) => void;
   onPrefetch?: () => void;
 }
 
@@ -65,19 +65,12 @@ export function GitHubSidebarRow({
   );
 
   const row = (
-    <SidebarListItem
-      description={description}
-      density="compact"
-      active={active}
-      leading={leading}
-      trailing={
-        trailing ? (
-          <span className="inline-flex items-center gap-1 tabular-nums">
-            <ClockIcon aria-label="Time" />
-            {trailing}
-          </span>
-        ) : undefined
-      }
+    <StreamRow
+      icon={leading}
+      title={title}
+      secondary={description}
+      meta={trailing}
+      selected={active}
       draggable={draggable}
       onClick={onClick}
       onDoubleClick={onOpenInNewWindow}
@@ -86,9 +79,14 @@ export function GitHubSidebarRow({
       onFocus={onPrefetch}
       onMouseEnter={onPrefetch}
       onPointerDown={onPrefetch}
-    >
-      {title}
-    </SidebarListItem>
+      actions={
+        onOpenInNewWindow ? (
+          <StreamIconButton label="Open in new window" onClick={onOpenInNewWindow}>
+            <WindowExpandIcon className="size-3" />
+          </StreamIconButton>
+        ) : undefined
+      }
+    />
   );
 
   if (!preview) {

@@ -45,7 +45,7 @@ vi.mock("@/features/database/components/database-sidebar", () => ({
   DatabaseSidebar: () => <Panel />,
 }));
 vi.mock("@/features/docker/components/docker-sidebar", () => ({ DockerSidebar: () => null }));
-vi.mock("@/features/git/components/git-view", () => ({ default: () => <Panel /> }));
+vi.mock("@/features/git/stream/stream-view", () => ({ default: () => <Panel /> }));
 vi.mock("@/features/github/components/github-prs-view", () => ({ default: () => null }));
 vi.mock("@/features/outline/components/outline-sidebar", () => ({ OutlineSidebar: () => null }));
 vi.mock("@/features/views/components/views-sidebar", () => ({ ViewsSidebar: () => null }));

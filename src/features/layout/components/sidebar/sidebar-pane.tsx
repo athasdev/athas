@@ -13,7 +13,7 @@ import { ExtensionErrorBoundary } from "@/extensions/ui/components/extension-err
 import { useExtensionViews } from "@/extensions/ui/hooks/use-extension-views";
 
 // Every view except the file tree loads on demand, so startup only parses the default one.
-const GitView = lazy(() => import("@/features/git/components/git-view"));
+const GitView = lazy(() => import("@/features/git/stream/stream-view"));
 const GitHubPRsView = lazy(() => import("@/features/github/components/github-prs-view"));
 const ViewsSidebar = lazy(() =>
   import("@/features/views/components/views-sidebar").then((module) => ({

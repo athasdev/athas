@@ -6,10 +6,13 @@ import { GitHubSidebarRow } from "../../components/github-sidebar-row";
 import { openGitHubContentInNewWindow } from "../../utils/open-in-new-window";
 import { useGitHubStore } from "../../stores/github.store";
 import { getSidebarTime } from "../../utils/github-viewer-utils";
-import { SidebarScrollArea, SidebarSection } from "@/ui/sidebar";
-import { EmptyState } from "@/ui/empty";
-import { Button } from "@/ui/button";
-import { Spinner } from "@/ui/spinner";
+import {
+  StreamEmpty,
+  StreamGroup,
+  StreamLoading,
+  StreamScroll,
+  StreamTextButton,
+} from "@/features/sidebar/components/stream/stream-list";
 import { TagIcon, RocketIcon, CopyIcon, OpenExternalIcon } from "@/ui/icons";
 import { ContextMenuPopup, createContextMenuGroups } from "@/ui/context-menu";
 import { useDropdownMenu, type MenuItem } from "@/ui/dropdown";
@@ -104,31 +107,27 @@ export default function GitHubDeliveryList({
       ]
     : [];
   return (
-    <SidebarScrollArea>
+    <StreamScroll>
       {error && (
-        <EmptyState
-          layout="sidebar"
-          tone="error"
-          role="alert"
-          message={error}
-          action={{ label: "Try again", onClick: refresh, disabled: loading }}
+        <StreamEmpty
+          title={error}
+          action={
+            <StreamTextButton onClick={refresh} disabled={loading}>
+              Try again
+            </StreamTextButton>
+          }
         />
       )}
       {loading && items.length === 0 ? (
-        <EmptyState
-          layout="sidebar"
-          message={<Spinner label={`Loading ${kind}`} showLabel compact />}
-        />
+        <StreamLoading label={`Loading ${kind}`} />
       ) : groups.length === 0 && !error ? (
-        <EmptyState
-          layout="sidebar"
-          message={items.length ? `No matching ${kind}` : `No ${kind} yet`}
-        />
+        <StreamEmpty title={items.length ? `No matching ${kind}` : `No ${kind} yet`} />
       ) : (
         groups.map((group) => (
-          <SidebarSection
-            forceExpanded={searchQuery.trim().length > 0}
+          <StreamGroup
+            forceOpen={searchQuery.trim().length > 0}
             key={group.title}
+            id={String(group.title)}
             title={group.title}
             count={group.items.length}
           >
@@ -217,15 +216,15 @@ export default function GitHubDeliveryList({
                 />
               );
             })}
-          </SidebarSection>
+          </StreamGroup>
         ))
       )}
       {items.length > 0 && (
         <div className="flex justify-center p-2">
           {hasMore ? (
-            <Button variant="ghost" disabled={loading} onClick={loadMore}>
-              {loading ? <Spinner compact /> : null} Load More
-            </Button>
+            <StreamTextButton disabled={loading} onClick={loadMore}>
+              {loading ? "Loading…" : "Load more"}
+            </StreamTextButton>
           ) : null}
         </div>
       )}
@@ -235,6 +234,6 @@ export default function GitHubDeliveryList({
         groups={createContextMenuGroups(menuItems)}
         onClose={menu.close}
       />
-    </SidebarScrollArea>
+    </StreamScroll>
   );
 }

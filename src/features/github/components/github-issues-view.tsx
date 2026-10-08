@@ -14,15 +14,19 @@ import { getGitHubAvatarUrl } from "../utils/github-avatar-url";
 import { openGitHubContentInNewWindow } from "../utils/open-in-new-window";
 import { GitHubAvatar } from "./github-avatar";
 import { GitHubSidebarRow, type GitHubSidebarPreviewBadge } from "./github-sidebar-row";
-import { SidebarScrollArea, SidebarSection } from "@/ui/sidebar";
+import {
+  StreamEmpty,
+  StreamGroup,
+  StreamLoading,
+  StreamScroll,
+  StreamTextButton,
+} from "@/features/sidebar/components/stream/stream-list";
 import {
   GITHUB_ISSUE_DETAILS_TTL_MS,
   GITHUB_ISSUE_LIST_TTL_MS,
   githubIssueDetailsCache,
   githubIssueListCache,
 } from "../utils/github-data-cache";
-import { Spinner } from "@/ui/spinner";
-import { EmptyState } from "@/ui/empty";
 
 interface IssueListItemProps {
   issue: IssueListItem;
@@ -47,7 +51,7 @@ const IssueRow = memo(
         login={issue.author.login}
         avatarUrl={issue.author.avatarUrl}
         size={48}
-        displaySize="md"
+        displaySize="sm"
       />
     );
 
@@ -210,31 +214,30 @@ const GitHubIssuesView = memo(
 
     return (
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden" aria-busy={isLoading}>
-        <SidebarScrollArea>
+        <StreamScroll>
           {error && (
-            <EmptyState
-              layout="sidebar"
-              message={error}
-              tone="error"
-              role="alert"
-              action={{ label: "Retry", onClick: refresh, disabled: isLoading }}
+            <StreamEmpty
+              title={error}
+              action={
+                <StreamTextButton onClick={refresh} disabled={isLoading}>
+                  Retry
+                </StreamTextButton>
+              }
             />
           )}
           {isLoading && deferredIssues.length === 0 ? (
-            <EmptyState
-              layout="sidebar"
-              message={<Spinner label="Loading issues" showLabel compact />}
-            />
+            <StreamLoading label="Loading issues" />
           ) : error && deferredIssues.length === 0 ? null : deferredIssues.length === 0 ? (
-            <EmptyState layout="sidebar" message="No issues" />
+            <StreamEmpty title="No issues" />
           ) : filteredIssues.length === 0 ? (
-            <EmptyState layout="sidebar" message="No matching issues" />
+            <StreamEmpty title="No matching issues" />
           ) : (
             <div className="min-w-0 space-y-1">
               {groupedIssues.map((group) => (
-                <SidebarSection
-                  forceExpanded={searchQuery.trim().length > 0}
+                <StreamGroup
+                  forceOpen={searchQuery.trim().length > 0}
                   key={group.id}
+                  id={String(group.id)}
                   title={group.title}
                   count={group.items.length}
                 >
@@ -268,11 +271,11 @@ const GitHubIssuesView = memo(
                       }
                     />
                   ))}
-                </SidebarSection>
+                </StreamGroup>
               ))}
             </div>
           )}
-        </SidebarScrollArea>
+        </StreamScroll>
       </div>
     );
   },
