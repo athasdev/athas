@@ -7,18 +7,10 @@ import {
   PlayIcon,
   StopIcon,
 } from "@/ui/icons";
-import {
-  memo,
-  startTransition,
-  useCallback,
-  useDeferredValue,
-  useEffect,
-  useMemo,
-  useRef,
-} from "react";
+import { memo, startTransition, useCallback, useDeferredValue, useEffect, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
 import { writeSidebarResourceDragData } from "@/features/sidebar/services/sidebar-resource-drag";
 import { GithubMark } from "@/ui/brand-marks";
 import { ContextMenuPopup, createContextMenuGroups } from "@/ui/context-menu";
@@ -28,15 +20,14 @@ import { SidebarScrollArea, SidebarSection } from "@/ui/sidebar";
 import { Spinner } from "@/ui/spinner";
 import { cn } from "@/utils/cn";
 import { writeClipboardText } from "@/utils/clipboard";
-import { fetchWorkflowRunDetails } from "../api/github-actions-api";
 import { useNow } from "../hooks/use-now";
-import { getWorkflowRunsEntry, useGitHubActionsStore } from "../stores/github-actions.store";
+import { useGitHubRepoPath } from "../hooks/use-github-repo-path";
+import { useWorkflowRunActions } from "../hooks/use-workflow-run-actions";
+import { useGitHubActionsStore } from "../stores/github-actions.store";
 import { useGitHubStore } from "../stores/github.store";
 import type { WorkflowRunFilter, WorkflowRunListItem } from "../types/github.types";
-import {
-  GITHUB_ACTION_DETAILS_TTL_MS,
-  githubActionDetailsCache,
-} from "../services/github-data-cache";
+import { workflowRunDetailsQuery, workflowRunsQuery } from "../services/github-queries";
+import { getQueryErrorMessage } from "@/utils/query-client";
 import { groupWorkflowRuns } from "../utils/github-sidebar-groups";
 import {
   getGitHubBranchUrl,
@@ -59,7 +50,6 @@ import { GitHubAuthStatusMessage } from "./github-auth-status";
 import { GitHubSidebarRow, type GitHubSidebarPreviewBadge } from "./github-sidebar-row";
 import { openGitHubContentInNewWindow } from "../utils/open-in-new-window";
 import { WORKFLOW_TONE_BADGE_TONE, WorkflowStatusIcon } from "./github-workflow-status-icon";
-import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 interface WorkflowRunRowProps {
@@ -244,286 +234,274 @@ function matchesWorkflowRunQuery(run: WorkflowRunListItem, query: string) {
   ].some((value) => value.toLowerCase().includes(query));
 }
 
+const EMPTY_RUNS: WorkflowRunListItem[] = [];
+
 interface GitHubActionsViewProps {
-  refreshNonce?: number;
   searchQuery?: string;
   filter?: WorkflowRunFilter;
 }
 
-const GitHubActionsView = memo(
-  ({ refreshNonce = 0, searchQuery = "", filter = "all" }: GitHubActionsViewProps) => {
-    const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
-    const activeRepoPath = useRepositoryStore.use.activeRepoPath();
-    const repoPath = activeRepoPath ?? rootFolderPath ?? null;
-    const isAuthenticated = useGitHubStore.use.isAuthenticated();
-    const { checkAuth } = useGitHubStore.use.actions();
-    const { openGitHubActionBuffer } = useBufferStore.use.actions();
-    const entry = useGitHubActionsStore((state) => getWorkflowRunsEntry(state.entries, repoPath));
-    const pendingActions = useGitHubActionsStore.use.pendingActions();
-    const { loadRuns, rerunRun, cancelRun } = useGitHubActionsStore.use.actions();
-    const contextMenu = useDropdownMenu<WorkflowRunListItem>();
-    const previousRefreshNonce = useRef(refreshNonce);
-    const activeBufferId = useActiveBufferId();
-    const activeRunId = useBufferStore((state) => {
-      const activeBuffer = activeBufferId
-        ? state.buffers.find((buffer) => buffer.id === activeBufferId)
-        : null;
-      return activeBuffer?.type === "githubAction" ? activeBuffer.runId : null;
-    });
-    const deferredSearchQuery = useDeferredValue(searchQuery);
-    const runs = entry.runs;
-    const hasActiveRuns = useMemo(() => runs.some((run) => isWorkflowRunActive(run)), [runs]);
-    const now = useNow(1_000, hasActiveRuns);
+const GitHubActionsView = memo(({ searchQuery = "", filter = "all" }: GitHubActionsViewProps) => {
+  const repoPath = useGitHubRepoPath();
+  const queryClient = useQueryClient();
+  const isAuthenticated = useGitHubStore.use.isAuthenticated();
+  const { checkAuth } = useGitHubStore.use.actions();
+  const { openGitHubActionBuffer } = useBufferStore.use.actions();
+  const runsQuery = useQuery({ ...workflowRunsQuery(repoPath), enabled: isAuthenticated });
+  const pendingActions = useGitHubActionsStore.use.pendingActions();
+  const { rerunRun, cancelRun } = useWorkflowRunActions();
+  const contextMenu = useDropdownMenu<WorkflowRunListItem>();
+  const activeBufferId = useActiveBufferId();
+  const activeRunId = useBufferStore((state) => {
+    const activeBuffer = activeBufferId
+      ? state.buffers.find((buffer) => buffer.id === activeBufferId)
+      : null;
+    return activeBuffer?.type === "githubAction" ? activeBuffer.runId : null;
+  });
+  const deferredSearchQuery = useDeferredValue(searchQuery);
+  const runs = runsQuery.data ?? EMPTY_RUNS;
+  const isLoading = runsQuery.isFetching;
+  const error = getQueryErrorMessage(runsQuery.error);
+  const hasActiveRuns = useMemo(() => runs.some((run) => isWorkflowRunActive(run)), [runs]);
+  const now = useNow(1_000, hasActiveRuns);
 
-    useEffect(() => {
-      const timeoutId = window.setTimeout(() => void checkAuth(), 0);
-      return () => window.clearTimeout(timeoutId);
-    }, [checkAuth]);
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => void checkAuth(), 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [checkAuth]);
 
-    useEffect(() => {
-      if (!isAuthenticated || !repoPath) return;
-      const force = previousRefreshNonce.current !== refreshNonce;
-      previousRefreshNonce.current = refreshNonce;
-      void loadRuns(repoPath, { force });
-    }, [isAuthenticated, loadRuns, refreshNonce, repoPath]);
+  const prefetchWorkflowRun = useCallback(
+    (run: WorkflowRunListItem) => {
+      if (!repoPath) return;
+      void queryClient
+        .query(workflowRunDetailsQuery(repoPath, run.databaseId))
+        .catch(() => undefined);
+    },
+    [queryClient, repoPath],
+  );
 
-    const prefetchWorkflowRun = useCallback(
-      (run: WorkflowRunListItem) => {
-        if (!repoPath) return;
-        void githubActionDetailsCache
-          .load(
-            `${repoPath}::${run.databaseId}`,
-            () => fetchWorkflowRunDetails(repoPath, run.databaseId),
-            { ttlMs: GITHUB_ACTION_DETAILS_TTL_MS },
-          )
-          .catch(() => undefined);
-      },
-      [repoPath],
-    );
+  const openRunInNewWindow = useCallback(
+    (run: WorkflowRunListItem) => {
+      openGitHubContentInNewWindow(repoPath, {
+        type: "githubAction",
+        runId: run.databaseId,
+        repoPath: repoPath ?? undefined,
+        name: getWorkflowRunTitle(run),
+        url: run.url,
+      });
+    },
+    [repoPath],
+  );
 
-    const openRunInNewWindow = useCallback(
-      (run: WorkflowRunListItem) => {
-        openGitHubContentInNewWindow(repoPath, {
-          type: "githubAction",
+  const openRun = useCallback(
+    (run: WorkflowRunListItem) => {
+      startTransition(() => {
+        openGitHubActionBuffer({
           runId: run.databaseId,
           repoPath: repoPath ?? undefined,
-          name: getWorkflowRunTitle(run),
+          title: getWorkflowRunTitle(run),
           url: run.url,
         });
-      },
-      [repoPath],
-    );
+      });
+    },
+    [openGitHubActionBuffer, repoPath],
+  );
 
-    const openRun = useCallback(
-      (run: WorkflowRunListItem) => {
-        startTransition(() => {
-          openGitHubActionBuffer({
-            runId: run.databaseId,
-            repoPath: repoPath ?? undefined,
-            title: getWorkflowRunTitle(run),
-            url: run.url,
-          });
-        });
-      },
-      [openGitHubActionBuffer, repoPath],
-    );
+  const handleContextMenu = useCallback(
+    (event: React.MouseEvent, run: WorkflowRunListItem) => {
+      contextMenu.open(event, run);
+    },
+    [contextMenu],
+  );
 
-    const handleContextMenu = useCallback(
-      (event: React.MouseEvent, run: WorkflowRunListItem) => {
-        contextMenu.open(event, run);
-      },
-      [contextMenu],
-    );
-
-    const runAction = useCallback(async (task: () => Promise<boolean>, successMessage: string) => {
-      try {
-        await task();
-        toast.success(successMessage);
-      } catch (error) {
-        toast.error(error instanceof Error ? error.message : String(error));
-      }
-    }, []);
-
-    const filteredRuns = useMemo(() => {
-      const query = deferredSearchQuery.trim().toLowerCase();
-      return runs.filter(
-        (run) => matchesWorkflowRunFilter(run, filter) && matchesWorkflowRunQuery(run, query),
-      );
-    }, [deferredSearchQuery, filter, runs]);
-    const groupedRuns = useMemo(() => groupWorkflowRuns(filteredRuns), [filteredRuns]);
-
-    useEffect(() => {
-      if (!isAuthenticated || !repoPath || filteredRuns.length === 0) return;
-
-      let cancelled = false;
-      const idleApi = window as Window & {
-        requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
-        cancelIdleCallback?: (id: number) => void;
-      };
-      const prefetchVisibleRuns = () => {
-        if (cancelled) return;
-        filteredRuns.slice(0, 4).forEach((run) => prefetchWorkflowRun(run));
-      };
-      const usesIdleCallback = typeof idleApi.requestIdleCallback === "function";
-      const idleId = usesIdleCallback
-        ? idleApi.requestIdleCallback?.(prefetchVisibleRuns, { timeout: 1200 })
-        : window.setTimeout(prefetchVisibleRuns, 500);
-
-      return () => {
-        cancelled = true;
-        if (usesIdleCallback && idleId !== undefined) {
-          idleApi.cancelIdleCallback?.(idleId);
-        } else if (idleId !== undefined) {
-          window.clearTimeout(idleId);
-        }
-      };
-    }, [filteredRuns, isAuthenticated, prefetchWorkflowRun, repoPath]);
-
-    const selectedRun = contextMenu.data;
-    const selectedState = selectedRun
-      ? getWorkflowRunState(selectedRun.status, selectedRun.conclusion)
-      : null;
-    const selectedPending = selectedRun ? pendingActions[selectedRun.databaseId] : undefined;
-    const contextMenuItems: MenuItem[] =
-      selectedRun && selectedState && repoPath
-        ? [
-            {
-              id: "open-run",
-              label: "Open Run",
-              icon: <PlayIcon />,
-              onClick: () => openRun(selectedRun),
-            },
-            {
-              id: "open-on-github",
-              label: "Open on GitHub",
-              icon: <GithubMark />,
-              onClick: () => void openExternalUrl(selectedRun.url),
-            },
-            {
-              id: "copy-link",
-              label: "Copy Link",
-              icon: <LinkIcon />,
-              onClick: () => void writeClipboardText(selectedRun.url),
-            },
-            {
-              id: "copy-title",
-              label: "Copy Title",
-              icon: <CopyIcon />,
-              onClick: () => void writeClipboardText(getWorkflowRunTitle(selectedRun)),
-            },
-            ...(selectedState.isActive
-              ? [
-                  {
-                    id: "cancel-run",
-                    label: "Cancel Run",
-                    icon: <StopIcon />,
-                    disabled: Boolean(selectedPending),
-                    onClick: () =>
-                      void runAction(
-                        () => cancelRun(repoPath, selectedRun.databaseId),
-                        "Cancellation requested",
-                      ),
-                  } satisfies MenuItem,
-                ]
-              : [
-                  {
-                    id: "rerun",
-                    label: "Re-run All Jobs",
-                    icon: <ArrowClockwiseIcon />,
-                    disabled: Boolean(selectedPending),
-                    onClick: () =>
-                      void runAction(
-                        () => rerunRun(repoPath, selectedRun.databaseId, false),
-                        "Re-run queued",
-                      ),
-                  } satisfies MenuItem,
-                  ...(selectedState.isFailed
-                    ? [
-                        {
-                          id: "rerun-failed",
-                          label: "Re-run Failed Jobs",
-                          icon: <ArrowCounterClockwiseIcon />,
-                          disabled: Boolean(selectedPending),
-                          onClick: () =>
-                            void runAction(
-                              () => rerunRun(repoPath, selectedRun.databaseId, true),
-                              "Re-run of failed jobs queued",
-                            ),
-                        } satisfies MenuItem,
-                      ]
-                    : []),
-                ]),
-          ]
-        : [];
-
-    if (!isAuthenticated) {
-      return <GitHubAuthStatusMessage layout="sidebar" />;
+  const runAction = useCallback(async (task: () => Promise<boolean>, successMessage: string) => {
+    try {
+      await task();
+      toast.success(successMessage);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
     }
+  }, []);
 
-    const isInitialLoading = entry.isLoading && runs.length === 0;
-
-    return (
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden" aria-busy={entry.isLoading}>
-        <SidebarScrollArea>
-          {entry.error && runs.length === 0 ? (
-            <EmptyState
-              layout="sidebar"
-              message={entry.error}
-              tone="error"
-              role="alert"
-              action={{
-                label: "Retry",
-                onClick: () => repoPath && void loadRuns(repoPath, { force: true }),
-                disabled: entry.isLoading,
-              }}
-            />
-          ) : isInitialLoading ? (
-            <EmptyState
-              layout="sidebar"
-              message={<Spinner label="Loading workflow runs" showLabel compact />}
-            />
-          ) : runs.length === 0 ? (
-            <EmptyState layout="sidebar" message="No workflow runs yet" />
-          ) : filteredRuns.length === 0 ? (
-            <EmptyState layout="sidebar" message="No matching workflow runs" />
-          ) : (
-            <div className="min-w-0 space-y-1">
-              {groupedRuns.map((group) => (
-                <SidebarSection
-                  forceExpanded={searchQuery.trim().length > 0}
-                  key={group.id}
-                  title={group.title}
-                  count={group.items.length}
-                >
-                  {group.items.map((run) => (
-                    <WorkflowRunRow
-                      key={run.databaseId}
-                      run={run}
-                      now={now}
-                      isActive={activeRunId === run.databaseId}
-                      pendingAction={pendingActions[run.databaseId]}
-                      repoPath={repoPath}
-                      onSelect={openRun}
-                      onOpenInNewWindow={openRunInNewWindow}
-                      onPrefetch={prefetchWorkflowRun}
-                      onContextMenu={handleContextMenu}
-                    />
-                  ))}
-                </SidebarSection>
-              ))}
-            </div>
-          )}
-        </SidebarScrollArea>
-        <ContextMenuPopup
-          isOpen={contextMenu.isOpen}
-          point={contextMenu.position}
-          groups={createContextMenuGroups(contextMenuItems)}
-          onClose={contextMenu.close}
-        />
-      </div>
+  const filteredRuns = useMemo(() => {
+    const query = deferredSearchQuery.trim().toLowerCase();
+    return runs.filter(
+      (run) => matchesWorkflowRunFilter(run, filter) && matchesWorkflowRunQuery(run, query),
     );
-  },
-);
+  }, [deferredSearchQuery, filter, runs]);
+  const groupedRuns = useMemo(() => groupWorkflowRuns(filteredRuns), [filteredRuns]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !repoPath || filteredRuns.length === 0) return;
+
+    let cancelled = false;
+    const idleApi = window as Window & {
+      requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+    const prefetchVisibleRuns = () => {
+      if (cancelled) return;
+      filteredRuns.slice(0, 4).forEach((run) => prefetchWorkflowRun(run));
+    };
+    const usesIdleCallback = typeof idleApi.requestIdleCallback === "function";
+    const idleId = usesIdleCallback
+      ? idleApi.requestIdleCallback?.(prefetchVisibleRuns, { timeout: 1200 })
+      : window.setTimeout(prefetchVisibleRuns, 500);
+
+    return () => {
+      cancelled = true;
+      if (usesIdleCallback && idleId !== undefined) {
+        idleApi.cancelIdleCallback?.(idleId);
+      } else if (idleId !== undefined) {
+        window.clearTimeout(idleId);
+      }
+    };
+  }, [filteredRuns, isAuthenticated, prefetchWorkflowRun, repoPath]);
+
+  const selectedRun = contextMenu.data;
+  const selectedState = selectedRun
+    ? getWorkflowRunState(selectedRun.status, selectedRun.conclusion)
+    : null;
+  const selectedPending = selectedRun ? pendingActions[selectedRun.databaseId] : undefined;
+  const contextMenuItems: MenuItem[] =
+    selectedRun && selectedState && repoPath
+      ? [
+          {
+            id: "open-run",
+            label: "Open Run",
+            icon: <PlayIcon />,
+            onClick: () => openRun(selectedRun),
+          },
+          {
+            id: "open-on-github",
+            label: "Open on GitHub",
+            icon: <GithubMark />,
+            onClick: () => void openExternalUrl(selectedRun.url),
+          },
+          {
+            id: "copy-link",
+            label: "Copy Link",
+            icon: <LinkIcon />,
+            onClick: () => void writeClipboardText(selectedRun.url),
+          },
+          {
+            id: "copy-title",
+            label: "Copy Title",
+            icon: <CopyIcon />,
+            onClick: () => void writeClipboardText(getWorkflowRunTitle(selectedRun)),
+          },
+          ...(selectedState.isActive
+            ? [
+                {
+                  id: "cancel-run",
+                  label: "Cancel Run",
+                  icon: <StopIcon />,
+                  disabled: Boolean(selectedPending),
+                  onClick: () =>
+                    void runAction(
+                      () => cancelRun(repoPath, selectedRun.databaseId),
+                      "Cancellation requested",
+                    ),
+                } satisfies MenuItem,
+              ]
+            : [
+                {
+                  id: "rerun",
+                  label: "Re-run All Jobs",
+                  icon: <ArrowClockwiseIcon />,
+                  disabled: Boolean(selectedPending),
+                  onClick: () =>
+                    void runAction(
+                      () => rerunRun(repoPath, selectedRun.databaseId, false),
+                      "Re-run queued",
+                    ),
+                } satisfies MenuItem,
+                ...(selectedState.isFailed
+                  ? [
+                      {
+                        id: "rerun-failed",
+                        label: "Re-run Failed Jobs",
+                        icon: <ArrowCounterClockwiseIcon />,
+                        disabled: Boolean(selectedPending),
+                        onClick: () =>
+                          void runAction(
+                            () => rerunRun(repoPath, selectedRun.databaseId, true),
+                            "Re-run of failed jobs queued",
+                          ),
+                      } satisfies MenuItem,
+                    ]
+                  : []),
+              ]),
+        ]
+      : [];
+
+  if (!isAuthenticated) {
+    return <GitHubAuthStatusMessage layout="sidebar" />;
+  }
+
+  const isInitialLoading = isLoading && runs.length === 0;
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden" aria-busy={isLoading}>
+      <SidebarScrollArea>
+        {error && runs.length === 0 ? (
+          <EmptyState
+            layout="sidebar"
+            message={error}
+            tone="error"
+            role="alert"
+            action={{
+              label: "Retry",
+              onClick: () => void runsQuery.refetch(),
+              disabled: isLoading,
+            }}
+          />
+        ) : isInitialLoading ? (
+          <EmptyState
+            layout="sidebar"
+            message={<Spinner label="Loading workflow runs" showLabel compact />}
+          />
+        ) : runs.length === 0 ? (
+          <EmptyState layout="sidebar" message="No workflow runs yet" />
+        ) : filteredRuns.length === 0 ? (
+          <EmptyState layout="sidebar" message="No matching workflow runs" />
+        ) : (
+          <div className="min-w-0 space-y-1">
+            {groupedRuns.map((group) => (
+              <SidebarSection
+                forceExpanded={searchQuery.trim().length > 0}
+                key={group.id}
+                title={group.title}
+                count={group.items.length}
+              >
+                {group.items.map((run) => (
+                  <WorkflowRunRow
+                    key={run.databaseId}
+                    run={run}
+                    now={now}
+                    isActive={activeRunId === run.databaseId}
+                    pendingAction={pendingActions[run.databaseId]}
+                    repoPath={repoPath}
+                    onSelect={openRun}
+                    onOpenInNewWindow={openRunInNewWindow}
+                    onPrefetch={prefetchWorkflowRun}
+                    onContextMenu={handleContextMenu}
+                  />
+                ))}
+              </SidebarSection>
+            ))}
+          </div>
+        )}
+      </SidebarScrollArea>
+      <ContextMenuPopup
+        isOpen={contextMenu.isOpen}
+        point={contextMenu.position}
+        groups={createContextMenuGroups(contextMenuItems)}
+        onClose={contextMenu.close}
+      />
+    </div>
+  );
+});
 
 GitHubActionsView.displayName = "GitHubActionsView";
 

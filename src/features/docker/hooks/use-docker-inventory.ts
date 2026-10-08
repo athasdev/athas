@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useMemo, useReducer } from "react";
-import { getDockerInventory } from "../services/docker-api";
-import type { DockerInventory } from "../types/docker.types";
+import { useCallback, useMemo, useReducer } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { refetchAfterMutation } from "@/utils/query-client";
+import { dockerInventoryQuery, dockerKeys } from "../services/docker-queries";
+import type { DockerContainer, DockerInventory } from "../types/docker.types";
 import { getDockerErrorMessage, isDockerConnectionError } from "../utils/docker-sidebar-utils";
 
 const emptyDockerInventory: DockerInventory = {
@@ -11,27 +13,21 @@ const emptyDockerInventory: DockerInventory = {
 };
 
 export interface DockerInventoryState {
-  inventory: DockerInventory;
   selectedContainerId: string | null;
-  isLoading: boolean;
-  connectionError: string | null;
+  /** A Docker action reported the daemon unreachable; holds until a newer inventory loads. */
+  unavailable: { message: string; at: number } | null;
   error: string | null;
 }
 
 type DockerInventoryAction =
-  | { type: "load-started" }
-  | { type: "load-succeeded"; inventory: DockerInventory }
-  | { type: "load-failed"; message: string }
-  | { type: "mark-unavailable"; message: string }
+  | { type: "mark-unavailable"; message: string; at: number }
   | { type: "action-failed"; message: string }
   | { type: "clear-error" }
   | { type: "select-container"; containerId: string | null };
 
 export const initialDockerInventoryState: DockerInventoryState = {
-  inventory: emptyDockerInventory,
   selectedContainerId: null,
-  isLoading: true,
-  connectionError: null,
+  unavailable: null,
   error: null,
 };
 
@@ -40,38 +36,8 @@ export function dockerInventoryReducer(
   action: DockerInventoryAction,
 ): DockerInventoryState {
   switch (action.type) {
-    case "load-started":
-      return { ...state, isLoading: true, error: null };
-    case "load-succeeded": {
-      const selectedContainerId =
-        state.selectedContainerId &&
-        action.inventory.containers.some((container) => container.id === state.selectedContainerId)
-          ? state.selectedContainerId
-          : (action.inventory.containers[0]?.id ?? null);
-      return {
-        ...state,
-        inventory: action.inventory,
-        selectedContainerId,
-        isLoading: false,
-        connectionError: null,
-      };
-    }
-    case "load-failed":
-      return {
-        ...state,
-        inventory: emptyDockerInventory,
-        selectedContainerId: null,
-        isLoading: false,
-        connectionError: action.message,
-      };
     case "mark-unavailable":
-      return {
-        ...state,
-        inventory: emptyDockerInventory,
-        selectedContainerId: null,
-        connectionError: action.message,
-        error: null,
-      };
+      return { ...state, unavailable: { message: action.message, at: action.at }, error: null };
     case "action-failed":
       return { ...state, error: action.message };
     case "clear-error":
@@ -81,24 +47,42 @@ export function dockerInventoryReducer(
   }
 }
 
+/** Keeps a selection that still exists, otherwise falls back to the first container. */
+export function resolveSelectedContainerId(
+  selectedContainerId: string | null,
+  containers: DockerContainer[],
+): string | null {
+  if (selectedContainerId && containers.some((container) => container.id === selectedContainerId)) {
+    return selectedContainerId;
+  }
+  return containers[0]?.id ?? null;
+}
+
 export function useDockerInventory() {
+  const queryClient = useQueryClient();
+  const query = useQuery(dockerInventoryQuery());
   const [state, dispatch] = useReducer(dockerInventoryReducer, initialDockerInventoryState);
 
-  const loadInventory = useCallback(async () => {
-    dispatch({ type: "load-started" });
-    try {
-      dispatch({ type: "load-succeeded", inventory: await getDockerInventory() });
-    } catch (loadError) {
-      dispatch({ type: "load-failed", message: getDockerErrorMessage(loadError) });
-    }
-  }, []);
+  const unavailableMessage =
+    state.unavailable && state.unavailable.at >= query.dataUpdatedAt
+      ? state.unavailable.message
+      : null;
+  const connectionError = query.isError ? getDockerErrorMessage(query.error) : unavailableMessage;
+  const inventory = connectionError ? emptyDockerInventory : (query.data ?? emptyDockerInventory);
+  const selectedContainerId = resolveSelectedContainerId(
+    state.selectedContainerId,
+    inventory.containers,
+  );
 
-  useEffect(() => {
-    void loadInventory();
-  }, [loadInventory]);
+  // Refreshing after a Docker action cancels a load that started before it, so an older
+  // response can never land after a newer one.
+  const loadInventory = useCallback(
+    () => refetchAfterMutation(queryClient, dockerKeys.inventory),
+    [queryClient],
+  );
 
   const markDockerUnavailable = useCallback((message: string) => {
-    dispatch({ type: "mark-unavailable", message });
+    dispatch({ type: "mark-unavailable", message, at: Date.now() });
   }, []);
 
   const handleDockerFailure = useCallback(
@@ -122,15 +106,18 @@ export function useDockerInventory() {
   }, []);
 
   const selectedContainer = useMemo(
-    () =>
-      state.inventory.containers.find((container) => container.id === state.selectedContainerId) ??
-      null,
-    [state.inventory.containers, state.selectedContainerId],
+    () => inventory.containers.find((container) => container.id === selectedContainerId) ?? null,
+    [inventory.containers, selectedContainerId],
   );
 
   return {
-    ...state,
+    inventory,
+    selectedContainerId,
     selectedContainer,
+    isLoading: query.isLoading,
+    isRefreshing: query.isFetching,
+    connectionError,
+    error: state.error,
     loadInventory,
     markDockerUnavailable,
     handleDockerFailure,

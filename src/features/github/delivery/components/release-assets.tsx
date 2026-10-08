@@ -1,5 +1,6 @@
 import { FieldError } from "@/ui/field";
 import { useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { pickFiles } from "@/utils/file-dialogs";
 import { openExternalUrl } from "@/utils/external-url";
 import { toast } from "sonner";
@@ -42,6 +43,7 @@ export function ReleaseAssets({
   repoPath: string;
   onBusyChange: (busy: boolean) => void;
 }) {
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const inFlight = useRef(false);
@@ -77,7 +79,7 @@ export function ReleaseAssets({
     } catch (error) {
       setError(`${uploaded ? `${uploaded} uploaded before the error. ` : ""}${String(error)}`);
     } finally {
-      if (uploaded) notifyDeliveryChanged("releases", repoPath, release.id);
+      if (uploaded) notifyDeliveryChanged(queryClient, "releases", repoPath, release.id);
       end();
     }
   };
@@ -87,7 +89,7 @@ export function ReleaseAssets({
     setBusy("Deleting asset");
     try {
       await deleteReleaseAsset(repoPath, deleting.id);
-      notifyDeliveryChanged("releases", repoPath, release.id);
+      notifyDeliveryChanged(queryClient, "releases", repoPath, release.id);
       toast.success("Asset deleted");
       setDeleting(null);
     } catch (error) {

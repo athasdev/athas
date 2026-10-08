@@ -1,23 +1,25 @@
+import { infiniteQueryOptions, queryOptions, type QueryClient } from "@tanstack/react-query";
 import { commands } from "@/bindings/commands";
 import type {
   Deployment as BindingDeployment,
   Release as BindingRelease,
 } from "@/bindings/commands";
-import { createTimedResourceCache } from "@/utils/timed-resource-cache";
 import type {
   DeliveryKind,
   DeliveryResource,
   Deployment,
   Release,
 } from "../types/github-delivery.types";
-import { deliveryKey } from "./github-delivery";
-import { emitAppEvent } from "@/utils/app-events";
 
-export const DELIVERY_TTL = 30_000;
-export const DELIVERY_LIST_TTL = 60_000;
+const DELIVERY_DETAIL_STALE_MS = 30_000;
+const DELIVERY_LIST_STALE_MS = 60_000;
 export const DELIVERY_PAGE_SIZE = 20;
-export const deliveryListCache = createTimedResourceCache<DeliveryResource[]>();
-export const deliveryDetailCache = createTimedResourceCache<DeliveryResource>();
+
+export const deliveryKeys = {
+  list: (kind: DeliveryKind, repoPath: string) => ["github", repoPath, kind, "list"] as const,
+  item: (kind: DeliveryKind, repoPath: string, id: number) =>
+    ["github", repoPath, kind, "item", id] as const,
+};
 
 export function normalizeRelease(release: BindingRelease): Release {
   return { ...release, immutable: release.immutable ?? false };
@@ -33,42 +35,53 @@ function normalizeDeployment(deployment: BindingDeployment): Deployment {
   };
 }
 
-export function loadDeliveryPage(
+export function fetchDeliveryPage(
   kind: DeliveryKind,
   repoPath: string,
   page: number,
-  force = false,
-) {
-  return deliveryListCache.load(
-    deliveryKey(kind, repoPath, page),
-    (): Promise<DeliveryResource[]> =>
-      kind === "releases"
-        ? commands.githubListReleases(repoPath, page).then((items) => items.map(normalizeRelease))
-        : commands
-            .githubListDeployments(repoPath, page)
-            .then((items) => items.map(normalizeDeployment)),
-    { ttlMs: DELIVERY_LIST_TTL, force },
-  );
+): Promise<DeliveryResource[]> {
+  return kind === "releases"
+    ? commands.githubListReleases(repoPath, page).then((items) => items.map(normalizeRelease))
+    : commands
+        .githubListDeployments(repoPath, page)
+        .then((items) => items.map(normalizeDeployment));
 }
 
-export function loadDeliveryDetail(
+export function deliveryListQuery(kind: DeliveryKind, repoPath: string) {
+  return infiniteQueryOptions({
+    queryKey: deliveryKeys.list(kind, repoPath),
+    queryFn: ({ pageParam }) => fetchDeliveryPage(kind, repoPath, pageParam),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, _pages, lastPageParam) =>
+      lastPage.length === DELIVERY_PAGE_SIZE ? lastPageParam + 1 : undefined,
+    staleTime: DELIVERY_LIST_STALE_MS,
+    // Polling refetches every loaded page, so only the first page is kept current on its own.
+    refetchInterval: (query) =>
+      (query.state.data?.pages.length ?? 0) <= 1 ? DELIVERY_LIST_STALE_MS : false,
+  });
+}
+
+export function deliveryDetailQuery(kind: DeliveryKind, repoPath: string, id: number | undefined) {
+  return queryOptions({
+    queryKey: deliveryKeys.item(kind, repoPath, id ?? -1),
+    queryFn: async (): Promise<DeliveryResource> => {
+      if (id === undefined) throw new Error("No release or deployment selected.");
+      return kind === "releases"
+        ? normalizeRelease(await commands.githubGetRelease(repoPath, id))
+        : normalizeDeployment(await commands.githubGetDeployment(repoPath, id));
+    },
+    enabled: id !== undefined,
+    staleTime: DELIVERY_DETAIL_STALE_MS,
+  });
+}
+
+/** A release or deployment changed: refresh its detail and the list it appears in. */
+export function notifyDeliveryChanged(
+  client: QueryClient,
   kind: DeliveryKind,
   repoPath: string,
   id: number,
-  force = false,
 ) {
-  return deliveryDetailCache.load(
-    deliveryKey(kind, repoPath, id),
-    (): Promise<DeliveryResource> =>
-      kind === "releases"
-        ? commands.githubGetRelease(repoPath, id).then(normalizeRelease)
-        : commands.githubGetDeployment(repoPath, id).then(normalizeDeployment),
-    { ttlMs: DELIVERY_TTL, force },
-  );
-}
-
-export function notifyDeliveryChanged(kind: DeliveryKind, repoPath: string, id: number) {
-  deliveryListCache.clear();
-  deliveryDetailCache.clear(deliveryKey(kind, repoPath, id));
-  emitAppEvent("github:delivery-changed", { kind, repoPath, id });
+  void client.invalidateQueries({ queryKey: deliveryKeys.list(kind, repoPath) });
+  void client.invalidateQueries({ queryKey: deliveryKeys.item(kind, repoPath, id) });
 }

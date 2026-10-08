@@ -1,80 +1,41 @@
-import { commands } from "@/bindings/commands";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useGitHubStore } from "@/features/github/stores/github.store";
 import type { GitHubNotification } from "@/features/github/types/github.types";
 import {
-  GITHUB_NOTIFICATION_LIST_TTL_MS,
-  githubNotificationListCache,
-} from "@/features/github/services/github-data-cache";
+  GITHUB_NOTIFICATIONS_INTERVAL_MS,
+  notificationsQuery,
+} from "@/features/github/services/github-queries";
 import { getGitHubNotificationTarget } from "@/features/github/services/github-notification-routing";
+import { getQueryErrorMessage } from "@/utils/query-client";
+
+const EMPTY_NOTIFICATIONS: GitHubNotification[] = [];
 
 export function useGitHubNotifications() {
   const isAuthenticated = useGitHubStore.use.isAuthenticated();
+  const currentUser = useGitHubStore.use.currentUser();
   const checkAuth = useGitHubStore.use.actions().checkAuth;
   const { openPRBuffer, openGitHubIssueBuffer, openGitHubActionBuffer } =
     useBufferStore.use.actions();
-  const [notifications, setNotifications] = useState<GitHubNotification[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const refresh = useCallback(async (force = false) => {
-    const cacheKey = "unread";
-    const cached = githubNotificationListCache.getFreshValue(
-      cacheKey,
-      GITHUB_NOTIFICATION_LIST_TTL_MS,
-    );
-    if (cached && !force) {
-      setNotifications(cached);
-      setError(null);
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-    try {
-      const nextNotifications = await githubNotificationListCache.load(
-        cacheKey,
-        () => commands.githubListNotifications(),
-        { force, ttlMs: GITHUB_NOTIFICATION_LIST_TTL_MS },
-      );
-      setNotifications(nextNotifications);
-    } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : String(nextError));
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  // Keyed by the account, so a sign-out or account switch never shows the previous inbox.
+  const query = useQuery({
+    ...notificationsQuery(isAuthenticated ? currentUser : null),
+    refetchInterval: GITHUB_NOTIFICATIONS_INTERVAL_MS,
+  });
+  const notifications = query.data ?? EMPTY_NOTIFICATIONS;
+  const refetchNotifications = query.refetch;
+  const refresh = useCallback(
+    async (force = false) => {
+      if (force || query.isStale) await refetchNotifications();
+    },
+    [query.isStale, refetchNotifications],
+  );
 
   useEffect(() => {
     void checkAuth();
   }, [checkAuth]);
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      setNotifications([]);
-      setError(null);
-      return;
-    }
-
-    void refresh();
-    const intervalId = window.setInterval(() => {
-      if (document.visibilityState === "visible") void refresh(true);
-    }, GITHUB_NOTIFICATION_LIST_TTL_MS);
-    const refreshWhenVisible = () => {
-      if (document.visibilityState === "visible") void refresh();
-    };
-
-    window.addEventListener("focus", refreshWhenVisible);
-    document.addEventListener("visibilitychange", refreshWhenVisible);
-
-    return () => {
-      window.clearInterval(intervalId);
-      window.removeEventListener("focus", refreshWhenVisible);
-      document.removeEventListener("visibilitychange", refreshWhenVisible);
-    };
-  }, [isAuthenticated, refresh]);
 
   const openNotification = useCallback(
     (notification: GitHubNotification) => {
@@ -112,8 +73,8 @@ export function useGitHubNotifications() {
   return {
     isAuthenticated,
     notifications,
-    isLoading,
-    error,
+    isLoading: query.isFetching,
+    error: getQueryErrorMessage(query.error),
     refresh,
     openNotification,
   };

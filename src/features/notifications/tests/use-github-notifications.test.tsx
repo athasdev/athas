@@ -2,8 +2,9 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
+import { QueryClientProvider, type QueryClient } from "@tanstack/react-query";
 import type { GitHubNotification } from "@/features/github/types/github.types";
-import { githubNotificationListCache } from "@/features/github/services/github-data-cache";
+import { createTestQueryClient } from "@/utils/tests/query-test-client";
 
 const mocks = vi.hoisted(() => ({
   invoke: vi.fn(),
@@ -21,6 +22,7 @@ vi.mock("@/features/github/stores/github.store", () => ({
   useGitHubStore: {
     use: {
       isAuthenticated: () => mocks.isAuthenticated,
+      currentUser: () => (mocks.isAuthenticated ? "athasdev" : null),
       actions: () => ({ checkAuth: mocks.checkAuth }),
     },
   },
@@ -41,6 +43,7 @@ const { useGitHubNotifications } = await import("../hooks/use-github-notificatio
 
 type Model = ReturnType<typeof useGitHubNotifications>;
 
+let client: QueryClient;
 let container: HTMLDivElement;
 let root: Root;
 let model: Model;
@@ -68,7 +71,15 @@ function Harness() {
 }
 
 async function mount() {
-  await act(async () => root.render(<Harness />));
+  await act(async () =>
+    root.render(
+      <QueryClientProvider client={client}>
+        <Harness />
+      </QueryClientProvider>,
+    ),
+  );
+  // Query delivers results to observers on a timer.
+  await act(async () => vi.advanceTimersByTimeAsync(0));
 }
 
 beforeEach(() => {
@@ -79,7 +90,7 @@ beforeEach(() => {
     configurable: true,
     get: () => visibility,
   });
-  githubNotificationListCache.clear();
+  client = createTestQueryClient();
   mocks.isAuthenticated = true;
   mocks.invoke.mockReset().mockResolvedValue([notification()]);
   for (const mock of [
@@ -99,6 +110,7 @@ beforeEach(() => {
 afterEach(async () => {
   await act(async () => root.unmount());
   container.remove();
+  client.clear();
   vi.useRealTimers();
 });
 
@@ -127,10 +139,12 @@ describe("GitHub notifications", () => {
     mocks.invoke.mockResolvedValue([notification({ id: "2" })]);
 
     await act(async () => model.refresh());
+    await act(async () => vi.advanceTimersByTimeAsync(0));
     expect(mocks.invoke).toHaveBeenCalledTimes(1);
     expect(model.notifications.map((item) => item.id)).toEqual(["1"]);
 
     await act(async () => model.refresh(true));
+    await act(async () => vi.advanceTimersByTimeAsync(0));
     expect(mocks.invoke).toHaveBeenCalledTimes(2);
     expect(model.notifications.map((item) => item.id)).toEqual(["2"]);
   });

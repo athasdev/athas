@@ -79,11 +79,10 @@ describe("marketplace contribution integrations", () => {
     expect(remote?.icon).toBe("https://example.test/icon.svg");
   });
 
-  it("returns an empty list when the catalog cannot be loaded", async () => {
-    vi.spyOn(console, "warn").mockImplementation(() => {});
+  it("reports a catalog that cannot be loaded instead of an empty marketplace", async () => {
     loadExtensionCatalog.mockRejectedValue(new Error("offline"));
 
-    await expect(loadMarketplaceContributionExtensions()).resolves.toEqual([]);
+    await expect(loadMarketplaceContributionExtensions()).rejects.toThrow("offline");
   });
 });
 

@@ -1,9 +1,7 @@
-import { fetchIssueDetails, listIssues } from "../api/github-issues-api";
-import { useGitHubList } from "../hooks/use-github-list";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { GitHubAuthStatusMessage } from "./github-auth-status";
 import { memo, startTransition, useCallback, useDeferredValue, useEffect, useMemo } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
 import { writeSidebarResourceDragData } from "@/features/sidebar/services/sidebar-resource-drag";
 import { useGitHubStore } from "../stores/github.store";
 import type { IssueFilter, IssueListItem } from "../types/github.types";
@@ -14,15 +12,11 @@ import { openGitHubContentInNewWindow } from "../utils/open-in-new-window";
 import { GitHubAvatar } from "./github-avatar";
 import { GitHubSidebarRow, type GitHubSidebarPreviewBadge } from "./github-sidebar-row";
 import { SidebarScrollArea, SidebarSection } from "@/ui/sidebar";
-import {
-  GITHUB_ISSUE_DETAILS_TTL_MS,
-  GITHUB_ISSUE_LIST_TTL_MS,
-  githubIssueDetailsCache,
-  githubIssueListCache,
-} from "../services/github-data-cache";
+import { issueDetailsQuery, issueListQuery } from "../services/github-queries";
+import { useGitHubRepoPath } from "../hooks/use-github-repo-path";
+import { getQueryErrorMessage } from "@/utils/query-client";
 import { Spinner } from "@/ui/spinner";
 import { EmptyState } from "@/ui/empty";
-import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 interface IssueListItemProps {
@@ -98,184 +92,172 @@ const IssueRow = memo(
 
 IssueRow.displayName = "IssueRow";
 
+const EMPTY_ISSUES: IssueListItem[] = [];
+
 interface GitHubIssuesViewProps {
-  refreshNonce?: number;
   searchQuery?: string;
   filter?: IssueFilter;
 }
 
-const GitHubIssuesView = memo(
-  ({ refreshNonce = 0, searchQuery = "", filter = "open" }: GitHubIssuesViewProps) => {
-    const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
-    const activeRepoPath = useRepositoryStore.use.activeRepoPath();
-    const repoPath = activeRepoPath ?? rootFolderPath ?? null;
-    const isAuthenticated = useGitHubStore.use.isAuthenticated();
-    const { checkAuth } = useGitHubStore.use.actions();
-    const { openGitHubIssueBuffer } = useBufferStore.use.actions();
-    const activeBufferId = useActiveBufferId();
-    const activeIssueNumber = useBufferStore((state) => {
-      const activeBuffer = activeBufferId
-        ? state.buffers.find((buffer) => buffer.id === activeBufferId)
-        : null;
-      return activeBuffer?.type === "githubIssue" ? activeBuffer.issueNumber : null;
-    });
-    const load = useCallback(
-      () => (repoPath ? listIssues(repoPath, filter) : Promise.resolve<IssueListItem[]>([])),
-      [filter, repoPath],
+const GitHubIssuesView = memo(({ searchQuery = "", filter = "open" }: GitHubIssuesViewProps) => {
+  const repoPath = useGitHubRepoPath();
+  const queryClient = useQueryClient();
+  const isAuthenticated = useGitHubStore.use.isAuthenticated();
+  const { checkAuth } = useGitHubStore.use.actions();
+  const { openGitHubIssueBuffer } = useBufferStore.use.actions();
+  const activeBufferId = useActiveBufferId();
+  const activeIssueNumber = useBufferStore((state) => {
+    const activeBuffer = activeBufferId
+      ? state.buffers.find((buffer) => buffer.id === activeBufferId)
+      : null;
+    return activeBuffer?.type === "githubIssue" ? activeBuffer.issueNumber : null;
+  });
+  const issuesQuery = useQuery({
+    ...issueListQuery(repoPath, filter),
+    enabled: isAuthenticated,
+  });
+  const deferredIssues = issuesQuery.data ?? EMPTY_ISSUES;
+  const isLoading = issuesQuery.isFetching;
+  const error = repoPath
+    ? getQueryErrorMessage(issuesQuery.error)
+    : isAuthenticated
+      ? "No repository selected."
+      : null;
+  const refetchIssues = issuesQuery.refetch;
+  const refresh = useCallback(() => void refetchIssues(), [refetchIssues]);
+  const deferredSearchQuery = useDeferredValue(searchQuery);
+
+  const prefetchIssue = useCallback(
+    (issue: IssueListItem) => {
+      if (!repoPath) return;
+      void queryClient.query(issueDetailsQuery(repoPath, issue.number)).catch(() => undefined);
+    },
+    [queryClient, repoPath],
+  );
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void checkAuth();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [checkAuth]);
+
+  const filteredIssues = useMemo(() => {
+    const query = deferredSearchQuery.trim().toLowerCase();
+    if (!query) return deferredIssues;
+
+    return deferredIssues.filter((issue) =>
+      [
+        issue.title,
+        `#${issue.number}`,
+        issue.author.login,
+        issue.state,
+        ...issue.labels.map((label) => label.name),
+      ].some((value) => value.toLowerCase().includes(query)),
     );
-    const {
-      data: deferredIssues,
-      isLoading,
-      error,
-      refresh,
-    } = useGitHubList({
-      cache: githubIssueListCache,
-      cacheKey: repoPath ? `${repoPath}::${filter}` : null,
-      enabled: isAuthenticated,
-      load,
-      refreshNonce,
-      ttlMs: GITHUB_ISSUE_LIST_TTL_MS,
-    });
-    const deferredSearchQuery = useDeferredValue(searchQuery);
+  }, [deferredIssues, deferredSearchQuery]);
+  const groupedIssues = useMemo(() => groupIssues(filteredIssues), [filter, filteredIssues]);
 
-    const prefetchIssue = useCallback(
-      (issue: IssueListItem) => {
-        if (!repoPath) return;
+  useEffect(() => {
+    if (!isAuthenticated || !repoPath || filteredIssues.length === 0) return;
 
-        const cacheKey = `${repoPath}::${issue.number}`;
-        void githubIssueDetailsCache
-          .load(cacheKey, () => fetchIssueDetails(repoPath, issue.number), {
-            ttlMs: GITHUB_ISSUE_DETAILS_TTL_MS,
-          })
-          .catch(() => undefined);
-      },
-      [repoPath],
-    );
+    let cancelled = false;
+    const idleApi = window as Window & {
+      requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+    const prefetchVisibleIssues = () => {
+      if (cancelled) return;
+      filteredIssues.slice(0, 4).forEach((issue) => prefetchIssue(issue));
+    };
+    const usesIdleCallback = typeof idleApi.requestIdleCallback === "function";
+    const idleId = usesIdleCallback
+      ? idleApi.requestIdleCallback?.(prefetchVisibleIssues, { timeout: 1200 })
+      : window.setTimeout(prefetchVisibleIssues, 500);
 
-    useEffect(() => {
-      const timeoutId = window.setTimeout(() => {
-        void checkAuth();
-      }, 0);
+    return () => {
+      cancelled = true;
+      if (usesIdleCallback && idleId !== undefined) {
+        idleApi.cancelIdleCallback(idleId);
+      } else if (idleId !== undefined) {
+        window.clearTimeout(idleId);
+      }
+    };
+  }, [filteredIssues, isAuthenticated, prefetchIssue, repoPath]);
 
-      return () => window.clearTimeout(timeoutId);
-    }, [checkAuth]);
+  if (!isAuthenticated) {
+    return <GitHubAuthStatusMessage layout="sidebar" />;
+  }
 
-    const filteredIssues = useMemo(() => {
-      const query = deferredSearchQuery.trim().toLowerCase();
-      if (!query) return deferredIssues;
-
-      return deferredIssues.filter((issue) =>
-        [
-          issue.title,
-          `#${issue.number}`,
-          issue.author.login,
-          issue.state,
-          ...issue.labels.map((label) => label.name),
-        ].some((value) => value.toLowerCase().includes(query)),
-      );
-    }, [deferredIssues, deferredSearchQuery]);
-    const groupedIssues = useMemo(() => groupIssues(filteredIssues), [filter, filteredIssues]);
-
-    useEffect(() => {
-      if (!isAuthenticated || !repoPath || filteredIssues.length === 0) return;
-
-      let cancelled = false;
-      const idleApi = window as Window & {
-        requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
-        cancelIdleCallback?: (id: number) => void;
-      };
-      const prefetchVisibleIssues = () => {
-        if (cancelled) return;
-        filteredIssues.slice(0, 4).forEach((issue) => prefetchIssue(issue));
-      };
-      const usesIdleCallback = typeof idleApi.requestIdleCallback === "function";
-      const idleId = usesIdleCallback
-        ? idleApi.requestIdleCallback?.(prefetchVisibleIssues, { timeout: 1200 })
-        : window.setTimeout(prefetchVisibleIssues, 500);
-
-      return () => {
-        cancelled = true;
-        if (usesIdleCallback && idleId !== undefined) {
-          idleApi.cancelIdleCallback(idleId);
-        } else if (idleId !== undefined) {
-          window.clearTimeout(idleId);
-        }
-      };
-    }, [filteredIssues, isAuthenticated, prefetchIssue, repoPath]);
-
-    if (!isAuthenticated) {
-      return <GitHubAuthStatusMessage layout="sidebar" />;
-    }
-
-    return (
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden" aria-busy={isLoading}>
-        <SidebarScrollArea>
-          {error && (
-            <EmptyState
-              layout="sidebar"
-              message={error}
-              tone="error"
-              role="alert"
-              action={{ label: "Retry", onClick: refresh, disabled: isLoading }}
-            />
-          )}
-          {isLoading && deferredIssues.length === 0 ? (
-            <EmptyState
-              layout="sidebar"
-              message={<Spinner label="Loading issues" showLabel compact />}
-            />
-          ) : error && deferredIssues.length === 0 ? null : deferredIssues.length === 0 ? (
-            <EmptyState layout="sidebar" message="No issues" />
-          ) : filteredIssues.length === 0 ? (
-            <EmptyState layout="sidebar" message="No matching issues" />
-          ) : (
-            <div className="min-w-0 space-y-1">
-              {groupedIssues.map((group) => (
-                <SidebarSection
-                  forceExpanded={searchQuery.trim().length > 0}
-                  key={group.id}
-                  title={group.title}
-                  count={group.items.length}
-                >
-                  {group.items.map((issue) => (
-                    <IssueRow
-                      key={issue.number}
-                      issue={issue}
-                      isActive={activeIssueNumber === issue.number}
-                      repoPath={repoPath}
-                      onPrefetch={() => prefetchIssue(issue)}
-                      onSelect={() =>
-                        startTransition(() => {
-                          openGitHubIssueBuffer({
-                            issueNumber: issue.number,
-                            repoPath: repoPath ?? undefined,
-                            title: issue.title,
-                            authorAvatarUrl: getGitHubAvatarUrl(issue.author),
-                            url: issue.url,
-                          });
-                        })
-                      }
-                      onOpenInNewWindow={() =>
-                        openGitHubContentInNewWindow(repoPath, {
-                          type: "githubIssue",
+  return (
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden" aria-busy={isLoading}>
+      <SidebarScrollArea>
+        {error && (
+          <EmptyState
+            layout="sidebar"
+            message={error}
+            tone="error"
+            role="alert"
+            action={{ label: "Retry", onClick: refresh, disabled: isLoading }}
+          />
+        )}
+        {isLoading && deferredIssues.length === 0 ? (
+          <EmptyState
+            layout="sidebar"
+            message={<Spinner label="Loading issues" showLabel compact />}
+          />
+        ) : error && deferredIssues.length === 0 ? null : deferredIssues.length === 0 ? (
+          <EmptyState layout="sidebar" message="No issues" />
+        ) : filteredIssues.length === 0 ? (
+          <EmptyState layout="sidebar" message="No matching issues" />
+        ) : (
+          <div className="min-w-0 space-y-1">
+            {groupedIssues.map((group) => (
+              <SidebarSection
+                forceExpanded={searchQuery.trim().length > 0}
+                key={group.id}
+                title={group.title}
+                count={group.items.length}
+              >
+                {group.items.map((issue) => (
+                  <IssueRow
+                    key={issue.number}
+                    issue={issue}
+                    isActive={activeIssueNumber === issue.number}
+                    repoPath={repoPath}
+                    onPrefetch={() => prefetchIssue(issue)}
+                    onSelect={() =>
+                      startTransition(() => {
+                        openGitHubIssueBuffer({
                           issueNumber: issue.number,
                           repoPath: repoPath ?? undefined,
+                          title: issue.title,
                           authorAvatarUrl: getGitHubAvatarUrl(issue.author),
-                          name: issue.title,
                           url: issue.url,
-                        })
-                      }
-                    />
-                  ))}
-                </SidebarSection>
-              ))}
-            </div>
-          )}
-        </SidebarScrollArea>
-      </div>
-    );
-  },
-);
+                        });
+                      })
+                    }
+                    onOpenInNewWindow={() =>
+                      openGitHubContentInNewWindow(repoPath, {
+                        type: "githubIssue",
+                        issueNumber: issue.number,
+                        repoPath: repoPath ?? undefined,
+                        authorAvatarUrl: getGitHubAvatarUrl(issue.author),
+                        name: issue.title,
+                        url: issue.url,
+                      })
+                    }
+                  />
+                ))}
+              </SidebarSection>
+            ))}
+          </div>
+        )}
+      </SidebarScrollArea>
+    </div>
+  );
+});
 
 GitHubIssuesView.displayName = "GitHubIssuesView";
 

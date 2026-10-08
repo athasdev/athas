@@ -2,17 +2,7 @@ import { commands } from "@/bindings/commands";
 import type { PullRequest, PullRequestDetails, PullRequestFile } from "../types/github.types";
 import type { GitHubTokenSyncStatus } from "./github-token-service";
 
-export const PR_LIST_CACHE_TTL_MS = 5 * 60_000;
-export const PR_DETAILS_CACHE_TTL_MS = 120_000;
 export const AUTH_CACHE_TTL_MS = 2 * 60_000;
-
-export function getPRListCacheKey(repoPath: string, filter: string): string {
-  return `${repoPath}::${filter}`;
-}
-
-export function getPRDetailsCacheKey(repoPath: string, prNumber: number): string {
-  return `${repoPath}::${prNumber}`;
-}
 
 export function isFresh(timestamp: number, ttlMs: number): boolean {
   return Date.now() - timestamp < ttlMs;

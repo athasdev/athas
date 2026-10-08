@@ -4,6 +4,7 @@ import { Checkbox } from "@/ui/checkbox";
 import { Field, FieldLabel } from "@/ui/field";
 import { FieldError } from "@/ui/field";
 import { useEffect, useId, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { openExternalUrl } from "@/utils/external-url";
 import { toast } from "sonner";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
@@ -28,10 +29,9 @@ import {
 import { Spinner } from "@/ui/spinner";
 import { writeClipboardText } from "@/utils/clipboard";
 import { useDeliveryDetail } from "../hooks/use-delivery-detail";
-import { deliveryDetailCache, notifyDeliveryChanged } from "../services/github-delivery-service";
+import { deliveryKeys, notifyDeliveryChanged } from "../services/github-delivery-service";
 import {
   deliveryBufferPath,
-  deliveryKey,
   isRelease,
   releaseTitle,
   safeDeliveryUrl,
@@ -68,6 +68,7 @@ export default function GitHubDeliveryViewer({ buffer }: { buffer: GitHubDeliver
   const active = useIsBufferActive(buffer.id);
   const { updateBuffer, closeBuffer } = useBufferStore.use.actions();
   const { data, loading, error, refresh } = useDeliveryDetail(kind, repoPath, resourceId, active);
+  const queryClient = useQueryClient();
   const [editing, setEditing] = useState(resourceId === undefined && kind === "releases");
   const [confirm, setConfirm] = useState<Confirmation | null>(null);
   const latestId = useId();
@@ -106,8 +107,8 @@ export default function GitHubDeliveryViewer({ buffer }: { buffer: GitHubDeliver
     if (url) void openExternalUrl(url).catch((error) => toast.error(String(error)));
   };
   const onSaved = (release: Release) => {
-    notifyDeliveryChanged("releases", repoPath, release.id);
-    deliveryDetailCache.set(deliveryKey("releases", repoPath, release.id), release);
+    queryClient.setQueryData(deliveryKeys.item("releases", repoPath, release.id), release);
+    notifyDeliveryChanged(queryClient, "releases", repoPath, release.id);
     updateBuffer({
       ...buffer,
       resourceId: release.id,
@@ -115,7 +116,6 @@ export default function GitHubDeliveryViewer({ buffer }: { buffer: GitHubDeliver
       name: releaseTitle(release),
     });
     setEditing(false);
-    refresh();
     toast.success(release.draft ? "Release draft saved" : "Release updated");
   };
   const mutate = async () => {
@@ -131,7 +131,7 @@ export default function GitHubDeliveryViewer({ buffer }: { buffer: GitHubDeliver
       } else {
         await deactivateDeployment(repoPath, data.id);
       }
-      notifyDeliveryChanged(kind, repoPath, data.id);
+      notifyDeliveryChanged(queryClient, kind, repoPath, data.id);
       if (confirm === "delete") closeBuffer(buffer.id);
       toast.success(
         confirm === "publish"

@@ -3,7 +3,6 @@ import type { ExtensionInstallRequest } from "@/extensions/hooks/use-extension-i
 import type { AcpTerminalAuthExit } from "@/features/ai/services/acp-terminal-auth";
 import type { AIChatSkillInsertDetail } from "@/features/ai/services/skill-events";
 import type { GitChange } from "@/features/git/events/git-events";
-import type { DeliveryKind } from "@/features/github/delivery/types/github-delivery.types";
 import type { GitSidebarAction } from "@/features/git/types/git.types";
 import type { GitHubSidebarAction } from "@/features/github/types/github.types";
 import type { OpenNotificationsCommandDetail } from "@/features/notifications/constants/notifications-events";
@@ -92,7 +91,6 @@ export interface AppEventMap {
   "git:palette-action": GitSidebarAction;
   "git:open-branch-manager": { tab: "branches" | "worktrees" | "repositories" };
   "github:palette-action": GitHubSidebarAction;
-  "github:delivery-changed": { kind: DeliveryKind; repoPath: string; id: number };
 
   // AI and sharing
   "ai:insert-skill": AIChatSkillInsertDetail;

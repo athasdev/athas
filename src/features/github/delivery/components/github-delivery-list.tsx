@@ -1,5 +1,6 @@
 import { writeSidebarResourceDragData } from "@/features/sidebar/services/sidebar-resource-drag";
 import { useDeferredValue, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { openExternalUrl } from "@/utils/external-url";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { GitHubSidebarRow } from "../../components/github-sidebar-row";
@@ -15,7 +16,7 @@ import { ContextMenuPopup, createContextMenuGroups } from "@/ui/context-menu";
 import { useDropdownMenu, type MenuItem } from "@/ui/dropdown";
 import { writeClipboardText } from "@/utils/clipboard";
 import { useDeliveryList } from "../hooks/use-delivery-list";
-import { loadDeliveryDetail } from "../services/github-delivery-service";
+import { deliveryDetailQuery } from "../services/github-delivery-service";
 import type { DeliveryKind, DeliveryResource } from "../types/github-delivery.types";
 import {
   deploymentState,
@@ -32,20 +33,18 @@ export default function GitHubDeliveryList({
   repoPath,
   filter,
   searchQuery,
-  refreshNonce,
 }: {
   kind: DeliveryKind;
   repoPath: string;
   filter: string;
   searchQuery: string;
-  refreshNonce: number;
 }) {
   const authenticated = useGitHubStore.use.isAuthenticated();
+  const queryClient = useQueryClient();
   const { items, loading, error, hasMore, refresh, loadMore } = useDeliveryList(
     kind,
     repoPath,
     authenticated,
-    refreshNonce,
   );
   const openContent = useBufferStore.use.actions().openContent;
   const activeBufferId = useActiveBufferId();
@@ -182,7 +181,9 @@ export default function GitHubDeliveryList({
                     menu.open(event, item);
                   }}
                   onPrefetch={() => {
-                    void loadDeliveryDetail(kind, repoPath, item.id).catch(() => undefined);
+                    void queryClient
+                      .query(deliveryDetailQuery(kind, repoPath, item.id))
+                      .catch(() => undefined);
                   }}
                   leading={release ? <TagIcon /> : <RocketIcon />}
                   trailing={getSidebarTime(

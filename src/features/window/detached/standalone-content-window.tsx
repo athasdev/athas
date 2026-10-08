@@ -10,6 +10,7 @@ import { TerminalTab } from "@/features/terminal/components/terminal-tab";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { ViewerLoadingState } from "@/features/viewer/components/viewer-state";
 import { parseResourceWindowPayload } from "./detached-resource-service";
+import { AppQueryProvider } from "@/components/app-query-provider";
 import { DetachedWindowShell } from "./detached-window-shell";
 import { useDetachedWindow } from "./use-detached-window";
 import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
@@ -56,35 +57,37 @@ export default function StandaloneContentWindow() {
   }, [buffer]);
 
   return (
-    <DetachedWindowShell
-      title={buffer?.name ?? "Athas"}
-      error={error ?? (!request ? "This window has no content to show." : null)}
-      runtime={ready ? <TerminalHost /> : null}
-    >
-      <main className="min-h-0 min-w-0 flex-1 overflow-hidden">
-        <Suspense fallback={<ViewerLoadingState label="Opening" layout="fill" />}>
-          {buffer?.type === "terminal" ? (
-            <TerminalTab
-              bufferId={buffer.id}
-              sessionId={buffer.sessionId}
-              shell={buffer.shell}
-              initialCommand={buffer.initialCommand}
-              workingDirectory={buffer.workingDirectory}
-              remoteConnectionId={buffer.remoteConnectionId}
-            />
-          ) : buffer?.type === "settings" ? (
-            <SettingsView />
-          ) : buffer?.type === "extensions" ? (
-            <ExtensionsView />
-          ) : buffer?.type === "extension" ? (
-            <ExtensionDetails extensionId={buffer.extensionId} />
-          ) : buffer && isResourceBuffer(buffer) ? (
-            <ResourceBufferView buffer={buffer} />
-          ) : (
-            <ViewerLoadingState label="Opening" layout="fill" />
-          )}
-        </Suspense>
-      </main>
-    </DetachedWindowShell>
+    <AppQueryProvider>
+      <DetachedWindowShell
+        title={buffer?.name ?? "Athas"}
+        error={error ?? (!request ? "This window has no content to show." : null)}
+        runtime={ready ? <TerminalHost /> : null}
+      >
+        <main className="min-h-0 min-w-0 flex-1 overflow-hidden">
+          <Suspense fallback={<ViewerLoadingState label="Opening" layout="fill" />}>
+            {buffer?.type === "terminal" ? (
+              <TerminalTab
+                bufferId={buffer.id}
+                sessionId={buffer.sessionId}
+                shell={buffer.shell}
+                initialCommand={buffer.initialCommand}
+                workingDirectory={buffer.workingDirectory}
+                remoteConnectionId={buffer.remoteConnectionId}
+              />
+            ) : buffer?.type === "settings" ? (
+              <SettingsView />
+            ) : buffer?.type === "extensions" ? (
+              <ExtensionsView />
+            ) : buffer?.type === "extension" ? (
+              <ExtensionDetails extensionId={buffer.extensionId} />
+            ) : buffer && isResourceBuffer(buffer) ? (
+              <ResourceBufferView buffer={buffer} />
+            ) : (
+              <ViewerLoadingState label="Opening" layout="fill" />
+            )}
+          </Suspense>
+        </main>
+      </DetachedWindowShell>
+    </AppQueryProvider>
   );
 }

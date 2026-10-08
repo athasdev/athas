@@ -1,5 +1,5 @@
 import { lazy } from "react";
-import { useGitHubStore } from "@/features/github/stores/github.store";
+import { useCachedPullRequest } from "@/features/github/hooks/use-cached-pull-request";
 import {
   getPullRequestStatus,
   PR_STATUS_BADGE_TONE,
@@ -92,8 +92,13 @@ export function ResourceBufferIcon({ buffer }: { buffer: ResourceBuffer }) {
 
 /** Live status of the resource, for chrome that sits outside the viewer. */
 export function ResourceBufferBadge({ buffer }: { buffer: ResourceBuffer }) {
-  const pr = useGitHubStore((state) => state.selectedPRDetails);
-  if (buffer.type !== "pullRequest" || !pr || pr.number !== buffer.prNumber) return null;
+  if (buffer.type !== "pullRequest") return null;
+  return <PullRequestStatusBadge repoPath={buffer.repoPath} prNumber={buffer.prNumber} />;
+}
+
+function PullRequestStatusBadge({ repoPath, prNumber }: { repoPath?: string; prNumber: number }) {
+  const { details: pr } = useCachedPullRequest(repoPath, prNumber);
+  if (!pr) return null;
   const status = getPullRequestStatus(pr);
   return <Badge tone={PR_STATUS_BADGE_TONE[status]}>{PULL_REQUEST_STATUS_LABEL[status]}</Badge>;
 }

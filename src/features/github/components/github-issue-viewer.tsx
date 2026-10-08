@@ -6,6 +6,7 @@ import {
   OpenExternalIcon,
 } from "@/ui/icons";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import {
   ViewerErrorState,
@@ -30,10 +31,6 @@ import {
   addIssueComment,
   deleteIssueComment,
   editIssue,
-  fetchIssueDetails,
-  listRepositoryIssueTypes,
-  listRepositoryLabels,
-  listRepositoryMilestones,
   lockIssue,
   setIssueState,
   unlockIssue,
@@ -42,10 +39,12 @@ import {
 import { useGitHubStore } from "../stores/github.store";
 import type { IssueDetails, IssueMilestone, IssueType, Label } from "../types/github.types";
 import {
-  GITHUB_ISSUE_DETAILS_TTL_MS,
-  githubIssueDetailsCache,
-  githubIssueListCache,
-} from "../services/github-data-cache";
+  githubKeys,
+  issueDetailsQuery,
+  repositoryMetadataQuery,
+  storeIssueDetails,
+} from "../services/github-queries";
+import { getQueryErrorMessage, refetchAfterMutation } from "@/utils/query-client";
 import { getGitHubMilestoneUrl } from "../utils/github-link-utils";
 import { copyToClipboard, getTimeAgo } from "../services/github-viewer-utils";
 import { getGitHubAvatarUrl } from "../services/github-avatar-url";
@@ -55,6 +54,11 @@ import { GitHubMetaChip, GitHubUserChip } from "./github-chips";
 import { GitHubCommentComposer } from "./github-comment-composer";
 import { GitHubAssigneePicker, GitHubLabelPicker } from "./github-metadata-pickers";
 import { LabelBadges } from "./pr-status";
+import { GitHubMetadataError } from "./github-metadata-error";
+
+const EMPTY_LABELS: Label[] = [];
+const EMPTY_MILESTONES: IssueMilestone[] = [];
+const EMPTY_ISSUE_TYPES: IssueType[] = [];
 
 interface GitHubIssueViewerProps {
   issueNumber: number;
@@ -65,15 +69,19 @@ interface GitHubIssueViewerProps {
 const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssueViewerProps) => {
   const updateBuffer = useBufferStore.use.actions().updateBuffer;
   const buffer = useBufferStore((state) => state.buffers.find((item) => item.id === bufferId));
-  const [details, setDetails] = useState<IssueDetails | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const detailsQuery = useQuery(issueDetailsQuery(repoPath ?? null, issueNumber));
+  const metadataQuery = useQuery(repositoryMetadataQuery(repoPath ?? null));
+  const details = detailsQuery.data ?? null;
+  const isLoading = detailsQuery.isFetching;
+  const error = repoPath ? getQueryErrorMessage(detailsQuery.error) : "No repository selected.";
+  const labels = metadataQuery.data?.labels ?? EMPTY_LABELS;
+  const milestones = metadataQuery.data?.milestones ?? EMPTY_MILESTONES;
+  const issueTypes = metadataQuery.data?.issueTypes ?? EMPTY_ISSUE_TYPES;
+  const metadataError = getQueryErrorMessage(metadataQuery.error);
   const [visibleCommentCount, setVisibleCommentCount] = useState(8);
   const [commentBody, setCommentBody] = useState("");
   const [mutationKey, setMutationKey] = useState<string | null>(null);
-  const [labels, setLabels] = useState<Label[]>([]);
-  const [milestones, setMilestones] = useState<IssueMilestone[]>([]);
-  const [issueTypes, setIssueTypes] = useState<IssueType[]>([]);
   const currentUser = useGitHubStore((state) => state.currentUser);
   const repositoryUrl = useMemo(
     () => details?.url.replace(/\/issues\/\d+$/, "") ?? undefined,
@@ -89,71 +97,8 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
     return Array.from(labelsByName.values());
   }, [details?.labels, labels]);
 
-  const fetchIssue = useCallback(
-    async (force = false) => {
-      if (!repoPath) {
-        setError("No repository selected.");
-        setIsLoading(false);
-        return;
-      }
-
-      const cacheKey = `${repoPath}::${issueNumber}`;
-      const cached = githubIssueDetailsCache.getFreshValue(cacheKey, GITHUB_ISSUE_DETAILS_TTL_MS);
-      if (cached && !force) {
-        setDetails(cached);
-        setError(null);
-        setIsLoading(false);
-        return;
-      }
-
-      const stale = githubIssueDetailsCache.getSnapshot(cacheKey)?.value;
-      if (stale && !force) {
-        setDetails(stale);
-      }
-
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const nextDetails = await githubIssueDetailsCache.load(
-          cacheKey,
-          () => fetchIssueDetails(repoPath, issueNumber),
-          { force, ttlMs: GITHUB_ISSUE_DETAILS_TTL_MS },
-        );
-        setDetails(nextDetails);
-        setError(null);
-      } catch (nextError) {
-        setError(nextError instanceof Error ? nextError.message : String(nextError));
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [issueNumber, repoPath],
-  );
-
-  useEffect(() => {
-    void fetchIssue();
-  }, [fetchIssue]);
-
-  useEffect(() => {
-    if (!repoPath) return;
-    let cancelled = false;
-
-    void Promise.all([
-      listRepositoryLabels(repoPath).catch((): Label[] => []),
-      listRepositoryMilestones(repoPath).catch((): IssueMilestone[] => []),
-      listRepositoryIssueTypes(repoPath).catch((): IssueType[] => []),
-    ]).then(([nextLabels, nextMilestones, nextIssueTypes]) => {
-      if (cancelled) return;
-      setLabels(nextLabels);
-      setMilestones(nextMilestones);
-      setIssueTypes(nextIssueTypes);
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [repoPath]);
+  const refetchIssue = detailsQuery.refetch;
+  const refreshIssue = useCallback(() => void refetchIssue(), [refetchIssue]);
 
   useEffect(() => {
     if (!details || !buffer || buffer.type !== "githubIssue") return;
@@ -230,11 +175,9 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
   const applyIssueDetails = useCallback(
     (nextDetails: IssueDetails) => {
       if (!repoPath) return;
-      githubIssueDetailsCache.set(`${repoPath}::${issueNumber}`, nextDetails);
-      githubIssueListCache.clear();
-      setDetails(nextDetails);
+      void storeIssueDetails(queryClient, repoPath, nextDetails);
     },
-    [issueNumber, repoPath],
+    [queryClient, repoPath],
   );
 
   const runMutation = useCallback(
@@ -312,13 +255,13 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
             ? unlockIssue(repoPath, issueNumber)
             : lockIssue(repoPath, issueNumber, lockReason ?? null),
         () => {
-          githubIssueDetailsCache.clear(`${repoPath}::${issueNumber}`);
-          void fetchIssue(true);
+          void refetchAfterMutation(queryClient, githubKeys.issue(repoPath, issueNumber));
+          void queryClient.invalidateQueries({ queryKey: githubKeys.issues(repoPath) });
           toast.success(shouldUnlock ? "Issue unlocked" : "Issue locked");
         },
       );
     },
-    [details, fetchIssue, issueNumber, repoPath, runMutation],
+    [details, issueNumber, queryClient, repoPath, runMutation],
   );
 
   const addComment = useCallback(async () => {
@@ -474,10 +417,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                       </DropdownMenuItem>
                     </>
                   )}
-                  <DropdownMenuItem
-                    disabled={isLoading && Boolean(details)}
-                    onClick={() => void fetchIssue(true)}
-                  >
+                  <DropdownMenuItem disabled={isLoading && Boolean(details)} onClick={refreshIssue}>
                     {isLoading && details ? "Refreshing..." : "Refresh"}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleOpenInBrowser}>Open on GitHub</DropdownMenuItem>
@@ -545,13 +485,19 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
         <ViewerErrorState
           message={error}
           actionLabel="Retry"
-          onAction={() => void fetchIssue(true)}
+          onAction={refreshIssue}
           layout="section"
         />
       ) : details ? (
         <ResourceSidebarLayout
           sidebar={
             <>
+              {metadataError ? (
+                <GitHubMetadataError
+                  message={metadataError}
+                  onRetry={() => void metadataQuery.refetch()}
+                />
+              ) : null}
               <ResourceSection title="Type">
                 <Select
                   value={details.issueType?.name ?? "none"}

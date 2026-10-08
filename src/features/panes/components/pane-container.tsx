@@ -15,7 +15,7 @@ import { isEditorKeyboardTarget } from "@/features/keymaps/services/editor-keybo
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { stageHunk, unstageHunk } from "@/features/git/api/git-status-api";
 import type { GitHunk } from "@/features/git/types/git.types";
-import { useGitHubStore } from "@/features/github/stores/github.store";
+import { useCachedPullRequest } from "@/features/github/hooks/use-cached-pull-request";
 import { formatDiffBufferLabel } from "@/features/git/services/diff-buffer-label";
 import { openSidebarResourceBuffer } from "@/features/sidebar/services/open-sidebar-resource";
 import {
@@ -281,11 +281,9 @@ function BufferPreviewCard({ buffer }: { buffer: PaneRenderBuffer }) {
 }
 
 function PullRequestPreviewCard({ buffer }: { buffer: PullRequestContent }) {
-  const selectedPRDetails = useGitHubStore.use.selectedPRDetails();
-  const selectedPRComments = useGitHubStore.use.selectedPRComments();
-  const details = selectedPRDetails?.number === buffer.prNumber ? selectedPRDetails : null;
+  const { details, comments } = useCachedPullRequest(buffer.repoPath, buffer.prNumber);
   const fileCount = details ? details.changedFiles : null;
-  const commentCount = details ? selectedPRComments.length : null;
+  const commentCount = comments ? comments.length : null;
   const commitCount = details ? details.commits.length : null;
   const authorLogin = details ? details.author.login : null;
 

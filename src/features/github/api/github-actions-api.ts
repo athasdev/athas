@@ -23,3 +23,9 @@ export const resolveNotificationWorkflowRun = (
     notificationTitle,
     notificationUpdatedAt,
   );
+
+export const rerunWorkflowRun = (repoPath: string, runId: number, failedJobsOnly: boolean) =>
+  commands.githubRerunWorkflowRun(repoPath, runId, failedJobsOnly);
+
+export const cancelWorkflowRun = (repoPath: string, runId: number) =>
+  commands.githubCancelWorkflowRun(repoPath, runId);

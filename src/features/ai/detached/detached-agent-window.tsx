@@ -9,6 +9,7 @@ import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { ShareDialog } from "@/features/sharing/components/share-dialog";
 import { SharingRuntime } from "@/features/sharing/components/sharing-runtime";
+import { AppQueryProvider } from "@/components/app-query-provider";
 import { DetachedWindowShell } from "@/features/window/detached/detached-window-shell";
 import { useDetachedWindow } from "@/features/window/detached/use-detached-window";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
@@ -144,39 +145,41 @@ export default function DetachedAgentWindow() {
       : null;
 
   return (
-    <DetachedWindowShell
-      title={chat?.title ?? "Agent"}
-      icon={<AgentSessionIcon session={chat} />}
-      actions={
-        ready && !returning ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={returnToOwner}
-            tooltip="Move this session back to the main window"
-            shortcut="mod+w"
-            aria-label="Return session to the main window"
-          >
-            <ArrowCounterClockwiseIcon />
-            Return
-          </Button>
-        ) : null
-      }
-      error={error ?? sessionError}
-      pending={pending}
-      runtime={
-        <>
-          <ShareDialog />
-          <SharingRuntime />
-        </>
-      }
-    >
-      {buffer?.type === "agent" ? (
-        <main className="min-h-0 min-w-0 flex-1">
-          <AgentTab buffer={buffer} />
-        </main>
-      ) : null}
-    </DetachedWindowShell>
+    <AppQueryProvider>
+      <DetachedWindowShell
+        title={chat?.title ?? "Agent"}
+        icon={<AgentSessionIcon session={chat} />}
+        actions={
+          ready && !returning ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={returnToOwner}
+              tooltip="Move this session back to the main window"
+              shortcut="mod+w"
+              aria-label="Return session to the main window"
+            >
+              <ArrowCounterClockwiseIcon />
+              Return
+            </Button>
+          ) : null
+        }
+        error={error ?? sessionError}
+        pending={pending}
+        runtime={
+          <>
+            <ShareDialog />
+            <SharingRuntime />
+          </>
+        }
+      >
+        {buffer?.type === "agent" ? (
+          <main className="min-h-0 min-w-0 flex-1">
+            <AgentTab buffer={buffer} />
+          </main>
+        ) : null}
+      </DetachedWindowShell>
+    </AppQueryProvider>
   );
 }

@@ -28,6 +28,7 @@ import { WindowResizeBorder } from "./features/window/components/window-resize-b
 import { DialogServiceProvider } from "@/ui/dialog";
 import { ContinuousAgentsRuntime } from "@/features/ai/continuous-agents/continuous-agents-runtime";
 import { DeferredEventDialog } from "@/components/deferred-event-dialog";
+import { AppQueryProvider } from "@/components/app-query-provider";
 import { bucketFrictionDuration } from "@/features/telemetry/services/friction-signals";
 import { recordFrictionSignal } from "@/features/telemetry/services/telemetry";
 
@@ -103,30 +104,32 @@ function WorkbenchApp() {
   }, []);
 
   return (
-    <MotionConfig reducedMotion={reduceMotion ? "always" : "user"}>
-      <DialogServiceProvider>
-        <TooltipProvider>
-          <SettingsReadyBootstrap />
-          <WindowResizeBorder />
+    <AppQueryProvider>
+      <MotionConfig reducedMotion={reduceMotion ? "always" : "user"}>
+        <DialogServiceProvider>
+          <TooltipProvider>
+            <SettingsReadyBootstrap />
+            <WindowResizeBorder />
 
-          <div className="h-dvh w-dvw overflow-hidden">
-            <FontStyleInjector />
-            <div className="window-container flex size-full flex-col overflow-hidden bg-background">
-              <MainLayout />
+            <div className="h-dvh w-dvw overflow-hidden">
+              <FontStyleInjector />
+              <div className="window-container flex size-full flex-col overflow-hidden bg-background">
+                <MainLayout />
+              </div>
+              <ZoomIndicator />
+              <Toaster />
+              <NotificationRecorder />
+              <ContinuousAgentsRuntime />
+              <DeferredEventDialog event="ai:open-agent-sessions" load={loadAgentSessionsDialog} />
+              <DeferredEventDialog event="feedback:open" load={loadProductFeedbackDialog} />
+              <DeferredEventDialog event="sharing:open" load={loadShareDialog} />
+              <SharingRuntime />
+              <GitHubActionsWatcher />
             </div>
-            <ZoomIndicator />
-            <Toaster />
-            <NotificationRecorder />
-            <ContinuousAgentsRuntime />
-            <DeferredEventDialog event="ai:open-agent-sessions" load={loadAgentSessionsDialog} />
-            <DeferredEventDialog event="feedback:open" load={loadProductFeedbackDialog} />
-            <DeferredEventDialog event="sharing:open" load={loadShareDialog} />
-            <SharingRuntime />
-            <GitHubActionsWatcher />
-          </div>
-        </TooltipProvider>
-      </DialogServiceProvider>
-    </MotionConfig>
+          </TooltipProvider>
+        </DialogServiceProvider>
+      </MotionConfig>
+    </AppQueryProvider>
   );
 }
 

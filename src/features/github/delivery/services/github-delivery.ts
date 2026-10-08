@@ -107,10 +107,6 @@ export function groupDelivery(items: DeliveryResource[]) {
   );
 }
 
-export function deliveryKey(kind: DeliveryKind, repoPath: string, id: number | "new") {
-  return JSON.stringify([kind, repoPath, id]);
-}
-
 export function deliveryBufferPath(kind: DeliveryKind, repoPath: string, id: number | "new") {
   return `github-${kind}://${encodeURIComponent(repoPath)}/${id}`;
 }

@@ -1,7 +1,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
 import { ViewerErrorState } from "@/features/viewer/components/viewer-state";
 import { Button } from "@/ui/button";
 import { showConfirmDialog } from "@/ui/dialog";
@@ -18,11 +18,7 @@ import {
   ResourceWorkspace,
 } from "@/ui/resource";
 import { toast } from "sonner";
-import {
-  deleteIssueComment,
-  listRepositoryLabels,
-  updateIssueComment,
-} from "../api/github-issues-api";
+import { deleteIssueComment, updateIssueComment } from "../api/github-issues-api";
 import {
   addPullRequestComment,
   closePullRequestOnGitHub,
@@ -30,7 +26,12 @@ import {
   submitPullRequestReview,
   updatePullRequest,
 } from "../api/github-pull-requests-api";
-import type { Label, PullRequestDetails } from "../types/github.types";
+import type {
+  Label,
+  PullRequestComment,
+  PullRequestDetails,
+  PullRequestFile,
+} from "../types/github.types";
 import type { Commit, FilePatchState, TabType } from "../types/github-pr-viewer.types";
 import {
   buildPRBufferPath,
@@ -50,6 +51,19 @@ import {
 import { copyToClipboard, getTimeAgo } from "../services/github-viewer-utils";
 import { getGitHubAvatarUrl } from "../services/github-avatar-url";
 import { useGitHubStore } from "../stores/github.store";
+import {
+  githubKeys,
+  pullRequestCommentsQuery,
+  pullRequestDetailsQuery,
+  pullRequestFilesQuery,
+  repositoryMetadataQuery,
+} from "../services/github-queries";
+import {
+  checkoutPullRequest,
+  openPullRequestInBrowser,
+} from "../services/github-pull-request-actions";
+import { useGitHubRepoPath } from "../hooks/use-github-repo-path";
+import { getQueryErrorMessage, refetchAfterMutation } from "@/utils/query-client";
 import { PRTimeline } from "./pr-timeline";
 import { PRFilesPanel } from "./pr-files-panel";
 import { getMergeStatusInfo } from "./pr-status";
@@ -66,7 +80,11 @@ import {
   type GitHubPRMergeMethod,
 } from "./github-pr-inline-action";
 import { GitHubBranchChip, GitHubMetaChip, GitHubUserChip } from "./github-chips";
-import { useProjectStore } from "@/features/workspace/stores/project.store";
+import { GitHubMetadataError } from "./github-metadata-error";
+
+const EMPTY_FILES: PullRequestFile[] = [];
+const EMPTY_COMMENTS: PullRequestComment[] = [];
+const EMPTY_LABELS: Label[] = [];
 
 interface GitHubPRViewerProps {
   prNumber: number;
@@ -74,8 +92,6 @@ interface GitHubPRViewerProps {
 }
 
 const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
-  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
-  const selectedRepoPath = useRepositoryStore.use.activeRepoPath();
   const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
   const prBuffer = useBufferStore((state) => {
     const buffer = state.buffers.find(
@@ -86,18 +102,9 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
     );
     return buffer?.type === "pullRequest" ? buffer : undefined;
   });
-  const selectedPRDetails = useGitHubStore.use.selectedPRDetails();
-  const selectedPRDiff = useGitHubStore.use.selectedPRDiff();
-  const selectedPRFiles = useGitHubStore.use.selectedPRFiles();
-  const selectedPRComments = useGitHubStore.use.selectedPRComments();
-  const isLoadingDetails = useGitHubStore.use.isLoadingDetails();
-  const isLoadingContent = useGitHubStore.use.isLoadingContent();
-  const detailsError = useGitHubStore.use.detailsError();
-  const contentError = useGitHubStore.use.contentError();
   const updateBuffer = useBufferStore.use.actions().updateBuffer;
-  const { selectPR, fetchPRs, fetchPRContent, openPRInBrowser, checkoutPR } =
-    useGitHubStore.use.actions();
-  const repoPath = prBuffer?.repoPath ?? selectedRepoPath ?? rootFolderPath;
+  const queryClient = useQueryClient();
+  const repoPath = useGitHubRepoPath(prBuffer?.repoPath);
 
   const [activeTab, setActiveTab] = useState<TabType>(() =>
     isPRFilesViewPath(prBuffer?.path ?? "") ? "files" : "activity",
@@ -106,33 +113,33 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
     () => parseSelectedFilePathFromPRBufferPath(prBuffer?.path ?? "") ?? null,
   );
   const [filePatches, setFilePatches] = useState<Record<string, FilePatchState>>({});
-  const [labels, setLabels] = useState<Label[]>([]);
   const [inlineAction, setInlineAction] = useState<GitHubPRInlineActionKind | null>(null);
   const [mutationKey, setMutationKey] = useState<string | null>(null);
   const [commentDraft, setCommentDraft] = useState("");
   const composerRef = useRef<HTMLDivElement | null>(null);
   const currentUser = useGitHubStore((state) => state.currentUser);
 
-  useEffect(() => {
-    if (repoPath && prNumber) {
-      void selectPR(repoPath, prNumber);
-    }
-  }, [repoPath, prNumber, selectPR]);
-
-  useEffect(() => {
-    if (!repoPath) return;
-    let cancelled = false;
-
-    void listRepositoryLabels(repoPath)
-      .catch((): Label[] => [])
-      .then((nextLabels) => {
-        if (!cancelled) setLabels(nextLabels);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [repoPath]);
+  const detailsQuery = useQuery(pullRequestDetailsQuery(repoPath, prNumber));
+  const filesQuery = useQuery({
+    ...pullRequestFilesQuery(repoPath, prNumber),
+    enabled: activeTab === "files",
+  });
+  const commentsQuery = useQuery({
+    ...pullRequestCommentsQuery(repoPath, prNumber),
+    enabled: activeTab === "activity",
+  });
+  const metadataQuery = useQuery(repositoryMetadataQuery(repoPath));
+  const selectedPRDetails = detailsQuery.data ?? null;
+  const selectedPRDiff = filesQuery.data?.diff ?? null;
+  const selectedPRFiles = filesQuery.data?.files ?? EMPTY_FILES;
+  const selectedPRComments = commentsQuery.data ?? EMPTY_COMMENTS;
+  const labels = metadataQuery.data?.labels ?? EMPTY_LABELS;
+  const metadataError = getQueryErrorMessage(metadataQuery.error);
+  const isLoadingDetails = detailsQuery.isFetching;
+  const detailsError = getQueryErrorMessage(detailsQuery.error);
+  const contentQuery = activeTab === "files" ? filesQuery : commentsQuery;
+  const isLoadingContent = contentQuery.isFetching;
+  const contentError = getQueryErrorMessage(contentQuery.error);
 
   useEffect(() => {
     const deepLinkedFilePath = parseSelectedFilePathFromPRBufferPath(prBuffer?.path ?? "");
@@ -154,17 +161,10 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
     }
   }, [activeTab, prBuffer?.path, selectedFilePath]);
 
+  const changedFileCount = selectedPRDetails ? (selectedPRDetails.changedFiles ?? 0) : null;
   useEffect(() => {
-    if (!repoPath || !prNumber) return;
-    if (activeTab === "files") {
-      void fetchPRContent(repoPath, prNumber, { mode: "files" });
-    } else if (activeTab === "activity") {
-      void fetchPRContent(repoPath, prNumber, { mode: "comments" });
-    }
-  }, [activeTab, repoPath, prNumber, fetchPRContent]);
-
-  useEffect(() => {
-    if (!repoPath || !prNumber || !selectedPRDetails || activeTab !== "activity") return;
+    if (!repoPath || !prNumber || changedFileCount === null || activeTab !== "activity") return;
+    if (changedFileCount > 12) return;
 
     const requestIdle = (
       window as Window & {
@@ -173,11 +173,7 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
     ).requestIdleCallback;
 
     const prefetch = () => {
-      void fetchPRContent(repoPath, prNumber, { mode: "comments" });
-
-      if ((selectedPRDetails.changedFiles ?? 0) <= 12) {
-        void fetchPRContent(repoPath, prNumber, { mode: "files" });
-      }
+      void queryClient.query(pullRequestFilesQuery(repoPath, prNumber)).catch(() => undefined);
     };
 
     if (typeof requestIdle === "function") {
@@ -187,7 +183,7 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
 
     const timeoutId = window.setTimeout(prefetch, 120);
     return () => window.clearTimeout(timeoutId);
-  }, [activeTab, fetchPRContent, prNumber, repoPath, selectedPRDetails]);
+  }, [activeTab, changedFileCount, prNumber, queryClient, repoPath]);
 
   useEffect(() => {
     if (!selectedPRDetails || !prBuffer) return;
@@ -325,45 +321,35 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
 
   const handleOpenInBrowser = useCallback(() => {
     if (repoPath) {
-      openPRInBrowser(repoPath, prNumber);
+      void openPullRequestInBrowser(repoPath, prNumber);
     }
-  }, [repoPath, prNumber, openPRInBrowser]);
+  }, [repoPath, prNumber]);
 
   const handleCheckout = useCallback(async () => {
     if (repoPath) {
       try {
-        await checkoutPR(repoPath, prNumber);
+        await checkoutPullRequest(repoPath, prNumber);
         toast.success(`Checked out PR #${prNumber}`);
       } catch (err) {
         console.error("Failed to checkout PR:", err);
         toast.error(err instanceof Error ? err.message : `Failed to checkout PR #${prNumber}`);
       }
     }
-  }, [repoPath, prNumber, checkoutPR]);
+  }, [repoPath, prNumber]);
 
   const handleRefresh = useCallback(() => {
     if (repoPath) {
-      void selectPR(repoPath, prNumber, { force: true });
-      if (activeTab === "files") {
-        void fetchPRContent(repoPath, prNumber, { force: true, mode: "files" });
-      } else if (activeTab === "activity") {
-        void fetchPRContent(repoPath, prNumber, {
-          force: true,
-          mode: "comments",
-        });
-      }
+      void queryClient.invalidateQueries({
+        queryKey: githubKeys.pullRequest(repoPath, prNumber),
+      });
     }
-  }, [activeTab, repoPath, prNumber, selectPR, fetchPRContent]);
+  }, [queryClient, repoPath, prNumber]);
 
-  const refreshPR = useCallback(
-    async (mode: "comments" | "full" = "full") => {
-      if (!repoPath) return;
-      await selectPR(repoPath, prNumber, { force: true });
-      void fetchPRs(repoPath, { force: true });
-      await fetchPRContent(repoPath, prNumber, { force: true, mode });
-    },
-    [fetchPRContent, fetchPRs, prNumber, repoPath, selectPR],
-  );
+  const refreshPR = useCallback(async () => {
+    if (!repoPath) return;
+    void queryClient.invalidateQueries({ queryKey: githubKeys.pullRequests(repoPath) });
+    await refetchAfterMutation(queryClient, githubKeys.pullRequest(repoPath, prNumber));
+  }, [prNumber, queryClient, repoPath]);
 
   const updatePR = useCallback(
     async (
@@ -381,7 +367,7 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
           next.labels.map((label) => label.name),
           next.assignees.map((assignee) => assignee.login),
         );
-        await refreshPR("comments");
+        await refreshPR();
         toast.success("Pull request updated");
         return true;
       } catch (error) {
@@ -420,9 +406,7 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
       await addPullRequestComment(repoPath, prNumber, body);
       setCommentDraft("");
       toast.success("Comment added");
-      void refreshPR("comments").catch(() => {
-        toast.error("Comment posted, but the conversation could not refresh. Reload to see it.");
-      });
+      void refreshPR();
       return true;
     } finally {
       setMutationKey(null);
@@ -435,7 +419,7 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
       setMutationKey(`comment-${commentId}`);
       try {
         await updateIssueComment(repoPath, commentId, body);
-        await refreshPR("comments");
+        await refreshPR();
         toast.success("Comment updated");
         return true;
       } catch (error) {
@@ -454,7 +438,7 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
       setMutationKey(`comment-${commentId}`);
       try {
         await deleteIssueComment(repoPath, commentId);
-        await refreshPR("comments");
+        await refreshPR();
         toast.success("Comment deleted");
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Could not delete the comment");
@@ -481,7 +465,7 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
           await mergePullRequest(repoPath, prNumber, method);
         }
 
-        await refreshPR(inlineAction === "merge" ? "full" : "comments");
+        await refreshPR();
         const completedAction = inlineAction;
         setInlineAction(null);
         toast.success(
@@ -511,7 +495,7 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
     setMutationKey("close");
     try {
       await closePullRequestOnGitHub(repoPath, prNumber);
-      await refreshPR("full");
+      await refreshPR();
       toast.success("Pull request closed");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to close pull request");
@@ -731,15 +715,23 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
           {errorState}
           <ResourceSidebarLayout
             sidebar={
-              <GitHubPRSidebar
-                pr={pr}
-                checksSummary={checksSummary}
-                availableLabels={availableLabels}
-                onLabelsChange={(nextLabels) => void updatePR({ labels: nextLabels })}
-                onAssigneesChange={(assignees) => void updatePR({ assignees })}
-                repoPath={repoPath ?? undefined}
-                repositoryUrl={repositoryUrl}
-              />
+              <>
+                {metadataError ? (
+                  <GitHubMetadataError
+                    message={metadataError}
+                    onRetry={() => void metadataQuery.refetch()}
+                  />
+                ) : null}
+                <GitHubPRSidebar
+                  pr={pr}
+                  checksSummary={checksSummary}
+                  availableLabels={availableLabels}
+                  onLabelsChange={(nextLabels) => void updatePR({ labels: nextLabels })}
+                  onAssigneesChange={(assignees) => void updatePR({ assignees })}
+                  repoPath={repoPath ?? undefined}
+                  repositoryUrl={repositoryUrl}
+                />
+              </>
             }
           >
             <PRTimeline

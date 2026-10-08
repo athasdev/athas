@@ -45,6 +45,8 @@ interface ExtensionStoreState {
   installedExtensions: Map<string, ExtensionInstallationMetadata>;
   extensionsWithUpdates: Set<string>;
   isLoadingRegistry: boolean;
+  /** Why the marketplace catalog could not load; bundled and local integrations still show. */
+  registryError: string | null;
   isLoadingInstalled: boolean;
   isCheckingUpdates: boolean;
   actions: {
@@ -68,6 +70,7 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
     installedExtensions: new Map(),
     extensionsWithUpdates: new Set(),
     isLoadingRegistry: false,
+    registryError: null,
     isLoadingInstalled: false,
     isCheckingUpdates: false,
 
@@ -82,7 +85,14 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
           const languageExtensions: ExtensionManifest[] = mergeMarketplaceLanguageExtensions(
             getPackagedLanguageExtensions(),
           );
-          const marketplaceExtensions = await loadMarketplaceContributionExtensions();
+          let marketplaceExtensions: ExtensionManifest[] = [];
+          let registryError: string | null = null;
+          try {
+            marketplaceExtensions = await loadMarketplaceContributionExtensions();
+          } catch (error) {
+            console.warn("Failed to load marketplace contribution integrations:", error);
+            registryError = error instanceof Error ? error.message : String(error);
+          }
           const extensionById = new Map<string, ExtensionManifest>();
 
           for (const manifest of [
@@ -130,11 +140,13 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
             }
 
             state.isLoadingRegistry = false;
+            state.registryError = registryError;
           });
         } catch (error) {
           console.error("Failed to load available integrations:", error);
           set((state) => {
             state.isLoadingRegistry = false;
+            state.registryError = error instanceof Error ? error.message : String(error);
           });
         }
       },

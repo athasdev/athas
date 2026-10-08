@@ -1,26 +1,30 @@
 import { useCallback, useEffect, useRef } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { createTimedResourceCache } from "@/utils/timed-resource-cache";
-import { fetchNormalizedPRDetails } from "../services/github-pr-store-service";
+import { pullRequestDetailsQuery, workflowRunsQuery } from "../services/github-queries";
 import { notifyWorkflowRunChanges } from "../services/github-workflow-notifications";
-import { useGitHubActionsStore } from "../stores/github-actions.store";
+import { useGitHubRepoPath } from "../hooks/use-github-repo-path";
 import { useGitHubStore } from "../stores/github.store";
-import type { PullRequestDetails, WorkflowRunListItem } from "../types/github.types";
+import type { WorkflowRunListItem } from "../types/github.types";
 import { filterRelevantWorkflowChanges } from "../utils/github-workflow-relevance";
 import { diffWorkflowRuns } from "../utils/github-workflow-run-changes";
 import { getWorkflowRunTitle, isWorkflowRunActive } from "../utils/github-workflow-status";
-import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 const ACTIVE_POLL_INTERVAL_MS = 15_000;
 const IDLE_POLL_INTERVAL_MS = 60_000;
 const HIDDEN_POLL_INTERVAL_MS = 90_000;
 
+function getPollInterval(runs: WorkflowRunListItem[] | undefined) {
+  if (document.visibilityState === "hidden") return HIDDEN_POLL_INTERVAL_MS;
+  return runs?.some((run) => isWorkflowRunActive(run))
+    ? ACTIVE_POLL_INTERVAL_MS
+    : IDLE_POLL_INTERVAL_MS;
+}
+
 export function useWorkflowRunWatcher() {
-  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
-  const activeRepoPath = useRepositoryStore.use.activeRepoPath();
-  const repoPath = activeRepoPath ?? rootFolderPath ?? null;
+  const repoPath = useGitHubRepoPath();
+  const queryClient = useQueryClient();
   const isAuthenticated = useGitHubStore.use.isAuthenticated();
   const currentUser = useGitHubStore.use.currentUser();
   const checkAuth = useGitHubStore.use.actions().checkAuth;
@@ -28,9 +32,19 @@ export function useWorkflowRunWatcher() {
     (state) => state.settings.githubActionNotifications,
   );
   const showGitHubActions = useSettingsStore((state) => state.settings.showGitHubActions);
-  const loadRuns = useGitHubActionsStore.use.actions().loadRuns;
   const openGitHubActionBuffer = useBufferStore.use.actions().openGitHubActionBuffer;
   const lastRunsRef = useRef<{ repoPath: string; runs: WorkflowRunListItem[] } | null>(null);
+  const enabled = Boolean(
+    isAuthenticated && repoPath && (notificationsEnabled || showGitHubActions),
+  );
+
+  // Polls in the background too, slower while hidden, so a finished run can still notify.
+  const runs = useQuery({
+    ...workflowRunsQuery(repoPath),
+    enabled,
+    refetchInterval: (query) => getPollInterval(query.state.data),
+    refetchIntervalInBackground: true,
+  }).data;
 
   const openRun = useCallback(
     (run: WorkflowRunListItem) => {
@@ -49,91 +63,30 @@ export function useWorkflowRunWatcher() {
   }, [checkAuth]);
 
   useEffect(() => {
-    const enabled = isAuthenticated && repoPath && (notificationsEnabled || showGitHubActions);
-    if (!enabled) {
+    if (!enabled || !repoPath) {
       lastRunsRef.current = null;
       return;
     }
+    if (!runs) return;
+
+    const previous = lastRunsRef.current?.repoPath === repoPath ? lastRunsRef.current.runs : null;
+    lastRunsRef.current = { repoPath, runs };
+    if (!notificationsEnabled) return;
 
     let cancelled = false;
-    let timeoutId: number | null = null;
-    let polling = false;
-    const pullRequests = createTimedResourceCache<PullRequestDetails>();
-
-    const schedule = (runs: WorkflowRunListItem[] | null) => {
-      if (cancelled) return;
-      const hasActiveRuns = runs?.some((run) => isWorkflowRunActive(run)) ?? false;
-      const delay =
-        document.visibilityState === "hidden"
-          ? HIDDEN_POLL_INTERVAL_MS
-          : hasActiveRuns
-            ? ACTIVE_POLL_INTERVAL_MS
-            : IDLE_POLL_INTERVAL_MS;
-      timeoutId = window.setTimeout(() => void poll(true), delay);
-    };
-
-    const poll = async (force: boolean) => {
-      if (cancelled || polling) return;
-      polling = true;
-      try {
-        const runs = await loadRuns(repoPath, { force, quiet: true });
-        if (cancelled) return;
-
-        if (runs) {
-          const previous =
-            lastRunsRef.current?.repoPath === repoPath ? lastRunsRef.current.runs : null;
-          lastRunsRef.current = { repoPath, runs };
-
-          if (notificationsEnabled) {
-            const changes = await filterRelevantWorkflowChanges(
-              diffWorkflowRuns(previous, runs),
-              currentUser,
-              (number) =>
-                pullRequests.load(
-                  String(number),
-                  () => fetchNormalizedPRDetails(repoPath, number),
-                  {
-                    ttlMs: IDLE_POLL_INTERVAL_MS,
-                  },
-                ),
-            );
-            if (cancelled) return;
-            void notifyWorkflowRunChanges(changes, openRun);
-          }
-        }
-
-        schedule(runs ?? lastRunsRef.current?.runs ?? null);
-      } finally {
-        polling = false;
-      }
-    };
-
-    const pollNow = () => {
-      if (document.visibilityState !== "visible") return;
-      if (timeoutId !== null) window.clearTimeout(timeoutId);
-      void poll(true);
-    };
-
-    void poll(false);
-    window.addEventListener("focus", pollNow);
-    document.addEventListener("visibilitychange", pollNow);
+    void filterRelevantWorkflowChanges(diffWorkflowRuns(previous, runs), currentUser, (number) =>
+      queryClient.query({
+        ...pullRequestDetailsQuery(repoPath, number),
+        staleTime: IDLE_POLL_INTERVAL_MS,
+      }),
+    ).then((changes) => {
+      if (!cancelled) void notifyWorkflowRunChanges(changes, openRun);
+    });
 
     return () => {
       cancelled = true;
-      lastRunsRef.current = null;
-      if (timeoutId !== null) window.clearTimeout(timeoutId);
-      window.removeEventListener("focus", pollNow);
-      document.removeEventListener("visibilitychange", pollNow);
     };
-  }, [
-    currentUser,
-    isAuthenticated,
-    loadRuns,
-    notificationsEnabled,
-    openRun,
-    repoPath,
-    showGitHubActions,
-  ]);
+  }, [currentUser, enabled, notificationsEnabled, openRun, queryClient, repoPath, runs]);
 }
 
 export function GitHubActionsWatcher() {

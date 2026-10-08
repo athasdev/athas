@@ -1,4 +1,5 @@
 import { getServiceUrls } from "@/config/services";
+import { queryClient } from "@/utils/query-client";
 
 const CDN_BASE_URL = getServiceUrls().extensionsCdnBaseUrl;
 const USE_LOCAL_SOURCES = import.meta.env.VITE_EXTENSION_MARKETPLACE_LOCAL === "true";
@@ -12,14 +13,15 @@ function withCacheBuster(url: string): string {
   return `${url}${separator}v=${Date.now()}`;
 }
 
-const CATALOG_SOURCES =
-  import.meta.env.DEV && USE_LOCAL_SOURCES
+function getCatalogSources() {
+  return import.meta.env.DEV && USE_LOCAL_SOURCES
     ? [
         "http://localhost:3000/api/extensions/manifests",
         `${LOCAL_CDN_BASE_URL}/manifests.json`,
         withCacheBuster(`${CDN_BASE_URL}/manifests.json`),
       ]
     : [withCacheBuster(`${CDN_BASE_URL}/manifests.json`)];
+}
 
 export async function fetchFirstAvailableExtensionCatalog<T>(
   urls: string[],
@@ -42,12 +44,18 @@ export async function fetchFirstAvailableExtensionCatalog<T>(
   throw new Error(`Failed to load integration catalog. ${errors.join("; ")}`);
 }
 
-let catalogPromise: Promise<Record<string, unknown>> | null = null;
+const CATALOG_QUERY_KEY = ["extensions", "catalog"] as const;
 
+/**
+ * The catalog is loaded once per session and shared by every reader; concurrent loads join one
+ * request, including a `fresh` one. A failed load is not kept, so the next read tries again.
+ */
 export function loadExtensionCatalog<T>(options: { fresh?: boolean } = {}) {
-  if (!catalogPromise || options.fresh) {
-    catalogPromise = fetchFirstAvailableExtensionCatalog<unknown>(CATALOG_SOURCES);
-  }
-
-  return catalogPromise as Promise<Record<string, T>>;
+  return queryClient.query({
+    queryKey: CATALOG_QUERY_KEY,
+    queryFn: () => fetchFirstAvailableExtensionCatalog<unknown>(getCatalogSources()),
+    staleTime: options.fresh ? 0 : Infinity,
+    gcTime: Infinity,
+    retry: false,
+  }) as Promise<Record<string, T>>;
 }
