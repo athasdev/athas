@@ -281,6 +281,9 @@ export const featureBoundaries: FeatureBoundaryConfig = {
       "components/stream/stream-tabs.tsx":
         "Tab strip the stream sidebars (Git, GitHub) put above their lists.",
     },
+    previews: {
+      "components/previews-host.tsx": MAIN_LAYOUT,
+    },
     tabs: {
       "components/unsaved-changes-dialog.tsx":
         "Save/discard prompt for closing dirty buffers, tabs and the window.",
@@ -359,6 +362,7 @@ export const featureBoundaries: FeatureBoundaryConfig = {
         "feedback",
         "github",
         "onboarding",
+        "previews",
         "run-actions",
         "sharing",
         "views",

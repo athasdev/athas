@@ -45,6 +45,11 @@ const ConnectionDialog = lazy(() =>
 const LinuxFolderPickerDialog = lazy(
   () => import("@/features/file-system/components/linux-folder-picker-dialog"),
 );
+const PreviewsHost = lazy(() =>
+  import("@/features/previews/components/previews-host").then((module) => ({
+    default: module.PreviewsHost,
+  })),
+);
 const QuickOpen = lazy(() => import("@/features/quick-open/components/quick-open"));
 const WindowCloseGuard = lazy(() =>
   import("@/features/window/components/window-close-guard").then((module) => ({
@@ -366,6 +371,7 @@ export function MainLayout() {
             <PendingBufferCloseDialog />
             <SettingsDialog />
             <ExtensionDialogs />
+            <PreviewsHost />
             <TerminalHost />
           </Suspense>
         ) : null}

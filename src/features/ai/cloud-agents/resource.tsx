@@ -25,6 +25,7 @@ import {
   FieldTitle,
 } from "@/ui/field";
 import {
+  BroadcastIcon,
   CheckCircleIcon,
   CloudIcon,
   GitPullRequestIcon,
@@ -50,6 +51,9 @@ import {
 import { Spinner } from "@/ui/spinner";
 import Textarea from "@/ui/textarea";
 import { ToggleGroup } from "@/ui/toggle-group";
+import { createSandboxPreview } from "@/features/previews/services/previews-api";
+import { parsePortInput } from "@/features/previews/services/preview-display";
+import { tryWriteClipboardText } from "@/utils/clipboard";
 import { openExternalUrl } from "@/utils/external-url";
 import { formatCloudAgentLogLine } from "./cloud-agent-log-format";
 import {
@@ -378,6 +382,51 @@ function CreateRun({ onStarted }: { onStarted: (run: CloudAgentRun) => void }) {
   );
 }
 
+function PreviewPort({ runId }: { runId: string }) {
+  const [portInput, setPortInput] = useState("");
+  const port = parsePortInput(portInput);
+  const preview = useMutation({
+    mutationFn: (value: number) => createSandboxPreview(runId, value),
+    onSuccess: async (created) => {
+      const copied = await tryWriteClipboardText(created.url);
+      toast.success(copied ? "Preview link copied" : "Preview ready");
+      void openExternalUrl(created.url);
+    },
+    onError: (cause) => toast.error(cause.message),
+  });
+
+  return (
+    <section className="space-y-2" aria-labelledby={`preview-port-${runId}`}>
+      <h2 id={`preview-port-${runId}`} className="font-medium text-foreground ui-text-base">
+        Preview
+      </h2>
+      <form
+        className="flex items-center gap-2"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (port !== null) preview.mutate(port);
+        }}
+      >
+        <Input
+          aria-label="Sandbox port"
+          inputMode="numeric"
+          placeholder="3000"
+          value={portInput}
+          onChange={(event) => setPortInput(event.target.value)}
+        />
+        <Button type="submit" disabled={port === null || preview.isPending}>
+          <BroadcastIcon />
+          {preview.isPending ? "Opening…" : "Preview port"}
+        </Button>
+      </form>
+      <p className="text-subtle-foreground ui-text-sm">
+        Opens a temporary link to a server the agent started in its sandbox. The server must listen
+        on 0.0.0.0, and the link stops working when the run ends.
+      </p>
+    </section>
+  );
+}
+
 function RunDetails({ run }: { run: CloudAgentRun }) {
   const queryClient = useQueryClient();
   const active = isActiveCloudAgentRun(run);
@@ -456,6 +505,8 @@ function RunDetails({ run }: { run: CloudAgentRun }) {
             <AlertDescription>{run.error}</AlertDescription>
           </Alert>
         ) : null}
+
+        {run.status === "running" ? <PreviewPort runId={run.id} /> : null}
 
         <section className="space-y-2">
           <h2 className="font-medium text-foreground ui-text-base">Activity</h2>
