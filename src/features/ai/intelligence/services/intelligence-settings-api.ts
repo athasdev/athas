@@ -36,13 +36,15 @@ export async function fetchIntelligenceSettings(
       ...(update ? { body: JSON.stringify({ scope, ...update }) } : {}),
     },
   );
-  const data = await response.json();
+  // A proxy or outage page is HTML, so a body that is not JSON must not hide the status.
+  const data = await response.json().catch(() => null);
   if (!response.ok)
     throw new IntelligenceSettingsError(
-      data.error || "Could not sync your AI settings.",
+      (typeof data?.error === "string" && data.error) || "Could not sync your AI settings.",
       response.status,
     );
   if (
+    !data ||
     data.scope !== scope ||
     !Array.isArray(data.scopes) ||
     !Number.isSafeInteger(data.revision) ||
