@@ -144,13 +144,20 @@ function getParentFolders(path: string) {
   return segments.slice(0, -1).map((_, index) => segments.slice(0, index + 1).join("/"));
 }
 
+/** Tree order: each folder is followed by its contents, folders before files at every level. */
 function sortNoteItems(items: CollaborationNoteItem[]) {
   return [...items].sort((left, right) => {
-    const leftDepth = left.path.split("/").length;
-    const rightDepth = right.path.split("/").length;
-    if (leftDepth !== rightDepth) return leftDepth - rightDepth;
-    if (left.type !== right.type) return left.type === "folder" ? -1 : 1;
-    return left.path.localeCompare(right.path);
+    const leftSegments = left.path.split("/");
+    const rightSegments = right.path.split("/");
+    const sharedDepth = Math.min(leftSegments.length, rightSegments.length);
+    for (let index = 0; index < sharedDepth; index++) {
+      if (leftSegments[index] === rightSegments[index]) continue;
+      const leftIsFolder = index < leftSegments.length - 1 || left.type === "folder";
+      const rightIsFolder = index < rightSegments.length - 1 || right.type === "folder";
+      if (leftIsFolder !== rightIsFolder) return leftIsFolder ? -1 : 1;
+      return leftSegments[index].localeCompare(rightSegments[index]);
+    }
+    return leftSegments.length - rightSegments.length;
   });
 }
 

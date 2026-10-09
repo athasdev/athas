@@ -249,6 +249,39 @@ describe("collaboration sidebar model", () => {
     ]);
   });
 
+  it("lists each folder's contents directly under it", () => {
+    const withRootFile = addCollaborationNoteFile({ contentMarkdown: "", path: "readme" });
+    const withNestedFile = addCollaborationNoteFile({
+      contentMarkdown: withRootFile.contentMarkdown,
+      path: "specs/rooms",
+    });
+    const withSecondFolder = addCollaborationNoteFile({
+      contentMarkdown: withNestedFile.contentMarkdown,
+      path: "archive/old",
+    });
+    const model = buildCollaborationSidebarModel({
+      collaboration: collaborationSnapshot({
+        channelNotes: [
+          {
+            channelId: 10,
+            contentMarkdown: withSecondFolder.contentMarkdown,
+            version: 1,
+            updatedAt: null,
+          },
+        ],
+      }),
+      selectedChannelId: 10,
+    });
+
+    expect(model?.notesItems.map((item) => item.path)).toEqual([
+      "archive",
+      "archive/old.md",
+      "specs",
+      "specs/rooms.md",
+      "readme.md",
+    ]);
+  });
+
   it("renames and deletes note workspace items", () => {
     const withFile = addCollaborationNoteFile({
       contentMarkdown: "",
