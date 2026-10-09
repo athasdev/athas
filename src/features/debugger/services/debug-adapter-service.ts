@@ -404,6 +404,9 @@ async function createDebugProtocolWaiter(
     settle = resolve;
     fail = reject;
   });
+  // A waiter can time out before anyone awaits it (the "initialized" waiter is armed before
+  // initialize is sent), so mark the rejection handled; awaiting the promise still throws.
+  promise.catch(() => {});
 
   unlisten = await listen<DebugProtocolMessage>("debugger_message", (event) => {
     if (event.payload.sessionId !== sessionId) return;
