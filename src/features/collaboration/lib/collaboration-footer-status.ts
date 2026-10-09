@@ -32,10 +32,10 @@ function getChannelLabel(
   return `#${channel.slug || channel.name}`;
 }
 
-function getStreamLabel(stream: CollaborationDocumentStreamSummary) {
-  if (stream.status === "live") return "Live document sync";
-  if (stream.status === "connecting" || stream.status === "reconnecting") return "Connecting";
-  if (stream.status === "error") return "Sync needs attention";
+export function getCollaborationStreamLabel(status: CollaborationDocumentStreamSummary["status"]) {
+  if (status === "live") return "Live document sync";
+  if (status === "connecting" || status === "reconnecting") return "Connecting";
+  if (status === "error") return "Sync needs attention";
   return "Presence ready";
 }
 
@@ -54,7 +54,7 @@ export function buildCollaborationFooterStatus({
   const workspaceName = collaboration.workspace?.name ?? "Team workspace";
   const channelLabel = getChannelLabel(collaboration, presenceTarget);
   const countLabel = onlineSessions.length > 0 ? String(onlineSessions.length) : null;
-  const streamLabel = getStreamLabel(activeDocumentStream);
+  const streamLabel = getCollaborationStreamLabel(activeDocumentStream.status);
   const tone =
     activeDocumentStream.status === "error"
       ? "error"

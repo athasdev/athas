@@ -1,6 +1,7 @@
 import { MicrophoneIcon, MonitorIcon } from "@/ui/icons";
 import { Button } from "@/ui/button";
 import { SidebarFooter } from "@/ui/sidebar";
+import { getCollaborationStreamLabel } from "@/features/collaboration/lib/collaboration-footer-status";
 
 type ShareState = "idle" | "active" | "error";
 
@@ -19,7 +20,7 @@ export function CollaborationMediaFooter({
   micState: ShareState;
   screenState: ShareState;
   onlineCount: number;
-  streamStatus: string;
+  streamStatus: Parameters<typeof getCollaborationStreamLabel>[0];
   isFollowing: boolean;
   onToggleMic: () => void;
   onToggleScreenShare: () => void;
@@ -50,19 +51,16 @@ export function CollaborationMediaFooter({
         >
           <MonitorIcon />
         </Button>
-        <div className="ui-text-sm min-w-0 flex-1 truncate px-1">
-          <span className="font-medium text-foreground">{workspaceName}</span>
-          <span className="px-1 text-subtle-foreground">·</span>
-          <span className="text-subtle-foreground">{onlineCount} online</span>
-          <span className="px-1 text-subtle-foreground">·</span>
-          <span className="text-subtle-foreground">{streamStatus}</span>
+        <div className="ui-text-sm min-w-0 flex-1 px-1">
+          <div className="truncate font-medium text-foreground">{workspaceName}</div>
+          <div className="truncate text-subtle-foreground">
+            {onlineCount} online · {getCollaborationStreamLabel(streamStatus)}
+          </div>
         </div>
         {isFollowing ? (
-          <span className="inline-flex min-w-0 ml-auto">
-            <Button type="button" variant="ghost" onClick={onStopFollowing}>
-              Stop
-            </Button>
-          </span>
+          <Button type="button" variant="ghost" tooltip="Stop following" onClick={onStopFollowing}>
+            Stop
+          </Button>
         ) : null}
       </div>
     </SidebarFooter>

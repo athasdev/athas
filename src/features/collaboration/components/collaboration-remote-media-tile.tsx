@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
-import { Card, CardContent } from "@/ui/card";
+import { Card } from "@/ui/card";
 
 export interface RemoteMediaShare {
   deviceId: string;
   stream: MediaStream;
 }
 
-export function RemoteMediaTile({ share }: { share: RemoteMediaShare }) {
+export function RemoteMediaTile({ share, name }: { share: RemoteMediaShare; name: string }) {
   const [videoElement, setVideoElement] = useState<HTMLVideoElement | null>(null);
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
   const hasVideo = share.stream.getVideoTracks().length > 0;
@@ -33,10 +33,10 @@ export function RemoteMediaTile({ share }: { share: RemoteMediaShare }) {
         />
       ) : null}
       <audio ref={setAudioElement} autoPlay />
-      <CardContent className="flex items-center justify-between px-2 py-1 text-subtle-foreground">
-        <span className="truncate">{share.deviceId}</span>
-        <span>{hasVideo ? "screen" : "audio"}</span>
-      </CardContent>
+      <div className="flex items-center justify-between gap-2 px-2 py-1 text-subtle-foreground">
+        <span className="truncate">{name}</span>
+        <span>{hasVideo ? "Screen" : "Audio"}</span>
+      </div>
     </Card>
   );
 }

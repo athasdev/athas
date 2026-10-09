@@ -51,8 +51,8 @@ import {
 } from "@/features/collaboration/services/collaboration-media-signaling";
 import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/ui/accordion";
+import { Bubble, BubbleContent } from "@/ui/bubble";
 import { Button } from "@/ui/button";
-import { Card, CardContent } from "@/ui/card";
 import { ContextMenuPopup, createContextMenuGroups } from "@/ui/context-menu";
 import { EmptyState } from "@/ui/empty";
 import {
@@ -66,6 +66,7 @@ import {
   type MenuItem,
 } from "@/ui/dropdown";
 import Input, { InlineRenameInput } from "@/ui/input";
+import { Message, MessageContent } from "@/ui/message";
 import { ScrollArea } from "@/ui/scroll-area";
 import {
   SidebarHeader,
@@ -247,11 +248,13 @@ export function CollaborationSidebarView() {
   const filteredPrivateChatParticipants = useMemo(
     () =>
       filterCollaborationPrivateChatParticipants({
-        participants: model?.participants ?? [],
+        participants: (model?.participants ?? []).filter(
+          (participant) => participant.followableUserId !== user?.id,
+        ),
         channelFilter,
         query: deferredChannelSearchQuery,
       }),
-    [channelFilter, deferredChannelSearchQuery, model?.participants],
+    [channelFilter, deferredChannelSearchQuery, model?.participants, user?.id],
   );
   const filteredNoteItems = useMemo(
     () =>
@@ -290,6 +293,16 @@ export function CollaborationSidebarView() {
   }, [collaboration?.presence, localDeviceId, selectedChannel]);
   const shouldPollMediaSignals = Boolean(selectedChannel && (hasLocalMedia || hasRemoteMedia));
   const selectedChannelId = selectedChannel?.id ?? null;
+  const chatViewportRef = useRef<HTMLDivElement | null>(null);
+  const chatEntryCount =
+    openConversation?.type === "private"
+      ? privateChatEntries.length
+      : (model?.chatEntries.length ?? 0);
+
+  useEffect(() => {
+    const viewport = chatViewportRef.current;
+    if (viewport) viewport.scrollTop = viewport.scrollHeight;
+  }, [chatEntryCount, openConversation]);
 
   useEffect(() => {
     if (!selectedNoteFile) {
@@ -518,6 +531,14 @@ export function CollaborationSidebarView() {
       </SidebarWorkspace>
     );
   }
+
+  const getDeviceMemberName = (deviceId: string) => {
+    const userId = collaboration?.presence.find((entry) => entry.deviceId === deviceId)?.userId;
+    return (
+      collaboration?.members.find((member) => member.userId !== null && member.userId === userId)
+        ?.name ?? "Teammate"
+    );
+  };
 
   const sendMessage = async () => {
     if (!selectedChannel || !model.canEditNotes || !draft.trim()) return;
@@ -1046,7 +1067,7 @@ export function CollaborationSidebarView() {
                         </Tooltip>
                       }
                     >
-                      <span className="block truncate font-medium">#{channel.slug}</span>
+                      <span className="block truncate font-medium">{channel.slug}</span>
                     </SidebarListItem>
                   ))}
                 </AccordionContent>
@@ -1101,7 +1122,7 @@ export function CollaborationSidebarView() {
             </Button>
             <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto">
               {model.channels.map((channel) => (
-                <span key={channel.id} className="inline-flex min-w-0 max-w-32">
+                <span key={channel.id} className="inline-flex max-w-32 shrink-0">
                   <Button
                     type="button"
                     variant="ghost"
@@ -1113,37 +1134,32 @@ export function CollaborationSidebarView() {
                     <span className="shrink-0 ui-text-sm">
                       {renderChannelIcon(channelIcons[String(channel.id)])}
                     </span>
-                    <span className="truncate">#{channel.slug}</span>
+                    <span className="truncate">{channel.slug}</span>
                   </Button>
                 </span>
               ))}
             </div>
           </div>
-          <ScrollArea fill="flex" contentPadding="md">
+          <ScrollArea fill="flex" contentPadding="md" viewportProps={{ ref: chatViewportRef }}>
             <div className="space-y-1.5">
               {model.chatGroups.length > 0 ? (
                 model.chatGroups.slice(-10).map((group) => (
-                  <div key={group.id} className="flex gap-2">
-                    <CollaborationAvatar name={group.author} />
-                    <div className="min-w-0 flex-1 space-y-1">
-                      <div className="px-1 text-subtle-foreground ui-text-sm">{group.author}</div>
-                      <div className="space-y-1">
-                        {group.entries.map((entry) => (
-                          <Card key={entry.id}>
-                            <CardContent className="px-2.5 py-1.5">
-                              {entry.kind === "document" ? (
-                                <span className="mb-0.5 flex items-center gap-1.5 text-subtle-foreground">
-                                  <FileTextIcon className="size-3" />
-                                  Document
-                                </span>
-                              ) : null}
-                              {entry.body}
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
+                  <CollaborationChatMessage key={group.id} author={group.author}>
+                    {group.entries.map((entry) => (
+                      <Bubble key={entry.id}>
+                        <BubbleContent>
+                          {entry.kind === "document" ? (
+                            <span className="flex items-start gap-1.5">
+                              <FileTextIcon className="mt-0.5 shrink-0 text-subtle-foreground" />
+                              {entry.body.replace(/^shared document:\s*/, "")}
+                            </span>
+                          ) : (
+                            entry.body
+                          )}
+                        </BubbleContent>
+                      </Bubble>
+                    ))}
+                  </CollaborationChatMessage>
                 ))
               ) : (
                 <EmptyState layout="sidebar" message="No chats yet." />
@@ -1187,11 +1203,10 @@ export function CollaborationSidebarView() {
                 <div className="min-w-0 flex-1 truncate text-foreground ui-text-sm">
                   {openPrivateParticipant.name}
                 </div>
-                <PresenceStatusDot online={openPrivateParticipant.online} />
               </>
             ) : null}
           </div>
-          <ScrollArea fill="flex" contentPadding="md">
+          <ScrollArea fill="flex" contentPadding="md" viewportProps={{ ref: chatViewportRef }}>
             <div className="space-y-1.5">
               {privateChatEntries.length > 0 ? (
                 privateChatEntries.map((entry) => {
@@ -1200,15 +1215,11 @@ export function CollaborationSidebarView() {
                   );
                   const authorName = author?.name ?? "Member";
                   return (
-                    <div key={entry.id} className="flex gap-2">
-                      <CollaborationAvatar name={authorName} />
-                      <div className="min-w-0 flex-1 space-y-1">
-                        <div className="px-1 text-subtle-foreground ui-text-sm">{authorName}</div>
-                        <Card>
-                          <CardContent className="px-2.5 py-1.5">{entry.body}</CardContent>
-                        </Card>
-                      </div>
-                    </div>
+                    <CollaborationChatMessage key={entry.id} author={authorName}>
+                      <Bubble>
+                        <BubbleContent>{entry.body}</BubbleContent>
+                      </Bubble>
+                    </CollaborationChatMessage>
                   );
                 })
               ) : (
@@ -1272,7 +1283,11 @@ export function CollaborationSidebarView() {
       {remoteShares.length > 0 ? (
         <div className="mb-1 space-y-1.5">
           {remoteShares.map((share) => (
-            <RemoteMediaTile key={share.deviceId} share={share} />
+            <RemoteMediaTile
+              key={share.deviceId}
+              share={share}
+              name={getDeviceMemberName(share.deviceId)}
+            />
           ))}
         </div>
       ) : null}
@@ -1291,23 +1306,20 @@ export function CollaborationSidebarView() {
               }
               disabled={!participant.followableUserId || participant.followableUserId === user?.id}
               leading={<CollaborationAvatar name={participant.name} />}
+              description={
+                participant.activeFilePath
+                  ? getBaseName(participant.activeFilePath, participant.activeFilePath)
+                  : undefined
+              }
               trailing={
                 <span className="flex items-center gap-1">
-                  <PresenceStatusDot online={participant.online} />
-                  {participant.microphone ? <MicrophoneIcon className="size-3 shrink-0" /> : null}
-                  {participant.screen ? <MonitorIcon className="size-3 shrink-0" /> : null}
-                  {participant.activeFilePath ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        void openParticipantFile(participant.activeFilePath!);
-                      }}
-                    >
-                      Open
-                    </Button>
+                  {participant.microphone ? (
+                    <MicrophoneIcon role="img" aria-label="Microphone on" className="shrink-0" />
                   ) : null}
+                  {participant.screen ? (
+                    <MonitorIcon role="img" aria-label="Sharing screen" className="shrink-0" />
+                  ) : null}
+                  <PresenceStatusDot online={participant.online} />
                 </span>
               }
             >
@@ -1372,28 +1384,18 @@ export function CollaborationSidebarView() {
             return (
               <SidebarListEditor
                 key={`${item.type}:${item.path}`}
-                leading={
-                  item.type === "folder" ? (
-                    <FolderIcon className="size-3.5" />
-                  ) : (
-                    <FileTextIcon className="size-3.5" />
-                  )
-                }
+                leading={<NoteItemIcon item={item} />}
               >
-                <div
-                  style={{ paddingLeft: `${Math.max(item.path.split("/").length - 1, 0) * 10}px` }}
-                >
-                  <InlineRenameInput
-                    value={renameNoteValue}
-                    onValueChange={setRenameNoteValue}
-                    onSubmit={(nextPath) => void renameNoteItem(item, nextPath)}
-                    onCancel={() => {
-                      setRenamingNotePath(null);
-                      setRenameNoteValue("");
-                    }}
-                    aria-label={`Rename ${item.path}`}
-                  />
-                </div>
+                <InlineRenameInput
+                  value={renameNoteValue}
+                  onValueChange={setRenameNoteValue}
+                  onSubmit={(nextPath) => void renameNoteItem(item, nextPath)}
+                  onCancel={() => {
+                    setRenamingNotePath(null);
+                    setRenameNoteValue("");
+                  }}
+                  aria-label={`Rename ${item.path}`}
+                />
               </SidebarListEditor>
             );
           }
@@ -1422,20 +1424,9 @@ export function CollaborationSidebarView() {
                 openNoteFileInEditor(item);
               }}
               onContextMenu={(event) => notesContextMenu.open(event, item)}
-              leading={
-                item.type === "folder" ? (
-                  <FolderIcon className="size-3.5" />
-                ) : (
-                  <FileTextIcon className="size-3.5" />
-                )
-              }
+              leading={<NoteItemIcon item={item} />}
             >
-              <span
-                className="block truncate"
-                style={{ paddingLeft: `${Math.max(item.path.split("/").length - 1, 0) * 10}px` }}
-              >
-                {item.path.split("/").slice(-1)[0]}
-              </span>
+              <span className="block truncate">{item.path.split("/").slice(-1)[0]}</span>
             </SidebarListItem>
           );
         })}
@@ -1528,6 +1519,30 @@ export function CollaborationSidebarView() {
         ) : null}
       </ChannelIconMenu>
     </SidebarWorkspace>
+  );
+}
+
+function CollaborationChatMessage({ author, children }: { author: string; children: ReactNode }) {
+  return (
+    <Message>
+      <CollaborationAvatar name={author} />
+      <MessageContent>
+        <div className="px-1 text-subtle-foreground ui-text-sm">{author}</div>
+        {children}
+      </MessageContent>
+    </Message>
+  );
+}
+
+function NoteItemIcon({ item }: { item: SidebarNoteItem }) {
+  const Icon = item.type === "folder" ? FolderIcon : FileTextIcon;
+  return (
+    <span
+      className="flex items-center"
+      style={{ paddingLeft: `${Math.max(item.path.split("/").length - 1, 0) * 10}px` }}
+    >
+      <Icon className="size-3.5" />
+    </span>
   );
 }
 
