@@ -50,6 +50,8 @@ vi.mock("@/features/ai/intelligence/stores/intelligence-settings.store", () => (
   useIntelligenceSettingsStore: { subscribe: () => () => {} },
 }));
 
+import { toast } from "sonner";
+import { AutocompleteModelRequiredError } from "@/features/ai/intelligence/services/intelligence-connection";
 import { InlineEditError } from "@/features/ai/intelligence/services/intelligence-text-service";
 import {
   clearRecentEdits,
@@ -268,5 +270,84 @@ describe("intelligence completion requests", () => {
       reason: "api-key",
       message: "Incorrect API key provided",
     });
+  });
+});
+
+describe("intelligence completion failures", () => {
+  const status = () => useIntelligenceCompletionStore.getState().status;
+
+  async function failWith(error: unknown) {
+    useIntelligenceCompletionStore.getState().actions.resume();
+    mocks.request.mockRejectedValueOnce(error);
+    await requestIntelligenceCompletion(completionRequest());
+    return status();
+  }
+
+  it("maps account and key errors to the pause the user can fix", async () => {
+    expect(await failWith(new InlineEditError("Sign in", 401, { hosted: true }))).toMatchObject({
+      kind: "paused",
+      reason: "sign-in",
+    });
+    expect(await failWith(new InlineEditError("Bad key", 401))).toMatchObject({
+      kind: "paused",
+      reason: "api-key",
+    });
+    expect(await failWith(new InlineEditError("Key needed", 402))).toMatchObject({
+      kind: "paused",
+      reason: "api-key",
+    });
+    expect(
+      await failWith(new InlineEditError("Disabled by policy", 403, { hosted: true })),
+    ).toMatchObject({ kind: "paused", reason: "policy" });
+    expect(vi.mocked(toast.warning)).toHaveBeenCalledWith(
+      "Tab autocomplete is disabled by your organization.",
+    );
+  });
+
+  it("warns about each pause reason only once per session", async () => {
+    vi.mocked(toast.warning).mockClear();
+    await failWith(new InlineEditError("Bad key", 401));
+    await failWith(new InlineEditError("Bad key", 401));
+    expect(vi.mocked(toast.warning)).not.toHaveBeenCalled();
+  });
+
+  it("waits quietly for a model choice on Automatic", async () => {
+    vi.mocked(toast.warning).mockClear();
+    expect(await failWith(new AutocompleteModelRequiredError("Choose a model"))).toMatchObject({
+      kind: "paused",
+      reason: "model",
+      message: "Choose a model",
+    });
+    expect(vi.mocked(toast.warning)).not.toHaveBeenCalled();
+  });
+
+  it("reports other failures and keeps their messages short", async () => {
+    expect(await failWith(new InlineEditError("Provider 403", 403))).toMatchObject({
+      kind: "error",
+      message: "Provider 403",
+    });
+    expect(
+      await failWith(Object.assign(new Error("No key"), { name: "AI_LoadAPIKeyError" })),
+    ).toMatchObject({ kind: "paused", reason: "api-key", message: "No key" });
+    expect(await failWith({ message: "x".repeat(400) })).toMatchObject({
+      kind: "error",
+      message: `${"x".repeat(239)}…`,
+    });
+    expect(await failWith(null)).toMatchObject({
+      kind: "error",
+      message: "Tab autocomplete failed. Try again.",
+    });
+  });
+
+  it("stops before asking when the request was already cancelled", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    await expect(
+      requestIntelligenceCompletion(completionRequest({ signal: controller.signal })),
+    ).resolves.toBeNull();
+    await expect(
+      requestIntelligenceCompletion(completionRequest({ beforeSelection: "   " })),
+    ).resolves.toBeNull();
+    expect(mocks.request).not.toHaveBeenCalled();
   });
 });
