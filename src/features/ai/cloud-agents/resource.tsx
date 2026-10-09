@@ -1,11 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { getProviderApiToken } from "@/features/ai/services/ai-token-service";
+import {
+  getProviderApiToken,
+  onProviderApiTokenChange,
+} from "@/features/ai/services/ai-token-service";
 import { useProFeature } from "@/features/auth/hooks/use-pro-feature";
 import { useGitStore } from "@/features/git/stores/git.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { resolveProjectGitHubRepository } from "@/features/views/services/view-github";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
+import { Alert, AlertActions, AlertDescription, AlertTitle } from "@/ui/alert";
 import Badge, { type BadgeTone } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/ui/card";
@@ -20,14 +25,17 @@ import {
   FieldTitle,
 } from "@/ui/field";
 import {
+  CheckCircleIcon,
   CloudIcon,
   GitPullRequestIcon,
   KeyIcon,
+  MinusCircleIcon,
   OpenExternalIcon,
   PlayIcon,
   PlusIcon,
   StopIcon,
   WarningCircleIcon,
+  XCircleIcon,
 } from "@/ui/icons";
 import Input from "@/ui/input";
 import { ResourceDocument, ResourceSummary } from "@/ui/resource";
@@ -39,6 +47,7 @@ import {
   SidebarSection,
   SidebarWorkspace,
 } from "@/ui/sidebar";
+import { Spinner } from "@/ui/spinner";
 import Textarea from "@/ui/textarea";
 import { ToggleGroup } from "@/ui/toggle-group";
 import { openExternalUrl } from "@/utils/external-url";
@@ -78,6 +87,20 @@ const STATUS: Record<CloudAgentRunStatus, { label: string; tone: BadgeTone }> = 
 };
 
 type Selection = "create" | `run:${string}`;
+
+function RunStatusIcon({ status }: { status: CloudAgentRunStatus }) {
+  const { label } = STATUS[status];
+  if (status === "queued" || status === "running") return <Spinner label={label} compact />;
+  if (status === "succeeded")
+    return <CheckCircleIcon role="img" aria-label={label} className="text-success" />;
+  if (status === "failed")
+    return <XCircleIcon role="img" aria-label={label} className="text-destructive" />;
+  return <MinusCircleIcon role="img" aria-label={label} className="text-subtle-foreground" />;
+}
+
+function agentLabel(agent: CloudAgentId) {
+  return AGENTS.find((option) => option.value === agent)!.label;
+}
 
 function formatDuration(seconds: number) {
   if (seconds < 60) return `${seconds}s`;
@@ -132,8 +155,7 @@ function CloudAgentsSidebar({
                 key={run.id}
                 active={selection === `run:${run.id}`}
                 description={run.repo}
-                leading={<CloudIcon />}
-                trailing={STATUS[run.status].label}
+                leading={<RunStatusIcon status={run.status} />}
                 onClick={() => onSelect(`run:${run.id}`)}
               >
                 {run.title}
@@ -167,6 +189,14 @@ function CreateRun({ onStarted }: { onStarted: (run: CloudAgentRun) => void }) {
   const [timeLimit, setTimeLimit] = useState("60");
   const provider = AGENTS.find((option) => option.value === agent)!.provider;
   const keyQuery = useQuery(providerKeyQuery(provider));
+
+  useEffect(
+    () =>
+      onProviderApiTokenChange((providerId) => {
+        void queryClient.invalidateQueries({ queryKey: cloudAgentKeys.providerKey(providerId) });
+      }),
+    [queryClient],
+  );
 
   useEffect(() => {
     if (!workspacePath) return;
@@ -318,11 +348,22 @@ function CreateRun({ onStarted }: { onStarted: (run: CloudAgentRun) => void }) {
             </Field>
           </FieldGroup>
           {keyQuery.data === false ? (
-            <div className="mt-4 flex items-center gap-2 text-warning ui-text-sm" role="status">
+            <Alert tone="warning" role="status" className="mt-4">
               <KeyIcon />
-              Add your {provider === "anthropic" ? "Anthropic" : "OpenAI"} API key in Settings &gt;
-              AI to run {AGENTS.find((option) => option.value === agent)!.label}.
-            </div>
+              <AlertTitle>API key needed</AlertTitle>
+              <AlertDescription>
+                Add your {provider === "anthropic" ? "Anthropic" : "OpenAI"} API key to run{" "}
+                {agentLabel(agent)}.
+              </AlertDescription>
+              <AlertActions>
+                <Button
+                  type="button"
+                  onClick={() => useUIState.getState().openSettings("ai-models", "API keys")}
+                >
+                  Add key
+                </Button>
+              </AlertActions>
+            </Alert>
           ) : null}
         </CardContent>
       </Card>
@@ -364,59 +405,67 @@ function RunDetails({ run }: { run: CloudAgentRun }) {
   };
 
   return (
-    <div className="space-y-5">
-      <Card>
-        <CardHeader>
-          <div className="mb-1 flex flex-wrap items-center gap-2">
-            <Badge tone={STATUS[run.status].tone}>{STATUS[run.status].label}</Badge>
+    <ResourceDocument
+      summary={
+        <ResourceSummary
+          icon={<CloudIcon className="text-subtle-foreground" />}
+          title={run.title}
+          badges={<Badge tone={STATUS[run.status].tone}>{STATUS[run.status].label}</Badge>}
+          description={`${agentLabel(run.agent)} · ${run.repo} · ${run.baseBranch}`}
+          meta={
             <span className="text-subtle-foreground ui-text-sm">
-              {run.repo} · {run.baseBranch} · {run.agent === "codex" ? "Codex" : "Claude Code"}
+              {active
+                ? `Up to ${run.maxMinutes} min, holding ${formatCents(run.holdCents)} until it finishes.`
+                : `${formatDuration(run.billedSeconds)} in the sandbox, ${formatCents(run.chargedCents)} charged.`}
             </span>
-          </div>
-          <CardTitle>{run.title}</CardTitle>
-          <CardDescription>
-            {active
-              ? `Up to ${run.maxMinutes} min, holding ${formatCents(run.holdCents)} until it finishes.`
-              : `${formatDuration(run.billedSeconds)} in the sandbox, ${formatCents(run.chargedCents)} charged.`}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-wrap gap-2">
-          {run.prUrl ? (
-            <Button type="button" variant="accent" onClick={() => void openExternalUrl(run.prUrl!)}>
-              <GitPullRequestIcon />
-              Open pull request
-              <OpenExternalIcon />
-            </Button>
-          ) : null}
-          {active ? (
-            <Button
-              type="button"
-              tone="danger"
-              disabled={cancel.isPending}
-              onClick={() => void handleCancel()}
-            >
-              <StopIcon />
-              Stop run
-            </Button>
-          ) : null}
-        </CardContent>
-      </Card>
+          }
+          actions={
+            <>
+              {run.prUrl ? (
+                <Button
+                  type="button"
+                  variant="accent"
+                  onClick={() => void openExternalUrl(run.prUrl!)}
+                >
+                  <GitPullRequestIcon />
+                  Open pull request
+                  <OpenExternalIcon />
+                </Button>
+              ) : null}
+              {active ? (
+                <Button
+                  type="button"
+                  tone="danger"
+                  disabled={cancel.isPending}
+                  onClick={() => void handleCancel()}
+                >
+                  <StopIcon />
+                  Stop run
+                </Button>
+              ) : null}
+            </>
+          }
+        />
+      }
+    >
+      <div className="space-y-5">
+        {run.error ? (
+          <Alert tone="error">
+            <WarningCircleIcon />
+            <AlertTitle>Run failed</AlertTitle>
+            <AlertDescription>{run.error}</AlertDescription>
+          </Alert>
+        ) : null}
 
-      {run.error ? (
-        <div className="flex items-center gap-2 text-destructive ui-text-sm" role="alert">
-          <WarningCircleIcon />
-          {run.error}
-        </div>
-      ) : null}
-
-      <section className="space-y-2">
-        <h2 className="font-medium text-foreground ui-text-base">Activity</h2>
-        {error ? <p className="text-subtle-foreground ui-text-sm">{error}</p> : null}
-        <CodeOutput tone="muted" height="auto" aria-live="polite">
-          {output || (active ? "Waiting for the sandbox…" : "No activity was recorded.")}
-        </CodeOutput>
-      </section>
-    </div>
+        <section className="space-y-2">
+          <h2 className="font-medium text-foreground ui-text-base">Activity</h2>
+          {error ? <p className="text-subtle-foreground ui-text-sm">{error}</p> : null}
+          <CodeOutput tone="muted" height="auto" aria-live="polite">
+            {output || (active ? "Waiting for the sandbox…" : "No activity was recorded.")}
+          </CodeOutput>
+        </section>
+      </div>
+    </ResourceDocument>
   );
 }
 
@@ -466,23 +515,24 @@ export default function CloudAgentsResource() {
         <CloudAgentsSidebar runs={runs} selection={selection} onSelect={setSelection} />
       ) : null}
       <main className="min-w-0 flex-1">
-        <ResourceDocument
-          summary={
-            <ResourceSummary
-              icon={<CloudIcon className="text-subtle-foreground" />}
-              title={selectedRun?.title ?? "New cloud run"}
-              description={`${runs.length} run${runs.length === 1 ? "" : "s"}`}
-            />
-          }
-        >
-          {!hasCloudAgents ? (
-            <UpgradeCard />
-          ) : selectedRun ? (
-            <RunDetails run={selectedRun} />
-          ) : (
-            <CreateRun onStarted={(run) => setSelection(`run:${run.id}`)} />
-          )}
-        </ResourceDocument>
+        {hasCloudAgents && selectedRun ? (
+          <RunDetails key={selectedRun.id} run={selectedRun} />
+        ) : (
+          <ResourceDocument
+            summary={
+              <ResourceSummary
+                icon={<CloudIcon className="text-subtle-foreground" />}
+                title={hasCloudAgents ? "New cloud run" : "Cloud Agents"}
+              />
+            }
+          >
+            {hasCloudAgents ? (
+              <CreateRun onStarted={(run) => setSelection(`run:${run.id}`)} />
+            ) : (
+              <UpgradeCard />
+            )}
+          </ResourceDocument>
+        )}
       </main>
     </div>
   );
