@@ -12,9 +12,7 @@ import {
 } from "../services/window-open-request";
 import { createPendingQueueDrain } from "../utils/pending-queue-drain";
 import { disposeListener } from "@/utils/tauri-drag-drop";
-import { parseMcpInstallLink } from "@/features/ai/services/mcp-install-link";
-import { usePendingMcpInstallStore } from "@/features/ai/stores/pending-mcp-install.store";
-import type { McpServerDraft } from "@/features/ai/types/mcp-server.types";
+import { usePendingMcpInstallLinkStore } from "../stores/pending-mcp-install-link.store";
 
 const drainPendingDeepLinks = createPendingQueueDrain({
   take: () => commands.takePendingDeepLinks(),
@@ -62,9 +60,7 @@ function handleDeepLink(url: string) {
     } else if (action.type === "extensionInstall") {
       installExtensionFromDeepLink(action.extensionId);
     } else if (action.type === "mcpInstall") {
-      openMcpInstallFromDeepLink(action.draft);
-    } else if (action.type === "invalidMcpInstall") {
-      toast.error("This MCP server link is not valid");
+      openMcpInstallFromDeepLink(action.url);
     } else if (action.type === "extensions") {
       void openExtensionsTabFromDeepLink(action.extensionsCategory);
     } else {
@@ -84,8 +80,7 @@ function isSupportedDeepLinkProtocol(protocol: string) {
 type DeepLinkAction =
   | { type: "windowOpen"; request: WindowOpenRequest }
   | { type: "extensionInstall"; extensionId: string }
-  | { type: "mcpInstall"; draft: McpServerDraft }
-  | { type: "invalidMcpInstall" }
+  | { type: "mcpInstall"; url: string }
   | { type: "extensions"; extensionsCategory?: Settings["extensionsActiveTab"] }
   | { type: "settings"; tab: SettingsTab; extensionsCategory?: Settings["extensionsActiveTab"] };
 
@@ -182,8 +177,7 @@ function parseDeepLinkAction(url: string): DeepLinkAction | null {
   }
 
   if (segments[0] === "mcp" && segments[1] === "install") {
-    const draft = parseMcpInstallLink(parsed);
-    return draft ? { type: "mcpInstall", draft } : { type: "invalidMcpInstall" };
+    return { type: "mcpInstall", url };
   }
 
   if (segments[0] === "settings") {
@@ -212,8 +206,8 @@ async function openSettingsFromDeepLink(
   useUIState.getState().openSettings(tab);
 }
 
-function openMcpInstallFromDeepLink(draft: McpServerDraft) {
-  usePendingMcpInstallStore.getState().actions.request(draft);
+function openMcpInstallFromDeepLink(url: string) {
+  usePendingMcpInstallLinkStore.getState().actions.request(url);
   void openSettingsFromDeepLink("ai-mcp");
 }
 
