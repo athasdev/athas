@@ -294,6 +294,21 @@ describe("collaboration room connection", () => {
     expect(statuses[statuses.length - 1]).toBe("open");
   });
 
+  it("reconnects when a closing socket never reports its close", async () => {
+    const { sockets, statuses } = setup([ticket(1)]);
+    await vi.advanceTimersByTimeAsync(0);
+    sockets[0]!.open();
+
+    sockets[0]!.readyState = 2;
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(statuses[statuses.length - 1]).toBe("reconnecting");
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(sockets).toHaveLength(2);
+    sockets[0]!.drop();
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(sockets).toHaveLength(2);
+  });
+
   it("retries when the token request fails", async () => {
     const { sockets, requestTicket } = setup([new Error("offline"), ticket(1)]);
     await vi.advanceTimersByTimeAsync(0);

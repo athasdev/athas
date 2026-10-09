@@ -315,6 +315,15 @@ export function connectCollaborationRoom(options: {
     }
     socket = next;
 
+    const handleClose = (code?: number) => {
+      if (socket !== next) return;
+      socket = null;
+      if (code === ROOM_TOKEN_EXPIRED_CLOSE_CODE) ticket = null;
+      if (keepaliveTimer) clearInterval(keepaliveTimer);
+      keepaliveTimer = null;
+      if (!closed) scheduleReconnect();
+    };
+
     next.onopen = () => {
       if (closed || socket !== next) return;
       attempts = 0;
@@ -324,6 +333,8 @@ export function connectCollaborationRoom(options: {
       if (keepaliveTimer) clearInterval(keepaliveTimer);
       keepaliveTimer = setInterval(() => {
         if (next.readyState === SOCKET_OPEN) next.send("ping");
+        // A closing handshake the server never finishes leaves no close event behind.
+        else handleClose();
       }, KEEPALIVE_MS);
       scheduleRefresh(current);
     };
@@ -332,14 +343,7 @@ export function connectCollaborationRoom(options: {
       const message = parseCollaborationRoomMessage(event.data);
       if (message) options.onMessage(message);
     };
-    next.onclose = (event) => {
-      if (socket !== next) return;
-      socket = null;
-      if (event.code === ROOM_TOKEN_EXPIRED_CLOSE_CODE) ticket = null;
-      if (keepaliveTimer) clearInterval(keepaliveTimer);
-      keepaliveTimer = null;
-      if (!closed) scheduleReconnect();
-    };
+    next.onclose = (event) => handleClose(event.code);
   };
 
   options.onStatus?.(status);
