@@ -1,0 +1,119 @@
+name: Package managers
+
+# Renders WinGet and Scoop manifests for a published stable release and, when
+# the matching secret exists, submits them:
+# - WINGET_TOKEN: classic PAT with public_repo, used by wingetcreate to open a
+#   pull request against microsoft/winget-pkgs from the token owner's fork.
+# - SCOOP_BUCKET_TOKEN: token with contents:write on athasdev/scoop-athas.
+# Without the secrets the manifests are still uploaded as a workflow artifact.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag, for example v0.16.1"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    if: ${{ github.event_name == 'workflow_dispatch' || !github.event.release.prerelease }}
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.release.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Download release checksums
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name || inputs.tag }}
+        run: |
+          gh release download "$TAG" --repo "${{ github.repository }}" --pattern SHA256SUMS.txt
+          published_at="$(gh release view "$TAG" --repo "${{ github.repository }}" --json publishedAt --jq .publishedAt)"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "date=${published_at:0:10}" >> "$GITHUB_OUTPUT"
+
+      - name: Render manifests
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
+          RELEASE_DATE: ${{ steps.release.outputs.date }}
+        run: |
+          bun scripts/release/package-managers.mjs \
+            --tag "$TAG" \
+            --repo "${{ github.repository }}" \
+            --checksums SHA256SUMS.txt \
+            --release-date "$RELEASE_DATE" \
+            --out package-managers
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: package-managers
+          path: package-managers
+          if-no-files-found: error
+
+  winget:
+    needs: render
+    runs-on: windows-latest
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: package-managers
+          path: package-managers
+
+      - name: Submit to winget-pkgs
+        shell: pwsh
+        env:
+          WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
+          TAG: ${{ needs.render.outputs.tag }}
+        run: |
+          if (-not $env:WINGET_TOKEN) {
+            Write-Host "WINGET_TOKEN is not configured; skipping the winget-pkgs submission."
+            exit 0
+          }
+          $version = $env:TAG.TrimStart("v")
+          $manifests = "package-managers/winget/manifests/a/athasdev/Athas/$version"
+          Invoke-WebRequest https://aka.ms/wingetcreate/latest -OutFile wingetcreate.exe
+          ./wingetcreate.exe submit --token $env:WINGET_TOKEN --prtitle "New version: athasdev.Athas version $version" $manifests
+
+  scoop:
+    needs: render
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: package-managers
+          path: package-managers
+
+      - name: Update the Scoop bucket
+        env:
+          SCOOP_BUCKET_TOKEN: ${{ secrets.SCOOP_BUCKET_TOKEN }}
+          TAG: ${{ needs.render.outputs.tag }}
+        run: |
+          if [[ -z "$SCOOP_BUCKET_TOKEN" ]]; then
+            echo "SCOOP_BUCKET_TOKEN is not configured; skipping the Scoop bucket update."
+            exit 0
+          fi
+          git clone "https://x-access-token:${SCOOP_BUCKET_TOKEN}@github.com/athasdev/scoop-athas.git" bucket-repo
+          mkdir -p bucket-repo/bucket
+          cp package-managers/scoop/bucket/athas.json bucket-repo/bucket/athas.json
+          cd bucket-repo
+          if git diff --quiet -- bucket/athas.json && git ls-files --error-unmatch bucket/athas.json >/dev/null 2>&1; then
+            echo "The bucket already has ${TAG}."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add bucket/athas.json
+          git commit -m "Update Athas to ${TAG#v}" -m "Generated from the ${TAG} release checksums."
+          git push

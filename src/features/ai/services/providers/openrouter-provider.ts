@@ -44,8 +44,9 @@ export class OpenRouterProvider extends AIProvider {
     const headers: ProviderHeaders = {
       "Content-Type": "application/json",
       Accept: "text/event-stream, application/json",
-      "HTTP-Referer": "https://localhost",
-      "X-Title": "Athas",
+      "HTTP-Referer": "https://athas.dev",
+      "X-OpenRouter-Title": "Athas",
+      "X-OpenRouter-Categories": "programming-app",
     };
 
     if (apiKey) {

@@ -46,17 +46,10 @@ Homebrew on macOS:
 brew install --cask athas
 ```
 
-WinGet on Windows:
+Nix on Linux:
 
-```powershell
-winget install --id=athasdev.Athas -e
-```
-
-Scoop on Windows:
-
-```powershell
-scoop bucket add athas https://github.com/athasdev/scoop-athas
-scoop install athas
+```bash
+nix run github:athasdev/athas
 ```
 
 ### Manual download

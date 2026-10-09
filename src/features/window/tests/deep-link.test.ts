@@ -72,4 +72,15 @@ describe("parseDeepLinkAction", () => {
     expect(parseDeepLinkAction("athas-alpha://open?path=/Users/test/file.ts")).toBeNull();
     expect(parseDeepLinkAction("athas://open")).toBeNull();
   });
+
+  it("turns MCP install links into a draft for review", () => {
+    const config = btoa(JSON.stringify({ command: "npx", args: ["-y", "server"] }));
+    expect(parseDeepLinkAction(`athas://mcp/install?name=Server&config=${config}`)).toMatchObject({
+      type: "mcpInstall",
+      draft: { name: "Server", command: "npx", argsText: "-y\nserver" },
+    });
+    expect(parseDeepLinkAction("athas://mcp/install?name=Server")).toEqual({
+      type: "invalidMcpInstall",
+    });
+  });
 });

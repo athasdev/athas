@@ -31,7 +31,8 @@ describe("OpenRouterProvider", () => {
     expect(provider.buildHeaders("secret")).toMatchObject({
       Accept: "text/event-stream, application/json",
       Authorization: "Bearer secret",
-      "X-Title": "Athas",
+      "HTTP-Referer": "https://athas.dev",
+      "X-OpenRouter-Title": "Athas",
     });
   });
 });

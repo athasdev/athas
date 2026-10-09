@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { McpServerDialog } from "@/features/ai/components/mcp/mcp-server-dialog";
 import {
   createMcpServerDraft,
@@ -11,6 +11,7 @@ import {
   removeMcpServerSecrets,
   storeMcpServerSecrets,
 } from "@/features/ai/services/mcp-server-secrets";
+import { usePendingMcpInstallStore } from "@/features/ai/stores/pending-mcp-install.store";
 import type { McpServerDraft, McpServerSetting } from "@/features/ai/types/mcp-server.types";
 import { useToast } from "@/utils/toast";
 import Section, { SettingRow } from "@/features/settings/components/settings-section";
@@ -26,6 +27,13 @@ export function McpServerSettings() {
   const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
   const { showToast } = useToast();
   const [draft, setDraft] = useState<McpServerDraft | null>(null);
+  const pendingInstall = usePendingMcpInstallStore.use.draft();
+
+  useEffect(() => {
+    if (!pendingInstall) return;
+    setDraft(pendingInstall);
+    usePendingMcpInstallStore.getState().actions.clear();
+  }, [pendingInstall]);
 
   const saveServers = (next: McpServerSetting[]) => updateSetting("mcpServers", next);
 
