@@ -46,6 +46,7 @@ import {
   updateCollaborationChannelNote,
   type CollaborationMediaSignal,
 } from "@/features/collaboration/services/collaboration-api";
+import { getCollaborationIceServers } from "@/features/collaboration/services/collaboration-ice-servers";
 import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/ui/accordion";
 import { Button } from "@/ui/button";
@@ -351,11 +352,11 @@ export function CollaborationSidebarView() {
   );
 
   const ensurePeerConnection = useCallback(
-    (remoteDeviceId: string) => {
+    (remoteDeviceId: string, iceServers: RTCIceServer[]) => {
       const existing = peerConnectionsRef.current.get(remoteDeviceId);
       if (existing) return existing;
 
-      const peerConnection = new RTCPeerConnection();
+      const peerConnection = new RTCPeerConnection({ iceServers });
       getLocalTracks().forEach((track) => {
         const sourceStream =
           track.kind === "audio" ? micStreamRef.current : screenStreamRef.current;
@@ -403,7 +404,8 @@ export function CollaborationSidebarView() {
 
   const createOfferForDevice = useCallback(
     async (remoteDeviceId: string) => {
-      const peerConnection = ensurePeerConnection(remoteDeviceId);
+      const iceServers = await getCollaborationIceServers();
+      const peerConnection = ensurePeerConnection(remoteDeviceId, iceServers);
       const offer = await peerConnection.createOffer();
       await peerConnection.setLocalDescription(offer);
       await postMediaSignal(remoteDeviceId, "offer", offer as unknown as Record<string, unknown>);
@@ -423,7 +425,8 @@ export function CollaborationSidebarView() {
         return;
       }
 
-      const peerConnection = ensurePeerConnection(signal.senderDeviceId);
+      const iceServers = await getCollaborationIceServers();
+      const peerConnection = ensurePeerConnection(signal.senderDeviceId, iceServers);
       if (signal.kind === "offer") {
         await peerConnection.setRemoteDescription(
           new RTCSessionDescription(signal.payload as unknown as RTCSessionDescriptionInit),
