@@ -113,6 +113,27 @@ const defaultAuthStoreDependencies: AuthStoreDependencies = {
   now: () => Date.now(),
 };
 
+const beforeLogoutHooks = new Set<() => Promise<void>>();
+const BEFORE_LOGOUT_TIMEOUT_MS = 3000;
+
+/**
+ * Registers work that needs the session one last time before signing out, such as stopping
+ * shared preview links. Signing out waits for it, at most three seconds.
+ */
+export function onBeforeLogout(hook: () => Promise<void>) {
+  beforeLogoutHooks.add(hook);
+  return () => {
+    beforeLogoutHooks.delete(hook);
+  };
+}
+
+function runBeforeLogoutHooks() {
+  return Promise.race([
+    Promise.allSettled([...beforeLogoutHooks].map((hook) => hook())),
+    new Promise((resolve) => setTimeout(resolve, BEFORE_LOGOUT_TIMEOUT_MS)),
+  ]);
+}
+
 export function createAuthStore(
   dependencies: AuthStoreDependencies = defaultAuthStoreDependencies,
 ) {
@@ -361,6 +382,7 @@ export function createAuthStore(
         },
 
         logout: async () => {
+          if (beforeLogoutHooks.size) await runBeforeLogoutHooks();
           cancelReconnect();
           if (subscriptionRefreshTimer) clearTimeout(subscriptionRefreshTimer);
           subscriptionRefreshTimer = null;
