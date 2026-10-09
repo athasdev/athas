@@ -173,10 +173,10 @@ export default defineConfig({
       // A couple of points under the measured suite, so a drop fails the run.
       // Raise these as coverage grows.
       thresholds: {
-        lines: 49,
-        statements: 48,
-        branches: 43,
-        functions: 42,
+        lines: 59,
+        statements: 58,
+        branches: 51,
+        functions: 51,
       },
     },
   },
