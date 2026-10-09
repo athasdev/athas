@@ -64,7 +64,16 @@ keyring = { version = "3.6.3", features = [
 tauri = { version = "2.12", features = ["macos-private-api", "protocol-asset"] }
 tauri-plugin-dialog = { version = "2.8", default-features = false, features = ["xdg-portal"] }
 tauri-plugin-fs = "2.6"
-tauri-plugin-http = "2.8"
+# Without the default `cookies` feature: the plugin's one cookie jar would replay cookies a
+# previewed dev server sets to every later visitor. `unsafe-headers` lets preview links forward
+# the visitor's Cookie, Origin and Referer headers to localhost.
+tauri-plugin-http = { version = "2.8", default-features = false, features = [
+  "rustls-tls",
+  "http2",
+  "charset",
+  "system-proxy",
+  "unsafe-headers",
+] }
 tauri-plugin-notification = "2.5"
 tauri-plugin-log = "2.10"
 tauri-plugin-opener = "2.7"
