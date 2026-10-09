@@ -429,6 +429,7 @@ function PreviewPort({ runId }: { runId: string }) {
 
 function RunDetails({ run }: { run: CloudAgentRun }) {
   const queryClient = useQueryClient();
+  const { hasPreviews } = useProFeature();
   const active = isActiveCloudAgentRun(run);
   const { lines, error } = useCloudAgentLogs(run.id, active);
   const output = useMemo(
@@ -506,7 +507,7 @@ function RunDetails({ run }: { run: CloudAgentRun }) {
           </Alert>
         ) : null}
 
-        {run.status === "running" ? <PreviewPort runId={run.id} /> : null}
+        {run.status === "running" && hasPreviews ? <PreviewPort runId={run.id} /> : null}
 
         <section className="space-y-2">
           <h2 className="font-medium text-foreground ui-text-base">Activity</h2>
@@ -521,6 +522,22 @@ function RunDetails({ run }: { run: CloudAgentRun }) {
 }
 
 function UpgradeCard() {
+  const { isPro } = useProFeature();
+
+  if (isPro) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Cloud agents are not available yet.</CardTitle>
+          <CardDescription>
+            Your plan includes them, but they are not turned on for your account yet. Check back
+            after the next Athas update.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <CardHeader>

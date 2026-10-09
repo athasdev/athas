@@ -8,7 +8,7 @@ export function hasProductCapability(
     return subscription.capabilities[capability];
   }
 
-  if (capability === "cloudAgents") return false;
+  if (capability === "cloudAgents" || capability === "previews") return false;
   if (capability === "collaboration") return Boolean(subscription?.collaboration?.enabled);
   if (capability === "enterprisePolicy") return subscription?.enterprise?.has_access === true;
   return subscription?.status === "pro";

@@ -37,6 +37,7 @@ describe("Pro feature access", () => {
           settingsSync: true,
           cloudWorkspaces: false,
           cloudAgents: false,
+          previews: false,
           collaboration: false,
           enterprisePolicy: false,
         },

@@ -14,6 +14,7 @@ const subscription: SubscriptionInfo = {
     settingsSync: true,
     cloudWorkspaces: true,
     cloudAgents: false,
+    previews: false,
     collaboration: true,
     enterprisePolicy: false,
   },

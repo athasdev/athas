@@ -32,6 +32,7 @@ export type ProductCapability =
   | "settingsSync"
   | "cloudWorkspaces"
   | "cloudAgents"
+  | "previews"
   | "collaboration"
   | "enterprisePolicy";
 
@@ -284,8 +285,9 @@ function parseSubscriptionInfoResponse(payload: unknown): SubscriptionInfo | nul
         typeof capabilities.cloudWorkspaces === "boolean"
           ? capabilities.cloudWorkspaces
           : payload.status === "pro",
-      // Servers from before cloud agents do not offer them.
+      // Servers from before cloud agents and previews, or without them set up, do not offer them.
       cloudAgents: capabilities.cloudAgents === true,
+      previews: capabilities.previews === true,
       collaboration:
         typeof capabilities.collaboration === "boolean"
           ? capabilities.collaboration

@@ -124,6 +124,7 @@ describe("auth-api desktop auth parsers", () => {
         settingsSync: true,
         cloudWorkspaces: true,
         cloudAgents: true,
+        previews: true,
         collaboration: false,
         enterprisePolicy: true,
       },
@@ -137,6 +138,7 @@ describe("auth-api desktop auth parsers", () => {
       settingsSync: true,
       cloudWorkspaces: true,
       cloudAgents: true,
+      previews: true,
       collaboration: false,
       enterprisePolicy: true,
     });
@@ -150,6 +152,7 @@ describe("auth-api desktop auth parsers", () => {
       collaboration: null,
     });
     expect(parsed?.capabilities?.cloudAgents).toBe(false);
+    expect(parsed?.capabilities?.previews).toBe(false);
   });
 
   it("rejects malformed subscription payloads before storing them", () => {

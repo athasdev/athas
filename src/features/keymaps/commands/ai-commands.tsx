@@ -13,6 +13,8 @@ import {
   TerminalWindowIcon,
   XIcon,
 } from "@/ui/icons";
+import { hasProductCapability } from "@/features/auth/services/product-capabilities";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
 import type { Command } from "../types/keymaps.types";
@@ -149,6 +151,7 @@ export const aiCommands: Command[] = [
     category: "AI",
     description: "Run Claude Code or Codex in the cloud and get a pull request",
     icon: <CloudIcon />,
+    when: () => hasProductCapability(useAuthStore.getState().subscription, "cloudAgents"),
     palette: true,
     execute: () => {
       useBufferStore.getState().actions.openCloudAgentsBuffer();

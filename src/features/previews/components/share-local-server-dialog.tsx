@@ -208,11 +208,11 @@ function SharePreviews() {
 
 export function ShareLocalServerDialog() {
   const { closeDialog } = usePreviewsStore.use.actions();
-  const { hasCloudAgents } = useProFeature();
+  const { hasPreviews } = useProFeature();
 
   return (
     <Dialog title="Share Local Server" icon={BroadcastIcon} onClose={closeDialog}>
-      {hasCloudAgents ? (
+      {hasPreviews ? (
         <SharePreviews />
       ) : (
         <div className="space-y-3">

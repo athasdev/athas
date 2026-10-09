@@ -22,6 +22,7 @@ describe("product capabilities", () => {
         settingsSync: true,
         cloudWorkspaces: true,
         cloudAgents: false,
+        previews: false,
         collaboration: false,
         enterprisePolicy: true,
       },
