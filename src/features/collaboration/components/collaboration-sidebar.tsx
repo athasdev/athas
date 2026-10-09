@@ -40,13 +40,15 @@ import { readFileContent } from "@/features/file-system/api/file-operations";
 import {
   appendCollaborationPrivateChatMessage,
   createCollaborationChannel,
-  fetchCollaborationMediaSignals,
   getCollaborationClientId,
-  postCollaborationMediaSignal,
   updateCollaborationChannelNote,
   type CollaborationMediaSignal,
 } from "@/features/collaboration/services/collaboration-api";
 import { getCollaborationIceServers } from "@/features/collaboration/services/collaboration-ice-servers";
+import {
+  createMediaSignalTransport,
+  type MediaSignalTransport,
+} from "@/features/collaboration/services/collaboration-media-signaling";
 import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/ui/accordion";
 import { Button } from "@/ui/button";
@@ -172,7 +174,11 @@ export function CollaborationSidebarView() {
   const screenStreamRef = useRef<MediaStream | null>(null);
   const peerConnectionsRef = useRef<Map<string, RTCPeerConnection>>(new Map());
   const remoteSharesRef = useRef<RemoteMediaShare[]>([]);
-  const lastMediaSignalIdRef = useRef(0);
+  const mediaSignalTransportRef = useRef<MediaSignalTransport | null>(null);
+  const mediaSignalHandlersRef = useRef<{
+    onSignal: (signal: CollaborationMediaSignal) => Promise<void>;
+    onDeviceJoined: (deviceId: string) => void;
+  }>({ onSignal: async () => {}, onDeviceJoined: () => {} });
   const [localDeviceId] = useState(getCollaborationClientId);
   const [remoteShares, setRemoteShares] = useState<RemoteMediaShare[]>([]);
   const channelContextMenu = useDropdownMenu<SidebarChannel>();
@@ -283,6 +289,7 @@ export function CollaborationSidebarView() {
     );
   }, [collaboration?.presence, localDeviceId, selectedChannel]);
   const shouldPollMediaSignals = Boolean(selectedChannel && (hasLocalMedia || hasRemoteMedia));
+  const selectedChannelId = selectedChannel?.id ?? null;
 
   useEffect(() => {
     if (!selectedNoteFile) {
@@ -321,10 +328,6 @@ export function CollaborationSidebarView() {
     [],
   );
 
-  const getLocalDeviceId = useCallback(() => {
-    return localDeviceId;
-  }, [localDeviceId]);
-
   const getLocalTracks = useCallback(
     () => [
       ...(micStreamRef.current?.getAudioTracks() ?? []),
@@ -339,16 +342,9 @@ export function CollaborationSidebarView() {
       kind: "offer" | "answer" | "ice" | "leave",
       payload: Record<string, unknown>,
     ) => {
-      if (!selectedChannel) return;
-      await postCollaborationMediaSignal({
-        channelId: selectedChannel.id,
-        senderDeviceId: getLocalDeviceId(),
-        recipientDeviceId,
-        kind,
-        payload,
-      });
+      await mediaSignalTransportRef.current?.send(recipientDeviceId, kind, payload);
     },
-    [getLocalDeviceId, selectedChannel],
+    [],
   );
 
   const ensurePeerConnection = useCallback(
@@ -457,33 +453,42 @@ export function CollaborationSidebarView() {
     [ensurePeerConnection, postMediaSignal, setRemoteShareList],
   );
 
+  const handleDeviceJoined = useCallback(
+    (remoteDeviceId: string) => {
+      if (!hasLocalMedia) return;
+      const peerConnection = peerConnectionsRef.current.get(remoteDeviceId);
+      if (peerConnection?.connectionState === "connected") return;
+      void createOfferForDevice(remoteDeviceId);
+    },
+    [createOfferForDevice, hasLocalMedia],
+  );
+
   useEffect(() => {
-    if (!selectedChannel || !shouldPollMediaSignals) return;
-
-    let cancelled = false;
-    const pollSignals = async () => {
-      try {
-        const signals = await fetchCollaborationMediaSignals({
-          channelId: selectedChannel.id,
-          afterId: lastMediaSignalIdRef.current,
-          deviceId: getLocalDeviceId(),
-        });
-        for (const signal of signals) {
-          lastMediaSignalIdRef.current = Math.max(lastMediaSignalIdRef.current, signal.id);
-          if (!cancelled) await handleMediaSignal(signal);
-        }
-      } catch {
-        if (import.meta.env.DEV) console.debug("Collaboration media signal poll failed");
-      }
+    mediaSignalHandlersRef.current = {
+      onSignal: handleMediaSignal,
+      onDeviceJoined: handleDeviceJoined,
     };
+  }, [handleDeviceJoined, handleMediaSignal]);
 
-    void pollSignals();
-    const timer = window.setInterval(() => void pollSignals(), 1000);
+  useEffect(() => {
+    if (!selectedChannelId) return;
+
+    const transport = createMediaSignalTransport({
+      channelId: selectedChannelId,
+      deviceId: localDeviceId,
+      onSignal: (signal) => mediaSignalHandlersRef.current.onSignal(signal),
+      onDeviceJoined: (deviceId) => mediaSignalHandlersRef.current.onDeviceJoined(deviceId),
+    });
+    mediaSignalTransportRef.current = transport;
     return () => {
-      cancelled = true;
-      window.clearInterval(timer);
+      transport.close();
+      if (mediaSignalTransportRef.current === transport) mediaSignalTransportRef.current = null;
     };
-  }, [getLocalDeviceId, handleMediaSignal, selectedChannel, shouldPollMediaSignals]);
+  }, [localDeviceId, selectedChannelId]);
+
+  useEffect(() => {
+    mediaSignalTransportRef.current?.setActive(shouldPollMediaSignals);
+  }, [selectedChannelId, shouldPollMediaSignals]);
 
   useEffect(() => {
     if (!selectedChannel) return;

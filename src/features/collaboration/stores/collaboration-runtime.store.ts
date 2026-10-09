@@ -80,6 +80,8 @@ interface CollaborationRuntimeState {
       update: CollaborationDocumentUpdate,
       localClientId?: string,
     ) => void;
+    recordRemotePresence: (update: CollaborationDocumentUpdate, localClientId?: string) => void;
+    removeRemotePresence: (clientId: string) => void;
     recordCursorUpdateSent: (documentId: number) => void;
     recordViewportUpdateSent: (documentId: number) => void;
     setStreamError: (path: string | null, error: string) => void;
@@ -163,6 +165,29 @@ function getViewportFromUpdate(
     followingUserId: getNumber(update.operation.followingUserId),
     serverVersion: update.serverVersion,
     updatedAt: update.createdAt,
+  };
+}
+
+function mergeRemotePresence(
+  state: Pick<CollaborationRuntimeState, "remoteCursors" | "remoteViewports">,
+  update: CollaborationDocumentUpdate,
+  localClientId?: string,
+) {
+  const cursor = update.clientId === localClientId ? null : getCursorFromUpdate(update);
+  const viewport = update.clientId === localClientId ? null : getViewportFromUpdate(update);
+  return {
+    remoteCursors: cursor
+      ? [
+          cursor,
+          ...state.remoteCursors.filter((entry) => entry.clientId !== cursor.clientId),
+        ].slice(0, 20)
+      : state.remoteCursors,
+    remoteViewports: viewport
+      ? [
+          viewport,
+          ...state.remoteViewports.filter((entry) => entry.clientId !== viewport.clientId),
+        ].slice(0, 20)
+      : state.remoteViewports,
   };
 }
 
@@ -256,20 +281,11 @@ export const useCollaborationRuntimeStore = createSelectors(
         })),
       recordStreamUpdate: (document, update, localClientId) =>
         set((state) => {
-          const cursor = update.clientId === localClientId ? null : getCursorFromUpdate(update);
-          const viewport = update.clientId === localClientId ? null : getViewportFromUpdate(update);
-          const remoteCursors = cursor
-            ? [
-                cursor,
-                ...state.remoteCursors.filter((entry) => entry.clientId !== cursor.clientId),
-              ].slice(0, 20)
-            : state.remoteCursors;
-          const remoteViewports = viewport
-            ? [
-                viewport,
-                ...state.remoteViewports.filter((entry) => entry.clientId !== viewport.clientId),
-              ].slice(0, 20)
-            : state.remoteViewports;
+          const { remoteCursors, remoteViewports } = mergeRemotePresence(
+            state,
+            update,
+            localClientId,
+          );
 
           return {
             activeDocumentStream: {
@@ -289,6 +305,13 @@ export const useCollaborationRuntimeStore = createSelectors(
             remoteViewports,
           };
         }),
+      recordRemotePresence: (update, localClientId) =>
+        set((state) => mergeRemotePresence(state, update, localClientId)),
+      removeRemotePresence: (clientId) =>
+        set((state) => ({
+          remoteCursors: state.remoteCursors.filter((entry) => entry.clientId !== clientId),
+          remoteViewports: state.remoteViewports.filter((entry) => entry.clientId !== clientId),
+        })),
       recordCursorUpdateSent: (documentId) =>
         set((state) => ({
           activeDocumentStream: {

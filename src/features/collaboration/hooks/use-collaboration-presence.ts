@@ -11,6 +11,12 @@ import {
   streamCollaborationDocumentUpdates,
   updateCollaborationPresence,
 } from "@/features/collaboration/services/collaboration-api";
+import {
+  connectCollaborationRoom,
+  publishDocumentPresence,
+  toRemoteDocumentUpdate,
+  type CollaborationRoomConnection,
+} from "@/features/collaboration/services/collaboration-realtime";
 import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
@@ -60,6 +66,7 @@ export function useCollaborationPresence() {
   });
   const lastPublishedCursorKey = useRef<string | null>(null);
   const lastPublishedViewportKey = useRef<string | null>(null);
+  const documentRoomRef = useRef<CollaborationRoomConnection | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated || !collaborationEnabled || !presenceEnabled) return;
@@ -214,6 +221,41 @@ export function useCollaborationPresence() {
 
   useEffect(() => {
     const documentId = activeDocumentStream.documentId;
+    if (!isAuthenticated || !collaborationEnabled || !realtimeDocumentsEnabled || !documentId) {
+      return;
+    }
+
+    const localClientId = getCollaborationClientId();
+    const room = connectCollaborationRoom({
+      target: { documentId },
+      deviceId: localClientId,
+      onMessage: (message) => {
+        if (message.type === "presence") {
+          const update = toRemoteDocumentUpdate(documentId, message);
+          if (update) collaborationRuntimeActions.recordRemotePresence(update, localClientId);
+          return;
+        }
+        if (message.type === "leave" && message.member.deviceId) {
+          collaborationRuntimeActions.removeRemotePresence(message.member.deviceId);
+        }
+      },
+    });
+    documentRoomRef.current = room;
+
+    return () => {
+      room.close();
+      if (documentRoomRef.current === room) documentRoomRef.current = null;
+    };
+  }, [
+    activeDocumentStream.documentId,
+    collaborationEnabled,
+    collaborationRuntimeActions,
+    isAuthenticated,
+    realtimeDocumentsEnabled,
+  ]);
+
+  useEffect(() => {
+    const documentId = activeDocumentStream.documentId;
     if (
       !isAuthenticated ||
       !collaborationEnabled ||
@@ -246,29 +288,39 @@ export function useCollaborationPresence() {
         if (lastPublishedCursorKey.current === cursorKey) return;
         lastPublishedCursorKey.current = cursorKey;
 
-        void appendCollaborationDocumentUpdate({
-          documentId,
-          clientId: getCollaborationClientId(),
-          clientSeq: getNextCollaborationClientSeq(),
+        const operation = {
+          source: "desktop-cursor",
+          path: activeFilePath,
+          cursor: cursorPosition,
+          selection: selection ?? null,
+          activeChannelId: presenceTarget.channelId,
+          followingUserId: presenceTarget.followingUserId,
+        };
+        const transport = publishDocumentPresence({
+          room: documentRoomRef.current,
           updateType: "cursor",
-          operation: {
-            source: "desktop-cursor",
-            path: activeFilePath,
-            cursor: cursorPosition,
-            selection: selection ?? null,
-            activeChannelId: presenceTarget.channelId,
-            followingUserId: presenceTarget.followingUserId,
+          operation,
+          sendOverRest: () => {
+            void appendCollaborationDocumentUpdate({
+              documentId,
+              clientId: getCollaborationClientId(),
+              clientSeq: getNextCollaborationClientSeq(),
+              updateType: "cursor",
+              operation,
+            })
+              .then((nextCollaboration) => {
+                if (nextCollaboration) setCollaborationSnapshot(nextCollaboration);
+                collaborationRuntimeActions.recordCursorUpdateSent(documentId);
+              })
+              .catch(() => {
+                if (import.meta.env.DEV) {
+                  console.debug("Collaboration cursor update append failed");
+                }
+              });
           },
-        })
-          .then((nextCollaboration) => {
-            if (nextCollaboration) setCollaborationSnapshot(nextCollaboration);
-            collaborationRuntimeActions.recordCursorUpdateSent(documentId);
-          })
-          .catch(() => {
-            if (import.meta.env.DEV) {
-              console.debug("Collaboration cursor update append failed");
-            }
-          });
+        });
+        if (transport === "realtime")
+          collaborationRuntimeActions.recordCursorUpdateSent(documentId);
       }, CURSOR_UPDATE_THROTTLE_MS);
     };
 
@@ -338,32 +390,43 @@ export function useCollaborationPresence() {
         if (lastPublishedViewportKey.current === viewportKey) return;
         lastPublishedViewportKey.current = viewportKey;
 
-        void appendCollaborationDocumentUpdate({
-          documentId,
-          clientId: getCollaborationClientId(),
-          clientSeq: getNextCollaborationClientSeq(),
-          updateType: "metadata",
-          operation: {
-            source: "desktop-viewport",
-            path: activeFilePath,
-            viewport: {
-              scrollTop,
-              scrollLeft,
-              viewportHeight,
-            },
-            activeChannelId: presenceTarget.channelId,
-            followingUserId: presenceTarget.followingUserId,
+        const operation = {
+          source: "desktop-viewport",
+          path: activeFilePath,
+          viewport: {
+            scrollTop,
+            scrollLeft,
+            viewportHeight,
           },
-        })
-          .then((nextCollaboration) => {
-            if (nextCollaboration) setCollaborationSnapshot(nextCollaboration);
-            collaborationRuntimeActions.recordViewportUpdateSent(documentId);
-          })
-          .catch(() => {
-            if (import.meta.env.DEV) {
-              console.debug("Collaboration viewport update append failed");
-            }
-          });
+          activeChannelId: presenceTarget.channelId,
+          followingUserId: presenceTarget.followingUserId,
+        };
+        const transport = publishDocumentPresence({
+          room: documentRoomRef.current,
+          updateType: "metadata",
+          operation,
+          sendOverRest: () => {
+            void appendCollaborationDocumentUpdate({
+              documentId,
+              clientId: getCollaborationClientId(),
+              clientSeq: getNextCollaborationClientSeq(),
+              updateType: "metadata",
+              operation,
+            })
+              .then((nextCollaboration) => {
+                if (nextCollaboration) setCollaborationSnapshot(nextCollaboration);
+                collaborationRuntimeActions.recordViewportUpdateSent(documentId);
+              })
+              .catch(() => {
+                if (import.meta.env.DEV) {
+                  console.debug("Collaboration viewport update append failed");
+                }
+              });
+          },
+        });
+        if (transport === "realtime") {
+          collaborationRuntimeActions.recordViewportUpdateSent(documentId);
+        }
       }, VIEWPORT_UPDATE_THROTTLE_MS);
     };
 
