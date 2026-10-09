@@ -65,6 +65,8 @@ export interface CollaborationRoomConnection {
 }
 
 const SOCKET_OPEN = 1;
+/** The room closes a socket with this code when its token expired without being renewed. */
+export const ROOM_TOKEN_EXPIRED_CLOSE_CODE = 4001;
 /** The account service answers 404 while realtime rooms are off; ask again after this long. */
 const REALTIME_DISABLED_RETRY_MS = 5 * 60_000;
 const TICKET_REFRESH_MARGIN_MS = 60_000;
@@ -189,6 +191,14 @@ export function toRemoteDocumentUpdate(
   };
 }
 
+function ticketToken(ticket: CollaborationRoomTicket) {
+  try {
+    return new URL(ticket.url).searchParams.get("token");
+  } catch {
+    return null;
+  }
+}
+
 export function reconnectDelay(attempt: number, random = Math.random()) {
   const base = Math.min(RECONNECT_MAX_MS, RECONNECT_BASE_MS * 2 ** Math.max(0, attempt - 1));
   return Math.round(base * (0.75 + random * 0.5));
@@ -196,8 +206,10 @@ export function reconnectDelay(attempt: number, random = Math.random()) {
 
 /**
  * Keeps a WebSocket to a realtime collaboration room open: it reconnects with backoff, fetches a
- * fresh room token shortly before the current one expires, and reports "unavailable" when the
- * account service has realtime rooms off or the room never opens, so callers can keep polling.
+ * fresh room token shortly before the current one expires and renews the open socket with it,
+ * and reports "unavailable" when the account service has realtime rooms off or the room never
+ * opens, so callers can keep polling. When the room closes the socket because its token expired
+ * (4001), the next connection asks for a new token.
  */
 export function connectCollaborationRoom(options: {
   target: CollaborationRoomTarget;
@@ -252,6 +264,10 @@ export function connectCollaborationRoom(options: {
           if (closed || !next) return;
           ticket = next;
           scheduleRefresh(next);
+          const token = ticketToken(next);
+          if (token && socket?.readyState === SOCKET_OPEN) {
+            socket.send(JSON.stringify({ type: "renew", token }));
+          }
         })
         .catch(() => {
           if (!closed) refreshTimer = setTimeout(() => scheduleRefresh(current), RECONNECT_MAX_MS);
@@ -316,9 +332,10 @@ export function connectCollaborationRoom(options: {
       const message = parseCollaborationRoomMessage(event.data);
       if (message) options.onMessage(message);
     };
-    next.onclose = () => {
+    next.onclose = (event) => {
       if (socket !== next) return;
       socket = null;
+      if (event.code === ROOM_TOKEN_EXPIRED_CLOSE_CODE) ticket = null;
       if (keepaliveTimer) clearInterval(keepaliveTimer);
       keepaliveTimer = null;
       if (!closed) scheduleReconnect();

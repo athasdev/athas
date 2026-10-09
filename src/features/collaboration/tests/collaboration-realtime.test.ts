@@ -52,9 +52,9 @@ class FakeSocket implements CollaborationRoomSocket {
   receive(data: unknown) {
     this.onmessage?.({ data: JSON.stringify(data) } as MessageEvent);
   }
-  drop() {
+  drop(code = 1006) {
     this.readyState = 3;
-    this.onclose?.({ code: 1006 } as CloseEvent);
+    this.onclose?.({ code } as CloseEvent);
   }
 }
 
@@ -263,6 +263,35 @@ describe("collaboration room connection", () => {
     sockets[0]!.drop();
     await vi.advanceTimersByTimeAsync(2_000);
     expect(sockets[1]!.url).toBe(ticket(2).url);
+  });
+
+  it("renews the open socket with the refreshed token", async () => {
+    const { sockets } = setup([
+      ticket(1, Date.now() + 10 * 60_000),
+      ticket(2, Date.now() + 20 * 60_000),
+    ]);
+    await vi.advanceTimersByTimeAsync(0);
+    sockets[0]!.open();
+
+    await vi.advanceTimersByTimeAsync(9 * 60_000);
+    expect(sockets[0]!.sent).toContain(JSON.stringify({ type: "renew", token: "t2" }));
+    expect(sockets).toHaveLength(1);
+  });
+
+  it("asks for a new token when the room closes the socket because its token expired", async () => {
+    const { sockets, statuses, requestTicket } = setup([
+      ticket(1, Date.now() + 10 * 60_000),
+      ticket(2, Date.now() + 20 * 60_000),
+    ]);
+    await vi.advanceTimersByTimeAsync(0);
+    sockets[0]!.open();
+
+    sockets[0]!.drop(4001);
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(requestTicket).toHaveBeenCalledTimes(2);
+    expect(sockets[1]!.url).toBe(ticket(2).url);
+    sockets[1]!.open();
+    expect(statuses[statuses.length - 1]).toBe("open");
   });
 
   it("retries when the token request fails", async () => {
