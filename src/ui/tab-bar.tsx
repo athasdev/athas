@@ -94,15 +94,16 @@ export function SortableTab({
   children,
   ...props
 }: SortableTabProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id,
-    disabled,
-    animateLayoutChanges: (args) => defaultAnimateLayoutChanges(args) || args.wasDragging,
-    transition: {
-      duration: 180,
-      easing: "var(--app-ease-smooth)",
-    },
-  });
+  const { active, attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({
+      id,
+      disabled,
+      animateLayoutChanges: (args) => defaultAnimateLayoutChanges(args) || args.wasDragging,
+      transition: {
+        duration: 180,
+        easing: "var(--app-ease-smooth)",
+      },
+    });
 
   const dragDistance = isDragging ? Math.hypot(transform?.x ?? 0, transform?.y ?? 0) : 0;
   const setRefs = (element: HTMLDivElement | null) => {
@@ -110,7 +111,8 @@ export function SortableTab({
     tabRef?.(element);
   };
   const tabClassName = cn(
-    "relative flex min-w-0 shrink-0 items-stretch will-change-transform",
+    "relative flex min-w-0 shrink-0 items-stretch",
+    active && "will-change-transform",
     !disabled && "touch-none",
     isDragging && "z-10 cursor-grabbing",
     isDragging && placeholderWhileDragging && "opacity-40",
