@@ -31,7 +31,6 @@ const UNSAVED_DIALOG_XPATH = '//*[@role="dialog"][.//*[normalize-space()="Unsave
 const UNSAVED_DIALOG = By.xpath(UNSAVED_DIALOG_XPATH);
 const DONT_SAVE = By.xpath(`${UNSAVED_DIALOG_XPATH}//button[normalize-space()="Don't Save"]`);
 const NOTES_LINES = ["Athas e2e notes", "second line"];
-const LINE_NUMBERS = By.css(".cm-editor .cm-lineNumbers");
 const ACTIVE_LINE = By.css(".cm-editor .cm-content .cm-activeLine");
 const ACTIVE_LINE_NUMBER = By.css(".cm-editor .cm-lineNumbers .cm-activeLineGutter");
 const GO_TO_LINE_INPUT = By.css('.cm-editor .cm-goto-line input[name="line"]');
@@ -164,7 +163,13 @@ describe("editor", () => {
 
     await waitUntil(
       async () => {
-        const numbers = (await text(LINE_NUMBERS)).split(/\s+/).filter(Boolean);
+        const numbers = await runOnVisible<string[]>(
+          EDITOR_CONTENT,
+          `return Array.from(
+            arguments[0].closest(".cm-editor").querySelectorAll(".cm-lineNumbers .cm-gutterElement"),
+            (element) => element.textContent.trim(),
+          );`,
+        );
         return ["1", "2", "3"].every((number) => numbers.includes(number));
       },
       UI_TIMEOUT,
@@ -176,7 +181,7 @@ describe("editor", () => {
       async () => {
         const colors = await runOnVisible<string[]>(
           EDITOR_CONTENT,
-          `return Array.from(arguments[0].querySelectorAll(".cm-line span"), (span) =>
+          `return Array.from(arguments[0].querySelectorAll('.cm-line span:not([contenteditable="false"])'), (span) =>
             getComputedStyle(span).color);`,
         );
         return new Set(colors).size >= 2;

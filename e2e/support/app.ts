@@ -131,8 +131,19 @@ export async function waitForProjectTree() {
 }
 
 /** The visible editor's rendered text, with non-breaking spaces read as spaces. */
+/**
+ * The document text of the visible editor, one line per rendered line. Widgets inside a line, such
+ * as the inline git blame, are not part of the document and are left out.
+ */
 export async function readEditorText() {
-  const text = await (await visibleElement(EDITOR_LINES)).getText();
+  const text = await runOnVisible<string>(
+    EDITOR_LINES,
+    `return Array.from(arguments[0].querySelectorAll(":scope > .cm-line"), (line) => {
+      const copy = line.cloneNode(true);
+      copy.querySelectorAll('[contenteditable="false"], .cm-widgetBuffer').forEach((node) => node.remove());
+      return copy.textContent;
+    }).join("\\n");`,
+  );
   return text.replace(/\u00a0/g, " ");
 }
 

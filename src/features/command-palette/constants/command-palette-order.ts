@@ -185,6 +185,7 @@ export const commandPaletteOrder: CommandPaletteSlot[] = [
   "ai.openAcpInspector",
   "ai.importAgentSession",
   "ai.openAgentCliInTerminal",
+  "ai.sendSelectionToClaudeCode",
   "ai.logOutOfAgent",
   "lsp.showStatus",
   "developer.openAthasLog",

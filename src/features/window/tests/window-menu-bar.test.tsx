@@ -167,6 +167,7 @@ describe("window menu bar", () => {
     expect(menuItems().map(itemLabel)).toContain("Reopen Closed Tab");
   });
 
+  // Clicks all ~100 menu items one by one; under CI coverage that outlasts the default timeout.
   it("sends every menu command to the window and closes the menu after each one", async () => {
     await render();
     const menus = ["File", "Edit", "View", "Go", "Terminal", "Run", "Agent", "Tools", "Help"];
@@ -202,7 +203,7 @@ describe("window menu bar", () => {
     expect(commandsRun("create_app_window")).toHaveLength(1);
     expect(commandsRun("plugin:process|exit")).toHaveLength(1);
     expect(commandsRun("reopen_current_webview_devtools")).toHaveLength(1);
-  });
+  }, 60_000);
 
   it("controls the native window from the Window menu", async () => {
     await render();

@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
+import type { AppUpdateMode } from "@/bindings/commands";
 
 const mocks = vi.hoisted(() => ({
   check: vi.fn(),
   relaunch: vi.fn(async () => {}),
-  selfUpdateSupported: vi.fn(async () => true),
+  appUpdateMode: vi.fn(async (): Promise<AppUpdateMode> => "self"),
   prepareTransition: vi.fn(async () => true),
   recordUpdateCheck: vi.fn(async () => true),
   openOnboardingBuffer: vi.fn(),
@@ -14,13 +15,16 @@ vi.mock("@tauri-apps/plugin-updater", () => ({ check: mocks.check }));
 vi.mock("@tauri-apps/plugin-process", () => ({ relaunch: mocks.relaunch }));
 vi.mock("@tauri-apps/api/app", () => ({ getVersion: async () => "1.0.0" }));
 vi.mock("@/bindings/commands", () => ({
-  commands: { selfUpdateSupported: mocks.selfUpdateSupported },
+  commands: { appUpdateMode: mocks.appUpdateMode },
 }));
 vi.mock("@/features/file-system/services/workspace-project-transition", () => ({
   prepareProjectTransitionWithUnsavedBuffers: mocks.prepareTransition,
 }));
 vi.mock("@/features/telemetry/services/telemetry", () => ({
   recordUpdateCheckTelemetry: mocks.recordUpdateCheck,
+}));
+vi.mock("@/features/settings/stores/settings.store", () => ({
+  useSettingsStore: { getState: () => ({ settings: { updateChannel: "stable" } }) },
 }));
 vi.mock("@/features/editor/stores/buffer.store", () => ({
   useBufferStore: {
@@ -94,8 +98,8 @@ describe("useUpdater", () => {
     window.localStorage.clear();
     mocks.check.mockReset();
     mocks.relaunch.mockClear();
-    mocks.selfUpdateSupported.mockReset();
-    mocks.selfUpdateSupported.mockResolvedValue(true);
+    mocks.appUpdateMode.mockReset();
+    mocks.appUpdateMode.mockResolvedValue("self");
     mocks.prepareTransition.mockReset();
     mocks.prepareTransition.mockResolvedValue(true);
     mocks.recordUpdateCheck.mockClear();
@@ -177,7 +181,7 @@ describe("useUpdater", () => {
     });
 
     it("never checks on installs that update outside the app", async () => {
-      mocks.selfUpdateSupported.mockResolvedValue(false);
+      mocks.appUpdateMode.mockResolvedValue("external");
       const { render, act, useUpdater } = await load();
       const updater = render(() => useUpdater(false));
 
@@ -191,7 +195,7 @@ describe("useUpdater", () => {
     });
 
     it("assumes self-update support when the platform query fails", async () => {
-      mocks.selfUpdateSupported.mockRejectedValue(new Error("unknown command"));
+      mocks.appUpdateMode.mockRejectedValue(new Error("unknown command"));
       mocks.check.mockResolvedValue(fakeUpdate());
       const { render, act, useUpdater } = await load();
       const updater = render(() => useUpdater(false));
@@ -414,7 +418,7 @@ describe("useAutoUpdate", () => {
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
     window.localStorage.clear();
     mocks.check.mockReset();
-    mocks.selfUpdateSupported.mockResolvedValue(true);
+    mocks.appUpdateMode.mockResolvedValue("self");
     vi.useFakeTimers();
   });
 
