@@ -711,6 +711,11 @@ function FileExplorerTreeComponent({
     setEditingValue("");
   };
 
+  const discardDraftItems = () => {
+    onUpdateFiles?.(removeNewItemsFromTree(files));
+    setEditingValue("");
+  };
+
   const finishInlineEditing = (item: FileEntry, newName: string) => {
     if (!onUpdateFiles) return;
 
@@ -720,6 +725,7 @@ function FileExplorerTreeComponent({
 
       if (!parentPath) {
         showAlertDialog("Cannot Create File", "Cannot determine where to create the file.");
+        discardDraftItems();
         return;
       }
 
@@ -732,6 +738,7 @@ function FileExplorerTreeComponent({
         const folder = findFileInTree(files, joinPath(parentPath, newName.trim()));
         if (folder) {
           showAlertDialog("Folder Already Exists", "A folder with this name already exists.");
+          discardDraftItems();
           return;
         }
         onCreateNewFolderInDirectory?.(parentPath, newName.trim());
@@ -739,14 +746,14 @@ function FileExplorerTreeComponent({
         const file = findFileInTree(files, joinPath(parentPath, newName.trim()));
         if (file) {
           showAlertDialog("File Already Exists", "A file with this name already exists.");
+          discardDraftItems();
           return;
         }
         onCreateNewFileInDirectory(parentPath, newName.trim());
       }
     }
 
-    onUpdateFiles(removeNewItemsFromTree(files));
-    setEditingValue("");
+    discardDraftItems();
   };
 
   const cancelInlineEditing = (file: FileEntry) => {

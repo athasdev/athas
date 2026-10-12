@@ -632,7 +632,7 @@ const ProjectPicker = memo(({ isOpen, initialStep = "picker", onClose }: Project
           <CommandFooter>
             <CommandFooterAction onClick={() => void handleOpenFolderClick()}>
               <FolderOpenIcon />
-              Open FolderIcon
+              Open Folder
             </CommandFooterAction>
             <CommandFooterAction onClick={handleNewProjectClick}>
               <PlusIcon />

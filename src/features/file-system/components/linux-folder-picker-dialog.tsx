@@ -146,7 +146,7 @@ export default function LinuxFolderPickerDialog() {
             Cancel
           </Button>
           <Button type="button" variant="accent" onClick={handleOpen}>
-            Open FolderIcon
+            Open Folder
           </Button>
         </>
       }

@@ -165,7 +165,7 @@ export function normalizeCommit(raw: unknown, index: number): Commit | null {
   const messageHeadline =
     asNonEmptyString(record.messageHeadline) ??
     asNonEmptyString(record.title) ??
-    firstMessageLine ??
+    asNonEmptyString(firstMessageLine) ??
     oid.slice(0, 7);
 
   const messageBody =

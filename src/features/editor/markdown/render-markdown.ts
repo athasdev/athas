@@ -277,6 +277,24 @@ function renderBlockquote(quotedLines: string[]): MarkdownPart[] {
   ];
 }
 
+const FOOTNOTE_DEFINITION = /^\[\^([^\]]+)\]:\s(.+)$/;
+
+/** Footnote definitions outside code fences, collected first so earlier references link to them. */
+function collectFootnotes(lines: string[]): Footnote[] {
+  const footnotes: Footnote[] = [];
+  let inCodeBlock = false;
+  for (const line of lines) {
+    if (line.match(/^```/)) {
+      inCodeBlock = !inCodeBlock;
+      continue;
+    }
+    if (inCodeBlock) continue;
+    const match = line.match(FOOTNOTE_DEFINITION);
+    if (match) footnotes.push({ id: match[1], text: match[2] });
+  }
+  return footnotes;
+}
+
 /** Renders markdown to HTML without touching the DOM, so it can run in a worker. */
 export function renderMarkdown(
   content: string,
@@ -289,7 +307,7 @@ export function renderMarkdown(
       : extractYamlFrontMatter(content);
   const { lines, links } = extractLinkDefinitions(body.split("\n"));
   const processedLines = new BlockCollector();
-  const footnotes: Footnote[] = [];
+  const footnotes = collectFootnotes(lines);
   let inUnorderedList = false;
   let inOrderedList = false;
   let inTaskList = false;
@@ -407,11 +425,8 @@ export function renderMarkdown(
       processedLines.add(
         `<li>${processInline(line.replace(/^\s*\d+\.\s/, ""), footnotes, links)}</li>`,
       );
-    } else if (line.match(/^\[\^([^\]]+)\]:\s(.+)$/)) {
-      const match = line.match(/^\[\^([^\]]+)\]:\s(.+)$/);
-      if (match) {
-        footnotes.push({ id: match[1], text: match[2] });
-      }
+    } else if (FOOTNOTE_DEFINITION.test(line)) {
+      continue;
     } else if (line.match(/^\|.*\|$/)) {
       const tableLines = [line];
       let j = i + 1;
