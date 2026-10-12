@@ -851,6 +851,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["ai", "agent", "follow", "acp", "editor", "location"],
   },
   {
+    id: "claude-code-ide-integration",
+    tab: "ai-agents",
+    section: "Claude Code",
+    label: "Editor Integration",
+    description: "Let Claude Code in a terminal connect to Athas with /ide",
+    keywords: ["claude", "claude code", "ide", "anthropic", "terminal", "diff", "selection", "mcp"],
+  },
+  {
     id: "ai-allowed-commands",
     tab: "ai-agents",
     section: "Allowed Commands",

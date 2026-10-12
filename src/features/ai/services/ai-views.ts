@@ -1,9 +1,11 @@
 import { lazy } from "react";
 import { registerSidebarView } from "@/features/layout/services/sidebar-view-registry";
 import { registerPaneView } from "@/features/panes/services/pane-view-registry";
+import { registerDiffBanner } from "@/features/git/services/diff-banner-registry";
 import { registerTabDecoration } from "@/features/tabs/services/tab-decoration-registry";
 import { AgentTabAttention, AgentTabIcon } from "../components/agent-tab-decorations";
 import { NewTabView } from "../components/new-tab-view";
+import { CLAUDE_CODE_PROPOSAL } from "../integrations/claude-code/services/claude-diff-proposal";
 
 const loadAgentTab = () => import("../components/agent-tab");
 const AgentTab = lazy(() => loadAgentTab().then((module) => ({ default: module.AgentTab })));
@@ -11,6 +13,11 @@ const ContinuousAgentsResource = lazy(() => import("../continuous-agents/resourc
 const CloudAgentsResource = lazy(() => import("../cloud-agents/resource"));
 const AcpInspectorView = lazy(() => import("../acp-inspector/components/acp-inspector-view"));
 const AgentEditsReviewView = lazy(() => import("../components/chat/agent-edits-review"));
+const ClaudeDiffReviewBar = lazy(() =>
+  import("../integrations/claude-code/components/claude-diff-review-bar").then((module) => ({
+    default: module.ClaudeDiffReviewBar,
+  })),
+);
 // Loaded on demand so the layout does not pull the AI stores into its import graph.
 const AgentContextSidebar = lazy(() =>
   import("../components/panel/agent-context-sidebar").then((module) => ({
@@ -41,6 +48,7 @@ export function registerAiViews() {
   registerPaneView("cloudAgents", { component: CloudAgentsResource, getProps: () => ({}) });
   registerPaneView("acpInspector", { component: AcpInspectorView, getProps: () => ({}) });
   registerPaneView("agentChanges", { component: AgentEditsReviewView, getProps: () => ({}) });
+  registerDiffBanner(CLAUDE_CODE_PROPOSAL, ClaudeDiffReviewBar);
 
   registerSidebarView({
     id: "agents",

@@ -440,6 +440,8 @@ function normalizeAISettings(settings: Settings): Settings {
   normalizedSettings.aiAgentNotificationSound =
     normalizedSettings.aiAgentNotificationSound === true;
   normalizedSettings.aiFollowAgent = normalizedSettings.aiFollowAgent === true;
+  normalizedSettings.claudeCodeIdeIntegration =
+    normalizedSettings.claudeCodeIdeIntegration !== false;
   normalizedSettings.aiAgentMaxSteps = normalizeIntelligenceAgentSteps(
     normalizedSettings.aiAgentMaxSteps,
   );

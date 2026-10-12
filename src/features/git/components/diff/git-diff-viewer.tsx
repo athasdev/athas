@@ -1,4 +1,5 @@
-import { memo, useMemo } from "react";
+import { memo, Suspense, useMemo } from "react";
+import { getDiffBanner } from "../../services/diff-banner-registry";
 import { useDiffData } from "../../hooks/use-git-diff-data";
 import { ViewerErrorState, ViewerLoadingState, ViewerState } from "@/ui/viewer-state";
 import type { DiffViewerProps, MultiFileDiff } from "../../types/git-diff.types";
@@ -22,6 +23,19 @@ const DiffViewer = memo(({ bufferId }: DiffViewerProps) => {
   }, [rawDiffData]);
 
   if (multiFileDiff) {
+    const Banner = getDiffBanner(multiFileDiff.commitHash);
+    if (Banner) {
+      return (
+        <div className="flex h-full flex-col overflow-hidden bg-background">
+          <Suspense fallback={null}>
+            <Banner bufferId={bufferId} />
+          </Suspense>
+          <div className="min-h-0 flex-1">
+            <GitDiffEditorStack bufferId={bufferId} multiDiff={multiFileDiff} />
+          </div>
+        </div>
+      );
+    }
     return <GitDiffEditorStack bufferId={bufferId} multiDiff={multiFileDiff} />;
   }
 

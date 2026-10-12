@@ -119,6 +119,8 @@ fn register_managed_state(app: &mut tauri::App) {
    app.manage(commands::development::docker::DockerLogStreams::default());
    app.manage(commands::development::cli_args::PendingCliOpenRequests::default());
    app.manage(commands::development::deep_links::PendingDeepLinks::default());
+   app.manage(crate::claude_ide::ClaudeIdeState::default());
+   crate::claude_ide::start_on_launch(app.handle());
 }
 
 /// Production builds serve bundled extensions from `$RESOURCE`, which the static
@@ -197,7 +199,7 @@ pub fn handle_single_instance_open(app_handle: &tauri::AppHandle, args: Vec<Stri
    }
 }
 
-fn get_workbench_window(app: &tauri::AppHandle) -> Option<tauri::WebviewWindow> {
+pub(crate) fn get_workbench_window(app: &tauri::AppHandle) -> Option<tauri::WebviewWindow> {
    let is_workbench = |window: &tauri::WebviewWindow| {
       window.url().is_ok_and(|url| {
          !url
@@ -694,4 +696,6 @@ pub(crate) fn shutdown_background_services(app_handle: &tauri::AppHandle) {
    if let Some(terminal_manager) = app_handle.try_state::<Arc<TerminalManager>>() {
       terminal_manager.close_all();
    }
+
+   crate::claude_ide::shutdown(app_handle);
 }

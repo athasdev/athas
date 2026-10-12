@@ -102,7 +102,7 @@ export function createAcpDiffViewNode(
   };
 }
 
-function toGitDiff(diff: AcpDiffOutput, rootFolderPath?: string | null): GitDiff {
+export function toGitDiff(diff: AcpDiffOutput, rootFolderPath?: string | null): GitDiff {
   const displayPath = toRelativeDisplayPath(diff.path, rootFolderPath);
   const isNew = diff.oldText.length === 0 && diff.newText.length > 0;
   const isDeleted = diff.oldText.length > 0 && diff.newText.length === 0;

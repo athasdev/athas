@@ -181,6 +181,24 @@ pub fn warm_terminal_environment(terminal_manager: State<'_, Arc<TerminalManager
    terminal_manager.warm_user_environment();
 }
 
+/// Points `claude` started in this terminal at Athas's IDE server, unless the user set the
+/// variables themselves.
+fn add_claude_ide_env(app_handle: &AppHandle, config: &mut TerminalConfig) {
+   use tauri::Manager;
+
+   let Some(state) = app_handle.try_state::<crate::claude_ide::ClaudeIdeState>() else {
+      return;
+   };
+   let variables = state.terminal_env();
+   if variables.is_empty() {
+      return;
+   }
+   let environment = config.environment.get_or_insert_with(HashMap::new);
+   for (key, value) in variables {
+      environment.entry(key.to_string()).or_insert(value);
+   }
+}
+
 fn shell_integration_dir(app_handle: &AppHandle) -> Option<String> {
    use tauri::Manager;
 
@@ -211,6 +229,7 @@ pub async fn create_terminal(
 ) -> Result<String, String> {
    config.term_program_version = Some(app_handle.package_info().version.to_string());
    config.shell_integration_dir = shell_integration_dir(&app_handle);
+   add_claude_ide_env(&app_handle, &mut config);
    let event_handler: TerminalEventHandler =
       Arc::new(move |_, event| on_event.send(event.into_channel_message()).is_ok());
    let connection_id = terminal_manager

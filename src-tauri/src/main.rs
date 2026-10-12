@@ -10,6 +10,10 @@ use browser::{
    browser_focus_workbench, browser_navigate, browser_open_devtools, browser_perform,
    browser_set_bounds, browser_set_zoom, browser_snapshot,
 };
+use claude_ide::{
+   claude_ide_at_mention, claude_ide_set_enabled, claude_ide_set_workspace_folders,
+   claude_ide_update_selection, respond_claude_ide_request,
+};
 use commands::*;
 use tauri::Manager;
 use tauri_plugin_window_state::StateFlags;
@@ -24,6 +28,7 @@ mod app_setup;
 mod bindings;
 mod bootstrap;
 mod browser;
+mod claude_ide;
 mod commands;
 mod file_events;
 mod logger;
@@ -81,6 +86,7 @@ fn main() {
          if matches!(event, tauri::WindowEvent::Destroyed) {
             terminal::close_window_terminals(window.app_handle(), window.label());
             browser::forget_window(window.app_handle(), window.label());
+            claude_ide::forget_window(window.app_handle(), window.label());
             commands::forget_window_watches(window.app_handle(), window.label());
          }
       })
@@ -340,6 +346,12 @@ pub(crate) fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
          close_terminal,
          list_shells,
          warm_terminal_environment,
+         // Claude Code IDE integration
+         claude_ide_set_enabled,
+         claude_ide_set_workspace_folders,
+         claude_ide_update_selection,
+         claude_ide_at_mention,
+         respond_claude_ide_request,
          // execute_shell,
          // SSH commands
          ssh_connect,

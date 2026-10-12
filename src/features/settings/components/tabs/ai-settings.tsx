@@ -97,6 +97,29 @@ function AgentBehaviorSection() {
   );
 }
 
+function ClaudeCodeSection() {
+  const enabled = useSettingsStore((state) => state.settings.claudeCodeIdeIntegration);
+  const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
+
+  return (
+    <Section title="Claude Code">
+      <SettingRow
+        label="Editor Integration"
+        description="Run claude in a terminal and use /ide to share your selection and review its edits here"
+        onReset={() =>
+          updateSetting("claudeCodeIdeIntegration", getDefaultSetting("claudeCodeIdeIntegration"))
+        }
+        canReset={enabled !== getDefaultSetting("claudeCodeIdeIntegration")}
+      >
+        <Switch
+          checked={enabled}
+          onChange={(checked) => updateSetting("claudeCodeIdeIntegration", checked)}
+        />
+      </SettingRow>
+    </Section>
+  );
+}
+
 function AgentInstructionsSection() {
   const userRules = useSettingsStore((state) => state.settings.aiUserRules);
   const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
@@ -163,6 +186,7 @@ export function AIAgentsSettings() {
     <SettingsView>
       <AgentsSection />
       <CodexSettings />
+      <ClaudeCodeSection />
       <AgentBehaviorSection />
       <AgentInstructionsSection />
       <AgentAllowedActionsSettings />

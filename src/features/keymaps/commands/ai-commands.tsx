@@ -90,6 +90,19 @@ export const aiCommands: Command[] = [
     execute: async () => (await aiActions()).openActiveAgentInNewWindow(),
   },
   {
+    id: "ai.sendSelectionToClaudeCode",
+    title: "AI: Send Selection to Claude Code",
+    category: "AI",
+    description: "Mention the selection or the active file in Claude Code running in a terminal",
+    icon: <TerminalWindowIcon />,
+    palette: true,
+    execute: async () => {
+      const { sendSelectionToClaudeCode } =
+        await import("@/features/ai/integrations/claude-code/services/claude-ide-bridge");
+      await sendSelectionToClaudeCode();
+    },
+  },
+  {
     id: "ai.toggleFollowAgent",
     title: "AI: Toggle Follow Agent",
     category: "AI",

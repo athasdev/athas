@@ -653,6 +653,27 @@ export const commands = {
   closeTerminal: (id: string) => __TAURI_INVOKE<null>("close_terminal", { id }),
   listShells: () => __TAURI_INVOKE<Shell[]>("list_shells"),
   warmTerminalEnvironment: () => __TAURI_INVOKE<void>("warm_terminal_environment"),
+  /**  Turns the Claude Code IDE server on or off. */
+  claudeIdeSetEnabled: (enabled: boolean) =>
+    __TAURI_INVOKE<null>("claude_ide_set_enabled", { enabled }),
+  /**  Reports the calling window's workspace folders, which the lock file advertises to Claude. */
+  claudeIdeSetWorkspaceFolders: (folders: string[]) =>
+    __TAURI_INVOKE<void>("claude_ide_set_workspace_folders", { folders }),
+  /**  Reports the active editor's selection, or null when no editor is active. */
+  claudeIdeUpdateSelection: (
+    selection: {
+      filePath: string;
+      text: string;
+      start: SelectionPosition;
+      end: SelectionPosition;
+    } | null,
+  ) => __TAURI_INVOKE<void>("claude_ide_update_selection", { selection }),
+  /**  Sends a file, or a zero-based line range in it, to Claude as context. */
+  claudeIdeAtMention: (filePath: string, lineStart: number | null, lineEnd: number | null) =>
+    __TAURI_INVOKE<null>("claude_ide_at_mention", { filePath, lineStart, lineEnd }),
+  /**  Answers a `claude-ide-request` event with the tool's result. */
+  respondClaudeIdeRequest: (requestId: string, answer: ToolAnswer) =>
+    __TAURI_INVOKE<void>("respond_claude_ide_request", { requestId, answer }),
   sshConnect: (
     connectionId: string,
     host: string,
@@ -5036,6 +5057,13 @@ export type DocumentChangeBatch = {
   fullContent: string | null;
 };
 
+export type EditorSelection = {
+  filePath: string;
+  text: string;
+  start: SelectionPosition;
+  end: SelectionPosition;
+};
+
 /**
  *  The text a checked write expects on disk, sent as its UTF-8 length and SHA-256 instead of a
  *  second full copy of the file.
@@ -6063,6 +6091,12 @@ export type SearchOptions = {
   maxResults: number | null;
 };
 
+/**  A zero-based position, as Claude Code expects in selection payloads. */
+export type SelectionPosition = {
+  line: number;
+  character: number;
+};
+
 /**  ACP session configuration option advertised by the agent */
 export type SessionConfigOption = {
   id: string;
@@ -6285,6 +6319,12 @@ export type TomlTheme = {
   is_dark: boolean | null;
   css_variables: { [key in string]: string };
   syntax_tokens: { [key in string]: string } | null;
+};
+
+/**  What the frontend answers a [`ToolRequest`] with: the text items of the result, or an error. */
+export type ToolAnswer = {
+  content: string[];
+  error: string | null;
 };
 
 export type ToolCallData = {

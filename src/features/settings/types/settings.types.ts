@@ -135,6 +135,8 @@ export interface Settings {
   aiAgentNotificationSound: boolean;
   /** Whether new agent chats start with "Follow agent" on. */
   aiFollowAgent: boolean;
+  /** Whether `claude` in a terminal can connect to Athas through `/ide`. */
+  claudeCodeIdeIntegration: boolean;
   /** Model requests one built-in agent turn may make before it pauses to ask to continue. */
   aiAgentMaxSteps: number;
   aiUserRules: string;

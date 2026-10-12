@@ -6,6 +6,10 @@ import {
   initializeAcpBufferReads,
 } from "@/features/ai/services/acp-buffer-reads";
 import {
+  cleanupClaudeIdeBridge,
+  initializeClaudeIdeBridge,
+} from "@/features/ai/integrations/claude-code/services/claude-ide-bridge";
+import {
   cleanupFileClipboardListener,
   initializeFileClipboardListener,
 } from "@/features/file-explorer/services/file-explorer-clipboard-listener";
@@ -92,6 +96,14 @@ export function useAppBootstrap() {
 
     return () => {
       void cleanupAcpBufferReads();
+    };
+  }, []);
+
+  useEffect(() => {
+    void initializeClaudeIdeBridge();
+
+    return () => {
+      void cleanupClaudeIdeBridge();
     };
   }, []);
 

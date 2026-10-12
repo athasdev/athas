@@ -40,6 +40,7 @@ athas-github = { path = "../crates/github" }
 athas-fff-search = { path = "../crates/fff-search" }
 athas-debugger = { path = "../crates/debugger" }
 athas-docker = { path = "../crates/docker" }
+athas-claude-ide = { path = "../crates/claude-ide" }
 athas-database = { path = "../crates/database", default-features = false, features = ["sqlite"] }
 mimalloc = { version = "0.1", default-features = false }
 log = "0.4.27"

@@ -104,6 +104,7 @@ export const defaultSettings: Settings = {
   aiAgentFinishNotifications: true,
   aiAgentNotificationSound: false,
   aiFollowAgent: false,
+  claudeCodeIdeIntegration: true,
   aiAgentMaxSteps: DEFAULT_INTELLIGENCE_AGENT_STEPS,
   aiUserRules: "",
   aiSkills: [],

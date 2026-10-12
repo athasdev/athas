@@ -33,6 +33,10 @@ vi.mock("@/features/ai/services/acp-buffer-reads", () => ({
   initializeAcpBufferReads: vi.fn(async () => harness.calls.push("acp:init")),
   cleanupAcpBufferReads: vi.fn(async () => harness.calls.push("acp:cleanup")),
 }));
+vi.mock("@/features/ai/integrations/claude-code/services/claude-ide-bridge", () => ({
+  initializeClaudeIdeBridge: vi.fn(async () => harness.calls.push("claude-ide:init")),
+  cleanupClaudeIdeBridge: vi.fn(async () => harness.calls.push("claude-ide:cleanup")),
+}));
 vi.mock("@/features/file-explorer/services/file-explorer-clipboard-listener", () => ({
   initializeFileClipboardListener: vi.fn(async () => harness.calls.push("clipboard:init")),
   cleanupFileClipboardListener: vi.fn(async () => harness.calls.push("clipboard:cleanup")),
@@ -105,11 +109,17 @@ describe("useAppBootstrap", () => {
     expect(harness.initializeAuth).toHaveBeenCalledOnce();
     expect(harness.initializeWhatsNew).toHaveBeenCalledOnce();
     expect(harness.initializeOnboarding).toHaveBeenCalledOnce();
-    expect(harness.calls).toEqual(["watcher:init", "acp:init", "clipboard:init"]);
+    expect(harness.calls).toEqual([
+      "watcher:init",
+      "acp:init",
+      "claude-ide:init",
+      "clipboard:init",
+    ]);
 
     await unmount();
-    expect(harness.calls.slice(3).sort()).toEqual([
+    expect(harness.calls.slice(4).sort()).toEqual([
       "acp:cleanup",
+      "claude-ide:cleanup",
       "clipboard:cleanup",
       "watcher:cleanup",
     ]);
