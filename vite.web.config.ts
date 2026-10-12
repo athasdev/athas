@@ -37,6 +37,10 @@ function webEditorOutput(): Plugin {
 export default mergeConfig(
   baseConfig,
   defineConfig({
+    // The editor accepts cloud workspace sessions only from the pages allowed to embed it.
+    define: {
+      "import.meta.env.VITE_WEB_EDITOR_PARENT_ORIGINS": JSON.stringify(frameAncestors),
+    },
     server: { hmr: false },
     build: {
       outDir: "dist-web",

@@ -30,7 +30,7 @@ export interface MemoryGitOptions {
   ahead?: number;
 }
 
-function diffLines(oldText: string, newText: string): GitDiffLine[] {
+export function diffLines(oldText: string, newText: string): GitDiffLine[] {
   const oldLines = oldText ? oldText.split("\n") : [];
   const newLines = newText ? newText.split("\n") : [];
   const rows = oldLines.length;

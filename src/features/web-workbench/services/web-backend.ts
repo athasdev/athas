@@ -68,7 +68,7 @@ function fileStat(fs: MemoryFileSystem, path: unknown) {
   };
 }
 
-function fuzzyScore(query: string, candidate: string) {
+export function fuzzyScore(query: string, candidate: string) {
   const needle = query.toLowerCase();
   const haystack = candidate.toLowerCase();
   if (!needle) return 1;
