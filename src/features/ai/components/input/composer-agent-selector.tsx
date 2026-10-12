@@ -1,19 +1,14 @@
 import { useState } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import {
-  AthasModelSections,
-  ModelResultsProvider,
   ModelSection,
-  ProviderModels,
-  useModelSearchResults,
+  useProviderModels,
 } from "@/features/ai/components/selectors/model-connection-menu";
 import { useConnectedModelProviders, useModelName } from "@/features/ai/hooks/use-model-providers";
 import { useAgentOptions } from "@/features/ai/hooks/use-agent-options";
-import { getCodexModelPatch } from "@/features/ai/integrations/codex/codex-model-settings";
-import { useCodexModels } from "@/features/ai/integrations/codex/use-codex-models";
 import { useCodexSettings } from "@/features/ai/integrations/codex/use-codex-settings";
 import { CODEX_INTEGRATION_ID } from "@/features/ai/integrations/integration-registry";
-import { getModelIconId } from "@/features/ai/lib/model-vendor";
+import { getModelIconId, pickRecommendedModels } from "@/features/ai/lib/model-vendor";
 import { classifySessionConfigOption } from "@/features/ai/lib/session-config-option-classifier";
 import type { SessionConfigOption, SessionConfigValue } from "@/features/ai/types/acp.types";
 import type { AgentType } from "@/features/ai/types/ai-chat.types";
@@ -22,50 +17,60 @@ import { Button } from "@/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuEmpty,
-  DropdownMenuFooter,
+  DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuSearch,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-  DropdownMenuViewport,
 } from "@/ui/dropdown";
 import { SlidersIcon } from "@/ui/icons";
-import { useMenuSearch, type MenuSearch } from "@/ui/menu-search";
-import { ComposerEffortSelector } from "./composer-effort-selector";
+import { Spinner } from "@/ui/spinner";
+import {
+  AcpModelSubmenus,
+  AthasModelSubmenu,
+  CodexModelSubmenus,
+  ProviderModelSubmenu,
+} from "./composer-model-submenus";
 import { FollowAgentMenuItem } from "./follow-agent-toggle";
 
-function CodexModels({
-  cwd,
-  active,
-  search,
-  onSelect,
+/**
+ * A connected provider the user is not on yet. Picking it switches to its first recommended
+ * model, or its first model, so the Model row has a real choice to show right away.
+ */
+function ConnectedProviderOption({
+  id,
+  name,
   disabled,
+  onSelect,
 }: {
-  cwd: string;
-  active: boolean;
-  search: MenuSearch;
-  onSelect: () => void;
+  id: string;
+  name: string;
   disabled: boolean;
+  onSelect: (modelId: string) => void;
 }) {
-  const { settings, update } = useCodexSettings();
-  const { models, loading, error, retry } = useCodexModels(cwd);
+  const { models, loading, error } = useProviderModels(id, "");
+  const model = pickRecommendedModels(models)[0] ?? models[0];
+
   return (
-    <ModelSection
-      id={CODEX_INTEGRATION_ID}
-      label="Codex"
-      models={[{ id: "default", name: "Default" }, ...models]}
-      selected={active ? settings.model || "default" : ""}
-      onSelect={(id) => {
-        update(getCodexModelPatch(id === "default" ? undefined : id, models, settings));
-        onSelect();
+    <DropdownMenuRadioItem
+      value={id}
+      disabled={disabled || !model}
+      title={!model ? (error ?? (loading ? "Loading models…" : "No models available")) : name}
+      onClick={() => {
+        if (model) onSelect(model.id);
       }}
-      providerId={CODEX_INTEGRATION_ID}
-      search={search}
-      loading={loading}
-      error={error}
-      retry={retry}
-      disabled={disabled}
-    />
+    >
+      {loading && !model ? (
+        <Spinner label={`Loading ${name} models`} compact />
+      ) : (
+        <ProviderIcon providerId={id} />
+      )}
+      <span className="min-w-0 flex-1 truncate">{name}</span>
+    </DropdownMenuRadioItem>
   );
 }
 
@@ -84,9 +89,9 @@ interface ComposerAgentSelectorProps {
 }
 
 /**
- * The composer's model button: one searchable list with a section per connection
- * (Recommended, Athas, each connected provider, then agents), plus a reasoning effort chip
- * beside it when the current model has an effort scale.
+ * The composer's model button: a short menu with a Provider row (Athas, each connected
+ * provider, then agents), a Model row for the current provider, and an Effort row when the
+ * current model has an effort scale. Each row opens its own submenu.
  */
 export function ComposerAgentSelector({
   cwd,
@@ -100,169 +105,162 @@ export function ComposerAgentSelector({
   onBeforeOpen,
   followChatId,
 }: ComposerAgentSelectorProps) {
-  const [isContentMounted, setIsContentMounted] = useState(false);
-  const search = useMenuSearch();
-  const { reportResults, hasNoResults } = useModelSearchResults();
+  const [isProviderMenuOpen, setIsProviderMenuOpen] = useState(false);
   const { options, isLoading, loadError, refresh } = useAgentOptions(currentAgentId);
   const { settings } = useCodexSettings();
+  const isCustom = currentAgentId === "custom";
   const model = sessionConfigOptions.find(
     (option) => classifySessionConfigOption(option) === "model" && option.kind.type === "select",
   );
   const modelKind = model?.kind.type === "select" ? model.kind : null;
   const currentAgent = options.find((option) => option.id === currentAgentId);
-  const iconId = currentAgentId === "custom" ? getModelIconId(providerId, modelId) : currentAgentId;
+  const iconId = isCustom ? getModelIconId(providerId, modelId) : currentAgentId;
   const selectedModelName = useModelName(providerId, modelId);
-  const label =
-    currentAgentId === "custom"
-      ? providerId === "athas" && (!modelId || modelId === "auto")
-        ? "Automatic"
-        : selectedModelName || modelId || "Choose model"
-      : currentAgentId === CODEX_INTEGRATION_ID
-        ? settings.model || "Default"
-        : modelKind?.options.find((option) => option.id === modelKind.currentValue)?.name ||
-          currentAgent?.name ||
-          currentAgentId;
+  const isAthasAutomatic = providerId === "athas" && (!modelId || modelId === "auto");
+  const label = isCustom
+    ? isAthasAutomatic
+      ? "Automatic"
+      : selectedModelName || modelId || "Choose model"
+    : currentAgentId === CODEX_INTEGRATION_ID
+      ? settings.model || "Default"
+      : modelKind?.options.find((option) => option.id === modelKind.currentValue)?.name ||
+        currentAgent?.name ||
+        currentAgentId;
   const configuredProviders = useConnectedModelProviders([providerId]);
   const agents = options.filter(
     (option) => option.id !== "custom" && (option.isInstalled || option.isCurrent),
   );
-  const codexAgent = agents.find((agent) => agent.id === CODEX_INTEGRATION_ID);
-  const modelAgent =
-    currentAgent &&
-    currentAgent.id !== CODEX_INTEGRATION_ID &&
-    model &&
-    (modelKind?.options.length ?? 0) > 1
-      ? currentAgent
-      : null;
-  const otherAgents = agents.filter(
-    (agent) => agent.id !== CODEX_INTEGRATION_ID && agent.id !== modelAgent?.id,
-  );
-  const selectAgent = (id: AgentType) => {
-    if (id !== currentAgentId) onAgentChange?.(id);
+  const currentProvider = isCustom ? providerId : currentAgentId;
+  const providerName = isCustom
+    ? providerId === "athas"
+      ? "Athas"
+      : (configuredProviders.find((provider) => provider.id === providerId)?.name ?? providerId)
+    : (currentAgent?.name ?? currentAgentId);
+  const canChooseApiModel = isCustom || Boolean(onAgentChange);
+  const chooseProvider = (choose: () => void) => {
+    setIsProviderMenuOpen(false);
+    choose();
   };
-  const customSelection = (id: string) => (currentAgentId === "custom" ? id : "");
 
   return (
-    <>
-      <DropdownMenu
-        onOpenChange={(open) => {
-          setIsContentMounted(open);
-          if (open) onBeforeOpen?.();
-          else search.reset();
-        }}
-      >
-        <span className="inline-flex min-w-0 max-w-52">
-          <DropdownMenuTrigger
-            render={
-              <Button
-                type="button"
-                variant="ghost"
-                truncate
-                aria-label="Change model"
-                tooltip="Change model"
-              />
-            }
-          >
-            <ProviderIcon
-              providerId={iconId}
-              iconUrl={currentAgentId === "custom" ? undefined : currentAgent?.icon}
+    <DropdownMenu
+      onOpenChange={(open) => {
+        if (open) onBeforeOpen?.();
+      }}
+    >
+      <span className="inline-flex min-w-0 max-w-52">
+        <DropdownMenuTrigger
+          render={
+            <Button
+              type="button"
+              variant="ghost"
+              truncate
+              aria-label="Change model"
+              tooltip="Change model"
             />
-            <span className="min-w-0 truncate">{label}</span>
-          </DropdownMenuTrigger>
-        </span>
-        <DropdownMenuContent align="start" side="top" viewport="searchable" size="wide">
-          <DropdownMenuSearch
-            value={search.query}
-            onChange={(event) => search.setQuery(event.target.value)}
-            placeholder="Select a model…"
-            autoFocus
-          />
-          <DropdownMenuViewport>
-            {isContentMounted ? (
-              <ModelResultsProvider value={reportResults}>
-                <AthasModelSections
-                  selected={customSelection(providerId === "athas" ? modelId || "auto" : "")}
-                  search={search}
-                  onSelect={(id) => onModelChange(id, "athas")}
-                />
-                {configuredProviders.map((provider) => (
-                  <ProviderModels
-                    key={provider.id}
-                    providerId={provider.id}
-                    providerName={provider.name}
-                    selected={customSelection(provider.id === providerId ? modelId : "")}
-                    search={search}
-                    onSelect={(id) => onModelChange(id, provider.id)}
-                  />
-                ))}
-                {codexAgent ? (
-                  <CodexModels
-                    cwd={cwd}
-                    active={currentAgentId === CODEX_INTEGRATION_ID}
-                    search={search}
-                    onSelect={() => selectAgent(CODEX_INTEGRATION_ID)}
-                    disabled={!onAgentChange && !codexAgent.isCurrent}
-                  />
-                ) : null}
-                {modelAgent && model && modelKind ? (
-                  <ModelSection
-                    id={modelAgent.id}
-                    label={modelAgent.name}
-                    models={modelKind.options.map((option) => ({
-                      id: option.id,
-                      name: option.name,
-                      tooltip: option.description
-                        ? `${option.name} · ${option.description}`
-                        : undefined,
-                      iconId: modelAgent.id,
-                      iconUrl: modelAgent.icon,
-                    }))}
-                    selected={modelKind.currentValue}
-                    onSelect={(value) => onSessionConfigChange(model.id, value)}
-                    providerId={modelAgent.id}
-                    search={search}
-                  />
-                ) : null}
-                <ModelSection
-                  id="agents"
-                  label="Agents"
-                  models={otherAgents.map((agent) => ({
-                    id: agent.id,
-                    name: agent.name,
-                    iconId: agent.id,
-                    iconUrl: agent.icon,
-                    disabled: !onAgentChange && !agent.isCurrent,
-                  }))}
-                  selected={otherAgents.some((agent) => agent.isCurrent) ? currentAgentId : ""}
-                  onSelect={(id) => selectAgent(id)}
-                  providerId="custom"
-                  search={search}
-                  loading={isLoading}
-                  error={loadError}
-                  retry={() => void refresh()}
-                />
-              </ModelResultsProvider>
-            ) : null}
-            {isContentMounted && search.isSearching && hasNoResults ? (
-              <DropdownMenuEmpty>No matching models</DropdownMenuEmpty>
-            ) : null}
-          </DropdownMenuViewport>
-          <DropdownMenuFooter>
-            {followChatId ? <FollowAgentMenuItem chatId={followChatId} /> : null}
-            <DropdownMenuItem onClick={() => useUIState.getState().openSettings("ai")}>
-              <SlidersIcon />
-              Configure models…
-            </DropdownMenuItem>
-          </DropdownMenuFooter>
-        </DropdownMenuContent>
-      </DropdownMenu>
-      <ComposerEffortSelector
-        cwd={cwd}
-        currentAgentId={currentAgentId}
-        sessionConfigOptions={sessionConfigOptions}
-        onSessionConfigChange={onSessionConfigChange}
-        onBeforeOpen={onBeforeOpen}
-      />
-    </>
+          }
+        >
+          <ProviderIcon providerId={iconId} iconUrl={isCustom ? undefined : currentAgent?.icon} />
+          <span className="min-w-0 truncate">{label}</span>
+        </DropdownMenuTrigger>
+      </span>
+      <DropdownMenuContent align="start" side="top" size="default">
+        <DropdownMenuGroup>
+          <DropdownMenuSub open={isProviderMenuOpen} onOpenChange={setIsProviderMenuOpen}>
+            <DropdownMenuSubTrigger value={providerName}>Provider</DropdownMenuSubTrigger>
+            <DropdownMenuSubContent size="default" viewport="list">
+              <DropdownMenuRadioGroup value={currentProvider}>
+                <DropdownMenuRadioItem
+                  value="athas"
+                  disabled={!canChooseApiModel}
+                  onClick={() =>
+                    chooseProvider(() => {
+                      if (currentProvider !== "athas") onModelChange("auto", "athas");
+                    })
+                  }
+                >
+                  <ProviderIcon providerId="athas" />
+                  <span className="min-w-0 flex-1 truncate">Athas</span>
+                </DropdownMenuRadioItem>
+                {configuredProviders.map((provider) =>
+                  provider.id === currentProvider ? (
+                    <DropdownMenuRadioItem
+                      key={provider.id}
+                      value={provider.id}
+                      onClick={() => setIsProviderMenuOpen(false)}
+                    >
+                      <ProviderIcon providerId={provider.id} />
+                      <span className="min-w-0 flex-1 truncate">{provider.name}</span>
+                    </DropdownMenuRadioItem>
+                  ) : (
+                    <ConnectedProviderOption
+                      key={provider.id}
+                      id={provider.id}
+                      name={provider.name}
+                      disabled={!canChooseApiModel}
+                      onSelect={(id) => chooseProvider(() => onModelChange(id, provider.id))}
+                    />
+                  ),
+                )}
+              </DropdownMenuRadioGroup>
+              <ModelSection
+                id="agents"
+                label="Agents"
+                models={agents.map((agent) => ({
+                  id: agent.id,
+                  name: agent.name,
+                  iconId: agent.id,
+                  iconUrl: agent.icon,
+                  disabled: !onAgentChange && !agent.isCurrent,
+                }))}
+                selected={isCustom ? "" : currentAgentId}
+                onSelect={(id) =>
+                  chooseProvider(() => {
+                    if (id !== currentAgentId) onAgentChange?.(id);
+                  })
+                }
+                providerId="custom"
+                loading={isLoading}
+                error={loadError}
+                retry={() => void refresh()}
+                closeOnClick={false}
+              />
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+          {isCustom ? (
+            providerId === "athas" ? (
+              <AthasModelSubmenu
+                value={label}
+                selected={modelId || "auto"}
+                onSelect={(id) => onModelChange(id, "athas")}
+              />
+            ) : (
+              <ProviderModelSubmenu
+                value={label}
+                providerId={providerId}
+                selected={modelId}
+                onSelect={(id) => onModelChange(id, providerId)}
+              />
+            )
+          ) : currentAgentId === CODEX_INTEGRATION_ID ? (
+            <CodexModelSubmenus cwd={cwd} value={label} />
+          ) : (
+            <AcpModelSubmenus
+              agentId={currentAgentId}
+              agentIcon={currentAgent?.icon}
+              value={label}
+              options={sessionConfigOptions}
+              onChange={onSessionConfigChange}
+            />
+          )}
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        {followChatId ? <FollowAgentMenuItem chatId={followChatId} /> : null}
+        <DropdownMenuItem onClick={() => useUIState.getState().openSettings("ai")}>
+          <SlidersIcon />
+          Configure models…
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

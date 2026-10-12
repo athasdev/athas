@@ -57,8 +57,8 @@ function isAthasAutomatic(connection: IntelligenceConnection) {
 }
 
 /**
- * Picks a model the same way the composer does: one searchable list with a section per
- * connection (Recommended and Athas, then every provider the user connected).
+ * Picks a model from one searchable list with a section per connection (Recommended and
+ * Athas, then every provider the user connected).
  */
 export function ModelConnectionPicker({
   value,

@@ -491,12 +491,16 @@ function DropdownMenuSubTrigger({
   className,
   inset,
   appearance = "item",
+  value,
   children,
   ...props
 }: DropdownMenuPrimitive.SubmenuTrigger.Props & {
   inset?: boolean;
   appearance?: "item" | "action";
+  /** The submenu's current choice, shown muted before the chevron. */
+  value?: ReactNode;
 }) {
+  const hasValue = value !== undefined && value !== null;
   return (
     <DropdownMenuPrimitive.SubmenuTrigger
       data-slot="dropdown-menu-sub-trigger"
@@ -511,7 +515,17 @@ function DropdownMenuSubTrigger({
       {...props}
     >
       {children}
-      {appearance === "item" ? <ChevronRightIcon className="ml-auto" /> : null}
+      {hasValue ? (
+        <span
+          data-slot="dropdown-menu-sub-trigger-value"
+          className="ml-auto min-w-0 max-w-32 truncate text-right text-subtle-foreground"
+        >
+          {value}
+        </span>
+      ) : null}
+      {appearance === "item" ? (
+        <ChevronRightIcon className={hasValue ? undefined : "ml-auto"} />
+      ) : null}
     </DropdownMenuPrimitive.SubmenuTrigger>
   );
 }

@@ -120,18 +120,18 @@ export function IntelligenceCompletionStatus() {
                 if (!open) modelSearch.reset();
               }}
             >
-              <DropdownMenuSubTrigger disabled={model.locked}>
-                Model
-                <span
-                  className="ml-auto min-w-0 max-w-40 truncate text-subtle-foreground ui-text-sm"
-                  title={
-                    model.providerName ? `${model.shortName} via ${model.providerName}` : undefined
-                  }
-                >
-                  {model.isAutomatic && model.resolved
+              <DropdownMenuSubTrigger
+                disabled={model.locked}
+                title={
+                  model.providerName ? `${model.shortName} via ${model.providerName}` : undefined
+                }
+                value={
+                  model.isAutomatic && model.resolved
                     ? `Auto · ${model.shortName}`
-                    : model.shortName}
-                </span>
+                    : model.shortName
+                }
+              >
+                Model
               </DropdownMenuSubTrigger>
               <DropdownMenuSubContent viewport="searchable" size="wide">
                 <ModelConnectionMenuList
