@@ -78,6 +78,12 @@ export async function click(locator: Locator) {
   await (await visibleElement(locator)).click();
 }
 
+/** Moves the pointer over an element, for controls that only show on hover. */
+export async function hover(locator: Locator) {
+  const element = await visibleElement(locator);
+  await driver().actions().move({ origin: element }).perform();
+}
+
 export async function attribute(locator: Locator, name: string) {
   return (await (await visibleElement(locator)).getAttribute(name)) ?? "";
 }
@@ -270,7 +276,7 @@ export async function closeTab(fileName: string) {
   );
 }
 
-const QUICK_OPEN_INPUT = By.css('input[aria-label="Search files and symbols"]');
+const QUICK_OPEN_INPUT = By.css('input[aria-controls="quick-open-results"]');
 
 export async function quickOpenFile(fileName: string) {
   await pressShortcut(Key.CONTROL, "p");

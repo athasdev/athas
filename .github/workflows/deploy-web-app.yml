@@ -58,11 +58,10 @@ jobs:
       - name: Build the web app
         run: bun run build:web
 
+      # wrangler-action installs Wrangler with npm, which rejects the repo's package overrides.
       - name: Deploy to Cloudflare
-        uses: cloudflare/wrangler-action@v4
-        with:
-          wranglerVersion: "4"
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: web
-          command: deploy
+        working-directory: web
+        run: bunx wrangler@4.149.0 deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

@@ -1,6 +1,6 @@
 import { ContextMenu as ContextMenuPrimitive } from "@base-ui/react/context-menu";
 import { Menu as MenuPrimitive } from "@base-ui/react/menu";
-import { Fragment, type ReactNode } from "react";
+import { Fragment, type ReactNode, useRef } from "react";
 import { CheckIcon, ChevronRightIcon } from "@/ui/icons";
 import {
   menuItemVariants,
@@ -216,6 +216,10 @@ function ContextMenuSeparator(props: Omit<ContextMenuPrimitive.Separator.Props, 
 
 function ContextMenuPopup({ isOpen, point, groups, onClose }: ContextMenuPopupProps) {
   const anchor = usePointAnchor(point);
+  // An action may move focus itself (a rename field, a dialog), so focus only goes back to where
+  // it was when the menu is dismissed. Restoring it after an action would blur a rename field
+  // that focused first and end the rename.
+  const actionRanRef = useRef(false);
 
   if (!isOpen) return null;
   const normalizedGroups = normalizeContextMenuGroups(groups);
@@ -235,7 +239,15 @@ function ContextMenuPopup({ isOpen, point, groups, onClose }: ContextMenuPopupPr
           align="start"
           className="isolate z-10070 outline-none"
         >
-          <MenuPrimitive.Popup data-slot="context-menu-popup" className={contextMenuPopupClassName}>
+          <MenuPrimitive.Popup
+            data-slot="context-menu-popup"
+            className={contextMenuPopupClassName}
+            finalFocus={() => {
+              const restore = !actionRanRef.current;
+              actionRanRef.current = false;
+              return restore;
+            }}
+          >
             {normalizedGroups.map((group, groupIndex) => {
               const showIcons = group.items.every((item) => item.icon !== undefined);
 
@@ -253,7 +265,10 @@ function ContextMenuPopup({ isOpen, point, groups, onClose }: ContextMenuPopupPr
                           key={item.id}
                           label={item.label}
                           disabled={disabled}
-                          onClick={item.onClick}
+                          onClick={() => {
+                            actionRanRef.current = true;
+                            item.onClick?.();
+                          }}
                           role={item.checked === undefined ? "menuitem" : "menuitemcheckbox"}
                           aria-checked={item.checked}
                           aria-current={item.selected ? "true" : undefined}
