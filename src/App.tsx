@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { parseDetachedWindowUrl } from "@/features/window/detached/services/detached-window-protocol";
+import { AppErrorBoundary } from "@/features/bootstrap/components/app-error-boundary";
 import { recordStartupMilestoneAfterFrame } from "@/features/bootstrap/services/startup-performance";
 import {
   getWindowOpenDiagnostics,
@@ -82,17 +83,19 @@ function App() {
   }, [blankWindowOpen]);
 
   return (
-    <Suspense fallback={<InitialWindowShell />}>
-      {detachedWindow?.kind === "agent" ? (
-        <DetachedAgentWindow />
-      ) : detachedWindow?.kind === "standalone" ? (
-        <StandaloneContentWindow />
-      ) : detachedWindow?.kind === "resource" ? (
-        <DetachedResourceWindow />
-      ) : (
-        <WorkbenchBoundary blankWindowOpen={blankWindowOpen} />
-      )}
-    </Suspense>
+    <AppErrorBoundary>
+      <Suspense fallback={<InitialWindowShell />}>
+        {detachedWindow?.kind === "agent" ? (
+          <DetachedAgentWindow />
+        ) : detachedWindow?.kind === "standalone" ? (
+          <StandaloneContentWindow />
+        ) : detachedWindow?.kind === "resource" ? (
+          <DetachedResourceWindow />
+        ) : (
+          <WorkbenchBoundary blankWindowOpen={blankWindowOpen} />
+        )}
+      </Suspense>
+    </AppErrorBoundary>
   );
 }
 

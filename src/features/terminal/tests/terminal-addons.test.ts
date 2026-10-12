@@ -139,6 +139,28 @@ describe("terminal addons", () => {
     addon._options.leave();
     expect(tip.hide).toHaveBeenCalledTimes(1);
   });
+
+  it("loads web links before the link tooltip exists and uses it once it does", () => {
+    const loaded: Array<{ _options: any }> = [];
+    const terminal = { loadAddon: (addon: never) => loaded.push(addon) } as unknown as Terminal;
+    let tip: ReturnType<typeof tooltip> | null = null;
+    const options = {
+      get tooltip() {
+        if (!tip) throw new Error("Terminal link tooltip is not ready.");
+        return tip;
+      },
+    };
+
+    expect(() => loadWebLinksAddon(terminal, options)).not.toThrow();
+    tip = tooltip();
+    const event = withoutModifier();
+    loaded[0]._options.hover(event, "https://athas.dev");
+    expect(tip.show).toHaveBeenCalledWith(
+      event,
+      "https://athas.dev",
+      describeTerminalLinkHint("url"),
+    );
+  });
 });
 
 describe("file links in terminal output", () => {

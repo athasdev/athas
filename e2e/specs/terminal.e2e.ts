@@ -95,8 +95,10 @@ describe("integrated terminal", () => {
   });
 
   e2eTest("keeps each terminal tab's shell separate", async () => {
-    // Each tab is its own shell: the first one moves into src/, the second
-    // stays at the project root, and relative writes show where each ran.
+    // Each tab is its own shell that starts at the project root: the first one
+    // moves into src/, the second stays put, and relative writes show where
+    // each ran. A relative `cd` works the same in bash, PowerShell, and cmd,
+    // where an absolute one would also need `/d` to cross drives.
     const firstTabFile = workspaceFile("src", "first-tab.txt");
     const secondTabFile = workspaceFile("second-tab.txt");
     const firstTabAgainFile = workspaceFile("src", "first-tab-again.txt");
@@ -105,7 +107,7 @@ describe("integrated terminal", () => {
     const tabsBefore = await countVisible(TERMINAL_TAB);
 
     await runInTerminal(
-      [`cd "${workspaceFile("src")}"`, echoTo("first-tab", "first-tab.txt")],
+      ["cd src", echoTo("first-tab", "first-tab.txt")],
       () => fileContains(firstTabFile, "first-tab"),
       "The first terminal never ran its commands in src/",
     );

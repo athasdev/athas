@@ -118,15 +118,16 @@ interface TerminalLinkOptions {
   tooltip: TerminalLinkTooltip;
 }
 
-export function loadWebLinksAddon(terminal: Terminal, { tooltip }: TerminalLinkOptions): void {
+/** Reads `options.tooltip` only on hover, so callers may create the tooltip after this. */
+export function loadWebLinksAddon(terminal: Terminal, options: TerminalLinkOptions): void {
   const webLinksAddon = new WebLinksAddon(
     (event: MouseEvent, uri: string) => {
       if (!isTerminalLinkModifierPressed(event)) return;
       openExternalTerminalLink(uri);
     },
     {
-      hover: (event, text) => tooltip.show(event, text, describeTerminalLinkHint("url")),
-      leave: () => tooltip.hide(),
+      hover: (event, text) => options.tooltip.show(event, text, describeTerminalLinkHint("url")),
+      leave: () => options.tooltip.hide(),
     },
   );
   terminal.loadAddon(webLinksAddon);

@@ -129,8 +129,10 @@ pub fn parse_open_arg(arg: &str, cwd: &Path) -> Option<OpenRequest> {
       cwd.join(file_part)
    };
 
-   // Canonicalize to resolve `.`, `..`, symlinks
-   let canonical = path.canonicalize().ok()?;
+   // Canonicalize to resolve `.`, `..`, symlinks. `dunce` keeps Windows paths in their plain
+   // `C:\...` form: a verbatim `\\?\C:\...` root would reach terminals as their working
+   // directory, and cmd.exe rejects that and starts in the Windows directory instead.
+   let canonical = dunce::canonicalize(&path).ok()?;
    let is_directory = canonical.is_dir();
 
    Some(OpenRequest {
@@ -178,8 +180,7 @@ fn parse_reused_cli_args(args: &[String], cwd: &Path) -> Vec<CliRequest> {
          })
          .unwrap_or_default(),
       "terminal" | "term" => {
-         let working_directory = cwd
-            .canonicalize()
+         let working_directory = dunce::canonicalize(cwd)
             .unwrap_or_else(|_| cwd.to_path_buf())
             .to_string_lossy()
             .into_owned();
@@ -295,8 +296,7 @@ pub fn parse_cli_args(args: &[String], cwd: &Path) -> Vec<CliRequest> {
          };
          vec![CliRequest::Surface {
             name: command.to_string(),
-            working_directory: working_directory
-               .canonicalize()
+            working_directory: dunce::canonicalize(&working_directory)
                .unwrap_or(working_directory)
                .to_string_lossy()
                .into_owned(),
@@ -382,8 +382,7 @@ mod tests {
       assert_eq!(
          parse_opened_urls(&[url]),
          vec![CliRequest::Path {
-            path: manifest_path
-               .canonicalize()
+            path: dunce::canonicalize(&manifest_path)
                .expect("manifest should exist")
                .to_string_lossy()
                .into_owned(),
@@ -484,9 +483,23 @@ mod tests {
    fn parse_open_arg_dot_resolves_to_cwd() {
       let cwd = std::env::current_dir().unwrap();
       let req = parse_open_arg(".", &cwd).unwrap();
-      assert_eq!(req.path, cwd.canonicalize().unwrap().to_string_lossy());
+      assert_eq!(
+         req.path,
+         dunce::canonicalize(&cwd).unwrap().to_string_lossy()
+      );
       assert!(req.is_directory);
       assert_eq!(req.line, None);
+   }
+
+   #[test]
+   fn parse_open_arg_keeps_windows_paths_out_of_verbatim_form() {
+      let cwd = std::env::current_dir().unwrap();
+      let req = parse_open_arg(".", &cwd).unwrap();
+      assert!(
+         !req.path.starts_with(r"\\?\"),
+         "verbatim path: {}",
+         req.path
+      );
    }
 
    #[test]
@@ -522,7 +535,12 @@ mod tests {
          vec![CliRequest::NewWindow {
             request: Box::new(CliRequest::Terminal {
                command: Some("npm test".to_string()),
-               working_directory: Some(cwd.canonicalize().unwrap().to_string_lossy().into_owned()),
+               working_directory: Some(
+                  dunce::canonicalize(&cwd)
+                     .unwrap()
+                     .to_string_lossy()
+                     .into_owned()
+               ),
             })
          }]
       );
@@ -557,7 +575,10 @@ mod tests {
       assert_eq!(
          requests[0],
          CliRequest::Path {
-            path: cwd.canonicalize().unwrap().to_string_lossy().into_owned(),
+            path: dunce::canonicalize(&cwd)
+               .unwrap()
+               .to_string_lossy()
+               .into_owned(),
             is_directory: true,
             line: None,
          }
@@ -591,7 +612,12 @@ mod tests {
          vec![CliRequest::NewWindow {
             request: Box::new(CliRequest::Terminal {
                command: Some("bun test".to_string()),
-               working_directory: Some(cwd.canonicalize().unwrap().to_string_lossy().into_owned()),
+               working_directory: Some(
+                  dunce::canonicalize(&cwd)
+                     .unwrap()
+                     .to_string_lossy()
+                     .into_owned()
+               ),
             })
          }]
       );

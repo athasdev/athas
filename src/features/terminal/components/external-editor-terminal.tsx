@@ -188,7 +188,6 @@ export const ExternalEditorTerminal = ({
     });
 
     terminal.loadAddon(fitAddon);
-    loadWebLinksAddon(terminal, linkOptions);
     terminal.loadAddon(unicodeAddon);
     terminal.loadAddon(clipboardAddon);
 
@@ -196,6 +195,7 @@ export const ExternalEditorTerminal = ({
 
     terminal.open(terminalRef.current);
     linkTooltip = new TerminalLinkTooltip(terminal);
+    loadWebLinksAddon(terminal, linkOptions);
     loadWebglRenderer(terminal, scheduleFit);
 
     xtermRef.current = terminal;

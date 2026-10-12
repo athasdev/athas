@@ -597,6 +597,7 @@ dependencies = [
  "colored",
  "crossbeam-channel",
  "dirs 5.0.1",
+ "dunce",
  "ec4rs",
  "env_logger",
  "flate2",
