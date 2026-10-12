@@ -130,6 +130,37 @@ jobs:
                -o -name '*.msi' -o -name '*.dmg' \) -exec cp {} release-dist/ \;
           ls -lh release-dist
 
+      - name: Smoke test the Windows installer
+        if: matrix.name == 'windows-x86_64'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $setup = Get-ChildItem release-dist -Filter '*-setup.exe' | Select-Object -First 1
+          Start-Process -FilePath $setup.FullName -ArgumentList '/S' -Wait
+          $installDir = Join-Path $env:LOCALAPPDATA 'Athas'
+          if (-not (Test-Path (Join-Path $installDir 'athas.exe'))) { throw "athas.exe was not installed to $installDir" }
+
+          $uninstallKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Athas'
+          $publisher = (Get-ItemProperty -LiteralPath $uninstallKey).Publisher
+          if ($publisher -ne 'athasdev') { throw "Publisher is '$publisher', expected 'athasdev'" }
+
+          $menuKeys = @(
+            'HKCU:\Software\Classes\*\shell\Athas\command',
+            'HKCU:\Software\Classes\Directory\shell\Athas\command',
+            'HKCU:\Software\Classes\Directory\Background\shell\Athas\command'
+          )
+          foreach ($key in $menuKeys) {
+            $command = (Get-Item -LiteralPath $key).GetValue('')
+            if ($command -notlike '*athas.exe*') { throw "Missing Open with Athas command at $key" }
+            Write-Host "$key -> $command"
+          }
+
+          Start-Process -FilePath (Join-Path $installDir 'uninstall.exe') -ArgumentList '/S', "_?=$installDir" -Wait
+          foreach ($key in $menuKeys) {
+            if (Test-Path -LiteralPath (Split-Path $key -Parent)) { throw "Uninstall left $key behind" }
+          }
+          Write-Host 'Installer smoke test passed'
+
       - name: Upload installers
         uses: actions/upload-artifact@v6
         with:
