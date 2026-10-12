@@ -112,16 +112,13 @@ describe("Linux release packaging", () => {
     expect(stable.entry.join("\n")).not.toContain("{{");
   });
 
-  it("lays out the tarball the way Tauri, Nix and install.sh expect", () => {
+  it("lays out the tarball the way Tauri and install.sh expect", () => {
     const script = readRepoFile("scripts/release/packaging/linux/tarball.sh");
-    const nixPackage = readRepoFile("nix/package.nix");
 
     expect(script).toContain('install -D -m 755 "$binary" "${app_root}/bin/athas"');
     expect(script).toContain('resource_dir="${app_root}/lib/${product_name}"');
     expect(script).toContain("__TAURI_BUNDLE_TYPE_VAR_UNK");
     expect(script).not.toMatch(/libcef|libexec|LD_PRELOAD/);
-    expect(nixPackage).toContain("webkitgtk_4_1");
-    expect(nixPackage).toContain("cp -r bin lib share $out/");
   });
 
   it("builds every Linux package with the stock Tauri bundler in the release workflow", () => {

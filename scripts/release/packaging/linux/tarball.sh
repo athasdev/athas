@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Portable tarball for package managers that wrap the release binary
-# themselves, such as the Nix package in nix/package.nix.
+# themselves, such as community Nix packages.
 # It links against the host WebKitGTK 4.1 and GTK 3 instead of bundling them.
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

@@ -42,6 +42,10 @@
   "bundle": {
     "active": true,
     "publisher": "athasdev",
+    "homepage": "https://athas.dev",
+    "category": "DeveloperTool",
+    "shortDescription": "Lightweight code editor with Git, a terminal and AI agents",
+    "longDescription": "Athas is a lightweight, open-source code editor for macOS, Windows and Linux. It has Git, an integrated terminal, a database viewer and coding agents built in.",
     "targets": ["app", "dmg", "nsis"],
     "createUpdaterArtifacts": true,
     "icon": [

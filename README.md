@@ -46,11 +46,24 @@ Homebrew on macOS:
 brew install --cask athas
 ```
 
-Nix on Linux:
+APT on Debian and Ubuntu:
 
 ```bash
-nix run github:athasdev/athas
+sudo install -d -m 0755 /etc/apt/keyrings
+curl -fsSL https://athas.dev/apt/athas.gpg | sudo tee /etc/apt/keyrings/athas.gpg > /dev/null
+echo "deb [arch=amd64,arm64 signed-by=/etc/apt/keyrings/athas.gpg] https://athas.dev/apt stable main" \
+  | sudo tee /etc/apt/sources.list.d/athas.list > /dev/null
+sudo apt update && sudo apt install athas
 ```
+
+DNF on Fedora and RHEL:
+
+```bash
+sudo curl -fsSL https://athas.dev/rpm/athas.repo -o /etc/yum.repos.d/athas.repo
+sudo dnf install athas
+```
+
+Installs from the APT and DNF repositories update with `apt upgrade` and `dnf upgrade`.
 
 ### Manual download
 

@@ -208,13 +208,16 @@ jobs:
         if: matrix.target != ''
         run: rustup target add ${{ matrix.target }}
 
-      - name: Cache Rust dependencies
+      # Tag runs cannot reuse each other's caches, so they only restore the ones
+      # release-cache.yml saves from main under the same per-target key.
+      - name: Restore Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
-          cache-on-failure: true
+          shared-key: release-${{ matrix.artifact }}
+          save-if: false
 
-      - name: Cache Bun dependencies
-        uses: actions/cache@v5
+      - name: Restore Bun dependencies
+        uses: actions/cache/restore@v5
         with:
           path: ~/.bun/install/cache
           key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
@@ -526,7 +529,7 @@ jobs:
             --repo "${{ github.repository }}"
 
       # Publishing needs a personal token: events from GITHUB_TOKEN would not start the
-      # workflows that run on a published release (package managers, Nix, www sync).
+      # workflows that run on a published release (package managers, www sync).
       - name: Publish release
         if: ${{ vars.AUTO_PUBLISH_RELEASE == 'true' }}
         env:
