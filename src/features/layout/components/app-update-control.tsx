@@ -16,6 +16,7 @@ export function AppUpdateControl({ compact = false }: { compact?: boolean }) {
   const openWhatsNew = useWhatsNewStore((state) => state.actions.open);
   const {
     showUpdateIndicator,
+    updateMode,
     downloading,
     installing,
     error: updateError,
@@ -31,7 +32,7 @@ export function AppUpdateControl({ compact = false }: { compact?: boolean }) {
     () => [
       {
         id: "install-update",
-        label: `Install Athas ${updateInfo?.version ?? "Update"}`,
+        label: `${updateMode === "notify" ? "Download" : "Install"} Athas ${updateInfo?.version ?? "Update"}`,
         icon: <DownloadIcon />,
         onClick: downloadAndInstall,
         disabled: updateBusy,
@@ -51,7 +52,14 @@ export function AppUpdateControl({ compact = false }: { compact?: boolean }) {
         disabled: updateBusy,
       },
     ],
-    [downloadAndInstall, onRemindLater, onViewReleaseNotes, updateBusy, updateInfo?.version],
+    [
+      downloadAndInstall,
+      onRemindLater,
+      onViewReleaseNotes,
+      updateBusy,
+      updateInfo?.version,
+      updateMode,
+    ],
   );
 
   if (!showUpdateIndicator || !updateInfo) {

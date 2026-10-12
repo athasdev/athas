@@ -20,6 +20,7 @@ type EditorCursorBlinking = "blink" | "smooth" | "phase" | "expand" | "solid";
 type TerminalCursorInactiveStyle = "outline" | "block" | "bar" | "underline" | "none";
 export type TabCloseButtonVisibility = "active" | "hover" | "always";
 export type FileTreeSortOrder = "folders-first" | "name";
+export type UpdateChannel = "stable" | "beta";
 export interface LegacyV0DesignSystemProfile {
   readonly id: string;
   readonly name: string;
@@ -54,6 +55,7 @@ export interface Settings {
   // General
   autoSave: boolean;
   quickOpenPreview: boolean;
+  updateChannel: UpdateChannel;
   // Editor
   fontFamily: string;
   fontSize: number;

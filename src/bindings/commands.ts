@@ -10,12 +10,13 @@ import { invoke as __TAURI_INVOKE, Channel } from "@tauri-apps/api/core";
 export const commands = {
   readAthasLog: () => __TAURI_INVOKE<AthasLogFile>("read_athas_log"),
   /**
-   *  Whether the in-app updater can replace this installation. On Linux only
-   *  AppImage, deb and rpm installs can update themselves: Flatpak builds are
-   *  updated by Flatpak, and the tarball (including the Nix package) by whoever
-   *  installed it.
+   *  How the in-app updater handles this installation. On Linux only AppImage,
+   *  deb and rpm installs can update themselves. The Flatpak bundle that Athas
+   *  no longer publishes only learns about new versions, while other Flatpak
+   *  packages and the tarball (including the Nix package) are updated by
+   *  whoever installed them.
    */
-  selfUpdateSupported: () => __TAURI_INVOKE<boolean>("self_update_supported"),
+  appUpdateMode: () => __TAURI_INVOKE<AppUpdateMode>("app_update_mode"),
   readLocalFile: (path: string) => __TAURI_INVOKE<ArrayBuffer>("read_local_file", { path }),
   writeLocalFileChecked: (
     path: string,
@@ -4505,6 +4506,15 @@ export type AgentTargetArgs_Serialize = {
   agent_id: string;
   workspace_path: string | null;
 };
+
+/**  How this installation gets new versions. */
+export type AppUpdateMode =
+  /**  The in-app updater downloads and installs new versions. */
+  | "self"
+  /**  Athas cannot replace itself, so it points to the download page instead. */
+  | "notify"
+  /**  A package manager installed Athas and keeps it up to date. */
+  | "external";
 
 export type AthasLogFile = {
   path: string;

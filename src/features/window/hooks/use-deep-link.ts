@@ -12,6 +12,7 @@ import {
 } from "../services/window-open-request";
 import { createPendingQueueDrain } from "../utils/pending-queue-drain";
 import { disposeListener } from "@/utils/tauri-drag-drop";
+import { usePendingMcpInstallLinkStore } from "../stores/pending-mcp-install-link.store";
 
 const drainPendingDeepLinks = createPendingQueueDrain({
   take: () => commands.takePendingDeepLinks(),
@@ -26,6 +27,7 @@ const drainPendingDeepLinks = createPendingQueueDrain({
  * Supports:
  *   athas://open?path=...&line=...&type=directory
  *   athas://extension/install/{extensionId}
+ *   athas://mcp/install?name=...&config=<base64 JSON>
  *   athas://settings?tab=advanced
  */
 export function useDeepLink() {
@@ -57,6 +59,8 @@ function handleDeepLink(url: string) {
       void enqueueWindowOpenRequest(action.request);
     } else if (action.type === "extensionInstall") {
       installExtensionFromDeepLink(action.extensionId);
+    } else if (action.type === "mcpInstall") {
+      openMcpInstallFromDeepLink(action.url);
     } else if (action.type === "extensions") {
       void openExtensionsTabFromDeepLink(action.extensionsCategory);
     } else {
@@ -76,6 +80,7 @@ function isSupportedDeepLinkProtocol(protocol: string) {
 type DeepLinkAction =
   | { type: "windowOpen"; request: WindowOpenRequest }
   | { type: "extensionInstall"; extensionId: string }
+  | { type: "mcpInstall"; url: string }
   | { type: "extensions"; extensionsCategory?: Settings["extensionsActiveTab"] }
   | { type: "settings"; tab: SettingsTab; extensionsCategory?: Settings["extensionsActiveTab"] };
 
@@ -171,6 +176,10 @@ function parseDeepLinkAction(url: string): DeepLinkAction | null {
     };
   }
 
+  if (segments[0] === "mcp" && segments[1] === "install") {
+    return { type: "mcpInstall", url };
+  }
+
   if (segments[0] === "settings") {
     if (parsed.searchParams.get("tab") === "extensions") {
       return {
@@ -195,6 +204,11 @@ async function openSettingsFromDeepLink(
 ) {
   const { useUIState } = await import("@/features/layout/stores/ui-state.store");
   useUIState.getState().openSettings(tab);
+}
+
+function openMcpInstallFromDeepLink(url: string) {
+  usePendingMcpInstallLinkStore.getState().actions.request(url);
+  void openSettingsFromDeepLink("ai-mcp");
 }
 
 async function openExtensionsTabFromDeepLink(extensionsCategory?: Settings["extensionsActiveTab"]) {

@@ -72,4 +72,9 @@ describe("parseDeepLinkAction", () => {
     expect(parseDeepLinkAction("athas-alpha://open?path=/Users/test/file.ts")).toBeNull();
     expect(parseDeepLinkAction("athas://open")).toBeNull();
   });
+
+  it("hands MCP install links to the MCP settings", () => {
+    const url = "athas://mcp/install?name=Server&config=e30";
+    expect(parseDeepLinkAction(url)).toEqual({ type: "mcpInstall", url });
+  });
 });

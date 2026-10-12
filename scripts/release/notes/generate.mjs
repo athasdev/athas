@@ -18,14 +18,18 @@ async function text(command) {
   return (await $`bash -lc ${command}`.text()).trim();
 }
 
+// Stable notes cover everything since the last stable release; beta notes since the last build.
 async function getPreviousTag(tag) {
   const tags = await text("git tag --sort=-creatordate --merged HEAD");
+  const previousTagPattern = tag.includes("-")
+    ? /^v\d+\.\d+\.\d+(?:-beta\.\d+)?$/
+    : /^v\d+\.\d+\.\d+$/;
   return tags
     .split("\n")
     .map((entry) => entry.trim())
     .filter(Boolean)
     .filter((entry) => entry !== tag)
-    .find((entry) => /^v\d+\.\d+\.\d+$/.test(entry));
+    .find((entry) => previousTagPattern.test(entry));
 }
 
 async function getComparableRevision(tag) {

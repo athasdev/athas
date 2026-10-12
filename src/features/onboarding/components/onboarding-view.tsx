@@ -13,6 +13,7 @@ import { markOnboardingCompleted } from "@/features/onboarding/services/onboardi
 import type { OnboardingContext } from "@/features/onboarding/services/onboarding-state";
 import { buildOnboardingViewModel } from "@/features/onboarding/lib/onboarding-view-model";
 import { useOnboardingStore } from "@/features/onboarding/stores/onboarding.store";
+import { installCli, isCliInstalled } from "@/features/settings/services/cli-install-service";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { formatReleaseDate } from "@/features/settings/services/whats-new";
 import { SettingsView, SettingRow } from "@/features/settings/components/settings-section";
@@ -23,6 +24,7 @@ import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 import { TextLink } from "@/ui/text-link";
 import { getServiceUrls } from "@/config/services";
+import { useToast } from "@/utils/toast";
 import { ReleaseNotesContent } from "./release-notes-content";
 
 const telemetryDescription =
@@ -56,6 +58,8 @@ export default function OnboardingView({ bufferId, context }: OnboardingViewProp
     settings.openFoldersInNewWindow,
   );
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [cliInstalled, setCliInstalled] = useState<boolean | null>(null);
+  const { showToast } = useToast();
   const [keybindingPreset, setKeybindingPreset] = useState<KeybindingPreset>(
     settings.keybindingPreset,
   );
@@ -71,6 +75,22 @@ export default function OnboardingView({ bufferId, context }: OnboardingViewProp
     settings.telemetry,
     settings.vimMode,
   ]);
+
+  useEffect(() => {
+    if (!viewModel.showSettings) return;
+    isCliInstalled()
+      .then(setCliInstalled)
+      .catch(() => setCliInstalled(null));
+  }, [viewModel.showSettings]);
+
+  const handleInstallCli = async () => {
+    try {
+      showToast({ message: await installCli(), type: "success" });
+      setCliInstalled(true);
+    } catch (error) {
+      showToast({ message: `Failed to install the athas command: ${error}`, type: "error" });
+    }
+  };
 
   const persistSelections = async () => {
     await Promise.all([
@@ -144,6 +164,26 @@ export default function OnboardingView({ bufferId, context }: OnboardingViewProp
         {viewModel.showSettings ? (
           <SettingsView>
             <SettingRow
+              label="Import settings from another editor"
+              description="Import matching setup from VS Code, Cursor, Windsurf, Zed, or JetBrains."
+            >
+              <Button variant="default" onClick={() => setIsImportDialogOpen(true)}>
+                Import
+              </Button>
+            </SettingRow>
+
+            {cliInstalled === false ? (
+              <SettingRow
+                label="Install the athas command"
+                description="Run athas . in a terminal to open the current folder."
+              >
+                <Button variant="default" onClick={() => void handleInstallCli()}>
+                  Install
+                </Button>
+              </SettingRow>
+            ) : null}
+
+            <SettingRow
               label="Keybinding preset"
               description={keybindingPresetDefinitions[keybindingPreset].description}
             >
@@ -176,15 +216,6 @@ export default function OnboardingView({ bufferId, context }: OnboardingViewProp
 
             <SettingRow label="Open folders in a new window">
               <Switch checked={openFoldersInNewWindow} onChange={setOpenFoldersInNewWindow} />
-            </SettingRow>
-
-            <SettingRow
-              label="Import settings from another editor"
-              description="Import matching setup from VS Code, Cursor, Windsurf, Zed, or JetBrains."
-            >
-              <Button variant="default" onClick={() => setIsImportDialogOpen(true)}>
-                Import
-              </Button>
             </SettingRow>
           </SettingsView>
         ) : (

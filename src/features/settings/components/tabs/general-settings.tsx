@@ -9,6 +9,9 @@ import { IdeSettingsImportDialog } from "@/features/file-system/components/ide-s
 import { useToast } from "@/utils/toast";
 import { TypedConfirmAction } from "@/features/settings/components/typed-confirm-action";
 import { useUpdater } from "@/features/settings/hooks/use-updater";
+import { getDefaultSetting } from "@/features/settings/config/default-settings";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import type { UpdateChannel } from "@/features/settings/types/settings.types";
 import { Alert, AlertDescription } from "@/ui/alert";
 import { Button } from "@/ui/button";
 import Command, {
@@ -19,6 +22,7 @@ import Command, {
   CommandList,
 } from "@/ui/command";
 import { Progress } from "@/ui/progress";
+import Select from "@/ui/select";
 import { describeOperatingSystem, getAppVersion } from "@/utils/app-environment";
 import { writeClipboardText } from "@/utils/clipboard";
 import { openExternalUrl } from "@/utils/external-url";
@@ -56,6 +60,7 @@ type ReportBugChannel = (typeof REPORT_BUG_CHANNELS)[number];
 
 export const GeneralSettings = () => {
   const {
+    updateMode,
     available,
     checking,
     downloading,
@@ -66,6 +71,8 @@ export const GeneralSettings = () => {
     checkForUpdates,
     downloadAndInstall,
   } = useUpdater(false);
+  const updateChannel = useSettingsStore((state) => state.settings.updateChannel);
+  const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
   const { showToast } = useToast();
 
   const [cliInstalled, setCliInstalled] = useState<boolean>(false);
@@ -198,7 +205,7 @@ export const GeneralSettings = () => {
                   ? "Downloading..."
                   : installing
                     ? "Installing..."
-                    : `Install ${updateInfo?.version ?? "update"}`}
+                    : `${updateMode === "notify" ? "Download" : "Install"} ${updateInfo?.version ?? "update"}`}
               </Button>
             ) : (
               <Button
@@ -228,6 +235,25 @@ export const GeneralSettings = () => {
             </Alert>
           </SettingBlock>
         ) : null}
+
+        <SettingRow
+          label="Update Channel"
+          description="Beta builds arrive earlier and may be less stable"
+          control="select"
+          onReset={() => updateSetting("updateChannel", getDefaultSetting("updateChannel"))}
+          canReset={updateChannel !== getDefaultSetting("updateChannel")}
+        >
+          <Select
+            value={updateChannel}
+            options={[
+              { value: "stable", label: "Stable" },
+              { value: "beta", label: "Beta" },
+            ]}
+            onChange={(value) => updateSetting("updateChannel", value as UpdateChannel)}
+            variant="surface"
+            width="full"
+          />
+        </SettingRow>
 
         <SettingRow label="Shell Command" description={cliStatus}>
           <div className="flex gap-2">

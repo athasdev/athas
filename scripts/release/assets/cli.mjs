@@ -155,6 +155,8 @@ function buildLatestJson({ tag, repo, notes, assets }) {
   const linuxArmRpm = assetById(assets, "linux-arm64-rpm");
   const winX64Nsis = assetById(assets, "windows-x64-nsis");
   const winArmNsis = assetById(assets, "windows-arm64-nsis");
+  const winX64Msi = assetById(assets, "windows-x64-msi");
+  const winArmMsi = assetById(assets, "windows-arm64-msi");
 
   return {
     version,
@@ -201,6 +203,8 @@ function buildLatestJson({ tag, repo, notes, assets }) {
         signature: readSignature(winArmNsis.signaturePath),
         url: releaseUrl(repo, tag, winArmNsis.name),
       },
+      "windows-x86_64-msi": updaterEntry(repo, tag, winX64Msi),
+      "windows-aarch64-msi": updaterEntry(repo, tag, winArmMsi),
     },
   };
 }
@@ -270,6 +274,8 @@ function validateLatestJson(latestJson, { tag, repo, assetNames }) {
     "windows-x86_64-nsis",
     "windows-aarch64",
     "windows-aarch64-nsis",
+    "windows-x86_64-msi",
+    "windows-aarch64-msi",
   ];
 
   for (const platform of requiredPlatforms) {

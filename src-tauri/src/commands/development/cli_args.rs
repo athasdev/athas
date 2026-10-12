@@ -95,22 +95,28 @@ impl From<OpenRequest> for CliRequest {
    }
 }
 
-/// Splits a path argument into the file path and optional line number.
-/// Handles `file:line` syntax while respecting Windows drive letters (e.g. `C:\foo`).
-pub fn split_path_and_line(arg: &str) -> (&str, Option<u32>) {
-   // Find the last colon
-   if let Some(pos) = arg.rfind(':') {
-      let after = &arg[pos + 1..];
-      // Only treat as line number if everything after the last colon is digits
-      if !after.is_empty()
-         && after.chars().all(|c| c.is_ascii_digit())
-         && let Ok(line) = after.parse::<u32>()
-         && line > 0
-      {
-         return (&arg[..pos], Some(line));
-      }
+/// Splits `:<positive number>` off the end of `arg`.
+fn split_number_suffix(arg: &str) -> Option<(&str, u32)> {
+   let (head, tail) = arg.rsplit_once(':')?;
+   if tail.is_empty() || !tail.chars().all(|c| c.is_ascii_digit()) {
+      return None;
    }
-   (arg, None)
+   let number = tail.parse::<u32>().ok().filter(|number| *number > 0)?;
+   Some((head, number))
+}
+
+/// Splits a path argument into the file path and optional line number.
+/// Handles `file:line` and `file:line:column` (the form editor launchers such as
+/// launch-editor pass; the column is dropped) while respecting Windows drive
+/// letters (e.g. `C:\foo`).
+pub fn split_path_and_line(arg: &str) -> (&str, Option<u32>) {
+   let Some((rest, last)) = split_number_suffix(arg) else {
+      return (arg, None);
+   };
+   match split_number_suffix(rest) {
+      Some((path, line)) => (path, Some(line)),
+      None => (rest, Some(last)),
+   }
 }
 
 /// Parses a CLI argument into an `OpenRequest`, resolving relative paths against `cwd`.
@@ -398,6 +404,19 @@ mod tests {
       let (path, line) = split_path_and_line("foo.txt:42");
       assert_eq!(path, "foo.txt");
       assert_eq!(line, Some(42));
+   }
+
+   #[test]
+   fn split_file_with_line_and_column() {
+      assert_eq!(
+         split_path_and_line("src/main.rs:42:7"),
+         ("src/main.rs", Some(42))
+      );
+      assert_eq!(
+         split_path_and_line("C:\\src\\main.rs:42:7"),
+         ("C:\\src\\main.rs", Some(42))
+      );
+      assert_eq!(split_path_and_line("foo.txt:0:7"), ("foo.txt:0", Some(7)));
    }
 
    #[test]

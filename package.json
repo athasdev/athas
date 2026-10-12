@@ -1,6 +1,6 @@
 {
   "name": "athas",
-  "version": "0.16.1",
+  "version": "0.16.3",
   "private": true,
   "type": "module",
   "scripts": {
@@ -32,7 +32,6 @@
     "build:linux:rpm": "tauri build --bundles rpm --no-sign",
     "build:linux:appimage": "tauri build --bundles appimage --no-sign",
     "build:linux:tarball": "tauri build --no-bundle && bash scripts/release/package-linux-tarball.sh $(uname -m) release-dist",
-    "build:linux:flatpak": "bun run build:linux:tarball && bash scripts/release/packaging/linux/flatpak.sh $(uname -m) release-dist",
     "build:dev": "tauri build --config src-tauri/tauri.dev.conf.json",
     "build:web": "vp build --config vite.web.config.ts",
     "smoke:macos": "bun scripts/smoke-app.ts --platform macos",
@@ -49,6 +48,7 @@
     "release:patch": "bun scripts/release.ts patch",
     "release:minor": "bun scripts/release.ts minor",
     "release:major": "bun scripts/release.ts major",
+    "release:beta": "bun scripts/release.ts beta",
     "extensions:clean": "bun extensions/tooling/clean-cdn-output.ts",
     "extensions:serve": "bun extensions/tooling/serve-cdn.ts",
     "extensions:stage": "bun extensions/tooling/stage-cdn-assets.ts",

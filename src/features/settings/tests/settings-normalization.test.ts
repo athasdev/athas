@@ -121,6 +121,17 @@ describe("settings normalization", () => {
     expect(normalizeSettingValue("fileTreeSortOrder", "name")).toBe("name");
   });
 
+  it("falls back to the stable update channel", () => {
+    const normalized = normalizeSettings({
+      ...getDefaultSettingsSnapshot(),
+      updateChannel: "nightly" as never,
+    });
+
+    expect(normalized.updateChannel).toBe("stable");
+    expect(normalizeSettingValue("updateChannel", "beta")).toBe("beta");
+    expect(normalizeSettingValue("updateChannel", undefined as never)).toBe("stable");
+  });
+
   it("falls back from unsupported editor and terminal cursor modes", () => {
     const normalized = normalizeSettings({
       ...getDefaultSettingsSnapshot(),

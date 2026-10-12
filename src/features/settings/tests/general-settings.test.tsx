@@ -97,7 +97,7 @@ beforeEach(() => {
   mocks.check.mockReset();
   mocks.openUrl.mockClear();
   mocks.writeText.mockClear();
-  vi.spyOn(commands, "selfUpdateSupported").mockResolvedValue(true);
+  vi.spyOn(commands, "appUpdateMode").mockResolvedValue("self");
   Element.prototype.getAnimations = () => [];
   Element.prototype.scrollIntoView = () => {};
   container = document.createElement("div");

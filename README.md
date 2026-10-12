@@ -46,25 +46,18 @@ Homebrew on macOS:
 brew install --cask athas
 ```
 
-WinGet on Windows:
+Nix on Linux:
 
-```powershell
-winget install --id=athasdev.Athas -e
-```
-
-Scoop on Windows:
-
-```powershell
-scoop bucket add athas https://github.com/athasdev/scoop-athas
-scoop install athas
+```bash
+nix run github:athasdev/athas
 ```
 
 ### Manual download
 
 Prebuilt packages for macOS, Windows, and Linux are available on the
 [GitHub Releases page](https://github.com/athasdev/athas/releases). Linux releases include native
-`.deb` and `.rpm` packages, an AppImage, a Flatpak bundle, and a portable `.tar.gz` bundle that
-uses the system WebKitGTK 4.1.
+`.deb` and `.rpm` packages, an AppImage, and a portable `.tar.gz` bundle that uses the system
+WebKitGTK 4.1.
 
 See the [installation guide](https://athas.dev/docs/installation) for detailed platform steps,
 install locations, and uninstall instructions.
