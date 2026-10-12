@@ -334,6 +334,9 @@ export const ExternalEditorTerminal = ({
       if (commandTimerRef.current) {
         clearTimeout(commandTimerRef.current);
         commandTimerRef.current = null;
+        // A settings or theme change sets the terminal up again before the editor command was
+        // sent; the new setup still has to send it.
+        hasExecutedCommandRef.current = false;
       }
 
       if (xtermRef.current) {

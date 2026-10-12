@@ -72,11 +72,12 @@ jobs:
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
 
-      - name: Cache APT packages
-        uses: awalsh128/cache-apt-pkgs-action@latest
-        with:
-          packages: libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
-          version: 1.0
+      # A plain install: the apt cache action fetched from a stale package index without
+      # `apt-get update`, got 404s and carried on, and the build then failed on missing glib.
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
       # The bindings staleness check formats generated TypeScript with vp fmt.
       - name: Setup Vite+

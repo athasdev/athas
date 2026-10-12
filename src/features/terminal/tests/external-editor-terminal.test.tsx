@@ -197,6 +197,33 @@ describe("external editor terminal", () => {
     });
   });
 
+  it("still runs the editor when a setting changes before the command is sent", async () => {
+    await renderExternalEditor();
+
+    settings.fontSize = 15;
+    try {
+      await act(async () =>
+        root.render(
+          <ExternalEditorBufferView
+            bufferId="buffer-1"
+            filePath="/workspace/notes.txt"
+            fileName="notes.txt"
+            terminalConnectionId={CONNECTION_ID}
+          />,
+        ),
+      );
+      await act(async () => vi.advanceTimersByTime(250));
+    } finally {
+      settings.fontSize = 14;
+    }
+
+    expect(mocks.terminalInput).toHaveBeenCalledTimes(1);
+    expect(mocks.terminalInput).toHaveBeenCalledWith(CONNECTION_ID, {
+      kind: "text",
+      data: 'vim "./notes.txt"\n',
+    });
+  });
+
   it("shows the link tooltip of the terminal it mounted when a URL is hovered", async () => {
     await renderExternalEditor();
 

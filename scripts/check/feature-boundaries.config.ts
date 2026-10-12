@@ -166,6 +166,7 @@ export const featureBoundaries: FeatureBoundaryConfig = {
       "components/pro-gate.tsx": "Gates Pro-only UI; extensions' generative UI renders through it.",
     },
     bootstrap: {
+      "components/app-error-boundary.tsx": APP_SHELL,
       "components/settings-ready-bootstrap.tsx": APP_SHELL,
     },
     "command-palette": {
