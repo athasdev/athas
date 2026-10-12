@@ -14,6 +14,7 @@ import { createGitStatusRefreshScheduler } from "@/features/git/services/git-sta
 import { useOnboardingStore } from "@/features/onboarding/stores/onboarding.store";
 import { CachedWorkspaceSplitViews } from "@/features/panes/components/split-view-root";
 import { usePaneKeyboard } from "@/features/panes/hooks/use-pane-keyboard";
+import { usePaneStore } from "@/features/panes/stores/pane.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useVimStore } from "@/features/vim/stores/vim.store";
 import { isWslPath } from "@/features/wsl/services/wsl-path";
@@ -87,6 +88,10 @@ export function MainLayout() {
 
   const isSidebarVisible = useUIState((state) => state.isSidebarVisible);
   const isBottomPaneVisible = useUIState((state) => state.isBottomPaneVisible);
+  const bottomBuffersVisible = useUIState(
+    (state) => state.isBottomPaneVisible && state.bottomPaneActiveTab === "buffers",
+  );
+  const { setBottomBuffersVisible } = usePaneStore.use.actions();
   const responsiveLayout = useResponsiveWorkbenchLayout();
   const renderedSidebarVisible = isSidebarVisible && !responsiveLayout.narrow;
   const uiFontSize = useSettingsStore((state) => state.settings.uiFontSize);
@@ -147,6 +152,10 @@ export function MainLayout() {
   const isEditorBottomPaneVisible = deferredSurfacesReady && isBottomPaneVisible;
   const roundMainContentLeftEdge = !renderedSidebarVisible;
   const roundMainContentRightEdge = !renderedRightSidebarVisible;
+
+  useEffect(() => {
+    setBottomBuffersVisible(bottomBuffersVisible);
+  }, [bottomBuffersVisible, setBottomBuffersVisible]);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {

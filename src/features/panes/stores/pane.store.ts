@@ -38,6 +38,11 @@ interface PaneState {
   activePaneId: string;
   mostRecentActivePaneIds: string[];
   fullscreenPaneId: string | null;
+  /**
+   * Whether the bottom panel is open on its buffers tab. While it is not, files never open in or
+   * get revealed in bottom panes, where nobody would see them.
+   */
+  bottomBuffersVisible: boolean;
   actions: PaneActions;
 }
 
@@ -111,6 +116,8 @@ interface PaneActions {
   togglePaneFullscreen: (paneId: string) => void;
   exitPaneFullscreen: () => void;
   restoreLayout: (layout: PaneLayoutSnapshot) => void;
+  /** Mirrors whether bottom panes are on screen; hiding them moves focus back to the editor. */
+  setBottomBuffersVisible: (visible: boolean) => void;
   reset: () => void;
 }
 
@@ -146,6 +153,7 @@ const initialState = {
   activePaneId: ROOT_PANE_ID,
   mostRecentActivePaneIds: [ROOT_PANE_ID],
   fullscreenPaneId: null,
+  bottomBuffersVisible: true,
 };
 
 function hasPane(root: PaneNode, paneId: string) {
@@ -281,8 +289,27 @@ function getFallbackPaneIdInTree(tree: PaneNode, history: string[], closingPaneI
 
 type LayoutState = Pick<
   PaneState,
-  "root" | "bottomRoot" | "activePaneId" | "mostRecentActivePaneIds" | "fullscreenPaneId"
+  | "root"
+  | "bottomRoot"
+  | "activePaneId"
+  | "mostRecentActivePaneIds"
+  | "fullscreenPaneId"
+  | "bottomBuffersVisible"
 >;
+
+/** Root panes are always on screen; bottom panes only while the bottom panel shows buffers. */
+function isPaneShownInState(state: LayoutState, paneId: string): boolean {
+  return state.bottomBuffersVisible || getTreeForPane(state, paneId) === "root";
+}
+
+/** The most recently focused root pane, for when the focused pane is a hidden bottom pane. */
+function getRootFallbackPane(state: LayoutState): PaneGroup | null {
+  for (const paneId of state.mostRecentActivePaneIds) {
+    const pane = findPaneGroup(state.root, paneId);
+    if (pane) return pane;
+  }
+  return getFirstPaneGroup(state.root);
+}
 
 function updateTreeOfPane(
   state: LayoutState,
@@ -331,10 +358,12 @@ function removeBufferEverywhereInState(state: PaneState, bufferId: string, prese
 /** The pane that already shows the buffer, preferring the focused one. */
 function findRevealPaneId(state: LayoutState, bufferId: string): string | null {
   const activePane = findPaneInState(state, state.activePaneId);
-  if (activePane?.bufferIds.includes(bufferId)) return activePane.id;
+  if (activePane?.bufferIds.includes(bufferId) && isPaneShownInState(state, activePane.id)) {
+    return activePane.id;
+  }
   return (
     findPaneGroupByBufferId(state.root, bufferId)?.id ??
-    findPaneGroupByBufferId(state.bottomRoot, bufferId)?.id ??
+    (state.bottomBuffersVisible ? findPaneGroupByBufferId(state.bottomRoot, bufferId)?.id : null) ??
     null
   );
 }
@@ -376,7 +405,11 @@ function splitPaneInState(
 
 /** The pane new buffers go to: the focused pane unless it is locked, else a new split beside it. */
 function resolveWritablePaneIdInState(state: PaneState, bufferId?: string): string | null {
-  const activePane = findPaneInState(state, state.activePaneId);
+  const focusedPane = findPaneInState(state, state.activePaneId);
+  const activePane =
+    focusedPane && isPaneShownInState(state, focusedPane.id)
+      ? focusedPane
+      : (getRootFallbackPane(state) ?? focusedPane);
   if (!activePane) return null;
   const writablePane = resolveWritablePaneForBuffer({
     activePane,
@@ -838,6 +871,15 @@ const createPaneStore = () =>
             state.activePaneId = activePane?.id ?? getFallbackActivePaneId(state);
             state.fullscreenPaneId = fullscreenPane?.id ?? null;
             setMostRecentActivePane(state, state.activePaneId);
+          });
+        },
+
+        setBottomBuffersVisible: (visible) => {
+          set((state) => {
+            state.bottomBuffersVisible = visible;
+            if (visible || isPaneShownInState(state, state.activePaneId)) return;
+            const rootPane = getRootFallbackPane(state);
+            if (rootPane) focusPaneInState(state, rootPane.id);
           });
         },
 
