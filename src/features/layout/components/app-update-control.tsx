@@ -94,7 +94,7 @@ export function AppUpdateControl({ compact = false }: { compact?: boolean }) {
         render={
           <Button
             type="button"
-            variant="ghost"
+            variant={updateBusy ? "ghost" : "accent"}
             size={compact ? "lg" : "sm"}
             disabled={updateBusy}
             iconOnly={compact}
