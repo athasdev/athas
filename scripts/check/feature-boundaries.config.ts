@@ -218,8 +218,6 @@ export const featureBoundaries: FeatureBoundaryConfig = {
       "components/diff/diff-file-content.tsx":
         "Single-file diff body reused by GitHub pull request files.",
       "components/git-branch-manager.tsx": ACTIVITY_CHROME,
-      "components/git-project-selector.tsx":
-        "Repository picker reused by the GitHub pull requests view.",
       "components/inline-git-blame-card.tsx": "Blame card the editor shows for inline blame.",
     },
     github: {
