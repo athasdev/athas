@@ -37,7 +37,6 @@ new_without_default = "allow"
 
 [profile.release]
 lto = "thin"
-codegen-units = 1
 
 [profile.dev]
 incremental = false
