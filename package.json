@@ -34,6 +34,7 @@
     "build:linux:tarball": "tauri build --no-bundle && bash scripts/release/package-linux-tarball.sh $(uname -m) release-dist",
     "build:linux:flatpak": "bun run build:linux:tarball && bash scripts/release/packaging/linux/flatpak.sh $(uname -m) release-dist",
     "build:dev": "tauri build --config src-tauri/tauri.dev.conf.json",
+    "build:web": "vp build --config vite.web.config.ts",
     "smoke:macos": "bun scripts/smoke-app.ts --platform macos",
     "smoke:linux": "bun scripts/smoke-app.ts --platform linux",
     "smoke:windows": "bun scripts/smoke-app.ts --platform windows",

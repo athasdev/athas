@@ -10,6 +10,8 @@ result-*
 
 # Build output
 dist/
+dist-web/
+.wrangler/
 
 # Test coverage reports
 coverage/

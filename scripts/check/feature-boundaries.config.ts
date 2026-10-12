@@ -365,7 +365,7 @@ export const featureBoundaries: FeatureBoundaryConfig = {
         "sharing",
         "views",
       ],
-      shell: ["bootstrap", "command-palette", "quick-open"],
+      shell: ["bootstrap", "command-palette", "quick-open", "web-workbench"],
     },
     tierOverrides: {
       "keymaps/commands/**": {

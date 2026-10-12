@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en" data-window-transparency="disabled">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>Athas</title>
+    <script type="module">
+      import { ensureStartupAppearanceApplied } from "/src/features/settings/lib/appearance-bootstrap.ts";
+
+      ensureStartupAppearanceApplied();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script
+      type="module"
+      src="/src/features/web-workbench/bootstrap/web-workbench-entry.ts"
+    ></script>
+  </body>
+</html>

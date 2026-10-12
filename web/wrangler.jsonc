@@ -1,0 +1,14 @@
+// The Athas web editor: the static output of `bun run build:web`, served by Cloudflare Workers
+// static assets. Deployed by .github/workflows/deploy-web-editor.yml. Security headers, including
+// the frame-ancestors policy, come from dist-web/_headers, which the build writes.
+{
+  "name": "athas-web-editor",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "../dist-web",
+    "not_found_handling": "single-page-application",
+  },
+  "routes": [{ "pattern": "editor.athas.dev", "custom_domain": true }],
+  "workers_dev": false,
+  "preview_urls": false,
+}
