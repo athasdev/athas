@@ -46,12 +46,6 @@ Homebrew on macOS:
 brew install --cask athas
 ```
 
-Nix on Linux:
-
-```bash
-nix run github:athasdev/athas
-```
-
 APT on Debian and Ubuntu:
 
 ```bash

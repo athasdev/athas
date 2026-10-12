@@ -529,7 +529,7 @@ jobs:
             --repo "${{ github.repository }}"
 
       # Publishing needs a personal token: events from GITHUB_TOKEN would not start the
-      # workflows that run on a published release (package managers, Nix, www sync).
+      # workflows that run on a published release (package managers, www sync).
       - name: Publish release
         if: ${{ vars.AUTO_PUBLISH_RELEASE == 'true' }}
         env:

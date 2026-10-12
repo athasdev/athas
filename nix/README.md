@@ -17,17 +17,9 @@ The shell matches the Linux/Tauri dependency set used by `scripts/setup/linux.sh
 - WebKitGTK 4.1, GTK 3, libsoup 3, libayatana-appindicator, librsvg
 - pkg-config, OpenSSL, patchelf, xdg-utils, file, Perl
 
-## Run the packaged editor
+## Installing Athas with Nix
 
-The default package wraps the latest stable, prebuilt Athas Linux release for
-`x86_64-linux` and `aarch64-linux`:
-
-```sh
-nix run github:athasdev/athas
-```
-
-This package does not build Athas from source. It downloads the release archive,
-patches its runtime library paths for Nix, and launches the packaged editor.
-
-A future source-built package will need the Bun dependencies vendored as a
-fixed-output derivation so the Tauri build can run without network access.
+Athas does not publish a Nix package, the same as Cursor; packaging for Nix is
+left to the community in nixpkgs. The portable `linux-<arch>.tar.gz` on each
+GitHub release links against the system WebKitGTK 4.1 and GTK 3, so it can be
+wrapped with `autoPatchelfHook` and `wrapGAppsHook3`.
