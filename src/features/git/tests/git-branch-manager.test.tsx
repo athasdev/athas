@@ -4,7 +4,6 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
-import { emitAppEvent } from "@/utils/app-events";
 import type { GitWorktree } from "../types/git.types";
 
 vi.hoisted(() => {
@@ -345,15 +344,6 @@ describe("git branch manager", () => {
     expect(body().getAllByText("added").length).toBeGreaterThan(0);
     await click(body().getByRole("button", { name: "Clear Added" }));
     expect(useRepositoryStore.getState().manualRepoPaths).toEqual([]);
-  });
-
-  it("opens on the requested tab from the command palette", async () => {
-    useRepositoryStore.setState({ availableRepoPaths: [] } as never);
-    await render({ paletteTarget: true });
-    await act(async () => emitAppEvent("git:open-branch-manager", { tab: "repositories" }));
-    await flush();
-    expect(body().getByPlaceholderText("Filter repositories...")).toBeTruthy();
-    expect(body().getByText("No repositories found")).toBeTruthy();
   });
 
   describe("branch menu", () => {

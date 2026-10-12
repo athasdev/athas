@@ -6,6 +6,7 @@ import type React from "react";
 import { memo, useEffect, useMemo, useState } from "react";
 import {
   isExternalMarkdownLink,
+  isOpenableExternalUrl,
   resolveWorkspaceFileLink,
 } from "@/features/ai/lib/workspace-file-links";
 import {
@@ -56,7 +57,7 @@ async function copyTextToClipboard(text: string) {
 
 async function openMarkdownLink(href: string, label: string) {
   if (isExternalMarkdownLink(href)) {
-    await openExternalUrl(href);
+    if (isOpenableExternalUrl(href)) await openExternalUrl(href);
     return;
   }
 
@@ -81,7 +82,7 @@ async function openMarkdownLink(href: string, label: string) {
     return;
   }
 
-  await openExternalUrl(href);
+  if (isOpenableExternalUrl(href)) await openExternalUrl(href);
 }
 
 function CodeBlock({ code, languageHint }: { code: string; languageHint: string }) {

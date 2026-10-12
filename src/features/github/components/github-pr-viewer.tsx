@@ -307,7 +307,7 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
   useEffect(() => {
     if (activeTab !== "files") return;
     if (diffFiles.length === 0) {
-      setSelectedFilePath(null);
+      if (!isLoadingContent) setSelectedFilePath(null);
       return;
     }
 
@@ -317,7 +317,7 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
       }
       return diffFiles[0]?.path ?? null;
     });
-  }, [activeTab, diffFiles]);
+  }, [activeTab, diffFiles, isLoadingContent]);
 
   const handleOpenInBrowser = useCallback(() => {
     if (repoPath) {

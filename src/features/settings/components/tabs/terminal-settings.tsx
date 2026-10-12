@@ -31,6 +31,7 @@ export const TerminalSettings = () => {
   const profiles = useTerminalProfilesStore.use.profiles();
   const profileActions = useTerminalProfilesStore.use.actions();
   const shells = useTerminalShellsStore.use.shells();
+  const hasLoadedShells = useTerminalShellsStore.use.hasLoaded();
 
   useEffect(() => {
     loadMonospaceFonts();
@@ -90,21 +91,23 @@ export const TerminalSettings = () => {
 
   useEffect(() => {
     if (
+      hasLoadedShells &&
       settings.terminalDefaultShellId &&
       !shells.some((shell) => shell.id === settings.terminalDefaultShellId)
     ) {
       void updateSetting("terminalDefaultShellId", "");
     }
-  }, [settings.terminalDefaultShellId, shells, updateSetting]);
+  }, [hasLoadedShells, settings.terminalDefaultShellId, shells, updateSetting]);
 
   useEffect(() => {
     if (
+      hasLoadedShells &&
       settings.terminalDefaultProfileId &&
       !allProfiles.some((profile) => profile.id === settings.terminalDefaultProfileId)
     ) {
       void updateSetting("terminalDefaultProfileId", "");
     }
-  }, [allProfiles, settings.terminalDefaultProfileId, updateSetting]);
+  }, [allProfiles, hasLoadedShells, settings.terminalDefaultProfileId, updateSetting]);
 
   return (
     <SettingsView>

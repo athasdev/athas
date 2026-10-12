@@ -24,6 +24,13 @@ const EXTERNAL_PROTOCOL_PATTERN = /^[a-z][a-z0-9+.-]*:/i;
 const LINE_HASH_PATTERN = /(?:#L|#line-?)(\d+)(?:[,-]L?(\d+))?$/i;
 const LINE_SUFFIX_PATTERN = /:(\d+)(?::(\d+))?$/;
 
+const OPENABLE_EXTERNAL_URL_PATTERN = /^(https?:\/\/|mailto:|tel:)/i;
+
+/** The schemes the system opener is allowed to open (see the opener scope in capabilities). */
+export function isOpenableExternalUrl(href: string): boolean {
+  return OPENABLE_EXTERNAL_URL_PATTERN.test(href.trim());
+}
+
 export function isExternalMarkdownLink(href: string): boolean {
   const trimmed = href.trim();
   return (

@@ -83,6 +83,7 @@ export function SkillsCommand({
   const [content, setContent] = useState("");
   const [marketplaceSkills, setMarketplaceSkills] = useState<MarketplaceSkill[]>([]);
   const [isLoadingMarketplace, setIsLoadingMarketplace] = useState(false);
+  const [hasLoadedMarketplace, setHasLoadedMarketplace] = useState(false);
 
   const skills = useSettingsStore((state) => state.settings.aiSkills);
   const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
@@ -326,15 +327,18 @@ export function SkillsCommand({
   ]);
 
   useEffect(() => {
-    if (!isOpen || view !== "browse" || marketplaceSkills.length > 0 || isLoadingMarketplace) {
+    if (!isOpen || view !== "browse" || hasLoadedMarketplace || isLoadingMarketplace) {
       return;
     }
 
     setIsLoadingMarketplace(true);
     void loadMarketplaceSkills()
       .then(setMarketplaceSkills)
-      .finally(() => setIsLoadingMarketplace(false));
-  }, [isLoadingMarketplace, isOpen, marketplaceSkills.length, view]);
+      .finally(() => {
+        setIsLoadingMarketplace(false);
+        setHasLoadedMarketplace(true);
+      });
+  }, [hasLoadedMarketplace, isLoadingMarketplace, isOpen, view]);
 
   useEffect(() => {
     const activeLength =

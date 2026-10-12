@@ -147,10 +147,10 @@ export const ThemeSelectorContent = ({
     [selectedIndex, filteredThemes, onThemeChange, onClose, initialTheme, applyPreviewTheme],
   );
 
-  // Update selected index when query changes
-  useEffect(() => {
+  const handleQueryChange = useCallback((value: string) => {
+    setQuery(value);
     setSelectedIndex(0);
-  }, [query]);
+  }, []);
 
   useEffect(() => {
     setSelectedIndex((prev) => clampSelectedIndex(prev, filteredThemes.length));
@@ -209,7 +209,7 @@ export const ThemeSelectorContent = ({
         <CommandInput
           ref={inputRef}
           value={query}
-          onChange={setQuery}
+          onChange={handleQueryChange}
           onKeyDown={handleKeyDown}
           placeholder="Search themes..."
           role="combobox"

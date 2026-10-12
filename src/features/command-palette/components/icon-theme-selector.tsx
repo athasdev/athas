@@ -145,10 +145,10 @@ export const IconThemeSelectorContent = ({
     [selectedIndex, filteredThemes, onThemeChange, onClose, initialTheme],
   );
 
-  // Update selected index when query changes
-  useEffect(() => {
+  const handleQueryChange = useCallback((value: string) => {
+    setQuery(value);
     setSelectedIndex(0);
-  }, [query]);
+  }, []);
 
   // Scroll selected item into view
   useEffect(() => {
@@ -181,7 +181,7 @@ export const IconThemeSelectorContent = ({
         <CommandInput
           ref={inputRef}
           value={query}
-          onChange={setQuery}
+          onChange={handleQueryChange}
           onKeyDown={handleKeyDown}
           placeholder="Search icons..."
           role="combobox"

@@ -61,6 +61,27 @@ async function key(key: string, options: KeyboardEventInit = {}) {
 }
 
 describe("Icon theme preview navigation", () => {
+  it("opens on the current theme rather than the first one", async () => {
+    await act(async () =>
+      root.render(
+        <IconThemeSelectorContent
+          key="third"
+          isActive
+          onBack={vi.fn()}
+          onClose={onClose}
+          onThemeChange={onThemeChange}
+          currentTheme="third"
+        />,
+      ),
+    );
+
+    expect(container.querySelector('[aria-selected="true"]')).toBe(
+      container.querySelector('[data-index="2"]'),
+    );
+    await key("Enter");
+    expect(onThemeChange).toHaveBeenCalledWith("third");
+  });
+
   it("does not change or commit a preview while composing a search", async () => {
     onThemeChange.mockClear();
     await key("ArrowDown", { isComposing: true });

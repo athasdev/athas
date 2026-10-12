@@ -55,7 +55,6 @@ import { useGitBlameStore } from "../stores/git-blame.store";
 import type { GitWorktree } from "../types/git.types";
 import { isOpenableGitWorktree } from "../services/git-worktree-open";
 import GitCommandSurface from "./git-command-surface";
-import { onAppEvent } from "@/utils/app-events";
 
 interface GitBranchManagerProps {
   currentBranch?: string;
@@ -63,7 +62,6 @@ interface GitBranchManagerProps {
   onBranchChange?: () => void;
   onWorktreeChange?: (repoPath: string) => void;
   onRepositoryChange?: (repoPath: string | null) => void;
-  paletteTarget?: boolean;
   triggerMode?: "repository" | "branch";
 }
 
@@ -149,7 +147,6 @@ const GitBranchManager = ({
   onBranchChange,
   onWorktreeChange,
   onRepositoryChange,
-  paletteTarget = false,
   triggerMode = "repository",
 }: GitBranchManagerProps) => {
   const [branches, setBranches] = useState<string[]>([]);
@@ -255,15 +252,6 @@ const GitBranchManager = ({
       if (triggerMode === "repository") void loadWorktrees();
     }
   }, [repoPath, isDropdownOpen, loadBranches, loadWorktrees, triggerMode]);
-
-  useEffect(() => {
-    if (!paletteTarget) return;
-    return onAppEvent("git:open-branch-manager", ({ tab }) => {
-      if (!repoPath) return;
-      setActiveTab(tab);
-      setIsDropdownOpen(true);
-    });
-  }, [paletteTarget, repoPath]);
 
   useEffect(() => {
     if (!isDropdownOpen) {

@@ -89,7 +89,6 @@ export interface AppEventMap {
   // Git and GitHub
   "git:changed": GitChange;
   "git:palette-action": GitSidebarAction;
-  "git:open-branch-manager": { tab: "branches" | "worktrees" | "repositories" };
   "github:palette-action": GitHubSidebarAction;
 
   // AI and sharing
