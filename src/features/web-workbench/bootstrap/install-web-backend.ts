@@ -20,8 +20,8 @@ function createMemoryStorage(): Storage {
  * several read the window label, the OS and persisted UI state at import time.
  */
 export function installWebBackend(backend: WebBackend) {
-  // The web editor is embedded in the athas.dev dashboard. Keep its persisted UI state in memory
-  // so every visit starts from the sample project and nothing touches the origin's storage.
+  // The app shares its origin with the athas.dev website. Keep its persisted UI state in memory
+  // so every visit starts from the sample project and nothing touches the website's storage.
   Object.defineProperty(window, "localStorage", { value: createMemoryStorage() });
   Object.defineProperty(window, "sessionStorage", { value: createMemoryStorage() });
 
@@ -49,18 +49,28 @@ export function installWebBackend(backend: WebBackend) {
   internals.__TAURI_INTERNALS__.convertFileSrc = (path: string) => path;
 }
 
+/** Whether the workbench's own `fetch` may load this URL: its assets, or data it already holds. */
+export function isWorkbenchFetchAllowed(url: URL, origin: string, basePath: string) {
+  if (url.protocol === "data:" || url.protocol === "blob:") return true;
+  return url.origin === origin && url.pathname.startsWith(basePath);
+}
+
 /**
- * Keeps the page's own `fetch` from reaching any other host. The workbench's assets load from
- * this origin; everything else it might try (update checks, telemetry) is answered locally.
+ * Keeps the workbench's `fetch` to its own assets under the app's base path. Everything else it
+ * might try (update checks, telemetry, the website's APIs) is answered locally, so the sample
+ * never reaches a server with the user's session. Returns the original `fetch` for the website
+ * API client, which is the only code that calls athas.dev.
  */
-export function blockExternalFetch() {
+export function blockExternalFetch(basePath: string = import.meta.env.BASE_URL) {
   const originalFetch = window.fetch.bind(window);
   window.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
     const url = new URL(
       typeof input === "string" ? input : input instanceof URL ? input.href : input.url,
       window.location.href,
     );
-    if (url.origin === window.location.origin) return originalFetch(input, init);
+    if (isWorkbenchFetchAllowed(url, window.location.origin, basePath))
+      return originalFetch(input, init);
     return Promise.resolve(new Response(null, { status: 204 }));
   }) as typeof fetch;
+  return originalFetch;
 }

@@ -15,7 +15,17 @@ import {
 } from "@/ui/icons";
 import { useWorkspaceTabsStore } from "@/features/workspace/stores/workspace-tabs.store";
 import type { ProjectPickerInitialStep } from "@/features/layout/stores/ui-state/types/ui-state.types";
-import { memo, type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  lazy,
+  memo,
+  type KeyboardEvent,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useRecentFoldersStore } from "@/features/file-system/stores/recent-folders.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { openRecentFolder } from "@/features/file-system/services/open-recent-folder";
@@ -59,7 +69,13 @@ import { Spinner } from "@/ui/spinner";
 import { toast } from "sonner";
 import { cn } from "@/utils/cn";
 import { connectionStore } from "@/features/remote/stores/remote-connection.store";
+import { GithubMark } from "@/ui/brand-marks";
 import NewProjectContent from "./new-project-content";
+
+// Only the web app (athas.dev/app) opens GitHub repositories in cloud workspaces.
+const GithubRepositoryContent = import.meta.env.VITE_ATHAS_WEB
+  ? lazy(() => import("@/features/web-workbench/components/github-repository-content"))
+  : null;
 
 interface ProjectPickerProps {
   isOpen: boolean;
@@ -85,9 +101,9 @@ const ProjectPicker = memo(({ isOpen, initialStep = "picker", onClose }: Project
   const [wslDistributions, setWslDistributions] = useState<WslDistribution[]>([]);
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [commandStep, setCommandStep] = useState<"picker" | "newProject" | "addRemote">(
-    initialStep,
-  );
+  const [commandStep, setCommandStep] = useState<
+    "picker" | "newProject" | "addRemote" | "githubRepository"
+  >(initialStep);
   const [remoteFormData, setRemoteFormData] = useState<RemoteConnectionFormData>(
     createRemoteConnectionFormData,
   );
@@ -433,11 +449,17 @@ const ProjectPicker = memo(({ isOpen, initialStep = "picker", onClose }: Project
             ? "Add Remote Connection"
             : commandStep === "newProject"
               ? "New Project"
-              : "Open Project"
+              : commandStep === "githubRepository"
+                ? "Open GitHub Repository"
+                : "Open Project"
         }
         autoFocus={commandStep === "picker"}
       >
-        {commandStep === "newProject" ? (
+        {commandStep === "githubRepository" && GithubRepositoryContent ? (
+          <Suspense fallback={null}>
+            <GithubRepositoryContent onBack={handleBackToPicker} onClose={onClose} />
+          </Suspense>
+        ) : commandStep === "newProject" ? (
           <NewProjectContent onBack={handleBackToPicker} onClose={onClose} />
         ) : commandStep === "picker" ? (
           <CommandHeader onClose={onClose}>
@@ -464,7 +486,8 @@ const ProjectPicker = memo(({ isOpen, initialStep = "picker", onClose }: Project
           </CommandHeader>
         )}
 
-        {commandStep === "newProject" ? null : commandStep === "picker" ? (
+        {commandStep === "newProject" || commandStep === "githubRepository" ? null : commandStep ===
+          "picker" ? (
           <CommandList>
             {filteredRecentFolders.length > 0 ? (
               <div className="space-y-0.5">
@@ -628,8 +651,15 @@ const ProjectPicker = memo(({ isOpen, initialStep = "picker", onClose }: Project
           </CommandList>
         )}
 
-        {commandStep === "newProject" ? null : commandStep === "picker" ? (
+        {commandStep === "newProject" || commandStep === "githubRepository" ? null : commandStep ===
+          "picker" ? (
           <CommandFooter>
+            {GithubRepositoryContent ? (
+              <CommandFooterAction onClick={() => setCommandStep("githubRepository")}>
+                <GithubMark />
+                GitHub Repository
+              </CommandFooterAction>
+            ) : null}
             <CommandFooterAction onClick={() => void handleOpenFolderClick()}>
               <FolderOpenIcon />
               Open Folder

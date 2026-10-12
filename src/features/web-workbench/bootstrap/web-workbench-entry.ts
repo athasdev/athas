@@ -1,3 +1,4 @@
+import { emit } from "@tauri-apps/api/event";
 import { enableMapSet } from "immer";
 import { version as appVersion } from "@/../package.json";
 import {
@@ -10,37 +11,32 @@ import {
   blockExternalFetch,
   installWebBackend,
 } from "@/features/web-workbench/bootstrap/install-web-backend";
-import { startRemoteWorkspace } from "@/features/web-workbench/bootstrap/remote-workspace";
+import {
+  createSwitchableBackend,
+  createWorkspaceSwitcher,
+} from "@/features/web-workbench/bootstrap/remote-workspace";
 import { MemoryFileSystem } from "@/features/web-workbench/services/memory-file-system";
 import { MemoryGitRepository } from "@/features/web-workbench/services/memory-git";
 import { setScriptedAgentFiles } from "@/features/web-workbench/services/scripted-network";
 import { createWebBackend } from "@/features/web-workbench/services/web-backend";
+import { createWebsiteApi } from "@/features/web-workbench/services/website-api";
 import type { PaneGroup, PaneNode } from "@/features/panes/types/pane.types";
 
-const params = new URL(window.location.href).searchParams;
-const themeType = params.get("theme") === "light" ? "light" : "dark";
+// Athas in the browser at athas.dev/app. It opens the in-memory sample project; signed-in Pro
+// users can open their GitHub repositories in cloud workspaces from the project picker.
+const themeType = window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
 
-// In workspace mode the athas.dev dashboard hands the editor a cloud workspace session by
-// postMessage; without one the editor opens the in-memory sample project.
-const remote =
-  params.get("mode") === "workspace" && window.parent !== window
-    ? await startRemoteWorkspace(appVersion)
-    : null;
-
-function createSampleBackend() {
-  const fs = new MemoryFileSystem(SAMPLE_ROOT, sampleFiles, [SAMPLE_HOME]);
-  const git = new MemoryGitRepository(fs, SAMPLE_ROOT, sampleRepository);
-  return createWebBackend({ home: SAMPLE_HOME, fs, git, appVersion });
-}
-
-const backend = remote?.backend ?? createSampleBackend();
-backend.seedStore("settings.json", {
+const fs = new MemoryFileSystem(SAMPLE_ROOT, sampleFiles, [SAMPLE_HOME]);
+const git = new MemoryGitRepository(fs, SAMPLE_ROOT, sampleRepository);
+const sample = createWebBackend({ home: SAMPLE_HOME, fs, git, appVersion });
+sample.seedStore("settings.json", {
   theme: `athas-${themeType}`,
   product_onboarding_state_v1: { lastSeenVersion: appVersion, completedVersion: appVersion },
 });
+const backend = createSwitchableBackend(sample);
 
 installWebBackend(backend);
-blockExternalFetch();
+const websiteFetch = blockExternalFetch();
 enableMapSet();
 
 await import("@/main");
@@ -56,19 +52,30 @@ async function waitFor(check: () => boolean, timeoutMs = 10_000) {
   return true;
 }
 
-function announceReady() {
-  document.documentElement.dataset.webWorkbenchReady = "true";
-  if (window.parent !== window) {
-    // Carries no data, so any embedding origin may hear it; CSP frame-ancestors decides who embeds.
-    window.parent.postMessage({ type: "athas-web-editor:ready" }, "*");
-  }
-}
-
 await waitFor(() => Boolean(document.querySelector("#root")?.childElementCount));
+await openSampleProject();
+// The workbench itself loads lazily behind the boot screen; its notices need it mounted.
+await waitFor(() => Boolean(document.querySelector("#root .window-container")));
+document.documentElement.dataset.webWorkbenchReady = "true";
 
-if (remote) await useFileSystemStore.getState().handleOpenFolderByPath(remote.workspace.root);
-else await openSampleProject();
-announceReady();
+const { useWorkspaceTabsStore } = await import("@/features/workspace/stores/workspace-tabs.store");
+const { startWebApp } = await import("@/features/web-workbench/bootstrap/web-app");
+const switcher = createWorkspaceSwitcher({
+  backend,
+  sample,
+  sampleRoot: SAMPLE_ROOT,
+  openFolder: (path) => useFileSystemStore.getState().handleOpenFolderByPath(path),
+  closeFolder: async (path) => {
+    const tab = useWorkspaceTabsStore.getState().projectTabs.find((item) => item.path === path);
+    if (tab) await useFileSystemStore.getState().closeProject(tab.id);
+  },
+  emit: (event, payload) => emit(event, payload),
+});
+await startWebApp({
+  api: createWebsiteApi(websiteFetch),
+  activate: switcher.activate,
+  deactivate: switcher.deactivate,
+});
 
 async function openSampleProject() {
   await useFileSystemStore.getState().handleOpenFolderByPath(SAMPLE_ROOT);

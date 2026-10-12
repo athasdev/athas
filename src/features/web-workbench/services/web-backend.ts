@@ -150,6 +150,8 @@ export function createWebBackend({ home, fs, git, appVersion }: WebBackendOption
     get_bundled_extensions_path: () => `${appData}/bundled`,
     self_update_supported: () => false,
     "plugin:updater|check": () => null,
+    // The project picker lists WSL distributions, which a browser never has.
+    wsl_list_distributions: () => [],
 
     // Paths
     "plugin:path|resolve_directory": (args) => {

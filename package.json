@@ -33,6 +33,7 @@
     "build:linux:appimage": "tauri build --bundles appimage --no-sign",
     "build:linux:tarball": "tauri build --no-bundle && bash scripts/release/package-linux-tarball.sh $(uname -m) release-dist",
     "build:dev": "tauri build --config src-tauri/tauri.dev.conf.json",
+    "dev:web": "vp dev --config vite.web.config.ts",
     "build:web": "vp build --config vite.web.config.ts",
     "smoke:macos": "bun scripts/smoke-app.ts --platform macos",
     "smoke:linux": "bun scripts/smoke-app.ts --platform linux",

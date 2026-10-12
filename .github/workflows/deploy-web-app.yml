@@ -1,12 +1,11 @@
-name: Deploy Web Editor
+name: Deploy Web App
 
-# Builds the browser workbench (bun run build:web) and deploys it to Cloudflare Workers static
-# assets as the athas-web-editor Worker on editor.athas.dev. The athas.dev dashboard embeds it.
+# Builds Athas for the browser (bun run build:web) and deploys it to Cloudflare Workers static
+# assets as the athas-web-app Worker on the routes athas.dev/app and athas.dev/app/*, where it
+# shares the website's origin and session.
 #
 # Needs the repository secrets CLOUDFLARE_API_TOKEN (Workers Scripts: Edit, plus Zone: Workers
-# Routes: Edit and DNS: Edit on athas.dev for the custom domain) and CLOUDFLARE_ACCOUNT_ID.
-# The optional repository variable WEB_EDITOR_FRAME_ANCESTORS replaces the origins allowed to
-# frame the editor (space separated, default https://athas.dev).
+# Routes: Edit on athas.dev) and CLOUDFLARE_ACCOUNT_ID.
 
 on:
   push:
@@ -21,14 +20,14 @@ on:
       - "scripts/vite/**"
       - "package.json"
       - "bun.lock"
-      - ".github/workflows/deploy-web-editor.yml"
+      - ".github/workflows/deploy-web-app.yml"
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: deploy-web-editor
+  group: deploy-web-app
   cancel-in-progress: false
 
 jobs:
@@ -53,12 +52,10 @@ jobs:
       - name: Install dependencies
         run: vp install --ignore-scripts
 
-      - name: Test the in-memory backend
+      - name: Test the web app
         run: vp test run src/features/web-workbench
 
-      - name: Build the web editor
-        env:
-          WEB_EDITOR_FRAME_ANCESTORS: ${{ vars.WEB_EDITOR_FRAME_ANCESTORS }}
+      - name: Build the web app
         run: bun run build:web
 
       - name: Deploy to Cloudflare

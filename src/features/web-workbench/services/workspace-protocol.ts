@@ -2,11 +2,11 @@ import type { GitDiffLine, GitDiff_Serialize } from "@/bindings/commands";
 
 /**
  * The client side of the cloud workspace protocol served by the athas-cloud Worker
- * (www/cloud/src/workspace-protocol.ts): what the dashboard hands the editor, the events the
- * workspace socket pushes, and the decoders for its binary frames and git patches.
+ * (www/cloud/src/workspace-protocol.ts): the session the website's token endpoint hands out, the
+ * events the workspace socket pushes, and the decoders for its binary frames and git patches.
  */
 
-/** What the athas.dev dashboard posts to the editor frame to open a cloud workspace. */
+/** What POST /api/cloud-workspaces/:id/token on athas.dev returns for a running workspace. */
 export interface WorkspaceSession {
   workspaceId: string;
   /** The Worker's https URL; the socket is `wss://…/workspaces/:id/socket`. */
@@ -39,11 +39,6 @@ export type WorkspaceEvent =
   | { type: "stopped"; reason: string; error?: string }
   /** The socket authenticated again after a reconnect. */
   | { type: "reconnected"; workspace: WorkspaceInfo };
-
-export const SESSION_MESSAGE = "athas-web-editor:workspace-session";
-export const SESSION_REQUEST_MESSAGE = "athas-web-editor:session-request";
-export const WORKSPACE_ENDED_MESSAGE = "athas-web-editor:workspace-ended";
-export const EDITOR_READY_MESSAGE = "athas-web-editor:ready";
 
 /** Close codes the Worker uses on the workspace socket. */
 export const SOCKET_UNAUTHORIZED = 4001;

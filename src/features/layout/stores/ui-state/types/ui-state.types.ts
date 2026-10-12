@@ -28,4 +28,4 @@ export type CommandPaletteViewId =
   | "local-history"
   | "outline";
 
-export type ProjectPickerInitialStep = "picker" | "addRemote";
+export type ProjectPickerInitialStep = "picker" | "addRemote" | "githubRepository";

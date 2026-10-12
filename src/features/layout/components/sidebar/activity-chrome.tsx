@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { openFolder } from "@/features/file-system/api/file-system-api";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
@@ -34,6 +34,11 @@ import Tooltip from "@/ui/tooltip";
 import { IS_MAC } from "@/utils/platform";
 import { selectIsTerminalPaneVisible } from "@/features/layout/stores/ui-state-selectors";
 import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
+
+// The web app (athas.dev/app) uses the website's session instead of the desktop sign-in.
+const WebAccountMenu = import.meta.env.VITE_ATHAS_WEB
+  ? lazy(() => import("@/features/web-workbench/components/web-account-menu"))
+  : null;
 
 export function ActivityChrome() {
   const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
@@ -183,7 +188,13 @@ export function ActivityChromeFooter() {
         <RunActionsButton />
         <NotificationsTrigger />
       </div>
-      <AccountMenu />
+      {WebAccountMenu ? (
+        <Suspense fallback={null}>
+          <WebAccountMenu />
+        </Suspense>
+      ) : (
+        <AccountMenu />
+      )}
     </div>
   );
 }

@@ -1,14 +1,26 @@
-// The Athas web editor: the static output of `bun run build:web`, served by Cloudflare Workers
-// static assets. Deployed by .github/workflows/deploy-web-editor.yml. Security headers, including
-// the frame-ancestors policy, come from dist-web/_headers, which the build writes.
+// Athas in the browser at https://athas.dev/app: the static output of `bun run build:web`, served
+// by Cloudflare Workers static assets on two routes of the athas.dev zone. Everything else on
+// athas.dev (the website, its /api and session cookie) stays with the origin server, so the app
+// shares the website's origin. Deployed by .github/workflows/deploy-web-app.yml.
+//
+// The app lives under dist-web/app and its files are served as they are. worker.ts only runs for
+// paths without a file: pages such as /app/anything get the app's page, missing files a 404.
+// Security headers and caching come from dist-web/_headers, which the build writes.
 {
-  "name": "athas-web-editor",
+  "name": "athas-web-app",
+  "main": "worker.ts",
   "compatibility_date": "2026-10-01",
   "assets": {
     "directory": "../dist-web",
-    "not_found_handling": "single-page-application",
+    "binding": "ASSETS",
+    "not_found_handling": "none",
+    "html_handling": "auto-trailing-slash",
   },
-  "routes": [{ "pattern": "editor.athas.dev", "custom_domain": true }],
+  // Two patterns, not `athas.dev/app*`, which would also take /apple-touch-icon.png.
+  "routes": [
+    { "pattern": "athas.dev/app", "zone_name": "athas.dev" },
+    { "pattern": "athas.dev/app/*", "zone_name": "athas.dev" },
+  ],
   "workers_dev": false,
   "preview_urls": false,
 }

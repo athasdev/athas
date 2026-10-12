@@ -45,7 +45,7 @@ export function GithubMark({ size = "1em", ...props }: BrandMarkProps) {
 }
 
 export const agentBrandImages: Readonly<Record<string, string>> = {
-  athas: "/logo.png",
+  athas: `${import.meta.env.BASE_URL}logo.png`,
   "claude-acp": claudeImage,
   anthropic: claudeImage,
   "gemini-cli": geminiImage,

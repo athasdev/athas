@@ -19,7 +19,7 @@ export interface WorkspaceTransport {
 export interface WorkspaceConnection extends WorkspaceTransport {
   /** Resolves with the workspace once the socket has authenticated. */
   ready: Promise<WorkspaceInfo>;
-  /** Hands the socket a fresh token; the dashboard sends one every few minutes. */
+  /** Hands the socket a fresh token; the app fetches one every few minutes. */
   renew(token: string): void;
   close(): void;
 }
@@ -37,7 +37,7 @@ export class WorkspaceCallError extends Error {
 export interface WorkspaceConnectionOptions {
   session: WorkspaceSession;
   /**
-   * A token that is still valid, asking the dashboard for a new one when needed or when
+   * A token that is still valid, asking the website for a new one when needed or when
    * `refresh` says the Worker refused the last one.
    */
   getToken: (refresh: boolean) => Promise<string>;
@@ -50,7 +50,7 @@ export interface WorkspaceConnectionOptions {
 const OPEN = 1;
 
 /**
- * The editor's connection to a cloud workspace: one WebSocket that authenticates with its first
+ * The web app's connection to a cloud workspace: one WebSocket that authenticates with its first
  * message (tokens never go into the URL), carries calls and their results, and pushes file
  * changes and terminal output. It reconnects after drops, fetching a new token when the old one
  * was refused, and reports `stopped` when the workspace ends.
@@ -165,7 +165,7 @@ export function connectWorkspace(options: WorkspaceConnectionOptions): Workspace
     try {
       token = await options.getToken(refreshToken);
     } catch {
-      finish("unauthorized", "The editor could not get access to the cloud workspace.");
+      finish("unauthorized", "Athas could not get access to the cloud workspace.");
       return;
     }
     if (closed) return;

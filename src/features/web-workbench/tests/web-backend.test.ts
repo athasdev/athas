@@ -37,6 +37,11 @@ describe("web workbench backend", () => {
     expect(await invoke("plugin:fs|read_dir", { path: `${SAMPLE_ROOT}/.athas/rules` })).toEqual([]);
   });
 
+  it("lists no WSL distributions, so the project picker opens", async () => {
+    const { invoke } = createSample();
+    expect(await invoke("wsl_list_distributions")).toEqual([]);
+  });
+
   it("reads, writes, renames and deletes files in memory", async () => {
     const { invoke } = createSample();
     const bytes = (await invoke("read_local_file", {
