@@ -3,6 +3,7 @@ import {
   forbiddenAssetPatterns,
   normalizedArtifactName,
   requiredAssets,
+  stableVersionFromTag,
   versionFromTag,
 } from "../assets/policy.mjs";
 
@@ -11,6 +12,26 @@ describe("release asset policy", () => {
     expect(versionFromTag("v1.2.3")).toBe("1.2.3");
     expect(() => versionFromTag("1.2.3")).toThrow("Invalid release tag");
     expect(() => versionFromTag("v1.2.3-preview.4")).toThrow("Invalid release tag");
+  });
+
+  it("accepts beta tags and keeps package managers on stable releases", () => {
+    expect(versionFromTag("v1.2.3-beta.4")).toBe("1.2.3-beta.4");
+    expect(() => versionFromTag("v1.2.3-beta.0")).toThrow("Invalid release tag");
+    expect(() => versionFromTag("v1.2.3-beta")).toThrow("Invalid release tag");
+    expect(stableVersionFromTag("v1.2.3")).toBe("1.2.3");
+    expect(() => stableVersionFromTag("v1.2.3-beta.4")).toThrow("Expected a stable release tag");
+  });
+
+  it("matches beta asset names exactly", () => {
+    const assets = requiredAssets("1.2.3-beta.4");
+    const matches = (name: string) => assets.some((asset) => asset.pattern.test(name));
+
+    expect(matches("Athas_1.2.3-beta.4_x64-setup.exe")).toBe(true);
+    expect(matches("Athas_1.2.3-beta.4_x64_en-US.msi")).toBe(true);
+    expect(matches("Athas-1.2.3-beta.4-1.x86_64.rpm")).toBe(true);
+    expect(matches("Athas-1.2.3~beta.4-1.x86_64.rpm")).toBe(true);
+    expect(matches("Athas_1.2.3-betaX4_x64-setup.exe")).toBe(false);
+    expect(matches("Athas_1.2.3_x64-setup.exe")).toBe(false);
   });
 
   it("normalizes architecture-specific macOS updater names", () => {

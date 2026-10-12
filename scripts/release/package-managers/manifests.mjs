@@ -1,4 +1,4 @@
-import { versionFromTag } from "../assets/policy.mjs";
+import { stableVersionFromTag } from "../assets/policy.mjs";
 
 export const WINGET_PACKAGE_ID = "athasdev.Athas";
 const WINGET_MANIFEST_VERSION = "1.10.0";
@@ -38,7 +38,7 @@ function wingetHeader(type) {
 }
 
 export function renderWingetManifests({ tag, repo, checksums, releaseDate }) {
-  const version = versionFromTag(tag);
+  const version = stableVersionFromTag(tag);
   const versionManifest = `${wingetHeader("version")}PackageIdentifier: ${WINGET_PACKAGE_ID}
 PackageVersion: ${version}
 DefaultLocale: en-US
@@ -104,7 +104,7 @@ ManifestVersion: ${WINGET_MANIFEST_VERSION}
 }
 
 export function renderScoopManifest({ tag, repo, checksums }) {
-  const version = versionFromTag(tag);
+  const version = stableVersionFromTag(tag);
   const architecture = {};
   const autoupdate = {};
   for (const installer of windowsInstallers) {

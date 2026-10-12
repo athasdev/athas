@@ -1248,6 +1248,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["import", "settings", "restore", "backup", "json"],
   },
   {
+    id: "general-update-channel",
+    tab: "general",
+    section: "Application",
+    label: "Update Channel",
+    description: "Beta builds arrive earlier and may be less stable",
+    keywords: ["update", "updates", "channel", "beta", "stable", "prerelease", "early access"],
+  },
+  {
     id: "general-import-editor-settings",
     tab: "general",
     section: "Application",

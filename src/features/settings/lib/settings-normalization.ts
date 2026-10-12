@@ -153,6 +153,7 @@ const TAB_CLOSE_BUTTON_VISIBILITY_MODES = new Set<Settings["tabCloseButtonVisibi
   "always",
 ]);
 const FILE_TREE_SORT_ORDERS = new Set<Settings["fileTreeSortOrder"]>(["folders-first", "name"]);
+const UPDATE_CHANNELS = new Set<Settings["updateChannel"]>(["stable", "beta"]);
 const EXTERNAL_EDITOR_MODES = new Set<Settings["externalEditor"]>([
   "none",
   "nvim",
@@ -284,6 +285,12 @@ function normalizeFileTreeSortOrder(value: unknown): Settings["fileTreeSortOrder
   return FILE_TREE_SORT_ORDERS.has(value as Settings["fileTreeSortOrder"])
     ? (value as Settings["fileTreeSortOrder"])
     : defaultSettings.fileTreeSortOrder;
+}
+
+function normalizeUpdateChannel(value: unknown): Settings["updateChannel"] {
+  return UPDATE_CHANNELS.has(value as Settings["updateChannel"])
+    ? (value as Settings["updateChannel"])
+    : defaultSettings.updateChannel;
 }
 
 function normalizeExternalEditor(
@@ -551,6 +558,9 @@ export function normalizeSettings(settings: Settings): Settings {
   normalizedSettings.fileTreeSortOrder = normalizeFileTreeSortOrder(
     (normalizedSettings as { fileTreeSortOrder?: unknown }).fileTreeSortOrder,
   );
+  normalizedSettings.updateChannel = normalizeUpdateChannel(
+    (normalizedSettings as { updateChannel?: unknown }).updateChannel,
+  );
   normalizedSettings.sidebarWidth = normalizeBoundedWidth(
     normalizedSettings.sidebarWidth,
     defaultSettings.sidebarWidth,
@@ -651,6 +661,10 @@ export function normalizeSettingValue<K extends keyof Settings>(
 
   if (key === "fileTreeSortOrder") {
     return normalizeFileTreeSortOrder(value) as Settings[K];
+  }
+
+  if (key === "updateChannel") {
+    return normalizeUpdateChannel(value) as Settings[K];
   }
 
   if (key === "sidebarWidth" || key === "rightSidebarWidth") {

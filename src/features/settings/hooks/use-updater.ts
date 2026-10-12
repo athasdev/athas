@@ -12,6 +12,7 @@ import {
   shouldSuppressUpdate,
   skipUpdateVersion,
 } from "../lib/update-preferences";
+import { useSettingsStore } from "../stores/settings.store";
 import { useWhatsNewStore } from "../stores/whats-new.store";
 
 let selfUpdateSupported: Promise<boolean> | null = null;
@@ -20,6 +21,14 @@ let selfUpdateSupported: Promise<boolean> | null = null;
 function isSelfUpdateSupported() {
   selfUpdateSupported ??= commands.selfUpdateSupported().catch(() => true);
   return selfUpdateSupported;
+}
+
+const UPDATE_CHANNEL_HEADER = "X-Athas-Update-Channel";
+
+// The endpoint stays the same; the server picks the manifest from this header.
+function checkForChannelUpdate() {
+  const channel = useSettingsStore.getState().settings.updateChannel;
+  return check({ headers: { [UPDATE_CHANNEL_HEADER]: channel } });
 }
 
 export interface UpdateInfo {
@@ -85,7 +94,7 @@ export const useUpdater = (checkOnMount = true) => {
 
       setState((prev) => ({ ...prev, checking: true, error: null }));
 
-      const update = await check();
+      const update = await checkForChannelUpdate();
       updateRef.current = update;
       const currentVersion = update?.currentVersion ?? "";
 
@@ -162,7 +171,7 @@ export const useUpdater = (checkOnMount = true) => {
     try {
       // Re-check if we don't have a cached update
       if (!updateRef.current?.available) {
-        const newUpdate = await check();
+        const newUpdate = await checkForChannelUpdate();
         if (!newUpdate?.available) {
           throw new Error("No update available");
         }

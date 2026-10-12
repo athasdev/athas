@@ -51,6 +51,15 @@ describe("package manager manifests", () => {
     expect(manifest.pre_install.join("\n")).toContain("managed-by-package-manager");
   });
 
+  it("refuses beta releases", () => {
+    expect(() => renderWingetManifests({ ...input, tag: "v1.2.4-beta.1" })).toThrow(
+      "Expected a stable release tag",
+    );
+    expect(() => renderScoopManifest({ ...input, tag: "v1.2.4-beta.1" })).toThrow(
+      "Expected a stable release tag",
+    );
+  });
+
   it("fails when an installer is missing from the checksums", () => {
     expect(() => renderScoopManifest({ ...input, tag: "v9.9.9" })).toThrow(
       "SHA256SUMS.txt has no entry for Athas_9.9.9_x64-setup.exe",

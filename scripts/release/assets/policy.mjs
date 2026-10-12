@@ -1,8 +1,17 @@
 export function versionFromTag(tag) {
-  if (!/^v\d+\.\d+\.\d+$/.test(tag)) {
+  if (!/^v\d+\.\d+\.\d+(?:-beta\.[1-9]\d*)?$/.test(tag)) {
     throw new Error(`Invalid release tag: ${tag}`);
   }
   return tag.slice(1);
+}
+
+// Package managers only track stable releases.
+export function stableVersionFromTag(tag) {
+  const version = versionFromTag(tag);
+  if (version.includes("-")) {
+    throw new Error(`Expected a stable release tag: ${tag}`);
+  }
+  return version;
 }
 
 function escapeRegExp(value) {
@@ -26,6 +35,8 @@ export function normalizedArtifactName(file, name) {
 
 export function requiredAssets(version) {
   const escapedVersion = escapeRegExp(version);
+  // RPM versions cannot contain "-", so a prerelease may be written with "~" instead.
+  const rpmVersion = escapedVersion.replace("-", "[-~]");
   const appPrefix = "Athas";
   return [
     {
@@ -100,13 +111,13 @@ export function requiredAssets(version) {
     },
     {
       id: "linux-x64-rpm",
-      pattern: new RegExp(`^${appPrefix}-${escapedVersion}-1\\.x86_64\\.rpm$`),
+      pattern: new RegExp(`^${appPrefix}-${rpmVersion}-1\\.x86_64\\.rpm$`),
       signature: true,
       checksum: true,
     },
     {
       id: "linux-arm64-rpm",
-      pattern: new RegExp(`^${appPrefix}-${escapedVersion}-1\\.aarch64\\.rpm$`),
+      pattern: new RegExp(`^${appPrefix}-${rpmVersion}-1\\.aarch64\\.rpm$`),
       signature: true,
       checksum: true,
     },

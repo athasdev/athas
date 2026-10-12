@@ -1,7 +1,13 @@
 #!/usr/bin/env bun
 import { $ } from "bun";
 import { waitForReleaseCi } from "./ci-gate";
-import { bumpVersion, formatVersion, getWindowsMsiVersion, parseVersion } from "./version";
+import {
+  bumpVersion,
+  formatVersion,
+  getWindowsMsiVersion,
+  parseVersion,
+  type StableReleaseBump,
+} from "./version";
 
 const colors = {
   reset: "\x1b[0m",
@@ -37,14 +43,22 @@ function info(message: string) {
   log(message, "cyan");
 }
 
-function getNextVersion(currentVersion: string, args: string[]): string {
-  const [bump = "patch"] = args;
+function isStableBump(value: string): value is StableReleaseBump {
+  return value === "patch" || value === "minor" || value === "major";
+}
 
-  if (bump !== "patch" && bump !== "minor" && bump !== "major") {
-    error("Invalid release bump. Use: patch, minor, or major");
+function getNextVersion(currentVersion: string, args: string[]): string {
+  const [bump = "patch", betaBase = "patch"] = args;
+
+  if (bump !== "beta" && !isStableBump(bump)) {
+    error("Invalid release bump. Use: patch, minor, major, or beta [patch|minor|major]");
   }
 
-  return formatVersion(bumpVersion(parseVersion(currentVersion), bump));
+  if (!isStableBump(betaBase)) {
+    error("Invalid beta base. Use: beta patch, beta minor, or beta major");
+  }
+
+  return formatVersion(bumpVersion(parseVersion(currentVersion), bump, betaBase));
 }
 
 async function getCommitsSinceLastTag(): Promise<string[]> {

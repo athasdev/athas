@@ -48,6 +48,7 @@
     "release:patch": "bun scripts/release.ts patch",
     "release:minor": "bun scripts/release.ts minor",
     "release:major": "bun scripts/release.ts major",
+    "release:beta": "bun scripts/release.ts beta",
     "extensions:clean": "bun extensions/tooling/clean-cdn-output.ts",
     "extensions:serve": "bun extensions/tooling/serve-cdn.ts",
     "extensions:stage": "bun extensions/tooling/stage-cdn-assets.ts",

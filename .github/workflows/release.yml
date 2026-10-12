@@ -39,7 +39,7 @@ jobs:
         run: |
           set -euo pipefail
           tag="${INPUT_TAG:-${GITHUB_REF_NAME}}"
-          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-beta\.[1-9][0-9]*)?$ ]]; then
             echo "Dispatch the release on its version tag."
             exit 1
           fi
@@ -91,7 +91,7 @@ jobs:
             tag="${GITHUB_REF_NAME}"
           fi
 
-          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-beta\.[1-9][0-9]*)?$ ]]; then
             echo "Invalid release tag: $tag"
             exit 1
           fi
@@ -473,6 +473,11 @@ jobs:
         run: |
           set -euo pipefail
 
+          prerelease_flag=()
+          if [[ "${TAG_NAME}" == *-* ]]; then
+            prerelease_flag=(--prerelease)
+          fi
+
           release_count="$(gh api "/repos/${{ github.repository }}/releases?per_page=100" \
             --jq "map(select(.tag_name == \"${TAG_NAME}\")) | length")"
 
@@ -492,14 +497,16 @@ jobs:
             gh release edit "${TAG_NAME}" \
               --repo "${{ github.repository }}" \
               --title "${RELEASE_NAME}" \
-              --notes-file release-metadata/release-body.md
+              --notes-file release-metadata/release-body.md \
+              "${prerelease_flag[@]}"
           else
             gh release create "${TAG_NAME}" \
               --repo "${{ github.repository }}" \
               --target "${GITHUB_SHA}" \
               --title "${RELEASE_NAME}" \
               --notes-file release-metadata/release-body.md \
-              --draft
+              --draft \
+              "${prerelease_flag[@]}"
           fi
 
       - name: Upload release assets

@@ -26,6 +26,7 @@ export const defaultSettings: Settings = {
   // General
   autoSave: false,
   quickOpenPreview: true,
+  updateChannel: "stable",
   // Editor
   fontFamily: DEFAULT_MONO_FONT_FAMILY,
   fontSize: DEFAULT_CODE_FONT_SIZE,

@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   update-nix:
-    # Preview archives use a different product name and are not the default package.
+    # Beta prereleases never replace the pinned stable package.
     if: >-
       github.repository == 'athasdev/athas' &&
       (github.event_name != 'release' || github.event.release.prerelease == false)

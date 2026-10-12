@@ -3,7 +3,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
-import { versionFromTag } from "./assets/policy.mjs";
+import { stableVersionFromTag } from "./assets/policy.mjs";
 import {
   parseChecksums,
   renderScoopManifest,
@@ -42,7 +42,7 @@ function writeAll(dir, files) {
   }
 }
 
-const version = versionFromTag(values.tag);
+const version = stableVersionFromTag(values.tag);
 writeAll(
   join(values.out, "winget", "manifests", "a", "athasdev", "Athas", version),
   renderWingetManifests(input),
