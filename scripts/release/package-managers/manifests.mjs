@@ -75,7 +75,7 @@ ManifestVersion: ${WINGET_MANIFEST_VERSION}
   const localeManifest = `${wingetHeader("defaultLocale")}PackageIdentifier: ${WINGET_PACKAGE_ID}
 PackageVersion: ${version}
 PackageLocale: en-US
-Publisher: Athas
+Publisher: athasdev
 PublisherUrl: https://athas.dev
 PublisherSupportUrl: https://github.com/${repo}/issues
 PackageName: Athas

@@ -41,6 +41,7 @@
   },
   "bundle": {
     "active": true,
+    "publisher": "athasdev",
     "targets": ["app", "dmg", "nsis"],
     "createUpdaterArtifacts": true,
     "icon": [

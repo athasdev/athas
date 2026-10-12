@@ -33,6 +33,7 @@ describe("package manager manifests", () => {
     );
     expect(installer).toContain(`InstallerSha256: ${x64.toUpperCase()}`);
     expect(installer).toContain("ReleaseDate: 2026-10-08");
+    expect(files["athasdev.Athas.locale.en-US.yaml"]).toContain("Publisher: athasdev\n");
     expect(files["athasdev.Athas.yaml"]).toMatch(/^# yaml-language-server: .+\nPackageIdentifier/);
   });
 
