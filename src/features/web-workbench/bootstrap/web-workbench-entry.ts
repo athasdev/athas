@@ -1,5 +1,6 @@
 import { emit } from "@tauri-apps/api/event";
 import { enableMapSet } from "immer";
+import { lazy } from "react";
 import { version as appVersion } from "@/../package.json";
 import {
   SAMPLE_HOME,
@@ -21,6 +22,7 @@ import { setScriptedAgentFiles } from "@/features/web-workbench/services/scripte
 import { createWebBackend } from "@/features/web-workbench/services/web-backend";
 import { createWebsiteApi } from "@/features/web-workbench/services/website-api";
 import type { PaneGroup, PaneNode } from "@/features/panes/types/pane.types";
+import { registerWebContributions } from "@/utils/web-contributions";
 
 // Athas in the browser at athas.dev/app. It opens the in-memory sample project; signed-in Pro
 // users can open their GitHub repositories in cloud workspaces from the project picker.
@@ -38,6 +40,12 @@ const backend = createSwitchableBackend(sample);
 installWebBackend(backend);
 const websiteFetch = blockExternalFetch();
 enableMapSet();
+registerWebContributions({
+  AccountMenu: lazy(() => import("@/features/web-workbench/components/web-account-menu")),
+  GithubRepositoryContent: lazy(
+    () => import("@/features/web-workbench/components/github-repository-content"),
+  ),
+});
 
 await import("@/main");
 

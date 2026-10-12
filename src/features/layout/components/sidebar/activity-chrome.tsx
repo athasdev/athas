@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useRef, useState } from "react";
+import { Suspense, useCallback, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { openFolder } from "@/features/file-system/api/file-system-api";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
@@ -32,13 +32,9 @@ import {
 import { SidebarIconButton } from "@/ui/sidebar";
 import Tooltip from "@/ui/tooltip";
 import { IS_MAC } from "@/utils/platform";
+import { getWebContributions } from "@/utils/web-contributions";
 import { selectIsTerminalPaneVisible } from "@/features/layout/stores/ui-state-selectors";
 import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
-
-// The web app (athas.dev/app) uses the website's session instead of the desktop sign-in.
-const WebAccountMenu = import.meta.env.VITE_ATHAS_WEB
-  ? lazy(() => import("@/features/web-workbench/components/web-account-menu"))
-  : null;
 
 export function ActivityChrome() {
   const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
@@ -179,6 +175,7 @@ function TerminalToggle() {
 }
 
 export function ActivityChromeFooter() {
+  const WebAccountMenu = getWebContributions().AccountMenu;
   const terminalEnabled = useSettingsStore((state) => state.settings.coreFeatures.terminal);
   return (
     <div className="flex w-full flex-col items-center gap-1">

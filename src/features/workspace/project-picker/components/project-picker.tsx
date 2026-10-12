@@ -16,7 +16,6 @@ import {
 import { useWorkspaceTabsStore } from "@/features/workspace/stores/workspace-tabs.store";
 import type { ProjectPickerInitialStep } from "@/features/layout/stores/ui-state/types/ui-state.types";
 import {
-  lazy,
   memo,
   type KeyboardEvent,
   Suspense,
@@ -68,14 +67,10 @@ import { Button } from "@/ui/button";
 import { Spinner } from "@/ui/spinner";
 import { toast } from "sonner";
 import { cn } from "@/utils/cn";
+import { getWebContributions } from "@/utils/web-contributions";
 import { connectionStore } from "@/features/remote/stores/remote-connection.store";
 import { GithubMark } from "@/ui/brand-marks";
 import NewProjectContent from "./new-project-content";
-
-// Only the web app (athas.dev/app) opens GitHub repositories in cloud workspaces.
-const GithubRepositoryContent = import.meta.env.VITE_ATHAS_WEB
-  ? lazy(() => import("@/features/web-workbench/components/github-repository-content"))
-  : null;
 
 interface ProjectPickerProps {
   isOpen: boolean;
@@ -95,6 +90,7 @@ const createRemoteConnectionFormData = (): RemoteConnectionFormData => ({
 });
 
 const ProjectPicker = memo(({ isOpen, initialStep = "picker", onClose }: ProjectPickerProps) => {
+  const GithubRepositoryContent = getWebContributions().GithubRepositoryContent;
   const inputRef = useRef<HTMLInputElement>(null);
   const remoteNameInputRef = useRef<HTMLInputElement>(null);
   const [connections, setConnections] = useState<RemoteConnection[]>([]);
