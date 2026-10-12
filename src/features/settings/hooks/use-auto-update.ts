@@ -9,6 +9,7 @@ const UPDATE_CHECK_INTERVAL = 4 * 60 * 60 * 1000; // 4 hours
 export const useAutoUpdate = () => {
   const [showUpdateIndicator, setShowUpdateIndicator] = useState(false);
   const {
+    updateMode,
     available,
     checking,
     downloading,
@@ -93,6 +94,7 @@ export const useAutoUpdate = () => {
 
   return {
     showUpdateIndicator,
+    updateMode,
     updateInfo,
     downloadProgress,
     downloading,

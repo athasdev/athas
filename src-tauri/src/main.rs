@@ -140,7 +140,7 @@ pub(crate) fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
       .commands(tauri_specta::collect_commands![
          // File system commands
          read_athas_log,
-         self_update_supported,
+         app_update_mode,
          read_local_file,
          write_local_file_checked,
          write_local_file,

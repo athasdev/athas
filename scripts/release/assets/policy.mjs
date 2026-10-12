@@ -86,18 +86,6 @@ export function requiredAssets(version) {
       checksum: true,
     },
     {
-      id: "linux-x64-flatpak",
-      pattern: new RegExp(`^${appPrefix}_${escapedVersion}_linux-x86_64\\.flatpak$`),
-      signature: true,
-      checksum: true,
-    },
-    {
-      id: "linux-arm64-flatpak",
-      pattern: new RegExp(`^${appPrefix}_${escapedVersion}_linux-aarch64\\.flatpak$`),
-      signature: true,
-      checksum: true,
-    },
-    {
       id: "linux-x64-deb",
       pattern: new RegExp(`^${appPrefix}_${escapedVersion}_amd64\\.deb$`),
       signature: true,

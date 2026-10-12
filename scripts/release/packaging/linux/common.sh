@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Shared helpers for the Linux tarball and Flatpak packaging scripts.
+# Shared helpers for the Linux tarball packaging script.
 
 normalize_linux_arch() {
   case "$1" in

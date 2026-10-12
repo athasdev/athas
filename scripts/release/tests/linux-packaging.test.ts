@@ -100,7 +100,7 @@ describe("Linux release packaging", () => {
     expect(fileSystemApi).toContain("useLinuxFolderPickerStore.getState().actions.open()");
   });
 
-  it("renders the shared desktop template for the tarball and Flatpak", () => {
+  it("renders the shared desktop template for the tarball", () => {
     const stable = renderDesktopEntry();
 
     expect(stable.desktopId).toBe("com.code.athas");
@@ -124,54 +124,13 @@ describe("Linux release packaging", () => {
     expect(nixPackage).toContain("cp -r bin lib share $out/");
   });
 
-  it("builds the Flatpak from the release tarball on the GNOME runtime", () => {
-    const manifest = readRepoFile("flatpak/com.code.athas.yml");
-    const metainfo = readRepoFile("flatpak/com.code.athas.metainfo.xml");
-    const script = readRepoFile("scripts/release/packaging/linux/flatpak.sh");
-
-    expect(manifest).toContain("id: com.code.athas");
-    expect(manifest).toContain("runtime: org.gnome.Platform");
-    expect(manifest).toMatch(/runtime-version: "\d+"/);
-    expect(manifest).toContain("command: athas");
-    for (const permission of [
-      "--filesystem=host",
-      "--filesystem=host-os:ro",
-      "--talk-name=org.freedesktop.Flatpak",
-      "--socket=wayland",
-      "--socket=fallback-x11",
-      "--device=dri",
-      "--share=network",
-    ]) {
-      expect(manifest).toContain(`- ${permission}\n`);
-    }
-    expect(manifest).toContain("path: athas.tar.gz");
-    expect(metainfo).toContain("<id>com.code.athas</id>");
-    expect(metainfo).toContain('<launchable type="desktop-id">com.code.athas.desktop</launchable>');
-    expect(metainfo).toContain('<release version="@VERSION@" date="@DATE@" />');
-    expect(script).toContain('cp "$tarball" "${work_dir}/athas.tar.gz"');
-    expect(script).toContain("flatpak build-bundle");
-    expect(script).toContain("--command=flatpak-builder org.flatpak.Builder");
-    expect(script).toContain("--env=FLATPAK_USER_DIR=");
-  });
-
-  it("installs Flathub's builder app wherever the Flatpak is built", () => {
-    for (const workflow of [".github/workflows/release.yml", ".github/workflows/linux-build.yml"]) {
-      const content = readRepoFile(workflow);
-      expect(content).toContain(
-        "flatpak install --user -y --noninteractive flathub org.flatpak.Builder",
-      );
-      expect(content).not.toMatch(/apt-get install[^\n]*(\\\n[^\n]*)*flatpak-builder/);
-    }
-  });
-
   it("builds every Linux package with the stock Tauri bundler in the release workflow", () => {
     const workflow = readRepoFile(".github/workflows/release.yml");
 
     expect(workflow).toContain('args: "--bundles deb,rpm,appimage"');
     expect(workflow).toContain("libwebkit2gtk-4.1-dev");
     expect(workflow).toContain("bash scripts/release/package-linux-tarball.sh");
-    expect(workflow).toContain("bash scripts/release/packaging/linux/flatpak.sh");
-    expect(workflow).toContain("release-dist/*.flatpak");
+    expect(workflow).not.toMatch(/flatpak/i);
     expect(workflow).not.toMatch(/cef|--features linux|cargo tauri/i);
   });
 

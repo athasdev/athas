@@ -32,7 +32,6 @@
     "build:linux:rpm": "tauri build --bundles rpm --no-sign",
     "build:linux:appimage": "tauri build --bundles appimage --no-sign",
     "build:linux:tarball": "tauri build --no-bundle && bash scripts/release/package-linux-tarball.sh $(uname -m) release-dist",
-    "build:linux:flatpak": "bun run build:linux:tarball && bash scripts/release/packaging/linux/flatpak.sh $(uname -m) release-dist",
     "build:dev": "tauri build --config src-tauri/tauri.dev.conf.json",
     "smoke:macos": "bun scripts/smoke-app.ts --platform macos",
     "smoke:linux": "bun scripts/smoke-app.ts --platform linux",

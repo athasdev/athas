@@ -60,6 +60,7 @@ type ReportBugChannel = (typeof REPORT_BUG_CHANNELS)[number];
 
 export const GeneralSettings = () => {
   const {
+    updateMode,
     available,
     checking,
     downloading,
@@ -204,7 +205,7 @@ export const GeneralSettings = () => {
                   ? "Downloading..."
                   : installing
                     ? "Installing..."
-                    : `Install ${updateInfo?.version ?? "update"}`}
+                    : `${updateMode === "notify" ? "Download" : "Install"} ${updateInfo?.version ?? "update"}`}
               </Button>
             ) : (
               <Button

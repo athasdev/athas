@@ -11,7 +11,7 @@ const io = vi.hoisted(() => ({
 vi.mock("@tauri-apps/plugin-updater", () => ({ check: io.check }));
 vi.mock("@tauri-apps/plugin-process", () => ({ relaunch: vi.fn() }));
 vi.mock("@/bindings/commands", () => ({
-  commands: { selfUpdateSupported: vi.fn().mockResolvedValue(true) },
+  commands: { appUpdateMode: vi.fn().mockResolvedValue("self") },
 }));
 vi.mock("@/features/editor/stores/buffer.store", () => ({
   useBufferStore: { getState: () => ({ buffers: [] }) },

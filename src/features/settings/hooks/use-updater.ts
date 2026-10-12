@@ -1,10 +1,11 @@
 import { relaunch } from "@tauri-apps/plugin-process";
 import { check, type Update } from "@tauri-apps/plugin-updater";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { commands } from "@/bindings/commands";
+import { type AppUpdateMode, commands } from "@/bindings/commands";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { prepareProjectTransitionWithUnsavedBuffers } from "@/features/file-system/services/workspace-project-transition";
 import { recordUpdateCheckTelemetry } from "@/features/telemetry/services/telemetry";
+import { openExternalUrl } from "@/utils/external-url";
 import {
   clearUpdatePreferencesForNewVersion,
   notifyUpdateDismissed,
@@ -15,12 +16,13 @@ import {
 import { useSettingsStore } from "../stores/settings.store";
 import { useWhatsNewStore } from "../stores/whats-new.store";
 
-let selfUpdateSupported: Promise<boolean> | null = null;
+const DOWNLOAD_PAGE_URL = "https://athas.dev/download";
 
-// Flatpak and tarball installs on Linux are updated outside Athas.
-function isSelfUpdateSupported() {
-  selfUpdateSupported ??= commands.selfUpdateSupported().catch(() => true);
-  return selfUpdateSupported;
+let appUpdateMode: Promise<AppUpdateMode> | null = null;
+
+function getAppUpdateMode() {
+  appUpdateMode ??= commands.appUpdateMode().catch((): AppUpdateMode => "self");
+  return appUpdateMode;
 }
 
 const UPDATE_CHANNEL_HEADER = "X-Athas-Update-Channel";
@@ -45,6 +47,7 @@ interface DownloadProgress {
 }
 
 interface UpdateState {
+  updateMode: AppUpdateMode;
   available: boolean;
   checking: boolean;
   downloading: boolean;
@@ -74,6 +77,7 @@ function toUpdateInfo(update: Update): UpdateInfo {
 
 export const useUpdater = (checkOnMount = true) => {
   const [state, setState] = useState<UpdateState>({
+    updateMode: "self",
     available: false,
     checking: false,
     downloading: false,
@@ -88,11 +92,12 @@ export const useUpdater = (checkOnMount = true) => {
 
   const checkForUpdates = useCallback(async (options: CheckForUpdatesOptions = {}) => {
     try {
-      if (!(await isSelfUpdateSupported())) {
+      const updateMode = await getAppUpdateMode();
+      if (updateMode === "external") {
         return false;
       }
 
-      setState((prev) => ({ ...prev, checking: true, error: null }));
+      setState((prev) => ({ ...prev, updateMode, checking: true, error: null }));
 
       const update = await checkForChannelUpdate();
       updateRef.current = update;
@@ -169,6 +174,11 @@ export const useUpdater = (checkOnMount = true) => {
 
   const downloadAndInstall = useCallback(async () => {
     try {
+      if ((await getAppUpdateMode()) === "notify") {
+        await openExternalUrl(DOWNLOAD_PAGE_URL);
+        return;
+      }
+
       // Re-check if we don't have a cached update
       if (!updateRef.current?.available) {
         const newUpdate = await checkForChannelUpdate();

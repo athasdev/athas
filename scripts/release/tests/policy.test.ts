@@ -49,13 +49,13 @@ describe("release asset policy", () => {
   it("requires the supported release matrix and rejects unsupported packages", () => {
     const assets = requiredAssets("1.2.3");
 
-    expect(assets).toHaveLength(18);
+    expect(assets).toHaveLength(16);
     expect(assets.some((asset) => asset.pattern.test("Athas_1.2.3_amd64.deb"))).toBe(true);
     expect(assets.some((asset) => asset.pattern.test("Athas-1.2.3-1.x86_64.rpm"))).toBe(true);
     expect(assets.some((asset) => asset.pattern.test("Athas_1.2.3_x64_en-US.msi"))).toBe(true);
     expect(assets.some((asset) => asset.pattern.test("Athas_1.2.3_amd64.AppImage"))).toBe(true);
     expect(assets.some((asset) => asset.pattern.test("Athas_1.2.3_linux-aarch64.flatpak"))).toBe(
-      true,
+      false,
     );
     expect(assets.some((asset) => asset.pattern.test("Athas_1.2.3_linux-x86_64.tar.gz"))).toBe(
       true,
