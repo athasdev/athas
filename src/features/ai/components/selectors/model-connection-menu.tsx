@@ -42,7 +42,7 @@ export function useModelSearchResults() {
 
 export const ModelResultsProvider = ModelResultsContext;
 
-interface ModelOption {
+export interface ModelOption {
   id: string;
   name: string;
   keywords?: string[];
@@ -57,17 +57,21 @@ interface ModelOption {
 interface ModelSectionProps {
   /** Unique within one menu; keys the section's search result count. */
   id: string;
-  label: string;
+  /** Omitted when the section is the menu's only list, such as a model submenu. */
+  label?: string;
   models: ModelOption[];
   selected: string;
   onSelect: (id: string) => void;
   /** Icon fallback for rows whose id names no known vendor. */
   providerId: string;
-  search: MenuSearch;
+  /** Omitted when the menu has no search box. */
+  search?: MenuSearch;
   loading?: boolean;
   error?: string | null;
   retry?: () => void;
   disabled?: boolean;
+  /** False keeps the menu open after a pick, for a parent that moves focus elsewhere itself. */
+  closeOnClick?: boolean;
 }
 
 function joinTooltip(parts: (string | null | undefined)[]) {
@@ -90,16 +94,15 @@ export function ModelSection({
   error,
   retry,
   disabled,
+  closeOnClick = true,
 }: ModelSectionProps) {
-  const filtered = search.filter(models, (model) => [
-    model.name,
-    model.id,
-    label,
-    ...(model.keywords ?? []),
-  ]);
+  const isSearching = search?.isSearching ?? false;
+  const filtered =
+    search?.filter(models, (model) => [model.name, model.id, label, ...(model.keywords ?? [])]) ??
+    models;
   const showStatus =
     Boolean(loading || error) &&
-    (!search.isSearching || search.filter([label], (name) => [name]).length > 0);
+    (!isSearching || Boolean(label && search?.filter([label], (name) => [name]).length));
   const count = filtered.length + (showStatus ? 1 : 0);
   const reportResults = useContext(ModelResultsContext);
   useEffect(() => {
@@ -111,10 +114,10 @@ export function ModelSection({
 
   return (
     <DropdownMenuGroup>
-      <DropdownMenuLabel>{label}</DropdownMenuLabel>
+      {label ? <DropdownMenuLabel>{label}</DropdownMenuLabel> : null}
       {showStatus && loading ? (
         <DropdownMenuItem disabled>
-          <Spinner label={`Loading ${label} models`} compact />
+          <Spinner label={label ? `Loading ${label} models` : "Loading models"} compact />
           Loading…
         </DropdownMenuItem>
       ) : null}
@@ -136,7 +139,7 @@ export function ModelSection({
           <DropdownMenuRadioItem
             key={model.id}
             value={model.id}
-            closeOnClick
+            closeOnClick={closeOnClick}
             disabled={disabled || model.disabled}
             title={model.tooltip ?? model.name}
           >
@@ -181,9 +184,49 @@ function toAthasOption(model: {
 }
 
 /**
+ * The Athas catalog as menu rows, plus a short "Recommended" pick that only shows while the
+ * catalog is reachable, which is what having Athas access looks like here.
+ */
+export function useAthasModels(selected: string) {
+  const { availableModels, isLoadingModels, modelFetchError, retry } = useAIModelOptions(
+    "athas",
+    selected || "auto",
+  );
+  const catalog = useAIChatStore((state) => state.dynamicModels.athas);
+  const models = (catalog ?? availableModels).map(toAthasOption);
+  return {
+    models,
+    recommended: modelFetchError ? [] : pickRecommendedModels(models),
+    loading: isLoadingModels,
+    error: modelFetchError,
+    retry,
+  };
+}
+
+/** One connected provider's models as menu rows. */
+export function useProviderModels(providerId: string, selected: string) {
+  const { availableModels, isLoadingModels, modelFetchError, retry } = useAIModelOptions(
+    providerId,
+    selected,
+  );
+  return {
+    models: availableModels.map((model): ModelOption => ({
+      id: model.id,
+      name: model.name,
+      tooltip: joinTooltip([
+        model.name,
+        model.contextWindow ? `${formatTokenCount(model.contextWindow)} context` : undefined,
+      ]),
+    })),
+    loading: isLoadingModels,
+    error: modelFetchError,
+    retry,
+  };
+}
+
+/**
  * The Athas catalog as two sections: a short "Recommended" pick (hidden while searching, since
- * every pick also sits in the full list) and "Athas" with every hosted model. Recommended only
- * shows while the catalog is reachable, which is what having Athas access looks like here.
+ * every pick also sits in the full list) and "Athas" with every hosted model.
  */
 export function AthasModelSections({
   selected,
@@ -194,13 +237,7 @@ export function AthasModelSections({
   search: MenuSearch;
   onSelect: (model: string) => void;
 }) {
-  const { availableModels, isLoadingModels, modelFetchError, retry } = useAIModelOptions(
-    "athas",
-    selected || "auto",
-  );
-  const catalog = useAIChatStore((state) => state.dynamicModels.athas);
-  const models = (catalog ?? availableModels).map(toAthasOption);
-  const recommended = modelFetchError ? [] : pickRecommendedModels(models);
+  const { models, recommended, loading, error, retry } = useAthasModels(selected);
 
   return (
     <>
@@ -223,8 +260,8 @@ export function AthasModelSections({
         onSelect={onSelect}
         providerId="athas"
         search={search}
-        loading={isLoadingModels}
-        error={modelFetchError}
+        loading={loading}
+        error={error}
         retry={retry}
       />
     </>
@@ -244,28 +281,18 @@ export function ProviderModels({
   search: MenuSearch;
   onSelect: (model: string) => void;
 }) {
-  const { availableModels, isLoadingModels, modelFetchError, retry } = useAIModelOptions(
-    providerId,
-    selected,
-  );
+  const { models, loading, error, retry } = useProviderModels(providerId, selected);
   return (
     <ModelSection
       id={providerId}
       label={providerName}
-      models={availableModels.map((model) => ({
-        id: model.id,
-        name: model.name,
-        tooltip: joinTooltip([
-          model.name,
-          model.contextWindow ? `${formatTokenCount(model.contextWindow)} context` : undefined,
-        ]),
-      }))}
+      models={models}
       selected={selected}
       onSelect={onSelect}
       providerId={providerId}
       search={search}
-      loading={isLoadingModels}
-      error={modelFetchError}
+      loading={loading}
+      error={error}
       retry={retry}
     />
   );

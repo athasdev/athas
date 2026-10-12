@@ -58,12 +58,6 @@ function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error);
 }
 
-function CurrentValue({ children }: { children: string }) {
-  return (
-    <span className="max-w-28 shrink-0 truncate text-right text-subtle-foreground">{children}</span>
-  );
-}
-
 function PreferenceLabel({ children }: { children: string }) {
   return <span className="min-w-0 flex-1 truncate">{children}</span>;
 }
@@ -79,9 +73,8 @@ function SkillsSubmenu({ onSelectSkill }: { onSelectSkill: (skill: AIChatSkill) 
 
   return (
     <DropdownMenuSub onOpenChange={(open) => !open && search.reset()}>
-      <DropdownMenuSubTrigger>
+      <DropdownMenuSubTrigger value={skills.length > 0 ? skills.length : undefined}>
         <PreferenceLabel>Skills</PreferenceLabel>
-        {skills.length > 0 ? <CurrentValue>{String(skills.length)}</CurrentValue> : null}
       </DropdownMenuSubTrigger>
       <DropdownMenuSubContent size="wide" viewport="searchable">
         <DropdownMenuSearch
@@ -259,9 +252,8 @@ function AcpConfigPreferences({
 
     return (
       <DropdownMenuSub key={option.id}>
-        <DropdownMenuSubTrigger>
+        <DropdownMenuSubTrigger value={currentName}>
           <PreferenceLabel>{option.name}</PreferenceLabel>
-          <CurrentValue>{currentName}</CurrentValue>
         </DropdownMenuSubTrigger>
         <DropdownMenuSubContent size="default">
           <DropdownMenuRadioGroup

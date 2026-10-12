@@ -20,6 +20,16 @@ vi.mock("@/features/ai/hooks/use-available-providers", () => ({
     { id: "openai", name: "OpenAI", models: [{ id: "gpt-test", name: "GPT Test" }] },
   ],
 }));
+vi.mock("@/features/ai/hooks/use-ai-model-options", () => ({
+  useAIModelOptions: () => ({
+    availableModels: [{ id: "gpt-test", name: "GPT Test" }],
+    isLoadingModels: false,
+    modelFetchError: null,
+  }),
+}));
+vi.mock("@/features/ai/integrations/codex/use-codex-models", () => ({
+  useCodexModels: () => ({ models: [], loading: false, error: null }),
+}));
 vi.mock("@/features/ai/integrations/codex/use-codex-settings", () => ({
   useCodexSettings: () => ({ settings: { model: "codex-mini" } }),
 }));
@@ -38,6 +48,13 @@ vi.mock("@/ui/dropdown", async (importOriginal) => {
     DropdownMenuViewport: group,
     DropdownMenuEmpty: group,
     DropdownMenuSeparator: () => <hr />,
+    DropdownMenuSub: group,
+    DropdownMenuSubContent: group,
+    DropdownMenuSubTrigger: ({ children, value }: { children?: ReactNode; value?: ReactNode }) => (
+      <div data-slot="dropdown-menu-sub-trigger">
+        {children}:{value}
+      </div>
+    ),
     DropdownMenuSearch: ({ placeholder }: { placeholder?: string }) => (
       <input placeholder={placeholder} />
     ),
@@ -77,11 +94,13 @@ const render = (
   );
 
 describe("Composer agent selector", () => {
-  it("labels the trigger with the chosen API model", () => {
+  it("labels the trigger and the Provider and Model rows with the chosen API model", () => {
     const markup = render("custom");
 
     expect(markup).toContain("GPT Test");
-    expect(markup).toContain("Select a model…");
+    expect(markup).toContain("Provider:OpenAI");
+    expect(markup).toContain("Model:GPT Test");
+    expect(markup).not.toContain("Effort:");
   });
 
   it("labels a CLI agent session with its own model", () => {
@@ -93,9 +112,9 @@ describe("Composer agent selector", () => {
     expect(render("gemini")).not.toContain("Follow agent in editor");
   });
 
-  it("shows a reasoning effort chip beside the model only when the agent has a scale", () => {
-    expect(render("gemini", undefined, [effortOption])).toContain(">Low<");
-    expect(render("gemini")).not.toContain(">Low<");
-    expect(render("custom", undefined, [effortOption])).not.toContain(">Low<");
+  it("shows the Effort row only when the agent has a scale", () => {
+    expect(render("gemini", undefined, [effortOption])).toContain("Effort:");
+    expect(render("gemini")).not.toContain("Effort:");
+    expect(render("custom", undefined, [effortOption])).not.toContain("Effort:");
   });
 });
