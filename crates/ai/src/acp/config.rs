@@ -8,7 +8,6 @@ use std::{
    process::Command,
    time::{Duration, Instant, SystemTime},
 };
-use tauri::{AppHandle, Manager};
 
 /// Cache duration for binary detection (60 seconds)
 const DETECTION_CACHE_SECONDS: u64 = 60;
@@ -37,11 +36,12 @@ pub struct AgentRegistry {
 }
 
 impl AgentRegistry {
-   pub fn new(app_handle: &AppHandle) -> Self {
+   /// A registry that finds managed agent installs under `data_dir`, the app's data directory.
+   pub fn new(data_dir: Option<&Path>) -> Self {
       Self {
          agents: HashMap::new(),
          last_detection: None,
-         managed_bin_dir: managed_acp_bin_dir(app_handle),
+         managed_bin_dir: data_dir.map(managed_acp_bin_dir),
          versions: HashMap::new(),
       }
    }
@@ -217,7 +217,7 @@ fn detect_binary_version(path: &Path) -> Option<String> {
 
 impl Default for AgentRegistry {
    fn default() -> Self {
-      panic!("AgentRegistry::default requires an AppHandle")
+      panic!("AgentRegistry::default requires the app's data directory")
    }
 }
 
@@ -227,9 +227,8 @@ pub fn managed_wrapper_path(managed_bin_dir: Option<&Path>, agent_id: &str) -> O
    path.is_file().then_some(path)
 }
 
-fn managed_acp_bin_dir(app_handle: &AppHandle) -> Option<PathBuf> {
-   let data_dir = app_handle.path().app_data_dir().ok()?;
-   Some(data_dir.join("tools").join("acp"))
+fn managed_acp_bin_dir(data_dir: &Path) -> PathBuf {
+   data_dir.join("tools").join("acp")
 }
 
 fn wrapper_file_name(agent_id: &str) -> String {

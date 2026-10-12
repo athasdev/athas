@@ -1,6 +1,7 @@
 #[cfg(not(target_os = "linux"))]
 use crate::menu;
 use crate::{
+   acp_events::{TauriAcpEventSink, acp_host_info},
    commands::{self, FffSearchState, FileClipboard, ThemeCache},
    file_events::TauriWorkspaceChangeSink,
    terminal::{FrontendTerminalSessions, ManagedTerminalManager as TerminalManager},
@@ -101,7 +102,8 @@ fn register_managed_state(app: &mut tauri::App) {
    app.manage(FrontendTerminalSessions::default());
 
    let acp_bridge = Arc::new(Mutex::new(AcpAgentBridge::new(
-      app.handle().clone(),
+      Arc::new(TauriAcpEventSink::new(app.handle().clone())),
+      acp_host_info(app.handle()),
       terminal_manager,
       commands::agent_launch_env(app.handle().clone()),
    )));

@@ -6,9 +6,9 @@ pub mod intelligence;
 pub mod mcp_stdio;
 
 pub use acp::{
-   AcpAgentBridge, AcpAgentStatus, AcpOpenedSession, AcpSessionInfo, AcpSessionList, AgentConfig,
-   AgentLaunchEnv, AgentRuntime, AgentSource, McpServerConfig, McpServerSecrets, McpServerSetting,
-   RegistryAgentInfo, SessionConfigValue,
+   AcpAgentBridge, AcpAgentStatus, AcpEmit, AcpEventSink, AcpHostInfo, AcpOpenedSession,
+   AcpSessionInfo, AcpSessionList, AgentConfig, AgentLaunchEnv, AgentRuntime, AgentSource,
+   McpServerConfig, McpServerSecrets, McpServerSetting, RegistryAgentInfo, SessionConfigValue,
 };
 pub use chat_history::{
    ChatData, ChatHistoryRepository, ChatSaveScope, ChatStats, ChatWithMessages, MessageData,

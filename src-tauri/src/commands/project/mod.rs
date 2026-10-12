@@ -2,7 +2,6 @@ pub mod asset_scope;
 pub mod clipboard;
 pub mod fs;
 pub mod local_history;
-mod path_guard;
 pub mod remote;
 pub mod remote_credentials;
 pub mod watcher;

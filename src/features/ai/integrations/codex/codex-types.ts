@@ -34,11 +34,6 @@ export interface CodexThreadSummary {
   updatedAt: number;
 }
 
-export interface CodexThreadPage {
-  threads: CodexThreadSummary[];
-  nextCursor: string | null;
-}
-
 export interface CodexSkillSummary {
   name: string;
   description: string;

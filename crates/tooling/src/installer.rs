@@ -43,6 +43,107 @@ fn validate_binary_download_url(input: &str) -> Result<(), ToolError> {
    }
 }
 
+/// Where an install writes its files and where it finds the runtimes that perform it.
+pub(crate) struct InstallEnv {
+   tools_dir: PathBuf,
+   runtime_root: PathBuf,
+   runtimes: RuntimeSource,
+   temurin_url: String,
+}
+
+/// Where language runtimes (bun, node, python, go, cargo) and system tools (gem, Rscript, java)
+/// are looked up.
+enum RuntimeSource {
+   /// Athas-managed runtimes, downloaded on demand, plus the system PATH and known toolchain
+   /// locations.
+   Managed,
+   /// Only executables inside this directory, so tests can drive installs with fake runtimes.
+   #[cfg(test)]
+   Dir(PathBuf),
+}
+
+impl InstallEnv {
+   fn for_app(app_handle: &AppHandle) -> Result<Self, ToolError> {
+      Ok(Self {
+         tools_dir: ToolInstaller::get_tools_dir(app_handle)?,
+         runtime_root: ToolInstaller::get_runtime_root(app_handle)?,
+         runtimes: RuntimeSource::Managed,
+         temurin_url: ToolInstaller::temurin_download_url(),
+      })
+   }
+
+   async fn runtime(&self, runtime_type: RuntimeType) -> Result<PathBuf, ToolError> {
+      match &self.runtimes {
+         RuntimeSource::Managed => {
+            RuntimeManager::get_runtime(Some(&self.runtime_root), runtime_type)
+               .await
+               .map_err(|error| ToolError::RuntimeNotAvailable(error.to_string()))
+         }
+         #[cfg(test)]
+         RuntimeSource::Dir(dir) => {
+            let name = match runtime_type {
+               RuntimeType::Bun => "bun",
+               RuntimeType::Node => "node",
+               RuntimeType::Python => "python3",
+               RuntimeType::Go => "go",
+               RuntimeType::Rust => "cargo",
+            };
+            ToolInstaller::find_binary_in_dirs(name, [dir.clone()]).ok_or_else(|| {
+               ToolError::RuntimeNotAvailable(
+                  athas_runtime::RuntimeError::NotFound(name.to_string()).to_string(),
+               )
+            })
+         }
+      }
+   }
+
+   /// Returns the node binary and the `npm-cli.js` script it runs to install packages.
+   async fn node_with_npm(&self) -> Result<(PathBuf, PathBuf), ToolError> {
+      let missing_npm =
+         || ToolError::RuntimeNotAvailable("The Node.js runtime is missing npm-cli.js".to_string());
+      match &self.runtimes {
+         RuntimeSource::Managed => {
+            let node = NodeRuntime::get_or_install_with_npm(Some(&self.runtime_root))
+               .await
+               .map_err(|error| ToolError::RuntimeNotAvailable(error.to_string()))?;
+            let npm_cli = node.npm_cli_path().ok_or_else(missing_npm)?;
+            Ok((node.binary_path().clone(), npm_cli))
+         }
+         #[cfg(test)]
+         RuntimeSource::Dir(dir) => {
+            let node = self.runtime(RuntimeType::Node).await?;
+            let npm_cli = dir.join("npm-cli.js");
+            if !npm_cli.exists() {
+               return Err(missing_npm());
+            }
+            Ok((node, npm_cli))
+         }
+      }
+   }
+
+   fn system_tool(&self, command_name: &str) -> Result<PathBuf, ToolError> {
+      match &self.runtimes {
+         RuntimeSource::Managed => ToolInstaller::find_system_tool(command_name),
+         #[cfg(test)]
+         RuntimeSource::Dir(dir) => ToolInstaller::find_binary_in_dirs(command_name, [dir.clone()])
+            .ok_or_else(|| {
+               ToolError::NotFound(format!(
+                  "{} (system tool not found in PATH or known toolchain locations)",
+                  command_name
+               ))
+            }),
+      }
+   }
+
+   fn java_candidates(&self, minimum_major: u32) -> Vec<PathBuf> {
+      match &self.runtimes {
+         RuntimeSource::Managed => ToolInstaller::system_java_candidates(minimum_major),
+         #[cfg(test)]
+         RuntimeSource::Dir(dir) => vec![dir.join(ToolInstaller::bin_file_name("java"))],
+      }
+   }
+}
+
 /// Handles installation of language tools
 pub struct ToolInstaller;
 
@@ -218,6 +319,28 @@ impl ToolInstaller {
    }
 
    pub fn find_java_executable(minimum_major: u32) -> Result<PathBuf, ToolError> {
+      Self::first_java_at_least(Self::system_java_candidates(minimum_major), minimum_major)
+   }
+
+   /// Picks the first existing candidate whose `java -version` reports at least `minimum_major`.
+   fn first_java_at_least(
+      candidates: Vec<PathBuf>,
+      minimum_major: u32,
+   ) -> Result<PathBuf, ToolError> {
+      candidates
+         .into_iter()
+         .find(|path| {
+            path.exists()
+               && Self::java_major_version(path).is_some_and(|major| major >= minimum_major)
+         })
+         .ok_or_else(|| {
+            ToolError::NotFound(format!(
+               "Java {minimum_major} or newer is required to run the Java language server"
+            ))
+         })
+   }
+
+   fn system_java_candidates(minimum_major: u32) -> Vec<PathBuf> {
       let mut candidates = Vec::new();
       if let Some(java_home) = env::var_os("JAVA_HOME") {
          candidates.push(
@@ -257,26 +380,16 @@ impl ToolInstaller {
       }
 
       candidates
-         .into_iter()
-         .find(|path| {
-            path.exists()
-               && Self::java_major_version(path).is_some_and(|major| major >= minimum_major)
-         })
-         .ok_or_else(|| {
-            ToolError::NotFound(format!(
-               "Java {minimum_major} or newer is required to run the Java language server"
-            ))
-         })
    }
 
-   fn managed_java_install_dir(app_handle: &AppHandle) -> Result<PathBuf, ToolError> {
-      Ok(Self::get_tools_dir(app_handle)?
+   fn managed_java_install_dir(tools_dir: &Path) -> PathBuf {
+      tools_dir
          .join("java")
-         .join(format!("temurin-{MANAGED_JAVA_MAJOR}")))
+         .join(format!("temurin-{MANAGED_JAVA_MAJOR}"))
    }
 
-   fn existing_managed_java(app_handle: &AppHandle) -> Result<Option<PathBuf>, ToolError> {
-      let install_dir = Self::managed_java_install_dir(app_handle)?;
+   fn existing_managed_java(tools_dir: &Path) -> Result<Option<PathBuf>, ToolError> {
+      let install_dir = Self::managed_java_install_dir(tools_dir);
       if !install_dir.exists() {
          return Ok(None);
       }
@@ -307,20 +420,28 @@ impl ToolInstaller {
    pub async fn get_or_install_java_executable(
       app_handle: &AppHandle,
    ) -> Result<PathBuf, ToolError> {
-      if let Ok(java) = Self::find_java_executable(MANAGED_JAVA_MAJOR) {
+      Self::java_executable_in(&InstallEnv::for_app(app_handle)?).await
+   }
+
+   /// Uses a suitable Java on the system, then a previously managed Temurin, and otherwise
+   /// downloads Temurin into the tools directory.
+   async fn java_executable_in(env: &InstallEnv) -> Result<PathBuf, ToolError> {
+      if let Ok(java) =
+         Self::first_java_at_least(env.java_candidates(MANAGED_JAVA_MAJOR), MANAGED_JAVA_MAJOR)
+      {
          return Ok(java);
       }
-      if let Some(java) = Self::existing_managed_java(app_handle)? {
+      if let Some(java) = Self::existing_managed_java(&env.tools_dir)? {
          return Ok(java);
       }
 
-      let url = Self::temurin_download_url();
+      let url = &env.temurin_url;
       log::info!(
          "Downloading managed Temurin {} from {}",
          MANAGED_JAVA_MAJOR,
          url
       );
-      let bytes = Self::download_bytes(&url).await?;
+      let bytes = Self::download_bytes(url).await?;
       let staging_dir = tempfile::tempdir()
          .map_err(|e| ToolError::InstallationFailed(format!("Failed to create temp dir: {}", e)))?;
       let archive_name = if cfg!(windows) {
@@ -331,7 +452,7 @@ impl ToolInstaller {
       Self::extract_archive(&bytes, archive_name, staging_dir.path())?;
       let java = Self::install_extracted_binary(
          staging_dir.path(),
-         &Self::managed_java_install_dir(app_handle)?,
+         &Self::managed_java_install_dir(&env.tools_dir),
          "java",
          "java",
       )?;
@@ -710,21 +831,15 @@ impl ToolInstaller {
    }
 
    async fn install_node_package_with_npm(
-      app_handle: &AppHandle,
+      env: &InstallEnv,
       package_dir: &Path,
       package: &str,
       command_name: &str,
       companion_packages: &[String],
    ) -> Result<PathBuf, ToolError> {
-      let runtime_root = Self::get_runtime_root(app_handle)?;
-      let node = NodeRuntime::get_or_install_with_npm(Some(&runtime_root))
-         .await
-         .map_err(|error| ToolError::RuntimeNotAvailable(error.to_string()))?;
-      let npm_cli = node.npm_cli_path().ok_or_else(|| {
-         ToolError::RuntimeNotAvailable("The Node.js runtime is missing npm-cli.js".to_string())
-      })?;
+      let (node, npm_cli) = env.node_with_npm().await?;
       Self::install_node_package(
-         (node.binary_path(), Some(&npm_cli)),
+         (&node, Some(&npm_cli)),
          "npm",
          package_dir,
          package,
@@ -969,81 +1084,49 @@ impl ToolInstaller {
 
    /// Install a tool based on its configuration
    pub async fn install(app_handle: &AppHandle, config: &ToolConfig) -> Result<PathBuf, ToolError> {
+      Self::install_in(&InstallEnv::for_app(app_handle)?, config).await
+   }
+
+   fn required_package(config: &ToolConfig) -> Result<&str, ToolError> {
+      config
+         .package
+         .as_deref()
+         .ok_or_else(|| ToolError::ConfigError("No package specified".to_string()))
+   }
+
+   async fn install_in(env: &InstallEnv, config: &ToolConfig) -> Result<PathBuf, ToolError> {
+      let command_name = Self::configured_command_name(config);
       match config.runtime {
          ToolRuntime::Bun => {
-            let package = config
-               .package
-               .as_ref()
-               .ok_or_else(|| ToolError::ConfigError("No package specified".to_string()))?;
-            Self::install_via_bun(
-               app_handle,
-               package,
-               Self::configured_command_name(config),
-               &config.packages,
-            )
-            .await
+            let package = Self::required_package(config)?;
+            Self::install_via_bun(env, package, command_name, &config.packages).await
          }
          ToolRuntime::Node => {
-            let package = config
-               .package
-               .as_ref()
-               .ok_or_else(|| ToolError::ConfigError("No package specified".to_string()))?;
-            Self::install_via_npm(
-               app_handle,
-               package,
-               Self::configured_command_name(config),
-               &config.packages,
-            )
-            .await
+            let package = Self::required_package(config)?;
+            Self::install_via_npm(env, package, command_name, &config.packages).await
          }
          ToolRuntime::Python => {
-            let package = config
-               .package
-               .as_ref()
-               .ok_or_else(|| ToolError::ConfigError("No package specified".to_string()))?;
-            Self::install_via_pip(app_handle, package, Self::configured_command_name(config)).await
+            Self::install_via_pip(env, Self::required_package(config)?, command_name).await
          }
          ToolRuntime::Go => {
-            let package = config
-               .package
-               .as_ref()
-               .ok_or_else(|| ToolError::ConfigError("No package specified".to_string()))?;
-            Self::install_via_go(app_handle, package, Self::configured_command_name(config)).await
+            Self::install_via_go(env, Self::required_package(config)?, command_name).await
          }
          ToolRuntime::Rust => {
-            let package = config
-               .package
-               .as_ref()
-               .ok_or_else(|| ToolError::ConfigError("No package specified".to_string()))?;
-            Self::install_via_cargo(app_handle, package, Self::configured_command_name(config))
-               .await
+            Self::install_via_cargo(env, Self::required_package(config)?, command_name).await
          }
          ToolRuntime::Ruby => {
-            let package = config
-               .package
-               .as_ref()
-               .ok_or_else(|| ToolError::ConfigError("No package specified".to_string()))?;
-            Self::install_via_gem(app_handle, package, Self::configured_command_name(config)).await
+            Self::install_via_gem(env, Self::required_package(config)?, command_name).await
          }
          ToolRuntime::R => {
-            let package = config
-               .package
-               .as_ref()
-               .ok_or_else(|| ToolError::ConfigError("No package specified".to_string()))?;
-            Self::install_via_r_package(app_handle, package, Self::configured_command_name(config))
-               .await
+            Self::install_via_r_package(env, Self::required_package(config)?, command_name).await
          }
-         ToolRuntime::System => {
-            let command_name = Self::configured_command_name(config);
-            Self::find_system_tool(command_name)
-         }
+         ToolRuntime::System => env.system_tool(command_name),
          ToolRuntime::Binary => {
-            let command_name = Self::configured_command_name(config);
-            if let Ok(system_path) = Self::find_system_tool(command_name) {
+            if let Ok(system_path) = env.system_tool(command_name) {
                return Ok(system_path);
             }
 
-            Self::install_binary_in(&Self::get_tools_dir(app_handle)?, config, command_name).await
+            Self::install_binary_in(&env.tools_dir, config, command_name).await
          }
       }
    }
@@ -1078,8 +1161,17 @@ impl ToolInstaller {
       app_handle: &AppHandle,
       config: &ToolConfig,
    ) -> Result<PathBuf, ToolError> {
+      Self::install_managed_in(&InstallEnv::for_app(app_handle)?, config).await
+   }
+
+   /// Like [`Self::install_in`], but a binary tool is always downloaded into the managed tools
+   /// directory instead of reusing one found on the system.
+   async fn install_managed_in(
+      env: &InstallEnv,
+      config: &ToolConfig,
+   ) -> Result<PathBuf, ToolError> {
       if config.runtime != ToolRuntime::Binary {
-         return Self::install(app_handle, config).await;
+         return Self::install_in(env, config).await;
       }
 
       let command_name = Self::configured_command_name(config);
@@ -1090,7 +1182,7 @@ impl ToolInstaller {
          ))
       })?;
       Self::download_binary(
-         &Self::binary_install_dir(app_handle, &config.name)?,
+         &Self::binary_install_dir_in(&env.tools_dir, &config.name),
          &config.name,
          command_name,
          url,
@@ -1109,32 +1201,29 @@ impl ToolInstaller {
 
    /// Install a package via Bun (global)
    async fn install_via_bun(
-      app_handle: &AppHandle,
+      env: &InstallEnv,
       package: &str,
       command_name: &str,
       companion_packages: &[String],
    ) -> Result<PathBuf, ToolError> {
-      let runtime_root = Self::get_runtime_root(app_handle)?;
-      let tools_dir = Self::get_tools_dir(app_handle)?;
-      let package_dir = tools_dir
+      let package_dir = env
+         .tools_dir
          .join("bun")
          .join(Self::node_package_identity(package));
       std::fs::create_dir_all(&package_dir)?;
       Self::ensure_node_package_manifest(&package_dir)?;
 
-      let bun_result =
-         match RuntimeManager::get_runtime(Some(&runtime_root), RuntimeType::Bun).await {
-            Ok(bun_path) => Self::install_node_package(
-               (&bun_path, None),
-               "Bun",
-               &package_dir,
-               package,
-               command_name,
-               companion_packages,
-               "add",
-            ),
-            Err(error) => Err(ToolError::RuntimeNotAvailable(error.to_string())),
-         };
+      let bun_result = env.runtime(RuntimeType::Bun).await.and_then(|bun_path| {
+         Self::install_node_package(
+            (&bun_path, None),
+            "Bun",
+            &package_dir,
+            package,
+            command_name,
+            companion_packages,
+            "add",
+         )
+      });
 
       match bun_result {
          Ok(path) => Ok(path),
@@ -1146,7 +1235,7 @@ impl ToolInstaller {
                bun_error
             );
             Self::install_node_package_with_npm(
-               app_handle,
+               env,
                &package_dir,
                package,
                command_name,
@@ -1165,20 +1254,20 @@ impl ToolInstaller {
 
    /// Install a package via npm (global)
    async fn install_via_npm(
-      app_handle: &AppHandle,
+      env: &InstallEnv,
       package: &str,
       command_name: &str,
       companion_packages: &[String],
    ) -> Result<PathBuf, ToolError> {
-      let tools_dir = Self::get_tools_dir(app_handle)?;
-      let package_dir = tools_dir
+      let package_dir = env
+         .tools_dir
          .join("npm")
          .join(Self::node_package_identity(package));
       std::fs::create_dir_all(&package_dir)?;
       Self::ensure_node_package_manifest(&package_dir)?;
 
       Self::install_node_package_with_npm(
-         app_handle,
+         env,
          &package_dir,
          package,
          command_name,
@@ -1189,17 +1278,13 @@ impl ToolInstaller {
 
    /// Install a package via pip (user)
    async fn install_via_pip(
-      app_handle: &AppHandle,
+      env: &InstallEnv,
       package: &str,
       command_name: &str,
    ) -> Result<PathBuf, ToolError> {
-      let runtime_root = Self::get_runtime_root(app_handle)?;
-      let python_path = RuntimeManager::get_runtime(Some(&runtime_root), RuntimeType::Python)
-         .await
-         .map_err(|e| ToolError::RuntimeNotAvailable(e.to_string()))?;
+      let python_path = env.runtime(RuntimeType::Python).await?;
 
-      let tools_dir = Self::get_tools_dir(app_handle)?;
-      let venv_dir = tools_dir.join("python").join(package);
+      let venv_dir = env.tools_dir.join("python").join(package);
       std::fs::create_dir_all(&venv_dir)?;
 
       log::info!(
@@ -1258,17 +1343,13 @@ impl ToolInstaller {
 
    /// Install a package via go install
    async fn install_via_go(
-      app_handle: &AppHandle,
+      env: &InstallEnv,
       package: &str,
       command_name: &str,
    ) -> Result<PathBuf, ToolError> {
-      let runtime_root = Self::get_runtime_root(app_handle)?;
-      let go_path = RuntimeManager::get_runtime(Some(&runtime_root), RuntimeType::Go)
-         .await
-         .map_err(|e| ToolError::RuntimeNotAvailable(e.to_string()))?;
+      let go_path = env.runtime(RuntimeType::Go).await?;
 
-      let tools_dir = Self::get_tools_dir(app_handle)?;
-      let gopath = tools_dir.join("go");
+      let gopath = env.tools_dir.join("go");
       std::fs::create_dir_all(&gopath)?;
 
       log::info!("Installing {} via go install", package);
@@ -1299,17 +1380,13 @@ impl ToolInstaller {
 
    /// Install a package via cargo install
    async fn install_via_cargo(
-      app_handle: &AppHandle,
+      env: &InstallEnv,
       package: &str,
       command_name: &str,
    ) -> Result<PathBuf, ToolError> {
-      let runtime_root = Self::get_runtime_root(app_handle)?;
-      let cargo_path = RuntimeManager::get_runtime(Some(&runtime_root), RuntimeType::Rust)
-         .await
-         .map_err(|e| ToolError::RuntimeNotAvailable(e.to_string()))?;
+      let cargo_path = env.runtime(RuntimeType::Rust).await?;
 
-      let tools_dir = Self::get_tools_dir(app_handle)?;
-      let cargo_home = tools_dir.join("cargo");
+      let cargo_home = env.tools_dir.join("cargo");
       std::fs::create_dir_all(&cargo_home)?;
 
       log::info!("Installing {} via cargo install", package);
@@ -1419,18 +1496,17 @@ impl ToolInstaller {
 
    /// Install a package via RubyGems into an Athas-managed GEM_HOME.
    async fn install_via_gem(
-      app_handle: &AppHandle,
+      env: &InstallEnv,
       package: &str,
       command_name: &str,
    ) -> Result<PathBuf, ToolError> {
-      let gem_path = Self::find_system_tool("gem").map_err(|_| {
+      let gem_path = env.system_tool("gem").map_err(|_| {
          ToolError::RuntimeNotAvailable(
             "RubyGems 'gem' was not found. Install Ruby to use Ruby language tools.".to_string(),
          )
       })?;
 
-      let tools_dir = Self::get_tools_dir(app_handle)?;
-      let package_dir = tools_dir.join("ruby").join(package);
+      let package_dir = env.tools_dir.join("ruby").join(package);
       let gem_home = package_dir.join("gems");
       let gem_bin_dir = package_dir.join("gem-bin");
       std::fs::create_dir_all(&gem_home)?;
@@ -1509,18 +1585,17 @@ impl ToolInstaller {
 
    /// Install an R package into an Athas-managed R library and write an LSP wrapper.
    async fn install_via_r_package(
-      app_handle: &AppHandle,
+      env: &InstallEnv,
       package: &str,
       command_name: &str,
    ) -> Result<PathBuf, ToolError> {
-      let rscript_path = Self::find_system_tool("Rscript").map_err(|_| {
+      let rscript_path = env.system_tool("Rscript").map_err(|_| {
          ToolError::RuntimeNotAvailable(
             "Rscript was not found. Install R to use R language tools.".to_string(),
          )
       })?;
 
-      let tools_dir = Self::get_tools_dir(app_handle)?;
-      let package_dir = tools_dir.join("r").join(package);
+      let package_dir = env.tools_dir.join("r").join(package);
       let r_library_dir = package_dir.join("library");
       std::fs::create_dir_all(&r_library_dir)?;
 

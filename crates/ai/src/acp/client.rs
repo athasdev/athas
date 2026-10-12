@@ -1,15 +1,16 @@
 use super::{
    AcpConnection,
    file_access::{self, FileAccess, OutsideAccess},
+   host::{AcpEmit, SharedAcpEventSink},
    replay::ReplayRouter,
    terminal_events::TerminalEvents,
    terminal_meta::{self, ToolTerminalMeta},
    terminal_state::{AcpTerminalState, TerminalChange, take_session_terminals},
    types::{
-      ACP_BUFFER_READ_EVENT, AcpBufferReadRequest, AcpContentBlock, AcpCost, AcpEvent,
-      AcpPermissionToolCall, AcpPlanEntry, AcpPlanEntryPriority, AcpPlanEntryStatus,
-      AcpToolCallLocation, AcpToolCallStatus, AcpToolKind, AcpUsageUpdate, SessionConfigOption,
-      SessionConfigOptionKind, SessionConfigOptionValue, UiAction,
+      AcpBufferReadRequest, AcpContentBlock, AcpCost, AcpEvent, AcpPermissionToolCall,
+      AcpPlanEntry, AcpPlanEntryPriority, AcpPlanEntryStatus, AcpToolCallLocation,
+      AcpToolCallStatus, AcpToolKind, AcpUsageUpdate, SessionConfigOption, SessionConfigOptionKind,
+      SessionConfigOptionValue, UiAction,
    },
    workspace_path::{
       SessionRoots, is_inside_roots, path_to_string, real_path, resolve_path_against_workspace,
@@ -24,7 +25,6 @@ use std::{
    path::{Path, PathBuf},
    sync::{Arc, Mutex as StdMutex},
 };
-use tauri::{AppHandle, Emitter, Manager};
 use tokio::sync::{Mutex, oneshot};
 
 /// Response for permission requests
@@ -231,13 +231,13 @@ impl Drop for PendingBufferRead {
 struct PendingRequest<T> {
    pending: Pending<T>,
    request_id: String,
-   app_handle: AppHandle,
+   events: SharedAcpEventSink,
 }
 
 impl<T> PendingRequest<T> {
    fn open(
       pending: &Pending<T>,
-      app_handle: &AppHandle,
+      events: &SharedAcpEventSink,
       session_id: Option<String>,
    ) -> (Self, oneshot::Receiver<T>) {
       let request_id = uuid::Uuid::new_v4().to_string();
@@ -249,7 +249,7 @@ impl<T> PendingRequest<T> {
       let request = Self {
          pending: pending.clone(),
          request_id,
-         app_handle: app_handle.clone(),
+         events: events.clone(),
       };
       (request, rx)
    }
@@ -261,7 +261,7 @@ impl<T> Drop for PendingRequest<T> {
          let event = AcpEvent::RequestClosed {
             request_id: self.request_id.clone(),
          };
-         if let Err(e) = self.app_handle.emit("acp-event", &event) {
+         if let Err(e) = self.events.acp_event(&event) {
             log::error!("Failed to emit ACP event: {}", e);
          }
       }
@@ -283,7 +283,9 @@ const ELICITATION_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(
 /// Athas ACP Client implementation
 /// Handles requests from the agent (file access, terminals, permissions)
 pub struct AthasAcpClient {
-   app_handle: AppHandle,
+   events: SharedAcpEventSink,
+   /// The app's version, handed to agent terminals as `TERM_PROGRAM_VERSION`.
+   app_version: String,
    workspace_path: Option<PathBuf>,
    /// Where the workspace really is on disk; agent file access outside these asks the user.
    workspace_roots: Vec<PathBuf>,
@@ -305,7 +307,8 @@ pub struct AthasAcpClient {
 
 impl AthasAcpClient {
    pub fn new(
-      app_handle: AppHandle,
+      events: SharedAcpEventSink,
+      app_version: String,
       workspace_path: Option<PathBuf>,
       terminal_manager: Arc<TerminalManager>,
    ) -> Self {
@@ -314,9 +317,10 @@ impl AthasAcpClient {
          .and_then(|path| std::fs::canonicalize(path).ok())
          .into_iter()
          .collect();
-      let terminal_events = TerminalEvents::new(app_handle.clone());
+      let terminal_events = TerminalEvents::new(events.clone());
       Self {
-         app_handle,
+         events,
+         app_version,
          workspace_path,
          workspace_roots,
          session_roots: SessionRoots::default(),
@@ -418,7 +422,7 @@ impl AthasAcpClient {
    }
 
    fn emit_event(&self, event: AcpEvent) {
-      if let Err(e) = self.app_handle.emit("acp-event", &event) {
+      if let Err(e) = self.events.acp_event(&event) {
          log::error!("Failed to emit ACP event: {}", e);
       }
    }
@@ -813,7 +817,7 @@ impl AthasAcpClient {
       let session_id = args.session_id.to_string();
       let (pending, response_rx) = PendingRequest::open(
          &self.pending_permissions,
-         &self.app_handle,
+         &self.events,
          Some(session_id.clone()),
       );
       let request_id = pending.request_id.clone();
@@ -918,11 +922,8 @@ impl AthasAcpClient {
          _ => None,
       };
 
-      let (pending, answer_rx) = PendingRequest::open(
-         &self.pending_elicitations,
-         &self.app_handle,
-         session_id.clone(),
-      );
+      let (pending, answer_rx) =
+         PendingRequest::open(&self.pending_elicitations, &self.events, session_id.clone());
       let request = serde_json::to_value(&args).map_err(|_| acp_sdk::Error::internal_error())?;
       self.emit_event(AcpEvent::ElicitationRequest {
          session_id,
@@ -1075,12 +1076,7 @@ impl AthasAcpClient {
    /// read and answers with the buffer's current text, or `None` when it does not have the file
    /// open. With no editor window, or none answering in time, the read goes to the disk.
    async fn read_open_buffer(&self, path: &Path) -> Option<String> {
-      let windows = self
-         .app_handle
-         .webview_windows()
-         .values()
-         .filter(|window| is_editor_window(window))
-         .count();
+      let windows = self.events.editor_window_count();
       if windows == 0 {
          return None;
       }
@@ -1089,7 +1085,7 @@ impl AthasAcpClient {
          request_id: pending.request_id.clone(),
          path: path_to_string(path),
       };
-      if let Err(e) = self.app_handle.emit(ACP_BUFFER_READ_EVENT, &request) {
+      if let Err(e) = self.events.emit(AcpEmit::BufferRead(&request)) {
          log::warn!("Failed to ask the editor for {}: {}", request.path, e);
          return None;
       }
@@ -1149,7 +1145,7 @@ impl AthasAcpClient {
       };
       let (pending, answer_rx) = PendingRequest::open(
          &self.pending_permissions,
-         &self.app_handle,
+         &self.events,
          Some(session_id.to_string()),
       );
       let request_id = pending.request_id.clone();
@@ -1258,7 +1254,7 @@ impl AthasAcpClient {
          },
          agent_write_id: write_id,
       };
-      if let Err(e) = self.app_handle.emit("file-changed", &event) {
+      if let Err(e) = self.events.emit(AcpEmit::FileChanged(&event)) {
          log::warn!("Failed to emit file change: {}", e);
       }
       Ok(())
@@ -1309,7 +1305,7 @@ impl AthasAcpClient {
          command: Some(command),
          args: command_args,
          size: TerminalSize::default(),
-         term_program_version: Some(self.app_handle.package_info().version.to_string()),
+         term_program_version: Some(self.app_version.clone()),
          shell_integration: Some(false),
          shell_integration_dir: None,
       };
@@ -1567,8 +1563,6 @@ impl AthasAcpClient {
    }
 }
 
-/// Whether a window runs the editor workbench, which answers buffer reads. Detached windows (a
-/// chat popped out on its own) hold no editor buffers.
 fn notice_event(session_id: String, notice: acp::Notice) -> AcpEvent {
    let severity = match notice.severity {
       acp::NoticeSeverity::Info => "info".to_string(),
@@ -1590,14 +1584,6 @@ enum ChunkRole {
    User,
    Agent,
    Thought,
-}
-
-fn is_editor_window<R: tauri::Runtime>(window: &tauri::WebviewWindow<R>) -> bool {
-   window.url().is_ok_and(|url| {
-      !url
-         .query_pairs()
-         .any(|(key, value)| key == "view" && value == "detached")
-   })
 }
 
 /// The session an extension request is about: its `sessionId` param when the agent sent one,

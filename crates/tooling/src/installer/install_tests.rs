@@ -190,6 +190,9 @@ fn download_error(result: Result<Vec<u8>, ToolError>) -> String {
 
 const UNKNOWN_TOOL: &str = "athas-test-tool-that-does-not-exist";
 
+#[cfg(unix)]
+mod runtimes;
+
 #[tokio::test]
 async fn downloads_bytes_and_reports_http_failures() {
    let server = FixtureServer::start(vec![

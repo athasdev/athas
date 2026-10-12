@@ -3,13 +3,12 @@
 //! read would flood the frontend, so what arrives within [`OUTPUT_FLUSH_DELAY`] goes out as one
 //! event. An exit sends the output still waiting first, so the chat never sees them reversed.
 
-use super::{terminal_state::TerminalChange, types::AcpEvent};
+use super::{host::SharedAcpEventSink, terminal_state::TerminalChange, types::AcpEvent};
 use std::{
    collections::HashMap,
    sync::{Arc, Mutex},
    time::Duration,
 };
-use tauri::{AppHandle, Emitter};
 
 /// How long output waits for more before it is sent.
 pub(super) const OUTPUT_FLUSH_DELAY: Duration = Duration::from_millis(75);
@@ -66,14 +65,14 @@ fn exit_event(
 /// Sends terminal changes to the chat as `acp-event`s. Cheap to clone.
 #[derive(Clone)]
 pub(super) struct TerminalEvents {
-   app_handle: AppHandle,
+   events: SharedAcpEventSink,
    pending: Arc<Mutex<PendingOutput>>,
 }
 
 impl TerminalEvents {
-   pub(super) fn new(app_handle: AppHandle) -> Self {
+   pub(super) fn new(events: SharedAcpEventSink) -> Self {
       Self {
-         app_handle,
+         events,
          pending: Arc::default(),
       }
    }
@@ -122,7 +121,7 @@ impl TerminalEvents {
    }
 
    fn emit(&self, event: &AcpEvent) {
-      if let Err(error) = self.app_handle.emit("acp-event", event) {
+      if let Err(error) = self.events.acp_event(event) {
          log::error!("Failed to emit ACP terminal event: {}", error);
       }
    }

@@ -1,10 +1,5 @@
 import { commands } from "@/bindings/commands";
-import type {
-  CodexSkillSummary,
-  CodexThreadPage,
-  CodexThreadSummary,
-  CodexModelOption,
-} from "./codex-types";
+import type { CodexSkillSummary, CodexThreadSummary, CodexModelOption } from "./codex-types";
 import type { QueryKey } from "@tanstack/react-query";
 import { queryClient } from "@/utils/query-client";
 
@@ -15,7 +10,6 @@ const codexCatalogKeys = {
   all: ["codex"] as const,
   startup: (cwd: string) => ["codex", cwd, "startup"] as const,
   models: (cwd: string) => ["codex", cwd, "models"] as const,
-  threads: (cwd: string, cursor: string | null) => ["codex", cwd, "threads", cursor] as const,
   skills: (cwd: string) => ["codex", cwd, "skills"] as const,
 };
 
@@ -110,8 +104,6 @@ export function listCodexComposerModels(cwd: string, force = false) {
   );
 }
 
-export const CODEX_COMPOSER_THREAD_PAGE_SIZE = 20;
-
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 }
@@ -143,16 +135,6 @@ export function normalizeCodexThreads(value: unknown): CodexThreadSummary[] {
       };
     })
     .filter((thread): thread is CodexThreadSummary => Boolean(thread));
-}
-
-export function normalizeCodexThreadPage(value: unknown): CodexThreadPage {
-  const response = asRecord(value);
-  const nextCursor = asString(response.nextCursor);
-
-  return {
-    threads: normalizeCodexThreads(value),
-    nextCursor: nextCursor || null,
-  };
 }
 
 export function normalizeCodexSkills(value: unknown) {
@@ -201,25 +183,6 @@ export async function startCodexComposer(cwd: string): Promise<void> {
       return true;
     },
     { staleTime: STARTUP_STALE_MS },
-  );
-}
-
-export async function listCodexComposerThreads(
-  cwd: string,
-  cursor: string | null = null,
-  force = false,
-): Promise<CodexThreadPage> {
-  return loadCatalogEntry(
-    codexCatalogKeys.threads(cwd, cursor),
-    async () => {
-      await startCodexComposer(cwd);
-      const result = await withCatalogTimeout(
-        commands.listCodexThreads(cwd, cursor, CODEX_COMPOSER_THREAD_PAGE_SIZE),
-      );
-
-      return normalizeCodexThreadPage(result);
-    },
-    { staleTime: CATALOG_STALE_MS, force },
   );
 }
 

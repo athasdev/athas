@@ -3,13 +3,17 @@
 use crate::{
    exec_guard::{validate_exec_args, validate_exec_command, validate_exec_env},
    extension_command::build_extension_command,
+   process_io::{ProcessError, run_process},
 };
 use serde::{Deserialize, Serialize};
 use std::{
    collections::HashMap,
-   io::Write,
    process::{Command, Stdio},
+   time::Duration,
 };
+
+/// How long a linter may run before it is killed and the lint run is reported as failed.
+const LINTER_TIMEOUT: Duration = Duration::from_secs(30);
 
 #[derive(Debug, Serialize, Deserialize, specta::Type)]
 pub struct LintRequest {
@@ -105,7 +109,16 @@ fn validate_linter_config(config: &LinterConfig) -> Result<(), String> {
 
 /// Runs the linter, feeding `content` on stdin unless the config reads the file itself, and
 /// parses its stdout in the configured diagnostic format (JSON by default).
-fn run_linter(mut command: Command, content: &str, config: &LinterConfig) -> LintResponse {
+fn run_linter(command: Command, content: &str, config: &LinterConfig) -> LintResponse {
+   run_linter_with_timeout(command, content, config, LINTER_TIMEOUT)
+}
+
+fn run_linter_with_timeout(
+   mut command: Command,
+   content: &str,
+   config: &LinterConfig,
+   timeout: Duration,
+) -> LintResponse {
    let use_stdin = config.input_method.as_deref().unwrap_or("stdin") == "stdin";
    let command_name = command.get_program().to_string_lossy().into_owned();
    if use_stdin {
@@ -114,23 +127,20 @@ fn run_linter(mut command: Command, content: &str, config: &LinterConfig) -> Lin
    command.stdout(Stdio::piped());
    command.stderr(Stdio::piped());
 
-   let mut child = match command.spawn() {
-      Ok(child) => child,
-      Err(e) => {
+   let output = match run_process(command, use_stdin.then_some(content), timeout) {
+      Ok(output) => output,
+      Err(ProcessError::Spawn(e)) => {
          return LintResponse::failed(format!("Linter not available: {} - {}", command_name, e));
       }
-   };
-
-   if use_stdin
-      && let Some(mut stdin) = child.stdin.take()
-      && stdin.write_all(content.as_bytes()).is_err()
-   {
-      return LintResponse::failed("Failed to write to linter stdin".to_string());
-   }
-
-   let output = match child.wait_with_output() {
-      Ok(output) => output,
-      Err(e) => return LintResponse::failed(format!("Failed to run linter: {}", e)),
+      Err(ProcessError::WriteStdin(_)) => {
+         return LintResponse::failed("Failed to write to linter stdin".to_string());
+      }
+      Err(ProcessError::Wait(e)) => {
+         return LintResponse::failed(format!("Failed to run linter: {}", e));
+      }
+      Err(ProcessError::TimedOut) => {
+         return LintResponse::failed(format!("Linter timed out after {}s", timeout.as_secs()));
+      }
    };
 
    // Linters exit non-zero when they find issues, so the output is parsed regardless.

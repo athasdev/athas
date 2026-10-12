@@ -1,10 +1,14 @@
 use super::{
    auth::{ACP_AUTHENTICATE_TIMEOUT, authenticate_method, automatic_auth_method},
    bridge_commands::{AcpCommand, OpenRequest, WorkerFollowUp, run_worker_loop},
-   bridge_init::{AgentLaunchEnv, ConnectionHandle, SessionTarget, StartedConnection},
+   bridge_init::{
+      AgentLaunchEnv, AgentLauncher, ConnectionHandle, SessionTarget, StartedConnection,
+      process_launcher,
+   },
    bridge_prompt::{PromptAuth, run_prompt},
    client::{AthasAcpClient, ClientResponders, PermissionResponse},
    config::AgentRegistry,
+   host::{AcpEmit, AcpHostInfo, SharedAcpEventSink},
    mcp_servers::{AcpSkippedMcpServer, McpServerConfig},
    process::{stop_child_tree, terminate_process_group},
    sessions::{ConnectionKey, SessionRegistry, is_idle},
@@ -26,7 +30,6 @@ use std::{
    thread,
    time::{Duration, Instant},
 };
-use tauri::{AppHandle, Emitter};
 use tokio::{
    process::Child,
    runtime::Runtime,
@@ -168,7 +171,9 @@ impl Drop for AgentConnection {
 /// Worker state running on the LocalSet thread: every running agent process, keyed by id, and
 /// the sessions open on them.
 pub(super) struct AcpWorker {
-   app_handle: AppHandle,
+   events: SharedAcpEventSink,
+   app_version: String,
+   launcher: AgentLauncher,
    connections: HashMap<u64, AgentConnection>,
    next_connection_id: u64,
    sessions: SessionRegistry,
@@ -186,14 +191,17 @@ pub(super) struct AcpWorker {
 
 impl AcpWorker {
    pub(super) fn new(
-      app_handle: AppHandle,
+      events: SharedAcpEventSink,
+      app_version: String,
       responders: ResponderRegistry,
       traffic: TrafficInspector,
       launch_env: AgentLaunchEnv,
       followup_tx: mpsc::UnboundedSender<WorkerFollowUp>,
    ) -> Self {
       Self {
-         app_handle,
+         events,
+         app_version,
+         launcher: process_launcher(),
          connections: HashMap::new(),
          next_connection_id: 0,
          sessions: SessionRegistry::default(),
@@ -206,8 +214,20 @@ impl AcpWorker {
       }
    }
 
-   pub(super) fn app_handle(&self) -> AppHandle {
-      self.app_handle.clone()
+   pub(super) fn events(&self) -> SharedAcpEventSink {
+      self.events.clone()
+   }
+
+   pub(super) fn app_version(&self) -> String {
+      self.app_version.clone()
+   }
+
+   pub(super) fn launcher(&self) -> AgentLauncher {
+      self.launcher.clone()
+   }
+
+   pub(super) fn followup_tx(&self) -> mpsc::UnboundedSender<WorkerFollowUp> {
+      self.followup_tx.clone()
    }
 
    pub(super) fn traffic(&self) -> TrafficInspector {
@@ -219,7 +239,7 @@ impl AcpWorker {
    }
 
    fn emit(&self, event: AcpEvent) {
-      if let Err(error) = self.app_handle.emit("acp-event", event) {
+      if let Err(error) = self.events.acp_event(&event) {
          log::warn!("Failed to emit ACP event: {}", error);
       }
    }
@@ -494,20 +514,18 @@ impl AcpWorker {
          if let Err(err) = run_prompt(
             handle.connection.clone(),
             acp_session_id,
-            handle.app_handle.clone(),
+            &*handle.events,
             prompt,
             auth,
          )
          .await
          {
-            log::error!("Failed to run ACP prompt: {}", err);
-            let _ = handle.app_handle.emit(
-               "acp-event",
-               AcpEvent::Error {
-                  session_id: Some(session_id.clone()),
-                  error: format!("Failed to run prompt: {}", err),
-               },
-            );
+            // `{:#}` keeps the cause, such as the agent's own error message, after the context.
+            log::error!("Failed to run ACP prompt: {:#}", err);
+            let _ = handle.events.acp_event(&AcpEvent::Error {
+               session_id: Some(session_id.clone()),
+               error: format!("Failed to run prompt: {:#}", err),
+            });
          }
          let _ = followup_tx.send(WorkerFollowUp::PromptFinished { session_id });
       });
@@ -582,7 +600,7 @@ impl AcpWorker {
    ) -> Result<impl Future<Output = Result<()>> + use<>> {
       let (_, connection) = self.connection_for_session(&session_id)?;
       let connection = connection.handle.connection.clone();
-      let app_handle = self.app_handle.clone();
+      let events = self.events.clone();
 
       let value = match value {
          SessionConfigValue::String(value) => acp::SessionConfigOptionValue::value_id(value),
@@ -599,13 +617,10 @@ impl AcpWorker {
          .await?;
          let config_options = map_config_options(response.config_options);
 
-         let _ = app_handle.emit(
-            "acp-event",
-            AcpEvent::ConfigOptionsUpdate {
-               session_id,
-               config_options,
-            },
-         );
+         let _ = events.acp_event(&AcpEvent::ConfigOptionsUpdate {
+            session_id,
+            config_options,
+         });
 
          Ok(())
       })
@@ -937,12 +952,14 @@ pub struct AcpAgentBridge {
 }
 
 impl AcpAgentBridge {
+   /// Starts the worker thread. Everything the frontend hears goes to `events`.
    pub fn new(
-      app_handle: AppHandle,
+      events: SharedAcpEventSink,
+      host: AcpHostInfo,
       terminal_manager: Arc<TerminalManager>,
       launch_env: AgentLaunchEnv,
    ) -> Self {
-      let mut registry = AgentRegistry::new(&app_handle);
+      let mut registry = AgentRegistry::new(host.data_dir.as_deref());
       registry.detect_installed();
 
       let (command_tx, command_rx) = mpsc::channel::<AcpCommand>(32);
@@ -950,11 +967,10 @@ impl AcpAgentBridge {
       let responders: ResponderRegistry = Arc::default();
       let worker_status = status.clone();
       let worker_responders = responders.clone();
-      let worker_app_handle = app_handle.clone();
+      let worker_events = events.clone();
       let traffic = TrafficInspector::default();
-      let traffic_app_handle = app_handle.clone();
       traffic.set_emitter(move |event| {
-         if let Err(error) = traffic_app_handle.emit("acp-traffic", event) {
+         if let Err(error) = events.emit(AcpEmit::Traffic(&event)) {
             log::warn!("Failed to emit ACP traffic: {}", error);
          }
       });
@@ -966,15 +982,16 @@ impl AcpAgentBridge {
          let local = LocalSet::new();
 
          local.block_on(&rt, async move {
-            run_worker_loop(
-               command_rx,
-               worker_status,
-               worker_app_handle,
+            let (followup_tx, followup_rx) = mpsc::unbounded_channel();
+            let worker = AcpWorker::new(
+               worker_events,
+               host.app_version,
                worker_responders,
                worker_traffic,
                launch_env,
-            )
-            .await;
+               followup_tx,
+            );
+            run_worker_loop(command_rx, followup_rx, worker_status, worker).await;
          });
       });
 
@@ -1322,6 +1339,8 @@ impl AcpAgentBridge {
 
 #[cfg(test)]
 mod front_tests;
+#[cfg(all(test, unix))]
+mod worker_tests;
 
 #[cfg(test)]
 mod tests {

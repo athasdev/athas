@@ -1,5 +1,6 @@
 mod bun;
 mod downloader;
+pub mod frontend_trace;
 mod node;
 pub mod notebook;
 pub mod process;

@@ -130,7 +130,7 @@ pub(super) fn access_denied(path: &Path) -> acp::Error {
 /// The `file-changed` event payload, in the shape the project file watcher emits and the
 /// frontend's file watcher listener reads.
 #[derive(Debug, Clone, Serialize)]
-pub(super) struct FileChangeEvent {
+pub struct FileChangeEvent {
    pub path: String,
    pub event_type: FileChangeType,
    /// For a change an agent write made, the `write_id` of its `agent_file_write` event.
@@ -147,7 +147,7 @@ pub fn next_agent_write_id() -> u64 {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub(super) enum FileChangeType {
+pub enum FileChangeType {
    /// A file that did not exist before: its folder in the file tree refreshes.
    Opened,
    /// An existing file changed: an open editor for it reloads.

@@ -5,6 +5,7 @@ use super::{
       describe_auth_methods, startup_auth_method,
    },
    client::{AthasAcpClient, ClientResponders},
+   host::{AcpEventSink, SharedAcpEventSink},
    mcp_servers::{AcpSkippedMcpServer, McpServerConfig, select_mcp_servers},
    process::{stop_child_tree, stop_child_tree_mut},
    replay::{ReplayMode, ReplayRouter},
@@ -24,14 +25,15 @@ use agent_client_protocol::{
 };
 use anyhow::{Result, bail};
 use athas_terminal::TerminalManager;
+use futures::future::LocalBoxFuture;
 use serde_json::json;
 use std::{
    collections::{HashMap, VecDeque},
    path::{Path, PathBuf},
    process::Stdio,
+   rc::Rc,
    sync::Arc,
 };
-use tauri::{AppHandle, Emitter};
 use tokio::{
    process::{Child, Command},
    sync::Mutex,
@@ -46,6 +48,30 @@ use tokio_util::{
 /// never sees it, and is read at each start, so a changed key applies the next time the agent
 /// starts.
 pub type AgentLaunchEnv = Arc<dyn Fn(&str) -> HashMap<String, String> + Send + Sync>;
+
+/// What starting an agent process needs.
+pub(super) struct AgentLaunch {
+   pub config: Box<AgentConfig>,
+   pub launch_env: HashMap<String, String>,
+   /// The resolved workspace the process runs in; `None` without a project.
+   pub workspace_path: Option<PathBuf>,
+   pub events: SharedAcpEventSink,
+   pub app_version: String,
+   pub terminal_manager: Arc<TerminalManager>,
+   pub traffic: TrafficInspector,
+   /// Ends startup at any point: the process is killed and the caller hears startup was stopped.
+   pub stop: CancellationToken,
+}
+
+/// Starts agent processes for the worker: [`start_connection`] in the app, scripted in-process
+/// agents in tests.
+pub(super) type AgentLauncher =
+   Rc<dyn Fn(AgentLaunch) -> LocalBoxFuture<'static, Result<StartedConnection>>>;
+
+/// The launcher that runs the agent's real process.
+pub(super) fn process_launcher() -> AgentLauncher {
+   Rc::new(|launch| Box::pin(start_connection(launch)))
+}
 
 /// An agent process that finished `initialize` and can hold sessions.
 pub(super) struct StartedConnection {
@@ -72,7 +98,7 @@ pub(super) struct ConnectionHandle {
    pub agent_name: String,
    pub connection: Arc<AcpConnection>,
    pub client: Arc<AthasAcpClient>,
-   pub app_handle: AppHandle,
+   pub events: SharedAcpEventSink,
    /// The resolved workspace the process runs in; `None` without a project.
    pub workspace_path: Option<PathBuf>,
    pub auth_methods: Vec<acp::AuthMethod>,
@@ -85,6 +111,44 @@ pub(super) struct ConnectionHandle {
 }
 
 impl ConnectionHandle {
+   /// The handle of an agent that answered `initialize` with `init_response`.
+   pub(super) fn new(
+      config: &AgentConfig,
+      connection: Arc<AcpConnection>,
+      client: Arc<AthasAcpClient>,
+      events: SharedAcpEventSink,
+      workspace_path: Option<PathBuf>,
+      init_response: acp::InitializeResponse,
+      recent_stderr: RecentAgentStderr,
+   ) -> Self {
+      let auth_methods = init_response.auth_methods.clone();
+      let described_auth_methods = describe_auth_methods(&auth_methods, config);
+      let supports_session_resume = init_response
+         .agent_capabilities
+         .session_capabilities
+         .resume
+         .is_some();
+      let supports_additional_directories = init_response
+         .agent_capabilities
+         .session_capabilities
+         .additional_directories
+         .is_some();
+      Self {
+         agent_id: config.id.clone(),
+         agent_name: config.name.clone(),
+         connection,
+         client,
+         events,
+         workspace_path,
+         auth_methods,
+         described_auth_methods,
+         agent_capabilities: init_response.agent_capabilities.into(),
+         supports_session_resume,
+         supports_additional_directories,
+         recent_stderr,
+      }
+   }
+
    /// The directory sessions are created in.
    pub(super) fn cwd(&self) -> PathBuf {
       self
@@ -96,7 +160,7 @@ impl ConnectionHandle {
 
 const MAX_RECENT_STDERR_LINES: usize = 20;
 pub(super) const ACP_STARTUP_STOPPED: &str = "ACP agent startup was stopped";
-type RecentAgentStderr = Arc<Mutex<VecDeque<String>>>;
+pub(super) type RecentAgentStderr = Arc<Mutex<VecDeque<String>>>;
 
 /// How startup may sign in when the agent asks for it.
 #[derive(Debug, Clone, Default)]
@@ -109,18 +173,20 @@ pub(super) struct StartupAuth {
 }
 
 /// Starts the agent process and runs `initialize`. Sessions are opened on it afterwards with
-/// [`open_session`]. `stop` ends startup at any point: the process is killed and the caller hears
-/// that startup was stopped.
-pub(super) async fn start_connection(
-   config: &AgentConfig,
-   launch_env: HashMap<String, String>,
-   workspace_path: Option<PathBuf>,
-   app_handle: AppHandle,
-   terminal_manager: Arc<TerminalManager>,
-   traffic: TrafficInspector,
-   stop: CancellationToken,
-) -> Result<StartedConnection> {
-   let mut child = spawn_agent_process(config, &launch_env, workspace_path.as_deref())?;
+/// [`open_session`]. `launch.stop` ends startup at any point: the process is killed and the
+/// caller hears that startup was stopped.
+pub(super) async fn start_connection(launch: AgentLaunch) -> Result<StartedConnection> {
+   let AgentLaunch {
+      config,
+      launch_env,
+      workspace_path,
+      events,
+      app_version,
+      terminal_manager,
+      traffic,
+      stop,
+   } = launch;
+   let mut child = spawn_agent_process(&config, &launch_env, workspace_path.as_deref())?;
    let tap = traffic.start_process(
       &config.id,
       &config.name,
@@ -139,17 +205,75 @@ pub(super) async fn start_connection(
    let recent_stderr = spawn_stderr_logger(&mut child, config.name.clone(), tap.clone());
 
    let client = Arc::new(AthasAcpClient::new(
-      app_handle.clone(),
+      events.clone(),
+      app_version,
       workspace_path.clone(),
       terminal_manager,
    ));
    let responders = client.responders();
 
+   let transport = tapped_transport(stdin.compat_write(), stdout.compat(), tap);
+   let (io_handle, connection_rx) = serve_client(transport, client.clone());
+   // Startup can take minutes (a first `npx` download), so Stop must be able to end it.
+   let startup = async {
+      let connection = Arc::new(
+         connection_rx
+            .await
+            .map_err(|_| anyhow::anyhow!("Failed to establish ACP connection"))?,
+      );
+      let init_response = initialize_connection(connection.clone()).await?;
+      Ok::<_, anyhow::Error>((connection, init_response))
+   };
+   let outcome = tokio::select! {
+      result = startup => Some(result),
+      () = stop.cancelled() => None,
+   };
+   let result = match outcome {
+      Some(Ok(result)) => result,
+      Some(Err(error)) => {
+         io_handle.abort();
+         stop_child_tree_mut(&mut child, process_group_id).await;
+         return Err(with_agent_stderr(error, &recent_stderr).await);
+      }
+      None => {
+         io_handle.abort();
+         stop_child_tree_mut(&mut child, process_group_id).await;
+         bail!(ACP_STARTUP_STOPPED);
+      }
+   };
+   let (connection, init_response) = result;
+
+   Ok(StartedConnection {
+      handle: ConnectionHandle::new(
+         &config,
+         connection,
+         client,
+         events,
+         workspace_path,
+         init_response,
+         recent_stderr,
+      ),
+      process: child,
+      process_group_id,
+      io_handle,
+      responders,
+   })
+}
+
+/// Runs the client side of an agent connection over `transport`, with `client` answering what
+/// the agent asks. Returns the task running it and the connection once it is established. Must
+/// run inside a `LocalSet`.
+pub(super) fn serve_client(
+   transport: impl acp_sdk::ConnectTo<acp_sdk::Client> + 'static,
+   client: Arc<AthasAcpClient>,
+) -> (
+   tokio::task::JoinHandle<()>,
+   tokio::sync::oneshot::Receiver<AcpConnection>,
+) {
    let (connection_tx, connection_rx) = tokio::sync::oneshot::channel();
    let request_client = client.clone();
-   let notification_client = client.clone();
+   let notification_client = client;
    let io_handle = tokio::task::spawn_local(async move {
-      let transport = tapped_transport(stdin.compat_write(), stdout.compat(), tap);
       let result = acp_sdk::Client
          .builder()
          .on_receive_request(
@@ -189,67 +313,7 @@ pub(super) async fn start_connection(
          log::error!("ACP I/O error: {}", e);
       }
    });
-   // Startup can take minutes (a first `npx` download), so Stop must be able to end it.
-   let startup = async {
-      let connection = Arc::new(
-         connection_rx
-            .await
-            .map_err(|_| anyhow::anyhow!("Failed to establish ACP connection"))?,
-      );
-      let init_response = initialize_connection(connection.clone()).await?;
-      Ok::<_, anyhow::Error>((connection, init_response))
-   };
-   let outcome = tokio::select! {
-      result = startup => Some(result),
-      () = stop.cancelled() => None,
-   };
-   let result = match outcome {
-      Some(Ok(result)) => result,
-      Some(Err(error)) => {
-         io_handle.abort();
-         stop_child_tree_mut(&mut child, process_group_id).await;
-         return Err(with_agent_stderr(error, &recent_stderr).await);
-      }
-      None => {
-         io_handle.abort();
-         stop_child_tree_mut(&mut child, process_group_id).await;
-         bail!(ACP_STARTUP_STOPPED);
-      }
-   };
-   let (connection, init_response) = result;
-   let auth_methods = init_response.auth_methods.clone();
-   let described_auth_methods = describe_auth_methods(&auth_methods, config);
-   let supports_session_resume = init_response
-      .agent_capabilities
-      .session_capabilities
-      .resume
-      .is_some();
-   let supports_additional_directories = init_response
-      .agent_capabilities
-      .session_capabilities
-      .additional_directories
-      .is_some();
-
-   Ok(StartedConnection {
-      handle: ConnectionHandle {
-         agent_id: config.id.clone(),
-         agent_name: config.name.clone(),
-         connection,
-         client,
-         app_handle,
-         workspace_path,
-         auth_methods,
-         described_auth_methods,
-         agent_capabilities: init_response.agent_capabilities.into(),
-         supports_session_resume,
-         supports_additional_directories,
-         recent_stderr,
-      },
-      process: child,
-      process_group_id,
-      io_handle,
-      responders,
-   })
+   (io_handle, connection_rx)
 }
 
 /// A session a chat can prompt.
@@ -325,14 +389,11 @@ pub(super) async fn open_session(
       Ok(session) => session,
       Err(error) => {
          if error.is::<AuthenticationRequired>()
-            && let Err(emit_error) = handle.app_handle.emit(
-               "acp-event",
-               AcpEvent::AuthRequired {
-                  agent_id: handle.agent_id.clone(),
-                  session_id: None,
-                  methods: handle.described_auth_methods.clone(),
-               },
-            )
+            && let Err(emit_error) = handle.events.acp_event(&AcpEvent::AuthRequired {
+               agent_id: handle.agent_id.clone(),
+               session_id: None,
+               methods: handle.described_auth_methods.clone(),
+            })
          {
             log::warn!("Failed to emit ACP auth required event: {}", emit_error);
          }
@@ -350,7 +411,7 @@ pub(super) async fn open_session(
       &additional_directories,
    );
    emit_initial_session_state(
-      &handle.app_handle,
+      &*handle.events,
       &session_bootstrap.session_id,
       session_bootstrap.initial_modes,
       session_bootstrap.initial_config_options,
@@ -563,7 +624,9 @@ fn client_capabilities() -> acp::ClientCapabilities {
       .meta(client_meta)
 }
 
-async fn initialize_connection(connection: Arc<AcpConnection>) -> Result<acp::InitializeResponse> {
+pub(super) async fn initialize_connection(
+   connection: Arc<AcpConnection>,
+) -> Result<acp::InitializeResponse> {
    let init_request = acp::InitializeRequest::new(SUPPORTED_PROTOCOL_VERSION)
       .client_capabilities(client_capabilities())
       .client_info(acp::Implementation::new("athas", env!("CARGO_PKG_VERSION")).title("Athas"));
@@ -955,31 +1018,25 @@ fn map_mode_state(modes: acp::SessionModeState) -> SessionModeState {
 }
 
 fn emit_initial_session_state(
-   app_handle: &AppHandle,
+   events: &dyn AcpEventSink,
    session_id: &acp::SessionId,
    initial_modes: Option<SessionModeState>,
    initial_config_options: Option<Vec<SessionConfigOption>>,
 ) {
    if let Some(mode_state) = initial_modes
-      && let Err(e) = app_handle.emit(
-         "acp-event",
-         AcpEvent::SessionModeUpdate {
-            session_id: session_id.to_string(),
-            mode_state,
-         },
-      )
+      && let Err(e) = events.acp_event(&AcpEvent::SessionModeUpdate {
+         session_id: session_id.to_string(),
+         mode_state,
+      })
    {
       log::warn!("Failed to emit initial session mode state: {}", e);
    }
 
    if let Some(config_options) = initial_config_options
-      && let Err(e) = app_handle.emit(
-         "acp-event",
-         AcpEvent::ConfigOptionsUpdate {
-            session_id: session_id.to_string(),
-            config_options,
-         },
-      )
+      && let Err(e) = events.acp_event(&AcpEvent::ConfigOptionsUpdate {
+         session_id: session_id.to_string(),
+         config_options,
+      })
    {
       log::warn!("Failed to emit initial session config options: {}", e);
    }

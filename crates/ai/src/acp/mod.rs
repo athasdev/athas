@@ -10,6 +10,7 @@ mod config;
 #[cfg(test)]
 mod fake_agent;
 mod file_access;
+mod host;
 pub mod mcp_servers;
 mod process;
 pub mod registry;
@@ -27,6 +28,9 @@ pub use bridge::AcpAgentBridge;
 pub use bridge_init::AgentLaunchEnv;
 /// Shared with Athas's own agent, so its writes and ACP writes never reuse an id.
 pub use file_access::next_agent_write_id;
+pub use host::{
+   ACP_EVENT, ACP_TRAFFIC_EVENT, AcpEmit, AcpEventSink, AcpHostInfo, FILE_CHANGED_EVENT,
+};
 pub use mcp_servers::{McpServerConfig, McpServerSecrets, McpServerSetting};
 pub use traffic::TrafficInspector;
 pub use types::{

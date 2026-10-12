@@ -194,6 +194,37 @@ exit 1"#,
    }
 
    #[test]
+   fn does_not_deadlock_on_a_linter_that_echoes_large_input() {
+      let dir = tempfile::tempdir().unwrap();
+      let content = "x".repeat(4 * 1024 * 1024);
+
+      let response = run_linter(script(dir.path(), "cat"), &content, &config(None, None));
+
+      assert!(response.success);
+      assert!(response.diagnostics.is_empty());
+   }
+
+   #[test]
+   fn stops_a_linter_that_hangs() {
+      let dir = tempfile::tempdir().unwrap();
+
+      let response = run_linter_with_timeout(
+         script(dir.path(), "sleep 5"),
+         "",
+         &config(None, None),
+         Duration::from_millis(100),
+      );
+
+      assert!(!response.success);
+      assert!(
+         response
+            .error
+            .unwrap_or_default()
+            .starts_with("Linter timed out")
+      );
+   }
+
+   #[test]
    fn reports_linter_crashes_that_produce_no_diagnostics() {
       let dir = tempfile::tempdir().unwrap();
       let command = script(

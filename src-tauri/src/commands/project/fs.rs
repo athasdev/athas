@@ -1,6 +1,8 @@
-use super::path_guard::{require_path_under_home, require_symlink_container_under_home};
-use athas_project::local_fs::{self, ExpectedFileDigest, SymlinkInfo};
 pub(super) use athas_project::local_fs::{copy_dir_all, remove_dir_all};
+use athas_project::{
+   local_fs::{self, ExpectedFileDigest, SymlinkInfo},
+   path_guard::{resolve_local_path, resolve_symlink_path},
+};
 use std::{fs, path::Path, time::Instant};
 #[cfg(target_os = "macos")]
 use tauri::Manager;
@@ -26,7 +28,7 @@ impl specta::Type for FileBytes {
 #[specta::specta]
 pub async fn get_local_directory_size(path: String) -> Result<u64, String> {
    tauri::async_runtime::spawn_blocking(move || {
-      let resolved = require_path_under_home(&path)?;
+      let resolved = resolve_local_path(&path)?;
       local_fs::directory_size(&resolved)
    })
    .await
@@ -46,7 +48,7 @@ pub async fn read_local_file(path: String) -> Result<FileBytes, String> {
       tauri::async_runtime::spawn_blocking(move || {
          let worker_started_at = Instant::now();
          let guard_started_at = Instant::now();
-         let resolved = require_path_under_home(&path)?;
+         let resolved = resolve_local_path(&path)?;
          let guard_elapsed = guard_started_at.elapsed();
          let read_started_at = Instant::now();
          let bytes =
@@ -91,7 +93,7 @@ pub async fn read_local_file(path: String) -> Result<FileBytes, String> {
 #[specta::specta]
 pub async fn write_local_file(path: String, content: String) -> Result<(), String> {
    tauri::async_runtime::spawn_blocking(move || {
-      let resolved = require_path_under_home(&path)?;
+      let resolved = resolve_local_path(&path)?;
       local_fs::write_text(&resolved, content)
    })
    .await
@@ -106,7 +108,7 @@ pub async fn write_local_file_checked(
    content: String,
 ) -> Result<(), String> {
    tauri::async_runtime::spawn_blocking(move || {
-      let resolved = require_path_under_home(&path)?;
+      let resolved = resolve_local_path(&path)?;
       local_fs::write_text_checked(&resolved, expected, content)
    })
    .await
@@ -120,7 +122,7 @@ pub async fn delete_local_file_checked(
    expected_content: String,
 ) -> Result<(), String> {
    tauri::async_runtime::spawn_blocking(move || {
-      let resolved = require_path_under_home(&path)?;
+      let resolved = resolve_local_path(&path)?;
       athas_project::file_mutations::delete_text_if_unchanged(&resolved, &expected_content)
    })
    .await
@@ -130,10 +132,9 @@ pub async fn delete_local_file_checked(
 #[command]
 #[specta::specta]
 pub fn open_file_external(path: String) -> Result<(), String> {
-   // Canonicalize and confine to $HOME so the platform opener cannot be
-   // invoked on system locations or on a scheme-like string that would be
-   // interpreted as a URL by xdg-open.
-   let resolved = require_path_under_home(&path)?;
+   // Canonicalize to a concrete absolute path so the platform opener is never
+   // handed a scheme-like string that xdg-open would interpret as a URL.
+   let resolved = resolve_local_path(&path)?;
    let resolved_str = resolved.to_string_lossy().to_string();
 
    #[cfg(target_os = "macos")]
@@ -163,7 +164,7 @@ pub fn open_file_external(path: String) -> Result<(), String> {
 #[command]
 #[specta::specta]
 pub async fn toggle_quick_look(app: AppHandle, path: String) -> Result<(), String> {
-   let resolved = require_path_under_home(&path)?;
+   let resolved = resolve_local_path(&path)?;
    if !resolved.is_file() {
       return Err("Quick Look is only available for local files".to_string());
    }
@@ -189,7 +190,7 @@ pub async fn toggle_quick_look(app: AppHandle, path: String) -> Result<(), Strin
 #[command]
 #[specta::specta]
 pub async fn show_share_picker(window: tauri::WebviewWindow, path: String) -> Result<(), String> {
-   let resolved = require_path_under_home(&path)?;
+   let resolved = resolve_local_path(&path)?;
    if !resolved.is_file() {
       return Err("Share is only available for local files".to_string());
    }
@@ -226,7 +227,7 @@ pub async fn get_symlink_info(
    tauri::async_runtime::spawn_blocking(move || {
       // Only the link's container is resolved, so links pointing outside the scope are still
       // reported.
-      let path = require_symlink_container_under_home(&path)?;
+      let path = resolve_symlink_path(&path)?;
       local_fs::symlink_info(&path, workspace_root)
    })
    .await
@@ -237,8 +238,8 @@ pub async fn get_symlink_info(
 #[specta::specta]
 pub fn rename_file(source_path: String, target_path: String) -> Result<(), String> {
    local_fs::rename_path(
-      &require_path_under_home(&source_path)?,
-      &require_path_under_home(&target_path)?,
+      &resolve_local_path(&source_path)?,
+      &resolve_local_path(&target_path)?,
    )
 }
 
@@ -246,7 +247,7 @@ pub fn rename_file(source_path: String, target_path: String) -> Result<(), Strin
 #[specta::specta]
 pub fn move_file(source_path: String, target_path: String) -> Result<(), String> {
    local_fs::move_path(
-      &require_path_under_home(&source_path)?,
-      &require_path_under_home(&target_path)?,
+      &resolve_local_path(&source_path)?,
+      &resolve_local_path(&target_path)?,
    )
 }

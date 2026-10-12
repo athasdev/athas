@@ -18,6 +18,7 @@ use terminal::{
    terminal_set_paused, terminal_write, warm_terminal_environment,
 };
 
+mod acp_events;
 mod app_setup;
 #[cfg(debug_assertions)]
 mod bindings;

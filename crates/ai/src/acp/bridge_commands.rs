@@ -1,18 +1,15 @@
 use super::{
-   bridge::{AcpWorker, ResponderRegistry, Shutdown, connection_key},
+   bridge::{AcpWorker, Shutdown, connection_key},
    bridge_init::{
-      ACP_STARTUP_STOPPED, AgentLaunchEnv, OpenedSession, SessionTarget, StartedConnection,
-      start_connection,
+      ACP_STARTUP_STOPPED, AgentLaunch, OpenedSession, SessionTarget, StartedConnection,
    },
    mcp_servers::McpServerConfig,
    sessions::{ConnectionKey, Startups},
-   traffic::TrafficInspector,
    types::{AcpAgentStatus, AcpOpenedSession, AcpSessionList, AgentConfig, SessionConfigValue},
 };
 use anyhow::Result;
 use athas_terminal::TerminalManager;
 use std::{sync::Arc, time::Instant};
-use tauri::AppHandle;
 use tokio::sync::{Mutex, mpsc, oneshot};
 
 type Response<T> = oneshot::Sender<Result<T>>;
@@ -190,22 +187,20 @@ fn join_startup(
          config.name
       );
    }
-   let app_handle = worker.app_handle();
-   let traffic = worker.traffic();
-   let launch_env = worker.launch_env(&config.id);
+   let launch = AgentLaunch {
+      launch_env: worker.launch_env(&config.id),
+      config,
+      workspace_path: key.workspace_path.clone(),
+      events: worker.events(),
+      app_version: worker.app_version(),
+      terminal_manager,
+      traffic: worker.traffic(),
+      stop,
+   };
+   let start = (worker.launcher())(launch);
    let followup_tx = followup_tx.clone();
    tokio::task::spawn_local(async move {
-      let result = start_connection(
-         &config,
-         launch_env,
-         key.workspace_path.clone(),
-         app_handle,
-         terminal_manager,
-         traffic,
-         stop,
-      )
-      .await
-      .map(Box::new);
+      let result = start.await.map(Box::new);
       let _ = followup_tx.send(WorkerFollowUp::Started {
          key,
          startup_id,
@@ -214,22 +209,15 @@ fn join_startup(
    });
 }
 
+/// Serves the bridge's commands, and the follow-ups `worker` hands back on `followup_rx`, until the
+/// bridge is dropped. `status` is kept up to date for status requests.
 pub(super) async fn run_worker_loop(
    mut command_rx: mpsc::Receiver<AcpCommand>,
+   mut followup_rx: mpsc::UnboundedReceiver<WorkerFollowUp>,
    status: Arc<Mutex<Vec<AcpAgentStatus>>>,
-   app_handle: AppHandle,
-   responders: ResponderRegistry,
-   traffic: TrafficInspector,
-   launch_env: AgentLaunchEnv,
+   mut worker: AcpWorker,
 ) {
-   let (followup_tx, mut followup_rx) = mpsc::unbounded_channel::<WorkerFollowUp>();
-   let mut worker = AcpWorker::new(
-      app_handle,
-      responders,
-      traffic,
-      launch_env,
-      followup_tx.clone(),
-   );
+   let followup_tx = worker.followup_tx();
    let mut startups = Startups::<StartupWaiter>::default();
    let mut health_check = tokio::time::interval(std::time::Duration::from_secs(1));
    health_check.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
