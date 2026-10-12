@@ -18,6 +18,7 @@ which = "7.0"
 zip = "2.2"
 
 [dev-dependencies]
+athas-test-support = { path = "../test-support" }
 tokio = { version = "1.0", features = ["io-util", "macros", "process", "rt", "time"] }
 
 [lints]

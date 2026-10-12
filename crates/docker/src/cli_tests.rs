@@ -1077,11 +1077,7 @@ async fn reports_log_stream_launch_failures_and_ignores_unknown_stops() {
 async fn stopping_a_stream_aborts_it() {
    let (_dir, root) = canonical_tempdir();
    let program = root.join("docker");
-   fs::write(&program, "#!/bin/sh\nexec sleep 30\n").unwrap();
-   {
-      use std::os::unix::fs::PermissionsExt;
-      fs::set_permissions(&program, fs::Permissions::from_mode(0o755)).unwrap();
-   }
+   athas_test_support::write_script(&program, "exec sleep 30");
    let streams = DockerLogStreams::default();
    let sink = Arc::new(RecordingSink::default());
 

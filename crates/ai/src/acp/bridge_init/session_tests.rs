@@ -525,14 +525,10 @@ fn startup_errors_carry_the_agents_last_relevant_stderr() {
       let traffic = TrafficInspector::default();
       let tap = traffic.start_process(&config.id, &config.name, None, Vec::new());
       let mut child = spawn_agent_process(&config, &HashMap::new(), None).unwrap();
-      let recent = spawn_stderr_logger(&mut child, config.name.clone(), tap);
+      let stderr = spawn_stderr_logger(&mut child, config.name.clone(), tap);
       child.wait().await.unwrap();
-      for _ in 0..200 {
-         if recent.lock().await.len() == 3 {
-            break;
-         }
-         tokio::time::sleep(std::time::Duration::from_millis(10)).await;
-      }
+      let recent = stderr.drained().await;
+      assert_eq!(recent.lock().await.len(), 3);
 
       let error = with_agent_stderr(anyhow::anyhow!("Agent exited"), &recent).await;
       assert_eq!(
@@ -543,5 +539,43 @@ fn startup_errors_carry_the_agents_last_relevant_stderr() {
       let quiet = Arc::new(Mutex::new(VecDeque::new()));
       let error = with_agent_stderr(anyhow::anyhow!("Agent exited"), &quiet).await;
       assert_eq!(error.to_string(), "Agent exited");
+   });
+}
+
+#[cfg(unix)]
+#[test]
+fn a_failed_startup_reports_what_the_agent_printed_after_stdout_closed() {
+   local(async {
+      // The agent exits at once, which fails `initialize`, and the reason reaches stderr only
+      // afterwards, from a process it left running that ignores the stop signal.
+      let config = agent_config(
+         Path::new("/bin/sh"),
+         &[
+            "-c",
+            concat!(
+               "(trap '' TERM; exec >&- <&-; sleep 0.2; ",
+               "echo 'Error: the agent needs an API key' >&2) & exit 3",
+            ),
+         ],
+      );
+      let error = start_connection(AgentLaunch {
+         config: Box::new(config),
+         launch_env: HashMap::new(),
+         workspace_path: None,
+         events: Arc::new(crate::acp::host::recording::RecordingSink::default()),
+         app_version: "1.0.0".to_string(),
+         terminal_manager: Arc::new(TerminalManager::new()),
+         traffic: TrafficInspector::default(),
+         stop: CancellationToken::new(),
+      })
+      .await
+      .err()
+      .unwrap()
+      .to_string();
+
+      assert!(
+         error.ends_with("Agent stderr: Error: the agent needs an API key"),
+         "{error}"
+      );
    });
 }

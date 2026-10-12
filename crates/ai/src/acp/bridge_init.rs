@@ -33,10 +33,12 @@ use std::{
    process::Stdio,
    rc::Rc,
    sync::Arc,
+   time::Duration,
 };
 use tokio::{
    process::{Child, Command},
    sync::Mutex,
+   task::JoinHandle,
 };
 use tokio_util::{
    compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt},
@@ -162,6 +164,27 @@ const MAX_RECENT_STDERR_LINES: usize = 20;
 pub(super) const ACP_STARTUP_STOPPED: &str = "ACP agent startup was stopped";
 pub(super) type RecentAgentStderr = Arc<Mutex<VecDeque<String>>>;
 
+/// How long a failed startup waits for the rest of the agent's stderr. The agent has been
+/// stopped by then, so the pipe closes at once unless a process it left behind still holds it.
+const STDERR_DRAIN_TIMEOUT: Duration = Duration::from_secs(2);
+
+/// The agent's stderr: its latest lines, and the task that reads them.
+pub(super) struct AgentStderr {
+   pub recent: RecentAgentStderr,
+   reader: Option<JoinHandle<()>>,
+}
+
+impl AgentStderr {
+   /// The latest lines once the agent's stderr is read to the end, or after
+   /// [`STDERR_DRAIN_TIMEOUT`].
+   pub(super) async fn drained(self) -> RecentAgentStderr {
+      if let Some(reader) = self.reader {
+         let _ = tokio::time::timeout(STDERR_DRAIN_TIMEOUT, reader).await;
+      }
+      self.recent
+   }
+}
+
 /// How startup may sign in when the agent asks for it.
 #[derive(Debug, Clone, Default)]
 pub(super) struct StartupAuth {
@@ -202,7 +225,7 @@ pub(super) async fn start_connection(launch: AgentLaunch) -> Result<StartedConne
       .stdout
       .take()
       .ok_or_else(|| anyhow::anyhow!("Failed to get stdout"))?;
-   let recent_stderr = spawn_stderr_logger(&mut child, config.name.clone(), tap.clone());
+   let stderr = spawn_stderr_logger(&mut child, config.name.clone(), tap.clone());
 
    let client = Arc::new(AthasAcpClient::new(
       events.clone(),
@@ -233,6 +256,9 @@ pub(super) async fn start_connection(launch: AgentLaunch) -> Result<StartedConne
       Some(Err(error)) => {
          io_handle.abort();
          stop_child_tree_mut(&mut child, process_group_id).await;
+         // An agent that exits during startup closes stdout, which fails `initialize` while
+         // what it printed to stderr, the actual reason, may still be unread.
+         let recent_stderr = stderr.drained().await;
          return Err(with_agent_stderr(error, &recent_stderr).await);
       }
       None => {
@@ -251,7 +277,7 @@ pub(super) async fn start_connection(launch: AgentLaunch) -> Result<StartedConne
          events,
          workspace_path,
          init_response,
-         recent_stderr,
+         stderr.recent,
       ),
       process: child,
       process_group_id,
@@ -529,13 +555,9 @@ fn spawn_agent_process(
    Ok(cmd.spawn()?)
 }
 
-fn spawn_stderr_logger(
-   child: &mut Child,
-   agent_name: String,
-   tap: TrafficTap,
-) -> RecentAgentStderr {
+fn spawn_stderr_logger(child: &mut Child, agent_name: String, tap: TrafficTap) -> AgentStderr {
    let recent_stderr = Arc::new(Mutex::new(VecDeque::new()));
-   if let Some(stderr) = child.stderr.take() {
+   let reader = child.stderr.take().map(|stderr| {
       let captured_stderr = recent_stderr.clone();
       tokio::task::spawn_local(async move {
          use tokio::io::{AsyncBufReadExt, BufReader};
@@ -549,9 +571,12 @@ fn spawn_stderr_logger(
                recent.pop_front();
             }
          }
-      });
+      })
+   });
+   AgentStderr {
+      recent: recent_stderr,
+      reader,
    }
-   recent_stderr
 }
 
 async fn with_agent_stderr(

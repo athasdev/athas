@@ -74,12 +74,7 @@ impl FakeDocker {
           \"$*\" in\n  'login '*) cat > {stdin} ;;\nesac\ncase \"$*\" in\n{arms}esac\nexit 0\n"
       );
       let program = root.join("docker");
-      fs::write(&program, script).unwrap();
-      #[cfg(unix)]
-      {
-         use std::os::unix::fs::PermissionsExt;
-         fs::set_permissions(&program, fs::Permissions::from_mode(0o755)).unwrap();
-      }
+      athas_test_support::write_executable(&program, &script);
       let docker = Docker::with_program(program);
       Self { dir, docker }
    }

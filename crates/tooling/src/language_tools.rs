@@ -210,12 +210,10 @@ mod tests {
       let dir = tools_dir.join("binary").join(name);
       fs::create_dir_all(&dir).unwrap();
       let path = dir.join(ToolInstaller::bin_file_name(name));
-      fs::write(&path, "#!/bin/sh\n").unwrap();
       #[cfg(unix)]
-      {
-         use std::os::unix::fs::PermissionsExt;
-         fs::set_permissions(&path, fs::Permissions::from_mode(0o755)).unwrap();
-      }
+      athas_test_support::write_executable(&path, "#!/bin/sh\n");
+      #[cfg(not(unix))]
+      fs::write(&path, "#!/bin/sh\n").unwrap();
       path
    }
 

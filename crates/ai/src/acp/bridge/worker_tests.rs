@@ -1431,19 +1431,15 @@ fn idle_agents_are_shut_down_once_nothing_uses_them() {
 
 #[test]
 fn the_bridge_runs_managed_agents_from_the_data_dir_and_streams_their_traffic() {
-   use std::os::unix::fs::PermissionsExt;
-
    let sink = Arc::new(RecordingSink::default());
    let data_dir = tempfile::tempdir().unwrap();
    let managed = data_dir.path().join("tools").join("acp");
    std::fs::create_dir_all(&managed).unwrap();
    let wrapper = managed.join(AGENT);
-   std::fs::write(
+   athas_test_support::write_script(
       &wrapper,
-      "#!/bin/sh\necho 'Error: the agent needs an API key' >&2\nexit 3\n",
-   )
-   .unwrap();
-   std::fs::set_permissions(&wrapper, std::fs::Permissions::from_mode(0o755)).unwrap();
+      "echo 'Error: the agent needs an API key' >&2\nexit 3",
+   );
 
    let mut bridge = AcpAgentBridge::new(
       sink.clone(),

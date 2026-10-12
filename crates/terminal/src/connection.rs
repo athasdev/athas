@@ -6,7 +6,7 @@ use crate::{
    shell::get_shell_by_id,
 };
 use anyhow::{Result, anyhow};
-use portable_pty::{Child, CommandBuilder, PtyPair, PtySize};
+use portable_pty::{Child, CommandBuilder, MasterPty, PtySize};
 #[cfg(not(target_os = "windows"))]
 use std::sync::OnceLock;
 use std::{
@@ -25,7 +25,7 @@ static USER_ENVIRONMENT_CACHE: OnceLock<HashMap<String, String>> = OnceLock::new
 
 pub struct TerminalConnection {
    pub id: String,
-   pub pty_pair: PtyPair,
+   pub master: Box<dyn MasterPty + Send>,
    pub event_handler: TerminalEventHandler,
    pub writer: Arc<Mutex<Option<Box<dyn Write + Send>>>>,
    pub child: Arc<Mutex<Option<Box<dyn Child + Send + Sync>>>>,
@@ -53,12 +53,17 @@ impl TerminalConnection {
          cmd = flatpak::host_pty_command(&cmd);
       }
       let child = pty_pair.slave.spawn_command(cmd)?;
-      let writer = Arc::new(Mutex::new(Some(pty_pair.master.take_writer()?)));
+      // Only the child keeps the slave open. Linux does not hang up a pty when its session
+      // leader exits, so while Athas held the slave the reader never saw EOF and the exit went
+      // unreported.
+      drop(pty_pair.slave);
+      let master = pty_pair.master;
+      let writer = Arc::new(Mutex::new(Some(master.take_writer()?)));
       let child = Arc::new(Mutex::new(Some(child)));
 
       Ok(Self {
          id,
-         pty_pair,
+         master,
          event_handler,
          writer,
          child,
@@ -545,7 +550,6 @@ impl TerminalConnection {
       let child = self.child.clone();
       let reader_control = self.reader_control.clone();
       let mut reader = self
-         .pty_pair
          .master
          .try_clone_reader()
          .expect("Failed to clone reader");
@@ -650,7 +654,7 @@ impl TerminalConnection {
 
    pub fn resize(&self, size: TerminalSize) -> Result<()> {
       let size = size.normalized();
-      self.pty_pair.master.resize(PtySize {
+      self.master.resize(PtySize {
          rows: size.rows,
          cols: size.cols,
          pixel_width: size.pixel_width,
@@ -932,5 +936,33 @@ mod tests {
          command.get_env("TERM_PROGRAM_VERSION"),
          Some(OsStr::new("0.9.0-test"))
       );
+   }
+
+   #[cfg(unix)]
+   #[test]
+   fn reports_the_exit_of_a_command_that_ends_on_its_own() {
+      let mut config = config_with_env(HashMap::new());
+      config.command = Some("sh".to_string());
+      config.args = Some(vec!["-c".to_string(), "printf done; exit 3".to_string()]);
+      let (events_tx, events_rx) = mpsc::channel();
+      let events_tx = Mutex::new(events_tx);
+      let handler: TerminalEventHandler = Arc::new(move |_, event| {
+         let _ = events_tx.lock().unwrap().send(event);
+         true
+      });
+      let connection = TerminalConnection::new("exit-test".to_string(), config, handler).unwrap();
+      connection.start_reader_thread();
+
+      let mut output = Vec::new();
+      let exit = loop {
+         match events_rx.recv_timeout(std::time::Duration::from_secs(10)) {
+            Ok(TerminalEvent::Output { data }) => output.extend(data),
+            Ok(TerminalEvent::Exit { exit_code, signal }) => break (exit_code, signal),
+            Ok(event) => panic!("unexpected event before the exit: {event:?}"),
+            Err(error) => panic!("no exit reported ({error}); output: {output:?}"),
+         }
+      };
+      assert_eq!(exit, (Some(3), None));
+      assert!(String::from_utf8_lossy(&output).contains("done"));
    }
 }

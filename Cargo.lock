@@ -587,6 +587,7 @@ dependencies = [
  "athas-remote",
  "athas-runtime",
  "athas-terminal",
+ "athas-test-support",
  "athas-tooling",
  "athas-version-control",
  "athas-wsl",
@@ -660,6 +661,7 @@ dependencies = [
  "athas-exec-path",
  "athas-project",
  "athas-terminal",
+ "athas-test-support",
  "athas-tooling",
  "base64 0.22.1",
  "bzip2",
@@ -749,6 +751,7 @@ dependencies = [
 name = "athas-docker"
 version = "0.1.0"
 dependencies = [
+ "athas-test-support",
  "serde",
  "serde_json",
  "specta",
@@ -874,6 +877,7 @@ dependencies = [
 name = "athas-runtime"
 version = "0.1.0"
 dependencies = [
+ "athas-test-support",
  "flate2",
  "log",
  "reqwest 0.12.28",
@@ -907,10 +911,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "athas-test-support"
+version = "0.1.0"
+
+[[package]]
 name = "athas-tooling"
 version = "0.1.0"
 dependencies = [
  "athas-runtime",
+ "athas-test-support",
  "flate2",
  "futures-util",
  "log",

@@ -137,12 +137,11 @@ fn parses_regex_diagnostics_with_normalized_severities() {
 #[cfg(unix)]
 mod process {
    use super::*;
-   use std::{fs, os::unix::fs::PermissionsExt, path::Path};
+   use std::path::Path;
 
    fn script(dir: &Path, body: &str) -> Command {
       let path = dir.join("linter");
-      fs::write(&path, format!("#!/bin/sh\n{body}\n")).unwrap();
-      fs::set_permissions(&path, fs::Permissions::from_mode(0o755)).unwrap();
+      athas_test_support::write_script(&path, body);
       Command::new(path)
    }
 

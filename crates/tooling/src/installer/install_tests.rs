@@ -175,9 +175,8 @@ fn write_file(path: &Path, contents: &str) {
 
 #[cfg(unix)]
 fn write_script(path: &Path, body: &str) {
-   use std::os::unix::fs::PermissionsExt;
-   write_file(path, &format!("#!/bin/sh\n{body}\n"));
-   fs::set_permissions(path, fs::Permissions::from_mode(0o755)).unwrap();
+   fs::create_dir_all(path.parent().unwrap()).unwrap();
+   athas_test_support::write_script(path, body);
 }
 
 fn download_error(result: Result<Vec<u8>, ToolError>) -> String {

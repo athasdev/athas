@@ -217,14 +217,13 @@ fn builtin_rustfmt_formats_stdin() {
 #[cfg(unix)]
 mod process {
    use super::*;
-   use std::{fs, os::unix::fs::PermissionsExt, path::Path, time::Instant};
+   use std::{fs, path::Path, time::Instant};
 
    const TIMEOUT: Duration = Duration::from_secs(10);
 
    fn script(dir: &Path, body: &str) -> Command {
       let path = dir.join("formatter");
-      fs::write(&path, format!("#!/bin/sh\n{body}\n")).unwrap();
-      fs::set_permissions(&path, fs::Permissions::from_mode(0o755)).unwrap();
+      athas_test_support::write_script(&path, body);
       Command::new(path)
    }
 

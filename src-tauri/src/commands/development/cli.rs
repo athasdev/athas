@@ -713,13 +713,11 @@ mod tests {
       ));
       fs::create_dir_all(&directory).unwrap();
       let binary = directory.join("Athas's binary");
-      fs::write(
+      athas_test_support::write_executable(
          &binary,
          "#!/bin/bash\nif [ \"$1\" = --validate-cli ]; then exit 0; fi\nprintf '%s\\0' \"$PWD\" \
           \"$@\" > result\n",
-      )
-      .unwrap();
-      fs::set_permissions(&binary, fs::Permissions::from_mode(0o755)).unwrap();
+      );
       let launcher = directory.join("athas");
       fs::write(&launcher, unix_cli_script(&binary)).unwrap();
       let status = Command::new("bash")

@@ -19,6 +19,7 @@ members = [
   "crates/browser",
   "crates/docker",
   "crates/claude-ide",
+  "crates/test-support",
 ]
 resolver = "2"
 
