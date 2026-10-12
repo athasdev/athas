@@ -51,7 +51,10 @@ export const useZoomStore = createSelectors(
         zoomIn: (type: ZoomType) => {
           const current = get()[`${type}ZoomLevel`];
           const currentIndex = ZOOM_LEVELS.findIndex((level) => level >= current);
-          const nextIndex = Math.min(currentIndex + 1, ZOOM_LEVELS.length - 1);
+          const nextIndex =
+            currentIndex === -1
+              ? ZOOM_LEVELS.length - 1
+              : Math.min(currentIndex + 1, ZOOM_LEVELS.length - 1);
           const newZoom = ZOOM_LEVELS[nextIndex];
           if (newZoom !== current) {
             set({ [`${type}ZoomLevel`]: newZoom });
@@ -62,7 +65,8 @@ export const useZoomStore = createSelectors(
         zoomOut: (type: ZoomType) => {
           const current = get()[`${type}ZoomLevel`];
           const currentIndex = ZOOM_LEVELS.findIndex((level) => level >= current);
-          const prevIndex = Math.max(currentIndex - 1, 0);
+          const prevIndex =
+            currentIndex === -1 ? ZOOM_LEVELS.length - 1 : Math.max(currentIndex - 1, 0);
           const newZoom = ZOOM_LEVELS[prevIndex];
 
           if (newZoom !== current) {

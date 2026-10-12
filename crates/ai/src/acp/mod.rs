@@ -1,3 +1,5 @@
+pub mod agent_catalog;
+pub mod agent_install;
 mod auth;
 mod bridge;
 mod bridge_commands;
@@ -5,6 +7,8 @@ mod bridge_init;
 mod bridge_prompt;
 mod client;
 mod config;
+#[cfg(test)]
+mod fake_agent;
 mod file_access;
 pub mod mcp_servers;
 mod process;

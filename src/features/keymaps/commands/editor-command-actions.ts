@@ -482,11 +482,10 @@ export async function runQuickFixForActiveEditor(): Promise<void> {
     return;
   }
 
-  const [{ useDiagnosticsStore }, { selectDiagnosticForQuickFix, selectPreferredCodeAction }] =
-    await Promise.all([
-      import("@/features/diagnostics/stores/diagnostics.store"),
-      import("@/features/diagnostics/services/quick-fix"),
-    ]);
+  const [{ useDiagnosticsStore }, { selectDiagnosticForQuickFix }] = await Promise.all([
+    import("@/features/diagnostics/stores/diagnostics.store"),
+    import("@/features/diagnostics/services/quick-fix"),
+  ]);
   const diagnostics = useDiagnosticsStore
     .getState()
     .actions.getDiagnosticsForFile(activeBuffer.path);
@@ -508,7 +507,6 @@ export async function runQuickFixForActiveEditor(): Promise<void> {
     return;
   }
 
-  const preferredAction = selectPreferredCodeAction(codeActions);
   const action =
     codeActions.length === 1
       ? codeActions[0]
@@ -524,14 +522,13 @@ export async function runQuickFixForActiveEditor(): Promise<void> {
           return selected === null ? null : codeActions[Number(selected)] || null;
         })();
 
-  const actionToApply = action ?? (codeActions.length === 1 ? preferredAction : null);
-  if (!actionToApply) return;
+  if (!action) return;
 
-  const result = await lspClient.applyCodeAction(activeBuffer.path, actionToApply.payload);
+  const result = await lspClient.applyCodeAction(activeBuffer.path, action.payload);
   if (result.applied) {
-    toast.success(`Applied: ${actionToApply.title}`);
+    toast.success(`Applied: ${action.title}`);
   } else {
-    toast.warning(result.reason || `Unable to apply action: ${actionToApply.title}`);
+    toast.warning(result.reason || `Unable to apply action: ${action.title}`);
   }
 }
 

@@ -94,10 +94,18 @@ function fileReferencesByLine(model: WorkflowLogModel, showTimestamps: boolean) 
   return byLine;
 }
 
-function resolveWorkflowLogFilePath(root: string | null, path: string): string {
-  if (/^([A-Za-z]:[\\/]|\/)/.test(path)) return path;
+function resolveWorkflowLogFilePath(root: string | null, path: string): string | null {
+  const trimmedRoot = root?.replace(/[\\/]+$/, "") ?? null;
+  if (/^([A-Za-z]:[\\/]|\/)/.test(path)) {
+    if (!trimmedRoot) return null;
+    const comparableRoot = trimmedRoot.replace(/\\/g, "/");
+    const comparablePath = path.replace(/\\/g, "/");
+    const insideRoot =
+      comparablePath.startsWith(`${comparableRoot}/`) && !comparablePath.split("/").includes("..");
+    return insideRoot ? path : null;
+  }
   const normalized = path.replace(/^\.\//, "");
-  return root ? `${root.replace(/[\\/]+$/, "")}/${normalized}` : normalized;
+  return trimmedRoot ? `${trimmedRoot}/${normalized}` : normalized;
 }
 
 const linkTitle = `${IS_MAC ? "Cmd" : "Ctrl"}+click to open in editor`;
@@ -144,13 +152,14 @@ function buildWorkflowLogDecorations(view: EditorView): DecorationSet {
     for (const reference of references.get(lineNumber) ?? []) {
       const from = columnPosition(lineNumber, reference.startColumn);
       const to = columnPosition(lineNumber, reference.endColumn);
-      if (to <= from) continue;
+      const path = resolveWorkflowLogFilePath(entry.repoPath, reference.path);
+      if (to <= from || !path) continue;
       ranges.push(
         Decoration.mark({
           class: FILE_LINK_CLASS,
           attributes: {
             title: linkTitle,
-            "data-path": resolveWorkflowLogFilePath(entry.repoPath, reference.path),
+            "data-path": path,
             "data-line": reference.fileLine ? String(reference.fileLine) : "",
             "data-column": reference.fileColumn ? String(reference.fileColumn) : "",
           },

@@ -352,6 +352,18 @@ describe("GitHub sidebar", () => {
       expect(view().getByRole("button", { name: "Filter: Review Requests" })).toBeTruthy();
     });
 
+    it("exposes the active filter as a checked menu item", async () => {
+      await render();
+
+      await click(view().getByRole("button", { name: "Filter: Open PRs" }));
+
+      const options = [...document.querySelectorAll<HTMLElement>('[role="menuitemcheckbox"]')].map(
+        (option) => [option.textContent?.trim(), option.getAttribute("aria-checked")],
+      );
+      expect(options).toContainEqual(["Open PRs", "true"]);
+      expect(options).toContainEqual(["Review Requests", "false"]);
+    });
+
     it("acts on a pull request from its context menu", async () => {
       await render();
 
@@ -426,6 +438,31 @@ describe("GitHub sidebar", () => {
 
       expect(useRepositoryStore.getState().activeRepoPath).toBe("/other");
       expect(view().getByText("From the other repository")).toBeTruthy();
+    });
+
+    it("explains when the browsed folder is not inside a repository", async () => {
+      handlers.github_list_prs = () => {
+        throw new Error("fatal: not a git repository");
+      };
+      mocks.pickDirectory.mockResolvedValue("/elsewhere");
+      await render();
+
+      await click(view().getByRole("button", { name: "Browse Repository" }));
+
+      expect(view().getByText("Not a Git repository")).toBeTruthy();
+      expect(view().getByText("Selected folder is not inside a Git repository.")).toBeTruthy();
+    });
+
+    it("explains a failed browse when no folder is open", async () => {
+      useProjectStore.setState({ rootFolderPath: undefined });
+      mocks.discoverRepos.mockResolvedValue([]);
+      mocks.pickDirectory.mockResolvedValue("/elsewhere");
+      await render();
+
+      await click(view().getByRole("button", { name: "Browse Repository" }));
+
+      expect(view().getByText("No repository selected")).toBeTruthy();
+      expect(view().getByText("Selected folder is not inside a Git repository.")).toBeTruthy();
     });
 
     it("asks for a repository when no folder is open", async () => {

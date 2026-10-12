@@ -272,6 +272,16 @@ describe("zoom store", () => {
     expect(useZoomStore.getState().showZoomIndicator).toBe(false);
   });
 
+  it("clamps a zoom level above the scale to the largest step", () => {
+    const { actions } = useZoomStore.getState();
+    useZoomStore.setState({ editorZoomLevel: 4, terminalZoomLevel: 4 });
+
+    actions.zoomIn("editor");
+    actions.zoomOut("terminal");
+
+    expect(useZoomStore.getState()).toMatchObject({ editorZoomLevel: 3, terminalZoomLevel: 3 });
+  });
+
   it("snaps an in-between zoom level onto the scale", () => {
     const { actions } = useZoomStore.getState();
     useZoomStore.setState({ editorZoomLevel: 1.05 });

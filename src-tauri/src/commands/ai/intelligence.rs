@@ -1,7 +1,7 @@
-use athas_ai::workspace_tools::{
-   ListFilesOptions, SearchOptions, WorkspaceFileWrite, WorkspaceReplacement,
+use athas_ai::{
+   intelligence::{IntelligenceCommandRun, IntelligenceFileWrite, file_deleted_event},
+   workspace_tools::{ListFilesOptions, SearchOptions, WorkspaceFileWrite, WorkspaceReplacement},
 };
-use serde::Serialize;
 use tauri::{AppHandle, Emitter};
 
 #[tauri::command]
@@ -20,11 +20,8 @@ pub async fn intelligence_paths_stay_in_workspace(
    root: String,
    paths: Vec<String>,
 ) -> Result<bool, String> {
-   if paths.len() > 256 {
-      return Ok(false);
-   }
    tauri::async_runtime::spawn_blocking(move || {
-      athas_ai::workspace_tools::paths_stay_in_workspace(&root, &paths)
+      athas_ai::intelligence::bounded_paths_stay_in_workspace(&root, &paths)
    })
    .await
    .map_err(|e| e.to_string())
@@ -43,17 +40,6 @@ pub async fn intelligence_list_files(
    .map_err(|e| e.to_string())?
 }
 
-/// A command's output together with the workspace files it changed, which the chat records for
-/// review like the agent's own writes.
-#[derive(Serialize, specta::Type)]
-#[serde(rename_all = "camelCase")]
-pub struct IntelligenceCommandRun {
-   #[serde(flatten)]
-   output: athas_ai::workspace_command::WorkspaceCommandOutput,
-   /// `None` when the workspace could not be compared, so changes went untracked.
-   file_changes: Option<athas_ai::workspace_changes::WorkspaceChanges>,
-}
-
 #[tauri::command]
 #[specta::specta]
 pub async fn intelligence_run_command(
@@ -61,27 +47,7 @@ pub async fn intelligence_run_command(
    command: String,
    id: String,
 ) -> Result<IntelligenceCommandRun, String> {
-   let snapshot_root = root.clone();
-   let snapshot = tauri::async_runtime::spawn_blocking(move || {
-      athas_ai::workspace_changes::snapshot_workspace(&snapshot_root).ok()
-   })
-   .await
-   .ok()
-   .flatten();
-   let output = athas_ai::workspace_command::run_workspace_command(&root, &command, &id).await?;
-   let file_changes = match snapshot {
-      Some(snapshot) => tauri::async_runtime::spawn_blocking(move || {
-         athas_ai::workspace_changes::diff_workspace(&snapshot).ok()
-      })
-      .await
-      .ok()
-      .flatten(),
-      None => None,
-   };
-   Ok(IntelligenceCommandRun {
-      output,
-      file_changes,
-   })
+   athas_ai::intelligence::run_tracked_workspace_command(&root, &command, &id).await
 }
 
 #[tauri::command]
@@ -124,39 +90,13 @@ pub async fn intelligence_search_files(
    .map_err(|e| e.to_string())?
 }
 
-/// A write by Athas's own agent, in the shape of the ACP `agent_file_write` event, so the chat
-/// records it for keep-or-reject review exactly like an ACP agent's write.
-#[derive(Serialize, specta::Type)]
-#[serde(rename_all = "camelCase")]
-pub struct IntelligenceFileWrite {
-   write_id: u64,
-   path: String,
-   previous_content: Option<String>,
-   content: String,
-}
-
 /// Tells the file tree and open editors about the write, tagged with its write id so the review
 /// log knows the change is the agent's. The caller records the write before the file watcher's
 /// grace period for unclaimed writes runs out.
-fn announce_write(
-   app: &AppHandle,
-   write: WorkspaceFileWrite,
-) -> Result<IntelligenceFileWrite, String> {
-   let write_id = athas_ai::acp::next_agent_write_id();
-   let _ = app.emit(
-      "file-changed",
-      serde_json::json!({
-         "path": write.path,
-         "event_type": if write.previous_content.is_some() { "reloaded" } else { "opened" },
-         "agent_write_id": write_id,
-      }),
-   );
-   Ok(IntelligenceFileWrite {
-      write_id,
-      path: write.path,
-      previous_content: write.previous_content,
-      content: write.content,
-   })
+fn announce_write(app: &AppHandle, write: WorkspaceFileWrite) -> IntelligenceFileWrite {
+   let write = IntelligenceFileWrite::record(write);
+   let _ = app.emit("file-changed", write.file_changed_event());
+   write
 }
 
 #[tauri::command]
@@ -173,7 +113,7 @@ pub async fn intelligence_edit_file(
    })
    .await
    .map_err(|e| e.to_string())??;
-   announce_write(&app, write)
+   Ok(announce_write(&app, write))
 }
 
 #[tauri::command]
@@ -195,7 +135,7 @@ pub async fn intelligence_write_file(
    })
    .await
    .map_err(|e| e.to_string())??;
-   announce_write(&app, write)
+   Ok(announce_write(&app, write))
 }
 
 #[tauri::command]
@@ -211,9 +151,6 @@ pub async fn intelligence_delete_file(
    })
    .await
    .map_err(|e| e.to_string())??;
-   let _ = app.emit(
-      "file-changed",
-      serde_json::json!({ "path": path, "event_type": "deleted" }),
-   );
+   let _ = app.emit("file-changed", file_deleted_event(&path));
    Ok(path)
 }

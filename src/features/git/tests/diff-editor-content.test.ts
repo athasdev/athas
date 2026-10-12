@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import { formatDiffBufferLabel } from "../services/diff-buffer-label";
 import {
-  createCollapsedDiffAccordionLine,
   getDiffEditorPath,
   parseDiffAccordionLine,
   serializeGitDiffForEditor,
@@ -114,6 +113,22 @@ describe("serializeGitDiffSourceForEditor", () => {
       actualLines: [1, 2, null, 9, null],
     });
   });
+
+  it("separates hunks when a hunk ends with an empty context line", () => {
+    const result = serializeGitDiffSourceForEditor(
+      makeDiff({
+        lines: [
+          { line_type: "header", content: "@@ 1 @@" },
+          { line_type: "context", content: "", old_line_number: 1, new_line_number: 1 },
+          { line_type: "header", content: "@@ 2 @@" },
+          { line_type: "added", content: "c", new_line_number: 9 },
+        ] as GitDiffLine[],
+      }),
+    );
+
+    expect(result.lineKinds).toEqual(["context", "spacer", "added"]);
+    expect(result.actualLines).toEqual([1, null, 9]);
+  });
 });
 
 describe("serializeGitDiffSourceForSplitEditor", () => {
@@ -144,7 +159,7 @@ describe("serializeGitDiffSourceForSplitEditor", () => {
     });
   });
 
-  it("keeps both sides the same length when a hunk ends with an added line", () => {
+  it("separates hunks on both sides when a hunk ends with an added line", () => {
     const result = serializeGitDiffSourceForSplitEditor(
       makeDiff({
         lines: [
@@ -156,8 +171,25 @@ describe("serializeGitDiffSourceForSplitEditor", () => {
       }),
     );
 
-    expect(result.left.lineKinds).toHaveLength(result.right.lineKinds.length);
-    expect(result.right.content.split("\n")).toEqual(["", "c", "d"]);
+    expect(result.left.content.split("\n")).toEqual(["b", "", "", "d"]);
+    expect(result.left.lineKinds).toEqual(["removed", "spacer", "spacer", "context"]);
+    expect(result.right.content.split("\n")).toEqual(["", "c", "", "d"]);
+    expect(result.right.lineKinds).toEqual(["spacer", "added", "spacer", "context"]);
+  });
+
+  it("separates hunks when a hunk ends with an empty context line", () => {
+    const result = serializeGitDiffSourceForSplitEditor(
+      makeDiff({
+        lines: [
+          { line_type: "context", content: "", old_line_number: 1, new_line_number: 1 },
+          { line_type: "header", content: "@@ 2 @@" },
+          { line_type: "context", content: "d", old_line_number: 7, new_line_number: 7 },
+        ] as GitDiffLine[],
+      }),
+    );
+
+    expect(result.left.lineKinds).toEqual(["context", "spacer", "context"]);
+    expect(result.right.lineKinds).toEqual(["context", "spacer", "context"]);
   });
 });
 
@@ -183,21 +215,11 @@ describe("multi-file diff serialization", () => {
     ]);
   });
 
-  it("round-trips collapsed accordion lines and rejects other text", () => {
-    const line = createCollapsedDiffAccordionLine({
-      name: "a.ts",
-      path: "src/a.ts",
-      status: "modified",
-      hiddenCount: 12,
-    });
+  it("rejects lines that are not accordion lines", () => {
+    const line = serializeMultiFileDiffForEditor({ files: [makeDiff()] } as MultiFileDiff).split(
+      "\n",
+    )[0];
 
-    expect(parseDiffAccordionLine(line)).toEqual({
-      name: "a.ts",
-      path: "src/a.ts",
-      status: "modified",
-      hiddenCount: 12,
-      collapsed: true,
-    });
     expect(parseDiffAccordionLine("+added line")).toBeNull();
     expect(parseDiffAccordionLine(`${line.slice(0, line.indexOf("{"))}{broken`)).toBeNull();
   });

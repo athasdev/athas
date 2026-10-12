@@ -1,4 +1,4 @@
-import type { Diagnostic, DiagnosticCodeAction } from "../types/diagnostics.types";
+import type { Diagnostic } from "../types/diagnostics.types";
 
 const SEVERITY_RANK: Record<Diagnostic["severity"], number> = {
   error: 3,
@@ -65,17 +65,4 @@ export function selectDiagnosticForQuickFix(
   return [...sameLineDiagnostics].sort((left, right) =>
     compareDiagnosticsForQuickFix(cursor.line, cursor.column, left, right),
   )[0];
-}
-
-export function selectPreferredCodeAction(
-  actions: DiagnosticCodeAction[],
-): DiagnosticCodeAction | null {
-  const enabledActions = actions.filter((action) => !action.disabledReason);
-  if (enabledActions.length === 0) return null;
-
-  return (
-    enabledActions.find((action) => action.isPreferred) ??
-    enabledActions.find((action) => action.kind?.includes("quickfix")) ??
-    enabledActions[0]
-  );
 }

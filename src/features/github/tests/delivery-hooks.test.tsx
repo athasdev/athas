@@ -62,6 +62,26 @@ describe("useDeliveryList", () => {
     expect(result.current.hasMore).toBe(false);
   });
 
+  it("ignores a second load request while the next page is loading", async () => {
+    const firstPage = Array.from({ length: 20 }, (_, index) => release(40 - index));
+    const list = vi
+      .spyOn(commands, "githubListReleases")
+      .mockResolvedValueOnce(firstPage)
+      .mockResolvedValueOnce([release(20)]);
+
+    const result = renderHook(() => useDeliveryList("releases", "/repo", true));
+    await vi.waitFor(() => expect(result.current.items).toHaveLength(20));
+
+    act(() => {
+      result.current.loadMore();
+      result.current.loadMore();
+    });
+
+    await vi.waitFor(() => expect(result.current.items).toHaveLength(21));
+    expect(list).toHaveBeenCalledTimes(2);
+    expect(list).toHaveBeenLastCalledWith("/repo", 2);
+  });
+
   it("does not load while disabled and reports failures", async () => {
     const list = vi
       .spyOn(commands, "githubListDeployments")

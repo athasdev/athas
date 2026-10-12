@@ -86,6 +86,16 @@ export async function text(locator: Locator) {
   return (await visibleElement(locator)).getText();
 }
 
+/** Position and size of the first visible match, in CSS pixels. */
+export async function elementRect(locator: Locator) {
+  return (await visibleElement(locator)).getRect();
+}
+
+/** Runs a script in the page with the first visible match as `arguments[0]`. */
+export async function runOnVisible<T>(locator: Locator, script: string) {
+  return driver().executeScript<T>(script, await visibleElement(locator));
+}
+
 export async function waitForWorkbench() {
   await driver().wait(
     until.elementLocated(WORKBENCH),

@@ -17,6 +17,7 @@ members = [
   "crates/debugger",
   "crates/database",
   "crates/browser",
+  "crates/docker",
 ]
 resolver = "2"
 

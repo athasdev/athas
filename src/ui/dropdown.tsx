@@ -557,6 +557,8 @@ function DropdownMenuItems({ items }: { items: readonly MenuItem[] }) {
         disabled={item.disabled || !item.onClick}
         variant={item.tone === "destructive" ? "destructive" : "default"}
         data-selected={item.selected ? "" : undefined}
+        role={item.checked === undefined ? "menuitem" : "menuitemcheckbox"}
+        aria-checked={item.checked}
         onClick={item.onClick}
       >
         {iconVisibility[index] && item.icon ? (

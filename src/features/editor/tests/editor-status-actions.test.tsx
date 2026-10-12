@@ -78,7 +78,7 @@ async function openPreferences() {
 }
 
 const checkbox = (label: string) =>
-  [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(
+  [...document.querySelectorAll<HTMLElement>('[role="menuitemcheckbox"]')].find(
     (item) => item.textContent?.trim() === label,
   )!;
 

@@ -232,7 +232,8 @@ const DiagnosticsPane = ({ diagnostics, onDiagnosticClick }: DiagnosticsPaneProp
   const [codeActionsByDiagnostic, setCodeActionsByDiagnostic] = useState<
     Record<string, DiagnosticCodeAction[]>
   >({});
-  const [loadingActionsKey, setLoadingActionsKey] = useState<string | null>(null);
+  const [loadingActionKeys, setLoadingActionKeys] = useState<ReadonlySet<string>>(() => new Set());
+  const requestedActionKeysRef = useRef(new Set<string>());
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -246,36 +247,33 @@ const DiagnosticsPane = ({ diagnostics, onDiagnosticClick }: DiagnosticsPaneProp
 
     const diagnostic = diagnosticContextMenu.data;
     const key = buildDiagnosticKey(diagnostic);
+    const requestedKeys = requestedActionKeysRef.current;
 
-    if (codeActionsByDiagnostic[key]) return;
+    if (requestedKeys.has(key)) return;
 
-    let cancelled = false;
-    setLoadingActionsKey(key);
+    requestedKeys.add(key);
+    setLoadingActionKeys((prev) => new Set(prev).add(key));
 
     lspClient
       .getCodeActions(diagnostic.filePath, diagnostic)
       .then((actions) => {
-        if (cancelled) return;
         setCodeActionsByDiagnostic((prev) => ({
           ...prev,
           [key]: actions,
         }));
       })
+      .catch((error: unknown) => {
+        requestedKeys.delete(key);
+        console.warn("Failed to load quick fixes:", error);
+      })
       .finally(() => {
-        if (!cancelled) {
-          setLoadingActionsKey((prev) => (prev === key ? null : prev));
-        }
+        setLoadingActionKeys((prev) => {
+          const next = new Set(prev);
+          next.delete(key);
+          return next;
+        });
       });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    codeActionsByDiagnostic,
-    diagnosticContextMenu.data,
-    diagnosticContextMenu.isOpen,
-    lspClient,
-  ]);
+  }, [diagnosticContextMenu.data, diagnosticContextMenu.isOpen, lspClient]);
 
   const filteredDiagnostics = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -577,7 +575,7 @@ const DiagnosticsPane = ({ diagnostics, onDiagnosticClick }: DiagnosticsPaneProp
 
     const key = buildDiagnosticKey(diagnostic);
     const codeActions = codeActionsByDiagnostic[key] || [];
-    const isLoading = loadingActionsKey === key;
+    const isLoading = loadingActionKeys.has(key);
 
     const items: MenuItem[] = [];
 
@@ -683,7 +681,7 @@ const DiagnosticsPane = ({ diagnostics, onDiagnosticClick }: DiagnosticsPaneProp
     copyDiagnosticLocation,
     copyDiagnosticMessage,
     diagnosticContextMenu.data,
-    loadingActionsKey,
+    loadingActionKeys,
     onDiagnosticClick,
     preferences.wrapMessages,
     sourceFilter,

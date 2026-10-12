@@ -9,7 +9,6 @@ interface DiffAccordionLineMeta {
   path: string;
   status: "added" | "deleted" | "modified" | "renamed";
   collapsed: boolean;
-  hiddenCount?: number;
 }
 
 export type DiffEditorLineKind = "context" | "added" | "removed" | "spacer";
@@ -127,7 +126,7 @@ export function serializeGitDiffSourceForEditor(diff: GitDiff): SerializedEditor
 
   for (const line of diff.lines) {
     if (line.line_type === "header") {
-      if (!previousWasHeader && lines.length > 0 && lines[lines.length - 1] !== "") {
+      if (!previousWasHeader && lines.length > 0) {
         pushLine(lines, lineKinds, actualLines, "", "spacer", null);
       }
       previousWasHeader = true;
@@ -165,7 +164,7 @@ export function serializeGitDiffSourceForSplitEditor(
 
   for (const line of diff.lines) {
     if (line.line_type === "header") {
-      if (!previousWasHeader && leftLines.length > 0 && leftLines[leftLines.length - 1] !== "") {
+      if (!previousWasHeader && leftLines.length > 0) {
         pushLine(leftLines, leftKinds, leftActualLines, "", "spacer", null);
         pushLine(rightLines, rightKinds, rightActualLines, "", "spacer", null);
       }
@@ -258,13 +257,4 @@ export function parseDiffAccordionLine(line: string): DiffAccordionLineMeta | nu
   } catch {
     return null;
   }
-}
-
-export function createCollapsedDiffAccordionLine(
-  meta: Omit<DiffAccordionLineMeta, "collapsed">,
-): string {
-  return `${DIFF_ACCORDION_PREFIX}${JSON.stringify({
-    ...meta,
-    collapsed: true,
-  } satisfies DiffAccordionLineMeta)}`;
 }

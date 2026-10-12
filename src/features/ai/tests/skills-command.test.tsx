@@ -186,8 +186,11 @@ describe("skills command", () => {
     await render({ isOpen: false });
     await render();
     closes = 0;
-    await press("Escape");
-    expect(closes).toBeGreaterThan(0);
+    await act(async () => {
+      fireEvent.keyDown(document.body, { key: "Escape" });
+    });
+    await flush();
+    expect(closes).toBe(1);
   });
 
   it("filters skills by title and content", async () => {

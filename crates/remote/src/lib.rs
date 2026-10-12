@@ -1,4 +1,5 @@
 mod file_ops;
+mod session_types;
 mod sftp_atomic_rename;
 mod ssh_helpers;
 mod ssh_host_trust;
@@ -21,6 +22,7 @@ use crate::{
 use athas_terminal::{TerminalChannelMessage, TerminalInput, TerminalSize};
 pub use file_ops::RemoteFileEntry;
 use serde::{Deserialize, Serialize};
+pub use session_types::{RemoteTerminalTarget, SSH_CONNECTION_STATUS_EVENT, SshConnectionStatus};
 use tauri::{AppHandle, Manager, ipc::Channel};
 
 #[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
@@ -211,23 +213,18 @@ pub async fn ssh_copy_path(
 }
 
 pub async fn create_remote_terminal(
-   host: String,
-   port: u16,
-   username: String,
-   password: Option<String>,
-   key_path: Option<String>,
-   working_directory: Option<String>,
+   target: RemoteTerminalTarget,
    size: TerminalSize,
    term_program_version: String,
    on_event: Channel<TerminalChannelMessage>,
 ) -> Result<String, String> {
    create_remote_terminal_inner(
-      host,
-      port,
-      username,
-      password,
-      key_path,
-      working_directory,
+      target.host,
+      target.port,
+      target.username,
+      target.password,
+      target.key_path,
+      target.working_directory,
       size,
       term_program_version,
       on_event,

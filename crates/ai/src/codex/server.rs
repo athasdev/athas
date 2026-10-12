@@ -382,16 +382,6 @@ impl CodexAppServer {
          .await
    }
 
-   pub async fn read_thread(&self, thread_id: String) -> Result<Value> {
-      self
-         .request(
-            "thread/read",
-            json!({ "threadId": thread_id, "includeTurns": true }),
-            REQUEST_TIMEOUT,
-         )
-         .await
-   }
-
    pub async fn archive_thread(&self, thread_id: String) -> Result<Value> {
       self
          .request(

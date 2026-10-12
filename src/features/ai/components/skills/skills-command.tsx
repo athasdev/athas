@@ -287,10 +287,6 @@ export function SkillsCommand({
       const activeItems = view === "browse" ? filteredMarketplaceSkills : filteredSkills;
 
       switch (event.key) {
-        case "Escape":
-          event.preventDefault();
-          handleClose();
-          break;
         case "ArrowDown":
           event.preventDefault();
           setSelectedIndex((current) =>

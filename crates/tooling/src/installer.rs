@@ -379,7 +379,7 @@ impl ToolInstaller {
       }
    }
 
-   fn bin_file_name(name: &str) -> String {
+   pub(crate) fn bin_file_name(name: &str) -> String {
       if cfg!(windows) {
          format!("{}.exe", name)
       } else {
@@ -419,7 +419,7 @@ impl ToolInstaller {
       }
    }
 
-   fn node_package_identity(package_spec: &str) -> String {
+   pub(crate) fn node_package_identity(package_spec: &str) -> String {
       if let Some(scoped) = package_spec.strip_prefix('@')
          && let Some((scope, scoped_name)) = scoped.split_once('/')
       {
@@ -815,8 +815,10 @@ impl ToolInstaller {
                ToolError::InstallationFailed(format!("Failed to read zip entry: {}", e))
             })?;
 
-            let Some(relative_path) = file.enclosed_name().map(|p| p.to_path_buf()) else {
-               continue;
+            let Some(relative_path) = file.enclosed_name() else {
+               return Err(ToolError::InstallationFailed(
+                  "Rejected archive entry with invalid path".to_string(),
+               ));
             };
 
             let output_path = target_dir.join(relative_path);
@@ -891,15 +893,22 @@ impl ToolInstaller {
    }
 
    fn binary_install_dir(app_handle: &AppHandle, name: &str) -> Result<PathBuf, ToolError> {
-      Ok(Self::get_tools_dir(app_handle)?.join("binary").join(name))
+      Ok(Self::binary_install_dir_in(
+         &Self::get_tools_dir(app_handle)?,
+         name,
+      ))
+   }
+
+   fn binary_install_dir_in(tools_dir: &Path, name: &str) -> PathBuf {
+      tools_dir.join("binary").join(name)
    }
 
    fn existing_managed_binary(
-      app_handle: &AppHandle,
+      tools_dir: &Path,
       config: &ToolConfig,
       command_name: &str,
    ) -> Result<Option<PathBuf>, ToolError> {
-      let install_dir = Self::binary_install_dir(app_handle, &config.name)?;
+      let install_dir = Self::binary_install_dir_in(tools_dir, &config.name);
       if install_dir.exists()
          && let Ok(path) = Self::pick_binary(&install_dir, command_name)
       {
@@ -907,7 +916,7 @@ impl ToolInstaller {
          return Ok(Some(path));
       }
 
-      let legacy_path = Self::get_tools_dir(app_handle)?
+      let legacy_path = tools_dir
          .join("bin")
          .join(Self::bin_file_name(command_name));
       if legacy_path.exists() {
@@ -1034,20 +1043,34 @@ impl ToolInstaller {
                return Ok(system_path);
             }
 
-            if let Some(path) = Self::existing_managed_binary(app_handle, config, command_name)? {
-               return Ok(path);
-            }
-
-            if let Some(url) = config.download_url.as_ref() {
-               Self::download_binary(app_handle, &config.name, command_name, url).await
-            } else {
-               Err(ToolError::NotFound(format!(
-                  "{} (not found in system locations and no managed binary download URL \
-                   configured)",
-                  command_name
-               )))
-            }
+            Self::install_binary_in(&Self::get_tools_dir(app_handle)?, config, command_name).await
          }
+      }
+   }
+
+   /// Reuses a managed binary under `tools_dir` or downloads the configured one there.
+   async fn install_binary_in(
+      tools_dir: &Path,
+      config: &ToolConfig,
+      command_name: &str,
+   ) -> Result<PathBuf, ToolError> {
+      if let Some(path) = Self::existing_managed_binary(tools_dir, config, command_name)? {
+         return Ok(path);
+      }
+
+      if let Some(url) = config.download_url.as_ref() {
+         Self::download_binary(
+            &Self::binary_install_dir_in(tools_dir, &config.name),
+            &config.name,
+            command_name,
+            url,
+         )
+         .await
+      } else {
+         Err(ToolError::NotFound(format!(
+            "{} (not found in system locations and no managed binary download URL configured)",
+            command_name
+         )))
       }
    }
 
@@ -1066,7 +1089,13 @@ impl ToolInstaller {
             command_name
          ))
       })?;
-      Self::download_binary(app_handle, &config.name, command_name, url).await
+      Self::download_binary(
+         &Self::binary_install_dir(app_handle, &config.name)?,
+         &config.name,
+         command_name,
+         url,
+      )
+      .await
    }
 
    /// Get the installation directory for tools
@@ -1526,23 +1555,22 @@ impl ToolInstaller {
    ///
    /// Enforces:
    /// - HTTPS-only URLs (localhost HTTP permitted in debug builds only).
-   /// - A 100 MB streaming size cap, independently of any `Content-Length`.
+   /// - A 512 MiB streaming size cap (`MAX_BINARY_DOWNLOAD_BYTES`), independently of any
+   ///   `Content-Length`.
    /// - Successful HTTP status.
    async fn download_binary(
-      app_handle: &AppHandle,
+      install_dir: &Path,
       name: &str,
       command_name: &str,
       url: &str,
    ) -> Result<PathBuf, ToolError> {
-      let install_dir = Self::binary_install_dir(app_handle, name)?;
-
       log::info!("Downloading {} from {}", name, url);
       let bytes = Self::download_bytes(url).await?;
 
       let staging_dir = tempfile::tempdir()
          .map_err(|e| ToolError::InstallationFailed(format!("Failed to create temp dir: {}", e)))?;
       Self::extract_archive(&bytes, url, staging_dir.path())?;
-      Self::install_extracted_binary(staging_dir.path(), &install_dir, name, command_name)
+      Self::install_extracted_binary(staging_dir.path(), install_dir, name, command_name)
    }
 
    async fn download_bytes(url: &str) -> Result<Vec<u8>, ToolError> {
@@ -1585,12 +1613,22 @@ impl ToolInstaller {
    }
 
    pub async fn ensure_java_debug_bundle(app_handle: &AppHandle) -> Result<PathBuf, ToolError> {
-      let bundle_path = Self::java_debug_bundle_path(app_handle)?;
+      Self::ensure_java_debug_bundle_at(
+         Self::java_debug_bundle_path(app_handle)?,
+         JAVA_DEBUG_VSIX_URL,
+      )
+      .await
+   }
+
+   async fn ensure_java_debug_bundle_at(
+      bundle_path: PathBuf,
+      vsix_url: &str,
+   ) -> Result<PathBuf, ToolError> {
       if bundle_path.exists() {
          return Ok(bundle_path);
       }
 
-      let downloaded = Self::download_bytes(JAVA_DEBUG_VSIX_URL).await?;
+      let downloaded = Self::download_bytes(vsix_url).await?;
       let mut archive_bytes = downloaded;
       if archive_bytes.starts_with(&[0x1f, 0x8b]) {
          let mut decoded = Vec::new();
@@ -1646,7 +1684,11 @@ impl ToolInstaller {
 
    /// Check if a tool is installed
    pub fn is_installed(app_handle: &AppHandle, config: &ToolConfig) -> Result<bool, ToolError> {
-      let path = Self::get_tool_path(app_handle, config)?;
+      Self::is_installed_in(&Self::get_tools_dir(app_handle)?, config)
+   }
+
+   pub(crate) fn is_installed_in(tools_dir: &Path, config: &ToolConfig) -> Result<bool, ToolError> {
+      let path = Self::tool_path_in(tools_dir, config)?;
       if !path.exists() {
          return Ok(false);
       }
@@ -1657,8 +1699,10 @@ impl ToolInstaller {
 
    /// Get the path where a tool would be/is installed
    pub fn get_tool_path(app_handle: &AppHandle, config: &ToolConfig) -> Result<PathBuf, ToolError> {
-      let tools_dir = Self::get_tools_dir(app_handle)?;
+      Self::tool_path_in(&Self::get_tools_dir(app_handle)?, config)
+   }
 
+   pub(crate) fn tool_path_in(tools_dir: &Path, config: &ToolConfig) -> Result<PathBuf, ToolError> {
       match config.runtime {
          ToolRuntime::Bun => {
             let command_name = Self::configured_command_name(config);
@@ -1757,7 +1801,7 @@ impl ToolInstaller {
                return Ok(system_path);
             }
 
-            if let Some(path) = Self::existing_managed_binary(app_handle, config, command_name)? {
+            if let Some(path) = Self::existing_managed_binary(tools_dir, config, command_name)? {
                return Ok(path);
             }
 
@@ -1776,8 +1820,13 @@ impl ToolInstaller {
       app_handle: &AppHandle,
       config: &ToolConfig,
    ) -> Result<PathBuf, ToolError> {
-      let tools_dir = Self::get_tools_dir(app_handle)?;
+      Self::lsp_launch_path_in(&Self::get_tools_dir(app_handle)?, config)
+   }
 
+   pub(crate) fn lsp_launch_path_in(
+      tools_dir: &Path,
+      config: &ToolConfig,
+   ) -> Result<PathBuf, ToolError> {
       match config.runtime {
          ToolRuntime::Bun => {
             let command_name = Self::configured_command_name(config);
@@ -1837,7 +1886,7 @@ impl ToolInstaller {
                }),
             )
          }
-         _ => Self::get_tool_path(app_handle, config),
+         _ => Self::tool_path_in(tools_dir, config),
       }
    }
 }
@@ -1853,5 +1902,7 @@ fn parse_java_major_version(output: &str) -> Option<u32> {
    }
 }
 
+#[cfg(test)]
+mod install_tests;
 #[cfg(test)]
 mod tests;

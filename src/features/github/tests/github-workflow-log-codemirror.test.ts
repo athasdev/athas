@@ -121,6 +121,30 @@ describe("workflow log CodeMirror extension", () => {
     expect(editor.dom.querySelector(".gha-log-ansi-red")?.textContent).toBe("error");
   });
 
+  it("links absolute paths only when they are inside the repository", () => {
+    const absoluteModel = buildWorkflowLogModel(
+      parseWorkflowLog(
+        [
+          "2026-09-06T23:21:02.5000000Z   --> /repo/src/main.rs:12:9",
+          "2026-09-06T23:21:02.6000000Z   --> /home/runner/work/app/src/lib.rs:4",
+          "2026-09-06T23:21:02.7000000Z   --> /repo/../etc/hosts.txt:1",
+        ].join("\n"),
+      ),
+      { showTimestamps: false },
+    );
+    const editor = createView(absoluteModel);
+    updateWorkflowLog(editor, {
+      model: absoluteModel,
+      showTimestamps: false,
+      highlightLine: null,
+      repoPath: "/repo",
+    });
+
+    expect(fileLinks(editor)).toEqual([
+      { text: "/repo/src/main.rs:12:9", path: "/repo/src/main.rs", line: "12", column: "9" },
+    ]);
+  });
+
   it("keeps relative paths when no repository is known", () => {
     const editor = createView(model);
     updateWorkflowLog(editor, {

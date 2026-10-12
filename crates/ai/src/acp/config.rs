@@ -46,6 +46,17 @@ impl AgentRegistry {
       }
    }
 
+   /// A registry with no agents and no managed install directory, for tests without a Tauri app.
+   #[cfg(test)]
+   pub(super) fn empty() -> Self {
+      Self {
+         agents: HashMap::new(),
+         last_detection: None,
+         managed_bin_dir: None,
+         versions: HashMap::new(),
+      }
+   }
+
    pub fn get(&self, id: &str) -> Option<&AgentConfig> {
       self.agents.get(id)
    }

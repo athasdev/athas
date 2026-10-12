@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
-import type { Diagnostic, DiagnosticCodeAction } from "../types/diagnostics.types";
-import { selectDiagnosticForQuickFix, selectPreferredCodeAction } from "../services/quick-fix";
+import type { Diagnostic } from "../types/diagnostics.types";
+import { selectDiagnosticForQuickFix } from "../services/quick-fix";
 
 function diagnostic(overrides: Partial<Diagnostic>): Diagnostic {
   return {
@@ -11,18 +11,6 @@ function diagnostic(overrides: Partial<Diagnostic>): Diagnostic {
     endLine: 0,
     endColumn: 1,
     message: "Diagnostic",
-    ...overrides,
-  };
-}
-
-function action(overrides: Partial<DiagnosticCodeAction>): DiagnosticCodeAction {
-  return {
-    id: "action",
-    title: "Action",
-    isPreferred: false,
-    hasCommand: false,
-    hasEdit: true,
-    payload: {},
     ...overrides,
   };
 }
@@ -50,15 +38,5 @@ describe("quick fix helpers", () => {
         { line: 2, column: 10 },
       )?.message,
     ).toBe("near");
-  });
-
-  it("prefers preferred code actions and ignores disabled actions", () => {
-    expect(
-      selectPreferredCodeAction([
-        action({ title: "Disabled", isPreferred: true, disabledReason: "No edit" }),
-        action({ title: "Fallback" }),
-        action({ title: "Preferred", isPreferred: true }),
-      ])?.title,
-    ).toBe("Preferred");
   });
 });

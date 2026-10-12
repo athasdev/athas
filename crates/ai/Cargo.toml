@@ -33,6 +33,7 @@ tokio-util = { version = "0.7", features = ["compat"] }
 athas-project = { path = "../project" }
 athas-exec-path = { path = "../exec-path" }
 athas-terminal = { path = "../terminal" }
+athas-tooling = { path = "../tooling" }
 tempfile = "3"
 uuid = { version = "1.0", features = ["v4", "serde"] }
 which = "7.0"

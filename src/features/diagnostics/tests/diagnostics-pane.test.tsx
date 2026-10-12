@@ -289,6 +289,36 @@ describe("diagnostics pane", () => {
     );
   });
 
+  it("finishes loading quick fixes that arrive after the menu was closed", async () => {
+    const actions = deferCodeActions();
+    await render();
+
+    await openContextMenu(problemRows()[0]);
+    expect(menuItem("Loading quick fixes...")).toBeTruthy();
+    await act(async () => {
+      fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+    });
+    await flush();
+    await actions.resolve([]);
+
+    await openContextMenu(problemRows()[0]);
+    expect(menuItem("Loading quick fixes...")).toBeUndefined();
+    expect(menuItem("No quick fixes available")).toBeTruthy();
+    expect(actions.spy).toHaveBeenCalledTimes(1);
+  });
+
+  it("stops loading quick fixes when the language server fails", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(LspClient.getInstance(), "getCodeActions").mockRejectedValue(new Error("LSP down"));
+    await render();
+
+    await openContextMenu(problemRows()[0]);
+    await flush();
+
+    expect(menuItem("Loading quick fixes...")).toBeUndefined();
+    expect(menuItem("No quick fixes available")).toBeTruthy();
+  });
+
   it("offers and applies quick fixes from the language server", async () => {
     const lsp = LspClient.getInstance();
     const actions = deferCodeActions();

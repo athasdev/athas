@@ -418,7 +418,6 @@ pub(crate) fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
          list_codex_models,
          read_codex_rate_limits,
          list_codex_threads,
-         read_codex_thread,
          archive_codex_thread,
          delete_codex_thread,
          list_codex_skills,

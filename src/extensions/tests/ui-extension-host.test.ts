@@ -392,6 +392,34 @@ describe("UI extension host contributions", () => {
     expect(state.commands.has("test.namespace-evil.run")).toBe(false);
   });
 
+  it("marks the extension as errored when a worker sends a refused contribution", async () => {
+    const { worker } = await loadWorkerExtension("test.refused");
+
+    await emitAndSettle(worker, {
+      type: "event",
+      event: "sidebar.registerView",
+      payload: { id: "athas.explorer" },
+    });
+
+    expect(extensionState("test.refused")).toMatchObject({
+      state: "error",
+      error: "Integration contribution ids must start with test.refused.",
+    });
+    expect(useUIExtensionStore.getState().sidebarViews.has("athas.explorer")).toBe(false);
+
+    await emitAndSettle(worker, {
+      type: "event",
+      event: "ai.registerProvider",
+      payload: { providerId: "openai" },
+    });
+
+    expect(extensionState("test.refused")).toMatchObject({
+      state: "error",
+      error: "Integration does not contribute AI provider openai",
+    });
+    expect(getProvider("openai")?.id).not.toBe("test.refused");
+  });
+
   it("routes toolbar clicks to the worker and surfaces failures", async () => {
     const { worker } = await loadWorkerExtension("test.toolbar");
     await emitAndSettle(worker, {

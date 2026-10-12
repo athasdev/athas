@@ -546,6 +546,19 @@ describe("extension store install", () => {
     expect(extensionRegistry.getExtension(SERVER_EXTENSION_ID)?.state).toBe("not-installed");
   });
 
+  it("does not record languages as installed when the language server install fails", async () => {
+    await loadCatalog({ languages: [serverLanguageManifest] });
+    backend.failedTools.set(`${SERVER_LANGUAGE_ID}:lsp`, "npm install failed");
+
+    await expect(storeActions().installExtension(SERVER_EXTENSION_ID)).rejects.toThrow(
+      "npm install failed",
+    );
+
+    expect(readInstalledLanguageIds()).toEqual([]);
+    await storeActions().loadInstalledExtensions();
+    expect(getAvailable(SERVER_EXTENSION_ID)?.isInstalled).toBe(false);
+  });
+
   it("installs a downloadable package with its checksum and activates its contributions", async () => {
     await loadCatalog({ marketplace: [themeManifest] });
 
@@ -739,6 +752,7 @@ describe("extension store uninstall", () => {
 
     expect(getAvailable(THEME_EXTENSION_ID)?.isInstalled).toBe(true);
     expect(useExtensionStore.getState().installedExtensions.has(THEME_EXTENSION_ID)).toBe(true);
+    expect(themeRegistry.getThemeSource(THEME_ID)?.extensionId).toBe(THEME_EXTENSION_ID);
   });
 });
 

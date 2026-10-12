@@ -1,9 +1,9 @@
 use super::github_token::{
-   GitHubTokenSource, PERSONAL_ACCESS_TOKEN_SECRET_KEY, cached_gh_cli_token,
-   has_athas_account_token, has_personal_access_token, invalidate_gh_cli_token_cache,
+   PERSONAL_ACCESS_TOKEN_SECRET_KEY, has_athas_account_token, has_personal_access_token,
    resolve_github_token,
 };
 use crate::secure_storage::{get_secret, remove_secret, store_secret};
+use athas_github::{GhCliAvailability, GitHubTokenStatus};
 pub use athas_github::{
    GitHubNotification, IssueComment, IssueDetails, IssueListItem, IssueMilestone, IssueType, Label,
    PullRequest, PullRequestComment, PullRequestDetails, PullRequestFile, WorkflowListItem,
@@ -708,36 +708,15 @@ pub async fn github_delete_release_asset(
    run_blocking(move || athas_github::github_delete_release_asset(repo_path, asset_id, token)).await
 }
 
-/// What the GitHub auth indicator in Settings shows.
-#[derive(serde::Serialize, specta::Type)]
-#[serde(rename_all = "camelCase")]
-pub struct GitHubTokenStatus {
-   /// Which source supplied the active token, or `None` when there is none.
-   pub source: Option<GitHubTokenSource>,
-   pub has_personal_access_token: bool,
-   pub has_athas_account_token: bool,
-   pub gh_cli_installed: bool,
-   /// The account the active token belongs to; `None` when GitHub rejected it.
-   pub login: Option<String>,
-   /// Scopes GitHub reports for the active token; `None` for fine-grained tokens.
-   pub scopes: Option<String>,
-}
-
 #[tauri::command]
 #[specta::specta]
 pub async fn github_token_status(app: tauri::AppHandle) -> Result<GitHubTokenStatus, String> {
    run_blocking(move || {
-      let resolved = resolve_github_token(&app);
-      let identity = athas_github::github_describe_token(resolved.token)?;
-
-      Ok(GitHubTokenStatus {
-         source: resolved.source,
-         has_personal_access_token: has_personal_access_token(&app),
-         has_athas_account_token: has_athas_account_token(&app),
-         gh_cli_installed: athas_github::is_gh_cli_installed(),
-         login: identity.as_ref().map(|identity| identity.login.clone()),
-         scopes: identity.and_then(|identity| identity.scopes),
-      })
+      athas_github::github_token_status(
+         resolve_github_token(&app),
+         has_personal_access_token(&app),
+         has_athas_account_token(&app),
+      )
    })
    .await
 }
@@ -748,11 +727,7 @@ pub async fn store_github_personal_access_token(
    app: tauri::AppHandle,
    token: String,
 ) -> Result<(), String> {
-   let token = token.trim();
-   if token.is_empty() {
-      return Err("Personal access token cannot be empty.".to_string());
-   }
-
+   let token = athas_github::normalize_personal_access_token(&token)?;
    store_secret(&app, PERSONAL_ACCESS_TOKEN_SECRET_KEY, token)
 }
 
@@ -766,28 +741,12 @@ pub async fn remove_github_personal_access_token(app: tauri::AppHandle) -> Resul
 #[tauri::command]
 #[specta::specta]
 pub async fn refresh_github_gh_cli_token() -> Result<(), String> {
-   invalidate_gh_cli_token_cache();
+   athas_github::invalidate_gh_cli_token_cache();
    Ok(())
-}
-
-/// Whether the `gh` CLI can supply a credential, for the one-click switch in empty states.
-#[derive(serde::Serialize, specta::Type)]
-#[serde(rename_all = "camelCase")]
-pub struct GhCliAvailability {
-   pub installed: bool,
-   /// True when `gh` is also logged in, so switching to it would actually work.
-   pub has_token: bool,
 }
 
 #[tauri::command]
 #[specta::specta]
 pub async fn github_gh_cli_availability() -> Result<GhCliAvailability, String> {
-   run_blocking(|| {
-      let installed = athas_github::is_gh_cli_installed();
-      Ok(GhCliAvailability {
-         installed,
-         has_token: installed && cached_gh_cli_token().is_some(),
-      })
-   })
-   .await
+   run_blocking(|| Ok(athas_github::gh_cli_availability())).await
 }

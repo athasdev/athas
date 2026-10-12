@@ -78,15 +78,16 @@ const SEEDED_SETTINGS = {
 /**
  * Gives every spec file a fresh app data directory and a pristine copy of the
  * fixture project. Only directories this harness owns are ever removed.
+ * `settings` are seeded on top of the defaults, as if the user had saved them.
  */
-export function resetSessionState() {
+export function resetSessionState(settings: Record<string, unknown> = {}) {
   if (path.basename(appDataDir) !== APP_DATA_DIR_NAME) {
     throw new Error(`Refusing to reset unexpected app data directory: ${appDataDir}`);
   }
 
   rmSync(appDataDir, { recursive: true, force: true });
   mkdirSync(appDataDir, { recursive: true });
-  writeFileSync(settingsFile, JSON.stringify(SEEDED_SETTINGS, null, 2));
+  writeFileSync(settingsFile, JSON.stringify({ ...SEEDED_SETTINGS, ...settings }, null, 2));
 
   rmSync(workspaceDir, { recursive: true, force: true });
   mkdirSync(path.dirname(workspaceDir), { recursive: true });

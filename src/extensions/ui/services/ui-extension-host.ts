@@ -92,7 +92,13 @@ class UIExtensionHost {
       });
       loaded.worker = worker;
       worker.addEventListener("message", (event: MessageEvent<ExtensionWorkerMessage>) => {
-        void this.handleMessage(loaded, event.data);
+        this.handleMessage(loaded, event.data).catch((error: unknown) => {
+          actions.updateExtensionState(
+            extensionId,
+            "error",
+            error instanceof Error ? error.message : String(error),
+          );
+        });
       });
       worker.addEventListener("error", (event) => {
         actions.updateExtensionState(extensionId, "error", event.message);

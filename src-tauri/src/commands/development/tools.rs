@@ -1,6 +1,4 @@
-use athas_tooling::{
-   LanguageToolConfigSet, LanguageToolStatus, ToolInstaller, ToolRegistry, ToolStatus, ToolType,
-};
+use athas_tooling::{LanguageToolConfigSet, LanguageToolStatus, ToolStatus};
 use serde_json::Value;
 #[cfg(debug_assertions)]
 use std::{
@@ -145,43 +143,7 @@ pub async fn install_language_tools(
    language_id: String,
    tools: Option<LanguageToolConfigSet>,
 ) -> Result<LanguageToolStatus, String> {
-   let mut status = LanguageToolStatus::new(&language_id);
-
-   let Some(resolved_tools) = ToolRegistry::get_tools(&language_id, tools) else {
-      return Ok(status);
-   };
-
-   // Install LSP
-   if let Some(config) = resolved_tools.get(&ToolType::Lsp) {
-      status.lsp = Some(match ToolInstaller::install(&app_handle, config).await {
-         Ok(_) if language_id == "java" => {
-            match ToolInstaller::ensure_java_debug_bundle(&app_handle).await {
-               Ok(_) => ToolStatus::Installed,
-               Err(e) => ToolStatus::Failed(e.to_string()),
-            }
-         }
-         Ok(_) => ToolStatus::Installed,
-         Err(e) => ToolStatus::Failed(e.to_string()),
-      });
-   }
-
-   // Install formatter
-   if let Some(config) = resolved_tools.get(&ToolType::Formatter) {
-      status.formatter = Some(match ToolInstaller::install(&app_handle, config).await {
-         Ok(_) => ToolStatus::Installed,
-         Err(e) => ToolStatus::Failed(e.to_string()),
-      });
-   }
-
-   // Install linter
-   if let Some(config) = resolved_tools.get(&ToolType::Linter) {
-      status.linter = Some(match ToolInstaller::install(&app_handle, config).await {
-         Ok(_) => ToolStatus::Installed,
-         Err(e) => ToolStatus::Failed(e.to_string()),
-      });
-   }
-
-   Ok(status)
+   Ok(athas_tooling::install_language_tools(&app_handle, &language_id, tools).await)
 }
 
 /// Install a specific tool type for a language
@@ -193,38 +155,13 @@ pub async fn install_tool(
    tool_type: String,
    tools: Option<LanguageToolConfigSet>,
 ) -> Result<ToolStatus, String> {
-   let tool_type = match tool_type.as_str() {
-      "lsp" => ToolType::Lsp,
-      "formatter" => ToolType::Formatter,
-      "linter" => ToolType::Linter,
-      _ => return Err(format!("Unknown tool type: {}", tool_type)),
-   };
-
-   let config = ToolRegistry::get_tool(&language_id, tool_type, tools).ok_or_else(|| {
-      format!(
-         "No {} configured for {}",
-         tool_type_str(&tool_type),
-         language_id
-      )
-   })?;
-
-   match ToolInstaller::install(&app_handle, &config).await {
-      Ok(_) if language_id == "java" && tool_type == ToolType::Lsp => {
-         match ToolInstaller::ensure_java_debug_bundle(&app_handle).await {
-            Ok(_) => Ok(ToolStatus::Installed),
-            Err(e) => Ok(ToolStatus::Failed(e.to_string())),
-         }
-      }
-      Ok(_) => Ok(ToolStatus::Installed),
-      Err(e) => Ok(ToolStatus::Failed(e.to_string())),
-   }
+   athas_tooling::install_tool(&app_handle, &language_id, &tool_type, tools).await
 }
 
 #[tauri::command]
 #[specta::specta]
 pub fn get_java_debug_bundle_path(app_handle: AppHandle) -> Result<Option<String>, String> {
-   let path = ToolInstaller::java_debug_bundle_path(&app_handle).map_err(|e| e.to_string())?;
-   Ok(path.exists().then(|| path.to_string_lossy().to_string()))
+   athas_tooling::java_debug_bundle_path(&app_handle)
 }
 
 /// Get the status of all tools for a language
@@ -235,46 +172,11 @@ pub async fn get_language_tool_status(
    language_id: String,
    tools: Option<LanguageToolConfigSet>,
 ) -> Result<LanguageToolStatus, String> {
-   let mut status = LanguageToolStatus::new(&language_id);
-
-   let Some(resolved_tools) = ToolRegistry::get_tools(&language_id, tools) else {
-      return Ok(status);
-   };
-
-   // Check LSP
-   if let Some(config) = resolved_tools.get(&ToolType::Lsp) {
-      status.lsp = Some(
-         if ToolInstaller::is_installed(&app_handle, config).unwrap_or(false) {
-            ToolStatus::Installed
-         } else {
-            ToolStatus::NotInstalled
-         },
-      );
-   }
-
-   // Check formatter
-   if let Some(config) = resolved_tools.get(&ToolType::Formatter) {
-      status.formatter = Some(
-         if ToolInstaller::is_installed(&app_handle, config).unwrap_or(false) {
-            ToolStatus::Installed
-         } else {
-            ToolStatus::NotInstalled
-         },
-      );
-   }
-
-   // Check linter
-   if let Some(config) = resolved_tools.get(&ToolType::Linter) {
-      status.linter = Some(
-         if ToolInstaller::is_installed(&app_handle, config).unwrap_or(false) {
-            ToolStatus::Installed
-         } else {
-            ToolStatus::NotInstalled
-         },
-      );
-   }
-
-   Ok(status)
+   Ok(athas_tooling::language_tool_status(
+      &app_handle,
+      &language_id,
+      tools,
+   ))
 }
 
 /// Get the path to a tool's binary
@@ -286,30 +188,7 @@ pub async fn get_tool_path(
    tool_type: String,
    tools: Option<LanguageToolConfigSet>,
 ) -> Result<Option<String>, String> {
-   let tool_type = match tool_type.as_str() {
-      "lsp" => ToolType::Lsp,
-      "formatter" => ToolType::Formatter,
-      "linter" => ToolType::Linter,
-      _ => return Err(format!("Unknown tool type: {}", tool_type)),
-   };
-
-   let config = match ToolRegistry::get_tool(&language_id, tool_type, tools) {
-      Some(c) => c,
-      None => return Ok(None),
-   };
-
-   let path = match tool_type {
-      ToolType::Lsp => {
-         ToolInstaller::get_lsp_launch_path(&app_handle, &config).map_err(|e| e.to_string())?
-      }
-      _ => ToolInstaller::get_tool_path(&app_handle, &config).map_err(|e| e.to_string())?,
-   };
-
-   if path.exists() {
-      Ok(Some(path.to_string_lossy().to_string()))
-   } else {
-      Ok(None)
-   }
+   athas_tooling::tool_path(&app_handle, &language_id, &tool_type, tools)
 }
 
 /// Get available tools for a language
@@ -319,17 +198,5 @@ pub fn get_available_tools(
    language_id: String,
    tools: Option<LanguageToolConfigSet>,
 ) -> Result<Vec<String>, String> {
-   let tools = ToolRegistry::get_tools(&language_id, tools);
-   match tools {
-      Some(t) => Ok(t.keys().map(|k| tool_type_str(k).to_string()).collect()),
-      None => Ok(vec![]),
-   }
-}
-
-fn tool_type_str(t: &ToolType) -> &'static str {
-   match t {
-      ToolType::Lsp => "lsp",
-      ToolType::Formatter => "formatter",
-      ToolType::Linter => "linter",
-   }
+   Ok(athas_tooling::available_tools(&language_id, tools))
 }

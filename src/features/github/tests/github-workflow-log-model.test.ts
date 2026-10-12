@@ -101,4 +101,22 @@ describe("workflow log model", () => {
       )[0],
     ).toMatchObject({ startColumn: 20, endColumn: 36 });
   });
+
+  it("finds absolute file references", () => {
+    const model = buildWorkflowLogModel(
+      parseWorkflowLog(
+        "2026-09-06T23:21:02.5000000Z error at /home/runner/work/app/src/main.rs:12:9 and C:/a/app/lib.ts:3",
+      ),
+      { showTimestamps: false },
+    );
+
+    expect(
+      findWorkflowLogFileReferences(model, { showTimestamps: false }).map(
+        ({ path, fileLine, fileColumn }) => ({ path, fileLine, fileColumn }),
+      ),
+    ).toEqual([
+      { path: "/home/runner/work/app/src/main.rs", fileLine: 12, fileColumn: 9 },
+      { path: "C:/a/app/lib.ts", fileLine: 3, fileColumn: undefined },
+    ]);
+  });
 });

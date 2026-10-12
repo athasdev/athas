@@ -216,11 +216,11 @@ export function findAdjacentProblemLine(
 }
 
 const FILE_REFERENCE_PATTERN =
-  /(?<![\w/.-])((?:\.{1,2}\/)?(?:[\w@.-]+\/)+[\w@.-]+\.[A-Za-z0-9]{1,8})(?::(\d+))?(?::(\d+))?(?![\w/])/g;
+  /(?<![\w/.-])((?:[A-Za-z]:\/|\/|\.{1,2}\/)?(?:[\w@.-]+\/)+[\w@.-]+\.[A-Za-z0-9]{1,8})(?::(\d+))?(?::(\d+))?(?![\w/])/g;
 const MAX_FILE_REFERENCES = 4_000;
 
 /**
- * Finds workspace-relative file references such as `src/app.ts:12:3` so they
+ * Finds file references such as `src/app.ts:12:3` or `/abs/path/app.ts:12` so they
  * can be turned into links. The scan is capped so pathological logs stay cheap.
  */
 export function findWorkflowLogFileReferences(

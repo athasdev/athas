@@ -1,6 +1,4 @@
 pub mod editorconfig;
-mod exec_guard;
-mod extension_command;
 pub mod format;
 pub mod lint;
 pub mod notebook;

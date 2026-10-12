@@ -1,0 +1,26 @@
+[package]
+name = "athas-docker"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+specta = { version = "=2.0.0-rc.25", features = ["derive", "serde_json"] }
+tar = "0.4"
+tokio = { version = "1.0", features = ["io-util", "macros", "process", "rt", "sync"] }
+uuid = { version = "1.0", features = ["v4"] }
+
+[dev-dependencies]
+tempfile = "3.20.0"
+tokio = { version = "1.0", features = [
+  "io-util",
+  "macros",
+  "process",
+  "rt-multi-thread",
+  "sync",
+  "time",
+] }
+
+[lints]
+workspace = true

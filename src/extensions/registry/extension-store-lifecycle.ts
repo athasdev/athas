@@ -113,8 +113,6 @@ export async function installExtensionLifecycle(params: {
 
   const languageConfigs = getManifestLanguageContributions(extension.manifest);
   if (languageConfigs.length > 0) {
-    await installLanguageExtensionManifest(extensionId, extension.manifest, onProgress);
-
     const primaryLanguageId = languageConfigs[0].id;
     const resolvedTools = await resolveToolPaths(primaryLanguageId, extension.manifest, {
       ensureInstalled: true,
@@ -131,6 +129,8 @@ export async function installExtensionLifecycle(params: {
         "Language server could not be installed. Reinstall the language tools.";
       throw new Error(runtimeIssue);
     }
+
+    await installLanguageExtensionManifest(extensionId, extension.manifest, onProgress);
 
     extensionRegistry.registerExtension(runtimeManifest, {
       isBundled: false,
@@ -197,8 +197,8 @@ export async function uninstallExtensionLifecycle(params: {
     return;
   }
 
-  await deactivateExtensionContributions(extensionId, extension.manifest);
   await commands.uninstallExtension(extensionId);
+  await deactivateExtensionContributions(extensionId, extension.manifest);
   await reloadInstalledExtensions();
   onNonLanguageUninstalled();
 }

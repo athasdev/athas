@@ -1,63 +1,29 @@
-use serde::Deserialize;
-use std::{
-   collections::HashMap,
-   fs,
-   path::{Path, PathBuf},
-   process::Stdio,
-   sync::Arc,
+use athas_docker::{Docker, DockerLogEvent, DockerLogExitEvent, DockerLogSink};
+pub use athas_docker::{
+   DockerBuildImageRequest, DockerComposeProject, DockerContainerFileEntry,
+   DockerDevContainerOpenResult, DockerEnvFile, DockerEnvFileContent, DockerInventory,
+   DockerLogStreams, DockerProjectConfig, DockerRegistryLoginRequest, DockerRegistrySearchResult,
+   DockerRunImageRequest,
 };
+use std::sync::Arc;
 use tauri::{AppHandle, Emitter, State};
-use tokio::{
-   io::{AsyncBufReadExt, AsyncRead, BufReader},
-   process::Command,
-   sync::Mutex,
-   task::JoinHandle,
-};
-use uuid::Uuid;
 
-mod cli_output;
-mod container_files;
-mod devcontainer;
-mod jsonc;
-mod process;
-mod project_config;
-mod types;
+struct AppLogSink(AppHandle);
 
-use cli_output::{
-   DockerComposeServiceRow, DockerContainerRow, DockerImageRow, DockerInspectContainerRow,
-   DockerNetworkRow, DockerRegistrySearchRow, DockerStatsRow, DockerVolumeRow,
-};
-use container_files::parse_container_file_archive;
-use devcontainer::{
-   devcontainer_workspace_folder, discover_dev_containers, read_dev_container,
-   resolve_workspace_mount, string_array_or_single, string_value,
-};
-use jsonc::normalize_jsonc;
-use process::{
-   format_docker_launch_error, run_docker, run_docker_bytes, run_docker_in, run_docker_owned,
-   run_docker_with_stdin,
-};
-use project_config::{
-   discover_env_files, empty_project_config, ensure_workspace_dir, inspect_env_file,
-   is_env_file_path, project_config_path, read_project_config, resolve_workspace_file,
-   sanitize_build_presets, sanitize_compose_presets, sanitize_debug_presets, sanitize_run_presets,
-};
-pub use types::*;
+impl DockerLogSink for AppLogSink {
+   fn line(&self, event: DockerLogEvent) {
+      let _ = self.0.emit("docker-container-log", event);
+   }
 
-#[derive(Default)]
-pub struct DockerLogStreams {
-   tasks: Arc<Mutex<HashMap<String, JoinHandle<()>>>>,
+   fn exit(&self, event: DockerLogExitEvent) {
+      let _ = self.0.emit("docker-container-log-exit", event);
+   }
 }
 
 #[tauri::command]
 #[specta::specta]
 pub async fn docker_get_inventory() -> Result<DockerInventory, String> {
-   Ok(DockerInventory {
-      containers: docker_list_containers().await?,
-      images: docker_list_images().await?,
-      volumes: docker_list_volumes().await?,
-      networks: docker_list_networks().await?,
-   })
+   Docker::default().inventory().await
 }
 
 #[tauri::command]
@@ -67,27 +33,9 @@ pub async fn docker_container_action(
    action: String,
    force: Option<bool>,
 ) -> Result<(), String> {
-   if container_id.trim().is_empty() {
-      return Err("Container id is required.".to_string());
-   }
-
-   let mut args = match action.as_str() {
-      "start" | "stop" | "restart" | "pause" | "unpause" => vec![action, container_id],
-      "remove" => {
-         let mut args = vec!["rm".to_string()];
-         if force.unwrap_or(false) {
-            args.push("--force".to_string());
-         }
-         args.push(container_id);
-         args
-      }
-      _ => return Err(format!("Unsupported Docker container action: {}", action)),
-   };
-
-   let borrowed = args.iter().map(String::as_str).collect::<Vec<_>>();
-   run_docker(&borrowed).await?;
-   args.clear();
-   Ok(())
+   Docker::default()
+      .container_action(container_id, action, force)
+      .await
 }
 
 #[tauri::command]
@@ -96,12 +44,7 @@ pub async fn docker_get_container_logs(
    container_id: String,
    tail: Option<u16>,
 ) -> Result<String, String> {
-   if container_id.trim().is_empty() {
-      return Err("Container id is required.".to_string());
-   }
-
-   let tail = tail.unwrap_or(500).to_string();
-   run_docker(&["logs", "--timestamps", "--tail", &tail, &container_id]).await
+   Docker::default().container_logs(container_id, tail).await
 }
 
 #[tauri::command]
@@ -112,29 +55,14 @@ pub async fn docker_start_container_log_stream(
    app_handle: AppHandle,
    streams: State<'_, DockerLogStreams>,
 ) -> Result<String, String> {
-   if container_id.trim().is_empty() {
-      return Err("Container id is required.".to_string());
-   }
-
-   let stream_id = Uuid::new_v4().to_string();
-   let stream_id_for_task = stream_id.clone();
-   let container_id_for_task = container_id.clone();
-   let tail = tail.unwrap_or(300).to_string();
-   let tasks = streams.tasks.clone();
-
-   let handle = tokio::spawn(async move {
-      run_container_log_stream(
-         app_handle,
-         tasks,
-         stream_id_for_task,
-         container_id_for_task,
+   streams
+      .start(
+         Docker::default(),
+         container_id,
          tail,
+         Arc::new(AppLogSink(app_handle)),
       )
-      .await;
-   });
-
-   streams.tasks.lock().await.insert(stream_id.clone(), handle);
-   Ok(stream_id)
+      .await
 }
 
 #[tauri::command]
@@ -143,14 +71,7 @@ pub async fn docker_stop_container_log_stream(
    stream_id: String,
    streams: State<'_, DockerLogStreams>,
 ) -> Result<(), String> {
-   if stream_id.trim().is_empty() {
-      return Ok(());
-   }
-
-   if let Some(handle) = streams.tasks.lock().await.remove(&stream_id) {
-      handle.abort();
-   }
-
+   streams.stop(&stream_id).await;
    Ok(())
 }
 
@@ -159,34 +80,7 @@ pub async fn docker_stop_container_log_stream(
 pub async fn docker_get_compose_project(
    workspace_path: Option<String>,
 ) -> Result<DockerComposeProject, String> {
-   let workspace_path = workspace_path.and_then(normalize_workspace_path);
-   let Some(workspace_path) = workspace_path else {
-      return Ok(DockerComposeProject {
-         workspace_path: None,
-         files: Vec::new(),
-         services: Vec::new(),
-      });
-   };
-
-   let compose_files = discover_compose_files(&workspace_path);
-   if compose_files.is_empty() {
-      return Ok(DockerComposeProject {
-         workspace_path: Some(workspace_path.to_string_lossy().into_owned()),
-         files: Vec::new(),
-         services: Vec::new(),
-      });
-   }
-
-   let services = docker_compose_services(&workspace_path, &compose_files).await?;
-
-   Ok(DockerComposeProject {
-      workspace_path: Some(workspace_path.to_string_lossy().into_owned()),
-      files: compose_files
-         .iter()
-         .map(|path| path.to_string_lossy().into_owned())
-         .collect(),
-      services,
-   })
+   Docker::default().compose_project(workspace_path).await
 }
 
 #[tauri::command]
@@ -198,132 +92,21 @@ pub async fn docker_compose_action(
    action: String,
    env_files: Option<Vec<String>>,
 ) -> Result<String, String> {
-   let workspace_path = normalize_workspace_path(workspace_path)
-      .ok_or_else(|| "Workspace path is required.".to_string())?;
-   if files.is_empty() {
-      return Err("No Docker Compose files were found for this workspace.".to_string());
-   }
-
-   let mut args = compose_file_args(&files);
-   for env_file in env_files.unwrap_or_default() {
-      if let Some(env_file) = normalize_optional_value(Some(env_file)) {
-         args.push("--env-file".to_string());
-         args.push(env_file);
-      }
-   }
-   match action.as_str() {
-      "up" => {
-         args.push("up".to_string());
-         args.push("--detach".to_string());
-         if let Some(service) = normalize_service(service) {
-            args.push(service);
-         }
-         run_docker_in(&args, &workspace_path).await
-      }
-      "stop" | "restart" | "build" => {
-         args.push(action);
-         if let Some(service) = normalize_service(service) {
-            args.push(service);
-         }
-         run_docker_in(&args, &workspace_path).await
-      }
-      "down" => {
-         args.push("down".to_string());
-         run_docker_in(&args, &workspace_path).await
-      }
-      "rebuild" => {
-         let mut build_args = args.clone();
-         build_args.push("build".to_string());
-         if let Some(service) = normalize_service(service.clone()) {
-            build_args.push(service);
-         }
-         let build_output = run_docker_in(&build_args, &workspace_path).await?;
-
-         args.push("up".to_string());
-         args.push("--detach".to_string());
-         if let Some(service) = normalize_service(service) {
-            args.push(service);
-         }
-         let up_output = run_docker_in(&args, &workspace_path).await?;
-         Ok(join_command_output(build_output, up_output))
-      }
-      _ => Err(format!("Unsupported Docker Compose action: {}", action)),
-   }
+   Docker::default()
+      .compose_action(workspace_path, files, service, action, env_files)
+      .await
 }
 
 #[tauri::command]
 #[specta::specta]
 pub async fn docker_build_image(request: DockerBuildImageRequest) -> Result<String, String> {
-   let context_path = normalize_required_path(request.context_path, "Build context path")?;
-   let mut args = vec!["build".to_string()];
-
-   if let Some(tag) = normalize_optional_value(request.tag) {
-      args.push("--tag".to_string());
-      args.push(tag);
-   }
-   if let Some(dockerfile_path) = request
-      .dockerfile_path
-      .and_then(|path| normalize_optional_value(Some(path)))
-      .map(PathBuf::from)
-   {
-      args.push("--file".to_string());
-      args.push(dockerfile_path.to_string_lossy().into_owned());
-   }
-   for build_arg in request.build_args.unwrap_or_default() {
-      if let Some(build_arg) = normalize_optional_value(Some(build_arg)) {
-         args.push("--build-arg".to_string());
-         args.push(build_arg);
-      }
-   }
-   args.push(context_path.to_string_lossy().into_owned());
-
-   run_docker_in(&args, &context_path).await
+   Docker::default().build_image(request).await
 }
 
 #[tauri::command]
 #[specta::specta]
 pub async fn docker_run_image(request: DockerRunImageRequest) -> Result<String, String> {
-   let image = normalize_optional_value(Some(request.image))
-      .ok_or_else(|| "Image is required.".to_string())?;
-   let mut args = vec!["run".to_string()];
-
-   if request.detach.unwrap_or(true) {
-      args.push("--detach".to_string());
-   }
-   if let Some(name) = normalize_optional_value(request.name) {
-      args.push("--name".to_string());
-      args.push(name);
-   }
-   for port in request.ports.unwrap_or_default() {
-      if let Some(port) = normalize_optional_value(Some(port)) {
-         args.push("--publish".to_string());
-         args.push(port);
-      }
-   }
-   for volume in request.volumes.unwrap_or_default() {
-      if let Some(volume) = normalize_optional_value(Some(volume)) {
-         args.push("--volume".to_string());
-         args.push(volume);
-      }
-   }
-   for env in request.env.unwrap_or_default() {
-      if let Some(env) = normalize_optional_value(Some(env)) {
-         args.push("--env".to_string());
-         args.push(env);
-      }
-   }
-   for env_file in request.env_files.unwrap_or_default() {
-      if let Some(env_file) = normalize_optional_value(Some(env_file)) {
-         args.push("--env-file".to_string());
-         args.push(env_file);
-      }
-   }
-   args.push(image);
-   if let Some(command) = normalize_optional_value(request.command) {
-      args.extend(split_command_args(&command)?);
-   }
-
-   run_docker_owned(&args).await
+   Docker::default().run_image(request).await
 }
 
 #[tauri::command]
@@ -333,20 +116,9 @@ pub async fn docker_image_action(
    action: String,
    force: Option<bool>,
 ) -> Result<String, String> {
-   let image_id = normalize_optional_value(Some(image_id))
-      .ok_or_else(|| "Image id is required.".to_string())?;
-
-   match action.as_str() {
-      "remove" => {
-         let mut args = vec!["rmi".to_string()];
-         if force.unwrap_or(false) {
-            args.push("--force".to_string());
-         }
-         args.push(image_id);
-         run_docker_owned(&args).await
-      }
-      _ => Err(format!("Unsupported Docker image action: {}", action)),
-   }
+   Docker::default()
+      .image_action(image_id, action, force)
+      .await
 }
 
 #[tauri::command]
@@ -355,42 +127,9 @@ pub async fn docker_prune_resources(
    target: String,
    include_volumes: Option<bool>,
 ) -> Result<String, String> {
-   let mut args = match target.as_str() {
-      "containers" => vec![
-         "container".to_string(),
-         "prune".to_string(),
-         "--force".to_string(),
-      ],
-      "images" => vec![
-         "image".to_string(),
-         "prune".to_string(),
-         "--all".to_string(),
-         "--force".to_string(),
-      ],
-      "volumes" => vec![
-         "volume".to_string(),
-         "prune".to_string(),
-         "--all".to_string(),
-         "--force".to_string(),
-      ],
-      "networks" => vec![
-         "network".to_string(),
-         "prune".to_string(),
-         "--force".to_string(),
-      ],
-      "system" => vec![
-         "system".to_string(),
-         "prune".to_string(),
-         "--force".to_string(),
-      ],
-      _ => return Err(format!("Unsupported Docker prune target: {}", target)),
-   };
-
-   if target == "system" && include_volumes.unwrap_or(false) {
-      args.push("--volumes".to_string());
-   }
-
-   run_docker_owned(&args).await
+   Docker::default()
+      .prune_resources(target, include_volumes)
+      .await
 }
 
 #[tauri::command]
@@ -399,14 +138,9 @@ pub async fn docker_list_container_files(
    container_id: String,
    path: Option<String>,
 ) -> Result<Vec<DockerContainerFileEntry>, String> {
-   let container_id = normalize_optional_value(Some(container_id))
-      .ok_or_else(|| "Container id is required.".to_string())?;
-   let container_path = normalize_container_path(path);
-   let source = format!("{}:{}", container_id, container_path);
-   let args = vec!["cp".to_string(), source, "-".to_string()];
-   let archive = run_docker_bytes(&args).await?;
-
-   parse_container_file_archive(&archive, &container_path)
+   Docker::default()
+      .list_container_files(container_id, path)
+      .await
 }
 
 #[tauri::command]
@@ -416,19 +150,9 @@ pub async fn docker_copy_from_container(
    container_path: String,
    host_path: String,
 ) -> Result<String, String> {
-   let container_id = normalize_optional_value(Some(container_id))
-      .ok_or_else(|| "Container id is required.".to_string())?;
-   let container_path = normalize_optional_value(Some(container_path))
-      .ok_or_else(|| "Container path is required.".to_string())?;
-   let host_path = normalize_optional_value(Some(host_path))
-      .ok_or_else(|| "Host path is required.".to_string())?;
-
-   run_docker_owned(&[
-      "cp".to_string(),
-      format!("{}:{}", container_id, container_path),
-      host_path,
-   ])
-   .await
+   Docker::default()
+      .copy_from_container(container_id, container_path, host_path)
+      .await
 }
 
 #[tauri::command]
@@ -438,18 +162,9 @@ pub async fn docker_copy_to_container(
    host_path: String,
    container_path: String,
 ) -> Result<String, String> {
-   let container_id = normalize_optional_value(Some(container_id))
-      .ok_or_else(|| "Container id is required.".to_string())?;
-   let host_path = normalize_required_path(host_path, "Host path")?;
-   let container_path = normalize_optional_value(Some(container_path))
-      .ok_or_else(|| "Container path is required.".to_string())?;
-
-   run_docker_owned(&[
-      "cp".to_string(),
-      host_path.to_string_lossy().into_owned(),
-      format!("{}:{}", container_id, container_path),
-   ])
-   .await
+   Docker::default()
+      .copy_to_container(container_id, host_path, container_path)
+      .await
 }
 
 #[tauri::command]
@@ -458,69 +173,31 @@ pub async fn docker_registry_search(
    query: String,
    limit: Option<u16>,
 ) -> Result<Vec<DockerRegistrySearchResult>, String> {
-   let query = normalize_optional_value(Some(query))
-      .ok_or_else(|| "Search query is required.".to_string())?;
-   let limit = limit.unwrap_or(25).clamp(1, 100).to_string();
-   let output = run_docker_owned(&[
-      "search".to_string(),
-      "--limit".to_string(),
-      limit,
-      "--format".to_string(),
-      "{{json .}}".to_string(),
-      query,
-   ])
-   .await?;
-
-   parse_json_lines::<DockerRegistrySearchRow>(&output)
-      .map(|rows| rows.into_iter().map(Into::into).collect())
+   Docker::default().registry_search(query, limit).await
 }
 
 #[tauri::command]
 #[specta::specta]
 pub async fn docker_registry_login(request: DockerRegistryLoginRequest) -> Result<String, String> {
-   let username = normalize_optional_value(Some(request.username))
-      .ok_or_else(|| "Username is required.".to_string())?;
-   if request.password.is_empty() {
-      return Err("Password is required.".to_string());
-   }
-
-   let mut args = vec![
-      "login".to_string(),
-      "--username".to_string(),
-      username,
-      "--password-stdin".to_string(),
-   ];
-   if let Some(registry) = normalize_optional_value(request.registry) {
-      args.push(registry);
-   }
-
-   run_docker_with_stdin(&args, request.password).await
+   Docker::default().registry_login(request).await
 }
 
 #[tauri::command]
 #[specta::specta]
 pub async fn docker_registry_pull(image: String) -> Result<String, String> {
-   let image =
-      normalize_optional_value(Some(image)).ok_or_else(|| "Image is required.".to_string())?;
-   run_docker_owned(&["pull".to_string(), image]).await
+   Docker::default().registry_pull(image).await
 }
 
 #[tauri::command]
 #[specta::specta]
 pub async fn docker_registry_push(image: String) -> Result<String, String> {
-   let image =
-      normalize_optional_value(Some(image)).ok_or_else(|| "Image is required.".to_string())?;
-   run_docker_owned(&["push".to_string(), image]).await
+   Docker::default().registry_push(image).await
 }
 
 #[tauri::command]
 #[specta::specta]
 pub async fn docker_tag_image(source: String, target: String) -> Result<String, String> {
-   let source = normalize_optional_value(Some(source))
-      .ok_or_else(|| "Source image is required.".to_string())?;
-   let target = normalize_optional_value(Some(target))
-      .ok_or_else(|| "Target tag is required.".to_string())?;
-   run_docker_owned(&["tag".to_string(), source, target]).await
+   Docker::default().tag_image(source, target).await
 }
 
 #[tauri::command]
@@ -528,18 +205,7 @@ pub async fn docker_tag_image(source: String, target: String) -> Result<String, 
 pub async fn docker_get_project_config(
    workspace_path: Option<String>,
 ) -> Result<DockerProjectConfig, String> {
-   let Some(workspace_path) = workspace_path.and_then(normalize_workspace_path) else {
-      return Ok(empty_project_config(None));
-   };
-   ensure_workspace_dir(&workspace_path)?;
-
-   let mut config = read_project_config(&workspace_path)?;
-   config.workspace_path = Some(workspace_path.to_string_lossy().into_owned());
-   config.env_files = discover_env_files(&workspace_path);
-   config.dev_containers = discover_dev_containers(&workspace_path);
-   config.workspace_debug_presets = discover_workspace_debug_presets(&workspace_path);
-
-   Ok(config)
+   athas_docker::project_config(workspace_path)
 }
 
 #[tauri::command]
@@ -548,45 +214,13 @@ pub async fn docker_save_project_config(
    workspace_path: String,
    config: DockerProjectConfig,
 ) -> Result<DockerProjectConfig, String> {
-   let workspace_path = normalize_workspace_path(workspace_path)
-      .ok_or_else(|| "Workspace path is required.".to_string())?;
-   ensure_workspace_dir(&workspace_path)?;
-
-   let config_path = project_config_path(&workspace_path);
-   if let Some(parent) = config_path.parent() {
-      fs::create_dir_all(parent)
-         .map_err(|error| format!("Failed to create Docker config directory: {}", error))?;
-   }
-
-   let saved_config = DockerProjectConfig {
-      workspace_path: None,
-      env_files: Vec::new(),
-      dev_containers: Vec::new(),
-      build_presets: sanitize_build_presets(config.build_presets),
-      run_presets: sanitize_run_presets(config.run_presets),
-      compose_presets: sanitize_compose_presets(config.compose_presets),
-      debug_presets: sanitize_debug_presets(config.debug_presets),
-      workspace_debug_presets: Vec::new(),
-   };
-   let contents = serde_json::to_string_pretty(&saved_config)
-      .map_err(|error| format!("Failed to encode Docker project config: {}", error))?;
-   fs::write(&config_path, format!("{}\n", contents))
-      .map_err(|error| format!("Failed to write Docker project config: {}", error))?;
-
-   docker_get_project_config(Some(workspace_path.to_string_lossy().into_owned())).await
+   athas_docker::save_project_config(workspace_path, config)
 }
 
 #[tauri::command]
 #[specta::specta]
 pub async fn docker_read_env_file(workspace_path: String, path: String) -> Result<String, String> {
-   let workspace_path = normalize_workspace_path(workspace_path)
-      .ok_or_else(|| "Workspace path is required.".to_string())?;
-   ensure_workspace_dir(&workspace_path)?;
-   let path = resolve_workspace_file(&workspace_path, path)?;
-   if !is_env_file_path(&path) {
-      return Err("Only .env files can be opened from Docker project settings.".to_string());
-   }
-   fs::read_to_string(&path).map_err(|error| format!("Failed to read env file: {}", error))
+   athas_docker::read_env_file(workspace_path, path)
 }
 
 #[tauri::command]
@@ -595,24 +229,7 @@ pub async fn docker_open_env_file(
    workspace_path: String,
    path: String,
 ) -> Result<DockerEnvFileContent, String> {
-   let workspace_path = normalize_workspace_path(workspace_path)
-      .ok_or_else(|| "Workspace path is required.".to_string())?;
-   ensure_workspace_dir(&workspace_path)?;
-   let path = resolve_workspace_file(&workspace_path, path)?;
-   if !is_env_file_path(&path) {
-      return Err("Only .env files can be opened from Docker project settings.".to_string());
-   }
-   let content = if path.exists() {
-      if !path.is_file() {
-         return Err("Env file path must point to a file.".to_string());
-      }
-      fs::read_to_string(&path).map_err(|error| format!("Failed to read env file: {}", error))?
-   } else {
-      fs::write(&path, "").map_err(|error| format!("Failed to create env file: {}", error))?;
-      String::new()
-   };
-   let file = inspect_env_file(&workspace_path, &path)?;
-   Ok(DockerEnvFileContent { file, content })
+   athas_docker::open_env_file(workspace_path, path)
 }
 
 #[tauri::command]
@@ -622,31 +239,13 @@ pub async fn docker_write_env_file(
    path: String,
    content: String,
 ) -> Result<DockerEnvFile, String> {
-   let workspace_path = normalize_workspace_path(workspace_path)
-      .ok_or_else(|| "Workspace path is required.".to_string())?;
-   ensure_workspace_dir(&workspace_path)?;
-   let path = resolve_workspace_file(&workspace_path, path)?;
-   if !is_env_file_path(&path) {
-      return Err("Only .env files can be edited from Docker project settings.".to_string());
-   }
-   fs::write(&path, content).map_err(|error| format!("Failed to write env file: {}", error))?;
-   inspect_env_file(&workspace_path, &path)
+   athas_docker::write_env_file(workspace_path, path, content)
 }
 
 #[tauri::command]
 #[specta::specta]
 pub async fn docker_delete_env_file(workspace_path: String, path: String) -> Result<(), String> {
-   let workspace_path = normalize_workspace_path(workspace_path)
-      .ok_or_else(|| "Workspace path is required.".to_string())?;
-   ensure_workspace_dir(&workspace_path)?;
-   let path = resolve_workspace_file(&workspace_path, path)?;
-   if !is_env_file_path(&path) {
-      return Err("Only .env files can be deleted from Docker project settings.".to_string());
-   }
-   if !path.is_file() {
-      return Err("Env file path must point to a file.".to_string());
-   }
-   fs::remove_file(&path).map_err(|error| format!("Failed to delete env file: {}", error))
+   athas_docker::delete_env_file(workspace_path, path)
 }
 
 #[tauri::command]
@@ -655,955 +254,7 @@ pub async fn docker_open_dev_container(
    workspace_path: String,
    config_path: String,
 ) -> Result<DockerDevContainerOpenResult, String> {
-   let workspace_path = normalize_workspace_path(workspace_path)
-      .ok_or_else(|| "Workspace path is required.".to_string())?;
-   ensure_workspace_dir(&workspace_path)?;
-   let config_path = resolve_workspace_file(&workspace_path, config_path)?;
-   let dev_container = read_dev_container(&workspace_path, &config_path)?;
-
-   if !dev_container.docker_compose_files.is_empty() {
-      return open_compose_dev_container(&workspace_path, &dev_container).await;
-   }
-
-   open_image_dev_container(&workspace_path, &dev_container).await
-}
-
-async fn docker_list_containers() -> Result<Vec<DockerContainer>, String> {
-   let output = run_docker(&["ps", "--all", "--size", "--format", "{{json .}}"]).await?;
-   let stats = docker_container_stats().await.unwrap_or_default();
-   let health_details = docker_container_health_details().await.unwrap_or_default();
-   parse_json_lines::<DockerContainerRow>(&output).map(|rows| {
-      rows
-         .into_iter()
-         .map(|row| {
-            let stats_key = row.id.clone();
-            let stats_by_name_key = row.names.clone();
-            let mut container = DockerContainer::from(row);
-            container.stats = stats
-               .get(&stats_key)
-               .or_else(|| stats.get(&stats_by_name_key))
-               .cloned();
-            container.health_details = health_details
-               .get(&stats_key)
-               .or_else(|| health_details.get(&stats_by_name_key))
-               .cloned();
-            container
-         })
-         .collect()
-   })
-}
-
-async fn docker_list_images() -> Result<Vec<DockerImage>, String> {
-   let output = run_docker(&["images", "--all", "--format", "{{json .}}"]).await?;
-   parse_json_lines::<DockerImageRow>(&output)
-      .map(|rows| rows.into_iter().map(Into::into).collect())
-}
-
-async fn docker_list_volumes() -> Result<Vec<DockerVolume>, String> {
-   let output = run_docker(&["volume", "ls", "--format", "{{json .}}"]).await?;
-   parse_json_lines::<DockerVolumeRow>(&output)
-      .map(|rows| rows.into_iter().map(Into::into).collect())
-}
-
-async fn docker_list_networks() -> Result<Vec<DockerNetwork>, String> {
-   let output = run_docker(&["network", "ls", "--format", "{{json .}}"]).await?;
-   parse_json_lines::<DockerNetworkRow>(&output)
-      .map(|rows| rows.into_iter().map(Into::into).collect())
-}
-
-async fn docker_container_stats() -> Result<HashMap<String, DockerContainerStats>, String> {
-   let output = run_docker(&["stats", "--no-stream", "--all", "--format", "{{json .}}"]).await?;
-   parse_json_lines::<DockerStatsRow>(&output).map(|rows| {
-      rows
-         .into_iter()
-         .flat_map(|row| {
-            let stats = DockerContainerStats::from(row.clone());
-            [(row.id, stats.clone()), (row.name, stats)]
-         })
-         .filter(|(key, _)| !key.trim().is_empty())
-         .collect()
-   })
-}
-
-async fn docker_container_health_details()
--> Result<HashMap<String, DockerContainerHealthDetails>, String> {
-   let ids = run_docker(&["ps", "--all", "--quiet"]).await?;
-   let ids = ids
-      .lines()
-      .map(str::trim)
-      .filter(|id| !id.is_empty())
-      .collect::<Vec<_>>();
-   if ids.is_empty() {
-      return Ok(HashMap::new());
-   }
-   let mut args = vec![
-      "inspect".to_string(),
-      "--format".to_string(),
-      "{{json .}}".to_string(),
-   ];
-   args.extend(ids.into_iter().map(ToString::to_string));
-   let output = run_docker_owned(&args).await?;
-
-   parse_json_lines::<DockerInspectContainerRow>(&output).map(|rows| {
-      rows
-         .into_iter()
-         .filter_map(|row| {
-            let health = row.state.health?;
-            let details = DockerContainerHealthDetails::from(health);
-            let name = row.name.trim_start_matches('/').to_string();
-            Some([(row.id, details.clone()), (name, details)])
-         })
-         .flatten()
-         .filter(|(key, _)| !key.trim().is_empty())
-         .collect()
-   })
-}
-
-async fn docker_compose_services(
-   workspace_path: &Path,
-   compose_files: &[PathBuf],
-) -> Result<Vec<DockerComposeService>, String> {
-   let service_names = docker_compose_service_names(workspace_path, compose_files).await?;
-   let rows = docker_compose_ps(workspace_path, compose_files).await?;
-   let mut row_by_service = rows
-      .into_iter()
-      .filter(|row| !row.service.trim().is_empty())
-      .map(|row| (row.service.clone(), row))
-      .collect::<HashMap<_, _>>();
-
-   let mut services = service_names
-      .into_iter()
-      .map(|name| {
-         row_by_service
-            .remove(&name)
-            .map(DockerComposeService::from)
-            .unwrap_or_else(|| DockerComposeService {
-               name,
-               state: "not created".to_string(),
-               status: "No container".to_string(),
-               health: None,
-               container_id: None,
-               container_name: None,
-               ports: String::new(),
-            })
-      })
-      .collect::<Vec<_>>();
-
-   services.extend(row_by_service.into_values().map(DockerComposeService::from));
-   services.sort_by(|a, b| a.name.cmp(&b.name));
-
-   Ok(services)
-}
-
-async fn docker_compose_service_names(
-   workspace_path: &Path,
-   compose_files: &[PathBuf],
-) -> Result<Vec<String>, String> {
-   let mut args = compose_path_args(compose_files);
-   args.push("config".to_string());
-   args.push("--services".to_string());
-
-   let output = run_docker_in(&args, workspace_path).await?;
-   Ok(output
-      .lines()
-      .map(str::trim)
-      .filter(|line| !line.is_empty())
-      .map(ToString::to_string)
-      .collect())
-}
-
-async fn docker_compose_ps(
-   workspace_path: &Path,
-   compose_files: &[PathBuf],
-) -> Result<Vec<DockerComposeServiceRow>, String> {
-   let mut args = compose_path_args(compose_files);
-   args.extend([
-      "ps".to_string(),
-      "--all".to_string(),
-      "--format".to_string(),
-      "json".to_string(),
-   ]);
-
-   let output = run_docker_in(&args, workspace_path).await?;
-   parse_compose_ps_output(&output)
-}
-
-fn normalize_workspace_path(path: String) -> Option<PathBuf> {
-   let trimmed = path.trim();
-   if trimmed.is_empty() || trimmed.starts_with("wsl://") || trimmed.starts_with("remote://") {
-      return None;
-   }
-
-   Some(PathBuf::from(trimmed))
-}
-
-fn normalize_required_path(path: String, label: &str) -> Result<PathBuf, String> {
-   let path =
-      normalize_optional_value(Some(path)).ok_or_else(|| format!("{} is required.", label))?;
-   let path = PathBuf::from(path);
-   if !path.exists() {
-      return Err(format!("{} does not exist: {}", label, path.display()));
-   }
-   Ok(path)
-}
-
-fn normalize_optional_value(value: Option<String>) -> Option<String> {
-   value
-      .map(|value| value.trim().to_string())
-      .filter(|value| !value.is_empty())
-}
-
-fn normalize_container_path(path: Option<String>) -> String {
-   let path = normalize_optional_value(path).unwrap_or_else(|| "/".to_string());
-   if path.starts_with('/') {
-      path
-   } else {
-      format!("/{}", path)
-   }
-}
-
-fn normalize_service(service: Option<String>) -> Option<String> {
-   normalize_optional_value(service)
-}
-
-fn discover_compose_files(workspace_path: &Path) -> Vec<PathBuf> {
-   [
-      "compose.yaml",
-      "compose.yml",
-      "docker-compose.yaml",
-      "docker-compose.yml",
-      ".devcontainer/compose.yaml",
-      ".devcontainer/compose.yml",
-      ".devcontainer/docker-compose.yaml",
-      ".devcontainer/docker-compose.yml",
-   ]
-   .into_iter()
-   .map(|relative| workspace_path.join(relative))
-   .filter(|path| path.is_file())
-   .collect()
-}
-
-fn discover_workspace_debug_presets(workspace_path: &Path) -> Vec<DockerDebugPreset> {
-   let path = workspace_path.join(".vscode").join("launch.json");
-   let Ok(content) = fs::read_to_string(path) else {
-      return Vec::new();
-   };
-   let Ok(value) = serde_json::from_str::<serde_json::Value>(&normalize_jsonc(&content)) else {
-      return Vec::new();
-   };
-   let Some(configurations) = value
-      .get("configurations")
-      .and_then(|value| value.as_array())
-   else {
-      return Vec::new();
-   };
-
-   configurations
-      .iter()
-      .enumerate()
-      .filter_map(|(index, config)| workspace_debug_preset_from_launch(index, config))
-      .collect()
-}
-
-fn workspace_debug_preset_from_launch(
-   index: usize,
-   config: &serde_json::Value,
-) -> Option<DockerDebugPreset> {
-   let name = string_value(config, "name")?;
-   let runtime = string_value(config, "runtime")
-      .or_else(|| string_value(config, "type"))
-      .unwrap_or_else(|| "custom".to_string());
-   let args = string_array_or_single(config, "args");
-   let program = string_value(config, "program");
-   let command = match normalize_debug_runtime(&runtime).as_str() {
-      "bun" => shell_join(
-         ["bun", "--inspect-brk"]
-            .into_iter()
-            .map(ToString::to_string)
-            .chain(program)
-            .chain(args),
-      ),
-      "node" => shell_join(
-         ["node", "--inspect-brk"]
-            .into_iter()
-            .map(ToString::to_string)
-            .chain(program)
-            .chain(args),
-      ),
-      "python" => shell_join(
-         ["python", "-m", "pdb"]
-            .into_iter()
-            .map(ToString::to_string)
-            .chain(program)
-            .chain(args),
-      ),
-      "rust" => shell_join(
-         ["cargo", "run"]
-            .into_iter()
-            .map(ToString::to_string)
-            .chain(args),
-      ),
-      "go" => shell_join(
-         ["dlv", "debug"]
-            .into_iter()
-            .map(ToString::to_string)
-            .chain(program)
-            .chain(std::iter::once("--".to_string()))
-            .chain(args),
-      ),
-      _ => string_value(config, "command")?,
-   };
-   if command.trim().is_empty() {
-      return None;
-   }
-
-   Some(DockerDebugPreset {
-      name: format!("{} ({})", name, index + 1),
-      command: resolve_debug_command_variables(&command),
-      workdir: string_value(config, "cwd").map(|cwd| resolve_debug_command_variables(&cwd)),
-      target: "container".to_string(),
-      source: Some("launch.json".to_string()),
-   })
-}
-
-async fn open_compose_dev_container(
-   workspace_path: &Path,
-   dev_container: &DockerDevContainer,
-) -> Result<DockerDevContainerOpenResult, String> {
-   let service = dev_container
-      .service
-      .clone()
-      .ok_or_else(|| "Dev Container Compose config is missing service.".to_string())?;
-   let compose_files = dev_container
-      .docker_compose_files
-      .iter()
-      .map(PathBuf::from)
-      .collect::<Vec<_>>();
-   let mut up_args = compose_path_args(&compose_files);
-   up_args.extend(["up".to_string(), "--detach".to_string(), service.clone()]);
-   let up_output = run_docker_in(&up_args, workspace_path).await?;
-
-   let mut ps_args = compose_path_args(&compose_files);
-   ps_args.extend(["ps".to_string(), "-q".to_string(), service.clone()]);
-   let container_id = run_docker_in(&ps_args, workspace_path)
-      .await?
-      .lines()
-      .next()
-      .map(str::trim)
-      .filter(|id| !id.is_empty())
-      .map(ToString::to_string)
-      .ok_or_else(|| format!("Docker Compose did not return a container for {}.", service))?;
-   let lifecycle_output = run_devcontainer_lifecycle_commands(&container_id, dev_container, true)
+   Docker::default()
+      .open_dev_container(workspace_path, config_path)
       .await
-      .map(|output| join_command_output(up_output.clone(), output))?;
-
-   Ok(DockerDevContainerOpenResult {
-      command: docker_exec_shell_command(
-         &container_id,
-         dev_container.workspace_folder.as_deref(),
-         dev_container.remote_user.as_deref(),
-         &dev_container.remote_env,
-      ),
-      name: format!("Dev Container: {}", dev_container.name),
-      container_id,
-      output: lifecycle_output,
-   })
 }
-
-async fn open_image_dev_container(
-   workspace_path: &Path,
-   dev_container: &DockerDevContainer,
-) -> Result<DockerDevContainerOpenResult, String> {
-   let image = match &dev_container.image {
-      Some(image) => image.clone(),
-      None if dev_container.docker_file.is_some() => {
-         let tag = format!(
-            "athas-devcontainer:{}",
-            slugify(&format!(
-               "{}-{}",
-               workspace_path.display(),
-               dev_container.name
-            ))
-         );
-         let docker_file = dev_container.docker_file.clone().unwrap();
-         let context = dev_container
-            .context
-            .clone()
-            .unwrap_or_else(|| workspace_path.to_string_lossy().into_owned());
-         run_docker_owned(&[
-            "build".to_string(),
-            "--file".to_string(),
-            docker_file,
-            "--tag".to_string(),
-            tag.clone(),
-            context,
-         ])
-         .await?;
-         tag
-      }
-      None => {
-         return Err(
-            "Dev Container must specify image, dockerFile, build.dockerFile, or Docker Compose."
-               .to_string(),
-         );
-      }
-   };
-   let container_name = format!(
-      "athas-devcontainer-{}",
-      slugify(&format!(
-         "{}-{}",
-         workspace_path.display(),
-         dev_container.name
-      ))
-   );
-   let workspace_folder = devcontainer_workspace_folder(workspace_path, dev_container);
-   let existing_container = docker_container_id_by_name(&container_name).await?;
-   let output = if let Some(container_id) = existing_container {
-      run_docker_owned(&["start".to_string(), container_id.clone()]).await?;
-      String::new()
-   } else {
-      let mut args = vec![
-         "run".to_string(),
-         "--detach".to_string(),
-         "--name".to_string(),
-         container_name.clone(),
-         "--workdir".to_string(),
-         workspace_folder.clone(),
-      ];
-      if let Some(workspace_mount) = &dev_container.workspace_mount {
-         args.push("--mount".to_string());
-         args.push(resolve_workspace_mount(
-            workspace_mount,
-            workspace_path,
-            &workspace_folder,
-         ));
-      } else {
-         args.push("--volume".to_string());
-         args.push(format!(
-            "{}:{}",
-            workspace_path.to_string_lossy(),
-            workspace_folder
-         ));
-      }
-      for env in &dev_container.container_env {
-         args.push("--env".to_string());
-         args.push(env.clone());
-      }
-      for mount in &dev_container.mounts {
-         args.push("--mount".to_string());
-         args.push(resolve_workspace_mount(
-            mount,
-            workspace_path,
-            &workspace_folder,
-         ));
-      }
-      for port in &dev_container.forward_ports {
-         args.push("--publish".to_string());
-         args.push(publish_port_arg(port));
-      }
-      args.extend(dev_container.run_args.clone());
-      args.extend([
-         image,
-         "sh".to_string(),
-         "-lc".to_string(),
-         "sleep infinity".to_string(),
-      ]);
-      run_docker_owned(&args).await?
-   };
-   let container_id = docker_container_id_by_name(&container_name)
-      .await?
-      .unwrap_or(container_name);
-   let lifecycle_output = run_devcontainer_lifecycle_commands(&container_id, dev_container, true)
-      .await
-      .map(|lifecycle_output| join_command_output(output, lifecycle_output))?;
-
-   Ok(DockerDevContainerOpenResult {
-      command: docker_exec_shell_command(
-         &container_id,
-         Some(&workspace_folder),
-         dev_container.remote_user.as_deref(),
-         &dev_container.remote_env,
-      ),
-      name: format!("Dev Container: {}", dev_container.name),
-      container_id,
-      output: lifecycle_output,
-   })
-}
-
-async fn docker_container_id_by_name(container_name: &str) -> Result<Option<String>, String> {
-   let output = run_docker_owned(&[
-      "ps".to_string(),
-      "--all".to_string(),
-      "--quiet".to_string(),
-      "--filter".to_string(),
-      format!("name=^/{}$", container_name),
-   ])
-   .await?;
-   Ok(output
-      .lines()
-      .next()
-      .map(str::trim)
-      .filter(|id| !id.is_empty())
-      .map(ToString::to_string))
-}
-
-async fn run_devcontainer_lifecycle_commands(
-   container_id: &str,
-   dev_container: &DockerDevContainer,
-   include_post_create: bool,
-) -> Result<String, String> {
-   let mut output = String::new();
-   if include_post_create
-      && (dev_container.on_create_command.is_some() || dev_container.post_create_command.is_some())
-   {
-      let marker_path = lifecycle_marker_path(dev_container);
-      let marker_exists = run_docker_exec_shell(container_id, &format!("test -f {}", marker_path))
-         .await
-         .is_ok();
-      if !marker_exists {
-         if let Some(command) = &dev_container.on_create_command {
-            output = join_command_output(
-               output,
-               run_docker_exec_command(container_id, command, dev_container).await?,
-            );
-         }
-         if let Some(command) = &dev_container.post_create_command {
-            output = join_command_output(
-               output,
-               run_docker_exec_command(container_id, command, dev_container).await?,
-            );
-         }
-         run_docker_exec_shell(
-            container_id,
-            &format!("mkdir -p /tmp && touch {}", marker_path),
-         )
-         .await?;
-      }
-   }
-   if let Some(command) = &dev_container.post_start_command {
-      output = join_command_output(
-         output,
-         run_docker_exec_command(container_id, command, dev_container).await?,
-      );
-   }
-   if let Some(command) = &dev_container.post_attach_command {
-      output = join_command_output(
-         output,
-         run_docker_exec_command(container_id, command, dev_container).await?,
-      );
-   }
-   Ok(output)
-}
-
-async fn run_docker_exec_command(
-   container_id: &str,
-   command: &str,
-   dev_container: &DockerDevContainer,
-) -> Result<String, String> {
-   let command = shell_command_with_context(
-      command,
-      dev_container.workspace_folder.as_deref(),
-      &dev_container.remote_env,
-   );
-   let mut args = vec!["exec".to_string()];
-   if let Some(remote_user) = dev_container
-      .remote_user
-      .as_deref()
-      .and_then(|user| normalize_optional_value(Some(user.to_string())))
-   {
-      args.push("--user".to_string());
-      args.push(remote_user);
-   }
-   args.extend([
-      container_id.to_string(),
-      "sh".to_string(),
-      "-lc".to_string(),
-      command,
-   ]);
-   run_docker_owned(&args).await
-}
-
-async fn run_docker_exec_shell(container_id: &str, command: &str) -> Result<String, String> {
-   run_docker_owned(&[
-      "exec".to_string(),
-      container_id.to_string(),
-      "sh".to_string(),
-      "-lc".to_string(),
-      command.to_string(),
-   ])
-   .await
-}
-
-fn lifecycle_marker_path(dev_container: &DockerDevContainer) -> String {
-   format!(
-      "/tmp/.athas-devcontainer-post-create-{}",
-      slugify(&dev_container.config_path)
-   )
-}
-
-fn publish_port_arg(port: &str) -> String {
-   if port.contains(':') {
-      port.to_string()
-   } else {
-      let host_port = port.split('/').next().unwrap_or(port);
-      format!("{}:{}", host_port, port)
-   }
-}
-
-fn normalize_debug_runtime(value: &str) -> String {
-   let normalized = value.to_lowercase();
-   if normalized.contains("bun") {
-      "bun"
-   } else if normalized.contains("node") || normalized.contains("pwa-node") {
-      "node"
-   } else if normalized.contains("python") || normalized.contains("debugpy") {
-      "python"
-   } else if normalized.contains("rust") || normalized.contains("lldb") {
-      "rust"
-   } else if normalized.contains("go") || normalized.contains("delve") {
-      "go"
-   } else {
-      "custom"
-   }
-   .to_string()
-}
-
-fn resolve_debug_command_variables(value: &str) -> String {
-   value
-      .replace("${workspaceFolder}", "/workspace")
-      .replace("${workspaceRoot}", "/workspace")
-      .replace("${fileWorkspaceFolder}", "/workspace")
-}
-
-fn shell_join(values: impl IntoIterator<Item = String>) -> String {
-   values
-      .into_iter()
-      .filter(|value| !value.trim().is_empty())
-      .map(|value| shell_quote(&value))
-      .collect::<Vec<_>>()
-      .join(" ")
-}
-
-fn docker_exec_shell_command(
-   container_id: &str,
-   workdir: Option<&str>,
-   remote_user: Option<&str>,
-   remote_env: &[String],
-) -> String {
-   let shell_probe = "if command -v bash >/dev/null 2>&1; then exec bash; elif command -v sh \
-                      >/dev/null 2>&1; then exec sh; else echo \"No interactive shell found in \
-                      this container.\" >&2; exit 127; fi";
-   let command = shell_command_with_context(shell_probe, workdir, remote_env);
-   let user_arg = remote_user
-      .filter(|user| !user.trim().is_empty())
-      .map(|user| format!(" --user {}", shell_quote(user)))
-      .unwrap_or_default();
-   format!(
-      "docker exec -it{} {} sh -lc {}",
-      user_arg,
-      shell_quote(container_id),
-      shell_quote(&command)
-   )
-}
-
-fn shell_command_with_context(
-   command: &str,
-   workdir: Option<&str>,
-   remote_env: &[String],
-) -> String {
-   let mut parts = remote_env
-      .iter()
-      .filter_map(|entry| entry.split_once('='))
-      .map(|(key, value)| format!("export {}={}", key, shell_quote(value)))
-      .collect::<Vec<_>>();
-   if let Some(workdir) = workdir.filter(|workdir| !workdir.trim().is_empty()) {
-      parts.push(format!("cd {}", shell_quote(workdir)));
-   }
-   parts.push(command.to_string());
-   parts.join(" && ")
-}
-
-fn split_command_args(command: &str) -> Result<Vec<String>, String> {
-   let mut args = Vec::new();
-   let mut current = String::new();
-   let mut chars = command.chars().peekable();
-   let mut quote: Option<char> = None;
-   let mut arg_started = false;
-
-   while let Some(ch) = chars.next() {
-      match ch {
-         '\\' if quote != Some('\'') => {
-            let Some(next) = chars.next() else {
-               return Err("Docker command ends with a dangling escape.".to_string());
-            };
-            current.push(next);
-            arg_started = true;
-         }
-         '\'' | '"' if quote == Some(ch) => {
-            quote = None;
-            arg_started = true;
-         }
-         '\'' | '"' if quote.is_none() => {
-            quote = Some(ch);
-            arg_started = true;
-         }
-         ch if ch.is_whitespace() && quote.is_none() => {
-            if arg_started {
-               args.push(std::mem::take(&mut current));
-               arg_started = false;
-            }
-         }
-         _ => {
-            current.push(ch);
-            arg_started = true;
-         }
-      }
-   }
-
-   if let Some(quote) = quote {
-      return Err(format!(
-         "Docker command has an unterminated {} quote.",
-         quote
-      ));
-   }
-   if arg_started {
-      args.push(current);
-   }
-
-   Ok(args)
-}
-
-fn shell_quote(value: &str) -> String {
-   format!("'{}'", value.replace('\'', "'\\''"))
-}
-
-fn slugify(value: &str) -> String {
-   let mut slug = value
-      .chars()
-      .map(|ch| {
-         if ch.is_ascii_alphanumeric() {
-            ch.to_ascii_lowercase()
-         } else {
-            '-'
-         }
-      })
-      .collect::<String>();
-   while slug.contains("--") {
-      slug = slug.replace("--", "-");
-   }
-   slug.trim_matches('-').chars().take(48).collect()
-}
-
-fn compose_path_args(compose_files: &[PathBuf]) -> Vec<String> {
-   let mut args = vec!["compose".to_string()];
-   for file in compose_files {
-      args.push("--file".to_string());
-      args.push(file.to_string_lossy().into_owned());
-   }
-   args
-}
-
-fn compose_file_args(compose_files: &[String]) -> Vec<String> {
-   let mut args = vec!["compose".to_string()];
-   for file in compose_files {
-      args.push("--file".to_string());
-      args.push(file.clone());
-   }
-   args
-}
-
-fn join_command_output(first: String, second: String) -> String {
-   [first.trim(), second.trim()]
-      .into_iter()
-      .filter(|output| !output.is_empty())
-      .collect::<Vec<_>>()
-      .join("\n")
-}
-
-async fn run_container_log_stream(
-   app_handle: AppHandle,
-   tasks: Arc<Mutex<HashMap<String, JoinHandle<()>>>>,
-   stream_id: String,
-   container_id: String,
-   tail: String,
-) {
-   let mut command = Command::new("docker");
-   command
-      .args([
-         "logs",
-         "--follow",
-         "--timestamps",
-         "--tail",
-         &tail,
-         &container_id,
-      ])
-      .stdout(Stdio::piped())
-      .stderr(Stdio::piped())
-      .kill_on_drop(true);
-
-   let mut child = match command.spawn() {
-      Ok(child) => child,
-      Err(error) => {
-         emit_log_exit(
-            &app_handle,
-            &stream_id,
-            &container_id,
-            None,
-            Some(format_docker_launch_error(error)),
-         );
-         tasks.lock().await.remove(&stream_id);
-         return;
-      }
-   };
-
-   let stdout_task = child.stdout.take().map(|stdout| {
-      spawn_log_reader(
-         app_handle.clone(),
-         stream_id.clone(),
-         container_id.clone(),
-         "stdout",
-         stdout,
-      )
-   });
-   let stderr_task = child.stderr.take().map(|stderr| {
-      spawn_log_reader(
-         app_handle.clone(),
-         stream_id.clone(),
-         container_id.clone(),
-         "stderr",
-         stderr,
-      )
-   });
-
-   match child.wait().await {
-      Ok(status) => emit_log_exit(&app_handle, &stream_id, &container_id, status.code(), None),
-      Err(error) => emit_log_exit(
-         &app_handle,
-         &stream_id,
-         &container_id,
-         None,
-         Some(format!("Docker log stream failed: {}", error)),
-      ),
-   }
-
-   if let Some(task) = stdout_task {
-      task.abort();
-   }
-   if let Some(task) = stderr_task {
-      task.abort();
-   }
-
-   tasks.lock().await.remove(&stream_id);
-}
-
-fn spawn_log_reader<R>(
-   app_handle: AppHandle,
-   stream_id: String,
-   container_id: String,
-   stream: &'static str,
-   reader: R,
-) -> JoinHandle<()>
-where
-   R: AsyncRead + Unpin + Send + 'static,
-{
-   tokio::spawn(async move {
-      let mut lines = BufReader::new(reader).lines();
-      loop {
-         match lines.next_line().await {
-            Ok(Some(line)) => {
-               let _ = app_handle.emit(
-                  "docker-container-log",
-                  DockerLogEvent {
-                     stream_id: stream_id.clone(),
-                     container_id: container_id.clone(),
-                     stream: stream.to_string(),
-                     line,
-                  },
-               );
-            }
-            Ok(None) => break,
-            Err(error) => {
-               let _ = app_handle.emit(
-                  "docker-container-log",
-                  DockerLogEvent {
-                     stream_id: stream_id.clone(),
-                     container_id: container_id.clone(),
-                     stream: "stderr".to_string(),
-                     line: format!("Failed to read Docker log stream: {}", error),
-                  },
-               );
-               break;
-            }
-         }
-      }
-   })
-}
-
-fn emit_log_exit(
-   app_handle: &AppHandle,
-   stream_id: &str,
-   container_id: &str,
-   code: Option<i32>,
-   error: Option<String>,
-) {
-   let _ = app_handle.emit(
-      "docker-container-log-exit",
-      DockerLogExitEvent {
-         stream_id: stream_id.to_string(),
-         container_id: container_id.to_string(),
-         code,
-         error,
-      },
-   );
-}
-
-fn parse_json_lines<T>(output: &str) -> Result<Vec<T>, String>
-where
-   T: for<'de> Deserialize<'de>,
-{
-   output
-      .lines()
-      .filter(|line| !line.trim().is_empty())
-      .map(|line| {
-         serde_json::from_str(line)
-            .map_err(|error| format!("Failed to parse Docker output: {}", error))
-      })
-      .collect()
-}
-
-fn parse_compose_ps_output(output: &str) -> Result<Vec<DockerComposeServiceRow>, String> {
-   let trimmed = output.trim();
-   if trimmed.is_empty() {
-      return Ok(Vec::new());
-   }
-
-   match serde_json::from_str::<serde_json::Value>(trimmed) {
-      Ok(serde_json::Value::Array(values)) => values
-         .into_iter()
-         .map(|value| {
-            serde_json::from_value(value)
-               .map_err(|error| format!("Failed to parse Docker Compose output: {}", error))
-         })
-         .collect(),
-      Ok(serde_json::Value::Object(_)) => serde_json::from_str(trimmed)
-         .map(|row| vec![row])
-         .map_err(|error| format!("Failed to parse Docker Compose output: {}", error)),
-      Ok(_) => Ok(Vec::new()),
-      Err(_) => parse_json_lines::<DockerComposeServiceRow>(trimmed),
-   }
-}
-
-fn parse_health(status: &str) -> Option<String> {
-   if status.contains("(healthy)") {
-      Some("healthy".to_string())
-   } else if status.contains("(unhealthy)") {
-      Some("unhealthy".to_string())
-   } else if status.contains("(health: starting)") {
-      Some("starting".to_string())
-   } else {
-      None
-   }
-}
-
-#[cfg(test)]
-mod tests;

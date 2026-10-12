@@ -1,4 +1,8 @@
 pub mod delivery;
+#[cfg(test)]
+mod http_tests;
+#[cfg(test)]
+pub(crate) mod mock_github;
 use crate::models::{
    GitHubNotification, IssueComment, IssueDetails, IssueListItem, IssueMilestone, IssueType, Label,
    PullRequest, PullRequestAuthor, PullRequestComment, PullRequestDetails, PullRequestFile,
@@ -20,13 +24,19 @@ use std::{
 };
 
 const GITHUB_API_BASE: &str = "https://api.github.com";
+const GITHUB_UPLOADS_BASE: &str = "https://uploads.github.com";
 const GITHUB_API_VERSION: &str = "2022-11-28";
 const GITHUB_JSON_ACCEPT: &str = "application/vnd.github+json";
 const GITHUB_WORKFLOW_JOB_LOGS_ACCEPT: &str = GITHUB_JSON_ACCEPT;
 const WORKFLOW_JOB_LOGS_UNAVAILABLE_MESSAGE: &str =
    "GitHub Actions logs are not available yet. Try again after the job finishes.";
 const USER_AGENT_VALUE: &str = "Athas";
-const GITHUB_REQUEST_INTERVAL: Duration = Duration::from_millis(200);
+// Tests talk to a local mock server, so they skip the pacing meant for api.github.com.
+const GITHUB_REQUEST_INTERVAL: Duration = if cfg!(test) {
+   Duration::ZERO
+} else {
+   Duration::from_millis(200)
+};
 
 static GITHUB_REQUEST_GATE: LazyLock<Mutex<Instant>> = LazyLock::new(|| Mutex::new(Instant::now()));
 
@@ -60,6 +70,8 @@ struct RepoRemote {
 struct GitHubApi {
    client: Client,
    github_token: Option<String>,
+   api_base: String,
+   uploads_base: String,
 }
 
 #[derive(Clone, Deserialize)]
@@ -325,9 +337,12 @@ impl GitHubApi {
          .build()
          .map_err(|e| format!("Failed to create GitHub API client: {e}"))?;
 
+      let (api_base, uploads_base) = api_bases();
       Ok(Self {
          client,
          github_token: github_token.filter(|token| !token.trim().is_empty()),
+         api_base,
+         uploads_base,
       })
    }
 
@@ -343,7 +358,7 @@ impl GitHubApi {
    }
 
    fn get(&self, path: &str, accept: &str) -> RequestBuilder {
-      self.apply_headers(self.client.get(format!("{GITHUB_API_BASE}{path}")), accept)
+      self.apply_headers(self.client.get(self.url(path)), accept)
    }
 
    fn get_json<T>(&self, path: &str) -> Result<T, String>
@@ -403,10 +418,7 @@ impl GitHubApi {
    {
       let response = send_github_request(
          self
-            .apply_headers(
-               self.client.post(format!("{GITHUB_API_BASE}{path}")),
-               GITHUB_JSON_ACCEPT,
-            )
+            .apply_headers(self.client.post(self.url(path)), GITHUB_JSON_ACCEPT)
             .json(body),
       )?;
       response
@@ -420,10 +432,7 @@ impl GitHubApi {
    {
       send_github_request(
          self
-            .apply_headers(
-               self.client.post(format!("{GITHUB_API_BASE}{path}")),
-               GITHUB_JSON_ACCEPT,
-            )
+            .apply_headers(self.client.post(self.url(path)), GITHUB_JSON_ACCEPT)
             .json(body),
       )?;
       Ok(())
@@ -436,10 +445,7 @@ impl GitHubApi {
    {
       let response = send_github_request(
          self
-            .apply_headers(
-               self.client.put(format!("{GITHUB_API_BASE}{path}")),
-               GITHUB_JSON_ACCEPT,
-            )
+            .apply_headers(self.client.put(self.url(path)), GITHUB_JSON_ACCEPT)
             .json(body),
       )?;
       response
@@ -453,20 +459,16 @@ impl GitHubApi {
    {
       send_github_request(
          self
-            .apply_headers(
-               self.client.put(format!("{GITHUB_API_BASE}{path}")),
-               GITHUB_JSON_ACCEPT,
-            )
+            .apply_headers(self.client.put(self.url(path)), GITHUB_JSON_ACCEPT)
             .json(body),
       )?;
       Ok(())
    }
 
    fn delete_empty(&self, path: &str) -> Result<(), String> {
-      send_github_request(self.apply_headers(
-         self.client.delete(format!("{GITHUB_API_BASE}{path}")),
-         GITHUB_JSON_ACCEPT,
-      ))?;
+      send_github_request(
+         self.apply_headers(self.client.delete(self.url(path)), GITHUB_JSON_ACCEPT),
+      )?;
       Ok(())
    }
 
@@ -477,15 +479,16 @@ impl GitHubApi {
    {
       let response = send_github_request(
          self
-            .apply_headers(
-               self.client.patch(format!("{GITHUB_API_BASE}{path}")),
-               GITHUB_JSON_ACCEPT,
-            )
+            .apply_headers(self.client.patch(self.url(path)), GITHUB_JSON_ACCEPT)
             .json(body),
       )?;
       response
          .json::<T>()
          .map_err(|e| format!("Failed to parse GitHub API response: {e}"))
+   }
+
+   fn url(&self, path: &str) -> String {
+      format!("{}{path}", self.api_base)
    }
 
    fn apply_headers(&self, request: RequestBuilder, accept: &str) -> RequestBuilder {
@@ -507,6 +510,15 @@ impl GitHubApi {
          request
       }
    }
+}
+
+/// The REST and upload hosts. Tests point both at the mock server they started on this thread.
+fn api_bases() -> (String, String) {
+   #[cfg(test)]
+   if let Some(base) = mock_github::base_url() {
+      return (base.clone(), base);
+   }
+   (GITHUB_API_BASE.to_string(), GITHUB_UPLOADS_BASE.to_string())
 }
 
 fn send_github_request(request: RequestBuilder) -> Result<Response, String> {

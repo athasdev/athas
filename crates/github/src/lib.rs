@@ -3,6 +3,7 @@ mod api;
 mod gh_cli;
 mod models;
 mod serde_helpers;
+mod token_source;
 
 pub use api::{
    GitHubAuthStatus, GitHubTokenIdentity, github_add_issue_comment, github_add_pr_comment,
@@ -24,6 +25,12 @@ pub use models::{
    LinkedIssue, PullRequest, PullRequestAuthor, PullRequestComment, PullRequestDetails,
    PullRequestFile, PullRequestReview, ReviewRequest, StatusCheck, WorkflowListItem,
    WorkflowRunDetails, WorkflowRunJob, WorkflowRunListItem, WorkflowRunStep,
+};
+pub use token_source::{
+   GhCliAvailability, GitHubTokenSource, GitHubTokenStatus, ResolvedGitHubToken,
+   TokenSourcePreference, TokenSources, cached_gh_cli_token, gh_cli_availability,
+   github_token_status, invalidate_gh_cli_token_cache, non_blank, normalize_personal_access_token,
+   resolve_token,
 };
 
 #[cfg(test)]

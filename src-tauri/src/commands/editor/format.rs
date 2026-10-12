@@ -1,8 +1,7 @@
-use super::{
-   exec_guard::{validate_exec_args, validate_exec_command, validate_exec_env},
-   extension_command::build_extension_command,
-};
 use athas_runtime::process::configure_background_command;
+use athas_tooling::{
+   build_extension_command, validate_exec_args, validate_exec_command, validate_exec_env,
+};
 use serde::{Deserialize, Serialize};
 use std::{
    collections::HashMap,

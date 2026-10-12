@@ -1,97 +1,7 @@
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 
-#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
-#[serde(rename_all = "camelCase")]
-pub struct LspDiagnosticContext {
-   pub line: u32,
-   pub column: u32,
-   pub end_line: u32,
-   pub end_column: u32,
-   pub message: String,
-   pub source: Option<String>,
-   pub code: Option<String>,
-   pub severity: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
-#[serde(rename_all = "camelCase")]
-pub struct LspCodeActionContext {
-   pub start_line: u32,
-   pub start_column: u32,
-   pub end_line: u32,
-   pub end_column: u32,
-   #[serde(default)]
-   pub diagnostics: Vec<LspDiagnosticContext>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
-#[serde(rename_all = "camelCase")]
-pub struct LspCodeActionItem {
-   pub id: String,
-   pub title: String,
-   pub kind: Option<String>,
-   pub is_preferred: bool,
-   pub disabled_reason: Option<String>,
-   pub has_command: bool,
-   pub has_edit: bool,
-   pub payload: Value,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
-#[serde(rename_all = "camelCase")]
-pub struct LspApplyCodeActionResult {
-   pub applied: bool,
-   pub reason: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
-#[serde(rename_all = "camelCase")]
-pub struct FlatSymbol {
-   pub name: String,
-   pub kind: String,
-   pub detail: Option<String>,
-   pub line: u32,
-   pub character: u32,
-   pub end_line: u32,
-   pub end_character: u32,
-   pub container_name: Option<String>,
-   pub hierarchy_path: Vec<u32>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
-#[serde(rename_all = "camelCase")]
-pub struct FlatWorkspaceSymbol {
-   pub name: String,
-   pub kind: String,
-   pub detail: Option<String>,
-   pub line: u32,
-   pub character: u32,
-   pub end_line: u32,
-   pub end_character: u32,
-   pub container_name: Option<String>,
-   pub file_path: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
-#[serde(rename_all = "camelCase")]
-pub struct FlatInlayHint {
-   pub line: u32,
-   pub character: u32,
-   pub label: String,
-   pub kind: Option<String>,
-   pub padding_left: bool,
-   pub padding_right: bool,
-}
-
-/// Semantic tokens in the LSP's compact relative encoding, sent to the webview as
-/// an `ArrayBuffer` instead of one JSON object per token.
-///
-/// Layout, all little-endian:
-/// - `u32` number of token integers (five per token)
-/// - `u32` byte length of the legend JSON
-/// - the token integers exactly as the server encoded them
-/// - the legend as UTF-8 JSON: `{"tokenTypes":[...],"tokenModifiers":[...]}`
+/// Semantic tokens sent to the webview as a raw `ArrayBuffer`; the layout is documented on
+/// [`athas_lsp::flat::encode_semantic_tokens_payload`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SemanticTokensPayload(pub Vec<u8>);
 
@@ -105,36 +15,6 @@ impl specta::Type for SemanticTokensPayload {
    fn definition(_: &mut specta::Types) -> specta::datatype::DataType {
       specta::datatype::DataType::Reference(specta_typescript::define("ArrayBuffer"))
    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
-#[serde(rename_all = "camelCase")]
-pub struct FlatCodeLens {
-   pub line: u32,
-   pub title: String,
-   pub command: Option<String>,
-   pub arguments: Option<Vec<Value>>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
-#[serde(rename_all = "camelCase")]
-pub struct FlatTextEditPosition {
-   pub line: u32,
-   pub character: u32,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
-#[serde(rename_all = "camelCase")]
-pub struct FlatTextEditRange {
-   pub start: FlatTextEditPosition,
-   pub end: FlatTextEditPosition,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
-#[serde(rename_all = "camelCase")]
-pub struct FlatTextEdit {
-   pub range: FlatTextEditRange,
-   pub new_text: String,
 }
 
 /// An `lsp_types` value crossing IPC unchanged. The generated bindings type it as

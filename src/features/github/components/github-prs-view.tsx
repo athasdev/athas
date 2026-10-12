@@ -856,6 +856,7 @@ const GitHubPRsView = memo(() => {
                 {!effectiveRepoPath ? (
                   <StreamEmpty
                     title="No repository selected"
+                    hint={repoSelectionError ?? undefined}
                     action={
                       <StreamTextButton
                         disabled={isSelectingRepo}
@@ -869,9 +870,8 @@ const GitHubPRsView = memo(() => {
                   <StreamEmpty
                     title={isRepoError ? "Not a Git repository" : error}
                     hint={
-                      isRepoError
-                        ? "Select a folder that contains a .git repository."
-                        : (repoSelectionError ?? undefined)
+                      repoSelectionError ??
+                      (isRepoError ? "Select a folder that contains a .git repository." : undefined)
                     }
                     action={
                       <StreamTextButton

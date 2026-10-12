@@ -577,6 +577,7 @@ dependencies = [
  "athas-browser",
  "athas-database",
  "athas-debugger",
+ "athas-docker",
  "athas-extensions",
  "athas-fff-search",
  "athas-github",
@@ -611,8 +612,6 @@ dependencies = [
  "percent-encoding",
  "regex",
  "reqwest 0.12.28",
- "roxmltree",
- "rusqlite",
  "rustls",
  "serde",
  "serde_json",
@@ -645,8 +644,6 @@ dependencies = [
  "toml 0.8.2",
  "ttf-parser",
  "url",
- "uuid",
- "walkdir",
  "webkit2gtk-sys",
  "which",
  "wry",
@@ -662,6 +659,7 @@ dependencies = [
  "athas-exec-path",
  "athas-project",
  "athas-terminal",
+ "athas-tooling",
  "base64 0.22.1",
  "bzip2",
  "flate2",
@@ -730,6 +728,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "athas-docker"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "specta",
+ "tar",
+ "tempfile",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
 name = "athas-exec-path"
 version = "0.1.0"
 dependencies = [
@@ -779,6 +790,7 @@ dependencies = [
  "serde",
  "serde_json",
  "specta",
+ "tempfile",
 ]
 
 [[package]]
@@ -804,14 +816,20 @@ name = "athas-project"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "dirs 5.0.1",
  "dunce",
  "ignore",
  "log",
  "notify",
+ "roxmltree",
+ "rusqlite",
  "serde",
  "serde_json",
+ "sha2",
  "specta",
  "tempfile",
+ "url",
+ "walkdir",
 ]
 
 [[package]]
@@ -842,10 +860,12 @@ dependencies = [
  "log",
  "reqwest 0.12.28",
  "serde",
+ "serde_json",
  "sha2",
  "specta",
  "tar",
  "tempfile",
+ "tokio",
  "which",
  "zip 2.4.2",
 ]
@@ -876,6 +896,7 @@ dependencies = [
  "flate2",
  "futures-util",
  "log",
+ "regex",
  "reqwest 0.12.28",
  "serde",
  "serde_json",

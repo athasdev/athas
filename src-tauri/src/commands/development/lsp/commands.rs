@@ -1,103 +1,25 @@
-use super::{
-   convert::{
-      convert_diagnostic_context_to_lsp, encode_semantic_tokens_payload, flatten_document_symbols,
-      flatten_inlay_hint, flatten_workspace_symbol_response, symbol_kind_label,
-   },
-   types::{
-      FlatCodeLens, FlatInlayHint, FlatSymbol, FlatTextEdit, FlatTextEditPosition,
-      FlatTextEditRange, FlatWorkspaceSymbol, IntoLsp, Lsp, LspApplyCodeActionResult,
-      LspCodeActionContext, LspCodeActionItem, SemanticTokensPayload,
+use super::types::{IntoLsp, Lsp, SemanticTokensPayload};
+use athas_lsp::{
+   DocumentChangeBatch, LspError, LspManager, LspResult,
+   client::LspInitialization,
+   flat::{
+      FlatCodeLens, FlatInlayHint, FlatSymbol, FlatTextEdit, FlatWorkspaceSymbol,
+      LspApplyCodeActionResult, LspCodeActionContext, LspCodeActionItem, code_action_items,
+      flatten_code_lenses, flatten_document_symbol_response, flatten_inlay_hints,
+      flatten_text_edits, flatten_workspace_symbol_response, locations_from_goto_response,
+      semantic_tokens_payload,
    },
 };
-use athas_lsp::{DocumentChangeBatch, LspError, LspManager, LspResult, client::LspInitialization};
-use athas_tooling::{LanguageToolConfigSet, ToolInstaller, ToolRegistry, ToolType};
+use athas_tooling::{LanguageToolConfigSet, LspLaunch, resolve_lsp_launch};
 use lsp_types::{
    CallHierarchyIncomingCall, CallHierarchyItem, CallHierarchyOutgoingCall, CodeActionOrCommand,
-   CompletionItem, DocumentHighlight, DocumentSymbolResponse, FoldingRange, GotoDefinitionResponse,
-   Hover, Location, Position, PrepareRenameResponse, SelectionRange, SemanticTokensResult,
-   SignatureHelp, TextEdit, TypeHierarchyItem, WorkspaceEdit,
+   CompletionItem, DocumentHighlight, FoldingRange, Hover, Location, Position,
+   PrepareRenameResponse, SelectionRange, SignatureHelp, TextEdit, TypeHierarchyItem,
+   WorkspaceEdit,
 };
 use serde_json::Value;
-use std::{collections::HashMap, path::PathBuf};
-use tauri::{AppHandle, Manager, State};
-
-type LspLaunchRequest = (
-   Option<String>,
-   Option<Vec<String>>,
-   Option<HashMap<String, String>>,
-);
-
-async fn resolve_lsp_launch_request(
-   app_handle: &AppHandle,
-   language_id: Option<String>,
-   server_path: Option<String>,
-   server_args: Option<Vec<String>>,
-   tools: Option<LanguageToolConfigSet>,
-) -> Result<LspLaunchRequest, String> {
-   let Some(language_id) = language_id else {
-      return Ok((server_path, server_args, None));
-   };
-   let Some(tools) = tools else {
-      return Ok((server_path, server_args, None));
-   };
-   let Some(config) = ToolRegistry::get_tool(&language_id, ToolType::Lsp, Some(tools)) else {
-      return Ok((server_path, server_args, None));
-   };
-
-   let resolved_path =
-      ToolInstaller::get_lsp_launch_path(app_handle, &config).map_err(|e| e.to_string())?;
-   let mut resolved_args = match server_args {
-      Some(args) if !args.is_empty() => Some(args),
-      _ if !config.args.is_empty() => Some(config.args.clone()),
-      args => args,
-   };
-   if config.name == "jdtls" {
-      let args = resolved_args.get_or_insert_default();
-      if !args
-         .iter()
-         .any(|arg| arg == "--java-executable" || arg.starts_with("--java-executable="))
-      {
-         let java = ToolInstaller::get_or_install_java_executable(app_handle)
-            .await
-            .map_err(|e| e.to_string())?;
-         args.splice(
-            0..0,
-            [
-               "--java-executable".to_string(),
-               java.to_string_lossy().to_string(),
-            ],
-         );
-      }
-   }
-   let resolved_env = if config.env.is_empty() {
-      None
-   } else {
-      Some(config.env.clone())
-   };
-
-   Ok((
-      Some(resolved_path.to_string_lossy().to_string()),
-      resolved_args,
-      resolved_env,
-   ))
-}
-
-fn locations_from_goto_response(response: Option<GotoDefinitionResponse>) -> Option<Vec<Location>> {
-   match response {
-      Some(GotoDefinitionResponse::Scalar(loc)) => Some(vec![loc]),
-      Some(GotoDefinitionResponse::Array(locs)) => Some(locs),
-      Some(GotoDefinitionResponse::Link(links)) => Some(
-         links
-            .into_iter()
-            .map(|link| Location {
-               uri: link.target_uri,
-               range: link.target_selection_range,
-            })
-            .collect(),
-      ),
-      None => None,
-   }
-}
+use std::path::PathBuf;
+use tauri::{Manager, State};
 
 #[tauri::command]
 #[specta::specta]
@@ -113,7 +35,11 @@ pub async fn lsp_start(
    workspace_edit_owner: Option<String>,
 ) -> LspResult<()> {
    log::info!("lsp_start command called with path: {}", workspace_path);
-   let (server_path, server_args, server_env) = resolve_lsp_launch_request(
+   let LspLaunch {
+      server_path,
+      server_args,
+      server_env,
+   } = resolve_lsp_launch(
       window.app_handle(),
       language_id,
       server_path,
@@ -168,7 +94,11 @@ pub async fn lsp_start_for_file(
    workspace_edit_owner: Option<String>,
 ) -> LspResult<()> {
    log::info!("lsp_start_for_file command called for file: {}", file_path);
-   let (server_path, server_args, server_env) = resolve_lsp_launch_request(
+   let LspLaunch {
+      server_path,
+      server_args,
+      server_env,
+   } = resolve_lsp_launch(
       window.app_handle(),
       language_id,
       server_path,
@@ -329,67 +259,16 @@ pub async fn lsp_get_code_actions(
    file_path: String,
    context: LspCodeActionContext,
 ) -> LspResult<Vec<LspCodeActionItem>> {
-   let range = lsp_types::Range {
-      start: lsp_types::Position {
-         line: context.start_line,
-         character: context.start_column,
-      },
-      end: lsp_types::Position {
-         line: context.end_line,
-         character: context.end_column,
-      },
-   };
+   let (range, diagnostics) = context.into_request();
    let actions = lsp_manager
-      .get_code_actions(
-         &file_path,
-         range,
-         context
-            .diagnostics
-            .into_iter()
-            .map(convert_diagnostic_context_to_lsp)
-            .collect(),
-      )
+      .get_code_actions(&file_path, range, diagnostics)
       .await
       .map_err(|e| {
          log::error!("Failed to get code actions: {}", e);
          LspError::from(e)
       })?;
 
-   Ok(actions
-      .into_iter()
-      .enumerate()
-      .map(|(index, action)| {
-         let payload = serde_json::to_value(&action).unwrap_or(Value::Null);
-         match &action {
-            CodeActionOrCommand::Command(command) => LspCodeActionItem {
-               id: format!("command-{}", index),
-               title: command.title.clone(),
-               kind: None,
-               is_preferred: false,
-               disabled_reason: None,
-               has_command: true,
-               has_edit: false,
-               payload,
-            },
-            CodeActionOrCommand::CodeAction(code_action) => LspCodeActionItem {
-               id: format!("code-action-{}", index),
-               title: code_action.title.clone(),
-               kind: code_action
-                  .kind
-                  .as_ref()
-                  .map(|kind| kind.as_str().to_string()),
-               is_preferred: code_action.is_preferred.unwrap_or(false),
-               disabled_reason: code_action
-                  .disabled
-                  .as_ref()
-                  .map(|disabled| disabled.reason.clone()),
-               has_command: code_action.command.is_some(),
-               has_edit: code_action.edit.is_some(),
-               payload,
-            },
-         }
-      })
-      .collect())
+   Ok(code_action_items(actions))
 }
 
 #[tauri::command]
@@ -490,18 +369,10 @@ pub async fn lsp_get_semantic_tokens(
          LspError::from(e)
       })?;
 
-   let data = match response {
-      Some(SemanticTokensResult::Tokens(tokens)) => tokens.data,
-      Some(SemanticTokensResult::Partial(partial)) => partial.data,
-      None => return Ok(encode_semantic_tokens_payload(&[], &[], &[])),
-   };
-   let (token_types, token_modifiers) = lsp_manager.semantic_token_legend(&file_path);
-
-   Ok(encode_semantic_tokens_payload(
-      &data,
-      &token_types,
-      &token_modifiers,
-   ))
+   Ok(SemanticTokensPayload(semantic_tokens_payload(
+      response,
+      || lsp_manager.semantic_token_legend(&file_path),
+   )))
 }
 
 #[tauri::command]
@@ -515,19 +386,7 @@ pub async fn lsp_get_code_lens(
       LspError::from(e)
    })?;
 
-   Ok(response
-      .unwrap_or_default()
-      .into_iter()
-      .filter_map(|lens| {
-         let cmd = lens.command?;
-         Some(FlatCodeLens {
-            line: lens.range.start.line,
-            title: cmd.title,
-            command: Some(cmd.command),
-            arguments: cmd.arguments,
-         })
-      })
-      .collect())
+   Ok(flatten_code_lenses(response))
 }
 
 #[tauri::command]
@@ -541,23 +400,7 @@ pub async fn lsp_format_document(
       LspError::from(e)
    })?;
 
-   Ok(response
-      .unwrap_or_default()
-      .into_iter()
-      .map(|edit| FlatTextEdit {
-         range: FlatTextEditRange {
-            start: FlatTextEditPosition {
-               line: edit.range.start.line,
-               character: edit.range.start.character,
-            },
-            end: FlatTextEditPosition {
-               line: edit.range.end.line,
-               character: edit.range.end.character,
-            },
-         },
-         new_text: edit.new_text,
-      })
-      .collect())
+   Ok(flatten_text_edits(response))
 }
 
 #[tauri::command]
@@ -584,23 +427,7 @@ pub async fn lsp_format_range(
          LspError::from(e)
       })?;
 
-   Ok(response
-      .unwrap_or_default()
-      .into_iter()
-      .map(|edit| FlatTextEdit {
-         range: FlatTextEditRange {
-            start: FlatTextEditPosition {
-               line: edit.range.start.line,
-               character: edit.range.start.character,
-            },
-            end: FlatTextEditPosition {
-               line: edit.range.end.line,
-               character: edit.range.end.character,
-            },
-         },
-         new_text: edit.new_text,
-      })
-      .collect())
+   Ok(flatten_text_edits(response))
 }
 
 #[tauri::command]
@@ -781,11 +608,7 @@ pub async fn lsp_get_inlay_hints(
          LspError::from(e)
       })?;
 
-   Ok(response
-      .unwrap_or_default()
-      .iter()
-      .map(flatten_inlay_hint)
-      .collect())
+   Ok(flatten_inlay_hints(response))
 }
 
 #[tauri::command]
@@ -802,28 +625,7 @@ pub async fn lsp_get_document_symbols(
          LspError::from(e)
       })?;
 
-   let symbols = match response {
-      Some(DocumentSymbolResponse::Flat(infos)) => infos
-         .into_iter()
-         .map(|info| FlatSymbol {
-            name: info.name,
-            kind: symbol_kind_label(info.kind),
-            detail: None,
-            line: info.location.range.start.line,
-            character: info.location.range.start.character,
-            end_line: info.location.range.end.line,
-            end_character: info.location.range.end.character,
-            container_name: info.container_name,
-            hierarchy_path: Vec::new(),
-         })
-         .collect(),
-      Some(DocumentSymbolResponse::Nested(doc_symbols)) => {
-         flatten_document_symbols(&doc_symbols, None)
-      }
-      None => vec![],
-   };
-
-   Ok(symbols)
+   Ok(flatten_document_symbol_response(response))
 }
 
 #[tauri::command]

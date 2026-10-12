@@ -29,15 +29,20 @@ function tauriDriverCapabilities() {
   return capabilities;
 }
 
+interface AppSessionOptions {
+  /** Settings saved before the app starts, for journeys that need a non-default setup. */
+  settings?: Record<string, unknown>;
+}
+
 /**
  * Starts a fresh app for the spec file: a wiped app data directory, a
  * pristine fixture project, and a new WebDriver session that opens it.
  */
-export function useAppSession(spec: string) {
+export function useAppSession(spec: string, { settings }: AppSessionOptions = {}) {
   beforeAll(async () => {
     currentSpec = spec;
     await stopAppProcesses();
-    resetSessionState();
+    resetSessionState(settings);
     const capabilities = ATTACH_TO_APP
       ? await launchAppForAttach(safeFileName(spec))
       : tauriDriverCapabilities();

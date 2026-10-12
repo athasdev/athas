@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { getQueryErrorMessage } from "@/utils/query-client";
 import { deliveryListQuery } from "../services/github-delivery-service";
@@ -8,6 +8,7 @@ const EMPTY_ITEMS: DeliveryResource[] = [];
 
 export function useDeliveryList(kind: DeliveryKind, repoPath: string, enabled: boolean) {
   const query = useInfiniteQuery({ ...deliveryListQuery(kind, repoPath), enabled });
+  const loadingMoreRef = useRef(false);
   const pages = query.data?.pages;
   const items = useMemo(() => {
     if (!pages) return EMPTY_ITEMS;
@@ -27,7 +28,11 @@ export function useDeliveryList(kind: DeliveryKind, repoPath: string, enabled: b
     hasMore: query.hasNextPage,
     refresh: () => void query.refetch(),
     loadMore: () => {
-      if (!query.isFetchingNextPage) void query.fetchNextPage();
+      if (loadingMoreRef.current) return;
+      loadingMoreRef.current = true;
+      void query.fetchNextPage().finally(() => {
+        loadingMoreRef.current = false;
+      });
     },
   };
 }

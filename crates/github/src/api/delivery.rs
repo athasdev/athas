@@ -267,7 +267,8 @@ pub fn github_upload_release_asset(
    let request = api
       .apply_headers(
          api.client.post(format!(
-            "https://uploads.github.com{}",
+            "{}{}",
+            api.uploads_base,
             repo_path(&slug, &format!("releases/{id}/assets"))
          )),
          super::GITHUB_JSON_ACCEPT,

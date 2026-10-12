@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { fireEvent } from "@testing-library/dom";
+import { fireEvent, waitFor } from "@testing-library/dom";
 import { act, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { toast } from "sonner";
@@ -60,14 +60,26 @@ async function flush() {
   });
 }
 
+async function eventually(assertion: () => void) {
+  await act(async () => {
+    await waitFor(assertion, { timeout: 5000 });
+  });
+}
+
+async function waitForMenuItems() {
+  await eventually(() => expect(menuItems().length).toBeGreaterThan(0));
+}
+
 async function render(initial: string | null = null) {
   await act(async () => root.render(<Harness initial={initial} />));
   await flush();
+  if (initial) await waitForMenuItems();
 }
 
 async function open(menu: string) {
   await act(async () => openMenu(menu));
   await flush();
+  await waitForMenuItems();
 }
 
 const menuItems = () =>
@@ -208,20 +220,23 @@ describe("window menu bar", () => {
 
   it("applies a registered theme from the View menu", async () => {
     await render("View");
-    const themeTrigger = document.querySelector<HTMLElement>('[data-slot="menubar-sub-trigger"]')!;
-    expect(themeTrigger.textContent).toContain("Theme");
+    const themeTrigger = () =>
+      document.querySelector<HTMLElement>('[data-slot="menubar-sub-trigger"]');
+    await eventually(() => expect(themeTrigger()?.textContent).toContain("Theme"));
     await act(async () => {
-      fireEvent.click(themeTrigger);
+      fireEvent.click(themeTrigger()!);
     });
-    await flush();
-    const ocean = [
-      ...document.querySelectorAll<HTMLElement>(
-        '[data-slot="menubar-sub-content"] [data-slot="menubar-item"]',
-      ),
-    ].find((item) => item.textContent?.includes("Ocean"));
-    await act(async () => ocean!.click());
-    await flush();
-    expect(emitted()).toContainEqual({ action: "theme_change", value: "ocean" });
+    const ocean = () =>
+      [
+        ...document.querySelectorAll<HTMLElement>(
+          '[data-slot="menubar-sub-content"] [data-slot="menubar-item"]',
+        ),
+      ].find((item) => item.textContent?.includes("Ocean"));
+    await eventually(() => expect(ocean()).toBeTruthy());
+    await act(async () => ocean()!.click());
+    await eventually(() =>
+      expect(emitted()).toContainEqual({ action: "theme_change", value: "ocean" }),
+    );
   });
 
   it("reports a Web Inspector that cannot open", async () => {
@@ -229,30 +244,25 @@ describe("window menu bar", () => {
     const error = vi.spyOn(toast, "error").mockImplementation(() => 1);
     await render();
     await click("Tools", "Web Inspector");
-    expect(error).toHaveBeenCalledWith("Inspector unavailable");
+    await eventually(() => expect(error).toHaveBeenCalledWith("Inspector unavailable"));
   });
 
   it("keeps the window above others while a menu is open and restores it afterwards", async () => {
     await render("File");
-    expect(commandsRun("plugin:window|set_always_on_top").map((call) => call.args.value)).toEqual([
-      true,
-    ]);
+    const alwaysOnTop = () =>
+      commandsRun("plugin:window|set_always_on_top").map((call) => call.args.value);
+    await eventually(() => expect(alwaysOnTop()).toEqual([true]));
 
     await act(async () => openMenu(null));
-    await flush();
-    expect(commandsRun("plugin:window|set_always_on_top").map((call) => call.args.value)).toEqual([
-      true,
-      false,
-    ]);
+    await eventually(() => expect(alwaysOnTop()).toEqual([true, false]));
   });
 
   it("leaves a window that is already always on top unchanged", async () => {
     native.alwaysOnTop = true;
     await render("Edit");
+    const alwaysOnTop = () =>
+      commandsRun("plugin:window|set_always_on_top").map((call) => call.args.value);
     await act(async () => openMenu(null));
-    await flush();
-    expect(commandsRun("plugin:window|set_always_on_top").map((call) => call.args.value)).toEqual([
-      true,
-    ]);
+    await eventually(() => expect(alwaysOnTop()).toEqual([true]));
   });
 });

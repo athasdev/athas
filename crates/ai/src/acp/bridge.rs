@@ -1321,6 +1321,9 @@ impl AcpAgentBridge {
 }
 
 #[cfg(test)]
+mod front_tests;
+
+#[cfg(test)]
 mod tests {
    use super::with_request_timeout;
    use std::time::Duration;

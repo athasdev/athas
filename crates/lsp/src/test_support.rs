@@ -12,7 +12,7 @@ use serde_json::{Value, json};
 use std::{
    collections::HashMap,
    io::{BufRead, BufReader, Write},
-   path::Path,
+   path::{Path, PathBuf},
    process::Child,
    thread,
    time::Duration,
@@ -38,20 +38,27 @@ impl Drop for FakeServer {
    }
 }
 
-pub(crate) async fn spawn_fake_server(workspace: &Path) -> (LspClient, Child) {
+/// The executable, arguments, and environment that launch the scripted server.
+pub(crate) fn fake_server_command() -> (PathBuf, Vec<String>, LspServerEnv) {
    let exe = std::env::current_exe().expect("test executable path");
    let mut env = LspServerEnv::new();
    env.insert(FAKE_SERVER_ENV.to_string(), "1".to_string());
+   let args = vec![
+      "--exact".to_string(),
+      "test_support::fake_lsp_server_entry".to_string(),
+      "--nocapture".to_string(),
+      "--test-threads=1".to_string(),
+      "--quiet".to_string(),
+   ];
+   (exe, args, env)
+}
+
+pub(crate) async fn spawn_fake_server(workspace: &Path) -> (LspClient, Child) {
+   let (exe, args, env) = fake_server_command();
 
    LspClient::start(
       exe,
-      vec![
-         "--exact".to_string(),
-         "test_support::fake_lsp_server_entry".to_string(),
-         "--nocapture".to_string(),
-         "--test-threads=1".to_string(),
-         "--quiet".to_string(),
-      ],
+      args,
       Url::from_file_path(workspace).unwrap(),
       None,
       Some(workspace.to_path_buf()),
@@ -117,21 +124,42 @@ fn result(id: &Value, result: Value) -> Value {
    json!({ "jsonrpc": "2.0", "id": id, "result": result })
 }
 
+/// The reply scripted for `method` through `fakeResponses`. A list answers successive calls in
+/// order and then keeps repeating its last entry.
+fn scripted_reply(responses: &mut HashMap<String, Value>, method: &str) -> Option<Value> {
+   match responses.get_mut(method)? {
+      Value::Array(queue) if queue.len() > 1 => Some(queue.remove(0)),
+      Value::Array(queue) => queue.first().cloned(),
+      reply => Some(reply.clone()),
+   }
+}
+
 fn run_fake_server() -> ! {
    let mut reader = BufReader::new(std::io::stdin().lock());
    let mut held_reverse: Option<Value> = None;
    let mut pending_server_requests: HashMap<String, Value> = HashMap::new();
    let mut capabilities = json!({});
+   let mut responses: HashMap<String, Value> = HashMap::new();
+   let mut received: Vec<Value> = Vec::new();
 
    while let Some(message) = read_message(&mut reader) {
       let method = message.get("method").and_then(Value::as_str);
       let id = message.get("id").cloned();
+
+      if let Some(method) = method
+         && !method.starts_with("test/")
+      {
+         received.push(json!({ "method": method, "params": message["params"] }));
+      }
 
       match (method, id) {
          (Some("initialize"), Some(id)) => {
             let options = &message["params"]["initializationOptions"];
             if let Some(caps) = options.get("fakeCapabilities") {
                capabilities = caps.clone();
+            }
+            if let Some(Value::Object(scripted)) = options.get("fakeResponses") {
+               responses = scripted.clone().into_iter().collect();
             }
             write_message(&result(
                &id,
@@ -171,8 +199,17 @@ fn run_fake_server() -> ! {
             }));
             pending_server_requests.insert(server_request_id, id);
          }
+         (Some("test/received"), Some(id)) => write_message(&result(&id, json!(received))),
          (Some("test/crash"), Some(_)) => std::process::exit(3),
          (Some("exit"), None) => std::process::exit(0),
+         (Some(method), Some(id)) if !method.starts_with("test/") => {
+            let mut reply = scripted_reply(&mut responses, method).unwrap_or_else(
+               || json!({ "error": { "code": -32601, "message": "Method not found" } }),
+            );
+            reply["jsonrpc"] = json!("2.0");
+            reply["id"] = id;
+            write_message(&reply);
+         }
          (None, Some(server_request_id)) => {
             let key = server_request_id.as_str().unwrap_or_default().to_string();
             if let Some(original_id) = pending_server_requests.remove(&key) {

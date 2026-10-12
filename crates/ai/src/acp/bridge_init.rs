@@ -986,6 +986,9 @@ fn emit_initial_session_state(
 }
 
 #[cfg(test)]
+mod session_tests;
+
+#[cfg(test)]
 mod tests {
    use super::*;
 

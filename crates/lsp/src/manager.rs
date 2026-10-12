@@ -24,7 +24,8 @@ pub struct LspManager {
    // Map (workspace path, language) to their LSP clients with reference counting
    workspace_clients: WorkspaceClients,
    registry: LspRegistry,
-   app_handle: AppHandle,
+   /// Absent only in tests, which run language servers without a Tauri app.
+   app_handle: Option<AppHandle>,
    settings: LspSettings,
    document_sessions: DocumentSessions,
    semantic_tokens: SemanticTokenCache,
@@ -47,6 +48,10 @@ fn send_document_changes(
 
 impl LspManager {
    pub fn new(app_handle: AppHandle) -> Self {
+      Self::with_app_handle(Some(app_handle))
+   }
+
+   fn with_app_handle(app_handle: Option<AppHandle>) -> Self {
       Self {
          workspace_clients: WorkspaceClients::new(),
          registry: LspRegistry::new(),
@@ -57,12 +62,20 @@ impl LspManager {
       }
    }
 
+   fn app_data_dir(&self) -> Result<PathBuf> {
+      let app_handle = self
+         .app_handle
+         .as_ref()
+         .context("No Tauri app handle available")?;
+      Ok(app_handle.path().app_data_dir()?)
+   }
+
    pub fn get_server_path(&self, server_name: &str) -> Result<PathBuf> {
       // For TypeScript, try multiple detection strategies
       if server_name == "typescript" {
          // Prefer Athas-managed tools so stale global language servers do not
          // shadow the version installed by the extension manager.
-         if let Ok(app_dir) = self.app_handle.path().app_data_dir() {
+         if let Ok(app_dir) = self.app_data_dir() {
             let tools_dir = app_dir.join("tools");
             if let Some(path) = utils::find_managed_binary(&tools_dir, "typescript-language-server")
             {
@@ -95,11 +108,7 @@ impl LspManager {
       }
 
       // Look for bundled executable
-      let app_dir = self
-         .app_handle
-         .path()
-         .app_data_dir()
-         .context("Failed to get app dir")?;
+      let app_dir = self.app_data_dir().context("Failed to get app dir")?;
 
       let bundled_path = app_dir.join(format!("{}-language-server", server_name));
 
@@ -168,8 +177,6 @@ impl LspManager {
       }
 
       let tools_dir = self
-         .app_handle
-         .path()
          .app_data_dir()
          .context("Failed to resolve app data dir while resolving LSP tool path")?
          .join("tools");
@@ -254,7 +261,7 @@ impl LspManager {
          server_path,
          server_args,
          root_uri.clone(),
-         Some(self.app_handle.clone()),
+         self.app_handle.clone(),
          Some(workspace_path.clone()),
          server_env_override.unwrap_or_default(),
       )
@@ -339,7 +346,7 @@ impl LspManager {
          server_path,
          server_args,
          root_uri.clone(),
-         Some(self.app_handle.clone()),
+         self.app_handle.clone(),
          Some(workspace_path.clone()),
          server_env_override.unwrap_or_default(),
       )
@@ -1697,6 +1704,9 @@ impl Drop for LspManager {
       self.shutdown();
    }
 }
+
+#[cfg(test)]
+mod server_tests;
 
 #[cfg(test)]
 mod tests {

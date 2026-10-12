@@ -1,6 +1,7 @@
 use crate::terminal::FrontendTerminalSessions;
 use athas_remote::{
-   RemoteFileEntry, SshConnection, close_remote_terminal as remote_close_terminal,
+   RemoteFileEntry, RemoteTerminalTarget, SSH_CONNECTION_STATUS_EVENT, SshConnection,
+   SshConnectionStatus, close_remote_terminal as remote_close_terminal,
    create_remote_terminal as remote_create_terminal,
    remote_terminal_resize as remote_terminal_resize_impl,
    remote_terminal_set_paused as remote_terminal_set_paused_impl,
@@ -13,7 +14,6 @@ use athas_remote::{
    ssh_rename_path as remote_ssh_rename_path, ssh_write_file as remote_ssh_write_file,
 };
 use athas_terminal::{TerminalChannelMessage, TerminalInput, TerminalSize};
-use serde::Deserialize;
 use tauri::{Emitter, State, ipc::Channel};
 
 #[tauri::command]
@@ -46,11 +46,8 @@ pub async fn ssh_connect(
    .await?;
 
    let _ = app.emit(
-      "ssh_connection_status",
-      serde_json::json!({
-         "connectionId": connection.id,
-         "connected": true
-      }),
+      SSH_CONNECTION_STATUS_EVENT,
+      SshConnectionStatus::connected(connection.id.clone()),
    );
 
    Ok(connection)
@@ -62,11 +59,8 @@ pub async fn ssh_disconnect(app: tauri::AppHandle, connection_id: String) -> Res
    remote_ssh_disconnect(app.clone(), connection_id.clone()).await?;
 
    let _ = app.emit(
-      "ssh_connection_status",
-      serde_json::json!({
-         "connectionId": connection_id,
-         "connected": false
-      }),
+      SSH_CONNECTION_STATUS_EVENT,
+      SshConnectionStatus::disconnected(connection_id),
    );
 
    Ok(())
@@ -81,11 +75,8 @@ pub async fn ssh_disconnect_only(
    remote_ssh_disconnect_only(connection_id.clone()).await?;
 
    let _ = app.emit(
-      "ssh_connection_status",
-      serde_json::json!({
-         "connectionId": connection_id,
-         "connected": false
-      }),
+      SSH_CONNECTION_STATUS_EVENT,
+      SshConnectionStatus::disconnected(connection_id),
    );
 
    Ok(())
@@ -189,18 +180,6 @@ pub async fn ssh_copy_path(
    remote_ssh_copy_path(connection_id, source_path, target_path, is_directory).await
 }
 
-/// Where a remote terminal connects and starts.
-#[derive(Debug, Clone, Deserialize, specta::Type)]
-#[serde(rename_all = "camelCase")]
-pub struct RemoteTerminalTarget {
-   pub host: String,
-   pub port: u16,
-   pub username: String,
-   pub password: Option<String>,
-   pub key_path: Option<String>,
-   pub working_directory: Option<String>,
-}
-
 #[tauri::command]
 #[specta::specta]
 pub async fn create_remote_terminal(
@@ -213,12 +192,7 @@ pub async fn create_remote_terminal(
    frontend_sessions: State<'_, FrontendTerminalSessions>,
 ) -> Result<String, String> {
    let connection_id = remote_create_terminal(
-      target.host,
-      target.port,
-      target.username,
-      target.password,
-      target.key_path,
-      target.working_directory,
+      target,
       size,
       app_handle.package_info().version.to_string(),
       on_event,
