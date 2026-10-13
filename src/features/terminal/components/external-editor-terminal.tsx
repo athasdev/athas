@@ -304,7 +304,8 @@ export const ExternalEditorTerminal = ({
       const command = getEditorCommand(filePath);
       commandTimerRef.current = setTimeout(() => {
         commandTimerRef.current = null;
-        write(`${command}\n`);
+        // Enter is a carriage return in every shell; cmd.exe under ConPTY ignores a bare newline.
+        write(`${command}\r`);
       }, 200);
     }
   }, [

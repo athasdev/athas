@@ -11,11 +11,13 @@ fail_under_lines=66
 
 out=target/llvm-cov
 
+# No --branch: branch coverage is unstable on nightly, and with it llvm-cov export crashed
+# (segfault) on the CI toolchain while writing the lcov report.
 cargo llvm-cov clean --workspace
-cargo llvm-cov --workspace --branch --no-fail-fast --no-report
+cargo llvm-cov --workspace --no-fail-fast --no-report
 
 mkdir -p "$out"
-cargo llvm-cov report --branch --lcov --output-path "$out/lcov.info"
-cargo llvm-cov report --branch --json --summary-only --output-path "$out/summary.json"
-cargo llvm-cov report --branch --html --output-dir "$out"
-cargo llvm-cov report --branch --summary-only --fail-under-lines "$fail_under_lines"
+cargo llvm-cov report --lcov --output-path "$out/lcov.info"
+cargo llvm-cov report --json --summary-only --output-path "$out/summary.json"
+cargo llvm-cov report --html --output-dir "$out"
+cargo llvm-cov report --summary-only --fail-under-lines "$fail_under_lines"

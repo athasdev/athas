@@ -7,7 +7,6 @@ import {
   fileContains,
   readTextFile,
   treeItem,
-  waitForDisplayed,
   waitForHidden,
   waitForProjectTree,
   waitUntil,
@@ -38,13 +37,9 @@ describe("external editor", () => {
     rmSync(OUTPUT_FILE, { force: true });
     const original = readTextFile(workspaceFile("notes.txt"));
 
+    // The stand-in editor runs and exits within moments, so its terminal can open and close
+    // between two polls; the file it writes is the proof that the terminal ran it.
     await click(treeItem("notes.txt"));
-    await waitForDisplayed(
-      TERMINAL,
-      "The external editor terminal never rendered",
-      STARTUP_TIMEOUT,
-    );
-
     await waitUntil(
       () => fileContains(OUTPUT_FILE, MARKER),
       STARTUP_TIMEOUT,

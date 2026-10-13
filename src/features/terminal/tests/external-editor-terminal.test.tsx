@@ -193,7 +193,7 @@ describe("external editor terminal", () => {
     await act(async () => vi.advanceTimersByTime(250));
     expect(mocks.terminalInput).toHaveBeenCalledWith(CONNECTION_ID, {
       kind: "text",
-      data: 'vim "./notes.txt"\n',
+      data: 'vim "./notes.txt"\r',
     });
   });
 
@@ -220,7 +220,7 @@ describe("external editor terminal", () => {
     expect(mocks.terminalInput).toHaveBeenCalledTimes(1);
     expect(mocks.terminalInput).toHaveBeenCalledWith(CONNECTION_ID, {
       kind: "text",
-      data: 'vim "./notes.txt"\n',
+      data: 'vim "./notes.txt"\r',
     });
   });
 
