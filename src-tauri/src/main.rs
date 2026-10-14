@@ -6,9 +6,9 @@ static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 use app_setup::{configure_app, shutdown_background_services};
 use browser::{
-   browser_clear_data, browser_close, browser_close_window_tabs, browser_create, browser_focus,
-   browser_focus_workbench, browser_navigate, browser_open_devtools, browser_perform,
-   browser_set_bounds, browser_set_zoom, browser_snapshot,
+   browser_capabilities, browser_clear_data, browser_close, browser_close_window_tabs,
+   browser_create, browser_focus, browser_focus_workbench, browser_navigate, browser_open_devtools,
+   browser_perform, browser_set_bounds, browser_set_zoom, browser_snapshot,
 };
 use claude_ide::{
    claude_ide_at_mention, claude_ide_set_enabled, claude_ide_set_workspace_folders,
@@ -331,6 +331,7 @@ pub(crate) fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
          browser_clear_data,
          browser_close,
          browser_close_window_tabs,
+         browser_capabilities,
          // File watcher commands
          stop_watching,
          set_project_root,

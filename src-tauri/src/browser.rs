@@ -10,11 +10,17 @@
 //!
 //! wry webviews are not `Send`, so they live on the main thread and every
 //! command hops there to use them.
+//!
+//! A tab draws above the whole workbench webview, so workbench UI over it, such
+//! as a menu, toast or dialog, would be hidden. The workbench sends the parts of
+//! each tab its UI covers as holes; [`page_holes`] cuts them out of the tab and
+//! lets the pointer through there, so the UI underneath shows and works. Every
+//! tab is laid out on its own, so any number of tabs can show at once.
 
 use athas_browser::{
-   BROWSER_LABEL_PREFIX, BridgeMessage, BrowserEvent, BrowserKeyBinding, NavigationDecision,
-   app_origins, bridge_script, decide_navigation, parse_browser_url, resolve_profile,
-   sanitize_favicon_url,
+   BROWSER_LABEL_PREFIX, BridgeMessage, BrowserCapabilities, BrowserEvent, BrowserKeyBinding,
+   NavigationDecision, PageRect, app_origins, bridge_script, clip_holes, decide_navigation,
+   parse_browser_url, resolve_profile, sanitize_favicon_url,
 };
 use serde::Deserialize;
 use std::{
@@ -42,6 +48,8 @@ struct BrowserTab {
    webview: WebView,
    window_label: String,
    visible: bool,
+   /// Where workbench UI covers the page, relative to it.
+   holes: Vec<PageRect>,
 }
 
 thread_local! {
@@ -181,6 +189,10 @@ impl BrowserBounds {
          size: LogicalSize::new(self.width.max(1.0), self.height.max(1.0)).into(),
       }
    }
+
+   fn to_page_rect(self) -> PageRect {
+      PageRect::new(self.x, self.y, self.width, self.height)
+   }
 }
 
 #[derive(Debug, Clone, Deserialize, specta::Type)]
@@ -269,6 +281,293 @@ fn capture_snapshot(webview: &WebView, done: impl FnOnce(Option<Vec<u8>>) + 'sta
       let configuration = WKSnapshotConfiguration::new(main_thread);
       configuration.setAfterScreenUpdates(false);
       view.takeSnapshotWithConfiguration_completionHandler(Some(&configuration), &handler);
+   }
+}
+
+/// Cuts holes in a page where workbench UI covers it, so the UI drawn by the
+/// workbench webview underneath shows there and gets the pointer.
+#[cfg(target_os = "macos")]
+#[allow(unexpected_cfgs)]
+mod page_holes {
+   use athas_browser::{PageRect, is_in_hole, visible_parts};
+   use objc::{
+      Encode, Encoding, class,
+      declare::ClassDecl,
+      msg_send,
+      runtime::{BOOL, Class, Object, Sel, YES, object_getClass},
+      sel, sel_impl,
+   };
+   use std::{cell::RefCell, collections::HashMap, ffi::c_void, sync::OnceLock};
+   use wry::{WebView, WebViewExtMacOS};
+
+   #[repr(C)]
+   #[derive(Clone, Copy)]
+   struct CGPoint {
+      x: f64,
+      y: f64,
+   }
+
+   // SAFETY: the encoding matches the C layout above, CoreGraphics' CGPoint.
+   unsafe impl Encode for CGPoint {
+      fn encode() -> Encoding {
+         // SAFETY: a valid Objective-C type encoding.
+         unsafe { Encoding::from_str("{CGPoint=dd}") }
+      }
+   }
+
+   #[repr(C)]
+   #[derive(Clone, Copy)]
+   struct CGSize {
+      width: f64,
+      height: f64,
+   }
+
+   #[repr(C)]
+   #[derive(Clone, Copy)]
+   struct CGRect {
+      origin: CGPoint,
+      size: CGSize,
+   }
+
+   #[link(name = "CoreGraphics", kind = "framework")]
+   unsafe extern "C" {
+      fn CGPathCreateMutable() -> *mut c_void;
+      fn CGPathAddRect(path: *mut c_void, transform: *const c_void, rect: CGRect);
+      fn CGPathRelease(path: *mut c_void);
+   }
+
+   unsafe extern "C" {
+      fn object_setClass(object: *mut Object, class: *const Class) -> *const Class;
+   }
+
+   const PAGE_CLASS_NAME: &str = "AthasBrowserPageView";
+
+   /// The page class and the wry class it extends, as addresses.
+   static PAGE_CLASS: OnceLock<(usize, usize)> = OnceLock::new();
+
+   thread_local! {
+      /// The holes of every page, by its view's address, for hit testing.
+      static HIT_HOLES: RefCell<HashMap<usize, Vec<PageRect>>> = RefCell::new(HashMap::new());
+   }
+
+   fn page_view(webview: &WebView) -> *mut Object {
+      let view = webview.webview();
+      &*view as *const wry::WryWebView as *mut Object
+   }
+
+   /// Returns no view for a point in a hole, so AppKit hands the event to the
+   /// workbench webview below the page; elsewhere the page handles it as before.
+   extern "C" fn hit_test(this: &Object, _: Sel, point: CGPoint) -> *mut Object {
+      let view = this as *const Object as *mut Object;
+      // SAFETY: AppKit calls this on the main thread with a live page view.
+      unsafe {
+         let in_hole = HIT_HOLES.with(|holes| {
+            let Ok(holes) = holes.try_borrow() else {
+               return false;
+            };
+            let Some(holes) = holes.get(&(view as usize)) else {
+               return false;
+            };
+            let superview: *mut Object = msg_send![view, superview];
+            let local: CGPoint = msg_send![view, convertPoint: point fromView: superview];
+            let bounds: CGRect = msg_send![view, bounds];
+            let flipped: BOOL = msg_send![view, isFlipped];
+            let y = if flipped == YES {
+               local.y
+            } else {
+               bounds.size.height - local.y
+            };
+            is_in_hole(holes, local.x, y)
+         });
+         if in_hole {
+            return std::ptr::null_mut();
+         }
+         match PAGE_CLASS.get() {
+            Some(&(_, superclass)) => {
+               let superclass = &*(superclass as *const Class);
+               msg_send![super(view, superclass), hitTest: point]
+            }
+            None => std::ptr::null_mut(),
+         }
+      }
+   }
+
+   /// A subclass of wry's webview class that lets the pointer through holes.
+   fn page_class(view: *mut Object) -> Option<*const Class> {
+      let &(class, _) = PAGE_CLASS.get_or_init(|| {
+         // SAFETY: `view` is a live wry webview; this runs on the main thread.
+         unsafe {
+            let superclass = object_getClass(view);
+            if superclass.is_null() {
+               return (0, 0);
+            }
+            let class = match ClassDecl::new(PAGE_CLASS_NAME, &*superclass) {
+               Some(mut declaration) => {
+                  declaration.add_method(
+                     sel!(hitTest:),
+                     hit_test as extern "C" fn(&Object, Sel, CGPoint) -> *mut Object,
+                  );
+                  declaration.register() as *const Class
+               }
+               None => Class::get(PAGE_CLASS_NAME)
+                  .map_or(std::ptr::null(), |class| class as *const Class),
+            };
+            (class as usize, superclass as usize)
+         }
+      });
+      (class != 0).then_some(class as *const Class)
+   }
+
+   /// Makes a new page let the pointer through its holes. Only browser tabs get
+   /// the subclass; the workbench webview, also a wry webview, keeps its class.
+   pub fn install(webview: &WebView) {
+      let view = page_view(webview);
+      if let Some(class) = page_class(view) {
+         // SAFETY: the subclass adds a method and no state, so the object stays
+         // valid as an instance of it, as with key-value observing.
+         unsafe {
+            object_setClass(view, class);
+         }
+      }
+   }
+
+   pub fn forget(webview: &WebView) {
+      let view = page_view(webview) as usize;
+      HIT_HOLES.with(|holes| {
+         if let Ok(mut holes) = holes.try_borrow_mut() {
+            holes.remove(&view);
+         }
+      });
+   }
+
+   /// Masks the page's layer to the parts outside `holes`, and records them for
+   /// hit testing.
+   pub fn apply(webview: &WebView, holes: &[PageRect]) -> Result<(), String> {
+      let view = page_view(webview);
+      HIT_HOLES.with(|map| {
+         if let Ok(mut map) = map.try_borrow_mut() {
+            if holes.is_empty() {
+               map.remove(&(view as usize));
+            } else {
+               map.insert(view as usize, holes.to_vec());
+            }
+         }
+      });
+      // SAFETY: `view` is the live WKWebView `webview` owns, on the main thread.
+      unsafe {
+         let _: () = msg_send![view, setWantsLayer: YES];
+         let layer: *mut Object = msg_send![view, layer];
+         if layer.is_null() {
+            return Err("The page has no layer to cut".to_string());
+         }
+         let _: () = msg_send![class!(CATransaction), begin];
+         let _: () = msg_send![class!(CATransaction), setDisableActions: YES];
+         if holes.is_empty() {
+            let _: () = msg_send![layer, setMask: std::ptr::null_mut::<Object>()];
+         } else {
+            let bounds: CGRect = msg_send![view, bounds];
+            let flipped: BOOL = msg_send![view, isFlipped];
+            let path = CGPathCreateMutable();
+            for part in visible_parts(bounds.size.width, bounds.size.height, holes) {
+               let y = if flipped == YES {
+                  part.y
+               } else {
+                  bounds.size.height - part.y - part.height
+               };
+               let rect = CGRect {
+                  origin: CGPoint { x: part.x, y },
+                  size: CGSize {
+                     width: part.width,
+                     height: part.height,
+                  },
+               };
+               let rect: CGRect = msg_send![view, convertRectToLayer: rect];
+               CGPathAddRect(path, std::ptr::null(), rect);
+            }
+            let mask: *mut Object = msg_send![class!(CAShapeLayer), layer];
+            let frame: CGRect = msg_send![layer, bounds];
+            let _: () = msg_send![mask, setFrame: frame];
+            let _: () = msg_send![mask, setPath: path];
+            CGPathRelease(path);
+            let _: () = msg_send![layer, setMask: mask];
+         }
+         let _: () = msg_send![class!(CATransaction), commit];
+      }
+      Ok(())
+   }
+}
+
+/// Cuts holes in a page where workbench UI covers it. The page's host window
+/// gets a region without the holes, which also sends the pointer there to the
+/// workbench window underneath.
+#[cfg(target_os = "windows")]
+mod page_holes {
+   use athas_browser::PageRect;
+   use windows::Win32::{
+      Foundation::HWND,
+      Graphics::Gdi::{CombineRgn, CreateRectRgn, DeleteObject, RGN_DIFF, SetWindowRgn},
+      UI::HiDpi::GetDpiForWindow,
+   };
+   use wry::{WebView, WebViewExtWindows};
+
+   /// Far beyond any page, so the region keeps everything outside the holes.
+   const REGION_EXTENT: i32 = 1 << 20;
+
+   pub fn install(_: &WebView) {
+   }
+
+   pub fn forget(_: &WebView) {
+   }
+
+   pub fn apply(webview: &WebView, holes: &[PageRect]) -> Result<(), String> {
+      let controller = webview.controller();
+      let mut window = HWND::default();
+      // SAFETY: the controller is live while `webview` is; this runs on the main thread.
+      unsafe { controller.ParentWindow(&mut window) }
+         .map_err(|error| format!("Failed to find the page window: {error}"))?;
+      // SAFETY: `window` is the page's host window. A region handed to
+      // `SetWindowRgn` belongs to the system; every other region is deleted.
+      unsafe {
+         if holes.is_empty() {
+            SetWindowRgn(window, None, true);
+            return Ok(());
+         }
+         let dpi = GetDpiForWindow(window);
+         let scale = if dpi == 0 { 1.0 } else { f64::from(dpi) / 96.0 };
+         let region = CreateRectRgn(0, 0, REGION_EXTENT, REGION_EXTENT);
+         for hole in holes {
+            let cut = CreateRectRgn(
+               (hole.x * scale).floor() as i32,
+               (hole.y * scale).floor() as i32,
+               ((hole.x + hole.width) * scale).ceil() as i32,
+               ((hole.y + hole.height) * scale).ceil() as i32,
+            );
+            let _ = CombineRgn(Some(region), Some(region), Some(cut), RGN_DIFF);
+            let _ = DeleteObject(cut.into());
+         }
+         if SetWindowRgn(window, Some(region), true) == 0 {
+            let _ = DeleteObject(region.into());
+         }
+      }
+      Ok(())
+   }
+}
+
+/// Linux hosts pages in the window's GTK box, which can't be cut, so the
+/// workbench hides a page while its UI covers any of it.
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+mod page_holes {
+   use athas_browser::PageRect;
+   use wry::WebView;
+
+   pub fn install(_: &WebView) {
+   }
+
+   pub fn forget(_: &WebView) {
+   }
+
+   pub fn apply(_: &WebView, _: &[PageRect]) -> Result<(), String> {
+      Ok(())
    }
 }
 
@@ -434,6 +733,7 @@ fn build_webview(
    });
 
    let webview = webview?;
+   page_holes::install(&webview);
    #[cfg(target_os = "macos")]
    if let Some(radius) = request.corner_radius.filter(|radius| *radius > 0.0) {
       round_corners(&webview, radius);
@@ -469,6 +769,7 @@ pub async fn browser_create(
                webview,
                window_label: window.label().to_string(),
                visible: true,
+               holes: Vec::new(),
             },
          );
       });
@@ -478,13 +779,36 @@ pub async fn browser_create(
    Ok(label)
 }
 
-/// Moves a tab over its pane, or hides it when `bounds` is `None`.
+/// Cuts `holes` out of a tab, or makes it whole again when there are none.
+fn set_holes(label: &str, tab: &mut BrowserTab, holes: Vec<PageRect>) -> Result<(), String> {
+   if holes.is_empty() && tab.holes.is_empty() {
+      return Ok(());
+   }
+   if holes.is_empty() != tab.holes.is_empty() {
+      log::debug!(
+         "[browser] {label}: {}",
+         if holes.is_empty() {
+            "uncovered".to_string()
+         } else {
+            format!("cut around {} workbench overlays", holes.len())
+         }
+      );
+   }
+   page_holes::apply(&tab.webview, &holes)?;
+   tab.holes = holes;
+   Ok(())
+}
+
+/// Moves a tab over its slot, or hides it when `bounds` is `None`. `holes` are
+/// the parts of the page workbench UI covers, relative to the page; the page is
+/// cut out there so the UI underneath shows and takes the pointer.
 #[command]
 #[specta::specta]
 pub async fn browser_set_bounds(
    app: AppHandle,
    label: String,
    bounds: Option<BrowserBounds>,
+   holes: Option<Vec<BrowserBounds>>,
 ) -> Result<(), String> {
    on_main_thread(&app, move || {
       with_tab(&label, |tab| {
@@ -493,6 +817,13 @@ pub async fn browser_set_bounds(
                tab.webview
                   .set_bounds(bounds.to_rect())
                   .map_err(|error| format!("Failed to move browser tab: {error}"))?;
+               let holes = holes
+                  .unwrap_or_default()
+                  .into_iter()
+                  .map(BrowserBounds::to_page_rect)
+                  .collect::<Vec<_>>();
+               // Cut before showing, so a page never flashes over the UI.
+               set_holes(&label, tab, clip_holes(bounds.width, bounds.height, &holes))?;
                if !tab.visible {
                   tab.webview
                      .set_visible(true)
@@ -500,18 +831,28 @@ pub async fn browser_set_bounds(
                   tab.visible = true;
                }
             }
-            None if tab.visible => {
-               tab.webview
-                  .set_visible(false)
-                  .map_err(|error| format!("Failed to hide browser tab: {error}"))?;
-               tab.visible = false;
+            None => {
+               if tab.visible {
+                  log::debug!("[browser] {label}: hidden");
+                  tab.webview
+                     .set_visible(false)
+                     .map_err(|error| format!("Failed to hide browser tab: {error}"))?;
+                  tab.visible = false;
+               }
+               set_holes(&label, tab, Vec::new())?;
             }
-            None => {}
          }
          Ok(())
       })?
    })
    .await
+}
+
+/// How this platform lets workbench UI show over browser tabs.
+#[command]
+#[specta::specta]
+pub fn browser_capabilities() -> BrowserCapabilities {
+   BrowserCapabilities::current()
 }
 
 #[command]
@@ -653,6 +994,9 @@ pub async fn browser_close(app: AppHandle, label: String) -> Result<(), String> 
    on_main_thread(&app, move || {
       // Dropping the webview removes it from its window.
       let removed = TABS.with(|tabs| tabs.borrow_mut().remove(&label));
+      if let Some(tab) = &removed {
+         page_holes::forget(&tab.webview);
+      }
       drop(removed);
       Ok(())
    })
@@ -688,6 +1032,9 @@ fn close_window_tabs(window_label: &str) {
          .filter_map(|label| tabs.remove(&label))
          .collect::<Vec<_>>()
    });
+   for tab in &removed {
+      page_holes::forget(&tab.webview);
+   }
    drop(removed);
 }
 

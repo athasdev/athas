@@ -75,7 +75,7 @@ export function BrowserPage({
 }: BrowserPageProps) {
   const workspaceId = useWorkspaceStoreScopeId();
   const { setContext } = useKeymapStore.use.actions();
-  const { isLoading, canGoBack, canGoForward, error, snapshotUrl } = useBrowserTabState(pageId);
+  const { isLoading, canGoBack, canGoForward, error } = useBrowserTabState(pageId);
   const backShortcut = useCommandShortcut("browser.back");
   const forwardShortcut = useCommandShortcut("browser.forward");
   const reloadShortcut = useCommandShortcut(isLoading ? undefined : "browser.reload");
@@ -137,7 +137,7 @@ export function BrowserPage({
       return;
     }
     browserTabManager.navigate(pageId, address);
-    if (!isBlankPage(address)) browserTabManager.focusPage(pageId);
+    if (!isBlankPage(address)) browserTabManager.focusPage(pageId, slotRef.current);
   };
 
   const handleAddressKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
@@ -151,7 +151,7 @@ export function BrowserPage({
         setDraft(null);
         requestAnimationFrame(() => input.select());
       } else if (!isBlank) {
-        browserTabManager.focusPage(pageId);
+        browserTabManager.focusPage(pageId, slotRef.current);
       }
     }
   };
@@ -174,7 +174,7 @@ export function BrowserPage({
               tooltip="Back"
               shortcut={backShortcut}
               disabled={isBlank || canGoBack === false}
-              onClick={() => browserTabManager.perform(pageId, "back")}
+              onClick={() => browserTabManager.perform(pageId, "back", slotRef.current)}
             >
               <ArrowLeftIcon />
             </Button>
@@ -184,7 +184,7 @@ export function BrowserPage({
               tooltip="Forward"
               shortcut={forwardShortcut}
               disabled={isBlank || canGoForward === false}
-              onClick={() => browserTabManager.perform(pageId, "forward")}
+              onClick={() => browserTabManager.perform(pageId, "forward", slotRef.current)}
             >
               <ArrowRightIcon />
             </Button>
@@ -194,7 +194,9 @@ export function BrowserPage({
               tooltip={isLoading ? "Stop" : "Reload"}
               shortcut={reloadShortcut}
               disabled={isBlank}
-              onClick={() => browserTabManager.perform(pageId, isLoading ? "stop" : "reload")}
+              onClick={() =>
+                browserTabManager.perform(pageId, isLoading ? "stop" : "reload", slotRef.current)
+              }
             >
               {isLoading ? <XIcon /> : <ArrowClockwiseIcon />}
             </Button>
@@ -260,7 +262,7 @@ export function BrowserPage({
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   disabled={isBlank}
-                  onClick={() => browserTabManager.openDevTools(pageId)}
+                  onClick={() => browserTabManager.openDevTools(pageId, slotRef.current)}
                 >
                   <BugIcon />
                   Developer Tools
@@ -268,7 +270,7 @@ export function BrowserPage({
                 <DropdownMenuItem
                   variant="destructive"
                   disabled={isBlank}
-                  onClick={() => void browserTabManager.clearBrowsingData(pageId)}
+                  onClick={() => void browserTabManager.clearBrowsingData(pageId, slotRef.current)}
                 >
                   <TrashIcon />
                   Clear Browsing Data
@@ -285,9 +287,6 @@ export function BrowserPage({
           data-browser-slot
           className="relative min-h-0 flex-1 overflow-hidden rounded-lg bg-surface shadow-(--shadow-card)"
         >
-          {snapshotUrl ? (
-            <img src={snapshotUrl} alt="" className="absolute inset-0 size-full" />
-          ) : null}
           {error ? (
             <ViewerErrorState
               message={error}

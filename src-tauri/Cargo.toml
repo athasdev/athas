@@ -117,6 +117,14 @@ sha2 = { version = "0.10", features = ["asm"] }
 [target.'cfg(target_os = "linux")'.dependencies]
 webkit2gtk-sys = "2"
 
+# Window regions that cut browser tabs around workbench UI; the version wry uses.
+[target.'cfg(target_os = "windows")'.dependencies]
+windows = { version = "0.62", features = [
+  "Win32_Foundation",
+  "Win32_Graphics_Gdi",
+  "Win32_UI_HiDpi",
+] }
+
 [target.'cfg(target_os = "macos")'.dependencies]
 objc = "0.2"
 # Page snapshots for browser tabs; the same versions wry uses.

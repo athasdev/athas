@@ -46,6 +46,7 @@ vi.mock("@/bindings/commands", () => ({
     browserClose: vi.fn(async () => null),
     browserFocusWorkbench: vi.fn(async () => null),
     browserSnapshot: vi.fn(async () => new ArrayBuffer(8)),
+    browserCapabilities: vi.fn(async () => ({ holes: true, snapshots: true })),
   },
 }));
 vi.mock("@/features/editor/stores/buffer.store", () => {
@@ -77,7 +78,9 @@ vi.mock("sonner", () => ({
 }));
 vi.mock("@tauri-apps/plugin-opener", () => ({ revealItemInDir: vi.fn(async () => {}) }));
 
-const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
+const flush = async () => {
+  for (let turn = 0; turn < 5; turn += 1) await new Promise((resolve) => setTimeout(resolve, 0));
+};
 const attached: Array<() => void> = [];
 const opened: string[] = [];
 
@@ -389,18 +392,17 @@ describe("browser page layout monitoring", () => {
     window.dispatchEvent(new Event("dragstart"));
 
     await vi.waitFor(() =>
-      expect(commands.browserSetBounds).toHaveBeenLastCalledWith("label-drag", null),
+      expect(commands.browserSetBounds).toHaveBeenLastCalledWith("label-drag", null, null),
     );
     expect(commands.browserSnapshot).toHaveBeenCalledWith("label-drag");
 
     window.dispatchEvent(new Event("dragend"));
     await new Promise((resolve) => setTimeout(resolve, 200));
 
-    expect(commands.browserSetBounds).toHaveBeenLastCalledWith("label-drag", {
-      x: 0,
-      y: 0,
-      width: 400,
-      height: 300,
-    });
+    expect(commands.browserSetBounds).toHaveBeenLastCalledWith(
+      "label-drag",
+      { x: 0, y: 0, width: 400, height: 300 },
+      null,
+    );
   });
 });

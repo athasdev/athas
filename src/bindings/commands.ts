@@ -585,7 +585,11 @@ export const commands = {
   reopenCurrentWebviewDevtools: () => __TAURI_INVOKE<null>("reopen_current_webview_devtools"),
   browserCreate: (request: BrowserCreateRequest, onEvent: Channel<BrowserEvent>) =>
     __TAURI_INVOKE<string>("browser_create", { request, onEvent }),
-  /**  Moves a tab over its pane, or hides it when `bounds` is `None`. */
+  /**
+   *  Moves a tab over its slot, or hides it when `bounds` is `None`. `holes` are
+   *  the parts of the page workbench UI covers, relative to the page; the page is
+   *  cut out there so the UI underneath shows and takes the pointer.
+   */
   browserSetBounds: (
     label: string,
     bounds: {
@@ -594,7 +598,8 @@ export const commands = {
       width: number | null;
       height: number | null;
     } | null,
-  ) => __TAURI_INVOKE<null>("browser_set_bounds", { label, bounds }),
+    holes: BrowserBounds[] | null,
+  ) => __TAURI_INVOKE<null>("browser_set_bounds", { label, bounds, holes }),
   browserNavigate: (label: string, url: string) =>
     __TAURI_INVOKE<null>("browser_navigate", { label, url }),
   browserPerform: (label: string, action: BrowserNavigationAction) =>
@@ -622,6 +627,8 @@ export const commands = {
    *  it starts, so tabs left by a reloaded workbench don't cover the new one.
    */
   browserCloseWindowTabs: () => __TAURI_INVOKE<null>("browser_close_window_tabs"),
+  /**  How this platform lets workbench UI show over browser tabs. */
+  browserCapabilities: () => __TAURI_INVOKE<BrowserCapabilities>("browser_capabilities"),
   /**
    *  Stops watching a workspace root for the calling window. The root stays watched while other
    *  windows or the search index still use it.
@@ -4554,6 +4561,17 @@ export type BrowserBounds = {
   y: number | null;
   width: number | null;
   height: number | null;
+};
+
+/**  How this platform lets workbench UI show over browser tabs. */
+export type BrowserCapabilities = {
+  /**
+   *  Pages can be cut around workbench UI, which then shows and takes the
+   *  pointer there. Without it, pages hide while UI covers them.
+   */
+  holes: boolean;
+  /**  `browser_snapshot` works, so a picture can stand in under the cut-out parts. */
+  snapshots: boolean;
 };
 
 export type BrowserCreateRequest = {
