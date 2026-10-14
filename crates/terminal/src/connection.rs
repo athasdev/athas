@@ -13,9 +13,21 @@ use std::{
    collections::HashMap,
    io::{Read, Write},
    path::Path,
-   sync::{Arc, Mutex, mpsc},
+   sync::{
+      Arc, Mutex,
+      atomic::{AtomicBool, Ordering},
+      mpsc,
+   },
    thread,
+   time::Duration,
 };
+
+/// How often the Windows exit watcher checks whether the shell has exited.
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
+const EXIT_POLL_INTERVAL: Duration = Duration::from_millis(150);
+/// How long the exit watcher lets the reader drain output the shell wrote just before exiting.
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
+const EXIT_FLUSH_GRACE: Duration = Duration::from_millis(250);
 
 /// PTY reads that may wait for the output thread before the reader blocks.
 const READER_QUEUE_CAPACITY: usize = 4;
@@ -569,6 +581,12 @@ impl TerminalConnection {
          );
       });
 
+      // Exit and Closed are sent once, by whichever of the reader and the Windows exit watcher
+      // notices the end first.
+      let finished = Arc::new(AtomicBool::new(false));
+      #[cfg(target_os = "windows")]
+      Self::start_exit_watcher(child.clone(), sender.clone(), finished.clone());
+
       thread::spawn(move || {
          let mut buffer = vec![0u8; 65536]; // 64KB buffer for better performance
          loop {
@@ -578,6 +596,9 @@ impl TerminalConnection {
 
             match reader.read(&mut buffer) {
                Ok(0) => {
+                  if finished.swap(true, Ordering::AcqRel) {
+                     break;
+                  }
                   let (exit_code, signal) = Self::child_exit_status(&child, true);
                   let _ = sender.send(TerminalEvent::Exit { exit_code, signal });
                   let _ = sender.send(TerminalEvent::Closed);
@@ -594,6 +615,9 @@ impl TerminalConnection {
                   }
                }
                Err(e) => {
+                  if finished.swap(true, Ordering::AcqRel) {
+                     break;
+                  }
                   let should_wait_for_status = e.raw_os_error() == Some(5)
                      || matches!(
                         e.kind(),
@@ -612,6 +636,44 @@ impl TerminalConnection {
                   break;
                }
             }
+         }
+      });
+   }
+
+   /// ConPTY keeps the output pipe open after the shell exits, until the pseudoconsole itself
+   /// is closed, so on Windows the reader never sees the end of output. This watches the child
+   /// instead and reports the exit once it has had a moment to flush its last output.
+   #[cfg(target_os = "windows")]
+   fn start_exit_watcher(
+      child: Arc<Mutex<Option<Box<dyn Child + Send + Sync>>>>,
+      sender: mpsc::SyncSender<TerminalEvent>,
+      finished: Arc<AtomicBool>,
+   ) {
+      thread::spawn(move || {
+         loop {
+            thread::sleep(EXIT_POLL_INTERVAL);
+            if finished.load(Ordering::Acquire) {
+               return;
+            }
+            let status = {
+               let Ok(mut guard) = child.lock() else { return };
+               let Some(child) = guard.as_mut() else { return };
+               match child.try_wait() {
+                  Ok(status) => status,
+                  Err(_) => return,
+               }
+            };
+            let Some(status) = status else { continue };
+            thread::sleep(EXIT_FLUSH_GRACE);
+            if finished.swap(true, Ordering::AcqRel) {
+               return;
+            }
+            let _ = sender.send(TerminalEvent::Exit {
+               exit_code: Some(status.exit_code()),
+               signal: status.signal().map(str::to_string),
+            });
+            let _ = sender.send(TerminalEvent::Closed);
+            return;
          }
       });
    }

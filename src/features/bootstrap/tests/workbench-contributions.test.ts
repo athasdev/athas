@@ -66,7 +66,6 @@ describe("workbench contributions", () => {
       "databases",
       "files",
       "agents",
-      "agent",
       "collaboration",
     ]);
   });
