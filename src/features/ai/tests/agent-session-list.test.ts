@@ -113,4 +113,13 @@ describe("agent session list", () => {
 
     expect(sessions.map((session) => session.id)).toEqual(["here"]);
   });
+
+  it("lists sessions from every project when asked to", () => {
+    const sessions = selectAgentSessions(
+      [used("here", 5), used("elsewhere", 6, { workspacePath: "/other" })],
+      { anyWorkspace: true },
+    );
+
+    expect(sessions.map((session) => session.id)).toEqual(["elsewhere", "here"]);
+  });
 });

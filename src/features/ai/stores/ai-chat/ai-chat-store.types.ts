@@ -28,7 +28,7 @@ import type { AIWorkspaceSessionSnapshot } from "@/features/workspace/types/work
 
 export type { AIWorkspaceSessionSnapshot };
 
-interface PendingAgentLaunchRequest {
+export interface PendingAgentLaunchRequest {
   chatId: string;
   agentId: AgentType;
   prompt: string | null;

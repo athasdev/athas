@@ -27,6 +27,7 @@ vi.mock("@/features/settings/stores/settings.store", () => ({
 
 vi.mock("@/features/workspace/stores/project.store", () => ({
   useProjectStore: {
+    getAllStores: () => [],
     getState: vi.fn(() => ({ rootFolderPath: "/workspace", workspaceFolders: [] })),
   },
 }));
@@ -85,6 +86,19 @@ describe("reopening a chat's ACP session", () => {
     expect(toast.warning).toHaveBeenCalledTimes(1);
     expect(vi.mocked(toast.warning).mock.calls[0][0]).toContain(
       "could not restore this chat's earlier session",
+    );
+  });
+
+  it("opens the session in the chat's own project, not the active one", async () => {
+    const chat = { id: "chat-1", agentId: "codex", acpSessionId: "earlier" };
+    actions.getChatById.mockReturnValue({ ...chat, workspacePath: "/client-project" } as never);
+    answerOpen({ sessionId: "earlier" });
+    await openChatSession();
+    actions.getChatById.mockReturnValue(chat);
+
+    expect(invoke).toHaveBeenCalledWith(
+      "open_acp_session",
+      expect.objectContaining({ agentId: "codex", workspacePath: "/client-project" }),
     );
   });
 });

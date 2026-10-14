@@ -66,4 +66,20 @@ describe("WorkspaceRuntimeRegistry", () => {
     expect(registry.getExistingStores<{ count: number }>("counter")).toHaveLength(2);
     unsubscribe();
   });
+
+  it("observes a store created after subscribing, before the next workspace change", () => {
+    registry.ensureWorkspace({ id: "workspace-a", name: "A", path: "/a" });
+    const listener = vi.fn();
+    const unsubscribe = registry.subscribeToStoreKey("counter", listener);
+
+    const lateStore = registry.getStore<{ count: number }>("counter", "workspace-a");
+    expect(listener).not.toHaveBeenCalled();
+
+    lateStore.setState({ count: 2 });
+    expect(listener).toHaveBeenCalledOnce();
+
+    unsubscribe();
+    lateStore.setState({ count: 3 });
+    expect(listener).toHaveBeenCalledOnce();
+  });
 });

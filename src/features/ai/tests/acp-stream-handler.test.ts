@@ -46,6 +46,7 @@ vi.mock("@/features/editor/stores/buffer.store", () => ({
 
 vi.mock("@/features/workspace/stores/project.store", () => ({
   useProjectStore: {
+    getAllStores: () => [],
     getState: vi.fn(() => ({
       rootFolderPath: "/workspace",
       workspaceFolders: [],

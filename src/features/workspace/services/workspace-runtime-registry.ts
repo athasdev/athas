@@ -19,6 +19,7 @@ export class WorkspaceRuntimeRegistry {
   private readonly runtimes = new Map<string, WorkspaceRuntime>();
   private readonly storeFactories = new Map<string, WorkspaceStoreFactory>();
   private readonly listeners = new Set<WorkspaceChangeListener>();
+  private readonly storeCreatedListeners = new Set<(key: string) => void>();
 
   constructor() {
     this.ensureWorkspace(welcomeWorkspace, "empty");
@@ -127,6 +128,7 @@ export class WorkspaceRuntimeRegistry {
 
     const store = factory(workspaceId);
     runtime.stores.set(key, store);
+    for (const listener of this.storeCreatedListeners) listener(key);
     return store as StoreApi<T>;
   }
 
@@ -150,8 +152,14 @@ export class WorkspaceRuntimeRegistry {
       bindStores();
       listener();
     });
+    // A store created between workspace changes is watched from its first update.
+    const onStoreCreated = (createdKey: string) => {
+      if (createdKey === key) bindStores();
+    };
+    this.storeCreatedListeners.add(onStoreCreated);
 
     return () => {
+      this.storeCreatedListeners.delete(onStoreCreated);
       unsubscribeRegistry();
       for (const unsubscribe of storeUnsubscribers) {
         unsubscribe();

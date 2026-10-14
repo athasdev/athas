@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { AgentAttentionDot } from "@/features/ai/components/agent-attention-dot";
 import { AgentSessionSidebarItem } from "@/features/ai/components/agent-session-sidebar-item";
 import { AgentSessionIcon } from "@/features/ai/components/icons/agent-session-icon";
 import { openAgentInNewWindow } from "@/features/ai/detached/services/agent-window-service";
@@ -13,7 +14,12 @@ import {
 } from "@/features/ai/lib/agent-session-groups";
 import { resolveAgentSessionIconId } from "@/features/ai/services/agent-session-icon";
 import { selectAgentSessions } from "@/features/ai/services/agent-session-list";
-import { openAgentHistoryChat } from "@/features/ai/services/open-agent-history";
+import {
+  openAgentSession,
+  startAgentInProject,
+} from "@/features/ai/services/agent-project-navigation";
+import { groupAgentSessionsByProject } from "@/features/ai/lib/agent-project-groups";
+import { useProjectAgentStatus } from "@/features/ai/hooks/use-project-agent-status";
 import {
   canBrowseAgentSessions,
   openAgentSessions,
@@ -24,6 +30,11 @@ import type { ChatSession } from "@/features/ai/types/ai-chat.types";
 import { getModelById, getProviderById } from "@/features/ai/types/providers.types";
 import { useGitStore } from "@/features/git/stores/git.store";
 import { getProjectNameFromPath } from "@/features/workspace/services/project-tab-path";
+import {
+  useWorkspaceTabsStore,
+  type ProjectTab,
+} from "@/features/workspace/stores/workspace-tabs.store";
+import { ProjectGlyph } from "@/features/layout/components/sidebar/project-glyph";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import {
   ContextMenu,
@@ -59,8 +70,10 @@ import {
   SidebarListItem,
   SidebarPanel,
   SidebarScrollArea,
+  SidebarSectionHeader,
   SidebarSectionLabel,
 } from "@/ui/sidebar";
+import { Spinner } from "@/ui/spinner";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { AgentsPlanFooter } from "./agents-plan-footer";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
@@ -129,7 +142,7 @@ function AgentRow({ chat, context }: { chat: ChatSession; context: AgentRowConte
           projectName={getProjectNameFromPath(chat.workspacePath || context.workspacePath || "")}
           workspacePath={chat.workspacePath || context.workspacePath}
           branch={chat.branch || context.currentBranch}
-          onOpen={() => openAgentHistoryChat(chat.id)}
+          onOpen={() => void openAgentSession(chat.id)}
           onOpenInNewWindow={() => void openAgentInNewWindow(chat.id)}
           actionsDisabled={isInAnotherWindow}
           onPinChange={(pinned) => setChatPinned(chat.id, pinned)}
@@ -207,7 +220,7 @@ function ArchivedAgentRow({ chat }: { chat: ChatSession }) {
         >
           <SidebarListItem
             leading={<AgentSessionIcon session={chat} size={16} />}
-            onClick={() => openAgentHistoryChat(chat.id)}
+            onClick={() => void openAgentSession(chat.id)}
           >
             {chat.title}
           </SidebarListItem>
@@ -227,9 +240,90 @@ function ArchivedAgentRow({ chat }: { chat: ChatSession }) {
   );
 }
 
+const PROJECT_SESSION_LIMIT = 5;
+
+function ProjectAgentSection({
+  project,
+  chats,
+  context,
+  showEmpty,
+}: {
+  project: ProjectTab;
+  chats: ChatSession[];
+  context: AgentRowContext;
+  showEmpty: boolean;
+}) {
+  const [expanded, setExpanded] = useState(true);
+  const [showAll, setShowAll] = useState(false);
+  const status = useProjectAgentStatus(chats);
+  const visibleChats = showAll ? chats : chats.slice(0, PROJECT_SESSION_LIMIT);
+  const hiddenCount = chats.length - visibleChats.length;
+  const startAgent = () => void startAgentInProject(project.id);
+
+  return (
+    <section className="flex flex-col gap-0.5" aria-label={`${project.name} agents`}>
+      <SidebarSectionHeader
+        expanded={expanded}
+        onToggle={() => setExpanded((open) => !open)}
+        title={project.path}
+        action={
+          <>
+            {expanded ? null : status.attention ? (
+              <span className="flex h-chrome-control items-center px-1.5">
+                <AgentAttentionDot attention={status.attention} />
+              </span>
+            ) : status.working ? (
+              <span className="flex h-chrome-control items-center px-1.5">
+                <Spinner label={`An agent is working in ${project.name}`} compact />
+              </span>
+            ) : null}
+            {chats.length > 0 ? (
+              <SidebarIconButton
+                tooltip={`New Agent in ${project.name}`}
+                aria-label={`New Agent in ${project.name}`}
+                onClick={startAgent}
+              >
+                <PlusIcon />
+              </SidebarIconButton>
+            ) : null}
+          </>
+        }
+      >
+        <span className="inline-flex min-w-0 items-center gap-1.5">
+          <ProjectGlyph projectPath={project.path} iconPath={project.customIcon} />
+          {project.name}
+        </span>
+      </SidebarSectionHeader>
+      {expanded ? (
+        <>
+          {visibleChats.map((chat) => (
+            <AgentRow key={chat.id} chat={chat} context={context} />
+          ))}
+          {hiddenCount > 0 || showAll ? (
+            <SidebarListItem
+              leading={showAll ? <ChevronDownIcon /> : <ChevronRightIcon />}
+              aria-expanded={showAll}
+              onClick={() => setShowAll((open) => !open)}
+            >
+              {showAll ? "Show less" : `Show ${hiddenCount} more`}
+            </SidebarListItem>
+          ) : null}
+          {chats.length === 0 && showEmpty ? (
+            <SidebarListItem leading={<PlusIcon />} onClick={startAgent}>
+              New Agent
+            </SidebarListItem>
+          ) : null}
+        </>
+      ) : null}
+    </section>
+  );
+}
+
 /**
- * The agents sidebar: every agent session in the workspace, pinned ones first, with the actions
- * to start, find, rename, archive and delete them. Opened from the activity rail.
+ * The agents sidebar: the agent sessions of the workspace, pinned ones first, with the actions to
+ * start, find, rename, archive and delete them. With several projects open it lists every open
+ * project's sessions under that project, so agents in other projects stay in view. Opened from
+ * the activity rail.
  */
 export function AgentsSidebar() {
   const chats = useAIChatStore((state) => state.chats);
@@ -248,6 +342,8 @@ export function AgentsSidebar() {
   const { getName: getAgentName } = useAgentDisplayNames();
   const [query, setQuery] = useState("");
   const [showArchived, setShowArchived] = useState(false);
+  const projectTabs = useWorkspaceTabsStore.use.projectTabs();
+  const isMultiProject = projectTabs.length > 1;
 
   const context: AgentRowContext = {
     currentChatId,
@@ -258,27 +354,48 @@ export function AgentsSidebar() {
     getAgentName,
   };
 
-  const { pinned, recentGroups, archived } = useMemo(() => {
+  const { pinned, recentGroups, projectGroups, archived } = useMemo(() => {
     const matches = (chat: ChatSession) =>
       matchesSearchQuery(query, [
         chat.title,
         chat.agentId === "custom" ? null : getAgentName(chat.agentId),
         chat.branch,
       ]);
-    const active = selectAgentSessions(chats, {
-      workspacePath,
-      keepIds: [currentChatId],
+    const scope = isMultiProject ? { anyWorkspace: true } : { workspacePath };
+    const active = selectAgentSessions(chats, { ...scope, keepIds: [currentChatId] }).filter(
+      matches,
+    );
+    const archivedSessions = selectAgentSessions(chats, {
+      ...scope,
+      includeArchived: "only",
     }).filter(matches);
+    if (isMultiProject) {
+      return {
+        pinned: [],
+        recentGroups: [],
+        projectGroups: groupAgentSessionsByProject(active, projectTabs),
+        archived: groupAgentSessionsByProject(archivedSessions, projectTabs).flatMap(
+          (group) => group.chats,
+        ),
+      };
+    }
     return {
       pinned: active.filter((chat) => chat.isPinned),
       recentGroups: groupAgentSessionsByActivity(active.filter((chat) => !chat.isPinned)),
-      archived: selectAgentSessions(chats, { workspacePath, includeArchived: "only" }).filter(
-        matches,
-      ),
+      projectGroups: [],
+      archived: archivedSessions,
     };
-  }, [chats, currentChatId, getAgentName, query, workspacePath]);
+  }, [chats, currentChatId, getAgentName, isMultiProject, projectTabs, query, workspacePath]);
 
-  const isEmpty = pinned.length === 0 && recentGroups.length === 0 && archived.length === 0;
+  const hasQuery = query.trim().length > 0;
+  const visibleProjectGroups = hasQuery
+    ? projectGroups.filter((group) => group.chats.length > 0)
+    : projectGroups;
+  const isEmpty =
+    pinned.length === 0 &&
+    recentGroups.length === 0 &&
+    visibleProjectGroups.length === 0 &&
+    archived.length === 0;
 
   return (
     <SidebarPanel data-slot="agents-sidebar">
@@ -331,6 +448,15 @@ export function AgentsSidebar() {
                 ))}
               </section>
             ) : null}
+            {visibleProjectGroups.map((group) => (
+              <ProjectAgentSection
+                key={group.project.id}
+                project={group.project}
+                chats={group.chats}
+                context={context}
+                showEmpty={!hasQuery}
+              />
+            ))}
             {recentGroups.map((group) => (
               <section key={group.id} className="flex flex-col gap-0.5" aria-label={group.label}>
                 <SidebarSectionLabel>{group.label}</SidebarSectionLabel>

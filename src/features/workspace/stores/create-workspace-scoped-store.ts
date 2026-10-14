@@ -6,6 +6,10 @@ import { createSelectors, type WithSelectors } from "@/utils/zustand-selectors";
 
 type WorkspaceStoreHook<T> = UseBoundStore<StoreApi<T>> & {
   getStore: (workspaceId: string) => StoreApi<T>;
+  /** This store in every open workspace, not just the active one. */
+  getAllStores: () => StoreApi<T>[];
+  /** Calls `listener` when this store changes in any workspace, or the workspaces change. */
+  subscribeAll: (listener: () => void) => () => void;
 };
 
 export type WorkspaceScopedStore<T extends object> = WithSelectors<WorkspaceStoreHook<T>>;
@@ -94,6 +98,9 @@ export function createWorkspaceScopedStore<T extends object>(
   }) as WorkspaceStoreHook<T>["subscribe"];
   useWorkspaceStore.getStore = (workspaceId) =>
     workspaceRuntimeRegistry.getStore<T>(key, workspaceId);
+  useWorkspaceStore.getAllStores = () => workspaceRuntimeRegistry.getExistingStores<T>(key);
+  useWorkspaceStore.subscribeAll = (listener) =>
+    workspaceRuntimeRegistry.subscribeToStoreKey(key, listener);
 
   return createSelectors(useWorkspaceStore) as WorkspaceScopedStore<T>;
 }

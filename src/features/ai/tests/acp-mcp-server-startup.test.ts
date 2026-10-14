@@ -60,6 +60,7 @@ vi.mock("@/features/ai/stores/ai-chat.store", () => ({
 
 vi.mock("@/features/workspace/stores/project.store", () => ({
   useProjectStore: {
+    getAllStores: () => [],
     getState: vi.fn(() => ({ rootFolderPath: "/workspace", workspaceFolders: [] })),
   },
 }));

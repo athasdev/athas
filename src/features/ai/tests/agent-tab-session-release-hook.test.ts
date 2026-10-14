@@ -23,8 +23,12 @@ vi.mock("@/features/ai/detached/stores/agent-window.store", () => ({
   agentIsDetached: () => false,
 }));
 vi.mock("@/features/editor/stores/buffer.store", async () => {
-  const { create } = await import("zustand");
-  const store = create(() => ({ buffers: [] as unknown[] }));
+  const { createStore } = await import("zustand/vanilla");
+  const { createWorkspaceScopedStore } =
+    await import("@/features/workspace/stores/create-workspace-scoped-store");
+  const store = createWorkspaceScopedStore("editor-buffer", () =>
+    createStore(() => ({ buffers: [] as unknown[] })),
+  );
   buffers.store = store;
   return { useBufferStore: store };
 });
@@ -33,6 +37,7 @@ import { enableMapSet } from "immer";
 import { commands } from "@/bindings/commands";
 import { useAgentTabSessionRelease } from "../hooks/use-agent-tab-session-release";
 import { useAIChatStore } from "../stores/ai-chat.store";
+import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 
 enableMapSet();
 
@@ -50,10 +55,16 @@ function closeTabs() {
   act(() => buffers.store.setState({ buffers: [] }));
 }
 
+function activateProject(id: string) {
+  act(() => workspaceRuntimeRegistry.activateWorkspace({ id, name: id, path: `/${id}` }));
+}
+
 beforeEach(async () => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   vi.restoreAllMocks();
   vi.spyOn(commands, "closeAcpSession").mockResolvedValue(undefined as never);
+  workspaceRuntimeRegistry.resetForTests();
+  workspaceRuntimeRegistry.activateWorkspace({ id: "project-a", name: "A", path: "/project-a" });
   const actions = useAIChatStore.getState().actions;
   chatId = actions.createNewChat("claude-code");
   actions.setChatAcpSessionId(chatId, `sess-${chatId}`);
@@ -123,5 +134,36 @@ describe("useAgentTabSessionRelease", () => {
         expect.any(Error),
       ),
     );
+  });
+
+  it("keeps an idle session alive when its project is switched away from and back", () => {
+    activateProject("project-b");
+    act(() => buffers.store.setState({ buffers: [{ id: "e", type: "editor" }] }));
+    activateProject("project-a");
+    activateProject("project-b");
+    expect(commands.closeAcpSession).not.toHaveBeenCalled();
+    expect(useAIChatStore.getState().acpSessions[`sess-${chatId}`]).toBeDefined();
+
+    activateProject("project-a");
+    closeTabs();
+    expect(commands.closeAcpSession).toHaveBeenCalledWith(`sess-${chatId}`);
+  });
+
+  it("releases a session whose tab closes in a project opened after the hook started", () => {
+    activateProject("project-c");
+    const other = useAIChatStore.getState().actions.createNewChat("claude-code");
+    useAIChatStore.getState().actions.setChatAcpSessionId(other, `sess-${other}`);
+    useAIChatStore.setState((state) => ({
+      acpAgents: {
+        claude: {
+          ...state.acpAgents.claude,
+          sessionIds: [`sess-${chatId}`, `sess-${other}`],
+        } as never,
+      },
+    }));
+    act(() => buffers.store.setState({ buffers: [tab(other)] }));
+    closeTabs();
+    expect(commands.closeAcpSession).toHaveBeenCalledWith(`sess-${other}`);
+    expect(commands.closeAcpSession).not.toHaveBeenCalledWith(`sess-${chatId}`);
   });
 });

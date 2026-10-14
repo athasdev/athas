@@ -7,10 +7,20 @@ import { useAgentPermissionsStore } from "@/features/ai/stores/agent-permissions
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 
-function openAgentChatIds(): Set<string> {
+/**
+ * Chats with a tab in any open project. Switching projects swaps the active buffer store, so
+ * reading only that one would treat every tab of the project left behind as closed.
+ */
+function getBufferLists() {
+  return useBufferStore.getAllStores().map((store) => store.getState().buffers);
+}
+
+function openAgentChatIds(bufferLists: ReturnType<typeof getBufferLists>): Set<string> {
   const ids = new Set<string>();
-  for (const buffer of useBufferStore.getState().buffers) {
-    if (buffer.type === "agent" && buffer.sessionId) ids.add(buffer.sessionId);
+  for (const buffers of bufferLists) {
+    for (const buffer of buffers) {
+      if (buffer.type === "agent" && buffer.sessionId) ids.add(buffer.sessionId);
+    }
   }
   return ids;
 }
@@ -41,10 +51,14 @@ function releaseChatSession(chatId: string) {
 /** Frees the agent sessions of chats whose tabs were closed (see `getSessionToCloseWithTab`). */
 export function useAgentTabSessionRelease() {
   useEffect(() => {
-    let open = openAgentChatIds();
-    return useBufferStore.subscribe((state, previous) => {
-      if (state.buffers === previous.buffers) return;
-      const next = openAgentChatIds();
+    let seen = getBufferLists();
+    let open = openAgentChatIds(seen);
+    return useBufferStore.subscribeAll(() => {
+      const lists = getBufferLists();
+      if (lists.length === seen.length && lists.every((buffers, index) => buffers === seen[index]))
+        return;
+      seen = lists;
+      const next = openAgentChatIds(lists);
       for (const chatId of open) {
         if (!next.has(chatId)) releaseChatSession(chatId);
       }

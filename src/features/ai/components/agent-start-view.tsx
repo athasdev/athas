@@ -24,6 +24,10 @@ import {
 interface AgentStartViewProps {
   children: ReactNode;
   showQuickActions?: boolean;
+  /** Shown under the title, before the composer. */
+  header?: ReactNode;
+  /** Shown after the quick actions. */
+  footer?: ReactNode;
 }
 
 interface ActionItem {
@@ -33,7 +37,12 @@ interface ActionItem {
   action: () => void;
 }
 
-export function AgentStartView({ children, showQuickActions = false }: AgentStartViewProps) {
+export function AgentStartView({
+  children,
+  showQuickActions = false,
+  header,
+  footer,
+}: AgentStartViewProps) {
   const { openTerminalBuffer, openBuffer } = useBufferStore.use.actions();
   const handleOpenFolder = useFileSystemStore.use.handleOpenFolder();
   const handleOpenAgent = useNewAgentAction();
@@ -91,6 +100,7 @@ export function AgentStartView({ children, showQuickActions = false }: AgentStar
     <Empty className="m-auto max-w-2xl gap-5 px-6 py-8" data-slot="agent-start-view">
       <EmptyHeader className="max-w-md">
         <EmptyTitle className="ui-text-lg">Where should we begin?</EmptyTitle>
+        {header}
       </EmptyHeader>
 
       {children}
@@ -113,6 +123,8 @@ export function AgentStartView({ children, showQuickActions = false }: AgentStar
           ))}
         </div>
       ) : null}
+
+      {footer}
     </Empty>
   );
 

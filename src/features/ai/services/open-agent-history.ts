@@ -5,6 +5,7 @@ import {
   focusAgentWindow,
   openAgentWindowSession,
 } from "@/features/ai/detached/services/agent-window-service";
+import { revealAgentsSidebar } from "@/features/layout/services/agents-sidebar-reveal";
 
 export function openAgentHistoryChat(chatId: string): string {
   if (agentIsDetached(chatId)) {
@@ -19,7 +20,9 @@ export function openAgentHistoryChat(chatId: string): string {
     void chatStore.actions.loadChatMessages(chatId);
   }
 
-  return (
-    openAgentWindowSession(chatId) ?? useBufferStore.getState().actions.openAgentBuffer(chatId)
-  );
+  const windowSession = openAgentWindowSession(chatId);
+  if (windowSession) return windowSession;
+  const bufferId = useBufferStore.getState().actions.openAgentBuffer(chatId);
+  revealAgentsSidebar();
+  return bufferId;
 }

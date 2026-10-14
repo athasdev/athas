@@ -1,4 +1,4 @@
-import { memo, useCallback, useLayoutEffect, useRef } from "react";
+import { memo, useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import { useNewAgentAction } from "@/features/ai/hooks/use-new-agent-action";
 import { DiagnosticsActivityControl } from "@/features/diagnostics/components/diagnostics-activity-control";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
@@ -8,6 +8,7 @@ import {
   ActivityChromeFooter,
 } from "@/features/layout/components/sidebar/activity-chrome";
 import { ActivityProjectPanel } from "@/features/layout/components/sidebar/activity-project-panel";
+import { watchAgentsSidebarDismissal } from "@/features/layout/services/agents-sidebar-reveal";
 import { useActivityBarVisibility } from "@/features/layout/hooks/use-activity-bar-visibility";
 import { useActivityNavigationItems } from "@/features/layout/hooks/use-activity-navigation-items";
 import { useActivityProjectCarousel } from "@/features/layout/hooks/use-activity-project-carousel";
@@ -26,6 +27,7 @@ import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state"
 
 export const ActivityBar = memo(() => {
   const { openSidebarView } = useSidebarPaneController();
+  useEffect(() => watchAgentsSidebarDismissal(), []);
   const { showToast } = useToast();
   const isGitViewActive = useUIState((state) => state.isGitViewActive);
   const isGitHubPRsViewActive = useUIState((state) => state.isGitHubPRsViewActive);

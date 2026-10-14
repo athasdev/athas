@@ -17,6 +17,7 @@ import type { AgentCompletionResult } from "@/features/ai/types/agent-completion
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { getAcpAdditionalDirectories } from "@/features/ai/lib/acp-additional-directories";
+import { normalizeAcpWorkspacePath } from "@/features/ai/lib/acp-workspace-path";
 import { buildAcpPrompt } from "@/features/ai/lib/acp-prompt";
 import {
   getAcpStartupErrorDetails,
@@ -418,9 +419,16 @@ export class AcpStreamHandler {
 
   /** The workspace's other roots, which agents that support them get with each session. */
   private static additionalDirectories(workspacePath: string | null) {
+    const target = normalizeAcpWorkspacePath(workspacePath);
+    const project =
+      useProjectStore
+        .getAllStores()
+        .map((store) => store.getState())
+        .find((state) => normalizeAcpWorkspacePath(state.rootFolderPath) === target) ??
+      useProjectStore.getState();
     const additionalDirectories = getAcpAdditionalDirectories(
       workspacePath,
-      useProjectStore.getState().workspaceFolders,
+      project.workspaceFolders,
     );
     return additionalDirectories.length > 0 ? additionalDirectories : null;
   }
@@ -431,8 +439,12 @@ export class AcpStreamHandler {
     if (notice) toast.warning(notice);
   }
 
+  /**
+   * The project the chat belongs to, which is not the active one when a queued or background turn
+   * runs after the user switched projects.
+   */
   private getWorkspacePath(): string | null {
-    return useProjectStore.getState().rootFolderPath ?? null;
+    return this.getTargetChat()?.workspacePath ?? useProjectStore.getState().rootFolderPath ?? null;
   }
 
   private getTargetChat() {

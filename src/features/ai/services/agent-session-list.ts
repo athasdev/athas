@@ -25,6 +25,8 @@ export function hasAgentSessionActivity(chat: SessionSummary): boolean {
 
 interface AgentSessionListOptions {
   workspacePath?: string | null;
+  /** Lists sessions from every project instead of only `workspacePath`'s. */
+  anyWorkspace?: boolean;
   /** Sessions that stay listed even while still empty, e.g. the open one. */
   keepIds?: Iterable<string | null | undefined>;
   /** `true` mixes archived sessions in, `"only"` returns just those. */
@@ -48,6 +50,7 @@ export function selectAgentSessions<T extends ChatSession>(
   chats: T[],
   {
     workspacePath,
+    anyWorkspace = false,
     keepIds,
     includeArchived = false,
     includePinned = true,
@@ -59,7 +62,7 @@ export function selectAgentSessions<T extends ChatSession>(
     if (id) kept.add(id);
   }
 
-  return filterChatsByWorkspace(chats, workspacePath)
+  return (anyWorkspace ? chats : filterChatsByWorkspace(chats, workspacePath))
     .filter((chat) => {
       if (includeArchived === "only") {
         return Boolean(chat.archivedAt) && (includeEmpty || hasAgentSessionActivity(chat));

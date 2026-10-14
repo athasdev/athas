@@ -9,17 +9,21 @@ import type { FileEntry } from "@/features/file-system/types/app.types";
 import type { ImageContent } from "@/features/ai/types/ai-chat.types";
 import { getAgentMessageAccess } from "@/features/ai/lib/agent-message-access";
 import { useToast } from "@/utils/toast";
+import { launchAgentInProject } from "@/features/ai/services/agent-project-navigation";
 
 const EMPTY_PROJECT_FILES: FileEntry[] = [];
 
 interface AgentLaunchInputProps {
   autoFocus?: boolean;
   surfaceId?: string;
+  /** The open project the agent starts in when it is not this surface's own. */
+  targetProjectId?: string | null;
 }
 
 export function AgentLaunchInput({
   autoFocus = false,
   surfaceId = "agent-launch-input",
+  targetProjectId = null,
 }: AgentLaunchInputProps) {
   const buffers = useOpenBuffersIgnoringText();
   const openAgentBuffer = useBufferStore.use.actions().openAgentBuffer;
@@ -27,11 +31,7 @@ export function AgentLaunchInput({
     (state) => state.projectFilesCache?.files ?? EMPTY_PROJECT_FILES,
   );
   const selectedAgentId = useAIChatStore((state) => state.selectedAgentId);
-  const createNewChat = useAIChatStore((state) => state.actions.createNewChat);
   const setSelectedAgentId = useAIChatStore((state) => state.actions.setSelectedAgentId);
-  const setPendingAgentLaunchRequest = useAIChatStore(
-    (state) => state.actions.setPendingAgentLaunchRequest,
-  );
   const composerContext = useComposerContextSelection();
   const { showToast } = useToast();
   const { selectedBufferIds, selectedFilesPaths } = composerContext.inputProps;
@@ -46,28 +46,25 @@ export function AgentLaunchInput({
         return access;
       }
 
-      const chatId = createNewChat(selectedAgentId, { activate: false });
-      setPendingAgentLaunchRequest({
-        chatId,
+      // Attached files and selections belong to this project, so they stay behind.
+      const keepsContext = !targetProjectId;
+      void launchAgentInProject(targetProjectId, {
         agentId: selectedAgentId,
         prompt: nextPrompt,
         images,
-        selectedBufferIds: Array.from(selectedBufferIds),
-        selectedFilesPaths: Array.from(selectedFilesPaths),
-        editorSelections: composerContext.inputProps.selectedEditorContexts,
+        selectedBufferIds: keepsContext ? Array.from(selectedBufferIds) : [],
+        selectedFilesPaths: keepsContext ? Array.from(selectedFilesPaths) : [],
+        editorSelections: keepsContext ? composerContext.inputProps.selectedEditorContexts : [],
       });
-      openAgentBuffer(chatId);
       return { accepted: true };
     },
     [
-      createNewChat,
-      openAgentBuffer,
       selectedAgentId,
       selectedBufferIds,
       selectedFilesPaths,
       composerContext.inputProps.selectedEditorContexts,
-      setPendingAgentLaunchRequest,
       showToast,
+      targetProjectId,
     ],
   );
 

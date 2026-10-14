@@ -6,8 +6,14 @@ import { useWorkspaceTabsStore } from "@/features/workspace/stores/workspace-tab
 import { cn } from "@/utils/cn";
 import { usePaneStore } from "../stores/pane.store";
 import { findPaneGroup } from "../services/pane-tree";
+import {
+  selectMountedWorkspaceIds,
+  selectRecentWorkspaceIds,
+} from "../services/workspace-view-cache";
 import { PaneContainer } from "./pane-container";
 import { PaneNodeRenderer } from "./pane-node-renderer";
+
+const EMPTY_WORKSPACE_IDS: readonly string[] = [];
 
 const SplitViewRoot = memo(function SplitViewRoot({
   activeSurface = true,
@@ -45,9 +51,12 @@ const SplitViewRoot = memo(function SplitViewRoot({
   );
 });
 
-const MAX_CACHED_WORKSPACES = 3;
-
-export function CachedWorkspaceSplitViews() {
+export function CachedWorkspaceSplitViews({
+  keepMountedWorkspaceIds = EMPTY_WORKSPACE_IDS,
+}: {
+  /** Workspaces to keep mounted past the cache limit, such as ones with an agent mid-turn. */
+  keepMountedWorkspaceIds?: readonly string[];
+}) {
   const projectTabs = useWorkspaceTabsStore.use.projectTabs();
   const activeWorkspaceId =
     projectTabs.find((projectTab) => projectTab.isActive)?.id ??
@@ -66,27 +75,21 @@ export function CachedWorkspaceSplitViews() {
   const [recentWorkspaceIds, setRecentWorkspaceIds] = useState<string[]>([]);
   const renderedWorkspaceIds = useMemo(
     () =>
-      [activeWorkspaceId, ...recentWorkspaceIds, ...eligibleWorkspaceIds]
-        .filter(
-          (workspaceId, index, workspaceIds) =>
-            workspaceId !== "workspace:welcome" &&
-            eligibleWorkspaceIds.includes(workspaceId) &&
-            workspaceIds.indexOf(workspaceId) === index,
-        )
-        .slice(0, MAX_CACHED_WORKSPACES),
-    [activeWorkspaceId, eligibleWorkspaceIds, recentWorkspaceIds],
+      selectMountedWorkspaceIds({
+        activeWorkspaceId,
+        recentWorkspaceIds,
+        eligibleWorkspaceIds,
+        keepMountedWorkspaceIds,
+      }),
+    [activeWorkspaceId, eligibleWorkspaceIds, keepMountedWorkspaceIds, recentWorkspaceIds],
   );
 
   useEffect(() => {
     setRecentWorkspaceIds((currentWorkspaceIds) => {
-      const nextWorkspaceIds = [activeWorkspaceId, ...currentWorkspaceIds, ...eligibleWorkspaceIds]
-        .filter(
-          (workspaceId, index, workspaceIds) =>
-            workspaceId !== "workspace:welcome" &&
-            eligibleWorkspaceIds.includes(workspaceId) &&
-            workspaceIds.indexOf(workspaceId) === index,
-        )
-        .slice(0, MAX_CACHED_WORKSPACES);
+      const nextWorkspaceIds = selectRecentWorkspaceIds(
+        [activeWorkspaceId, ...currentWorkspaceIds, ...eligibleWorkspaceIds],
+        eligibleWorkspaceIds,
+      );
 
       return nextWorkspaceIds.length === currentWorkspaceIds.length &&
         nextWorkspaceIds.every((workspaceId, index) => workspaceId === currentWorkspaceIds[index])
