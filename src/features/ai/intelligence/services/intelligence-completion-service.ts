@@ -7,6 +7,7 @@ import { AutocompleteModelRequiredError } from "@/features/ai/intelligence/servi
 import { useIntelligenceSettingsStore } from "@/features/ai/intelligence/stores/intelligence-settings.store";
 import { loadAgentContextPolicy } from "@/features/ai/services/agent-context-policy";
 import { onProviderApiTokenChange } from "@/features/ai/services/ai-token-service";
+import { formatUsageRate } from "@/features/ai/services/hosted-usage";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics.store";
 import {
@@ -37,14 +38,19 @@ export const INTELLIGENCE_COMPLETION_SUFFIX_CHARS = 4000;
 
 const notifiedPauseReasons = new Set<IntelligenceCompletionPauseReason>();
 
-const PAUSE_NOTICES: Record<IntelligenceCompletionPauseReason, string> = {
-  credits:
-    "Tab autocomplete is paused: there is no Athas AI credit left. Pro includes Athas credit every month, then pay as you go at list price +10%.",
+const PAUSE_NOTICES: Record<Exclude<IntelligenceCompletionPauseReason, "credits">, string> = {
   "sign-in": "Tab autocomplete is paused. Sign in to use Athas AI.",
   "api-key": "Tab autocomplete is paused because the selected provider needs an API key.",
   policy: "Tab autocomplete is disabled by your organization.",
   model: "Tab autocomplete is paused until you choose a model for it in Settings.",
 };
+
+/** The credits notice names the rate the account's usage is billed at. */
+function getPauseNotice(reason: IntelligenceCompletionPauseReason) {
+  if (reason !== "credits") return PAUSE_NOTICES[reason];
+  const markup = useAuthStore.getState().subscription?.intelligence?.credits?.usageMarkup;
+  return `Tab autocomplete is paused: there is no Athas AI credit left. Pro includes Athas credit every month, then pay as you go at ${formatUsageRate(markup)}.`;
+}
 
 function getPauseReason(error: InlineEditError): IntelligenceCompletionPauseReason | null {
   if (error.status === 401) return error.hosted ? "sign-in" : "api-key";
@@ -71,7 +77,7 @@ function reportIntelligenceCompletionError(error: unknown) {
       const notify = reason !== "sign-in" || useAuthStore.getState().isAuthenticated;
       if (notify && !notifiedPauseReasons.has(reason)) {
         notifiedPauseReasons.add(reason);
-        toast.warning(PAUSE_NOTICES[reason]);
+        toast.warning(getPauseNotice(reason));
       }
       return;
     }

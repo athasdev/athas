@@ -18,10 +18,14 @@ export interface HostedUsageState {
   allowanceCents: number;
   /** Pay-as-you-go balance used after the included credit, or null when the server has none. */
   walletBalanceCents: number | null;
+  /** List price multiplier the account's own usage is billed at, or null when not reported. */
+  usageMarkup: number | null;
   periodEnd: Date | null;
 }
 
 const LOW_USAGE_PERCENT = 80;
+/** What current Athas plans bill hosted usage at, for servers that do not report it. */
+const DEFAULT_USAGE_MARKUP = 1.35;
 
 const usdFormatter = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 const resetFormatter = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" });
@@ -33,6 +37,15 @@ export function formatUsdCents(cents: number) {
 
 export function formatResetDate(date: Date) {
   return resetFormatter.format(date);
+}
+
+/** The rate hosted usage is billed at, such as `list price +35%`, as the server reports it. */
+export function formatUsageRate(markup: number | null | undefined) {
+  const value =
+    typeof markup === "number" && Number.isFinite(markup) && markup >= 1
+      ? markup
+      : DEFAULT_USAGE_MARKUP;
+  return `list price +${Math.round((value - 1) * 100)}%`;
 }
 
 export function getHostedUsageState(
@@ -71,6 +84,7 @@ export function getHostedUsageState(
     pendingCents,
     allowanceCents: credits.allowanceCents,
     walletBalanceCents,
+    usageMarkup: credits.usageMarkup ?? null,
     periodEnd: periodEnd && !Number.isNaN(periodEnd.getTime()) ? periodEnd : null,
   };
 }

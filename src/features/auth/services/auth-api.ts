@@ -42,7 +42,7 @@ export interface SubscriptionInfo {
   status: "free" | "pro";
   capabilities?: ProductCapabilities;
   subscription: {
-    plan: "free" | "pro" | "teams" | "enterprise" | string;
+    plan: "free" | "plus" | "pro" | "teams" | "enterprise" | string;
     renews_at: string | null;
     ends_at: string | null;
   } | null;
@@ -209,7 +209,7 @@ export interface IntelligenceCredits {
   pendingCents: number;
   remainingCents: number;
   requestsCount: number;
-  /** List price multiplier hosted requests are billed at (1.1 = plus 10%), when reported. */
+  /** List price multiplier hosted requests are billed at (1.35 = plus 35%), when reported. */
   usageMarkup?: number | null;
   /**
    * Spendable prepaid balance hosted turns draw from after the included credit, with in-flight

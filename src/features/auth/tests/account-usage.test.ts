@@ -14,4 +14,12 @@ describe("account usage", () => {
   it("labels Intelligence subscribers as Pro without exposing internal usage", () => {
     expect(getAccountPlanLabel(subscription("pro"), true)).toBe("Pro");
   });
+
+  it("labels Plus subscribers as Plus", () => {
+    const plus: SubscriptionInfo = {
+      ...subscription("pro"),
+      subscription: { plan: "plus", renews_at: null, ends_at: null },
+    };
+    expect(getAccountPlanLabel(plus, true)).toBe("Plus");
+  });
 });

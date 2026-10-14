@@ -16,6 +16,7 @@ import { Progress } from "@/ui/progress";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import Section, { SettingRow } from "../settings-section";
 import { describeIncludedCredit } from "@/features/ai/services/athas-credit";
+import { formatUsageRate } from "@/features/ai/services/hosted-usage";
 
 function openBilling() {
   void openExternalUrl(getServiceUrls().dashboardBillingUrl).catch((error: unknown) =>
@@ -90,7 +91,7 @@ export function AthasPlanSection() {
       {isAuthenticated ? (
         <SettingRow
           label="Balance"
-          description="Used after included credit, at list price +10%"
+          description={`Used after included credit, at ${formatUsageRate(credits?.usageMarkup)}`}
           activateOnClick={false}
         >
           <div className="flex items-center gap-2">

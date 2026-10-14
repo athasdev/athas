@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import {
+  formatUsageRate,
   formatUsdCents,
   getHostedModelPriceHint,
   getHostedUsageHeadline,
@@ -19,6 +20,13 @@ const credits = {
 };
 
 describe("hosted usage state", () => {
+  it("names the account's reported rate, or the current one when none is reported", () => {
+    expect(formatUsageRate(1.1)).toBe("list price +10%");
+    expect(formatUsageRate(1.35)).toBe("list price +35%");
+    expect(formatUsageRate(null)).toBe("list price +35%");
+    expect(getHostedUsageState(credits)?.usageMarkup).toBe(1.1);
+  });
+
   it("counts in-flight usage toward the ring", () => {
     expect(getHostedUsageState({ ...credits, pendingCents: 350 })).toMatchObject({
       usedPercent: 85,

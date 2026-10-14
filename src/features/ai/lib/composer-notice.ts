@@ -1,4 +1,8 @@
-import { formatResetDate, formatUsdCents } from "@/features/ai/services/hosted-usage";
+import {
+  formatResetDate,
+  formatUsageRate,
+  formatUsdCents,
+} from "@/features/ai/services/hosted-usage";
 import type {
   ComposerNotice,
   ComposerNoticeInput,
@@ -161,7 +165,7 @@ function usageNotice(input: ComposerNoticeInput): ComposerNotice | null {
       tone: "info",
       icon: "credit",
       title: "Now using your balance",
-      description: `Included credit is used up. ${balance ?? "$0.00"} left at list price +10%.${resetSuffix(usage.periodEnd)}`,
+      description: `Included credit is used up. ${balance ?? "$0.00"} left at ${formatUsageRate(usage.usageMarkup)}.${resetSuffix(usage.periodEnd)}`,
       primary: { id: "open-billing", label: "Add credit" },
       dismissible: true,
     };

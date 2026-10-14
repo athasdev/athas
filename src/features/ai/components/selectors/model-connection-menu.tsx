@@ -2,13 +2,14 @@ import { createContext, useCallback, useContext, useEffect, useState } from "rea
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { useAIModelOptions } from "@/features/ai/hooks/use-ai-model-options";
 import { formatTokenCount } from "@/features/ai/lib/acp-usage";
-import { getHostedModelPriceHint } from "@/features/ai/services/hosted-usage";
+import { formatUsageRate, getHostedModelPriceHint } from "@/features/ai/services/hosted-usage";
 import {
   getModelIconId,
   getModelVendorName,
   pickRecommendedModels,
 } from "@/features/ai/lib/model-vendor";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
 import {
   DropdownMenuGroup,
   DropdownMenuItem,
@@ -155,13 +156,16 @@ export function ModelSection({
   );
 }
 
-function toAthasOption(model: {
-  id: string;
-  name: string;
-  contextWindow?: number;
-  input?: number;
-  output?: number;
-}): ModelOption {
+function toAthasOption(
+  model: {
+    id: string;
+    name: string;
+    contextWindow?: number;
+    input?: number;
+    output?: number;
+  },
+  usageRate: string,
+): ModelOption {
   if (model.id === "auto")
     return {
       id: model.id,
@@ -177,7 +181,7 @@ function toAthasOption(model: {
     tooltip: joinTooltip([
       model.name,
       vendor,
-      price ? `${price} per million tokens, billed at list price +10%` : undefined,
+      price ? `${price} per million tokens, billed at ${usageRate}` : undefined,
       model.contextWindow ? `${formatTokenCount(model.contextWindow)} context` : undefined,
     ]),
   };
@@ -193,7 +197,11 @@ export function useAthasModels(selected: string) {
     selected || "auto",
   );
   const catalog = useAIChatStore((state) => state.dynamicModels.athas);
-  const models = (catalog ?? availableModels).map(toAthasOption);
+  const usageMarkup = useAuthStore(
+    (state) => state.subscription?.intelligence?.credits?.usageMarkup,
+  );
+  const usageRate = formatUsageRate(usageMarkup);
+  const models = (catalog ?? availableModels).map((model) => toAthasOption(model, usageRate));
   return {
     models,
     recommended: modelFetchError ? [] : pickRecommendedModels(models),

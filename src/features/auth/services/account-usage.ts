@@ -7,10 +7,12 @@ export function getAccountPlanLabel(
 ): string {
   const isEnterprise = subscription?.subscription?.plan === "enterprise";
   const isTeams = subscription?.subscription?.plan === "teams";
+  const isPlus = subscription?.subscription?.plan === "plus";
   const isPro = hasProductCapability(subscription, "intelligence");
 
   if (isEnterprise) return "Enterprise";
   if (isTeams) return "Teams";
+  if (isPlus) return "Plus";
   if (isPro) return "Pro";
   return isAuthenticated ? "Free" : "Guest";
 }

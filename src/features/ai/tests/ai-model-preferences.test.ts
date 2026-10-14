@@ -105,6 +105,7 @@ describe("Athas included credit", () => {
     allowanceCents: 1000,
     walletBalanceCents: null,
     periodEnd: new Date("2026-10-01T12:00:00Z"),
+    usageMarkup: 1.35,
   };
 
   it("says how much is left and when it resets", () => {

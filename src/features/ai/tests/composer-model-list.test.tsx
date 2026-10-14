@@ -243,7 +243,7 @@ describe("composer model selector", () => {
     expect(rowsIn(models, "All models")).toHaveLength(9);
     const sonnet = rowsIn(models, "All models")[2];
     expect(sonnet.getAttribute("title")).toContain("Anthropic");
-    expect(sonnet.getAttribute("title")).toContain("billed at list price +10%");
+    expect(sonnet.getAttribute("title")).toContain("billed at list price +35%");
     await act(async () => rowsIn(models, "All models")[1].click());
     expect(onModelChange).toHaveBeenCalledExactlyOnceWith("moonshotai/kimi-k2.6", "athas");
   });
