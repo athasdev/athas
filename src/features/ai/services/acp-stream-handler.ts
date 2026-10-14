@@ -23,7 +23,11 @@ import {
   isAcpAuthenticationError,
 } from "@/features/ai/lib/acp-authentication";
 import { getChatTitleFromSessionInfo } from "@/features/ai/lib/acp-session-info";
-import { getAcpAgentKey, selectAcpAgentStatus } from "@/features/ai/services/acp-session-state";
+import {
+  getAcpAgentKey,
+  getAcpPrepareKey,
+  selectAcpAgentStatus,
+} from "@/features/ai/services/acp-session-state";
 import { formatSkippedMcpServersNotice } from "@/features/ai/services/mcp-servers";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 
@@ -90,6 +94,8 @@ export class AcpStreamHandler {
   private static sessionQueues = new Map<string, Promise<void>>();
   /** The chat whose session open is starting or reaching each agent, by agent id. */
   private static openingChats = new Map<string, string>();
+  /** Sessions being prepared ahead of a first prompt, by `getAcpPrepareKey`. */
+  private static prepares = new Map<string, Promise<void>>();
   private listeners: AcpListeners = {};
   private activeTools = new Map<string, string>();
   /** The turn is over and every handler that will be called has been. */
@@ -111,6 +117,8 @@ export class AcpStreamHandler {
   private cancelGraceTimeout: ReturnType<typeof setTimeout> | null = null;
   /** The sign-in method the user picked; startup authenticates with it if the agent asks. */
   private authMethodId: string | null = null;
+  /** Opens the session ahead of the first prompt: no sign-in, no install, nothing to ask. */
+  private prepareOnly = false;
   private resolveSettled: () => void = () => {};
   /** Resolves once the handler has finished, however the turn ended. */
   private readonly settled = new Promise<void>((resolve) => {
@@ -134,6 +142,79 @@ export class AcpStreamHandler {
       chatId,
     );
     await handler.ensureSession();
+  }
+
+  /**
+   * Opens the session a chat will prompt in before the user sends anything, so the composer shows
+   * the agent's models, modes and options right away. A chat with an earlier session reattaches
+   * it; a chat without one (or a draft without a chat) gets a new session its first prompt takes
+   * over. It never signs in or installs anything: an agent that needs either is left alone until
+   * the user sends a prompt, and a failed prepare is not retried until the agent runs again.
+   */
+  static prepare(agentId: string, chatId?: string | null): Promise<void> {
+    const state = useAIChatStore.getState();
+    const chat = chatId ? state.chats.find((candidate) => candidate.id === chatId) : undefined;
+    const ownSessionId = chat?.agentId === agentId ? (chat.acpSessionId ?? null) : null;
+    const workspacePath = chat?.workspacePath ?? AcpStreamHandler.currentWorkspacePath();
+    const key = getAcpPrepareKey(agentId, workspacePath, ownSessionId);
+    const inFlight = AcpStreamHandler.prepares.get(key);
+    if (inFlight) return inFlight;
+    const existing = state.acpPrepares[key];
+    const preparedSessionId = ownSessionId ?? existing?.sessionId;
+    if (existing?.status === "failed") return Promise.resolve();
+    if (preparedSessionId && state.acpSessions[preparedSessionId]) return Promise.resolve();
+    if (!ownSessionId && existing?.status === "ready") return Promise.resolve();
+
+    const { actions } = state;
+    const handler = new AcpStreamHandler(
+      agentId,
+      { onChunk: () => {}, onComplete: () => {}, onError: () => {} },
+      chat?.id,
+    );
+    handler.prepareOnly = true;
+    const run = (async () => {
+      actions.setAcpPrepare(key, { agentId, status: "preparing", sessionId: null });
+      try {
+        if (ownSessionId) {
+          await handler.ensureSession();
+          actions.setAcpPrepare(key, null);
+          return;
+        }
+        const wasRunning = selectAcpAgentStatus(state, agentId, workspacePath)?.running;
+        const opened = await handler.openSession(workspacePath, null);
+        if (!opened.status.running) throw new Error(`${agentId} failed to start`);
+        actions.setAcpAgentStatus(opened.status);
+        if (!wasRunning) handler.reportSkippedMcpServers(opened.status);
+        actions.setAcpPrepare(key, { agentId, status: "ready", sessionId: opened.sessionId });
+        actions.restoreChatSessionSettings(opened.sessionId);
+      } catch (error) {
+        console.warn(`Could not prepare ${agentId} before the first prompt:`, error);
+        actions.setAcpPrepare(key, { agentId, status: "failed", sessionId: null });
+      }
+    })();
+    AcpStreamHandler.prepares.set(key, run);
+    void run.finally(() => {
+      if (AcpStreamHandler.prepares.get(key) === run) AcpStreamHandler.prepares.delete(key);
+    });
+    return run;
+  }
+
+  /**
+   * The session prepared for a chat's first prompt, once it finished opening. The chat holds it
+   * from now on; null when none was prepared or it did not open.
+   */
+  private static claimPreparedSession(
+    agentId: string,
+    workspacePath: string | null,
+    chatId: string | null,
+  ): Promise<string | null> | null {
+    const key = getAcpPrepareKey(agentId, workspacePath, null);
+    const inFlight = AcpStreamHandler.prepares.get(key);
+    if (!inFlight && useAIChatStore.getState().acpPrepares?.[key]?.status !== "ready") return null;
+    return (async () => {
+      await inFlight;
+      return useAIChatStore.getState().actions.claimPreparedAcpSession(key, chatId);
+    })();
   }
 
   async start(userMessage: string, context: ContextInfo): Promise<void> {
@@ -223,11 +304,25 @@ export class AcpStreamHandler {
   private async ensureSessionOnce(): Promise<void> {
     try {
       const targetChat = this.getTargetChat();
-      const desiredSessionId =
+      const ownSessionId =
         targetChat?.agentId === this.agentId ? (targetChat.acpSessionId ?? null) : null;
       const workspacePath = this.getWorkspacePath();
       this.workspacePath = workspacePath;
+      // A chat without a session takes the one prepared while the user was writing.
+      const claim =
+        ownSessionId || this.prepareOnly
+          ? null
+          : AcpStreamHandler.claimPreparedSession(
+              this.agentId,
+              workspacePath,
+              targetChat?.id ?? null,
+            );
+      const claimedSessionId = claim ? await claim : null;
+      const desiredSessionId = ownSessionId ?? claimedSessionId;
       const store = useAIChatStore.getState();
+      if (targetChat && claimedSessionId) {
+        store.actions.setChatAcpSessionId(targetChat.id, claimedSessionId);
+      }
       const isStarting = !selectAcpAgentStatus(store, this.agentId, workspacePath)?.running;
 
       if (isStarting) {
@@ -244,6 +339,7 @@ export class AcpStreamHandler {
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         if (
+          this.prepareOnly ||
           this.cancelRequested ||
           message.includes("startup timed out") ||
           message.includes(ACP_STARTUP_STOPPED)
@@ -276,7 +372,7 @@ export class AcpStreamHandler {
       }
       // The session may have said what it offers before the chat knew it was its session.
       store.actions.restoreChatSessionSettings(opened.sessionId);
-      if (opened.contextLost) {
+      if (opened.contextLost && !claimedSessionId) {
         toast.warning(
           `${this.agentId} could not restore this chat's earlier session, so it starts fresh without the earlier context.`,
         );
@@ -305,6 +401,7 @@ export class AcpStreamHandler {
           this.authMethodId || null,
           useSettingsStore.getState().settings.mcpServers.filter((server) => server.enabled),
           AcpStreamHandler.additionalDirectories(workspacePath),
+          this.prepareOnly || null,
         ) as Promise<AcpOpenedSession>,
         ACP_START_TIMEOUT_MS,
         `${this.agentId} startup timed out`,
@@ -872,6 +969,7 @@ export class AcpStreamHandler {
         null,
         useSettingsStore.getState().settings.mcpServers.filter((server) => server.enabled),
         AcpStreamHandler.additionalDirectories(AcpStreamHandler.currentWorkspacePath()),
+        null,
       ) as Promise<AcpOpenedSession>,
       ACP_START_TIMEOUT_MS,
       `${agentId} did not load the session in time`,

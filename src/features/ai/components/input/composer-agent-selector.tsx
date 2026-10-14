@@ -80,6 +80,8 @@ interface ComposerAgentSelectorProps {
   providerId: string;
   modelId: string;
   sessionConfigOptions: SessionConfigOption[];
+  /** The agent's session is still opening, so its models may not be all there yet. */
+  isLoadingSessionConfig?: boolean;
   onAgentChange?: (agentId: AgentType) => void;
   onModelChange: (modelId: string, providerId: string) => void;
   onSessionConfigChange: (optionId: string, value: SessionConfigValue) => void;
@@ -99,6 +101,7 @@ export function ComposerAgentSelector({
   providerId,
   modelId,
   sessionConfigOptions,
+  isLoadingSessionConfig = false,
   onAgentChange,
   onModelChange,
   onSessionConfigChange,
@@ -250,6 +253,7 @@ export function ComposerAgentSelector({
               agentIcon={currentAgent?.icon}
               value={label}
               options={sessionConfigOptions}
+              loading={isLoadingSessionConfig}
               onChange={onSessionConfigChange}
             />
           )}

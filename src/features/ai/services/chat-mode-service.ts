@@ -2,10 +2,7 @@ import {
   getCodexSettings,
   saveCodexSettings,
 } from "@/features/ai/integrations/codex/codex-integration-service";
-import {
-  selectChatAcpSession,
-  selectChatAcpSessionId,
-} from "@/features/ai/services/acp-session-state";
+import { selectComposerAcpSession } from "@/features/ai/services/acp-session-state";
 import {
   findModeForIntent,
   getChatModeSource,
@@ -14,6 +11,7 @@ import {
   selectChatMode,
 } from "@/features/ai/lib/composer-modes";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import type {
   ChatModeSource,
   ComposerModeIntent,
@@ -23,17 +21,22 @@ import type {
 /** The mode source of a chat, read outside React (palette commands, slash commands). */
 export function readChatModeSource(chatId: string | null, agentId?: string): ChatModeSource {
   const state = useAIChatStore.getState();
-  const resolvedAgentId =
-    agentId ??
-    state.chats.find((chat) => chat.id === chatId)?.agentId ??
-    state.actions.getCurrentAgentId();
+  const chat = chatId ? state.chats.find((candidate) => candidate.id === chatId) : undefined;
+  const resolvedAgentId = agentId ?? chat?.agentId ?? state.actions.getCurrentAgentId();
+  const acpTarget = {
+    chatId,
+    agentId: resolvedAgentId,
+    workspacePath: chat?.workspacePath ?? useProjectStore.getState().rootFolderPath ?? null,
+  };
+  const acp = selectComposerAcpSession(state, acpTarget);
   return getChatModeSource({
     chatId,
     agentId: resolvedAgentId,
     builtInMode: selectChatMode(state, chatId),
     codexMode: getCodexSettings().collaborationMode,
-    acpSession: selectChatAcpSession(state, chatId),
-    acpSessionId: selectChatAcpSessionId(state, chatId),
+    acpSession: acp.session,
+    acpSessionId: acp.sessionId,
+    acpTarget,
   });
 }
 
@@ -49,10 +52,19 @@ export function applyChatMode(source: ChatModeSource, modeId: string): boolean {
       saveCodexSettings({ ...getCodexSettings(), collaborationMode: modeId });
       return true;
     case "acp-config":
-      if (!source.sessionId || !source.configOptionId) return false;
+      if (!source.configOptionId) return false;
+      if (source.target) {
+        actions.changeAcpOption(source.target, { configId: source.configOptionId, value: modeId });
+        return true;
+      }
+      if (!source.sessionId) return false;
       void actions.changeSessionConfigOption(source.sessionId, source.configOptionId, modeId);
       return true;
     case "acp-mode":
+      if (source.target) {
+        actions.changeAcpOption(source.target, { modeId });
+        return true;
+      }
       if (!source.sessionId) return false;
       void actions.changeSessionMode(source.sessionId, modeId);
       return true;

@@ -1,3 +1,5 @@
+import type { AcpOptionTarget } from "@/features/ai/types/acp.types";
+
 /** The three modes every chat offers, whatever the agent calls them. */
 export type ComposerModeIntent = "agent" | "ask" | "plan";
 
@@ -15,4 +17,6 @@ export interface ChatModeSource {
   chatId?: string | null;
   sessionId?: string | null;
   configOptionId?: string;
+  /** Where an ACP pick goes while the agent's session is still opening. */
+  target?: AcpOptionTarget;
 }

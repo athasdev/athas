@@ -23,6 +23,8 @@ pub(super) struct OpenRequest {
    pub mcp_servers: Vec<McpServerConfig>,
    /// The workspace's other roots, offered to agents that take `additionalDirectories`.
    pub additional_directories: Vec<String>,
+   /// Opened ahead of the chat's first prompt: it never signs in and never asks the user to.
+   pub prepare: bool,
    pub response_tx: Response<AcpOpenedSession>,
 }
 
@@ -507,6 +509,7 @@ mod tests {
             auth_method_id: None,
             mcp_servers: Vec::new(),
             additional_directories: Vec::new(),
+            prepare: false,
             response_tx: open_tx,
          }),
          StartupWaiter::Started(started_tx),

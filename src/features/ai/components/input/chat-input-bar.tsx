@@ -29,7 +29,6 @@ import { useAgentDraft } from "@/features/ai/hooks/use-agent-draft";
 import { shouldIgnoreSearchFile } from "@/features/file-search/services/file-search-filtering";
 import type { AIChatSkillInsertDetail } from "@/features/ai/services/skill-events";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
-import { selectChatAcpSession } from "@/features/ai/services/acp-session-state";
 import { useVoiceInput } from "@/features/ai/hooks/use-voice-input";
 import { useComposerFileDrop } from "@/features/ai/hooks/use-composer-file-drop";
 import { getImageMimeType } from "@/utils/image-file-types";
@@ -46,7 +45,7 @@ import {
 } from "@/features/ai/utils/chat-composer-dom";
 import type { InlineDropdownPosition, PastedImage } from "@/features/ai/types/chat-composer.types";
 import type { AIChatSkill } from "@/features/ai/types/skills.types";
-import type { SlashCommand } from "@/features/ai/types/acp.types";
+import type { SessionConfigValue, SlashCommand } from "@/features/ai/types/acp.types";
 import type {
   AIChatInputBarProps,
   RestoredComposerPrompt,
@@ -71,6 +70,10 @@ import { ComposerAgentSelector } from "./composer-agent-selector";
 import { ChatPreferencesMenu } from "./chat-preferences-menu";
 import { ComposerModeSelector } from "./composer-mode-selector";
 import { useChatModeSource } from "@/features/ai/hooks/use-chat-mode";
+import {
+  useComposerAcpSession,
+  usePrepareAcpSession,
+} from "@/features/ai/hooks/use-composer-acp-session";
 import { applyChatModeIntent, cycleChatMode } from "@/features/ai/services/chat-mode-service";
 import {
   filterComposerSlashCommands,
@@ -181,10 +184,11 @@ const AIChatInputBar = memo(function AIChatInputBar({
   });
   const slashCommandRangeRef = useRef({ startIndex: 0, endIndex: 0 });
 
-  const acpSession = useAIChatStore((state) => selectChatAcpSession(state, chatId));
+  const composerAcp = useComposerAcpSession(chatId, currentAgentId);
+  usePrepareAcpSession(composerAcp);
+  const acpSession = composerAcp.session;
   const sessionConfigOptions = acpSession.configOptions;
   const session = useAIChatStore((state) => state.chats.find((chat) => chat.id === chatId));
-  const acpSessionId = session?.acpSessionId ?? null;
   const modeSource = useChatModeSource(chatId ?? null, currentAgentId);
   const followChatId = chatId && isAcpAgent(currentAgentId) ? chatId : null;
   useFollowAgentInterrupt(followChatId);
@@ -215,9 +219,9 @@ const AIChatInputBar = memo(function AIChatInputBar({
   // ACP agents don't need API key (they handle their own auth)
   const isInputEnabled = isCustomAgent ? hasApiKey : true;
   const isStreaming = isTyping && !!streamingMessageId;
-  const changeSessionConfigOption = useAIChatStore(
-    (state) => state.actions.changeSessionConfigOption,
-  );
+  const changeAcpOption = useAIChatStore((state) => state.actions.changeAcpOption);
+  const changeSessionConfigOption = (configId: string, value: SessionConfigValue) =>
+    changeAcpOption(composerAcp.target, { configId, value });
 
   const handleApiModelChange = useCallback(
     (nextModelId: string, nextProviderId: string) => {
@@ -1398,11 +1402,10 @@ const AIChatInputBar = memo(function AIChatInputBar({
               providerId={aiProviderId}
               modelId={aiModelId}
               sessionConfigOptions={sessionConfigOptions}
+              isLoadingSessionConfig={composerAcp.isLoading}
               onAgentChange={onAgentChange}
               onModelChange={handleApiModelChange}
-              onSessionConfigChange={(optionId, value) => {
-                if (acpSessionId) void changeSessionConfigOption(acpSessionId, optionId, value);
-              }}
+              onSessionConfigChange={changeSessionConfigOption}
               onBeforeOpen={closeInlineMenus}
               followChatId={followChatId}
             />
@@ -1417,9 +1420,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
                 currentAgentId={currentAgentId}
                 canChangeAgent={Boolean(onAgentChange)}
                 sessionConfigOptions={sessionConfigOptions}
-                onSessionConfigChange={(optionId, value) => {
-                  if (acpSessionId) void changeSessionConfigOption(acpSessionId, optionId, value);
-                }}
+                onSessionConfigChange={changeSessionConfigOption}
                 onSelectSkill={insertSkillAtCursor}
                 onSelectCodexSkill={insertCodexSkillAtCursor}
                 onBeforeOpen={closeInlineMenus}

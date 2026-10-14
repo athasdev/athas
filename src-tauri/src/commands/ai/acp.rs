@@ -97,7 +97,9 @@ pub async fn refresh_acp_agent_registry(
 /// `import_session` it is an agent session a new chat imports, and the answer carries its history.
 /// `mcp_servers` is the user's MCP server list from settings; enabled servers are joined with
 /// their stored secrets and offered to the agent. `additional_directories` are the workspace's
-/// other roots, offered to agents that support them.
+/// other roots, offered to agents that support them. With `prepare` the session is opened ahead of
+/// the chat's first prompt: it never signs in or asks the user to, and `import_session` and
+/// `auth_method_id` are ignored.
 #[tauri::command]
 #[specta::specta]
 #[allow(clippy::too_many_arguments)]
@@ -111,6 +113,7 @@ pub async fn open_acp_session(
    auth_method_id: Option<String>,
    mcp_servers: Option<Vec<McpServerSetting>>,
    additional_directories: Option<Vec<String>>,
+   prepare: Option<bool>,
 ) -> Result<AcpOpenedSession, String> {
    let mcp_servers = resolve_mcp_servers(&app_handle, mcp_servers.unwrap_or_default());
    refresh_registered_agents(&app_handle, &bridge, false).await;
@@ -119,18 +122,31 @@ pub async fn open_acp_session(
       bridge.detect_agents();
       bridge.clone()
    };
-   bridge
-      .open_session(
-         &agent_id,
-         workspace_path,
-         session_id,
-         import_session.unwrap_or(false),
-         auth_method_id,
-         mcp_servers,
-         additional_directories.unwrap_or_default(),
-      )
-      .await
-      .map_err(|e| e.to_string())
+   let additional_directories = additional_directories.unwrap_or_default();
+   let opened = if prepare.unwrap_or(false) {
+      bridge
+         .prepare_session(
+            &agent_id,
+            workspace_path,
+            session_id,
+            mcp_servers,
+            additional_directories,
+         )
+         .await
+   } else {
+      bridge
+         .open_session(
+            &agent_id,
+            workspace_path,
+            session_id,
+            import_session.unwrap_or(false),
+            auth_method_id,
+            mcp_servers,
+            additional_directories,
+         )
+         .await
+   };
+   opened.map_err(|e| e.to_string())
 }
 
 /// Lets go of a chat's session (the chat was deleted); the agent keeps serving other chats.

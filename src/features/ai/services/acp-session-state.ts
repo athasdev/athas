@@ -1,5 +1,10 @@
-import type { AcpAgentStatus, AcpSessionState } from "@/features/ai/types/acp.types";
+import type {
+  AcpAgentStatus,
+  AcpOptionTarget,
+  AcpSessionState,
+} from "@/features/ai/types/acp.types";
 import type { ChatSession } from "@/features/ai/types/ai-chat.types";
+import type { AcpSessionPrepare } from "@/features/ai/stores/ai-chat/ai-chat-store.types";
 import { CODEX_INTEGRATION_ID } from "@/features/ai/integrations/integration-registry";
 import { normalizeAcpWorkspacePath } from "../lib/acp-workspace-path";
 
@@ -19,10 +24,74 @@ export function getAcpAgentKey(agentId: string, workspacePath: string | null | u
   return `${agentId}\u0000${normalizeAcpWorkspacePath(workspacePath) ?? ""}`;
 }
 
+/**
+ * Identifies a session being prepared: a chat's own earlier session by its id, otherwise the new
+ * session a draft of `agentId` in `workspacePath` will take over.
+ */
+export function getAcpPrepareKey(
+  agentId: string,
+  workspacePath: string | null | undefined,
+  ownSessionId: string | null,
+): string {
+  return ownSessionId ? `session\u0000${ownSessionId}` : getAcpAgentKey(agentId, workspacePath);
+}
+
+/** Whether a session told what it offers: the models, modes and options the composer shows. */
+export function hasAcpSessionOptions(session: AcpSessionState | null | undefined): boolean {
+  return Boolean(session?.configOptions.length || session?.modeState.availableModes.length);
+}
+
 interface AcpStateSlice {
   chats: ChatSession[];
   acpAgents: Record<string, AcpAgentStatus>;
   acpSessions: Record<string, AcpSessionState>;
+}
+
+interface ComposerAcpStateSlice extends AcpStateSlice {
+  acpPrepares: Record<string, AcpSessionPrepare>;
+  acpOptionCache: Record<string, AcpSessionState>;
+}
+
+export interface ComposerAcpSession {
+  /** The open session the composer's picks go to; null until one reported its options. */
+  sessionId: string | null;
+  /** The session's modes, options and commands, or the agent's last known ones until then. */
+  session: AcpSessionState;
+  /** A session is being opened for the composer, so what it shows may still change. */
+  isLoading: boolean;
+}
+
+/** The chat's own session, which it reattaches; null for a draft or a chat that has none yet. */
+export function selectOwnAcpSessionId(
+  state: Pick<AcpStateSlice, "chats">,
+  { chatId, agentId }: Pick<AcpOptionTarget, "chatId" | "agentId">,
+): string | null {
+  if (!chatId) return null;
+  const chat = state.chats.find((candidate) => candidate.id === chatId);
+  return chat?.agentId === agentId ? (chat.acpSessionId ?? null) : null;
+}
+
+/**
+ * What the composer of `target` shows for its ACP agent: the chat's session, or the session
+ * prepared for its first prompt, and the agent's last known options while neither is open yet.
+ * Every field keeps its identity between calls while the store does not change.
+ */
+export function selectComposerAcpSession(
+  state: ComposerAcpStateSlice,
+  target: AcpOptionTarget,
+): ComposerAcpSession {
+  const ownSessionId = selectOwnAcpSessionId(state, target);
+  const prepare =
+    state.acpPrepares[getAcpPrepareKey(target.agentId, target.workspacePath, ownSessionId)];
+  const sessionId = ownSessionId ?? (prepare?.status === "ready" ? prepare.sessionId : null);
+  const live = sessionId ? state.acpSessions[sessionId] : undefined;
+  const isReady = hasAcpSessionOptions(live);
+  return {
+    sessionId: isReady ? sessionId : null,
+    session:
+      (isReady ? live : state.acpOptionCache[target.agentId]) ?? live ?? EMPTY_ACP_SESSION_STATE,
+    isLoading: !isReady && prepare?.status === "preparing",
+  };
 }
 
 /** The running agent process for `agentId` in `workspacePath`, if any. */

@@ -753,6 +753,7 @@ describe("AcpStreamHandler", () => {
       authMethodId: null,
       mcpServers: [],
       additionalDirectories: null,
+      prepare: null,
     });
   });
 
@@ -794,6 +795,7 @@ describe("AcpStreamHandler", () => {
       authMethodId: "gemini-api-key",
       mcpServers: [],
       additionalDirectories: null,
+      prepare: null,
     });
     expect(
       vi.mocked(invoke).mock.calls.some(([command]) => command === "authenticate_acp_agent"),

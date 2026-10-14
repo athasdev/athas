@@ -45,6 +45,7 @@ describe("persisted chat preferences", () => {
         mode: useAIChatStore.getState().mode,
         outputStyle: useAIChatStore.getState().outputStyle,
         selectedAgentId: "codex",
+        acpOptionCache: {},
       },
       version: 3,
     });

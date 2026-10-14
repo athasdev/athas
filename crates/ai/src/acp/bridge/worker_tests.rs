@@ -247,6 +247,19 @@ impl Harness {
          .await
    }
 
+   async fn prepare(&self, session_id: Option<&str>) -> Result<AcpOpenedSession> {
+      self
+         .bridge
+         .prepare_session(
+            AGENT,
+            Some(self.workspace.clone()),
+            session_id.map(str::to_string),
+            Vec::new(),
+            Vec::new(),
+         )
+         .await
+   }
+
    async fn prompt(&self, text: &str) -> Result<()> {
       self
          .bridge
@@ -1030,6 +1043,59 @@ fn a_prompt_that_needs_sign_in_asks_the_user_unless_one_method_signs_in_on_its_o
          "login"
       );
       assert!(h.sink.of_type("auth_required").is_empty());
+   });
+}
+
+#[test]
+fn a_prepared_session_reports_its_options_and_the_first_prompt_reuses_it() {
+   local(async {
+      let h = Harness::new(vec![script(json!({
+         "session/prompt": { "result": end_turn() }
+      }))]);
+
+      let prepared = h.prepare(None).await.unwrap();
+      assert_eq!(prepared.session_id, "s1");
+      let options = h.sink.wait_for("config_options_update", |_| true).await;
+      assert_eq!(options["configOptions"][0]["id"], "model");
+      h.sink.wait_for("session_mode_update", |_| true).await;
+
+      let opened = h.open(Some("s1")).await.unwrap();
+      assert_eq!(opened.session_id, "s1");
+      assert!(!opened.context_lost);
+      h.prompt("Hi").await.unwrap();
+      h.turn_end().await;
+
+      assert_eq!(h.launches(), 1);
+      assert_eq!(
+         h.agent(0).agent.methods(),
+         vec!["initialize", "session/new", "session/prompt"]
+      );
+   });
+}
+
+#[test]
+fn preparing_a_session_never_signs_in_or_asks_the_user_to() {
+   local(async {
+      let auth_required =
+         json!({ "error": { "code": -32000, "message": "Authentication required" } });
+      let mut agent = script(json!({
+         "session/new": auth_required,
+         "authenticate": { "result": {} }
+      }));
+      agent["initialize"]["result"]["authMethods"] = json!([{ "id": "login", "name": "Log in" }]);
+      let h = Harness::new(vec![agent]);
+
+      let error = h.prepare(None).await.unwrap_err();
+
+      assert!(error.to_string().contains("Authentication required"));
+      assert!(
+         !h.agent(0)
+            .agent
+            .methods()
+            .contains(&"authenticate".to_string())
+      );
+      assert!(h.sink.of_type("auth_required").is_empty());
+      wait_for_exit(h.agent(0).pid).await;
    });
 }
 

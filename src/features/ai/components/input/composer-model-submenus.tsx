@@ -266,17 +266,23 @@ function findSelectOption(options: SessionConfigOption[], category: "model" | "t
     : null;
 }
 
+/**
+ * The ACP agent's model and effort rows. While its session is opening (`loading`), the Model row
+ * shows the agent's last known models, or only a loading row before it ever reported any.
+ */
 export function AcpModelSubmenus({
   agentId,
   agentIcon,
   value,
   options,
+  loading = false,
   onChange,
 }: {
   agentId: string;
   agentIcon?: string | null;
   value: string;
   options: SessionConfigOption[];
+  loading?: boolean;
   onChange: (optionId: string, value: SessionConfigValue) => void;
 }) {
   const model = findSelectOption(options, "model");
@@ -284,19 +290,24 @@ export function AcpModelSubmenus({
 
   return (
     <>
-      {model ? (
+      {model || loading ? (
         <ModelSubmenu
           value={value}
-          models={model.options.map((option) => ({
-            id: option.id,
-            name: option.name,
-            tooltip: option.description ? `${option.name} · ${option.description}` : undefined,
-            iconId: agentId,
-            iconUrl: agentIcon,
-          }))}
-          selected={model.currentValue}
-          onSelect={(id) => onChange(model.id, id)}
+          models={
+            model?.options.map((option) => ({
+              id: option.id,
+              name: option.name,
+              tooltip: option.description ? `${option.name} · ${option.description}` : undefined,
+              iconId: agentId,
+              iconUrl: agentIcon,
+            })) ?? []
+          }
+          selected={model?.currentValue ?? ""}
+          onSelect={(id) => {
+            if (model) onChange(model.id, id);
+          }}
           providerId={agentId}
+          loading={loading}
         />
       ) : null}
       {effort ? (

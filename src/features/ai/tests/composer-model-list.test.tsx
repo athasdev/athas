@@ -301,6 +301,44 @@ describe("composer model selector", () => {
     expect(subTriggers()).not.toContain("EffortHigh");
   });
 
+  it("shows a loading Model row while an agent's session opens, never an empty one", async () => {
+    await render({ currentAgentId: "gemini", isLoadingSessionConfig: true });
+    await open();
+    expect(subTriggers()).toEqual(["ProviderGemini CLI", "ModelGemini CLI"]);
+    const loading = await openSubmenu("Model");
+    expect(loading.textContent).toContain("Loading…");
+    expect(loading.textContent).not.toContain("No models available");
+    expect(rowsOf(loading)).toEqual([]);
+  });
+
+  it("offers the agent's last known models while its session opens", async () => {
+    const modelOption = {
+      id: "model",
+      name: "Model",
+      category: "model",
+      kind: {
+        type: "select" as const,
+        currentValue: "pro",
+        options: [
+          { id: "flash", name: "Flash" },
+          { id: "pro", name: "Pro" },
+        ],
+      },
+    };
+    await render({
+      currentAgentId: "gemini",
+      sessionConfigOptions: [modelOption],
+      isLoadingSessionConfig: true,
+    });
+    await open();
+    expect(subTriggers()).toEqual(["ProviderGemini CLI", "ModelPro"]);
+    const models = await openSubmenu("Model");
+    expect(models.textContent).toContain("Loading…");
+    expect(names(rowsOf(models))).toEqual(["Flash", "Pro"]);
+    await act(async () => rowsOf(models)[0].click());
+    expect(onSessionConfigChange).toHaveBeenCalledExactlyOnceWith("model", "flash");
+  });
+
   it("opens and closes submenus from the keyboard", async () => {
     await render();
     await open();

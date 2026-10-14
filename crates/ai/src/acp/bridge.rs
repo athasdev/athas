@@ -366,20 +366,26 @@ impl AcpWorker {
       };
       connection.pending_opens += 1;
       let handle = connection.handle.clone();
-      let startup_auth = super::bridge_init::StartupAuth {
-         allow_automatic: !self
-            .logged_out_agents
-            .borrow()
-            .contains(&connection.key.agent_id),
-         chosen_method_id: request.auth_method_id.clone(),
+      // A prepared session leaves sign-in to the chat's first prompt.
+      let startup_auth = if request.prepare {
+         super::bridge_init::StartupAuth::default()
+      } else {
+         super::bridge_init::StartupAuth {
+            allow_automatic: !self
+               .logged_out_agents
+               .borrow()
+               .contains(&connection.key.agent_id),
+            chosen_method_id: request.auth_method_id.clone(),
+         }
       };
-      let signed_in_with_choice = request.auth_method_id.is_some();
+      let signed_in_with_choice = request.auth_method_id.is_some() && !request.prepare;
       let followup_tx = self.followup_tx.clone();
       tokio::task::spawn_local(async move {
          let result = super::bridge_init::open_session(
             handle,
             request.target.clone(),
             startup_auth,
+            !request.prepare,
             request.mcp_servers,
             request.additional_directories,
             map_config_options,
@@ -1068,6 +1074,50 @@ impl AcpAgentBridge {
          (None, true) => bail!("Choose an agent session to import"),
          (None, false) => SessionTarget::New,
       };
+      self
+         .request_open(agent_id, workspace_path, |response_tx| OpenRequest {
+            target,
+            auth_method_id,
+            mcp_servers,
+            additional_directories,
+            prepare: false,
+            response_tx,
+         })
+         .await
+   }
+
+   /// Opens a session ahead of a chat's first prompt, so the agent's models, modes and config
+   /// options are known before the user sends anything. `session_id` is the chat's earlier
+   /// session, reattached like [`Self::open_session`] does; without it a new session is created.
+   /// Unlike a chat's open it never signs in and never asks the user to: when the agent wants a
+   /// sign-in the open fails without an `auth_required` event, and the chat's first prompt asks.
+   pub async fn prepare_session(
+      &self,
+      agent_id: &str,
+      workspace_path: Option<String>,
+      session_id: Option<String>,
+      mcp_servers: Vec<McpServerConfig>,
+      additional_directories: Vec<String>,
+   ) -> Result<AcpOpenedSession> {
+      let target = session_id.map_or(SessionTarget::New, SessionTarget::Reattach);
+      self
+         .request_open(agent_id, workspace_path, |response_tx| OpenRequest {
+            target,
+            auth_method_id: None,
+            mcp_servers,
+            additional_directories,
+            prepare: true,
+            response_tx,
+         })
+         .await
+   }
+
+   async fn request_open(
+      &self,
+      agent_id: &str,
+      workspace_path: Option<String>,
+      request: impl FnOnce(oneshot::Sender<Result<AcpOpenedSession>>) -> OpenRequest,
+   ) -> Result<AcpOpenedSession> {
       let config = self
          .registry
          .get(agent_id)
@@ -1082,13 +1132,7 @@ impl AcpAgentBridge {
             workspace_path,
             config: Box::new(config),
             terminal_manager,
-            request: OpenRequest {
-               target,
-               auth_method_id,
-               mcp_servers,
-               additional_directories,
-               response_tx,
-            },
+            request: request(response_tx),
          })
          .await
    }

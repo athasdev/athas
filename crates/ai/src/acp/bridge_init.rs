@@ -356,12 +356,13 @@ pub(super) struct OpenedSession {
 
 /// Opens the session `target` asks for on a running agent (see [`bootstrap_session`]). The
 /// session's initial modes and config options are emitted as events. When the agent wants a sign-in
-/// Athas may not do on its own, an `auth_required` event is emitted and the open fails with
-/// [`AuthenticationRequired`].
+/// Athas may not do on its own, the open fails with [`AuthenticationRequired`], and with
+/// `ask_for_sign_in` an `auth_required` event tells the user.
 pub(super) async fn open_session(
    handle: ConnectionHandle,
    target: SessionTarget,
    startup_auth: StartupAuth,
+   ask_for_sign_in: bool,
    mcp_servers: Vec<McpServerConfig>,
    additional_directories: Vec<String>,
    map_config_options: impl Fn(Vec<acp::SessionConfigOption>) -> Vec<SessionConfigOption>,
@@ -414,7 +415,8 @@ pub(super) async fn open_session(
    let session_bootstrap = match session_bootstrap {
       Ok(session) => session,
       Err(error) => {
-         if error.is::<AuthenticationRequired>()
+         if ask_for_sign_in
+            && error.is::<AuthenticationRequired>()
             && let Err(emit_error) = handle.events.acp_event(&AcpEvent::AuthRequired {
                agent_id: handle.agent_id.clone(),
                session_id: None,

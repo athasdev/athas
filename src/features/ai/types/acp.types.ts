@@ -72,6 +72,15 @@ export interface AcpOpenedSession {
 }
 
 /** What an ACP session advertises: its slash commands, modes and config options. */
+/** Where the composer's mode and option picks go: a chat, or the new chat a draft becomes. */
+export interface AcpOptionTarget {
+  chatId: string | null;
+  agentId: string;
+  workspacePath: string | null;
+}
+
+export type AcpOptionPick = { modeId: string } | { configId: string; value: SessionConfigValue };
+
 export interface AcpSessionState {
   slashCommands: SlashCommand[];
   modeState: {

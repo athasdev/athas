@@ -1,5 +1,7 @@
 import type {
   AcpAgentStatus,
+  AcpOptionPick,
+  AcpOptionTarget,
   AcpSessionState,
   AcpUsageUpdate,
   SessionConfigOption,
@@ -13,6 +15,7 @@ import type {
   Chat,
   ChatMode,
   ChatSession,
+  ChatSessionSettings,
   Message,
   OutputStyle,
   ImageContent,
@@ -48,6 +51,17 @@ export interface AgentRunState {
 
 export type ChatMessageLoadState = "loading" | "loaded" | "error";
 
+/**
+ * A session opened ahead of a chat's first prompt, so the composer shows the agent's models,
+ * modes and options before the user sends anything.
+ */
+export interface AcpSessionPrepare {
+  agentId: string;
+  status: "preparing" | "ready" | "failed";
+  /** The open session no chat holds yet; null for a chat reattaching its own session. */
+  sessionId: string | null;
+}
+
 export interface AIChatState {
   /**
    * Every chat's metadata, without messages. A streamed token never touches this list, so the
@@ -77,6 +91,19 @@ export interface AIChatState {
   acpAgents: Record<string, AcpAgentStatus>;
   /** What each open ACP session advertises, by session id. */
   acpSessions: Record<string, AcpSessionState>;
+  /** Sessions opened ahead of a first prompt, by `getAcpPrepareKey`. */
+  acpPrepares: Record<string, AcpSessionPrepare>;
+  /**
+   * Picks made in a draft before its prepared session could take them, by
+   * `getAcpAgentKey(agentId, workspacePath)`. They are applied once the session reports what it
+   * offers.
+   */
+  acpPendingPicks: Record<string, ChatSessionSettings>;
+  /**
+   * What each ACP agent offered last, by agent id. The composer shows it until a session of the
+   * agent reports its own, so models and modes are there before the first prompt.
+   */
+  acpOptionCache: Record<string, AcpSessionState>;
 }
 
 export interface AIChatActions {
@@ -174,9 +201,22 @@ export interface AIChatActions {
   ) => Promise<void>;
   /**
    * Applies the chat's saved mode and config picks to its reattached session, once per session,
-   * where the session still offers them.
+   * where the session still offers them. A prepared session no chat holds yet gets the picks
+   * made while it was opening.
    */
   restoreChatSessionSettings: (sessionId: string) => void;
+  /** Records how preparing a session for `key` went, or forgets it with null. */
+  setAcpPrepare: (key: string, prepare: AcpSessionPrepare | null) => void;
+  /**
+   * Hands the prepared session for `agentKey` to `chatId` (or to whoever asks, without a chat)
+   * and returns it; null when none is ready. Picks still waiting for it move to the chat.
+   */
+  claimPreparedAcpSession: (agentKey: string, chatId: string | null) => string | null;
+  /**
+   * Changes a mode or config option from the composer. Without an open session yet, the pick
+   * waits for one and the agent's last known options show it in the meantime.
+   */
+  changeAcpOption: (target: AcpOptionTarget, pick: AcpOptionPick) => void;
   /** Saves the chat's "Follow agent" toggle with its history. */
   setChatFollowAgent: (chatId: string, following: boolean) => void;
 

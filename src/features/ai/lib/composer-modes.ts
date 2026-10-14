@@ -4,7 +4,7 @@ import type {
   ComposerModeIntent,
   ComposerModeOption,
 } from "@/features/ai/types/composer-mode.types";
-import type { AcpSessionState } from "@/features/ai/types/acp.types";
+import type { AcpOptionTarget, AcpSessionState } from "@/features/ai/types/acp.types";
 import { classifySessionConfigOption } from "@/features/ai/lib/session-config-option-classifier";
 import { CODEX_INTEGRATION_ID } from "@/features/ai/integrations/integration-registry";
 
@@ -82,6 +82,7 @@ export function getChatModeSource({
   codexMode,
   acpSession,
   acpSessionId,
+  acpTarget,
 }: {
   chatId?: string | null;
   agentId: string;
@@ -89,6 +90,8 @@ export function getChatModeSource({
   codexMode?: string | null;
   acpSession: AcpSessionState;
   acpSessionId: string | null;
+  /** Where a pick goes while the agent's session is still opening. */
+  acpTarget?: AcpOptionTarget;
 }): ChatModeSource {
   if (agentId === "custom") {
     return {
@@ -113,6 +116,7 @@ export function getChatModeSource({
       currentId: configOption.kind.currentValue || options[0]?.id || null,
       sessionId: acpSessionId,
       configOptionId: configOption.id,
+      target: acpTarget,
     };
   }
 
@@ -122,6 +126,7 @@ export function getChatModeSource({
     options,
     currentId: acpSession.modeState.currentModeId ?? options[0]?.id ?? null,
     sessionId: acpSessionId,
+    target: acpTarget,
   };
 }
 

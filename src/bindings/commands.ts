@@ -804,7 +804,9 @@ export const commands = {
    *  `import_session` it is an agent session a new chat imports, and the answer carries its history.
    *  `mcp_servers` is the user's MCP server list from settings; enabled servers are joined with
    *  their stored secrets and offered to the agent. `additional_directories` are the workspace's
-   *  other roots, offered to agents that support them.
+   *  other roots, offered to agents that support them. With `prepare` the session is opened ahead of
+   *  the chat's first prompt: it never signs in or asks the user to, and `import_session` and
+   *  `auth_method_id` are ignored.
    */
   openAcpSession: (
     agentId: string,
@@ -814,6 +816,7 @@ export const commands = {
     authMethodId: string | null,
     mcpServers: McpServerSetting[] | null,
     additionalDirectories: string[] | null,
+    prepare: boolean | null,
   ) =>
     __TAURI_INVOKE<AcpOpenedSession_Serialize>("open_acp_session", {
       agentId,
@@ -823,6 +826,7 @@ export const commands = {
       authMethodId,
       mcpServers,
       additionalDirectories,
+      prepare,
     }),
   /**  Lets go of a chat's session (the chat was deleted); the agent keeps serving other chats. */
   closeAcpSession: (sessionId: string) => __TAURI_INVOKE<null>("close_acp_session", { sessionId }),

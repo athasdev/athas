@@ -28,6 +28,7 @@ const useAIChatStoreBase = create<AIChatStore>()(
         mode: state.mode,
         outputStyle: state.outputStyle,
         selectedAgentId: state.selectedAgentId,
+        acpOptionCache: state.acpOptionCache,
       }),
       merge: (persistedState, currentState) => {
         const persisted = persistedState as Partial<AIChatState> | undefined;
@@ -38,6 +39,9 @@ const useAIChatStoreBase = create<AIChatStore>()(
           selectedAgentId: migrateLegacyAgentId(persisted?.selectedAgentId ?? "custom"),
           acpAgents: {},
           acpSessions: {},
+          acpPrepares: {},
+          acpPendingPicks: {},
+          acpOptionCache: persisted?.acpOptionCache ?? {},
         };
       },
     },

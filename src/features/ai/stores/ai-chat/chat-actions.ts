@@ -55,6 +55,9 @@ type ChatActions = Omit<
   | "changeSessionConfigOption"
   | "restoreChatSessionSettings"
   | "setChatFollowAgent"
+  | "setAcpPrepare"
+  | "claimPreparedAcpSession"
+  | "changeAcpOption"
 >;
 
 const getCurrentWorkspacePath = () => useProjectStore.getState().rootFolderPath || null;

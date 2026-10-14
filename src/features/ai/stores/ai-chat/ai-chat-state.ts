@@ -18,5 +18,8 @@ export function createInitialAIChatState(): AIChatState {
     dynamicModels: {},
     acpAgents: {},
     acpSessions: {},
+    acpPrepares: {},
+    acpPendingPicks: {},
+    acpOptionCache: {},
   };
 }
