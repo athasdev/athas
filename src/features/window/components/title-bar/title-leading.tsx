@@ -13,11 +13,11 @@ import { Toggle } from "@/ui/toggle";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 import { cn } from "@/utils/cn";
-import { IS_MAC } from "@/utils/platform";
+import { IS_MAC, IS_WEB } from "@/utils/platform";
 
 /**
- * The leading end of the title bar, next to the window controls: the app menu (Windows and Linux,
- * where there is no native menu bar), the sidebar toggle, then the project and branch the
+ * The leading end of the title bar, next to the window controls: the app menu (Windows, Linux and
+ * the web, where there is no native menu bar), the sidebar toggle, then the project and branch the
  * workbench is on.
  */
 export function TitleLeading() {
@@ -42,7 +42,7 @@ export function TitleLeading() {
           IS_MAC ? "gap-0.5" : "gap-1",
         )}
       >
-        {IS_MAC ? null : (
+        {IS_MAC && !IS_WEB ? null : (
           <div className="-ml-0.5 flex shrink-0">
             <WindowMenuDropdown
               trigger={<Button variant="ghost" iconOnly tooltip="Menu" aria-label="Menu" />}

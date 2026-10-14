@@ -31,6 +31,8 @@ export const currentPlatform: Platform = detectPlatform();
 export const IS_MAC: boolean = currentPlatform === "macos";
 export const IS_WINDOWS: boolean = currentPlatform === "windows";
 export const IS_LINUX: boolean = currentPlatform === "linux";
+/** Athas in the browser (athas.dev/app). It reports macOS but has no native menu or traffic lights. */
+export const IS_WEB: boolean = import.meta.env.VITE_ATHAS_WEB === "true";
 export const PLATFORM_CLASS_NAME = IS_MAC
   ? "platform-macos"
   : IS_WINDOWS
@@ -40,6 +42,7 @@ export const PLATFORM_CLASS_NAME = IS_MAC
 export function applyPlatformClass(root?: Element): void {
   const target = root ?? (typeof document === "undefined" ? null : document.documentElement);
   target?.classList.add(PLATFORM_CLASS_NAME);
+  if (IS_WEB) target?.classList.add("platform-web");
 }
 
 export function isMac(): boolean {

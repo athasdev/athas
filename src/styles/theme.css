@@ -255,7 +255,8 @@
     --athas-title-bar-leading-inset: 4.75rem;
   }
 
-  html.platform-macos[data-fullscreen] {
+  html.platform-macos[data-fullscreen],
+  html.platform-web {
     --athas-title-bar-leading-inset: var(--athas-chrome-padding-inline);
   }
 
