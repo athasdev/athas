@@ -163,7 +163,7 @@ function ToolDiff({
   );
 
   return (
-    <div className="flex min-w-0 flex-col items-start gap-1">
+    <div className="flex min-w-0 flex-col gap-1">
       <ExtensionDiffPreview
         filePath={preview.filePath}
         oldPath={preview.oldPath}
@@ -173,9 +173,11 @@ function ToolDiff({
         caption={caption}
       />
       {hiddenRows > 0 ? (
-        <Button type="button" variant="link" onClick={() => setShowAll(true)}>
-          Expand diff ({hiddenRows} more {hiddenRows === 1 ? "line" : "lines"})
-        </Button>
+        <span className="self-start">
+          <Button type="button" variant="link" onClick={() => setShowAll(true)}>
+            Expand diff ({hiddenRows} more {hiddenRows === 1 ? "line" : "lines"})
+          </Button>
+        </span>
       ) : null}
     </div>
   );
