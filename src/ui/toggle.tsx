@@ -20,6 +20,8 @@ const toggleVariants = cva(
       size: {
         sm: "size-chrome-control [&_svg:not([class*='size-'])]:size-[1em]",
         md: "size-7 [&_svg:not([class*='size-'])]:size-3.5",
+        /** The activity rail and the controls lined up with it. */
+        lg: "size-rail-control rounded-lg [&_svg:not([class*='size-'])]:size-4",
       },
     },
     defaultVariants: {

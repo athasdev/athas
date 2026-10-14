@@ -61,8 +61,10 @@ afterEach(async () => {
   container.remove();
 });
 
-describe("ContextMenuPopup focus", () => {
-  it("leaves focus where an action put it", async () => {
+// The file tree's Rename item focuses an inline field; the context menu must not take focus back
+// as it closes, or the blur submits the rename before anything is typed.
+describe("renaming from a context menu", () => {
+  it("keeps the rename field focused after the menu closes", async () => {
     await openMenu();
     await act(async () => menuItem().click());
     await settle();
@@ -70,7 +72,7 @@ describe("ContextMenuPopup focus", () => {
     expect(document.activeElement?.getAttribute("aria-label")).toBe("Rename notes.txt");
   });
 
-  it("returns focus when the menu is dismissed", async () => {
+  it("still returns focus when the menu is dismissed without a choice", async () => {
     await openMenu();
     expect(menuItem()).toBeTruthy();
     await act(async () => {

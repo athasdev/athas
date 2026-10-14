@@ -31,27 +31,19 @@ const native = vi.hoisted(() => {
   return state;
 });
 
-const { default: WindowMenuBar } = await import("../components/window-menu-bar");
+const { default: WindowMenuBar, WindowMenuDropdown } =
+  await import("../components/window-menu-bar");
 
 let root: Root;
 let container: HTMLDivElement;
 let openMenu: (menu: string | null) => void;
 let activeMenu: string | null;
-let compactCloses = 0;
 
 function Harness({ initial }: { initial: string | null }) {
   const [menu, setMenu] = useState<string | null>(initial);
   openMenu = setMenu;
   activeMenu = menu;
-  return (
-    <WindowMenuBar
-      activeMenu={menu}
-      setActiveMenu={setMenu}
-      onCompactClose={() => {
-        compactCloses++;
-      }}
-    />
-  );
+  return <WindowMenuBar activeMenu={menu} setActiveMenu={setMenu} />;
 }
 
 async function flush() {
@@ -107,7 +99,6 @@ beforeEach(() => {
   native.calls.length = 0;
   native.alwaysOnTop = false;
   native.failDevtools = false;
-  compactCloses = 0;
   Element.prototype.getAnimations = () => [];
   Element.prototype.scrollIntoView = () => {};
   vi.stubGlobal(
@@ -184,7 +175,6 @@ describe("window menu bar", () => {
       }
     }
 
-    expect(compactCloses).toBeGreaterThan(80);
     const actions = emitted();
     expect(actions).toContainEqual({ action: "execute_command", value: "workbench.newTab" });
     expect(actions).toContainEqual({ action: "open_folder", value: null });
@@ -265,5 +255,80 @@ describe("window menu bar", () => {
       commandsRun("plugin:window|set_always_on_top").map((call) => call.args.value);
     await act(async () => openMenu(null));
     await eventually(() => expect(alwaysOnTop()).toEqual([true]));
+  });
+
+  describe("as the title bar dropdown", () => {
+    function renderDropdown() {
+      return act(async () =>
+        root.render(
+          <WindowMenuDropdown trigger={<button type="button" aria-label="Menu" />}>
+            Athas
+          </WindowMenuDropdown>,
+        ),
+      );
+    }
+
+    const menuButton = () => document.querySelector<HTMLElement>('[aria-label="Menu"]')!;
+    const rows = () => [
+      ...document.querySelectorAll<HTMLElement>('[data-slot="dropdown-menu-sub-trigger"]'),
+    ];
+
+    async function openDropdown() {
+      await renderDropdown();
+      await act(async () => menuButton().click());
+      await flush();
+      await eventually(() => expect(rows().length).toBeGreaterThan(0));
+    }
+
+    it("lists every menu as a row of an opaque dropdown", async () => {
+      await openDropdown();
+
+      const dropdown = document.querySelector('[data-slot="dropdown-menu-content"]')!;
+      expect(dropdown.className).toContain("bg-overlay");
+      expect(rows().map((row) => row.textContent?.trim())).toEqual([
+        "File",
+        "Edit",
+        "View",
+        "Go",
+        "Terminal",
+        "Run",
+        "Agent",
+        "Tools",
+        "Window",
+        "Help",
+      ]);
+      expect(document.querySelector('[data-slot="menubar"]')).toBeNull();
+    });
+
+    it("opens a menu's items beside its row and closes after one runs", async () => {
+      await openDropdown();
+      const view = rows().find((row) => row.textContent?.trim() === "View")!;
+      await act(async () => view.click());
+      await waitForMenuItems();
+
+      const item = menuItems().find((candidate) => itemLabel(candidate) === "Toggle Sidebar");
+      expect(item).toBeDefined();
+      await act(async () => item!.click());
+      await flush();
+
+      expect(emitted()).toContainEqual({ action: "toggle_sidebar", value: null });
+      await eventually(() =>
+        expect(document.querySelector('[data-slot="dropdown-menu-content"]')).toBeNull(),
+      );
+    });
+
+    it("keeps the window above others while it is open", async () => {
+      await openDropdown();
+      const alwaysOnTop = () =>
+        commandsRun("plugin:window|set_always_on_top").map((call) => call.args.value);
+      await eventually(() => expect(alwaysOnTop()).toEqual([true]));
+
+      await act(async () => {
+        fireEvent.keyDown(document.querySelector('[data-slot="dropdown-menu-content"]')!, {
+          key: "Escape",
+        });
+      });
+      await eventually(() => expect(alwaysOnTop()).toEqual([true, false]));
+    });
   });
 });

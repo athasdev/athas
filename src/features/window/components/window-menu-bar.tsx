@@ -8,7 +8,7 @@ import {
   toggleWindowFullscreen,
 } from "@/features/window/services/native-window-api";
 import type React from "react";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRegisteredThemes } from "@/extensions/themes/use-registered-themes";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { createAppWindow } from "@/features/window/services/create-app-window";
@@ -21,33 +21,40 @@ import {
   MenubarSeparator,
   MenubarSub,
   MenubarSubContent,
+  MenubarSubmenus,
   MenubarSubTrigger,
   MenubarTrigger,
 } from "@/ui/menubar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@/ui/dropdown";
+import {
+  ArrowRightIcon,
+  EyeIcon,
+  FileIcon,
+  PencilIcon,
+  PlayIcon,
+  QuestionIcon,
+  SparkleIcon,
+  TerminalWindowIcon,
+  WindowExpandIcon,
+  WrenchIcon,
+} from "@/ui/icons";
 import { cn } from "@/utils/cn";
 import { IS_LINUX, IS_WINDOWS } from "@/utils/platform";
 
 interface Props {
   activeMenu: string | null;
   setActiveMenu: React.Dispatch<React.SetStateAction<string | null>>;
-  compactFloating?: boolean;
-  onCompactClose?: () => void;
 }
 
-const WindowMenuBar = ({
-  activeMenu,
-  setActiveMenu,
-  compactFloating = false,
-  onCompactClose,
-}: Props) => {
-  const compactMenuBar = useSettingsStore((state) => state.settings.compactMenuBar);
-  const themes = useRegisteredThemes();
+function useRaiseWindowWhileMenuOpen(isMenuOpen: boolean) {
   const menuWindowRaiseRef = useRef<{ restoreTo: boolean } | null>(null);
-  const shouldRaiseWindowForMenu = (IS_WINDOWS || IS_LINUX) && Boolean(activeMenu);
-  const closeMenu = useCallback(() => {
-    setActiveMenu(null);
-    onCompactClose?.();
-  }, [onCompactClose, setActiveMenu]);
+  const shouldRaiseWindowForMenu = (IS_WINDOWS || IS_LINUX) && isMenuOpen;
 
   useEffect(() => {
     let disposed = false;
@@ -101,6 +108,10 @@ const WindowMenuBar = ({
       void restoreWindowLevel();
     };
   }, [shouldRaiseWindowForMenu]);
+}
+
+function useWindowMenus(closeMenu: () => void) {
+  const themes = useRegisteredThemes();
 
   const handleClickEmit = useCallback(
     (action: string, value?: string) => {
@@ -501,21 +512,22 @@ const WindowMenuBar = ({
     [closeMenu, handleClickEmit, handleCommand, handleNewWindow, themes],
   );
 
+  return menus;
+}
+
+const WindowMenuBar = ({ activeMenu, setActiveMenu }: Props) => {
+  const compactMenuBar = useSettingsStore((state) => state.settings.compactMenuBar);
+  const closeMenu = useCallback(() => setActiveMenu(null), [setActiveMenu]);
+  useRaiseWindowWhileMenuOpen(Boolean(activeMenu));
+  const menus = useWindowMenus(closeMenu);
+
   return (
-    <div
-      className={cn(
-        "z-100000 flex flex-col",
-        compactMenuBar && compactFloating && "absolute top-full left-0 mt-1",
-        compactMenuBar && !compactFloating && "absolute inset-0",
-      )}
-    >
+    <div className={cn("z-100000 flex flex-col", compactMenuBar && "absolute inset-0")}>
       <Menubar
         value={activeMenu ?? ""}
         onValueChange={(value) => setActiveMenu(value || null)}
         className={
-          compactMenuBar && !compactFloating
-            ? "h-full rounded-none border-none bg-transparent px-2 py-0"
-            : undefined
+          compactMenuBar ? "h-full rounded-none border-none bg-transparent px-2 py-0" : undefined
         }
       >
         {Object.entries(menus).map(([menuName, menuContent]) => (
@@ -528,5 +540,56 @@ const WindowMenuBar = ({
     </div>
   );
 };
+
+const menuIcons: Record<string, React.ReactNode> = {
+  File: <FileIcon />,
+  Edit: <PencilIcon />,
+  View: <EyeIcon />,
+  Go: <ArrowRightIcon />,
+  Terminal: <TerminalWindowIcon />,
+  Run: <PlayIcon />,
+  Agent: <SparkleIcon />,
+  Tools: <WrenchIcon />,
+  Window: <WindowExpandIcon />,
+  Help: <QuestionIcon />,
+};
+
+// The dropdown closes itself when an item runs.
+function keepMenuOpenState() {}
+
+/**
+ * The app menus as one dropdown behind `trigger`: each menu is a row that opens its items beside
+ * it. The title bar uses it on Windows and Linux.
+ */
+export function WindowMenuDropdown({
+  trigger,
+  children,
+}: {
+  trigger: React.ReactElement;
+  children: React.ReactNode;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  useRaiseWindowWhileMenuOpen(isOpen);
+  const menus = useWindowMenus(keepMenuOpenState);
+
+  return (
+    <DropdownMenu onOpenChange={setIsOpen}>
+      <DropdownMenuTrigger render={trigger}>{children}</DropdownMenuTrigger>
+      <DropdownMenuContent side="bottom" align="start" size="compact">
+        <MenubarSubmenus>
+          {Object.entries(menus).map(([menuName, menuContent]) => (
+            <DropdownMenuSub key={menuName}>
+              <DropdownMenuSubTrigger>
+                {menuIcons[menuName]}
+                {menuName}
+              </DropdownMenuSubTrigger>
+              {menuContent}
+            </DropdownMenuSub>
+          ))}
+        </MenubarSubmenus>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
 
 export default WindowMenuBar;

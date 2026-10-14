@@ -556,7 +556,6 @@ const GitBranchManager = ({
                 data-branch-manager-trigger="true"
                 disabled={isLoading}
                 variant="ghost"
-                size="sm"
                 align="start"
                 active={isDropdownOpen}
                 truncate

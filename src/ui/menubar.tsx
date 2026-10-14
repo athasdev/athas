@@ -1,5 +1,5 @@
 import { Menu, Menubar as BaseMenubar } from "@base-ui/react";
-import { createContext, useContext, useMemo, type ComponentProps } from "react";
+import { createContext, useContext, useMemo, type ComponentProps, type ReactNode } from "react";
 import Keybinding from "@/ui/keybinding";
 import { menuItemVariants, menuSeparatorVariants, menuSurfaceVariants } from "@/ui/dropdown";
 import { ChevronRightIcon } from "@/ui/icons";
@@ -8,11 +8,14 @@ import { cn } from "@/utils/cn";
 interface MenubarContextValue {
   value: string;
   onValueChange: (value: string) => void;
+  /** Menus open below a horizontal bar, or to the right of a dropdown's rows. */
+  layout: "bar" | "dropdown";
 }
 
 const MenubarContext = createContext<MenubarContextValue>({
   value: "",
   onValueChange: () => {},
+  layout: "bar",
 });
 
 type MenubarProps = ComponentProps<typeof BaseMenubar> & {
@@ -25,6 +28,7 @@ function Menubar({ className, value = "", onValueChange, ...props }: MenubarProp
     () => ({
       value,
       onValueChange: onValueChange ?? (() => {}),
+      layout: "bar" as const,
     }),
     [onValueChange, value],
   );
@@ -101,11 +105,14 @@ function MenubarContent({
   className,
   align = "start",
   alignOffset = -4,
-  side = "bottom",
+  side,
   sideOffset = 4,
   collisionPadding = 8,
   ...props
 }: MenubarContentProps) {
+  const { layout } = useContext(MenubarContext);
+  side ??= layout === "dropdown" ? "right" : "bottom";
+
   return (
     <Menu.Portal>
       <Menu.Positioner
@@ -225,6 +232,20 @@ function MenubarSubContent({
   );
 }
 
+const SUBMENU_CONTEXT: MenubarContextValue = {
+  value: "",
+  onValueChange: () => {},
+  layout: "dropdown",
+};
+
+/**
+ * Hosts menubar menus as rows of a dropdown instead of a bar: each `MenubarContent` inside opens
+ * beside its row, like a submenu.
+ */
+function MenubarSubmenus({ children }: { children: ReactNode }) {
+  return <MenubarContext.Provider value={SUBMENU_CONTEXT}>{children}</MenubarContext.Provider>;
+}
+
 export {
   Menubar,
   MenubarContent,
@@ -236,6 +257,7 @@ export {
   MenubarShortcut,
   MenubarSub,
   MenubarSubContent,
+  MenubarSubmenus,
   MenubarSubTrigger,
   MenubarTrigger,
 };

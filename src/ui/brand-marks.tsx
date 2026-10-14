@@ -77,6 +77,18 @@ export function getDatabaseBrandImage(providerOrExtensionId: string): string | u
     : undefined;
 }
 
+export function AthasMark({ size = "1em" }: { size?: number | string }) {
+  return (
+    <img
+      src={agentBrandImages.athas}
+      alt=""
+      draggable={false}
+      className="shrink-0 object-contain"
+      style={{ width: size, height: size }}
+    />
+  );
+}
+
 export function DatabaseBrandMark({
   provider,
   size = "1em",

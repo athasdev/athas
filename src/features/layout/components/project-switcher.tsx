@@ -230,7 +230,6 @@ export function ProjectSwitcher({
             render={
               <Button
                 variant="ghost"
-                size="sm"
                 truncate
                 aria-label={`Switch project. Current project: ${projectName}`}
                 title={projectPath || projectName}
@@ -238,7 +237,6 @@ export function ProjectSwitcher({
                 <ProjectGlyph
                   projectPath={projectPath}
                   iconPath={displayIconPath}
-                  className="size-3"
                   imageClassName="size-4"
                 />
                 <span className="min-w-0 truncate">{projectName}</span>
