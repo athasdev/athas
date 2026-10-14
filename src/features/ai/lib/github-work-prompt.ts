@@ -1,4 +1,4 @@
-import type { GitHubWorkItem } from "@/features/github/utils/github-work-suggestions";
+import type { GitHubWorkItem } from "@/features/github/services/github-work-suggestions";
 
 const MAX_BODY_LENGTH = 4000;
 

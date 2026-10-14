@@ -5,7 +5,10 @@ import { Item, ItemContent, ItemGroup, ItemMedia } from "@/ui/item";
 import { issueListQuery, pullRequestListQuery } from "../services/github-queries";
 import { useGitHubStore } from "../stores/github.store";
 import type { IssueListItem, PullRequest } from "../types/github.types";
-import { type GitHubWorkItem, selectGitHubWorkSuggestions } from "../utils/github-work-suggestions";
+import {
+  type GitHubWorkItem,
+  selectGitHubWorkSuggestions,
+} from "../services/github-work-suggestions";
 
 const EMPTY_PULL_REQUESTS: PullRequest[] = [];
 const EMPTY_ISSUES: IssueListItem[] = [];

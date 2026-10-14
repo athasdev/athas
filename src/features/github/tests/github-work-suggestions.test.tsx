@@ -6,7 +6,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { createTestQueryClient } from "@/utils/tests/query-test-client";
 import type { IssueListItem } from "../types/github.types";
-import { selectGitHubWorkSuggestions } from "../utils/github-work-suggestions";
+import { selectGitHubWorkSuggestions } from "../services/github-work-suggestions";
 import { pullRequest } from "./github-view-fixtures";
 
 const mocks = vi.hoisted(() => ({

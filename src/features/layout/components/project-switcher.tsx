@@ -46,7 +46,7 @@ import {
   getClosedRemoteConnections,
   getProjectRemoteConnectionId,
 } from "@/features/layout/utils/project-switcher-items";
-import { ProjectGlyph } from "./sidebar/project-glyph";
+import { ProjectGlyph } from "@/features/workspace/project-icons/components/project-glyph";
 import {
   getProjectNameFromPath,
   isRemoteProjectPath,

@@ -228,6 +228,8 @@ export const featureBoundaries: FeatureBoundaryConfig = {
     github: {
       "components/github-actions-watcher.tsx": APP_SHELL,
       "components/github-auth-status.tsx": "GitHub sign-in state message reused by notifications.",
+      "components/github-work-suggestions.tsx":
+        "Recent pull requests and issues the AI new tab offers to start an agent on.",
     },
     keymaps: {
       "components/keybinding-row.tsx": "Keybinding table row the keyboard settings page renders.",
@@ -326,6 +328,8 @@ export const featureBoundaries: FeatureBoundaryConfig = {
         "Project icon the project switcher shows.",
       "project-icons/components/project-icon-picker.tsx":
         "Project icon picker opened from the project switcher.",
+      "project-icons/components/project-glyph.tsx":
+        "Project icon or folder glyph the project switcher and the agents sidebar show.",
     },
   },
   layers: {

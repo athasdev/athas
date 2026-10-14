@@ -34,7 +34,7 @@ import {
   useWorkspaceTabsStore,
   type ProjectTab,
 } from "@/features/workspace/stores/workspace-tabs.store";
-import { ProjectGlyph } from "@/features/layout/components/sidebar/project-glyph";
+import { ProjectGlyph } from "@/features/workspace/project-icons/components/project-glyph";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import {
   ContextMenu,
