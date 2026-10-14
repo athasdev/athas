@@ -16,8 +16,8 @@ import {
 } from "@/ui/icons";
 import { SidebarTabBar, SidebarTabPanels } from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
-import { useSessionPills } from "../hooks/use-session-pills";
 import { animateCard, type CardRect, takeCardOrigin } from "../services/card-motion";
+import { getSessionToolTabs } from "../services/session-boxes";
 import { getLatestSessionPlan } from "../services/session-plan";
 import {
   getSessionTerminalId,
@@ -35,7 +35,6 @@ const SessionTerminalView = lazy(() =>
   import("./session-terminal-view").then((module) => ({ default: module.SessionTerminalView })),
 );
 
-const TOOL_ORDER: SessionPanelTab[] = ["changes", "browser", "terminal", "plan"];
 const TOOLS: Record<SessionPanelTab, { label: string; icon: ReactNode }> = {
   changes: { label: "Changes", icon: <GitDiffIcon /> },
   browser: { label: "Browser", icon: <GlobeIcon /> },
@@ -48,23 +47,28 @@ interface SessionToolCardProps {
   agentBufferId: string;
   paneId: string | undefined;
   workingDirectory: string | undefined;
+  /** `split`: beside the conversation; `cover`: over it, in fullscreen or a narrow session. */
+  placement: "split" | "cover";
+  /** What the card's right edge meets: the rail of folded boxes, or the session's edge. */
+  beside: "rail" | "edge";
 }
 
 /**
- * A session tool expanded from its pill into a card over the right part of the session, or over
- * all of it in fullscreen. Native content (the browser page, the terminal) mounts only once the
- * card stops moving, since a native view can't follow a CSS animation.
+ * The tool a session box or the header opened, as a larger card beside the conversation, or over
+ * it in fullscreen. Native content (the browser page, the terminal) mounts only once the card
+ * stops moving, since a native view can't follow a CSS animation.
  */
 export function SessionToolCard({
   chatId,
   agentBufferId,
   paneId,
   workingDirectory,
+  placement,
+  beside,
 }: SessionToolCardProps) {
   const panel = useSessionPanel(chatId);
   const attention = useSessionPanelStore((state) => state.attention[chatId]);
   const actions = useSessionPanelStore.use.actions();
-  const pills = useSessionPills(chatId, true);
   const { context, messages } = useAgentSessionContext(chatId);
   const plan = messages ? getLatestSessionPlan(messages) : null;
   const tab: SessionPanelTab = panel.tab === "plan" && !plan ? "changes" : panel.tab;
@@ -101,7 +105,7 @@ export function SessionToolCard({
     };
   }, [panel.fullscreen]);
 
-  const collapse = async () => {
+  const close = async () => {
     if (closingRef.current) return;
     closingRef.current = true;
     setSettled(false);
@@ -131,17 +135,13 @@ export function SessionToolCard({
       });
       actions.detachTerminal(chatId);
     }
-    void collapse();
+    void close();
   };
 
-  const available = new Set<SessionPanelTab>([tab]);
-  for (const pill of pills) available.add(pill.tab);
-  for (const marked of Object.keys(attention ?? {})) available.add(marked as SessionPanelTab);
-  if (!plan) available.delete("plan");
   const canOpenInTab =
     (tab === "changes" && context.changes.length > 0) || tab === "browser" || tab === "terminal";
 
-  const items = TOOL_ORDER.filter((tool) => available.has(tool)).map((tool) => ({
+  const items = getSessionToolTabs(plan !== null).map((tool) => ({
     id: tool,
     ...TOOLS[tool],
     badge:
@@ -180,23 +180,27 @@ export function SessionToolCard({
   return (
     <Card
       ref={cardRef}
-      variant="elevated"
-      plane="overlay"
+      variant={placement === "cover" ? "elevated" : "default"}
+      plane={placement === "cover" ? "overlay" : "surface"}
       layout="flush"
       role="region"
       aria-label={`${TOOLS[tab].label}, session tools`}
       data-slot="session-tool-card"
+      data-placement={placement}
       data-fullscreen={panel.fullscreen || undefined}
       className={cn(
-        "absolute z-10030 origin-top-left",
-        panel.fullscreen
-          ? "inset-1.5"
-          : "top-pane-header right-2 bottom-2 w-[calc(var(--spacing-session-tool-card)-0.75rem)]",
+        "origin-top-left",
+        placement === "split"
+          ? "mt-0.5 mr-2 mb-2 w-[calc(var(--spacing-session-tool-card)-0.5rem)] shrink-0"
+          : [
+              "absolute top-0.5 bottom-2 left-2 z-30",
+              beside === "rail" ? "right-(--spacing-session-rail)" : "right-2",
+            ],
       )}
       onKeyDown={(event) => {
         if (event.key !== "Escape" || event.defaultPrevented) return;
         event.preventDefault();
-        void collapse();
+        void close();
       }}
     >
       <SidebarTabBar<SessionPanelTab>
@@ -237,7 +241,7 @@ export function SessionToolCard({
               iconOnly
               tooltip="Close"
               shortcut="escape"
-              onClick={() => void collapse()}
+              onClick={() => void close()}
             >
               <XIcon />
             </Button>

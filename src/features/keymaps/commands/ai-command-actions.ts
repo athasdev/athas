@@ -50,13 +50,18 @@ function getActiveAgentSessionId(): string | null {
   return null;
 }
 
-/** Expands or collapses the tool card of the agent session in front. */
+/** Opens or closes the tool panel of the agent session in front. */
 export function toggleActiveSessionPanel(): void {
   const chatId = getActiveAgentSessionId();
   if (chatId) useSessionPanelStore.getState().actions.toggle(chatId);
 }
 
-/** Expands the tool card of the agent session in front on `tab`, ready to use. */
+/** Shows or hides the boxes beside agent sessions: environment, context, changes and the rest. */
+export function toggleSessionDetails(): void {
+  useSessionPanelStore.getState().actions.toggleBoxesHidden();
+}
+
+/** Opens the tool panel of the agent session in front on `tab`, ready to use. */
 export function showActiveSessionPanelTab(tab: SessionPanelTab): void {
   const chatId = getActiveAgentSessionId();
   if (!chatId) return;

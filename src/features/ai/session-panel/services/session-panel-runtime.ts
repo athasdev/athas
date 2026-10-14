@@ -26,7 +26,7 @@ import { onSessionCommandOutput } from "./session-command-output";
 import { routeSessionLink } from "./session-links";
 
 const SCAN_DELAY_MS = 400;
-/** How often a server marked live is checked, so its pill goes once the process stops. */
+/** How often a server marked live is checked, so its Running row goes once the process stops. */
 const LIVENESS_INTERVAL_MS = 10_000;
 /** Recent messages hold the tool calls still running; older ones were scanned already. */
 const SCANNED_MESSAGES = 4;

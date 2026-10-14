@@ -30,8 +30,19 @@ function useOpenAgentPath() {
   );
 }
 
-/** The files a session changed, each opening its net diff, with a button to open the file. */
-export function AgentSessionChangeRows({ changes }: { changes: AgentSessionChange[] }) {
+/**
+ * The files a session changed, with a button to open the file. A row opens its net diff in an
+ * editor tab, or hands the change to `onSelect` when the host shows the diff itself.
+ */
+export function AgentSessionChangeRows({
+  changes,
+  selectedPath,
+  onSelect,
+}: {
+  changes: AgentSessionChange[];
+  selectedPath?: string | null;
+  onSelect?: (change: AgentSessionChange, origin: HTMLElement) => void;
+}) {
   const openPath = useOpenAgentPath();
 
   return changes.map((change) => {
@@ -61,7 +72,11 @@ export function AgentSessionChangeRows({ changes }: { changes: AgentSessionChang
             leading={<ThemedFileIcon fileName={fileName} isDir={false} />}
             description={directory || undefined}
             trailing={<DiffStats additions={change.additions} deletions={change.deletions} />}
-            onClick={() => openAgentSessionReview([change])}
+            active={change.path === selectedPath}
+            aria-current={change.path === selectedPath ? "true" : undefined}
+            onClick={(event) =>
+              onSelect ? onSelect(change, event.currentTarget) : openAgentSessionReview([change])
+            }
             data-path={change.path}
           >
             {fileName}

@@ -9,7 +9,8 @@ import { AgentWindowPlaceholder } from "@/features/ai/detached/agent-window-plac
 import { useAgentWindowStore } from "@/features/ai/detached/stores/agent-window.store";
 import { isAgentWindow } from "@/features/ai/detached/services/agent-window-service";
 import { AgentSessionLayout } from "../session-panel/components/agent-session-layout";
-import { SessionPanelHeaderActions } from "../session-panel/components/session-panel-header-actions";
+import { SessionAside } from "../session-panel/components/session-aside";
+import { SessionHeaderTools } from "../session-panel/components/session-header-tools";
 
 interface AgentTabProps {
   buffer: AgentContent;
@@ -55,8 +56,16 @@ export function AgentTab({ buffer, paneId, isActive = true }: AgentTabProps) {
       activeBuffer={activeBuffer}
       buffers={contextBuffers}
       isActiveSurface={isActive}
-      headerActions={
-        hasToolPanel ? <SessionPanelHeaderActions chatId={buffer.sessionId} /> : undefined
+      headerActions={hasToolPanel ? <SessionHeaderTools chatId={buffer.sessionId} /> : undefined}
+      aside={
+        hasToolPanel ? (
+          <SessionAside
+            chatId={buffer.sessionId}
+            agentBufferId={buffer.id}
+            paneId={paneId}
+            workingDirectory={workspacePath ?? undefined}
+          />
+        ) : undefined
       }
     />
   );
@@ -64,14 +73,7 @@ export function AgentTab({ buffer, paneId, isActive = true }: AgentTabProps) {
   return (
     <div className="size-full overflow-hidden">
       {hasToolPanel ? (
-        <AgentSessionLayout
-          chatId={buffer.sessionId}
-          agentBufferId={buffer.id}
-          paneId={paneId}
-          workingDirectory={workspacePath ?? undefined}
-        >
-          {chat}
-        </AgentSessionLayout>
+        <AgentSessionLayout chatId={buffer.sessionId}>{chat}</AgentSessionLayout>
       ) : (
         chat
       )}

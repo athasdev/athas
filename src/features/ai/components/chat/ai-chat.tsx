@@ -90,6 +90,7 @@ const AIChat = memo(function AIChat({
   selectedFiles = [],
   allProjectFiles = [],
   headerActions,
+  aside,
 }: AIChatProps) {
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const aiProviderId = useSettingsStore((state) => state.settings.aiProviderId);
@@ -833,67 +834,70 @@ const AIChat = memo(function AIChat({
           ) : null}
         </Empty>
       ) : (
-        <>
-          {useInitialComposer ? (
-            <AgentStartView>{composer}</AgentStartView>
-          ) : (
-            <MessageScrollerProvider autoScroll defaultScrollPosition="last-anchor">
-              <MessageScroller>
-                <MessageScrollerViewport fadeEdges>
-                  <ChatMessages
-                    surfaceId={surfaceId}
-                    chatId={effectiveChatId}
-                    onSendFollowUp={handleSendFollowUp}
-                    onEditUserMessage={handleEditUserMessage}
-                    onRetryStalledResponse={() => void retryLastTurn()}
-                    canEditUserMessages={
-                      getAgentMessageAccess(currentAgentId, hasSessionApiKey).accepted &&
-                      !isSurfaceTyping &&
-                      !surfaceStreamingMessageId &&
-                      !isAiChatBlockedByPolicy
-                    }
-                    acpEvents={timelineEvents}
-                    searchQuery={messageSearchQuery}
-                    activeSearchMessageId={activeMessageSearchMatch?.messageId ?? null}
-                    activeSearchIndex={activeMessageSearchIndex}
-                  />
-                </MessageScrollerViewport>
-                <MessageScrollerButton />
-              </MessageScroller>
-            </MessageScrollerProvider>
-          )}
+        <div className="relative flex min-h-0 flex-1">
+          <div className="@container/chat flex min-w-0 flex-1 flex-col">
+            {useInitialComposer ? (
+              <AgentStartView>{composer}</AgentStartView>
+            ) : (
+              <MessageScrollerProvider autoScroll defaultScrollPosition="last-anchor">
+                <MessageScroller>
+                  <MessageScrollerViewport fadeEdges>
+                    <ChatMessages
+                      surfaceId={surfaceId}
+                      chatId={effectiveChatId}
+                      onSendFollowUp={handleSendFollowUp}
+                      onEditUserMessage={handleEditUserMessage}
+                      onRetryStalledResponse={() => void retryLastTurn()}
+                      canEditUserMessages={
+                        getAgentMessageAccess(currentAgentId, hasSessionApiKey).accepted &&
+                        !isSurfaceTyping &&
+                        !surfaceStreamingMessageId &&
+                        !isAiChatBlockedByPolicy
+                      }
+                      acpEvents={timelineEvents}
+                      searchQuery={messageSearchQuery}
+                      activeSearchMessageId={activeMessageSearchMatch?.messageId ?? null}
+                      activeSearchIndex={activeMessageSearchIndex}
+                    />
+                  </MessageScrollerViewport>
+                  <MessageScrollerButton />
+                </MessageScroller>
+              </MessageScrollerProvider>
+            )}
 
-          {currentPermission ? (
-            <AcpPermissionPrompt
-              permission={currentPermission}
-              queuedCount={permissionQueue.length - 1}
-              onRespond={handlePermission}
-            />
-          ) : null}
+            {currentPermission ? (
+              <AcpPermissionPrompt
+                permission={currentPermission}
+                queuedCount={permissionQueue.length - 1}
+                onRespond={handlePermission}
+              />
+            ) : null}
 
-          {currentQuestion?.request.mode === "url" ? (
-            <AcpUrlQuestionPrompt
-              key={currentQuestion.requestId}
-              request={currentQuestion.request}
-              agentLabel={assistantLabel}
-              queuedCount={agentQuestions.length - 1}
-              waiting={currentQuestion.waiting ?? false}
-              onAnswer={handleQuestionAnswer}
-              onDismiss={() => questionActions.remove(currentQuestion.requestId)}
-            />
-          ) : currentQuestion ? (
-            <AcpQuestionPrompt
-              key={currentQuestion.requestId}
-              requestId={currentQuestion.requestId}
-              request={currentQuestion.request}
-              agentLabel={assistantLabel}
-              queuedCount={agentQuestions.length - 1}
-              onAnswer={handleQuestionAnswer}
-            />
-          ) : null}
+            {currentQuestion?.request.mode === "url" ? (
+              <AcpUrlQuestionPrompt
+                key={currentQuestion.requestId}
+                request={currentQuestion.request}
+                agentLabel={assistantLabel}
+                queuedCount={agentQuestions.length - 1}
+                waiting={currentQuestion.waiting ?? false}
+                onAnswer={handleQuestionAnswer}
+                onDismiss={() => questionActions.remove(currentQuestion.requestId)}
+              />
+            ) : currentQuestion ? (
+              <AcpQuestionPrompt
+                key={currentQuestion.requestId}
+                requestId={currentQuestion.requestId}
+                request={currentQuestion.request}
+                agentLabel={assistantLabel}
+                queuedCount={agentQuestions.length - 1}
+                onAnswer={handleQuestionAnswer}
+              />
+            ) : null}
 
-          {!useInitialComposer ? composer : null}
-        </>
+            {!useInitialComposer ? composer : null}
+          </div>
+          {aside}
+        </div>
       )}
     </div>
   );

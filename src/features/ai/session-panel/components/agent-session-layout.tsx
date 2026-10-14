@@ -1,81 +1,61 @@
-import { type ReactNode, useEffect, useRef, useState } from "react";
-import { cn } from "@/utils/cn";
-import { canFloatSessionPills } from "../services/session-pills";
-import { useSessionPanel } from "../stores/session-panel.store";
-import { SessionPillsPlacementContext, SessionSignalPills } from "./session-signal-pills";
-import { SessionToolCard } from "./session-tool-card";
+import { type ReactNode, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { getSessionAsideLayout } from "../services/session-boxes";
+import { useSessionPanel, useSessionPanelStore } from "../stores/session-panel.store";
+import { SessionAsideLayoutContext } from "./session-aside";
 
-interface AgentSessionLayoutProps {
-  chatId: string;
-  agentBufferId: string;
-  paneId: string | undefined;
-  workingDirectory: string | undefined;
-  children: ReactNode;
-}
-
-function useCanFloatPills() {
+function useWidth() {
   const ref = useRef<HTMLDivElement>(null);
-  const [canFloat, setCanFloat] = useState(false);
+  const [size, setSize] = useState({ width: 0, remPx: 16 });
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const element = ref.current;
-    if (!element || typeof ResizeObserver === "undefined") return;
+    if (!element) return;
     const measure = () => {
       const remPx = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
-      setCanFloat(canFloatSessionPills(element.clientWidth, remPx));
+      const width = element.clientWidth;
+      setSize((current) =>
+        current.width === width && current.remPx === remPx ? current : { width, remPx },
+      );
     };
+    measure();
+    if (typeof ResizeObserver === "undefined") return;
     const observer = new ResizeObserver(measure);
     observer.observe(element);
-    measure();
     return () => observer.disconnect();
   }, []);
 
-  return [ref, canFloat] as const;
+  return [ref, size] as const;
 }
 
 /**
- * An agent session with its tools: pills on its right edge while they are collapsed, and the
- * card a pill grows into, which keeps the conversation readable beside it.
+ * An agent session, measured so its boxes and open tool fit beside the conversation: a column of
+ * boxes when there is room, a rail of their icons when there is not or a tool needs the room.
  */
-export function AgentSessionLayout({
-  chatId,
-  agentBufferId,
-  paneId,
-  workingDirectory,
-  children,
-}: AgentSessionLayoutProps) {
+export function AgentSessionLayout({ chatId, children }: { chatId: string; children: ReactNode }) {
   const panel = useSessionPanel(chatId);
-  const [containerRef, canFloat] = useCanFloatPills();
-  const placement = canFloat ? "floating" : "header";
+  const boxesHidden = useSessionPanelStore((state) => state.boxesHidden);
+  const [ref, { width, remPx }] = useWidth();
+  const layout = getSessionAsideLayout({
+    width,
+    remPx,
+    toolOpen: panel.open,
+    fullscreen: panel.fullscreen,
+    boxesHidden,
+  });
+  const { boxes, tool } = layout;
+  const value = useMemo(() => ({ boxes, tool }), [boxes, tool]);
 
   return (
     <div
-      ref={containerRef}
+      ref={ref}
       data-agent-session-chat={chatId}
+      data-session-boxes={boxes}
+      data-session-tool={tool}
       className="relative size-full min-h-0 overflow-hidden"
     >
-      <div
-        className={cn(
-          "flex size-full min-h-0 min-w-0 flex-col overflow-hidden transition-[padding] duration-normal ease-smooth motion-reduce:transition-none",
-          panel.open && !panel.fullscreen && "pr-session-tool-card",
-        )}
-      >
-        <SessionPillsPlacementContext.Provider value={placement}>
-          {children}
-        </SessionPillsPlacementContext.Provider>
-      </div>
-      {placement === "floating" ? (
-        <SessionSignalPills chatId={chatId} placement="floating" />
-      ) : null}
-      {panel.open ? (
-        <SessionToolCard
-          key={chatId}
-          chatId={chatId}
-          agentBufferId={agentBufferId}
-          paneId={paneId}
-          workingDirectory={workingDirectory}
-        />
-      ) : null}
+      <SessionAsideLayoutContext.Provider value={value}>
+        {children}
+      </SessionAsideLayoutContext.Provider>
     </div>
   );
 }

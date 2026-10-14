@@ -1,12 +1,21 @@
 export type SessionPanelTab = "changes" | "browser" | "terminal" | "plan";
 
-/** The tool card of one agent session, as the session left it. */
+/** The boxes beside an agent session, in the order they stack. */
+export type SessionBoxId =
+  | "environment"
+  | "context"
+  | "changes"
+  | "running"
+  | "plan"
+  | "connectors";
+
+/** The tool panel of one agent session, as the session left it. */
 export interface SessionPanelState {
-  /** The card is expanded from its pill; collapsed, only the pills show. */
+  /** A tool is open beside the conversation; closed, the session shows its boxes. */
   open: boolean;
-  /** The tool the card shows, and opens on next time. */
+  /** The tool the panel shows, and opens on next time. */
   tab: SessionPanelTab;
-  /** The card fills the whole session instead of its right part. */
+  /** The tool covers the conversation instead of sitting beside it. */
   fullscreen: boolean;
   /** The address the panel's browser shows; empty until something opens a page. */
   browserUrl: string;

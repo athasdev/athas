@@ -171,6 +171,7 @@ export const commandPaletteOrder: CommandPaletteSlot[] = [
   "ai.openAgentInNewWindow",
   "ai.showAgentSessions",
   "ai.toggleSessionPanel",
+  "ai.toggleSessionDetails",
   "ai.showSessionChanges",
   "ai.showSessionBrowser",
   "ai.showSessionTerminal",

@@ -7,7 +7,7 @@ export interface CardRect {
 
 const origins = new Map<string, CardRect>();
 
-/** Remembers the pill a session's card grows from, until the card reads it. */
+/** Remembers the box row a session's tool card grows from, until the card reads it. */
 export function setCardOrigin(chatId: string, rect: CardRect) {
   origins.set(chatId, rect);
 }
@@ -20,7 +20,7 @@ export function takeCardOrigin(chatId: string): CardRect | null {
 
 /**
  * The transform that draws an element laid out at `to` where `from` is, with its origin at the
- * top left: the first frame of a grow from a pill, or the last frame of a collapse into one.
+ * top left: the first frame of a grow from a box row, or the last frame of a collapse into one.
  */
 export function getFlipTransform(from: CardRect, to: CardRect): string {
   const scaleX = to.width > 0 ? from.width / to.width : 1;

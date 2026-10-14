@@ -61,6 +61,8 @@ async function render() {
           agentBufferId="agent-buffer"
           paneId="pane"
           workingDirectory="/p"
+          placement="split"
+          beside="rail"
         />
       ) : null,
     ),
@@ -95,7 +97,7 @@ afterEach(() => {
 });
 
 describe("session tool card", () => {
-  it("shows the tool once it settles and switches only between tools with signals", async () => {
+  it("shows the tool once it settles and switches between its tools", async () => {
     useSessionPanelStore.getState().actions.open("chat-1", "browser");
     await render();
     expect(card()).not.toBeNull();
@@ -103,7 +105,7 @@ describe("session tool card", () => {
     const tabs = Array.from(container.querySelectorAll("[role=tab]")).map((tab) =>
       tab.getAttribute("aria-label"),
     );
-    expect(tabs).toEqual(["Changes", "Browser"]);
+    expect(tabs).toEqual(["Changes", "Browser", "Terminal"]);
   });
 
   it("goes fullscreen and back, remembering it for the session", async () => {
@@ -116,7 +118,7 @@ describe("session tool card", () => {
     expect(panel().fullscreen).toBe(false);
   });
 
-  it("collapses back to its pill on Close and on Escape", async () => {
+  it("closes back to the boxes on Close and on Escape", async () => {
     useSessionPanelStore.getState().actions.open("chat-1", "changes");
     await render();
     await click(button("Close"));

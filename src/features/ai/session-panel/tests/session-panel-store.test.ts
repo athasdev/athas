@@ -21,6 +21,9 @@ describe("session panel store", () => {
       liveServers: {},
       attention: {},
       focusRequests: {},
+      selectedChanges: {},
+      collapsedBoxes: {},
+      boxesHidden: false,
     });
   });
 
@@ -69,6 +72,46 @@ describe("session panel store", () => {
     const stored = JSON.parse(localStorage.getItem("athas-agent-session-panels-v1") ?? "{}");
     expect(stored.state.panels.a).toMatchObject({ open: true, tab: "terminal" });
     expect(stored.state.servers).toBeUndefined();
+  });
+
+  it("remembers folded boxes and hidden details for every session across restarts", async () => {
+    actions().toggleBoxCollapsed("environment");
+    actions().toggleBoxCollapsed("plan");
+    actions().toggleBoxCollapsed("plan");
+    actions().toggleBoxesHidden();
+    const saved = localStorage.getItem("athas-agent-session-panels-v1") ?? "{}";
+    const stored = JSON.parse(saved);
+    expect(stored.state.collapsedBoxes).toEqual({ environment: true });
+    expect(stored.state.boxesHidden).toBe(true);
+
+    useSessionPanelStore.setState({ collapsedBoxes: {}, boxesHidden: false });
+    localStorage.setItem("athas-agent-session-panels-v1", saved);
+    await useSessionPanelStore.persist.rehydrate();
+    expect(useSessionPanelStore.getState().collapsedBoxes).toEqual({ environment: true });
+    expect(useSessionPanelStore.getState().boxesHidden).toBe(true);
+  });
+
+  it("reads panels saved before boxes existed", async () => {
+    localStorage.setItem(
+      "athas-agent-session-panels-v1",
+      JSON.stringify({ state: { panels: { old: { open: false, tab: "plan" } } }, version: 1 }),
+    );
+    await useSessionPanelStore.persist.rehydrate();
+    expect(panel("old")).toMatchObject({ open: false, tab: "plan" });
+    expect(useSessionPanelStore.getState().collapsedBoxes).toEqual({});
+    expect(useSessionPanelStore.getState().boxesHidden).toBe(false);
+  });
+
+  it("keeps the picked change per session and out of storage", () => {
+    actions().selectChange("a", "/p/a.ts");
+    actions().selectChange("b", "/p/b.ts");
+    expect(useSessionPanelStore.getState().selectedChanges).toEqual({
+      a: "/p/a.ts",
+      b: "/p/b.ts",
+    });
+    actions().open("a");
+    const stored = JSON.parse(localStorage.getItem("athas-agent-session-panels-v1") ?? "{}");
+    expect(stored.state.selectedChanges).toBeUndefined();
   });
 
   it("clears a tab's mark when the user looks at it", () => {

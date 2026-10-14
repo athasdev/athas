@@ -2,7 +2,11 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { skipUnchangedPersistWrites } from "@/features/ai/stores/ai-chat/ai-chat-persist-storage";
-import type { SessionPanelState, SessionPanelTab } from "../types/session-panel.types";
+import type {
+  SessionBoxId,
+  SessionPanelState,
+  SessionPanelTab,
+} from "../types/session-panel.types";
 
 /** Sessions whose panel state is kept across restarts, most recently used first. */
 const MAX_REMEMBERED_PANELS = 200;
@@ -24,9 +28,9 @@ function isBlankAddress(url: string) {
 
 /**
  * What a dev server becoming reachable changes in a session's tools. The browser opens itself
- * once per session: a collapsed session expands its card on Browser at the server, an expanded
- * card keeps the tool the user chose and only marks Browser, and a page the user is reading is
- * never replaced.
+ * once per session: a session showing its boxes opens its tool panel on Browser at the server, an
+ * open panel keeps the tool the user chose and only marks Browser, and a page the user is reading
+ * is never replaced.
  */
 export function planDevServerOpen(
   panel: SessionPanelState,
@@ -79,6 +83,12 @@ interface SessionPanelStoreState {
   attention: Record<string, Partial<Record<SessionPanelTab, true>>>;
   /** A tab the user asked to use, so its view takes keyboard focus once when it shows. */
   focusRequests: Record<string, SessionPanelTab>;
+  /** The changed file each session's Changes tool shows the diff of. */
+  selectedChanges: Record<string, string>;
+  /** Boxes the user folded to their header, the same in every session. */
+  collapsedBoxes: Partial<Record<SessionBoxId, true>>;
+  /** The user put the boxes away; tools still open beside the conversation. */
+  boxesHidden: boolean;
   actions: {
     toggle: (chatId: string) => void;
     open: (chatId: string, tab?: SessionPanelTab) => void;
@@ -98,10 +108,16 @@ interface SessionPanelStoreState {
     consumeFocus: (chatId: string, tab: SessionPanelTab) => boolean;
     /** Applies {@link planDevServerOpen}; returns whether the panel changed. */
     openForDevServer: (chatId: string, url: string) => boolean;
+    selectChange: (chatId: string, path: string) => void;
+    toggleBoxCollapsed: (box: SessionBoxId) => void;
+    toggleBoxesHidden: () => void;
   };
 }
 
-type PersistedSessionPanels = Pick<SessionPanelStoreState, "panels">;
+type PersistedSessionPanels = Pick<
+  SessionPanelStoreState,
+  "panels" | "collapsedBoxes" | "boxesHidden"
+>;
 
 function rememberRecent(panels: Record<string, SessionPanelState>) {
   const entries = Object.entries(panels);
@@ -145,6 +161,9 @@ const useSessionPanelStoreBase = create<SessionPanelStoreState>()(
         liveServers: {},
         attention: {},
         focusRequests: {},
+        selectedChanges: {},
+        collapsedBoxes: {},
+        boxesHidden: false,
         actions: {
           toggle: (chatId) => {
             const panel = selectSessionPanel(get(), chatId);
@@ -227,24 +246,49 @@ const useSessionPanelStoreBase = create<SessionPanelStoreState>()(
             if (plan.attention) get().actions.markAttention(chatId, plan.attention);
             return true;
           },
+          selectChange: (chatId, path) =>
+            set((state) =>
+              state.selectedChanges[chatId] === path
+                ? state
+                : { selectedChanges: { ...state.selectedChanges, [chatId]: path } },
+            ),
+          toggleBoxCollapsed: (box) =>
+            set((state) => {
+              const collapsedBoxes = { ...state.collapsedBoxes };
+              if (collapsedBoxes[box]) delete collapsedBoxes[box];
+              else collapsedBoxes[box] = true;
+              return { collapsedBoxes };
+            }),
+          toggleBoxesHidden: () => set((state) => ({ boxesHidden: !state.boxesHidden })),
         },
       };
     },
     {
       name: "athas-agent-session-panels-v1",
-      version: 1,
+      version: 2,
       storage: skipUnchangedPersistWrites(
         createJSONStorage<PersistedSessionPanels>(() => localStorage),
       ),
-      partialize: (state): PersistedSessionPanels => ({ panels: rememberRecent(state.panels) }),
-      merge: (persistedState, currentState) => ({
-        ...currentState,
-        panels: Object.fromEntries(
-          Object.entries((persistedState as PersistedSessionPanels | undefined)?.panels ?? {}).map(
-            ([chatId, panel]) => [chatId, { ...DEFAULT_SESSION_PANEL, ...panel }],
-          ),
-        ),
+      migrate: (persistedState) => persistedState as PersistedSessionPanels,
+      partialize: (state): PersistedSessionPanels => ({
+        panels: rememberRecent(state.panels),
+        collapsedBoxes: state.collapsedBoxes,
+        boxesHidden: state.boxesHidden,
       }),
+      merge: (persistedState, currentState) => {
+        const persisted = persistedState as Partial<PersistedSessionPanels> | undefined;
+        return {
+          ...currentState,
+          panels: Object.fromEntries(
+            Object.entries(persisted?.panels ?? {}).map(([chatId, panel]) => [
+              chatId,
+              { ...DEFAULT_SESSION_PANEL, ...panel },
+            ]),
+          ),
+          collapsedBoxes: persisted?.collapsedBoxes ?? {},
+          boxesHidden: persisted?.boxesHidden ?? false,
+        };
+      },
     },
   ),
 );

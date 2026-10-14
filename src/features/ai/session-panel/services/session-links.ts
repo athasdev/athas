@@ -27,7 +27,7 @@ export function isSessionServerUrl(url: string): boolean {
   });
 }
 
-/** Expands the session's card on its browser at `url`. */
+/** Opens the session's tool panel on its browser at `url`. */
 export function openInSessionBrowser(chatId: string, url: string) {
   const { setBrowserPage, open } = useSessionPanelStore.getState().actions;
   setBrowserPage(chatId, { url });

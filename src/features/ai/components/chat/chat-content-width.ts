@@ -1,3 +1,7 @@
 import { cva } from "class-variance-authority";
 
-export const chatContentWidth = cva("mx-auto w-[calc(100%-1rem)] max-w-4xl");
+/**
+ * The column the transcript, prompts and composer share: centred at a reading width, with side
+ * padding that grows with the room the chat has (`@container/chat` in `ai-chat.tsx`).
+ */
+export const chatContentWidth = cva("mx-auto w-full max-w-4xl px-3 @lg/chat:px-5 @3xl/chat:px-8");

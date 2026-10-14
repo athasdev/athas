@@ -482,13 +482,23 @@ const sidebarListItemVariants = cva(
     variants: {
       tone: {
         default:
-          "text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground data-[active=true]:bg-selected data-[active=true]:text-foreground",
+          "text-muted-foreground data-[active=true]:bg-selected data-[active=true]:text-foreground",
         warning: "bg-warning-soft text-warning hover:text-warning focus-visible:text-warning",
         error:
           "bg-destructive-soft text-destructive hover:text-destructive focus-visible:text-destructive",
       },
+      /** `false` for a row that only reads out a value, so it does not light up as if clickable. */
+      interactive: { true: "", false: "" },
     },
-    defaultVariants: { tone: "default" },
+    compoundVariants: [
+      {
+        tone: "default",
+        interactive: true,
+        className:
+          "hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground",
+      },
+    ],
+    defaultVariants: { tone: "default", interactive: true },
   },
 );
 
@@ -692,6 +702,7 @@ export function SidebarListItem({
   trailing,
   tone = "default",
   as = "button",
+  interactive = true,
   ref,
   ...props
 }: Omit<ComponentProps<"button">, "className" | "style"> & {
@@ -703,6 +714,8 @@ export function SidebarListItem({
   trailing?: ReactNode;
   tone?: "default" | "warning" | "error";
   as?: "button" | "div";
+  /** Set to `false` with `as="div"` for a row that shows a value and does nothing on click. */
+  interactive?: boolean;
 }) {
   return useRender({
     defaultTagName: as,
@@ -712,7 +725,7 @@ export function SidebarListItem({
       type: as === "button" ? (props.type ?? "button") : undefined,
       className: cn(
         sidebarListRowVariants({ density, multiline: Boolean(description) }),
-        sidebarListItemVariants({ tone }),
+        sidebarListItemVariants({ tone, interactive }),
       ),
       style: undefined,
       "data-slot": "sidebar-list-item",
