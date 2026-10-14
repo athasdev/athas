@@ -12,6 +12,7 @@ import { getModelIconId, pickRecommendedModels } from "@/features/ai/lib/model-v
 import { classifySessionConfigOption } from "@/features/ai/lib/session-config-option-classifier";
 import type { SessionConfigOption, SessionConfigValue } from "@/features/ai/types/acp.types";
 import type { AgentType } from "@/features/ai/types/ai-chat.types";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { Button } from "@/ui/button";
 import {
@@ -19,6 +20,7 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
@@ -130,6 +132,7 @@ export function ComposerAgentSelector({
         currentAgent?.name ||
         currentAgentId;
   const configuredProviders = useConnectedModelProviders([providerId]);
+  const isSignedIn = useAuthStore((state) => state.subscription !== null);
   const agents = options.filter(
     (option) => option.id !== "custom" && (option.isInstalled || option.isCurrent),
   );
@@ -184,7 +187,13 @@ export function ComposerAgentSelector({
                 >
                   <ProviderIcon providerId="athas" />
                   <span className="min-w-0 flex-1 truncate">Athas</span>
+                  <span className="shrink-0 text-subtle-foreground ui-text-caption">
+                    {isSignedIn ? "Athas credit" : "Sign in"}
+                  </span>
                 </DropdownMenuRadioItem>
+                {configuredProviders.length > 0 ? (
+                  <DropdownMenuLabel>Your API keys</DropdownMenuLabel>
+                ) : null}
                 {configuredProviders.map((provider) =>
                   provider.id === currentProvider ? (
                     <DropdownMenuRadioItem

@@ -208,8 +208,8 @@ describe("composer model selector", () => {
     await render();
     await open();
     const providers = await openSubmenu("Provider");
-    expect(names(rowsOf(providers))).toEqual(["Athas", "OpenAI", "Codex", "Gemini CLI"]);
-    expect(labelsOf(providers)).toEqual(["Agents"]);
+    expect(names(rowsOf(providers))).toEqual(["AthasSign in", "OpenAI", "Codex", "Gemini CLI"]);
+    expect(labelsOf(providers)).toEqual(["Your API keys", "Agents"]);
     expect(rowsOf(providers)[0].getAttribute("aria-checked")).toBe("true");
     expect(state.loadModels).not.toHaveBeenCalledWith("anthropic");
   });

@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import AIChatInputBar from "@/features/ai/components/input/chat-input-bar";
 import { useComposerContextSelection } from "@/features/ai/hooks/use-composer-context-selection";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
@@ -8,6 +8,10 @@ import { useFileSystemStore } from "@/features/file-system/stores/file-system.st
 import type { FileEntry } from "@/features/file-system/types/app.types";
 import type { ImageContent } from "@/features/ai/types/ai-chat.types";
 import { getAgentMessageAccess } from "@/features/ai/lib/agent-message-access";
+import { getAgentAccessMessage } from "@/features/ai/services/agent-turn-runner";
+import { getProviderAccessFromMap } from "@/features/ai/stores/ai-chat/provider-actions";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useToast } from "@/utils/toast";
 import { launchAgentInProject } from "@/features/ai/services/agent-project-navigation";
 
@@ -34,15 +38,29 @@ export function AgentLaunchInput({
   const setSelectedAgentId = useAIChatStore((state) => state.actions.setSelectedAgentId);
   const composerContext = useComposerContextSelection();
   const { showToast } = useToast();
+  const providerId = useSettingsStore((state) => state.settings.aiProviderId);
+  const subscription = useAuthStore((state) => state.subscription);
+  const checkApiKey = useAIChatStore((state) => state.actions.checkApiKey);
+
+  useEffect(() => {
+    if (selectedAgentId === "custom") void checkApiKey(providerId);
+  }, [selectedAgentId, providerId, subscription, checkApiKey]);
   const { selectedBufferIds, selectedFilesPaths } = composerContext.inputProps;
 
   const submit = useCallback(
     (prompt: string, images?: ImageContent[]) => {
       const nextPrompt = prompt.trim();
       if (!nextPrompt && !images?.length) return { accepted: false };
-      const access = getAgentMessageAccess(selectedAgentId, useAIChatStore.getState().hasApiKey);
+      const access = getAgentMessageAccess(
+        selectedAgentId,
+        getProviderAccessFromMap(providerId, useAIChatStore.getState().providerApiKeys),
+        providerId,
+      );
       if (!access.accepted) {
-        showToast({ message: access.error ?? "This agent is not ready.", type: "error" });
+        showToast({
+          message: getAgentAccessMessage(selectedAgentId, providerId, access.error),
+          type: "error",
+        });
         return access;
       }
 
@@ -64,6 +82,7 @@ export function AgentLaunchInput({
       selectedFilesPaths,
       composerContext.inputProps.selectedEditorContexts,
       showToast,
+      providerId,
       targetProjectId,
     ],
   );

@@ -143,17 +143,20 @@ describe("starting a turn", () => {
     await runAgentTurn({ content: "Hello" }, host);
 
     expect(host.showError).toHaveBeenCalledWith(
-      "Configure an API key before sending a message with the custom provider.",
+      "Add your OpenAI API key in Settings to use OpenAI models.",
     );
     expect(messages(chatId)).toEqual([]);
     expect(mocks.stream).not.toHaveBeenCalled();
   });
 
-  it("explains hosted access for the Athas provider", () => {
+  it("asks to sign in for Athas models and for a key for the user's own providers", () => {
     expect(getAgentAccessMessage("custom", "athas", "x")).toBe(
-      "Sign in and add Athas Agent balance to use hosted models.",
+      "Sign in to Athas to use Athas models.",
     );
-    expect(getAgentAccessMessage("custom", "openai", undefined)).toBe("This agent is not ready.");
+    expect(getAgentAccessMessage("custom", "openai", undefined)).toBe(
+      "Add your OpenAI API key in Settings to use OpenAI models.",
+    );
+    expect(getAgentAccessMessage("opencode", "athas", undefined)).toBe("This agent is not ready.");
   });
 
   it("ignores empty prompts and edits of unknown messages", async () => {

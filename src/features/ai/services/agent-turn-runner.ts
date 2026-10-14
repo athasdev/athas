@@ -1,5 +1,8 @@
 import type { MutableRefObject } from "react";
-import { getAgentMessageAccess } from "@/features/ai/lib/agent-message-access";
+import {
+  getAgentMessageAccess,
+  getProviderAccessError,
+} from "@/features/ai/lib/agent-message-access";
 import { getAgentStopNotice } from "@/features/ai/lib/agent-stop-notice";
 import { type AgentRunEnding, getAgentRunEnding } from "@/features/ai/lib/agent-message-queue";
 import {
@@ -113,8 +116,8 @@ export function getAgentAccessMessage(
   providerId: string,
   accessError: string | undefined,
 ): string {
-  return agentId === "custom" && providerId === "athas"
-    ? "Sign in and add Athas Agent balance to use hosted models."
+  return agentId === "custom"
+    ? getProviderAccessError(providerId)
     : (accessError ?? "This agent is not ready.");
 }
 
