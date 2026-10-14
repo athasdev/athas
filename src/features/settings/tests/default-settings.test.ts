@@ -60,7 +60,7 @@ describe("default settings", () => {
     expect(settings.pinnedSidebarExtensionItems).toEqual([]);
     expect(settings.hiddenGitSidebarItems).toEqual([]);
     expect(settings.sidebarWidth).toBe(220);
-    expect(settings.rightSidebarWidth).toBe(220);
+    expect(settings).not.toHaveProperty("rightSidebarWidth");
   });
 
   it("preserves established file-tree behavior", () => {

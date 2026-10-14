@@ -48,3 +48,34 @@ export async function openExternalBrowserUrl(value: string | URL): Promise<boole
   await openUrl(url);
   return true;
 }
+
+/**
+ * Decides where a web link opens instead of the system browser, such as the built-in browser
+ * beside an agent session. `origin` is the element the link was clicked in. Returns false to leave
+ * the link to the system browser.
+ */
+export type WebLinkRouter = (url: string, origin: Element | null) => boolean;
+
+let webLinkRouter: WebLinkRouter | null = null;
+
+/** Installs the router web links go through; returns a function that removes it. */
+export function setWebLinkRouter(router: WebLinkRouter): () => void {
+  webLinkRouter = router;
+  return () => {
+    if (webLinkRouter === router) webLinkRouter = null;
+  };
+}
+
+/**
+ * Opens a link the user clicked: an http(s) link goes through the installed router first, so it
+ * can open inside Athas; anything it leaves, and other schemes, open in the system browser.
+ */
+export async function openWebLink(
+  value: string | URL,
+  origin: Element | null = null,
+): Promise<boolean> {
+  const url = resolveExternalBrowserUrl(value);
+  if (!url) return false;
+  if (/^https?:/i.test(url) && webLinkRouter?.(url, origin)) return true;
+  return openExternalBrowserUrl(url);
+}

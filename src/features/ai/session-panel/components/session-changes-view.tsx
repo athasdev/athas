@@ -1,5 +1,5 @@
 import { DiffStats } from "@/features/ai/components/diff-stats";
-import { AgentSessionChangeRows } from "@/features/ai/components/panel/agent-context-sidebar";
+import { AgentSessionChangeRows } from "./session-change-rows";
 import { useAgentSessionContext } from "@/features/ai/hooks/use-agent-session-context";
 import { openAgentSessionReview } from "@/features/ai/lib/agent-session-context";
 import { keepAllAgentEdits, rejectAllAgentEdits } from "@/features/ai/services/agent-edits-service";

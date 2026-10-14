@@ -49,7 +49,11 @@ export function AgentSessionLayout({
   const placement = canFloat ? "floating" : "header";
 
   return (
-    <div ref={containerRef} className="relative size-full min-h-0 overflow-hidden">
+    <div
+      ref={containerRef}
+      data-agent-session-chat={chatId}
+      className="relative size-full min-h-0 overflow-hidden"
+    >
       <div
         className={cn(
           "flex size-full min-h-0 min-w-0 flex-col overflow-hidden transition-[padding] duration-normal ease-smooth motion-reduce:transition-none",

@@ -3,10 +3,15 @@ import { useAcpTerminalsStore } from "@/features/ai/stores/acp-terminals.store";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { Message, ToolCall } from "@/features/ai/types/ai-chat.types";
 import { useHostedBrowserRunsStore } from "@/features/browser-use/stores/hosted-browser-runs.store";
-import { detectLocalPorts } from "@/features/previews/services/detect-local-ports";
+import {
+  COMMON_DEV_PORTS,
+  detectLocalPorts,
+} from "@/features/previews/services/detect-local-ports";
+import { isLongRunningCommand, unwrapShellCommand } from "@/features/ai/lib/shell-command";
 import { previewsStoreDependencies } from "@/features/previews/stores/previews.store";
 import { subscribeToTerminalEvents } from "@/features/terminal/services/terminal-protocol";
 import { onAppEvent } from "@/utils/app-events";
+import { setWebLinkRouter } from "@/utils/external-navigation";
 import {
   getSessionBrowserPageId,
   getSessionTerminalChatId,
@@ -17,13 +22,38 @@ import {
 import type { SessionPanelTab } from "../types/session-panel.types";
 import { createDevServerAutoOpener, createTypingTracker } from "./dev-server-auto-open";
 import { collectText, extractLocalServerUrls, getLocalServerPort } from "./dev-server-urls";
+import { onSessionCommandOutput } from "./session-command-output";
+import { routeSessionLink } from "./session-links";
 
 const SCAN_DELAY_MS = 400;
+/** How often a server marked live is checked, so its pill goes once the process stops. */
+const LIVENESS_INTERVAL_MS = 10_000;
 /** Recent messages hold the tool calls still running; older ones were scanned already. */
 const SCANNED_MESSAGES = 4;
 /** Text kept from the previous output chunk, so an address split across chunks is still found. */
 const CHUNK_OVERLAP = 256;
 const COMMAND_TOOL = /bash|shell|terminal|command|process|exec|output/i;
+/** Waits before looking for the port of a dev server that printed no address; it may be starting. */
+const PORT_PROBE_DELAYS_MS = [1500, 3000, 6000, 12_000];
+
+/** The port a command names, such as `--port 3000`, `-p 3000` or `PORT=3000`. */
+export function getCommandPort(command: string): number | null {
+  const match =
+    /(?:--port[=\s]+|(?:^|\s)-p\s+|\bPORT=)(\d{2,5})\b/.exec(command) ??
+    /localhost:(\d{2,5})\b/.exec(command);
+  const port = match ? Number(match[1]) : null;
+  return port !== null && port > 0 && port <= 65535 ? port : null;
+}
+
+function commandText(toolCall: ToolCall): string | null {
+  const input = toolCall.input as Record<string, unknown> | null | undefined;
+  const raw = input?.command ?? input?.cmd;
+  if (typeof raw === "string") return unwrapShellCommand(raw);
+  if (Array.isArray(raw) && raw.every((part) => typeof part === "string")) {
+    return unwrapShellCommand(raw as string[]);
+  }
+  return null;
+}
 
 function toTime(value: Date | number | string | undefined): number {
   if (value instanceof Date) return value.getTime();
@@ -45,21 +75,23 @@ function isPanelShowing(chatId: string, tab: SessionPanelTab) {
 /**
  * Follows every agent session for what its panel should react to: a dev server its commands
  * started (the Browser opens once per session), a failed command in its terminal (the Terminal
- * tab is marked) or run by the agent (the Activity tab is marked), and an agent using the hosted
- * browser (the Browser tab is marked). It reads the session stores instead of the views, so a
- * session reacts while it is not on screen.
+ * tool is marked) and an agent using the hosted browser (the Browser tool is marked). It also
+ * routes links clicked in a session into Athas's browser. It reads the session stores instead of
+ * the views, so a session reacts while it is not on screen.
  */
 export function startSessionPanelRuntime(): () => void {
   const startedAt = Date.now();
   const typing = createTypingTracker(window);
   const panelActions = useSessionPanelStore.getState().actions;
 
+  const isReachable = async (url: string) => {
+    const port = getLocalServerPort(url);
+    if (port === null) return false;
+    return (await detectLocalPorts(previewsStoreDependencies.fetch, [port])).length > 0;
+  };
+
   const opener = createDevServerAutoOpener({
-    isReachable: async (url) => {
-      const port = getLocalServerPort(url);
-      if (port === null) return false;
-      return (await detectLocalPorts(previewsStoreDependencies.fetch, [port])).length > 0;
-    },
+    isReachable,
     isUserTyping: typing.isTyping,
     wait: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
     hasAutoOpened: (chatId) =>
@@ -83,7 +115,24 @@ export function startSessionPanelRuntime(): () => void {
 
   const scannedMessages = new Map<string, Message[]>();
   const scannedOutput = new Map<string, number>();
-  const reportedFailures = new Set<string>();
+  const probedCommands = new Set<string>();
+
+  // A dev server that printed no address yet: look for the port it names, else a common one.
+  const probeCommandPort = async (chatId: string, command: string) => {
+    const named = getCommandPort(command);
+    const ports = named === null ? COMMON_DEV_PORTS : [named];
+    for (const delay of PORT_PROBE_DELAYS_MS) {
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      if (useSessionPanelStore.getState().liveServers[chatId]) return;
+      const [port] = await detectLocalPorts(previewsStoreDependencies.fetch, ports).catch(
+        () => [] as number[],
+      );
+      if (port !== undefined) {
+        report(chatId, `http://localhost:${port}/`);
+        return;
+      }
+    }
+  };
   let scanTimer: ReturnType<typeof setTimeout> | null = null;
 
   const scanChats = () => {
@@ -93,15 +142,28 @@ export function startSessionPanelRuntime(): () => void {
       if (scannedMessages.get(chatId) === messages) continue;
       scannedMessages.set(chatId, messages);
       for (const message of messages.slice(-SCANNED_MESSAGES)) {
+        const messageKey = `${chatId}:message:${message.id}`;
+        if (
+          message.role === "assistant" &&
+          !message.isStreaming &&
+          toTime(message.timestamp) >= startedAt &&
+          scannedOutput.get(messageKey) !== message.content.length
+        ) {
+          scannedOutput.set(messageKey, message.content.length);
+          report(chatId, message.content);
+        }
         for (const toolCall of message.toolCalls ?? []) {
           if (toTime(toolCall.timestamp) < startedAt || !isCommandToolCall(toolCall)) continue;
           const key = `${chatId}:${toolCall.id}`;
+          const command = commandText(toolCall);
           if (
-            getToolCallPhase(toolCall, message.isStreaming) === "failed" &&
-            !reportedFailures.has(key)
+            command &&
+            ["running", "background"].includes(getToolCallPhase(toolCall, message.isStreaming)) &&
+            !probedCommands.has(key) &&
+            isLongRunningCommand(command)
           ) {
-            reportedFailures.add(key);
-            if (!isPanelShowing(chatId, "activity")) panelActions.markAttention(chatId, "activity");
+            probedCommands.add(key);
+            void probeCommandPort(chatId, command);
           }
           const text = collectText([toolCall.output, toolCall.rawOutput, toolCall.terminals]);
           if (scannedOutput.get(key) === text.length) continue;
@@ -164,8 +226,30 @@ export function startSessionPanelRuntime(): () => void {
     }
   });
 
+  const stopLinkRouting = setWebLinkRouter(routeSessionLink);
+
+  const outputTails = new Map<string, string>();
+  const stopCommandOutput = onSessionCommandOutput((chatId, chunk) => {
+    const text = (outputTails.get(chatId) ?? "") + chunk;
+    outputTails.set(chatId, text.slice(-CHUNK_OVERLAP));
+    report(chatId, text);
+  });
+
+  const liveness = setInterval(() => {
+    for (const [chatId, url] of Object.entries(useSessionPanelStore.getState().liveServers)) {
+      void isReachable(url).then((answers) => {
+        if (answers || useSessionPanelStore.getState().liveServers[chatId] !== url) return;
+        panelActions.clearServerLive(chatId);
+        opener.forget(chatId, url);
+      });
+    }
+  }, LIVENESS_INTERVAL_MS);
+
   return () => {
     if (scanTimer) clearTimeout(scanTimer);
+    clearInterval(liveness);
+    stopLinkRouting();
+    stopCommandOutput();
     typing.dispose();
     stopChats();
     stopAcpTerminals();

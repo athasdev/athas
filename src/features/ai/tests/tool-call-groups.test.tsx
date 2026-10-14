@@ -168,6 +168,38 @@ afterEach(async () => {
 });
 
 describe("tool call list", () => {
+  it("reads a finished turn as done while a dev server it started keeps running", async () => {
+    const devServer = run(
+      "/bin/zsh -lc 'mise exec node@24.19.0 -- ./node_modules/.bin/vp run dev'",
+      {
+        status: "in_progress",
+        timestamp: new Date(),
+      },
+    );
+    const toolCalls = [run("bun install", { timestamp: new Date() }), devServer];
+    const summary = summarizeToolActivity(toolCalls, { isStreaming: false });
+    expect(summary.running).toBeNull();
+    expect(summary.background).toBe(devServer);
+
+    await act(async () => root.render(<ToolCallList toolCalls={toolCalls} isStreaming={false} />));
+    const row = container.querySelector("button")!;
+    expect(row.textContent).toContain("Ran 2 commands · vp run dev still running");
+    expect(row.textContent).not.toContain("Working");
+    expect(row.textContent).not.toContain("/bin/zsh");
+    expect(row.querySelector("[data-slot=status-dot]")).not.toBeNull();
+    expect(row.querySelector(".animate-spin, .motion-safe\\:animate-spin")).toBeNull();
+  });
+
+  it("still shows a running command as working while the turn streams", () => {
+    const toolCalls = [
+      run("bun install", { timestamp: new Date() }),
+      run("/bin/bash -lc 'bun test'", { status: "in_progress", timestamp: new Date() }),
+    ];
+    const summary = summarizeToolActivity(toolCalls, { isStreaming: true });
+    expect(summary.running?.id).toBe("run-/bin/bash -lc 'bun test'");
+    expect(summary.background).toBeNull();
+  });
+
   it("collapses a finished turn to its summary and expands to the steps", async () => {
     await act(async () =>
       root.render(

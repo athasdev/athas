@@ -154,4 +154,62 @@ describe("buildAgentSessionContext", () => {
       { type: "text", value: "first" },
     ]);
   });
+
+  it("reads a Codex session's file changes and its wrapped commands", () => {
+    const fileChange = {
+      type: "fileChange",
+      id: "fc-1",
+      status: "completed",
+      changes: [
+        {
+          path: "/repo/src/pricing.tsx",
+          kind: { type: "update" },
+          diff: "--- a/src/pricing.tsx\n+++ b/src/pricing.tsx\n@@ -1,3 +1,4 @@\n keep\n-old\n+new\n+added\n tail",
+        },
+        { path: "/repo/src/toggle.tsx", kind: { type: "add" }, diff: "one\ntwo" },
+      ],
+    };
+    const context = buildAgentSessionContext(
+      {
+        messages: [
+          assistant("m1", 1, {
+            isStreaming: false,
+            toolCalls: [
+              {
+                id: "fc-1",
+                name: "fileChange",
+                kind: "edit",
+                status: "completed",
+                input: fileChange,
+                output: fileChange,
+                timestamp: at(1),
+              },
+              {
+                id: "cmd-1",
+                name: "/bin/zsh -lc 'mise exec node@24 -- ./node_modules/.bin/vp run dev'",
+                kind: "execute",
+                status: "in_progress",
+                input: {
+                  type: "commandExecution",
+                  command: "/bin/zsh -lc 'mise exec node@24 -- ./node_modules/.bin/vp run dev'",
+                },
+                timestamp: at(2),
+              },
+            ],
+          }),
+        ],
+      },
+      "/repo",
+    );
+
+    expect(context.changes.map((change) => change.displayPath).sort()).toEqual([
+      "src/pricing.tsx",
+      "src/toggle.tsx",
+    ]);
+    expect(context.additions).toBe(4);
+    expect(context.deletions).toBe(1);
+    expect(context.commands[0]?.command).toBe(
+      "mise exec node@24 -- ./node_modules/.bin/vp run dev",
+    );
+  });
 });

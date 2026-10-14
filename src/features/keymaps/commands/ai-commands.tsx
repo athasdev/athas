@@ -1,5 +1,4 @@
 import {
-  ActivityIcon,
   ArrowsClockwiseIcon,
   CloudIcon,
   ArrowsLeftRightIcon,
@@ -107,6 +106,15 @@ export const aiCommands: Command[] = [
     },
   },
   {
+    id: "ai.showAgentSessions",
+    title: "AI: Show Agent Sessions",
+    category: "AI",
+    description: "Open the agents sidebar with this project's sessions and their history",
+    icon: <HistoryIcon />,
+    palette: true,
+    execute: async () => (await aiActions()).showAgentSessions(),
+  },
+  {
     id: "ai.toggleSessionPanel",
     title: "AI: Toggle Session Tools",
     category: "AI",
@@ -141,15 +149,6 @@ export const aiCommands: Command[] = [
     icon: <TerminalIcon />,
     palette: true,
     execute: async () => (await aiActions()).showActiveSessionPanelTab("terminal"),
-  },
-  {
-    id: "ai.showSessionActivity",
-    title: "AI: Show Session Activity",
-    category: "AI",
-    description: "Open the files the agent read, the commands it ran and the links it used",
-    icon: <ActivityIcon />,
-    palette: true,
-    execute: async () => (await aiActions()).showActiveSessionPanelTab("activity"),
   },
   {
     id: "ai.toggleFollowAgent",

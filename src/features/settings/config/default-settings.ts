@@ -114,7 +114,6 @@ export const defaultSettings: Settings = {
   ollamaBaseUrl: "http://localhost:11434",
   // Layout
   sidebarWidth: 220,
-  rightSidebarWidth: 220,
   showGitHubPullRequests: true,
   showGitHubIssues: true,
   showGitHubActions: true,

@@ -104,20 +104,11 @@ export function MainLayout() {
   const responsiveLayout = useResponsiveWorkbenchLayout();
   const renderedSidebarVisible = isSidebarVisible && !responsiveLayout.narrow;
   const uiFontSize = useSettingsStore((state) => state.settings.uiFontSize);
-  const sidebarWidth = useSettingsStore((state) => state.settings.sidebarWidth);
-  const rightSidebarWidth = useSettingsStore((state) => state.settings.rightSidebarWidth);
-  const isRightSidebarVisible = useUIState((state) => state.isRightSidebarVisible);
-  const activeRightSidebarView = useUIState((state) => state.activeRightSidebarView);
-  const renderedRightSidebarVisible = isRightSidebarVisible && !responsiveLayout.narrow;
   const isDatabaseConnectionVisible = useUIState((state) => state.isDatabaseConnectionVisible);
   const setIsDatabaseConnectionVisible = useUIState(
     (state) => state.setIsDatabaseConnectionVisible,
   );
   const renderedActivityRailWidth = getCollapsedActivityBarWidth(uiFontSize);
-  const leftPaneReservedWidth =
-    renderedActivityRailWidth + (renderedRightSidebarVisible ? rightSidebarWidth : 0);
-  const rightPaneReservedWidth =
-    renderedActivityRailWidth + (renderedSidebarVisible ? sidebarWidth : 0);
   const vimRelativeLineNumbers = useSettingsStore((state) => state.settings.vimRelativeLineNumbers);
   const relativeLineNumbers = useVimStore.use.relativeLineNumbers();
   const { setRelativeLineNumbers } = useVimStore.use.actions();
@@ -160,7 +151,6 @@ export function MainLayout() {
 
   const isEditorBottomPaneVisible = deferredSurfacesReady && isBottomPaneVisible;
   const roundMainContentLeftEdge = !renderedSidebarVisible;
-  const roundMainContentRightEdge = !renderedRightSidebarVisible;
 
   useEffect(() => {
     setBottomBuffersVisible(bottomBuffersVisible);
@@ -317,12 +307,10 @@ export function MainLayout() {
               <ActivityBar />
             </div>
             <ResizablePane
-              position="left"
-              widthKey="sidebarWidth"
               hidden={!renderedSidebarVisible}
-              reservedWidth={leftPaneReservedWidth}
+              reservedWidth={renderedActivityRailWidth}
             >
-              <SidebarPane paneLevel="primary" visible={renderedSidebarVisible} />
+              <SidebarPane visible={renderedSidebarVisible} />
             </ResizablePane>
 
             <div className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -333,36 +321,17 @@ export function MainLayout() {
                     (isEditorBottomPaneVisible
                       ? "rounded-tl-xl border-l"
                       : "rounded-l-xl border-l"),
-                  roundMainContentRightEdge &&
-                    (isEditorBottomPaneVisible ? "rounded-tr-xl" : "rounded-r-xl"),
+                  isEditorBottomPaneVisible ? "rounded-tr-xl" : "rounded-r-xl",
                 )}
               >
                 <CachedWorkspaceSplitViews keepMountedWorkspaceIds={runningAgentProjectIds} />
               </div>
               {deferredSurfacesReady && (
                 <Suspense fallback={null}>
-                  <BottomPane
-                    roundLeftEdge={roundMainContentLeftEdge}
-                    roundRightEdge={roundMainContentRightEdge}
-                  />
+                  <BottomPane roundLeftEdge={roundMainContentLeftEdge} />
                 </Suspense>
               )}
             </div>
-
-            <ResizablePane
-              position="right"
-              widthKey="rightSidebarWidth"
-              hidden={!renderedRightSidebarVisible}
-              reservedWidth={rightPaneReservedWidth}
-            >
-              <SidebarPane
-                paneLevel="edge"
-                visible={renderedRightSidebarVisible}
-                activeView={activeRightSidebarView}
-                isGitActive={false}
-                isGitHubPRsActive={false}
-              />
-            </ResizablePane>
           </div>
         </div>
 

@@ -90,6 +90,7 @@ interface SessionPanelStoreState {
     setBrowserPage: (chatId: string, page: { url?: string; zoom?: number }) => void;
     recordServer: (chatId: string, url: string) => void;
     markServerLive: (chatId: string, url: string) => void;
+    clearServerLive: (chatId: string) => void;
     markAttention: (chatId: string, tab: SessionPanelTab) => void;
     clearAttention: (chatId: string, tab: SessionPanelTab) => void;
     requestFocus: (chatId: string, tab: SessionPanelTab) => void;
@@ -190,6 +191,13 @@ const useSessionPanelStoreBase = create<SessionPanelStoreState>()(
                 ? state
                 : { liveServers: { ...state.liveServers, [chatId]: url } },
             ),
+          clearServerLive: (chatId) =>
+            set((state) => {
+              if (!(chatId in state.liveServers)) return state;
+              const liveServers = { ...state.liveServers };
+              delete liveServers[chatId];
+              return { liveServers };
+            }),
           markAttention: (chatId, tab) =>
             set((state) => {
               if (state.attention[chatId]?.[tab]) return state;

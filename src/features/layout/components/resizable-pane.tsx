@@ -8,30 +8,23 @@ import {
   MIN_RESPONSIVE_PANE_WIDTH,
 } from "../utils/resizable-pane-layout";
 
-type WidthSettingKey = "sidebarWidth" | "rightSidebarWidth";
-
 const MIN_SIDEBAR_WIDTH = 140;
 
 interface ResizablePaneProps {
   children: React.ReactNode;
-  position: "left" | "right";
-  widthKey: WidthSettingKey;
   className?: string;
   hidden?: boolean;
-  outerEdge?: boolean;
   reservedWidth?: number;
 }
 
+/** The primary sidebar's resizable column, whose width is the `sidebarWidth` setting. */
 export function ResizablePane({
   children,
-  position,
-  widthKey,
   className,
   hidden = false,
-  outerEdge = true,
   reservedWidth = 0,
 }: ResizablePaneProps) {
-  const storedWidth = useSettingsStore((state) => state.settings[widthKey]);
+  const storedWidth = useSettingsStore((state) => state.settings.sidebarWidth);
   const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
   const [width, setWidth] = useState(() =>
     Math.round(
@@ -91,14 +84,14 @@ export function ResizablePane({
 
   useEffect(() => {
     const handleWindowResize = () => {
-      const currentStored = useSettingsStore.getState().settings[widthKey];
+      const currentStored = useSettingsStore.getState().settings.sidebarWidth;
       const nextWidth = clampWidth(currentStored);
       setWidth(nextWidth);
     };
 
     window.addEventListener("resize", handleWindowResize);
     return () => window.removeEventListener("resize", handleWindowResize);
-  }, [widthKey, clampWidth]);
+  }, [clampWidth]);
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
@@ -114,7 +107,7 @@ export function ResizablePane({
       const contentEl = contentRef.current;
 
       const handleMouseMove = (e: MouseEvent) => {
-        const deltaX = position === "right" ? startX - e.clientX : e.clientX - startX;
+        const deltaX = e.clientX - startX;
         const rawWidth = startWidth + deltaX;
         currentWidth = clampWidth(rawWidth);
 
@@ -133,7 +126,7 @@ export function ResizablePane({
         if (rafId !== null) cancelAnimationFrame(rafId);
         setWidth(currentWidth);
         setIsResizing(false);
-        updateSetting(widthKey, currentWidth);
+        updateSetting("sidebarWidth", currentWidth);
         document.removeEventListener("mousemove", handleMouseMove);
         document.removeEventListener("mouseup", handleMouseUp);
         document.body.style.cursor = "";
@@ -145,25 +138,21 @@ export function ResizablePane({
       document.body.style.cursor = "col-resize";
       document.body.style.userSelect = "none";
     },
-    [width, position, widthKey, updateSetting, clampWidth],
+    [width, updateSetting, clampWidth],
   );
 
   const totalWidth = hidden ? "0px" : `${width}px`;
   const resizeHandle = !hidden ? (
     <div
       onMouseDown={handleMouseDown}
-      style={
-        position === "left"
-          ? { right: "calc(var(--athas-workbench-gap) / -2)" }
-          : { left: "calc(var(--athas-workbench-gap) / -2)" }
-      }
+      style={{ right: "calc(var(--athas-workbench-gap) / -2)" }}
       className={cn(
         "group absolute top-0 z-30 flex h-full w-workbench cursor-col-resize items-center justify-center",
         "transition-colors duration-fast ease-smooth hover:bg-primary-soft",
       )}
       role="separator"
       aria-orientation="vertical"
-      aria-label={position === "right" ? "Resize right sidebar" : "Resize left sidebar"}
+      aria-label="Resize sidebar"
       aria-valuenow={Math.round(width)}
       aria-valuemin={Math.round(getMinWidth())}
       aria-valuemax={Math.round(getMaxWidth())}
@@ -192,7 +181,6 @@ export function ResizablePane({
       )}
       aria-hidden={hidden}
     >
-      {position === "right" ? resizeHandle : null}
       {isResizing && <div className="fixed inset-0 z-40 cursor-col-resize" />}
       <div
         ref={contentRef}
@@ -207,16 +195,14 @@ export function ResizablePane({
         <div
           className={cn(
             "athas-glass-island flex min-h-0 flex-1 flex-col overflow-hidden border-border border-y bg-background",
-            position === "left" && "border-l border-r",
-            position === "right" && "border-r",
-            !hidden && position === "left" && "rounded-l-xl",
-            !hidden && position === "right" && outerEdge && "rounded-r-xl",
+            "border-l border-r",
+            !hidden && "rounded-l-xl",
           )}
         >
           {children}
         </div>
       </div>
-      {position === "left" ? resizeHandle : null}
+      {resizeHandle}
     </div>
   );
 }

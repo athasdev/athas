@@ -19,7 +19,7 @@ import {
   useCodeHighlightSegments,
 } from "@/features/editor/markdown/highlighted-code";
 import { normalizeCodeFenceLanguage } from "@/features/editor/markdown/services/language-map";
-import { openExternalUrl } from "@/utils/external-url";
+import { openWebLink } from "@/utils/external-navigation";
 import { Button } from "@/ui/button";
 import { TextLink } from "@/ui/text-link";
 import { writeClipboardText } from "@/utils/clipboard";
@@ -55,9 +55,9 @@ async function copyTextToClipboard(text: string) {
   await writeClipboardText(text);
 }
 
-async function openMarkdownLink(href: string, label: string) {
+async function openMarkdownLink(href: string, label: string, origin: Element) {
   if (isExternalMarkdownLink(href)) {
-    if (isOpenableExternalUrl(href)) await openExternalUrl(href);
+    if (isOpenableExternalUrl(href)) await openWebLink(href, origin);
     return;
   }
 
@@ -82,7 +82,7 @@ async function openMarkdownLink(href: string, label: string) {
     return;
   }
 
-  if (isOpenableExternalUrl(href)) await openExternalUrl(href);
+  if (isOpenableExternalUrl(href)) await openWebLink(href, origin);
 }
 
 function CodeBlock({ code, languageHint }: { code: string; languageHint: string }) {
@@ -322,7 +322,7 @@ function renderInlineFormatting(text: string): React.ReactNode {
           href={url}
           onClick={(e) => {
             e.preventDefault();
-            void openMarkdownLink(url, label);
+            void openMarkdownLink(url, label, e.currentTarget);
           }}
         >
           {label}
@@ -342,7 +342,7 @@ function renderInlineFormatting(text: string): React.ReactNode {
           href={url}
           onClick={(e) => {
             e.preventDefault();
-            void openExternalUrl(url);
+            void openWebLink(url, e.currentTarget);
           }}
         >
           {url.length > 60 ? `${url.slice(0, 60)}...` : url}

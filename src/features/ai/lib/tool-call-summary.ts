@@ -3,8 +3,16 @@ import type { AcpToolKind } from "@/features/ai/types/acp.types";
 import { getAcpDiffOutputs, toRelativeDisplayPath } from "./acp-diff-output";
 import { diffTextLines } from "@/features/git/services/line-diff";
 import { parseMcpToolName } from "./mcp-tool-name";
+import { cleanCommand, unwrapShellCommand } from "./shell-command";
 
-export type ToolCallPhase = "running" | "done" | "failed" | "declined" | "cancelled";
+/**
+ * `background`: the turn finished while the call kept running, such as a dev server it started;
+ * it reads as done and still running, never as the agent working.
+ */
+export type ToolCallPhase = "running" | "background" | "done" | "failed" | "declined" | "cancelled";
+
+/** Calls from before this window opened can't still be running in it. */
+const WINDOW_OPENED_AT = Date.now();
 
 export interface ToolCallSummary {
   kind: AcpToolKind;
@@ -72,7 +80,11 @@ export function getToolCallPhase(toolCall: ToolCall, isStreaming?: boolean): Too
   if (wasDeclined(toolCall.output)) return "declined";
   if (toolCall.status === "cancelled") return "cancelled";
   if (toolCall.status === "completed" || toolCall.isComplete) return "done";
-  if (toolCall.status === "pending" || toolCall.status === "in_progress") return "running";
+  if (toolCall.status === "pending" || toolCall.status === "in_progress") {
+    if (isStreaming !== false) return "running";
+    const started = new Date(toolCall.timestamp).getTime();
+    return Number.isFinite(started) && started >= WINDOW_OPENED_AT ? "background" : "done";
+  }
   return isStreaming ? "running" : "done";
 }
 
@@ -136,10 +148,18 @@ export function summarizeToolCall(
       if (Array.isArray(toolCall.output)) count = toolCall.output.length;
       break;
     }
-    case "execute":
-      target = firstString(input, ["command", "cmd", "description"]);
+    case "execute": {
+      const raw = input.command ?? input.cmd;
+      const command =
+        typeof raw === "string" && raw.trim()
+          ? unwrapShellCommand(raw)
+          : Array.isArray(raw) && raw.length > 0 && raw.every((part) => typeof part === "string")
+            ? unwrapShellCommand(raw as string[])
+            : null;
+      target = command ? cleanCommand(firstLine(command)) : firstString(input, ["description"]);
       target = target ? firstLine(target) : null;
       break;
+    }
     case "fetch":
       target = firstString(input, ["url", "uri", "query"]);
       target = target ? firstLine(target) : null;
@@ -158,7 +178,7 @@ export function summarizeToolCall(
     ? mcpTool.tool
     : kind === "other"
       ? toolCall.name
-      : VERBS[kind][phase === "running" ? 0 : 1];
+      : VERBS[kind][phase === "running" || phase === "background" ? 0 : 1];
 
   return {
     kind,

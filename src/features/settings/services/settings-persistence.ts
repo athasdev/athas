@@ -31,7 +31,6 @@ async function initializeStoreDefaults(store: Store) {
     ),
   );
   const changes: Array<[string, unknown]> = [];
-  const legacySidebarWidth = entries.get("sidebarWidth");
 
   for (const [key, defaultValue] of Object.entries(defaultSettings)) {
     const persistedValue = persistedEntries.get(key);
@@ -39,7 +38,7 @@ async function initializeStoreDefaults(store: Store) {
     let nextValue = currentValue;
 
     if (currentValue === null || currentValue === undefined) {
-      nextValue = key === "rightSidebarWidth" ? (legacySidebarWidth ?? defaultValue) : defaultValue;
+      nextValue = defaultValue;
     } else if (isRecord(defaultValue)) {
       nextValue = isRecord(currentValue) ? { ...defaultValue, ...currentValue } : defaultValue;
     }

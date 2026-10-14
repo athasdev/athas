@@ -19,6 +19,7 @@ import {
   selectLogOutAgentId,
 } from "@/features/ai/services/agent-command-context";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
+import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { useSessionPanelStore } from "@/features/ai/session-panel/stores/session-panel.store";
 import type { SessionPanelTab } from "@/features/ai/session-panel/types/session-panel.types";
 
@@ -26,7 +27,7 @@ function getActiveBuffer() {
   return useBufferStore.getState().actions.getActiveBuffer() ?? undefined;
 }
 
-/** The agent tab in front, or the chat the agent panel shows. */
+/** The agent tab in front, or the current chat. */
 function getActiveChatId(): string | null {
   const buffer = getActiveBuffer();
   return buffer?.type === "agent" ? buffer.sessionId : useAIChatStore.getState().currentChatId;
@@ -104,6 +105,13 @@ export function keepAllPendingAgentChanges(): void {
 
 export function rejectAllPendingAgentChanges(): void {
   withAgentEditsChat((chatId) => void rejectAllAgentEdits(chatId));
+}
+
+/** Shows the agents sidebar, where every session of the project is listed. */
+export function showAgentSessions(): void {
+  const ui = useUIState.getState();
+  ui.setActiveView("agents");
+  ui.setIsSidebarVisible(true);
 }
 
 export function importAgentSession(): void {

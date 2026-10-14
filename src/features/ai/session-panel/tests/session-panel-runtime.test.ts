@@ -19,6 +19,7 @@ vi.mock("@/features/ai/stores/ai-chat.store", () => ({
 }));
 vi.mock("@/utils/tauri-fetch", () => ({ tauriFetch: vi.fn() }));
 vi.mock("@/features/previews/services/detect-local-ports", () => ({
+  COMMON_DEV_PORTS: [3000, 5173],
   detectLocalPorts: async (_fetch: unknown, ports: number[]) =>
     ports.filter((port) => mocks.reachablePorts.has(port)),
 }));
@@ -37,6 +38,7 @@ const { useAcpTerminalsStore } = await import("@/features/ai/stores/acp-terminal
 const { useHostedBrowserRunsStore } =
   await import("@/features/browser-use/stores/hosted-browser-runs.store");
 const { emitAppEvent } = await import("@/utils/app-events");
+const { reportSessionCommandOutput } = await import("../services/session-command-output");
 const { startSessionPanelRuntime } = await import("../services/session-panel-runtime");
 const { getSessionBrowserPageId, getSessionTerminalId, selectSessionPanel, useSessionPanelStore } =
   await import("../stores/session-panel.store");
@@ -74,7 +76,13 @@ beforeEach(() => {
   mocks.terminalListeners.clear();
   mocks.navigate.mockClear();
   mocks.focusPage.mockClear();
-  useSessionPanelStore.setState({ panels: {}, servers: {}, attention: {}, focusRequests: {} });
+  useSessionPanelStore.setState({
+    panels: {},
+    servers: {},
+    liveServers: {},
+    attention: {},
+    focusRequests: {},
+  });
   useAIChatStore.setState({
     chats: [{ id: "chat-1", acpSessionId: "acp-1" } as ChatSession],
     messagesByChat: {},
@@ -129,6 +137,50 @@ describe("session panel runtime", () => {
 
     expect(useSessionPanelStore.getState().servers["chat-1"]).toEqual(["http://localhost:3000/"]);
     expect(panel("chat-1").browserUrl).toBe("http://localhost:3000/");
+  });
+
+  it("finds a server in Codex command output streamed outside the transcript", async () => {
+    mocks.reachablePorts.add(3000);
+    reportSessionCommandOutput("chat-1", "  ➜  Local:   http://local");
+    reportSessionCommandOutput("chat-1", "host:3000/\n");
+    await vi.advanceTimersByTimeAsync(0);
+    expect(useSessionPanelStore.getState().liveServers["chat-1"]).toBe("http://localhost:3000/");
+  });
+
+  it("finds a server the agent names in its finished reply", async () => {
+    mocks.reachablePorts.add(3000);
+    useAIChatStore.setState({
+      messagesByChat: {
+        "chat-1": [
+          {
+            id: "reply",
+            role: "assistant",
+            content: "The dev server is up at http://localhost:3000.",
+            timestamp: new Date(),
+            isStreaming: false,
+          } as Message,
+        ],
+      },
+    });
+    await vi.advanceTimersByTimeAsync(400);
+    expect(useSessionPanelStore.getState().liveServers["chat-1"]).toBe("http://localhost:3000/");
+  });
+
+  it("finds the port of a dev server that printed no address", async () => {
+    const devServer = commandMessage("dev", "", new Date());
+    devServer.isStreaming = false;
+    devServer.toolCalls![0]!.status = "in_progress";
+    devServer.toolCalls![0]!.input = {
+      command: "/bin/zsh -lc 'mise exec node@24.19.0 -- ./node_modules/.bin/vp run dev'",
+    };
+    devServer.toolCalls![0]!.output = undefined;
+    useAIChatStore.setState({ messagesByChat: { "chat-1": [devServer] } });
+    await vi.advanceTimersByTimeAsync(400);
+    expect(useSessionPanelStore.getState().liveServers["chat-1"]).toBeUndefined();
+
+    mocks.reachablePorts.add(3000);
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(useSessionPanelStore.getState().liveServers["chat-1"]).toBe("http://localhost:3000/");
   });
 
   it("does not open for a server that never answers", async () => {
@@ -194,13 +246,39 @@ describe("session panel runtime", () => {
     expect(attention("other").terminal).toBeUndefined();
   });
 
-  it("marks the Activity tab when an agent command fails", async () => {
+  it("drops a live server once it stops answering, so its pill goes", async () => {
+    mocks.reachablePorts.add(5173);
+    useAcpTerminalsStore
+      .getState()
+      .actions.append("term-1", "acp-1", "Local: http://localhost:5173/\n");
+    await vi.advanceTimersByTimeAsync(0);
+    expect(useSessionPanelStore.getState().liveServers["chat-1"]).toBe("http://localhost:5173/");
+
+    mocks.reachablePorts.delete(5173);
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(useSessionPanelStore.getState().liveServers["chat-1"]).toBeUndefined();
+  });
+
+  it("does not mark anything for a failed agent command, which the chat already shows", async () => {
     const failed = commandMessage("fail", "error: tests failed", new Date());
     failed.toolCalls![0]!.status = "failed";
     useAIChatStore.setState({ messagesByChat: { "chat-1": [failed] } });
     await vi.advanceTimersByTimeAsync(400);
-    expect(attention("chat-1").activity).toBe(true);
-    expect(panel("chat-1").open).toBe(false);
+    expect(attention("chat-1")).toEqual({});
+  });
+
+  it("routes links clicked in a session into Athas", async () => {
+    const { openWebLink } = await import("@/utils/external-navigation");
+    const session = document.createElement("div");
+    session.setAttribute("data-agent-session-chat", "chat-1");
+    const link = document.createElement("a");
+    session.append(link);
+    document.body.append(session);
+
+    await openWebLink("http://localhost:4000/docs", link);
+    expect(panel("chat-1")).toMatchObject({ open: true, tab: "browser" });
+    expect(panel("chat-1").browserUrl).toBe("http://localhost:4000/docs");
+    session.remove();
   });
 
   it("marks the Browser tab while the agent uses the hosted browser", () => {

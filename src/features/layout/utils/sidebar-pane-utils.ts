@@ -12,15 +12,6 @@ interface SidebarPaneClickResult {
   nextView: SidebarView;
 }
 
-export type SidebarPaneLevel = "primary" | "edge";
-
-const EDGE_SIDEBAR_VIEWS = new Set<SidebarView>(["collaboration", "agent"]);
-
-export function getSidebarPaneLevel(view: SidebarView): SidebarPaneLevel {
-  if (EDGE_SIDEBAR_VIEWS.has(view)) return "edge";
-  return "primary";
-}
-
 export function getActiveSidebarView({
   isGitViewActive,
   isGitHubPRsViewActive,

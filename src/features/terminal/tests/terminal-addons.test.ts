@@ -114,7 +114,7 @@ describe("terminal addons", () => {
     terminal.dispose();
   });
 
-  it("opens web links only with the modifier and shows a hint on hover", () => {
+  it("opens web links only with the modifier and shows a hint on hover", async () => {
     const loaded: Array<{ _handler: (event: MouseEvent, uri: string) => void; _options: any }> = [];
     const terminal = { loadAddon: (addon: never) => loaded.push(addon) } as unknown as Terminal;
     const tip = tooltip();
@@ -126,8 +126,8 @@ describe("terminal addons", () => {
     expect(mocks.openUrl).not.toHaveBeenCalled();
     addon._handler(withModifier(), "https://athas.dev");
     addon._handler(withModifier(), "javascript:alert(1)");
+    await vi.waitFor(() => expect(mocks.openUrl).toHaveBeenCalledWith("https://athas.dev/"));
     expect(mocks.openUrl).toHaveBeenCalledTimes(1);
-    expect(mocks.openUrl).toHaveBeenCalledWith("https://athas.dev/");
 
     const event = withoutModifier();
     addon._options.hover(event, "https://athas.dev");
@@ -205,7 +205,7 @@ describe("file links in terminal output", () => {
 });
 
 describe("OSC 8 hyperlinks", () => {
-  it("opens file:// links in the editor and web links externally", () => {
+  it("opens file:// links in the editor and web links externally", async () => {
     const openFile = vi.fn();
     const tip = tooltip();
     const handler = createTerminalLinkHandler({
@@ -222,7 +222,7 @@ describe("OSC 8 hyperlinks", () => {
     expect(openFile).toHaveBeenCalledWith(expect.objectContaining({ path: "/ws/a.ts" }));
 
     handler.activate(withModifier(), "mailto:dev@athas.dev", undefined as never);
-    expect(mocks.openUrl).toHaveBeenCalledWith("mailto:dev@athas.dev");
+    await vi.waitFor(() => expect(mocks.openUrl).toHaveBeenCalledWith("mailto:dev@athas.dev"));
   });
 
   it("logs links that fail to open", async () => {

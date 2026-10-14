@@ -9,10 +9,14 @@ const session = vi.hoisted(() => ({
     changes: [] as unknown[],
     additions: 0,
     deletions: 0,
-    commands: [] as Array<{ command: string; phase: string }>,
+    commands: [] as Array<{ command: string; phase: string; timestamp?: number }>,
   },
 }));
 
+const navigate = vi.hoisted(() => vi.fn());
+vi.mock("@/features/browser/services/browser-tab-manager", () => ({
+  browserTabManager: { navigate },
+}));
 vi.mock("@/features/ai/hooks/use-agent-session-context", () => ({
   useAgentSessionContext: () => ({ context: session.context, messages: [] }),
 }));
@@ -67,7 +71,14 @@ describe("floating session pills", () => {
     expect(selectSessionPanel(useSessionPanelStore.getState(), "chat-1")).toMatchObject({
       open: true,
       tab: "browser",
+      browserUrl: "http://localhost:5173/",
     });
+    await vi.waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith(
+        "agent-session-browser:chat-1",
+        "http://localhost:5173/",
+      ),
+    );
     expect(pills()).toEqual([]);
   });
 
@@ -82,6 +93,45 @@ describe("floating session pills", () => {
       vi.advanceTimersByTime(200);
     });
     expect(container.querySelector("[data-pill=changes]")).toBeNull();
+  });
+
+  it("names a starting command without its shell wrapper", async () => {
+    session.context = {
+      changes: [],
+      additions: 0,
+      deletions: 0,
+      commands: [
+        { command: "/bin/zsh -lc 'bun test --bail'", phase: "running", timestamp: Date.now() },
+      ],
+    };
+    await render();
+    const pill = container.querySelector("[data-pill=terminal]");
+    expect(pill?.textContent).toBe("Running bun test");
+    expect(pill?.innerHTML).not.toContain("font-mono");
+  });
+
+  it("shows a dev server as one live pill with its address", async () => {
+    session.context = {
+      changes: [],
+      additions: 0,
+      deletions: 0,
+      commands: [
+        {
+          command: "mise exec node@24.19.0 -- ./node_modules/.bin/vp run dev",
+          phase: "running",
+          timestamp: Date.now(),
+        },
+      ],
+    };
+    useSessionPanelStore.setState({ liveServers: { "chat-1": "http://localhost:3000/" } });
+    await render();
+    expect(pills()).toEqual(["browser"]);
+    const pill = container.querySelector("[data-pill=browser]");
+    expect(pill?.textContent).toBe("vp run dev · localhost:3000");
+    expect(pill?.querySelector("[data-slot=status-dot]")).not.toBeNull();
+    expect(pill?.querySelector("button")?.getAttribute("aria-label")).toBe(
+      "vp run dev · localhost:3000",
+    );
   });
 
   it("shows a failed command and opens the terminal ready to type", async () => {

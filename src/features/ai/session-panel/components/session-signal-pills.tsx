@@ -1,13 +1,16 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { DiffStats } from "@/features/ai/components/diff-stats";
+import { cleanCommand, shortenCommand } from "@/features/ai/lib/shell-command";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { GitDiffIcon, ListChecksIcon, TerminalIcon } from "@/ui/icons";
 import { Spinner } from "@/ui/spinner";
+import { StatusDot } from "@/ui/status-dot";
 import { cn } from "@/utils/cn";
 import { useSessionPills } from "../hooks/use-session-pills";
 import type { SessionPill } from "../services/session-pills";
 import { setCardOrigin } from "../services/card-motion";
+import { openInSessionBrowser } from "../services/session-links";
 import { useSessionPanelStore } from "../stores/session-panel.store";
 
 /** Where a session's pills go: floating beside the chat column, or in the session header. */
@@ -34,11 +37,14 @@ function describePill(pill: SessionPill): string {
     case "changes":
       return `${pill.files} changed ${pill.files === 1 ? "file" : "files"}, +${pill.additions} −${pill.deletions}`;
     case "browser":
-      return `${hostOf(pill.url)} is running`;
+      return pill.command
+        ? `${cleanCommand(pill.command)} · ${hostOf(pill.url)}`
+        : `${hostOf(pill.url)} is running`;
     case "terminal":
-      return pill.state === "failed"
-        ? "A command failed"
-        : `Running ${pill.command ?? "a command"}`;
+      if (pill.state === "failed") return "A command failed in the session terminal";
+      return pill.state === "live"
+        ? `${cleanCommand(pill.command ?? "")} is running`
+        : `Running ${cleanCommand(pill.command ?? "")}`;
     case "plan":
       return `Plan: ${pill.done} of ${pill.total} done`;
   }
@@ -56,20 +62,30 @@ function PillContent({ pill }: { pill: SessionPill }) {
     case "browser":
       return (
         <>
-          <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-success" />
-          <span className="min-w-0 truncate">{hostOf(pill.url)}</span>
+          <StatusDot tone="live" />
+          <span className="min-w-0 truncate">
+            {pill.command
+              ? `${shortenCommand(pill.command)} · ${hostOf(pill.url)}`
+              : hostOf(pill.url)}
+          </span>
         </>
       );
     case "terminal":
-      return pill.state === "failed" ? (
+      if (pill.state === "failed") {
+        return (
+          <>
+            <TerminalIcon />
+            <Badge tone="danger">Failed</Badge>
+          </>
+        );
+      }
+      return (
         <>
-          <TerminalIcon />
-          <Badge tone="danger">Failed</Badge>
-        </>
-      ) : (
-        <>
-          <Spinner compact />
-          <span className="min-w-0 truncate font-mono">{pill.command}</span>
+          {pill.state === "live" ? <StatusDot tone="live" /> : <Spinner compact />}
+          <span className="min-w-0 truncate">
+            {pill.state === "live" ? "" : "Running "}
+            {shortenCommand(pill.command ?? "")}
+          </span>
         </>
       );
     case "plan":
@@ -119,8 +135,9 @@ function usePillPresence(pills: SessionPill[]) {
 }
 
 /**
- * What a session with a collapsed tool card has going on: its changes, a live server, a failed or
- * running command and its plan. Each pill grows into the card on its tool.
+ * What a session with a collapsed tool card has going on: its changes, a live server or process,
+ * a command still starting or one that failed, and its plan. Each pill grows into the card on its
+ * tool; the server pill opens the browser at its address.
  */
 export function SessionSignalPills({
   chatId,
@@ -141,13 +158,13 @@ export function SessionSignalPills({
         data-pill={pill.id}
         data-leaving={leaving || undefined}
         className={cn(
-          "flex max-w-36 transition-[opacity,translate] duration-fast ease-smooth starting:translate-x-1 starting:opacity-0 data-leaving:translate-x-1 data-leaving:opacity-0 motion-reduce:transition-none",
+          "flex max-w-56 transition-[opacity,translate] duration-fast ease-smooth starting:translate-x-1 starting:opacity-0 data-leaving:translate-x-1 data-leaving:opacity-0 motion-reduce:transition-none",
           leaving ? "pointer-events-none" : placement === "floating" && "pointer-events-auto",
         )}
       >
         <Button
           type="button"
-          variant={placement === "floating" ? "outline" : "ghost"}
+          variant="default"
           size="sm"
           truncate
           tooltip={label}
@@ -161,6 +178,10 @@ export function SessionSignalPills({
               width: rect.width,
               height: rect.height,
             });
+            if (pill.id === "browser") {
+              openInSessionBrowser(chatId, pill.url);
+              return;
+            }
             if (pill.tab === "terminal") requestFocus(chatId, "terminal");
             open(chatId, pill.tab);
           }}

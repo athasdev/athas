@@ -29,9 +29,6 @@ vi.mock("@/features/editor/stores/buffer.store", () => ({
     }),
   },
 }));
-vi.mock("@/features/ai/components/panel/agent-context-sidebar", () => ({
-  AgentSessionActivity: () => <div data-testid="activity" />,
-}));
 vi.mock("../components/session-changes-view", () => ({
   SessionChangesView: () => <div data-testid="changes" />,
 }));

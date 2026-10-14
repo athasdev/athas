@@ -253,10 +253,6 @@ const AIChat = memo(function AIChat({
 
   // Agent availability is handled dynamically by the agent selector.
 
-  const handleDeleteChat = (chatId: string) => {
-    chatActions.deleteChat(chatId);
-  };
-
   const updateInitialAgentSessionTitle = useCallback(
     async (chatId: string, userMessage: string) => {
       const fallbackTitle = getFallbackAgentSessionTitle(userMessage);
@@ -785,8 +781,6 @@ const AIChat = memo(function AIChat({
       <ChatHeader
         chatId={effectiveChatId}
         sessionActions={headerActions}
-        onDeleteChat={handleDeleteChat}
-        onSwitchChat={chatId ? openAgentHistoryChat : chatActions.switchToChat}
         isMessageSearchOpen={isMessageSearchOpen}
         messageSearchQuery={messageSearchQuery}
         onToggleMessageSearch={() => {

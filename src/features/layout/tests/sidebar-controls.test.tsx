@@ -40,20 +40,16 @@ vi.mock("@/features/layout/stores/ui-state.store", async () => {
   const { create: createStore } = await import("zustand");
   const store = createStore<Record<string, unknown>>()((set) => ({
     isSidebarVisible: true,
-    isRightSidebarVisible: false,
     isGitViewActive: false,
     isGitHubPRsViewActive: false,
     activeSidebarView: "files",
-    activeRightSidebarView: "agent",
     setActiveView: (view: string) =>
       set({
         activeSidebarView: view,
         isGitViewActive: view === "git",
         isGitHubPRsViewActive: view === "github-prs",
       }),
-    setActiveRightSidebarView: (view: string) => set({ activeRightSidebarView: view }),
     setIsSidebarVisible: (visible: boolean) => set({ isSidebarVisible: visible }),
-    setIsRightSidebarVisible: (visible: boolean) => set({ isRightSidebarVisible: visible }),
   }));
   return { useUIState: store };
 });
@@ -94,11 +90,9 @@ const settingsStore = useSettingsStore as unknown as {
 beforeEach(() => {
   uiStore.setState({
     isSidebarVisible: true,
-    isRightSidebarVisible: false,
     isGitViewActive: false,
     isGitHubPRsViewActive: false,
     activeSidebarView: "files",
-    activeRightSidebarView: "agent",
   });
   settingsStore.setState({
     settings: { hiddenSidebarActivityItems: [], pinnedSidebarExtensionItems: [] },
@@ -123,26 +117,6 @@ describe("useSidebarPaneController", () => {
     expect(uiStore.getState()).toMatchObject({
       activeSidebarView: "files",
       isSidebarVisible: true,
-    });
-    unmount();
-  });
-
-  it("toggles edge views in the right sidebar", () => {
-    const { result, unmount } = renderHook(useSidebarPaneController);
-
-    act(() => result.current.openSidebarView("agent"));
-    expect(uiStore.getState()).toMatchObject({
-      activeRightSidebarView: "agent",
-      isRightSidebarVisible: true,
-    });
-
-    act(() => result.current.openSidebarView("agent"));
-    expect(uiStore.getState().isRightSidebarVisible).toBe(false);
-
-    act(() => result.current.openSidebarView("files", { paneLevel: "edge" }));
-    expect(uiStore.getState()).toMatchObject({
-      activeRightSidebarView: "files",
-      isRightSidebarVisible: true,
     });
     unmount();
   });
@@ -240,13 +214,11 @@ describe("view and terminal slices", () => {
     useProjectStore.setState({ rootFolderPath: "/projects/view-slice" });
 
     store.getState().setActiveView("github-prs");
-    store.getState().setActiveRightSidebarView("collaboration");
 
     expect(store.getState()).toMatchObject({
       isGitViewActive: false,
       isGitHubPRsViewActive: true,
       activeSidebarView: "github-prs",
-      activeRightSidebarView: "collaboration",
     });
     expect(workspaceSessionRepository.loadUi("/projects/view-slice")).toMatchObject({
       activeSidebarView: "github-prs",

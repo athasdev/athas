@@ -104,10 +104,12 @@ describe("settings import/export", () => {
     expect(imported?.compactFoldersInFileTree).toBe(true);
   });
 
-  it("preserves the shared sidebar width when importing legacy settings", () => {
-    const imported = parseSettingsImportJson(JSON.stringify({ sidebarWidth: 340 }));
+  it("keeps the sidebar width and drops the removed right sidebar width", () => {
+    const imported = parseSettingsImportJson(
+      JSON.stringify({ sidebarWidth: 340, rightSidebarWidth: 300 }),
+    );
 
     expect(imported?.sidebarWidth).toBe(340);
-    expect(imported?.rightSidebarWidth).toBe(340);
+    expect(imported).not.toHaveProperty("rightSidebarWidth");
   });
 });

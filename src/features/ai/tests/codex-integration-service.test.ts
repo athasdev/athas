@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { CodexIntegrationService } from "@/features/ai/integrations/codex/codex-integration-service";
+import { onSessionCommandOutput } from "@/features/ai/session-panel/services/session-command-output";
 
 const mocks = vi.hoisted(() => ({
   invoke: vi.fn(() => Promise.resolve()),
@@ -71,6 +72,35 @@ describe("Codex integration service", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it("hands command output to the session, so a dev server it prints is found", () => {
+    const service = new CodexIntegrationService(
+      { onChunk: vi.fn(), onComplete: vi.fn(), onError: vi.fn() },
+      "chat-1",
+    ) as unknown as {
+      threadId: string;
+      handleEvent: (event: { method: string; params: Record<string, unknown> }) => void;
+    };
+    service.threadId = "thread-1";
+    const outputs: Array<[string, string]> = [];
+    const stop = onSessionCommandOutput((chatId, text) => outputs.push([chatId, text]));
+
+    service.handleEvent({
+      method: "item/commandExecution/outputDelta",
+      params: {
+        threadId: "thread-1",
+        itemId: "cmd-1",
+        delta: "  ➜  Local:   http://localhost:3000/\n",
+      },
+    });
+    service.handleEvent({
+      method: "item/commandExecution/outputDelta",
+      params: { threadId: "other-thread", itemId: "cmd-2", delta: "http://localhost:9999/" },
+    });
+    stop();
+
+    expect(outputs).toEqual([["chat-1", "  ➜  Local:   http://localhost:3000/\n"]]);
   });
 
   it("opens native pull request tabs and resolves the dynamic tool call", () => {

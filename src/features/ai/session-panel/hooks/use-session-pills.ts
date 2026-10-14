@@ -1,7 +1,7 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAgentSessionContext } from "@/features/ai/hooks/use-agent-session-context";
 import { getLatestSessionPlan } from "../services/session-plan";
-import { getSessionPills } from "../services/session-pills";
+import { getSessionPills, SHORT_COMMAND_MS } from "../services/session-pills";
 import { useSessionPanel, useSessionPanelStore } from "../stores/session-panel.store";
 
 /**
@@ -14,15 +14,24 @@ export function useSessionPills(chatId: string, whileOpen = false) {
   const terminalFailed = useSessionPanelStore((state) =>
     Boolean(state.attention[chatId]?.terminal),
   );
-  const agentCommandFailed = useSessionPanelStore((state) =>
-    Boolean(state.attention[chatId]?.activity),
-  );
   const { context, messages } = useAgentSessionContext(chatId);
   const plan = messages ? getLatestSessionPlan(messages) : null;
-  const runningCommand =
-    context.commands.find((command) => command.phase === "running")?.command ?? null;
+  const running = context.commands.find(
+    (command) => command.phase === "running" || command.phase === "background",
+  );
+  const runningCommand = running?.command ?? null;
+  const startedAt = running?.timestamp ?? 0;
   const planDone = plan?.done ?? 0;
   const planTotal = plan?.entries.length ?? 0;
+  const [now, setNow] = useState(() => Date.now());
+
+  // A short command turns live once it has kept running for a while, so look again then.
+  useEffect(() => {
+    if (!runningCommand) return;
+    const remaining = startedAt + SHORT_COMMAND_MS - Date.now();
+    const timer = setTimeout(() => setNow(Date.now()), Math.max(0, remaining) + 50);
+    return () => clearTimeout(timer);
+  }, [runningCommand, startedAt]);
 
   return useMemo(
     () =>
@@ -35,9 +44,9 @@ export function useSessionPills(chatId: string, whileOpen = false) {
         },
         liveServer,
         terminalFailed,
-        agentCommandFailed,
-        runningCommand,
+        runningCommand: runningCommand ? { command: runningCommand, startedAt } : null,
         plan: planTotal > 0 ? { done: planDone, total: planTotal } : null,
+        now,
       }),
     [
       panel.open,
@@ -47,10 +56,11 @@ export function useSessionPills(chatId: string, whileOpen = false) {
       context.deletions,
       liveServer,
       terminalFailed,
-      agentCommandFailed,
       runningCommand,
+      startedAt,
       planDone,
       planTotal,
+      now,
     ],
   );
 }

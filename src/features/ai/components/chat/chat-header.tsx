@@ -11,43 +11,27 @@ import {
   ArrowDownIcon,
   ArrowLeftIcon,
   ArrowUpIcon,
-  PlusIcon,
   SearchIcon,
-  SidebarRightIcon,
   WindowExpandIcon,
   XIcon,
   DotsIcon,
   FileIcon,
 } from "@/ui/icons";
-import { type ReactNode, useEffect, useMemo, useRef } from "react";
-import { selectAgentSessions } from "@/features/ai/services/agent-session-list";
-import { useProjectStore } from "@/features/workspace/stores/project.store";
-import { useUIState } from "@/features/layout/stores/ui-state.store";
-import { useSidebarPaneController } from "@/features/layout/hooks/use-sidebar-pane-controller";
+import { type ReactNode, useEffect, useRef } from "react";
 import { PaneContentHeader } from "@/ui/pane-content-chrome";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import { useAIChatStore } from "../../stores/ai-chat.store";
-import ChatHistoryDropdown from "../history/chat-history-dropdown";
-import { selectAcpAgentStatus } from "@/features/ai/services/acp-session-state";
-import {
-  canBrowseAgentSessions,
-  openAgentSessions,
-} from "@/features/ai/services/open-agent-sessions";
-import { useNewAgentAction } from "../../hooks/use-new-agent-action";
 import {
   isAgentWindow,
   openAgentInNewWindow,
 } from "@/features/ai/detached/services/agent-window-service";
 import { requestWindowClose } from "@/features/window/services/request-window-close";
-import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 
 interface ChatHeaderProps {
   chatId?: string | null;
   /** Session controls from the host, such as its tools. */
   sessionActions?: ReactNode;
-  onDeleteChat?: (chatId: string) => void;
-  onSwitchChat: (chatId: string) => void;
   isMessageSearchOpen: boolean;
   messageSearchQuery: string;
   onToggleMessageSearch: () => void;
@@ -62,8 +46,6 @@ interface ChatHeaderProps {
 export function ChatHeader({
   chatId,
   sessionActions,
-  onDeleteChat,
-  onSwitchChat,
   isMessageSearchOpen,
   messageSearchQuery,
   onToggleMessageSearch,
@@ -75,39 +57,15 @@ export function ChatHeader({
   onNextMessageSearchMatch,
 }: ChatHeaderProps) {
   const currentChatId = useAIChatStore((state) => state.currentChatId);
-  const chats = useAIChatStore((state) => state.chats);
-  const workspacePath = useProjectStore((state) => state.rootFolderPath || null);
-  const selectedAgentId = useAIChatStore((state) => state.selectedAgentId);
-  const setChatArchived = useAIChatStore((state) => state.actions.setChatArchived);
-
   const effectiveChatId = chatId ?? currentChatId;
-  const standalone = isAgentWindow();
-  const { openSidebarView } = useSidebarPaneController();
-  const isAgentPanelOpen = useUIState(
-    (state) => state.isRightSidebarVisible && state.activeRightSidebarView === "agent",
+  const currentChatTitle = useAIChatStore(
+    (state) => state.chats.find((chat) => chat.id === effectiveChatId)?.title,
   );
-  const currentChat = chats.find((chat) => chat.id === effectiveChatId);
+  const standalone = isAgentWindow();
   const hasMessages = useAIChatStore((state) =>
     effectiveChatId ? (state.messagesByChat[effectiveChatId]?.length ?? 0) > 0 : false,
   );
-  const currentAgentId = currentChat?.agentId ?? selectedAgentId;
-  const handleNewAgent = useNewAgentAction({ agentId: currentAgentId });
-  const canBrowseSessions = useAIChatStore((state) =>
-    canBrowseAgentSessions(
-      selectAcpAgentStatus(state, currentAgentId, workspacePath),
-      currentAgentId,
-    ),
-  );
-  const newAgentShortcut = useCommandShortcut("workbench.agentLauncher");
   const messageSearchInputRef = useRef<HTMLInputElement>(null);
-  const workspaceChats = useMemo(
-    () => selectAgentSessions(chats, { workspacePath, keepIds: [effectiveChatId] }),
-    [chats, effectiveChatId, workspacePath],
-  );
-  const archivedChats = useMemo(
-    () => selectAgentSessions(chats, { workspacePath, includeArchived: "only" }),
-    [chats, workspacePath],
-  );
   const hasSearchQuery = messageSearchQuery.trim().length > 0;
   const hasMessageSearchMatches = messageSearchMatchCount > 0;
   const messageSearchPosition =
@@ -196,7 +154,7 @@ export function ChatHeader({
         <PaneContentHeader
           surface="transparent"
           separated={false}
-          title={currentChat?.title || "Agent"}
+          title={currentChatTitle || "Agent"}
           actions={
             <>
               <Button
@@ -212,48 +170,6 @@ export function ChatHeader({
 
               {sessionActions}
 
-              {!standalone && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  iconOnly
-                  active={isAgentPanelOpen}
-                  aria-pressed={isAgentPanelOpen}
-                  onClick={() => openSidebarView("agent", { paneLevel: "edge" })}
-                  tooltip={isAgentPanelOpen ? "Hide agent panel" : "Show agent panel"}
-                  aria-label={isAgentPanelOpen ? "Hide agent panel" : "Show agent panel"}
-                >
-                  <SidebarRightIcon />
-                </Button>
-              )}
-
-              {!standalone && (
-                <ChatHistoryDropdown
-                  chats={workspaceChats}
-                  archivedChats={archivedChats}
-                  currentChatId={effectiveChatId}
-                  onSwitchToChat={onSwitchChat}
-                  onSetChatArchived={setChatArchived}
-                  onDeleteChat={onDeleteChat ?? (() => {})}
-                  onBrowseAgentSessions={
-                    canBrowseSessions ? () => openAgentSessions(currentAgentId) : undefined
-                  }
-                />
-              )}
-
-              {!standalone && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  iconOnly
-                  onClick={handleNewAgent}
-                  tooltip="New Agent"
-                  shortcut={newAgentShortcut}
-                  aria-label="New Agent"
-                >
-                  <PlusIcon />
-                </Button>
-              )}
               <DropdownMenu>
                 <DropdownMenuTrigger
                   render={

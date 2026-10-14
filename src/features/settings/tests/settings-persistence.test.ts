@@ -46,28 +46,22 @@ describe("settings persistence", () => {
     expect(storeMocks.save).not.toHaveBeenCalled();
   });
 
-  it("migrates the legacy shared sidebar width to the right sidebar", async () => {
+  it("ignores a stored width of the removed right sidebar", async () => {
     const { loadSettingsFromStore } =
       await import("@/features/settings/services/settings-persistence");
     const settings = getDefaultSettingsSnapshot();
-    const legacyEntries = Object.entries(settings).filter(([key]) => key !== "rightSidebarWidth");
-    const sidebarWidth = 340;
     const store = {
       entries: storeMocks.entries,
       save: storeMocks.save,
       set: storeMocks.set,
     };
-    storeMocks.entries.mockResolvedValue(
-      legacyEntries.map(([key, value]) => [key, key === "sidebarWidth" ? sidebarWidth : value]),
-    );
+    storeMocks.entries.mockResolvedValue([...Object.entries(settings), ["rightSidebarWidth", 300]]);
     storeMocks.load.mockResolvedValue(store);
 
     const loaded = await loadSettingsFromStore();
 
-    expect(loaded.sidebarWidth).toBe(sidebarWidth);
-    expect(loaded.rightSidebarWidth).toBe(sidebarWidth);
-    expect(storeMocks.set).toHaveBeenCalledWith("rightSidebarWidth", sidebarWidth);
-    expect(storeMocks.save).toHaveBeenCalledTimes(1);
+    expect(loaded).toEqual(settings);
+    expect(storeMocks.set).not.toHaveBeenCalledWith("rightSidebarWidth", expect.anything());
   });
 
   it("initializes the persisted Outline preference for existing settings", async () => {

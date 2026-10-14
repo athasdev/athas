@@ -148,7 +148,6 @@ export interface Settings {
   ollamaBaseUrl: string;
   // Layout
   sidebarWidth: number;
-  rightSidebarWidth: number;
   showGitHubPullRequests: boolean;
   showGitHubIssues: boolean;
   showGitHubActions: boolean;

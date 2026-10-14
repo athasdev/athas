@@ -160,10 +160,9 @@ describe("settings normalization", () => {
     expect(normalized.tabCloseButtonVisibility).toBe("active");
     expect(normalized).not.toHaveProperty("windowChromeDensity");
     expect(normalized.sidebarWidth).toBe(140);
-    expect(normalized.rightSidebarWidth).toBe(600);
+    expect(normalized).not.toHaveProperty("rightSidebarWidth");
     expect(normalizeSettingValue("tabCloseButtonVisibility", "hover")).toBe("hover");
     expect(normalizeSettingValue("sidebarWidth", 900)).toBe(600);
-    expect(normalizeSettingValue("rightSidebarWidth", 100)).toBe(140);
   });
 
   it("drops removed footer settings", () => {

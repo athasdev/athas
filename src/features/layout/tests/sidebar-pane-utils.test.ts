@@ -1,17 +1,9 @@
 import { describe, expect, test } from "vite-plus/test";
 import {
   getActiveSidebarView,
-  getSidebarPaneLevel,
   resolveSidebarPaneClick,
   shouldOpenSidebarSubview,
 } from "../utils/sidebar-pane-utils";
-
-describe("getSidebarPaneLevel", () => {
-  test("keeps ordinary workbench views in the primary sidebar", () => {
-    expect(getSidebarPaneLevel("files")).toBe("primary");
-    expect(getSidebarPaneLevel("databases")).toBe("primary");
-  });
-});
 
 describe("getActiveSidebarView", () => {
   test("defaults to files when no alternate pane is active", () => {

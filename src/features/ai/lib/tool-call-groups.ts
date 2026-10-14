@@ -29,6 +29,8 @@ export interface ToolActivitySummary {
   failed: number;
   /** The step still running, whose label stands in for the summary while it works. */
   running: ToolCall | null;
+  /** A step that kept running after the turn finished, such as a dev server. */
+  background: ToolCall | null;
   additions: number;
   deletions: number;
   /** When the first step started, or null when the calls carry no real start time. */
@@ -71,6 +73,7 @@ export function summarizeToolActivity(
   const steps = new Map<AcpToolKind, { count: number; targets: Set<unknown> }>();
   let failed = 0;
   let running: ToolCall | null = null;
+  let background: ToolCall | null = null;
   let additions = 0;
   let deletions = 0;
   let startedAt: number | null = null;
@@ -83,11 +86,14 @@ export function summarizeToolActivity(
     if (kind === "think") continue;
     const phase = getToolCallPhase(toolCall, options.isStreaming);
     if (phase === "running") running ??= toolCall;
+    if (phase === "background") background ??= toolCall;
     if (phase === "failed") failed += 1;
 
     const start = startOf(toolCall);
     const duration = toolCallDurationMs(toolCall);
-    if (start === null || (duration === null && phase !== "running")) allTimed = false;
+    if (start === null || (duration === null && phase !== "running" && phase !== "background")) {
+      allTimed = false;
+    }
     if (start !== null) {
       startedAt = startedAt === null ? start : Math.min(startedAt, start);
       if (duration !== null) {
@@ -115,6 +121,7 @@ export function summarizeToolActivity(
     steps: [...steps].map(([kind, { count }]) => ({ kind, count })),
     failed,
     running,
+    background,
     additions,
     deletions,
     startedAt,

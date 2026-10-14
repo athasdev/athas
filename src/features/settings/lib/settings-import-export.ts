@@ -82,13 +82,6 @@ export function parseSettingsImportJson(jsonString: string): Settings | null {
     candidate?.schemaVersion ?? 0,
   ) as Partial<Settings>;
 
-  if (
-    migratedSettings.rightSidebarWidth === undefined &&
-    migratedSettings.sidebarWidth !== undefined
-  ) {
-    migratedSettings.rightSidebarWidth = migratedSettings.sidebarWidth;
-  }
-
   return normalizeSettings({
     ...getDefaultSettingsSnapshot(),
     ...migratedSettings,

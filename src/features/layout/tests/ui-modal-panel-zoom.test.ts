@@ -209,14 +209,12 @@ describe("panel slice", () => {
     store.getState().setIsSidebarVisible(false);
     store.getState().setIsBottomPaneVisible(true);
     store.getState().setBottomPaneActiveTab("terminal");
-    store.getState().setIsRightSidebarVisible(true);
     store.getState().setIsFindVisible(true);
 
     expect(save).not.toHaveBeenCalled();
     expect(store.getState()).toMatchObject({
       isSidebarVisible: false,
       isBottomPaneVisible: true,
-      isRightSidebarVisible: true,
       isFindVisible: true,
     });
     save.mockRestore();

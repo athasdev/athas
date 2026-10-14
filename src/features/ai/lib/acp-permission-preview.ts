@@ -1,4 +1,5 @@
 import { getAcpDiffOutputs } from "@/features/ai/lib/acp-diff-output";
+import { unwrapShellCommand } from "@/features/ai/lib/shell-command";
 import type {
   AcpEvent,
   AcpPermissionPreview,
@@ -10,8 +11,6 @@ type PermissionRequestEvent = Extract<AcpEvent, { type: "permission_request" }>;
 const MAX_SUMMARY_FIELDS = 4;
 const MAX_SUMMARY_VALUE_LENGTH = 80;
 const MAX_SUMMARY_TEXT_LENGTH = 240;
-const SHELL_NAMES = new Set(["sh", "bash", "zsh", "fish", "pwsh", "powershell", "cmd"]);
-const SHELL_SCRIPT_FLAGS = new Set(["-c", "-lc", "-ic", "/c", "-Command"]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -19,23 +18,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function truncate(text: string, maxLength: number): string {
   return text.length > maxLength ? `${text.slice(0, maxLength - 1)}…` : text;
-}
-
-function getShellName(program: string): string {
-  const name = program.split(/[\\/]/).pop() ?? program;
-  return name.replace(/\.exe$/i, "").toLowerCase();
-}
-
-/** A command array like `["bash", "-lc", "ls"]` reads best as the script it runs. */
-function formatCommandArray(parts: string[]): string {
-  if (
-    parts.length === 3 &&
-    SHELL_NAMES.has(getShellName(parts[0])) &&
-    SHELL_SCRIPT_FLAGS.has(parts[1])
-  ) {
-    return parts[2];
-  }
-  return parts.join(" ");
 }
 
 /** The shell command an execute call's `rawInput` carries, in the shapes agents send it. */
@@ -49,7 +31,8 @@ export function getRawInputCommand(rawInput: unknown): string | null {
       value.length > 0 &&
       value.every((part) => typeof part === "string")
     ) {
-      return formatCommandArray(value);
+      // A command array like `["bash", "-lc", "ls"]` reads best as the script it runs.
+      return unwrapShellCommand(value);
     }
   }
   return null;

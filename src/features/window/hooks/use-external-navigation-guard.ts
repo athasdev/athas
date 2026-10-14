@@ -1,16 +1,16 @@
 import { useEffect } from "react";
-import { openExternalBrowserUrl, resolveExternalBrowserUrl } from "@/utils/external-navigation";
+import { openWebLink, resolveExternalBrowserUrl } from "@/utils/external-navigation";
 
 function getAnchorTarget(target: EventTarget | null): HTMLAnchorElement | null {
   if (!(target instanceof Element)) return null;
   return target.closest("a[href]");
 }
 
-function openExternally(value: string | URL): boolean {
+function openExternally(value: string | URL, origin: Element | null): boolean {
   const url = resolveExternalBrowserUrl(value);
   if (!url) return false;
 
-  void openExternalBrowserUrl(url);
+  void openWebLink(url, origin);
   return true;
 }
 
@@ -26,12 +26,13 @@ export function useExternalNavigationGuard() {
 
       event.preventDefault();
       event.stopPropagation();
-      void openExternalBrowserUrl(url);
+      // The installed router may open it inside Athas, such as in an agent session's browser.
+      void openWebLink(url, anchor);
     };
 
     const originalOpen = window.open;
     window.open = (url?: string | URL, target?: string, features?: string) => {
-      if (url && openExternally(url)) {
+      if (url && openExternally(url, document.activeElement)) {
         return null;
       }
 

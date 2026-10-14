@@ -1,3 +1,4 @@
+import { reportSessionCommandOutput } from "@/features/ai/session-panel/services/session-command-output";
 import {
   ATHAS_BROWSER_TOOL,
   runHostedBrowserTool,
@@ -193,6 +194,10 @@ export class CodexIntegrationService {
       return;
     }
 
+    if (method === "item/commandExecution/outputDelta") {
+      if (this.chatId) reportSessionCommandOutput(this.chatId, String(params.delta ?? ""));
+      return;
+    }
     if (method === "item/agentMessage/delta") {
       this.startPendingMessage();
       this.handlers.onChunk(String(params.delta ?? ""));

@@ -18,12 +18,6 @@ const ClaudeDiffReviewBar = lazy(() =>
     default: module.ClaudeDiffReviewBar,
   })),
 );
-// Loaded on demand so the layout does not pull the AI stores into its import graph.
-const AgentContextSidebar = lazy(() =>
-  import("../components/panel/agent-context-sidebar").then((module) => ({
-    default: module.AgentContextSidebar,
-  })),
-);
 const AgentsSidebar = lazy(() =>
   import("../components/sidebar/agents-sidebar").then((module) => ({
     default: module.AgentsSidebar,
@@ -60,13 +54,6 @@ export function registerAiViews() {
     order: 80,
     component: AgentsSidebar,
     isAvailable: ({ coreFeatures }) => coreFeatures.aiChat,
-    loadsOnDemand: true,
-    suspendWhenHidden: true,
-  });
-  registerSidebarView({
-    id: "agent",
-    order: 90,
-    component: AgentContextSidebar,
     loadsOnDemand: true,
     suspendWhenHidden: true,
   });

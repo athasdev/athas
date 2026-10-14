@@ -56,6 +56,9 @@ import { ToolLocations } from "./tool-locations";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { Button } from "@/ui/button";
 import { CodeOutput } from "@/ui/code-output";
+import { LinkedText } from "./linked-text";
+import { shortenCommand } from "@/features/ai/lib/shell-command";
+import { StatusDot } from "@/ui/status-dot";
 import { ICON_CONCEPTS } from "@/ui/icon-concepts";
 import { Marker, MarkerContent, MarkerIcon } from "@/ui/marker";
 import { Shimmer } from "@/ui/shimmer";
@@ -187,7 +190,9 @@ function TerminalOutput({ terminal }: { terminal: AcpTerminalSnapshot }) {
   return (
     <div className="flex min-w-0 flex-col gap-1">
       {text ? (
-        <CodeOutput tone="muted">{terminal.truncated ? `…\n${text}` : text}</CodeOutput>
+        <CodeOutput tone="muted">
+          <LinkedText text={terminal.truncated ? `…\n${text}` : text} />
+        </CodeOutput>
       ) : null}
       {status ? (
         <span className={cn("ui-text-sm", failed ? "text-destructive" : "text-subtle-foreground")}>
@@ -269,12 +274,17 @@ function DisclosureBody({
   );
 }
 
-/** The status column: a spinner while running, the error mark on failure, else the kind. */
+/**
+ * The status column: a spinner while running, a steady dot for a process that outlived its turn,
+ * the error mark on failure, else the kind.
+ */
 function StepIcon({ icon: KindIcon, phase }: { icon: Icon; phase: ToolCallSummary["phase"] }) {
   return (
     <MarkerIcon tone={phase === "running" ? "accent" : phase === "failed" ? "error" : "default"}>
       {phase === "running" ? (
         <CircleDottedIcon className="motion-safe:animate-spin" />
+      ) : phase === "background" ? (
+        <StatusDot tone="live" />
       ) : phase === "failed" ? (
         <FailedIcon />
       ) : (
@@ -371,7 +381,7 @@ const ToolCallRow = memo(function ToolCallRow({
         </p>
       ) : (
         <CodeOutput key="output" tone="muted">
-          {outputText}
+          <LinkedText text={outputText} />
         </CodeOutput>
       ),
     );
@@ -601,6 +611,10 @@ function ToolActivityGroup({
   const running = summary.running
     ? summarizeToolCall(summary.running, { isStreaming, rootFolderPath })
     : null;
+  const background = summary.background
+    ? summarizeToolCall(summary.background, { isStreaming, rootFolderPath })
+    : null;
+  const isLive = !isRunning && background !== null;
   const duration = formatDuration(summary.durationMs);
   const title = isRunning
     ? `Working${elapsed > 0 ? ` ${formatElapsed(elapsed)}` : ""}`
@@ -609,7 +623,9 @@ function ToolActivityGroup({
       : null;
   const detail = running
     ? [running.verb, running.target].filter(Boolean).join(" ")
-    : describeToolActivity(summary);
+    : isLive
+      ? `${describeToolActivity(summary)} · ${background.target ? shortenCommand(background.target) : "a command"} still running`
+      : describeToolActivity(summary);
 
   return (
     <div data-ai-element="tool-call-group" className="group/tool flex min-w-0 flex-col">
@@ -629,6 +645,8 @@ function ToolActivityGroup({
           <MarkerIcon tone={hasFailed ? "error" : isRunning ? "accent" : "default"}>
             {isRunning ? (
               <CircleDottedIcon className="motion-safe:animate-spin" />
+            ) : isLive ? (
+              <StatusDot tone="live" />
             ) : hasFailed ? (
               <FailedIcon />
             ) : (

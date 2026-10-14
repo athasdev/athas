@@ -1,4 +1,4 @@
-export type SessionPanelTab = "changes" | "browser" | "terminal" | "plan" | "activity";
+export type SessionPanelTab = "changes" | "browser" | "terminal" | "plan";
 
 /** The tool card of one agent session, as the session left it. */
 export interface SessionPanelState {

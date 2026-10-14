@@ -1,12 +1,10 @@
 import { lazy, type ReactNode, Suspense, useLayoutEffect, useRef, useState } from "react";
-import { AgentSessionActivity } from "@/features/ai/components/panel/agent-context-sidebar";
 import { useAgentSessionContext } from "@/features/ai/hooks/use-agent-session-context";
 import { openAgentSessionReview } from "@/features/ai/lib/agent-session-context";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { Button } from "@/ui/button";
 import { Card } from "@/ui/card";
 import {
-  ActivityIcon,
   ArrowsInIcon,
   ArrowsOutIcon,
   GitDiffIcon,
@@ -37,13 +35,12 @@ const SessionTerminalView = lazy(() =>
   import("./session-terminal-view").then((module) => ({ default: module.SessionTerminalView })),
 );
 
-const TOOL_ORDER: SessionPanelTab[] = ["changes", "browser", "terminal", "plan", "activity"];
+const TOOL_ORDER: SessionPanelTab[] = ["changes", "browser", "terminal", "plan"];
 const TOOLS: Record<SessionPanelTab, { label: string; icon: ReactNode }> = {
   changes: { label: "Changes", icon: <GitDiffIcon /> },
   browser: { label: "Browser", icon: <GlobeIcon /> },
   terminal: { label: "Terminal", icon: <TerminalIcon /> },
   plan: { label: "Plan", icon: <ListChecksIcon /> },
-  activity: { label: "Activity", icon: <ActivityIcon /> },
 };
 
 interface SessionToolCardProps {
@@ -158,9 +155,7 @@ export function SessionToolCard({
         ? { tone: "info" as const, label: "new activity" }
         : tool === "terminal" && attention?.terminal
           ? { tone: "error" as const, label: "a command failed" }
-          : tool === "activity" && attention?.activity
-            ? { tone: "error" as const, label: "an agent command failed" }
-            : undefined,
+          : undefined,
   }));
 
   const content: Record<SessionPanelTab, ReactNode> = {
@@ -180,7 +175,6 @@ export function SessionToolCard({
       </Suspense>
     ),
     plan: plan ? <SessionPlanView plan={plan} /> : null,
-    activity: <AgentSessionActivity sessionId={chatId} embedded />,
   };
 
   return (

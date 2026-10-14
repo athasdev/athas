@@ -8,5 +8,4 @@ export type SidebarView =
   | "docker"
   | "databases"
   | "collaboration"
-  | "agent"
   | (string & {});

@@ -3,6 +3,8 @@ import { diffTextLines } from "@/features/git/services/line-diff";
 import type { AcpToolKind } from "../types/acp.types";
 import type { Chat, Message, ToolCall } from "../types/ai-chat.types";
 import { getAcpDiffOutputs, openAcpDiffOutput, toRelativeDisplayPath } from "./acp-diff-output";
+import { getCodexFileChangeDiffs } from "../integrations/codex/codex-file-changes";
+import { unwrapShellCommand } from "./shell-command";
 import { getStructuredToolViews } from "./structured-tool-view";
 import { getToolCallPhase, summarizeToolCall, type ToolCallPhase } from "./tool-call-summary";
 
@@ -86,11 +88,19 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
+/** The command an execute call runs, without the shell wrapper agents put around it. */
 function commandOf(toolCall: ToolCall): string | null {
   if (!isRecord(toolCall.input)) return null;
   for (const key of ["command", "cmd", "script"]) {
     const value = toolCall.input[key];
-    if (typeof value === "string" && value.trim()) return value.trim();
+    if (typeof value === "string" && value.trim()) return unwrapShellCommand(value);
+    if (
+      Array.isArray(value) &&
+      value.length > 0 &&
+      value.every((part) => typeof part === "string")
+    ) {
+      return unwrapShellCommand(value);
+    }
   }
   return null;
 }
@@ -181,7 +191,9 @@ export function buildAgentSessionContext(
         views.push({ id: `${toolCall.id ?? toolCall.name}:${views.length}`, view, timestamp });
       }
 
-      const diffs = getAcpDiffOutputs(toolCall.output);
+      const acpDiffs = getAcpDiffOutputs(toolCall.output);
+      const diffs =
+        acpDiffs.length > 0 ? acpDiffs : getCodexFileChangeDiffs(toolCall.output ?? toolCall.input);
       if (diffs.length > 0) {
         for (const diff of diffs) {
           const existing = changes.get(diff.path);
@@ -203,7 +215,8 @@ export function buildAgentSessionContext(
       }
 
       if (summary.kind === "execute") {
-        const command = commandOf(toolCall) ?? summary.target;
+        const command =
+          commandOf(toolCall) ?? (summary.target ? unwrapShellCommand(summary.target) : null);
         if (command) {
           commands.push({
             id: toolCall.id ?? `${toolCall.name}:${commands.length}`,

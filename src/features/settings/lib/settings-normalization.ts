@@ -569,12 +569,8 @@ export function normalizeSettings(settings: Settings): Settings {
     SIDEBAR_WIDTH_MIN,
     SIDEBAR_WIDTH_MAX,
   );
-  normalizedSettings.rightSidebarWidth = normalizeBoundedWidth(
-    normalizedSettings.rightSidebarWidth,
-    defaultSettings.rightSidebarWidth,
-    SIDEBAR_WIDTH_MIN,
-    SIDEBAR_WIDTH_MAX,
-  );
+  // The right sidebar is gone; agent session tools float over the session instead.
+  delete (normalizedSettings as { rightSidebarWidth?: unknown }).rightSidebarWidth;
   normalizedSettings.externalEditor = normalizeExternalEditor(
     (normalizedSettings as { externalEditor?: unknown }).externalEditor,
     normalizedSettings.customEditorCommand,
@@ -669,12 +665,10 @@ export function normalizeSettingValue<K extends keyof Settings>(
     return normalizeUpdateChannel(value) as Settings[K];
   }
 
-  if (key === "sidebarWidth" || key === "rightSidebarWidth") {
-    const fallback =
-      key === "sidebarWidth" ? defaultSettings.sidebarWidth : defaultSettings.rightSidebarWidth;
+  if (key === "sidebarWidth") {
     return normalizeBoundedWidth(
       value,
-      fallback,
+      defaultSettings.sidebarWidth,
       SIDEBAR_WIDTH_MIN,
       SIDEBAR_WIDTH_MAX,
     ) as Settings[K];

@@ -1,4 +1,4 @@
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openWebLink } from "@/utils/external-navigation";
 import { ClipboardAddon, type ClipboardSelectionType } from "@xterm/addon-clipboard";
 import { FitAddon } from "@xterm/addon-fit";
 import { ImageAddon } from "@xterm/addon-image";
@@ -108,10 +108,10 @@ function reportRendererFallback(reason: "unavailable" | "context-loss", error?: 
   void recordFrictionSignal({ area: "terminal", signal: "renderer_fallback" });
 }
 
-function openExternalTerminalLink(uri: string): void {
+function openTerminalWebLink(uri: string, origin: Element | null): void {
   const target = resolveExternalLinkTarget(uri);
   if (!target) return;
-  openUrl(target).catch((error) => console.error("Failed to open link:", error));
+  openWebLink(target, origin).catch((error) => console.error("Failed to open link:", error));
 }
 
 interface TerminalLinkOptions {
@@ -123,7 +123,7 @@ export function loadWebLinksAddon(terminal: Terminal, options: TerminalLinkOptio
   const webLinksAddon = new WebLinksAddon(
     (event: MouseEvent, uri: string) => {
       if (!isTerminalLinkModifierPressed(event)) return;
-      openExternalTerminalLink(uri);
+      openTerminalWebLink(uri, event.target instanceof Element ? event.target : null);
     },
     {
       hover: (event, text) => options.tooltip.show(event, text, describeTerminalLinkHint("url")),
@@ -196,7 +196,7 @@ export function createTerminalLinkHandler(options: FileLinksProviderOptions): IL
         void options.openFile(fileLink);
         return;
       }
-      openExternalTerminalLink(uri);
+      openTerminalWebLink(uri, event.target instanceof Element ? event.target : null);
     },
     hover: (event, uri) => {
       const fileLink = resolveFileLink(uri);

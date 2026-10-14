@@ -23,10 +23,9 @@ const DebuggerView = lazy(() => import("@/features/debugger/components/debugger-
 
 interface BottomPaneProps {
   roundLeftEdge?: boolean;
-  roundRightEdge?: boolean;
 }
 
-const BottomPane = ({ roundLeftEdge = true, roundRightEdge = true }: BottomPaneProps) => {
+const BottomPane = ({ roundLeftEdge = true }: BottomPaneProps) => {
   const isBottomPaneVisible = useUIState((state) => state.isBottomPaneVisible);
   const bottomPaneActiveTab = useUIState((state) => state.bottomPaneActiveTab);
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
@@ -236,7 +235,7 @@ const BottomPane = ({ roundLeftEdge = true, roundRightEdge = true }: BottomPaneP
         "athas-glass-island relative flex min-h-0 flex-col overflow-hidden bg-background",
         "border-border border-r border-b",
         roundLeftEdge && "rounded-bl-xl border-l",
-        roundRightEdge && "rounded-br-xl",
+        "rounded-br-xl",
         isInternalHoverTarget && "ring-2 ring-primary ring-inset",
         isFullScreen && "size-full rounded-none border-0 shadow-none ring-0",
         !isFullScreen && "flex-1",

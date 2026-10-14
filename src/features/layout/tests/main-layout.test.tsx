@@ -82,8 +82,8 @@ vi.mock("@/features/window/components/title-bar/title-leading", () => ({
 vi.mock("../components/performance-monitor", () => ({ PerformanceMonitor: stub("perf") }));
 vi.mock("../components/sidebar/activity-bar", () => ({ ActivityBar: stub("activity-bar") }));
 vi.mock("../components/sidebar/sidebar-pane", () => ({
-  SidebarPane: ({ paneLevel, visible }: { paneLevel: string; visible: boolean }) => (
-    <div data-testid={`sidebar-${paneLevel}`} data-visible={visible} />
+  SidebarPane: ({ visible }: { visible: boolean }) => (
+    <div data-testid="sidebar" data-visible={visible} />
   ),
 }));
 vi.mock("../components/resizable-pane", () => ({
@@ -231,8 +231,7 @@ describe("main layout", () => {
     expect(view().getByTestId("title-leading")).toBeTruthy();
     expect(view().getByTestId("activity-bar")).toBeTruthy();
     expect(view().getByTestId("split-views")).toBeTruthy();
-    expect(view().getByTestId("sidebar-primary").dataset.visible).toBe("true");
-    expect(view().queryByTestId("sidebar-edge")).toBeNull();
+    expect(view().getByTestId("sidebar").dataset.visible).toBe("true");
     await wait(30);
     expect(view().getByTestId("bottom-pane")).toBeTruthy();
     expect(view().getByTestId("quick-open")).toBeTruthy();
@@ -242,10 +241,8 @@ describe("main layout", () => {
 
     await act(async () => {
       useUIState.getState().setIsSidebarVisible(false);
-      useUIState.setState({ isRightSidebarVisible: true });
     });
-    expect(view().queryByTestId("sidebar-primary")).toBeNull();
-    expect(view().getByTestId("sidebar-edge")).toBeTruthy();
+    expect(view().queryByTestId("sidebar")).toBeNull();
   });
 
   it("opens and closes the database connection dialog", async () => {

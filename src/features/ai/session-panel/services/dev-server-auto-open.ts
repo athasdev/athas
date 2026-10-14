@@ -50,6 +50,10 @@ export function createDevServerAutoOpener(dependencies: DevServerAutoOpenDepende
         pending.delete(key);
       }
     },
+    /** Lets an address that stopped answering be checked again when it shows up again. */
+    forget(chatId: string, url: string) {
+      reachable.delete(`${chatId}\n${url}`);
+    },
   };
 }
 
