@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vite-plus/test";
-import { buildRemoteRootPath, isRemotePath, parseRemotePath } from "../services/remote-path";
+import {
+  buildRemoteEntryPath,
+  buildRemoteRootPath,
+  isRemotePath,
+  parseRemotePath,
+} from "../services/remote-path";
 
 describe("remote-path utils", () => {
   it("parses a remote workspace root path", () => {
@@ -23,5 +28,11 @@ describe("remote-path utils", () => {
 
   it("builds a remote root path", () => {
     expect(buildRemoteRootPath("conn-123")).toBe("remote://conn-123/");
+  });
+
+  it("builds entry paths with a single separator after the connection id", () => {
+    expect(buildRemoteEntryPath("conn-123", "/home/me")).toBe("remote://conn-123/home/me");
+    expect(buildRemoteEntryPath("conn-123", "//bin")).toBe("remote://conn-123/bin");
+    expect(buildRemoteEntryPath("conn-123", "/srv//app/src")).toBe("remote://conn-123/srv/app/src");
   });
 });

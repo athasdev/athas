@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
+import { getRelativePath } from "@/utils/path-helpers";
 import { buildRemoteWorkspaceTree } from "../controllers/remote-workspace";
 
 describe("buildRemoteWorkspaceTree", () => {
@@ -46,5 +47,14 @@ describe("buildRemoteWorkspaceTree", () => {
         },
       ],
     });
+  });
+
+  it("keeps entries listed from the remote root under the workspace root", () => {
+    const { fileTree } = buildRemoteWorkspaceTree("conn-1", "Production", [
+      { name: "bin", path: "//bin", is_dir: true, size: 0 },
+    ]);
+
+    expect(fileTree[0].path).toBe("remote://conn-1/bin");
+    expect(getRelativePath(fileTree[0].path, "remote://conn-1/")).toBe("bin");
   });
 });

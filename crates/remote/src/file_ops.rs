@@ -281,7 +281,7 @@ pub(super) async fn read_directory(
             if name == "." || name == ".." {
                return None;
             }
-            let full_path = path_buf.to_string_lossy().to_string();
+            let full_path = join_remote_path(dir_path, &name);
             let is_symlink = stat.file_type() == ssh2::FileType::Symlink;
             let target = if is_symlink {
                sftp
@@ -320,6 +320,12 @@ pub(super) async fn read_directory(
    }
 }
 
+/// Remote hosts use POSIX paths. SFTP `readdir` builds its entries with `PathBuf::join`, which
+/// joins with a backslash on Windows, so the entry path is joined here instead.
+fn join_remote_path(directory: &str, name: &str) -> String {
+   format!("{}/{}", directory.trim_end_matches('/'), name)
+}
+
 fn sort_entries(entries: &mut [RemoteFileEntry]) {
    entries.sort_by(|a, b| match (a.is_dir, b.is_dir) {
       (true, false) => std::cmp::Ordering::Less,
@@ -355,7 +361,9 @@ pub(super) async fn read_file(connection_id: String, file_path: String) -> Resul
 
 const DIRECTORY_LIST_SCRIPT: &str = r#"set -eu
 [ -d "$1" ] && [ -r "$1" ] && [ -x "$1" ] || { printf 'Directory is not readable.\n' >&2; exit 1; }
-for p in "$1"/* "$1"/.[!.]* "$1"/..?*; do
+d=$1
+while [ "${d%/}" != "$d" ]; do d=${d%/}; done
+for p in "$d"/* "$d"/.[!.]* "$d"/..?*; do
   [ -e "$p" ] || [ -L "$p" ] || continue
   kind=f; [ ! -d "$p" ] || kind=d
   linked=false; target=
@@ -563,6 +571,40 @@ mod tests {
          .arg(directory)
          .output()
          .expect("run listing script")
+   }
+
+   #[cfg(unix)]
+   #[test]
+   fn shell_listing_paths_have_a_single_separator() {
+      let dir = tempfile::tempdir().expect("temp dir");
+      std::fs::write(dir.path().join("file.txt"), "text").expect("write file");
+
+      let output = run_listing_script(Path::new(&format!("{}//", dir.path().display())));
+      assert!(output.status.success());
+      let entries = parse_directory_entries(&String::from_utf8(output.stdout).expect("utf8"))
+         .expect("listing");
+      assert_eq!(
+         entries[0].path,
+         format!("{}/file.txt", dir.path().display())
+      );
+
+      let output = run_listing_script(Path::new("/"));
+      assert!(output.status.success());
+      let entries =
+         parse_directory_entries(&String::from_utf8_lossy(&output.stdout)).expect("listing");
+      assert!(!entries.is_empty());
+      assert!(
+         entries
+            .iter()
+            .all(|entry| entry.path == format!("/{}", entry.name))
+      );
+   }
+
+   #[test]
+   fn remote_paths_are_joined_with_a_forward_slash() {
+      assert_eq!(join_remote_path("/", "bin"), "/bin");
+      assert_eq!(join_remote_path("/home/me/", "src"), "/home/me/src");
+      assert_eq!(join_remote_path("/home/me", "src"), "/home/me/src");
    }
 
    #[cfg(unix)]

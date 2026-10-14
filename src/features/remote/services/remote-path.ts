@@ -15,3 +15,8 @@ export function parseRemotePath(path: string): { connectionId: string; remotePat
 export function buildRemoteRootPath(connectionId: string): string {
   return `remote://${connectionId}/`;
 }
+
+/** The workspace path of an entry a remote listing returned, with repeated slashes collapsed. */
+export function buildRemoteEntryPath(connectionId: string, remotePath: string): string {
+  return `remote://${connectionId}/${remotePath.replace(/^\/+/, "").replace(/\/{2,}/g, "/")}`;
+}

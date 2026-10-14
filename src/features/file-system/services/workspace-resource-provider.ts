@@ -1,7 +1,7 @@
 import { readFile as readLocalFileBytes } from "@tauri-apps/plugin-fs";
 import { commands } from "@/bindings/commands";
 import { invalidateFileTreeGitIgnoreCache } from "@/features/file-explorer/services/file-tree-gitignore";
-import { parseRemotePath } from "@/features/remote/services/remote-path";
+import { buildRemoteEntryPath, parseRemotePath } from "@/features/remote/services/remote-path";
 import { parseWslPath } from "@/features/wsl/services/wsl-path";
 import { readDirectoryContents, readFileContent } from "../api/file-operations";
 import { sortFileEntries } from "./file-tree-utils";
@@ -66,7 +66,7 @@ const remoteWorkspaceResourceProvider: WorkspaceResourceProvider = {
 
     return entries.map((entry) => ({
       name: entry.name,
-      path: `remote://${remoteInfo.connectionId}${entry.path}`,
+      path: buildRemoteEntryPath(remoteInfo.connectionId, entry.path),
       isDir: entry.is_dir,
       children: entry.is_dir ? [] : undefined,
       ...(entry.is_symlink !== undefined

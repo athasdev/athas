@@ -1,4 +1,4 @@
-import { buildRemoteRootPath } from "@/features/remote/services/remote-path";
+import { buildRemoteEntryPath, buildRemoteRootPath } from "@/features/remote/services/remote-path";
 import type { FileEntry } from "../types/app.types";
 
 interface RemoteDirectoryEntry {
@@ -24,7 +24,7 @@ export function buildRemoteWorkspaceTree(
   const remotePath = buildRemoteRootPath(connectionId);
   const fileTree: FileEntry[] = entries.map((entry) => ({
     name: entry.name,
-    path: `remote://${connectionId}${entry.path}`,
+    path: buildRemoteEntryPath(connectionId, entry.path),
     isDir: entry.is_dir,
     children: entry.is_dir ? [] : undefined,
     ...(entry.is_symlink !== undefined
