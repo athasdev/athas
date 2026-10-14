@@ -203,6 +203,10 @@ export const featureBoundaries: FeatureBoundaryConfig = {
       "components/toolbar/file-path-breadcrumb.tsx":
         "Navigable file path breadcrumb used by file viewers.",
     },
+    browser: {
+      "components/browser-page.tsx":
+        "A web page with its navigation bar; agent session panels embed one.",
+    },
     feedback: {
       "components/product-feedback-dialog.tsx": APP_SHELL,
     },
@@ -295,6 +299,8 @@ export const featureBoundaries: FeatureBoundaryConfig = {
       "components/terminal-host.tsx":
         "Keeps terminal sessions alive; main layout and terminal windows mount it.",
       "components/terminal-container.tsx": "Terminal panel mounted in the bottom pane.",
+      "components/terminal-slot.tsx":
+        "Mount point for a live terminal session; agent session panels embed one.",
     },
     viewer: {
       "csv/components/csv-preview.tsx": "CSV table preview the code editor shows for CSV files.",

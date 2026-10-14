@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { authenticatedFetch } from "@/features/auth/services/auth-api";
 import { runHostedBrowserTool } from "../services/browser-tool";
+import { useHostedBrowserRunsStore } from "../stores/hosted-browser-runs.store";
 vi.mock("@/features/auth/services/auth-api", () => ({ authenticatedFetch: vi.fn() }));
 beforeEach(() => vi.clearAllMocks());
 describe("hosted browser tool", () => {
@@ -22,6 +23,21 @@ describe("hosted browser tool", () => {
     expect(timeout).toHaveBeenCalledWith(120_000);
     expect(vi.mocked(authenticatedFetch).mock.calls[0][1]?.signal).toBeInstanceOf(AbortSignal);
     timeout.mockRestore();
+  });
+  it("shows the chat that a run is going on until it ends", async () => {
+    let finish: (response: Response) => void = () => {};
+    vi.mocked(authenticatedFetch).mockReturnValue(
+      new Promise<Response>((resolve) => {
+        finish = resolve;
+      }),
+    );
+    const run = runHostedBrowserTool({ url: "https://example.com" }, "call", "chat-1");
+    await vi.waitFor(() =>
+      expect(useHostedBrowserRunsStore.getState().runs["chat-1"]?.url).toBe("https://example.com"),
+    );
+    finish(new Response(JSON.stringify({})));
+    await run;
+    expect(useHostedBrowserRunsStore.getState().runs["chat-1"]).toBeUndefined();
   });
   it("returns payment errors without retrying", async () => {
     vi.mocked(authenticatedFetch).mockResolvedValue(

@@ -89,6 +89,7 @@ const AIChat = memo(function AIChat({
   buffers = [],
   selectedFiles = [],
   allProjectFiles = [],
+  headerActions,
 }: AIChatProps) {
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const aiProviderId = useSettingsStore((state) => state.settings.aiProviderId);
@@ -783,6 +784,7 @@ const AIChat = memo(function AIChat({
     >
       <ChatHeader
         chatId={effectiveChatId}
+        sessionActions={headerActions}
         onDeleteChat={handleDeleteChat}
         onSwitchChat={chatId ? openAgentHistoryChat : chatActions.switchToChat}
         isMessageSearchOpen={isMessageSearchOpen}

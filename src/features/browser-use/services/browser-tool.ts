@@ -1,13 +1,17 @@
 import { authenticatedFetch } from "@/features/auth/services/auth-api";
+import { useHostedBrowserRunsStore } from "../stores/hosted-browser-runs.store";
 
 export const ATHAS_BROWSER_TOOL = "athas_browser";
 
-export async function runHostedBrowserTool(args: unknown, callId: string) {
+/** Runs a browser task on Athas's hosted browser; `chatId` lets the chat show it is running. */
+export async function runHostedBrowserTool(args: unknown, callId: string, chatId?: string | null) {
+  const runs = useHostedBrowserRunsStore.getState().actions;
   try {
     if (!args || typeof args !== "object" || Array.isArray(args))
       throw new Error("Provide a URL and browser actions.");
     const input = args as Record<string, unknown>;
     if (typeof input.url !== "string") throw new Error("A public website URL is required.");
+    if (chatId) runs.start(chatId, input.url);
     const digest = new Uint8Array(
       await crypto.subtle.digest("SHA-256", new TextEncoder().encode(callId)),
     );
@@ -41,5 +45,7 @@ export async function runHostedBrowserTool(args: unknown, callId: string) {
         },
       ],
     };
+  } finally {
+    if (chatId) runs.finish(chatId);
   }
 }

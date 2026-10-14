@@ -61,6 +61,9 @@ vi.mock("@/features/debugger/services/debug-adapter-events", () => ({
   },
 }));
 vi.mock("@/features/ai/hooks/use-chat-initialization", () => ({ useChatInitialization: () => {} }));
+vi.mock("@/features/ai/session-panel/hooks/use-session-panel-runtime", () => ({
+  useSessionPanelRuntime: () => {},
+}));
 vi.mock("@/features/ai/hooks/use-running-agent-project-ids", () => ({
   useRunningAgentProjectIds: () => [],
 }));

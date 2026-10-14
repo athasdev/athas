@@ -163,7 +163,11 @@ export class CodexIntegrationService {
       const toolName = String(params.tool ?? "");
       if (toolName === ATHAS_BROWSER_TOOL) {
         const requestId = event.id;
-        void runHostedBrowserTool(params.arguments, `${this.threadId}:${this.turnId}:${requestId}`)
+        void runHostedBrowserTool(
+          params.arguments,
+          `${this.threadId}:${this.turnId}:${requestId}`,
+          this.chatId,
+        )
           .then((decision) => commands.respondCodexRequest({ requestId, decision }))
           .catch((error) => this.handlers.onError(String(error), true));
         return;

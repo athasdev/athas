@@ -169,6 +169,11 @@ export const commandPaletteOrder: CommandPaletteSlot[] = [
   "database.connect",
 
   "ai.openAgentInNewWindow",
+  "ai.toggleSessionPanel",
+  "ai.showSessionChanges",
+  "ai.showSessionBrowser",
+  "ai.showSessionTerminal",
+  "ai.showSessionActivity",
   "ai.toggleFollowAgent",
   "ai.cycleAgentMode",
   "ai.reviewPendingAgentChanges",

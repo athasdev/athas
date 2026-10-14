@@ -8,7 +8,7 @@ import {
 } from "@/ui/icons";
 import { openExternalUrl } from "@/utils/external-url";
 import { DiffStats } from "@/features/ai/components/diff-stats";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useCallback, useRef, useState } from "react";
 import { GenerativeUIRenderer } from "@/extensions/ui/components/generative-ui-renderer";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
@@ -33,11 +33,10 @@ import { getBaseName, getDirName, joinPath } from "@/utils/path-helpers";
 import {
   type AgentSessionChange,
   type AgentSessionResource,
-  buildAgentSessionContext,
   openAgentSessionReview,
 } from "../../lib/agent-session-context";
 import { useAIChatStore } from "../../stores/ai-chat.store";
-import { useSettledChatMessages } from "../../hooks/use-settled-chat-messages";
+import { useAgentSessionContext } from "../../hooks/use-agent-session-context";
 import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 type SectionId = "changes" | "files" | "commands" | "resources" | "views";
@@ -69,31 +68,83 @@ function resourceIcon(resource: AgentSessionResource) {
   return <LinkIcon />;
 }
 
-export function AgentContextSidebar() {
-  const sessionId = useActiveAgentSessionId();
-  const chat = useAIChatStore((state) =>
-    sessionId ? (state.chats.find((candidate) => candidate.id === sessionId) ?? null) : null,
-  );
-  const loadState = useAIChatStore((state) =>
-    sessionId ? state.chatMessageLoadStates[sessionId] : undefined,
-  );
-  const loadChatMessages = useAIChatStore((state) => state.actions.loadChatMessages);
-  const openContent = useBufferStore((state) => state.actions.openContent);
+/** Opens a path the agent reported, which may be relative to the project. */
+export function useOpenAgentPath() {
   const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath || null);
-  // Settled rather than selected: a streaming reply changes the messages every frame.
-  const settledMessages = useSettledChatMessages(chat ? sessionId : null);
-  const messages = chat ? settledMessages : undefined;
-  const context = useMemo(
-    () => buildAgentSessionContext(messages ? { messages } : null, rootFolderPath),
-    [messages, rootFolderPath],
+  return useCallback(
+    (path: string) => {
+      const absolutePath =
+        isAbsolutePath(path) || !rootFolderPath ? path : joinPath(rootFolderPath, path);
+      void handleFileSelect(absolutePath, false);
+    },
+    [handleFileSelect, rootFolderPath],
   );
-  const [collapsed, setCollapsed] = useState<Set<SectionId>>(() => new Set());
+}
 
-  useEffect(() => {
-    if (!sessionId || loadState === "loaded" || loadState === "loading") return;
-    void loadChatMessages(sessionId);
-  }, [loadChatMessages, loadState, sessionId]);
+/** The files a session changed, each opening its net diff, with a button to open the file. */
+export function AgentSessionChangeRows({ changes }: { changes: AgentSessionChange[] }) {
+  const openPath = useOpenAgentPath();
+
+  return changes.map((change) => {
+    const fileName = getBaseName(change.displayPath, change.displayPath);
+    const directory = getDirName(change.displayPath);
+    return (
+      <SidebarListActionRow
+        key={change.path}
+        actions={[
+          <SidebarIconButton
+            key="open"
+            tooltip="Open file"
+            aria-label={`Open ${change.displayPath}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              openPath(change.path);
+            }}
+          >
+            <FileTextIcon />
+          </SidebarIconButton>,
+        ]}
+      >
+        <Tooltip content={change.displayPath} width="full">
+          <SidebarListItem
+            density="compact"
+            tone={change.phase === "failed" ? "error" : "default"}
+            leading={<ThemedFileIcon fileName={fileName} isDir={false} />}
+            description={directory || undefined}
+            trailing={<DiffStats additions={change.additions} deletions={change.deletions} />}
+            onClick={() => openAgentSessionReview([change])}
+            data-path={change.path}
+          >
+            {fileName}
+          </SidebarListItem>
+        </Tooltip>
+      </SidebarListActionRow>
+    );
+  });
+}
+
+export function AgentContextSidebar() {
+  const sessionId = useActiveAgentSessionId();
+  return <AgentSessionActivity sessionId={sessionId} />;
+}
+
+/**
+ * What one session is doing and touched: the current step, changes, files read, commands,
+ * resources and canvas. Embedded in the session's own panel it leaves out the title and the
+ * changes, which the panel shows in their own tab.
+ */
+export function AgentSessionActivity({
+  sessionId,
+  embedded = false,
+}: {
+  sessionId: string | null;
+  embedded?: boolean;
+}) {
+  const { chat, context, loadState, messages, rootFolderPath } = useAgentSessionContext(sessionId);
+  const openContent = useBufferStore((state) => state.actions.openContent);
+  const openPath = useOpenAgentPath();
+  const [collapsed, setCollapsed] = useState<Set<SectionId>>(() => new Set());
 
   const toggleSection = useCallback((section: SectionId) => {
     setCollapsed((current) => {
@@ -102,19 +153,6 @@ export function AgentContextSidebar() {
       else next.add(section);
       return next;
     });
-  }, []);
-
-  const openPath = useCallback(
-    (path: string) => {
-      const absolutePath =
-        isAbsolutePath(path) || !rootFolderPath ? path : joinPath(rootFolderPath, path);
-      void handleFileSelect(absolutePath, false);
-    },
-    [handleFileSelect, rootFolderPath],
-  );
-
-  const openChange = useCallback((change: AgentSessionChange) => {
-    openAgentSessionReview([change]);
   }, []);
 
   const openResource = useCallback(
@@ -156,8 +194,8 @@ export function AgentContextSidebar() {
     id: SectionId,
     title: string,
     count: number,
-    children: React.ReactNode,
-    action?: React.ReactNode,
+    children: ReactNode,
+    action?: ReactNode,
   ) => {
     if (count === 0) return null;
     const expanded = !collapsed.has(id);
@@ -181,23 +219,25 @@ export function AgentContextSidebar() {
 
   return (
     <SidebarPanel data-slot="agent-context-sidebar">
-      <SidebarHeader>
-        <SidebarSectionLabel leading={<SparkleIcon />} className="min-w-0 flex-1 px-0">
-          {chat.title || "Agent"}
-        </SidebarSectionLabel>
-        {changes.length > 0 ? (
-          <Button
-            type="button"
-            variant="default"
-            size="sm"
-            onClick={() => openAgentSessionReview(changes)}
-            tooltip="Review every change from this session in one diff"
-          >
-            Review
-            <DiffStats additions={additions} deletions={deletions} />
-          </Button>
-        ) : null}
-      </SidebarHeader>
+      {embedded ? null : (
+        <SidebarHeader>
+          <SidebarSectionLabel leading={<SparkleIcon />} className="min-w-0 flex-1 px-0">
+            {chat.title || "Agent"}
+          </SidebarSectionLabel>
+          {changes.length > 0 ? (
+            <Button
+              type="button"
+              variant="default"
+              size="sm"
+              onClick={() => openAgentSessionReview(changes)}
+              tooltip="Review every change from this session in one diff"
+            >
+              Review
+              <DiffStats additions={additions} deletions={deletions} />
+            </Button>
+          ) : null}
+        </SidebarHeader>
+      )}
 
       <SidebarScrollArea>
         {focus ? (
@@ -232,52 +272,17 @@ export function AgentContextSidebar() {
           </div>
         ) : null}
 
-        {renderSection(
-          "changes",
-          "Changes",
-          changes.length,
-          changes.map((change) => {
-            const fileName = getBaseName(change.displayPath, change.displayPath);
-            const directory = getDirName(change.displayPath);
-            return (
-              <SidebarListActionRow
-                key={change.path}
-                actions={[
-                  <SidebarIconButton
-                    key="open"
-                    tooltip="Open file"
-                    aria-label={`Open ${change.displayPath}`}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      openPath(change.path);
-                    }}
-                  >
-                    <FileTextIcon />
-                  </SidebarIconButton>,
-                ]}
-              >
-                <Tooltip content={change.displayPath} width="full">
-                  <SidebarListItem
-                    density="compact"
-                    tone={change.phase === "failed" ? "error" : "default"}
-                    leading={<ThemedFileIcon fileName={fileName} isDir={false} />}
-                    description={directory || undefined}
-                    trailing={
-                      <DiffStats additions={change.additions} deletions={change.deletions} />
-                    }
-                    onClick={() => openChange(change)}
-                    data-path={change.path}
-                  >
-                    {fileName}
-                  </SidebarListItem>
-                </Tooltip>
-              </SidebarListActionRow>
-            );
-          }),
-          <span className="pr-1.5 ui-text-sm">
-            <DiffStats additions={additions} deletions={deletions} />
-          </span>,
-        )}
+        {embedded
+          ? null
+          : renderSection(
+              "changes",
+              "Changes",
+              changes.length,
+              <AgentSessionChangeRows changes={changes} />,
+              <span className="pr-1.5 ui-text-sm">
+                <DiffStats additions={additions} deletions={deletions} />
+              </span>,
+            )}
 
         {renderSection(
           "files",
@@ -351,7 +356,11 @@ export function AgentContextSidebar() {
           )),
         )}
 
-        {!focus && changes.length === 0 && files.length === 0 && loadState !== "loading" ? (
+        {!focus &&
+        (embedded || changes.length === 0) &&
+        files.length === 0 &&
+        commands.length === 0 &&
+        loadState !== "loading" ? (
           <EmptyState
             layout="sidebar"
             message="Nothing yet. Files, commands and changes show up here as the agent works."

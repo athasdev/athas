@@ -40,6 +40,8 @@
   --spacing-tab-max: var(--athas-tab-max-width);
   --spacing-disclosure-indent: calc(1em + var(--athas-chrome-gap));
   --spacing-palette-offset: 10vh;
+  /* The share of an agent session an expanded tool card takes, beside the conversation. */
+  --spacing-session-tool-card: 45%;
   --shadow-seam-top: 0 -1px 0 0 var(--background);
   --spacing-sidebar-header: var(--athas-sidebar-header-height);
   --spacing-workbench: var(--athas-workbench-gap);

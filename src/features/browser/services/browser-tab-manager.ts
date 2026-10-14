@@ -6,6 +6,7 @@ import { keymapRegistry } from "@/features/keymaps/services/keymap-registry";
 import type { BrowserContent } from "@/features/panes/types/pane-content.types";
 import { getInternalTabDragData } from "@/features/tabs/services/internal-tab-drag";
 import { useBrowserTabStore } from "../stores/browser-tab.store";
+import type { BrowserPagePatch, BrowserPageStore } from "../types/browser-page.types";
 import { getBrowserTabName, isBlankPage } from "./browser-address";
 import { getBrowserKeyBindings, isPageCommand } from "../utils/browser-key-bindings";
 import {
@@ -30,6 +31,8 @@ interface BrowserTab {
   bufferId: string;
   workspaceId: string | null;
   label: string | null;
+  /** Keeps the address of a page that has no buffer; tabs keep theirs on their buffer. */
+  pageStore: BrowserPageStore | null;
   creating: boolean;
   closed: boolean;
   /** Address to load once the webview exists; tabs create their webview the first time they show. */
@@ -103,8 +106,10 @@ class BrowserTabManager {
     workspaceId: string | null,
     slot: BrowserSlot,
     initialUrl: string,
+    pageStore: BrowserPageStore | null = null,
   ): () => void {
     const tab = this.ensureTab(bufferId, workspaceId);
+    tab.pageStore = pageStore;
     if (tab.slot) this.resizeObserver?.unobserve(tab.slot.element);
     tab.slot = slot;
     if (!tab.label && !tab.pendingUrl && !isBlankPage(initialUrl)) {
@@ -219,6 +224,7 @@ class BrowserTabManager {
         bufferId,
         workspaceId,
         label: null,
+        pageStore: null,
         creating: false,
         closed: false,
         pendingUrl: null,
@@ -232,17 +238,19 @@ class BrowserTabManager {
     return tab;
   }
 
-  private getBuffer(tab: BrowserTab): BrowserContent | null {
+  private getBuffer(tab: BrowserTab): Pick<BrowserContent, "url" | "zoom"> | null {
+    if (tab.pageStore) return tab.pageStore.read();
     const buffer = getBufferStore(tab.workspaceId)
       .getState()
       .buffers.find((candidate) => candidate.id === tab.bufferId);
     return buffer?.type === "browser" ? buffer : null;
   }
 
-  private updateBuffer(
-    tab: BrowserTab,
-    patch: Partial<Pick<BrowserContent, "url" | "name" | "favicon" | "zoom">>,
-  ) {
+  private updateBuffer(tab: BrowserTab, patch: BrowserPagePatch) {
+    if (tab.pageStore) {
+      tab.pageStore.update(patch);
+      return;
+    }
     getBufferStore(tab.workspaceId).getState().actions.updateBrowserBuffer(tab.bufferId, patch);
   }
 

@@ -37,8 +37,13 @@ export function registerAiViews() {
   });
   registerPaneView("agent", {
     component: AgentTab,
-    getProps: (buffer, host) => ({ buffer, isActive: host.isActive }),
+    getProps: (buffer, host) => ({ buffer, paneId: host.paneId, isActive: host.isActive }),
     prefetch: loadAgentTab,
+    onClose: (buffer) => {
+      void import("../session-panel/services/session-panel-resources").then(
+        ({ releaseSessionPanelResources }) => releaseSessionPanelResources(buffer.sessionId),
+      );
+    },
   });
   registerTabDecoration("agent", { icon: AgentTabIcon, indicator: AgentTabAttention });
   registerPaneView("continuousAgents", {

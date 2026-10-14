@@ -2,6 +2,7 @@ import { PerformanceMonitor } from "./performance-monitor";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useChatInitialization } from "@/features/ai/hooks/use-chat-initialization";
 import { useRunningAgentProjectIds } from "@/features/ai/hooks/use-running-agent-project-ids";
+import { useSessionPanelRuntime } from "@/features/ai/session-panel/hooks/use-session-panel-runtime";
 import { useCollaborationPresence } from "@/features/collaboration/hooks/use-collaboration-presence";
 import { initializeDebuggerEventBridge } from "@/features/debugger/services/debug-adapter-events";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
@@ -89,6 +90,7 @@ export function MainLayout() {
     setLayoutShell(element);
   }, []);
   useChatInitialization();
+  useSessionPanelRuntime();
   const runningAgentProjectIds = useRunningAgentProjectIds();
   usePaneKeyboard();
   useCollaborationPresence();

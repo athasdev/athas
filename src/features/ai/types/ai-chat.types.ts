@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type {
   AcpPlanEntry,
   AcpTerminalSnapshot,
@@ -162,6 +163,8 @@ export interface AIChatProps {
   buffers?: PaneContent[];
   selectedFiles?: string[];
   allProjectFiles?: FileEntry[];
+  /** Controls the host adds to the session header, such as its tool panel toggle. */
+  headerActions?: ReactNode;
   mode: "chat";
 }
 

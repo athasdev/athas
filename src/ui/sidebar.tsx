@@ -345,9 +345,20 @@ interface SidebarTabItem<TValue extends string> {
   label: string;
   icon?: ReactNode;
   badge?: ReactNode;
+  /** Marks an inactive tab that has something new, such as a failed command. */
+  attention?: { tone: "info" | "error"; label: string };
   ariaLabel?: string;
   disabled?: boolean;
 }
+
+const sidebarTabAttentionVariants = cva(
+  "pointer-events-none absolute top-1 right-1 size-1.5 rounded-full",
+  {
+    variants: {
+      tone: { info: "bg-primary", error: "bg-destructive" },
+    },
+  },
+);
 
 interface SidebarTabPanelItem<TValue extends string> {
   id: TValue;
@@ -359,6 +370,7 @@ export function SidebarTabBar<TValue extends string>({
   value,
   onChange,
   children,
+  actions,
   className,
   label = "Sidebar sections",
 }: {
@@ -366,6 +378,8 @@ export function SidebarTabBar<TValue extends string>({
   value: TValue;
   onChange: (value: TValue) => void;
   children?: ReactNode;
+  /** Controls at the end of the tab row, such as closing the panel. */
+  actions?: ReactNode;
   className?: string;
   label?: string;
 }) {
@@ -377,33 +391,48 @@ export function SidebarTabBar<TValue extends string>({
     >
       <div
         className={cn(
-          "flex h-pane-header min-w-0 shrink-0 items-center justify-center px-chrome-inline",
+          "flex h-pane-header min-w-0 shrink-0 items-center px-chrome-inline",
+          actions ? "justify-between gap-chrome" : "justify-center",
           className,
         )}
       >
         <div className="scrollbar-none min-w-0 overflow-x-auto overscroll-x-none">
           <TabsList variant="sidebar" aria-label={label}>
-            {items.map((item) => (
-              <TabsTrigger
-                key={item.id}
-                value={item.id}
-                disabled={item.disabled}
-                aria-label={item.ariaLabel ?? item.label}
-                title={item.ariaLabel ?? item.label}
-              >
-                {item.icon}
-                <span
-                  className={cn("min-w-0 truncate", item.icon && item.id !== value && "sr-only")}
+            {items.map((item) => {
+              const name = item.ariaLabel ?? item.label;
+              const attention = item.attention && item.id !== value ? item.attention : null;
+              const accessibleName = attention ? `${name}, ${attention.label}` : name;
+              return (
+                <TabsTrigger
+                  key={item.id}
+                  value={item.id}
+                  disabled={item.disabled}
+                  aria-label={accessibleName}
+                  title={accessibleName}
                 >
-                  {item.label}
-                </span>
-                {item.badge && item.id === value ? (
-                  <span className="shrink-0 tabular-nums text-subtle-foreground">{item.badge}</span>
-                ) : null}
-              </TabsTrigger>
-            ))}
+                  {item.icon}
+                  <span
+                    className={cn("min-w-0 truncate", item.icon && item.id !== value && "sr-only")}
+                  >
+                    {item.label}
+                  </span>
+                  {item.badge && item.id === value ? (
+                    <span className="shrink-0 tabular-nums text-subtle-foreground">
+                      {item.badge}
+                    </span>
+                  ) : null}
+                  {attention ? (
+                    <span
+                      data-slot="sidebar-tab-attention"
+                      className={sidebarTabAttentionVariants({ tone: attention.tone })}
+                    />
+                  ) : null}
+                </TabsTrigger>
+              );
+            })}
           </TabsList>
         </div>
+        {actions ? <div className="flex shrink-0 items-center gap-1">{actions}</div> : null}
       </div>
       {children}
     </Tabs>

@@ -21,6 +21,32 @@ export const defaultKeymaps: Keybinding[] = [
     when: "editorFocus && agentEditHunks",
   },
 
+  // Agent session tools, while an agent session is the active surface.
+  {
+    key: "cmd+alt+b",
+    command: "ai.toggleSessionPanel",
+    source: "default",
+    when: "agentSessionFocus",
+  },
+  {
+    key: "cmd+alt+c",
+    command: "ai.showSessionChanges",
+    source: "default",
+    when: "agentSessionFocus",
+  },
+  {
+    key: "cmd+shift+b",
+    command: "ai.showSessionBrowser",
+    source: "default",
+    when: "agentSessionFocus",
+  },
+  {
+    key: "ctrl+`",
+    command: "ai.showSessionTerminal",
+    source: "default",
+    when: "agentSessionFocus",
+  },
+
   // File Operations
   {
     key: "cmd+t",

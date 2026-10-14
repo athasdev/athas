@@ -1,4 +1,5 @@
 import {
+  ActivityIcon,
   ArrowsClockwiseIcon,
   CloudIcon,
   ArrowsLeftRightIcon,
@@ -6,11 +7,14 @@ import {
   CheckIcon,
   CrosshairIcon,
   GitDiffIcon,
+  GlobeIcon,
   HistoryIcon,
   ShieldCheckIcon,
   SignOutIcon,
   SparkleIcon,
+  TerminalIcon,
   TerminalWindowIcon,
+  WrenchIcon,
   XIcon,
 } from "@/ui/icons";
 import { hasProductCapability } from "@/features/auth/services/product-capabilities";
@@ -101,6 +105,51 @@ export const aiCommands: Command[] = [
         await import("@/features/ai/integrations/claude-code/services/claude-ide-bridge");
       await sendSelectionToClaudeCode();
     },
+  },
+  {
+    id: "ai.toggleSessionPanel",
+    title: "AI: Toggle Session Tools",
+    category: "AI",
+    description: "Expand or collapse the changes, browser and terminal of the agent session",
+    icon: <WrenchIcon />,
+    palette: true,
+    execute: async () => (await aiActions()).toggleActiveSessionPanel(),
+  },
+  {
+    id: "ai.showSessionChanges",
+    title: "AI: Show Session Changes",
+    category: "AI",
+    description: "Open the files the agent session changed",
+    icon: <GitDiffIcon />,
+    palette: true,
+    execute: async () => (await aiActions()).showActiveSessionPanelTab("changes"),
+  },
+  {
+    id: "ai.showSessionBrowser",
+    title: "AI: Show Session Browser",
+    category: "AI",
+    description: "Open the agent session's browser, with the servers it started",
+    icon: <GlobeIcon />,
+    palette: true,
+    execute: async () => (await aiActions()).showActiveSessionPanelTab("browser"),
+  },
+  {
+    id: "ai.showSessionTerminal",
+    title: "AI: Show Session Terminal",
+    category: "AI",
+    description: "Open a terminal in the agent session's project",
+    icon: <TerminalIcon />,
+    palette: true,
+    execute: async () => (await aiActions()).showActiveSessionPanelTab("terminal"),
+  },
+  {
+    id: "ai.showSessionActivity",
+    title: "AI: Show Session Activity",
+    category: "AI",
+    description: "Open the files the agent read, the commands it ran and the links it used",
+    icon: <ActivityIcon />,
+    palette: true,
+    execute: async () => (await aiActions()).showActiveSessionPanelTab("activity"),
   },
   {
     id: "ai.toggleFollowAgent",

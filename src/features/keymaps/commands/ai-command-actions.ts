@@ -19,6 +19,8 @@ import {
   selectLogOutAgentId,
 } from "@/features/ai/services/agent-command-context";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
+import { useSessionPanelStore } from "@/features/ai/session-panel/stores/session-panel.store";
+import type { SessionPanelTab } from "@/features/ai/session-panel/types/session-panel.types";
 
 function getActiveBuffer() {
   return useBufferStore.getState().actions.getActiveBuffer() ?? undefined;
@@ -38,6 +40,28 @@ export async function openActiveAgentInNewWindow(): Promise<void> {
   const buffer = getActiveBuffer();
   if (buffer?.type === "agent") await openAgentInNewWindow(buffer.sessionId);
   else showToast({ message: "Open an agent tab first.", type: "info" });
+}
+
+function getActiveAgentSessionId(): string | null {
+  const buffer = getActiveBuffer();
+  if (buffer?.type === "agent") return buffer.sessionId;
+  showToast({ message: "Open an agent session first.", type: "info" });
+  return null;
+}
+
+/** Expands or collapses the tool card of the agent session in front. */
+export function toggleActiveSessionPanel(): void {
+  const chatId = getActiveAgentSessionId();
+  if (chatId) useSessionPanelStore.getState().actions.toggle(chatId);
+}
+
+/** Expands the tool card of the agent session in front on `tab`, ready to use. */
+export function showActiveSessionPanelTab(tab: SessionPanelTab): void {
+  const chatId = getActiveAgentSessionId();
+  if (!chatId) return;
+  const { open, requestFocus } = useSessionPanelStore.getState().actions;
+  requestFocus(chatId, tab);
+  open(chatId, tab);
 }
 
 export function toggleFollowActiveAgent(): void {

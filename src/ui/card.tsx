@@ -14,6 +14,8 @@ const cardVariants = cva(
         /** A `default` card that responds to hover and focus. */
         interactive:
           "border border-border cursor-default transition-colors duration-fast hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus",
+        /** Floats over the content it belongs to, such as an agent session's tool card. */
+        elevated: "shadow-(--shadow-popover) ring-1 ring-border",
       },
       /**
        * The plane the card fill comes from. `surface` suits cards on the content plane;
@@ -22,10 +24,14 @@ const cardVariants = cva(
       plane: {
         surface: "bg-surface",
         background: "bg-background",
+        /** The overlay plane menus and popovers use, for cards that float above content. */
+        overlay: "bg-overlay",
       },
       layout: {
         /** Header, content, and footer spaced apart. */
         stack: "gap-3 py-3",
+        /** No spacing of its own, for a card whose content owns its chrome, such as a tool. */
+        flush: "",
         /**
          * Rows split by hairlines inset from the card edge, such as a section of settings. Each
          * row owns its padding; the card owns the edge and the lines between rows.

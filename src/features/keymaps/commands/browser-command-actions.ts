@@ -1,5 +1,6 @@
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { resolveBrowserAddress } from "@/features/browser/services/browser-address";
+import { useBrowserTabStore } from "@/features/browser/stores/browser-tab.store";
 import { showPromptDialog } from "@/ui/dialog";
 import { emitAppEvent } from "@/utils/app-events";
 
@@ -8,10 +9,14 @@ const loadBrowserTabManager = () =>
     ({ browserTabManager }) => browserTabManager,
   );
 
-/** The browser tab shown in the active pane, if the active buffer is one. */
+/**
+ * The browser tab shown in the active pane, if the active buffer is one, else the page with
+ * keyboard focus, such as the browser in an agent session's panel.
+ */
 function getActiveBrowserBufferId(): string | null {
   const buffer = useBufferStore.getState().actions.getActiveBuffer();
-  return buffer?.type === "browser" ? buffer.id : null;
+  if (buffer?.type === "browser") return buffer.id;
+  return useBrowserTabStore.getState().focusedBufferId;
 }
 
 export function openNewBrowserTab(url?: string): void {

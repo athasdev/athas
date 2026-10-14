@@ -19,7 +19,7 @@ import {
   DotsIcon,
   FileIcon,
 } from "@/ui/icons";
-import { useEffect, useMemo, useRef } from "react";
+import { type ReactNode, useEffect, useMemo, useRef } from "react";
 import { selectAgentSessions } from "@/features/ai/services/agent-session-list";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
@@ -44,6 +44,8 @@ import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcu
 
 interface ChatHeaderProps {
   chatId?: string | null;
+  /** Session controls from the host, such as its tools. */
+  sessionActions?: ReactNode;
   onDeleteChat?: (chatId: string) => void;
   onSwitchChat: (chatId: string) => void;
   isMessageSearchOpen: boolean;
@@ -59,6 +61,7 @@ interface ChatHeaderProps {
 
 export function ChatHeader({
   chatId,
+  sessionActions,
   onDeleteChat,
   onSwitchChat,
   isMessageSearchOpen,
@@ -206,6 +209,8 @@ export function ChatHeader({
               >
                 <SearchIcon />
               </Button>
+
+              {sessionActions}
 
               {!standalone && (
                 <Button
