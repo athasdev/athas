@@ -129,12 +129,13 @@ pub struct BrowserCapabilities {
 }
 
 impl BrowserCapabilities {
-   /// macOS masks the page's layer and passes hits through, Windows clips the
-   /// page's window with a region, and both cut holes. Only macOS takes
-   /// pictures of pages. Linux hosts pages in a GTK box that can't be cut.
+   /// Windows clips the page's window with a region to cut holes. macOS hides a
+   /// covered page behind a picture of it instead: letting the pointer through a
+   /// hole needs a runtime subclass of WebKit's view, which AppKit aborts on when
+   /// the page is resized. Linux hosts pages in a GTK box that can't be cut.
    pub const fn current() -> Self {
       Self {
-         holes: cfg!(any(target_os = "macos", target_os = "windows")),
+         holes: cfg!(target_os = "windows"),
          snapshots: cfg!(target_os = "macos"),
       }
    }
@@ -222,10 +223,7 @@ mod tests {
    #[test]
    fn reports_what_this_platform_supports() {
       let capabilities = BrowserCapabilities::current();
-      assert_eq!(
-         capabilities.holes,
-         cfg!(any(target_os = "macos", target_os = "windows"))
-      );
+      assert_eq!(capabilities.holes, cfg!(target_os = "windows"));
       assert_eq!(capabilities.snapshots, cfg!(target_os = "macos"));
    }
 }
