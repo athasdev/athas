@@ -202,6 +202,7 @@ export function useSessionBoxes(chatId: string): SessionBoxesData {
   );
 
   const visible = getVisibleSessionBoxes({
+    started: (messages?.length ?? 0) > 0 || Boolean(cloudRun),
     hasContextUsage: contextUsage !== null,
     runningItems: running.length,
     hasPlan: plan !== null,

@@ -221,7 +221,6 @@ interface BufferActions {
   closeBuffersBatch: (bufferIds: string[], skipSessionSave?: boolean) => void;
   /** Activates a buffer and focuses its pane, or `paneId` (adding it there when needed). */
   setActiveBuffer: (bufferId: string, paneId?: string) => void;
-  showNewTabView: () => void;
   updateBufferContent: (
     bufferId: string,
     content: string,
@@ -290,8 +289,6 @@ interface AddBufferOptions {
   replaceBufferIds?: string[];
   /** Buffers closed along the way; panes they empty close too. */
   closeBufferIds?: string[];
-  /** Whether the active pane's new-tab page is consumed by the new buffer. */
-  consumeNewTab?: boolean;
   evict?: boolean;
   includePreviewsInEviction?: boolean;
 }
@@ -304,7 +301,6 @@ interface OpenNewContentOptions {
 let bufferIdSequence = 0;
 const generateBufferId = (path: string): string =>
   `buffer_${path.replace(/[^a-zA-Z0-9]/g, "_")}_${Date.now()}_${bufferIdSequence++}`;
-let newTabSequence = 0;
 
 const getWorkspacePaneReplacementBufferId = (
   closingBufferIds: string[],
@@ -435,17 +431,6 @@ const createBufferStore = (workspaceId: string) => {
   const getPaneReplacementBufferId = (closingBufferIds: string[], buffers: PaneContent[]) =>
     getWorkspacePaneReplacementBufferId(closingBufferIds, buffers, workspaceId);
 
-  const getTargetPane = (paneId: string | undefined) => {
-    const paneState = paneStore.getState();
-    return (paneId ? paneState.actions.getPaneById(paneId) : null) ?? selectActivePane(paneState);
-  };
-
-  /** The new-tab page the target pane shows, which the next opened buffer takes over. */
-  const getActiveNewTabBufferId = (buffers: PaneContent[], paneId?: string): string | null => {
-    const buffer = getBufferById(buffers, getTargetPane(paneId)?.activeBufferId);
-    return buffer?.type === "newTab" ? buffer.id : null;
-  };
-
   /** The preview tab of the pane a new buffer would open in, if it has one. */
   const getWritablePanePreviewBufferId = (paneId?: string): string | null => {
     const paneState = paneStore.getState();
@@ -488,16 +473,12 @@ const createBufferStore = (workspaceId: string) => {
           preview,
           replaceBufferIds = [],
           closeBufferIds = [],
-          consumeNewTab = true,
           evict = true,
           includePreviewsInEviction,
         }: AddBufferOptions = {},
       ): string => {
         const { buffers, maxOpenTabs } = get();
         const replaced = [...replaceBufferIds];
-        const newTabBufferId = consumeNewTab ? getActiveNewTabBufferId(buffers, paneId) : null;
-        if (newTabBufferId && !replaced.includes(newTabBufferId)) replaced.push(newTabBufferId);
-
         const closed = [...closeBufferIds];
         if (evict) {
           const leaving = new Set([...replaced, ...closed]);
@@ -824,16 +805,6 @@ const createBufferStore = (workspaceId: string) => {
                 newBuffer.name = displayName;
 
                 addAndShow(newBuffer);
-                saveWorkspaceSession();
-                return newBuffer.id;
-              }
-
-              case "newTab": {
-                const newBuffer = createPaneContent(
-                  generateBufferId(`newtab://${newTabSequence++}`),
-                  spec,
-                );
-                addAndShow(newBuffer, { consumeNewTab: false });
                 saveWorkspaceSession();
                 return newBuffer.id;
               }
@@ -1341,10 +1312,6 @@ const createBufferStore = (workspaceId: string) => {
             if (previousActiveBufferId !== bufferId) {
               saveWorkspaceSession();
             }
-          },
-
-          showNewTabView: () => {
-            get().actions.openContent({ type: "newTab" });
           },
 
           updateBufferContent: (

@@ -4,7 +4,6 @@ import { registerPaneView } from "@/features/panes/services/pane-view-registry";
 import { registerDiffBanner } from "@/features/git/services/diff-banner-registry";
 import { registerTabDecoration } from "@/features/tabs/services/tab-decoration-registry";
 import { AgentTabAttention, AgentTabIcon } from "../components/agent-tab-decorations";
-import { NewTabView } from "../components/new-tab-view";
 import { CLAUDE_CODE_PROPOSAL } from "../integrations/claude-code/services/claude-diff-proposal";
 
 const loadAgentTab = () => import("../components/agent-tab");
@@ -24,10 +23,6 @@ const AgentsSidebar = lazy(() =>
 );
 
 export function registerAiViews() {
-  registerPaneView("newTab", {
-    component: NewTabView,
-    getProps: (buffer, host) => ({ autoFocus: host.isActive, surfaceId: `new-tab-${buffer.id}` }),
-  });
   registerPaneView("agent", {
     component: AgentTab,
     getProps: (buffer, host) => ({ buffer, paneId: host.paneId, isActive: host.isActive }),

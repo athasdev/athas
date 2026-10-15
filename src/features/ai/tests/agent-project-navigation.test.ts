@@ -8,8 +8,6 @@ const mocks = vi.hoisted(() => ({
     { id: "chat-a", workspacePath: "/work/a" },
     { id: "chat-b", workspacePath: "/work/b/" },
   ],
-  createNewChat: vi.fn(() => "new-chat"),
-  setPendingAgentLaunchRequest: vi.fn(),
 }));
 
 vi.mock("@/features/workspace/services/workspace-runtime-registry", () => ({
@@ -52,31 +50,11 @@ vi.mock("@/features/ai/stores/ai-chat.store", () => ({
   useAIChatStore: {
     getState: () => ({
       chats: mocks.chats,
-      actions: {
-        createNewChat: mocks.createNewChat,
-        setPendingAgentLaunchRequest: mocks.setPendingAgentLaunchRequest,
-      },
     }),
   },
-}));
-vi.mock("@/features/editor/stores/buffer.store", () => ({
-  useBufferStore: {
-    getState: () => ({
-      actions: {
-        openAgentBuffer: (chatId: string) => {
-          mocks.calls.push(`tab:${chatId}@${mocks.activeProjectId}`);
-          return `agent://${chatId}`;
-        },
-      },
-    }),
-  },
-}));
-vi.mock("@/features/layout/services/agents-sidebar-reveal", () => ({
-  revealAgentsSidebar: () => mocks.calls.push("reveal"),
 }));
 
 import {
-  launchAgentInProject,
   openAgentSession,
   startAgentInProject,
 } from "@/features/ai/services/agent-project-navigation";
@@ -108,22 +86,6 @@ describe("agent project navigation", () => {
   it("starts a new session in the project picked", async () => {
     await startAgentInProject("project-b");
     expect(mocks.calls).toEqual(["switch:project-b", "new@project-b"]);
-  });
-
-  it("creates a launched session in the target project and reveals the agents", async () => {
-    const launch = {
-      agentId: "claude-code" as const,
-      prompt: "Work on issue #1",
-      selectedBufferIds: [],
-      selectedFilesPaths: [],
-      editorSelections: [],
-    };
-    expect(await launchAgentInProject("project-b", launch)).toBe("new-chat");
-    expect(mocks.calls).toEqual(["switch:project-b", "tab:new-chat@project-b", "reveal"]);
-    expect(mocks.setPendingAgentLaunchRequest).toHaveBeenCalledWith({
-      ...launch,
-      chatId: "new-chat",
-    });
   });
 
   it("stays in the active project for unknown or missing project ids", () => {

@@ -1,5 +1,4 @@
 import { type ReactNode, useId } from "react";
-import { Card } from "@/ui/card";
 import { SidebarSectionHeader, SidebarSectionLabel } from "@/ui/sidebar";
 import { useSessionPanelStore } from "../stores/session-panel.store";
 import type { SessionBoxId } from "../types/session-panel.types";
@@ -16,7 +15,7 @@ interface SessionBoxProps {
   children: ReactNode;
 }
 
-/** One box beside an agent session: a small card with a header that folds it away. */
+/** One box beside an agent session: a section with a header that folds it away. */
 export function SessionBox({ id, title, summary, action, placement, children }: SessionBoxProps) {
   const collapsed = useSessionPanelStore((state) => Boolean(state.collapsedBoxes[id]));
   const { toggleBoxCollapsed } = useSessionPanelStore.use.actions();
@@ -44,28 +43,25 @@ export function SessionBox({ id, title, summary, action, placement, children }: 
 
   const expanded = !collapsed;
   return (
-    <Card
-      layout="flush"
+    <section
       data-slot="session-box"
       data-box={id}
       data-collapsed={collapsed || undefined}
-      className="shrink-0"
+      className="flex min-w-0 shrink-0 flex-col p-1"
     >
-      <div className="flex min-w-0 flex-col p-1">
-        <SidebarSectionHeader
-          expanded={expanded}
-          aria-controls={contentId}
-          onToggle={() => toggleBoxCollapsed(id)}
-          action={trailing}
-        >
-          {title}
-        </SidebarSectionHeader>
-        {expanded ? (
-          <div id={contentId} className="flex min-w-0 flex-col pt-0.5">
-            {children}
-          </div>
-        ) : null}
-      </div>
-    </Card>
+      <SidebarSectionHeader
+        expanded={expanded}
+        aria-controls={contentId}
+        onToggle={() => toggleBoxCollapsed(id)}
+        action={trailing}
+      >
+        {title}
+      </SidebarSectionHeader>
+      {expanded ? (
+        <div id={contentId} className="flex min-w-0 flex-col pt-0.5">
+          {children}
+        </div>
+      ) : null}
+    </section>
   );
 }

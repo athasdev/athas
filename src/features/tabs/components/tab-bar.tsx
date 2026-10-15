@@ -48,7 +48,7 @@ import {
 } from "../services/internal-tab-drag";
 import TabBarItem from "./tab-bar-item";
 import { TabHistoryNavigation } from "./tab-history-navigation";
-import { NewTabMenu } from "./new-tab-menu";
+import { NewTabButton } from "./new-tab-button";
 import TabContextMenu from "./tab-context-menu";
 import { getBufferText } from "@/features/editor/services/open-buffer-text";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
@@ -793,7 +793,7 @@ const TabBar = ({
                 <SidebarIcon />
               </Button>
             )}
-            {paneId && !isBottomPane && <NewTabMenu paneId={paneId} />}
+            {paneId && !isBottomPane && <NewTabButton paneId={paneId} />}
             {paneId && !disablePaneActions && !isBottomPane ? (
               <Button
                 type="button"

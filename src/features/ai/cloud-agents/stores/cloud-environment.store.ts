@@ -8,7 +8,7 @@ import {
   DEFAULT_CLOUD_MAX_MINUTES,
 } from "../services/cloud-environment";
 
-/** The environment picked in a composer that has no session yet, such as a new tab's. */
+/** The environment picked in a composer that has no session yet. */
 export interface CloudEnvironmentDraft {
   kind: AgentEnvironmentKind;
   repo: string | null;
@@ -36,8 +36,6 @@ interface CloudEnvironmentState {
   preferences: CloudAgentPreferences;
   actions: {
     updateDraft: (key: string, patch: Partial<CloudEnvironmentDraft>) => void;
-    /** Returns the draft and forgets it, for the session it is handed to. */
-    takeDraft: (key: string) => CloudEnvironmentDraft | null;
     appendLog: (runId: string, lines: CloudAgentLogLine[], cursor: number) => void;
     setLogError: (runId: string, error: string | null) => void;
     setPreferences: (patch: Partial<CloudAgentPreferences>) => void;
@@ -49,7 +47,7 @@ const EMPTY_LOG: CloudRunLog = { lines: [], cursor: 0, loaded: false, error: nul
 
 const useCloudEnvironmentStoreBase = create<CloudEnvironmentState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       drafts: {},
       logs: {},
       preferences: { useOwnKey: false, maxMinutes: DEFAULT_CLOUD_MAX_MINUTES },
@@ -61,17 +59,6 @@ const useCloudEnvironmentStoreBase = create<CloudEnvironmentState>()(
               [key]: { ...(state.drafts[key] ?? EMPTY_CLOUD_DRAFT), ...patch },
             },
           })),
-        takeDraft: (key) => {
-          const draft = get().drafts[key] ?? null;
-          if (draft) {
-            set((state) => {
-              const drafts = { ...state.drafts };
-              delete drafts[key];
-              return { drafts };
-            });
-          }
-          return draft;
-        },
         appendLog: (runId, lines, cursor) =>
           set((state) => {
             const current = state.logs[runId] ?? EMPTY_LOG;

@@ -4,7 +4,6 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { readFileContent } from "@/features/file-system/api/file-operations";
 import { openFile } from "@/features/file-system/api/file-system-api";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import { Button } from "@/ui/button";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -21,28 +20,7 @@ import {
   TerminalWindowIcon,
 } from "@/ui/icons";
 
-interface AgentStartViewProps {
-  children: ReactNode;
-  showQuickActions?: boolean;
-  /** Shown under the title, before the composer. */
-  header?: ReactNode;
-  /** Shown after the quick actions. */
-  footer?: ReactNode;
-}
-
-interface ActionItem {
-  id: string;
-  label: string;
-  icon: ReactNode;
-  action: () => void;
-}
-
-export function AgentStartView({
-  children,
-  showQuickActions = false,
-  header,
-  footer,
-}: AgentStartViewProps) {
+export function AgentStartView({ children }: { children: ReactNode }) {
   const { openTerminalBuffer, openBuffer } = useBufferStore.use.actions();
   const handleOpenFolder = useFileSystemStore.use.handleOpenFolder();
   const handleOpenAgent = useNewAgentAction();
@@ -69,73 +47,15 @@ export function AgentStartView({
     }
   }, [openBuffer]);
 
-  const quickActions: ActionItem[] = [
-    {
-      id: "new-file",
-      label: "New file",
-      icon: <PlusIcon />,
-      action: handleNewFile,
-    },
-    {
-      id: "find",
-      label: "Open file",
-      icon: <FileTextIcon />,
-      action: handleOpenFile,
-    },
-    {
-      id: "terminal",
-      label: "New terminal",
-      icon: <TerminalWindowIcon />,
-      action: handleOpenTerminal,
-    },
-    {
-      id: "research",
-      label: "Open folder",
-      icon: <FolderOpenIcon />,
-      action: handleOpenFolder,
-    },
-  ];
-
-  const startView = (
-    <Empty className="m-auto max-w-2xl gap-5 px-6 py-8" data-slot="agent-start-view">
-      <EmptyHeader className="max-w-md">
-        <EmptyTitle className="ui-text-lg">Where should we begin?</EmptyTitle>
-        {header}
-      </EmptyHeader>
-
-      {children}
-
-      {showQuickActions ? (
-        <div className="grid w-full grid-cols-[repeat(auto-fit,minmax(8rem,1fr))] gap-2">
-          {quickActions.map((item) => (
-            <Button
-              key={item.id}
-              type="button"
-              onClick={item.action}
-              variant="default"
-              width="full"
-              align="start"
-              truncate
-            >
-              {item.icon}
-              <span className="min-w-0 truncate">{item.label}</span>
-            </Button>
-          ))}
-        </div>
-      ) : null}
-
-      {footer}
-    </Empty>
-  );
-
-  if (showQuickActions) {
-    return <div className="flex size-full min-h-0 flex-1 overflow-auto">{startView}</div>;
-  }
-
   return (
     <ContextMenu>
       <ContextMenuTrigger className="flex size-full min-h-0 flex-1 overflow-auto">
-        {startView}
+        <Empty className="m-auto max-w-2xl gap-5 px-6 py-8" data-slot="agent-start-view">
+          <EmptyHeader className="max-w-md">
+            <EmptyTitle className="ui-text-lg">Where should we begin?</EmptyTitle>
+          </EmptyHeader>
+          {children}
+        </Empty>
       </ContextMenuTrigger>
       <ContextMenuContent>
         <ContextMenuItem onClick={handleNewFile}>

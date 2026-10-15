@@ -22,9 +22,31 @@ const running = (signals: Partial<SessionRunningSignals>) =>
 const command = (text: string, ago = 0) => ({ command: text, startedAt: NOW - ago });
 
 describe("session boxes", () => {
-  it("always shows Environment and Changes, and the rest once they have something to say", () => {
+  it("shows no boxes before the session starts, unless they have something to say", () => {
     expect(
       getVisibleSessionBoxes({
+        started: false,
+        hasContextUsage: false,
+        runningItems: 0,
+        hasPlan: false,
+        connectors: 0,
+      }),
+    ).toEqual([]);
+    expect(
+      getVisibleSessionBoxes({
+        started: false,
+        hasContextUsage: false,
+        runningItems: 0,
+        hasPlan: false,
+        connectors: 1,
+      }),
+    ).toEqual(["connectors"]);
+  });
+
+  it("shows Environment and Changes once started, and the rest once they have something to say", () => {
+    expect(
+      getVisibleSessionBoxes({
+        started: true,
         hasContextUsage: false,
         runningItems: 0,
         hasPlan: false,
@@ -33,6 +55,7 @@ describe("session boxes", () => {
     ).toEqual(["environment", "changes"]);
     expect(
       getVisibleSessionBoxes({
+        started: true,
         hasContextUsage: true,
         runningItems: 1,
         hasPlan: true,
@@ -42,7 +65,13 @@ describe("session boxes", () => {
   });
 
   it("shows a cloud session's sandbox and spend instead of local context and servers", () => {
-    const local = { hasContextUsage: true, runningItems: 1, hasPlan: true, connectors: 2 };
+    const local = {
+      started: true,
+      hasContextUsage: true,
+      runningItems: 1,
+      hasPlan: true,
+      connectors: 2,
+    };
     expect(getVisibleSessionBoxes({ ...local, cloud: { running: true, hasRun: true } })).toEqual([
       "environment",
       "changes",

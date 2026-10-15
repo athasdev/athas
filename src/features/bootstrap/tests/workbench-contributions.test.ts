@@ -20,7 +20,6 @@ const VIEW_TYPES: PaneContentType[] = [
   "terminal",
   "browser",
   "agent",
-  "newTab",
   "diff",
   "image",
   "pdf",

@@ -1,11 +1,9 @@
 import { openAgentWindowSession } from "@/features/ai/detached/services/agent-window-service";
 import { getProviderApiToken } from "@/features/ai/services/ai-token-service";
-import { launchAgentInProject } from "@/features/ai/services/agent-project-navigation";
 import { openAgentHistoryChat } from "@/features/ai/services/open-agent-history";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type {
   AgentMessageSubmitResult,
-  AgentType,
   ChatCloudEnvironment,
   ChatCloudRun,
   Message,
@@ -248,37 +246,6 @@ export function openNewCloudAgentChat() {
   const bufferId = useBufferStore.getState().actions.openAgentBuffer(chatId);
   revealAgentsSidebar();
   return bufferId;
-}
-
-/**
- * Starts a cloud session from a composer that has none yet, such as a new tab's, and sends its
- * first prompt.
- */
-export async function launchCloudAgent(
-  projectId: string | null,
-  launch: {
-    agentId: AgentType;
-    prompt: string;
-    repo: string | null;
-    branch: string | null;
-  },
-) {
-  const chatId = await launchAgentInProject(projectId, {
-    agentId: launch.agentId,
-    prompt: null,
-    selectedBufferIds: [],
-    selectedFilesPaths: [],
-    editorSelections: [],
-  });
-  if (!chatId) return null;
-  useAIChatStore.getState().actions.setPendingAgentLaunchRequest(null);
-  useAIChatStore
-    .getState()
-    .actions.setChatCloudEnvironment(
-      chatId,
-      emptyCloudEnvironment({ repo: launch.repo, branch: launch.branch }),
-    );
-  return { chatId, result: startCloudSessionRun(chatId, launch.prompt) };
 }
 
 /** Opens a run started elsewhere (another device, or before sessions held runs) as a session. */

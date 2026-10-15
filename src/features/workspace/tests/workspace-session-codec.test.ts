@@ -134,10 +134,10 @@ describe("workspace session codec", () => {
 
   it("rejects virtual editors and unsupported pane content", () => {
     const unsupportedBuffer: PaneContent = {
-      id: "new-tab-1",
-      type: "newTab",
-      path: "new-tab://new-tab-1",
-      name: "New Tab",
+      id: "diagnostics-1",
+      type: "diagnostics",
+      path: "diagnostics://diagnostics-1",
+      name: "Diagnostics",
     };
 
     expect(
@@ -183,17 +183,17 @@ describe("workspace session codec", () => {
   });
 
   it("does not save an active path for unsupported pane content", () => {
-    const newTab: PaneContent = {
-      id: "new-tab-1",
-      type: "newTab",
-      path: "new-tab://new-tab-1",
-      name: "New Tab",
+    const diagnostics: PaneContent = {
+      id: "diagnostics-1",
+      type: "diagnostics",
+      path: "diagnostics://diagnostics-1",
+      name: "Diagnostics",
     };
 
     expect(
       buildWorkspaceBufferSnapshot({
-        buffers: [newTab],
-        activeBufferId: newTab.id,
+        buffers: [diagnostics],
+        activeBufferId: diagnostics.id,
         workspaceRootPath: "/workspace",
       }),
     ).toEqual({ buffers: [], activeBufferPath: null });

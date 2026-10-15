@@ -212,7 +212,6 @@ export interface AIChatInputBarProps {
   size?: "default" | "roomy";
   autoFocus?: boolean;
   onAgentChange?: (agentId: AgentType, model?: ApiModelSelection) => void;
-  onTerminalChatCreated?: (chatId: string) => void;
   onSendMessage: (message: string, images?: ImageContent[]) => AgentMessageSubmitResult;
   onInterruptAndSend: (message: string, images?: ImageContent[]) => AgentMessageSubmitResult;
   onMoveQueuedMessage: (fromIndex: number, toIndex: number) => void;
@@ -228,10 +227,6 @@ export interface AIChatInputBarProps {
   onRetryLastTurn?: () => void;
   /** Put back into the composer when it is empty; a new `id` restores again. */
   restoredPrompt?: RestoredComposerPrompt | null;
-  /** Where a composer without a session keeps its Local or Cloud pick; the surface id by default. */
-  environmentDraftKey?: string;
-  /** The project a cloud run defaults its repository from; the session's or the active one by default. */
-  environmentWorkspacePath?: string | null;
 }
 
 export interface ApiModelSelection {

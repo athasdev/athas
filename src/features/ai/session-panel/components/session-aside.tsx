@@ -36,6 +36,7 @@ export const SessionAsideLayoutContext = createContext<SessionAsideLayout>({
 
 function SessionBoxColumn({ chatId }: { chatId: string }) {
   const data = useSessionBoxes(chatId);
+  if (data.visible.length === 0) return null;
   return (
     <ScrollArea
       role="complementary"
@@ -107,6 +108,7 @@ function RailIcon({ id, data }: { id: SessionBoxId; data: SessionBoxesData }): R
 function SessionBoxRail({ chatId }: { chatId: string }) {
   const data = useSessionBoxes(chatId);
   const [openBox, setOpenBox] = useState<SessionBoxId | null>(null);
+  if (data.visible.length === 0) return null;
   return (
     <div
       role="group"

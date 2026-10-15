@@ -61,7 +61,7 @@ describe("getExplorerTargetPath", () => {
   it("ignores non-file buffers", () => {
     const buffer = {
       id: "web",
-      type: "newTab",
+      type: "diagnostics",
       path: "https://example.com",
       name: "Example",
     } satisfies PaneContent;

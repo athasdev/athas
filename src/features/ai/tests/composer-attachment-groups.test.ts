@@ -78,7 +78,6 @@ describe("composer attachment groups", () => {
       buffer("database", "db"),
       buffer("pullRequest", "pr"),
       buffer("agent", "agent"),
-      buffer("newTab", "new"),
     ];
     expect(
       group({

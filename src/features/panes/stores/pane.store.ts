@@ -58,7 +58,7 @@ interface PlaceBufferOptions {
   preview?: boolean;
   /** Tab position for a buffer the target pane does not hold yet; the end by default. */
   index?: number;
-  /** Buffers taken out of every pane first, keeping panes they empty (replaced preview, new tab). */
+  /** Buffers taken out of every pane first, keeping panes they empty (a replaced preview). */
   replaceBufferIds?: readonly string[];
   /** Buffers taken out of every pane first, closing panes they empty (auto eviction). */
   closeBufferIds?: readonly string[];

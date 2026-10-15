@@ -239,6 +239,15 @@ describe("session aside", () => {
     expect(card?.dataset.beside).toBe("rail");
   });
 
+  it("leaves out the column and the rail while no box has anything to show", async () => {
+    boxes.data = { ...(boxes.data as object), visible: [] };
+    await render();
+    expect(find("[data-slot=session-box-column]")).toBeNull();
+    width = 800;
+    await render();
+    expect(find("[data-slot=session-box-rail]")).toBeNull();
+  });
+
   it("shows no boxes once the user hides them, while tools still open", async () => {
     useSessionPanelStore.setState({ boxesHidden: true });
     await render();

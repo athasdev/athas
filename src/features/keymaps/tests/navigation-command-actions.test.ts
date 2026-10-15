@@ -120,14 +120,14 @@ function openNonEditor() {
   useBufferStore.setState({
     buffers: [
       {
-        id: "new-tab",
-        type: "newTab",
-        path: "newtab://1",
-        name: "New Tab",
+        id: "diagnostics",
+        type: "diagnostics",
+        path: "diagnostics://1",
+        name: "Diagnostics",
       },
     ],
   });
-  seedActiveBuffer("new-tab");
+  seedActiveBuffer("diagnostics");
 }
 
 function lspRange(line: number, character: number, endCharacter = character + 3) {

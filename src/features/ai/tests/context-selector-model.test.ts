@@ -31,7 +31,6 @@ describe("context selector model", () => {
       createBuffer("githubIssue", "issue"),
       createBuffer("githubAction", "action"),
       createBuffer("agent", "agent"),
-      createBuffer("newTab", "new-tab"),
     ]);
 
     expect(groups.github.map((buffer) => buffer.id)).toEqual(["pr", "issue", "action"]);

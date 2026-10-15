@@ -55,13 +55,6 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         name: "Agent",
         sessionId: spec.sessionId ?? id.replace("buffer_", ""),
       };
-    case "newTab":
-      return {
-        ...base,
-        type: "newTab",
-        path: `newtab://${id}`,
-        name: "New Tab",
-      };
     case "diff":
       return {
         ...base,

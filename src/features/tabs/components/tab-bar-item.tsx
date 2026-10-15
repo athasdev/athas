@@ -130,7 +130,7 @@ const TabBarItem = memo(function TabBarItem({
           ) : null
         }
       >
-        {showTabIcons && buffer.type !== "newTab" ? (
+        {showTabIcons ? (
           <div className="grid size-3 shrink-0 place-content-center">
             <BufferTypeIcon buffer={buffer} displayName={displayName} />
           </div>

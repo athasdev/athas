@@ -47,13 +47,6 @@ vi.mock("@/features/editor/stores/buffer.store", () => ({
 vi.mock("@/features/layout/services/agents-sidebar-reveal", () => ({
   revealAgentsSidebar: () => {},
 }));
-vi.mock("@/features/ai/services/agent-project-navigation", async () => {
-  const { useAIChatStore } = await import("@/features/ai/stores/ai-chat.store");
-  return {
-    launchAgentInProject: (_projectId: string | null, launch: { agentId: string }) =>
-      useAIChatStore.getState().actions.createNewChat(launch.agentId, { activate: false }),
-  };
-});
 vi.mock("@/features/auth/services/auth-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/features/auth/services/auth-api")>()),
   authenticatedFetch: async (path: string, init?: RequestInit) => {
@@ -90,7 +83,6 @@ import { cloudAgentKeys } from "../services/cloud-agents-queries";
 import {
   cancelCloudRun,
   getCloudSendBlocker,
-  launchCloudAgent,
   openCloudRunSession,
   openNewCloudAgentChat,
   retryCloudRun,
@@ -185,16 +177,14 @@ describe("cloud environment per session", () => {
   });
 
   it("keeps a draft for a composer without a session", () => {
-    const { updateDraft, takeDraft } = useCloudEnvironmentStore.getState().actions;
-    updateDraft("new-tab", { kind: "cloud" });
-    updateDraft("new-tab", { repo: "athasdev/athas", branch: "main" });
-    expect(useCloudEnvironmentStore.getState().drafts["new-tab"]).toEqual({
+    const { updateDraft } = useCloudEnvironmentStore.getState().actions;
+    updateDraft("composer", { kind: "cloud" });
+    updateDraft("composer", { repo: "athasdev/athas", branch: "main" });
+    expect(useCloudEnvironmentStore.getState().drafts["composer"]).toEqual({
       kind: "cloud",
       repo: "athasdev/athas",
       branch: "main",
     });
-    expect(takeDraft("new-tab")?.kind).toBe("cloud");
-    expect(useCloudEnvironmentStore.getState().drafts["new-tab"]).toBeUndefined();
   });
 
   it("opens the Cloud Agents command as a new cloud session", () => {
@@ -353,23 +343,6 @@ describe("cloud run lifecycle", () => {
 });
 
 describe("cloud sessions from elsewhere", () => {
-  it("starts a cloud session from the new tab composer", async () => {
-    const launched = await launchCloudAgent(null, {
-      agentId: "codex",
-      prompt: "Bump deps",
-      repo: "athasdev/athas",
-      branch: "dev",
-    });
-    expect(launched?.result).toEqual({ accepted: true });
-    await flush();
-    await flush();
-    expect(io.posts[0]).toMatchObject({ agent: "codex", baseBranch: "dev", prompt: "Bump deps" });
-    expect(chatOf(launched!.chatId).sessionSettings?.cloud).toMatchObject({
-      repo: "athasdev/athas",
-      branch: "dev",
-    });
-  });
-
   it("opens a run started on another device as a session, once", () => {
     const run = makeRun("remote", {
       repo: "me/other",

@@ -3,7 +3,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import type { DiffContent, NewTabContent } from "@/features/panes/types/pane-content.types";
+import type { DiffContent, PaneContent } from "@/features/panes/types/pane-content.types";
 import DiffViewer from "../components/diff/git-diff-viewer";
 import { getFileDiff } from "../api/git-diff-api";
 import type { GitDiff } from "../types/git.types";
@@ -83,11 +83,11 @@ function commitBuffer(id: string): DiffContent {
   });
 }
 
-const otherTab: NewTabContent = {
+const otherTab: PaneContent = {
   id: "other",
-  path: "new-tab://other",
+  path: "diagnostics://other",
   name: "Other tab",
-  type: "newTab",
+  type: "diagnostics",
 };
 let container: HTMLDivElement;
 let root: Root;

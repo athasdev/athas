@@ -122,7 +122,7 @@ const TabContextMenu = ({
           },
         ]
       : []),
-    ...(buffer.type !== "newTab" && buffer.type !== "browser"
+    ...(buffer.type !== "browser"
       ? [
           {
             id: "copy-path",
@@ -187,7 +187,7 @@ const TabContextMenu = ({
           },
         ]
       : []),
-    ...(buffer.type !== "extension" && buffer.type !== "newTab"
+    ...(buffer.type !== "extension"
       ? [
           {
             id: "reload",

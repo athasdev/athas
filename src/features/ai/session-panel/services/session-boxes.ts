@@ -64,6 +64,8 @@ export function getSessionRunningItems(signals: SessionRunningSignals): SessionR
 }
 
 export interface SessionBoxSignals {
+  /** The session has sent its first message. */
+  started: boolean;
   hasContextUsage: boolean;
   runningItems: number;
   hasPlan: boolean;
@@ -73,8 +75,9 @@ export interface SessionBoxSignals {
 }
 
 /**
- * The boxes a session shows, in stacking order. Environment and Changes are always there, so the
- * column reads the same in every session; the others appear once they have something to say.
+ * The boxes a session shows, in stacking order. Environment and Changes are there once the session
+ * starts, so the column reads the same in every session; the others appear once they have
+ * something to say.
  */
 export function getVisibleSessionBoxes(signals: SessionBoxSignals): SessionBoxId[] {
   const cloud = signals.cloud;
@@ -82,7 +85,7 @@ export function getVisibleSessionBoxes(signals: SessionBoxSignals): SessionBoxId
     switch (box) {
       case "environment":
       case "changes":
-        return true;
+        return signals.started;
       case "context":
         return !cloud && signals.hasContextUsage;
       case "running":

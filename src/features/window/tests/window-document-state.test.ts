@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { EditorContent, NewTabContent } from "@/features/panes/types/pane-content.types";
+import type { EditorContent } from "@/features/panes/types/pane-content.types";
 import { getWindowDocumentState } from "@/features/window/utils/window-document-state";
 
 const editorBuffer = (overrides: Partial<EditorContent> = {}): EditorContent => ({
@@ -43,17 +43,10 @@ describe("getWindowDocumentState", () => {
     });
   });
 
-  it("uses project identity for a new tab", () => {
-    const newTab: NewTabContent = {
-      id: "new-tab",
-      type: "newTab",
-      path: "new-tab",
-      name: "New Tab",
-    };
-
+  it("uses project identity without an active tab", () => {
     expect(
       getWindowDocumentState({
-        activeBuffer: newTab,
+        activeBuffer: null,
         projectName: "project",
         rootFolderPath: "/Users/me/project",
       }),

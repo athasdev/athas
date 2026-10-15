@@ -1,3 +1,4 @@
+import { openNewAgentChat } from "@/features/ai/services/open-new-agent-chat";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
@@ -16,7 +17,7 @@ export function showNewTab(): void {
     emitAppEvent("terminal:new");
     return;
   }
-  useBufferStore.getState().actions.showNewTabView();
+  openNewAgentChat();
 }
 
 export async function saveActiveFile(): Promise<void> {

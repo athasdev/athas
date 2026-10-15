@@ -54,7 +54,6 @@ export function useTabsSection({
   const items = useMemo(() => {
     if (!buffers) return [];
     const candidates = buffers
-      .filter((buffer) => buffer.type !== "newTab")
       .map((buffer) => ({ buffer, description: describeBuffer(buffer, rootFolderPath) }))
       .filter(({ buffer, description }) =>
         matchesSearchQuery(query, [buffer.name, description, buffer.path]),

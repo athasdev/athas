@@ -2,15 +2,10 @@ import { findAgentSessionProject } from "@/features/ai/lib/agent-project-groups"
 import { openAgentHistoryChat } from "@/features/ai/services/open-agent-history";
 import { openNewAgentChat } from "@/features/ai/services/open-new-agent-chat";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
-import type { PendingAgentLaunchRequest } from "@/features/ai/stores/ai-chat/ai-chat-store.types";
 import type { AgentType } from "@/features/ai/types/ai-chat.types";
-import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import { revealAgentsSidebar } from "@/features/layout/services/agents-sidebar-reveal";
 import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 import { useWorkspaceTabsStore } from "@/features/workspace/stores/workspace-tabs.store";
-
-type AgentLaunch = Omit<PendingAgentLaunchRequest, "chatId">;
 
 /**
  * Runs `open` with `projectId` as the active project. Agent tabs, their agent process and the
@@ -47,16 +42,4 @@ export function openAgentSession(chatId: string) {
 /** Opens a new agent session in `projectId`, the active project by default. */
 export function startAgentInProject(projectId: string | null | undefined, agentId?: AgentType) {
   return inProject(projectId, () => openNewAgentChat(agentId));
-}
-
-/** Starts an agent in `projectId` and sends it `launch`'s prompt as soon as its tab opens. */
-export function launchAgentInProject(projectId: string | null | undefined, launch: AgentLaunch) {
-  return inProject(projectId, () => {
-    const { actions } = useAIChatStore.getState();
-    const chatId = actions.createNewChat(launch.agentId, { activate: false });
-    actions.setPendingAgentLaunchRequest({ ...launch, chatId });
-    useBufferStore.getState().actions.openAgentBuffer(chatId);
-    revealAgentsSidebar();
-    return chatId;
-  });
 }

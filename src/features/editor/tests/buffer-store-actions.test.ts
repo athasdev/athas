@@ -212,13 +212,6 @@ describe("opening tool and GitHub tabs", () => {
     expect(actions().openContent({ type: "browser", path: "browser://saved" })).toBe(first);
     expect(actions().openBrowserBuffer("https://a.dev")).not.toBe(first);
   });
-
-  it("opens a new tab view each time it is asked", () => {
-    actions().showNewTabView();
-    actions().showNewTabView();
-    expect(buffers().filter((buffer) => buffer.type === "newTab").length).toBeGreaterThanOrEqual(1);
-    expect(active()?.type).toBe("newTab");
-  });
 });
 
 describe("external editor tabs", () => {

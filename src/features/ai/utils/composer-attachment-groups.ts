@@ -109,8 +109,7 @@ export function getComposerAttachmentGroups({
   };
 
   for (const buffer of buffers) {
-    if (!selectedBufferIds.has(buffer.id) || buffer.type === "agent" || buffer.type === "newTab")
-      continue;
+    if (!selectedBufferIds.has(buffer.id) || buffer.type === "agent") continue;
     const kind = getBufferKind(buffer);
     addEntry({
       key: kind === "files" || kind === "images" ? `path:${buffer.path}` : `buffer:${buffer.id}`,

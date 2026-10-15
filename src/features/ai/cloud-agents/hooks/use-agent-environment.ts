@@ -17,8 +17,8 @@ export interface AgentEnvironment {
 
 /**
  * Where a composer's agent runs: on this machine or in the cloud, with the repository and branch
- * a cloud run starts from. A session keeps it in its settings; a composer without a session yet,
- * such as a new tab's, keeps a draft under `draftKey` until it starts one.
+ * a cloud run starts from. A session keeps it in its settings; a composer without a session yet
+ * keeps a draft under `draftKey` until it starts one.
  */
 export function useAgentEnvironment({
   chatId,

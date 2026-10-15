@@ -96,9 +96,9 @@ const makePreviewBuffer = (
 
 const makeUnrelatedBuffer = (): PaneContent => ({
   id: "unrelated",
-  type: "newTab",
-  path: "newtab://unrelated",
-  name: "New Tab",
+  type: "diagnostics",
+  path: "diagnostics://unrelated",
+  name: "Diagnostics",
 });
 
 describe("reopen closed tab", () => {

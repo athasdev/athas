@@ -222,7 +222,7 @@ describe("pane view registry", () => {
     expect(element?.props).toEqual({ label: "Refs@p1" });
     expect(element?.key).toBe("refs");
     expect(getPaneView("references")).toBeDefined();
-    expect(renderPaneView({ ...buffer, type: "newTab" } as PaneContent, {})).toBeNull();
+    expect(renderPaneView({ ...buffer, type: "workspaces" } as PaneContent, {})).toBeNull();
   });
 
   it("runs close, reload and prefetch hooks and marks resource views", () => {

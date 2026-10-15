@@ -45,8 +45,8 @@ const createMockStorage = () => {
 function makeTab(id: string): PaneContent {
   return {
     id,
-    type: "newTab",
-    path: `newtab://${id}`,
+    type: "diagnostics",
+    path: `diagnostics://${id}`,
     name: id,
   };
 }

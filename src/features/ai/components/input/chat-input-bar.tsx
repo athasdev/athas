@@ -122,7 +122,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
   size = "default",
   autoFocus = false,
   onAgentChange,
-  onTerminalChatCreated,
   onSendMessage,
   onInterruptAndSend,
   onMoveQueuedMessage,
@@ -134,8 +133,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
   lastTurnFailedOffline,
   onRetryLastTurn,
   restoredPrompt,
-  environmentDraftKey,
-  environmentWorkspacePath,
 }: AIChatInputBarProps) {
   const inputRef = useRef<HTMLDivElement>(null);
   const composerRef = useRef<HTMLDivElement>(null);
@@ -191,15 +188,10 @@ const AIChatInputBar = memo(function AIChatInputBar({
   const slashCommandRangeRef = useRef({ startIndex: 0, endIndex: 0 });
 
   const session = useAIChatStore((state) => state.chats.find((chat) => chat.id === chatId));
-  const environment = useAgentEnvironment({ chatId, draftKey: environmentDraftKey ?? surfaceId });
+  const environment = useAgentEnvironment({ chatId, draftKey: surfaceId });
   const isCloud = environment.kind === "cloud";
   const activeProjectPath = useProjectStore((state) => state.rootFolderPath ?? null);
-  const cloudTargets = useCloudTargets(
-    environment,
-    environmentWorkspacePath !== undefined
-      ? environmentWorkspacePath
-      : (session?.workspacePath ?? activeProjectPath),
-  );
+  const cloudTargets = useCloudTargets(environment, session?.workspacePath ?? activeProjectPath);
   const composerAcp = useComposerAcpSession(chatId, currentAgentId);
   usePrepareAcpSession(composerAcp, { enabled: !isCloud });
   const acpSession = composerAcp.session;
@@ -1103,7 +1095,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
     if (command !== null) {
       if (!command || !terminalEnabled) return;
       try {
-        const targetChatId = runChatTerminalCommand({
+        runChatTerminalCommand({
           chatId,
           agentId: currentAgentId,
           command,
@@ -1113,7 +1105,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
         setHasInputText(false);
         if (inputRef.current) inputRef.current.textContent = "";
         closeInlineMenus();
-        if (!chatId) onTerminalChatCreated?.(targetChatId);
       } catch (error) {
         showToast({ message: String(error), type: "error" });
       }

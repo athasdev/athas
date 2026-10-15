@@ -17,7 +17,7 @@ function isGitHubContextBuffer(buffer: PaneContent) {
 }
 
 function getSelectableContextBuffers(buffers: PaneContent[]) {
-  return buffers.filter((buffer) => buffer.type !== "agent" && buffer.type !== "newTab");
+  return buffers.filter((buffer) => buffer.type !== "agent");
 }
 
 export function groupContextBuffers(buffers: PaneContent[]) {

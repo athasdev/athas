@@ -19,7 +19,7 @@ export function getWindowDocumentState({
   rootFolderPath,
 }: WindowDocumentStateInput): WindowDocumentState {
   const contextName = rootFolderPath && projectName && projectName !== "Files" ? projectName : null;
-  const documentName = activeBuffer?.type === "newTab" ? null : activeBuffer?.name;
+  const documentName = activeBuffer?.name;
   const titleParts = [
     documentName,
     documentName === contextName ? null : contextName,
