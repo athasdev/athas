@@ -69,8 +69,11 @@ function commandMessage(id: string, output: string, timestamp: Date): Message {
 let stop: () => void;
 
 beforeEach(() => {
+  // After the real time the tool call summary read when it loaded, so new calls count as
+  // started in this window whatever day the tests run.
+  const now = Date.now() + 60_000;
   vi.useFakeTimers();
-  vi.setSystemTime(new Date("2026-10-15T12:00:00Z"));
+  vi.setSystemTime(now);
   localStorage.clear();
   mocks.reachablePorts.clear();
   mocks.terminalListeners.clear();
@@ -128,7 +131,11 @@ describe("session panel runtime", () => {
     useAIChatStore.setState({
       messagesByChat: {
         "chat-1": [
-          commandMessage("old", "ready on http://localhost:4000", new Date("2026-10-14T12:00:00Z")),
+          commandMessage(
+            "old",
+            "ready on http://localhost:4000",
+            new Date(Date.now() - 86_400_000),
+          ),
           commandMessage("new", "ready on http://localhost:3000", new Date()),
         ],
       },
