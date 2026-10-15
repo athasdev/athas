@@ -8,6 +8,12 @@ const boxes = vi.hoisted(() => ({ data: null as unknown }));
 const navigate = vi.hoisted(() => vi.fn());
 
 vi.mock("../hooks/use-session-boxes", () => ({ useSessionBoxes: () => boxes.data }));
+vi.mock("@/features/ai/cloud-agents/components/cloud-session-boxes", () => ({
+  CloudCostContent: () => null,
+  CloudEnvironmentRows: () => null,
+  CloudPullRequestRow: () => null,
+  CloudRunningRow: () => null,
+}));
 vi.mock("../hooks/use-branch-pull-request", () => ({ useBranchPullRequest: () => null }));
 vi.mock("../components/session-tool-card", () => ({
   SessionToolCard: ({ placement, beside }: { placement: string; beside: string }) => (

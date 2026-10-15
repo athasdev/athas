@@ -10,7 +10,6 @@ import { CLAUDE_CODE_PROPOSAL } from "../integrations/claude-code/services/claud
 const loadAgentTab = () => import("../components/agent-tab");
 const AgentTab = lazy(() => loadAgentTab().then((module) => ({ default: module.AgentTab })));
 const ContinuousAgentsResource = lazy(() => import("../continuous-agents/resource"));
-const CloudAgentsResource = lazy(() => import("../cloud-agents/resource"));
 const AcpInspectorView = lazy(() => import("../acp-inspector/components/acp-inspector-view"));
 const AgentEditsReviewView = lazy(() => import("../components/chat/agent-edits-review"));
 const ClaudeDiffReviewBar = lazy(() =>
@@ -44,7 +43,6 @@ export function registerAiViews() {
     component: ContinuousAgentsResource,
     getProps: () => ({}),
   });
-  registerPaneView("cloudAgents", { component: CloudAgentsResource, getProps: () => ({}) });
   registerPaneView("acpInspector", { component: AcpInspectorView, getProps: () => ({}) });
   registerPaneView("agentChanges", { component: AgentEditsReviewView, getProps: () => ({}) });
   registerDiffBanner(CLAUDE_CODE_PROPOSAL, ClaudeDiffReviewBar);

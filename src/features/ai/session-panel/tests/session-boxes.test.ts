@@ -41,6 +41,30 @@ describe("session boxes", () => {
     ).toEqual(["environment", "context", "changes", "running", "plan", "connectors"]);
   });
 
+  it("shows a cloud session's sandbox and spend instead of local context and servers", () => {
+    const local = { hasContextUsage: true, runningItems: 1, hasPlan: true, connectors: 2 };
+    expect(getVisibleSessionBoxes({ ...local, cloud: { running: true, hasRun: true } })).toEqual([
+      "environment",
+      "changes",
+      "running",
+      "cost",
+      "plan",
+    ]);
+    expect(getVisibleSessionBoxes({ ...local, cloud: { running: false, hasRun: true } })).toEqual([
+      "environment",
+      "changes",
+      "cost",
+      "plan",
+    ]);
+    expect(
+      getVisibleSessionBoxes({
+        ...local,
+        hasPlan: false,
+        cloud: { running: false, hasRun: false },
+      }),
+    ).toEqual(["environment", "changes"]);
+  });
+
   it("offers Plan as a tool only while the session has one", () => {
     expect(getSessionToolTabs(false)).toEqual(["changes", "browser", "terminal"]);
     expect(getSessionToolTabs(true)).toEqual(["changes", "browser", "terminal", "plan"]);

@@ -13,6 +13,7 @@ import type {
   AgentType,
   ApiModelSelection,
   Chat,
+  ChatCloudEnvironment,
   ChatMode,
   ChatSession,
   ChatSessionSettings,
@@ -131,7 +132,7 @@ export interface AIChatActions {
   removeQueuedAgentMessage: (chatId: string, index: number) => void;
   createNewChat: (
     agentId?: AgentType,
-    options?: { activate?: boolean; reuseEmpty?: boolean },
+    options?: { activate?: boolean; reuseEmpty?: boolean; workspacePath?: string | null },
   ) => string;
   ensureChatSession: (
     chatId: string,
@@ -145,6 +146,8 @@ export interface AIChatActions {
   updateChatTitle: (chatId: string, title: string) => void;
   setChatPinned: (chatId: string, isPinned: boolean) => void;
   setChatArchived: (chatId: string, isArchived: boolean) => void;
+  /** Runs the chat's agent in the cloud with `cloud`, or on this machine again with null. */
+  setChatCloudEnvironment: (chatId: string, cloud: ChatCloudEnvironment | null) => void;
   setChatAcpSessionId: (chatId: string, sessionId: string | null) => void;
   addMessage: (chatId: string, message: Message) => void;
   updateMessage: (chatId: string, messageId: string, updates: Partial<Message>) => void;

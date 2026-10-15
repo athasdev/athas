@@ -76,6 +76,14 @@ import {
 import { Spinner } from "@/ui/spinner";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { AgentsPlanFooter } from "./agents-plan-footer";
+import { CloudRunSidebarRow } from "@/features/ai/cloud-agents/components/cloud-run-sidebar-row";
+import { useCloudRun } from "@/features/ai/cloud-agents/hooks/use-cloud-runs";
+import { useCloudSidebarEntries } from "@/features/ai/cloud-agents/hooks/use-cloud-sidebar-entries";
+import {
+  type CloudAgentRun,
+  isActiveCloudAgentRun,
+} from "@/features/ai/cloud-agents/services/cloud-agents-api";
+import { getLatestCloudRun } from "@/features/ai/cloud-agents/services/cloud-environment";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 interface AgentRowContext {
@@ -90,7 +98,10 @@ interface AgentRowContext {
 function AgentRow({ chat, context }: { chat: ChatSession; context: AgentRowContext }) {
   const isInAnotherWindow = useAgentWindowStore((state) => Boolean(state.sessions[chat.id]));
   const attention = useChatAttention(chat.id);
-  const working = useAIChatStore((state) => isAgentSessionWorking(state.messagesByChat[chat.id]));
+  const cloud = chat.sessionSettings?.cloud ?? null;
+  const cloudRun = useCloudRun(getLatestCloudRun(cloud)?.runId);
+  const streaming = useAIChatStore((state) => isAgentSessionWorking(state.messagesByChat[chat.id]));
+  const working = streaming || Boolean(cloudRun && isActiveCloudAgentRun(cloudRun));
   const { deleteChat, updateChatTitle, setChatPinned, setChatArchived } = useAIChatStore(
     (state) => state.actions,
   );
@@ -141,7 +152,8 @@ function AgentRow({ chat, context }: { chat: ChatSession; context: AgentRowConte
           working={working}
           projectName={getProjectNameFromPath(chat.workspacePath || context.workspacePath || "")}
           workspacePath={chat.workspacePath || context.workspacePath}
-          branch={chat.branch || context.currentBranch}
+          branch={cloud ? cloud.branch : chat.branch || context.currentBranch}
+          cloudRepo={cloud ? cloud.repo : undefined}
           onOpen={() => void openAgentSession(chat.id)}
           onOpenInNewWindow={() => void openAgentInNewWindow(chat.id)}
           actionsDisabled={isInAnotherWindow}
@@ -241,15 +253,19 @@ function ArchivedAgentRow({ chat }: { chat: ChatSession }) {
 }
 
 const PROJECT_SESSION_LIMIT = 5;
+const NO_CLOUD_RUNS: CloudAgentRun[] = [];
 
 function ProjectAgentSection({
   project,
   chats,
+  cloudRuns,
   context,
   showEmpty,
 }: {
   project: ProjectTab;
   chats: ChatSession[];
+  /** Cloud runs on this project's repository that have no session here yet. */
+  cloudRuns: CloudAgentRun[];
   context: AgentRowContext;
   showEmpty: boolean;
 }) {
@@ -308,7 +324,10 @@ function ProjectAgentSection({
               {showAll ? "Show less" : `Show ${hiddenCount} more`}
             </SidebarListItem>
           ) : null}
-          {chats.length === 0 && showEmpty ? (
+          {cloudRuns.map((run) => (
+            <CloudRunSidebarRow key={run.id} run={run} workspacePath={project.path} />
+          ))}
+          {chats.length === 0 && cloudRuns.length === 0 && showEmpty ? (
             <SidebarListItem leading={<PlusIcon />} onClick={startAgent}>
               New Agent
             </SidebarListItem>
@@ -387,15 +406,46 @@ export function AgentsSidebar() {
     };
   }, [chats, currentChatId, getAgentName, isMultiProject, projectTabs, query, workspacePath]);
 
+  const cloudEntries = useCloudSidebarEntries(chats, projectTabs);
+  const cloudGroups = useMemo(() => {
+    const matchesRun = (run: CloudAgentRun) =>
+      matchesSearchQuery(query, [run.title, run.repo, run.branch]);
+    const matchesChat = (chat: ChatSession) =>
+      matchesSearchQuery(query, [chat.title, chat.sessionSettings?.cloud?.repo]);
+    const runsByProject = Object.fromEntries(
+      Object.entries(cloudEntries.runsByProject).map(([id, runs]) => [id, runs.filter(matchesRun)]),
+    );
+    return {
+      runsByProject: isMultiProject ? runsByProject : {},
+      otherRuns: [
+        ...(isMultiProject
+          ? []
+          : projectTabs.flatMap((project) =>
+              (runsByProject[project.id] ?? []).map((run) => ({
+                run,
+                workspacePath: project.path,
+              })),
+            )),
+        ...cloudEntries.otherRuns.filter(matchesRun).map((run) => ({ run, workspacePath: null })),
+      ],
+      otherChats: cloudEntries.otherChats.filter(matchesChat),
+    };
+  }, [cloudEntries, isMultiProject, projectTabs, query]);
+
   const hasQuery = query.trim().length > 0;
   const visibleProjectGroups = hasQuery
-    ? projectGroups.filter((group) => group.chats.length > 0)
+    ? projectGroups.filter(
+        (group) =>
+          group.chats.length > 0 || (cloudGroups.runsByProject[group.project.id]?.length ?? 0) > 0,
+      )
     : projectGroups;
+  const hasCloudSection = cloudGroups.otherRuns.length > 0 || cloudGroups.otherChats.length > 0;
   const isEmpty =
     pinned.length === 0 &&
     recentGroups.length === 0 &&
     visibleProjectGroups.length === 0 &&
-    archived.length === 0;
+    archived.length === 0 &&
+    !hasCloudSection;
 
   return (
     <SidebarPanel data-slot="agents-sidebar">
@@ -453,6 +503,7 @@ export function AgentsSidebar() {
                 key={group.project.id}
                 project={group.project}
                 chats={group.chats}
+                cloudRuns={cloudGroups.runsByProject[group.project.id] ?? NO_CLOUD_RUNS}
                 context={context}
                 showEmpty={!hasQuery}
               />
@@ -465,6 +516,17 @@ export function AgentsSidebar() {
                 ))}
               </section>
             ))}
+            {hasCloudSection ? (
+              <section className="flex flex-col gap-0.5" aria-label="Cloud agents">
+                <SidebarSectionLabel>Cloud</SidebarSectionLabel>
+                {cloudGroups.otherChats.map((chat) => (
+                  <AgentRow key={chat.id} chat={chat} context={context} />
+                ))}
+                {cloudGroups.otherRuns.map(({ run, workspacePath }) => (
+                  <CloudRunSidebarRow key={run.id} run={run} workspacePath={workspacePath} />
+                ))}
+              </section>
+            ) : null}
             {archived.length > 0 ? (
               <section className="flex flex-col gap-0.5" aria-label="Archived agents">
                 <SidebarListItem

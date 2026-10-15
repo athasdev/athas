@@ -96,6 +96,10 @@ import { AgentEditsBar } from "./agent-edits-bar";
 import { FileMentionDropdown } from "../mentions/file-mention-dropdown";
 import { SlashCommandDropdown } from "../mentions/slash-command-dropdown";
 import { ContextSelector } from "../selectors/context-selector";
+import { useAgentEnvironment } from "@/features/ai/cloud-agents/hooks/use-agent-environment";
+import { useCloudTargets } from "@/features/ai/cloud-agents/hooks/use-cloud-targets";
+import { ComposerEnvironmentControls } from "@/features/ai/cloud-agents/components/composer-environment-controls";
+import { CloudComposerNotice } from "@/features/ai/cloud-agents/components/cloud-composer-notice";
 
 const AIChatInputBar = memo(function AIChatInputBar({
   chatId,
@@ -130,6 +134,8 @@ const AIChatInputBar = memo(function AIChatInputBar({
   lastTurnFailedOffline,
   onRetryLastTurn,
   restoredPrompt,
+  environmentDraftKey,
+  environmentWorkspacePath,
 }: AIChatInputBarProps) {
   const inputRef = useRef<HTMLDivElement>(null);
   const composerRef = useRef<HTMLDivElement>(null);
@@ -184,11 +190,20 @@ const AIChatInputBar = memo(function AIChatInputBar({
   });
   const slashCommandRangeRef = useRef({ startIndex: 0, endIndex: 0 });
 
+  const session = useAIChatStore((state) => state.chats.find((chat) => chat.id === chatId));
+  const environment = useAgentEnvironment({ chatId, draftKey: environmentDraftKey ?? surfaceId });
+  const isCloud = environment.kind === "cloud";
+  const activeProjectPath = useProjectStore((state) => state.rootFolderPath ?? null);
+  const cloudTargets = useCloudTargets(
+    environment,
+    environmentWorkspacePath !== undefined
+      ? environmentWorkspacePath
+      : (session?.workspacePath ?? activeProjectPath),
+  );
   const composerAcp = useComposerAcpSession(chatId, currentAgentId);
-  usePrepareAcpSession(composerAcp);
+  usePrepareAcpSession(composerAcp, { enabled: !isCloud });
   const acpSession = composerAcp.session;
   const sessionConfigOptions = acpSession.configOptions;
-  const session = useAIChatStore((state) => state.chats.find((chat) => chat.id === chatId));
   const modeSource = useChatModeSource(chatId ?? null, currentAgentId);
   const followChatId = chatId && isAcpAgent(currentAgentId) ? chatId : null;
   useFollowAgentInterrupt(followChatId);
@@ -1195,7 +1210,9 @@ const AIChatInputBar = memo(function AIChatInputBar({
   });
 
   const isDropActive = isContextDragOver || isDraggingFiles;
-  const inputPlaceholder = "Ask anything, @ to add context";
+  const inputPlaceholder = isCloud
+    ? "Describe a task for the cloud agent"
+    : "Ask anything, @ to add context";
 
   useEffect(() => {
     if (!autoFocus || !isActiveSurface) return;
@@ -1309,6 +1326,14 @@ const AIChatInputBar = memo(function AIChatInputBar({
             onRetryLastTurn={onRetryLastTurn}
           />
         ) : null}
+        {!isTerminalMode ? (
+          <CloudComposerNotice
+            environment={environment}
+            targets={cloudTargets}
+            currentAgentId={currentAgentId}
+            onAgentChange={onAgentChange}
+          />
+        ) : null}
         {isTerminalMode ? (
           <div className="px-3 pt-2.5">
             <ChromeBar region="content" surface="transparent">
@@ -1380,22 +1405,26 @@ const AIChatInputBar = memo(function AIChatInputBar({
           </ComposerToolbar>
         ) : (
           <ComposerToolbar>
-            <ContextSelector
-              buffers={buffers}
-              selectedBufferIds={selectedBufferIds}
-              selectedFilesPaths={selectedFilesPaths}
-              onToggleBuffer={toggleBufferSelection}
-              onToggleFile={toggleFileSelection}
-              isOpen={isContextDropdownOpen}
-              triggerRef={contextTriggerRef}
-              onOpenChange={(open) => {
-                if (open) {
-                  closeInlineMenus();
-                }
-                setIsContextDropdownOpen(open);
-              }}
-            />
-            <ComposerModeSelector source={modeSource} onBeforeOpen={closeInlineMenus} />
+            {isCloud ? null : (
+              <ContextSelector
+                buffers={buffers}
+                selectedBufferIds={selectedBufferIds}
+                selectedFilesPaths={selectedFilesPaths}
+                onToggleBuffer={toggleBufferSelection}
+                onToggleFile={toggleFileSelection}
+                isOpen={isContextDropdownOpen}
+                triggerRef={contextTriggerRef}
+                onOpenChange={(open) => {
+                  if (open) {
+                    closeInlineMenus();
+                  }
+                  setIsContextDropdownOpen(open);
+                }}
+              />
+            )}
+            {isCloud ? null : (
+              <ComposerModeSelector source={modeSource} onBeforeOpen={closeInlineMenus} />
+            )}
             <ComposerAgentSelector
               cwd={projectPath}
               currentAgentId={currentAgentId}
@@ -1407,11 +1436,16 @@ const AIChatInputBar = memo(function AIChatInputBar({
               onModelChange={handleApiModelChange}
               onSessionConfigChange={changeSessionConfigOption}
               onBeforeOpen={closeInlineMenus}
-              followChatId={followChatId}
+              followChatId={isCloud ? null : followChatId}
+            />
+            <ComposerEnvironmentControls
+              environment={environment}
+              targets={cloudTargets}
+              onBeforeOpen={closeInlineMenus}
             />
 
             <div className="ml-auto flex shrink-0 items-center gap-1">
-              {contextBudget ? (
+              {isCloud ? null : contextBudget ? (
                 <ComposerContextMeter budget={contextBudget} />
               ) : (
                 <AcpContextMeter usage={acpSession.usage} />

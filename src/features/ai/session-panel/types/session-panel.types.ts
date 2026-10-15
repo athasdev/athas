@@ -6,6 +6,7 @@ export type SessionBoxId =
   | "context"
   | "changes"
   | "running"
+  | "cost"
   | "plan"
   | "connectors";
 

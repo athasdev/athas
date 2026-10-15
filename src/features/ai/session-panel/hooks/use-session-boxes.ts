@@ -34,6 +34,12 @@ import {
 import { getLatestSessionPlan, type SessionPlan } from "../services/session-plan";
 import { useSessionPanelStore } from "../stores/session-panel.store";
 import type { SessionBoxId } from "../types/session-panel.types";
+import { useCloudRun } from "@/features/ai/cloud-agents/hooks/use-cloud-runs";
+import {
+  type CloudAgentRun,
+  isActiveCloudAgentRun,
+} from "@/features/ai/cloud-agents/services/cloud-agents-api";
+import { getLatestCloudRun } from "@/features/ai/cloud-agents/services/cloud-environment";
 
 const NO_BUFFERS = new Set<string>();
 
@@ -59,6 +65,8 @@ export interface SessionBoxesData {
   running: SessionRunningItem[];
   plan: SessionPlan | null;
   connectors: SessionConnector[];
+  /** Set for a session that runs in the cloud, with the run it sent last. */
+  cloud: { repo: string | null; branch: string | null; run: CloudAgentRun | null } | null;
 }
 
 /** The newest command still running, and a clock that ticks once when it turns into a live process. */
@@ -183,11 +191,24 @@ export function useSessionBoxes(chatId: string): SessionBoxesData {
     [mcpServers, skippedServers],
   );
 
+  const cloudEnvironment = chat?.sessionSettings?.cloud ?? null;
+  const cloudRun = useCloudRun(getLatestCloudRun(cloudEnvironment)?.runId);
+  const cloud = useMemo(
+    () =>
+      cloudEnvironment
+        ? { repo: cloudEnvironment.repo, branch: cloudEnvironment.branch, run: cloudRun }
+        : null,
+    [cloudEnvironment, cloudRun],
+  );
+
   const visible = getVisibleSessionBoxes({
     hasContextUsage: contextUsage !== null,
     runningItems: running.length,
     hasPlan: plan !== null,
     connectors: connectors.length,
+    cloud: cloud
+      ? { running: Boolean(cloudRun && isActiveCloudAgentRun(cloudRun)), hasRun: Boolean(cloudRun) }
+      : null,
   });
 
   return {
@@ -198,5 +219,6 @@ export function useSessionBoxes(chatId: string): SessionBoxesData {
     running,
     plan,
     connectors,
+    cloud,
   };
 }

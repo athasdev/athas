@@ -177,7 +177,6 @@ describe("opening tool and GitHub tabs", () => {
     const opened = [
       actions().openReferencesBuffer(),
       actions().openContinuousAgentsBuffer(),
-      actions().openCloudAgentsBuffer(),
       actions().openAcpInspectorBuffer(),
       actions().openExtensionsBuffer(),
     ];
@@ -185,11 +184,10 @@ describe("opening tool and GitHub tabs", () => {
     expect([
       actions().openReferencesBuffer(),
       actions().openContinuousAgentsBuffer(),
-      actions().openCloudAgentsBuffer(),
       actions().openAcpInspectorBuffer(),
       actions().openExtensionsBuffer(),
     ]).toEqual(opened);
-    expect(new Set(opened).size).toBe(5);
+    expect(new Set(opened).size).toBe(4);
   });
 
   it("numbers terminal and agent tabs and reuses them by session", () => {

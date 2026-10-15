@@ -40,12 +40,15 @@ export function useComposerAcpSession(
  * so once per agent and chat: an agent that later stops for being idle is not started again just
  * because its composer is still on screen, and shows its last known options instead.
  */
-export function usePrepareAcpSession({
-  target,
-  sessionId,
-  isLoading,
-}: Pick<ReturnType<typeof useComposerAcpSession>, "target" | "sessionId" | "isLoading">) {
-  const needsSession = isAcpAgent(target.agentId) && !sessionId && !isLoading;
+export function usePrepareAcpSession(
+  {
+    target,
+    sessionId,
+    isLoading,
+  }: Pick<ReturnType<typeof useComposerAcpSession>, "target" | "sessionId" | "isLoading">,
+  { enabled = true }: { enabled?: boolean } = {},
+) {
+  const needsSession = enabled && isAcpAgent(target.agentId) && !sessionId && !isLoading;
   const ownSessionId = useAIChatStore((state) =>
     target.chatId
       ? (state.chats.find((chat) => chat.id === target.chatId)?.acpSessionId ?? null)

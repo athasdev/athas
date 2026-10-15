@@ -508,6 +508,7 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
       }
 
       const newChat = createChat(nextAgentId);
+      if (options.workspacePath !== undefined) newChat.workspacePath = options.workspacePath;
 
       set((draft) => {
         draft.chats.unshift(newChat);
@@ -679,6 +680,23 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
       const chat = get().chats.find((candidate) => candidate.id === chatId);
       if (chat) {
         void saveChatMetadataToDb(chat);
+      }
+    },
+    setChatCloudEnvironment: (chatId, cloud) => {
+      set((state) => {
+        const chat = state.chats.find((candidate) => candidate.id === chatId);
+        if (!chat) return;
+        const settings = { ...chat.sessionSettings };
+        if (cloud) settings.cloud = cloud;
+        else delete settings.cloud;
+        chat.sessionSettings = settings;
+      });
+
+      const chat = get().chats.find((candidate) => candidate.id === chatId);
+      if (chat) {
+        void saveChatMetadataToDb(chat).catch((error) =>
+          console.error("Failed to save the chat's cloud environment:", error),
+        );
       }
     },
     setChatArchived: (chatId, isArchived) => {

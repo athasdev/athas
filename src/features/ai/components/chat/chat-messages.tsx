@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo } from "react";
+import { memo, type ReactNode, useCallback, useEffect, useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { buildChatTimeline, toMs } from "@/features/ai/lib/chat-timeline";
 import { getFollowUpActionsForMessage } from "@/features/ai/lib/follow-up-actions";
@@ -33,6 +33,8 @@ interface ChatMessagesProps {
   activeSearchMessageId?: string | null;
   activeSearchIndex?: number;
   surfaceId: string;
+  /** What a host shows under a message, such as the cloud run a reply belongs to. */
+  renderMessageAddon?: (messageId: string) => ReactNode;
 }
 
 const EMPTY_TIMESTAMPS: number[] = [];
@@ -63,6 +65,7 @@ interface ChatTimelineMessageProps {
   onEditUserMessage?: (messageId: string, content: string) => void | Promise<void>;
   onRetryBefore: (messageId: string) => void | Promise<void>;
   onRetryStalled?: () => void;
+  renderAddon?: (messageId: string) => ReactNode;
 }
 
 /**
@@ -81,6 +84,7 @@ const ChatTimelineMessage = memo(function ChatTimelineMessage({
   onEditUserMessage,
   onRetryBefore,
   onRetryStalled,
+  renderAddon,
 }: ChatTimelineMessageProps) {
   const message = useAIChatStore((state) =>
     findMessage(state.messagesByChat[chatId], messageIndex, messageId),
@@ -148,6 +152,7 @@ const ChatTimelineMessage = memo(function ChatTimelineMessage({
         chatId={chatId}
         onExecutePlanStep={onSendFollowUp}
       />
+      {renderAddon?.(message.id)}
       {isLastMessage && message.role === "assistant" && onSendFollowUp ? (
         <ChatFollowUpActions
           actions={getFollowUpActionsForMessage(message)}
@@ -169,6 +174,7 @@ export const ChatMessages = memo(function ChatMessages({
   activeSearchMessageId,
   activeSearchIndex,
   surfaceId,
+  renderMessageAddon,
 }: ChatMessagesProps) {
   const { scrollToMessage } = useMessageScroller();
   const resolvedChatId = useAIChatStore((state) => chatId ?? state.currentChatId);
@@ -265,6 +271,7 @@ export const ChatMessages = memo(function ChatMessages({
             onEditUserMessage={onEditUserMessage}
             onRetryBefore={retryBefore}
             onRetryStalled={isLastMessage ? onRetryStalledResponse : undefined}
+            renderAddon={renderMessageAddon}
           />
         );
       })}

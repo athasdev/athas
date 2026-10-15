@@ -13,6 +13,7 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/ui/hover-card";
 import {
   ArchiveIcon,
   ClockIcon,
+  CloudIcon,
   CubeIcon,
   DotsIcon,
   FolderIcon,
@@ -41,6 +42,8 @@ interface AgentSessionSidebarItemProps {
   projectName: string;
   workspacePath?: string | null;
   branch?: string | null;
+  /** The GitHub repository a cloud session runs on; null for a cloud session without one yet. */
+  cloudRepo?: string | null;
   active?: boolean;
   pinned?: boolean;
   /** What the session is waiting on the user for, if anything. */
@@ -93,6 +96,7 @@ export function AgentSessionSidebarItem({
   agentLabel,
   attention,
   branch,
+  cloudRepo,
   createdAt,
   lastActiveAt,
   modelLabel,
@@ -181,6 +185,11 @@ export function AgentSessionSidebarItem({
                   <AgentAttentionDot attention={attention} />
                 ) : working ? (
                   <Spinner label="Agent is working" compact />
+                ) : cloudRepo !== undefined ? (
+                  <span className="flex items-center gap-1 text-subtle-foreground ui-text-caption">
+                    <CloudIcon aria-label="Runs in the cloud" />
+                    {lastActive}
+                  </span>
                 ) : (
                   <span className="text-subtle-foreground ui-text-caption">{lastActive}</span>
                 )
@@ -234,6 +243,13 @@ export function AgentSessionSidebarItem({
             label="Project"
             value={projectName}
           />
+          {cloudRepo !== undefined ? (
+            <MetadataRow
+              icon={<CloudIcon className="size-3.5" />}
+              label="Runs"
+              value={cloudRepo ? `Cloud · ${cloudRepo}` : "Cloud"}
+            />
+          ) : null}
           <MetadataRow
             icon={<ClockIcon className="size-3.5" />}
             label="Started"

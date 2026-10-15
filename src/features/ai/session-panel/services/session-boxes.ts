@@ -14,6 +14,7 @@ export const SESSION_BOX_ORDER: SessionBoxId[] = [
   "context",
   "changes",
   "running",
+  "cost",
   "plan",
   "connectors",
 ];
@@ -67,6 +68,8 @@ export interface SessionBoxSignals {
   runningItems: number;
   hasPlan: boolean;
   connectors: number;
+  /** A cloud session's run: its sandbox runs remotely and it spends credit, not local context. */
+  cloud?: { running: boolean; hasRun: boolean } | null;
 }
 
 /**
@@ -74,19 +77,22 @@ export interface SessionBoxSignals {
  * column reads the same in every session; the others appear once they have something to say.
  */
 export function getVisibleSessionBoxes(signals: SessionBoxSignals): SessionBoxId[] {
+  const cloud = signals.cloud;
   return SESSION_BOX_ORDER.filter((box) => {
     switch (box) {
       case "environment":
       case "changes":
         return true;
       case "context":
-        return signals.hasContextUsage;
+        return !cloud && signals.hasContextUsage;
       case "running":
-        return signals.runningItems > 0;
+        return cloud ? cloud.running : signals.runningItems > 0;
+      case "cost":
+        return Boolean(cloud?.hasRun);
       case "plan":
         return signals.hasPlan;
       case "connectors":
-        return signals.connectors > 0;
+        return !cloud && signals.connectors > 0;
     }
   });
 }

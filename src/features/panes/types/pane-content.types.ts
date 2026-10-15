@@ -52,7 +52,6 @@ export type PaneContentType =
   | "diagnostics"
   | "references"
   | "continuousAgents"
-  | "cloudAgents"
   | "acpInspector"
   | "agentChanges"
   | "workspaces"
@@ -235,10 +234,6 @@ interface ContinuousAgentsContent extends PaneContentBase {
   type: "continuousAgents";
 }
 
-interface CloudAgentsContent extends PaneContentBase {
-  type: "cloudAgents";
-}
-
 interface AcpInspectorContent extends PaneContentBase {
   type: "acpInspector";
 }
@@ -300,7 +295,6 @@ export type PaneContent =
   | DiagnosticsContent
   | ReferencesContent
   | ContinuousAgentsContent
-  | CloudAgentsContent
   | AcpInspectorContent
   | AgentChangesContent
   | WorkspacesContent
@@ -334,7 +328,6 @@ const VIRTUAL_TYPES: ReadonlySet<PaneContentType> = new Set([
   "diagnostics",
   "references",
   "continuousAgents",
-  "cloudAgents",
   "acpInspector",
   "agentChanges",
   "workspaces",
@@ -525,9 +518,6 @@ export type OpenContentSpec =
     }
   | {
       type: "continuousAgents";
-    }
-  | {
-      type: "cloudAgents";
     }
   | {
       type: "acpInspector";

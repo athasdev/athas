@@ -1,7 +1,18 @@
 import { createContext, type ReactNode, useContext, useState } from "react";
 import { formatTokenCount } from "@/features/ai/lib/acp-usage";
 import { Button } from "@/ui/button";
-import { GitDiffIcon, ListChecksIcon, PlayCircleIcon, PlugsConnectedIcon } from "@/ui/icons";
+import {
+  CloudIcon,
+  CreditCardIcon,
+  GitDiffIcon,
+  ListChecksIcon,
+  PlayCircleIcon,
+  PlugsConnectedIcon,
+} from "@/ui/icons";
+import {
+  formatCreditMicros,
+  getRunSpentMicros,
+} from "@/features/ai/cloud-agents/services/cloud-environment";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import { ProgressCircle } from "@/ui/progress";
 import { ScrollArea } from "@/ui/scroll-area";
@@ -44,6 +55,7 @@ function SessionBoxColumn({ chatId }: { chatId: string }) {
 function railReading(id: SessionBoxId, data: SessionBoxesData): string | null {
   switch (id) {
     case "environment":
+      if (data.cloud) return data.cloud.repo ? `Cloud, ${data.cloud.repo}` : "Cloud";
       return data.environment
         ? `${data.environment.name}, ${describeLocation(data.environment.location)}`
         : null;
@@ -54,11 +66,14 @@ function railReading(id: SessionBoxId, data: SessionBoxesData): string | null {
           : `${Math.round(data.context.percent)}% used`
         : null;
     case "changes": {
+      if (data.cloud) return data.cloud.run?.prUrl ? "Pull request opened" : "No pull request yet";
       const count = data.changes.files.length;
       return count === 0 ? "No changes yet" : `${count} ${count === 1 ? "file" : "files"}`;
     }
     case "running":
-      return `${data.running.length} running`;
+      return data.cloud ? "Sandbox running" : `${data.running.length} running`;
+    case "cost":
+      return data.cloud?.run ? formatCreditMicros(getRunSpentMicros(data.cloud.run)) : null;
     case "plan":
       return data.plan ? `${data.plan.done} of ${data.plan.entries.length} done` : null;
     case "connectors":
@@ -69,6 +84,7 @@ function railReading(id: SessionBoxId, data: SessionBoxesData): string | null {
 function RailIcon({ id, data }: { id: SessionBoxId; data: SessionBoxesData }): ReactNode {
   switch (id) {
     case "environment":
+      if (data.cloud) return <CloudIcon />;
       return data.environment ? <LocationIcon location={data.environment.location} /> : null;
     case "context":
       return (
@@ -78,6 +94,8 @@ function RailIcon({ id, data }: { id: SessionBoxId; data: SessionBoxesData }): R
       return <GitDiffIcon />;
     case "running":
       return <PlayCircleIcon />;
+    case "cost":
+      return <CreditCardIcon />;
     case "plan":
       return <ListChecksIcon />;
     case "connectors":
@@ -127,7 +145,8 @@ function SessionBoxRail({ chatId }: { chatId: string }) {
                 <SessionBoxContent id={id} chatId={chatId} data={data} placement="popover" />
               </PopoverContent>
             </Popover>
-            {id === "running" && data.running.some((item) => item.kind !== "failed") ? (
+            {id === "running" &&
+            (data.cloud || data.running.some((item) => item.kind !== "failed")) ? (
               <span className="pointer-events-none absolute top-0.5 right-0.5 flex">
                 <StatusDot tone="live" />
               </span>

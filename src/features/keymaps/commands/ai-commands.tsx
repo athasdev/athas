@@ -221,12 +221,14 @@ export const aiCommands: Command[] = [
     id: "ai.openCloudAgents",
     title: "AI: Cloud Agents",
     category: "AI",
-    description: "Run Claude Code or Codex in the cloud and get a pull request",
+    description: "Start an agent session that runs in the cloud and opens a pull request",
     icon: <CloudIcon />,
     when: () => hasProductCapability(useAuthStore.getState().subscription, "cloudAgents"),
     palette: true,
-    execute: () => {
-      useBufferStore.getState().actions.openCloudAgentsBuffer();
+    execute: async () => {
+      const { openNewCloudAgentChat } =
+        await import("@/features/ai/cloud-agents/services/cloud-session");
+      openNewCloudAgentChat();
     },
   },
   {

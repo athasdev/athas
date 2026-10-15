@@ -77,6 +77,9 @@ import { AcpQuestionPrompt } from "./acp-question-prompt";
 import { AcpUrlQuestionPrompt } from "./acp-url-question-prompt";
 import { ChatHeader } from "./chat-header";
 import { ChatMessages } from "./chat-messages";
+import { CloudRunCard } from "@/features/ai/cloud-agents/components/cloud-run-card";
+import { CloudSessionSync } from "@/features/ai/cloud-agents/components/cloud-session-sync";
+import { startCloudSessionRun } from "@/features/ai/cloud-agents/services/cloud-session";
 
 const EMPTY_QUEUE: QueuedAgentMessage[] = [];
 
@@ -131,6 +134,18 @@ const AIChat = memo(function AIChat({
   const currentChat = useChatSession(effectiveChatId);
   const currentAgentId = currentChat?.agentId ?? selectedAgentId;
   const chatSessionId = currentChat?.acpSessionId ?? null;
+  const cloudRunMessageIds = useMemo(
+    () => new Set(currentChat?.sessionSettings?.cloud?.runs.map((run) => run.messageId)),
+    [currentChat?.sessionSettings?.cloud?.runs],
+  );
+  const isCloudSession = Boolean(currentChat?.sessionSettings?.cloud);
+  const renderCloudRunCard = useCallback(
+    (messageId: string) =>
+      effectiveChatId && cloudRunMessageIds.has(messageId) ? (
+        <CloudRunCard chatId={effectiveChatId} messageId={messageId} />
+      ) : null,
+    [cloudRunMessageIds, effectiveChatId],
+  );
   const sessionNotices = useAcpNoticesStore((state) =>
     chatSessionId ? state.notices[chatSessionId] : undefined,
   );
@@ -429,11 +444,24 @@ const AIChat = memo(function AIChat({
     );
   }
 
+  const sendToCloud = (messageContent: string, images?: ImageContent[]) => {
+    const result = !effectiveChatId
+      ? { accepted: false, error: "Open a session to run it in the cloud." }
+      : images?.length
+        ? { accepted: false, error: "Cloud runs take text only. Remove the images to send." }
+        : startCloudSessionRun(effectiveChatId, messageContent);
+    if (result.error) showToast({ message: result.error, type: "error" });
+    else if (result.accepted && effectiveChatId && messageCount === 0)
+      void updateInitialAgentSessionTitle(effectiveChatId, messageContent);
+    return result;
+  };
+
   const sendMessage = useCallback(
     (messageContent: string, images?: ImageContent[]): AgentMessageSubmitResult => {
       if (agentIsDetached(effectiveChatId))
         return { accepted: false, error: "This agent is open in another window." };
       if (!messageContent.trim() && !images?.length) return { accepted: false };
+      if (isCloudSession) return sendToCloud(messageContent, images);
       const access = getAgentMessageAccess(currentAgentId, hasSessionApiKey);
       if (!access.accepted) {
         showToast({
@@ -489,6 +517,8 @@ const AIChat = memo(function AIChat({
       currentAgentId,
       effectiveChatId,
       isChatMessagesLoaded,
+      isCloudSession,
+      messageCount,
       showToast,
     ],
   );
@@ -509,6 +539,7 @@ const AIChat = memo(function AIChat({
     (messageContent: string, images?: ImageContent[]): AgentMessageSubmitResult => {
       if (agentIsDetached(effectiveChatId)) return { accepted: false };
       if (!messageContent.trim() && !images?.length) return { accepted: false };
+      if (isCloudSession) return sendMessage(messageContent, images);
       const access = getAgentMessageAccess(currentAgentId, hasSessionApiKey);
       if (!access.accepted) {
         showToast({
@@ -534,6 +565,7 @@ const AIChat = memo(function AIChat({
       sessionProviderId,
       currentAgentId,
       effectiveChatId,
+      isCloudSession,
       sendMessage,
       showToast,
     ],
@@ -849,6 +881,7 @@ const AIChat = memo(function AIChat({
                       onEditUserMessage={handleEditUserMessage}
                       onRetryStalledResponse={() => void retryLastTurn()}
                       canEditUserMessages={
+                        !isCloudSession &&
                         getAgentMessageAccess(currentAgentId, hasSessionApiKey).accepted &&
                         !isSurfaceTyping &&
                         !surfaceStreamingMessageId &&
@@ -858,6 +891,7 @@ const AIChat = memo(function AIChat({
                       searchQuery={messageSearchQuery}
                       activeSearchMessageId={activeMessageSearchMatch?.messageId ?? null}
                       activeSearchIndex={activeMessageSearchIndex}
+                      renderMessageAddon={isCloudSession ? renderCloudRunCard : undefined}
                     />
                   </MessageScrollerViewport>
                   <MessageScrollerButton />
@@ -897,6 +931,7 @@ const AIChat = memo(function AIChat({
             {!useInitialComposer ? composer : null}
           </div>
           {aside}
+          {isCloudSession && effectiveChatId ? <CloudSessionSync chatId={effectiveChatId} /> : null}
         </div>
       )}
     </div>

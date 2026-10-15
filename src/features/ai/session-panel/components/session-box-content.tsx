@@ -35,6 +35,17 @@ import { openSessionTool } from "../services/session-tools";
 import type { SessionBoxId } from "../types/session-panel.types";
 import { SessionBox } from "./session-box";
 import { AgentSessionChangeRows } from "./session-change-rows";
+import {
+  CloudCostContent,
+  CloudEnvironmentRows,
+  CloudPullRequestRow,
+  CloudRunningRow,
+} from "@/features/ai/cloud-agents/components/cloud-session-boxes";
+import { isActiveCloudAgentRun } from "@/features/ai/cloud-agents/services/cloud-agents-api";
+import {
+  formatCreditMicros,
+  getRunSpentMicros,
+} from "@/features/ai/cloud-agents/services/cloud-environment";
 
 /** Changed files a box lists before it hands the rest to the Changes tool. */
 const MAX_BOX_CHANGES = 6;
@@ -52,6 +63,7 @@ export const SESSION_BOX_TITLES: Record<SessionBoxId, string> = {
   context: "Context",
   changes: "Changes",
   running: "Running",
+  cost: "Cost",
   plan: "Plan",
   connectors: "Connectors",
 };
@@ -123,7 +135,14 @@ function LiveDot() {
   );
 }
 
-function EnvironmentBox({ data, placement }: BoxProps) {
+function EnvironmentBox({ chatId, data, placement }: BoxProps) {
+  if (data.cloud) {
+    return (
+      <SessionBox id="environment" title="Environment" placement={placement} summary="Cloud">
+        <CloudEnvironmentRows chatId={chatId} run={data.cloud.run} />
+      </SessionBox>
+    );
+  }
   const environment = data.environment;
   if (!environment) {
     return (
@@ -223,7 +242,25 @@ function PullRequestRow({ repoPath, branch }: { repoPath: string; branch: string
   );
 }
 
+function CloudChangesBox({ data, placement }: BoxProps) {
+  const run = data.cloud?.run;
+  return (
+    <SessionBox id="changes" title="Changes" placement={placement}>
+      {run?.prUrl ? (
+        <CloudPullRequestRow run={run} />
+      ) : (
+        <BoxNote>
+          {run && isActiveCloudAgentRun(run)
+            ? "The agent's changes arrive as a pull request when it finishes."
+            : "Changes from a cloud run arrive as a pull request."}
+        </BoxNote>
+      )}
+    </SessionBox>
+  );
+}
+
 function ChangesBox({ chatId, data, placement }: BoxProps) {
+  if (data.cloud) return <CloudChangesBox chatId={chatId} data={data} placement={placement} />;
   const { files, additions, deletions } = data.changes;
   const hidden = files.length - MAX_BOX_CHANGES;
   return (
@@ -315,12 +352,36 @@ function RunningRow({ chatId, item }: { chatId: string; item: SessionRunningItem
 }
 
 function RunningBox({ chatId, data, placement }: BoxProps) {
+  const cloudRun = data.cloud?.run;
+  if (data.cloud) {
+    if (!cloudRun || !isActiveCloudAgentRun(cloudRun)) return null;
+    return (
+      <SessionBox id="running" title="Running" placement={placement}>
+        <CloudRunningRow run={cloudRun} />
+      </SessionBox>
+    );
+  }
   if (data.running.length === 0) return null;
   return (
     <SessionBox id="running" title="Running" placement={placement}>
       {data.running.map((item) => (
         <RunningRow key={item.kind} chatId={chatId} item={item} />
       ))}
+    </SessionBox>
+  );
+}
+
+function CostBox({ data, placement }: BoxProps) {
+  const run = data.cloud?.run;
+  if (!run) return null;
+  return (
+    <SessionBox
+      id="cost"
+      title="Cost"
+      placement={placement}
+      summary={formatCreditMicros(getRunSpentMicros(run))}
+    >
+      <CloudCostContent run={run} />
     </SessionBox>
   );
 }
@@ -413,6 +474,8 @@ export function SessionBoxContent({ id, ...props }: BoxProps & { id: SessionBoxI
       return <ChangesBox {...props} />;
     case "running":
       return <RunningBox {...props} />;
+    case "cost":
+      return <CostBox {...props} />;
     case "plan":
       return <PlanBox {...props} />;
     case "connectors":

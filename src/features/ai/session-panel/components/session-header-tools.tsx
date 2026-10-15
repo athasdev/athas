@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 import { Button } from "@/ui/button";
 import { GitDiffIcon, GlobeIcon, SidebarRightIcon, TerminalIcon } from "@/ui/icons";
@@ -44,10 +45,13 @@ export function SessionHeaderTools({ chatId }: { chatId: string }) {
   const panel = useSessionPanel(chatId);
   const boxesHidden = useSessionPanelStore((state) => state.boxesHidden);
   const { toggleBoxesHidden } = useSessionPanelStore.use.actions();
+  const isCloud = useAIChatStore((state) =>
+    Boolean(state.chats.find((chat) => chat.id === chatId)?.sessionSettings?.cloud),
+  );
 
   return (
     <>
-      {HEADER_TOOLS.map((tool) => (
+      {(isCloud ? [] : HEADER_TOOLS).map((tool) => (
         <HeaderToolButton
           key={tool.tab}
           chatId={chatId}

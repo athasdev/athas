@@ -151,6 +151,26 @@ export interface ChatSessionSettings {
   configOptions?: Record<string, string | boolean>;
   /** The chat's "Follow agent" toggle, when the user set it; otherwise the setting applies. */
   followAgent?: boolean;
+  /** Set when the session runs its agent in a cloud sandbox instead of on this machine. */
+  cloud?: ChatCloudEnvironment;
+}
+
+/** Where a cloud session's runs start: a GitHub repository and branch, and the runs so far. */
+export interface ChatCloudEnvironment {
+  /** `owner/name`. */
+  repo: string | null;
+  branch: string | null;
+  runs: ChatCloudRun[];
+}
+
+/** One prompt sent to the cloud, and the run it started. */
+export interface ChatCloudRun {
+  /** The assistant message the run's work is written into. */
+  messageId: string;
+  /** Null until the server accepted the run, and when it refused it. */
+  runId: string | null;
+  /** Why the run could not start. */
+  error?: { message: string; code?: string } | null;
 }
 
 export interface AIChatProps {
@@ -208,6 +228,10 @@ export interface AIChatInputBarProps {
   onRetryLastTurn?: () => void;
   /** Put back into the composer when it is empty; a new `id` restores again. */
   restoredPrompt?: RestoredComposerPrompt | null;
+  /** Where a composer without a session keeps its Local or Cloud pick; the surface id by default. */
+  environmentDraftKey?: string;
+  /** The project a cloud run defaults its repository from; the session's or the active one by default. */
+  environmentWorkspacePath?: string | null;
 }
 
 export interface ApiModelSelection {

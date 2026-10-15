@@ -1,5 +1,32 @@
 import type { AcpSessionState, SessionConfigValue } from "@/features/ai/types/acp.types";
-import type { ChatSessionSettings } from "@/features/ai/types/ai-chat.types";
+import type {
+  ChatCloudEnvironment,
+  ChatCloudRun,
+  ChatSessionSettings,
+} from "@/features/ai/types/ai-chat.types";
+
+function parseCloudRun(value: unknown): ChatCloudRun[] {
+  if (!value || typeof value !== "object") return [];
+  const { messageId, runId, error } = value as Record<string, unknown>;
+  if (typeof messageId !== "string") return [];
+  const run: ChatCloudRun = { messageId, runId: typeof runId === "string" ? runId : null };
+  if (error && typeof error === "object") {
+    const { message, code } = error as Record<string, unknown>;
+    if (typeof message === "string")
+      run.error = typeof code === "string" ? { message, code } : { message };
+  }
+  return [run];
+}
+
+function parseCloudEnvironment(value: unknown): ChatCloudEnvironment | null {
+  if (!value || typeof value !== "object") return null;
+  const { repo, branch, runs } = value as Record<string, unknown>;
+  return {
+    repo: typeof repo === "string" && repo ? repo : null,
+    branch: typeof branch === "string" && branch ? branch : null,
+    runs: Array.isArray(runs) ? runs.flatMap(parseCloudRun) : [],
+  };
+}
 
 /** Reads a chat's saved session settings; anything unreadable counts as none. */
 export function parseChatSessionSettings(
@@ -9,10 +36,12 @@ export function parseChatSessionSettings(
   try {
     const parsed: unknown = JSON.parse(value);
     if (!parsed || typeof parsed !== "object") return null;
-    const { modeId, configOptions, followAgent } = parsed as Record<string, unknown>;
+    const { modeId, configOptions, followAgent, cloud } = parsed as Record<string, unknown>;
     const settings: ChatSessionSettings = {};
     if (typeof modeId === "string") settings.modeId = modeId;
     if (typeof followAgent === "boolean") settings.followAgent = followAgent;
+    const cloudEnvironment = parseCloudEnvironment(cloud);
+    if (cloudEnvironment) settings.cloud = cloudEnvironment;
     if (configOptions && typeof configOptions === "object") {
       settings.configOptions = Object.fromEntries(
         Object.entries(configOptions).filter(

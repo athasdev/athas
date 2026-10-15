@@ -6,7 +6,6 @@ import type { MultiFileDiff } from "@/features/git/types/git-diff.types";
 import type { GitDiff } from "@/features/git/types/git.types";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import {
-  CloudIcon,
   ActivityIcon,
   ArrowsClockwiseIcon,
   ArrowsLeftRightIcon,
@@ -117,8 +116,6 @@ export function BufferTypeIcon({
       return <WarningCircleIcon className="text-subtle-foreground" />;
     case "continuousAgents":
       return <ArrowsClockwiseIcon className="text-subtle-foreground" />;
-    case "cloudAgents":
-      return <CloudIcon className="text-subtle-foreground" />;
     case "acpInspector":
       return <ArrowsLeftRightIcon className="text-subtle-foreground" />;
     case "agentChanges":
