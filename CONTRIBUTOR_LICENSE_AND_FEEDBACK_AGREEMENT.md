@@ -1,64 +1,93 @@
 # Contributor License and Feedback Agreement
 
-Effective date: 2026-02-18
+Effective date: 2026-10-15
 
 This Contributor License and Feedback Agreement ("Agreement") applies to
-contributions you submit to the Athas project repository.
-
-By submitting a contribution (including code, documentation, tests, design
-assets, issue content, or any other material), you agree to the terms below.
+everything you submit to the Athas project. Please read it before you open a
+pull request. You keep the copyright in your work; this Agreement gives Athas a
+license to use it.
 
 ## 1. Definitions
 
-- "Project" means the Athas repository and related project resources.
-- "Contribution" means any work you submit to the Project.
-- "Feedback" means suggestions, ideas, bug reports, or improvement proposals.
+- "Athas" means Mehmet Özgül, who maintains the Project under the name Athas,
+  and any successor or assignee of the Project, including a company Athas
+  transfers the Project to.
+- "Project" means the Athas repository at github.com/athasdev/athas and
+  software built from it.
+- "Contribution" means any code, documentation, tests, design assets, or other
+  material you submit to the Project, including through a pull request, patch,
+  commit, or issue.
+- "Feedback" means suggestions, ideas, bug reports, or improvement proposals
+  you give about the Project.
+- "You" means the person, or the organization that person submits on behalf
+  of, who submits a Contribution or Feedback.
 
-## 2. Your Representations
+## 2. Copyright License
 
-You represent that:
+You grant Athas and recipients of software Athas distributes a perpetual,
+worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license
+to reproduce, prepare derivative works of, publicly display, publicly perform,
+sublicense, and distribute your Contributions and derivative works of them.
 
-- You have the legal right to submit your Contribution.
-- Your Contribution is your original work, or you have sufficient rights to
-  submit it.
-- You are not knowingly submitting material that infringes third-party rights.
+This license lets Athas distribute your Contributions under the GNU Affero
+General Public License and also under any other license or terms, including
+proprietary licenses, commercial editions of Athas, and the terms of app stores
+such as the Mac App Store.
 
-## 3. License for Contributions
+## 3. Patent License
 
-You agree that each Contribution you submit is licensed under the same license
-as the Project at the time of submission (currently AGPL-3.0, or any later
-version if the Project uses "or later" terms).
+You grant Athas and recipients of software Athas distributes a perpetual,
+worldwide, non-exclusive, no-charge, royalty-free, irrevocable patent license
+to make, have made, use, offer to sell, sell, import, and otherwise transfer
+your Contributions, alone or combined with the Project. If anyone starts patent
+litigation claiming that a Contribution or the Project infringes a patent, the
+patent licenses granted to them under this Agreement end on the date the
+litigation is filed.
 
-To the extent needed for maintainers and users to use your Contribution in the
-Project, you grant Athas maintainers and all recipients of the Project a
-worldwide, perpetual, non-exclusive, royalty-free, irrevocable copyright
-license to use, reproduce, modify, distribute, publicly perform, and publicly
-display your Contribution under the Project's license terms.
+## 4. Feedback License
 
-## 4. Patent Grant
-
-If your Contribution includes patentable subject matter, you grant a worldwide,
-perpetual, non-exclusive, royalty-free, irrevocable patent license to make,
-have made, use, sell, offer for sale, import, and otherwise transfer your
-Contribution as part of the Project under the Project's license terms.
-
-## 5. Feedback License
-
-You grant Athas maintainers a worldwide, perpetual, non-exclusive, royalty-free,
+You grant Athas a worldwide, perpetual, non-exclusive, royalty-free,
 irrevocable license to use, copy, modify, publish, and otherwise exploit any
 Feedback you provide, without restriction and without compensation to you.
 
-## 6. No Obligation
+## 5. Your Representations
 
-Project maintainers are not required to accept, use, or maintain any
-Contribution or Feedback.
+You represent that:
 
-## 7. Disclaimer
+- You are legally entitled to grant the licenses above. If your employer or
+  anyone else has rights to work you create, you have their permission to
+  submit the Contribution, or they have waived those rights.
+- Each Contribution is your original work, or you identify in the pull request
+  any part that is not, together with its source and license.
+- To your knowledge, your Contribution does not infringe anyone else's rights.
 
-Except where required by applicable law, Contributions and Feedback are provided
-"as is", without warranties or conditions of any kind.
+You will tell Athas if any of these statements stops being true.
+
+## 6. Your Rights
+
+You keep all rights, title, and interest in your Contributions. You may use
+them for any other purpose. You are not required to provide support for them,
+and Contributions and Feedback are provided "as is", without warranties or
+conditions of any kind, except where required by applicable law.
+
+## 7. No Obligation
+
+Athas is not required to accept, use, or distribute any Contribution or
+Feedback.
 
 ## 8. Acceptance
 
-Submitting a pull request, commit, patch, issue, discussion content, or other
-Contribution to the Project constitutes your acceptance of this Agreement.
+You accept this Agreement by checking the agreement box in a pull request, or
+by otherwise stating that you agree to it when submitting a Contribution. The
+Agreement covers that Contribution and all later ones you submit to the
+Project. Section 4 applies to Feedback you submit to the Project, such as in
+issues and discussions, on or after the effective date.
+
+## 9. Earlier Contributions
+
+Contributions submitted before 2026-10-15 were accepted under the terms that
+applied when they were submitted, including the earlier version of this
+Agreement dated 2026-02-18. This Agreement does not change those terms. Athas
+distributes those Contributions under other terms only if their contributor
+agrees, for example by stating in an issue or pull request that this Agreement
+also covers their earlier Contributions.

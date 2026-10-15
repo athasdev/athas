@@ -97,7 +97,7 @@ See the [documentation](https://athas.dev/docs).
 
 ## Contributing
 
-Contributions are welcome! See the [contributing guide](CONTRIBUTING.md) and [Contributor License and Feedback Agreement](CONTRIBUTOR_LICENSE_AND_FEEDBACK_AGREEMENT.md).
+Contributions are welcome! See the [contributing guide](CONTRIBUTING.md). Pull requests need agreement to the [Contributor License and Feedback Agreement](CONTRIBUTOR_LICENSE_AND_FEEDBACK_AGREEMENT.md).
 
 ## Support
 
@@ -107,4 +107,10 @@ Contributions are welcome! See the [contributing guide](CONTRIBUTING.md) and [Co
 
 ## License
 
-[AGPL-3.0](LICENSE)
+Copyright (C) 2022-2026 Athas
+
+Athas is free software: you can redistribute it and/or modify it under the terms of the [GNU Affero General Public License](LICENSE) as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+Athas is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
+
+Athas may also be distributed under other terms, such as through the Mac App Store or in commercial editions. The [Contributor License and Feedback Agreement](CONTRIBUTOR_LICENSE_AND_FEEDBACK_AGREEMENT.md) gives the project the rights to do so for code contributed on or after 2026-10-15.

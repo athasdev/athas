@@ -26,8 +26,17 @@ bun dev
 5. Run release validation when touching release flow: `bun release:check`
 6. Rebase on master: `git rebase origin/master`
 7. Squash commits into logical units
-8. Review and agree to the
+8. Read and agree to the
    [Contributor License and Feedback Agreement](CONTRIBUTOR_LICENSE_AND_FEEDBACK_AGREEMENT.md)
+   by checking the box in the pull request
+
+## Contributor License and Feedback Agreement
+
+Athas is licensed under the AGPL-3.0, and Athas also distributes it under other terms, such as
+through the Mac App Store or in commercial editions. The
+[Contributor License and Feedback Agreement](CONTRIBUTOR_LICENSE_AND_FEEDBACK_AGREEMENT.md) gives
+Athas the rights to include your contribution in both. You keep the copyright in your work. Pull
+requests without the agreement checked can't be merged.
 
 ## Guidelines
 
