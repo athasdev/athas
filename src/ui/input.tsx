@@ -173,6 +173,9 @@ type InlineRenameInputProps = Omit<
   width?: "full" | "content";
 };
 
+/** How long after opening a rename field a lost focus is taken back rather than submitted. */
+const RENAME_FOCUS_SETTLE_MS = 400;
+
 export function InlineRenameInput({
   value,
   onValueChange,
@@ -186,14 +189,31 @@ export function InlineRenameInput({
 }: InlineRenameInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const finishedRef = useRef(false);
+  const settlingUntilRef = useRef(0);
+  const touchedRef = useRef(false);
 
   useEffect(() => {
+    settlingUntilRef.current = performance.now() + RENAME_FOCUS_SETTLE_MS;
     const frameId = requestAnimationFrame(() => {
       inputRef.current?.focus();
       inputRef.current?.select();
     });
     return () => cancelAnimationFrame(frameId);
   }, []);
+
+  // A closing menu can pull focus back for a moment after the field opens. Losing focus then is
+  // not the user leaving the field, so take it back instead of submitting the unchanged name.
+  const handleBlur = () => {
+    if (!touchedRef.current && performance.now() < settlingUntilRef.current) {
+      requestAnimationFrame(() => {
+        if (finishedRef.current || !inputRef.current) return;
+        inputRef.current.focus();
+        inputRef.current.select();
+      });
+      return;
+    }
+    submit();
+  };
 
   const submit = () => {
     if (finishedRef.current) return;
@@ -222,10 +242,14 @@ export function InlineRenameInput({
       spellCheck={false}
       ref={inputRef}
       value={value}
-      onChange={(event) => onValueChange(event.target.value)}
-      onBlur={submit}
+      onChange={(event) => {
+        touchedRef.current = true;
+        onValueChange(event.target.value);
+      }}
+      onBlur={handleBlur}
       onKeyDown={(event) => {
         event.stopPropagation();
+        touchedRef.current = true;
         if (event.key === "Enter") {
           event.preventDefault();
           submit();
