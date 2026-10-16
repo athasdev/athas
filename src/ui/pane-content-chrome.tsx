@@ -76,7 +76,7 @@ function PaneContentStatusBar({
       separated={false}
       className={cn(
         "justify-between overflow-hidden whitespace-nowrap border-t",
-        separated ? "border-border" : "border-transparent",
+        separated ? "border-divider" : "border-transparent",
         className,
       )}
       {...props}

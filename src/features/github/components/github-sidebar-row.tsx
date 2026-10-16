@@ -104,7 +104,7 @@ export function GitHubSidebarRow({
         size="wide"
         variant="preview"
       >
-        <div className="border-border border-b p-3">
+        <div className="border-divider border-b p-3">
           <div className="flex min-w-0 items-start gap-2.5">
             {preview.icon ? (
               <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-accent">
@@ -164,7 +164,7 @@ export function GitHubSidebarRow({
           </dl>
         ) : null}
         {preview.footer ? (
-          <div className="border-border border-t px-3 py-2 text-subtle-foreground ui-text-sm">
+          <div className="border-divider border-t px-3 py-2 text-subtle-foreground ui-text-sm">
             {preview.footer}
           </div>
         ) : null}

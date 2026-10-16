@@ -1,4 +1,5 @@
 import Badge from "@/ui/badge";
+import { Card } from "@/ui/card";
 import { CheckIcon, CircleDottedIcon, ListChecksIcon } from "@/ui/icons";
 import { Shimmer } from "@/ui/shimmer";
 import { Spinner } from "@/ui/spinner";
@@ -19,10 +20,7 @@ export function AgentPlan({
   const done = entries.filter((entry) => entry.status === "completed").length;
 
   return (
-    <section
-      aria-label="Agent plan"
-      className="flex min-w-0 flex-col gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-2 ui-text-sm"
-    >
+    <Card role="region" aria-label="Agent plan" layout="compact" className="min-w-0">
       <header className="flex items-center gap-1.5 text-muted-foreground">
         <ListChecksIcon className="size-3.5 shrink-0" />
         <span className="font-medium text-foreground">Plan</span>
@@ -55,9 +53,7 @@ export function AgentPlan({
                 active={running && isStreaming}
                 className={cn(
                   "min-w-0 flex-1 text-pretty",
-                  entry.status === "completed"
-                    ? "text-muted-foreground line-through"
-                    : "text-foreground",
+                  entry.status === "completed" ? "text-muted-foreground" : "text-foreground",
                 )}
               >
                 {entry.content}
@@ -69,6 +65,6 @@ export function AgentPlan({
           );
         })}
       </ol>
-    </section>
+    </Card>
   );
 }

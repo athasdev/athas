@@ -403,7 +403,7 @@ export default function DataGrid({
 
   return (
     <div className="font-sans flex min-h-0 flex-1 flex-col">
-      <div className="group flex h-9 items-center justify-between border-border border-b px-3">
+      <div className="group flex h-9 items-center justify-between border-divider border-b px-3">
         <span className="ui-text-sm text-subtle-foreground">
           {queryResult.rows.length} {resultLabel}
         </span>
@@ -436,7 +436,7 @@ export default function DataGrid({
           <thead className="sticky top-0 z-10">
             <tr>
               <th
-                className="w-10 border-border border-b bg-surface px-2 py-1.5 text-left font-normal text-subtle-foreground hover:bg-accent"
+                className="w-10 border-divider border-b bg-surface px-2 py-1.5 text-left font-normal text-subtle-foreground hover:bg-accent"
                 onClick={handleSelectAllClick}
                 aria-label="Select all visible cells"
               >
@@ -451,7 +451,7 @@ export default function DataGrid({
                 return (
                   <th
                     key={i}
-                    className="group relative whitespace-nowrap border-border border-b bg-surface px-2 py-1.5 text-left font-normal transition-colors hover:bg-accent"
+                    className="group relative whitespace-nowrap border-divider border-b bg-surface px-2 py-1.5 text-left font-normal transition-colors hover:bg-accent"
                     style={{ width: colWidth, minWidth: 60 }}
                     onClick={() => canSortColumns && onColumnSort(col)}
                   >
@@ -533,7 +533,7 @@ export default function DataGrid({
                   onContextMenu={(e) => canOpenRowMenu && onRowContextMenu(e, ri)}
                 >
                   <td
-                    className="border-border border-b px-2 py-1.5 text-subtle-foreground hover:bg-accent"
+                    className="border-divider border-b px-2 py-1.5 text-subtle-foreground hover:bg-accent"
                     onClick={(event) => handleRowHeaderClick(ri, event.shiftKey)}
                   >
                     {(currentPage - 1) * pageSize + ri + 1}
@@ -562,7 +562,7 @@ export default function DataGrid({
                       <td
                         key={ci}
                         className={cn(
-                          "max-w-75 border-border border-b px-2 py-1.5 font-normal text-foreground",
+                          "max-w-75 border-divider border-b px-2 py-1.5 font-normal text-foreground",
                           isEditing && "py-1",
                           canEditCells && !isPK && "hover:bg-accent",
                           isPK && "bg-accent",

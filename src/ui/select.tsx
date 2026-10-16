@@ -439,7 +439,7 @@ function SearchableSelect({
         )}
       >
         {searchableTrigger === "menu" ? (
-          <div className="border-border border-b p-1">
+          <div className="border-divider border-b p-1">
             <ComboboxInput
               ref={searchInputRef}
               leftIcon={SearchIcon}

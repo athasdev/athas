@@ -120,7 +120,7 @@ export function ScrollDebugOverlay() {
           Update Rate: <span className="text-warning">{metrics.fps} FPS</span>
         </div>
       </div>
-      <div className="mt-2 border-border border-t pt-2 text-subtle-foreground">
+      <div className="mt-2 border-divider border-t pt-2 text-subtle-foreground">
         Disable: localStorage.removeItem(&apos;debug-scroll&apos;)
       </div>
     </div>

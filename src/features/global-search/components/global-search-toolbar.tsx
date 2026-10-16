@@ -154,7 +154,7 @@ export const GlobalSearchToolbar = memo(function GlobalSearchToolbar({
         }
       />
       {detailsVisible ? (
-        <div className="space-y-2 border-border border-b bg-background px-2 pb-2">
+        <div className="space-y-2 border-divider border-b bg-background px-2 pb-2">
           <SearchReplaceRow
             value={replaceQuery}
             onChange={onReplaceQueryChange}

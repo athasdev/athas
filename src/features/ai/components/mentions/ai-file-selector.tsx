@@ -206,7 +206,7 @@ export function AIFileSelector({
     >
       {showSearchInput && (
         <div
-          className={cn("border-border border-b bg-surface px-2 py-2", compact && "px-1.5 py-1.5")}
+          className={cn("border-divider border-b bg-surface px-2 py-2", compact && "px-1.5 py-1.5")}
         >
           <ComboboxInput
             ref={searchInputRef}

@@ -171,7 +171,7 @@ export function PdfViewer({ filePath }: PdfViewerProps) {
             >
               <OpenExternalIcon className="text-foreground" />
             </Button>
-            <div className="mx-1 h-4 w-px bg-border" />
+            <div className="mx-1 h-4 w-px bg-divider" />
             <ViewerZoomControls
               zoom={zoom}
               onZoomIn={() => {
@@ -221,7 +221,7 @@ export function PdfViewer({ filePath }: PdfViewerProps) {
             {Array.from({ length: numPages }, (_el, index) => (
               <div
                 key={`page_${index + 1}`}
-                className="pdf-page-container bg-white shadow-(--shadow-card)"
+                className="pdf-page-container bg-white shadow-(--shadow-raised)"
                 data-page-number={index + 1}
               >
                 <Page

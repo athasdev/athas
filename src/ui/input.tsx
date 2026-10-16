@@ -12,7 +12,7 @@ export interface InputProps extends Omit<
   style?: never;
   containerClassName?: never;
   /**
-   * - `default` — a bordered field on the surface plane
+   * - `default` — a raised field, edged by the shared shadow ring
    * - `ghost` — no box; for a search row inside a menu or popover header
    * - `inline` — an underline only; for renaming in place
    * - `title` — bare heading-sized text; for editing a document title
@@ -28,7 +28,7 @@ export interface InputProps extends Omit<
 }
 
 const inputVariants = cva(
-  "w-full min-w-0 rounded-md px-2 py-1 ui-text-sm text-foreground outline-none transition-[box-shadow,background-color,border-color,color] duration-fast ease-smooth placeholder:text-subtle-foreground disabled:cursor-not-allowed disabled:opacity-50 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none aria-invalid:border-destructive aria-invalid:focus:border-destructive aria-invalid:focus:ring-destructive-soft",
+  "w-full min-w-0 rounded-md px-2 py-1 ui-text-sm text-foreground outline-none transition-[box-shadow,background-color,color] duration-fast ease-smooth placeholder:text-subtle-foreground disabled:cursor-not-allowed disabled:opacity-50 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none aria-invalid:ring-1 aria-invalid:ring-destructive aria-invalid:focus:ring-2 aria-invalid:focus:ring-destructive-soft",
   {
     variants: {
       font: {
@@ -37,8 +37,7 @@ const inputVariants = cva(
         inherit: "font-inherit",
       },
       variant: {
-        default:
-          "border border-border bg-surface focus:border-primary focus:ring-2 focus:ring-focus",
+        default: "bg-raised shadow-(--shadow-raised) focus:ring-2 focus:ring-focus",
         ghost: "border-0 bg-transparent",
         inline:
           "rounded-none border-0 border-b border-border-strong bg-transparent px-0 focus:border-primary",

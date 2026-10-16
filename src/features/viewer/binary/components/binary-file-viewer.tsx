@@ -87,7 +87,7 @@ export function BinaryFileViewer({ filePath, fileName }: BinaryFileViewerProps) 
                 </div>
 
                 {metadata.wasmMetadata.sections.length > 0 && (
-                  <div className="mt-3 overflow-hidden border-y border-border">
+                  <div className="mt-3 overflow-hidden border-y border-divider">
                     <Table>
                       <TableHeader className="static bg-background">
                         <TableRow>
@@ -100,7 +100,7 @@ export function BinaryFileViewer({ filePath, fileName }: BinaryFileViewerProps) 
                           <TableRow
                             key={`${section.id}-${i}`}
                             className={cn(
-                              "border-border border-b last:border-b-0",
+                              "border-divider border-b last:border-b-0",
                               i % 2 === 0 ? "bg-transparent" : "bg-background",
                             )}
                           >

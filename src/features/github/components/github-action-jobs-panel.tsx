@@ -145,7 +145,7 @@ export function GitHubActionJobsPanel({
               </button>
 
               {isSelected ? (
-                <ol className="my-1 ml-3 flex flex-col gap-0.5 border-border border-l pl-1.5">
+                <ol className="my-1 ml-3 flex flex-col gap-0.5 border-divider border-l pl-1.5">
                   {job.steps.length === 0 ? (
                     <li className="px-2 py-1.5 text-subtle-foreground ui-text-sm">
                       No steps reported

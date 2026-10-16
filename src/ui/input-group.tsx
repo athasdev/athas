@@ -6,12 +6,12 @@ import Textarea from "@/ui/textarea";
 import { cn } from "@/utils/cn";
 
 const inputGroupVariants = cva(
-  "group/input-group relative flex min-h-7 w-full min-w-0 items-center rounded-md bg-surface text-foreground outline-none transition-[border-color,box-shadow] duration-fast has-disabled:opacity-50 has-[[data-slot=input-group-control]:focus]:ring-2 has-[[data-slot=input-group-control]:focus]:ring-focus has-[[data-slot][aria-invalid=true]]:border-destructive has-[>[data-align=block-end]]:h-auto has-[>[data-align=block-end]]:flex-col has-[>[data-align=block-start]]:h-auto has-[>[data-align=block-start]]:flex-col has-[>textarea]:h-auto",
+  "group/input-group relative flex min-h-7 w-full min-w-0 items-center rounded-md text-foreground outline-none transition-shadow duration-fast has-disabled:opacity-50 has-[[data-slot=input-group-control]:focus]:ring-2 has-[[data-slot=input-group-control]:focus]:ring-focus has-[[data-slot][aria-invalid=true]]:ring-1 has-[[data-slot][aria-invalid=true]]:ring-destructive has-[>[data-align=block-end]]:h-auto has-[>[data-align=block-end]]:flex-col has-[>[data-align=block-start]]:h-auto has-[>[data-align=block-start]]:flex-col has-[>textarea]:h-auto",
   {
     variants: {
       variant: {
-        default: "border border-border has-[[data-slot=input-group-control]:focus]:border-primary",
-        surface: "border-0",
+        default: "bg-raised shadow-(--shadow-raised)",
+        surface: "bg-surface",
       },
     },
     defaultVariants: {

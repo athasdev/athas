@@ -17,7 +17,7 @@ const ImageContainer = memo(
       <div
         className={cn(
           "flex items-center justify-center gap-1 py-1 ui-text-sm",
-          "border-border border-b font-medium",
+          "border-divider border-b font-medium",
           labelColor,
         )}
       >
@@ -70,7 +70,7 @@ const ImageDiffViewer = memo(({ diff, fileName, onClose, commitHash }: ImageDiff
         onClose={onClose}
       />
 
-      <div className="flex items-center justify-center gap-2 border-border border-b bg-surface py-1">
+      <div className="flex items-center justify-center gap-2 border-divider border-b bg-surface py-1">
         <Button
           onClick={handleZoomOut}
           disabled={zoom <= MIN_ZOOM}
@@ -99,7 +99,7 @@ const ImageDiffViewer = memo(({ diff, fileName, onClose, commitHash }: ImageDiff
       <div className="flex flex-1 overflow-hidden">
         {status === "added" ? (
           <div className="flex flex-1 flex-col">
-            <div className="flex items-center justify-center gap-1 border-border border-b bg-git-added-soft py-1 font-medium ui-text-sm text-git-added">
+            <div className="flex items-center justify-center gap-1 border-divider border-b bg-git-added-soft py-1 font-medium ui-text-sm text-git-added">
               <PlusIcon />
               New Image
             </div>
@@ -114,7 +114,7 @@ const ImageDiffViewer = memo(({ diff, fileName, onClose, commitHash }: ImageDiff
           </div>
         ) : status === "deleted" ? (
           <div className="flex flex-1 flex-col">
-            <div className="flex items-center justify-center gap-1 border-border border-b bg-git-deleted-soft py-1 font-medium ui-text-sm text-git-deleted">
+            <div className="flex items-center justify-center gap-1 border-divider border-b bg-git-deleted-soft py-1 font-medium ui-text-sm text-git-deleted">
               <MinusIcon />
               Removed Image
             </div>
@@ -139,7 +139,7 @@ const ImageDiffViewer = memo(({ diff, fileName, onClose, commitHash }: ImageDiff
                 zoom={zoom}
               />
             )}
-            {hasOldImage && hasNewImage && <div className="w-px bg-border" />}
+            {hasOldImage && hasNewImage && <div className="w-px bg-divider" />}
             {hasNewImage && (
               <ImageContainer
                 label="Added"

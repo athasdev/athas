@@ -16,7 +16,7 @@ export const Composer = forwardRef<
       data-slot="composer"
       data-drag-active={dragActive || undefined}
       className={cn(
-        "relative flex min-w-0 shrink-0 flex-col rounded-xl border border-border bg-field text-foreground shadow-xs transition-[border-color,box-shadow] duration-fast ease-smooth motion-reduce:transition-none has-focus-visible:border-primary has-focus-visible:ring-2 has-focus-visible:ring-focus data-[drag-active=true]:border-primary data-[drag-active=true]:ring-2 data-[drag-active=true]:ring-focus",
+        "relative flex min-w-0 shrink-0 flex-col rounded-xl bg-field text-foreground shadow-(--shadow-raised) transition-shadow duration-fast ease-smooth motion-reduce:transition-none has-focus-visible:ring-2 has-focus-visible:ring-focus data-[drag-active=true]:ring-2 data-[drag-active=true]:ring-focus",
         className,
       )}
       {...props}

@@ -285,7 +285,7 @@ export function BrowserPage({
         <div
           ref={slotRef}
           data-browser-slot
-          className="relative min-h-0 flex-1 overflow-hidden rounded-lg bg-surface shadow-(--shadow-card)"
+          className="relative min-h-0 flex-1 overflow-hidden rounded-lg bg-surface shadow-(--shadow-raised)"
         >
           {error ? (
             <ViewerErrorState

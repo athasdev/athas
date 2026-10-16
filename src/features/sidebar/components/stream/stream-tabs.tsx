@@ -12,7 +12,7 @@ export interface StreamTab {
 
 export function StreamTabs({ tabs, label }: { tabs: StreamTab[]; label: string }) {
   return (
-    <nav aria-label={label} className="@container/tabs shrink-0 border-b border-border px-2">
+    <nav aria-label={label} className="@container/tabs shrink-0 border-b border-divider px-2">
       <div className="flex h-12 items-stretch gap-0.5 py-1">
         {tabs.map((tab) => (
           <button

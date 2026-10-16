@@ -54,7 +54,7 @@ function SplitDiffCodePanel({
 
   return (
     <div className="flex min-w-0 flex-1">
-      <div className="w-11 shrink-0 border-border border-r bg-background">
+      <div className="w-11 shrink-0 border-divider border-r bg-background">
         {lines.map((line, index) => {
           const meta = getSplitLineMeta(line, side);
           return (
@@ -185,7 +185,7 @@ const TextDiffViewer = memo(
                 />
                 {!isCollapsed && (
                   <div className="flex min-w-0">
-                    <div className="min-w-0 flex-1 border-border border-r">
+                    <div className="min-w-0 flex-1 border-divider border-r">
                       <SplitDiffCodePanel
                         side="left"
                         lines={hunk.lines}

@@ -73,7 +73,7 @@ export const CommentItem = memo(
 
     return (
       <Card variant="default" className="bg-surface">
-        <div className="flex items-center gap-2 border-border border-b px-3 py-2.5">
+        <div className="flex items-center gap-2 border-divider border-b px-3 py-2.5">
           <div className="ui-text-sm flex min-w-0 flex-1 items-center gap-2">
             <GitHubUserChip
               login={comment.author.login}

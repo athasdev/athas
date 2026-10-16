@@ -30,7 +30,7 @@ export const MultibufferFileHeader = memo(function MultibufferFileHeader({
   showFileIcon = true,
 }: MultibufferFileHeaderProps) {
   return (
-    <div className="font-sans ui-text-sm sticky top-0 z-50 flex h-9 min-w-0 max-w-full items-center gap-1 border-border border-b bg-background px-1.5">
+    <div className="font-sans ui-text-sm sticky top-0 z-50 flex h-9 min-w-0 max-w-full items-center gap-1 border-divider border-b bg-background px-1.5">
       {onToggle ? (
         <Button
           type="button"

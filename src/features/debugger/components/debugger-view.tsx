@@ -609,7 +609,7 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
       </ContextMenu>
 
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(260px,320px)_minmax(0,1fr)]">
-        <aside className="flex min-h-0 flex-col border-border border-r">
+        <aside className="flex min-h-0 flex-col border-divider border-r">
           <div className="space-y-3 p-3">
             <div className="space-y-1.5">
               <div className="font-sans text-subtle-foreground ui-text-sm">Configuration</div>
@@ -727,7 +727,7 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
           </div>
 
           {activeSession && activeSession.status !== "idle" ? (
-            <div className="border-border border-t px-3 py-2 ui-text-sm">
+            <div className="border-divider border-t px-3 py-2 ui-text-sm">
               <div className="flex items-center gap-2">
                 <DebugSessionStatusIcon status={activeSession.status} />
                 <span className="truncate font-medium">{activeSession.name}</span>
@@ -739,7 +739,7 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
             </div>
           ) : null}
 
-          <div className="mt-auto border-border border-t px-3 py-2 ui-text-sm text-subtle-foreground">
+          <div className="mt-auto border-divider border-t px-3 py-2 ui-text-sm text-subtle-foreground">
             <div className="flex items-center gap-1.5">
               <FolderOpenIcon size={12} />
               <span className="truncate">

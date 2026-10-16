@@ -231,7 +231,7 @@ const tabItemVariants = cva(
   {
     variants: {
       active: {
-        true: "z-10 text-foreground before:bg-tab-active before:shadow-(--shadow-card)",
+        true: "z-10 text-foreground before:bg-tab-active",
         false: "text-subtle-foreground hover:text-foreground hover:before:bg-accent",
       },
       dragged: {

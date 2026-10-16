@@ -2,9 +2,9 @@ import { cva, type VariantProps } from "class-variance-authority";
 import type { ComponentProps } from "react";
 import { cn } from "@/utils/cn";
 
-/** Selectable, wrapped text in a bordered box: tool output, commands, previews. */
+/** Selectable, wrapped text in a recessed box: tool output, commands, previews. */
 const codeOutputVariants = cva(
-  "min-w-0 overflow-auto rounded-lg border border-border bg-surface px-2.5 py-2 whitespace-pre-wrap wrap-anywhere select-text ui-text-sm",
+  "min-w-0 overflow-auto rounded-lg bg-surface px-2.5 py-2 whitespace-pre-wrap wrap-anywhere select-text ui-text-sm",
   {
     variants: {
       tone: {

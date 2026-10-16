@@ -152,7 +152,7 @@ export default function LinuxFolderPickerDialog() {
       }
       contentLayout="flush"
     >
-      <div className="border-border border-b px-3 py-2">
+      <div className="border-divider border-b px-3 py-2">
         <div className="flex items-center gap-1.5">
           <Button
             type="button"
@@ -197,7 +197,7 @@ export default function LinuxFolderPickerDialog() {
       </div>
 
       <div className="flex min-h-75 flex-col">
-        <div className="flex min-h-8 items-center border-border border-b px-3">
+        <div className="flex min-h-8 items-center border-divider border-b px-3">
           <span className="ui-text-sm truncate font-medium text-foreground">{title}</span>
           <span className="ui-text-sm ml-auto truncate font-mono text-subtle-foreground">
             {currentPath}

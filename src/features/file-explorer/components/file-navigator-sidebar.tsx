@@ -90,7 +90,7 @@ interface FileNavigatorSidebarProps {
 
 // Docked beside the multibuffer it navigates, one surface from its filter bar to its last row.
 const fileNavigatorClassName =
-  "relative flex h-full min-h-0 min-w-0 shrink-0 flex-col overflow-hidden border-border border-l bg-background";
+  "relative flex h-full min-h-0 min-w-0 shrink-0 flex-col overflow-hidden border-divider border-l bg-background";
 
 function getItemSearchText(item: FileNavigatorItem) {
   return [item.label, item.path, item.key, item.iconPath].filter(Boolean).join(" ").toLowerCase();

@@ -210,7 +210,7 @@ export function AgentSessionSidebarItem({
         variant="preview"
       >
         <div className="flex min-w-0 items-start gap-3 bg-accent p-3">
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-background ring-1 ring-border">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-background ring-1 ring-divider">
             <ProviderIcon providerId={providerIconId} size={16} />
           </span>
           <div className="min-w-0 flex-1">
@@ -222,7 +222,7 @@ export function AgentSessionSidebarItem({
                   : `Active ${formatCompactRelativeDate(lastActiveAt, { justNowLabel: "just now" })}`}
               </span>
               {pinned ? (
-                <span className="flex shrink-0 items-center gap-1 rounded-full bg-background px-1.5 py-0.5 text-subtle-foreground ring-1 ring-border">
+                <span className="flex shrink-0 items-center gap-1 rounded-full bg-background px-1.5 py-0.5 text-subtle-foreground ring-1 ring-divider">
                   <PinIcon className="size-3" />
                   Pinned
                 </span>
@@ -231,7 +231,7 @@ export function AgentSessionSidebarItem({
           </div>
         </div>
 
-        <dl className="flex flex-col gap-1.5 border-border border-t p-3 ui-text-sm">
+        <dl className="flex flex-col gap-1.5 border-divider border-t p-3 ui-text-sm">
           <MetadataRow
             icon={<SparkleIcon className="size-3.5" />}
             label="Agent"
@@ -267,7 +267,7 @@ export function AgentSessionSidebarItem({
 
         {workspacePath ? (
           <div
-            className="min-w-0 truncate border-border border-t px-3 py-2 font-mono text-subtle-foreground ui-text-sm"
+            className="min-w-0 truncate border-divider border-t px-3 py-2 font-mono text-subtle-foreground ui-text-sm"
             title={workspacePath}
             dir="rtl"
           >
@@ -275,7 +275,7 @@ export function AgentSessionSidebarItem({
           </div>
         ) : null}
 
-        <div className="flex items-center justify-between gap-2 border-border border-t bg-surface px-3 py-2 text-subtle-foreground ui-text-sm">
+        <div className="flex items-center justify-between gap-2 border-divider border-t bg-surface px-3 py-2 text-subtle-foreground ui-text-sm">
           <span>Click to open</span>
           <span>Double-click for new window</span>
         </div>

@@ -24,7 +24,7 @@ import { OverlayRoot } from "@/ui/overlay-root";
 
 const menuSurfaceVariants = cva(
   // One fast, smooth entrance for every menu-shaped surface: fade + a hint of scale from its anchor.
-  `max-h-(--available-height) w-fit min-w-32 ${OVERLAY_MAX_WIDTH} origin-(--transform-origin) rounded-lg bg-overlay font-sans text-foreground shadow-(--shadow-popover) ring-1 ring-border outline-none ui-text-chrome transition-[opacity,transform,scale] duration-fast ease-smooth data-starting-style:scale-[0.98] data-starting-style:opacity-0 data-ending-style:scale-[0.98] data-ending-style:opacity-0 motion-reduce:transition-none`,
+  `max-h-(--available-height) w-fit min-w-32 ${OVERLAY_MAX_WIDTH} origin-(--transform-origin) rounded-xl bg-overlay font-sans text-foreground shadow-(--shadow-popover) outline-none ui-text-chrome transition-[opacity,transform,scale] duration-fast ease-smooth data-starting-style:scale-[0.98] data-starting-style:opacity-0 data-ending-style:scale-[0.98] data-ending-style:opacity-0 motion-reduce:transition-none`,
   {
     variants: {
       viewport: {
@@ -62,7 +62,7 @@ const menuLabelVariants = cva(
   "px-2 py-1 font-sans font-medium text-subtle-foreground ui-text-caption",
 );
 
-const menuSeparatorVariants = cva("-mx-1 my-1 h-px bg-border");
+const menuSeparatorVariants = cva("-mx-1 my-1 h-px bg-divider");
 
 export type MenuItemTone = "default" | "accent" | "destructive";
 
@@ -187,7 +187,7 @@ function DropdownMenuSearch({
   return (
     <div
       data-slot="dropdown-menu-search"
-      className="sticky top-0 z-20 shrink-0 overflow-clip border-border border-b bg-overlay p-1"
+      className="sticky top-0 z-20 shrink-0 overflow-clip border-divider border-b bg-overlay p-1"
     >
       <Input
         leftIcon={SearchIcon}
@@ -243,7 +243,7 @@ function DropdownMenuFooter({ className, ...props }: ComponentProps<"div">) {
     <div
       data-slot="dropdown-menu-footer"
       className={cn(
-        "relative z-20 shrink-0 overflow-clip border-border border-t bg-overlay p-1",
+        "relative z-20 shrink-0 overflow-clip border-divider border-t bg-overlay p-1",
         className,
       )}
       {...props}

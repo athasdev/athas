@@ -10,7 +10,7 @@ const toggleVariants = cva(
     variants: {
       variant: {
         default: "bg-transparent",
-        outline: "border border-border bg-surface",
+        outline: "bg-raised shadow-(--shadow-raised)",
       },
       tone: {
         default: "",

@@ -109,7 +109,7 @@ function ContinuousAgentsSidebar({
 
   return (
     <aside
-      className="w-[clamp(12rem,24vw,15rem)] shrink-0 border-border border-r"
+      className="w-[clamp(12rem,24vw,15rem)] shrink-0 border-divider border-r"
       aria-label="Continuous Agents navigation"
       data-slot="continuous-agents-sidebar"
     >
@@ -511,7 +511,7 @@ function CreateContent({ onCreated }: { onCreated: (taskId: string) => void }) {
         ))}
       </div>
 
-      <div className="flex justify-end border-border border-t pt-5">
+      <div className="flex justify-end border-divider border-t pt-5">
         <Button type="button" variant="accent" disabled={!canCreate} onClick={handleCreate}>
           <PlayIcon />
           Start continuous agent
@@ -628,7 +628,7 @@ function TaskContent({
         </CardContent>
       </Card>
 
-      <div className="flex flex-wrap items-center gap-2 border-border border-t pt-5">
+      <div className="flex flex-wrap items-center gap-2 border-divider border-t pt-5">
         <Button
           type="button"
           variant="accent"

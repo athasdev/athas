@@ -120,7 +120,7 @@ function EventRow({
   return (
     <div className="flex min-w-0 items-start gap-3">
       <span
-        className={`relative z-10 flex size-6 shrink-0 items-center justify-center rounded-full bg-background ring-1 ring-border [&_svg]:size-3.5 ${tone}`}
+        className={`relative z-10 flex size-6 shrink-0 items-center justify-center rounded-full bg-background ring-1 ring-divider [&_svg]:size-3.5 ${tone}`}
       >
         {icon}
       </span>
@@ -337,7 +337,7 @@ export function PRTimeline({
 
       <ResourceSection title="Activity">
         <div className="space-y-4">
-          <ol className="relative space-y-4 before:absolute before:top-3 before:bottom-3 before:left-3 before:w-px before:bg-border">
+          <ol className="relative space-y-4 before:absolute before:top-3 before:bottom-3 before:left-3 before:w-px before:bg-divider">
             {events.map((event) => (
               <li key={eventKey(event)} className="relative">
                 {renderEvent(event)}

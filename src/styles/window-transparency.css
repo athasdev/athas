@@ -53,6 +53,7 @@ html:is(.platform-macos, .platform-windows):not([data-window-transparency="disab
   --selected: var(--athas-glass-active);
   --surface: var(--athas-glass-surface);
   --border: var(--athas-glass-border);
+  --divider: color-mix(in srgb, var(--athas-glass-border) 72%, transparent);
   --border-strong: var(--athas-glass-border-strong);
   background: var(--athas-glass-shell-bg) !important;
   -webkit-backdrop-filter: none;
@@ -76,6 +77,14 @@ html.platform-windows:not([data-window-transparency="disabled"])
   :is(.athas-resizable-pane, .athas-sidebar-rail) {
   -webkit-backdrop-filter: blur(18px) saturate(1.08);
   backdrop-filter: blur(18px) saturate(1.08);
+}
+
+/* With glass on, the sidebar keeps its own translucent island instead of the page plane, so a
+   hairline separates it from the editor again. */
+html:is(.platform-macos, .platform-windows):not([data-window-transparency="disabled"])
+  [data-plane="page"] {
+  --background: inherit;
+  border-right: 1px solid var(--divider);
 }
 
 /* Islands: editor, sidebar contents, bottom pane. */

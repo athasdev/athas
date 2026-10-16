@@ -36,7 +36,7 @@ interface MultipleToggleGroupProps<Value extends string> extends ToggleGroupComm
 }
 
 const toggleGroupVariants = cva(
-  "inline-flex max-w-full items-stretch self-start rounded-md border border-border bg-surface",
+  "inline-flex max-w-full items-stretch self-start rounded-md bg-raised shadow-(--shadow-raised)",
   {
     variants: {
       variant: {
@@ -65,7 +65,7 @@ const toggleGroupItemVariants = cva(
     variants: {
       variant: {
         default: "",
-        segmented: "rounded-none border-border border-r last:border-r-0",
+        segmented: "rounded-none border-divider border-r last:border-r-0",
       },
       iconOnly: {
         true: "aspect-square px-0",

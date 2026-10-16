@@ -33,7 +33,7 @@ const commandItemVariants = cva(
   {
     variants: {
       selected: {
-        true: "bg-selected text-foreground",
+        true: "bg-accent text-foreground",
         false: "bg-transparent text-foreground hover:bg-accent",
       },
     },
@@ -53,7 +53,7 @@ const commandInputClassName = cva(
         /** Borderless input that sits inside a command header. */
         inline: "h-8 bg-transparent",
         /** Standalone bordered field, for a search box in a toolbar. */
-        field: "h-7 rounded-md border border-border bg-surface px-2",
+        field: "h-7 rounded-md bg-raised px-2 shadow-(--shadow-raised)",
         /** Same shape as `field`, on a raised surface. */
         surface: "h-7 rounded-md bg-accent px-2",
       },
@@ -143,7 +143,7 @@ const Command = ({
               aria-describedby={undefined}
               initialFocus={autoFocus ? getInitialFocusTarget : false}
               className={cn(
-                "rounded-xl bg-overlay text-foreground shadow-(--shadow-dialog) ring-1 ring-border outline-none",
+                "rounded-2xl bg-overlay text-foreground shadow-(--shadow-dialog) outline-none",
                 // Native @starting-style: the surface mounts already open, so the entrance
                 // must not depend on Base UI flipping a data attribute after mount.
                 "transition-[opacity,transform,scale] duration-fast ease-smooth starting:translate-y-1 starting:scale-[0.98] starting:opacity-0 motion-reduce:transition-none",
@@ -176,7 +176,7 @@ export const CommandHeader = ({ children, onClose, onClear, className }: Command
   return (
     <div
       data-command-header
-      className={cn("relative z-20 shrink-0 overflow-clip border-border border-b", className)}
+      className={cn("relative z-20 shrink-0 overflow-clip border-divider border-b", className)}
     >
       <div className={commandHeaderContentClassName}>
         {children}
@@ -300,7 +300,7 @@ interface CommandFooterProps {
 export const CommandFooter = ({ children }: CommandFooterProps) => (
   <div
     data-command-footer
-    className="relative z-20 shrink-0 overflow-clip border-border border-t p-2"
+    className="relative z-20 shrink-0 overflow-clip border-divider border-t p-2"
   >
     <div className="flex flex-wrap items-center gap-1.5">{children}</div>
   </div>

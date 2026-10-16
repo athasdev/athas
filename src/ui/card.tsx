@@ -3,25 +3,27 @@ import type { ComponentProps } from "react";
 import { cn } from "@/utils/cn";
 
 const cardVariants = cva(
-  "group/card flex flex-col overflow-hidden rounded-lg font-sans ui-text-sm text-foreground",
+  "group/card flex flex-col overflow-hidden rounded-xl font-sans ui-text-sm text-foreground",
   {
     variants: {
       variant: {
-        /** A panel with a hairline edge, so it reads on either plane. */
-        default: "border border-border",
-        /** Edge only, for grouping content that stays on the current plane. */
-        outline: "border border-border",
+        /** A raised panel: separated from its plane by a shadow ring, not a border. */
+        default: "shadow-(--shadow-raised)",
+        /** A hairline only, for grouping content that stays on the current plane. */
+        outline: "border border-divider",
         /** A `default` card that responds to hover and focus. */
         interactive:
-          "border border-border cursor-default transition-colors duration-fast hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus",
+          "shadow-(--shadow-raised) cursor-default transition-colors duration-fast hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus",
         /** Floats over the content it belongs to, such as an agent session's tool card. */
-        elevated: "shadow-(--shadow-popover) ring-1 ring-border",
+        elevated: "shadow-(--shadow-popover)",
       },
       /**
-       * The plane the card fill comes from. `surface` suits cards on the content plane;
-       * `background` raises cards off a surface page, such as Settings.
+       * The plane the card fill comes from. `raised` is the default: the page colour in light
+       * themes and a lifted tone in dark ones. `surface` recesses a card into chrome; `background`
+       * matches the document plane, such as Settings cards on a surface page.
        */
       plane: {
+        raised: "bg-raised",
         surface: "bg-surface",
         background: "bg-background",
         /** The overlay plane menus and popovers use, for cards that float above content. */
@@ -32,22 +34,24 @@ const cardVariants = cva(
         stack: "gap-3 py-3",
         /** No spacing of its own, for a card whose content owns its chrome, such as a tool. */
         flush: "",
+        /** Short rows packed close under a one-line header, such as an agent's plan. */
+        compact: "gap-1.5 px-3 py-2.5",
         /**
          * Rows split by hairlines inset from the card edge, such as a section of settings. Each
          * row owns its padding; the card owns the edge and the lines between rows.
          */
-        list: "*:relative *:not-first:before:pointer-events-none *:not-first:before:absolute *:not-first:before:inset-x-3 *:not-first:before:top-0 *:not-first:before:h-px *:not-first:before:bg-border",
+        list: "*:relative *:not-first:before:pointer-events-none *:not-first:before:absolute *:not-first:before:inset-x-3 *:not-first:before:top-0 *:not-first:before:h-px *:not-first:before:bg-divider",
       },
       tone: {
         default: "",
-        /** Tinted with the primary colour, for a callout or a plan. */
-        accent: "border-primary bg-primary-soft",
+        /** Tinted with the primary colour, for a callout or a plan. The tint is the edge. */
+        accent: "bg-primary-soft shadow-none",
       },
     },
     compoundVariants: [{ variant: "outline", class: "bg-transparent" }],
     defaultVariants: {
       variant: "default",
-      plane: "surface",
+      plane: "raised",
       layout: "stack",
       tone: "default",
     },
@@ -59,7 +63,7 @@ function Card({
   variant = "default",
   layout = "stack",
   tone = "default",
-  plane = "surface",
+  plane = "raised",
   ...props
 }: ComponentProps<"div"> & VariantProps<typeof cardVariants>) {
   return (
@@ -90,7 +94,7 @@ function CardTitle({ className, ...props }: ComponentProps<"div">) {
   return (
     <div
       data-slot="card-title"
-      className={cn("font-medium leading-snug text-foreground", className)}
+      className={cn("font-medium leading-snug tracking-heading text-foreground", className)}
       {...props}
     />
   );
@@ -124,7 +128,7 @@ function CardFooter({ className, ...props }: ComponentProps<"div">) {
   return (
     <div
       data-slot="card-footer"
-      className={cn("flex items-center border-border border-t px-3 pt-3", className)}
+      className={cn("flex items-center border-divider border-t px-3 pt-3", className)}
       {...props}
     />
   );

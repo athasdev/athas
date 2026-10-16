@@ -21,11 +21,7 @@ import { BottomBufferPane } from "./bottom-buffer-pane";
 
 const DebuggerView = lazy(() => import("@/features/debugger/components/debugger-view"));
 
-interface BottomPaneProps {
-  roundLeftEdge?: boolean;
-}
-
-const BottomPane = ({ roundLeftEdge = true }: BottomPaneProps) => {
+const BottomPane = () => {
   const isBottomPaneVisible = useUIState((state) => state.isBottomPaneVisible);
   const bottomPaneActiveTab = useUIState((state) => state.bottomPaneActiveTab);
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
@@ -210,8 +206,7 @@ const BottomPane = ({ roundLeftEdge = true }: BottomPaneProps) => {
       className={cn(
         "group relative z-20 flex h-workbench w-full shrink-0 cursor-ns-resize",
         "transition-colors duration-fast ease-smooth hover:bg-primary-soft",
-        "border-border border-r bg-background",
-        roundLeftEdge && "border-l",
+        "bg-background",
         isResizing && "bg-primary-soft",
       )}
       role="separator"
@@ -233,11 +228,8 @@ const BottomPane = ({ roundLeftEdge = true }: BottomPaneProps) => {
       data-bottom-pane-drop-target
       className={cn(
         "athas-glass-island relative flex min-h-0 flex-col overflow-hidden bg-background",
-        "border-border border-r border-b",
-        roundLeftEdge && "rounded-bl-xl border-l",
-        "rounded-br-xl",
         isInternalHoverTarget && "ring-2 ring-primary ring-inset",
-        isFullScreen && "size-full rounded-none border-0 shadow-none ring-0",
+        isFullScreen && "size-full ring-0",
         !isFullScreen && "flex-1",
       )}
       onDragOver={handleDragOver}

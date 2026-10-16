@@ -228,7 +228,7 @@ function ViewBoardDisplay({ table, presentation }: ViewDataDisplayProps) {
           key={group.key}
           className="flex min-w-64 max-w-80 flex-1 flex-col overflow-hidden rounded-lg bg-surface"
         >
-          <div className="border-border border-b p-2.5">
+          <div className="border-divider border-b p-2.5">
             <GroupHeader label={group.label} count={group.rows.length} />
           </div>
           <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-2">

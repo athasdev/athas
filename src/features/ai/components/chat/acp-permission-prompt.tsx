@@ -227,7 +227,7 @@ export function AcpPermissionPrompt({
         onBlur={(event) => {
           if (!event.currentTarget.contains(event.relatedTarget)) setHasFocus(false);
         }}
-        className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5 rounded-xl border border-border bg-background px-2 py-1.5 shadow-(--shadow-card) outline-none focus-visible:border-primary"
+        className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5 rounded-xl bg-raised px-2 py-1.5 shadow-(--shadow-raised) outline-none focus-visible:ring-2 focus-visible:ring-focus"
       >
         <KeyIcon className="size-3.5 shrink-0 text-subtle-foreground" />
         <div

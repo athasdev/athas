@@ -202,7 +202,7 @@ export function DebugExceptionBreakpointsList({
   if (filters.length === 0) return null;
 
   return (
-    <div className="border-border border-b py-1">
+    <div className="border-divider border-b py-1">
       {filters.map((filter) => (
         <label
           key={filter.filter}

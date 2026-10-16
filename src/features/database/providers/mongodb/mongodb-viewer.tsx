@@ -105,7 +105,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
       />
 
       <div className="flex min-h-0 flex-1">
-        <div className={databasePanelClassName("w-56 shrink-0 border-border border-r")}>
+        <div className={databasePanelClassName("w-56 shrink-0 border-divider border-r")}>
           <PaneContentHeader leading={<StackIcon />} title="Collections" />
           <ScrollArea fill="flex" contentPadding="sm" contentGap="xs">
             {store.collections.map((col) => (
@@ -202,7 +202,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                   </div>
                 )}
               </div>
-              <div className="divide-y divide-border border-y border-border">
+              <div className="divide-y divide-border border-y border-divider">
                 {store.documents.map((doc, i) => {
                   const id = doc._id ? String(doc._id) : String(i);
                   const displayIndex = getMongoDocumentDisplayIndex(
@@ -250,7 +250,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
           )}
 
           {!store.isLoading && store.totalPages > 1 && (
-            <div className="flex items-center justify-between border-border border-t px-3 py-2">
+            <div className="flex items-center justify-between border-divider border-t px-3 py-2">
               <div className="flex items-center gap-2">
                 <Select
                   value={store.pageSize.toString()}

@@ -30,7 +30,7 @@ export function ExtensionDialogs() {
               maxHeight: dialog.height ?? 600,
             }}
           >
-            <DialogHeader className="flex-row items-center justify-between gap-2 border-border border-b px-4 py-3">
+            <DialogHeader className="flex-row items-center justify-between gap-2 border-divider border-b px-4 py-3">
               <DialogTitle>{dialog.title}</DialogTitle>
               <DialogClose render={<Button variant="ghost" iconOnly aria-label="Close dialog" />}>
                 <XIcon />

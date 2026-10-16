@@ -202,7 +202,7 @@ function ProviderApiKeyCommandContent({
           )}
         </CommandList>
 
-        <div className="min-w-0 border-border border-l p-3">
+        <div className="min-w-0 border-divider border-l p-3">
           {selectedProvider ? (
             <div className="space-y-3">
               <div className="flex items-center gap-2">

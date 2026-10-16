@@ -24,11 +24,11 @@
 .cm-editor .cm-panels-bottom .cm-vim-panel {
   min-height: var(--athas-chrome-control-height);
   padding: 3px 8px;
-  border: 1px solid var(--border);
+  border: 0;
   border-radius: var(--radius-lg);
   background: var(--overlay);
   color: var(--foreground);
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--shadow-raised);
   font: var(--ui-text-sm) / 1.45 var(--editor-font-family);
   pointer-events: auto;
 }

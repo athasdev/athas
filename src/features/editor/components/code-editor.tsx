@@ -638,7 +638,7 @@ const CodeEditor = ({
           {outline && showOutlineSetting && activeBufferId ? (
             <aside
               aria-label="Outline"
-              className="flex w-64 min-w-0 shrink-0 border-border border-l"
+              className="flex w-64 min-w-0 shrink-0 border-divider border-l"
               data-slot="editor-outline"
             >
               <OutlineSidebar bufferId={activeBufferId} />

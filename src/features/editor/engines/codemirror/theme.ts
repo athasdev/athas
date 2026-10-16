@@ -19,7 +19,7 @@ export const athasEditorTheme = EditorView.theme({
   ".cm-cursor, .cm-dropCursor": { borderLeftColor: "var(--cursor, var(--foreground))" },
   "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, ::selection":
     { backgroundColor: "var(--selection)" },
-  ".cm-activeLine": { backgroundColor: "var(--selected)" },
+  ".cm-activeLine": { backgroundColor: "var(--accent)" },
   ".cm-gutters": {
     backgroundColor: "var(--background)",
     color: "var(--subtle-foreground)",

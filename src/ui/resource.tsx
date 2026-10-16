@@ -25,7 +25,7 @@ function ResourceBands({ summary, tabs }: Pick<ResourceShellProps, "summary" | "
         </div>
       ) : null}
       {tabs ? (
-        <div className="sticky top-0 z-20 shrink-0 border-border border-b bg-background px-4 sm:px-6">
+        <div className="sticky top-0 z-20 shrink-0 border-divider border-b bg-background px-4 sm:px-6">
           <ResourceRail>{tabs}</ResourceRail>
         </div>
       ) : null}
@@ -149,7 +149,7 @@ export function ResourceSidebarLayout({ children, sidebar }: ResourceSidebarLayo
   return (
     <div className="grid gap-8 @min-[52rem]/resource:grid-cols-[minmax(0,1fr)_15rem] @min-[52rem]/resource:gap-12">
       <main className="min-w-0">{children}</main>
-      <aside className="min-w-0 space-y-6 border-border border-t pt-6 font-sans ui-text-sm text-foreground @min-[52rem]/resource:border-t-0 @min-[52rem]/resource:pt-0">
+      <aside className="min-w-0 space-y-6 border-divider border-t pt-6 font-sans ui-text-sm text-foreground @min-[52rem]/resource:border-t-0 @min-[52rem]/resource:pt-0">
         {sidebar}
       </aside>
     </div>

@@ -4,7 +4,7 @@ import { memo, useState } from "react";
 import { cn } from "@/utils/cn";
 
 const avatarVariants = cva(
-  "relative flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-accent font-sans font-medium text-muted-foreground ring-1 ring-border ring-inset select-none",
+  "relative flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-accent font-sans font-medium text-muted-foreground ring-1 ring-divider ring-inset select-none",
   {
     variants: {
       size: {

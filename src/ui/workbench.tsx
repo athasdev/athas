@@ -83,10 +83,10 @@ export function WorkbenchNavigation<TValue extends string>({
     <div className="flex size-full min-h-0 min-w-0 @max-[680px]/workbench:flex-col">
       <aside
         data-slot="workbench-navigation"
-        className="flex w-52 shrink-0 flex-col gap-3 border-border border-r p-2 @max-[680px]/workbench:w-full @max-[680px]/workbench:border-r-0 @max-[680px]/workbench:border-b"
+        className="flex w-52 shrink-0 flex-col gap-3 p-2 @max-[680px]/workbench:w-full"
       >
         <div className="flex shrink-0 flex-col gap-2">
-          <h1 className="flex h-7 items-center px-1.5 font-medium text-foreground ui-text-base">
+          <h1 className="flex h-7 items-center px-1.5 font-medium tracking-heading text-foreground ui-text-base">
             {title}
           </h1>
           {search}
@@ -169,7 +169,9 @@ function WorkbenchContentTitle({
   return (
     <div className="min-w-0 flex-1 basis-64">
       <div className="flex min-w-0 flex-wrap items-center gap-2">
-        <h2 className="min-w-0 wrap-break-word font-medium text-foreground ui-text-lg">{title}</h2>
+        <h2 className="min-w-0 wrap-break-word font-medium tracking-heading text-balance text-foreground ui-text-lg">
+          {title}
+        </h2>
         {status}
       </div>
       {description ? (

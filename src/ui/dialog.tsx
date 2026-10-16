@@ -42,7 +42,7 @@ const dialogBodyVariants = cva("", {
 });
 
 const dialogContentVariants = cva(
-  "-translate-x-1/2 -translate-y-1/2 fixed top-1/2 left-1/2 z-9999 flex max-h-[90vh] w-full max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl bg-overlay text-foreground shadow-(--shadow-dialog) ring-1 ring-border outline-none",
+  "-translate-x-1/2 -translate-y-1/2 fixed top-1/2 left-1/2 z-9999 flex max-h-[90vh] w-full max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl bg-overlay text-foreground shadow-(--shadow-dialog) outline-none",
   {
     variants: {
       size: {
@@ -139,7 +139,7 @@ function DialogFooter({ className, ...props }: ComponentProps<"div">) {
     <div
       data-slot="dialog-footer"
       className={cn(
-        "flex shrink-0 flex-col-reverse gap-2 border-border border-t px-4 py-3 sm:flex-row sm:justify-end",
+        "flex shrink-0 flex-col-reverse gap-2 px-4 pt-1 pb-4 sm:flex-row sm:justify-end",
         className,
       )}
       {...props}
@@ -151,7 +151,10 @@ function DialogTitle({ className, ...props }: DialogPrimitive.Title.Props) {
   return (
     <DialogPrimitive.Title
       data-slot="dialog-title"
-      className={cn("font-sans ui-text-base font-medium leading-snug text-foreground", className)}
+      className={cn(
+        "font-sans ui-text-base font-medium leading-snug tracking-heading text-foreground",
+        className,
+      )}
       {...props}
     />
   );
@@ -239,7 +242,7 @@ const AppDialog = ({
               <div className="flex shrink-0 items-center justify-between px-4 py-3">
                 <div className="flex min-w-0 items-center gap-2">
                   {Icon && <Icon className="text-muted-foreground" />}
-                  <DialogPrimitive.Title className="min-w-0 font-sans ui-text-base font-medium text-foreground">
+                  <DialogPrimitive.Title className="min-w-0 font-sans ui-text-base font-medium tracking-heading text-foreground">
                     {title}
                   </DialogPrimitive.Title>
                 </div>

@@ -442,7 +442,7 @@ function renderNode(
         />
       );
     case "divider":
-      return <div key={key} className="h-px bg-border" />;
+      return <div key={key} className="h-px bg-divider" />;
     default:
       return <Fragment key={key} />;
   }

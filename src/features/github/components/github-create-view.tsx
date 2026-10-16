@@ -413,7 +413,7 @@ ${statusSummary}`;
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3 border-border border-y py-3">
+            <div className="flex flex-wrap items-center gap-3 border-divider border-y py-3">
               <div className="flex min-w-56 flex-1 items-center gap-2">
                 <span className="shrink-0 font-sans ui-text-sm text-subtle-foreground">
                   Workflow
@@ -498,7 +498,7 @@ ${statusSummary}`;
             </div>
 
             {kind === "pull-request" ? (
-              <div className="flex flex-wrap items-center gap-2 border-border border-y py-3">
+              <div className="flex flex-wrap items-center gap-2 border-divider border-y py-3">
                 <GitBranchIcon className="text-subtle-foreground" />
                 <span className="font-sans ui-text-sm text-subtle-foreground">Head</span>
                 <Select
@@ -555,7 +555,7 @@ ${statusSummary}`;
               </div>
             ) : null}
 
-            <div className="flex flex-wrap items-center justify-between gap-3 border-border border-t pt-3">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-divider border-t pt-3">
               <div className="flex min-w-0 flex-wrap items-center gap-2">
                 <GitHubLabelPicker
                   labels={labels}

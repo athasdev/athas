@@ -215,7 +215,7 @@ function BufferPreviewCard({ buffer }: { buffer: PaneRenderBuffer }) {
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background">
       <div className="pointer-events-none flex min-h-0 flex-1 overflow-hidden">
-        <div className="flex w-12 shrink-0 flex-col items-end gap-1 border-r border-border bg-surface px-2 py-4 ui-text-sm leading-5 text-subtle-foreground">
+        <div className="flex w-12 shrink-0 flex-col items-end gap-1 border-r border-divider bg-surface px-2 py-4 ui-text-sm leading-5 text-subtle-foreground">
           {previewLines.map((_, index) => (
             <span key={`${buffer.id}-line-${index + 1}`}>{index + 1}</span>
           ))}
@@ -227,7 +227,7 @@ function BufferPreviewCard({ buffer }: { buffer: PaneRenderBuffer }) {
         </div>
       </div>
 
-      <div className="border-t border-border bg-surface px-4 py-2">
+      <div className="border-t border-divider bg-surface px-4 py-2">
         <div className="truncate ui-text-sm font-medium text-foreground">
           {buffer.type === "diff" ? formatDiffBufferLabel(buffer.name, buffer.path) : buffer.name}
         </div>

@@ -7,7 +7,7 @@ const alertVariants = cva(
   {
     variants: {
       tone: {
-        default: "border border-border bg-surface [&>svg]:text-muted-foreground",
+        default: "bg-surface [&>svg]:text-muted-foreground",
         info: "bg-info-soft [&>svg]:text-info",
         success: "bg-success-soft [&>svg]:text-success",
         warning: "bg-warning-soft [&>svg]:text-warning",

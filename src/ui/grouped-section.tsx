@@ -28,7 +28,7 @@ const groupedSectionTitleVariants = cva(
 
 /** Hairlines between flat rows, inset like the grouped card's, without the card. */
 const FLAT_ROW_DIVIDERS =
-  "*:relative *:not-first:before:pointer-events-none *:not-first:before:absolute *:not-first:before:inset-x-3 *:not-first:before:top-0 *:not-first:before:h-px *:not-first:before:bg-border";
+  "*:relative *:not-first:before:pointer-events-none *:not-first:before:absolute *:not-first:before:inset-x-3 *:not-first:before:top-0 *:not-first:before:h-px *:not-first:before:bg-divider";
 
 export interface GroupedSectionProps
   extends

@@ -79,7 +79,7 @@ export function ExtensionDiffPreview({
       onOpenChange={setIsOpen}
       render={<figure />}
       data-slot="diff-preview"
-      className="min-w-0 overflow-hidden rounded-lg border border-border bg-background"
+      className="min-w-0 overflow-hidden rounded-xl bg-raised shadow-(--shadow-raised)"
       aria-label={`Diff for ${filePath}, ${additions} additions and ${deletions} deletions`}
     >
       {caption ? (
@@ -87,7 +87,7 @@ export function ExtensionDiffPreview({
           <CollapsibleTrigger
             className={cn(
               "flex min-h-8 w-full min-w-0 items-center gap-2 bg-surface px-2.5 py-1.5 text-left ui-text-sm outline-none transition-colors duration-fast ease-smooth hover:bg-accent focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-inset",
-              isOpen && "border-border border-b",
+              isOpen && "border-divider border-b",
             )}
           >
             <ChevronRightIcon
@@ -136,7 +136,7 @@ export function ExtensionDiffPreview({
                   <span
                     role="cell"
                     aria-hidden="true"
-                    className="col-span-3 border-border border-r px-2 py-0.5 text-right text-subtle-foreground"
+                    className="col-span-3 border-divider border-r px-2 py-0.5 text-right text-subtle-foreground"
                   >
                     @@
                   </span>
@@ -149,14 +149,14 @@ export function ExtensionDiffPreview({
                   <span
                     role="cell"
                     aria-hidden="true"
-                    className="select-none border-border border-r px-2 py-0.5 text-right text-subtle-foreground tabular-nums"
+                    className="select-none border-divider border-r px-2 py-0.5 text-right text-subtle-foreground tabular-nums"
                   >
                     {line.oldLine ?? ""}
                   </span>
                   <span
                     role="cell"
                     aria-hidden="true"
-                    className="select-none border-border border-r px-2 py-0.5 text-right text-subtle-foreground tabular-nums"
+                    className="select-none border-divider border-r px-2 py-0.5 text-right text-subtle-foreground tabular-nums"
                   >
                     {line.newLine ?? ""}
                   </span>
@@ -189,14 +189,14 @@ export function ExtensionDiffPreview({
           ))}
         </div>
         {hiddenRowCount > 0 ? (
-          <div className="border-border border-t bg-surface px-1 py-0.5">
+          <div className="border-divider border-t bg-surface px-1 py-0.5">
             <Button variant="ghost" size="sm" width="full" onClick={() => setShowAllRows(true)}>
               Show {hiddenRowCount} more {hiddenRowCount === 1 ? "line" : "lines"}
             </Button>
           </div>
         ) : null}
         {truncated ? (
-          <div className="border-border border-t bg-surface px-2.5 py-1.5 text-subtle-foreground ui-text-sm">
+          <div className="border-divider border-t bg-surface px-2.5 py-1.5 text-subtle-foreground ui-text-sm">
             Diff preview truncated
           </div>
         ) : null}

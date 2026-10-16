@@ -33,7 +33,7 @@ const itemVariants = cva(
     variants: {
       variant: {
         default: "border-transparent",
-        outline: "border-border",
+        outline: "border-divider",
         muted: "border-transparent bg-surface",
         /** A row inside a `Card` list: square, on the card's row grid, split by its hairlines. */
         list: "min-h-10 rounded-none border-transparent px-3 py-2 focus-visible:ring-inset",

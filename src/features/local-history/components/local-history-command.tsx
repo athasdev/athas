@@ -414,7 +414,7 @@ export function LocalHistoryCommandContent({
         </CommandHeaderAction>
       </CommandHeader>
 
-      <div className="border-border border-b px-4 py-2">
+      <div className="border-divider border-b px-4 py-2">
         <CommandInput
           ref={inputRef}
           value={query}

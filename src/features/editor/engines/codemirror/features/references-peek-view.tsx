@@ -132,7 +132,7 @@ export function ReferencesPeekView({
 
   return (
     <div
-      className="flex h-full flex-col overflow-hidden border-border border-y bg-surface font-sans text-foreground ui-text-sm"
+      className="flex h-full flex-col overflow-hidden border-divider border-y bg-surface font-sans text-foreground ui-text-sm"
       data-slot="references-peek"
       onKeyDown={handleKeyDown}
     >
@@ -171,7 +171,7 @@ export function ReferencesPeekView({
           aria-label="References"
           aria-activedescendant={selected ? `references-peek-${selectedIndex}` : undefined}
           tabIndex={0}
-          className="w-72 shrink-0 overflow-y-auto border-border border-l py-1 outline-none"
+          className="w-72 shrink-0 overflow-y-auto border-divider border-l py-1 outline-none"
         >
           {groups.map((group) => (
             <div key={group.filePath} role="group" aria-label={group.fileName}>

@@ -130,7 +130,7 @@ export function SidebarToolbar({
   return (
     <div
       className={cn(
-        "font-sans ui-text-chrome flex h-pane-header min-w-0 shrink-0 select-none items-center gap-chrome border-border px-chrome-inline",
+        "font-sans ui-text-chrome flex h-pane-header min-w-0 shrink-0 select-none items-center gap-chrome border-divider px-chrome-inline",
         position === "top" ? "border-b" : "border-t",
         className,
       )}
@@ -148,10 +148,7 @@ export const SidebarFooter = forwardRef<
   return (
     <div
       ref={ref}
-      className={cn(
-        "ui-text-chrome mx-2 mb-2 shrink-0 rounded-lg border border-border bg-surface p-0 pb-1",
-        className,
-      )}
+      className={cn("ui-text-chrome mx-2 mb-2 shrink-0 rounded-lg bg-surface p-0 pb-1", className)}
       {...props}
     >
       {children}
@@ -188,7 +185,7 @@ export function SidebarComposerBody({
     <div
       className={cn(
         "overflow-hidden",
-        variant === "surface" && "rounded-lg border border-border bg-surface",
+        variant === "surface" && "rounded-lg bg-raised shadow-(--shadow-raised)",
         className,
       )}
       {...props}

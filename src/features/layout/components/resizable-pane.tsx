@@ -193,11 +193,8 @@ export function ResizablePane({
         )}
       >
         <div
-          className={cn(
-            "athas-glass-island flex min-h-0 flex-1 flex-col overflow-hidden border-border border-y bg-background",
-            "border-l border-r",
-            !hidden && "rounded-l-xl",
-          )}
+          data-plane="page"
+          className="athas-glass-island flex min-h-0 flex-1 flex-col overflow-hidden bg-background"
         >
           {children}
         </div>

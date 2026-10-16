@@ -16,7 +16,7 @@ function TableHeader({ className, ...props }: ComponentProps<"thead">) {
     <thead
       data-slot="table-header"
       className={cn(
-        "sticky top-0 z-10 border-border border-b bg-background [&_tr]:border-b-0",
+        "sticky top-0 z-10 border-divider border-b bg-background [&_tr]:border-b-0",
         className,
       )}
       {...props}
@@ -38,7 +38,7 @@ function TableFooter({ className, ...props }: ComponentProps<"tfoot">) {
   return (
     <tfoot
       data-slot="table-footer"
-      className={cn("border-border border-t bg-surface font-medium", className)}
+      className={cn("border-divider border-t bg-surface font-medium", className)}
       {...props}
     />
   );
@@ -49,7 +49,7 @@ function TableRow({ className, ...props }: ComponentProps<"tr">) {
     <tr
       data-slot="table-row"
       className={cn(
-        "border-border border-b transition-colors hover:bg-accent data-[state=selected]:bg-selected",
+        "border-divider border-b transition-colors hover:bg-accent data-[state=selected]:bg-selected",
         className,
       )}
       {...props}

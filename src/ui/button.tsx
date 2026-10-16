@@ -17,7 +17,7 @@ export const buttonVariants = cva(
           "bg-primary text-primary-foreground hover:bg-primary-hover data-[active=true]:bg-primary-hover **:data-[slot=kbd]:bg-primary-foreground/20 **:data-[slot=kbd]:text-primary-foreground",
         /** A field-shaped trigger: selects and pickers that sit among inputs. */
         outline:
-          "border border-border bg-surface text-foreground hover:border-border-strong data-[active=true]:border-primary data-popup-open:border-primary",
+          "bg-raised text-foreground shadow-(--shadow-raised) hover:bg-accent data-[active=true]:bg-selected data-popup-open:bg-accent",
         /** Borderless: toolbars, icon buttons, quiet actions. */
         ghost:
           "bg-transparent text-subtle-foreground hover:bg-accent hover:text-foreground data-[active=true]:bg-selected data-[active=true]:text-foreground",

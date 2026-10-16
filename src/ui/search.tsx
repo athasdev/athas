@@ -237,7 +237,7 @@ export function SearchReplaceRow({
   replaceAllTooltip?: string;
 }) {
   return (
-    <div className="flex items-center gap-1.5 border-border border-t pt-1.5">
+    <div className="flex items-center gap-1.5 border-divider border-t pt-1.5">
       <span className="flex size-7 shrink-0 items-center justify-center text-muted-foreground">
         <ArrowsLeftRightIcon />
       </span>

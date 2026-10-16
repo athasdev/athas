@@ -56,7 +56,7 @@ const SearchExcerptLine = memo(function SearchExcerptLine({
     <>
       {showLineNumbers ? (
         <span
-          className="shrink-0 select-none border-border border-r pr-3 text-right text-subtle-foreground tabular-nums"
+          className="shrink-0 select-none border-divider border-r pr-3 text-right text-subtle-foreground tabular-nums"
           style={{ width: `${gutterWidth}px` }}
         >
           {mappedLine ?? ""}

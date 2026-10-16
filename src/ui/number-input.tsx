@@ -92,7 +92,7 @@ export default function NumberInput({
       <NumberFieldPrimitive.Input
         data-setting-primary-control="true"
         {...props}
-        className="h-7 min-w-[5ch] flex-1 rounded-md border border-border bg-surface px-2 text-center font-sans ui-text-sm tabular-nums text-foreground outline-none transition-[border-color,box-shadow] duration-fast ease-smooth placeholder:text-subtle-foreground focus:border-primary focus:ring-2 focus:ring-focus disabled:cursor-not-allowed disabled:opacity-50"
+        className="h-7 min-w-[5ch] flex-1 rounded-md bg-raised px-2 text-center shadow-(--shadow-raised) font-sans ui-text-sm tabular-nums text-foreground outline-none transition-shadow duration-fast ease-smooth placeholder:text-subtle-foreground focus:ring-2 focus:ring-focus disabled:cursor-not-allowed disabled:opacity-50"
       />
 
       <NumberFieldPrimitive.Increment

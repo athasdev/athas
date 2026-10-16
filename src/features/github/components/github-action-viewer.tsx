@@ -687,7 +687,7 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
         />
       ) : details ? (
         <div className="flex min-h-0 flex-1 @max-[48rem]/resource:flex-col">
-          <div className="flex w-72 shrink-0 flex-col border-border border-r bg-surface @max-[48rem]/resource:max-h-64 @max-[48rem]/resource:w-full @max-[48rem]/resource:border-r-0 @max-[48rem]/resource:border-b">
+          <div className="flex w-72 shrink-0 flex-col border-divider border-r bg-surface @max-[48rem]/resource:max-h-64 @max-[48rem]/resource:w-full @max-[48rem]/resource:border-r-0 @max-[48rem]/resource:border-b">
             <GitHubActionJobsPanel
               jobs={jobs}
               selectedJobId={selectedJobId}

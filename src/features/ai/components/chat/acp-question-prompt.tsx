@@ -59,7 +59,7 @@ function QuestionStep({ question }: { question: ElicitationQuestion }) {
                   </QuestionnaireChoiceDescription>
                 ) : null}
                 {option.preview ? (
-                  <span className="mt-1 block max-h-32 overflow-auto rounded-md border border-border bg-background px-2 py-1.5 font-mono whitespace-pre-wrap wrap-anywhere text-muted-foreground ui-text-caption">
+                  <span className="mt-1 block max-h-32 overflow-auto rounded-md bg-surface px-2 py-1.5 font-mono whitespace-pre-wrap wrap-anywhere text-muted-foreground ui-text-caption">
                     {option.preview}
                   </span>
                 ) : null}
@@ -131,7 +131,7 @@ export function AcpQuestionPrompt({
     <div
       className={cn(
         chatContentWidth(),
-        "mb-1 flex flex-col gap-2.5 rounded-xl border border-border bg-background p-2.5 shadow-(--shadow-card) ui-text-sm",
+        "mb-1 flex flex-col gap-2.5 rounded-xl bg-raised p-2.5 shadow-(--shadow-raised) ui-text-sm",
       )}
     >
       <div className="flex min-w-0 items-start gap-2">

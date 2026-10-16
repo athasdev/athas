@@ -160,7 +160,7 @@ const MultibufferSectionView = memo(function MultibufferSectionView({
       ref={sectionRef}
       data-multibuffer-section={section.key}
       data-multibuffer-index={index}
-      className="relative min-w-0 max-w-full border-border border-b bg-background"
+      className="relative min-w-0 max-w-full border-divider border-b bg-background"
     >
       <MultibufferFileHeader
         filePath={section.path}
@@ -363,7 +363,7 @@ export function MultibufferWorkspace({
               />
               {header.actions ? (
                 <>
-                  <div className="mx-1 h-3.5 w-px bg-border" />
+                  <div className="mx-1 h-3.5 w-px bg-divider" />
                   {header.actions}
                 </>
               ) : null}

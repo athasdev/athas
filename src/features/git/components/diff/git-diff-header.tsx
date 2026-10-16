@@ -87,7 +87,7 @@ const DiffHeader = memo(
     const fullPath = diff?.file_path || fileName || "";
 
     return (
-      <div className="sticky top-0 z-10 border-border border-b">
+      <div className="sticky top-0 z-10 border-divider border-b">
         <Breadcrumb
           filePathOverride={isMultiFileView ? title || "Uncommitted Changes" : fullPath}
           interactive={!isMultiFileView}
@@ -127,7 +127,7 @@ const DiffHeader = memo(
                   >
                     <ChevronUpIcon />
                   </Button>
-                  <div className="mx-1 h-4 w-px bg-border" />
+                  <div className="mx-1 h-4 w-px bg-divider" />
                 </>
               )}
               {showDisplayControls && (
@@ -167,7 +167,7 @@ const DiffHeader = memo(
                       </Button>
                     </div>
                   )}
-                  <div className="mx-1 h-4 w-px bg-border" />
+                  <div className="mx-1 h-4 w-px bg-divider" />
                 </>
               )}
               <Button

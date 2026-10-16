@@ -23,7 +23,7 @@ export const chromeBarVariants = cva(
         transparent: "bg-transparent",
       },
       separated: {
-        true: "border-border border-b",
+        true: "border-divider border-b",
         false: "border-transparent border-b",
       },
     },
@@ -135,7 +135,7 @@ export function ChromeSeparator({
       role="separator"
       aria-orientation={orientation}
       className={cn(
-        "shrink-0 bg-border",
+        "shrink-0 bg-divider",
         orientation === "vertical" ? "mx-0.5 h-3.5 w-px" : "my-0.5 h-px w-full",
         className,
       )}

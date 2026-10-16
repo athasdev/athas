@@ -14,12 +14,11 @@ interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement
 }
 
 const textareaVariants = cva(
-  "w-full min-w-0 rounded-md ui-text-sm text-foreground outline-none transition-[border-color,box-shadow,background-color,color] duration-fast ease-smooth placeholder:text-subtle-foreground disabled:cursor-not-allowed disabled:opacity-50",
+  "w-full min-w-0 rounded-md ui-text-sm text-foreground outline-none transition-[box-shadow,background-color,color] duration-fast ease-smooth placeholder:text-subtle-foreground disabled:cursor-not-allowed disabled:opacity-50",
   {
     variants: {
       variant: {
-        default:
-          "border border-border bg-surface focus:border-primary focus:ring-2 focus:ring-focus",
+        default: "bg-raised shadow-(--shadow-raised) focus:ring-2 focus:ring-focus",
         ghost: "border-0 bg-transparent",
       },
       inset: {

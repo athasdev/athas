@@ -56,7 +56,7 @@ export function CsvTableView({
         {/* Header */}
         <div
           className={cn(
-            "font-sans ui-text-sm grid w-full gap-0 border-border border-b bg-surface",
+            "font-sans ui-text-sm grid w-full gap-0 border-divider border-b bg-surface",
             stickyHeader && "sticky top-0 isolate z-30",
           )}
           style={{ gridTemplateColumns: gridTemplate, willChange: "transform" }}
@@ -66,7 +66,7 @@ export function CsvTableView({
               key={i}
               className={cn(
                 "whitespace-nowrap bg-surface px-2 py-1.5 text-left text-foreground",
-                i > 0 && "border-border border-l",
+                i > 0 && "border-divider border-l",
               )}
             >
               {col}
@@ -94,8 +94,8 @@ export function CsvTableView({
                     <div
                       key={cIndex}
                       className={cn(
-                        "ui-text-sm max-w-90 border-border border-b px-2",
-                        cIndex > 0 && "border-border border-l",
+                        "ui-text-sm max-w-90 border-divider border-b px-2",
+                        cIndex > 0 && "border-divider border-l",
                         dense ? "py-1" : "py-2",
                       )}
                       title={cell === null ? "NULL" : String(cell)}
@@ -125,8 +125,8 @@ export function CsvTableView({
                   <div
                     key={cIndex}
                     className={cn(
-                      "ui-text-sm max-w-90 border-border border-b px-2",
-                      cIndex > 0 && "border-border border-l",
+                      "ui-text-sm max-w-90 border-divider border-b px-2",
+                      cIndex > 0 && "border-divider border-l",
                       dense ? "py-1" : "py-2",
                     )}
                     title={cell === null ? "NULL" : String(cell)}

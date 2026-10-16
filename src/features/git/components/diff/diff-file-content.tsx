@@ -227,7 +227,7 @@ function EmbeddedDiffSectionEditor({
   if (viewMode === "split") {
     return (
       <div className="grid grid-cols-2 bg-background" style={{ height: `${height}px` }}>
-        <div className="relative overflow-hidden border-border border-r bg-background">
+        <div className="relative overflow-hidden border-divider border-r bg-background">
           <DiffLineBackgroundLayer
             lineKinds={splitContent.left.lineKinds}
             lineHeight={lineHeight}

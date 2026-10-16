@@ -57,7 +57,7 @@ export function DockerContainerDetail({
   onCopyFromContainer,
 }: DockerContainerDetailProps) {
   return (
-    <div className="max-h-72 shrink-0 border-t border-border bg-surface">
+    <div className="max-h-72 shrink-0 border-t border-divider bg-surface">
       <div className="flex h-8 items-center justify-between gap-2 px-2">
         <div className="min-w-0">
           <div className="truncate ui-text-sm font-medium text-foreground">{container.name}</div>
@@ -106,7 +106,7 @@ export function DockerContainerDetail({
       </div>
       {activeTab === "logs" ? (
         <>
-          <div className="flex items-center gap-1 border-t border-border px-2 py-1">
+          <div className="flex items-center gap-1 border-t border-divider px-2 py-1">
             <SearchField
               value={logQuery}
               onChange={onLogQueryChange}
@@ -127,11 +127,11 @@ export function DockerContainerDetail({
             ))}
           </div>
           {logError ? (
-            <div className="border-t border-border px-2 py-1 ui-text-sm text-destructive">
+            <div className="border-t border-divider px-2 py-1 ui-text-sm text-destructive">
               {logError}
             </div>
           ) : null}
-          <div className="ui-text-sm max-h-36 overflow-auto border-t border-border px-2 py-1 font-mono leading-4">
+          <div className="ui-text-sm max-h-36 overflow-auto border-t border-divider px-2 py-1 font-mono leading-4">
             {filteredLogLines.length > 0 ? (
               filteredLogLines.map((entry) => (
                 <div
@@ -153,7 +153,7 @@ export function DockerContainerDetail({
         </>
       ) : (
         <>
-          <div className="flex items-center gap-1 border-t border-border px-2 py-1">
+          <div className="flex items-center gap-1 border-t border-divider px-2 py-1">
             <Button
               type="button"
               variant="ghost"
@@ -178,11 +178,11 @@ export function DockerContainerDetail({
             </Button>
           </div>
           {filesError ? (
-            <div className="border-t border-border px-2 py-1 ui-text-sm text-destructive">
+            <div className="border-t border-divider px-2 py-1 ui-text-sm text-destructive">
               {filesError}
             </div>
           ) : null}
-          <div className="max-h-44 overflow-auto border-t border-border py-1">
+          <div className="max-h-44 overflow-auto border-t border-divider py-1">
             {isFilesLoading ? (
               <div className="px-2 py-2 ui-text-sm text-subtle-foreground">Loading files...</div>
             ) : containerFiles.length > 0 ? (

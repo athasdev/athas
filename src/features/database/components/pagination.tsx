@@ -49,7 +49,7 @@ export default function Pagination({
   if (totalPages <= 1) return null;
 
   return (
-    <div className="flex items-center justify-between border-border border-t bg-surface px-3 py-2">
+    <div className="flex items-center justify-between border-divider border-t bg-surface px-3 py-2">
       <div className="flex items-center gap-2">
         <Select
           value={pageSize.toString()}

@@ -7,10 +7,10 @@ interface SwitchProps extends Omit<SwitchPrimitive.Root.Props, "onCheckedChange"
 }
 
 const switchClassName =
-  "group/switch relative inline-flex h-4 w-7 shrink-0 items-center rounded-full bg-selected p-0.5 outline-none ring-1 ring-border ring-inset transition-[background-color,box-shadow] duration-normal ease-smooth hover:bg-border data-checked:bg-primary data-checked:ring-primary data-checked:hover:bg-primary-hover focus-visible:ring-2 focus-visible:ring-focus data-disabled:cursor-not-allowed data-disabled:opacity-50";
+  "group/switch relative inline-flex h-4 w-7 shrink-0 items-center rounded-full bg-selected p-0.5 outline-none ring-1 ring-divider ring-inset transition-[background-color,box-shadow] duration-normal ease-smooth hover:bg-divider data-checked:bg-primary data-checked:ring-primary data-checked:hover:bg-primary-hover focus-visible:ring-2 focus-visible:ring-focus data-disabled:cursor-not-allowed data-disabled:opacity-50";
 
 const switchThumbClassName =
-  "pointer-events-none block size-3 rounded-full bg-foreground shadow-(--shadow-card) transition-[transform,background-color] duration-normal ease-smooth group-data-checked/switch:translate-x-3 group-data-checked/switch:bg-primary-foreground";
+  "pointer-events-none block size-3 rounded-full bg-foreground shadow-(--shadow-raised) transition-[transform,background-color] duration-normal ease-smooth group-data-checked/switch:translate-x-3 group-data-checked/switch:bg-primary-foreground";
 
 export default function Switch({ checked, onChange, className, ...props }: SwitchProps) {
   return (

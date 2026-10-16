@@ -777,7 +777,7 @@ function StreamList({
                     <span className="relative flex w-3 shrink-0 justify-center">
                       <span
                         className={cn(
-                          "absolute top-0 -bottom-1.5 w-px bg-border",
+                          "absolute top-0 -bottom-1.5 w-px bg-divider",
                           index === 0 && "top-2",
                           index === commits.length - 1 && "bottom-auto h-2",
                         )}

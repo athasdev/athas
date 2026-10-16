@@ -7,8 +7,8 @@
 .cm-editor .cm-tooltip.cm-completionInfo,
 .cm-editor .cm-tooltip.cm-tooltip-hover,
 .cm-editor .cm-tooltip:has(> .cm-athas-signatureHelp) {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border: 0;
+  border-radius: var(--radius-xl);
   background: var(--overlay);
   color: var(--foreground);
   box-shadow: var(--shadow-popover);
@@ -262,7 +262,7 @@
 }
 
 .cm-editor .cm-tooltip-hover > * + * {
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--divider);
 }
 
 .cm-editor .cm-athas-hover {
@@ -303,7 +303,7 @@
 .cm-editor .cm-athas-markdown hr {
   margin: 0.55em 0;
   border: 0;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--divider);
 }
 
 .cm-editor .cm-athas-markdown code {
@@ -389,7 +389,7 @@
 }
 
 .cm-editor .cm-tooltip-lint .cm-diagnostic + .cm-diagnostic {
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--divider);
 }
 
 .cm-editor .cm-athas-diagnosticSource {
@@ -432,7 +432,7 @@
 }
 
 .cm-editor .cm-athas-signatureRow + .cm-athas-signatureDocs {
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--divider);
   padding-top: 6px;
 }
 

@@ -44,17 +44,12 @@ export function Toaster() {
         descriptionClassName: "font-sans! font-normal!",
         classNames: {
           toast:
-            "group rounded-lg! border-border! bg-overlay! font-sans! font-normal! text-foreground! shadow-(--shadow-popover)!",
+            "group rounded-xl! border-0! bg-overlay! font-sans! font-normal! text-foreground! shadow-(--shadow-popover)!",
           content: "pr-8",
           title: "ui-text-sm font-sans! font-normal! leading-5! tracking-normal! text-foreground!",
           description:
             "ui-text-sm font-sans! font-normal! leading-5! tracking-normal! text-muted-foreground!",
           icon: "mt-0.5",
-          success: "border-border",
-          info: "border-border",
-          warning: "border-border",
-          error: "border-border",
-          loading: "border-border",
           closeButton:
             "absolute top-2! right-2! left-auto! m-0! size-4.5! transform-none! rounded! border-transparent! bg-transparent! text-subtle-foreground! shadow-none! opacity-0 transition-[opacity,background-color,color] duration-fast ease-smooth group-hover:opacity-100 hover:bg-accent! hover:text-foreground! rtl:right-auto! rtl:left-2!",
           actionButton: "font-sans border-none bg-accent text-foreground hover:bg-selected",
@@ -70,7 +65,7 @@ export function Toaster() {
         },
         style: {
           background: "var(--overlay)",
-          border: "1px solid var(--border)",
+          border: "0",
           color: "var(--foreground)",
           fontWeight: "400",
         },

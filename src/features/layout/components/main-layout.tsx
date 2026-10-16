@@ -150,7 +150,6 @@ export function MainLayout() {
   }, !rootFolderPath);
 
   const isEditorBottomPaneVisible = deferredSurfacesReady && isBottomPaneVisible;
-  const roundMainContentLeftEdge = !renderedSidebarVisible;
 
   useEffect(() => {
     setBottomBuffersVisible(bottomBuffersVisible);
@@ -313,22 +312,21 @@ export function MainLayout() {
               <SidebarPane visible={renderedSidebarVisible} />
             </ResizablePane>
 
-            <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+            <div
+              data-slot="workbench-island"
+              className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl shadow-(--shadow-raised)"
+            >
               <div
                 className={cn(
-                  "athas-glass-island relative min-h-0 flex-1 overflow-hidden border-border border-y border-r bg-background",
-                  roundMainContentLeftEdge &&
-                    (isEditorBottomPaneVisible
-                      ? "rounded-tl-xl border-l"
-                      : "rounded-l-xl border-l"),
-                  isEditorBottomPaneVisible ? "rounded-tr-xl" : "rounded-r-xl",
+                  "athas-glass-island relative min-h-0 flex-1 overflow-hidden bg-background",
+                  isEditorBottomPaneVisible && "border-divider border-b",
                 )}
               >
                 <CachedWorkspaceSplitViews keepMountedWorkspaceIds={runningAgentProjectIds} />
               </div>
               {deferredSurfacesReady && (
                 <Suspense fallback={null}>
-                  <BottomPane roundLeftEdge={roundMainContentLeftEdge} />
+                  <BottomPane />
                 </Suspense>
               )}
             </div>

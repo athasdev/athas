@@ -97,7 +97,7 @@ function FieldLabel({ className, ...props }: ComponentProps<typeof Label>) {
     <Label
       data-slot="field-label"
       className={cn(
-        "group/field-label peer/field-label w-fit leading-snug has-[>[data-slot=field]]:w-full has-[>[data-slot=field]]:flex-col has-[>[data-slot=field]]:rounded-lg has-[>[data-slot=field]]:border has-[>[data-slot=field]]:border-border has-[>[data-slot=field]]:p-2.5",
+        "group/field-label peer/field-label w-fit leading-snug has-[>[data-slot=field]]:w-full has-[>[data-slot=field]]:flex-col has-[>[data-slot=field]]:rounded-lg has-[>[data-slot=field]]:bg-raised has-[>[data-slot=field]]:p-2.5 has-[>[data-slot=field]]:shadow-(--shadow-raised)",
         className,
       )}
       {...props}

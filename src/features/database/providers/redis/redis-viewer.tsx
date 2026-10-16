@@ -125,7 +125,7 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
       />
 
       <div className="flex min-h-0 flex-1">
-        <div className={databasePanelClassName("w-64 shrink-0 border-border border-r")}>
+        <div className={databasePanelClassName("w-64 shrink-0 border-divider border-r")}>
           <PaneContentHeader
             leading={<SearchIcon />}
             context={
@@ -212,7 +212,7 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
 
           {!store.isLoading && showInfo && store.serverInfo && (
             <div className="flex-1 overflow-auto p-3">
-              <section className="border-y border-border py-3">
+              <section className="border-y border-divider py-3">
                 <div className="mb-3 text-subtle-foreground ui-text-sm uppercase tracking-wider">
                   Server Info
                 </div>

@@ -231,7 +231,7 @@ const DiffLine = memo(
         >
           <div
             className={cn(
-              "w-11 shrink-0 select-none border-border border-r px-2 py-0.5 text-right",
+              "w-11 shrink-0 select-none border-divider border-r px-2 py-0.5 text-right",
               "font-mono tabular-nums",
               getGutterBackground(diffType),
               getGutterTextColor(diffType),
@@ -267,7 +267,7 @@ const DiffLine = memo(
         >
           <div
             className={cn(
-              "flex min-h-0 min-w-0 basis-1/2 overflow-hidden border-border border-r",
+              "flex min-h-0 min-w-0 basis-1/2 overflow-hidden border-divider border-r",
               line.line_type === "removed"
                 ? cn(getLineBackground("removed"), getRailClassName("removed"))
                 : "",
@@ -275,7 +275,7 @@ const DiffLine = memo(
           >
             <div
               className={cn(
-                "w-11 shrink-0 select-none border-border border-r px-2 py-0.5 text-right",
+                "w-11 shrink-0 select-none border-divider border-r px-2 py-0.5 text-right",
                 "font-mono tabular-nums",
                 getGutterBackground(line.line_type === "removed" ? "removed" : ""),
                 getGutterTextColor(line.line_type === "removed" ? "removed" : ""),
@@ -306,7 +306,7 @@ const DiffLine = memo(
           >
             <div
               className={cn(
-                "w-11 shrink-0 select-none border-border border-r px-2 py-0.5 text-right",
+                "w-11 shrink-0 select-none border-divider border-r px-2 py-0.5 text-right",
                 "font-mono tabular-nums",
                 getGutterBackground(line.line_type === "added" ? "added" : ""),
                 getGutterTextColor(line.line_type === "added" ? "added" : ""),
@@ -342,7 +342,7 @@ const DiffLine = memo(
       >
         <div
           className={cn(
-            "w-11 shrink-0 select-none border-border border-r px-2 py-0.5 text-right",
+            "w-11 shrink-0 select-none border-divider border-r px-2 py-0.5 text-right",
             "font-mono tabular-nums",
             getGutterBackground(line.line_type),
             getGutterTextColor(line.line_type),

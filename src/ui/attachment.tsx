@@ -13,7 +13,7 @@ import { instantTransition, quickTransition } from "@/utils/motion";
 import { cn } from "@/utils/cn";
 
 const attachmentVariants = cva(
-  "group/attachment relative flex w-fit max-w-[min(16rem,100%)] min-w-0 shrink-0 ui-text-sm gap-2 rounded-lg bg-surface text-foreground outline-none ring-1 ring-border transition-[background-color,box-shadow] duration-fast ease-smooth motion-reduce:transition-none hover:bg-accent focus-within:ring-2 focus-within:ring-focus focus-visible:ring-2 focus-visible:ring-focus has-data-[slot=attachment-content]:px-2 has-data-[slot=attachment-content]:py-1.5 has-data-[slot=attachment-media]:p-1.5 data-[state=error]:ring-destructive data-[state=idle]:ring-0 data-[state=idle]:border data-[state=idle]:border-dashed data-[state=idle]:border-border-strong",
+  "group/attachment relative flex w-fit max-w-[min(16rem,100%)] min-w-0 shrink-0 ui-text-sm gap-2 rounded-lg bg-surface text-foreground outline-none ring-1 ring-divider transition-[background-color,box-shadow] duration-fast ease-smooth motion-reduce:transition-none hover:bg-accent focus-within:ring-2 focus-within:ring-focus focus-visible:ring-2 focus-visible:ring-focus has-data-[slot=attachment-content]:px-2 has-data-[slot=attachment-content]:py-1.5 has-data-[slot=attachment-media]:p-1.5 data-[state=error]:ring-destructive data-[state=idle]:ring-0 data-[state=idle]:border data-[state=idle]:border-dashed data-[state=idle]:border-border-strong",
   {
     variants: {
       orientation: {

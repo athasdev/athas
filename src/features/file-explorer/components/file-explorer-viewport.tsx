@@ -369,7 +369,7 @@ function FileTreeStickyHeaders({
       ref={layerRef}
       aria-hidden="true"
       className={cn(
-        "absolute top-0 z-20 overflow-hidden bg-background shadow-seam-top after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-border",
+        "absolute top-0 z-20 overflow-hidden bg-background shadow-seam-top after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-divider",
         sticky.rows.length === 0 && "hidden",
       )}
       style={{ left: bounds.left, width: bounds.width, height: sticky.height }}

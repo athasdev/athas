@@ -97,7 +97,7 @@ function QuestionnaireChoice({
     <QuestionnairePrimitive.Choice
       data-slot="questionnaire-choice"
       className={cn(
-        "group/questionnaire-choice relative flex cursor-pointer items-start gap-2 rounded-md border border-border bg-surface px-2.5 py-2 text-start text-foreground ui-text-sm outline-none transition-colors duration-fast ease-smooth select-none hover:border-border-strong has-[>input:focus-visible]:ring-2 has-[>input:focus-visible]:ring-focus data-invalid:border-destructive data-checked:border-primary data-checked:bg-selected",
+        "group/questionnaire-choice relative flex cursor-pointer items-start gap-2 rounded-md bg-raised px-2.5 py-2 text-start text-foreground ui-text-sm shadow-(--shadow-raised) outline-none transition-colors duration-fast ease-smooth select-none hover:bg-accent has-[>input:focus-visible]:ring-2 has-[>input:focus-visible]:ring-focus data-invalid:ring-1 data-invalid:ring-destructive data-checked:bg-primary-soft data-checked:ring-1 data-checked:ring-primary",
         "data-disabled:pointer-events-none data-disabled:cursor-not-allowed data-disabled:opacity-50",
         className,
       )}
@@ -154,7 +154,7 @@ function QuestionnaireInput({
     <QuestionnairePrimitive.Input
       data-slot="questionnaire-input"
       className={cn(
-        "h-7 w-full min-w-0 rounded-md border border-border bg-surface px-2 text-foreground ui-text-sm outline-none transition-[border-color,box-shadow] duration-fast ease-smooth placeholder:text-subtle-foreground hover:border-border-strong focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive",
+        "h-7 w-full min-w-0 rounded-md bg-raised px-2 text-foreground ui-text-sm shadow-(--shadow-raised) outline-none transition-shadow duration-fast ease-smooth placeholder:text-subtle-foreground focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:ring-1 aria-invalid:ring-destructive",
         className,
       )}
       {...props}

@@ -8,9 +8,16 @@
  * same system.
  *
  * Planes, from recessed to floating:
- *   surface    chrome: sidebars, panels, cards, inputs, footers
+ *   surface    chrome: the page around the workbench island, with the rail
+ *              and the sidebar on it (data-plane="page" maps background to it)
  *   background content: the editor and document areas
+ *   raised     cards, fields and buttons that sit on a plane: the document
+ *              colour in light themes, a lifted tone in dark ones
  *   overlay    floating: menus, popovers, tooltips, dialogs
+ *
+ * Edges: raised and floating things are separated by a shadow ring
+ * (shadow-raised, shadow-popover, shadow-dialog), not a border. The ring is a
+ * foreground tint, so it follows the theme instead of a fixed grey.
  *
  * Interaction fills: accent is the hover fill, selected is the active or
  * selected fill. Both sit on either plane.
@@ -18,8 +25,11 @@
  * Text ramp: foreground > muted-foreground > subtle-foreground. Use the ramp,
  * never an opacity modifier, to de-emphasise text.
  *
- * Borders: border is the only hairline. border-strong marks a focused or
- * emphasised edge. Prefer plane contrast over borders.
+ * Lines: divider is the hairline between regions that share a tone, such as
+ * rows in a list or two split panes. border is the stronger line for a real
+ * boundary on one plane, such as a table or an outlined card; border-strong
+ * marks a focused or emphasised edge. Prefer plane contrast and spacing over
+ * either.
  *
  * Status: primary, success, warning, destructive, info. Each has a `-soft`
  * tint for fills behind status text. Text on a solid primary fill uses
@@ -29,6 +39,8 @@
   --font-sans: var(--app-font-family);
   --font-heading: var(--app-font-family);
   --font-mono: var(--editor-font-family);
+  /* Headings tighten slightly as they grow, as Inter's optical sizes do. */
+  --tracking-heading: -0.011em;
   --leading-row: 1.35;
   --leading-chrome: var(--athas-chrome-line-height);
 
@@ -71,6 +83,7 @@
   --color-background: var(--background);
   --color-island: var(--athas-glass-island-bg, var(--background));
   --color-surface: var(--surface);
+  --color-raised: var(--raised);
   --color-overlay: var(--overlay);
   --color-field: var(--field);
   --color-scrim: var(--scrim);
@@ -78,6 +91,7 @@
   --color-muted-foreground: var(--app-muted-foreground);
   --color-subtle-foreground: var(--app-subtle-foreground);
   --color-border: var(--border);
+  --color-divider: var(--divider);
   --color-border-strong: var(--border-strong);
   --color-accent: var(--accent);
   --color-selected: var(--selected);
@@ -214,14 +228,16 @@
     --cursor-vim-insert: var(--primary);
 
     /* Derived tokens. */
+    --raised: var(--background);
     --overlay: var(--background);
     /* Text entry surfaces such as the AI composer: close to the page in light themes, where
        the surface grey reads as disabled, and raised like the overlay in dark ones. */
     --field: color-mix(in srgb, var(--background) 82%, var(--surface));
-    /* The active tab on a background-coloured tab bar: a tint in light themes, where the
+    /* The active tab on a background-coloured tab bar: a flat tint in light themes, where the
        overlay would match the bar, and the raised overlay in dark ones. */
-    --tab-active: color-mix(in srgb, var(--background) 91%, var(--foreground) 9%);
-    --scrim: rgb(0 0 0 / 0.24);
+    --tab-active: color-mix(in srgb, var(--background) 94%, var(--foreground) 6%);
+    --scrim: rgb(0 0 0 / 0.16);
+    --divider: color-mix(in srgb, var(--border) 72%, transparent);
     --border-strong: color-mix(in srgb, var(--border) 60%, var(--foreground) 40%);
     --focus-ring: color-mix(in srgb, var(--primary) 40%, transparent);
     --primary-hover: color-mix(in srgb, var(--primary) 88%, var(--foreground) 12%);
@@ -231,21 +247,23 @@
     --success-soft: color-mix(in srgb, var(--success) 12%, transparent);
     --warning-soft: color-mix(in srgb, var(--warning) 14%, transparent);
     --info-soft: color-mix(in srgb, var(--info) 12%, transparent);
-    --git-added-soft: color-mix(in srgb, var(--git-added) 16%, transparent);
-    --git-deleted-soft: color-mix(in srgb, var(--git-deleted) 16%, transparent);
-    --git-modified-soft: color-mix(in srgb, var(--git-modified) 16%, transparent);
-    --git-renamed-soft: color-mix(in srgb, var(--git-renamed) 16%, transparent);
+    --git-added-soft: color-mix(in srgb, var(--git-added) 12%, transparent);
+    --git-deleted-soft: color-mix(in srgb, var(--git-deleted) 12%, transparent);
+    --git-modified-soft: color-mix(in srgb, var(--git-modified) 12%, transparent);
+    --git-renamed-soft: color-mix(in srgb, var(--git-renamed) 12%, transparent);
 
-    --shadow-card:
-      0 1px 2px rgb(0 0 0 / 0.05), 0 2px 4px rgb(0 0 0 / 0.02), 0 0 0 0.5px rgb(0 0 0 / 0.08);
+    /* The edge of anything raised or floating: a hairline ring tinted from the foreground. */
+    --edge: color-mix(in srgb, var(--foreground) 8%, transparent);
+    --shadow-raised:
+      0 0 0 1px var(--edge), 0 1px 2px -1px rgb(0 0 0 / 0.06), 0 2px 4px rgb(0 0 0 / 0.03);
     --shadow-popover:
-      0 8px 16px rgb(0 0 0 / 0.04), 0 16px 32px rgb(0 0 0 / 0.03), 0 2px 4px rgb(0 0 0 / 0.04),
-      0 0 0 0.5px rgb(0 0 0 / 0.1);
+      0 0 0 1px var(--edge), 0 2px 4px rgb(0 0 0 / 0.04), 0 8px 16px -4px rgb(0 0 0 / 0.08),
+      0 16px 32px -8px rgb(0 0 0 / 0.06);
     --shadow-dialog:
-      0 8px 16px rgb(0 0 0 / 0.04), 0 24px 56px rgb(0 0 0 / 0.08), 0 2px 6px rgb(0 0 0 / 0.04),
-      0 0 0 0.5px rgb(0 0 0 / 0.12);
+      0 0 0 1px var(--edge), 0 2px 6px rgb(0 0 0 / 0.04), 0 12px 24px -6px rgb(0 0 0 / 0.08),
+      0 32px 64px -12px rgb(0 0 0 / 0.12);
     --shadow-drag:
-      0 8px 18px rgb(0 0 0 / 0.12), 0 18px 44px rgb(0 0 0 / 0.12), 0 0 0 0.5px rgb(0 0 0 / 0.12);
+      0 0 0 1px var(--edge), 0 8px 18px rgb(0 0 0 / 0.12), 0 18px 44px rgb(0 0 0 / 0.12);
     --shadow-editor-sticky: 0 8px 16px -14px rgb(0 0 0 / 0.28);
 
     --symbol-function: var(--syntax-function);
@@ -280,6 +298,12 @@
     --border-strong: color-mix(in srgb, var(--border) 25%, var(--foreground) 75%);
   }
 
+  /* Chrome that sits on the page around the workbench island, such as the sidebar: its content
+     plane is the surface, so it reads as part of the page and needs no dividing line. */
+  [data-plane="page"] {
+    --background: var(--surface);
+  }
+
   :root[data-differentiate-without-color="true"]
     :is([aria-current="page"], [aria-selected="true"], [data-active="true"]) {
     outline: 1px solid var(--border-strong);
@@ -287,22 +311,31 @@
   }
 
   :root[data-theme-type="dark"] {
+    --raised: color-mix(in srgb, var(--background) 95%, var(--foreground) 5%);
     --overlay: color-mix(in srgb, var(--background) 92%, var(--foreground) 8%);
     --field: color-mix(in srgb, var(--background) 94%, var(--foreground) 6%);
     --tab-active: var(--overlay);
-    --scrim: rgb(0 0 0 / 0.45);
-    --shadow-card:
-      0 1px 2px rgb(0 0 0 / 0.24), 0 2px 4px rgb(0 0 0 / 0.18), 0 0 0 0.5px rgb(255 255 255 / 0.1);
+    --scrim: rgb(0 0 0 / 0.4);
+    --divider: color-mix(in srgb, var(--border) 80%, transparent);
+    /* Dark planes read by tone, so the edge is a faint light ring inside and a dark one outside. */
+    --edge: color-mix(in srgb, var(--foreground) 7%, transparent);
+    --shadow-raised:
+      inset 0 0 0 1px var(--edge), 0 0 0 1px rgb(0 0 0 / 0.22), 0 1px 2px rgb(0 0 0 / 0.2),
+      0 2px 4px rgb(0 0 0 / 0.12);
     --shadow-popover:
-      0 8px 16px rgb(0 0 0 / 0.26), 0 16px 32px rgb(0 0 0 / 0.22), 0 2px 4px rgb(0 0 0 / 0.22),
-      0 0 0 0.5px rgb(255 255 255 / 0.1);
+      inset 0 0 0 1px var(--edge), 0 0 0 1px rgb(0 0 0 / 0.32), 0 2px 4px rgb(0 0 0 / 0.2),
+      0 8px 16px -4px rgb(0 0 0 / 0.28), 0 16px 32px -8px rgb(0 0 0 / 0.24);
     --shadow-dialog:
-      0 8px 16px rgb(0 0 0 / 0.3), 0 24px 56px rgb(0 0 0 / 0.36), 0 2px 6px rgb(0 0 0 / 0.24),
-      0 0 0 0.5px rgb(255 255 255 / 0.12);
+      inset 0 0 0 1px var(--edge), 0 0 0 1px rgb(0 0 0 / 0.36), 0 2px 6px rgb(0 0 0 / 0.24),
+      0 12px 24px -6px rgb(0 0 0 / 0.32), 0 32px 64px -12px rgb(0 0 0 / 0.4);
     --shadow-drag:
-      0 8px 18px rgb(0 0 0 / 0.36), 0 18px 44px rgb(0 0 0 / 0.34),
-      0 0 0 0.5px rgb(255 255 255 / 0.12);
+      inset 0 0 0 1px var(--edge), 0 8px 18px rgb(0 0 0 / 0.36), 0 18px 44px rgb(0 0 0 / 0.34);
     --shadow-editor-sticky: 0 10px 20px -16px rgb(0 0 0 / 0.72);
+  }
+
+  :root[data-increase-contrast="true"] {
+    --edge: color-mix(in srgb, var(--foreground) 24%, transparent);
+    --divider: var(--border);
   }
 
   :root[data-ui-density="comfortable"] {

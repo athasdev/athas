@@ -52,7 +52,7 @@ export function AcpUrlQuestionPrompt({
     <div
       className={cn(
         chatContentWidth(),
-        "mb-1 flex flex-col gap-2.5 rounded-xl border border-border bg-background p-2.5 shadow-(--shadow-card) ui-text-sm",
+        "mb-1 flex flex-col gap-2.5 rounded-xl bg-raised p-2.5 shadow-(--shadow-raised) ui-text-sm",
       )}
     >
       <div className="flex min-w-0 items-start gap-2">
@@ -67,7 +67,7 @@ export function AcpUrlQuestionPrompt({
         {queuedCount > 0 ? <Badge>+{queuedCount}</Badge> : null}
       </div>
 
-      <div className="flex min-w-0 flex-col gap-1 rounded-lg border border-border bg-surface px-2.5 py-2">
+      <div className="flex min-w-0 flex-col gap-1 rounded-lg bg-surface px-2.5 py-2">
         {link.openable ? (
           <span className="flex min-w-0 items-center gap-1.5 font-medium text-foreground">
             <GlobeIcon className="size-3.5 shrink-0 text-subtle-foreground" />

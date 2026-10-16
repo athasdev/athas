@@ -38,10 +38,10 @@ export function SettingsView({ layout = "stack", className, ...props }: Settings
 }
 
 /**
- * A titled group of settings: a small muted header, then its rows on the page surface with no
- * card or hairlines. Spacing alone separates rows and sections.
+ * A titled group of settings: a small muted header over one raised card of rows, split by inset
+ * hairlines. The card sits on the Settings surface, so the edge is a shadow ring, not a border.
  */
-export default function Section({ title, variant = "flat", className, ...props }: SectionProps) {
+export default function Section({ title, variant = "group", className, ...props }: SectionProps) {
   return (
     <GroupedSection
       title={title}

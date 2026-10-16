@@ -11,17 +11,15 @@ const Combobox = ComboboxPrimitive.Root;
 type ComboboxVariant = "default" | "ghost" | "button" | "surface";
 
 const comboboxInputGroupVariants = cva(
-  "group/combobox-input relative flex h-7 min-w-0 items-center rounded-md font-sans ui-text-sm transition-[border-color,box-shadow,background-color,color] duration-fast ease-smooth outline-none has-disabled:cursor-not-allowed has-disabled:opacity-50",
+  "group/combobox-input relative flex h-7 min-w-0 items-center rounded-md font-sans ui-text-sm transition-[box-shadow,background-color,color] duration-fast ease-smooth outline-none has-disabled:cursor-not-allowed has-disabled:opacity-50",
   {
     variants: {
       variant: {
-        default:
-          "border border-border bg-surface focus-within:border-primary focus-within:ring-2 focus-within:ring-focus",
+        default: "bg-raised shadow-(--shadow-raised) focus-within:ring-2 focus-within:ring-focus",
         ghost: "border-0 bg-transparent",
         button:
           "border-0 bg-accent text-foreground hover:bg-selected focus-within:ring-2 focus-within:ring-focus",
-        surface:
-          "border border-border bg-surface text-foreground focus-within:border-primary focus-within:ring-2 focus-within:ring-focus",
+        surface: "bg-surface text-foreground focus-within:ring-2 focus-within:ring-focus",
       },
     },
     defaultVariants: {
