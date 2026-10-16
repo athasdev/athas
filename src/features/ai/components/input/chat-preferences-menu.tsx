@@ -8,6 +8,9 @@ import { CODEX_INTEGRATION_ID } from "@/features/ai/integrations/integration-reg
 import type { SessionConfigOption, SessionConfigValue } from "@/features/ai/types/acp.types";
 import type { AgentType } from "@/features/ai/types/ai-chat.types";
 import type { AIChatSkill } from "@/features/ai/types/skills.types";
+import type { ChatModeSource } from "@/features/ai/types/composer-mode.types";
+import { getCurrentModeOption } from "@/features/ai/lib/composer-modes";
+import { applyChatMode } from "@/features/ai/services/chat-mode-service";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
@@ -31,7 +34,15 @@ import {
   DropdownMenuTrigger,
 } from "@/ui/dropdown";
 import { useMenuSearch } from "@/ui/menu-search";
-import { ArrowClockwiseIcon, SignOutIcon, SlidersIcon, WarningIcon } from "@/ui/icons";
+import {
+  ArrowClockwiseIcon,
+  ChatBubbleTextIcon,
+  MagicWandIcon,
+  SettingsIcon,
+  SignOutIcon,
+  SlidersIcon,
+  WarningIcon,
+} from "@/ui/icons";
 import { Spinner } from "@/ui/spinner";
 import { getChatPreferencesModel } from "@/features/ai/utils/chat-preferences-model";
 import { classifySessionConfigOption } from "@/features/ai/lib/session-config-option-classifier";
@@ -62,6 +73,33 @@ function PreferenceLabel({ children }: { children: string }) {
   return <span className="min-w-0 flex-1 truncate">{children}</span>;
 }
 
+/** The chat's mode: Agent, Ask and Plan, or whatever modes the agent offers. */
+function ModeSubmenu({ source }: { source: ChatModeSource }) {
+  const current = getCurrentModeOption(source);
+  if (!current || source.options.length < 2) return null;
+
+  return (
+    <DropdownMenuSub>
+      <DropdownMenuSubTrigger value={current.label}>
+        <ChatBubbleTextIcon />
+        <PreferenceLabel>Mode</PreferenceLabel>
+      </DropdownMenuSubTrigger>
+      <DropdownMenuSubContent size="compact">
+        <DropdownMenuRadioGroup
+          value={current.id}
+          onValueChange={(modeId) => applyChatMode(source, modeId)}
+        >
+          {source.options.map((option) => (
+            <DropdownMenuRadioItem key={option.id} value={option.id} closeOnClick>
+              {option.label}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuSubContent>
+    </DropdownMenuSub>
+  );
+}
+
 function SkillsSubmenu({ onSelectSkill }: { onSelectSkill: (skill: AIChatSkill) => void }) {
   const search = useMenuSearch();
   const skills = useSettingsStore((state) => state.settings.aiSkills);
@@ -74,6 +112,7 @@ function SkillsSubmenu({ onSelectSkill }: { onSelectSkill: (skill: AIChatSkill) 
   return (
     <DropdownMenuSub onOpenChange={(open) => !open && search.reset()}>
       <DropdownMenuSubTrigger value={skills.length > 0 ? skills.length : undefined}>
+        <MagicWandIcon />
         <PreferenceLabel>Skills</PreferenceLabel>
       </DropdownMenuSubTrigger>
       <DropdownMenuSubContent size="wide" viewport="searchable">
@@ -155,6 +194,7 @@ function CodexSkillsSubmenu({
       }}
     >
       <DropdownMenuSubTrigger>
+        <MagicWandIcon />
         <PreferenceLabel>Skills</PreferenceLabel>
       </DropdownMenuSubTrigger>
       <DropdownMenuSubContent size="wide" viewport="searchable">
@@ -253,6 +293,7 @@ function AcpConfigPreferences({
     return (
       <DropdownMenuSub key={option.id}>
         <DropdownMenuSubTrigger value={currentName}>
+          <SlidersIcon />
           <PreferenceLabel>{option.name}</PreferenceLabel>
         </DropdownMenuSubTrigger>
         <DropdownMenuSubContent size="default">
@@ -280,6 +321,8 @@ interface ChatPreferencesMenuProps {
   onSelectSkill: (skill: AIChatSkill) => void;
   onSelectCodexSkill: (skillName: string) => void;
   onBeforeOpen: () => void;
+  /** The chat's modes, shown as a Mode submenu when there are two or more. */
+  modeSource?: ChatModeSource;
 }
 
 export function ChatPreferencesMenu({
@@ -290,6 +333,7 @@ export function ChatPreferencesMenu({
   onSelectSkill,
   onSelectCodexSkill,
   onBeforeOpen,
+  modeSource,
 }: ChatPreferencesMenuProps) {
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const cwd = rootFolderPath || ".";
@@ -391,8 +435,9 @@ export function ChatPreferencesMenu({
       >
         <SlidersIcon />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" side="top" size="wide">
+      <DropdownMenuContent align="start" side="top" size="compact">
         <DropdownMenuGroup>
+          {modeSource ? <ModeSubmenu source={modeSource} /> : null}
           {isCodex ? null : (
             <AcpConfigPreferences
               options={preferences.acpConfigOptions.filter((option) => {
@@ -424,7 +469,8 @@ export function ChatPreferencesMenu({
           </DropdownMenuItem>
         ) : null}
         <DropdownMenuItem onClick={() => useUIState.getState().openSettings("ai")}>
-          AI settings…
+          <SettingsIcon />
+          Settings…
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

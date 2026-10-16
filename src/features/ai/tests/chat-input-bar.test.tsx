@@ -57,17 +57,21 @@ describe("Agent composer", () => {
     },
   );
 
-  it("keeps the toolbar and send action inside the prompt surface, after the text", () => {
+  it("keeps add context, the text, voice and send in one row inside the prompt surface", () => {
     const markup = renderComposer();
     const surfaceStart = markup.indexOf('data-ai-element="prompt-input"');
+    const rowStart = markup.indexOf('data-slot="composer-row"');
+    const contextStart = markup.indexOf('aria-label="Add context"');
     const textboxStart = markup.indexOf('role="textbox"');
-    const toolbarStart = markup.indexOf('data-slot="composer-toolbar"');
     const sendStart = markup.indexOf('aria-label="Send message"');
+    const controlsStart = markup.indexOf('data-slot="composer-controls"');
 
     expect(surfaceStart).toBeGreaterThanOrEqual(0);
-    expect(textboxStart).toBeGreaterThan(surfaceStart);
-    expect(toolbarStart).toBeGreaterThan(textboxStart);
-    expect(sendStart).toBeGreaterThan(toolbarStart);
+    expect(rowStart).toBeGreaterThan(surfaceStart);
+    expect(contextStart).toBeGreaterThan(rowStart);
+    expect(textboxStart).toBeGreaterThan(contextStart);
+    expect(sendStart).toBeGreaterThan(textboxStart);
+    expect(controlsStart).toBeGreaterThan(sendStart);
   });
 
   it("summarizes attached files without exposing a chip for every filename", () => {
@@ -95,16 +99,17 @@ describe("Agent composer", () => {
     expect(markup).toContain('aria-label="Stop generation"');
   });
 
-  it("keeps one toolbar row: context, mode, model and settings", () => {
+  it("puts the model and settings below the input, with the mode inside settings", () => {
     const markup = renderComposer({ currentAgentId: "custom" });
-    const toolbar = markup.slice(markup.indexOf('data-slot="composer-toolbar"'));
-    expect(toolbar).toContain('aria-label="Add context"');
-    expect(toolbar).toContain('aria-label="Mode: Agent"');
-    expect(toolbar).toContain('aria-label="Change model"');
+    const controls = markup.slice(markup.indexOf('data-slot="composer-controls"'));
+    expect(controls).toContain('aria-label="Change model"');
+    expect(controls).toContain('aria-label="AI preferences"');
+    expect(controls).not.toContain('aria-label="Add context"');
+    expect(controls).not.toContain('aria-label="Mode: Agent"');
     // A new chat carries only the agent's instructions; a ring there reads as a spinner.
-    expect(toolbar).not.toContain('aria-label="Context window: ');
-    expect(toolbar).not.toContain('aria-label="Show slash commands"');
-    expect(toolbar).not.toContain('aria-label="Reasoning effort"');
-    expect(toolbar).not.toContain("Follow the agent in the editor");
+    expect(controls).not.toContain('aria-label="Context window: ');
+    expect(controls).not.toContain('aria-label="Show slash commands"');
+    expect(controls).not.toContain('aria-label="Reasoning effort"');
+    expect(controls).not.toContain("Follow the agent in the editor");
   });
 });

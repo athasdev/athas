@@ -121,7 +121,6 @@ describe("Composer modes and commands", () => {
     expect(useAIChatStore.getState().mode).toBe("ask");
     await press("Tab", { shiftKey: true });
     expect(useAIChatStore.getState().mode).toBe("plan");
-    expect(container.querySelector('[aria-label="Mode: Plan"]')).not.toBeNull();
   });
 
   it("switches mode from a leading /plan and sends the rest of the message", async () => {

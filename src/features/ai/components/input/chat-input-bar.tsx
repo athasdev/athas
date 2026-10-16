@@ -74,7 +74,6 @@ import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { chatContentWidth } from "../chat/chat-content-width";
 import { ComposerAgentSelector } from "./composer-agent-selector";
 import { ChatPreferencesMenu } from "./chat-preferences-menu";
-import { ComposerModeSelector } from "./composer-mode-selector";
 import { useChatModeSource } from "@/features/ai/hooks/use-chat-mode";
 import {
   useComposerAcpSession,
@@ -1293,8 +1292,8 @@ const AIChatInputBar = memo(function AIChatInputBar({
       contentEditable
       font={isTerminalMode ? "mono" : "sans"}
       size={size}
-      inline={!isTerminalMode}
-      className={isTerminalMode ? undefined : "flex-1"}
+      inline
+      className="flex-1"
       onInput={handleInputChange}
       onKeyDown={handleKeyDown}
       onMouseDown={handleEditableMouseDown}
@@ -1384,7 +1383,53 @@ const AIChatInputBar = memo(function AIChatInputBar({
           />
         )}
 
-        {isTerminalMode ? editable : null}
+        <ComposerRow>
+          {isTerminalMode || isCloud ? null : (
+            <ContextSelector
+              buffers={buffers}
+              selectedBufferIds={selectedBufferIds}
+              selectedFilesPaths={selectedFilesPaths}
+              onToggleBuffer={toggleBufferSelection}
+              onToggleFile={toggleFileSelection}
+              isOpen={isContextDropdownOpen}
+              triggerRef={contextTriggerRef}
+              onOpenChange={(open) => {
+                if (open) {
+                  closeInlineMenus();
+                }
+                setIsContextDropdownOpen(open);
+              }}
+            />
+          )}
+          {editable}
+          {isTerminalMode ? null : (
+            <>
+              {isSpeechRecognitionSupported || isMacDevSpeechRecognitionBlocked ? (
+                <Button
+                  type="button"
+                  disabled={!isInputEnabled || !isSpeechRecognitionSupported}
+                  active={isListening}
+                  aria-pressed={isListening}
+                  onClick={toggleVoiceInput}
+                  variant="ghost"
+                  tone={isListening ? "accent" : "default"}
+                  iconOnly
+                  tooltip={
+                    isMacDevSpeechRecognitionBlocked
+                      ? "Voice input is unavailable in macOS development builds. Use a packaged build."
+                      : isListening
+                        ? interimTranscript || "Stop voice input"
+                        : "Start voice input"
+                  }
+                  aria-label={isListening ? "Stop voice input" : "Start voice input"}
+                >
+                  <MicrophoneIcon className={cn(isListening && "animate-pulse")} />
+                </Button>
+              ) : null}
+              {sendControls}
+            </>
+          )}
+        </ComposerRow>
 
         {isTerminalMode ? (
           <ComposerToolbar>
@@ -1406,51 +1451,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
             </Button>
             {sendControls}
           </ComposerToolbar>
-        ) : (
-          <ComposerRow>
-            {isCloud ? null : (
-              <ContextSelector
-                buffers={buffers}
-                selectedBufferIds={selectedBufferIds}
-                selectedFilesPaths={selectedFilesPaths}
-                onToggleBuffer={toggleBufferSelection}
-                onToggleFile={toggleFileSelection}
-                isOpen={isContextDropdownOpen}
-                triggerRef={contextTriggerRef}
-                onOpenChange={(open) => {
-                  if (open) {
-                    closeInlineMenus();
-                  }
-                  setIsContextDropdownOpen(open);
-                }}
-              />
-            )}
-            {editable}
-            {isSpeechRecognitionSupported || isMacDevSpeechRecognitionBlocked ? (
-              <Button
-                type="button"
-                disabled={!isInputEnabled || !isSpeechRecognitionSupported}
-                active={isListening}
-                aria-pressed={isListening}
-                onClick={toggleVoiceInput}
-                variant="ghost"
-                tone={isListening ? "accent" : "default"}
-                iconOnly
-                tooltip={
-                  isMacDevSpeechRecognitionBlocked
-                    ? "Voice input is unavailable in macOS development builds. Use a packaged build."
-                    : isListening
-                      ? interimTranscript || "Stop voice input"
-                      : "Start voice input"
-                }
-                aria-label={isListening ? "Stop voice input" : "Start voice input"}
-              >
-                <MicrophoneIcon className={cn(isListening && "animate-pulse")} />
-              </Button>
-            ) : null}
-            {sendControls}
-          </ComposerRow>
-        )}
+        ) : null}
         {isDropActive ? (
           <ComposerDropHint>
             <FilePlusIcon />
@@ -1461,9 +1462,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
       {isTerminalMode ? null : (
         <div data-slot="composer-controls" className="flex min-w-0 items-center gap-1 px-1">
-          {isCloud ? null : (
-            <ComposerModeSelector source={modeSource} onBeforeOpen={closeInlineMenus} />
-          )}
           <ComposerAgentSelector
             cwd={projectPath}
             currentAgentId={currentAgentId}
@@ -1497,6 +1495,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
               onSelectSkill={insertSkillAtCursor}
               onSelectCodexSkill={insertCodexSkillAtCursor}
               onBeforeOpen={closeInlineMenus}
+              modeSource={isCloud ? undefined : modeSource}
             />
           </div>
         </div>
