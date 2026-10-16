@@ -1,4 +1,3 @@
-import { AnimatePresence, motion } from "motion/react";
 import {
   ArrowLeftIcon,
   CirclesIcon,
@@ -41,26 +40,11 @@ import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/ui/table";
 import { ToggleGroup } from "@/ui/toggle-group";
-import { quickTransition } from "@/utils/motion";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { TypedConfirmAction } from "../typed-confirm-action";
 import Section, { SettingBlock, SettingsView, SettingRow } from "../settings-section";
 
 type FilterType = "all" | "user" | "default" | "preset" | "preset-changes" | "extension";
-
-const editorStepTransition = {
-  initial: { opacity: 0, x: 14 },
-  animate: { opacity: 1, x: 0 },
-  exit: { opacity: 0, x: -14 },
-  transition: quickTransition,
-};
-
-const summaryStepTransition = {
-  initial: { opacity: 0, x: -14 },
-  animate: { opacity: 1, x: 0 },
-  exit: { opacity: 0, x: 14 },
-  transition: quickTransition,
-};
 
 const importIssueLabels = {
   "invalid-entry": "invalid entries",
@@ -260,168 +244,155 @@ export const KeyboardSettings = () => {
 
   return (
     <SettingsView>
-      <AnimatePresence mode="wait" initial={false}>
-        {isEditingKeybindings ? (
-          <motion.div
-            key="keyboard-editor"
-            className="flex min-w-0 flex-col"
-            {...editorStepTransition}
-          >
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <Button variant="ghost" onClick={() => setIsEditingKeybindings(false)}>
-                <ArrowLeftIcon />
-                Back
+      {isEditingKeybindings ? (
+        <div key="keyboard-editor" className="flex min-w-0 flex-col">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <Button variant="ghost" onClick={() => setIsEditingKeybindings(false)}>
+              <ArrowLeftIcon />
+              Back
+            </Button>
+            <div className="flex items-center gap-2">
+              <TypedConfirmAction
+                actionLabel="Reset to Defaults"
+                variant="danger"
+                onConfirm={handleResetAll}
+              />
+              <Button variant="outline" onClick={handleImport}>
+                Import
               </Button>
-              <div className="flex items-center gap-2">
-                <TypedConfirmAction
-                  actionLabel="Reset to Defaults"
-                  variant="danger"
-                  onConfirm={handleResetAll}
-                />
-                <Button variant="outline" onClick={handleImport}>
-                  Import
-                </Button>
-                <Button variant="outline" onClick={() => void handleExport()}>
-                  Export
-                </Button>
-              </div>
+              <Button variant="outline" onClick={() => void handleExport()}>
+                Export
+              </Button>
             </div>
+          </div>
 
-            <div className="mb-3 flex items-center gap-2">
-              <Input
-                placeholder="Search keybindings..."
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                leftIcon={SearchIcon}
-              />
-            </div>
+          <div className="mb-3 flex items-center gap-2">
+            <Input
+              placeholder="Search keybindings..."
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              leftIcon={SearchIcon}
+            />
+          </div>
 
-            <div className="mb-3 overflow-x-auto">
-              <ToggleGroup
-                value={filterType}
-                onValueChange={setFilterType}
-                ariaLabel="Keybinding filter"
-                options={[
-                  { value: "all", label: "All", icon: <CirclesIcon /> },
-                  { value: "user", label: "User", icon: <UserIcon /> },
-                  { value: "default", label: "Default", icon: <SlidersIcon /> },
-                  { value: "preset", label: "Preset", icon: <DownloadIcon optical="md" /> },
-                  {
-                    value: "preset-changes",
-                    label: "Preset Changes",
-                    icon: <DownloadIcon optical="md" />,
-                  },
-                  { value: "extension", label: "Integration", icon: <CubeIcon /> },
-                ]}
-              />
-            </div>
+          <div className="mb-3 overflow-x-auto">
+            <ToggleGroup
+              value={filterType}
+              onValueChange={setFilterType}
+              ariaLabel="Keybinding filter"
+              options={[
+                { value: "all", label: "All", icon: <CirclesIcon /> },
+                { value: "user", label: "User", icon: <UserIcon /> },
+                { value: "default", label: "Default", icon: <SlidersIcon /> },
+                { value: "preset", label: "Preset", icon: <DownloadIcon optical="md" /> },
+                {
+                  value: "preset-changes",
+                  label: "Preset Changes",
+                  icon: <DownloadIcon optical="md" />,
+                },
+                { value: "extension", label: "Integration", icon: <CubeIcon /> },
+              ]}
+            />
+          </div>
 
-            <div className="min-w-0 overflow-x-auto">
-              <Table className={keybindingTableMinWidth()}>
-                <colgroup>
-                  <col className="w-[32%]" />
-                  <col className="w-[23%]" />
-                  <col className="w-[20%]" />
-                  <col className="w-[11%]" />
-                  <col className="w-[14%]" />
-                </colgroup>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Command</TableHead>
-                    <TableHead>Keybinding</TableHead>
-                    <TableHead>When</TableHead>
-                    <TableHead>Source</TableHead>
-                    <TableHead>Actions</TableHead>
+          <div className="min-w-0 overflow-x-auto">
+            <Table className={keybindingTableMinWidth()}>
+              <colgroup>
+                <col className="w-[32%]" />
+                <col className="w-[23%]" />
+                <col className="w-[20%]" />
+                <col className="w-[11%]" />
+                <col className="w-[14%]" />
+              </colgroup>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Command</TableHead>
+                  <TableHead>Keybinding</TableHead>
+                  <TableHead>When</TableHead>
+                  <TableHead>Source</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredCommands.length === 0 ? (
+                  <TableRow className="hover:bg-transparent">
+                    <TableCell colSpan={5} className="p-0">
+                      <Empty className="min-h-36 py-8">
+                        <EmptyDescription>No keybindings found</EmptyDescription>
+                      </Empty>
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredCommands.length === 0 ? (
-                    <TableRow className="hover:bg-transparent">
-                      <TableCell colSpan={5} className="p-0">
-                        <Empty className="min-h-36 py-8">
-                          <EmptyDescription>No keybindings found</EmptyDescription>
-                        </Empty>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredCommands.map((command) => {
-                      const binding = getKeybindingForCommand(command.id);
-                      return (
-                        <KeybindingRow key={command.id} command={command} keybinding={binding} />
-                      );
-                    })
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </motion.div>
-        ) : (
-          <motion.div
-            key="keyboard-summary"
-            className="flex flex-col gap-6"
-            {...summaryStepTransition}
-          >
-            <Section title="Keyboard">
-              <SettingRow
-                label="Vim Mode"
-                onReset={() => updateSetting("vimMode", getDefaultSetting("vimMode"))}
-                canReset={vimMode !== getDefaultSetting("vimMode")}
-              >
-                <Switch
-                  checked={vimMode}
-                  onChange={(checked) => updateSetting("vimMode", checked)}
-                />
-              </SettingRow>
+                ) : (
+                  filteredCommands.map((command) => {
+                    const binding = getKeybindingForCommand(command.id);
+                    return (
+                      <KeybindingRow key={command.id} command={command} keybinding={binding} />
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      ) : (
+        <div key="keyboard-summary" className="flex flex-col gap-6">
+          <Section title="Keyboard">
+            <SettingRow
+              label="Vim Mode"
+              onReset={() => updateSetting("vimMode", getDefaultSetting("vimMode"))}
+              canReset={vimMode !== getDefaultSetting("vimMode")}
+            >
+              <Switch checked={vimMode} onChange={(checked) => updateSetting("vimMode", checked)} />
+            </SettingRow>
 
-              <SettingRow
-                label="Keybinding Preset"
-                control="select"
-                onReset={() =>
-                  updateSetting("keybindingPreset", getDefaultSetting("keybindingPreset"))
-                }
-                canReset={keybindingPreset !== getDefaultSetting("keybindingPreset")}
-              >
-                <Select
-                  value={keybindingPreset}
-                  onChange={(value) => updateSetting("keybindingPreset", value as KeybindingPreset)}
-                  options={keybindingPresetOptions}
-                  variant="surface"
-                  width="full"
-                  aria-label="Keybinding preset"
-                />
-              </SettingRow>
+            <SettingRow
+              label="Keybinding Preset"
+              control="select"
+              onReset={() =>
+                updateSetting("keybindingPreset", getDefaultSetting("keybindingPreset"))
+              }
+              canReset={keybindingPreset !== getDefaultSetting("keybindingPreset")}
+            >
+              <Select
+                value={keybindingPreset}
+                onChange={(value) => updateSetting("keybindingPreset", value as KeybindingPreset)}
+                options={keybindingPresetOptions}
+                variant="surface"
+                width="full"
+                aria-label="Keybinding preset"
+              />
+            </SettingRow>
 
-              {keybindingPreset !== "none" && !selectedPresetCoverage.isComplete ? (
-                <SettingBlock>
-                  <Alert tone="warning">
-                    <WarningCircleIcon />
-                    <AlertDescription>
-                      {selectedPresetCoverage.missingCommandIds.length} command
-                      {selectedPresetCoverage.missingCommandIds.length === 1 ? "" : "s"} not covered
-                      by this preset.
-                    </AlertDescription>
-                  </Alert>
-                </SettingBlock>
-              ) : null}
-            </Section>
+            {keybindingPreset !== "none" && !selectedPresetCoverage.isComplete ? (
+              <SettingBlock>
+                <Alert tone="warning">
+                  <WarningCircleIcon />
+                  <AlertDescription>
+                    {selectedPresetCoverage.missingCommandIds.length} command
+                    {selectedPresetCoverage.missingCommandIds.length === 1 ? "" : "s"} not covered
+                    by this preset.
+                  </AlertDescription>
+                </Alert>
+              </SettingBlock>
+            ) : null}
+          </Section>
 
-            <Section title="Shortcuts">
-              <SettingRow
-                label="Edit Keybindings"
-                description={
-                  userOverrideCount > 0
-                    ? `${userOverrideCount} custom shortcut${userOverrideCount === 1 ? "" : "s"}`
-                    : undefined
-                }
-              >
-                <Button variant="outline" onClick={() => setIsEditingKeybindings(true)}>
-                  Edit
-                </Button>
-              </SettingRow>
-            </Section>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          <Section title="Shortcuts">
+            <SettingRow
+              label="Edit Keybindings"
+              description={
+                userOverrideCount > 0
+                  ? `${userOverrideCount} custom shortcut${userOverrideCount === 1 ? "" : "s"}`
+                  : undefined
+              }
+            >
+              <Button variant="outline" onClick={() => setIsEditingKeybindings(true)}>
+                Edit
+              </Button>
+            </SettingRow>
+          </Section>
+        </div>
+      )}
     </SettingsView>
   );
 };

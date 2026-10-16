@@ -8,10 +8,9 @@ export function SettingsDialog() {
   const isSettingsVisible = useUIState((state) => state.isSettingsVisible);
   const closeSettings = useUIState((state) => state.closeSettings);
 
-  if (!isSettingsVisible) return null;
-
   return (
     <AppDialog
+      open={isSettingsVisible}
       title="Settings"
       size="settings"
       hideHeader

@@ -127,6 +127,61 @@ describe("font store", () => {
       expect(commandMocks.getSystemFonts).toHaveBeenCalledTimes(2);
     });
 
+    it("rescans a known list in the background, without a loading state", async () => {
+      commandMocks.getSystemFonts.mockResolvedValue(systemFonts);
+      const store = await loadStore();
+      await store.getState().actions.loadAvailableFonts();
+      let resolveScan: (fonts: FontInfo[]) => void = () => {};
+      commandMocks.getSystemFonts.mockReturnValueOnce(
+        new Promise<FontInfo[]>((resolve) => {
+          resolveScan = resolve;
+        }),
+      );
+
+      const rescan = store.getState().actions.loadAvailableFonts(true);
+
+      expect(store.getState()).toMatchObject({ isLoading: false, availableFonts: systemFonts });
+      resolveScan([...systemFonts, font("Iosevka", true)]);
+      await rescan;
+      expect(store.getState().availableFonts.map((entry) => entry.family)).toContain("Iosevka");
+    });
+
+    it("shares one system scan between callers that ask at the same time", async () => {
+      commandMocks.getSystemFonts.mockResolvedValue(systemFonts);
+      const store = await loadStore();
+
+      await Promise.all([
+        store.getState().actions.loadAvailableFonts(true),
+        store.getState().actions.loadAvailableFonts(true),
+      ]);
+
+      expect(commandMocks.getSystemFonts).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps the same lists when a rescan finds the same fonts", async () => {
+      commandMocks.getSystemFonts.mockResolvedValue(systemFonts);
+      const store = await loadStore();
+      await store.getState().actions.loadAvailableFonts();
+      const { availableFonts, monospaceFonts } = store.getState();
+
+      commandMocks.getSystemFonts.mockResolvedValue(systemFonts.map((entry) => ({ ...entry })));
+      await store.getState().actions.loadAvailableFonts(true);
+
+      expect(store.getState().availableFonts).toBe(availableFonts);
+      expect(store.getState().monospaceFonts).toBe(monospaceFonts);
+    });
+
+    it("keeps showing a known list when a background rescan fails", async () => {
+      commandMocks.getSystemFonts.mockResolvedValue(systemFonts);
+      const store = await loadStore();
+      await store.getState().actions.loadAvailableFonts();
+
+      commandMocks.getSystemFonts.mockRejectedValue(new Error("enumeration failed"));
+      await store.getState().actions.loadAvailableFonts(true);
+
+      expect(store.getState()).toMatchObject({ availableFonts: systemFonts, error: null });
+    });
+
     it("falls back to bundled fonts outside the desktop bridge", async () => {
       commandMocks.getSystemFonts.mockRejectedValue(
         new TypeError("Cannot read properties of undefined (reading '__TAURI_INTERNALS__')"),

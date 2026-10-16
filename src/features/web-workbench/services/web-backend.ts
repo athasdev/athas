@@ -144,6 +144,7 @@ export function createWebBackend({ home, fs, git, appVersion }: WebBackendOption
       differentiateWithoutColor: false,
     }),
     get_system_fonts: () => [],
+    get_monospace_fonts: () => [],
     list_shells: () => [],
     take_pending_deep_links: () => [],
     take_pending_cli_open_requests: () => [],

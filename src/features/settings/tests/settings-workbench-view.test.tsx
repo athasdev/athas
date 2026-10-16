@@ -190,6 +190,16 @@ describe("settings workbench view", () => {
     expect(region().id).toBe(`settings-panel-${tab}`);
   });
 
+  it("opens each page at its top instead of the last page's scroll offset", async () => {
+    await render();
+    region().scrollTop = 900;
+
+    await act(async () => button("Keybindings").click());
+    await flush();
+
+    expect(region().scrollTop).toBe(0);
+  });
+
   it("remembers a page opened directly from elsewhere", async () => {
     useUIState.getState().setSettingsInitialTab("terminal");
     await render();

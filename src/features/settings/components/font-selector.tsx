@@ -14,6 +14,8 @@ import { Spinner } from "@/ui/spinner";
 import Select from "@/ui/select";
 import { cn } from "@/utils/cn";
 
+const rescannedFontLists = new Set<"all" | "monospace">();
+
 interface FontSelectorProps {
   value: string;
   onChange: (fontFamily: string) => void;
@@ -37,12 +39,16 @@ export const FontSelector = ({
   const [selectedFont, setSelectedFont] = useState(value);
   const [isCustomFontValid, setIsCustomFontValid] = useState(false);
 
-  // Load fonts on mount
+  // Scanning the system's fonts is slow, so a picker rescans once per session, in the
+  // background, and otherwise shows the list the app already has.
   useEffect(() => {
+    const list = monospaceOnly ? "monospace" : "all";
+    const forceRefresh = !rescannedFontLists.has(list);
+    rescannedFontLists.add(list);
     if (monospaceOnly) {
-      loadMonospaceFonts(true); // Force refresh
+      void loadMonospaceFonts(forceRefresh);
     } else {
-      loadAvailableFonts(true); // Force refresh
+      void loadAvailableFonts(forceRefresh);
     }
   }, [monospaceOnly, loadAvailableFonts, loadMonospaceFonts]);
 

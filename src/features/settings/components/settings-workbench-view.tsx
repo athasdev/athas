@@ -1,5 +1,5 @@
 import { SharingSettings } from "@/features/sharing/components/sharing-settings";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import type { SettingsTabItem } from "@/features/settings/config/settings-tabs";
 import { useSettingsPage } from "@/features/settings/hooks/use-settings-page";
 import {
@@ -180,9 +180,12 @@ const SettingsWorkbenchView = () => {
     };
   }, [activeTab, selectedResultId, searchResults]);
 
-  useEffect(() => {
-    if (!contentRef.current) return;
-    contentRef.current.scrollLeft = 0;
+  // Each page opens at its top; before paint, so the old offset never shows on the new page.
+  useLayoutEffect(() => {
+    const content = contentRef.current;
+    if (!content) return;
+    content.scrollTop = 0;
+    content.scrollLeft = 0;
   }, [activeTab]);
 
   const renderTabContent = () => {

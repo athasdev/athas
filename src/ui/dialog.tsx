@@ -1,6 +1,5 @@
 import { Dialog as DialogPrimitive } from "@base-ui/react";
 import { cva } from "class-variance-authority";
-import { motion, useReducedMotionConfig } from "motion/react";
 import { useEffect, useState, type ComponentProps, type ReactNode } from "react";
 import {
   AlertDialog,
@@ -17,13 +16,17 @@ import { Button, type ButtonVariant } from "@/ui/button";
 import { type IconProps, InfoIcon, QuestionIcon, WarningIcon, XIcon } from "@/ui/icons";
 import Input from "@/ui/input";
 import { ScrollArea } from "@/ui/scroll-area";
-import { instantTransition, overlayEntrance, quickTransition } from "@/utils/motion";
 import { resolveEscapeGuard } from "@/utils/keyboard/escape-guard";
 import { cn } from "@/utils/cn";
 import { OverlayRoot } from "@/ui/overlay-root";
 
 interface DialogProps {
   children: ReactNode;
+  /**
+   * Leave unset for a dialog its parent mounts only while it shows. A dialog that stays mounted
+   * passes its state instead, so closing plays the exit before the content unmounts.
+   */
+  open?: boolean;
   onClose: () => void;
   title: ReactNode;
   scrollable?: boolean;
@@ -160,8 +163,13 @@ function DialogTitle({ className, ...props }: DialogPrimitive.Title.Props) {
   );
 }
 
+/** Opacity and scale only, so the compositor runs it even while the content mounts. */
+const appDialogMotion =
+  "transition-[opacity,scale] duration-fast ease-smooth data-starting-style:opacity-0 data-ending-style:opacity-0 data-ending-style:duration-100 data-ending-style:ease-in motion-reduce:transition-none";
+
 const AppDialog = ({
   children,
+  open = true,
   onClose,
   title,
   icon: Icon,
@@ -172,21 +180,11 @@ const AppDialog = ({
   hideHeader = false,
   contentLayout,
 }: DialogProps) => {
-  const prefersReducedMotion = useReducedMotionConfig();
-  const popupMotion = prefersReducedMotion
-    ? {
-        initial: false as const,
-        animate: { opacity: 1, scale: 1, y: 0, filter: "blur(0px)" },
-        exit: { opacity: 1, scale: 1, y: 0, filter: "blur(0px)" },
-        transition: instantTransition,
-      }
-    : overlayEntrance;
-
   return (
     <DialogPrimitive.Root
-      open
-      onOpenChange={(open, eventDetails) => {
-        if (open) return;
+      open={open}
+      onOpenChange={(nextOpen, eventDetails) => {
+        if (nextOpen) return;
 
         if (eventDetails.reason === "escape-key") {
           const target = eventDetails.event.target as HTMLElement | null;
@@ -212,29 +210,17 @@ const AppDialog = ({
       <DialogPrimitive.Portal>
         <OverlayRoot>
           <DialogPrimitive.Backdrop
-            render={
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={prefersReducedMotion ? instantTransition : quickTransition}
-              />
-            }
-            className="fixed inset-0 z-9998 bg-scrim transition-opacity duration-75 data-ending-style:opacity-0 data-starting-style:opacity-0"
+            className={cn("fixed inset-0 z-9998 bg-scrim", appDialogMotion)}
           />
 
           <DialogPrimitive.Popup
             aria-describedby={undefined}
-            render={
-              <motion.div
-                initial={popupMotion.initial}
-                animate={popupMotion.animate}
-                exit={popupMotion.exit}
-                transition={popupMotion.transition}
-              />
-            }
             data-dialog-content=""
-            className={dialogContentVariants({ size })}
+            className={cn(
+              dialogContentVariants({ size }),
+              appDialogMotion,
+              "data-starting-style:scale-[0.98] data-ending-style:scale-[0.98]",
+            )}
           >
             {hideHeader ? (
               <DialogPrimitive.Title className="sr-only">{title}</DialogPrimitive.Title>

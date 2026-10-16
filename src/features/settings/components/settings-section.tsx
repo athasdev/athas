@@ -272,20 +272,19 @@ export function SettingRow({
           </div>
           {labelAccessory}
           {onReset ? (
-            <span
-              className={cn("flex size-5 items-center justify-center", !canReset && "invisible")}
-            >
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={onReset}
-                disabled={!canReset}
-                aria-label={resetLabel || `Reset ${label}`}
-                tooltip={canReset ? resetLabel || `Reset ${label}` : undefined}
-                iconOnly
-              >
-                <ArrowCounterClockwiseIcon />
-              </Button>
+            <span className="flex size-5 items-center justify-center">
+              {canReset ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={onReset}
+                  aria-label={resetLabel || `Reset ${label}`}
+                  tooltip={resetLabel || `Reset ${label}`}
+                  iconOnly
+                >
+                  <ArrowCounterClockwiseIcon />
+                </Button>
+              ) : null}
             </span>
           ) : null}
         </div>

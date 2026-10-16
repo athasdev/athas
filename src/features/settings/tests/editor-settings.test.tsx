@@ -191,13 +191,13 @@ describe("editor settings", () => {
 
     await typeNumber("Font Size", "18");
     await typeNumber("Line Height", "1.6");
-    await typeNumber("Tab Size", "2");
+    await typeNumber("Tab Size", "4");
     await typeNumber("Max Open Tabs", "12");
 
     expect(settings()).toMatchObject({
       fontSize: 18,
       editorLineHeight: 1.6,
-      tabSize: 2,
+      tabSize: 4,
       maxOpenTabs: 12,
     });
 
