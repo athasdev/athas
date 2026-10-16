@@ -63,7 +63,13 @@ import { ComposerAttachments } from "./composer-attachments";
 import Badge, { badgeVariants } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
-import { Composer, ComposerDropHint, ComposerEditable, ComposerToolbar } from "@/ui/composer";
+import {
+  Composer,
+  ComposerDropHint,
+  ComposerEditable,
+  ComposerRow,
+  ComposerToolbar,
+} from "@/ui/composer";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { chatContentWidth } from "../chat/chat-content-width";
 import { ComposerAgentSelector } from "./composer-agent-selector";
@@ -1280,6 +1286,30 @@ const AIChatInputBar = memo(function AIChatInputBar({
     </Button>
   );
 
+  const editable = (
+    <ComposerEditable
+      ref={inputRef}
+      data-ai-element="prompt-input-editable"
+      contentEditable
+      font={isTerminalMode ? "mono" : "sans"}
+      size={size}
+      inline={!isTerminalMode}
+      className={isTerminalMode ? undefined : "flex-1"}
+      onInput={handleInputChange}
+      onKeyDown={handleKeyDown}
+      onMouseDown={handleEditableMouseDown}
+      onFocus={() => setIsComposerFocused(true)}
+      onBlur={() => setIsComposerFocused(false)}
+      onPaste={handlePaste}
+      data-placeholder={inputPlaceholder}
+      role="textbox"
+      aria-multiline
+      aria-label={isTerminalMode ? "Terminal command" : "Message input"}
+      aria-describedby={isTerminalMode ? terminalHintId : undefined}
+      tabIndex={0}
+    />
+  );
+
   return (
     <div
       ref={aiChatContainerRef}
@@ -1354,25 +1384,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
           />
         )}
 
-        <ComposerEditable
-          ref={inputRef}
-          data-ai-element="prompt-input-editable"
-          contentEditable
-          font={isTerminalMode ? "mono" : "sans"}
-          size={size}
-          onInput={handleInputChange}
-          onKeyDown={handleKeyDown}
-          onMouseDown={handleEditableMouseDown}
-          onFocus={() => setIsComposerFocused(true)}
-          onBlur={() => setIsComposerFocused(false)}
-          onPaste={handlePaste}
-          data-placeholder={inputPlaceholder}
-          role="textbox"
-          aria-multiline
-          aria-label={isTerminalMode ? "Terminal command" : "Message input"}
-          aria-describedby={isTerminalMode ? terminalHintId : undefined}
-          tabIndex={0}
-        />
+        {isTerminalMode ? editable : null}
 
         {isTerminalMode ? (
           <ComposerToolbar>
@@ -1395,7 +1407,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
             {sendControls}
           </ComposerToolbar>
         ) : (
-          <ComposerToolbar>
+          <ComposerRow>
             {isCloud ? null : (
               <ContextSelector
                 buffers={buffers}
@@ -1413,68 +1425,31 @@ const AIChatInputBar = memo(function AIChatInputBar({
                 }}
               />
             )}
-            {isCloud ? null : (
-              <ComposerModeSelector source={modeSource} onBeforeOpen={closeInlineMenus} />
-            )}
-            <ComposerAgentSelector
-              cwd={projectPath}
-              currentAgentId={currentAgentId}
-              providerId={aiProviderId}
-              modelId={aiModelId}
-              sessionConfigOptions={sessionConfigOptions}
-              isLoadingSessionConfig={composerAcp.isLoading}
-              onAgentChange={onAgentChange}
-              onModelChange={handleApiModelChange}
-              onSessionConfigChange={changeSessionConfigOption}
-              onBeforeOpen={closeInlineMenus}
-              followChatId={isCloud ? null : followChatId}
-            />
-            <ComposerEnvironmentControls
-              environment={environment}
-              targets={cloudTargets}
-              onBeforeOpen={closeInlineMenus}
-            />
-
-            <div className="ml-auto flex shrink-0 items-center gap-1">
-              {isCloud ? null : contextBudget ? (
-                <ComposerContextMeter budget={contextBudget} />
-              ) : (
-                <AcpContextMeter usage={acpSession.usage} />
-              )}
-              <ChatPreferencesMenu
-                currentAgentId={currentAgentId}
-                canChangeAgent={Boolean(onAgentChange)}
-                sessionConfigOptions={sessionConfigOptions}
-                onSessionConfigChange={changeSessionConfigOption}
-                onSelectSkill={insertSkillAtCursor}
-                onSelectCodexSkill={insertCodexSkillAtCursor}
-                onBeforeOpen={closeInlineMenus}
-              />
-              {isSpeechRecognitionSupported || isMacDevSpeechRecognitionBlocked ? (
-                <Button
-                  type="button"
-                  disabled={!isInputEnabled || !isSpeechRecognitionSupported}
-                  active={isListening}
-                  aria-pressed={isListening}
-                  onClick={toggleVoiceInput}
-                  variant="ghost"
-                  tone={isListening ? "accent" : "default"}
-                  iconOnly
-                  tooltip={
-                    isMacDevSpeechRecognitionBlocked
-                      ? "Voice input is unavailable in macOS development builds. Use a packaged build."
-                      : isListening
-                        ? interimTranscript || "Stop voice input"
-                        : "Start voice input"
-                  }
-                  aria-label={isListening ? "Stop voice input" : "Start voice input"}
-                >
-                  <MicrophoneIcon className={cn(isListening && "animate-pulse")} />
-                </Button>
-              ) : null}
-              {sendControls}
-            </div>
-          </ComposerToolbar>
+            {editable}
+            {isSpeechRecognitionSupported || isMacDevSpeechRecognitionBlocked ? (
+              <Button
+                type="button"
+                disabled={!isInputEnabled || !isSpeechRecognitionSupported}
+                active={isListening}
+                aria-pressed={isListening}
+                onClick={toggleVoiceInput}
+                variant="ghost"
+                tone={isListening ? "accent" : "default"}
+                iconOnly
+                tooltip={
+                  isMacDevSpeechRecognitionBlocked
+                    ? "Voice input is unavailable in macOS development builds. Use a packaged build."
+                    : isListening
+                      ? interimTranscript || "Stop voice input"
+                      : "Start voice input"
+                }
+                aria-label={isListening ? "Stop voice input" : "Start voice input"}
+              >
+                <MicrophoneIcon className={cn(isListening && "animate-pulse")} />
+              </Button>
+            ) : null}
+            {sendControls}
+          </ComposerRow>
         )}
         {isDropActive ? (
           <ComposerDropHint>
@@ -1483,6 +1458,49 @@ const AIChatInputBar = memo(function AIChatInputBar({
           </ComposerDropHint>
         ) : null}
       </Composer>
+
+      {isTerminalMode ? null : (
+        <div data-slot="composer-controls" className="flex min-w-0 items-center gap-1 px-1">
+          {isCloud ? null : (
+            <ComposerModeSelector source={modeSource} onBeforeOpen={closeInlineMenus} />
+          )}
+          <ComposerAgentSelector
+            cwd={projectPath}
+            currentAgentId={currentAgentId}
+            providerId={aiProviderId}
+            modelId={aiModelId}
+            sessionConfigOptions={sessionConfigOptions}
+            isLoadingSessionConfig={composerAcp.isLoading}
+            onAgentChange={onAgentChange}
+            onModelChange={handleApiModelChange}
+            onSessionConfigChange={changeSessionConfigOption}
+            onBeforeOpen={closeInlineMenus}
+            followChatId={isCloud ? null : followChatId}
+          />
+          <ComposerEnvironmentControls
+            environment={environment}
+            targets={cloudTargets}
+            onBeforeOpen={closeInlineMenus}
+          />
+
+          <div className="ml-auto flex shrink-0 items-center gap-1">
+            {isCloud ? null : contextBudget ? (
+              <ComposerContextMeter budget={contextBudget} />
+            ) : (
+              <AcpContextMeter usage={acpSession.usage} />
+            )}
+            <ChatPreferencesMenu
+              currentAgentId={currentAgentId}
+              canChangeAgent={Boolean(onAgentChange)}
+              sessionConfigOptions={sessionConfigOptions}
+              onSessionConfigChange={changeSessionConfigOption}
+              onSelectSkill={insertSkillAtCursor}
+              onSelectCodexSkill={insertCodexSkillAtCursor}
+              onBeforeOpen={closeInlineMenus}
+            />
+          </div>
+        </div>
+      )}
 
       {!isTerminalMode && (isActiveSurface || isComposerFocused) && mentionState.active && (
         <FileMentionDropdown

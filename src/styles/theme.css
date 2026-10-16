@@ -72,6 +72,7 @@
   --color-island: var(--athas-glass-island-bg, var(--background));
   --color-surface: var(--surface);
   --color-overlay: var(--overlay);
+  --color-field: var(--field);
   --color-scrim: var(--scrim);
   --color-foreground: var(--foreground);
   --color-muted-foreground: var(--app-muted-foreground);
@@ -214,6 +215,9 @@
 
     /* Derived tokens. */
     --overlay: var(--background);
+    /* Text entry surfaces such as the AI composer: close to the page in light themes, where
+       the surface grey reads as disabled, and raised like the overlay in dark ones. */
+    --field: color-mix(in srgb, var(--background) 82%, var(--surface));
     /* The active tab on a background-coloured tab bar: a tint in light themes, where the
        overlay would match the bar, and the raised overlay in dark ones. */
     --tab-active: color-mix(in srgb, var(--background) 91%, var(--foreground) 9%);
@@ -284,6 +288,7 @@
 
   :root[data-theme-type="dark"] {
     --overlay: color-mix(in srgb, var(--background) 92%, var(--foreground) 8%);
+    --field: color-mix(in srgb, var(--background) 94%, var(--foreground) 6%);
     --tab-active: var(--overlay);
     --scrim: rgb(0 0 0 / 0.45);
     --shadow-card:
