@@ -116,7 +116,7 @@ export type FeatureBoundaryBaseline = {
 
 const APP_SHELL = "Mounted by the app shell (src/App.tsx, src/main.tsx, src/workbench-app.tsx).";
 const MAIN_LAYOUT = "Mounted by the main layout.";
-const ACTIVITY_CHROME = "Control mounted in the activity bar or title bar chrome.";
+const ACTIVITY_CHROME = "Control mounted in the workbench sidebar or title bar chrome.";
 const SETTINGS_SECTION = "Settings section this feature contributes to the settings dialog.";
 const COMMAND_VIEW = "Command palette view this feature contributes.";
 const EDITOR_FEATURE_API =
@@ -159,6 +159,12 @@ export const featureBoundaries: FeatureBoundaryConfig = {
       "components/messages/markdown-renderer.tsx":
         "Assistant markdown renderer reused for extension and skill descriptions.",
       "components/skills/skills-command.tsx": "Skills browser embedded in the extensions view.",
+      "components/sidebar/workbench-sessions.tsx":
+        "Session rows, project session lists and the Inbox the workbench sidebar shows.",
+      "components/sidebar/agents-plan-footer.tsx":
+        "Athas AI usage ring or upgrade prompt in the workbench sidebar footer.",
+      "components/agent-attention-dot.tsx":
+        "Marks a collapsed project in the workbench sidebar whose session waits on the user.",
     },
     auth: {
       "components/account-menu.tsx": ACTIVITY_CHROME,
@@ -234,7 +240,6 @@ export const featureBoundaries: FeatureBoundaryConfig = {
     layout: {
       "components/main-layout.tsx": APP_SHELL,
       "components/zoom-indicator.tsx": APP_SHELL,
-      "components/project-switcher.tsx": ACTIVITY_CHROME,
     },
     "local-history": {
       "components/local-history-command.tsx": COMMAND_VIEW,
@@ -322,11 +327,11 @@ export const featureBoundaries: FeatureBoundaryConfig = {
         "Infrastructure for per-workspace stores used by most features.",
       "project-picker/components/project-picker.tsx": ACTIVITY_CHROME,
       "project-icons/components/project-custom-icon.tsx":
-        "Project icon the project switcher shows.",
+        "Project icon the workbench sidebar shows.",
       "project-icons/components/project-icon-picker.tsx":
-        "Project icon picker opened from the project switcher.",
+        "Project icon picker opened from the workbench sidebar's project menu.",
       "project-icons/components/project-glyph.tsx":
-        "Project icon or folder glyph the project switcher and the agents sidebar show.",
+        "Project icon or folder glyph the workbench sidebar and session details show.",
     },
   },
   layers: {

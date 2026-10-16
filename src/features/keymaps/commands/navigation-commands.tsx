@@ -1,3 +1,4 @@
+import { showProjectTool } from "@/features/layout/services/project-tools";
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
@@ -11,7 +12,6 @@ import {
 } from "@/ui/icons";
 import { getActiveCodeMirrorNavigation } from "@/features/editor/services/active-editor-navigation";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import type { SidebarView } from "@/features/layout/types/sidebar.types";
 import { setOutlineVisibilityPreference } from "@/features/outline/services/outline-visibility";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { emitAppEvent } from "@/utils/app-events";
@@ -55,12 +55,6 @@ const switchPrevTab = () => {
     useBufferStore.getState().actions.switchToPreviousBuffer();
   }
 };
-
-function showSidebarView(view: SidebarView): void {
-  const state = useUIState.getState();
-  state.setIsSidebarVisible(true);
-  state.setActiveView(view);
-}
 
 export const navigationCommands: Command[] = [
   {
@@ -234,7 +228,7 @@ export const navigationCommands: Command[] = [
     description: "Switch to files view",
     icon: <FolderOpenIcon />,
     palette: { keybindingCommandId: "workbench.showFileExplorer" },
-    execute: () => showSidebarView("files"),
+    execute: () => showProjectTool("files"),
   },
   {
     id: "view.showGit",
@@ -243,7 +237,7 @@ export const navigationCommands: Command[] = [
     description: "Switch to Git view",
     icon: <GitBranchIcon />,
     palette: { keybindingCommandId: "workbench.showSourceControl" },
-    execute: () => showSidebarView("git"),
+    execute: () => showProjectTool("git"),
   },
   {
     id: "view.showPullRequests",
@@ -252,7 +246,7 @@ export const navigationCommands: Command[] = [
     description: "Switch to GitHub Pull Requests view",
     icon: <GitPullRequestIcon />,
     palette: { keybindingCommandId: "workbench.showGitHub" },
-    execute: () => showSidebarView("github-prs"),
+    execute: () => showProjectTool("github-prs"),
   },
   {
     id: "view.showViews",
@@ -261,7 +255,7 @@ export const navigationCommands: Command[] = [
     description: "Switch to project custom views",
     icon: <StackIcon />,
     palette: { keybindingCommandId: "workbench.showViews" },
-    execute: () => showSidebarView("views"),
+    execute: () => showProjectTool("views"),
   },
   {
     id: "view.showRunAndDebug",

@@ -69,6 +69,7 @@ import {
 import type { AcpElicitationResponse } from "@/features/ai/lib/acp-elicitation";
 import { AcpPermissionPrompt } from "./acp-permission-prompt";
 import { markAgentChatVisible } from "@/features/ai/lib/visible-agent-chats";
+import { useSessionInboxStore } from "@/features/ai/stores/session-inbox.store";
 import {
   selectChatPermissions,
   useAgentPermissionsStore,
@@ -128,7 +129,12 @@ const AIChat = memo(function AIChat({
   const previousChatId = useRef(effectiveChatId);
   useEffect(() => {
     if (!effectiveChatId) return;
-    return markAgentChatVisible(effectiveChatId);
+    useSessionInboxStore.getState().actions.markRead(effectiveChatId);
+    const release = markAgentChatVisible(effectiveChatId);
+    return () => {
+      release();
+      useSessionInboxStore.getState().actions.markRead(effectiveChatId);
+    };
   }, [effectiveChatId]);
   const currentChat = useChatSession(effectiveChatId);
   const currentAgentId = currentChat?.agentId ?? selectedAgentId;

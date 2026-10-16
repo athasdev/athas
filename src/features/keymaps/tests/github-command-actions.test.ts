@@ -13,7 +13,8 @@ vi.hoisted(() => {
 
 import { GITHUB_CONNECTION_URL } from "@/features/github/services/github-token-service";
 import { useGitHubStore } from "@/features/github/stores/github.store";
-import { useUIState } from "@/features/layout/stores/ui-state.store";
+import { selectDockLayout, useDockLayoutStore } from "@/features/layout/stores/dock-layout.store";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 import { onAppEvent } from "@/utils/app-events";
@@ -30,6 +31,11 @@ vi.mock("@tauri-apps/plugin-opener", () => ({ openUrl: mocks.openUrl }));
 vi.mock("@/utils/toast", () => ({ showToast: mocks.toast }));
 
 const actions: unknown[] = [];
+const githubPaneOpen = () =>
+  selectDockLayout(useDockLayoutStore.getState(), {
+    kind: "project",
+    id: "/work/site",
+  }).panes.includes("view:github-prs");
 let stop: () => void;
 
 beforeEach(() => {
@@ -37,8 +43,8 @@ beforeEach(() => {
   workspaceRuntimeRegistry.resetForTests();
   actions.length = 0;
   stop = onAppEvent("github:palette-action", (action) => actions.push(action));
-  useUIState.getState().setIsSidebarVisible(false);
-  useUIState.getState().setActiveView("files");
+  useProjectStore.setState({ rootFolderPath: "/work/site" });
+  useDockLayoutStore.setState({ layouts: {}, hidden: false, currentOwner: null });
 });
 
 afterEach(() => {
@@ -49,16 +55,13 @@ afterEach(() => {
 });
 
 describe("GitHub palette actions", () => {
-  it("turns a hidden section on, shows the GitHub sidebar and scrolls to the section", async () => {
+  it("turns a hidden section on, opens GitHub in the dock and scrolls to the section", async () => {
     await useSettingsStore.getState().actions.updateSetting("showGitHubReleases", false);
 
     await openGitHubSection("releases");
 
     expect(useSettingsStore.getState().settings.showGitHubReleases).toBe(true);
-    expect(useUIState.getState()).toMatchObject({
-      isSidebarVisible: true,
-      activeSidebarView: "github-prs",
-    });
+    expect(githubPaneOpen()).toBe(true);
     expect(actions).toEqual([]);
     vi.runAllTimers();
     expect(actions).toEqual([{ type: "show-section", section: "releases" }]);
@@ -67,7 +70,7 @@ describe("GitHub palette actions", () => {
   it("refreshes the GitHub view", () => {
     refreshGitHubView();
     vi.runAllTimers();
-    expect(useUIState.getState().activeSidebarView).toBe("github-prs");
+    expect(githubPaneOpen()).toBe(true);
     expect(actions).toEqual([{ type: "refresh" }]);
   });
 

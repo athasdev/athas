@@ -18,7 +18,6 @@ import { normalizeConfiguredFontFamily } from "@/features/settings/services/font
 import {
   GIT_SIDEBAR_ITEM_IDS,
   GIT_SIDEBAR_TAB_IDS,
-  SIDEBAR_ACTIVITY_ITEM_IDS,
   normalizeItemOrder,
 } from "@/features/layout/config/item-order";
 import { normalizeUiFontSize } from "@/features/settings/services/ui-font-size";
@@ -592,16 +591,6 @@ export function normalizeSettings(settings: Settings): Settings {
 
   normalizedSettings.iconTheme = normalizeIconTheme(normalizedSettings.iconTheme);
 
-  normalizedSettings.sidebarActivityItemsOrder = normalizeItemOrder(
-    normalizedSettings.sidebarActivityItemsOrder,
-    SIDEBAR_ACTIVITY_ITEM_IDS,
-  );
-  normalizedSettings.hiddenSidebarActivityItems = normalizeStringList(
-    normalizedSettings.hiddenSidebarActivityItems,
-  ).filter((itemId) => itemId !== "search" && itemId !== "review");
-  normalizedSettings.pinnedSidebarExtensionItems = normalizeStringList(
-    normalizedSettings.pinnedSidebarExtensionItems,
-  );
   return normalizedSettings;
 }
 
@@ -672,10 +661,6 @@ export function normalizeSettingValue<K extends keyof Settings>(
       SIDEBAR_WIDTH_MIN,
       SIDEBAR_WIDTH_MAX,
     ) as Settings[K];
-  }
-
-  if (key === "hiddenSidebarActivityItems" || key === "pinnedSidebarExtensionItems") {
-    return normalizeStringList(value) as Settings[K];
   }
 
   if (key === "hiddenGitSidebarItems") {

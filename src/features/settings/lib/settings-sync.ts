@@ -64,9 +64,6 @@ type SyncableSettingsKey =
   | "autoThemeDark"
   | "compactMenuBar"
   | "windowTransparency"
-  | "sidebarActivityItemsOrder"
-  | "hiddenSidebarActivityItems"
-  | "pinnedSidebarExtensionItems"
   | "openFoldersInNewWindow"
   | "aiProviderId"
   | "aiModelId"
@@ -185,9 +182,6 @@ const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "autoThemeDark",
   "compactMenuBar",
   "windowTransparency",
-  "sidebarActivityItemsOrder",
-  "hiddenSidebarActivityItems",
-  "pinnedSidebarExtensionItems",
   "openFoldersInNewWindow",
   "aiProviderId",
   "aiModelId",

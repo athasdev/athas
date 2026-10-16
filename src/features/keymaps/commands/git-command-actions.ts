@@ -1,3 +1,4 @@
+import { showProjectTool } from "@/features/layout/services/project-tools";
 import { commitChanges } from "@/features/git/api/git-commits-api";
 import {
   fetchChanges,
@@ -12,7 +13,6 @@ import {
 } from "@/features/git/api/git-status-api";
 import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
 import { showToast } from "@/utils/toast";
-import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { showConfirmDialog, showPromptDialog } from "@/ui/dialog";
 import { emitAppEvent } from "@/utils/app-events";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
@@ -24,9 +24,7 @@ function dispatchGitSidebarAction(action: GitSidebarAction): void {
 
 /** Shows the Git sidebar, then hands the action to it once it has mounted. */
 export function openGitSidebarAction(detail: GitSidebarAction): void {
-  const state = useUIState.getState();
-  state.setIsSidebarVisible(true);
-  state.setActiveView("git");
+  showProjectTool("git");
   window.setTimeout(() => dispatchGitSidebarAction(detail), 0);
 }
 

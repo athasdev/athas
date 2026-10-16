@@ -44,9 +44,6 @@ vi.mock("@/features/editor/stores/buffer.store", () => ({
     }),
   },
 }));
-vi.mock("@/features/layout/services/agents-sidebar-reveal", () => ({
-  revealAgentsSidebar: () => {},
-}));
 vi.mock("@/features/auth/services/auth-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/features/auth/services/auth-api")>()),
   authenticatedFetch: async (path: string, init?: RequestInit) => {

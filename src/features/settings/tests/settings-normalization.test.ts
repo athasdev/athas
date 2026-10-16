@@ -194,28 +194,6 @@ describe("settings normalization", () => {
     );
   });
 
-  it("normalizes hidden activity sidebar items", () => {
-    const normalized = normalizeSettings({
-      ...getDefaultSettingsSnapshot(),
-      hiddenSidebarActivityItems: [
-        "search",
-        "review",
-        "",
-        "search",
-        "extension.example",
-      ] as string[],
-    });
-
-    expect(normalized.hiddenSidebarActivityItems).toEqual(["extension.example"]);
-    expect(
-      normalizeSettingValue("hiddenSidebarActivityItems", [
-        "git",
-        "git",
-        42,
-      ] as unknown as string[]),
-    ).toEqual(["git"]);
-  });
-
   it("normalizes hidden Source Control submenu items", () => {
     const normalized = normalizeSettings({
       ...getDefaultSettingsSnapshot(),

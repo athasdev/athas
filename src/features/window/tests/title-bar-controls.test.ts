@@ -22,12 +22,8 @@ const accountMenuSource = readFileSync(
   fileURLToPath(new URL("../../auth/components/account-menu.tsx", import.meta.url)),
   "utf8",
 );
-const activityBarSource = readFileSync(
-  fileURLToPath(new URL("../../layout/components/sidebar/activity-bar.tsx", import.meta.url)),
-  "utf8",
-);
-const activityChromeSource = readFileSync(
-  fileURLToPath(new URL("../../layout/components/sidebar/activity-chrome.tsx", import.meta.url)),
+const workbenchSidebarSource = readFileSync(
+  fileURLToPath(new URL("../../layout/components/sidebar/workbench-sidebar.tsx", import.meta.url)),
   "utf8",
 );
 const mainLayoutSource = readFileSync(
@@ -36,10 +32,6 @@ const mainLayoutSource = readFileSync(
 );
 const paneContainerSource = readFileSync(
   fileURLToPath(new URL("../../panes/components/pane-container.tsx", import.meta.url)),
-  "utf8",
-);
-const projectSwitcherSource = readFileSync(
-  fileURLToPath(new URL("../../layout/components/project-switcher.tsx", import.meta.url)),
   "utf8",
 );
 const branchManagerSource = readFileSync(
@@ -52,21 +44,16 @@ const dropdownSource = readFileSync(
 );
 
 describe("title bar controls", () => {
-  it("leads the title bar with the sidebar toggle, then project and branch", () => {
+  it("leads the title bar with the sidebar toggle, then the branch, and lists projects in the sidebar", () => {
     const toggleIndex = titleLeadingSource.indexOf("<Toggle");
-    const projectIndex = titleLeadingSource.indexOf("<ProjectSwitcher");
     const branchIndex = titleLeadingSource.indexOf("<GitBranchManager");
 
     expect(toggleIndex).toBeGreaterThan(-1);
-    expect(projectIndex).toBeGreaterThan(toggleIndex);
-    expect(branchIndex).toBeGreaterThan(projectIndex);
+    expect(branchIndex).toBeGreaterThan(toggleIndex);
+    expect(titleLeadingSource).not.toContain("ProjectSwitcher");
     expect(titleLeadingSource).toContain('useCommandShortcut("workbench.toggleSidebar")');
     expect(titleLeadingSource).toContain('triggerMode="branch"');
-    expect(activityChromeSource).not.toContain("<ProjectSwitcher");
-    expect(activityChromeSource).not.toContain("<GitBranchManager");
-    expect(projectSwitcherSource).toContain(
-      '<span className="min-w-0 truncate">{projectName}</span>',
-    );
+    expect(workbenchSidebarSource).toContain("<SidebarProjects />");
   });
 
   it("puts back and forward in the pane tab bar, right before the tabs", () => {
@@ -77,41 +64,39 @@ describe("title bar controls", () => {
     expect(navigationIndex).toBeLessThan(tabBarSource.indexOf("<SortableContext"));
   });
 
-  it("orders update, run, notifications, and account actions in the activity footer", () => {
-    const updateIndex = activityChromeSource.indexOf("<AppUpdateControl");
-    const terminalIndex = activityChromeSource.indexOf("<TerminalToggle />");
-    const runActionsIndex = activityChromeSource.indexOf("<RunActionsButton");
-    const notificationsIndex = activityChromeSource.indexOf("<NotificationsTrigger");
-    const accountIndex = activityChromeSource.indexOf("<AccountMenu");
+  it("puts the account first and the update, run, terminal and notifications after it in the sidebar footer", () => {
+    const accountIndex = workbenchSidebarSource.indexOf("<AccountMenu />");
+    const updateIndex = workbenchSidebarSource.indexOf("<AppUpdateControl");
+    const runActionsIndex = workbenchSidebarSource.indexOf("<RunActionsButton");
+    const terminalIndex = workbenchSidebarSource.indexOf("<TerminalToggle />");
+    const notificationsIndex = workbenchSidebarSource.indexOf("<NotificationsTrigger");
 
-    expect(updateIndex).toBeGreaterThan(-1);
-    expect(terminalIndex).toBeGreaterThan(updateIndex);
-    expect(runActionsIndex).toBeGreaterThan(terminalIndex);
-    expect(notificationsIndex).toBeGreaterThan(runActionsIndex);
-    expect(accountIndex).toBeGreaterThan(notificationsIndex);
-    expect(activityChromeSource).toContain("<AccountMenu />");
+    expect(accountIndex).toBeGreaterThan(-1);
+    expect(updateIndex).toBeGreaterThan(accountIndex);
+    expect(runActionsIndex).toBeGreaterThan(updateIndex);
+    expect(terminalIndex).toBeGreaterThan(runActionsIndex);
+    expect(notificationsIndex).toBeGreaterThan(terminalIndex);
     expect(accountMenuSource).toContain("<SidebarIconButton");
     expect(accountMenuSource).not.toContain("<SidebarListItem");
-    // The rail's overlay placement opens the account menu to the right.
+    // The footer's overlay placement opens its menus upward.
     expect(accountMenuSource).toContain('<DropdownMenuContent size="wide">');
-    expect(activityBarSource).toContain('<OverlaySideProvider side="right" align="end">');
+    expect(workbenchSidebarSource).toContain('<OverlaySideProvider side="top" align="start">');
   });
 
-  it("keeps activity navigation and the relocated chrome in the rail", () => {
-    expect(activityBarSource).toContain('id: "search"');
-    expect(activityBarSource).toContain("<SearchIcon />");
-    expect(activityBarSource).toContain(
-      'visibleNavigationItems.findIndex((item) => item.id === "files")',
-    );
-    expect(activityBarSource).toContain("<ActivityChrome />");
-    expect(activityBarSource).toContain("<ActivityChromeFooter />");
-    expect(activityBarSource).not.toContain("expanded");
+  it("keeps search, a new session and the Inbox at the top of the sidebar", () => {
+    const searchIndex = workbenchSidebarSource.indexOf("<SearchIcon />");
+    const newSessionIndex = workbenchSidebarSource.indexOf("New session");
+    const inboxIndex = workbenchSidebarSource.indexOf("<InboxIcon />");
+    expect(searchIndex).toBeGreaterThan(-1);
+    expect(newSessionIndex).toBeGreaterThan(searchIndex);
+    expect(inboxIndex).toBeGreaterThan(newSessionIndex);
+    expect(workbenchSidebarSource).toContain("Customize");
   });
 
   it("keeps native window controls over the workbench", () => {
     expect(titleBarSource).toContain("pointer-events-none absolute top-0 right-0 w-auto");
     expect(mainLayoutSource.indexOf("<TitleBarWithSettings showMinimal overlay")).toBeGreaterThan(
-      mainLayoutSource.indexOf("<ActivityBar"),
+      mainLayoutSource.indexOf("<WorkbenchSidebar"),
     );
   });
 
@@ -122,12 +107,7 @@ describe("title bar controls", () => {
     expect(paneContainerSource).not.toContain("createPortal(");
   });
 
-  it("uses searchable anchored menus for activity sidebar project and branch selection", () => {
-    expect(projectSwitcherSource).toContain("<DropdownMenuSearch");
-    expect(projectSwitcherSource).toContain("<DropdownMenuViewport>");
-    expect(projectSwitcherSource).toContain("<DropdownMenuFooter>");
-    expect(projectSwitcherSource).toContain('placeholder="Search projects"');
-    expect(projectSwitcherSource).toContain('viewport="searchable"');
+  it("uses a searchable anchored menu for branch selection", () => {
     expect(branchManagerSource).toContain('if (triggerMode === "branch")');
     expect(branchManagerSource).toContain('placeholder="Search branches"');
     expect(branchManagerSource).toContain('viewport="searchable"');

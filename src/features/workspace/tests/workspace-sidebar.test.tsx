@@ -9,8 +9,7 @@ import { useWorkspaceManagementStore } from "../team/stores/workspace-management
 const mocks = vi.hoisted(() => ({
   openContent: vi.fn(),
   openFolder: vi.fn(),
-  setActiveView: vi.fn(),
-  setIsSidebarVisible: vi.fn(),
+  showProjectTool: vi.fn(),
   readTeamWorkspaceContent: vi.fn(),
   buffers: [{ id: "editor", type: "editor" }],
   activeBufferId: "editor",
@@ -32,8 +31,8 @@ vi.mock("@/features/workspace/stores/workspace-tabs.store", () => ({
 }));
 vi.mock("@/features/file-system/api/file-system-api", () => ({ openFolder: mocks.openFolder }));
 vi.mock("@/features/auth/stores/auth.store", () => ({ useAuthStore: () => false }));
-vi.mock("@/features/layout/stores/ui-state.store", () => ({
-  useUIState: { getState: () => mocks },
+vi.mock("@/features/layout/services/project-tools", () => ({
+  showProjectTool: mocks.showProjectTool,
 }));
 vi.mock("../team/services/team-workspace-service", () => ({
   readTeamWorkspaceContent: mocks.readTeamWorkspaceContent,
@@ -93,10 +92,9 @@ describe("workspace sidebar navigation", () => {
     expect(mocks.openContent).toHaveBeenCalledWith({ type: "workspaces" });
   });
 
-  it("shows the standard sidebar when management is opened from a command", () => {
+  it("opens the Workspaces tool in the dock when management is opened from a command", () => {
     openWorkspaceManagement();
-    expect(mocks.setActiveView).toHaveBeenCalledWith("workspaces");
-    expect(mocks.setIsSidebarVisible).toHaveBeenCalledWith(true);
+    expect(mocks.showProjectTool).toHaveBeenCalledWith("workspaces");
     expect(mocks.openContent).toHaveBeenCalledWith({ type: "workspaces" });
     expect(useWorkspaceManagementStore.getState().selectedRoot).toBe("/active");
   });

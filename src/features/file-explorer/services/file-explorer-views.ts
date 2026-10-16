@@ -1,3 +1,5 @@
+import { createElement } from "react";
+import { FilesIcon } from "@/ui/icons";
 import { registerSidebarView } from "@/features/layout/services/sidebar-view-registry";
 import { FileExplorerPane } from "../components/file-explorer-pane";
 
@@ -5,8 +7,9 @@ import { FileExplorerPane } from "../components/file-explorer-pane";
 export function registerFileExplorerViews() {
   registerSidebarView({
     id: "files",
+    title: "Files",
+    icon: createElement(FilesIcon),
     order: 70,
     component: FileExplorerPane,
-    suspendWhenHidden: true,
   });
 }

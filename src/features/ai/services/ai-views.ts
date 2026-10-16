@@ -10,7 +10,6 @@ import {
   useIsLocalSession,
 } from "../session-panel/hooks/use-session-tool-availability";
 import { useSessionHasInfo } from "../session-panel/hooks/use-session-boxes";
-import { registerSidebarView } from "@/features/layout/services/sidebar-view-registry";
 import { registerPaneView } from "@/features/panes/services/pane-view-registry";
 import { registerDiffBanner } from "@/features/git/services/diff-banner-registry";
 import { registerTabDecoration } from "@/features/tabs/services/tab-decoration-registry";
@@ -26,11 +25,6 @@ const AgentEditsReviewView = lazy(() => import("../components/chat/agent-edits-r
 const ClaudeDiffReviewBar = lazy(() =>
   import("../integrations/claude-code/components/claude-diff-review-bar").then((module) => ({
     default: module.ClaudeDiffReviewBar,
-  })),
-);
-const AgentsSidebar = lazy(() =>
-  import("../components/sidebar/agents-sidebar").then((module) => ({
-    default: module.AgentsSidebar,
   })),
 );
 
@@ -119,13 +113,4 @@ export function registerAiViews() {
   registerPaneView("agentChanges", { component: AgentEditsReviewView, getProps: () => ({}) });
   registerPaneView("customize", { component: CustomizeView, getProps: () => ({}) });
   registerDiffBanner(CLAUDE_CODE_PROPOSAL, ClaudeDiffReviewBar);
-
-  registerSidebarView({
-    id: "agents",
-    order: 80,
-    component: AgentsSidebar,
-    isAvailable: ({ coreFeatures }) => coreFeatures.aiChat,
-    loadsOnDemand: true,
-    suspendWhenHidden: true,
-  });
 }

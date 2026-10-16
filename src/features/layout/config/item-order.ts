@@ -1,27 +1,6 @@
-export const SIDEBAR_ACTIVITY_ITEM_IDS = [
-  "agents",
-  "files",
-  "workspaces",
-  "git",
-  "github-prs",
-  "views",
-  "debugger",
-  "databases",
-  "docker",
-  "extensions",
-] as const;
-export const DEFAULT_HIDDEN_SIDEBAR_ACTIVITY_ITEM_IDS = [
-  "github-prs",
-  "views",
-  "debugger",
-  "databases",
-  "docker",
-  "extensions",
-] as const;
 export const GIT_SIDEBAR_TAB_IDS = ["changes", "history"] as const;
 export const GIT_SIDEBAR_ITEM_IDS = [...GIT_SIDEBAR_TAB_IDS, "remotes", "tags", "stashes"] as const;
 
-export type SidebarActivityItemId = (typeof SIDEBAR_ACTIVITY_ITEM_IDS)[number];
 export type GitSidebarTabId = (typeof GIT_SIDEBAR_TAB_IDS)[number];
 export type GitSidebarItemId = (typeof GIT_SIDEBAR_ITEM_IDS)[number];
 

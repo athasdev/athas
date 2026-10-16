@@ -1,3 +1,4 @@
+import { showProjectTool } from "@/features/layout/services/project-tools";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
@@ -5,7 +6,6 @@ import { GITHUB_CONNECTION_URL } from "@/features/github/services/github-token-s
 import { useGitHubStore } from "@/features/github/stores/github.store";
 import { showToast } from "@/utils/toast";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { emitAppEvent } from "@/utils/app-events";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 import type {
@@ -30,9 +30,7 @@ function getRepoPath(): string | null {
 }
 
 function showGitHubSidebar(): void {
-  const state = useUIState.getState();
-  state.setIsSidebarVisible(true);
-  state.setActiveView("github-prs");
+  showProjectTool("github-prs");
 }
 
 function dispatchGitHubSidebarAction(action: GitHubSidebarAction): void {

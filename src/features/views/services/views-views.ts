@@ -1,4 +1,5 @@
-import { lazy } from "react";
+import { StackIcon } from "@/ui/icons";
+import { createElement, lazy } from "react";
 import { registerSidebarView } from "@/features/layout/services/sidebar-view-registry";
 import { registerPaneView } from "@/features/panes/services/pane-view-registry";
 
@@ -13,10 +14,10 @@ export function registerCustomViews() {
   registerPaneView("customView", { component: CustomView, getProps: (buffer) => ({ buffer }) });
   registerSidebarView({
     id: "views",
+    title: "Views",
+    icon: createElement(StackIcon),
     order: 30,
     component: ViewsSidebar,
     getProps: ({ rootFolderPath }) => ({ projectPath: rootFolderPath ?? null }),
-    loadsOnDemand: true,
-    suspendWhenHidden: true,
   });
 }

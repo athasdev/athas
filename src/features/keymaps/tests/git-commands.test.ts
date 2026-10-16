@@ -2,20 +2,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test"
 import { onAppEvent } from "@/utils/app-events";
 
 const mocks = vi.hoisted(() => ({
-  setIsSidebarVisible: vi.fn(),
-  setActiveView: vi.fn(),
+  showProjectTool: vi.fn(),
   showToast: vi.fn(),
   stageAllFiles: vi.fn(async () => true),
   repo: { activeRepoPath: "/repo" as string | null },
 }));
 
-vi.mock("@/features/layout/stores/ui-state.store", () => ({
-  useUIState: {
-    getState: () => ({
-      setIsSidebarVisible: mocks.setIsSidebarVisible,
-      setActiveView: mocks.setActiveView,
-    }),
-  },
+vi.mock("@/features/layout/services/project-tools", () => ({
+  showProjectTool: mocks.showProjectTool,
 }));
 vi.mock("@/utils/toast", () => ({ showToast: mocks.showToast }));
 vi.mock("@/features/git/stores/git-repository.store", () => ({
@@ -95,11 +89,10 @@ describe("git commands", () => {
     ["git.manageWorktrees", { type: "manage-branches", tab: "worktrees" }],
     ["git.showBranchDiff", { type: "show-branch-diff" }],
     ["git.viewStashes", { type: "view-stashes" }],
-  ])("opens %s through the git sidebar", async (id, detail) => {
+  ])("opens %s through the Git tool in the dock", async (id, detail) => {
     await command(id).execute();
 
-    expect(mocks.setIsSidebarVisible).toHaveBeenCalledWith(true);
-    expect(mocks.setActiveView).toHaveBeenCalledWith("git");
+    expect(mocks.showProjectTool).toHaveBeenCalledWith("git");
     expect(gitSidebarAction).toHaveBeenCalledWith(detail);
   });
 

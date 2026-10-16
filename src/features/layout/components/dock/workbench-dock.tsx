@@ -3,11 +3,11 @@ import {
   Fragment,
   type MouseEvent as ReactMouseEvent,
   useCallback,
+  useEffect,
   useRef,
   useState,
 } from "react";
 import { AGENT_SESSION_CHAT_ATTRIBUTE } from "@/features/ai/session-panel/services/session-links";
-import { useDockOwner } from "@/features/layout/hooks/use-dock-owner";
 import { getDockSessionInfo } from "@/features/layout/services/dock-pane-registry";
 import {
   getDockPaneShares,
@@ -207,21 +207,19 @@ function Dock({ owner, hasInfo }: { owner: DockOwner; hasInfo: boolean }) {
  * The right dock: the tools of the session (or project) in the centre, stacked as panes, with the
  * session's details above them. Each owner keeps its own layout.
  */
-export function WorkbenchDock() {
-  const owner = useDockOwner();
-  if (!owner || owner.kind !== "session") return null;
-  return <SessionDock key={owner.id} chatId={owner.id} />;
+export function WorkbenchDock({ owner }: { owner: DockOwner | null }) {
+  const { setCurrentOwner } = useDockLayoutStore.use.actions();
+  useEffect(() => {
+    setCurrentOwner(owner);
+  }, [owner, setCurrentOwner]);
+  if (!owner) return null;
+  if (owner.kind === "session") return <SessionDock key={owner.id} chatId={owner.id} />;
+  return <Dock key={owner.id} owner={owner} hasInfo={false} />;
 }
 
-/** Whether a pane of the dock is maximized over the centre. */
-export function useDockCoversCentre(): boolean {
-  const owner = useDockOwner();
+/** Whether a pane of the owner's dock is maximized over the centre. */
+export function useDockCoversCentre(owner: DockOwner | null): boolean {
   const layout = useDockLayout(owner);
   const hidden = useDockLayoutStore.use.hidden();
-  return Boolean(
-    owner?.kind === "session" &&
-    !hidden &&
-    layout.maximized &&
-    layout.panes.includes(layout.maximized),
-  );
+  return Boolean(owner && !hidden && layout.maximized && layout.panes.includes(layout.maximized));
 }

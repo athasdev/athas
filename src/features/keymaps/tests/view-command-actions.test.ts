@@ -16,6 +16,9 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorSettingOverridesStore } from "@/features/editor/stores/editor-setting-overrides.store";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { useZoomStore } from "@/features/layout/stores/zoom.store";
+import { selectDockLayout, useDockLayoutStore } from "@/features/layout/stores/dock-layout.store";
+import type { DockOwner } from "@/features/layout/types/dock.types";
+import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { seedActiveBuffer } from "@/features/panes/tests/helpers/seed-pane-tabs";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
@@ -84,6 +87,9 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
+const dockPanes = (owner: DockOwner) =>
+  selectDockLayout(useDockLayoutStore.getState(), owner).panes;
+
 describe("sidebar toggles", () => {
   it("flips the sidebar visibility", () => {
     ui().setIsSidebarVisible(true);
@@ -99,31 +105,27 @@ describe("sidebar toggles", () => {
     ["github-prs", toggleGitHubSidebar],
     ["views", toggleViewsSidebar],
     ["docker", toggleDockerSidebar],
-  ] as const)(
-    "shows the %s view, then hides the sidebar when it is already showing",
-    (view, toggle) => {
-      ui().setIsSidebarVisible(false);
-      ui().setActiveView(view === "files" ? "git" : "files");
+  ] as const)("opens %s in the project's dock, then closes it there", (view, toggle) => {
+    useProjectStore.setState({ rootFolderPath: "/work/site" });
+    useDockLayoutStore.setState({ layouts: {}, hidden: false, currentOwner: null });
+    const owner = { kind: "project", id: "/work/site" } as const;
+    const pane = `view:${view}`;
+    if (view === "files") useDockLayoutStore.getState().actions.close(owner, pane);
 
-      toggle();
-      expect(ui().isSidebarVisible).toBe(true);
-      expect(ui().activeSidebarView).toBe(view);
-
-      toggle();
-      expect(ui().isSidebarVisible).toBe(false);
-      expect(ui().activeSidebarView).toBe(view);
-    },
-  );
-
-  it("switches to another view instead of hiding when a different view is visible", () => {
-    ui().setActiveView("files");
-    ui().setIsSidebarVisible(true);
-
-    toggleSourceControlSidebar();
-
+    toggle();
+    expect(dockPanes(owner)).toContain(pane);
     expect(ui().isSidebarVisible).toBe(true);
-    expect(ui().activeSidebarView).toBe("git");
-    expect(ui().isGitViewActive).toBe(true);
+
+    toggle();
+    expect(dockPanes(owner)).not.toContain(pane);
+  });
+
+  it("opens a tool in the dock of the session it shows", () => {
+    const session = { kind: "session", id: "chat-1" } as const;
+    useDockLayoutStore.setState({ layouts: {}, hidden: false, currentOwner: session });
+    toggleSourceControlSidebar();
+    expect(dockPanes(session)).toEqual(["view:git"]);
+    useDockLayoutStore.setState({ currentOwner: null });
   });
 });
 

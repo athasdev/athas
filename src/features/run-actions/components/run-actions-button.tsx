@@ -161,7 +161,6 @@ export default function RunActionsButton() {
                 type="button"
                 variant="ghost"
                 iconOnly
-                size="lg"
                 tooltip="Run actions"
                 aria-label="Run actions"
                 active={isMenuOpen}

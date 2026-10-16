@@ -3,9 +3,28 @@ import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 import { useDockLayoutStore, selectDockLayout } from "@/features/layout/stores/dock-layout.store";
 import { Button } from "@/ui/button";
-import { GitDiffIcon, GlobeIcon, SidebarRightIcon, TerminalIcon } from "@/ui/icons";
+import { getProjectToolPaneId } from "@/features/layout/services/dock-pane-registry";
+import { getSidebarViews } from "@/features/layout/services/sidebar-view-registry";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/ui/dropdown";
+import {
+  GitDiffIcon,
+  GlobeIcon,
+  ListChecksIcon,
+  SidebarRightIcon,
+  TerminalIcon,
+  WrenchIcon,
+} from "@/ui/icons";
+import { useHasSessionPlan } from "../hooks/use-session-tool-availability";
+import { openSessionTool, toggleSessionTool } from "../services/session-tools";
 import { StatusDot } from "@/ui/status-dot";
-import { toggleSessionTool } from "../services/session-tools";
 import { getSessionDockOwner, useSessionPanelStore } from "../stores/session-panel.store";
 import type { SessionPanelTab } from "../types/session-panel.types";
 
@@ -50,6 +69,58 @@ function HeaderToolButton({
   );
 }
 
+/** Plan and the project tools (Files, Source Control, GitHub…), opened in the session's dock. */
+function MoreToolsMenu({ chatId }: { chatId: string }) {
+  const coreFeatures = useSettingsStore((state) => state.settings.coreFeatures);
+  const hasPlan = useHasSessionPlan(getSessionDockOwner(chatId));
+  const tools = getSidebarViews().filter(
+    (view) => view.isAvailable?.({ coreFeatures, hasTeamsCollaborationAccess: false }) ?? true,
+  );
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            type="button"
+            variant="ghost"
+            iconOnly
+            aria-label="More tools"
+            tooltip="More tools"
+          />
+        }
+      >
+        <WrenchIcon />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" size="default">
+        {hasPlan ? (
+          <DropdownMenuItem onClick={() => openSessionTool(chatId, "plan", { focus: true })}>
+            <ListChecksIcon />
+            Plan
+          </DropdownMenuItem>
+        ) : null}
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>Project tools</DropdownMenuLabel>
+          {tools.map((tool) => (
+            <DropdownMenuItem
+              key={tool.id}
+              onClick={() =>
+                useDockLayoutStore
+                  .getState()
+                  .actions.open(getSessionDockOwner(chatId), getProjectToolPaneId(tool.id), {
+                    focus: true,
+                  })
+              }
+            >
+              {tool.icon}
+              {tool.title}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 /** The session header's way into its tools, and the switch that puts the dock away. */
 export function SessionHeaderTools({ chatId }: { chatId: string }) {
   const hidden = useDockLayoutStore.use.hidden();
@@ -64,6 +135,7 @@ export function SessionHeaderTools({ chatId }: { chatId: string }) {
       {(isCloud ? [] : HEADER_TOOLS).map((tool) => (
         <HeaderToolButton key={tool.tab} chatId={chatId} tool={tool} />
       ))}
+      <MoreToolsMenu chatId={chatId} />
       <Button
         type="button"
         variant="ghost"

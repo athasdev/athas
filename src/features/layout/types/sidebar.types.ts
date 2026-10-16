@@ -1,6 +1,5 @@
 export type SidebarView =
   | "files"
-  | "agents"
   | "git"
   | "github-prs"
   | "workspaces"

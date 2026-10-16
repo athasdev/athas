@@ -156,9 +156,9 @@ export default function WebAccountMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        render={<SidebarIconButton size="lg" tooltip={accountName} aria-label="Account" />}
+        render={<SidebarIconButton tooltip={accountName} aria-label="Account" />}
       >
-        <Avatar name={accountName} src={signedIn?.user.avatarUrl} size="md" />
+        <Avatar name={accountName} src={signedIn?.user.avatarUrl} size="sm" />
       </DropdownMenuTrigger>
       <DropdownMenuContent size="wide">
         {signedIn ? (

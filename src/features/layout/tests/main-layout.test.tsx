@@ -80,11 +80,13 @@ vi.mock("@/features/window/components/title-bar/title-leading", () => ({
   TitleLeading: stub("title-leading"),
 }));
 vi.mock("../components/performance-monitor", () => ({ PerformanceMonitor: stub("perf") }));
-vi.mock("../components/sidebar/activity-bar", () => ({ ActivityBar: stub("activity-bar") }));
-vi.mock("../components/sidebar/sidebar-pane", () => ({
-  SidebarPane: ({ visible }: { visible: boolean }) => (
-    <div data-testid="sidebar" data-visible={visible} />
-  ),
+vi.mock("../components/sidebar/workbench-sidebar", () => ({
+  WorkbenchSidebar: stub("sidebar"),
+  ProjectPickerHost: stub("project-picker-host"),
+}));
+vi.mock("../components/dock/workbench-dock", () => ({
+  WorkbenchDock: stub("dock"),
+  useDockCoversCentre: () => false,
 }));
 vi.mock("../components/resizable-pane", () => ({
   ResizablePane: ({ hidden, children }: { hidden: boolean; children: ReactNode }) =>
@@ -229,9 +231,10 @@ describe("main layout", () => {
   it("lays out the workbench and mounts the deferred surfaces after the first paint", async () => {
     await render();
     expect(view().getByTestId("title-leading")).toBeTruthy();
-    expect(view().getByTestId("activity-bar")).toBeTruthy();
     expect(view().getByTestId("split-views")).toBeTruthy();
-    expect(view().getByTestId("sidebar").dataset.visible).toBe("true");
+    expect(view().getByTestId("sidebar")).toBeTruthy();
+    expect(view().getByTestId("dock")).toBeTruthy();
+    expect(view().getByTestId("project-picker-host")).toBeTruthy();
     await wait(30);
     expect(view().getByTestId("bottom-pane")).toBeTruthy();
     expect(view().getByTestId("quick-open")).toBeTruthy();

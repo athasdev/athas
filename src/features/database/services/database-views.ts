@@ -1,4 +1,5 @@
-import { lazy } from "react";
+import { DatabaseIcon } from "@/ui/icons";
+import { createElement, lazy } from "react";
 import { registerSidebarView } from "@/features/layout/services/sidebar-view-registry";
 import { registerPaneView } from "@/features/panes/services/pane-view-registry";
 import { DatabaseBufferView } from "../components/database-buffer-view";
@@ -20,9 +21,9 @@ export function registerDatabaseViews() {
   });
   registerSidebarView({
     id: "databases",
+    title: "Databases",
+    icon: createElement(DatabaseIcon),
     order: 60,
     component: DatabaseSidebar,
-    loadsOnDemand: true,
-    suspendWhenHidden: true,
   });
 }

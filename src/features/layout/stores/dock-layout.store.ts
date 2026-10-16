@@ -87,7 +87,9 @@ interface DockLayoutStoreState {
    * file from the session's tools keeps its dock. Null once the project's own view was chosen.
    */
   stickySessions: Record<string, string | null>;
-  /** A pane the user asked for, which scrolls into view and takes focus once when it shows. */
+  /** Whose tools the dock shows now; the workbench dock keeps it current. */
+  currentOwner: DockOwner | null;
+  /** A pane the user asked for, which takes focus once when it shows. */
   focusRequest: { owner: string; pane: DockPaneId; nonce: number } | null;
   actions: {
     /** Adds `pane` to the owner's dock, or keeps it where it is, and shows the dock. */
@@ -102,6 +104,7 @@ interface DockLayoutStoreState {
     setWidth: (width: number) => void;
     setHidden: (hidden: boolean) => void;
     setStickySession: (workspacePath: string, chatId: string | null) => void;
+    setCurrentOwner: (owner: DockOwner | null) => void;
     /** Whether `pane` was asked to take focus, clearing the request. */
     consumeFocus: (owner: DockOwner, pane: DockPaneId) => boolean;
     /** Gives sessions without a dock the one their old tool panel described. */
@@ -180,6 +183,7 @@ const useDockLayoutStoreBase = create<DockLayoutStoreState>()(
         width: DEFAULT_DOCK_WIDTH,
         hidden: false,
         stickySessions: {},
+        currentOwner: null,
         focusRequest: null,
         actions: {
           open,
@@ -222,6 +226,12 @@ const useDockLayoutStoreBase = create<DockLayoutStoreState>()(
               state.stickySessions[workspacePath] === chatId
                 ? state
                 : { stickySessions: { ...state.stickySessions, [workspacePath]: chatId } },
+            ),
+          setCurrentOwner: (owner) =>
+            set((state) =>
+              state.currentOwner?.kind === owner?.kind && state.currentOwner?.id === owner?.id
+                ? state
+                : { currentOwner: owner },
             ),
           consumeFocus: (owner, pane) => {
             const request = get().focusRequest;

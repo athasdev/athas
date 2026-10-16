@@ -36,7 +36,6 @@ import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
 import { useSidebarStore } from "@/features/layout/stores/sidebar.store";
 import { writeSidebarResourceDragData } from "@/features/sidebar/services/sidebar-resource-drag";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { ChromeGroup } from "@/ui/chrome";
 import { ContextMenuPopup, createContextMenuGroups } from "@/ui/context-menu";
 import {
@@ -206,7 +205,7 @@ const PRListItem = memo(
 
 PRListItem.displayName = "PRListItem";
 
-const GitHubPRsView = memo(() => {
+const GitHubPRsView = memo(({ isActive = true }: { isActive?: boolean }) => {
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const currentFilter = useGitHubStore.use.currentFilter();
   const isAuthenticated = useGitHubStore.use.isAuthenticated();
@@ -225,7 +224,7 @@ const GitHubPRsView = memo(() => {
   const githubSidebarSectionOrder = useSettingsStore(
     (state) => state.settings.githubSidebarSectionOrder,
   );
-  const isGitHubPRsViewActive = useUIState((state) => state.isGitHubPRsViewActive);
+  const isGitHubPRsViewActive = isActive;
   const effectiveRepoPath = activeRepoPath ?? rootFolderPath ?? null;
   const pullRequestsQuery = useQuery({
     ...pullRequestListQuery(effectiveRepoPath, currentFilter, markAuthFailed),

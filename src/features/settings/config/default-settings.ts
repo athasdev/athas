@@ -8,11 +8,7 @@ import {
   DEFAULT_MONO_FONT_FAMILY,
   DEFAULT_UI_FONT_FAMILY,
 } from "@/features/settings/config/typography-defaults";
-import {
-  DEFAULT_HIDDEN_SIDEBAR_ACTIVITY_ITEM_IDS,
-  GIT_SIDEBAR_TAB_IDS,
-  SIDEBAR_ACTIVITY_ITEM_IDS,
-} from "@/features/layout/config/item-order";
+import { GIT_SIDEBAR_TAB_IDS } from "@/features/layout/config/item-order";
 import type { Settings } from "@/features/settings/types/settings.types";
 
 export const DEFAULT_AI_PROVIDER_ID = "athas";
@@ -85,9 +81,6 @@ export const defaultSettings: Settings = {
   nativeMenuBar: false,
   compactMenuBar: true,
   windowTransparency: false,
-  sidebarActivityItemsOrder: [...SIDEBAR_ACTIVITY_ITEM_IDS],
-  hiddenSidebarActivityItems: [...DEFAULT_HIDDEN_SIDEBAR_ACTIVITY_ITEM_IDS],
-  pinnedSidebarExtensionItems: [],
   openFoldersInNewWindow: true,
   // AI
   aiProviderId: DEFAULT_AI_PROVIDER_ID,
@@ -204,9 +197,6 @@ export function getDefaultSettingsSnapshot(): Settings {
     enterpriseAllowedExtensionIds: [...defaultSettings.enterpriseAllowedExtensionIds],
     hiddenFilePatterns: [...defaultSettings.hiddenFilePatterns],
     hiddenDirectoryPatterns: [...defaultSettings.hiddenDirectoryPatterns],
-    sidebarActivityItemsOrder: [...defaultSettings.sidebarActivityItemsOrder],
-    hiddenSidebarActivityItems: [...defaultSettings.hiddenSidebarActivityItems],
-    pinnedSidebarExtensionItems: [...defaultSettings.pinnedSidebarExtensionItems],
     hiddenGitSidebarItems: [...defaultSettings.hiddenGitSidebarItems],
     aiSkills: defaultSettings.aiSkills.map((skill) => ({ ...skill })),
     mcpServers: defaultSettings.mcpServers.map((server) => ({ ...server, args: [...server.args] })),

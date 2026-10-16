@@ -43,21 +43,12 @@ describe("default settings", () => {
     expect(settings.terminalRightClickSelectsWord).toBe(false);
   });
 
-  it("starts with a focused Activity rail while keeping specialist tools available", () => {
+  it("starts with calm tabs, every Git sidebar item and the default sidebar width", () => {
     const settings = getDefaultSettingsSnapshot();
 
     expect(settings.reduceMotion).toBe(false);
     expect(settings.showTabIcons).toBe(true);
     expect(settings.tabCloseButtonVisibility).toBe("active");
-    expect(settings.hiddenSidebarActivityItems).toEqual([
-      "github-prs",
-      "views",
-      "debugger",
-      "databases",
-      "docker",
-      "extensions",
-    ]);
-    expect(settings.pinnedSidebarExtensionItems).toEqual([]);
     expect(settings.hiddenGitSidebarItems).toEqual([]);
     expect(settings.sidebarWidth).toBe(220);
     expect(settings).not.toHaveProperty("rightSidebarWidth");

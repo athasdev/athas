@@ -58,10 +58,8 @@ import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { workspaceSessionRepository } from "@/features/workspace/persistence/services/workspace-session-repository";
-import { normalizeItemOrder, SIDEBAR_ACTIVITY_ITEM_IDS } from "../config/item-order";
-import { useActivityBarVisibility } from "../hooks/use-activity-bar-visibility";
+import { GIT_SIDEBAR_ITEM_IDS, normalizeItemOrder } from "../config/item-order";
 import { useResponsiveWorkbenchLayout } from "../hooks/use-responsive-workbench-layout";
-import { useSidebarPaneController } from "../hooks/use-sidebar-pane-controller";
 import { createTerminalSlice, type TerminalSlice } from "../stores/ui-state/terminal-slice";
 import { createViewSlice, type ViewSlice } from "../stores/ui-state/view-slice";
 
@@ -103,78 +101,6 @@ afterEach(() => {
   useProjectStore.setState({ rootFolderPath: undefined });
 });
 
-describe("useSidebarPaneController", () => {
-  it("switches primary views and collapses the sidebar when the active view is clicked", () => {
-    const { result, unmount } = renderHook(useSidebarPaneController);
-
-    act(() => result.current.openSidebarView("git"));
-    expect(uiStore.getState()).toMatchObject({ activeSidebarView: "git", isSidebarVisible: true });
-
-    act(() => result.current.openSidebarView("git"));
-    expect(uiStore.getState().isSidebarVisible).toBe(false);
-
-    act(() => result.current.openSidebarView("files"));
-    expect(uiStore.getState()).toMatchObject({
-      activeSidebarView: "files",
-      isSidebarVisible: true,
-    });
-    unmount();
-  });
-});
-
-describe("useActivityBarVisibility", () => {
-  it("hides and shows core items and never hides search", () => {
-    settingsStore.setState({
-      settings: {
-        hiddenSidebarActivityItems: ["search", "docker"],
-        pinnedSidebarExtensionItems: [],
-      },
-    });
-    const { result, unmount } = renderHook(useActivityBarVisibility);
-
-    expect(result.current.isNavigationItemVisible("docker")).toBe(false);
-    expect(result.current.isNavigationItemVisible("files")).toBe(true);
-
-    act(() => result.current.setNavigationItemVisible("git", false));
-    act(() => result.current.setNavigationItemVisible("git", false));
-    act(() => result.current.setNavigationItemVisible("docker", true));
-
-    expect(settingsStore.getState().settings.hiddenSidebarActivityItems).toEqual(["search", "git"]);
-    expect(result.current.isNavigationItemVisible("git")).toBe(false);
-    expect(result.current.isNavigationItemVisible("docker")).toBe(true);
-    unmount();
-  });
-
-  it("pins extension items explicitly", () => {
-    const { result, unmount } = renderHook(useActivityBarVisibility);
-
-    expect(result.current.isNavigationItemVisible("ext.todo")).toBe(false);
-    act(() => result.current.setNavigationItemVisible("ext.todo", true));
-    act(() => result.current.setNavigationItemVisible("ext.todo", true));
-    expect(settingsStore.getState().settings.pinnedSidebarExtensionItems).toEqual(["ext.todo"]);
-    expect(result.current.isNavigationItemVisible("ext.todo")).toBe(true);
-
-    act(() => result.current.setNavigationItemVisible("ext.todo", false));
-    expect(result.current.isNavigationItemVisible("ext.todo")).toBe(false);
-    unmount();
-  });
-
-  it("shows every item at once", () => {
-    settingsStore.setState({
-      settings: { hiddenSidebarActivityItems: ["git"], pinnedSidebarExtensionItems: [] },
-    });
-    const { result, unmount } = renderHook(useActivityBarVisibility);
-
-    act(() => result.current.showAll(["files", "git", "ext.todo", "ext.db"]));
-
-    expect(settingsStore.getState().settings).toEqual({
-      hiddenSidebarActivityItems: [],
-      pinnedSidebarExtensionItems: ["ext.todo", "ext.db"],
-    });
-    unmount();
-  });
-});
-
 describe("useResponsiveWorkbenchLayout", () => {
   it("only changes when the narrow breakpoint is crossed", () => {
     Object.assign(window, { innerWidth: 1200 });
@@ -199,9 +125,7 @@ describe("useResponsiveWorkbenchLayout", () => {
 
 describe("normalizeItemOrder", () => {
   it("keeps the saved order, drops unknown and duplicate ids and appends new ones", () => {
-    expect(normalizeItemOrder(undefined, SIDEBAR_ACTIVITY_ITEM_IDS)).toEqual([
-      ...SIDEBAR_ACTIVITY_ITEM_IDS,
-    ]);
+    expect(normalizeItemOrder(undefined, GIT_SIDEBAR_ITEM_IDS)).toEqual([...GIT_SIDEBAR_ITEM_IDS]);
     expect(
       normalizeItemOrder<string>(["git", "removed", "git", "files"], ["files", "git", "docker"]),
     ).toEqual(["git", "files", "docker"]);

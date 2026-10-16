@@ -1,4 +1,5 @@
-import { lazy } from "react";
+import { UsersIcon } from "@/ui/icons";
+import { createElement, lazy } from "react";
 import { registerSidebarView } from "@/features/layout/services/sidebar-view-registry";
 
 const CollaborationSidebarView = lazy(() =>
@@ -10,10 +11,11 @@ const CollaborationSidebarView = lazy(() =>
 export function registerCollaborationViews() {
   registerSidebarView({
     id: "collaboration",
+    title: "Collaboration",
+    icon: createElement(UsersIcon),
     order: 100,
     component: CollaborationSidebarView,
     isAvailable: ({ coreFeatures, hasTeamsCollaborationAccess }) =>
       hasTeamsCollaborationAccess && coreFeatures.teamCollaboration,
-    loadsOnDemand: true,
   });
 }

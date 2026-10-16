@@ -9,9 +9,7 @@ const harness = vi.hoisted(() => ({
   hasInfo: true,
 }));
 
-vi.mock("@/features/layout/hooks/use-dock-owner", () => ({
-  useDockOwner: () => harness.owner,
-}));
+vi.mock("../components/dock/project-tools", () => ({ useProjectTools: () => [] }));
 vi.mock("@/features/panes/components/pane-resize-handle", () => ({
   PaneResizeHandle: () => createElement("div", { "data-slot": "dock-resize" }),
 }));
@@ -73,12 +71,19 @@ const layout = () => selectDockLayout(useDockLayoutStore.getState(), owner);
 const actions = () => useDockLayoutStore.getState().actions;
 
 function Probe() {
-  return createElement("output", { "data-covers": String(useDockCoversCentre()) });
+  return createElement("output", { "data-covers": String(useDockCoversCentre(harness.owner)) });
 }
 
 async function render() {
   await act(async () =>
-    root.render(createElement("div", null, createElement(WorkbenchDock), createElement(Probe))),
+    root.render(
+      createElement(
+        "div",
+        null,
+        createElement(WorkbenchDock, { owner: harness.owner }),
+        createElement(Probe),
+      ),
+    ),
   );
 }
 

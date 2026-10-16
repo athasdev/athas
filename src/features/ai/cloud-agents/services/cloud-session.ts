@@ -10,7 +10,6 @@ import type {
 } from "@/features/ai/types/ai-chat.types";
 import { getFallbackAgentSessionTitle } from "@/features/ai/utils/chat-session-title";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { revealAgentsSidebar } from "@/features/layout/services/agents-sidebar-reveal";
 import { queryClient } from "@/utils/query-client";
 import { useCloudEnvironmentStore } from "../stores/cloud-environment.store";
 import {
@@ -244,7 +243,6 @@ export function openNewCloudAgentChat() {
   const windowSession = openAgentWindowSession(chatId);
   if (windowSession) return windowSession;
   const bufferId = useBufferStore.getState().actions.openAgentBuffer(chatId);
-  revealAgentsSidebar();
   return bufferId;
 }
 

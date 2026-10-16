@@ -1,4 +1,4 @@
-import { useUIState } from "@/features/layout/stores/ui-state.store";
+import { showProjectTool } from "@/features/layout/services/project-tools";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useWorkspaceManagementStore } from "../stores/workspace-management.store";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
@@ -6,8 +6,6 @@ import { useProjectStore } from "@/features/workspace/stores/project.store";
 export function openWorkspaceManagement() {
   const root = useProjectStore.getState().rootFolderPath;
   if (root) useWorkspaceManagementStore.getState().actions.register(root);
-  const ui = useUIState.getState();
-  ui.setActiveView("workspaces");
-  ui.setIsSidebarVisible(true);
+  showProjectTool("workspaces");
   return useBufferStore.getState().actions.openContent({ type: "workspaces" });
 }

@@ -1,3 +1,4 @@
+import { toggleProjectTool } from "@/features/layout/services/project-tools";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { openNewAgentChat } from "@/features/ai/services/open-new-agent-chat";
 import { editorAPI } from "@/features/editor/services/editor-api";
@@ -88,53 +89,23 @@ export function openGlobalSearchBuffer(): void {
 }
 
 export function toggleFilesSidebar(): void {
-  const state = useUIState.getState();
-  if (state.isSidebarVisible && state.activeSidebarView === "files") {
-    state.setIsSidebarVisible(false);
-  } else {
-    state.setActiveView("files");
-    state.setIsSidebarVisible(true);
-  }
+  toggleProjectTool("files");
 }
 
 export function toggleSourceControlSidebar(): void {
-  const state = useUIState.getState();
-  if (state.isSidebarVisible && state.activeSidebarView === "git") {
-    state.setIsSidebarVisible(false);
-  } else {
-    state.setActiveView("git");
-    state.setIsSidebarVisible(true);
-  }
+  toggleProjectTool("git");
 }
 
 export function toggleGitHubSidebar(): void {
-  const state = useUIState.getState();
-  if (state.isSidebarVisible && state.activeSidebarView === "github-prs") {
-    state.setIsSidebarVisible(false);
-  } else {
-    state.setActiveView("github-prs");
-    state.setIsSidebarVisible(true);
-  }
+  toggleProjectTool("github-prs");
 }
 
 export function toggleViewsSidebar(): void {
-  const state = useUIState.getState();
-  if (state.isSidebarVisible && state.activeSidebarView === "views") {
-    state.setIsSidebarVisible(false);
-  } else {
-    state.setActiveView("views");
-    state.setIsSidebarVisible(true);
-  }
+  toggleProjectTool("views");
 }
 
 export function toggleDockerSidebar(): void {
-  const state = useUIState.getState();
-  if (state.isSidebarVisible && state.activeSidebarView === "docker") {
-    state.setIsSidebarVisible(false);
-  } else {
-    state.setActiveView("docker");
-    state.setIsSidebarVisible(true);
-  }
+  toggleProjectTool("docker");
 }
 
 export function showThemeSelector(): void {

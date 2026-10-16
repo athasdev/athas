@@ -1,3 +1,4 @@
+import { showProjectTool } from "@/features/layout/services/project-tools";
 import { useEditorSettingOverridesStore } from "@/features/editor/stores/editor-setting-overrides.store";
 import { isWordWrapShown } from "@/features/editor/services/word-wrap-toggle";
 import {
@@ -416,13 +417,9 @@ export const databaseCommands: Command[] = [
     id: "database.connect",
     title: "Show Databases",
     category: "Database",
-    description: "Show workspace database connections in the sidebar",
+    description: "Show workspace database connections in the dock",
     icon: <DatabaseIcon />,
     palette: { label: "Database: Show Databases" },
-    execute: () => {
-      const ui = useUIState.getState();
-      ui.setActiveView("databases");
-      ui.setIsSidebarVisible(true);
-    },
+    execute: () => showProjectTool("databases"),
   },
 ];

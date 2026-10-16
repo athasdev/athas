@@ -4,7 +4,6 @@ import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { migrateLegacyAgentId } from "./agent-clis";
 import { openAgentWindowSession } from "@/features/ai/detached/services/agent-window-service";
-import { revealAgentsSidebar } from "@/features/layout/services/agents-sidebar-reveal";
 
 interface OpenNewAgentChatOptions {
   editorSelections?: EditorSelectionContext[];
@@ -37,6 +36,5 @@ export function openNewAgentChat(
   const windowSession = openAgentWindowSession(chatId);
   if (windowSession) return windowSession;
   const bufferId = useBufferStore.getState().actions.openAgentBuffer(chatId);
-  revealAgentsSidebar();
   return bufferId;
 }

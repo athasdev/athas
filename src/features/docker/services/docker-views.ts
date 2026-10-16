@@ -1,4 +1,5 @@
-import { lazy } from "react";
+import { PackageIcon } from "@/ui/icons";
+import { createElement, lazy } from "react";
 import { registerSidebarView } from "@/features/layout/services/sidebar-view-registry";
 
 const DockerSidebar = lazy(() =>
@@ -8,10 +9,10 @@ const DockerSidebar = lazy(() =>
 export function registerDockerViews() {
   registerSidebarView({
     id: "docker",
+    title: "Docker",
+    icon: createElement(PackageIcon),
     order: 40,
     component: DockerSidebar,
     isAvailable: ({ coreFeatures }) => coreFeatures.docker,
-    loadsOnDemand: true,
-    suspendWhenHidden: true,
   });
 }

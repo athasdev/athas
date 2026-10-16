@@ -175,8 +175,10 @@ describe("settings UI contract", () => {
       "utf8",
     );
     const sectionSource = readFileSync(`${componentsDirectory}/settings-section.tsx`, "utf8");
-    const sidebarPaneSource = readFileSync(
-      fileURLToPath(new URL("../../layout/components/sidebar/sidebar-pane.tsx", import.meta.url)),
+    const sidebarSource = readFileSync(
+      fileURLToPath(
+        new URL("../../layout/components/sidebar/workbench-sidebar.tsx", import.meta.url),
+      ),
       "utf8",
     );
     const modalSliceSource = readFileSync(
@@ -193,7 +195,7 @@ describe("settings UI contract", () => {
     expect(settingsViewSource).not.toContain("<SettingsBreadcrumb");
     expect(sectionSource).toContain("<GroupedSection");
     expect(sectionSource).not.toContain("<Accordion");
-    expect(sidebarPaneSource).not.toContain("SettingsSidebar");
+    expect(sidebarSource).not.toContain("SettingsSidebar");
     expect(modalSliceSource).toContain("isSettingsVisible: true");
     expect(modalSliceSource).not.toContain("openSettingsBuffer");
     expect(modalSliceSource).not.toContain("setIsSidebarVisible");

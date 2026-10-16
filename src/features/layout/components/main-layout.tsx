@@ -29,14 +29,13 @@ import { frontendTrace } from "@/utils/frontend-trace";
 import { recordStartupMilestone } from "@/features/bootstrap/services/startup-performance";
 import { useBootstrapPhaseReached } from "@/features/bootstrap/stores/bootstrap-phase.store";
 import { getInternalTabDragData } from "@/features/tabs/services/internal-tab-drag";
-import { getCollapsedActivityBarWidth } from "@/features/layout/utils/activity-bar-layout";
 import { WorkbenchFullscreenRootContext } from "@/ui/workbench-fullscreen-surface";
 import TitleBarWithSettings from "../../window/components/title-bar/title-bar";
 import { TitleLeading } from "../../window/components/title-bar/title-leading";
 import { ResizablePane } from "./resizable-pane";
 import { useDockCoversCentre, WorkbenchDock } from "./dock/workbench-dock";
-import { ActivityBar } from "./sidebar/activity-bar";
-import { SidebarPane } from "./sidebar/sidebar-pane";
+import { useDockOwner } from "../hooks/use-dock-owner";
+import { ProjectPickerHost, WorkbenchSidebar } from "./sidebar/workbench-sidebar";
 import { useResponsiveWorkbenchLayout } from "../hooks/use-responsive-workbench-layout";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 
@@ -103,14 +102,13 @@ export function MainLayout() {
   );
   const { setBottomBuffersVisible } = usePaneStore.use.actions();
   const responsiveLayout = useResponsiveWorkbenchLayout();
-  const dockCoversCentre = useDockCoversCentre();
+  const dockOwner = useDockOwner();
+  const dockCoversCentre = useDockCoversCentre(dockOwner);
   const renderedSidebarVisible = isSidebarVisible && !responsiveLayout.narrow;
-  const uiFontSize = useSettingsStore((state) => state.settings.uiFontSize);
   const isDatabaseConnectionVisible = useUIState((state) => state.isDatabaseConnectionVisible);
   const setIsDatabaseConnectionVisible = useUIState(
     (state) => state.setIsDatabaseConnectionVisible,
   );
-  const renderedActivityRailWidth = getCollapsedActivityBarWidth(uiFontSize);
   const vimRelativeLineNumbers = useSettingsStore((state) => state.settings.vimRelativeLineNumbers);
   const relativeLineNumbers = useVimStore.use.relativeLineNumbers();
   const { setRelativeLineNumbers } = useVimStore.use.actions();
@@ -304,14 +302,8 @@ export function MainLayout() {
             className="flex flex-1 flex-row overflow-hidden pr-workbench"
             style={{ minHeight: 0 }}
           >
-            <div className="h-full shrink-0">
-              <ActivityBar />
-            </div>
-            <ResizablePane
-              hidden={!renderedSidebarVisible}
-              reservedWidth={renderedActivityRailWidth}
-            >
-              <SidebarPane visible={renderedSidebarVisible} />
+            <ResizablePane hidden={!renderedSidebarVisible}>
+              <WorkbenchSidebar />
             </ResizablePane>
 
             <div
@@ -335,13 +327,14 @@ export function MainLayout() {
                 </Suspense>
               )}
             </div>
-            <WorkbenchDock />
+            <WorkbenchDock owner={dockOwner} />
           </div>
         </div>
 
         <TitleBarWithSettings showMinimal overlay />
 
         <PerformanceMonitor />
+        <ProjectPickerHost />
 
         {/* Global modals and overlays */}
         {deferredSurfacesReady ? (

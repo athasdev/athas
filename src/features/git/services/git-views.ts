@@ -1,4 +1,5 @@
-import { lazy } from "react";
+import { GitBranchIcon } from "@/ui/icons";
+import { createElement, lazy } from "react";
 import { registerSidebarView } from "@/features/layout/services/sidebar-view-registry";
 import { registerPaneView } from "@/features/panes/services/pane-view-registry";
 
@@ -15,6 +16,8 @@ export function registerGitViews() {
   });
   registerSidebarView({
     id: "git",
+    title: "Source Control",
+    icon: createElement(GitBranchIcon),
     order: 10,
     component: GitView,
     getProps: ({ rootFolderPath, onFileSelect, isActive }) => ({
@@ -23,6 +26,5 @@ export function registerGitViews() {
       isActive,
     }),
     isAvailable: ({ coreFeatures }) => coreFeatures.git,
-    loadsOnDemand: true,
   });
 }

@@ -30,6 +30,11 @@ const io = vi.hoisted(() => {
     iconScans: [] as string[],
     closed: [] as string[],
     folderPicks: 0,
+    started: [] as string[],
+    shownTools: [] as string[],
+    shownProjects: [] as string[],
+    pickerSteps: [] as string[],
+    status: { attention: null as string | null, working: false },
   };
 });
 
@@ -58,12 +63,55 @@ vi.mock("@/features/workspace/project-icons/components/project-icon-picker", () 
   ),
 }));
 
-const { ProjectSwitcher } = await import("../components/project-switcher");
+vi.mock("@/features/ai/hooks/use-sidebar-sessions", () => ({
+  useSidebarSessions: () => ({
+    byProject: {
+      web: { projectId: "web", chats: [{ id: "c1", title: "Fix login" }], cloudRuns: [] },
+    },
+    otherChats: [],
+    otherRuns: [],
+    archived: [],
+  }),
+}));
+vi.mock("@/features/ai/components/sidebar/workbench-sessions", () => ({
+  ProjectSessionList: ({ sessions }: { sessions?: { chats: { id: string; title: string }[] } }) => (
+    <ul>
+      {sessions?.chats.map((chat) => (
+        <li key={chat.id}>{chat.title}</li>
+      ))}
+    </ul>
+  ),
+  OtherCloudSessions: () => null,
+  ArchivedSessions: () => null,
+}));
+vi.mock("@/features/ai/hooks/use-project-agent-status", () => ({
+  useProjectAgentStatus: () => io.status,
+}));
+vi.mock("@/features/ai/services/agent-project-navigation", () => ({
+  startAgentInProject: (id: string) => io.started.push(id),
+}));
+vi.mock("@/features/layout/services/project-view", () => ({
+  activateProject: async () => true,
+  showProjectView: async (id: string) => io.shownProjects.push(id),
+}));
+vi.mock("@/features/layout/services/project-tools", () => ({
+  showProjectTool: (view: string) => io.shownTools.push(view),
+}));
+vi.mock("../components/dock/project-tools", () => ({
+  useProjectTools: () => [
+    { view: "files", paneId: "view:files", title: "Files", icon: null, render: () => null },
+    { view: "git", paneId: "view:git", title: "Source Control", icon: null, render: () => null },
+  ],
+}));
+
+const { SidebarProjects } = await import("../components/sidebar/sidebar-projects");
+const { useWorkspaceTabsStore } = await import("@/features/workspace/stores/workspace-tabs.store");
+const { useUIState } = await import("@/features/layout/stores/ui-state.store");
+const { useWorkbenchSidebarStore } =
+  await import("@/features/layout/stores/workbench-sidebar.store");
 
 let root: Root;
 let container: HTMLDivElement;
-let selected: string[];
-let remoteRequests: number;
 
 const project = (id: string, path: string, extra: Partial<ProjectTab> = {}): ProjectTab => ({
   id,
@@ -74,7 +122,7 @@ const project = (id: string, path: string, extra: Partial<ProjectTab> = {}): Pro
   ...extra,
 });
 
-const WEB = project("web", "/code/web");
+const WEB = project("web", "/code/web", { isActive: true });
 const API = project("api", "/code/api", { customIcon: "/code/api/logo.png" });
 const BOX = project("box", "remote://box/", { name: "Build box" });
 
@@ -94,21 +142,12 @@ async function flush() {
   });
 }
 
-async function render(
-  current: ProjectTab | null = WEB,
-  projects: ProjectTab[] = [WEB, API, BOX],
-  isSwitchingProject = false,
-) {
+async function render(projects: ProjectTab[] = [WEB, API, BOX]) {
+  useWorkspaceTabsStore.setState({ projectTabs: projects });
   await act(async () =>
     root.render(
       <DialogServiceProvider>
-        <ProjectSwitcher
-          project={current ?? undefined}
-          projects={projects}
-          isSwitchingProject={isSwitchingProject}
-          onSelectProject={(id) => selected.push(id)}
-          onAddRemote={() => remoteRequests++}
-        />
+        <SidebarProjects />
       </DialogServiceProvider>,
     ),
   );
@@ -116,26 +155,15 @@ async function render(
 }
 
 const view = () => within(document.body);
-const trigger = () => view().getByRole("button", { name: /^Switch project/ });
+const group = (id: string) => document.querySelector<HTMLElement>(`[data-project-id="${id}"]`);
 const menuItem = (name: string | RegExp) =>
   [...document.querySelectorAll<HTMLElement>('[role^="menuitem"]')].find((item) =>
     typeof name === "string"
       ? item.textContent?.trim() === name
       : name.test(item.textContent ?? ""),
   );
-const rows = () =>
-  [...document.querySelectorAll<HTMLElement>('[role^="menuitem"]')].map((item) =>
-    item.textContent?.trim(),
-  );
 
-async function openMenu() {
-  await act(async () => {
-    fireEvent.click(trigger());
-  });
-  await flush();
-}
-
-async function click(element: HTMLElement | undefined) {
+async function click(element: HTMLElement | null | undefined) {
   if (!element) throw new Error("Missing element");
   await act(async () => {
     fireEvent.click(element);
@@ -143,9 +171,13 @@ async function click(element: HTMLElement | undefined) {
   await flush();
 }
 
-async function rowAction(name: string, action: string) {
-  await click(view().getByRole("menuitem", { name: `More actions for ${name}` }));
+async function projectAction(name: string, action: string) {
+  await click(view().getByRole("button", { name: `Actions for ${name}` }));
   await click(menuItem(action));
+}
+
+async function addProjectMenu() {
+  await click(view().getByRole("button", { name: "Add project" }));
 }
 
 async function confirm(label = "Remove") {
@@ -162,8 +194,11 @@ beforeEach(() => {
   io.iconScans = [];
   io.closed = [];
   io.folderPicks = 0;
-  selected = [];
-  remoteRequests = 0;
+  io.started = [];
+  io.shownTools = [];
+  io.shownProjects = [];
+  io.status = { attention: null, working: false };
+  useWorkbenchSidebarStore.setState({ collapsedProjects: {}, inboxOpen: false });
   useProjectStore.setState({ rootFolderPath: "/code/web" });
   useFileSystemStore.setState({
     closeProject: async (id: string) => {
@@ -201,71 +236,60 @@ afterEach(async () => {
   vi.unstubAllGlobals();
 });
 
-describe("project switcher", () => {
-  it("names the current project and scans its folder for an icon once", async () => {
+describe("sidebar projects", () => {
+  it("groups each open project's sessions under it and marks the active project", async () => {
     await render();
-    expect(trigger().getAttribute("aria-label")).toBe("Switch project. Current project: web");
-    expect(trigger().getAttribute("title")).toBe("/code/web");
-    expect(io.iconScans).toEqual(["/code/web"]);
-    expect(trigger().querySelector("img")?.getAttribute("src")).toContain("favicon.svg");
-
-    await render({ ...WEB, lastOpened: 2 });
-    expect(io.iconScans).toEqual(["/code/web"]);
-
-    await render(BOX);
-    expect(trigger().getAttribute("aria-label")).toBe("Switch project. Current project: Build box");
+    expect(group("web")?.dataset.activeProject).toBe("true");
+    expect(group("api")?.dataset.activeProject).toBeUndefined();
+    expect(group("web")?.textContent).toContain("Fix login");
+    expect(group("api")?.textContent).toContain("New session");
+    expect(group("web")?.querySelector("img")?.getAttribute("src")).toContain("favicon.svg");
     expect(io.iconScans).toEqual(["/code/web"]);
   });
 
-  it("falls back to the open folder without a project tab", async () => {
-    useProjectStore.setState({ rootFolderPath: "/code/scratch" });
-    await render(null, []);
-    expect(trigger().getAttribute("aria-label")).toBe("Switch project. Current project: scratch");
-    expect(io.iconScans).toEqual([]);
+  it("folds a project to its header, which then shows a session at work", async () => {
+    io.status = { attention: null, working: true };
+    await render();
+    await click(within(group("web")!).getByRole("button", { name: /^web/ }));
+    expect(group("web")?.textContent).not.toContain("Fix login");
+    expect(within(group("web")!).getByRole("status")).toBeTruthy();
+    expect(useWorkbenchSidebarStore.getState().collapsedProjects).toEqual({ web: true });
   });
 
-  it("lists projects and closed remote connections and switches projects", async () => {
+  it("starts a session in the project it is asked from", async () => {
     await render();
-    await openMenu();
-    expect(rows()).toEqual(
-      expect.arrayContaining(["web", "api", "Build box", "Lab server", "Open project…"]),
-    );
-    expect(rows().filter((row) => row === "Build box")).toHaveLength(1);
-    await click(menuItem("api"));
-    expect(selected).toEqual(["api"]);
+    await click(view().getByRole("button", { name: "New session in api" }));
+    expect(io.started).toEqual(["api"]);
   });
 
-  it("filters projects and remote connections by search", async () => {
+  it("opens the project's own view and its tools from the project menu", async () => {
     await render();
-    await openMenu();
-    const search = view().getByPlaceholderText("Search projects");
-    await act(async () => {
-      fireEvent.change(search, { target: { value: "lab" } });
-    });
-    await flush();
-    expect(menuItem("web")).toBeUndefined();
+    await projectAction("api", "Show project files");
+    expect(io.shownProjects).toEqual(["api"]);
+    await click(view().getByRole("button", { name: "Actions for web" }));
+    await click(menuItem("Project tools"));
+    await click(menuItem("Source Control"));
+    expect(io.shownTools).toEqual(["git"]);
+  });
+
+  it("opens a folder, adds a remote and lists saved remotes that are not open", async () => {
+    const openProjectPicker = vi.fn();
+    useUIState.setState({ openProjectPicker } as never);
+    await render();
+    await addProjectMenu();
     expect(menuItem("Lab server")).toBeDefined();
-    await act(async () => {
-      fireEvent.change(search, { target: { value: "zzz" } });
-    });
-    await flush();
-    expect(view().getByText("No projects match")).toBeTruthy();
-  });
-
-  it("opens a folder or starts adding a remote from the footer", async () => {
-    await render();
-    await openMenu();
+    expect(menuItem("Build box")).toBeUndefined();
     await click(menuItem("Open project…"));
     expect(io.folderPicks).toBe(1);
-    await openMenu();
+    await addProjectMenu();
     await click(menuItem("Add remote…"));
-    expect(remoteRequests).toBe(1);
+    expect(openProjectPicker).toHaveBeenCalledWith("addRemote");
   });
 
-  it("connects to a closed remote and asks for a password when needed", async () => {
+  it("connects to a saved remote and asks for a password when needed", async () => {
     io.connectErrors = ["Authentication failed"];
     await render();
-    await openMenu();
+    await addProjectMenu();
     await click(menuItem("Lab server"));
     expect(io.connects).toEqual([["lab", undefined]]);
     const password = view().getByPlaceholderText("Enter password");
@@ -283,7 +307,7 @@ describe("project switcher", () => {
     const error = vi.spyOn(toast, "error").mockImplementation(() => 1);
     io.connectErrors = ["Connection refused"];
     await render();
-    await openMenu();
+    await addProjectMenu();
     await click(menuItem("Lab server"));
     expect(error).toHaveBeenCalledTimes(1);
     expect(view().queryByPlaceholderText("Enter password")).toBeNull();
@@ -295,8 +319,7 @@ describe("project switcher", () => {
       recentFolders: [{ name: "api", path: "/code/api", lastOpened: "now" }],
     } as never);
     await render();
-    await openMenu();
-    await rowAction("api", "Remove from Athas…");
+    await projectAction("api", "Remove from Athas…");
     expect(view().getByText(/Files on disk will not be deleted/)).toBeTruthy();
     await confirm();
     expect(io.closed).toEqual(["api"]);
@@ -306,8 +329,7 @@ describe("project switcher", () => {
 
   it("removes a remote project and its saved connection", async () => {
     await render();
-    await openMenu();
-    await rowAction("Build box", "Remove from Athas…");
+    await projectAction("Build box", "Remove from Athas…");
     expect(view().getByText(/Remote files will not be deleted/)).toBeTruthy();
     await confirm();
     expect(io.closed).toEqual(["box"]);
@@ -315,30 +337,33 @@ describe("project switcher", () => {
   });
 
   it("keeps a project when removal is cancelled or the project refuses to close", async () => {
-    await render(WEB, [WEB, project("stuck", "/code/stuck")]);
-    await openMenu();
-    await rowAction("stuck", "Remove from Athas…");
+    await render([WEB, project("stuck", "/code/stuck")]);
+    await projectAction("stuck", "Remove from Athas…");
     await confirm("Cancel");
     expect(io.closed).toEqual([]);
 
-    await openMenu();
-    await rowAction("stuck", "Remove from Athas…");
+    await projectAction("stuck", "Remove from Athas…");
     await confirm();
     expect(io.closed).toEqual(["stuck"]);
   });
 
-  it("removes a closed remote connection", async () => {
+  it("closes a project without removing it", async () => {
     await render();
-    await openMenu();
-    await rowAction("Lab server", "Remove from Athas…");
+    await projectAction("api", "Close project");
+    expect(io.closed).toEqual(["api"]);
+  });
+
+  it("removes a saved remote connection", async () => {
+    await render();
+    await addProjectMenu();
+    await click(view().getByRole("button", { name: "Remove Lab server from Athas" }));
     await confirm();
     expect(io.connections.map((connection) => connection.id)).toEqual(["box"]);
   });
 
   it("picks an icon for a local project", async () => {
     await render();
-    await openMenu();
-    await rowAction("api", "Select project icon…");
+    await projectAction("api", "Select project icon…");
     expect(view().getByRole("dialog", { name: "Icon for /code/api" })).toBeTruthy();
     await click(view().getByRole("button", { name: "Done" }));
     expect(view().queryByRole("dialog", { name: "Icon for /code/api" })).toBeNull();

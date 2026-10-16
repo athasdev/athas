@@ -121,11 +121,9 @@ export function rejectAllPendingAgentChanges(): void {
   withAgentEditsChat((chatId) => void rejectAllAgentEdits(chatId));
 }
 
-/** Shows the agents sidebar, where every session of the project is listed. */
+/** Shows the sidebar, where every project's sessions are listed. */
 export function showAgentSessions(): void {
-  const ui = useUIState.getState();
-  ui.setActiveView("agents");
-  ui.setIsSidebarVisible(true);
+  useUIState.getState().setIsSidebarVisible(true);
 }
 
 export function importAgentSession(): void {

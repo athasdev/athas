@@ -287,6 +287,7 @@ export const HistoryIcon = createIconComponent(
 );
 export const HouseIcon = createIconComponent(Nucleo.IconHouseOutline18, "HouseIcon");
 export const ImageIcon = createIconComponent(Nucleo.IconImageOutline18, "ImageIcon");
+export const InboxIcon = createIconComponent(Nucleo.IconInboxOutline18, "InboxIcon");
 export const InfoIcon = createIconComponent(Nucleo.IconCircleInfoOutline18, "InfoIcon");
 export const KeyIcon = createIconComponent(Nucleo.IconKeyOutline18, "KeyIcon");
 export const KeyboardIcon = createIconComponent(Nucleo.IconKeyboardOutline18, "KeyboardIcon");

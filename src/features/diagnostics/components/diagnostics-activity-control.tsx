@@ -27,7 +27,6 @@ export function DiagnosticsActivityControl() {
   return (
     <Tooltip content={status.tooltip}>
       <SidebarIconButton
-        size="lg"
         solidWhenActive
         active={isActive}
         tone={status.tone}

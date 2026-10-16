@@ -55,7 +55,11 @@ describe("workbench contributions", () => {
     for (const type of TEXT_TYPES) expect(getPaneView(type), type).toBeUndefined();
   });
 
-  it("keeps the sidebar views in their order", () => {
+  it("registers every project tool with a title and an icon, sessions excluded", () => {
+    for (const view of getSidebarViews()) {
+      expect(view.title, view.id).toBeTruthy();
+      expect(view.icon, view.id).toBeTruthy();
+    }
     expect(getSidebarViews().map((view) => view.id)).toEqual([
       "git",
       "github-prs",
@@ -64,7 +68,6 @@ describe("workbench contributions", () => {
       "workspaces",
       "databases",
       "files",
-      "agents",
       "collaboration",
     ]);
   });

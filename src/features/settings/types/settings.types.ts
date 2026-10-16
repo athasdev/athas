@@ -1,10 +1,6 @@
 import type { CoreFeaturesState } from "./feature.types";
 import type { AIChatSkill, McpServerSetting } from "./ai-settings.types";
-import type {
-  GitSidebarItemId,
-  GitSidebarTabId,
-  SidebarActivityItemId,
-} from "@/features/layout/config/item-order";
+import type { GitSidebarItemId, GitSidebarTabId } from "@/features/layout/config/item-order";
 
 export type Theme = string;
 export type UiDensity = "compact" | "comfortable";
@@ -114,9 +110,6 @@ export interface Settings {
   nativeMenuBar: boolean;
   compactMenuBar: boolean;
   windowTransparency: boolean;
-  sidebarActivityItemsOrder: Array<SidebarActivityItemId | string>;
-  hiddenSidebarActivityItems: string[];
-  pinnedSidebarExtensionItems: string[];
   openFoldersInNewWindow: boolean;
   // AI
   aiProviderId: string;

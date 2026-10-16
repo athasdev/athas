@@ -1,20 +1,20 @@
-import type { ComponentType } from "react";
+import type { ComponentType, ReactNode } from "react";
 import type { SidebarView } from "@/features/layout/types/sidebar.types";
 import type { CoreFeaturesState } from "@/features/settings/types/feature.types";
 
 /**
- * The views the sidebar panes show, contributed by the features that own them. A feature
- * registers its views from its registration module, which the workbench runs once before it
- * renders (`bootstrap/services/register-workbench-views.ts`). Registration modules reference views
- * through `lazy()`, so a view's code loads the first time it shows. Extension views are added by the
- * sidebar pane itself, after every registered view.
+ * The project tools (Files, Source Control, GitHub and the rest), contributed by the features
+ * that own them. Each opens as a pane of the dock (`view:<id>`). A feature registers its views from
+ * its registration module, which the workbench runs once before it renders. Registration modules
+ * reference views through `lazy()`, so a view's code loads the first time it shows. Extension views
+ * are added by the dock after every registered view.
  */
 
-/** What the sidebar pane hands each view. */
+/** What the dock hands each project tool view. */
 export interface SidebarViewContext {
   rootFolderPath: string | undefined;
   onFileSelect: (path: string, isDir: boolean) => void;
-  /** The view is the active view of its sidebar pane. */
+  /** The view is on screen in the dock. */
   isActive: boolean;
 }
 
@@ -26,15 +26,14 @@ export interface SidebarViewAvailability {
 
 export interface SidebarViewDefinition<P extends object> {
   id: SidebarView;
+  /** The name the view goes by in the dock header and the menus that open it. */
+  title: string;
+  icon: ReactNode;
   /** Position among the registered views, lowest first. */
   order: number;
   component: ComponentType<P>;
   getProps?: (context: SidebarViewContext) => NoInfer<P>;
   isAvailable?: (availability: SidebarViewAvailability) => boolean;
-  /** The view's code loads on demand, so it renders inside its own Suspense boundary. */
-  loadsOnDemand?: boolean;
-  /** Pause the view while its sidebar is collapsed instead of keeping it running. */
-  suspendWhenHidden?: boolean;
 }
 
 type AnySidebarViewDefinition = SidebarViewDefinition<object>;
