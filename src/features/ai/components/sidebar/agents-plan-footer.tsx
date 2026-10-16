@@ -1,19 +1,12 @@
 import { openExternalUrl } from "@/utils/external-url";
 import { getServiceUrls } from "@/config/services";
-import {
-  formatResetDate,
-  formatUsdCents,
-  getHostedUsageHeadline,
-  getHostedUsageState,
-  getHostedUsageTone,
-} from "@/features/ai/services/hosted-usage";
+import { getHostedUsageState } from "@/features/ai/services/hosted-usage";
 import { useProFeature } from "@/features/auth/hooks/use-pro-feature";
 import { useSubscriptionRefresh } from "@/features/auth/hooks/use-subscription-refresh";
 import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { Button } from "@/ui/button";
 import { SparkleIcon } from "@/ui/icons";
-import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
-import { Progress, ProgressCircle, ProgressLabel, ProgressValue } from "@/ui/progress";
+import { AthasUsageIndicator } from "../athas-usage-indicator";
 import { SidebarIconButton } from "@/ui/sidebar";
 
 const USAGE_REFRESH_INTERVAL_MS = 3 * 60 * 1000;
@@ -60,54 +53,9 @@ export function AgentsPlanFooter() {
     );
   }
 
-  const tone = getHostedUsageTone(usage.level);
-  const headline = getHostedUsageHeadline(usage);
   return (
     <div className="shrink-0 px-chrome-inline py-2">
-      <Popover>
-        <PopoverTrigger
-          openOnHover
-          delay={200}
-          render={
-            <SidebarIconButton
-              aria-label={`Athas AI usage: ${usage.usedPercent}% of included credit used, ${headline}`}
-            />
-          }
-        >
-          <ProgressCircle value={usage.usedPercent} tone={tone} />
-        </PopoverTrigger>
-        <PopoverContent side="top" align="start" size="default">
-          <Progress value={usage.usedPercent} tone={tone} aria-label="Included credit used">
-            <ProgressLabel>Included credit</ProgressLabel>
-            <ProgressValue>{() => headline}</ProgressValue>
-          </Progress>
-          <div className="flex min-w-0 flex-col gap-0.5 text-subtle-foreground">
-            <span>
-              {formatUsdCents(usage.usedCents)} of {formatUsdCents(usage.allowanceCents)} included
-              used
-            </span>
-            {usage.pendingCents > 0 ? (
-              <span>{formatUsdCents(usage.pendingCents)} in progress</span>
-            ) : null}
-            {usage.walletBalanceCents !== null ? (
-              <span>{formatUsdCents(usage.walletBalanceCents)} pay-as-you-go balance</span>
-            ) : null}
-            {usage.periodEnd ? (
-              <span>Included credit resets {formatResetDate(usage.periodEnd)}</span>
-            ) : null}
-          </div>
-          <div>
-            <Button
-              variant="link"
-              onClick={() => void openExternalUrl(services.dashboardBillingUrl)}
-            >
-              {usage.level === "ok" || usage.walletBalanceCents === null
-                ? "Manage billing"
-                : "Add credit"}
-            </Button>
-          </div>
-        </PopoverContent>
-      </Popover>
+      <AthasUsageIndicator placement="sidebar" />
     </div>
   );
 }
