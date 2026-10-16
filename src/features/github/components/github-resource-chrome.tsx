@@ -53,7 +53,7 @@ export function PullRequestCarouselCard({ buffer }: { buffer: PaneViewBuffer<"pu
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background">
-      <div className="shrink-0 bg-surface px-3 py-3">
+      <div className="shrink-0 px-3 py-3">
         <div className="flex min-w-0 items-start gap-2">
           <div className="mt-0.5 size-4 shrink-0 rounded-lg bg-success-soft" />
           <div className="min-w-0 flex-1">

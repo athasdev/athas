@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/ui/button";
+import { Card } from "@/ui/card";
 import { Spinner } from "@/ui/spinner";
 import { GitHubMarkdownEditor } from "./github-markdown-editor";
 import { capitalize } from "@/utils/capitalize";
@@ -54,52 +55,56 @@ export function GitHubPRInlineAction({
   }, [kind]);
 
   return (
-    <section className="space-y-3 rounded-lg border border-border bg-surface p-3">
-      <h2 className="font-sans ui-text-sm font-medium text-foreground">{copy.title}</h2>
-      {kind === "merge" ? (
-        <div className="flex flex-wrap items-center gap-1">
-          {(["squash", "merge", "rebase"] as const).map((option) => (
-            <Button
-              key={option}
-              type="button"
-              variant="ghost"
-              active={method === option}
-              onClick={() => setMethod(option)}
+    <div className="pl-9">
+      <Card>
+        <section className="space-y-3 px-3">
+          <h2 className="font-sans ui-text-sm font-medium text-foreground">{copy.title}</h2>
+          {kind === "merge" ? (
+            <div className="flex flex-wrap items-center gap-1">
+              {(["squash", "merge", "rebase"] as const).map((option) => (
+                <Button
+                  key={option}
+                  type="button"
+                  variant="ghost"
+                  active={method === option}
+                  onClick={() => setMethod(option)}
+                  disabled={isSubmitting}
+                >
+                  {capitalize(option)}
+                </Button>
+              ))}
+            </div>
+          ) : (
+            <GitHubMarkdownEditor
+              value={body}
+              onChange={setBody}
+              placeholder={"placeholder" in copy ? copy.placeholder : "Write a review..."}
+              autoFocus
+              minHeight={160}
               disabled={isSubmitting}
-            >
-              {capitalize(option)}
+              onSubmit={() => {
+                if (canSubmit) void onSubmit(body, method);
+              }}
+              onCancel={onCancel}
+            />
+          )}
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" onClick={onCancel} disabled={isSubmitting}>
+              Cancel
             </Button>
-          ))}
-        </div>
-      ) : (
-        <GitHubMarkdownEditor
-          value={body}
-          onChange={setBody}
-          placeholder={"placeholder" in copy ? copy.placeholder : "Write a review..."}
-          autoFocus
-          minHeight={160}
-          disabled={isSubmitting}
-          onSubmit={() => {
-            if (canSubmit) void onSubmit(body, method);
-          }}
-          onCancel={onCancel}
-        />
-      )}
-      <div className="flex justify-end gap-2">
-        <Button type="button" variant="ghost" onClick={onCancel} disabled={isSubmitting}>
-          Cancel
-        </Button>
-        <Button
-          type="button"
-          variant="accent"
-          onClick={() => void onSubmit(body, method)}
-          disabled={!canSubmit}
-          shortcut="mod+enter"
-        >
-          {isSubmitting ? <Spinner label="Working" compact /> : null}
-          {copy.submitLabel}
-        </Button>
-      </div>
-    </section>
+            <Button
+              type="button"
+              variant="accent"
+              onClick={() => void onSubmit(body, method)}
+              disabled={!canSubmit}
+              shortcut="mod+enter"
+            >
+              {isSubmitting ? <Spinner label="Working" compact /> : null}
+              {copy.submitLabel}
+            </Button>
+          </div>
+        </section>
+      </Card>
+    </div>
   );
 }

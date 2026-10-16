@@ -104,7 +104,7 @@ export function GitHubSidebarRow({
         size="wide"
         variant="preview"
       >
-        <div className="border-divider border-b p-3">
+        <div className="px-3 pt-3 pb-1">
           <div className="flex min-w-0 items-start gap-2.5">
             {preview.icon ? (
               <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-accent">
@@ -133,7 +133,7 @@ export function GitHubSidebarRow({
           ) : null}
         </div>
         {preview.details?.length ? (
-          <dl className="grid grid-cols-[5.25rem_minmax(0,1fr)] gap-x-3 gap-y-2 p-3 ui-text-sm">
+          <dl className="grid grid-cols-[5.25rem_minmax(0,1fr)] gap-x-3 gap-y-2 px-3 pt-2 pb-3 ui-text-sm">
             {preview.details.map((detail, index) =>
               detail.value ? (
                 <div key={index} className="contents">
@@ -164,9 +164,7 @@ export function GitHubSidebarRow({
           </dl>
         ) : null}
         {preview.footer ? (
-          <div className="border-divider border-t px-3 py-2 text-subtle-foreground ui-text-sm">
-            {preview.footer}
-          </div>
+          <div className="px-3 pb-3 text-subtle-foreground ui-text-sm">{preview.footer}</div>
         ) : null}
       </HoverCardContent>
     </HoverCard>

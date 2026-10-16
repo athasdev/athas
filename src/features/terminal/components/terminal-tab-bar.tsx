@@ -42,6 +42,7 @@ import {
   DropdownMenuTrigger,
 } from "@/ui/dropdown";
 import { ContextMenuPopup, type ContextMenuAction } from "@/ui/context-menu";
+import { ChromeGroup } from "@/ui/chrome";
 import { Button } from "@/ui/button";
 import {
   scrollTabIntoStrip,
@@ -399,7 +400,7 @@ const TerminalTabBar = ({
   }, [activeTerminalId, sortedTerminalKey]);
   const terminalProfiles = getAllTerminalProfiles(availableShells, customProfiles);
   const terminalToolbarActions = (
-    <div className="flex h-full shrink-0 items-center gap-1 pl-0.5">
+    <ChromeGroup reveal gap="tight" className="ml-0.5 h-full">
       {onSearchTerminal && (
         <Button
           onClick={onSearchTerminal}
@@ -452,7 +453,7 @@ const TerminalTabBar = ({
           {isFullScreen ? <ArrowsInIcon /> : <ArrowsOutIcon />}
         </Button>
       )}
-    </div>
+    </ChromeGroup>
   );
   const pinnedTerminals = sortedTerminals.filter((terminal) => terminal.isPinned);
   const regularTerminals = sortedTerminals.filter((terminal) => !terminal.isPinned);

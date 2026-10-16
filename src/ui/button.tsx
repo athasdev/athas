@@ -21,6 +21,8 @@ export const buttonVariants = cva(
         /** Borderless: toolbars, icon buttons, quiet actions. */
         ghost:
           "bg-transparent text-subtle-foreground hover:bg-accent hover:text-foreground data-[active=true]:bg-selected data-[active=true]:text-foreground",
+        /** A view switch in a header: no fill, the active one reads by tone. */
+        tab: "bg-transparent text-subtle-foreground hover:text-foreground data-[active=true]:text-foreground data-popup-open:text-foreground",
         /** Inline text link. Sizes itself to its text. */
         link: "h-auto rounded-sm bg-transparent p-0 text-primary underline-offset-4 hover:underline",
       },

@@ -1,12 +1,8 @@
 import {
   CheckCircleIcon,
-  ChevronDownIcon,
-  ChevronRightIcon,
   CircleDotIcon,
   ClockIcon,
   GitMergeIcon,
-  LinkIcon,
-  UserIcon,
   WarningCircleIcon,
   XCircleIcon,
 } from "@/ui/icons";
@@ -15,7 +11,6 @@ import { memo, useMemo, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import Badge, { type BadgeTone } from "@/ui/badge";
 import { Button } from "@/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import { Spinner } from "@/ui/spinner";
 import { cn } from "@/utils/cn";
 import type { Label, LinkedIssue, StatusCheck } from "../types/github.types";
@@ -34,17 +29,6 @@ interface CIStatusProps {
   repositoryUrl?: string;
 }
 
-function getCheckBadgeTone(check: StatusCheck): BadgeTone {
-  if (check.conclusion === "SUCCESS") return "success";
-  if (check.conclusion === "FAILURE" || check.conclusion === "ERROR") {
-    return "danger";
-  }
-  if (check.status === "IN_PROGRESS" || check.status === "PENDING" || check.status === "QUEUED") {
-    return "warning";
-  }
-  return "neutral";
-}
-
 /** Failed first, then running, then passed, then skipped or neutral. */
 function getCheckPriority(check: StatusCheck): number {
   if (check.conclusion === "FAILURE" || check.conclusion === "ERROR") return 0;
@@ -55,8 +39,21 @@ function getCheckPriority(check: StatusCheck): number {
   return 3;
 }
 
+const COLLAPSED_CHECK_COUNT = 5;
+
+function CheckStatusIcon({ check }: { check: StatusCheck }) {
+  if (check.conclusion === "SUCCESS") return <CheckCircleIcon className="text-success" />;
+  if (check.conclusion === "FAILURE" || check.conclusion === "ERROR") {
+    return <XCircleIcon className="text-destructive" />;
+  }
+  if (check.status === "IN_PROGRESS" || check.status === "PENDING" || check.status === "QUEUED") {
+    return <Spinner label="Pending check" compact />;
+  }
+  return <CircleDotIcon className="text-subtle-foreground" />;
+}
+
 export const CIStatusIndicator = memo(({ checks, repoPath, repositoryUrl }: CIStatusProps) => {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [showAll, setShowAll] = useState(false);
   const { openGitHubActionBuffer } = useBufferStore.use.actions();
 
   const openCheck = (check: StatusCheck) => {
@@ -67,7 +64,6 @@ export const CIStatusIndicator = memo(({ checks, repoPath, repositoryUrl }: CISt
       repoPath &&
       isGitHubEntityLinkForRepository(entityLink, repositoryUrl)
     ) {
-      setIsExpanded(false);
       openGitHubActionBuffer({
         runId: entityLink.runId,
         repoPath,
@@ -90,35 +86,12 @@ export const CIStatusIndicator = memo(({ checks, repoPath, repositoryUrl }: CISt
       (c) => c.status === "IN_PROGRESS" || c.status === "PENDING" || c.status === "QUEUED",
     ).length;
 
-    if (failedCount > 0) {
-      return {
-        icon: <XCircleIcon className="text-destructive" />,
-        label: `${failedCount} failed`,
-        tone: "text-destructive",
-      };
-    }
-
-    if (pendingCount > 0) {
-      return {
-        icon: <Spinner label="Pending checks" compact />,
-        label: `${pendingCount} pending`,
-        tone: "text-warning",
-      };
-    }
-
+    if (failedCount > 0) return { label: `${failedCount} failed`, tone: "text-destructive" };
+    if (pendingCount > 0) return { label: `${pendingCount} pending`, tone: "text-warning" };
     if (passedCount === checks.length) {
-      return {
-        icon: <CheckCircleIcon className="text-success" />,
-        label: `${passedCount} checks passed`,
-        tone: "text-success",
-      };
+      return { label: `${passedCount} checks passed`, tone: "text-success" };
     }
-
-    return {
-      icon: <CircleDotIcon className="text-subtle-foreground" />,
-      label: `${passedCount}/${checks.length} passed`,
-      tone: "text-subtle-foreground",
-    };
+    return { label: `${passedCount}/${checks.length} passed`, tone: "text-subtle-foreground" };
   }, [checks]);
 
   const orderedChecks = useMemo(
@@ -128,52 +101,41 @@ export const CIStatusIndicator = memo(({ checks, repoPath, repositoryUrl }: CISt
 
   if (!summary) return null;
 
+  const visibleChecks = showAll ? orderedChecks : orderedChecks.slice(0, COLLAPSED_CHECK_COUNT);
+  const hiddenCount = orderedChecks.length - visibleChecks.length;
+
   return (
-    <Popover open={isExpanded} onOpenChange={setIsExpanded}>
-      <span className="inline-flex min-w-0 -ml-1.5">
-        <PopoverTrigger render={<Button type="button" variant="ghost" align="start" />}>
-          {summary.icon}
-          <span className={cn("font-sans", summary.tone)}>{summary.label}</span>
-          {isExpanded ? (
-            <ChevronDownIcon className="text-subtle-foreground" />
-          ) : (
-            <ChevronRightIcon className="text-subtle-foreground" />
-          )}
-        </PopoverTrigger>
-      </span>
-      <PopoverContent align="start" size="panel" className="max-h-80 overflow-y-auto p-1.5">
-        {orderedChecks.map((check, idx) => (
-          <button
-            key={idx}
-            type="button"
-            onClick={() => openCheck(check)}
-            disabled={!check.detailsUrl}
-            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-foreground transition-colors hover:bg-accent disabled:cursor-default disabled:hover:bg-transparent"
-          >
-            {check.conclusion === "SUCCESS" ? (
-              <CheckCircleIcon className="text-success" />
-            ) : check.conclusion === "FAILURE" || check.conclusion === "ERROR" ? (
-              <XCircleIcon className="text-destructive" />
-            ) : (
-              <Spinner label="Pending check" compact />
-            )}
-            <div className="min-w-0 flex-1">
-              <p className="truncate font-sans ui-text-sm text-foreground">
-                {check.name ?? "Check"}
-              </p>
-              {check.workflowName && (
-                <p className="truncate font-sans ui-text-sm text-subtle-foreground">
-                  {check.workflowName}
-                </p>
-              )}
-            </div>
-            <Badge tone={getCheckBadgeTone(check)}>
-              {(check.conclusion ?? check.status ?? "pending").toLowerCase()}
-            </Badge>
-          </button>
+    <div className="min-w-0 space-y-1">
+      <p className={cn("font-sans tabular-nums ui-text-sm", summary.tone)}>{summary.label}</p>
+      <ul className="-mx-1.5 min-w-0">
+        {visibleChecks.map((check, idx) => (
+          <li key={`${check.name ?? "check"}-${idx}`}>
+            <button
+              type="button"
+              onClick={() => openCheck(check)}
+              disabled={!check.detailsUrl}
+              title={
+                check.workflowName ? `${check.workflowName} / ${check.name ?? "Check"}` : undefined
+              }
+              className="flex h-7 w-full min-w-0 items-center gap-2 rounded-md px-1.5 text-left font-sans ui-text-sm text-muted-foreground outline-none transition-colors duration-fast hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-default disabled:hover:bg-transparent [&_svg]:size-3.5 [&_svg]:shrink-0"
+            >
+              <CheckStatusIcon check={check} />
+              <span className="min-w-0 flex-1 truncate">{check.name ?? "Check"}</span>
+            </button>
+          </li>
         ))}
-      </PopoverContent>
-    </Popover>
+      </ul>
+      {hiddenCount > 0 || showAll ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => setShowAll((value) => !value)}
+        >
+          {showAll ? "Show fewer" : `Show ${hiddenCount} more`}
+        </Button>
+      ) : null}
+    </div>
   );
 });
 
@@ -207,7 +169,7 @@ export function getMergeStatusInfo({
     icon,
     ready: false,
   });
-  if (status === "merged") return blocked("Merged", "accent", GitMergeIcon);
+  if (status === "merged") return blocked("Merged", "merged", GitMergeIcon);
   if (status === "closed") return blocked("Closed without merging", "neutral", XCircleIcon);
 
   const mergeState = (mergeStateStatus ?? "").toLowerCase();
@@ -268,23 +230,18 @@ export const LinkedIssuesList = memo(({ issues, repoPath, repositoryUrl }: Linke
   };
 
   return (
-    <span className="font-sans ui-text-sm inline-flex shrink-0 items-center gap-1 text-subtle-foreground">
-      <LinkIcon className="text-subtle-foreground" />
-      <span>Linked</span>
-      <span className="inline-flex items-center gap-1">
-        {issues.map((issue, idx) => (
-          <button
-            key={idx}
-            type="button"
-            onClick={() => openIssue(issue)}
-            className="rounded-chrome px-0.5 font-sans text-primary ui-text-sm hover:underline focus-visible:underline focus-visible:outline-none"
-            aria-label={`Open issue #${issue.number}`}
-          >
-            #{issue.number}
-            {idx < issues.length - 1 && ","}
-          </button>
-        ))}
-      </span>
+    <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1 font-sans ui-text-sm">
+      {issues.map((issue, idx) => (
+        <button
+          key={idx}
+          type="button"
+          onClick={() => openIssue(issue)}
+          className="inline-flex items-center gap-1 rounded-chrome text-primary tabular-nums hover:underline focus-visible:underline focus-visible:outline-none"
+          aria-label={`Open issue #${issue.number}`}
+        >
+          <CircleDotIcon className="size-3.5 text-subtle-foreground" />#{issue.number}
+        </button>
+      ))}
     </span>
   );
 });
@@ -329,24 +286,3 @@ export const LabelBadges = memo(({ labels, repositoryUrl, kind = "issues" }: Lab
 });
 
 LabelBadges.displayName = "LabelBadges";
-
-// Assignees
-interface AssigneesProps {
-  assignees: { login: string }[];
-}
-
-const AssigneesList = memo(({ assignees }: AssigneesProps) => {
-  if (assignees.length === 0) return null;
-
-  return (
-    <span className="font-sans ui-text-sm inline-flex shrink-0 items-center gap-1 text-subtle-foreground">
-      <UserIcon />
-      <span>Assigned</span>
-      <span className="text-foreground">
-        {assignees.map((assignee) => `@${assignee.login}`).join(", ")}
-      </span>
-    </span>
-  );
-});
-
-AssigneesList.displayName = "AssigneesList";

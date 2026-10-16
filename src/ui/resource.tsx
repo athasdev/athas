@@ -20,7 +20,7 @@ function ResourceBands({ summary, tabs }: Pick<ResourceShellProps, "summary" | "
   return (
     <>
       {summary ? (
-        <div className="shrink-0 px-4 pt-5 pb-3 sm:px-6">
+        <div className="shrink-0 px-4 pt-5 pb-2 sm:px-6">
           <ResourceRail>{summary}</ResourceRail>
         </div>
       ) : null}
@@ -120,14 +120,18 @@ export function ResourceSummary({
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-center gap-2">
           {icon ? <span className="flex shrink-0 items-center [&_svg]:size-5">{icon}</span> : null}
-          <div className="min-w-0 font-semibold text-foreground ui-text-lg">{title}</div>
+          <div className="min-w-0 font-semibold tracking-heading text-foreground ui-text-lg">
+            {title}
+          </div>
           {badges ? <span className="flex shrink-0 items-center gap-1.5">{badges}</span> : null}
         </div>
         {description ? (
           <p className="mt-1 truncate text-muted-foreground ui-text-sm">{description}</p>
         ) : null}
         {meta ? (
-          <div className="mt-2 flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1">{meta}</div>
+          <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 tabular-nums">
+            {meta}
+          </div>
         ) : null}
       </div>
       {actions || aside ? (

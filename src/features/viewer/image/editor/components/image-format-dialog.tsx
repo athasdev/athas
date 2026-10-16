@@ -175,7 +175,7 @@ export function ImageFormatDialog({
         </div>
       )}
 
-      <div className="rounded border border-border bg-surface p-3">
+      <div className="rounded-lg bg-surface p-3">
         <div className="flex items-center justify-between">
           <span className="text-foreground ui-text-sm">Estimated Size:</span>
           <div className="flex items-center gap-2">

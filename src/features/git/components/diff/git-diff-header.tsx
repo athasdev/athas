@@ -1,3 +1,4 @@
+import { ChromeSeparator } from "@/ui/chrome";
 import { Button } from "@/ui/button";
 import {
   CheckIcon,
@@ -127,7 +128,7 @@ const DiffHeader = memo(
                   >
                     <ChevronUpIcon />
                   </Button>
-                  <div className="mx-1 h-4 w-px bg-divider" />
+                  <ChromeSeparator />
                 </>
               )}
               {showDisplayControls && (
@@ -167,7 +168,7 @@ const DiffHeader = memo(
                       </Button>
                     </div>
                   )}
-                  <div className="mx-1 h-4 w-px bg-divider" />
+                  <ChromeSeparator />
                 </>
               )}
               <Button

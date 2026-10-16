@@ -1,3 +1,4 @@
+import { ChromeSeparator } from "@/ui/chrome";
 import type { ReactNode } from "react";
 import { EyeIcon, PenIcon, SearchIcon } from "@/ui/icons";
 import { useShallow } from "zustand/react/shallow";
@@ -101,6 +102,7 @@ export default function Breadcrumb({
   return (
     <PaneContentHeader
       separated={false}
+      revealActions
       className="select-none"
       leading={leadingContent}
       context={
@@ -130,7 +132,7 @@ export default function Breadcrumb({
       actions={
         <>
           {defaultActions}
-          {defaultActions && rightContent ? <div className="mx-1 h-3.5 w-px bg-divider" /> : null}
+          {defaultActions && rightContent ? <ChromeSeparator /> : null}
           {rightContent}
           {extensionActions.right.map((action) => (
             <ExtensionToolbarAction key={action.id} action={action} />

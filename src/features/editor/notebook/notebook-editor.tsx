@@ -208,14 +208,14 @@ function MarkdownOutput({ source }: { source: string }) {
   const html = useHighlightedMarkdown(source);
   return (
     <div
-      className="markdown-preview typeset typeset-preview overflow-auto rounded-md border border-border bg-surface p-2.5"
+      className="markdown-preview typeset typeset-preview overflow-auto rounded-md bg-surface p-2.5"
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );
 }
 
 const outputClassName =
-  "m-0 overflow-auto rounded-md border border-border bg-surface p-2.5 font-mono ui-text-sm leading-normal text-foreground";
+  "m-0 overflow-auto rounded-md bg-surface p-2.5 font-mono ui-text-sm leading-normal text-foreground";
 
 function NotebookOutputView({ output }: { output: NotebookOutput }) {
   if (output.output_type === "stream") {
@@ -262,7 +262,7 @@ function NotebookOutputView({ output }: { output: NotebookOutput }) {
     if (svg) {
       return (
         <div
-          className="overflow-auto rounded-md border border-border bg-surface p-2.5"
+          className="overflow-auto rounded-md bg-surface p-2.5"
           dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(svg) }}
         />
       );
@@ -275,7 +275,7 @@ function NotebookOutputView({ output }: { output: NotebookOutput }) {
           title="PDF output"
           src={`data:application/pdf;base64,${pdf}`}
           sandbox="allow-same-origin"
-          className="h-105 w-full rounded-md border border-border bg-surface"
+          className="h-105 w-full rounded-md bg-surface"
         />
       );
     }
@@ -284,7 +284,7 @@ function NotebookOutputView({ output }: { output: NotebookOutput }) {
     if (html) {
       return (
         <div
-          className="overflow-auto rounded-md border border-border bg-surface p-2.5"
+          className="overflow-auto rounded-md bg-surface p-2.5"
           dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }}
         />
       );
@@ -512,7 +512,7 @@ function NotebookCellView({
           ) : (
             <textarea
               aria-label="Cell source"
-              className="m-0 block min-h-23 w-full resize-y rounded-md border border-border bg-surface p-2.5 font-mono ui-text-sm leading-normal text-foreground outline-none focus:border-primary"
+              className="m-0 block min-h-23 w-full resize-y rounded-md bg-raised p-2.5 font-mono ui-text-sm leading-normal text-foreground shadow-(--shadow-raised) outline-none focus:ring-2 focus:ring-focus"
               value={source}
               spellCheck={isMarkdown}
               onChange={(event) => onSourceChange(cellIndex, event.target.value)}

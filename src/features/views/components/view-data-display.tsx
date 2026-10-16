@@ -93,7 +93,7 @@ function ViewTableDisplay({ table, presentation }: ViewDataDisplayProps) {
             {presentation.groupBy ? (
               <GroupHeader label={group.label} count={group.rows.length} />
             ) : null}
-            <div className="overflow-hidden rounded-lg border border-border bg-surface">
+            <Card layout="flush">
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
@@ -125,7 +125,7 @@ function ViewTableDisplay({ table, presentation }: ViewDataDisplayProps) {
                   </TableBody>
                 </Table>
               </div>
-            </div>
+            </Card>
           </section>
         ))}
       </div>

@@ -10,10 +10,14 @@ export interface StreamTab {
   onClick: () => void;
 }
 
+/**
+ * The section switcher at the top of a stream sidebar. The active section reads by tone and
+ * carries its label; the others are quiet icons, so the row stays one line at any width.
+ */
 export function StreamTabs({ tabs, label }: { tabs: StreamTab[]; label: string }) {
   return (
-    <nav aria-label={label} className="@container/tabs shrink-0 border-b border-divider px-2">
-      <div className="flex h-12 items-stretch gap-0.5 py-1">
+    <nav aria-label={label} className="@container/tabs shrink-0 px-2">
+      <div className="flex h-pane-header items-center gap-0.5">
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -23,30 +27,26 @@ export function StreamTabs({ tabs, label }: { tabs: StreamTab[]; label: string }
             aria-current={tab.active ? "page" : undefined}
             onClick={tab.onClick}
             className={cn(
-              "relative flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-md transition-colors",
+              "flex h-chrome-control min-w-0 shrink-0 items-center justify-center gap-1 rounded-md px-1.5 ui-text-sm transition-colors duration-fast outline-none focus-visible:ring-2 focus-visible:ring-focus [&>svg]:size-3.5 [&>svg]:shrink-0",
               tab.active
-                ? "bg-primary/10 text-primary"
-                : "text-subtle-foreground hover:bg-foreground/5 hover:text-foreground",
+                ? "min-w-0 shrink font-medium text-foreground"
+                : "text-subtle-foreground hover:bg-accent hover:text-foreground",
             )}
           >
-            <span className="relative [&>svg]:size-4">
-              {tab.icon}
-              {tab.count ? (
-                <span
-                  className={cn(
-                    "absolute -top-1.5 left-3 flex h-3.5 min-w-3.5 items-center justify-center rounded-full px-0.5 ui-text-caption font-semibold tabular-nums",
-                    tab.active
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-foreground/15 text-foreground",
-                  )}
-                >
-                  {tab.count > 99 ? "99+" : tab.count}
-                </span>
-              ) : null}
-            </span>
-            <span className="max-w-full truncate px-0.5 ui-text-caption leading-3 @max-[240px]/tabs:hidden">
-              {tab.label}
-            </span>
+            {tab.icon}
+            {tab.active ? (
+              <span className="min-w-0 truncate @max-[250px]/tabs:sr-only">{tab.label}</span>
+            ) : null}
+            {tab.count ? (
+              <span
+                className={cn(
+                  "shrink-0 font-normal tabular-nums ui-text-caption",
+                  tab.active ? "text-muted-foreground" : "text-subtle-foreground",
+                )}
+              >
+                {tab.count > 99 ? "99+" : tab.count}
+              </span>
+            ) : null}
           </button>
         ))}
       </div>

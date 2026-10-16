@@ -228,7 +228,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
       }
     >
       {installedDbTypes.length === 0 ? (
-        <div className="rounded-lg border border-border bg-surface px-3 py-2 text-subtle-foreground ui-text-sm">
+        <div className="rounded-lg bg-surface px-3 py-2 text-subtle-foreground ui-text-sm">
           Install a database provider from Settings &gt; Integrations to connect to databases.
         </div>
       ) : null}

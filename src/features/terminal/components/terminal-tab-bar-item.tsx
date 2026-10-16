@@ -17,7 +17,7 @@ import { Button } from "@/ui/button";
 import { InlineRenameInput } from "@/ui/input";
 import { ProgressCircle } from "@/ui/progress";
 import { Spinner } from "@/ui/spinner";
-import { TabItem } from "@/ui/tab-bar";
+import { TabItem, TabLabel } from "@/ui/tab-bar";
 import { cn } from "@/utils/cn";
 import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 
@@ -205,12 +205,9 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
                 aria-label="Part of a split group"
               />
             ) : null}
-            <span
-              className={cn(
-                "font-sans ui-text-chrome max-w-full select-none overflow-hidden text-ellipsis whitespace-nowrap",
-                "text-left",
-                isActive ? "text-foreground" : "text-subtle-foreground",
-              )}
+            <TabLabel
+              label={displayName}
+              className="max-w-full select-none text-left"
               title={
                 terminal.currentDirectory
                   ? `${displayName} — ${terminal.currentDirectory}`
@@ -218,7 +215,7 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
               }
             >
               {displayName}
-            </span>
+            </TabLabel>
           </>
         )}
       </TabItem>

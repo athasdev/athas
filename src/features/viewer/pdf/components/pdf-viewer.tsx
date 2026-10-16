@@ -1,3 +1,4 @@
+import { ChromeSeparator } from "@/ui/chrome";
 import { openFileInDefaultApp, readFileBytes } from "@/utils/local-files";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
@@ -171,7 +172,7 @@ export function PdfViewer({ filePath }: PdfViewerProps) {
             >
               <OpenExternalIcon className="text-foreground" />
             </Button>
-            <div className="mx-1 h-4 w-px bg-divider" />
+            <ChromeSeparator />
             <ViewerZoomControls
               zoom={zoom}
               onZoomIn={() => {

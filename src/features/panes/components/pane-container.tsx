@@ -810,7 +810,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       data-pane-container
       data-pane-id={pane.id}
       className={cn(
-        "relative flex size-full flex-col overflow-hidden bg-background",
+        "group/chrome-host relative flex size-full flex-col overflow-hidden bg-background",
         isActivePane && "ring-1 ring-focus",
         (isDragOver || internalHoverZone) && "ring-2 ring-primary",
       )}

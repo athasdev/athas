@@ -96,7 +96,7 @@ export const SidebarPane = memo(({ visible = true }: SidebarPaneProps) => {
   }
 
   return (
-    <div className="flex h-full min-h-0" data-external-file-drop-scope="sidebar">
+    <div className="group/chrome-host flex h-full min-h-0" data-external-file-drop-scope="sidebar">
       {paneEntries
         .filter((pane) => nextRecentPaneIds.includes(pane.id))
         .map((pane) => {

@@ -4,15 +4,15 @@ import type { GitFile } from "../types/git.types";
 
 const STATUS_META: Record<GitFile["status"], { letter: string; label: string; className: string }> =
   {
-    modified: { letter: "M", label: "Modified", className: "text-git-modified bg-git-modified/15" },
-    added: { letter: "A", label: "Added", className: "text-git-added bg-git-added/15" },
-    deleted: { letter: "D", label: "Deleted", className: "text-git-deleted bg-git-deleted/15" },
+    modified: { letter: "M", label: "Modified", className: "text-git-modified" },
+    added: { letter: "A", label: "Added", className: "text-git-added" },
+    deleted: { letter: "D", label: "Deleted", className: "text-git-deleted" },
     untracked: {
       letter: "U",
       label: "Untracked",
-      className: "text-git-untracked bg-git-untracked/15",
+      className: "text-git-untracked",
     },
-    renamed: { letter: "R", label: "Renamed", className: "text-git-renamed bg-git-renamed/15" },
+    renamed: { letter: "R", label: "Renamed", className: "text-git-renamed" },
   };
 
 export function StatusLetter({ status }: { status: GitFile["status"] }) {
@@ -21,7 +21,7 @@ export function StatusLetter({ status }: { status: GitFile["status"] }) {
     <span
       title={meta.label}
       className={cn(
-        "inline-flex size-4 shrink-0 items-center justify-center rounded-md font-mono ui-text-caption font-semibold",
+        "inline-flex size-4 shrink-0 items-center justify-center font-mono ui-text-caption font-medium",
         meta.className,
       )}
     >

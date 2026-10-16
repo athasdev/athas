@@ -16,8 +16,14 @@ import {
   NodesIcon,
   SparkleIcon,
 } from "@/ui/icons";
+import { ChromeGroup } from "@/ui/chrome";
+import { Composer } from "@/ui/composer";
 import { cn } from "@/utils/cn";
-import { StreamIconButton } from "@/features/sidebar/components/stream/stream-list";
+import {
+  StreamBar,
+  StreamContextButton,
+  StreamIconButton,
+} from "@/features/sidebar/components/stream/stream-list";
 import { DiffNumbers } from "./stream-primitives";
 import type { SourceControlModel } from "./use-source-control-model";
 
@@ -36,29 +42,29 @@ export function StreamIdentity({
   actionsMenu: ReactNode;
 }) {
   return (
-    <div className="@container/identity flex items-center gap-1 px-2 pt-2 pb-1.5">
-      <button
-        type="button"
+    <StreamBar className="@container/identity">
+      <StreamContextButton
         onClick={onOpenBranches}
         title={`${model.activeRepoPath ?? ""}\n${model.branch} — switch branch`}
-        className="flex h-7 min-w-0 flex-1 items-center gap-1.5 rounded-md px-1.5 text-left hover:bg-foreground/5"
       >
         {isLinkedWorktree ? (
-          <NodesIcon className="size-3.5 shrink-0 text-subtle-foreground" />
+          <NodesIcon className="size-3.5 text-subtle-foreground" />
         ) : (
-          <GitBranchIcon className="size-3.5 shrink-0 text-subtle-foreground" />
+          <GitBranchIcon className="size-3.5 text-subtle-foreground" />
         )}
-        <span className="min-w-0 truncate ui-text-sm">
+        <span className="min-w-0 truncate">
           <span className="text-subtle-foreground @max-[240px]/identity:hidden">
             {model.repoName} /{" "}
           </span>
           <span className="font-medium text-foreground">{model.branch || "detached"}</span>
         </span>
-        <ChevronDownIcon className="size-3 shrink-0 text-subtle-foreground" />
-      </button>
+        <ChevronDownIcon className="size-3 text-subtle-foreground" />
+      </StreamContextButton>
       <SyncButton model={model} />
-      {actionsMenu}
-    </div>
+      <ChromeGroup reveal gap="none">
+        {actionsMenu}
+      </ChromeGroup>
+    </StreamBar>
   );
 }
 
@@ -102,10 +108,10 @@ function SyncButton({ model }: { model: SourceControlModel }) {
     <div
       ref={anchorRef}
       className={cn(
-        "flex h-6 shrink-0 items-stretch overflow-hidden rounded-md ui-text-sm font-medium",
-        tone === "warn" && "bg-warning/12 text-warning",
-        tone === "primary" && "bg-primary/12 text-primary",
-        tone === "quiet" && "text-muted-foreground",
+        "flex h-chrome-control shrink-0 items-stretch overflow-hidden rounded-md ui-text-sm font-medium",
+        tone === "warn" && "text-warning",
+        tone === "primary" && "text-primary",
+        tone === "quiet" && "text-subtle-foreground",
       )}
     >
       <button
@@ -114,7 +120,7 @@ function SyncButton({ model }: { model: SourceControlModel }) {
         onClick={() => void model.runRemote(suggestedRemote)}
         title={title}
         aria-label={title}
-        className="flex items-center gap-0.5 pr-1 pl-1.5 hover:bg-foreground/8 disabled:opacity-60"
+        className="flex items-center gap-0.5 pr-1 pl-1.5 outline-none transition-colors duration-fast hover:bg-accent focus-visible:bg-accent disabled:opacity-60"
       >
         {busy || suggestedRemote === "fetch" ? (
           <ArrowsClockwiseIcon className={cn("size-3", busy && "animate-spin")} />
@@ -131,7 +137,7 @@ function SyncButton({ model }: { model: SourceControlModel }) {
             <button
               type="button"
               aria-label="More remote actions"
-              className="flex items-center px-0.5 hover:bg-foreground/8"
+              className="flex items-center px-0.5 outline-none transition-colors duration-fast hover:bg-accent focus-visible:bg-accent data-popup-open:bg-accent"
             />
           }
         >
@@ -198,8 +204,8 @@ export function StreamComposer({ model }: { model: SourceControlModel }) {
         : `${stagedCount} staged`;
 
   return (
-    <div className="px-3 pb-2.5">
-      <div className="@container/composer rounded-lg border border-border bg-foreground/3 transition-colors focus-within:border-primary/50">
+    <div className="px-2 pt-1 pb-2">
+      <Composer className="@container/composer">
         <textarea
           ref={textareaRef}
           value={message}
@@ -213,7 +219,7 @@ export function StreamComposer({ model }: { model: SourceControlModel }) {
           }}
           placeholder="Commit message"
           aria-label="Commit message"
-          className="block w-full resize-none bg-transparent px-2.5 py-2 ui-text-sm leading-4 text-foreground outline-none placeholder:text-subtle-foreground"
+          className="block w-full resize-none bg-transparent px-2.5 pt-2 pb-1 ui-text-sm leading-4 text-foreground outline-none placeholder:text-subtle-foreground"
         />
         <div className="flex items-center gap-1 px-1 pb-1">
           <StreamIconButton
@@ -260,7 +266,7 @@ export function StreamComposer({ model }: { model: SourceControlModel }) {
             </DropdownMenu>
           </div>
         </div>
-      </div>
+      </Composer>
     </div>
   );
 }

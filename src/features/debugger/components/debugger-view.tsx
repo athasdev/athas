@@ -632,7 +632,7 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
                   placeholder="Command to run"
                 />
               ) : (
-                <div className="font-sans min-h-8 truncate rounded-lg border border-border bg-surface px-2 py-1.5 font-mono ui-text-sm text-subtle-foreground">
+                <div className="font-sans min-h-8 truncate rounded-lg bg-surface px-2 py-1.5 font-mono ui-text-sm text-subtle-foreground">
                   {adapterCommandPreview || selectedCommand || "No command available"}
                 </div>
               )}

@@ -15,6 +15,7 @@ import { ContextMenuPopup, createContextMenuGroups } from "@/ui/context-menu";
 import { showAlertDialog } from "@/ui/dialog";
 import { useDropdownMenu, type MenuItem } from "@/ui/dropdown";
 import { Avatar } from "@/ui/avatar";
+import Badge from "@/ui/badge";
 import { EmptyState } from "@/ui/empty";
 import {
   ArchiveIcon,
@@ -398,7 +399,7 @@ function StreamView(props: SourceControlModelProps) {
     {
       id: "home",
       label: "Changes",
-      icon: <GitDiffIcon className="size-4" />,
+      icon: <GitDiffIcon />,
       count: model.files.length,
       active: !panel,
       onClick: goHome,
@@ -406,7 +407,7 @@ function StreamView(props: SourceControlModelProps) {
     {
       id: "branches",
       label: "Branches",
-      icon: <GitBranchIcon className="size-4" />,
+      icon: <GitBranchIcon />,
       count: model.branches.length,
       active: panel === "branches",
       onClick: () => openPanel("branches"),
@@ -414,7 +415,7 @@ function StreamView(props: SourceControlModelProps) {
     {
       id: "worktrees",
       label: "Worktrees",
-      icon: <NodesIcon className="size-4" />,
+      icon: <NodesIcon />,
       count: worktrees.length,
       active: panel === "worktrees",
       onClick: () => openPanel("worktrees"),
@@ -424,7 +425,7 @@ function StreamView(props: SourceControlModelProps) {
           {
             id: "remotes",
             label: "Remotes",
-            icon: <GlobeIcon className="size-4" />,
+            icon: <GlobeIcon />,
             count: refCounts.remotes,
             active: panel === "remotes",
             onClick: () => openPanel("remotes"),
@@ -436,7 +437,7 @@ function StreamView(props: SourceControlModelProps) {
           {
             id: "tags",
             label: "Tags",
-            icon: <TagIcon className="size-4" />,
+            icon: <TagIcon />,
             count: refCounts.tags,
             active: panel === "tags",
             onClick: () => openPanel("tags"),
@@ -448,7 +449,7 @@ function StreamView(props: SourceControlModelProps) {
           {
             id: "repositories",
             label: "Repos",
-            icon: <FolderOpenIcon className="size-4" />,
+            icon: <FolderOpenIcon />,
             count: repoPaths.length,
             active: panel === "repositories",
             onClick: () => openPanel("repositories"),
@@ -771,7 +772,7 @@ function StreamList({
                     onClick={() => onOpenCommit(commit)}
                     className={cn(
                       "group relative flex cursor-default gap-2.5 rounded-md py-1.5 pr-2 pl-2",
-                      selected ? "bg-primary/8" : "hover:bg-foreground/5",
+                      selected ? "bg-selected" : "hover:bg-accent",
                     )}
                   >
                     <span className="relative flex w-3 shrink-0 justify-center">
@@ -804,11 +805,7 @@ function StreamList({
                         <span className="truncate">{commit.author}</span>
                         <span>·</span>
                         <span className="shrink-0">{formatRelativeDate(commit.date)}</span>
-                        {unpushed ? (
-                          <span className="rounded-full bg-primary/15 px-1.5 ui-text-caption font-medium text-primary">
-                            unpushed
-                          </span>
-                        ) : null}
+                        {unpushed ? <Badge tone="accent">unpushed</Badge> : null}
                         {selected ? null : (
                           <span className="ml-auto hidden font-mono group-hover:inline">
                             {shortHash(commit.hash)}
@@ -863,7 +860,7 @@ function StreamList({
               <button
                 type="button"
                 onClick={() => model.loadMoreCommits()}
-                className="mt-1 w-full rounded-md py-1.5 ui-text-sm text-subtle-foreground hover:bg-foreground/5 hover:text-foreground"
+                className="mt-1 w-full rounded-md py-1.5 ui-text-sm text-subtle-foreground transition-colors duration-fast hover:bg-accent hover:text-foreground"
               >
                 Load older commits
               </button>

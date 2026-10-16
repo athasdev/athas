@@ -31,7 +31,7 @@
  * marks a focused or emphasised edge. Prefer plane contrast and spacing over
  * either.
  *
- * Status: primary, success, warning, destructive, info. Each has a `-soft`
+ * Status: primary, success, warning, destructive, info, merged. Each has a `-soft`
  * tint for fills behind status text. Text on a solid primary fill uses
  * primary-foreground.
  */
@@ -95,7 +95,6 @@
   --color-border-strong: var(--border-strong);
   --color-accent: var(--accent);
   --color-selected: var(--selected);
-  --color-tab-active: var(--tab-active);
   --color-selection: var(--selection);
   --color-focus: var(--focus-ring);
   --color-scrollbar-thumb: var(--app-scrollbar-thumb);
@@ -118,6 +117,8 @@
   --color-warning-soft: var(--warning-soft);
   --color-info: var(--info);
   --color-info-soft: var(--info-soft);
+  --color-merged: var(--merged);
+  --color-merged-soft: var(--merged-soft);
 
   --color-git-modified: var(--git-modified);
   --color-git-modified-soft: var(--git-modified-soft);
@@ -222,6 +223,8 @@
     --success: var(--terminal-green, var(--primary));
     --warning: var(--terminal-yellow, var(--primary));
     --info: var(--terminal-blue, var(--primary));
+    /* Work that landed, such as a merged pull request: purple, as code hosts use it. */
+    --merged: var(--terminal-magenta, var(--primary));
     --selection: color-mix(in srgb, var(--primary) 25%, transparent);
     --cursor: var(--foreground);
     --cursor-vim-normal: color-mix(in srgb, var(--primary) 60%, transparent);
@@ -233,9 +236,6 @@
     /* Text entry surfaces such as the AI composer: close to the page in light themes, where
        the surface grey reads as disabled, and raised like the overlay in dark ones. */
     --field: color-mix(in srgb, var(--background) 82%, var(--surface));
-    /* The active tab on a background-coloured tab bar: a flat tint in light themes, where the
-       overlay would match the bar, and the raised overlay in dark ones. */
-    --tab-active: color-mix(in srgb, var(--background) 94%, var(--foreground) 6%);
     --scrim: rgb(0 0 0 / 0.16);
     --divider: color-mix(in srgb, var(--border) 72%, transparent);
     --border-strong: color-mix(in srgb, var(--border) 60%, var(--foreground) 40%);
@@ -247,6 +247,7 @@
     --success-soft: color-mix(in srgb, var(--success) 12%, transparent);
     --warning-soft: color-mix(in srgb, var(--warning) 14%, transparent);
     --info-soft: color-mix(in srgb, var(--info) 12%, transparent);
+    --merged-soft: color-mix(in srgb, var(--merged) 12%, transparent);
     --git-added-soft: color-mix(in srgb, var(--git-added) 12%, transparent);
     --git-deleted-soft: color-mix(in srgb, var(--git-deleted) 12%, transparent);
     --git-modified-soft: color-mix(in srgb, var(--git-modified) 12%, transparent);
@@ -314,7 +315,6 @@
     --raised: color-mix(in srgb, var(--background) 95%, var(--foreground) 5%);
     --overlay: color-mix(in srgb, var(--background) 92%, var(--foreground) 8%);
     --field: color-mix(in srgb, var(--background) 94%, var(--foreground) 6%);
-    --tab-active: var(--overlay);
     --scrim: rgb(0 0 0 / 0.4);
     --divider: color-mix(in srgb, var(--border) 80%, transparent);
     /* Dark planes read by tone, so the edge is a faint light ring inside and a dark one outside. */

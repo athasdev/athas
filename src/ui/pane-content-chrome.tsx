@@ -12,6 +12,8 @@ interface PaneContentHeaderProps extends Omit<
   context?: ReactNode;
   detail?: ReactNode;
   actions?: ReactNode;
+  /** Ghost the actions until the pane is hovered or they take focus; see `ChromeGroup`. */
+  revealActions?: boolean;
 }
 
 function PaneContentHeader({
@@ -20,6 +22,7 @@ function PaneContentHeader({
   context,
   detail,
   actions,
+  revealActions = false,
   separated = true,
   className,
   ...props
@@ -45,7 +48,11 @@ function PaneContentHeader({
           ) : null}
         </ChromeGroup>
         {actions ? (
-          <ChromeGroup gap="tight" className="scrollbar-none ml-auto max-w-[70%] overflow-x-auto">
+          <ChromeGroup
+            gap="tight"
+            reveal={revealActions}
+            className="scrollbar-none ml-auto max-w-[70%] overflow-x-auto"
+          >
             {actions}
           </ChromeGroup>
         ) : null}

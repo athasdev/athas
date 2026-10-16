@@ -59,7 +59,8 @@ export function PRCommitsDropdown({ commits, repoPath }: PRCommitsDropdownProps)
         render={
           <Button
             type="button"
-            variant="ghost"
+            variant="tab"
+            weight="regular"
             size="sm"
             aria-label={`Show ${commits.length} ${commitLabel}`}
           />

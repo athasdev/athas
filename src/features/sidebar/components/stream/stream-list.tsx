@@ -1,5 +1,7 @@
 import {
+  forwardRef,
   useState,
+  type ComponentProps,
   type DragEvent,
   type HTMLAttributes,
   type MouseEvent,
@@ -7,6 +9,9 @@ import {
   type Ref,
   type RefObject,
 } from "react";
+import Badge, { type BadgeTone } from "@/ui/badge";
+import { Button } from "@/ui/button";
+import { ChromeGroup } from "@/ui/chrome";
 import { Spinner } from "@/ui/spinner";
 import {
   DropdownMenu,
@@ -39,22 +44,21 @@ export function StreamIconButton({
   active?: boolean;
 }) {
   return (
-    <button
+    <Button
       type="button"
-      title={label}
-      aria-label={label}
+      variant="ghost"
+      size="sm"
+      iconOnly
+      tooltip={label}
       disabled={disabled}
+      active={active}
       onClick={(event) => {
         event.stopPropagation();
         onClick?.();
       }}
-      className={cn(
-        "inline-flex size-5.5 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground disabled:pointer-events-none disabled:opacity-40",
-        active && "bg-primary/12 text-primary",
-      )}
     >
       {children}
-    </button>
+    </Button>
   );
 }
 
@@ -73,15 +77,14 @@ export function StreamMenuButton({
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <button
+          <Button
             type="button"
-            title={label}
+            variant="ghost"
+            size="sm"
+            iconOnly
             aria-label={label}
+            active={active}
             onClick={(event) => event.stopPropagation()}
-            className={cn(
-              "inline-flex size-5.5 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground",
-              active && "bg-primary/12 text-primary",
-            )}
           />
         }
       >
@@ -106,7 +109,7 @@ export function StreamSearchField({
   autoFocus?: boolean;
 }) {
   return (
-    <div className="flex h-7 min-w-0 flex-1 items-center gap-1.5 rounded-md bg-foreground/5 px-2 focus-within:bg-foreground/8">
+    <div className="flex h-chrome-control min-w-0 flex-1 items-center gap-1.5 px-2">
       <SearchIcon className="size-3.5 shrink-0 text-subtle-foreground" />
       <input
         autoFocus={autoFocus}
@@ -117,13 +120,51 @@ export function StreamSearchField({
         className="min-w-0 flex-1 bg-transparent ui-text-sm text-foreground outline-none placeholder:text-subtle-foreground"
       />
       {value ? (
-        <button type="button" aria-label="Clear search" onClick={() => onChange("")}>
-          <XIcon className="size-3 text-subtle-foreground" />
-        </button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="xs"
+          iconOnly
+          aria-label="Clear search"
+          onClick={() => onChange("")}
+        >
+          <XIcon />
+        </Button>
       ) : null}
     </div>
   );
 }
+
+/** One header row of a stream sidebar, the same height as every other sidebar bar. */
+export function StreamBar({ className, ...props }: ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="stream-bar"
+      className={cn("flex h-sidebar-header min-w-0 shrink-0 items-center gap-0.5 px-2", className)}
+      {...props}
+    />
+  );
+}
+
+/**
+ * The context a stream sidebar works in, such as the repository and branch: a quiet button that
+ * fills its bar and opens a picker.
+ */
+export const StreamContextButton = forwardRef<HTMLButtonElement, ComponentProps<"button">>(
+  function StreamContextButton({ className, ...props }, ref) {
+    return (
+      <button
+        ref={ref}
+        type="button"
+        className={cn(
+          "flex h-chrome-control min-w-0 flex-1 items-center gap-1.5 rounded-md px-1.5 text-left ui-text-sm outline-none transition-colors duration-fast hover:bg-accent focus-visible:ring-2 focus-visible:ring-focus [&>svg]:shrink-0",
+          className,
+        )}
+        {...props}
+      />
+    );
+  },
+);
 
 /** The fixed strip above a list: search on the left, the tab's actions on the right. */
 export function StreamToolbar({
@@ -134,7 +175,7 @@ export function StreamToolbar({
   children?: ReactNode;
 }) {
   return (
-    <div className="flex shrink-0 items-center gap-1 px-3 pt-2.5 pb-1.5">
+    <StreamBar>
       {search ? (
         <StreamSearchField
           value={search.value}
@@ -144,8 +185,12 @@ export function StreamToolbar({
       ) : (
         <span className="flex-1" />
       )}
-      {children}
-    </div>
+      {children ? (
+        <ChromeGroup reveal gap="tight">
+          {children}
+        </ChromeGroup>
+      ) : null}
+    </StreamBar>
   );
 }
 
@@ -190,7 +235,7 @@ export function StreamSection({
     <section data-stream-section={id}>
       {/* -top-px with a matching pt-px stops rows peeking through a subpixel seam above. */}
       <div className="sticky -top-px z-10 bg-background pt-px">
-        <div onClick={onToggle} className="group flex h-8 cursor-default items-center gap-1.5 px-2">
+        <div onClick={onToggle} className="group flex h-7 cursor-default items-center gap-1.5 px-2">
           <ChevronRightIcon
             className={cn(
               "size-3 shrink-0 text-subtle-foreground transition-transform",
@@ -201,11 +246,11 @@ export function StreamSection({
             {title}
           </span>
           {count !== undefined ? (
-            <span className="shrink-0 rounded-full bg-foreground/8 px-1.5 ui-text-caption leading-4 text-subtle-foreground tabular-nums">
+            <span className="shrink-0 ui-text-caption text-subtle-foreground tabular-nums">
               {count}
             </span>
           ) : null}
-          <span className="ml-auto hidden shrink-0 gap-0.5 group-focus-within:flex group-hover:flex">
+          <span className="ml-auto flex shrink-0 gap-0.5 opacity-0 transition-opacity duration-fast group-focus-within:opacity-100 group-hover:opacity-100 has-data-popup-open:opacity-100">
             {actions}
           </span>
         </div>
@@ -272,12 +317,12 @@ export function StreamRow({
       onMouseEnter={onMouseEnter}
       className={cn(
         "group flex h-7 cursor-default items-center gap-2 rounded-md px-2",
-        selected ? "bg-primary/8" : "hover:bg-foreground/5",
+        selected ? "bg-selected" : "hover:bg-accent",
         muted && "opacity-50",
         className,
       )}
     >
-      <span className={cn("flex shrink-0 items-center", selected && "text-primary")}>{icon}</span>
+      <span className="flex shrink-0 items-center">{icon}</span>
       <span
         className={cn(
           "min-w-0 truncate ui-text-sm",
@@ -307,27 +352,22 @@ export function StreamRow({
   );
 }
 
+const STREAM_BADGE_TONE = {
+  neutral: "neutral",
+  primary: "accent",
+  success: "success",
+  warning: "warning",
+  danger: "danger",
+} as const satisfies Record<string, BadgeTone>;
+
 export function StreamBadge({
   children,
   tone = "neutral",
 }: {
   children: ReactNode;
-  tone?: "neutral" | "primary" | "success" | "warning" | "danger";
+  tone?: keyof typeof STREAM_BADGE_TONE;
 }) {
-  return (
-    <span
-      className={cn(
-        "rounded-full px-1.5 ui-text-caption leading-4 font-medium",
-        tone === "neutral" && "bg-foreground/8 text-subtle-foreground",
-        tone === "primary" && "bg-primary/14 text-primary",
-        tone === "success" && "bg-success/14 text-success",
-        tone === "warning" && "bg-warning/14 text-warning",
-        tone === "danger" && "bg-destructive/14 text-destructive",
-      )}
-    >
-      {children}
-    </span>
-  );
+  return <Badge tone={STREAM_BADGE_TONE[tone]}>{children}</Badge>;
 }
 
 export function StreamEmpty({
@@ -340,7 +380,7 @@ export function StreamEmpty({
   action?: ReactNode;
 }) {
   return (
-    <div className="mx-1 my-2 rounded-xl border border-dashed border-border px-3 py-5 text-center">
+    <div className="mx-1 px-3 py-6 text-center">
       <div className="ui-text-sm text-muted-foreground">{title}</div>
       {hint ? <div className="mt-0.5 ui-text-sm text-subtle-foreground">{hint}</div> : null}
       {action ? <div className="mt-2.5 flex justify-center">{action}</div> : null}
@@ -358,14 +398,9 @@ export function StreamTextButton({
   disabled?: boolean;
 }) {
   return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      className="h-6 rounded-md bg-foreground/8 px-2.5 ui-text-sm font-medium text-foreground hover:bg-foreground/12 disabled:opacity-40"
-    >
+    <Button type="button" size="sm" disabled={disabled} onClick={onClick}>
       {children}
-    </button>
+    </Button>
   );
 }
 

@@ -13,7 +13,7 @@ import {
 } from "react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/ui/accordion";
 import { Button, type ButtonProps } from "@/ui/button";
-import { ChromeBar } from "@/ui/chrome";
+import { ChromeBar, ChromeGroup } from "@/ui/chrome";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/ui/dropdown";
 import { FieldTitle } from "@/ui/field";
 import { ChevronDownIcon, DotsIcon, IconContext, SearchIcon } from "@/ui/icons";
@@ -617,13 +617,9 @@ export const SidebarFilterBar = forwardRef<
       {leading}
       <SidebarFilterField ref={ref} {...props} />
       {actions ? (
-        <div
-          className="ml-auto flex shrink-0 items-center gap-chrome-tight"
-          role="group"
-          aria-label={actionsLabel}
-        >
+        <ChromeGroup reveal gap="tight" className="ml-auto" role="group" aria-label={actionsLabel}>
           {actions}
-        </div>
+        </ChromeGroup>
       ) : null}
     </SidebarHeader>
   );

@@ -1,7 +1,6 @@
 import { openExternalUrl } from "@/utils/external-url";
-import { memo, useState } from "react";
+import { memo, useState, type ReactNode } from "react";
 import { Button } from "@/ui/button";
-import { Card } from "@/ui/card";
 import { showConfirmDialog } from "@/ui/dialog";
 import {
   DropdownMenu,
@@ -13,7 +12,10 @@ import { DotsIcon } from "@/ui/icons";
 import { Spinner } from "@/ui/spinner";
 import { writeClipboardText } from "@/utils/clipboard";
 import { getTimeAgo } from "../services/github-viewer-utils";
+import { getGitHubUserUrl } from "../utils/github-link-utils";
+import { GitHubAvatar } from "./github-avatar";
 import { GitHubMetaChip, GitHubUserChip } from "./github-chips";
+import { GitHubTimelineMarker } from "./github-timeline";
 import GitHubMarkdown from "./github-markdown";
 import { GitHubMarkdownEditor } from "./github-markdown-editor";
 
@@ -25,6 +27,10 @@ interface CommentItemProps {
     updatedAt?: string;
     url?: string;
   };
+  /** What the author did, shown after their name, such as "commented". */
+  action?: string;
+  /** Replaces the author's avatar on the timeline, such as a review's verdict icon. */
+  marker?: ReactNode;
   repositoryUrl?: string;
   repoPath?: string;
   canManage?: boolean;
@@ -36,6 +42,8 @@ interface CommentItemProps {
 export const CommentItem = memo(
   ({
     comment,
+    action = "commented",
+    marker,
     repositoryUrl,
     repoPath,
     canManage = false,
@@ -72,58 +80,83 @@ export const CommentItem = memo(
     };
 
     return (
-      <Card variant="default" className="bg-surface">
-        <div className="flex items-center gap-2 border-divider border-b px-3 py-2.5">
-          <div className="ui-text-sm flex min-w-0 flex-1 items-center gap-2">
-            <GitHubUserChip
-              login={comment.author.login}
-              avatarUrl={comment.author.avatarUrl}
-              className="min-w-0 font-medium text-foreground"
-              avatarSize="md"
-            />
+      <article className="group/comment min-w-0">
+        <div className="flex min-w-0 items-center gap-3">
+          {marker ?? (
+            <GitHubTimelineMarker>
+              <GitHubAvatar
+                login={comment.author.login}
+                avatarUrl={comment.author.avatarUrl}
+                size={48}
+                displaySize="md"
+              />
+            </GitHubTimelineMarker>
+          )}
+          <div className="flex min-h-6 min-w-0 flex-1 flex-wrap items-center gap-x-1.5 font-sans ui-text-sm text-subtle-foreground">
+            {marker ? (
+              <GitHubUserChip
+                login={comment.author.login}
+                avatarUrl={comment.author.avatarUrl}
+                className="font-medium text-foreground"
+              />
+            ) : (
+              <GitHubMetaChip
+                title={`Open ${comment.author.login} on GitHub`}
+                href={getGitHubUserUrl(comment.author.login)}
+                className="font-medium text-foreground"
+              >
+                {comment.author.login}
+              </GitHubMetaChip>
+            )}
+            <span>{action}</span>
             <GitHubMetaChip
               title={new Date(comment.createdAt).toLocaleString()}
               href={comment.url ?? null}
             >
               {getTimeAgo(comment.createdAt)}
             </GitHubMetaChip>
-            {wasEdited ? <span className="shrink-0 text-subtle-foreground">edited</span> : null}
+            {wasEdited ? <span className="shrink-0">· edited</span> : null}
           </div>
           {hasMenu ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    iconOnly
-                    aria-label="Comment actions"
-                    disabled={isBusy}
-                  />
-                }
-              >
-                {isBusy ? <Spinner label="Updating comment" compact /> : <DotsIcon />}
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {canEdit ? <DropdownMenuItem onClick={startEditing}>Edit</DropdownMenuItem> : null}
-                {comment.url ? (
-                  <>
-                    <DropdownMenuItem onClick={() => void openExternalUrl(comment.url ?? "")}>
-                      Open on GitHub
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => void writeClipboardText(comment.url ?? "")}>
-                      Copy link
-                    </DropdownMenuItem>
-                  </>
-                ) : null}
-                {canDelete ? (
-                  <DropdownMenuItem onClick={() => void handleDelete()}>Delete</DropdownMenuItem>
-                ) : null}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <span className="flex shrink-0 opacity-0 transition-opacity duration-fast group-hover/comment:opacity-100 focus-within:opacity-100 has-data-popup-open:opacity-100">
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      iconOnly
+                      aria-label="Comment actions"
+                      disabled={isBusy}
+                    />
+                  }
+                >
+                  {isBusy ? <Spinner label="Updating comment" compact /> : <DotsIcon />}
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {canEdit ? (
+                    <DropdownMenuItem onClick={startEditing}>Edit</DropdownMenuItem>
+                  ) : null}
+                  {comment.url ? (
+                    <>
+                      <DropdownMenuItem onClick={() => void openExternalUrl(comment.url ?? "")}>
+                        Open on GitHub
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => void writeClipboardText(comment.url ?? "")}>
+                        Copy link
+                      </DropdownMenuItem>
+                    </>
+                  ) : null}
+                  {canDelete ? (
+                    <DropdownMenuItem onClick={() => void handleDelete()}>Delete</DropdownMenuItem>
+                  ) : null}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </span>
           ) : null}
         </div>
-        <div className="space-y-3 px-3 py-3">
+        <div className="mt-1 space-y-3 pl-9">
           {isEditing && onEdit ? (
             <>
               <GitHubMarkdownEditor
@@ -162,13 +195,13 @@ export const CommentItem = memo(
             <GitHubMarkdown
               content={comment.body}
               className="github-markdown-pr"
-              contentClassName="ui-text-sm leading-6 text-muted-foreground"
+              contentClassName="ui-text-sm leading-6 text-foreground"
               repositoryUrl={repositoryUrl}
               repoPath={repoPath}
             />
           )}
         </div>
-      </Card>
+      </article>
     );
   },
 );

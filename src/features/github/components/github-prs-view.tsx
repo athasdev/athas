@@ -37,6 +37,7 @@ import { useSidebarStore } from "@/features/layout/stores/sidebar.store";
 import { writeSidebarResourceDragData } from "@/features/sidebar/services/sidebar-resource-drag";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
+import { ChromeGroup } from "@/ui/chrome";
 import { ContextMenuPopup, createContextMenuGroups } from "@/ui/context-menu";
 import {
   DropdownMenu,
@@ -47,6 +48,8 @@ import {
   type MenuItem,
 } from "@/ui/dropdown";
 import {
+  StreamBar,
+  StreamContextButton,
   StreamEmpty,
   StreamGroup,
   StreamIconButton,
@@ -793,38 +796,36 @@ const GitHubPRsView = memo(() => {
             }))}
           />
 
-          <div className="flex shrink-0 items-center gap-1 px-2 pt-2 pb-0.5">
+          <StreamBar>
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={
-                  <button
-                    type="button"
-                    title={`${effectiveRepoPath ?? ""}\nSwitch repository`}
-                    className="flex h-7 min-w-0 flex-1 items-center gap-1.5 rounded-md px-1.5 text-left hover:bg-foreground/5"
-                  />
+                  <StreamContextButton title={`${effectiveRepoPath ?? ""}\nSwitch repository`} />
                 }
               >
-                <GithubMark className="size-3.5 shrink-0 text-subtle-foreground" />
-                <span className="min-w-0 truncate ui-text-sm">
+                <GithubMark className="size-3.5 text-subtle-foreground" />
+                <span className="min-w-0 truncate">
                   <span className="font-medium text-foreground">{repoName}</span>
                   {currentBranch ? (
                     <span className="text-subtle-foreground"> / {currentBranch}</span>
                   ) : null}
                 </span>
-                <ChevronDownIcon className="size-3 shrink-0 text-subtle-foreground" />
+                <ChevronDownIcon className="size-3 text-subtle-foreground" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" size="default">
                 <DropdownMenuItems items={repositoryItems} />
               </DropdownMenuContent>
             </DropdownMenu>
-            <StreamIconButton
-              label="Refresh"
-              disabled={isLoading || !effectiveRepoPath}
-              onClick={handleRefreshActiveSection}
-            >
-              <ArrowClockwiseIcon className="size-3.5" />
-            </StreamIconButton>
-          </div>
+            <ChromeGroup reveal gap="none">
+              <StreamIconButton
+                label="Refresh"
+                disabled={isLoading || !effectiveRepoPath}
+                onClick={handleRefreshActiveSection}
+              >
+                <ArrowClockwiseIcon className="size-3.5" />
+              </StreamIconButton>
+            </ChromeGroup>
+          </StreamBar>
 
           <StreamToolbar
             search={{

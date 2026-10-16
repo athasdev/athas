@@ -23,6 +23,8 @@ import { CommentItem } from "./comment-item";
 import { GitHubUserChip } from "./github-chips";
 import { GitHubInlineMarkdown } from "./github-inline-editors";
 import { GitHubCommentComposer } from "./github-comment-composer";
+import { GitHubTimeline, GitHubTimelineItem, GitHubTimelineMarker } from "./github-timeline";
+import { cn } from "@/utils/cn";
 
 type TimelineEvent =
   | { kind: "opened"; at: string; pr: PullRequestDetails; commitCount: number }
@@ -103,7 +105,7 @@ function EventTime({ at }: { at: string }) {
 
 function EventRow({
   icon,
-  tone = "text-subtle-foreground",
+  tone,
   onClick,
   label,
   children,
@@ -119,17 +121,16 @@ function EventRow({
     "flex min-h-6 min-w-0 flex-1 flex-wrap items-center gap-x-1.5 gap-y-0.5 font-sans ui-text-sm leading-6 text-subtle-foreground";
   return (
     <div className="flex min-w-0 items-start gap-3">
-      <span
-        className={`relative z-10 flex size-6 shrink-0 items-center justify-center rounded-full bg-background ring-1 ring-divider [&_svg]:size-3.5 ${tone}`}
-      >
-        {icon}
-      </span>
+      <GitHubTimelineMarker className={tone}>{icon}</GitHubTimelineMarker>
       {onClick ? (
         <button
           type="button"
           onClick={onClick}
           aria-label={label}
-          className={`${contentClassName} -mx-1.5 -my-0.5 rounded-chrome px-1.5 py-0.5 text-left transition-colors duration-fast hover:bg-accent focus-visible:bg-accent focus-visible:outline-none`}
+          className={cn(
+            contentClassName,
+            "-mx-1.5 rounded-md px-1.5 text-left transition-colors duration-fast hover:bg-accent focus-visible:bg-accent focus-visible:outline-none",
+          )}
         >
           {children}
         </button>
@@ -140,20 +141,30 @@ function EventRow({
   );
 }
 
-function ReviewEvent({ review }: { review: PullRequestReview }) {
-  const state =
-    review.state === "APPROVED"
-      ? { icon: <CheckCircleIcon />, tone: "text-success", label: "approved these changes" }
-      : review.state === "CHANGES_REQUESTED"
-        ? { icon: <XCircleIcon />, tone: "text-destructive", label: "requested changes" }
-        : { icon: <ChatBubbleTextIcon />, tone: "text-subtle-foreground", label: "reviewed" };
+const REVIEW_STATE = {
+  APPROVED: { icon: <CheckCircleIcon />, tone: "text-success", label: "approved these changes" },
+  CHANGES_REQUESTED: {
+    icon: <XCircleIcon />,
+    tone: "text-destructive",
+    label: "requested changes",
+  },
+  DEFAULT: { icon: <ChatBubbleTextIcon />, tone: undefined, label: "reviewed" },
+};
 
+function getReviewState(review: PullRequestReview) {
+  if (review.state === "APPROVED") return REVIEW_STATE.APPROVED;
+  if (review.state === "CHANGES_REQUESTED") return REVIEW_STATE.CHANGES_REQUESTED;
+  return REVIEW_STATE.DEFAULT;
+}
+
+function ReviewEvent({ review }: { review: PullRequestReview }) {
+  const state = getReviewState(review);
   return (
     <EventRow icon={state.icon} tone={state.tone}>
       <GitHubUserChip
         login={review.login}
         avatarUrl={review.avatarUrl}
-        className="text-foreground"
+        className="font-medium text-foreground"
       />
       <span>{state.label}</span>
       {review.submittedAt ? <EventTime at={review.submittedAt} /> : null}
@@ -209,7 +220,7 @@ export function PRTimeline({
             <GitHubUserChip
               login={event.pr.author.login}
               avatarUrl={event.pr.author.avatarUrl}
-              className="text-foreground"
+              className="font-medium text-foreground"
             />
             <span>
               {`opened this pull request${
@@ -228,69 +239,58 @@ export function PRTimeline({
             onClick={() => void openCommit(event.commit)}
             label={`Open commit ${event.commit.oid.slice(0, 7)}`}
           >
-            <span className="text-foreground">{getCommitAuthor(event.commit)}</span>
+            <span className="font-medium text-foreground">{getCommitAuthor(event.commit)}</span>
             <span>committed</span>
+            <span className="min-w-0 truncate text-muted-foreground">
+              {event.commit.messageHeadline}
+            </span>
             <span className="font-mono">{event.commit.oid.slice(0, 7)}</span>
-            <span className="min-w-0 truncate text-foreground">{event.commit.messageHeadline}</span>
             <EventTime at={event.at} />
           </EventRow>
         );
-      case "review":
+      case "review": {
+        if (!event.review.body.trim()) return <ReviewEvent review={event.review} />;
+        const state = getReviewState(event.review);
         return (
-          <div className="space-y-3">
-            <ReviewEvent review={event.review} />
-            {event.review.body.trim() ? (
-              <div className="pl-9">
-                <CommentItem
-                  comment={{
-                    author: { login: event.review.login },
-                    body: event.review.body,
-                    createdAt: event.review.submittedAt ?? event.at,
-                  }}
-                  repositoryUrl={repositoryUrl}
-                  repoPath={repoPath}
-                />
-              </div>
-            ) : null}
-          </div>
+          <CommentItem
+            comment={{
+              author: { login: event.review.login, avatarUrl: event.review.avatarUrl },
+              body: event.review.body,
+              createdAt: event.review.submittedAt ?? event.at,
+            }}
+            action={state.label}
+            marker={
+              <GitHubTimelineMarker className={state.tone}>{state.icon}</GitHubTimelineMarker>
+            }
+            repositoryUrl={repositoryUrl}
+            repoPath={repoPath}
+          />
         );
+      }
       case "comment":
         return (
-          <div className="space-y-3">
-            <EventRow icon={<ChatBubbleTextIcon />}>
-              <GitHubUserChip
-                login={event.comment.author.login}
-                avatarUrl={event.comment.author.avatarUrl}
-                className="text-foreground"
-              />
-              <span>commented</span>
-              <EventTime at={event.at} />
-            </EventRow>
-            <div className="pl-9">
-              <CommentItem
-                comment={event.comment}
-                repositoryUrl={repositoryUrl}
-                repoPath={repoPath}
-                canManage={
-                  Boolean(currentUser) &&
-                  currentUser?.toLowerCase() === event.comment.author.login.toLowerCase()
-                }
-                isBusy={busyCommentId === event.comment.id}
-                onEdit={(body) => onEditComment(event.comment.id, body)}
-                onDelete={() => onDeleteComment(event.comment.id)}
-              />
-            </div>
-          </div>
+          <CommentItem
+            comment={event.comment}
+            repositoryUrl={repositoryUrl}
+            repoPath={repoPath}
+            canManage={
+              Boolean(currentUser) &&
+              currentUser?.toLowerCase() === event.comment.author.login.toLowerCase()
+            }
+            isBusy={busyCommentId === event.comment.id}
+            onEdit={(body) => onEditComment(event.comment.id, body)}
+            onDelete={() => onDeleteComment(event.comment.id)}
+          />
         );
       case "merged":
         return (
-          <EventRow icon={<GitMergeIcon />} tone="text-primary">
+          <EventRow icon={<GitMergeIcon />} tone="text-merged">
             {event.pr.mergedBy ? (
               <>
                 <GitHubUserChip
                   login={event.pr.mergedBy.login}
                   avatarUrl={event.pr.mergedBy.avatarUrl}
-                  className="text-foreground"
+                  className="font-medium text-foreground"
                 />
                 <span>merged this pull request</span>
               </>
@@ -336,21 +336,19 @@ export function PRTimeline({
       </ResourceSection>
 
       <ResourceSection title="Activity">
-        <div className="space-y-4">
-          <ol className="relative space-y-4 before:absolute before:top-3 before:bottom-3 before:left-3 before:w-px before:bg-divider">
+        <div className="space-y-5">
+          <GitHubTimeline>
             {events.map((event) => (
-              <li key={eventKey(event)} className="relative">
-                {renderEvent(event)}
-              </li>
+              <GitHubTimelineItem key={eventKey(event)}>{renderEvent(event)}</GitHubTimelineItem>
             ))}
             {isLoadingContent && comments.length === 0 ? (
-              <li className="relative">
+              <GitHubTimelineItem>
                 <EventRow icon={<Spinner label="Loading activity" compact />}>
                   <span>Loading activity</span>
                 </EventRow>
-              </li>
+              </GitHubTimelineItem>
             ) : null}
-          </ol>
+          </GitHubTimeline>
 
           {contentError ? (
             <ViewerErrorState

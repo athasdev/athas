@@ -45,6 +45,8 @@ import { getGitHubMilestoneUrl } from "../utils/github-link-utils";
 import { copyToClipboard, getTimeAgo } from "../services/github-viewer-utils";
 import { getGitHubAvatarUrl } from "../services/github-avatar-url";
 import { CommentItem } from "./comment-item";
+import { capitalize } from "@/utils/capitalize";
+import { GitHubTimeline, GitHubTimelineItem } from "./github-timeline";
 import { GitHubInlineMarkdown, GitHubInlineTitle } from "./github-inline-editors";
 import { GitHubMetaChip, GitHubUserChip } from "./github-chips";
 import { GitHubCommentComposer } from "./github-comment-composer";
@@ -421,16 +423,32 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                 </ResourceActionsMenu>
               </>
             }
-            icon={<CircleDotIcon className={isOpen ? "text-success" : "text-subtle-foreground"} />}
+            icon={
+              <CircleDotIcon
+                className={
+                  isOpen
+                    ? "text-success"
+                    : details.stateReason === "completed"
+                      ? "text-merged"
+                      : "text-subtle-foreground"
+                }
+              />
+            }
             title={
               <GitHubInlineTitle value={details.title} onSave={(title) => updateIssue({ title })} />
             }
             badges={
               <>
-                <Badge tone={isOpen ? "success" : "neutral"}>
-                  {details.stateReason
-                    ? `${details.state.toLowerCase()} as ${details.stateReason.replace("_", " ")}`
-                    : details.state.toLowerCase()}
+                <Badge
+                  tone={
+                    isOpen ? "success" : details.stateReason === "completed" ? "merged" : "neutral"
+                  }
+                >
+                  {capitalize(
+                    details.stateReason && !isOpen
+                      ? `${details.state.toLowerCase()} as ${details.stateReason.replace("_", " ")}`
+                      : details.state.toLowerCase(),
+                  )}
                 </Badge>
                 {details.locked ? (
                   <Badge tone="warning">
@@ -624,28 +642,33 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
             </ResourceSection>
 
             <ResourceSection title="Activity">
-              <div className="w-full space-y-3">
+              <div className="w-full space-y-5">
                 {details.comments.length > 0 ? (
-                  visibleComments.map((comment, index) => (
-                    <CommentItem
-                      key={comment.id || `${comment.author.login}-${comment.createdAt}-${index}`}
-                      comment={comment}
-                      repositoryUrl={repositoryUrl}
-                      repoPath={repoPath}
-                      canManage={
-                        Boolean(currentUser) &&
-                        currentUser?.toLowerCase() === comment.author.login.toLowerCase()
-                      }
-                      isBusy={mutationKey === `comment-${comment.id}`}
-                      onEdit={(body) => editComment(comment.id, body)}
-                      onDelete={() => deleteComment(comment.id)}
-                    />
-                  ))
+                  <GitHubTimeline>
+                    {visibleComments.map((comment, index) => (
+                      <GitHubTimelineItem
+                        key={comment.id || `${comment.author.login}-${comment.createdAt}-${index}`}
+                      >
+                        <CommentItem
+                          comment={comment}
+                          repositoryUrl={repositoryUrl}
+                          repoPath={repoPath}
+                          canManage={
+                            Boolean(currentUser) &&
+                            currentUser?.toLowerCase() === comment.author.login.toLowerCase()
+                          }
+                          isBusy={mutationKey === `comment-${comment.id}`}
+                          onEdit={(body) => editComment(comment.id, body)}
+                          onDelete={() => deleteComment(comment.id)}
+                        />
+                      </GitHubTimelineItem>
+                    ))}
+                  </GitHubTimeline>
                 ) : (
                   <ViewerState description="No comments yet" layout="section" className="min-h-0" />
                 )}
                 {details.comments.length > visibleComments.length ? (
-                  <div className="px-1 py-2">
+                  <div className="py-2 pl-9">
                     <Spinner
                       label={`Loading ${details.comments.length - visibleComments.length} more comments`}
                       showLabel

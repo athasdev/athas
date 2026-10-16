@@ -163,7 +163,7 @@ export function DockerContainerDetail({
             >
               Up
             </Button>
-            <div className="ui-text-sm min-w-0 flex-1 truncate rounded border border-border bg-background px-2 py-1 font-mono text-subtle-foreground">
+            <div className="ui-text-sm min-w-0 flex-1 truncate rounded-md bg-surface px-2 py-1 font-mono text-subtle-foreground">
               {containerPath}
             </div>
             <Button

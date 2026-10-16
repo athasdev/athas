@@ -76,7 +76,7 @@ const DiffHunkHeader = memo(
 
     return (
       <div
-        className="flex min-w-full w-fit select-none items-stretch border-divider border-b bg-surface font-mono text-subtle-foreground"
+        className="flex min-w-full w-fit select-none items-stretch bg-surface font-mono text-subtle-foreground"
         data-selection-scope-exclude="true"
         style={headerStyle}
       >
@@ -88,7 +88,7 @@ const DiffHunkHeader = memo(
           aria-label={`${isCollapsed ? "Expand" : "Collapse"} diff hunk ${rangeLabel}`}
           title={hunk.header.content}
         >
-          <span className="flex items-center justify-center border-divider border-r text-subtle-foreground">
+          <span className="flex items-center justify-center text-subtle-foreground">
             <span className="flex size-4 items-center justify-center">
               {isCollapsed ? (
                 <ChevronRightIcon size={iconSize} />
@@ -120,7 +120,7 @@ const DiffHunkHeader = memo(
         </button>
 
         {canStage ? (
-          <span className="flex shrink-0 items-center border-divider border-l px-1">
+          <span className="flex shrink-0 items-center px-1">
             <Button
               type="button"
               variant="ghost"

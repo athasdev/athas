@@ -12,6 +12,7 @@ const badgeVariants = cva(
         warning: "bg-warning-soft text-warning",
         danger: "bg-destructive-soft text-destructive",
         info: "bg-info-soft text-info",
+        merged: "bg-merged-soft text-merged",
       },
       truncate: { true: "min-w-0 shrink overflow-hidden", false: "shrink-0" },
     },
@@ -42,7 +43,10 @@ export default function Badge({ tone, truncate, labelColor, children, ...props }
       className={badgeVariants({ tone, truncate })}
       style={
         color
-          ? { color, backgroundColor: `color-mix(in srgb, ${color} 16%, transparent)` }
+          ? {
+              color: `color-mix(in srgb, ${color} 62%, var(--foreground))`,
+              backgroundColor: `color-mix(in srgb, ${color} 16%, transparent)`,
+            }
           : undefined
       }
     >

@@ -17,6 +17,7 @@ import { requestInlineEdit } from "@/features/ai/intelligence/services/intellige
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { Button } from "@/ui/button";
+import { Card } from "@/ui/card";
 import { Checkbox } from "@/ui/checkbox";
 import Input from "@/ui/input";
 import { ResourceDocument, ResourceSummary } from "@/ui/resource";
@@ -413,7 +414,7 @@ ${statusSummary}`;
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3 border-divider border-y py-3">
+            <div className="flex flex-wrap items-center gap-3 py-2">
               <div className="flex min-w-56 flex-1 items-center gap-2">
                 <span className="shrink-0 font-sans ui-text-sm text-subtle-foreground">
                   Workflow
@@ -498,7 +499,7 @@ ${statusSummary}`;
             </div>
 
             {kind === "pull-request" ? (
-              <div className="flex flex-wrap items-center gap-2 border-divider border-y py-3">
+              <div className="flex flex-wrap items-center gap-2 pb-3">
                 <GitBranchIcon className="text-subtle-foreground" />
                 <span className="font-sans ui-text-sm text-subtle-foreground">Head</span>
                 <Select
@@ -540,14 +541,14 @@ ${statusSummary}`;
               </div>
             ) : null}
 
-            <div className="pt-3">
+            <Card layout="compact">
               <GitHubMarkdownEditor
                 value={body}
                 onChange={setBody}
                 placeholder="Write a description..."
                 minHeight={240}
               />
-            </div>
+            </Card>
 
             {error ? (
               <div className="mt-3 rounded-lg bg-destructive-soft px-3 py-2 ui-text-sm text-destructive">
@@ -555,7 +556,7 @@ ${statusSummary}`;
               </div>
             ) : null}
 
-            <div className="flex flex-wrap items-center justify-between gap-3 border-divider border-t pt-3">
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-4">
               <div className="flex min-w-0 flex-wrap items-center gap-2">
                 <GitHubLabelPicker
                   labels={labels}

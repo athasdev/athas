@@ -244,7 +244,7 @@ describe("GitHub issue viewer", () => {
     expect(view().getByText("Steps to reproduce")).toBeTruthy();
     expect(view().getByText("2 comments")).toBeTruthy();
     expect(view().getByText("Comment 1")).toBeTruthy();
-    expect(view().getByText("open")).toBeTruthy();
+    expect(view().getByText("Open")).toBeTruthy();
     expect(useBufferStore.getState().buffers[0]).toMatchObject({
       name: "Crash on save",
       url: "https://github.com/athasdev/athas/issues/12",
@@ -279,7 +279,7 @@ describe("GitHub issue viewer", () => {
       { repoPath: "/repo", issueNumber: 12, state: "closed", stateReason: "completed" },
     ]);
     expect(mocks.toast.success).toHaveBeenCalledWith("Issue closed");
-    expect(view().getByText("closed as completed")).toBeTruthy();
+    expect(view().getByText("Closed as completed")).toBeTruthy();
 
     await click(view().getByRole("button", { name: "Reopen" }));
     expect(calls("github_update_issue_state").slice(-1)[0]).toMatchObject({
@@ -296,7 +296,7 @@ describe("GitHub issue viewer", () => {
     expect(calls("github_update_issue_state")).toEqual([
       { repoPath: "/repo", issueNumber: 12, state: "closed", stateReason: "not_planned" },
     ]);
-    expect(view().getByText("closed as not planned")).toBeTruthy();
+    expect(view().getByText("Closed as not planned")).toBeTruthy();
 
     handlers.github_update_issue_state = () => {
       throw new Error("no permission");
@@ -389,8 +389,7 @@ describe("GitHub issue viewer", () => {
     expect(view().getByText("Reproduced on main")).toBeTruthy();
     expect(view().getByText("3 comments")).toBeTruthy();
 
-    const ownComment = () =>
-      view().getByText("Comment 1").closest("[data-slot='card']") as HTMLElement;
+    const ownComment = () => view().getByText("Comment 1").closest("article") as HTMLElement;
     await click(within(ownComment()).getByRole("button", { name: "Comment actions" }));
     await click(menuItem("Edit"));
     await typeInto(view().getByRole("textbox", { name: "Edit comment..." }), "Edited comment");
@@ -401,9 +400,10 @@ describe("GitHub issue viewer", () => {
     expect(view().getByText("Edited comment")).toBeTruthy();
 
     await click(
-      within(
-        view().getByText("Edited comment").closest("[data-slot='card']") as HTMLElement,
-      ).getByRole("button", { name: "Comment actions" }),
+      within(view().getByText("Edited comment").closest("article") as HTMLElement).getByRole(
+        "button",
+        { name: "Comment actions" },
+      ),
     );
     await click(menuItem("Delete"));
     expect(calls("github_delete_issue_comment")).toEqual([{ repoPath: "/repo", commentId: 1 }]);

@@ -25,6 +25,7 @@ import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
 import type { Terminal } from "@/features/terminal/types/terminal.types";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { Button } from "@/ui/button";
+import { ChromeGroup } from "@/ui/chrome";
 import { ContextMenu, ContextMenuTrigger } from "@/ui/context-menu";
 import {
   scrollTabIntoStrip,
@@ -779,7 +780,7 @@ const TabBar = ({
             </TabStrip>
           </SortableContext>
 
-          <div className="ml-auto flex h-full shrink-0 items-center gap-1 pl-0.5">
+          <ChromeGroup reveal gap="tight" className="ml-auto h-full">
             {paneId && !disablePaneActions && !isBottomPane && isInSplit && (
               <Button
                 type="button"
@@ -808,7 +809,7 @@ const TabBar = ({
                 {isPaneFullscreen ? <ArrowsInIcon /> : <ArrowsOutIcon />}
               </Button>
             ) : null}
-          </div>
+          </ChromeGroup>
         </TabBarSurface>
         {draggedBuffer ? (
           <TabDragOverlay>

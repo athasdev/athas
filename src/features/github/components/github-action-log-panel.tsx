@@ -21,6 +21,7 @@ import {
   type ReadonlyEditorView,
 } from "@/features/editor/components/codemirror-readonly-view";
 import { Button } from "@/ui/button";
+import { ChromeGroup } from "@/ui/chrome";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -263,8 +264,11 @@ export function GitHubActionLogPanel({
     .join(" · ");
 
   return (
-    <section className="flex min-h-0 min-w-0 flex-1 flex-col" aria-label="Job logs">
-      <div className="flex shrink-0 flex-wrap items-center gap-2 border-divider border-b px-3 py-2">
+    <section
+      className="group/chrome-host flex min-h-0 min-w-0 flex-1 flex-col"
+      aria-label="Job logs"
+    >
+      <div className="flex shrink-0 flex-wrap items-center gap-2 px-3 py-2">
         <div className="flex min-w-0 flex-1 items-center gap-2">
           {subject ? (
             <WorkflowStatusIcon
@@ -353,88 +357,90 @@ export function GitHubActionLogPanel({
               leftIcon={SearchIcon}
             />
           </span>
-          <Toggle
-            pressed={showTimestamps}
-            onClick={onToggleTimestamps}
-            tooltip={showTimestamps ? "Hide timestamps" : "Show timestamps"}
-            aria-label="Toggle timestamps"
-          >
-            <ClockIcon />
-          </Toggle>
-          <Toggle
-            pressed={wrap}
-            onClick={onToggleWrap}
-            tooltip={wrap ? "Disable line wrap" : "Wrap long lines"}
-            aria-label="Toggle line wrap"
-          >
-            <TextAlignJustifyIcon />
-          </Toggle>
-          <Button
-            type="button"
-            variant="ghost"
-            iconOnly
-            tooltip="Copy logs"
-            onClick={onCopy}
-            disabled={lines.length === 0}
-          >
-            <CopyIcon />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            iconOnly
-            tooltip="Refresh logs"
-            onClick={onRefresh}
-            disabled={!job || !isLogsAvailable || isLoading}
-          >
-            {isLoading ? <Spinner label="Loading logs" compact /> : <ArrowClockwiseIcon />}
-          </Button>
-          {onOpenOnGitHub ? (
+          <ChromeGroup reveal gap="tight">
+            <Toggle
+              pressed={showTimestamps}
+              onClick={onToggleTimestamps}
+              tooltip={showTimestamps ? "Hide timestamps" : "Show timestamps"}
+              aria-label="Toggle timestamps"
+            >
+              <ClockIcon />
+            </Toggle>
+            <Toggle
+              pressed={wrap}
+              onClick={onToggleWrap}
+              tooltip={wrap ? "Disable line wrap" : "Wrap long lines"}
+              aria-label="Toggle line wrap"
+            >
+              <TextAlignJustifyIcon />
+            </Toggle>
             <Button
               type="button"
               variant="ghost"
               iconOnly
-              tooltip="Open job on GitHub"
-              onClick={onOpenOnGitHub}
+              tooltip="Copy logs"
+              onClick={onCopy}
+              disabled={lines.length === 0}
             >
-              <OpenExternalIcon />
+              <CopyIcon />
             </Button>
-          ) : null}
-          <DropdownMenu>
-            <Tooltip content="More log actions">
-              <DropdownMenuTrigger
-                render={
-                  <Button type="button" variant="ghost" iconOnly aria-label="More log actions" />
-                }
+            <Button
+              type="button"
+              variant="ghost"
+              iconOnly
+              tooltip="Refresh logs"
+              onClick={onRefresh}
+              disabled={!job || !isLogsAvailable || isLoading}
+            >
+              {isLoading ? <Spinner label="Loading logs" compact /> : <ArrowClockwiseIcon />}
+            </Button>
+            {onOpenOnGitHub ? (
+              <Button
+                type="button"
+                variant="ghost"
+                iconOnly
+                tooltip="Open job on GitHub"
+                onClick={onOpenOnGitHub}
               >
-                <DotsIcon />
-              </DropdownMenuTrigger>
-            </Tooltip>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                disabled={model.foldRanges.length === 0}
-                onClick={() => runEditorCommand(foldAll)}
-              >
-                Collapse all groups
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                disabled={model.foldRanges.length === 0}
-                onClick={() => runEditorCommand(unfoldAll)}
-              >
-                Expand all groups
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                disabled={model.rows.length === 0}
-                onClick={() => runEditorCommand(openSearchPanel)}
-              >
-                Find in logs
-              </DropdownMenuItem>
-              <DropdownMenuItem disabled={lines.length === 0} onClick={onExport}>
-                <DownloadIcon />
-                Export log
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                <OpenExternalIcon />
+              </Button>
+            ) : null}
+            <DropdownMenu>
+              <Tooltip content="More log actions">
+                <DropdownMenuTrigger
+                  render={
+                    <Button type="button" variant="ghost" iconOnly aria-label="More log actions" />
+                  }
+                >
+                  <DotsIcon />
+                </DropdownMenuTrigger>
+              </Tooltip>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  disabled={model.foldRanges.length === 0}
+                  onClick={() => runEditorCommand(foldAll)}
+                >
+                  Collapse all groups
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={model.foldRanges.length === 0}
+                  onClick={() => runEditorCommand(unfoldAll)}
+                >
+                  Expand all groups
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={model.rows.length === 0}
+                  onClick={() => runEditorCommand(openSearchPanel)}
+                >
+                  Find in logs
+                </DropdownMenuItem>
+                <DropdownMenuItem disabled={lines.length === 0} onClick={onExport}>
+                  <DownloadIcon />
+                  Export log
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </ChromeGroup>
         </div>
       </div>
 

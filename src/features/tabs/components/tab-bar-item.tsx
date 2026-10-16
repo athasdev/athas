@@ -9,7 +9,7 @@ import { shouldShowTabCloseButton } from "@/features/settings/services/ui-prefer
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
 import { InlineRenameInput } from "@/ui/input";
-import { TabItem } from "@/ui/tab-bar";
+import { TabItem, TabLabel } from "@/ui/tab-bar";
 import { cn } from "@/utils/cn";
 import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 
@@ -152,16 +152,9 @@ const TabBarItem = memo(function TabBarItem({
             spellCheck={false}
           />
         ) : (
-          <span
-            className={cn(
-              "font-sans ui-text-chrome min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap",
-              isActive ? "text-foreground" : "text-subtle-foreground",
-              isPreview && "italic",
-            )}
-            title={buffer.path}
-          >
+          <TabLabel label={displayName} preview={isPreview} className="flex-1" title={buffer.path}>
             {displayName}
-          </span>
+          </TabLabel>
         )}
         {isDirtyContent(buffer) && (
           <div

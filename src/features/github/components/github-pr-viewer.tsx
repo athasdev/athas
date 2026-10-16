@@ -8,7 +8,7 @@ import { showConfirmDialog } from "@/ui/dialog";
 import { DropdownMenuItem } from "@/ui/dropdown";
 import { Spinner } from "@/ui/spinner";
 import Badge from "@/ui/badge";
-import { GitMergeIcon, GitPullRequestIcon } from "@/ui/icons";
+import { ArrowRightIcon, GitMergeIcon, GitPullRequestIcon } from "@/ui/icons";
 import {
   ResourceActionsMenu,
   ResourceContent,
@@ -81,6 +81,7 @@ import {
 } from "./github-pr-inline-action";
 import { GitHubBranchChip, GitHubMetaChip, GitHubUserChip } from "./github-chips";
 import { GitHubMetadataError } from "./github-metadata-error";
+import { GitHubInlineTitle } from "./github-inline-editors";
 
 const EMPTY_FILES: PullRequestFile[] = [];
 const EMPTY_COMMENTS: PullRequestComment[] = [];
@@ -607,9 +608,23 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
     reviewDecision: pr.reviewDecision,
   });
   const MergeStatusIcon = mergeStatus.icon;
+  const statusIcon =
+    status === "merged" ? (
+      <GitMergeIcon className="text-merged" />
+    ) : (
+      <GitPullRequestIcon
+        className={
+          status === "open"
+            ? "text-success"
+            : status === "closed"
+              ? "text-destructive"
+              : "text-subtle-foreground"
+        }
+      />
+    );
+
   const actions = (
     <>
-      <Badge tone={PR_STATUS_BADGE_TONE[status]}>{PULL_REQUEST_STATUS_LABEL[status]}</Badge>
       {mergeStatus.ready ? (
         <Button onClick={() => openInlineAction("merge")} variant="accent" size="sm">
           <GitMergeIcon />
@@ -643,44 +658,57 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
   );
 
   const summary = (
-    <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1">
-      <GitHubMetaChip title="Pull request number">{`#${pr.number}`}</GitHubMetaChip>
-      <GitHubUserChip
-        login={pr.author.login}
-        avatarUrl={pr.author.avatarUrl}
-        className="text-foreground"
-        avatarSize="sm"
-      />
-      <GitHubMetaChip title={new Date(pr.createdAt).toLocaleString()}>
-        {`Opened ${getTimeAgo(pr.createdAt)}`}
-      </GitHubMetaChip>
-      <GitHubMetaChip title={new Date(pr.updatedAt).toLocaleString()}>
-        {`Updated ${getTimeAgo(pr.updatedAt)}`}
-      </GitHubMetaChip>
-      {isRefreshingDetails ? <Spinner label="Refreshing" compact /> : null}
-      <span className="flex min-w-0 items-center gap-1">
-        <GitHubBranchChip name={pr.headRef} repositoryUrl={repositoryUrl} className="max-w-64" />
-        <span aria-hidden="true" className="text-subtle-foreground">
-          →
-        </span>
-        <GitHubBranchChip name={pr.baseRef} repositoryUrl={repositoryUrl} className="max-w-64" />
-      </span>
-    </div>
+    <ResourceSummary
+      icon={statusIcon}
+      title={<GitHubInlineTitle value={pr.title} onSave={(title) => updatePR({ title })} />}
+      badges={
+        <Badge tone={PR_STATUS_BADGE_TONE[status]}>{PULL_REQUEST_STATUS_LABEL[status]}</Badge>
+      }
+      actions={actions}
+      meta={
+        <>
+          <GitHubMetaChip title="Pull request number">{`#${pr.number}`}</GitHubMetaChip>
+          <GitHubUserChip
+            login={pr.author.login}
+            avatarUrl={pr.author.avatarUrl}
+            className="text-muted-foreground"
+            avatarSize="sm"
+          />
+          <span className="flex min-w-0 items-center gap-1">
+            <GitHubBranchChip
+              name={pr.headRef}
+              repositoryUrl={repositoryUrl}
+              className="max-w-64"
+            />
+            <ArrowRightIcon aria-hidden="true" className="size-3 shrink-0 text-subtle-foreground" />
+            <GitHubBranchChip
+              name={pr.baseRef}
+              repositoryUrl={repositoryUrl}
+              className="max-w-64"
+            />
+          </span>
+          <GitHubMetaChip title={new Date(pr.createdAt).toLocaleString()}>
+            {`Opened ${getTimeAgo(pr.createdAt)}`}
+          </GitHubMetaChip>
+          <GitHubMetaChip title={new Date(pr.updatedAt).toLocaleString()}>
+            {`Updated ${getTimeAgo(pr.updatedAt)}`}
+          </GitHubMetaChip>
+          {isRefreshingDetails ? <Spinner label="Refreshing" compact /> : null}
+        </>
+      }
+    />
   );
 
   const tabs = (
-    <div className="flex min-w-0 items-center justify-between gap-3">
-      <GitHubPRTabs
-        activeView={activeTab}
-        commits={commits}
-        repoPath={repoPath ?? undefined}
-        additions={pr.additions}
-        deletions={pr.deletions}
-        onShowOverview={handleShowOverview}
-        onShowChanges={handleShowFiles}
-      />
-      <div className="flex shrink-0 items-center gap-1.5">{actions}</div>
-    </div>
+    <GitHubPRTabs
+      activeView={activeTab}
+      commits={commits}
+      repoPath={repoPath ?? undefined}
+      additions={pr.additions}
+      deletions={pr.deletions}
+      onShowOverview={handleShowOverview}
+      onShowChanges={handleShowFiles}
+    />
   );
 
   const errorState = detailsError ? (

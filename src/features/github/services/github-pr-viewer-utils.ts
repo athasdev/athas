@@ -204,7 +204,7 @@ export type PullRequestStatus = "open" | "draft" | "merged" | "closed";
 export const PR_STATUS_BADGE_TONE: Record<PullRequestStatus, BadgeTone> = {
   open: "success",
   draft: "neutral",
-  merged: "accent",
+  merged: "merged",
   closed: "danger",
 };
 

@@ -230,8 +230,9 @@ const tabItemVariants = cva(
   "group/tab ui-text-chrome relative isolate flex h-tab min-h-tab min-w-20 max-w-tab-max w-fit shrink-0 select-none items-center gap-chrome-loose whitespace-nowrap rounded-md border-0 bg-transparent pr-6 pl-2 text-subtle-foreground outline-none transition-[transform,opacity,color,background-color,box-shadow] duration-fast ease-smooth before:pointer-events-none before:absolute before:inset-0 before:-z-10 before:rounded-[inherit] before:bg-transparent before:content-['']",
   {
     variants: {
+      /** The active tab reads by tone and weight; only hover lays a fill behind a tab. */
       active: {
-        true: "z-10 text-foreground before:bg-tab-active",
+        true: "z-10 font-medium text-foreground",
         false: "text-subtle-foreground hover:text-foreground hover:before:bg-accent",
       },
       dragged: {
@@ -267,6 +268,37 @@ export const TabItem = forwardRef<HTMLDivElement, TabItemProps>(function TabItem
     </div>
   );
 });
+
+/**
+ * A tab's name. It reserves the width of its medium weight, so the strip does not shift when the
+ * active tab changes.
+ */
+export function TabLabel({
+  label,
+  preview = false,
+  children,
+  className,
+  ...props
+}: HTMLAttributes<HTMLSpanElement> & {
+  label: string;
+  /** A preview tab, replaced by the next file opened, reads in italics. */
+  preview?: boolean;
+}) {
+  return (
+    <span
+      data-slot="tab-label"
+      data-label={label}
+      className={cn(
+        "inline-flex min-w-0 flex-col font-sans ui-text-chrome after:invisible after:h-0 after:overflow-hidden after:font-medium after:whitespace-nowrap after:content-[attr(data-label)]",
+        preview && "italic",
+        className,
+      )}
+      {...props}
+    >
+      <span className="truncate">{children}</span>
+    </span>
+  );
+}
 
 /** How far the edge fade reaches into an overflowing tab strip; matches `scroll-fade-6`. */
 const TAB_STRIP_FADE_WIDTH = 24;

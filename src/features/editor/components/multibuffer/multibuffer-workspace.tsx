@@ -16,6 +16,7 @@ import {
   type FileNavigatorTone,
   type FileNavigatorViewMode,
 } from "@/features/file-explorer/components/file-navigator-sidebar";
+import { ChromeSeparator } from "@/ui/chrome";
 import { PaneContentHeader } from "@/ui/pane-content-chrome";
 import { ScrollArea } from "@/ui/scroll-area";
 import { cn } from "@/utils/cn";
@@ -349,6 +350,8 @@ export function MultibufferWorkspace({
     >
       {header ? (
         <PaneContentHeader
+          separated={false}
+          revealActions
           className="select-none"
           leading={header.icon}
           title={header.title}
@@ -363,7 +366,7 @@ export function MultibufferWorkspace({
               />
               {header.actions ? (
                 <>
-                  <div className="mx-1 h-3.5 w-px bg-divider" />
+                  <ChromeSeparator />
                   {header.actions}
                 </>
               ) : null}

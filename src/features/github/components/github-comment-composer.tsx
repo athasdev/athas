@@ -6,6 +6,7 @@ import { Spinner } from "@/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
 import Textarea from "@/ui/textarea";
 import { GitHubAvatar } from "./github-avatar";
+import { GitHubTimelineMarker } from "./github-timeline";
 import GitHubMarkdown from "./github-markdown";
 
 interface GitHubCommentComposerProps {
@@ -71,99 +72,102 @@ export function GitHubCommentComposer({
   };
 
   return (
-    <div ref={containerRef} className="min-w-0 space-y-2">
-      <Composer>
-        <form
-          aria-label="Add a comment"
-          aria-busy={busy}
-          className="p-3"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void submit();
-          }}
-          onKeyDown={(event) => {
-            if (
-              event.key === "Enter" &&
-              (event.metaKey || event.ctrlKey) &&
-              !event.nativeEvent.isComposing
-            ) {
+    <div ref={containerRef} className="flex min-w-0 items-start gap-3">
+      <GitHubTimelineMarker className="mt-2">
+        {currentUser ? <GitHubAvatar login={currentUser} size={48} displaySize="md" /> : null}
+      </GitHubTimelineMarker>
+      <div className="min-w-0 flex-1 space-y-2">
+        <Composer>
+          <form
+            aria-label="Add a comment"
+            aria-busy={busy}
+            className="px-3 pt-2 pb-2.5"
+            onSubmit={(event) => {
               event.preventDefault();
-              event.stopPropagation();
               void submit();
-            }
-          }}
-        >
-          <Tabs value={mode} onValueChange={(next) => setMode(String(next))}>
-            <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
-              <TabsList aria-label="Comment editor">
-                <TabsTrigger value="write">Write</TabsTrigger>
-                <TabsTrigger value="preview">Preview</TabsTrigger>
-              </TabsList>
-              {currentUser ? (
-                <span className="flex min-w-0 items-center gap-1.5 text-subtle-foreground ui-text-sm">
-                  <GitHubAvatar login={currentUser} displaySize="sm" />
-                  <span className="truncate">{currentUser}</span>
-                </span>
-              ) : null}
-            </div>
-            <TabsContent value="write">
-              <Textarea
-                ref={inputRef}
-                aria-label="Comment"
-                aria-describedby={error ? `${hintId} ${errorId}` : hintId}
-                aria-invalid={Boolean(error)}
-                value={value}
-                onChange={(event) => {
-                  onChange(event.target.value);
-                  setError(null);
-                }}
-                placeholder={placeholder}
-                rows={3}
-                variant="ghost"
-                resize="none"
-                className="block min-h-20 max-h-64"
-                disabled={disabled || busy}
-                spellCheck
-              />
-            </TabsContent>
-            <TabsContent value="preview">
-              <div className="min-h-20 max-h-64 overflow-auto px-2 py-1">
-                {value.trim() ? (
-                  <GitHubMarkdown
-                    content={value}
-                    repositoryUrl={repositoryUrl}
-                    repoPath={repoPath}
-                  />
-                ) : (
-                  <p className="text-subtle-foreground ui-text-sm">Nothing to preview yet.</p>
-                )}
+            }}
+            onKeyDown={(event) => {
+              if (
+                event.key === "Enter" &&
+                (event.metaKey || event.ctrlKey) &&
+                !event.nativeEvent.isComposing
+              ) {
+                event.preventDefault();
+                event.stopPropagation();
+                void submit();
+              }
+            }}
+          >
+            <Tabs value={mode} onValueChange={(next) => setMode(String(next))}>
+              <div className="-ml-1.5 flex min-w-0 items-center gap-2">
+                <TabsList variant="text" aria-label="Comment editor">
+                  <TabsTrigger value="write">Write</TabsTrigger>
+                  <TabsTrigger value="preview">Preview</TabsTrigger>
+                </TabsList>
               </div>
-            </TabsContent>
-          </Tabs>
-          <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-            <span
-              id={hintId}
-              className="flex flex-wrap items-center gap-2 text-subtle-foreground ui-text-sm"
-            >
-              Markdown supported
-              <span className="inline-flex items-center gap-1">
-                <Keybinding binding="mod+enter" /> to send
+              <TabsContent value="write">
+                <Textarea
+                  ref={inputRef}
+                  aria-label="Comment"
+                  aria-describedby={error ? `${hintId} ${errorId}` : hintId}
+                  aria-invalid={Boolean(error)}
+                  value={value}
+                  onChange={(event) => {
+                    onChange(event.target.value);
+                    setError(null);
+                  }}
+                  placeholder={placeholder}
+                  rows={3}
+                  variant="ghost"
+                  resize="none"
+                  className="block min-h-20 max-h-64"
+                  disabled={disabled || busy}
+                  spellCheck
+                />
+              </TabsContent>
+              <TabsContent value="preview">
+                <div className="min-h-20 max-h-64 overflow-auto px-2 py-1">
+                  {value.trim() ? (
+                    <GitHubMarkdown
+                      content={value}
+                      repositoryUrl={repositoryUrl}
+                      repoPath={repoPath}
+                    />
+                  ) : (
+                    <p className="text-subtle-foreground ui-text-sm">Nothing to preview yet.</p>
+                  )}
+                </div>
+              </TabsContent>
+            </Tabs>
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+              <span
+                id={hintId}
+                className="flex flex-wrap items-center gap-2 text-subtle-foreground ui-text-sm"
+              >
+                Markdown supported
+                <span className="inline-flex items-center gap-1">
+                  <Keybinding binding="mod+enter" /> to send
+                </span>
               </span>
-            </span>
-            <div className="ml-auto">
-              <Button type="submit" disabled={!canSubmit}>
-                {busy ? <Spinner label="Posting comment" compact /> : null}
-                {busy ? "Posting…" : "Comment"}
-              </Button>
+              <div className="ml-auto">
+                <Button
+                  type="submit"
+                  variant={canSubmit ? "accent" : "default"}
+                  disabled={!canSubmit}
+                >
+                  {busy ? <Spinner label="Posting comment" compact /> : null}
+                  {busy ? "Posting…" : "Comment"}
+                </Button>
+              </div>
             </div>
-          </div>
-        </form>
-      </Composer>
-      {error ? (
-        <p id={errorId} role="alert" className="text-destructive ui-text-sm">
-          {error}
-        </p>
-      ) : null}
+          </form>
+        </Composer>
+        {error ? (
+          <p id={errorId} role="alert" className="text-destructive ui-text-sm">
+            {error}
+          </p>
+        ) : null}
+      </div>
     </div>
   );
 }
