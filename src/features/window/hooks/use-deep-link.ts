@@ -60,7 +60,7 @@ function handleDeepLink(url: string) {
     } else if (action.type === "extensionInstall") {
       installExtensionFromDeepLink(action.extensionId);
     } else if (action.type === "mcpInstall") {
-      openMcpInstallFromDeepLink(action.url);
+      void openMcpInstallFromDeepLink(action.url);
     } else if (action.type === "extensions") {
       void openExtensionsTabFromDeepLink(action.extensionsCategory);
     } else {
@@ -206,9 +206,11 @@ async function openSettingsFromDeepLink(
   useUIState.getState().openSettings(tab);
 }
 
-function openMcpInstallFromDeepLink(url: string) {
+/** Customize reads the pending link into its MCP server dialog, so the user reviews it first. */
+async function openMcpInstallFromDeepLink(url: string) {
   usePendingMcpInstallLinkStore.getState().actions.request(url);
-  void openSettingsFromDeepLink("ai-mcp");
+  const { useBufferStore } = await import("@/features/editor/stores/buffer.store");
+  useBufferStore.getState().actions.openContent({ type: "customize" });
 }
 
 async function openExtensionsTabFromDeepLink(extensionsCategory?: Settings["extensionsActiveTab"]) {

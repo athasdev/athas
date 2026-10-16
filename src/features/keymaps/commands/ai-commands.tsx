@@ -8,6 +8,7 @@ import {
   GitDiffIcon,
   GlobeIcon,
   HistoryIcon,
+  PuzzlePieceIcon,
   ShieldCheckIcon,
   SidebarRightIcon,
   SignOutIcon,
@@ -21,6 +22,7 @@ import { hasProductCapability } from "@/features/auth/services/product-capabilit
 import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
+import { openCustomize } from "@/features/ai/customize/services/open-customize";
 import type { Command } from "../types/keymaps.types";
 
 /** Loaded on use, so the keymap layer does not pull in the agent edit review up front. */
@@ -205,6 +207,17 @@ export const aiCommands: Command[] = [
     icon: <XIcon />,
     palette: true,
     execute: async () => (await aiActions()).rejectAllPendingAgentChanges(),
+  },
+  {
+    id: "ai.openCustomize",
+    title: "AI: Customize",
+    category: "AI",
+    description: "Add MCP servers, agents, skills and extensions",
+    icon: <PuzzlePieceIcon />,
+    palette: true,
+    execute: () => {
+      openCustomize();
+    },
   },
   {
     id: "ai.openContinuousAgents",

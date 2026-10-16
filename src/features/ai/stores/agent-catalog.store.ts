@@ -30,6 +30,16 @@ interface AgentCatalogState {
     runAgentAction: (agentId: string, agentName: string, action: AgentAction) => Promise<void>;
   };
 }
+const AGENT_ACTION_COMMANDS: Record<AgentAction, (agentId: string) => Promise<unknown>> = {
+  install: (agentId) => commands.installAcpAgent(agentId),
+  update: (agentId) => commands.updateAcpAgent(agentId),
+  uninstall: (agentId) => commands.uninstallAcpAgent(agentId),
+};
+const AGENT_ACTION_PAST_TENSE: Record<AgentAction, string> = {
+  install: "installed",
+  update: "updated",
+  uninstall: "uninstalled",
+};
 const emptySource = <T>(): CatalogSource<T> => ({
   data: null,
   status: "idle",
@@ -93,9 +103,7 @@ export const useAgentCatalogStore = createSelectors(
             return;
           set({ pendingAction: { agentId, action } });
           try {
-            const updated = (await (action === "update"
-              ? commands.updateAcpAgent(agentId)
-              : commands.installAcpAgent(agentId))) as AgentConfig;
+            const updated = (await AGENT_ACTION_COMMANDS[action](agentId)) as AgentConfig;
             const source = get().agents;
             set({
               agents: {
@@ -103,7 +111,13 @@ export const useAgentCatalogStore = createSelectors(
                 data: [...(source.data ?? []).filter((agent) => agent.id !== updated.id), updated],
               },
             });
-            toast.success(`${agentName} ${action === "update" ? "updated" : "installed"}`);
+            if (action === "uninstall" && updated.installed) {
+              toast.info(`${agentName} managed install removed`, {
+                description: "A global installation is still detected on your PATH.",
+              });
+            } else {
+              toast.success(`${agentName} ${AGENT_ACTION_PAST_TENSE[action]}`);
+            }
           } catch (error) {
             toast.error(`Failed to ${action} ${agentName}`, {
               description: getAgentErrorMessage(error),

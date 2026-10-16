@@ -57,6 +57,7 @@ export type PaneContentType =
   | "settings"
   | "extensions"
   | "extension"
+  | "customize"
   | "onboarding";
 
 // ── Base fields shared by every content type ────────────────────────
@@ -249,6 +250,10 @@ export interface ExtensionsContent extends PaneContentBase {
   type: "extensions";
 }
 
+interface CustomizeContent extends PaneContentBase {
+  type: "customize";
+}
+
 export interface ExtensionContent extends PaneContentBase {
   type: "extension";
   extensionId: string;
@@ -295,6 +300,7 @@ export type PaneContent =
   | SettingsContent
   | ExtensionsContent
   | ExtensionContent
+  | CustomizeContent
   | OnboardingContent;
 
 // ── Type guards ─────────────────────────────────────────────────────
@@ -327,6 +333,7 @@ const VIRTUAL_TYPES: ReadonlySet<PaneContentType> = new Set([
   "settings",
   "extensions",
   "extension",
+  "customize",
   "onboarding",
 ]);
 
@@ -530,6 +537,9 @@ export type OpenContentSpec =
       type: "extension";
       extensionId: string;
       name: string;
+    }
+  | {
+      type: "customize";
     }
   | {
       type: "onboarding";

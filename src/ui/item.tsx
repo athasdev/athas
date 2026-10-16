@@ -41,6 +41,8 @@ const itemVariants = cva(
       size: {
         default: "",
         compact: "min-h-chrome-control px-1 py-0.5",
+        /** A catalog row led by a `tile` mark, with room around the mark. */
+        comfortable: "gap-3 px-2 py-2",
       },
       /** Fills on hover when the item is not an anchor or button, such as a `role="button"` row. */
       interactive: { true: "cursor-default hover:bg-accent", false: "" },
@@ -84,6 +86,8 @@ const itemMediaVariants = cva(
         default: "bg-transparent",
         icon: "text-muted-foreground [&_svg:not([class*='size-'])]:size-4",
         image: "size-6 overflow-hidden rounded-md [&_img]:size-full [&_img]:object-cover",
+        /** A raised square holding a brand mark or a letter, as in a catalog of apps. */
+        tile: "size-10 rounded-lg bg-raised font-medium text-muted-foreground shadow-(--shadow-raised) ui-text-base group-has-data-[slot=item-description]/item:translate-y-0 group-has-data-[slot=item-description]/item:self-center [&_img]:size-6 [&_img]:object-contain [&_svg:not([class*='size-'])]:size-5",
       },
     },
     defaultVariants: {
@@ -133,14 +137,26 @@ function ItemTitle({ className, ...props }: ComponentProps<"div">) {
   );
 }
 
-function ItemDescription({ className, ...props }: ComponentProps<"p">) {
+const itemDescriptionVariants = cva(
+  "text-left font-sans ui-text-sm font-normal leading-normal text-muted-foreground [&>a]:underline [&>a]:underline-offset-4 [&>a:hover]:text-primary",
+  {
+    variants: {
+      /** How many lines the description may take before it is cut off. */
+      lines: { 1: "line-clamp-1", 2: "line-clamp-2" },
+    },
+    defaultVariants: { lines: 2 },
+  },
+);
+
+function ItemDescription({
+  className,
+  lines,
+  ...props
+}: ComponentProps<"p"> & VariantProps<typeof itemDescriptionVariants>) {
   return (
     <p
       data-slot="item-description"
-      className={cn(
-        "line-clamp-2 text-left font-sans ui-text-sm font-normal leading-normal text-muted-foreground [&>a]:underline [&>a]:underline-offset-4 [&>a:hover]:text-primary",
-        className,
-      )}
+      className={cn(itemDescriptionVariants({ lines }), className)}
       {...props}
     />
   );

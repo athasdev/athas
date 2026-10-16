@@ -10,6 +10,7 @@ import {
 } from "@/ui/icons";
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import {
+  applySkillDraft,
   createSkillFromMarketplace,
   hasSkillLocalOverride,
   isMarketplaceSkillInstalled,
@@ -46,10 +47,6 @@ interface SkillsCommandProps {
 }
 
 export type SkillsView = "list" | "browse" | "editor";
-
-function createSkillId() {
-  return `skill-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-}
 
 function getSyncLabel(enabled: boolean, status: string) {
   if (!enabled) return "Not synced";
@@ -186,48 +183,11 @@ export function SkillsCommand({
   );
 
   const handleSave = useCallback(async () => {
-    const trimmedTitle = title.trim();
-    if (!trimmedTitle) return;
-
-    const now = new Date().toISOString();
-    const nextSkills = editingSkillId
-      ? skills.map((skill) =>
-          skill.id === editingSkillId
-            ? (() => {
-                if (skill.source !== "marketplace") {
-                  return { ...skill, title: trimmedTitle, content, updatedAt: now };
-                }
-
-                const upstreamTitle = skill.upstreamTitle ?? skill.title;
-                const upstreamContent = skill.upstreamContent ?? skill.content;
-                const upstreamDescription = skill.upstreamDescription ?? skill.description;
-
-                return {
-                  ...skill,
-                  title: trimmedTitle,
-                  content,
-                  localOverride: trimmedTitle !== upstreamTitle || content !== upstreamContent,
-                  upstreamTitle,
-                  upstreamContent,
-                  upstreamDescription,
-                  updatedAt: now,
-                };
-              })()
-            : skill,
-        )
-      : [
-          {
-            id: createSkillId(),
-            title: trimmedTitle,
-            content,
-            source: "local" as const,
-            createdAt: now,
-            updatedAt: now,
-          },
-          ...skills,
-        ];
-
-    await updateSetting("aiSkills", nextSkills);
+    if (!title.trim()) return;
+    await updateSetting(
+      "aiSkills",
+      applySkillDraft(skills, { id: editingSkillId, title, content }),
+    );
     closeEditor();
   }, [closeEditor, content, editingSkillId, skills, title, updateSetting]);
 

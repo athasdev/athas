@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import {
+  applySkillDraft,
   createSkillFromMarketplace,
   hasMarketplaceSkillUpdate,
   hasSkillLocalOverride,
@@ -229,5 +230,48 @@ describe("skill library", () => {
       content: "Review this diff and test coverage carefully.",
       localOverride: false,
     });
+  });
+});
+
+describe("applySkillDraft", () => {
+  const now = "2026-10-16T00:00:00.000Z";
+
+  it("adds a new local skill first", () => {
+    const existing = { id: "a", title: "A", content: "", createdAt: "", updatedAt: "" };
+    const [created, ...rest] = applySkillDraft(
+      [existing],
+      { id: null, title: "  Review  ", content: "Check it" },
+      now,
+    );
+    expect(created).toMatchObject({ title: "Review", content: "Check it", source: "local" });
+    expect(created.id).toMatch(/^skill-/);
+    expect(rest).toEqual([existing]);
+  });
+
+  it("tracks an edit of a catalog skill as a local override", () => {
+    const skill = createSkillFromMarketplace({
+      id: "docs",
+      title: "Docs",
+      description: "Write docs",
+      content: "original",
+      tags: [],
+    });
+    const [edited] = applySkillDraft(
+      [skill],
+      { id: skill.id, title: "Docs", content: "mine" },
+      now,
+    );
+    expect(edited).toMatchObject({
+      content: "mine",
+      localOverride: true,
+      upstreamContent: "original",
+      updatedAt: now,
+    });
+    const [reverted] = applySkillDraft(
+      [edited],
+      { id: skill.id, title: "Docs", content: "original" },
+      now,
+    );
+    expect(reverted.localOverride).toBe(false);
   });
 });

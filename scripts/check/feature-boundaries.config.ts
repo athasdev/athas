@@ -149,7 +149,6 @@ export const featureBoundaries: FeatureBoundaryConfig = {
       "components/history/agent-sessions-dialog.tsx": APP_SHELL,
       "continuous-agents/continuous-agents-runtime.tsx": APP_SHELL,
       "detached/detached-agent-window.tsx": APP_SHELL,
-      "components/mcp/mcp-server-settings.tsx": SETTINGS_SECTION,
       "components/permissions/agent-allowed-actions-settings.tsx": SETTINGS_SECTION,
       "integrations/codex/codex-settings.tsx": SETTINGS_SECTION,
       "components/icons/provider-icons.tsx":

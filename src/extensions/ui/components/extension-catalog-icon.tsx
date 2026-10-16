@@ -31,7 +31,7 @@ export function ExtensionCategoryIcon({ category }: { category: UnifiedExtension
   return categoryIcon(category, "size-4 text-subtle-foreground");
 }
 
-function ExtensionIconGraphic({ extension }: { extension: UnifiedExtension }) {
+export function ExtensionIconGraphic({ extension }: { extension: UnifiedExtension }) {
   if (extension.appearancePreview) {
     return <AppearancePreviewGraphic preview={extension.appearancePreview} size="catalog" />;
   }

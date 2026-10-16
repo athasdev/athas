@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 import { DiffStats } from "@/features/ai/components/diff-stats";
+import { openCustomize } from "@/features/ai/customize/services/open-customize";
 import { formatTokenCount, formatUsageCost } from "@/features/ai/lib/acp-usage";
 import { cleanCommand, shortenCommand } from "@/features/ai/lib/shell-command";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { ProjectGlyph } from "@/features/workspace/project-icons/components/project-glyph";
 import Badge from "@/ui/badge";
 import {
@@ -432,7 +432,6 @@ function PlanBox({ chatId, data, placement }: BoxProps) {
 }
 
 function ConnectorsBox({ data, placement }: BoxProps) {
-  const openSettings = useUIState((state) => state.openSettings);
   if (data.connectors.length === 0) return null;
   return (
     <SessionBox
@@ -442,9 +441,9 @@ function ConnectorsBox({ data, placement }: BoxProps) {
       summary={data.connectors.length}
       action={
         <SidebarIconButton
-          tooltip="MCP server settings"
-          aria-label="MCP server settings"
-          onClick={() => openSettings("ai-mcp")}
+          tooltip="Manage MCP servers"
+          aria-label="Manage MCP servers"
+          onClick={() => openCustomize("mcp")}
         >
           <SettingsIcon />
         </SidebarIconButton>

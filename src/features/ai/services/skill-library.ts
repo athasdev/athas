@@ -224,3 +224,52 @@ export function resetSkillLocalOverride(skill: AIChatSkill): AIChatSkill {
     updatedAt: now,
   };
 }
+
+/** A skill being written or edited: `id` is null for a new one. */
+export interface SkillDraft {
+  id: string | null;
+  title: string;
+  content: string;
+}
+
+export function createSkillId() {
+  return `skill-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+/**
+ * Applies a saved draft to the skill list. A new skill goes first. Editing a catalog skill keeps
+ * its upstream text, so the edit is tracked as a local override that catalog updates respect.
+ */
+export function applySkillDraft(
+  skills: AIChatSkill[],
+  draft: SkillDraft,
+  now = new Date().toISOString(),
+): AIChatSkill[] {
+  const title = draft.title.trim();
+  const content = draft.content;
+
+  if (!draft.id) {
+    return [
+      { id: createSkillId(), title, content, source: "local", createdAt: now, updatedAt: now },
+      ...skills,
+    ];
+  }
+
+  return skills.map((skill) => {
+    if (skill.id !== draft.id) return skill;
+    if (skill.source !== "marketplace") return { ...skill, title, content, updatedAt: now };
+
+    const upstreamTitle = getInstalledUpstreamTitle(skill);
+    const upstreamContent = getInstalledUpstreamContent(skill);
+    return {
+      ...skill,
+      title,
+      content,
+      localOverride: title !== upstreamTitle || content !== upstreamContent,
+      upstreamTitle,
+      upstreamContent,
+      upstreamDescription: getInstalledUpstreamDescription(skill),
+      updatedAt: now,
+    };
+  });
+}

@@ -185,6 +185,7 @@ export const commandPaletteOrder: CommandPaletteSlot[] = [
   "workbench.agentLauncher",
   "editor.addSelectionToChat",
   "editor.addSelectionToNewChat",
+  "ai.openCustomize",
   "ai.openContinuousAgents",
   "ai.openCloudAgents",
   "ai.manageAllowedCommands",

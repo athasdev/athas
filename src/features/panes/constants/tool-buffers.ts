@@ -11,6 +11,7 @@ type SingletonToolBufferType = Extract<
   | "workspaces"
   | "settings"
   | "extensions"
+  | "customize"
 >;
 
 export const SINGLETON_TOOL_BUFFER_METADATA: Record<
@@ -49,6 +50,10 @@ export const SINGLETON_TOOL_BUFFER_METADATA: Record<
   extensions: {
     path: "extensions://marketplace",
     name: "Integrations",
+  },
+  customize: {
+    path: "customize://agents",
+    name: "Customize",
   },
 };
 

@@ -11,7 +11,6 @@ const featuresDirectory = fileURLToPath(new URL("../../", import.meta.url));
 const settingsSourceRoots = [
   "settings/components",
   "sharing/components/sharing-settings.tsx",
-  "ai/components/mcp/mcp-server-settings.tsx",
   "ai/components/permissions/agent-allowed-actions-settings.tsx",
   "ai/integrations/codex/codex-settings.tsx",
 ];

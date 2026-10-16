@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import {
   hasMcpServerDraftErrors,
   MCP_TRANSPORT_LABELS,
@@ -11,6 +11,7 @@ import type {
   McpServerSetting,
   McpTransport,
 } from "@/features/ai/types/mcp-server.types";
+import { Alert, AlertDescription } from "@/ui/alert";
 import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/ui/field";
@@ -22,6 +23,8 @@ import { ToggleGroup } from "@/ui/toggle-group";
 interface McpServerDialogProps {
   initialDraft: McpServerDraft;
   servers: readonly McpServerSetting[];
+  /** What the user still has to fill in, shown above the form. */
+  notice?: ReactNode;
   onClose: () => void;
   onSave: (draft: McpServerDraft) => Promise<void>;
 }
@@ -31,7 +34,13 @@ const TRANSPORT_OPTIONS = (Object.keys(MCP_TRANSPORT_LABELS) as McpTransport[]).
   label: MCP_TRANSPORT_LABELS[value],
 }));
 
-export function McpServerDialog({ initialDraft, servers, onClose, onSave }: McpServerDialogProps) {
+export function McpServerDialog({
+  initialDraft,
+  servers,
+  notice,
+  onClose,
+  onSave,
+}: McpServerDialogProps) {
   const [draft, setDraft] = useState(initialDraft);
   const [errors, setErrors] = useState<McpServerDraftErrors>({});
   const [isSaving, setIsSaving] = useState(false);
@@ -72,6 +81,11 @@ export function McpServerDialog({ initialDraft, servers, onClose, onSave }: McpS
       }
     >
       <div className="space-y-4">
+        {notice ? (
+          <Alert tone="info" role="note">
+            <AlertDescription>{notice}</AlertDescription>
+          </Alert>
+        ) : null}
         <Field>
           <FieldLabel htmlFor="mcp-server-name">Name</FieldLabel>
           <Input

@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { McpServerSettings } from "@/features/ai/components/mcp/mcp-server-settings";
 import { AgentAllowedActionsSettings } from "@/features/ai/components/permissions/agent-allowed-actions-settings";
 import { CodexSettings } from "@/features/ai/integrations/codex/codex-settings";
 import {
@@ -15,9 +14,9 @@ import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import NumberInput from "@/ui/number-input";
 import Switch from "@/ui/switch";
 import Textarea from "@/ui/textarea";
-import { AgentsSection } from "../ai/agents-section";
 import { AthasPlanSection } from "../ai/athas-plan-section";
 import { CustomEndpointSection } from "../ai/custom-endpoint-section";
+import { AgentsSummarySection, McpServersSummarySection } from "../ai/customize-summary-section";
 import { DefaultModelSection } from "../ai/default-model-section";
 import { FeatureModelsSection } from "../ai/feature-models-section";
 import { OllamaSection } from "../ai/ollama-section";
@@ -184,7 +183,7 @@ function ChatHistorySection() {
 export function AIAgentsSettings() {
   return (
     <SettingsView>
-      <AgentsSection />
+      <AgentsSummarySection />
       <CodexSettings />
       <ClaudeCodeSection />
       <AgentBehaviorSection />
@@ -198,7 +197,7 @@ export function AIAgentsSettings() {
 export function McpSettings() {
   return (
     <SettingsView>
-      <McpServerSettings />
+      <McpServersSummarySection />
     </SettingsView>
   );
 }

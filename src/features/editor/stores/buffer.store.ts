@@ -976,7 +976,8 @@ const createBufferStore = (workspaceId: string) => {
               case "agentChanges":
               case "workspaces":
               case "settings":
-              case "extensions": {
+              case "extensions":
+              case "customize": {
                 const existing = buffers.find((b) => b.type === spec.type);
                 if (existing) {
                   return showExisting(existing.id, { reveal: true });

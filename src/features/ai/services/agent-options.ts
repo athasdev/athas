@@ -11,7 +11,7 @@ const ATHAS_AGENT_OPTION = {
   description: "Chat directly with a configured model provider",
 };
 
-export type AgentAction = "install" | "update";
+export type AgentAction = "install" | "update" | "uninstall";
 
 export interface PendingAgentAction {
   agentId: string;

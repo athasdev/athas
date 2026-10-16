@@ -16,6 +16,7 @@ import {
   GitPullRequestIcon,
   GridIcon,
   PackageIcon,
+  PuzzlePieceIcon,
   RocketIcon,
   SearchIcon,
   SettingsIcon,
@@ -124,6 +125,8 @@ export function BufferTypeIcon({
       return <GridIcon />;
     case "settings":
       return <SettingsIcon className="text-subtle-foreground" />;
+    case "customize":
+      return <PuzzlePieceIcon className="text-subtle-foreground" />;
     default:
       if (buffer.type === "diff" && isMultiFileDiff(buffer.diffData)) {
         return <GitBranchIcon className="text-subtle-foreground" />;

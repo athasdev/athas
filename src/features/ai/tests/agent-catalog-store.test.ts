@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
-const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
+const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn(), info: vi.fn() }));
 vi.mock("sonner", () => ({ toast }));
 
 import { commands } from "@/bindings/commands";
@@ -93,6 +93,20 @@ describe("agent catalog", () => {
       description: "npm ERR! 404",
     });
     expect(state().pendingAction).toBeNull();
+  });
+
+  it("uninstalls an agent and says when a global install is still on the PATH", async () => {
+    vi.spyOn(commands, "uninstallAcpAgent")
+      .mockResolvedValueOnce({ id: "gemini", name: "gemini", installed: false } as never)
+      .mockResolvedValueOnce({ id: "gemini", name: "gemini", installed: true } as never);
+
+    await state().actions.runAgentAction("gemini", "Gemini CLI", "uninstall");
+    expect(toast.success).toHaveBeenCalledWith("Gemini CLI uninstalled");
+
+    await state().actions.runAgentAction("gemini", "Gemini CLI", "uninstall");
+    expect(toast.info).toHaveBeenCalledWith("Gemini CLI managed install removed", {
+      description: "A global installation is still detected on your PATH.",
+    });
   });
 
   it("ignores actions for built-in agents and while another runs", async () => {

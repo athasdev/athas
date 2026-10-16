@@ -45,8 +45,9 @@ export interface GroupedSectionProps
    * - `group` — rows inside one grouped card on the `background` plane, split by inset hairlines
    * - `flat` — rows directly on the current plane under a heading, split by hairlines, no card
    * - `bare` — content that brings its own layout, such as a table or a grid of cards
+   * - `grid` — borderless rows under a heading, in two columns once the section is wide enough
    */
-  variant?: "group" | "flat" | "bare";
+  variant?: "group" | "flat" | "bare" | "grid";
 }
 
 /**
@@ -68,15 +69,24 @@ export function GroupedSection({
   return (
     <section
       data-slot="grouped-section"
-      className={cn("group/grouped-section flex min-w-0 flex-col gap-1.5", className)}
+      className={cn(
+        "group/grouped-section flex min-w-0 flex-col gap-1.5",
+        variant === "grid" && "-mx-2",
+        className,
+      )}
       {...props}
     >
-      <header className="flex min-h-6 min-w-0 items-center gap-2 px-3">
+      <header
+        className={cn(
+          "flex min-h-6 min-w-0 items-center gap-2",
+          variant === "grid" ? "px-2" : "px-3",
+        )}
+      >
         <div className="flex min-w-0 flex-1 flex-col">
           <h2
             className={groupedSectionTitleVariants({
               tone,
-              size: variant === "flat" ? "heading" : "label",
+              size: variant === "flat" || variant === "grid" ? "heading" : "label",
             })}
           >
             {icon}
@@ -96,6 +106,15 @@ export function GroupedSection({
         </Card>
       ) : variant === "flat" ? (
         <div className={cn("flex min-w-0 flex-col", FLAT_ROW_DIVIDERS)}>{children}</div>
+      ) : variant === "grid" ? (
+        <div className="@container/grouped-grid min-w-0">
+          <div
+            role="list"
+            className="grid grid-cols-1 gap-x-6 gap-y-0.5 @xl/grouped-grid:grid-cols-2"
+          >
+            {children}
+          </div>
+        </div>
       ) : (
         <div className="flex min-w-0 flex-col gap-2">{children}</div>
       )}
