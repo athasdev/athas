@@ -2,6 +2,12 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { skipUnchangedPersistWrites } from "@/features/ai/stores/ai-chat/ai-chat-persist-storage";
+import {
+  type LegacySessionPanel,
+  selectDockLayout,
+  useDockLayoutStore,
+} from "@/features/layout/stores/dock-layout.store";
+import type { DockOwner } from "@/features/layout/types/dock.types";
 import type {
   SessionBoxId,
   SessionPanelState,
@@ -13,9 +19,6 @@ const MAX_REMEMBERED_PANELS = 200;
 const MAX_SERVERS_PER_SESSION = 8;
 
 export const DEFAULT_SESSION_PANEL: SessionPanelState = {
-  open: false,
-  tab: "changes",
-  fullscreen: false,
   browserUrl: "",
   terminalGeneration: 0,
   autoOpened: false,
@@ -26,27 +29,33 @@ function isBlankAddress(url: string) {
   return !url || url === "about:blank";
 }
 
+/** The dock of a chat's session. */
+export function getSessionDockOwner(chatId: string): DockOwner {
+  return { kind: "session", id: chatId };
+}
+
 /**
  * What a dev server becoming reachable changes in a session's tools. The browser opens itself
- * once per session: a session showing its boxes opens its tool panel on Browser at the server, an
- * open panel keeps the tool the user chose and only marks Browser, and a page the user is reading
- * is never replaced.
+ * once per session: a session showing only its details opens Browser at the server, a dock with
+ * tools open keeps them and only marks Browser, and a page the user is reading is never replaced.
  */
 export function planDevServerOpen(
   panel: SessionPanelState,
   url: string,
-): { patch: Partial<SessionPanelState>; attention: SessionPanelTab | null } | null {
+  dockPanes: readonly string[],
+): {
+  patch: Partial<SessionPanelState>;
+  openBrowser: boolean;
+  attention: SessionPanelTab | null;
+} | null {
   if (panel.autoOpened) return null;
   const browserUrl = isBlankAddress(panel.browserUrl) ? url : panel.browserUrl;
-  if (!panel.open) {
-    return {
-      patch: { open: true, tab: "browser", browserUrl, autoOpened: true },
-      attention: null,
-    };
-  }
+  const patch = { browserUrl, autoOpened: true };
+  if (dockPanes.length === 0) return { patch, openBrowser: true, attention: null };
   return {
-    patch: { browserUrl, autoOpened: true },
-    attention: panel.tab === "browser" ? null : "browser",
+    patch,
+    openBrowser: false,
+    attention: dockPanes.includes("browser") ? null : "browser",
   };
 }
 
@@ -81,20 +90,11 @@ interface SessionPanelStoreState {
   liveServers: Record<string, string>;
   /** Tabs that have something new since the user last looked at them. */
   attention: Record<string, Partial<Record<SessionPanelTab, true>>>;
-  /** A tab the user asked to use, so its view takes keyboard focus once when it shows. */
-  focusRequests: Record<string, SessionPanelTab>;
   /** The changed file each session's Changes tool shows the diff of. */
   selectedChanges: Record<string, string>;
   /** Boxes the user folded to their header, the same in every session. */
   collapsedBoxes: Partial<Record<SessionBoxId, true>>;
-  /** The user put the boxes away; tools still open beside the conversation. */
-  boxesHidden: boolean;
   actions: {
-    toggle: (chatId: string) => void;
-    open: (chatId: string, tab?: SessionPanelTab) => void;
-    close: (chatId: string) => void;
-    selectTab: (chatId: string, tab: SessionPanelTab) => void;
-    toggleFullscreen: (chatId: string) => void;
     /** Gives the session a new terminal; the current one moved into an editor tab. */
     detachTerminal: (chatId: string) => void;
     setBrowserPage: (chatId: string, page: { url?: string; zoom?: number }) => void;
@@ -103,21 +103,52 @@ interface SessionPanelStoreState {
     clearServerLive: (chatId: string) => void;
     markAttention: (chatId: string, tab: SessionPanelTab) => void;
     clearAttention: (chatId: string, tab: SessionPanelTab) => void;
-    requestFocus: (chatId: string, tab: SessionPanelTab) => void;
-    /** Whether `tab` was asked to take focus, clearing the request. */
-    consumeFocus: (chatId: string, tab: SessionPanelTab) => boolean;
-    /** Applies {@link planDevServerOpen}; returns whether the panel changed. */
+    /** Applies {@link planDevServerOpen}; returns whether the session's tools changed. */
     openForDevServer: (chatId: string, url: string) => boolean;
     selectChange: (chatId: string, path: string) => void;
     toggleBoxCollapsed: (box: SessionBoxId) => void;
-    toggleBoxesHidden: () => void;
   };
 }
 
-type PersistedSessionPanels = Pick<
-  SessionPanelStoreState,
-  "panels" | "collapsedBoxes" | "boxesHidden"
->;
+type PersistedSessionPanels = Pick<SessionPanelStoreState, "panels" | "collapsedBoxes">;
+
+const KEPT_PANEL_FIELDS = new Set<string>([
+  "browserUrl",
+  "browserZoom",
+  "terminalGeneration",
+  "autoOpened",
+  "updatedAt",
+]);
+
+/**
+ * Before the dock, a session's panel kept which tool it showed (`open`, `tab`, `fullscreen`).
+ * Version 3 hands that to the dock as the session's layout and drops it here.
+ */
+export function migrateSessionPanels(
+  persisted: unknown,
+  version: number,
+  seedDock: (panels: Record<string, LegacySessionPanel>) => void,
+): PersistedSessionPanels {
+  const state = (persisted ?? {}) as Partial<PersistedSessionPanels> & {
+    panels?: Record<string, SessionPanelState & LegacySessionPanel>;
+  };
+  if (version >= 3) return state as PersistedSessionPanels;
+  const legacy = state.panels ?? {};
+  seedDock(legacy);
+  return {
+    collapsedBoxes: state.collapsedBoxes ?? {},
+    panels: Object.fromEntries(
+      Object.entries(legacy).map(([chatId, panel]) => [
+        chatId,
+        Object.fromEntries(
+          Object.entries(panel).filter(
+            ([key, value]) => KEPT_PANEL_FIELDS.has(key) && value !== undefined,
+          ),
+        ) as SessionPanelState,
+      ]),
+    ),
+  };
+}
 
 function rememberRecent(panels: Record<string, SessionPanelState>) {
   const entries = Object.entries(panels);
@@ -160,29 +191,9 @@ const useSessionPanelStoreBase = create<SessionPanelStoreState>()(
         servers: {},
         liveServers: {},
         attention: {},
-        focusRequests: {},
         selectedChanges: {},
         collapsedBoxes: {},
-        boxesHidden: false,
         actions: {
-          toggle: (chatId) => {
-            const panel = selectSessionPanel(get(), chatId);
-            patchPanel(chatId, { open: !panel.open });
-            if (!panel.open) clearAttention(chatId, panel.tab);
-          },
-          open: (chatId, tab) => {
-            const panel = selectSessionPanel(get(), chatId);
-            const nextTab = tab ?? panel.tab;
-            patchPanel(chatId, { open: true, tab: nextTab });
-            clearAttention(chatId, nextTab);
-          },
-          close: (chatId) => patchPanel(chatId, { open: false }),
-          selectTab: (chatId, tab) => {
-            patchPanel(chatId, { tab });
-            clearAttention(chatId, tab);
-          },
-          toggleFullscreen: (chatId) =>
-            patchPanel(chatId, { fullscreen: !selectSessionPanel(get(), chatId).fullscreen }),
           detachTerminal: (chatId) =>
             patchPanel(chatId, {
               terminalGeneration: selectSessionPanel(get(), chatId).terminalGeneration + 1,
@@ -228,21 +239,17 @@ const useSessionPanelStoreBase = create<SessionPanelStoreState>()(
               };
             }),
           clearAttention,
-          requestFocus: (chatId, tab) =>
-            set((state) => ({ focusRequests: { ...state.focusRequests, [chatId]: tab } })),
-          consumeFocus: (chatId, tab) => {
-            if (get().focusRequests[chatId] !== tab) return false;
-            set((state) => {
-              const focusRequests = { ...state.focusRequests };
-              delete focusRequests[chatId];
-              return { focusRequests };
-            });
-            return true;
-          },
           openForDevServer: (chatId, url) => {
-            const plan = planDevServerOpen(selectSessionPanel(get(), chatId), url);
+            const owner = getSessionDockOwner(chatId);
+            const dock = useDockLayoutStore.getState();
+            const plan = planDevServerOpen(
+              selectSessionPanel(get(), chatId),
+              url,
+              selectDockLayout(dock, owner).panes,
+            );
             if (!plan) return false;
             patchPanel(chatId, plan.patch);
+            if (plan.openBrowser) dock.actions.open(owner, "browser");
             if (plan.attention) get().actions.markAttention(chatId, plan.attention);
             return true;
           },
@@ -259,21 +266,22 @@ const useSessionPanelStoreBase = create<SessionPanelStoreState>()(
               else collapsedBoxes[box] = true;
               return { collapsedBoxes };
             }),
-          toggleBoxesHidden: () => set((state) => ({ boxesHidden: !state.boxesHidden })),
         },
       };
     },
     {
       name: "athas-agent-session-panels-v1",
-      version: 2,
+      version: 3,
       storage: skipUnchangedPersistWrites(
         createJSONStorage<PersistedSessionPanels>(() => localStorage),
       ),
-      migrate: (persistedState) => persistedState as PersistedSessionPanels,
+      migrate: (persistedState, version) =>
+        migrateSessionPanels(persistedState, version, (panels) =>
+          useDockLayoutStore.getState().actions.seedLegacyPanels(panels),
+        ),
       partialize: (state): PersistedSessionPanels => ({
         panels: rememberRecent(state.panels),
         collapsedBoxes: state.collapsedBoxes,
-        boxesHidden: state.boxesHidden,
       }),
       merge: (persistedState, currentState) => {
         const persisted = persistedState as Partial<PersistedSessionPanels> | undefined;
@@ -286,7 +294,6 @@ const useSessionPanelStoreBase = create<SessionPanelStoreState>()(
             ]),
           ),
           collapsedBoxes: persisted?.collapsedBoxes ?? {},
-          boxesHidden: persisted?.boxesHidden ?? false,
         };
       },
     },

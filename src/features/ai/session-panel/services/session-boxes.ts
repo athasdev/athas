@@ -1,13 +1,8 @@
 import { isLongRunningCommand } from "@/features/ai/lib/shell-command";
-import type { SessionBoxId, SessionPanelTab } from "../types/session-panel.types";
+import type { SessionBoxId } from "../types/session-panel.types";
 
 /** How long a command shows a spinner before it counts as a process that keeps running. */
 export const SHORT_COMMAND_MS = 4000;
-
-/** Below this session width, in rem, the boxes fold into a rail of their icons. */
-export const BOX_COLUMN_MIN_REM = 60;
-/** Below this session width, in rem, an open tool covers the conversation instead of sitting beside it. */
-export const TOOL_SPLIT_MIN_REM = 40;
 
 export const SESSION_BOX_ORDER: SessionBoxId[] = [
   "environment",
@@ -98,46 +93,4 @@ export function getVisibleSessionBoxes(signals: SessionBoxSignals): SessionBoxId
         return !cloud && signals.connectors > 0;
     }
   });
-}
-
-/** The tools the panel switches between; Plan only while the session has one. */
-export function getSessionToolTabs(hasPlan: boolean): SessionPanelTab[] {
-  return hasPlan ? ["changes", "browser", "terminal", "plan"] : ["changes", "browser", "terminal"];
-}
-
-export interface SessionAsideLayout {
-  /** `column`: the boxes stacked beside the chat; `rail`: their icons, each opening its box. */
-  boxes: "column" | "rail" | "hidden";
-  /** `split`: the tool sits between the chat and the rail; `cover`: it covers the chat. */
-  tool: "none" | "split" | "cover";
-}
-
-/**
- * How a session lays out its boxes and its open tool. An open tool needs the room the column
- * took, so the column folds into its rail and every box stays one click away; closing the tool
- * unfolds it again. A session too narrow for the column keeps the rail, and one too narrow to
- * split lets the tool cover the conversation.
- */
-export function getSessionAsideLayout({
-  width,
-  remPx,
-  toolOpen,
-  fullscreen,
-  boxesHidden,
-}: {
-  width: number;
-  remPx: number;
-  toolOpen: boolean;
-  fullscreen: boolean;
-  boxesHidden: boolean;
-}): SessionAsideLayout {
-  const rem = width / (remPx || 16);
-  if (toolOpen) {
-    return {
-      boxes: boxesHidden ? "hidden" : "rail",
-      tool: fullscreen || rem < TOOL_SPLIT_MIN_REM ? "cover" : "split",
-    };
-  }
-  if (boxesHidden) return { boxes: "hidden", tool: "none" };
-  return { boxes: rem >= BOX_COLUMN_MIN_REM ? "column" : "rail", tool: "none" };
 }

@@ -8,17 +8,15 @@ import AIChat from "./chat/ai-chat";
 import { AgentWindowPlaceholder } from "@/features/ai/detached/agent-window-placeholder";
 import { useAgentWindowStore } from "@/features/ai/detached/stores/agent-window.store";
 import { isAgentWindow } from "@/features/ai/detached/services/agent-window-service";
-import { AgentSessionLayout } from "../session-panel/components/agent-session-layout";
-import { SessionAside } from "../session-panel/components/session-aside";
 import { SessionHeaderTools } from "../session-panel/components/session-header-tools";
+import { AGENT_SESSION_CHAT_ATTRIBUTE } from "../session-panel/services/session-links";
 
 interface AgentTabProps {
   buffer: AgentContent;
-  paneId?: string;
   isActive?: boolean;
 }
 
-export function AgentTab({ buffer, paneId, isActive = true }: AgentTabProps) {
+export function AgentTab({ buffer, isActive = true }: AgentTabProps) {
   const windowStatus = useAgentWindowStore((state) => state.sessions[buffer.sessionId]);
   const contextBuffers = useOpenBuffersIgnoringText(isActive);
   const activeBuffer = useBufferStore(
@@ -28,9 +26,6 @@ export function AgentTab({ buffer, paneId, isActive = true }: AgentTabProps) {
   const setContext = useKeymapStore.use.actions().setContext;
   const chatTitle = useAIChatStore(
     (state) => state.chats.find((chat) => chat.id === buffer.sessionId)?.title,
-  );
-  const workspacePath = useAIChatStore(
-    (state) => state.chats.find((chat) => chat.id === buffer.sessionId)?.workspacePath,
   );
   const tabTitle = chatTitle || "New Session";
   const hasToolPanel = !isAgentWindow();
@@ -48,35 +43,20 @@ export function AgentTab({ buffer, paneId, isActive = true }: AgentTabProps) {
 
   if (windowStatus) return <AgentWindowPlaceholder chatId={buffer.sessionId} />;
 
-  const chat = (
-    <AIChat
-      mode="chat"
-      surfaceId={`agent-session:${buffer.sessionId}`}
-      chatId={buffer.sessionId}
-      activeBuffer={activeBuffer}
-      buffers={contextBuffers}
-      isActiveSurface={isActive}
-      headerActions={hasToolPanel ? <SessionHeaderTools chatId={buffer.sessionId} /> : undefined}
-      aside={
-        hasToolPanel ? (
-          <SessionAside
-            chatId={buffer.sessionId}
-            agentBufferId={buffer.id}
-            paneId={paneId}
-            workingDirectory={workspacePath ?? undefined}
-          />
-        ) : undefined
-      }
-    />
-  );
-
   return (
-    <div className="size-full overflow-hidden">
-      {hasToolPanel ? (
-        <AgentSessionLayout chatId={buffer.sessionId}>{chat}</AgentSessionLayout>
-      ) : (
-        chat
-      )}
+    <div
+      className="size-full overflow-hidden"
+      {...(hasToolPanel ? { [AGENT_SESSION_CHAT_ATTRIBUTE]: buffer.sessionId } : {})}
+    >
+      <AIChat
+        mode="chat"
+        surfaceId={`agent-session:${buffer.sessionId}`}
+        chatId={buffer.sessionId}
+        activeBuffer={activeBuffer}
+        buffers={contextBuffers}
+        isActiveSurface={isActive}
+        headerActions={hasToolPanel ? <SessionHeaderTools chatId={buffer.sessionId} /> : undefined}
+      />
     </div>
   );
 }

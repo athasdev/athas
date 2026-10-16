@@ -223,3 +223,8 @@ export function useSessionBoxes(chatId: string): SessionBoxesData {
     cloud,
   };
 }
+
+/** Whether a session has details to show yet; a session that has not started has none. */
+export function useSessionHasInfo(chatId: string): boolean {
+  return useSessionBoxes(chatId).visible.length > 0;
+}

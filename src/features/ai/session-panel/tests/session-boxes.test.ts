@@ -1,13 +1,9 @@
 import { describe, expect, it } from "vite-plus/test";
 import {
-  BOX_COLUMN_MIN_REM,
-  getSessionAsideLayout,
   getSessionRunningItems,
-  getSessionToolTabs,
   getVisibleSessionBoxes,
   SHORT_COMMAND_MS,
   type SessionRunningSignals,
-  TOOL_SPLIT_MIN_REM,
 } from "../services/session-boxes";
 
 const NOW = 1_000_000;
@@ -93,11 +89,6 @@ describe("session boxes", () => {
       }),
     ).toEqual(["environment", "changes"]);
   });
-
-  it("offers Plan as a tool only while the session has one", () => {
-    expect(getSessionToolTabs(false)).toEqual(["changes", "browser", "terminal"]);
-    expect(getSessionToolTabs(true)).toEqual(["changes", "browser", "terminal", "plan"]);
-  });
 });
 
 describe("running items", () => {
@@ -130,53 +121,5 @@ describe("running items", () => {
 
   it("adds a failed terminal command", () => {
     expect(running({ terminalFailed: true })).toEqual([{ kind: "failed" }]);
-  });
-});
-
-describe("session aside layout", () => {
-  const remPx = 16;
-  const wide = BOX_COLUMN_MIN_REM * remPx;
-  const layout = (overrides: Partial<Parameters<typeof getSessionAsideLayout>[0]>) =>
-    getSessionAsideLayout({
-      width: wide,
-      remPx,
-      toolOpen: false,
-      fullscreen: false,
-      boxesHidden: false,
-      ...overrides,
-    });
-
-  it("stacks the boxes beside the chat when there is room, and folds them into a rail when not", () => {
-    expect(layout({})).toEqual({ boxes: "column", tool: "none" });
-    expect(layout({ width: wide - 1 })).toEqual({ boxes: "rail", tool: "none" });
-  });
-
-  it("folds the column into its rail while a tool is open, and unfolds it once it closes", () => {
-    expect(layout({ toolOpen: true })).toEqual({ boxes: "rail", tool: "split" });
-    expect(layout({ toolOpen: false })).toEqual({ boxes: "column", tool: "none" });
-  });
-
-  it("lets the tool cover the chat in fullscreen or a narrow session, keeping the rail", () => {
-    expect(layout({ toolOpen: true, fullscreen: true })).toEqual({ boxes: "rail", tool: "cover" });
-    expect(layout({ toolOpen: true, width: TOOL_SPLIT_MIN_REM * remPx - 1 })).toEqual({
-      boxes: "rail",
-      tool: "cover",
-    });
-    expect(layout({ toolOpen: true, width: TOOL_SPLIT_MIN_REM * remPx })).toEqual({
-      boxes: "rail",
-      tool: "split",
-    });
-  });
-
-  it("scales the thresholds with the UI font size", () => {
-    expect(layout({ remPx: 20, width: wide })).toEqual({ boxes: "rail", tool: "none" });
-  });
-
-  it("shows no boxes once the user hides them, while tools still open", () => {
-    expect(layout({ boxesHidden: true })).toEqual({ boxes: "hidden", tool: "none" });
-    expect(layout({ boxesHidden: true, toolOpen: true })).toEqual({
-      boxes: "hidden",
-      tool: "split",
-    });
   });
 });

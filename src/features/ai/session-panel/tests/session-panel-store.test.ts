@@ -1,15 +1,21 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it } from "vite-plus/test";
+import { selectDockLayout, useDockLayoutStore } from "@/features/layout/stores/dock-layout.store";
+import { openSessionTool } from "../services/session-tools";
 import {
   DEFAULT_SESSION_PANEL,
+  getSessionDockOwner,
   getSessionTerminalChatId,
   getSessionTerminalId,
+  migrateSessionPanels,
   planDevServerOpen,
   selectSessionPanel,
   useSessionPanelStore,
 } from "../stores/session-panel.store";
 
 const panel = (chatId: string) => selectSessionPanel(useSessionPanelStore.getState(), chatId);
+const dock = (chatId: string) =>
+  selectDockLayout(useDockLayoutStore.getState(), getSessionDockOwner(chatId));
 const actions = () => useSessionPanelStore.getState().actions;
 
 describe("session panel store", () => {
@@ -20,30 +26,14 @@ describe("session panel store", () => {
       servers: {},
       liveServers: {},
       attention: {},
-      focusRequests: {},
       selectedChanges: {},
       collapsedBoxes: {},
-      boxesHidden: false,
     });
+    useDockLayoutStore.setState({ layouts: {}, hidden: false, focusRequest: null });
   });
 
-  it("starts closed on the Changes tab", () => {
+  it("starts with no page, the first terminal and the browser not opened yet", () => {
     expect(panel("new")).toEqual(DEFAULT_SESSION_PANEL);
-    expect(panel("new").open).toBe(false);
-  });
-
-  it("keeps the expanded tool and fullscreen per session", () => {
-    actions().open("a", "browser");
-    actions().toggleFullscreen("a");
-    actions().toggle("b");
-    actions().selectTab("b", "terminal");
-
-    expect(panel("a")).toMatchObject({ open: true, tab: "browser", fullscreen: true });
-    expect(panel("b")).toMatchObject({ open: true, tab: "terminal", fullscreen: false });
-
-    actions().toggle("a");
-    expect(panel("a")).toMatchObject({ open: false, tab: "browser", fullscreen: true });
-    expect(panel("b").open).toBe(true);
   });
 
   it("gives the session a new terminal once its terminal moves into a tab", () => {
@@ -56,76 +46,88 @@ describe("session panel store", () => {
     expect(getSessionTerminalChatId(next)).toBe("a");
   });
 
-  it("fills in fields a remembered session is missing", async () => {
+  it("hands the tool a session showed to its dock and keeps the rest", () => {
+    const seeded: Record<string, unknown> = {};
+    const migrated = migrateSessionPanels(
+      {
+        panels: {
+          a: { open: true, tab: "browser", fullscreen: true, browserUrl: "http://localhost:3000/" },
+          b: { open: false, tab: "plan", terminalGeneration: 2 },
+        },
+        collapsedBoxes: { plan: true },
+        boxesHidden: true,
+      },
+      2,
+      (panels) => Object.assign(seeded, panels),
+    );
+    expect(Object.keys(seeded)).toEqual(["a", "b"]);
+    expect(migrated.collapsedBoxes).toEqual({ plan: true });
+    expect(migrated.panels.a).toMatchObject({ browserUrl: "http://localhost:3000/" });
+    expect(migrated.panels.a).not.toHaveProperty("open");
+    expect(migrated.panels.b).not.toHaveProperty("tab");
+    expect(migrated.panels.b.terminalGeneration).toBe(2);
+    expect(migrated).not.toHaveProperty("boxesHidden");
+  });
+
+  it("moves an open tool panel into the session's dock when it rehydrates", async () => {
     localStorage.setItem(
       "athas-agent-session-panels-v1",
-      JSON.stringify({ state: { panels: { old: { open: true, tab: "browser" } } }, version: 1 }),
+      JSON.stringify({
+        state: { panels: { old: { open: true, tab: "terminal", fullscreen: false } } },
+        version: 2,
+      }),
     );
     await useSessionPanelStore.persist.rehydrate();
-    expect(panel("old")).toMatchObject({ open: true, tab: "browser", fullscreen: false });
+    expect(dock("old").panes).toEqual(["terminal"]);
     expect(panel("old").terminalGeneration).toBe(0);
+    const stored = JSON.parse(localStorage.getItem("athas-agent-session-panels-v1") ?? "{}");
+    expect(stored.version).toBe(3);
+    expect(stored.state.panels.old).not.toHaveProperty("tab");
   });
 
   it("remembers sessions across restarts and keeps the runtime-only state out", () => {
-    actions().open("a", "terminal");
+    actions().detachTerminal("a");
     actions().recordServer("a", "http://localhost:5173/");
+    actions().selectChange("a", "/p/a.ts");
     const stored = JSON.parse(localStorage.getItem("athas-agent-session-panels-v1") ?? "{}");
-    expect(stored.state.panels.a).toMatchObject({ open: true, tab: "terminal" });
+    expect(stored.state.panels.a).toMatchObject({ terminalGeneration: 1 });
     expect(stored.state.servers).toBeUndefined();
+    expect(stored.state.selectedChanges).toBeUndefined();
   });
 
-  it("remembers folded boxes and hidden details for every session across restarts", async () => {
+  it("remembers folded boxes for every session across restarts", async () => {
     actions().toggleBoxCollapsed("environment");
     actions().toggleBoxCollapsed("plan");
     actions().toggleBoxCollapsed("plan");
-    actions().toggleBoxesHidden();
     const saved = localStorage.getItem("athas-agent-session-panels-v1") ?? "{}";
-    const stored = JSON.parse(saved);
-    expect(stored.state.collapsedBoxes).toEqual({ environment: true });
-    expect(stored.state.boxesHidden).toBe(true);
+    expect(JSON.parse(saved).state.collapsedBoxes).toEqual({ environment: true });
 
-    useSessionPanelStore.setState({ collapsedBoxes: {}, boxesHidden: false });
+    useSessionPanelStore.setState({ collapsedBoxes: {} });
     localStorage.setItem("athas-agent-session-panels-v1", saved);
     await useSessionPanelStore.persist.rehydrate();
     expect(useSessionPanelStore.getState().collapsedBoxes).toEqual({ environment: true });
-    expect(useSessionPanelStore.getState().boxesHidden).toBe(true);
   });
 
-  it("reads panels saved before boxes existed", async () => {
-    localStorage.setItem(
-      "athas-agent-session-panels-v1",
-      JSON.stringify({ state: { panels: { old: { open: false, tab: "plan" } } }, version: 1 }),
-    );
-    await useSessionPanelStore.persist.rehydrate();
-    expect(panel("old")).toMatchObject({ open: false, tab: "plan" });
-    expect(useSessionPanelStore.getState().collapsedBoxes).toEqual({});
-    expect(useSessionPanelStore.getState().boxesHidden).toBe(false);
-  });
-
-  it("keeps the picked change per session and out of storage", () => {
-    actions().selectChange("a", "/p/a.ts");
+  it("keeps the picked change per session and opens Changes on it", () => {
+    openSessionTool("a", "changes", { changePath: "/p/a.ts" });
     actions().selectChange("b", "/p/b.ts");
     expect(useSessionPanelStore.getState().selectedChanges).toEqual({
       a: "/p/a.ts",
       b: "/p/b.ts",
     });
-    actions().open("a");
-    const stored = JSON.parse(localStorage.getItem("athas-agent-session-panels-v1") ?? "{}");
-    expect(stored.state.selectedChanges).toBeUndefined();
+    expect(dock("a").panes).toEqual(["changes"]);
+    expect(dock("b").panes).toEqual([]);
   });
 
-  it("clears a tab's mark when the user looks at it", () => {
+  it("clears a tool's mark when the user opens it", () => {
     actions().markAttention("a", "terminal");
     expect(useSessionPanelStore.getState().attention.a?.terminal).toBe(true);
-    actions().open("a", "terminal");
+    openSessionTool("a", "terminal");
     expect(useSessionPanelStore.getState().attention.a?.terminal).toBeUndefined();
-  });
-
-  it("hands a focus request to the tab once", () => {
-    actions().requestFocus("a", "terminal");
-    expect(actions().consumeFocus("a", "browser")).toBe(false);
-    expect(actions().consumeFocus("a", "terminal")).toBe(true);
-    expect(actions().consumeFocus("a", "terminal")).toBe(false);
+    expect(useDockLayoutStore.getState().focusRequest).toMatchObject({
+      owner: "session:a",
+      pane: "terminal",
+    });
   });
 
   it("lists a session's servers newest first without repeats", () => {
@@ -147,38 +149,43 @@ describe("session panel store", () => {
 describe("opening the browser for a dev server", () => {
   const url = "http://localhost:5173/";
 
-  it("opens a closed panel on the Browser tab at the server", () => {
-    expect(planDevServerOpen(DEFAULT_SESSION_PANEL, url)).toEqual({
-      patch: { open: true, tab: "browser", browserUrl: url, autoOpened: true },
+  beforeEach(() => {
+    useSessionPanelStore.setState({ panels: {}, attention: {} });
+    useDockLayoutStore.setState({ layouts: {}, hidden: false, focusRequest: null });
+  });
+
+  it("opens Browser at the server in a dock that shows only the details", () => {
+    expect(planDevServerOpen(DEFAULT_SESSION_PANEL, url, [])).toEqual({
+      patch: { browserUrl: url, autoOpened: true },
+      openBrowser: true,
       attention: null,
     });
   });
 
-  it("keeps the tab the user chose and marks Browser instead", () => {
-    const open = { ...DEFAULT_SESSION_PANEL, open: true, tab: "terminal" as const };
-    expect(planDevServerOpen(open, url)).toEqual({
+  it("keeps the tools the user opened and marks Browser instead", () => {
+    expect(planDevServerOpen(DEFAULT_SESSION_PANEL, url, ["terminal"])).toEqual({
       patch: { browserUrl: url, autoOpened: true },
+      openBrowser: false,
       attention: "browser",
     });
   });
 
   it("never replaces a page the user is reading", () => {
-    const reading = {
-      ...DEFAULT_SESSION_PANEL,
-      open: true,
-      tab: "browser" as const,
-      browserUrl: "https://docs.example.com/",
-    };
-    expect(planDevServerOpen(reading, url)?.patch.browserUrl).toBe("https://docs.example.com/");
+    const reading = { ...DEFAULT_SESSION_PANEL, browserUrl: "https://docs.example.com/" };
+    expect(planDevServerOpen(reading, url, ["browser"])).toEqual({
+      patch: { browserUrl: "https://docs.example.com/", autoOpened: true },
+      openBrowser: false,
+      attention: null,
+    });
   });
 
   it("happens once per session", () => {
-    expect(useSessionPanelStore.getState().actions.openForDevServer("once", url)).toBe(true);
-    useSessionPanelStore.getState().actions.close("once");
-    expect(
-      useSessionPanelStore.getState().actions.openForDevServer("once", "http://localhost:3000/"),
-    ).toBe(false);
-    expect(panel("once")).toMatchObject({ open: false, browserUrl: url });
-    expect(planDevServerOpen({ ...DEFAULT_SESSION_PANEL, autoOpened: true }, url)).toBeNull();
+    expect(actions().openForDevServer("once", url)).toBe(true);
+    expect(dock("once").panes).toEqual(["browser"]);
+    useDockLayoutStore.getState().actions.close(getSessionDockOwner("once"), "browser");
+    expect(actions().openForDevServer("once", "http://localhost:3000/")).toBe(false);
+    expect(dock("once").panes).toEqual([]);
+    expect(panel("once").browserUrl).toBe(url);
+    expect(planDevServerOpen({ ...DEFAULT_SESSION_PANEL, autoOpened: true }, url, [])).toBeNull();
   });
 });

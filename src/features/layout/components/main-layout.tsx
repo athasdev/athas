@@ -34,6 +34,7 @@ import { WorkbenchFullscreenRootContext } from "@/ui/workbench-fullscreen-surfac
 import TitleBarWithSettings from "../../window/components/title-bar/title-bar";
 import { TitleLeading } from "../../window/components/title-bar/title-leading";
 import { ResizablePane } from "./resizable-pane";
+import { useDockCoversCentre, WorkbenchDock } from "./dock/workbench-dock";
 import { ActivityBar } from "./sidebar/activity-bar";
 import { SidebarPane } from "./sidebar/sidebar-pane";
 import { useResponsiveWorkbenchLayout } from "../hooks/use-responsive-workbench-layout";
@@ -102,6 +103,7 @@ export function MainLayout() {
   );
   const { setBottomBuffersVisible } = usePaneStore.use.actions();
   const responsiveLayout = useResponsiveWorkbenchLayout();
+  const dockCoversCentre = useDockCoversCentre();
   const renderedSidebarVisible = isSidebarVisible && !responsiveLayout.narrow;
   const uiFontSize = useSettingsStore((state) => state.settings.uiFontSize);
   const isDatabaseConnectionVisible = useUIState((state) => state.isDatabaseConnectionVisible);
@@ -314,7 +316,10 @@ export function MainLayout() {
 
             <div
               data-slot="workbench-island"
-              className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl shadow-(--shadow-raised)"
+              className={cn(
+                "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl shadow-(--shadow-raised)",
+                dockCoversCentre && "hidden",
+              )}
             >
               <div
                 className={cn(
@@ -330,6 +335,7 @@ export function MainLayout() {
                 </Suspense>
               )}
             </div>
+            <WorkbenchDock />
           </div>
         </div>
 

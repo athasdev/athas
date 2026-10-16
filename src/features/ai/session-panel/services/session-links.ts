@@ -2,6 +2,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { usePreviewsStore } from "@/features/previews/stores/previews.store";
 import { getLocalServerPort } from "./dev-server-urls";
 import { getSessionBrowserPageId, useSessionPanelStore } from "../stores/session-panel.store";
+import { openSessionTool } from "./session-tools";
 
 /** Marks the element an agent session renders in, so a link clicked inside it knows its session. */
 export const AGENT_SESSION_CHAT_ATTRIBUTE = "data-agent-session-chat";
@@ -27,11 +28,10 @@ export function isSessionServerUrl(url: string): boolean {
   });
 }
 
-/** Opens the session's tool panel on its browser at `url`. */
+/** Opens the session's browser in its dock at `url`. */
 export function openInSessionBrowser(chatId: string, url: string) {
-  const { setBrowserPage, open } = useSessionPanelStore.getState().actions;
-  setBrowserPage(chatId, { url });
-  open(chatId, "browser");
+  useSessionPanelStore.getState().actions.setBrowserPage(chatId, { url });
+  openSessionTool(chatId, "browser");
   void import("@/features/browser/services/browser-tab-manager").then(({ browserTabManager }) =>
     browserTabManager.navigate(getSessionBrowserPageId(chatId), url),
   );

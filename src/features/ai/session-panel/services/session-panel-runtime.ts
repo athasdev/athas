@@ -12,8 +12,10 @@ import { previewsStoreDependencies } from "@/features/previews/stores/previews.s
 import { subscribeToTerminalEvents } from "@/features/terminal/services/terminal-protocol";
 import { onAppEvent } from "@/utils/app-events";
 import { setWebLinkRouter } from "@/utils/external-navigation";
+import { isDockPaneShowing } from "@/features/layout/stores/dock-layout.store";
 import {
   getSessionBrowserPageId,
+  getSessionDockOwner,
   getSessionTerminalChatId,
   getSessionTerminalId,
   selectSessionPanel,
@@ -68,8 +70,7 @@ function isCommandToolCall(toolCall: ToolCall) {
 }
 
 function isPanelShowing(chatId: string, tab: SessionPanelTab) {
-  const panel = selectSessionPanel(useSessionPanelStore.getState(), chatId);
-  return panel.open && panel.tab === tab;
+  return isDockPaneShowing(getSessionDockOwner(chatId), tab);
 }
 
 /**

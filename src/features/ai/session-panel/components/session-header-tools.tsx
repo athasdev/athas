@@ -1,10 +1,12 @@
 import type { ReactNode } from "react";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
+import { useDockLayoutStore, selectDockLayout } from "@/features/layout/stores/dock-layout.store";
 import { Button } from "@/ui/button";
 import { GitDiffIcon, GlobeIcon, SidebarRightIcon, TerminalIcon } from "@/ui/icons";
+import { StatusDot } from "@/ui/status-dot";
 import { toggleSessionTool } from "../services/session-tools";
-import { useSessionPanel, useSessionPanelStore } from "../stores/session-panel.store";
+import { getSessionDockOwner, useSessionPanelStore } from "../stores/session-panel.store";
 import type { SessionPanelTab } from "../types/session-panel.types";
 
 const HEADER_TOOLS: { tab: SessionPanelTab; label: string; command: string; icon: ReactNode }[] = [
@@ -16,35 +18,43 @@ const HEADER_TOOLS: { tab: SessionPanelTab; label: string; command: string; icon
 function HeaderToolButton({
   chatId,
   tool,
-  active,
 }: {
   chatId: string;
   tool: (typeof HEADER_TOOLS)[number];
-  active: boolean;
 }) {
   const shortcut = useCommandShortcut(tool.command);
+  const active = useDockLayoutStore(
+    (state) =>
+      !state.hidden &&
+      selectDockLayout(state, getSessionDockOwner(chatId)).panes.includes(tool.tab),
+  );
+  const attention = useSessionPanelStore((state) => Boolean(state.attention[chatId]?.[tool.tab]));
+  const label = attention && !active ? `${tool.label}, has something new` : tool.label;
   return (
-    <Button
-      type="button"
-      variant="ghost"
-      iconOnly
-      active={active}
-      aria-pressed={active}
-      aria-label={tool.label}
-      tooltip={tool.label}
-      shortcut={shortcut}
-      onClick={() => toggleSessionTool(chatId, tool.tab)}
-    >
-      {tool.icon}
-    </Button>
+    <span className="relative flex">
+      <Button
+        type="button"
+        variant="ghost"
+        iconOnly
+        active={active}
+        aria-pressed={active}
+        aria-label={label}
+        tooltip={tool.label}
+        shortcut={shortcut}
+        onClick={() => toggleSessionTool(chatId, tool.tab)}
+      >
+        {tool.icon}
+      </Button>
+      {attention && !active ? <StatusDot tone="unread" placement="corner" /> : null}
+    </span>
   );
 }
 
-/** The session header's way into its tools, and the switch that puts the boxes away. */
+/** The session header's way into its tools, and the switch that puts the dock away. */
 export function SessionHeaderTools({ chatId }: { chatId: string }) {
-  const panel = useSessionPanel(chatId);
-  const boxesHidden = useSessionPanelStore((state) => state.boxesHidden);
-  const { toggleBoxesHidden } = useSessionPanelStore.use.actions();
+  const hidden = useDockLayoutStore.use.hidden();
+  const { setHidden } = useDockLayoutStore.use.actions();
+  const shortcut = useCommandShortcut("ai.toggleSessionPanel");
   const isCloud = useAIChatStore((state) =>
     Boolean(state.chats.find((chat) => chat.id === chatId)?.sessionSettings?.cloud),
   );
@@ -52,22 +62,18 @@ export function SessionHeaderTools({ chatId }: { chatId: string }) {
   return (
     <>
       {(isCloud ? [] : HEADER_TOOLS).map((tool) => (
-        <HeaderToolButton
-          key={tool.tab}
-          chatId={chatId}
-          tool={tool}
-          active={panel.open && panel.tab === tool.tab}
-        />
+        <HeaderToolButton key={tool.tab} chatId={chatId} tool={tool} />
       ))}
       <Button
         type="button"
         variant="ghost"
         iconOnly
-        active={!boxesHidden}
-        aria-pressed={!boxesHidden}
-        aria-label="Session details"
-        tooltip={boxesHidden ? "Show session details" : "Hide session details"}
-        onClick={toggleBoxesHidden}
+        active={!hidden}
+        aria-pressed={!hidden}
+        aria-label="Session dock"
+        tooltip={hidden ? "Show the session dock" : "Hide the session dock"}
+        shortcut={shortcut}
+        onClick={() => setHidden(!hidden)}
       >
         <SidebarRightIcon />
       </Button>

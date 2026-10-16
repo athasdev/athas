@@ -243,7 +243,7 @@ export function SessionBrowserView({
 }: {
   chatId: string;
   paneId: string | undefined;
-  agentBufferId: string;
+  agentBufferId: string | undefined;
 }) {
   const panel = useSessionPanel(chatId);
   const pageId = getSessionBrowserPageId(chatId);
@@ -274,7 +274,7 @@ export function SessionBrowserView({
       isActive={false}
       pageStore={pageStore}
       onPageFocus={() => {
-        if (paneId) activateBufferInPaneAndSync(paneId, agentBufferId);
+        if (paneId && agentBufferId) activateBufferInPaneAndSync(paneId, agentBufferId);
       }}
       addressLeading={<ServerMenu chatId={chatId} pageId={pageId} />}
       actions={<ShareButton url={url} />}

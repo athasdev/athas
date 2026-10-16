@@ -23,6 +23,10 @@ const { useExternalNavigationGuard } =
   await import("@/features/window/hooks/use-external-navigation-guard");
 const { isSessionServerUrl, routeSessionLink } = await import("../services/session-links");
 const { selectSessionPanel, useSessionPanelStore } = await import("../stores/session-panel.store");
+const { selectDockLayout, useDockLayoutStore } =
+  await import("@/features/layout/stores/dock-layout.store");
+const dockPanes = () =>
+  selectDockLayout(useDockLayoutStore.getState(), { kind: "session", id: "chat-1" }).panes;
 
 let session: HTMLElement;
 let link: HTMLElement;
@@ -31,7 +35,8 @@ let stopRouting: () => void;
 beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
-  useSessionPanelStore.setState({ panels: {}, attention: {}, focusRequests: {} });
+  useSessionPanelStore.setState({ panels: {}, attention: {} });
+  useDockLayoutStore.setState({ layouts: {}, hidden: false, focusRequest: null });
   session = document.createElement("div");
   session.setAttribute("data-agent-session-chat", "chat-1");
   link = document.createElement("a");
@@ -49,10 +54,9 @@ describe("session link routing", () => {
   it("opens a local server in the session's own browser", async () => {
     await expect(openWebLink("http://127.0.0.1:5173/app", link)).resolves.toBe(true);
     expect(selectSessionPanel(useSessionPanelStore.getState(), "chat-1")).toMatchObject({
-      open: true,
-      tab: "browser",
       browserUrl: "http://127.0.0.1:5173/app",
     });
+    expect(dockPanes()).toEqual(["browser"]);
     await vi.waitFor(() =>
       expect(mocks.navigate).toHaveBeenCalledWith(
         "agent-session-browser:chat-1",
@@ -68,7 +72,7 @@ describe("session link routing", () => {
 
     await openWebLink("https://athas.dev/docs", link);
     expect(mocks.openBrowserBuffer).toHaveBeenCalledWith("https://athas.dev/docs");
-    expect(selectSessionPanel(useSessionPanelStore.getState(), "chat-1").open).toBe(false);
+    expect(dockPanes()).toEqual([]);
     expect(mocks.openUrl).not.toHaveBeenCalled();
   });
 
@@ -100,11 +104,10 @@ describe("session link routing", () => {
 
     await vi.waitFor(() =>
       expect(selectSessionPanel(useSessionPanelStore.getState(), "chat-1")).toMatchObject({
-        open: true,
-        tab: "browser",
         browserUrl: "http://localhost:3000/",
       }),
     );
+    expect(dockPanes()).toEqual(["browser"]);
     expect(mocks.openUrl).not.toHaveBeenCalled();
     act(() => guard.unmount());
   });

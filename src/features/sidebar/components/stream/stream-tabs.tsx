@@ -17,7 +17,7 @@ export interface StreamTab {
 export function StreamTabs({ tabs, label }: { tabs: StreamTab[]; label: string }) {
   return (
     <nav aria-label={label} className="@container/tabs shrink-0 px-2">
-      <div className="flex h-pane-header items-center gap-0.5">
+      <div className="flex h-sidebar-header items-center gap-0.5">
         {tabs.map((tab) => (
           <button
             key={tab.id}

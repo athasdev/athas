@@ -50,12 +50,9 @@ import {
 /** Changed files a box lists before it hands the rest to the Changes tool. */
 const MAX_BOX_CHANGES = 6;
 
-type Placement = "column" | "popover";
-
 interface BoxProps {
   chatId: string;
   data: SessionBoxesData;
-  placement: Placement;
 }
 
 export const SESSION_BOX_TITLES: Record<SessionBoxId, string> = {
@@ -135,10 +132,10 @@ function LiveDot() {
   );
 }
 
-function EnvironmentBox({ chatId, data, placement }: BoxProps) {
+function EnvironmentBox({ chatId, data }: BoxProps) {
   if (data.cloud) {
     return (
-      <SessionBox id="environment" title="Environment" placement={placement} summary="Cloud">
+      <SessionBox id="environment" title="Environment" summary="Cloud">
         <CloudEnvironmentRows chatId={chatId} run={data.cloud.run} />
       </SessionBox>
     );
@@ -146,7 +143,7 @@ function EnvironmentBox({ chatId, data, placement }: BoxProps) {
   const environment = data.environment;
   if (!environment) {
     return (
-      <SessionBox id="environment" title="Environment" placement={placement}>
+      <SessionBox id="environment" title="Environment">
         <BoxNote>No project folder.</BoxNote>
       </SessionBox>
     );
@@ -155,7 +152,6 @@ function EnvironmentBox({ chatId, data, placement }: BoxProps) {
     <SessionBox
       id="environment"
       title="Environment"
-      placement={placement}
       summary={
         environment.location.kind === "local" ? undefined : describeLocation(environment.location)
       }
@@ -182,7 +178,7 @@ function EnvironmentBox({ chatId, data, placement }: BoxProps) {
   );
 }
 
-function ContextBox({ data, placement }: BoxProps) {
+function ContextBox({ data }: BoxProps) {
   const usage = data.context;
   if (!usage) return null;
   const used = formatTokenCount(usage.usedTokens);
@@ -194,7 +190,6 @@ function ContextBox({ data, placement }: BoxProps) {
     <SessionBox
       id="context"
       title="Context"
-      placement={placement}
       summary={usage.percent === null ? used : `${Math.round(usage.percent)}%`}
     >
       <div className="px-1.5 pt-0.5 pb-1.5">
@@ -242,10 +237,10 @@ function PullRequestRow({ repoPath, branch }: { repoPath: string; branch: string
   );
 }
 
-function CloudChangesBox({ data, placement }: BoxProps) {
+function CloudChangesBox({ data }: BoxProps) {
   const run = data.cloud?.run;
   return (
-    <SessionBox id="changes" title="Changes" placement={placement}>
+    <SessionBox id="changes" title="Changes">
       {run?.prUrl ? (
         <CloudPullRequestRow run={run} />
       ) : (
@@ -259,15 +254,14 @@ function CloudChangesBox({ data, placement }: BoxProps) {
   );
 }
 
-function ChangesBox({ chatId, data, placement }: BoxProps) {
-  if (data.cloud) return <CloudChangesBox chatId={chatId} data={data} placement={placement} />;
+function ChangesBox({ chatId, data }: BoxProps) {
+  if (data.cloud) return <CloudChangesBox chatId={chatId} data={data} />;
   const { files, additions, deletions } = data.changes;
   const hidden = files.length - MAX_BOX_CHANGES;
   return (
     <SessionBox
       id="changes"
       title="Changes"
-      placement={placement}
       summary={
         files.length > 0 ? <DiffStats additions={additions} deletions={deletions} /> : undefined
       }
@@ -275,7 +269,7 @@ function ChangesBox({ chatId, data, placement }: BoxProps) {
         <SidebarIconButton
           tooltip="Open changes"
           aria-label="Open changes"
-          onClick={(event) => openSessionTool(chatId, "changes", event.currentTarget)}
+          onClick={() => openSessionTool(chatId, "changes")}
         >
           <ArrowsOutIcon />
         </SidebarIconButton>
@@ -293,15 +287,13 @@ function ChangesBox({ chatId, data, placement }: BoxProps) {
         <>
           <AgentSessionChangeRows
             changes={files.slice(0, MAX_BOX_CHANGES)}
-            onSelect={(change, origin) =>
-              openSessionTool(chatId, "changes", origin, { changePath: change.path })
-            }
+            onSelect={(change) => openSessionTool(chatId, "changes", { changePath: change.path })}
           />
           {hidden > 0 ? (
             <SidebarListItem
               density="compact"
               leading={<GitDiffIcon />}
-              onClick={(event) => openSessionTool(chatId, "changes", event.currentTarget)}
+              onClick={() => openSessionTool(chatId, "changes")}
             >
               {hidden} more {hidden === 1 ? "file" : "files"}
             </SidebarListItem>
@@ -332,7 +324,7 @@ function RunningRow({ chatId, item }: { chatId: string; item: SessionRunningItem
           density="compact"
           leading={item.state === "live" ? <LiveDot /> : <Spinner compact />}
           aria-label={`${cleanCommand(item.command)} is running`}
-          onClick={(event) => openSessionTool(chatId, "terminal", event.currentTarget)}
+          onClick={() => openSessionTool(chatId, "terminal")}
         >
           {shortenCommand(item.command)}
         </SidebarListItem>
@@ -343,7 +335,7 @@ function RunningRow({ chatId, item }: { chatId: string; item: SessionRunningItem
           density="compact"
           tone="error"
           leading={<TerminalIcon />}
-          onClick={(event) => openSessionTool(chatId, "terminal", event.currentTarget)}
+          onClick={() => openSessionTool(chatId, "terminal")}
         >
           A command failed
         </SidebarListItem>
@@ -351,19 +343,19 @@ function RunningRow({ chatId, item }: { chatId: string; item: SessionRunningItem
   }
 }
 
-function RunningBox({ chatId, data, placement }: BoxProps) {
+function RunningBox({ chatId, data }: BoxProps) {
   const cloudRun = data.cloud?.run;
   if (data.cloud) {
     if (!cloudRun || !isActiveCloudAgentRun(cloudRun)) return null;
     return (
-      <SessionBox id="running" title="Running" placement={placement}>
+      <SessionBox id="running" title="Running">
         <CloudRunningRow run={cloudRun} />
       </SessionBox>
     );
   }
   if (data.running.length === 0) return null;
   return (
-    <SessionBox id="running" title="Running" placement={placement}>
+    <SessionBox id="running" title="Running">
       {data.running.map((item) => (
         <RunningRow key={item.kind} chatId={chatId} item={item} />
       ))}
@@ -371,22 +363,17 @@ function RunningBox({ chatId, data, placement }: BoxProps) {
   );
 }
 
-function CostBox({ data, placement }: BoxProps) {
+function CostBox({ data }: BoxProps) {
   const run = data.cloud?.run;
   if (!run) return null;
   return (
-    <SessionBox
-      id="cost"
-      title="Cost"
-      placement={placement}
-      summary={formatCreditMicros(getRunSpentMicros(run))}
-    >
+    <SessionBox id="cost" title="Cost" summary={formatCreditMicros(getRunSpentMicros(run))}>
       <CloudCostContent run={run} />
     </SessionBox>
   );
 }
 
-function PlanBox({ chatId, data, placement }: BoxProps) {
+function PlanBox({ chatId, data }: BoxProps) {
   const plan = data.plan;
   if (!plan) return null;
   const total = plan.entries.length;
@@ -397,13 +384,12 @@ function PlanBox({ chatId, data, placement }: BoxProps) {
     <SessionBox
       id="plan"
       title="Plan"
-      placement={placement}
       summary={`${plan.done}/${total}`}
       action={
         <SidebarIconButton
           tooltip="Open plan"
           aria-label="Open plan"
-          onClick={(event) => openSessionTool(chatId, "plan", event.currentTarget)}
+          onClick={() => openSessionTool(chatId, "plan")}
         >
           <ArrowsOutIcon />
         </SidebarIconButton>
@@ -420,7 +406,7 @@ function PlanBox({ chatId, data, placement }: BoxProps) {
         <SidebarListItem
           density="compact"
           leading={current.status === "in_progress" ? <CircleDotIcon /> : <ListChecksIcon />}
-          onClick={(event) => openSessionTool(chatId, "plan", event.currentTarget)}
+          onClick={() => openSessionTool(chatId, "plan")}
         >
           {current.content}
         </SidebarListItem>
@@ -431,13 +417,12 @@ function PlanBox({ chatId, data, placement }: BoxProps) {
   );
 }
 
-function ConnectorsBox({ data, placement }: BoxProps) {
+function ConnectorsBox({ data }: BoxProps) {
   if (data.connectors.length === 0) return null;
   return (
     <SessionBox
       id="connectors"
       title="Connectors"
-      placement={placement}
       summary={data.connectors.length}
       action={
         <SidebarIconButton
@@ -462,7 +447,7 @@ function ConnectorsBox({ data, placement }: BoxProps) {
   );
 }
 
-/** One box's content, in the column or in the popover the rail opens. */
+/** One box's content in the session details. */
 export function SessionBoxContent({ id, ...props }: BoxProps & { id: SessionBoxId }) {
   switch (id) {
     case "environment":

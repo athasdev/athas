@@ -17,6 +17,7 @@ import { ChromeBar, ChromeGroup } from "@/ui/chrome";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/ui/dropdown";
 import { FieldTitle } from "@/ui/field";
 import { ChevronDownIcon, DotsIcon, IconContext, SearchIcon } from "@/ui/icons";
+import { PaneHeaderPortal, usePaneHeaderHost } from "@/ui/pane";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import { ScrollArea } from "@/ui/scroll-area";
 import { SearchField } from "@/ui/search";
@@ -90,6 +91,11 @@ export function SidebarTitleBar({
   actionsLayout?: "constrained" | "content";
 }) {
   const titleClassName = "min-w-0 flex-1 truncate font-medium text-foreground ui-text-base";
+  const hostedByPane = usePaneHeaderHost();
+
+  if (hostedByPane) {
+    return children ? <PaneHeaderPortal>{children}</PaneHeaderPortal> : null;
+  }
 
   return (
     <div
@@ -130,7 +136,7 @@ export function SidebarToolbar({
   return (
     <div
       className={cn(
-        "font-sans ui-text-chrome flex h-pane-header min-w-0 shrink-0 select-none items-center gap-chrome border-divider px-chrome-inline",
+        "font-sans ui-text-chrome flex h-sidebar-header min-w-0 shrink-0 select-none items-center gap-chrome border-divider px-chrome-inline",
         position === "top" ? "border-b" : "border-t",
         className,
       )}
@@ -388,7 +394,7 @@ export function SidebarTabBar<TValue extends string>({
     >
       <div
         className={cn(
-          "flex h-pane-header min-w-0 shrink-0 items-center px-chrome-inline",
+          "flex h-sidebar-header min-w-0 shrink-0 items-center px-chrome-inline",
           actions ? "justify-between gap-chrome" : "justify-center",
           className,
         )}
@@ -455,12 +461,12 @@ export function SidebarTabPanels<TValue extends string>({
 }
 
 const sidebarListRowVariants = cva(
-  "flex min-h-chrome-control w-full min-w-0 items-center gap-chrome rounded-md px-1.5 py-0.5 font-sans font-normal ui-text-sm [&_svg]:size-[1em]",
+  "flex min-h-list-row w-full min-w-0 items-center gap-chrome rounded-md px-1.5 py-0.5 font-sans font-normal ui-text-sm [&_svg]:size-[1em]",
   {
     variants: {
       density: {
         default: "",
-        compact: "",
+        compact: "min-h-chrome-control",
         comfortable: "min-h-10 gap-3 px-2 py-2 ui-text-base",
       },
       multiline: { true: "h-auto" },

@@ -41,7 +41,7 @@ export function AgentSessionChangeRows({
 }: {
   changes: AgentSessionChange[];
   selectedPath?: string | null;
-  onSelect?: (change: AgentSessionChange, origin: HTMLElement) => void;
+  onSelect?: (change: AgentSessionChange) => void;
 }) {
   const openPath = useOpenAgentPath();
 
@@ -74,9 +74,7 @@ export function AgentSessionChangeRows({
             trailing={<DiffStats additions={change.additions} deletions={change.deletions} />}
             active={change.path === selectedPath}
             aria-current={change.path === selectedPath ? "true" : undefined}
-            onClick={(event) =>
-              onSelect ? onSelect(change, event.currentTarget) : openAgentSessionReview([change])
-            }
+            onClick={() => (onSelect ? onSelect(change) : openAgentSessionReview([change]))}
             data-path={change.path}
           >
             {fileName}

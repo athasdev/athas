@@ -20,8 +20,10 @@ import {
 } from "@/features/ai/services/agent-command-context";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
-import { useSessionPanelStore } from "@/features/ai/session-panel/stores/session-panel.store";
+import { getSessionDockOwner } from "@/features/ai/session-panel/stores/session-panel.store";
+import { openSessionTool } from "@/features/ai/session-panel/services/session-tools";
 import type { SessionPanelTab } from "@/features/ai/session-panel/types/session-panel.types";
+import { selectDockLayout, useDockLayoutStore } from "@/features/layout/stores/dock-layout.store";
 
 function getActiveBuffer() {
   return useBufferStore.getState().actions.getActiveBuffer() ?? undefined;
@@ -50,24 +52,31 @@ function getActiveAgentSessionId(): string | null {
   return null;
 }
 
-/** Opens or closes the tool panel of the agent session in front. */
+/** Shows or puts away the dock beside the centre. */
 export function toggleActiveSessionPanel(): void {
-  const chatId = getActiveAgentSessionId();
-  if (chatId) useSessionPanelStore.getState().actions.toggle(chatId);
+  const { hidden, actions } = useDockLayoutStore.getState();
+  actions.setHidden(!hidden);
 }
 
-/** Shows or hides the boxes beside agent sessions: environment, context, changes and the rest. */
+/**
+ * Unfolds or folds the session's details: environment, context, changes and the rest. With no
+ * tool open they are the whole dock, so this shows or puts the dock away.
+ */
 export function toggleSessionDetails(): void {
-  useSessionPanelStore.getState().actions.toggleBoxesHidden();
+  const chatId = getActiveAgentSessionId();
+  if (!chatId) return;
+  const owner = getSessionDockOwner(chatId);
+  const state = useDockLayoutStore.getState();
+  const layout = selectDockLayout(state, owner);
+  if (layout.panes.length === 0 || state.hidden) state.actions.setHidden(!state.hidden);
+  else state.actions.setInfoExpanded(owner, !layout.infoExpanded);
 }
 
-/** Opens the tool panel of the agent session in front on `tab`, ready to use. */
+/** Opens one of the tools of the agent session in front in its dock, ready to use. */
 export function showActiveSessionPanelTab(tab: SessionPanelTab): void {
   const chatId = getActiveAgentSessionId();
   if (!chatId) return;
-  const { open, requestFocus } = useSessionPanelStore.getState().actions;
-  requestFocus(chatId, tab);
-  open(chatId, tab);
+  openSessionTool(chatId, tab, { focus: true });
 }
 
 export function toggleFollowActiveAgent(): void {

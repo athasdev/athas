@@ -1,5 +1,5 @@
 import { type ReactNode, useId } from "react";
-import { SidebarSectionHeader, SidebarSectionLabel } from "@/ui/sidebar";
+import { SidebarSectionHeader } from "@/ui/sidebar";
 import { useSessionPanelStore } from "../stores/session-panel.store";
 import type { SessionBoxId } from "../types/session-panel.types";
 
@@ -10,13 +10,11 @@ interface SessionBoxProps {
   summary?: ReactNode;
   /** Controls at the end of the header, such as opening the box's tool. */
   action?: ReactNode;
-  /** `column`: folds to its header and remembers it; `popover`: always open, opened from the rail. */
-  placement: "column" | "popover";
   children: ReactNode;
 }
 
-/** One box beside an agent session: a section with a header that folds it away. */
-export function SessionBox({ id, title, summary, action, placement, children }: SessionBoxProps) {
+/** One box of a session's details: a section with a header that folds it away, remembered. */
+export function SessionBox({ id, title, summary, action, children }: SessionBoxProps) {
   const collapsed = useSessionPanelStore((state) => Boolean(state.collapsedBoxes[id]));
   const { toggleBoxCollapsed } = useSessionPanelStore.use.actions();
   const contentId = useId();
@@ -31,15 +29,6 @@ export function SessionBox({ id, title, summary, action, placement, children }: 
         {action}
       </span>
     ) : null;
-
-  if (placement === "popover") {
-    return (
-      <section data-slot="session-box" data-box={id} className="flex min-w-0 flex-col gap-1">
-        <SidebarSectionLabel trailing={trailing}>{title}</SidebarSectionLabel>
-        {children}
-      </section>
-    );
-  }
 
   const expanded = !collapsed;
   return (

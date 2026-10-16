@@ -43,7 +43,13 @@ const { startSessionPanelRuntime } = await import("../services/session-panel-run
 const { getSessionBrowserPageId, getSessionTerminalId, selectSessionPanel, useSessionPanelStore } =
   await import("../stores/session-panel.store");
 
+const { selectDockLayout, useDockLayoutStore } =
+  await import("@/features/layout/stores/dock-layout.store");
+const { openSessionTool } = await import("../services/session-tools");
+
 const panel = (chatId: string) => selectSessionPanel(useSessionPanelStore.getState(), chatId);
+const dockPanes = (chatId: string) =>
+  selectDockLayout(useDockLayoutStore.getState(), { kind: "session", id: chatId }).panes;
 const attention = (chatId: string) => useSessionPanelStore.getState().attention[chatId] ?? {};
 
 function commandMessage(id: string, output: string, timestamp: Date): Message {
@@ -84,8 +90,8 @@ beforeEach(() => {
     servers: {},
     liveServers: {},
     attention: {},
-    focusRequests: {},
   });
+  useDockLayoutStore.setState({ layouts: {}, hidden: false, focusRequest: null });
   useAIChatStore.setState({
     chats: [{ id: "chat-1", acpSessionId: "acp-1" } as ChatSession],
     messagesByChat: {},
@@ -114,11 +120,10 @@ describe("session panel runtime", () => {
 
     expect(useSessionPanelStore.getState().servers["chat-1"]).toEqual(["http://localhost:5173/"]);
     expect(panel("chat-1")).toMatchObject({
-      open: true,
-      tab: "browser",
       browserUrl: "http://localhost:5173/",
       autoOpened: true,
     });
+    expect(dockPanes("chat-1")).toEqual(["browser"]);
     expect(mocks.navigate).toHaveBeenCalledWith(
       getSessionBrowserPageId("chat-1"),
       "http://localhost:5173/",
@@ -197,7 +202,7 @@ describe("session panel runtime", () => {
     await vi.advanceTimersByTimeAsync(15_000);
 
     expect(useSessionPanelStore.getState().servers["chat-1"]).toEqual(["http://localhost:5173/"]);
-    expect(panel("chat-1").open).toBe(false);
+    expect(dockPanes("chat-1")).toEqual([]);
   });
 
   it("waits while the user types before opening the panel", async () => {
@@ -210,14 +215,14 @@ describe("session panel runtime", () => {
       .getState()
       .actions.append("term-1", "acp-1", "Local: http://localhost:5173/\n");
     await vi.advanceTimersByTimeAsync(800);
-    expect(panel("chat-1").open).toBe(false);
+    expect(dockPanes("chat-1")).toEqual([]);
 
     editor.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true }));
     await vi.advanceTimersByTimeAsync(1_000);
-    expect(panel("chat-1").open).toBe(false);
+    expect(dockPanes("chat-1")).toEqual([]);
 
     await vi.advanceTimersByTimeAsync(1_000);
-    expect(panel("chat-1").open).toBe(true);
+    expect(dockPanes("chat-1")).toEqual(["browser"]);
     expect(document.activeElement).not.toBe(editor);
     editor.remove();
   });
@@ -235,7 +240,7 @@ describe("session panel runtime", () => {
     await vi.advanceTimersByTimeAsync(0);
 
     expect(useSessionPanelStore.getState().servers["chat-1"]).toContain("http://127.0.0.1:8080/");
-    expect(panel("chat-1").tab).toBe("browser");
+    expect(dockPanes("chat-1")).toEqual(["browser"]);
   });
 
   it("marks the Terminal tab when a command in the session terminal fails", () => {
@@ -243,9 +248,9 @@ describe("session panel runtime", () => {
     const failure = { status: "failure" as const, exitCode: 1, durationMs: 20, finishedAt: 1 };
     emitAppEvent("terminal:command-finished", { terminalId, command: failure });
     expect(attention("chat-1").terminal).toBe(true);
-    expect(panel("chat-1").open).toBe(false);
+    expect(dockPanes("chat-1")).toEqual([]);
 
-    useSessionPanelStore.getState().actions.open("chat-1", "terminal");
+    openSessionTool("chat-1", "terminal");
     emitAppEvent("terminal:command-finished", { terminalId, command: failure });
     expect(attention("chat-1").terminal).toBeUndefined();
 
@@ -283,7 +288,7 @@ describe("session panel runtime", () => {
     document.body.append(session);
 
     await openWebLink("http://localhost:4000/docs", link);
-    expect(panel("chat-1")).toMatchObject({ open: true, tab: "browser" });
+    expect(dockPanes("chat-1")).toEqual(["browser"]);
     expect(panel("chat-1").browserUrl).toBe("http://localhost:4000/docs");
     session.remove();
   });

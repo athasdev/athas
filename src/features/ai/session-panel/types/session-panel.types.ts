@@ -1,6 +1,7 @@
+/** A session's own tools, each a pane of its dock. */
 export type SessionPanelTab = "changes" | "browser" | "terminal" | "plan";
 
-/** The boxes beside an agent session, in the order they stack. */
+/** The boxes of a session's details, in the order they stack. */
 export type SessionBoxId =
   | "environment"
   | "context"
@@ -10,15 +11,12 @@ export type SessionBoxId =
   | "plan"
   | "connectors";
 
-/** The tool panel of one agent session, as the session left it. */
+/**
+ * What one agent session's tools keep between visits. Which tools are open, their order and sizes
+ * are the session's dock layout (`dock-layout.store.ts`).
+ */
 export interface SessionPanelState {
-  /** A tool is open beside the conversation; closed, the session shows its boxes. */
-  open: boolean;
-  /** The tool the panel shows, and opens on next time. */
-  tab: SessionPanelTab;
-  /** The tool covers the conversation instead of sitting beside it. */
-  fullscreen: boolean;
-  /** The address the panel's browser shows; empty until something opens a page. */
+  /** The address the session's browser shows; empty until something opens a page. */
   browserUrl: string;
   browserZoom?: number;
   /** Bumped when the session's terminal moves into an editor tab, naming the next one. */

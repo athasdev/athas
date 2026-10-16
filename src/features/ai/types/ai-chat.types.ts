@@ -185,8 +185,6 @@ export interface AIChatProps {
   allProjectFiles?: FileEntry[];
   /** Controls the host adds to the session header, such as its tool panel toggle. */
   headerActions?: ReactNode;
-  /** What the host shows beside the conversation, under the header, such as session details. */
-  aside?: ReactNode;
   mode: "chat";
 }
 

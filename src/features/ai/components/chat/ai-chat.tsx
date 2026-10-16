@@ -93,7 +93,6 @@ const AIChat = memo(function AIChat({
   selectedFiles = [],
   allProjectFiles = [],
   headerActions,
-  aside,
 }: AIChatProps) {
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const aiProviderId = useSettingsStore((state) => state.settings.aiProviderId);
@@ -930,7 +929,6 @@ const AIChat = memo(function AIChat({
 
             {!useInitialComposer ? composer : null}
           </div>
-          {aside}
           {isCloudSession && effectiveChatId ? <CloudSessionSync chatId={effectiveChatId} /> : null}
         </div>
       )}

@@ -18,7 +18,7 @@ import {
   FileIcon,
 } from "@/ui/icons";
 import { type ReactNode, useEffect, useRef } from "react";
-import { PaneContentHeader } from "@/ui/pane-content-chrome";
+import { PaneActions, PaneHeader, PaneTitle } from "@/ui/pane";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import { useAIChatStore } from "../../stores/ai-chat.store";
@@ -83,10 +83,8 @@ export function ChatHeader({
   return (
     <div className="relative z-10020 shrink-0">
       {isMessageSearchOpen ? (
-        <PaneContentHeader
-          surface="transparent"
-          separated={false}
-          context={
+        <PaneHeader>
+          <div className="flex min-w-0 flex-1 items-center gap-chrome">
             <Input
               ref={messageSearchInputRef}
               value={messageSearchQuery}
@@ -111,111 +109,107 @@ export function ChatHeader({
               variant="ghost"
               leftIcon={SearchIcon}
             />
-          }
-          detail={messageSearchPosition}
-          actions={
-            <>
-              <Button
-                type="button"
-                variant="ghost"
-                iconOnly
-                disabled={!hasMessageSearchMatches}
-                onClick={onPreviousMessageSearchMatch}
-                tooltip="Previous match"
-                aria-label="Previous search match"
-              >
-                <ArrowUpIcon />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                iconOnly
-                disabled={!hasMessageSearchMatches}
-                onClick={onNextMessageSearchMatch}
-                tooltip="Next match"
-                aria-label="Next search match"
-              >
-                <ArrowDownIcon />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                iconOnly
-                onClick={onCloseMessageSearch}
-                tooltip="Close search"
-                aria-label="Close message search"
-              >
-                <XIcon />
-              </Button>
-            </>
-          }
-        />
+            {messageSearchPosition ? (
+              <span className="shrink-0 tabular-nums text-subtle-foreground">
+                {messageSearchPosition}
+              </span>
+            ) : null}
+          </div>
+          <PaneActions reveal={false}>
+            <Button
+              type="button"
+              variant="ghost"
+              iconOnly
+              disabled={!hasMessageSearchMatches}
+              onClick={onPreviousMessageSearchMatch}
+              tooltip="Previous match"
+              aria-label="Previous search match"
+            >
+              <ArrowUpIcon />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              iconOnly
+              disabled={!hasMessageSearchMatches}
+              onClick={onNextMessageSearchMatch}
+              tooltip="Next match"
+              aria-label="Next search match"
+            >
+              <ArrowDownIcon />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              iconOnly
+              onClick={onCloseMessageSearch}
+              tooltip="Close search"
+              aria-label="Close message search"
+            >
+              <XIcon />
+            </Button>
+          </PaneActions>
+        </PaneHeader>
       ) : (
-        <PaneContentHeader
-          surface="transparent"
-          separated={false}
-          title={currentChatTitle || "Agent"}
-          actions={
-            <>
-              <Button
-                type="button"
-                variant="ghost"
-                iconOnly
-                onClick={onToggleMessageSearch}
-                tooltip="Search messages"
-                aria-label="Search messages"
+        <PaneHeader>
+          <PaneTitle>{currentChatTitle || "Agent"}</PaneTitle>
+          <PaneActions>
+            <Button
+              type="button"
+              variant="ghost"
+              iconOnly
+              onClick={onToggleMessageSearch}
+              tooltip="Search messages"
+              aria-label="Search messages"
+            >
+              <SearchIcon />
+            </Button>
+
+            {sessionActions}
+
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    iconOnly
+                    aria-label="Conversation actions"
+                    tooltip="Conversation actions"
+                  />
+                }
               >
-                <SearchIcon />
-              </Button>
-
-              {sessionActions}
-
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      iconOnly
-                      aria-label="Conversation actions"
-                      tooltip="Conversation actions"
-                    />
-                  }
+                <DotsIcon />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" size="default">
+                <DropdownMenuItem
+                  disabled={!effectiveChatId}
+                  onClick={() => effectiveChatId && void openChatTranscript(effectiveChatId)}
                 >
-                  <DotsIcon />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" size="default">
+                  <FileIcon />
+                  Open conversation as Markdown
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={!hasMessages}
+                  onClick={() => shareAgent(effectiveChatId ?? undefined)}
+                >
+                  <UploadIcon />
+                  Share agent to web
+                </DropdownMenuItem>
+                {effectiveChatId && (
                   <DropdownMenuItem
-                    disabled={!effectiveChatId}
-                    onClick={() => effectiveChatId && void openChatTranscript(effectiveChatId)}
+                    onClick={() =>
+                      standalone ? requestWindowClose() : void openAgentInNewWindow(effectiveChatId)
+                    }
                   >
-                    <FileIcon />
-                    Open conversation as Markdown
+                    {standalone ? <ArrowLeftIcon /> : <WindowExpandIcon />}
+                    {standalone ? "Return agent to main window" : "Open agent in new window"}
                   </DropdownMenuItem>
-                  <DropdownMenuItem
-                    disabled={!hasMessages}
-                    onClick={() => shareAgent(effectiveChatId ?? undefined)}
-                  >
-                    <UploadIcon />
-                    Share agent to web
-                  </DropdownMenuItem>
-                  {effectiveChatId && (
-                    <DropdownMenuItem
-                      onClick={() =>
-                        standalone
-                          ? requestWindowClose()
-                          : void openAgentInNewWindow(effectiveChatId)
-                      }
-                    >
-                      {standalone ? <ArrowLeftIcon /> : <WindowExpandIcon />}
-                      {standalone ? "Return agent to main window" : "Open agent in new window"}
-                    </DropdownMenuItem>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </>
-          }
-        />
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </PaneActions>
+        </PaneHeader>
       )}
     </div>
   );

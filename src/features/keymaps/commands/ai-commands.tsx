@@ -119,9 +119,9 @@ export const aiCommands: Command[] = [
   },
   {
     id: "ai.toggleSessionPanel",
-    title: "AI: Toggle Session Tools",
+    title: "AI: Toggle Session Dock",
     category: "AI",
-    description: "Open or close the changes, browser and terminal beside the agent session",
+    description: "Show or put away the dock of tools and details beside the agent session",
     icon: <WrenchIcon />,
     palette: true,
     execute: async () => (await aiActions()).toggleActiveSessionPanel(),
@@ -131,7 +131,7 @@ export const aiCommands: Command[] = [
     title: "AI: Toggle Session Details",
     category: "AI",
     description:
-      "Show or hide the environment, context, changes and other boxes beside agent sessions",
+      "Unfold or fold the environment, context, changes and other details in the session dock",
     icon: <SidebarRightIcon />,
     palette: true,
     execute: async () => (await aiActions()).toggleSessionDetails(),

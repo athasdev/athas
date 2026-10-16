@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { cn } from "@/utils/cn";
 import { getPaneResizeLimits, resizePanePair, resizePanePairByPixels } from "../utils/pane-resize";
 
 interface PaneResizeHandleProps {
@@ -7,6 +8,8 @@ interface PaneResizeHandleProps {
   onReset?: () => void;
   initialSizes: [number, number];
   resizeHandleCount: number;
+  /** `gap`: between two raised panes, where the gap already separates them; the line shows on hover. */
+  appearance?: "line" | "gap";
 }
 
 export function PaneResizeHandle({
@@ -15,6 +18,7 @@ export function PaneResizeHandle({
   onReset,
   initialSizes,
   resizeHandleCount,
+  appearance = "line",
 }: PaneResizeHandleProps) {
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -166,9 +170,12 @@ export function PaneResizeHandle({
       tabIndex={0}
     >
       <div
-        className={`bg-divider transition-colors ${
-          isDragging ? "bg-primary" : "group-hover:bg-border-strong"
-        } ${isHorizontal ? "h-full w-px" : "h-px w-full"}`}
+        className={cn(
+          "transition-colors",
+          appearance === "line" ? "bg-divider" : "bg-transparent",
+          isDragging ? "bg-primary" : "group-hover:bg-border-strong",
+          isHorizontal ? "h-full w-px" : "h-px w-full",
+        )}
       />
       {isDragging && (
         <div

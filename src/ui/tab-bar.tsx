@@ -20,6 +20,7 @@ import { forwardRef, useCallback, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { instantTransition, quickTransition } from "@/utils/motion";
 import { cn } from "@/utils/cn";
+import { paneHeaderVariants } from "@/ui/pane";
 
 /** How far above or below the tab row the pointer may stray and still reorder tabs. */
 const TAB_ROW_SLOP = 8;
@@ -343,10 +344,7 @@ export const TabBarSurface = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivEl
       <div
         ref={ref}
         data-slot="tab-bar"
-        className={cn(
-          "relative flex h-tab-bar min-h-tab-bar shrink-0 items-center gap-chrome overflow-hidden bg-background px-chrome-inline",
-          className,
-        )}
+        className={cn(paneHeaderVariants(), "relative overflow-hidden bg-background", className)}
         {...props}
       />
     );
