@@ -1,4 +1,3 @@
-import { PerformanceMonitor } from "./performance-monitor";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useChatInitialization } from "@/features/ai/hooks/use-chat-initialization";
 import { useRunningAgentProjectIds } from "@/features/ai/hooks/use-running-agent-project-ids";
@@ -32,9 +31,12 @@ import { getInternalTabDragData } from "@/features/tabs/services/internal-tab-dr
 import { WorkbenchFullscreenRootContext } from "@/ui/workbench-fullscreen-surface";
 import TitleBarWithSettings from "../../window/components/title-bar/title-bar";
 import { TitleLeading } from "../../window/components/title-bar/title-leading";
+import { MERGED_TITLE_ROW } from "@/features/window/services/title-row";
 import { ResizablePane } from "./resizable-pane";
 import { useDockCoversCentre, WorkbenchDock } from "./dock/workbench-dock";
 import { useDockOwner } from "../hooks/use-dock-owner";
+import { useAgentBufferSessionId } from "../hooks/use-active-session-id";
+import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { ProjectPickerHost, WorkbenchSidebar } from "./sidebar/workbench-sidebar";
 import { useResponsiveWorkbenchLayout } from "../hooks/use-responsive-workbench-layout";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
@@ -81,6 +83,24 @@ const TerminalHost = lazy(() =>
 );
 const BottomPane = lazy(() => import("./bottom-pane/bottom-pane"));
 
+/**
+ * Whether the centre shows a session nobody has written in yet: its start screen floats on the
+ * window, without the raised island a conversation sits on. The bottom pane keeps its own island.
+ */
+function useIsEmptySessionInFront(): boolean {
+  const sessionId = useAgentBufferSessionId();
+  const isEmptySession = useAIChatStore((state) =>
+    sessionId ? (state.messagesByChat[sessionId]?.length ?? 0) === 0 : false,
+  );
+  // Split panes each keep their island, so only a centre of one pane clears.
+  const isSinglePane = usePaneStore((state) => state.root.type === "group");
+  // An empty workbench is about to show a new session, so it clears the same way.
+  const isEmptyWorkbench = usePaneStore(
+    (state) => state.root.type === "group" && state.root.bufferIds.length === 0,
+  );
+  return isSinglePane && (isEmptySession || isEmptyWorkbench);
+}
+
 export function MainLayout() {
   const [deferredSurfacesReady, setDeferredSurfacesReady] = useState(false);
   const layoutShellRef = useRef<HTMLDivElement | null>(null);
@@ -96,7 +116,6 @@ export function MainLayout() {
   useCollaborationPresence();
 
   const isSidebarVisible = useUIState((state) => state.isSidebarVisible);
-  const isBottomPaneVisible = useUIState((state) => state.isBottomPaneVisible);
   const bottomBuffersVisible = useUIState(
     (state) => state.isBottomPaneVisible && state.bottomPaneActiveTab === "buffers",
   );
@@ -105,6 +124,7 @@ export function MainLayout() {
   const dockOwner = useDockOwner();
   const dockCoversCentre = useDockCoversCentre(dockOwner);
   const renderedSidebarVisible = isSidebarVisible && !responsiveLayout.narrow;
+  const clearCentre = useIsEmptySessionInFront();
   const isDatabaseConnectionVisible = useUIState((state) => state.isDatabaseConnectionVisible);
   const setIsDatabaseConnectionVisible = useUIState(
     (state) => state.setIsDatabaseConnectionVisible,
@@ -148,8 +168,6 @@ export function MainLayout() {
       toast.warning("No supported dropped files or folders could be opened.");
     }
   }, !rootFolderPath);
-
-  const isEditorBottomPaneVisible = deferredSurfacesReady && isBottomPaneVisible;
 
   useEffect(() => {
     setBottomBuffersVisible(bottomBuffersVisible);
@@ -289,51 +307,58 @@ export function MainLayout() {
           </div>
         )}
 
-        <div
-          data-slot="workbench-title-row"
-          data-tauri-drag-region
-          className="relative z-20 h-title-bar shrink-0"
-        >
-          <TitleLeading />
-        </div>
-
-        <div className="athas-workbench-glass relative z-10 flex flex-1 flex-col overflow-hidden pb-workbench">
+        {MERGED_TITLE_ROW ? null : (
           <div
-            className="flex flex-1 flex-row overflow-hidden pr-workbench"
-            style={{ minHeight: 0 }}
+            data-slot="workbench-title-row"
+            data-tauri-drag-region
+            className="relative z-20 h-title-bar shrink-0"
           >
-            <ResizablePane hidden={!renderedSidebarVisible}>
-              <WorkbenchSidebar />
-            </ResizablePane>
+            <TitleLeading />
+          </div>
+        )}
 
+        <div
+          className={cn(
+            "athas-workbench-glass relative z-10 flex min-h-0 flex-1 flex-row overflow-hidden p-workbench",
+            !MERGED_TITLE_ROW && "pt-0",
+          )}
+        >
+          {MERGED_TITLE_ROW ? (
+            <div
+              aria-hidden
+              data-slot="workbench-top-gap"
+              data-tauri-drag-region
+              className="absolute inset-x-0 top-0 h-workbench"
+            />
+          ) : null}
+          <ResizablePane hidden={!renderedSidebarVisible}>
+            <WorkbenchSidebar titleRow={MERGED_TITLE_ROW} />
+          </ResizablePane>
+
+          <div
+            data-slot="workbench-centre"
+            className={cn("flex min-h-0 min-w-90 flex-1 flex-col", dockCoversCentre && "hidden")}
+          >
             <div
               data-slot="workbench-island"
-              className={cn(
-                "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl shadow-(--shadow-raised)",
-                dockCoversCentre && "hidden",
-              )}
+              data-island={clearCentre ? "clear" : undefined}
+              className="relative min-h-0 flex-1"
             >
-              <div
-                className={cn(
-                  "athas-glass-island relative min-h-0 flex-1 overflow-hidden bg-background",
-                  isEditorBottomPaneVisible && "border-divider border-b",
-                )}
-              >
-                <CachedWorkspaceSplitViews keepMountedWorkspaceIds={runningAgentProjectIds} />
-              </div>
-              {deferredSurfacesReady && (
-                <Suspense fallback={null}>
-                  <BottomPane />
-                </Suspense>
-              )}
+              <CachedWorkspaceSplitViews keepMountedWorkspaceIds={runningAgentProjectIds} />
             </div>
-            <WorkbenchDock owner={dockOwner} />
+            {deferredSurfacesReady && (
+              <Suspense fallback={null}>
+                <BottomPane />
+              </Suspense>
+            )}
           </div>
+          <WorkbenchDock owner={dockOwner} />
         </div>
+
+        {MERGED_TITLE_ROW ? <TitleLeading merged sidebarShown={renderedSidebarVisible} /> : null}
 
         <TitleBarWithSettings showMinimal overlay />
 
-        <PerformanceMonitor />
         <ProjectPickerHost />
 
         {/* Global modals and overlays */}

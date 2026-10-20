@@ -14,7 +14,7 @@ import {
   openWorkingTreeDiffBuffer,
   WORKING_TREE_EMPTY_LABELS,
   WORKING_TREE_TITLES,
-} from "../utils/open-working-tree-diff-buffer";
+} from "../services/open-working-tree-diff-buffer";
 
 function openDiffBuffer(
   virtualPath: string,

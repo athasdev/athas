@@ -2,8 +2,12 @@ import { PackageIcon } from "@/ui/icons";
 import { createElement, lazy } from "react";
 import { registerSidebarView } from "@/features/layout/services/sidebar-view-registry";
 
+const loadDockerSidebar = () => import("../components/docker-sidebar");
 const DockerSidebar = lazy(() =>
-  import("../components/docker-sidebar").then((module) => ({ default: module.DockerSidebar })),
+  loadDockerSidebar().then((module) => ({ default: module.DockerSidebar })),
+);
+const DockerHeaderActions = lazy(() =>
+  loadDockerSidebar().then((module) => ({ default: module.DockerHeaderActions })),
 );
 
 export function registerDockerViews() {
@@ -13,6 +17,7 @@ export function registerDockerViews() {
     icon: createElement(PackageIcon),
     order: 40,
     component: DockerSidebar,
+    HeaderActions: DockerHeaderActions,
     isAvailable: ({ coreFeatures }) => coreFeatures.docker,
   });
 }

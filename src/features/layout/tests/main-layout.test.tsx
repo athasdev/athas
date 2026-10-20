@@ -79,7 +79,6 @@ vi.mock("@/features/window/components/title-bar/title-bar", () => ({
 vi.mock("@/features/window/components/title-bar/title-leading", () => ({
   TitleLeading: stub("title-leading"),
 }));
-vi.mock("../components/performance-monitor", () => ({ PerformanceMonitor: stub("perf") }));
 vi.mock("../components/sidebar/workbench-sidebar", () => ({
   WorkbenchSidebar: stub("sidebar"),
   ProjectPickerHost: stub("project-picker-host"),

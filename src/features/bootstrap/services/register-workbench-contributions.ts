@@ -16,7 +16,6 @@ import { registerReferencesViews } from "@/features/references/services/referenc
 import { registerSettingsViews } from "@/features/settings/services/settings-views";
 import { registerTerminalViews } from "@/features/terminal/services/terminal-views";
 import { registerViewerViews } from "@/features/viewer/services/viewer-views";
-import { registerCustomViews } from "@/features/views/services/views-views";
 import { registerWorkspaceViews } from "@/features/workspace/team/services/workspace-views";
 
 let registered = false;
@@ -42,7 +41,6 @@ export function registerWorkbenchContributions() {
   registerReferencesViews();
   registerOnboardingViews();
   registerViewerViews();
-  registerCustomViews();
   registerWorkspaceViews();
   registerExtensionPaneViews();
   registerFileExplorerViews();

@@ -23,6 +23,12 @@ const ATHAS_WINDOWS_LIGHT_ACRYLIC_TINT: Color = Color(245, 245, 245, 125);
 
 static APP_WINDOW_COUNTER: AtomicU32 = AtomicU32::new(0);
 
+/// Where the traffic lights of a workbench window sit, from its top-left corner. Keep in step
+/// with `trafficLightPosition` in `tauri.macos.conf.json` and the top row in `main-layout.tsx`
+/// (the workbench gutter plus half a pane header).
+#[cfg(target_os = "macos")]
+const WORKBENCH_TRAFFIC_LIGHTS: (f64, f64) = (16.0, 28.0);
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateAppWindowRequest {
@@ -379,6 +385,22 @@ fn create_labeled_app_window_internal(
    let builder = builder
       .hidden_title(true)
       .title_bar_style(TitleBarStyle::Overlay);
+
+   // Workbench windows have no title row: the traffic lights sit in the top row of the
+   // sidebar, centred on the pane headers. Detached and standalone windows keep AppKit's
+   // own position over their 32px title bar.
+   #[cfg(target_os = "macos")]
+   let builder = if request
+      .as_ref()
+      .is_some_and(|request| request.content.is_some() || request.detached.is_some())
+   {
+      builder
+   } else {
+      builder.traffic_light_position(tauri::LogicalPosition::new(
+         WORKBENCH_TRAFFIC_LIGHTS.0,
+         WORKBENCH_TRAFFIC_LIGHTS.1,
+      ))
+   };
 
    let build_started_at = Instant::now();
    let window = builder

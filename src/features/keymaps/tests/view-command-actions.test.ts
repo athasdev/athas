@@ -43,7 +43,6 @@ import {
   toggleSidebar,
   toggleSourceControlSidebar,
   toggleTerminalPane,
-  toggleViewsSidebar,
   toggleWordWrap,
   zoomIn,
   zoomOut,
@@ -103,7 +102,6 @@ describe("sidebar toggles", () => {
     ["files", toggleFilesSidebar],
     ["git", toggleSourceControlSidebar],
     ["github-prs", toggleGitHubSidebar],
-    ["views", toggleViewsSidebar],
     ["docker", toggleDockerSidebar],
   ] as const)("opens %s in the project's dock, then closes it there", (view, toggle) => {
     useProjectStore.setState({ rootFolderPath: "/work/site" });

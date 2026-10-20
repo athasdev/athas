@@ -928,6 +928,7 @@ export const commands = {
   readCodexRateLimits: () => __TAURI_INVOKE<unknown>("read_codex_rate_limits"),
   listCodexThreads: (cwd: string | null, cursor: string | null, limit: number | null) =>
     __TAURI_INVOKE<unknown>("list_codex_threads", { cwd, cursor, limit }),
+  readCodexThread: (threadId: string) => __TAURI_INVOKE<unknown>("read_codex_thread", { threadId }),
   archiveCodexThread: (threadId: string) =>
     __TAURI_INVOKE<unknown>("archive_codex_thread", { threadId }),
   deleteCodexThread: (threadId: string) =>

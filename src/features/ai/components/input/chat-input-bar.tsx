@@ -1462,7 +1462,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
       </Composer>
 
       {isTerminalMode ? null : (
-        <div data-slot="composer-controls" className="flex min-w-0 items-center gap-1 px-1">
+        <div data-slot="composer-controls" className="flex min-w-0 items-center gap-1 px-1.5">
           <ComposerAgentSelector
             cwd={projectPath}
             currentAgentId={currentAgentId}
@@ -1474,7 +1474,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
             onModelChange={handleApiModelChange}
             onSessionConfigChange={changeSessionConfigOption}
             onBeforeOpen={closeInlineMenus}
-            followChatId={isCloud ? null : followChatId}
           />
           <ComposerEnvironmentControls
             environment={environment}

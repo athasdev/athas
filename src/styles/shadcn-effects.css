@@ -525,10 +525,8 @@
   --shimmer-angle: calc(--value(integer) * 1deg);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .shimmer {
-    animation: none;
-    background-image: none;
-    -webkit-text-fill-color: currentColor;
-  }
+.shimmer {
+  animation: none;
+  background-image: none;
+  -webkit-text-fill-color: currentColor;
 }

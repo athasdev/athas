@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import type { ProjectUiSession } from "@/features/workspace/stores/session.store";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 vi.hoisted(() => {
@@ -64,40 +65,38 @@ describe("project UI session", () => {
     ui.setIsSidebarVisible(false);
     ui.setIsBottomPaneVisible(true);
     ui.setBottomPaneActiveTab("terminal");
-    ui.setActiveView("git");
 
     const captured = getCurrentProjectUiState();
     expect(captured).toMatchObject({
       isSidebarVisible: false,
       isBottomPaneVisible: true,
       bottomPaneActiveTab: "terminal",
-      activeSidebarView: "git",
     });
+    expect(captured).not.toHaveProperty("activeSidebarView");
     expect(captured.paneState).toBeDefined();
 
     persistCurrentProjectUiState(undefined);
     persistCurrentProjectUiState("/projects/ui-a");
     expect(workspaceSessionRepository.loadUi("/projects/ui-a")).toMatchObject({
       isSidebarVisible: false,
-      activeSidebarView: "git",
     });
   });
 
   it("reads a specific workspace's stores when asked", () => {
     workspaceRuntimeRegistry.ensureWorkspace({ id: "ws-b", name: "b" }, "ready");
-    useUIState.getStore("ws-b").getState().setActiveView("github-prs");
+    useUIState.getStore("ws-b").getState().setBottomPaneActiveTab("debugger");
 
-    expect(getCurrentProjectUiState("ws-b").activeSidebarView).toBe("github-prs");
-    expect(getCurrentProjectUiState().activeSidebarView).not.toBe("github-prs");
+    expect(getCurrentProjectUiState("ws-b").bottomPaneActiveTab).toBe("debugger");
+    expect(getCurrentProjectUiState().bottomPaneActiveTab).not.toBe("debugger");
   });
 
-  it("restores saved panels and maps retired sidebar views", () => {
+  it("restores saved panels and opens the debugger a retired sidebar view pointed at", () => {
     workspaceSessionRepository.saveUi("/projects/ui-legacy", {
       isSidebarVisible: true,
       isBottomPaneVisible: false,
       bottomPaneActiveTab: "terminal",
-      activeSidebarView: "debugger" as never,
-    });
+      activeSidebarView: "debugger",
+    } as ProjectUiSession);
 
     restoreProjectUiState("/projects/ui-legacy");
 
@@ -105,29 +104,20 @@ describe("project UI session", () => {
       isSidebarVisible: true,
       isBottomPaneVisible: true,
       bottomPaneActiveTab: "debugger",
-      activeSidebarView: "files",
     });
 
     workspaceSessionRepository.saveUi("/projects/ui-sources", {
       isSidebarVisible: false,
       isBottomPaneVisible: false,
       bottomPaneActiveTab: "terminal",
-      activeSidebarView: "data-sources" as never,
-    });
+      activeSidebarView: "data-sources",
+    } as ProjectUiSession);
     restoreProjectUiState("/projects/ui-sources");
     expect(useUIState.getState()).toMatchObject({
       isSidebarVisible: false,
-      activeSidebarView: "views",
-    });
-
-    workspaceSessionRepository.saveUi("/projects/ui-ext", {
-      isSidebarVisible: true,
       isBottomPaneVisible: false,
       bottomPaneActiveTab: "terminal",
-      activeSidebarView: "extensions" as never,
     });
-    restoreProjectUiState("/projects/ui-ext");
-    expect(useUIState.getState().activeSidebarView).toBe("files");
   });
 
   it("falls back to default panels for projects without a saved session", () => {
@@ -262,5 +252,47 @@ describe("workspace tabs", () => {
       "other",
       "local",
     ]);
+  });
+});
+
+describe("tab sets in the project UI session", () => {
+  const editor = (id: string) => ({
+    id,
+    type: "editor" as const,
+    path: `/projects/sets/${id}.ts`,
+    name: `${id}.ts`,
+    content: "",
+    savedContent: "",
+    isDirty: false,
+    isVirtual: false,
+  });
+  const tabs = () => {
+    const root = usePaneStore.getState().root;
+    return root.type === "group" ? root.bufferIds : [];
+  };
+
+  it("saves every owner's tabs and restores the project's on screen, sessions' aside", async () => {
+    const { useTabSetsStore, getSessionTabSet, PROJECT_TAB_SET } =
+      await import("@/features/panes/stores/tab-sets.store");
+    useBufferStore.setState((state) => ({ ...state, buffers: [editor("a"), editor("b")] }));
+    usePaneStore.getState().actions.placeBuffer("a");
+    useBufferStore.getState().actions.openAgentBuffer("chat");
+    usePaneStore.getState().actions.placeBuffer("b");
+
+    const captured = getCurrentProjectUiState();
+    expect(captured.tabSets?.activeOwner).toBe(getSessionTabSet("chat"));
+    expect(captured.tabSets?.layouts[PROJECT_TAB_SET]?.root).toMatchObject({
+      bufferPaths: ["/projects/sets/a.ts"],
+    });
+    expect(captured.paneState?.root).toMatchObject({ bufferPaths: ["/projects/sets/b.ts"] });
+
+    persistCurrentProjectUiState("/projects/sets");
+    restoreProjectPaneState("/projects/sets");
+
+    expect(useTabSetsStore.getState().activeOwner).toBe(PROJECT_TAB_SET);
+    expect(tabs()).toEqual(["a"]);
+    expect(useTabSetsStore.getState().stored[getSessionTabSet("chat")]?.root).toMatchObject({
+      bufferIds: ["b"],
+    });
   });
 });

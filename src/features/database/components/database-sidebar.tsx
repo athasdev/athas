@@ -44,6 +44,10 @@ import { buildSavedConnectionConfig } from "../utils/connection-config";
 import { getInstalledDatabaseTypes, validateConnectionInput } from "../utils/connection-validation";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
+import { usePaneCommands } from "@/features/layout/hooks/use-pane-commands";
+import { getProjectToolPaneId } from "@/features/layout/services/dock-pane-registry";
+import { runPaneCommand } from "@/features/layout/services/pane-commands";
+import type { SidebarViewHeaderProps } from "@/features/layout/services/sidebar-view-registry";
 
 function getBaseName(path: string) {
   return path.split(/[\\/]/).filter(Boolean).pop() ?? path;
@@ -191,6 +195,7 @@ export function DatabaseSidebar() {
     setProviderQuery("");
     setMode("choose-provider");
   };
+  usePaneCommands(getProjectToolPaneId("databases"), { add: showProviderStep });
 
   const chooseProvider = (dbType: DatabaseType) => {
     setSelectedDbType(dbType);
@@ -461,7 +466,7 @@ export function DatabaseSidebar() {
             </>
           }
         />
-      ) : (
+      ) : mode === "file-provider" || mode === "network-provider" || showProviders ? (
         <SidebarHeader>
           {mode === "file-provider" || mode === "network-provider" ? (
             <>
@@ -470,10 +475,10 @@ export function DatabaseSidebar() {
               <span className="truncate">{PROVIDER_REGISTRY[selectedDbType].label}</span>
             </>
           ) : (
-            <span className="truncate">{showProviders ? "Add database" : "Databases"}</span>
+            <span className="truncate">Add database</span>
           )}
         </SidebarHeader>
-      )}
+      ) : null}
       <SidebarScrollArea>
         {showProviders ? (
           installedDbTypes.length === 0 ? (
@@ -707,5 +712,19 @@ export function DatabaseSidebar() {
         </div>
       ) : null}
     </SidebarPanel>
+  );
+}
+
+/** The Databases pane header's action: add a database to the project. */
+export function DatabaseHeaderActions({ rootFolderPath }: SidebarViewHeaderProps) {
+  return (
+    <SidebarIconButton
+      onClick={() => void runPaneCommand(getProjectToolPaneId("databases"), "add")}
+      aria-label="Add database"
+      tooltip="Add database"
+      disabled={!rootFolderPath}
+    >
+      <PlusIcon />
+    </SidebarIconButton>
   );
 }

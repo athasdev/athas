@@ -136,6 +136,7 @@ export default function RunActionsButton() {
     const confirmed = await showConfirmDialog(`Delete the run action “${action.name}”?`, {
       title: "Delete run action",
       confirmLabel: "Delete",
+      destructive: true,
     });
     if (confirmed) deleteAction(action.id);
   };

@@ -17,7 +17,10 @@ import {
 } from "@/features/layout/stores/dock-layout.store";
 import type { DockOwner } from "@/features/layout/types/dock.types";
 import { PaneResizeHandle } from "@/features/panes/components/pane-resize-handle";
+import { Pane } from "@/ui/pane";
+import { MERGED_TITLE_ROW } from "@/features/window/services/title-row";
 import { cn } from "@/utils/cn";
+import { DockAddPaneMenu } from "./dock-add-pane-menu";
 import { DockPaneFrame } from "./dock-pane-frame";
 import { useDockPaneViews } from "./use-dock-pane-views";
 
@@ -66,12 +69,19 @@ function SessionInfo({ chatId, compact }: { chatId: string; compact: boolean }) 
   const { setInfoExpanded } = useDockLayoutStore.use.actions();
   if (!info) return null;
   const { Column, Summary } = info;
-  if (!compact) return <Column chatId={chatId} />;
+  if (!compact) {
+    return (
+      <Pane surface="island" data-slot="dock-session-info" className="flex-1">
+        <Column chatId={chatId} />
+      </Pane>
+    );
+  }
   return (
-    <div
+    <Pane
+      surface="island"
       data-slot="dock-session-info"
       data-expanded={layout.infoExpanded || undefined}
-      className="flex max-h-[45%] min-h-0 shrink-0 flex-col"
+      className="max-h-[45%] shrink-0"
     >
       <Summary
         chatId={chatId}
@@ -79,7 +89,7 @@ function SessionInfo({ chatId, compact }: { chatId: string; compact: boolean }) 
         onToggle={() => setInfoExpanded(owner, !layout.infoExpanded)}
       />
       {layout.infoExpanded ? <Column chatId={chatId} /> : null}
-    </div>
+    </Pane>
   );
 }
 
@@ -91,6 +101,33 @@ function SessionDock({ chatId }: { chatId: string }) {
   return <Dock owner={{ kind: "session", id: chatId }} hasInfo={hasInfo} />;
 }
 
+/** How long the dock takes to slide out or away; matches `duration-fast`. */
+const DOCK_TOGGLE_MS = 150;
+
+/**
+ * Keeps the dock mounted while it slides away, and marks the renders where it slides, so only a
+ * show or hide animates: switching sessions or projects swaps the dock at once.
+ */
+function useDockPresence(shown: boolean) {
+  const [present, setPresent] = useState(shown);
+  const [toggling, setToggling] = useState(false);
+  const [previousShown, setPreviousShown] = useState(shown);
+  if (previousShown !== shown) {
+    setPreviousShown(shown);
+    setToggling(true);
+    if (shown) setPresent(true);
+  }
+  useEffect(() => {
+    if (!toggling) return;
+    const timer = window.setTimeout(() => {
+      setToggling(false);
+      if (!shown) setPresent(false);
+    }, DOCK_TOGGLE_MS + 30);
+    return () => window.clearTimeout(timer);
+  }, [shown, toggling]);
+  return { present, toggling };
+}
+
 function Dock({ owner, hasInfo }: { owner: DockOwner; hasInfo: boolean }) {
   const layout = useDockLayout(owner);
   const hidden = useDockLayoutStore.use.hidden();
@@ -99,38 +136,53 @@ function Dock({ owner, hasInfo }: { owner: DockOwner; hasInfo: boolean }) {
   const views = useDockPaneViews(owner);
   const { dragging, onMouseDown } = useDockWidthDrag();
   const stackRef = useRef<HTMLDivElement>(null);
+  const [initialPanes] = useState(() => new Set(layout.panes));
 
-  const panes = layout.panes.flatMap((id) => {
+  const openPanes = layout.panes.flatMap((id) => {
     const view = views.get(id);
     return view ? [view] : [];
   });
+  const shown = !hidden && (openPanes.length > 0 || hasInfo);
+  const { present, toggling } = useDockPresence(shown);
+  // While it slides away the dock keeps showing what it held.
+  const lastPanesRef = useRef(openPanes);
+  if (shown) lastPanesRef.current = openPanes;
+  const panes = shown ? openPanes : lastPanesRef.current;
   const shares = getDockPaneShares({ panes: panes.map((view) => view.id), sizes: layout.sizes });
   const maximized = panes.find((view) => view.id === layout.maximized) ?? null;
 
-  if (hidden || (panes.length === 0 && !hasInfo)) return null;
+  if (!present) return null;
 
   const showsPanes = panes.length > 0;
   const sessionAttribute =
     owner.kind === "session" ? { [AGENT_SESSION_CHAT_ATTRIBUTE]: owner.id } : {};
+  // While sliding, the content keeps its full width so terminals and pages do not reflow.
+  const sliding = toggling && !maximized;
 
   return (
     <aside
       data-slot="workbench-dock"
       data-dock-owner={owner.kind}
       data-maximized={maximized ? "true" : undefined}
+      data-state={shown ? "open" : "closed"}
       aria-label={owner.kind === "session" ? "Session tools" : "Project tools"}
+      aria-hidden={shown ? undefined : true}
+      inert={!shown}
       {...sessionAttribute}
       className={cn(
-        "relative flex h-full min-h-0 min-w-0 shrink-0 flex-col gap-workbench pl-workbench",
-        maximized
-          ? "flex-1"
-          : showsPanes
-            ? "w-(--dock-width) max-w-[calc(100%-22.5rem)]"
-            : "w-(--spacing-session-boxes)",
+        // Beside a sidebar in a narrow window the dock shrinks, so the centre keeps its room.
+        "relative flex h-full min-h-0 min-w-0",
+        maximized && "flex-1",
+        sliding && "shrink-0",
+        !maximized && showsPanes && "w-(--dock-width) max-w-[calc(100%-22.5rem)]",
+        !maximized && !showsPanes && "w-(--spacing-session-boxes)",
+        sliding &&
+          "overflow-hidden transition-[width] duration-fast ease-smooth starting:w-0 motion-reduce:transition-none",
+        !shown && "w-0",
       )}
       style={{ "--dock-width": `${width}px` } as CSSProperties}
     >
-      {showsPanes && !maximized ? (
+      {showsPanes && !maximized && shown ? (
         <div
           role="separator"
           aria-orientation="vertical"
@@ -142,63 +194,78 @@ function Dock({ owner, hasInfo }: { owner: DockOwner; hasInfo: boolean }) {
         >
           <div
             className={cn(
-              "h-full w-px transition-colors duration-fast ease-smooth group-hover:bg-primary",
-              dragging && "bg-primary",
+              "h-full w-px transition-colors duration-fast ease-smooth",
+              dragging ? "bg-primary" : "group-hover:bg-border-strong",
             )}
           />
         </div>
       ) : null}
       {dragging ? <div className="fixed inset-0 z-40 cursor-col-resize" /> : null}
-      {hasInfo && !maximized ? <SessionInfo chatId={owner.id} compact={showsPanes} /> : null}
-      {showsPanes ? (
-        <div
-          ref={stackRef}
-          data-pane-split-container="true"
-          className="flex min-h-0 flex-1 flex-col"
-        >
-          {(maximized ? [maximized] : panes).map((view, index) => (
-            <Fragment key={view.id}>
-              {index > 0 ? (
-                <PaneResizeHandle
-                  direction="vertical"
-                  appearance="gap"
-                  initialSizes={[shares[index - 1], shares[index]]}
-                  resizeHandleCount={panes.length - 1}
-                  onReset={() => actions.resize(owner, { [panes[index - 1].id]: 1, [view.id]: 1 })}
-                  onResize={([before, after]) => {
-                    // The handle previews the drag on the panes' inline flex-grow; the store
-                    // owns their shares from here on.
-                    for (const element of stackRef.current?.querySelectorAll<HTMLElement>(
-                      "[data-dock-pane]",
-                    ) ?? []) {
-                      element.style.removeProperty("flex-grow");
+      <div
+        data-slot="dock-content"
+        className={cn(
+          "flex h-full min-h-0 shrink-0 flex-col gap-workbench pl-workbench",
+          sliding && showsPanes && "w-(--dock-width)",
+          sliding && !showsPanes && "w-(--spacing-session-boxes)",
+          !sliding && "w-full",
+        )}
+      >
+        {hasInfo && !maximized ? <SessionInfo chatId={owner.id} compact={showsPanes} /> : null}
+        {showsPanes ? (
+          <div
+            ref={stackRef}
+            data-pane-split-container="true"
+            className="flex min-h-0 flex-1 flex-col"
+          >
+            {(maximized ? [maximized] : panes).map((view, index) => (
+              <Fragment key={view.id}>
+                {index > 0 ? (
+                  <PaneResizeHandle
+                    direction="vertical"
+                    appearance="gap"
+                    initialSizes={[shares[index - 1], shares[index]]}
+                    resizeHandleCount={panes.length - 1}
+                    onReset={() =>
+                      actions.resize(owner, { [panes[index - 1].id]: 1, [view.id]: 1 })
                     }
-                    actions.resize(
-                      owner,
-                      Object.fromEntries(
-                        panes.map((pane, paneIndex) => [
-                          pane.id,
-                          paneIndex === index - 1
-                            ? before
-                            : paneIndex === index
-                              ? after
-                              : shares[paneIndex],
-                        ]),
-                      ),
-                    );
-                  }}
+                    onResize={([before, after]) => {
+                      // The handle previews the drag on the panes' inline flex-grow; the store
+                      // owns their shares from here on.
+                      for (const element of stackRef.current?.querySelectorAll<HTMLElement>(
+                        "[data-dock-pane]",
+                      ) ?? []) {
+                        element.style.removeProperty("flex-grow");
+                      }
+                      actions.resize(
+                        owner,
+                        Object.fromEntries(
+                          panes.map((pane, paneIndex) => [
+                            pane.id,
+                            paneIndex === index - 1
+                              ? before
+                              : paneIndex === index
+                                ? after
+                                : shares[paneIndex],
+                          ]),
+                        ),
+                      );
+                    }}
+                  />
+                ) : null}
+                <DockPaneFrame
+                  owner={owner}
+                  view={view}
+                  share={shares[panes.indexOf(view)] ?? 1}
+                  maximized={view === maximized}
+                  appear={!initialPanes.has(view.id)}
+                  dockActions={index === 0 ? <DockAddPaneMenu owner={owner} /> : undefined}
+                  windowTopRow={MERGED_TITLE_ROW && index === 0 && !(hasInfo && !maximized)}
                 />
-              ) : null}
-              <DockPaneFrame
-                owner={owner}
-                view={view}
-                share={shares[panes.indexOf(view)] ?? 1}
-                maximized={view === maximized}
-              />
-            </Fragment>
-          ))}
-        </div>
-      ) : null}
+              </Fragment>
+            ))}
+          </div>
+        ) : null}
+      </div>
     </aside>
   );
 }

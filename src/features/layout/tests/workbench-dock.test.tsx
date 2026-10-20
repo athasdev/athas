@@ -14,7 +14,6 @@ vi.mock("@/features/panes/components/pane-resize-handle", () => ({
   PaneResizeHandle: () => createElement("div", { "data-slot": "dock-resize" }),
 }));
 
-import { SidebarTitleBar } from "@/ui/sidebar";
 import { useDockCoversCentre, WorkbenchDock } from "../components/dock/workbench-dock";
 import { registerDockPane, registerDockSessionInfo } from "../services/dock-pane-registry";
 import { selectDockLayout, useDockLayoutStore } from "../stores/dock-layout.store";
@@ -40,18 +39,13 @@ registerDockPane({
     createElement("p", null, focusRequested ? "terminal focused" : "terminal body"),
 });
 registerDockPane({
-  id: "hosted",
-  title: "Hosted",
+  id: "tool",
+  title: "Tool",
   icon: null,
   order: 3,
   scope: "session",
-  hostsViewChrome: true,
-  component: () =>
-    createElement(
-      SidebarTitleBar,
-      { title: "Hosted view" },
-      createElement("button", { type: "button" }, "Refresh"),
-    ),
+  component: () => createElement("p", null, "tool body"),
+  HeaderActions: () => createElement("button", { type: "button" }, "Refresh"),
 });
 registerDockSessionInfo({
   Column: ({ chatId }) => createElement("p", { "data-slot": "info-column" }, `details ${chatId}`),
@@ -160,6 +154,30 @@ describe("workbench dock", () => {
     expect(find("output")?.dataset.covers).toBe("false");
   });
 
+  it("slides away when put away, and only then leaves the layout", async () => {
+    vi.useFakeTimers();
+    try {
+      act(() => actions().open(owner, "changes"));
+      await render();
+      const dock = find("[data-slot=workbench-dock]");
+      expect(dock?.dataset.state).toBe("open");
+      expect(dock?.className).not.toContain("transition-[width]");
+
+      act(() => actions().setHidden(true));
+      expect(find("[data-slot=workbench-dock]")?.dataset.state).toBe("closed");
+      expect(find("[data-slot=workbench-dock]")?.className).toContain("transition-[width]");
+      expect(find("[data-dock-pane=changes]")).not.toBeNull();
+
+      await act(async () => vi.advanceTimersByTime(400));
+      expect(find("[data-slot=workbench-dock]")).toBeNull();
+
+      act(() => actions().setHidden(false));
+      expect(find("[data-slot=workbench-dock]")?.className).toContain("starting:w-0");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("hands a focus request to the pane that was asked for", async () => {
     act(() => actions().open(owner, "terminal", { focus: true }));
     await render();
@@ -167,13 +185,22 @@ describe("workbench dock", () => {
     expect(useDockLayoutStore.getState().focusRequest).toBeNull();
   });
 
-  it("moves a hosted view's title bar actions into the pane header", async () => {
-    act(() => actions().open(owner, "hosted"));
+  it("puts a pane's own actions in its header, before maximize and close", async () => {
+    act(() => actions().open(owner, "tool"));
     await render();
-    const header = find("[data-dock-pane=hosted] [data-slot=pane-header]");
-    expect(header?.textContent).toContain("Refresh");
-    expect(find("[data-dock-pane=hosted] [data-slot=pane-body]")?.textContent).not.toContain(
-      "Hosted view",
-    );
+    const buttons = [
+      ...(find("[data-dock-pane=tool] [data-slot=pane-header]")?.querySelectorAll("button") ?? []),
+    ].map((button) => button.textContent || button.getAttribute("aria-label"));
+    expect(buttons).toEqual(["Refresh", "Add pane", "Maximize Tool", "Close Tool"]);
+    expect(find("[data-dock-pane=tool] [data-slot=pane-body]")?.textContent).toBe("tool body");
+  });
+
+  it("gives a pane a new focus request each time it is asked for again", async () => {
+    act(() => actions().open(owner, "terminal", { focus: true }));
+    await render();
+    act(() => actions().open(owner, "terminal", { focus: true }));
+    await render();
+    expect(find("[data-dock-pane=terminal]")?.textContent).toContain("terminal focused");
+    expect(useDockLayoutStore.getState().focusRequest).toBeNull();
   });
 });

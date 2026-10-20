@@ -24,7 +24,7 @@ export function AgentsPlanFooter() {
 
   if (!hasIntelligence) {
     return (
-      <div className="shrink-0 px-chrome-inline py-2">
+      <div className="flex shrink-0 items-center">
         <Button
           variant="ghost"
           size="sm"
@@ -41,7 +41,7 @@ export function AgentsPlanFooter() {
 
   if (!usage) {
     return (
-      <div className="shrink-0 px-chrome-inline py-2">
+      <div className="flex shrink-0 items-center">
         <SidebarIconButton
           tooltip="Athas AI usage"
           aria-label="Open Athas AI usage"
@@ -54,7 +54,7 @@ export function AgentsPlanFooter() {
   }
 
   return (
-    <div className="shrink-0 px-chrome-inline py-2">
+    <div className="flex shrink-0 items-center">
       <AthasUsageIndicator placement="sidebar" />
     </div>
   );

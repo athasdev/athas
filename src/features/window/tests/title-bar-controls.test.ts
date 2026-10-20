@@ -44,24 +44,22 @@ const dropdownSource = readFileSync(
 );
 
 describe("title bar controls", () => {
-  it("leads the title bar with the sidebar toggle, then the branch, and lists projects in the sidebar", () => {
+  it("leads the title bar with the sidebar toggle, then back and forward, with no branch picker", () => {
     const toggleIndex = titleLeadingSource.indexOf("<Toggle");
-    const branchIndex = titleLeadingSource.indexOf("<GitBranchManager");
+    const navigationIndex = titleLeadingSource.indexOf("<TabHistoryNavigation />");
 
     expect(toggleIndex).toBeGreaterThan(-1);
-    expect(branchIndex).toBeGreaterThan(toggleIndex);
+    expect(navigationIndex).toBeGreaterThan(toggleIndex);
     expect(titleLeadingSource).not.toContain("ProjectSwitcher");
+    expect(titleLeadingSource).not.toContain("GitBranchManager");
     expect(titleLeadingSource).toContain('useCommandShortcut("workbench.toggleSidebar")');
-    expect(titleLeadingSource).toContain('triggerMode="branch"');
     expect(workbenchSidebarSource).toContain("<SidebarProjects />");
   });
 
-  it("puts back and forward in the pane tab bar, right before the tabs", () => {
+  it("keeps back and forward out of the pane tab bar", () => {
     expect(tabHistoryNavigationSource).toContain("export function TabHistoryNavigation");
     expect(mainLayoutSource).not.toContain("titleActions=");
-    const navigationIndex = tabBarSource.indexOf("<TabHistoryNavigation />");
-    expect(navigationIndex).toBeGreaterThan(-1);
-    expect(navigationIndex).toBeLessThan(tabBarSource.indexOf("<SortableContext"));
+    expect(tabBarSource).not.toContain("<TabHistoryNavigation />");
   });
 
   it("puts the account first and the update, run, terminal and notifications after it in the sidebar footer", () => {
@@ -83,14 +81,12 @@ describe("title bar controls", () => {
     expect(workbenchSidebarSource).toContain('<OverlaySideProvider side="top" align="start">');
   });
 
-  it("keeps search, a new session and the Inbox at the top of the sidebar", () => {
+  it("keeps search and a new session at the top of the sidebar", () => {
     const searchIndex = workbenchSidebarSource.indexOf("<SearchIcon />");
     const newSessionIndex = workbenchSidebarSource.indexOf("New session");
-    const inboxIndex = workbenchSidebarSource.indexOf("<InboxIcon />");
     expect(searchIndex).toBeGreaterThan(-1);
     expect(newSessionIndex).toBeGreaterThan(searchIndex);
-    expect(inboxIndex).toBeGreaterThan(newSessionIndex);
-    expect(workbenchSidebarSource).toContain("Customize");
+    expect(workbenchSidebarSource).toContain("Integrations");
   });
 
   it("keeps native window controls over the workbench", () => {

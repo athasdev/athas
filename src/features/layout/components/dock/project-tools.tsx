@@ -4,7 +4,10 @@ import { ExtensionErrorBoundary } from "@/extensions/ui/components/extension-err
 import { useExtensionViews } from "@/extensions/ui/hooks/use-extension-views";
 import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import { getProjectToolPaneId } from "@/features/layout/services/dock-pane-registry";
+import {
+  type DockPaneProps,
+  getProjectToolPaneId,
+} from "@/features/layout/services/dock-pane-registry";
 import {
   getSidebarViews,
   type SidebarViewDefinition,
@@ -16,11 +19,11 @@ import { useProjectStore } from "@/features/workspace/stores/project.store";
 /** Project tools in the order menus list them; any others follow by registration order. */
 const TOOL_ORDER = [
   "files",
+  "search",
   "git",
   "github-prs",
   "docker",
   "databases",
-  "views",
   "workspaces",
   "collaboration",
 ];
@@ -30,20 +33,33 @@ export interface ProjectTool {
   paneId: DockPaneId;
   title: string;
   icon: ReactNode;
-  render: () => ReactNode;
+  render: (props: DockPaneProps) => ReactNode;
+  renderActions?: () => ReactNode;
 }
 
-function RegisteredToolView({ definition }: { definition: SidebarViewDefinition<object> }) {
+function RegisteredToolView({
+  definition,
+  focusRequest,
+}: {
+  definition: SidebarViewDefinition<object>;
+  focusRequest: number;
+}) {
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
   const View = definition.component;
   const props =
-    definition.getProps?.({ rootFolderPath, onFileSelect: handleFileSelect, isActive: true }) ?? {};
+    definition.getProps?.({ rootFolderPath, onFileSelect: handleFileSelect, focusRequest }) ?? {};
   return (
     <div data-external-file-drop-scope="sidebar" className="flex min-h-0 flex-1 flex-col">
       <View {...props} />
     </div>
   );
+}
+
+function RegisteredToolActions({ definition }: { definition: SidebarViewDefinition<object> }) {
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
+  const Actions = definition.HeaderActions;
+  return Actions ? <Actions rootFolderPath={rootFolderPath} /> : null;
 }
 
 function rank(view: string) {
@@ -69,7 +85,12 @@ export function useProjectTools(): ProjectTool[] {
         paneId: getProjectToolPaneId(definition.id),
         title: definition.title,
         icon: definition.icon,
-        render: () => <RegisteredToolView definition={definition} />,
+        render: ({ focusRequest }) => (
+          <RegisteredToolView definition={definition} focusRequest={focusRequest} />
+        ),
+        renderActions: definition.HeaderActions
+          ? () => <RegisteredToolActions definition={definition} />
+          : undefined,
       }));
     const contributed = Array.from(extensionViews.values()).map((view): ProjectTool => ({
       view: view.id,

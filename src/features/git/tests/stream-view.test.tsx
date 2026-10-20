@@ -5,7 +5,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
-import { emitAppEvent } from "@/utils/app-events";
+import { runPaneCommand } from "@/features/layout/services/pane-commands";
 import { clearRepositoryDiscoveryCache } from "../api/git-repo-api";
 import { invalidateGitDiffData } from "../api/git-diff-api";
 import type { GitFile, GitWorktree } from "../types/git.types";
@@ -386,7 +386,9 @@ describe("source control stream view", () => {
       expect(
         (view().getByRole("button", { name: /Initialize/ }) as HTMLButtonElement).disabled,
       ).toBe(true);
-      await act(async () => emitAppEvent("git:palette-action", { type: "initialize-repository" }));
+      await act(async () =>
+        runPaneCommand("view:git", "action", { type: "initialize-repository" }),
+      );
       await settle();
       expect(mocks.toast.error).toHaveBeenCalledWith(
         "Open a folder before initializing a repository.",
@@ -598,7 +600,7 @@ describe("source control stream view", () => {
       await render();
       expect(view().queryByText("WIP parser")).toBeNull();
 
-      await act(async () => emitAppEvent("git:palette-action", { type: "view-stashes" }));
+      await act(async () => runPaneCommand("view:git", "action", { type: "view-stashes" }));
       await settle();
       const stash = titled("On main: WIP parser");
 
@@ -846,7 +848,7 @@ describe("source control stream view", () => {
       mocks.prompts = ["/work/x", ""];
       await render();
       await act(async () =>
-        emitAppEvent("git:palette-action", { type: "manage-branches", tab: "worktrees" }),
+        runPaneCommand("view:git", "action", { type: "manage-branches", tab: "worktrees" }),
       );
       await settle();
 
@@ -889,7 +891,7 @@ describe("source control stream view", () => {
       await render();
 
       expect(tab("Remotes").title).toBe("Remotes (2)");
-      await act(async () => emitAppEvent("git:palette-action", { type: "manage-remotes" }));
+      await act(async () => runPaneCommand("view:git", "action", { type: "manage-remotes" }));
       await settle();
       expect(view().getByText("git@github.com:me/athas.git")).toBeTruthy();
 
@@ -958,7 +960,7 @@ describe("source control stream view", () => {
       mocks.prompts = ["v3.0.0", "Third"];
       await render();
 
-      await act(async () => emitAppEvent("git:palette-action", { type: "manage-tags" }));
+      await act(async () => runPaneCommand("view:git", "action", { type: "manage-tags" }));
       await settle();
       expect(view().getByText("Second")).toBeTruthy();
       expect(view().getByText("1111111")).toBeTruthy();
@@ -1106,11 +1108,11 @@ describe("source control stream view", () => {
     await render();
     const statusReads = calls("git_status").length;
 
-    await act(async () => emitAppEvent("git:palette-action", { type: "refresh" }));
+    await act(async () => runPaneCommand("view:git", "action", { type: "refresh" }));
     await settle();
     expect(calls("git_status").length).toBeGreaterThan(statusReads);
 
-    await act(async () => emitAppEvent("git:palette-action", { type: "show-branch-diff" }));
+    await act(async () => runPaneCommand("view:git", "action", { type: "show-branch-diff" }));
     await settle();
     expect(body().getByPlaceholderText("Compare current branch with...")).toBeTruthy();
     await act(async () => {
@@ -1121,17 +1123,19 @@ describe("source control stream view", () => {
     await settle();
 
     await act(async () =>
-      emitAppEvent("git:palette-action", { type: "manage-branches", tab: "branches" }),
+      runPaneCommand("view:git", "action", { type: "manage-branches", tab: "branches" }),
     );
     await settle();
     expect(view().getByPlaceholderText("Filter branches")).toBeTruthy();
 
-    await act(async () => emitAppEvent("git:palette-action", { type: "show-tab", tab: "history" }));
+    await act(async () =>
+      runPaneCommand("view:git", "action", { type: "show-tab", tab: "history" }),
+    );
     await settle();
     expect(view().getByPlaceholderText("Filter changes")).toBeTruthy();
 
     mocks.pickDirectory.mockResolvedValue(null);
-    await act(async () => emitAppEvent("git:palette-action", { type: "select-repository" }));
+    await act(async () => runPaneCommand("view:git", "action", { type: "select-repository" }));
     await settle();
     expect(mocks.pickDirectory).toHaveBeenCalled();
   });

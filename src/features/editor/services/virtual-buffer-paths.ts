@@ -1,11 +1,5 @@
 import type { GitHubDeliveryContent } from "@/features/panes/types/pane-content.types";
 
-export function getViewBufferPath(projectPath: string, viewId?: string): string {
-  return viewId
-    ? `view://${encodeURIComponent(projectPath)}/${viewId}`
-    : `view://create/${encodeURIComponent(projectPath)}`;
-}
-
 export function deliveryBufferPath(
   kind: GitHubDeliveryContent["kind"],
   repoPath: string,
@@ -39,4 +33,9 @@ export function parseCollaborationNoteBufferPath(path: string): {
   } catch {
     return null;
   }
+}
+
+/** The path of a project's dashboard tab, one per project. */
+export function projectDashboardPath(projectPath: string): string {
+  return `project-dashboard://${encodeURIComponent(projectPath)}`;
 }

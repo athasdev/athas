@@ -8,7 +8,8 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getBufferById } from "@/features/editor/stores/buffer-index";
 import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
-import { onAppEvent } from "@/utils/app-events";
+import { getProjectToolPaneId } from "@/features/layout/services/dock-pane-registry";
+import { usePaneCommands } from "@/features/layout/hooks/use-pane-commands";
 import { writeSidebarResourceDragData } from "@/features/sidebar/services/sidebar-resource-drag";
 import { CommandEmpty, CommandItemBadge, CommandItemRow, CommandList } from "@/ui/command";
 import { ContextMenuPopup, createContextMenuGroups } from "@/ui/context-menu";
@@ -50,7 +51,7 @@ import GitActionsMenu from "../components/git-actions-menu";
 import GitCommandSurface from "../components/git-command-surface";
 import { useRepositoryStore } from "../stores/git-repository.store";
 import { useGitStore } from "../stores/git.store";
-import type { GitCommit, GitWorktree } from "../types/git.types";
+import type { GitCommit, GitSidebarAction, GitWorktree } from "../types/git.types";
 import { getGitAuthorAvatarUrl } from "../utils/git-author-avatar";
 import { getStashDisplayTitle } from "../utils/git-stash-format";
 import { openGitWorktreeWorkspace } from "../services/git-worktree-open";
@@ -256,8 +257,8 @@ function StreamView(props: SourceControlModelProps) {
     [hiddenItems, updateSetting],
   );
 
-  useEffect(() => {
-    return onAppEvent("git:palette-action", (detail) => {
+  usePaneCommands(getProjectToolPaneId("git"), {
+    action: (detail: GitSidebarAction) => {
       if (detail.type === "select-repository") void handleSelectRepository();
       else if (detail.type === "initialize-repository") void handleInitializeRepository();
       else if (detail.type === "refresh") void model.refresh();
@@ -267,15 +268,8 @@ function StreamView(props: SourceControlModelProps) {
       else if (detail.type === "manage-tags") openPanel("tags");
       else if (detail.type === "view-stashes") revealSection("stashes");
       else if (detail.type === "show-tab") revealSection(detail.tab);
-    });
-  }, [
-    handleInitializeRepository,
-    handleSelectRepository,
-    model,
-    openPanel,
-    revealSection,
-    showBranchPicker,
-  ]);
+    },
+  });
 
   const actionsMenu = (hasGitRepo: boolean) => (
     <GitActionsMenu
@@ -299,10 +293,6 @@ function StreamView(props: SourceControlModelProps) {
   if (!activeRepoPath || (!model.hasStatus && !model.isLoading)) {
     return (
       <div className="flex h-full min-h-0 flex-col bg-background text-foreground">
-        <div className="flex h-11 items-center justify-between px-3">
-          <span className="ui-text-base font-semibold">Source Control</span>
-          {actionsMenu(false)}
-        </div>
         <EmptyState
           layout="sidebar"
           title={activeRepoPath ? "Not a Git repository" : "No repository selected"}

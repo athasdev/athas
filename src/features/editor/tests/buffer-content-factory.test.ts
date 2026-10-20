@@ -68,40 +68,6 @@ describe("createPaneContent continuous agent surfaces", () => {
   });
 });
 
-describe("createPaneContent custom view surfaces", () => {
-  it("creates a project-scoped setup tab", () => {
-    const content = createPaneContent("new-view", {
-      type: "customView",
-      projectPath: "/projects/athas",
-    });
-
-    expect(content).toMatchObject({
-      type: "customView",
-      name: "New Custom View",
-      path: "view://create/%2Fprojects%2Fathas",
-      projectPath: "/projects/athas",
-      viewId: undefined,
-    });
-  });
-
-  it("creates a stable tab for a saved view", () => {
-    const content = createPaneContent("release-view", {
-      type: "customView",
-      projectPath: "/projects/athas",
-      viewId: "release-downloads",
-      name: "Release downloads",
-    });
-
-    expect(content).toMatchObject({
-      type: "customView",
-      name: "Release downloads",
-      path: "view://%2Fprojects%2Fathas/release-downloads",
-      projectPath: "/projects/athas",
-      viewId: "release-downloads",
-    });
-  });
-});
-
 describe("createPaneContent SVG preview surfaces", () => {
   it("keeps the preview linked to its editable source file", () => {
     const content = createPaneContent("svg-preview", {

@@ -10,7 +10,6 @@ import {
 } from "@/features/bootstrap/services/startup-performance";
 import { SettingsReadyBootstrap } from "@/features/bootstrap/components/settings-ready-bootstrap";
 import { useAppBootstrap } from "@/features/bootstrap/hooks/use-app-bootstrap";
-import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import {
   traceWindowOpen,
   traceWindowOpenAfterFrame,
@@ -52,7 +51,6 @@ function WorkbenchApp() {
   useNativeNotificationIntegration();
   useAcpEventSync();
   useAgentTabSessionRelease();
-  const reduceMotion = useSettingsStore((state) => state.settings.reduceMotion);
 
   useEffect(() => {
     const mountedAt = performance.now();
@@ -108,7 +106,7 @@ function WorkbenchApp() {
 
   return (
     <AppQueryProvider>
-      <MotionConfig reducedMotion={reduceMotion ? "always" : "user"}>
+      <MotionConfig reducedMotion="always">
         <DialogServiceProvider>
           <TooltipProvider>
             <SettingsReadyBootstrap />

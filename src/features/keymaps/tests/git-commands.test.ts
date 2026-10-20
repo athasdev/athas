@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { onAppEvent } from "@/utils/app-events";
+import { registerPaneCommands } from "@/features/layout/services/pane-commands";
 
 const mocks = vi.hoisted(() => ({
   showProjectTool: vi.fn(),
@@ -32,7 +32,6 @@ vi.mock("@/features/git/api/git-remotes-api", () => ({
 
 vi.mock("@/ui/dialog", () => ({ showConfirmDialog: vi.fn(), showPromptDialog: vi.fn() }));
 
-// Load the lazily imported actions before `window` is stubbed for the sidebar timers.
 await import("../commands/git-command-actions");
 const { gitCommands } = await import("../commands/git-commands");
 
@@ -49,18 +48,11 @@ describe("git commands", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.repo.activeRepoPath = "/repo";
-    unsubscribe = onAppEvent("git:palette-action", gitSidebarAction);
-    vi.stubGlobal("window", {
-      setTimeout: (callback: () => void) => {
-        callback();
-        return 0;
-      },
-    });
+    unsubscribe = registerPaneCommands("view:git", { action: gitSidebarAction });
   });
 
   afterEach(() => {
     unsubscribe();
-    vi.unstubAllGlobals();
   });
 
   it("offers the manager-backed git command aliases", () => {
@@ -93,7 +85,7 @@ describe("git commands", () => {
     await command(id).execute();
 
     expect(mocks.showProjectTool).toHaveBeenCalledWith("git");
-    expect(gitSidebarAction).toHaveBeenCalledWith(detail);
+    await vi.waitFor(() => expect(gitSidebarAction).toHaveBeenCalledWith(detail));
   });
 
   it("stages every change in the active repository", async () => {

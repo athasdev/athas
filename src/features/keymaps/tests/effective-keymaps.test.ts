@@ -3,7 +3,9 @@ import type { Keybinding } from "../types/keymaps.types";
 import {
   getEffectiveKeybindingForCommand,
   getEffectiveKeybindings,
+  getEffectiveKeybindingsByCommand,
   getEffectiveShortcutsByCommand,
+  getKeybindingConflicts,
 } from "../services/effective-keymaps";
 
 const registryKeybindings: Keybinding[] = [
@@ -130,5 +132,37 @@ describe("effective keybindings", () => {
     expect(shortcuts.has("workbench.commandPalette")).toBe(false);
     expect(shortcuts.has("workbench.newWindow")).toBe(false);
     expect(shortcuts.get("editor.goToReferences")).toBe("alt+F7");
+  });
+});
+
+describe("keybindings by command and their conflicts", () => {
+  it("resolves every command's binding in one pass, preferring an enabled one", () => {
+    const byCommand = getEffectiveKeybindingsByCommand({
+      preset: "none",
+      registryKeybindings,
+      userKeybindings: [
+        { key: "cmd+alt+s", command: "file.save", source: "user", enabled: false },
+        { key: "cmd+k cmd+s", command: "file.save", source: "user", replaceDefaults: false },
+      ],
+    });
+
+    expect(byCommand.get("file.save")?.key).toBe("cmd+k cmd+s");
+    expect(byCommand.get("workbench.toggleSidebar")?.key).toBe("cmd+b");
+    expect(byCommand.has("missing.command")).toBe(false);
+  });
+
+  it("lists commands sharing a normalized key in the same context", () => {
+    const conflicts = getKeybindingConflicts([
+      { key: "cmd+s", command: "file.save", source: "default" },
+      { key: "Cmd+S", command: "editor.format", source: "user" },
+      { key: "cmd+s", command: "file.saveAll", source: "user", enabled: false },
+      { key: "cmd+k", command: "terminal.clear", source: "default", when: "terminalFocus" },
+      { key: "cmd+k", command: "editor.clear", source: "default", when: "editorFocus" },
+    ]);
+
+    expect(conflicts.get("file.save")).toEqual(["editor.format"]);
+    expect(conflicts.get("editor.format")).toEqual(["file.save"]);
+    expect(conflicts.has("file.saveAll")).toBe(false);
+    expect(conflicts.has("terminal.clear")).toBe(false);
   });
 });

@@ -103,7 +103,6 @@ describe("useSystemAccessibility", () => {
     expect(attr("data-reduce-transparency")).toBe("true");
     expect(attr("data-increase-contrast")).toBe("false");
     expect(attr("data-differentiate-without-color")).toBe("true");
-    expect(attr("data-reduce-motion")).toBe("true");
     expect(events.syncTransparency).toHaveBeenCalled();
     unmount();
     await settle();

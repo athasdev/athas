@@ -75,15 +75,10 @@ const effortOption = {
   },
 };
 
-const render = (
-  agentId: string,
-  followChatId?: string,
-  sessionConfigOptions: (typeof effortOption)[] = [],
-) =>
+const render = (agentId: string, sessionConfigOptions: (typeof effortOption)[] = []) =>
   renderToStaticMarkup(
     <ComposerAgentSelector
       cwd="/project"
-      followChatId={followChatId}
       currentAgentId={agentId}
       providerId="openai"
       modelId="gpt-test"
@@ -107,14 +102,13 @@ describe("Composer agent selector", () => {
     expect(render("codex")).toContain("codex-mini");
   });
 
-  it("offers following the agent from the model menu when the chat supports it", () => {
-    expect(render("gemini", "chat-1")).toContain("Follow agent in editor");
+  it("no longer offers following the agent from the model menu", () => {
     expect(render("gemini")).not.toContain("Follow agent in editor");
   });
 
-  it("shows the Effort row only when the agent has a scale", () => {
-    expect(render("gemini", undefined, [effortOption])).toContain("Effort:");
-    expect(render("gemini")).not.toContain("Effort:");
-    expect(render("custom", undefined, [effortOption])).not.toContain("Effort:");
+  it("shows the Effort slider only when the agent has a scale", () => {
+    expect(render("gemini", [effortOption])).toContain('aria-label="Effort"');
+    expect(render("gemini")).not.toContain('aria-label="Effort"');
+    expect(render("custom", [effortOption])).not.toContain('aria-label="Effort"');
   });
 });

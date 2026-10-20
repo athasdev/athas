@@ -482,7 +482,8 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
       // "New Agent" used to mint a row per click, so the history filled up with
       // identical untouched sessions. Hand back the one that is already waiting.
       if (options.reuseEmpty) {
-        const workspacePath = getCurrentWorkspacePath();
+        const workspacePath =
+          options.workspacePath !== undefined ? options.workspacePath : getCurrentWorkspacePath();
         const isReusable = (chat: ChatSession) =>
           chat.agentId === nextAgentId &&
           !chat.archivedAt &&
@@ -619,6 +620,14 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
       );
       void import("@/features/ai/services/agent-checkpoints-service")
         .then(({ forgetChatCheckpoints }) => forgetChatCheckpoints(chatId))
+        .catch(() => undefined);
+      // The session's own tabs go with it; the project's tabs come back if it was in front.
+      void import("@/features/panes/stores/tab-sets.store")
+        .then(({ getSessionTabSet, useTabSetsStore }) => {
+          for (const store of useTabSetsStore.getAllStores()) {
+            store.getState().actions.forget(getSessionTabSet(chatId));
+          }
+        })
         .catch(() => undefined);
       // Nobody can answer the chat's permission prompts any more.
       void import("@/features/ai/stores/agent-permissions.store")

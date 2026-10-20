@@ -2,7 +2,6 @@ import type { StateCreator } from "zustand";
 import type { BottomPaneTab } from "@/features/layout/stores/ui-state/types/ui-state.types";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { workspaceSessionRepository } from "@/features/workspace/persistence/services/workspace-session-repository";
-import { DEFAULT_PROJECT_UI_STATE } from "@/features/workspace/persistence/services/workspace-ui-defaults";
 
 interface PanelState {
   isSidebarVisible: boolean;
@@ -32,12 +31,10 @@ export const createPanelSlice: StateCreator<PanelSlice, [], [], PanelSlice> = (s
     set({ isSidebarVisible: v });
     const projectPath = useProjectStore.getState().rootFolderPath;
     if (projectPath) {
-      const state = get() as PanelSlice & { activeSidebarView?: string };
       workspaceSessionRepository.saveUi(projectPath, {
         isSidebarVisible: v,
         isBottomPaneVisible: get().isBottomPaneVisible,
         bottomPaneActiveTab: get().bottomPaneActiveTab,
-        activeSidebarView: state.activeSidebarView ?? DEFAULT_PROJECT_UI_STATE.activeSidebarView,
       });
     }
   },
@@ -46,12 +43,10 @@ export const createPanelSlice: StateCreator<PanelSlice, [], [], PanelSlice> = (s
     set({ isBottomPaneVisible: v });
     const projectPath = useProjectStore.getState().rootFolderPath;
     if (projectPath) {
-      const state = get() as PanelSlice & { activeSidebarView?: string };
       workspaceSessionRepository.saveUi(projectPath, {
         isSidebarVisible: get().isSidebarVisible,
         isBottomPaneVisible: v,
         bottomPaneActiveTab: get().bottomPaneActiveTab,
-        activeSidebarView: state.activeSidebarView ?? DEFAULT_PROJECT_UI_STATE.activeSidebarView,
       });
     }
   },
@@ -59,12 +54,10 @@ export const createPanelSlice: StateCreator<PanelSlice, [], [], PanelSlice> = (s
     set({ bottomPaneActiveTab: tab });
     const projectPath = useProjectStore.getState().rootFolderPath;
     if (projectPath) {
-      const state = get() as PanelSlice & { activeSidebarView?: string };
       workspaceSessionRepository.saveUi(projectPath, {
         isSidebarVisible: get().isSidebarVisible,
         isBottomPaneVisible: get().isBottomPaneVisible,
         bottomPaneActiveTab: tab,
-        activeSidebarView: state.activeSidebarView ?? DEFAULT_PROJECT_UI_STATE.activeSidebarView,
       });
     }
   },

@@ -173,7 +173,7 @@ describe("modal slice", () => {
 
 describe("panel slice", () => {
   const createPanelStore = () =>
-    create<PanelSlice & { activeSidebarView?: string }>()((set, get, api) => ({
+    create<PanelSlice>()((set, get, api) => ({
       ...createPanelSlice(set, get, api),
     }));
 
@@ -190,14 +190,12 @@ describe("panel slice", () => {
 
     store.getState().setIsSidebarVisible(false);
     store.getState().setIsBottomPaneVisible(true);
-    store.setState({ activeSidebarView: "git" });
     store.getState().setBottomPaneActiveTab("diagnostics" as never);
 
     expect(workspaceSessionRepository.loadUi("/projects/athas")).toMatchObject({
       isSidebarVisible: false,
       isBottomPaneVisible: true,
       bottomPaneActiveTab: "diagnostics",
-      activeSidebarView: "git",
     });
   });
 

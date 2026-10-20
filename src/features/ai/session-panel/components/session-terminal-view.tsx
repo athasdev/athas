@@ -9,21 +9,24 @@ export function SessionTerminalView({
   terminalId,
   workingDirectory,
   takeFocus,
+  onExit,
 }: {
   terminalId: string;
   workingDirectory: string | undefined;
   takeFocus: boolean;
+  onExit: (terminalId: string) => void;
 }) {
   const [isActive, setIsActive] = useState(takeFocus);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col px-1.5 pb-1.5">
+    <div className="flex min-h-0 flex-1 flex-col">
       <TerminalSlot
         sessionId={terminalId}
         isActive={isActive}
         isVisible
         workingDirectory={workingDirectory}
         onActivate={() => setIsActive(true)}
+        onTerminalExit={onExit}
       />
     </div>
   );

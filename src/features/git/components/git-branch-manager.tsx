@@ -333,7 +333,7 @@ const GitBranchManager = ({
 
     const confirmed = await showConfirmDialog(
       `Are you sure you want to delete branch "${branchName}"?`,
-      { title: "Delete Branch", confirmLabel: "Delete" },
+      { title: "Delete Branch", confirmLabel: "Delete", destructive: true },
     );
     if (!confirmed) return;
 

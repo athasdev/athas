@@ -4,7 +4,7 @@ import postgresImage from "../../extensions/official/postgres/icon.svg";
 import mysqlImage from "../../extensions/official/mysql/icon.svg";
 import mongodbImage from "../../extensions/official/mongodb/icon.svg";
 import redisImage from "../../extensions/official/redis/icon.svg";
-import claudeImage from "../../extensions/official/claude-code/icon.svg";
+import claudeAgentImage from "../../extensions/official/claude-code/icon.svg";
 import geminiImage from "../../extensions/official/gemini-cli/icon.svg";
 import antigravityImage from "../../extensions/official/antigravity/icon.svg";
 import copilotImage from "../../extensions/official/github-copilot/icon.svg";
@@ -46,8 +46,8 @@ export function GithubMark({ size = "1em", ...props }: BrandMarkProps) {
 
 export const agentBrandImages: Readonly<Record<string, string>> = {
   athas: `${import.meta.env.BASE_URL}logo.png`,
-  "claude-acp": claudeImage,
-  anthropic: claudeImage,
+  "claude-acp": claudeAgentImage,
+  anthropic: claudeAgentImage,
   "gemini-cli": geminiImage,
   google: geminiImage,
   gemini: geminiImage,

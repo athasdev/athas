@@ -68,16 +68,25 @@ export function CustomizeAddButton({
   label,
   busy = false,
   busyLabel = "Installing",
+  disabled = false,
   onClick,
 }: {
   label: string;
   busy?: boolean;
   busyLabel?: string;
+  disabled?: boolean;
   onClick: () => void;
 }) {
   if (busy) return <Spinner compact label={busyLabel} />;
   return (
-    <Button type="button" variant="ghost" iconOnly tooltip={label} onClick={onClick}>
+    <Button
+      type="button"
+      variant="ghost"
+      iconOnly
+      tooltip={label}
+      disabled={disabled}
+      onClick={onClick}
+    >
       <PlusIcon />
     </Button>
   );

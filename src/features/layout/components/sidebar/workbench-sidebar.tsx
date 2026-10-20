@@ -1,9 +1,7 @@
 import { Suspense } from "react";
 import { createPortal } from "react-dom";
-import { SessionInboxList } from "@/features/ai/components/sidebar/workbench-sessions";
 import { AgentsPlanFooter } from "@/features/ai/components/sidebar/agents-plan-footer";
 import { openCustomize } from "@/features/ai/customize/services/open-customize";
-import { useInboxSessions } from "@/features/ai/hooks/use-inbox-sessions";
 import { startAgentInProject } from "@/features/ai/services/agent-project-navigation";
 import { AccountMenu } from "@/features/auth/components/account-menu";
 import { DiagnosticsActivityControl } from "@/features/diagnostics/components/diagnostics-activity-control";
@@ -12,22 +10,13 @@ import { keymapRegistry } from "@/features/keymaps/services/keymap-registry";
 import { AppUpdateControl } from "@/features/layout/components/app-update-control";
 import { selectIsTerminalPaneVisible } from "@/features/layout/stores/ui-state-selectors";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
-import { useWorkbenchSidebarStore } from "@/features/layout/stores/workbench-sidebar.store";
 import { NotificationsTrigger } from "@/features/notifications/components/notifications-trigger";
 import RunActionsButton from "@/features/run-actions/components/run-actions-button";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import ProjectPicker from "@/features/workspace/project-picker/components/project-picker";
 import { useWorkspaceTabsStore } from "@/features/workspace/stores/workspace-tabs.store";
 import { ControlSizeProvider } from "@/ui/control-size";
-import {
-  ChevronLeftIcon,
-  InboxIcon,
-  PencilLineIcon,
-  SearchIcon,
-  SettingsIcon,
-  SlidersIcon,
-  TerminalWindowIcon,
-} from "@/ui/icons";
+import { PencilLineIcon, PuzzlePieceIcon, SearchIcon, TerminalWindowIcon } from "@/ui/icons";
 import Keybinding from "@/ui/keybinding";
 import { OverlaySideProvider } from "@/ui/overlay-side";
 import { SidebarIconButton, SidebarListItem, SidebarPanel, SidebarScrollArea } from "@/ui/sidebar";
@@ -75,9 +64,6 @@ function SidebarTop() {
   const activeProjectId = useWorkspaceTabsStore(
     (state) => state.projectTabs.find((project) => project.isActive)?.id,
   );
-  const inboxOpen = useWorkbenchSidebarStore.use.inboxOpen();
-  const { setInboxOpen } = useWorkbenchSidebarStore.use.actions();
-  const inboxCount = useInboxSessions().length;
 
   return (
     <nav aria-label="Workbench" className="flex shrink-0 flex-col gap-px px-chrome-inline pt-1">
@@ -89,28 +75,12 @@ function SidebarTop() {
         Search
       </SidebarListItem>
       {aiEnabled ? (
-        <>
-          <SidebarListItem
-            leading={<PencilLineIcon />}
-            onClick={() => void startAgentInProject(activeProjectId)}
-          >
-            New session
-          </SidebarListItem>
-          <SidebarListItem
-            leading={<InboxIcon />}
-            active={inboxOpen}
-            aria-pressed={inboxOpen}
-            aria-label={inboxCount > 0 ? `Inbox, ${inboxCount} need you` : "Inbox"}
-            trailing={
-              inboxCount > 0 ? (
-                <span className="tabular-nums text-subtle-foreground">{inboxCount}</span>
-              ) : undefined
-            }
-            onClick={() => setInboxOpen(!inboxOpen)}
-          >
-            Inbox
-          </SidebarListItem>
-        </>
+        <SidebarListItem
+          leading={<PencilLineIcon />}
+          onClick={() => void startAgentInProject(activeProjectId)}
+        >
+          New session
+        </SidebarListItem>
       ) : null}
     </nav>
   );
@@ -118,8 +88,6 @@ function SidebarTop() {
 
 function SidebarBottom() {
   const WebAccountMenu = getWebContributions().AccountMenu;
-  const openSettings = useUIState((state) => state.openSettings);
-  const settingsShortcut = useCommandShortcut("workbench.openSettings");
   const terminalEnabled = useSettingsStore((state) => state.settings.coreFeatures.terminal);
   const aiEnabled = useSettingsStore((state) => state.settings.coreFeatures.aiChat);
 
@@ -127,22 +95,15 @@ function SidebarBottom() {
     <OverlaySideProvider side="top" align="start">
       <div
         data-slot="workbench-sidebar-footer"
-        className="flex shrink-0 flex-col gap-px px-chrome-inline pb-1.5"
+        className="flex shrink-0 flex-col gap-1 px-chrome-inline pb-1.5"
       >
         {aiEnabled ? (
-          <SidebarListItem leading={<SlidersIcon />} onClick={() => openCustomize()}>
-            Customize
+          <SidebarListItem leading={<PuzzlePieceIcon />} onClick={() => openCustomize()}>
+            Integrations
           </SidebarListItem>
         ) : null}
-        <SidebarListItem
-          leading={<SettingsIcon />}
-          trailing={settingsShortcut ? <Keybinding binding={settingsShortcut} /> : undefined}
-          onClick={() => openSettings()}
-        >
-          Settings
-        </SidebarListItem>
         <ControlSizeProvider size="sm">
-          <div className="flex items-center gap-chrome-tight pt-1">
+          <div className="flex h-list-row items-center gap-chrome-tight">
             {WebAccountMenu ? (
               <Suspense fallback={null}>
                 <WebAccountMenu />
@@ -165,35 +126,24 @@ function SidebarBottom() {
   );
 }
 
-function InboxHeader() {
-  const { setInboxOpen } = useWorkbenchSidebarStore.use.actions();
-  return (
-    <SidebarListItem leading={<ChevronLeftIcon />} onClick={() => setInboxOpen(false)}>
-      Projects
-    </SidebarListItem>
-  );
-}
-
 /**
- * The workbench's one navigation: search, a new session and the Inbox at the top, every open
- * project with its sessions below, and Customize, Settings and the account at the bottom.
+ * The workbench's one navigation: search and a new session at the top, pinned sessions and every
+ * open project with its sessions below, and Integrations and the account at the bottom. With
+ * `titleRow`, its first row is the window's top row, under the traffic lights and sidebar toggle.
  */
-export function WorkbenchSidebar() {
-  const inboxOpen = useWorkbenchSidebarStore.use.inboxOpen();
-  const aiEnabled = useSettingsStore((state) => state.settings.coreFeatures.aiChat);
-  const showsInbox = inboxOpen && aiEnabled;
+export function WorkbenchSidebar({ titleRow = false }: { titleRow?: boolean }) {
   return (
     <SidebarPanel data-slot="workbench-sidebar">
+      {titleRow ? (
+        <div
+          data-slot="sidebar-title-row"
+          data-tauri-drag-region
+          className="h-pane-header shrink-0"
+        />
+      ) : null}
       <SidebarTop />
-      <SidebarScrollArea aria-label={showsInbox ? "Inbox" : "Projects and sessions"}>
-        {showsInbox ? (
-          <div className="flex flex-col gap-1">
-            <InboxHeader />
-            <SessionInboxList />
-          </div>
-        ) : (
-          <SidebarProjects />
-        )}
+      <SidebarScrollArea aria-label="Projects and sessions">
+        <SidebarProjects />
       </SidebarScrollArea>
       <SidebarBottom />
     </SidebarPanel>

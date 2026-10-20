@@ -156,8 +156,16 @@ async function open() {
     container.querySelector<HTMLButtonElement>('[aria-label="Change model"]')!.click(),
   );
 }
+// Base UI moves focus into and out of submenus on the next animation frame.
+const nextFrames = () =>
+  new Promise<void>((resolve) =>
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+  );
 async function press(target: Element, key: string) {
-  await act(async () => target.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true })));
+  await act(async () => {
+    target.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
+    await nextFrames();
+  });
 }
 const menus = () => [...document.querySelectorAll<HTMLElement>('[role="menu"]:not([data-closed])')];
 const subTriggers = () =>
@@ -184,6 +192,11 @@ const rowsOf = (menu: HTMLElement) => [
   ...menu.querySelectorAll<HTMLElement>('[role="menuitemradio"]'),
 ];
 const names = (items: Iterable<HTMLElement>) => [...items].map((row) => row.textContent);
+const effortSlider = () =>
+  document.querySelector<HTMLElement>('[role="group"][aria-label="Effort"]');
+const effortSteps = () => [
+  ...(effortSlider()?.querySelectorAll<HTMLElement>('[role="radio"]') ?? []),
+];
 const labelsOf = (menu: HTMLElement) =>
   [...menu.querySelectorAll<HTMLElement>('[data-slot="dropdown-menu-label"]')].map(
     (label) => label.textContent,
@@ -276,29 +289,54 @@ describe("composer model selector", () => {
   it("offers Codex models and reasoning effort while Codex is the agent", async () => {
     await render({ currentAgentId: "codex" });
     await open();
-    expect(subTriggers()).toEqual(["ProviderCodex", "Modelcodex-test", "Effortmedium"]);
+    expect(subTriggers()).toEqual(["ProviderCodex", "Modelcodex-test"]);
+    expect(effortSlider()?.textContent).toContain("Medium · Default");
+    expect(effortSteps().map((step) => step.getAttribute("aria-label"))).toEqual(["Low", "Medium"]);
+    expect(effortSteps()[1].getAttribute("aria-checked")).toBe("true");
     const models = await openSubmenu("Model");
     expect(names(rowsOf(models))).toEqual(["Default", "Codex Test"]);
-    const effort = await openSubmenu("Effort");
-    expect(names(rowsOf(effort))).toEqual(["low", "mediumDefault"]);
-    await act(async () => rowsOf(effort)[0].click());
+    await act(async () => effortSteps()[0].click());
     expect(state.update).toHaveBeenCalledExactlyOnceWith({ model: "codex-test", effort: "low" });
   });
 
-  it("shows the Effort row only when the agent's model has an effort scale", async () => {
+  it("shows the Effort slider only when the agent's model has an effort scale", async () => {
     await render({ currentAgentId: "gemini", sessionConfigOptions: [effortOption] });
     await open();
-    expect(subTriggers()).toEqual(["ProviderGemini CLI", "EffortHigh"]);
-    const effort = await openSubmenu("Effort");
-    await act(async () => rowsOf(effort)[0].click());
+    expect(subTriggers()).toEqual(["ProviderGemini CLI"]);
+    expect(effortSlider()?.textContent).toContain("High");
+    await act(async () => effortSteps()[0].click());
     expect(onSessionConfigChange).toHaveBeenCalledExactlyOnceWith("effort", "low");
 
     await render({ currentAgentId: "gemini", sessionConfigOptions: [] });
     await open();
-    expect(subTriggers()).toEqual(["ProviderGemini CLI"]);
+    expect(effortSlider()).toBeNull();
 
     await render({ sessionConfigOptions: [effortOption] });
-    expect(subTriggers()).not.toContain("EffortHigh");
+    await open();
+    expect(effortSlider()).toBeNull();
+  });
+
+  it("keeps an agent's default effort apart from the scale as Auto", async () => {
+    const withDefault = {
+      ...effortOption,
+      kind: {
+        ...effortOption.kind,
+        currentValue: "default",
+        options: [{ id: "default", name: "Default" }, ...effortOption.kind.options],
+      },
+    };
+    await render({ currentAgentId: "gemini", sessionConfigOptions: [withDefault] });
+    await open();
+    const [auto, ...levels] = effortSteps();
+    expect(auto.textContent).toBe("Auto");
+    expect(auto.getAttribute("aria-checked")).toBe("true");
+    expect(levels.map((step) => step.getAttribute("aria-label"))).toEqual(["Low", "High"]);
+    await act(async () => {
+      effortSlider()!.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }),
+      );
+    });
+    expect(onSessionConfigChange).toHaveBeenCalledExactlyOnceWith("effort", "low");
   });
 
   it("shows a loading Model row while an agent's session opens, never an empty one", async () => {

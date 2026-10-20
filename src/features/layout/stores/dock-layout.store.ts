@@ -82,11 +82,6 @@ interface DockLayoutStoreState {
   width: number;
   /** The user put the dock away; it comes back when a tool opens. */
   hidden: boolean;
-  /**
-   * The session each project's dock follows while that session's tab stays open, so opening a
-   * file from the session's tools keeps its dock. Null once the project's own view was chosen.
-   */
-  stickySessions: Record<string, string | null>;
   /** Whose tools the dock shows now; the workbench dock keeps it current. */
   currentOwner: DockOwner | null;
   /** A pane the user asked for, which takes focus once when it shows. */
@@ -103,7 +98,6 @@ interface DockLayoutStoreState {
     setInfoExpanded: (owner: DockOwner, expanded: boolean) => void;
     setWidth: (width: number) => void;
     setHidden: (hidden: boolean) => void;
-    setStickySession: (workspacePath: string, chatId: string | null) => void;
     setCurrentOwner: (owner: DockOwner | null) => void;
     /** Whether `pane` was asked to take focus, clearing the request. */
     consumeFocus: (owner: DockOwner, pane: DockPaneId) => boolean;
@@ -182,7 +176,6 @@ const useDockLayoutStoreBase = create<DockLayoutStoreState>()(
         layouts: {},
         width: DEFAULT_DOCK_WIDTH,
         hidden: false,
-        stickySessions: {},
         currentOwner: null,
         focusRequest: null,
         actions: {
@@ -221,12 +214,6 @@ const useDockLayoutStoreBase = create<DockLayoutStoreState>()(
             ),
           setWidth: (width) => set({ width: Math.max(MIN_DOCK_WIDTH, Math.round(width)) }),
           setHidden: (hidden) => set({ hidden }),
-          setStickySession: (workspacePath, chatId) =>
-            set((state) =>
-              state.stickySessions[workspacePath] === chatId
-                ? state
-                : { stickySessions: { ...state.stickySessions, [workspacePath]: chatId } },
-            ),
           setCurrentOwner: (owner) =>
             set((state) =>
               state.currentOwner?.kind === owner?.kind && state.currentOwner?.id === owner?.id

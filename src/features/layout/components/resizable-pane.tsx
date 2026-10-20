@@ -145,9 +145,8 @@ export function ResizablePane({
   const resizeHandle = !hidden ? (
     <div
       onMouseDown={handleMouseDown}
-      style={{ right: "calc(var(--athas-workbench-gap) / -2)" }}
       className={cn(
-        "group absolute top-0 z-30 flex h-full w-workbench cursor-col-resize items-center justify-center",
+        "group absolute top-0 right-0 z-30 flex h-full w-workbench cursor-col-resize items-center justify-center",
         "transition-colors duration-fast ease-smooth hover:bg-primary-soft",
       )}
       role="separator"
@@ -186,7 +185,7 @@ export function ResizablePane({
         ref={contentRef}
         style={{ width: hidden ? "0px" : `${width}px` }}
         className={cn(
-          "flex min-h-0 shrink-0 flex-col overflow-hidden py-0",
+          "flex min-h-0 shrink-0 flex-col overflow-hidden pr-workbench",
           isTogglingVisibility &&
             !isResizing &&
             "transition-[width] duration-fast ease-smooth motion-reduce:transition-none",
@@ -194,7 +193,7 @@ export function ResizablePane({
       >
         <div
           data-plane="page"
-          className="athas-glass-island flex min-h-0 flex-1 flex-col overflow-hidden bg-background"
+          className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background"
         >
           {children}
         </div>

@@ -114,9 +114,10 @@
     -moz-user-select: none !important;
   }
 
-  html[data-reduce-motion="true"] *,
-  html[data-reduce-motion="true"] *::before,
-  html[data-reduce-motion="true"] *::after {
+  /* Motion is always reduced; spinners keep turning so work in progress stays visible. */
+  *:not(.animate-spin),
+  *::before,
+  *::after {
     scroll-behavior: auto !important;
     transition-duration: 1ms !important;
     transition-delay: 0ms !important;
@@ -125,37 +126,14 @@
     animation-iteration-count: 1 !important;
   }
 
-  html[data-reduce-motion="true"] .drop-indicator {
+  .drop-indicator {
     animation: none;
   }
 
-  html[data-reduce-motion="true"] .text-shimmer {
+  .text-shimmer {
     color: var(--subtle-foreground);
     background: none;
     animation: none;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-      scroll-behavior: auto !important;
-      transition-duration: 1ms !important;
-      transition-delay: 0ms !important;
-      animation-duration: 1ms !important;
-      animation-delay: 0ms !important;
-      animation-iteration-count: 1 !important;
-    }
-
-    .drop-indicator {
-      animation: none;
-    }
-
-    .text-shimmer {
-      color: var(--subtle-foreground);
-      background: none;
-      animation: none;
-    }
   }
 
   [style*="zoom"] {

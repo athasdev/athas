@@ -1,3 +1,5 @@
+import { getProjectToolPaneId } from "@/features/layout/services/dock-pane-registry";
+import { runPaneCommand } from "@/features/layout/services/pane-commands";
 import { showProjectTool } from "@/features/layout/services/project-tools";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
@@ -6,7 +8,6 @@ import { GITHUB_CONNECTION_URL } from "@/features/github/services/github-token-s
 import { useGitHubStore } from "@/features/github/stores/github.store";
 import { showToast } from "@/utils/toast";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { emitAppEvent } from "@/utils/app-events";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 import type {
   GitHubSidebarAction,
@@ -29,14 +30,10 @@ function getRepoPath(): string | null {
   );
 }
 
-function showGitHubSidebar(): void {
+/** Opens GitHub in the dock, then hands it the action once its view is mounted. */
+function runGitHubSidebarAction(action: GitHubSidebarAction): Promise<boolean> {
   showProjectTool("github-prs");
-}
-
-function dispatchGitHubSidebarAction(action: GitHubSidebarAction): void {
-  window.setTimeout(() => {
-    emitAppEvent("github:palette-action", action);
-  }, 0);
+  return runPaneCommand(getProjectToolPaneId("github-prs"), "action", action);
 }
 
 /** Turns the section on when it is hidden, then shows it in the GitHub sidebar. */
@@ -48,13 +45,11 @@ export async function openGitHubSection(section: GitHubSidebarSection): Promise<
     await actions.updateSetting(settingKey, true);
   }
 
-  showGitHubSidebar();
-  dispatchGitHubSidebarAction({ type: "show-section", section });
+  void runGitHubSidebarAction({ type: "show-section", section });
 }
 
-export function refreshGitHubView(): void {
-  showGitHubSidebar();
-  dispatchGitHubSidebarAction({ type: "refresh" });
+export function refreshGitHubView(): Promise<boolean> {
+  return runGitHubSidebarAction({ type: "refresh" });
 }
 
 export function openGitHubForm(formKind: "pull-request" | "issue" | "action"): void {

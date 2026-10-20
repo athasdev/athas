@@ -66,7 +66,6 @@ export const legacyPaletteIds: Readonly<Record<string, string>> = {
   "view-show-files": "view.showFiles",
   "view-show-git": "view.showGit",
   "view-show-github-prs": "view.showPullRequests",
-  "view-show-views": "view.showViews",
   "view-show-debugger": "view.showRunAndDebug",
   "view-show-outline": "view.showOutline",
   "search-global": "workbench.showGlobalSearch",

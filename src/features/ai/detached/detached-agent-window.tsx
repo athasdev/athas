@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { AgentTab } from "@/features/ai/components/agent-tab";
 import { registerAiEditorFeatures } from "@/features/ai/services/ai-editor-features";
+import { registerSessionDockPanes } from "@/features/ai/services/ai-views";
+import { WorkbenchDock } from "@/features/layout/components/dock/workbench-dock";
 import { AgentSessionIcon } from "@/features/ai/components/icons/agent-session-icon";
 import { useAcpEventSync } from "@/features/ai/hooks/use-acp-event-sync";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
@@ -15,6 +17,7 @@ import { DetachedWindowShell } from "@/features/window/detached/detached-window-
 import { useDetachedWindow } from "@/features/window/detached/hooks/use-detached-window";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { Button } from "@/ui/button";
+import { Pane } from "@/ui/pane";
 import { ArrowCounterClockwiseIcon } from "@/ui/icons";
 import {
   type AgentWindowMessage,
@@ -29,6 +32,7 @@ import { usePaneStore } from "@/features/panes/stores/pane.store";
 enableMapSet();
 
 registerAiEditorFeatures();
+registerSessionDockPanes();
 
 const RETURN_TIMEOUT_MS = 10_000;
 
@@ -150,6 +154,7 @@ export default function DetachedAgentWindow() {
   return (
     <AppQueryProvider>
       <DetachedWindowShell
+        plane="workbench"
         title={chat?.title ?? "Agent"}
         icon={<AgentSessionIcon session={chat} />}
         actions={
@@ -178,8 +183,11 @@ export default function DetachedAgentWindow() {
         }
       >
         {buffer?.type === "agent" ? (
-          <main className="min-h-0 min-w-0 flex-1">
-            <AgentTab buffer={buffer} />
+          <main className="flex min-h-0 min-w-0 flex-1 flex-row p-workbench pt-0">
+            <Pane surface="island" className="flex-1">
+              <AgentTab buffer={buffer} />
+            </Pane>
+            <WorkbenchDock owner={{ kind: "session", id: buffer.sessionId }} />
           </main>
         ) : null}
       </DetachedWindowShell>

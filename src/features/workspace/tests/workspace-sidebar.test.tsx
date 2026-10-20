@@ -2,7 +2,7 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { WorkspaceSidebar } from "../team/components/workspace-sidebar";
+import { WorkspaceHeaderActions, WorkspaceSidebar } from "../team/components/workspace-sidebar";
 import { openWorkspaceManagement } from "../team/services/open-workspace-management";
 import { useWorkspaceManagementStore } from "../team/stores/workspace-management.store";
 
@@ -84,9 +84,9 @@ describe("workspace sidebar navigation", () => {
     expect(mocks.readTeamWorkspaceContent).toHaveBeenCalledTimes(1);
   });
 
-  it("opens a newly added workspace in the details area", async () => {
+  it("opens a workspace added from the pane header in the details area", async () => {
     mocks.openFolder.mockResolvedValue("/new");
-    await act(async () => root.render(<WorkspaceSidebar />));
+    await act(async () => root.render(<WorkspaceHeaderActions />));
     await act(async () => button("Add workspace").click());
     expect(useWorkspaceManagementStore.getState().selectedRoot).toBe("/new");
     expect(mocks.openContent).toHaveBeenCalledWith({ type: "workspaces" });

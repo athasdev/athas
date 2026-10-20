@@ -11,7 +11,14 @@ import { getDockOwnerKey, useDockLayoutStore } from "@/features/layout/stores/do
 import type { DockOwner, DockPaneId } from "@/features/layout/types/dock.types";
 import { Button } from "@/ui/button";
 import { ArrowsInIcon, ArrowsOutIcon, XIcon } from "@/ui/icons";
-import { Pane, PaneActions, PaneBody, PaneHeader, PaneTitle } from "@/ui/pane";
+import {
+  Pane,
+  PaneActions,
+  PaneBody,
+  PaneHeader,
+  PaneHeaderLeadingSpace,
+  PaneTitle,
+} from "@/ui/pane";
 
 const DRAG_TYPE = "application/x-athas-dock-pane";
 
@@ -22,8 +29,6 @@ export interface DockPaneView {
   render: (props: DockPaneProps) => ReactNode;
   renderDetail?: (props: DockPaneProps) => ReactNode;
   renderActions?: (props: DockPaneProps) => ReactNode;
-  /** The view brings its own title bar, whose actions move into this pane's header. */
-  hostsViewChrome?: boolean;
 }
 
 interface DockPaneFrameProps {
@@ -31,13 +36,30 @@ interface DockPaneFrameProps {
   view: DockPaneView;
   share: number;
   maximized: boolean;
+  /** The pane was added while the dock showed, so it fades in instead of popping in. */
+  appear?: boolean;
+  /** Dock-wide actions the top pane carries, such as adding a pane. */
+  dockActions?: ReactNode;
+  /**
+   * The header is part of the window's top row: its empty space moves the window, and the title
+   * itself still drags to reorder.
+   */
+  windowTopRow?: boolean;
 }
 
 /**
  * One tool in the dock: the shared pane header (its name, its own actions, maximize and close)
  * over the tool. Dragging a header onto another reorders them.
  */
-export function DockPaneFrame({ owner, view, share, maximized }: DockPaneFrameProps) {
+export function DockPaneFrame({
+  owner,
+  view,
+  share,
+  maximized,
+  appear = false,
+  dockActions,
+  windowTopRow = false,
+}: DockPaneFrameProps) {
   const ownerKey = getDockOwnerKey(owner);
   const actions = useDockLayoutStore.use.actions();
   const focusNonce = useDockLayoutStore((state) =>
@@ -45,16 +67,16 @@ export function DockPaneFrame({ owner, view, share, maximized }: DockPaneFramePr
       ? state.focusRequest.nonce
       : null,
   );
-  const [focusRequested, setFocusRequested] = useState(false);
+  const [focusRequest, setFocusRequest] = useState(0);
   const [dropTarget, setDropTarget] = useState(false);
 
   useEffect(() => {
     if (focusNonce === null) return;
     if (!actions.consumeFocus(owner, view.id)) return;
-    setFocusRequested(true);
+    setFocusRequest((count) => count + 1);
   }, [actions, focusNonce, owner, view.id]);
 
-  const props: DockPaneProps = { owner, focusRequested };
+  const props: DockPaneProps = { owner, focusRequested: focusRequest > 0, focusRequest };
 
   const onDragStart = (event: DragEvent) => {
     event.dataTransfer.setData(DRAG_TYPE, view.id);
@@ -73,7 +95,7 @@ export function DockPaneFrame({ owner, view, share, maximized }: DockPaneFramePr
   return (
     <Pane
       surface="island"
-      hostsViewChrome={view.hostsViewChrome}
+      appear={appear}
       role="region"
       aria-label={view.title}
       data-dock-pane={view.id}
@@ -92,12 +114,18 @@ export function DockPaneFrame({ owner, view, share, maximized }: DockPaneFramePr
         onDragLeave={() => setDropTarget(false)}
         onDrop={onDrop}
         dropTarget={dropTarget}
+        data-tauri-drag-region={windowTopRow || undefined}
         onDoubleClick={(event) => {
-          if ((event.target as Element).closest("button, input")) return;
+          const target = event.target as Element;
+          if (target.closest("button, input")) return;
+          // A double click on the window's top row zooms the window instead.
+          if (target.hasAttribute("data-tauri-drag-region")) return;
           actions.toggleMaximized(owner, view.id);
         }}
       >
+        {maximized ? <PaneHeaderLeadingSpace /> : null}
         <PaneTitle
+          data-tauri-drag-region={windowTopRow || undefined}
           icon={view.icon}
           detail={
             view.renderDetail ? (
@@ -111,6 +139,7 @@ export function DockPaneFrame({ owner, view, share, maximized }: DockPaneFramePr
           {view.renderActions ? (
             <Suspense fallback={null}>{view.renderActions(props)}</Suspense>
           ) : null}
+          {dockActions}
           <Button
             type="button"
             variant="ghost"

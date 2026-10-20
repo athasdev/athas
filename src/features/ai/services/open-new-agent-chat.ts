@@ -7,6 +7,8 @@ import { openAgentWindowSession } from "@/features/ai/detached/services/agent-wi
 
 interface OpenNewAgentChatOptions {
   editorSelections?: EditorSelectionContext[];
+  /** The project the session belongs to, the active one by default; `null` for none. */
+  workspacePath?: string | null;
 }
 
 export function openNewAgentChat(
@@ -22,6 +24,7 @@ export function openNewAgentChat(
     activate: false,
     // A pending launch request needs its own session; a bare "New Agent" does not.
     reuseEmpty: !options.editorSelections?.length,
+    workspacePath: options.workspacePath,
   });
   if (options.editorSelections?.length) {
     chatStore.actions.setPendingAgentLaunchRequest({

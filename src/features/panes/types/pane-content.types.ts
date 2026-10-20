@@ -40,7 +40,6 @@ export type PaneContentType =
   | "githubDelivery"
   | "githubAction"
   | "githubForm"
-  | "customView"
   | "markdownDocument"
   | "markdownPreview"
   | "htmlPreview"
@@ -58,6 +57,7 @@ export type PaneContentType =
   | "extensions"
   | "extension"
   | "customize"
+  | "projectDashboard"
   | "onboarding";
 
 // ── Base fields shared by every content type ────────────────────────
@@ -174,12 +174,6 @@ export interface GitHubFormContent extends PaneContentBase {
   defaultHead?: string;
 }
 
-export interface CustomViewContent extends PaneContentBase {
-  type: "customView";
-  projectPath: string;
-  viewId?: string;
-}
-
 export interface MarkdownDocumentContent extends PaneContentBase {
   type: "markdownDocument";
   content: string;
@@ -259,6 +253,11 @@ export interface ExtensionContent extends PaneContentBase {
   extensionId: string;
 }
 
+export interface ProjectDashboardContent extends PaneContentBase {
+  type: "projectDashboard";
+  projectPath: string;
+}
+
 interface OnboardingContent extends PaneContentBase {
   type: "onboarding";
   mode: OnboardingMode;
@@ -283,7 +282,6 @@ export type PaneContent =
   | GitHubDeliveryContent
   | GitHubActionContent
   | GitHubFormContent
-  | CustomViewContent
   | MarkdownDocumentContent
   | MarkdownPreviewContent
   | HtmlPreviewContent
@@ -301,6 +299,7 @@ export type PaneContent =
   | ExtensionsContent
   | ExtensionContent
   | CustomizeContent
+  | ProjectDashboardContent
   | OnboardingContent;
 
 // ── Type guards ─────────────────────────────────────────────────────
@@ -321,7 +320,6 @@ const VIRTUAL_TYPES: ReadonlySet<PaneContentType> = new Set([
   "githubDelivery",
   "githubAction",
   "githubForm",
-  "customView",
   "markdownDocument",
   "globalSearch",
   "diagnostics",
@@ -334,6 +332,7 @@ const VIRTUAL_TYPES: ReadonlySet<PaneContentType> = new Set([
   "extensions",
   "extension",
   "customize",
+  "projectDashboard",
   "onboarding",
 ]);
 
@@ -462,12 +461,6 @@ export type OpenContentSpec =
       defaultHead?: string;
     }
   | {
-      type: "customView";
-      projectPath: string;
-      viewId?: string;
-      name?: string;
-    }
-  | {
       type: "markdownDocument";
       documentId: string;
       content?: string;
@@ -540,6 +533,11 @@ export type OpenContentSpec =
     }
   | {
       type: "customize";
+    }
+  | {
+      type: "projectDashboard";
+      projectPath: string;
+      name: string;
     }
   | {
       type: "onboarding";

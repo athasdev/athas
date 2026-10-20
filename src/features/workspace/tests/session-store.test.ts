@@ -29,7 +29,6 @@ const previousSession: ProjectSession = {
     isSidebarVisible: true,
     isBottomPaneVisible: false,
     bottomPaneActiveTab: "terminal",
-    activeSidebarView: "explorer",
     paneState: {
       root: {
         id: "root",
@@ -108,7 +107,6 @@ describe("project session persistence helpers", () => {
         isSidebarVisible: false,
         isBottomPaneVisible: true,
         bottomPaneActiveTab: "diagnostics",
-        activeSidebarView: "search",
         paneState: null,
       },
       now: 2,
@@ -121,8 +119,8 @@ describe("project session persistence helpers", () => {
       isSidebarVisible: false,
       isBottomPaneVisible: true,
       bottomPaneActiveTab: "diagnostics",
-      activeSidebarView: "search",
       paneState: null,
+      tabSets: null,
     });
   });
 });

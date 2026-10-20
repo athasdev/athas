@@ -565,43 +565,19 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["font", "size", "ui", "icon", "scale", "typography"],
   },
   {
-    id: "appearance-reduce-motion",
+    id: "appearance-window-transparency",
     tab: "appearance",
     section: "Interface",
-    label: "Reduce Motion",
-    description: "Reduce non-essential interface animations while keeping state changes visible",
-    keywords: ["motion", "animation", "accessibility", "reduce", "interface"],
-  },
-  {
-    id: "appearance-show-tab-icons",
-    tab: "appearance",
-    section: "Interface",
-    label: "Show Tab Icons",
-    description: "Show file and view icons in editor tabs",
-    keywords: ["tab", "icon", "file", "view", "interface", "hide"],
-  },
-  {
-    id: "appearance-ui-density",
-    tab: "appearance",
-    section: "Interface",
-    label: "UI Density",
-    description: "Space around tabs, toolbars, and workspace panes",
-    keywords: ["window", "chrome", "density", "compact", "comfortable", "spacing", "layout"],
-  },
-  {
-    id: "appearance-tab-close-buttons",
-    tab: "appearance",
-    section: "Interface",
-    label: "Tab Close Buttons",
-    description: "Choose when unpinned tabs show their close button",
-    keywords: ["tab", "close", "button", "active", "hover", "always"],
+    label: "Window Transparency",
+    description: "Use translucent app chrome and transparent native windows where supported",
+    keywords: ["window", "transparency", "transparent", "translucent", "glass", "chrome"],
   },
   ...(!IS_MAC && !IS_WINDOWS && !IS_LINUX
     ? [
         {
           id: "appearance-native-menu-bar",
           tab: "appearance",
-          section: "Layout",
+          section: "Interface",
           label: "Native Menu Bar",
           description: "Use the native menu bar or a custom UI menu bar",
           keywords: ["menu", "bar", "native", "ui"],
@@ -613,30 +589,13 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
         {
           id: "appearance-compact-menu-bar",
           tab: "appearance",
-          section: "Layout",
+          section: "Interface",
           label: "Compact Menu Bar",
           description: "Requires UI menu bar; compact hamburger or full UI menu",
           keywords: ["menu", "bar", "compact", "hamburger", "ui"],
         } satisfies SettingSearchRecord,
       ]
     : []),
-  {
-    id: "appearance-window-transparency",
-    tab: "appearance",
-    section: "Layout",
-    label: "Window Transparency",
-    description: "Use translucent app chrome and transparent native windows where supported",
-    keywords: ["window", "transparency", "transparent", "translucent", "glass", "chrome"],
-  },
-  {
-    id: "appearance-open-folders-new-window",
-    tab: "appearance",
-    section: "Layout",
-    label: "Open Projects In New Window",
-    description:
-      "Open each new project in a separate window and disable activity-bar project switching",
-    keywords: ["open", "folder", "project", "new", "window", "separate", "activity", "switch"],
-  },
 
   // AI Settings
   {

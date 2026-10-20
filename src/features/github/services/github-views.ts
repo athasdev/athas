@@ -5,6 +5,11 @@ import { registerPaneView } from "@/features/panes/services/pane-view-registry";
 import { registerGitHubResourceViews } from "./github-resource-views";
 
 const GitHubPRsView = lazy(() => import("../components/github-prs-view"));
+const GitHubPaneActions = lazy(() =>
+  import("../components/github-pane-actions").then((module) => ({
+    default: module.GitHubPaneActions,
+  })),
+);
 // Markdown documents edit in the GitHub-flavored markdown editor.
 const MarkdownDocumentView = lazy(() =>
   import("../components/markdown-document-view").then((module) => ({
@@ -20,7 +25,7 @@ export function registerGitHubViews() {
     icon: createElement(GithubMark),
     order: 20,
     component: GitHubPRsView,
-    getProps: ({ isActive }) => ({ isActive }),
+    HeaderActions: GitHubPaneActions,
     isAvailable: ({ coreFeatures }) => coreFeatures.github,
   });
   registerPaneView("markdownDocument", {

@@ -10,8 +10,10 @@ import type { DockOwner, DockPaneId } from "../types/dock.types";
 
 export interface DockPaneProps {
   owner: DockOwner;
-  /** The pane was asked to take focus once it shows. */
+  /** The pane was asked to take focus since it mounted. */
   focusRequested: boolean;
+  /** Counts the focus requests since the pane mounted, so it can take focus again on each. */
+  focusRequest: number;
 }
 
 export interface DockPaneDefinition {
@@ -28,8 +30,6 @@ export interface DockPaneDefinition {
   HeaderActions?: ComponentType<DockPaneProps>;
   /** Whether the owner can open it now, such as Plan only while the session has a plan. */
   useAvailable?: (owner: DockOwner) => boolean;
-  /** The pane shows a view with its own title bar, whose actions move into the pane header. */
-  hostsViewChrome?: boolean;
 }
 
 /**

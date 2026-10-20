@@ -280,7 +280,7 @@ async function rejectHunks(chatId: string, entry: AgentEditEntry, hunks: AgentEd
   if (removesFile && unsaved !== null) {
     const confirmed = await showConfirmDialog(
       `${name} has unsaved edits. Discard them and delete the file the agent created?`,
-      { title: "Delete agent-created file", confirmLabel: "Discard and delete" },
+      { title: "Delete agent-created file", confirmLabel: "Discard and delete", destructive: true },
     );
     // The agent may have written the file again while the user decided.
     if (!confirmed || getAgentEditEntries(chatId)[entry.path]?.revision !== entry.revision) return;

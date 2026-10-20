@@ -6,20 +6,13 @@ import type { PanelSlice } from "./ui-state/panel-slice";
 import { createPanelSlice } from "./ui-state/panel-slice";
 import type { TerminalSlice } from "./ui-state/terminal-slice";
 import { createTerminalSlice } from "./ui-state/terminal-slice";
-import type { ViewSlice } from "./ui-state/view-slice";
-import { createViewSlice } from "./ui-state/view-slice";
 
-// Re-export types for convenience
+type UIState = ModalSlice & PanelSlice & TerminalSlice;
 
-// Combined store type
-type UIState = ModalSlice & PanelSlice & ViewSlice & TerminalSlice;
-
-// Create the combined store
 const createUIStateStore = () =>
   createStore<UIState>()((...a) => ({
     ...createModalSlice(...a),
     ...createPanelSlice(...a),
-    ...createViewSlice(...a),
     ...createTerminalSlice(...a),
   }));
 

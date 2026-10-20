@@ -10,12 +10,11 @@ import { getCodexModelPatch } from "@/features/ai/integrations/codex/codex-model
 import { useCodexModels } from "@/features/ai/integrations/codex/use-codex-models";
 import { useCodexSettings } from "@/features/ai/integrations/codex/use-codex-settings";
 import { CODEX_INTEGRATION_ID } from "@/features/ai/integrations/integration-registry";
+import { formatEffortLabel, isAutoEffort } from "@/features/ai/lib/effort-levels";
 import { classifySessionConfigOption } from "@/features/ai/lib/session-config-option-classifier";
 import type { SessionConfigOption, SessionConfigValue } from "@/features/ai/types/acp.types";
 import {
   DropdownMenuEmpty,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
   DropdownMenuSearch,
   DropdownMenuSub,
   DropdownMenuSubContent,
@@ -23,6 +22,7 @@ import {
   DropdownMenuViewport,
 } from "@/ui/dropdown";
 import { useMenuSearch } from "@/ui/menu-search";
+import { StepSlider } from "@/ui/step-slider";
 
 /** Longer model lists get a search box and, when the catalog has them, recommended picks. */
 const SHORT_MODEL_LIST_LENGTH = 8;
@@ -123,10 +123,11 @@ interface EffortStep {
 }
 
 /**
- * Every agent that exposes an ordered "how hard should it think" scale gets the same row:
- * Codex reasoning efforts and the ACP `thought_level` session config both land here.
+ * Every agent that exposes an ordered "how hard should it think" scale gets the same slider:
+ * Codex reasoning efforts and the ACP `thought_level` session config both land here, in one
+ * wording. An agent's "default" level sits apart as Auto, since it is not a point on the scale.
  */
-function EffortSubmenu({
+function EffortSlider({
   steps,
   selected,
   defaultValue,
@@ -137,31 +138,20 @@ function EffortSubmenu({
   defaultValue?: string;
   onSelect: (value: string) => void;
 }) {
-  const current = steps.find((step) => step.value === selected) ?? steps[0];
-
+  const labelled = steps.map((step) => ({
+    ...step,
+    label: formatEffortLabel(step.value, step.label),
+  }));
   return (
-    <DropdownMenuSub>
-      <DropdownMenuSubTrigger value={<span className="capitalize">{current?.label}</span>}>
-        Effort
-      </DropdownMenuSubTrigger>
-      <DropdownMenuSubContent size="compact">
-        <DropdownMenuRadioGroup value={current?.value ?? ""} onValueChange={onSelect}>
-          {steps.map((step) => (
-            <DropdownMenuRadioItem
-              key={step.value}
-              value={step.value}
-              title={step.description}
-              closeOnClick
-            >
-              <span className="min-w-0 flex-1 truncate capitalize">{step.label}</span>
-              {step.value === defaultValue ? (
-                <span className="shrink-0 text-subtle-foreground">Default</span>
-              ) : null}
-            </DropdownMenuRadioItem>
-          ))}
-        </DropdownMenuRadioGroup>
-      </DropdownMenuSubContent>
-    </DropdownMenuSub>
+    <StepSlider
+      label="Effort"
+      steps={labelled.filter((step) => !isAutoEffort(step.value))}
+      autoStep={labelled.find((step) => isAutoEffort(step.value))}
+      value={selected}
+      onValueChange={onSelect}
+      markedValue={defaultValue}
+      markedLabel="Default"
+    />
   );
 }
 
@@ -239,7 +229,7 @@ export function CodexModelSubmenus({ cwd, value }: { cwd: string; value: string 
         retry={retry}
       />
       {current && efforts.length > 1 ? (
-        <EffortSubmenu
+        <EffortSlider
           steps={efforts.map((effort) => ({
             value: effort.value,
             label: effort.value,
@@ -311,7 +301,7 @@ export function AcpModelSubmenus({
         />
       ) : null}
       {effort ? (
-        <EffortSubmenu
+        <EffortSlider
           steps={effort.options.map((option) => ({
             value: option.id,
             label: option.name,

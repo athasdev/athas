@@ -490,6 +490,7 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
     const confirmed = await showConfirmDialog("Close this pull request without merging it?", {
       title: "Close pull request",
       confirmLabel: "Close PR",
+      destructive: true,
     });
     if (!confirmed) return;
 

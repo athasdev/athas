@@ -98,3 +98,46 @@ export function getEffectiveShortcutsByCommand(
 
   return shortcuts;
 }
+
+/**
+ * Each command's effective binding in one pass: the first enabled one, else its first. Lists that
+ * show every command read from this instead of resolving each command on its own.
+ */
+export function getEffectiveKeybindingsByCommand(
+  input: EffectiveKeybindingsInput,
+): Map<string, Keybinding> {
+  const byCommand = new Map<string, Keybinding>();
+  for (const binding of getEffectiveKeybindings(input)) {
+    const current = byCommand.get(binding.command);
+    if (!current || (current.enabled === false && binding.enabled !== false)) {
+      byCommand.set(binding.command, binding);
+    }
+  }
+  return byCommand;
+}
+
+/**
+ * The commands each command shares a key with, among the bindings in effect: both enabled, on the
+ * same key, in the same context (or both in none). Keys compare after normalizing, so `Cmd+S` and
+ * `cmd+s` collide.
+ */
+export function getKeybindingConflicts(bindings: Iterable<Keybinding>): Map<string, string[]> {
+  const commandsBySlot = new Map<string, Set<string>>();
+  for (const binding of bindings) {
+    if (binding.enabled === false || !binding.key) continue;
+    const slot = `${normalizeKeybindingForComparison(binding.key)}\u0000${binding.when ?? ""}`;
+    const commands = commandsBySlot.get(slot) ?? new Set<string>();
+    commands.add(binding.command);
+    commandsBySlot.set(slot, commands);
+  }
+
+  const conflicts = new Map<string, string[]>();
+  for (const commands of commandsBySlot.values()) {
+    if (commands.size < 2) continue;
+    for (const command of commands) {
+      const others = [...commands].filter((other) => other !== command);
+      conflicts.set(command, [...(conflicts.get(command) ?? []), ...others]);
+    }
+  }
+  return conflicts;
+}

@@ -26,7 +26,9 @@ export function readChatModeSource(chatId: string | null, agentId?: string): Cha
   const acpTarget = {
     chatId,
     agentId: resolvedAgentId,
-    workspacePath: chat?.workspacePath ?? useProjectStore.getState().rootFolderPath ?? null,
+    workspacePath: chat
+      ? (chat.workspacePath ?? null)
+      : (useProjectStore.getState().rootFolderPath ?? null),
   };
   const acp = selectComposerAcpSession(state, acpTarget);
   return getChatModeSource({

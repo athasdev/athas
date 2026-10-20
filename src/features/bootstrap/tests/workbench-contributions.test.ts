@@ -30,7 +30,6 @@ const VIEW_TYPES: PaneContentType[] = [
   "githubDelivery",
   "githubAction",
   "githubForm",
-  "customView",
   "markdownDocument",
   "externalEditor",
   "globalSearch",
@@ -61,9 +60,9 @@ describe("workbench contributions", () => {
       expect(view.icon, view.id).toBeTruthy();
     }
     expect(getSidebarViews().map((view) => view.id)).toEqual([
+      "search",
       "git",
       "github-prs",
-      "views",
       "docker",
       "workspaces",
       "databases",

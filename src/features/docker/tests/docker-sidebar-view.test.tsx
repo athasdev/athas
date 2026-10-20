@@ -58,7 +58,7 @@ vi.mock("@/features/file-system/stores/file-system.store", () => ({
 }));
 vi.mock("@/utils/external-url", () => ({ openExternalUrl: vi.fn(async () => {}) }));
 
-const { DockerSidebar } = await import("../components/docker-sidebar");
+const { DockerHeaderActions, DockerSidebar } = await import("../components/docker-sidebar");
 
 enableMapSet();
 
@@ -128,6 +128,7 @@ async function render() {
   await act(async () =>
     root.render(
       <QueryClientProvider client={client}>
+        <DockerHeaderActions />
         <DockerSidebar />
       </QueryClientProvider>,
     ),
@@ -173,6 +174,8 @@ beforeEach(() => {
   api.stopDockerContainerLogStream.mockResolvedValue(undefined);
   api.listDockerContainerFiles.mockResolvedValue([]);
   useSidebarStore.getState().actions.setDockerSection("resources");
+  useSidebarStore.getState().actions.setDockerQuery("");
+  useSidebarStore.getState().actions.setDockerContainerFilter("all");
   useProjectStore.setState({ rootFolderPath: "/repo" });
   client = createTestQueryClient();
   Element.prototype.getAnimations = () => [];
@@ -230,6 +233,7 @@ describe("Docker sidebar", () => {
         item.textContent?.includes("Refresh"),
       )!,
     );
+    await flush();
     expect(api.getDockerInventory).toHaveBeenCalledTimes(2);
   });
 

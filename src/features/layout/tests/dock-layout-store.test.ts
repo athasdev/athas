@@ -23,7 +23,6 @@ describe("dock layout store", () => {
     useDockLayoutStore.setState({
       layouts: {},
       hidden: false,
-      stickySessions: {},
       focusRequest: null,
     });
   });
@@ -86,9 +85,7 @@ describe("dock layout store", () => {
     actions().open(project, "view:git");
     actions().setWidth(420);
     actions().setHidden(true);
-    actions().setStickySession("/work/site", "a");
     const saved = localStorage.getItem(STORAGE_KEY) ?? "{}";
-    expect(JSON.parse(saved).state.stickySessions).toBeUndefined();
 
     useDockLayoutStore.setState({ layouts: {}, width: 0, hidden: false });
     localStorage.setItem(STORAGE_KEY, saved);
@@ -126,24 +123,14 @@ describe("dock pane shares", () => {
 });
 
 describe("dock owner", () => {
-  const base = {
-    activeSessionId: null,
-    openSessionIds: ["a", "b"],
-    stickySessionId: undefined,
-    projectPath: "/work/site/",
-  };
+  const base = { activeSessionId: null, projectPath: "/work/site/" };
 
   it("belongs to the session in front", () => {
     expect(resolveDockOwner({ ...base, activeSessionId: "b" })).toEqual(sessionB);
   });
 
-  it("stays with a session the user left for a file while its tab is open", () => {
-    expect(resolveDockOwner({ ...base, stickySessionId: "a" })).toEqual(sessionA);
-    expect(resolveDockOwner({ ...base, stickySessionId: "c" })).toEqual(project);
-  });
-
   it("falls back to the project, and to nothing without one", () => {
-    expect(resolveDockOwner({ ...base, stickySessionId: null })).toEqual(project);
+    expect(resolveDockOwner(base)).toEqual(project);
     expect(resolveDockOwner({ ...base, projectPath: null })).toBeNull();
   });
 });

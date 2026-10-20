@@ -37,11 +37,11 @@ export function getAcpAuthenticationCommand(
         ? `"${command.replace(/"/g, '""')}"`
         : `'${command.replace(/'/g, "'\\''")}'`;
 
-    return agentId === "claude-acp" ? `${quotedCommand} --cli auth login --console` : quotedCommand;
+    return agentId === "claude-acp" ? `${quotedCommand} --cli auth login` : quotedCommand;
   }
 
   const fallbackCommands: Record<string, string> = {
-    "claude-acp": "claude-agent-acp --cli auth login --console",
+    "claude-acp": "claude-agent-acp --cli auth login",
     "gemini-cli": "gemini",
     "kimi-cli": "kimi",
     opencode: "opencode",

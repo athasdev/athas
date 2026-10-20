@@ -87,7 +87,7 @@ export function useMcpServerEditor(onInstallLink?: () => void) {
     async (server: McpServerSetting) => {
       const confirmed = await showConfirmDialog(
         `Remove ${server.name}? Agents started after this will no longer get it.`,
-        { title: "Remove MCP server", confirmLabel: "Remove" },
+        { title: "Remove MCP server", confirmLabel: "Remove", destructive: true },
       );
       if (!confirmed) return;
 

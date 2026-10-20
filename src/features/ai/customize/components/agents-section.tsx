@@ -121,7 +121,7 @@ function AgentAction({
     return (
       <CustomizeAddButton
         label={`Install ${agent.name}`}
-        busy={Boolean(pendingAction)}
+        disabled={Boolean(pendingAction)}
         onClick={() =>
           void useAgentCatalogStore
             .getState()

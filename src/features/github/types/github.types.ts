@@ -230,7 +230,7 @@ export type GitHubSidebarSection =
   | "releases"
   | "deployments";
 
-/** What a command asks the GitHub sidebar to do, sent as the `github:palette-action` app event. */
+/** What a command asks the GitHub pane to do, run as its `action` command (`pane-commands.ts`). */
 export type GitHubSidebarAction =
   | { type: "show-section"; section: GitHubSidebarSection }
   | { type: "refresh" };

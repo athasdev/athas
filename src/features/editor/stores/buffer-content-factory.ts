@@ -1,7 +1,7 @@
 import { detectLanguageFromFileName } from "@/features/editor/services/language-detection";
 import {
   deliveryBufferPath,
-  getViewBufferPath,
+  projectDashboardPath,
 } from "@/features/editor/services/virtual-buffer-paths";
 import { SINGLETON_TOOL_BUFFER_METADATA } from "@/features/panes/constants/tool-buffers";
 import type { OpenContentSpec, PaneContent } from "@/features/panes/types/pane-content.types";
@@ -162,15 +162,6 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         defaultHead: spec.defaultHead,
       };
     }
-    case "customView":
-      return {
-        ...base,
-        type: "customView",
-        path: getViewBufferPath(spec.projectPath, spec.viewId),
-        name: spec.name ?? (spec.viewId ? "Custom View" : "New Custom View"),
-        projectPath: spec.projectPath,
-        viewId: spec.viewId,
-      };
     case "markdownDocument":
       return {
         ...base,
@@ -248,6 +239,14 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         path: `extension://${encodeURIComponent(spec.extensionId)}`,
         name: spec.name,
         extensionId: spec.extensionId,
+      };
+    case "projectDashboard":
+      return {
+        ...base,
+        type: "projectDashboard",
+        path: projectDashboardPath(spec.projectPath),
+        name: spec.name,
+        projectPath: spec.projectPath,
       };
     case "onboarding":
       return {

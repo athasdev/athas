@@ -68,7 +68,7 @@ function applyWindowTransparency(enabled: boolean) {
   syncEffectiveWindowTransparency();
 }
 
-function applyUiPreferences(settings: Pick<Settings, "reduceMotion" | "uiDensity">) {
+function applyUiPreferences(settings: Pick<Settings, "uiDensity">) {
   if (typeof document === "undefined") return;
 
   for (const [name, value] of Object.entries(getUiRootAttributes(settings))) {
@@ -208,7 +208,7 @@ export function applySettingSideEffect<K extends keyof Settings>(
     applyWindowTransparency(value as boolean);
   }
 
-  if (key === "reduceMotion" || key === "uiDensity") {
+  if (key === "uiDensity") {
     applyUiPreferences(getSettings());
   }
 

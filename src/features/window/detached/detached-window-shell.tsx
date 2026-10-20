@@ -9,6 +9,7 @@ import { DialogServiceProvider } from "@/ui/dialog";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
 import { Toaster } from "@/ui/sonner";
 import { TooltipProvider } from "@/ui/tooltip";
+import { cn } from "@/utils/cn";
 
 interface DetachedWindowPendingState {
   title: string;
@@ -25,6 +26,12 @@ interface DetachedWindowShellProps {
   children: ReactNode;
   /** Extra runtime that only some kinds need, mounted next to the toaster. */
   runtime?: ReactNode;
+  /**
+   * - `content` — the window is one opaque document, as a detached file or resource
+   * - `workbench` — raised islands on the window plane, see-through with glass, as the main window;
+   *   the islands carry their own titles, so the title bar shows only the actions
+   */
+  plane?: "content" | "workbench";
 }
 
 /**
@@ -40,6 +47,7 @@ export function DetachedWindowShell({
   pending,
   children,
   runtime,
+  plane = "content",
 }: DetachedWindowShellProps) {
   useFontLoading();
   useSystemAccessibility();
@@ -54,10 +62,17 @@ export function DetachedWindowShell({
         <FontStyleInjector />
         <WindowResizeBorder />
         <div
-          data-window-surface="content"
-          className="athas-layout-shell flex h-dvh flex-col overflow-hidden bg-background"
+          data-window-surface={plane === "content" ? "content" : undefined}
+          className={cn(
+            "athas-layout-shell flex h-dvh flex-col overflow-hidden",
+            plane === "content" ? "bg-background" : "bg-surface",
+          )}
         >
-          <TitleBar showMinimal title={title} titleIcon={icon} titleActions={actions} />
+          {plane === "content" ? (
+            <TitleBar showMinimal title={title} titleIcon={icon} titleActions={actions} />
+          ) : (
+            <TitleBar showMinimal titleActions={actions} />
+          )}
           {error ? (
             <Empty tone="error">
               <EmptyHeader>

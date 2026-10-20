@@ -30,6 +30,8 @@ import { requestWindowClose } from "@/features/window/services/request-window-cl
 
 interface ChatHeaderProps {
   chatId?: string | null;
+  /** The title row with the session's controls; off where the host's tab bar carries them. */
+  showTitleRow?: boolean;
   /** Session controls from the host, such as its tools. */
   sessionActions?: ReactNode;
   isMessageSearchOpen: boolean;
@@ -45,6 +47,7 @@ interface ChatHeaderProps {
 
 export function ChatHeader({
   chatId,
+  showTitleRow = true,
   sessionActions,
   isMessageSearchOpen,
   messageSearchQuery,
@@ -61,10 +64,6 @@ export function ChatHeader({
   const currentChatTitle = useAIChatStore(
     (state) => state.chats.find((chat) => chat.id === effectiveChatId)?.title,
   );
-  const standalone = isAgentWindow();
-  const hasMessages = useAIChatStore((state) =>
-    effectiveChatId ? (state.messagesByChat[effectiveChatId]?.length ?? 0) > 0 : false,
-  );
   const messageSearchInputRef = useRef<HTMLInputElement>(null);
   const hasSearchQuery = messageSearchQuery.trim().length > 0;
   const hasMessageSearchMatches = messageSearchMatchCount > 0;
@@ -79,6 +78,8 @@ export function ChatHeader({
     if (!isMessageSearchOpen) return;
     requestAnimationFrame(() => messageSearchInputRef.current?.focus());
   }, [isMessageSearchOpen]);
+
+  if (!showTitleRow && !isMessageSearchOpen) return null;
 
   return (
     <div className="relative z-10020 shrink-0">
@@ -167,50 +168,65 @@ export function ChatHeader({
 
             {sessionActions}
 
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    iconOnly
-                    aria-label="Conversation actions"
-                    tooltip="Conversation actions"
-                  />
-                }
-              >
-                <DotsIcon />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" size="default">
-                <DropdownMenuItem
-                  disabled={!effectiveChatId}
-                  onClick={() => effectiveChatId && void openChatTranscript(effectiveChatId)}
-                >
-                  <FileIcon />
-                  Open conversation as Markdown
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  disabled={!hasMessages}
-                  onClick={() => shareAgent(effectiveChatId ?? undefined)}
-                >
-                  <UploadIcon />
-                  Share agent to web
-                </DropdownMenuItem>
-                {effectiveChatId && (
-                  <DropdownMenuItem
-                    onClick={() =>
-                      standalone ? requestWindowClose() : void openAgentInNewWindow(effectiveChatId)
-                    }
-                  >
-                    {standalone ? <ArrowLeftIcon /> : <WindowExpandIcon />}
-                    {standalone ? "Return agent to main window" : "Open agent in new window"}
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <ChatConversationMenu chatId={effectiveChatId} />
           </PaneActions>
         </PaneHeader>
       )}
     </div>
+  );
+}
+
+/** Open the conversation as Markdown, share it, or move it to or from its own window. */
+export function ChatConversationMenuItems({ chatId }: { chatId: string | null | undefined }) {
+  const standalone = isAgentWindow();
+  const hasMessages = useAIChatStore((state) =>
+    chatId ? (state.messagesByChat[chatId]?.length ?? 0) > 0 : false,
+  );
+  return (
+    <>
+      <DropdownMenuItem
+        disabled={!chatId}
+        onClick={() => chatId && void openChatTranscript(chatId)}
+      >
+        <FileIcon />
+        Open conversation as Markdown
+      </DropdownMenuItem>
+      <DropdownMenuItem disabled={!hasMessages} onClick={() => shareAgent(chatId ?? undefined)}>
+        <UploadIcon />
+        Share agent to web
+      </DropdownMenuItem>
+      {chatId && (
+        <DropdownMenuItem
+          onClick={() => (standalone ? requestWindowClose() : void openAgentInNewWindow(chatId))}
+        >
+          {standalone ? <ArrowLeftIcon /> : <WindowExpandIcon />}
+          {standalone ? "Return agent to main window" : "Open agent in new window"}
+        </DropdownMenuItem>
+      )}
+    </>
+  );
+}
+
+/** The conversation's menu: open it as Markdown, share it, or move it to or from its own window. */
+export function ChatConversationMenu({ chatId }: { chatId: string | null | undefined }) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            type="button"
+            variant="ghost"
+            iconOnly
+            aria-label="Conversation actions"
+            tooltip="Conversation actions"
+          />
+        }
+      >
+        <DotsIcon />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" size="default">
+        <ChatConversationMenuItems chatId={chatId} />
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

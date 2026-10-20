@@ -159,11 +159,6 @@ describe("opening tool and GitHub tabs", () => {
     const extension = actions().openExtensionBuffer("acme.tools", "Tools");
     expect(actions().openExtensionBuffer("acme.tools", "Acme Tools")).toBe(extension);
     expect(byId(extension).name).toBe("Acme Tools");
-
-    const view = actions().openContent({ type: "customView", projectPath: "/ws", viewId: "todo" });
-    expect(actions().openContent({ type: "customView", projectPath: "/ws", viewId: "todo" })).toBe(
-      view,
-    );
   });
 
   it("keeps one onboarding tab per mode and version", () => {

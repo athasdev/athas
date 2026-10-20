@@ -9,6 +9,7 @@ import {
   ListIcon,
   SearchIcon,
   SidebarIcon,
+  SidebarRightIcon,
   SparkleIcon,
   TerminalWindowIcon,
   TextAlignJustifyIcon,
@@ -17,12 +18,12 @@ import {
   ZoomOutIcon,
 } from "@/ui/icons";
 import { setNativeMenuBarEnabled } from "@/features/window/services/native-window-api";
-import { usePerformanceExperiments } from "@/features/settings/stores/performance-experiments.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { IS_LINUX, IS_MAC, IS_WINDOWS } from "@/utils/platform";
 import { emitAppEvent } from "@/utils/app-events";
 import type { Command } from "../types/keymaps.types";
+import { toggleDock } from "@/features/layout/services/dock-visibility";
 import {
   restartDebugSession,
   startGeneratedDebugSession,
@@ -34,6 +35,7 @@ import {
   openCommandPalette,
   openDiagnosticsBuffer,
   openGlobalSearchBuffer,
+  showGlobalSearch,
   openKeyboardShortcuts,
   openNewAgentSession,
   resetZoom,
@@ -51,7 +53,6 @@ import {
   toggleSidebar,
   toggleSourceControlSidebar,
   toggleTerminalPane,
-  toggleViewsSidebar,
   toggleWordWrap,
   zoomIn,
   zoomOut,
@@ -59,12 +60,6 @@ import {
 import { selectIsTerminalPaneVisible } from "@/features/layout/stores/ui-state-selectors";
 
 export const viewCommands: Command[] = [
-  {
-    id: "workbench.togglePerformanceMonitor",
-    title: "Toggle Performance Monitor",
-    category: "View",
-    execute: () => usePerformanceExperiments.getState().actions.toggleMonitor(),
-  },
   {
     id: "workbench.toggleSidebar",
     title: "Toggle Sidebar",
@@ -75,6 +70,15 @@ export const viewCommands: Command[] = [
         ? { label: "View: Hide Sidebar", description: "Hide the sidebar panel" }
         : { label: "View: Show Sidebar", description: "Show the sidebar panel" },
     execute: toggleSidebar,
+  },
+  {
+    id: "workbench.toggleDock",
+    title: "Toggle Dock",
+    category: "View",
+    description: "Show or put away the dock of tools beside the centre",
+    icon: <SidebarRightIcon />,
+    palette: { label: "View: Toggle Dock" },
+    execute: toggleDock,
   },
   {
     id: "workbench.toggleTerminal",
@@ -153,12 +157,21 @@ export const viewCommands: Command[] = [
     description: "Search across files in workspace",
     icon: <SearchIcon />,
     palette: { label: "Search: Global Search", category: "Navigation" },
-    execute: openGlobalSearchBuffer,
+    execute: showGlobalSearch,
   },
   {
     id: "workbench.showProjectSearch",
     title: "Project Search",
     category: "View",
+    execute: showGlobalSearch,
+  },
+  {
+    id: "workbench.openGlobalSearchInTab",
+    title: "Open Search in a Tab",
+    category: "View",
+    description: "Search across files in a tab with the file list beside the results",
+    icon: <SearchIcon />,
+    palette: { label: "Search: Open Search in a Tab", category: "Navigation" },
     execute: openGlobalSearchBuffer,
   },
   {
@@ -178,12 +191,6 @@ export const viewCommands: Command[] = [
     title: "Show GitHub",
     category: "View",
     execute: toggleGitHubSidebar,
-  },
-  {
-    id: "workbench.showViews",
-    title: "Show Views",
-    category: "View",
-    execute: toggleViewsSidebar,
   },
   {
     id: "workbench.showDocker",

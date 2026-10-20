@@ -15,9 +15,7 @@ import {
   UI_FONT_SIZE_STEP,
 } from "@/features/settings/services/ui-font-size";
 import { getDefaultSetting } from "@/features/settings/config/default-settings";
-import { normalizeUiDensity } from "@/features/settings/services/ui-preferences";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import type { TabCloseButtonVisibility } from "@/features/settings/types/settings.types";
 import { Button } from "@/ui/button";
 import NumberInput from "@/ui/number-input";
 import Section, { SettingsView, SettingRow } from "../settings-section";
@@ -42,7 +40,6 @@ export const AppearanceSettings = () => {
       iconTheme: state.settings.iconTheme,
       nativeMenuBar: state.settings.nativeMenuBar,
       openFoldersInNewWindow: state.settings.openFoldersInNewWindow,
-      reduceMotion: state.settings.reduceMotion,
       showTabIcons: state.settings.showTabIcons,
       syncSystemTheme: state.settings.syncSystemTheme,
       tabCloseButtonVisibility: state.settings.tabCloseButtonVisibility,
@@ -344,74 +341,18 @@ export const AppearanceSettings = () => {
 
       <Section title="Interface">
         <SettingRow
-          label="UI Density"
-          control="select"
-          description="Space around tabs, toolbars, and workspace panes"
-          onReset={() => updateSetting("uiDensity", getDefaultSetting("uiDensity"))}
-          canReset={settings.uiDensity !== getDefaultSetting("uiDensity")}
-        >
-          <Select
-            value={settings.uiDensity}
-            options={[
-              { value: "compact", label: "Compact" },
-              { value: "comfortable", label: "Comfortable" },
-            ]}
-            onChange={(value) => updateSetting("uiDensity", normalizeUiDensity(value))}
-            variant="surface"
-            width="full"
-            aria-label="UI density"
-          />
-        </SettingRow>
-
-        <SettingRow
-          label="Reduce Motion"
-          onReset={() => updateSetting("reduceMotion", getDefaultSetting("reduceMotion"))}
-          canReset={settings.reduceMotion !== getDefaultSetting("reduceMotion")}
-        >
-          <Switch
-            checked={settings.reduceMotion}
-            onChange={(checked) => updateSetting("reduceMotion", checked)}
-          />
-        </SettingRow>
-
-        <SettingRow
-          label="Show Tab Icons"
-          onReset={() => updateSetting("showTabIcons", getDefaultSetting("showTabIcons"))}
-          canReset={settings.showTabIcons !== getDefaultSetting("showTabIcons")}
-        >
-          <Switch
-            checked={settings.showTabIcons}
-            onChange={(checked) => updateSetting("showTabIcons", checked)}
-          />
-        </SettingRow>
-
-        <SettingRow
-          label="Tab Close Buttons"
-          control="select"
+          label="Window Transparency"
           onReset={() =>
-            updateSetting("tabCloseButtonVisibility", getDefaultSetting("tabCloseButtonVisibility"))
+            updateSetting("windowTransparency", getDefaultSetting("windowTransparency"))
           }
-          canReset={
-            settings.tabCloseButtonVisibility !== getDefaultSetting("tabCloseButtonVisibility")
-          }
+          canReset={settings.windowTransparency !== getDefaultSetting("windowTransparency")}
         >
-          <Select
-            value={settings.tabCloseButtonVisibility}
-            options={[
-              { value: "active", label: "Active and Hovered" },
-              { value: "hover", label: "Hovered Only" },
-              { value: "always", label: "Always" },
-            ]}
-            onChange={(value) =>
-              updateSetting("tabCloseButtonVisibility", value as TabCloseButtonVisibility)
-            }
-            variant="surface"
-            width="full"
+          <Switch
+            checked={settings.windowTransparency}
+            onChange={(checked) => updateSetting("windowTransparency", checked)}
           />
         </SettingRow>
-      </Section>
 
-      <Section title="Layout">
         {!IS_MAC && !IS_WINDOWS && !IS_LINUX && (
           <SettingRow
             label="Native Menu Bar"
@@ -441,32 +382,6 @@ export const AppearanceSettings = () => {
             />
           </SettingRow>
         )}
-
-        <SettingRow
-          label="Window Transparency"
-          onReset={() =>
-            updateSetting("windowTransparency", getDefaultSetting("windowTransparency"))
-          }
-          canReset={settings.windowTransparency !== getDefaultSetting("windowTransparency")}
-        >
-          <Switch
-            checked={settings.windowTransparency}
-            onChange={(checked) => updateSetting("windowTransparency", checked)}
-          />
-        </SettingRow>
-
-        <SettingRow
-          label="Open Projects In New Window"
-          onReset={() =>
-            updateSetting("openFoldersInNewWindow", getDefaultSetting("openFoldersInNewWindow"))
-          }
-          canReset={settings.openFoldersInNewWindow !== getDefaultSetting("openFoldersInNewWindow")}
-        >
-          <Switch
-            checked={settings.openFoldersInNewWindow}
-            onChange={(checked) => updateSetting("openFoldersInNewWindow", checked)}
-          />
-        </SettingRow>
       </Section>
 
       {isThemeCreatorOpen ? (

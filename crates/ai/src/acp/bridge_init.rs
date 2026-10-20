@@ -16,7 +16,7 @@ use super::{
       AcpAgentCapabilities, AcpAuthMethod, AcpEvent, AgentConfig, SessionConfigOption, SessionMode,
       SessionModeState,
    },
-   workspace_path::{self, path_to_string},
+   workspace_path::{self, path_to_string, projectless_cwd},
 };
 use crate::executable_path::find_executable;
 use agent_client_protocol::{
@@ -153,10 +153,7 @@ impl ConnectionHandle {
 
    /// The directory sessions are created in.
    pub(super) fn cwd(&self) -> PathBuf {
-      self
-         .workspace_path
-         .clone()
-         .unwrap_or_else(|| std::env::current_dir().unwrap_or_default())
+      self.workspace_path.clone().unwrap_or_else(projectless_cwd)
    }
 }
 
@@ -496,34 +493,13 @@ fn configure_background_agent_command(command: &mut Command) {
    }
 }
 
-/// Flags an agent is always started with, whatever its manifest or registry entry says. They are
-/// kept out of `AgentConfig::args` because terminal sign-in runs the agent's command with those
-/// args, and the wrapped CLI rejects flags it does not know.
-///
-/// The Claude adapter's `--hide-claude-auth` leaves out claude.ai subscription sign-in and refuses
-/// sessions signed in with a subscription: Anthropic does not allow third-party apps to offer
-/// Claude.ai login or route requests through Free, Pro or Max plan credentials.
-const LAUNCH_ONLY_ARGS: &[(&str, &[&str])] = &[("claude-acp", &["--hide-claude-auth"])];
-
-fn launch_args(config: &AgentConfig) -> Vec<String> {
-   let mut args = config.args.clone();
-   if let Some((_, extra)) = LAUNCH_ONLY_ARGS.iter().find(|(id, _)| *id == config.id) {
-      for arg in *extra {
-         if !args.iter().any(|existing| existing == arg) {
-            args.push((*arg).to_string());
-         }
-      }
-   }
-   args
-}
-
 fn spawn_agent_process(
    config: &AgentConfig,
    launch_env: &HashMap<String, String>,
    workspace_path: Option<&Path>,
 ) -> Result<Child> {
    let binary = config.binary_path.as_deref().unwrap_or(&config.binary_name);
-   let args = launch_args(config);
+   let args = &config.args;
    log::info!(
       "Starting agent '{}' (binary: {}, resolved: {}, args: {:?})",
       config.name,
@@ -534,7 +510,7 @@ fn spawn_agent_process(
 
    let mut cmd = Command::new(binary);
    configure_background_agent_command(&mut cmd);
-   cmd.args(&args)
+   cmd.args(args)
       .stdin(Stdio::piped())
       .stdout(Stdio::piped())
       .stderr(Stdio::piped());
@@ -550,9 +526,7 @@ fn spawn_agent_process(
       cmd.env(key, value);
    }
 
-   if let Some(path) = workspace_path {
-      cmd.current_dir(path);
-   }
+   cmd.current_dir(workspace_path.map_or_else(projectless_cwd, Path::to_path_buf));
 
    Ok(cmd.spawn()?)
 }
@@ -1092,19 +1066,6 @@ mod tests {
       };
       let request = serde_json::to_value(new_session_request("/work/app".into(), scope)).unwrap();
       assert!(request.get("additionalDirectories").is_none());
-   }
-
-   #[test]
-   fn the_claude_adapter_always_starts_without_subscription_sign_in() {
-      let claude = AgentConfig::new("claude-acp", "Claude Agent", "claude-agent-acp");
-      assert_eq!(launch_args(&claude), vec!["--hide-claude-auth".to_string()]);
-
-      // A registry entry that already passes the flag does not get it twice.
-      let claude = claude.with_args(vec!["--hide-claude-auth"]);
-      assert_eq!(launch_args(&claude), vec!["--hide-claude-auth".to_string()]);
-
-      let gemini = AgentConfig::new("gemini-cli", "Gemini CLI", "gemini").with_args(vec!["--acp"]);
-      assert_eq!(launch_args(&gemini), vec!["--acp".to_string()]);
    }
 
    #[test]

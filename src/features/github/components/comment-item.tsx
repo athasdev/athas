@@ -75,6 +75,7 @@ export const CommentItem = memo(
       const confirmed = await showConfirmDialog("Delete this comment permanently?", {
         title: "Delete comment",
         confirmLabel: "Delete",
+        destructive: true,
       });
       if (confirmed) await onDelete();
     };

@@ -11,6 +11,7 @@ import {
   ArrowsLeftRightIcon,
   ChatBubbleTextIcon,
   DatabaseIcon,
+  FolderIcon,
   GitBranchIcon,
   GitDiffIcon,
   GitPullRequestIcon,
@@ -108,8 +109,6 @@ export function BufferTypeIcon({
       ) : (
         <ActivityIcon className="text-subtle-foreground" />
       );
-    case "customView":
-      return <GridIcon className="text-subtle-foreground" />;
     case "globalSearch":
     case "references":
       return <SearchIcon className="text-subtle-foreground" />;
@@ -127,6 +126,8 @@ export function BufferTypeIcon({
       return <SettingsIcon className="text-subtle-foreground" />;
     case "customize":
       return <PuzzlePieceIcon className="text-subtle-foreground" />;
+    case "projectDashboard":
+      return <FolderIcon className="text-subtle-foreground" />;
     default:
       if (buffer.type === "diff" && isMultiFileDiff(buffer.diffData)) {
         return <GitBranchIcon className="text-subtle-foreground" />;

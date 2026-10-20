@@ -6,6 +6,26 @@ use std::{
    sync::Mutex,
 };
 
+/// Where agents run for sessions that belong to no project: `~/.athas/chats`, created on first use,
+/// so they never land in the app's own working directory.
+pub(super) fn projectless_cwd() -> PathBuf {
+   let fallback = || std::env::current_dir().unwrap_or_default();
+   let Some(home) = std::env::var_os("HOME")
+      .or_else(|| std::env::var_os("USERPROFILE"))
+      .map(PathBuf::from)
+   else {
+      return fallback();
+   };
+   let dir = home.join(".athas").join("chats");
+   match fs::create_dir_all(&dir) {
+      Ok(()) => dir,
+      Err(error) => {
+         log::warn!("Could not create {}: {error}", dir.display());
+         fallback()
+      }
+   }
+}
+
 pub(super) fn resolve_workspace_path(workspace_path: Option<String>) -> Result<Option<PathBuf>> {
    let Some(raw_path) = workspace_path else {
       return Ok(None);

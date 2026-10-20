@@ -12,28 +12,35 @@ export interface ProjectAgentStatus {
   attention: ChatAttention | null;
   /** Whether any session is writing a reply. */
   working: boolean;
+  /** How many sessions are writing a reply. */
+  workingCount: number;
+  /** How many sessions wait on the user. */
+  attentionCount: number;
 }
 
 /** The combined state of a project's agent sessions, for its collapsed sidebar header. */
 export function useProjectAgentStatus(
   chats: readonly Pick<ChatSession, "id" | "acpSessionId">[],
 ): ProjectAgentStatus {
-  const working = useAIChatStore((state) =>
-    chats.some((chat) => isAgentSessionWorking(state.messagesByChat[chat.id])),
+  const workingCount = useAIChatStore(
+    (state) => chats.filter((chat) => isAgentSessionWorking(state.messagesByChat[chat.id])).length,
   );
   const permissions = useAgentPermissionsStore.use.permissions();
   const questions = useAcpQuestionsStore.use.questions();
   const authRequest = useAcpAuthStore.use.request();
   let attention: ChatAttention | null = null;
+  let attentionCount = 0;
   for (const chat of chats) {
-    attention = getChatAttention({
+    const chatAttention = getChatAttention({
       chatId: chat.id,
       sessionId: chat.acpSessionId,
       pendingPermissions: permissions.filter((item) => item.chatId === chat.id).length,
       questions,
       authRequest,
     });
-    if (attention) break;
+    if (!chatAttention) continue;
+    attention ??= chatAttention;
+    attentionCount += 1;
   }
-  return { attention, working };
+  return { attention, working: workingCount > 0, workingCount, attentionCount };
 }

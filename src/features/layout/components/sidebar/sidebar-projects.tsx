@@ -3,12 +3,18 @@ import { toast } from "sonner";
 import { AgentAttentionDot } from "@/features/ai/components/agent-attention-dot";
 import {
   ArchivedSessions,
+  ChatSessions,
   OtherCloudSessions,
+  PinnedSessions,
   ProjectSessionList,
 } from "@/features/ai/components/sidebar/workbench-sessions";
+import { useOutsideAgentSessions } from "@/features/ai/hooks/use-outside-agent-sessions";
 import { useProjectAgentStatus } from "@/features/ai/hooks/use-project-agent-status";
 import { type SidebarSessions, useSidebarSessions } from "@/features/ai/hooks/use-sidebar-sessions";
-import { startAgentInProject } from "@/features/ai/services/agent-project-navigation";
+import {
+  openProjectDashboard,
+  startAgentInProject,
+} from "@/features/ai/services/agent-project-navigation";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useRecentFoldersStore } from "@/features/file-system/stores/recent-folders.store";
 import { activateProject, showProjectView } from "@/features/layout/services/project-view";
@@ -54,7 +60,9 @@ import {
   DropdownMenuTrigger,
 } from "@/ui/dropdown";
 import {
+  ChevronRightIcon,
   DotsIcon,
+  FolderIcon,
   FolderOpenIcon,
   ImageIcon,
   PlusIcon,
@@ -128,6 +136,7 @@ function ProjectGroup({
   const revealInFolder = useFileSystemStore((state) => state.handleRevealInFolder);
   const isLocal = !isRemoteProjectPath(project.path) && !isWslPath(project.path);
   const newSession = () => void startAgentInProject(project.id);
+  const outside = useOutsideAgentSessions(project.path, aiEnabled && !collapsed && isLocal);
   const iconPath = useProjectIcon(project.path, project.customIcon);
 
   return (
@@ -163,6 +172,10 @@ function ProjectGroup({
               <DotsIcon />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" size="default">
+              <DropdownMenuItem onClick={() => void openProjectDashboard(project.id)}>
+                <FolderIcon />
+                Open dashboard
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => void showProjectView(project.id)}>
                 <SidebarRightIcon />
                 Show project files
@@ -204,7 +217,20 @@ function ProjectGroup({
           active={active && collapsed}
           aria-expanded={!collapsed}
           title={project.path}
-          leading={<ProjectGlyph projectPath={project.path} iconPath={iconPath} />}
+          leading={
+            <span className="relative flex size-[1em] items-center justify-center">
+              <span className="flex items-center justify-center transition-opacity duration-fast group-hover/sidebar-list-action-row:opacity-0 group-has-focus-visible/sidebar-list-action-row:opacity-0 motion-reduce:transition-none">
+                <ProjectGlyph projectPath={project.path} iconPath={iconPath} />
+              </span>
+              <ChevronRightIcon
+                aria-hidden
+                className={cn(
+                  "absolute opacity-0 transition-[opacity,transform] duration-fast group-hover/sidebar-list-action-row:opacity-100 group-has-focus-visible/sidebar-list-action-row:opacity-100 motion-reduce:transition-none",
+                  !collapsed && "rotate-90",
+                )}
+              />
+            </span>
+          }
           trailing={
             collapsed && status.attention ? (
               <AgentAttentionDot attention={status.attention} />
@@ -212,15 +238,35 @@ function ProjectGroup({
               <Spinner label={`A session is working in ${project.name}`} compact />
             ) : null
           }
-          onClick={() => toggleProjectCollapsed(project.id)}
+          onClick={(event) => {
+            if (event.target instanceof Element && event.target.closest("[data-project-name]")) {
+              void openProjectDashboard(project.id);
+              return;
+            }
+            toggleProjectCollapsed(project.id);
+          }}
         >
-          <span className={cn(active && "font-medium text-foreground")}>{project.name}</span>
+          <span
+            data-project-name
+            title={`Open ${project.name} dashboard`}
+            className={cn("hover:underline", active && "font-medium text-foreground")}
+          >
+            {project.name}
+          </span>
         </SidebarListItem>
       </SidebarListActionRow>
       {collapsed ? null : (
-        <div className="flex flex-col gap-px pl-3">
-          <ProjectSessionList sessions={sessions} projectPath={project.path} />
-          {aiEnabled && (sessions?.chats.length ?? 0) === 0 && !sessions?.cloudRuns.length ? (
+        <div className="flex flex-col gap-px pl-4">
+          <ProjectSessionList
+            sessions={sessions}
+            projectId={project.id}
+            projectPath={project.path}
+            outside={outside}
+          />
+          {aiEnabled &&
+          (sessions?.chats.length ?? 0) === 0 &&
+          !sessions?.cloudRuns.length &&
+          outside.length === 0 ? (
             <SidebarListItem leading={<PlusIcon />} onClick={newSession}>
               New session
             </SidebarListItem>
@@ -291,6 +337,7 @@ export function SidebarProjects() {
       {
         title: connectionId ? "Remove Remote Connection" : "Remove Project",
         confirmLabel: "Remove",
+        destructive: true,
       },
     );
     if (!confirmed) return;
@@ -312,7 +359,7 @@ export function SidebarProjects() {
   const handleRemoveRemoteConnection = async (connection: RemoteConnection) => {
     const confirmed = await showConfirmDialog(
       `Remove “${connection.name}” from Athas? Remote files will not be deleted.`,
-      { title: "Remove Remote Connection", confirmLabel: "Remove" },
+      { title: "Remove Remote Connection", confirmLabel: "Remove", destructive: true },
     );
     if (!confirmed) return;
     try {
@@ -327,8 +374,10 @@ export function SidebarProjects() {
 
   return (
     <div className="flex flex-col gap-3">
+      <PinnedSessions chats={sessions.pinned} />
       <section aria-label="Projects" className="flex flex-col gap-1">
         <SidebarSectionLabel
+          className="pr-0.5"
           trailing={
             <DropdownMenu
               onOpenChange={(open) => {
@@ -402,6 +451,7 @@ export function SidebarProjects() {
           </SidebarListItem>
         ) : null}
       </section>
+      {aiEnabled ? <ChatSessions chats={sessions.chats} /> : null}
       <OtherCloudSessions chats={sessions.otherChats} runs={sessions.otherRuns} />
       <ArchivedSessions chats={sessions.archived} />
       {iconPickerProject ? (

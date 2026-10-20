@@ -98,7 +98,6 @@ export interface Settings {
   uiFontFamily: string;
   uiDensity: UiDensity;
   uiFontSize: number;
-  reduceMotion: boolean;
   showTabIcons: boolean;
   tabCloseButtonVisibility: TabCloseButtonVisibility;
   // Theme

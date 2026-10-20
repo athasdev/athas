@@ -34,16 +34,20 @@ import { useDebuggerStore } from "@/features/debugger/stores/debugger.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import {
   type DockerActivitySection,
+  type DockerContainerFilter,
   useSidebarStore,
 } from "@/features/layout/stores/sidebar.store";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
+import { getProjectToolPaneId } from "@/features/layout/services/dock-pane-registry";
+import { usePaneCommands } from "@/features/layout/hooks/use-pane-commands";
+import { runPaneCommand } from "@/features/layout/services/pane-commands";
 import { showPromptDialog } from "@/ui/dialog";
 import {
   SidebarTabBar,
   SidebarSearchPopover,
   SidebarSectionLabel,
-  SidebarWorkspace,
+  SidebarPanel,
 } from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
 import {
@@ -119,7 +123,6 @@ type DockerSection =
   | "volumes"
   | "networks"
   | "cleanup";
-type DockerContainerFilter = "all" | "running" | "stopped";
 
 const dockerSectionGroups: Record<DockerActivitySection, DockerSection[]> = {
   resources: ["containers", "images", "cleanup", "volumes", "networks"],
@@ -198,7 +201,6 @@ export function DockerSidebar() {
     isComposeLoading,
     isComposeRefreshing,
     isProjectConfigLoading,
-    isProjectConfigRefreshing,
     composeError,
     projectConfigError,
     loadComposeProject,
@@ -207,10 +209,10 @@ export function DockerSidebar() {
     setComposeError,
     setProjectConfigError,
   } = useDockerWorkspaceProject(rootFolderPath ?? null);
-  const [query, setQuery] = useState("");
+  const query = useSidebarStore.use.dockerQuery();
+  const containerFilter = useSidebarStore.use.dockerContainerFilter();
   const activeSection = useSidebarStore.use.dockerSection();
   const setActiveSection = useSidebarStore.use.actions().setDockerSection;
-  const [containerFilter, setContainerFilter] = useState<DockerContainerFilter>("all");
   const [collapsedSections, setCollapsedSections] = useState<Set<DockerSection>>(() => new Set());
   const [busyContainerId, setBusyContainerId] = useState<string | null>(null);
   const [busyComposeService, setBusyComposeService] = useState<string | null>(null);
@@ -247,6 +249,7 @@ export function DockerSidebar() {
     }
     void loadProjectConfig();
   }, [activeSection, loadComposeProject, loadInventory, loadProjectConfig]);
+  usePaneCommands(getProjectToolPaneId("docker"), { refresh: refreshDocker });
 
   const normalizedQuery = query.trim().toLowerCase();
   const filteredContainers = inventory.containers.filter((container) => {
@@ -894,12 +897,6 @@ export function DockerSidebar() {
   };
 
   const isDockerDaemonReady = !isLoading && connectionError === null;
-  const isActiveSectionLoading =
-    activeSection === "resources" || activeSection === "registry"
-      ? isRefreshing
-      : activeSection === "compose"
-        ? isComposeRefreshing
-        : isProjectConfigRefreshing;
 
   const renderSection = (section: DockerSection, rows: ReactNode) => {
     const title = section === "cleanup" ? "Cleanup" : section[0].toUpperCase() + section.slice(1);
@@ -939,58 +936,7 @@ export function DockerSidebar() {
 
   return (
     <>
-      <SidebarWorkspace
-        title="Docker"
-        actions={
-          <>
-            <SidebarSearchPopover
-              value={query}
-              onChange={setQuery}
-              placeholder="Search Docker"
-              aria-label="Search Docker resources"
-            />
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    iconOnly
-                    active={containerFilter !== "all"}
-                    tooltip="View options"
-                    aria-label="Docker view options"
-                  />
-                }
-              >
-                <SlidersIcon />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuRadioGroup
-                  value={containerFilter}
-                  onValueChange={(value) => setContainerFilter(value as DockerContainerFilter)}
-                >
-                  <DropdownMenuLabel>Containers</DropdownMenuLabel>
-                  <DropdownMenuRadioItem value="all" closeOnClick>
-                    All
-                  </DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="running" closeOnClick>
-                    Running
-                  </DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="stopped" closeOnClick>
-                    Stopped
-                  </DropdownMenuRadioItem>
-                </DropdownMenuRadioGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem disabled={isActiveSectionLoading} onClick={refreshDocker}>
-                  {isActiveSectionLoading ? <Spinner compact /> : <ArrowClockwiseIcon />}
-                  Refresh
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </>
-        }
-        className="font-sans select-none"
-      >
+      <SidebarPanel className="font-sans select-none">
         <SidebarTabBar
           label="Docker sections"
           value={activeSection}
@@ -1574,7 +1520,7 @@ export function DockerSidebar() {
             ) : null}
           </>
         )}
-      </SidebarWorkspace>
+      </SidebarPanel>
 
       {dialogMode ? (
         <DockerImageDialog
@@ -1593,6 +1539,63 @@ export function DockerSidebar() {
           onRun={handleRunImage}
         />
       ) : null}
+    </>
+  );
+}
+
+/** The Docker pane header's actions: search its resources, filter containers and refresh. */
+export function DockerHeaderActions() {
+  const query = useSidebarStore.use.dockerQuery();
+  const containerFilter = useSidebarStore.use.dockerContainerFilter();
+  const { setDockerQuery, setDockerContainerFilter } = useSidebarStore.use.actions();
+  return (
+    <>
+      <SidebarSearchPopover
+        value={query}
+        onChange={setDockerQuery}
+        placeholder="Search Docker"
+        aria-label="Search Docker resources"
+      />
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button
+              type="button"
+              variant="ghost"
+              iconOnly
+              active={containerFilter !== "all"}
+              tooltip="View options"
+              aria-label="Docker view options"
+            />
+          }
+        >
+          <SlidersIcon />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuRadioGroup
+            value={containerFilter}
+            onValueChange={(value) => setDockerContainerFilter(value as DockerContainerFilter)}
+          >
+            <DropdownMenuLabel>Containers</DropdownMenuLabel>
+            <DropdownMenuRadioItem value="all" closeOnClick>
+              All
+            </DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="running" closeOnClick>
+              Running
+            </DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="stopped" closeOnClick>
+              Stopped
+            </DropdownMenuRadioItem>
+          </DropdownMenuRadioGroup>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onClick={() => void runPaneCommand(getProjectToolPaneId("docker"), "refresh")}
+          >
+            <ArrowClockwiseIcon />
+            Refresh
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </>
   );
 }

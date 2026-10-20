@@ -25,7 +25,7 @@ vi.mock("@/features/ai/services/ai-chat-history-service", () => ({
   saveChatMetadataToDb: vi.fn().mockResolvedValue(undefined),
   saveChatToDb: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock("@/features/views/services/view-github", () => ({
+vi.mock("@/features/github/services/project-github-repository", () => ({
   resolveProjectGitHubRepository: async () => ({ owner: "athasdev", repo: "athas" }),
 }));
 vi.mock("@/utils/external-url", () => ({

@@ -1,13 +1,11 @@
 import { useEffect } from "react";
 import { interruptsAgentFollow } from "@/features/ai/lib/agent-follow";
-import { stopFollowingAgent, toggleFollowAgent } from "@/features/ai/services/agent-follow-service";
+import { stopFollowingAgent } from "@/features/ai/services/agent-follow-service";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useIsFollowingAgent } from "@/features/ai/stores/agent-follow.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useToast } from "@/utils/toast";
 import { usePaneStore } from "@/features/panes/stores/pane.store";
-import { DropdownMenuCheckboxItem } from "@/ui/dropdown";
-import { CrosshairIcon } from "@/ui/icons";
 
 const USER_INPUT_EVENTS = ["pointerdown", "keydown", "wheel"] as const;
 
@@ -56,20 +54,4 @@ export function useFollowAgentInterrupt(chatId: string | null) {
       }
     };
   }, [chatId, following, running, showToast]);
-}
-
-/** The chat's "Follow agent" toggle, as a row of the composer's model menu. */
-export function FollowAgentMenuItem({ chatId }: { chatId: string }) {
-  const following = useIsFollowingAgent(chatId);
-  return (
-    <DropdownMenuCheckboxItem
-      checked={following}
-      closeOnClick={false}
-      onCheckedChange={() => toggleFollowAgent(chatId)}
-      title="Open the files the agent works in while its turn runs"
-    >
-      <CrosshairIcon />
-      <span className="min-w-0 flex-1 truncate">Follow agent in editor</span>
-    </DropdownMenuCheckboxItem>
-  );
 }

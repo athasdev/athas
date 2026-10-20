@@ -185,6 +185,11 @@ export interface AIChatProps {
   allProjectFiles?: FileEntry[];
   /** Controls the host adds to the session header, such as its tool panel toggle. */
   headerActions?: ReactNode;
+  /**
+   * The host's tab bar carries the session's title and controls (see `AgentHeaderActions`), so
+   * the chat drops its own header row and only shows the message search bar while it is open.
+   */
+  headerInTabBar?: boolean;
   mode: "chat";
 }
 

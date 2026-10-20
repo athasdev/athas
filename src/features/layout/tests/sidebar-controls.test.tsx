@@ -40,15 +40,6 @@ vi.mock("@/features/layout/stores/ui-state.store", async () => {
   const { create: createStore } = await import("zustand");
   const store = createStore<Record<string, unknown>>()((set) => ({
     isSidebarVisible: true,
-    isGitViewActive: false,
-    isGitHubPRsViewActive: false,
-    activeSidebarView: "files",
-    setActiveView: (view: string) =>
-      set({
-        activeSidebarView: view,
-        isGitViewActive: view === "git",
-        isGitHubPRsViewActive: view === "github-prs",
-      }),
     setIsSidebarVisible: (visible: boolean) => set({ isSidebarVisible: visible }),
   }));
   return { useUIState: store };
@@ -57,11 +48,9 @@ vi.mock("@/features/layout/stores/ui-state.store", async () => {
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
-import { workspaceSessionRepository } from "@/features/workspace/persistence/services/workspace-session-repository";
 import { GIT_SIDEBAR_ITEM_IDS, normalizeItemOrder } from "../config/item-order";
 import { useResponsiveWorkbenchLayout } from "../hooks/use-responsive-workbench-layout";
 import { createTerminalSlice, type TerminalSlice } from "../stores/ui-state/terminal-slice";
-import { createViewSlice, type ViewSlice } from "../stores/ui-state/view-slice";
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -86,12 +75,7 @@ const settingsStore = useSettingsStore as unknown as {
 };
 
 beforeEach(() => {
-  uiStore.setState({
-    isSidebarVisible: true,
-    isGitViewActive: false,
-    isGitHubPRsViewActive: false,
-    activeSidebarView: "files",
-  });
+  uiStore.setState({ isSidebarVisible: true });
   settingsStore.setState({
     settings: { hiddenSidebarActivityItems: [], pinnedSidebarExtensionItems: [] },
   });
@@ -132,34 +116,7 @@ describe("normalizeItemOrder", () => {
   });
 });
 
-describe("view and terminal slices", () => {
-  it("tracks the active view and saves it with the project UI state", () => {
-    const store = create<ViewSlice>()(createViewSlice);
-    useProjectStore.setState({ rootFolderPath: "/projects/view-slice" });
-
-    store.getState().setActiveView("github-prs");
-
-    expect(store.getState()).toMatchObject({
-      isGitViewActive: false,
-      isGitHubPRsViewActive: true,
-      activeSidebarView: "github-prs",
-    });
-    expect(workspaceSessionRepository.loadUi("/projects/view-slice")).toMatchObject({
-      activeSidebarView: "github-prs",
-    });
-  });
-
-  it("does not save the view without an open project", () => {
-    const save = vi.spyOn(workspaceSessionRepository, "saveUi");
-    const store = create<ViewSlice>()(createViewSlice);
-
-    store.getState().setActiveView("git");
-
-    expect(store.getState().isGitViewActive).toBe(true);
-    expect(save).not.toHaveBeenCalled();
-    save.mockRestore();
-  });
-
+describe("terminal slice", () => {
   it("focuses the registered terminal on request", () => {
     const store = create<TerminalSlice>()(createTerminalSlice);
     const focus = vi.fn();

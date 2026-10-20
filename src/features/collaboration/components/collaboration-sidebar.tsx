@@ -76,7 +76,7 @@ import {
   SidebarListItem,
   SidebarTabPanels,
   SidebarTabBar,
-  SidebarWorkspace,
+  SidebarPanel,
 } from "@/ui/sidebar";
 import { toast } from "sonner";
 import Tooltip from "@/ui/tooltip";
@@ -526,9 +526,9 @@ export function CollaborationSidebarView() {
 
   if (!model) {
     return (
-      <SidebarWorkspace title="Collaboration">
+      <SidebarPanel>
         <EmptyState layout="sidebar" message="Teams workspace is not available for this account." />
-      </SidebarWorkspace>
+      </SidebarPanel>
     );
   }
 
@@ -1446,7 +1446,7 @@ export function CollaborationSidebarView() {
   );
 
   return (
-    <SidebarWorkspace title="Collaboration">
+    <SidebarPanel>
       <SidebarTabBar
         label="Collaboration sections"
         className="relative z-10020"
@@ -1518,7 +1518,7 @@ export function CollaborationSidebarView() {
           />
         ) : null}
       </ChannelIconMenu>
-    </SidebarWorkspace>
+    </SidebarPanel>
   );
 }
 

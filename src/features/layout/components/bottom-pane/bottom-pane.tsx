@@ -15,6 +15,7 @@ import TerminalContainer from "@/features/terminal/components/terminal-container
 import { cn } from "@/utils/cn";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
+import { Pane } from "@/ui/pane";
 import { WorkbenchFullscreenSurface } from "@/ui/workbench-fullscreen-surface";
 import { emitAppEvent, onAppEvent } from "@/utils/app-events";
 import { BottomBufferPane } from "./bottom-buffer-pane";
@@ -203,12 +204,7 @@ const BottomPane = () => {
   const resizeGutter = !isFullScreen ? (
     <div
       onMouseDown={handleMouseDown}
-      className={cn(
-        "group relative z-20 flex h-workbench w-full shrink-0 cursor-ns-resize",
-        "transition-colors duration-fast ease-smooth hover:bg-primary-soft",
-        "bg-background",
-        isResizing && "bg-primary-soft",
-      )}
+      className="group flex h-workbench w-full shrink-0 cursor-row-resize items-center"
       role="separator"
       tabIndex={0}
       aria-orientation="horizontal"
@@ -216,21 +212,21 @@ const BottomPane = () => {
     >
       <div
         className={cn(
-          "absolute inset-x-0 -top-px h-px bg-transparent transition-colors duration-fast ease-smooth group-hover:bg-primary",
-          isResizing && "bg-primary",
+          "h-px w-full transition-colors duration-fast ease-smooth",
+          isResizing ? "bg-primary" : "group-hover:bg-border-strong",
         )}
       />
     </div>
   ) : null;
 
   const paneContent = (
-    <div
+    <Pane
+      surface={isFullScreen ? "plain" : "island"}
       data-bottom-pane-drop-target
       className={cn(
-        "athas-glass-island group/chrome-host relative flex min-h-0 flex-col overflow-hidden bg-background",
+        "relative",
         isInternalHoverTarget && "ring-2 ring-primary ring-inset",
-        isFullScreen && "size-full ring-0",
-        !isFullScreen && "flex-1",
+        isFullScreen ? "size-full" : "flex-1",
       )}
       onDragOver={handleDragOver}
       onDrop={handleDrop}
@@ -243,6 +239,7 @@ const BottomPane = () => {
             className={cn("h-full", bottomPaneActiveTab === "terminal" ? "block" : "hidden")}
             onFullScreen={() => setIsFullScreen(!isFullScreen)}
             isFullScreen={isFullScreen}
+            onClose={closeBottomPane}
           />
         )}
 
@@ -264,7 +261,7 @@ const BottomPane = () => {
           </div>
         )}
       </div>
-    </div>
+    </Pane>
   );
 
   const pane = isFullScreen ? (

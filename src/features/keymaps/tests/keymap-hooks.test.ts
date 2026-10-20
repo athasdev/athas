@@ -15,10 +15,8 @@ vi.hoisted(() => {
 
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useVimStore } from "@/features/vim/stores/vim.store";
-import { useKeybindingConflicts } from "../hooks/use-keybinding-conflicts";
 import { useKeybindingRecorder } from "../hooks/use-keybinding-recorder";
 import { useKeymapContext } from "../hooks/use-keymap-context";
-import { keymapRegistry } from "../services/keymap-registry";
 import { useKeymapStore } from "../stores/keymaps.store";
 
 function renderHook<T>(useHook: () => T) {
@@ -113,57 +111,6 @@ describe("keybinding recorder", () => {
     act(() => other.result.current.stopRecording());
     expect(useKeymapStore.getState().recordingCommandId).toBeNull();
     other.unmount();
-  });
-});
-
-describe("keybinding conflicts", () => {
-  beforeEach(() => {
-    for (const id of ["files.save", "files.saveAll", "terminal.clear"]) {
-      keymapRegistry.registerCommand({ id, title: id, execute: () => {} });
-    }
-    useKeymapStore.setState({
-      keybindings: [
-        { key: "cmd+s", command: "files.save", source: "user", enabled: true },
-        { key: "cmd+s", command: "files.saveAll", source: "user", enabled: false },
-        {
-          key: "cmd+k",
-          command: "terminal.clear",
-          when: "terminalFocus",
-          source: "user",
-          enabled: true,
-        },
-        { key: "cmd+s", command: "unregistered.command", source: "user", enabled: true },
-      ],
-    });
-  });
-
-  afterEach(() => {
-    for (const id of ["files.save", "files.saveAll", "terminal.clear"]) {
-      keymapRegistry.unregisterCommand(id);
-    }
-  });
-
-  it("lists enabled, registered commands on the same key and context", () => {
-    const { result, unmount } = renderHook(() => useKeybindingConflicts("cmd+s", "editor.format"));
-    expect(result.current.hasConflict).toBe(true);
-    expect(result.current.conflictingCommands.map((command) => command.id)).toEqual(["files.save"]);
-    unmount();
-  });
-
-  it("does not conflict with itself, other contexts or an empty key", () => {
-    const self = renderHook(() => useKeybindingConflicts("cmd+s", "files.save"));
-    expect(self.result.current.hasConflict).toBe(false);
-
-    const otherContext = renderHook(() => useKeybindingConflicts("cmd+k", "x", "editorFocus"));
-    expect(otherContext.result.current.hasConflict).toBe(false);
-
-    const sameContext = renderHook(() => useKeybindingConflicts("cmd+k", "x", "terminalFocus"));
-    expect(sameContext.result.current.conflictingCommands.map((command) => command.id)).toEqual([
-      "terminal.clear",
-    ]);
-
-    const empty = renderHook(() => useKeybindingConflicts("", "x"));
-    expect(empty.result.current).toEqual({ hasConflict: false, conflictingCommands: [] });
   });
 });
 

@@ -46,7 +46,7 @@ describe("Customize routing", () => {
     expect(buffer).toMatchObject({
       type: "customize",
       path: "customize://agents",
-      name: "Customize",
+      name: "Integrations",
     });
     expect(isSingletonToolBuffer(buffer)).toBe(true);
     expect(isVirtualContent(buffer)).toBe(true);

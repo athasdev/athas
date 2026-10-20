@@ -31,6 +31,7 @@ const io = vi.hoisted(() => {
     closed: [] as string[],
     folderPicks: 0,
     started: [] as string[],
+    dashboards: [] as string[],
     shownTools: [] as string[],
     shownProjects: [] as string[],
     pickerSteps: [] as string[],
@@ -65,9 +66,11 @@ vi.mock("@/features/workspace/project-icons/components/project-icon-picker", () 
 
 vi.mock("@/features/ai/hooks/use-sidebar-sessions", () => ({
   useSidebarSessions: () => ({
+    pinned: [{ id: "c2", title: "Release notes" }],
     byProject: {
       web: { projectId: "web", chats: [{ id: "c1", title: "Fix login" }], cloudRuns: [] },
     },
+    chats: [],
     otherChats: [],
     otherRuns: [],
     archived: [],
@@ -81,14 +84,22 @@ vi.mock("@/features/ai/components/sidebar/workbench-sessions", () => ({
       ))}
     </ul>
   ),
+  PinnedSessions: ({ chats }: { chats: { id: string; title: string }[] }) => (
+    <section aria-label="Pinned sessions">{chats.map((chat) => chat.title)}</section>
+  ),
+  ChatSessions: () => null,
   OtherCloudSessions: () => null,
   ArchivedSessions: () => null,
+}));
+vi.mock("@/features/ai/hooks/use-outside-agent-sessions", () => ({
+  useOutsideAgentSessions: () => [],
 }));
 vi.mock("@/features/ai/hooks/use-project-agent-status", () => ({
   useProjectAgentStatus: () => io.status,
 }));
 vi.mock("@/features/ai/services/agent-project-navigation", () => ({
   startAgentInProject: (id: string) => io.started.push(id),
+  openProjectDashboard: (id: string) => io.dashboards.push(id),
 }));
 vi.mock("@/features/layout/services/project-view", () => ({
   activateProject: async () => true,
@@ -195,10 +206,11 @@ beforeEach(() => {
   io.closed = [];
   io.folderPicks = 0;
   io.started = [];
+  io.dashboards = [];
   io.shownTools = [];
   io.shownProjects = [];
   io.status = { attention: null, working: false };
-  useWorkbenchSidebarStore.setState({ collapsedProjects: {}, inboxOpen: false });
+  useWorkbenchSidebarStore.setState({ collapsedProjects: {} });
   useProjectStore.setState({ rootFolderPath: "/code/web" });
   useFileSystemStore.setState({
     closeProject: async (id: string) => {
@@ -247,6 +259,17 @@ describe("sidebar projects", () => {
     expect(io.iconScans).toEqual(["/code/web"]);
   });
 
+  it("lists pinned sessions above the projects, not inside them", async () => {
+    await render();
+    const pinned = view().getByRole("region", { name: "Pinned sessions" });
+    const projects = view().getByRole("region", { name: "Projects" });
+    expect(pinned.textContent).toContain("Release notes");
+    expect(group("web")?.textContent).not.toContain("Release notes");
+    expect(
+      pinned.compareDocumentPosition(projects) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
   it("folds a project to its header, which then shows a session at work", async () => {
     io.status = { attention: null, working: true };
     await render();
@@ -254,6 +277,21 @@ describe("sidebar projects", () => {
     expect(group("web")?.textContent).not.toContain("Fix login");
     expect(within(group("web")!).getByRole("status")).toBeTruthy();
     expect(useWorkbenchSidebarStore.getState().collapsedProjects).toEqual({ web: true });
+  });
+
+  it("opens the project dashboard from its name and folds it from the rest of its row", async () => {
+    await render();
+    const header = within(group("web")!).getByRole("button", { name: /^web/ });
+    await click(header.querySelector<HTMLElement>("[data-project-name]")!);
+    expect(io.dashboards).toEqual(["web"]);
+    expect(useWorkbenchSidebarStore.getState().collapsedProjects).toEqual({});
+
+    await click(header);
+    expect(io.dashboards).toEqual(["web"]);
+    expect(useWorkbenchSidebarStore.getState().collapsedProjects).toEqual({ web: true });
+
+    await projectAction("api", "Open dashboard");
+    expect(io.dashboards).toEqual(["web", "api"]);
   });
 
   it("starts a session in the project it is asked from", async () => {

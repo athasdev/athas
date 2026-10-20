@@ -12,19 +12,15 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/ui/dropdown";
-import {
-  GitDiffIcon,
-  GlobeIcon,
-  ListChecksIcon,
-  SidebarRightIcon,
-  TerminalIcon,
-  WrenchIcon,
-} from "@/ui/icons";
-import { useHasSessionPlan } from "../hooks/use-session-tool-availability";
+import { DotsIcon, GitDiffIcon, GlobeIcon, ListChecksIcon, TerminalIcon } from "@/ui/icons";
+import { ChatConversationMenuItems } from "@/features/ai/components/chat/chat-header";
+import { useHasSessionPlan, useSessionHasChanges } from "../hooks/use-session-tool-availability";
 import { openSessionTool, toggleSessionTool } from "../services/session-tools";
 import { StatusDot } from "@/ui/status-dot";
+import { isAgentWindow } from "@/features/ai/detached/services/agent-window-service";
 import { getSessionDockOwner, useSessionPanelStore } from "../stores/session-panel.store";
 import type { SessionPanelTab } from "../types/session-panel.types";
 
@@ -48,7 +44,9 @@ function HeaderToolButton({
       selectDockLayout(state, getSessionDockOwner(chatId)).panes.includes(tool.tab),
   );
   const attention = useSessionPanelStore((state) => Boolean(state.attention[chatId]?.[tool.tab]));
+  const hasChanges = useSessionHasChanges(chatId);
   const label = attention && !active ? `${tool.label}, has something new` : tool.label;
+  if (tool.tab === "changes" && !hasChanges && !active && !attention) return null;
   return (
     <span className="relative flex">
       <Button
@@ -69,8 +67,11 @@ function HeaderToolButton({
   );
 }
 
-/** Plan and the project tools (Files, Source Control, GitHub…), opened in the session's dock. */
-function MoreToolsMenu({ chatId }: { chatId: string }) {
+/**
+ * The session's other actions: its plan and the project tools (Files, Source Control, GitHub…),
+ * opened in its dock, then the conversation's own actions.
+ */
+function SessionMoreActionsMenu({ chatId }: { chatId: string }) {
   const coreFeatures = useSettingsStore((state) => state.settings.coreFeatures);
   const hasPlan = useHasSessionPlan(getSessionDockOwner(chatId));
   const tools = getSidebarViews().filter(
@@ -84,12 +85,12 @@ function MoreToolsMenu({ chatId }: { chatId: string }) {
             type="button"
             variant="ghost"
             iconOnly
-            aria-label="More tools"
-            tooltip="More tools"
+            aria-label="More actions"
+            tooltip="More actions"
           />
         }
       >
-        <WrenchIcon />
+        <DotsIcon />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" size="default">
         {hasPlan ? (
@@ -116,39 +117,27 @@ function MoreToolsMenu({ chatId }: { chatId: string }) {
             </DropdownMenuItem>
           ))}
         </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <ChatConversationMenuItems chatId={chatId} />
       </DropdownMenuContent>
     </DropdownMenu>
   );
 }
 
-/** The session header's way into its tools, and the switch that puts the dock away. */
+/** The session header's way into its tools; the tab bar holds the switch that puts the dock away. */
 export function SessionHeaderTools({ chatId }: { chatId: string }) {
-  const hidden = useDockLayoutStore.use.hidden();
-  const { setHidden } = useDockLayoutStore.use.actions();
-  const shortcut = useCommandShortcut("ai.toggleSessionPanel");
   const isCloud = useAIChatStore((state) =>
     Boolean(state.chats.find((chat) => chat.id === chatId)?.sessionSettings?.cloud),
   );
 
   return (
     <>
-      {(isCloud ? [] : HEADER_TOOLS).map((tool) => (
-        <HeaderToolButton key={tool.tab} chatId={chatId} tool={tool} />
-      ))}
-      <MoreToolsMenu chatId={chatId} />
-      <Button
-        type="button"
-        variant="ghost"
-        iconOnly
-        active={!hidden}
-        aria-pressed={!hidden}
-        aria-label="Session dock"
-        tooltip={hidden ? "Show the session dock" : "Hide the session dock"}
-        shortcut={shortcut}
-        onClick={() => setHidden(!hidden)}
-      >
-        <SidebarRightIcon />
-      </Button>
+      {(isCloud ? [] : HEADER_TOOLS)
+        .filter((tool) => !isAgentWindow() || tool.tab === "changes")
+        .map((tool) => (
+          <HeaderToolButton key={tool.tab} chatId={chatId} tool={tool} />
+        ))}
+      <SessionMoreActionsMenu chatId={chatId} />
     </>
   );
 }

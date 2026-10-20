@@ -14,7 +14,10 @@ vi.mock("@tauri-apps/api/event", () => ({
 }));
 
 const { chats } = vi.hoisted(() => ({
-  chats: new Map<string, { id: string; agentId: string; acpSessionId: string | null }>(),
+  chats: new Map<
+    string,
+    { id: string; agentId: string; acpSessionId: string | null; workspacePath?: string | null }
+  >(),
 }));
 
 vi.mock("@/features/ai/stores/ai-chat.store", () => ({
@@ -804,8 +807,18 @@ describe("AcpStreamHandler", () => {
   });
 
   it("runs prompts in two chats on the same agent at once, each in its own session", async () => {
-    chats.set("chat-1", { id: "chat-1", agentId: "codex", acpSessionId: "session-a" });
-    chats.set("chat-2", { id: "chat-2", agentId: "codex", acpSessionId: "session-b" });
+    chats.set("chat-1", {
+      id: "chat-1",
+      agentId: "codex",
+      acpSessionId: "session-a",
+      workspacePath: "/workspace",
+    });
+    chats.set("chat-2", {
+      id: "chat-2",
+      agentId: "codex",
+      acpSessionId: "session-b",
+      workspacePath: "/workspace",
+    });
     mockOpenSessions({ "chat-1": "session-a", "chat-2": "session-b" });
     const handlersFor = () => ({ onChunk: vi.fn(), onComplete: vi.fn(), onError: vi.fn() });
     const firstHandlers = handlersFor();

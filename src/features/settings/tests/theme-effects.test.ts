@@ -109,7 +109,7 @@ describe("theme side effects", () => {
   it("discards outdated requests before the registry is ready", async () => {
     mocks.ready = false;
     const { applySettingSideEffect } = await import("@/features/settings/lib/settings-effects");
-    const settings = getDefaultSettingsSnapshot();
+    const settings = { ...getDefaultSettingsSnapshot(), syncSystemTheme: false };
     applySettingSideEffect("theme", settings.theme, () => settings);
     await vi.dynamicImportSettled();
     const staleReady = [...mocks.readyListeners][0];
@@ -129,7 +129,11 @@ describe("theme side effects", () => {
       id === "late-dark" ? undefined : { id, isDark: id.includes("dark") },
     );
     const { applySettingSideEffect } = await import("@/features/settings/lib/settings-effects");
-    const settings = { ...getDefaultSettingsSnapshot(), theme: "late-dark" };
+    const settings = {
+      ...getDefaultSettingsSnapshot(),
+      syncSystemTheme: false,
+      theme: "late-dark",
+    };
     applySettingSideEffect("theme", settings.theme, () => settings);
     await vi.dynamicImportSettled();
     const staleRegistration = [...mocks.registryListeners][0];

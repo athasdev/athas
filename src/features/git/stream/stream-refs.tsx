@@ -240,7 +240,7 @@ export function WorktreesPanel({
     if (!model.activeRepoPath) return;
     const confirmed = await showConfirmDialog(
       `Remove the worktree at ${worktree.path}? Its folder is deleted.`,
-      { title: "Remove worktree", confirmLabel: "Remove" },
+      { title: "Remove worktree", confirmLabel: "Remove", destructive: true },
     );
     if (!confirmed) return;
     if (!(await removeWorktree(model.activeRepoPath, worktree.path))) {
@@ -466,6 +466,7 @@ export function RemotesPanel({
     const confirmed = await showConfirmDialog(`Remove remote "${remote.name}"?`, {
       title: "Remove remote",
       confirmLabel: "Remove",
+      destructive: true,
     });
     if (!confirmed) return;
     if (!(await removeRemote(repoPath, remote.name))) {
@@ -670,6 +671,7 @@ export function TagsPanel({
           const confirmed = await showConfirmDialog(`Delete ${tag.name} from ${remoteName}?`, {
             title: "Delete remote tag",
             confirmLabel: "Delete",
+            destructive: true,
           });
           if (confirmed) {
             await runRemote(`Deleted ${tag.name} from ${remoteName}`, () =>
@@ -700,6 +702,7 @@ export function TagsPanel({
           const confirmed = await showConfirmDialog(`Delete tag "${tag.name}"?`, {
             title: "Delete tag",
             confirmLabel: "Delete",
+            destructive: true,
           });
           if (!confirmed) return;
           if (!(await deleteTag(repoPath, tag.name))) {

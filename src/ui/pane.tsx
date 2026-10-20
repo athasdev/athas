@@ -1,13 +1,5 @@
 import { cva, type VariantProps } from "class-variance-authority";
-import {
-  type ComponentProps,
-  createContext,
-  forwardRef,
-  type ReactNode,
-  useContext,
-  useState,
-} from "react";
-import { createPortal } from "react-dom";
+import { type ComponentProps, forwardRef, type ReactNode } from "react";
 import { ChromeGroup } from "@/ui/chrome";
 import { ControlSizeProvider } from "@/ui/control-size";
 import { cn } from "@/utils/cn";
@@ -29,39 +21,27 @@ const paneVariants = cva(
         island: "athas-glass-island rounded-xl bg-background shadow-(--shadow-raised)",
         plain: "",
       },
+      /** Fades in as it mounts, for a pane the user just added beside others. */
+      appear: {
+        true: "transition-opacity duration-fast ease-smooth starting:opacity-0 motion-reduce:transition-none",
+        false: "",
+      },
     },
-    defaultVariants: { surface: "plain" },
+    defaultVariants: { surface: "plain", appear: false },
   },
 );
 
-const PaneHeaderSlotContext = createContext<{
-  target: HTMLElement | null;
-  setTarget: (element: HTMLElement | null) => void;
-} | null>(null);
-
 export const Pane = forwardRef<
   HTMLDivElement,
-  ComponentProps<"div"> &
-    VariantProps<typeof paneVariants> & {
-      /**
-       * Lets the view inside hand its own title bar actions to this pane's header (see
-       * `PaneHeaderPortal`), so a view hosted in a pane does not stack a second header under it.
-       */
-      hostsViewChrome?: boolean;
-    }
->(function Pane({ className, surface, hostsViewChrome = false, children, ...props }, ref) {
-  const [target, setTarget] = useState<HTMLElement | null>(null);
-  const content = (
-    <div ref={ref} data-slot="pane" className={cn(paneVariants({ surface }), className)} {...props}>
-      {children}
-    </div>
-  );
-  return hostsViewChrome ? (
-    <PaneHeaderSlotContext.Provider value={{ target, setTarget }}>
-      {content}
-    </PaneHeaderSlotContext.Provider>
-  ) : (
-    content
+  ComponentProps<"div"> & VariantProps<typeof paneVariants>
+>(function Pane({ className, surface, appear, ...props }, ref) {
+  return (
+    <div
+      ref={ref}
+      data-slot="pane"
+      className={cn(paneVariants({ surface, appear }), className)}
+      {...props}
+    />
   );
 });
 
@@ -94,6 +74,21 @@ export const PaneHeader = forwardRef<
     </ControlSizeProvider>
   );
 });
+
+/**
+ * Room at the start of the window's top-left pane header for the window controls and the sidebar
+ * toggle, which float there while the sidebar is hidden. It takes no room otherwise, and cancels
+ * the header gap after it so the first tab or title keeps the pane inset.
+ */
+export function PaneHeaderLeadingSpace() {
+  return (
+    <div
+      aria-hidden
+      data-tauri-drag-region
+      className="-mr-chrome h-full w-title-leading shrink-0"
+    />
+  );
+}
 
 /** A pane's icon and name, with an optional quiet reading such as a count after it. */
 export function PaneTitle({
@@ -133,7 +128,6 @@ export function PaneActions({
   children,
   ...props
 }: Omit<ComponentProps<typeof ChromeGroup>, "gap" | "grow"> & { reveal?: boolean }) {
-  const slot = useContext(PaneHeaderSlotContext);
   return (
     <ChromeGroup
       data-slot="pane-actions"
@@ -142,22 +136,9 @@ export function PaneActions({
       className={cn("ml-auto", className)}
       {...props}
     >
-      {slot ? <span ref={slot.setTarget} className="contents" /> : null}
       {children}
     </ChromeGroup>
   );
-}
-
-/** Whether a hosting pane takes this view's title bar actions into its own header. */
-export function usePaneHeaderHost(): boolean {
-  return useContext(PaneHeaderSlotContext) !== null;
-}
-
-/** Renders a hosted view's header actions in the header of the pane that hosts it. */
-export function PaneHeaderPortal({ children }: { children: ReactNode }) {
-  const slot = useContext(PaneHeaderSlotContext);
-  if (!slot?.target) return null;
-  return createPortal(children, slot.target);
 }
 
 export function PaneBody({ className, ...props }: ComponentProps<"div">) {

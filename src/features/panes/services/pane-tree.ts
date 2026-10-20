@@ -337,6 +337,24 @@ export function getAllPaneGroups(root: PaneNode): PaneGroup[] {
   return groups;
 }
 
+/**
+ * The group in the top-left (`start`) or top-right (`end`) corner of the layout, whose tab bar
+ * sits at that end of the window's top row. A horizontal split lays its children side by side.
+ */
+export function getTopCornerPaneGroup(root: PaneNode, corner: "start" | "end"): PaneGroup {
+  if (root.type === "group") return root;
+  const child =
+    root.direction === "horizontal" && corner === "end" ? root.children[1] : root.children[0];
+  return getTopCornerPaneGroup(child, corner);
+}
+
+/** Whether the group's tab bar is in the top row of the layout, under no other group. */
+export function isPaneInTopRow(root: PaneNode, paneId: string): boolean {
+  if (root.type === "group") return root.id === paneId;
+  if (root.direction === "vertical") return isPaneInTopRow(root.children[0], paneId);
+  return isPaneInTopRow(root.children[0], paneId) || isPaneInTopRow(root.children[1], paneId);
+}
+
 export function getFirstPaneGroup(root: PaneNode): PaneGroup {
   if (root.type === "group") {
     return root;

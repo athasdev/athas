@@ -117,7 +117,7 @@ async function openContextMenu(row: HTMLElement) {
   await flush();
 }
 const menuItem = (label: string) =>
-  [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(
+  [...document.querySelectorAll<HTMLElement>('[role="menuitem"], [role="menuitemcheckbox"]')].find(
     (item) => item.textContent?.trim() === label,
   )!;
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useState } from "react";
 import { WarningCircleIcon } from "@/ui/icons";
 import { cva } from "class-variance-authority";
 import { Alert, AlertDescription } from "@/ui/alert";
@@ -7,7 +7,6 @@ import { Button } from "@/ui/button";
 import { TableCell, TableRow } from "@/ui/table";
 import KeybindingDisplay from "@/ui/keybinding";
 import { cn } from "@/utils/cn";
-import { useKeybindingConflicts } from "../hooks/use-keybinding-conflicts";
 import { useKeymapStore } from "../stores/keymaps.store";
 import type { Command, Keybinding } from "../types/keymaps.types";
 import { KeybindingInput } from "./keybinding-input";
@@ -17,17 +16,19 @@ export const keybindingTableMinWidth = cva("min-w-175");
 interface KeybindingRowProps {
   command: Command;
   keybinding?: Keybinding;
+  /** The commands that share this command's key and context. */
+  conflictingCommands: Command[];
 }
 
-export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
+export const KeybindingRow = memo(function KeybindingRow({
+  command,
+  keybinding,
+  conflictingCommands,
+}: KeybindingRowProps) {
   const [isEditing, setIsEditing] = useState(false);
   const { addKeybinding, removeKeybinding } = useKeymapStore.use.actions();
   const displayedKey = keybinding?.enabled === false ? undefined : keybinding?.key;
-  const { hasConflict, conflictingCommands } = useKeybindingConflicts(
-    displayedKey || "",
-    command.id,
-    keybinding?.when,
-  );
+  const hasConflict = conflictingCommands.length > 0;
 
   const handleSave = (newKey: string) => {
     removeKeybinding(command.id);
@@ -146,4 +147,4 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
       )}
     </>
   );
-}
+});

@@ -11,7 +11,7 @@ export const chromeBarVariants = cva(
         tabs: "h-tab-bar min-h-tab-bar gap-chrome bg-background px-chrome-inline",
         content: "h-7 min-h-7 gap-chrome bg-background px-chrome-inline",
         status: "h-7 min-h-7 gap-chrome-loose bg-background px-chrome-inline",
-        sidebar: "min-h-sidebar-header gap-chrome bg-background px-chrome-inline",
+        sidebar: "min-h-sidebar-header gap-chrome bg-background px-pane-inset",
       },
       emphasis: {
         supporting: "text-subtle-foreground",

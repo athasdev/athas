@@ -11,7 +11,7 @@ export const UI_TIMEOUT = 15_000;
 
 export const FILE_TREE = By.css('[role="tree"][aria-label="File Explorer"]');
 export const EDITOR_LINES = By.css(".cm-editor .cm-content");
-const WORKBENCH = By.css('[data-slot="workbench-title-row"]');
+const WORKBENCH = By.css('[data-slot="workbench-island"]');
 const PALETTE_INPUT = By.css('input[placeholder="Search commands and actions..."]');
 
 export function treeItem(name: string) {

@@ -23,14 +23,6 @@ function OpenAIIcon({ size, className, ...props }: IconProps) {
   );
 }
 
-function AnthropicIcon({ size, className, ...props }: IconProps) {
-  return (
-    <svg aria-hidden="true" {...defaultProps(size, className)} {...props}>
-      <path d="M13.827 3.52h3.603L24 20.48h-3.603l-6.57-16.96zm-7.258 0h3.767L16.906 20.48h-3.674l-1.63-4.327H5.293l-1.63 4.327H0l6.57-16.96zm2.327 4.513L6.588 13.89h4.616L8.896 8.033z" />
-    </svg>
-  );
-}
-
 function GeminiIcon({ size, className, ...props }: IconProps) {
   return (
     <svg aria-hidden="true" {...defaultProps(size, className)} {...props}>
@@ -167,9 +159,6 @@ export function ProviderIcon({
     case "codex":
     case "codex-cli":
       return <OpenAIIcon {...props} />;
-    case "anthropic":
-    case "claude-acp":
-      return <AnthropicIcon {...props} />;
     case "gemini":
     case "google":
     case "gemini-cli":

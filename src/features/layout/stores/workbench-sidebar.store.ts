@@ -5,11 +5,11 @@ import { createSelectors } from "@/utils/zustand-selectors";
 interface WorkbenchSidebarState {
   /** Projects folded to their header, by project id. */
   collapsedProjects: Record<string, true>;
-  /** The sidebar lists the Inbox instead of the projects. */
-  inboxOpen: boolean;
+  /** The Chats list, of sessions in no open project, folded to its header. */
+  chatsCollapsed: boolean;
   actions: {
     toggleProjectCollapsed: (projectId: string) => void;
-    setInboxOpen: (open: boolean) => void;
+    toggleChatsCollapsed: () => void;
   };
 }
 
@@ -17,7 +17,7 @@ const useWorkbenchSidebarStoreBase = create<WorkbenchSidebarState>()(
   persist(
     (set) => ({
       collapsedProjects: {},
-      inboxOpen: false,
+      chatsCollapsed: false,
       actions: {
         toggleProjectCollapsed: (projectId) =>
           set((state) => {
@@ -26,13 +26,16 @@ const useWorkbenchSidebarStoreBase = create<WorkbenchSidebarState>()(
             else collapsedProjects[projectId] = true;
             return { collapsedProjects };
           }),
-        setInboxOpen: (inboxOpen) => set({ inboxOpen }),
+        toggleChatsCollapsed: () => set((state) => ({ chatsCollapsed: !state.chatsCollapsed })),
       },
     }),
     {
       name: "athas-workbench-sidebar-v1",
       storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({ collapsedProjects: state.collapsedProjects }),
+      partialize: (state) => ({
+        collapsedProjects: state.collapsedProjects,
+        chatsCollapsed: state.chatsCollapsed,
+      }),
     },
   ),
 );

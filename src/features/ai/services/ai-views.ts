@@ -8,16 +8,35 @@ import { GitDiffIcon, GlobeIcon, ListChecksIcon, TerminalIcon } from "@/ui/icons
 import {
   useHasSessionPlan,
   useIsLocalSession,
+  useIsLocalSessionInMainWindow,
 } from "../session-panel/hooks/use-session-tool-availability";
 import { useSessionHasInfo } from "../session-panel/hooks/use-session-boxes";
-import { registerPaneView } from "@/features/panes/services/pane-view-registry";
+import {
+  registerEmptyPaneView,
+  registerPaneView,
+} from "@/features/panes/services/pane-view-registry";
 import { registerDiffBanner } from "@/features/git/services/diff-banner-registry";
 import { registerTabDecoration } from "@/features/tabs/services/tab-decoration-registry";
 import { AgentTabAttention, AgentTabIcon } from "../components/agent-tab-decorations";
 import { CLAUDE_CODE_PROPOSAL } from "../integrations/claude-code/services/claude-diff-proposal";
 
 const loadAgentTab = () => import("../components/agent-tab");
+const AgentHeaderActions = lazy(() =>
+  import("../components/agent-header-actions").then((module) => ({
+    default: module.AgentHeaderActions,
+  })),
+);
 const AgentTab = lazy(() => loadAgentTab().then((module) => ({ default: module.AgentTab })));
+const ProjectDashboardView = lazy(() =>
+  import("../project-dashboard/components/project-dashboard-view").then((module) => ({
+    default: module.ProjectDashboardView,
+  })),
+);
+const EmbeddedNewSession = lazy(() =>
+  import("../components/embedded-new-session").then((module) => ({
+    default: module.EmbeddedNewSession,
+  })),
+);
 const ContinuousAgentsResource = lazy(() => import("../continuous-agents/resource"));
 const AcpInspectorView = lazy(() => import("../acp-inspector/components/acp-inspector-view"));
 const CustomizeView = lazy(() => import("../customize/components/customize-view"));
@@ -43,7 +62,11 @@ const SessionInfoSummary = lazy(() =>
   loadDockInfo().then((module) => ({ default: module.SessionInfoSummary })),
 );
 
-function registerSessionDockPanes() {
+/**
+ * The session's tools for the dock. A detached agent window registers them too, for its own dock;
+ * the terminal and browser stay with the main window, which hosts the terminals and webviews.
+ */
+export function registerSessionDockPanes() {
   registerDockPane({
     id: "changes",
     title: "Changes",
@@ -63,7 +86,7 @@ function registerSessionDockPanes() {
     scope: "session",
     component: fromDockPanes("SessionTerminalPane"),
     HeaderActions: fromDockPanes("SessionTerminalActions"),
-    useAvailable: useIsLocalSession,
+    useAvailable: useIsLocalSessionInMainWindow,
   });
   registerDockPane({
     id: "browser",
@@ -73,7 +96,7 @@ function registerSessionDockPanes() {
     scope: "session",
     component: fromDockPanes("SessionBrowserPane"),
     HeaderActions: fromDockPanes("SessionBrowserActions"),
-    useAvailable: useIsLocalSession,
+    useAvailable: useIsLocalSessionInMainWindow,
   });
   registerDockPane({
     id: "plan",
@@ -94,10 +117,17 @@ function registerSessionDockPanes() {
 
 export function registerAiViews() {
   registerSessionDockPanes();
+  registerEmptyPaneView(EmbeddedNewSession);
+  registerPaneView("projectDashboard", {
+    component: ProjectDashboardView,
+    getProps: (buffer) => ({ projectPath: buffer.projectPath }),
+    keyByBuffer: true,
+  });
   registerPaneView("agent", {
     component: AgentTab,
     getProps: (buffer, host) => ({ buffer, isActive: host.isActive }),
     prefetch: loadAgentTab,
+    headerActions: AgentHeaderActions,
     onClose: (buffer) => {
       void import("../session-panel/services/session-panel-resources").then(
         ({ releaseSessionPanelResources }) => releaseSessionPanelResources(buffer.sessionId),

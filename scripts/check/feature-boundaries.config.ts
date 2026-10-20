@@ -160,7 +160,7 @@ export const featureBoundaries: FeatureBoundaryConfig = {
         "Assistant markdown renderer reused for extension and skill descriptions.",
       "components/skills/skills-command.tsx": "Skills browser embedded in the extensions view.",
       "components/sidebar/workbench-sessions.tsx":
-        "Session rows, project session lists and the Inbox the workbench sidebar shows.",
+        "Session rows, pinned sessions and project session lists the workbench sidebar shows.",
       "components/sidebar/agents-plan-footer.tsx":
         "Athas AI usage ring or upgrade prompt in the workbench sidebar footer.",
       "components/agent-attention-dot.tsx":
@@ -229,6 +229,8 @@ export const featureBoundaries: FeatureBoundaryConfig = {
         "Single-file diff body reused by GitHub pull request files.",
       "components/git-branch-manager.tsx": ACTIVITY_CHROME,
       "components/inline-git-blame-card.tsx": "Blame card the editor shows for inline blame.",
+      "stream/stream-primitives.tsx":
+        "File status letter and glyph the project dashboard lists uncommitted files with.",
     },
     github: {
       "components/github-actions-watcher.tsx": APP_SHELL,
@@ -238,6 +240,8 @@ export const featureBoundaries: FeatureBoundaryConfig = {
       "components/keybinding-row.tsx": "Keybinding table row the keyboard settings page renders.",
     },
     layout: {
+      "components/dock/workbench-dock.tsx":
+        "The dock of session tools; the main layout and detached agent windows mount it.",
       "components/main-layout.tsx": APP_SHELL,
       "components/zoom-indicator.tsx": APP_SHELL,
     },
@@ -295,6 +299,8 @@ export const featureBoundaries: FeatureBoundaryConfig = {
       "components/unsaved-changes-dialog.tsx":
         "Save/discard prompt for closing dirty buffers, tabs and the window.",
       "components/tab-bar.tsx": "The editor tab bar each pane renders.",
+      "components/tab-history-navigation.tsx":
+        "Back and forward through the jump list, shown in the title row next to the sidebar toggle.",
       "components/buffer-type-icon.tsx":
         "The icon of a tab's content, shared with quick open's list of open tabs.",
       "components/pending-buffer-close-dialog.tsx": MAIN_LAYOUT,
@@ -376,7 +382,6 @@ export const featureBoundaries: FeatureBoundaryConfig = {
         "previews",
         "run-actions",
         "sharing",
-        "views",
       ],
       shell: ["bootstrap", "command-palette", "quick-open", "web-workbench"],
     },
@@ -397,6 +402,10 @@ export const featureBoundaries: FeatureBoundaryConfig = {
       "window/detached/detached-resource-window.tsx": {
         tier: "shell",
         reason: "Root view of a detached resource window, mounted by src/App.tsx.",
+      },
+      "ai/detached/detached-agent-window.tsx": {
+        tier: "shell",
+        reason: "Root view of a detached agent window, mounted by src/App.tsx; it hosts the dock.",
       },
       "window/detached/standalone-content-window.tsx": {
         tier: "shell",

@@ -16,6 +16,13 @@ interface PaneLayoutRestoreOptions {
   previewBufferIds?: ReadonlySet<string>;
   /** Saved buffer paths in their old global tab order, for sessions older than version 2. */
   legacyTabOrder?: readonly string[];
+  /**
+   * Open buffers that belong elsewhere, such as another tab set, and must not be added to this
+   * layout as buffers it forgot to mention.
+   */
+  excludeBufferIds?: ReadonlySet<string>;
+  /** Adds open buffers the layout does not mention to its active pane; true by default. */
+  attachMissing?: boolean;
 }
 
 const createEmptyPaneNode = (id: string): PaneGroup => ({
@@ -297,6 +304,13 @@ export const buildPaneLayoutFromSession = (
   options: PaneLayoutRestoreOptions = {},
 ): PaneLayoutSnapshot => {
   const isLegacySession = (paneState?.version ?? 1) < PROJECT_PANE_SESSION_VERSION;
+  const excluded = options.excludeBufferIds;
+  const attachable =
+    options.attachMissing === false
+      ? []
+      : excluded
+        ? buffers.filter((buffer) => !excluded.has(buffer.id))
+        : buffers;
   if (!paneState) {
     return applyRestoredTabStateToLayout(
       attachMissingBuffersToLayout(
@@ -307,7 +321,7 @@ export const buildPaneLayoutFromSession = (
           mostRecentActivePaneIds: [ROOT_PANE_ID],
           fullscreenPaneId: null,
         },
-        buffers,
+        attachable,
         options.activeBufferId,
       ),
       buffers,
@@ -329,7 +343,7 @@ export const buildPaneLayoutFromSession = (
         mostRecentActivePaneIds: paneState.mostRecentActivePaneIds,
         fullscreenPaneId: paneState.fullscreenPaneId,
       },
-      buffers,
+      attachable,
       options.activeBufferId,
     ),
     buffers,

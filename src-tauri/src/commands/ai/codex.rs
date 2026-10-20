@@ -149,6 +149,18 @@ pub async fn list_codex_threads(
 
 #[tauri::command]
 #[specta::specta]
+pub async fn read_codex_thread(
+   server: State<'_, CodexAppServer>,
+   thread_id: String,
+) -> Result<Value, String> {
+   server
+      .read_thread(thread_id)
+      .await
+      .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+#[specta::specta]
 pub async fn archive_codex_thread(
    server: State<'_, CodexAppServer>,
    thread_id: String,

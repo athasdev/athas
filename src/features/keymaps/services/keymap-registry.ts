@@ -9,6 +9,7 @@ import type { Command, Keybinding } from "../types/keymaps.types";
 class KeymapRegistry {
   private commands = new Map<string, Command>();
   private keybindings: Keybinding[] = [];
+  private keybindingsVersion = 0;
 
   registerCommand(command: Command): void {
     if (this.commands.has(command.id)) {
@@ -47,11 +48,13 @@ class KeymapRegistry {
     }
 
     this.keybindings.push(keybinding);
+    this.keybindingsVersion += 1;
     logger.debug("Keymaps", `Registered keybinding: ${keybinding.key} -> ${keybinding.command}`);
   }
 
   unregisterKeybinding(commandId: string): void {
     this.keybindings = this.keybindings.filter((kb) => kb.command !== commandId);
+    this.keybindingsVersion += 1;
     logger.debug("Keymaps", `Unregistered keybinding for: ${commandId}`);
   }
 
@@ -65,6 +68,11 @@ class KeymapRegistry {
 
   getAllKeybindings(): Keybinding[] {
     return [...this.keybindings];
+  }
+
+  /** Changes whenever a default keybinding is registered or removed, for caches built on them. */
+  getKeybindingsVersion(): number {
+    return this.keybindingsVersion;
   }
 
   /** Runs a command. Failures are logged and passed to `onError`; the returned promise never rejects. */

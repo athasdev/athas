@@ -50,7 +50,14 @@ const getNavigatorPath = (filePath: string, displayPath: string, fileName: strin
   return displayPath || fileName;
 };
 
-const GlobalSearchBuffer = () => {
+interface GlobalSearchBufferProps {
+  /** `dock`: the narrow Search pane, which starts without the file list beside the results. */
+  placement?: "tab" | "dock";
+  /** Counts the times the user asked for search, so the query field takes focus each time. */
+  focusRequest?: number;
+}
+
+const GlobalSearchBuffer = ({ placement = "tab", focusRequest = 0 }: GlobalSearchBufferProps) => {
   const activeWorkspaceId = useActiveWorkspaceId();
   const scopedWorkspaceId = useWorkspaceStoreScopeId();
   const workspaceId = scopedWorkspaceId ?? activeWorkspaceId;
@@ -70,7 +77,7 @@ const GlobalSearchBuffer = () => {
   );
   const [visibleMatchLimit, setVisibleMatchLimit] = useState(CONTENT_SEARCH_INITIAL_RENDER_LIMIT);
   const [fileNavigatorViewMode, setFileNavigatorViewMode] = useState<FileNavigatorViewMode>("flat");
-  const [isFileNavigatorVisible, setIsFileNavigatorVisible] = useState(true);
+  const [isFileNavigatorVisible, setIsFileNavigatorVisible] = useState(placement === "tab");
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
   const [prioritizedFilePath, setPrioritizedFilePath] = useState<string | null>(null);
   const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(null);
@@ -356,14 +363,14 @@ const GlobalSearchBuffer = () => {
   ]);
 
   useEffect(() => {
-    if (!shouldFocusOnMount.current) return;
+    if (!shouldFocusOnMount.current && focusRequest === 0) return;
     const frame = requestAnimationFrame(() => {
       inputRef.current?.focus();
       inputRef.current?.select();
     });
 
     return () => cancelAnimationFrame(frame);
-  }, []);
+  }, [focusRequest]);
 
   useEffect(() => {
     setVisibleMatchLimit(CONTENT_SEARCH_INITIAL_RENDER_LIMIT);
@@ -509,6 +516,7 @@ const GlobalSearchBuffer = () => {
         fileNavigatorAvailable={fileNavigatorItems.length > 0}
         fileNavigatorVisible={isFileNavigatorVisible}
         onFileNavigatorVisibleChange={setIsFileNavigatorVisible}
+        compact={placement === "dock"}
       />
 
       <div className="relative min-h-0 flex-1 overflow-hidden bg-background">

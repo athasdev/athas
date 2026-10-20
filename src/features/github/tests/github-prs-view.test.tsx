@@ -6,7 +6,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
-import { emitAppEvent } from "@/utils/app-events";
+import { runPaneCommand } from "@/features/layout/services/pane-commands";
 import { createTestQueryClient } from "@/utils/tests/query-test-client";
 import { pullRequest, workflowRun } from "./github-view-fixtures";
 
@@ -88,7 +88,6 @@ const { defaultSettings } = await import("@/features/settings/config/default-set
 const { useProjectStore } = await import("@/features/workspace/stores/project.store");
 const { useRepositoryStore } = await import("@/features/git/stores/git-repository.store");
 const { clearRepositoryDiscoveryCache } = await import("@/features/git/api/git-repo-api");
-const { useUIState } = await import("@/features/layout/stores/ui-state.store");
 const { useSidebarStore } = await import("@/features/layout/stores/sidebar.store");
 const { useGitHubStore } = await import("../stores/github.store");
 const { useGitHubActionsStore } = await import("../stores/github-actions.store");
@@ -177,7 +176,6 @@ beforeEach(() => {
   useSettingsStore.setState({ settings: { ...defaultSettings } } as never);
   useBufferStore.setState({ buffers: [] });
   useProjectStore.setState({ rootFolderPath: "/repo" });
-  useUIState.setState({ isGitHubPRsViewActive: true });
   useSidebarStore.getState().actions.setGitHubSection("pull-requests");
   for (const fn of [
     ...Object.values(mocks.toast),
@@ -267,7 +265,7 @@ describe("GitHub sidebar", () => {
     handlers.github_check_auth = () => "notAuthenticated";
     await render();
 
-    expect(view().getByText("GitHub")).toBeTruthy();
+    expect(view().queryByText("GitHub", { exact: true })).toBeNull();
     expect(view().queryByRole("navigation", { name: "GitHub sections" })).toBeNull();
     expect(calls("github_list_prs")).toEqual([]);
   });
@@ -562,13 +560,13 @@ describe("GitHub sidebar", () => {
       await render();
 
       await act(async () =>
-        emitAppEvent("github:palette-action", { type: "show-section", section: "issues" }),
+        runPaneCommand("view:github-prs", "action", { type: "show-section", section: "issues" }),
       );
       await settle();
       expect(view().getByPlaceholderText("Filter issues")).toBeTruthy();
 
       const before = calls("github_list_issues").length;
-      await act(async () => emitAppEvent("github:palette-action", { type: "refresh" }));
+      await act(async () => runPaneCommand("view:github-prs", "action", { type: "refresh" }));
       await settle();
       expect(calls("github_list_issues").length).toBeGreaterThan(before);
     });

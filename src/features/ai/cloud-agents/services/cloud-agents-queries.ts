@@ -1,5 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
-import { resolveProjectGitHubRepository } from "@/features/views/services/view-github";
+import { resolveProjectGitHubRepository } from "@/features/github/services/project-github-repository";
 import { isRemoteProjectPath } from "@/features/workspace/services/project-tab-path";
 import {
   isActiveCloudAgentRun,

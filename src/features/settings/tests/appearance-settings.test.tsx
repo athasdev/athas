@@ -197,7 +197,9 @@ beforeAll(() => {
 beforeEach(() => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   workspaceRuntimeRegistry.resetForTests();
-  useSettingsStore.setState({ settings: getDefaultSettingsSnapshot() });
+  useSettingsStore.setState({
+    settings: { ...getDefaultSettingsSnapshot(), syncSystemTheme: false },
+  });
   mocks.toasts.length = 0;
   mocks.storage.clear();
   mocks.failStoreWrites = false;
@@ -234,25 +236,28 @@ afterEach(async () => {
 });
 
 describe("appearance settings", () => {
-  it("toggles interface preferences and resets them", async () => {
+  it("toggles window transparency and resets it", async () => {
     await render();
 
-    await click(body().getByRole("switch", { name: "Reduce Motion" }));
-    await click(body().getByRole("switch", { name: "Show Tab Icons" }));
     await click(body().getByRole("switch", { name: "Window Transparency" }));
-    await click(body().getByRole("switch", { name: "Open Projects In New Window" }));
+    expect(settings().windowTransparency).toBe(false);
 
-    expect(settings()).toMatchObject({
-      reduceMotion: true,
-      showTabIcons: false,
-      windowTransparency: true,
-      openFoldersInNewWindow: false,
-    });
+    await click(body().getByRole("button", { name: "Reset Window Transparency" }));
+    expect(settings().windowTransparency).toBe(true);
+  });
 
-    await click(body().getByRole("button", { name: "Reset Reduce Motion" }));
-    await click(body().getByRole("button", { name: "Reset Show Tab Icons" }));
-    expect(settings().reduceMotion).toBe(false);
-    expect(settings().showTabIcons).toBe(true);
+  it("only offers window transparency under Interface", async () => {
+    await render();
+
+    for (const label of [
+      "Reduce Motion",
+      "UI Density",
+      "Show Tab Icons",
+      "Tab Close Buttons",
+      "Open Projects In New Window",
+    ]) {
+      expect(document.querySelector(`[data-setting-row-label="${label}"]`)).toBeNull();
+    }
   });
 
   it("picks a color theme from the registered themes", async () => {
@@ -283,16 +288,6 @@ describe("appearance settings", () => {
 
     await choose("Preferred Dark Theme", "Nord");
     expect(settings().autoThemeDark).toBe("nord");
-  });
-
-  it("changes density and tab close button visibility", async () => {
-    await render();
-
-    await choose("UI Density", "Comfortable");
-    await choose("Tab Close Buttons", "Always");
-
-    expect(settings().uiDensity).toBe("comfortable");
-    expect(settings().tabCloseButtonVisibility).toBe("always");
   });
 
   it("applies a typed UI font size", async () => {

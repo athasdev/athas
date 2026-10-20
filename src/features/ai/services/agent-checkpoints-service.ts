@@ -348,7 +348,7 @@ export function restoreCheckpoint(
         `${describeFiles(changedSince)} changed after the agent edited ${
           changedSince.length === 1 ? "it" : "them"
         }. Restoring the checkpoint discards those changes, including unsaved edits.`,
-        { title: "Restore checkpoint", confirmLabel: "Discard and restore" },
+        { title: "Restore checkpoint", confirmLabel: "Discard and restore", destructive: true },
       );
       if (!confirmed || !isCurrentLifetime(chatId, lifetime)) return { status: "cancelled" };
     }

@@ -1,6 +1,5 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { SidebarView } from "@/features/layout/types/sidebar.types";
 import type { AIWorkspaceSessionSnapshot } from "@/features/workspace/types/workspace-session.types";
 import type { PaneNode } from "@/features/panes/types/pane.types";
 import type { PersistedTerminal } from "@/features/terminal/types/terminal.types";
@@ -30,8 +29,16 @@ export interface ProjectUiSession {
   isSidebarVisible: boolean;
   isBottomPaneVisible: boolean;
   bottomPaneActiveTab: BottomPaneTab;
-  activeSidebarView: SidebarView;
+  /** The tab set on screen when the project was saved. */
   paneState?: ProjectPaneSession | null;
+  /** Whose tab set `paneState` is, and the project's and sessions' other tab sets. */
+  tabSets?: ProjectTabSetsSession | null;
+}
+
+export interface ProjectTabSetsSession {
+  /** `project`, or `session:<chat id>`. */
+  activeOwner: string;
+  layouts: Record<string, ProjectPaneSession>;
 }
 
 interface ProjectPaneGroupSession {
@@ -147,6 +154,8 @@ export function buildSavedProjectUiSession({
       uiState.paneState === undefined
         ? (previousSession?.uiState?.paneState ?? null)
         : uiState.paneState,
+    tabSets:
+      uiState.tabSets === undefined ? (previousSession?.uiState?.tabSets ?? null) : uiState.tabSets,
   };
 
   return {

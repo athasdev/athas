@@ -8,7 +8,6 @@ import {
   GitPullRequestIcon,
   ListIcon,
   PackageIcon,
-  StackIcon,
 } from "@/ui/icons";
 import { getActiveCodeMirrorNavigation } from "@/features/editor/services/active-editor-navigation";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
@@ -247,15 +246,6 @@ export const navigationCommands: Command[] = [
     icon: <GitPullRequestIcon />,
     palette: { keybindingCommandId: "workbench.showGitHub" },
     execute: () => showProjectTool("github-prs"),
-  },
-  {
-    id: "view.showViews",
-    title: "View: Show Views",
-    category: "Navigation",
-    description: "Switch to project custom views",
-    icon: <StackIcon />,
-    palette: { keybindingCommandId: "workbench.showViews" },
-    execute: () => showProjectTool("views"),
   },
   {
     id: "view.showRunAndDebug",

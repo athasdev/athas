@@ -1,3 +1,5 @@
+import { getProjectToolPaneId } from "@/features/layout/services/dock-pane-registry";
+import { runPaneCommand } from "@/features/layout/services/pane-commands";
 import { showProjectTool } from "@/features/layout/services/project-tools";
 import { commitChanges } from "@/features/git/api/git-commits-api";
 import {
@@ -14,22 +16,19 @@ import {
 import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
 import { showToast } from "@/utils/toast";
 import { showConfirmDialog, showPromptDialog } from "@/ui/dialog";
-import { emitAppEvent } from "@/utils/app-events";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 import type { GitSidebarAction } from "@/features/git/types/git.types";
 
-function dispatchGitSidebarAction(action: GitSidebarAction): void {
-  emitAppEvent("git:palette-action", action);
-}
+const GIT_PANE = getProjectToolPaneId("git");
 
-/** Shows the Git sidebar, then hands the action to it once it has mounted. */
-export function openGitSidebarAction(detail: GitSidebarAction): void {
+/** Opens Source Control in the dock, then hands it the action once its view is mounted. */
+export function openGitSidebarAction(detail: GitSidebarAction): Promise<boolean> {
   showProjectTool("git");
-  window.setTimeout(() => dispatchGitSidebarAction(detail), 0);
+  return runPaneCommand(GIT_PANE, "action", detail);
 }
 
 export function refreshGitStatus(): void {
-  dispatchGitSidebarAction({ type: "refresh" });
+  void openGitSidebarAction({ type: "refresh" });
   showToast({ message: "Refreshing Git status...", type: "info" });
 }
 
@@ -158,7 +157,7 @@ export async function discardAllWorkingChanges(): Promise<void> {
 
   const confirmed = await showConfirmDialog(
     "Are you sure you want to discard all changes? This cannot be undone.",
-    { title: "Discard All Changes", confirmLabel: "Discard" },
+    { title: "Discard All Changes", confirmLabel: "Discard", destructive: true },
   );
   if (!confirmed) return;
 

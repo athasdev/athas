@@ -1,4 +1,3 @@
-import { usePerformanceExperiments } from "../../stores/performance-experiments.store";
 import { useEffect, useState } from "react";
 import { saveTextFileWithDialog } from "@/utils/file-dialogs";
 import { useToast } from "@/utils/toast";
@@ -31,8 +30,6 @@ function getTelemetryStatusVariant(status: TelemetryLogEntry["status"]): BadgeTo
 }
 
 export const AdvancedSettings = () => {
-  const showMonitor = usePerformanceExperiments.use.showMonitor();
-  const { toggleMonitor } = usePerformanceExperiments.use.actions();
   const telemetry = useSettingsStore((state) => state.settings.telemetry);
   const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
   const resetToDefaults = useSettingsStore((state) => state.actions.resetToDefaults);
@@ -124,11 +121,6 @@ export const AdvancedSettings = () => {
 
   return (
     <SettingsView>
-      <Section title="Performance experiments">
-        <SettingRow label="Show performance monitor">
-          <Switch checked={showMonitor} onChange={toggleMonitor} />
-        </SettingRow>
-      </Section>
       <Section title="Data">
         <SettingRow label="Export Settings">
           <Button variant="outline" onClick={() => void handleExportSettings()}>

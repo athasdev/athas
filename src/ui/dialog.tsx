@@ -309,6 +309,7 @@ type PrimitiveDialogRequest =
       message: ReactNode;
       confirmLabel: string;
       cancelLabel: string;
+      destructive: boolean;
       resolve: (value: boolean) => void;
     }
   | {
@@ -335,6 +336,12 @@ interface PrimitiveConfirmOptions {
   title?: string;
   confirmLabel?: string;
   cancelLabel?: string;
+}
+
+interface ConfirmDialogOptions extends PrimitiveConfirmOptions {
+  /** The action deletes or discards something, so its button reads as dangerous. */
+  destructive?: boolean;
+  signal?: AbortSignal;
 }
 
 interface PrimitivePromptOptions extends PrimitiveConfirmOptions {
@@ -373,7 +380,7 @@ export function showAlertDialog(message: ReactNode, title = "Notice"): Promise<v
 
 export function showConfirmDialog(
   message: ReactNode,
-  options: PrimitiveConfirmOptions & { signal?: AbortSignal } = {},
+  options: ConfirmDialogOptions = {},
 ): Promise<boolean> {
   return new Promise((resolve) => {
     const signal = options.signal;
@@ -403,6 +410,7 @@ export function showConfirmDialog(
       message,
       confirmLabel: options.confirmLabel ?? "Confirm",
       cancelLabel: options.cancelLabel ?? "Cancel",
+      destructive: options.destructive ?? false,
       resolve: finish,
     });
   });
@@ -523,15 +531,18 @@ function PrimitiveDialogHost({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogMedia>
-              <QuestionIcon />
+            <AlertDialogMedia className={dialog.destructive ? "text-destructive" : undefined}>
+              {dialog.destructive ? <WarningIcon /> : <QuestionIcon />}
             </AlertDialogMedia>
             <AlertDialogTitle>{dialog.title}</AlertDialogTitle>
             <AlertDialogDescription>{dialog.message}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{dialog.cancelLabel}</AlertDialogCancel>
-            <AlertDialogAction variant="accent" onClick={() => onClose(() => dialog.resolve(true))}>
+            <AlertDialogAction
+              variant={dialog.destructive ? "destructive" : "accent"}
+              onClick={() => onClose(() => dialog.resolve(true))}
+            >
               {dialog.confirmLabel}
             </AlertDialogAction>
           </AlertDialogFooter>

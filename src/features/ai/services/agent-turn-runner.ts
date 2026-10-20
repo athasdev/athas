@@ -1,6 +1,4 @@
 import type { MutableRefObject } from "react";
-import { useSessionInboxStore } from "@/features/ai/stores/session-inbox.store";
-import { isAgentChatVisible } from "@/features/ai/lib/visible-agent-chats";
 import {
   getAgentMessageAccess,
   getProviderAccessError,
@@ -359,11 +357,6 @@ class AgentTurnStream {
   }
 
   private notify(kind: AgentNativeNotificationKind, dedupeId: string = this.messageId) {
-    if (kind === "complete" || kind === "error") {
-      useSessionInboxStore
-        .getState()
-        .actions.recordOutcome(this.chatId, kind, isAgentChatVisible(this.chatId));
-    }
     if (!this.turn.isAcp && this.turn.agentId !== CODEX_INTEGRATION_ID) return;
     void sendAgentNativeNotification({
       kind,

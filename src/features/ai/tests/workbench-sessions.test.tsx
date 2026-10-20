@@ -32,9 +32,8 @@ vi.mock("@/features/ai/services/ai-chat-history-service", () => ({
 
 import { useAgentPermissionsStore } from "@/features/ai/stores/agent-permissions.store";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
-import { useSessionInboxStore } from "@/features/ai/stores/session-inbox.store";
 import type { ChatSession, Message } from "@/features/ai/types/ai-chat.types";
-import { ProjectSessionList, SessionInboxList } from "../components/sidebar/workbench-sessions";
+import { PinnedSessions, ProjectSessionList } from "../components/sidebar/workbench-sessions";
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -52,10 +51,8 @@ const session = (id: string, title: string, minutesAgo: number): ChatSession => 
 const chats = [
   session("working", "Working session", 1),
   session("waiting", "Waiting session", 2),
-  session("failed", "Failed session", 3),
-  session("done", "Finished session", 4),
-  session("quiet", "Quiet session", 5),
-  ...Array.from({ length: 3 }, (_, index) => session(`old-${index}`, `Old ${index}`, 60 + index)),
+  session("quiet", "Quiet session", 3),
+  ...Array.from({ length: 5 }, (_, index) => session(`old-${index}`, `Old ${index}`, 60 + index)),
 ];
 
 let container: HTMLElement;
@@ -64,7 +61,6 @@ const rows = () =>
   [...container.querySelectorAll<HTMLElement>("[data-session-id]")].map((row) => ({
     id: row.dataset.sessionId,
     status: row.dataset.sessionStatus,
-    unread: Boolean(row.querySelector("[data-slot=status-dot]")),
   }));
 
 beforeEach(() => {
@@ -78,13 +74,6 @@ beforeEach(() => {
   useAgentPermissionsStore.setState({
     permissions: [{ id: "p", chatId: "waiting" }] as never,
   });
-  useSessionInboxStore.setState({
-    outcomes: {
-      failed: { outcome: "error", unread: true, at: 1 },
-      done: { outcome: "complete", unread: true, at: 1 },
-      quiet: { outcome: "complete", unread: false, at: 1 },
-    },
-  });
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);
@@ -96,40 +85,42 @@ afterEach(() => {
 });
 
 describe("workbench sessions", () => {
-  it("lists a project's recent sessions with their status and unread mark", async () => {
+  it("lists a project's recent sessions with their status", async () => {
     await act(async () =>
       root.render(
         <ProjectSessionList
+          projectId="web"
           projectPath="/code/web"
           sessions={{ projectId: "web", chats, cloudRuns: [] }}
         />,
       ),
     );
     expect(rows()).toEqual([
-      { id: "working", status: "running", unread: false },
-      { id: "waiting", status: "needs-input", unread: false },
-      { id: "failed", status: "failed", unread: true },
-      { id: "done", status: "idle", unread: true },
-      { id: "quiet", status: "idle", unread: false },
+      { id: "working", status: "running" },
+      { id: "waiting", status: "needs-input" },
+      { id: "quiet", status: "idle" },
+      { id: "old-0", status: "idle" },
+      { id: "old-1", status: "idle" },
     ]);
     expect(container.textContent).toContain("Show 3 more");
   });
 
-  it("gathers the sessions that need the user in the Inbox, newest first", async () => {
-    await act(async () => root.render(<SessionInboxList />));
-    expect(rows().map((row) => row.id)).toEqual(["waiting", "failed", "done"]);
-    expect(container.textContent).toContain("web");
+  it("lists pinned sessions under their own label and opens them", async () => {
+    const pinned = [{ ...session("pinned", "Pinned session", 1), isPinned: true }];
+    await act(async () => root.render(<PinnedSessions chats={pinned} />));
+    expect(container.querySelector("[aria-label='Pinned sessions']")?.textContent).toContain(
+      "Pinned",
+    );
+    expect(rows().map((row) => row.id)).toEqual(["pinned"]);
 
     await act(async () =>
-      container.querySelector<HTMLElement>('[data-session-id="failed"] button')?.click(),
+      container.querySelector<HTMLElement>('[data-session-id="pinned"] button')?.click(),
     );
-    expect(io.opened).toEqual(["failed"]);
+    expect(io.opened).toEqual(["pinned"]);
   });
 
-  it("says when nothing needs the user", async () => {
-    useAgentPermissionsStore.setState({ permissions: [] });
-    useSessionInboxStore.setState({ outcomes: {} });
-    await act(async () => root.render(<SessionInboxList />));
-    expect(container.textContent).toContain("Nothing needs you");
+  it("shows nothing while no session is pinned", async () => {
+    await act(async () => root.render(<PinnedSessions chats={[]} />));
+    expect(container.textContent).toBe("");
   });
 });

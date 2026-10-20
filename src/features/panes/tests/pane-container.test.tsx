@@ -1,9 +1,25 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vite-plus/test";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import { PaneContainer } from "../components/pane-container";
 import { PaneSurfaceLayer } from "../components/pane-surface-layer";
+import { registerEmptyPaneView } from "../services/pane-view-registry";
+import { usePaneStore } from "../stores/pane.store";
 
 describe("PaneContainer", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("shows the registered empty view in place, without a tab, when the only pane is empty", () => {
+    const { id } = usePaneStore.getInitialState().root;
+    const pane = { id, type: "group" as const, bufferIds: [], activeBufferId: null };
+    vi.spyOn(performance, "now").mockReturnValue(60_000);
+    registerEmptyPaneView(() => <div data-slot="test-empty-view" />);
+
+    const markup = renderToStaticMarkup(<PaneContainer pane={pane} />);
+
+    expect(markup).toContain('data-slot="test-empty-view"');
+    expect(markup).not.toContain('role="tab"');
+  });
+
   it("keeps a blank pane shell mounted when no tabs are open", () => {
     const markup = renderToStaticMarkup(
       <PaneContainer

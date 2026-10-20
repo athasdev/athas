@@ -4,10 +4,12 @@ import { registerSidebarView } from "@/features/layout/services/sidebar-view-reg
 import { registerPaneView } from "@/features/panes/services/pane-view-registry";
 
 const WorkspaceManagementView = lazy(() => import("../components/workspace-management-view"));
+const loadWorkspaceSidebar = () => import("../components/workspace-sidebar");
 const WorkspaceSidebar = lazy(() =>
-  import("../components/workspace-sidebar").then((module) => ({
-    default: module.WorkspaceSidebar,
-  })),
+  loadWorkspaceSidebar().then((module) => ({ default: module.WorkspaceSidebar })),
+);
+const WorkspaceHeaderActions = lazy(() =>
+  loadWorkspaceSidebar().then((module) => ({ default: module.WorkspaceHeaderActions })),
 );
 
 export function registerWorkspaceViews() {
@@ -18,5 +20,6 @@ export function registerWorkspaceViews() {
     icon: createElement(GridIcon),
     order: 50,
     component: WorkspaceSidebar,
+    HeaderActions: WorkspaceHeaderActions,
   });
 }

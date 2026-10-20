@@ -237,7 +237,7 @@ export function CustomizeView() {
   return (
     <Workbench data-customize-section={section}>
       <WorkbenchNavigation
-        title="Customize"
+        title="Integrations"
         search={null}
         groups={navigationGroups}
         value={section}

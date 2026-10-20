@@ -92,7 +92,7 @@ function useRunningCommand(commands: { command: string; phase: string; timestamp
 export function useSessionBoxes(chatId: string): SessionBoxesData {
   const { chat, context, messages } = useAgentSessionContext(chatId);
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath || null);
-  const workspacePath = chat?.workspacePath ?? rootFolderPath;
+  const workspacePath = chat ? (chat.workspacePath ?? null) : rootFolderPath;
   const agentId = chat?.agentId ?? "custom";
   const acp = isAcpAgent(agentId);
 

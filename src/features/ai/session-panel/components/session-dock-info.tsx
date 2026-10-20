@@ -137,7 +137,7 @@ export function SessionInfoSummary({
       aria-label={expanded ? "Fold session details" : `Session details. ${label}`}
       title={location ?? undefined}
       onClick={onToggle}
-      className="flex h-pane-header w-full min-w-0 shrink-0 items-center gap-3 rounded-lg px-2 text-left text-muted-foreground ui-text-sm outline-none transition-colors duration-fast ease-smooth hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-focus [&_svg]:size-[1em] [&_svg]:shrink-0"
+      className="flex h-pane-header w-full min-w-0 shrink-0 items-center gap-3 rounded-lg pr-2 pl-pane-inset text-left text-muted-foreground ui-text-sm outline-none transition-colors duration-fast ease-smooth hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-focus [&_svg]:size-[1em] [&_svg]:shrink-0"
     >
       <span className="flex min-w-0 flex-1 items-center gap-3 overflow-hidden">
         {readings.map(({ id, reading }, index) => (

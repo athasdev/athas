@@ -9,7 +9,7 @@ export function useStopCloudRun(runId: string) {
   const stop = async () => {
     const confirmed = await showConfirmDialog(
       "Stop this run? The agent's work so far is discarded, and the time used is still charged.",
-      { title: "Stop cloud run", confirmLabel: "Stop" },
+      { title: "Stop cloud run", confirmLabel: "Stop", destructive: true },
     );
     if (!confirmed) return;
     setStopping(true);

@@ -210,7 +210,7 @@ export const aiCommands: Command[] = [
   },
   {
     id: "ai.openCustomize",
-    title: "AI: Customize",
+    title: "AI: Integrations",
     category: "AI",
     description: "Add MCP servers, agents, skills and extensions",
     icon: <PuzzlePieceIcon />,

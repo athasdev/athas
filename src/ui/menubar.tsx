@@ -172,7 +172,7 @@ function MenubarSeparator({ className, ...props }: ComponentProps<typeof Menu.Se
 function MenubarShortcut({ shortcut }: { shortcut: string }) {
   return (
     <span data-slot="menubar-shortcut" className="ml-auto shrink-0">
-      <Keybinding binding={shortcut} />
+      <Keybinding binding={shortcut} variant="menu" />
     </span>
   );
 }
@@ -194,7 +194,7 @@ function MenubarSubTrigger({
       {...props}
     >
       <span className="min-w-0 flex-1 truncate whitespace-nowrap">{children}</span>
-      <ChevronRightIcon className="ml-2 size-4 shrink-0 text-subtle-foreground" />
+      <ChevronRightIcon className="ml-2 size-3 shrink-0 text-subtle-foreground" />
     </Menu.SubmenuTrigger>
   );
 }

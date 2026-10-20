@@ -33,6 +33,11 @@ export interface PaneViewDefinition<T extends PaneContentType, P extends object>
   onClose?: (buffer: PaneViewBuffer<T>) => void;
   /** Reloads the buffer's content in place, for the tab's Reload action. */
   reload?: (buffer: PaneViewBuffer<T>) => void;
+  /**
+   * The view's own controls, shown at the end of its pane's tab bar while it is the pane's active
+   * tab, so the view needs no header row of its own under the tabs.
+   */
+  headerActions?: ComponentType<{ buffer: PaneViewBuffer<T>; paneId: string }>;
   /** Replaces the view on its card in the horizontal tab carousel. */
   carouselCard?: ComponentType<{ buffer: PaneViewBuffer<T> }>;
   /**
@@ -95,4 +100,15 @@ export function prefetchPaneViews() {
   for (const definition of paneViews.values()) {
     void definition.prefetch?.();
   }
+}
+
+let emptyPaneView: ComponentType | null = null;
+
+/** What the workbench's only pane shows while it has no tabs, contributed by its owning feature. */
+export function registerEmptyPaneView(component: ComponentType) {
+  emptyPaneView = component;
+}
+
+export function getEmptyPaneView(): ComponentType | null {
+  return emptyPaneView;
 }

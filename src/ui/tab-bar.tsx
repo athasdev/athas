@@ -20,6 +20,7 @@ import { forwardRef, useCallback, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { instantTransition, quickTransition } from "@/utils/motion";
 import { cn } from "@/utils/cn";
+import { ControlSizeProvider } from "@/ui/control-size";
 import { paneHeaderVariants } from "@/ui/pane";
 
 /** How far above or below the tab row the pointer may stray and still reorder tabs. */
@@ -338,15 +339,22 @@ export const TabStrip = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement
   },
 );
 
+/** A pane header holding tabs; its actions take the pane header's control size, as in any pane. */
 export const TabBarSurface = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
   function TabBarSurface({ className, ...props }, ref) {
     return (
-      <div
-        ref={ref}
-        data-slot="tab-bar"
-        className={cn(paneHeaderVariants(), "relative overflow-hidden bg-background", className)}
-        {...props}
-      />
+      <ControlSizeProvider size="sm">
+        <div
+          ref={ref}
+          data-slot="tab-bar"
+          className={cn(
+            paneHeaderVariants(),
+            "relative overflow-hidden bg-background pl-pane-inset",
+            className,
+          )}
+          {...props}
+        />
+      </ControlSizeProvider>
     );
   },
 );

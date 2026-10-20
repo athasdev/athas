@@ -10,9 +10,11 @@ import {
   ArrowUpIcon,
   ArrowsInIcon,
   ArrowsOutIcon,
+  ColumnsIcon,
   PlusIcon,
   SearchIcon,
   TerminalWindowIcon,
+  XIcon,
 } from "@/ui/icons";
 import type React from "react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -169,6 +171,8 @@ interface TerminalTabBarProps {
   onPrevTerminal?: () => void;
   onFullScreen?: () => void;
   isFullScreen?: boolean;
+  /** Closes the pane holding the terminals, such as the bottom pane. */
+  onClose?: () => void;
   onSplitTerminal?: (direction: TerminalSplitDirection, terminalId: string) => void;
   onSplitWithTerminal?: (
     targetTerminalId: string,
@@ -198,6 +202,7 @@ const TerminalTabBar = ({
   onPrevTerminal,
   onFullScreen,
   isFullScreen = false,
+  onClose,
   onSplitTerminal,
   onSplitWithTerminal,
   onUnsplitTerminal,
@@ -440,6 +445,18 @@ const TerminalTabBar = ({
           </DropdownMenuContent>
         </DropdownMenu>
       )}
+      {onSplitTerminal && activeTerminalId && (
+        <Button
+          onClick={() => onSplitTerminal("right", activeTerminalId)}
+          variant="ghost"
+          iconOnly
+          size="sm"
+          tooltip="Split Terminal"
+          aria-label="Split terminal"
+        >
+          <ColumnsIcon />
+        </Button>
+      )}
       {onFullScreen && (
         <Button
           onClick={onFullScreen}
@@ -451,6 +468,18 @@ const TerminalTabBar = ({
           aria-label={isFullScreen ? "Exit full screen terminal" : "Full screen terminal"}
         >
           {isFullScreen ? <ArrowsInIcon /> : <ArrowsOutIcon />}
+        </Button>
+      )}
+      {onClose && (
+        <Button
+          onClick={onClose}
+          variant="ghost"
+          iconOnly
+          size="sm"
+          tooltip="Close Panel"
+          aria-label="Close panel"
+        >
+          <XIcon />
         </Button>
       )}
     </ChromeGroup>

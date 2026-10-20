@@ -6,6 +6,9 @@ import { registerPaneView } from "@/features/panes/services/pane-view-registry";
 const loadDiffViewer = () => import("../components/diff/git-diff-viewer");
 const DiffViewer = lazy(loadDiffViewer);
 const GitView = lazy(() => import("../stream/stream-view"));
+const GitPaneActions = lazy(() =>
+  import("../components/git-pane-actions").then((module) => ({ default: module.GitPaneActions })),
+);
 
 export function registerGitViews() {
   registerPaneView("diff", {
@@ -20,11 +23,8 @@ export function registerGitViews() {
     icon: createElement(GitBranchIcon),
     order: 10,
     component: GitView,
-    getProps: ({ rootFolderPath, onFileSelect, isActive }) => ({
-      repoPath: rootFolderPath,
-      onFileSelect,
-      isActive,
-    }),
+    getProps: ({ rootFolderPath, onFileSelect }) => ({ repoPath: rootFolderPath, onFileSelect }),
+    HeaderActions: GitPaneActions,
     isAvailable: ({ coreFeatures }) => coreFeatures.git,
   });
 }

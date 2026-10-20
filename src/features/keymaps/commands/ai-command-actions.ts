@@ -1,3 +1,4 @@
+import { toggleDock } from "@/features/layout/services/dock-visibility";
 import { logOutOfAcpAgent } from "@/features/ai/services/acp-logout";
 import { openAgentCliInTerminal } from "@/features/ai/services/open-agent-cli-in-terminal";
 import { openAgentSessions } from "@/features/ai/services/open-agent-sessions";
@@ -54,8 +55,7 @@ function getActiveAgentSessionId(): string | null {
 
 /** Shows or puts away the dock beside the centre. */
 export function toggleActiveSessionPanel(): void {
-  const { hidden, actions } = useDockLayoutStore.getState();
-  actions.setHidden(!hidden);
+  toggleDock();
 }
 
 /**

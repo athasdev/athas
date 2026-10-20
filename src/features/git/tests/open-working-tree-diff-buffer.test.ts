@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getWorkingTreeDiffEntries } from "../utils/open-working-tree-diff-buffer";
+import { getWorkingTreeDiffEntries } from "../services/open-working-tree-diff-buffer";
 
 describe("working tree review entries", () => {
   const files = [

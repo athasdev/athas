@@ -73,6 +73,7 @@ export default function WorkspaceManagementView() {
       !(await showConfirmDialog("Discard unsaved workspace configuration and reload the file?", {
         title: "Reload workspace",
         confirmLabel: "Discard and reload",
+        destructive: true,
       }))
     )
       return;

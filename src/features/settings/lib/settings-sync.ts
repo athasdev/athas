@@ -54,7 +54,6 @@ type SyncableSettingsKey =
   | "terminalRightClickSelectsWord"
   | "uiFontFamily"
   | "uiFontSize"
-  | "reduceMotion"
   | "showTabIcons"
   | "tabCloseButtonVisibility"
   | "theme"
@@ -172,7 +171,6 @@ const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "terminalRightClickSelectsWord",
   "uiFontFamily",
   "uiFontSize",
-  "reduceMotion",
   "showTabIcons",
   "tabCloseButtonVisibility",
   "theme",

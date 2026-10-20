@@ -38,8 +38,8 @@ const SplitViewRoot = memo(function SplitViewRoot({
 
   return (
     <>
-      <div className="size-full overflow-hidden">
-        <PaneNodeRenderer node={root} hiddenPaneId={fullscreenPaneId} />
+      <div className="size-full">
+        <PaneNodeRenderer node={root} hiddenPaneId={fullscreenPaneId} islands />
       </div>
 
       {activeSurface && fullscreenPane && (
@@ -103,7 +103,7 @@ export function CachedWorkspaceSplitViews({
   }
 
   return (
-    <div className="relative size-full overflow-hidden">
+    <div className="relative size-full">
       {renderedWorkspaceIds.map((workspaceId) => {
         const isActive = workspaceId === activeWorkspaceId;
 
@@ -113,7 +113,7 @@ export function CachedWorkspaceSplitViews({
               aria-hidden={!isActive}
               inert={!isActive}
               className={cn(
-                "absolute inset-0 overflow-hidden",
+                "absolute inset-0",
                 isActive ? "visible z-10" : "invisible pointer-events-none",
               )}
             >

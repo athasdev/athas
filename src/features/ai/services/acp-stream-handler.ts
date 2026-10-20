@@ -156,7 +156,9 @@ export class AcpStreamHandler {
     const state = useAIChatStore.getState();
     const chat = chatId ? state.chats.find((candidate) => candidate.id === chatId) : undefined;
     const ownSessionId = chat?.agentId === agentId ? (chat.acpSessionId ?? null) : null;
-    const workspacePath = chat?.workspacePath ?? AcpStreamHandler.currentWorkspacePath();
+    const workspacePath = chat
+      ? (chat.workspacePath ?? null)
+      : AcpStreamHandler.currentWorkspacePath();
     const key = getAcpPrepareKey(agentId, workspacePath, ownSessionId);
     const inFlight = AcpStreamHandler.prepares.get(key);
     if (inFlight) return inFlight;
@@ -444,7 +446,10 @@ export class AcpStreamHandler {
    * runs after the user switched projects.
    */
   private getWorkspacePath(): string | null {
-    return this.getTargetChat()?.workspacePath ?? useProjectStore.getState().rootFolderPath ?? null;
+    const chat = this.getTargetChat();
+    return chat
+      ? (chat.workspacePath ?? null)
+      : (useProjectStore.getState().rootFolderPath ?? null);
   }
 
   private getTargetChat() {

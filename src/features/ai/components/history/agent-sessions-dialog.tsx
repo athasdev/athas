@@ -87,7 +87,7 @@ function AgentSessionsBrowser({ agentId, onClose }: { agentId: string; onClose: 
   const deleteSession = async (session: AcpSessionInfo) => {
     const confirmed = await showConfirmDialog(
       `Delete “${session.title || session.sessionId}” from the agent? This cannot be undone.`,
-      { title: "Delete agent session", confirmLabel: "Delete" },
+      { title: "Delete agent session", confirmLabel: "Delete", destructive: true },
     );
     if (!confirmed) return;
     setBusySessionId(session.sessionId);

@@ -8,8 +8,8 @@ import AIChat from "./chat/ai-chat";
 import { AgentWindowPlaceholder } from "@/features/ai/detached/agent-window-placeholder";
 import { useAgentWindowStore } from "@/features/ai/detached/stores/agent-window.store";
 import { isAgentWindow } from "@/features/ai/detached/services/agent-window-service";
-import { SessionHeaderTools } from "../session-panel/components/session-header-tools";
 import { AGENT_SESSION_CHAT_ATTRIBUTE } from "../session-panel/services/session-links";
+import { SessionHeaderTools } from "../session-panel/components/session-header-tools";
 
 interface AgentTabProps {
   buffer: AgentContent;
@@ -28,7 +28,9 @@ export function AgentTab({ buffer, isActive = true }: AgentTabProps) {
     (state) => state.chats.find((chat) => chat.id === buffer.sessionId)?.title,
   );
   const tabTitle = chatTitle || "New Session";
-  const hasToolPanel = !isAgentWindow();
+  // The main window's tab bar carries the session's controls; an agent window has no tab bar,
+  // so the session keeps its own header row there, over the window's own dock.
+  const inAgentWindow = isAgentWindow();
 
   useEffect(() => {
     if (tabTitle === buffer.name) return;
@@ -36,17 +38,17 @@ export function AgentTab({ buffer, isActive = true }: AgentTabProps) {
   }, [buffer, tabTitle, updateBuffer]);
 
   useEffect(() => {
-    if (!isActive || !hasToolPanel) return;
+    if (!isActive) return;
     setContext("agentSessionFocus", true);
     return () => setContext("agentSessionFocus", false);
-  }, [hasToolPanel, isActive, setContext]);
+  }, [isActive, setContext]);
 
   if (windowStatus) return <AgentWindowPlaceholder chatId={buffer.sessionId} />;
 
   return (
     <div
       className="size-full overflow-hidden"
-      {...(hasToolPanel ? { [AGENT_SESSION_CHAT_ATTRIBUTE]: buffer.sessionId } : {})}
+      {...{ [AGENT_SESSION_CHAT_ATTRIBUTE]: buffer.sessionId }}
     >
       <AIChat
         mode="chat"
@@ -55,7 +57,8 @@ export function AgentTab({ buffer, isActive = true }: AgentTabProps) {
         activeBuffer={activeBuffer}
         buffers={contextBuffers}
         isActiveSurface={isActive}
-        headerActions={hasToolPanel ? <SessionHeaderTools chatId={buffer.sessionId} /> : undefined}
+        headerInTabBar={!inAgentWindow}
+        headerActions={inAgentWindow ? <SessionHeaderTools chatId={buffer.sessionId} /> : undefined}
       />
     </div>
   );

@@ -1,8 +1,16 @@
 import { isDirtyContent } from "@/features/panes/types/pane-content.types";
 import { type DragEndEvent, type DragMoveEvent, type DragStartEvent } from "@dnd-kit/core";
 import { SortableContext, horizontalListSortingStrategy } from "@dnd-kit/sortable";
-import { ArrowsInIcon, ArrowsOutIcon, SidebarIcon } from "@/ui/icons";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ArrowsInIcon, ArrowsOutIcon, SidebarIcon, XIcon } from "@/ui/icons";
+import {
+  type ComponentType,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getBufferById } from "@/features/editor/stores/buffer-index";
@@ -15,8 +23,13 @@ import { usePaneStore } from "@/features/panes/stores/pane.store";
 import { activateBufferInPaneAndSync } from "@/features/panes/services/pane-activation";
 import { splitEditorGroup } from "@/features/panes/services/pane-command-actions";
 import { moveBufferToPaneDropTarget } from "@/features/panes/services/pane-drop-actions";
-import { findPaneGroup } from "@/features/panes/services/pane-tree";
-import { reloadPaneView } from "@/features/panes/services/pane-view-registry";
+import {
+  findPaneGroup,
+  getTopCornerPaneGroup,
+  isPaneInTopRow,
+} from "@/features/panes/services/pane-tree";
+import { MERGED_TITLE_ROW } from "@/features/window/services/title-row";
+import { getPaneView, reloadPaneView } from "@/features/panes/services/pane-view-registry";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import { getChromeNavigationIndex } from "@/features/layout/services/chrome-keyboard";
@@ -26,6 +39,7 @@ import type { Terminal } from "@/features/terminal/types/terminal.types";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { Button } from "@/ui/button";
 import { ChromeGroup } from "@/ui/chrome";
+import { PaneHeaderLeadingSpace } from "@/ui/pane";
 import { ContextMenu, ContextMenuTrigger } from "@/ui/context-menu";
 import {
   scrollTabIntoStrip,
@@ -48,7 +62,7 @@ import {
   setInternalTabDragHoverTarget,
 } from "../services/internal-tab-drag";
 import TabBarItem from "./tab-bar-item";
-import { TabHistoryNavigation } from "./tab-history-navigation";
+import { DockToggleButton } from "./dock-toggle-button";
 import { NewTabButton } from "./new-tab-button";
 import TabContextMenu from "./tab-context-menu";
 import { getBufferText } from "@/features/editor/services/open-buffer-text";
@@ -115,6 +129,16 @@ const TabBar = ({
       : findPaneGroup(state.root, paneId);
   });
   const isInSplit = usePaneStore((state) => state.root.type === "split");
+  const isTopEndPane = usePaneStore(
+    (state) => Boolean(paneId) && getTopCornerPaneGroup(state.root, "end").id === paneId,
+  );
+  const isTopStartPane = usePaneStore(
+    (state) => Boolean(paneId) && getTopCornerPaneGroup(state.root, "start").id === paneId,
+  );
+  // In a window without a title row, the top row of tab bars is where the window is dragged.
+  const isWindowTopRow = usePaneStore(
+    (state) => MERGED_TITLE_ROW && Boolean(paneId) && isPaneInTopRow(state.root, paneId ?? ""),
+  );
   const paneBufferIds = pane?.bufferIds ?? null;
   // In the pane's tab order; buffers no pane shows only appear in the pane-less bar.
   const buffers = useBufferStore(
@@ -157,6 +181,13 @@ const TabBar = ({
   }, [buffers]);
   const activeBufferId =
     activeBufferCandidate && bufferById.has(activeBufferCandidate) ? activeBufferCandidate : null;
+  const activeBuffer = activeBufferId ? bufferById.get(activeBufferId) : undefined;
+  // The tab in front may bring its own controls, so its view needs no header row under the tabs.
+  const ActiveHeaderActions = activeBuffer
+    ? (getPaneView(activeBuffer.type)?.headerActions as
+        | ComponentType<{ buffer: PaneContent; paneId: string }>
+        | undefined)
+    : undefined;
   const isPaneFullscreen = paneId ? fullscreenPaneId === paneId : false;
   const isPaneLocked = Boolean(pane?.locked);
   const isBottomPane = paneId === BOTTOM_PANE_ID;
@@ -669,10 +700,11 @@ const TabBar = ({
           role="tablist"
           aria-label="Open files"
           onWheel={handleWheel}
+          data-tauri-drag-region={isWindowTopRow || undefined}
         >
-          {!isBottomPane && <TabHistoryNavigation />}
+          {isWindowTopRow && isTopStartPane ? <PaneHeaderLeadingSpace /> : null}
           <SortableContext items={sortedBufferIds} strategy={horizontalListSortingStrategy}>
-            <TabStrip ref={tabStripRef}>
+            <TabStrip ref={tabStripRef} data-tauri-drag-region={isWindowTopRow || undefined}>
               {sortedBuffers.map((buffer, index) => (
                 <SortableTab
                   key={buffer.id}
@@ -780,7 +812,16 @@ const TabBar = ({
             </TabStrip>
           </SortableContext>
 
-          <ChromeGroup reveal gap="tight" className="ml-auto h-full">
+          <ChromeGroup
+            gap="tight"
+            className="ml-auto h-full shrink-0"
+            data-tauri-drag-region={isWindowTopRow || undefined}
+          >
+            {ActiveHeaderActions && activeBuffer && paneId ? (
+              <Suspense fallback={null}>
+                <ActiveHeaderActions buffer={activeBuffer} paneId={paneId} />
+              </Suspense>
+            ) : null}
             {paneId && !disablePaneActions && !isBottomPane && isInSplit && (
               <Button
                 type="button"
@@ -809,6 +850,20 @@ const TabBar = ({
                 {isPaneFullscreen ? <ArrowsInIcon /> : <ArrowsOutIcon />}
               </Button>
             ) : null}
+            {isBottomPane ? (
+              <Button
+                type="button"
+                onClick={() => useUIState.getState().setIsBottomPaneVisible(false)}
+                variant="ghost"
+                iconOnly
+                size="sm"
+                tooltip="Close Panel"
+                aria-label="Close panel"
+              >
+                <XIcon />
+              </Button>
+            ) : null}
+            {isTopEndPane && !isPaneFullscreen ? <DockToggleButton /> : null}
           </ChromeGroup>
         </TabBarSurface>
         {draggedBuffer ? (

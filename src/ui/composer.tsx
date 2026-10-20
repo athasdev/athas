@@ -25,15 +25,18 @@ export const Composer = forwardRef<
 });
 
 const composerEditableVariants = cva(
-  "w-full overflow-x-hidden overflow-y-auto whitespace-pre-wrap wrap-break-word bg-transparent px-3 pt-3 pb-1.5 text-left ui-text-base leading-relaxed text-foreground outline-none empty:before:pointer-events-none empty:before:text-subtle-foreground empty:before:content-[attr(data-placeholder)]",
+  "w-full overflow-x-hidden overflow-y-auto whitespace-pre-wrap wrap-break-word bg-transparent text-left ui-text-base leading-relaxed text-foreground outline-none empty:before:pointer-events-none empty:before:text-subtle-foreground empty:before:content-[attr(data-placeholder)]",
   {
     variants: {
       font: { sans: "font-sans", mono: "font-mono" },
       /** `roomy` is the first prompt of an empty chat, where the composer is the whole page. */
       size: { default: "max-h-48 min-h-11", roomy: "max-h-64 min-h-20" },
       enabled: { true: "cursor-text", false: "cursor-not-allowed text-muted-foreground" },
-      /** One line that grows with the text, sharing a row with the composer's buttons. */
-      inline: { true: "min-h-8 px-1.5 py-1.5", false: "" },
+      /**
+       * One line that grows with the text, sharing a row with the composer's buttons. A single
+       * line is as tall as a button, and the padding centres every last line on the buttons.
+       */
+      inline: { true: "min-h-7 px-1.5 py-composer-line-inset", false: "px-3 pt-3 pb-1.5" },
     },
     defaultVariants: { font: "sans", size: "default", enabled: true, inline: false },
   },

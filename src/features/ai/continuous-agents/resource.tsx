@@ -704,6 +704,7 @@ export default function ContinuousAgentsResource() {
       {
         title: "Delete continuous agent",
         confirmLabel: "Delete",
+        destructive: true,
       },
     );
     if (!confirmed) return;

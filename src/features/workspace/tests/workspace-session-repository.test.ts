@@ -86,7 +86,6 @@ describe("workspace session repository", () => {
         isSidebarVisible: true,
         isBottomPaneVisible: false,
         bottomPaneActiveTab: "terminal",
-        activeSidebarView: "files",
         paneState: null,
       },
     });
@@ -95,7 +94,6 @@ describe("workspace session repository", () => {
     expect(saved?.uiState).toMatchObject({
       isSidebarVisible: true,
       isBottomPaneVisible: false,
-      activeSidebarView: "files",
     });
   });
 

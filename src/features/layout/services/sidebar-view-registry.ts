@@ -3,19 +3,25 @@ import type { SidebarView } from "@/features/layout/types/sidebar.types";
 import type { CoreFeaturesState } from "@/features/settings/types/feature.types";
 
 /**
- * The project tools (Files, Source Control, GitHub and the rest), contributed by the features
- * that own them. Each opens as a pane of the dock (`view:<id>`). A feature registers its views from
- * its registration module, which the workbench runs once before it renders. Registration modules
- * reference views through `lazy()`, so a view's code loads the first time it shows. Extension views
- * are added by the dock after every registered view.
+ * The project tools (Files, Search, Source Control, GitHub and the rest), contributed by the
+ * features that own them. Each opens as a pane of the dock (`view:<id>`), under the pane's own
+ * header: the view's title and icon, the `HeaderActions` it registers, then maximize and close. A
+ * feature registers its views from its registration module, which the workbench runs once before
+ * it renders. Registration modules reference views through `lazy()`, so a view's code loads the
+ * first time it shows. Extension views are added by the dock after every registered view.
  */
 
 /** What the dock hands each project tool view. */
 export interface SidebarViewContext {
   rootFolderPath: string | undefined;
   onFileSelect: (path: string, isDir: boolean) => void;
-  /** The view is on screen in the dock. */
-  isActive: boolean;
+  /** Counts the times the user asked for the view, so it can focus its main control each time. */
+  focusRequest: number;
+}
+
+/** What the dock hands a project tool's header actions. */
+export interface SidebarViewHeaderProps {
+  rootFolderPath: string | undefined;
 }
 
 /** What decides whether a view is offered at all. */
@@ -33,6 +39,8 @@ export interface SidebarViewDefinition<P extends object> {
   order: number;
   component: ComponentType<P>;
   getProps?: (context: SidebarViewContext) => NoInfer<P>;
+  /** The view's actions in its pane header, before maximize and close. */
+  HeaderActions?: ComponentType<SidebarViewHeaderProps>;
   isAvailable?: (availability: SidebarViewAvailability) => boolean;
 }
 

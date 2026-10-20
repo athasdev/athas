@@ -17,7 +17,7 @@ import { selectDockLayout, useDockLayoutStore } from "@/features/layout/stores/d
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
-import { onAppEvent } from "@/utils/app-events";
+import { registerPaneCommands } from "@/features/layout/services/pane-commands";
 import {
   checkGitHubAuthentication,
   connectGitHubAccount,
@@ -42,7 +42,9 @@ beforeEach(() => {
   vi.useFakeTimers();
   workspaceRuntimeRegistry.resetForTests();
   actions.length = 0;
-  stop = onAppEvent("github:palette-action", (action) => actions.push(action));
+  stop = registerPaneCommands("view:github-prs", {
+    action: (action: unknown) => actions.push(action),
+  });
   useProjectStore.setState({ rootFolderPath: "/work/site" });
   useDockLayoutStore.setState({ layouts: {}, hidden: false, currentOwner: null });
 });
@@ -62,15 +64,26 @@ describe("GitHub palette actions", () => {
 
     expect(useSettingsStore.getState().settings.showGitHubReleases).toBe(true);
     expect(githubPaneOpen()).toBe(true);
-    expect(actions).toEqual([]);
-    vi.runAllTimers();
-    expect(actions).toEqual([{ type: "show-section", section: "releases" }]);
+    await vi.waitFor(() =>
+      expect(actions).toEqual([{ type: "show-section", section: "releases" }]),
+    );
   });
 
-  it("refreshes the GitHub view", () => {
-    refreshGitHubView();
-    vi.runAllTimers();
+  it("refreshes the GitHub view", async () => {
+    await expect(refreshGitHubView()).resolves.toBe(true);
     expect(githubPaneOpen()).toBe(true);
+    expect(actions).toEqual([{ type: "refresh" }]);
+  });
+
+  it("waits for the GitHub pane to mount before handing it the action", async () => {
+    stop();
+    const refreshed = refreshGitHubView();
+    await Promise.resolve();
+    expect(actions).toEqual([]);
+    stop = registerPaneCommands("view:github-prs", {
+      action: (action: unknown) => actions.push(action),
+    });
+    await expect(refreshed).resolves.toBe(true);
     expect(actions).toEqual([{ type: "refresh" }]);
   });
 

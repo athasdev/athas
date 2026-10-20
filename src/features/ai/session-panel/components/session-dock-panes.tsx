@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from "react";
+import { lazy, Suspense, useCallback, useEffect } from "react";
 import { useAgentSessionContext } from "@/features/ai/hooks/use-agent-session-context";
 import { openAgentSessionReview } from "@/features/ai/lib/agent-session-context";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
@@ -10,6 +10,7 @@ import { usePaneStore } from "@/features/panes/stores/pane.store";
 import { Button } from "@/ui/button";
 import { EmptyState } from "@/ui/empty";
 import { ListChecksIcon, SquareArrowUpIcon } from "@/ui/icons";
+import { closeExitedSessionTerminal } from "../services/session-panel-resources";
 import { getLatestSessionPlan } from "../services/session-plan";
 import {
   getSessionDockOwner,
@@ -82,6 +83,10 @@ export function SessionTerminalPane({ owner, focusRequested }: DockPaneProps) {
   const panel = useSessionPanel(chatId);
   const workingDirectory = useSessionWorkspacePath(chatId);
   useClearAttention(chatId, "terminal");
+  const handleExit = useCallback(
+    (terminalId: string) => closeExitedSessionTerminal(chatId, terminalId),
+    [chatId],
+  );
   return (
     <Suspense fallback={null}>
       <SessionTerminalView
@@ -89,6 +94,7 @@ export function SessionTerminalPane({ owner, focusRequested }: DockPaneProps) {
         terminalId={getSessionTerminalId(chatId, panel.terminalGeneration)}
         workingDirectory={workingDirectory}
         takeFocus={focusRequested}
+        onExit={handleExit}
       />
     </Suspense>
   );

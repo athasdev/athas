@@ -188,6 +188,7 @@ export function useSourceControlModel({
         {
           title: "Discard changes",
           confirmLabel: "Discard",
+          destructive: true,
         },
       );
       if (!confirmed) return;
@@ -362,6 +363,7 @@ export function useSourceControlModel({
       const confirmed = await showConfirmDialog(`Delete branch "${branch}"?`, {
         title: "Delete branch",
         confirmLabel: "Delete",
+        destructive: true,
       });
       if (!confirmed) return;
       if (!(await deleteGitBranch(activeRepoPath, branch))) {

@@ -9,20 +9,18 @@ import { useAcpQuestionsStore } from "@/features/ai/stores/acp-questions.store";
 import { useAgentEditEntries } from "@/features/ai/stores/agent-edits.store";
 import { useAgentPermissionsStore } from "@/features/ai/stores/agent-permissions.store";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
-import { useSessionInboxStore } from "@/features/ai/stores/session-inbox.store";
+import { useSessionPullRequest } from "./use-session-pull-request";
 import type { ChatSession } from "@/features/ai/types/ai-chat.types";
 import type { ChatAttention } from "@/features/ai/types/chat-attention.types";
 
 export interface SessionRowStatus {
   status: SessionStatus;
   attention: ChatAttention | null;
-  /** The session ended a turn the user has not looked at. */
-  unread: boolean;
 }
 
-/** Where one session stands, for its sidebar row and the Inbox. */
+/** Where one session stands, for its sidebar row. */
 export function useSessionStatus(
-  chat: Pick<ChatSession, "id" | "acpSessionId" | "sessionSettings">,
+  chat: Pick<ChatSession, "id" | "acpSessionId" | "sessionSettings" | "workspacePath" | "branch">,
 ): SessionRowStatus {
   const working = useAIChatStore((state) => isAgentSessionWorking(state.messagesByChat[chat.id]));
   const pendingPermissions = useAgentPermissionsStore(
@@ -30,9 +28,9 @@ export function useSessionStatus(
   );
   const questions = useAcpQuestionsStore.use.questions();
   const authRequest = useAcpAuthStore.use.request();
-  const outcome = useSessionInboxStore((state) => state.outcomes[chat.id] ?? null);
   const unreviewedEdits = Object.keys(useAgentEditEntries(chat.id)).length;
   const cloudRun = useCloudRun(getLatestCloudRun(chat.sessionSettings?.cloud ?? null)?.runId);
+  const pullRequest = useSessionPullRequest(chat, cloudRun);
   const attention = getChatAttention({
     chatId: chat.id,
     sessionId: chat.acpSessionId,
@@ -40,7 +38,12 @@ export function useSessionStatus(
     questions,
     authRequest,
   });
-  const status = getSessionStatus({ working, attention, outcome, unreviewedEdits, cloudRun });
-  const unread = Boolean(outcome?.unread);
-  return useMemo(() => ({ status, attention, unread }), [attention, status, unread]);
+  const status = getSessionStatus({
+    working,
+    attention,
+    unreviewedEdits,
+    cloudRun,
+    pullRequest,
+  });
+  return useMemo(() => ({ status, attention }), [attention, status]);
 }

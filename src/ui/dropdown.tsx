@@ -19,12 +19,15 @@ import { ScrollArea } from "@/ui/scroll-area";
 import { cn } from "@/utils/cn";
 import { CheckIcon, ChevronRightIcon, SearchIcon } from "@/ui/icons";
 import Keybinding from "@/ui/keybinding";
+import { resolveMenuPoint } from "@/ui/menu-point";
 import { useOverlayPlacement } from "@/ui/overlay-side";
 import { OverlayRoot } from "@/ui/overlay-root";
 
 const menuSurfaceVariants = cva(
-  // One fast, smooth entrance for every menu-shaped surface: fade + a hint of scale from its anchor.
-  `max-h-(--available-height) w-fit min-w-32 ${OVERLAY_MAX_WIDTH} origin-(--transform-origin) rounded-xl bg-overlay font-sans text-foreground shadow-(--shadow-popover) outline-none ui-text-chrome transition-[opacity,transform,scale] duration-fast ease-smooth data-starting-style:scale-[0.98] data-starting-style:opacity-0 data-ending-style:scale-[0.98] data-ending-style:opacity-0 motion-reduce:transition-none`,
+  // Every menu-shaped surface: the overlay plane with the popover ring, an 8px radius around 4px
+  // padding (so rows take the nested 4px radius), and a quick fade with a hint of scale from the
+  // anchor that leaves a little faster than it arrives.
+  `max-h-(--available-height) w-fit min-w-32 ${OVERLAY_MAX_WIDTH} origin-(--transform-origin) rounded-xl bg-overlay font-sans text-foreground shadow-(--shadow-popover) outline-none ui-text-chrome transition-[opacity,scale] duration-120 ease-smooth data-starting-style:scale-[0.97] data-starting-style:opacity-0 data-ending-style:scale-[0.97] data-ending-style:opacity-0 data-ending-style:duration-80 data-ending-style:ease-in motion-reduce:transition-none`,
   {
     variants: {
       viewport: {
@@ -42,11 +45,13 @@ const menuSurfaceVariants = cva(
 );
 
 const menuItemVariants = cva(
-  "relative flex w-full cursor-default items-center justify-start gap-2 whitespace-nowrap rounded-md px-2 py-1 text-left font-sans text-foreground outline-hidden select-none transition-colors hover:bg-accent focus:bg-accent data-highlighted:bg-accent data-selected:bg-selected disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 data-disabled:pointer-events-none data-disabled:cursor-not-allowed data-disabled:opacity-50 ui-text-chrome [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5 [&_svg]:text-muted-foreground",
+  // A 28px row with an inset hover pill. Icons are 14px and muted until the row is highlighted;
+  // a disabled row steps down the text ramp instead of fading, so it still reads.
+  "relative flex min-h-7 w-full cursor-default items-center justify-start gap-2 whitespace-nowrap rounded-md px-2 py-1 text-left font-sans leading-chrome text-foreground outline-hidden select-none ui-text-chrome hover:bg-accent focus:bg-accent data-highlighted:bg-accent data-selected:bg-selected disabled:pointer-events-none disabled:cursor-not-allowed disabled:text-subtle-foreground data-disabled:pointer-events-none data-disabled:cursor-not-allowed data-disabled:text-subtle-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5 data-disabled:[&_svg]:text-subtle-foreground",
   {
     variants: {
       tone: {
-        default: "",
+        default: "[&_svg]:text-muted-foreground data-highlighted:[&_svg]:text-foreground",
         accent: "text-primary [&_svg]:text-primary",
         destructive:
           "text-destructive hover:bg-destructive-soft focus:bg-destructive-soft data-highlighted:bg-destructive-soft [&_svg]:text-destructive",
@@ -59,10 +64,10 @@ const menuItemVariants = cva(
 );
 
 const menuLabelVariants = cva(
-  "px-2 py-1 font-sans font-medium text-subtle-foreground ui-text-caption",
+  "px-2 pt-1.5 pb-1 font-sans font-medium leading-chrome text-subtle-foreground ui-text-caption",
 );
 
-const menuSeparatorVariants = cva("-mx-1 my-1 h-px bg-divider");
+const menuSeparatorVariants = cva("-mx-1 my-1 h-px bg-border");
 
 export type MenuItemTone = "default" | "accent" | "destructive";
 
@@ -106,23 +111,23 @@ export function isMenuActionItem(item: MenuItem): item is MenuActionItem {
  * Pair it with `positionMethod="fixed"` on the content.
  */
 export function usePointAnchor(point: { x: number; y: number }) {
-  return useMemo(
-    () => ({
+  return useMemo(() => {
+    const { x, y } = resolveMenuPoint({ x: point.x, y: point.y });
+    return {
       getBoundingClientRect: () =>
         ({
-          x: point.x,
-          y: point.y,
-          top: point.y,
-          right: point.x,
-          bottom: point.y,
-          left: point.x,
+          x,
+          y,
+          top: y,
+          right: x,
+          bottom: y,
+          left: x,
           width: 0,
           height: 0,
           toJSON: () => undefined,
         }) as DOMRect,
-    }),
-    [point.x, point.y],
-  );
+    };
+  }, [point.x, point.y]);
 }
 
 interface DropdownMenuState<T> {
@@ -509,7 +514,7 @@ function DropdownMenuSubTrigger({
       openOnHover
       className={cn(
         appearance === "item" && menuItemVariants(),
-        appearance === "item" && "data-inset:pl-8 data-open:bg-accent data-open:text-foreground",
+        appearance === "item" && "data-inset:pl-8 data-popup-open:bg-accent",
         className,
       )}
       {...props}
@@ -524,7 +529,7 @@ function DropdownMenuSubTrigger({
         </span>
       ) : null}
       {appearance === "item" ? (
-        <ChevronRightIcon className={hasValue ? undefined : "ml-auto"} />
+        <ChevronRightIcon className={cn("size-3 text-subtle-foreground", !hasValue && "ml-auto")} />
       ) : null}
     </DropdownMenuPrimitive.SubmenuTrigger>
   );
@@ -576,21 +581,21 @@ function DropdownMenuItems({ items }: { items: readonly MenuItem[] }) {
         onClick={item.onClick}
       >
         {iconVisibility[index] && item.icon ? (
-          <span className="grid size-4 shrink-0 place-items-center [&>svg]:block [&>svg]:size-4">
+          <span className="grid size-3.5 shrink-0 place-items-center [&>svg]:block [&>svg]:size-3.5">
             {item.icon}
           </span>
         ) : null}
         <span className="min-w-0 flex-1 truncate whitespace-nowrap">{item.label}</span>
         <span className="ml-auto flex shrink-0 items-center gap-2">
-          {item.shortcut ? <Keybinding binding={item.shortcut} /> : null}
+          {item.shortcut ? <Keybinding binding={item.shortcut} variant="menu" /> : null}
           {item.trailing === "disclosure" ? (
             <ChevronRightIcon className="size-3 text-subtle-foreground" />
           ) : item.trailing?.type === "text" ? (
             <span className="text-subtle-foreground tabular-nums">{item.trailing.label}</span>
           ) : null}
           {item.checked !== undefined ? (
-            <span className="flex size-4 items-center justify-center">
-              {item.checked ? <CheckIcon className="text-primary" /> : null}
+            <span className="flex size-3.5 items-center justify-center">
+              {item.checked ? <CheckIcon /> : null}
             </span>
           ) : null}
         </span>

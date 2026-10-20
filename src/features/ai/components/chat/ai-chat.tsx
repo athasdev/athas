@@ -69,7 +69,6 @@ import {
 import type { AcpElicitationResponse } from "@/features/ai/lib/acp-elicitation";
 import { AcpPermissionPrompt } from "./acp-permission-prompt";
 import { markAgentChatVisible } from "@/features/ai/lib/visible-agent-chats";
-import { useSessionInboxStore } from "@/features/ai/stores/session-inbox.store";
 import {
   selectChatPermissions,
   useAgentPermissionsStore,
@@ -77,6 +76,7 @@ import {
 import { AcpQuestionPrompt } from "./acp-question-prompt";
 import { AcpUrlQuestionPrompt } from "./acp-url-question-prompt";
 import { ChatHeader } from "./chat-header";
+import { useChatMessageSearchStore } from "../../stores/chat-message-search.store";
 import { ChatMessages } from "./chat-messages";
 import { CloudRunCard } from "@/features/ai/cloud-agents/components/cloud-run-card";
 import { CloudSessionSync } from "@/features/ai/cloud-agents/components/cloud-session-sync";
@@ -94,6 +94,7 @@ const AIChat = memo(function AIChat({
   selectedFiles = [],
   allProjectFiles = [],
   headerActions,
+  headerInTabBar = false,
 }: AIChatProps) {
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const aiProviderId = useSettingsStore((state) => state.settings.aiProviderId);
@@ -119,7 +120,15 @@ const AIChat = memo(function AIChat({
   const questionActions = useAcpQuestionsStore.use.actions();
   const [acpEvents, setAcpEvents] = useState<ChatAcpEvent[]>([]);
   const [refusedPrompt, setRefusedPrompt] = useState<RestoredComposerPrompt | null>(null);
-  const [isMessageSearchOpen, setIsMessageSearchOpen] = useState(false);
+  const messageSearchChatId = chatId ?? currentChatId ?? "";
+  const isMessageSearchOpen = useChatMessageSearchStore((state) =>
+    Boolean(state.open[messageSearchChatId]),
+  );
+  const { setOpen: setMessageSearchOpen } = useChatMessageSearchStore.use.actions();
+  const setIsMessageSearchOpen = useCallback(
+    (open: boolean) => setMessageSearchOpen(messageSearchChatId, open),
+    [messageSearchChatId, setMessageSearchOpen],
+  );
   const [messageSearchQuery, setMessageSearchQuery] = useState("");
   const [activeMessageSearchIndex, setActiveMessageSearchIndex] = useState(0);
   const composerContext = useComposerContextSelection(peekAgentDraft(surfaceId));
@@ -129,12 +138,7 @@ const AIChat = memo(function AIChat({
   const previousChatId = useRef(effectiveChatId);
   useEffect(() => {
     if (!effectiveChatId) return;
-    useSessionInboxStore.getState().actions.markRead(effectiveChatId);
-    const release = markAgentChatVisible(effectiveChatId);
-    return () => {
-      release();
-      useSessionInboxStore.getState().actions.markRead(effectiveChatId);
-    };
+    return markAgentChatVisible(effectiveChatId);
   }, [effectiveChatId]);
   const currentChat = useChatSession(effectiveChatId);
   const currentAgentId = currentChat?.agentId ?? selectedAgentId;
@@ -208,7 +212,7 @@ const AIChat = memo(function AIChat({
     setIsMessageSearchOpen(false);
     setMessageSearchQuery("");
     setActiveMessageSearchIndex(0);
-  }, []);
+  }, [setIsMessageSearchOpen]);
 
   const goToPreviousMessageSearchMatch = useCallback(() => {
     if (messageSearchMatches.length === 0) return;
@@ -818,6 +822,7 @@ const AIChat = memo(function AIChat({
     >
       <ChatHeader
         chatId={effectiveChatId}
+        showTitleRow={!headerInTabBar}
         sessionActions={headerActions}
         isMessageSearchOpen={isMessageSearchOpen}
         messageSearchQuery={messageSearchQuery}

@@ -63,7 +63,7 @@ export const DEFAULT_APPEARANCE_BOOTSTRAP_CACHE: AppearanceBootstrapCache = {
   uiFontFamily: DEFAULT_UI_FONT_FAMILY,
   uiFontSize: UI_FONT_SIZE_DEFAULT,
   uiDensity: "compact",
-  windowTransparency: false,
+  windowTransparency: true,
 };
 
 function sanitizeVarMap(value: unknown): Record<string, string> {

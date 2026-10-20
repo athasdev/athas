@@ -37,7 +37,6 @@ import {
   CodexModelSubmenus,
   ProviderModelSubmenu,
 } from "./composer-model-submenus";
-import { FollowAgentMenuItem } from "./follow-agent-toggle";
 
 /**
  * A connected provider the user is not on yet. Picking it switches to its first recommended
@@ -88,14 +87,12 @@ interface ComposerAgentSelectorProps {
   onModelChange: (modelId: string, providerId: string) => void;
   onSessionConfigChange: (optionId: string, value: SessionConfigValue) => void;
   onBeforeOpen?: () => void;
-  /** The chat whose agent can be followed in the editor; omitted when following is unavailable. */
-  followChatId?: string | null;
 }
 
 /**
  * The composer's model button: a short menu with a Provider row (Athas, each connected
- * provider, then agents), a Model row for the current provider, and an Effort row when the
- * current model has an effort scale. Each row opens its own submenu.
+ * provider, then agents) and a Model row for the current provider, each opening its own submenu,
+ * and an Effort slider when the current model has an effort scale.
  */
 export function ComposerAgentSelector({
   cwd,
@@ -108,7 +105,6 @@ export function ComposerAgentSelector({
   onModelChange,
   onSessionConfigChange,
   onBeforeOpen,
-  followChatId,
 }: ComposerAgentSelectorProps) {
   const [isProviderMenuOpen, setIsProviderMenuOpen] = useState(false);
   const { options, isLoading, loadError, refresh } = useAgentOptions(currentAgentId);
@@ -268,7 +264,6 @@ export function ComposerAgentSelector({
           )}
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        {followChatId ? <FollowAgentMenuItem chatId={followChatId} /> : null}
         <DropdownMenuItem onClick={() => useUIState.getState().openSettings("ai")}>
           <SlidersIcon />
           Configure models…

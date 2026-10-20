@@ -19,7 +19,6 @@ export function useDockPaneViews(owner: DockOwner): Map<DockPaneId, DockPaneView
         render: (props) => createElement(component, props),
         renderDetail: HeaderDetail ? (props) => createElement(HeaderDetail, props) : undefined,
         renderActions: HeaderActions ? (props) => createElement(HeaderActions, props) : undefined,
-        hostsViewChrome: pane.hostsViewChrome,
       });
     }
     for (const tool of projectTools) {
@@ -28,7 +27,7 @@ export function useDockPaneViews(owner: DockOwner): Map<DockPaneId, DockPaneView
         title: tool.title,
         icon: tool.icon,
         render: tool.render,
-        hostsViewChrome: true,
+        renderActions: tool.renderActions,
       });
     }
     return views;

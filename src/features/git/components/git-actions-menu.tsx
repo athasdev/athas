@@ -161,6 +161,7 @@ const GitActionsMenu = ({
       !(await showConfirmDialog("Discard all unstaged changes? This cannot be undone.", {
         title: "Discard Changes",
         confirmLabel: "Discard",
+        destructive: true,
       }))
     ) {
       return;

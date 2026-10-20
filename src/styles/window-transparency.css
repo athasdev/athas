@@ -31,7 +31,9 @@ html:is(.platform-macos, .platform-windows):not([data-window-transparency="disab
 html:is(.platform-macos, .platform-windows):not(
     [data-window-transparency="disabled"]
   )[data-theme-type="light"] {
-  --athas-glass-shell-bg: color-mix(in srgb, var(--surface) 46%, transparent);
+  /* Light vibrancy lets wallpaper colour through strongly, so the window plane is tinted more,
+     close to the macOS sidebar material. */
+  --athas-glass-shell-bg: color-mix(in srgb, var(--surface) 72%, transparent);
   --athas-glass-island-bg: color-mix(in srgb, var(--background) 84%, transparent);
   --athas-glass-surface: color-mix(in srgb, var(--surface) 62%, transparent);
   --athas-glass-border: color-mix(in srgb, var(--foreground) 12%, transparent);
@@ -79,18 +81,29 @@ html.platform-windows:not([data-window-transparency="disabled"])
   backdrop-filter: blur(18px) saturate(1.08);
 }
 
-/* With glass on, the sidebar keeps its own translucent island instead of the page plane, so a
-   hairline separates it from the editor again. */
+/* With glass on, the sidebar sits on the window itself: no plane of its own, no dividing line. */
 html:is(.platform-macos, .platform-windows):not([data-window-transparency="disabled"])
   [data-plane="page"] {
-  --background: inherit;
-  border-right: 1px solid var(--divider);
+  --background: transparent;
 }
 
-/* Islands: editor, sidebar contents, bottom pane. */
+/* Islands (the centre, every dock pane, the bottom pane) are one raised, opaque surface, so a
+   pane's header and body share one tone and the window shows only in the gutters. */
 html:is(.platform-macos, .platform-windows):not([data-window-transparency="disabled"])
   .athas-glass-island {
-  background: var(--athas-glass-island-bg) !important;
+  background: var(--background) !important;
+}
+
+/* A session nobody has written in yet floats its start screen on the window, like the sidebar. */
+html:is(.platform-macos, .platform-windows):not([data-window-transparency="disabled"])
+  [data-island="clear"] {
+  --background: transparent;
+}
+
+html:is(.platform-macos, .platform-windows):not([data-window-transparency="disabled"])
+  [data-island="clear"]
+  .athas-glass-island {
+  box-shadow: none !important;
 }
 
 html:is(.platform-macos, .platform-windows):not([data-window-transparency="disabled"])
@@ -102,6 +115,13 @@ html:is(.platform-macos, .platform-windows):not([data-window-transparency="disab
 html:is(.platform-macos, .platform-windows):not([data-window-transparency="disabled"])
   .athas-workbench-glass {
   background: transparent !important;
+}
+
+/* A pane taken full screen floats over the window plane; the workbench under it steps away so it
+   does not show through the gutters. */
+.athas-layout-shell:has(> [data-slot="workbench-fullscreen-surface"]) > .athas-workbench-glass {
+  opacity: 0;
+  pointer-events: none;
 }
 
 html:is(.platform-macos, .platform-windows):not([data-window-transparency="disabled"])

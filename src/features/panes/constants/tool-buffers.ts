@@ -53,7 +53,7 @@ export const SINGLETON_TOOL_BUFFER_METADATA: Record<
   },
   customize: {
     path: "customize://agents",
-    name: "Customize",
+    name: "Integrations",
   },
 };
 

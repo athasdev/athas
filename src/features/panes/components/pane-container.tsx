@@ -46,7 +46,12 @@ import { BOTTOM_PANE_ID } from "../constants/pane";
 import { usePaneStore } from "../stores/pane.store";
 import type { PaneGroup } from "../types/pane.types";
 import type { EditorContent, TerminalContent } from "../types/pane-content.types";
-import { getPaneView, prefetchPaneViews, renderPaneView } from "../services/pane-view-registry";
+import {
+  getEmptyPaneView,
+  getPaneView,
+  prefetchPaneViews,
+  renderPaneView,
+} from "../services/pane-view-registry";
 import {
   getOrCreatePaneDropTarget,
   moveBufferToPaneDropTarget,
@@ -171,6 +176,9 @@ function toPaneRenderBuffer(buffer: Buffer | undefined): PaneRenderBuffer | unde
   return buffer;
 }
 
+const EMPTY_WORKBENCH_DELAY_MS = 250;
+/** How long after the window loads a project may still be restoring its tabs. */
+const STARTUP_WINDOW_MS = 5000;
 const EMPTY_PANE_BUFFERS: PaneRenderBuffer[] = [];
 
 function BufferPreviewCard({ buffer }: { buffer: PaneRenderBuffer }) {
@@ -296,6 +304,20 @@ export function PaneContainer({ pane }: PaneContainerProps) {
   );
   const activeBuffer = paneBuffers.find((buffer) => buffer.id === pane.activeBufferId) ?? null;
   const activeBufferPath = activeBuffer?.path;
+  const isSolePane = usePaneStore((state) => state.root.id === pane.id);
+  const isSwitchingProject = useFileSystemStore((state) => state.isSwitchingProject);
+  const isEmptyWorkbench =
+    paneBuffers.length === 0 && isSolePane && pane.id !== BOTTOM_PANE_ID && !isSwitchingProject;
+
+  // An empty workbench shows a new session in place, without a tab. Only at startup does it
+  // wait, so a restoring project can bring its own tabs back first.
+  const [emptyViewReady, setEmptyViewReady] = useState(() => performance.now() > STARTUP_WINDOW_MS);
+  useEffect(() => {
+    if (emptyViewReady || !isEmptyWorkbench) return;
+    const timer = window.setTimeout(() => setEmptyViewReady(true), EMPTY_WORKBENCH_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [emptyViewReady, isEmptyWorkbench]);
+  const EmptyPaneView = isEmptyWorkbench && emptyViewReady ? getEmptyPaneView() : null;
 
   useLayoutEffect(() => {
     if (activeBufferPath) fileOpenBenchmark.markOnce(activeBufferPath, "pane-rendered");
@@ -836,7 +858,13 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       />
       <div className="relative min-h-0 flex-1 overflow-hidden">
         <Suspense fallback={null}>
-          {paneBuffers.length === 0 ? null : shouldRenderCarousel ? (
+          {paneBuffers.length === 0 ? (
+            EmptyPaneView ? (
+              <PaneSurfaceLayer active>
+                <EmptyPaneView />
+              </PaneSurfaceLayer>
+            ) : null
+          ) : shouldRenderCarousel ? (
             <div
               ref={carouselViewportRef}
               className="scrollbar-none flex h-full items-stretch gap-4 overflow-x-auto overflow-y-hidden px-4 py-4 overscroll-x-none"

@@ -39,6 +39,8 @@ interface GlobalSearchToolbarProps {
   fileNavigatorAvailable: boolean;
   fileNavigatorVisible: boolean;
   onFileNavigatorVisibleChange: (visible: boolean) => void;
+  /** The narrow Search pane: the result count moves under the query, the file list switch goes. */
+  compact?: boolean;
 }
 
 export const GlobalSearchToolbar = memo(function GlobalSearchToolbar({
@@ -67,6 +69,7 @@ export const GlobalSearchToolbar = memo(function GlobalSearchToolbar({
   fileNavigatorAvailable,
   fileNavigatorVisible,
   onFileNavigatorVisibleChange,
+  compact = false,
 }: GlobalSearchToolbarProps) {
   const searchOptionToggles: Array<{
     key: "caseSensitive" | "wholeWord" | "useRegex";
@@ -77,6 +80,16 @@ export const GlobalSearchToolbar = memo(function GlobalSearchToolbar({
     { key: "wholeWord", label: "Match whole word", icon: SEARCH_TOGGLE_ICONS.wholeWord },
     { key: "useRegex", label: "Use regular expression", icon: SEARCH_TOGGLE_ICONS.regex },
   ];
+
+  const status = searchWarning ? (
+    <Badge tone="warning" truncate title={searchWarning} role="status" aria-live="polite">
+      {searchWarning}
+    </Badge>
+  ) : resultLabel ? (
+    <ChromeLabel tone="muted" title={resultLabel} role="status" className="px-1">
+      {resultLabel}
+    </ChromeLabel>
+  ) : null;
 
   return (
     <>
@@ -136,23 +149,20 @@ export const GlobalSearchToolbar = memo(function GlobalSearchToolbar({
                 </Toggle>
               ))}
             </div>
-            {searchWarning ? (
-              <Badge tone="warning" truncate title={searchWarning} role="status" aria-live="polite">
-                {searchWarning}
-              </Badge>
-            ) : resultLabel ? (
-              <ChromeLabel tone="muted" title={resultLabel} role="status" className="px-1">
-                {resultLabel}
-              </ChromeLabel>
-            ) : null}
-            <MultibufferNavigatorToggle
-              open={fileNavigatorVisible}
-              onOpenChange={onFileNavigatorVisibleChange}
-              disabled={!fileNavigatorAvailable}
-            />
+            {compact ? null : status}
+            {compact ? null : (
+              <MultibufferNavigatorToggle
+                open={fileNavigatorVisible}
+                onOpenChange={onFileNavigatorVisibleChange}
+                disabled={!fileNavigatorAvailable}
+              />
+            )}
           </>
         }
       />
+      {compact && status ? (
+        <div className="flex min-w-0 items-center px-2 pt-1">{status}</div>
+      ) : null}
       {detailsVisible ? (
         <div className="space-y-2 border-divider border-b bg-background px-2 pb-2">
           <SearchReplaceRow

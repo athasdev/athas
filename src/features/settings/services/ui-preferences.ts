@@ -1,6 +1,6 @@
 import type { Settings, UiDensity } from "@/features/settings/types/settings.types";
 
-type UiRootPreferences = Pick<Settings, "reduceMotion"> & Partial<Pick<Settings, "uiDensity">>;
+type UiRootPreferences = Partial<Pick<Settings, "uiDensity">>;
 
 export function normalizeUiDensity(value: unknown): UiDensity {
   return value === "comfortable" ? "comfortable" : "compact";
@@ -8,7 +8,6 @@ export function normalizeUiDensity(value: unknown): UiDensity {
 
 export function getUiRootAttributes(settings: UiRootPreferences) {
   return {
-    "data-reduce-motion": settings.reduceMotion ? "true" : "system",
     "data-ui-density": normalizeUiDensity(settings.uiDensity),
   } as const;
 }

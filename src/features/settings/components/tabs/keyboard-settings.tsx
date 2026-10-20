@@ -9,7 +9,7 @@ import {
   WarningCircleIcon,
 } from "@/ui/icons";
 import { saveTextFileWithDialog } from "@/utils/file-dialogs";
-import { useMemo, useState } from "react";
+import { useDeferredValue, useMemo, useState } from "react";
 import {
   KeybindingRow,
   keybindingTableMinWidth,
@@ -21,8 +21,11 @@ import {
   keybindingPresetOptions,
 } from "@/features/keymaps/constants/keybinding-presets";
 import { useKeymapStore } from "@/features/keymaps/stores/keymaps.store";
-import type { Keybinding } from "@/features/keymaps/types/keymaps.types";
-import { getEffectiveKeybindingForCommand } from "@/features/keymaps/services/effective-keymaps";
+import type { Command } from "@/features/keymaps/types/keymaps.types";
+import {
+  getEffectiveKeybindingsByCommand,
+  getKeybindingConflicts,
+} from "@/features/keymaps/services/effective-keymaps";
 import {
   createKeybindingsExportPayload,
   getExportableUserKeybindings,
@@ -45,6 +48,8 @@ import { TypedConfirmAction } from "../typed-confirm-action";
 import Section, { SettingBlock, SettingsView, SettingRow } from "../settings-section";
 
 type FilterType = "all" | "user" | "default" | "preset" | "preset-changes" | "extension";
+
+const NO_CONFLICTS: Command[] = [];
 
 const importIssueLabels = {
   "invalid-entry": "invalid entries",
@@ -72,6 +77,7 @@ function getImportIssueDescription(
 
 export const KeyboardSettings = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const deferredSearchQuery = useDeferredValue(searchQuery);
   const [filterType, setFilterType] = useState<FilterType>("all");
   const [isEditingKeybindings, setIsEditingKeybindings] = useState(false);
   const { showToast } = useToast();
@@ -85,13 +91,26 @@ export const KeyboardSettings = () => {
   const commands = useMemo(() => keymapRegistry.getAllCommands(), []);
   const registryKeybindings = useMemo(() => keymapRegistry.getAllKeybindings(), []);
 
-  const getKeybindingForCommand = (commandId: string): Keybinding | undefined =>
-    getEffectiveKeybindingForCommand({
-      commandId,
-      preset: keybindingPreset,
-      registryKeybindings,
-      userKeybindings,
-    });
+  const bindingsByCommand = useMemo(
+    () =>
+      getEffectiveKeybindingsByCommand({
+        preset: keybindingPreset,
+        registryKeybindings,
+        userKeybindings,
+      }),
+    [keybindingPreset, registryKeybindings, userKeybindings],
+  );
+  const conflictsByCommand = useMemo(() => {
+    const commandById = new Map(commands.map((command) => [command.id, command]));
+    const conflicts = new Map<string, Command[]>();
+    for (const [commandId, others] of getKeybindingConflicts(bindingsByCommand.values())) {
+      conflicts.set(
+        commandId,
+        others.flatMap((other) => commandById.get(other) ?? []),
+      );
+    }
+    return conflicts;
+  }, [bindingsByCommand, commands]);
 
   const selectedPresetCoverage = useMemo(
     () => getKeybindingPresetCoverageReport(keybindingPreset),
@@ -103,10 +122,11 @@ export const KeyboardSettings = () => {
   );
 
   const filteredCommands = useMemo(() => {
-    const query = searchQuery.trim();
+    const query = deferredSearchQuery.trim();
+    const changedCommandIds = new Set(selectedPresetDiff.changedCommandIds);
 
     return commands.filter((command) => {
-      const binding = getKeybindingForCommand(command.id);
+      const binding = bindingsByCommand.get(command.id);
       const matchesSearch =
         !query ||
         matchesSearchQuery(query, [
@@ -125,7 +145,7 @@ export const KeyboardSettings = () => {
       if (filterType === "default") return !binding || binding.source === "default";
       if (filterType === "preset") return binding?.source === "preset";
       if (filterType === "preset-changes") {
-        return selectedPresetDiff.changedCommandIds.includes(command.id);
+        return changedCommandIds.has(command.id);
       }
       if (filterType === "extension") return binding?.source === "extension";
 
@@ -133,12 +153,10 @@ export const KeyboardSettings = () => {
     });
   }, [
     commands,
-    searchQuery,
+    deferredSearchQuery,
     filterType,
     selectedPresetDiff.changedCommandIds,
-    keybindingPreset,
-    userKeybindings,
-    registryKeybindings,
+    bindingsByCommand,
   ]);
 
   const userOverrideCount = useMemo(
@@ -275,7 +293,7 @@ export const KeyboardSettings = () => {
             />
           </div>
 
-          <div className="mb-3 overflow-x-auto">
+          <div className="mb-3">
             <ToggleGroup
               value={filterType}
               onValueChange={setFilterType}
@@ -323,12 +341,14 @@ export const KeyboardSettings = () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredCommands.map((command) => {
-                    const binding = getKeybindingForCommand(command.id);
-                    return (
-                      <KeybindingRow key={command.id} command={command} keybinding={binding} />
-                    );
-                  })
+                  filteredCommands.map((command) => (
+                    <KeybindingRow
+                      key={command.id}
+                      command={command}
+                      keybinding={bindingsByCommand.get(command.id)}
+                      conflictingCommands={conflictsByCommand.get(command.id) ?? NO_CONFLICTS}
+                    />
+                  ))
                 )}
               </TableBody>
             </Table>

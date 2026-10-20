@@ -733,7 +733,7 @@ const DiagnosticsPane = ({ diagnostics, onDiagnosticClick }: DiagnosticsPaneProp
       ...GROUP_OPTIONS.map((option) => ({
         id: `group-${option.value}`,
         label: `Group by: ${option.label}`,
-        icon: preferences.groupBy === option.value ? <CheckIcon /> : undefined,
+        checked: preferences.groupBy === option.value,
         onClick: () => {
           setPreferences((prev) => ({
             ...prev,
@@ -749,7 +749,7 @@ const DiagnosticsPane = ({ diagnostics, onDiagnosticClick }: DiagnosticsPaneProp
       ...SORT_OPTIONS.map((option) => ({
         id: `sort-${option.value}`,
         label: `Sort by: ${option.label}`,
-        icon: preferences.sortBy === option.value ? <CheckIcon /> : undefined,
+        checked: preferences.sortBy === option.value,
         onClick: () => {
           setPreferences((prev) => ({
             ...prev,
@@ -765,7 +765,7 @@ const DiagnosticsPane = ({ diagnostics, onDiagnosticClick }: DiagnosticsPaneProp
       items.push({
         id: `severity-${severity}`,
         label: `${SEVERITY_LABEL[severity]} (${visibleBySeverity[severity]}/${totalBySeverity[severity]})`,
-        icon: severityFilter[severity] ? <CheckIcon /> : undefined,
+        checked: severityFilter[severity],
         onClick: () => toggleSeverity(severity),
       });
     }
@@ -774,7 +774,7 @@ const DiagnosticsPane = ({ diagnostics, onDiagnosticClick }: DiagnosticsPaneProp
       items.push({
         id: "only-current-file",
         label: "Only Current File",
-        icon: preferences.onlyCurrentFile ? <CheckIcon /> : undefined,
+        checked: preferences.onlyCurrentFile,
         onClick: () => togglePreference("onlyCurrentFile"),
       });
     }

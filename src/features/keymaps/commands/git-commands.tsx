@@ -31,7 +31,7 @@ function gitSidebarCommand(
     description,
     icon,
     palette: keybindingCommandId ? { keybindingCommandId } : true,
-    execute: async () => (await gitActions()).openGitSidebarAction(action),
+    execute: async () => void (await gitActions()).openGitSidebarAction(action),
   };
 }
 

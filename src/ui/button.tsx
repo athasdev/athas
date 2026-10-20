@@ -15,12 +15,15 @@ export const buttonVariants = cva(
         /** Solid primary button: the one call to action on a surface. */
         accent:
           "bg-primary text-primary-foreground hover:bg-primary-hover data-[active=true]:bg-primary-hover **:data-[slot=kbd]:bg-primary-foreground/20 **:data-[slot=kbd]:text-primary-foreground",
+        /** An action that deletes or discards something. */
+        destructive:
+          "bg-destructive-soft text-destructive hover:bg-destructive/20 data-[active=true]:bg-destructive/20",
         /** A field-shaped trigger: selects and pickers that sit among inputs. */
         outline:
           "bg-raised text-foreground shadow-(--shadow-raised) hover:bg-accent data-[active=true]:bg-selected data-popup-open:bg-accent",
         /** Borderless: toolbars, icon buttons, quiet actions. */
         ghost:
-          "bg-transparent text-subtle-foreground hover:bg-accent hover:text-foreground data-[active=true]:bg-selected data-[active=true]:text-foreground",
+          "bg-transparent text-subtle-foreground hover:bg-accent hover:text-foreground data-[active=true]:bg-selected data-[active=true]:text-foreground data-popup-open:bg-accent data-popup-open:text-foreground",
         /** A view switch in a header: no fill, the active one reads by tone. */
         tab: "bg-transparent text-subtle-foreground hover:text-foreground data-[active=true]:text-foreground data-popup-open:text-foreground",
         /** Inline text link. Sizes itself to its text. */

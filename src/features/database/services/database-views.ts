@@ -4,10 +4,12 @@ import { registerSidebarView } from "@/features/layout/services/sidebar-view-reg
 import { registerPaneView } from "@/features/panes/services/pane-view-registry";
 import { DatabaseBufferView } from "../components/database-buffer-view";
 
+const loadDatabaseSidebar = () => import("../components/database-sidebar");
 const DatabaseSidebar = lazy(() =>
-  import("../components/database-sidebar").then((module) => ({
-    default: module.DatabaseSidebar,
-  })),
+  loadDatabaseSidebar().then((module) => ({ default: module.DatabaseSidebar })),
+);
+const DatabaseHeaderActions = lazy(() =>
+  loadDatabaseSidebar().then((module) => ({ default: module.DatabaseHeaderActions })),
 );
 
 export function registerDatabaseViews() {
@@ -25,5 +27,6 @@ export function registerDatabaseViews() {
     icon: createElement(DatabaseIcon),
     order: 60,
     component: DatabaseSidebar,
+    HeaderActions: DatabaseHeaderActions,
   });
 }

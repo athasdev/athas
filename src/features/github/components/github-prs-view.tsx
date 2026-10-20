@@ -90,7 +90,8 @@ import { GitHubAvatar } from "./github-avatar";
 import GitHubIssuesView from "./github-issues-view";
 import { GitHubSidebarRow, type GitHubSidebarPreviewBadge } from "./github-sidebar-row";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
-import { onAppEvent } from "@/utils/app-events";
+import { getProjectToolPaneId } from "@/features/layout/services/dock-pane-registry";
+import { usePaneCommands } from "@/features/layout/hooks/use-pane-commands";
 import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state";
 
 const EMPTY_PULL_REQUESTS: PullRequest[] = [];
@@ -205,7 +206,7 @@ const PRListItem = memo(
 
 PRListItem.displayName = "PRListItem";
 
-const GitHubPRsView = memo(({ isActive = true }: { isActive?: boolean }) => {
+const GitHubPRsView = memo(() => {
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const currentFilter = useGitHubStore.use.currentFilter();
   const isAuthenticated = useGitHubStore.use.isAuthenticated();
@@ -224,11 +225,10 @@ const GitHubPRsView = memo(({ isActive = true }: { isActive?: boolean }) => {
   const githubSidebarSectionOrder = useSettingsStore(
     (state) => state.settings.githubSidebarSectionOrder,
   );
-  const isGitHubPRsViewActive = isActive;
   const effectiveRepoPath = activeRepoPath ?? rootFolderPath ?? null;
   const pullRequestsQuery = useQuery({
     ...pullRequestListQuery(effectiveRepoPath, currentFilter, markAuthFailed),
-    enabled: isGitHubPRsViewActive && isAuthenticated,
+    enabled: isAuthenticated,
   });
   const prs = pullRequestsQuery.data ?? EMPTY_PULL_REQUESTS;
   const isLoading = pullRequestsQuery.isFetching;
@@ -276,14 +276,11 @@ const GitHubPRsView = memo(({ isActive = true }: { isActive?: boolean }) => {
   ]);
 
   useEffect(() => {
-    if (isGitHubPRsViewActive) {
-      const timeoutId = window.setTimeout(() => {
-        void checkAuth();
-      }, 0);
-
-      return () => window.clearTimeout(timeoutId);
-    }
-  }, [checkAuth, isGitHubPRsViewActive]);
+    const timeoutId = window.setTimeout(() => {
+      void checkAuth();
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [checkAuth]);
 
   useEffect(() => {
     if (availableSections.length === 0) return;
@@ -321,7 +318,7 @@ const GitHubPRsView = memo(({ isActive = true }: { isActive?: boolean }) => {
   }, [effectiveRepoPath]);
 
   useEffect(() => {
-    if (!isGitHubPRsViewActive || !effectiveRepoPath || !isAuthenticated) return;
+    if (!effectiveRepoPath || !isAuthenticated) return;
 
     let cancelled = false;
     const idleApi = window as Window & {
@@ -363,7 +360,6 @@ const GitHubPRsView = memo(({ isActive = true }: { isActive?: boolean }) => {
   }, [
     effectiveRepoPath,
     isAuthenticated,
-    isGitHubPRsViewActive,
     issueFilter,
     queryClient,
     showGitHubActions,
@@ -389,22 +385,12 @@ const GitHubPRsView = memo(({ isActive = true }: { isActive?: boolean }) => {
     void queryClient.invalidateQueries({ queryKey });
   }, [activeSection, currentFilter, effectiveRepoPath, issueFilter, queryClient]);
 
-  useEffect(() => {
-    const handlePaletteAction = (detail: GitHubSidebarAction) => {
-      if (!detail) return;
-
-      if (detail.type === "show-section") {
-        setActiveSection(detail.section);
-        return;
-      }
-
-      if (detail.type === "refresh") {
-        handleRefreshActiveSection();
-      }
-    };
-
-    return onAppEvent("github:palette-action", handlePaletteAction);
-  }, [handleRefreshActiveSection]);
+  usePaneCommands(getProjectToolPaneId("github-prs"), {
+    action: (detail: GitHubSidebarAction) => {
+      if (detail.type === "show-section") setActiveSection(detail.section);
+      else if (detail.type === "refresh") handleRefreshActiveSection();
+    },
+  });
 
   const handleSelectRepository = useCallback(async () => {
     setIsSelectingRepo(true);
@@ -650,12 +636,7 @@ const GitHubPRsView = memo(({ isActive = true }: { isActive?: boolean }) => {
   );
 
   useEffect(() => {
-    if (
-      !isGitHubPRsViewActive ||
-      activeSection !== "pull-requests" ||
-      !effectiveRepoPath ||
-      filteredPrs.length === 0
-    ) {
+    if (activeSection !== "pull-requests" || !effectiveRepoPath || filteredPrs.length === 0) {
       return;
     }
 
@@ -685,7 +666,7 @@ const GitHubPRsView = memo(({ isActive = true }: { isActive?: boolean }) => {
         window.clearTimeout(idleId);
       }
     };
-  }, [activeSection, effectiveRepoPath, filteredPrs, isGitHubPRsViewActive, queryClient]);
+  }, [activeSection, effectiveRepoPath, filteredPrs, queryClient]);
 
   const sectionLabels: Record<GitHubSidebarSection, string> = {
     "pull-requests": "Pull Requests",
@@ -760,9 +741,6 @@ const GitHubPRsView = memo(({ isActive = true }: { isActive?: boolean }) => {
   if (!isAuthenticated) {
     return (
       <div className="flex h-full min-h-0 flex-col bg-background font-sans text-foreground">
-        <div className="flex h-11 shrink-0 items-center px-3 ui-text-base font-semibold">
-          GitHub
-        </div>
         <GitHubAuthStatusMessage layout="sidebar" />
       </div>
     );

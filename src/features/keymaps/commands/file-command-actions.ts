@@ -1,4 +1,6 @@
 import { openNewAgentChat } from "@/features/ai/services/open-new-agent-chat";
+import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
+import { usePaneStore } from "@/features/panes/stores/pane.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
@@ -47,24 +49,29 @@ export async function revertActiveFile(): Promise<void> {
   await bufferStore.actions.reloadBufferFromDisk(activeBuffer.id);
 }
 
-/** The tab shown in the focused pane, falling back to the last active tab. */
-function getActivePaneBufferId(): string | null {
-  return useBufferStore.getState().actions.getActiveBuffer()?.id ?? null;
-}
-
 export function closeActiveTab(): void {
   if (isTerminalFocused()) {
     emitAppEvent("terminal:close-active");
     return;
   }
 
-  const bufferId = getActivePaneBufferId();
-  if (bufferId) {
-    useBufferStore.getState().actions.closeBuffer(bufferId);
+  const buffer = useBufferStore.getState().actions.getActiveBuffer();
+  if (buffer) {
+    const { root } = usePaneStore.getState();
+    const isLastTab = root.type === "group" && root.bufferIds.length === 1;
+    // The last tab left, an unsent new session, is already the start screen; closing it would
+    // only reopen it.
+    if (isLastTab && buffer.type === "agent" && isUnsentSession(buffer.sessionId)) return;
+    useBufferStore.getState().actions.closeBuffer(buffer.id);
+    if (isLastTab) openNewAgentChat();
     return;
   }
 
   requestWindowClose();
+}
+
+function isUnsentSession(sessionId: string): boolean {
+  return (useAIChatStore.getState().messagesByChat[sessionId]?.length ?? 0) === 0;
 }
 
 export function closeCurrentWindow(): void {

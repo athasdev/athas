@@ -2,8 +2,9 @@ import { describe, expect, it } from "vite-plus/test";
 import { getDefaultSettingsSnapshot } from "@/features/settings/config/default-settings";
 
 describe("default settings", () => {
-  it("starts with window transparency disabled", () => {
-    expect(getDefaultSettingsSnapshot().windowTransparency).toBe(false);
+  it("starts with window transparency and OS theme sync enabled", () => {
+    expect(getDefaultSettingsSnapshot().windowTransparency).toBe(true);
+    expect(getDefaultSettingsSnapshot().syncSystemTheme).toBe(true);
   });
 
   it("opens new projects in separate windows by default", () => {
@@ -46,7 +47,7 @@ describe("default settings", () => {
   it("starts with calm tabs, every Git sidebar item and the default sidebar width", () => {
     const settings = getDefaultSettingsSnapshot();
 
-    expect(settings.reduceMotion).toBe(false);
+    expect("reduceMotion" in settings).toBe(false);
     expect(settings.showTabIcons).toBe(true);
     expect(settings.tabCloseButtonVisibility).toBe("active");
     expect(settings.hiddenGitSidebarItems).toEqual([]);

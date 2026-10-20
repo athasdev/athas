@@ -46,6 +46,8 @@ interface TerminalContainerProps {
   className?: string;
   onFullScreen?: () => void;
   isFullScreen?: boolean;
+  /** Closes the pane holding the terminals, shown as the last header action. */
+  onClose?: () => void;
 }
 
 interface CloseTerminalOptions {
@@ -75,6 +77,7 @@ const TerminalContainer = ({
   className = "",
   onFullScreen,
   isFullScreen = false,
+  onClose,
 }: TerminalContainerProps) => {
   const activeWorkspaceId = useActiveWorkspaceId();
   const workspaceId = useWorkspaceStoreScopeId() ?? activeWorkspaceId;
@@ -728,6 +731,7 @@ const TerminalContainer = ({
     onPrevTerminal: switchToPrevTerminal,
     onFullScreen,
     isFullScreen,
+    onClose,
   };
   const activeTerminal = terminals.find((terminal) => terminal.id === activeTerminalId);
   const activeLayout = useMemo<PaneNode | null>(() => {

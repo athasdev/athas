@@ -103,7 +103,7 @@ export interface GitBlameLine {
   commit: string;
 }
 
-/** What a command asks the Git sidebar to do, sent as the `git:palette-action` app event. */
+/** What a command asks Source Control to do, run as its pane's `action` command (`pane-commands.ts`). */
 export type GitSidebarAction =
   | { type: "manage-branches"; tab: "branches" | "worktrees" }
   | { type: "show-branch-diff" }

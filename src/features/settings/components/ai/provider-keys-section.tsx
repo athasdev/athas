@@ -57,7 +57,7 @@ function ProviderKeyRow({
   const reset = async () => {
     const confirmed = await showConfirmDialog(
       `Remove your ${provider.name} API key from this device?`,
-      { title: `Reset ${provider.name} key`, confirmLabel: "Reset" },
+      { title: `Reset ${provider.name} key`, confirmLabel: "Reset", destructive: true },
     );
     if (!confirmed) return;
     try {

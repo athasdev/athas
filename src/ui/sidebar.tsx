@@ -17,7 +17,6 @@ import { ChromeBar, ChromeGroup } from "@/ui/chrome";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/ui/dropdown";
 import { FieldTitle } from "@/ui/field";
 import { ChevronDownIcon, DotsIcon, IconContext, SearchIcon } from "@/ui/icons";
-import { PaneHeaderPortal, usePaneHeaderHost } from "@/ui/pane";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import { ScrollArea } from "@/ui/scroll-area";
 import { SearchField } from "@/ui/search";
@@ -91,11 +90,6 @@ export function SidebarTitleBar({
   actionsLayout?: "constrained" | "content";
 }) {
   const titleClassName = "min-w-0 flex-1 truncate font-medium text-foreground ui-text-base";
-  const hostedByPane = usePaneHeaderHost();
-
-  if (hostedByPane) {
-    return children ? <PaneHeaderPortal>{children}</PaneHeaderPortal> : null;
-  }
 
   return (
     <div

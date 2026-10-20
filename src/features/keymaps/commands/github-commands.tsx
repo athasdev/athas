@@ -125,7 +125,7 @@ export const githubCommands: Command[] = [
     description: "Refresh the active GitHub sidebar section",
     icon: <ArrowClockwiseIcon />,
     palette: true,
-    execute: async () => (await githubActions()).refreshGitHubView(),
+    execute: async () => void (await githubActions()).refreshGitHubView(),
   },
   {
     id: "github.checkAuthentication",

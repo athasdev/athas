@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { onAppEvent } from "@/utils/app-events";
+import { registerPaneCommands } from "@/features/layout/services/pane-commands";
 
 const mocks = vi.hoisted(() => ({
   toast: vi.fn(),
@@ -30,7 +30,7 @@ vi.mock("@/features/workspace/stores/project.store", () => ({
   useProjectStore: { getState: () => mocks.project },
 }));
 vi.mock("@/features/layout/stores/ui-state.store", () => ({
-  useUIState: { getState: () => ({ setIsSidebarVisible: vi.fn(), setActiveView: vi.fn() }) },
+  useUIState: { getState: () => ({ setIsSidebarVisible: vi.fn() }) },
 }));
 vi.mock("@/features/git/api/git-status-api", () => ({
   stageAllFiles: mocks.git.stageAllFiles,
@@ -67,14 +67,14 @@ afterEach(() => {
 });
 
 describe("git palette actions", () => {
-  it("asks the sidebar to refresh and says so", () => {
+  it("asks Source Control to refresh and says so", async () => {
     const handler = vi.fn();
-    const stop = onAppEvent("git:palette-action", handler);
+    const stop = registerPaneCommands("view:git", { action: handler });
 
     refreshGitStatus();
+    await vi.waitFor(() => expect(handler).toHaveBeenCalledWith({ type: "refresh" }));
     stop();
 
-    expect(handler).toHaveBeenCalledWith({ type: "refresh" });
     expect(lastToast()).toEqual({ message: "Refreshing Git status...", type: "info" });
   });
 

@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import type { GitHubDeliveryContent } from "@/features/panes/types/pane-content.types";
 import { openCommitDiffBuffer } from "@/features/git/services/open-commit-diff-buffer";
-import { resolveProjectGitHubRepository } from "@/features/views/services/view-github";
+import { resolveProjectGitHubRepository } from "@/features/github/services/project-github-repository";
 import { ViewerErrorState, ViewerLoadingState } from "@/ui/viewer-state";
 import { Button } from "@/ui/button";
 import { ArrowClockwiseIcon, CopyIcon, OpenExternalIcon, TagIcon } from "@/ui/icons";

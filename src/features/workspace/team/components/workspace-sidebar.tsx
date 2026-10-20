@@ -1,6 +1,4 @@
-import { useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { openFolder } from "@/features/file-system/api/file-system-api";
 import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { Button } from "@/ui/button";
@@ -12,9 +10,11 @@ import {
   SidebarScrollArea,
   SidebarSectionLabel,
   SidebarSectionStack,
-  SidebarWorkspace,
+  SidebarPanel,
 } from "@/ui/sidebar";
 import { getBaseName } from "@/utils/path-helpers";
+import { showToast } from "@/utils/toast";
+import { openFolder } from "@/features/file-system/api/file-system-api";
 import { WORKSPACE_SECTIONS } from "../config/workspace-sections";
 import { useWorkspaceSelection } from "../hooks/use-workspace-selection";
 import { useWorkspaceManagementStore } from "../stores/workspace-management.store";
@@ -23,40 +23,16 @@ import { useActiveBufferId } from "@/features/panes/hooks/use-pane-buffer-state"
 export function WorkspaceSidebar() {
   const { root, paths, drafts } = useWorkspaceSelection();
   const section = useWorkspaceManagementStore.use.section();
-  const { register, select, setSection } = useWorkspaceManagementStore.use.actions();
+  const { select, setSection } = useWorkspaceManagementStore.use.actions();
   const enterprise = useAuthStore((state) => state.subscription?.enterprise?.has_access);
   const activeBufferId = useActiveBufferId();
   const isManagementActive = useBufferStore(
     (state) => state.buffers.find((buffer) => buffer.id === activeBufferId)?.type === "workspaces",
   );
-  const [actionError, setActionError] = useState<string | null>(null);
-  const openDetails = () => useBufferStore.getState().actions.openContent({ type: "workspaces" });
-  const add = async () => {
-    setActionError(null);
-    try {
-      const path = await openFolder();
-      if (path) {
-        register(path);
-        openDetails();
-      }
-    } catch (error) {
-      setActionError(error instanceof Error ? error.message : String(error));
-    }
-  };
+  const openDetails = () => openWorkspaceDetails();
 
   return (
-    <SidebarWorkspace
-      title="Workspaces"
-      actions={
-        <SidebarIconButton
-          aria-label="Add workspace"
-          tooltip="Add workspace"
-          onClick={() => void add()}
-        >
-          <PlusIcon />
-        </SidebarIconButton>
-      }
-    >
+    <SidebarPanel>
       <SidebarScrollArea>
         <Select
           aria-label="Workspace"
@@ -74,11 +50,6 @@ export function WorkspaceSidebar() {
           }}
           placeholder="Choose a workspace"
         />
-        {actionError ? (
-          <p role="alert" className="mt-2 text-destructive ui-text-sm">
-            {actionError}
-          </p>
-        ) : null}
         <nav aria-label="Workspace sections">
           <SidebarSectionStack>
             {WORKSPACE_SECTIONS.map((group) => (
@@ -112,6 +83,37 @@ export function WorkspaceSidebar() {
           </Button>
         ) : null}
       </SidebarScrollArea>
-    </SidebarWorkspace>
+    </SidebarPanel>
+  );
+}
+
+function openWorkspaceDetails() {
+  useBufferStore.getState().actions.openContent({ type: "workspaces" });
+}
+
+/** The Workspaces pane header's action: register a folder as a workspace and open its details. */
+export function WorkspaceHeaderActions() {
+  const { register } = useWorkspaceManagementStore.use.actions();
+  const add = async () => {
+    try {
+      const path = await openFolder();
+      if (!path) return;
+      register(path);
+      openWorkspaceDetails();
+    } catch (error) {
+      showToast({
+        message: `Could not add the workspace: ${error instanceof Error ? error.message : String(error)}`,
+        type: "error",
+      });
+    }
+  };
+  return (
+    <SidebarIconButton
+      aria-label="Add workspace"
+      tooltip="Add workspace"
+      onClick={() => void add()}
+    >
+      <PlusIcon />
+    </SidebarIconButton>
   );
 }

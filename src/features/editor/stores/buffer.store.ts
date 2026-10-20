@@ -3,7 +3,7 @@ import { createStore } from "zustand/vanilla";
 import type { DatabaseType } from "@/features/panes/types/pane-content.types";
 import {
   deliveryBufferPath,
-  getViewBufferPath,
+  projectDashboardPath,
 } from "@/features/editor/services/virtual-buffer-paths";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import {
@@ -22,6 +22,13 @@ import type { GitDiff } from "@/features/git/types/git.types";
 import { getBufferById, getBufferByPath } from "@/features/editor/stores/buffer-index";
 import type { ImageDraftState } from "@/features/viewer/image/editor/services/image-edit-session";
 import { usePaneStore } from "@/features/panes/stores/pane.store";
+import {
+  getSessionTabSet,
+  getTabSetSessionId,
+  PROJECT_TAB_SET,
+  useTabSetsStore,
+} from "@/features/panes/stores/tab-sets.store";
+import { getAllPaneGroups } from "@/features/panes/services/pane-tree";
 import {
   selectActiveBufferId,
   selectActivePane,
@@ -427,6 +434,18 @@ const scheduleExtensionSupportCheck = (path: string) => {
 const createBufferStore = (workspaceId: string) => {
   const paneStore = usePaneStore.getStore(workspaceId);
   const paneActions = () => paneStore.getState().actions;
+  const tabSets = () => useTabSetsStore.getStore(workspaceId).getState();
+  /** Buffers another owner's tab set shows: closing their tab here only takes it off screen. */
+  const getHeldBufferIds = () => tabSets().actions.getHeldBufferIds();
+  /** A session's tab set left with no tab hands the centre back to the project's. */
+  const leaveEmptySessionTabSet = () => {
+    const { activeOwner, actions } = tabSets();
+    if (!getTabSetSessionId(activeOwner)) return;
+    const hasTabs = getAllPaneGroups(paneStore.getState().root).some(
+      (group) => group.bufferIds.length > 0,
+    );
+    if (!hasTabs) actions.switchTo(PROJECT_TAB_SET);
+  };
   const getActiveBufferIdInWorkspace = () => selectActiveBufferId(paneStore.getState());
   const getPaneReplacementBufferId = (closingBufferIds: string[], buffers: PaneContent[]) =>
     getWorkspacePaneReplacementBufferId(closingBufferIds, buffers, workspaceId);
@@ -480,10 +499,11 @@ const createBufferStore = (workspaceId: string) => {
         const { buffers, maxOpenTabs } = get();
         const replaced = [...replaceBufferIds];
         const closed = [...closeBufferIds];
+        const held = getHeldBufferIds();
         if (evict) {
           const leaving = new Set([...replaced, ...closed]);
           const { evictedBuffer } = evictLeastRecentAutoClosableBuffer(
-            buffers.filter((buffer) => !leaving.has(buffer.id)),
+            buffers.filter((buffer) => !leaving.has(buffer.id) && !held.has(buffer.id)),
             maxOpenTabs,
             {
               ...selectPaneBufferFlags(paneStore.getState()),
@@ -505,7 +525,7 @@ const createBufferStore = (workspaceId: string) => {
           closeBufferIds: closed,
         });
 
-        const dropped = new Set([...replaced, ...closed]);
+        const dropped = new Set([...replaced, ...closed].filter((bufferId) => !held.has(bufferId)));
         if (dropped.size > 0) {
           for (const bufferId of dropped) forgetBufferState(bufferId);
           set((state) => {
@@ -629,12 +649,27 @@ const createBufferStore = (workspaceId: string) => {
       };
 
       /** Closes buffers for good: panes drop them in one update, then the registry does. */
-      const closeBuffersForce = (bufferIds: readonly string[]) => {
+      const closeBuffersForce = (requestedBufferIds: readonly string[]) => {
+        const held = getHeldBufferIds();
+        const heldBufferIds = requestedBufferIds.filter((bufferId) => held.has(bufferId));
+        const bufferIds = requestedBufferIds.filter((bufferId) => !held.has(bufferId));
+        if (heldBufferIds.length > 0) {
+          const activeBufferId = getActiveBufferIdInWorkspace();
+          paneActions().removeBuffers(heldBufferIds, {
+            revealBufferId:
+              activeBufferId && heldBufferIds.includes(activeBufferId)
+                ? getPaneReplacementBufferId(heldBufferIds, get().buffers)
+                : null,
+          });
+        }
         for (const bufferId of bufferIds) flushLiveDocument(bufferId);
         const { buffers, closedBuffersHistory } = get();
         const closingIds = new Set(bufferIds);
         const closingBuffers = buffers.filter((buffer) => closingIds.has(buffer.id));
-        if (closingBuffers.length === 0) return;
+        if (closingBuffers.length === 0) {
+          leaveEmptySessionTabSet();
+          return;
+        }
         const closingBufferIds = closingBuffers.map((buffer) => buffer.id);
 
         const paneState = paneStore.getState();
@@ -671,6 +706,7 @@ const createBufferStore = (workspaceId: string) => {
           state.closedBuffersHistory = history;
         });
         saveWorkspaceSession();
+        leaveEmptySessionTabSet();
       };
 
       return {
@@ -903,21 +939,26 @@ const createBufferStore = (workspaceId: string) => {
                 return openNewContent(path);
               }
 
-              case "githubForm": {
-                const path = `github-form://create/${spec.formKind}/${encodeURIComponent(spec.repoPath)}`;
-                const existing = buffers.find(
-                  (buffer) => buffer.type === "githubForm" && buffer.path === path,
-                );
+              case "projectDashboard": {
+                const path = projectDashboardPath(spec.projectPath);
+                const existing = getBufferByPath(buffers, path);
                 if (existing) {
-                  return showExisting(existing.id);
+                  return showExisting(existing.id, {
+                    reveal: true,
+                    update: (buffer) => {
+                      if (buffer?.type === "projectDashboard") buffer.name = spec.name;
+                    },
+                  });
                 }
 
                 return openNewContent(path);
               }
 
-              case "customView": {
-                const path = getViewBufferPath(spec.projectPath, spec.viewId);
-                const existing = getBufferByPath(buffers, path);
+              case "githubForm": {
+                const path = `github-form://create/${spec.formKind}/${encodeURIComponent(spec.repoPath)}`;
+                const existing = buffers.find(
+                  (buffer) => buffer.type === "githubForm" && buffer.path === path,
+                );
                 if (existing) {
                   return showExisting(existing.id);
                 }
@@ -1220,6 +1261,18 @@ const createBufferStore = (workspaceId: string) => {
           },
 
           openAgentBuffer: (sessionId?: string): string => {
+            // A session opens in its own tab set: its tab, then the files opened from it.
+            if (sessionId) {
+              const openBufferIds = new Set(get().buffers.map((buffer) => buffer.id));
+              const { actions } = tabSets();
+              actions.switchTo(getSessionTabSet(sessionId), {
+                isOpenBuffer: (bufferId) => openBufferIds.has(bufferId),
+              });
+              const bufferId = get().actions.openContent({ type: "agent", sessionId });
+              // The session's tab lives in its own set only, not also among the project's tabs.
+              actions.removeBuffers([bufferId]);
+              return bufferId;
+            }
             return get().actions.openContent({ type: "agent", sessionId });
           },
 
@@ -1264,7 +1317,8 @@ const createBufferStore = (workspaceId: string) => {
 
             if (!buffer) return;
 
-            if (isDirtyContent(buffer)) {
+            // A tab whose buffer another tab set still shows closes without asking to save.
+            if (isDirtyContent(buffer) && !getHeldBufferIds().has(bufferId)) {
               set((state) => {
                 state.pendingClose = {
                   bufferId,
@@ -1281,22 +1335,27 @@ const createBufferStore = (workspaceId: string) => {
             closeBuffersForce([bufferId]);
           },
 
-          closeBuffersBatch: (bufferIds: string[], skipSessionSave = false) => {
-            if (bufferIds.length === 0) return;
+          closeBuffersBatch: (requestedBufferIds: string[], skipSessionSave = false) => {
+            if (requestedBufferIds.length === 0) return;
+            const held = getHeldBufferIds();
+            const bufferIds = requestedBufferIds.filter((bufferId) => !held.has(bufferId));
+            const heldBufferIds = requestedBufferIds.filter((bufferId) => held.has(bufferId));
 
             for (const id of bufferIds) forgetLiveDocument(id);
             const { buffers } = get();
             const closingBufferIds = new Set(bufferIds);
             const activeBufferId = getActiveBufferIdInWorkspace();
             const replacementBufferId =
-              activeBufferId && closingBufferIds.has(activeBufferId)
-                ? getPaneReplacementBufferId(bufferIds, buffers)
+              activeBufferId && requestedBufferIds.includes(activeBufferId)
+                ? getPaneReplacementBufferId(requestedBufferIds, buffers)
                 : null;
 
             for (const buffer of buffers) {
               if (closingBufferIds.has(buffer.id)) releaseClosedPaneView(buffer);
             }
-            paneActions().removeBuffers(bufferIds, { revealBufferId: replacementBufferId });
+            paneActions().removeBuffers([...bufferIds, ...heldBufferIds], {
+              revealBufferId: replacementBufferId,
+            });
             set((state) => {
               state.buffers = state.buffers.filter((b) => !closingBufferIds.has(b.id));
             });
@@ -1304,6 +1363,7 @@ const createBufferStore = (workspaceId: string) => {
             if (!skipSessionSave) {
               saveWorkspaceSession();
             }
+            leaveEmptySessionTabSet();
           },
 
           setActiveBuffer: (bufferId: string, paneId?: string) => {

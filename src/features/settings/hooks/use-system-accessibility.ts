@@ -40,7 +40,6 @@ export function useSystemAccessibility() {
         "data-differentiate-without-color",
         nativePreferences.differentiateWithoutColor,
       );
-      setBooleanAttribute("data-reduce-motion", nativePreferences.reduceMotion);
       syncEffectiveWindowTransparency();
     };
 
