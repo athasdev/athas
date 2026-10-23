@@ -9,6 +9,8 @@ on:
       - "flake.nix"
       - "flake.lock"
       - "nix/**"
+      - "package.json"
+      - "rust-toolchain.toml"
   pull_request:
     paths:
       - ".github/workflows/nix.yml"
@@ -16,6 +18,8 @@ on:
       - "flake.nix"
       - "flake.lock"
       - "nix/**"
+      - "package.json"
+      - "rust-toolchain.toml"
   workflow_dispatch:
 
 jobs:
@@ -30,15 +34,39 @@ jobs:
         uses: DeterminateSystems/nix-installer-action@v22
 
       - name: Validate flake
-        run: nix flake check --no-write-lock-file
+        run: nix flake check --all-systems --no-write-lock-file
 
       - name: Validate dev tools
         run: |
-          nix develop --no-write-lock-file --command bash -lc '
+          nix develop --no-write-lock-file --command bash -euc '
             bun --version
             node --version
             rustc --version
             cargo --version
-            pkg-config --exists javascriptcoregtk-4.1
-            pkg-config --exists libsoup-3.0
+            rust-analyzer --version
+            pkg-config --exists gtk+-3.0 webkit2gtk-4.1 libsoup-3.0 openssl
+          '
+
+      - name: Validate Rust linking
+        run: |
+          nix develop --no-write-lock-file --command bash -euc '
+            build_dir=$(mktemp -d)
+            trap '\''rm -rf "$build_dir"'\'' EXIT
+            printf "fn main() {}\n" > "$build_dir/main.rs"
+            rustc "$build_dir/main.rs" -o "$build_dir/smoke"
+            "$build_dir/smoke"
+          '
+
+      - name: Validate JavaScript toolchain requirements
+        run: |
+          nix develop --no-write-lock-file --command bun -e '
+            const { packageManager, engines } = require("./package.json");
+            const minimumBun = packageManager.split("@")[1];
+            const node = Bun.spawnSync(["node", "--version"]);
+            const nodeVersion = node.stdout.toString().trim().replace(/^v/, "");
+            if (node.exitCode !== 0 ||
+                !Bun.semver.satisfies(Bun.version, ">=" + minimumBun) ||
+                !Bun.semver.satisfies(nodeVersion, engines.node)) {
+              throw new Error(`Expected Bun >=${minimumBun} and Node ${engines.node}; got Bun ${Bun.version} and Node ${nodeVersion}`);
+            }
           '
