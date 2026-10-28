@@ -15,6 +15,7 @@ import {
 import { createPortal } from "react-dom";
 import { CheckIcon, ChevronRightIcon } from "@/ui/icons";
 import {
+  type MenuItem,
   menuItemVariants,
   menuSeparatorVariants,
   menuSurfaceVariants,
@@ -473,6 +474,28 @@ function ContextMenuSeparator(props: Omit<ContextMenuPrimitive.Separator.Props, 
   );
 }
 
+/**
+ * The context menu form of `DropdownMenuItems`, so a row's "More actions" menu and its right-click
+ * menu are built from one list.
+ */
+function ContextMenuItems({ items }: { items: readonly MenuItem[] }) {
+  return items.map((item) =>
+    item.separator ? (
+      <ContextMenuSeparator key={item.id} />
+    ) : (
+      <ContextMenuItem
+        key={item.id}
+        disabled={item.disabled || !item.onClick}
+        variant={item.tone === "destructive" ? "destructive" : "default"}
+        onClick={item.onClick}
+      >
+        {item.icon}
+        {item.label}
+      </ContextMenuItem>
+    ),
+  );
+}
+
 function ContextMenuPopup({
   isOpen,
   point,
@@ -609,6 +632,7 @@ export {
   ContextMenuContent,
   ContextMenuGroup,
   ContextMenuItem,
+  ContextMenuItems,
   ContextMenuPopup,
   ContextMenuSeparator,
   ContextMenuSub,

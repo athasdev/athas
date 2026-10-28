@@ -1,8 +1,11 @@
-import { Suspense } from "react";
+import { type ReactNode, Suspense } from "react";
 import { createPortal } from "react-dom";
 import { AgentsPlanFooter } from "@/features/ai/components/sidebar/agents-plan-footer";
 import { openCustomize } from "@/features/ai/customize/services/open-customize";
-import { startAgentInProject } from "@/features/ai/services/agent-project-navigation";
+import {
+  startAgentInProject,
+  startProjectlessChat,
+} from "@/features/ai/services/agent-project-navigation";
 import { AccountMenu } from "@/features/auth/components/account-menu";
 import { DiagnosticsActivityControl } from "@/features/diagnostics/components/diagnostics-activity-control";
 import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
@@ -15,12 +18,26 @@ import RunActionsButton from "@/features/run-actions/components/run-actions-butt
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import ProjectPicker from "@/features/workspace/project-picker/components/project-picker";
 import { useWorkspaceTabsStore } from "@/features/workspace/stores/workspace-tabs.store";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItems,
+  ContextMenuTrigger,
+} from "@/ui/context-menu";
 import { ControlSizeProvider } from "@/ui/control-size";
-import { PencilLineIcon, PuzzlePieceIcon, SearchIcon, TerminalWindowIcon } from "@/ui/icons";
+import { type MenuItem, menuSeparator } from "@/ui/dropdown";
+import {
+  ChatBubbleTextIcon,
+  PencilLineIcon,
+  PuzzlePieceIcon,
+  SearchIcon,
+  TerminalWindowIcon,
+} from "@/ui/icons";
 import Keybinding from "@/ui/keybinding";
 import { OverlaySideProvider } from "@/ui/overlay-side";
 import { SidebarIconButton, SidebarListItem, SidebarPanel, SidebarScrollArea } from "@/ui/sidebar";
 import { getWebContributions } from "@/utils/web-contributions";
+import { useAddProjectItems } from "../../hooks/use-add-project-items";
 import { SidebarProjects } from "./sidebar-projects";
 
 /** The project picker the sidebar and the title bar open, rendered over the whole window. */
@@ -126,6 +143,43 @@ function SidebarBottom() {
   );
 }
 
+/** Right-clicking the sidebar outside any row: start something or add a project. */
+function SidebarAreaMenu({ children }: { children: ReactNode }) {
+  const aiEnabled = useSettingsStore((state) => state.settings.coreFeatures.aiChat);
+  const activeProjectId = useWorkspaceTabsStore(
+    (state) => state.projectTabs.find((project) => project.isActive)?.id,
+  );
+  const addProjectItems = useAddProjectItems();
+  const items: MenuItem[] = [
+    ...(aiEnabled
+      ? [
+          {
+            id: "new-session",
+            label: "New session",
+            icon: <PencilLineIcon />,
+            onClick: () => void startAgentInProject(activeProjectId),
+          },
+          {
+            id: "new-chat",
+            label: "New chat",
+            icon: <ChatBubbleTextIcon />,
+            onClick: () => void startProjectlessChat(),
+          },
+          menuSeparator("project-separator"),
+        ]
+      : []),
+    ...addProjectItems,
+  ];
+  return (
+    <ContextMenu>
+      <ContextMenuTrigger className="flex min-h-0 flex-1 flex-col">{children}</ContextMenuTrigger>
+      <ContextMenuContent>
+        <ContextMenuItems items={items} />
+      </ContextMenuContent>
+    </ContextMenu>
+  );
+}
+
 /**
  * The workbench's one navigation: search and a new session at the top, pinned sessions and every
  * open project with its sessions below, and Integrations and the account at the bottom. With
@@ -142,9 +196,11 @@ export function WorkbenchSidebar({ titleRow = false }: { titleRow?: boolean }) {
         />
       ) : null}
       <SidebarTop />
-      <SidebarScrollArea aria-label="Projects and sessions">
-        <SidebarProjects />
-      </SidebarScrollArea>
+      <SidebarAreaMenu>
+        <SidebarScrollArea aria-label="Projects and sessions">
+          <SidebarProjects />
+        </SidebarScrollArea>
+      </SidebarAreaMenu>
       <SidebarBottom />
     </SidebarPanel>
   );

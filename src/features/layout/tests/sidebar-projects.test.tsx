@@ -187,6 +187,14 @@ async function projectAction(name: string, action: string) {
   await click(menuItem(action));
 }
 
+async function rightClick(element: Element | null | undefined) {
+  if (!element) throw new Error("Missing element");
+  await act(async () => {
+    fireEvent.contextMenu(element, { clientX: 10, clientY: 10 });
+  });
+  await flush();
+}
+
 async function addProjectMenu() {
   await click(view().getByRole("button", { name: "Add project" }));
 }
@@ -397,6 +405,38 @@ describe("sidebar projects", () => {
     await click(view().getByRole("button", { name: "Remove Lab server from Athas" }));
     await confirm();
     expect(io.connections.map((connection) => connection.id)).toEqual(["box"]);
+  });
+
+  it("offers the project menu on right-click, with its path and folding", async () => {
+    const writeText = vi.fn(async () => {});
+    vi.doMock("@tauri-apps/plugin-clipboard-manager", () => ({ writeText }));
+    await render();
+    await rightClick(group("api")?.querySelector('[aria-expanded="true"]'));
+    expect(menuItem("Show project files")).toBeDefined();
+    expect(menuItem("Project tools")).toBeDefined();
+    await click(menuItem("Copy path"));
+    expect(writeText).toHaveBeenCalledWith("/code/api");
+
+    await rightClick(group("api")?.querySelector('[aria-expanded="true"]'));
+    await click(menuItem("Collapse"));
+    expect(useWorkbenchSidebarStore.getState().collapsedProjects).toEqual({ api: true });
+
+    await rightClick(group("api")?.querySelector('[aria-expanded="false"]'));
+    await click(menuItem("Close project"));
+    expect(io.closed).toEqual(["api"]);
+    vi.doUnmock("@tauri-apps/plugin-clipboard-manager");
+  });
+
+  it("opens or adds projects from the Projects heading's right-click menu", async () => {
+    const openProjectPicker = vi.fn();
+    useUIState.setState({ openProjectPicker } as never);
+    await render();
+    await rightClick(view().getByText("Projects"));
+    await click(menuItem("Open project…"));
+    expect(io.folderPicks).toBe(1);
+    await rightClick(view().getByText("Projects"));
+    await click(menuItem("Add remote…"));
+    expect(openProjectPicker).toHaveBeenCalledWith("addRemote");
   });
 
   it("picks an icon for a local project", async () => {
