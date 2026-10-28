@@ -13,6 +13,7 @@ import {
 } from "@/ui/icons";
 import type React from "react";
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
 import { useShallow } from "zustand/react/shallow";
 import { useEventListener } from "usehooks-ts";
@@ -1124,8 +1125,12 @@ function FileExplorerTreeComponent({
     setIsDeletingPath(true);
     try {
       await Promise.resolve(onDeletePath?.(deleteCandidate.path, deleteCandidate.isDir));
-      setDeleteCandidate(null);
+    } catch (error) {
+      toast.error(`Could not delete ${getPathBaseName(deleteCandidate.path)}`, {
+        description: error instanceof Error ? error.message : String(error),
+      });
     } finally {
+      setDeleteCandidate(null);
       setIsDeletingPath(false);
     }
   }, [deleteCandidate, onDeletePath]);

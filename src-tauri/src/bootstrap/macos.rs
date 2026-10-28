@@ -818,6 +818,52 @@ pub fn configure_window_tabbing(ns_window: *mut c_void) -> Result<(), String> {
 }
 
 #[cfg(target_os = "macos")]
+unsafe extern "C" fn ignore_cancel_operation(
+   _window: *mut Object,
+   _selector: runtime::Sel,
+   _sender: *mut Object,
+) {
+}
+
+/// Keeps Escape from leaving full screen. The webview hands an Escape the page did not use up the
+/// responder chain as `cancelOperation:`, and NSWindow answers it by exiting full screen.
+#[cfg(target_os = "macos")]
+pub fn ignore_window_cancel_operation(ns_window: *mut c_void) -> Result<(), String> {
+   if ns_window.is_null() {
+      return Err("NSWindow is unavailable".to_string());
+   }
+
+   unsafe {
+      let window_class = runtime::object_getClass(ns_window.cast::<Object>()) as *mut Class;
+      if window_class.is_null() {
+         return Err("NSWindow class is unavailable".to_string());
+      }
+
+      add_delegate_method(
+         window_class,
+         sel!(cancelOperation:),
+         mem::transmute::<unsafe extern "C" fn(*mut Object, runtime::Sel, *mut Object), Imp>(
+            ignore_cancel_operation,
+         ),
+         b"v@:@\0",
+      )
+   }
+}
+
+/// Whether AppKit shows the window full screen, including a tab that joined a full-screen tab
+/// group (tao only tracks windows it put there itself).
+#[cfg(target_os = "macos")]
+pub fn is_window_fullscreen(ns_window: *mut c_void) -> bool {
+   const NS_WINDOW_STYLE_MASK_FULL_SCREEN: usize = 1 << 14;
+   if ns_window.is_null() {
+      return false;
+   }
+
+   let style_mask: usize = unsafe { msg_send![ns_window.cast::<Object>(), styleMask] };
+   style_mask & NS_WINDOW_STYLE_MASK_FULL_SCREEN != 0
+}
+
+#[cfg(target_os = "macos")]
 pub fn perform_window_tab_action(ns_window: *mut c_void, action: &str) -> Result<(), String> {
    if ns_window.is_null() {
       return Err("NSWindow is unavailable".to_string());

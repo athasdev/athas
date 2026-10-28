@@ -246,12 +246,16 @@ export function CodexModelSubmenus({ cwd, value }: { cwd: string; value: string 
   );
 }
 
-function findSelectOption(options: SessionConfigOption[], category: "model" | "thought_level") {
+function findSelectOption(
+  options: SessionConfigOption[],
+  category: "model" | "thought_level",
+  minChoices: number,
+) {
   const option = options.find(
     (candidate) =>
       classifySessionConfigOption(candidate) === category && candidate.kind.type === "select",
   );
-  return option?.kind.type === "select" && option.kind.options.length > 1
+  return option?.kind.type === "select" && option.kind.options.length >= minChoices
     ? { id: option.id, ...option.kind }
     : null;
 }
@@ -275,8 +279,10 @@ export function AcpModelSubmenus({
   loading?: boolean;
   onChange: (optionId: string, value: SessionConfigValue) => void;
 }) {
-  const model = findSelectOption(options, "model");
-  const effort = findSelectOption(options, "thought_level");
+  // An agent that reports a single model still shows which one it runs (Antigravity falls back
+  // to only the current model when it cannot list the others).
+  const model = findSelectOption(options, "model", 1);
+  const effort = findSelectOption(options, "thought_level", 2);
 
   return (
     <>

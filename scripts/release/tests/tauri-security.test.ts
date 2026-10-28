@@ -76,6 +76,30 @@ describe("Tauri security surface", () => {
     }
   });
 
+  it("grants every fs plugin command the frontend imports", () => {
+    const granted = new Set(readCapabilities().flatMap(permissionIds));
+    const imported = new Set<string>();
+    for (const file of fs.readdirSync(path.join(repoRoot, "src"), { recursive: true })) {
+      const relative = String(file);
+      if (!/\.tsx?$/.test(relative) || /(^|\/)tests?\/|\.test\.tsx?$/.test(relative)) continue;
+      const source = fs.readFileSync(path.join(repoRoot, "src", relative), "utf8");
+      for (const match of source.matchAll(
+        /import\s*\{([^}]*)\}\s*from\s*"@tauri-apps\/plugin-fs"/g,
+      )) {
+        for (const specifier of match[1].split(",")) {
+          const name = specifier.trim().split(/\s+as\s+/)[0];
+          if (/^[a-z]/.test(name)) imported.add(name);
+        }
+      }
+    }
+
+    expect(imported.size).toBeGreaterThan(0);
+    for (const name of imported) {
+      const permission = `fs:allow-${name.replace(/[A-Z]/g, (char) => `-${char.toLowerCase()}`)}`;
+      expect(granted.has(permission), `${name} needs ${permission}`).toBe(true);
+    }
+  });
+
   it("gives remote pages no capabilities", () => {
     // Browser tabs are wry webviews outside Tauri's webview manager and talk to the
     // workbench only through their own bridge, so no capability needs remote URLs.
